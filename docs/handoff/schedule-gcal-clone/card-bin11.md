@@ -1,7 +1,7 @@
 # 実装カード 便11: 日・3日間・週の枠線を Google に揃える（G37〜G41）（2026-11-09）
 
 - 設計: `docs/handoff/schedule-gcal-clone/design.md` §2.4（G37〜G41）・§3.16（審査は §9 の 14 回目）
-- PO の承認: 未（この欄は PO の承認の後に、PO の言葉と日付で書き足す。承認が無い間は作業しない）
+- PO の承認: PO の選択「1」（2026-11-09・「この直し方で作り、本番に出して Google と並べて確かめる」）
 - 土台: origin/main（作業の時点の最新）。ブランチ `release/schedule-gcal-borders-impl`
 - 対象 ADR: ADR-1065（金型 CalendarView・決まり 7 予定の画面の見た目は金型の css だけ）・ADR-067（トークン）
 - 行番号はすべて origin/main 1ca6dbf38 の値。違っていたら中身で場所を探し、見つからなければ止める。

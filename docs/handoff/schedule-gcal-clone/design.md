@@ -6,7 +6,7 @@
 追加（2026-11-08）: 便8（残りの部品を決められた部品に差し替える・G26〜G30）は PO の選択「1」（2026-11-08）。作り方は §3.13。設計審査は §9 の 11 回目。
 追加（2026-11-09）: 便9（月表示・詳しくの小窓と一覧の時刻を Google の形に・G31〜G35）は PO の選択「1、2」（2026-11-08）で設計した。作り方は §3.14。設計審査は §9 の 12 回目（APPROVE）。G31〜G35 は **PO 承認済み**（2026-11-09、PO の選択「1」＝「5か所の直しを承認して、作るところまで進める」）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin9.md`。
 追加（2026-11-09）: 便10（日・3日間・週から月へ切り替えると画面全体が消える不具合・G36）は PO の選択「1」（2026-11-09・画面が消える不具合を先に直す）。作り方は §3.15。設計審査は §9 の 13 回目（APPROVE）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin10.md`。金型の設計 `docs/handoff/calendar-view-component/design.md` §4-3 の `views` の行も「月でも渡す」に直した。
-追加（2026-11-09）: 便11（日・3日間・週の枠線を Google に揃える・G37〜G41）は PO の選択「1」（2026-11-09・枠線を揃える設計を作り、PO の承認を得てから直す）。作り方は §3.16。設計審査は §9 の 14 回目（APPROVE）。G37〜G41 は PO の承認待ち。実装カードは `docs/handoff/schedule-gcal-clone/card-bin11.md`。
+追加（2026-11-09）: 便11（日・3日間・週の枠線を Google に揃える・G37〜G41）は PO の選択「1」（2026-11-09・枠線を揃える設計を作り、PO の承認を得てから直す）。作り方は §3.16。設計審査は §9 の 14 回目（APPROVE）。G37〜G41 は **PO 承認済み**（2026-11-09、PO の選択「1」＝「この直し方で作り、本番に出して Google と並べて確かめる」）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin11.md`。
 根拠: `docs/handoff/schedule-gcal-clone/recon.md`（以下 recon）。前の設計 `docs/handoff/schedule-gcal-alignment/design.md`（K1〜K14）を引き継ぎ、便2（K8〜K11）はこの設計に入れ直す。
 
 ## 1. 目的
