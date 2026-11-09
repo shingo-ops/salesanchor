@@ -127,7 +127,7 @@ async def update_series(
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="シリーズが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:tcg_series")
     await db.commit()
     return TcgSeriesResponse(**dict(row))
 
@@ -143,7 +143,7 @@ async def delete_series(series_id: int, db: AsyncSession = Depends(get_db)):
         {"id": series_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="シリーズが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:tcg_series")
     await db.commit()
 
 
@@ -228,7 +228,7 @@ async def update_type(
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="種別が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:tcg_type")
     await db.commit()
     return TcgTypeResponse(**dict(row))
 
@@ -247,7 +247,7 @@ async def delete_type(type_id: int, db: AsyncSession = Depends(get_db)):
         )
     ).mappings().first()
     if not type_row:
-        raise HTTPException(status_code=404, detail="種別が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:tcg_type")
     # 使用中（その種別のシリーズが存在）なら削除不可
     in_use = (
         await db.execute(

@@ -87,7 +87,7 @@ async def send_channel_invite(
     )
     lead_row = lead_result.mappings().first()
     if not lead_row:
-        raise HTTPException(status_code=404, detail="リードが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:lead")
 
     ticket_channel_id = lead_row["discord_guild_channel_id"]
     if not ticket_channel_id:

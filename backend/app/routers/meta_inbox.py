@@ -585,7 +585,7 @@ async def connect_delete(
     if row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="該当する接続済 Page が見つかりません",
+            detail="not_found:meta_page",
         )
     record_id = int(row[0])
     encrypted_token = row[1]

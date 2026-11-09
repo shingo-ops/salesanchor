@@ -150,7 +150,7 @@ async def update_dex(
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="図鑑エントリが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:dex_entry")
     await db.commit()
     return dict(row)
 
@@ -170,7 +170,7 @@ async def delete_dex(
         text(f"DELETE FROM {table} WHERE id = :id"), {"id": entry_id}
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="図鑑エントリが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:dex_entry")
     await db.commit()
 
 

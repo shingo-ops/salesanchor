@@ -699,7 +699,7 @@ async def update_offer(
     if result.first() is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="指定されたオファーが見つかりません",
+            detail="not_found:inventory_offer",
         )
 
     offer = await _load_offer(db, offer_id)
@@ -761,6 +761,6 @@ async def delete_offer(
     if result.first() is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="指定されたオファーが見つかりません",
+            detail="not_found:inventory_offer",
         )
     await db.commit()

@@ -253,7 +253,7 @@ async def get_supplier(supplier_id: int, db: AsyncSession = Depends(get_db),
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="仕入先が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:supplier")
     return SupplierResponse(**row)
 
 
@@ -296,7 +296,7 @@ async def update_supplier(supplier_id: int, data: SupplierUpdate,
     )
     old_row = old.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="仕入先が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:supplier")
     update_data = data.model_dump(exclude_unset=True)
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE}
     if not update_data:
@@ -327,7 +327,7 @@ async def delete_supplier(supplier_id: int, db: AsyncSession = Depends(get_db),
     )
     old_row = old.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="仕入先が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:supplier")
     await db.execute(
         text("UPDATE suppliers SET is_active = FALSE, updated_at = NOW() WHERE id = :id AND tenant_id = :tenant_id"),
         {"id": supplier_id, "tenant_id": tenant_id},

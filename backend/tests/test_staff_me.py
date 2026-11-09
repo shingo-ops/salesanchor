@@ -78,7 +78,7 @@ async def test_get_my_staff_404_when_no_link(client, db_session):
     res = await client.get("/api/v1/staff/me")
     assert res.status_code == 404
     body = res.json()
-    assert "staff" in body["detail"] or "見つかりません" in body["detail"]
+    assert body["detail"] == "not_found:my_staff_profile"
 
 
 @pytest.mark.asyncio

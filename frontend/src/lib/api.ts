@@ -27,7 +27,7 @@ import i18n from "../i18n";
 import { getClientId } from "./realtime/clientId";
 import { isDevSession } from "./auth/devSessionSlot";
 import { expireSession, getAccessToken, selfRefresh } from "./auth/selfAuth";
-import { apiErrorReasonKey } from "./apiErrorReason";
+import { apiErrorReasonMessage } from "./apiErrorReason";
 
 const API_BASE = "/api/v1";
 
@@ -122,6 +122,16 @@ async function fetchWithReauth(url: string, init: RequestInit, path: string): Pr
   return retried;
 }
 
+/** 失敗の応答の detail から ApiError.message を作る（request と requestForm の共通・ADR-1071） */
+function errorMessageFromDetail(detail: unknown, status: number): string {
+  // 共通の理由コード・「見つからない」のコードなら画面の言語の文、
+  // それ以外の文字列ならそのまま、dict なら detail フィールドを優先
+  const reasonMessage = apiErrorReasonMessage(detail);
+  if (reasonMessage) return reasonMessage;
+  if (typeof detail === "string") return detail;
+  return (detail as { detail?: string } | null | undefined)?.detail || i18n.t("common.httpError", { status });
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -164,15 +174,7 @@ async function request<T>(
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         const detail = body?.detail;
-        // detail が共通の理由コード（apiErrorReason.ts の表）なら画面の言語の文、
-        // それ以外の文字列ならそのまま、dict なら detail フィールドを優先
-        const reasonKey = apiErrorReasonKey(detail);
-        const message = reasonKey
-          ? i18n.t(reasonKey)
-          : typeof detail === "string"
-            ? detail
-            : detail?.detail || i18n.t("common.httpError", { status: res.status });
-        throw new ApiError(message, res.status, detail);
+        throw new ApiError(errorMessageFromDetail(detail, res.status), res.status, detail);
       }
       if (res.status === 204) return undefined as T;
       return res.json();
@@ -255,13 +257,7 @@ async function requestForm<T>(path: string, body: FormData): Promise<T> {
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({}));
     const detail = (errBody as { detail?: unknown }).detail;
-    const reasonKey = apiErrorReasonKey(detail);
-    const message = reasonKey
-      ? i18n.t(reasonKey)
-      : typeof detail === "string"
-        ? detail
-        : (detail as { detail?: string })?.detail || i18n.t("common.httpError", { status: res.status });
-    throw new ApiError(message, res.status, detail);
+    throw new ApiError(errorMessageFromDetail(detail, res.status), res.status, detail);
   }
   if (res.status === 204) return undefined as T;
   return res.json();

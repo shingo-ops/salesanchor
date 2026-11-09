@@ -153,7 +153,7 @@ async def update_payment_fee_setting(
         raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="決済手数料設定が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:payment_fee_setting")
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072
     return PaymentFeeSettingResponse(**dict(row))
@@ -178,6 +178,6 @@ async def delete_payment_fee_setting(
         {"id": setting_id, "tenant_id": tenant_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="決済手数料設定が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:payment_fee_setting")
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072

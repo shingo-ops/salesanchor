@@ -286,3 +286,52 @@
 .comp-calendar--schedule.comp-calendar--days .fc-timegrid-now-indicator-container {
   overflow: visible;
 }
+
+/* ---- 予定の画面の見た目・月の升目（ADR-1065 What 7・design §3.14 G31〜G33） ---- */
+.comp-calendar--schedule.comp-calendar--month {
+  --fc-today-bg-color: transparent;
+}
+
+.comp-calendar--schedule.comp-calendar--month .fc-col-header-cell {
+  font-size: var(--font-2xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--schedule-hour-label);
+}
+
+.comp-calendar--schedule.comp-calendar--month .fc-daygrid-day-top {
+  justify-content: center;
+}
+
+.comp-calendar--schedule.comp-calendar--month .comp-calendar__monthnum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--schedule-month-daynum-size);
+  height: var(--schedule-month-daynum-size);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-full);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.comp-calendar--schedule.comp-calendar--month .comp-calendar__monthnum--today {
+  background: var(--schedule-today);
+  color: var(--on-solid);
+}
+
+.comp-calendar--schedule.comp-calendar--month .fc-daygrid-dot-event.comp-calendar__event {
+  border-width: 0;
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.comp-calendar--schedule.comp-calendar--month .fc-daygrid-block-event .fc-daygrid-event-dot {
+  display: none;
+}
+
+.comp-calendar--schedule.comp-calendar--month .comp-calendar__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

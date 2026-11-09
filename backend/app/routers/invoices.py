@@ -227,7 +227,7 @@ async def get_invoice(
     result = await db.execute(text(f"SELECT {_INVOICE_COLUMNS} FROM invoices WHERE id = :id"), {"id": invoice_id})
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="請求書が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:invoice")
     items = await _get_invoice_items(db, invoice_id)
     return InvoiceDetailResponse(**dict(row), items=[InvoiceItemResponse(**i) for i in items])
 
@@ -253,7 +253,7 @@ async def create_invoice_from_quote(
     )
     q = quote.mappings().first()
     if not q:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="見積もりが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:quote")
     if q["status"] != "approved":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="承認済みの見積もりのみ請求書に変換できます")
 
@@ -350,7 +350,7 @@ async def create_invoice(
     )
     contact_row = contact_check.first()
     if not contact_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された担当者が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:contact")
     if contact_row[0] != data.company_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -459,7 +459,7 @@ async def update_invoice(
     old = await db.execute(text(f"SELECT {_INVOICE_COLUMNS} FROM invoices WHERE id = :id"), {"id": invoice_id})
     old_row = old.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="請求書が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:invoice")
     if old_row["status"] != "draft":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="draft状態の請求書のみ編集できます")
 
@@ -571,7 +571,7 @@ async def void_invoice(
     old = await db.execute(text(f"SELECT {_INVOICE_COLUMNS} FROM invoices WHERE id = :id"), {"id": invoice_id})
     old_row = old.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="請求書が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:invoice")
     if old_row["status"] == "voided":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="既に無効化されています")
     if old_row["status"] == "paid":
@@ -641,7 +641,7 @@ async def issue_paypal_link(
     )
     inv_row = inv.mappings().first()
     if not inv_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="請求書が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:invoice")
     if inv_row["status"] not in ("issued", "overdue"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="発行済み（issued/overdue）の請求書のみリンク発行できます")
     if inv_row["total_amount"] is None or Decimal(inv_row["total_amount"]) <= 0:
@@ -748,7 +748,7 @@ async def confirm_paypal_payment(
     )
     inv_row = inv.mappings().first()
     if not inv_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="請求書が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:invoice")
     if not inv_row["paypal_order_id"]:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="先に PayPal 請求書を発行してください")
     if inv_row["status"] not in ("issued", "overdue"):

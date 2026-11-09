@@ -136,7 +136,7 @@ async def update_channel(channel_id: int, data: ChannelUpdate, db: AsyncSession 
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="チャンネルが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:notification_channel")
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
                            action="update", table_name="notification_channels",
                            record_id=channel_id, new_data=update_data)
@@ -152,7 +152,7 @@ async def delete_channel(channel_id: int, db: AsyncSession = Depends(get_db),
                          current_user: User = Depends(get_current_user)):
     r = await db.execute(text("DELETE FROM notification_channels WHERE id = :id RETURNING id"), {"id": channel_id})
     if not r.first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="チャンネルが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:notification_channel")
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
                            action="delete", table_name="notification_channels", record_id=channel_id)
     await db.commit()

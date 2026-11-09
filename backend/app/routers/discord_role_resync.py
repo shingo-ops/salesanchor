@@ -59,7 +59,7 @@ async def resync_discord_role(
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="リードが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:lead")
 
     discord_user_id = row["discord_user_id"]
     estimated_scale = row["estimated_scale"]

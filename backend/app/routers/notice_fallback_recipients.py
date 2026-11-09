@@ -90,7 +90,7 @@ async def put_notice_fallback_recipients(
 ):
     """受け取る人を丸ごと置き換える。別会社・無効・存在しない id が 1 つでもあれば 422。"""
     if not current_user.tenant_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会社が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:company")
     tenant_id = current_user.tenant_id
     wanted = sorted(set(body.user_ids))
     if wanted:

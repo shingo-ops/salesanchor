@@ -335,7 +335,7 @@ async def get_product(
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="商品が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:product")
     return (await _build_responses(db, ctx, [row]))[0]
 
 
@@ -457,7 +457,7 @@ async def update_product(
     )
     old_row = old_result.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="商品が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:product")
 
     update_data = data.model_dump(exclude_unset=True)
     packaging_fields = {k: v for k, v in update_data.items() if k in LEGACY_FIELDS}
@@ -660,7 +660,7 @@ async def delete_product(
     )
     old_row = old_result.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="商品が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:product")
 
     blocking = await _check_product_references(db, product_id, tenant_id, admin_db=admin_db)
     if blocking:
@@ -760,7 +760,7 @@ async def check_inventory(
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="商品が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:product")
 
     return InventoryCheckResponse(
         product_id=row["id"],

@@ -162,7 +162,7 @@ async def _load_open_invite(db: AsyncSession, tenant_id: int, invite_id: int):
         {"id": invite_id, "tid": tenant_id},
     )).first()
     if invite is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="招待が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:staff_join_invite")
     if invite.status != "open":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="受付中の招待だけ操作できます")
     return invite

@@ -137,7 +137,7 @@ async def get_quote(
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="見積もりが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:quote")
 
     items = await _get_quote_items(db, quote_id)
     return QuoteDetailResponse(**dict(row), items=[QuoteItemResponse(**i) for i in items])
@@ -162,7 +162,7 @@ async def create_quote(
     )
     company_row = company_check.first()
     if not company_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された会社が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:company")
     company_lead_id = company_row[0]
 
     # Step 5d: contact / company の存在 + 所属一致確認のみ
@@ -172,7 +172,7 @@ async def create_quote(
     )
     contact_row = contact_check.first()
     if not contact_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された担当者が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:contact")
     if contact_row[0] != data.company_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -277,7 +277,7 @@ async def update_quote(
     old_result = await db.execute(text(f"SELECT {_QUOTE_COLUMNS} FROM quotes WHERE id = :id"), {"id": quote_id})
     old_row = old_result.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="見積もりが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:quote")
     if old_row["status"] in ("approved", "rejected", "expired"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"ステータス「{old_row['status']}」の見積もりは編集できません")
 
@@ -411,7 +411,7 @@ async def delete_quote(
     old = await db.execute(text(f"SELECT {_QUOTE_COLUMNS} FROM quotes WHERE id = :id"), {"id": quote_id})
     old_row = old.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="見積もりが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:quote")
     if old_row["status"] != "draft":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="draft状態の見積もりのみ削除できます")
 

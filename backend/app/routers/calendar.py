@@ -233,7 +233,7 @@ async def list_calendar_owners(
     if not current_staff:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="現在のユーザーに紐づく担当者が見つかりません",
+            detail="not_found:my_staff_profile",
         )
 
     current_staff_id = int(current_staff["id"])
@@ -329,7 +329,7 @@ async def update_calendar_owner(
     if not staff_row.first():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="担当者が見つかりません",
+            detail="not_found:calendar_owner",
         )
 
     current_staff = await _current_staff_row(db, user)
@@ -380,7 +380,7 @@ async def update_calendar_owner(
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="担当者が見つかりません",
+            detail="not_found:calendar_owner",
         )
     data = dict(row)
     return OwnerRosterItem(
@@ -468,14 +468,14 @@ async def update_event(
     )
     record = row.first()
     if not record:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="イベントが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:calendar_event")
 
     created_by, event_calendar_type, event_user_id = record[0], record[1], record[2]
     event_google_id, event_meet_url = record[3], record[4]
     event_owner = event_user_id if event_user_id is not None else created_by
     # 他人の「自分だけ」予定は存在しないものとして扱う（管理者でも）
     if event_calendar_type == "personal" and event_owner != user.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="イベントが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:calendar_event")
 
     if created_by != user.id and not is_tenant_admin(await get_user_system_keys(db, user.id)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="編集権限がありません")
@@ -548,11 +548,11 @@ async def delete_event(
     )
     record = row.first()
     if not record:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="イベントが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:calendar_event")
 
     event_owner = record[2] if record[2] is not None else record[0]
     if record[1] == "personal" and event_owner != user.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="イベントが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:calendar_event")
 
     if record[0] != user.id and not is_tenant_admin(await get_user_system_keys(db, user.id)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="削除権限がありません")

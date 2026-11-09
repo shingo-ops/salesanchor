@@ -126,7 +126,7 @@ async def update_condition_def(
         raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="コンディション定義が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:condition_definition")
     await db.commit()
     return ConditionDefResponse(**dict(row))
 
@@ -159,7 +159,7 @@ async def delete_condition_def(
         {"id": def_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="コンディション定義が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:condition_definition")
     await db.commit()
 
 
@@ -179,7 +179,7 @@ async def get_condition_def_links(
         {"id": def_id},
     )
     if not exists.fetchone():
-        raise HTTPException(status_code=404, detail="コンディション定義が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:condition_definition")
 
     qu_res = await db.execute(
         text(
