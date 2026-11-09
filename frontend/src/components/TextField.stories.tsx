@@ -109,12 +109,13 @@ export const ControlDisabled: Story = {
 }
 
 export const ControlVariants: Story = {
-  name: 'TextFieldControl variants (karte / search / schedule / composer)',
+  name: 'TextFieldControl variants (karte / search / schedule / schedule-title / composer)',
   render: () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
       <TextFieldControl variant="karte" placeholder="Karte field" aria-label="Karte field" />
       <TextFieldControl variant="search" placeholder="Search field" aria-label="Search field" />
       <TextFieldControl variant="schedule" placeholder="Schedule field" aria-label="Schedule field" />
+      <TextFieldControl variant="schedule-title" placeholder="Add title" aria-label="Schedule title" />
       <TextFieldControl variant="composer" type="date" aria-label="Composer field" />
     </div>
   ),

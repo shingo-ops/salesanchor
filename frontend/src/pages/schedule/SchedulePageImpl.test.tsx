@@ -160,7 +160,7 @@ describe("SchedulePage share-with-staff toggle", () => {
     expect(toggle.checked).toBe(true);
     fireEvent.click(toggle);
     expect(toggle.checked).toBe(false);
-    fireEvent.change(screen.getByPlaceholderText(i18n.t("schedule.eventTitle")), { target: { value: "Secret" } });
+    fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "Secret" } });
     fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
     await waitFor(() => expect(api.post).toHaveBeenCalled());
     const [path, body] = vi.mocked(api.post).mock.calls[0] as [string, Record<string, unknown>];
@@ -264,7 +264,7 @@ describe("SchedulePage keyboard shortcuts (K7)", () => {
     view();
     await screen.findByRole("button", { name: i18n.t("schedule.create") });
   };
-  const titleInput = () => screen.queryByPlaceholderText(i18n.t("schedule.eventTitle"));
+  const titleInput = () => screen.queryByLabelText(i18n.t("schedule.eventTitle"));
 
   describe("keys that act", () => {
     it("T goes back to today", async () => {
@@ -351,13 +351,13 @@ describe("SchedulePage keyboard shortcuts (K7)", () => {
     it("C opens the create popover", async () => {
       await ready();
       press("c");
-      expect(await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"))).toBeTruthy();
+      expect(await screen.findByLabelText(i18n.t("schedule.eventTitle"))).toBeTruthy();
     });
 
     it("Escape closes the popover", async () => {
       await ready();
       press("c");
-      await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+      await screen.findByLabelText(i18n.t("schedule.eventTitle"));
       press("Escape");
       expect(titleInput()).toBeNull();
     });
@@ -382,7 +382,7 @@ describe("SchedulePage keyboard shortcuts (K7)", () => {
     it("Escape inside an input still closes the popover", async () => {
       await ready();
       press("c");
-      const input = await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+      const input = await screen.findByLabelText(i18n.t("schedule.eventTitle"));
       press("Escape", {}, input);
       expect(titleInput()).toBeNull();
     });
@@ -390,7 +390,7 @@ describe("SchedulePage keyboard shortcuts (K7)", () => {
     it("Escape during IME composition does not close the popover", async () => {
       await ready();
       press("c");
-      const input = await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+      const input = await screen.findByLabelText(i18n.t("schedule.eventTitle"));
       press("Escape", { isComposing: true }, input);
       expect(titleInput()).not.toBeNull();
     });
@@ -416,7 +416,7 @@ describe("SchedulePage keyboard shortcuts (K7)", () => {
     it("ignores letter keys while a popover is open", async () => {
       await ready();
       press("c");
-      await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+      await screen.findByLabelText(i18n.t("schedule.eventTitle"));
       press("m");
       expect(pressed(i18n.t("schedule.monthView"))).toBe(false);
       expect(pressed(i18n.t("schedule.weekView"))).toBe(true);
@@ -439,10 +439,10 @@ describe("SchedulePage Google Meet (K12)", () => {
   const MEET = "https://meet.google.com/abc-defg-hij";
   const openCreate = async () => {
     fireEvent.click(await screen.findByRole("button", { name: i18n.t("schedule.create") }));
-    await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+    await screen.findByLabelText(i18n.t("schedule.eventTitle"));
   };
   const save = () => {
-    fireEvent.change(screen.getByPlaceholderText(i18n.t("schedule.eventTitle")), { target: { value: "Meet Meeting" } });
+    fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "Meet Meeting" } });
     fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
   };
   const enableMeet = () => {
@@ -500,7 +500,7 @@ describe("SchedulePage Google Meet (K12)", () => {
     save();
     expect(await screen.findByText(i18n.t("schedule.meetFailed"))).toBeTruthy();
     // 予定は保存済みなので小窓は閉じる
-    await waitFor(() => expect(screen.queryByPlaceholderText(i18n.t("schedule.eventTitle"))).toBeNull());
+    await waitFor(() => expect(screen.queryByLabelText(i18n.t("schedule.eventTitle"))).toBeNull());
   });
 
   it("shows the join link for an event with meet_url and no toggle on edit", async () => {
@@ -513,7 +513,7 @@ describe("SchedulePage Google Meet (K12)", () => {
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toBe("noopener noreferrer");
     fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
-    await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+    await screen.findByLabelText(i18n.t("schedule.eventTitle"));
     expect(screen.queryByRole("switch", { name: addMeetLabel() })).toBeNull();
     expect(screen.getByRole("link", { name: joinLabel() })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
@@ -541,7 +541,7 @@ describe("SchedulePage Google Meet (K12)", () => {
     view();
     fireEvent.click(await screen.findByText("Own Event"));
     fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
-    await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+    await screen.findByLabelText(i18n.t("schedule.eventTitle"));
     expect(screen.queryByRole("switch", { name: addMeetLabel() })).toBeNull();
   });
 
@@ -589,7 +589,7 @@ describe("SchedulePage on CalendarView", () => {
     await ready();
     selectRange(new Date(2026, 10, 10, 10, 0), new Date(2026, 10, 10, 11, 0), false);
     await waitFor(() =>
-      expect(document.activeElement).toBe(screen.getByPlaceholderText(i18n.t("schedule.eventTitle"))),
+      expect(document.activeElement).toBe(screen.getByLabelText(i18n.t("schedule.eventTitle"))),
     );
     expect(screen.queryByText(i18n.t("schedule.addEvent"))).toBeNull();
   });
@@ -597,7 +597,7 @@ describe("SchedulePage on CalendarView", () => {
   it("C2: location and description are closed lines that open on click and take focus", async () => {
     await ready();
     selectRange(new Date(2026, 10, 10, 10, 0), new Date(2026, 10, 10, 11, 0), false);
-    await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+    await screen.findByLabelText(i18n.t("schedule.eventTitle"));
     expect(screen.queryByPlaceholderText(i18n.t("schedule.locationPlaceholder"))).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: i18n.t("schedule.locationPlaceholder") }));
     const location = await screen.findByPlaceholderText(i18n.t("schedule.locationPlaceholder"));
@@ -606,6 +606,147 @@ describe("SchedulePage on CalendarView", () => {
     fireEvent.click(screen.getByRole("button", { name: i18n.t("schedule.descriptionPlaceholder") }));
     const description = await screen.findByPlaceholderText(i18n.t("schedule.descriptionPlaceholder"));
     await waitFor(() => expect(document.activeElement).toBe(description));
+  });
+
+  describe("便12: 作る小窓と仮の箱（G42〜G50）", () => {
+    const D = (day: number, h = 0, mi = 0) => new Date(2026, 10, day, h, mi);
+    const openTimed = async () => {
+      await ready();
+      selectRange(D(10, 10), D(10, 11), false);
+      await screen.findByLabelText(i18n.t("schedule.eventTitle"));
+    };
+    const draftLine = (s: Date, e: Date, allDay = false) =>
+      formatDraftDateLine(
+        {
+          startDate: formatDateInput(s),
+          startTime: formatTimeInput(s),
+          endDate: formatDateInput(e),
+          endTime: formatTimeInput(e),
+          allDay,
+        },
+        i18n.t.bind(i18n) as never,
+        i18n.language,
+      );
+    const openDateRow = async (lineText: RegExp) => {
+      fireEvent.click(await screen.findByRole("button", { name: lineText }));
+      return (await screen.findAllByLabelText(i18n.t("schedule.time"))) as HTMLInputElement[];
+    };
+
+    it("the create popover has no backdrop, the detail popover has one", async () => {
+      answers.events = [apiEvent({})];
+      view();
+      await screen.findByText("Own Event");
+      await waitFor(() => expect(calendarProps.current).not.toBeNull());
+      selectRange(D(10, 10), D(10, 11), false);
+      await screen.findByLabelText(i18n.t("schedule.eventTitle"));
+      expect(document.querySelectorAll(".schedule-popover-backdrop")).toHaveLength(0);
+      fireEvent.keyDown(document.body, { key: "Escape" });
+      await waitFor(() => expect(document.querySelector(".schedule-popover")).toBeNull());
+      fireEvent.click(await screen.findByText("Own Event"));
+      await waitFor(() => expect(document.querySelectorAll(".schedule-popover-backdrop")).toHaveLength(1));
+    });
+
+    it("the pending box is editable and follows the title", async () => {
+      await openTimed();
+      expect(pendingOf()?.editable).toBe(true);
+      expect(pendingOf()?.title).toBe(i18n.t("schedule.noTitle"));
+      fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "試し" } });
+      await waitFor(() => expect(pendingOf()?.title).toBe("試し"));
+    });
+
+    it("changing only the start time moves the end too (10:00-11:00 to 15:00-16:00)", async () => {
+      await openTimed();
+      const inputs = await openDateRow(/午前10時/);
+      fireEvent.change(inputs[0], { target: { value: "15:00" } });
+      await waitFor(() => expect(pendingOf()?.start).toEqual(D(10, 15)));
+      expect(pendingOf()?.end).toEqual(D(10, 16));
+    });
+
+    it("moving the pending box changes only the draft and saves the moved time", async () => {
+      await openTimed();
+      const revert = vi.fn();
+      act(() => {
+        calendarProps.current?.onEventMove("pending", D(11, 14), D(11, 15), false, revert);
+      });
+      const line = await screen.findByRole("button", { name: draftLine(D(11, 14), D(11, 15)) });
+      expect(line).toBeTruthy();
+      expect(api.patch).not.toHaveBeenCalled();
+      expect(api.post).not.toHaveBeenCalled();
+      expect(revert).not.toHaveBeenCalled();
+      fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "Moved" } });
+      fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+      await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+      const body = vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>;
+      expect(body.start_datetime).toBe(D(11, 14).toISOString());
+      expect(body.end_datetime).toBe(D(11, 15).toISOString());
+      expect(api.patch).not.toHaveBeenCalled();
+    });
+
+    it("resizing the pending box changes the end time in the draft", async () => {
+      await openTimed();
+      act(() => {
+        calendarProps.current?.onEventResize("pending", D(10, 10), D(10, 11, 30), vi.fn());
+      });
+      const inputs = await openDateRow(/午前10時/);
+      await waitFor(() => expect(inputs[1].value).toBe("11:30"));
+    });
+
+    it("resizing an all-day pending box keeps it all-day", async () => {
+      await ready();
+      selectRange(D(10), D(12), true);
+      await screen.findByLabelText(i18n.t("schedule.eventTitle"));
+      act(() => {
+        calendarProps.current?.onEventResize("pending", D(10), D(13), vi.fn());
+      });
+      await waitFor(() => expect(pendingOf()?.end).toEqual(D(13)));
+      expect(pendingOf()?.allDay).toBe(true);
+    });
+
+    it("moving an all-day pending box one week later moves the box", async () => {
+      await ready();
+      selectRange(D(10), D(12), true);
+      await screen.findByLabelText(i18n.t("schedule.eventTitle"));
+      act(() => {
+        calendarProps.current?.onEventMove("pending", D(17), D(19), true, vi.fn());
+      });
+      await waitFor(() => expect(pendingOf()?.start).toEqual(D(17)));
+      expect(pendingOf()?.end).toEqual(D(19));
+    });
+
+    it("pressing outside closes the popover and the box; pressing inside the calendar or popover does not", async () => {
+      await openTimed();
+      fireEvent.pointerDown(screen.getByTestId("calendar-view"));
+      fireEvent.pointerDown(screen.getByLabelText(i18n.t("schedule.eventTitle")));
+      expect(document.querySelector(".schedule-popover")).not.toBeNull();
+      expect(pendingOf()).toBeDefined();
+      fireEvent.pointerDown(document.body);
+      await waitFor(() => expect(document.querySelector(".schedule-popover")).toBeNull());
+      await waitFor(() => expect(pendingOf()).toBeUndefined());
+    });
+
+    it("the footer has more options then save and no cancel; more options opens every row", async () => {
+      await openTimed();
+      const footer = document.querySelector(".schedule-popover__footer") as HTMLElement;
+      const labels = Array.from(footer.querySelectorAll("button")).map((b) => b.textContent);
+      expect(labels).toEqual([i18n.t("schedule.moreOptions"), i18n.t("common.save")]);
+      expect(screen.queryByRole("button", { name: i18n.t("common.cancel") })).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: i18n.t("schedule.moreOptions") }));
+      expect(await screen.findAllByLabelText(i18n.t("schedule.time"))).toHaveLength(2);
+      expect(screen.getByPlaceholderText(i18n.t("schedule.locationPlaceholder"))).toBeTruthy();
+      expect(screen.getByPlaceholderText(i18n.t("schedule.descriptionPlaceholder"))).toBeTruthy();
+      expect(screen.queryByRole("button", { name: i18n.t("schedule.moreOptions") })).toBeNull();
+    });
+
+    it("places the create popover beside the box rect reported by the calendar", async () => {
+      await openTimed();
+      act(() => {
+        calendarProps.current?.onEventRect("pending", { top: 100, left: 200, right: 300, bottom: 140, width: 100, height: 40 });
+      });
+      await waitFor(() => {
+        const el = document.querySelector(".schedule-popover--create") as HTMLElement;
+        expect(el.style.left).toBe("308px");
+      });
+    });
   });
 
   it("C3: the single view button opens a menu of four views and picks one", async () => {
@@ -638,11 +779,11 @@ describe("SchedulePage on CalendarView", () => {
     await ready();
     expect(pendingOf()).toBeUndefined();
     selectRange(new Date(2026, 10, 10, 10, 0), new Date(2026, 10, 10, 11, 0), false);
-    await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+    await screen.findByLabelText(i18n.t("schedule.eventTitle"));
     const pending = pendingOf();
     expect(pending?.id).toBe("pending");
     expect(pending?.title).toBe(i18n.t("schedule.noTitle"));
-    expect(pending?.editable).toBe(false);
+    expect(pending?.editable).toBe(true);
     fireEvent.keyDown(document.body, { key: "Escape" });
     await waitFor(() => expect(pendingOf()).toBeUndefined());
   });

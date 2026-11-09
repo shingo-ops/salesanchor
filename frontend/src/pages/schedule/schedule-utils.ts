@@ -239,6 +239,103 @@ export function fitPopover(
   return { left, top };
 }
 
+/** 下書きの日時の 5 項目（ScheduleDraft の一部・design §3.17 作り方 1） */
+export interface DraftDates {
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
+  allDay: boolean;
+}
+
+/** 作る小窓を仮の箱の横に置くときの、箱と小窓のあき(px)。--space-2 と同じ値（design §3.17 作り方 4） */
+export const CREATE_POPOVER_GAP = 8;
+
+/**
+ * 下書きの日時 → 仮の箱の start・end・allDay（design §3.17 作り方 1・G47）。
+ * 終日の end は endDate の次の日 0 時（FullCalendar の終日の end と同じ）。
+ * 日時が読めない・end が start 以前のときは null（箱を出さない）。保存（saveEvent）と同じ combineDateTime を使う。
+ */
+export function draftToRange(draft: DraftDates): { start: Date; end: Date; allDay: boolean } | null {
+  const start = combineDateTime(draft.startDate, draft.allDay ? "00:00" : draft.startTime);
+  const end = draft.allDay
+    ? addDays(combineDateTime(draft.endDate, "00:00"), 1)
+    : combineDateTime(draft.endDate, draft.endTime);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end.getTime() <= start.getTime()) return null;
+  return { start, end, allDay: draft.allDay };
+}
+
+/**
+ * 箱の日時 → 下書きの日時（design §3.17 作り方 2）。openCreateRange と moveDraft の両方が使う。
+ * 終日: endDate は end（無ければ start＋1 日）の 1 日前、時刻は 00:00／23:59。
+ * 時刻つき: end が無ければ start＋1 時間（FullCalendar の既定と同じ）。
+ */
+export function rangeToDraftDates(start: Date, end: Date | null, allDay: boolean): DraftDates {
+  if (allDay) {
+    const endDay = end ?? addDays(start, 1);
+    return {
+      startDate: formatDateInput(start),
+      startTime: "00:00",
+      endDate: formatDateInput(addDays(endDay, -1)),
+      endTime: "23:59",
+      allDay: true,
+    };
+  }
+  const timedEnd = end ?? new Date(start.getTime() + 60 * 60 * 1000);
+  return {
+    startDate: formatDateInput(start),
+    startTime: formatTimeInput(start),
+    endDate: formatDateInput(timedEnd),
+    endTime: formatTimeInput(timedEnd),
+    allDay: false,
+  };
+}
+
+/**
+ * 作る小窓で始まりの日付・時刻だけを直したとき、長さを保って終わりも同じだけずらす（design §3.17 作り方 1・Google と同じ）。
+ * 今の下書きの長さが読めない（どちらかが読めない・0 以下）か、新しい始まりが読めないときは、始まりだけ入れ替える。
+ */
+export function shiftDraftStart<T extends DraftDates>(draft: T, nextStartDate: string, nextStartTime: string): T {
+  const startOnly = { ...draft, startDate: nextStartDate, startTime: nextStartTime };
+  if (draft.allDay) {
+    const oldStart = combineDateTime(draft.startDate, "00:00");
+    const oldEnd = combineDateTime(draft.endDate, "00:00");
+    const nextStart = combineDateTime(nextStartDate, "00:00");
+    if ([oldStart, oldEnd, nextStart].some((d) => Number.isNaN(d.getTime())) || oldEnd < oldStart) return startOnly;
+    const days = Math.round((oldEnd.getTime() - oldStart.getTime()) / (24 * 60 * 60 * 1000));
+    return { ...startOnly, endDate: formatDateInput(addDays(nextStart, days)) };
+  }
+  const oldStart = combineDateTime(draft.startDate, draft.startTime);
+  const oldEnd = combineDateTime(draft.endDate, draft.endTime);
+  const nextStart = combineDateTime(nextStartDate, nextStartTime);
+  if ([oldStart, oldEnd, nextStart].some((d) => Number.isNaN(d.getTime())) || oldEnd <= oldStart) return startOnly;
+  const nextEnd = new Date(nextStart.getTime() + (oldEnd.getTime() - oldStart.getTime()));
+  return { ...startOnly, endDate: formatDateInput(nextEnd), endTime: formatTimeInput(nextEnd) };
+}
+
+/**
+ * 作る小窓を仮の箱の横に置く（design §3.17 作り方 4・G43・Google の実測 R12-3）。
+ * 横: 箱の右＋gap。入らなければ箱の左−小窓の幅−gap。
+ * 縦: 「箱の上の端」と「画面の真ん中に置いた位置」の小さい方を、margin〜(画面の高さ−小窓の高さ−margin) に収める。
+ * 箱が無いとき（C キー・作成ボタン）は fitPopover と同じ真ん中。
+ */
+export function fitCreatePopover(
+  anchor: AnchorRect | null,
+  size: PopoverSize,
+  viewport: PopoverViewport,
+  margin: number,
+  gap: number,
+): { left: number; top: number } {
+  if (!anchor) return fitPopover(null, size, viewport, margin);
+  const maxLeft = Math.max(margin, viewport.width - size.width - margin);
+  const maxTop = Math.max(margin, viewport.height - size.height - margin);
+  const rightSide = anchor.right + gap;
+  const leftSide = anchor.left - size.width - gap;
+  const left = clamp(rightSide + size.width > viewport.width - margin ? leftSide : rightSide, margin, maxLeft);
+  const top = clamp(Math.min(anchor.top, (viewport.height - size.height) / 2), margin, maxTop);
+  return { left, top };
+}
+
 export function normalizeEvent(event: ApiCalendarEvent): ScheduleItem {
   const start = parseLocalDate(event.start_datetime);
   const end = parseLocalDate(event.end_datetime);
