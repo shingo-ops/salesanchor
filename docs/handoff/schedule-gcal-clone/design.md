@@ -104,15 +104,15 @@ PO 2026-11-09 の言葉:「つぎは新規の予定を追加するときの表�
 
 | # | 成功条件 | 確かめ方 | 根拠 |
 |---|---|---|---|
-| G42 | 時間割を押して（引っぱって）作る小窓の見た目が Google と同じ並びになる。①幅 600px（窓が狭いときは窓の幅−24px）②角の丸み 28px・枠線なし・地は薄い色 ③題名は下線だけの欄で、文字の大きさ 22px、空のときは「タイトルを追加」 ④行は「絵の列（左から 24px）＋中身（左から 68px）」で、題名も中身の列にそろう ⑤1 行の高さは 40px 以上 ⑥下の右に「その他のオプション」と「保存」が並ぶ（「キャンセル」は無い。閉じるのは右上の ×・Esc・時間割の外を押す） | 本番 /schedule の週で空の升目を押し、小窓の `getBoundingClientRect().width`・`border-radius`・`border-width`・`background-color`、題名の欄の `font-size`・`border-bottom-width`・`border-top-width`（0）・`placeholder`、日時の行の絵と文字の左の位置（小窓の左から 24px・68px・差 ±2px）、各行の高さ、下のボタンの文字と並び順を読む。Google の作る小窓（R12-1）と並べて画面写しを撮る（保存しない） | R12-1・R12-2 |
-| G43 | 作る小窓は、時間割の仮の箱の横（右。右に入らないときは左）に 8px あけて出る。縦の位置は「箱の上の端」と「画面の真ん中に置いた位置」の小さい方（画面からはみ出さない）。C キー・左の作成ボタンから作るとき（箱が無い）は今と同じく画面の真ん中 | 本番の週で、月曜 10 時・土曜 10 時・水曜 21 時の 3 か所を押し、仮の箱と小窓の四角を読む。箱の右（左）の端と小窓の左（右）の端の差が 8px ±1、上の端が式どおり ±1。C キーで開いて真ん中に出ることも見る | R12-3 |
+| G42 | 時間割を押して（引っぱって）作る小窓の見た目が Google と同じ並びになる。①幅 600px（窓が狭いときは窓の幅−24px）②角の丸み 28px・枠線なし・地は薄い色（明るい画面 rgb(247,250,252)・ダーク rgb(36,48,70)＝`--bg-subtle`）③題名は下線だけの欄（下線 1px＝`--border`: 明るい rgb(226,232,240)・ダーク rgb(51,65,85)。押すと 2px＝`--accent`: 明るい rgb(30,58,138)・ダーク rgb(91,141,217)）で、文字の大きさ 22px、空のときは「タイトルを追加」 ④行は「絵の列（左から 24px）＋中身（左から 68px）」で、題名も中身の列にそろう ⑤1 行の高さは 40px 以上 ⑥下の右に「その他のオプション」と「保存」が並ぶ（「キャンセル」は無い。閉じるのは右上の ×・Esc・時間割の外を押す） | 本番 /schedule の週で空の升目を押し、小窓の `getBoundingClientRect().width`・`border-radius`・`border-width`・`background-color`、題名の欄の `font-size`・`border-bottom-width`・`border-top-width`（0）・`placeholder`、日時の行の絵と文字の左の位置（小窓の左から 24px・68px・差 ±2px）、各行の高さ、下のボタンの文字と並び順を読む。Google の作る小窓（R12-1）と並べて画面写しを撮る（保存しない） | R12-1・R12-2 |
+| G43 | 作る小窓は、時間割の仮の箱の横（右。右に入らないときは左）に 8px あけて出る。縦の位置は「箱の上の端」と「画面の真ん中に置いた位置」の小さい方（画面からはみ出さない）。C キー・左の作成ボタンから作るとき（箱が無い）は今と同じく画面の真ん中。月表示の 1 日押し（箱が無い）は今と同じく押した所の横 | 本番の週で、月曜 10 時・土曜 10 時・水曜 21 時の 3 か所を押し、仮の箱と小窓の四角を読む。箱の右（左）の端と小窓の左（右）の端の差が 8px ±1、上の端が式どおり ±1。C キーで開いて真ん中に出ること、月表示で 1 日を押して押した所の横（12px あけ）に出ることも見る | R12-3 |
 | G44 | 作る小窓が開いている間、画面が灰色にならない（幕が無い）。時間割は押せる・引っぱれる。時間割と小窓の外（左の欄・上の帯）を押すと小窓が閉じ、仮の箱も消える。詳しく見る・直す小窓と「他 N 件」の小窓は今のまま（幕あり） | 本番の週で作る小窓を開き、`.schedule-popover-backdrop` が 0 個。詳しく見る小窓では 1 個。左の欄の空いた所を押すと小窓と仮の箱が消える | R12-2・R12-4 |
-| G45 | 作る小窓が開いたまま、仮の箱をつかんで別の時刻・別の日へ動かせる。離すと、小窓の日時の 1 行がすぐ新しい日時になり、小窓は動いた箱の横へ付いていく。題名に入れた文字は消えず、箱にも出る | 本番の週で月曜 10 時を押し、題名に「試し」と入れ、箱を水曜 14 時へ動かす。日時の 1 行が「11月11日(水) 午後2時～午後3時」の形になる・小窓の左の端が箱の右の端＋8px（または左）・題名の欄が「試し」・箱の文字が「試し」。保存せず × で閉じる | R12-5 |
+| G45 | 作る小窓が開いたまま、仮の箱をつかんで別の時刻・別の日へ動かせる。離すと、小窓の日時の 1 行がすぐ新しい日時になり、小窓は動いた箱の横へ付いていく。題名に入れた文字は消えず、箱にも出る | 本番の週で月曜 10 時を押し、題名に「試し」と入れ、箱を同じ月曜の 13 時へ動かし（同じ日の中）、続けて水曜 14 時へ動かす（別の日）。どちらの後も、日時の 1 行が動かした後の日時（例「11月11日(水) 午後2時～午後3時」の形）・小窓の左の端が箱の右の端＋8px（または左）±1・小窓の上の端が式どおり ±1。題名の欄が「試し」・箱の文字が「試し」。保存せず × で閉じる | R12-5 |
 | G46 | 作る小窓が開いたまま、仮の箱の下の端を引いて長さを変えられる。離すと日時の 1 行の終わりの時刻が変わる | 本番の週で 10 時の箱の下の端を 11 時半まで引き、日時の 1 行が「午前10時～午前11時30分」の形になる。保存しない | R12-5 |
-| G47 | 小窓の日付・時刻の欄を直すと、仮の箱も同じ日時へ動く（箱と小窓の日時は 1 か所から出る） | 本番の週で日時の 1 行を押して始まりを 15:00 に直し、箱が 15 時の所へ動く。単体の試験で、下書きの日時を変えると仮の箱の start・end が変わる | R12-6 |
+| G47 | 小窓の日付・時刻の欄を直すと、仮の箱も同じ日時へ動く（箱と小窓の日時は 1 か所から出る） | 本番の週で 10 時の箱を作り、日時の 1 行を押して始まりを 15:00 に直すと、箱が 15 時〜16 時の所へ動く（長さ 1 時間を保つ）。単体の試験で、下書きの日時を変えると仮の箱の start・end が変わる | R12-6 |
 | G48 | 箱を動かした後に「保存」を押すと、動かした後の日時で保存される。仮の箱を動かしても、保存を押すまでは裏側へ何も送らない | 単体の試験で、仮の箱を動かした後の保存の送り先・中身（`POST /calendar/events` の start_datetime・end_datetime）と、動かした時点で PATCH・POST が 0 回であることを確かめる（本番では保存しない） | R12-6 |
 | G49 | 月表示で 2 日以上を引っぱって作る終日の仮の箱も、つかんで別の日へ動かせ、小窓の日付が変わる。月の 1 日押しは今と同じ（箱を出さず 7 時から 1 時間） | 本番の月で 2 日を引っぱり、箱を 1 週後へ動かして日時の 1 行を読む。単体の試験で終日の箱を動かした後の下書き（startDate・endDate・allDay）を確かめる | R12-5・R12-6 |
-| G50 | ダークでも同じ並びで、色はトークンだけ。既にある項目（種類・Google Meet・社員にも見せる・場所・説明）は 1 つも減らない。英語の画面でも文字が t() から出る | 本番でダークに切り替えて小窓の地・下線・文字の色を読む（明るい画面と別の値）。作る小窓に 5 つの項目が出る（Meet は Google をつないだ人だけ）。CI の色・数値の見張りと i18n の検査が緑 | R12-2 |
+| G50 | ダークでも同じ並びで、色はトークンだけ。既にある項目（種類・Google Meet・社員にも見せる・場所・説明）は 1 つも減らない。英語の画面でも文字が t() から出る | 本番でダークに切り替えて小窓の地・題名の下線・押した時の下線の色を読み、G42 ②③ のダークの値（rgb(36,48,70)・rgb(51,65,85)・rgb(91,141,217)）と一致する。作る小窓に 5 つの項目が出る（Meet は Google をつないだ人だけ）。CI の色・数値の見張りと i18n の検査が緑 | R12-2 |
 
 ## 3. 作り方（How）
 
@@ -627,18 +627,25 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 1. 仮の箱の日時を下書き 1 か所から出す（G47・SSOT）。
    - `pendingRange` をやめ、`pendingVisible`（真偽）だけ持つ。時間割を押して作ったときだけ真（今と同じ条件）。作る小窓以外になったら偽（今の `:1221-1224` と同じ道）。
    - 箱の start・end・allDay は `draft` から出す（終日は `endDate` の次の日 0 時を end にする。日時が読めない・end が start 以前のときは箱を出さない）。この変換は `schedule-utils.ts` に純粋な関数 `draftToRange(draft)` として置き、`saveEvent`（`:1090-1095`）の日時の作り方と同じ `combineDateTime` を使う。
-   - 箱は `editable: true` にする。
+   - 箱は `editable: true` にする。箱の文字は下書きの題名 `draft.title.trim() || t("schedule.noTitle")`（今の `:1262` の固定の「(タイトルなし)」をやめる・G45「箱にも出る」）。
+   - `pendingRange` を使う所は全部置き換える（2026-11-09 に `grep -n setPendingRange` で 5 か所）: 消す 3 か所 `:1223`（作る小窓以外になった）・`:1249`（月の 1 日押しの道）・`:1590`（「他 N 件」）は `pendingVisible` を偽に、作る `:1244`（openCreateRange）は下書きを入れて真に、宣言 `:952` は `pendingVisible` に替える。
+   - `calendarEvents`（`:1258`）は `useMemo` で包み、依存は「見えている予定」と `draft` の日時・題名・終日と `pendingVisible` にする（毎回新しい配列を作って金型の `fcEvents` を作り直さない）。
+   - 作る小窓で始まりの日付・時刻だけを直したときは、長さを保って終わりも同じだけずらす（Google と同じ。直す小窓は今のまま）。そうしないと終わり≦始まりになって箱が消え、G47 を満たせない。この計算は純粋な関数 `shiftDraftStart(draft, nextStartDate, nextStartTime)`（`schedule-utils.ts`）に置き、作る小窓の始まりの日付・時刻の欄（`:396-414`）の `onChange` だけがこれを使う。
 2. 箱を動かした・長さを変えたら、下書きを直す（G45・G46・G48・G49）。
    - `onEventMove`・`onEventResize` で id が `"pending"` のときは `patchMoved` を呼ばず、新しい関数 `moveDraft(start, end, allDay)` で `draft` の日付・時刻・終日を直す。裏側へは何も送らない。
    - 終日へ動かしたとき（end が無い）は 1 日、時刻つきへ動かしたとき（end が無い）は 1 時間（FullCalendar の既定と同じ）。
+   - 日時→下書きの変換は純粋な関数 `rangeToDraftDates(start, end, allDay)`（`schedule-utils.ts`）1 つにする。終日は `endDate = addDays(end ?? start＋1 日, −1)`・時刻は 00:00／23:59（今の `openCreateRange` と同じ）。時刻つきは end が無ければ start＋1 時間。`openCreateRange`（`:1227-1245` の `lastDay` の計算）と `moveDraft` の両方がこれを使い、`draftToRange` と往復して同じ値に戻る。
+   - 長さを変えたとき（`onEventResize` は終日かどうかを渡さない・`frontend/src/components/CalendarView.tsx:313`）は、id が `"pending"` なら終日かどうかを `draft.allDay` から取る（今の `itemById(id)?.allDay` は仮の箱では偽になり、終日の箱が時刻つきに化けるため）。
 3. 作る小窓だけ幕を外す（G44）。
    - `SchedulePopover` の幕（`:289`）を `mode !== "create"` のときだけ出す。「他 N 件」の小窓（`:739`）は変えない。
-   - 作る小窓のときは、document の `pointerdown` を見て、押した所が小窓の中でも時間割の中でもないときに閉じる（今の幕を押したときと同じ `onClose`）。時間割の中を押したときは FullCalendar に任せる（空の升目は今と同じく新しい箱で作り直す・別の予定は詳しく見る小窓に替わる・仮の箱はつかんで動かせる）。時間割の中かどうかは、予定の画面の時間割の箱（`.schedule-calendar`・`:1563`）に `ref` を付けて `contains` で見る（FullCalendar の名前を画面に出さない）。
+   - 作る小窓のときは、document の `pointerdown` を capture で見て、`event.composedPath()` に小窓の要素も時間割の箱も入っていないときに閉じる（今の幕を押したときと同じ `onClose`）。capture にするのは、押した先の部品が止めても届くようにするため。日付の見出し（日の数字）を押したときは、今と同じく日表示へ移り（`:1581-1584`）、作る小窓は閉じる（`popover` が null になり、`:1221-1224` で仮の箱も消える）。時間割の中を押したときは FullCalendar に任せる（空の升目は今と同じく新しい箱で作り直す・別の予定は詳しく見る小窓に替わる・仮の箱はつかんで動かせる）。時間割の中かどうかは、予定の画面の時間割の箱（`.schedule-calendar`・`:1563`）に `ref` を付けて `contains` で見る（FullCalendar の名前を画面に出さない）。
    - 押している間の幕の色の token（`--schedule-overlay-scrim`）は残る道（詳しく見る・他 N 件）で使い続ける。
 4. 小窓を箱の横に置く（G43）。
-   - 金型 `CalendarView` に口を 1 つ足す: `onEventRect?: (id: string, rect: CalendarViewRect | null) => void` と、その対象 `trackEventId?: string`。金型は `eventDidMount` で対象の要素を覚え（`eventWillUnmount` で忘れる）、描いた後と、時間割の巻き上げ（`wrapperRef` の中の scroll を capture で受ける）と窓の大きさが変わった時に、その要素の四角を `rectOf` で返す。FullCalendar の型は金型の外に出さない（ADR-1065 What 1）。
+   - 金型 `CalendarView` に口を 1 つ足す: `onEventRect?: (id: string, rect: CalendarViewRect | null) => void` と、その対象 `trackEventId?: string`。金型は `eventDidMount` で対象の要素を覚え、`eventWillUnmount` では覚えている要素と同じときだけ忘れる（別の日へ動かすと新しい要素の mount の後に古い要素の unmount が来ることがあるため）。FullCalendar の型は金型の外に出さない（ADR-1065 What 1）。
+   - 四角を測る時（FullCalendar 6.1.22 は同じ日の中で動かす・長さを変えるとき要素を作り直さず、外側の `.fc-timegrid-event-harness` の style だけを変える。別の日へ動かすと作り直す。初めの mount の時は `visibility: hidden` のことがある）: ①`eventDidMount` の後の `requestAnimationFrame` ②覚えた要素の一番近い `.fc-timegrid-event-harness`（無ければ要素自身）の `style` 属性の変化を `MutationObserver` で見る ③`eventDrop`・`eventResize` の後の `requestAnimationFrame` ④時間割の巻き上げ（`wrapperRef` の中の scroll を capture で受ける）⑤今ある `ResizeObserver`（`:123-131`）の中。どれも `rectOf` で返す。
+   - 見えない（`visibility: hidden`・幅 0）ときは `null` を返す。つかんでいる間・引いている間（`eventDragStart`〜`eventDragStop`・`eventResizeStart`〜`eventResizeStop`）は返さず、離した後に 1 回返す（小窓が指の下で揺れない）。
    - 予定の画面は `trackEventId="pending"` を渡し、返ってきた四角を作る小窓の `anchor` にする（押した点の四角は使わない）。
-   - 置き場所の式は新しい純粋な関数 `fitCreatePopover(anchor, size, viewport, margin, gap)`（`schedule-utils.ts`）: 横は箱の右＋gap、入らなければ箱の左−小窓の幅−gap。縦は `min(anchor.top, (viewport.height − size.height) / 2)` を margin〜(画面の高さ−小窓の高さ−margin) に収める。gap は 8（`--space-2` と同じ値・`POPOVER_MARGIN` と同じく定数で持つ）。箱が無いとき（C キー・作成ボタン）は今の `fitPopover` と同じ真ん中。詳しく見る小窓・他 N 件の小窓は今の `fitPopover` のまま。
+   - 置き場所の式は新しい純粋な関数 `fitCreatePopover(anchor, size, viewport, margin, gap)`（`schedule-utils.ts`）: 横は箱の右＋gap、入らなければ箱の左−小窓の幅−gap。縦は `min(anchor.top, (viewport.height − size.height) / 2)` を margin〜(画面の高さ−小窓の高さ−margin) に収める。gap は 8（`--space-2` と同じ値・`POPOVER_MARGIN` と同じく定数で持つ）。箱が無いとき（C キー・作成ボタン）は今の `fitPopover` と同じ真ん中。月表示の 1 日押し（箱を出さない）は今のまま押した点の横（`fitPopover`）。四角が `null` の間は、前に受けた四角（無ければ押した点）のまま置く。詳しく見る小窓・他 N 件の小窓は今の `fitPopover` のまま。
 5. 作る小窓の見た目を Google に寄せる（G42・G50）。作る小窓だけに `schedule-popover--create` の class を足し、規則はその下だけに書く（詳しく見る・直す小窓は変えない）。
    - 小窓: 幅 `--schedule-create-popover-width: 37.5rem`、丸み `--schedule-create-popover-radius: 1.75rem`、地 `--schedule-create-popover-bg: var(--bg-subtle)`、枠なし、影は今の `--shadow-lg`。新しいトークンは `frontend/src/tokens.css` の `--schedule-popover-max-h` の次に置く（色は既存トークンを指すだけなので、ダークでも `--bg-subtle` のダークの値になる）。あわせて `frontend/src/pages/schedule.css:7-8` の `--schedule-popover-width`・`--schedule-popover-max-h` の写しを消し、`frontend/src/tokens.css:409-410` の 1 か所にする（値は同じなので見た目は変わらない）。
    - 行の形: 中身を 2 列の格子（`grid-template-columns: var(--schedule-create-icon-col) minmax(0, 1fr)`・`--schedule-create-icon-col: 2.75rem`＝絵 20px＋あき 24px）にし、小窓の左右の内側のあきを `--space-6`（24px）にする。絵は 1 列目、中身は 2 列目。各行の高さは `min-height: var(--space-10)`（40px）。題名は 2 列目に置く（Google と同じく 68px）。
@@ -652,9 +659,9 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 7. ADR-1065 の What 6 に 1 文足す:「予定の四角を知りたいときは、呼ぶ側が対象の id と口（onEventRect）を渡す。金型はその予定の四角だけを返す」。`node scripts/generate-adr-index.js` で索引を作り直す。
 
 試験:
-- `frontend/src/pages/schedule/schedule-utils.test.ts`: `draftToRange`（時刻つき・終日 1 日・終日 2 日・読めない・end≦start）と `fitCreatePopover`（右・左・縦の min・下にはみ出す・箱なしで真ん中）。
-- `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`: 作る小窓に幕が無い・詳しく見るには幕がある／仮の箱が `editable: true`／金型の `onEventMove("pending", …)` を呼ぶと日時の 1 行が変わり、PATCH・POST が 0 回、続けて保存すると POST の start_datetime・end_datetime が動かした後の値／`onEventResize("pending", …)` で終わりが変わる／終日の箱を動かすと startDate・endDate が変わる／日時の欄を直すと箱の start が変わる／時間割と小窓の外の pointerdown で閉じ、時間割の中の pointerdown では閉じない／下のボタンが「その他のオプション」「保存」の順で「キャンセル」が無い／「その他のオプション」で 3 つの行が開く。
-- `frontend/src/components/CalendarView.test.tsx`: `trackEventId` を渡すと、その予定の描画の後に `onEventRect` が四角つきで呼ばれ、ほかの予定では呼ばれない。
+- `frontend/src/pages/schedule/schedule-utils.test.ts`: `draftToRange`（時刻つき・終日 1 日・終日 2 日・読めない・end≦start）・`rangeToDraftDates`（終日 1 日・終日 2 日・時刻つき・end なし）・`draftToRange` と `rangeToDraftDates` の往復が同じ値（終日 1 日・終日 2 日・時刻つき）・`shiftDraftStart`（時刻つきで 10:00〜11:00 の始まりを 15:00 にすると 15:00〜16:00・日付を 1 日進めると終わりも 1 日進む・終日）・`fitCreatePopover`（右・左・縦の min・下にはみ出す・箱なしで真ん中）。
+- `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`: 作る小窓に幕が無い・詳しく見るには幕がある／仮の箱が `editable: true`／題名に「試し」と入れると仮の箱の title が「試し」・空なら「(タイトルなし)」／作る小窓で始まりの時刻を直すと箱の start と end が同じ長さのまま動く／終日の仮の箱で `onEventResize("pending", …)` を呼ぶと下書きの allDay が真のまま／金型の `onEventMove("pending", …)` を呼ぶと日時の 1 行が変わり、PATCH・POST が 0 回、続けて保存すると POST の start_datetime・end_datetime が動かした後の値／`onEventResize("pending", …)` で終わりが変わる／終日の箱を動かすと startDate・endDate が変わる／日時の欄を直すと箱の start が変わる／時間割と小窓の外の pointerdown で閉じ、時間割の中の pointerdown では閉じない／下のボタンが「その他のオプション」「保存」の順で「キャンセル」が無い／「その他のオプション」で 3 つの行が開く。
+- `frontend/src/components/CalendarView.test.tsx`: `trackEventId` を渡すと、その予定の描画の後に `onEventRect` が四角つきで呼ばれ、ほかの予定では呼ばれない／同じ日の中で start だけ変えた events を渡し直すと（要素は作り直されない）、`onEventRect` がもう一度呼ばれる／`eventWillUnmount` が古い要素で後から来ても、新しい要素を忘れない。
 - 見た目の値（幅・丸み・22px・68px・40px・8px）は jsdom が計算しないので、受入れで本番の値を読む（G42〜G44）。
 
 選ばなかった案:
@@ -673,7 +680,8 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - 幅 600px の小窓が狭い窓ではみ出す: 幅は `min(var(--schedule-create-popover-width), calc(100vw - var(--space-6)))`（今と同じ式）。高さは今の上限のまま。窓の幅 900 でも測る。
 - 箱の四角を返す口が多く呼ばれる: 呼ぶのは対象の予定 1 つだけで、四角が前と同じなら置き場所は変えない（`usePopoverPlacement` の今の比べ方）。
 - 金型 `TextFieldControl` の種類を足す（ADR-144・`docs/CC_UI_GOVERNANCE.md:14`「PO 許可を得てから components/ に金型を登録」）: PO の承認を得てから作る。今ある種類は変えない。
-- 月表示: 箱を出すのは 2 日以上の終日だけ（今と同じ）。1 日押しは箱なしで真ん中ではなく押した所の横（今のまま）。
+- 月表示: 箱を出すのは 2 日以上の終日だけ（今と同じ）。1 日押しは箱なしで、押した所の横（今のまま・G43 で確かめる）。
+- 要素を作り直さない動かし方で四角が古いまま: 上の作り方 4 の ②（harness の style を見る）と ③（離した後）で測り直す。単体の試験と G45 の「同じ日の中で動かす」で確かめる。
 
 戻し方: 便12 の PR を revert する（frontend だけ・DB・移行・設定は変えない）。
 
@@ -693,7 +701,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 | 便9 | 月表示の日付・今日の丸・曜日の行・予定の 1 行の形、詳しくの小窓と一覧の時刻の形（§3.14 の A 組）。金型 CalendarView の月の中身 2 つ・css・トークン 1 つ・予定の画面の 2 か所・ADR-1065 の決まり 7 に月の 1 文（§3.14「ADR の改訂」・PO 承認 2026-11-09「1」） | G31〜G35 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 | 便10 | 日・3日間・週から月へ切り替えると画面全体が消える不具合の直し（§3.15）。金型 CalendarView の 1 か所（`views` を常に渡す）と試験 | G36 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 | 便11 | 日・3日間・週の枠線を Google に揃える（§3.16）。金型 CalendarView の css に規則 8 つ・トークン 1 つ | G37〜G41 | なし（frontend の css だけ。移行・deploy・scripts・DB は無い） |
-| 便12 | 作る小窓を Google の形に・作っている途中の箱を動かせる（§3.17）。金型 CalendarView に口 1 つ（ADR-1065 What 6 に 1 文）・金型 TextFieldControl に種類 1 つ・絵 3 つ・トークン 5 つ・文言 2 つ・予定の画面 | G42〜G50 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
+| 便12 | 作る小窓を Google の形に・作っている途中の箱を動かせる（§3.17）。金型 CalendarView に口 1 つ（ADR-1065 What 6 に 1 文）・金型 TextFieldControl に種類 1 つ・絵 3 つ・トークン 5 つ・文言 2 つ・予定の画面 | G42〜G50 | なし（frontend だけ。移行・deploy・scripts・DB は無い）。PO 承認（G42〜G50・金型 2 つ・ADR-1065 What 6）の後に着手 |
 
 便0 を先に出す理由: 今の本番で毎回起きる間違いで、1 行で直り、載せ替えを待つ理由がない。
 
@@ -912,3 +920,12 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - (3) ○ 同じ写しで月表示の値（scrollgrid・曜日の行・日の升目・区切り・scrollbar-color）が足す前と後で全部同じ。
 - (4) ○ `check-css-hardcoded-values.js` は PASSED。新トークンは var() で、置き場所は `--schedule-gridline-w` の次の行。
 - (5) ○ 抜けなし。推奨 1 件: 短い線は 1 時間 1 行（`frontend/src/components/CalendarView.tsx:194`）が前提 → §3.16 の心配と対処に 1 行足した。
+
+### 15 回目（便12・G42〜G50）: 1 回目 REVISE（2026-11-09・クラウドの Opus・origin/release/schedule-gcal-create-drag 4a98e7ff7・照合は origin/main・セッション cse_01HHUUpQ8FDPRcA2kozeeKvS）
+
+- 結果は返事の本文で全部読んだ（実行記録では途中で切れたので、セッションの画面で全文を読んだ）。行番号のずれ無し。heroicons の 3 つの絵・ADR の照合は ○。
+- 直す 1: 仮の箱の文字が固定の「(タイトルなし)」のまま（`:1262`）で G45「箱にも出る」を満たさない → §3.17 作り方 1 に `draft.title.trim() || t("schedule.noTitle")` と試験を足した。
+- 直す 2: 始まりだけ直すと終わり≦始まりになり箱が消え、G47 を確かめられない → 作る小窓では長さを保って終わりもずらす（`shiftDraftStart`）。G47 の確かめ方と試験を直した。
+- 直す 3: 日時→下書きの変換が 2 か所になる・長さを変えたとき終日の箱が時刻つきに化ける（`CalendarView.tsx:313` は終日を渡さない）→ `rangeToDraftDates` 1 つにし、仮の箱は `draft.allDay` を使う。往復の試験を足した。
+- 直す 4: FullCalendar 6.1.22 は同じ日の中の動かし・長さ変えで要素を作り直さず harness の style だけ変える（timegrid `internal.js:765`）ので、`eventDidMount` だけでは四角が古い → harness の style を `MutationObserver` で見る・離した後に測る・見えないときは null・unmount は同じ要素のときだけ忘れる。G45 に同じ日の中の動かしを足した。
+- 推奨 5〜9（`calendarEvents` を useMemo・つかんでいる間は返さない／外の押しは capture と composedPath・日付の見出しを押すと閉じる・消す所の一覧／月の 1 日押しは今のまま押した所の横で G43 に足す／G42②・G50 に合格の値／§4 の便12 の行に PO 承認の後に着手）は全部入れた。消す所は審査の挙げた行ではなく、`grep -n setPendingRange` の実物（`:952,1223,1244,1249,1590`）で書いた。
