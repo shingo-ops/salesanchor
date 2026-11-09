@@ -329,3 +329,12 @@
 - user:hooks の要素は `split("|", 1)` で event を取り、残りを `rsplit("|", 1)` で matcher と組の sha8 に分ける。matcher に `|` が入る組がある（.claude/settings.json:81 の `Write|Edit`）。
 - 印の外で判定の関数が呼んでよい部品は sha8・item_sha8・parse_ts・perm_paths・load_json と、引数の gh_view・git_run、標準ライブラリだけ。ほかの部品が要るなら印の中に書く（印の外を弱めても guard_judge が変わらない道をふさぐ）。
 - 判定に使う op は record の行の op。挙げていない target と op の組は通さない（B 側）。
+
+### 13-8. 便2 のカードを書くときに決めた細部（第12版・2026-11-09。カード card-bin2.md）
+- 札の検査・語の検査・命令の形は、台本が consent-audit.py の `_ga_manifest`・`_ga_words_ok`・`_ga_hook_form`・`item_sha8` を読み込んで使う。同じ規則を台本に書き写さない（点検と台本で規則が食い違う道をふさぐ）。consent-audit.py は便2 では変えない（guard_judge を変えない）。
+- 手順の順の細部: §6 の 9（PR 番号）を札を読む前に行う。札と本体の語の検査は、PR #n のマージの版（`git show`）で読む（§5-0）。版の基準は、手順3で GitHub の main と同じと確かめた写しの HEAD にする（写しの `origin/main` の参照は古いことがあるため。§6 の 9 の `origin/main` と同じ版を指す）。
+- §6 の 5・6 の細部: 試験は、入れ先に写す前に一時の置き場へ写したもので流す。通ってから入れ先へ写し、sha256 が正本と同じことを確かめる。試験が落ちたときに `~/.claude/scripts/` に写しが残り、週次点検で説明のつかない差になるのを防ぐ。
+- 試験の呼び方の決まり: 札の `tests` の各ファイルは、引数1つ（`hooks` の1つ目の `file` の写しのパス）で流す。`.py` は `python3 -I -B`、`.sh` は `bash`。今の mac-test-guard の test_guard.py:6 と同じ形。新しい見張りの試験もこの形で書く。
+- 記録が一部書けなかったとき（perm-change.py が拒んだとき。§5-3 の秘密の値の疑いなど）は、入れたまま `INSTALL_OK_RECORD_INCOMPLETE`（終了コード 3）で終える。書けなかった変化は週次点検で B に出て、Opus が PO に報告する。
+- 同時に2回流れるのを防ぐため、`~/.claude/.install-guard.lock` をフォルダで作る（macOS に flock が無いため mkdir の形）。
+- 台本の試験では、perm-change.py を偽物に差し替える（本物は origin の URL を GitHub と決めていて、試験から GitHub に触れずには流せない。:29・:293）。本物の record の行の形は便1 の G14 で確かめ済み。
