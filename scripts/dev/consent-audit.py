@@ -1063,7 +1063,7 @@ def _ga_ci_ok(git_run, tools, v, name, mtests):
             if any(b in run for b in _GA_CI_BAD):
                 return False
             for holder in (st, job):
-                if str(holder.get("continue-on-error")).lower() == "true" or "if" in holder:
+                if ("continue-on-error" in holder and holder.get("continue-on-error") is not False) or "if" in holder:
                     return False
     return all(t in called for t in mtests)
 
@@ -1115,15 +1115,24 @@ def _ga_hookfiles_remove(home, git_run, tools, v, mc, name, m, pathsha, h):
         rc, d = git_run(["diff", "--no-renames", P, mc, "--"] + ["scripts/agent-hooks/%s/%s" % (name, t) for t in T], tools)
         if rc != 0:
             return False
+        inhead = False
         for ln in d.decode("utf-8", "replace").split("\n"):
-            if ln.startswith("-") and not ln.startswith("---"):
+            if ln.startswith("diff --git "):
+                inhead = True
+                continue
+            if inhead:
+                if ln.startswith("@@"):
+                    inhead = False
+                elif ln.startswith("---") or ln.startswith("+++"):
+                    continue
+            if ln.startswith("-"):
                 return False
-            if ln.startswith("+") and not ln.startswith("+++") and any(rx.search(ln[1:]) for rx in _GA_PLUS_RES):
+            if ln.startswith("+") and any(rx.search(ln[1:]) for rx in _GA_PLUS_RES):
                 return False
     return _ga_ci_ok(git_run, tools, v, name, m["tests"])
 
 
-def _ga_check(home, row, held_ts, since, rows, gh_view, git_run, v, el, now):
+def _ga_check(home, row, held_ts, since, rows, gh_view, git_run, v, el, now, came=None, gone=None):
     if el is None or now is None or not v:
         return False
     tools = perm_paths(home)["tools"]
@@ -1202,6 +1211,8 @@ def _ga_check(home, row, held_ts, since, rows, gh_view, git_run, v, el, now):
     event, rest = el.split("|", 1)
     matcher, _gsha = rest.rsplit("|", 1)
     if op == "remove":
+        if not (came is not None and "%s|%s|%s" % (event, matcher, row.get("replaced_by")) in came):
+            return False
         return _ga_user_remove(home, row, event, matcher, rows, cands)
     grp = _ga_group(home, event, matcher, h)
     if grp is None:
@@ -1213,21 +1224,22 @@ def _ga_check(home, row, held_ts, since, rows, gh_view, git_run, v, el, now):
     for rr in rows:
         if (rr.get("sub") == "record" and rr.get("target") == "user-hooks" and rr.get("op") == "remove"
                 and rr.get("po_ref") == ref and rr.get("replaced_by") == h
+                and gone is not None and "%s|%s|%s" % (event, matcher, rr.get("item_hash")) in gone
                 and _ga_user_remove(home, rr, event, matcher, rows, cands)):
             return True
     return False
 
 
-def guard_add_ok(home, row, held_ts, key, h, since, rows, gh_view, git_run, v, el, now):
+def guard_add_ok(home, row, held_ts, key, h, since, rows, gh_view, git_run, v, el, now, came=None, gone=None):
     """設計 ADR-1072: AI が PR で入れた見張りを、記録で説明できるか（強める変更だけ）。"""
     try:
-        return bool(_ga_check(home, row, held_ts, since, rows, gh_view, git_run, v, el, now))
+        return bool(_ga_check(home, row, held_ts, since, rows, gh_view, git_run, v, el, now, came, gone))
     except Exception:
         return False
 # <<< ADR-1072 guard-add judge
 
 
-def record_ok(home, row, held, key, h, since, rows, gh_view, git_run, v, *, el=None, now=None):
+def record_ok(home, row, held, key, h, since, rows, gh_view, git_run, v, *, el=None, now=None, came=None, gone=None):
     """record の行の確かめ（設計 §4-3 第6版）。通ったときだけ差分の説明に使う。"""
     ref = row.get("po_ref") or ""
     held_ts = parse_ts(held.get("ts")) if held else None
@@ -1257,7 +1269,7 @@ def record_ok(home, row, held, key, h, since, rows, gh_view, git_run, v, *, el=N
         return consent_ticket_has_hash(home, key3[0], h, used)
     # >>> ADR-1072 guard-add judge
     if ref.startswith("PR#") and row.get("target") in ("hook-files", "user-hooks"):
-        return guard_add_ok(home, row, held_ts, key, h, since, rows, gh_view, git_run, v, el, now)
+        return guard_add_ok(home, row, held_ts, key, h, since, rows, gh_view, git_run, v, el, now, came, gone)
     # <<< ADR-1072 guard-add judge
     if b_target and row.get("target") not in PR_ONLY_TARGETS:
         return False
@@ -1275,7 +1287,7 @@ def record_ok(home, row, held, key, h, since, rows, gh_view, git_run, v, *, el=N
     return pr_diff_ok(home, row, h, v, mc, git_run)
 
 
-def judge_change(home, key, h, op, since, rows, gh_view, git_run=None, v=None, *, el=None, now=None):
+def judge_change(home, key, h, op, since, rows, gh_view, git_run=None, v=None, *, el=None, now=None, came=None, gone=None):
     """差分1件を判定する。None=説明がつく、'A'=台帳に無い、'B'=PO 記録が足りない。"""
     git_run = git_run or run_git
     cands = []
@@ -1307,7 +1319,7 @@ def judge_change(home, key, h, op, since, rows, gh_view, git_run=None, v=None, *
             if not must_po and not str(row.get("category", "")).startswith("reserved"):
                 return None
             continue
-        if record_ok(home, row, held, key, h, since, rows, gh_view, git_run, v, el=el, now=now):
+        if record_ok(home, row, held, key, h, since, rows, gh_view, git_run, v, el=el, now=now, came=came, gone=gone):
             return None
     # §2-3 のキー（allow 系以外）は、通らない record の行しか無いときも B。repo:permissions.allow は
     # allow 系なので、held の行が無ければ A（design A19）。
@@ -1386,7 +1398,8 @@ def run_permissions(home, out, now=None, commit=False, gh_view=None, git_run=Non
             for op, els in (("add", added), ("remove", removed)):
                 for el in els:
                     h = element_hash(el)
-                    v = judge_change(home, k, h, op, old_ts, led["rows"], gh_view, git_run, tstate.get("v"), el=el, now=now)
+                    v = judge_change(home, k, h, op, old_ts, led["rows"], gh_view, git_run, tstate.get("v"), el=el, now=now,
+                                     came=tuple(added), gone=tuple(removed))
                     if v:
                         reasons[v].append("%s %s" % (k, h))
         # C: 台帳の鎖・行数・前回の head

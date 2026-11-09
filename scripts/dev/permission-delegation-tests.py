@@ -1682,13 +1682,63 @@ def test_g14(tmp):
         code == 0 and not ({"replaced_by", "batch", "old_json"} & set(r)))
 
 
+def gt_swap_forge(tmp, name, prior_both, final_both):
+    """入れ替えの偽装（§13）。prior_both=True なら前回の写しが [old, new]、False なら [old] だけ。"""
+    e = gt_env(tmp, name)
+    old = {"matcher": "Bash", "hooks": [gt_hk(e)]}
+    if prior_both:
+        new = {"matcher": "Bash", "hooks": [gt_hk(e), gt_guard_hk(e)]}
+        gt_set_hooks(e, [old, new])
+    else:
+        new = {"matcher": "Bash", "hooks": [gt_hk(e, "other.py"), gt_guard_hk(e)]}
+        gt_set_hooks(e, [old])
+    run_audit(e, GT_SNAP, commit=True)
+    mc = merge_pr_at(e, gt_edits({"guard.py": GT_GUARD1, "test_guard.py": GT_TEST1}, gt_manifest()), GT_W_MERGE)
+    gt_put(e, {"guard.py": GT_GUARD1})
+    h_new = audit.item_sha8(new)
+    if prior_both:
+        gt_set_hooks(e, [new])
+        gt_rec(e, "user-hooks", "add", h_new, extra=["--batch", GT_BATCH])
+        gt_rec(e, "user-hooks", "remove", audit.item_sha8(old),
+               extra=["--batch", GT_BATCH, "--replaced-by", h_new, "--old-json", json.dumps(old)])
+    else:
+        gt_set_hooks(e, [old, new])
+        fake = {"matcher": "Bash", "hooks": [gt_hk(e, "other.py")]}
+        gt_rec(e, "hook-files", "add", c8(GT_GUARD1))
+        gt_rec(e, "user-hooks", "add", h_new, extra=["--batch", GT_BATCH])
+        gt_rec(e, "user-hooks", "remove", audit.item_sha8(fake),
+               extra=["--batch", GT_BATCH, "--replaced-by", h_new, "--old-json", json.dumps(fake)])
+    return e, run_audit(e, GT_NOW, gh=lambda n: gt_view(mc) if n == 7 else None)
+
+
+def test_g15(tmp):
+    _, lines = gt_swap_forge(tmp, "g15-a", False, None)
+    chk("G15-a", "前回の写しに無い組を減の行に書いた入れ替えは B", any(" user:hooks " in x for x in gt_b(lines)))
+    _, lines = gt_swap_forge(tmp, "g15-b", True, None)
+    chk("G15-b", "前から登録済みの組を new にした入れ替え（new が今週の増に無い）は B",
+        any(" user:hooks " in x for x in gt_b(lines)))
+
+
+def test_g16(tmp):
+    a = gt_edits({"guard.py": GT_GUARD1, "test_guard.py": GT_TEST1 + "-- keep\n"}, gt_manifest())
+    c = gt_edits({"guard.py": GT_GUARD2, "test_guard.py": GT_TEST1}, gt_manifest())
+    _, lines = gt_modify_case(tmp, "g16", a, c)
+    chk("G16", "試験ファイルの本文の -- で始まる行を消す PR は B", any(" hook_files " in x for x in gt_b(lines)))
+
+
+def test_g17(tmp):
+    ci = gt_ci(["test_guard.py"], step_extra="        continue-on-error: ${{ true }}\n")
+    _, lines = gt_modify_case(tmp, "g17", GT_BASE_A, GT_BASE_C, ci=ci)
+    chk("G17", "continue-on-error が式の CI は B", any(" hook_files " in x for x in gt_b(lines)))
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="permdel-tests-")
     try:
         for fn in (test_a1, test_a2, test_a3, test_a4, test_a18, test_a5_a6, test_a7, test_a19, test_a20, test_a8, test_a9, test_a10,
                    test_a11_a12_a13, test_a14, test_a17, test_a21,
                    test_g1, test_g2, test_g3, test_g4, test_g5, test_g8, test_g10, test_g11, test_g12, test_g13,
-                   test_g14):
+                   test_g14, test_g15, test_g16, test_g17):
             try:
                 fn(tmp)
             except Exception as ex:  # 試験自体の崩れは失敗として数える
