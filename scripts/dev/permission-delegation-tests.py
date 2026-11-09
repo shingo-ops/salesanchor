@@ -789,6 +789,7 @@ def test_a19(tmp):
 
 A20_OP = "bash ~/.salesanchor-tools/docs/handoff/permission-delegation/po-register-delegation.sh consent:KEY"
 A20_ITEM = "Bash(rm:*)"
+A20_HKI_OP = "bash ~/.salesanchor-tools/docs/handoff/guard-add-by-ai/po-%s-hki.sh consent:KEY"
 
 
 def a20_text(h, op=A20_OP, heading=True, opline=True, option=True):
@@ -885,6 +886,12 @@ def test_a20(tmp):
     ng("A20-n17", "record が k2 より前", rec_off=800)
     ng("A20-n18", "record が k2 の24時間より後", rec_off=900 + 86400 + 60, now_off=900 + 86400 + 3600)
     ng("A20-n19", "同意票に item_hash が無い", text=a20_text("00000000"))
+    lines, h = a20_case(tmp, "A20-ok4", text=a20_text(audit.item_sha8(A20_ITEM), op=A20_HKI_OP % "register"))
+    chk("A20-ok4", "guard-add-by-ai の po-register-hki.sh も PO の `!` の台本として通る", not reasons(lines))
+    lines, h = a20_case(tmp, "A20-ok5", text=a20_text(audit.item_sha8(A20_ITEM), op=A20_HKI_OP % "unregister"))
+    chk("A20-ok5", "guard-add-by-ai の po-unregister-hki.sh も通る", not reasons(lines))
+    ng("A20-n21", "guard-add-by-ai の別の台本は通らない",
+       text=a20_text(audit.item_sha8(A20_ITEM), op="bash ~/.salesanchor-tools/docs/handoff/guard-add-by-ai/other.sh consent:KEY"))
     lines, h = a20_case(tmp, "A20-n20", second=True)
     bs = [x for x in lines if x.startswith("ABNORMAL_REASON=B ")]
     chk("A20-n20", "同じ po_ref の2回目は B（1回目は通る）", len(bs) == 1 and bs[0].endswith(audit.item_sha8("Bash(mv:*)")))
@@ -1732,13 +1739,148 @@ def test_g17(tmp):
     chk("G17", "continue-on-error が式の CI は B", any(" hook_files " in x for x in gt_b(lines)))
 
 
+G18_EDIT = os.path.join(ROOT, "docs", "handoff", "permission-delegation", "po_delegation_edit.py")
+G18_PDL_DESIGN = os.path.join(ROOT, "docs", "handoff", "permission-delegation", "design.md")
+G18_GAB = os.path.join(ROOT, "docs", "handoff", "guard-add-by-ai")
+G18_HKI_DESIGN = os.path.join(G18_GAB, "design.md")
+G18_AUDIT = os.path.join(HERE, "consent-audit.py")
+G18_HKI_HASH = "203789ba"
+G18_FAKE_PC = (
+    "import json, os, sys\n"
+    "with open(os.path.join(os.environ['HOME'], 'record-calls.jsonl'), 'a') as f:\n"
+    "    f.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+    "sys.exit(int(os.environ.get('FAKE_RC', '0')))\n"
+)
+
+
+def g18_settings(tmp, name):
+    d = os.path.join(tmp, name)
+    os.makedirs(os.path.join(d, "home", ".salesanchor-tools", "scripts", "dev"), exist_ok=True)
+    with open(os.path.join(d, "home", ".salesanchor-tools", "scripts", "dev", "perm-change.py"), "w") as f:
+        f.write(G18_FAKE_PC)
+    sp = os.path.join(d, "settings.json")
+    write_json(sp, {"autoMode": {"allow": ["Bash(echo x)"]}})
+    return d, sp
+
+
+def g18_edit(mode, sp, design, *extra):
+    return subprocess.run([sys.executable, "-I", "-B", G18_EDIT, mode, sp, design, G18_AUDIT] + list(extra),
+                          capture_output=True, text=True)
+
+
+def g18_allow(sp):
+    return load_json(sp)["autoMode"]["allow"]
+
+
+def g18_stmt(design, heading, label):
+    in_sec = False
+    for line in read(design).split("\n"):
+        if line.startswith("### "):
+            in_sec = line.startswith(heading)
+        elif in_sec and line.startswith("> %s:" % label):
+            return line[2:]
+    return None
+
+
+def g18_script(d, sp, name, key, rc=None):
+    env = {"HOME": os.path.join(d, "home"), "PATH": os.environ["PATH"]}
+    if rc is not None:
+        env["FAKE_RC"] = str(rc)
+    return subprocess.run(["bash", os.path.join(G18_GAB, name), key, sp], capture_output=True, text=True, env=env)
+
+
+def g18_calls(d):
+    p = os.path.join(d, "home", "record-calls.jsonl")
+    return [json.loads(x) for x in read(p).split("\n") if x] if os.path.exists(p) else []
+
+
+def g18_baks(d):
+    return [x for x in os.listdir(d) if ".bak-" in x]
+
+
+def g18_bytes(p):
+    with open(p, "rb") as f:
+        return f.read()
+
+
+def test_g18(tmp):
+    pdl = g18_stmt(G18_PDL_DESIGN, "### 4-6.", "PDL-1")
+    hki = g18_stmt(G18_HKI_DESIGN, "### 6-1.", "HKI-1")
+    HK = ["### 6-1.", "HKI-1"]
+    d, sp = g18_settings(tmp, "g18-1")
+    r = g18_edit("register", sp, G18_PDL_DESIGN)
+    a = g18_allow(sp)
+    chk("G18-1", "引数4つの register は PDL-1 を末尾に足す",
+        r.returncode == 0 and "added: PDL-1 を末尾に1件追加した" in r.stdout and "CHANGED=yes" in r.stdout
+        and a[-1] == pdl and a[0] == "Bash(echo x)" and "HASH=%s" % audit.item_sha8(pdl) in r.stdout.split("\n"))
+    d, sp = g18_settings(tmp, "g18-2")
+    r = g18_edit("register", sp, G18_HKI_DESIGN, *HK)
+    a = g18_allow(sp)
+    chk("G18-2", "引数6つで HKI-1 を足す（item_sha8 203789ba）",
+        r.returncode == 0 and "added: HKI-1 を末尾に1件追加した" in r.stdout and "CHANGED=yes" in r.stdout
+        and a[-1] == hki and audit.item_sha8(a[-1]) == G18_HKI_HASH and "HASH=%s" % G18_HKI_HASH in r.stdout.split("\n"))
+    n = len(g18_allow(sp))
+    r = g18_edit("register", sp, G18_HKI_DESIGN, *HK)
+    chk("G18-3", "もう一度 register しても変わらない",
+        r.returncode == 0 and "no change: 同じ文が既にある" in r.stdout and "CHANGED=no" in r.stdout and len(g18_allow(sp)) == n)
+    d, sp = g18_settings(tmp, "g18-4")
+    g18_edit("register", sp, G18_PDL_DESIGN)
+    g18_edit("register", sp, G18_HKI_DESIGN, *HK)
+    r = g18_edit("unregister", sp, G18_HKI_DESIGN, *HK)
+    chk("G18-4", "HKI-1 の unregister は HKI-1 だけを外す",
+        r.returncode == 0 and "removed: HKI-1 だけを外した" in r.stdout and g18_allow(sp) == ["Bash(echo x)", pdl])
+    d, sp = g18_settings(tmp, "g18-5")
+    dup = os.path.join(d, "design.md")
+    with open(dup, "w", encoding="utf-8") as f:
+        f.write("### 6-1. x\n> HKI-1: a\n> HKI-1: b\n")
+    before = g18_bytes(sp)
+    r = g18_edit("register", sp, dup, *HK)
+    chk("G18-5", "HKI-1 の行が2つなら止まり settings.json は変わらない", r.returncode != 0 and g18_bytes(sp) == before)
+    d, sp = g18_settings(tmp, "g18-6")
+    before = g18_bytes(sp)
+    rs = [g18_edit("register", sp, G18_HKI_DESIGN, "## 6.", "HKI-1"),
+          g18_edit("register", sp, G18_HKI_DESIGN, "### ", "HKI-1"),
+          g18_edit("register", sp, G18_HKI_DESIGN, "### 6", "HKI-1"),
+          g18_edit("register", sp, G18_HKI_DESIGN, "### 6-1.", "hki-1"),
+          g18_edit("register", sp, G18_HKI_DESIGN, "### 6-1.")]
+    chk("G18-6", "見出し・ラベルの形が違う5通りは exit 2 で settings.json は変わらない",
+        all(x.returncode == 2 for x in rs) and g18_bytes(sp) == before)
+    d, sp = g18_settings(tmp, "g18-7")
+    before = g18_bytes(sp)
+    r = g18_script(d, sp, "po-register-hki.sh", "x")
+    chk("G18-7", "鍵が consent: で始まらなければ exit 1・何も変えない",
+        r.returncode == 1 and g18_bytes(sp) == before and not g18_baks(d) and not g18_calls(d))
+    d, sp = g18_settings(tmp, "g18-8")
+    r = g18_script(d, sp, "po-register-hki.sh", "consent:KEY")
+    want = ["record", "--target", "user-automode-allow", "--op", "add", "--item-hash", G18_HKI_HASH,
+            "--po-ref", "consent:KEY", "--actor", "po-script"]
+    chk("G18-8", "po-register-hki.sh は控えを作り record を1回呼ぶ",
+        r.returncode == 0 and len(g18_baks(d)) == 1 and g18_calls(d) == [want])
+    d, sp = g18_settings(tmp, "g18-9")
+    before = g18_bytes(sp)
+    r = g18_script(d, sp, "po-register-hki.sh", "consent:KEY", rc=1)
+    chk("G18-9", "record が失敗したら控えから戻る", r.returncode == 1 and g18_bytes(sp) == before)
+    d, sp = g18_settings(tmp, "g18-10")
+    g18_edit("register", sp, G18_HKI_DESIGN, *HK)
+    r = g18_script(d, sp, "po-unregister-hki.sh", "consent:KEY")
+    c = g18_calls(d)
+    chk("G18-10", "po-unregister-hki.sh は HKI-1 を外し record(remove) を1回呼ぶ",
+        r.returncode == 0 and hki not in g18_allow(sp) and len(c) == 1
+        and c[0][c[0].index("--op") + 1] == "remove" and c[0][c[0].index("--item-hash") + 1] == G18_HKI_HASH)
+    d, sp = g18_settings(tmp, "g18-11")
+    g18_edit("register", sp, G18_HKI_DESIGN, *HK)
+    r = g18_script(d, sp, "po-register-hki.sh", "consent:KEY")
+    chk("G18-11", "既に HKI-1 があれば record を呼ばない",
+        r.returncode == 0 and "record: 変更が無かったので台帳には書きません" in r.stdout and not g18_calls(d))
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="permdel-tests-")
     try:
         for fn in (test_a1, test_a2, test_a3, test_a4, test_a18, test_a5_a6, test_a7, test_a19, test_a20, test_a8, test_a9, test_a10,
                    test_a11_a12_a13, test_a14, test_a17, test_a21,
                    test_g1, test_g2, test_g3, test_g4, test_g5, test_g8, test_g10, test_g11, test_g12, test_g13,
-                   test_g14, test_g15, test_g16, test_g17):
+                   test_g14, test_g15, test_g16, test_g17, test_g18):
             try:
                 fn(tmp)
             except Exception as ex:  # 試験自体の崩れは失敗として数える

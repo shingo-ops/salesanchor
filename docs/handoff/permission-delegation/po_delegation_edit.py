@@ -5,37 +5,42 @@
 - 足すのは末尾に1件。同じ文が既にあれば何もしない。外すのは PDL-1 の文だけ（他の要素は触らない）。
 - 最後に item_hash（consent-audit.py の item_sha8）を `HASH=` の行で出す。
 
-使い方: python3 po_delegation_edit.py register|unregister <settings.json> <design.md> <consent-audit.py>
+使い方: python3 po_delegation_edit.py register|unregister <settings.json> <design.md> <consent-audit.py> [<見出し> <ラベル>]
+見出しとラベルを省くと `### 4-6.` と `PDL-1`（ADR-1034）。HKI-1 は `### 6-1.` `HKI-1`（ADR-1072）。
 """
 import importlib.util
 import json
 import os
+import re
 import sys
 
 HEADING = "### 4-6."
-QUOTE_START = "> PDL-1:"
 
 
-def read_statement(design_path):
+def read_statement(design_path, heading=HEADING, label="PDL-1"):
     in_section, found = False, []
     with open(design_path, encoding="utf-8") as f:
         for line in f.read().split("\n"):
             if line.startswith("### "):
-                in_section = line.startswith(HEADING)
+                in_section = line.startswith(heading)
                 continue
-            if in_section and line.startswith(QUOTE_START):
+            if in_section and line.startswith("> %s:" % label):
                 found.append(line[2:])
     if len(found) != 1:
-        raise SystemExit("ERROR: design.md §4-6 に PDL-1 の文が %d 件ある（1件のはず）。変更しない。" % len(found))
+        raise SystemExit("ERROR: design.md %s に %s の文が %d 件ある（1件のはず）。変更しない。" % (heading[4:], label, len(found)))
     return found[0]
 
 
 def main():
-    if len(sys.argv) != 5 or sys.argv[1] not in ("register", "unregister"):
-        print("usage: po_delegation_edit.py register|unregister <settings.json> <design.md> <consent-audit.py>", file=sys.stderr)
+    if len(sys.argv) not in (5, 7) or sys.argv[1] not in ("register", "unregister"):
+        print("usage: po_delegation_edit.py register|unregister <settings.json> <design.md> <consent-audit.py> [<見出し> <ラベル>]", file=sys.stderr)
         return 2
     mode, path, design, audit_path = sys.argv[1:5]
-    text = read_statement(design)
+    heading, label = (sys.argv[5], sys.argv[6]) if len(sys.argv) == 7 else (HEADING, "PDL-1")
+    if not re.fullmatch(r"### [0-9]+(-[0-9]+)*\.", heading) or not re.fullmatch(r"[A-Z]{2,5}-[0-9]{1,3}", label):
+        print("ERROR: 見出し・ラベルの形が違う。変更しない。", file=sys.stderr)
+        return 2
+    text = read_statement(design, heading, label)
     spec = importlib.util.spec_from_file_location("consent_audit", audit_path)
     audit = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(audit)
@@ -52,14 +57,14 @@ def main():
         else:
             allow.append(text)
             changed = True
-            print("added: PDL-1 を末尾に1件追加した")
+            print("added: %s を末尾に1件追加した" % label)
     else:
         if text not in allow:
-            print("no change: PDL-1 は無い")
+            print("no change: %s は無い" % label)
         else:
             allow[:] = [x for x in allow if x != text]
             changed = True
-            print("removed: PDL-1 だけを外した")
+            print("removed: %s だけを外した" % label)
     if changed:
         tmp = path + ".potmp"
         with open(tmp, "w", encoding="utf-8") as f:
