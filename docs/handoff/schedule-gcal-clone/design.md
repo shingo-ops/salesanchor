@@ -7,7 +7,7 @@
 追加（2026-11-09）: 便9（月表示・詳しくの小窓と一覧の時刻を Google の形に・G31〜G35）は PO の選択「1、2」（2026-11-08）で設計した。作り方は §3.14。設計審査は §9 の 12 回目（APPROVE）。G31〜G35 は **PO 承認済み**（2026-11-09、PO の選択「1」＝「5か所の直しを承認して、作るところまで進める」）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin9.md`。
 追加（2026-11-09）: 便10（日・3日間・週から月へ切り替えると画面全体が消える不具合・G36）は PO の選択「1」（2026-11-09・画面が消える不具合を先に直す）。作り方は §3.15。設計審査は §9 の 13 回目（APPROVE）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin10.md`。金型の設計 `docs/handoff/calendar-view-component/design.md` §4-3 の `views` の行も「月でも渡す」に直した。
 追加（2026-11-09）: 便11（日・3日間・週の枠線を Google に揃える・G37〜G41）は PO の選択「1」（2026-11-09・枠線を揃える設計を作り、PO の承認を得てから直す）。作り方は §3.16。設計審査は §9 の 14 回目（APPROVE）。G37〜G41 は **PO 承認済み**（2026-11-09、PO の選択「1」＝「この直し方で作り、本番に出して Google と並べて確かめる」）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin11.md`。
-追加（2026-11-09）: 便12（作る小窓を Google の形に・作っている途中の箱を動かせる・G42〜G50）は PO の言葉「つぎは新規の予定を追加するときの表示の仕方と編集途中でもドラッグで動かせる機能を実装してくれ、Googleカレンダーと同じUI/UXで」（2026-11-09）。作り方は §3.17。G42〜G50 と金型 2 つの変更（ADR-144）は **PO の承認待ち**。設計審査は §9 の 15 回目。
+追加（2026-11-09）: 便12（作る小窓を Google の形に・作っている途中の箱を動かせる・G42〜G50）は PO の言葉「つぎは新規の予定を追加するときの表示の仕方と編集途中でもドラッグで動かせる機能を実装してくれ、Googleカレンダーと同じUI/UXで」（2026-11-09）。作り方は §3.17。G42〜G50 と金型 2 つの変更（ADR-144）は **PO の承認待ち**。設計審査は §9 の 15 回目（2 回目 APPROVE）。
 根拠: `docs/handoff/schedule-gcal-clone/recon.md`（以下 recon）。前の設計 `docs/handoff/schedule-gcal-alignment/design.md`（K1〜K14）を引き継ぎ、便2（K8〜K11）はこの設計に入れ直す。
 
 ## 1. 目的
@@ -629,7 +629,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
    - 箱の start・end・allDay は `draft` から出す（終日は `endDate` の次の日 0 時を end にする。日時が読めない・end が start 以前のときは箱を出さない）。この変換は `schedule-utils.ts` に純粋な関数 `draftToRange(draft)` として置き、`saveEvent`（`:1090-1095`）の日時の作り方と同じ `combineDateTime` を使う。
    - 箱は `editable: true` にする。箱の文字は下書きの題名 `draft.title.trim() || t("schedule.noTitle")`（今の `:1262` の固定の「(タイトルなし)」をやめる・G45「箱にも出る」）。
    - `pendingRange` を使う所は全部置き換える（2026-11-09 に `grep -n setPendingRange` で 5 か所）: 消す 3 か所 `:1223`（作る小窓以外になった）・`:1249`（月の 1 日押しの道）・`:1590`（「他 N 件」）は `pendingVisible` を偽に、作る `:1244`（openCreateRange）は下書きを入れて真に、宣言 `:952` は `pendingVisible` に替える。
-   - `calendarEvents`（`:1258`）は `useMemo` で包み、依存は「見えている予定」と `draft` の日時・題名・終日と `pendingVisible` にする（毎回新しい配列を作って金型の `fcEvents` を作り直さない）。
+   - `calendarEvents`（`:1258`）は `useMemo` で包み、依存は中で使う値すべて（見えている予定・`draft` の日時・題名・終日・`pendingVisible`・祝日 `holidaysQ.data`（`:1284`）・`ownerByUserId`・`currentOwnerUserId`（`:1268`・`:1280`）・`t`）にする。毎回新しい配列を作って金型の `fcEvents` を作り直さないためで、依存を削って祝日や色が古いまま残る形にはしない（`frontend/eslint.config.js:35` の `react-hooks/exhaustive-deps` は警告だけで止めないため、カードに全部書く）。
    - 作る小窓で始まりの日付・時刻だけを直したときは、長さを保って終わりも同じだけずらす（Google と同じ。直す小窓は今のまま）。そうしないと終わり≦始まりになって箱が消え、G47 を満たせない。この計算は純粋な関数 `shiftDraftStart(draft, nextStartDate, nextStartTime)`（`schedule-utils.ts`）に置き、作る小窓の始まりの日付・時刻の欄（`:396-414`）の `onChange` だけがこれを使う。
 2. 箱を動かした・長さを変えたら、下書きを直す（G45・G46・G48・G49）。
    - `onEventMove`・`onEventResize` で id が `"pending"` のときは `patchMoved` を呼ばず、新しい関数 `moveDraft(start, end, allDay)` で `draft` の日付・時刻・終日を直す。裏側へは何も送らない。
@@ -642,7 +642,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
    - 押している間の幕の色の token（`--schedule-overlay-scrim`）は残る道（詳しく見る・他 N 件）で使い続ける。
 4. 小窓を箱の横に置く（G43）。
    - 金型 `CalendarView` に口を 1 つ足す: `onEventRect?: (id: string, rect: CalendarViewRect | null) => void` と、その対象 `trackEventId?: string`。金型は `eventDidMount` で対象の要素を覚え、`eventWillUnmount` では覚えている要素と同じときだけ忘れる（別の日へ動かすと新しい要素の mount の後に古い要素の unmount が来ることがあるため）。FullCalendar の型は金型の外に出さない（ADR-1065 What 1）。
-   - 四角を測る時（FullCalendar 6.1.22 は同じ日の中で動かす・長さを変えるとき要素を作り直さず、外側の `.fc-timegrid-event-harness` の style だけを変える。別の日へ動かすと作り直す。初めの mount の時は `visibility: hidden` のことがある）: ①`eventDidMount` の後の `requestAnimationFrame` ②覚えた要素の一番近い `.fc-timegrid-event-harness`（無ければ要素自身）の `style` 属性の変化を `MutationObserver` で見る ③`eventDrop`・`eventResize` の後の `requestAnimationFrame` ④時間割の巻き上げ（`wrapperRef` の中の scroll を capture で受ける）⑤今ある `ResizeObserver`（`:123-131`）の中。どれも `rectOf` で返す。
+   - 四角を測る時（FullCalendar 6.1.22 は同じ日の中で動かす・長さを変えるとき要素を作り直さず、外側の `.fc-timegrid-event-harness` の style だけを変える。別の日へ動かすと作り直す。初めの mount の時は `visibility: hidden` のことがある）: ①`eventDidMount` の後の `requestAnimationFrame` ②覚えた要素の一番近い `.fc-timegrid-event-harness, .fc-daygrid-event-harness`（無ければ要素自身）の `style` 属性の変化を `MutationObserver` で見る（月表示と週の終日の段は daygrid の harness で、key が `instanceId:firstCol`（daygrid `internal.js:261,606`）のため、始まりの列が変わらない長さ変えでは作り直されず left・right の style だけが変わる） ③`eventDrop`・`eventResize` の後の `requestAnimationFrame` ④時間割の巻き上げ（`wrapperRef` の中の scroll を capture で受ける）⑤今ある `ResizeObserver`（`:123-131`）の中。どれも `rectOf` で返す。
    - 見えない（`visibility: hidden`・幅 0）ときは `null` を返す。つかんでいる間・引いている間（`eventDragStart`〜`eventDragStop`・`eventResizeStart`〜`eventResizeStop`）は返さず、離した後に 1 回返す（小窓が指の下で揺れない）。
    - 予定の画面は `trackEventId="pending"` を渡し、返ってきた四角を作る小窓の `anchor` にする（押した点の四角は使わない）。
    - 置き場所の式は新しい純粋な関数 `fitCreatePopover(anchor, size, viewport, margin, gap)`（`schedule-utils.ts`）: 横は箱の右＋gap、入らなければ箱の左−小窓の幅−gap。縦は `min(anchor.top, (viewport.height − size.height) / 2)` を margin〜(画面の高さ−小窓の高さ−margin) に収める。gap は 8（`--space-2` と同じ値・`POPOVER_MARGIN` と同じく定数で持つ）。箱が無いとき（C キー・作成ボタン）は今の `fitPopover` と同じ真ん中。月表示の 1 日押し（箱を出さない）は今のまま押した点の横（`fitPopover`）。四角が `null` の間は、前に受けた四角（無ければ押した点）のまま置く。詳しく見る小窓・他 N 件の小窓は今の `fitPopover` のまま。
@@ -929,3 +929,9 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - 直す 3: 日時→下書きの変換が 2 か所になる・長さを変えたとき終日の箱が時刻つきに化ける（`CalendarView.tsx:313` は終日を渡さない）→ `rangeToDraftDates` 1 つにし、仮の箱は `draft.allDay` を使う。往復の試験を足した。
 - 直す 4: FullCalendar 6.1.22 は同じ日の中の動かし・長さ変えで要素を作り直さず harness の style だけ変える（timegrid `internal.js:765`）ので、`eventDidMount` だけでは四角が古い → harness の style を `MutationObserver` で見る・離した後に測る・見えないときは null・unmount は同じ要素のときだけ忘れる。G45 に同じ日の中の動かしを足した。
 - 推奨 5〜9（`calendarEvents` を useMemo・つかんでいる間は返さない／外の押しは capture と composedPath・日付の見出しを押すと閉じる・消す所の一覧／月の 1 日押しは今のまま押した所の横で G43 に足す／G42②・G50 に合格の値／§4 の便12 の行に PO 承認の後に着手）は全部入れた。消す所は審査の挙げた行ではなく、`grep -n setPendingRange` の実物（`:952,1223,1244,1249,1590`）で書いた。
+
+2 回目: APPROVE（2026-11-09 14:04〜14:06 UTC・クラウドの Opus・origin/release/schedule-gcal-create-drag 10e31b8e5・照合は origin/main d9d0e1d8・セッション cse_01HHUUpRJwvgNN1Y7yZUf1LZ）
+- 結果は返事の本文で読んだ。1 回目の 9 件は全部 ○（行つき）。pendingRange の 5 か所・幕・saveEvent・日付と時刻の欄・patchMoved は origin/main d9d0e1d8 の実物と一致。c6ce79fb6 から frontend の差は無し。
+- npm pack した 6.1.22 で eventDragStart（interaction `index.js:1286`）・eventDragStop（`:1371`）・eventResizeStart（`:1595`）・eventResizeStop（`:1663`）・eventDidMount／eventWillUnmount（core）が在る。種類の欄は普通の `<select>`（`Select.tsx:93`・portal なし）なので外の押しの判定で誤って閉じない。
+- 推奨 1: useMemo の依存に祝日・持ち主の色・t が抜けていた → 作り方 1 を「中で使う値すべて」に直した。
+- 推奨 2: 月表示・週の終日の段は daygrid の harness で、始まりの列が同じ長さ変えは style だけ変わる → 作り方 4 ② の見張る相手に `.fc-daygrid-event-harness` を足した。
