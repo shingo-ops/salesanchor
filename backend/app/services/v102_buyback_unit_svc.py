@@ -26,7 +26,7 @@ from app.services.gemini_raw_copy_v102_product_first import (
     PRODUCT_KUBUN_SET,
 )
 from app.services.gemini_raw_copy_v102_soldout_ref import condition_decided_by_word
-from app.services.tcg_analyzer_svc import resolve_unit_v2
+from app.services.tcg_analyzer_svc import DEFAULT_CONDITION_CODE_BY_GROUP, resolve_unit_v2
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +41,8 @@ _SETTING_KEYS = [SETTING_BOX_MIN, SETTING_BOX_MAX, SETTING_CASE_MIN, SETTING_MAX
 UNIT_BOX, UNIT_CASE, UNIT_PACK = "Box", "Case", "Pack"
 _UNIT_GROUP = {UNIT_BOX: "box", UNIT_CASE: "case", UNIT_PACK: "pack"}
 _GROUPS = tuple(_UNIT_GROUP.values())
-# 状態の種類の札（public.condition_definitions.id）のうち、各群の「手を付けていない」既定として同一視するもの（2=未開封・7=未サーチ）
-_DEFAULT_LABELS = frozenset({2, 7})
+# 語で決まった状態の札のうち、値段で決まった群にその札の行が無ければ、その群の既定（DEFAULT_CONDITION_CODE_BY_GROUP）に写すもの（2=未開封・7=未サーチ）
+_FALLBACK_TO_DEFAULT_LABELS = frozenset({2, 7})
 _KIND_DEFAULT = "default"
 _REASON_MULTIPLE = "condition_multiple_candidates"
 
@@ -108,7 +108,7 @@ class Target:
 class ConditionMap:
     """状態マスタから読んだもの。
 
-    targets: 群 → 種類（札。2・7 は _KIND_DEFAULT）→ 写し先の行（その種類の行がちょうど 1 行のものだけ）。使えない群は入れない。
+    targets: 群 → 種類 → 写し先の行（その種類の行がちょうど 1 行のものだけ）。種類は札（int）と _KIND_DEFAULT。_KIND_DEFAULT はその群の既定の code の行。使えない群は入れない。
     label_by_condition_id / label_by_code: 読んだ全行の札（札が空の行は None）。
     """
 
@@ -220,14 +220,10 @@ def load_medians(session: Session, product_ids: Sequence[int], max_age_days: int
     return {int(r[0]): Decimal(str(r[1])) for r in rows}
 
 
-def _kind(label: int | None) -> Any:
-    return _KIND_DEFAULT if label in _DEFAULT_LABELS else label
-
-
 def load_targets(session: Session) -> ConditionMap | None:
     """状態マスタ（群 box・case・pack の有効な共用行）を 1 回で読む。
 
-    box・case の群は、unit_id が 1 種類（NULL なし）で既定（札 2・7）の行がちょうど 1 行のときだけ使える。どちらかが使えなければ None（便全体で何もしない）。
+    box・case の群は、unit_id が 1 種類（NULL なし）で既定（DEFAULT_CONDITION_CODE_BY_GROUP の code）の行が札の入った 1 行のときだけ使える。どちらかが使えなければ None（便全体で何もしない）。
     pack の群は unit_id が 1 種類でなければ pack だけ使えない（box・case は決める）。
     """
     rows = session.execute(text(_TARGETS_SQL), {"groups": list(_GROUPS)}).fetchall()
@@ -252,21 +248,25 @@ def load_targets(session: Session) -> ConditionMap | None:
         for label, codes in by_label.items():
             if label is not None and len(codes) >= 2:  # (a)
                 logger.warning("[buyback_unit] 状態マスタの群 %s に札 %s の行が %d 行あります: %s", group, label, len(codes), ",".join(sorted(codes)))
-        default_codes = [code for _t, code, label, _u in members if label in _DEFAULT_LABELS]
-        if len(default_codes) != 1:  # (b)
-            logger.warning("[buyback_unit] 状態マスタの群 %s の既定（札 2・7）の行が %d 行です（1 行であるべき）: %s", group, len(default_codes), ",".join(sorted(default_codes)))
+        default_code = DEFAULT_CONDITION_CODE_BY_GROUP[group]
+        default_rows = [(t, label) for t, code, label, _u in members if code == default_code]
+        default_ok = len(default_rows) == 1 and default_rows[0][1] is not None
+        if not default_ok:  # (b)
+            logger.warning("[buyback_unit] 状態マスタの群 %s の既定（code %s）の行が %d 行です、または札が空です（札の入った 1 行であるべき）", group, default_code, len(default_rows))
         if len(unit_keys) >= 2:  # (c)
             logger.warning("[buyback_unit] 状態マスタの群 %s の unit_id が %d 種類あります（NULL を含む）: %s", group, len(unit_keys), ",".join(sorted(code for _t, code, _l, _u in members)))
         elif unit_keys == {None}:  # (c) 群の単位がすべて引けない（line_units が無効等）
             logger.warning("[buyback_unit] 状態マスタの群 %s の単位がすべて引けません（unit_id が無い、または line_units が無効）: %s", group, ",".join(sorted(code for _t, code, _l, _u in members)))
         single_unit = len(unit_keys) == 1 and None not in unit_keys
-        usable[group] = single_unit and (len(default_codes) == 1 or group == _UNIT_GROUP[UNIT_PACK])
+        usable[group] = single_unit and (default_ok or group == _UNIT_GROUP[UNIT_PACK])
         if single_unit:
             by_kind: dict[Any, list[Target]] = {}
             for target, _code, label, _u in members:
                 if label is not None and target is not None:
-                    by_kind.setdefault(_kind(label), []).append(target)
+                    by_kind.setdefault(label, []).append(target)
             targets[group] = {kind: ts[0] for kind, ts in by_kind.items() if len(ts) == 1}
+            if default_ok and default_rows[0][0] is not None:
+                targets[group][_KIND_DEFAULT] = default_rows[0][0]
     if not (usable[_UNIT_GROUP[UNIT_BOX]] and usable[_UNIT_GROUP[UNIT_CASE]]):
         logger.warning("[buyback_unit] 状態マスタの群 box・case のどちらかが使えない形なので、買取価格による単位・状態の判定をしません")
         return None
@@ -313,7 +313,7 @@ def _current_kind(values: Mapping[str, Any], cmap: ConditionMap) -> Any:
         return _KIND_DEFAULT
     cid = values.get("condition_id")
     label = cmap.label_by_condition_id.get(int(cid)) if cid is not None else None
-    return None if label is None else _kind(label)
+    return label if label is not None else None
 
 
 def _review_code_kinds(item: Mapping[str, Any], cmap: ConditionMap) -> set[Any] | None:
@@ -326,27 +326,35 @@ def _review_code_kinds(item: Mapping[str, Any], cmap: ConditionMap) -> set[Any] 
             label = cmap.label_by_code.get(str(code))
             if label is None:
                 return None
-            kinds.add(_kind(label))
+            kinds.add(label)
     return kinds
 
 
-def decide_kind(item: Mapping[str, Any], values: Mapping[str, Any], cmap: ConditionMap) -> Any:
-    """状態の種類（_KIND_DEFAULT か札）。決められなければ None（何もしない）。
+def _target_of(rows: Mapping[Any, Target], kind: Any) -> Target | None:
+    if kind in _FALLBACK_TO_DEFAULT_LABELS:
+        return rows.get(kind) or rows.get(_KIND_DEFAULT)
+    return rows.get(kind)
 
-    今の状態の種類と codes の種類を合わせて 1 つのときだけ。今の状態が「既定」で codes があるときは、既定を数えず codes の種類だけを使う（design.md B）。
-    """
+
+def decide_target(item, values, cmap, group) -> Target | None:
+    """値段で決まった群 group での写し先。決められなければ None（何もしない）。
+    今の状態の種類と codes の種類を合わせ、それぞれの写し先が 1 つにそろうときだけ（種類ではなく写し先で比べる。design.md 追補 C）。
+    今の状態が既定で codes があるときは、既定を数えず codes だけを使う（今と同じ）。"""
+    rows = cmap.targets.get(group)
     current = _current_kind(values, cmap)
-    if current is None:
+    if rows is None or current is None:
         return None
     code_kinds = _review_code_kinds(item, cmap)
     if code_kinds is None:
         return None
     if not code_kinds:
         if _REASON_MULTIPLE in (values.get("review_reasons") or "").split(REASON_SEPARATOR):
-            return None  # 理由があるのに codes が 1 つも取れない行は何もしない（理由も外さない）
-        return current
-    kinds = code_kinds if current == _KIND_DEFAULT else {*code_kinds, current}
-    return next(iter(kinds)) if len(kinds) == 1 else None
+            return None
+        kinds = {current}
+    else:
+        kinds = code_kinds if current == _KIND_DEFAULT else {*code_kinds, current}
+    found = {_target_of(rows, k) for k in kinds}
+    return next(iter(found)) if len(found) == 1 and None not in found else None
 
 
 def apply_buyback_units(
@@ -378,8 +386,7 @@ def apply_buyback_units(
         unit, ratio = decided
         if unit == UNIT_PACK and items[i].get("product_category") != PRODUCT_KUBUN_BOX:
             continue  # Pack は箱系の分類の行だけ
-        kind = decide_kind(items[i], values, cmap)
-        target = cmap.targets.get(_UNIT_GROUP[unit], {}).get(kind) if kind is not None else None
+        target = decide_target(items[i], values, cmap, _UNIT_GROUP[unit])
         if target is None:
             continue
         word_decided = condition_decided_by_word(str(values.get("condition_basis") or ""))
