@@ -5,6 +5,7 @@
 追加（2026-11-07）: 見た目 5 か所の成功条件 G15〜G19 は **PO 承認済み**（PO 原文「１，」＝「この決め方で設計を進める」を選択）。作り方は §3.8・便6。設計審査は §9 の 4 回目（REVISE）・5 回目（**APPROVE**）。
 追加（2026-11-08）: 便8（残りの部品を決められた部品に差し替える・G26〜G30）は PO の選択「1」（2026-11-08）。作り方は §3.13。設計審査は §9 の 11 回目。
 追加（2026-11-09）: 便9（月表示・詳しくの小窓と一覧の時刻を Google の形に・G31〜G35）は PO の選択「1、2」（2026-11-08）で設計した。作り方は §3.14。設計審査は §9 の 12 回目（APPROVE）。G31〜G35 は **PO 承認済み**（2026-11-09、PO の選択「1」＝「5か所の直しを承認して、作るところまで進める」）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin9.md`。
+追加（2026-11-09）: 便10（日・3日間・週から月へ切り替えると画面全体が消える不具合・G36）は PO の選択「1」（2026-11-09・画面が消える不具合を先に直す）。作り方は §3.15。設計審査は §9 の 13 回目（APPROVE）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin10.md`。金型の設計 `docs/handoff/calendar-view-component/design.md` §4-3 の `views` の行も「月でも渡す」に直した。
 根拠: `docs/handoff/schedule-gcal-clone/recon.md`（以下 recon）。前の設計 `docs/handoff/schedule-gcal-alignment/design.md`（K1〜K14）を引き継ぎ、便2（K8〜K11）はこの設計に入れ直す。
 
 ## 1. 目的
@@ -450,7 +451,7 @@ PO 2026-11-09「1」（画面が消える不具合を先に直す・設計と審
 - R10-1（誤りの全件）: console の error は 10 件で、10 件とも同じ文 `Error: viewType "calendarDays" is not available. Please make sure you've loaded all neccessary plugins`（ERROR 5・EXCEPTION 5）。10 件とも呼び出し元は `componentDidUpdate → resetOptions → … → _computeCurrentViewData`。他の種類の error は 0 件。
 - R10-2（起きた順・本番で画面の変化と通信を記録）: 1 回目の月では予定を取りに行き、その間に金型が一度外れて月の形で作り直された（作り直し 2 個目）。週へ戻った時は作り直されず同じ金型のまま。2 回目の月で m を押して約 23ms 後、取り直しの前に上の error が出て、4ms 後に画面の根（`#root`）の中身が 0 個になった。
 - R10-3（原因）: 金型 `frontend/src/components/CalendarView.tsx:105-108` で作る `views`（`calendarDays` という表示の種類の定義）を、時間割の設定 `daysProps`（`:193-194`）の中だけで渡している。月の設定 `monthProps`（`:230`）には無く、`:285` で `{...(isMonth ? monthProps : daysProps)}` と入れ替える。React の包み（`@fullcalendar/react` 6.1.22 `dist/index.js:76`）は props が変わるたびに `resetOptions(props 全部)` を呼び、`@fullcalendar/core` 6.1.22 `index.js:1364-1367` は設定を丸ごと置き換える。表示の種類の一覧は `index.js:364-369`（`parseViewConfigs(optionOverrides.views)`）で作り直されるので `calendarDays` が消える。この時まだ表示は `calendarDays` のままで（表示を月へ切り替える `changeView` は `:111-120` の useEffect で、包みの更新より後に走る）、`index.js:1561-1563` が上の error を投げる。
-- R10-4（1 回目は消えず 2 回目に消える理由）: 予定の画面は、予定の写しがまだ無い間は金型を外して読み込み中を出す（`frontend/src/pages/schedule/SchedulePageImpl.tsx:990` の `isPending`・`:1547`）。写しの名前は表示の期間を含み（`:961-964`）、写しは 30 分残る（`frontend/src/lib/query/apiQuery.ts:5,21,28` の `GC_TIME_MS`・`staleTime` 既定 0）。TanStack Query 5.104.4 の `isPending` は「写しがまだ無い」の意味で、写しがあれば裏で取り直しても読み込み中にならない（Context7 /tanstack/query）。1 回目の月は写しが無いので金型が作り直されて助かる。2 回目は写しが在るので同じ金型のまま `views` が外れて落ちる。
+- R10-4（その月の写しが無い時は消えず、写しが在る時に消える理由。本番で観測したのは「1 回目は消えず 2 回目に消える」）: 予定の画面は、予定の写しがまだ無い間は金型を外して読み込み中を出す（`frontend/src/pages/schedule/SchedulePageImpl.tsx:990` の `isPending`・`:1547`）。写しの名前は表示の期間を含み（`:961-964`）、写しは 30 分残る（`frontend/src/lib/query/apiQuery.ts:5,21,28` の `GC_TIME_MS`・`staleTime` 既定 0）。TanStack Query 5.104.4 の `isPending` は「写しがまだ無い」の意味で、写しがあれば裏で取り直しても読み込み中にならない（Context7 /tanstack/query）。写しが無い月は金型が作り直されて助かる。写しが在る月は同じ金型のまま `views` が外れて落ちる。このため 30 分以内に同じ月を一度開いていれば、1 回目の切り替えでも落ちる（筋道からの推論・本番では未確認・審査 13 回目の推奨 1）。直しはどちらの場合も同じ。
 - R10-5（画面全体が消える理由）: `frontend/src` に誤りを受け止める部品（`ErrorBoundary`・`componentDidCatch`・`errorElement`）が 0 件（試験を除く・`git grep` で確かめた）。1 か所の誤りでアプリ全体が消える。これは予定の画面に限らない話なので便10 では直さず、PO へ別に伝える（変更は一度に 1 つ）。
 - 日・3日間は週と同じ `calendarDays` を使う（`:105-108`・`dayCount` だけ違う）ので同じ道を通る。本番で観測したのは週だけ。
 - 金型を作った時点から同じ不具合が在ったかは、まだ確かめていない。
@@ -708,3 +709,12 @@ PO 2026-11-09「1」（画面が消える不具合を先に直す・設計と審
 - (2) ○ G33 の受入れ・選ばなかった案・ADR の改訂・戻し方・便9 の行が互いに合う。
 - (3) ○ 直しは design.md だけ。1 回目に ○ だった所は変わっていない。
 - 指摘なし。
+
+### 13 回目（便10・G36）: APPROVE（2026-11-09 02:00〜02:03 UTC・クラウドの Opus・origin/release/schedule-view-switch-crash 1c2b17b51・照合は origin/main a34b0af43・セッション cse_01HHUUpPVCG139vep4NhSB8m）
+
+- 結果は返事の本文で全部読んだ（途中で切れていない）。
+- (1) ○ npm pack した 6.1.22 で、`@fullcalendar/react` `dist/index.js:76` は `resetOptions` を changedOptionNames なしで呼ぶ。core `index.js:1366-1367` は設定を丸ごと置き換え、`:366` が `parseViewConfigs(optionOverrides.views)`、`:1561-1563` が throw。a34b0af43 の `frontend/src/components/CalendarView.tsx:194` で `views` は `daysProps` の中だけ。/tmp で core を直接動かすと、今の形は dayCount 1・3・7 のどれも同じ誤りになった。
+- (2) ○ 直した形では週→月→週→月が 3 通りとも通り、最後は `dayGridMonth`。月の時に dayCount を 3 に変えてから `calendarDays` へ切り替えても期間は 3 日。`monthProps` には触れない。
+- (3) ○ 今の差し替え（`captured.props`）と T5 の読み方で書ける。core の 2 つの文は中身に在る。
+- (4) ○ `frontend/src/pages/schedule/SchedulePageImpl.tsx:961-964,990,1547`・`frontend/src/lib/query/apiQuery.ts:5,21,28` と合う。
+- (5) ○ 推奨 2 件と直したこと: ①R10-4 の「1 回目」を「その月の写しが無い時」に書き換え、30 分以内に同じ月を開いていれば 1 回目でも落ちる（推論・本番未確認）と書いた。②包み（react）側の丸ごと置き換えも見張る: カード §3-2 に `readPackageFiles('react/dist', ...)` で `dist/index.js` の `this.calendar.resetOptions(Object.assign(Object.assign({}, this.props)` を見る 1 行を足した（関数は変えない・`node_modules/@fullcalendar/<pkg>/` を読むため）。
