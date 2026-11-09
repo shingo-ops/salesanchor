@@ -614,7 +614,7 @@ else
   start_health
   ssh "$HOST" 'sudo -n /usr/bin/systemctl restart docker && sudo -n /usr/bin/systemctl is-active docker'
   after_running=""
-  for i in $(seq 1 30); do
+  for _ in $(seq 1 30); do
     after_running="$(ssh "$HOST" 'docker ps -q | wc -l' | tr -d ' ' || true)"
     if [ "$after_running" = "$before_running" ]; then break; fi
     sleep 2
@@ -682,7 +682,7 @@ echo "rc1=$rc1 rc2=$rc2"
 [ "$rc1" -eq 1 ] && [ "$rc2" -eq 1 ] || { echo "NG: rc"; exit 1; }
 [ "$(sha256sum "$TF/dockerd_state.prom")" = "$before" ] || { echo "NG: file changed"; exit 1; }
 ls -a "$TF"
-if ls -A "$TF" | grep -q '^\.dockerd_state\.'; then echo "NG: temp left"; exit 1; fi
+if find "$TF" -maxdepth 1 -name '.dockerd_state.*' | grep -q .; then echo "NG: temp left"; exit 1; fi
 
 echo "== 5. 台本の入口（外の操作の前に止まること。gh・ssh は呼ばれない）"
 bash -n scripts/ops/dockerd-restart-window.sh
@@ -771,5 +771,16 @@ echo "ALL OK"
 ## 13. 報告欄（担当が追記）
 
 - （未記入）
+
+## 14. 追補（2026-11-09 Opus・試験場 run 42590629169 の shellcheck 警告 2 件）
+
+試験場では係・台本の試験はすべて通り、shellcheck の警告 2 件だけで終了コード 1 になった。§4 の完成形を次の 2 行だけ直した（本文 §4-7・§4-8 は直し後の形）。
+
+| ファイル | 警告 | 直す前 | 直した後 |
+|---|---|---|---|
+| scripts/ops/dockerd-restart-window.sh（§4-7・数を待つ loop） | SC2034 i が使われていない | `for i in $(seq 1 30); do` | `for _ in $(seq 1 30); do` |
+| tests/sandbox/dockerd-state.sh（§4-8・一時ファイルの確かめ） | SC2010 ls と grep の組み合わせ | `if ls -A "$TF" \| grep -q '^\.dockerd_state\.'; then …` | `if find "$TF" -maxdepth 1 -name '.dockerd_state.*' \| grep -q .; then …` |
+
+担当の作業: 既存の作業場所（release/dockerd-memory-maintenance-impl）で上の 2 行だけを直し、§5-1 の 3（SYNTAX_OK）を流し、commit → push → §5-2 の試験場をもう 1 回動かす。
 
 END OF CARD
