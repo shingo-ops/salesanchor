@@ -34,6 +34,10 @@
 | `scripts/dev/perm-change.py:739` | `r.add_argument("--target", required=True)` |
 | `scripts/dev/perm-change.py:745` | `r.add_argument("--actor", default="opus", choices=["opus", "po-script"])` |
 | `scripts/dev/permission-delegation-tests.py:1251` | `def main():` |
+| `scripts/dev/permission-delegation-tests.py:80` | `def git(cwd, *args):` |
+| `scripts/dev/permission-delegation-tests.py:475` | `prefix, rest = key.split(":", 1)` |
+| `scripts/dev/permission-delegation-tests.py:503` | `chk("A5-0", "写しのキーは設計の表の24種` |
+| `scripts/dev/permission-delegation-tests.py:565` | `def merge_pr(e, edits, branch="feat"):` |
 | `.claude/agents/reviewer.md:45` | `- 審査結果を SubagentHandback で返すとき、` |
 
 ## 1. 事実（Opus が確かめたこと。担当は確かめ直さなくてよい）
@@ -142,6 +146,8 @@ LEDGER_ONLY_KEYS（:450）と PR_ONLY_TARGETS（:801）には足さない。
 
 設計書 §5-0〜§5-5 と §13-4 のとおり。ここでは順番と値の取り方だけを書く。
 
+0. 使う op は record の行の `op`（`row["op"]`）。下の 9. に挙げていない target と op の組（`user-hooks` の `modify` など）は False。
+   - 印の外の関数で呼んでよいのは `sha8`・`item_sha8`・`parse_ts`・`perm_paths`・`load_json` と、引数の `gh_view`・`git_run`、標準ライブラリだけ。`_git_text` など、ほかの部品は呼ばない。要る部品は印の中に新しく書く（印の外の部品を書き換えて判定を弱めても、写し `guard_judge` が変わらないため）。
 1. `el` と `now` が None でない。`v` が空でない。
 2. 浅い取得でない: `git rev-parse --is-shallow-repository` の出力が `false`（tools のリポジトリで流す）。
 3. PR: `gh_view(N)` が dict で `state == "MERGED"`。`mergedAt` が読める。`mergeCommit.oid` が `^[0-9a-f]{7,64}$`。`git merge-base --is-ancestor mc v` が 0。
@@ -168,7 +174,7 @@ LEDGER_ONLY_KEYS（:450）と PR_ONLY_TARGETS（:801）には足さない。
      - CI の検査: `git show <v>:.github/workflows/agent-hooks-test.yml` を PyYAML（`yaml.safe_load`）で読む。`import yaml` は関数の中で行い、ImportError なら False。mc の札の `tests` の各パス `scripts/agent-hooks/<name>/<t>` が、どれかの job のどれかの step の `run` の値の、`#` で始まらない行（前の空白を除いて見る）に含まれること。含まれない試験が1つでもあれば False。T の試験を呼ぶ各 step について、`run` の値に `|| true`・`|| :`・`; true`・`|| exit 0`・`set +e`・` -k `・`--deselect` のどれかがある、step か job に `continue-on-error` が true、step か job に `if` の欄がある、のどれかなら False。
    - target `hook-files`・op `modify`: False（使わない）。
    - target `user-hooks`・op `add`（§5-2）:
-     - `el` を `rsplit("|", 2)` で event・matcher・組の sha8 に分ける。
+     - `el` を分ける: `event, rest = el.split("|", 1)`、続けて `matcher, gsha = rest.rsplit("|", 1)`。matcher には `|` が入ることがある（例: `.claude/settings.json:81` の `Write|Edit`）。`rsplit("|", 2)` は使わない。user-hooks の減の側でも同じ分け方にする。
      - 今の `<home>/.claude/settings.json` の `hooks[event]` の組で、`matcher` が同じで `item_sha8(組) == h` のものを探す。無ければ False。
      - 組の `hooks` の各フックが、候補の札のどれかの `hooks` の項目から作るフック `{"type": "command", "command": "<interpreter> <home>/.claude/scripts/<name>/<file>"}` と、欄の全部が同じ（欄の数も同じ）で、その項目の event・matcher が組と同じ。1つでも当たらなければ、次の「入れ替えの増の側」を確かめる。
      - 入れ替えの増の側: 同じ PR 番号で、`replaced_by == h` の減の行（target `user-hooks`・op `remove`）が台帳にあり、その行で下の「減の側」が通るなら True。
@@ -195,8 +201,19 @@ LEDGER_ONLY_KEYS（:450）と PR_ONLY_TARGETS（:801）には足さない。
 
 ## 7. 試験（`scripts/dev/permission-delegation-tests.py`）
 
-- 既にある test_a1〜test_a21 は変えない。新しい関数の名前は `test_g1` のように G を付ける。main（:1251）の一覧の最後に足す。
+- 既にある test_a1〜test_a21 は変えない。例外は次の2か所だけ（写しのキーが2つ増えるため。§5-1）:
+  - :503 の A5-0: `len(ALL_KEYS) == 24` を `len(ALL_KEYS) == 26` に、文の「24種」を「26種」にする。ほかの条件は変えない。
+  - :464 の mutate: :475 の `key.split(":", 1)` の前に2つの分かれを足す。
+    - `key == "guard_installer"`: `<env.tools>/scripts/agent-hooks/install-guard.sh` を（フォルダを作って）`#!/bin/bash\necho new\n` で書き、return。
+    - `key == "guard_judge"`: `<env.tools>/scripts/dev/consent-audit.py` を（フォルダを作って）次の3行で書き、return: `# >>> ADR-1072 guard-add judge`・`x = 1`・`# <<< ADR-1072 guard-add judge`。
+  - A5 の繰り返しは、この2つのキーでも今の期待（B が出る）のまま通ること。
+- 新しい関数の名前は `test_g1` のように G を付ける。main（:1251）の一覧の最後に足す。
 - 時刻は T0（:25）を使わず、試験の中で固定する（設計書 §10 の A2: 前回の写しは 2026-11-09T04:00:00Z、マージは 05:00:00Z、record の行は 06:00:00Z、点検の now は 07:00:00Z）。ほかの G も、特に書いていなければ同じ時刻を使う。
+- git の commit の日時も固定する。§5-5 の 8. の `--until` は commit の日時で選ぶので、今の時計で commit すると G1・G2・G10 が誤って B になる（2026-11-09 09:44 UTC にクラウドの審査で実行して確かめ済み）。
+  - 新しい補助 `git_at(cwd, when, *args)` を足す。中身は :80 の `git` と同じで、`env=dict(os.environ, GIT_AUTHOR_DATE=when, GIT_COMMITTER_DATE=when)` を付けて流す（`when` は `2026-11-09T05:00:00Z` の形の文字列）。
+  - 新しい補助 `merge_pr_at(e, edits, when, branch="feat")` を足す。中身は :565 の `merge_pr` と同じで、commit と merge の2つだけ `git_at(..., when, ...)` で流す。
+  - G の中でマージを作るときは、全部 `merge_pr_at` を使う。`merge_pr` と `e.advance` は使わない。前の版（§5-5 の 9. の P）を作るマージは `2026-11-09T03:00:00Z` にする。
+  - 偽の gh_view の `mergedAt` は、同じ PR の `merge_pr_at` の `when` と同じ時刻にする。
 - 一時の HOME の中に、`.claude/scripts/<name>/` と `.claude/settings.json` を試験が書く（台本は便2 で作るので、この便では試験が台本の手順 5・7 と同じことをする）。
 - 見張りの見本の中身は試験の中に文字列で書く。本物の mac-test-guard を読む必要は無い（中身は §5-5 の語を含まないこと）。札の見本は設計書 §5-0 の形。
 - CI の見本: 一時の git リポジトリに `.github/workflows/agent-hooks-test.yml` を置き、試験のパスを `run:` で呼ぶ形にする。
@@ -238,6 +255,11 @@ cd "$WT" && git grep -n "^PR_ONLY_TARGETS" -- scripts/dev/consent-audit.py
 cd "$WT" && git grep -n -e '"--replaced-by"' -e '"--batch"' -e '"--old-json"' -- scripts/dev/perm-change.py
 # 試験 G（11件）
 cd "$WT" && git grep -n "^def test_g" -- scripts/dev/permission-delegation-tests.py
+# 日時を固定する補助（2件）と、A5-0 の数（1件。26）
+cd "$WT" && git grep -n -e "^def git_at" -e "^def merge_pr_at" -- scripts/dev/permission-delegation-tests.py
+cd "$WT" && git grep -n 'len(ALL_KEYS) == 26' -- scripts/dev/permission-delegation-tests.py
+# 既にある試験の差は §7 の例外2か所だけ（- の行は A5-0 の1行だけ）
+cd "$WT" && git diff origin/main...HEAD -- scripts/dev/permission-delegation-tests.py | grep '^-[^-]'
 # 変えたファイル（4件）
 cd "$WT" && git diff origin/main...HEAD --name-only
 ```
@@ -247,7 +269,7 @@ cd "$WT" && git diff origin/main...HEAD --name-only
 | 起きたこと | どうする |
 |---|---|
 | §0 の行が基準と違う | 停止し、BLOCKED: で差を返す |
-| 既にある試験（test_a1〜test_a21）が1つでも落ちる | 既にある試験を書き換えない。停止し、BLOCKED: で生の出力を返す |
+| 既にある試験（test_a1〜test_a21）が1つでも落ちる | §7 の例外2か所（A5-0 の数・mutate の2つの分かれ）のほかは書き換えない。停止し、BLOCKED: で生の出力を返す |
 | 設計書 §5・§13 と、この カードの §5-5 が食い違う | 書き手の判断で決めない。NEEDS_DECISION: で両方の文を返す |
 | G の期待を満たすには §5-5 に無い条件が要る | 条件を足さない。NEEDS_DECISION: で返す |
 | 試験の中で実物の GitHub に触れたくなる（gh を本当に呼ぶ等） | 呼ばない。gh_view と git_run は偽物か一時のリポジトリに向ける |
