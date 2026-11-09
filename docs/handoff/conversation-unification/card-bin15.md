@@ -362,12 +362,12 @@ CREATE UNIQUE INDEX idx_meta_messages_message_id_unique ON meta_messages (messag
   - 落ちたら BLOCKED: で返す。
 - `backend/tests/test_ticket_channel_translation.py`:
   - `_FakeMessage`（:40-48）に `type: object = discord.MessageType.default` を足す（`import discord` も足す）。今ある試験の動きは変わらない。
-  - `test_ticket_channel_outbound_is_ignored_without_commit_or_translation`（:77-113）は、担当の投稿を入れるようになるので、次のとおりに直す:
+  - `test_ticket_channel_outbound_is_ignored_without_commit_or_translation`（:155-191）は、担当の投稿を入れるようになるので、次のとおりに直す:
     - 名前を `test_ticket_channel_staff_post_is_stored_outbound_without_translation` にする。
-    - `session.execute.side_effect` に、INSERT の返りとして3つ目の `_mock_result((99,))` を足す。
+    - `session.execute` が呼ばれるのは2回（リードを探す文と INSERT）。返りは足さず、2つ目の `_mock_result((1,))` を INSERT の返りとして `_mock_result((99,))` に替える。
     - 期待: `handled is True`、`session.commit.await_count == 1`、`enqueue_mock.assert_not_called()`、`publish_mock.assert_not_called()`。
     - `customer_reply_notifier.schedule_customer_reply_notice` を MagicMock で差し替え、呼ばれないことも確かめる。
-    - INSERT に渡した値で `direction == "outbound"`、`recipient_id == "1234567890"` を確かめる（`session.execute.call_args_list[2]`）。
+    - INSERT に渡した値で `direction == "outbound"`、`recipient_id == "1234567890"` を確かめる（`session.execute.call_args_list[1]`）。
 
 ### 8-3. 足す試験（新しい `backend/tests/test_conversation_unify_bin15.py`、SQLite）
 
@@ -385,14 +385,14 @@ CREATE UNIQUE INDEX idx_meta_messages_message_id_unique ON meta_messages (messag
 | 10 | Discord: 担当（お客さんでもボットでもない）がチケットの部屋に書く | outbound が1行、`sender_name`=表示名、`recipient_id`=お客さんの Discord id。返信の知らせ・訳が呼ばれない | K8 |
 | 11 | Discord: 10 と同じ message id が2回届く | 行は1のまま | K8・K9 |
 | 12 | Discord: お客さんの投稿・ボットの投稿・webhook の投稿・担当のピン留めの知らせ（`type=discord.MessageType.pins_add`） | お客さんは inbound で1行（今までどおり）。ボット・webhook・ピン留めの知らせは0行（commit 0） | K8 |
-| 13 | Discord: `discord_user_id` が空のリードの部屋に、誰かが書く | 0行 | — |
+| 13 | Discord: `discord_user_id` が空のリードの部屋に、誰かが書く | 0行（INSERT が呼ばれず commit 0） | — |
 | 14 | `meta_graph._DEFAULT_SUBSCRIBED_FIELDS` | `"message_echoes"` を含む | K6 |
 
 - 10〜13（Discord）は、`test_ticket_channel_translation.py` と同じ組み方にする。
   - 書き込みの処理は `tenant_NNN.meta_messages` と会社名付きで書くので、SQLite の表では試さない。
   - `AsyncMock` のセッションに `execute.side_effect` で返りを並べ、`_DBContext` で包む。`set_tenant_context` は差し替える。
   - 1行入ったかは「INSERT の execute が呼ばれ、返りの行があり、commit が1回」で確かめる。
-  - 11 は、2回目の INSERT の返りを `_mock_result(None)` にし、返信の知らせが2回目に呼ばれないこと、INSERT の文に `ON CONFLICT (message_id)` があることで確かめる。
+  - 11 は、関数を2回呼ぶ。1回目は返り2つ（リードの行・`(99,)`）のセッション、2回目は返り2つ（リードの行・`None`）の**新しい**セッションで組む。確かめるのは次の3つ: 2回とも `handled is True`。2回とも INSERT の文に `ON CONFLICT (message_id)` がある。2回目で例外が出ない。行が1つのままになることは、本番の索引（§1）と §13 の K9 で確かめる。
 - 8・9 は、送信の試験（`test_message_send.py`）の土台と写しの処理（`webhook.process_messenger_event`）が、同じ DB を見るように組む（`test_conv_backbone_ben1b._patch_webhook_runtime` の差し替え方を使う）。
 - どうしても同じ DB にできなければ、NEEDS_DECISION: で理由を返す。8・9 を外して進めない。
 - 新しい試験ファイルは、移行の見張り（`test_tenant_loop_migration_guard` 等）の登録が要るなら登録する。
