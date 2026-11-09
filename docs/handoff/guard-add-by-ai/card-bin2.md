@@ -90,7 +90,7 @@
 |---|---|---|
 | `INSTALL_OK` | 0 | 入れた、または差が無かった。記録も全部書けた |
 | `INSTALL_OK_RECORD_INCOMPLETE` | 3 | 入れたが、記録の行の一部を書けなかった（週次点検で B に出る。Opus が PO に報告する） |
-| `INSTALL_FAILED: <理由>` | 1 | 止まった。settings.json に触っていない。手順9より前で止まったときは `~/.claude/scripts/` にも触っていない（手順10の後で止まったときの扱いは手順10） |
+| `INSTALL_FAILED: <理由>` | 1 | 止まった。settings.json に触っていない。手順9で本体を写す前に止まったときは `~/.claude/scripts/` にも触っていない（手順9で本体を1つでも写した後に止まったときの扱いは手順10） |
 
 手順（設計 §6 の 1〜10。どこか1つでも失敗したら `INSTALL_FAILED:` で止まる）:
 
@@ -113,18 +113,18 @@
    - 札の `tests` を順に流す。拡張子が `.py` なら `python3 -I -B <T の試験> <置き場の hooks[0].file>`、`.sh` なら `bash <T の試験> <置き場の hooks[0].file>`、ほかは止まる。cwd は `T`。1本 300 秒で打ち切る。1本でも 0 以外なら止まる。
    - 試験の引数の決まり（本体のパスを1つ受ける）は、今の test_guard.py:6 と同じ。新しい見張りもこの形で書く（設計 §13-8）。
 8. settings.json の新しい形を組み立てる（まだ書かない。入れ先に触る前に、読めないときに止まるため）:
+   - 排他（ここで取る。settings.json を読む前に取り、2つの実行が古い中身で上書きし合う道をふさぐ）: `os.mkdir(H/.claude/.install-guard.lock)`。既にあれば止まる（自分で作っていない lock は消さない）。作った後は、終わりと失敗のどちらでも消す（try/finally。手順12の出力の前まで持つ）。
    - `H/.claude/settings.json` が無い・JSON として読めない・object でないなら止まる。読んだ中身を `old` として、深い写し `d` を作る。
    - 札の `hooks` の各要素について、`new = _ga_hook_form(H, name, hk)`。`d["hooks"][event]` の組のうち `g.get("matcher", "") == hk.get("matcher", "")` のものに、`command` が `new["command"]` と同じフックが既にあれば何もしない。
    - 無ければ、同じ event と matcher の組を前から順に見て、`command` の最後の空白で区切った語が `after` と同じか `/` + `after` で終わるフックを探し、その直後に `new` を入れる。見つからなければ、同じ event と matcher の最初の組の最後に足す。そういう組が無ければ、`{"matcher": <matcher>, "hooks": [new]}` の組を `d["hooks"][event]` の最後に足す（札に matcher が無ければ `"matcher"` の欄を付けない）。
    - 既にあるフックを消す・並べ替える・欄を変えることはしない。
    - 変わった組ごとに、前の組（`old` の中の同じ位置の組。新しい組なら無し）と後の組（全部の要素を入れ終えた `d` の中の組）を覚える。1回の実行で同じ組に2件以上入れても、記録は「実行の前の組」と「全部入れた後の組」の1組だけにする（途中の形を記録すると、週次点検の `_ga_group` が組を見つけられず B に出る）。
 9. 入れ先へ本体を写す（ここから先は ~/.claude に書く）:
-   - 排他: `os.mkdir(H/.claude/.install-guard.lock)`。既にあれば止まる（自分で作っていない lock は消さない）。作った後は、終わりと失敗のどちらでも消す（try/finally）。
-   - 札の `files` の各ファイルについて、前の中身8桁（入れ先に無ければ `-`）を覚える。
-   - 中身が同じなら写さない。違えば、入れ先のファイルを書けるようにしてから写し、`chmod 0o555`（中のフォルダは `os.makedirs`）。写した後の sha256 が正本と同じでなければ止まる。
+   - 札の `files` の順に1つずつ、「前の中身8桁を覚える→写す→確かめる」を終えてから次のファイルへ進む。前の中身8桁は、入れ先に無ければ `-`。入れ先にあっても普通のファイルでない（フォルダ・シンボリックリンク）なら止まる。
+   - 中身が同じなら写さない。違えば、入れ先のファイルを書けるようにしてから写し、`chmod 0o555`（中のフォルダは `os.makedirs`）。写した後の sha256 が正本と同じでなければ止まる（そのファイルは記録しない。週次点検で B に残す）。
 10. settings.json を書く:
    - `d == old` なら書き直さない（sha256 が前と同じまま）。
-   - 違えば、`settings.json.bak-install-guard-<name>-<UTC の時刻>` に控えを取り、同じフォルダに一時ファイルを書き、読み直して JSON の object であることを確かめてから `os.replace`。書き方は `json.dump(d, f, ensure_ascii=False, indent=2)` と改行1つ（今の install.sh:56-57 と同じ）。
+   - 違えば、`settings.json.bak-install-guard-<name>-<UTC の時刻>` に控えを取り、同じフォルダに一時ファイル（名前は `settings.json.tmp-install-guard-<name>`）を書き、読み直して JSON の object であることを確かめてから `os.replace`。書き方は `json.dump(d, f, ensure_ascii=False, indent=2)` と改行1つ（今の install.sh:56-57 と同じ）。一時ファイルは、`os.replace` しなかったときは finally で消す。
    - 手順9で本体を1つでも写した後に、手順9の残りか手順10で止まったとき: settings.json は変えないまま（`os.replace` の前なら元のまま）、写した本体の分の hook-files の記録（手順11の「本体」の行）だけを書いてから、`INSTALL_FAILED: <理由>` で止まる。こうすると、~/.claude/scripts の差は記録で説明でき、週次点検で B に出ない。
 11. 記録（設計 §6 の 10・§5-3）。変わったものだけ書く。2回目の実行で差が無ければ1行も書かない。
     - batch: `"batch:" + secrets.token_hex(8)`（1回の実行で1つ）
@@ -135,7 +135,7 @@
     - item_sha8 は consent-audit.py の `item_sha8` を使う
 12. 出力（値を出さない。8桁のハッシュだけ）: `PR=#<n>`、`FILE <name>/<file> <前8桁か-> <後8桁>`（変わったものだけ）、`GROUP <event>|<matcher> <前8桁か-> <後8桁>`（変わったものだけ）、差が無ければ `NO_CHANGE`、記録した行の数 `RECORDED=<数>`、最後の行（上の表）。
 
-書かないこと: ほかの見張りの install.sh・rollback.sh を呼ばない。`~/.claude` の settings.json と `scripts/<name>/` と `.install-guard.lock` と控えのほかには書かない。外す処理を持たない。
+書かないこと: ほかの見張りの install.sh・rollback.sh を呼ばない。`~/.claude` の settings.json と `scripts/<name>/` と `.install-guard.lock` と控えと一時ファイル（finally で消す）のほかには書かない。外す処理を持たない。
 
 ## 6. 試験（`scripts/agent-hooks/test_install_guard.py`）
 
@@ -164,6 +164,7 @@
 | A8-n | 試験のファイルだけに `--approve`・本体に大文字の `APPROVE` だけ | 2件とも `INSTALL_OK` |
 | A11-s | 写しが浅い取得（`git clone --depth 1 file://...` で作る） | `INSTALL_FAILED:` と同上 |
 | S-bad | `<HOME>/.claude/settings.json` を JSON でない中身にしておく | `INSTALL_FAILED:` と同上（`~/.claude/scripts/demo-guard/` が作られていない） |
+| P-fail | 札の `files` を `["guard.py", "lib.py"]` にし、`<HOME>/.claude/scripts/demo-guard/lib.py` という名前のフォルダを先に置く（1つ目は写せて2つ目で止まる） | `INSTALL_FAILED:`。終了コード 1。settings.json の sha256 が流す前と同じ。lock が無い。記録の呼び出しは1回だけ（guard.py の hook-files add）。§6 の5点のうち ④⑤ は当てない |
 | T-fail | 試験が 1 で終わる | `INSTALL_FAILED:`。`~/.claude/scripts/demo-guard/` が作られていない |
 | T-sub | マージでない commit が最後に変えたフォルダ（`Merge pull request` の形でない） | `INSTALL_FAILED:` と同上 |
 | R-fail | 偽の perm-change.py が remove の行だけ 1 で返す | 最後の行が `INSTALL_OK_RECORD_INCOMPLETE`、終了コード 3。`RECORD_FAILED:` の行が1つ |
@@ -172,7 +173,7 @@
 | M-real | このリポジトリの mac-test-guard の札と本体と試験を一時の写しに入れて流す | `INSTALL_OK`。命令は `python3 <HOME>/.claude/scripts/mac-test-guard/guard.py` で、mac-vm-guard.py の直後 |
 
 - 「同上」の止まり方の確かめは、どれも ①最後の行が `INSTALL_FAILED:` で始まる ②終了コード 1 ③settings.json の sha256 が流す前と同じ ④`<HOME>/.claude/scripts` の下のファイル一覧と中身が流す前と同じ ⑤`record-calls.jsonl` が無いか空、の5つ。
-- L-lock では lock を台本が消さないこと（自分で作っていない lock は消さない）。lock を作った後の失敗では消すこと（T-fail の後に lock が無いことを確かめる）。
+- L-lock では lock を台本が消さないこと（自分で作っていない lock は消さない）。lock を作った後の失敗では消すこと（S-bad と P-fail の後に lock が無いことを確かめる）。③の sha256 は、settings.json を JSON として読まず、バイト列で比べる。
 
 ## 7. CI（`.github/workflows/agent-hooks-test.yml`）
 
