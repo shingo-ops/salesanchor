@@ -754,6 +754,8 @@ PO_BANG_OP_PREFIXES = (
     "bash ~/.salesanchor-tools/docs/handoff/permission-delegation/po-register-delegation.sh ",
     "bash ~/.salesanchor-tools/docs/handoff/permission-delegation/po-unregister-delegation.sh ",
     "bash ~/CC報告ファイル-keep/permission-delegation/po-apply-",
+    "bash ~/.salesanchor-tools/docs/handoff/guard-add-by-ai/po-register-hki.sh ",
+    "bash ~/.salesanchor-tools/docs/handoff/guard-add-by-ai/po-unregister-hki.sh ",
 )
 
 
