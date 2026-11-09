@@ -1,0 +1,28 @@
+## backend pytest (135 passed; the process then hung at exit on an aiosqlite thread and was ended by timeout 200, exit 124)
+........................................................................ [ 53%]
+...............................................................          [100%]
+=============================== warnings summary ===============================
+tests/test_roles_edit_hierarchy.py::test_role_page_list_hides_four_keys_for_every_editor[owner]
+  /root/worktrees/salesanchor/release-role-edit-hierarchy/backend/app/main.py:27: StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+    from app.routers import (
+
+tests/test_roles_hidden_system_admin.py: 12 warnings
+  /tmp/claude-0/venv/lib/python3.12/site-packages/aiosqlite/core.py:63: DeprecationWarning: The default datetime adapter is deprecated as of Python 3.12; see the sqlite3 documentation for suggested replacement recipes
+    result = function()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+135 passed, 13 warnings in 12.62s
+## vitest
+|
+!  No story files found for the specified pattern: src/**/*.mdx
+
+ RUN  v4.1.7 /root/worktrees/salesanchor/release-role-edit-hierarchy/frontend
+
+
+ Test Files  23 passed (23)
+      Tests  207 passed (207)
+   Start at  03:01:40
+   Duration  11.76s (transform 2.57s, setup 579ms, import 7.30s, tests 7.37s, environment 15.37s)
+
+## tsc
+tsc exit 0
