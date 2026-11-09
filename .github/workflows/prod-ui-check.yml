@@ -2,10 +2,16 @@ name: prod-ui-check
 
 # 本番の画面点検（毎朝 JST 07:00）。見るだけで、書き込みはしない。
 # 合格のときは何も送らない。不合格のときだけ Discord に送る（ADR-1051）。
+# 配備（Deploy to VPS）が成功して終わったあとにも動く（workflow_run）。
 
 on:
   schedule:
     - cron: "0 22 * * *"
+  # 配備が成功して終わったら点検する（ADR-1051 改訂 2026-11-08）。deploy.yml は変えない
+  workflow_run:
+    workflows: ["Deploy to VPS"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       force_fail:
@@ -23,6 +29,8 @@ concurrency:
 
 jobs:
   check:
+    # 配備が失敗・取り消しで終わったときは点検しない
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
     # 速さの記録の段（最大 40 分で打ち切る）を含めて 60 分
     timeout-minutes: 60
@@ -111,6 +119,7 @@ jobs:
         if: failure() && steps.gate.outputs.skip != 'true'
         env:
           DISCORD_WEBHOOK_OWNER_PING: ${{ secrets.DISCORD_WEBHOOK_OWNER_PING }}
+          EVENT_NAME: ${{ github.event_name }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [ -z "${DISCORD_WEBHOOK_OWNER_PING:-}" ]; then
@@ -134,7 +143,9 @@ jobs:
           except Exception:
               pass
           label = " / ".join(names) if names else "点検を最後まで実行できませんでした"
-          content = "🚨 本番の画面点検が不合格: %s。%s" % (label, os.environ.get("RUN_URL", ""))
+          kind = {"workflow_run": "配備の後", "schedule": "毎朝", "workflow_dispatch": "手動"}.get(os.environ.get("EVENT_NAME", ""), "")
+          head = "🚨 本番の画面点検（%s）が不合格" % kind if kind else "🚨 本番の画面点検が不合格"
+          content = "%s: %s。%s" % (head, label, os.environ.get("RUN_URL", ""))
           print(json.dumps({"content": content, "username": "Prod UI Check"}, ensure_ascii=False))
           PY
           )
@@ -144,7 +155,7 @@ jobs:
 
       # 全画面の速さを記録する（ADR-1053）。判定も知らせもしない。この段の失敗で仕事全体を失敗にしない
       - name: 画面の速さを記録（判定なし）
-        if: always() && steps.gate.outputs.skip != 'true'
+        if: always() && steps.gate.outputs.skip != 'true' && github.event_name != 'workflow_run'
         continue-on-error: true
         # 試験の上限 45 分 + 1 分。この段が延びても仕事の上限 60 分の中で終わらせる（設計 5-8）
         timeout-minutes: 46
