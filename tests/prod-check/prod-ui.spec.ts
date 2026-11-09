@@ -1,5 +1,5 @@
 /**
- * 本番の画面点検 S1〜S8（見るだけ。書き込み操作はしない）
+ * 本番の画面点検 S1〜S12（S9 は通知の試験）（見るだけ。書き込み操作はしない）
  *
  * 各 test 名は通知文にそのまま出る。何が壊れたか分かる名前にする。
  */
@@ -20,6 +20,9 @@ function apiOk(page: Page, pathRe: RegExp) {
 const COMPANIES_API = /^\/api\/v1\/companies$/;
 const LEADS_API = /^\/api\/v1\/leads$/;
 const COMPANY_DETAIL_API = /^\/api\/v1\/companies\/[^/]+$/;
+const INVENTORY_API = /^\/api\/v1\/inventory$/;
+const LEAD_DETAIL_API = /^\/api\/v1\/leads\/\d+$/;
+const CALENDAR_EVENTS_API = /^\/api\/v1\/calendar\/events$/;
 
 test.describe("本番の画面点検", () => {
   test("S1 画面が開く（ログイン画面）", async ({ page }) => {
@@ -129,6 +132,47 @@ test.describe("本番の画面点検", () => {
     await login(page, email, password);
     await signOut(page);
     await expect(page).toHaveURL(/\/login$/);
+  });
+
+  test("S10 在庫表が開く", async ({ authedPage: page }) => {
+    const inv = apiOk(page, INVENTORY_API);
+    await page.goto("/inventory");
+    expect((await inv).status(), "在庫表の API の応答").toBeLessThan(400);
+    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main [data-testid=inventory-loading]")).toBeHidden();
+    await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
+    await expect(page.locator(".error-message")).toHaveCount(0);
+  });
+
+  test("S11 リードの詳細が開く", async ({ authedPage: page }) => {
+    const list = apiOk(page, LEADS_API);
+    await page.goto("/crm/leads");
+    const listRes = await list;
+    expect(listRes.status(), "リード一覧の API の応答").toBeLessThan(400);
+    const rows = (await listRes.json()) as Array<{ id: number }>;
+    test.skip(!Array.isArray(rows) || rows.length === 0, "リード 0 件");
+    const detail = apiOk(page, LEAD_DETAIL_API);
+    await page.goto(`/crm/leads/${rows[0].id}/edit`);
+    expect((await detail).status(), "リード詳細の API の応答").toBeLessThan(400);
+    await expect(page.locator("main")).toBeVisible();
+    await expect(page.locator("main .sa-loading-block")).toHaveCount(0);
+    await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
+    await expect(page.locator(".error-message")).toHaveCount(0);
+  });
+
+  test("S12 予定表が開きエラーが出ない", async ({ authedPage: page }) => {
+    const errors: string[] = [];
+    page.on("console", (msg) => {
+      if (msg.type() === "error") errors.push(msg.text());
+    });
+    const events = apiOk(page, CALENDAR_EVENTS_API);
+    await page.goto("/schedule");
+    expect((await events).status(), "予定の API の応答").toBeLessThan(400);
+    await expect(page.locator("main .comp-calendar")).toBeVisible();
+    await expect(page.locator("main .schedule-loading")).toHaveCount(0);
+    await expect(page.locator("main .schedule-error")).toHaveCount(0);
+    await page.waitForTimeout(5_000);
+    expect(errors, `console.error が ${errors.length} 件`).toHaveLength(0);
   });
 
   // 通知の試験用。PROD_CHECK_FORCE_FAIL=1 のときだけ足す（必ず落ちる）

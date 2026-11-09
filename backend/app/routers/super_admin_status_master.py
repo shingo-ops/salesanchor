@@ -246,7 +246,7 @@ async def update_status_master(
         raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="ステータスが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:status")
     await db.commit()
     return TcgStatusMasterResponse(**dict(row))
 
@@ -269,7 +269,7 @@ async def delete_status_master(
         {"id": entry_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="ステータスが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:status")
     await db.commit()
 
 

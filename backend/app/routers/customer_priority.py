@@ -101,7 +101,7 @@ async def override_priority_score(
         old_row = existing.mappings().first()
         if old_row is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                                detail="リードが見つかりません")
+                                detail="not_found:lead")
 
     old_tier = old_row["tier"]
 
@@ -248,7 +248,7 @@ async def override_message_label(
     row = result.fetchone()
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="ラベルが見つかりません")
+                            detail="not_found:message_label")
 
     await db.commit()
     # ADR-072: commit 直後にテナントコンテキスト再設定

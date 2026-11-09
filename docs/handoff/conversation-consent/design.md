@@ -1012,7 +1012,7 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 **D2 実体の写し（指紋）で固定**
 - 指紋を取る時点（審査1回目の推奨1を採用）: 件の claude を起動する前に取る。`createCase`（sessions.ts:394-414。async）の中で、写しを作った後・`spawnSession` を呼ぶ前に `resolveClaudeReal` で実体を解き、sha256・size を流し読みで計算し、その `real` と指紋を `spawnSession` → `prepareCaseRoom` へ渡す（`prepareCaseRoom` は渡された `real` を使い、解き直さない）。起動した後に計算すると、開いてから計算するまでの間に中身を変えられるため。計算に 60 秒かかれば件は開くが 4b は `claude_version_unverified`・D1 n1 に理由を付ける。残る隙（計算してから起動台本が exec するまでの差し替え）は E2（固いリンクでない）と起動時の再確認（§14-14-6 の 3）で減らすだけで、無くはならない（PO「1」の水準で受け入れる）。
 - 読む物: 件を開くときに解いた実体の道 `claudeReal`（sessions.ts:514。[server/sessions.ts:661](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/sessions.ts#L661) で `caseClaudeReal`（:219 の Map）に残す。起動台本はこの道を `AC_CLAUDE_BIN` として受け（:504）、`ccdiscord.zsh:19` で実行できることを確かめ、`:76` で exec する）。
-- 書く物: `caseClaudeReal` の値を `{ real, size, sha256 }` に広げる（上の時点で取った値。流し読みは非同期で、サーバーを止めない）。指紋を持たない件（どの道で開いたかを問わない。復元 restore.ts:125-190 を含む）は、4b で必ず `claude_version_unverified`（誤って通す方へ倒さない）。復元の道に同じ計算を足すかは便CS3a の実装の選択で、どちらでも K50 の「指紋なし→409」で確かめる。実体のサイズと計算時間は未確認（U5）。大きすぎると分かれば、件を開くときは `size`・`mtime`・`ino` の一致で代え、sha256 は起動時と probe のときだけ計算する（K56 で測って決める）。
+- 書く物: `caseClaudeReal` の値を `{ real, size, sha256 }` に広げる（上の時点で取った値。流し読みは非同期で、サーバーを止めない）。指紋を持たない件（どの道で開いたかを問わない。復元 restore.ts:125-190 を含む）は、4b で必ず `claude_version_unverified`（誤って通す方へ倒さない）。復元の道に同じ計算を足すかは便CS3a の実装の選択で、どちらでも K50 の「指紋なし→409」で確かめる。実体のサイズと計算時間は未確認（U5）→ §14-14-7 で実測した（2.1.319 は 321,995,200 バイト・253〜284 ms。代える理由は無い）。大きすぎると分かれば、件を開くときは `size`・`mtime`・`ino` の一致で代え、sha256 は起動時と probe のときだけ計算する（K56 で測って決める）。
 - 判定 4b の新しい形: 件の指紋（sha256・size）が記録の `usable: true` の項目と一致 → 通す。あわせて最後の名前が `CLAUDE_VERSION_PATTERN`（[server/config.ts:409](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/config.ts#L409)）に合うことは引き続き要求する（監査の `claudeVersion` 欄 [server/routine-audit.ts:58-59](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/routine-audit.ts#L58-L59) に書くため）。名前だけでは通らない。
 
 **D3' サーバー内部の判定**
@@ -1093,7 +1093,7 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 8. 監査: 発火・○・×・中断・無効化・通知をすべて `routine-audit.jsonl` に残す（`caseClaudeVersionProbe`・`caseClaudeVersionNotice`）。本文・鍵・合言葉は書かない。例外は 9 の `paneSamples` だけ（probe の件の画面の写し。サーバーが自分で開いた件で、送った文は定数の文1〜文3 だけなので PO の会話を含まない）。
 9. 記録を残す（PO 2026-11-06「記録も残るようにして」）: 自動の確かめは1回ごとに後から読める記録を残し、消さない。
    - 監査の書き方は追記だけ（[server/routine-audit.ts:73](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/routine-audit.ts#L73) `appendFile`。同ファイルに消す・切り詰める処理は無い）。本機能も消す・切り詰める処理を足さない。
-   - `caseClaudeVersionProbe` の1行に必ず入れる欄: 始めた時刻・終わった時刻・`claudeVersion`・sha256 の先頭16桁・`outcome`（ok / denied / aborted）・×の番号（E1〜E4・P0〜P5・R1）・発火の理由（t1 / t2）・`probeCaseId`・`counts`（P2・P3・P5 で数えた数: P2 の下請けの Write の post の行・P2 の間の post の行・pre の plan の行・plan の行に合う post の行・pre の Bash の行・P1・P2 の pre の行のうち対の post が無い行。活動の記録と probe の道具の記録は後で消えるため、数をここに残す。審査2回目 推奨2）・`paneSamples`（P0〜P3 の各 `idle` 復帰の時点の probe の件の `capture-pane` 1 枚ずつ・最大 4 枚・各 4KiB まで・制御文字を除く。K55 ② の U6 の確かめに使う。監査は1件1行の JSON の追記で、`JSON.stringify` して追記するだけなので行の長さの上限は無い。[server/routine-audit.ts:69-78](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/routine-audit.ts#L69-L78)。MAC の対象にはしない。MAC は D5 の記録の改ざんを見る物で、監査は証拠の記録のため。審査2回目 必須5）。`caseClaudeVersionNotice` の1行: 時刻・reason（n1〜n5）・`claudeVersion`・sha256 の先頭16桁・`outcome` は "ok"。2 つの action の行とも `callerSessionId` は null（省けない欄。[server/routine-audit.ts:24](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/routine-audit.ts#L24)。審査4回目 推奨1）。×の番号の欄の名前は `failedCheck` にそろえる。
+   - `caseClaudeVersionProbe` の1行に必ず入れる欄: 始めた時刻・終わった時刻・`claudeVersion`・sha256 の先頭16桁・`outcome`（ok / denied / aborted）・×の番号（E1〜E4・P0〜P5・R1）・発火の理由（t1 / t2）・`probeCaseId`・`counts`（P2・P3・P5 で数えた数: P2 の下請けの Write の post の行・P2 の間の post の行・pre の plan の行・plan の行に合う post の行・pre の Bash の行・P1・P2 の pre の行のうち対の post が無い行・文4 を送れたか（`p3FollowUp`。送れたら 1、送らなかった・送れなかったら 0。§14-14-16 の 4）。活動の記録と probe の道具の記録は後で消えるため、数をここに残す。審査2回目 推奨2）・`paneSamples`（P0〜P3 の各 `idle` 復帰の時点の probe の件の `capture-pane` 1 枚ずつ・最大 4 枚・各 4KiB まで・制御文字を除く。K55 ② の U6 の確かめに使う。監査は1件1行の JSON の追記で、`JSON.stringify` して追記するだけなので行の長さの上限は無い。[server/routine-audit.ts:69-78](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/routine-audit.ts#L69-L78)。MAC の対象にはしない。MAC は D5 の記録の改ざんを見る物で、監査は証拠の記録のため。審査2回目 必須5）。`caseClaudeVersionNotice` の1行: 時刻・reason（n1〜n5）・`claudeVersion`・sha256 の先頭16桁・`outcome` は "ok"。2 つの action の行とも `callerSessionId` は null（省けない欄。[server/routine-audit.ts:24](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/routine-audit.ts#L24)。審査4回目 推奨1）。×の番号の欄の名前は `failedCheck` にそろえる。
    - 監査の型の直し（便CS3a。審査3回目 必須3）: `RoutineAuditEntry`（[server/routine-audit.ts:13-62](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/routine-audit.ts#L13-L62)）の `outcome`（今は :16 で `"ok" | "denied"` だけ）に `"aborted"` を足す。欄 `startedAt`・`endedAt`・`sha16`・`failedCheck`（×の番号）・`trigger`（t1 / t2）・`probeCaseId`・`counts`・`paneSamples` を足す。:2 の注記「token・本文の中身は書かない」に「例外: `caseClaudeVersionProbe` の `paneSamples`（設計 conversation-consent §14-14-6 の 8・9）」を書き足す。`audit_failed` は監査に書けなかったことの印なので監査の `outcome` には入れず、記録の `lastResult` だけに入る。
    - D5 の記録の項目は消さない（§14-14-3 D5）。使えなくなった版も `usable: false` で残り、`lastProbeAt`・`lastResult`・`failCount` が履歴の要約になる。
    - 読み方: PO は画面の案内（D1 ①）と `/api/state` の `caseSayVersions` で今の状態を見る。過去の履歴は Opus 本体の会話が `routine-audit.jsonl` と記録ファイルを Read（または Bash の `grep`・`tail`）で読み、PO に報告する。見張りは本体の会話を止めない（6）ので、新しい読み口は作らない。下請けには読ませない（止まる）。履歴を一覧で見る新しい画面は本版では作らない（作るなら別の設計・PO 判断）。
@@ -1104,11 +1104,11 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 
 | 項目 | 見込み | 根拠 |
 |---|---|---|
-| probe 1 回の claude の使用量（トークン） | 未確認 | 根拠となる実測が無い。文 3 つ・下請け 1 つ・返事 3 回の小さい会話だが、数は書けない。K56 で測る |
-| probe 1 回の時間 | 10 分以内（P5 の上限） | 上限は設計で決めた値。実測は K56 |
+| probe 1 回の claude の使用量（トークン） | 未確認 | 根拠となる実測が無い。文 3 つ・下請け 1 つ・返事 3 回の小さい会話だが、数は書けない。K56（2026-11-09）でも読んでいない（件の鍵の使用量の読み口を確かめていない） |
+| probe 1 回の時間 | 10 分以内（P5 の上限） | 上限は設計で決めた値。実測（K56）: 115.0 秒（2026-11-09 の 2.1.319 の ok の回。監査の `startedAt` 2026-11-08T18:31:46.604Z〜`endedAt` 18:33:41.606Z。文4 を 1 回送った回） |
 | probe の発火回数 | claude の版が変わるたび 1 回（×なら最大 3 回） | 版の変化の頻度は未確認（U10）。観測は 2.1.318 → 2.1.319 が 2026-11-05〜06 の間に 1 回（docs/CHANGELOG.md:6） |
-| 写しのディスク | 未確認 | `git clone --local --no-checkout`（case-clone.ts:102）。大きさは測っていない |
-| 指紋の計算 | 未確認（U5） | 実体のサイズを測っていない |
+| 写しのディスク | 約 172 MiB・作るのに 18.9 秒（K56 の代わりの実測） | `git clone --local --no-checkout`（case-clone.ts:102）。本物の確かめの写しは終わると片付くので、2026-11-09 に同じ引数（`--no-hardlinks --local --no-checkout`）で同じ本店から別の場所へ作り、`du -sk` で 176208 KiB、`/usr/bin/time` で real 18.86 秒。本物の確かめの時点の値ではない（本店の大きさで変わる。本店の `.git` は `du -sh` で 295M） |
+| 指紋の計算 | 253〜284 ms（3 回。K56・U5 の実測） | 実体 2.1.319 は 321,995,200 バイト。agent-console に入っている `fingerprintFile`（dist-server/server/case-say-versions.js:14）を node から 2026-11-09 に 3 回呼び、253・266・284 ms。sha256 の先頭 16 桁は版の記録と同じ。打ち切り（`FINGERPRINT_TIMEOUT_MS` 60 秒。同 :12）より十分短いので、指紋を size・mtime・ino に代える理由は無い（§14-14-13 の推奨3。本書は変えない） |
 | 使う鍵 | 件の鍵（`ccdiscord.zsh:45-49` が Keychain から取る専用の項目） | この鍵が PO の購読と同じ契約かは未確認（U3）。同じなら PO の枚数を減らす |
 
 #### 14-14-8 成功条件
@@ -1146,7 +1146,7 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 - U2 PO の Mac の dataDir が、`GUARD_IFS`（activity-hooks.ts:15・:18）の規則の名前の下にあるか（K57 で確かめる。値は本書に書かない）。
 - U3 件のログインの鍵（`ccdiscord.zsh:45-49`）が PO の購読と同じ契約か。
 - U4 probe 1 回の claude の使用量（トークン）。
-- U5 claude の実体のサイズと sha256 の計算時間。
+- U5 claude の実体のサイズと sha256 の計算時間。→ §14-14-7 で実測した（K56・2026-11-09。321,995,200 バイト・253〜284 ms）。
 - U6 P4 の選ぶ画面の正規表現が実物の画面に合うか。確かめは K55 ② で、監査の行の `paneSamples`（K55 ① の probe の件の画面の写し）だけで行う。PO の件の画面は読まない。合わなければ probe は×（P4）に倒れ、正規表現を直す便を出す（誤って○にはならない側の外れは、選ぶ画面を見逃す側。K55 ④ の場面で D1 n4 が出なければ見逃しの疑いとして PO に報告する）。
 - U7 件の AI が case-guard の拒否の文を返事に写すか（P3 の参考記録）。
 - U8 決めた（§14-14-3 D4 の片付け）: sessions.ts の閉じる道は件のファイルも W も消さない。sessions.ts の外の `onRemoved` の聞き手は読んでいないが、probe は自分で消すので答えに依らない。
@@ -1287,6 +1287,19 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 | 1 | 2026-11-07 19:41 | 本節 d520da26・カード 95ca0363 | 返事の終わりが切れて判定の行が読めず、読めた必須2・推奨2 を取り込んだ | 必須1 → 2 (c) の P3 だけの旗。必須2 → 3 の数え方。推奨1 → 2 (d')。推奨2 → 2 (c) の「2 回続けて `idle`」 |
 | 2 | 2026-11-07 19:47 | 本節 5cb8fb75・カード 95ca0363 | REVISE | 必須1 → カード G5 の試験の偽の世界に、状態の口・文4 だけ失敗させる口・送った時刻の列を足した。必須2 → `p3FollowUp` は文4 を送れた後で 1（2 の 4）。推奨 → K51 の行（20050 ms・交互の列 10050 ms・送信失敗でも数が残る） |
 | 3 | 2026-11-07 19:54 | 本節 6704edeb・カード dd04e8fd | APPROVE（必須・推奨なし） | 審査役が run() と偽の世界で、文4 を送る時刻（3050・20050・20050・10050 ms）を数えて一義と確かめた。既存の試験は壊れない |
+
+本物の結果（K55 ①。2026-11-09 05:00 JST に Opus 本体が読んだ。版の記録は node で結果・時刻・sha256 の先頭16桁・大きさ・実体・`usable`・`failCount`・`lastProbeAt` の欄だけ、監査は最後の 2 行の `caseClaudeVersionProbe`（今回の行と前の×の行）の `outcome`・`failedCheck`・`claudeVersion`・`startedAt`・`endedAt`・`counts` だけを読んだ。MAC の欄・鍵・`paneSamples` は読んでいない）:
+
+| 物 | 値 |
+|---|---|
+| きっかけ | §14-14-17 の毎日の見回りの初回（定期実行「Claude版の確かめ 毎日見回り」11/09 03:30 の `sent`・`closed`）。見回りの返事（定期実行の履歴の `summary`）では、表の 7 行目 C に当たり 3:31 JST にサーバーを再起動（t2）した。再起動の時刻は返事の記載で、Opus 本体は別に確かめていない。監査の `startedAt` は 3:31:46 JST |
+| 版の記録 | `claudeVersion: "2.1.319"`・sha256 先頭 `1f53587e92dee8e0`・`size: 321995200`・`usable: true`・`lastResult: "ok"`・`failCount: 0`・`lastProbeAt: 2026-11-08T18:33:41.606Z` |
+| 監査 `caseClaudeVersionProbe` | `outcome: "ok"`・`failedCheck` なし・`startedAt: 2026-11-08T18:31:46.604Z`・`endedAt: 2026-11-08T18:33:41.606Z`（約 1 分 55 秒） |
+| 監査 `counts` | `p3FollowUp: 1`・`planPres: 1`・`planPresNoId: 0`・`planPosts: 0`・`mainPostsAfter3: 0`・`p2Posts: 3`・`p2AgentWrite: 1`・`p2SubagentStarts: 1`・`p2SubagentStops: 1`・`bashPres: 0`・`unpairedPres: 0`・`p4Matches: 0` |
+
+判定: K55 ① ○（`usable: true`・`lastResult: "ok"`・監査 ok）。`p3FollowUp: 1` なので、本物の Mac でも文3 だけでは plan の pre が来ず、文4 を 1 回送った後に plan の pre が 1 件来て、対の post は 0 件だった（クラウドの切り分けの 6 / 6 と同じ形）。新 P4 は 0 件で、計画の文の番号の行を誤って数えていない。§14-14-17 の K61 も ○（`lastProbeAt` が 2026-11-07T17:34:31Z から変わった）。
+
+前の×の行（2026-11-07T17:34:31Z・P3）の `counts` は `p2AgentWrite: 1`・`p2SubagentStarts: 1`・`p2SubagentStops: 1` の 3 つだけで、P3 の数は残っていなかった（直す前の版は :475 の×で数を入れなかったため。§14-14-16 の 2 (d') で直した物）。
 
 #### 14-14-17 第12版の直し2: 版の確かめの毎日の見回り（2026-11-08・PO「1」「小さく始める」）
 

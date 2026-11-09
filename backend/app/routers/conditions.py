@@ -198,7 +198,7 @@ async def get_condition(
     row = result.mappings().first()
     if not row:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="状態が見つかりません"
+            status_code=status.HTTP_404_NOT_FOUND, detail="not_found:condition"
         )
     return ConditionResponse(**dict(row))
 
@@ -286,7 +286,7 @@ async def update_condition(
     old_row = old.mappings().first()
     if not old_row:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="状態が見つかりません"
+            status_code=status.HTTP_404_NOT_FOUND, detail="not_found:condition"
         )
     update_data = data.model_dump(exclude_unset=True)
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE}
@@ -339,7 +339,7 @@ async def delete_condition(
     old_row = old.mappings().first()
     if not old_row:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="状態が見つかりません"
+            status_code=status.HTTP_404_NOT_FOUND, detail="not_found:condition"
         )
     await db.execute(
         text(
@@ -541,7 +541,7 @@ async def list_condition_aliases(
         {"id": condition_id, "tid": tenant_id},
     )
     if not parent.fetchone():
-        raise HTTPException(status_code=404, detail="状態が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:condition")
     result = await db.execute(
         text(
             f"SELECT {_ALIAS_COLS} FROM public.condition_aliases "
@@ -576,7 +576,7 @@ async def create_condition_alias(
         {"id": condition_id, "tid": tenant_id},
     )
     if not parent.fetchone():
-        raise HTTPException(status_code=404, detail="状態が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:condition")
     try:
         result = await db.execute(
             text(
@@ -618,6 +618,6 @@ async def delete_condition_alias(
         {"id": alias_id, "tid": tenant_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="別名が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:alias")
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072

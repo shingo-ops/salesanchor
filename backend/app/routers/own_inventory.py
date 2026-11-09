@@ -164,7 +164,7 @@ async def get_own_inventory(
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="自社在庫が見つかりません",
+            detail="not_found:own_inventory",
         )
     return OwnInventoryResponse(**dict(row))
 
@@ -192,7 +192,7 @@ async def update_own_inventory(
     if not old_row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="自社在庫が見つかりません",
+            detail="not_found:own_inventory",
         )
     update_data = {k: v for k, v in data.model_dump(exclude_unset=True).items() if k in _UPDATABLE}
     if not update_data:

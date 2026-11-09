@@ -95,7 +95,7 @@ async def _ensure_order_exists(db: AsyncSession, order_id: int, tenant_id: int) 
     if not res.first():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="注文が見つかりません",
+            detail="not_found:order",
         )
 
 
@@ -202,7 +202,7 @@ async def get_order_financial(
         # 受注の有無は問わず 404（情報量を最小化）。
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="売上情報が見つかりません",
+            detail="not_found:order_financial",
         )
     return _build_response(row)
 
@@ -224,7 +224,7 @@ async def update_order_financial(
     if not old_row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="売上情報が見つかりません",
+            detail="not_found:order_financial",
         )
 
     update_data = data.model_dump(exclude_unset=True)
@@ -281,7 +281,7 @@ async def delete_order_financial(
     if not old_row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="売上情報が見つかりません",
+            detail="not_found:order_financial",
         )
 
     order_financials_t = tenant_table_ref(db, tenant_id, "order_financials")

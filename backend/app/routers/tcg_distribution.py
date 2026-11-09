@@ -121,7 +121,7 @@ async def get_distribution_target(
 ):
     row = await svc.get_target(db, str(target_id))
     if row is None:
-        raise HTTPException(status_code=404, detail="配信先が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:distribution_target")
     return row
 
 
@@ -144,7 +144,7 @@ async def update_distribution_target(
     except svc.ViewerAccountNotFoundError as exc:
         raise HTTPException(status_code=422, detail="お客さんが見つかりません") from exc
     if row is None:
-        raise HTTPException(status_code=404, detail="配信先が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:distribution_target")
     return row
 
 
@@ -159,7 +159,7 @@ async def delete_distribution_target(
 ):
     ok = await svc.soft_delete_target(db, str(target_id))
     if not ok:
-        raise HTTPException(status_code=404, detail="配信先が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:distribution_target")
 
 
 # ---------------------------------------------------------------------------

@@ -202,6 +202,28 @@ describe('T3 props passed to FullCalendar', () => {
     p.eventClick({ event: { id: 'e1' } });
     expect(onEventClick).toHaveBeenCalledWith('e1', null);
   });
+
+  it.each([1, 3, 7] as const)(
+    'keeps the days view defined while switching days and month (dayCount %i, G36)',
+    (dayCount) => {
+      const days = (
+        <CalendarView mode="days" date="2026-11-02" dayCount={dayCount} events={events} ariaLabel="cal" />
+      );
+      const month = (
+        <CalendarView mode="month" date="2026-11-02" dayCount={dayCount} events={events} ariaLabel="cal" />
+      );
+      const expected = { type: 'timeGrid', duration: { days: dayCount } };
+      const { rerender } = render(days);
+      expect(fcProps().views.calendarDays).toEqual(expected);
+      rerender(month);
+      expect(fcProps().views.calendarDays).toEqual(expected);
+      rerender(days);
+      expect(fcProps().views.calendarDays).toEqual(expected);
+      rerender(month);
+      expect(fcProps().views.calendarDays).toEqual(expected);
+      expect(fcProps().initialView).toBe('dayGridMonth');
+    },
+  );
 });
 
 describe('T4 every --fc-* variable is overridden in CalendarView.css', () => {
@@ -227,6 +249,14 @@ describe('T5 FullCalendar internals the more-link handling relies on', () => {
     const src = readPackageFiles('core', (n) => n === 'internal-common.js');
     expect(src).toContain("if (!moreLinkClick || moreLinkClick === 'popover')");
     expect(src).toContain('context.calendarApi.zoomTo(date, moreLinkClick)');
+  });
+
+  it('still replaces every option on resetOptions (core and react wrapper) and builds views from optionOverrides.views (G36)', () => {
+    const src = readPackageFiles('core', (n) => n === 'index.js');
+    expect(src).toContain('props.optionOverrides = optionOverrides');
+    expect(src).toContain('parseViewConfigs(optionOverrides.views)');
+    const wrapper = readPackageFiles('react/dist', (n) => n === 'index.js');
+    expect(wrapper).toContain('this.calendar.resetOptions(Object.assign(Object.assign({}, this.props)');
   });
 });
 
@@ -556,6 +586,90 @@ describe('T11 appearance schedule', () => {
     cleanup();
     const other = render(head({ date: new Date(2026, 10, 8), isToday: false }));
     expect(other.container.querySelectorAll('.comp-calendar__daynum--today')).toHaveLength(0);
+  });
+
+  it('renders month day numbers with a today circle and a month-day label on the 1st (G31)', () => {
+    render(
+      <CalendarView mode="month" date="2026-11-02" events={events} appearance="schedule" ariaLabel="cal" />,
+    );
+    const content = fcProps().dayCellContent;
+    expect(typeof content).toBe('function');
+    const today = render(content({ date: new Date(2026, 10, 8), isToday: true }));
+    expect(today.container.querySelectorAll('.comp-calendar__monthnum--today')).toHaveLength(1);
+    expect(today.container.querySelector('.comp-calendar__monthnum')?.textContent).toBe('8');
+    cleanup();
+    const other = render(content({ date: new Date(2026, 10, 8), isToday: false }));
+    expect(other.container.querySelectorAll('.comp-calendar__monthnum--today')).toHaveLength(0);
+    cleanup();
+    const first = render(content({ date: new Date(2026, 10, 1), isToday: false }));
+    expect(first.container.querySelector('.comp-calendar__monthnum')?.textContent).toBe(
+      new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(new Date(2026, 10, 1)),
+    );
+  });
+
+  it('passes no dayCellContent to month mode without appearance (G31)', () => {
+    render(<CalendarView mode="month" date="2026-11-02" events={events} ariaLabel="cal" />);
+    expect(fcProps().dayCellContent).toBeUndefined();
+  });
+
+  const monthEvent = (allDay: boolean) => ({
+    timeText: '8p',
+    event: {
+      title: 'e1',
+      start: new Date(2026, 10, 2, 20),
+      end: new Date(2026, 10, 2, 21),
+      allDay,
+      extendedProps: { source: events[0] },
+    },
+  });
+
+  it('renders a timed month event as dot + time + title (G33)', () => {
+    render(
+      <CalendarView
+        mode="month"
+        date="2026-11-02"
+        events={events}
+        appearance="schedule"
+        eventLayout="stacked"
+        timeStyle="meridiem"
+        ariaLabel="cal"
+      />,
+    );
+    const out = render(<>{fcProps().eventContent(monthEvent(false))}</>);
+    expect(out.container.querySelectorAll('.fc-daygrid-event-dot')).toHaveLength(1);
+    expect(out.container.querySelector('.comp-calendar__time')?.textContent).toBe('calendarView.pm');
+    expect(out.container.querySelector('.comp-calendar__title')?.textContent).toBe('e1');
+    expect(out.container.querySelectorAll('.comp-calendar__content--stacked')).toHaveLength(0);
+  });
+
+  it('renders no month dot for all-day events or in days mode (G33)', () => {
+    render(
+      <CalendarView
+        mode="month"
+        date="2026-11-02"
+        events={events}
+        appearance="schedule"
+        eventLayout="stacked"
+        timeStyle="meridiem"
+        ariaLabel="cal"
+      />,
+    );
+    const allDay = render(<>{fcProps().eventContent(monthEvent(true))}</>);
+    expect(allDay.container.querySelectorAll('.fc-daygrid-event-dot')).toHaveLength(0);
+    cleanup();
+    render(
+      <CalendarView
+        mode="days"
+        date="2026-11-02"
+        events={events}
+        appearance="schedule"
+        eventLayout="stacked"
+        timeStyle="meridiem"
+        ariaLabel="cal"
+      />,
+    );
+    const days = render(<>{fcProps().eventContent(monthEvent(false))}</>);
+    expect(days.container.querySelectorAll('.fc-daygrid-event-dot')).toHaveLength(0);
   });
 });
 

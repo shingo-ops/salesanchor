@@ -138,7 +138,7 @@ async def update_product_format(
         raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="フォーマットが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:product_format")
     await db.commit()
     games = await _game_ids_for(db, [row["id"]])
     return ProductFormatResponse(**dict(row), game_ids=games.get(row["id"], []))
@@ -161,7 +161,7 @@ async def replace_product_format_games(
         {"id": format_id},
     )).mappings().first()
     if not fmt:
-        raise HTTPException(status_code=404, detail="フォーマットが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:product_format")
     if wanted:
         found = (await db.execute(
             text("SELECT count(*) FROM public.type_master WHERE id = ANY(:ids) AND is_active = TRUE"),
@@ -231,5 +231,5 @@ async def delete_product_format(
         {"id": format_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="フォーマットが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:product_format")
     await db.commit()

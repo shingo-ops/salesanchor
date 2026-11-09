@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
 import { queryClient } from "../../lib/query/apiQuery";
 import SchedulePage from "./SchedulePageImpl";
-import { formatDayLabel, getWeekDays } from "./schedule-utils";
+import { formatTimeRange } from "../../components/calendarView.utils";
+import { formatDateInput, formatDayLabel, formatDraftDateLine, formatTimeInput, getWeekDays } from "./schedule-utils";
 
 vi.mock("../../contexts/AuthContext", () => ({
   useAuth: () => ({ user: { uid: "user-a" } }),
@@ -919,5 +920,46 @@ describe("SchedulePage on component molds (G26-G28)", () => {
     expect(close.querySelector("svg")).not.toBeNull();
     fireEvent.click(close);
     await waitFor(() => expect(screen.queryByText(message)).toBeNull());
+  });
+});
+
+describe("SchedulePage time lines (G34-G35)", () => {
+  const range = () => {
+    const s = new Date(todayAt(10));
+    const e = new Date(todayAt(11));
+    return { s, e };
+  };
+
+  it("shows the Google-style time line in the detail popover and no date line (G34)", async () => {
+    answers.events = [apiEvent({})];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    const { s, e } = range();
+    const expected = formatDraftDateLine(
+      {
+        startDate: formatDateInput(s),
+        startTime: formatTimeInput(s),
+        endDate: formatDateInput(e),
+        endTime: formatTimeInput(e),
+        allDay: false,
+      },
+      i18n.t.bind(i18n) as never,
+      i18n.language,
+    );
+    await waitFor(() => expect(document.querySelector(".schedule-popover__time")).not.toBeNull());
+    expect(document.querySelector(".schedule-popover__time")?.textContent).toBe(expected);
+    expect(document.querySelectorAll(".schedule-popover__date")).toHaveLength(0);
+  });
+
+  it("shows the meridiem time range in the list view (G35)", async () => {
+    answers.events = [apiEvent({})];
+    view();
+    await screen.findByText("Own Event");
+    fireEvent.keyDown(document.body, { key: "a" });
+    await waitFor(() => expect(document.querySelector(".schedule-list__time")).not.toBeNull());
+    const { s, e } = range();
+    const text = document.querySelector(".schedule-list__time")?.textContent ?? "";
+    expect(text).toBe(formatTimeRange(s, e, i18n.t.bind(i18n) as never, false));
+    expect(text).not.toMatch(/\d{2}:\d{2} - \d{2}:\d{2}/);
   });
 });

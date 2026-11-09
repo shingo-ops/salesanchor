@@ -200,7 +200,7 @@ async def update_unit(
         raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="単位が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:unit")
     await db.commit()
     return UnitResponse(**dict(row))
 
@@ -223,7 +223,7 @@ async def delete_unit(
         {"id": unit_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="単位が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:unit")
     await db.commit()
 
 
@@ -297,7 +297,7 @@ async def delete_unit_alias(alias_id: int, db: AsyncSession = Depends(get_db)):
         {"id": alias_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="別名が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:alias")
     await db.commit()
 
 

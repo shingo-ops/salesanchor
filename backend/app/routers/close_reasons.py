@@ -115,7 +115,7 @@ async def update_close_reason(
     if not existing.first():
         raise HTTPException(
             status_code=http_status.HTTP_404_NOT_FOUND,
-            detail="指定された理由が見つかりません",
+            detail="not_found:close_reason",
         )
 
     update_fields = data.model_dump(exclude_unset=True)

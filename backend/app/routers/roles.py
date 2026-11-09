@@ -304,7 +304,7 @@ async def update_role(
     """ロール情報を更新する（部分更新）。システムロール不可、priority制限あり。"""
     old = await _get_role(db, role_id, current_user)
     if not old:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ロールが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:role")
     if old["is_system"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="システムロールは編集できません")
     if await _role_system_key(db, role_id) in ROLE_PAGE_HIDDEN_KEYS:
@@ -378,7 +378,7 @@ async def delete_role(
     """ロールを削除する（システムロール不可、priority制限あり）"""
     old = await _get_role(db, role_id, current_user)
     if not old:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ロールが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:role")
     if old["is_system"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="システムロールは削除できません")
     if await _role_system_key(db, role_id) is not None:
@@ -431,7 +431,7 @@ async def get_role_permissions(
     """ロールに割り当てられている権限一覧を取得する"""
     role = await _get_role(db, role_id, current_user)
     if not role or await _role_system_key(db, role_id) in ROLE_PAGE_HIDDEN_KEYS:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ロールが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:role")
 
     result = await db.execute(
         text("""
@@ -461,7 +461,7 @@ async def set_role_permissions(
     """ロールに割り当てる権限を一括更新する（既存の割り当てを置き換える）"""
     role = await _get_role(db, role_id, current_user)
     if not role:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ロールが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:role")
     # ロール画面の編集の決まり（ADR-147 追補 2026-11-09）。priority の比べ方ではなく system_key で決める
     my_system_keys = await get_user_system_keys(db, current_user.id)
     if not (my_system_keys & ROLE_EDITOR_KEYS):
@@ -550,7 +550,7 @@ async def get_user_roles(
         {"uid": user_id, "tid": tenant_id},
     )
     if not user_check.first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定されたユーザーが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:user")
 
     result = await db.execute(
         _visible_text(f"""

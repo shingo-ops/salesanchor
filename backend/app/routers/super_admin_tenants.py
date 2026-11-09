@@ -58,7 +58,7 @@ async def delete_tenant_logical(
             )
         ).mappings().one_or_none()
         if not row:
-            raise HTTPException(404, "テナントが見つかりません")
+            raise HTTPException(404, "not_found:tenant")
 
         if body.confirm != f"DELETE:{row['tenant_code']}":
             raise HTTPException(
@@ -121,7 +121,7 @@ async def delete_tenant_physical(
         )
     ).mappings().one_or_none()
     if not row:
-        raise HTTPException(404, "テナントが見つかりません")
+        raise HTTPException(404, "not_found:tenant")
 
     if body.confirm != f"DELETE:{row['tenant_code']}":
         raise HTTPException(

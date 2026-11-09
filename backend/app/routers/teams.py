@@ -90,7 +90,7 @@ async def get_team(
     """チーム詳細を取得する"""
     team = await _load_team(db, team_id)
     if not team:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="チームが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:team")
     return TeamResponse(**team)
 
 
@@ -156,7 +156,7 @@ async def update_team(
     """チーム情報を更新する（部分更新）"""
     old = await _load_team(db, team_id)
     if not old:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="チームが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:team")
 
     update_data = data.model_dump(exclude_unset=True)
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE_COLUMNS}
@@ -205,7 +205,7 @@ async def delete_team(
     """チームを削除する（メンバーはCASCADE削除）"""
     old = await _load_team(db, team_id)
     if not old:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="チームが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:team")
 
     await db.execute(text("DELETE FROM teams WHERE id = :id"), {"id": team_id})
     await record_audit_log(
@@ -231,7 +231,7 @@ async def list_team_members(
     """チームのメンバー一覧を取得する"""
     team = await _load_team(db, team_id)
     if not team:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="チームが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:team")
 
     result = await db.execute(
         text("""
@@ -263,7 +263,7 @@ async def add_team_member(
     """チームにメンバーを追加する"""
     team = await _load_team(db, team_id)
     if not team:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="チームが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:team")
 
     # 対象ユーザーが同テナントに属するか確認
     user_check = await db.execute(
@@ -325,7 +325,7 @@ async def remove_team_member(
         {"tid": team_id, "uid": user_id},
     )
     if not result.first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="メンバーが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:team_member")
 
     await record_audit_log(
         db=db, tenant_id=tenant_id, user_id=current_user.id,

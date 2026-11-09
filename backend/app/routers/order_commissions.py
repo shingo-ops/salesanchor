@@ -104,7 +104,7 @@ async def _ensure_order_exists(db: AsyncSession, order_id: int, tenant_id: int) 
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="注文が見つかりません",
+            detail="not_found:order",
         )
     return dict(row)
 
@@ -359,7 +359,7 @@ async def unassign_commission(
     if not existing:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="該当ロールの報酬レコードが見つかりません",
+            detail="not_found:role_commission",
         )
 
     order_commissions_t = tenant_table_ref(db, tenant_id, "order_commissions")
