@@ -13,7 +13,7 @@
    - hook_files `29ac3748|9e086e1e` = ~/.claude/scripts/mac-test-guard/guard.py。中身の sha256 の先頭8桁 `9e086e1e` は origin/main の `scripts/agent-hooks/mac-test-guard/guard.py` と同じ（`git show origin/main:… | shasum -a 256`）。
    - user:hooks `+PreToolUse|Bash|3ba846f5` = mac-vm-guard.py と mac-test-guard/guard.py の組。`-PreToolUse|Bash|062521a7` = mac-vm-guard.py だけの旧版。
    - 入れたのは PO の `!` による `scripts/agent-hooks/mac-test-guard/install.sh`（docs/handoff/mac-test-guard/design.md:77）。設計・実装は PR #5039・#5049（GitHub main にマージ済み）。
-2. 見張りの PR 番号での説明は、repo の settings.json（repo-allow・repo-hooks）だけに限られる: `/Users/tanizawashingo/.salesanchor-tools/scripts/dev/consent-audit.py:801`（PR_ONLY_TARGETS）・`:906`（それ以外の B は PR 番号では通らない）。理由は「Opus は自分で PR をマージできるので、PR は PO の確認の証にならない」（docs/handoff/permission-delegation/design.md:328）。
+2. 見張りの PR 番号での説明は、repo の settings.json（repo-allow・repo-hooks）だけに限られる: /Users/tanizawashingo/.salesanchor-tools/scripts/dev/consent-audit.py:801（PR_ONLY_TARGETS）・`:906`（それ以外の B は PR 番号では通らない）。理由は「Opus は自分で PR をマージできるので、PR は PO の確認の証にならない」（docs/handoff/permission-delegation/design.md:328）。
 3. user:hooks・hook_files を説明できるのは、本文にハッシュを含む同意票（PO の「1」）だけ（同 design.md:197）。台帳の分類は perm-change.py:669 で `reserved:R4`。
 4. 見張りを ~/.claude に入れる作業は、Claude Code の自動判定が「AI が自分の設定を変える」として止めるため、今は PO の `!` で台本を走らせている（同 design.md:225、mac-test-guard/design.md:82）。
 5. 11/02 の週次点検でも同じ形の B（見張りを足した変更）が出て、Opus は記録できなかった（~/CC報告ファイル-keep/consent-weekly/20261102-changes-analysis.md）。
