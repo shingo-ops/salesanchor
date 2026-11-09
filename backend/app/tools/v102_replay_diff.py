@@ -15,6 +15,7 @@ import csv
 import json
 import logging
 import sys
+import time
 from dataclasses import replace as dataclass_replace
 from pathlib import Path
 
@@ -23,6 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.services import line_analysis_v102_svc as svc
 from app.services.gemini_raw_copy_v102_product_first import validate_condition_heading
+from app.tools._tx_guard import release_before_compute, set_idle_tx_limit
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +80,7 @@ def replay_post(session: Session, job_id: str, masters: dict) -> list[dict]:
     """1 投稿ぶん。run_v102_analysis の読み取りの部分と同じ順で、run_v102_pipeline まで。"""
     from app.tasks.tcg_extraction import load_extraction_context  # noqa: PLC0415  循環 import を避ける
 
+    started = time.monotonic()
     schema = svc.analyzer.TCG_SCHEMA
     ctx = load_extraction_context(session, job_id)
     if ctx is None:
@@ -93,6 +96,8 @@ def replay_post(session: Session, job_id: str, masters: dict) -> list[dict]:
         masters, svc.load_followup_reference(session, job_id), svc.load_soldout_ref_posts(session, job_id),
         svc.load_posted_date(session, job_id),
     )
+    logger.info("[v102_replay_diff] job=%s read_ms=%d", job_id, int((time.monotonic() - started) * 1000))
+    release_before_compute(session)  # 計算の前に取引を閉じる（design C1）
     pipeline = svc.run_v102_pipeline(response_text, ctx, followup_masters, fixed_products=fixed_products)
     return [item_record(job_id, i, it) for i, it in enumerate(pipeline.get("v102_items") or [])]
 
@@ -100,7 +105,9 @@ def replay_post(session: Session, job_id: str, masters: dict) -> list[dict]:
 def replay(session: Session, posts: list[str], out_path: Path, heading_setting: Path | None = None) -> dict:
     """posts の各投稿をやり直して out_path（JSONL）に書く。1 投稿の失敗は記録して次へ進む。"""
     disable_gemini()
+    set_idle_tx_limit(session)
     masters, _unit_ids = svc.load_v102_masters(session)  # 1 回だけ読む
+    release_before_compute(session)
     if heading_setting is not None and masters.get("product_first") is not None:
         rule = load_heading_setting(heading_setting)
         masters = {**masters, "product_first": dataclass_replace(masters["product_first"], condition_heading=rule)}
@@ -115,6 +122,8 @@ def replay(session: Session, posts: list[str], out_path: Path, heading_setting: 
             except Exception as exc:  # noqa: BLE001
                 stats["errors"] += 1
                 logger.error("[v102_replay_diff] job=%s: %s", job_id, type(exc).__name__)
+                session.rollback()
+                set_idle_tx_limit(session)
                 continue
             finally:
                 session.rollback()  # 読み取りだけ。何も書かない

@@ -44,8 +44,10 @@ def fakes(monkeypatch, tmp_path):
                                                   "input_tokens": 10, "output_tokens": 6}),
         parse7=MagicMock(return_value=([{"raw_product_name": "p"}], [])),
         record=MagicMock(return_value="evt"),
+        idle_limit=MagicMock(return_value="30s"),
         out=tmp_path,
     )
+    monkeypatch.setattr(pab, "set_idle_tx_limit", m.idle_limit)
     monkeypatch.setattr(pab, "call_gemini_raw_copy_v8", m.v8)
     monkeypatch.setattr(pab, "call_gemini_raw_copy", m.v7)
     monkeypatch.setattr(pab, "parse_raw_copy_response", m.parse7)
@@ -1413,3 +1415,25 @@ def test_main_passes_retry_options_to_run_ab(monkeypatch, fakes, tmp_path):
     assert rc == 0
     kwargs = fake_run.call_args.kwargs
     assert kwargs["retry_transient"] == 3 and kwargs["retry_wait_sec"] == 30.0
+
+
+def test_transaction_is_closed_before_each_gemini_call_and_idle_limit_is_set_once(monkeypatch, fakes):
+    # Arrange
+    calls: list[str] = []
+    session = MagicMock()
+    session.rollback.side_effect = lambda: calls.append("rollback")
+    orig = fakes.v8.side_effect
+
+    def v8(*a, **k):
+        calls.append("gemini")
+        return orig(*a, **k)
+
+    fakes.v8.side_effect = v8
+    # Act
+    summary = _run(fakes, monkeypatch, run_ids=("r1",), repeat=2, session=session)
+    # Assert
+    assert summary.succeeded == 2
+    idx = [i for i, c in enumerate(calls) if c == "gemini"]
+    assert len(idx) == 2
+    assert all(calls[i - 1] == "rollback" for i in idx)  # 2 回とも Gemini の直前に取引を閉じる
+    assert fakes.idle_limit.call_count == 1
