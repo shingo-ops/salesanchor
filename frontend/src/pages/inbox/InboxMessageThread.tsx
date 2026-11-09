@@ -7,7 +7,6 @@ import { api } from "../../lib/api";
 import type { Conversation, MessagesResponse } from "../../lib/messages";
 import { translateMessage } from "../../lib/messages";
 import { OutboundTranslationPreview } from "./OutboundTranslationPreview";
-import { ManualRecordSection } from "./ManualRecordSection";
 import { formatAbsolute, getInitials, relativeTime } from "./inbox.types";
 import type { LeadDetail } from "./inbox.types";
 import { MessageReactionBadges } from "./MessageReactionBadges";
@@ -67,8 +66,6 @@ interface Props {
   sendReaction: (messageId: number, emojiName: string, emojiId?: string) => Promise<void>;
   /** Discord リアクション取り消し */
   deleteReaction: (messageId: number, emojiName: string, emojiId?: string) => Promise<void>;
-  /** 手の記録を保存したあと、会話の流れを読み直す */
-  onManualRecordSaved?: () => void;
   /**
    * 一覧へ戻る（スマホの1画面1ページ用）。useInboxState の backToList をそのまま渡す。
    * PC・タブレットでは一覧が常に見えているのでボタン自体を出さない。
@@ -100,7 +97,7 @@ export function InboxMessageThread({
   trimmedDraft, submitSend, retrySend, handleKeyDown,
   attachedFile, setAttachedFile, clearAttachment,
   recipientLanguageSetting, setRecipientLanguage,
-  sendReaction, deleteReaction, onManualRecordSaved,
+  sendReaction, deleteReaction,
 }: Props) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -860,15 +857,6 @@ export function InboxMessageThread({
           />
         </div>
       </div>
-
-      {/* SA-02 Stage 3: 手動記録入力（manual チャネルのみ表示） */}
-      {selectedLeadId != null && (
-        <ManualRecordSection
-          leadId={selectedLeadId}
-          currentPlatform={selectedConversation?.platform ?? null}
-          onSaved={onManualRecordSaved}
-        />
-      )}
 
       {/* 受信画像 原寸ライトボックス（G2） */}
       {lightboxUrl && (

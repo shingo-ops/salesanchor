@@ -15,7 +15,7 @@
   "app/routers/companies.py": 8,
   "app/routers/conditions.py": 2,
   "app/routers/contacts.py": 5,
-  "app/routers/conv_logs.py": 10,
+  "app/routers/conv_logs.py": 4,
   "app/routers/customer_priority.py": 1,
   "app/routers/discord_announcement.py": 2,
   "app/routers/discord_auto_setup.py": 3,

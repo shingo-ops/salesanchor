@@ -158,8 +158,6 @@ export interface UseInboxStateReturn {
   // Discord リアクション
   sendReaction: (messageId: number, emojiName: string, emojiId?: string) => Promise<void>;
   deleteReaction: (messageId: number, emojiName: string, emojiId?: string) => Promise<void>;
-  /** 選択中のリードの会話の流れを読み直す（手の記録の保存後など） */
-  reloadMessages: () => Promise<void>;
 
   // 管理ドロップダウン
   manageOpen: boolean;
@@ -530,10 +528,6 @@ export function useInboxState(): UseInboxStateReturn {
     if (!selectedLeadId) return;
     await api.delete(buildReactionDeletePath(selectedLeadId, messageId, emojiName, emojiId));
     await loadMessages(selectedLeadId);
-  }, [selectedLeadId, loadMessages]);
-
-  const reloadMessages = useCallback(async () => {
-    if (selectedLeadId !== null) await loadMessages(selectedLeadId);
   }, [selectedLeadId, loadMessages]);
 
   // ---------------------------------------------------------------------------
@@ -1223,7 +1217,6 @@ export function useInboxState(): UseInboxStateReturn {
     // Discord リアクション
     sendReaction,
     deleteReaction,
-    reloadMessages,
 
     // 管理ドロップダウン
     manageOpen,
