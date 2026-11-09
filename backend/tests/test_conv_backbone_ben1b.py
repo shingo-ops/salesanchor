@@ -21,6 +21,8 @@ from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
+from tests import test_message_send as ms
+
 
 LEADS_DDL = """
     CREATE TABLE leads (
@@ -74,41 +76,10 @@ TENANTS_DDL = """
     )
 """
 
-META_MESSAGES_DDL = """
-    CREATE TABLE meta_messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id INTEGER NOT NULL,
-        lead_id INTEGER,
-        platform VARCHAR(20) NOT NULL DEFAULT 'messenger',
-        sender_id VARCHAR(100),
-        sender_name VARCHAR(200),
-        message_text TEXT,
-        direction VARCHAR(10) NOT NULL DEFAULT 'inbound',
-        raw_payload TEXT,
-        message_id VARCHAR(100),
-        recipient_id VARCHAR(100),
-        messaging_type VARCHAR(20),
-        message_tag VARCHAR(50),
-        sent_by_staff_id INTEGER,
-        error_code VARCHAR(50),
-        error_message TEXT,
-        seen_at TIMESTAMP,
-        seen_by_staff_id INTEGER,
-        page_id VARCHAR(50),
-        original_language VARCHAR(10),
-        attachment_url TEXT,
-        attachment_type VARCHAR(20),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        deleted_at TIMESTAMP,
-        is_manual BOOLEAN
-    )
-"""
+META_MESSAGES_DDL = ms._META_MESSAGES_DDL
 
-# 本番と同じ重複防止の索引（SQLite は1回の execute で1文なので別定数）
-META_MESSAGES_UNIQUE = (
-    "CREATE UNIQUE INDEX idx_meta_messages_message_id_unique "
-    "ON meta_messages (message_id) WHERE message_id IS NOT NULL"
-)
+# 共通の meta_messages 定義（test_message_send）をそのまま使う
+META_MESSAGES_UNIQUE = ms._META_MESSAGES_MSGID_INDEX_DDL
 
 CONVERSATION_LOGS_DDL = """
     CREATE TABLE conversation_logs (
