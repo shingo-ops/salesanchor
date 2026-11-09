@@ -201,8 +201,8 @@ const CALENDAR_EVENTS_API = /^\/api\/v1\/calendar\/events$/;
 
 | # | 結果 | 根拠 |
 |---|---|---|
-| K1 | ○ | 合流（2026-11-09 01:21:44Z）の後、`gh run list --workflow prod-ui-check.yml` に event=`workflow_run` の実行が 6 件（成功 4・取り消し 2）。取り消しは下の別件 3 |
-| K2 | ○ | 01:34:42Z 開始の `workflow_run` の実行で S1〜S8・S10〜S12 の 11 件が passed・failed 0。その後の 3 件（02:23Z・02:44Z・03:22Z 開始）も success |
+| K1 | ○ | 合流（2026-11-09 01:21:44Z）の後、`gh run list --workflow prod-ui-check.yml` に event=`workflow_run` の実行が 7 件（成功 5・取り消し 2）。取り消しは下の別件 3 |
+| K2 | ○ | 01:34:42Z 開始の `workflow_run` の実行で S1〜S8・S10〜S12 の 11 件が passed・failed 0。その後の 4 件（01:37Z・02:23Z・02:44Z・03:22Z 開始）も success |
 | K3 | ○ | K2 と同じ実行で S3 passed |
 | K4 | ○ | 同じ実行で速さの記録の段が skipped（`if:` に `github.event_name != 'workflow_run'`。prod-ui-check.yml:158） |
 | K5 | ○ | `curl -sI https://app.salesanchor.jp/` の応答の CSP に `font-src 'self' data:`（2026-11-09 Opus 実測） |
@@ -218,7 +218,7 @@ const CALENDAR_EVENTS_API = /^\/api\/v1\/calendar\/events$/;
 
 ### 別件 2: 配備中かどうかを、点検が始まったときにしか見ていない
 
-- 観測: 11/9 の毎朝の実行（schedule・01:21:37Z 作成）は、「配備中の確認」の段（prod-ui-check.yml:38-61）で配備中 0 件と判定して点検へ進んだ。#5280 の配備はその直後に始まり、上の別件 1 の 17 秒の間（01:24:57〜01:25:14Z）に点検が重なった。結果は「4 failed・1 flaky・3 passed」。落ちたのは S3（字形の CSP。まだ直す前の本番を点検したため）と、S6・S7・S8（`net::ERR_CONNECTION_REFUSED`）。S4 は 1 回目に同じ接続の拒否で落ち、試し直しで合格した（生出力 `/tmp/CC報告ファイル/ui-check-42545158421.txt` の要約の行）。落ちた知らせも送られた。
+- 観測: 11/9 の毎朝の実行（schedule・01:21:37Z 作成）は、「配備中の確認」の段（prod-ui-check.yml:38-61）で配備中 0 件と判定して点検へ進んだ。#5280 の配備はその直後に始まり、上の別件 1 の 17 秒の間（01:24:57〜01:25:14Z）に点検が重なった。結果は「4 failed・1 flaky・3 passed」。落ちたのは S3（字形の CSP。まだ直す前の本番を点検したため）と、S6・S7・S8（`net::ERR_CONNECTION_REFUSED`）。S4 は 1 回目に API の返事の待ち時間切れ（`TimeoutError: page.waitForResponse: Timeout 20000ms exceeded`・prod-ui.spec.ts:64）で落ち、試し直しで合格した。【推測】これも nginx の作り直しと重なったためかもしれないが、文面は時間切れで、接続の拒否ではない（生出力 `/tmp/CC報告ファイル/ui-check-42545158421.txt` の要約の行）。落ちた知らせも送られた。
 - 原因: 確認は始まったときの 1 回（配備中なら 10 分待ってもう 1 回）だけで、点検の途中で配備が始まることは見ていない。
 - 影響: 毎朝の実行と合流が重なると、本番は正常でも落ちた知らせが来る（誤った知らせ）。
 - 扱い: 本書の範囲外の後続。直し方の候補は「落ちたときに、点検の間に配備が動いていたかを見て、動いていたら配備の後にもう 1 回だけ確かめ直す」。週次の保守で誤った知らせの件数を数えてから決める（勝手に足さない）。
