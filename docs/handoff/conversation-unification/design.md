@@ -187,3 +187,17 @@ PO 要件（2026-11-07 原文）: 「Messangerに限らず、受信箱で送受�
   4. 中: ConvLogCreate・ConvLogUpdate・冒頭の説明・conv_log_writer の import → 外すに足した。
   5. 低・6. 低: M5 の範囲と語 → backend/tests・frontend/scripts と ManualRecord・ConvLog*・_fire_translation・_fetch_conv_log を足した。
 - 未確認（審査役）: openapi.json 作り直し後の差・文言キーの検査・e2e。e2e は Opus が tests/ と frontend の e2e で conv-logs・manual-record・manualRecord を探し 0 件（同じ記録の末尾）。残り2つは実装の CI で確かめる。
+
+### 便M 2回目（2026-11-09・クラウド architect opus・HEAD 9d9a26ba1・99秒）: APPROVE
+
+- 高の指摘なし。中1・低4はカード card-binM.md に入れた。
+  - 中: error_detail の基準は 10→4。数える行は :514・:558・:598・:603。審査役が試験の数え方の関数で確かめた。
+  - 低: 外す import と残す import を名前で書く。`logging`/`logger` も外す。使うのは `_fire_translation` だけで、Opus が origin/main で確かめた。
+  - 低: test_conv_logs_router.py の :501 より後ろの3本も消す。
+  - 低: bin1 の冒頭の説明と :45 の注記を直す。:312 の書き換えは created_at も入れる（priority_scoring.py:274）。
+  - 低: 新しい試験の名前に M5 の語を入れない。
+- Opus がカード作成時に直したこと:
+  - §0 の行番号2か所を直した（list_channel_masters は :178、印は :114）。
+  - 名簿の関数名を直した（update_channel_master_visibility）。
+  - InboxMessageThread で消す範囲に :864 の注釈を含めた。
+- 未確認: 外した後の openapi.json の差と、書き換えた :312 が SQLite で通るか。どちらも CI で確かめる。
