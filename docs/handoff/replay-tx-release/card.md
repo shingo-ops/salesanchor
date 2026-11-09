@@ -122,4 +122,10 @@ def set_idle_tx_limit(session: Session, seconds: int = IDLE_TX_LIMIT_SECONDS) ->
    - test_v102_replay_diff「上限を置く」: 列の最初の 4 つが execute・commit・execute・rollback。
    - 新しい試験（v102_replay_diff と prompt_ab_recompute の両方）: 1 件目の計算の偽物が例外を出す → その後に SET の execute と commit がもう一度呼ばれ、2 件目も処理される。
 5. §6 の確かめをもう一度流し、生の出力を報告に貼る。
+6. 既存の試験との合わせ方（1 回目の実装で NEEDS_DECISION になった点への Opus の判断）:
+   - 既存の試験 test_prompt_ab.py の `test_ledger_row_is_written_per_call_with_source_ref_and_committed`（commit の回数）と `test_v102_prompt_name_e_uses_file_not_db`（execute の回数）は、run_ab の最初の `set_idle_tx_limit` が数に入って落ちる。
+   - 期待の数（2・0）は書き換えない。その数が守っている意味（台帳の行ごとに commit する・指示書を DB から読まない）を残すため。
+   - 代わりに、既存の `fakes` の準備の中で `monkeypatch.setattr(pab, "set_idle_tx_limit", m.idle_limit)`（`m.idle_limit = MagicMock(return_value="30s")`）を足し、上限の置き方は数えない。既存の試験に手を入れてよいのはこの 1 行（と MagicMock を作る 1 行）だけ。test_prompt_ab_recompute.py の `fakes` も、第 2 版の set_idle_tx_limit で既存の数の確かめが落ちる時だけ同じことをする（rec の側の名前で）。
+   - run_ab が `set_idle_tx_limit` を呼ぶことは、新しい試験で `m.idle_limit.call_count == 1` を確かめる。
+   - 部分だけを流す pytest は、全体のカバレッジの下限で落ちるので `--no-cov` を付けてよい。`*_on_real_postgres` の試験が DB 無しでエラーになるのは環境のせいなので、その名前と最後の行を報告に書けばよい（CI で流す）。
 
