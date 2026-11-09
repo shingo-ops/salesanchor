@@ -193,3 +193,46 @@ const CALENDAR_EVENTS_API = /^\/api\/v1\/calendar\/events$/;
 ## 10. 未決事項
 
 - なし（PO の判断が要る点は無い）。実装時の確かめ（§4-2・§4-3 の「止まって報告」）で食い違いが出たら止める。
+- K7 の判定は §11 の時刻の扱いで行う。別件 1・2 を直すかは、§11 のとおり後続で決める。
+
+## 11. 合流後の結果と、見つかった別件（2026-11-09 追記・Opus）
+
+### K1〜K7 の結果
+
+| # | 結果 | 根拠 |
+|---|---|---|
+| K1 | ○ | 合流（2026-11-09 01:21:44Z）の後、`gh run list --workflow prod-ui-check.yml` に event=`workflow_run` の実行が 7 件（成功 5・取り消し 2）。取り消しは下の別件 3 |
+| K2 | ○ | 01:34:42Z 開始の `workflow_run` の実行で S1〜S8・S10〜S12 の 11 件が passed・failed 0。その後の 4 件（01:37Z・02:23Z・02:44Z・03:22Z 開始）も success |
+| K3 | ○ | K2 と同じ実行で S3 passed |
+| K4 | ○ | 同じ実行で速さの記録の段が skipped（`if:` に `github.event_name != 'workflow_run'`。prod-ui-check.yml:158） |
+| K5 | ○ | `curl -sI https://app.salesanchor.jp/` の応答の CSP に `font-src 'self' data:`（2026-11-09 Opus 実測） |
+| K6 | ○ | job の `if:` が `github.event_name != 'workflow_run' \|\| github.event.workflow_run.conclusion == 'success'`（prod-ui-check.yml:33）。合流前の審査で確認済み |
+| K7 | 未判定 | 合流の翌朝の schedule の実行を待つ。cron は `0 22 * * *`（prod-ui-check.yml:9）だが、直近 2 回の schedule の実行は 01:00Z（11/8）と 01:21Z（11/9）に始まっている。GitHub の schedule は遅れて始まることがあるので、判定は「22:00Z 以後で最初の schedule の実行」で行う |
+
+### 別件 1: nginx の作り直しの間、本番に約 17 秒つながらない
+
+- 観測: #5280 の配備の記録（Deploy to VPS・「Recreate nginx」の段）で、`Container astro-webapp-nginx-1 Recreate` が 01:24:57.316Z、`Recreated` が 01:25:14.149Z、確認の 200 が 01:25:14.594Z。止まっていたのは約 17 秒。
+- deploy.yml の注記は「nginx 再起動中（~2-3s）に brief な 502 窓」（deploy.yml:506）で、実測と合わない。
+- 影響: nginx の設定が変わる配備のたびに、お客さんの画面が約 17 秒つながらない（502 でなく接続の拒否）。
+- 扱い: deploy.yml は危険パス（ADR-136）なので本書では直さない。直すなら別の設計（例: 作り直しでなく `nginx -s reload` で足りる場合を分ける）として起案する。注記の数字の訂正も同じ便で行う。
+
+### 別件 2: 配備中かどうかを、点検が始まったときにしか見ていない
+
+- 観測: 11/9 の毎朝の実行（schedule・01:21:37Z 作成）は、「配備中の確認」の段（prod-ui-check.yml:38-61）で配備中 0 件と判定して点検へ進んだ。#5280 の配備はその直後に始まり、上の別件 1 の 17 秒の間（01:24:57〜01:25:14Z）に点検が重なった。結果は「4 failed・1 flaky・3 passed」。落ちたのは S3（字形の CSP。まだ直す前の本番を点検したため）と、S6・S7・S8（`net::ERR_CONNECTION_REFUSED`）。S4 は 1 回目に API の返事の待ち時間切れ（`TimeoutError: page.waitForResponse: Timeout 20000ms exceeded`・prod-ui.spec.ts:64。点検が動いた版 42802381b の行で、今の版では :67 のリード一覧の API 待ち）で落ち、試し直しで合格した。S4 の 1 回目は 01:24:18Z に落ちており、nginx の作り直し（01:24:57Z〜）より前。【推測】配備の中の frontend などのコンテナの作り直し（01:24:09〜01:24:11Z）と重なったためかもしれないが、文面は時間切れで、接続の拒否ではない（生出力 `/tmp/CC報告ファイル/ui-check-42545158421.txt` の要約の行）。落ちた知らせも送られた。
+- 原因: 確認は始まったときの 1 回（配備中なら 10 分待ってもう 1 回）だけで、点検の途中で配備が始まることは見ていない。
+- 影響: 毎朝の実行と合流が重なると、本番は正常でも落ちた知らせが来る（誤った知らせ）。
+- 扱い: 本書の範囲外の後続。直し方の候補は「落ちたときに、点検の間に配備が動いていたかを見て、動いていたら配備の後にもう 1 回だけ確かめ直す」。週次の保守で誤った知らせの件数を数えてから決める（勝手に足さない）。
+
+### 別件 3: 配備の後の実行が取り消される
+
+- 観測: 01:26:49Z と 01:31:02Z 開始の `workflow_run` の実行が cancelled。どちらも次の配備の後の実行が入ってきた時点で、待っていた方が取り消された。
+- 仕組み: concurrency（prod-ui-check.yml:26-28、`cancel-in-progress: false`）でも、待っている実行は 1 本までで、新しい実行が入ると待っていた方は取り消される（GitHub 公式 control-workflow-concurrency「By default, any existing pending job or workflow in the same concurrency group will be canceled」。Context7 で 2026-11-09 確認）。
+- 影響: 続けて合流したとき、途中の配備の後の点検は飛ぶ。最後の配備の後の点検は必ず動くので、本番の最新の状態は見られる。§6 の「続けて合流があれば、その配備の後にもう一度点検が動く」と合っている。
+- 扱い: 直さない（設計どおり）。取り消しの件数を失敗として数えないことだけ、週次の保守で守る。
+
+### 別件 4: 在庫表は、絞り込みの読み込みが失敗したときだけ書き込みを送る
+
+- 観測: 在庫表は開くと `GET /me/inventory-filters` を読み、成功したときだけ「最後に保存した値」を覚える（frontend/src/pages/inventory/InventoryPage.tsx:333）。失敗したときは覚えないまま読み込み済みにするので（同 :350-351）、保存の処理（同 :358-383）が既定の絞り込みを `PATCH /me/inventory-filters` で送る。
+- §4-3 の「開いただけで GET 以外を送らない」は、読み込みが成功したときだけ成り立つ。
+- 影響: 点検用の人の絞り込みの保存が既定に戻るだけ。お客さんのデータには触らない。
+- 扱い: 点検の前提の注記として残す。在庫表の直しは本書の範囲外。

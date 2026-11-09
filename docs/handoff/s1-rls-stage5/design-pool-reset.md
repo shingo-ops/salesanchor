@@ -188,7 +188,7 @@ if DATABASE_URL.startswith("postgresql"):
 | K2 | 配備後の本番ログで、下の 5 種 × 4 コンテナの 20 マスがすべて 0 件 | k-baseline.sh の K2/K3 行 | 20 マスすべて 0 件（下の表） |
 | K3 | 配備後、celery-worker の ① `traceback` の件数と `close_exc` の件数が同じ（既存の `Exception closing connection` 以外の traceback が 0 件）、② `close_exc_per_h` が 20 以下 | 同上 | ① 3 件と 3 件で同じ ② 12.7／時（参考: 07:43〜08:48Z の別の数え方では 18 件／約 65 分＝約 16.6／時）。20 は 2 回の実測の大きい方に 2 割足した上限 |
 | K4（便2 だけ） | 借りた直後の接続の文脈が空で、Bx を外すとそれを見分けられる（見分けるのは T1〜T3。T4 は回帰の確認） | §5 便2 の T1〜T4 が必須チェック「pytest (SQLite + PostgreSQL RLS)」の中で緑（skip でない）。CI の pytest の出力に test_pool_reset_on_return.py の 4 件が passed で出ることを PR で確かめる | — |
-| K5（便2 だけ） | 返した接続が `idle in transaction` で残らない | 配備後に reader 鍵で pg_stat_activity を読み、アプリの役の接続で state が `idle in transaction` かつ state_change が 1 分より前のものが 0 件 | 配備前に同じ読み方で取る |
+| K5（便2 だけ） | 返した接続が `idle in transaction` で残らない | 配備後に pg_stat_activity を読み、アプリの役の接続で state が `idle in transaction` かつ state_change が 1 分より前のものが 0 件。読み方は §11 の訂正のとおり（reader 鍵では読めない） | 配備前に同じ読み方で取る |
 | K6（便2 だけ） | 会社1 で画面の主な操作が通る | 本番で会社1 の在庫表・リードの詳細・カレンダーを開き、エラー表示が無い（評価役が画面で確かめる） | — |
 
 K2 の 20 マス（基準値。数える文字は k-baseline.sh の `pat` の並びのとおり。`grep -c -F` で行を数える）:
@@ -247,3 +247,27 @@ SQLAlchemy の根拠は、上流のタグ rel_2_0_38 のファイルを行つき
 - 物差しで守る: k-baseline.sh を、この先の RLS の便（S1 段階⑤）でも配備の前後に同じ形で流す。
 - 既存の見張り: scripts/lint_tenant_schema.py の Rule C（commit の後の最初の文が reset か）は今のまま動く。
 - 守り手: Opus（設計担当）。配備後 24 時間の K2・K3 の数え直しは Opus（設計担当）が docs/handoff/s1-rls-stage5/k-baseline.sh で行い、結果を本書の末尾に追記する。
+
+## 11. 配備後の記録（2026-11-09 追記・Opus）
+
+### K5 の読み方の訂正
+
+- §6 の K5 は最初「reader 鍵で読む」と書いていた。reader 鍵の役（ai_reader）で pg_stat_activity を読むと、ほかの役の接続の `state` が空で返る（2026-11-08 Opus 実測）。PostgreSQL は、自分の役でない接続の state などを、`pg_read_all_stats` の権限が無い役には見せないため（PostgreSQL 公式「27.2.2. Viewing Statistics」: In rows about other sessions, many columns will be null。https://www.postgresql.org/docs/current/monitoring-stats.html 、Context7 で 2026-11-09 確認）。
+- このため K5 は、manual-only 鍵で本番に入り、DB の持ち主の役で読み取り専用の取引（`BEGIN READ ONLY` → SELECT → `ROLLBACK`）として読む。出すのは役・状態ごとの件数だけにする。台本は PO が `!` で流す（CLAUDE.md「VPS 直作業禁止」の無制限鍵の扱いに従う）。
+- reader 鍵の役に `pg_read_all_stats` を足す案は、本書の範囲外。足すなら ADR-1024 の改訂として別に設計する。
+
+### K5 の結果（合格）
+
+| 項目 | 値 |
+|---|---|
+| 読んだ時刻 | 2026-11-08T16:03:47Z（便2 の配備の後） |
+| アプリの役（salesanchor_app）の接続 | `idle` 11 本（うち state_change が 1 分より前 9 本）。`idle in transaction` は 0 本 |
+| 判定の行 | `k5_idle_in_tx_over_1min_app=0`・ssh の終了コード 0 |
+| 判定 | ○（基準は 0 件） |
+
+- 配備前の値を同じ読み方で取ったかは、本書の作業記録に無い（未確認）。基準は「0 件」の絶対値なので、判定には使っていない。
+
+### まだ済んでいないこと
+
+- 配備後 24 時間の K2・K3 の数え直し（§維持の仕組み）。次の配備でコンテナが入れ替わる前に k-baseline.sh で数え、ここに追記する。
+- 配備の後に本番のログに出た 401／403 の出どころの調べ。便2 の変更に関係するかは未確認。関係するかを file:line で特定し、ここに追記する。
