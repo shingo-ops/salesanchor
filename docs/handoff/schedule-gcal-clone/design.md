@@ -6,6 +6,7 @@
 追加（2026-11-08）: 便8（残りの部品を決められた部品に差し替える・G26〜G30）は PO の選択「1」（2026-11-08）。作り方は §3.13。設計審査は §9 の 11 回目。
 追加（2026-11-09）: 便9（月表示・詳しくの小窓と一覧の時刻を Google の形に・G31〜G35）は PO の選択「1、2」（2026-11-08）で設計した。作り方は §3.14。設計審査は §9 の 12 回目（APPROVE）。G31〜G35 は **PO 承認済み**（2026-11-09、PO の選択「1」＝「5か所の直しを承認して、作るところまで進める」）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin9.md`。
 追加（2026-11-09）: 便10（日・3日間・週から月へ切り替えると画面全体が消える不具合・G36）は PO の選択「1」（2026-11-09・画面が消える不具合を先に直す）。作り方は §3.15。設計審査は §9 の 13 回目（APPROVE）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin10.md`。金型の設計 `docs/handoff/calendar-view-component/design.md` §4-3 の `views` の行も「月でも渡す」に直した。
+追加（2026-11-09）: 便11（日・3日間・週の枠線を Google に揃える・G37〜G41）は PO の選択「1」（2026-11-09・枠線を揃える設計を作り、PO の承認を得てから直す）。作り方は §3.16。設計審査は §9 の 14 回目（APPROVE）。G37〜G41 は PO の承認待ち。実装カードは `docs/handoff/schedule-gcal-clone/card-bin11.md`。
 根拠: `docs/handoff/schedule-gcal-clone/recon.md`（以下 recon）。前の設計 `docs/handoff/schedule-gcal-alignment/design.md`（K1〜K14）を引き継ぎ、便2（K8〜K11）はこの設計に入れ直す。
 
 ## 1. 目的
@@ -566,6 +567,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - `scrollbar-color` を使えない古い道具: 透明にならず今の灰色の帯が残るだけで、列はずれない（幅は変えない）。
 - 月の表示が変わる: 規則はすべて `.comp-calendar--days` の下。G41 で直す前の値（R11-6）と比べる。
 - ダーク: 色は `--schedule-gridline` だけ（ダークは `frontend/src/tokens.css:669`）。`transparent` は今の css でも使っている（`:182`）。
+- 時刻の列の短い線は、1 時間に 1 行という今の設定（`frontend/src/components/CalendarView.tsx:194` の `slotDuration: '01:00:00'`）が前提。30 分ごとの行にすると、時刻の文字が無い行にも短い線が出る。行の刻みを変える時は、この規則を見直す（審査 14 回目の推奨）。
 
 戻し方: 便11 の PR を revert する（frontend の css 2 ファイルだけ・DB や設定は変えない）。
 
@@ -814,3 +816,12 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - (3) ○ 今の差し替え（`captured.props`）と T5 の読み方で書ける。core の 2 つの文は中身に在る。
 - (4) ○ `frontend/src/pages/schedule/SchedulePageImpl.tsx:961-964,990,1547`・`frontend/src/lib/query/apiQuery.ts:5,21,28` と合う。
 - (5) ○ 推奨 2 件と直したこと: ①R10-4 の「1 回目」を「その月の写しが無い時」に書き換え、30 分以内に同じ月を開いていれば 1 回目でも落ちる（推論・本番未確認）と書いた。②包み（react）側の丸ごと置き換えも見張る: カード §3-2 に `readPackageFiles('react/dist', ...)` で `dist/index.js` の `this.calendar.resetOptions(Object.assign(Object.assign({}, this.props)` を見る 1 行を足した（関数は変えない・`node_modules/@fullcalendar/<pkg>/` を読むため）。
+
+### 14 回目（便11・G37〜G41）: APPROVE（2026-11-09 05:43〜 UTC・クラウドの Opus・origin/release/schedule-gcal-borders-design aa2dce8c5・照合は origin/main 1ca6dbf38・セッション cse_01HHUUpR2iMPQkS9eqyvoEGt）
+
+- 結果は返事の本文で全部読んだ（途中で切れていない）。
+- (1) ○ `frontend/src/components/CalendarView.css:16,180-288,182`・`frontend/src/tokens.css:74,75,400,423,669` が実物と合う。npm pack した 6.1.22 で、td/th と scrollgrid の線（core `internal-common.js`）・divider の `padding:0 0 2px`・cushion の `padding:0 4px`（timegrid）・`overflow-y`（`internal-common.js:7055` の `forceYScrollbars ? 'scroll'`）を確かめた。
+- (2) ○ /tmp の写しに規則を足し、FullCalendar の global 版の週を Playwright で読んだ。上の行・左上の角・時刻の列・「終日」の升目は 4 辺 0px。`::after` は幅 8px・上の線 1px。cushion の右のあきは 12px で、文字の右の端 52.5 は列の右の端 53 以下。divider は高さ 1px・下の線 1px だけ。slot-lane の上 1px・timegrid-col・終日の日の升目の線は残った。divider の規則の詳細度 (0,4,0) は `.fc-scrollgrid-section > *` の (0,3,0) に勝つ。
+- (3) ○ 同じ写しで月表示の値（scrollgrid・曜日の行・日の升目・区切り・scrollbar-color）が足す前と後で全部同じ。
+- (4) ○ `check-css-hardcoded-values.js` は PASSED。新トークンは var() で、置き場所は `--schedule-gridline-w` の次の行。
+- (5) ○ 抜けなし。推奨 1 件: 短い線は 1 時間 1 行（`CalendarView.tsx:194`）が前提 → §3.16 の心配と対処に 1 行足した。
