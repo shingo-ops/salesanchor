@@ -16,14 +16,14 @@
 | K3 | 見張りを入れるために PO が `!` を打つ回数 | mac-test-guard で1回 | 0回（導入時の1回を除く） | 新しい見張りの設計書の「導入」の欄に PO の `!` が無いこと |
 
 ## 3. 対象と対象外
-- 対象: ~/.claude/settings.json の hooks（user:hooks）と ~/.claude/scripts/ の見張りの本体（hook_files）のうち、正本が `scripts/agent-hooks/<名前>/` のフォルダにあり、そのフォルダに台帳札 `guard-manifest.json`（§5-0）があるもの。
+- 対象: ~/.claude/settings.json の hooks（user:hooks）と ~/.claude/scripts/ の見張りの本体（hook_files）のうち、正本が `scripts/agent-hooks/<名前>/` のフォルダにあり、そのフォルダに台帳札 「guard-manifest.json」（§5-0）があるもの。
 - 対象外のまま（B が出る）: `scripts/agent-hooks/` の直下に置かれた見張り（例: master-register-rules-guard.py）、札の無いフォルダ、正本がリポジトリに無い見張り。
 - 対象外（今までどおり PO の「1」）: 見張りを外す・弱める変更、permissions.deny / ask / defaultMode、確認を省く設定、autoMode.soft_deny / environment、danger_ops、本番の設定。
 
 ## 4. 変更前後
 | | 変更前 | 変更後 |
 |---|---|---|
-| 見張りの正本 | リポジトリの `scripts/agent-hooks/<名前>/`（置き方は見張りごとにばらばら。直下に置いたものもある） | 同じフォルダに台帳札 `guard-manifest.json` を置いたものだけが対象（§5-0） |
+| 見張りの正本 | リポジトリの `scripts/agent-hooks/<名前>/`（置き方は見張りごとにばらばら。直下に置いたものもある） | 同じフォルダに台帳札 「guard-manifest.json」 を置いたものだけが対象（§5-0） |
 | ~/.claude へ入れる台本 | 見張りごとの install.sh を PO が `!` で流す | 全部の見張りで共通の台本 `scripts/agent-hooks/install-guard.sh <名前>` を1本だけ使う。Opus か実行役が流す。自動判定の例外 HKI-1 で通す（§6） |
 | 台帳への記録 | PO の「1」で `consent:` の record（無いと B） | 共通の台本が最後に `perm-change.py record --po-ref PR#<n>` を書く（§6） |
 | 点検の確かめ | user:hooks・hook_files の PR 番号は通らない（consent-audit.py:906） | 「強める変更」に限り PR 番号で通す（§5） |
@@ -33,8 +33,8 @@
 変更するファイル（実装の便で触るもの。これ以外は触らない）:
 - `scripts/dev/consent-audit.py`: §5 の分岐を足す。今の hook_files の要素は `sha8(相対パス)|中身8桁` でパスそのものを持たない（consent-audit.py:656）ので、札からパスを引く処理を足す。
 - `scripts/dev/perm-change.py`: record に `--replaced-by`・`--batch`・`--old-json` を足す（今の record の引数は perm-change.py:739-745 で、この3つは無い）。
-- `scripts/agent-hooks/install-guard.sh`（新規）と、その試験。
-- `scripts/agent-hooks/mac-test-guard/guard-manifest.json`（新規。1つ目の対象）。
+- 「scripts/agent-hooks/install-guard.sh」（新規）と、その試験。
+- 「scripts/agent-hooks/mac-test-guard/guard-manifest.json」（新規。1つ目の対象）。
 - `.github/workflows/agent-hooks-test.yml`: mac-test-guard の試験と install-guard.sh の試験を足す。checkout（今の :23・:34。fetch-depth の指定が無く浅い取得）に `fetch-depth: 0` を足す（§5-1〜5-4 の一覧の 6 が履歴を読むため）。
 - `scripts/dev/permission-delegation-tests.py`: A1〜A5・A7〜A12 の試験を足す。
 - 審査役（reviewer）の定義: §5 の末尾の確認項目2行を足す。
@@ -50,8 +50,8 @@
 ```
 - 名前は `^[a-z0-9-]+$`。フォルダ名と同じであること。
 - 点検と台本が読む札は、PR #n のマージの版の札（`git show <PR #n のマージ>:scripts/agent-hooks/<name>/guard-manifest.json`）。今の main の札や、手元の写しの札は読まない。札が無い版を指す PR 番号なら B（台本も止まる）。例外は §5-4 の試験の検査だけで、そこでは「前に入れていた版」（一覧の 6）の札も読む。前に入れていた版に札が無ければ、中身の書き換え（4.）は B（今の review-gate・confidential-quote-guard がこれに当たる）。札を足す PR では本体を変えない（札だけを足し、本体の直しは次の PR にする）。
-- `hooks[].after` は並べる位置の目印で、パスではない。書けるのは、既にある命令の末尾のファイル名（`/` を含まない。形は `^[A-Za-z0-9_.-]+$`）。例: `mac-vm-guard.py`。台本は、同じ event と matcher の組で、命令の末尾がこの名前のフックの直後に足す。見つからなければ組の最後に足す。点検は `after` を判定に使わない（足した位置は §5-3 の「同じ順」で確かめる）。
-- `files`・`tests`・`hooks[].file` に書ける名前は、フォルダの中の相対パスだけ。形は `^[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)*$` で、`..` の区切りと `/` で始まる名前は拒む（例: `../review-gate/gate.py` と書いて別の見張りのファイルを上書きする道をふさぐ）。台本と点検の両方で拒み、拒んだら台本は止まり、点検は B にする。
+- `hooks[].after` は並べる位置の目印で、パスではない。書けるのは、既にある命令の末尾のファイル名（`/` を含まない。形は `^[A-Za-z0-9_.-]+$`）。例: 「mac-vm-guard.py」。台本は、同じ event と matcher の組で、命令の末尾がこの名前のフックの直後に足す。見つからなければ組の最後に足す。点検は `after` を判定に使わない（足した位置は §5-3 の「同じ順」で確かめる）。
+- `files`・`tests`・`hooks[].file` に書ける名前は、フォルダの中の相対パスだけ。形は `^[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)*$` で、`..` の区切りと `/` で始まる名前は拒む（例: 「../review-gate/gate.py」 と書いて別の見張りのファイルを上書きする道をふさぐ）。台本と点検の両方で拒み、拒んだら台本は止まり、点検は B にする。
 - `hooks[].event` に書けるのは `PreToolUse` と `Stop` だけ。ほかの event（確認を代わりに出す PermissionRequest、文脈を足す UserPromptSubmit・SessionStart など）への登録は PO の「1」が要る（B）。
 - 足す命令の組の欄は `type` と `command` だけ（`timeout` などほかの欄は札に書けない）。
 - パスの対応は固定: 入れた先 `~/.claude/scripts/<name>/<file>` ⇔ 正本 `scripts/agent-hooks/<name>/<file>`。点検は sha8(`<name>/<file>`) を札から計算し、hook_files の要素（consent-audit.py:656 の `sha8(相対パス)|中身8桁`）と突き合わせる。
@@ -87,13 +87,13 @@
   - `approve` の語がある。
   - `updatedInput`・`updatedPermissions`・`updatedToolOutput`・`behavior`・`additionalContext` の語がある。
   語の一覧の根拠は Claude Code の公式の hooks の説明（code.claude.com/docs/en/hooks。Context7 `/websites/code_claude` で 2026-11-09 に確認）: PreToolUse は `updatedInput` で実行する中身を差し替えられる。PermissionRequest は `decision.behavior: "allow"` で確認を代わりに通し、`updatedPermissions` で許可を足せる。PostToolUse は `updatedToolOutput` で結果を差し替えられる。文字列を組み立てて隠す書き方は機械では見つけきれないので、審査役の確認項目（下）と ADR の受け入れたリスクで持つ。
-- 共通の台本 `install-guard.sh` と点検の判定の部分（consent-audit.py の §5 の分岐）を変える PR。台帳に置いた台本の sha256 と GitHub main の台本が違えば B。PO の「1」で台帳の値を更新する。
+- 共通の台本 「install-guard.sh」 と点検の判定の部分（consent-audit.py の §5 の分岐）を変える PR。台帳に置いた台本の sha256 と GitHub main の台本が違えば B。PO の「1」で台帳の値を更新する。
 - 札の `files` や `hooks` から消えた名前があるもの（外す変更）。
 
 あわせて、PR #n は ADR-1029 の審査（新しく起動した opus の審査役の APPROVE）を通ってマージされていることを条件にする（既にマージの見張りで強制されている）。審査役の確認項目に2行を足す。「この PR は見張りの止める範囲を狭めていないか」「確認を飛ばす返事（allow・approve）を返す道を作っていないか」。
 
 ## 6. 入れる道（共通の台本 install-guard.sh）
-- 置き場所は `scripts/agent-hooks/install-guard.sh`（1本だけ）。見張りごとの install.sh は作らない。既にある mac-test-guard・confidential-quote-guard・review-gate の install.sh は残すが、AI は流さない（HKI-1 の対象外）。
+- 置き場所は 「scripts/agent-hooks/install-guard.sh」（1本だけ）。見張りごとの install.sh は作らない。既にある mac-test-guard・confidential-quote-guard・review-gate の install.sh は残すが、AI は流さない（HKI-1 の対象外）。
 - 台本の手順（どこか1つでも失敗したら settings.json に触らず `INSTALL_FAILED:` で止まる）:
   1. 引数は名前1つだけ。`^[a-z0-9-]+$` に合わない・フォルダや札が無い・引数が2つ以上なら止まる。
   2. 入れ先は `$HOME/.claude` に固定する。環境変数 CLAUDE_DIR は読まない（今の mac-test-guard/install.sh:8 の形を使わない）。
@@ -129,12 +129,15 @@
 5. 1つの PR を何度も使う。対処: 今の「同じ po_ref と item_hash の組は1回」をそのまま使う（permission-delegation/design.md:195）。
 6. 審査役が中身を読まずに APPROVE できる（ADR-1029:40）。Opus は自分でマージできる。対処: この2つは新しい ADR に受け入れたリスクとして書き、PO の承認を取る。
 - 戻し方: HKI-1 を外す台本（PO の `!`）と、consent-audit.py の §5 の分岐を元に戻す PR。共通の台本で入れた見張りを外すのは、今までどおり見張りごとの rollback.sh を PO の `!` で流す。
-- 外部事例: 使わない。社内の決まり（誰が確認するか）の変更で、外の数値が設計の正しさを示さないため。
 
 ### 8-1. ADR の扱い
 - 新しい ADR を起こし、ADR-1034 の決定2（見張りは R4。PR 番号で説明できるのは repo の settings.json だけ。ADR-1034:16・:34）を一部改める。改めるのは「§5 の強める変更に限り、user:hooks と hook_files も PR 番号で説明できる」の1点だけ。外す・弱める・共通の台本の変更は ADR-1034 のまま。
 - Why に書くこと: PO の言葉（2026-11-09）、毎週の B（11/02・11/09）、§8 の受け入れたリスク 1・2・3・6。
 - この ADR が PO に承認されるまで、実装の便は出さない。
+
+## 8-2. 外部・過去事例の参照と我々への応用
+- 外部事例: 該当なし。社内の決まり（誰が確認するか）の変更で、外の数値が設計の正しさを示さないため。
+- 過去事例: 11/02 と 11/09 の週次点検で、AI が PR で入れた見張りが毎回 B に出た（recon.md の観測した事実 1・5）。応用: §5 の機械の判定で、足す・強める変更だけを PR 番号で通す。
 
 ## 9. PO の決定（2026-11-09。PO の返事「1」＝下の案1）
 見張りの「中身の書き換え」を AI の確認だけで記録してよいか。
@@ -159,6 +162,7 @@
 | A11 古い PR 番号で古い版へ戻すと B。前に入れていた版が main の履歴に無いときも B | 試験（2件。一時の git リポジトリに v1（PR#a）・v2（PR#b）の2つのマージを作り、v2 を入れた後で v1 の中身を PR#a で記録する。もう1件は履歴に無い中身から書き換える）。あわせて、浅い取得の写しで台本が止まり点検が B になることを1件 |
 
 ## 11. 維持の仕組み
+- 守り手: scripts/dev/consent-audit.py（週次点検。§5 の判定をここに置き、K1・K2 を毎週出す）
 - 週次点検（agent-console の定期作業）が毎週 K1・K2 を出す。B が出たら今までどおり Opus が中身を調べて PO に報告する。
 - 新しい見張りの設計書は「正本は `scripts/agent-hooks/<名前>/`、札は guard-manifest.json、試験は agent-hooks-test.yml で流す、導入は AI が install-guard.sh」を書く。
 - 審査役の確認項目（§5 の末尾の2行）は reviewer の定義に足す。
