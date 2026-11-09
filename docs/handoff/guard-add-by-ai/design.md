@@ -1,6 +1,6 @@
 # design: AI が足した見張りを記録できる道（草案・2026-11-09）
 
-状態: 設計案作成済み（第5版）／自己審査済み（同じ AI。§12）／§9 は PO 決定済み（2026-11-09「1」＝案1）／クラウドでの設計審査 1回目 REVISE（必須6件）・2回目 REVISE（必須4件・推奨3件）・3回目 REVISE（必須2件・推奨1件）・4回目 REVISE（必須1件・推奨2件・事実の直し1件）を反映済み・5回目は未実施／実装未着手。
+状態: 設計案作成済み（第6版）／自己審査済み（同じ AI。§12）／§9 は PO 決定済み（2026-11-09「1」＝案1）／クラウドでの設計審査 1回目 REVISE（必須6件）・2回目 REVISE（必須4件・推奨3件）・3回目 REVISE（必須2件・推奨1件）・4回目 REVISE（必須1件・推奨2件・事実の直し1件）・5回目 REVISE（必須3件・推奨1件・未確認1件）を反映済み・6回目は未実施／実装未着手。
 根拠: recon.md（同じフォルダ）。関係 ADR: ADR-1034・ADR-1033・ADR-1029。
 
 ## 1. 目的（PO の言葉から）
@@ -31,7 +31,7 @@
 | 共通の台本そのものの変更 | （無い） | PO の「1」が要る（§5-5） |
 
 変更するファイル（実装の便で触るもの。これ以外は触らない）:
-- `scripts/dev/consent-audit.py`: §5 の分岐を足す。今の照合値は中身の sha8 だけでパスを持たない（consent-audit.py:701）ので、札からパスを引く処理を足す。
+- `scripts/dev/consent-audit.py`: §5 の分岐を足す。今の hook_files の要素は `sha8(相対パス)|中身8桁` でパスそのものを持たない（consent-audit.py:656）ので、札からパスを引く処理を足す。
 - `scripts/dev/perm-change.py`: record に `--replaced-by`・`--batch`・`--old-json` を足す（今の record の引数は perm-change.py:739-745 で、この3つは無い）。
 - `scripts/agent-hooks/install-guard.sh`（新規）と、その試験。
 - `scripts/agent-hooks/mac-test-guard/guard-manifest.json`（新規。1つ目の対象）。
@@ -49,8 +49,9 @@
  "tests": ["test_guard.py"]}
 ```
 - 名前は `^[a-z0-9-]+$`。フォルダ名と同じであること。
-- 点検と台本が読む札は、PR #n のマージの版の札（`git show <PR #n のマージ>:scripts/agent-hooks/<name>/guard-manifest.json`）だけ。今の main の札や、手元の写しの札は読まない。札が無い版を指す PR 番号なら B（台本も止まる）。
-- `files`・`tests`・`hooks[].file`・`hooks[].after` に書ける名前は、フォルダの中の相対パスだけ。形は `^[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)*$` で、`..` の区切りと `/` で始まる名前は拒む（例: `../review-gate/gate.py` と書いて別の見張りのファイルを上書きする道をふさぐ）。台本と点検の両方で拒み、拒んだら台本は止まり、点検は B にする。
+- 点検と台本が読む札は、PR #n のマージの版の札（`git show <PR #n のマージ>:scripts/agent-hooks/<name>/guard-manifest.json`）。今の main の札や、手元の写しの札は読まない。札が無い版を指す PR 番号なら B（台本も止まる）。例外は §5-4 の試験の検査だけで、そこでは「前に入れていた版」（一覧の 6）の札も読む。
+- `hooks[].after` は並べる位置の目印で、パスではない。書けるのは、既にある命令の末尾のファイル名（`/` を含まない。形は `^[A-Za-z0-9_.-]+$`）。例: `mac-vm-guard.py`。台本は、同じ event と matcher の組で、命令の末尾がこの名前のフックの直後に足す。見つからなければ組の最後に足す。点検は `after` を判定に使わない（足した位置は §5-3 の「同じ順」で確かめる）。
+- `files`・`tests`・`hooks[].file` に書ける名前は、フォルダの中の相対パスだけ。形は `^[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)*$` で、`..` の区切りと `/` で始まる名前は拒む（例: `../review-gate/gate.py` と書いて別の見張りのファイルを上書きする道をふさぐ）。台本と点検の両方で拒み、拒んだら台本は止まり、点検は B にする。
 - `hooks[].event` に書けるのは `PreToolUse` と `Stop` だけ。ほかの event（確認を代わりに出す PermissionRequest、文脈を足す UserPromptSubmit・SessionStart など）への登録は PO の「1」が要る（B）。
 - 足す命令の組の欄は `type` と `command` だけ（`timeout` などほかの欄は札に書けない）。
 - パスの対応は固定: 入れた先 `~/.claude/scripts/<name>/<file>` ⇔ 正本 `scripts/agent-hooks/<name>/<file>`。点検は sha8(`<name>/<file>`) を札から計算し、hook_files の要素（consent-audit.py:656 の `sha8(相対パス)|中身8桁`）と突き合わせる。
@@ -62,16 +63,17 @@
 3. user:hooks の組の入れ替え: 減の組 E_old と増の組 E_new が、同じ束（下）にあり、同じ event と matcher で、E_old の各フックの中身（`type`・`command`・`timeout` など全部の欄）が E_new に同じ形で同じ順に入っていて、足したフックが 2. を満たす。命令の文字列だけでなく全部の欄を比べる（`timeout` を縮めて効きを弱める道をふさぐ）。減の行には `--replaced-by <E_new の sha8>` と E_old の JSON 全体を持たせる。点検は、行の JSON の sha8 が item_hash と同じことを確かめる。E_old の命令に秘密の値（`=` を含む引数・トークンの形）があれば、JSON を行に書かずに B のまま残す。
    - 束の決め方: 共通の台本の1回の実行で書いた行。行に同じ `batch:<実行の id>`（台本が作る乱数16桁）と同じ PR#n を持たせる。
 4. hook_files の中身の書き換え（同じパスで中身が変わる）【PO 決定 §9 案1】: 1. の条件に加え、次の全部を満たすこと。
-   - PR #n の差分を `git diff --no-renames <マージの親1> <マージ>` で取り、札の `tests` にあるファイルに `-` の行が0行。
-   - 札の `tests` から消えた名前が0件（前のマージの版の札と比べる）。
-   - 札の `tests` の全部が、GitHub main の `.github/workflows/agent-hooks-test.yml` の jobs の steps の `run:` の行で呼ばれている（注釈の行は数えない。YAML として読み、`run` の値の中に試験のパスがあること）。
-5. 時刻の条件（§5 の分岐だけに使う）: 今の PR 番号での確かめは「マージが今から7日以内」を求める（consent-audit.py:900-901・DAYS=7 は :30）。§5 の分岐ではこれを使わず、次の2つにする。
+   - 比べる元 P は「前に入れていた版」のマージ（一覧の 6 で決める）。比べる先は PR #n のマージ。試験の範囲 T は、P の版の札の `tests` と PR #n の版の札の `tests` を合わせたもの（間の PR で札から名前だけ消してから、次の PR で試験を消す道をふさぐ）。
+   - `git diff --no-renames <P> <PR #n のマージ>` で、T のファイルに `-` の行が0行。
+   - P の版の札の `tests` にあって PR #n の版の札の `tests` に無い名前が0件。
+   - PR #n の版の札の `tests` の全部が、GitHub main の `.github/workflows/agent-hooks-test.yml` の jobs の steps の `run:` の行で呼ばれている（注釈の行は数えない。YAML として読み、`run` の値の中に試験のパスがあること）。
+5. 時刻の条件（§5 の分岐だけに使う）: 今の PR 番号での確かめは「マージの時刻が、前回の写しの時刻（since。保留の行は held_ts）より後」を求める（consent-audit.py:911-913）。このため、前回の点検の後に入れても、マージが前回の点検より前なら通らない。§5 の分岐ではこれを使わず、次の2つにする。
    - PR #n のマージの時刻が、record の行の時刻より前。
-   - record の行の時刻が、点検の期間（今から7日）の中。
-   これで、マージから7日以上たって入れた見張りも、入れた週の点検で B に出ない。古い PR 番号を後から何度も使う道は、§8 の 5（同じ po_ref と item_hash の組は1回）と、下の 6 でふさぐ。
+   - record の行の時刻が、前回の写しの時刻（since）より後で、点検の now より前。
+   これで、前回の点検より前にマージされ、後から入れた見張りも、入れた週の点検で B に出ない。古い PR 番号を後から何度も使う道は、§8 の 5（同じ po_ref と item_hash の組は1回）と、下の 6 でふさぐ。
 6. いちばん新しい版の条件（古い版へ戻して弱める道をふさぐ）:
    - PR #n は、record の行の時刻の時点で、GitHub main で `scripts/agent-hooks/<name>/` を最後に変えたマージであること（`git log --first-parent origin/main --until=<行の時刻> -1 --format=%H -- scripts/agent-hooks/<name>/` が PR #n のマージと同じ）。古い PR 番号（例: v1 を入れた PR#a）で、後の版（v2）から古い版へ戻すことはこれで通らない。
-   - 4. の試験の比べる元は、PR #n の1つ前のマージではなく、前に入れていた版にする。点検は、前回の写しの hook_files の同じパスの中身8桁を、main の `scripts/agent-hooks/<name>/` の履歴（first-parent のマージ）から探し、見つかったマージから PR #n のマージまでの差分で 4. を確かめる。同じ中身が複数のマージにあるときは、PR #n から first-parent を遡って最初に当たったマージを使う。前に入れていた版が main の履歴に無ければ B。
+   - 4. の試験の比べる元（P）は、PR #n の1つ前のマージではなく、前に入れていた版にする。新しく足す見張り（前回の写しに同じパスが無い）は 4. に当たらないので P は要らない。点検は、前回の写しの hook_files の同じパスの中身8桁を、main の `scripts/agent-hooks/<name>/` の履歴（first-parent のマージ）から探し、見つかったマージから PR #n のマージまでの差分で 4. を確かめる。同じ中身が複数のマージにあるときは、PR #n から first-parent を遡って最初に当たったマージを使う。前に入れていた版が main の履歴に無ければ B。
    - 履歴が浅い取得（`git rev-parse --is-shallow-repository` が true）のときは、この条件を確かめられないので、台本は止まり、点検は B にする。
    - 古い版の中身を新しい PR でもう一度入れ直す（戻す PR）は、この条件では通る。試験の行が消えていれば 4. で B になる。試験を残したまま本体だけ戻すものは、審査役の確認項目と §8 の 1 の受け入れたリスクで持つ。
 
@@ -103,7 +105,8 @@
 - 自動判定の例外 HKI-1（PO が導入時に `!` で1回だけ足す。ADR-1034 の PDL-1 と同じ形）:
   > HKI-1: Allowed only for a Bash command that is exactly `bash ~/.salesanchor-tools/scripts/agent-hooks/install-guard.sh <name>` on a single line, where `<name>` matches `^[a-z0-9-]+$`, with no other arguments, no environment variable prefix (for example `CLAUDE_DIR=`), no pipe, no `;`, `&&` or `||`, no newline, no `$(`, no backquote, and no redirection. The script itself refuses to run unless ~/.salesanchor-tools is clean and equal to GitHub main. It only adds guard hooks listed in a reviewed and merged guard-manifest.json; it never removes or loosens hooks. Running any per-guard install.sh or rollback.sh, any other script under ~/.salesanchor-tools or ~/.claude, or editing settings files directly is still Self-Modification.
 - 台本の版の確かめ（手順3）は台本が自分で行う。書き換えられた台本は、その確かめも飛ばせる。外す・弱める変化を最後に見つけるのは週次点検だけ（台本の変更は §5-5 で B、settings.json と本体の変化は §5 に当たらなければ B）。台本の確かめは事故を防ぐためのもので、守りの本体は点検である。
-- 今週の3件の本当の記録: #5049 の版には札が無い（札は実装の便の PR で足す）。札を足す PR がマージされると、それが mac-test-guard のフォルダを最後に変えたマージになる。だから3件は、札を足す PR の番号で、導入の便で共通の台本を1回流して記録する（中身は #5049 と同じなので、§5-1 の中身の一致は札を足す PR の版でも満たす）。#5049 の番号では記録しない。
+- 今週の3件は記録し直さない: 11/09 の週次点検で写しが確定済み（~/.claude/logs/permission-snapshot.json の更新 2026-11-09 14:01 JST。`29ac3748` と `3ba846f5` がそれぞれ1件入っていることを Opus が grep で確認）。来週の点検では差として出ないので、後から記録しても使われない。3件は 11/09 の点検の記録に B として残したままにする（中身は外す・弱める変化0件と調べ済み。~/CC報告ファイル-keep/consent-weekly/20261109-inject-analysis.md）。
+- 実物で初めて通す確かめ（K1 の最初の1回）は、札を足す PR を共通の台本で入れたときに行う。mac-test-guard は中身が変わらないので hook_files・user:hooks の差は出ず、記録の行も書かれない（台本は「差が無い」と出して終わる）。差が出る最初の見張りの導入で K1 を測る。
 - 1つ目の対象は mac-test-guard。札を足す PR で、test_guard.py を CI（agent-hooks-test.yml）に足す。今の CI が流しているのは review-gate と master-register の試験だけ（.github/workflows/agent-hooks-test.yml:25・:36。mac-test-guard と confidential-quote-guard の試験は呼ばれていない。Opus が 2026-11-09 に `git grep agent-hooks origin/main -- .github/workflows/` で確認）。
 
 ## 7. 代替案
@@ -140,15 +143,15 @@
 | 基準 | 検証方法 |
 |---|---|
 | A1 §5-1〜3 を満たす増・入れ替えが B に出ない | 試験（一時の HOME と一時の git リポジトリ。既存の permission-delegation-tests.py に足す） |
-| A2 今週の3件が下の3行の記録で説明でき、B が0件 | 11/09 の写しの複製を一時の HOME に置き、下の3行を一時の台帳に書いて点検を流す（`--commit-snapshot` なし）。点検の基準の時刻は固定する（run_audit の now を 2026-11-09T07:00:00Z にして呼ぶ。record の行の時刻は 2026-11-09T06:00:00Z）。流す日によって結果が変わらないこと。一時の git リポジトリに、今の main の mac-test-guard（#5049 の版・0e82884f7）に札を足したマージ PR#m を作る（マージ時刻は 2026-11-09T05:00:00Z）。行: ① hook_files `29ac3748\|9e086e1e` を PR#m ② user:hooks `PreToolUse\|Bash\|3ba846f5` を PR#m・batch X ③ user:hooks `PreToolUse\|Bash\|062521a7` の減を PR#m・batch X・`--replaced-by 3ba846f5`・E_old の JSON。あわせて、札の無い版（#5049 相当）の番号で書いた行は B になることを1件確かめる。本当の3件の記録は §6 の「今週の3件の本当の記録」のとおり |
+| A2 今週の3件が下の3行の記録で説明でき、B が0件 | 11/09 の写しの複製を一時の HOME に置き、下の3行を一時の台帳に書いて点検を流す（`--commit-snapshot` なし）。点検の基準の時刻は固定する（run_audit の now を 2026-11-09T07:00:00Z にして呼ぶ。record の行の時刻は 2026-11-09T06:00:00Z）。流す日によって結果が変わらないこと。一時の git リポジトリに、今の main の mac-test-guard（#5049 の版・0e82884f7）に札を足したマージ PR#m を作る（マージ時刻は 2026-11-09T05:00:00Z）。一時の HOME の settings.json に、前の組（mac-vm-guard.py だけ。命令のパスは一時の HOME で書く）を置いて前回の写しを取り、共通の台本で mac-test-guard を入れて点検を流す。組と本体の sha8 は一時の HOME のパスで決まるので、行に書く値は試験の中で計算する（本番の `3ba846f5`・`062521a7` は使わない。本番の HOME とパスが違うと値が変わるため。consent-audit.py:457-459・:589）。行は3種: ① hook_files の増を PR#m ② user:hooks の増の組を PR#m・batch X ③ 前の組の減を PR#m・batch X・`--replaced-by <増の組の sha8>`・前の組の JSON。B が0件。あわせて、札の無い版（#5049 相当）の番号で書いた行は B になることを1件確かめる |
 | A3 組から命令を抜く入れ替え・既にあるフックの `timeout` を縮める入れ替えが B | 試験（2件） |
 | A4 PR に無い中身・札の無いフォルダ・`scripts/agent-hooks/` の直下のファイル・札に `../` や `/` で始まる名前を書いたもの・`PreToolUse` と `Stop` 以外の event が B（台本も止まる） | 試験（5件） |
-| A5 札の `tests` に `-` の行がある PR・`tests` から名前が消えた PR・CI で呼ばれていない試験での中身の書き換えが B | 試験（3件） |
+| A5 札の `tests` に `-` の行がある PR・`tests` から名前が消えた PR・CI で呼ばれていない試験での中身の書き換え・2段の PR（PR#b で札から試験 t2 の名前だけ消し、入れない。PR#c で本体を変え t2 も消し、PR#c で入れる）が B | 試験（4件） |
 | A6 AI が、見張りごとの install.sh・rollback.sh・`CLAUDE_DIR=` を前に付けた共通の台本・引数2つの共通の台本を走らせると止まる | 導入後に1回ずつ試す。止まったと判定する条件: Bash の結果が拒否で返り、settings.json の sha256 が試す前と同じ。4件の結果を keep に残す |
 | A7 共通の台本が足すだけで、2回流しても命令は1件・台帳の行も1組 | 試験 |
 | A8 §5-5 の語の一覧のどれかを、札の `files` か `hooks[].file` に含む見張りは、台本が止め、点検も B にする。試験ファイルだけにある語・大文字の `APPROVE` では止めない | 試験（語ごとに1件の7件: `permissionDecision` と `allow`・`approve`・`updatedInput`・`updatedPermissions`・`updatedToolOutput`・`behavior`・`additionalContext`。止めない見本2件: 試験ファイルの `--approve`・本体の `APPROVE`。今の mac-test-guard・review-gate の gate.py・confidential-quote-guard の guard.py を当てて0件の1件） |
 | A9 共通の台本が、~/.salesanchor-tools に変更がある・main と版が違う・名前の形が違うときに止まる | 試験（3件） |
-| A10 マージから8日たって入れた見張りが、入れた週の点検で B に出ない。record の行の時刻がマージより前なら B | 試験（2件。now を固定する） |
+| A10 前回の写しの時刻より8日前にマージし、写しの後で入れた見張りが、入れた週の点検で B に出ない。record の行の時刻がマージより前なら B | 試験（2件。now を固定する） |
 | A11 古い PR 番号で古い版へ戻すと B。前に入れていた版が main の履歴に無いときも B | 試験（2件。一時の git リポジトリに v1（PR#a）・v2（PR#b）の2つのマージを作り、v2 を入れた後で v1 の中身を PR#a で記録する。もう1件は履歴に無い中身から書き換える）。あわせて、浅い取得の写しで台本が止まり点検が B になることを1件 |
 
 ## 11. 維持の仕組み
@@ -195,7 +198,16 @@
 | 推奨2 前に入れていた中身が複数のマージにあるときの選び方が無い | §5-1〜5-4 の一覧の 6（PR #n から遡って最初のもの） |
 | 事実の直し §5-5 の「26行」は誤り | §5-5（10行・区別すると0件） |
 
-### 12-5. 自己審査（同じ AI。独立した第二者の審査ではない）
-- 判定: 5回目のクラウド審査の結果を待つ。
+### 12-5. クラウドでの設計審査 5回目（2026-11-09 08:11 UTC・opus・読むだけ。判定 REVISE。4回目の指摘は全部直っていると確認）
+| 指摘 | 直したところ |
+|---|---|
+| 必須1 試験の検査の比べる元が版ごとに違う。2段の PR で試験を消せる | §5-0（例外）・§5-4（P と T・両方の札の tests を合わせる）・一覧の 6・A5 |
+| 必須2 A2 の値が本番の HOME のパスに縛られ、一時の HOME では合わない | A2（値は試験の中で計算する） |
+| 必須3 札の見本の `after` がフォルダの外のファイル名で、相対パスの決まりと合わない | §5-0（`after` は並べる目印。`/` を含まないファイル名） |
+| 推奨 行番号の誤り（:900-901・:701） | §5 一覧の 5（:911-913・since より後）・§4（:656） |
+| 未確認 11/09 の点検で写しが確定済みなら3件を記録しても使われない | Opus が確認: 確定済み（14:01 JST の写しに2つの値が入っている）。§6（記録し直さない・K1 は差が出る最初の導入で測る） |
+
+### 12-6. 自己審査（同じ AI。独立した第二者の審査ではない）
+- 判定: 6回目のクラウド審査の結果を待つ。
 - 手元での語の一覧の数え直しは、review-gate の見張りに止められたので行っていない（審査役の記録の台本に触れる形になったため。言い換えはしていない）。根拠は3回目の審査の実測だけで、A8 の試験で確かめる。
 - 残る未確認: HKI-1 の文で、自動判定が AI の実行を実際に通すか（recon 未確認）。これは ADR の承認の後、導入の便で確かめる（A6 と同じ時）。通らなかったときは、K3 を満たせないことを PO に戻す。
