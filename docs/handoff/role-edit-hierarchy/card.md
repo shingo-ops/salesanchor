@@ -146,3 +146,45 @@ DONE / BLOCKED: / NEEDS_DECISION: のどれか。commit と push までして、
 想定分岐:
 - 既存の試験（test_staff_join_api など）が落ちた → 直さず止めて、落ちた試験名と生出力を返す。
 - 循環 import がどうしても解けない → 止めて BLOCKED:。
+
+## 追加カード7（権限の保存は「新しく足す分」だけ確かめる・2026-11-09）
+
+理由: マージ前の審査で見つかった設計の入れ忘れ。`PUT /roles/{id}/permissions`（`backend/app/routers/roles.py` の `set_role_permissions`、`not_granted = requested_keys - my_perms` の所）は、送られた一覧の全部を「自分が持つ権限か」で確かめている。画面（`frontend/src/pages/roles/RolesPage.tsx:238-251` の savePermissions）はそのロールの権限一覧を全部送る。店長の初期権限（`backend/app/services/tenant.py:69-97`）には suppliers.create・deals.create・orders.create などが無く、「仕入れ」「営業」は持っている。このため店長が「仕入れ」を開いて1つ外して保存しても 403 になり、PO の要件「店長はオーナーとシステム管理者以外のロールを全部直せる」を満たさない。
+決め方（Opus の設計判断）: 「自分が持たない権限を他のロールに新しく足せない」という止めは残す（店長が自分のロールに足して上がる道を作らないため）。確かめる対象を「今そのロールに入っている権限との差分で、新しく足す分」だけにする。外す・そのまま残すのは自由。roles.* の 422 は今のまま、送られた一覧全部で確かめる。
+
+手順:
+
+1. `backend/app/routers/roles.py` に、モジュールの関数として次を足す（`set_role_permissions` の上、ほかの `_` 付き関数の並び）:
+   ```python
+   def _keys_not_grantable(requested: set[str], current: set[str], mine: set[str]) -> set[str]:
+       """新しく足す権限のうち、自分が持たないもの。外す・残すは確かめない（ADR-147 追補 2026-11-09）。"""
+       return (requested - current) - mine
+   ```
+2. 同 `set_role_permissions` の `my_perms = await load_user_permissions(...)` の行の直後を、次のとおりにする:
+   - 変更前: `not_granted = requested_keys - my_perms`
+   - 変更後:
+     ```python
+     current_res = await db.execute(
+         text(
+             "SELECT p.key FROM role_permissions rp "
+             "JOIN public.permissions p ON p.id = rp.permission_id WHERE rp.role_id = :rid"
+         ),
+         {"rid": role_id},
+     )
+     current_keys = {row.key for row in current_res.fetchall()}
+     not_granted = _keys_not_grantable(requested_keys, current_keys, my_perms)
+     ```
+   - 直前のコメント「エスカレーション防止: 自分が持たない権限は他ロールに付与できない」の下に1行足す: `# 確かめるのは新しく足す分だけ（今あるものを残す・外すのは自由。画面は一覧を全部送るため）`
+   - 403 の文面・`if not_granted:` の形・roles.* の 422 の確かめは変えない。
+3. 試験 `backend/tests/test_system_roles.py` の末尾に、純粋な関数の試験を足す（`from app.routers.roles import _keys_not_grantable`）:
+   - 今ある権限をそのまま送る: `_keys_not_grantable({"a","b"}, {"a","b"}, set()) == set()`
+   - 今ある権限から1つ外す: `_keys_not_grantable({"a"}, {"a","b"}, set()) == set()`
+   - 自分が持つ権限を足す: `_keys_not_grantable({"a","c"}, {"a"}, {"c"}) == set()`
+   - 自分が持たない権限を足す: `_keys_not_grantable({"a","x"}, {"a"}, {"c"}) == {"x"}`
+4. 試験: `backend` で `timeout 900 pytest tests/test_system_roles.py tests/test_roles_edit_hierarchy.py tests/test_roles.py tests/test_error_detail_guard.py -q --no-cov -n0 -p no:cacheprovider`。生出力を `docs/handoff/role-edit-hierarchy/impl-checks-7.txt` に保存する。`error_detail_baseline.json` は変えない。増えたら止める。
+5. commit・push（同じ枝）。
+
+触らない: `backend/app/routers/roles.py`・`backend/tests/test_system_roles.py`・`impl-checks-7.txt` 以外。画面（RolesPage.tsx）は変えない。
+想定分岐:
+- `test_roles.py` か `test_roles_edit_hierarchy.py` の既存試験が落ちた → 直さず止めて、落ちた試験名と生出力を返す。
+- `_keys_not_grantable` の名前がもうある → 止めて BLOCKED:。
