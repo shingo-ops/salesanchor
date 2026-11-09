@@ -172,6 +172,10 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 - `scripts/qa/seed-tenant.sql:110-120` の 3 つの INSERT から `firebase_uid` の列と値を外す（R31）。同じファイルの注記 :21-23（psql 変数 `qa_*_firebase_uid` の説明）も消す。手で動かしたときに失敗しないため。`scripts/qa/reset-tenant.sh:120-122` が渡す値は使われなくなるだけで、psql は失敗しない。ファイルごと消すのは ADR-1051 D5 に任せる。
 - `scripts/data_migration/*` は過去の移行の記録なので触らない（§8-2 の例外）。ほかに列が無いと失敗する SQL が見つかれば、カードの段階で止まる。
 - 本番で消える値は tenant_006 の 1 件だけ。人の正本とはつながっていて（R26）、アプリはこの列を読まない。
+- カード作成時の直し（2026-11-09・origin/main bb87bf0b1 で確かめた）:
+  - 行番号のずれ: `backend/app/services/tenant.py:617`・`backend/tests/conftest.py:534`・`backend/tests/rls_bootstrap.py:246`・`:261`・`migrations/20261024_100300_create_ai_cloud_views.sql:544`・`backend/tests/ops/test_ai_cloud_views.py:484`（今の数は 1084）。
+  - 一覧に足すファイル: `backend/tests/test_calendar_sync_tenant_reset_pg.py:100`。rls_bootstrap の `public.users` に `firebase_uid` を入れて INSERT している。rls_bootstrap から列を消すと壊れるので、INSERT から列と値を外す。この試験は CI で流れる（`RLS_ADMIN_DATABASE_URL`・`RLS_TEST_DATABASE_URL` が `.github/workflows/test.yml:234-236` で渡る）。
+  - `backend/tests/test_export_inventory_for_sheet.py:75` の扱い:`public.users` の列で、staff の列ではない。`TEST_PG_URL` が無いと飛ばす試験で、CI は `TEST_PG_URL` を渡さない（`.github/workflows/test.yml:237-243`・`backend/tests/conftest.py:22-29`）。本番の `public.users` に `firebase_uid` は無い（`backend/tests/ops/test_ai_cloud_views.py:551-556` の注記）。§8-1 で便4 に割り当てたファイルなので（K9）、INSERT（:75-81）から `firebase_uid` の列と、値 `:uid`・`"uid"` の行だけを外す。ほかの列は Firebase と関係ないので触らない。
 
 ### 5-5. 便5 外部の片付け（PO の手作業と GO）
 

@@ -243,7 +243,6 @@ async def _ensure_public_users(conn) -> None:
             CREATE TABLE IF NOT EXISTS public.users (
                 id INTEGER PRIMARY KEY,
                 tenant_id INTEGER NOT NULL DEFAULT 999,
-                firebase_uid VARCHAR(128) UNIQUE,
                 username VARCHAR(255),
                 email VARCHAR(255),
                 full_name VARCHAR(255),
@@ -258,10 +257,10 @@ async def _ensure_public_users(conn) -> None:
     await conn.execute(
         text("""
             INSERT INTO public.users (
-                id, tenant_id, firebase_uid, username, email, full_name,
+                id, tenant_id, username, email, full_name,
                 role, is_active, is_super_admin, locale, theme
             )
-            VALUES (999, 999, 'test-user', 'testuser', 'test@example.com', 'Test User',
+            VALUES (999, 999, 'testuser', 'test@example.com', 'Test User',
                     'admin', TRUE, TRUE, 'ja', 'light')
             ON CONFLICT (id) DO NOTHING
         """)

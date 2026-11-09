@@ -1,6 +1,6 @@
 -- ADR-1052 段1: 相談係用の伏せたビュー ai_cloud を作る（冪等・1 トランザクション）。
 -- 一覧には載せない。run_all_migrations.sh の EXIT trap が、毎回の実行の最後に流す（ai_ro と同じ形）。
--- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1084 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
+-- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1083 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
 -- 2) ai_cloud を作り直す。3) ai_cloud_meta.build_views() で全ビューを作り、build_log に 1 行書く。
 -- 4) ai_reader_cloud に ai_cloud の USAGE と SELECT だけを付ける。
 -- 分類表の元: docs/handoff/cloud-case-ai/stage1-column-class.tsv（表ごと・class ごとにまとめて unnest で入れる）。
@@ -541,7 +541,7 @@ FROM (VALUES
   ('tenant_*','shipping_zones',ARRAY['country_code','country_name'],'mask',''),
   ('tenant_*','shipping_zones',ARRAY['zone'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
   ('tenant_*','source_messages',ARRAY['raw_sha256','raw_text'],'mask',''),
-  ('tenant_*','staff',ARRAY['discord_user_id','firebase_uid','given_name_en','given_name_jp','given_name_kana','phone','primary_email','staff_code'],'mask',''),
+  ('tenant_*','staff',ARRAY['discord_user_id','given_name_en','given_name_jp','given_name_kana','phone','primary_email','staff_code'],'mask',''),
   ('tenant_*','staff',ARRAY['status'],'allow','値の決まり staff_status_check で値が限られる'),
   ('tenant_*','staff',ARRAY['surname_en','surname_jp','surname_kana'],'mask',''),
   ('tenant_*','staff_emails',ARRAY['email'],'mask',''),

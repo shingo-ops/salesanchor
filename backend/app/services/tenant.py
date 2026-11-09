@@ -614,7 +614,6 @@ CREATE TABLE IF NOT EXISTS {schema}.staff (
     role_id INTEGER REFERENCES {schema}.roles(id),
     status VARCHAR(20) NOT NULL DEFAULT 'active'
         CHECK (status IN ('active','inactive','pending')),
-    firebase_uid VARCHAR(128) UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (tenant_id, staff_code),
