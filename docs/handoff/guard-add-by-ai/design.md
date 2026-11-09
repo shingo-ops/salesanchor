@@ -373,3 +373,8 @@
 - 新しい台本 po-register-hki.sh・po-unregister-hki.sh は PDL-1 の台本の写しで、違いは読む節（`### 6-1.`）とラベル（HKI-1）だけ。台帳の record は `--target user-automode-allow --po-ref consent:<鍵> --actor po-script`。
 - 週次点検（consent-audit.py）の `PO_BANG_OP_PREFIXES` に新しい2本の命令の頭を足す。ほかの台本（同じフォルダの install-guard 以外のもの）は今までどおり B。
 - 導入の順: マージ → ~/.salesanchor-tools に台本が届いたことを Opus が確かめる → 同意票（操作1 が `po-register-hki.sh consent:<鍵>`）→ PO の「1」→ PO の `!` 1回 → install-guard.sh mac-test-guard の初回（差が無いで終わる見込み）→ A6。
+- カードのクラウド審査 1回目（2026-11-09 16:49 UTC・opus・読むだけ。判定 APPROVE。§0 の表は実物と一致・§6-1 の文は 733字 `203789ba` で移す前と同じ、と実際に計算して確認）の推奨4件を取り込んだ（カード第2版）:
+  1. 5番目の引数（見出し）は `^### [0-9]+(-[0-9]+)*\.$` に完全一致したときだけ通す。`### ` だけや `### 6` で、ほかの節まで読む道をふさぐ。G18-6 に2通り足した。
+  2. G18-6 の chk は1回だけ呼ぶ（PASS の増え方 14 を保つ）。
+  3. G18-7〜11 は番号ごとに別の一時フォルダを使う（控えの名前が秒単位のため）。
+  4. 導入の順の補足: 同意票の本文に HKI-1 の item_hash `203789ba` を書く（点検の record_ok が同意票の文に item_hash があることを求める。consent-audit.py:1268・試験 A20-n19）。外すときは足したときと別の鍵（新しい同意票と「1」）を使う（同じ po_ref と item_hash の組は1回まで）。

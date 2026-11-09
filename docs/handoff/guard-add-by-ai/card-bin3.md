@@ -1,6 +1,6 @@
 # 実装カード 便3: 自動判定の例外 HKI-1 を PO の `!` で足す・外す台本（ADR-1072）
 
-- 版: 第1版（2026-11-10）
+- 版: 第2版（2026-11-10。クラウド審査1回目 APPROVE の推奨1〜3を取り込み。design.md §13-13）
 - 設計: docs/handoff/guard-add-by-ai/design.md §6・§6-1・§13-13
 - PO の決定: 2026-11-10 の返事「1」（「前回と同じ形の専用の台本を作る」を選んだ）。ADR-1072 と実装開始は 2026-11-09 の「1」
 - 基準: origin/main 96a63df05a23c0250e7a0550ca7399e1ddb4b01a
@@ -43,7 +43,7 @@
 ## 3. po_delegation_edit.py の変更（規則は1か所のまま。PDL-1 の動きは変えない）
 - 引数を「4つ」または「6つ」にする。6つのときの5番目は見出しの頭（例 `### 6-1.`）、6番目はラベル（例 `HKI-1`）。
   - 4つのとき: 見出し `### 4-6.`、ラベル `PDL-1`（今と同じ）。
-  - 5番目は `### ` で始まらなければ止まる。6番目は `^[A-Z]{2,5}-[0-9]{1,3}$` に合わなければ止まる。どちらも exit 2 で、settings.json を読む前に止まる。
+  - 5番目は `^### [0-9]+(-[0-9]+)*\.$` に完全一致（re.fullmatch）しなければ止まる（`### ` だけ・`### 6` のように、ほかの節まで対象になる値を通さない）。6番目は `^[A-Z]{2,5}-[0-9]{1,3}$` に合わなければ止まる。どちらも exit 2 で、settings.json を読む前に止まる。
   - それ以外の数の引数は今と同じ usage を出して exit 2。usage の文は `register|unregister <settings.json> <design.md> <consent-audit.py> [<見出し> <ラベル>]` にする。
 - `read_statement` の探し方は今のまま（行頭が `### ` の行で節を切り替え、節の中で行頭が `> <ラベル>:` の行を集め、1件でなければ止まる）。見出しとラベルを引数で受けるだけにする。字下げした行は今と同じく数えない。
 - 出力の文の `PDL-1` を、ラベルに置き換える（4つの引数のときの出力は、今と1文字も変わらない）。止まるときの文の `§4-6` は、見出しの文字から `### ` を除いた部分（例 `4-6.`・`6-1.`）に置き換え、`design.md <その部分> に <ラベル> の文が %d 件ある（1件のはず）。変更しない。` にする。【4つの引数のときこの1文だけは今の文 `design.md §4-6 に PDL-1 の文が…` と変わる。試験 G18-1 はこの文を見ない】
@@ -68,6 +68,8 @@
 
 ## 6. 試験（scripts/dev/permission-delegation-tests.py に足す。番号は G18 と A20-ok4〜5・A20-n21）
 共通: 一時のフォルダに settings.json を作る（`{"autoMode": {"allow": ["Bash(echo x)"]}}`）。リポジトリの本物の `docs/handoff/permission-delegation/design.md` と `docs/handoff/guard-add-by-ai/design.md` を読む。台本の試験では、一時の HOME に `~/.salesanchor-tools/scripts/dev/perm-change.py` の偽物（受けた引数を `<HOME>/record-calls.jsonl` に1行の JSON で足し、環境変数 `FAKE_RC` の値（無ければ 0）で終わる）を置く。台本は `env={"HOME": <一時の HOME>, "PATH": os.environ["PATH"]}` で `bash <リポジトリの台本> <鍵> <一時の settings.json>` として流す。本物の ~/.claude と ~/.salesanchor-tools には触らない。
+- G18-7〜G18-11 は、番号ごとに別の一時フォルダ（settings.json と HOME の両方）を使う（控えの名前は秒単位なので、同じフォルダだと同じ秒に上書きされ `.bak-` の数がずれる）。
+- 各番号の chk は1回だけ呼ぶ（1つの番号で複数の条件を見るときも、全部満たせば PASS の1回）。
 
 | 番号 | 準備 | 期待 |
 |---|---|---|
@@ -76,7 +78,7 @@
 | G18-3 | G18-2 の後にもう一度 register | exit 0。`no change: 同じ文が既にある`・`CHANGED=no`。allow の件数が同じ |
 | G18-4 | PDL-1 と HKI-1 の両方を足した後、HKI-1 を unregister | exit 0。`removed: HKI-1 だけを外した`。PDL-1 と `Bash(echo x)` は残り、順も同じ |
 | G18-5 | `> HKI-1:` の行が §6-1 に2つある一時の design.md で register | 0 以外で終わる。settings.json のバイト列が前と同じ |
-| G18-6 | 5番目が `## 6.`／6番目が `hki-1`／引数5つ、の3通り | どれも exit 2。settings.json のバイト列が前と同じ |
+| G18-6 | 5番目が `## 6.`／5番目が `### `／5番目が `### 6`／6番目が `hki-1`／引数5つ、の5通り | どれも exit 2。settings.json のバイト列が前と同じ。chk は1回だけ呼ぶ（5通りすべて満たせば PASS） |
 | G18-7 | po-register-hki.sh を鍵 `x` で流す | exit 1。settings.json のバイト列が前と同じ。`.bak-` のファイルが無い。record の呼び出し0回 |
 | G18-8 | po-register-hki.sh を鍵 `consent:KEY` で流す | exit 0。`.bak-` のファイルが1つ。record の呼び出し1回で、引数が `record --target user-automode-allow --op add --item-hash 203789ba --po-ref consent:KEY --actor po-script` |
 | G18-9 | G18-8 と同じで `FAKE_RC=1` | exit 1。settings.json のバイト列が流す前と同じ（控えから戻った） |
