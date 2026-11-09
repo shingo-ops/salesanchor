@@ -1,6 +1,6 @@
 -- apply.sql (WRITES; needs a PO GO; one transaction; ends in COMMIT)
 -- Target: DB jarvis_db. Schemas: tenant_001, tenant_003, tenant_004, tenant_005, tenant_006.
--- 7 roles get system_key (manager x5, inspector x1, smoke x1) and 4 stored roles.view rows are removed.
+-- 7 roles get system_key (manager x5, inspector x1, smoke x1) and 6 stored roles.view rows are removed.
 -- 順番: このデータ SQL を先に入れ、そのあとでコードを反映する（design §5）。
 \set ON_ERROR_STOP on
 BEGIN;
@@ -8,7 +8,7 @@ SET LOCAL lock_timeout = '10s';
 SET LOCAL statement_timeout = '60s';
 DO $do$
 DECLARE
-  specs jsonb := $j$[{"schema":"tenant_001","tid":1,"id":2536,"role":"マネージャー","key":"manager","stored":1},{"schema":"tenant_003","tid":3,"id":2536,"role":"マネージャー","key":"manager","stored":1},{"schema":"tenant_004","tid":4,"id":2514,"role":"マネージャー","key":"manager","stored":1},{"schema":"tenant_005","tid":5,"id":2514,"role":"マネージャー","key":"manager","stored":0},{"schema":"tenant_006","tid":6,"id":3,"role":"マネージャー","key":"manager","stored":0},{"schema":"tenant_001","tid":1,"id":2611,"role":"点検用（見るだけ）","key":"inspector","stored":1},{"schema":"tenant_004","tid":4,"id":2589,"role":"スモーク専用","key":"smoke","stored":0}]$j$::jsonb;
+  specs jsonb := $j$[{"schema":"tenant_001","tid":1,"id":2536,"role":"マネージャー","key":"manager","stored":1},{"schema":"tenant_003","tid":3,"id":2536,"role":"マネージャー","key":"manager","stored":1},{"schema":"tenant_004","tid":4,"id":2514,"role":"マネージャー","key":"manager","stored":1},{"schema":"tenant_005","tid":5,"id":2514,"role":"マネージャー","key":"manager","stored":1},{"schema":"tenant_006","tid":6,"id":3,"role":"マネージャー","key":"manager","stored":1},{"schema":"tenant_001","tid":1,"id":2611,"role":"点検用（見るだけ）","key":"inspector","stored":1},{"schema":"tenant_004","tid":4,"id":2589,"role":"スモーク専用","key":"smoke","stored":0}]$j$::jsonb;
   spec jsonb; sch text; n int; c int; ids jsonb; dkeys jsonb; touched int := 0; removed int := 0;
 BEGIN
   -- precheck.sql と同じ照合（実行時に読み直して、1つでも違えば全体を止める）
@@ -69,7 +69,7 @@ BEGIN
     IF c <> 1 THEN RAISE EXCEPTION 'audit_log insert for % rows=% (expected 1)', sch, c; END IF;
   END LOOP;
   IF touched <> 7 THEN RAISE EXCEPTION 'touched % roles (expected 7)', touched; END IF;
-  IF removed <> 4 THEN RAISE EXCEPTION 'removed % stored rows (expected 4)', removed; END IF;
+  IF removed <> 6 THEN RAISE EXCEPTION 'removed % stored rows (expected 6)', removed; END IF;
   RAISE NOTICE 'DONE: % roles updated, % stored roles.* rows removed', touched, removed;
 END
 $do$;

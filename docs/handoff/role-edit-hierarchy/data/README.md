@@ -2,15 +2,15 @@
 
 設計: `docs/handoff/role-edit-hierarchy/design.md` §5。前例: `docs/handoff/roles-system-key-data/`（形を写した）。ADR-155 により `migrations/` には何も足さない。
 
-## やること（7 + 4）
+## やること（7 + 6）
 
 | 会社 | ロール名 | id | 入れる system_key | 消す保存行（roles.view） |
 |---|---|---|---|---|
 | t001 | マネージャー | 2536 | manager | 1 |
 | t003 | マネージャー | 2536 | manager | 1 |
 | t004 | マネージャー | 2514 | manager | 1 |
-| t005 | マネージャー | 2514 | manager | 0 |
-| t006 | マネージャー | 3 | manager | 0 |
+| t005 | マネージャー | 2514 | manager | 1 |
+| t006 | マネージャー | 3 | manager | 1 |
 | t001 | 点検用（見るだけ） | 2611 | inspector | 1 |
 | t004 | スモーク専用 | 2589 | smoke | 0 |
 

@@ -6,7 +6,7 @@ SET LOCAL lock_timeout = '10s';
 SET LOCAL statement_timeout = '60s';
 DO $do$
 DECLARE
-  specs jsonb := $j$[{"schema":"tenant_001","tid":1,"id":2536,"role":"マネージャー","key":"manager","stored":1},{"schema":"tenant_003","tid":3,"id":2536,"role":"マネージャー","key":"manager","stored":1},{"schema":"tenant_004","tid":4,"id":2514,"role":"マネージャー","key":"manager","stored":1},{"schema":"tenant_005","tid":5,"id":2514,"role":"マネージャー","key":"manager","stored":0},{"schema":"tenant_006","tid":6,"id":3,"role":"マネージャー","key":"manager","stored":0},{"schema":"tenant_001","tid":1,"id":2611,"role":"点検用（見るだけ）","key":"inspector","stored":1},{"schema":"tenant_004","tid":4,"id":2589,"role":"スモーク専用","key":"smoke","stored":0}]$j$::jsonb;
+  specs jsonb := $j$[{"schema":"tenant_001","tid":1,"id":2536,"role":"マネージャー","key":"manager","stored":1},{"schema":"tenant_003","tid":3,"id":2536,"role":"マネージャー","key":"manager","stored":1},{"schema":"tenant_004","tid":4,"id":2514,"role":"マネージャー","key":"manager","stored":1},{"schema":"tenant_005","tid":5,"id":2514,"role":"マネージャー","key":"manager","stored":1},{"schema":"tenant_006","tid":6,"id":3,"role":"マネージャー","key":"manager","stored":1},{"schema":"tenant_001","tid":1,"id":2611,"role":"点検用（見るだけ）","key":"inspector","stored":1},{"schema":"tenant_004","tid":4,"id":2589,"role":"スモーク専用","key":"smoke","stored":0}]$j$::jsonb;
   spec jsonb; sch text; n int; total int := 0;
 BEGIN
   FOR spec IN SELECT * FROM jsonb_array_elements(specs) LOOP

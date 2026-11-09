@@ -125,7 +125,7 @@ OWNER_ADMIN_ONLY_KEYS = ROLE_PAGE_HIDDEN_KEYS | {ROLE_KEY_MANAGER}
 | t004 | スモーク専用 | 2589 | smoke |
 
 - 名前と id の両方で1件だけ当たることを確かめ、`system_key IS NULL` のときだけ入れる。1トランザクション・lock_timeout 10s・audit_log 記録。
-- 同じ SQL で、編集できないロールの保存行から roles.* を消す（t001 点検用 roles.view の1行・マネージャーの roles.view 3行）。消した行は rollback.sql で戻せるよう、apply 前に行を書き出す。
+- 同じ SQL で、編集できないロールの保存行から roles.* を消す（t001 点検用 roles.view の1行・マネージャーの roles.view 5行。2026-11-09 本番の読み直しで t005・t006 にも1行ずつあると分かり 3→5 に直した）。消した行は rollback.sql で戻せるよう、apply 前に行を書き出す。
 - 順番: コードの反映 → データ SQL。コードが先でも、値が入るまでマネージャーは「その他」扱いでロール画面を失うだけ（数分）。値が先だと古いコードには影響しない。→ **データ SQL を先に入れ、その後コードを反映**（どの時点でも誰もロール画面を失わない）。
 
 ## 6. 代替案

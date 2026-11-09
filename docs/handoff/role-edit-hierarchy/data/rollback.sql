@@ -35,7 +35,7 @@ BEGIN
             jsonb_build_object('rolled_back_audit_id', a.id, 'system_key_step', 'role-edit-hierarchy-20261109-rollback')::text);
   END LOOP;
   IF undone <> 7 THEN RAISE EXCEPTION 'rolled back % roles (expected 7)', undone; END IF;
-  IF restored <> 4 THEN RAISE EXCEPTION 'restored % stored rows (expected 4)', restored; END IF;
+  IF restored <> 6 THEN RAISE EXCEPTION 'restored % stored rows (expected 6)', restored; END IF;
   RAISE NOTICE 'ROLLED BACK: % roles, % stored rows restored', undone, restored;
 END
 $do$;
