@@ -239,7 +239,7 @@ mode: handoff
 **tenant_invoice_payment_methods**（一覧。どの請求書の選択肢に出すかを決める表）
 - id、tenant_id（NOT NULL）、region（domestic／overseas）、method_type（NOT NULL。bank／wise）、display_name（プルダウンに出す名前。必須・空文字は CHECK で止める）、sort_order、is_active（既定 true）、updated_by_user_id、created_at、updated_at。
 - UNIQUE (id, tenant_id, method_type)。詳細の表が「行の id・会社・種類の組」を外部キーで指すためだけに置く（下の1対1の決まり）。
-- 制約には名前を付ける（UNIQUE・外部キー・CHECK）。移行を2回流しても壊れないようにするため。先例: migrations/20261103_120000_create_ai_job_assignments.sql:35（UNIQUE (id, job_key)）と :45（FOREIGN KEY (choice_id, job_key)）。どちらの列も NOT NULL（同 :28・:41）。もう1つの先例 migrations/20261022_100000_products_format_in_work_fk.sql:56。主キーがそのまま外部キーになる1対1の詳細の表は、会社ごとのスキーマに先例がある（backend/app/services/tenant.py:303・:324・:643）。
+- 制約には名前を付ける（UNIQUE・外部キー・CHECK）。移行を2回流しても壊れないようにするため。会社ごとの表では、同じ名前の制約が会社の数だけできる。このため「もう有るか」の確かめは名前（conname）だけでなくスキーマ（connamespace）でも絞る。名前だけで確かめると2社目から追加が飛ばされる。先例: migrations/20261103_120000_create_ai_job_assignments.sql:35（UNIQUE (id, job_key)）と :45（FOREIGN KEY (choice_id, job_key)）。どちらの列も NOT NULL（同 :28・:41）。もう1つの先例 migrations/20261022_100000_products_format_in_work_fk.sql:56。主キーがそのまま外部キーになる1対1の詳細の表は、会社ごとのスキーマに先例がある（backend/app/services/tenant.py:303・:324・:643）。
 
 **tenant_invoice_payment_bank**（銀行口座の詳細。一覧の行1つに1行）
 - payment_method_id（主キー）、method_type（NOT NULL・CHECK で 'bank' だけ・既定 'bank'）、tenant_id（NOT NULL）、account_holder、bank_name、bank_branch、bank_account_type、bank_account_number、swift_code（任意）、bank_address（任意）、created_at、updated_at。
