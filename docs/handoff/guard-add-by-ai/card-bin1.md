@@ -306,3 +306,53 @@ cd "$WT" && git diff origin/main...HEAD --name-only
 - 便2 のカードは、この便のマージの後に書く。
 
 END OF CARD
+
+## 13. マージ前の審査で見つかった穴の直し（第2版・2026-11-09。設計書 §12-13）
+
+この節は、§5-5 と §7 に足す条件と試験です。§0〜§12 と食い違うところは、この節が優先します。
+
+### 13-0. 着手条件
+
+- 枝は `release/guard-add-by-ai-bin1`。HEAD が a6648897a1fe4eb2abfce75273faf20df075ffe3（main を取り込んだ merge）か、その子孫であること。違えば止まって `BLOCKED:` で返す。
+- 新しい枝は作らない。この枝に commit を足して push する（`git push --force` はしない）。
+- push が見張りに止められたら、回り道を作らずに止まって `BLOCKED:` で生の出力を返す。
+
+### 13-1. 直すところ（`scripts/dev/consent-audit.py`。行番号は a6648897a の版）
+
+1. 判定に、今週の差分の要素を渡す。
+   - `run_permissions`（:1386-1389 の `for op, els in (("add", added), ("remove", removed))`）で、`judge_change` に `came=tuple(added)`・`gone=tuple(removed)` を足して渡す（キーワード引数。その key の added と removed）。
+   - `judge_change`（:1278）・`record_ok`（:1230。呼び出しは :1310）・`guard_add_ok`（:1221 付近）・`_ga_check`（:1126）に、キーワード引数 `came=None`・`gone=None` を足して下へ渡す。印の外の行（`judge_change`・`record_ok` の定義と呼び出し・`run_permissions`）は、引数を足す変更だけにする。
+2. user:hooks の増を入れ替えで通す道（:1213-1217 の `for rr in rows:` の条件）に、`gone is not None and "%s|%s|%s" % (event, matcher, rr.get("item_hash")) in gone` を足す。
+3. user:hooks の減の道（:1209-1210 の `if op == "remove":`）は、`came is not None and "%s|%s|%s" % (event, matcher, row.get("replaced_by")) in came` でなければ False を返す。満たせば今までどおり `_ga_user_remove(...)` を返す。
+4. `_ga_hookfiles_remove` の試験ファイルの差分の読み方（:1118-1123）: 見出しの中（`diff --git ` で始まる行から、そのファイルの最初の `@@` で始まる行まで）だけ、`---`・`+++` で始まる行を飛ばす。見出しの外では、`-` で始まる行はすべて False、`+` で始まる行はすべて `_GA_PLUS_RES` に当てる。
+5. `_ga_ci_ok` の `continue-on-error`（:1066）: `"continue-on-error" in holder and holder.get("continue-on-error") is not False` なら False。`"if" in holder` の条件はそのまま残す。
+- 2.〜5. は、印（`# >>> ADR-1072 guard-add judge` と `# <<< ...`）の中の行だけを変える。印の行の数（4行）は変えない。
+
+### 13-2. 足す試験（`scripts/dev/permission-delegation-tests.py`。`test_g15`〜`test_g17` を足し、main() の一覧の最後に足す）
+
+| 試験 | 場面 | 期待 |
+|---|---|---|
+| G15-a | 前回の写しは組 old=`[gt_hk(e)]` だけ。PR#7 で札のある見張りをマージし本体を入れる。settings を `[old, new]`（new=`[gt_hk(e, "other.py"), gt_guard_hk(e)]`）にする。record で ① hook-files の増 ② user-hooks の増 h_new・batch X ③ user-hooks の減 h_fake・batch X・`--replaced-by h_new`・`--old-json` に `{"matcher": "Bash", "hooks": [gt_hk(e, "other.py")]}`（前回の写しに無い組。h_fake はその item_sha8） | user:hooks が B |
+| G15-b | 前回の写しは組 `[old, new]`（new=`[gt_hk(e), gt_guard_hk(e)]`。new は前から登録済み）。PR#7 で札のある見張りをマージし本体を入れる。settings を `[new]` にする。record で ① user-hooks の増 h_new・batch X ② user-hooks の減 h_old・batch X・`--replaced-by h_new`・`--old-json` に old | user:hooks が B（new が今週の増の要素に無い） |
+| G16 | `gt_modify_case` で、P の版の試験ファイルに `-- keep` の1行を含め、mc の版でその行だけを消す（ほかは G5-0 と同じ） | hook_files が B |
+| G17 | G5-0 と同じ場面で、CI の試験を呼ぶ step に `continue-on-error: ${{ true }}` を付ける | hook_files が B |
+
+- 対照: 既にある G1-c・G2-a（本物の入れ替え）と G5-0 が、直したあとも B に出ないこと。
+- G15〜G17 のマージの時刻と行の時刻は、§7 の決まり（`merge_pr_at`・固定の時刻）に従う。
+- G16 の `-- keep` は、試験の本文として成り立たなくてよい（点検は中身を実行しない）。
+
+### 13-3. 終わったときの検索（§8 に足す）
+
+- `git grep -n "in gone" -- scripts/dev/consent-audit.py` が1件、`git grep -n "in came" -- scripts/dev/consent-audit.py` が1件。
+- `git grep -c "ADR-1072 guard-add judge" -- scripts/dev/consent-audit.py` が 4。
+- §8 の「試験ファイルの `-` の行は A5-0 の1行だけ」は、main() の一覧の行を含めて2行と読み替える（この直しでも main() の一覧の行が変わる）。
+
+### 13-4. 分かれ道
+
+| 起きたこと | どうする |
+|---|---|
+| 既にある試験（A・G1〜G14）が1つでも落ちる | 試験を書き換えない。止まって `BLOCKED:` で生の出力を返す |
+| G15〜G17 を B にするのに、13-1 に無い条件が要る | 条件を足さない。`NEEDS_DECISION:` で返す |
+| 13-1 の行番号の場所に、書かれた中身が無い | 止まって `BLOCKED:` で、その場所の生の行を返す |
+
+- 報告は §11 と同じ形。試験の生の出力の最後の5行（直す前の a6648897a と直した後）、`FAIL` を含む行の全部、13-3 の検索の生の出力を入れる。
