@@ -40,7 +40,7 @@ from app.routers import (
     contact,  # LP問い合わせフォーム受付
     contact_channel_links,  # SA-05: 担当者チャンネルリンク生成 API
     contacts,  # Phase 1-B-2 Step 5b-1
-    conv_logs,  # SA-02 Stage 3: 手動会話ログ CRUD
+    conv_logs,  # 連絡手段の名簿 API
     countries,  # Foundation F1: 国台帳 (public.countries)
     customer_priority,  # ADR-107 (SA-14): 分析エージェント(A) 顧客優先度付け
     dashboard,
