@@ -185,3 +185,27 @@ async def test_create_tenant_schema_seeds_phase_b(monkeypatch):
     assert len(settings_sql) == 1
     assert "VALUES (:tid, 'B'" in settings_sql[0]
     assert "VALUES (:tid, 'A'" not in settings_sql[0]
+
+
+def test_keys_not_grantable_keep_same():
+    from app.routers.roles import _keys_not_grantable
+
+    assert _keys_not_grantable({"a", "b"}, {"a", "b"}, set()) == set()
+
+
+def test_keys_not_grantable_remove_one():
+    from app.routers.roles import _keys_not_grantable
+
+    assert _keys_not_grantable({"a"}, {"a", "b"}, set()) == set()
+
+
+def test_keys_not_grantable_add_owned():
+    from app.routers.roles import _keys_not_grantable
+
+    assert _keys_not_grantable({"a", "c"}, {"a"}, {"c"}) == set()
+
+
+def test_keys_not_grantable_add_not_owned():
+    from app.routers.roles import _keys_not_grantable
+
+    assert _keys_not_grantable({"a", "x"}, {"a"}, {"c"}) == {"x"}

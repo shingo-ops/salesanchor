@@ -80,6 +80,11 @@ def _visible_text(sql: str):
     return text(sql).bindparams(bindparam("hidden_keys", expanding=True))
 
 
+def _keys_not_grantable(requested: set[str], current: set[str], mine: set[str]) -> set[str]:
+    """新しく足す権限のうち、自分が持たないもの。外す・残すは確かめない（ADR-147 追補 2026-11-09）。"""
+    return (requested - current) - mine
+
+
 async def _get_role(db: AsyncSession, role_id: int, current_user: User) -> dict | None:
     """ロールを1件取る。super admin 以外には隠すロールを「無い」ものとして扱う。"""
     result = await db.execute(
@@ -488,6 +493,7 @@ async def set_role_permissions(
             )
 
         # エスカレーション防止: 自分が持たない権限は他ロールに付与できない
+        # 確かめるのは新しく足す分だけ（今あるものを残す・外すのは自由。画面は一覧を全部送るため）
         # （オーナーは全権限所持のため影響なし。下位priorityのユーザーだけに効く）
         requested_keys = {row.key for row in rows}
         if requested_keys & ALL_ROLE_KEYS:
@@ -496,7 +502,15 @@ async def set_role_permissions(
                 detail="role_page_keys_not_savable",
             )
         my_perms = await load_user_permissions(db, tenant_id, current_user.id)
-        not_granted = requested_keys - my_perms
+        current_res = await db.execute(
+            text(
+                "SELECT p.key FROM role_permissions rp "
+                "JOIN public.permissions p ON p.id = rp.permission_id WHERE rp.role_id = :rid"
+            ),
+            {"rid": role_id},
+        )
+        current_keys = {row.key for row in current_res.fetchall()}
+        not_granted = _keys_not_grantable(requested_keys, current_keys, my_perms)
         if not_granted:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

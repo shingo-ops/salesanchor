@@ -1,0 +1,9 @@
+........................................................................ [ 58%]
+....................................................                     [100%]
+=============================== warnings summary ===============================
+tests/test_roles_edit_hierarchy.py::test_role_page_list_hides_four_keys_for_every_editor[owner]
+  /root/worktrees/salesanchor/release-role-edit-hierarchy/backend/app/main.py:27: StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+    from app.routers import (
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+124 passed, 1 warning in 20.88s
