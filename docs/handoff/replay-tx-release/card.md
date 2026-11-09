@@ -94,3 +94,32 @@ def set_idle_tx_limit(session: Session, seconds: int = IDLE_TX_LIMIT_SECONDS) ->
 - prompt_ab の確かめで commit 前の書き込みが見つかった → 止めて BLOCKED: で戻す。
 - ruff が import の順を指摘 → ruff の指摘どおりに直す（中身は変えない）。
 - 完了の報告は DONE / BLOCKED: / NEEDS_DECISION: のどれかで始める。
+
+## 8. 第2版で追加（2026-11-10 マージ前の審査 REVISE の直し・design §12）
+
+1版で入れたものはそのまま残し、次を足す・直す。
+
+1. `_tx_guard.set_idle_tx_limit` を次の全文に置き換える（logging を import し、`logger = logging.getLogger(__name__)` を置く）:
+
+```python
+def set_idle_tx_limit(session: Session, seconds: int = IDLE_TX_LIMIT_SECONDS) -> str:
+    session.execute(text(f"SET idle_in_transaction_session_timeout = '{int(seconds)}s'"))
+    session.commit()
+    value = session.execute(text("SHOW idle_in_transaction_session_timeout")).scalar()
+    session.rollback()
+    logger.info("[tx_guard] idle_in_transaction_session_timeout=%s", value)
+    return str(value)
+```
+
+2. 位置の書き方の直し（1 版の意味は変えない。1 版がこのとおりでなければ直す）:
+   - §2 の `started = time.monotonic()` は、replay_post の説明文と、その直後の関数の中の import の行の後に置く。
+   - §3 の recompute() は、`set_idle_tx_limit(session)` を `masters = _load_masters(session)` の前の行に、`release_before_compute(session)` を `masters = _load_masters(session)` の次の行に置く。
+3. 失敗の後に上限を置き直す:
+   - v102_replay_diff.replay の `except Exception` の中、`logger.error(...)` の次・`continue` の前に `session.rollback()` と `set_idle_tx_limit(session)` の 2 行。
+   - prompt_ab_recompute.recompute の `except Exception` の中、今ある `session.rollback()` の次の行に `set_idle_tx_limit(session)`。
+4. 試験を直す・足す:
+   - test_tx_guard: set_idle_tx_limit が execute（SET・`'30s'` を含む）→ commit → execute（SHOW）→ rollback の順で呼ぶ。返り値が偽物の scalar の値。
+   - test_v102_replay_diff「上限を置く」: 列の最初の 4 つが execute・commit・execute・rollback。
+   - 新しい試験（v102_replay_diff と prompt_ab_recompute の両方）: 1 件目の計算の偽物が例外を出す → その後に SET の execute と commit がもう一度呼ばれ、2 件目も処理される。
+5. §6 の確かめをもう一度流し、生の出力を報告に貼る。
+
