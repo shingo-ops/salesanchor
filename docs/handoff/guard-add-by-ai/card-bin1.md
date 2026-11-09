@@ -166,7 +166,7 @@ LEDGER_ONLY_KEYS（:450）と PR_ONLY_TARGETS（:801）には足さない。
    - target `hook-files`・op `add`（§5-1）: 要素 `el` の `|` の前（パスの sha8）が sha8(`<name>/<file>`) と同じ `files` の名前があり、`git show mc:scripts/agent-hooks/<name>/<file>` の sha256 先頭8桁が `h`。
    - target `hook-files`・op `remove`（§5-4。中身の書き換えの減の側）:
      - パスの sha8 が当たる `<name>/<file>` があり、今の `<home>/.claude/scripts/<name>/<file>` があって、その中身の sha256 先頭8桁が mc の版の中身の8桁と同じ（入れた先が新しい版になっている）。無ければ False（外す変更は B）。
-     - P を探す: `git log --first-parent --format=%H mc^1 -- scripts/agent-hooks/<name>/` を上から順に見て、`git show <c>:scripts/agent-hooks/<name>/<file>` の sha256 先頭8桁が `h` の最初の `<c>`。無ければ False。
+     - P を探す: `git log --first-parent --format=%H mc^1 -- scripts/agent-hooks/<name>/` を上から順に見て、`git show <c>:scripts/agent-hooks/<name>/<file>` の sha256 先頭8桁が `h` の最初の `<c>` を見つける。そこから同じ一覧を続けて下へ見て、中身8桁が `h` のままの版が続く間は進み、続く最後の版を P とする（ファイルが無い版・中身8桁が違う版に当たったら、その1つ手前で止める）。例: 新しい順に PR#c・PR#b（札だけ変更・中身は h）・PR#a（中身は h）・それより前（中身が違う）なら P は PR#a。最初の `<c>` が無ければ False。（§12-12。2段の PR で、間の札だけの PR を P にしないため）
      - P の版の札が読めて §5-0 の検査を通る。無ければ False。
      - T = P の札の `tests` ∪ mc の札の `tests`。P の札の `tests` にあって mc の札の `tests` に無い名前が1つでもあれば False。
      - `git diff --no-renames P mc -- T_PATHS` で、`---` を除く `-` で始まる行が1行でもあれば False。
