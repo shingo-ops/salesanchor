@@ -592,7 +592,7 @@ PR ごとの静的点検にも1つ足す（第8版）:
 - 最後に「precheck finished at <UTC 時刻> waited=<秒>」を1行書く。移行の段の始まりの時刻との差が、点検の後の隙（18-6）の長さになる。
 
 ### 18-4. 試験
-便1（backend の pytest。`backend/tests/test_prompt_ab.py`・`backend/tests/test_prompt_ab_recompute.py` に足し、流し直しは新しい試験ファイル `backend/tests/test_v102_replay_diff.py`（origin/main に無い））:
+便1（backend の pytest。`backend/tests/test_prompt_ab.py`・`backend/tests/test_prompt_ab_recompute.py` に足し、流し直しは新しい試験ファイル backend/tests/test_v102_replay_diff.py（origin/main に無い））:
 - 偽の session（execute で「取引あり」、rollback・commit で「取引なし」になる）を渡す。読み取りの関数は偽の session の execute を1回呼んで固定の値を返すように差し替える。
 - T1 流し直し: run_v102_pipeline を差し替え、呼ばれた瞬間に偽の session が「取引なし」であることを確かめる。2投稿で流す。
 - T2 再計算: _v102_row_fields を差し替え、同じことを確かめる。2行で流す。
@@ -676,7 +676,7 @@ PR ごとの静的点検にも1つ足す（第8版）:
   - 推奨1 old checkout の分岐は :213（:214 は backup.sh）→ 18-1 を直した。
   - 推奨2 前例は datname を pg_locks の結合でだけ使い state で絞らない → 動き1 で前例と同じ所・新しく足す所を書き分けた。
   - 推奨3 台本は作業場所を読まないので接続先を直書き → 動き1 に `-U jarvis -d jarvis_db -v ON_ERROR_STOP=1`。
-  - 推奨4 rollback の位置が引数の式の中で曖昧・新しい試験ファイルの名前 → 便1 の変更前後と `backend/tests/test_v102_replay_diff.py`。
+  - 推奨4 rollback の位置が引数の式の中で曖昧・新しい試験ファイルの名前 → 便1 の変更前後と backend/tests/test_v102_replay_diff.py。
   - 推奨5 K18-4 で止まった回を3回に数えるか → 数えると明記。
   - 推奨6 「移行のある本番反映」は実態と合わない（条件は backend・scripts なども含む。:38〜:43）→ K18-4・18-6 の言い方を直した。
 - K18-6 の見え方の確認（2026-11-10 02:01〜02:04 JST、reader 鍵の道、読むだけ）: ほかのユーザーの接続の usename・application_name は見える。state・xact_start は空（null）。pg_locks の pid・relation・mode は見え、pg_class で extraction_items（public と tenant_001）の名前も引ける。K18-6 は「名前なしの salesanchor_app の接続が extraction_items を握っていた回」を pg_locks と pg_stat_activity の結合で数えるので、この道で測れる。state は使わない。
