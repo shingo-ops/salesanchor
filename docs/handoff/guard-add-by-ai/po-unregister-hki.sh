@@ -3,7 +3,7 @@
 # - 第1引数: 同意票（ADR-1033）の鍵 consent:<k1>:<k2>:<k3>。必須（台帳の po_ref になる）。
 #   consent: で始まらなければ何も変えずに終わる。
 # - 第2引数: settings.json のパス（省略時は ~/.claude/settings.json。試験用に差し替え可）
-# - PDL-1 の1件だけを外す。settings.json を .bak-<日時> に写してから変更し、読み直して確かめる。
+# - HKI-1 の1件だけを外す。settings.json を .bak-<日時> に写してから変更し、読み直して確かめる。
 # - 変更したときだけ、台帳に record を書く（SKIP_RECORD=1 で飛ばす）。record が失敗したら外した文を控えから戻す。
 set -euo pipefail
 export GIT_NO_REPLACE_OBJECTS=1

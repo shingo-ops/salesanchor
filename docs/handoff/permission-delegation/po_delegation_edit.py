@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""settings.json の autoMode.allow に PDL-1 の例外の文を足す／外す（ADR-1034 §4-6）。
+"""settings.json の autoMode.allow に例外の文（既定は PDL-1）を足す／外す（ADR-1034 §4-6・ADR-1072 §6-1）。
 
-- 文は実行のたびに design.md §4-6 の引用ブロック（> PDL-1: で始まる1行）から読む（直書きしない）。
-- 足すのは末尾に1件。同じ文が既にあれば何もしない。外すのは PDL-1 の文だけ（他の要素は触らない）。
+- 文は実行のたびに design.md の指定の見出しの節の引用ブロック（> <ラベル>: で始まる1行）から読む（直書きしない）。
+- 足すのは末尾に1件。同じ文が既にあれば何もしない。外すのはそのラベルの文だけ（他の要素は触らない）。
 - 最後に item_hash（consent-audit.py の item_sha8）を `HASH=` の行で出す。
 
 使い方: python3 po_delegation_edit.py register|unregister <settings.json> <design.md> <consent-audit.py> [<見出し> <ラベル>]
