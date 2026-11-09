@@ -505,8 +505,8 @@ PR ごとの静的点検にも1つ足す（第8版）:
 - 計画: (1) 本節の Architect 審査（新しく起動） (2) 設計 PR をマージ (3) 段2の K2-5〜K2-7 がそろった後、実装の前に reader 鍵の道で usename・application_name の列を1回引けることを確かめる。そのあと Sonnet が 4a を実装・CI・赤の実演・ADR-1037 の追記（名前の正本の場所と役割の環境変数） (4) reviewer（opus、新しく起動） (5) 委任 GO で本番へ（backend・`docker-compose.yml`・`scripts/smoke_test_post_deploy.sh` を含む。移行・DROP・秘密の値は無い） (6) K4-5・K4-6 (7) 4b の詳細設計。
 - 継続: 名前の正本は2か所ある。アプリの接続の名前は 4a で置く新しいモジュール（場所は実装 PR で本節に書く）。本番反映の控え・移行の名前は `scripts/lib/db-app-names.sh`（段2）。分ける理由は、シェルの台本は Python を読めず、アプリはシェルの lib を読めないから（17-2）。2つが重ならないことは C4-2 が守る。守り手: backend の pytest（C4-1〜C4-4、実装 PR で足す）と `.github/workflows/backup-script-test.yml`（C1〜C9）。
 
-## 18. 段6 詳細設計 — 試しの道具の取引を読んだらすぐ閉じる／移行の前に開いたままの取引を点検してから入れ替える（第2版）
-状態: 設計案（Planner＝Opus）。第1版の審査（クラウドの Architect＝Opus、2026-11-10）は REVISE（必須2・推奨5）。第2版で全件を直した（18-11）。PO の選択: 2026-11-10「1、2」（(1) 試しの道具が読み終えたらすぐ表を放す (2) 移行の前に、動いている試しと開いたままの取引を確かめ、待つか知らせる）。本番に出す GO は委任（opus-delegation）に基づく Claude Opus 発行。
+## 18. 段6 詳細設計 — 試しの道具の取引を読んだらすぐ閉じる／移行の前に開いたままの取引を点検してから入れ替える（第3版）
+状態: 設計案（Planner＝Opus）。第1版の審査（クラウドの Architect＝Opus、2026-11-10）は REVISE（必須2・推奨5）。第2版で全件を直した。第2版の審査も REVISE（必須1・推奨4）で、第3版で全件を直した（18-11）。PO の選択: 2026-11-10「1、2」（(1) 試しの道具が読み終えたらすぐ表を放す (2) 移行の前に、動いている試しと開いたままの取引を確かめ、待つか知らせる）。本番に出す GO は委任（opus-delegation）に基づく Claude Opus 発行。
 
 ### 18-1. 事実（2026-11-10 調べ。行番号は origin/main 96a63df05）
 本番反映の記録（`gh run view --log`、2026-10-29 14:00Z 以降の deploy.yml の実行 447 回）を全部読んだ。生の記録は社内の作業メモにある。
@@ -544,9 +544,9 @@ PR ごとの静的点検にも1つ足す（第8版）:
 | 成功の条件 | 判定 |
 |---|---|
 | K18-1 道具3本: 計算と Gemini の呼び出しの間、取引が開いていない | 試験 T1〜T3 PASS（18-4） |
-| K18-2 点検の台本: 開いたままの取引があれば待ち、上限を過ぎたら止まる。無ければ通る | 試験 P1〜P8 PASS（18-4） |
+| K18-2 点検の台本: 開いたままの取引があれば待ち、上限を過ぎたら止まる。無ければ通る | 試験 P1〜P8（P4a〜P4c を含む）PASS（18-4） |
 | K18-3 試験が壊れた実装を捕まえる | 赤の実演（18-4） |
-| K18-4 本番: 便2の後、移行のある本番反映3回で、点検の段の結論の行が「clean」で、待った秒数が記録に出る。止まった回は、止めた理由の握り手が記録に出ている。便2を出す回そのものも数える（台本は origin/main から読むため、18-3 の動き0） | 本番反映の記録 |
+| K18-4 本番: 便2の後、移行のある本番反映3回で、点検の段の結論の行が「clean」で、待った秒数が記録に出る。止まった回は、止めた理由の握り手が記録に出ている。便2を出す回そのものも数える（台本は origin/main から読むため、18-3 の動き0）。3回とも記録に「FAKE」の行が無い | 本番反映の記録 |
 | K18-5 本番: 便2の後30日、新しいコードに入れ替えた後に移行がロック待ちの上限で失敗した回が0（基準: 10/29〜11/9 の34回中6回）。失敗があれば、握り手の取引の始まりが点検の段の終わりより前か後かで分けて数える（後なら「点検の後に来た握り手」＝18-6 の隙） | 本番反映の記録を同じ数え方で数える。点検の段の終わりの時刻は、その段の記録の最後の行の時刻 |
 | K18-6 本番: 便1の後、試しの道具（流し直し）を本番で20投稿だけ流し、その間 1 秒おきに60回、reader 鍵の道で pg_locks と pg_stat_activity を見る。名前なしの salesanchor_app の接続が extraction_items を握っていた回を数える。合格: 便1の後が 60回中6回以下、かつ便1の前の基準値の半分以下。基準値が 60回中30回未満なら、この測り方では差が出ないので合否を出さず止まって設計を見直す | reader 鍵の道の記録。測る前に、reader 鍵の道でほかのユーザーの接続の usename・application_name と pg_locks の relation が見えるかを1回確かめる（未確認）。見えなければ測らずに止まり、測り方を設計し直す |
 
@@ -569,17 +569,17 @@ PR ごとの静的点検にも1つ足す（第8版）:
 | `.github/workflows/backup-script-test.yml` | C1〜C10 | 新しい試験の台本 scripts/tests/test-deploy-db-precheck.sh（P1〜P8）を足す。paths にも足す |
 
 新しい段の中身（ssh の script。作業場所は書き換えない）:
-0. `cd /home/ubuntu/salesanchor` → `git fetch origin main` → `git show origin/main:scripts/deploy-db-precheck.sh > /tmp/deploy-db-precheck.sh` が成功したら `bash /tmp/deploy-db-precheck.sh`。origin/main に台本が無いときだけ（`git cat-file -e origin/main:scripts/deploy-db-precheck.sh` が失敗）「>>> [precheck] skipped: script not in origin/main」と書いて通る。fetch 自体が失敗したら止まる（exit 1）。理由: 作業場所は入れ替えの段（:258〜:259）までは1つ前の版のため（18-1）、作業場所の台本を流すと、便2を出す回は台本が無く、その後も毎回1つ前の版が動く。origin/main から読めば、今まさに出す版の台本が動く。入れ替えの段も同じ `git fetch origin main` をするので、新しい通信先・権限は足さない。
+0. `set -e` の下で、次の順に固定する。(a) `cd /home/ubuntu/salesanchor` (b) `git fetch origin main`（失敗なら exit 1） (c) `git rev-parse --verify origin/main`（失敗なら exit 1） (d) `git cat-file -e origin/main:scripts/deploy-db-precheck.sh` が失敗したときだけ「>>> [precheck] skipped: script not in origin/main」と書いて exit 0 (e) `TMP=$(mktemp)` と `trap 'rm -f "$TMP"' EXIT` で置き場所を作る (f) `git show origin/main:scripts/deploy-db-precheck.sh > "$TMP"`（失敗なら exit 1） (g) `bash "$TMP"`。決まった名前の /tmp は使わない。台本はそれだけで動き、作業場所の他のファイルを読まない（作業場所は1つ前の版のため）。同時に2回の本番反映は動かない（`.github/workflows/deploy.yml` :14〜:16 の `concurrency: deploy-production`・`cancel-in-progress: false`）。理由: 作業場所は入れ替えの段（:258〜:259）までは1つ前の版のため（18-1）、作業場所の台本を流すと、便2を出す回は台本が無く、その後も毎回1つ前の版が動く。origin/main から読めば、今まさに出す版の台本が動く。入れ替えの段も同じ `git fetch origin main` をするので、新しい通信先・権限は足さない。
 
 新しい台本の動き:
-1. jarvis で `docker exec astro-webapp-postgres-1 psql`（statement_timeout 5s・lock_timeout 1s）を流し、pg_stat_activity から「state が idle in transaction（aborted も含む）で、`now() - xact_start` が5秒より長く、`pid <> pg_backend_pid()`、`backend_type = 'client backend'`、`datname = current_database()` の接続」を数える（前例 `scripts/run_all_migrations.sh` :66〜:68 と同じ絞り方）。
+1. jarvis で `docker exec astro-webapp-postgres-1 psql`（statement_timeout 5s・lock_timeout 1s）を流し、pg_stat_activity から「state が idle in transaction（aborted も含む）で、`now() - xact_start` が5秒より長く、`pid <> pg_backend_pid()`、`backend_type = 'client backend'`、`datname = current_database()` の接続」を数える（前例 `scripts/run_all_migrations.sh` :66〜:68 と同じ絞り方）。psql の呼び出しは `timeout 10` で包む（つながる前や `docker exec` で止まっても10秒で戻り、`$SECONDS` の判定に戻れる）。timeout で戻った回・psql が失敗した回は数えられなかったとして止まる（exit 1。P6）。
 2. 5秒おきに数え、3回続けて0本なら「clean」と書いて通る（最短10秒）。1回でも1本以上なら、続けての数えは0に戻る。投稿ごとに取引を開き直す試しは、1回だけの見た目では0本に見えることがあるため、3回続けて見る。数えるたびに「sample N: count=K streak=S elapsed=E」を1行書く。
 3. 待ちの時間は、回数×5秒ではなく bash の `$SECONDS`（実際の経過秒）で測る（psql 1回の時間が足されても上限がずれない）。600秒たっても3回続けて0本にならなければ止まる（exit 1）。止まるときは、握り手の pid・ユーザー・application_name・状態・取引の秒数・握った表の名前と、動いている一時コンテナの名前（`docker ps --filter label=com.docker.compose.oneoff=True`）を書く。文の中身（SQL）と接続元の場所は書かない。
-4. 止まったら Discord に1通送る（`.github/workflows/deploy.yml` :875 で使っている既存の DISCORD_WEBHOOK_OWNER_PING。新しい秘密の値は足さない）。文面は「移行の前の点検で止めました。本番は前のままです。止めた理由: 開いたままの取引 N 本（名前: …）。試しが終わってから、この回をやり直してください。」。
+4. 止まったら Discord に1通送る（`.github/workflows/deploy.yml` :875 で使っている既存の DISCORD_WEBHOOK_OWNER_PING。新しい秘密の値は足さない）。送るのは VPS の中の台本なので、渡し方は今の Finalize（`.github/workflows/deploy.yml` :874〜:880）と同じにする: 段の `env:` に `ROLLBACK_DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_OWNER_PING }}`、`with:` に `envs: ROLLBACK_DISCORD_WEBHOOK`。台本はこの変数が空なら「webhook not set」と書いて送らずに exit 1 を続ける。文面は「移行の前の点検で止めました。本番は前のままです。止めた理由: 開いたままの取引 N 本（名前: …）。試しが終わってから、この回をやり直してください。」。
 5. 待ちの秒数（5・3回・600）と取引の長さ（5秒）は台本の頭に1か所だけ書く（正本）。試験は環境変数で短くして流す。
-5b. 試験のためだけに、環境変数 `DB_PRECHECK_FAKE_COUNTS`（例 `0,1,0,0,0`）があれば psql の代わりにその数を順に使う。本番の deploy.yml はこの変数を渡さない（P8 で確かめる）。
+5b. 試験のためだけに、環境変数 `DB_PRECHECK_FAKE_COUNTS`（例 `0,1,0,0,0`）があれば psql の代わりにその数を順に使う。並びを使い切ったら最後の値を繰り返す（使い切りで止まる形にすると、上限の判定が壊れていても P4b が緑になるため）。この変数を使った回は、最初に「FAKE counts in use」を1行書く。本番の deploy.yml はこの変数を渡さない（P8 で確かめる）。本番の記録に「FAKE」の行が無いことは K18-4 で見る（サーバー側の環境に変数が残っていた場合を捕まえる）。
 6. 試しを止める・接続を切ることはしない（PO の選択「待つか知らせる」）。
-- ssh の段の command_timeout は 12m にする（待ち600秒＋最後の1回の psql 5秒＋握り手の記録＋Discord の送信＋fetch の余裕。`$SECONDS` で測るので、待ちは600秒を大きく超えない）。
+- ssh の段の command_timeout は 12m にする（待ち600秒＋最後の1回の psql（timeout 10秒）＋握り手の記録＋Discord の送信＋fetch の余裕。`$SECONDS` で測るので、待ちは600秒を大きく超えない）。
 - 最後に「precheck finished at <UTC 時刻> waited=<秒>」を1行書く。移行の段の始まりの時刻との差が、点検の後の隙（18-6）の長さになる。
 
 ### 18-4. 試験
@@ -596,12 +596,13 @@ PR ごとの静的点検にも1つ足す（第8版）:
 - P3 待っている間に握り手が取引を閉じる → 通る。
 - P4 3回続けての数え（DB を使わず `DB_PRECHECK_FAKE_COUNTS` で決まった数を渡す。間隔は0秒）:
   - P4a `0,1,0,0,0` → exit 0。「clean」は5回目の数えの後に出る（1回目の0では通らない。記録の sample 行が5行）。
-  - P4b `0,0,1,0,0,1,0,0,1,…`（上限まで3回続けて0にならない並び）と短い上限 → exit 1。
+  - P4b 並び `1`（使い切ったら最後の値を繰り返すので、ずっと1本）・間隔1秒・上限3秒 → exit 1。「上限で止まった」の行（止めた理由の行）が出て、経過が3秒以上。
+  - P4c 並び `0,1,0,0,0` で「FAKE counts in use」の行が1行出る。
 - P5 active の長い文だけ → 通る（数えない）。
 - P6 DB につながらない → 止まる（exit 1。黙って通らない）。
-- P7 `.github/workflows/deploy.yml` を YAML として読み、新しい段が控えの段と入れ替えの段より前にあり、条件が移行の段と同じで、script に `git show origin/main:scripts/deploy-db-precheck.sh` と skipped の分岐があること。
+- P7 `.github/workflows/deploy.yml` を YAML として読み、新しい段が控えの段と入れ替えの段より前にあり、条件が移行の段と同じで、script に `git show origin/main:scripts/deploy-db-precheck.sh`・skipped の分岐・`mktemp` があり、作業場所の台本を流す形（`bash scripts/deploy-db-precheck.sh`）が無いこと。段の `env:` に `ROLLBACK_DISCORD_WEBHOOK` が DISCORD_WEBHOOK_OWNER_PING から渡され、`envs:` に `ROLLBACK_DISCORD_WEBHOOK` があること。
 - P8 `.github/workflows/deploy.yml` のどこにも `DB_PRECHECK_FAKE_COUNTS` が無いこと。
-- 赤の実演（便2の PR で1回、結果を PR に貼る）: (1) 数える条件から idle in transaction を外すと P2 が赤 (2) 3回続けての数えを1回にすると P4a が赤（1回目の0で通ってしまう） (3) 新しい段を入れ替えの段の後ろへ動かすと P7 が赤 (4) 台本を origin/main からでなく作業場所から読む形にすると P7 が赤。
+- 赤の実演（便2の PR で1回、結果を PR に貼る）: (1) 数える条件から idle in transaction を外すと P2 が赤 (2) 3回続けての数えを1回にすると P4a が赤（1回目の0で通ってしまう） (3) 新しい段を入れ替えの段の後ろへ動かすと P7 が赤 (4) 台本を origin/main からでなく作業場所から読む形にすると P7 が赤（origin/main から読む行を残したまま作業場所の台本も流す形も赤） (5) 台本から上限（`$SECONDS` が600を超えたら止める）の判定を外すと P4b が赤（試験の時間切れ30秒で落ちる形にする）。
 
 ### 18-5. 選ばなかった案
 - 一時コンテナ（oneoff=True）が1つでも動いていたら止める: 投稿ごとに取引を閉じる正しい道具（`scripts/ops/reextract-v6-loop.sh`）まで止める。止めたいのは「取引を開いたまま表を握る」ことで、コンテナの有無ではない。コンテナの名前は止めた理由の記録にだけ使う。
@@ -649,3 +650,10 @@ PR ごとの静的点検にも1つ足す（第8版）:
   - 推奨5 数える範囲 → `pg_backend_pid()`・`backend_type`・`datname` で絞る。
   - 推奨6 K18-6 の判定の数 → 60回中6回以下かつ基準値の半分以下、基準値30回未満なら止まる。reader 鍵で見えるかを先に確かめる。
   - 推奨7 :1310 は Discord に送らない → 18-1 の書き方を直した。
+- 第2版（HEAD 3a421a9f4）: クラウドの Architect（Opus、2026-11-10、読むだけ）→ REVISE（必須1・推奨4）。1回目の7件は○（必須2 は下の必須1 に回した）。入れ替えの段も `origin/main` に合わせる（:258〜:259。`github.sha` ではない）ので、点検の台本と入れ替え後の版の基準は同じ、と確認された。ADR-1003 の例外7種には当たらない。
+  - 必須1 偽の数の並びを使い切ったときの動きが無く、P4b の判定が決まらない → 最後の値を繰り返す（5b）、P4b を並び `1`・間隔1秒・上限3秒に、赤(5) を追加。
+  - 推奨2 Discord の webhook の渡し方 → 動き4 に Finalize と同じ `env:`・`envs:` を明記し、P7 で確かめる。
+  - 推奨3 /tmp の決まった名前・順番 → 動き0 を `mktemp`・`trap`、rev-parse → cat-file → show の順に固定。
+  - 推奨4 つながる前や docker exec で止まると上限の判定に戻れない → psql を `timeout 10` で包む。
+  - 推奨5 サーバー側の環境に偽の数の変数が残る → 「FAKE counts in use」の行、P4c、K18-4 で FAKE の行が0。
+- 第3版: 上の5件を反映。
