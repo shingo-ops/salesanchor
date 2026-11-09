@@ -147,7 +147,7 @@ LEDGER_ONLY_KEYS（:450）と PR_ONLY_TARGETS（:801）には足さない。
 設計書 §5-0〜§5-5 と §13-4 のとおり。ここでは順番と値の取り方だけを書く。
 
 0. 使う op は record の行の `op`（`row["op"]`）。下の 9. に挙げていない target と op の組（`user-hooks` の `modify` など）は False。
-   - 印の外の関数で呼んでよいのは `sha8`・`item_sha8`・`parse_ts`・`perm_paths`・`load_json` と、引数の `gh_view`・`git_run`、標準ライブラリだけ。`_git_text` など、ほかの部品は呼ばない。要る部品は印の中に新しく書く（印の外の部品を書き換えて判定を弱めても、写し `guard_judge` が変わらないため）。
+   - 印の外の関数で呼んでよいのは `sha8`・`item_sha8`・`parse_ts`・`perm_paths`・`load_json` と、引数の `gh_view`・`git_run`、標準ライブラリ、9. の CI の検査で関数の中で読み込む PyYAML の `yaml` だけ。`_git_text` など、ほかの部品は呼ばない。要る部品は印の中に新しく書く（印の外の部品を書き換えて判定を弱めても、写し `guard_judge` が変わらないため）。
 1. `el` と `now` が None でない。`v` が空でない。
 2. 浅い取得でない: `git rev-parse --is-shallow-repository` の出力が `false`（tools のリポジトリで流す）。
 3. PR: `gh_view(N)` が dict で `state == "MERGED"`。`mergedAt` が読める。`mergeCommit.oid` が `^[0-9a-f]{7,64}$`。`git merge-base --is-ancestor mc v` が 0。
@@ -213,6 +213,7 @@ LEDGER_ONLY_KEYS（:450）と PR_ONLY_TARGETS（:801）には足さない。
   - 新しい補助 `git_at(cwd, when, *args)` を足す。中身は :80 の `git` と同じで、`env=dict(os.environ, GIT_AUTHOR_DATE=when, GIT_COMMITTER_DATE=when)` を付けて流す（`when` は `2026-11-09T05:00:00Z` の形の文字列）。
   - 新しい補助 `merge_pr_at(e, edits, when, branch="feat")` を足す。中身は :565 の `merge_pr` と同じで、commit と merge の2つだけ `git_at(..., when, ...)` で流す。
   - G の中でマージを作るときは、全部 `merge_pr_at` を使う。`merge_pr` と `e.advance` は使わない。前の版（§5-5 の 9. の P）を作るマージは `2026-11-09T03:00:00Z` にする。
+  - 1つの環境でマージを2回以上作るとき（P と mc など）は、2回目から `branch` に別の名前（例: `"feat2"`）を渡す。同じ名前だと `checkout -b` が失敗する。
   - 偽の gh_view の `mergedAt` は、同じ PR の `merge_pr_at` の `when` と同じ時刻にする。
 - 一時の HOME の中に、`.claude/scripts/<name>/` と `.claude/settings.json` を試験が書く（台本は便2 で作るので、この便では試験が台本の手順 5・7 と同じことをする）。
 - 見張りの見本の中身は試験の中に文字列で書く。本物の mac-test-guard を読む必要は無い（中身は §5-5 の語を含まないこと）。札の見本は設計書 §5-0 の形。
