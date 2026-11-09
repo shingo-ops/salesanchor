@@ -27,7 +27,7 @@ jobs:
         run: |
           BASE="${{ github.event.pull_request.base.sha || 'HEAD~1' }}"
           CHANGED=$(git diff --name-only "$BASE"...HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
-          if echo "$CHANGED" | grep -qE "^(monitoring/|docker-compose(\.monitoring|\.exporters)?\.yml|\.env(\.monitoring)?\.example|\.github/workflows/monitoring-check\.yml|docs/runbooks/alerts\.md|scripts/ops/container_state\.py|scripts/tests/test_container_state\.py)"; then
+          if echo "$CHANGED" | grep -qE "^(monitoring/|docker-compose(\.monitoring|\.exporters)?\.yml|\.env(\.monitoring)?\.example|\.github/workflows/monitoring-check\.yml|docs/runbooks/alerts\.md|scripts/ops/container_state\.py|scripts/tests/test_container_state\.py|scripts/ops/dockerd_state\.py|scripts/tests/test_dockerd_state\.py)"; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
@@ -66,6 +66,7 @@ jobs:
           python3 monitoring/scripts/check_app_healthchecks.py
           python3 monitoring/scripts/tests/test_check_app_healthchecks.py -v
           python3 scripts/tests/test_container_state.py -v
+          python3 scripts/tests/test_dockerd_state.py -v
           python3 monitoring/recovery-check/tests/test_recovery_check.py -v
 
       - name: Prometheus ルール構文と単体試験（promtool）
