@@ -19,13 +19,15 @@
 
 ## 2. 今の仕組み（コードの実物）
 
-- `docker-compose.yml:5-30`: nginx は `nginx:1.31.1`。設定は `./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro` の 1 ファイルだけの取り付け（`docker-compose.yml:11`）。`stop_signal`・`stop_grace_period` の指定は無い（同じファイルで指定があるのは :166-167 と :304-305 のほかのサービスだけ）。
+- `docker-compose.yml:5-39`: nginx は `nginx:1.31.1`。設定は `./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro` の 1 ファイルだけの取り付け（`docker-compose.yml:11`）。`stop_signal`・`stop_grace_period` の指定は無い（同じファイルで指定があるのは :166-167 と :304-305 のほかのサービスだけ）。
 - `.github/workflows/deploy.yml:44-46`: `nginx/**` か `docker-compose.yml` が変わると `nginx=true`。
 - `.github/workflows/deploy.yml:66-79`: 前回の成功した配備が push の直前の版と違うと、差分に関係なく `nginx=true` にする（全部実行）。
-- `.github/workflows/deploy.yml:516-605`: 「Recreate nginx」の段。`nginx -t` を通してから `docker compose up -d --no-deps --force-recreate nginx`（:577）。
+- `.github/workflows/deploy.yml:516-607`: 「Recreate nginx」の段。`nginx -t` を通してから `docker compose up -d --no-deps --force-recreate nginx`（:577）。
 - `.github/workflows/deploy.yml:561`: 戻り先の設定の点検は、`-v .deploy_prev_nginx.conf:/etc/nginx/conf.d/default.conf:ro` で 1 ファイルを差し替えて `nginx -t`。
 - `.github/workflows/deploy.yml:1261-`: 失敗時の /design/ 遮断の段も `--force-recreate nginx`。
-- `scripts/blue-green-cutover.sh:154`: 配備のたびに `docker exec <nginx> nginx -s reload` を流している。`.github/workflows/deploy.yml:759` も reload を流す。
+- `scripts/blue-green-cutover.sh:154`: 配備のたびに `docker exec <nginx> nginx -s reload` を流している。呼び出しは「Deploy to VPS」の段（`.github/workflows/deploy.yml:235-`）の中の `.github/workflows/deploy.yml:461` で、条件なしに毎回流れる。`git reset --hard origin/main`（`.github/workflows/deploy.yml:259`）より後、「Recreate nginx」の段（:516）の点検より前。今は 1 ファイルの取り付けなので、この reload は古いファイルを読み直すだけ（`.github/workflows/deploy.yml:498-501` の注記）。
+- `.github/workflows/deploy.yml:743`: 接続先が変わったときにも切替を流す（同じ reload を含む）。
+- `.github/workflows/deploy.yml:759`: 「Bootstrap salesanchor_app role」の段（:700-）の最後に `nginx -s reload`。「Recreate nginx」の段より後。
 
 ## 3. 本番での観測（読み取りだけ）
 

@@ -20,9 +20,9 @@
 | 番号 | 基準 | 検証方法 |
 |---|---|---|
 | K1 | 設定（`nginx/nginx.conf`）だけを変えた配備で、本番の 443 が 1 回も接続を拒否しない | 配備の間、外から 1 秒ごとに `curl -s -o /dev/null -w "%{http_code}" https://app.salesanchor.jp/` を流し、`000` が 0 回（記録を残す） |
-| K2 | 入口の箱を作り直す配備で、`Recreate`〜`Started` が 3 秒以内 | 配備の記録の「Recreate nginx」の段の `Container astro-webapp-nginx-1 Recreate` と `Started` の時刻の差 |
+| K2 | 入口の箱を作り直す配備で、`Recreate`〜`Recreated` が 3 秒以内 | 配備の記録の「Recreate nginx」の段の `Container astro-webapp-nginx-1 Recreate` と `Container astro-webapp-nginx-1 Recreated` の時刻の差（recon §3-1 の表と同じ測り方） |
 | K3 | docker 本体の記録に、nginx について `failed to exit within 10s of signal 3` が出ない | 本番で `journalctl -u docker --since <配備の開始>` を読み取り、該当の行が 0 件 |
-| K4 | 設定を変えた配備の後、本番の nginx が新しい設定で動いている | 配備の後に本番で ①`docker exec astro-webapp-nginx-1 sha256sum /etc/nginx/conf.d/nginx.conf` と `git show origin/main:nginx/nginx.conf \| sha256sum` が一致 ②`docker logs -t astro-webapp-nginx-1` に配備の時刻より後の `signal 1 (SIGHUP) received ... reconfiguring` が 1 行以上 |
+| K4 | 設定を変えた配備の後、本番の nginx が新しい設定で動いている | 配備の後に本番で ①`docker exec astro-webapp-nginx-1 sha256sum /etc/nginx/conf.d/nginx.conf` の 1 列目と、配備した版の `git show <配備した版>:nginx/nginx.conf \| sha256sum` の 1 列目が一致 ②`docker logs -t astro-webapp-nginx-1` に、段 B の 4 の reload の道の 2（配備の記録の `nginx reload:` の行）の時刻より後の `signal 1 (SIGHUP) received ... reconfiguring` が 1 行以上 |
 | K5 | 設定が壊れていたら、今の nginx は前の設定のまま動き続ける（今と同じ守り） | 試しの環境で、`nginx -t` に通らない設定を流し、reload が流れず 443 が 200 のまま |
 | K6 | reload の 10 分後に、古い働き手が 0 | 本番で `docker top astro-webapp-nginx-1` の `worker process is shutting down` の数 |
 
@@ -59,7 +59,7 @@ K2 の注意: 11/9 01:24 の回では、力ずくで止めてから新しい箱�
 
 - SIGTERM は nginx の「すぐ止める」（Context7 `/websites/nginx_en` control.html）。
 - 3 秒は、止まらなかったときの上限。
-- 失うもの: 止める瞬間に途中だった短い要求が切れる。今も 10 秒後に力ずくで切っているので、切れる相手は増えない。流れ続ける接続は、画面の側がつなぎ直す（`frontend/src/hooks/useSSE.ts:12-14` で 2 秒から倍々・上限 5 分、:93-96 の `scheduleReconnect`。会話の未読数は `frontend/src/components/DesktopShell.tsx:141`・`frontend/src/components/MobileShell.tsx:116` がこれを使う）。
+- 失うもの: 新しい接続が断られる時間は減るが、止める瞬間に途中だった短い要求は切れる（今の丁寧な停止なら、短い要求は 10 秒の待ちの間に終わっていた）。流れ続ける接続は、画面の側がつなぎ直す（`frontend/src/hooks/useSSE.ts:12-14` で 2 秒から倍々・上限 5 分、:93-96 の `scheduleReconnect`。会話の未読数は `frontend/src/components/DesktopShell.tsx:141`・`frontend/src/components/MobileShell.tsx:116` がこれを使う）。
 - 反映のとき 1 回だけ: この変更自体が docker-compose.yml の変更なので、作り直しが 1 回走る。そのときは古い箱の止め方（SIGQUIT・10 秒）で止まる。新しい止め方が効くのは 2 回目の作り直しから。
 - 触らない: `nginx/nginx.conf`・`.github/workflows/deploy.yml`・ほかのサービス。
 
@@ -70,17 +70,30 @@ K2 の注意: 11/9 01:24 の回では、力ずくで止めてから新しい箱�
    - 変更後: `- ./nginx:/etc/nginx/conf.d:ro`
    - フォルダごと取り付けると、`git reset --hard` でファイルが置き換わっても箱の中から新しいファイルが見える。だから reload で足りる。
    - イメージの本体の設定は `include /etc/nginx/conf.d/*.conf;` なので、読まれるのは `nginx/` の直下の `*.conf` だけ。本番で当たるのは `nginx/nginx.conf` だけ（recon §3-3）。控え 2 つは名前が `.conf` で終わらないので読まれない。
-2. `nginx/` の直下に `nginx.conf` 以外の `*.conf` が無いことを、配備の点検に足す（Recreate の段の `nginx -t` の前）。あれば配備を止める。
-3. 「Recreate nginx」の段（`.github/workflows/deploy.yml:516-605`）を、次の 2 通りに分ける。
-   - 箱の定義が変わったとき: `docker compose config --hash nginx` の値と、今の箱の `com.docker.compose.config-hash` の印を比べる。違えば今までどおり作り直す（段 A で 3 秒以内）。
+2. 設定の点検を、既存の reload より前に移す（審査の指摘への対処）。
+   - 事実: 配備の途中で、すでに reload が 2 か所流れている。①切替の台本 `scripts/blue-green-cutover.sh:154`。呼び出しは「Deploy to VPS」の段の `.github/workflows/deploy.yml:461` で、毎回・条件なし。取り込み（:259）の後で、「Recreate nginx」の段（:516）の点検より前。②`.github/workflows/deploy.yml:759`（「Recreate nginx」の段より後）。（recon §2）
+   - 今は 1 ファイルの取り付けなので、①②は古いファイルを読み直すだけで害がない。フォルダにすると、①の reload が点検の前に新しい設定を読み込む。だから点検を①より前に置かないと、点検していない設定が本番に入る。
+   - 変更: 「Deploy to VPS」の段の中で、取り付けの点検を `docker compose build` の後・`bash scripts/blue-green-cutover.sh`（:461）の前に入れる。中身は今の「Recreate nginx」の段の 1〜3（:546-572。戻り先の用意・戻り先の `nginx -t`・新しい設定の `nginx -t`）と、次の 3。
+   - 新しい設定が `nginx -t` に通らないときは、今の :569 と同じく `cp .deploy_prev_nginx.conf nginx/nginx.conf` で作業の写しを戻り先に替えてから先へ進む。①②の reload は戻り先の設定を読むので、本番は前の設定のまま。配備は最後に失敗の表示にする（今の「Fail if nginx recreate failed」と同じ扱い）。
+   - 戻り先の `nginx -t` に通らないときは、今の :562 と同じく配備を止める。
+   - ①②の reload は消さない。①は backend の切替の後に名前を引き直すため（台本の注記 `scripts/blue-green-cutover.sh:153`）、②は ADR-130 の念のため。点検の後に流れるので、読むのは点検を通った設定だけになる。
+3. `nginx/` の直下に `nginx.conf` 以外の `*.conf` が無いことを、2 の点検の最初に足す。あれば配備を止める。
+4. 「Recreate nginx」の段（`.github/workflows/deploy.yml:516-607`）を、次の 2 通りに分ける。点検（1〜3）は 2 で前に移したので、この段では繰り返さない。
+   - 箱の定義が変わったとき: `docker compose config --hash nginx` の値と、今の箱の `com.docker.compose.config-hash` の印を比べる。違えば今までどおり作り直す（段 A で 3 秒以内）。作り直しの後の確かめ・good の書き直し・自動で戻すのは今の :576-607 のまま。
      - 本番で 2026-11-09 08:30Z に読み取りで確かめた値: `docker compose config --hash nginx` の出力は `nginx 87c866eb…`（先頭に名前が付く）、箱の印は `87c866eb…` で一致（`/tmp/CC報告ファイル/nginx-hash-check.txt`・Docker Compose v5.1.1）。比べるときは出力の 2 列目を使う。
      - 本番では `docker-compose.exporters.yml` も一緒に読まれている（同じ出力の警告の行）。配備の段と同じ作業場所・同じ環境で計算すること。
-   - 違わないとき: `docker exec astro-webapp-nginx-1 nginx -t` が通れば `docker exec astro-webapp-nginx-1 nginx -s reload`。通らなければ reload せず、今の段と同じく戻り先の設定に戻して配備を失敗の表示にする。
+   - 違わないとき（reload の道）: 次の順に流す。
+     1. `docker exec astro-webapp-nginx-1 nginx -t`。通らなければ reload しない（2 で戻した設定のはずなので、ここで落ちるのは想定外。配備を失敗の表示にする）。
+     2. `echo "nginx reload: $(date -u +%FT%TZ)"` で時刻を記録に残し、`docker exec astro-webapp-nginx-1 nginx -s reload`。この行の時刻が K4② の起点。
+     3. 今の作り直しの道と同じ `_nginx_confirm`（:530-544。最大 15 秒・起きていて 443 が 000 でない）で確かめる。
+     4. 通れば、今の :590 と同じく `nginx/nginx.conf` を `.deploy_nginx_good.conf` に書き直す（`.tmp` に写してから `mv`）。
+     5. 通らなければ、`cp .deploy_prev_nginx.conf nginx/nginx.conf` → `nginx -s reload` → `_nginx_confirm` で戻し、配備を失敗の表示にする（今の :601-607 の作り直しを reload に替えたもの。good は書き換えない）。
    - 前の配備が失敗して「全部実行」になった回（`.github/workflows/deploy.yml:66-79`）も、この比べ方で作り直しを避けられる。
-4. 戻り先の点検（`.github/workflows/deploy.yml:561`）の差し替え先を `/etc/nginx/conf.d/default.conf` から `/etc/nginx/conf.d/nginx.conf` に替える。替えないと、フォルダの中の `nginx.conf` と差し替えた `default.conf` の 2 つが読まれ、点検が誤って落ちる。
-5. `ADR-137` の「~2-3 秒」の記述と `.github/workflows/deploy.yml:506` の注記を、実測（10〜17 秒・段 A の後の値）に直す。
-6. 反映のとき 1 回だけ: 取り付けを変えるので作り直しが 1 回走る（段 A の後なら 3 秒以内）。
-- 触らない: 失敗時の /design/ 遮断の段（`.github/workflows/deploy.yml:1261-`）。失敗の時だけ走る段なので、作り直しのままにする。段 A で止まる時間は短くなる。
+5. 戻り先の点検（`.github/workflows/deploy.yml:561`）の差し替え先を `/etc/nginx/conf.d/default.conf` から `/etc/nginx/conf.d/nginx.conf` に替える。替えないと、フォルダの中の `nginx.conf` と差し替えた `default.conf` の 2 つが読まれ、点検が誤って落ちる。
+6. `ADR-137` の「~2-3 秒」の記述と `.github/workflows/deploy.yml:506` の注記を、実測（10〜17 秒・段 A の後の値）に直す。:498-501 の注記（reload では足りない）も、フォルダの取り付けの後は当てはまらないので直す。
+7. 反映のとき 1 回だけ: 取り付けを変えるので作り直しが 1 回走る（段 A の後なら 3 秒以内）。
+- 触らない: 失敗時の /design/ 遮断の段（`.github/workflows/deploy.yml:1261-`）。失敗の時だけ走る段なので、作り直しのままにする。段 A で止まる時間は短くなる。`.github/workflows/deploy.yml:743` の切替の呼び出し（接続先が変わったときだけ）も、2 の点検より後に流れるので触らない。
+- 【未確認】段 B のカードを書く前に、:743 の段が 2 の点検より後にあることを、その時の main の実物で確かめる（今の main では :700 の段の中で、:461 より後）。
 
 ### 段 A と段 B の順番
 
@@ -97,8 +110,8 @@ K2 の注意: 11/9 01:24 の回では、力ずくで止めてから新しい箱�
 ## 6. 弊害・トレードオフ
 
 - reload の後、流れ続ける接続を持った古い働き手が残る → 対策: K6 で測る。残る数が多いときは、`proxy_read_timeout 3600s`（`nginx/nginx.conf:246`・`:266`・`:286`）を短くする案を別に起こす。今のメモリは 11.37MiB / 256MiB（recon §3-4）。
-- フォルダの取り付けで、`nginx/` の直下に誤って `*.conf` を置くと本番が読む → 対策: §4 段 B の 2（配備の点検）。
-- 段 A の SIGTERM で、止める瞬間の途中の要求が切れる → 今も 10 秒後に力ずくで切っているので、悪くはならない。
+- フォルダの取り付けで、`nginx/` の直下に誤って `*.conf` を置くと本番が読む → 対策: §4 段 B の 3（配備の点検）。
+- 段 A の SIGTERM で、新しい接続が断られる時間は減るが、止める瞬間に途中だった短い要求は切れる → 対策: 段 B で設定だけの変更は作り直さなくなるので、作り直しの回数そのものを減らす。作り直しは箱の定義が変わったときだけになる。
 
 ## 7. 外部・過去事例の参照と我々への応用
 
