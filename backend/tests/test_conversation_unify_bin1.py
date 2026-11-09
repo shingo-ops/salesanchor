@@ -333,6 +333,7 @@ async def webhook_db():
     eng = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
     async with eng.begin() as conn:
         for ddl in (ben.LEADS_DDL, ben.LEAD_CHANNELS_DDL, ben.TENANT_META_CONFIG_DDL, ben.TENANTS_DDL,
+                    ben.META_MESSAGES_DDL, ben.META_MESSAGES_UNIQUE,
                     ben.CONVERSATION_LOGS_DDL, ben.CONVERSATION_LOGS_UNIQUE):
             await conn.execute(text(ddl))
         await conn.execute(text("INSERT INTO tenants (id, name, is_active) VALUES (999, 'Test Tenant', 1)"))
@@ -365,9 +366,9 @@ async def test_webhook_echo_and_inbound_write_no_conversation_logs(webhook_db, m
         }]}],
     }
     await wh.process_messenger_event(echo)
-    # echo では何も書かず、リードも作らない（受信の書き込みも呼ばれない）
+    # 便1.5: echo は受信の書き込み（_persist_meta_message）を呼ばず、知らない相手のリードを作る
     persist.assert_not_awaited()
-    assert (await webhook_db.execute(text("SELECT COUNT(*) FROM leads"))).scalar() == 0
+    assert (await webhook_db.execute(text("SELECT COUNT(*) FROM leads"))).scalar() == 1
 
     inbound = {
         "object": "page",

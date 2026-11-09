@@ -44,6 +44,7 @@ _DEFAULT_TIMEOUT_SECONDS = 10.0
 _GRAPH_BASE_URL = "https://graph.facebook.com"
 _DEFAULT_SUBSCRIBED_FIELDS = (
     "messages",
+    "message_echoes",  # 会話の一本化 便1.5: アプリ外から送った返信の写しを受ける
     "messaging_postbacks",
     "message_deliveries",
     "message_reads",

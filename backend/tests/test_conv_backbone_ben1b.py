@@ -2,8 +2,8 @@
 
 検証項目:
   1. write_conversation_log(lead_id=None) は ValueError を返す
-  2. echo の未知 PSID は、会話の一本化 便1 以降はリードを作らず、conversation_logs にも書かない
-  3. echo の既知 PSID は、会話の一本化 便1 以降は conversation_logs に書かず、lead を増やさない
+  2. echo の未知 PSID は、便1.5 以降は meta_messages に outbound で書く（リードは作る・conversation_logs には書かない）
+  3. echo の既知 PSID は、便1.5 以降は meta_messages に outbound で書く（lead は増やさない・conversation_logs には書かない）
 """
 
 from __future__ import annotations
@@ -74,6 +74,42 @@ TENANTS_DDL = """
     )
 """
 
+META_MESSAGES_DDL = """
+    CREATE TABLE meta_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id INTEGER NOT NULL,
+        lead_id INTEGER,
+        platform VARCHAR(20) NOT NULL DEFAULT 'messenger',
+        sender_id VARCHAR(100),
+        sender_name VARCHAR(200),
+        message_text TEXT,
+        direction VARCHAR(10) NOT NULL DEFAULT 'inbound',
+        raw_payload TEXT,
+        message_id VARCHAR(100),
+        recipient_id VARCHAR(100),
+        messaging_type VARCHAR(20),
+        message_tag VARCHAR(50),
+        sent_by_staff_id INTEGER,
+        error_code VARCHAR(50),
+        error_message TEXT,
+        seen_at TIMESTAMP,
+        seen_by_staff_id INTEGER,
+        page_id VARCHAR(50),
+        original_language VARCHAR(10),
+        attachment_url TEXT,
+        attachment_type VARCHAR(20),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TIMESTAMP,
+        is_manual BOOLEAN
+    )
+"""
+
+# 本番と同じ重複防止の索引（SQLite は1回の execute で1文なので別定数）
+META_MESSAGES_UNIQUE = (
+    "CREATE UNIQUE INDEX idx_meta_messages_message_id_unique "
+    "ON meta_messages (message_id) WHERE message_id IS NOT NULL"
+)
+
 CONVERSATION_LOGS_DDL = """
     CREATE TABLE conversation_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -112,6 +148,8 @@ async def engine():
         await conn.execute(text(LEAD_CHANNELS_DDL))
         await conn.execute(text(TENANT_META_CONFIG_DDL))
         await conn.execute(text(TENANTS_DDL))
+        await conn.execute(text(META_MESSAGES_DDL))
+        await conn.execute(text(META_MESSAGES_UNIQUE))
         await conn.execute(text(CONVERSATION_LOGS_DDL))
         await conn.execute(text(CONVERSATION_LOGS_UNIQUE))
         await conn.execute(
@@ -233,14 +271,28 @@ async def test_echo_unknown_psid_creates_outbound_lead(db_session, webhook_env, 
 
     await wh.process_messenger_event(body)
 
-    # 便1: echo は何も書かない。リードも作らない
-    res = await db_session.execute(text("SELECT COUNT(*) FROM leads"))
-    assert res.scalar() == 0
-
-    res = await db_session.execute(text("SELECT COUNT(*) FROM conversation_logs"))
-    assert res.scalar() == 0
+    # 便1.5: echo は知らない相手のリード（outbound）を作り、meta_messages に outbound で書く
+    res = await db_session.execute(
+        text("SELECT channel_type, initiative FROM leads")
+    )
+    leads = res.fetchall()
+    assert len(leads) == 1
+    assert leads[0][0] == "messenger"
+    assert leads[0][1] == "outbound"
 
     res = await db_session.execute(text("SELECT COUNT(*) FROM lead_channels"))
+    assert res.scalar() == 1
+
+    res = await db_session.execute(
+        text("SELECT direction, recipient_id FROM meta_messages")
+    )
+    msgs = res.fetchall()
+    assert len(msgs) == 1
+    assert msgs[0][0] == "outbound"
+    assert msgs[0][1] == "PSID-00001234"
+
+    # conversation_logs には書かない
+    res = await db_session.execute(text("SELECT COUNT(*) FROM conversation_logs"))
     assert res.scalar() == 0
 
 
@@ -277,7 +329,16 @@ async def test_echo_known_psid_uses_existing_lead(db_session, webhook_env, monke
     res = await db_session.execute(text("SELECT COUNT(*) FROM leads"))
     assert res.scalar() == 1
 
-    # 便1: echo は conversation_logs に書かない
+    # 便1.5: echo は既存リードの meta_messages に outbound で書く
+    res = await db_session.execute(
+        text("SELECT lead_id, direction FROM meta_messages WHERE message_id = 'mid-echo-known'")
+    )
+    msgs = res.fetchall()
+    assert len(msgs) == 1
+    assert msgs[0][0] == 42
+    assert msgs[0][1] == "outbound"
+
+    # conversation_logs には書かない
     res = await db_session.execute(text(
         "SELECT COUNT(*) FROM conversation_logs WHERE external_message_id = 'mid-echo-known'"
     ))

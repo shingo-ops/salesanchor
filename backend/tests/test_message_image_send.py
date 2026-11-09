@@ -123,6 +123,12 @@ _META_MESSAGES_DDL = """
     )
 """
 
+# 便1.5: 本番と同じ重複防止の索引。SQLite は1回の execute で1文しか流せないので別定数にする
+_META_MESSAGES_MSGID_INDEX_DDL = (
+    "CREATE UNIQUE INDEX idx_meta_messages_message_id_unique "
+    "ON meta_messages (message_id) WHERE message_id IS NOT NULL"
+)
+
 _TENANT_META_CONFIG_DDL = """
     CREATE TABLE tenant_meta_config (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -167,7 +173,10 @@ async def engine():
         dbapi_conn.execute("PRAGMA foreign_keys=OFF")
 
     async with eng.begin() as conn:
-        for ddl in [_LEAD_DDL, _META_MESSAGES_DDL, _TENANT_META_CONFIG_DDL, _STAFF_DDL]:
+        for ddl in [
+            _LEAD_DDL, _META_MESSAGES_DDL, _META_MESSAGES_MSGID_INDEX_DDL,
+            _TENANT_META_CONFIG_DDL, _STAFF_DDL,
+        ]:
             await conn.execute(text(ddl))
 
     yield eng
