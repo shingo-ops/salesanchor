@@ -352,14 +352,14 @@ def _k5_price_step(basis, label, price):
     candidate = bb.is_candidate(item, values, {})
     decided = bb.decide_code(Decimal(str(price)), Decimal("1000"), settings)
     cmap = _cmap()
-    kind = bb.decide_kind(item, values, cmap)
-    out = None
-    if decided is not None and kind is not None:
+    target = None
+    if decided is not None:
         unit, ratio = decided
-        target = cmap.targets[bb._UNIT_GROUP[unit]].get(kind)
-        if target is not None:
-            out = bb.with_decision(values, target, ratio, {"Box": 1, "Case": 2, "Pack": 3}, condition_decided_by_word(basis))
-    return candidate, kind, out
+        target = bb.decide_target(item, values, cmap, bb._UNIT_GROUP[unit])
+    out = None
+    if target is not None:
+        out = bb.with_decision(values, target, ratio, {"Box": 1, "Case": 2, "Pack": 3}, condition_decided_by_word(basis))
+    return candidate, target, out
 
 
 @pytest.mark.parametrize("label", [7, 3, 4])
