@@ -375,6 +375,26 @@ def test_p_fail_second_file():
     assert len(c) == 1 and arg_of(c[0], "--target") == "hook-files" and arg_of(c[0], "--op") == "add", c
 
 
+def test_p_oserr():
+    e = Env(manifest=None, build=False)
+    mf = e.manifest(files=("guard.py", "sub/lib.py"))
+    e.merge_guard(manifest=mf, files={"guard.py": GUARD_PY, "sub/lib.py": "X = 1\n", "test_guard.py": TEST_PY})
+    git(e.tools, "pull", "--ff-only", check=False)
+    os.makedirs(os.path.join(e.claude, "scripts/demo-guard"))
+    wfile(os.path.join(e.claude, "scripts/demo-guard/sub"), "plain file\n")
+    before = sha_bytes(e.settings)
+    rc, lines, full = e.run()
+    assert lines[-1].startswith("INSTALL_FAILED:"), full
+    assert "想定外の止まり方" not in full, full
+    assert rc == 1
+    assert sha_bytes(e.settings) == before
+    assert not os.path.exists(os.path.join(e.claude, ".install-guard.lock"))
+    c = e.calls_list()
+    assert len(c) == 1 and arg_of(c[0], "--target") == "hook-files" and arg_of(c[0], "--op") == "add", c
+    g8 = hashlib.sha256(GUARD_PY.encode()).hexdigest()[:8]
+    assert arg_of(c[0], "--item-hash") == g8, c
+
+
 def test_t_fail_test_exit1():
     e = Env(files={"guard.py": GUARD_PY, "test_guard.py": "import sys\nsys.exit(1)\n"})
     stopped_case(e)

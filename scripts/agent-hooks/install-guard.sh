@@ -258,24 +258,29 @@ def locked_part(T, H, DEST_ROOT, name, pr, files, hooks, folder, form_fn, hash_f
     changed = []  # (file, 前8桁か-, 後8桁)
     try:
         for fn in files:
-            src = os.path.join(folder, fn)
-            dst = os.path.join(DEST_ROOT, "scripts", name, fn)
-            srcb = read_bytes(src)
-            want = hashlib.sha256(srcb).hexdigest()
-            before = "-"
-            if os.path.lexists(dst):
-                if os.path.islink(dst) or not os.path.isfile(dst):
-                    raise Fail("入れ先が普通のファイルではありません (%s)" % fn)
-                before = sha8_bytes(read_bytes(dst))
-                if hashlib.sha256(read_bytes(dst)).hexdigest() == want:
-                    continue
-                os.chmod(dst, 0o644)
-            os.makedirs(os.path.dirname(dst), exist_ok=True)
-            shutil.copyfile(src, dst)
-            os.chmod(dst, 0o555)
-            if hashlib.sha256(read_bytes(dst)).hexdigest() != want:
-                raise Fail("写した本体が正本と違います (%s)" % fn)
-            changed.append((fn, before, want[:8]))
+            try:
+                src = os.path.join(folder, fn)
+                dst = os.path.join(DEST_ROOT, "scripts", name, fn)
+                srcb = read_bytes(src)
+                want = hashlib.sha256(srcb).hexdigest()
+                before = "-"
+                if os.path.lexists(dst):
+                    if os.path.islink(dst) or not os.path.isfile(dst):
+                        raise Fail("入れ先が普通のファイルではありません (%s)" % fn)
+                    before = sha8_bytes(read_bytes(dst))
+                    if hashlib.sha256(read_bytes(dst)).hexdigest() == want:
+                        continue
+                    os.chmod(dst, 0o644)
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copyfile(src, dst)
+                os.chmod(dst, 0o555)
+                if hashlib.sha256(read_bytes(dst)).hexdigest() != want:
+                    raise Fail("写した本体が正本と違います (%s)" % fn)
+                changed.append((fn, before, want[:8]))
+            except Fail:
+                raise
+            except OSError as e:
+                raise Fail("本体を写せません (%s: %s)" % (fn, type(e).__name__))
         # 10. settings.json を書く
         if d != old:
             stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
