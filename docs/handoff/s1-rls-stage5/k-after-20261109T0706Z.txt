@@ -1,0 +1,70 @@
+taken_at=2026-11-09T07:06:35Z
+## K1 health
+200 1.214442
+200 1.094603
+200 1.220124
+200 1.379551
+200 1.169232
+200 1.079092
+200 1.173160
+200 1.092937
+200 1.092866
+200 1.119854
+200 1.098887
+200 1.470879
+200 1.274142
+200 1.294617
+200 1.451782
+200 1.308956
+200 1.222002
+200 1.117044
+200 1.124187
+200 1.215237
+200 1.188792
+200 1.272396
+200 1.779455
+200 1.240273
+200 1.127473
+200 1.221006
+200 1.338381
+200 1.264454
+200 1.085931
+200 1.151608
+200 1.328716
+200 1.104360
+200 1.453723
+200 1.376280
+200 1.439850
+200 1.306147
+200 1.223066
+200 1.282593
+200 1.234116
+200 1.270928
+200 1.120221
+200 1.360128
+200 1.133883
+200 1.101523
+200 1.110964
+200 1.262214
+200 1.233943
+200 1.107411
+200 1.377807
+200 1.205543
+200 1.358296
+200 1.149267
+200 1.426391
+200 1.355532
+200 1.272135
+200 1.104468
+200 1.290938
+200 1.167576
+200 1.228595
+200 1.212144
+k1_ok200=60 k1_total=60
+k1_median_ms=1222.5 k1_p95_ms=1451.8
+## K2/K3 logs
+c=astro-webapp-backend-1 start=2026-11-09T05:55:18.389286329Z hours=1.231 lines=971 relnotexist=0 relnotexist_per_h=0.000 rls=0 rls_per_h=0.000 invalid_int=0 invalid_int_per_h=0.000 s500=0 s500_per_h=0.000 traceback=0 traceback_per_h=0.000 reset_exc=0 reset_exc_per_h=0.000 close_exc=0 close_exc_per_h=0.000
+c=astro-webapp-celery-worker-1 start=2026-11-09T05:56:41.140183317Z hours=1.208 lines=1548 relnotexist=0 relnotexist_per_h=0.000 rls=0 rls_per_h=0.000 invalid_int=0 invalid_int_per_h=0.000 s500=0 s500_per_h=0.000 traceback=21 traceback_per_h=17.384 reset_exc=0 reset_exc_per_h=0.000 close_exc=21 close_exc_per_h=17.384
+c=astro-webapp-discord-gateway-1 start=2026-11-09T05:56:41.137809808Z hours=1.208 lines=14 relnotexist=0 relnotexist_per_h=0.000 rls=0 rls_per_h=0.000 invalid_int=0 invalid_int_per_h=0.000 s500=0 s500_per_h=0.000 traceback=0 traceback_per_h=0.000 reset_exc=0 reset_exc_per_h=0.000 close_exc=0 close_exc_per_h=0.000
+c=astro-webapp-celery-beat-1 start=2026-11-09T05:56:41.135670968Z hours=1.208 lines=240 relnotexist=0 relnotexist_per_h=0.000 rls=0 rls_per_h=0.000 invalid_int=0 invalid_int_per_h=0.000 s500=0 s500_per_h=0.000 traceback=0 traceback_per_h=0.000 reset_exc=0 reset_exc_per_h=0.000 close_exc=0 close_exc_per_h=0.000
+rc_ssh=0
