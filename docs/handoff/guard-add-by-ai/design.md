@@ -105,12 +105,17 @@
   8. JSON として読み直してから置き換える。
   9. PR 番号は `git log --first-parent origin/main -1 --format=%s -- scripts/agent-hooks/<name>/` の「Merge pull request #n」から取る。取れなければ記録せず止まる。
   10. 変わった要素ごとに `perm-change.py record --po-ref PR#<n>` の行を書く（§5-3 の batch と E_old の JSON を含む）。
-- 自動判定の例外 HKI-1（PO が導入時に `!` で1回だけ足す。ADR-1034 の PDL-1 と同じ形）:
-  > HKI-1: Allowed only for a Bash command that is exactly `bash ~/.salesanchor-tools/scripts/agent-hooks/install-guard.sh <name>` on a single line, where `<name>` matches `^[a-z0-9-]+$`, with no other arguments, no environment variable prefix (for example `CLAUDE_DIR=`), no pipe, no `;`, `&&` or `||`, no newline, no `$(`, no backquote, and no redirection. The script itself refuses to run unless ~/.salesanchor-tools is clean and equal to GitHub main. It only adds guard hooks listed in a reviewed and merged guard-manifest.json; it never removes or loosens hooks. Running any per-guard install.sh or rollback.sh, any other script under ~/.salesanchor-tools or ~/.claude, or editing settings files directly is still Self-Modification.
+- 自動判定の例外 HKI-1（PO が導入時に `!` で1回だけ足す。ADR-1034 の PDL-1 と同じ形）: 文の正本は §6-1 の引用ブロック（足す台本が実行のたびにそこから読む）。
 - 台本の版の確かめ（手順3）は台本が自分で行う。書き換えられた台本は、その確かめも飛ばせる。外す・弱める変化を最後に見つけるのは週次点検だけ（台本の変更は §5-5 で B、settings.json と本体の変化は §5 に当たらなければ B）。台本の確かめは事故を防ぐためのもので、守りの本体は点検である。
 - 今週の3件は記録し直さない: 11/09 の週次点検で写しが確定済み（~/.claude/logs/permission-snapshot.json の更新 2026-11-09 14:01 JST。`29ac3748` と `3ba846f5` がそれぞれ1件入っていることを Opus が grep で確認）。来週の点検では差として出ないので、後から記録しても使われない。3件は 11/09 の点検の記録に B として残したままにする（中身は外す・弱める変化0件と調べ済み。~/CC報告ファイル-keep/consent-weekly/20261109-inject-analysis.md）。
 - 実物で初めて通す確かめ（K1 の最初の1回）は、札を足す PR を共通の台本で入れたときに行う。mac-test-guard は中身が変わらないので hook_files・user:hooks の差は出ず、記録の行も書かれない（台本は「差が無い」と出して終わる）。差が出る最初の見張りの導入で K1 を測る。
 - 1つ目の対象は mac-test-guard。札を足す PR で、test_guard.py を CI（agent-hooks-test.yml）に足す。今の CI が流しているのは review-gate と master-register の試験だけ（.github/workflows/agent-hooks-test.yml:25・:36。mac-test-guard と confidential-quote-guard の試験は呼ばれていない。Opus が 2026-11-09 に `git grep agent-hooks origin/main -- .github/workflows/` で確認）。
+
+### 6-1. 自動判定の例外 HKI-1 の文（正本。PO が `!` で足す・外す台本がここから読む）
+- 足す: `bash ~/.salesanchor-tools/docs/handoff/guard-add-by-ai/po-register-hki.sh consent:<鍵>`。外す: 同じフォルダの `po-unregister-hki.sh`（§8 の戻し方）。どちらも PDL-1 の台本と同じ形（控え→変更→読み直し→台帳に record）。
+- 下の1行は行頭から書く。台本はこの節の中で行頭が `> HKI-1:` の行を1つだけ探す。2つ以上・0なら何も変えずに止まる。文を変えると item_hash が変わるので、変えるときは設計の改版として扱う。
+
+> HKI-1: Allowed only for a Bash command that is exactly `bash ~/.salesanchor-tools/scripts/agent-hooks/install-guard.sh <name>` on a single line, where `<name>` matches `^[a-z0-9-]+$`, with no other arguments, no environment variable prefix (for example `CLAUDE_DIR=`), no pipe, no `;`, `&&` or `||`, no newline, no `$(`, no backquote, and no redirection. The script itself refuses to run unless ~/.salesanchor-tools is clean and equal to GitHub main. It only adds guard hooks listed in a reviewed and merged guard-manifest.json; it never removes or loosens hooks. Running any per-guard install.sh or rollback.sh, any other script under ~/.salesanchor-tools or ~/.claude, or editing settings files directly is still Self-Modification.
 
 ## 7. 代替案
 | 案 | 中身 | 採らない理由 |
@@ -360,3 +365,11 @@
 - 中-1: 手順9で本体を写した後に OS のエラーが出ると、`Fail` に変わらず外側で止まり、写した分の hook-files の記録が書かれない。カード手順10の「写した後に止まったときは記録してから止まる」と食い違う。
 - 直し方: 手順9の1つのファイルの処理で出た `OSError` を `Fail` に変える（カード §5 手順9に1項目）。試験 P-oserr を足し、20件にした（カード §6）。
 - 低1〜4は直さない。理由: 低1（途中で止まると 0o644 のまま）は週次点検が中身の sha で見るので記録の点で中-1 に含まれる。低2は文の違いだけ。低3は ~/.claude に書ける者なら settings.json を直接変えられ、新しい攻め口にならない。低4（削除するファイルの欄）は、GO 記録を足すときに process-artifacts gate の求めを確かめてから決める。
+
+### 13-13. 便3: HKI-1 を PO の `!` で足す・外す台本（第17版・2026-11-10。カード card-bin3.md）
+- 経緯: 便2 のマージ後、HKI-1 を足す手順が無いと分かった（§6 は「PDL-1 と同じ形」と書くだけで、足す台本を決めていなかった。入れ忘れたのは設計側）。PO は 2026-11-10 に「1」（前回と同じ形の専用の台本を作る）を選んだ。
+- 文の正本を §6-1 に移した。文は1文字も変えていない（733字・item_sha8 `203789ba`。移す前の origin/main 96a63df05 の文と同じことを Opus が consent-audit.py の item_sha8 で確かめた）。
+- 足し外しの道具は ADR-1034 の po_delegation_edit.py を1本のまま使い、見出しとラベルを引数で受けるようにする（規則を2か所に書き写さない）。引数が4つのときの動きは今と同じ。
+- 新しい台本 po-register-hki.sh・po-unregister-hki.sh は PDL-1 の台本の写しで、違いは読む節（`### 6-1.`）とラベル（HKI-1）だけ。台帳の record は `--target user-automode-allow --po-ref consent:<鍵> --actor po-script`。
+- 週次点検（consent-audit.py）の `PO_BANG_OP_PREFIXES` に新しい2本の命令の頭を足す。ほかの台本（同じフォルダの install-guard 以外のもの）は今までどおり B。
+- 導入の順: マージ → ~/.salesanchor-tools に台本が届いたことを Opus が確かめる → 同意票（操作1 が `po-register-hki.sh consent:<鍵>`）→ PO の「1」→ PO の `!` 1回 → install-guard.sh mac-test-guard の初回（差が無いで終わる見込み）→ A6。
