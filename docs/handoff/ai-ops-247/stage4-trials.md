@@ -34,8 +34,8 @@ PO 2026-11-09 の望む流れ（原文）:
 
 - クラウドの network secret は、1 つのホストに 1 つ・ヘッダ 1 行（S docs/adr/ADR-1052-cloud-case-ai.md:39、S docs/handoff/cloud-case-ai/design.md:188）。
 - 本番の読む窓は `api.salesanchor.jp` の `/api/v1/ops/read-window/query`（S nginx/nginx.conf:642）。ヘッダ `X-Read-Window-Token`（S docs/adr/ADR-1042-cloud-read-window.md:19）。
-- 不具合の記録を書く窓（保守 API）も `api.salesanchor.jp`。ヘッダ `Authorization: Bearer <OPS_API_TOKEN>`（S backend/app/routers/ops.py:102-103）。読む窓と同じホストで値が違うため、1 つの環境に両方は登録できない。
-- グラフの画面は `app.salesanchor.jp/grafana/`（S nginx/nginx.conf:309、S docker-compose.monitoring.yml:44）。読み取り専用の担当 `claude-code-reader`（Viewer）がある（S docs/adr/ADR-079-claude-code-monitoring-access.md:25）。鍵は `Authorization: Bearer <トークン>` で使う（Grafana 公式: grafana.com/docs/grafana-cloud/learn-and-build/developer-resources/api-reference/http-api/authentication/、Context7 で 2026-11-10 確認）。
+- 不具合の記録を書く窓（保守 API）も `api.salesanchor.jp`。ヘッダ `Authorization: Bearer <OPS_API_TOKEN>`（S backend/app/routers/ops.py:36,102-103,117-123）。読む窓と同じホストで値が違うため、1 つの環境に両方は登録できない。
+- グラフの画面は `app.salesanchor.jp/grafana/`（S nginx/nginx.conf:309、S docker-compose.monitoring.yml:44）。読み取り専用の担当 `claude-code-reader`（Viewer）がある（S docs/adr/ADR-079-claude-code-monitoring-access.md:26）。鍵は `Authorization: Bearer <トークン>` で使う（Grafana 公式: grafana.com/docs/grafana-cloud/learn-and-build/developer-resources/api-reference/http-api/authentication/、Context7 で 2026-11-10 確認）。
 - データ元の識別名: Prometheus `PBFA97CFB590B2093`、Loki `P8E80F9AEF21F6940`（S monitoring/grafana/provisioning/datasources/datasources.yml:9,17）。
 
 ### 3-2. 手元での事前の確かめ（2026-11-10、値は画面・記録に出していない）
@@ -44,6 +44,8 @@ PO 2026-11-09 の望む流れ（原文）:
 |---|---|
 | 読む窓に鍵なしで `SELECT 1 AS ok` | 401 |
 | 読む窓に PO の手元の控えの値を付けて同じ問い合わせ | 200・`ok` `1` が返った（控えは本物） |
+| 読む窓で `SELECT count(*) FROM ops_incidents`（元の表） | 400・権限なし（pgcode 42501）。読む窓は元の表を読めない |
+| 読む窓で `SELECT count(*) FROM ai_ro.public__ops_incidents`（読むための写し。S migrations/20261017_130100_create_ai_ro_views.sql:79） | 200・`682`（2026-11-09T16:15:32Z ごろ） |
 | グラフの画面 `/grafana/api/health` | 200 |
 | 手元の Viewer トークンで Prometheus に `count(up)` | 200・`9` が返った |
 | 手元の Viewer トークンでフォルダを作る（書き込み） | 403（folders:create が無い） |
@@ -70,7 +72,7 @@ PO 2026-11-09 の望む流れ（原文）:
 
 | 基準 | 検証方法 |
 |---|---|
-| K1 クラウドの調べ係が読む窓で本番の件数を読める | クラウドで `SELECT count(*) FROM ops_incidents` を流し 200。同じ時刻帯に手元で同じ問い合わせをして件数が一致 |
+| K1 クラウドの調べ係が読む窓で本番の件数を読める | クラウドで `SELECT count(*) FROM ai_ro.public__ops_incidents` を流し 200。同じ時刻帯に手元で同じ問い合わせをして件数が一致 |
 | K2 読む窓で書けない | クラウドで `UPDATE` 1 文を流し、成功しない（200 以外、または読み取り専用のエラー） |
 | K3 グラフで数を読める | クラウドで Prometheus に `count(up)` を問い合わせ 200・数が返る |
 | K4 グラフで書けない | クラウドでフォルダ作成を試し 403 |
@@ -109,4 +111,4 @@ PO 2026-11-09 の望む流れ（原文）:
 ## 7. 維持の仕組み
 
 - 結果は本書 §3 に追記し、S docs/handoff/ai-ops-247/stage4-requirements.md の書き直し（PO の流れ）で使う。
-- グラフ用トークンの更新は 90 日（S docs/B-11_credential_management_policy.md:72 の行に含める）。
+- グラフ用トークンの更新は 90 日（S docs/B-11_credential_management_policy.md:71 の行に含める）。
