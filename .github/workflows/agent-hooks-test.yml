@@ -1,6 +1,6 @@
 name: Agent Hooks Test
 
-# scripts/agent-hooks/ の受入試験（review-gate: ADR-1029・商品登録の見張り: doc-agenda-nav design §32 D2）。
+# scripts/agent-hooks/ の受入試験（review-gate: ADR-1029・商品登録の見張り: doc-agenda-nav design §32 D2・mac-test-guard・install-guard: ADR-1072）。
 # 偽の gh・一時ディレクトリだけを使う。本物の ~/.claude には触れない。
 # ※ 必須チェック（Branch Protection）には登録しない。
 
@@ -21,6 +21,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - name: Run review-gate tests
         run: bash scripts/agent-hooks/review-gate/test_review_gate.sh
 
@@ -32,5 +34,33 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - name: Run master-register guard tests
         run: bash scripts/agent-hooks/test_master_register_rules_guard.sh
+
+  mac-test-guard:
+    name: mac-test-guard test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Run mac-test-guard tests
+        run: python3 scripts/agent-hooks/mac-test-guard/test_guard.py
+
+  install-guard:
+    name: install-guard test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Run install-guard tests
+        run: python3 scripts/agent-hooks/test_install_guard.py
