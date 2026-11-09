@@ -221,7 +221,15 @@ describe("本番の許可 135 件", () => {
 
   it("許可が実在しない行は出ない（固定の行は残る）", () => {
     const only = buildRows([{ key: "dashboard.view", category: "x" }], ROLE_ROWS);
-    expect(only.map((r) => r.id)).toEqual(["dashboard", "schedule", "loginRequests"]);
+    expect(only.map((r) => r.id)).toEqual(["dashboard", "schedule", "roles", "loginRequests"]);
+  });
+
+  it("ロールの行は固定表示（オーナー・システム管理者・マネージャーだけ）で、roles.* は切替に出ない", () => {
+    const row = buildRows(PERMS, ROLE_ROWS).find((r) => r.id === "roles");
+    expect(row?.fixed).toBe("roleEditors");
+    expect(row?.keys.sort()).toEqual([
+      "roles.assign", "roles.create", "roles.delete", "roles.update", "roles.view",
+    ]);
   });
 });
 

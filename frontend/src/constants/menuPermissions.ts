@@ -122,7 +122,7 @@ export interface RoleRowDef {
   /** 行の許可（DB の許可の鍵） */
   keys: readonly string[];
   /** 切替の代わりに固定の文を出す */
-  fixed?: "always" | "ownerOnly";
+  fixed?: "always" | "ownerOnly" | "roleEditors";
   /** 行の下に出す注記の言葉の鍵 */
   noteKey?: string;
 }
@@ -169,6 +169,7 @@ export const ROLE_ROWS: readonly RoleRowDef[] = [
   {
     id: "roles", section: "team", menus: ["roles"],
     keys: ["roles.view", "roles.create", "roles.update", "roles.delete", "roles.assign"],
+    fixed: "roleEditors",
   },
   {
     id: "teams", section: "team", menus: ["teams"],

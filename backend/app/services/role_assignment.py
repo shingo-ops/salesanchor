@@ -10,6 +10,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.dependencies import get_user_system_keys
+from app.auth.system_roles import OWNER_ADMIN_ONLY_KEYS, is_tenant_admin
 from app.models import User
 from app.routers.roles import (
     _hidden_role_params,
@@ -41,12 +43,13 @@ async def check_assignable_role(
     """granter が role_id を付与してよいかの検査（assign_single_role の前半と同じ）。granter の最大 priority を返す。
 
     - role_id が同テナントに存在し、隠すロールでない（super admin 以外）こと → 違えば 400
+    - 付与できるのが owner/admin だけのロール（OWNER_ADMIN_ONLY_KEYS）を、owner/admin でない人が付けようとした → 403 role_not_assignable
     - 付与するロールの priority が granter の最大 priority 未満であること → 違えば 403
     """
     hidden_params = _hidden_role_params(granter)
     found = await db.execute(
         _visible_text(
-            "SELECT id, priority FROM roles WHERE id = :rid AND tenant_id = :tid "
+            "SELECT id, priority, system_key FROM roles WHERE id = :rid AND tenant_id = :tid "
             f"AND {_visible_role_sql()}"
         ),
         {"rid": role_id, "tid": tenant_id, **hidden_params},
@@ -56,6 +59,13 @@ async def check_assignable_role(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="指定の role_id はこのテナントに存在しません",
+        )
+    if role["system_key"] in OWNER_ADMIN_ONLY_KEYS and not is_tenant_admin(
+        await get_user_system_keys(db, granter.id)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="role_not_assignable",
         )
 
     my_max = await _max_priority_for_user(db, granter.id)
@@ -77,6 +87,7 @@ async def assign_single_role(
     """target_user_id の「見えるロール」をすべて外し、role_id の1つだけにする。
 
     - role_id が同テナントに存在し、隠すロールでない（super admin 以外）こと → 違えば 400
+    - 付与できるのが owner/admin だけのロール（OWNER_ADMIN_ONLY_KEYS）を、owner/admin でない人が付けようとした → 403 role_not_assignable
     - 付与するロールの priority が自分の最大 priority 未満であること → 違えば 403
     - 対象の人の今の最大 priority が自分の最大 priority 未満であること → 違えば 403
     - 隠すロール（super admin 向け）は super admin 以外の操作では外さない

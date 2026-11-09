@@ -23,7 +23,7 @@ beforeEach(async () => {
   vi.stubGlobal('fetch', vi.fn(() => { throw new Error('Unexpected network'); }));
   mock.get.mockImplementation(async (url: string) => {
     if (url === '/me/permissions') return { permissions };
-    if (url === '/roles') return [{ ...role, color: roleColor }];
+    if (url === '/roles?scope=role_page') return [{ ...role, color: roleColor }];
     if (url === '/permissions' || url === '/roles/1/permissions') return [];
     if (url === '/super-admin/knowledge' || url.startsWith('/super-admin/knowledge?q=')) return [rule];
     if (url === '/super-admin/aliases' || url.startsWith('/super-admin/aliases?q=')) return [alias];
@@ -69,10 +69,10 @@ describe('role Button migration contracts', () => {
     const createChecked = createColors.filter(input => input.checked);
     expect(createChecked).toHaveLength(1); expect(createChecked[0]).toBe(createColors[0]);
     fireEvent.click(within(dialog).getByRole('button', { name: tr('common.create') })); expect(mock.post).not.toHaveBeenCalled();
-    fillRole(dialog); const reads = mock.get.mock.calls.filter(c => c[0] === '/roles').length;
+    fillRole(dialog); const reads = mock.get.mock.calls.filter(c => c[0] === '/roles?scope=role_page').length;
     fireEvent.click(within(dialog).getByRole('button', { name: tr('common.create') }));
     await waitFor(() => expect(mock.post).toHaveBeenCalledExactlyOnceWith('/roles', { name: ' New role ', color: createChecked[0].value, priority: 900, description: ' desc ' }));
-    await waitFor(() => expect(mock.get.mock.calls.filter(c => c[0] === '/roles')).toHaveLength(reads + 1));
+    await waitFor(() => expect(mock.get.mock.calls.filter(c => c[0] === '/roles?scope=role_page')).toHaveLength(reads + 1));
     ({ dialog } = openRole()); fireEvent.change(dialog.querySelector('input[required]')!, { target: { value: 'Retained' } });
     const writesBeforeCancel = mock.post.mock.calls.length + mock.patch.mock.calls.length;
     fireEvent.click(within(dialog).getByRole('button', { name: tr('common.cancel') }));
