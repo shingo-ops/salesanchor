@@ -25,7 +25,7 @@
 触らない（変えたら差し戻し）:
 - `frontend/src/tokens.css` の §2 以外の行（ダークの段を含む。新トークンは色を持たないのでダークに足さない）
 - `frontend/src/components/CalendarView.css` の §3 以外の行（月の段 `.comp-calendar--month` `:290-` を含む）
-- `frontend/src/components/CalendarView.tsx`・`CalendarView.test.tsx`・`calendarView.utils.ts`・`CalendarView.stories.tsx`
+- `frontend/src/components/CalendarView.tsx`・`frontend/src/components/CalendarView.test.tsx`・`frontend/src/components/calendarView.utils.ts`・`frontend/src/components/CalendarView.stories.tsx`
 - `frontend/src/pages/schedule/`
 - 移行（migrations）・`.github/workflows/`・リポジトリ直下の `scripts/`・backend・`frontend/scripts/`
 

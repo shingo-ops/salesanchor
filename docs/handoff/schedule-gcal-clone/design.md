@@ -648,7 +648,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - 便8 の札の色は札の部品の 6 色だけ。`frontend/src/features/schedule/calendars.config.test.ts` が 7 種類の対応と、設定に `#` の色が無いことを CI で毎回確かめる。
 - 便9 の月表示の見た目は `CalendarView.css` の `.comp-calendar--schedule.comp-calendar--month` の 1 か所だけ。数値と色の見張り（同上）が CI で直書きを止める。`frontend/src/components/CalendarView.test.tsx` が 1 日の「M月1日」（M は月の数字）・今日の丸・点の 1 行を毎回確かめる。
 - 便10 の不具合は `frontend/src/components/CalendarView.test.tsx` が、表示を切り替えても月の時に `views.calendarDays` が渡ることと、FullCalendar の設定の置き換え方（丸ごと置き換え）を CI で毎回確かめる。
-- 便11 の線は `CalendarView.css` の `.comp-calendar--schedule.comp-calendar--days` の 1 か所だけ。数値と色の見張り（同上）が CI で直書きを止める。jsdom は見た目の規則を計算しないので単体の試験は置かず、FullCalendar の版を上げる時は G37〜G41 の確かめ方で本番の値を読み直す（版は ADR-1065 で 6.1.22 に固定）。
+- 便11 の線は `frontend/src/components/CalendarView.css` の `.comp-calendar--schedule.comp-calendar--days` の 1 か所だけ。数値と色の見張り（同上）が CI で直書きを止める。jsdom は見た目の規則を計算しないので単体の試験は置かず、FullCalendar の版を上げる時は G37〜G41 の確かめ方で本番の値を読み直す（版は ADR-1065 で 6.1.22 に固定）。
 - 守り手: frontend/src/pages/schedule/SchedulePageImpl.test.tsx（押した時刻で小窓が開くことを CI の試験で毎回確かめる。金型に載せ替えた後は frontend/src/components/CalendarView.test.tsx が加わる）
 
 ## 9. 審査
@@ -824,4 +824,4 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - (2) ○ /tmp の写しに規則を足し、FullCalendar の global 版の週を Playwright で読んだ。上の行・左上の角・時刻の列・「終日」の升目は 4 辺 0px。`::after` は幅 8px・上の線 1px。cushion の右のあきは 12px で、文字の右の端 52.5 は列の右の端 53 以下。divider は高さ 1px・下の線 1px だけ。slot-lane の上 1px・timegrid-col・終日の日の升目の線は残った。divider の規則の詳細度 (0,4,0) は `.fc-scrollgrid-section > *` の (0,3,0) に勝つ。
 - (3) ○ 同じ写しで月表示の値（scrollgrid・曜日の行・日の升目・区切り・scrollbar-color）が足す前と後で全部同じ。
 - (4) ○ `check-css-hardcoded-values.js` は PASSED。新トークンは var() で、置き場所は `--schedule-gridline-w` の次の行。
-- (5) ○ 抜けなし。推奨 1 件: 短い線は 1 時間 1 行（`CalendarView.tsx:194`）が前提 → §3.16 の心配と対処に 1 行足した。
+- (5) ○ 抜けなし。推奨 1 件: 短い線は 1 時間 1 行（`frontend/src/components/CalendarView.tsx:194`）が前提 → §3.16 の心配と対処に 1 行足した。
