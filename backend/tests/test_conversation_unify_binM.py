@@ -2,7 +2,7 @@
 
 検証項目:
   1〜4. リード配下の会話記録の道（作成・一覧・変更・削除）が無い（404 か 405）
-  5. アプリの道の一覧に、その道を含むものが0件
+  5. アプリの道の一覧に、リード配下のその道が0件（会社の会話タブの道は残す）
   6. 連絡手段の名簿の一覧 API（GET /api/v1/channel-masters）は残っている
 """
 from __future__ import annotations
@@ -43,7 +43,7 @@ def test_no_route_contains_the_gone_path():
     from app.main import app
 
     paths = [getattr(r, "path", "") for r in app.routes]
-    assert [p for p in paths if _GONE_PATH in p] == []
+    assert [p for p in paths if p.startswith("/api/v1/leads/") and _GONE_PATH in p] == []
 
 
 def test_channel_masters_list_route_remains():
