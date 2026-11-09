@@ -481,7 +481,7 @@ def test_role_migration_is_idempotent(pg):
     # meta の migration も冪等（分類表の中身は消えない）
     n0 = _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0]
     c.execute(_read(_META_SQL))
-    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1084
+    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1083
 
 
 # ---------------------------------------------------------------- T10（CI の見張り）
@@ -553,7 +553,6 @@ def test_t10_classification_covers_real_shaped_tables(cluster):
         # docs/handoff/cloud-case-ai/stage1-h-decision.md §1
         scaffold_only = {
             ("public", "tenants", "company_name"),
-            ("public", "users", "firebase_uid"),
             *(
                 ("tenant_001", "suppliers", col)
                 for col in ("supplier_code", "name", "contact_name", "email", "phone", "address", "notes")

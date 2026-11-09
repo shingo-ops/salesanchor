@@ -122,7 +122,7 @@ describe("schedule save refetches only the events (R2)", () => {
     await waitFor(() => expect(readsOf("/shifts?")).toBe(1));
     mockGet.mockClear();
     fireEvent.click(await screen.findByRole("button", { name: i18n.t("schedule.create") }));
-    fireEvent.change(screen.getByPlaceholderText(i18n.t("schedule.eventTitle")), { target: { value: "New Event" } });
+    fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "New Event" } });
     fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
     await waitFor(() => expect(api.post).toHaveBeenCalled());
     await waitFor(() => expect(readsOf("/calendar/events?")).toBe(1));

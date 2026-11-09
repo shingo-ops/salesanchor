@@ -1,0 +1,4 @@
+{"name": "mac-test-guard",
+ "files": ["guard.py"],
+ "hooks": [{"event": "PreToolUse", "matcher": "Bash", "interpreter": "python3", "file": "guard.py", "after": "mac-vm-guard.py"}],
+ "tests": ["test_guard.py"]}

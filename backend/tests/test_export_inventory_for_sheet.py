@@ -72,11 +72,10 @@ async def _setup_movements(engine, tenant_id: int) -> dict:
         op_id = (
             await conn.execute(
                 text(
-                    "INSERT INTO public.users (firebase_uid, email, name, is_active, is_super_admin) "
-                    "VALUES (:uid, :email, :n, TRUE, TRUE) RETURNING id"
+                    "INSERT INTO public.users (email, name, is_active, is_super_admin) "
+                    "VALUES (:email, :n, TRUE, TRUE) RETURNING id"
                 ),
                 {
-                    "uid": f"export_test_op_{tag}",
                     "email": f"export_test_{tag}@example.com",
                     "n": f"export_test_op_{tag}",
                 },

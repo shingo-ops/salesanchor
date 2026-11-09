@@ -472,6 +472,18 @@ def mutate(env, key):
         with open(os.path.join(env.claude, "scripts", "new_hook.sh"), "w") as f:
             f.write("#!/bin/bash\necho new\n")
         return
+    if key == "guard_installer":
+        gp = os.path.join(env.tools, "scripts", "agent-hooks", "install-guard.sh")
+        os.makedirs(os.path.dirname(gp), exist_ok=True)
+        with open(gp, "w") as f:
+            f.write("#!/bin/bash\necho new\n")
+        return
+    if key == "guard_judge":
+        gp = os.path.join(env.tools, "scripts", "dev", "consent-audit.py")
+        os.makedirs(os.path.dirname(gp), exist_ok=True)
+        with open(gp, "w") as f:
+            f.write("# >>> ADR-1072 guard-add judge\nx = 1\n# <<< ADR-1072 guard-add judge\n")
+        return
     prefix, rest = key.split(":", 1)
     path = {"user": env.settings, "user-local": env.settings_local, "repo": env.tools_settings,
             "repo-local": env.repo_local}[prefix]
@@ -500,7 +512,7 @@ ALL_KEYS = sorted(set(audit.TARGET_KEYS.values()))
 
 
 def test_a5_a6(tmp):
-    chk("A5-0", "写しのキーは設計の表の24種（ledger・tools_clean・permits を除く）に対応する", len(ALL_KEYS) == 24 and set(audit.TARGET_KEYS) >= {"danger-ops", "hook-files", "repo-allow"})
+    chk("A5-0", "写しのキーは設計の表の26種（ledger・tools_clean・permits を除く）に対応する", len(ALL_KEYS) == 26 and set(audit.TARGET_KEYS) >= {"danger-ops", "hook-files", "repo-allow"})
     for key in ALL_KEYS:
         e = light_env(tmp, "a5-" + key.replace(":", "_").replace(".", "_"), repo_dir=key.startswith("repo:"))
         run_audit(e, T0, commit=True)
@@ -1248,11 +1260,485 @@ def test_a21(tmp):
         and any(x.startswith("ABNORMAL_REASON=B hook_files ") for x in lines))
 
 
+# ── G（ADR-1072: AI が PR で入れた見張りを記録で説明する）──────────────────
+
+GT_SNAP = datetime.datetime(2026, 11, 9, 4, 0, 0, tzinfo=UTC)
+GT_ROW = datetime.datetime(2026, 11, 9, 6, 0, 0, tzinfo=UTC)
+GT_NOW = datetime.datetime(2026, 11, 9, 7, 0, 0, tzinfo=UTC)
+GT_W_CI = "2026-11-09T01:00:00Z"
+GT_W_A = "2026-11-09T03:00:00Z"
+GT_W_MID = "2026-11-09T03:30:00Z"
+GT_W_MERGE = "2026-11-09T05:00:00Z"
+GT_NAME = "mac-test-guard"
+GT_GUARD1 = "#!/usr/bin/env python3\nprint('guard v1')\n"
+GT_GUARD2 = "#!/usr/bin/env python3\nprint('guard v2')\n"
+GT_TEST1 = "def test_a():\n    assert True\n"
+GT_TEST2 = "def test_b():\n    assert True\n"
+GT_HOOK = {"event": "PreToolUse", "matcher": "Bash", "interpreter": "python3", "file": "guard.py",
+           "after": "mac-vm-guard.py"}
+GT_BATCH = "batch:0123456789abcdef"
+
+
+def git_at(cwd, when, *args):
+    r = subprocess.run(["git", "-C", cwd, "-c", "user.name=t", "-c", "user.email=t@example.invalid",
+                        "-c", "commit.gpgsign=false"] + list(args), capture_output=True,
+                       env=dict(os.environ, GIT_AUTHOR_DATE=when, GIT_COMMITTER_DATE=when))
+    if r.returncode != 0:
+        raise RuntimeError("git %s: %s" % (args, r.stderr.decode("utf-8", "replace")))
+    return r.stdout.decode("utf-8", "replace").strip()
+
+
+def merge_pr_at(e, edits, when, branch="feat"):
+    """merge_pr と同じ。ただし commit と merge の日時を when に固定する。"""
+    git(e.seed, "checkout", "-q", "-b", branch)
+    for rel, text in edits.items():
+        p = os.path.join(e.seed, rel)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "w", encoding="utf-8") as f:
+            f.write(text)
+    git(e.seed, "add", "-A")
+    git_at(e.seed, when, "commit", "-q", "-m", "change " + branch)
+    git(e.seed, "checkout", "-q", "main")
+    git_at(e.seed, when, "merge", "-q", "--no-ff", "-m", "Merge " + branch, branch)
+    git(e.seed, "push", "-q", "origin", "main")
+    mc = git(e.seed, "rev-parse", "HEAD")
+    git(e.tools, "fetch", "-q", "origin")
+    git(e.tools, "reset", "-q", "--hard", "origin/main")
+    return mc
+
+
+def gt_manifest(files=("guard.py",), tests=("test_guard.py",), hooks=None, name=GT_NAME):
+    return {"name": name, "files": list(files), "hooks": [dict(GT_HOOK)] if hooks is None else hooks,
+            "tests": list(tests)}
+
+
+def gt_edits(files, manifest=None, name=GT_NAME):
+    ed = {"scripts/agent-hooks/%s/%s" % (name, f): t for f, t in files.items()}
+    if manifest is not None:
+        ed["scripts/agent-hooks/%s/guard-manifest.json" % name] = json.dumps(manifest)
+    return ed
+
+
+def gt_ci(tests, suffix="", step_extra="", name=GT_NAME):
+    runs = "".join("          python3 scripts/agent-hooks/%s/%s%s\n" % (name, t, suffix) for t in tests)
+    return ("name: agent-hooks-test\non: [push]\njobs:\n  t:\n    runs-on: ubuntu-latest\n    steps:\n"
+            "      - name: run\n%s        run: |\n%s") % (step_extra, runs)
+
+
+def gt_env(tmp, name, ci=None):
+    e = Env(tmp, name, with_git=True)
+    if ci is not None:
+        merge_pr_at(e, {".github/workflows/agent-hooks-test.yml": ci}, GT_W_CI, "ci")
+    return e
+
+
+def gt_hk(e, f="mac-vm-guard.py", name="", **extra):
+    d = {"type": "command", "command": "python3 %s" % os.path.join(e.claude, "scripts", name, f)}
+    d.update(extra)
+    return d
+
+
+def gt_guard_hk(e):
+    return {"type": "command", "command": "python3 %s/.claude/scripts/%s/guard.py" % (e.home, GT_NAME)}
+
+
+def gt_set_hooks(e, groups):
+    d = load_json(e.settings)
+    d["hooks"] = {"PreToolUse": groups}
+    write_json(e.settings, d)
+
+
+def gt_put(e, files, name=GT_NAME):
+    for f, t in files.items():
+        p = os.path.join(e.claude, "scripts", name, f)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "w", encoding="utf-8") as fh:
+            fh.write(t)
+
+
+def c8(text):
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:8]
+
+
+def gt_view(mc, when=GT_W_MERGE):
+    return {"state": "MERGED", "mergedAt": when, "mergeCommit": {"oid": mc}}
+
+
+def gt_rec(e, target, op, h, ref="PR#7", now=GT_ROW, extra=()):
+    code, _, err = run_pc(e, ["record", "--target", target, "--op", op, "--item-hash", h, "--po-ref", ref]
+                          + list(extra), now=now)
+    if code != 0:
+        raise RuntimeError("record が拒まれた: %s" % err)
+
+
+def gt_b(lines):
+    return [x for x in reasons(lines)
+            if x.startswith("ABNORMAL_REASON=B ") and (" hook_files " in x or " user:hooks " in x)]
+
+
+def gt_add_case(tmp, name, edits="default", installed=None, merge_when=GT_W_MERGE, row_now=GT_ROW,
+                inst_dir=GT_NAME, prep=None, ci=None):
+    """hook_files の増だけを PR#7 で記録する場面。返り値: (env, 点検の出力)。"""
+    e = gt_env(tmp, name, ci=ci)
+    gt_set_hooks(e, [{"matcher": "Bash", "hooks": [gt_hk(e)]}])
+    run_audit(e, GT_SNAP, commit=True)
+    if edits == "default":
+        edits = gt_edits({"guard.py": GT_GUARD1, "test_guard.py": GT_TEST1}, gt_manifest())
+    mc = merge_pr_at(e, edits, merge_when)
+    installed = installed if installed is not None else {"guard.py": GT_GUARD1}
+    gt_put(e, installed, inst_dir)
+    gt_rec(e, "hook-files", "add", c8(installed["guard.py"]), now=row_now)
+    if prep:
+        prep(e)
+    lines = run_audit(e, GT_NOW, gh=lambda n: gt_view(mc, merge_when) if n == 7 else None)
+    return e, lines
+
+
+def gt_swap_case(tmp, name, old_fn=None, new_fn=None, edits="default", plain=False, ci=None):
+    """hook_files の増・user:hooks の増・前の組の減（入れ替え）の3行（設計 A2）。plain=True は組を足すだけ。"""
+    e = gt_env(tmp, name, ci=ci)
+    old = {"matcher": "Bash", "hooks": old_fn(e) if old_fn else [gt_hk(e)]}
+    gt_set_hooks(e, [old])
+    run_audit(e, GT_SNAP, commit=True)
+    if edits == "default":
+        edits = gt_edits({"guard.py": GT_GUARD1, "test_guard.py": GT_TEST1}, gt_manifest())
+    mc = merge_pr_at(e, edits, GT_W_MERGE)
+    gt_put(e, {"guard.py": GT_GUARD1})
+    if plain:
+        new = {"matcher": "Bash", "hooks": [gt_guard_hk(e)]}
+        gt_set_hooks(e, [old, new])
+    else:
+        new = {"matcher": "Bash", "hooks": new_fn(e) if new_fn else [gt_hk(e), gt_guard_hk(e)]}
+        gt_set_hooks(e, [new])
+    h_new, h_old = audit.item_sha8(new), audit.item_sha8(old)
+    gt_rec(e, "hook-files", "add", c8(GT_GUARD1))
+    if plain:
+        gt_rec(e, "user-hooks", "add", h_new)
+    else:
+        gt_rec(e, "user-hooks", "add", h_new, extra=["--batch", GT_BATCH])
+        gt_rec(e, "user-hooks", "remove", h_old,
+               extra=["--batch", GT_BATCH, "--replaced-by", h_new, "--old-json", json.dumps(old)])
+    lines = run_audit(e, GT_NOW, gh=lambda n: gt_view(mc) if n == 7 else None)
+    return e, lines
+
+
+def gt_modify_case(tmp, name, a_edits, c_edits, mid_edits=None, ci="default", inst1=GT_GUARD1, inst2=GT_GUARD2,
+                   shallow=False, hist=True):
+    """hook_files の中身の書き換え（減の要素と増の要素）を PR#7 で記録する場面。"""
+    if ci == "default":
+        ci = gt_ci(["test_guard.py"])
+    e = gt_env(tmp, name, ci=ci)
+    if hist:
+        merge_pr_at(e, a_edits, GT_W_A, "pra")
+        if mid_edits:
+            merge_pr_at(e, mid_edits, GT_W_MID, "prb")
+    gt_put(e, {"guard.py": inst1})
+    gt_set_hooks(e, [{"matcher": "Bash", "hooks": [gt_hk(e)]}])
+    run_audit(e, GT_SNAP, commit=True)
+    mc = merge_pr_at(e, c_edits, GT_W_MERGE, "prc")
+    gt_put(e, {"guard.py": inst2})
+    gt_rec(e, "hook-files", "add", c8(inst2))
+    gt_rec(e, "hook-files", "remove", c8(inst1))
+    if shallow:
+        shutil.rmtree(e.tools)
+        subprocess.run(["git", "clone", "-q", "--depth", "1", "file://" + e.bare, e.tools], check=True)
+    return e, run_audit(e, GT_NOW, gh=lambda n: gt_view(mc) if n == 7 else None)
+
+
+GT_BASE_A = gt_edits({"guard.py": GT_GUARD1, "test_guard.py": GT_TEST1}, gt_manifest())
+GT_BASE_C = gt_edits({"guard.py": GT_GUARD2}, gt_manifest())
+
+
+def test_g1(tmp):
+    e, lines = gt_add_case(tmp, "g1-files")
+    chk("G1-a", "札のある見張りの hook_files の増が PR#n の記録で B に出ない（変化は検出される）",
+        not gt_b(lines) and any(x.startswith("    + ") for x in lines))
+    e, lines = gt_swap_case(tmp, "g1-plain", plain=True)
+    chk("G1-b", "新しい組を足す user:hooks の増が B に出ない", not gt_b(lines) and any(x.startswith("    + PreToolUse|") for x in lines))
+    e, lines = gt_swap_case(tmp, "g1-swap")
+    chk("G1-c", "組の入れ替え（増・減・本体の増の3行）が B に出ない", not gt_b(lines) and any(x.startswith("    - ") for x in lines))
+
+
+def test_g2(tmp):
+    e, lines = gt_swap_case(tmp, "g2-main")
+    chk("G2-a", "今週の3件と同じ形の3行は B が0件", not gt_b(lines))
+    chk("G2-b", "3行とも台帳に書けた（hook-files 1・user-hooks 2）",
+        sorted((r.get("target"), r.get("op")) for r in ledger_rows(e) if r.get("sub") == "record")
+        == [("hook-files", "add"), ("user-hooks", "add"), ("user-hooks", "remove")])
+    e, lines = gt_add_case(tmp, "g2-nomanifest", edits=gt_edits({"guard.py": GT_GUARD1, "test_guard.py": GT_TEST1}))
+    chk("G2-c", "札の無い版の番号で書いた行は B", any(" hook_files " in x for x in gt_b(lines)))
+
+
+def test_g3(tmp):
+    e, lines = gt_swap_case(
+        tmp, "g3-drop",
+        old_fn=lambda e: [gt_hk(e), gt_hk(e, "other.py")],
+        new_fn=lambda e: [gt_guard_hk(e)])
+    chk("G3-a", "組から命令を抜く入れ替えは B", any(" user:hooks " in x for x in gt_b(lines)))
+    e, lines = gt_swap_case(
+        tmp, "g3-timeout",
+        old_fn=lambda e: [gt_hk(e, timeout=60)],
+        new_fn=lambda e: [gt_hk(e, timeout=10), gt_guard_hk(e)])
+    chk("G3-b", "既にあるフックの timeout を縮める入れ替えは B", any(" user:hooks " in x for x in gt_b(lines)))
+
+
+def test_g4(tmp):
+    _, lines = gt_add_case(tmp, "g4-content", installed={"guard.py": "#!/bin/sh\necho tampered\n"})
+    chk("G4-a", "PR に無い中身は B", any(" hook_files " in x for x in gt_b(lines)))
+    _, lines = gt_add_case(tmp, "g4-nofolder", edits=gt_edits({"guard.py": GT_GUARD1}))
+    chk("G4-b", "札の無いフォルダは B", any(" hook_files " in x for x in gt_b(lines)))
+    _, lines = gt_add_case(tmp, "g4-top", edits={"scripts/agent-hooks/guard.py": GT_GUARD1}, inst_dir="")
+    chk("G4-c", "scripts/agent-hooks/ の直下のファイルは B", any(" hook_files " in x for x in gt_b(lines)))
+    ok = True
+    for i, bad in enumerate(["../review-gate/gate.py", "/etc/guard.py"]):
+        _, lines = gt_add_case(
+            tmp, "g4-path%d" % i,
+            edits=gt_edits({"guard.py": GT_GUARD1}, gt_manifest(files=("guard.py", bad))))
+        ok = ok and any(" hook_files " in x for x in gt_b(lines))
+    chk("G4-d", "札に ../ や / で始まる名前があると B（2件）", ok)
+    hk = dict(GT_HOOK, event="PermissionRequest")
+    _, lines = gt_add_case(
+        tmp, "g4-event", edits=gt_edits({"guard.py": GT_GUARD1}, gt_manifest(hooks=[hk])))
+    chk("G4-e", "event が PreToolUse と Stop 以外なら B", any(" hook_files " in x for x in gt_b(lines)))
+
+
+def test_g5(tmp):
+    _, lines = gt_modify_case(tmp, "g5-ok", GT_BASE_A, GT_BASE_C)
+    chk("G5-0", "（対照）試験を保ったままの中身の書き換えは B に出ない", not gt_b(lines))
+    both = gt_edits({"guard.py": GT_GUARD1, "test_guard.py": GT_TEST1, "test_two.py": GT_TEST2},
+                    gt_manifest(tests=("test_guard.py", "test_two.py")))
+    c1 = gt_edits({"guard.py": GT_GUARD2, "test_guard.py": "def test_a():\n"}, gt_manifest())
+    _, lines = gt_modify_case(tmp, "g5-1", GT_BASE_A, c1)
+    chk("G5-1", "札の tests に - の行がある PR は B", any(" hook_files " in x for x in gt_b(lines)))
+    _, lines = gt_modify_case(tmp, "g5-2", both, GT_BASE_C, ci=gt_ci(["test_guard.py", "test_two.py"]))
+    chk("G5-2", "tests から名前が消えた PR は B", any(" hook_files " in x for x in gt_b(lines)))
+    _, lines = gt_modify_case(
+        tmp, "g5-3",
+        both, gt_edits({"guard.py": GT_GUARD2}, gt_manifest(tests=("test_guard.py", "test_two.py"))))
+    chk("G5-3", "CI で呼ばれていない試験での中身の書き換えは B", any(" hook_files " in x for x in gt_b(lines)))
+    mid = gt_edits({}, gt_manifest(tests=("test_guard.py",)))
+    c4 = gt_edits({"guard.py": GT_GUARD2, "test_two.py": ""}, gt_manifest(tests=("test_guard.py",)))
+    _, lines = gt_modify_case(tmp, "g5-4", both, c4, mid_edits=mid)
+    chk("G5-4", "2段の PR（札だけ変えた PR を挟んで試験を消す）は B", any(" hook_files " in x for x in gt_b(lines)))
+    a5 = gt_edits({"guard.py": GT_GUARD1, "test_guard.py": GT_TEST1})
+    c5 = gt_edits({"guard.py": GT_GUARD2, "test_guard.py": ""}, gt_manifest())
+    _, lines = gt_modify_case(tmp, "g5-5", a5, c5)
+    chk("G5-5", "前に入れていた版に札が無い見張りの書き換えは B", any(" hook_files " in x for x in gt_b(lines)))
+
+
+def test_g8(tmp):
+    words = [("permissionDecision と allow", "print('{\"permissionDecision\": \"allow\"}')"),
+             ("approve", "print('approve it')"), ("updatedInput", "x = {'updatedInput': 1}"),
+             ("updatedPermissions", "x = {'updatedPermissions': 1}"),
+             ("updatedToolOutput", "x = {'updatedToolOutput': 1}"), ("behavior", "x = {'behavior': 'allow'}"),
+             ("additionalContext", "x = {'additionalContext': 1}")]
+    for i, (label, line) in enumerate(words):
+        body = GT_GUARD1 + line + "\n"
+        _, lines = gt_add_case(
+            tmp, "g8-%d" % i,
+            edits=gt_edits({"guard.py": body, "test_guard.py": GT_TEST1}, gt_manifest()),
+            installed={"guard.py": body})
+        chk("G8-%d" % (i + 1), "本体に %s があれば B" % label, any(" hook_files " in x for x in gt_b(lines)))
+    _, lines = gt_add_case(
+        tmp, "g8-testonly",
+        edits=gt_edits({"guard.py": GT_GUARD1, "test_guard.py": GT_TEST1 + "ARGS = '--approve'\n"}, gt_manifest()))
+    chk("G8-8", "試験ファイルだけにある --approve は B にならない", not gt_b(lines))
+    body = GT_GUARD1 + "print('APPROVE')\n"
+    _, lines = gt_add_case(
+        tmp, "g8-upper",
+        edits=gt_edits({"guard.py": body, "test_guard.py": GT_TEST1}, gt_manifest()), installed={"guard.py": body})
+    chk("G8-9", "本体の大文字の APPROVE は B にならない", not gt_b(lines))
+
+
+def test_g10(tmp):
+    _, lines = gt_add_case(tmp, "g10-old", merge_when="2026-11-01T05:00:00Z")
+    chk("G10-1", "前回の写しの8日前にマージし、写しの後で入れた見張りは B に出ない", not gt_b(lines))
+    _, lines = gt_add_case(tmp, "g10-early", row_now=GT_SNAP + td(1800))
+    chk("G10-2", "record の行の時刻がマージより前なら B", any(" hook_files " in x for x in gt_b(lines)))
+
+
+def test_g11(tmp):
+    e = gt_env(tmp, "g11-back")
+    gt_set_hooks(e, [{"matcher": "Bash", "hooks": [gt_hk(e)]}])
+    mc_a = merge_pr_at(e, gt_edits({"guard.py": GT_GUARD1, "test_guard.py": GT_TEST1}, gt_manifest()), GT_W_A, "pra")
+    merge_pr_at(e, gt_edits({"guard.py": GT_GUARD2}, gt_manifest()), GT_W_MID, "prb")
+    gt_put(e, {"guard.py": GT_GUARD2})
+    run_audit(e, GT_SNAP, commit=True)
+    gt_put(e, {"guard.py": GT_GUARD1})
+    gt_rec(e, "hook-files", "add", c8(GT_GUARD1))
+    lines = run_audit(e, GT_NOW, gh=lambda n: gt_view(mc_a, GT_W_A) if n == 7 else None)
+    chk("G11-1", "古い PR 番号で古い版へ戻すと B", any(" hook_files " in x for x in gt_b(lines)))
+    _, lines = gt_modify_case(tmp, "g11-nohist", GT_BASE_A, GT_BASE_C, hist=False, inst1="#!/bin/sh\necho unrecorded\n")
+    chk("G11-2", "前に入れていた版が main の履歴に無いと B", any(" hook_files " in x for x in gt_b(lines)))
+    e, lines = gt_swap_case(tmp, "g11-shallow-ok")
+    chk("G11-3pre", "（対照）浅くない取得なら通る", not gt_b(lines))
+    _, lines = gt_modify_case(tmp, "g11-shallow", GT_BASE_A, GT_BASE_C, shallow=True)
+    chk("G11-3", "浅い取得では B", any(" hook_files " in x for x in gt_b(lines)))
+
+
+def test_g12(tmp):
+    plus = lambda s: gt_edits({"guard.py": GT_GUARD2, "test_guard.py": GT_TEST1 + s}, gt_manifest())
+    cases = [("T の + の行に skip", plus("# skip this\n"), "default", True),
+             ("T の + の行に exit 0", plus("# exit 0\n"), "default", True),
+             ("run に || true", GT_BASE_C, gt_ci(["test_guard.py"], suffix=" || true"), True),
+             ("step に continue-on-error", GT_BASE_C,
+              gt_ci(["test_guard.py"], step_extra="        continue-on-error: true\n"), True),
+             ("step に if: false", GT_BASE_C, gt_ci(["test_guard.py"], step_extra="        if: false\n"), True),
+             ("T の + の行の末尾に sys.exit(0)", plus("    sys.exit(0)\n"), "default", True),
+             ("止めない見本: skipping だけ", plus("    print('skipping')\n"), "default", False)]
+    for i, (label, c_edits, ci, bad) in enumerate(cases):
+        _, lines = gt_modify_case(tmp, "g12-%d" % i, GT_BASE_A, c_edits, ci=ci)
+        got = any(" hook_files " in x for x in gt_b(lines))
+        chk("G12-%d" % (i + 1), "%s: %s" % (label, "B" if bad else "B にならない"), got if bad else not gt_b(lines))
+
+
+def test_g13(tmp):
+    e = Env(tmp, "g13-first", with_git=True)
+    run_audit(e, GT_SNAP, commit=True)
+    snap = load_json(e.snapshot)
+    snap.pop("guard_judge")
+    snap.pop("guard_installer")
+    write_json(e.snapshot, snap)
+    lines = run_audit(e, GT_NOW)
+    chk("G13-1", "前回の写しに無いキーは「（初回）」で、B に出ない",
+        any(x.startswith("  guard_judge:") and "（初回）" in x for x in lines)
+        and not [x for x in reasons(lines) if "guard_judge" in x or "guard_installer" in x])
+    tp = os.path.join(e.tools, "scripts", "dev", "consent-audit.py")
+
+    def tweak(env):
+        p = os.path.join(env.tools, "scripts", "dev", "consent-audit.py")
+        t = read(p)
+        mark = "# >>> ADR-1072 guard-add" + " judge\n"
+        assert mark in t
+        with open(p, "w", encoding="utf-8") as f:
+            f.write(t.replace(mark, mark + "# tweak\n", 1))
+
+    e = Env(tmp, "g13-changed", with_git=True)
+    run_audit(e, GT_SNAP, commit=True)
+    old_h = audit._guard_judge_sha(e.tools)[0]
+    tweak(e)
+    new_h = audit._guard_judge_sha(e.tools)[0]
+    lines = run_audit(e, GT_NOW)
+    chk("G13-2", "値が変わり記録が無ければ B",
+        "ABNORMAL_REASON=B guard_judge %s" % new_h in lines and old_h != new_h)
+    seed_row(e, GT_ROW, sub="record", target="guard-judge", op="remove", item_hash=old_h, category="reserved:R4",
+             result="recorded", po_ref="PR#5")
+    seed_row(e, GT_ROW + td(1), sub="record", target="guard-judge", op="add", item_hash=new_h,
+             category="reserved:R4", result="recorded", po_ref="PR#5")
+    lines = run_audit(e, GT_NOW, gh=lambda n: {"state": "MERGED", "mergedAt": GT_W_MERGE, "mergeCommit": {"oid": "a" * 40}})
+    chk("G13-3", "値が変わり PR#n の record があっても B",
+        "ABNORMAL_REASON=B guard_judge %s" % new_h in lines and "ABNORMAL_REASON=B guard_judge %s" % old_h in lines)
+    e = Env(tmp, "g13-installer", with_git=True)
+    run_audit(e, GT_SNAP, commit=True)
+    gp = os.path.join(e.tools, "scripts", "agent-hooks", "install-guard.sh")
+    os.makedirs(os.path.dirname(gp))
+    with open(gp, "w") as f:
+        f.write("#!/bin/bash\necho install\n")
+    lines = run_audit(e, GT_NOW)
+    chk("G13-4", "install-guard.sh が無い状態から有る状態になると、記録なしで B",
+        any(x.startswith("ABNORMAL_REASON=B guard_installer ") for x in lines))
+
+
+def test_g14(tmp):
+    e = Env(tmp, "g14", with_git=True)
+    old = {"matcher": "Bash", "hooks": [{"type": "command", "command": "python3 /h/.claude/scripts/a.py"}]}
+    h = audit.item_sha8(old)
+    base = ["record", "--target", "user-hooks", "--op", "remove", "--item-hash", h, "--po-ref", "PR#5"]
+
+    def good(**kw):
+        d = {"--replaced-by": "abcdef12", "--batch": GT_BATCH, "--old-json": json.dumps(old)}
+        d.update(kw)
+        return base + [x for k, v in d.items() if v is not None for x in (k, v)]
+
+    def refused(desc, argv, tid):
+        n0 = ledger_n(e)
+        code, _, err = run_pc(e, argv)
+        chk(tid, "%s は拒む（exit 1・台帳の行数が変わらない）" % desc, code == 1 and ledger_n(e) == n0)
+        return err
+
+    refused("--old-json の item_sha8 が --item-hash と違う", good(**{"--old-json": json.dumps(dict(old, matcher="X"))}), "G14-1")
+    refused("target が user-hooks でない", ["record", "--target", "hook-files", "--op", "remove", "--item-hash", h,
+                                          "--po-ref", "PR#5", "--replaced-by", "abcdef12", "--batch", GT_BATCH,
+                                          "--old-json", json.dumps(old)], "G14-2")
+    refused("--replaced-by だけ", good(**{"--old-json": None}), "G14-3")
+    refused("--old-json だけ", good(**{"--replaced-by": None}), "G14-3b")
+    sec1 = {"matcher": "Bash", "hooks": [{"type": "command", "command": "python3 /h/a.py TOKEN=abc"}]}
+    err = refused("command に = を含む語", good(**{"--old-json": json.dumps(sec1), }) [:5] + ["--item-hash", audit.item_sha8(sec1)]
+                  + good(**{"--old-json": json.dumps(sec1)})[7:], "G14-4")
+    chk("G14-4b", "拒む文に秘密の値を出さない", "abc" not in err)
+    sec2 = {"matcher": "Bash", "hooks": [{"type": "command", "command": "python3 /h/a.py " + "A" * 40}]}
+    refused("32字以上の語", good(**{"--old-json": json.dumps(sec2)})[:5] + ["--item-hash", audit.item_sha8(sec2)]
+            + good(**{"--old-json": json.dumps(sec2)})[7:], "G14-5")
+    refused("batch の形が違う", good(**{"--batch": "batch:xyz"}), "G14-6")
+    n0 = ledger_n(e)
+    code, _, _ = run_pc(e, good())
+    r = ledger_rows(e)[-1]
+    chk("G14-7", "正しい形は1行書け、行に3つの欄がある",
+        code == 0 and ledger_n(e) == n0 + 1 and r.get("replaced_by") == "abcdef12" and r.get("batch") == GT_BATCH
+        and r.get("old_json") == old)
+    code, _, _ = run_pc(e, ["record", "--target", "user-deny", "--op", "add", "--item-hash", "abcdef12", "--po-ref", "PR#1"])
+    r = ledger_rows(e)[-1]
+    chk("G14-8", "欄を使わない今までの record は今の形のまま（3つの欄が無い）",
+        code == 0 and not ({"replaced_by", "batch", "old_json"} & set(r)))
+
+
+def gt_swap_forge(tmp, name, prior_both, final_both):
+    """入れ替えの偽装（§13）。prior_both=True なら前回の写しが [old, new]、False なら [old] だけ。"""
+    e = gt_env(tmp, name)
+    old = {"matcher": "Bash", "hooks": [gt_hk(e)]}
+    if prior_both:
+        new = {"matcher": "Bash", "hooks": [gt_hk(e), gt_guard_hk(e)]}
+        gt_set_hooks(e, [old, new])
+    else:
+        new = {"matcher": "Bash", "hooks": [gt_hk(e, "other.py"), gt_guard_hk(e)]}
+        gt_set_hooks(e, [old])
+    run_audit(e, GT_SNAP, commit=True)
+    mc = merge_pr_at(e, gt_edits({"guard.py": GT_GUARD1, "test_guard.py": GT_TEST1}, gt_manifest()), GT_W_MERGE)
+    gt_put(e, {"guard.py": GT_GUARD1})
+    h_new = audit.item_sha8(new)
+    if prior_both:
+        gt_set_hooks(e, [new])
+        gt_rec(e, "user-hooks", "add", h_new, extra=["--batch", GT_BATCH])
+        gt_rec(e, "user-hooks", "remove", audit.item_sha8(old),
+               extra=["--batch", GT_BATCH, "--replaced-by", h_new, "--old-json", json.dumps(old)])
+    else:
+        gt_set_hooks(e, [old, new])
+        fake = {"matcher": "Bash", "hooks": [gt_hk(e, "other.py")]}
+        gt_rec(e, "hook-files", "add", c8(GT_GUARD1))
+        gt_rec(e, "user-hooks", "add", h_new, extra=["--batch", GT_BATCH])
+        gt_rec(e, "user-hooks", "remove", audit.item_sha8(fake),
+               extra=["--batch", GT_BATCH, "--replaced-by", h_new, "--old-json", json.dumps(fake)])
+    return e, run_audit(e, GT_NOW, gh=lambda n: gt_view(mc) if n == 7 else None)
+
+
+def test_g15(tmp):
+    _, lines = gt_swap_forge(tmp, "g15-a", False, None)
+    chk("G15-a", "前回の写しに無い組を減の行に書いた入れ替えは B", any(" user:hooks " in x for x in gt_b(lines)))
+    _, lines = gt_swap_forge(tmp, "g15-b", True, None)
+    chk("G15-b", "前から登録済みの組を new にした入れ替え（new が今週の増に無い）は B",
+        any(" user:hooks " in x for x in gt_b(lines)))
+
+
+def test_g16(tmp):
+    a = gt_edits({"guard.py": GT_GUARD1, "test_guard.py": GT_TEST1 + "-- keep\n"}, gt_manifest())
+    c = gt_edits({"guard.py": GT_GUARD2, "test_guard.py": GT_TEST1}, gt_manifest())
+    _, lines = gt_modify_case(tmp, "g16", a, c)
+    chk("G16", "試験ファイルの本文の -- で始まる行を消す PR は B", any(" hook_files " in x for x in gt_b(lines)))
+
+
+def test_g17(tmp):
+    ci = gt_ci(["test_guard.py"], step_extra="        continue-on-error: ${{ true }}\n")
+    _, lines = gt_modify_case(tmp, "g17", GT_BASE_A, GT_BASE_C, ci=ci)
+    chk("G17", "continue-on-error が式の CI は B", any(" hook_files " in x for x in gt_b(lines)))
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="permdel-tests-")
     try:
         for fn in (test_a1, test_a2, test_a3, test_a4, test_a18, test_a5_a6, test_a7, test_a19, test_a20, test_a8, test_a9, test_a10,
-                   test_a11_a12_a13, test_a14, test_a17, test_a21):
+                   test_a11_a12_a13, test_a14, test_a17, test_a21,
+                   test_g1, test_g2, test_g3, test_g4, test_g5, test_g8, test_g10, test_g11, test_g12, test_g13,
+                   test_g14, test_g15, test_g16, test_g17):
             try:
                 fn(tmp)
             except Exception as ex:  # 試験自体の崩れは失敗として数える
