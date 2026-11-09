@@ -29,12 +29,12 @@
 - `backend/app/auth/dependencies.py:569-572` 計算を owner/admin 以外にも通す。
 - `backend/app/routers/roles.py` 一覧の scope、権限保存の可否の決まり。
 - `backend/app/services/tenant.py:69-90` 新しい会社のマネージャーに system_key='manager'。
-- `frontend/src/pages/roles/RolesPage.tsx`・`frontend/src/constants/menuPermissions.ts`・`ja.json`/`en.json`。
+- `frontend/src/pages/roles/RolesPage.tsx`・`frontend/src/constants/menuPermissions.ts`・`frontend/src/locales/ja.json`/`frontend/src/locales/en.json`。
 - 本番データ: 一度きりの SQL で system_key を入れる（ADR-155、前例 `docs/handoff/roles-system-key-data/`）。
 
 対象外（触らない）:
-- 作成の順位の決まり `roles.py:220-224`、割当の「相手が自分より下」の決まり（`roles.py:579` ensure_target_below_me）は今のまま。
-- スタッフ画面 `StaffEditPage.tsx:107`・`StaffPage.tsx:118` と `_visible_role_sql`（`roles.py:54-64`、`staff.py:96`）は今のまま。
+- 作成の順位の決まり `backend/app/routers/roles.py:220-224`、割当の「相手が自分より下」の決まり（`backend/app/routers/roles.py:579` ensure_target_below_me）は今のまま。
+- スタッフ画面 `frontend/src/pages/staff/StaffEditPage.tsx:107`・`frontend/src/pages/staff/StaffPage.tsx:118` と `_visible_role_sql`（`backend/app/routers/roles.py:54-64`、`backend/app/routers/staff.py:96`）は今のまま。
 - 点検用・スモーク専用が持つ roles.* 以外の権限。
 
 ## 4. 変更前後
@@ -86,30 +86,30 @@ OWNER_ADMIN_ONLY_KEYS = ROLE_PAGE_HIDDEN_KEYS | {ROLE_KEY_MANAGER}
 2. 対象の system_key が ROLE_PAGE_HIDDEN_KEYS → 403「このロールの権限はここでは変更できません」（i18n はサーバー文言の既存の形に合わせる）。
 3. 自分がマネージャーだけ（owner/admin を持たない）で、対象が owner/admin → 2 で既に止まる。対象がマネージャー自身は通す（PO の言葉「オーナーとシステム管理者以外」）。
 4. 送られた鍵に roles.* が入っている → 422（ロール画面の鍵は計算で決まる。保存行に持たせない）。
-5. 既存のエスカレーション防止 `roles.py:459-468` はそのまま。
+5. 既存のエスカレーション防止 `backend/app/routers/roles.py:459-468` はそのまま。
 - `GET /roles/{id}/permissions` も対象が ROLE_PAGE_HIDDEN_KEYS なら 404（画面に出さないものは開けない）。ただし scope 無しの一覧を使うスタッフ画面は権限の詳細を読まないので影響なし（実装時に grep で確かめる）。
 
 ### 4-4b 作成・削除・名前の変更・割当（PO「2」で足す止め）
 
-- POST /roles（`roles.py:206-259`）: 今のまま（順位はマネージャー 500 未満だけ・system_key は付けられない＝INSERT に列が無い）。
-- DELETE /roles（`roles.py:335-383`）: 今の2つの止めに足す。対象に system_key があれば誰でも 403「このロールは削除できません」。これで点検用（300）・スモーク専用（100）をマネージャーが消せない。マネージャーのロールも消せない（編集役が消えるのを防ぐ）。
-- PATCH /roles（`roles.py:262-332`）: 今の止めに足す。対象が ROLE_PAGE_HIDDEN_KEYS なら 403。
-- PUT /users/{id}/roles（`roles.py:533-611`）: 付けるロールに system_key が OWNER_ADMIN_ONLY_KEYS のものがあり、自分が owner/admin でなければ 403。オーナー・システム管理者はマネージャー（500）も点検用も今どおり付けられる。
-  - 今の順位の止め（`roles.py:572-576`）でマネージャーはオーナー・システム管理者・マネージャーを付けられない。足す止めは点検用・スモーク専用（順位が低い）のため。
-- 画面の作成・削除ボタンは既に `hasPermission("roles.create")`・`hasPermission("roles.delete")`（`RolesPage.tsx:311,363`）で出し分け済み。変更なし。
+- POST /roles（`backend/app/routers/roles.py:206-259`）: 今のまま（順位はマネージャー 500 未満だけ・system_key は付けられない＝INSERT に列が無い）。
+- DELETE /roles（`backend/app/routers/roles.py:335-383`）: 今の2つの止めに足す。対象に system_key があれば誰でも 403「このロールは削除できません」。これで点検用（300）・スモーク専用（100）をマネージャーが消せない。マネージャーのロールも消せない（編集役が消えるのを防ぐ）。
+- PATCH /roles（`backend/app/routers/roles.py:262-332`）: 今の止めに足す。対象が ROLE_PAGE_HIDDEN_KEYS なら 403。
+- PUT /users/{id}/roles（`backend/app/routers/roles.py:533-611`）: 付けるロールに system_key が OWNER_ADMIN_ONLY_KEYS のものがあり、自分が owner/admin でなければ 403。オーナー・システム管理者はマネージャー（500）も点検用も今どおり付けられる。
+  - 今の順位の止め（`backend/app/routers/roles.py:572-576`）でマネージャーはオーナー・システム管理者・マネージャーを付けられない。足す止めは点検用・スモーク専用（順位が低い）のため。
+- 画面の作成・削除ボタンは既に `hasPermission("roles.create")`・`hasPermission("roles.delete")`（`frontend/src/pages/roles/RolesPage.tsx:311,363`）で出し分け済み。変更なし。
 
 ### 4-5 新しい会社（tenant.py）
 
 - DEFAULT_ROLES のマネージャーに `"system_key": ROLE_KEY_MANAGER` を足す。権限の配列から `"roles.view"` を外す（計算で付く）。
-- upsert は `COALESCE(既存, 新)`（`tenant.py:1625`）なので、既存会社の値を壊さない。
+- upsert は `COALESCE(既存, 新)`（`backend/app/services/tenant.py:1625`）なので、既存会社の値を壊さない。
 - `backend/tests/test_system_roles.py:65-69` の「他は system_key 無し」を「マネージャーは manager、他は無し」に直す。
 
 ### 4-6 画面（frontend）
 
-- `RolesPage.tsx:117` → `/roles?scope=role_page`。
-- `RolesPage.tsx:169` → `canEditPerms = hasPermission("roles.update")`（隠すロールは一覧に出ないので is_system の条件は要らない）。
-- `menuPermissions.ts:125,218` の fixed に `"roleEditors"` を足し、`menuPermissions.ts:169-172` の「ロール」行を `fixed: "roleEditors"` にする（切替を出さず文だけ）。
-- `ja.json` / `en.json` に `roles.fixedRoleEditors` = 「オーナー・システム管理者・マネージャーだけに出ます」／ "Shown only to Owner, System admin and Manager"。既存の fixedOwner の並びに置く。
+- `frontend/src/pages/roles/RolesPage.tsx:117` → `/roles?scope=role_page`。
+- `frontend/src/pages/roles/RolesPage.tsx:169` → `canEditPerms = hasPermission("roles.update")`（隠すロールは一覧に出ないので is_system の条件は要らない）。
+- `frontend/src/constants/menuPermissions.ts:125,218` の fixed に `"roleEditors"` を足し、`frontend/src/constants/menuPermissions.ts:169-172` の「ロール」行を `fixed: "roleEditors"` にする（切替を出さず文だけ）。
+- `frontend/src/locales/ja.json` / `frontend/src/locales/en.json` に `roles.fixedRoleEditors` = 「オーナー・システム管理者・マネージャーだけに出ます」／ "Shown only to Owner, System admin and Manager"。既存の fixedOwner の並びに置く。
 - 新しい部品・色は作らない（既存の固定表示の金型をそのまま使う、ADR-144）。
 
 ## 5. 本番データ（ADR-155 の一度きり SQL）
@@ -145,14 +145,16 @@ OWNER_ADMIN_ONLY_KEYS = ROLE_PAGE_HIDDEN_KEYS | {ROLE_KEY_MANAGER}
 - 計算を全員に通すので、権限の読込が1回増える（全権限の表を読む）。今もオーナー・管理者は毎回読んでいて、キャッシュ付き。
 - 誤って manager を2行に入れる → テナント内一意の索引（`migrations/20261005_150000_add_roles_system_key.sql:43`）で SQL ごと失敗する。
 
-## 9. 外部事例
+## 9. 外部・過去事例の参照と我々への応用
 
-- 該当事例は使わない。理由: 中身は既存 ADR-147 の仕組み（system_key で役割を見分け、権限を計算で足す）を1段広げるだけで、新しい方式を入れないため。
+- 外部事例: 使わない。理由: 中身は既存 ADR-147 の仕組み（system_key で役割を見分け、権限を計算で足す）を1段広げるだけで、新しい方式を入れないため。直接の根拠がない事例を成功の証明に使わない。
+- 過去事例（社内）: `docs/handoff/roles-system-key-data/` で owner/admin の system_key を一度きり SQL で入れた前例。名前で1件ずつ確かめ、audit_log に記録した。応用: 今回の data/ の precheck / dryrun / apply / postcheck / rollback も同じ形にした。
 
 ## 10. 維持の仕組み
 
 - backend 試験: 4つの役割（owner/admin/manager/営業）× 3操作（一覧 scope・保存・隠すロールの保存）の表で固定。
-- `test_system_roles.py` で DEFAULT_ROLES のマネージャーの system_key を固定。
+- `backend/tests/test_system_roles.py` で DEFAULT_ROLES のマネージャーの system_key を固定。
+- 守り手: CI の backend 試験（`backend/tests/test_roles_edit_hierarchy.py`・`backend/tests/test_system_roles.py`）と画面の試験（`frontend/src/constants/menuPermissions.test.ts`）。落ちたら合流できない。
 - ADR-147 の Why に「ロール画面を直せるのは3役割。見分けは system_key」を追記（Amendment）。
 
 ## 11. 審査（Opus 自己審査・独立審査ではない）

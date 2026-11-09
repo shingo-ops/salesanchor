@@ -36,7 +36,7 @@
 - `frontend/src/constants/menuPermissions.ts:169-172` 「ロール」行の鍵 = roles.view/create/update/delete/assign。
 - `migrations/20261005_150000_add_roles_system_key.sql:39-45` system_key 列と部分一意索引（テナント内一意）。値は別手順で入れる（ADR-155）。
 - 前例: `docs/handoff/roles-system-key-data/apply.sql` 名前で1件を確かめて system_key を入れ、audit_log に記録した。
-- `tests/prod-check/prod-ui.spec.ts` / `device-accept.spec.ts` に roles 画面は無い（role の語は getByRole だけ）。`tests/prod-check/page-speed-targets.ts:55,124` だけが /roles と /management-center/roles を開く（判定なし）。
+- `tests/prod-check/prod-ui.spec.ts` / `tests/prod-check/device-accept.spec.ts` に roles 画面は無い（role の語は getByRole だけ）。`tests/prod-check/page-speed-targets.ts:55,124` だけが /roles と /management-center/roles を開く（判定なし）。
 
 ## 観測事実（本番・2026-11-08 reader 鍵）
 
