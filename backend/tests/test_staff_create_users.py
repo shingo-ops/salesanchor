@@ -165,9 +165,10 @@ async def test_create_does_not_write_staff_primary_email_and_ignores_firebase_ui
     assert body["primary_email"] == "loginmail@example.com"  # users.email から出る
     assert "firebase_uid" not in body
     row = (await db_session.execute(text(
-        "SELECT primary_email, firebase_uid FROM staff WHERE id = :id"), {"id": body["id"]})).mappings().first()
+        "SELECT primary_email FROM staff WHERE id = :id"), {"id": body["id"]})).mappings().first()
     assert row["primary_email"] is None
-    assert row["firebase_uid"] is None
+    staff_cols = [r[1] for r in (await db_session.execute(text("PRAGMA table_info(staff)"))).all()]
+    assert "firebase_uid" not in staff_cols  # 列そのものが無い（便4）
     user_email = (await db_session.execute(text(
         "SELECT email FROM users WHERE id = :id"), {"id": body["user_id"]})).scalar()
     assert user_email == "loginmail@example.com"
@@ -233,9 +234,8 @@ async def test_patch_with_firebase_uid_is_ignored(client, db_session):
 
     assert res.status_code == 200, res.text
     assert "firebase_uid" not in res.json()
-    stored = (await db_session.execute(text(
-        "SELECT firebase_uid FROM staff WHERE id = :id"), {"id": staff_id})).scalar()
-    assert stored is None
+    staff_cols = [r[1] for r in (await db_session.execute(text("PRAGMA table_info(staff)"))).all()]
+    assert "firebase_uid" not in staff_cols  # 列そのものが無い（便4）
 
 
 # ── 初回設定メール（ADR-1013 便4a。新しく利用者ができたときだけ） ──
