@@ -26,11 +26,11 @@ from sqlalchemy import text
 @pytest.fixture
 async def grant_priority(db_session):
     """テストユーザー (id=999) に、指定した優先度のロールを user_roles 経由で付与する関数を返す。"""
-    async def _grant(priority: int) -> int:
+    async def _grant(priority: int, system_key: str | None = None) -> int:
         res = await db_session.execute(text(
-            "INSERT INTO roles (tenant_id, name, priority, is_system) "
-            "VALUES (999, :n, :p, FALSE) RETURNING id"
-        ), {"n": f"試験用付与ロール{priority}", "p": priority})
+            "INSERT INTO roles (tenant_id, name, priority, is_system, system_key) "
+            "VALUES (999, :n, :p, FALSE, :k) RETURNING id"
+        ), {"n": f"試験用付与ロール{priority}", "p": priority, "k": system_key})
         role_id = res.scalar_one()
         await db_session.execute(text(
             "INSERT INTO user_roles (user_id, role_id, assigned_by) VALUES (999, :r, 999)"
@@ -42,8 +42,11 @@ async def grant_priority(db_session):
 
 @pytest.fixture
 async def top_user(grant_priority):
-    """テストユーザー (id=999) に priority=1000 のロールを付与する。"""
-    return await grant_priority(1000)
+    """テストユーザー (id=999) に priority=1000 のオーナー（system_key=owner）を付与する。
+
+    ロール画面の編集の決まり（ADR-147 追補 2026-11-09）は system_key で決まるため、最上位の試験ユーザーはオーナー扱い。
+    """
+    return await grant_priority(1000, "owner")
 
 
 # ---------------------------------------------------------------------------
@@ -409,9 +412,10 @@ class TestRolePermissions:
         assert data["permission_count"] == 0
 
     async def test_set_role_permissions_system_role_forbidden(self, client, db_session):
-        """システムロールへの権限設定は 403"""
+        """ロール画面に出さないシステムロール（system_key=inspector）への権限設定は 403（ADR-147 追補 2026-11-09）"""
         await db_session.execute(text(
-            "INSERT INTO roles (tenant_id, name, priority, is_system) VALUES (999, 'perm-sys-ロール', 50, TRUE)"
+            "INSERT INTO roles (tenant_id, name, priority, is_system, system_key) "
+            "VALUES (999, 'perm-sys-ロール', 50, TRUE, 'inspector')"
         ))
         await db_session.commit()
 
