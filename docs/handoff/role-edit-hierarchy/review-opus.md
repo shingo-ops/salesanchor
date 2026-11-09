@@ -14,6 +14,7 @@
 - 入れ忘れ 1 件を見つけた: 新しい 6 つの失敗の印が画面の文の表（`frontend/src/lib/apiErrorReason.ts`）に無く、英字のまま画面に出る。追加カード2 で直した（00d167871）。クラウドの試験: 63 passed・vitest 3 passed・tsc 0。
 - `roles.*` を使う場所を全部見た（`backend/app/routers/roles.py:198,240,295,370,423,452,538,571`・`backend/app/routers/staff.py:78`・`frontend/src/constants/menuPermissions.ts:65`・`frontend/src/components/DesktopShell.tsx:188`）。計算で鍵が決まる前提と食い違う所は無い。
 - データ SQL（`data/`）: precheck と apply は同じ照合を持ち、1 件でも違えば全体を止める。apply は 7 件・4 行の件数を確かめてから COMMIT。rollback は audit_log の記録から戻す。
+- 追記（2026-11-09）: 本番の読み直しで、消す行は 4 行ではなく 6 行と分かった（t005・t006 のマネージャーにも roles.view が1行ずつ）。apply・dryrun・rollback の期待値は 9b45d94f3 で 6 に直した。
 
 ## 残る注意
 
