@@ -15,17 +15,43 @@ PO 実装承認: 2026-11-09「1」（この設計で実装まで進める）。�
 
 ## やること
 
-### 1. `backend/app/services/tcg_analyzer_svc.py`（値は変えない。置き場所を 1 か所にするだけ）
+### 1. `backend/app/services/tcg_analyzer_svc.py`（本番の結果は変えない。code と名前の置き場所を 1 か所にする）
 - 定数（`ENGINE_VERSION` :60 の近く）を足す:
   ```python
   # 状態の語が無い行の、状態マスタの群（line_conditions.value_group）ごとの既定の状態の code。
   # R4・R5（resolve_condition_v2）と値段で単位を決める規則（v102_buyback_unit_svc）の両方がここを読む（正本はここ 1 か所）
   DEFAULT_CONDITION_CODE_BY_GROUP = {"box": "CN0003", "case": "CN0001", "pack": "CN0010"}
+  # 上の code の行が状態マスタ（cond_entries）に無いときだけ使う名前（今の直書きと同じ）。ある時は行の名前を使う
+  _DEFAULT_CANONICAL_IF_ROW_MISSING = {"box": "Sealed box", "case": "Case", "pack": "Searched pack"}
   ```
-- :953 `_find_cond_id(cond_entries, "CN0001")` → `_find_cond_id(cond_entries, DEFAULT_CONDITION_CODE_BY_GROUP["case"])`。
-- :956 `"CN0003"` → `DEFAULT_CONDITION_CODE_BY_GROUP["box"]`。
-- :974 `"CN0010"` → `DEFAULT_CONDITION_CODE_BY_GROUP["pack"]`。
-- :965 の `"CN0007"`（メモの語を見る行）・canonical の文字（`"Case"`・`"Sealed box"`・`"Searched pack"`）・返す basis は変えない。
+- `_find_cond_id`（:998）の下に足す:
+  ```python
+  def _group_default_condition(cond_entries: list[dict], cond_canonical_to_uuid: dict, group: str) -> tuple[str, Optional[str]]:
+      """群の既定の状態の（名前, id）。DEFAULT_CONDITION_CODE_BY_GROUP の code の行があればその行の名前と id。
+      無ければ _DEFAULT_CANONICAL_IF_ROW_MISSING の名前と、その名前で引いた id（今の動きと同じ）。"""
+      code = DEFAULT_CONDITION_CODE_BY_GROUP[group]
+      for e in cond_entries:
+          if e["code"] == code:
+              return e["canonical"], e["cond_id"]
+      name = _DEFAULT_CANONICAL_IF_ROW_MISSING[group]
+      return name, cond_canonical_to_uuid.get(name)
+  ```
+- :952-957 を次にする（basis `b4` は変えない）:
+  ```python
+  if "箱系大" in kubun:
+      canonical, cid = _group_default_condition(cond_entries, cond_canonical_to_uuid, "case")
+      return (canonical, cid, b4)
+  if "箱系" in kubun:
+      canonical, cid = _group_default_condition(cond_entries, cond_canonical_to_uuid, "box")
+      return (canonical, cid, b4)
+  ```
+- :974-975 を次にする:
+  ```python
+  canonical, cid = _group_default_condition(cond_entries, cond_canonical_to_uuid, "pack")
+  return (canonical, cid, b4_prefix + "R5:パック既定")
+  ```
+- :965 の `"CN0007"`（メモの語を見る行）と、返す basis は変えない。
+- `_find_cond_id` は消さない（:994 の CN0008 と `backend/app/services/line_analysis_v102_svc.py:723` が使っている）。
 
 ### 2. `backend/app/services/v102_buyback_unit_svc.py`
 1. import（:29）に `DEFAULT_CONDITION_CODE_BY_GROUP` を足す。
@@ -79,7 +105,7 @@ PO 実装承認: 2026-11-09「1」（この設計で実装まで進める）。�
   - :407 期待を `("Searched pack", "Pack")` に、注記を「未開封 @箱の 1/10 → パックの群に札 2 の行が無いので既定の Searched pack」に。
   - :531-539: 消す行を `CN0007` から `CN0010` に替え、期待を次にする: 語なし @1000 → 変わらない（Pack の既定が無い）／語なし @10000 → Box／「未サーチ」の語（:408 の `unsearched` と同じ形）@1000 → Unsearched pack・Pack／warning に「群 pack」と「既定」。
   - :542-547: `two_box_defaults` を「CN0003 を消した形」に替え、何もしない（便全体）ことを確かめる。`no_case_default` はそのまま。
-- `backend/tests/test_v102_condition_heading.py:355-362`: `bb.decide_kind(...)` と `cmap.targets[...].get(kind)` を `target = bb.decide_target(item, values, cmap, bb._UNIT_GROUP[unit]) if decided is not None else None` に替え、返す 2 つ目を `target` にする（:370 の `marked[1] == plain[1]` は Target 同士の比較になる）。:365-378 の期待は変えない。
+- `backend/tests/test_v102_condition_heading.py:355-362`: `bb.decide_kind(...)` と `cmap.targets[...].get(kind)` を、`decided` が None でないときに先に `unit, ratio = decided` と分解してから `target = bb.decide_target(item, values, cmap, bb._UNIT_GROUP[unit])`（`decided` が None なら `target = None`）にする形に替え、返す 2 つ目を `target` にする（:370 の `marked[1] == plain[1]` は Target 同士の比較になる）。:365-378 の期待は変えない。
 
 ### 4. 足すテスト
 - `backend/tests/test_v102_buyback_unit.py`:
@@ -88,7 +114,10 @@ PO 実装承認: 2026-11-09「1」（この設計で実装まで進める）。�
   3. C3b (ii): 「サーチ済」の語（`_kvalues("searched", ...)`・basis `R2:サーチ済`）＋ codes `["CN0003"]` → パックの帯で Searched pack・Pack・理由が外れる。同じ行の箱の帯（@10000）は何もしない（Searched box と Sealed box が食い違う）。
   4. 箱の群に札 7 の行 `("CN9002", 91, "Unsearched box", "box", 10, 7, "Box")` を足した形: 「未サーチ」の語 @10000 → Unsearched box、語なし @10000 → Sealed box、warning (b) は出ない。
   5. 既定の行に札が無い形（CN0010 の札を None）: 語なし @1000 → 変わらない、warning (b)。
-- `backend/tests/test_tcg_keyword_matching.py` か R4・R5 を試している既存のファイル（`git grep -ln "R5:パック既定" backend/tests`）の作り方に合わせて 1 件: `DEFAULT_CONDITION_CODE_BY_GROUP == {"box": "CN0003", "case": "CN0001", "pack": "CN0010"}`。
+  6. C2: 本番と同じ形の `TARGET_ROWS`（:19-27）のまま、「未サーチ」の語（:408 の `unsearched` と同じ形）@1000 → Unsearched pack・Pack、@10000 → Sealed box・Box。
+- `backend/tests/test_tcg_keyword_matching.py` の作り方に合わせて 2 件:
+  1. `DEFAULT_CONDITION_CODE_BY_GROUP == {"box": "CN0003", "case": "CN0001", "pack": "CN0010"}`。
+  2. CN0010 の行の名前だけを別の名前（例 `"Searched pack X"`）にした cond_entries で、パック系の語なしの行を R5 に通す → 返る名前がその別の名前・id がその行の id・basis が `R5:パック既定` で終わる。同じく CN0010 の行を除いた cond_entries では、今どおり `"Searched pack"` と `cond_canonical_to_uuid` の id が返る。
 
 ## 触らない範囲
 - 上記以外の製品コード・既存テスト・frontend・migrations・deploy.yml・本番 scripts・DB・設定値。
@@ -99,10 +128,12 @@ PO 実装承認: 2026-11-09「1」（この設計で実装まで進める）。�
 - 上の 3. に書いていない既存テストが落ちる → 直さずに止める（落ちたテスト名と生出力を返す）。
 - `tcg_analyzer_svc.py` を `v102_buyback_unit_svc.py` から import すると循環 import になる → 止める（定数の置き場所は Opus が決める）。
 - :953・:956・:974 の中身が上と違う（code が違う等）→ 止める。
-- `git grep -n '"CN0001"\|"CN0003"\|"CN0010"' backend/app` が、直した後に :965 以外で 1 件でも残る → 止めて場所を返す。
+- 直した後に `git grep -n '"CN0001"\|"CN0003"\|"CN0010"' backend/app` が、定数の行のほかに 1 件でも残る → 止めて場所を返す。
+- 直した後に `git grep -n '"Case"\|"Sealed box"\|"Searched pack"' backend/app/services/tcg_analyzer_svc.py` で、`_DEFAULT_CANONICAL_IF_ROW_MISSING` の行のほかに、R4・R5（:949-975 付近）の中に 1 件でも残る → 止めて場所を返す（ほかの場所にある名前は今回の対象外なので触らない）。
+- 上の 4. の 2 件目で、CN0010 の行を除いた形の結果が今と違う → 止める。
 
 ## 完了の条件
-- ローカルで `backend/tests/test_v102_buyback_unit.py`・`backend/tests/test_v102_condition_heading.py`・`backend/tests/test_v102_value_overrides.py`・`backend/tests/test_gemini_raw_copy_v102_unit_state_set.py`・`backend/tests/test_tcg_keyword_matching.py`・`backend/tests/test_gemini_raw_copy_v102_product_first.py`・`backend/tests/test_tcg_supplier_quality.py` が通る（生出力をファイルへ）。
+- ローカルで `backend/tests/test_v102_buyback_unit.py`・`backend/tests/test_v102_condition_heading.py`・`backend/tests/test_v102_value_overrides.py`・`backend/tests/test_gemini_raw_copy_v102_unit_state_set.py`・`backend/tests/test_tcg_keyword_matching.py`・`backend/tests/test_gemini_raw_copy_v102_product_first.py`・`backend/tests/test_tcg_supplier_quality.py`・`backend/tests/test_gemini_raw_copy_v102_soldout_ref.py`・`backend/tests/test_tcg_condition_review.py`・`backend/tests/test_gemini_raw_copy_v10.py` が通る（生出力をファイルへ。DB が要る試験は CI の結果で確かめ、その旨を報告に書く）。
 - `gh auth status` で shingo-cc を確認し、worktree 内から PR を起票（base main。migration を含まないので Draft にしない）。本文はテンプレ起点で「### 標準ワークフロー確認」（recon/design は docs/handoff/price-unit-decision/、対象 ADR-1036、触るファイルを 1 行カンマ区切り、削除するファイル なし、PO 承認 2026-11-09「1」）。社外秘の原文・仕入元名・投稿番号は入れない。
 - 報告は DONE / BLOCKED: / NEEDS_DECISION: で、PR URL・HEAD・テスト生出力のパス。
 
