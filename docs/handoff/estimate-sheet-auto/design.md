@@ -49,16 +49,21 @@ KGI: 配信が届いたあと、見積もり用の自動の行の値段を人が
 | A2 / B2 | 在庫がこの数以下は使わない | 10 |
 | A3 / B3 | この数以上の在庫がある申し出があれば、その中だけから選ぶ | 50 |
 | A4 / B4 | 一番安い値段からこの差以内なら、在庫が多いほうを選ぶ | 100 |
-| D1, D2:D | 使わない仕入元（1行に1人） | 空 |
-| F1, F2:F | 見積もりに出す状態 | Sealed box / No shrink box（今の見積もり用に出ている2つ。recon §2-1） |
-| H2（1つの欄・複数選択） | 出すシリーズ（PO 2026-11-08「1」。空なら自動の行は出さず「シリーズを選んでください」と出す） | ポケモン / ワンピース（今の見積もり用に出ている2つ。recon §2-1） |
-| J1:K1, J2:K | 状態ごとの名前の後ろにつける印。J 列は `SAマスタ!A2:A` のプルダウン（打ち間違いを防ぐ）。J 列に行があれば「登録済み」。K が空なら「印なし」で登録済み | Sealed box→空 / No shrink box→` no shrink`（今の D8 `Storm Emeralda  no shrink` などの書き方に合わせる） |
+| D2（1つの欄・複数選択） | 使わない仕入元。プルダウンの元は `='SAマスタ'!$B$2:$B` | 空 |
+| F2（1つの欄・複数選択） | 見積もりに出す状態。プルダウンの元は `='SAマスタ'!$A$2:$A` | Sealed box / No shrink box（今の見積もり用に出ている2つ。recon §2-1） |
+| H2（1つの欄・複数選択） | 出すシリーズ（PO 2026-11-08「1」。空なら自動の行は出さず「シリーズを選んでください」と出す）。プルダウンの元は `='SAマスタ'!$C$2:$C` | ポケモン / ワンピース（今の見積もり用に出ている2つ。recon §2-1） |
+| J1:K1, J2:K | 状態ごとの名前の後ろにつける印。J2:J1000 は `='SAマスタ'!$A$2:$A` のプルダウン（1つだけ選ぶ・打ち間違いを防ぐ）。J 列に行があれば「登録済み」。K が空なら「印なし」で登録済み | Sealed box→空 / No shrink box→` no shrink`（今の D8 `Storm Emeralda  no shrink` などの書き方に合わせる） |
+
+入力規則の作り方（2026-11-09 試しのシートで観測）:
+- プルダウンの元の範囲は必ず `$` つきの絶対参照で書く。`SAマスタ!A2:A`（F2）と `SAマスタ!C2:C`（H2）を相対参照で作ると、シートが「列が1つずれた同じ規則」とみなして1つの規則「F2,H2」にまとめた。絶対参照で作り直すと、規則は D2・F2・H2・J2:J1000 の4つに分かれた。
+- 複数選択の欄は、選択肢の窓でクリックして選ぶ。欄に文字を打つと窓の検索になり、Return でも数式バーでも値は入らなかった。空にするときは欄を選んで Delete。
+- 日本語を打つ欄（プルダウンでない欄）は、先に Return で編集の状態にしてから打つ。選んだだけで打つと入らなかった。
 
 ### 3-2 自動選定タブ（A1 に式1本。人は触らない）
 出す列: 商品ID, 状態, 型番, 日本語名, Item, 値段, 仕入元, 在庫数, 投稿日時, シリーズ, 発売日。
 
 選び方（商品ID×状態の組ごと）:
-1. 在庫集計のうち、商品IDが空でない・在庫 > B2・仕入元が D 列に無い・状態が F 列にある・シリーズが H 列にある（H が空なら全部）・値段が数として読める行だけ残す。
+1. 在庫集計のうち、商品IDが空でない・在庫 > B2・仕入元が D2 で選ばれていない・状態が F2 で選ばれていて J 列に行がある・シリーズが H2 で選ばれている・値段が数として読める行だけ残す（F2 か H2 が空なら手順5の知らせだけを出す）。
 2. 組の中に在庫 ≥ B3 の行があれば、その行だけに絞る。無ければ絞らない。
 3. 一番安い値段を見て、その値段＋B4 以内の行に絞る。
 4. 在庫の多い順、同じなら安い順に並べ、先頭の1行を採る。
@@ -66,18 +71,21 @@ KGI: 配信が届いたあと、見積もり用の自動の行の値段を人が
    - 印が未登録の状態（PO 2026-11-09「1」）: 選ばれた状態のうち J 列に行が無いものは、その状態の行を出さない。自動の欄の先頭に「状態『〇〇』の印を登録してください」と出す（複数あれば「、」でつなぐ）。理由: 印を書き忘れると品名が Sealed box と重なり、請求書が違う値段を拾うため。印なしのまま出すことも、状態の名前を勝手に付けることもしない。
    - 先頭の知らせの順: 「状態を選んでください」→「シリーズを選んでください」→「印を登録してください」。前の2つが出ているときは自動の行を1行も出さない。印の知らせのときは、登録済みの状態の行は出す。
    - 確かめ: 試しのシートで、J 列に無い状態（例 Case）を選ぶ。Case の行が0行・先頭に「状態『Case』の印を登録してください」が出る・Sealed box と No shrink box の行は今までどおり出ること。
-6. 全体を、条件タブ H 列に書いたシリーズの順（H が空なら文字の順）、同じシリーズの中は発売日の新しい順に並べる。文字の並び順に頼らないため（PO 2026-11-07 の問いを受けて）。
+6. 全体を、SAマスタ C 列の行の順（DB の `sort_order`）、同じシリーズの中は発売日の新しい順に並べる。H2 で選んだ順には頼らない（PO 2026-11-08「1」）。
 
 式（在庫集計の値は文字なので `VALUE()` で数に直す。recon §6）。**改行を入れずに1行で貼る**（セルに打つと改行で入力が終わる。2026-11-07 試しのシートで「=LET(」だけが入り解析エラーになった）:
 ```
-=ARRAYFORMULA(LET(src,FILTER('在庫集計'!A2:O,'在庫集計'!O2:O<>""),lo,'条件'!B2,big,'条件'!B3,tol,'条件'!B4,ex,IFERROR(FILTER('条件'!D2:D,'条件'!D2:D<>""),"#なし#"),st,FILTER('条件'!F2:F,'条件'!F2:F<>""),sr,'条件'!H2:H,pr,IFERROR(VALUE(CHOOSECOLS(src,7)),-1),qt,IFERROR(VALUE(CHOOSECOLS(src,8)),0),keep,(pr>=0)*(qt>lo)*ISNA(MATCH(CHOOSECOLS(src,11),ex,0))*ISNUMBER(MATCH(CHOOSECOLS(src,6),st,0))*((COUNTA(sr)=0)+ISNUMBER(MATCH(CHOOSECOLS(src,13),sr,0))>0),d,FILTER(HSTACK(src,pr,qt),keep>0),keys,UNIQUE(CHOOSECOLS(d,15,6)),head,{"商品ID","状態","型番","日本語名","Item","値段","仕入元","在庫数","投稿日時","シリーズ","発売日"},body,REDUCE(head,SEQUENCE(ROWS(keys)),LAMBDA(acc,i,VSTACK(acc,LET(grp,FILTER(d,CHOOSECOLS(d,15)=INDEX(keys,i,1),CHOOSECOLS(d,6)=INDEX(keys,i,2)),grpa,FILTER(grp,CHOOSECOLS(grp,17)>=IF(MAX(CHOOSECOLS(grp,17))>=big,big,0)),mn,MIN(CHOOSECOLS(grpa,16)),grpb,FILTER(grpa,CHOOSECOLS(grpa,16)<=mn+tol),best,CHOOSEROWS(SORT(grpb,17,FALSE,16,TRUE),1),en,INDEX(best,1,5),jp,INDEX(best,1,4),sfx,IFERROR(VLOOKUP(INDEX(best,1,6),'条件'!J2:K,2,FALSE),""),HSTACK(INDEX(best,1,15),INDEX(best,1,6),INDEX(best,1,3),jp,IF(en="",jp,en)&sfx,INDEX(best,1,16),INDEX(best,1,11),INDEX(best,1,17),INDEX(best,1,1),INDEX(best,1,13),INDEX(best,1,12)))))),picked,CHOOSEROWS(body,SEQUENCE(ROWS(body)-1,1,2)),sl,IFERROR(FILTER(sr,sr<>""),"#なし#"),so,IFERROR(MATCH(CHOOSECOLS(picked,10),sl,0),999),IFERROR(VSTACK(head,SORT(picked,so,TRUE,10,TRUE,11,FALSE)),head)))
+=ARRAYFORMULA(LET(has,LAMBDA(c,sel,ISNUMBER(FIND(", "&IF(ISNUMBER(FIND(",",c)),""""&c&"""",c)&", ",", "&sel&", "))),fs,'条件'!F2,hs,'条件'!H2,ds,'条件'!D2,lo,'条件'!B2,big,'条件'!B3,tol,'条件'!B4,jj,'条件'!J2:J,mst,'SAマスタ'!A2:A,msr,'SAマスタ'!C2:C,head,{"商品ID","状態","型番","日本語名","Item","値段","仕入元","在庫数","投稿日時","シリーズ","発売日"},blank,LAMBDA(m,HSTACK("","","","",m,"","","","","","")),sel,IFERROR(FILTER(mst,mst<>"",has(mst,fs)),""),unreg,IFERROR(FILTER(sel,sel<>"",ISNA(MATCH(sel,jj,0))),""),msg,IF(INDEX(unreg,1)="","","状態『"&TEXTJOIN("』、『",TRUE,unreg)&"』の印を登録してください"),IF(fs="",VSTACK(head,blank("状態を選んでください")),IF(hs="",VSTACK(head,blank("シリーズを選んでください")),LET(src,FILTER('在庫集計'!A2:O,'在庫集計'!O2:O<>""),pr,IFERROR(VALUE(CHOOSECOLS(src,7)),-1),qt,IFERROR(VALUE(CHOOSECOLS(src,8)),0),keep,(pr>=0)*(qt>lo)*NOT(has(CHOOSECOLS(src,11),ds))*has(CHOOSECOLS(src,6),fs)*ISNUMBER(MATCH(CHOOSECOLS(src,6),jj,0))*has(CHOOSECOLS(src,13),hs),d,FILTER(HSTACK(src,pr,qt),keep>0),keys,UNIQUE(CHOOSECOLS(d,15,6)),body,REDUCE(head,SEQUENCE(ROWS(keys)),LAMBDA(acc,i,VSTACK(acc,LET(grp,FILTER(d,CHOOSECOLS(d,15)=INDEX(keys,i,1),CHOOSECOLS(d,6)=INDEX(keys,i,2)),grpa,FILTER(grp,CHOOSECOLS(grp,17)>=IF(MAX(CHOOSECOLS(grp,17))>=big,big,0)),mn,MIN(CHOOSECOLS(grpa,16)),grpb,FILTER(grpa,CHOOSECOLS(grpa,16)<=mn+tol),best,CHOOSEROWS(SORT(grpb,17,FALSE,16,TRUE),1),en,INDEX(best,1,5),jp,INDEX(best,1,4),sfx,IFERROR(VLOOKUP(INDEX(best,1,6),'条件'!J2:K,2,FALSE),""),HSTACK(INDEX(best,1,15),INDEX(best,1,6),INDEX(best,1,3),jp,IF(en="",jp,en)&sfx,INDEX(best,1,16),INDEX(best,1,11),INDEX(best,1,17),INDEX(best,1,1),INDEX(best,1,13),INDEX(best,1,12)))))),picked,CHOOSEROWS(body,SEQUENCE(ROWS(body)-1,1,2)),so,IFERROR(MATCH(CHOOSECOLS(picked,10),msr,0),999),sorted,IFERROR(SORT(picked,so,TRUE,10,TRUE,11,FALSE),blank("")),IF(msg="",VSTACK(head,sorted),VSTACK(head,blank(msg),sorted)))))))
 ```
 - 2026-11-07 の試しで直した2点（観測）:
   - `ARRAYFORMULA` で全体を包む。包まないと LET の中の `VALUE(CHOOSECOLS(...))` や比べる式が1つの値しか返さない（`SUM(--(pr>=0))` が包まないと 1、包むと 88）。
   - LET の名前にセル番地と同じ形（`g2`・`g3`）を使わない。`#NAME?`「関数 LET の引数 3 は有効な名前ではありません。」になる。`grp`/`grpa`/`grpb`/`best`/`picked` に替えた。
   - 旧い式は途中のエラーを `IFERROR` が隠し、見出しだけ・見出しの繰り返しが出ていた。
+- 2026-11-09 の試しで直した2点（観測）:
+  - 閉じかっこが1つ多かった。シートは「数式の開始括弧が足りない」と出して入れなかった。貼る前に、文字列の外のかっこの数が合うことを機械で数える（開き＝閉じ）。
+  - LET の名前 `m3` はセル番地 M3 と同じ形で、`#NAME?`「関数 LET の引数 29 は有効な名前ではありません。」になった。`msg` に替えた。
 - 列の番号: 在庫集計の 1〜15 ＋ 16=数にした値段、17=数にした在庫。
-- 残る行が0件のときは途中がエラーになり、最後の `IFERROR(…, head)` で見出しだけ出す。
+- 残る行が0件のときは途中がエラーになり、`IFERROR(SORT(...), blank(""))` で見出しと空の1行だけ出す。
 
 ### 3-3 手入力タブ
 - A 型番 / B 日本語名 / C 状態 / D Item / E 値段。見出しは1行目。状態は空でもよい（PO 2026-11-07「2」で状態の列を追加）。
@@ -89,8 +97,9 @@ KGI: 配信が届いたあと、見積もり用の自動の行の値段を人が
 - 手順: 見積もり用の D 列を右クリック →「左に1列挿入」→ D1 に `状態`。列の挿入で、同じファイルの中で見積もり用を指す式（請求書 G 列・P 列の式）はシートが自動で1列ずらす（試しのシートで観測: `'見積もり用'!$D:$E` → `$E:$F` に変わり、`Aura Seeker` で 11000 が出たまま）。
 - 手入力タブも C 列の左に1列挿入して C1 に `状態`。
 ```
-=ARRAYFORMULA(LET(auto,IFERROR(FILTER(CHOOSECOLS('自動選定'!A2:K,3,4,2,5,6),'自動選定'!A2:A<>""),{"","","","",""}),hand,IFERROR(FILTER('手入力'!A2:E,'手入力'!D2:D<>""),{"","","","",""}),both,VSTACK(auto,hand),rr,FILTER(both,CHOOSECOLS(both,4)<>""),IFERROR(HSTACK(SEQUENCE(ROWS(rr)),rr),"")))
+=ARRAYFORMULA(LET(auto,IFERROR(FILTER(CHOOSECOLS('自動選定'!A2:K,3,4,2,5,6),'自動選定'!E2:E<>""),{"","","","",""}),hand,IFERROR(FILTER('手入力'!A2:E,'手入力'!D2:D<>""),{"","","","",""}),both,VSTACK(auto,hand),rr,FILTER(both,CHOOSECOLS(both,4)<>""),IFERROR(HSTACK(SEQUENCE(ROWS(rr)),rr),"")))
 ```
+- 自動選定から取る行は Item（E 列）が空でない行。知らせの行（商品IDが空で E 列に文が入る行）も見積もり用の先頭に出し、NO 1 が付く（2026-11-09 観測）。知らせが出ている間は、その見積もりを送らない。
 - Item の後ろの状態の印（J:K）は残す。請求書は Item 名だけで値段を探すため、同じ商品の未開封とシュリンクなしを名前で分ける必要がある。
 - 【未確認】公開の価格表が IMPORTRANGE で見積もり用を読んでいる場合、その範囲は文字で書かれているので列の挿入では自動でずれない。伊藤さんに確かめる。
 - 列を挿入したあと、A2:F106 の今の値・式を消す（残っていると式が広がれず `#REF!` になる）。
@@ -134,7 +143,7 @@ PO の要件（2026-11-07）: 「タブがある人には配信してない人�
 - 式での見分け方（1行ずつ、在庫集計の値 c が選ばれているか）: `LET(t,IF(ISNUMBER(FIND(",",c)),""""&c&"""",c),ISNUMBER(FIND(", "&t&", ",", "&選択欄&", ")))`。
   - 試しの結果: `A, B co`→TRUE、`A`→FALSE（`A, B co` の一部でも当たらない）、`Sealed box`→TRUE、`Damaged sealed box`（選んでいない）→FALSE。
   - `FIND` は大文字小文字を区別する。値の元は在庫集計とマスタタブで同じ DB なので、書き方は一致する。
-- まだ確かめていないこと: 値の中に `"` がある場合の形。マスタタブの値に `"` があるかを実装カードの前に数える。
+- 値の中の `,` と `"`: 2026-11-09 に本番 DB を読み取り専用で数え、状態24・仕入元241・シリーズ18 のどれにも0件。値に入るようになったら見分ける式を見直す。
 - シリーズ（PO 2026-11-08「1」）: 状態と同じく1つの欄で複数を選ぶ。選択肢は `SAマスタ!C2:C`。見分け方は状態と同じ式。
   - 並び順は、選んだ順ではなく `SAマスタ` C 列の行の順（DB の `sort_order`）に従う。複数選択の値の中の順番が「クリックした順」か「範囲の順」かはまだ確かめていない。そのため、その順番には頼らない。§3-2 手順6 はこの順に読み替える。
   - 空なら、自動の行は1行も出さず「シリーズを選んでください」と出す。状態とシリーズの両方が空なら「状態を選んでください」を先に出す。
@@ -211,9 +220,21 @@ PO の要件（2026-11-07）: 「タブがある人には配信してない人�
 - K9: 条件を変えてタブを開き直し、2秒待った時点で変わっていた（K3・K4 とも）→ 10秒以内 **○**。データは88行での測定。本物の1383行での時間は本物の写しで測る（未測定）。
 - 確かめに使った式のセルはすべて消した。
 
+### 7-2 試しのシートでの結果（2026-11-09・PO 決定 11-08「1」×2・11-09「1」を入れた最終の式）
+- 条件タブの入力規則: D2・F2・H2（1つの欄で複数選択）と J2:J1000（1つ選ぶ）の4つ。元はどれも SAマスタ の絶対参照（§3-1）。
+- 条件: F2＝Sealed box と No shrink box、H2＝ポケモン と ワンピース、J2＝Sealed box、J3＝No shrink box（K3＝` no shrink`）、B2/B3/B4＝10/50/100、D2 は空。
+- 自動選定: 8行。ポケモン5行のあとにワンピース3行。同じシリーズの中は発売日の新しい順。先頭はハドウシーカー（商品ID 466045）Sealed box 11,000 → K1 ○。11-07 と同じ8行。
+- 見積もり用: NO 1〜9（9行目は手入力の SR 100cards 41,000）。式を入れ替える前と同じ → K5 ○。Item が空の行0 → K7 ○。ストームエメラルダの2行が日本語名 → K8 ○。
+- 請求: G4＝11000 → K1 ○。
+- F2 に Case を足す（J 列に Case の行は無い）→ 自動選定の2行目に「状態『Case』の印を登録してください」が出て、Case の行は0、ほかの8行はそのまま → ○。見積もり用では知らせの行が NO 1 になり、ほかが NO 2〜10 にずれた。請求 G4 は 11000 のまま。
+- F2 を空 → 「状態を選んでください」だけ → ○。H2 を空 → 「シリーズを選んでください」だけ → ○。
+- H2 を「ワンピース, ポケモン」の順で選ぶ → それでもポケモンが先 → 並びは SAマスタ の順 → ○。
+- F2・H2 は元の値に戻した。
+- K2〜K4・K9 は今回個別にやり直していない。出力は 11-07 と同じ。
+
 ## 8. 実装の進め方（PO の判断待ち）
 - 式の貼り付けは製品コードではないが、作業は実装にあたる。Opus は書き込まない。
-- 試しのシート（88行）では K1〜K9 が ○（§7-1）。
+- 試しのシート（88行）では K1〜K9 が ○（§7-1）。11-09 の最終の式でも K1・K5・K7・K8 と3つの知らせ・並び順が ○（§7-2）。
 - 本物（伊藤さんのシート）へ入れる前の関門:
   1. 伊藤さんへの3つの問いに答えを得る（§9）。
   2. 本物の写し（1383行）で K9 の時間を測る。
@@ -224,7 +245,7 @@ PO の要件（2026-11-07）: 「タブがある人には配信してない人�
   - (c) 新しい書き込み専用の鍵を作る。SA 本番の鍵は使わない。
 
 ## 9. 未解決
-- 誰が式を貼るか（上の (a)〜(c)）。→ PO が決める。
+- 誰が式を貼るか（上の (a)〜(c)）。→ PO が決める。試しのシートでの組み立ては 2026-11-09 に済んだ（§7-2）。
 - P71:P95 の用途。IMPORTRANGE の範囲。元シートのほかの請求書タブ。→ 伊藤さんに聞く。
 - `is_active` が偽の作品の商品が在庫集計に出ているか（出ていると、その商品は選べず見積もりに出ない）。→ 実装カードの前に DB を読み取り専用で数える。
 - 英語名が重なる商品（K7b）は対象外。直すときは SA の商品マスタで、英語圏の2か所以上で確かめ、候補を PO に見せてから入れる。
