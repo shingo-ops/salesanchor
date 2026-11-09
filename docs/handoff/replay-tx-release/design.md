@@ -88,7 +88,9 @@
 | 30 秒の上限で、長い読み取りの途中の道具が切られる | P1 で最長を測ってから決める。切られた場合は道具がエラーで止まるだけで、本番のデータは変わらない（読み取りだけ） |
 | 別セッションの再生台本 replay_words.py | v102_replay_diff.replay を呼ぶだけなので C1 と C4 がそのまま効く（recon §2-1）。その枝には触らない。持ち主へは引き継ぎに書く |
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
+
+- 過去事例（自社）: 2026-11-09 の 7 回の失敗（recon §1）。握り手は試しの再生の箱で、計算の間の開いた取引だった。応用: 道具の側で計算の前に閉じる（C1〜C3）。
 
 - PostgreSQL 公式文書（runtime-config-client、Context7 /websites/postgresql で 2026-11-10 確認）: idle_in_transaction_session_timeout は「開いた取引の中で待っている接続を、指定の時間で終わらせる」。目的として「取引を開いたままの接続が鍵を持ち続けるのを防ぐ」と書かれている。この設計の C4 はこの使い方そのもの。
 - SQLAlchemy 2.0 公式文書（Session の基本、Context7 /websites/sqlalchemy_en_20_orm で 2026-11-10 確認）: Session は最初の execute で取引を始め、commit か rollback まで閉じない（autobegin）。計算の前に閉じる C1〜C3 はこの仕組みに沿う。
@@ -96,6 +98,7 @@
 
 ## 9. 維持の仕組み
 
+- 守り手: backend/tests/test_prompt_ab_recompute.py（今ある試験。実装便で C2 の確かめを足し、C1 用に backend/tests/test_v102_replay_diff.py、C3 用に prompt_ab の試験を足す。CI の必須チェックで毎回走る）
 - K4 の試験が CI の必須チェックの中で毎回走る。新しい道具を足すときは `_tx_guard` を使う（使わない道具は審査役が指摘する。docs/ai-agents/executor-checklist.md への追記は実装便で行う）。
 - 段4（接続の名前）の追補: 道具 3 つの名前を段4 の名前の表に足す。足す時期は段4 の実装のとき（段4 の担当へ引き継ぐ）。
 - 段5（全件の流し直しをやめる）は別の設計のまま進める。
