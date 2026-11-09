@@ -20,7 +20,7 @@
    - compute_permission_keys の単体試験（owner/admin/manager/その他・roles.* の付け外し）。
    - roles ルーターの HTTP 試験: design §2 K3/K4/K5/K7 の表（4つの役割 × 一覧 scope・権限保存・削除・名前変更・割当）。既存の roles 試験の作り方に合わせる。
    - 画面: `menuPermissions.test.ts`・`rolePermissionRows.test.ts` を新しい固定表示に合わせる。
-7. 一度きりのデータ SQL: `docs/handoff/role-edit-hierarchy/data/` に precheck / dryrun / apply / postcheck / rollback と README を、前例 `docs/handoff/roles-system-key-data/` の形で作る（§5 の表の7件＋ roles.* の保存行の削除4行）。`migrations/` には何も足さない（ADR-155）。
+7. 一度きりのデータ SQL: `docs/handoff/role-edit-hierarchy/data/` に precheck / dryrun / apply / postcheck / rollback と README を、前例 `docs/handoff/roles-system-key-data/` の形で作る（§5 の表の7件＋ roles.* の保存行の削除6行。2026-11-09 本番の読み直しで4→6に直した）。`migrations/` には何も足さない（ADR-155）。
 8. `docs/adr/ADR-147-common-6roles-standardization.md` に Amendment（2026-11-09）を1節足す: 「ロール画面を開いて直せるのはオーナー・システム管理者・マネージャー（system_key=manager）。画面に出さないのは owner/admin/inspector/smoke」。そのあと `node scripts/generate-adr-index.js`。
 
 ## 触らない
