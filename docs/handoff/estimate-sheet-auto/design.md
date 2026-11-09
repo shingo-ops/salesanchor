@@ -194,7 +194,7 @@ PO の要件（2026-11-07）: 「タブがある人には配信してない人�
 タブの形（タブ名は「SAマスタ」で固定。名前はコードの定数1か所だけに置く）:
 | 列 | 見出し | 中身 | 元（実物） |
 |---|---|---|---|
-| A | 状態 | 配信に出うる状態の名前（重なりなし・名前順） | `public.line_conditions` の `canonical`。配信と同じ除外（`effect='EXCLUDE'` と `FLAG_` で始まる値）を当てる。除外の定義は `_condition_filter`（`backend/app/services/tcg_distribution_svc.py:234`）の1か所を使う |
+| A | 状態 | 配信に出うる状態の名前（重なりなし・PO が決めた単位別の並び。§7-6。名前順はやめた） | `public.line_conditions` の `canonical`。配信と同じ除外（`effect='EXCLUDE'` と `FLAG_` で始まる値）を当てる。除外の定義は `_condition_filter`（`backend/app/services/tcg_distribution_svc.py:234`）の1か所を使う |
 | B | 仕入元 | 配信の「提供者」に出うる仕入元の名前（重なりなし・名前順） | `public.supplier_channels` から `public.suppliers` をたどる名前。配信の提供者と同じたどり方（同ファイル `:361-364`）。使っていない仕入元（`is_active` が偽）は出さない |
 | C | シリーズ | 配信の「Series」に出うる作品の名前（重なりなし・DB の並び順） | `public.type_master` の `name_ja`。配信の Series と同じたどり方（`products.work_id` → `type_master`。同ファイル `:336`・`:369-370`）。`is_active` が偽の作品は出さない。並びは `sort_order`、同じなら `name_ja` |
 
@@ -332,6 +332,17 @@ PO の要件（2026-11-07）: 「タブがある人には配信してない人�
 - PO「自動選定の列の幅を調整した、ポケモンとワンピースにも適応できる？」→ 自動選定 A1:Q1 を写し、ポケモン・ワンピースの A1 に「列の幅のみ貼り付け」。中身と式は変えていない。画面で幅がそろったことを確かめた。
 - 観測: シートのタブ一覧に「見積もり用」が無い（9タブ: ポケモン・ワンピース・手入力・自動選定・条件・為替・決済・在庫集計・SAマスタ）。
 - PO 決定（2026-11-09「1」）: 見積もり用タブは PO が消した。このままでよい。→ 見積もりはポケモン・ワンピースのタブ（と自動選定）で見る形になった。§3-4 の見積もり用の説明は、古い説明の書き直しのときに合わせて直す。
+
+### 7-6 状態の選択肢の並び（2026-11-09・PO 決定）
+- PO の言葉: 「SAの状態マスタの値の並びだけど [下の24個] の順番にしてくれ、見づらいから」「プルダウンで並べるときはこの並びにしてほしい、単位別に並んでいないと使いづらい」
+- PO が決めた並び（24個）: Case / Damaged case / Opened case / Sealed box / Damaged sealed box / No shrink box / Opened box / Searched box / Unsearched pack / Searched pack / Bulk / Single / PSA10 / PSA9 / PSA8 / PSA7以下 / With booklet / Without booklet / 未開封 / 開封済み / 雑誌付き / 空箱 Case / Empty box / AR confirmed pack
+- 試しのシートでしたこと: SAマスタ A2:A25 を上の並びの値に置き換えた（前は名前順の同じ24個。値の集合は同じ）。式でなく値で置いた。条件タブの状態の選択肢がこの並びで出ることを画面で確かめた。選んであった値（Sealed box・Case）はそのまま。
+- SA の今の並びとの比べ（本番 DB を読み取り専用で 2026-11-09 20:36 に読んだ。生の結果 `/tmp/CC報告ファイル/mitsumori/line_conditions_order.tsv`）:
+  - SA には「価値の順」（ADR-1023 の `value_group`・`value_rank`。`backend/app/services/tcg_result_order.py` の `VALUE_GROUP_ORDER = case, box, pack, promo_pack, single, booklet, supply`）がある。
+  - PO の並びとは5か所で違う: ①Bulk（SA は順位なし・最後のほう）②Single（SA は PSA7以下の後）③With/Without booklet（SA は未開封・開封済みより後）④AR confirmed pack（SA は Searched pack の次）⑤空箱 Case・Empty box（SA は順位なし）。
+  - DB では PSA10 と 雑誌付き が2つの区分に1つずつある（id 55・62、68・70）。シートでは名前で1つにまとめる。
+  - 価値の順は配信の並びなどほかの仕事に使っている。PO の並びに合わせて書き換えると、その仕事の並びも変わる。
+- 未決（PO に聞く）: SA が SAマスタを書くとき、この並びを SA のどこに持つか。後から状態が増えたときの置き場所もここで決まる。
 
 ## 8. 実装の進め方（PO の判断待ち）
 - 式の貼り付けは製品コードではないが、作業は実装にあたる。Opus は書き込まない。
