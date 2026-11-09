@@ -274,7 +274,7 @@ mode: handoff
 
 最初の行（移行では入れない。ADR-1007 決定1）:
 - 中身: 商材「在庫解析ツール」、プラン「在庫解析の閲覧とシート配信」、買い切り、200,000円（税抜）、機能2つ、既定の支払日数 3。発行元の会社は HIGH LIFE JPN（2026-11-05 PO「1」）。
-- 入れ方: 「1回だけのデータの変更」。SQL の頭で運営の印（`SET LOCAL app.is_operator = 'true'`。この SQL は psql で1回流すだけでアプリの試験を通らないので直接書く）を張り、どの役で流しても RLS で止まらない形にする。SQL と記録を docs/handoff/viewer-contract-stage/ に置き、PO の合意 → DRY-RUN → COMMIT で流す。発行元の会社の番号は SQL に数字で書かず、DRY-RUN で会社名から引いた結果を PO に見せてから COMMIT する。
+- 入れ方: 「1回だけのデータの変更」。SQL の頭で運営の印（`SET LOCAL app.is_operator = 'true'`。この SQL は psql で1回流すだけでアプリの試験を通らないので直接書く）を張り、どの役で流しても RLS で止まらない形にする。記録（README）は docs/handoff/viewer-contract-stage/ に置き、SQL は手元に置く（リポジトリの .gitignore が *.sql を除くため。先例 delete-test-invoice/README.md）。PO の合意 → DRY-RUN → COMMIT で流す。発行元の会社の番号は SQL に数字で書かず、DRY-RUN で会社名から引いた結果を PO に見せてから COMMIT する。
 - 試験は自分で行を用意する（試験の fixture）。本番の値を試験から読まない。
 
 RLS（ADR-1018 の段階①の型。会社ごとの4表は今の会社ごとの表と同じく ENABLE だけで FORCE は付けない。tenant.py に FORCE は0件）: 新しい public の表（sa_products・sa_plans・sa_plan_features・sa_contracts・tax_rates・viewer_invoices・viewer_invoice_lines・viewer_invoice_number_seq・prefectures）は、読むのは全行可、書くのは `app.is_operator='true'` のときだけにする。ENABLE と FORCE を付ける（ADR-1018 Decision 3）。
@@ -455,6 +455,7 @@ commit の後、裏で順に行う:
 | 2 | 状態・表・税率画面・会社情報のページの住所と登録と振込先・今の書類の読み先の切り替え・フォーム3日 | 会社情報のページと税率の画面 | |
 | 3 | 請求書（作成・PDF・メール・ドライブ・再発行・入金確認） | まだ押せない（手続き中の人がいない） | |
 | 4 | ボタンの切り替え・三点・直接移す道の削除 | 全部 | PO の入力とテストの後 |
+| 未定 | 商材とプランの登録画面（§2） | 最高管理者の画面 | §3-4d を足した後に便を決める |
 
 - 便2 の移行は危険な変更に当たる。ADR-136 の手順で GO を記録する。
 - 便2 の本番反映の後、便3 の前に行うこと（ADR-1007 決定1 の道。移行では値を入れない）:
