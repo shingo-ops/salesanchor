@@ -62,3 +62,23 @@ DONE / BLOCKED: / NEEDS_DECISION: のどれか。commit と push までして、
 | role_not_assignable | apiError.roleNotAssignable | このロールを付けられるのは、オーナーとシステム管理者だけです。付けたいときはオーナーに頼んでください。 | Only the owner or system admin can give this role. Ask the owner to give it. |
 
 触らない: 上の4ファイルと impl-checks-2.txt 以外。返し方は上と同じ。
+
+## 追加カード3（main の取り込み・2026-11-09）
+
+理由: 枝が main より古く、合流前の確かめ（guard-authoring/evaluation）が「main を含まない」で止まった。main 側で ADR-1071 便3（`not_found:<対象>` の印）が入り、5ファイルがぶつかる。
+
+手順:
+
+1. `git merge --no-edit origin/main`（rebase・force push は禁止。merge commit で取り込む）。
+2. ぶつかりの解き方（どちらも残す）:
+   - `backend/app/routers/roles.py` GET /roles/{id}/permissions: `if not role or await _role_system_key(db, role_id) in ROLE_PAGE_HIDDEN_KEYS:` の条件は枝の形、detail は main の `"not_found:role"`。
+   - 同 PUT /roles/{id}/permissions: `if not role:` の detail は `"not_found:role"`。その後は枝の形（編集役でなければ role_permissions_edit_forbidden、隠すロールなら role_permissions_not_editable_here）。main 側の `if role["is_system"]:` は入れない（設計 §4-4 で外した止め）。
+   - `frontend/src/locales/ja.json`・`en.json` の `apiError`: 枝の6行と main の notFound / notFoundUnknown / notFoundTarget を両方残す（JSON として正しい形・カンマに注意）。文は一字も変えない。
+   - `docs/adr/README.md`: 手で直さず `node scripts/generate-adr-index.js` で作り直す。
+   - `backend/tests/error_detail_baseline.json` の roles.py: 手で数を決めず、`backend/tests/test_error_detail_guard.py` の作り直しの手順（ファイル冒頭の説明）に従い、実際の数に合わせる。ほかの行は main の値のまま。
+3. 自動で合わさった `frontend/src/lib/apiErrorReason.ts`・`apiErrorReason.test.ts`・`backend/tests/test_api_error_reason_sync.py` が両方の印を持つか見る。
+4. 試験: `backend` で `pytest tests/test_api_error_reason_sync.py tests/test_error_detail_guard.py tests/test_roles_edit_hierarchy.py tests/test_roles.py tests/test_roles_hidden_system_admin.py tests/test_system_roles.py -q`、`frontend` で `npx vitest run src/lib src/constants` と `npx tsc --noEmit -p .`。生出力を `docs/handoff/role-edit-hierarchy/impl-checks-3.txt` に保存。
+5. commit・push（同じ枝）。
+
+触らない: 上のぶつかり5ファイルと impl-checks-3.txt 以外の中身を書き換えない（merge で入る main の変更はそのまま）。
+想定分岐: 上の5ファイル以外でぶつかったら止めて BLOCKED: と生出力を返す。試験が落ちたら直さず止めて生出力を返す。
