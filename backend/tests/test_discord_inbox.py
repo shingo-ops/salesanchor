@@ -38,6 +38,7 @@ from app.database import get_db
 from app.routers import leads as leads_router
 from app.services import discord_webhook_sender
 from app.services.discord_sender import DiscordSendError, send_discord_dm
+from tests import test_message_send as ms
 
 # ---------------------------------------------------------------------------
 # DDL (SQLite in-memory)
@@ -154,6 +155,7 @@ async def engine():
     async with eng.begin() as conn:
         await conn.execute(text(_LEAD_DDL))
         await conn.execute(text(_META_MESSAGES_DDL))
+        await conn.execute(text(ms._META_MESSAGES_MSGID_INDEX_DDL))
         await conn.execute(text(_STAFF_DDL))
 
     yield eng

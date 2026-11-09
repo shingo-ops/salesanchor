@@ -81,7 +81,7 @@ export interface CalendarViewProps {
 | 値 | days | month | 理由 |
 |---|---|---|---|
 | plugins | timeGridPlugin・dayGridPlugin | 同じ | |
-| views | `{ calendarDays: { type: 'timeGrid', duration: { days: dayCount } } }` | — | 2列・7列を同じ形で出す |
+| views | `{ calendarDays: { type: 'timeGrid', duration: { days: dayCount } } }` | 同じ（月でも渡す） | 2列・7列を同じ形で出す。月でも渡すのは、props が変わると FullCalendar が設定を丸ごと置き換え、定義が消えて月への切り替えで画面全体が落ちるため（schedule-gcal-clone design §3.15 G36） |
 | initialView | `'calendarDays'` | `'dayGridMonth'` | |
 | initialDate | `date` | `date` | |
 | headerToolbar | `false` | `false` | 送るボタンは呼ぶ側が金型 Button で置く |

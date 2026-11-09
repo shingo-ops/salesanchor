@@ -49,7 +49,7 @@
 - backend/app/services/lang_judge.py:85・:123 言語の多数決（meta と UNION ALL）。
 - backend/app/routers/conv_logs.py:93・:230・:325・:386・:440 手の記録の取得・変更・削除。
 - backend/app/routers/leads.py:3014 リード統合の付け替え（ADR-1049）。
-- backend/app/tasks/sa02_recon_monitor.py:83・backend/app/celery_app.py:151-157 毎朝8時の2表の突合（コメント「並走終了後にこのエントリを削除すること」）。
+- 突合の台本 sa02_recon_monitor.py の83行目（tasks の下。便1 で削除済み）・backend/app/celery_app.py:151-157 毎朝8時の2表の突合（コメント「並走終了後にこのエントリを削除すること」）。
 - scripts/smoke_test_post_deploy.sh:158-165 反映後の確認 [7e]。
 - scripts/verify_sa02_stage2_count_check.py・scripts/migrate_sa02_stage2_meta_to_conv_logs.py（逆向き meta→conv の移行台本。run_all からは呼ばれない）。
 

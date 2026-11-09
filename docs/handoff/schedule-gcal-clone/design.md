@@ -4,7 +4,8 @@
 実装の承認: PO はこのセッションの冒頭で「PRマージ、デプロイまで完走させてくれ」、3 択で「3」（違いもまとめて設計し直してから全部いっしょに作る）と指示した。設計審査の APPROVE と便ごとのカードが揃った便から作る。
 追加（2026-11-07）: 見た目 5 か所の成功条件 G15〜G19 は **PO 承認済み**（PO 原文「１，」＝「この決め方で設計を進める」を選択）。作り方は §3.8・便6。設計審査は §9 の 4 回目（REVISE）・5 回目（**APPROVE**）。
 追加（2026-11-08）: 便8（残りの部品を決められた部品に差し替える・G26〜G30）は PO の選択「1」（2026-11-08）。作り方は §3.13。設計審査は §9 の 11 回目。
-追加（2026-11-09）: 便9（月表示・詳しくの小窓と一覧の時刻を Google の形に・G31〜G35）は PO の選択「1、2」（2026-11-08）で設計した。作り方は §3.14。設計審査は §9 の 12 回目（APPROVE）。G31〜G35 の承認と実装はまだ（PO の承認待ち）。
+追加（2026-11-09）: 便9（月表示・詳しくの小窓と一覧の時刻を Google の形に・G31〜G35）は PO の選択「1、2」（2026-11-08）で設計した。作り方は §3.14。設計審査は §9 の 12 回目（APPROVE）。G31〜G35 は **PO 承認済み**（2026-11-09、PO の選択「1」＝「5か所の直しを承認して、作るところまで進める」）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin9.md`。
+追加（2026-11-09）: 便10（日・3日間・週から月へ切り替えると画面全体が消える不具合・G36）は PO の選択「1」（2026-11-09・画面が消える不具合を先に直す）。作り方は §3.15。設計審査は §9 の 13 回目（APPROVE）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin10.md`。金型の設計 `docs/handoff/calendar-view-component/design.md` §4-3 の `views` の行も「月でも渡す」に直した。
 根拠: `docs/handoff/schedule-gcal-clone/recon.md`（以下 recon）。前の設計 `docs/handoff/schedule-gcal-alignment/design.md`（K1〜K14）を引き継ぎ、便2（K8〜K11）はこの設計に入れ直す。
 
 ## 1. 目的
@@ -81,6 +82,7 @@ PO の選択（2026-11-08）「1」＝「残りの5か所を決められた部�
 | G33 | 月表示の、時刻のある 1 日だけの予定が 1 行「色の点（8px）＋始まりの時刻（例「午後8時」）＋題名」で、枠の線と地の色が無い。行の高さは 20〜24px（Google 実測 22px）。終日の予定は今の帯のまま。日をまたぐ時刻のある予定は帯の枠と地のまま、点は出さず中の文字は「始まりの時刻＋題名」の 1 行 | 本番の月表示で時刻のある予定 1 つの高さ・`border-width`・地の色・点の要素の大きさと、中の文字を読む。帯の予定（`.fc-daygrid-block-event`）の中の点の要素の `display` が `none`。単体の試験で 1 行の形と、終日の予定が帯のままなこと | R9-2・R9-4 |
 | G34 | 予定の詳しくの小窓の日時が 1 行「11月6日(金) 午後12時30分～午後1時30分」の形（作る小窓・検索の結果と同じ文の作り方）。別の行の日付は無くなる。終日は「11月6日(金) 終日」 | 本番で時刻のある予定と終日の予定を押し、小窓の日時の行の文字を読む。`.schedule-popover__date` が 0 個。単体の試験 | R9-5 |
 | G35 | 一覧の表示の行の時刻が 12 時間の形（例「午前7時～午前8時」）。今は「07:00 - 08:00」 | 本番の一覧の表示で、行の時刻の文字を読む。単体の試験 | R9-5 |
+| G36 | 日・3日間・週で見ている時に月へ切り替えても、画面が消えない。同じ月を 2 回目に開く時（週→月→週→月・日→月→日→月・3日間→月→3日間→月）も消えず、最後は月の升目が出る。その間に画面の裏の誤り（console の error）が 0 件（今は 2 回目の月で `viewType "calendarDays" is not available` が出て画面全体が消える） | 本番 /schedule で近道のキー w→m→w→m・d→m→d→m・x→m→x→m を各 3 秒あけて押し、console の error の数・`#root` の子の数（1 以上）・最後の表示の種類（`fc-dayGridMonth-view`）を読む（予定は保存しない）。単体の試験で、日・週→月→日・週→月と props を差し替えても月の時に `views.calendarDays` が渡ること | R10-1〜R10-4 |
 
 ## 3. 作り方（How）
 
@@ -441,6 +443,38 @@ ADR の改訂: ADR-1065 の決まり 7 は「`'schedule'` は時間割のとき�
 
 戻し方: 便9 の PR を revert する（frontend と ADR-1065 の 1 文だけ・DB や設定は変えない）。
 
+### 3.15 便10: 日・3日間・週から月へ切り替えると画面全体が消える不具合（G36・2026-11-09）
+
+PO 2026-11-09「1」（画面が消える不具合を先に直す・設計と審査をしてから直す）。2026-11-09 に本番 /schedule（PO のログインの画面・Claude in Chrome）で、週→月→週→月と切り替えると 2 回目の月で画面全体が白くなるのを観測した。予定の保存・削除はしていない。
+
+確かめた事実（行番号は origin/main a34b0af43。FullCalendar の中身は npm pack した 6.1.22 の実物）:
+- R10-1（誤りの全件）: console の error は 10 件で、10 件とも同じ文 `Error: viewType "calendarDays" is not available. Please make sure you've loaded all neccessary plugins`（ERROR 5・EXCEPTION 5）。10 件とも呼び出し元は `componentDidUpdate → resetOptions → … → _computeCurrentViewData`。他の種類の error は 0 件。
+- R10-2（起きた順・本番で画面の変化と通信を記録）: 1 回目の月では予定を取りに行き、その間に金型が一度外れて月の形で作り直された（作り直し 2 個目）。週へ戻った時は作り直されず同じ金型のまま。2 回目の月で m を押して約 23ms 後、取り直しの前に上の error が出て、4ms 後に画面の根（`#root`）の中身が 0 個になった。
+- R10-3（原因）: 金型 `frontend/src/components/CalendarView.tsx:105-108` で作る `views`（`calendarDays` という表示の種類の定義）を、時間割の設定 `daysProps`（`:193-194`）の中だけで渡している。月の設定 `monthProps`（`:230`）には無く、`:285` で `{...(isMonth ? monthProps : daysProps)}` と入れ替える。React の包み（`@fullcalendar/react` 6.1.22 `dist/index.js:76`）は props が変わるたびに `resetOptions(props 全部)` を呼び、`@fullcalendar/core` 6.1.22 `index.js:1364-1367` は設定を丸ごと置き換える。表示の種類の一覧は `index.js:364-369`（`parseViewConfigs(optionOverrides.views)`）で作り直されるので `calendarDays` が消える。この時まだ表示は `calendarDays` のままで（表示を月へ切り替える `changeView` は `:111-120` の useEffect で、包みの更新より後に走る）、`index.js:1561-1563` が上の error を投げる。
+- R10-4（その月の写しが無い時は消えず、写しが在る時に消える理由。本番で観測したのは「1 回目は消えず 2 回目に消える」）: 予定の画面は、予定の写しがまだ無い間は金型を外して読み込み中を出す（`frontend/src/pages/schedule/SchedulePageImpl.tsx:990` の `isPending`・`:1547`）。写しの名前は表示の期間を含み（`:961-964`）、写しは 30 分残る（`frontend/src/lib/query/apiQuery.ts:5,21,28` の `GC_TIME_MS`・`staleTime` 既定 0）。TanStack Query 5.104.4 の `isPending` は「写しがまだ無い」の意味で、写しがあれば裏で取り直しても読み込み中にならない（Context7 /tanstack/query）。写しが無い月は金型が作り直されて助かる。写しが在る月は同じ金型のまま `views` が外れて落ちる。このため 30 分以内に同じ月を一度開いていれば、1 回目の切り替えでも落ちる（筋道からの推論・本番では未確認・審査 13 回目の推奨 1）。直しはどちらの場合も同じ。
+- R10-5（画面全体が消える理由）: `frontend/src` に誤りを受け止める部品（`ErrorBoundary`・`componentDidCatch`・`errorElement`）が 0 件（試験を除く・`git grep` で確かめた）。1 か所の誤りでアプリ全体が消える。これは予定の画面に限らない話なので便10 では直さず、PO へ別に伝える（変更は一度に 1 つ）。
+- 日・3日間は週と同じ `calendarDays` を使う（`:105-108`・`dayCount` だけ違う）ので同じ道を通る。本番で観測したのは週だけ。
+- 金型を作った時点から同じ不具合が在ったかは、まだ確かめていない。
+
+作り方:
+1. `frontend/src/components/CalendarView.tsx` の `<FullCalendar>`（`:277-285`）に `views={views}` を足し、`daysProps` の中の `views,`（`:194`）を消す。月でも時間割でも `views` が常に渡る。`views` は `calendarDays` の定義を 1 つ足すだけで、月の升目（`dayGridMonth`）の描き方は変えない。
+2. `frontend/src/components/CalendarView.test.tsx` に試験を足す（今の差し替えの FullCalendar の写し `captured.props` を使う）:
+   - 週（`mode="days"`・`dayCount=7`）→月→週→月と rerender し、月の時の `views.calendarDays` が `{ type: 'timeGrid', duration: { days: 7 } }` であること。日（1）・3日間（3）でも同じ。
+   - 部品の中身の見張り（今の T5 と同じ読み方）: `@fullcalendar/core` の `index.js` に `props.optionOverrides = optionOverrides` と `parseViewConfigs(optionOverrides.views)` の 2 つの文が在ること。部品の版が変わって置き換えの仕方が変わったら、この試験が落ちて読み直しを促す。
+3. ADR・トークン・文言・DB は変えない。
+
+選ばなかった案:
+- 表示を切り替える時に金型を作り直す（`key={mode}`）: 作り直すたびに描き直しで画面がちらつき、スクロールの位置なども失う。今の「作り直さず合わせる」作り（`:110`）と食い違う。
+- 誤りを受け止める部品を足すだけ: 画面全体は消えなくなるが、月へ切り替えられない不具合は残る。別の話として PO に伝える。
+- `changeView` を props の差し替えより先に呼ぶ: 包みの更新（子の componentDidUpdate）は親の useEffect より先に走るので、順番を入れ替えるには作りを大きく変える。`views` を常に渡せば順番に関係なく起きない。
+- 予定の画面の読み込み中を毎回出して作り直させる: 写しの利点を捨て、原因（金型）を直さない。金型を使う他の画面でも同じ不具合が残る。
+
+心配と対処:
+- 月の時も `views` を渡すことで月の見た目が変わる: `views` は `calendarDays` の定義だけで、月の設定（`monthProps`）には触らない。受入れで月の表示を画面写しで便9 の後と比べる。
+- 部品の版を上げた時に置き換えの仕方が変わる: 作り方 2 の見張りの試験で気づく。版は ADR-1065 で 6.1.22 に固定。
+
+戻し方: 便10 の PR を revert する（frontend の 2 ファイルだけ・DB や設定は変えない）。
+
 ### 3.4 祝日の出どころ（2026-11-06 に確かめて決めた）
 
 確かめた事実:
@@ -476,7 +510,8 @@ ADR の改訂: ADR-1065 の決まり 7 は「`'schedule'` は時間割のとき�
 | 便6 | 見た目 5 か所（§3.8）。金型に口 1 つ・css・トークン 2 つ・予定の画面に 1 行 | G15〜G19 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 | 便7 | 上の帯を 1 段・左上のメニューボタン・3日間・1時間の高さ・今の時刻の丸・一番上の文字（§3.12）。金型 PageLayout に口 1 つ・金型 CalendarView に測り直し 1 つ・css・トークン 3 つ | G20〜G25 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 | 便8 | 残りの部品を決められた部品に差し替える（§3.13 の A 組）。ボタン 5 つ・札 1 つ・持ち主の色・使わなくなった規則を消す。部品の追加・変更なし | G26〜G30 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
-| 便9 | 月表示の日付・今日の丸・曜日の行・予定の 1 行の形、詳しくの小窓と一覧の時刻の形（§3.14 の A 組）。金型 CalendarView の月の中身 2 つ・css・トークン 1 つ・予定の画面の 2 か所・ADR-1065 の決まり 7 に月の 1 文（§3.14「ADR の改訂」・PO 承認の後） | G31〜G35 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
+| 便9 | 月表示の日付・今日の丸・曜日の行・予定の 1 行の形、詳しくの小窓と一覧の時刻の形（§3.14 の A 組）。金型 CalendarView の月の中身 2 つ・css・トークン 1 つ・予定の画面の 2 か所・ADR-1065 の決まり 7 に月の 1 文（§3.14「ADR の改訂」・PO 承認 2026-11-09「1」） | G31〜G35 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
+| 便10 | 日・3日間・週から月へ切り替えると画面全体が消える不具合の直し（§3.15）。金型 CalendarView の 1 か所（`views` を常に渡す）と試験 | G36 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 
 便0 を先に出す理由: 今の本番で毎回起きる間違いで、1 行で直り、載せ替えを待つ理由がない。
 
@@ -515,6 +550,7 @@ ADR の改訂: ADR-1065 の決まり 7 は「`'schedule'` は時間割のとき�
 - 便6 の見た目は `CalendarView.css` の `.comp-calendar--schedule.comp-calendar--days` の 1 か所だけ。数値の見張り（`frontend/scripts/check-css-hardcoded-values.js`）と色の見張り（`frontend/scripts/check-css-hardcoded-colors.js`）が CI で直書きを止める。
 - 便8 の札の色は札の部品の 6 色だけ。`frontend/src/features/schedule/calendars.config.test.ts` が 7 種類の対応と、設定に `#` の色が無いことを CI で毎回確かめる。
 - 便9 の月表示の見た目は `CalendarView.css` の `.comp-calendar--schedule.comp-calendar--month` の 1 か所だけ。数値と色の見張り（同上）が CI で直書きを止める。`frontend/src/components/CalendarView.test.tsx` が 1 日の「M月1日」（M は月の数字）・今日の丸・点の 1 行を毎回確かめる。
+- 便10 の不具合は `frontend/src/components/CalendarView.test.tsx` が、表示を切り替えても月の時に `views.calendarDays` が渡ることと、FullCalendar の設定の置き換え方（丸ごと置き換え）を CI で毎回確かめる。
 - 守り手: frontend/src/pages/schedule/SchedulePageImpl.test.tsx（押した時刻で小窓が開くことを CI の試験で毎回確かめる。金型に載せ替えた後は frontend/src/components/CalendarView.test.tsx が加わる）
 
 ## 9. 審査
@@ -673,3 +709,12 @@ ADR の改訂: ADR-1065 の決まり 7 は「`'schedule'` は時間割のとき�
 - (2) ○ G33 の受入れ・選ばなかった案・ADR の改訂・戻し方・便9 の行が互いに合う。
 - (3) ○ 直しは design.md だけ。1 回目に ○ だった所は変わっていない。
 - 指摘なし。
+
+### 13 回目（便10・G36）: APPROVE（2026-11-09 02:00〜02:03 UTC・クラウドの Opus・origin/release/schedule-view-switch-crash 1c2b17b51・照合は origin/main a34b0af43・セッション cse_01HHUUpPVCG139vep4NhSB8m）
+
+- 結果は返事の本文で全部読んだ（途中で切れていない）。
+- (1) ○ npm pack した 6.1.22 で、`@fullcalendar/react` `dist/index.js:76` は `resetOptions` を changedOptionNames なしで呼ぶ。core `index.js:1366-1367` は設定を丸ごと置き換え、`:366` が `parseViewConfigs(optionOverrides.views)`、`:1561-1563` が throw。a34b0af43 の `frontend/src/components/CalendarView.tsx:194` で `views` は `daysProps` の中だけ。/tmp で core を直接動かすと、今の形は dayCount 1・3・7 のどれも同じ誤りになった。
+- (2) ○ 直した形では週→月→週→月が 3 通りとも通り、最後は `dayGridMonth`。月の時に dayCount を 3 に変えてから `calendarDays` へ切り替えても期間は 3 日。`monthProps` には触れない。
+- (3) ○ 今の差し替え（`captured.props`）と T5 の読み方で書ける。core の 2 つの文は中身に在る。
+- (4) ○ `frontend/src/pages/schedule/SchedulePageImpl.tsx:961-964,990,1547`・`frontend/src/lib/query/apiQuery.ts:5,21,28` と合う。
+- (5) ○ 推奨 2 件と直したこと: ①R10-4 の「1 回目」を「その月の写しが無い時」に書き換え、30 分以内に同じ月を開いていれば 1 回目でも落ちる（推論・本番未確認）と書いた。②包み（react）側の丸ごと置き換えも見張る: カード §3-2 に `readPackageFiles('react/dist', ...)` で `dist/index.js` の `this.calendar.resetOptions(Object.assign(Object.assign({}, this.props)` を見る 1 行を足した（関数は変えない・`node_modules/@fullcalendar/<pkg>/` を読むため）。
