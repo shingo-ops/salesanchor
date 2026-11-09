@@ -334,6 +334,8 @@ def _iter_inbound_messages(
       - has_attachments: bool（raw_payload 用）
       - attachment_url: 画像など最初の添付 URL（無ければ None）
       - attachment_type: 添付種別 "image" 等（無ければ None）
+      - business_id:    送った側（ページ / IG アカウント）。写し（is_echo）のときだけ
+      - app_id:         送ったアプリの id（文字列）。写し（is_echo）のときだけ
 
     対応フォーマット:
       A) entry[].messaging[] (Messenger 標準 + Instagram でも一般的)
@@ -365,21 +367,31 @@ def _iter_inbound_messages(
             continue
         # J1 エコー受信 ON: アプリ外から送った送信メッセージを outbound として yield する
         if msg.get("is_echo"):
+            # 便1.5: 自分宛ての試し送り（IG の is_self）と、消された文は受けない
+            if msg.get("is_self") or msg.get("is_deleted"):
+                continue
             recipient = messaging.get("recipient") or {}
             customer_psid = (
                 str(recipient.get("id", ""))
                 if recipient.get("id") is not None
                 else ""
             )
+            sender = messaging.get("sender") or {}
+            business_id = (
+                str(sender.get("id", "")) if sender.get("id") is not None else ""
+            )
             if customer_psid:
+                app_id_raw = msg.get("app_id")
                 yield {
-                    "sender_id": customer_psid,  # 顧客 PSID（lead 検索に使用）
+                    "sender_id": customer_psid,  # 顧客 PSID / IGSID（lead 検索に使用）
+                    "business_id": business_id,  # 送った側（ページ / IG アカウント）
+                    "app_id": str(app_id_raw) if app_id_raw is not None else None,
                     "message_text": msg.get("text", "") or "",
                     "message_id": msg.get("mid"),
                     "timestamp": messaging.get("timestamp"),
                     "has_attachments": bool(msg.get("attachments")),
-                    "attachment_url": None,
-                    "attachment_type": None,
+                    "attachment_url": _extract_first_image_url(msg),
+                    "attachment_type": _extract_first_image_type(msg),
                     "is_echo": True,
                 }
             continue
@@ -416,8 +428,10 @@ def _iter_inbound_messages(
             for m in messages:
                 if not isinstance(m, dict):
                     continue
-                # is_echo 相当ガード（Format B）: 自分送信メッセージをスキップ
+                # 便1.5: B 形式の写しは公式に形の説明が無く、お客さんの id の場所が分からないため受けない。
+                # IG の写しは A 形式（messaging[]）で届く（公式 webhooks/examples）。
                 if m.get("is_echo"):
+                    logging.info("[webhook] format-B echo not stored: mid=%s", m.get("id") or m.get("mid"))
                     continue
                 from_obj = m.get("from") or {}
                 sender_id = str(from_obj.get("id", "")) if isinstance(from_obj, dict) else ""
@@ -534,12 +548,16 @@ async def _find_lead_id_for_psid(
 
 async def _create_outbound_lead_for_echo(
     db: AsyncSession,
-    schema: str,
+    *,
     tenant_id: int,
     psid: str,
+    platform: str,
 ) -> int:
     """echo 受信時に未登録の相手へ outbound lead を作成して id を返す。"""
-    customer_name = f"Messenger:{psid[-8:]}"
+    if platform not in ("messenger", "instagram"):
+        raise ValueError(f"unsupported platform: {platform}")
+    # 受信（_persist_meta_message）と同じ既定名にして、次の受信で名前の解決が働くようにする
+    customer_name = "Messenger User" if platform == "messenger" else "Instagram User"
     ins = await db.execute(
         text("""
             INSERT INTO leads (
@@ -553,8 +571,8 @@ async def _create_outbound_lead_for_echo(
         {
             "tenant_id": tenant_id,
             "customer_name": customer_name,
-            "channel_type": "messenger",
-            "notes": "[便1b] echo受信時に自動作成",
+            "channel_type": platform,
+            "notes": "[会話の一本化 便1.5] アプリ外の返信の写しで自動作成",
         },
     )
     row = ins.first()
@@ -569,7 +587,7 @@ async def _create_outbound_lead_for_echo(
             VALUES (:lead_id, :platform, :external_id)
             ON CONFLICT (platform, external_id) DO NOTHING
         """),
-        {"lead_id": lead_id, "platform": "messenger", "external_id": psid},
+        {"lead_id": lead_id, "platform": platform, "external_id": psid},
     )
     await db.execute(
         text("UPDATE leads SET lead_code = :code WHERE id = :id"),
@@ -744,6 +762,89 @@ async def _persist_meta_message(
     return (msg_inserted_id, lead_id)
 
 
+async def _persist_echo_message(
+    db: AsyncSession,
+    *,
+    tenant_id: int,
+    platform: str,
+    customer_id: str,
+    business_id: str,
+    message_text: str,
+    message_id: Optional[str],
+    timestamp: Any,
+    has_attachments: bool,
+    app_id: Optional[str],
+    page_id: Optional[str] = None,
+    attachment_url: Optional[str] = None,
+    attachment_type: Optional[str] = None,
+) -> Optional[int]:
+    """アプリの外（スマホのアプリ・Business Suite）から送った返信の写しを outbound で保存する（会話の一本化 便1.5）。
+
+    自社アプリから送った分は送信の処理が既に保存しているので入れない（app_id が META_APP_ID と同じとき）。
+    app_id が無い写し（Instagram）は message_id の重複防止で二重を防ぐ。
+    Returns: 新しく入れた meta_messages.id。入れなかったときは None。
+    """
+    if platform not in ("messenger", "instagram"):
+        raise ValueError(f"unsupported platform: {platform}")
+    own_app_id = os.getenv("META_APP_ID", "")
+    if own_app_id and app_id and app_id == own_app_id:
+        logging.info("[webhook] echo from own app not stored: mid=%s", message_id)
+        return None
+    if not message_id:
+        logging.info("[webhook] echo without mid not stored: platform=%s", platform)
+        return None
+
+    lead_id = await _find_lead_id_for_psid(db, platform, customer_id)
+    if lead_id is None:
+        lead_id = await _create_outbound_lead_for_echo(
+            db, tenant_id=tenant_id, psid=customer_id, platform=platform,
+        )
+
+    raw_payload = json.dumps({
+        "timestamp": timestamp,
+        "has_text": bool(message_text),
+        "has_attachments": has_attachments,
+        "is_echo": True,
+        "app_id": app_id,
+    })
+    ins = await db.execute(
+        text("""
+            INSERT INTO meta_messages (
+                tenant_id, lead_id, platform,
+                sender_id, message_text, direction, raw_payload,
+                message_id, recipient_id, page_id,
+                attachment_url, attachment_type
+            )
+            VALUES (
+                :tenant_id, :lead_id, :platform,
+                :sender_id, :message_text, 'outbound', :raw_payload,
+                :message_id, :recipient_id, :page_id,
+                :attachment_url, :attachment_type
+            )
+            ON CONFLICT (message_id) WHERE message_id IS NOT NULL
+            DO NOTHING
+            RETURNING id
+        """),
+        {
+            "tenant_id": tenant_id,
+            "lead_id": lead_id,
+            "platform": platform,
+            "sender_id": business_id,
+            "message_text": message_text,
+            "raw_payload": raw_payload,
+            "message_id": message_id,
+            "recipient_id": customer_id,
+            "page_id": page_id,
+            "attachment_url": attachment_url,
+            "attachment_type": attachment_type,
+        },
+    )
+    inserted_id = ins.scalar_one_or_none()
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+    return inserted_id
+
+
 async def process_messenger_event(body: dict) -> None:
     """Meta から受信した Webhook イベントを処理する（Messenger + Instagram 兼用）。
 
@@ -752,6 +853,7 @@ async def process_messenger_event(body: dict) -> None:
       2. entry[].id でテナント特定（tenant_meta_config 参照、env fallback あり）
       3. _iter_inbound_messages で messaging[] / changes[] 両形式を正規化
       4. _persist_meta_message で leads upsert + meta_messages INSERT
+         （写し is_echo は _persist_echo_message で outbound に書く）
       5. 保存後に受信翻訳を標準入口へ enqueue
       6. Discord 通知（PII 除去済）
     """
@@ -805,12 +907,32 @@ async def process_messenger_event(body: dict) -> None:
                     await set_tenant_context(db, tenant_id)
 
                     for m in messages:
-                        # ── J1 エコー受信（アプリ外送信）: 便1 では何も書かない ──
+                        # ── 便1.5 エコー受信（アプリ外送信）: outbound で meta_messages に書く ──
                         if m.get("is_echo"):
-                            logging.info(
-                                "[webhook] echo skipped (conversation unification bin1): sender=%s",
-                                m.get("sender_id"),
+                            echo_id = await _persist_echo_message(
+                                db,
+                                tenant_id=tenant_id,
+                                platform=platform,
+                                customer_id=m["sender_id"],
+                                business_id=m.get("business_id") or entry_id,
+                                message_text=m["message_text"],
+                                message_id=m["message_id"],
+                                timestamp=m["timestamp"],
+                                has_attachments=m["has_attachments"],
+                                app_id=m.get("app_id"),
+                                page_id=page_id_for_message,
+                                attachment_url=m.get("attachment_url"),
+                                attachment_type=m.get("attachment_type"),
                             )
+                            if echo_id is not None:
+                                try:
+                                    from app.services.sse_pubsub import publish_inbox_update
+                                    await publish_inbox_update(tenant_id)
+                                except Exception:
+                                    logging.warning(
+                                        "[Meta] SSE publish 失敗（echo・Webhook 処理は継続）: tenant_id=%s",
+                                        tenant_id,
+                                    )
                             continue
 
                         # ── inbound: meta_messages に書く ──
