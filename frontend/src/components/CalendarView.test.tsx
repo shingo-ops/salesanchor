@@ -202,6 +202,28 @@ describe('T3 props passed to FullCalendar', () => {
     p.eventClick({ event: { id: 'e1' } });
     expect(onEventClick).toHaveBeenCalledWith('e1', null);
   });
+
+  it.each([1, 3, 7] as const)(
+    'keeps the days view defined while switching days and month (dayCount %i, G36)',
+    (dayCount) => {
+      const days = (
+        <CalendarView mode="days" date="2026-11-02" dayCount={dayCount} events={events} ariaLabel="cal" />
+      );
+      const month = (
+        <CalendarView mode="month" date="2026-11-02" dayCount={dayCount} events={events} ariaLabel="cal" />
+      );
+      const expected = { type: 'timeGrid', duration: { days: dayCount } };
+      const { rerender } = render(days);
+      expect(fcProps().views.calendarDays).toEqual(expected);
+      rerender(month);
+      expect(fcProps().views.calendarDays).toEqual(expected);
+      rerender(days);
+      expect(fcProps().views.calendarDays).toEqual(expected);
+      rerender(month);
+      expect(fcProps().views.calendarDays).toEqual(expected);
+      expect(fcProps().initialView).toBe('dayGridMonth');
+    },
+  );
 });
 
 describe('T4 every --fc-* variable is overridden in CalendarView.css', () => {
@@ -227,6 +249,14 @@ describe('T5 FullCalendar internals the more-link handling relies on', () => {
     const src = readPackageFiles('core', (n) => n === 'internal-common.js');
     expect(src).toContain("if (!moreLinkClick || moreLinkClick === 'popover')");
     expect(src).toContain('context.calendarApi.zoomTo(date, moreLinkClick)');
+  });
+
+  it('still replaces every option on resetOptions (core and react wrapper) and builds views from optionOverrides.views (G36)', () => {
+    const src = readPackageFiles('core', (n) => n === 'index.js');
+    expect(src).toContain('props.optionOverrides = optionOverrides');
+    expect(src).toContain('parseViewConfigs(optionOverrides.views)');
+    const wrapper = readPackageFiles('react/dist', (n) => n === 'index.js');
+    expect(wrapper).toContain('this.calendar.resetOptions(Object.assign(Object.assign({}, this.props)');
   });
 });
 
