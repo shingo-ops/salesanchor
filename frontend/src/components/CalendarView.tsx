@@ -189,9 +189,8 @@ export function CalendarView({
     .filter(Boolean)
     .join(' ');
 
-  // design §4-3 の表: days だけ・month だけの値は分けて渡す
+  // design §4-3 の表: days だけ・month だけの値は分けて渡す（views は月でも渡す・下の <FullCalendar>）
   const daysProps = {
-    views,
     slotDuration: '01:00:00',
     slotLabelInterval: '01:00:00',
     slotLabelFormat: SLOT_LABEL_FORMAT,
@@ -282,6 +281,9 @@ export function CalendarView({
         headerToolbar={false}
         firstDay={weekStart}
         nowIndicator
+        // 月でも calendarDays の定義を渡す。月へ切り替えた時に定義が消えて画面全体が落ちるのを防ぐ
+        // （props が変わると FullCalendar は設定を丸ごと置き換える・schedule-gcal-clone design §3.15 G36）
+        views={views}
         {...(isMonth ? monthProps : daysProps)}
         eventClick={(arg) => {
           onEventClick?.(arg.event.id, rectOf(arg.el));
