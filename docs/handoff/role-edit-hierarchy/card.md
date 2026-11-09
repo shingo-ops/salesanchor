@@ -82,3 +82,15 @@ DONE / BLOCKED: / NEEDS_DECISION: のどれか。commit と push までして、
 
 触らない: 上のぶつかり5ファイルと impl-checks-3.txt 以外の中身を書き換えない（merge で入る main の変更はそのまま）。
 想定分岐: 上の5ファイル以外でぶつかったら止めて BLOCKED: と生出力を返す。試験が落ちたら直さず止めて生出力を返す。
+
+## 追加カード4（画面とサーバーの約束ファイルの作り直し・2026-11-09）
+
+理由: 確かめ「API contract is up to date」が落ちた。GET /roles に scope を足したのに `frontend/api-contract/openapi.json` を作り直していなかった（入れ忘れ）。
+
+手順:
+
+1. `cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json`（Python 3.12 の venv で流す）。
+2. `git diff --stat` で変わったのが `frontend/api-contract/openapi.json` だけで、中身が GET /roles の description と scope の引数だけであることを確かめる。それ以外が変わったら止めて BLOCKED: と生出力を返す。
+3. commit・push（同じ枝）。
+
+触らない: `frontend/api-contract/openapi.json` 以外。
