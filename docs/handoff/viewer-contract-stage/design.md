@@ -216,7 +216,7 @@ mode: handoff
 - PDF の登録番号の行は、その書類の region の行が有のときだけ出す。
 
 会社ごとのスキーマの新しい4表（会社情報・振込先の一覧・銀行の詳細・Wise の詳細）に共通の決まり:
-- **SSOT の境界**: 書類に載せる会社名・メール・サイト・住所・電話・インボイス登録は tenant_issuer_profiles、振込先は tenant_invoice_payment_methods（一覧）と tenant_invoice_payment_bank・tenant_invoice_payment_wise（種類ごとの詳細。同じ項目を一覧と詳細の両方に持たない）、印影と既定の言語は tenant_profile が唯一の正本。同じ項目を2つの表に持たない。書類はすべて get_issuer を通して読む。tenant_profile の古い6列は読むだけで、書く道は無い（2026-11-06 PO の言葉。ideal-state の 25）。どちらの region かは書類の issuer_region が唯一の正本で、決める処理は decide_issuer_region の1つだけ。
+- **SSOT の境界**: 書類に載せる会社名・メール・サイト・住所・電話・インボイス登録は tenant_issuer_profiles、振込先は tenant_invoice_payment_methods（一覧）と tenant_invoice_payment_bank・tenant_invoice_payment_wise（種類ごとの詳細。同じ項目を一覧と詳細の両方に持たない。例外は外部キーで種類を合わせるための method_type と、RLS で会社を分けるための tenant_id。どちらも外部キーで一覧の値と一致させる）、印影と既定の言語は tenant_profile が唯一の正本。同じ項目を2つの表に持たない。書類はすべて get_issuer を通して読む。tenant_profile の古い6列は読むだけで、書く道は無い（2026-11-06 PO の言葉。ideal-state の 25）。どちらの region かは書類の issuer_region が唯一の正本で、決める処理は decide_issuer_region の1つだけ。
 - 置き場は会社ごとのスキーマ（tenant_NNN.tenant_issuer_profiles、tenant_NNN.tenant_invoice_payment_methods、tenant_NNN.tenant_invoice_payment_bank、tenant_NNN.tenant_invoice_payment_wise）。会社別のデータはそこに置く決まり（ADR-142 の Context）で、会社情報（tenant_profile）も同じ場所にある。
 - ADR-142 の Decision 2 と 3 に従い、次を同じ変更で揃える。既存の全会社へ足す移行と、backend/app/services/tenant.py の _TENANT_TABLES_SQL（:195）・_RLS_ENABLE_SQL（:1221）・_RLS_POLICY_SQL（:1274）の3か所。ポリシー名は `<表名>_tenant_isolation`、条件は own_inventory と同じ（tenant.py:1338〜:1340）。権限は一括付与に任せる。既定の行は入れない。発行元の行が無ければ発行を止める。
 - 次の口は発行元の会社の番号で set_tenant_context を張る: 作成画面の材料（invoice-draft。get_issuer と振込先を読む）、発行、再発行、もう一度送る、もう一度保存、入金確認、裏のメールとドライブ。発行の処理は表名は tenant_table_ref で書く（backend/app/auth/dependencies.py:277・:409）。commit の後は reset する（同 :339、ADR-072）。
@@ -237,21 +237,22 @@ mode: handoff
 - 種類の一覧の正本は、一覧の表の method_type の CHECK（'bank','wise'）の1か所。種類の表は作らない（PO 2026-11-09「1」）。画面の選択肢の文字は t() のキー（種類ごとに1つ）で出す。
 
 **tenant_invoice_payment_methods**（一覧。どの請求書の選択肢に出すかを決める表）
-- id、tenant_id（NOT NULL）、region（domestic／overseas）、method_type（bank／wise）、display_name（プルダウンに出す名前。必須・空文字は CHECK で止める）、sort_order、is_active（既定 true）、updated_by_user_id、created_at、updated_at。
-- UNIQUE (id, method_type)。詳細の表が「行の id と種類の組」を外部キーで指すためだけに置く（下の1対1の決まり）。
+- id、tenant_id（NOT NULL）、region（domestic／overseas）、method_type（NOT NULL。bank／wise）、display_name（プルダウンに出す名前。必須・空文字は CHECK で止める）、sort_order、is_active（既定 true）、updated_by_user_id、created_at、updated_at。
+- UNIQUE (id, tenant_id, method_type)。詳細の表が「行の id・会社・種類の組」を外部キーで指すためだけに置く（下の1対1の決まり）。
+- 制約には名前を付ける（UNIQUE・外部キー・CHECK）。移行を2回流しても壊れないようにするため。先例: migrations/20261103_120000_create_ai_job_assignments.sql:35（UNIQUE (id, job_key)）と :45（FOREIGN KEY (choice_id, job_key)）。どちらの列も NOT NULL（同 :28・:41）。もう1つの先例 migrations/20261022_100000_products_format_in_work_fk.sql:56。主キーがそのまま外部キーになる1対1の詳細の表は、会社ごとのスキーマに先例がある（backend/app/services/tenant.py:303・:324・:643）。
 
 **tenant_invoice_payment_bank**（銀行口座の詳細。一覧の行1つに1行）
-- payment_method_id（主キー）、method_type（CHECK で 'bank' だけ・既定 'bank'）、tenant_id、account_holder、bank_name、bank_branch、bank_account_type、bank_account_number、swift_code（任意）、bank_address（任意）、created_at、updated_at。
+- payment_method_id（主キー）、method_type（NOT NULL・CHECK で 'bank' だけ・既定 'bank'）、tenant_id（NOT NULL）、account_holder、bank_name、bank_branch、bank_account_type、bank_account_number、swift_code（任意）、bank_address（任意）、created_at、updated_at。
 - 必須（NOT NULL と空文字の CHECK）: account_holder・bank_name・bank_branch・bank_account_type・bank_account_number。swift_code と bank_address は空で保存できる（PO 2026-11-09「1」）。
 
 **tenant_invoice_payment_wise**（Wise の詳細。一覧の行1つに1行）
-- payment_method_id（主キー）、method_type（CHECK で 'wise' だけ・既定 'wise'）、tenant_id、account_holder、wise_currency、wise_email、iban、swift_bic、bank_name、bank_address、note、created_at、updated_at。
+- payment_method_id（主キー）、method_type（NOT NULL・CHECK で 'wise' だけ・既定 'wise'）、tenant_id（NOT NULL）、account_holder、wise_currency、wise_email、iban、swift_bic、bank_name、bank_address、note、created_at、updated_at。
 - 必須: account_holder・wise_currency（CHECK `^[A-Z]{3}$`）・wise_email。任意: iban・swift_bic・bank_name・bank_address・note（PO 2026-11-09 の提案「名義、IBAN、SWIFT/BIC、銀行名と住所、メールアドレス」。メールで送金してもらう運用のため、メールを必須にする）。
 - 通貨ごとに1行（口座は通貨ごとに分かれている。PO 2026-11-05 の Wise の画面の確認）。
 
 1対1の決まり（DB で止めるもの・処理で止めるもの）:
-- 種類の食い違いは DB で止める。詳細の表は (payment_method_id, method_type) で一覧の (id, method_type) を外部キーで指す（ON DELETE CASCADE）。詳細の method_type は CHECK で1つの値に固定されるので、bank の一覧の行に Wise の詳細は付けられない。1行に2つの詳細も付けられない（詳細の主キーが payment_method_id）。
-- 一覧の行の種類は後から変えられない（変えると外部キーが切れて誤りになる）。種類を変えるときは消して作り直す。画面も同じ動きにする（種類を変えると、他の種類の入力値は保存しない）。
+- 種類の食い違いは DB で止める。詳細の表は (payment_method_id, tenant_id, method_type) で一覧の (id, tenant_id, method_type) を外部キーで指す（ON DELETE CASCADE）。3列とも NOT NULL にする。理由: CHECK は NULL を通し、外部キーも既定（MATCH SIMPLE）では列のどれかが NULL だと確かめない。NULL を許すと種類の食い違いが通ってしまう。詳細の method_type は CHECK で1つの値に固定されるので、bank の一覧の行に Wise の詳細は付けられない。1行に2つの詳細も付けられない（詳細の主キーが payment_method_id）。
+- 一覧の行の種類は後から変えられない（変えると外部キーが切れて誤りになる）。種類を変えるときは消して作り直す。画面も同じ動きにする（種類を変えると、他の種類の入力値は保存しない）。API は PUT で今と違う method_type が来たら 422（payment_method.type_immutable）を返し、何も書かない。
 - 「一覧の行に詳細が必ずある」ことは、書く口を1つにして守る。足す・直すは1つの取引の中で一覧と詳細の両方を書き、どちらかが失敗したら全部戻す。読む口は一覧と詳細をつないで読み、詳細の無い一覧の行は選択肢に出さず、発行も止める（409 payment_method）。DB の遅らせる見張り（CONSTRAINT TRIGGER の DEFERRABLE）は使わない。理由: リポジトリの migrations と backend/app に先例が0件（2026-11-10 git grep）。
 - 消せる。一覧の行を消すと詳細も消える（CASCADE）。発行済みの請求書は写しを持つので変わらない。使わなくするだけなら is_active を false にする。
 - 請求書から振込先の行へ外部キーは張らない。理由: 請求書は public の1つの表で、振込先は会社ごとに別のスキーマの表にある。外部キーは参照先の表を1つに決める必要があり、会社の数だけある表を1本の外部キーで指せない。会社ごとの表から public を指す向きの外部キーは先例がある（tenant.py:518・:605）が、今回は逆向き。発行時の写し（issuer_snapshot）に振込先の全項目と行の id を残す。
@@ -300,7 +301,7 @@ RLS（ADR-1018 の段階①の型。会社ごとの4表は今の会社ごとの�
 | 請求書の作成・入金確認・再発行 | Modal.tsx |
 | 「前の会社情報」（古い値を読むだけで見せる欄） | Textarea.tsx（今のページの TextareaControl。TenantProfilePage.tsx:25）を readOnly で使う |
 | 入れ直しの案内 | Callout.tsx |
-| 自由に書く欄（wise_account_note・bank_address） | Textarea.tsx |
+| 自由に書く欄（Wise の note・bank_address） | Textarea.tsx |
 | 行の三点ボタン | 新設の MoreMenuButton（§3-3・§7-2） |
 
 - 新しい画面の部品は別ファイルに置く: IssuerProfileSection.tsx（書類に載せる会社情報の区切り。国内用と海外用のタブ）、InvoiceRegistrationField.tsx（タブの中の登録の欄）、PaymentMethodList.tsx、PaymentMethodForm.tsx、TaxRatesPage.tsx、ViewerInvoiceCreateModal.tsx、ViewerPaymentConfirmModal.tsx。
@@ -343,7 +344,7 @@ RLS（ADR-1018 の段階①の型。会社ごとの4表は今の会社ごとの�
 | 道 | 送る | 返す |
 |---|---|---|
 | PUT /admin/issuer-profiles/{region} | company_name・email・website・country_code・postal_code・prefecture_code・state_region・city・address1・address2・phone・is_invoice_registered・registration_number（無のとき番号を送っても NULL で保存） | 保存した行の全項目と updated_at |
-| POST・PUT /admin/invoice-payment-methods | region・method_type・display_name と種類ごとの列（§3-4 の表の列） | 保存した行の全項目 |
+| POST・PUT /admin/invoice-payment-methods | 一覧の項目（region・method_type・display_name・sort_order・is_active）と、method_type と同じ名前の入れ物に詳細の項目（bank: {account_holder…bank_address}、wise: {account_holder…note}）。method_type と違う名前の入れ物が来たら 422 | 保存した行の全項目（一覧と詳細を1つにまとめた形） |
 | GET /prefectures | なし | code・name_ja・name_en・sort_order の配列 |
 | GET /super-admin/viewers/{viewer_id}/invoice-draft | なし | plans（id・name・unit_price_jpy）・bill_to・payment_methods（id・display_name・method_type。domestic の行。Wise は wise_currency が JPY の行だけ）・default_due_date・tax_rate_percent |
 | POST /super-admin/viewers/{viewer_id}/invoices | plan_id・payment_method_id・discounts（description・amount_jpy の配列）・due_date・save_default | 請求書の行（id・invoice_number・金額の6項目・status・mail_status・drive_status） |
@@ -577,7 +578,7 @@ commit の後、裏で順に行う:
 | A30 | 都道府県の選択肢が DB の47行から出て、画面のコードに都道府県名が無い | backend pytest（試験の seed で47行・API が47行を返す・frontend/src を読んで「北海道」が0件）。CI に専用の手順名は作らず、backend の試験の中で確かめる |
 | A31 | DB の動き: 運営の印なしで新しい public の9表へ書くと、INSERT は RLS の誤りで止まり、UPDATE と DELETE は0行になる。運営の印ありなら書ける。処理の動き: 行を直す処理（契約・請求書・税率の削除・採番）は、変えた行数が1でないと誤りで止まる | backend pytest（実 PostgreSQL・salesanchor_app。DB の動きは9表それぞれ。処理の動きは UPDATE・DELETE を持つ処理ごと。都道府県・明細・機能の表には UPDATE の処理が無いので処理の動きの対象外） |
 | A32 | 住所・登録・振込先を足す・直す・消すと audit_logs に1行ずつ残り、口座番号と IBAN は下4桁だけ | backend pytest |
-| A44 | 振込先の1対1: bank の一覧の行に Wise の詳細を付けると DB の誤りで止まる。1つの一覧の行に詳細を2行付けられない。一覧の種類を直すと誤りで止まる。一覧を消すと詳細も消える。詳細の書き込みが失敗すると一覧の行も残らない。詳細の無い一覧の行は選択肢に出ず、発行は 409 payment_method で止まる | backend pytest（実 PostgreSQL・salesanchor_app） |
+| A44 | 振込先の1対1: bank の一覧の行に Wise の詳細を付けると DB の誤りで止まる。1つの一覧の行に詳細を2行付けられない。一覧の種類を直すと誤りで止まる（API は 422 payment_method.type_immutable）。詳細の method_type か tenant_id を NULL にすると NOT NULL で止まる。詳細の tenant_id が一覧と違うと外部キーで止まる。一覧を消すと詳細も消える。詳細の書き込みが失敗すると一覧の行も残らない。詳細の無い一覧の行は選択肢に出ず、発行は 409 payment_method で止まる | backend pytest（実 PostgreSQL・salesanchor_app） |
 | A33 | 番号の採番を同時に2つ走らせても番号が重ならない | backend pytest（実 PostgreSQL・2接続） |
 | A34 | 閲覧者に結び付いた配信先（viewer_account_id あり）で、契約手続き中（contracting）の閲覧者には配信されず、理由が not_contracted になる。入金確認で active になると配信される。配信の処理（tcg_distribution_svc.py:725 の `va.status <> 'active'`）は変えない | backend pytest（contracting の人の配信先の行の reason） |
 | A35 | 日本語のフォントが登録できないとき、発行が止まり請求書の行が作られない | backend pytest（フォントの読み込みを失敗させる） |
@@ -618,5 +619,5 @@ commit の後、裏で順に行う:
 
 - 守り手: .github/workflows/process-artifacts-gate.yml
 - 対象: 1つの情報を1か所に置く決めごと（§3-1・§3-4。差出人は get_issuer の1つの道だけで読む。A40 の grep の試験で守る）と、請求書を名簿の削除から切り離す決めごと（§3-9）。
-- 振込先の守り（2026-11-10 origin/main で確かめた既存の見張り）: 全会社のスキーマの形の差を止める .github/workflows/schema-check.yml、会社の表の読み書きの決まりを止める .github/workflows/lint-tenant-schema.yml（ADR-072 の strict）、移行の参照の登録を止める migration-guard。種類の食い違いと必須は DB の外部キーと CHECK が毎回の書き込みで止める。会社ごとの表の RLS の有無を数える専用の点検は無い（scripts/check_public_tenant_rls.py は public の表だけを見る）。このため A22 の試験で新しい4表を比べる。
+- 振込先の守り（2026-11-10 origin/main で確かめた既存の見張り）: 全会社のスキーマの表・列・列の型の差を止める .github/workflows/schema-check.yml（scripts/db/sync_tenant_schema.py:162〜:184 が比べるのは表・列・型だけ。外部キー・CHECK・RLS の差は止めない。RLS などの数は記録に出すだけ :467〜:481）、会社の表の読み書きの決まりを止める .github/workflows/lint-tenant-schema.yml（ADR-072 の strict）、移行の参照の登録を止める migration-guard。種類の食い違いと必須は DB の外部キーと CHECK が毎回の書き込みで止める。会社ごとの表の RLS の有無を数える専用の点検は無い（scripts/check_public_tenant_rls.py は public の表だけを見る）。このため外部キー・CHECK・RLS の差は A22 と A44 の試験だけで止める。
 - 補足: 状態の漏れは受入条件のテスト、列の隠し忘れは相談係の道の分類表（migrations/20261024_100300_create_ai_cloud_views.sql）と A18 の試験で止める。金額と期限の決まりは backend のテストで守る。
