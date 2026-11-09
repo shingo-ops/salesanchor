@@ -13,12 +13,12 @@
 |---|---|---|
 | K1 | 全会社で会話の表が1つ（conversation_logs が 0 表） | 本番 `information_schema.tables` で table_name='conversation_logs' の数が 0 |
 | K2 | 便1 反映後 24 時間で、conversation_logs に新しく入った行が 0 | 本番 ai_ro で created_at > 反映時刻 の数 |
-| K3 | 受信箱で手で記録した会話が、その相手の会話の流れに出る | PO が本番画面で1件記録して目視（○×） |
+| K3 | （廃止 PO 2026-11-09「手動記録は廃止なのでK3不要」。手動記録そのものを便M で外す） | — |
 | K4 | リードの無い会話が 0 件で、空のまま入れようとすると止まる | 本番の数 0 ＋ CI の試験で NOT NULL 違反を確認 |
 | K5 | 数字が変わらない: 成約分析・週次の助言・会社詳細の会話タブ・会社の会話数と最終会話日（v_company_stats）・言語判定の結果が便1の前後で同じ | 反映前に基準値を取り、反映後に同じ問いで比べる（差 0）。下見は recon §8-4。言語判定は画面が使う値（確定か・確定のときの言語。useInboxState.ts:723）で比べる（recon §8-6） |
 
 ## 3. 対象と対象外
-- 対象: §4 の3便。
+- 対象: §4 の便（便1・便1.5・便M・便2・便3）。
 - 対象外: 全社1つ（public）への移動（PO 2026-11-07 不採用）。会話の取り込み（conversation-import）は便1 の後に別に進める。meta_messages の表名の変更。
 
 ## 4. 進め方（1便ずつ「出す→本番で確かめる→次」）
@@ -60,7 +60,7 @@ PO 要件（2026-11-07 原文）: 「Messangerに限らず、受信箱で送受�
   - Instagram: Meta 公式の Instagram 版の説明では、返信の写しは `messages` の購読で `is_echo` 付きで届く。解析 A 形式は受ける。B 形式（webhook.py:421-423）は捨てている。
   - Discord チケット: スタッフが Discord で直接書いた文は捨てている（ticket_channel_writer.py:208-216 「non-customer message ignored」）。アプリからの送信は Discord の webhook で担当の名前を使って送る（leads.py:2246-2270 ADR-159）。届いた写しは webhook_id 付きなので :199 で飛ばしている。直接書いた文と区別できる。
   - Discord DM: 受け取り自体を全部飛ばしている（client.py:432-435 ADR-146 F7）。受信箱の窓口ではないので対象外。
-  - WhatsApp・電話・対面: 自動の連携が無い（名簿で manual）。手の記録で残す。WhatsApp の連携が付いた時に同じ型を当てる（whatsapp-intake で扱う）。
+  - WhatsApp・電話・対面: 自動の連携が無い（名簿で manual）。手の記録は便M で外す（PO 2026-11-09）。連携が付くまでアプリには残らない。WhatsApp の連携が付いた時に同じ型を当てる（whatsapp-intake で扱う）。
   - 本番の Meta 接続: 全社で有効 0 件（各社 tenant_meta_config の is_active 数 0）。本番で直接の目視は接続を付け直すまでできない。
 - 変更（すべて meta_messages だけに書く。conversation_logs には書かない）:
   - 返信の写し（echo）を meta_messages に outbound で入れる。`ON CONFLICT (message_id) WHERE message_id IS NOT NULL DO NOTHING`。echo の app_id が自社アプリ（META_APP_ID）なら入れない（アプリから送った分は送信の処理が既に入れている。二重を防ぐ）。
@@ -79,6 +79,40 @@ PO 要件（2026-11-07 原文）: 「Messangerに限らず、受信箱で送受�
 | K7 | Instagram アプリから送った返信が、同じく1件だけ出る | K6 と同じ |
 | K8 | Discord のチケットチャンネルにスタッフが直接書いた返信が、1件だけ出る | PO が1通書き本番画面で目視（○×）＋ CI 試験 |
 | K9 | アプリから送った返信が二重に出ない | 送信1通につき meta_messages の行が1（本番 ai_ro で message_id の重複 0）＋ CI 試験（写しが先・後の両方） |
+
+### 便M 手動記録を外す（PO 2026-11-09「手動記録は廃止なのでK3不要」「便1.5 を先、手動記録の廃止の設計はその後」。画面とコードだけ。表の形とデータは変えない）
+- 目的: 受信箱から「手で会話を書き足す欄」をなくす。会話は自動でつながった窓口（Messenger・Instagram・Discord）だけが入る。
+- 前提の数（recon §8-8）: 本番の手の記録は、新旧どちらの置き場にも5社とも 0 行。消す・移すデータは無い。
+- 外すもの:
+  - 画面: ManualRecordSection.tsx を消す。InboxMessageThread.tsx の読み込み :10・受け口 :71・:103・表示 :865-871 と、InboxPage.tsx:235 の受け渡しを消す。
+  - 会社の会話タブの「手動記録」の印 CompanyConvLogsTab.tsx:114-118 を消す（タブは残す）。
+  - 文言: ja.json・en.json の inbox.manualRecord と companies.convHistory.manual。error-text-next-action-baseline.json:107 の行。check-dangling-routes.js:44 の行。
+  - API: conv_logs.py の作成・一覧・変更・削除（:192-490）と、それだけが使う _fetch_conv_log・_fire_translation、ConvLogCreate・ConvLogUpdate（:49-66）、使わなくなる import（conv_log_writer の2関数を含む）。ファイル冒頭の説明（:1-14）を名簿の API の説明に書き直す。名簿の API は残す。
+  - 即時反映の表 topics.py:237-239 の3行。openapi.json は作り直す。
+  - 文の数の基準: backend/tests/error_detail_baseline.json:18 の conv_logs.py の値を、外した後の数に下げる（下げないと test_error_detail_guard.py の「減った」の検査で落ちる）。
+  - 試験（審査1回目の指摘で足した）:
+    - test_conv_logs_fire_translation.py は丸ごと消す（_fire_translation を直接読み込む）。
+    - test_conv_logs_router.py は手の記録の試験（create_conv_log・update・delete の試験）を消し、名簿の試験（:372-500 の create_channel_master・deactivate_channel_master）は残す。
+    - test_conversation_unify_bin1.py は、準備 env（:53-97）から conv_logs の差し替え3つと real_fetch を外す。手の記録の API を使う試験（:143・:165・:181・:206・:224・:266）と _record_manual（:125）を消す。言語判定の除外の試験（:286）は残す。本文のラベル付けの除外の試験（:312）は、手の記録を直接 INSERT する形に書き換えて残す（priority_scoring.py:273 の確かめを残すため）。
+    - 「4つの道が 404 か 405 を返す」試験を1本足す。
+- 残すもの（理由）:
+  - is_manual 列と読む所の除外: 行が 0 で結果を変えない。列を消すのは表の形の変更なので、便3 で conversation_logs と一緒に片付ける。
+  - 名簿の WhatsApp（manual・有効）: リードの窓口を選ぶ一覧（ChannelTypeCombobox）に出るので残す。WhatsApp の連携が付いたら auto に替える（whatsapp-intake で扱う）。
+  - 名簿の会社専用の行を足す画面（ChannelMastersPage）: 窓口の名前を選ぶための名簿で、手の記録とは別。
+  - 会社の会話タブ・会社の会話の API（companies.py:1065-1140）: meta_messages 全体を見せる画面で、手の記録とは別。
+- 受入れの基準（全部の確かめは PO の指示どおり最後にまとめて行う。PO 2026-11-09「動作確認は最後に一気にやる」）:
+
+| # | 基準 | 検証方法 |
+|---|---|---|
+| M1 | 受信箱で WhatsApp の相手を開いても、手で書き足す欄が出ない | 最後の確かめで PO が本番画面を目視（○×） |
+| M2 | 手の記録の4つの道が使えない | CI の試験で 404/405。反映後に本番 API へ作成を1回投げて 404/405（○×） |
+| M3 | 本番の手の記録が 0 行のまま | 反映の前後に本番 reader で is_manual=true を数え、どちらも 0 |
+| M4 | 受信箱の送信・会話の流れ・会社の会話タブが今までどおり | CI の試験と e2e が緑。反映後の自動の動作確認が合格 |
+| M5 | 外したものの名前が残らない | `git grep -n -E "ManualRecord|manualRecord|create_conv_log|list_conv_logs|update_conv_log|delete_conv_log|ConvLogCreate|ConvLogUpdate|_fire_translation|_fetch_conv_log" -- backend/app backend/tests frontend/src frontend/scripts scripts` が 0 行 |
+
+- 危険の度合い: migrations・deploy.yml・本番 scripts を触らない。危険 PR（ADR-136）に当たらない。GO は委任（ADR-1003）で出す。
+- 戻し方: PR を revert すれば画面と API が戻る。データは触らないので戻す作業は無い。
+- 維持の仕組み: M5 の語が戻ってこないよう、便3 で足す「conversation_logs の語を止める確かめ」に同じ語を足す（便3 のカードで決める）。それまでは設計担当が便ごとに M5 の grep を回す。
 
 ### 便2 lead_id を必須にし、リードを消すときは止める（migration・危険 PR）
 - 先に、リード無しの1件（会社4 id=14・2026-05-14 の英文の問い合わせ）の扱いを PO が決める。
@@ -144,3 +178,26 @@ PO 要件（2026-11-07 原文）: 「Messangerに限らず、受信箱で送受�
   4. 低: v_company_stats の作り直しは revert で戻らない → §7 に書いた。
   5. 低: K5 の成約分析・週次の助言の「同じ問い」が未固定 → カードで文として固定する。
 - 未確認（審査役）: lead_id が空で入る道が主要3か所のほかに無いか → 便2 のカードで確かめる。
+### 便M 1回目（2026-11-09・クラウド architect opus・HEAD 620e6fd28・81秒）: REVISE
+- recon §8-8 の行番号は origin/main d1580a38b とすべて一致。残すものは外す部分に依存しない。M1〜M4 は○×で判定できる。
+- 指摘と直し（Opus が origin/main で照合して反映。生の記録 /tmp/CC報告ファイル/conv/manual/revise-check.txt）:
+  1. 高: test_conv_logs_fire_translation.py が _fire_translation を直接読み込む → 丸ごと消すに足した。
+  2. 高: test_conversation_unify_bin1.py の準備 env が conv_logs の関数を差し替える。残す試験 :286 も env を使う → 差し替えを外す・:286 を残す・:312 を直接 INSERT に書き換えると書いた。
+  3. 中: error_detail_baseline.json:18 の基準 → 下げるに足した。
+  4. 中: ConvLogCreate・ConvLogUpdate・冒頭の説明・conv_log_writer の import → 外すに足した。
+  5. 低・6. 低: M5 の範囲と語 → backend/tests・frontend/scripts と ManualRecord・ConvLog*・_fire_translation・_fetch_conv_log を足した。
+- 未確認（審査役）: openapi.json 作り直し後の差・文言キーの検査・e2e。e2e は Opus が tests/ と frontend の e2e で conv-logs・manual-record・manualRecord を探し 0 件（同じ記録の末尾）。残り2つは実装の CI で確かめる。
+
+### 便M 2回目（2026-11-09・クラウド architect opus・HEAD 9d9a26ba1・99秒）: APPROVE
+
+- 高の指摘なし。中1・低4はカード card-binM.md に入れた。
+  - 中: error_detail の基準は 10→4。数える行は :514・:558・:598・:603。審査役が試験の数え方の関数で確かめた。
+  - 低: 外す import と残す import を名前で書く。`logging`/`logger` も外す。使うのは `_fire_translation` だけで、Opus が origin/main で確かめた。
+  - 低: test_conv_logs_router.py の :501 より後ろの3本も消す。
+  - 低: bin1 の冒頭の説明と :45 の注記を直す。:312 の書き換えは created_at も入れる（priority_scoring.py:274）。
+  - 低: 新しい試験の名前に M5 の語を入れない。
+- Opus がカード作成時に直したこと:
+  - §0 の行番号2か所を直した（list_channel_masters は :178、印は :114）。
+  - 名簿の関数名を直した（update_channel_master_visibility）。
+  - InboxMessageThread で消す範囲に :864 の注釈を含めた。
+- 未確認: 外した後の openapi.json の差と、書き換えた :312 が SQLite で通るか。どちらも CI で確かめる。

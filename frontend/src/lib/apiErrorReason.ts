@@ -66,7 +66,6 @@ export const NOT_FOUND_TARGET_KEYS: Readonly<Record<string, string>> = {
   distribution_target: "apiError.notFoundTarget.distribution_target",
   line_import_job: "apiError.notFoundTarget.line_import_job",
   calendar_owner: "apiError.notFoundTarget.calendar_owner",
-  conv_log: "apiError.notFoundTarget.conv_log",
   channel_master: "apiError.notFoundTarget.channel_master",
   goal: "apiError.notFoundTarget.goal",
   inventory_offer: "apiError.notFoundTarget.inventory_offer",
