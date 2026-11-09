@@ -1012,7 +1012,7 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 **D2 実体の写し（指紋）で固定**
 - 指紋を取る時点（審査1回目の推奨1を採用）: 件の claude を起動する前に取る。`createCase`（sessions.ts:394-414。async）の中で、写しを作った後・`spawnSession` を呼ぶ前に `resolveClaudeReal` で実体を解き、sha256・size を流し読みで計算し、その `real` と指紋を `spawnSession` → `prepareCaseRoom` へ渡す（`prepareCaseRoom` は渡された `real` を使い、解き直さない）。起動した後に計算すると、開いてから計算するまでの間に中身を変えられるため。計算に 60 秒かかれば件は開くが 4b は `claude_version_unverified`・D1 n1 に理由を付ける。残る隙（計算してから起動台本が exec するまでの差し替え）は E2（固いリンクでない）と起動時の再確認（§14-14-6 の 3）で減らすだけで、無くはならない（PO「1」の水準で受け入れる）。
 - 読む物: 件を開くときに解いた実体の道 `claudeReal`（sessions.ts:514。[server/sessions.ts:661](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/sessions.ts#L661) で `caseClaudeReal`（:219 の Map）に残す。起動台本はこの道を `AC_CLAUDE_BIN` として受け（:504）、`ccdiscord.zsh:19` で実行できることを確かめ、`:76` で exec する）。
-- 書く物: `caseClaudeReal` の値を `{ real, size, sha256 }` に広げる（上の時点で取った値。流し読みは非同期で、サーバーを止めない）。指紋を持たない件（どの道で開いたかを問わない。復元 restore.ts:125-190 を含む）は、4b で必ず `claude_version_unverified`（誤って通す方へ倒さない）。復元の道に同じ計算を足すかは便CS3a の実装の選択で、どちらでも K50 の「指紋なし→409」で確かめる。実体のサイズと計算時間は未確認（U5）。大きすぎると分かれば、件を開くときは `size`・`mtime`・`ino` の一致で代え、sha256 は起動時と probe のときだけ計算する（K56 で測って決める）。
+- 書く物: `caseClaudeReal` の値を `{ real, size, sha256 }` に広げる（上の時点で取った値。流し読みは非同期で、サーバーを止めない）。指紋を持たない件（どの道で開いたかを問わない。復元 restore.ts:125-190 を含む）は、4b で必ず `claude_version_unverified`（誤って通す方へ倒さない）。復元の道に同じ計算を足すかは便CS3a の実装の選択で、どちらでも K50 の「指紋なし→409」で確かめる。実体のサイズと計算時間は未確認（U5）→ §14-14-7 で実測した（2.1.319 は 321,995,200 バイト・253〜284 ms。代える理由は無い）。大きすぎると分かれば、件を開くときは `size`・`mtime`・`ino` の一致で代え、sha256 は起動時と probe のときだけ計算する（K56 で測って決める）。
 - 判定 4b の新しい形: 件の指紋（sha256・size）が記録の `usable: true` の項目と一致 → 通す。あわせて最後の名前が `CLAUDE_VERSION_PATTERN`（[server/config.ts:409](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/config.ts#L409)）に合うことは引き続き要求する（監査の `claudeVersion` 欄 [server/routine-audit.ts:58-59](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/routine-audit.ts#L58-L59) に書くため）。名前だけでは通らない。
 
 **D3' サーバー内部の判定**
@@ -1146,7 +1146,7 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 - U2 PO の Mac の dataDir が、`GUARD_IFS`（activity-hooks.ts:15・:18）の規則の名前の下にあるか（K57 で確かめる。値は本書に書かない）。
 - U3 件のログインの鍵（`ccdiscord.zsh:45-49`）が PO の購読と同じ契約か。
 - U4 probe 1 回の claude の使用量（トークン）。
-- U5 claude の実体のサイズと sha256 の計算時間。
+- U5 claude の実体のサイズと sha256 の計算時間。→ §14-14-7 で実測した（K56・2026-11-09。321,995,200 バイト・253〜284 ms）。
 - U6 P4 の選ぶ画面の正規表現が実物の画面に合うか。確かめは K55 ② で、監査の行の `paneSamples`（K55 ① の probe の件の画面の写し）だけで行う。PO の件の画面は読まない。合わなければ probe は×（P4）に倒れ、正規表現を直す便を出す（誤って○にはならない側の外れは、選ぶ画面を見逃す側。K55 ④ の場面で D1 n4 が出なければ見逃しの疑いとして PO に報告する）。
 - U7 件の AI が case-guard の拒否の文を返事に写すか（P3 の参考記録）。
 - U8 決めた（§14-14-3 D4 の片付け）: sessions.ts の閉じる道は件のファイルも W も消さない。sessions.ts の外の `onRemoved` の聞き手は読んでいないが、probe は自分で消すので答えに依らない。
