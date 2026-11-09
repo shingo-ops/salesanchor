@@ -1255,7 +1255,6 @@
       "empty": "会話ログがありません",
       "inbound": "受信",
       "outbound": "送信",
-      "manual": "手動記録",
       "translation": "翻訳"
     }
   },
@@ -1419,19 +1418,6 @@
     "translationBudgetExceeded": "今月の翻訳上限に達しました",
     "showOriginal": "原文を見る",
     "translatedBy": "AI翻訳",
-    "manualRecord": {
-      "sectionTitle": "手動記録",
-      "channelLabel": "チャネル",
-      "contentPlaceholder": "会話内容を入力...",
-      "occurredAtLabel": "日時",
-      "save": "記録を保存",
-      "savedBadge": "手動記録",
-      "saveError": "保存に失敗しました",
-      "dupWarning": "同一内容の記録が1時間以内に存在します。重複の可能性があります。",
-      "saveAnyway": "それでも保存",
-      "deleteConfirm": "この記録を削除しますか？",
-      "deleted": "削除しました"
-    },
     "settings": {
       "title": "受信箱の設定",
       "display": "表示カスタマイズ",
