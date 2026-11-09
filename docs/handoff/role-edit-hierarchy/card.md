@@ -94,3 +94,20 @@ DONE / BLOCKED: / NEEDS_DECISION: のどれか。commit と push までして、
 3. commit・push（同じ枝）。
 
 触らない: `frontend/api-contract/openapi.json` 以外。
+
+## 追加カード5（新しい会社の試験の期待値・2026-11-09）
+
+理由: CI の `pytest (SQLite + PostgreSQL RLS)` で `backend/tests/test_permission_resolution_pg.py::test_real_load_user_permissions_computes_owner_and_admin_and_fresh_tenant_state` が落ちた。設計 §4-5 で新しい会社のマネージャーに `system_key=manager` を付けたのに、この試験の「マネージャーの system_key は空」を直すのを入れ忘れた（PostgreSQL 専用の試験で、手元とクラウドでは流れていなかった）。
+
+手順:
+
+1. `backend/tests/test_permission_resolution_pg.py:24` の取り込みに `ROLE_KEY_MANAGER` を足す: `from app.auth.system_roles import ROLE_KEY_ADMIN, ROLE_KEY_MANAGER, ROLE_KEY_OWNER, SYSTEM_MANAGE_KEY`。
+2. 同 `:215` を次の2行に置き換える:
+   - 変更前: `assert all(roles[n][0] is None for n in ("マネージャー", "営業", "CS", "仕入れ", "発送"))`
+   - 変更後:
+     `assert roles["マネージャー"] == (ROLE_KEY_MANAGER, False)`
+     `assert all(roles[n][0] is None for n in ("営業", "CS", "仕入れ", "発送"))`
+3. ほかの行は変えない（goals の確かめはそのまま）。
+4. commit・push（同じ枝）。PostgreSQL が無ければ試験は流さなくてよい（CI で確かめる）。`python -m py_compile` だけ流す。
+
+触らない: `backend/tests/test_permission_resolution_pg.py` 以外。
