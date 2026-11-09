@@ -111,11 +111,6 @@ export function CompanyConvLogsTab({ companyId, contacts }: Props) {
                   ? t("companies.convHistory.inbound")
                   : t("companies.convHistory.outbound")}
               </span>
-              {log.recorded_by_user_id && (
-                <span className="conv-log-manual-badge">
-                  {t("companies.convHistory.manual")}
-                </span>
-              )}
               <span className="conv-log-time">
                 {log.occurred_at
                   ? new Date(log.occurred_at).toLocaleString("ja-JP", {

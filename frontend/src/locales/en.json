@@ -1255,7 +1255,6 @@
       "empty": "No conversation logs found",
       "inbound": "Inbound",
       "outbound": "Outbound",
-      "manual": "Manual",
       "translation": "Translation"
     }
   },
@@ -1419,19 +1418,6 @@
     "translationBudgetExceeded": "Monthly translation limit reached",
     "showOriginal": "Show original",
     "translatedBy": "AI Translation",
-    "manualRecord": {
-      "sectionTitle": "Manual Record",
-      "channelLabel": "Channel",
-      "contentPlaceholder": "Enter conversation content...",
-      "occurredAtLabel": "Date & Time",
-      "save": "Save Record",
-      "savedBadge": "Manual",
-      "saveError": "Failed to save",
-      "dupWarning": "A similar record exists within 1 hour. This may be a duplicate.",
-      "saveAnyway": "Save anyway",
-      "deleteConfirm": "Delete this record?",
-      "deleted": "Deleted"
-    },
     "settings": {
       "title": "Inbox Settings",
       "display": "Display Customization",
@@ -6167,7 +6153,6 @@
       "distribution_target": "The distribution target",
       "line_import_job": "The import job",
       "calendar_owner": "The person in charge",
-      "conv_log": "The conversation log",
       "channel_master": "The channel",
       "goal": "The goal",
       "inventory_offer": "The offer",

@@ -1,15 +1,8 @@
 """会話の一本化 便1: 会話を書く所と読む所を meta_messages だけにする 試験（SQLite）。
 
-検証項目（カード 9-3）:
-  1. 手の記録を作ると meta_messages に1行（is_manual TRUE・sender_id manual:user_<id>・
-     message_id manual_ で始まる・created_at = occurred_at）、conversation_logs に0行
-  2. 手の記録が会話の流れの API（GET /leads/{id}/messages）に出る（K3）
-  3. 過去の時刻で記録した手の記録が、流れのその時刻の位置に並ぶ。あとで時刻を直すと直した位置に並ぶ
-  4. 消した手の記録が流れに出ない
-  5. 手の記録が最新の行でも、最新の窓口・24時間の窓・未読に戻す行・受信箱の一覧が、手の記録の無いときと同じ
-  6. 自動連携の行の id を手の記録の変更・削除の API に渡すと 404
-  7. 電話の手の記録（inbound・original_language 'en'）が言語判定に数えられない
-  8. 本文のラベル付け（priority_scoring）に手の記録が入らない
+検証項目（手の記録を書き足す API は便Mで外した。ここに残るのは読む所・書く所の確かめ）:
+  7. 手の記録の行（直接入れたもの。電話・inbound・original_language 'en'）が言語判定に数えられない
+  8. 手の記録の行（直接入れたもの）が本文のラベル付け（priority_scoring）に入らない
   9. webhook の受信1件・echo 1件・Discord の DM 1件で、conversation_logs に0行。echo でリードが作られない
   10. migration の文字の確かめ
 
@@ -40,7 +33,7 @@ from tests.conftest import (
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _MIGRATION = _REPO_ROOT / "migrations" / "20261108_100000_rebuild_company_stats_on_meta_messages.sql"
 
-# 手の記録の作成が入れる列（INBOX_BADGE の定義に無いもの）
+# meta_messages の試験で使う列（INBOX_BADGE の定義に無いもの）
 _EXTRA_META_COLUMNS = (
     "contact_id INTEGER",
     "company_id INTEGER",
@@ -51,7 +44,7 @@ _EXTRA_META_COLUMNS = (
 
 @pytest_asyncio.fixture
 async def env(db_session):
-    """手の記録の作成・読み出しを SQLite で通すための準備。"""
+    """meta_messages の試験の準備（SQLite）。"""
     engine = db_session.bind
 
     def _strip_schema(conn, cursor, statement, parameters, context, executemany):
@@ -73,23 +66,7 @@ async def env(db_session):
         await db_session.execute(text(ddl))
     await db_session.commit()
 
-    from app.routers import conv_logs as conv_logs_router
-
-    real_fetch = conv_logs_router._fetch_conv_log
-
-    async def fetch_with_datetimes(db, tenant_id, log_id):
-        # SQLite は日時を文字で返す（PostgreSQL は日時）。監査用の isoformat() が通るよう日時にそろえる
-        row = await real_fetch(db, tenant_id, log_id)
-        if row is not None:
-            for key in ("occurred_at", "deleted_at"):
-                if isinstance(row[key], str):
-                    row[key] = datetime.fromisoformat(row[key])
-        return row
-
     with (
-        patch("app.routers.conv_logs.record_audit_log", new=AsyncMock()),
-        patch("app.routers.conv_logs._fire_translation", new=AsyncMock()),
-        patch("app.routers.conv_logs._fetch_conv_log", new=fetch_with_datetimes),
         patch("app.cache.get_avatar_urls_batch", new=AsyncMock(return_value={})),
     ):
         yield db_session
@@ -122,161 +99,8 @@ async def _add_auto(db, lead_id: int, *, created_at: str, direction: str = "inbo
     return new_id
 
 
-async def _record_manual(client, lead_id: int, *, content: str = "電話で確認", occurred: str,
-                         channel: str = "phone", direction: str = "inbound") -> int:
-    res = await client.post(
-        f"/api/v1/leads/{lead_id}/conv-logs",
-        json={"channel_type": channel, "direction": direction, "content_text": content, "occurred_at": occurred},
-    )
-    assert res.status_code == 201, res.text
-    return res.json()["id"]
-
-
 async def _rows(db, sql: str, **params):
     return (await db.execute(text(sql), params)).mappings().all()
-
-
-# ---------------------------------------------------------------------------
-# 1. 手の記録は meta_messages に1行だけ
-# ---------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_manual_record_goes_to_meta_messages_only(client, env):
-    lead_id = await _make_lead(client)
-    log_id = await _record_manual(client, lead_id, occurred="2026-06-01T10:00:00+00:00")
-
-    rows = await _rows(env, "SELECT * FROM meta_messages WHERE id = :i", i=log_id)
-    assert len(rows) == 1
-    row = rows[0]
-    assert row["is_manual"] in (1, True)
-    assert row["sender_id"].startswith("manual:user_")
-    assert row["message_id"].startswith("manual_")
-    assert row["platform"] == "phone"
-    assert row["lead_id"] == lead_id
-    assert row["created_at"] == row["occurred_at"]
-
-    logs = await _rows(env, "SELECT * FROM conversation_logs")
-    assert logs == []
-
-
-# ---------------------------------------------------------------------------
-# 2. 会話の流れに出る（K3）
-# ---------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_manual_record_shows_in_conversation_flow(client, env):
-    lead_id = await _make_lead(client)
-    await _add_auto(env, lead_id, created_at="2026-06-01 09:00:00", message_text="auto-1")
-    await _record_manual(client, lead_id, content="手の記録A", occurred="2026-06-02T10:00:00+00:00")
-
-    res = await client.get(f"/api/v1/leads/{lead_id}/messages")
-    assert res.status_code == 200, res.text
-    texts = [m["message_text"] for m in res.json()["messages"]]
-    assert "手の記録A" in texts
-    assert "auto-1" in texts
-
-
-# ---------------------------------------------------------------------------
-# 3. 並ぶ位置は記録した時刻。あとで直すと直した位置に動く
-# ---------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_manual_record_is_placed_by_its_time(client, env):
-    lead_id = await _make_lead(client)
-    await _add_auto(env, lead_id, created_at="2026-06-02 09:00:00", message_text="auto-late")
-    await _add_auto(env, lead_id, created_at="2026-06-01 09:00:00", message_text="auto-early",
-                    direction="outbound")
-    log_id = await _record_manual(client, lead_id, content="過去の手の記録", occurred="2026-06-01T12:00:00+00:00")
-
-    res = await client.get(f"/api/v1/leads/{lead_id}/messages")
-    order = [m["message_text"] for m in res.json()["messages"]]
-    assert order == ["auto-early", "過去の手の記録", "auto-late"]
-
-    patched = await client.patch(
-        f"/api/v1/leads/{lead_id}/conv-logs/{log_id}",
-        json={"occurred_at": "2026-06-03T12:00:00+00:00"},
-    )
-    assert patched.status_code == 200, patched.text
-    res = await client.get(f"/api/v1/leads/{lead_id}/messages")
-    order = [m["message_text"] for m in res.json()["messages"]]
-    assert order == ["auto-early", "auto-late", "過去の手の記録"]
-
-
-# ---------------------------------------------------------------------------
-# 4. 消した手の記録は流れに出ない
-# ---------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_deleted_manual_record_is_not_in_flow(client, env):
-    lead_id = await _make_lead(client)
-    await _add_auto(env, lead_id, created_at="2026-06-01 09:00:00", message_text="auto-1")
-    log_id = await _record_manual(client, lead_id, content="消す記録", occurred="2026-06-02T10:00:00+00:00")
-
-    deleted = await client.delete(f"/api/v1/leads/{lead_id}/conv-logs/{log_id}")
-    assert deleted.status_code == 204
-
-    res = await client.get(f"/api/v1/leads/{lead_id}/messages")
-    texts = [m["message_text"] for m in res.json()["messages"]]
-    assert "消す記録" not in texts
-    assert texts == ["auto-1"]
-
-
-# ---------------------------------------------------------------------------
-# 5. 手の記録が最新でも、窓口・24時間の窓・未読・受信箱が変わらない
-# ---------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_manual_latest_row_does_not_change_destination_window_unread_inbox(client, env):
-    lead_id = await _make_lead(client)
-    await _add_auto(env, lead_id, created_at="2026-06-01 09:00:00", platform="messenger",
-                    message_text="customer hello")
-
-    async def snapshot():
-        msgs = (await client.get(f"/api/v1/leads/{lead_id}/messages")).json()
-        inbox = (await client.get("/api/v1/conversations")).json()["conversations"]
-        conv = next(c for c in inbox if c["lead_id"] == lead_id)
-        return {
-            "platform": msgs["lead"]["platform"],
-            "window": msgs["messaging_window"],
-            "inbox_platform": conv["platform"],
-            "inbox_last_text": conv["last_message_text"],
-            "inbox_unread": conv["unread_count"],
-        }
-
-    before = await snapshot()
-    assert before["platform"] == "messenger"
-    assert before["inbox_unread"] == 1
-
-    # 手の記録（電話）を、一番新しい行として足す
-    await _record_manual(client, lead_id, content="電話で話した", occurred="2026-06-09T10:00:00+00:00")
-    after = await snapshot()
-    assert after == before
-
-    # 未読に戻す: 戻す行は自動連携の最新の受信（手の記録ではない）
-    await client.post(f"/api/v1/leads/{lead_id}/messages/mark-read")
-    unmarked = await client.post(f"/api/v1/leads/{lead_id}/messages/mark-unread")
-    assert unmarked.status_code == 200, unmarked.text
-    assert unmarked.json()["unmarked_count"] == 1
-    # 未読に戻ったのは自動連携の受信。手の記録の行は戻さない
-    auto_row = await _rows(env, "SELECT seen_at FROM meta_messages WHERE message_text = 'customer hello'")
-    manual_row = await _rows(env, "SELECT seen_at FROM meta_messages WHERE message_text = '電話で話した'")
-    assert auto_row[0]["seen_at"] is None
-    assert manual_row[0]["seen_at"] is not None
-
-
-# ---------------------------------------------------------------------------
-# 6. 自動連携の行の id を手の記録の API に渡すと 404
-# ---------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_auto_row_id_is_404_for_manual_api(client, env):
-    lead_id = await _make_lead(client)
-    auto_id = await _add_auto(env, lead_id, created_at="2026-06-01 09:00:00")
-
-    patched = await client.patch(
-        f"/api/v1/leads/{lead_id}/conv-logs/{auto_id}", json={"content_text": "書き換え"}
-    )
-    assert patched.status_code == 404
-    deleted = await client.delete(f"/api/v1/leads/{lead_id}/conv-logs/{auto_id}")
-    assert deleted.status_code == 404
-
-    rows = await _rows(env, "SELECT message_text, deleted_at FROM meta_messages WHERE id = :i", i=auto_id)
-    assert rows[0]["message_text"] == "auto"
-    assert rows[0]["deleted_at"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -314,7 +138,16 @@ async def test_priority_scoring_label_skips_manual_record(client, env):
 
     lead_id = await _make_lead(client)
     auto_id = await _add_auto(env, lead_id, created_at="2026-06-01 09:00:00", message_text="価格はいくらですか")
-    await _record_manual(client, lead_id, content="電話で価格を確認", occurred="2026-06-02T10:00:00+00:00")
+    await env.execute(
+        text(
+            "INSERT INTO meta_messages (tenant_id, lead_id, platform, sender_id, message_id, message_text, "
+            "direction, original_language, is_manual, occurred_at, created_at) "
+            "VALUES (999, :l, 'phone', 'manual:user_1', 'manual_label_1', '電話で価格を確認', 'inbound', 'en', 1, "
+            "'2026-06-02 10:00:00', '2026-06-02 10:00:00')"
+        ),
+        {"l": lead_id},
+    )
+    await env.commit()
 
     with patch("app.auth.dependencies.reset_tenant_context", new=AsyncMock()):
         saved = await label_lead_messages(env, lead_id, 999)

@@ -115,6 +115,23 @@
 - META_APP_ID は環境変数で読む（meta_graph.py:160・meta_inbox.py:488）。
 - 送信の INSERT（backend/app/routers/leads.py:2084-2098）に ON CONFLICT は無い。
 
+### 8-8 手動記録の廃止の下見（2026-11-09・origin/main d1580a38b と本番 reader で Opus が照合。生出力 /tmp/CC報告ファイル/conv/manual/）
+- 本番の手の記録（manual-rows.tsv・cl-manual.tsv）:
+  - meta_messages の is_manual=true は会社1・3・4・5・6 とも 0 行。
+  - conversation_logs の is_manual=true も5社とも 0 行（全行は会社1 3579・会社4 6・ほか 0）。
+  - 手の記録は一度も使われていない。消す行も移す行も無い。
+- 名簿（roster.tsv）: manual は電話 id10・対面 id11（どちらも無効）と WhatsApp id12（有効）だけ。会社専用の行は 0 行。
+- 入口は1つだけ: frontend/src/pages/inbox/ManualRecordSection.tsx。受信箱の会話の下に出し（frontend/src/pages/inbox/InboxMessageThread.tsx:865-871）、今の相手の窓口が名簿で manual のときだけ入力欄を見せる（ManualRecordSection.tsx:46-72）。今は WhatsApp の相手だけが当たる。
+- 手の記録の API（backend/app/routers/conv_logs.py）:
+  - 作成 :192-317・一覧 :319-364・変更 :366-438・削除 :440-490。補助 _fetch_conv_log :83・_fire_translation :116 はこの4つだけが使う。
+  - 同じファイルの名簿の API（:169-190・:492-614）は手の記録と別物。残す。
+  - 呼ぶ所（callers.txt）は ManualRecordSection.tsx:81 の作成だけ。一覧・変更・削除を呼ぶ画面は無い。試験は backend/tests/test_conversation_unify_bin1.py:128・:193・:211・:271・:274 と backend/tests/test_conv_logs_router.py。
+  - 即時反映の表 backend/app/realtime/topics.py:237-239 に3行。API の写し frontend/api-contract/openapi.json に4か所。
+- 手の記録の印を出す画面: 会社の会話タブ frontend/src/pages/company-detail/CompanyConvLogsTab.tsx:114-118（recorded_by_user_id があれば「手動記録」の印）。タブ自体は meta_messages 全体を読む（backend/app/routers/companies.py:1065-1140）ので残す。
+- 文言: ja.json/en.json の inbox.manualRecord（11語）と companies.convHistory.manual。frontend/scripts/error-text-next-action-baseline.json:107 に inbox.manualRecord.saveError。scripts/check-dangling-routes.js:44 に ManualRecordSection.tsx。
+- is_manual の除外（leads.py:1106・:1121・:1306・:1840・:2467、meta_inbox.py:937・:950、priority_scoring.py:273、translation_monitor.py:73）は行が 0 なので結果を変えない。列と一緒に便3 で片付ける。
+- 成約分析 backend/app/routers/analytics.py:2486-2489 は名簿の conversation_store で窓口を集めて meta_messages を読む。WhatsApp の名簿の値を変えなければ結果は同じ。
+
 ## 9. 未確認
 - Meta の echo を本番で受けられるか（全社とも接続が無効なので試せない）。Meta アプリ画面側の購読項目（外部の画面）。
 - Instagram の返信の写しが今の接続で実際に届いていたか（届いた記録は 0 件）。

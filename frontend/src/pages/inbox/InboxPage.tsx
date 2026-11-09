@@ -232,7 +232,6 @@ export default function InboxPage() {
                 setRecipientLanguage={state.setRecipientLanguage}
                 sendReaction={state.sendReaction}
                 deleteReaction={state.deleteReaction}
-                onManualRecordSaved={state.reloadMessages}
                 onOpenSettings={() => setShowSettings(true)}
               />
             </div>

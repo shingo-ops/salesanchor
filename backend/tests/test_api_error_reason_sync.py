@@ -59,8 +59,8 @@ def test_table_codes_are_used_in_app():
 
 def test_not_found_table_rows_are_read():
     targets = _targets()
-    assert len(targets) == 67
-    assert len(set(targets)) == 67
+    assert len(targets) == 66
+    assert len(set(targets)) == 66
 
 
 def test_not_found_targets_match_app():

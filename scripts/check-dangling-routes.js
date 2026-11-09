@@ -41,7 +41,6 @@ const TRANSLATION_SELF_PREFIX = '/translation';
 // フロントエンドで /api/v1 を直接渡している二重 prefix 異常ファイル（正規化時に前置しない）
 const DOUBLE_PREFIX_ANOMALY_FILES = new Set([
   'frontend/src/pages/admin/ChannelMastersPage.tsx',
-  'frontend/src/pages/inbox/ManualRecordSection.tsx',
 ]);
 
 // ---------------------------------------------------------------------------
