@@ -247,7 +247,7 @@ mode: handoff
 
 **tenant_invoice_payment_wise**（Wise の詳細。一覧の行1つに1行）
 - payment_method_id（主キー）、method_type（NOT NULL・CHECK で 'wise' だけ・既定 'wise'）、tenant_id（NOT NULL）、account_holder、wise_currency、wise_email、iban、swift_bic、bank_name、bank_address、note、created_at、updated_at。
-- 必須: account_holder・wise_currency（CHECK `^[A-Z]{3}$`）・wise_email。任意: iban・swift_bic・bank_name・bank_address・note（PO 2026-11-09 の提案「名義、IBAN、SWIFT/BIC、銀行名と住所、メールアドレス」。メールで送金してもらう運用のため、メールを必須にする）。
+- 必須: account_holder・wise_currency（CHECK `^[A-Z]{3}$`）・wise_email。任意: iban・swift_bic・bank_name・bank_address・note（PO 2026-11-09 の提案「名義、IBAN、SWIFT/BIC、銀行名と住所、メールアドレス」。メールで送金してもらう運用と読み（AI の読み。ideal-state の読みの記録）、メールを必須にする）。
 - 通貨ごとに1行（口座は通貨ごとに分かれている。PO 2026-11-05 の Wise の画面の確認）。
 
 1対1の決まり（DB で止めるもの・処理で止めるもの）:
@@ -533,7 +533,7 @@ commit の後、裏で順に行う:
 - ~~3年保持を始める前に、専門家に確かめるか。~~ → 確かめずに進める（PO 2026-11-07「2」）。新しいポリシーを公開し、14日以上たってから新旧の決まりで結果に差が出るようにする（消す処理の変更自体はマージの時点で本番に入る。§3-9）。
 - ~~閲覧者に改訂をメールで知らせるか（審査 2026-11-07 の指摘(2)）。~~ → メールは送らず、サイトに載せるだけにする（PO 2026-11-07「2」。他の案は「24人全員にメール」「契約中の4人だけにメール」）。
 - ~~振込先の銀行口座に海外送金の欄（SWIFT コード・銀行の住所）を入れる。~~ → 入れる。どちらも任意（空で保存できる）（PO 2026-11-09「1」）。
-- ~~Wise と PayPal の入力項目（§3-4）。~~ → Wise は名義・通貨・メールが必須、IBAN・SWIFT/BIC・銀行名・銀行の住所・メモが任意。支払いリンクは持たない。PayPal は振込先に入れない（PO 2026-11-09 の提案と「1」）。表は一覧と種類ごとの詳細の2段（PO 2026-11-10「１」）。
+- ~~Wise と PayPal の入力項目（§3-4）。~~ → Wise は名義・通貨・メールが必須、IBAN・SWIFT/BIC・銀行名・銀行の住所・メモが任意。支払いリンクは持たない。PayPal は振込先に入れない（PO 2026-11-09 の言葉と提案。ideal-state 31〜33）。表は一覧と種類ごとの詳細の2段（PO 2026-11-10「１」）。
 - 書類に載せる会社情報と振込先を直せる人を tenant.profile.edit を持つ人のままにするか、オーナーだけにするか。
 - 都道府県の一覧を新しい表にする（§3-4 の案A）。
 - 管理センターのメニューとページの名前を「発行者情報」から「会社情報」に変える（PO 2026-11-06「管理センターに会社情報メニューを作ってそこから登録できるように出来る？」。メニューは今もあるので新しく作らない）。
