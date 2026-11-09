@@ -23,7 +23,7 @@
 | K2 | 入口の箱を作り直す配備で、`Recreate`〜`Recreated` が 3 秒以内 | 配備の記録の「Recreate nginx」の段の `Container astro-webapp-nginx-1 Recreate` と `Container astro-webapp-nginx-1 Recreated` の時刻の差（recon §3-1 の表と同じ測り方） |
 | K3 | docker 本体の記録に、nginx について `failed to exit within 10s of signal 3` が出ない | 本番で `journalctl -u docker --since <配備の開始>` を読み取り、該当の行が 0 件 |
 | K4 | 設定を変えた配備の後、本番の nginx が新しい設定で動いている | 配備の後に本番で ①`docker exec astro-webapp-nginx-1 sha256sum /etc/nginx/conf.d/nginx.conf` の 1 列目と、配備した版の `git show <配備した版>:nginx/nginx.conf \| sha256sum` の 1 列目が一致 ②`docker logs -t astro-webapp-nginx-1` に、段 B の 4 の reload の道の 2（配備の記録の `nginx reload:` の行）の時刻より後の `signal 1 (SIGHUP) received ... reconfiguring` が 1 行以上 |
-| K5 | 設定が壊れていたら、今の nginx は前の設定のまま動き続ける（今と同じ守り） | 試しの環境で、`nginx -t` に通らない設定を流し、reload が流れず 443 が 200 のまま |
+| K5 | 設定が壊れていたら、今の nginx は前の設定のまま動き続ける（今と同じ守り） | GitHub の一時環境で試す（Mac では流さない。今そのための試験は無く【未確認】。段 B のカードで作る）。フォルダ取り付けの `nginx:1.31.1` を立て、`nginx -t` に通らない設定を置いて段 B の 2 の点検を流す。○の条件: 作業の写しが戻り先の設定に替わる・目印に `NEW_BAD` が書かれる・続けて流す `nginx -s reload`（①②に当たるもの）の後も `nginx -T` の出力が前の設定と同じ・443 が 200 のまま |
 | K6 | reload の 10 分後に、古い働き手が 0 | 本番で `docker top astro-webapp-nginx-1` の `worker process is shutting down` の数 |
 
 K6 は【未確認】の点（recon §3-4）を測るための基準。× のときは §6 の対処に進む。
@@ -76,12 +76,20 @@ K2 の注意: 11/9 01:24 の回では、力ずくで止めてから新しい箱�
    - 変更: 「Deploy to VPS」の段の中で、取り付けの点検を `docker compose build` の後・`bash scripts/blue-green-cutover.sh`（:461）の前に入れる。中身は今の「Recreate nginx」の段の手順 1〜3（`.github/workflows/deploy.yml:546-572`。戻り先の用意・戻り先の `nginx -t`・新しい設定の `nginx -t`）と、段 B の 3。
    - 流す条件: 今の「Recreate nginx」の段と同じく、`steps.gate.outputs.nginx == 'true'` のときだけ流す。「Deploy to VPS」の段（:235-241）には今 `envs:` が無いので、段の `env:` に `NGINX_GATE: ${{ steps.gate.outputs.nginx }}` を足し、`with:` に `envs: NGINX_GATE` を足して渡す（同じファイルの :711 などと同じ渡し方）。条件の段 `gate`（:64）は「Deploy to VPS」より前にある。gate が false の配備は nginx の設定も compose も前の成功した配備から変わっていない（:44-46・:66-79）ので、点検しなくても ①② の reload が読むのは前と同じ設定。
    - 点検の最初に、前の配備の失敗の目印 `.deploy_nginx_check_failed`（作業場所の直下・git に入れない。`.deploy_prev_sha` と同じ扱い）を消す。
-   - 新しい設定が `nginx -t` に通らないときは、今の :569 と同じく `cp .deploy_prev_nginx.conf nginx/nginx.conf` で作業の写しを戻り先に替え、目印 `.deploy_nginx_check_failed` に理由を 1 行書いてから先へ進む（配備全体は止めない。backend などは今までどおり入る）。①②の reload は戻り先の設定を読むので、本番は前の設定のまま。
-   - 戻り先の `nginx -t` に通らないときも、今と同じく後ろの段を流し続ける形に揃える（今の :561-563 の `exit 1` は `continue-on-error: true`（:518）の段の中なので、配備全体は止まっていない。移す先は `set -e`（:242）なので、ここで `exit 1` すると :461 の前で配備全体が止まり、今と動きが変わる）。目印に理由を書き、新しい設定の点検へ進む。新しい設定が通れば ①② の reload で新しい設定が入る（今は作り直さずに古い設定のまま残る。ここだけ今と違うが、入るのは `nginx -t` を通った設定）。新しい設定も通らなければ、写しを戻さずそのまま（壊れた設定を reload しても、nginx は前の設定のまま動き続ける。nginx 公式 control.html「失敗したら変更を戻し、古い設定で動き続ける」）。
-   - 失敗の表示の運び方: 「Recreate nginx」の段の最後で目印を見て、在れば理由を出して `exit 1` にする。この段は `continue-on-error: true` なので後ろの段は流れ、今の「Fail if nginx recreate failed」（`.github/workflows/deploy.yml:1019-1020`。`steps.nginx_recreate.outcome == 'failure'` を見る）が配備全体を失敗の表示にする。目印は gate が true のときだけ作られ、その配備では「Recreate nginx」の段も同じ条件で流れるので、目印が見られずに残ることはない（「Deploy to VPS」の段が途中で落ちた配備は、その時点で失敗の表示になる。残った目印は次の点検の最初に消える）。
+   - 目印の書き方: 1 行に決まった語を 1 つ書く。起きたものは全部、行を足して書く（複数行になってよい）。語は次の 4 つだけ。
+     - `NO_PREV`: 戻り先を用意できない（今の手順 1 の :555-557 の場合）
+     - `PREV_BAD`: 戻り先が `nginx -t` に通らない（今の :561-563 の場合）
+     - `NEW_BAD`: 新しい設定が `nginx -t` に通らない（今の :566-571 の場合）
+     - `EXTRA_CONF`: `nginx/` の直下に `nginx.conf` 以外の `*.conf` がある（段 B の 3）
+   - 戻り先を用意できないとき（今の手順 1 の終わりの `exit 1`。`.github/workflows/deploy.yml:555-557`）も、`exit 1` にしない。今は `continue-on-error`（:518）の段の中なので配備全体は止まっていないが、移す先は `set -e`（:242）のため。目印に `NO_PREV` を書き、戻り先の点検は飛ばして新しい設定の点検へ進む。
+   - 新しい設定が `nginx -t` に通らず、戻り先が用意できて点検にも通っているときは、今の :569 と同じく `cp .deploy_prev_nginx.conf nginx/nginx.conf` で作業の写しを戻り先に替え、目印に `NEW_BAD` を書いてから先へ進む（配備全体は止めない。backend などは今までどおり入る）。①②の reload は戻り先の設定を読むので、本番は前の設定のまま。
+   - 戻り先の `nginx -t` に通らないときも、今と同じく後ろの段を流し続ける形に揃える（今の :561-563 の `exit 1` は `continue-on-error: true`（:518）の段の中なので、配備全体は止まっていない。移す先は `set -e`（:242）なので、ここで `exit 1` すると :461 の前で配備全体が止まり、今と動きが変わる）。目印に `PREV_BAD` を書き、新しい設定の点検へ進む。新しい設定が通れば ①② の reload で新しい設定が入る（今は作り直さずに古い設定のまま残る。ここだけ今と違うが、入るのは `nginx -t` を通った設定）。新しい設定も通らなければ（`NO_PREV` か `PREV_BAD` に加えて `NEW_BAD`）、戻す写しが無いか壊れているので、写しを戻さずそのまま（壊れた設定を reload しても、nginx は前の設定のまま動き続ける。nginx 公式 control.html「失敗したら変更を戻し、古い設定で動き続ける」）。
+   - 失敗の表示の運び方: 「Recreate nginx」の段で目印を見て（どこで見るかは段 B の 4。成功の `exit 0` より前）、在れば中身の語を全部記録に出して `exit 1` にする。この段は `continue-on-error: true` なので後ろの段は流れ、今の「Fail if nginx recreate failed」（`.github/workflows/deploy.yml:1019-1020`。`steps.nginx_recreate.outcome == 'failure'` を見る）が配備全体を失敗の表示にする。目印は gate が true のときだけ作られ、その配備では「Recreate nginx」の段も同じ条件で流れるので、目印が見られずに残ることはない（「Deploy to VPS」の段が途中で落ちた配備は、その時点で失敗の表示になる。残った目印は次の点検の最初に消える）。
    - ①②の reload は消さない。①は backend の切替の後に名前を引き直すため（台本の注記 `scripts/blue-green-cutover.sh:153`）、②は ADR-130 の念のため。点検の後に流れるので、読むのは点検を通った設定だけになる。
-3. `nginx/` の直下に `nginx.conf` 以外の `*.conf` が無いことを、2 の点検の最初に足す。あれば、その配備だけは `exit 1` で配備全体を止める（:461 の backend の切替より前）。これは今からの動きの変更。理由: 余分な `*.conf` は `nginx -t` を通っても本番の入口の動きを黙って変えるので、①の reload に読ませない方法がほかに無い。影響: 同じ配備の backend・画面の変更も入らない。余分なファイルを消した次の配備で入る。
-4. 「Recreate nginx」の段（`.github/workflows/deploy.yml:516-607`）を、次の 2 通りに分ける。今の段の手順 1〜3（:546-572）は段 B の 2 で前に移したので、この段では繰り返さない。最後に段 B の 2 の目印を見る。ただし目印の理由が「戻り先が `nginx -t` に通らない」のときは、戻る先が無いので、今の :561-563 と同じく作り直しも reload の道の戻しもせず、すぐ `exit 1` にする（新しい設定は①②の reload ですでに入っている）。
+3. `nginx/` の直下に `nginx.conf` 以外の `*.conf` が無いことを、2 の点検の最初（目印を消した直後）に足す。あれば、そのファイルを作業場所の直下の `.deploy_nginx_extra/`（`nginx/` の外・git に入れない）へ移し、目印に `EXTRA_CONF` を書き、ファイル名を記録に出して先へ進む（配備全体は止めない）。理由: 余分な `*.conf` は `nginx -t` を通っても本番の入口の動きを黙って変える。移せば、①②の reload にも、失敗時の /design/ 遮断の段（`.github/workflows/deploy.yml:1261-`。:1284 で `nginx -t`、:1287 で作り直し）にも読まれない。配備は失敗の表示になる（2 の運び方）。git に入っているファイルなら、次の配備の取り込み（:259）で戻り、また移されて失敗の表示になる。消すまで毎回そうなる。
+4. 「Recreate nginx」の段（`.github/workflows/deploy.yml:516-607`）を、次の 2 通りに分ける。今の段の手順 1〜3（:546-572）は段 B の 2 で前に移したので、この段では繰り返さない。段の最初に段 B の 2 の目印を読む。
+   - 目印に `NO_PREV` か `PREV_BAD` があるとき: 戻る先が無いので、作り直しも reload もしない。`_nginx_confirm`（:531-544）だけを流して結果を記録に残し、目印の語を出して `exit 1` にする。①②の reload で入った設定が 443 で応えているかを、記録で分かるようにするため。
+   - それ以外（目印が無い、または `NEW_BAD`・`EXTRA_CONF` だけ）: 作業の写しは点検を通った設定なので、下の 2 通りを流す。最後（成功の `exit 0` より前）に目印を見て、在れば語を出して `exit 1`。
    - 箱の定義が変わったとき: `docker compose config --hash nginx` の値と、今の箱の `com.docker.compose.config-hash` の印を比べる。違えば今までどおり作り直す（段 A で 3 秒以内）。作り直しの後の確かめ・good の書き直し・自動で戻すのは今の :576-607 のまま。
      - 本番で 2026-11-09 08:30Z に読み取りで確かめた値: `docker compose config --hash nginx` の出力は `nginx 87c866eb…`（先頭に名前が付く）、箱の印は `87c866eb…` で一致（`/tmp/CC報告ファイル/nginx-hash-check.txt`・Docker Compose v5.1.1）。比べるときは出力の 2 列目を使う。
      - 本番では `docker-compose.exporters.yml` も一緒に読まれている（同じ出力の警告の行）。配備の段と同じ作業場所・同じ環境で計算すること。
@@ -95,7 +103,7 @@ K2 の注意: 11/9 01:24 の回では、力ずくで止めてから新しい箱�
 5. 戻り先の点検（`.github/workflows/deploy.yml:561`）の差し替え先を `/etc/nginx/conf.d/default.conf` から `/etc/nginx/conf.d/nginx.conf` に替える。替えないと、フォルダの中の `nginx.conf` と差し替えた `default.conf` の 2 つが読まれ、点検が誤って落ちる。
 6. `ADR-137` の「~2-3 秒」の記述と `.github/workflows/deploy.yml:506` の注記を、実測（10〜17 秒・段 A の後の値）に直す。:498-501 の注記（reload では足りない）も、フォルダの取り付けの後は当てはまらないので直す。
 7. 反映のとき 1 回だけ: 取り付けを変えるので作り直しが 1 回走る（段 A の後なら 3 秒以内）。
-- 触らない: 失敗時の /design/ 遮断の段（`.github/workflows/deploy.yml:1261-`）。失敗の時だけ走る段なので、作り直しのままにする。段 A で止まる時間は短くなる。`.github/workflows/deploy.yml:743` の切替の呼び出し（接続先が変わったときだけ）も、2 の点検より後に流れるので触らない。
+- 触らない: 失敗時の /design/ 遮断の段（`.github/workflows/deploy.yml:1261-`）。失敗の時だけ走る段なので、作り直しのままにする。余分な `*.conf` は段 B の 3 で `nginx/` の外へ移してあるので、この段にも読まれない。段 A で止まる時間は短くなる。`.github/workflows/deploy.yml:743` の切替の呼び出し（接続先が変わったときだけ）も、2 の点検より後に流れるので触らない。
 - 【未確認】段 B のカードを書く前に、:743 の段が 2 の点検より後にあることを、その時の main の実物で確かめる（今の main では :700 の段の中で、:461 より後）。
 
 ### 段 A と段 B の順番
@@ -113,7 +121,7 @@ K2 の注意: 11/9 01:24 の回では、力ずくで止めてから新しい箱�
 ## 6. 弊害・トレードオフ
 
 - reload の後、流れ続ける接続を持った古い働き手が残る → 対策: K6 で測る。残る数が多いときは、`proxy_read_timeout 3600s`（`nginx/nginx.conf:246`・`:266`・`:286`）を短くする案を別に起こす。今のメモリは 11.37MiB / 256MiB（recon §3-4）。
-- フォルダの取り付けで、`nginx/` の直下に誤って `*.conf` を置くと本番が読む → 対策: §4 段 B の 3（配備の点検。在れば配備全体を止める）。
+- フォルダの取り付けで、`nginx/` の直下に誤って `*.conf` を置くと本番が読む → 対策: §4 段 B の 3（配備の点検。在れば `nginx/` の外へ移し、配備を失敗の表示にする）。
 - 段 B の後は、①の reload（`.github/workflows/deploy.yml:461`）の時点で新しい設定が本番に入る。443 の確かめ（`_nginx_confirm`）は「Recreate nginx」の段まで流れないので、その間（少なくとも :477 の `docker compose stop -t 60 celery-worker` などを挟む）は 443 を見ていない。`nginx -t` は通るのに 443 が応えない設定のときは、その間だけ本番が応えない【推測。こういう設定の実例はまだ確かめていない】。→ 対策: 「Recreate nginx」の段の確かめで落ちれば戻り先に reload で戻す（段 B の 4 の 5）。今の作り直しの道も、作り直した後に初めて 443 を確かめるので、確かめる前に新しい設定が本番に出ている点は同じ。:461 の直後にも確かめを足すかは、段 B のカードを書くときに、その間の長さを配備の記録で測ってから決める（測った値と判断をカードに書く）。
 - 段 A の SIGTERM で、新しい接続が断られる時間は減るが、止める瞬間に途中だった短い要求は切れる → 対策: 段 B で設定だけの変更は作り直さなくなるので、作り直しの回数そのものを減らす。作り直しは箱の定義が変わったときだけになる。
 
