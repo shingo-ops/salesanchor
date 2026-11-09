@@ -286,14 +286,14 @@
 - §5 の分岐は、`po_ref` が `PR#<数字>` で target が `hook-files` か `user-hooks` のときだけ。ほかは今の流れのまま（:906 の判定より前で分ける）。
 
 ### 13-3. 「台帳に置いた台本の sha256」の置き場（§5-5 の2つ目の項目の実装）
-- 写しに2つのキーを足す。`guard_installer` = `~/.salesanchor-tools/scripts/agent-hooks/install-guard.sh` の sha256 先頭8桁（ファイルが無ければ空の一覧）。`guard_judge` = `~/.salesanchor-tools/scripts/dev/consent-audit.py` の、印 `# >>> ADR-1072 guard-add judge` と `# <<< ADR-1072 guard-add judge` に挟まれた行を全部つないだ文字列の sha8（印が無ければ空の一覧）。§5 の分岐の関数と、record_ok の中の分岐の呼び出しの行は、印の中に置く。
+- 写しに2つのキーを足す。`guard_installer` = ~/.salesanchor-tools/scripts/agent-hooks/install-guard.sh の sha256 先頭8桁（ファイルが無ければ空の一覧）。`guard_judge` = ~/.salesanchor-tools/scripts/dev/consent-audit.py の、印 `# >>> ADR-1072 guard-add judge` と `# <<< ADR-1072 guard-add judge` に挟まれた行を全部つないだ文字列の sha8（印が無ければ空の一覧）。§5 の分岐の関数と、record_ok の中の分岐の呼び出しの行は、印の中に置く。
 - TARGET_KEYS に `"guard-installer": "guard_installer"` と `"guard-judge": "guard_judge"` を足す。LEDGER_ONLY_KEYS と PR_ONLY_TARGETS には足さない。このため、値が変われば PO の「1」（`consent:` の記録）でしか説明できず、無ければ B（:906 で PR 番号は通らない）。
 - 便1 のマージの後の最初の点検では、2つのキーは前回の写しに無いので「（初回）」と出て判定しない（:1019-1021）。`guard_installer` は便1 の時点では空の一覧なので、便2 で台本が入ると増として出て、PO の「1」が要る。これが「台帳に置いた値を PO の「1」で決める」に当たる。
 
 ### 13-4. §5 の分岐の細部
 - 1.（hook_files の増）: PR #n のマージ mc について、`git diff --name-only mc^1 mc -- scripts/agent-hooks/` からフォルダ名を取る（`scripts/agent-hooks/<name>/...` の形のものだけ。直下のファイルは数えない）。各フォルダの札を mc の版で読み（§5-0 の検査を全部当てる）、札の `files` の各名前について sha8(`<name>/<file>`) が要素のパスの sha8 と同じで、`git show mc:scripts/agent-hooks/<name>/<file>` の sha256 先頭8桁が item_hash と同じものがあれば、その名前で 5・6 と §5-5 を確かめる。
 - 4.（中身の書き換え）: 写しでは「減の要素」と「増の要素」の2つに分かれる。§5-4 の試験の検査は減の要素の判定で行い、増の要素は 1. だけで判定する（減の要素が説明できなければ B が出るので、増だけを記録して逃げる道は無い）。減の要素の判定: 要素のパスの sha8 に当たるファイルが、今の `~/.claude/scripts/<name>/<file>` にあり、その中身が mc の版と同じこと。P は 6 の決め方（`git log --first-parent --format=%H mc^1 -- scripts/agent-hooks/<name>/` を新しい順に見て、その版のファイルの中身8桁が item_hash と同じ最初のものを見つけ、そこから同じ中身が途切れずに続く範囲のいちばん古いもの。§12-12）。ファイルが無い（外した）なら B。
-- 2.・3.（user:hooks）: 今の `~/.claude/settings.json` の hooks から、event・matcher が要素と同じで組の sha8 が item_hash と同じ組を探す。組のフックが札の形と同じかは、mc で変わったフォルダの札から作った命令と比べる。3. の減の行は `--replaced-by`・`--batch`・`--old-json` を持ち、同じ PR 番号と batch で item_hash が replaced-by と同じ増の行が台帳にあること。増の組は、同じ batch で通る減の行があれば 3. で通す。
+- 2.・3.（user:hooks）: 今の ~/.claude/settings.json の hooks から、event・matcher が要素と同じで組の sha8 が item_hash と同じ組を探す。組のフックが札の形と同じかは、mc で変わったフォルダの札から作った命令と比べる。3. の減の行は `--replaced-by`・`--batch`・`--old-json` を持ち、同じ PR 番号と batch で item_hash が replaced-by と同じ増の行が台帳にあること。増の組は、同じ batch で通る減の行があれば 3. で通す。
 - 5. の時刻: mergedAt < 行の時刻、かつ（held の時刻、無ければ前回の写しの時刻）< 行の時刻 < now。今の「マージが前回の写しより後」（:911-913）は §5 の分岐では使わない。
 - 6.: `git log --first-parent <v> --until=<行の時刻> -1 --format=%H -- scripts/agent-hooks/<name>/` が mc と同じ。v は今の tstate の v（GitHub main の sha）。`git rev-parse --is-shallow-repository` が true なら B。
 - §5-4 の CI の検査は `git show <v>:.github/workflows/agent-hooks-test.yml` を PyYAML で読む。PyYAML は関数の中で読み込み、読み込めなければその検査は通さない（B 側）。【未確認】週次点検の定期作業が使う python3 に PyYAML があるか（手元の /usr/local/bin/python3 は 6.0.3 あり、/usr/bin/python3 は無し。定期作業がどちらを使うかは未確認）。無い場合、中身の書き換えだけが毎回 B に出る（安全側）。便1 のマージの後の最初の点検の記録で確かめる。
