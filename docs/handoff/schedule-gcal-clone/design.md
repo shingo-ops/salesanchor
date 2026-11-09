@@ -6,6 +6,7 @@
 追加（2026-11-08）: 便8（残りの部品を決められた部品に差し替える・G26〜G30）は PO の選択「1」（2026-11-08）。作り方は §3.13。設計審査は §9 の 11 回目。
 追加（2026-11-09）: 便9（月表示・詳しくの小窓と一覧の時刻を Google の形に・G31〜G35）は PO の選択「1、2」（2026-11-08）で設計した。作り方は §3.14。設計審査は §9 の 12 回目（APPROVE）。G31〜G35 は **PO 承認済み**（2026-11-09、PO の選択「1」＝「5か所の直しを承認して、作るところまで進める」）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin9.md`。
 追加（2026-11-09）: 便10（日・3日間・週から月へ切り替えると画面全体が消える不具合・G36）は PO の選択「1」（2026-11-09・画面が消える不具合を先に直す）。作り方は §3.15。設計審査は §9 の 13 回目（APPROVE）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin10.md`。金型の設計 `docs/handoff/calendar-view-component/design.md` §4-3 の `views` の行も「月でも渡す」に直した。
+追加（2026-11-09）: 便11（日・3日間・週の枠線を Google に揃える・G37〜G41）は PO の選択「1」（2026-11-09・枠線を揃える設計を作り、PO の承認を得てから直す）。作り方は §3.16。設計審査は §9 の 14 回目（APPROVE）。G37〜G41 は **PO 承認済み**（2026-11-09、PO の選択「1」＝「この直し方で作り、本番に出して Google と並べて確かめる」）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin11.md`。
 根拠: `docs/handoff/schedule-gcal-clone/recon.md`（以下 recon）。前の設計 `docs/handoff/schedule-gcal-alignment/design.md`（K1〜K14）を引き継ぎ、便2（K8〜K11）はこの設計に入れ直す。
 
 ## 1. 目的
@@ -83,6 +84,18 @@ PO の選択（2026-11-08）「1」＝「残りの5か所を決められた部�
 | G34 | 予定の詳しくの小窓の日時が 1 行「11月6日(金) 午後12時30分～午後1時30分」の形（作る小窓・検索の結果と同じ文の作り方）。別の行の日付は無くなる。終日は「11月6日(金) 終日」 | 本番で時刻のある予定と終日の予定を押し、小窓の日時の行の文字を読む。`.schedule-popover__date` が 0 個。単体の試験 | R9-5 |
 | G35 | 一覧の表示の行の時刻が 12 時間の形（例「午前7時～午前8時」）。今は「07:00 - 08:00」 | 本番の一覧の表示で、行の時刻の文字を読む。単体の試験 | R9-5 |
 | G36 | 日・3日間・週で見ている時に月へ切り替えても、画面が消えない。同じ月を 2 回目に開く時（週→月→週→月・日→月→日→月・3日間→月→3日間→月）も消えず、最後は月の升目が出る。その間に画面の裏の誤り（console の error）が 0 件（今は 2 回目の月で `viewType "calendarDays" is not available` が出て画面全体が消える） | 本番 /schedule で近道のキー w→m→w→m・d→m→d→m・x→m→x→m を各 3 秒あけて押し、console の error の数・`#root` の子の数（1 以上）・最後の表示の種類（`fc-dayGridMonth-view`）を読む（予定は保存しない）。単体の試験で、日・週→月→日・週→月と props を差し替えても月の時に `views.calendarDays` が渡ること | R10-1〜R10-4 |
+
+### 2.4 日・3日間・週の枠線を Google に揃える（G37〜G41・便11・2026-11-09 追加）
+
+PO 2026-11-09 の言葉:「Googleかれんだーはタイムテーブルの予定を入れる宇文だけに枠線が入っていて日付と時間の部分は枠線が入っていないが、SAアプリは枠線が全てに入っている」。PO の選択「1」（枠線を揃える設計を作り、PO の承認を得てから直す）。
+
+| # | 成功条件 | 確かめ方 | 根拠 |
+|---|---|---|---|
+| G37 | 日・3日間・週の上の行（曜日と日付）に線が 1 本も無い。時間割の外枠（上と左）も無い | 本番 /schedule の週で `.fc-scrollgrid`・`.fc-col-header-cell`・左上の角（`thead .fc-timegrid-axis`）の 4 辺の `border-*-width` が全部 0px。画面写しで日付の行に縦線・横線が無い | R11-1・R11-2 |
+| G38 | 左の時刻の列の中に線が無い（時刻の文字を横切る線・列の右の縦線が無い）。毎時の線は、予定を入れる升目の左の端から時刻の列へ 8px だけ出る（Google 実測 9px）。時刻の文字の右の端と、その短い線の左の端の間は 4px 以上あく | 本番の週で `.fc-timegrid-slot-label` の 4 辺が 0px。同じ要素の `::after` が幅 8px・上の線 1px。時刻の文字の要素（`.fc-timegrid-slot-label-cushion`）の右の内側のあき（`padding-right`）が 12px（8px＋4px）で、文字の要素が時刻の列からはみ出ない（右の端が列の右の端以下） | R11-1・R11-3 |
+| G39 | 終日の行は、日と日の間の縦線だけ残る。「終日」の文字の升目には線が無い。終日の行と時間割の間は 1px の横線 1 本（今は高さ 3px の灰色の帯） | 本番の週で `.fc-daygrid-body .fc-timegrid-axis` の 4 辺が 0px。`.fc-timegrid-divider` の高さが 1px・下の線 1px・右の線 0px | R11-1・R11-4 |
+| G40 | 予定を入れる升目の線（日と日の間の縦線・毎時の横線・升目の左の端の縦線）は今のまま残る。土曜の右の外と、上の行・終日の行の右の端に、線や灰色の帯が出ない。色は今のトークンのまま（ダークでも同じトークン） | 本番の週で `.fc-timegrid-slot-lane` の上の線 1px・`.fc-timegrid-col` の線 1px。`.fc-scrollgrid-section > *` の右と下が 0px。上の行と終日の行の `.fc-scroller` の `scrollbar-color` が透明。画面写しで右の端に灰色の帯が無い | R11-1・R11-5 |
+| G41 | 月表示の線は変わらない | 本番の月表示で `.fc-scrollgrid`（上 1px・左 1px）・`.fc-col-header-cell`（4 辺 1px）・`.fc-daygrid-day`（4 辺 1px）・`.fc-scrollgrid-section-body > *`（右 1px・下 1px）・`.fc-scroller` の `scrollbar-color`（auto）が直す前と同じ（直す前の値は R11-6） | R11-6 |
 
 ## 3. 作り方（How）
 
@@ -475,6 +488,89 @@ PO 2026-11-09「1」（画面が消える不具合を先に直す・設計と審
 
 戻し方: 便10 の PR を revert する（frontend の 2 ファイルだけ・DB や設定は変えない）。
 
+### 3.16 便11: 日・3日間・週の枠線を Google に揃える（G37〜G41・2026-11-09）
+
+PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得てから直す）。2026-11-09 に本番 /schedule の週と Google カレンダーの週（どちらも PO のログインの画面・Claude in Chrome・窓の幅 1378px）を並べて測った。予定の保存・削除はしていない。下の「試した形」は Opus の画面の中だけに一時的な見た目の規則を足して測り、測った後に外した（本番の配布物は変えていない）。
+
+確かめた事実（行番号は origin/main 1ca6dbf38。FullCalendar の中身は npm pack した 6.1.22 の実物）:
+- R11-1（Google の週の線・DOM の実測）: 線は 3 種類だけ。①毎時の横線 24 本は、時間割の箱（幅 972px）の中の行ごとの `::after`（幅 972px・下の線 1px solid rgb(221,227,234)）。左の端は x=318 で、日の列の始まり（x=327）より 9px 時刻の列に出る。②日の列 7 本（幅 138px）の右の線 1px rgb(221,227,234)。土曜だけ右の線の色が白（rgb(255,255,255)）で見えない。③升目の左の端は、幅 9px の要素の右の線 1px。曜日と日付の行（`role="columnheader"`）は 4 辺とも線が無い。時刻の文字の要素は線を持たない。終日の行は日の間の縦線だけで、時間割との間は 1 本の線（巻き上げた時に影が付く）。
+- R11-2（SA の今・本番の週で読んだ値）: 外枠 `.fc-scrollgrid` は上 1px・左 1px。曜日と日付の升目 `.fc-col-header-cell` と左上の角は 4 辺 1px。色はすべて `--fc-border-color`（`frontend/src/components/CalendarView.css:16` で `--schedule-gridline`・本番の明るい画面で rgb(218,220,224)）。線の元は FullCalendar の `.fc-theme-standard td,.fc-theme-standard th{border:1px solid var(--fc-border-color)}` と `.fc-theme-standard .fc-scrollgrid{border:1px solid …}`（core 6.1.22 `internal-common.js`）。
+- R11-3（時刻の列）: `.fc-timegrid-slot-label` は上・右・左が 1px なので、毎時の線が時刻の文字を横切り、列の右にも縦線が出る。時刻の文字の内側のあき（`.fc-timegrid-slot-label-cushion`）は FullCalendar の `padding:0 4px`（timegrid 6.1.22）。時刻の列の幅は FullCalendar が文字の幅を測って決める（試した形で、あきを 8px 足すと列が 55px→63px に広がった）。
+- R11-4（終日の行と時間割の間）: `.fc-timegrid-divider` は FullCalendar の `padding:0 0 2px` と下の線 1px で高さ 3px の帯（右の線も 1px）。「終日」の升目（`.fc-daygrid-body .fc-timegrid-axis`）は 4 辺 1px。
+- R11-5（右の端）: 区切りの升目 `.fc-scrollgrid-section > *` は右 1px（上の行・終日の行・時間割）と下 1px（終日の行）。上の行と終日の行の巻き上げの箱 `.fc-scroller` は、時間割の巻き上げの帯と列をそろえるため FullCalendar が `overflow-y: scroll` にしており、PO の Mac では幅 15px の空の帯（灰色）が右の端に出て、線に見える。
+- R11-6（月表示・直す前の値）: `.fc-scrollgrid` 上 1px・左 1px、`.fc-scrollgrid-section-header > *` 右 1px、`.fc-scrollgrid-section-body > *` 右 1px・下 1px、`.fc-col-header-cell` と `.fc-daygrid-day` は 4 辺 1px、`.fc-scroller` の `scrollbar-color` は auto（2 個）。
+- R11-7（試した形・Opus の画面の中だけ）: 作り方の規則を一時的に足すと、上の行と時刻の列の線が消え、毎時の線の 8px の短い線・終日の行の縦線・1px の区切り・日の間の線が残った（G37〜G40 の値をすべて満たした）。画面の写しで Google と同じ並びになったことを目で確かめた。土曜の右の外に線が残ったのは、時間割の巻き上げの帯（本物の巻き上げ）の左の端だけ。
+- 使うトークンは在る: `--schedule-gridline`（`frontend/src/tokens.css:400`・ダーク `:669`）、`--schedule-gridline-w: 1px`（`:423`）、`--space-1: 4px`（`:74`）、`--space-2: 8px`（`:75`）。
+- 金型の中で日・3日間・週だけに効かせる場所は `.comp-calendar--schedule.comp-calendar--days`（`frontend/src/components/CalendarView.css:180-288`）。月は `.comp-calendar--schedule.comp-calendar--month`（`:290-`）で別。
+
+作り方（`frontend/src/components/CalendarView.css` の `.comp-calendar--schedule.comp-calendar--days` の段の終わり、`:288` の後に足す。値は var() だけ）:
+1. トークンを 1 つ足す（`frontend/src/tokens.css` の `--schedule-gridline-w` の次の行）: `--schedule-hour-tick-w: var(--space-2); /* 毎時の線が時刻の列へ出る長さ（Google 実測 9px） */`。
+2. 次の規則を足す:
+```css
+/* ---- 便11（design §3.16）: 線は予定を入れる升目だけ（G37〜G40） ---- */
+.comp-calendar--schedule.comp-calendar--days .fc-scrollgrid {
+  border-top-width: 0;
+  border-left-width: 0;
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-scrollgrid-section > * {
+  border-right-width: 0;
+  border-bottom-width: 0;
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-col-header-cell,
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-axis,
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-slot-label {
+  border-width: 0;
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-scrollgrid-section > .fc-timegrid-divider {
+  padding: 0;
+  border-bottom-width: var(--schedule-gridline-w);
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-slot-label {
+  position: relative;
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-slot-label::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--schedule-hour-tick-w);
+  border-top: var(--schedule-gridline-w) solid var(--schedule-gridline);
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-slot-label-cushion {
+  padding-right: calc(var(--schedule-hour-tick-w) + var(--space-1));
+}
+
+/* 上の行と終日の行の空の巻き上げの帯を見せない（幅は残して列をそろえる） */
+.comp-calendar--schedule.comp-calendar--days .fc-scrollgrid-section:not(.fc-scrollgrid-section-liquid) .fc-scroller {
+  scrollbar-color: transparent transparent;
+}
+```
+3. 単体の試験は足さない（jsdom は見た目の規則を計算しないため）。代わりに受入れで本番の値を読む（G37〜G41 の確かめ方）。見本帳（Storybook）の時間割の例はそのまま使える。
+4. ADR・文言・DB・金型の口（props）は変えない。ADR-1065 の決まり 7（予定の画面の見た目は金型の css だけ）の範囲の中。
+
+選ばなかった案:
+- `--fc-border-color` を透明にして、要る線だけ描き直す: 日の間の線・毎時の線・予定の枠など、残したい線まで全部描き直すことになり、変える行が増える。
+- Google の巻き上げた時の影を区切りの線にまねる: 巻き上げた時だけ出る作りで、まだ測っていない。今回は 1px の線 1 本にする。
+- 土曜の右の外の線（本物の巻き上げの帯の端）を消す: 巻き上げの帯を細くするなどは、使う人の Mac の設定（巻き上げの帯をいつも出すか）で見え方が変わり、帯をつかめなくなるおそれがある。今回は触らない。
+- 線の色を Google の色（rgb(221,227,234)）に変える: PO の指摘は「線がどこにあるか」で、色ではない。変更は一度に 1 つ。
+- 時刻の列へ出る短い線を付けない: Google には在り、毎時の線がどの時刻かを目で追いやすい。付けるのは疑似の要素 1 つとトークン 1 つで済む。
+
+心配と対処:
+- 時刻の列が 8px 広がり、日の列が少し狭くなる（週・幅 1378px で 1 列およそ 1px）: 受入れで週・3日間・日の画面写しを撮り、予定の文字が切れないかを見る。
+- 一番上（0 時）の行にも短い線が出る: 0 時の文字は出さない（G18）が、線は区切りの線と重なる位置で、巻き上げると隠れる。Google も 0 時に線がある（R11-1 ①の 1 本目）。
+- `scrollbar-color` を使えない古い道具: 透明にならず今の灰色の帯が残るだけで、列はずれない（幅は変えない）。
+- 月の表示が変わる: 規則はすべて `.comp-calendar--days` の下。G41 で直す前の値（R11-6）と比べる。
+- ダーク: 色は `--schedule-gridline` だけ（ダークは `frontend/src/tokens.css:669`）。`transparent` は今の css でも使っている（`:182`）。
+- 時刻の列の短い線は、1 時間に 1 行という今の設定（`frontend/src/components/CalendarView.tsx:194` の `slotDuration: '01:00:00'`）が前提。30 分ごとの行にすると、時刻の文字が無い行にも短い線が出る。行の刻みを変える時は、この規則を見直す（審査 14 回目の推奨）。
+
+戻し方: 便11 の PR を revert する（frontend の css 2 ファイルだけ・DB や設定は変えない）。
+
 ### 3.4 祝日の出どころ（2026-11-06 に確かめて決めた）
 
 確かめた事実:
@@ -512,6 +608,7 @@ PO 2026-11-09「1」（画面が消える不具合を先に直す・設計と審
 | 便8 | 残りの部品を決められた部品に差し替える（§3.13 の A 組）。ボタン 5 つ・札 1 つ・持ち主の色・使わなくなった規則を消す。部品の追加・変更なし | G26〜G30 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 | 便9 | 月表示の日付・今日の丸・曜日の行・予定の 1 行の形、詳しくの小窓と一覧の時刻の形（§3.14 の A 組）。金型 CalendarView の月の中身 2 つ・css・トークン 1 つ・予定の画面の 2 か所・ADR-1065 の決まり 7 に月の 1 文（§3.14「ADR の改訂」・PO 承認 2026-11-09「1」） | G31〜G35 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 | 便10 | 日・3日間・週から月へ切り替えると画面全体が消える不具合の直し（§3.15）。金型 CalendarView の 1 か所（`views` を常に渡す）と試験 | G36 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
+| 便11 | 日・3日間・週の枠線を Google に揃える（§3.16）。金型 CalendarView の css に規則 8 つ・トークン 1 つ | G37〜G41 | なし（frontend の css だけ。移行・deploy・scripts・DB は無い） |
 
 便0 を先に出す理由: 今の本番で毎回起きる間違いで、1 行で直り、載せ替えを待つ理由がない。
 
@@ -551,6 +648,7 @@ PO 2026-11-09「1」（画面が消える不具合を先に直す・設計と審
 - 便8 の札の色は札の部品の 6 色だけ。`frontend/src/features/schedule/calendars.config.test.ts` が 7 種類の対応と、設定に `#` の色が無いことを CI で毎回確かめる。
 - 便9 の月表示の見た目は `CalendarView.css` の `.comp-calendar--schedule.comp-calendar--month` の 1 か所だけ。数値と色の見張り（同上）が CI で直書きを止める。`frontend/src/components/CalendarView.test.tsx` が 1 日の「M月1日」（M は月の数字）・今日の丸・点の 1 行を毎回確かめる。
 - 便10 の不具合は `frontend/src/components/CalendarView.test.tsx` が、表示を切り替えても月の時に `views.calendarDays` が渡ることと、FullCalendar の設定の置き換え方（丸ごと置き換え）を CI で毎回確かめる。
+- 便11 の線は `frontend/src/components/CalendarView.css` の `.comp-calendar--schedule.comp-calendar--days` の 1 か所だけ。数値と色の見張り（同上）が CI で直書きを止める。jsdom は見た目の規則を計算しないので単体の試験は置かず、FullCalendar の版を上げる時は G37〜G41 の確かめ方で本番の値を読み直す（版は ADR-1065 で 6.1.22 に固定）。
 - 守り手: frontend/src/pages/schedule/SchedulePageImpl.test.tsx（押した時刻で小窓が開くことを CI の試験で毎回確かめる。金型に載せ替えた後は frontend/src/components/CalendarView.test.tsx が加わる）
 
 ## 9. 審査
@@ -718,3 +816,12 @@ PO 2026-11-09「1」（画面が消える不具合を先に直す・設計と審
 - (3) ○ 今の差し替え（`captured.props`）と T5 の読み方で書ける。core の 2 つの文は中身に在る。
 - (4) ○ `frontend/src/pages/schedule/SchedulePageImpl.tsx:961-964,990,1547`・`frontend/src/lib/query/apiQuery.ts:5,21,28` と合う。
 - (5) ○ 推奨 2 件と直したこと: ①R10-4 の「1 回目」を「その月の写しが無い時」に書き換え、30 分以内に同じ月を開いていれば 1 回目でも落ちる（推論・本番未確認）と書いた。②包み（react）側の丸ごと置き換えも見張る: カード §3-2 に `readPackageFiles('react/dist', ...)` で `dist/index.js` の `this.calendar.resetOptions(Object.assign(Object.assign({}, this.props)` を見る 1 行を足した（関数は変えない・`node_modules/@fullcalendar/<pkg>/` を読むため）。
+
+### 14 回目（便11・G37〜G41）: APPROVE（2026-11-09 05:43〜 UTC・クラウドの Opus・origin/release/schedule-gcal-borders-design aa2dce8c5・照合は origin/main 1ca6dbf38・セッション cse_01HHUUpR2iMPQkS9eqyvoEGt）
+
+- 結果は返事の本文で全部読んだ（途中で切れていない）。
+- (1) ○ `frontend/src/components/CalendarView.css:16,180-288,182`・`frontend/src/tokens.css:74,75,400,423,669` が実物と合う。npm pack した 6.1.22 で、td/th と scrollgrid の線（core `internal-common.js`）・divider の `padding:0 0 2px`・cushion の `padding:0 4px`（timegrid）・`overflow-y`（`internal-common.js:7055` の `forceYScrollbars ? 'scroll'`）を確かめた。
+- (2) ○ /tmp の写しに規則を足し、FullCalendar の global 版の週を Playwright で読んだ。上の行・左上の角・時刻の列・「終日」の升目は 4 辺 0px。`::after` は幅 8px・上の線 1px。cushion の右のあきは 12px で、文字の右の端 52.5 は列の右の端 53 以下。divider は高さ 1px・下の線 1px だけ。slot-lane の上 1px・timegrid-col・終日の日の升目の線は残った。divider の規則の詳細度 (0,4,0) は `.fc-scrollgrid-section > *` の (0,3,0) に勝つ。
+- (3) ○ 同じ写しで月表示の値（scrollgrid・曜日の行・日の升目・区切り・scrollbar-color）が足す前と後で全部同じ。
+- (4) ○ `check-css-hardcoded-values.js` は PASSED。新トークンは var() で、置き場所は `--schedule-gridline-w` の次の行。
+- (5) ○ 抜けなし。推奨 1 件: 短い線は 1 時間 1 行（`frontend/src/components/CalendarView.tsx:194`）が前提 → §3.16 の心配と対処に 1 行足した。
