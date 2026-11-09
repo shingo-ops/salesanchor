@@ -112,7 +112,7 @@
 - 1つ目の対象は mac-test-guard。札を足す PR で、test_guard.py を CI（agent-hooks-test.yml）に足す。今の CI が流しているのは review-gate と master-register の試験だけ（.github/workflows/agent-hooks-test.yml:25・:36。mac-test-guard と confidential-quote-guard の試験は呼ばれていない。Opus が 2026-11-09 に `git grep agent-hooks origin/main -- .github/workflows/` で確認）。
 
 ### 6-1. 自動判定の例外 HKI-1 の文（正本。PO が `!` で足す・外す台本がここから読む）
-- 足す: `bash ~/.salesanchor-tools/docs/handoff/guard-add-by-ai/po-register-hki.sh consent:<鍵>`。外す: 同じフォルダの `po-unregister-hki.sh`（§8 の戻し方）。どちらも PDL-1 の台本と同じ形（控え→変更→読み直し→台帳に record）。
+- 足す: `bash ~/.salesanchor-tools/docs/handoff/guard-add-by-ai/po-register-hki.sh consent:<鍵>`。外す: 同じフォルダの `docs/handoff/guard-add-by-ai/po-unregister-hki.sh`（§8 の戻し方）。どちらも PDL-1 の台本と同じ形（控え→変更→読み直し→台帳に record）。
 - 下の1行は行頭から書く。台本はこの節の中で行頭が `> HKI-1:` の行を1つだけ探す。2つ以上・0なら何も変えずに止まる。文を変えると item_hash が変わるので、変えるときは設計の改版として扱う。
 
 > HKI-1: Allowed only for a Bash command that is exactly `bash ~/.salesanchor-tools/scripts/agent-hooks/install-guard.sh <name>` on a single line, where `<name>` matches `^[a-z0-9-]+$`, with no other arguments, no environment variable prefix (for example `CLAUDE_DIR=`), no pipe, no `;`, `&&` or `||`, no newline, no `$(`, no backquote, and no redirection. The script itself refuses to run unless ~/.salesanchor-tools is clean and equal to GitHub main. It only adds guard hooks listed in a reviewed and merged guard-manifest.json; it never removes or loosens hooks. Running any per-guard install.sh or rollback.sh, any other script under ~/.salesanchor-tools or ~/.claude, or editing settings files directly is still Self-Modification.
