@@ -13,6 +13,8 @@ from __future__ import annotations
   2026-04-16: 初版作成（Phase 1）
 """
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import bindparam, text
 from sqlalchemy.exc import IntegrityError
@@ -26,7 +28,15 @@ from app.auth.dependencies import (
     require_permission,
     reset_tenant_context,
 )
-from app.auth.system_roles import TENANT_HIDDEN_SYSTEM_KEYS, is_tenant_admin, is_tenant_owner
+from app.auth.system_roles import (
+    ALL_ROLE_KEYS,
+    OWNER_ADMIN_ONLY_KEYS,
+    ROLE_EDITOR_KEYS,
+    ROLE_PAGE_HIDDEN_KEYS,
+    TENANT_HIDDEN_SYSTEM_KEYS,
+    is_tenant_admin,
+    is_tenant_owner,
+)
 from app.cache import invalidate_tenant_permissions, invalidate_user_permissions
 from app.database import get_db
 from app.models import User
@@ -88,6 +98,13 @@ async def _get_role(db: AsyncSession, role_id: int, current_user: User) -> dict 
     if is_hidden and not _is_super_admin(current_user):
         return None
     return role
+
+
+async def _role_system_key(db: AsyncSession, role_id: int) -> str | None:
+    """ロールの system_key を1件取る（無ければ None）。"""
+    result = await db.execute(text("SELECT system_key FROM roles WHERE id = :id"), {"id": role_id})
+    row = result.first()
+    return row[0] if row else None
 
 
 async def _max_priority_for_user(db: AsyncSession, user_id: int) -> int:
@@ -183,12 +200,25 @@ async def get_my_permissions(
 async def list_roles(
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=50, ge=1, le=200),
+    scope: Literal["role_page"] | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     tenant_id: int = Depends(get_current_tenant),
     current_user: User = Depends(get_current_user),
 ):
-    """ロール一覧を取得する（priority降順）"""
+    """ロール一覧を取得する（priority降順）。scope=role_page はロール画面用で、画面に出さないロールを super admin でも除く"""
     offset = (page - 1) * per_page
+    if scope == "role_page":
+        result = await db.execute(
+            text("""
+                SELECT id, tenant_id, name, color, priority, is_system, description,
+                       created_at, updated_at
+                FROM roles WHERE (system_key IS NULL OR system_key NOT IN :page_hidden_keys)
+                ORDER BY priority DESC, name
+                LIMIT :limit OFFSET :offset
+            """).bindparams(bindparam("page_hidden_keys", expanding=True)),
+            {"limit": per_page, "offset": offset, "page_hidden_keys": sorted(ROLE_PAGE_HIDDEN_KEYS)},
+        )
+        return [RoleResponse(**row) for row in result.mappings().all()]
     result = await db.execute(
         _visible_text(f"""
             SELECT id, tenant_id, name, color, priority, is_system, description,
@@ -277,6 +307,8 @@ async def update_role(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ロールが見つかりません")
     if old["is_system"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="システムロールは編集できません")
+    if await _role_system_key(db, role_id) in ROLE_PAGE_HIDDEN_KEYS:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="role_not_editable_here")
 
     my_max = await _max_priority_for_user(db, current_user.id)
     if old["priority"] >= my_max:
@@ -349,6 +381,8 @@ async def delete_role(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ロールが見つかりません")
     if old["is_system"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="システムロールは削除できません")
+    if await _role_system_key(db, role_id) is not None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="role_not_deletable")
 
     my_max = await _max_priority_for_user(db, current_user.id)
     if old["priority"] >= my_max:
@@ -396,7 +430,7 @@ async def get_role_permissions(
 ):
     """ロールに割り当てられている権限一覧を取得する"""
     role = await _get_role(db, role_id, current_user)
-    if not role:
+    if not role or await _role_system_key(db, role_id) in ROLE_PAGE_HIDDEN_KEYS:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ロールが見つかりません")
 
     result = await db.execute(
@@ -428,17 +462,14 @@ async def set_role_permissions(
     role = await _get_role(db, role_id, current_user)
     if not role:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ロールが見つかりません")
-    if role["is_system"]:
+    # ロール画面の編集の決まり（ADR-147 追補 2026-11-09）。priority の比べ方ではなく system_key で決める
+    my_system_keys = await get_user_system_keys(db, current_user.id)
+    if not (my_system_keys & ROLE_EDITOR_KEYS):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="role_permissions_edit_forbidden")
+    if await _role_system_key(db, role_id) in ROLE_PAGE_HIDDEN_KEYS:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="システムロールの権限は変更できません",
-        )
-
-    my_max = await _max_priority_for_user(db, current_user.id)
-    if role["priority"] >= my_max:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="自分と同等以上のpriorityを持つロールは編集できません",
+            detail="role_permissions_not_editable_here",
         )
 
     # 権限IDの妥当性確認 + 権限キー取得（エスカレーションチェック用）
@@ -459,6 +490,11 @@ async def set_role_permissions(
         # エスカレーション防止: 自分が持たない権限は他ロールに付与できない
         # （オーナーは全権限所持のため影響なし。下位priorityのユーザーだけに効く）
         requested_keys = {row.key for row in rows}
+        if requested_keys & ALL_ROLE_KEYS:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="role_page_keys_not_savable",
+            )
         my_perms = await load_user_permissions(db, tenant_id, current_user.id)
         not_granted = requested_keys - my_perms
         if not_granted:
@@ -556,7 +592,7 @@ async def set_user_roles(
     # 隠すロールは super admin 以外には「存在しない」扱い（下の missing で 400）
     role_check = await db.execute(
         _visible_text(
-            f"SELECT id, priority FROM roles WHERE id IN :ids AND {_visible_role_sql()}"
+            f"SELECT id, priority, system_key FROM roles WHERE id IN :ids AND {_visible_role_sql()}"
         ).bindparams(bindparam("ids", expanding=True)),
         {"ids": data.role_ids, **hidden_params},
     )
@@ -568,7 +604,13 @@ async def set_user_roles(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"存在しないロールID: {sorted(missing)}",
         )
+    my_system_keys = await get_user_system_keys(db, current_user.id)
     for row in role_rows:
+        if row.system_key in OWNER_ADMIN_ONLY_KEYS and not is_tenant_admin(my_system_keys):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="role_not_assignable",
+            )
         if row.priority >= my_max:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

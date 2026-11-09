@@ -2241,6 +2241,7 @@
     "menusTogether": "These {{count}} menus appear and disappear together with one permission",
     "fixedAlways": "Shown to everyone",
     "fixedOwner": "Shown to the owner only",
+    "fixedRoleEditors": "Shown only to Owner, System admin and Manager",
     "notePrefs": "Each person's display setting can also hide this menu",
     "noteChatPrefs": "This menu is not hidden by permissions; only each person's display setting hides it",
     "noteReports": "The menu is always shown. This changes which numbers are visible",

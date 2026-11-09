@@ -567,9 +567,8 @@ async def load_user_permissions(
     # システムロール（owner / admin）は role_permissions の行に頼らず、権限マスタから計算した集合を
     # 保存済みの付与に和集合で加える（新しい権限キーが行の追加なしで owner / admin に届く）
     system_keys = await get_user_system_keys(db, user_id)
-    if is_tenant_admin(system_keys):
-        master = await db.execute(text("SELECT key FROM public.permissions"))
-        keys = compute_permission_keys(keys, system_keys, {row[0] for row in master.fetchall()})
+    master = await db.execute(text("SELECT key FROM public.permissions"))
+    keys = compute_permission_keys(keys, system_keys, {row[0] for row in master.fetchall()})
 
     await cache_user_permissions(tenant_id, user_id, keys)
     return keys
