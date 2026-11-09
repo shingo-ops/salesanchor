@@ -52,7 +52,8 @@
   - **migration は要らない。**
 - `_create_outbound_lead_for_echo`（webhook.py:535-581）と `_find_lead_id_for_psid`（webhook.py:511-532）は、今どこからも呼ばれていない（`git grep` で呼び元 0）。
 - Discord のチケットの部屋は非公開である。書けるのはお客さん・担当のロール・ボットだけ（`ticket_channel_creator.py:10-14`）。だから「ボットでもお客さんでもない人」は担当である。
-- 未読の数は受信だけを数える（`meta_inbox.py:943` の `mm.direction = 'inbound' AND mm.seen_at IS NULL`、`leads.py:1211`）。送った行を足しても未読は増えない。
+- 未読の数は受信だけを数える（`backend/app/routers/meta_inbox.py:943` の `mm.direction = 'inbound' AND mm.seen_at IS NULL`、`leads.py:1211`）。送った行を足しても未読は増えない。
+- `meta_messages` の RLS は `tenant_isolation_meta_messages`（`migrations/012_add_meta_tenant_tables.sql:34-35`、USING だけで FOR ALL）。アプリは既に同じ表を UPDATE している（`leads.py:1205`・`conv_logs.py:415` ほか）。だから §5 の `DO UPDATE` は、同じ会社の行に対して今の権限で通る。
 - 会話の流れの API（`leads.py:1010-1018`）は `direction`・`sender_name`・`sent_by_staff_id` をそのまま返す。画面は direction で左右を分けるので、**画面の変更は要らない。**
 
 ## 2. 設計書からの2つの絞り込み（design.md §便1.5 にも同じ内容を書いた）
@@ -134,13 +135,13 @@
 
 - 引数を `(db, *, tenant_id: int, psid: str, platform: str)` にする。使っていない `schema` は外す（呼び元は 0 件）。
 - `platform` が `("messenger", "instagram")` でなければ `ValueError`。
-- `customer_name` は `"Messenger User" if platform == "messenger" else "Instagram User"` にする（:620 の受信と同じ既定名）。
-  - 理由: お客さんが次に書いたとき、:625-636 の名前の解決が働くようにする。
-- `channel_type` と、lead_channels の `platform` を `platform` にする（:555 と :571 の `"messenger"` の決め打ちをやめる）。
+- `customer_name` は `"Messenger User" if platform == "messenger" else "Instagram User"` にする（:642 の受信と同じ既定名）。
+  - 理由: お客さんが次に書いたとき、:628-640 の名前の解決が働くようにする。
+- `channel_type` と、lead_channels の `platform` を `platform` にする（:556 と :572 の `"messenger"` の決め打ちをやめる）。
 - `notes` は `"[会話の一本化 便1.5] アプリ外の返信の写しで自動作成"` にする。
 - commit の直後の `reset_tenant_context` は残す（ADR-072）。
 
-### 4-4. 新しい関数 `_persist_echo_message`（`_persist_meta_message` の直後、:741 の後に置く）
+### 4-4. 新しい関数 `_persist_echo_message`（`_persist_meta_message` の直後、関数の終わりの :744 の後に置く）
 
 ```python
 async def _persist_echo_message(
@@ -280,13 +281,14 @@ async def _persist_echo_message(
 
 | 場所 | 送るもの | 足す行 |
 |---|---|---|
-| :2086-2098 | Messenger・IG の文 | `ON CONFLICT (message_id) WHERE message_id IS NOT NULL DO UPDATE SET sent_by_staff_id = EXCLUDED.sent_by_staff_id, messaging_type = EXCLUDED.messaging_type, message_tag = EXCLUDED.message_tag` |
-| :2346-2354 | Discord の文 | `ON CONFLICT (message_id) WHERE message_id IS NOT NULL DO UPDATE SET sent_by_staff_id = EXCLUDED.sent_by_staff_id` |
+| :2086-2098 | Messenger・IG の文 | `ON CONFLICT (message_id) WHERE message_id IS NOT NULL DO UPDATE SET sent_by_staff_id = EXCLUDED.sent_by_staff_id, lead_id = EXCLUDED.lead_id, messaging_type = EXCLUDED.messaging_type, message_tag = EXCLUDED.message_tag` |
+| :2346-2354 | Discord の文 | `ON CONFLICT (message_id) WHERE message_id IS NOT NULL DO UPDATE SET sent_by_staff_id = EXCLUDED.sent_by_staff_id, lead_id = EXCLUDED.lead_id` |
 | :2533-2545 | Discord の画像 | 2346 と同じ |
 | :2844-2856 | Messenger・IG の画像 | 2086 と同じ |
 
 - SQLite 用の2回目の INSERT（:2105・:2553・:2864）は**変えない**。`DO UPDATE` で行が必ず返るので、そこには進まない。
-- 送信の失敗（error_code）の行には message_id が無いので、この変更の対象外になる。
+- `lead_id = EXCLUDED.lead_id` を入れる理由: 写しが先に届いて別のリードを作っていても、アプリで送った相手のリードにそろえるため。
+- 送信に失敗したときは meta_messages の行が作られない（error_code は監査の記録にだけ残る）。だから、この変更の対象外になる。
 
 ## 6. 購読の既定（`backend/app/services/meta_graph.py:45-52`）
 
@@ -302,11 +304,16 @@ async def _persist_echo_message(
 - `lead.discord_user_id` が空のときは、**今までどおり捨てる**（ログも今のまま）。
   - 理由: 誰がお客さんか分からないまま担当の投稿として入れると、お客さんの文を送った側に置いてしまうため。
 - それ以外は `direction = "inbound" if author_id == str(lead.discord_user_id) else "outbound"` とする。
+- outbound にするのは、投稿の種類が普通の文か返信のときだけにする。
+  - 書き方: `if direction == "outbound" and getattr(message, "type", None) not in outside_ticket_notice._ALLOWED_TYPES:` なら、ログを1行出して `return True`（commit しない）。
+  - 前例: `outside_ticket_notice.py:26`・`:126` の同じ絞り込み。ピン留めや参加の知らせなどの仕組みの投稿を、担当の文として入れないため。
+  - inbound（お客さんの投稿）には、この絞り込みを**足さない**（今の動きを変えない）。
 - :221-233 の INSERT は、次のように直す:
   - `direction` を `:direction` にする。
   - 列に `recipient_id` を足す。outbound のときは `lead.discord_user_id`、inbound のときは None を入れる。アプリの Discord 送信（leads.py:2346-2363）と同じ向きにそろえる。
   - `sender_id` = `author_id`、`sender_name` = `author_name` は今のまま（担当の表示名が入る）。
   - `original_language` は今のまま。
+- SSE（`publish_inbox_update`）は、この関数では今も呼んでいない。outbound でも**足さない**。
 - outbound のときは、次のことを**しない**:
   - `customer_reply_notifier.schedule_customer_reply_notice`（:262-264）
   - `enqueue_inbound_translation`（:336-342）
@@ -322,7 +329,13 @@ async def _persist_echo_message(
 ```sql
 CREATE UNIQUE INDEX idx_meta_messages_message_id_unique ON meta_messages (message_id) WHERE message_id IS NOT NULL
 ```
-- 少なくとも次の4つに足す: `backend/tests/test_message_send.py`、`backend/tests/test_message_image_send.py`、`backend/tests/test_discord_staff_send.py`、§7 を試す Discord の試験。
+- SQLite は1回の execute で1つの文しか流せない。索引は表の DDL とは**別の定数**にし、表を作った後に別の execute で流す。
+- 前例: `backend/tests/test_webhook_instagram.py:155-158`（`uq_meta_messages_message_id`）。`backend/tests/conftest.py:2168` も同じ索引を持つ。
+- 少なくとも次に足す:
+  - `backend/tests/test_message_send.py`
+  - `backend/tests/test_message_image_send.py`（索引の定数をここに置く。`test_discord_staff_send.py:34` は DDL をここから import しているので、同じ定数も import して流す）
+  - `backend/tests/test_discord_staff_send.py`
+- 落ちたら足す候補: `test_outbound_draft_send.py`・`test_conversations.py`・`test_discord_inbox.py`・`test_messages.py`（どれも meta_messages の DDL を持ち、索引が無い）。
 - ほかの試験が「ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint」で落ちたら、その試験の DDL にも同じ索引を足す。
 
 ### 8-2. 直す試験（写しを入れるようになった分の期待だけを変える）
@@ -347,6 +360,14 @@ CREATE UNIQUE INDEX idx_meta_messages_message_id_unique ON meta_messages (messag
 - `backend/tests/test_webhook_instagram.py`:
   - :610-635 と :921-944 の写しは recipient が無いので、今までどおり yield されない。**変えない。**
   - 落ちたら BLOCKED: で返す。
+- `backend/tests/test_ticket_channel_translation.py`:
+  - `_FakeMessage`（:40-48）に `type: object = discord.MessageType.default` を足す（`import discord` も足す）。今ある試験の動きは変わらない。
+  - `test_ticket_channel_outbound_is_ignored_without_commit_or_translation`（:77-113）は、担当の投稿を入れるようになるので、次のとおりに直す:
+    - 名前を `test_ticket_channel_staff_post_is_stored_outbound_without_translation` にする。
+    - `session.execute.side_effect` に、INSERT の返りとして3つ目の `_mock_result((99,))` を足す。
+    - 期待: `handled is True`、`session.commit.await_count == 1`、`enqueue_mock.assert_not_called()`、`publish_mock.assert_not_called()`。
+    - `customer_reply_notifier.schedule_customer_reply_notice` を MagicMock で差し替え、呼ばれないことも確かめる。
+    - INSERT に渡した値で `direction == "outbound"`、`recipient_id == "1234567890"` を確かめる（`session.execute.call_args_list[2]`）。
 
 ### 8-3. 足す試験（新しい `backend/tests/test_conversation_unify_bin15.py`、SQLite）
 
@@ -363,10 +384,15 @@ CREATE UNIQUE INDEX idx_meta_messages_message_id_unique ON meta_messages (messag
 | 9 | アプリの送信が**先**で、同じ mid の写しが後（app_id なし） | 行は1、`sent_by_staff_id` は送った担当のまま | K9 |
 | 10 | Discord: 担当（お客さんでもボットでもない）がチケットの部屋に書く | outbound が1行、`sender_name`=表示名、`recipient_id`=お客さんの Discord id。返信の知らせ・訳が呼ばれない | K8 |
 | 11 | Discord: 10 と同じ message id が2回届く | 行は1のまま | K8・K9 |
-| 12 | Discord: お客さんの投稿・ボットの投稿・webhook の投稿 | お客さんは inbound で1行（今までどおり）。ボットと webhook は0行 | K8 |
+| 12 | Discord: お客さんの投稿・ボットの投稿・webhook の投稿・担当のピン留めの知らせ（`type=discord.MessageType.pins_add`） | お客さんは inbound で1行（今までどおり）。ボット・webhook・ピン留めの知らせは0行（commit 0） | K8 |
 | 13 | Discord: `discord_user_id` が空のリードの部屋に、誰かが書く | 0行 | — |
 | 14 | `meta_graph._DEFAULT_SUBSCRIBED_FIELDS` | `"message_echoes"` を含む | K6 |
 
+- 10〜13（Discord）は、`test_ticket_channel_translation.py` と同じ組み方にする。
+  - 書き込みの処理は `tenant_NNN.meta_messages` と会社名付きで書くので、SQLite の表では試さない。
+  - `AsyncMock` のセッションに `execute.side_effect` で返りを並べ、`_DBContext` で包む。`set_tenant_context` は差し替える。
+  - 1行入ったかは「INSERT の execute が呼ばれ、返りの行があり、commit が1回」で確かめる。
+  - 11 は、2回目の INSERT の返りを `_mock_result(None)` にし、返信の知らせが2回目に呼ばれないこと、INSERT の文に `ON CONFLICT (message_id)` があることで確かめる。
 - 8・9 は、送信の試験（`test_message_send.py`）の土台と写しの処理（`webhook.process_messenger_event`）が、同じ DB を見るように組む（`test_conv_backbone_ben1b._patch_webhook_runtime` の差し替え方を使う）。
 - どうしても同じ DB にできなければ、NEEDS_DECISION: で理由を返す。8・9 を外して進めない。
 - 新しい試験ファイルは、移行の見張り（`test_tenant_loop_migration_guard` 等）の登録が要るなら登録する。
