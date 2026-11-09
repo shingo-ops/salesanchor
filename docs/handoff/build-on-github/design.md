@@ -191,7 +191,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 5. 走査の道具（gitleaks）の版は固定し、`actions/*` と同じく SHA で pin する。
 
 ### 7-3 VITE の値
-- 事実: `frontend/Dockerfile:7-16` の `ARG/ENV` 5 つ。`VITE_FIREBASE_API_KEY`・`VITE_FIREBASE_AUTH_DOMAIN`・`VITE_GCP_PROJECT_ID` は prod1 の `.env`（手で置いた値。deploy は書かない）から `docker-compose.yml:201-203` で渡っている。`VITE_FUNNEL_DASHBOARD` と `VITE_AUTH_PROVIDER='self'` は deploy が GitHub secret / 固定値で `.env` に書く（`deploy.yml:370,380`）。画面の JS に `VITE_FIREBASE_API_KEY` が 1 か所載っている（recon §6）＝画面を開く人に届く前提の値。`frontend/src/lib/firebase.ts:19-21` が今も 3 つを読む。
+- 事実: `frontend/Dockerfile:7-16` の `ARG/ENV` 5 つ。`VITE_FIREBASE_API_KEY`・`VITE_FIREBASE_AUTH_DOMAIN`・`VITE_GCP_PROJECT_ID` は prod1 の `.env`（手で置いた値。deploy は書かない）から `docker-compose.yml:201-203` で渡っている。`VITE_FUNNEL_DASHBOARD` と `VITE_AUTH_PROVIDER='self'` は deploy が GitHub secret / 固定値で `.env` に書く（`deploy.yml:370,380`）。画面の JS に `VITE_FIREBASE_API_KEY` が 1 か所載っている（recon §6）＝画面を開く人に届く前提の値。（当時は frontend/src/lib/firebase.ts の 19〜21 行が 3 つを読んでいた。その後 b88c0ce49 でこのファイルは消え、2026-11-09 の origin/main では frontend/src に VITE_FIREBASE_API_KEY を読む所は無い）。
 - 後: 組み立てが GitHub に移るので、5 つの値は GitHub から渡す。
   - `VITE_GCP_PROJECT_ID`・`VITE_FIREBASE_AUTH_DOMAIN`・`VITE_AUTH_PROVIDER`: 置き場の **Variables**（秘密でない。`frontend/.env.example` にも載る種類の値）。
   - `VITE_FIREBASE_API_KEY`: 画面に載る値だが、置き場が公開なので Variables は誰でも読める。Variables に置いても JS に載っている以上は同じ露出。ただし「GitHub の画面で一覧に出る」ことを避けたいなら **secret** に置く（記録では自動で伏せ字）。推奨は secret（露出を増やさない）。§19-1 D6。
@@ -456,7 +456,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 | U4 | `COMPOSE_FILE` 指定時に docker-compose.override.yml が読まれないか | 便2 で手元の `docker compose config` | 決定済み（§19-2 D9 override 方式）。通らなければ §12 便2 分岐 (b) に落とす技術判断で、PO には聞かない |
 | U5 | prod1 に未追跡の docker-compose.override.yml が無いか | PO の読み取り `ls /home/ubuntu/salesanchor/docker-compose.override.yml` | 同上（あれば中身を PO が読み、便2 の前に消すか分岐 (b)） |
 | U6 | 完成品ごとの GitHub での組み立て分数 | 便1 の実測（§11） | K8・案B の見積もり |
-| U7 | prod1 の `.env` にある VITE_FIREBASE_* の値の出所と、AUTH_PROVIDER=self でも要るか | PO が `.env` の名前だけ確かめる（値は見せない）。`frontend/src/lib/firebase.ts:19-21` は今も読むので要る前提 | D6 |
+| U7 | prod1 の `.env` にある VITE_FIREBASE_* の値の出所と、AUTH_PROVIDER=self でも要るか | PO が `.env` の名前だけ確かめる（値は見せない）。当時の frontend/src/lib/firebase.ts は b88c0ce49 で消えたため、要るかは組み立て移動の便で確かめ直す | D6 |
 | U8 | build-push-action の provenance（既定）に build-args が含まれるか | 便1 で `provenance: false` にするので頼らない | — |
 | U9 | 案B の repository_dispatch / workflow_dispatch に要る fine-grained PAT の権限名 | docs.github.com の REST の該当ページ（本セッションから到達不可） | 案B を選ぶ場合のみ（D1） |
 | U10 | `/home/ubuntu/node_exporter_textfile` に ubuntu の cron から書けるか | PO の読み取り `ls -ld` | 便0 の分岐 (b) |
@@ -592,11 +592,11 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 ### 24-2 §12 便0 からの変更点（Opus の技術判断。目的と範囲は変えない）
 | 項目 | §12 便0 の記載 | 確定 | 理由 |
 |---|---|---|---|
-| 値を書く係 | scripts/ops/dockerd-rss-textfile.sh | scripts/ops/dockerd_state.py（python3 標準ライブラリだけ） | 既存の `scripts/ops/container_state.py`（同じ置き場・同じ cron の型）と揃え、単体試験を CI で回せるようにする |
+| 値を書く係 | scripts/ops/dockerd-rss-textfile.sh | scripts/ops/dockerd_state.py（python3 標準ライブラリだけ） | 既存の scripts/ops/container_state.py（同じ置き場・同じ cron の型）と揃え、単体試験を CI で回せるようにする |
 | 書く値 | rss・vmswap・threads | 左に加え、dockerd の起動時刻（`/run/docker.pid` の更新時刻）と、書いた時刻 | 入れ直しの時刻を Prometheus だけで読めるようにする。書いた時刻は係の止まりの見張りに使う |
 | 見張り | 記載なし | DockerdMemoryHigh（1GiB 超が 30 分・ticket）と DockerdStateStale（係が 10 分書いていない・ticket） | 測るだけでは次の膨らみに気づけない。閾値の根拠は 24-3 |
 | 係の止まりの見張りの式 | — | `changes(...[10m]) == 0 or absent(...)` | `time() -` の比較だと時計のずれ（ClockSkew）で誤って鳴る。既存の 7 本は Alertmanager の抑止で避けているが、本便は Alertmanager に触らずに済む式にした |
-| U10（textfile の置き場に書けるか） | 未確認 | 解決: `/home/ubuntu/node_exporter_textfile` は ubuntu が書ける（`container_state.py` が毎分ここへ書いている） | §18 U10 |
+| U10（textfile の置き場に書けるか） | 未確認 | 解決: `/home/ubuntu/node_exporter_textfile` は ubuntu が書ける（`scripts/ops/container_state.py` が毎分ここへ書いている） | §18 U10 |
 | 台本の時間帯 | 14:00〜16:00 | 開始は 14:00〜15:44 だけ受け付ける | 16:00 までに終わらせるため（再起動の所要は約 2 分の見込み・live-restore の試し 1 回分を含めて 15 分の余裕） |
 
 ### 24-3 閾値の根拠（DockerdMemoryHigh）
