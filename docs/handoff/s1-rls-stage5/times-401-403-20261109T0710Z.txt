@@ -1,0 +1,20 @@
+# 401/403 の生の出力（読み取りだけの台本 2 本・backend の docker logs・IP と問い合わせ文字列は出していない）
+# 窓: 今の backend コンテナの起動（start=）から読んだ時刻（now=）まで。403 の行が無いのは、grep が 401|403 の両方を拾って 0 行だったため。
+# 注: 07:13:06Z に docker 本体が再起動しコンテナが入れ替わったため、同じ窓での取り直しはできない。
+## count-401-403.sh の出力（口ごとの件数）
+start=2026-11-09T05:55:18.389286329Z now=2026-11-09T07:10:39Z
+      4 401 POST /api/v1/auth/refresh
+      1 401 POST /api/v1/auth/login
+      1 401 GET /api/v1/me/permissions
+      1 401 GET /api/v1/conversations
+total_lines=980
+rc_ssh=0
+## times-401.sh の出力（1 行ずつの時刻・応答・メソッド・パス）
+2026-11-09T06:00:53.671475667 401 POST /api/v1/auth/refresh
+2026-11-09T06:01:13.572760941 401 POST /api/v1/auth/refresh
+2026-11-09T06:02:33.636342572 401 POST /api/v1/auth/refresh
+2026-11-09T06:02:33.753979049 401 POST /api/v1/auth/login
+2026-11-09T06:02:53.745072509 401 POST /api/v1/auth/refresh
+2026-11-09T06:02:54.590121363 401 GET /api/v1/conversations
+2026-11-09T06:02:54.618816376 401 GET /api/v1/me/permissions
+lines_401=7 lines_403=0
