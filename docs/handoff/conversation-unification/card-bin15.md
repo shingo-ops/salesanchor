@@ -301,7 +301,7 @@ async def _persist_echo_message(
 変更前（:208-216）: お客さんでない人の投稿を、ログだけ出して捨てている。
 
 変更後:
-- `lead.discord_user_id` が空のときは、**今までどおり捨てる**（ログも今のまま）。
+- `lead.discord_user_id` が空のときは、**今までどおり捨てる**（保存しない・commit しない・`return True`）。ログの文言は `"[discord-gateway] ticket channel lead has no discord_user_id tenant=%s lead=%s msg=%s"` に替える（古い文言 `non-customer message ignored` は §9 で0件を確かめるため残さない）。
   - 理由: 誰がお客さんか分からないまま担当の投稿として入れると、お客さんの文を送った側に置いてしまうため。
 - それ以外は `direction = "inbound" if author_id == str(lead.discord_user_id) else "outbound"` とする。
 - outbound にするのは、投稿の種類が普通の文か返信のときだけにする。
@@ -383,7 +383,7 @@ CREATE UNIQUE INDEX idx_meta_messages_message_id_unique ON meta_messages (messag
 | 8 | 写しが**先**に入ってから、アプリが同じ mid で送信（Messenger・IG の文） | 行は1、`sent_by_staff_id`=送った担当、送信の応答は成功 | K9 |
 | 9 | アプリの送信が**先**で、同じ mid の写しが後（app_id なし） | 行は1、`sent_by_staff_id` は送った担当のまま | K9 |
 | 10 | Discord: 担当（お客さんでもボットでもない）がチケットの部屋に書く | outbound が1行、`sender_name`=表示名、`recipient_id`=お客さんの Discord id。返信の知らせ・訳が呼ばれない | K8 |
-| 11 | Discord: 10 と同じ message id が2回届く | 行は1のまま | K8・K9 |
+| 11 | Discord: 10 と同じ message id が2回届く | 2回とも `handled is True`・2回とも INSERT の文に `ON CONFLICT (message_id)`・例外なし（行が1つのままかは本番の索引と K9 で確かめる） | K8・K9 |
 | 12 | Discord: お客さんの投稿・ボットの投稿・webhook の投稿・担当のピン留めの知らせ（`type=discord.MessageType.pins_add`） | お客さんは inbound で1行（今までどおり）。ボット・webhook・ピン留めの知らせは0行（commit 0） | K8 |
 | 13 | Discord: `discord_user_id` が空のリードの部屋に、誰かが書く | 0行（INSERT が呼ばれず commit 0） | — |
 | 14 | `meta_graph._DEFAULT_SUBSCRIBED_FIELDS` | `"message_echoes"` を含む | K6 |
