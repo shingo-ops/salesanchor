@@ -207,3 +207,45 @@ async def test_owner_can_still_assign_manager_inspector_smoke(client, db_session
     res = await client.put(f"/api/v1/users/{TARGET_USER_ID}/roles", json={"role_ids": [roles[target]]})
     assert res.status_code == 200, res.text
     assert await _role_ids_of(db_session, TARGET_USER_ID) == {roles[target]}
+
+
+# ---------- K7: スタッフ画面の道（check_assignable_role）でも同じ止め ----------
+
+async def _granter(db_session):
+    from app.models import User
+
+    user = await db_session.get(User, 999)
+    assert user is not None, "BLOCKED: 試験ユーザー 999 が取れない"
+    return user
+
+
+@pytest.mark.parametrize("target", ["owner", "manager", "inspector", "smoke"])
+async def test_manager_check_assignable_role_blocks_owner_admin_only(db_session, roles, target):
+    from fastapi import HTTPException
+
+    from app.services.role_assignment import check_assignable_role
+
+    await _act_as(db_session, roles, "manager")
+    granter = await _granter(db_session)
+    with pytest.raises(HTTPException) as exc:
+        await check_assignable_role(db_session, 999, granter, roles[target])
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "role_not_assignable"
+
+
+@pytest.mark.parametrize("target", ["sales", "low"])
+async def test_manager_check_assignable_role_allows_normal(db_session, roles, target):
+    from app.services.role_assignment import check_assignable_role
+
+    await _act_as(db_session, roles, "manager")
+    granter = await _granter(db_session)
+    await check_assignable_role(db_session, 999, granter, roles[target])
+
+
+@pytest.mark.parametrize("target", ["inspector", "smoke", "manager"])
+async def test_owner_check_assignable_role_allows_special(db_session, roles, target):
+    from app.services.role_assignment import check_assignable_role
+
+    await _act_as(db_session, roles, "owner")
+    granter = await _granter(db_session)
+    await check_assignable_role(db_session, 999, granter, roles[target])
