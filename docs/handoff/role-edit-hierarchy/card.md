@@ -38,3 +38,27 @@
 ## 返し方
 
 DONE / BLOCKED: / NEEDS_DECISION: のどれか。commit と push までして、変えたファイルの一覧と試験の生出力を返す。PR は作らない（Opus が作る）。
+
+## 追加カード2（Opus 審査で見つけた入れ忘れ・2026-11-09）
+
+設計の入れ忘れ: サーバーが返す新しい6つの印（role_not_editable_here ほか）を画面の文に直す表に入れていなかった。今のままだと画面に英字の印がそのまま出る（例: マネージャーがスタッフ画面でマネージャーのロールを付けようとしたとき）。
+
+手順:
+
+1. `frontend/src/lib/apiErrorReason.ts` の `API_ERROR_REASON_KEYS` に下の6行を足す（既存2行の後ろ・この順）。
+2. `frontend/src/locales/ja.json` と `en.json` の `apiError` に下の文を足す（文は一字も変えない）。
+3. `backend/tests/test_api_error_reason_sync.py` の `test_table_rows_are_read` の期待値に6つを同じ順で足す。
+4. `frontend/src/lib/apiErrorReason.test.ts` の最初の試験に `expect(apiErrorReasonKey("role_not_assignable")).toBe("apiError.roleNotAssignable");` を1行足す。
+5. 試験: `backend` で `pytest tests/test_api_error_reason_sync.py tests/test_error_detail_guard.py tests/test_roles_edit_hierarchy.py -q`、`frontend` で `npx vitest run src/lib/apiErrorReason.test.ts` と `npx tsc --noEmit -p .`。生出力を `docs/handoff/role-edit-hierarchy/impl-checks-2.txt` に保存。
+6. commit・push（同じ枝）。
+
+| 印 | 鍵 | ja | en |
+|---|---|---|---|
+| role_not_editable_here | apiError.roleNotEditableHere | このロールはロール画面では直せません。直したいときはオーナーに頼んでください。 | This role can't be changed on the Roles page. Ask the owner to change it. |
+| role_not_deletable | apiError.roleNotDeletable | このロールは仕組みで使っているため、消せません。使わないときは、人からこのロールを外してください。 | This role is used by the system and can't be deleted. Remove it from people instead. |
+| role_permissions_edit_forbidden | apiError.rolePermissionsEditForbidden | ロールの権限を直せるのは、オーナー・システム管理者・マネージャーだけです。直したいときは、この人たちに頼んでください。 | Only the owner, system admin or manager can change role permissions. Ask one of them. |
+| role_permissions_not_editable_here | apiError.rolePermissionsNotEditableHere | このロールの権限はロール画面では直せません。直したいときはオーナーに頼んでください。 | This role's permissions can't be changed on the Roles page. Ask the owner to change them. |
+| role_page_keys_not_savable | apiError.rolePageKeysNotSavable | ロール画面を開ける人は役割で決まるため、保存できませんでした。画面を開き直してから、もう一度保存してください。 | Who can open the Roles page is set by role, so this was not saved. Reload the page and save again. |
+| role_not_assignable | apiError.roleNotAssignable | このロールを付けられるのは、オーナーとシステム管理者だけです。付けたいときはオーナーに頼んでください。 | Only the owner or system admin can give this role. Ask the owner to give it. |
+
+触らない: 上の4ファイルと impl-checks-2.txt 以外。返し方は上と同じ。
