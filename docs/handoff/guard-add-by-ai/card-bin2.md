@@ -122,6 +122,7 @@
 9. 入れ先へ本体を写す（ここから先は ~/.claude に書く）:
    - 札の `files` の順に1つずつ、「前の中身8桁を覚える→写す→確かめる」を終えてから次のファイルへ進む。前の中身8桁は、入れ先に無ければ `-`。入れ先にあっても普通のファイルでない（フォルダ・シンボリックリンク）なら止まる。
    - 中身が同じなら写さない。違えば、入れ先のファイルを書けるようにしてから写し、`chmod 0o555`（中のフォルダは `os.makedirs`）。写した後の sha256 が正本と同じでなければ止まる（そのファイルは記録しない。週次点検で B に残す）。
+   - 1つのファイルの処理（読む・`chmod`・`os.makedirs`・写す・確かめる）で OS のエラー（`OSError`）が出たときも、`Fail("本体を写せません (<file>: <例外の型の名前>)")` に変えて止まる。こうすると、手順10の最後の項目（写した分の記録を書いてから止まる）がどの止まり方にも当たる（第16版・マージ前審査の指摘 中-1）。
 10. settings.json を書く:
    - `d == old` なら書き直さない（sha256 が前と同じまま）。
    - 違えば、`settings.json.bak-install-guard-<name>-<UTC の時刻>` に控えを取り、同じフォルダに一時ファイル（名前は `settings.json.tmp-install-guard-<name>`）を書き、読み直して JSON の object であることを確かめてから `os.replace`。書き方は `json.dump(d, f, ensure_ascii=False, indent=2)` と改行1つ（今の install.sh:56-57 と同じ）。一時ファイルは、`os.replace` しなかったときは finally で消す。
@@ -165,6 +166,7 @@
 | A11-s | 写しが浅い取得（`git clone --depth 1 file://...` で作る） | `INSTALL_FAILED:` と同上 |
 | S-bad | `<HOME>/.claude/settings.json` を JSON でない中身にしておく | `INSTALL_FAILED:` と同上（`~/.claude/scripts/demo-guard/` が作られていない） |
 | P-fail | 札の `files` を `["guard.py", "lib.py"]` にし、`<HOME>/.claude/scripts/demo-guard/lib.py` という名前のフォルダを先に置く（1つ目は写せて2つ目で止まる） | `INSTALL_FAILED:`。終了コード 1。settings.json の sha256 が流す前と同じ。lock が無い。記録の呼び出しは1回だけ（guard.py の hook-files add）。§6 の5点のうち ④⑤ は当てない |
+| P-oserr | 札の `files` を `["guard.py", "sub/lib.py"]` にし、`<HOME>/.claude/scripts/demo-guard/sub` という名前の**普通のファイル**を先に置く（1つ目は写せて、2つ目の `os.makedirs` が OS のエラーで止まる） | P-fail と同じ（`INSTALL_FAILED:` で始まり `想定外の止まり方` を含まない。終了コード 1。settings.json の sha256 が流す前と同じ。lock が無い。記録の呼び出しは1回だけで、guard.py の hook-files add・item-hash は guard.py の sha256 の前8桁） |
 | T-fail | 試験が 1 で終わる | `INSTALL_FAILED:`。`~/.claude/scripts/demo-guard/` が作られていない |
 | T-sub | マージでない commit が最後に変えたフォルダ（`Merge pull request` の形でない） | `INSTALL_FAILED:` と同上 |
 | R-fail | 偽の perm-change.py が remove の行だけ 1 で返す | 最後の行が `INSTALL_OK_RECORD_INCOMPLETE`、終了コード 3。`RECORD_FAILED:` の行が1つ |
