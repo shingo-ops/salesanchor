@@ -11,7 +11,7 @@
 | 段階1〜2 | 障害記録の表・保守 API・Discord 表示 | 済 | `docs/handoff/ai-ops-247/card-stage1-bin1.md`〜`docs/handoff/ai-ops-247/card-stage2-bin-c.md`、`backend/app/routers/ops.py:230`〜`:718` に口 9 つ |
 | 段階3 便D・便E・定着 T1 | 健康診断・状態書き係 | 済 | `docs/handoff/ai-ops-247/card-stage3-bin-d.md`・`docs/handoff/ai-ops-247/card-stage3-bin-e.md`・`docs/handoff/ai-ops-247/card-stage3-teichaku-t1.md` |
 | 段階3 便F | 保守 API に「auto で未処置」の絞り込みを足す | 未着手 | `docs/handoff/ai-ops-247/stage3-design.md:89`。カードの文書が無い |
-| 段階3 便G | 応急処置係（prod1 の cron） | 未着手 | `docs/handoff/ai-ops-247/stage3-design.md:99`。origin/main に処置係のコードが無い（`first_aid` の語は表の列と `backend/app/routers/ops.py:48`・`:356`・`:414` のみ） |
+| 段階3 便G | 応急処置係（prod1 の cron） | 未着手 | `docs/handoff/ai-ops-247/stage3-design.md:99`。origin/main に処置係のコードが無い（`first_aid` の語は表の列名と口の引数だけ。例: `backend/app/routers/ops.py:48`〜`:50`・`:356`〜`:358`・`:414`） |
 | 段階3 便H | migration 失敗の見張り | 未着手 | `docs/handoff/ai-ops-247/stage3-design.md:115`。`DeployMigrationFailed` の語が origin/main のコード・見張りに無い |
 | 段階3 の前提 V6 | 健康診断の 24 時間誤判定 0 | 未確認 | `docs/handoff/ai-ops-247/stage3-design.md:171`。結果の記録が見つからない |
 | 段階4 | AI を起こす | 未着手 | `docs/adr/ADR-1012-ai-ops-247.md:28`（決定 4）。`/fire` を呼ぶコードが無い |
