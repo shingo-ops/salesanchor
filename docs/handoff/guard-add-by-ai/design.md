@@ -1,6 +1,6 @@
 # design: AI が足した見張りを記録できる道（草案・2026-11-09）
 
-状態: 設計案作成済み（第9版）／設計審査済み（クラウドでの設計審査 8回目 APPROVE・2026-11-09 08:43 UTC・opus。1〜7回目の REVISE は全部反映済み。8回目の推奨2件も反映済み。§12）／§9 は PO 決定済み（2026-11-09「1」＝案1）／ADR は起案済み・PO 未承認（ADR-1072。§8-1。PO の承認まで実装の便は出さない）／実装未着手。
+状態: 設計案作成済み（第9版）／設計審査済み（クラウドでの設計審査 8回目 APPROVE・2026-11-09 08:43 UTC・opus。1〜7回目の REVISE は全部反映済み。8回目の推奨2件も反映済み。§12）／§9 は PO 決定済み（2026-11-09「1」＝案1）／ADR-1072 は PO 承認済み（2026-11-09「1」。承認と実装の開始を選んだ返事）／実装未着手。
 根拠: recon.md（同じフォルダ）。関係 ADR: ADR-1034・ADR-1033・ADR-1029。
 
 ## 1. 目的（PO の言葉から）
@@ -37,7 +37,7 @@
 - 「scripts/agent-hooks/mac-test-guard/guard-manifest.json」（新規。1つ目の対象）。
 - `.github/workflows/agent-hooks-test.yml`: mac-test-guard の試験と install-guard.sh の試験を足す。checkout（今の :23・:34。fetch-depth の指定が無く浅い取得）に `fetch-depth: 0` を足す（§5-1〜5-4 の一覧の 6 が履歴を読むため）。
 - `scripts/dev/permission-delegation-tests.py`: A1〜A5・A7〜A12 の試験を足す。
-- 審査役（reviewer）の定義: §5 の末尾の確認項目2行を足す。
+- 審査役（reviewer）の定義 `.claude/agents/reviewer.md`（リポジトリの版）: §5 の末尾の確認項目2行を足す。理由: 公式の説明（code.claude.com/docs/en/sub-agents の優先順位の表）では、同じ名前の担当はプロジェクトの `.claude/agents/`（優先3）が利用者の `~/.claude/agents/`（優先4）より優先される。リポジトリには ほかに `docs/agents/reviewer.md`（GPT 向けの古い説明。担当として読まれない）がある。~/.claude の版は AI は変えない。
 
 ## 5. 「強める変更」の定め方（点検が機械で判定する）
 ### 5-0. 台帳札 guard-manifest.json（点検が読む正本の対応表）
