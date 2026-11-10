@@ -44,7 +44,9 @@ def test_limit_survives_pool_return_and_invalidate_on_real_postgres(pg):
         assert pid3 != pid2  # 新しい接続
         assert value3 == _EXPECTED
     finally:
-        event.remove(engine, "connect", _tx_guard._on_connect_set_idle_limit)
+        # 付いていないときに外すと InvalidRequestError が本当の失敗を隠すため、付いているときだけ外す
+        if event.contains(engine, "connect", _tx_guard._on_connect_set_idle_limit):
+            event.remove(engine, "connect", _tx_guard._on_connect_set_idle_limit)
         engine.dispose()
 
 
@@ -60,5 +62,7 @@ def test_listener_registered_once_on_real_engine_on_real_postgres(pg, monkeypatc
         assert event.contains(engine, "connect", _tx_guard._on_connect_set_idle_limit)
         assert listen_spy.call_count == 1
     finally:
-        event.remove(engine, "connect", _tx_guard._on_connect_set_idle_limit)
+        # 付いていないときに外すと InvalidRequestError が本当の失敗を隠すため、付いているときだけ外す
+        if event.contains(engine, "connect", _tx_guard._on_connect_set_idle_limit):
+            event.remove(engine, "connect", _tx_guard._on_connect_set_idle_limit)
         engine.dispose()
