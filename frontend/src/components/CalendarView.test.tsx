@@ -783,4 +783,16 @@ describe('T10 trackEventId・onEventRect（便12・ADR-1065 What 6）', () => {
     );
     expect(onEventRect).toHaveBeenCalledTimes(1);
   });
+
+  it('ignores the drag mirror: no onEventRect and no re-render', () => {
+    const onEventRect = vi.fn();
+    mountView(onEventRect);
+    act(() => fcProps().eventDidMount(mountArg('p', makeEl(200))));
+    onEventRect.mockClear();
+    const before = fcProps();
+    act(() => fcProps().eventDidMount({ ...mountArg('p', makeEl(600)), isMirror: true }));
+    act(() => fcProps().eventWillUnmount({ ...mountArg('p', makeEl(600)), isMirror: true }));
+    expect(onEventRect).not.toHaveBeenCalled();
+    expect(fcProps()).toBe(before);
+  });
 });
