@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import httpx
 from fastapi import FastAPI, Request
 
+from app.realtime import stream_db
 from app.routers import realtime_events as ev
 
 
@@ -31,7 +32,7 @@ def _patch_auth(monkeypatch, log):
     async def fake_tenant(request, user, db):
         return 1
 
-    monkeypatch.setattr(ev, "get_db", fake_get_db)
+    monkeypatch.setattr(stream_db, "get_db", fake_get_db)
     monkeypatch.setattr(ev, "get_current_user", fake_user)
     monkeypatch.setattr(ev, "get_current_tenant", fake_tenant)
 

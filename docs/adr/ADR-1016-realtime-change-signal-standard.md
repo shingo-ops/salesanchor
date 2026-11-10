@@ -90,3 +90,7 @@
 ## 詳細
 
 `docs/handoff/realtime-standard/design.md`
+
+## 追記: 流し続ける口は DB を持たない
+
+流し続ける口（SSE）は、流している間 DB の接続と取引を持たない。認証・会社・権限は backend/app/realtime/stream_db.py の短いセッションで済ませ、流し始める前に閉じる。見張りは backend/tests/test_sse_no_db_hold.py。理由: yield 依存の後始末は応答を送り終えた後に走るので、流れ1本ごとに取引が開いたままになり、本番反映の前の点検（ADR-1037）を止めた（docs/handoff/app-idle-tx/recon.md）。
