@@ -146,7 +146,7 @@ C1 と同じ置き換え。`AND ar.status = :sold_out` と ORDER BY（:1450）�
 |---|---|---|---|
 | 遅い形（相関副問い合わせ）に戻らない | C3 の 3（文の形を調べる試験） | 実装の後にできる | §3 C3 |
 | 読む中身が変わらない | C3 の 1・2 と今ある `test_sold_items_and_stock_items_are_read_apart_from_the_latest_job_with_resolved_products`（本物の PostgreSQL） | 今あるものは有り。足す 2 本は実装の後 | `backend/tests/test_gemini_raw_copy_v102_soldout_ref.py:438` |
-| 試験が、backend を変えた PR では毎回、本物の PostgreSQL で流れる | 本線の必須チェック「pytest (SQLite + PostgreSQL RLS)」。backend を変えたときに全部の試験を postgres:16 で流す（変えないときは試験を飛ばして通る。`test.yml:117`）。実装の PR は backend を変えるので必ず流れる | 有り | `gh api repos/shingo-ops/salesanchor/rules/branches/main` の必須チェック一覧、`.github/workflows/test.yml:122-123`・`:218`・`:253` |
+| 試験が、backend を変えた PR では毎回、本物の PostgreSQL で流れる | 本線の必須チェック「pytest (SQLite + PostgreSQL RLS)」。backend を変えたときに全部の試験を postgres:16 で流す（変えないときは試験を飛ばして通る。`.github/workflows/test.yml:117`）。実装の PR は backend を変えるので必ず流れる | 有り | `gh api repos/shingo-ops/salesanchor/rules/branches/main` の必須チェック一覧、`.github/workflows/test.yml:122-123`・`:218`・`:253` |
 | 本物の DB が無いときに試験が黙って飛ばされない | DB の接続先が無いと失敗する（飛ばさない） | 有り | `backend/tests/test_tcg_work_matching_integration.py:388`（assert） |
 | 本番で遅い問い合わせが出たら気づく | 遅い問い合わせの記録・集計 | **無い** | 本番 2026-11-10 reader の道: `log_min_duration_statement` = -1（記録しない）、拡張は pg_trgm・plpgsql だけ（pg_stat_statements 無し）、auto_explain の設定は無い（42704）。docs/adr・docs/specs に遅い問い合わせの見張りを決めた ADR は無い（git grep 0 件。precision-benchmark.md の 1 件は別の話） |
 
