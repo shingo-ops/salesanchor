@@ -719,7 +719,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
    - 作る小窓の項目（日時と終日・種類・Meet・社員にも見せる・場所・説明。今の小窓と同じ順）の描き方を `frontend/src/pages/schedule/ScheduleDraftFields.tsx` に移し、小窓と全画面の両方がそれを使う。値は今の `draft`（`:1033`）1 つで、全画面用に写しを作らない。始まりを直すときは今と同じ `shiftDraftStart` を使う。
    - 小窓は今の「閉じた行を押すと開く」まま。全画面は全部開いた形で出す（部品に `expanded` を渡す）。
 3. 全画面の入れ物の金型 `FullScreenDialog`（G53・G56・G57。PO の許可の後に作る）。
-   - `frontend/src/components/FullScreenDialog.tsx`・`.css`・`.stories.tsx`・`.test.tsx`。document.body へ portal、`role="dialog"`・`aria-modal="true"`・`aria-label`（呼ぶ側が渡す文字）、`useFocusTrap`（`frontend/src/hooks/useFocusTrap`）、開いた時は `initialFocusRef`（無ければ最初の押せる物）へ、閉じた時は開く前の要素がまだ画面に在ればそこへ戻す（予定の画面では押した元は小窓と一緒に消えるので、戻る先は描き直した小窓の題名の欄。小窓の `placed` で題名へ移る今の動き・`:307`）。Esc は document の keydown で受けて `stopPropagation` し `onClose`（金型 Modal と同じ形・window の近道へ届かない）。ただし変換中（`event.isComposing || event.keyCode === 229`）の Esc は何もしない（近道の判定 `:1436` と同じ形。金型 Modal の Esc `:72-77` は見ていないので写さない）。
+   - `frontend/src/components/FullScreenDialog.tsx`・`frontend/src/components/FullScreenDialog.css`・`frontend/src/components/FullScreenDialog.stories.tsx`・`frontend/src/components/FullScreenDialog.test.tsx`。document.body へ portal、`role="dialog"`・`aria-modal="true"`・`aria-label`（呼ぶ側が渡す文字）、`useFocusTrap`（`frontend/src/hooks/useFocusTrap`）、開いた時は `initialFocusRef`（無ければ最初の押せる物）へ、閉じた時は開く前の要素がまだ画面に在ればそこへ戻す（予定の画面では押した元は小窓と一緒に消えるので、戻る先は描き直した小窓の題名の欄。小窓の `placed` で題名へ移る今の動き・`:307`）。Esc は document の keydown で受けて `stopPropagation` し `onClose`（金型 Modal と同じ形・window の近道へ届かない）。ただし変換中（`event.isComposing || event.keyCode === 229`）の Esc は何もしない（近道の判定 `:1436` と同じ形。金型 Modal の Esc `:72-77` は見ていないので写さない）。
    - 口: `open`・`onClose`・`ariaLabel`・`closeLabel`・`title`（一番上の真ん中に置く中身）・`actions`（右の中身）・`children`。× は金型 Button（ghost・iconOnly）。
    - 見た目: `position: fixed; inset: 0; z-index: var(--z-modal); background: var(--bg-surface)`。一番上の帯と中身。中身の幅は `min(var(--modal-wide-w), 100%)` で真ん中。新しいトークンは足さない（数値は既存の space・トークンだけ）。
 4. 予定の画面につなぐ（G53〜G56）。
@@ -731,13 +731,13 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
    - 保存は今の `saveEvent`（`:1186-1225`）をそのまま呼ぶ。`saveEvent` の成功の道の最後に `setFullEditOpen(false)` を足す。失敗の道は `setError` のままなので全画面は開いたままで、全画面の中に `error` を出す。
    - 近道の判定（`:1432-`）の最初に `if (fullEditOpen) return;` を足す。今も `windowOpen`（`:1440`）で止まるが、小窓を描かない形に変わっても止まることを明示しておく（Esc は金型が先に止める）。
    - `popover` が null になる道（保存・時間割の外を押す）では `fullEditOpen` も偽にする（`useEffect` で `popover?.mode !== "create"` のとき偽・`:1318` と同じ形）。
-5. 文言（ADR-027）: `schedule.addMeet` の文を替える（ja「Google Meet のビデオ会議を追加」・en「Add Google Meet video conferencing」）。新しいキー `schedule.meetPending`・`schedule.removeMeet`・`schedule.fullEditLabel`（ja「予定の編集」・en「Edit event」）を `frontend/src/locales/ja.json`・`en.json` の両方に足す。× の読み上げは今ある `common.close`。
+5. 文言（ADR-027）: `schedule.addMeet` の文を替える（ja「Google Meet のビデオ会議を追加」・en「Add Google Meet video conferencing」）。新しいキー `schedule.meetPending`・`schedule.removeMeet`・`schedule.fullEditLabel`（ja「予定の編集」・en「Edit event」）を `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` の両方に足す。× の読み上げは今ある `common.close`。
 6. 触らない範囲: 裏側・DB・移行・deploy・scripts・Google の権限。詳しく見る・直す小窓の並び（Meet の行の置き換えだけ）。既に有る予定を全画面で直すこと・招待する人・通知・繰り返し・色（次の便の候補）。
 
 試験:
 - `frontend/src/components/FullScreenDialog.test.tsx`: open で dialog が出る・aria-modal・× と Esc で `onClose`・Esc が window へ届かない・変換中の Esc では `onClose` が呼ばれない・Tab が中を回る・閉じると元の要素へ戻る。
 - `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`: 今の Meet の試験 8 本（`:437-`）を `role="button"` に読み替え／× で戻すと `add_meet` を送らない／`queryByRole("switch", { name: /Google Meet/ })` が null（作る小窓・直す小窓・全画面の 3 か所）／「その他のオプション」で dialog が開き、題名・日時が小窓の値のまま（`:726-738` を書き替え）／× と Esc で dialog が消え小窓が開いたまま題名が残り POST・PATCH が 0 回／dialog の保存で POST の中身が小窓からの保存と同じ・成功で dialog と小窓が消える・失敗で dialog が開いたままエラー文が dialog の中／dialog が開いた状態で「m」を送っても表示が変わらない／× で閉じた後のフォーカスが作る小窓の題名の欄／保存に失敗して × で閉じると時間割の側に失敗の文が出ない。
-- 見本帳: `FullScreenDialog.stories.tsx`（`check:stories`）。
+- 見本帳: `frontend/src/components/FullScreenDialog.stories.tsx`（`check:stories`）。
 
 選ばなかった案:
 - 金型 Modal に寸法「full」を足す: Modal の上の帯は題の文字 1 つの形で、×・題名の欄・保存の帯にならない。広く使われている金型の形を変えることになる。
@@ -772,7 +772,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 | 便10 | 日・3日間・週から月へ切り替えると画面全体が消える不具合の直し（§3.15）。金型 CalendarView の 1 か所（`views` を常に渡す）と試験 | G36 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 | 便11 | 日・3日間・週の枠線を Google に揃える（§3.16）。金型 CalendarView の css に規則 8 つ・トークン 1 つ | G37〜G41 | なし（frontend の css だけ。移行・deploy・scripts・DB は無い） |
 | 便12 | 作る小窓を Google の形に・作っている途中の箱を動かせる（§3.17）。金型 CalendarView に口 1 つ（ADR-1065 What 6 に 1 文）・金型 TextFieldControl に種類 1 つ・絵 3 つ・トークン 5 つ・文言 2 つ・予定の画面 | G42〜G50 | なし（frontend だけ。移行・deploy・scripts・DB は無い）。PO 承認（G42〜G50・金型 2 つ・ADR-1065 What 6）の後に着手 |
-| 便13 | Google Meet を押す行に・「その他のオプション」で全画面の編集（§3.18）。新しい金型 FullScreenDialog 1 つ・項目の部品を 1 か所に・文言 3 つ足し 1 つ替え・予定の画面 | G51〜G57 | なし（frontend だけ。移行・deploy・scripts・DB・Google の権限は無い）。PO 承認済み（2026-11-11「1」・G51〜G57・新しい金型）。カード `card-bin13.md` |
+| 便13 | Google Meet を押す行に・「その他のオプション」で全画面の編集（§3.18）。新しい金型 FullScreenDialog 1 つ・項目の部品を 1 か所に・文言 3 つ足し 1 つ替え・予定の画面 | G51〜G57 | なし（frontend だけ。移行・deploy・scripts・DB・Google の権限は無い）。PO 承認済み（2026-11-11「1」・G51〜G57・新しい金型）。カード `docs/handoff/schedule-gcal-clone/card-bin13.md` |
 
 便0 を先に出す理由: 今の本番で毎回起きる間違いで、1 行で直り、載せ替えを待つ理由がない。
 
@@ -1019,10 +1019,10 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 
 2 回目: REVISE（2026-11-10 17:44〜17:45 UTC・クラウドの Opus・0dd26de2a・照合は origin/main 263889d6・セッション cse_01HHUUpSEkRwbzNiSnb7zgrK）
 - 結果は実行記録の本文で読んだ。1 回目の 7 件は全部 ○（行つき）。768b3db1 から 263889d6 までに予定の画面・Modal・useFocusTrap の差は無し。
-- 直す 1: G51 の「名前が Google Meet の switch」は Testing Library の完全一致で今も直した後も 0 個になり、切り替えが残っても ○ になる（今の名前は `schedule.addMeet`「Google Meet を付ける」・`SchedulePageImpl.tsx:548`）→ G51 と試験を `queryByRole("switch", { name: /Google Meet/ })` が null に揃えた。
+- 直す 1: G51 の「名前が Google Meet の switch」は Testing Library の完全一致で今も直した後も 0 個になり、切り替えが残っても ○ になる（今の名前は `schedule.addMeet`「Google Meet を付ける」・`frontend/src/pages/schedule/SchedulePageImpl.tsx:548`）→ G51 と試験を `queryByRole("switch", { name: /Google Meet/ })` が null に揃えた。
 
 3 回目: APPROVE（2026-11-10 17:49〜17:50 UTC・クラウドの Opus・8a33cc85a・照合は origin/main 5dc69e7・セッション cse_01HHUUpRAdMdDJ9ZagZTVXTK）
 - 結果は実行記録の本文で読んだ。必須 0 件・推奨 0 件。
-- 2 回目の直す 1 は ○: G51（`:123`）と §3.18 の試験（`:738`）が同じ書き方。今の切り替えの名前は ja「Google Meet を付ける」・en "Add Google Meet"（どちらも `locales/*.json:3351`）で、今は ×・直した後は ○ になり判定できる。終日（`:449`）・社員にも見せる（`:559`）の切り替えは当たらない。
+- 2 回目の直す 1 は ○: G51（`:123`）と §3.18 の試験（`:738`）が同じ書き方。今の切り替えの名前は ja「Google Meet を付ける」・en "Add Google Meet"（どちらも `frontend/src/locales/ja.json:3351`・`frontend/src/locales/en.json:3351`）で、今は ×・直した後は ○ になり判定できる。終日（`:449`）・社員にも見せる（`:559`）の切り替えは当たらない。
 - 263889d6 から 5dc69e7 までに予定の画面と言葉の表の差は無し。
 - 未確認: 試験そのものは流していない（読むだけの役）。実装の CI で確かめる。
