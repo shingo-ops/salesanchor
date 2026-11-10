@@ -505,7 +505,7 @@ PR ごとの静的点検にも1つ足す（第8版）:
 - 計画: (1) 本節の Architect 審査（新しく起動） (2) 設計 PR をマージ (3) 段2の K2-5〜K2-7 がそろった後、実装の前に reader 鍵の道で usename・application_name の列を1回引けることを確かめる。そのあと Sonnet が 4a を実装・CI・赤の実演・ADR-1037 の追記（名前の正本の場所と役割の環境変数） (4) reviewer（opus、新しく起動） (5) 委任 GO で本番へ（backend・`docker-compose.yml`・`scripts/smoke_test_post_deploy.sh` を含む。移行・DROP・秘密の値は無い） (6) K4-5・K4-6 (7) 4b の詳細設計。
 - 継続: 名前の正本は2か所ある。アプリの接続の名前は 4a で置く新しいモジュール（場所は実装 PR で本節に書く）。本番反映の控え・移行の名前は `scripts/lib/db-app-names.sh`（段2）。分ける理由は、シェルの台本は Python を読めず、アプリはシェルの lib を読めないから（17-2）。2つが重ならないことは C4-2 が守る。守り手: backend の pytest（C4-1〜C4-4、実装 PR で足す）と `.github/workflows/backup-script-test.yml`（C1〜C9）。
 
-## 18. 段6 詳細設計 — 試しの道具の取引を読んだらすぐ閉じる／移行の前に開いたままの取引を点検してから入れ替える（第4版）
+## 18. 段6 詳細設計 — 試しの道具の取引を読んだらすぐ閉じる／移行の前に開いたままの取引を点検してから入れ替える（第4.1版）
 状態（第4.1版、2026-11-10）: 設計審査済み（第4版の審査 APPROVE、2026-11-10 クラウドの Architect＝Opus。中4・軽3 は第4.1版で反映、18-13）。実装未着手（便2 は未実装、道具の設計の追補 C5・C6 も未実装）。第4版を書く前の状態: 第3.2版を受けたクラウドの Architect の審査（2026-11-10、origin/main 96a63df05 で照合）は REVISE（重2・中2・軽1）。第4版で全件を直した（18-12）。便1 は別の設計 docs/handoff/replay-tx-release/design.md（以下「道具の設計」）に置き換えた。道具の設計は PR #5340 で実装済みで、2026-11-10 04:28 JST に本番反映済み。便2（点検の段）は実装未着手。
 第3.2版までの状態: 設計審査済み（第3版 APPROVE、2026-11-10。推奨5件は第3.1版で反映。第3.1版のマージ前審査も APPROVE で、推奨6件は第3.2版で反映）。第1版の審査（クラウドの Architect＝Opus、2026-11-10）は REVISE（必須2・推奨5）。第2版で全件を直した。第2版の審査も REVISE（必須1・推奨4）で、第3版で全件を直した（18-11）。PO の選択: 2026-11-10「1、2」（(1) 試しの道具が読み終えたらすぐ表を放す (2) 移行の前に、動いている試しと開いたままの取引を確かめ、待つか知らせる）。本番に出す GO は委任（opus-delegation）に基づく Claude Opus 発行。
 
@@ -637,7 +637,7 @@ P1〜P3・P5・P6 の job は入れ物の名前を本番と同じ astro-webapp-p
 - 必須でない所（正直に書く）: 本物の DB が要る P1〜P3・P5・P6 は `.github/workflows/backup-script-test.yml` で走り、必須チェックではない（:6 の注記）。数える条件（state・秒数）を壊す変更は、この job が赤になってもマージは止まらない。必須に上げるのは Ruleset の変更で PO だけができる操作なので、本設計では上げない。代わりに、scripts/deploy-db-precheck.sh を変える PR では reviewer（opus）がこの job の結果を確かめる（ADR-1029 のマージ前の審査）。
 - 台本を直したときは、その版が出る本番反映の回から効く（origin/main から読むため）。
 - 待ちの秒数・取引の長さ・長い active の文の秒数の正本は、新しい台本の頭の1か所。
-- 道具3本が読んだまま計算や Gemini を呼ぶ形に戻ったら、道具の設計の K4 の試験が赤になる（必須の pytest）。新しい道具が共通の関数を使わずに Session を使ったら、道具の設計の C6 の試験が赤になる（必須の pytest）。
+- 道具3本が読んだまま計算や Gemini を呼ぶ形に戻ったら、道具の設計の K4 の試験が赤になる（必須の pytest）。DB を使う道具が `set_idle_tx_limit(` を呼んでいない、または `backend/app/tools/` の外から app.tools を読み込んだら、道具の設計 §14 の C6' の試験が赤になる（必須の pytest）。
 - 新しい試しの道具は、点検の段が本番反映の前に必ず見つける（道具の名前に関係なく、開いたままの取引を数える）。
 - 止まった回の記録は、本番反映の記録と Discord に残る。K18-5 は 30 日後に同じ数え方（18-1）で数え直す。
 
@@ -719,3 +719,5 @@ P1〜P3・P5・P6 の job は入れ物の名前を本番と同じ astro-webapp-p
 | 軽1 | P7 の条件の比べ方があいまい | 18-3 の deploy.yml の行と P7 を「移行の段の `if:` と文字列で完全に同じ」に直した |
 | 軽2 | backup-script-test.yml の paths に足す物が書かれていない | 18-3 に2行・2か所を書いた |
 | 軽3 | test.yml の filters の書き方が実物と違う | 18-3 を実物の7行どおりに直した |
+
+マージ前の審査（reviewer＝opus、手元で新しく起動、2026-11-10、PR #5348）: APPROVE（必須0・推奨5）。推奨1・2 は道具の設計 §14 に、推奨3 は本節の見出し・18-9・台帳・道具の設計 §6 K5 と §13 C5 に反映した。推奨4（`.github/workflows/test.yml` :17〜:26 の push の paths に deploy.yml が無い）は範囲外とする。理由: main への直の push は Branch Protection で止められていて、main に入る道は PR だけ。PR では pytest の job が paths なしで必ず走り、detect-changes の filters に deploy.yml を足すので P7・P8 が流れる（18-3）。推奨5（PR の確かめ guard-authoring/evaluation の赤）は、枝が main より古く、確かめの最初の「main がこの枝の祖先か」で止まったもの（`scripts/run-guard-evaluation.js` :25 の merge-base --is-ancestor）。main を取り込んで直した。
