@@ -112,7 +112,7 @@
 - 動きに効く直書き（REPO 変数・`gh -R`・比較に使う文字列）:
   scripts/dev/check-pr-merge-ready.py:14,16,166-169 / scripts/gh-pr-create-safe.sh:114-138 / scripts/check-process-artifacts.js:39-43 / scripts/agent-hooks/review-gate/gate.py:53 / scripts/ci/is-ledger-done-pr.sh:21 / scripts/dev/consent-audit.py:406 / scripts/dev/perm-change.py:29 / scripts/reaper-worktree.sh:93 / scripts/backfill-active-work-done.sh:23 / scripts/ops/dockerd-restart-window.sh:12 / scripts/smoke/external-github.sh:33 / scripts/snapshot/github.sh:40 / scripts/sop-health-collector.js:25 / scripts/setup-vps-runner.sh / scripts/accuracy/*/vps_*.sh / .github/workflows/monthly-secret-expiry.yml:42 / publish-qa-checksheet.yml（Pages URL）/ backend/app/routers/discord_auto_setup.py:66 / 試験の固定値 / CODEOWNERS（@shingo-ops）
 - 訂正（設計審査 5 回目の必須指摘 2）: 上の一覧のうち `scripts/ci/is-ledger-done-pr.sh:21` は PR の作者（人の名前）なので変えない。`scripts/sop-health-collector.js:25` は便0 ではなく設計 §6「移した直後の組」で変える。分け方は設計 §8 移す前 3 の正規表現で決める。
-- 訂正（設計審査 6 回目の必須指摘）: bb9d147a9 で `*.md` を除く範囲の甲は 164 行、除かないと 165 行（差は `tools/claude-channels/README.md:18`）。同じ範囲の乙は 12 本・42 行で、docker-compose の 2 行を除くと 10 本・40 行（2026-11-10 に手元の git grep で数え直した）。
+- 訂正（設計審査 6 回目の必須指摘）: bb9d147a9 で \*.md を除く範囲の甲は 164 行、除かないと 165 行（差は `tools/claude-channels/README.md:18`）。同じ範囲の乙は 12 本・42 行で、docker-compose の 2 行を除くと 10 本・40 行（2026-11-10 に手元の git grep で数え直した）。
 - 文書（docs/handoff・docs/adr）の旧名は、記録なので書き換えない（Web の転送で開ける）。
 - 追記（設計審査 2026-11-10 の指摘で照合）: 上の一覧は scripts・.github・backend・frontend の範囲だけで漏れがあった。origin/main をリポジトリ全体で `git grep -l 'shingo-ops' -- ':!docs' ':!.claude-pipeline'` すると 51 ファイル（生出力 scratchpad の mq-fix1.txt・mq-fix2.txt）。追加の動きに効く物: `scripts/validate-pr-ownership.sh:142`・`scripts/dev/test-agent-hooks.sh:12,52,392`・`.github/workflows/weekly-stale-tasks.yml:36`・`monitoring/scripts/check_alert_rules.py:18`・`tools/claude-channels/README.md:18`・本番の見張り `docker-compose.yml:558`・`docker-compose.monitoring.yml:111,157`・`monitoring/github-collector/collector.py:27`。monitoring/prometheus・loki・grafana の 93 行は対応を設計 §6 で扱う。人の名前（actor 比較・CODEOWNERS・AGENTS.md）は変えない。
 
@@ -152,7 +152,7 @@ shingo-cc 名義（権限 write）では runners 403・hooks 404・keys 404 で�
 
 | 項目 | 読んだ結果 | 移しでどうなるか | 残り |
 |---|---|---|---|
-| U2 自前の実行機 | 2 台: `salesanchor-vps`（Linux・online）・`Shingo-Mac-Temp`（macOS・online）。`GET repos/.../actions/runners` | 公式の「移しで残る物」の一覧（github/docs `transferring-a-repository.md`・Context7）に実行機の記載は無い | 移した直後に同じ API で 2 台あるかを見る。消えていたら design §8 移した直後 4 |
+| U2 自前の実行機 | 2 台: `salesanchor-vps`（Linux・online）・`Shingo-Mac-Temp`（macOS・online）。`GET repos/.../actions/runners` | 公式の「移しで残る物」の一覧（github/docs transferring-a-repository.md・Context7）に実行機の記載は無い | 移した直後に同じ API で 2 台あるかを見る。消えていたら design §8 移した直後 4 |
 | U3 webhook | 0 件（`GET .../hooks` が `[]`） | 対象なし | なし |
 | U3 deploy key | 2 件: `VPS Deploy Key`（書き込み可・2026-03-26）・`VPS Deploy Key (sa_deploy 2026-07-20)`（読むだけ） | 公式: webhooks・secrets・deploy keys は移した後も付いたまま | 移した直後に件数 2 を見る |
 | U3 GitHub App | 本線の最新 5 件の commit で動いた App: `github-actions`・`claude`・`cursor`・`google-cloud-build`。会社名義に入っている App: `claude`（selected）・`chatgpt-codex-connector`（all） | 必須の確かめ 16 件は全部 `integration_id` が null か 15368（github-actions）。`claude`・`cursor`・`google-cloud-build` の check suite は conclusion が null で、必須には入っていない。origin/main に cloudbuild・cursor の設定ファイルと参照は無い（`git ls-tree`・`git grep`） | `cursor`・`google-cloud-build` を会社名義で入れ直すかは PO が決める（入れなくても合流は止まらない）。`claude` は会社名義で selected なので、移した後にこのリポジトリを選ぶ必要があるかを U5 で確かめる |
