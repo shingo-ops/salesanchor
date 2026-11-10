@@ -17,12 +17,14 @@
 |---|---|---|---|
 | K1 | 本線への合流は全件が列を通る | `gh api repos/<新>/rulesets/<id>` に merge_queue の規則があり bypass_actors が空。導入後 14 日の合流 PR 全件で GraphQL `timelineItems(itemTypes:[ADDED_TO_MERGE_QUEUE_EVENT])` が 1 件以上 | 0%（列が無い） |
 | K2 | 追い越しによる取り込みのやり直し | 導入後 14 日の合流 PR ごとに、起点（下の注）以降に入った「本線を取り込む commit」（親が 2 つで、片方が main の commit）の数。中央値 0・最大 1 以下 | 便0 で直近 14 日を同じ数え方で記録する（#5335 は 9） |
-| K3 | 合流の準備ができてから本線に入るまで | 同 14 日の、起点（下の注）→ `mergedAt` の時間の中央値が、便0 で数えた基準値以下。内訳として `added_to_merge_queue` → `merged` の中央値が 60 分以下 | 便0 で直近 14 日の「起点 → `mergedAt`」の中央値を記録する（前後で同じ起点・同じ数え方） |
+| K3 | 追い越しで長く待たされる PR が減る（案・U19 で PO が決める） | 同 14 日の合流 PR で (a) 起点（下の注）→ `mergedAt` が 120 分を超えた PR の割合が、便0 の基準値の半分以下。(b) `added_to_merge_queue` → `merged` の中央値が 60 分以下。中央値・p75・最大は記録だけ残し、判定には使わない（下の注） | 便0 で直近 14 日の (a) の割合と、中央値・p75・最大を記録する（前後で同じ起点・同じ数え方）。参考: 7 回目の審査が直近 20 件で数えた値は中央値 約 4.8 分・120 分超え 4 件（20%）・最大 400.8 分 |
 | K4 | 列が止まったら気付く | 列の先頭の項目（`position` が一番小さい項目）の確かめ（列の commit の check suite の作成時刻のうち一番早い物から数える）が 40 分を超えても終わらないとき、次の見回り（15 分ごと）で Discord の PO 宛てに 1 通届く。確かめの制限時間 60 分（§4）より前に鳴る目安（40＋15＝55 分）。定時の起動は混む時間に遅れることがあるので、見回りごとに「予定の時刻と実際の起動時刻の差」を記録し、14 日で 5 分を超えた回数を数える。便2 の後、試しの PR が列にいる間に見張りを手で起動し、しきい値を 1 分にして 1 通届くことを確かめる | 見張り 0 |
 | K5 | 移しで本番が壊れない | 移した直後の最初の配備で deploy 成功・smoke 成功・app と /api/health が 200 | — |
 | K6 | 移しで設定が欠けない | secret 86=86・ruleset 2=2（中身一致）・自前の実行機の数が移す前と同じ・Pages が新 URL で開ける（中の参照の書き換えは便3） | R§6-3 の値 |
 
 K3 の 60 分は「確かめ 1 回（20〜25 分）＋前に並ぶ分」の目安。PO の承認で確定する。
+
+K3 を「中央値が基準値以下」から替えた理由（設計審査 7 回目の必須指摘 1）: 直近 20 件の「起点 → `mergedAt`」は 0.1 分が 6 件・25 分未満が 13 件で、中央値は約 4.8 分（台帳 DONE の自動の PR が多く、緑になってすぐ入る）。列を入れると、どの合流も列の中で確かめをもう 1 回（20〜25 分）流すので、中央値はその分だけ必ず増える。だから「中央値が基準値以下」は設計上満たせない。列で減らしたいのは追い越しで何時間も待たされる PR（直近では 400.8 分・369.7 分・239.2 分・149.0 分）なので、その長い待ちの割合で判定する。120 分は「列の確かめの制限時間 60 分（§4）の 2 回分」で、普通の待ちと追い越しの待ちを分ける目安。選ばなかった案: 台帳 DONE の自動の PR を K2・K3 から外す案（外す判定を `scripts/ci/is-ledger-done-pr.sh` に頼ることになり、前後で数える集まりが変わりやすい。記録では台帳 DONE かどうかの内訳を残す）、「後の中央値 ≤ 前の中央値＋25 分」の案（列の確かめの長さが変わると基準が動く）。
 
 起点の決め方（設計審査 5 回目の必須指摘 1 で替えた）: 「PR の commit のうち、必須の確かめが初めて全部 success になった commit」の、その必須の確かめの完了時刻のうち一番遅い物。
 - 「通った」と数える結果は check-run の conclusion が `success`・`skipped`・`neutral`、commit status の state が `success`（6 回目の推奨 1。便2 の後は乙の job が skipped になるため）。同じ名前の check-run が再実行で複数あるときは id が一番大きい物、同じ context の status が複数あるときは一番新しい物を使う。
@@ -150,7 +152,7 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 | 仕組み | 中身 | 守らせ方 |
 |---|---|---|
 | 列そのもの | ruleset の merge queue 必須・bypass 空 | GitHub が列を通らない合流を拒む（人も AI も） |
-| 列の見張り | 新しい workflow（schedule 15 分ごと・public なので無料・手で起動するときはしきい値を入力で変えられる）。GraphQL `repository.mergeQueue(branch:"main").entries` のうち `position` が一番小さい項目の `headCommit.checkSuites` の `createdAt` のうち一番早い物から 40 分を超えて、まだ合流していなければ scripts/notify/discord-owner-ping.sh で PO に知らせる（MergeQueueEntry に `position`・`headCommit`・`state`・`enqueuedAt` があること、CheckSuite に `createdAt` があることは 2026-11-10 に公式スキーマで確認済み）。列が作り直されると先頭の commit が変わり時刻もやり直しになる。`headCommit` が null、または `checkSuites` が 0 件のときは、その回は数えずに記録だけ残す（6 回目の推奨 4）。便2 の試しの PR で、この時刻と列から外れた時刻の差を記録する（5 回目の推奨 2） | K4。Mergify の指摘「黙って止まる」への手当て |
+| 列の見張り | 新しい workflow（schedule 15 分ごと・public なので無料・手で起動するときはしきい値を入力で変えられる）。GraphQL `repository.mergeQueue(branch:"main").entries` のうち `position` が一番小さい項目の `headCommit.checkSuites` の `createdAt` のうち一番早い物から 40 分を超えて、まだ合流していなければ scripts/notify/discord-owner-ping.sh で PO に知らせる（MergeQueueEntry に `position`・`headCommit`・`state`・`enqueuedAt` があること、CheckSuite に `createdAt` があることは 2026-11-10 に公式スキーマで確認済み）。列が作り直されると先頭の commit が変わり時刻もやり直しになる。`headCommit` が null、または `checkSuites` が 0 件のときは、その回は数えずに記録だけ残す（6 回目の推奨 4）。便2 の試しの PR で、この時刻と列から外れた時刻の差を記録する（5 回目の推奨 2）。<br>列から外れたことの知らせ（U15 で PO が知らせると決めた場合。7 回目の推奨 1）: timeline は PR ごとにしか読めないので、読む PR を次のとおり決める。(1) 前回の起動時刻 T は、この workflow の前回の成功した run の作成時刻（`gh run list --workflow <この workflow> --status success --limit 1`）から取り、別の置き場を作らない。取れないとき（初回）は 30 分前。(2) `gh api graphql` の search `repo:<新> is:pr updated:>=T` で、T 以降に更新された PR（開いている・閉じた・合流した全部）を取る。(3) 各 PR の `timelineItems(itemTypes:[REMOVED_FROM_MERGE_QUEUE_EVENT], since:T)` を読み、`createdAt` が T 以降の物だけ知らせる。(4) その PR が今 MERGED なら知らせない（合流で列を出たときにこの event が付くかは未確認・U20）。同じ外れを 2 回知らせないために、(3) の `createdAt` は T 以降に限る（T は前回の成功した run なので、失敗した回の分は次の回で拾う） | K4。Mergify の指摘「黙って止まる」への手当て |
 | 設定のずれの見張り | 週 1 で ruleset を読み、merge queue の規則が無い・bypass が空でない・strict が有効、のどれかで Discord | 誰かが外したら気付く |
 | 審査の見張り | review-gate に `--admin` を止める行 | 列を飛ばす命令を AI が出せない |
 | 数える | 週 1 で K2・K3 を数えて記録（14 日で判定） | 効果を数で確かめる |
@@ -201,6 +203,8 @@ R§7（出典・日付・数値・適用の限界は scratchpad の mq-web/evide
 - R§8 の U1〜U8。とくに U2・U3・U5 は PO の画面の確認が要る。
 - strict を外すこと（§4）を PO が認めるか。
 - K3 の 60 分を PO が認めるか。
+- U19（PO が決める）: K3 の判定を §2 の案（120 分を超えた PR の割合が基準値の半分以下＋列の中の中央値 60 分以下）にするか。列を入れると合流のたびに確かめが 1 回増えるので、合流までの中央値は今より約 20〜25 分長くなる（7 回目の必須指摘 1）。PO が中央値で比べたいなら、その増え方を受け入れた上での上限を PO が決める。
+- U20（便2 の試しで埋まる）: 列から合流したときにも `REMOVED_FROM_MERGE_QUEUE_EVENT` が付くか（7 回目の推奨 1。公式スキーマには型と項目 `actor`・`beforeCommit`・`createdAt`・`enqueuer`・`id`・`mergeQueue`・`pullRequest`・`reason` があるが、どのときに付くかは書かれていない）。§9 は MERGED の PR を知らせない形にしてあるので、付いても付かなくても誤って鳴らない。試しの PR で付くかを記録する。
 - U9: `PIPELINE_PAT` の種類と持ち主（PO の画面の確認）。細かく絞る型で持ち主が個人なら、会社を持ち主にした鍵を作り直す。
 - U10: 列に入れたときに `auto_merge_enabled` が起きるか（公式 events-that-trigger-workflows.md:666 では `enqueued` と別の種類・未確認）。便2 の試しの PR で確かめる（§11）。便0 の見張りの判定はどちらでも安全な形にする（§6）。
 - U11: 本番の見張り（docker-compose の GitHub App）が会社名義のリポジトリを読めるか（§10・U3 と一緒に確かめる）。
@@ -209,6 +213,7 @@ R§7（出典・日付・数値・適用の限界は scratchpad の mq-web/evide
 - U15（PO が決める）: 列から外れたとき PO にも Discord で知らせるか（§2 K4 の注）。知らせない場合、外れたことに気付くのは作者（shingo-cc）だけになる。
 - U16（PO が決める）: K4 のしきい値を 40 分のままにするか、定時の起動の遅れに備えて 35 分にするか。設計の推奨は 40 分のまま遅れを数える（35 分だと普通の確かめ 20〜25 分との差が 10 分になり、混んだ日に誤って鳴りやすい）。14 日で遅れが 5 分を超えた回数が 1 回以上なら 35 分に下げる案を出す。
 - U17（PO が決める）: 便1（名義の移し）の間、本線への合流を止める時間帯（6 回目の観点 f）。移している最中の合流は行き先が変わる途中で起きるため、止める時間を決めてから同意票を出す。
-- U18（調査で埋まる）: 列の一時枝（gh-readonly-queue/…）が作られたとき push の event で workflow が起きるか。公式 events-that-trigger-workflows.md で確かめ、起きるなら push で動く workflow の重い仕事が二重に走らないかをカード（便0）で確かめる（6 回目の観点 f）。
+- U18（便2 の試しで埋まる）: 列の一時枝（gh-readonly-queue/…）が作られたとき Actions の `push:` で workflow が起きるか。7 回目の審査で公式文書を読んだ結果: managing-a-merge-queue.md:49 は「外部の CI は gh-readonly-queue/{base_branch} の枝が push されたときに動かすべき」と書くが、Actions の `push:` が起きるかは events-that-trigger-workflows.md に書かれていない。文書だけでは決まらないので、便0 で `push:` の 5 本に `gh-readonly-queue/**` の除外を前もって入れ（起きても起きなくても安全）、§11「一時枝で余計に走らない」の試しで実際に起きたか（除外が無ければ起きていたか）を記録する。
+- `push:` で動く workflow の一覧（§11 の 5 本）は、7 回目の審査の抜き出しが空で返り確かめ直せていない。カード（便0）を作るとき、最新の main で `.github/workflows/*.yml` の `on.push` を YAML として読み（行の抜き出しではなく）、枝の指定ごとに一覧を作り直す。5 本と食い違ったら止める。
 - U14: prod2（監視用サーバー）の `/opt/salesanchor-monitoring` に設定を置く正式な手順と担当（§6「移した直後の組」）。カードを作る前に正本を探し、無ければ PO に聞く。
 - 行番号: この設計の file:行 は 2026-11-10 の origin/main（2bf29d9e〜53b3b308）の値。カードを作るときに最新の main で確かめ直す（3 回目の推奨 4）。
