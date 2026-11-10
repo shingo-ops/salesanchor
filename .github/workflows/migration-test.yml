@@ -2135,18 +2135,44 @@ jobs:
     steps:
       - name: Report results
         run: |
+          det="${{ needs.detect-changes.result }}"
+          out="${{ needs.detect-changes.outputs.migrations }}"
           r="${{ needs.migration-test-run.result }}"
           d="${{ needs.migration-full-dryrun.result }}"
           e="${{ needs.migration-registration-exists.result }}"
           g="${{ needs.migration-registration-exists-regression.result }}"
+          echo "detect-changes: $det (migrations=$out)"
           echo "migration-test-run: $r"
           echo "migration-full-dryrun: $d"
           echo "migration-registration-exists: $e"
           echo "migration-registration-exists-regression: $g"
-          if [[ "$e" == "success" || "$e" == "skipped" ]] && [[ "$g" == "success" || "$g" == "skipped" ]] && [[ "$r" == "success" || "$r" == "skipped" ]] && [[ "$d" == "success" || "$d" == "skipped" ]]; then
-            echo "OK: all migration tests passed or no migration changes"
-            exit 0
-          else
-            echo "FAIL: migration-registration-exists=$e, migration-registration-exists-regression=$g, migration-test-run=$r, migration-full-dryrun=$d"
+          if [[ "$det" != "success" ]]; then
+            echo "FAIL: detect-changes is not success (detect-changes=$det)"
             exit 1
           fi
+          if [[ "$g" != "success" ]]; then
+            echo "FAIL: migration-registration-exists-regression runs every time and must succeed: $g"
+            exit 1
+          fi
+          case "$out" in
+            true)
+              if [[ "$e" == "success" && "$r" == "success" && "$d" == "success" ]]; then
+                echo "OK: migrations changed and all migration tests passed"
+                exit 0
+              fi
+              echo "FAIL: migrations changed but tests did not succeed: migration-registration-exists=$e, migration-test-run=$r, migration-full-dryrun=$d"
+              exit 1
+              ;;
+            false)
+              if [[ "$e" == "skipped" && "$r" == "skipped" && "$d" == "skipped" ]]; then
+                echo "OK: migrations not changed and migration tests were skipped"
+                exit 0
+              fi
+              echo "FAIL: migrations not changed but tests were not skipped: migration-registration-exists=$e, migration-test-run=$r, migration-full-dryrun=$d"
+              exit 1
+              ;;
+            *)
+              echo "FAIL: detect-changes output is not true/false: migrations='$out'"
+              exit 1
+              ;;
+          esac
