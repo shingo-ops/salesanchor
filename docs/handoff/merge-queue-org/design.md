@@ -3,7 +3,7 @@
 - この文書は何か: 本線に入れる順番を GitHub に任せて、PR の追い越しとやり直しをなくすための設計書。
 - 親の仕様書: [ブランチ運用](../../specs/branch-operations/README.md)（合流の手順を変えるため、その子として置く）
 - 区分（STANDARD-WORKFLOW §1.8）: 既存の延長・修正（ブランチ運用の合流の手順を変える）。
-- 状態: 設計案（PO 未承認）。設計審査 11 回目（b9b8010ac・2026-11-10）で APPROVE（必須 0・推奨 4。推奨 4 件は 7d0cfa833 で反映）。12 回目（7d0cfa833）は REVISE（必須 1「維持の仕組み」欄が無い・推奨 3）で、この版で全部直した。名義の移し・ruleset の変更は PO の最終確認（同意票）まで行わない。
+- 状態: 設計案（PO 未承認）。設計審査 11 回目（b9b8010ac・2026-11-10）で APPROVE（必須 0・推奨 4。推奨 4 件は 7d0cfa833 で反映）。12 回目（7d0cfa833）は REVISE（必須 1「維持の仕組み」欄が無い・推奨 3）で、c9140f6c0 で全部直した。13 回目（c9140f6c0・2026-11-10）で APPROVE（必須 0・推奨 2。origin/main の validateDesignDoc・validateMaintenanceSection を当てて指摘 0）。推奨 2 件（§14 の効き始めの注・親子リンクの宿題）はこの版で反映。名義の移し・ruleset の変更は PO の最終確認（同意票）まで行わない。
 - 下調べ: docs/handoff/merge-queue-org/recon.md（以下 R§）。ADR 案: docs/handoff/merge-queue-org/adr-draft.md
 - PO の選択: 2026-11-10「1」＝「会社の名義に移して、GitHub純正の順番待ちの列を使う方向で設計する」
 - 関連 ADR: ADR-135（本線＝本番投入可・:66 で merge queue を不採用）・ADR-136（危険 PR の GO）・ADR-1029（マージ前の審査をフックで強制）・ADR-1011（hooks は AI がパッチ・PO が `!` で反映）・ADR-1003（docs-only の合流）
@@ -244,7 +244,8 @@ R§7（出典・日付・数値・適用の限界は scratchpad の mq-web/evide
 
 ## 14. 維持の仕組み
 
-- 守り手: scripts/agent-hooks/review-gate/gate.py（便0 で `--admin` を止める行を足し、列を飛ばす合流の命令を AI が出せないようにする）。列そのものは GitHub の ruleset が守る（ファイルではないので、下の見張りで外れに気付く）。
+- 守り手: scripts/agent-hooks/review-gate/gate.py（便0 で `--admin` を止める行を足し、列を飛ばす合流の命令を AI が出せないようにする。この行が効き始めるのは便0 の後から。それまでは列がまだ無いので、守る対象も無い）。列そのものは GitHub の ruleset が守る（ファイルではないので、下の見張りで外れに気付く）。
 - 便0・便2 で作る見張りの workflow（列の見張り・外れの知らせ・設定のずれの見張り。§9）は、まだファイルが無い。作ったら、この欄の守り手にパスを足す（便3 の片付けで行う）。
 - 対象: 本線への合流が全件列を通ること（ruleset の merge queue の規則・bypass が空・strict が無効）。列が止まったときに PO に知らせが届くこと（K4）。
+- 親子リンクの宿題（STANDARD-WORKFLOW §1.6）: 親の仕様書 docs/specs/branch-operations/README.md の §7 に、この recon.md・design.md へのリンクがまだ無い。設計を PO が承認した直後の文書だけの変更で足す（遅くとも便3 の片付けで）。
 - 中身の詳しい表: §9「続ける仕組み」。
