@@ -126,12 +126,33 @@ jobs:
     steps:
       - name: Report results
         run: |
+          det="${{ needs.detect-changes.result }}"
+          out="${{ needs.detect-changes.outputs.frontend }}"
+          ev="${{ github.event_name }}"
           r="${{ needs.karte-gate-run.result }}"
-          echo "karte-gate-run: $r"
-          if [[ "$r" == "success" || "$r" == "skipped" ]]; then
-            echo "OK"
-            exit 0
-          else
-            echo "FAIL"
+          echo "detect-changes: $det (frontend=$out) / event: $ev / karte-gate-run: $r"
+          if [[ "$det" != "success" ]]; then
+            echo "FAIL: detect-changes is not success (detect-changes=$det)"
             exit 1
           fi
+          case "$out" in
+            true|false) ;;
+            *)
+              echo "FAIL: detect-changes output is not true/false: frontend='$out'"
+              exit 1
+              ;;
+          esac
+          if [[ "$out" == "true" || "$ev" == "workflow_dispatch" ]]; then
+            if [[ "$r" == "success" ]]; then
+              echo "OK: karte gate ran and passed"
+              exit 0
+            fi
+            echo "FAIL: karte gate had to run but did not succeed: karte-gate-run=$r"
+            exit 1
+          fi
+          if [[ "$r" == "skipped" ]]; then
+            echo "OK: frontend not changed and karte gate was skipped"
+            exit 0
+          fi
+          echo "FAIL: frontend not changed but karte gate was not skipped: karte-gate-run=$r"
+          exit 1

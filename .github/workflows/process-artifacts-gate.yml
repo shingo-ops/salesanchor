@@ -9,13 +9,17 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
     branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main]
 
 concurrency:
-  group: process-artifacts-gate-${{ github.event.pull_request.number }}
+  group: process-artifacts-gate-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   gate:
+    if: github.event_name != 'merge_group'
     name: process-artifacts gate
     runs-on: ubuntu-latest
     timeout-minutes: 5
