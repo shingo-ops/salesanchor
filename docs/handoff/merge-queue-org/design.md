@@ -3,7 +3,7 @@
 - この文書は何か: 本線に入れる順番を GitHub に任せて、PR の追い越しとやり直しをなくすための設計書。
 - 親の仕様書: [ブランチ運用](../../specs/branch-operations/README.md)（合流の手順を変えるため、その子として置く）
 - 区分（STANDARD-WORKFLOW §1.8）: 既存の延長・修正（ブランチ運用の合流の手順を変える）。
-- 状態: 設計案（PO 未承認）。設計審査 11 回目（b9b8010ac・2026-11-10）で APPROVE（必須 0・推奨 4。推奨 4 件は 7d0cfa833 で反映）。12 回目（7d0cfa833）は REVISE（必須 1「維持の仕組み」欄が無い・推奨 3）で、c9140f6c0 で全部直した。13 回目（c9140f6c0・2026-11-10）で APPROVE（必須 0・推奨 2。origin/main の validateDesignDoc・validateMaintenanceSection を当てて指摘 0）。推奨 2 件（§14 の効き始めの注・親子リンクの宿題）はこの版で反映。名義の移し・ruleset の変更は PO の最終確認（同意票）まで行わない。
+- 状態: **PO 承認済み（2026-11-11「1」＝「承認して、下準備から始める」）**。画面の確認 6 件は R§9 で済み。U15・U16・U17・U19 と strict を外すことは、便2 の同意票の前に PO に聞く（便0 には影響しない）。設計審査の経緯: 設計審査 11 回目（b9b8010ac・2026-11-10）で APPROVE（必須 0・推奨 4。推奨 4 件は 7d0cfa833 で反映）。12 回目（7d0cfa833）は REVISE（必須 1「維持の仕組み」欄が無い・推奨 3）で、c9140f6c0 で全部直した。13 回目（c9140f6c0・2026-11-10）で APPROVE（必須 0・推奨 2。origin/main の validateDesignDoc・validateMaintenanceSection を当てて指摘 0）。推奨 2 件（§14 の効き始めの注・親子リンクの宿題）はこの版で反映。名義の移し・ruleset の変更は PO の最終確認（同意票）まで行わない。
 - 下調べ: docs/handoff/merge-queue-org/recon.md（以下 R§）。ADR 案: docs/handoff/merge-queue-org/adr-draft.md
 - PO の選択: 2026-11-10「1」＝「会社の名義に移して、GitHub純正の順番待ちの列を使う方向で設計する」
 - 関連 ADR: ADR-135（本線＝本番投入可・:66 で merge queue を不採用）・ADR-136（危険 PR の GO）・ADR-1029（マージ前の審査をフックで強制）・ADR-1011（hooks は AI がパッチ・PO が `!` で反映）・ADR-1003（docs-only の合流）
