@@ -48,6 +48,7 @@ jobs:
               - 'docker-compose.yml'
               - 'docker-compose.test.yml'
               - '.github/workflows/test.yml'
+              - '.github/workflows/deploy.yml'
 
   # 静的解析（ruff/bandit/mypy）— pytest-run と並列実行
   # 設定: backend/pyproject.toml（ruff/mypy/bandit/pytest の SSoT）

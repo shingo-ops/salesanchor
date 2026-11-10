@@ -15,6 +15,8 @@ on:
       - 'scripts/migration_py_entry.py'
       - 'scripts/run_all_migrations.sh'
       - 'scripts/tests/test-deploy-orphan-cleanup.sh'
+      - 'scripts/deploy-db-precheck.sh'
+      - 'scripts/tests/test-deploy-db-precheck.sh'
       - '.github/workflows/deploy.yml'
       - '.github/workflows/backup-script-test.yml'
   push:
@@ -26,6 +28,8 @@ on:
       - 'scripts/migration_py_entry.py'
       - 'scripts/run_all_migrations.sh'
       - 'scripts/tests/test-deploy-orphan-cleanup.sh'
+      - 'scripts/deploy-db-precheck.sh'
+      - 'scripts/tests/test-deploy-db-precheck.sh'
       - '.github/workflows/deploy.yml'
       - '.github/workflows/backup-script-test.yml'
   workflow_dispatch:
@@ -75,3 +79,26 @@ jobs:
         env:
           REQUIRE_DOCKER: '1'
         run: bash scripts/tests/test-deploy-orphan-cleanup.sh
+
+  db-precheck:
+    name: deploy db precheck test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      # P7 が deploy.yml を読むのに使う
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pyyaml
+        run: pip install pyyaml
+
+      # P1〜P8（design §18-4）。入れ物の名前を本番と同じ astro-webapp-postgres-1 にする
+      - name: Run test-deploy-db-precheck.sh (P1-P8)
+        env:
+          REQUIRE_DOCKER: '1'
+        run: bash scripts/tests/test-deploy-db-precheck.sh
