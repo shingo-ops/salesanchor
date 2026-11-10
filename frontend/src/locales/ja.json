@@ -3308,6 +3308,8 @@
     "deleteEvent": "予定を削除",
     "deleteEventConfirm": "この予定を削除しますか？",
     "eventTitle": "タイトル",
+    "addTitle": "タイトルを追加",
+    "moreOptions": "その他のオプション",
     "eventStart": "開始日時",
     "eventEnd": "終了日時",
     "eventDescription": "説明",

@@ -389,6 +389,25 @@
   transition: initial;
 }
 
+/* schedule-title: 予定の作る小窓の題名（下線だけ・Google の実測 22px・schedule-gcal-clone design §3.17 G42） */
+.comp-field__input.comp-input--schedule-title {
+  min-height: var(--space-10);
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background-color: transparent;
+  font-size: var(--schedule-create-title-size);
+  line-height: normal;
+}
+
+.comp-field__input.comp-input--schedule-title:focus,
+.comp-field__input.comp-input--schedule-title:focus-visible {
+  border-bottom: 2px solid var(--accent);
+  box-shadow: none;
+  outline: none;
+}
+
 /* composer: WeeklyAdvisorSection.css db-weekly-composer-input（旧規則の border は --border-subtle が未定義のため無効化され枠なしで描画されていた。その見た目を写す） */
 .comp-field__input.comp-input--composer {
   min-height: auto;

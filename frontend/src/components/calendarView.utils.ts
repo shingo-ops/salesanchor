@@ -82,6 +82,13 @@ export interface CalendarViewProps {
   onEventResize?: (id: string, start: Date, end: Date | null, revert: () => void) => void;
   /** 月の「ほか N 件」。渡したときは onDayClick を呼ばずにこちらを呼ぶ */
   onMoreClick?: (date: Date, rect: CalendarViewRect | null) => void;
+  /** 四角を知りたい予定の id。onEventRect と組で渡す */
+  trackEventId?: string;
+  /**
+   * trackEventId の予定の四角（画面の座標）。描いた後・動かした後・長さを変えた後・巻き上げた後・包みの大きさが変わった後に呼ぶ。
+   * 見えない（visibility: hidden・幅 0）・描かれていないときは null。つかんでいる間・引いている間は呼ばず、離した後に 1 回呼ぶ。
+   */
+  onEventRect?: (id: string, rect: CalendarViewRect | null) => void;
   ariaLabel: string;
   /** 見た目の型。'plain'（既定）は今の形。'schedule' は予定の画面の形（ADR-1065 What 7・design §3.8） */
   appearance?: 'plain' | 'schedule';

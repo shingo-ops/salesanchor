@@ -408,6 +408,11 @@
   --schedule-shell-radius:   var(--radius-lg); /* スケジュール面の角丸 */
   --schedule-popover-width:  20rem;    /* 詳細ポップオーバー幅 */
   --schedule-popover-max-h:  34rem;    /* 詳細ポップオーバー最大高 */
+  --schedule-create-popover-width:  37.5rem;  /* 作る小窓の幅（600px・Google の実測 598px・G42） */
+  --schedule-create-popover-radius: 1.75rem;  /* 作る小窓の角の丸み（28px・G42） */
+  --schedule-create-popover-bg:     var(--bg-subtle); /* 作る小窓の地（G42） */
+  --schedule-create-icon-col:       2.75rem;  /* 作る小窓の絵の列の幅（絵 20px＋あき 24px・G42） */
+  --schedule-create-title-size:     1.375rem; /* 作る小窓の題名の文字（22px・G42） */
   --schedule-month-cell-min-h: 7.5rem; /* 月ビューのセル最小高 */
   --schedule-month-dot-size: 8px;      /* 月ビュー・一覧の担当者色の丸 */
   --schedule-month-daynum-size: 24px;  /* 月ビューの日付の丸（今日の丸・Google の実測 24px） */
