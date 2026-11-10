@@ -20,7 +20,7 @@
 | K3 | 列に入れてから本線に入るまで | 同 14 日の `added_to_merge_queue` → `merged` の時間の中央値が 60 分以下 | 便0 で「全部緑になってから合流まで」を直近 14 日で数えて記録する |
 | K4 | 列が止まったら気付く | 一番古い列の項目が 60 分進まないとき、15 分以内に Discord の PO 宛てに 1 通届く。便2 の後に試しの PR で 1 回起こして確かめる | 見張り 0 |
 | K5 | 移しで本番が壊れない | 移した直後の最初の配備で deploy 成功・smoke 成功・app と /api/health が 200 | — |
-| K6 | 移しで設定が欠けない | secret 86=86・ruleset 2=2（中身一致）・自前の実行機の数が移す前と同じ・Pages が新 URL で開ける | R§6-3 の値 |
+| K6 | 移しで設定が欠けない | secret 86=86・ruleset 2=2（中身一致）・自前の実行機の数が移す前と同じ・Pages が新 URL で開ける（中の参照の書き換えは便3） | R§6-3 の値 |
 
 K3 の 60 分は「確かめ 1 回（20〜25 分）＋前に並ぶ分」の目安。PO の承認で確定する。
 
@@ -91,6 +91,8 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 | scripts/agent-hooks/review-gate/gate.py:53 | STRICT_CHECK_REPOS に新しい名前を足す（旧と新の両方。大文字小文字は区別しない）。`--admin` を止める行を足す。手元の写し（~/.claude/scripts/review-gate）は ADR-1011 どおり PO が `!` で反映 |
 | R§6-4 の直書き全部 | `${{ github.repository }}`・`gh repo view`・`GITHUB_REPOSITORY` から取る形に直す。試験の固定値と CODEOWNERS は新名へ |
 | 設計審査で見つかった漏れ（必須指摘 3） | `scripts/validate-pr-ownership.sh:142`（REPO_SLUG の既定値）・`scripts/dev/test-agent-hooks.sh:12,52,392`（試験の origin）・`.github/workflows/weekly-stale-tasks.yml:36`（案内の URL）・`monitoring/scripts/check_alert_rules.py:18`（手順書の URL）・`tools/claude-channels/README.md:18`（clone 先）を新名か自動で取る形に。**本番の見張りの設定** `docker-compose.yml:558`（`--owner=shingo-ops`）・`docker-compose.monitoring.yml:111`（`GHA_OWNER`）・`:157`（`GITHUB_REPO`）・`monitoring/github-collector/collector.py:27`（既定値）は、移した後に旧名のままだと GitHub の動きの記録が取れなくなる。旧名と新名のどちらでも動くかは未確認なので、便1 の直後に本番へ配る変更として扱う（§8 移した直後 5 に入れる）。人の名前としての `shingo-ops`（`line-import-device.yml:29`・`line-import-operations.yml:20`・`sandbox-test.yml:18` の actor 比較・`feedback-issue-triage.yml:42`・CODEOWNERS の `@shingo-ops`・AGENTS.md）は人を指すので変えない |
+| .github/workflows/auto-merge-guard.yml（設計審査 2 回目の必須指摘 1） | 今は `pull_request_target` の `auto_merge_enabled`（:16）で起き、台帳 DONE の PR でなければ `gh pr merge --disable-auto`（:60）で予約を消す。列が必須の枝では、確かめが緑になる前に合流の命令を出すと auto-merge の予約になる（gh 2.85.0 の help・公式 merging-a-pull-request-with-a-merge-queue.md:53）。この見張りがその予約を消すので、PR は列に入らずに止まる。直し: (1) gh-pr-merge-safe.sh は必須の確かめが全部緑（check-pr-merge-ready.py の判定）になってから合流の命令を出す（今の動きのまま・カードで行を確かめる）。(2) 列に入れる操作で `auto_merge_enabled` が起きるかは未確認なので、§11 の試しの PR で確かめる。(3) 起きる場合は、見張りの判定に「緑で列に入った PR は消さない」を足す形をカードで決める |
+| 見張りの数え先（設計審査 2 回目の必須指摘 2） | `scripts/sop-health-collector.js:25`（`REPO` の既定値 `shingo-ops/salesanchor`）が記録に付ける名前と、`monitoring/grafana/provisioning/dashboards/json/sop-health.json:72,137,202` の `repo="shingo-ops/salesanchor"` の絞り込みは組。片方だけ変えるとグラフが黙って空になる。直し: 両方を同じ便（便1 の直後の本番への変更）で新名に変える。移す前の記録は旧名のまま残るので、グラフの絞り込みを旧名・新名の両方にする（`repo=~"shingo-ops/salesanchor|GEN-RYU-System/salesanchor"`）。`monitoring/prometheus/alert_rules.yml`（38 行）と `monitoring/prometheus/tests/alert_rules_test.yml`（44 行）の手順書の URL は、GitHub の転送で開けるが、同じ便で新名に直す（試験の期待値も同時に変える） |
 
 ## 7. 進め方（便ごとに 1 つ変え、測ってから次へ）
 
@@ -112,13 +114,14 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 1. ruleset 2 件・リポジトリの設定・secret の名前の一覧（値は読めない・名前だけ）・Pages の設定を JSON で保存する。
 2. 開いている PR の数と、列の代わりに合流を止める時間帯を PO と決める（移す数分間は合流しない）。
 3. 便0 が本線に入り、直書きが残っていないことを `git grep -n 'shingo-ops/salesanchor' -- ':!docs' ':!.claude-pipeline' ':!tasks'` で 0 件にしてある（リポジトリ全体。scripts 等の 4 か所に絞らない。monitoring・docker-compose を含める）。`shingo-ops` 単独の残りは §6 の「人の名前」の行と一致することを確かめる。
+4. （設計審査 2 回目の必須指摘 3）`PIPELINE_PAT` の種類を PO に画面で確かめてもらう（U9）。使う所は 8 本・14 か所（`deploy.yml:66,1161-1162`・`auto-merge-guard.yml:33`・`ledger-auto-done-main.yml:45,87,170,175`・`ledger-done-update-branch.yml:27`・`active-work-auto-done.yml:26,139`・`active-work-auto-review.yml:25`・`external-state-snapshot.yml:84`・`monthly-secret-expiry.yml:18`）。公式文書では、細かく権限を絞る型の鍵は「持ち主を 1 つ選び、その持ち主の物しか触れない」（github/docs `managing-your-personal-access-tokens.md:108`）。この型で持ち主が個人名義なら、移した後は 14 か所が全部失敗する。`deploy.yml:72` の「前回の配備が成功したか」の確かめも失敗し、毎回すべての移行を走らせる側に倒れる。手当て: この型なら、移す前に持ち主を GEN-RYU-System にした鍵を PO に作ってもらう（会社が鍵の承認を求める設定なら、その承認も）。移した直後、最初の合流より前に secret を差し替える（§8 移した直後 1）。古い型の鍵なら、会社が古い型の鍵を許しているかを確かめる。
 
 移す前（PO・画面で読むだけ）: R§8 の U2（実行機）・U3（webhook・deploy key・GitHub App）を読む。個人名義に入れた App（claude.ai の GitHub 連携を含む）が会社名義で要るかを決める。
 
 移す（PO・画面）: Settings → Danger Zone → Transfer → GEN-RYU-System・名前は salesanchor のまま。
 
 移した直後（Opus）:
-1. K6: secret 86・ruleset 2 件の中身を保存した JSON と突き合わせ。欠けていたら保存した JSON で作り直す案を PO に同意票で出す。
+1. K6: secret 86・ruleset 2 件の中身を保存した JSON と突き合わせ。欠けていたら保存した JSON で作り直す案を PO に同意票で出す。U9 で鍵の差し替えが要るときは、最初の合流より前に `PIPELINE_PAT` を差し替える（secrets の変更なので PO の同意票）。差し替えた後、読むだけの API を 1 回呼んで新名のリポジトリに届くことを確かめる。
 2. 手元の全 worktree と本店の `git remote set-url origin`（新 URL）。
 3. ~/.claude/settings.json の自動判定の文（R§6-5）と agent-console の routines.json（11 か所）を新名に直す（settings は ADR-1034 の権限の足し引きの手順）。
 4. 自前の実行機の確認（U2）。消えていたら scripts/setup-vps-runner.sh で登録し直す（本番の VPS の作業は PO の同意）。
@@ -147,6 +150,8 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 | 列が止まって誰も気付かない | §9 の見張り（K4） |
 | 純正の列の不具合（2026-04-23 例） | merge 方式は当時の対象外。列の見張りと K1 の照合で気付く |
 | 乙に分けた確かめが、合わせた形の問題を見逃す | 乙は PR 本文・PR 差分だけで決まる物に限る。カードで行を読んで決め、迷ったら甲 |
+| 個人名義を持ち主にした鍵が、会社名義のリポジトリで使えない（2 回目の必須指摘 3） | §8 移す前 4・移した直後 1。差し替えるまで合流しない |
+| 列で合流が続き、配備の待ちが置き換わる（公式 `actions-group-concurrency.md`: 同じ組で待てるのは 1 本だけで、古い待ちは取り消される。2 回目の推奨） | `deploy.yml:63-75` が「前回成功した配備の commit」と `github.event.before` を比べ、違えば全部の移行を走らせる側に倒れる。この確かめは `PIPELINE_PAT` を使うので、鍵の差し替え（上の行）が前提。便2 の後の 14 日で、取り消された配備の数を K3 と一緒に数える |
 | 危険 PR（移行・deploy.yml・本番 scripts）の GO | 「列に入れる」＝「合流の操作」とみなし、GO（ADR-136）は列に入れる前に受け取る。最大 1 件ずつなので 1 PR＝1 配備は変わらない |
 
 ## 11. 受け入れ基準と検証方法
@@ -159,6 +164,9 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 | 便0: 一時枝で余計に走らない | 5 本の `push:` に `gh-readonly-queue/**` の除外がある。便2 の後の試しの PR で、その 5 本の run が一時枝で 0 件 |
 | 便0: 直書き 0 | §8 移す前 3 の grep が 0 件 |
 | 便1: K5・K6 | §8 移した直後 1・5 |
+| 便1: 鍵が新名で使える | 移した直後、`PIPELINE_PAT` を使う読むだけの workflow（monthly-secret-expiry の手動起動）が成功。最初の配備で `deploy.yml` の「Check previous deploy completed」が「差分どおり」を出す |
+| 便2: 列に入れても見張りが消さない | 試しの PR（台帳 DONE ではない普通の PR）を、確かめが緑になってから gh-pr-merge-safe.sh で列に入れる。auto-merge-guard の run が無いか、あっても予約を消していない。PR が MERGED になる |
+| 便1 直後: 見張りのグラフが途切れない | Grafana の sop-health で、移す前と後の両方の点が 1 本のグラフに出る |
 | 便2: K1 の設定 | ruleset の JSON に merge_queue（MERGE・同時 5・最大 1・制限 60）・strict=false・bypass 空 |
 | 便2: K4 | 試しに列を 60 分止めて Discord に 1 通 |
 | 14 日後: K1〜K3 | §2 の測り方 |
@@ -172,3 +180,4 @@ R§7（出典・日付・数値・適用の限界は scratchpad の mq-web/evide
 - R§8 の U1〜U8。とくに U2・U3・U5 は PO の画面の確認が要る。
 - strict を外すこと（§4）を PO が認めるか。
 - K3 の 60 分を PO が認めるか。
+- U9: `PIPELINE_PAT` の種類と持ち主（PO の画面の確認）。細かく絞る型で持ち主が個人なら、会社を持ち主にした鍵を作り直す。
