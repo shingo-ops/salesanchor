@@ -120,7 +120,7 @@ PO 2026-11-10 の言葉（要旨）: 予定の箱の UI/UX を Google と同じ�
 
 | # | 成功条件 | 確かめ方 | 根拠 |
 |---|---|---|---|
-| G51 | 作る小窓の Meet は切り替えではなく、絵＋「Google Meet のビデオ会議を追加」の 1 行のボタン。押すと行が「Google Meet のビデオ会議（保存すると参加用のリンクができます）」＋右に × に変わる。× を押すと元の行に戻る。Google をつないでいない人には行が出ない（今と同じ） | 本番の週で空の升目を押し、Meet の行を押す→文が変わり × が出る→× で戻る（保存しない）。名前が「Google Meet」の `role="switch"` が小窓に 0 個（終日・社員にも見せるの切り替えは残る）。単体の試験で、押した後に保存すると POST の `add_meet` が true、× で戻してから保存すると `add_meet` が無い | R13-1・R13-2 |
+| G51 | 作る小窓の Meet は切り替えではなく、絵＋「Google Meet のビデオ会議を追加」の 1 行のボタン。押すと行が「Google Meet のビデオ会議（保存すると参加用のリンクができます）」＋右に × に変わる。× を押すと元の行に戻る。Google をつないでいない人には行が出ない（今と同じ） | 本番の週で空の升目を押し、Meet の行を押す→文が変わり × が出る→× で戻る（保存しない）。名前に「Google Meet」を含む `role="switch"` が小窓に 0 個（試験は `queryByRole("switch", { name: /Google Meet/ })` が null。終日・社員にも見せるの切り替えは残る）。単体の試験で、押した後に保存すると POST の `add_meet` が true、× で戻してから保存すると `add_meet` が無い | R13-1・R13-2 |
 | G52 | 自分の Google の予定で Meet が無いものを直す小窓でも、同じ Meet の行が出る（今の切り替えの代わり）。Meet が有る予定は今と同じく「Google Meet で参加」が出る | 単体の試験（今の Meet の試験 8 本を、切り替えからボタンに読み替えて全部通す） | R13-2 |
 | G53 | 作る小窓の「その他のオプション」を押すと、窓いっぱいの編集画面が開く。編集画面の一番上は左から ×・題名の欄・「保存」。その下に 日時と終日・種類・Meet の行・社員にも見せる・場所・説明 が全部開いた形で縦に並ぶ（今の作る小窓と同じ順・`frontend/src/pages/schedule/SchedulePageImpl.tsx:445,515,543,556,569,590`）。小窓で入れた題名・日時・種類・Meet の状態がそのまま入っている | 本番の週で月曜 10 時を押し、題名に「試し」と入れ、「その他のオプション」を押す。編集画面の四角が窓と同じ（`getBoundingClientRect` が 0,0,窓の幅,窓の高さ ±1）・題名が「試し」・日時が月曜 10 時〜11 時・6 つの項目が上の順。保存しない | R13-3 |
 | G54 | 編集画面の × か Esc で、カレンダーに戻る。戻ると作る小窓が元の位置に開いたままで、入れた題名と仮の箱が残っている。裏側へは何も送らない | 本番で G53 の続きに × を押し、作る小窓の題名が「試し」・仮の箱が月曜 10 時に在る。Esc でも同じ。単体の試験で、開いて × で戻る間の POST・PATCH が 0 回 | R13-3・R13-4 |
@@ -735,7 +735,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 
 試験:
 - `frontend/src/components/FullScreenDialog.test.tsx`: open で dialog が出る・aria-modal・× と Esc で `onClose`・Esc が window へ届かない・変換中の Esc では `onClose` が呼ばれない・Tab が中を回る・閉じると元の要素へ戻る。
-- `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`: 今の Meet の試験 8 本（`:437-`）を `role="button"` に読み替え／× で戻すと `add_meet` を送らない／`role="switch"` で addMeet が 0 個／「その他のオプション」で dialog が開き、題名・日時が小窓の値のまま（`:726-738` を書き替え）／× と Esc で dialog が消え小窓が開いたまま題名が残り POST・PATCH が 0 回／dialog の保存で POST の中身が小窓からの保存と同じ・成功で dialog と小窓が消える・失敗で dialog が開いたままエラー文が dialog の中／dialog が開いた状態で「m」を送っても表示が変わらない／× で閉じた後のフォーカスが作る小窓の題名の欄／保存に失敗して × で閉じると時間割の側に失敗の文が出ない。
+- `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`: 今の Meet の試験 8 本（`:437-`）を `role="button"` に読み替え／× で戻すと `add_meet` を送らない／`queryByRole("switch", { name: /Google Meet/ })` が null（作る小窓・直す小窓・全画面の 3 か所）／「その他のオプション」で dialog が開き、題名・日時が小窓の値のまま（`:726-738` を書き替え）／× と Esc で dialog が消え小窓が開いたまま題名が残り POST・PATCH が 0 回／dialog の保存で POST の中身が小窓からの保存と同じ・成功で dialog と小窓が消える・失敗で dialog が開いたままエラー文が dialog の中／dialog が開いた状態で「m」を送っても表示が変わらない／× で閉じた後のフォーカスが作る小窓の題名の欄／保存に失敗して × で閉じると時間割の側に失敗の文が出ない。
 - 見本帳: `FullScreenDialog.stories.tsx`（`check:stories`）。
 
 選ばなかった案:
@@ -1015,4 +1015,8 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - 直す 2: 終日・社員にも見せるの `<Toggle>`（:449・:559）が残るので「switch が 0 個」は必ず× → 「名前が Google Meet の switch が 0 個」に直した。
 - 直す 3: 押した元の「その他のオプション」は小窓と一緒に消える → G56 を「閉じると作る小窓の題名へ」に直し、試験に足した。
 - 推奨 4〜7（近道は今も `windowOpen` で止まる旨／金型の Esc は変換中は何もしない・試験／週の外へ日付を変えたときの動きを心配と対処に／× で `error` を消す・`meetAvailable` を 1 つの変数で両方へ）は全部入れた。
+
+2 回目: REVISE（2026-11-10 17:44〜17:45 UTC・クラウドの Opus・0dd26de2a・照合は origin/main 263889d6・セッション cse_01HHUUpSEkRwbzNiSnb7zgrK）
+- 結果は実行記録の本文で読んだ。1 回目の 7 件は全部 ○（行つき）。768b3db1 から 263889d6 までに予定の画面・Modal・useFocusTrap の差は無し。
+- 直す 1: G51 の「名前が Google Meet の switch」は Testing Library の完全一致で今も直した後も 0 個になり、切り替えが残っても ○ になる（今の名前は `schedule.addMeet`「Google Meet を付ける」・`SchedulePageImpl.tsx:548`）→ G51 と試験を `queryByRole("switch", { name: /Google Meet/ })` が null に揃えた。
 
