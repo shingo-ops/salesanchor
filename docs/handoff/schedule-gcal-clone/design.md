@@ -1020,3 +1020,8 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - 結果は実行記録の本文で読んだ。1 回目の 7 件は全部 ○（行つき）。768b3db1 から 263889d6 までに予定の画面・Modal・useFocusTrap の差は無し。
 - 直す 1: G51 の「名前が Google Meet の switch」は Testing Library の完全一致で今も直した後も 0 個になり、切り替えが残っても ○ になる（今の名前は `schedule.addMeet`「Google Meet を付ける」・`SchedulePageImpl.tsx:548`）→ G51 と試験を `queryByRole("switch", { name: /Google Meet/ })` が null に揃えた。
 
+3 回目: APPROVE（2026-11-10 17:49〜17:50 UTC・クラウドの Opus・8a33cc85a・照合は origin/main 5dc69e7・セッション cse_01HHUUpRAdMdDJ9ZagZTVXTK）
+- 結果は実行記録の本文で読んだ。必須 0 件・推奨 0 件。
+- 2 回目の直す 1 は ○: G51（`:123`）と §3.18 の試験（`:738`）が同じ書き方。今の切り替えの名前は ja「Google Meet を付ける」・en "Add Google Meet"（どちらも `locales/*.json:3351`）で、今は ×・直した後は ○ になり判定できる。終日（`:449`）・社員にも見せる（`:559`）の切り替えは当たらない。
+- 263889d6 から 5dc69e7 までに予定の画面と言葉の表の差は無し。
+- 未確認: 試験そのものは流していない（読むだけの役）。実装の CI で確かめる。
