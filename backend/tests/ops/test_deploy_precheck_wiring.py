@@ -1,12 +1,14 @@
 """本番反映の移行の前の点検（scripts/deploy-db-precheck.sh）と deploy.yml の配線の試験（DB も docker も要らない）。
 
-設計: docs/handoff/deploy-db-stall/design.md §18-4（P4a〜P4c・P7・P8）。
+設計: docs/handoff/deploy-db-stall/design.md §18-4・§18-14（P4a〜P4e・P7〜P9）。
 必須チェック「pytest (SQLite + PostgreSQL RLS)」の中で毎回走る。
 本物の DB が要る P1〜P3・P5・P6 は scripts/tests/test-deploy-db-precheck.sh（必須ではない）。
 
 - P4a〜P4c: 台本を subprocess で流し、DB_PRECHECK_FAKE_COUNTS で決めた数を渡す（間隔は 0〜1 秒）
+- P4d・P4e: 設定が整数でない・続けての回数が1未満なら、数える前に止まる（§18-14）
 - P7: deploy.yml を YAML として読み、新しい段の形を確かめる（移行の段の if は名前で探して読む）
 - P8: deploy.yml のどこにも DB_PRECHECK_FAKE_COUNTS が無い
+- P9: 点検の段が台本を流す前に DB_PRECHECK_ の変数と BASH_ENV を外す（段の行を実際に sh で流して確かめる）
 """
 
 from __future__ import annotations
@@ -102,7 +104,66 @@ def test_p4c_fake_line_appears_once_only_with_variable(tmp_path):
     assert _count(r"FAKE", r2.stdout + r2.stderr) == 0, r2.stdout + r2.stderr
 
 
-# ---------------------------------------------------------------- P7 / P8
+# ---------------------------------------------------------------- P4d / P4e
+def _assert_stopped_by_setting_check(r, expect_line: str):
+    out = r.stdout + r.stderr
+    assert r.returncode == 1, out
+    lines = out.splitlines()
+    assert _count(re.escape(expect_line), out) == 1, out
+    assert _count(r"\] clean:", out) == 0, out
+    assert _count(r"sample ", out) == 0, out
+    assert lines and lines[-1].startswith(">>> [precheck] precheck finished at"), out
+
+
+def test_p4d_streak_zero_is_refused():
+    try:
+        r = _run(
+            {
+                "DB_PRECHECK_STREAK": "0",
+                "DB_PRECHECK_FAKE_COUNTS": "1",
+                "DB_PRECHECK_POLL_SEC": "0",
+                "DB_PRECHECK_LIMIT_SEC": "3",
+            },
+            timeout=10,
+        )
+    except subprocess.TimeoutExpired as e:
+        pytest.fail(f"P4d 10 秒の時間切れ: {e}")
+    _assert_stopped_by_setting_check(
+        r, "invalid setting DB_PRECHECK_STREAK=0 (must be 1 or more)"
+    )
+
+
+_SETTING_VARS = [
+    "DB_PRECHECK_POLL_SEC",
+    "DB_PRECHECK_STREAK",
+    "DB_PRECHECK_LIMIT_SEC",
+    "DB_PRECHECK_XACT_SEC",
+    "DB_PRECHECK_LONG_ACTIVE_SEC",
+]
+
+
+@pytest.mark.parametrize("bad", ["abc", "-1", "3 4", "5s"])
+@pytest.mark.parametrize("name", _SETTING_VARS)
+def test_p4e_non_integer_setting_is_refused(name, bad):
+    env = {
+        "DB_PRECHECK_FAKE_COUNTS": "0",
+        "DB_PRECHECK_POLL_SEC": "0",
+        "DB_PRECHECK_LIMIT_SEC": "3",
+    }
+    env[name] = bad
+    try:
+        r = _run(env, timeout=10)
+    except subprocess.TimeoutExpired as e:
+        pytest.fail(f"P4e {name}={bad!r} 10 秒の時間切れ: {e}")
+    out = r.stdout + r.stderr
+    assert r.returncode == 1, out
+    assert _count(r"^>>> \[precheck\] invalid setting " + re.escape(name) + r"=.*\(must be a whole number\)", out) == 1, out
+    assert _count(r"\] clean:", out) == 0, out
+    assert _count(r"sample ", out) == 0, out
+    assert out.splitlines()[-1].startswith(">>> [precheck] precheck finished at"), out
+
+
+# ---------------------------------------------------------------- P7 / P8 / P9
 def _load_deploy():
     with DEPLOY_YML.open(encoding="utf-8") as f:
         return yaml.safe_load(f)
@@ -163,3 +224,67 @@ def test_p7_deploy_yml_new_step_shape():
 
 def test_p8_deploy_yml_has_no_fake_counts_variable():
     assert "DB_PRECHECK_FAKE_COUNTS" not in DEPLOY_YML.read_text(encoding="utf-8")
+
+
+# ---------------------------------------------------------------- P9
+UNSET_LINE = "unset $(env | sed -n 's/^\\(DB_PRECHECK_[A-Za-z0-9_]*\\)=.*/\\1/p')"
+RUN_LINE = 'env -u BASH_ENV bash "$TMP"'
+
+
+def _precheck_script_lines() -> list[str]:
+    doc = _load_deploy()
+    steps = _steps_of_job_with(doc, NEW_STEP_NAME)
+    new = steps[_only_index(steps, "新しい段", lambda s: s.get("name") == NEW_STEP_NAME)]
+    return [ln.strip() for ln in new["with"]["script"].splitlines()]
+
+
+def test_p9a_step_unsets_variables_before_running_script():
+    lines = _precheck_script_lines()
+    run_idx = [i for i, ln in enumerate(lines) if 'bash "$TMP"' in ln]
+    assert len(run_idx) == 1, lines
+    assert lines[run_idx[0]] == RUN_LINE, lines[run_idx[0]]
+    assert UNSET_LINE in lines, lines
+    assert lines.index(UNSET_LINE) < run_idx[0], lines
+
+
+def _run_step_lines(tmp_path, extra_env: dict[str, str]):
+    lines = _precheck_script_lines()
+    dump = tmp_path / "dump.sh"
+    dump.write_text(
+        "#!/bin/bash\n"
+        "python3 -c 'import json, os, sys; json.dump(dict(os.environ), sys.stdout)'\n",
+        encoding="utf-8",
+    )
+    selected = [ln for ln in lines if ln.startswith("unset ")] + [ln for ln in lines if 'bash "$TMP"' in ln]
+    cmd = "\n".join(selected)
+    env = {k: v for k, v in os.environ.items() if not k.startswith("DB_PRECHECK_") and k != "BASH_ENV"}
+    env["TMP"] = str(dump)
+    env.update(extra_env)
+    return subprocess.run(["sh", "-c", cmd], env=env, capture_output=True, text=True, timeout=30)
+
+
+def test_p9b_variables_and_bash_env_are_removed(tmp_path):
+    import json
+
+    rc = tmp_path / "rc.sh"
+    rc.write_text("export DB_PRECHECK_STREAK=0\n", encoding="utf-8")
+    r = _run_step_lines(
+        tmp_path,
+        {
+            "DB_PRECHECK_FAKE_COUNTS": "0",
+            "DB_PRECHECK_STREAK": "0",
+            "DB_PRECHECK_XACT_SEC": "99999",
+            "DB_PRECHECK_NEW_ONE": "1",
+            "DB_PRECHECK_ODD": "a=b\nc=d",
+            "BASH_ENV": str(rc),
+        },
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    got = json.loads(r.stdout)
+    assert [k for k in got if k.startswith("DB_PRECHECK_")] == [], got
+    assert "BASH_ENV" not in got, got
+
+
+def test_p9c_no_variables_still_exits_zero(tmp_path):
+    r = _run_step_lines(tmp_path, {})
+    assert r.returncode == 0, r.stdout + r.stderr

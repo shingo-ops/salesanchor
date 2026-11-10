@@ -89,16 +89,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # P7 が deploy.yml を読むのに使う
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install pyyaml
-        run: pip install pyyaml
-
-      # P1〜P8（design §18-4）。入れ物の名前を本番と同じ astro-webapp-postgres-1 にする
-      - name: Run test-deploy-db-precheck.sh (P1-P8)
+      # P1〜P3・P5・P6（design §18-4。P4a〜P4e・P7〜P9 は必須の pytest）。入れ物の名前を本番と同じ astro-webapp-postgres-1 にする
+      - name: Run test-deploy-db-precheck.sh (P1-P3, P5, P6)
         env:
           REQUIRE_DOCKER: '1'
         run: bash scripts/tests/test-deploy-db-precheck.sh

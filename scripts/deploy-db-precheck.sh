@@ -19,7 +19,7 @@
 #     数えられなければ止めずに unknown と書く。偽の数の回は書かない
 #
 # 試験のためだけの環境変数: DB_PRECHECK_FAKE_COUNTS（例 0,1,0,0,0）。あれば DB の代わりにその数を順に使い、
-# 並びを使い切ったら最後の値を繰り返す。本番の deploy.yml はこの変数を渡さない（試験 P8）。
+# 並びを使い切ったら最後の値を繰り返す。本番の deploy.yml は台本を流す前に DB_PRECHECK_ で始まる変数を全部外す（試験 P8・P9）。
 
 set -u
 
@@ -44,6 +44,26 @@ SECONDS=0
 finish() { # finish: 最後の1行（移行の段の始まりとの差が、点検の後の隙の長さ）
   echo ">>> [precheck] precheck finished at $(date -u +%Y-%m-%dT%H:%M:%SZ) waited=${SECONDS}"
 }
+
+# ---- 設定の確かめ（数える前・DB にはつながない。設計 §18-14） ----
+for _pair in "DB_PRECHECK_POLL_SEC=${POLL_SEC}" "DB_PRECHECK_STREAK=${CLEAN_STREAK}" \
+  "DB_PRECHECK_LIMIT_SEC=${WAIT_LIMIT_SEC}" "DB_PRECHECK_XACT_SEC=${XACT_SEC}" \
+  "DB_PRECHECK_LONG_ACTIVE_SEC=${LONG_ACTIVE_SEC}"; do
+  _val="${_pair#*=}"
+  case "${_val}" in
+    ''|*[!0-9]*)
+      echo ">>> [precheck] invalid setting ${_pair%%=*}=${_val} (must be a whole number) - stopping"
+      finish
+      exit 1
+      ;;
+  esac
+done
+if [ "${CLEAN_STREAK}" -lt 1 ]; then
+  echo ">>> [precheck] invalid setting DB_PRECHECK_STREAK=${CLEAN_STREAK} (must be 1 or more) - stopping"
+  finish
+  exit 1
+fi
+# -----------------------------------------------------------------
 
 # 取引が開いたままの接続の条件（数えるのと握り手の記録で同じ条件）
 WHERE_SQL="state IN ('idle in transaction', 'idle in transaction (aborted)')
@@ -142,7 +162,7 @@ notify_discord() { # notify_discord <本数> <名前の一覧>
   return 0
 }
 
-echo ">>> [precheck] start: poll=${POLL_SEC}s streak=${CLEAN_STREAK} limit=${WAIT_LIMIT_SEC}s xact>${XACT_SEC}s"
+echo ">>> [precheck] start: poll=${POLL_SEC}s streak=${CLEAN_STREAK} limit=${WAIT_LIMIT_SEC}s xact>${XACT_SEC}s long_active>${LONG_ACTIVE_SEC}s"
 if [ -n "${FAKE}" ]; then
   echo ">>> [precheck] FAKE counts in use (${FAKE})"
 fi
