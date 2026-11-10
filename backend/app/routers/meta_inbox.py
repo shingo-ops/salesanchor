@@ -22,7 +22,6 @@ from typing import Optional
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,11 +30,9 @@ from app.auth.dependencies import (
     get_current_user,
     require_permission,
     reset_tenant_context,
-    security,
 )
 from app.database import get_db
 from app.models import User
-from app.realtime import stream_db
 from app.services import encryption, meta_graph, oauth_state
 from app.services.audit import record_audit_log
 from app.services.meta_graph import (
@@ -47,9 +44,6 @@ from app.services.meta_graph import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-# 受信箱の流れ（SSE）用。登録時の依存（get_current_tenant）を付けないための別の束（ADR-1016 追記）
-stream_router = APIRouter()
-_MESSAGING_VIEW = require_permission("messaging.view")
 
 
 # ---------------------------------------------------------------------------
@@ -1048,10 +1042,13 @@ from starlette.responses import StreamingResponse
 _SSE_HEARTBEAT_SEC = 30  # nginx proxy_read_timeout(3600s) より十分短く
 
 
-@stream_router.get("/conversations/stream")
+@router.get(
+    "/conversations/stream",
+    dependencies=[Depends(require_permission("messaging.view"))],
+)
 async def stream_inbox_updates(
     request: Request,
-    cred: HTTPAuthorizationCredentials = Depends(security),
+    tenant_id: int = Depends(get_current_tenant),
 ) -> StreamingResponse:
     """
     SSE で Inbox 更新を通知する。
@@ -1059,12 +1056,6 @@ async def stream_inbox_updates(
     - 30 秒ごとにハートビート ping
     - テナントあたり SSE_MAX_CONN_PER_TENANT 接続まで（超過時 503）
     """
-    # DB 依存（Depends）は持たない。yield 依存は流れを送り終えるまで閉じないため（ADR-1016 追記）
-    async with stream_db.short_db_scope() as db:
-        user = await get_current_user(request, cred, db)
-        tenant_id = await get_current_tenant(request, user, db)
-        await _MESSAGING_VIEW(current_user=user, tenant_id=tenant_id, db=db)
-
     from app.services.sse_pubsub import (
         decrement_connection,
         increment_connection,

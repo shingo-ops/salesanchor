@@ -552,8 +552,6 @@ app.include_router(
     bots.router, prefix="/api/v1", tags=["bots"],
     dependencies=[Depends(get_current_tenant)],
 )
-# 受信箱の流れ（SSE）。認証は経路の中の短いセッションで行うので、登録時の依存を付けない（ADR-1016 追記）
-app.include_router(meta_inbox.stream_router, prefix="/api/v1", tags=["meta-inbox"])
 # Phase 1-D Sprint 2: Meta Inbox OAuth 接続バックエンド
 app.include_router(
     meta_inbox.router, prefix="/api/v1", tags=["meta-inbox"],
