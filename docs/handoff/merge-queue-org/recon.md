@@ -145,3 +145,17 @@
 | U6 | merge_group で動かしたときの確かめの所要 | 便0 の後、移す前は測れない（個人名義では merge_group が起きない）。移した後、列を「必須」にする前に試しの PR で測る | Opus |
 | U7 | lessons-guard.yml の起動条件 | 便0 のカード作成時に読む | Opus |
 | U8 | Pages を使う人・場所（QA チェック表の URL を誰が開くか） | 便2 のカード作成時に検索 | Opus |
+
+## 9. 画面の確認を API で読んだ結果（2026-11-11・PO の指示「shingo-opsでみてくれ」で shingo-ops 名義の読むだけの API）
+
+shingo-cc 名義（権限 write）では runners 403・hooks 404・keys 404 で読めなかった。shingo-ops 名義（scope: gist, read:org, repo, workflow）で読んだ。
+
+| 項目 | 読んだ結果 | 移しでどうなるか | 残り |
+|---|---|---|---|
+| U2 自前の実行機 | 2 台: `salesanchor-vps`（Linux・online）・`Shingo-Mac-Temp`（macOS・online）。`GET repos/.../actions/runners` | 公式の「移しで残る物」の一覧（github/docs `transferring-a-repository.md`・Context7）に実行機の記載は無い | 移した直後に同じ API で 2 台あるかを見る。消えていたら design §8 移した直後 4 |
+| U3 webhook | 0 件（`GET .../hooks` が `[]`） | 対象なし | なし |
+| U3 deploy key | 2 件: `VPS Deploy Key`（書き込み可・2026-03-26）・`VPS Deploy Key (sa_deploy 2026-07-20)`（読むだけ） | 公式: webhooks・secrets・deploy keys は移した後も付いたまま | 移した直後に件数 2 を見る |
+| U3 GitHub App | 本線の最新 5 件の commit で動いた App: `github-actions`・`claude`・`cursor`・`google-cloud-build`。会社名義に入っている App: `claude`（selected）・`chatgpt-codex-connector`（all） | 必須の確かめ 16 件は全部 `integration_id` が null か 15368（github-actions）。`claude`・`cursor`・`google-cloud-build` の check suite は conclusion が null で、必須には入っていない。origin/main に cloudbuild・cursor の設定ファイルと参照は無い（`git ls-tree`・`git grep`） | `cursor`・`google-cloud-build` を会社名義で入れ直すかは PO が決める（入れなくても合流は止まらない）。`claude` は会社名義で selected なので、移した後にこのリポジトリを選ぶ必要があるかを U5 で確かめる |
+| U9 `PIPELINE_PAT` | secret の作成 2026-05-07・更新 2026-09-02（名前と時刻だけ）。種類と持ち主は API で読めない | — | PO の画面（github.com/settings/personal-access-tokens と /settings/tokens）で確かめる |
+| U12 会社の合鍵の決まり | `GET orgs/GEN-RYU-System/personal-access-tokens` は 404。read:org では読めない（admin:org が要る） | — | PO の画面で確かめる |
+| 参考 | 会社 GEN-RYU-System の plan は free。shingo-ops は admin・active。リポジトリの Actions は enabled・allowed_actions all | 公開リポジトリなので free でも列が使える（R§2） | — |
