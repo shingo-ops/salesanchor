@@ -11,7 +11,7 @@
 2. 【事実】止まったときの握り手は 2 本。どちらも `salesanchor_app|salesanchor_backend|idle in transaction`。pid 122539 は 20 秒・表 `permissions,role_permissions,roles,tenants,user_roles,users`。pid 122170 は 13 秒・表 `users`。一時コンテナは 0 個。
 3. 【事実】0 本の回は 227 秒目から約 32 秒おきに出た（227・264・296・327・359・396・428・459・491 秒。deploy-5364-failed.log）。
 4. 【事実】2 回目（11:31Z）は 3 回続けて 0 本で 11 秒で通り、反映・移行・動作確認まで成功した（deploy-5364-retry.log）。
-5. 【事実】点検の数え方は `state IN ('idle in transaction', 'idle in transaction (aborted)') AND now() - xact_start > 5 秒`（`scripts/deploy-db-precheck.sh` :49-53）。
+5. 【事実】点検の数え方は `state IN ('idle in transaction', 'idle in transaction (aborted)') AND now() - xact_start > 5 秒`（`scripts/deploy-db-precheck.sh` :49-53。基準 4cc17871f の行番号。origin/main d9a5938f では :69-73）。
 6. 【事実】アプリの DB 接続は `get_db()` の yield 依存（`backend/app/database.py` :70-85）。後始末は応答を送り終えた後の finally。application_name は `salesanchor_backend`（同 :16）。pool_size=20・max_overflow=10（同 :27-28）。
 7. 【事実（公式文書 Context7 /websites/fastapi_tiangolo）】yield 依存の既定は `scope="request"` で、後始末は応答を送り終えた後に走る。本番は fastapi==0.136.3（`backend/requirements.txt` :1）。
 8. 【事実】握り手の表は、認証の4つの関数が読む表と一致する。`get_current_user`（`backend/app/auth/dependencies.py` :112-130）→ users、`get_current_tenant`（同 :235-286。最後の文は :274-281 の `SET app.is_operator = ''`）→ tenants、`load_user_permissions`（同 :537-563。最後の文は `SELECT key FROM public.permissions`）→ user_roles・role_permissions・permissions、`get_user_system_keys` → roles。認証の道に commit は無い。
@@ -28,7 +28,7 @@
 
 ### C1: 握り手はどの要求から来るか → `/api/v1/conversations/stream`
 - 基準（タブなし・12:14〜12:19Z、idle-tx-sample-20261110T121412Z.txt）: 5 秒より長い握り手は 0 本。0 秒の `SELECT 1`（接続の生存確認）だけ。
-- 実験（Chrome でアプリのダッシュボードを 1 枚だけ開く・12:25:20〜12:27:50Z、idle-tx-sample-20261110T122507Z.txt）: 開いている間、`salesanchor_backend` の idle in transaction が常に 1 本あった。取引の開始は 12:25:20・12:25:53・12:26:25・12:26:57・12:27:31 と約 32 秒ごとに入れ替わり、各回 24〜29 秒まで伸びた。最後の文は `SELECT key FROM public.permissions` または `SET app.is_operator = ''`（A-8 の最後の文と一致）。接続元は全部 172.19.0.13。
+- 実験（Chrome でアプリのダッシュボードを 1 枚だけ開く・12:25:20〜12:27:50Z、idle-tx-sample-20261110T122507Z.txt）: 開いている間、`salesanchor_backend` の idle in transaction が常に 1 本あった。取引の開始は 12:25:20・12:25:53・12:26:25・12:26:57・12:27:31 と約 32 秒ごとに入れ替わり、各回 24〜29 秒まで伸びた。最後の文は `SELECT key FROM public.permissions` または `SET app.is_operator = ''`（A-8 の最後の文と一致）。接続元は全部同じ1つのコンテナ（backend のコンテナ内の番地）。
 - タブを閉じた後（12:28:19 の回）: 5 秒より長い握り手は 0 本に戻った。
 - ブラウザの通信記録: 約 60 秒の間に `/api/v1/conversations/stream` が 2 回、どちらも 200（つなぎ直し）。
 - nginx（12:05〜12:08Z、nginx-stream-20261110T122428Z.txt）: 別の利用者（Windows の Chrome）が各画面で conversations/stream と events/stream を開いていた。
