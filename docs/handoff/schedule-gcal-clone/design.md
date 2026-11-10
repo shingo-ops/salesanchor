@@ -120,12 +120,12 @@ PO 2026-11-10 の言葉（要旨）: 予定の箱の UI/UX を Google と同じ�
 
 | # | 成功条件 | 確かめ方 | 根拠 |
 |---|---|---|---|
-| G51 | 作る小窓の Meet は切り替えではなく、絵＋「Google Meet のビデオ会議を追加」の 1 行のボタン。押すと行が「Google Meet のビデオ会議（保存すると参加用のリンクができます）」＋右に × に変わる。× を押すと元の行に戻る。Google をつないでいない人には行が出ない（今と同じ） | 本番の週で空の升目を押し、Meet の行を押す→文が変わり × が出る→× で戻る（保存しない）。`role="switch"` が小窓に 0 個。単体の試験で、押した後に保存すると POST の `add_meet` が true、× で戻してから保存すると `add_meet` が無い | R13-1・R13-2 |
+| G51 | 作る小窓の Meet は切り替えではなく、絵＋「Google Meet のビデオ会議を追加」の 1 行のボタン。押すと行が「Google Meet のビデオ会議（保存すると参加用のリンクができます）」＋右に × に変わる。× を押すと元の行に戻る。Google をつないでいない人には行が出ない（今と同じ） | 本番の週で空の升目を押し、Meet の行を押す→文が変わり × が出る→× で戻る（保存しない）。名前が「Google Meet」の `role="switch"` が小窓に 0 個（終日・社員にも見せるの切り替えは残る）。単体の試験で、押した後に保存すると POST の `add_meet` が true、× で戻してから保存すると `add_meet` が無い | R13-1・R13-2 |
 | G52 | 自分の Google の予定で Meet が無いものを直す小窓でも、同じ Meet の行が出る（今の切り替えの代わり）。Meet が有る予定は今と同じく「Google Meet で参加」が出る | 単体の試験（今の Meet の試験 8 本を、切り替えからボタンに読み替えて全部通す） | R13-2 |
-| G53 | 作る小窓の「その他のオプション」を押すと、窓いっぱいの編集画面が開く。編集画面の一番上は左から ×・題名の欄・「保存」。その下に 日時と終日・Meet の行・場所・種類・社員にも見せる・説明 が全部開いた形で縦に並ぶ。小窓で入れた題名・日時・種類・Meet の状態がそのまま入っている | 本番の週で月曜 10 時を押し、題名に「試し」と入れ、「その他のオプション」を押す。編集画面の四角が窓と同じ（`getBoundingClientRect` が 0,0,窓の幅,窓の高さ ±1）・題名が「試し」・日時が月曜 10 時〜11 時・6 つの項目が上の順。保存しない | R13-3 |
+| G53 | 作る小窓の「その他のオプション」を押すと、窓いっぱいの編集画面が開く。編集画面の一番上は左から ×・題名の欄・「保存」。その下に 日時と終日・種類・Meet の行・社員にも見せる・場所・説明 が全部開いた形で縦に並ぶ（今の作る小窓と同じ順・`frontend/src/pages/schedule/SchedulePageImpl.tsx:445,515,543,556,569,590`）。小窓で入れた題名・日時・種類・Meet の状態がそのまま入っている | 本番の週で月曜 10 時を押し、題名に「試し」と入れ、「その他のオプション」を押す。編集画面の四角が窓と同じ（`getBoundingClientRect` が 0,0,窓の幅,窓の高さ ±1）・題名が「試し」・日時が月曜 10 時〜11 時・6 つの項目が上の順。保存しない | R13-3 |
 | G54 | 編集画面の × か Esc で、カレンダーに戻る。戻ると作る小窓が元の位置に開いたままで、入れた題名と仮の箱が残っている。裏側へは何も送らない | 本番で G53 の続きに × を押し、作る小窓の題名が「試し」・仮の箱が月曜 10 時に在る。Esc でも同じ。単体の試験で、開いて × で戻る間の POST・PATCH が 0 回 | R13-3・R13-4 |
 | G55 | 編集画面の「保存」は、小窓の「保存」と同じ中身を送る（同じ関数）。うまくいくと編集画面も小窓も閉じて予定が時間割に出る。失敗すると編集画面は開いたままで、失敗の文が編集画面の中に出る | 単体の試験で、編集画面の保存の POST の中身が小窓からの保存と同じ・成功で閉じる・失敗で開いたままエラー文が編集画面の中に在る（本番では保存しない） | R13-4 |
-| G56 | 編集画面が開いている間、近道のキー（例: m で月表示）は効かない。Tab で動く先は編集画面の中だけ。閉じると押した元へ戻る | 単体の試験で、編集画面が開いた状態で body に「m」を送っても表示が変わらない・Tab が編集画面の外へ出ない。本番で目で見る | R13-4 |
+| G56 | 編集画面が開いている間、近道のキー（例: m で月表示）は効かない。Tab で動く先は編集画面の中だけ。閉じると作る小窓の題名の欄に文字を打てる状態（フォーカス）になる。題名の欄で日本語を変換している途中の Esc では閉じない | 単体の試験で、編集画面が開いた状態で body に「m」を送っても表示が変わらない・Tab が編集画面の外へ出ない・× で閉じた後 `document.activeElement` が作る小窓の題名の欄・変換中（`isComposing`）の Esc で dialog が残る。本番で目で見る | R13-4 |
 | G57 | 明るい・ダークどちらも色はトークンだけ。英語の画面でも文字が t() から出る。新しい金型（全画面の入れ物）に見本帳の例と単体の試験が在る | 本番でダークに切り替えて編集画面の地が `--bg-surface` のダークの値と一致。CI の「Lint & Dark Mode Check」（色・数値・i18n・見本帳の検査を含む）と「UI governance gate」が緑 | R13-5 |
 
 ## 3. 作り方（How）
@@ -707,7 +707,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - R13-1（Google）: PO の言葉で、Google の Meet は「押す行」で、「その他のオプション」は全画面の編集が開き閉じるとカレンダーに戻る（PO 2026-11-10）。Google は Meet の行を押した時点で部屋を作るが、アプリは保存のときに作る（ADR-1060・PO 2026-11-10「1」）。このため押した後の行は参加の案内ではなく「保存すると参加用のリンクができます」と書く（まだ無いリンクを出さない）。Google の全画面の編集の細かい寸法は測っていない（未確認）。受入れで Google と並べて写しを撮り、並び（×・題名・保存が一番上、その下に項目）を比べる。
 - R13-2（アプリの Meet）: 切り替え（金型 Toggle・`role="switch"`）で、`meetAvailable && !item?.meetUrl` のときに作る・直す小窓の両方に出る（`frontend/src/pages/schedule/SchedulePageImpl.tsx:541-552`）。値は下書きの `addMeet`（`:95`）1 つで、保存のとき `meetAvailable && draft.addMeet && !popover?.item?.meetUrl` なら `add_meet` を送る（`:1201`）。裏側（`backend/app/routers/calendar.py`・`backend/app/services/calendar_service.py`）は変えない。外す操作は作らない（ADR-1060 What 8）——今回の × は保存前の下書きの印を戻すだけで、Google の予定から Meet を外す操作ではない。
 - R13-3（アプリの「その他のオプション」）: 作る小窓の下に在り、押すと閉じている行（日時・場所・説明）を全部開き、全部開くと消える（`:612-630`）。試験は `frontend/src/pages/schedule/SchedulePageImpl.test.tsx:726-738`。
-- R13-4（重なりの心配）: ①作る小窓は document の `pointerdown` を capture で見て、小窓と時間割の外を押すと閉じる（`:309-324`）。全画面を小窓の上に重ねると、全画面の中を押しただけで小窓（と下書き）が閉じる。②近道のキーは window に 1 つ（`:1432-` の判定・`:1477` で付ける）。③失敗の文（`shownError`・`:1089`）と帯（`banner`・`:1649`）は時間割の側（`schedule-main`）に出るので、全画面の下に隠れる。
+- R13-4（重なりの心配）: ①作る小窓は document の `pointerdown` を capture で見て、小窓と時間割の外を押すと閉じる（`:309-324`）。全画面を小窓の上に重ねると、全画面の中を押しただけで小窓（と下書き）が閉じる。②近道のキーは window に 1 つ（`:1432-` の判定・`:1477` で付ける）。小窓が開いている間は `windowOpen = popover !== null`（`:1440`）で文字キーは今も効かない（`:1450`）。③失敗の文（`shownError`・`:1089`）と帯（`banner`・`:1649`）は時間割の側（`schedule-main`）に出るので、全画面の下に隠れる。
 - R13-5（金型）: 窓いっぱいの入れ物の金型は無い（`frontend/src/components/` に Modal・Sheet・Drawer は在るが、Modal は寸法 sm〜xl・Drawer は右から出る板・Sheet は下から出る板）。新しい金型は PO の許可が要る（ADR-144・`docs/CC_UI_GOVERNANCE.md:14`。前例は Sheet・2026-10-13 PO 許可）。色・重なりのトークンは在る（`--z-modal: 400`・`frontend/src/tokens.css:135`／`--modal-wide-w: 880px`・`:489`／`--bg-surface`）。`frontend/scripts/check-css-fixed-position` は `src/pages` の css だけを見るので、金型の css で `position: fixed` を使える。
 
 作り方:
@@ -715,26 +715,27 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
    - `:541-552` の切り替えを、新しい部品 `MeetRow`（`frontend/src/pages/schedule/ScheduleDraftFields.tsx`）に替える。印が偽のとき: 金型 Button（ghost・md）に「Google Meet のビデオ会議を追加」（`schedule.addMeet` の文を替える）。押すと `onDraftChange({ ...draft, addMeet: true })`。印が真のとき: 文「Google Meet のビデオ会議（保存すると参加用のリンクができます）」（新しいキー `schedule.meetPending`）＋金型 Button（ghost・sm・iconOnly・× の絵・aria-label は新しいキー `schedule.removeMeet`「Google Meet を外す」）。× は `addMeet: false` に戻すだけ。
    - 出す条件・送る中身・`joinMeetLink`（`:327-339`）は変えない。
 2. 入れる項目を 1 か所にする（SSOT）。
-   - 作る小窓の項目（日時と終日・Meet・種類・社員にも見せる・場所・説明）の描き方を `frontend/src/pages/schedule/ScheduleDraftFields.tsx` に移し、小窓と全画面の両方がそれを使う。値は今の `draft`（`:1033`）1 つで、全画面用に写しを作らない。始まりを直すときは今と同じ `shiftDraftStart` を使う。
+   - 作る小窓の項目（日時と終日・種類・Meet・社員にも見せる・場所・説明。今の小窓と同じ順）の描き方を `frontend/src/pages/schedule/ScheduleDraftFields.tsx` に移し、小窓と全画面の両方がそれを使う。値は今の `draft`（`:1033`）1 つで、全画面用に写しを作らない。始まりを直すときは今と同じ `shiftDraftStart` を使う。
    - 小窓は今の「閉じた行を押すと開く」まま。全画面は全部開いた形で出す（部品に `expanded` を渡す）。
 3. 全画面の入れ物の金型 `FullScreenDialog`（G53・G56・G57。PO の許可の後に作る）。
-   - `frontend/src/components/FullScreenDialog.tsx`・`.css`・`.stories.tsx`・`.test.tsx`。document.body へ portal、`role="dialog"`・`aria-modal="true"`・`aria-label`（呼ぶ側が渡す文字）、`useFocusTrap`（`frontend/src/hooks/useFocusTrap`）、開いた時は `initialFocusRef`（無ければ最初の押せる物）へ、閉じた時は開く前の要素がまだ画面に在ればそこへ戻す。Esc は document の keydown で受けて `stopPropagation` し `onClose`（金型 Modal と同じ形・window の近道へ届かない）。
+   - `frontend/src/components/FullScreenDialog.tsx`・`.css`・`.stories.tsx`・`.test.tsx`。document.body へ portal、`role="dialog"`・`aria-modal="true"`・`aria-label`（呼ぶ側が渡す文字）、`useFocusTrap`（`frontend/src/hooks/useFocusTrap`）、開いた時は `initialFocusRef`（無ければ最初の押せる物）へ、閉じた時は開く前の要素がまだ画面に在ればそこへ戻す（予定の画面では押した元は小窓と一緒に消えるので、戻る先は描き直した小窓の題名の欄。小窓の `placed` で題名へ移る今の動き・`:307`）。Esc は document の keydown で受けて `stopPropagation` し `onClose`（金型 Modal と同じ形・window の近道へ届かない）。ただし変換中（`event.isComposing || event.keyCode === 229`）の Esc は何もしない（近道の判定 `:1436` と同じ形。金型 Modal の Esc `:72-77` は見ていないので写さない）。
    - 口: `open`・`onClose`・`ariaLabel`・`closeLabel`・`title`（一番上の真ん中に置く中身）・`actions`（右の中身）・`children`。× は金型 Button（ghost・iconOnly）。
    - 見た目: `position: fixed; inset: 0; z-index: var(--z-modal); background: var(--bg-surface)`。一番上の帯と中身。中身の幅は `min(var(--modal-wide-w), 100%)` で真ん中。新しいトークンは足さない（数値は既存の space・トークンだけ）。
 4. 予定の画面につなぐ（G53〜G56）。
    - ページの状態 `fullEditOpen`（真偽）を足す。作る小窓の「その他のオプション」は `setError(null)` と `setFullEditOpen(true)` にする（行を開く今の動きはやめる）。
    - 全画面が開いている間は作る小窓を描かない（`{popover && !fullEditOpen && <SchedulePopover …/>}`・`:1752`）。`popover` は残すので、仮の箱（`:1318-1320` は `popover?.mode` を見る）と下書きは残る。閉じると小窓が同じ `popover.anchor` で描き直される。
    - 新しい部品 `ScheduleFullEditor`（`frontend/src/pages/schedule/ScheduleFullEditor.tsx`）: 金型 `FullScreenDialog` の中に、題名（金型 `TextFieldControl variant="schedule-title"`）・「保存」（金型 Button primary・題名が空なら押せない）・`ScheduleDraftFields`（`expanded`）・失敗の文（`error` を中に出す）。
-   - × と Esc は `setFullEditOpen(false)` だけ（下書き・popover は触らない・何も送らない）。
+   - × と Esc は `setFullEditOpen(false)` と `setError(null)`（保存に失敗した文は編集画面の中で見せ終えたので、時間割の側 `shownError`・`:1089` に残さない）。下書き・popover は触らない・何も送らない。
+   - 編集画面の Meet の行の出す条件は、作る小窓に渡している `meetAvailable`（`:1766-1773` の式）と同じ値を渡す（式を 2 か所に書かない。1 つの変数にして両方へ渡す）。
    - 保存は今の `saveEvent`（`:1186-1225`）をそのまま呼ぶ。`saveEvent` の成功の道の最後に `setFullEditOpen(false)` を足す。失敗の道は `setError` のままなので全画面は開いたままで、全画面の中に `error` を出す。
-   - 近道の判定（`:1432-`）の最初に `if (fullEditOpen) return;` を足す（Esc は金型が先に止める）。
+   - 近道の判定（`:1432-`）の最初に `if (fullEditOpen) return;` を足す。今も `windowOpen`（`:1440`）で止まるが、小窓を描かない形に変わっても止まることを明示しておく（Esc は金型が先に止める）。
    - `popover` が null になる道（保存・時間割の外を押す）では `fullEditOpen` も偽にする（`useEffect` で `popover?.mode !== "create"` のとき偽・`:1318` と同じ形）。
 5. 文言（ADR-027）: `schedule.addMeet` の文を替える（ja「Google Meet のビデオ会議を追加」・en「Add Google Meet video conferencing」）。新しいキー `schedule.meetPending`・`schedule.removeMeet`・`schedule.fullEditLabel`（ja「予定の編集」・en「Edit event」）を `frontend/src/locales/ja.json`・`en.json` の両方に足す。× の読み上げは今ある `common.close`。
 6. 触らない範囲: 裏側・DB・移行・deploy・scripts・Google の権限。詳しく見る・直す小窓の並び（Meet の行の置き換えだけ）。既に有る予定を全画面で直すこと・招待する人・通知・繰り返し・色（次の便の候補）。
 
 試験:
-- `frontend/src/components/FullScreenDialog.test.tsx`: open で dialog が出る・aria-modal・× と Esc で `onClose`・Esc が window へ届かない・Tab が中を回る・閉じると元の要素へ戻る。
-- `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`: 今の Meet の試験 8 本（`:437-`）を `role="button"` に読み替え／× で戻すと `add_meet` を送らない／`role="switch"` で addMeet が 0 個／「その他のオプション」で dialog が開き、題名・日時が小窓の値のまま（`:726-738` を書き替え）／× と Esc で dialog が消え小窓が開いたまま題名が残り POST・PATCH が 0 回／dialog の保存で POST の中身が小窓からの保存と同じ・成功で dialog と小窓が消える・失敗で dialog が開いたままエラー文が dialog の中／dialog が開いた状態で「m」を送っても表示が変わらない。
+- `frontend/src/components/FullScreenDialog.test.tsx`: open で dialog が出る・aria-modal・× と Esc で `onClose`・Esc が window へ届かない・変換中の Esc では `onClose` が呼ばれない・Tab が中を回る・閉じると元の要素へ戻る。
+- `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`: 今の Meet の試験 8 本（`:437-`）を `role="button"` に読み替え／× で戻すと `add_meet` を送らない／`role="switch"` で addMeet が 0 個／「その他のオプション」で dialog が開き、題名・日時が小窓の値のまま（`:726-738` を書き替え）／× と Esc で dialog が消え小窓が開いたまま題名が残り POST・PATCH が 0 回／dialog の保存で POST の中身が小窓からの保存と同じ・成功で dialog と小窓が消える・失敗で dialog が開いたままエラー文が dialog の中／dialog が開いた状態で「m」を送っても表示が変わらない／× で閉じた後のフォーカスが作る小窓の題名の欄／保存に失敗して × で閉じると時間割の側に失敗の文が出ない。
 - 見本帳: `FullScreenDialog.stories.tsx`（`check:stories`）。
 
 選ばなかった案:
@@ -748,6 +749,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - 小窓を描き直すと、小窓の中の開いた行（日時・場所・説明）は閉じた形に戻る: 値は下書きに残るので消えない。全画面で直した値は、閉じた行の 1 行の文に出る。
 - 全画面の題名の欄に初めから文字を入れると、近道のキーの判定より前に金型の Esc が働く: 金型が `stopPropagation` するので window の近道は動かない（試験で確かめる）。
 - 狭い窓（スマホの幅）: 全画面なのではみ出さない。中身は縦に並ぶだけ。
+- 編集画面で日付を今見ている週の外へ変えて閉じる: 仮の箱は見えず、小窓は前の位置に出る（`handlePendingRect` は四角が null のとき置き場所を変えない・`:1356`）。今の作る小窓の中で日付を週の外へ変えたときと同じ動きなので、今回は変えない。保存すれば予定はその日に入る。
 - Meet の × を Google の予定から Meet を外す操作と取り違える: 印が真になるのは保存前の下書きだけで、保存済みの予定では行が出ない（`!item?.meetUrl`）。
 
 戻し方: 便13 の PR を revert する（frontend だけ・DB・移行・設定は変えない）。
@@ -1005,3 +1007,12 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - npm pack した 6.1.22 で eventDragStart（interaction `index.js:1286`）・eventDragStop（`:1371`）・eventResizeStart（`:1595`）・eventResizeStop（`:1663`）・eventDidMount／eventWillUnmount（core）が在る。種類の欄は普通の `<select>`（`frontend/src/components/Select.tsx:93`・portal なし）なので外の押しの判定で誤って閉じない。
 - 推奨 1: useMemo の依存に祝日・持ち主の色・t が抜けていた → 作り方 1 を「中で使う値すべて」に直した。
 - 推奨 2: 月表示・週の終日の段は daygrid の harness で、始まりの列が同じ長さ変えは style だけ変わる → 作り方 4 ② の見張る相手に `.fc-daygrid-event-harness` を足した。
+
+### 16 回目（便13・G51〜G57）: 1 回目 REVISE（2026-11-10 17:36〜17:38 UTC・クラウドの Opus・origin/release/schedule-gcal-full-edit-design f96c28db4・照合は origin/main 768b3db1・セッション cse_01HHUUpRAuVAawvQRSz2qLo1）
+
+- 結果は実行記録の本文で読んだ。§3.18 の引用行（541-552・309-324・612-630・1186-1225・1318・1432-/1477・1089・1649・1752・:95・:1201・:327-339）は実物どおり。小窓を描かない間も popover・draft・仮の箱・anchor は残る。全画面の中の部品で外の押しの誤判定は無い。saveEvent の成功・失敗の道に穴は無い。選ばなかった案の理由は実物どおり。
+- 直す 1: 項目の並びが G53・作り方 2・実物で 3 通り → 実物の並び（日時:445→種類:515→Meet:543→社員:556→場所:569→説明:590）に揃えた。
+- 直す 2: 終日・社員にも見せるの `<Toggle>`（:449・:559）が残るので「switch が 0 個」は必ず× → 「名前が Google Meet の switch が 0 個」に直した。
+- 直す 3: 押した元の「その他のオプション」は小窓と一緒に消える → G56 を「閉じると作る小窓の題名へ」に直し、試験に足した。
+- 推奨 4〜7（近道は今も `windowOpen` で止まる旨／金型の Esc は変換中は何もしない・試験／週の外へ日付を変えたときの動きを心配と対処に／× で `error` を消す・`meetAvailable` を 1 つの変数で両方へ）は全部入れた。
+
