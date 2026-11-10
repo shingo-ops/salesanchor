@@ -186,6 +186,42 @@ jobs:
             fi
 
       # ============================================
+      # 移行の前の点検（deploy-db-stall 段6 便2・ADR-1037）
+      # 開いたままの DB 取引を数え、3回続けて0本になるまで待つ（上限600秒）。
+      # 上限を過ぎたら、コードを入れ替える前にここで止めて Discord に知らせる。
+      # 台本は origin/main から読む（作業場所は入れ替えの段までは1つ前の版のため）。
+      # docs/handoff/deploy-db-stall/design.md §18-3
+      # ============================================
+      - name: Check open DB transactions before deploy
+        if: ${{ success() && steps.gate.outputs.migrations == 'true' }}
+        uses: appleboy/ssh-action@v1
+        env:
+          ROLLBACK_DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_OWNER_PING }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: ROLLBACK_DISCORD_WEBHOOK
+          command_timeout: 12m
+          script: |
+            set -e
+            echo "============================================"
+            echo "Check open DB transactions before deploy..."
+            echo "============================================"
+            cd /home/ubuntu/salesanchor
+
+            git fetch origin main || { echo ">>> [precheck] git fetch failed"; exit 1; }
+            git rev-parse --verify origin/main >/dev/null || { echo ">>> [precheck] origin/main not found"; exit 1; }
+            if ! git cat-file -e origin/main:scripts/deploy-db-precheck.sh; then
+              echo ">>> [precheck] skipped: script not in origin/main"
+              exit 0
+            fi
+            TMP=$(mktemp)
+            trap 'rm -f "$TMP"' EXIT
+            git show origin/main:scripts/deploy-db-precheck.sh > "$TMP" || { echo ">>> [precheck] git show failed"; exit 1; }
+            bash "$TMP"
+
+      # ============================================
       # デプロイ前 DB バックアップ
       # git pull / docker compose の前に取得して万一のロールバック保険とする。
       # scripts/backup.sh が /home/ubuntu/backups/postgres/ に .sql.gz を生成。
