@@ -3,7 +3,7 @@
 
 **親**: `docs/handoff/deploy-db-stall/design.md`（ADR-1037 の移行前の点検）。**関連 ADR**: ADR-1016（即時反映の通り道）、ADR-1037、ADR-1070、ADR-131、ADR-1015（区分）。  
 **日付**: 2026-11-10。**担当**: Planner（Opus）。  
-**状態**: 設計案作成済み。設計審査済み（1回目 REVISE 4件・2回目 REVISE 3件を反映、3回目 APPROVE。低い指摘2件も §5-5 に反映。記録は docs/handoff/app-idle-tx/review-architect.md）。PO 承認前。実装未着手。  
+**状態**: 設計案作成済み。設計審査済み（1回目 REVISE 4件・2回目 REVISE 3件を反映、3回目 APPROVE。低い指摘2件も §5-5 に反映。記録は docs/handoff/app-idle-tx/review-architect.md）。PO 承認済み（2026-11-11「1」、案 A を実装）。実装は便1（`docs/handoff/app-idle-tx/card-bin1.md`）で進行中。  
 **PO の選択**: 2026-11-10「1」（理由を調べ、直す設計案を作る。実装の前に報告）。  
 **根拠**: `docs/handoff/app-idle-tx/recon.md`（以下 recon）。
 
