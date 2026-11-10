@@ -1,0 +1,4 @@
+{"name": "install-form-guard",
+ "files": ["guard.py"],
+ "hooks": [{"event": "PreToolUse", "matcher": "Bash", "interpreter": "python3", "file": "guard.py"}],
+ "tests": ["test_guard.py"]}
