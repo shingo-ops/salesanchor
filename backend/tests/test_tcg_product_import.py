@@ -360,7 +360,7 @@ async def test_create_product_commit_flag_and_legacy_postcheck(monkeypatch, comm
     monkeypatch.setattr(master, "find_code_collisions", AsyncMock(return_value=[]))
     monkeypatch.setattr(master, "_validate_product_format", AsyncMock())  # ADR-1020 便3: 細分類の検査は別の試験で見る
     args = dict(extraction_item_id="", source_message_id="", product_kind_id=1, work_id=1,
-                manufacturer_id="m", product_category_id="c", japanese_title="商品", release_date="2026-01-01",
+                manufacturer_id="m", product_category_id="3", japanese_title="商品", release_date="2026-01-01",
                 search_keywords="検索", exclude_keywords="除外", english_title="Item", mark="MK1",
                 product_format_id=5)
     if commit is not None:

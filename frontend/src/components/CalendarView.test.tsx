@@ -1,6 +1,6 @@
 /* eslint-disable local/no-japanese-literal -- テスト: 午前・午後の時刻が Google と同じ日本語で出ることを検証する（ADR-027・precedent: DataTable.test.tsx） */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render } from '@testing-library/react';
+import { act, cleanup, render } from '@testing-library/react';
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ja from '../locales/ja.json';
@@ -693,5 +693,106 @@ describe('T12 formatWeekdayShort / formatSlotLabel', () => {
   it('formats other hours', () => {
     expect(formatSlotLabel(new Date(2026, 10, 8, 9, 0), '09:00', tJa, 'meridiem')).toBe('午前9時');
     expect(formatSlotLabel(new Date(2026, 10, 8, 9, 0), '09:00', tJa, 'h24')).toBe('09:00');
+  });
+});
+
+describe('T10 trackEventId・onEventRect（便12・ADR-1065 What 6）', () => {
+  const makeEl = (left: number, width = 100) => {
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    el.getBoundingClientRect = () =>
+      ({ top: 10, left, right: left + width, bottom: 50, width, height: 40, x: left, y: 10, toJSON: () => ({}) }) as DOMRect;
+    return el;
+  };
+  const mountArg = (id: string, el: HTMLElement) => ({
+    event: { id, extendedProps: { source: {} } },
+    el,
+  });
+  const mountView = (onEventRect: (id: string, rect: unknown) => void) =>
+    render(
+      <CalendarView mode="days" date="2026-11-10" events={[]} ariaLabel="x" trackEventId="p" onEventRect={onEventRect} />,
+    );
+
+  beforeEach(() => {
+    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0);
+      return 0;
+    });
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  it('calls onEventRect when the tracked event mounts, and not for other ids', () => {
+    const onEventRect = vi.fn();
+    mountView(onEventRect);
+    act(() => fcProps().eventDidMount(mountArg('x', makeEl(0))));
+    expect(onEventRect).not.toHaveBeenCalled();
+    act(() => fcProps().eventDidMount(mountArg('p', makeEl(200))));
+    expect(onEventRect).toHaveBeenCalledWith('p', expect.objectContaining({ left: 200, right: 300 }));
+  });
+
+  it('calls onEventRect again after eventDrop with the same element', () => {
+    const onEventRect = vi.fn();
+    mountView(onEventRect);
+    act(() => fcProps().eventDidMount(mountArg('p', makeEl(200))));
+    onEventRect.mockClear();
+    act(() =>
+      fcProps().eventDrop({
+        event: { id: 'p', start: new Date(2026, 10, 11, 10), end: new Date(2026, 10, 11, 11), allDay: false },
+        revert: vi.fn(),
+      }),
+    );
+    expect(onEventRect).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the newer element when the older one unmounts afterwards', () => {
+    const onEventRect = vi.fn();
+    mountView(onEventRect);
+    const a = makeEl(100);
+    const b = makeEl(500);
+    act(() => fcProps().eventDidMount(mountArg('p', a)));
+    act(() => fcProps().eventDidMount(mountArg('p', b)));
+    act(() => fcProps().eventWillUnmount(mountArg('p', a)));
+    onEventRect.mockClear();
+    act(() =>
+      fcProps().eventResize({
+        event: { id: 'p', start: new Date(2026, 10, 11, 10), end: new Date(2026, 10, 11, 12) },
+        revert: vi.fn(),
+      }),
+    );
+    expect(onEventRect).toHaveBeenLastCalledWith('p', expect.objectContaining({ left: 500 }));
+  });
+
+  it('does not call onEventRect while dragging, and calls once after eventDrop', () => {
+    const onEventRect = vi.fn();
+    const { container } = mountView(onEventRect);
+    act(() => fcProps().eventDidMount(mountArg('p', makeEl(200))));
+    act(() => fcProps().eventDragStart());
+    onEventRect.mockClear();
+    act(() => {
+      container.firstElementChild?.dispatchEvent(new Event('scroll'));
+    });
+    expect(onEventRect).not.toHaveBeenCalled();
+    act(() =>
+      fcProps().eventDrop({
+        event: { id: 'p', start: new Date(2026, 10, 11, 10), end: new Date(2026, 10, 11, 11), allDay: false },
+        revert: vi.fn(),
+      }),
+    );
+    expect(onEventRect).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores the drag mirror: no onEventRect and no re-render', () => {
+    const onEventRect = vi.fn();
+    mountView(onEventRect);
+    act(() => fcProps().eventDidMount(mountArg('p', makeEl(200))));
+    onEventRect.mockClear();
+    const before = fcProps();
+    act(() => fcProps().eventDidMount({ ...mountArg('p', makeEl(600)), isMirror: true }));
+    act(() => fcProps().eventWillUnmount({ ...mountArg('p', makeEl(600)), isMirror: true }));
+    expect(onEventRect).not.toHaveBeenCalled();
+    expect(fcProps()).toBe(before);
   });
 });
