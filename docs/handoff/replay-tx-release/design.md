@@ -138,3 +138,21 @@
 4. カードの書き方の曖昧な 2 か所を直した（card.md §8）。
 5. 30 秒で切られた場合の動き。→ replay()・recompute() は失敗した 1 件の後に `session.rollback()` と `set_idle_tx_limit(session)` を流し直してから次へ進む（切られた後の新しい接続にも上限を置く）。試験で確かめる。prompt_ab は今のとおり止まる。
 
+
+## 13. P4 本番測定の結果（2026-11-10 JST 04:33〜04:42・prod1・同じ 20 投稿 / 1,018 品目）
+
+- 本番の版: 462837bee（実装のマージ 21c15eb92 を含む）。Deploy to VPS run 42683601513 success 2026-11-09T19:32:01Z。
+- 生の記録: prod1 /home/ubuntu/fhd-test/replaytx/（before.*・after.*・k3/）。
+
+| 回 | 版 | 写し数 | 取引を開いて待つ写し | うち 1 秒以上（K1） | 最長の待ち |
+|---|---|---|---|---|---|
+| base（§11・参考） | 直す前 | 193 | 183 | 167 | 49.44 秒 |
+| before | 直す前（96a63df05 の版を差し込み） | 197 | 184 | 168 | 50.58 秒 |
+| after | 直した後（本番の版） | 194 | 0 | 0 | 0 |
+
+- K1 ○: after の 1 秒以上の写し 0（before 168）。
+- K2 ×: read_ms 20 件 最小 19 / 最大 1129。1,000 以上が 5 件（1129・1001・1000・1008・1030）。その間の接続は SELECT の実行中（active）で、待ちではない。取引の長さの最大 0.90 秒。→ 遅さの元は「売り切れの参照」の 2 つの SQL（docs/handoff/soldout-ref-read-speed/recon.md）。直しは docs/handoff/soldout-ref-read-speed/design.md で扱う。
+- K3 ○: 1,018 品目の比べで違い 0。before.jsonl と after.jsonl はバイト単位で同一。マスタの最終更新時刻は 4 回とも products / product_search_keywords = 2026-10-30 06:08:45 UTC。
+- K4 ○: CI の必須チェックで緑（実装の PR）。
+- K5 ○: ログ `[tx_guard] idle_in_transaction_session_timeout=30s`。
+- KGI（試しを流しても本番反映の移行が鍵待ちで止まらない）の直接の原因（計算の間の開いた取引）は K1 で 0 になった。
