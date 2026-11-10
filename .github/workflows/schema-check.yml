@@ -227,12 +227,33 @@ jobs:
     steps:
       - name: Report results
         run: |
+          det="${{ needs.detect-changes.result }}"
+          out="${{ needs.detect-changes.outputs.relevant }}"
           result="${{ needs.schema-check-run.result }}"
-          echo "schema-check-run: $result"
-          if [[ "$result" == "success" || "$result" == "skipped" ]]; then
-            echo "✅ テナントスキーマチェック通過（skipped = スキーマ変更なし）"
-            exit 0
-          else
-            echo "❌ テナントスキーマチェック失敗"
+          echo "detect-changes: $det (relevant=$out) / schema-check-run: $result"
+          if [[ "$det" != "success" ]]; then
+            echo "FAIL: detect-changes is not success (detect-changes=$det)"
             exit 1
           fi
+          case "$out" in
+            true)
+              if [[ "$result" == "success" ]]; then
+                echo "OK: schema-related change and tenant schema check passed"
+                exit 0
+              fi
+              echo "FAIL: schema-related change but tenant schema check did not succeed: schema-check-run=$result"
+              exit 1
+              ;;
+            false)
+              if [[ "$result" == "skipped" ]]; then
+                echo "OK: no schema-related change and tenant schema check was skipped"
+                exit 0
+              fi
+              echo "FAIL: no schema-related change but tenant schema check was not skipped: schema-check-run=$result"
+              exit 1
+              ;;
+            *)
+              echo "FAIL: detect-changes output is not true/false: relevant='$out'"
+              exit 1
+              ;;
+          esac
