@@ -180,3 +180,37 @@ def test_new_product_registration_keeps_box_single_filter(pg, monkeypatch):
         'ワンピース\n架空の登録検証デッキ PSA10',
         [work_fixture.record('架空の登録検証デッキ',2,state='PSA10')])
     assert result['analysis_stats']['pid_resolved']==0
+
+
+def test_new_product_registration_accepts_category_id_as_text(pg, monkeypatch):
+    from app.services import tcg_product_master_svc as master
+    connection, engine, async_url = pg
+    monkeypatch.setattr(master, 'TCG_SCHEMA', SCHEMA)
+    async def register():
+        ae = create_async_engine(async_url)
+        try:
+            async with AsyncSession(ae) as session:
+                from sqlalchemy import text
+                refs = {}
+                for key, table, code in [('product_kind_id','public.product_kinds','TCG'),('work_id','public.type_master','one_piece'),('manufacturer_id',f'{SCHEMA}.tcg_manufacturers','MK002'),('product_category_id','public.tcg_product_categories','PC_BOX')]:
+                    raw_id = (await session.execute(text(f'SELECT id FROM {table} WHERE code=:code'),{'code':code})).scalar_one()
+                    # 画面は商品区分を文字で送る。product_category_id は文字、product_kind_id は数、他は従来どおり。
+                    if key == 'product_category_id':
+                        refs[key] = str(raw_id)
+                        category_int = int(raw_id)
+                    else:
+                        refs[key] = int(raw_id) if key == 'product_kind_id' else str(raw_id)
+                fmt_id = (await session.execute(text("INSERT INTO public.product_formats (code,name) VALUES ('SAFETYFMT2','安全試験細分類2') RETURNING id"))).scalar_one()
+                await session.execute(text("INSERT INTO public.product_format_game_links (format_id,type_master_id) SELECT :f,id FROM public.type_master WHERE code='one_piece'"),{'f':fmt_id})
+                refs['product_format_id'] = int(fmt_id)
+                args = dict(extraction_item_id='',source_message_id='',japanese_title='架空の文字区分検証デッキ',release_date='2026-01-01',search_keywords='架空の文字区分検証デッキ',exclude_keywords='',english_title='Fictional text category deck',mark='ZZSAFE02',blank_confirmations=['exclude_keywords'],**refs)
+                first = await master.create_product(session, **args)
+                second = await master.create_product(session, **args)
+                assert first['ok'] and not second['ok'] and second['code']=='DUPLICATE_CANDIDATE'
+                return first['product_id'], category_int
+        finally:
+            await ae.dispose()
+    product_int_id, category_int = asyncio.run(register())
+    with connection.cursor() as cur:
+        cur.execute('SELECT product_category_id FROM public.products WHERE id=%s',(int(product_int_id),))
+        assert cur.fetchone()[0]==category_int

@@ -131,7 +131,7 @@ async def test_create_product_binds_release_date_as_date(monkeypatch):
 
     await master.create_product(
         db, extraction_item_id="", source_message_id="", product_kind_id=1, work_id=1,
-        manufacturer_id="m", product_category_id="c", japanese_title="商品",
+        manufacturer_id="m", product_category_id="3", japanese_title="商品",
         release_date=" 2026-01-01 ", search_keywords="a", exclude_keywords="b", mark="SV1",
         english_title="Product", product_format_id=5,
     )
@@ -158,3 +158,70 @@ async def test_create_product_rejects_missing_before_db():
     assert message.startswith("REQUIRED_FIELDS_MISSING:name_en,")
     assert "product_format_id" in message
     db.execute.assert_not_called()
+
+
+def _category_id_db():
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock, MagicMock
+
+    def result(row):
+        return SimpleNamespace(fetchone=MagicMock(return_value=row))
+
+    calls = []
+
+    async def execute(query, params=None):
+        calls.append((str(query), params))
+        if "INSERT INTO public.products" in str(query):
+            return result(SimpleNamespace(id="77", int_id=77))
+        if "SELECT id FROM public.products" in str(query):
+            return result(SimpleNamespace(id=77))
+        return result(None)
+
+    db = SimpleNamespace(execute=AsyncMock(side_effect=execute), commit=AsyncMock())
+    return db, calls
+
+
+def _patch_category_id_deps(monkeypatch, master):
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr(master, "check_duplicates", AsyncMock(return_value={"candidates": []}))
+    monkeypatch.setattr(master, "_next_pm_code", AsyncMock(return_value="PM0100"))
+    monkeypatch.setattr(master, "find_code_collisions", AsyncMock(return_value=[]))
+    monkeypatch.setattr(master, "_validate_product_format", AsyncMock())
+
+
+@pytest.mark.asyncio
+async def test_create_product_converts_text_category_id_to_int(monkeypatch):
+    from app.services import tcg_product_master_svc as master
+
+    db, calls = _category_id_db()
+    _patch_category_id_deps(monkeypatch, master)
+
+    await master.create_product(
+        db, extraction_item_id="", source_message_id="", product_kind_id=1, work_id=1,
+        manufacturer_id="m", product_category_id="1", japanese_title="商品",
+        release_date="2026-01-01", search_keywords="a", exclude_keywords="b", mark="SV1",
+        english_title="Product", product_format_id=5,
+    )
+
+    inserted = [p for q, p in calls if "INSERT INTO public.products" in q]
+    assert inserted and inserted[0]["product_category_id"] == 1
+    assert isinstance(inserted[0]["product_category_id"], int)
+
+
+@pytest.mark.asyncio
+async def test_create_product_rejects_non_numeric_category_id(monkeypatch):
+    from app.services import tcg_product_master_svc as master
+
+    db, calls = _category_id_db()
+    _patch_category_id_deps(monkeypatch, master)
+
+    with pytest.raises(ValueError, match="PRODUCT_CATEGORY_ID_INVALID"):
+        await master.create_product(
+            db, extraction_item_id="", source_message_id="", product_kind_id=1, work_id=1,
+            manufacturer_id="m", product_category_id="x", japanese_title="商品",
+            release_date="2026-01-01", search_keywords="a", exclude_keywords="b", mark="SV1",
+            english_title="Product", product_format_id=5,
+        )
+
+    assert not [q for q, _ in calls if "INSERT INTO public.products" in q]
