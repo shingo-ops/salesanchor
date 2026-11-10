@@ -23,5 +23,28 @@
 | 3 | 低 | 禁止の依存が get_db だけ。get_admin_db も同じ yield 依存 | `backend/app/database.py` :112 で確認 | design §5-5: 禁止を `{get_db, get_admin_db}` に |
 | 4 | 低 | recon A-10 に受信箱の画面のもう 1 本が抜け | `frontend/src/hooks/useInboxSSE.ts` :14・`frontend/src/pages/inbox/useInboxState.ts` :594 で確認 | recon A-10 に追記。直す範囲は変わらない |
 
-## 2 回目
+## 2 回目（2026-11-10 12:50〜13:05Z・対象 commit c75682500・基準 origin/main 4cc17871）
+
+判定: **REVISE**（1回目の4件は全部直っている。見張りの漏れ 1 件と詰め 2 件）
+
+### 審査役が確かめた事実
+- 1回目の指摘4件は全部直っている。recon A-10 の引用も実物と一致した。
+- /tmp に main の写しを置き、§5-1〜§5-3 をそのまま当てた（fastapi 0.136.3・starlette 1.3.1・Python 3.12）。
+  - 変更前の openapi の書き出しは、今の `frontend/api-contract/openapi.json` と `cmp` で一致した（BASE_SAME）。
+  - 変更後の書き出しも変更前と1バイトも違わない（AFTER_SAME）。K7 の見込みが立った。
+  - 変更後の写しで `test_permission_catalog`・`test_conditions_permission_keys`・`test_realtime_events` が 18 passed。
+- §5-5 の集め方を実物の全 712 経路に当てた。型を読めない経路は 0 件。戻り型でも `text/event-stream` でも同じ 3 本が集まった。
+- 変更前の main では conversations/stream と leads/stream に get_db があり赤になる。変更後に残るのは leads/stream だけで、例外の表のとおり。
+
+### 指摘と対応
+| # | 重さ | 指摘 | Planner の確かめ | 直したところ |
+|---|---|---|---|---|
+| 1 | 中 | FastAPI 0.136.3 の `fastapi.sse.EventSourceResponse`（StreamingResponse の子）を response_class にした async generator の流し口は、(1)(2) のどちらでも拾えない。審査役の試しの出力 `hint: False src: False response_class_is_stream: True asyncgen: True` | 審査役の試しの出力を記録で読んだ。今の 712 経路で (3) の当たりは 0 件なので 3 本の完全一致は変わらない | design §5-5 に (3) response_class と async generator の集め方を追加 |
+| 2 | 低 | §5-4 T1 の期待の並びに tenant が抜けている。§5-3 は get_current_tenant を呼ぶ | design §5-3 :110 で確認 | T1 を `["open","auth","tenant","perm","closed"]` に |
+| 3 | 低（推測） | 禁止の依存を関数そのもので比べると、get_db を包んだ別の yield 依存が漏れる | 変更後の受信箱の流れと events/stream の依存は `security`（HTTPBearer）だけ。leads/stream は例外の表 | design §5-5: 依存の木に generator 関数があれば赤、に広げた |
+
+### 未確認（審査役）
+- `test_viewer_isolation`（DB が要る）と §5-4 の新しい試験は写しでは流していない。実装の CI で確かめる（K3）。
+
+## 3 回目
 （審査待ち）
