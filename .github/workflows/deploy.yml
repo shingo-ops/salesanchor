@@ -219,7 +219,8 @@ jobs:
             TMP=$(mktemp)
             trap 'rm -f "$TMP"' EXIT
             git show origin/main:scripts/deploy-db-precheck.sh > "$TMP" || { echo ">>> [precheck] git show failed"; exit 1; }
-            bash "$TMP"
+            unset $(env | sed -n 's/^\(DB_PRECHECK_[A-Za-z0-9_]*\)=.*/\1/p')
+            env -u BASH_ENV bash "$TMP"
 
       # ============================================
       # デプロイ前 DB バックアップ

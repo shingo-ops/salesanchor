@@ -5,7 +5,7 @@
 #   P6 DB につながらない（偽 docker）                                    docker 不要
 #   P1 何も無い / P2 開いたままの取引で止まる / P3 待つ間に閉じる / P5 active は数えない   docker 要
 #
-# P4a〜P4c・P7・P8（DB が要らない）は必須の pytest に移した:
+# P4a〜P4e・P7〜P9（DB が要らない）は必須の pytest に移した:
 #   backend/tests/ops/test_deploy_precheck_wiring.py（同じ試験を2か所に置かない）
 #
 # 実行: bash scripts/tests/test-deploy-db-precheck.sh

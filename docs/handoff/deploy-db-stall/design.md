@@ -505,7 +505,8 @@ PR ごとの静的点検にも1つ足す（第8版）:
 - 計画: (1) 本節の Architect 審査（新しく起動） (2) 設計 PR をマージ (3) 段2の K2-5〜K2-7 がそろった後、実装の前に reader 鍵の道で usename・application_name の列を1回引けることを確かめる。そのあと Sonnet が 4a を実装・CI・赤の実演・ADR-1037 の追記（名前の正本の場所と役割の環境変数） (4) reviewer（opus、新しく起動） (5) 委任 GO で本番へ（backend・`docker-compose.yml`・`scripts/smoke_test_post_deploy.sh` を含む。移行・DROP・秘密の値は無い） (6) K4-5・K4-6 (7) 4b の詳細設計。
 - 継続: 名前の正本は2か所ある。アプリの接続の名前は 4a で置く新しいモジュール（場所は実装 PR で本節に書く）。本番反映の控え・移行の名前は `scripts/lib/db-app-names.sh`（段2）。分ける理由は、シェルの台本は Python を読めず、アプリはシェルの lib を読めないから（17-2）。2つが重ならないことは C4-2 が守る。守り手: backend の pytest（C4-1〜C4-4、実装 PR で足す）と `.github/workflows/backup-script-test.yml`（C1〜C9）。
 
-## 18. 段6 詳細設計 — 試しの道具の取引を読んだらすぐ閉じる／移行の前に開いたままの取引を点検してから入れ替える（第4.1版）
+## 18. 段6 詳細設計 — 試しの道具の取引を読んだらすぐ閉じる／移行の前に開いたままの取引を点検してから入れ替える（第4.2版）
+状態（第4.2版の追補、2026-11-10）: 便2 は #5345 で本番反映済み（2026-11-10 10:09Z 合流・run 42796774375 success、K18-4 の1回目）。18-14（点検の設定をサーバー側の環境で変えられないようにする）は設計審査済み（3回目 APPROVE、軽3件は第3.1稿で取り込み済み）・実装未着手。PO の決定 2026-11-10「1」。
 状態（第4.1版、2026-11-10）: 設計審査済み（第4版の審査 APPROVE、2026-11-10 クラウドの Architect＝Opus。中4・軽3 は第4.1版で反映、18-13）。実装未着手（便2 は未実装、道具の設計の追補 C5・C6 も未実装）。第4版を書く前の状態: 第3.2版を受けたクラウドの Architect の審査（2026-11-10、origin/main 96a63df05 で照合）は REVISE（重2・中2・軽1）。第4版で全件を直した（18-12）。便1 は別の設計 docs/handoff/replay-tx-release/design.md（以下「道具の設計」）に置き換えた。道具の設計は PR #5340 で実装済みで、2026-11-10 04:28 JST に本番反映済み。便2（点検の段）は実装未着手。
 第3.2版までの状態: 設計審査済み（第3版 APPROVE、2026-11-10。推奨5件は第3.1版で反映。第3.1版のマージ前審査も APPROVE で、推奨6件は第3.2版で反映）。第1版の審査（クラウドの Architect＝Opus、2026-11-10）は REVISE（必須2・推奨5）。第2版で全件を直した。第2版の審査も REVISE（必須1・推奨4）で、第3版で全件を直した（18-11）。PO の選択: 2026-11-10「1、2」（(1) 試しの道具が読み終えたらすぐ表を放す (2) 移行の前に、動いている試しと開いたままの取引を確かめ、待つか知らせる）。本番に出す GO は委任（opus-delegation）に基づく Claude Opus 発行。
 
@@ -721,3 +722,83 @@ P1〜P3・P5・P6 の job は入れ物の名前を本番と同じ astro-webapp-p
 | 軽3 | test.yml の filters の書き方が実物と違う | 18-3 を実物の7行どおりに直した |
 
 マージ前の審査（reviewer＝opus、手元で新しく起動、2026-11-10、PR #5348）: APPROVE（必須0・推奨5）。推奨1・2 は道具の設計 §14 に、推奨3 は本節の見出し・18-9・台帳・道具の設計 §6 K5 と §13 C5 に反映した。推奨4（`.github/workflows/test.yml` :17〜:26 の push の paths に deploy.yml が無い）は範囲外とする。理由: main への直の push は Branch Protection で止められていて、main に入る道は PR だけ。PR では pytest の job が paths なしで必ず走り、detect-changes の filters に deploy.yml を足すので P7・P8 が流れる（18-3）。推奨5（PR の確かめ guard-authoring/evaluation の赤）は、枝が main より古く、確かめの最初の「main がこの枝の祖先か」で止まったもの（`scripts/run-guard-evaluation.js` :25 の merge-base --is-ancestor）。main を取り込んで直した。
+
+### 18-14. 第4.2版の追補（2026-11-10）— 点検の設定をサーバー側の環境で変えられないようにする
+
+PO の決定: 2026-11-10「1」（抜け道をふさぎ、古い記述も一緒に直す）。便2（#5345）の本番反映の後、マージ前の審査（reviewer＝opus）の MINOR から Opus が調べて PO に出した。
+
+#### 18-14-1. 事実（origin/main 931a3c443 で読んだ）
+- 台本の設定5つは環境変数があればそれを使う: `scripts/deploy-db-precheck.sh` :27 `POLL_SEC="${DB_PRECHECK_POLL_SEC:-5}"`・:28 `CLEAN_STREAK="${DB_PRECHECK_STREAK:-3}"`・:29 `WAIT_LIMIT_SEC="${DB_PRECHECK_LIMIT_SEC:-600}"`・:30 `XACT_SEC="${DB_PRECHECK_XACT_SEC:-5}"`・:31 `LONG_ACTIVE_SEC="${DB_PRECHECK_LONG_ACTIVE_SEC:-60}"`。偽の数は :39 `FAKE="${DB_PRECHECK_FAKE_COUNTS:-}"`。
+- 通る判定は :168 `if [ "${STREAK}" -ge "${CLEAN_STREAK}" ]`。STREAK は1回目の数えの後 0 か 1（:161〜:165）。CLEAN_STREAK が 0 なら、1回目に開いたままの取引が何本あっても `0 -ge 0` で clean と書いて exit 0 になる（台本を読んで確かめた。実行での確かめは試験 P4d で行う）。
+- `XACT_SEC` は SQL の文字列に直に入る（:50 `interval '${XACT_SEC} seconds'`、:112 も同じ）。大きな値（例 99999）にすると何も数えず通る。`LONG_ACTIVE_SEC` も SQL に入る（:67）。
+- 本番反映が失敗したときの段「Deployment Failure Notification」（`.github/workflows/deploy.yml` :1346〜:1351）は echo して exit 1 するだけで、Discord には送らない。知らせは GitHub の失敗の記録（実行の赤）だけ。
+- bash は、殻の外から渡された `BASH_ENV` が指すファイルを、台本の前に読む。審査（クラウドの Architect、2026-11-10）で、足す1行の後に `bash 台本` と流すと、そのファイルで入れた `DB_PRECHECK_STREAK=0` が台本に届くことを実際に流して確かめた。`env -u BASH_ENV bash 台本` なら届かない（同じ審査で実測）。
+- `.github/workflows/backup-script-test.yml` の db-precheck の job（:83〜:104）は、注記「P7 が deploy.yml を読むのに使う」（:92）・setup-python（:93）・pyyaml（:97〜:98）を持つ。P7 は必須の pytest に移り、`scripts/tests/test-deploy-db-precheck.sh` は python も yaml も使わない（中で `python`・`yaml` を探して、頭の説明の :8 も含めて0件）。
+- 偽の数の変数がサーバー側の環境にあると、DB を見ずにその数で判定する（:80〜:89）。値が `0` なら3回目で clean になる。
+- deploy.yml の点検の段（`.github/workflows/deploy.yml` :195〜:222）は、これらの変数を渡さない（`envs: ROLLBACK_DISCORD_WEBHOOK` だけ）。ただし、台本は ssh の先の環境をそのまま受け継ぐ（:222 `bash "$TMP"`）。サーバー側の環境に `DB_PRECHECK_` の変数があれば効く。
+- 今の守り: P8（`backend/tests/ops/test_deploy_precheck_wiring.py` :164〜:165）は deploy.yml の文字列に偽の数の変数名が無いことだけを見る。サーバー側の環境は見ない。K18-4 は本番の記録の「FAKE」の行で後から見るだけで、止めない。
+- 本番の1回目（run 42796774375、2026-11-10 10:10Z）の記録は `start: poll=5s streak=3 limit=600s xact>5s` で、FAKE の行は無かった。今サーバー側に変数が入っている形跡は無い。LONG_ACTIVE_SEC は start の行に出ていない。
+- 試験が環境変数で変える設定は POLL・LIMIT・LONG_ACTIVE と偽の数だけ（`scripts/tests/test-deploy-db-precheck.sh` :69〜:220、`backend/tests/ops/test_deploy_precheck_wiring.py` :58・:75・:92）。STREAK と XACT は試験で変えていない。
+
+#### 18-14-2. 目的と成功の条件
+目的: 本番の点検は、いつも台本の頭に書いた値（5秒・3回・600秒・5秒・60秒）で動く。サーバー側の環境に何が残っていても、点検を素通りしない。
+
+| 成功の条件 | 判定 |
+|---|---|
+| K18-7 サーバー側の環境に `DB_PRECHECK_` で始まる変数や `BASH_ENV` があっても、点検の段は台本を流す前にそれを全部外す | 必須の pytest P9 が PASS（下の 18-14-4） |
+| K18-8 台本は設定が整数でなければ、または続けて0本の回数が1未満なら、数える前に止まる（exit 1・「invalid setting」の行・clean の行なし・sample の行なし） | 必須の pytest P4d・P4e が PASS |
+| K18-9 試験の説明の古い記述が無くなる | `.github/workflows/backup-script-test.yml` と ADR-1037 に「P1〜P8」「P1-P8」が0件。`.github/workflows/backup-script-test.yml` の db-precheck の job に、注記「P7 が deploy.yml を読むのに使う」・setup-python・pyyaml が0件（新しい :100 の注記の「P7〜P9」は数えない） |
+| K18-10 本番: 本節の版が出た後の、移行の段が動く本番反映で、start の行が `poll=5s streak=3 limit=600s xact>5s long_active>60s` で、FAKE の行が無い | 本番反映の記録。本節の版が出た後、移行の段が動く本番反映の最初の1回で見る（K18-4 の残りの回と同じ記録） |
+
+#### 18-14-3. 変更前 → 変更後
+deploy.yml の変更（表の中では区切り記号を逃がしているので、正本はこのかたまり）。1行足し、台本を流す行を1行置き換える:
+
+```sh
+unset $(env | sed -n 's/^\(DB_PRECHECK_[A-Za-z0-9_]*\)=.*/\1/p')
+env -u BASH_ENV bash "$TMP"
+```
+
+| 場所 | 変更前 | 変更後 |
+|---|---|---|
+| `.github/workflows/deploy.yml` 点検の段の script（:222） | `bash "$TMP"` | 上のかたまりの2行にする。名前を並べず頭の文字で外すので、台本に新しい設定を足しても書き足しは要らない。sed・unset・`env -u` は ssh の先の殻が bash でも dash でも動く（審査で bash・dash とも `set -e` の下で終了コード0、値に `=` や改行を含む変数も全部消えた。変数が1つも無いときも終了コード0）。ssh の先の殻が何かは appleboy/ssh-action の公式の説明に書かれていない（未確認）ため、どちらでも動く形にする |
+| `scripts/deploy-db-precheck.sh` finish の定義（:44〜:46）の直後、start の行（:145）より前 | 確かめなし | 5つの設定（POLL_SEC・CLEAN_STREAK・WAIT_LIMIT_SEC・XACT_SEC・LONG_ACTIVE_SEC）を、数字だけ（`case ... in '' \| *[!0-9]*)`）か確かめる。外れたら `>>> [precheck] invalid setting <環境変数の名前>=<値> (must be a whole number) - stopping` を1行書き、finish を書いて exit 1。次に CLEAN_STREAK が1未満なら `>>> [precheck] invalid setting DB_PRECHECK_STREAK=<値> (must be 1 or more) - stopping` を書き、finish を書いて exit 1。確かめは start の行より前で、DB にはつながない。Discord には送らない。知らせは本番反映の失敗の記録（GitHub の実行の赤）だけになる（18-14-5） |
+| `scripts/deploy-db-precheck.sh` start の行（:145） | `start: poll=… streak=… limit=… xact>…` | 後ろに ` long_active>${LONG_ACTIVE_SEC}s` を足す（5つの設定がすべて記録に出る） |
+| `scripts/deploy-db-precheck.sh` 頭の説明（:21〜:22） | 「本番の deploy.yml はこの変数を渡さない（試験 P8）」 | 「本番の deploy.yml は台本を流す前に DB_PRECHECK_ で始まる変数を全部外す（試験 P8・P9）」に直す |
+| `backend/tests/ops/test_deploy_precheck_wiring.py` | P4a〜P4c・P7・P8 | P4d・P4e・P9 を足す（18-14-4）。頭の説明に P4d・P4e・P9 を足す |
+| `.github/workflows/backup-script-test.yml` :100〜:101 | 注記「P1〜P8（design §18-4）」・段の名前「Run test-deploy-db-precheck.sh (P1-P8)」 | 「P1〜P3・P5・P6（design §18-4。P4a〜P4e・P7〜P9 は必須の pytest）」・「Run test-deploy-db-precheck.sh (P1-P3, P5, P6)」。段の名前は必須チェックの名前ではない（必須の確かめは job 単位）ので、変えても必須の確かめの名前は変わらない |
+| `.github/workflows/backup-script-test.yml` :92〜:98（db-precheck の job の中だけ） | 注記「P7 が deploy.yml を読むのに使う」・setup-python・Install pyyaml | 3つとも消す（使う試験が無い。18-14-1）。:70〜:75 の別の job の setup-python・pyyaml は触らない |
+| `docs/adr/ADR-1037-migration-lock-timeout.md` :94 | 「… の P1〜P8）」 | 「… の P1〜P3・P5・P6。DB が要らない P4a〜P4e・P7〜P9 は必須の pytest `backend/tests/ops/test_deploy_precheck_wiring.py`）。本番の点検の段は台本を流す前に DB_PRECHECK_ で始まる変数を全部外す」 |
+| `scripts/tests/test-deploy-db-precheck.sh` :8（頭の説明だけ） | 「P4a〜P4c・P7・P8（DB が要らない）は必須の pytest に移した:」 | 「P4a〜P4e・P7〜P9（DB が要らない）は必須の pytest に移した:」 |
+
+触らない範囲: 数える条件（:49〜:53 の WHERE_SQL）・待ちの数の既定値・握り手の記録・Discord の文面・段の `if:`・段の順番・command_timeout・`scripts/tests/test-deploy-db-precheck.sh` の試験の中身（頭の説明 :8 は表のとおり直す。試験は POLL・LIMIT・LONG_ACTIVE に数字だけを渡しているので、そのまま通る）。偽の数の並びの中身（数字以外が入った場合）は確かめない。数字以外は `-eq` が失敗して続けての数えが0に戻るだけで、通る向きには働かない（:161〜:165）。
+
+#### 18-14-4. 試験（すべて必須の pytest `backend/tests/ops/test_deploy_precheck_wiring.py`）
+- P4d `DB_PRECHECK_STREAK=0`・偽の数 `1`・間隔0秒・上限3秒 → exit 1。`invalid setting DB_PRECHECK_STREAK=0 (must be 1 or more)` の行が1行。`] clean:` の行が0行。`sample ` の行が0行。最後の行が `precheck finished at` で始まる。subprocess の時間切れは10秒（確かめを消した赤の実演では、続けての数え1回目で clean を書いて exit 0 になり、終了コードと clean・invalid の行の数で赤になる）。
+- P4e 5つの変数それぞれに、値 `abc`・`-1`・`3 4`・`5s` を1つずつ入れる（5×4＝20通り。pytest.mark.parametrize）。偽の数 `0`・間隔0秒・上限3秒（入れる変数が POLL・LIMIT のときはそれだけを壊す）→ exit 1。`invalid setting <その変数の名前>=` で始まり `(must be a whole number)` を含む行が1行。`] clean:` の行が0行。`sample ` の行が0行。最後の行が `precheck finished at` で始まる。subprocess の時間切れは10秒。時間切れになったら、その通りは赤（例外を通す）。
+- P9 deploy.yml の点検の段の script を YAML で読む。(a) `unset $(env | sed -n 's/^\(DB_PRECHECK_[A-Za-z0-9_]*\)=.*/\1/p')` の行があり、その後に `env -u BASH_ENV bash "$TMP"` の行がある。`bash "$TMP"` を含む行はこの1行だけ (b) 一時の場所に、python で `os.environ` を JSON で書き出す小さな bash の台本を置き、その場所を `TMP` に入れる。script から `unset ` で始まる行（0本でもよい）と `bash "$TMP"` を含む行を探して読み、書き写さずそのまま並べて（完全一致では探さない。`env -u BASH_ENV ` が消えたときに、行が見つからない例外ではなく、BASH_ENV から変数が入る動きで赤にするため）、`DB_PRECHECK_FAKE_COUNTS=0`・`DB_PRECHECK_STREAK=0`・`DB_PRECHECK_XACT_SEC=99999`・`DB_PRECHECK_NEW_ONE=1`・値に `=` と改行を含む `DB_PRECHECK_ODD`・`BASH_ENV=<存在するファイル>` を入れた環境で、`sh -c` で流す。python の `os.environ` に `DB_PRECHECK_` で始まる名前が0件・`BASH_ENV` が無い・終了コード0（`env` の出力を行で数えない。別の変数の値の改行で誤って赤になるため） (c) 変数が1つも無い環境で同じく流しても終了コード0。行の中身は試験に書き写さず、script から `unset ` で始まる行を探して読む（ただし (a) で中身が上の形と同じことは確かめる）。
+- P8 は変えない（deploy.yml に偽の数の変数名が無い。新しい行は名前を書かないので P8 と両立する）。
+- 赤の実演（PR に結果を貼る）: (1) deploy.yml の unset の行を消す → P9 が赤 (2) deploy.yml の `env -u BASH_ENV ` を消して `bash "$TMP"` に戻す → P9 が赤 (3) 台本の「1未満なら止める」を消す → P4d が赤 (4) 台本の「数字だけか」の確かめを消す → P4e の20通りがすべて赤（`STREAK=-1` は「1未満なら止める」で止まるが、行に `must be a whole number` が無いので赤）。
+
+#### 18-14-5. 選ばなかった案
+- STREAK と XACT を環境変数で変えられない定数にする: 2つの穴はふさげるが、偽の数の変数（試験に要る）は残るので、段で外す仕組みが別に要る。段で外せば全部をまとめてふさげるので、台本の読み込みの形は今のまま（§18-3 の動き5「試験は環境変数で短くして流す」を保つ）。
+- 外す変数を名前で並べる（`env -u A -u B …`）: 台本に設定を足したとき書き足しを忘れると穴が開く。名前を並べると P8 とも食い違う。
+- `env -i` で環境を空にして流す: docker の呼び出しに要る環境（HOME など）まで消える。何が要るかを本番で確かめていないので採らない。
+- 確かめで止まったときに Discord に送る: K18-7 の後は、設定はサーバー側から入らず、台本の頭の値（PR で審査され、P4a〜P4c が通る値）だけになる。確かめで止まるのは試験の中だけで、本番では起きない道なので、知らせの文面を足さない。万一止まっても本番反映は GitHub で赤になり、入れ替えの前で止まる（本番は前の版のまま動く）。
+- 書き出した関数（`BASH_FUNC_*`）や、サーバー側の docker・PATH の差し替えも外す: 範囲外。これらは人が意図してサーバーに入れない限り残らず、そこまでできる人は台本を通さずに何でもできる。本節は「試しで入れた変数の消し忘れ」で点検が素通りする道をふさぐことが目的。
+- 数字だけでなく値の上限・下限も確かめる（例 XACT_SEC=99999 を止める）: K18-7 の後は値が台本の頭からしか来ないので、範囲の確かめは試験の中の値を縛るだけになる。足さない。
+
+#### 18-14-6. 弊害・戻し方・継続
+- 弊害: 試験で設定に数字以外を入れていた場所があれば止まる。今の試験は数字だけ（18-14-1）なので該当しない。サーバー側で意図して設定を変える道は無くなる（変えたいときは台本の頭を直して PR を出す。正本は台本の頭の1か所のまま）。
+- 戻し方: PR を revert して main にマージ。台本は origin/main から読むので、次の本番反映から前の形に戻る。DB は変えない。
+- 継続: P9 が段の unset の行を、P4d・P4e が台本の確かめを、必須の pytest で毎回見る。deploy.yml だけを変える PR でも走る（`.github/workflows/test.yml` の detect-changes の filters に deploy.yml がある。§18-3）。
+- K18-4 の数え方は変えない。本節の版が出た後の回も、3回のうちに数える（点検の判定の形は同じため）。
+
+#### 18-14-7. 外部の事例
+不要。理由: 環境変数を外す・整数か確かめるのは本リポジトリの台本の中の直しで、判定は試験（18-14-4）と本番の記録（K18-10）だけで行う。sed・unset の動きは試験 P9 で実際に流して確かめる。
+
+#### 18-14-8. 計画
+審査の記録: 1回目（クラウドの Architect、2026-11-10 11:42Z〜11:45Z）は、試しの写しの置き直しで `rm -rf` を見張りに止められ、判定なしで終わった。止まる前の指摘（知らせの段の記述が実物と違う・BASH_ENV の抜け道・行番号のずれ・db-precheck の job の古い注記と使わない段・P9 の数え方・P4e の時間切れ）は本節に取り込んだ（第2稿）。
+2回目（クラウドの Architect、2026-11-10 11:51Z〜11:56Z、審査対象 faa5e25e0、origin/main ae8def4d3 で照合）→ **REVISE**（中2・軽5）。写しで deploy.yml の2行は bash・dash とも変数と BASH_ENV が消えて終了コード0、P4a〜P4e・P9 は29件すべて通り、赤の実演4つも赤になった。指摘（K18-9 が新しい注記の「P7〜P9」で必ず×になる・確かめの置き場所が finish の定義より前・P9 (b) が流す行を試験が自分で書いている・P4d の赤の実演の動き・K18-10 の回数・台帳の状態が古い・18-14-1 の「:8 以外」）は第3稿で取り込んだ。台帳のファイルを commit しない、という指摘は採らない（`.gitignore` :67〜:71 が active-work.d の下の .md ファイルを残す決まりで、origin/main に同じ形のファイルが439件ある）。状態の行だけ直した。軽7 の後半は記録の切れで読めていない（3回目の審査で確かめる）。
+3回目（クラウドの Architect、2026-11-10 12:04Z〜12:07Z、審査対象 22e158ee0、origin/main d06f150c7 で照合）→ **APPROVE**。2回目の指摘は軽6 を除き直っており、軽6 を採らない理由も正しいと判定（`.gitignore` :67〜:71、origin/main に439件）。写しで pytest 29件が通り、赤の実演4つがすべて赤（(2) は P9 (b) も BASH_ENV から変数が入る動きで赤）。新しい軽3件（P9 (b) の行の探し方・赤の実演(4) で `STREAK=-1` の1通りが緑のまま・`scripts/tests/test-deploy-db-precheck.sh` :8 の古い説明）は第3.1稿で取り込んだ。軽7 の後半は前の記録が無く、同じ内容かは確かめられないとされ、3件目として言い直された。
+
+(1) 本節をクラウドの Architect（新しく起動・読むだけ）で審査 (2) APPROVE の後、同じ枝でクラウドの Sonnet が 18-14-3 を実装し、試験と赤の実演 (3) reviewer（opus・手元で新しく起動）→ PR 本文に GO 記録（POの委任に基づくClaude Opus発行。deploy.yml・scripts を含む）→ マージ → 本番反映 (4) 移行の段が動く本番反映で K18-10 と K18-4 の残りを見る。
