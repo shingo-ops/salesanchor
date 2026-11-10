@@ -1425,13 +1425,12 @@ _STOCK_ITEMS_SQL = """
     SELECT ej.source_message_id, ei.source_lines, ei.line_start, ei.line_end, ar.product_id, ar.condition_id,
            COALESCE(ar.condition_canonical, '') AS condition_canonical,
            ar.unit_id, COALESCE(ar.unit_canonical, '') AS unit_canonical
-    FROM {schema}.extraction_jobs ej
+    FROM (SELECT DISTINCT ON (j.source_message_id) j.id, j.source_message_id FROM {schema}.extraction_jobs j
+          WHERE j.source_message_id = ANY(CAST(:ids AS uuid[]))
+          ORDER BY j.source_message_id, j.created_at DESC, j.id DESC) ej
     JOIN {schema}.extraction_items ei ON ei.extraction_job_id = ej.id
     JOIN {schema}.analysis_results ar ON ar.extraction_item_id = ei.id
-    WHERE ej.source_message_id = ANY(CAST(:ids AS uuid[]))
-      AND ej.id = (SELECT j2.id FROM {schema}.extraction_jobs j2 WHERE j2.source_message_id = ej.source_message_id
-                   ORDER BY j2.created_at DESC, j2.id DESC LIMIT 1)
-      AND ar.pid_resolved = TRUE AND ar.product_id IS NOT NULL AND ar.condition_id IS NOT NULL
+    WHERE ar.pid_resolved = TRUE AND ar.product_id IS NOT NULL AND ar.condition_id IS NOT NULL
       AND ar.status IS DISTINCT FROM :sold_out
     ORDER BY ej.source_message_id, ei.line_start NULLS LAST, ei.gemini_index NULLS LAST, ei.id
 """
@@ -1439,13 +1438,12 @@ _STOCK_ITEMS_SQL = """
 
 _SOLD_ITEMS_SQL = """
     SELECT ej.source_message_id, ar.product_id, COALESCE(ar.condition_canonical, '') AS condition_canonical
-    FROM {schema}.extraction_jobs ej
+    FROM (SELECT DISTINCT ON (j.source_message_id) j.id, j.source_message_id FROM {schema}.extraction_jobs j
+          WHERE j.source_message_id = ANY(CAST(:ids AS uuid[]))
+          ORDER BY j.source_message_id, j.created_at DESC, j.id DESC) ej
     JOIN {schema}.extraction_items ei ON ei.extraction_job_id = ej.id
     JOIN {schema}.analysis_results ar ON ar.extraction_item_id = ei.id
-    WHERE ej.source_message_id = ANY(CAST(:ids AS uuid[]))
-      AND ej.id = (SELECT j2.id FROM {schema}.extraction_jobs j2 WHERE j2.source_message_id = ej.source_message_id
-                   ORDER BY j2.created_at DESC, j2.id DESC LIMIT 1)
-      AND ar.pid_resolved = TRUE AND ar.product_id IS NOT NULL AND ar.condition_id IS NOT NULL
+    WHERE ar.pid_resolved = TRUE AND ar.product_id IS NOT NULL AND ar.condition_id IS NOT NULL
       AND ar.status = :sold_out
     ORDER BY ej.source_message_id, ei.line_start NULLS LAST, ei.gemini_index NULLS LAST, ei.id
 """
