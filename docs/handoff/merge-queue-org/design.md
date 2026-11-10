@@ -70,13 +70,14 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 | UI governance gate | 乙 | PR の差分の部品を見る。カードで行を読み、全体走査なら甲に変える |
 | dangling-route gate | 甲 | 片方が道を消し、片方がその道を使うと壊れる |
 | warn-direct-lesson-edit | 乙 | PR の差分の警告（R§8 U7 をカードで確かめる） |
-| guard-authoring/evaluation | 乙 | PR の差分に対する試験。concurrency が pull_request.number（R§4） |
+| guard-authoring/evaluation | 乙（ただし job の if では揃わない・下の注） | PR の差分に対する試験。concurrency が pull_request.number（R§4） |
 | process-artifacts gate | 乙 | PR 本文と PR のファイル一覧を見る |
 | API contract is up to date | 甲 | 2 つの PR の API 変更で生成物が古くなる |
 | doc index reachability | 甲 | 全体の走査 |
 
 - `github.event.pull_request.*`・head_ref・base_ref を使う甲の workflow（R§4 の列）は、列では merge_group の base_sha/head_sha を使う形に直す。行の変更前後はカード（便0）で全件書く。
-- 列の一時枝（`gh-readonly-queue/main/...`）で push 起動の workflow が余計に走らないか、`push:` の branches 指定を全 83 本でカードに一覧する。
+- 注（設計審査 2026-11-10 の必須指摘 1）: `guard-authoring/evaluation` は job の名前ではない。`scripts/run-guard-evaluation.js:5` の `CONTEXT` で、`pull_request_target` の job（`.github/workflows/guard-authoring-gate.yml:16-18,43-44`・`statuses: write` は :51）が PR の head の commit に status を書く（同 js:18-19）。列の commit にはこの status が届かないので、job に if を付けても列で Pending のまま止まる。便0 では、merge_group のときに列の commit（`merge_group.head_sha`）へ同じ名前の status を書く job を足す。中身は「列に入った PR の head に success の status があることを API で読み、あれば success を書く」。PR の中身は列に入ると変わらないので、PR で通った結果を写すだけでよい。ほかの乙 4 件（migration-guard・UI governance・warn-direct-lesson-edit・process-artifacts）も、必須の名前が job の名前か status かをカードで 1 件ずつ確かめ、status なら同じ形にする。ruleset で integration_id 15368 に結び付いた 5 件（R§3）の、status を書く側の名義が合うかもカードで確かめる。
+- 列の一時枝（`gh-readonly-queue/main/...`）で余計に走る push 起動の workflow（設計審査の必須指摘 2・origin/main の実物で確認）: branches の指定が無い `backup-script-test.yml`・`deploy-script-test.yml`、`branches-ignore: [main]` だけの `active-work-lint.yml`・`aeon-script-check.yml`・`task-state-check.yml` の 5 本。便0 でそれぞれの `push:` の `branches-ignore` に `'gh-readonly-queue/**'` を足す（指定が無い 2 本は `branches-ignore: ['gh-readonly-queue/**']` を新たに置く）。数え方: `.github/workflows` 直下の 81 本（`_archive/` の 2 本は GitHub が動かさない）。一時枝で push の event が起きるかは公式文書で確かめる（未確認）。起きなくても足して害はない。
 - 個人名義のうちは merge_group が起きないので、便0 を入れても今の動きは変わらない（入れて安全）。
 
 ## 6. 合流の道の直し（便0 に含める。列の前後どちらでも動く形）
@@ -89,6 +90,7 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 | .github/workflows/ledger-done-update-branch.yml | 列が入ると不要。便3 で止める（便2 の前に止めると今の運用が詰まる） |
 | scripts/agent-hooks/review-gate/gate.py:53 | STRICT_CHECK_REPOS に新しい名前を足す（旧と新の両方。大文字小文字は区別しない）。`--admin` を止める行を足す。手元の写し（~/.claude/scripts/review-gate）は ADR-1011 どおり PO が `!` で反映 |
 | R§6-4 の直書き全部 | `${{ github.repository }}`・`gh repo view`・`GITHUB_REPOSITORY` から取る形に直す。試験の固定値と CODEOWNERS は新名へ |
+| 設計審査で見つかった漏れ（必須指摘 3） | `scripts/validate-pr-ownership.sh:142`（REPO_SLUG の既定値）・`scripts/dev/test-agent-hooks.sh:12,52,392`（試験の origin）・`.github/workflows/weekly-stale-tasks.yml:36`（案内の URL）・`monitoring/scripts/check_alert_rules.py:18`（手順書の URL）・`tools/claude-channels/README.md:18`（clone 先）を新名か自動で取る形に。**本番の見張りの設定** `docker-compose.yml:558`（`--owner=shingo-ops`）・`docker-compose.monitoring.yml:111`（`GHA_OWNER`）・`:157`（`GITHUB_REPO`）・`monitoring/github-collector/collector.py:27`（既定値）は、移した後に旧名のままだと GitHub の動きの記録が取れなくなる。旧名と新名のどちらでも動くかは未確認なので、便1 の直後に本番へ配る変更として扱う（§8 移した直後 5 に入れる）。人の名前としての `shingo-ops`（`line-import-device.yml:29`・`line-import-operations.yml:20`・`sandbox-test.yml:18` の actor 比較・`feedback-issue-triage.yml:42`・CODEOWNERS の `@shingo-ops`・AGENTS.md）は人を指すので変えない |
 
 ## 7. 進め方（便ごとに 1 つ変え、測ってから次へ）
 
@@ -109,7 +111,7 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 移す前（Opus）:
 1. ruleset 2 件・リポジトリの設定・secret の名前の一覧（値は読めない・名前だけ）・Pages の設定を JSON で保存する。
 2. 開いている PR の数と、列の代わりに合流を止める時間帯を PO と決める（移す数分間は合流しない）。
-3. 便0 が本線に入り、直書きが残っていないことを `git grep -n 'shingo-ops/salesanchor' -- scripts .github backend frontend` で 0 件（文書を除く）にしてある。
+3. 便0 が本線に入り、直書きが残っていないことを `git grep -n 'shingo-ops/salesanchor' -- ':!docs' ':!.claude-pipeline' ':!tasks'` で 0 件にしてある（リポジトリ全体。scripts 等の 4 か所に絞らない。monitoring・docker-compose を含める）。`shingo-ops` 単独の残りは §6 の「人の名前」の行と一致することを確かめる。
 
 移す前（PO・画面で読むだけ）: R§8 の U2（実行機）・U3（webhook・deploy key・GitHub App）を読む。個人名義に入れた App（claude.ai の GitHub 連携を含む）が会社名義で要るかを決める。
 
@@ -120,7 +122,7 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 2. 手元の全 worktree と本店の `git remote set-url origin`（新 URL）。
 3. ~/.claude/settings.json の自動判定の文（R§6-5）と agent-console の routines.json（11 か所）を新名に直す（settings は ADR-1034 の権限の足し引きの手順）。
 4. 自前の実行機の確認（U2）。消えていたら scripts/setup-vps-runner.sh で登録し直す（本番の VPS の作業は PO の同意）。
-5. 次の本線への合流で、K5（配備・smoke・200）を確かめる。
+5. 次の本線への合流で、K5（配備・smoke・200）を確かめる。本番の見張りの設定（§6 の docker-compose・collector）が新名で動き、GitHub の動きの記録が途切れていないことも確かめる。
 6. クラウドの依頼を 1 本（読むだけ）流して clone できるか（U5）。
 
 ## 9. 続ける仕組み（標準化・機械で守らせる）
@@ -153,6 +155,8 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 |---|---|
 | 便0: 16 件全部に merge_group | `git grep -L 'merge_group' -- <16 本>` が空 |
 | 便0: 乙の job は列で飛ぶ | 便2 の後の試しの PR で、乙の確かめが merge_group の run で skipped・Success |
+| 便0: status 型の必須（guard-authoring/evaluation 等）が列で揃う | 便2 の後の試しの PR で、列の commit の `gh api repos/<新>/commits/<head_sha>/status` にその名前が success で載る |
+| 便0: 一時枝で余計に走らない | 5 本の `push:` に `gh-readonly-queue/**` の除外がある。便2 の後の試しの PR で、その 5 本の run が一時枝で 0 件 |
 | 便0: 直書き 0 | §8 移す前 3 の grep が 0 件 |
 | 便1: K5・K6 | §8 移した直後 1・5 |
 | 便2: K1 の設定 | ruleset の JSON に merge_queue（MERGE・同時 5・最大 1・制限 60）・strict=false・bypass 空 |
