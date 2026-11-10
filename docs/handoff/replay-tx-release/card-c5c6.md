@@ -133,3 +133,10 @@ def install_idle_tx_listener(engine: Engine) -> None:
 
 END OF CARD
 - PR 本文は .github/pull_request_template.md に従う。`### 標準ワークフロー確認` に recon: docs/handoff/replay-tx-release/recon.md・設計: docs/handoff/replay-tx-release/design.md・対象ADR: ADR-1037 を書く。
+
+## 8. 追記（2026-11-10・CI の結果を受けて。Opus）
+
+- 事実: PR の CI「pytest (SQLite + PostgreSQL RLS)」で試験A・B が `sqlalchemy.exc.MissingGreenlet` で失敗した（run 42755892620、`2 failed, 8694 passed`）。共有 fixture（backend/tests/test_tcg_work_matching_integration.py の `pg`）が返す `url` は `drivername="postgresql+asyncpg"` で、同期の `create_engine` では使えない。カード §2 にこの点を書き忘れていた（Opus の書き漏れ）。
+- 道具の本物の接続は psycopg2（backend/app/tasks/tcg_extraction.py :90 で asyncpg を psycopg2 に置き換えて `create_engine`）。
+- 直し（backend/tests/test_tx_guard_pool.py だけ）: 試験A・B の `create_engine(url, pool_size=1, max_overflow=0)` を2か所とも `create_engine(url.set(drivername="postgresql+psycopg2"), pool_size=1, max_overflow=0)` にする。ほかは変えない。backend/app/tools/_tx_guard.py は変えない。
+- 確かめ: ruff check を流す。CI で試験A・B が passed であること。§6 の分かれ道はそのまま使う。
