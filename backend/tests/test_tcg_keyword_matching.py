@@ -18,6 +18,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.services.tcg_analyzer_svc import (
+    DEFAULT_CONDITION_CODE_BY_GROUP,
     SHIP_DROP_CATEGORY,
     SHIP_NOTE_CATEGORY,
     _note_matches,
@@ -4241,3 +4242,21 @@ class TestLoadConditionEntriesValueRank:
         main_sql = str(session.execute.call_args_list[1].args[0])
         assert "value_rank" not in main_sql
         session.rollback.assert_not_called()
+
+
+def test_default_condition_code_by_group_is_fixed():
+    assert DEFAULT_CONDITION_CODE_BY_GROUP == {"box": "CN0003", "case": "CN0001", "pack": "CN0010"}
+
+
+def test_r5_pack_default_reads_the_cn0010_row_name_and_id():
+    entries = [dict(e, canonical="Searched pack X") if e["code"] == "CN0010" else e for e in _COND_ENTRIES]
+    cn0010 = next(e for e in entries if e["code"] == "CN0010")
+    actual = resolve_condition_v2("", "商品", "パック系", entries, _COND_UUID_MAP)
+    assert actual[0] == "Searched pack X" and actual[1] == cn0010["cond_id"] and actual[2].endswith("R5:パック既定")
+
+
+def test_r5_pack_default_without_cn0010_row_keeps_the_old_name_and_id():
+    entries = [e for e in _COND_ENTRIES if e["code"] != "CN0010"]
+    uuids = {**_COND_UUID_MAP, "Searched pack": "uuid-by-name"}
+    actual = resolve_condition_v2("", "商品", "パック系", entries, uuids)
+    assert actual[0] == "Searched pack" and actual[1] == "uuid-by-name" and actual[2].endswith("R5:パック既定")

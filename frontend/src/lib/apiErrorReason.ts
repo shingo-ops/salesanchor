@@ -11,6 +11,12 @@ import i18n from "../i18n";
 export const API_ERROR_REASON_KEYS: Readonly<Record<string, string>> = {
   no_fields_to_update: "apiError.noFieldsToUpdate",
   conflict_constraint: "apiError.conflictConstraint",
+  role_not_editable_here: "apiError.roleNotEditableHere",
+  role_not_deletable: "apiError.roleNotDeletable",
+  role_permissions_edit_forbidden: "apiError.rolePermissionsEditForbidden",
+  role_permissions_not_editable_here: "apiError.rolePermissionsNotEditableHere",
+  role_page_keys_not_savable: "apiError.rolePageKeysNotSavable",
+  role_not_assignable: "apiError.roleNotAssignable",
 };
 
 /** detail が表のコードなら文言キー、そうでなければ null */
@@ -60,7 +66,6 @@ export const NOT_FOUND_TARGET_KEYS: Readonly<Record<string, string>> = {
   distribution_target: "apiError.notFoundTarget.distribution_target",
   line_import_job: "apiError.notFoundTarget.line_import_job",
   calendar_owner: "apiError.notFoundTarget.calendar_owner",
-  conv_log: "apiError.notFoundTarget.conv_log",
   channel_master: "apiError.notFoundTarget.channel_master",
   goal: "apiError.notFoundTarget.goal",
   inventory_offer: "apiError.notFoundTarget.inventory_offer",

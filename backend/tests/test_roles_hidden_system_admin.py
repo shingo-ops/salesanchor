@@ -31,8 +31,8 @@ async def seeded(db_session):
     # 操作する側（テストユーザー 999）に priority=1000 のロールを user_roles 経由で付与する（users.role は見ない）
     top = await db_session.execute(
         text(
-            "INSERT INTO roles (tenant_id, name, priority, is_system) "
-            "VALUES (999, '試験用最上位ロール', 1000, FALSE) RETURNING id"
+            "INSERT INTO roles (tenant_id, name, priority, is_system, system_key) "
+            "VALUES (999, '試験用最上位ロール', 1000, FALSE, 'owner') RETURNING id"
         )
     )
     await db_session.execute(
@@ -203,9 +203,10 @@ async def test_super_admin_sees_hidden_role_in_list(client, seeded):
     assert seeded["hidden"] in {r["id"] for r in res.json()}
 
 
-async def test_super_admin_can_open_hidden_role(client, seeded):
+async def test_super_admin_cannot_open_hidden_role_permissions(client, seeded):
+    """ADR-147 追補 2026-11-09: 画面に出さないロール（admin 含む）の権限は super admin でも 404。"""
     _as_super_admin()
-    assert (await client.get(f"/api/v1/roles/{seeded['hidden']}/permissions")).status_code == 200
+    assert (await client.get(f"/api/v1/roles/{seeded['hidden']}/permissions")).status_code == 404
 
 
 async def test_super_admin_can_assign_hidden_role(client, seeded, db_session):

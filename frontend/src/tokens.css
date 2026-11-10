@@ -421,6 +421,7 @@
   --schedule-empty-icon-color: var(--calendar-google-blue); /* 空状態アイコン前景 */
   --schedule-control-border: var(--border); /* ビュー/操作コントロール枠線 */
   --schedule-gridline-w:      1px;      /* 時間割の罫線の太さ */
+  --schedule-hour-tick-w:     var(--space-2); /* 毎時の線が時刻の列へ出る長さ（Google 実測 9px・G38） */
   --schedule-event-border-w:  2px;      /* 予定の枠の太さ（見積もり・重なり） */
   --schedule-event-estimate-style: dashed; /* 見積もりの枠の線の種類（実際は solid） */
   --schedule-now-line-w: 2px;     /* 今の時刻の線の太さ（G16） */

@@ -58,3 +58,7 @@
 ## 追補（2026-10-10）
 
 システム管理者ロールは運営者用。super admin（public.users.is_super_admin）以外には一覧に見せず、付けさせない。見分けは roles.system_key='admin'（backend/app/auth/system_roles.py の TENANT_HIDDEN_SYSTEM_KEYS）。ロール自体は削除しない。PO 決定 2026-10-10。
+
+## Amendment（2026-11-09）
+
+ロール画面を開いて直せるのはオーナー・システム管理者・マネージャー（system_key=manager）。画面に出さないのは owner/admin/inspector/smoke。見分けは roles.system_key で行い（名前・priority では見分けない）、ロール画面の鍵（roles.*）は保存行ではなく役割から計算で決める（backend/app/auth/system_roles.py の ROLE_PAGE_HIDDEN_KEYS・ROLE_EDITOR_KEYS・compute_permission_keys）。それ以外のロールの人は roles.* を持たず、メニューにも出ない。マネージャーはロールの作成・削除・人への割当もできるが、system_key を持つロールの削除と、owner/admin/manager/inspector/smoke の割当はできない。設計: docs/handoff/role-edit-hierarchy/design.md。PO 決定 2026-11-09。

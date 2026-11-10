@@ -1251,3 +1251,5 @@ run_sql migrations/20261107_150000_add_google_webhook_subscriptions_rls.sql
 run_sql migrations/20261107_160000_add_tenant_budget_settings_rls.sql
 # 会話の一本化 便1: v_company_stats の会話の数え方を meta_messages に付け替える（CREATE OR REPLACE VIEW・列は同じ・値は変えない）。冪等
 run_sql migrations/20261108_100000_rebuild_company_stats_on_meta_messages.sql
+# firebase-removal 便4: 全テナントの staff から使わない列 firebase_uid を外す（構造のみ・冪等）
+run_sql migrations/20261109_200000_drop_staff_firebase_uid.sql

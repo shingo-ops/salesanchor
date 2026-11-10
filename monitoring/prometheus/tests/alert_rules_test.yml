@@ -1,7 +1,7 @@
 # Prometheus ルールの単体試験（promtool test rules）
 # 書式: https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
 # 実行: promtool test rules monitoring/prometheus/tests/alert_rules_test.yml
-# 全 36 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
+# 全 38 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
 
 rule_files:
   - ../alert_rules.yml
@@ -1094,4 +1094,91 @@ tests:
               runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#permissionkeycheckfailed"
       - eval_time: 20m
         alertname: PermissionKeyCheckFailed
+        exp_alerts: []
+
+  # --- build-on-github 便0: dockerd ---
+  - name: DockerdMemoryHighFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_dockerd_rss_bytes{instance="app-vps",job="node-exporter"}'
+        values: '1610612736x40'
+    alert_rule_test:
+      - eval_time: 35m
+        alertname: DockerdMemoryHigh
+        exp_alerts:
+          - exp_labels:
+              instance: app-vps
+              job: node-exporter
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "docker の土台（dockerd）のメモリが 1GiB を超えています"
+              description: "prod1 の dockerd のメモリが 30 分続けて 1GiB を超えています。2026-11-09 は約 2.0GB まで膨らみ本番が止まりました。日本時間 14:00〜16:00 に入れ直しの台本を流してください。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#dockerdmemoryhigh"
+
+  - name: DockerdMemoryHighShort
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_dockerd_rss_bytes{instance="app-vps",job="node-exporter"}'
+        values: '1610612736x40'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: DockerdMemoryHigh
+        exp_alerts: []
+
+  - name: DockerdMemoryHighQuiet
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_dockerd_rss_bytes{instance="app-vps",job="node-exporter"}'
+        values: '268435456x40'
+    alert_rule_test:
+      - eval_time: 35m
+        alertname: DockerdMemoryHigh
+        exp_alerts: []
+
+  - name: DockerdStateStaleFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_dockerd_state_last_run_timestamp_seconds{instance="app-vps",job="node-exporter"}'
+        values: '1000+0x20'
+    alert_rule_test:
+      - eval_time: 16m
+        alertname: DockerdStateStale
+        exp_alerts:
+          - exp_labels:
+              instance: app-vps
+              job: node-exporter
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "dockerd のメモリを書く係が 10 分以上動いていません"
+              description: "prod1 の scripts/ops/dockerd_state.py が 10 分以上 textfile を書いていません。dockerd が膨らんでも DockerdMemoryHigh が鳴りません。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#dockerdstatestale"
+
+  - name: DockerdStateStaleAbsent
+    interval: 1m
+    input_series:
+      - series: 'up{job="node-exporter",instance="app-vps"}'
+        values: '1x20'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: DockerdStateStale
+        exp_alerts:
+          - exp_labels:
+              instance: app-vps
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "dockerd のメモリを書く係が 10 分以上動いていません"
+              description: "prod1 の scripts/ops/dockerd_state.py が 10 分以上 textfile を書いていません。dockerd が膨らんでも DockerdMemoryHigh が鳴りません。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#dockerdstatestale"
+
+  - name: DockerdStateFresh
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_dockerd_state_last_run_timestamp_seconds{instance="app-vps",job="node-exporter"}'
+        values: '0+60x20'
+    alert_rule_test:
+      - eval_time: 16m
+        alertname: DockerdStateStale
         exp_alerts: []

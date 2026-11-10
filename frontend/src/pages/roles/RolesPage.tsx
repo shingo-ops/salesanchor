@@ -105,6 +105,16 @@ const PRIORITY_VALUES = [1000, 900, 500, 300];
 const emptyRoleForm = { name: "", color: COLOR_PALETTE[0], priority: 500, description: "" };
 
 const NO_ROLES: Role[] = [];
+
+/** ロール画面の一覧。画面に出さないロールを除く（scope=role_page） */
+const ROLES_PATH = "/roles?scope=role_page";
+
+/** 固定表示の行の文（切替の代わりに出す） */
+const FIXED_LABEL_KEYS = {
+  always: "roles.fixedAlways",
+  ownerOnly: "roles.fixedOwner",
+  roleEditors: "roles.fixedRoleEditors",
+} as const;
 const NO_PERMISSIONS: Permission[] = [];
 const EMPTY_IDS: Set<number> = new Set();
 const toIds = (perms: Permission[]): Set<number> => new Set(perms.map((p) => p.id));
@@ -114,7 +124,7 @@ export default function RolesPage() {
   const { hasPermission } = usePermissions();
 
   // データ
-  const rolesQ = useApiQuery<Role[]>("/roles");
+  const rolesQ = useApiQuery<Role[]>(ROLES_PATH);
   const permsQ = useApiQuery<Permission[]>("/permissions");
   const roles = rolesQ.data ?? NO_ROLES;
   const permissions = permsQ.data ?? NO_PERMISSIONS;
@@ -166,7 +176,7 @@ export default function RolesPage() {
     });
   }
 
-  const canEditPerms = hasPermission("roles.update") && !isSystemRole;
+  const canEditPerms = hasPermission("roles.update");
   const canTogglePerms = canEditPerms && permsReady;
 
   // 持っている許可の鍵（編集中）。行の計算は鍵で行い、保存する一覧は id のまま（menu.* もそのまま残る）
@@ -279,7 +289,7 @@ export default function RolesPage() {
       } else {
         await api.post("/roles", payload);
       }
-      await cache.fetch("/roles", () => api.get<Role[]>("/roles"));
+      await cache.fetch(ROLES_PATH, () => api.get<Role[]>(ROLES_PATH));
       setShowRoleForm(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.saveError"));
@@ -291,7 +301,7 @@ export default function RolesPage() {
     setDeleteTarget(null);
     try {
       await api.delete(`/roles/${id}`);
-      await cache.fetch("/roles", () => api.get<Role[]>("/roles"));
+      await cache.fetch(ROLES_PATH, () => api.get<Role[]>(ROLES_PATH));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.deleteError"));
     }
@@ -408,7 +418,7 @@ export default function RolesPage() {
                                 )}
                                 {row.fixed ? (
                                   <span className="role-perm-row-fixed">
-                                    {t(row.fixed === "always" ? "roles.fixedAlways" : "roles.fixedOwner")}
+                                    {t(FIXED_LABEL_KEYS[row.fixed])}
                                   </span>
                                 ) : (
                                   <SegmentedToggle

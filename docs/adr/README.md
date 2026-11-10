@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-11-08 / ADR 総数: 228 件
+最終更新: 2026-11-09 / ADR 総数: 229 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -212,7 +212,7 @@
 | [ADR-1031](./ADR-1031-single-and-promo-pack-conditions.md) | ADR-1031: シングル系の状態5つ（PSA10／PSA9／PSA8／PSA7以下／Single）と、区分「プロモパック系」（既定は未開封） | Accepted | — | — |
 | [ADR-1032](./ADR-1032-current-row-revival-guard.md) | ADR-1032: 再解析で、新しい投稿に隠れていた古い投稿の行を現行に戻さない（復活止め） | Accepted | — | — |
 | [ADR-1033](./ADR-1033-conversation-consent-ticket.md) | ADR-1033: 危険な操作を、会話での同意（同意票と「1」）でも通せるようにする | Proposed | — | — |
-| [ADR-1034](./ADR-1034-opus-permission-delegation-ledger.md) | ADR-1034: Opus が権限を足し引きし、理由を台帳に残して毎週点検する | Proposed | — | — |
+| [ADR-1034](./ADR-1034-opus-permission-delegation-ledger.md) | ADR-1034: Opus が権限を足し引きし、理由を台帳に残して毎週点検する | Proposed | Amended by ADR-1072 | — |
 | [ADR-1035](./ADR-1035-condition-unit-and-booklet-category.md) | ADR-1035: 状態ごとの単位（Case/Box/Pack）と、区分「ブックレット系」（既定は With booklet） | Proposed | — | — |
 | [ADR-1036](./ADR-1036-price-decides-unit.md) | ADR-1036: 単位が「個」・無記入の箱系の行は、値段で Box／Case／Pack を決める（v102） | Proposed | — | — |
 | [ADR-1037](./ADR-1037-migration-lock-timeout.md) | ADR-1037: 入れ替え時の migration はロック待ちを1秒で諦め、間を空けて流し直す | Accepted | — | — |
@@ -247,6 +247,7 @@
 | [ADR-1068](./ADR-1068-staff-self-registration.md) | ADR-1068: スタッフの自己登録（招待リンク → 申込 → Discord の番号 → 個室と初回ログイン） | Proposed | — | — |
 | [ADR-1070](./ADR-1070-pool-reset-on-return.md) | ADR-1070: 接続を貸し出しに戻すたびに会社の文脈を消す（Bx） | Proposed | — | — |
 | [ADR-1071](./ADR-1071-plain-language-error-messages.md) | ADR-1071: 失敗したときの文は「何が起きたか＋次にすること」を誰でも分かる言葉で出す | Accepted | — | — |
+| [ADR-1072](./ADR-1072-guard-add-by-ai-record.md) | ADR-1072: AI が足した見張りを、マージ済み PR で記録できるようにする（ADR-1034 決定2の一部を改める） | Proposed | Amends ADR-1034 | — |
 
 ## ステータス凡例
 

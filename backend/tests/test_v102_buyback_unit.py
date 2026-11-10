@@ -344,7 +344,7 @@ CURRENT = {
 }
 # B の表（design.md）の期待値。None は「決めない（今のまま）」
 B_TABLE = {
-    ("default", "Box"): "Sealed box", ("default", "Case"): "Case", ("default", "Pack"): "Unsearched pack",
+    ("default", "Box"): "Sealed box", ("default", "Case"): "Case", ("default", "Pack"): "Searched pack",
     ("damaged", "Box"): "Damaged sealed box", ("damaged", "Case"): "Damaged case", ("damaged", "Pack"): None,
     ("opened", "Box"): "Opened box", ("opened", "Case"): "Opened case", ("opened", "Pack"): None,
     ("searched", "Box"): "Searched box", ("searched", "Case"): None, ("searched", "Pack"): "Searched pack",
@@ -404,7 +404,7 @@ def test_k1_unopened_word_is_the_default_kind(code_word, kind, expected_case, ex
     out = _kapply(_kitem(basis="R2:未開封"), values)
     assert (out["condition_canonical"], out["unit_canonical"], out["condition_basis"]) == (expected_case, "Case", "R2:未開封|PRICE:①r=12.00")
     out = _kapply(_kitem(basis="R2:未開封"), {**values, "price_normalized": 1000})
-    assert (out["condition_canonical"], out["unit_canonical"]) == ("Unsearched pack", "Pack")  # 未開封 @箱の 1/10 → Unsearched pack
+    assert (out["condition_canonical"], out["unit_canonical"]) == ("Searched pack", "Pack")  # 未開封 @箱の 1/10 → パックの群に札 2 の行が無いので既定の Searched pack
     unsearched = _values(1000, condition_id=22, condition_canonical="Unsearched pack", condition_basis="R2:未サーチ", unit_canonical="Pack", unit_id=11, unit_resolved=True)
     out = _kapply(_kitem(basis="R2:未サーチ"), {**unsearched, "price_normalized": 10000})
     assert (out["condition_canonical"], out["unit_canonical"]) == (expected_box, "Box")
@@ -529,22 +529,23 @@ def test_label_less_unit_mixed_in_pack_group_stops_only_pack_and_warns(caplog):
 
 
 def test_pack_group_without_default_row_warns_but_box_and_case_still_decide(caplog):
-    rows = [r for r in TARGET_ROWS if r[0] != "CN0007"]
+    rows = [r for r in TARGET_ROWS if r[0] != "CN0010"]
+    unsearched = _unsearched_values(1000, reasons=None)
     with caplog.at_level("WARNING"):
         values = _kvalues("default", "Box", 1000)
-        assert _kapply(_kitem(), values, targets=rows) == values  # 既定の Pack 行が無いので Pack の既定は決まらない
-        assert _kapply(_kitem(), _kvalues("default", "Box", 10000), targets=rows)["unit_canonical"] == "Box"
-        searched = _kapply(_kitem(basis="R2:サーチ済"), _kvalues("searched", "Box", 1000), targets=rows)
-        assert searched["condition_canonical"] == "Searched pack"
+        assert _kapply(_kitem(), values, targets=rows) == values  # 既定の Pack 行が無いので語なしは決まらない
+        assert _kapply(_kitem(), _kvalues("default", "Box", 10000), targets=rows)["condition_canonical"] == "Sealed box"
+        out = _kapply(_kitem(basis="R2:未サーチ"), unsearched, targets=rows)
+        assert (out["condition_canonical"], out["unit_canonical"]) == ("Unsearched pack", "Pack")
     assert any("群 pack" in r.message and "既定" in r.message for r in caplog.records)  # (b)
 
 
 def test_box_or_case_group_without_exactly_one_default_stops_everything():
     no_case_default = [r for r in TARGET_ROWS if r[0] != "CN0001"]
-    two_box_defaults = [*TARGET_ROWS, ("CN9002", 91, "Sealed box 2", "box", 10, 7, "Box")]
+    no_box_default = [r for r in TARGET_ROWS if r[0] != "CN0003"]
     values = _kvalues("default", "Box", 10000)
     assert _kapply(_kitem(), values, targets=no_case_default) == values
-    assert _kapply(_kitem(), values, targets=two_box_defaults) == values
+    assert _kapply(_kitem(), values, targets=no_box_default) == values
 
 
 def test_does_not_mutate_input_in_the_new_paths():
@@ -605,3 +606,56 @@ def test_group_with_all_units_unresolved_warns(caplog):
         values = _kvalues("default", "Box", 1000)
         assert _kapply(_kitem(), values, targets=rows) == values
     assert any("群 pack" in r.message and "引けません" in r.message for r in caplog.records)
+
+
+# --- 便C：状態の語が無いパックはサーチ済み・既定の code を 1 か所に（design.md 追補 C） -------------------------
+
+def _unsearched_values(price, reasons="condition_multiple_candidates"):
+    return _values(price, condition_id=22, condition_canonical="Unsearched pack", condition_basis="R2:未サーチ", unit_canonical="Pack", unit_id=11, unit_resolved=True,
+                   review_reasons=reasons, needs_review=reasons is not None)
+
+
+def test_c3_unsearched_word_with_box_code_decides_box_at_box_band():
+    item = _kitem(basis="R2:未サーチ", review=[{"kind": "condition_multiple_candidates", "codes": ["CN0003"]}])
+    out = _kapply(item, _unsearched_values(10000))
+    assert (out["condition_canonical"], out["unit_canonical"]) == ("Sealed box", "Box")
+
+
+def test_c3b_unsearched_word_with_box_code_does_nothing_at_pack_band():
+    item = _kitem(basis="R2:未サーチ", review=[{"kind": "condition_multiple_candidates", "codes": ["CN0003"]}])
+    values = _unsearched_values(1000)
+    assert _kapply(item, values) == values
+
+
+def test_c3b_searched_word_with_box_code_decides_pack_only_at_pack_band():
+    item = _kitem(basis="R2:サーチ済", review=[{"kind": "condition_multiple_candidates", "codes": ["CN0003"]}])
+    out = _kapply(item, _kvalues("searched", "Box", 1000, reasons="condition_multiple_candidates"))
+    assert (out["condition_canonical"], out["unit_canonical"]) == ("Searched pack", "Pack")
+    assert out["review_reasons"] is None
+    values = _kvalues("searched", "Box", 10000, reasons="condition_multiple_candidates")
+    assert _kapply(item, values) == values  # Searched box と Sealed box が食い違う
+
+
+def test_c4_unsearched_box_row_with_label_7_is_used_for_the_unsearched_word(caplog):
+    rows = [*TARGET_ROWS, ("CN9002", 91, "Unsearched box", "box", 10, 7, "Box")]
+    with caplog.at_level("WARNING"):
+        out = _kapply(_kitem(basis="R2:未サーチ"), _unsearched_values(10000, None), targets=rows)
+        assert (out["condition_canonical"], out["unit_canonical"]) == ("Unsearched box", "Box")
+        out = _kapply(_kitem(), _kvalues("default", "Box", 10000), targets=rows)
+        assert out["condition_canonical"] == "Sealed box"
+    assert not any("既定" in r.message for r in caplog.records)  # warning (b) は出ない
+
+
+def test_c5_pack_default_row_without_label_does_nothing_and_warns(caplog):
+    rows = [(c, i, n, g, u, (None if c == "CN0010" else d), uc) for c, i, n, g, u, d, uc in TARGET_ROWS]
+    values = _kvalues("default", "Box", 1000)
+    with caplog.at_level("WARNING"):
+        assert _kapply(_kitem(), values, targets=rows) == values
+    assert any("群 pack" in r.message and "既定" in r.message for r in caplog.records)
+
+
+def test_c2_unsearched_word_with_production_rows():
+    out = _kapply(_kitem(basis="R2:未サーチ"), _unsearched_values(1000, None))
+    assert (out["condition_canonical"], out["unit_canonical"]) == ("Unsearched pack", "Pack")
+    out = _kapply(_kitem(basis="R2:未サーチ"), _unsearched_values(10000, None))
+    assert (out["condition_canonical"], out["unit_canonical"]) == ("Sealed box", "Box")

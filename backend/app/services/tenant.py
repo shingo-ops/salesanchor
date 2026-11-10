@@ -30,7 +30,7 @@ import re
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.system_roles import ROLE_KEY_ADMIN, ROLE_KEY_OWNER, SYSTEM_MANAGE_KEY
+from app.auth.system_roles import ROLE_KEY_ADMIN, ROLE_KEY_MANAGER, ROLE_KEY_OWNER, SYSTEM_MANAGE_KEY
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +70,7 @@ DEFAULT_ROLES = [
         "color": "#3b82f6",  # 青
         "priority": 500,
         "is_system": False,
+        "system_key": ROLE_KEY_MANAGER,
         "permissions": [
             "dashboard.view", "reports.view", "reports.export",
             "customers.view", "customers.update",
@@ -78,7 +79,6 @@ DEFAULT_ROLES = [
             "deals.view", "deals.update",
             "orders.view",
             "teams.view", "teams.manage_members",
-            "roles.view",
             # Phase 2
             "products.view",
             "quotes.view", "quotes.update", "quotes.approve",
@@ -614,7 +614,6 @@ CREATE TABLE IF NOT EXISTS {schema}.staff (
     role_id INTEGER REFERENCES {schema}.roles(id),
     status VARCHAR(20) NOT NULL DEFAULT 'active'
         CHECK (status IN ('active','inactive','pending')),
-    firebase_uid VARCHAR(128) UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (tenant_id, staff_code),

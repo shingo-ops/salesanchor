@@ -97,16 +97,15 @@ async def _setup():
             await conn.execute(
                 text(
                     "INSERT INTO public.users ("
-                    " id, tenant_id, firebase_uid, username, email, full_name,"
+                    " id, tenant_id, username, email, full_name,"
                     " role, is_active, is_super_admin, locale, theme)"
-                    " VALUES (:id, :t, :fuid, :uname, :email, 'Cal Reset', 'admin',"
+                    " VALUES (:id, :t, :uname, :email, 'Cal Reset', 'admin',"
                     "         TRUE, FALSE, 'ja', 'light')"
                     " ON CONFLICT (id) DO NOTHING"
                 ),
                 {
                     "id": uid,
                     "t": _TENANT,
-                    "fuid": f"cal-reset-{uid}",
                     "uname": f"cal-reset-{uid}",
                     "email": f"cal-reset-{uid}@example.com",
                 },

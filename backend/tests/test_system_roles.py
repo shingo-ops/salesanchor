@@ -11,7 +11,9 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app.auth.system_roles import (
+    ALL_ROLE_KEYS,
     ROLE_KEY_ADMIN,
+    ROLE_KEY_MANAGER,
     ROLE_KEY_OWNER,
     SYSTEM_MANAGE_KEY,
     compute_permission_keys,
@@ -58,6 +60,36 @@ class TestComputePermissionKeys:
         assert stored == {"customers.view"} and system_keys == {ROLE_KEY_ADMIN}
 
 
+class TestComputeRolePageKeys:
+    """ロール画面の鍵（roles.*）は役割から計算で決まる（ADR-147 追補 2026-11-09）。"""
+
+    ALL = ALL_ROLE_KEYS | {"customers.view", SYSTEM_MANAGE_KEY}
+
+    def test_manager_gets_all_role_keys_even_without_stored_rows(self):
+        result = compute_permission_keys({"customers.view"}, {ROLE_KEY_MANAGER}, self.ALL)
+        assert ALL_ROLE_KEYS <= result
+        assert "customers.view" in result
+        assert SYSTEM_MANAGE_KEY not in result
+
+    def test_manager_stored_role_keys_are_replaced_by_computed(self):
+        result = compute_permission_keys({"roles.view"}, {ROLE_KEY_MANAGER}, self.ALL)
+        assert result == ALL_ROLE_KEYS
+
+    def test_other_roles_lose_stored_role_keys(self):
+        stored = {"customers.view", "roles.view", "roles.update"}
+        assert compute_permission_keys(stored, set(), self.ALL) == {"customers.view"}
+        assert compute_permission_keys(stored, {"inspector"}, self.ALL) == {"customers.view"}
+
+    def test_owner_and_admin_keep_all_role_keys(self):
+        assert ALL_ROLE_KEYS <= compute_permission_keys(set(), {ROLE_KEY_OWNER}, self.ALL)
+        assert ALL_ROLE_KEYS <= compute_permission_keys(set(), {ROLE_KEY_ADMIN}, self.ALL)
+
+    def test_inputs_are_not_mutated(self):
+        stored = {"roles.view"}
+        compute_permission_keys(stored, {ROLE_KEY_MANAGER}, self.ALL)
+        assert stored == {"roles.view"}
+
+
 def _role(name: str) -> dict:
     return next(role for role in tenant_service.DEFAULT_ROLES if role["name"] == name)
 
@@ -66,7 +98,12 @@ class TestDefaultRoles:
     def test_system_keys(self):
         assert _role("オーナー")["system_key"] == ROLE_KEY_OWNER
         assert _role("システム管理者")["system_key"] == ROLE_KEY_ADMIN
-        others = [r for r in tenant_service.DEFAULT_ROLES if r["name"] not in ("オーナー", "システム管理者")]
+        assert _role("マネージャー")["system_key"] == ROLE_KEY_MANAGER
+        assert "roles.view" not in _role("マネージャー")["permissions"]  # 計算で付く
+        others = [
+            r for r in tenant_service.DEFAULT_ROLES
+            if r["name"] not in ("オーナー", "システム管理者", "マネージャー")
+        ]
         assert all(r.get("system_key") is None for r in others)
 
     def test_admin_is_system_role(self):
@@ -148,3 +185,27 @@ async def test_create_tenant_schema_seeds_phase_b(monkeypatch):
     assert len(settings_sql) == 1
     assert "VALUES (:tid, 'B'" in settings_sql[0]
     assert "VALUES (:tid, 'A'" not in settings_sql[0]
+
+
+def test_keys_not_grantable_keep_same():
+    from app.routers.roles import _keys_not_grantable
+
+    assert _keys_not_grantable({"a", "b"}, {"a", "b"}, set()) == set()
+
+
+def test_keys_not_grantable_remove_one():
+    from app.routers.roles import _keys_not_grantable
+
+    assert _keys_not_grantable({"a"}, {"a", "b"}, set()) == set()
+
+
+def test_keys_not_grantable_add_owned():
+    from app.routers.roles import _keys_not_grantable
+
+    assert _keys_not_grantable({"a", "c"}, {"a"}, {"c"}) == set()
+
+
+def test_keys_not_grantable_add_not_owned():
+    from app.routers.roles import _keys_not_grantable
+
+    assert _keys_not_grantable({"a", "x"}, {"a"}, {"c"}) == {"x"}
