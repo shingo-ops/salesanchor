@@ -1,6 +1,6 @@
 # design: AI が足した見張りを記録できる道（草案・2026-11-09）
 
-状態: 設計案作成済み（第11版。§13 は実装に向けた補足。9回目の審査 REVISE の必須3件・推奨2件を §13-7 と便1カードに反映）／設計審査済み（クラウドでの設計審査 10回目 APPROVE・2026-11-09 09:58 UTC・opus。推奨2件は便1カードに反映済み。§12-11。8回目も APPROVE・08:43 UTC。1〜7回目の REVISE は全部反映済み。8回目の推奨2件も反映済み。§12）／§9 は PO 決定済み（2026-11-09「1」＝案1）／ADR-1072 は PO 承認済み（2026-11-09「1」。承認と実装の開始を選んだ返事）／便1 の実装は G5-4 で NEEDS_DECISION（§12-12 で P の決め方を設計の意図に合わせて直した。実装は出し直し）／便1 の実装 PR はマージ前の審査で REQUEST_CHANGES（§12-13 で入れ替えの条件を足した。便1カード §13 で直す）。／便4（§13-14・第18版。共通の台本の命令の形を見張る install-form-guard。PO 決定 2026-11-10「1」）は設計案作成済み・設計審査待ち。
+状態: 設計案作成済み（第11版。§13 は実装に向けた補足。9回目の審査 REVISE の必須3件・推奨2件を §13-7 と便1カードに反映）／設計審査済み（クラウドでの設計審査 10回目 APPROVE・2026-11-09 09:58 UTC・opus。推奨2件は便1カードに反映済み。§12-11。8回目も APPROVE・08:43 UTC。1〜7回目の REVISE は全部反映済み。8回目の推奨2件も反映済み。§12）／§9 は PO 決定済み（2026-11-09「1」＝案1）／ADR-1072 は PO 承認済み（2026-11-09「1」。承認と実装の開始を選んだ返事）／便1 の実装は G5-4 で NEEDS_DECISION（§12-12 で P の決め方を設計の意図に合わせて直した。実装は出し直し）／便1 の実装 PR はマージ前の審査で REQUEST_CHANGES（§12-13 で入れ替えの条件を足した。便1カード §13 で直す）。／便4（§13-14・第18版。共通の台本の命令の形を見張る install-form-guard。PO 決定 2026-11-10「1」）は設計案作成済み／設計審査済み（クラウドでの設計審査 1回目 APPROVE・2026-11-10 09:56 UTC・opus。推奨2件は §13-14 の「受け入れたリスク」と「巻き添え」に反映済み）。
 根拠: recon.md（同じフォルダ）。関係 ADR: ADR-1034・ADR-1033・ADR-1029。
 
 ## 1. 目的（PO の言葉から）
@@ -396,8 +396,8 @@
   7. 入力の JSON が読めないときは止めない（exit 0）。mac-test-guard と同じ。Claude Code が壊れた JSON を渡すことは無い前提で、ほかの Bash を巻き添えで止めないため。
   8. 本体に §5-5 の語（`approve`・`behavior`・`updatedInput` など）を書かない。台本と点検の語の検査に当たるため。
 - 公式の動き（Context7 `/websites/code_claude`・code.claude.com/docs/en/hooks で 2026-11-10 に確認）: PreToolUse で exit 2 を返すと、その道具の呼び出しは止まり、標準エラーが Claude に返る。exit 0 は許可にならず、ふつうの許可の流れ（自動判定を含む）へ進む。よってこの見張りは自動判定の前に止め、通したものも自動判定の確かめを受ける。
-- 巻き添え: Opus が手元の Bash で `git show …install-guard.sh` や `grep install-guard` を打つと止まる。中を読むときは Read ツールを使う（consent-guard と同じ扱い）。クラウドの担当には ~/.claude の見張りが無いので影響しない。`test_install_guard.py` は `install_guard`（下線）なので当たらない。
-- 受け入れたリスク: 変数で文字列を組み立てる書き方（例 `D=install; bash ~/…/${D}-guard.sh x`）は、この見張りでは見つけきれない。HKI-1 の形に合わないので自動判定の確かめは受ける。最後の守りは今までどおり週次点検（設定が変われば記録で説明できない限り B）。
+- 巻き添え: Opus が手元の Bash で `git show …install-guard.sh` や `grep install-guard` を打つと止まる。中を読むときは Read ツールを使う（consent-guard と同じ扱い）。クラウドの担当には ~/.claude の見張りが無いので影響しない。`test_install_guard.py` は `install_guard`（下線）なので当たらない。 Mac で台本の名前（`install-guard`）を含む PR の題・`--body`・commit の文・枝の名前を Bash の命令に直接書くと止まる。PR の本文と commit の文はファイルで渡し、題と枝の名前には台本の名前を入れない。
+- 受け入れたリスク: 変数で文字列を組み立てる書き方（例 `D=install; bash ~/…/${D}-guard.sh x`）と、グロブ・波かっこ・パスの書き換えを使う書き方（設計審査で exit 0 を実測した例: `cd ~/.salesanchor-tools/scripts && bash agent-hooks/install-g?ard.sh x`・`bash ~/.salesanchor-tools/scripts//agent-hooks/install-gu*.sh x`・`bash ~/.salesanchor-tools/scripts/./agent-hooks/install-{g,}uard.sh x`）は、この見張りでは見つけきれない。当たり判定を広げると普段の命令（`perm-change.py sync` など）を巻き添えにするため、広げない。HKI-1 の形に合わないので自動判定の確かめは受ける。最後の守りは今までどおり週次点検（設定が変われば記録で説明できない限り B）。
 - 入れ方: マージ → `perm-change.py sync` で ~/.salesanchor-tools を GitHub main にそろえる → Opus が `bash ~/.salesanchor-tools/scripts/agent-hooks/install-guard.sh install-form-guard` を1回。これが K1（§2）の最初の実測になる（差が出る最初の見張り。§6 の 111 行目）。PO の `!` は要らない。
 - 受入条件:
 
