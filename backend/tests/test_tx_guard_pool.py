@@ -28,7 +28,7 @@ def _read(engine):
 
 def test_limit_survives_pool_return_and_invalidate_on_real_postgres(pg):
     _conn, _pg_engine, url = pg
-    engine = create_engine(url, pool_size=1, max_overflow=0)
+    engine = create_engine(url.set(drivername="postgresql+psycopg2"), pool_size=1, max_overflow=0)
     install_idle_tx_listener(engine)
     try:
         pid1, value1 = _read(engine)
@@ -50,7 +50,7 @@ def test_limit_survives_pool_return_and_invalidate_on_real_postgres(pg):
 
 def test_listener_registered_once_on_real_engine_on_real_postgres(pg, monkeypatch):
     _conn, _pg_engine, url = pg
-    engine = create_engine(url, pool_size=1, max_overflow=0)
+    engine = create_engine(url.set(drivername="postgresql+psycopg2"), pool_size=1, max_overflow=0)
     listen_spy = MagicMock(wraps=event.listen)
     monkeypatch.setattr(_tx_guard.event, "listen", listen_spy)
     try:
