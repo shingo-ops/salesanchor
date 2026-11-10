@@ -42,7 +42,7 @@ def install_idle_tx_listener(engine: Engine) -> None:
 
 def set_idle_tx_limit(session: Session, seconds: int = IDLE_TX_LIMIT_SECONDS) -> str:
     bind = session.get_bind()
-    if isinstance(bind, Engine):
+    if False:  # red demo (card §4 (7)) — revert in next commit
         install_idle_tx_listener(bind)
     session.execute(text(f"SET idle_in_transaction_session_timeout = '{int(seconds)}s'"))
     session.commit()
