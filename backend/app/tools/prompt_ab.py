@@ -86,6 +86,7 @@ from app.services.line_analysis_v102_svc import (  # v102 の本番部品（移�
 from app.services.llm_budget import record_usage_event_sync
 from app.services.tcg_analyzer_svc import load_condition_entries, load_lookup_maps, load_status_master
 from app.tasks.tcg_extraction import TCG_SCHEMA, _get_sync_session, load_extraction_context
+from app.tools._tx_guard import release_before_compute, set_idle_tx_limit
 
 logger = logging.getLogger(__name__)
 
@@ -481,6 +482,7 @@ def run_ab(
     prompt_key: str | None = None, retry_transient: int = 0, retry_wait_sec: float = 30.0,
 ) -> AbSummary:
     summary = AbSummary(target_count=len(run_ids), dry_run=dry_run)
+    set_idle_tx_limit(session)
     rules: dict[str, dict] | None = None
     rules_sha256: str | None = None
     if supplier_rules_file is not None:  # 誤りはここで止まる（Gemini を呼ぶ前）
@@ -542,6 +544,7 @@ def run_ab(
                 supplier_context, override = _effective_supplier_context(ctx, rules, rules_sha256, omit_supplier_fields)
                 if override is not None:
                     row["supplier_rules_override"] = override
+                release_before_compute(session)  # Gemini を待つ前に取引を閉じる（design C3）
                 wait = retry_wait_sec
                 while True:  # Gemini 呼び出し（v7・v8 系の if/else 全体）だけをやり直す
                     try:
