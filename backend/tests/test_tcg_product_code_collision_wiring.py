@@ -62,7 +62,7 @@ async def test_create_product_returns_code_collisions_without_blocking(monkeypat
 
     out = await master.create_product(
         db, extraction_item_id="", source_message_id="", product_kind_id=1, work_id=1,
-        manufacturer_id="m", product_category_id="c", japanese_title=" 新商品 ",
+        manufacturer_id="m", product_category_id="3", japanese_title=" 新商品 ",
         release_date="2026-01-01", search_keywords="語1, 語2,", exclude_keywords="除1", mark="ST01",
         english_title="New item", product_format_id=5,
     )

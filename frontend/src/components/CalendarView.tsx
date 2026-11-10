@@ -336,6 +336,9 @@ export function CalendarView({
         eventDidMount={(arg) => {
           const color = (arg.event.extendedProps.source as CalendarViewEvent).color;
           if (color) arg.el.style.setProperty('--comp-calendar-owner-color', color);
+          // ドラッグ中の写しは追わない。追うと再描画で FullCalendar の設定が入れ替わり、
+          // 離したときに eventDrop が出なくなる（card-bin12-fix1.md）
+          if (arg.isMirror) return;
           if (trackRef.current.trackEventId && arg.event.id === trackRef.current.trackEventId) {
             trackedElRef.current = arg.el;
             setTrackedEl(arg.el);
@@ -343,6 +346,7 @@ export function CalendarView({
           }
         }}
         eventWillUnmount={(arg) => {
+          if (arg.isMirror) return; // 写しは追っていない（eventDidMount と同じ趣旨）
           // 別の日へ動かすと、新しい要素の mount の後に古い要素の unmount が来ることがある。同じ要素のときだけ忘れる
           if (trackedElRef.current === arg.el) {
             trackedElRef.current = null;
