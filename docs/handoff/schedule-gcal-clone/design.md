@@ -8,6 +8,7 @@
 追加（2026-11-09）: 便10（日・3日間・週から月へ切り替えると画面全体が消える不具合・G36）は PO の選択「1」（2026-11-09・画面が消える不具合を先に直す）。作り方は §3.15。設計審査は §9 の 13 回目（APPROVE）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin10.md`。金型の設計 `docs/handoff/calendar-view-component/design.md` §4-3 の `views` の行も「月でも渡す」に直した。
 追加（2026-11-09）: 便11（日・3日間・週の枠線を Google に揃える・G37〜G41）は PO の選択「1」（2026-11-09・枠線を揃える設計を作り、PO の承認を得てから直す）。作り方は §3.16。設計審査は §9 の 14 回目（APPROVE）。G37〜G41 は **PO 承認済み**（2026-11-09、PO の選択「1」＝「この直し方で作り、本番に出して Google と並べて確かめる」）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin11.md`。
 追加（2026-11-09）: 便12（作る小窓を Google の形に・作っている途中の箱を動かせる・G42〜G50）は PO の言葉「つぎは新規の予定を追加するときの表示の仕方と編集途中でもドラッグで動かせる機能を実装してくれ、Googleカレンダーと同じUI/UXで」（2026-11-09）。作り方は §3.17。G42〜G50 と金型 2 つの変更（ADR-144）は **PO 承認済み**（2026-11-10、PO の選択「1」＝「この設計で作り、本番に出してGoogleと並べて確かめる」）。設計審査は §9 の 15 回目（2 回目 APPROVE）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin12.md`。
+追加（2026-11-11）: 便13（Google Meet を押す行に・「その他のオプション」で全画面の編集・G51〜G57）は PO の言葉（2026-11-10・§2.6）。作り方は §3.18。設計審査は §9 の 16 回目（3 回目 APPROVE）。G51〜G57 と新しい金型 `FullScreenDialog`（ADR-144）は **PO 承認済み**（2026-11-11、PO の選択「1」＝「この形で作り、本番に出す」）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin13.md`。
 根拠: `docs/handoff/schedule-gcal-clone/recon.md`（以下 recon）。前の設計 `docs/handoff/schedule-gcal-alignment/design.md`（K1〜K14）を引き継ぎ、便2（K8〜K11）はこの設計に入れ直す。
 
 ## 1. 目的
@@ -771,7 +772,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 | 便10 | 日・3日間・週から月へ切り替えると画面全体が消える不具合の直し（§3.15）。金型 CalendarView の 1 か所（`views` を常に渡す）と試験 | G36 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 | 便11 | 日・3日間・週の枠線を Google に揃える（§3.16）。金型 CalendarView の css に規則 8 つ・トークン 1 つ | G37〜G41 | なし（frontend の css だけ。移行・deploy・scripts・DB は無い） |
 | 便12 | 作る小窓を Google の形に・作っている途中の箱を動かせる（§3.17）。金型 CalendarView に口 1 つ（ADR-1065 What 6 に 1 文）・金型 TextFieldControl に種類 1 つ・絵 3 つ・トークン 5 つ・文言 2 つ・予定の画面 | G42〜G50 | なし（frontend だけ。移行・deploy・scripts・DB は無い）。PO 承認（G42〜G50・金型 2 つ・ADR-1065 What 6）の後に着手 |
-| 便13 | Google Meet を押す行に・「その他のオプション」で全画面の編集（§3.18）。新しい金型 FullScreenDialog 1 つ・項目の部品を 1 か所に・文言 3 つ足し 1 つ替え・予定の画面 | G51〜G57 | なし（frontend だけ。移行・deploy・scripts・DB・Google の権限は無い）。PO 承認（G51〜G57・新しい金型）の後に着手 |
+| 便13 | Google Meet を押す行に・「その他のオプション」で全画面の編集（§3.18）。新しい金型 FullScreenDialog 1 つ・項目の部品を 1 か所に・文言 3 つ足し 1 つ替え・予定の画面 | G51〜G57 | なし（frontend だけ。移行・deploy・scripts・DB・Google の権限は無い）。PO 承認済み（2026-11-11「1」・G51〜G57・新しい金型）。カード `card-bin13.md` |
 
 便0 を先に出す理由: 今の本番で毎回起きる間違いで、1 行で直り、載せ替えを待つ理由がない。
 
