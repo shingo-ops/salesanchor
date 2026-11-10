@@ -21,7 +21,7 @@
 - 閲覧者の正本は public.viewer_accounts、請求先の正本は public.viewer_billing_profiles のまま。本テーマで写しを持つのは、発行時点の請求書の中だけ。
 - B2B の請求書（ADR-101・会社ごとの invoices）とは別の表にする。
 - トレカ商品のマスタとは別の表にする。
-- 差出人の情報の正本: 書類に載せる会社名・メール・サイト・住所・電話・インボイス登録は tenant_issuer_profiles（国内用・海外用の1行ずつ）、振込先は tenant_invoice_payment_methods、印影と既定の言語は tenant_profile。書類はすべて get_issuer で読む。B2B の請求書の国内向けか海外向けかは、請求書の issuer_region が正本（作るときに取引先の既定の請求先の国で決める。決められないときは作らせない）。見積書は今回変えない。
+- 差出人の情報の正本: 書類に載せる会社名・メール・サイト・住所・電話・インボイス登録は tenant_issuer_profiles（国内用・海外用の1行ずつ）、振込先は一覧の tenant_invoice_payment_methods と種類ごとの詳細の tenant_invoice_payment_bank・tenant_invoice_payment_wise（1対1）、印影と既定の言語は tenant_profile。書類はすべて get_issuer で読む。B2B の請求書の国内向けか海外向けかは、請求書の issuer_region が正本（作るときに取引先の既定の請求先の国で決める。決められないときは作らせない）。見積書は今回変えない。
 
 ## 維持の仕組み
 
