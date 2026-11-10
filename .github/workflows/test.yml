@@ -266,16 +266,46 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Check out workflow files and checker
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout: |
+            .github
+            scripts
+      - name: Test the aggregator checker
+        run: python3 -I scripts/tests/test_check_ci_aggregators.py -v
+      - name: Check aggregator decision logic
+        run: python3 -I scripts/ci/check_ci_aggregators.py
       - name: Report results
         run: |
+          det="${{ needs.detect-changes.result }}"
+          out="${{ needs.detect-changes.outputs.backend }}"
           pr="${{ needs.pytest-run.result }}"
           lint="${{ needs.lint-backend.result }}"
-          echo "pytest-run: $pr / lint-backend: $lint"
-          if [[ ("$pr" == "success" || "$pr" == "skipped") && \
-                ("$lint" == "success" || "$lint" == "skipped") ]]; then
-            echo "OK: all checks passed or backend not changed"
-            exit 0
-          else
-            echo "FAIL: pytest-run=$pr lint-backend=$lint"
+          echo "detect-changes: $det (backend=$out) / pytest-run: $pr / lint-backend: $lint"
+          if [[ "$det" != "success" ]]; then
+            echo "FAIL: detect-changes is not success (detect-changes=$det)"
             exit 1
           fi
+          case "$out" in
+            true)
+              if [[ "$pr" == "success" && "$lint" == "success" ]]; then
+                echo "OK: backend changed and all checks passed"
+                exit 0
+              fi
+              echo "FAIL: backend changed but checks did not succeed: pytest-run=$pr lint-backend=$lint"
+              exit 1
+              ;;
+            false)
+              if [[ "$pr" == "skipped" && "$lint" == "skipped" ]]; then
+                echo "OK: backend not changed and checks were skipped"
+                exit 0
+              fi
+              echo "FAIL: backend not changed but checks were not skipped: pytest-run=$pr lint-backend=$lint"
+              exit 1
+              ;;
+            *)
+              echo "FAIL: detect-changes output is not true/false: backend='$out'"
+              exit 1
+              ;;
+          esac

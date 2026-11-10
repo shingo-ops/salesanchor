@@ -131,18 +131,37 @@ jobs:
     steps:
       - name: Report results
         run: |
+          det="${{ needs.detect-changes.result }}"
+          out="${{ needs.detect-changes.outputs.frontend }}"
           r="${{ needs.lint-run.result }}"
           u="${{ needs.unit-run.result }}"
-          echo "lint-run: $r"
-          echo "unit-run: $u"
-          ok() { [[ "$1" == "success" || "$1" == "skipped" ]]; }
-          if ok "$r" && ok "$u"; then
-            echo "OK: lint and unit tests passed or no frontend changes"
-            exit 0
-          else
-            echo "FAIL: lint-run=$r unit-run=$u"
+          echo "detect-changes: $det (frontend=$out) / lint-run: $r / unit-run: $u"
+          if [[ "$det" != "success" ]]; then
+            echo "FAIL: detect-changes is not success (detect-changes=$det)"
             exit 1
           fi
+          case "$out" in
+            true)
+              if [[ "$r" == "success" && "$u" == "success" ]]; then
+                echo "OK: frontend changed and lint and unit tests passed"
+                exit 0
+              fi
+              echo "FAIL: frontend changed but checks did not succeed: lint-run=$r unit-run=$u"
+              exit 1
+              ;;
+            false)
+              if [[ "$r" == "skipped" && "$u" == "skipped" ]]; then
+                echo "OK: frontend not changed and checks were skipped"
+                exit 0
+              fi
+              echo "FAIL: frontend not changed but checks were not skipped: lint-run=$r unit-run=$u"
+              exit 1
+              ;;
+            *)
+              echo "FAIL: detect-changes output is not true/false: frontend='$out'"
+              exit 1
+              ;;
+          esac
 
   # ─── 画面検査（3幅のみ・恒久） ──────────────────────────────────────────────
   # PR #4165 でスマホの「一覧へ戻る」が効かない状態を本番に出し #4168 で撤回した。
@@ -235,15 +254,36 @@ jobs:
     steps:
       - name: Report results
         run: |
+          det="${{ needs.detect-changes.result }}"
+          out="${{ needs.detect-changes.outputs.frontend }}"
           r="${{ needs.visual-language-run.result }}"
-          echo "visual-language-run: $r"
-          if [[ "$r" == "success" || "$r" == "skipped" ]]; then
-            echo "OK: 画面検査が通過、またはフロントエンド変更なし"
-            exit 0
-          else
-            echo "FAIL: visual-language-run=$r"
+          echo "detect-changes: $det (frontend=$out) / visual-language-run: $r"
+          if [[ "$det" != "success" ]]; then
+            echo "FAIL: detect-changes is not success (detect-changes=$det)"
             exit 1
           fi
+          case "$out" in
+            true)
+              if [[ "$r" == "success" ]]; then
+                echo "OK: frontend changed and visual checks passed"
+                exit 0
+              fi
+              echo "FAIL: frontend changed but visual checks did not succeed: visual-language-run=$r"
+              exit 1
+              ;;
+            false)
+              if [[ "$r" == "skipped" ]]; then
+                echo "OK: frontend not changed and visual checks were skipped"
+                exit 0
+              fi
+              echo "FAIL: frontend not changed but visual checks were not skipped: visual-language-run=$r"
+              exit 1
+              ;;
+            *)
+              echo "FAIL: detect-changes output is not true/false: frontend='$out'"
+              exit 1
+              ;;
+          esac
 
   # ─── E2E テスト ────────────────────────────────────────────────────────────
   playwright:

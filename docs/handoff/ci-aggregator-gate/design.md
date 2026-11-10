@@ -1,6 +1,6 @@
 # design — 必須チェックの「まとめ役」が、変更の判定に失敗したら赤を出すようにする
 
-- 状態: 設計案（PO 未承認）。実装は未着手。
+- 状態: PO 承認済み（2026-11-11 PO「1」）。実装カード card.md で実装に入る。
 - 根拠: docs/handoff/ci-aggregator-gate/recon.md（行番号は origin/main ae8def4d3）。
 - 関係する決まり: ADR-135・ADR-136（必須チェックと危険なパス。この設計は migrations・deploy.yml に触らない。実装 PR は scripts/ci/ と scripts/tests/ を新しく作るので、scripts/check-process-artifacts.js:1025 の危険なパスに当たり、GO 記録が要る。実装カードにもそう書く）・ADR-1003（GO の委任。例外の 7 種のうち Ruleset と workflow-lint.yml には触らない）・ADR-1047（決まり台帳）・docs/specs/rule-enforcement/README.md。
 
@@ -168,7 +168,7 @@ C1 と同じ形。答えは frontend。karte-gate-run の条件には `|| github
 | 守ること | 仕組み | 今あるか | 根拠 |
 |---|---|---|---|
 | 6 つのまとめ役が判定ジョブの結果を見続ける | C7 の検査が必須の pytest の中で毎回動く | 実装の後にできる | §3 C7・C9 |
-| 新しいまとめ役が同じ穴を持って生まれない | C7 は `.github/workflows` の全部のファイルを見るので、新しいまとめ役も対象になる | 実装の後にできる | §3 C7 |
+| 新しいまとめ役が同じ穴を持って生まれない | C7 は `.github/workflows` の直下の .yml を全部見るので、新しいまとめ役も対象になる | 実装の後にできる | §3 C7 |
 | 実行役を足したのに判定に入れ忘れない | C7 の 3 つ目の確かめ | 実装の後にできる | §3 C7 |
 | 検査そのものが壊れても気づく | C8 の赤と緑の見本の試験 | 実装の後にできる | §3 C8 |
 | まとめ役の型（detect-changes＋always()）が消えない | workflow-lint.yml の has_aggregator_pattern（migration-test.yml・e2e.yml） | 有り | `.github/workflows/workflow-lint.yml:86-95`・`:148-172` |

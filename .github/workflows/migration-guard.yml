@@ -3,9 +3,13 @@ name: Migration Guard
 on:
   pull_request:
     branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main]
 
 jobs:
   check:
+    if: github.event_name != 'merge_group'
     name: models.py に新 Column → deploy.yml にマイグレーション追記必須
     runs-on: ubuntu-latest
     steps:

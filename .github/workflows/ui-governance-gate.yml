@@ -10,9 +10,13 @@ name: UI Governance Gate
 on:
   pull_request:
     branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main]
 
 jobs:
   ui-governance:
+    if: github.event_name != 'merge_group'
     name: UI governance gate
     runs-on: ubuntu-latest
     timeout-minutes: 5
