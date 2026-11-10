@@ -3,11 +3,15 @@ import { describe, expect, it } from "vitest";
 import i18n from "../../i18n";
 import ja from "../../locales/ja.json";
 import {
+  draftToRange,
   eventNumericId,
+  fitCreatePopover,
   fitPopover,
   formatDraftDateLine,
   formatSearchResultLine,
   normalizeShift,
+  rangeToDraftDates,
+  shiftDraftStart,
   toCalendarEnd,
   toHolidayEvents,
   toRangeEnd,
@@ -250,5 +254,129 @@ describe("toHolidayEvents", () => {
     expect(toHolidayEvents([{ date: "2026/11/03", name: "x" }])).toEqual([]);
     expect(toHolidayEvents(undefined)).toEqual([]);
     expect(toHolidayEvents([])).toEqual([]);
+  });
+});
+
+const D = (y: number, mo: number, d: number, h = 0, mi = 0) => new Date(y, mo - 1, d, h, mi);
+
+describe("draftToRange（便12）", () => {
+  const timedDraft = { startDate: "2026-11-10", startTime: "10:00", endDate: "2026-11-10", endTime: "11:00", allDay: false };
+
+  it("時刻つき 10:00〜11:00", () => {
+    expect(draftToRange(timedDraft)).toEqual({ start: D(2026, 11, 10, 10), end: D(2026, 11, 10, 11), allDay: false });
+  });
+
+  it("終日 1 日は end が次の日 0 時", () => {
+    const r = draftToRange({ ...timedDraft, allDay: true });
+    expect(r?.start).toEqual(D(2026, 11, 10));
+    expect(r?.end).toEqual(D(2026, 11, 11));
+    expect(r?.allDay).toBe(true);
+  });
+
+  it("終日 2 日は end が 11-12 0 時", () => {
+    const r = draftToRange({ ...timedDraft, allDay: true, endDate: "2026-11-11" });
+    expect(r?.end).toEqual(D(2026, 11, 12));
+  });
+
+  it("startDate が空なら null", () => {
+    expect(draftToRange({ ...timedDraft, startDate: "" })).toBeNull();
+  });
+
+  it("end が start と同じなら null", () => {
+    expect(draftToRange({ ...timedDraft, endTime: "10:00" })).toBeNull();
+  });
+});
+
+describe("rangeToDraftDates（便12）", () => {
+  it("終日 1 日", () => {
+    expect(rangeToDraftDates(D(2026, 11, 10), D(2026, 11, 11), true)).toEqual({
+      startDate: "2026-11-10", startTime: "00:00", endDate: "2026-11-10", endTime: "23:59", allDay: true,
+    });
+  });
+
+  it("終日 2 日", () => {
+    expect(rangeToDraftDates(D(2026, 11, 10), D(2026, 11, 12), true).endDate).toBe("2026-11-11");
+  });
+
+  it("時刻つき 10:00〜11:30", () => {
+    expect(rangeToDraftDates(D(2026, 11, 10, 10), D(2026, 11, 10, 11, 30), false)).toEqual({
+      startDate: "2026-11-10", startTime: "10:00", endDate: "2026-11-10", endTime: "11:30", allDay: false,
+    });
+  });
+
+  it("時刻つき end なしは 1 時間後", () => {
+    const r = rangeToDraftDates(D(2026, 11, 10, 10), null, false);
+    expect(r.endTime).toBe("11:00");
+  });
+
+  it("終日 end なしは endDate＝startDate", () => {
+    expect(rangeToDraftDates(D(2026, 11, 10), null, true).endDate).toBe("2026-11-10");
+  });
+
+  it("draftToRange との往復で元に戻る", () => {
+    const cases: Array<[Date, Date, boolean]> = [
+      [D(2026, 11, 10), D(2026, 11, 11), true],
+      [D(2026, 11, 10), D(2026, 11, 12), true],
+      [D(2026, 11, 10, 10), D(2026, 11, 10, 11, 30), false],
+    ];
+    for (const [s, e, a] of cases) {
+      expect(draftToRange(rangeToDraftDates(s, e, a))).toEqual({ start: s, end: e, allDay: a });
+    }
+  });
+});
+
+describe("shiftDraftStart（便12）", () => {
+  const base = { startDate: "2026-11-10", startTime: "10:00", endDate: "2026-11-10", endTime: "11:00", allDay: false };
+
+  it("始まりを 15:00 にすると 15:00〜16:00", () => {
+    const r = shiftDraftStart(base, "2026-11-10", "15:00");
+    expect([r.startTime, r.endTime, r.endDate]).toEqual(["15:00", "16:00", "2026-11-10"]);
+  });
+
+  it("日付を 1 日進めると終わりの日付も 1 日進む", () => {
+    const r = shiftDraftStart(base, "2026-11-11", "10:00");
+    expect([r.startDate, r.endDate, r.endTime]).toEqual(["2026-11-11", "2026-11-11", "11:00"]);
+  });
+
+  it("終日 2 日の始まりを 3 日進めると終わりも 3 日進む", () => {
+    const allDay = { ...base, allDay: true, endDate: "2026-11-11" };
+    const r = shiftDraftStart(allDay, "2026-11-13", "00:00");
+    expect([r.startDate, r.endDate]).toEqual(["2026-11-13", "2026-11-14"]);
+  });
+
+  it("新しい始まりが空なら終わりは今のまま", () => {
+    const r = shiftDraftStart(base, "", "10:00");
+    expect([r.startDate, r.endDate, r.endTime]).toEqual(["", "2026-11-10", "11:00"]);
+  });
+});
+
+describe("fitCreatePopover（便12）", () => {
+  const size = { width: 600, height: 300 };
+  const viewport = { width: 1280, height: 800 };
+  const rect = (left: number, top: number, width = 100, height = 40): AnchorRect => ({
+    left, top, width, height, right: left + width, bottom: top + height,
+  });
+
+  it("右に入るなら anchor.right＋8", () => {
+    expect(fitCreatePopover(rect(100, 100), size, viewport, 16, 8).left).toBe(208);
+  });
+
+  it("右に入らないなら anchor.left−幅−8", () => {
+    expect(fitCreatePopover(rect(900, 100), size, viewport, 16, 8).left).toBe(900 - 600 - 8);
+  });
+
+  it("縦は anchor.top と (vh−h)/2 の小さい方", () => {
+    expect(fitCreatePopover(rect(100, 100), size, viewport, 16, 8).top).toBe(100);
+    expect(fitCreatePopover(rect(100, 400), size, viewport, 16, 8).top).toBe(250);
+  });
+
+  it("下にはみ出すなら vh−h−margin に収める", () => {
+    const tall = { width: 600, height: 790 };
+    expect(fitCreatePopover(rect(100, 600), tall, viewport, 16, 8).top).toBe(Math.max(16, 800 - 790 - 16));
+    expect(fitCreatePopover(rect(100, 600), { width: 600, height: 700 }, viewport, 16, 8).top).toBe(50);
+  });
+
+  it("anchor なしは fitPopover(null) と同じ真ん中", () => {
+    expect(fitCreatePopover(null, size, viewport, 16, 8)).toEqual(fitPopover(null, size, viewport, 16));
   });
 });

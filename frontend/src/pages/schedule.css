@@ -4,8 +4,6 @@
 .schedule-settings {
   --schedule-shell-gap: var(--space-5);
   --schedule-shell-radius: var(--radius-lg);
-  --schedule-popover-width: 20rem;
-  --schedule-popover-max-h: 34rem;
   --schedule-month-cell-min-h: 7.5rem;
   --schedule-rail-bg: var(--bg-surface);
   --schedule-rail-border: var(--border);
@@ -482,6 +480,35 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 作る小窓（design §3.17 作り方 5・G42）。詳しく見る・直す小窓は上の規則のまま */
+.schedule-popover.schedule-popover--create {
+  width: min(var(--schedule-create-popover-width), calc(100vw - var(--space-6)));
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  border: none;
+  border-radius: var(--schedule-create-popover-radius);
+  background: var(--schedule-create-popover-bg);
+}
+
+.schedule-popover--create .schedule-popover__body--form {
+  gap: 0;
+}
+
+.schedule-create-row {
+  display: grid;
+  grid-template-columns: var(--schedule-create-icon-col) minmax(0, 1fr);
+  align-items: center;
+  min-height: var(--space-10);
+}
+
+.schedule-create-row__icon {
+  grid-column: 1;
+  color: var(--text-secondary);
+}
+
+.schedule-create-row > :not(.schedule-create-row__icon) {
+  grid-column: 2;
 }
 
 .schedule-day-list__row {
