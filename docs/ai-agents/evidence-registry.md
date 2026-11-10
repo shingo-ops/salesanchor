@@ -23,6 +23,25 @@ follow_up:
 ## Current Entries
 
 ```text
+id: EV-20261110-SOLDOUT-REF
+date: 2026-11-10
+agent: Claude Opus（設計担当・POの委任に基づくGO）＋ Sonnet（クラウドで実装）＋ 審査役 opus（本線に入れた後の事後審査）
+task: LINE 解析の「売り切れの参照」2 つの読み取り SQL を速くする（PR #5359）
+scope: backend/app/services/line_analysis_v102_svc.py の _STOCK_ITEMS_SQL・_SOLD_ITEMS_SQL、試験 2 ファイル、docs/handoff/soldout-ref-read-speed/
+evidence:
+  - type: command
+    reference: 本番 prod1 P3 測定（docs/handoff/soldout-ref-read-speed/design.md §11）
+    summary: 各 SQL 最大 34.7 ms（前 387.8〜1378.3 ms）、再生の read_ms 最大 78 ms（前 1136 ms）、EXPLAIN の JIT 行 0、20 投稿・1,018 品目の出力が直す前と cmp 同一
+  - type: log
+    reference: #5359 pytest-run-internal（postgres:16）
+    summary: 8723 passed・79 skipped。足した試験に skip の道は無い
+confidence: high
+tradeoff: 画面の変化が無い変更のため、人の目視の確認は無い。代わりに本番での測定（読むだけ）で中身が同じことと速さを確かめた。K3 は出力の売り切れ欄が全部空のため証明の力が限られる（design §11-2）。
+decision: 完了。本番反映済み。
+follow_up: 本番の遅い問い合わせの見張り・_INHERIT_PRICE_SQL・必須チェックの集約の穴は tasks/todo.md（PO 判断）。
+```
+
+```text
 id: EV-20261013-AI-OPS-247
 date: 2026-10-13
 agent: Claude Opus（設計担当）＋ Sonnet（読み取り調査）
