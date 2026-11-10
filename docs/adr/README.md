@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-11-09 / ADR 総数: 229 件
+最終更新: 2026-11-10 / ADR 総数: 230 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -248,6 +248,7 @@
 | [ADR-1070](./ADR-1070-pool-reset-on-return.md) | ADR-1070: 接続を貸し出しに戻すたびに会社の文脈を消す（Bx） | Proposed | — | — |
 | [ADR-1071](./ADR-1071-plain-language-error-messages.md) | ADR-1071: 失敗したときの文は「何が起きたか＋次にすること」を誰でも分かる言葉で出す | Accepted | — | — |
 | [ADR-1072](./ADR-1072-guard-add-by-ai-record.md) | ADR-1072: AI が足した見張りを、マージ済み PR で記録できるようにする（ADR-1034 決定2の一部を改める） | Proposed | Amends ADR-1034 | — |
+| [ADR-1073](./ADR-1073-shime-box-all-states.md) | ADR-1073: 状態を書かない箱の〆は、箱の仲間の状態をまとめて完売にする（v102 規則12h） | Proposed | — | — |
 
 ## ステータス凡例
 
