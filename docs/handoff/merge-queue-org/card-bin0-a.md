@@ -179,7 +179,7 @@
 
 ## 8. 作業場所と push（PR は Opus が作る）
 
-1. クラウドの写しの一番上（`git rev-parse --show-toplevel` の場所）で `git fetch origin && bash scripts/new-worktree.sh release/merge-queue-bin0-a-impl --claude`（origin/main 起点）。出力はパイプに通さない。作成後に `git worktree list` で実在を確かめ、以後はその作業場所で行う
+1. クラウドの写しの一番上（`git rev-parse --show-toplevel` の場所）で `git fetch origin && bash scripts/new-worktree.sh release/merge-queue-bin0-a-impl`（origin/main 起点。`--claude` は付けない。付けると Claude Code の起動を試みて止まる）。出力はパイプに通さない。作成後に `git worktree list` で実在を確かめ、以後はその作業場所で行う
 2. `git checkout origin/release/merge-queue-bin0-cards -- docs/handoff/merge-queue-org/card-bin0-a.md .claude-pipeline/active-work.d/release-merge-queue-bin0-cards.md` → `git status --short` で 2 件を確かめる（枝の取り込みは使わない）
 3. §4 のとおりに書く（Edit ツール）。§5-1 を通す
 4. commit（`--no-verify` は使わない。文: `ci: skip merge-queue temp branches in five push-triggered workflows`）→ `git log -1 --oneline`
