@@ -3,7 +3,7 @@
 
 **親**: `docs/handoff/deploy-db-stall/design.md`（ADR-1037 の移行前の点検）。**関連 ADR**: ADR-1016（即時反映の通り道）、ADR-1037、ADR-1070、ADR-131、ADR-1015（区分）。  
 **日付**: 2026-11-10。**担当**: Planner（Opus）。  
-**状態**: 設計案作成済み。設計審査1回目 REVISE（指摘4件）・2回目 REVISE（指摘3件）を反映済み・3回目の審査待ち（結果は docs/handoff/app-idle-tx/review-architect.md）。PO 承認前。実装未着手。  
+**状態**: 設計案作成済み。設計審査済み（1回目 REVISE 4件・2回目 REVISE 3件を反映、3回目 APPROVE。低い指摘2件も §5-5 に反映。記録は docs/handoff/app-idle-tx/review-architect.md）。PO 承認前。実装未着手。  
 **PO の選択**: 2026-11-10「1」（理由を調べ、直す設計案を作る。実装の前に報告）。  
 **根拠**: `docs/handoff/app-idle-tx/recon.md`（以下 recon）。
 
@@ -130,9 +130,9 @@ app.include_router(meta_inbox.stream_router, prefix="/api/v1", tags=["meta-inbox
 - 集め方（3つの和集合）: `app.main.app` の全経路（`APIRoute`）のうち、
   (1) `typing.get_type_hints(route.endpoint).get("return")` が `StreamingResponse` かその子のもの（meta_inbox.py と leads.py は `from __future__ import annotations` なので、`__annotations__` の文字列を直接比べない）。
   (2) `inspect.getsource(route.endpoint)` に `text/event-stream` を含むもの（戻り型を書かない流し口を拾う補助）。
-  (3) `route.response_class`（`DefaultPlaceholder` なら `.value`）が `StreamingResponse` の子のもの、または `inspect.isasyncgenfunction(route.endpoint)` が真のもの（FastAPI 0.136.3 の `fastapi.sse.EventSourceResponse` で書いた流し口を拾う。設計審査2回目の指摘1。今の 712 経路では当たり 0 件）。
+  (3) `route.response_class`（`DefaultPlaceholder` なら `.value`）が `StreamingResponse` の子のもの、または `inspect.isasyncgenfunction(route.endpoint)` か `inspect.isgeneratorfunction(route.endpoint)` が真のもの（同期の generator で書いた流し口も FastAPI 0.136.3 は流し続ける。設計審査3回目の指摘2）（FastAPI 0.136.3 の `fastapi.sse.EventSourceResponse` で書いた流し口を拾う。設計審査2回目の指摘1。今の 712 経路では当たり 0 件）。
 - 集めた経路の (メソッド, 道) の集合が、次の 3 本と完全に一致することを確かめる: `GET /api/v1/events/stream`・`GET /api/v1/conversations/stream`・`GET /api/v1/leads/stream`。増えたら赤（新しい流し口はこの表に足して審査を通す）。減っても赤（集め方の空振りを防ぐ）。
-- 集めた各経路の依存の木（登録時の依存を含む `route.dependant` を `dependencies` でたどり、各 `call` を見る）に、yield 依存が無いことを確かめる。判定は `call`（関数でなければ `call.__call__`）に `inspect.isgeneratorfunction` か `inspect.isasyncgenfunction` が真なら赤。`{app.database.get_db, app.database.get_admin_db}`（`backend/app/database.py` :112 の get_admin_db も同じ yield 依存）はこれに含まれ、get_db を包んだ別の yield 依存も拾う（設計審査2回目の指摘3）。赤の出力には依存の名前を出す。
+- 集めた各経路の依存の木（登録時の依存を含む `route.dependant` を `dependencies` でたどり、各 `call` を見る）に、yield 依存が無いことを確かめる。判定は FastAPI 自身の判定 `sub.is_gen_callable or sub.is_async_gen_callable`（`sub` は依存の木の各 `Dependant`）が真なら赤。`functools.partial(get_db)` のような包み方も拾う（設計審査3回目の指摘1。手で `call.__call__` を見る判定は partial を見逃した。今の全経路では両方の判定の結果は同じ）。`{app.database.get_db, app.database.get_admin_db}`（`backend/app/database.py` :112 の get_admin_db も同じ yield 依存）はこれに含まれ、get_db を包んだ別の yield 依存も拾う（設計審査2回目の指摘3）。赤の出力には依存の名前を出す。
 - 例外の表（理由付き）: `("GET", "/api/v1/leads/stream")` だけ。理由「`/leads/{lead_id}` が先に登録されていて流れに入らない（recon B の別の不具合）。直すときに例外を消す」。
 - 例外の表の経路がまだ在り、まだ get_db を持つことも確かめる（直したのに例外が残ったら赤）。
 

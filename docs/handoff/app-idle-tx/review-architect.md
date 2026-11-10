@@ -46,5 +46,31 @@
 ### 未確認（審査役）
 - `test_viewer_isolation`（DB が要る）と §5-4 の新しい試験は写しでは流していない。実装の CI で確かめる（K3）。
 
-## 3 回目
-（審査待ち）
+## 3 回目（2026-11-10 13:10〜13:14Z・対象 commit ee89c492c・基準 origin/main d9a5938f）
+
+判定: **APPROVE**（低い指摘2件。どちらも今の経路には当たらない穴）
+
+### 審査役が確かめた事実
+- 対象の5ファイルと auth・test_realtime_events は、基準 4cc17871 から d9a5938f まで変わっていない（`git diff --stat` が空）。
+- 2回目の指摘3件は全部直っている。
+- main の写しに §5-1〜§5-3 を当て、§5-5 の判定を全 712 経路に流した（fastapi 0.136.3・starlette 1.3.1・Python 3.12）。
+  - 型を読めない経路は 0 件。集まったのは3本ちょうど（`set_equal True`）。(3) の当たりは 0 件。
+  - 赤は leads/stream（get_db・例外の表のとおり）だけ。conversations/stream と events/stream の依存は HTTPBearer だけで赤なし。
+  - 直す前の main では conversations/stream が `red= ['get_db']`。
+  - 全経路で yield と判定された依存は get_admin_db・get_db だけ。FastAPI 自身の `is_gen_callable` と食い違った依存は 0 件。誤検知なし。
+- 変更後の写しで test_realtime_events・test_permission_catalog・test_conditions_permission_keys が 18 passed。
+
+### 指摘と対応
+| # | 重さ | 指摘 | Planner の確かめ | 直したところ |
+|---|---|---|---|---|
+| 1 | 低 | `functools.partial(get_db)` を依存にすると見逃す。試しの出力 `partial(get_db) design_judge= False fastapi_is_gen= True` | 審査役の試しの出力を記録で読んだ | design §5-5: 判定を FastAPI 自身の `is_gen_callable or is_async_gen_callable` に |
+| 2 | 低 | 同期の generator の流し口を (3) で集められない。試しの出力 `/sync c3= False isgen= True`・`/sync 200 application/jsonl` | 同上 | design §5-5 (3) に `inspect.isgeneratorfunction(route.endpoint)` を追加 |
+
+### 推測（審査役）
+- ミドルウェアの audit と session_guard は `call_next` の後に短いセッションで閉じる（`backend/app/middleware/audit.py` :144・:242）。流している間に取引を持ち続けない、と読んだ。動かしての確認はしていない。
+
+### 未確認（審査役）
+- `test_viewer_isolation`（DB が要る）と §5-4 の T1〜T4 は写しでは流していない。実装の CI で確かめる（K3）。K1・K5 は本番で測る。
+
+### 再審査
+- 審査役は「実装カードで吸収できる大きさ。もう一度の設計審査は要らない」と判断した。Planner は2件を設計に入れた。判定方法を強める向きの変更で、今の全経路の結果は審査役の試しで同じと確かめられている。
