@@ -559,7 +559,7 @@ PR ごとの静的点検にも1つ足す（第8版）:
 |---|---|---|
 | 本番の台本 | なし | 新しい台本 scripts/deploy-db-precheck.sh（下の動き） |
 | `.github/workflows/deploy.yml` | 空き容量の点検 → 控え → 入れ替え | 空き容量の点検 → 新しい段「Check open DB transactions before deploy」→ 控え → 入れ替え。条件は移行の段（`.github/workflows/deploy.yml` :767「Run database migrations」）と文字列まで同じ `if: ${{ success() && steps.gate.outputs.migrations == 'true' }}` |
-| `.github/workflows/backup-script-test.yml` | C1〜C10 | 新しい試験の台本 scripts/tests/test-deploy-db-precheck.sh（DB が要る P1〜P3・P5・P6）を足す。`on.pull_request.paths` と `on.push.paths`（:9〜:30。今は2つの一覧が同じ）の両方に `scripts/deploy-db-precheck.sh` と `scripts/tests/test-deploy-db-precheck.sh` の2行を足す |
+| `.github/workflows/backup-script-test.yml` | C1〜C10 | 新しい試験の台本 scripts/tests/test-deploy-db-precheck.sh（DB が要る P1〜P3・P5・P6）を足す。`on.pull_request.paths` と `on.push.paths`（:9〜:30。今は2つの一覧が同じ）の両方に scripts/deploy-db-precheck.sh と scripts/tests/test-deploy-db-precheck.sh の2行を足す |
 | 新しい試験 backend/tests/ops/test_deploy_precheck_wiring.py | なし | DB が要らない P4a〜P4c・P7・P8 を pytest で書く（必須チェック「pytest (SQLite + PostgreSQL RLS)」の中で毎回走る。`backend/pyproject.toml` :54 の testpaths は tests なので tests/ops も入る）。P4a〜P4c は subprocess で `bash scripts/deploy-db-precheck.sh` を `DB_PRECHECK_FAKE_COUNTS` 付きで流す。リポジトリの根は前例 `backend/tests/ops/test_nginx_case_api_guard.py` :15 と同じ `Path(__file__).resolve().parents[3]` で求める |
 | `.github/workflows/test.yml` の detect-changes の backend の filters（:42〜:50） | backend/**・migrations/**・scripts/**・pyproject.toml・docker-compose.yml・docker-compose.test.yml・.github/workflows/test.yml（:44〜:50 の7行） | `.github/workflows/deploy.yml` を足す（deploy.yml だけを変える PR でも P7・P8 が必須チェックの中で走る。scripts/deploy-db-precheck.sh は scripts/** で既に入る） |
 
@@ -634,7 +634,7 @@ P1〜P3・P5・P6 の job は入れ物の名前を本番と同じ astro-webapp-p
 
 ### 18-9. 継続（維持の仕組み）
 - 第4版: 点検の段が消えたり、入れ替えの後ろへ動いたり、作業場所の古い台本を読む形に戻ったり、偽の数の変数が deploy.yml に入ったりしたら、P7・P8 が赤になる。P7・P8 は必須チェック「pytest (SQLite + PostgreSQL RLS)」の中で走り、赤ならマージできない（`.github/workflows/test.yml` :9〜:12・:262〜:263。deploy.yml を detect-changes の filters に足すので、deploy.yml だけを変える PR でも走る）。3回続けての数えと上限の判定を壊すと P4a〜P4c が同じ必須チェックで赤になる。
-- 必須でない所（正直に書く）: 本物の DB が要る P1〜P3・P5・P6 は `.github/workflows/backup-script-test.yml` で走り、必須チェックではない（:6 の注記）。数える条件（state・秒数）を壊す変更は、この job が赤になってもマージは止まらない。必須に上げるのは Ruleset の変更で PO だけができる操作なので、本設計では上げない。代わりに、`scripts/deploy-db-precheck.sh` を変える PR では reviewer（opus）がこの job の結果を確かめる（ADR-1029 のマージ前の審査）。
+- 必須でない所（正直に書く）: 本物の DB が要る P1〜P3・P5・P6 は `.github/workflows/backup-script-test.yml` で走り、必須チェックではない（:6 の注記）。数える条件（state・秒数）を壊す変更は、この job が赤になってもマージは止まらない。必須に上げるのは Ruleset の変更で PO だけができる操作なので、本設計では上げない。代わりに、scripts/deploy-db-precheck.sh を変える PR では reviewer（opus）がこの job の結果を確かめる（ADR-1029 のマージ前の審査）。
 - 台本を直したときは、その版が出る本番反映の回から効く（origin/main から読むため）。
 - 待ちの秒数・取引の長さ・長い active の文の秒数の正本は、新しい台本の頭の1か所。
 - 道具3本が読んだまま計算や Gemini を呼ぶ形に戻ったら、道具の設計の K4 の試験が赤になる（必須の pytest）。新しい道具が共通の関数を使わずに Session を使ったら、道具の設計の C6 の試験が赤になる（必須の pytest）。
