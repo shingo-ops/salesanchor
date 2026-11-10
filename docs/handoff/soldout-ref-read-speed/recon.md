@@ -22,13 +22,13 @@
 ### 1-2. 場所（行番号）
 
 - `backend/app/services/line_analysis_v102_svc.py:1327-1345` load_soldout_ref_posts。:1341 で `_load_stock_items` と `_load_sold_items` を呼ぶ。
-- `backend/app/services/line_analysis_v102_svc.py:1424-1437` `_STOCK_ITEMS_SQL`、`:1440-1452` `_SOLD_ITEMS_SQL`。どちらも :1432-1433・:1446-1447 に「その投稿の最新の job」を選ぶ相関副問い合わせ:
+- `backend/app/services/line_analysis_v102_svc.py:1424-1437` `_STOCK_ITEMS_SQL`、`:1440-1451` `_SOLD_ITEMS_SQL`。どちらも :1432-1433・:1446-1447 に「その投稿の最新の job」を選ぶ相関副問い合わせ:
   `AND ej.id = (SELECT j2.id FROM extraction_jobs j2 WHERE j2.source_message_id = ej.source_message_id ORDER BY j2.created_at DESC, j2.id DESC LIMIT 1)`
 - `backend/app/services/line_analysis_v102_svc.py:1463-1478` `_load_stock_items`、`:1481-1491` `_load_sold_items`（SQL を流して行を組むだけ）。
 
 ### 1-3. 呼び出し元（全部）
 
-- 本番の解析: `backend/app/services/line_analysis_v102_svc.py:1567`（run_v102_analysis の中。:1544 で投稿ごとの鍵 pg_advisory_xact_lock を取った同じ取引の中。:1572 で commit）。
+- 本番の解析: `backend/app/services/line_analysis_v102_svc.py:1567`（run_v102_analysis の中。:1539 で投稿ごとの鍵 pg_advisory_xact_lock を取った同じ取引の中。:1572 で commit）。
 - 試しの道具: `backend/app/tools/v102_replay_diff.py`（replay_post）・`backend/app/tools/prompt_ab_recompute.py`。
 - 〆の参照の本体: `backend/app/services/gemini_raw_copy_v102_soldout_ref.py`（読んだ結果を使うだけ。SQL は持たない）。
 - `git grep -n "_STOCK_ITEMS_SQL\|_SOLD_ITEMS_SQL\|_load_stock_items\|_load_sold_items" origin/main -- backend` の結果は上の場所と試験 2 か所（§5）だけ。
@@ -67,7 +67,7 @@ JOIN {schema}.extraction_items ei ON ei.extraction_job_id = ej.id
 
 - 書き換えの見積もりの費用は 3,318〜3,412（境目 100,000 の 1/29 以下）なので JIT は走らない。
 - 今の形の時間は §2 の回（374〜562 ms）と §3 の回（387〜1378 ms）で違う。同じ SQL・同じ投稿でも回によって 2 倍ほど振れる。振れの原因は確かめていない（§6）。書き換えはどちらの回でも 85 ms 以下。
-- 同じ意味になる理由（紙の上の確かめ）: 今の形は「:ids の投稿の job のうち、その投稿の job を created_at の新しい順・id の大きい順に並べた先頭と同じ id のもの」。書き換えは「:ids の投稿ごとに、同じ並べ方の先頭 1 つ」。並べ方（created_at DESC, id DESC）が同じで、id は主キーなので同点が無い。created_at が NULL の行の扱い（DESC で先頭）も同じ式なので同じ。外側の ORDER BY（:1436・:1451）は変えない。
+- 同じ意味になる理由（紙の上の確かめ）: 今の形は「:ids の投稿の job のうち、その投稿の job を created_at の新しい順・id の大きい順に並べた先頭と同じ id のもの」。書き換えは「:ids の投稿ごとに、同じ並べ方の先頭 1 つ」。並べ方（created_at DESC, id DESC）が同じで、id は主キーなので同点が無い。created_at が NULL の行の扱い（DESC で先頭）も同じ式なので同じ。外側の ORDER BY（:1436・:1450）は変えない。
 
 ## 4. 同じ形のほかの SQL（p5_inherit.json）
 
