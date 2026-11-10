@@ -1,6 +1,6 @@
 name: Agent Hooks Test
 
-# scripts/agent-hooks/ の受入試験（review-gate: ADR-1029・商品登録の見張り: doc-agenda-nav design §32 D2・mac-test-guard・install-guard: ADR-1072）。
+# scripts/agent-hooks/ の受入試験（review-gate: ADR-1029・商品登録の見張り: doc-agenda-nav design §32 D2・mac-test-guard・install-guard・install-form-guard: ADR-1072）。
 # 偽の gh・一時ディレクトリだけを使う。本物の ~/.claude には触れない。
 # ※ 必須チェック（Branch Protection）には登録しない。
 
@@ -64,3 +64,16 @@ jobs:
           fetch-depth: 0
       - name: Run install-guard tests
         run: python3 scripts/agent-hooks/test_install_guard.py
+
+  install-form-guard:
+    name: install-form-guard test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Run install-form-guard tests
+        run: python3 scripts/agent-hooks/install-form-guard/test_guard.py
