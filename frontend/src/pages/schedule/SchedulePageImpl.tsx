@@ -7,7 +7,7 @@
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, ReactNode, RefObject } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Badge } from "../../components/Badge";
@@ -45,7 +45,12 @@ import {
   addMonths,
   clamp,
   combineDateTime,
+  CREATE_POPOVER_GAP,
+  draftToRange,
+  fitCreatePopover,
   fitPopover,
+  rangeToDraftDates,
+  shiftDraftStart,
   formatDateInput,
   formatDayKey,
   formatDayLabel,
@@ -154,21 +159,20 @@ function formatRangeTitle(view: ScheduleView, anchorDate: Date): string {
  * 小窓を出したあとに実寸を測って置く（測る前は見えなくする）。
  * 画面の大きさが変わったとき・中身の高さが変わったとき（場所・説明の欄を開いたときなど）は測り直す。
  */
-function usePopoverPlacement(anchor: AnchorRect | null) {
+function usePopoverPlacement(anchor: AnchorRect | null, besideBox: boolean) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   const place = useCallback(() => {
     const el = ref.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const next = fitPopover(
-      anchor,
-      { width: rect.width, height: rect.height },
-      { width: window.innerWidth, height: window.innerHeight },
-      POPOVER_MARGIN,
-    );
+    const size = { width: rect.width, height: rect.height };
+    const viewport = { width: window.innerWidth, height: window.innerHeight };
+    const next = besideBox
+      ? fitCreatePopover(anchor, size, viewport, POPOVER_MARGIN, CREATE_POPOVER_GAP)
+      : fitPopover(anchor, size, viewport, POPOVER_MARGIN);
     setPos((current) => (current && current.left === next.left && current.top === next.top ? current : next));
-  }, [anchor]);
+  }, [anchor, besideBox]);
 
   useLayoutEffect(() => {
     place();
@@ -207,6 +211,30 @@ function SectionTitle({ children }: { children: ReactNode }) {
   return <div className="schedule-section__title">{children}</div>;
 }
 
+/**
+ * 作る小窓の 1 行（1 列目: 絵・2 列目: 中身）。直す小窓（creating が偽）は包まず中身だけ出す。
+ * wrap が真のときは、複数の中身を 1 つの 2 列目の箱にまとめる（design §3.17 作り方 5）。
+ */
+function CreateRow({
+  creating,
+  icon,
+  wrap = false,
+  children,
+}: {
+  creating: boolean;
+  icon: ReactNode;
+  wrap?: boolean;
+  children: ReactNode;
+}) {
+  if (!creating) return <>{children}</>;
+  return (
+    <div className="schedule-create-row">
+      <span className="schedule-create-row__icon">{icon}</span>
+      {wrap ? <div>{children}</div> : children}
+    </div>
+  );
+}
+
 function getOwnerMeta(
   ownerByUserId: Map<number, CalendarOwner>,
   ownerUserId: number | null,
@@ -233,7 +261,13 @@ function SchedulePopover({
   canEdit,
   canChangeVisibility,
   meetAvailable,
+  placement,
+  calendarAreaRef,
 }: {
+  /** 作る小窓を仮の箱の横に置くか（"box"）、押した点の横に置くか（"point"）（design §3.17 作り方 4） */
+  placement: "box" | "point";
+  /** 予定の画面の時間割の箱。作る小窓は、ここと小窓の外を押したら閉じる（作り方 3） */
+  calendarAreaRef: RefObject<HTMLDivElement | null>;
   mode: PopoverMode;
   anchor: AnchorRect | null;
   item: ScheduleItem | null;
@@ -254,9 +288,12 @@ function SchedulePopover({
   const ClockIcon = SCHEDULE_POPOVER_ICONS.clock;
   const LocationIcon = SCHEDULE_POPOVER_ICONS.location;
   const DescriptionIcon = SCHEDULE_POPOVER_ICONS.description;
+  const CategoryIcon = SCHEDULE_POPOVER_ICONS.category;
+  const MeetIcon = SCHEDULE_POPOVER_ICONS.meet;
+  const ShareIcon = SCHEDULE_POPOVER_ICONS.share;
   const creating = mode === "create";
   const editable = canEdit || mode === "create";
-  const { ref: popoverRef, style: position, placed } = usePopoverPlacement(anchor);
+  const { ref: popoverRef, style: position, placed } = usePopoverPlacement(anchor, creating && placement === "box");
   // 作るときは日時・場所・説明を 1 行で閉じて出し、押すと開く（design §3.9・G3 ②③）
   const [dateOpen, setDateOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
@@ -269,6 +306,22 @@ function SchedulePopover({
   useEffect(() => {
     if (creating && placed) titleRef.current?.focus();
   }, [creating, placed]);
+  // 作る小窓は幕が無い。時間割と小窓の外を押したら閉じる（design §3.17 作り方 3・G44）。押した先の部品が止めても届くよう capture で見る
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    if (!creating) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const path = event.composedPath();
+      const popoverEl = popoverRef.current;
+      const calendarEl = calendarAreaRef.current;
+      if (popoverEl && path.includes(popoverEl)) return;
+      if (calendarEl && path.includes(calendarEl)) return;
+      onCloseRef.current();
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [creating, popoverRef, calendarAreaRef]);
   const meta = getCalendarMeta(draft.category);
   const timeLabel = item ? formatSearchResultLine(item, t, i18n.language) : "";
   const meetUrl = item?.meetUrl && item.meetUrl.startsWith(MEET_URL_PREFIX) ? item.meetUrl : null;
@@ -286,8 +339,8 @@ function SchedulePopover({
 
   return (
     <>
-      <div className="schedule-popover-backdrop" onClick={onClose} />
-      <div ref={popoverRef} className="schedule-popover" style={position} onClick={(event) => event.stopPropagation()}>
+      {!creating && <div className="schedule-popover-backdrop" onClick={onClose} />}
+      <div ref={popoverRef} className={`schedule-popover${creating ? " schedule-popover--create" : ""}`} style={position} onClick={(event) => event.stopPropagation()}>
         <div className="schedule-popover__header">
           <div className="schedule-popover__header-meta">
             {!creating && (
@@ -363,20 +416,34 @@ function SchedulePopover({
           </div>
         ) : (
           <div className="schedule-popover__body schedule-popover__body--form">
-            <label className="schedule-field">
-              {!creating && <span className="schedule-field__label">{t("schedule.eventTitle")}</span>}
-              <TextFieldControl
-                variant="schedule"
-                value={draft.title}
-                onChange={(event) => onDraftChange({ ...draft, title: event.target.value })}
-                placeholder={t("schedule.eventTitle")}
-                aria-label={t("schedule.eventTitle")}
-                ref={titleRef}
-              />
-            </label>
+            {creating ? (
+              <div className="schedule-create-row schedule-create-row--title">
+                <span className="schedule-create-row__icon" aria-hidden="true" />
+                <TextFieldControl
+                  variant="schedule-title"
+                  value={draft.title}
+                  onChange={(event) => onDraftChange({ ...draft, title: event.target.value })}
+                  placeholder={t("schedule.addTitle")}
+                  aria-label={t("schedule.eventTitle")}
+                  ref={titleRef}
+                />
+              </div>
+            ) : (
+              <label className="schedule-field">
+                <span className="schedule-field__label">{t("schedule.eventTitle")}</span>
+                <TextFieldControl
+                  variant="schedule"
+                  value={draft.title}
+                  onChange={(event) => onDraftChange({ ...draft, title: event.target.value })}
+                  placeholder={t("schedule.eventTitle")}
+                  aria-label={t("schedule.eventTitle")}
+                  ref={titleRef}
+                />
+              </label>
+            )}
 
             {showDate ? (
-              <>
+              <CreateRow creating={creating} icon={<ClockIcon size={20} aria-hidden="true" />} wrap>
                 <div className="schedule-field schedule-field--inline">
                   <span className="schedule-field__label">{t("schedule.allDay")}</span>
                   <Toggle
@@ -398,7 +465,7 @@ function SchedulePopover({
                       variant="schedule"
                       type="date"
                       value={draft.startDate}
-                      onChange={(event) => onDraftChange({ ...draft, startDate: event.target.value })}
+                      onChange={(event) => onDraftChange(creating ? shiftDraftStart(draft, event.target.value, draft.startTime) : { ...draft, startDate: event.target.value })}
                     />
                   </label>
                   {!draft.allDay && (
@@ -408,7 +475,7 @@ function SchedulePopover({
                         variant="schedule"
                         type="time"
                         value={draft.startTime}
-                        onChange={(event) => onDraftChange({ ...draft, startTime: event.target.value })}
+                        onChange={(event) => onDraftChange(creating ? shiftDraftStart(draft, draft.startDate, event.target.value) : { ...draft, startTime: event.target.value })}
                       />
                     </label>
                   )}
@@ -436,107 +503,133 @@ function SchedulePopover({
                     </label>
                   )}
                 </div>
-              </>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                fullWidth
-                layoutClassName="schedule-popover__line"
-                onClick={() => setDateOpen(true)}
-              >
-                <ClockIcon size={18} aria-hidden="true" />
-                <span className="schedule-popover__line-text">{formatDraftDateLine(draft, t, i18n.language)}</span>
-              </Button>
-            )}
+              </CreateRow>
+            ) : creating ? (
+              <CreateRow creating icon={<ClockIcon size={20} aria-hidden="true" />}>
+                <Button variant="ghost" size="md" fullWidth layoutClassName="schedule-popover__line" onClick={() => setDateOpen(true)}>
+                  <span className="schedule-popover__line-text">{formatDraftDateLine(draft, t, i18n.language)}</span>
+                </Button>
+              </CreateRow>
+            ) : null}
 
-            <label className="schedule-field">
-              <span className="schedule-field__label">{t("schedule.category")}</span>
-              <SelectControl
-                size="sm"
-                fullWidth
-                value={draft.category}
-                onChange={(event) => {
-                  const category = event.target.value as CalendarId;
-                  onDraftChange(
-                    mode === "create"
-                      ? { ...draft, category, visibleToStaff: category !== "personal" }
-                      : { ...draft, category },
-                  );
-                }}
-              >
-                {CALENDARS.map((calendar) => (
-                  <option key={calendar.id} value={calendar.id}>
-                    {t(calendar.labelKey)}
-                  </option>
-                ))}
-              </SelectControl>
-            </label>
+            <CreateRow creating={creating} icon={<CategoryIcon size={20} aria-hidden="true" />}>
+              <label className="schedule-field">
+                {!creating && <span className="schedule-field__label">{t("schedule.category")}</span>}
+                <SelectControl
+                  size="sm"
+                  fullWidth
+                  aria-label={creating ? t("schedule.category") : undefined}
+                  value={draft.category}
+                  onChange={(event) => {
+                    const category = event.target.value as CalendarId;
+                    onDraftChange(
+                      mode === "create"
+                        ? { ...draft, category, visibleToStaff: category !== "personal" }
+                        : { ...draft, category },
+                    );
+                  }}
+                >
+                  {CALENDARS.map((calendar) => (
+                    <option key={calendar.id} value={calendar.id}>
+                      {t(calendar.labelKey)}
+                    </option>
+                  ))}
+                </SelectControl>
+              </label>
+            </CreateRow>
 
             {joinMeetLink}
             {meetAvailable && !item?.meetUrl && (
-              <div className="schedule-field schedule-field--inline">
-                <span className="schedule-field__label">{t("schedule.addMeet")}</span>
-                <Toggle
-                  checked={draft.addMeet}
-                  aria-label={t("schedule.addMeet")}
-                  onCheckedChange={(next) => onDraftChange({ ...draft, addMeet: next })}
-                />
-              </div>
+              <CreateRow creating={creating} icon={<MeetIcon size={20} aria-hidden="true" />}>
+                <div className="schedule-field schedule-field--inline">
+                  <span className="schedule-field__label">{t("schedule.addMeet")}</span>
+                  <Toggle
+                    checked={draft.addMeet}
+                    aria-label={t("schedule.addMeet")}
+                    onCheckedChange={(next) => onDraftChange({ ...draft, addMeet: next })}
+                  />
+                </div>
+              </CreateRow>
             )}
 
             {canChangeVisibility && (
-              <div className="schedule-field schedule-field--inline">
-                <span className="schedule-field__label">{t("schedule.shareWithStaff")}</span>
-                <Toggle
-                  checked={draft.visibleToStaff}
-                  aria-label={t("schedule.shareWithStaff")}
-                  onCheckedChange={(next) => onDraftChange({ ...draft, visibleToStaff: next })}
-                />
-              </div>
+              <CreateRow creating={creating} icon={<ShareIcon size={20} aria-hidden="true" />}>
+                <div className="schedule-field schedule-field--inline">
+                  <span className="schedule-field__label">{t("schedule.shareWithStaff")}</span>
+                  <Toggle
+                    checked={draft.visibleToStaff}
+                    aria-label={t("schedule.shareWithStaff")}
+                    onCheckedChange={(next) => onDraftChange({ ...draft, visibleToStaff: next })}
+                  />
+                </div>
+              </CreateRow>
             )}
 
             {showLocation ? (
-              <label className="schedule-field">
-                <span className="schedule-field__label">{t("schedule.eventLocation")}</span>
-                <TextFieldControl
-                  variant="schedule"
-                  value={draft.location}
-                  onChange={(event) => onDraftChange({ ...draft, location: event.target.value })}
-                  placeholder={t("schedule.locationPlaceholder")}
-                  autoFocus={locationOpen}
-                />
-              </label>
+              <CreateRow creating={creating} icon={<LocationIcon size={20} aria-hidden="true" />}>
+                <label className="schedule-field">
+                  <span className="schedule-field__label">{t("schedule.eventLocation")}</span>
+                  <TextFieldControl
+                    variant="schedule"
+                    value={draft.location}
+                    onChange={(event) => onDraftChange({ ...draft, location: event.target.value })}
+                    placeholder={t("schedule.locationPlaceholder")}
+                    autoFocus={locationOpen}
+                  />
+                </label>
+              </CreateRow>
             ) : (
-              <Button variant="ghost" size="sm" fullWidth layoutClassName="schedule-popover__line" onClick={() => setLocationOpen(true)}>
-                <LocationIcon size={18} aria-hidden="true" />
-                <span className="schedule-popover__line-text">{t("schedule.locationPlaceholder")}</span>
-              </Button>
+              <CreateRow creating icon={<LocationIcon size={20} aria-hidden="true" />}>
+                <Button variant="ghost" size="md" fullWidth layoutClassName="schedule-popover__line" onClick={() => setLocationOpen(true)}>
+                  <span className="schedule-popover__line-text">{t("schedule.locationPlaceholder")}</span>
+                </Button>
+              </CreateRow>
             )}
 
             {showDescription ? (
-              <label className="schedule-field">
-                <span className="schedule-field__label">{t("schedule.eventDescription")}</span>
-                <TextareaControl
-                  variant="schedule"
-                  rows={4}
-                  value={draft.description}
-                  onChange={(event) => onDraftChange({ ...draft, description: event.target.value })}
-                  placeholder={t("schedule.descriptionPlaceholder")}
-                  autoFocus={descriptionOpen}
-                />
-              </label>
+              <CreateRow creating={creating} icon={<DescriptionIcon size={20} aria-hidden="true" />}>
+                <label className="schedule-field">
+                  <span className="schedule-field__label">{t("schedule.eventDescription")}</span>
+                  <TextareaControl
+                    variant="schedule"
+                    rows={4}
+                    value={draft.description}
+                    onChange={(event) => onDraftChange({ ...draft, description: event.target.value })}
+                    placeholder={t("schedule.descriptionPlaceholder")}
+                    autoFocus={descriptionOpen}
+                  />
+                </label>
+              </CreateRow>
             ) : (
-              <Button variant="ghost" size="sm" fullWidth layoutClassName="schedule-popover__line" onClick={() => setDescriptionOpen(true)}>
-                <DescriptionIcon size={18} aria-hidden="true" />
-                <span className="schedule-popover__line-text">{t("schedule.descriptionPlaceholder")}</span>
-              </Button>
+              <CreateRow creating icon={<DescriptionIcon size={20} aria-hidden="true" />}>
+                <Button variant="ghost" size="md" fullWidth layoutClassName="schedule-popover__line" onClick={() => setDescriptionOpen(true)}>
+                  <span className="schedule-popover__line-text">{t("schedule.descriptionPlaceholder")}</span>
+                </Button>
+              </CreateRow>
             )}
           </div>
         )}
 
         <div className="schedule-popover__footer">
-          {mode !== "detail" ? (
+          {mode === "create" ? (
+            <>
+              {!(showDate && showLocation && showDescription) && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setDateOpen(true);
+                    setLocationOpen(true);
+                    setDescriptionOpen(true);
+                  }}
+                >
+                  {t("schedule.moreOptions")}
+                </Button>
+              )}
+              <Button variant="primary" onClick={onSave} disabled={!draft.title.trim()}>
+                {t("common.save")}
+              </Button>
+            </>
+          ) : mode !== "detail" ? (
             <>
               <Button variant="primary" onClick={onSave} disabled={!draft.title.trim()}>
                 {t("common.save")}
@@ -733,7 +826,7 @@ function ScheduleDayListPopover({
 }) {
   const { t } = useTranslation();
   const CloseIcon = SCHEDULE_POPOVER_ICONS.close;
-  const { ref, style } = usePopoverPlacement(anchor);
+  const { ref, style } = usePopoverPlacement(anchor, false);
   return (
     <>
       <div className="schedule-popover-backdrop" onClick={onClose} />
@@ -949,7 +1042,10 @@ export default function SchedulePage() {
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
   const [searchResultsOpen, setSearchResultsOpen] = useState(false);
   // 押す・引っぱるで選んだ範囲の仮の箱（design §3.7）。DB にも Google にも送らない
-  const [pendingRange, setPendingRange] = useState<{ start: Date; end: Date; allDay: boolean } | null>(null);
+  // 時間割を押して作ったときだけ真。箱の日時は draft から出す（design §3.17 作り方 1・SSOT）
+  const [pendingVisible, setPendingVisible] = useState(false);
+  // 予定の画面の時間割の箱。作る小窓の「外を押したら閉じる」の内側の判定に使う（作り方 3）
+  const calendarAreaRef = useRef<HTMLDivElement | null>(null);
 
   // useMemo で参照を安定させる: 毎レンダーで new Date() が生成されると
   // Object.is 比較が false になり useEffect が際限なく再発火する（shifts 500 無限ループの根本原因）
@@ -1220,33 +1316,28 @@ export default function SchedulePage() {
 
   // 仮の箱は、作る小窓以外になったら消す（閉じる・保存・削除・Esc・詳細を開く、のどの道でも拾える）
   useEffect(() => {
-    if (popover?.mode !== "create") setPendingRange(null);
+    if (popover?.mode !== "create") setPendingVisible(false);
   }, [popover]);
 
   // 押す・引っぱるで選んだ範囲から作る小窓を開く
   const openCreateRange = (start: Date, end: Date, allDay: boolean, anchor: AnchorRect | null) => {
     setDayList(null);
-    // 終日の終わりは FullCalendar では「次の日 0:00」。小窓の終わりの日は 1 日戻す
-    const lastDay = allDay ? addDays(end, -1) : end;
+    // 終日の終わりは FullCalendar では「次の日 0:00」。小窓の終わりの日は 1 日戻す（rangeToDraftDates）
     setDraft({
       title: "",
       category: "meeting",
-      startDate: formatDateInput(start),
-      startTime: allDay ? "00:00" : formatTimeInput(start),
-      endDate: formatDateInput(lastDay),
-      endTime: allDay ? "23:59" : formatTimeInput(end),
-      allDay,
+      ...rangeToDraftDates(start, end, allDay),
       visibleToStaff: true,
       description: "",
       location: "",
       addMeet: false,
     });
-    setPendingRange({ start, end, allDay });
+    setPendingVisible(true);
     setPopover({ mode: "create", anchor, item: null });
   };
 
   const handleSelectRange = (start: Date, end: Date, allDay: boolean, anchor: AnchorRect | null) => {
-    setPendingRange(null); // 前の仮の箱を消す（月の 1 日押しの道は仮の箱を出さない）
+    setPendingVisible(false); // 前の仮の箱を消す（月の 1 日押しの道は仮の箱を出さない）
     const oneDay = allDay && addDays(start, 1).getTime() === end.getTime();
     if (view === "month" && oneDay) {
       openCreate(start, anchor); // 今の月の升目と同じ: その日の 7 時から 1 時間
@@ -1255,20 +1346,42 @@ export default function SchedulePage() {
     openCreateRange(start, end, allDay, anchor);
   };
 
+  // 仮の箱を動かした・長さを変えた → 下書きの日時だけ直す。裏側へは何も送らない（作り方 2・G48）
+  const moveDraft = (start: Date, end: Date | null, allDay: boolean) => {
+    setDraft((current) => ({ ...current, ...rangeToDraftDates(start, end, allDay) }));
+  };
+
+  // 仮の箱の四角を作る小窓の置き場所に使う（作り方 4）。null の間は前の四角（無ければ押した点）のまま
+  const handlePendingRect = useCallback((id: string, rect: AnchorRect | null) => {
+    if (id !== "pending" || !rect) return;
+    setPopover((current) => {
+      if (!current || current.mode !== "create") return current;
+      const prev = current.anchor;
+      if (prev && prev.top === rect.top && prev.left === rect.left && prev.right === rect.right && prev.bottom === rect.bottom) {
+        return current;
+      }
+      return { ...current, anchor: rect };
+    });
+  }, []);
+
   const itemById = (id: string) => visibleEvents.find((item) => item.id === id) ?? null;
 
-  const calendarEvents: CalendarViewEvent[] = [
-    ...(pendingRange
+  const pendingBox = pendingVisible ? draftToRange(draft) : null;
+  const pendingStartMs = pendingBox?.start.getTime();
+  const pendingEndMs = pendingBox?.end.getTime();
+  const pendingAllDay = pendingBox?.allDay;
+  const calendarEvents: CalendarViewEvent[] = useMemo(() => [
+    ...(pendingBox
       ? [{
           id: "pending",
-          title: t("schedule.noTitle"),
-          start: pendingRange.start,
-          end: pendingRange.end,
-          allDay: pendingRange.allDay,
+          title: draft.title.trim() || t("schedule.noTitle"),
+          start: pendingBox.start,
+          end: pendingBox.end,
+          allDay: pendingBox.allDay,
           color: currentOwnerUserId != null
             ? getOwnerMeta(ownerByUserId, currentOwnerUserId, currentOwnerUserId).color
             : undefined,
-          editable: false,
+          editable: true,
         }]
       : []),
     ...visibleEvents.map((item) => ({
@@ -1281,7 +1394,12 @@ export default function SchedulePage() {
       editable: canMoveItem(item),
     })),
     ...toHolidayEvents(holidaysQ.data?.holidays),
-  ];
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- pendingBox は start・end の時刻と allDay で追う（design §3.17）。canMoveItem は canEditItem（currentOwnerUserId・canManageOwners）から決まる
+  ], [
+    pendingStartMs, pendingEndMs, pendingAllDay,
+    draft.title, visibleEvents, holidaysQ.data, ownerByUserId, currentOwnerUserId, t,
+    canManageOwners,
+  ]);
 
   // 動かす・長さを変える（design §3.3）
   const patchMoved = async (id: string, start: Date, end: Date | null, allDay: boolean, revert: () => void) => {
@@ -1560,7 +1678,7 @@ export default function SchedulePage() {
                     onSelectEvent={(item, rect) => openDetail(item, rect)}
                   />
                 ) : (
-                  <div className="schedule-calendar">
+                  <div className="schedule-calendar" ref={calendarAreaRef}>
                     <CalendarView
                       mode={view === "month" ? "month" : "days"}
                       date={view === "month" ? anchorDate : viewDays[0]}
@@ -1581,13 +1699,30 @@ export default function SchedulePage() {
                       onDayClick={(date) => {
                         setAnchorDate(date);
                         setView("day");
+                        // 日の数字は時間割の中なので「外を押す」で閉じない。日表示へ移るときに作る小窓を閉じる（作り方 3）
+                        setPopover((current) => (current?.mode === "create" ? null : current));
                       }}
                       onSelectRange={handleSelectRange}
-                      onEventMove={patchMoved}
-                      onEventResize={(id, start, end, revert) => patchMoved(id, start, end, itemById(id)?.allDay ?? false, revert)}
+                      onEventMove={(id, start, end, allDay, revert) => {
+                        if (id === "pending") {
+                          moveDraft(start, end, allDay);
+                          return;
+                        }
+                        void patchMoved(id, start, end, allDay, revert);
+                      }}
+                      onEventResize={(id, start, end, revert) => {
+                        if (id === "pending") {
+                          // onEventResize は終日かどうかを渡さない。仮の箱は下書きから取る（作り方 2）
+                          moveDraft(start, end, draft.allDay);
+                          return;
+                        }
+                        void patchMoved(id, start, end, itemById(id)?.allDay ?? false, revert);
+                      }}
+                      trackEventId="pending"
+                      onEventRect={handlePendingRect}
                       onMoreClick={(date, rect) => {
                         setPopover(null);
-                        setPendingRange(null);
+                        setPendingVisible(false);
                         setDayList({ date, anchor: rect });
                       }}
                       ariaLabel={t("schedule.title")}
@@ -1626,6 +1761,8 @@ export default function SchedulePage() {
           onDelete={deleteEvent}
           canEdit={canEditSelected}
           canChangeVisibility={canChangeVisibility}
+          placement={pendingVisible ? "box" : "point"}
+          calendarAreaRef={calendarAreaRef}
           meetAvailable={
             meetAvailable
             && (popover.mode === "create"
