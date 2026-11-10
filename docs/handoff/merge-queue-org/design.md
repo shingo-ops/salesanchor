@@ -17,12 +17,19 @@
 |---|---|---|---|
 | K1 | 本線への合流は全件が列を通る | `gh api repos/<新>/rulesets/<id>` に merge_queue の規則があり bypass_actors が空。導入後 14 日の合流 PR 全件で GraphQL `timelineItems(itemTypes:[ADDED_TO_MERGE_QUEUE_EVENT])` が 1 件以上 | 0%（列が無い） |
 | K2 | 追い越しによる取り込みのやり直し | 導入後 14 日の合流 PR ごとに、起点（下の注）以降に入った「本線を取り込む commit」（親が 2 つで、片方が main の commit）の数。中央値 0・最大 1 以下 | 便0 で直近 14 日を同じ数え方で記録する（#5335 は 9） |
-| K3 | 追い越しで長く待たされる PR が減る（案・U19 で PO が決める） | 同 14 日の合流 PR で (a) 起点（下の注）→ `mergedAt` が 120 分を超えた PR の割合が、便0 の基準値の半分以下。(b) `added_to_merge_queue` → `merged` の中央値が 60 分以下。中央値・p75・最大は記録だけ残し、判定には使わない（下の注） | 便0 で直近 14 日の (a) の割合と、中央値・p75・最大を記録する（前後で同じ起点・同じ数え方）。参考: 7 回目の審査が直近 20 件で数えた値は中央値 約 4.8 分・120 分超え 4 件（20%）・最大 400.8 分 |
+| K3 | 追い越しで長く待たされる PR が減る（案・U19 で PO が決める） | 同 14 日の合流 PR で (a) 時計の始まり（起点と GO の時刻の遅い方。下の注）→ `mergedAt` が 120 分を超えた PR の割合が、便0 の基準値の半分以下。全件と「台帳 DONE を除いた分」の両方で満たすこと。基準値で 120 分を超えた件数が 10 件未満なら (a) は判定しない。(b) `added_to_merge_queue` → `merged` の中央値が 60 分以下。中央値・p75・最大は記録だけ残し、判定には使わない（下の注） | 便0 で直近 14 日の (a) の割合と、中央値・p75・最大を記録する（前後で同じ起点・同じ数え方）。参考: 7 回目の審査が直近 20 件で数えた値は中央値 約 4.8 分・120 分超え 4 件（20%）・最大 400.8 分 |
 | K4 | 列が止まったら気付く | 列の先頭の項目（`position` が一番小さい項目）の確かめ（列の commit の check suite の作成時刻のうち一番早い物から数える）が 40 分を超えても終わらないとき、次の見回り（15 分ごと）で Discord の PO 宛てに 1 通届く。確かめの制限時間 60 分（§4）より前に鳴る目安（40＋15＝55 分）。定時の起動は混む時間に遅れることがあるので、見回りごとに「予定の時刻と実際の起動時刻の差」を記録し、14 日で 5 分を超えた回数を数える。便2 の後、試しの PR が列にいる間に見張りを手で起動し、しきい値を 1 分にして 1 通届くことを確かめる | 見張り 0 |
 | K5 | 移しで本番が壊れない | 移した直後の最初の配備で deploy 成功・smoke 成功・app と /api/health が 200 | — |
 | K6 | 移しで設定が欠けない | secret 86=86・ruleset 2=2（中身一致）・自前の実行機の数が移す前と同じ・Pages が新 URL で開ける（中の参照の書き換えは便3） | R§6-3 の値 |
 
-K3 の 60 分は「確かめ 1 回（20〜25 分）＋前に並ぶ分」の目安。PO の承認で確定する。
+K3 の 60 分は「確かめ 1 回（20〜25 分）＋前に並ぶ分」の目安。PO の承認で確定する（U19 に含める）。
+
+K3(a) の時計の始まり（設計審査 8 回目の必須指摘 1）: 危険な道（`migrations/`・`deploy.yml`・本番 `scripts/`。ADR-136）を含む PR は、PO の「GO #番号」が出るまで合流できない。この待ちは列を入れても減らないので、K3(a) では数えない。8 回目の審査で、直近 40 件の 120 分超え 5 件のうち #5345（149 分）は GO 待ちだった（GO のコメント 2026-11-10 10:06 UTC・合流 10:09 UTC）。
+- 決め方: PR の issue comment のうち、本文が正規表現 `GO\s*#<その PR の番号>` に当たる一番早い物の `created_at` を GO の時刻とする。時計の始まりは「起点」と「GO の時刻」の遅い方。GO のコメントが無い PR は起点のまま。
+- 危険な道を含むのに GO のコメントが見つからない PR（GO を PR 本文の `### GO記録` だけに書いた等）は数から外し、§2 の「外した割合」に入れる。
+- カード（便0）で、#5345 に台本を流して GO の時刻が 10:06 UTC と出ることを確かめる。
+- 8 回目の審査の数え（直近 40 件・GO を考えない起点）: 120 分超え 5 件（12.5%）。台帳 DONE 14 件（0.1〜0.5 分）を除くと 5/26（19%）。数える集まりで割合が動くので、全件と台帳 DONE を除いた分の両方で判定する。台帳 DONE かどうかは `scripts/ci/is-ledger-done-pr.sh` と同じ判定を使う。
+- 判定できる件数の下限: 14 日で約 560 件（1 日約 40 件）なら、基準値 12.5% の半分は約 6.3% で数の上では判定できる。ただし 120 分超えが 10 件未満の基準値では、1〜2 件の差で結果が変わるので判定しない。
 
 K3 を「中央値が基準値以下」から替えた理由（設計審査 7 回目の必須指摘 1）: 直近 20 件の「起点 → `mergedAt`」は 0.1 分が 6 件・25 分未満が 13 件で、中央値は約 4.8 分（台帳 DONE の自動の PR が多く、緑になってすぐ入る）。列を入れると、どの合流も列の中で確かめをもう 1 回（20〜25 分）流すので、中央値はその分だけ必ず増える。だから「中央値が基準値以下」は設計上満たせない。列で減らしたいのは追い越しで何時間も待たされる PR（直近では 400.8 分・369.7 分・239.2 分・149.0 分）なので、その長い待ちの割合で判定する。120 分は「列の確かめの制限時間 60 分（§4）の 2 回分」で、普通の待ちと追い越しの待ちを分ける目安。選ばなかった案: 台帳 DONE の自動の PR を K2・K3 から外す案（外す判定を `scripts/ci/is-ledger-done-pr.sh` に頼ることになり、前後で数える集まりが変わりやすい。記録では台帳 DONE かどうかの内訳を残す）、「後の中央値 ≤ 前の中央値＋25 分」の案（列の確かめの長さが変わると基準が動く）。
 
@@ -36,7 +43,7 @@ K3 を「中央値が基準値以下」から替えた理由（設計審査 7 �
 - 起点が取れなかった PR（管理者の飛ばし等）は数から外し、外した数と割合を一緒に記録する。外した割合が 5% を超えたら、その 14 日の K2・K3 は判定しない（前後どちらでも同じ扱い）。
 - 前（便0 の基準値）と後（14 日後）で同じ起点・同じ式を使う。数える台本はカード（便0）で 1 本にし、前後で同じ台本を流す。台本は列の一時枝の commit（merge_group）を読まない（PR の commit だけを読む）。
 
-K4 の 40 分の理由（設計審査 4 回目の必須指摘 3）: 列の確かめの制限時間は 60 分（§4）で、止まった項目は 60 分で列から外される。しきい値を 60 分にすると、鳴る前に外されて鳴らない。今の確かめは 20〜25 分なので、40 分は普通の確かめでは鳴らず、制限時間の前に鳴る。数えるのは「先頭の項目の確かめが始まってから」で、「列に入れてから」ではない（同時 5 本の後ろで待つ間は止まりではないため）。列の外し（制限時間切れ・赤）は GitHub が PR に記録し、作者に知らせる。作者は主に shingo-cc なので PO には届かない（5 回目の推奨 4）。そこで、外れたことは §9 の列の見張りが PR の timeline の `REMOVED_FROM_MERGE_QUEUE_EVENT`（項目 `createdAt`・`pullRequest`・`reason`。2026-11-10 に公式スキーマ schema-pulls.json で確認）を前回の起動以降の分だけ読み、Discord で PO に知らせる案を置く（U15・PO が決める）。gh-pr-merge-safe.sh だけで読む形にしない。台本が「列に入れた」と報告して終わる場合や、画面から入れた場合に見落とすため（6 回目の推奨 2）。「position が 1」と書かないのは、公式スキーマの説明（`The position of this entry in the queue`）に 0 から数えるか 1 から数えるかが書かれていないため（5 回目の推奨 1）。
+K4 の 40 分の理由（設計審査 4 回目の必須指摘 3）: 列の確かめの制限時間は 60 分（§4）で、止まった項目は 60 分で列から外される。しきい値を 60 分にすると、鳴る前に外されて鳴らない。今の確かめは 20〜25 分なので、40 分は普通の確かめでは鳴らず、制限時間の前に鳴る。数えるのは「先頭の項目の確かめが始まってから」で、「列に入れてから」ではない（同時 5 本の後ろで待つ間は止まりではないため）。列の外し（制限時間切れ・赤）は GitHub が PR に記録し、作者に知らせる。作者は主に shingo-cc なので PO には届かない（5 回目の推奨 4）。そこで、外れたことは §9 の「外れの知らせ」（`pull_request_target` の `dequeued` で起きる workflow。8 回目の必須指摘 2）が、理由を PR の timeline の `REMOVED_FROM_MERGE_QUEUE_EVENT` の `reason`（2026-11-10 に公式スキーマ schema-pulls.json で確認）から読んで、Discord で PO に知らせる案を置く（U15・PO が決める）。gh-pr-merge-safe.sh だけで読む形にしない。台本が「列に入れた」と報告して終わる場合や、画面から入れた場合に見落とすため（6 回目の推奨 2）。「position が 1」と書かないのは、公式スキーマの説明（`The position of this entry in the queue`）に 0 から数えるか 1 から数えるかが書かれていないため（5 回目の推奨 1）。
 
 ## 3. 選んだ案と、選ばなかった案
 
@@ -91,7 +98,7 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 
 - `github.event.pull_request.*`・head_ref・base_ref を使う甲の workflow（R§4 の列）は、列では merge_group の base_sha/head_sha を使う形に直す。行の変更前後はカード（便0）で全件書く。
 - 注（設計審査 2026-11-10 の必須指摘 1）: `guard-authoring/evaluation` は job の名前ではない。`scripts/run-guard-evaluation.js:5` の `CONTEXT` で、`pull_request_target` の job（`.github/workflows/guard-authoring-gate.yml:16-18,43-44`・`statuses: write` は :51）が PR の head の commit に status を書く（同 js:18-19）。列の commit にはこの status が届かないので、job に if を付けても列で Pending のまま止まる。便0 では、merge_group のときに列の commit（`merge_group.head_sha`）へ同じ名前の status を書く job を足す。中身は「列に入った PR の head に success の status があることを API で読み、あれば success を書く」。PR の中身は列に入ると変わらないので、PR で通った結果を写すだけでよい。ほかの乙 4 件（migration-guard・UI governance・warn-direct-lesson-edit・process-artifacts）も、必須の名前が job の名前か status かをカードで 1 件ずつ確かめ、status なら同じ形にする。ruleset で integration_id 15368 に結び付いた 5 件（R§3）の、status を書く側の名義が合うかもカードで確かめる。
-- 列の一時枝（`gh-readonly-queue/main/...`）で余計に走る push 起動の workflow（設計審査の必須指摘 2・origin/main の実物で確認）: branches の指定が無い `backup-script-test.yml`・`deploy-script-test.yml`、`branches-ignore: [main]` だけの `active-work-lint.yml`・`aeon-script-check.yml`・`task-state-check.yml` の 5 本。便0 でそれぞれの `push:` の `branches-ignore` に `'gh-readonly-queue/**'` を足す（指定が無い 2 本は `branches-ignore: ['gh-readonly-queue/**']` を新たに置く）。数え方: `.github/workflows` 直下の 81 本（`_archive/` の 2 本は GitHub が動かさない）。一時枝で push の event が起きるかは公式文書で確かめる（未確認）。起きなくても足して害はない。
+- 列の一時枝（`gh-readonly-queue/main/...`）で余計に走る push 起動の workflow（設計審査の必須指摘 2・origin/main の実物で確認）: branches の指定が無い `backup-script-test.yml`・`deploy-script-test.yml`、`branches-ignore: [main]` だけの `active-work-lint.yml`・`aeon-script-check.yml`・`task-state-check.yml` の 5 本。便0 でそれぞれの `push:` の `branches-ignore` に `'gh-readonly-queue/**'` を足す（指定が無い 2 本は `branches-ignore: ['gh-readonly-queue/**']` を新たに置く）。数え方: `.github/workflows` 直下の 81 本（`_archive/` の 2 本は GitHub が動かさない）。一時枝で push の event が起きるかは、公式文書だけでは決まらない（§13 U18。8 回目の推奨 2）。起きなくても足して害はないので前もって足し、便2 の試しで確かめる。
 - 個人名義のうちは merge_group が起きないので、便0 を入れても今の動きは変わらない（入れて安全）。
 
 ## 6. 合流の道の直し（便0 に含める。列の前後どちらでも動く形）
@@ -152,7 +159,7 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 | 仕組み | 中身 | 守らせ方 |
 |---|---|---|
 | 列そのもの | ruleset の merge queue 必須・bypass 空 | GitHub が列を通らない合流を拒む（人も AI も） |
-| 列の見張り | 新しい workflow（schedule 15 分ごと・public なので無料・手で起動するときはしきい値を入力で変えられる）。GraphQL `repository.mergeQueue(branch:"main").entries` のうち `position` が一番小さい項目の `headCommit.checkSuites` の `createdAt` のうち一番早い物から 40 分を超えて、まだ合流していなければ scripts/notify/discord-owner-ping.sh で PO に知らせる（MergeQueueEntry に `position`・`headCommit`・`state`・`enqueuedAt` があること、CheckSuite に `createdAt` があることは 2026-11-10 に公式スキーマで確認済み）。列が作り直されると先頭の commit が変わり時刻もやり直しになる。`headCommit` が null、または `checkSuites` が 0 件のときは、その回は数えずに記録だけ残す（6 回目の推奨 4）。便2 の試しの PR で、この時刻と列から外れた時刻の差を記録する（5 回目の推奨 2）。<br>列から外れたことの知らせ（U15 で PO が知らせると決めた場合。7 回目の推奨 1）: timeline は PR ごとにしか読めないので、読む PR を次のとおり決める。(1) 前回の起動時刻 T は、この workflow の前回の成功した run の作成時刻（`gh run list --workflow <この workflow> --status success --limit 1`）から取り、別の置き場を作らない。取れないとき（初回）は 30 分前。(2) `gh api graphql` の search `repo:<新> is:pr updated:>=T` で、T 以降に更新された PR（開いている・閉じた・合流した全部）を取る。(3) 各 PR の `timelineItems(itemTypes:[REMOVED_FROM_MERGE_QUEUE_EVENT], since:T)` を読み、`createdAt` が T 以降の物だけ知らせる。(4) その PR が今 MERGED なら知らせない（合流で列を出たときにこの event が付くかは未確認・U20）。同じ外れを 2 回知らせないために、(3) の `createdAt` は T 以降に限る（T は前回の成功した run なので、失敗した回の分は次の回で拾う） | K4。Mergify の指摘「黙って止まる」への手当て |
+| 列の見張り | 新しい workflow（schedule 15 分ごと・public なので無料・手で起動するときはしきい値を入力で変えられる）。GraphQL `repository.mergeQueue(branch:"main").entries` のうち `position` が一番小さい項目の `headCommit.checkSuites` の `createdAt` のうち一番早い物から 40 分を超えて、まだ合流していなければ scripts/notify/discord-owner-ping.sh で PO に知らせる（MergeQueueEntry に `position`・`headCommit`・`state`・`enqueuedAt` があること、CheckSuite に `createdAt` があることは 2026-11-10 に公式スキーマで確認済み）。列が作り直されると先頭の commit が変わり時刻もやり直しになる。`headCommit` が null、または `checkSuites` が 0 件のときは、その回は数えずに記録だけ残す（6 回目の推奨 4）。便2 の試しの PR で、この時刻と列から外れた時刻の差を記録する（5 回目の推奨 2）。<br>列から外れたことの知らせ（U15 で PO が知らせると決めた場合）は、定時の見回りとは別の workflow にし、外れた時に GitHub が直接起こす形にする（設計審査 8 回目の必須指摘 2。7 回目の案「定時の検索 updated:>=T」は、外れたときに PR の更新時刻が変わるかが公式文書に無く、検索の遅れで取りこぼし、回の重なりで二重に届くため替えた）。<br>(1) 起動: `on: pull_request_target: types: [dequeued]`。公式 events-that-trigger-workflows.md の `pull_request_target` の種類に `enqueued`・`dequeued` がある（2026-11-10 に github/docs の main で確認。github.com 向け）。`pull_request_target` は main 側の定義で動き PR の中のコードを動かさないので、Discord の鍵を渡しても PR から書き換えられない。PR の中身は checkout しない。<br>(2) 外れ 1 回につき run が 1 回なので、検索も前回の時刻も要らず、取りこぼしと二重は起きない（run が失敗したときは Actions の失敗として残り、§9「設定のずれの見張り」とは別に作者に届く）。<br>(3) 合流で列を出たときにも `dequeued` が起きるかは未確認（U20）。そこで run の中で PR を読み直し（`gh api repos/<新>/pulls/<番号>` の `merged`）、合流済みなら知らせない。<br>(4) 外れた理由は、PR の `timelineItems(itemTypes:[REMOVED_FROM_MERGE_QUEUE_EVENT], last:1)` の `reason` を読んで知らせに書く（項目は 2026-11-10 に公式スキーマで確認済み）。読めないときは理由なしで知らせる。<br>(5) リポジトリの Actions の設定で `pull_request_target` が動かせる状態かを、カード（便2）で設定を読んで確かめる（会社名義に移した後の設定で読む） | K4。Mergify の指摘「黙って止まる」への手当て |
 | 設定のずれの見張り | 週 1 で ruleset を読み、merge queue の規則が無い・bypass が空でない・strict が有効、のどれかで Discord | 誰かが外したら気付く |
 | 審査の見張り | review-gate に `--admin` を止める行 | 列を飛ばす命令を AI が出せない |
 | 数える | 週 1 で K2・K3 を数えて記録（14 日で判定） | 効果を数で確かめる |
@@ -167,7 +174,7 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 | 便0 で入れた見張りの判定が効かず、試しの PR の列入りが消される（3 回目の推奨 2） | §7 の便2 の戻し（ruleset から列の規則を外す）を先に行い、見張りを直してから便2 をやり直す |
 | ruleset が移しで消える | 保存した JSON から作り直す（U1） |
 | 移してから「移した直後の組」が本番に届くまで、見張りの表示や GitHub の動きの記録が欠ける（4 回目の必須指摘 1） | 移した当日に組の PR を合流し、同じ日に PO の同意票で prod1・prod2 に届ける。sop-health の点は記録が残るので後から表示される。gha-exporter が旧名で読めるか（GitHub の転送が API で効くか）は未確認なので、欠けた時間を記録に残す |
-| 列の中の確かめが長くなり待ちが延びる | 同時 5 本・制限 60 分。K3 で測り、数を見て変える |
+| 列の中の確かめが長くなり待ちが延びる | 同時 5 本・制限 60 分。K3 で測り、数を見て変える。見積り（8 回目の推奨 3）: 台帳 DONE の PR も列を通るので、1 日 46 件（台帳 15・作業 31。R§1）が全部列に入る。確かめ 25 分・同時 5 本なら 1 時間に約 12 件を流せる。1 時間に 12 件を超えて入る時間帯があると待ちが延びる。便0 で直近 14 日の「1 時間あたりの合流数の最大」を数えて記録し、12 件を超える時間帯があれば同時の数を見直す案を PO に出す |
 | 列が止まって誰も気付かない | §9 の見張り（K4） |
 | 純正の列の不具合（2026-04-23 例） | merge 方式は当時の対象外。列の見張りと K1 の照合で気付く |
 | 乙に分けた確かめが、合わせた形の問題を見逃す | 乙は PR 本文・PR 差分だけで決まる物に限る。カードで行を読んで決め、迷ったら甲 |
@@ -192,6 +199,7 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 | 便1 直後: 見張りのグラフが途切れない | Grafana の sop-health で、移す前と後の両方の点が 1 本のグラフに出る |
 | 便2: K1 の設定 | ruleset の JSON に merge_queue（MERGE・同時 5・最大 1・制限 60）・strict=false・bypass 空 |
 | 便2: K4 | 試しの PR が列にいる間に、列の見張りをしきい値 1 分で手で起動し、Discord に 1 通。普段のしきい値 40 分は workflow の既定値で確かめる（§2 K4） |
+| 便2: 外れの知らせ（U15 で知らせると決めた場合） | わざと赤にした試しの PR を列に入れ、外れたときに `dequeued` の run が 1 回起き、Discord に 1 通だけ届く。合流した試しの PR では知らせが 0 通（U20 の記録も同時に取る） |
 | 14 日後: K1〜K3 | §2 の測り方 |
 
 ## 12. 外部事例
@@ -202,9 +210,8 @@ R§7（出典・日付・数値・適用の限界は scratchpad の mq-web/evide
 
 - R§8 の U1〜U8。とくに U2・U3・U5 は PO の画面の確認が要る。
 - strict を外すこと（§4）を PO が認めるか。
-- K3 の 60 分を PO が認めるか。
-- U19（PO が決める）: K3 の判定を §2 の案（120 分を超えた PR の割合が基準値の半分以下＋列の中の中央値 60 分以下）にするか。列を入れると合流のたびに確かめが 1 回増えるので、合流までの中央値は今より約 20〜25 分長くなる（7 回目の必須指摘 1）。PO が中央値で比べたいなら、その増え方を受け入れた上での上限を PO が決める。
-- U20（便2 の試しで埋まる）: 列から合流したときにも `REMOVED_FROM_MERGE_QUEUE_EVENT` が付くか（7 回目の推奨 1。公式スキーマには型と項目 `actor`・`beforeCommit`・`createdAt`・`enqueuer`・`id`・`mergeQueue`・`pullRequest`・`reason` があるが、どのときに付くかは書かれていない）。§9 は MERGED の PR を知らせない形にしてあるので、付いても付かなくても誤って鳴らない。試しの PR で付くかを記録する。
+- U19（PO が決める）: K3 の判定を §2 の案（GO 待ちを除いた時計で 120 分を超えた PR の割合が基準値の半分以下＋列の中の中央値 60 分以下）にするか。60 分の目安もここで決める。列を入れると合流のたびに確かめが 1 回増えるので、合流までの中央値は今より約 20〜25 分長くなる（7 回目の必須指摘 1）。PO が中央値で比べたいなら、その増え方を受け入れた上での上限を PO が決める。
+- U20（便2 の試しで埋まる）: 列から合流したときにも `pull_request_target` の `dequeued` が起きるか、そのとき `REMOVED_FROM_MERGE_QUEUE_EVENT` が付くか（8 回目の必須指摘 2。公式文書は種類の名前だけで、どのときに起きるかは書かれていない）。§9 は合流済みの PR を知らせない形にしてあるので、起きても起きなくても誤って鳴らない。試しの PR（合流する 1 件と、わざと赤にして外れる 1 件）で、起きたか・`reason` に何が入ったかを記録する。外れる 1 件で知らせが 1 通だけ届くことを確かめる。
 - U9: `PIPELINE_PAT` の種類と持ち主（PO の画面の確認）。細かく絞る型で持ち主が個人なら、会社を持ち主にした鍵を作り直す。
 - U10: 列に入れたときに `auto_merge_enabled` が起きるか（公式 events-that-trigger-workflows.md:666 では `enqueued` と別の種類・未確認）。便2 の試しの PR で確かめる（§11）。便0 の見張りの判定はどちらでも安全な形にする（§6）。
 - U11: 本番の見張り（docker-compose の GitHub App）が会社名義のリポジトリを読めるか（§10・U3 と一緒に確かめる）。
