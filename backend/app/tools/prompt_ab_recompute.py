@@ -28,6 +28,7 @@ from app.services.line_analysis_v102_svc import (
 )
 from app.tasks.tcg_extraction import _get_sync_session
 from app.tools import prompt_ab as pab
+from app.tools._tx_guard import release_before_compute, set_idle_tx_limit
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,7 @@ def _recompute_row(session: Session, row: dict, masters: dict, contexts: dict[st
     followup = load_followup_reference(session, job_id)  # 本番（run_v102_analysis）と同じ関数
     soldout_posts = load_soldout_ref_posts(session, job_id)  # 本番（run_v102_analysis）と同じ関数
     posted_date = load_posted_date(session, job_id)  # 本番（run_v102_analysis）と同じ関数
+    release_before_compute(session)  # 計算の前に取引を閉じる（design C2）
     return {
         **copied,
         **pab._v102_row_fields(row["response_text"], ctx, masters_with_followup(masters, followup, soldout_posts, posted_date)),
@@ -94,7 +96,9 @@ def _recompute_row(session: Session, row: dict, masters: dict, contexts: dict[st
 def recompute(session: Session, *, from_jsonl: Path, out_dir: Path) -> RecomputeSummary:
     """from_jsonl の各行を作り直して out_dir に書く。1行の失敗は記録して次へ進み、件数を返す。"""
     lines = [ln for ln in Path(from_jsonl).read_text(encoding="utf-8").splitlines() if ln.strip()]
+    set_idle_tx_limit(session)
     masters = _load_masters(session)  # 空ならここで止まる
+    release_before_compute(session)
     out_path = Path(out_dir) / f"recompute-{Path(from_jsonl).stem}.jsonl"
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     out_path.unlink(missing_ok=True)  # 実行のたびに作り直す（追記しない）
@@ -109,6 +113,7 @@ def recompute(session: Session, *, from_jsonl: Path, out_dir: Path) -> Recompute
             result = _recompute_row(session, source, masters, contexts)
         except Exception as exc:  # noqa: BLE001
             session.rollback()
+            set_idle_tx_limit(session)
             summary.errors += 1
             pab._append_jsonl(out_path, {
                 **{k: source[k] for k in _COPIED_FIELDS if k in source},
