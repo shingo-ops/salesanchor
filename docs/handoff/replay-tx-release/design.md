@@ -1,6 +1,6 @@
 # design — 試しの道具が計算の間に取引を開いたままにしない（本番反映の移行を止めない）
 
-- 状態: C1〜C4 は PO 承認済み（2026-11-10 PO「1」＝この設計で作る）・実装済み（PR #5340、2026-11-09T19:27:59Z マージ、2026-11-10 04:28 JST 本番反映）。P1 基準値は測定済み（§11）。P4（本番での前後の測定）はまだ測っていない。追補 C5・C6 と K の直し（§13、2026-11-10）は設計案作成済み・審査待ち・実装未着手。
+- 状態: C1〜C4 は PO 承認済み（2026-11-10 PO「1」＝この設計で作る）・実装済み（PR #5340、2026-11-09T19:27:59Z マージ、2026-11-10 04:28 JST 本番反映）。P1 基準値は測定済み（§11）。P4（本番での前後の測定）はまだ測っていない。追補 C5・C6 と K の直し（§13、2026-11-10）と §14 の直しは設計審査済み（クラウドの Architect＝Opus の審査 APPROVE、2026-11-10。中4 は §14 で反映）・実装未着手。
 - 根拠: docs/handoff/replay-tx-release/recon.md（行番号は origin/main 96a63df05）。
 - 実装: release/replay-tx-impl（クラウドの Sonnet・card.md §1〜§8 のとおり）。マージ前の審査・本番での測定（P4）はその PR で行う。
 - 関係する決まり: ADR-1037（移行の鍵待ち 1 秒）・ADR-1070（接続の返却時の後始末）・docs/handoff/deploy-db-stall/design.md §17（段4 接続の名前）・docs/handoff/migration-runner-redesign/design.md §5（段5 全件の流し直しをやめる）。
@@ -177,3 +177,33 @@
 | Q3 | 実装カード（C5・C6・K4 の足し・K5 の足し）→ クラウドの Sonnet が実装・赤の実演 | Opus→Sonnet | 試験が赤・カードと実物の食い違い |
 | Q4 | reviewer（opus）・CI 緑・GO・マージ・本番反映。migrations・deploy.yml・本番 scripts を含まない | Opus | 審査 REVISE |
 | Q5 | P4 の測定（K1〜K3・K5）。C5 の後で測る | Opus | K のどれかが × |
+
+Q1 の結果: APPROVE（2026-11-10 01:38Z、クラウドの Architect＝Opus、読むだけ）。指摘 中4 は §14 で直した。Q3 のカードは §13 と §14 の両方を入れる。
+
+## 14. 追補の直し（2026-11-10）— §13 の審査 APPROVE の指摘 中1〜中4
+
+行番号は origin/main c5bd38863（Opus が読み直した）。
+
+### C5' 受け手の登録は本物の engine のときだけ（中2）
+
+- 事実: `backend/tests/test_v102_replay_diff.py` :18 は `session = MagicMock()` で、本物の `set_idle_tx_limit` をそのまま通す。差し替えているのは `test_prompt_ab.py` :50 と `test_prompt_ab_recompute.py` :74 だけ。`test_tx_guard.py` も MagicMock を使う。
+- 後: 受け手の登録を `set_idle_tx_limit` の中に直に書かず、別の関数（例 `install_idle_tx_listener(bind)`）に分ける。`set_idle_tx_limit` は `session.get_bind()` が `sqlalchemy.engine.Engine` のときだけその関数を呼ぶ（偽物の session のときは登録しない）。登録の関数は `event.contains` で登録済みなら何もしない。
+- カードに書くこと: MagicMock を使う今の試験（上の3か所と test_tx_guard.py）が C5 の後も緑のままであること。赤になったら、試験の側でなく上の「Engine のときだけ」の判定を確かめる。
+
+### K5' 本物のプールを通しても上限が残る（中3）
+
+- 事実: アプリの async の engine には ADR-1070 の返却時の処理がある（`backend/app/database.py` :37 `_reset_session_state` が rollback → RESET ALL → commit、:50 `install_pool_reset` で async の engine の pool にだけ付ける、作る所は :33 `pool_reset_on_return=None`）。道具の `_engine`（`backend/app/tasks/tcg_extraction.py` :94）には付いていない。もし付けば RESET ALL が SET を毎回消す。
+- 文書（Opus が Context7 で 2026-11-10 確認。審査では読めず未確認だった点）: SQLAlchemy 2.0 の PoolEvents.connect は「新しい DBAPI 接続がプールのために初めて作られた時」に呼ばれる（/websites/sqlalchemy_en_20_core、events.html）。プールの既定 `pool_reset_on_return='rollback'` は返すときに DBAPI の rollback を呼ぶ（pooling.html「Reset On Return」）。PostgreSQL の SET は「取引が commit されたら、その後は接続が終わるまで残る。取引が中止されたら消える」（/websites/postgresql、sql-set.html）。だから C5 の受け手が commit まで流せば、既定の返却の rollback では消えない。
+- 足す試験（pytest-run の本物の PostgreSQL で。SQLite では飛ばす）: 試験の中で専用の engine を `create_engine(..., pool_size=1, max_overflow=0)` で作り、C5' の登録の関数を呼ぶ。(1) 接続を取って返し、取り直して `SHOW idle_in_transaction_session_timeout` が `30s` (2) 取った接続を `invalidate()` してから取り直し、新しい接続でも `30s` (3) 試験の後で `event.remove` で受け手を外し、engine を `dispose()`。30 の値は `IDLE_TX_LIMIT_SECONDS` から作り、試験に数字を書かない。
+- 守り: もし将来、道具の `_engine` に RESET ALL の返却処理が付けば (1) が赤になる。
+
+### C6' 見張りの範囲を広げる（中1・中4）
+
+§13 の C6 をこう置き換える（同じ試験ファイル backend/tests/test_tools_tx_guard_required.py）。
+
+- 見る範囲: `backend/app/tools/` の下を下のフォルダまで（`rglob("*.py")`）。`__init__.py` と `_tx_guard.py` は除く。
+- DB を使う道具の見分け方: 本文に `_get_sync_session`・`Session(`・`_engine`・`create_engine`・`sessionmaker`・`.connect(` のどれかがある。
+- 判定: DB を使う道具なのに、本文で `set_idle_tx_limit(` を呼んでいなければ赤（import だけでは通さない）。例外表の扱いは §13 のまま（例外表にあるのに上の語が1つも無ければ赤）。
+- 漏れの見張り（中4）: `backend/app/` の下で `backend/app/tools/` の外にあるファイルが `app.tools` を読み込んでいたら赤（`from app.tools`・`import app.tools`・`from app import tools` の3つの書き方を探す）。2026-11-10 の origin/main c5bd38863 で `git grep` して該当は0件。
+- 赤の実演（§13 の3つに足す。実装 PR で1回、結果を PR に貼る）: (4) prompt_ab.py の `_tx_guard` の import を残して `set_idle_tx_limit(` の呼び出しだけを消すと赤 (5) 試験の中で一時のフォルダに `backend/app/tools/sub/x.py` 相当（`_engine.connect(` だけを持つ）を置いて見せると赤（実物のリポジトリにはファイルを足さない形で、見る根を引数で渡せる関数にして確かめる） (6) `backend/app/tasks/` の下の一時の写しに `from app.tools import prompt_ab` を置いて見せると赤（同じく根を引数で渡す）。
+- 今の道具の当てはめ（2026-11-10 実物）: prompt_ab・prompt_ab_recompute・v102_replay_diff は `set_idle_tx_limit(` を呼ぶので通る。reextract_v6_with_v102 は例外表。sync_review_reason_labels は上の語が無いので対象外。実装のときに一致しなければ止まって Opus に戻す。

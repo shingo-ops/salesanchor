@@ -506,7 +506,7 @@ PR ごとの静的点検にも1つ足す（第8版）:
 - 継続: 名前の正本は2か所ある。アプリの接続の名前は 4a で置く新しいモジュール（場所は実装 PR で本節に書く）。本番反映の控え・移行の名前は `scripts/lib/db-app-names.sh`（段2）。分ける理由は、シェルの台本は Python を読めず、アプリはシェルの lib を読めないから（17-2）。2つが重ならないことは C4-2 が守る。守り手: backend の pytest（C4-1〜C4-4、実装 PR で足す）と `.github/workflows/backup-script-test.yml`（C1〜C9）。
 
 ## 18. 段6 詳細設計 — 試しの道具の取引を読んだらすぐ閉じる／移行の前に開いたままの取引を点検してから入れ替える（第4版）
-状態（第4版、2026-11-10）: 設計案作成済み・審査待ち。第3.2版を受けたクラウドの Architect の審査（2026-11-10、origin/main 96a63df05 で照合）は REVISE（重2・中2・軽1）。第4版で全件を直した（18-12）。便1 は別の設計 docs/handoff/replay-tx-release/design.md（以下「道具の設計」）に置き換えた。道具の設計は PR #5340 で実装済みで、2026-11-10 04:28 JST に本番反映済み。便2（点検の段）は実装未着手。
+状態（第4.1版、2026-11-10）: 設計審査済み（第4版の審査 APPROVE、2026-11-10 クラウドの Architect＝Opus。中4・軽3 は第4.1版で反映、18-13）。実装未着手（便2 は未実装、道具の設計の追補 C5・C6 も未実装）。第4版を書く前の状態: 第3.2版を受けたクラウドの Architect の審査（2026-11-10、origin/main 96a63df05 で照合）は REVISE（重2・中2・軽1）。第4版で全件を直した（18-12）。便1 は別の設計 docs/handoff/replay-tx-release/design.md（以下「道具の設計」）に置き換えた。道具の設計は PR #5340 で実装済みで、2026-11-10 04:28 JST に本番反映済み。便2（点検の段）は実装未着手。
 第3.2版までの状態: 設計審査済み（第3版 APPROVE、2026-11-10。推奨5件は第3.1版で反映。第3.1版のマージ前審査も APPROVE で、推奨6件は第3.2版で反映）。第1版の審査（クラウドの Architect＝Opus、2026-11-10）は REVISE（必須2・推奨5）。第2版で全件を直した。第2版の審査も REVISE（必須1・推奨4）で、第3版で全件を直した（18-11）。PO の選択: 2026-11-10「1、2」（(1) 試しの道具が読み終えたらすぐ表を放す (2) 移行の前に、動いている試しと開いたままの取引を確かめ、待つか知らせる）。本番に出す GO は委任（opus-delegation）に基づく Claude Opus 発行。
 
 ### 18-1. 事実（2026-11-10 調べ。行番号は origin/main 96a63df05）
@@ -558,10 +558,10 @@ PR ごとの静的点検にも1つ足す（第8版）:
 | 場所 | 変更前 | 変更後 |
 |---|---|---|
 | 本番の台本 | なし | 新しい台本 scripts/deploy-db-precheck.sh（下の動き） |
-| `.github/workflows/deploy.yml` | 空き容量の点検 → 控え → 入れ替え | 空き容量の点検 → 新しい段「Check open DB transactions before deploy」→ 控え → 入れ替え。条件は移行の段と同じ `steps.gate.outputs.migrations == 'true'` |
-| `.github/workflows/backup-script-test.yml` | C1〜C10 | 新しい試験の台本 scripts/tests/test-deploy-db-precheck.sh（DB が要る P1〜P3・P5・P6）を足す。paths にも足す |
+| `.github/workflows/deploy.yml` | 空き容量の点検 → 控え → 入れ替え | 空き容量の点検 → 新しい段「Check open DB transactions before deploy」→ 控え → 入れ替え。条件は移行の段（`.github/workflows/deploy.yml` :767「Run database migrations」）と文字列まで同じ `if: ${{ success() && steps.gate.outputs.migrations == 'true' }}` |
+| `.github/workflows/backup-script-test.yml` | C1〜C10 | 新しい試験の台本 scripts/tests/test-deploy-db-precheck.sh（DB が要る P1〜P3・P5・P6）を足す。`on.pull_request.paths` と `on.push.paths`（:9〜:30。今は2つの一覧が同じ）の両方に `scripts/deploy-db-precheck.sh` と `scripts/tests/test-deploy-db-precheck.sh` の2行を足す |
 | 新しい試験 backend/tests/ops/test_deploy_precheck_wiring.py | なし | DB が要らない P4a〜P4c・P7・P8 を pytest で書く（必須チェック「pytest (SQLite + PostgreSQL RLS)」の中で毎回走る。`backend/pyproject.toml` :54 の testpaths は tests なので tests/ops も入る）。P4a〜P4c は subprocess で `bash scripts/deploy-db-precheck.sh` を `DB_PRECHECK_FAKE_COUNTS` 付きで流す。リポジトリの根は前例 `backend/tests/ops/test_nginx_case_api_guard.py` :15 と同じ `Path(__file__).resolve().parents[3]` で求める |
-| `.github/workflows/test.yml` の detect-changes の backend の filters（:42〜:50） | backend/**・migrations/**・scripts/**・pyproject.toml・docker-compose*.yml・test.yml | `.github/workflows/deploy.yml` を足す（deploy.yml だけを変える PR でも P7・P8 が必須チェックの中で走る。scripts/deploy-db-precheck.sh は scripts/** で既に入る） |
+| `.github/workflows/test.yml` の detect-changes の backend の filters（:42〜:50） | backend/**・migrations/**・scripts/**・pyproject.toml・docker-compose.yml・docker-compose.test.yml・.github/workflows/test.yml（:44〜:50 の7行） | `.github/workflows/deploy.yml` を足す（deploy.yml だけを変える PR でも P7・P8 が必須チェックの中で走る。scripts/deploy-db-precheck.sh は scripts/** で既に入る） |
 
 新しい段の中身（ssh の script。作業場所は書き換えない）:
 0. `set -e` の下で、次の順に固定する。(a) `cd /home/ubuntu/salesanchor` (b) `git fetch origin main`（失敗なら exit 1） (c) `git rev-parse --verify origin/main`（失敗なら exit 1） (d) `if ! git cat-file -e origin/main:scripts/deploy-db-precheck.sh; then echo ">>> [precheck] skipped: script not in origin/main"; exit 0; fi`（`set -e` の下で if で包まないと rc=128 で止まり skipped が出ない。第3版の審査の実測） (e) `TMP=$(mktemp)` と `trap 'rm -f "$TMP"' EXIT` で置き場所を作る (f) `git show origin/main:scripts/deploy-db-precheck.sh > "$TMP"`（失敗なら exit 1） (g) `bash "$TMP"`。決まった名前の /tmp は使わない。台本はそれだけで動き、作業場所の他のファイルを読まない（作業場所は1つ前の版のため）。同時に2回の本番反映は動かない（`.github/workflows/deploy.yml` :14〜:16 の `concurrency: deploy-production`・`cancel-in-progress: false`）。理由: 作業場所は入れ替えの段（:258〜:259）までは1つ前の版のため（18-1）、作業場所の台本を流すと、便2を出す回は台本が無く、その後も毎回1つ前の版が動く。origin/main から読めば、今まさに出す版の台本が動く。入れ替えの段も同じ `git fetch origin main` をするので、新しい通信先・権限は足さない。
@@ -597,7 +597,7 @@ P1〜P3・P5・P6 の job は入れ物の名前を本番と同じ astro-webapp-p
   - P4c 並び `0,1,0,0,0` で「FAKE counts in use」の行が1行出る。
 - P5 active の長い文だけ → 通る（数えない）。第4版: 61秒以上 active の文が1本あるとき「info: long active statements=1」の行が出る（試験では60秒を環境変数で短くする。正本は台本の頭の1か所）。
 - P6 DB につながらない → 止まる（exit 1。黙って通らない）。
-- P7 `.github/workflows/deploy.yml` を YAML として読み、新しい段が控えの段と入れ替えの段より前にあり、条件が移行の段と同じで、script に `git show origin/main:scripts/deploy-db-precheck.sh`・skipped の分岐・`mktemp` があり、作業場所の台本を流す形（`bash scripts/deploy-db-precheck.sh`）が無いこと。段の `env:` に `ROLLBACK_DISCORD_WEBHOOK` が DISCORD_WEBHOOK_OWNER_PING から渡され、`envs:` に `ROLLBACK_DISCORD_WEBHOOK` があること。
+- P7 `.github/workflows/deploy.yml` を YAML として読み、新しい段が控えの段と入れ替えの段より前にあり、`if:` の文字列が移行の段（:767）の `if:` と完全に同じ（前後の空白を除いて文字列で比べる。移行の段の `if:` を名前「Run database migrations」で探して読み、値を試験に書き写さない）で、script に `git show origin/main:scripts/deploy-db-precheck.sh`・skipped の分岐・`mktemp` があり、作業場所の台本を流す形（`bash scripts/deploy-db-precheck.sh`）が無いこと。段の `env:` に `ROLLBACK_DISCORD_WEBHOOK` が DISCORD_WEBHOOK_OWNER_PING から渡され、`envs:` に `ROLLBACK_DISCORD_WEBHOOK` があること。
 - P8 `.github/workflows/deploy.yml` のどこにも `DB_PRECHECK_FAKE_COUNTS` が無いこと。
 - 赤の実演（便2の PR で1回、結果を PR に貼る）: (1) 数える state の条件を消すと P5 が赤（active も数えてしまう）、`'active'` に変えると P2 が赤 (2) 3回続けての数えを1回にすると P4a が赤（1回目の0で通ってしまう） (3) 新しい段を入れ替えの段の後ろへ動かすと P7 が赤 (4) 台本を origin/main からでなく作業場所から読む形にすると P7 が赤（origin/main から読む行を残したまま作業場所の台本も流す形も赤） (5) 台本から上限（`$SECONDS` が600を超えたら止める）の判定を外すと P4b が赤（試験の時間切れ30秒で落ちる形にする）。
 
@@ -704,3 +704,18 @@ P1〜P3・P5・P6 の job は入れ物の名前を本番と同じ astro-webapp-p
 | 3 中 | 本節と道具の設計の食い違い（全体の切断設定の外し方の範囲・直に rollback・同じ試験ファイル・名前の置き場） | 便1 を道具の設計に置き換え（18-3）、18-5 の範囲を「DB 全体とアプリの接続」に、T1〜T3 を道具の設計の K4 へ（18-4）、名前は段4 の表だけ（18-7）、K18-6 を廃止（18-2） |
 | 4 中 | 残る穴（長い active の文・fhd_snapshot・アプリの握り） | K18-5 に持ち主の分け方 (b)、点検の段に長い active の文の記録（18-3 の動き7・P5）、statement_timeout は入れない理由（18-5）、scripts/ の道具は範囲外の理由（18-7） |
 | 5 軽 | 道具の設計の受入条件のあいまいさ | 道具の設計の §13 で直した（K1 の測り方・K2・P2・K4・C3） |
+
+### 18-13. 第4版の審査と第4.1版の改訂（2026-11-10）
+審査: クラウドの Architect（Opus、2026-11-10 01:38Z 終了、読むだけ、審査対象 f21f8c43f、origin/main b960a1937 で照合）→ **APPROVE**。前回の5件はすべて実物と合う形で直ったと判定。新しい指摘は中4・軽3 で、作り直しは要らず実装カードに足せば足りる、とされた。全文の写しは Opus の手元の記録（/tmp/CC報告ファイル/deploy-lock-1109/rev2/architect-rev2-1110.md）。
+
+第4.1版を書いた時点の事実（Opus が origin/main c5bd38863 で読み直した）: 移行の段の `if:` は `.github/workflows/deploy.yml` :767。同じ文字列が :805（Post-deploy smoke tests）にもあるので、P7 は段の名前で移行の段を探す。`.github/workflows/backup-script-test.yml` の paths は :9〜:30。`.github/workflows/test.yml` の backend の filters は :44〜:50 の7行。
+
+| 指摘 | 中身 | 第4.1版の直し |
+|---|---|---|
+| 中1 | 道具の設計の C6 は見る範囲が狭い（下のフォルダ・別の接続の取り方・import だけで呼ばない形がすり抜ける） | 道具の設計 §14 の C6' |
+| 中2 | C5 を足すと MagicMock の session を使う今の試験が赤になる見込み | 道具の設計 §14 の C5'（登録は bind が Engine のときだけ・今の試験の直しをカードに書く） |
+| 中3 | C5 の試験がプールの返却・作り直しを通らない | 道具の設計 §14 の K5'（本物の PostgreSQL で返却後と invalidate 後に 30s） |
+| 中4 | アプリに漏れない守りが今の grep だけ | 道具の設計 §14 の C6'（tools の外から app.tools を読み込んだら赤） |
+| 軽1 | P7 の条件の比べ方があいまい | 18-3 の deploy.yml の行と P7 を「移行の段の `if:` と文字列で完全に同じ」に直した |
+| 軽2 | backup-script-test.yml の paths に足す物が書かれていない | 18-3 に2行・2か所を書いた |
+| 軽3 | test.yml の filters の書き方が実物と違う | 18-3 を実物の7行どおりに直した |
