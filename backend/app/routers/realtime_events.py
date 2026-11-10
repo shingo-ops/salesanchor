@@ -5,15 +5,14 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials
 
 from app.auth.dependencies import get_current_tenant, get_current_user, require_super_admin, security
-from app.database import get_db
 from app.models import User
+from app.realtime import stream_db
 from app.realtime.hub import Connection, hub
 
 logger = logging.getLogger(__name__)
@@ -50,11 +49,6 @@ def _release(user_id: int) -> None:
         _active_by_user[user_id] = n - 1
 
 
-def _db_scope():
-    """短命の DB セッション。get_db と同じ後始末（ロールバック・テナント文脈クリア）を使う。"""
-    return asynccontextmanager(get_db)()
-
-
 @router.get("/events/stream")
 async def stream_change_signals(
     request: Request,
@@ -66,7 +60,7 @@ async def stream_change_signals(
     SSE 1 本ごとに DB 接続を握り続けてしまうため。認証・会社 ID・super admin の判定だけ
     短いセッションで行い、ストリームを返す前に閉じる。
     """
-    async with _db_scope() as db:
+    async with stream_db.short_db_scope() as db:
         user = await get_current_user(request, cred, db)
         tenant_id = await get_current_tenant(request, user, db)
         is_super_admin = await _is_super_admin(user)

@@ -3,7 +3,7 @@
 
 **親**: `docs/handoff/deploy-db-stall/design.md`（ADR-1037 の移行前の点検）。**関連 ADR**: ADR-1016（即時反映の通り道）、ADR-1037、ADR-1070、ADR-131、ADR-1015（区分）。  
 **日付**: 2026-11-10。**担当**: Planner（Opus）。  
-**状態**: 設計案作成済み。設計審査済み（1回目 REVISE 4件・2回目 REVISE 3件を反映、3回目 APPROVE。低い指摘2件も §5-5 に反映。記録は docs/handoff/app-idle-tx/review-architect.md）。PO 承認前。実装未着手。  
+**状態**: 設計案作成済み。設計審査済み（1回目 REVISE 4件・2回目 REVISE 3件を反映、3回目 APPROVE。低い指摘2件も §5-5 に反映。記録は docs/handoff/app-idle-tx/review-architect.md）。PO 承認済み（2026-11-11「1」、案 A を実装）。実装は便1（`docs/handoff/app-idle-tx/card-bin1.md`）で進行中。  
 **PO の選択**: 2026-11-10「1」（理由を調べ、直す設計案を作る。実装の前に報告）。  
 **根拠**: `docs/handoff/app-idle-tx/recon.md`（以下 recon）。
 
@@ -169,6 +169,6 @@ app.include_router(meta_inbox.stream_router, prefix="/api/v1", tags=["meta-inbox
 - 数値付きの他社事例は使わない。理由: 原因と効き目は自分の本番の実測（recon B）で示せ、K1 で同じ物差しで測れるため。
 
 ## 11. 維持の仕組み
-- 守り手: 人手で守る（この設計書だけの段階では関所のファイルがまだ無いため。便1の実装 PR で backend/tests/test_sse_no_db_hold.py の見張りを足し、新しい流し続ける口が yield 依存を持った時点で CI が赤になる。その PR でこの行を見張りのファイルに書き換える）。
+- 守り手: `backend/tests/test_sse_no_db_hold.py`（新しい流し続ける口が yield 依存を持った時点で CI が赤になる）。
 - 決まりの置き場: ADR-1016 の追記（§5-6）。
 - 本番の見張り: 本番反映の前の点検（`scripts/deploy-db-precheck.sh`、ADR-1037）が握り手の名前を記録し続ける。K5 で数える。
