@@ -3348,7 +3348,10 @@
     "togglePanel": "Main menu",
     "listView": "Schedule",
     "dateTimeLine": "{{date}} {{time}}",
-    "addMeet": "Add Google Meet",
+    "addMeet": "Add Google Meet video conferencing",
+    "meetPending": "Google Meet video conferencing (the join link is created when you save)",
+    "removeMeet": "Remove Google Meet",
+    "fullEditLabel": "Edit event",
     "joinMeet": "Join with Google Meet",
     "meetFailed": "Couldn't add Google Meet",
     "shortcuts": {

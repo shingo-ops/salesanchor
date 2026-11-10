@@ -1,5 +1,5 @@
 /* eslint-disable local/no-japanese-literal -- テスト: 作る小窓の日時の 1 行が Google と同じ日本語で出ることを検証する（ADR-027・precedent: CalendarView.test.tsx） */
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
@@ -451,27 +451,28 @@ describe("SchedulePage Google Meet (K12)", () => {
     answers.meetAvailable = true;
   };
 
-  it("hides the Meet toggle when meet_available is false", async () => {
+  it("hides the Meet row when meet_available is false", async () => {
     answers.isTenantAdmin = true;
     answers.connected = true;
     answers.meetAvailable = false;
     view();
     await openCreate();
     await waitFor(() => expect(mockGet).toHaveBeenCalledWith("/google-calendar/status"));
-    expect(screen.queryByRole("switch", { name: addMeetLabel() })).toBeNull();
+    expect(screen.queryByRole("button", { name: addMeetLabel() })).toBeNull();
     save();
     await waitFor(() => expect(api.post).toHaveBeenCalled());
     const body = vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>;
     expect("add_meet" in body).toBe(false);
   });
 
-  it("sends add_meet only when the toggle is on", async () => {
+  it("sends add_meet only when the Meet row is on", async () => {
     enableMeet();
     view();
     await openCreate();
-    const toggle = (await screen.findByRole("switch", { name: addMeetLabel() })) as HTMLInputElement;
-    expect(toggle.checked).toBe(false);
-    fireEvent.click(toggle);
+    const row = await screen.findByRole("button", { name: addMeetLabel() });
+    fireEvent.click(row);
+    expect(screen.getByText(i18n.t("schedule.meetPending"))).toBeTruthy();
+    expect(screen.getByRole("button", { name: i18n.t("schedule.removeMeet") })).toBeTruthy();
     vi.mocked(api.post).mockResolvedValueOnce({ id: 1, meet_url: MEET });
     save();
     await waitFor(() => expect(api.post).toHaveBeenCalled());
@@ -480,11 +481,11 @@ describe("SchedulePage Google Meet (K12)", () => {
     expect(screen.queryByText(i18n.t("schedule.meetFailed"))).toBeNull();
   });
 
-  it("does not send add_meet when the toggle is left off", async () => {
+  it("does not send add_meet when the Meet row is left off", async () => {
     enableMeet();
     view();
     await openCreate();
-    await screen.findByRole("switch", { name: addMeetLabel() });
+    await screen.findByRole("button", { name: addMeetLabel() });
     save();
     await waitFor(() => expect(api.post).toHaveBeenCalled());
     const body = vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>;
@@ -495,7 +496,7 @@ describe("SchedulePage Google Meet (K12)", () => {
     enableMeet();
     view();
     await openCreate();
-    fireEvent.click(await screen.findByRole("switch", { name: addMeetLabel() }));
+    fireEvent.click(await screen.findByRole("button", { name: addMeetLabel() }));
     vi.mocked(api.post).mockResolvedValueOnce({ id: 1, meet_url: null });
     save();
     expect(await screen.findByText(i18n.t("schedule.meetFailed"))).toBeTruthy();
@@ -503,7 +504,7 @@ describe("SchedulePage Google Meet (K12)", () => {
     await waitFor(() => expect(screen.queryByLabelText(i18n.t("schedule.eventTitle"))).toBeNull());
   });
 
-  it("shows the join link for an event with meet_url and no toggle on edit", async () => {
+  it("shows the join link for an event with meet_url and no Meet row on edit", async () => {
     enableMeet();
     answers.events = [apiEvent({ meet_url: MEET })];
     view();
@@ -514,7 +515,7 @@ describe("SchedulePage Google Meet (K12)", () => {
     expect(link.getAttribute("rel")).toBe("noopener noreferrer");
     fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
     await screen.findByLabelText(i18n.t("schedule.eventTitle"));
-    expect(screen.queryByRole("switch", { name: addMeetLabel() })).toBeNull();
+    expect(screen.queryByRole("button", { name: addMeetLabel() })).toBeNull();
     expect(screen.getByRole("link", { name: joinLabel() })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
     await waitFor(() => expect(api.patch).toHaveBeenCalled());
@@ -522,27 +523,27 @@ describe("SchedulePage Google Meet (K12)", () => {
     expect("add_meet" in body).toBe(false);
   });
 
-  it("shows the toggle when editing an own event that has no Meet yet", async () => {
+  it("shows the Meet row when editing an own event that has no Meet yet", async () => {
     enableMeet();
     answers.events = [apiEvent({ google_event_id: "g1" })];
     view();
     fireEvent.click(await screen.findByText("Own Event"));
     fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
-    fireEvent.click(await screen.findByRole("switch", { name: addMeetLabel() }));
+    fireEvent.click(await screen.findByRole("button", { name: addMeetLabel() }));
     vi.mocked(api.patch).mockResolvedValueOnce({ id: 1, meet_url: MEET });
     fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
     await waitFor(() => expect(api.patch).toHaveBeenCalled());
     expect((vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>).add_meet).toBe(true);
   });
 
-  it("hides the toggle when editing an own event that was never sent to Google", async () => {
+  it("hides the Meet row when editing an own event that was never sent to Google", async () => {
     enableMeet();
     answers.events = [apiEvent({ google_event_id: null })];
     view();
     fireEvent.click(await screen.findByText("Own Event"));
     fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
     await screen.findByLabelText(i18n.t("schedule.eventTitle"));
-    expect(screen.queryByRole("switch", { name: addMeetLabel() })).toBeNull();
+    expect(screen.queryByRole("button", { name: addMeetLabel() })).toBeNull();
   });
 
   it("does not show a join link for a URL outside meet.google.com", async () => {
@@ -552,6 +553,38 @@ describe("SchedulePage Google Meet (K12)", () => {
     fireEvent.click(await screen.findByText("Own Event"));
     await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") });
     expect(screen.queryByRole("link", { name: joinLabel() })).toBeNull();
+  });
+
+  it("pressing the Meet row then the remove button restores the row and sends no add_meet", async () => {
+    enableMeet();
+    view();
+    await openCreate();
+    fireEvent.click(await screen.findByRole("button", { name: addMeetLabel() }));
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("schedule.removeMeet") }));
+    expect(screen.getByRole("button", { name: addMeetLabel() })).toBeTruthy();
+    save();
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const body = vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>;
+    expect("add_meet" in body).toBe(false);
+  });
+
+  it("has no Meet switch in the create popover, the edit popover or the full editor", async () => {
+    enableMeet();
+    answers.events = [apiEvent({ google_event_id: "g1" })];
+    view();
+    await openCreate();
+    await screen.findByRole("button", { name: addMeetLabel() });
+    expect(screen.queryByRole("switch", { name: /Google Meet/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("schedule.moreOptions") }));
+    await screen.findByRole("dialog", { name: i18n.t("schedule.fullEditLabel") });
+    expect(screen.queryByRole("switch", { name: /Google Meet/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.close") }));
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByLabelText(i18n.t("schedule.eventTitle"))).toBeNull());
+    fireEvent.click(await screen.findByText("Own Event"));
+    fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
+    await screen.findByRole("button", { name: addMeetLabel() });
+    expect(screen.queryByRole("switch", { name: /Google Meet/ })).toBeNull();
   });
 });
 
@@ -724,17 +757,23 @@ describe("SchedulePage on CalendarView", () => {
       await waitFor(() => expect(pendingOf()).toBeUndefined());
     });
 
-    it("the footer has more options then save and no cancel; more options opens every row", async () => {
+    it("the footer has more options then save and no cancel; more options opens the full editor", async () => {
       await openTimed();
       const footer = document.querySelector(".schedule-popover__footer") as HTMLElement;
       const labels = Array.from(footer.querySelectorAll("button")).map((b) => b.textContent);
       expect(labels).toEqual([i18n.t("schedule.moreOptions"), i18n.t("common.save")]);
       expect(screen.queryByRole("button", { name: i18n.t("common.cancel") })).toBeNull();
+      fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "試し" } });
       fireEvent.click(screen.getByRole("button", { name: i18n.t("schedule.moreOptions") }));
-      expect(await screen.findAllByLabelText(i18n.t("schedule.time"))).toHaveLength(2);
-      expect(screen.getByPlaceholderText(i18n.t("schedule.locationPlaceholder"))).toBeTruthy();
-      expect(screen.getByPlaceholderText(i18n.t("schedule.descriptionPlaceholder"))).toBeTruthy();
-      expect(screen.queryByRole("button", { name: i18n.t("schedule.moreOptions") })).toBeNull();
+      const dialog = await screen.findByRole("dialog", { name: i18n.t("schedule.fullEditLabel") });
+      expect((within(dialog).getByLabelText(i18n.t("schedule.eventTitle")) as HTMLInputElement).value).toBe("試し");
+      const times = within(dialog).getAllByLabelText(i18n.t("schedule.time")) as HTMLInputElement[];
+      expect(times[0].value).toBe("10:00");
+      expect(times[1].value).toBe("11:00");
+      expect((within(dialog).getAllByDisplayValue("2026-11-10") as HTMLInputElement[]).length).toBeGreaterThan(0);
+      expect(within(dialog).getByPlaceholderText(i18n.t("schedule.locationPlaceholder"))).toBeTruthy();
+      expect(within(dialog).getByPlaceholderText(i18n.t("schedule.descriptionPlaceholder"))).toBeTruthy();
+      expect(document.querySelector(".schedule-popover")).toBeNull();
     });
 
     it("places the create popover beside the box rect reported by the calendar", async () => {
@@ -746,6 +785,103 @@ describe("SchedulePage on CalendarView", () => {
         const el = document.querySelector(".schedule-popover--create") as HTMLElement;
         expect(el.style.left).toBe("308px");
       });
+    });
+  });
+
+  describe("SchedulePage full editor (G53-G56)", () => {
+    const D = (day: number, h = 0, mi = 0) => new Date(2026, 10, day, h, mi);
+    const openTimed = async () => {
+      await ready();
+      selectRange(D(10, 10), D(10, 11), false);
+      await screen.findByLabelText(i18n.t("schedule.eventTitle"));
+    };
+    const openFull = async () => {
+      await openTimed();
+      fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "試し" } });
+      fireEvent.click(screen.getByRole("button", { name: i18n.t("schedule.moreOptions") }));
+      return screen.findByRole("dialog", { name: i18n.t("schedule.fullEditLabel") });
+    };
+    const titleValue = () => (screen.getByLabelText(i18n.t("schedule.eventTitle")) as HTMLInputElement).value;
+
+    it("1: the close button returns to the popover with the title and the pending box, no save call", async () => {
+      await openFull();
+      fireEvent.click(screen.getByRole("button", { name: i18n.t("common.close") }));
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: i18n.t("schedule.fullEditLabel") })).toBeNull());
+      expect(document.querySelector(".schedule-popover")).not.toBeNull();
+      expect(titleValue()).toBe("試し");
+      expect(pendingOf()).toBeDefined();
+      expect(api.post).not.toHaveBeenCalled();
+      expect(api.patch).not.toHaveBeenCalled();
+    });
+
+    it("2: Escape does the same as the close button", async () => {
+      await openFull();
+      fireEvent.keyDown(document, { key: "Escape" });
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: i18n.t("schedule.fullEditLabel") })).toBeNull());
+      expect(document.querySelector(".schedule-popover")).not.toBeNull();
+      expect(titleValue()).toBe("試し");
+      expect(pendingOf()).toBeDefined();
+      expect(api.post).not.toHaveBeenCalled();
+      expect(api.patch).not.toHaveBeenCalled();
+    });
+
+    it("3: saving from the dialog sends the same body as saving from the popover", async () => {
+      const dialog = await openFull();
+      fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
+      await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+      const pick = (b: Record<string, unknown>) => ({
+        title: b.title,
+        start_datetime: b.start_datetime,
+        end_datetime: b.end_datetime,
+        is_all_day: b.is_all_day,
+        category: b.category,
+      });
+      const fromDialog = pick(vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>);
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      await waitFor(() => expect(document.querySelector(".schedule-popover")).toBeNull());
+
+      cleanup();
+      queryClient.clear();
+      vi.mocked(api.post).mockClear();
+      calendarProps.current = null;
+      await openTimed();
+      fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "試し" } });
+      fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+      await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+      const fromPopover = pick(vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>);
+      expect(fromDialog).toEqual(fromPopover);
+    });
+
+    it("4: a failed save keeps the dialog with the error, and closing clears the error", async () => {
+      const dialog = await openFull();
+      vi.mocked(api.post).mockRejectedValueOnce(new Error("boom"));
+      fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
+      const still = await screen.findByRole("dialog", { name: i18n.t("schedule.fullEditLabel") });
+      expect(await within(still).findByText("boom")).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: i18n.t("common.close") }));
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: i18n.t("schedule.fullEditLabel") })).toBeNull());
+      expect(document.querySelector(".schedule-error")?.textContent ?? "").not.toContain("boom");
+    });
+
+    it("5: letter shortcuts do nothing while the dialog is open", async () => {
+      await openFull();
+      expect(calendarProps.current?.mode).not.toBe("month");
+      fireEvent.keyDown(document.body, { key: "m" });
+      expect(calendarProps.current?.mode).not.toBe("month");
+    });
+
+    it("6: closing returns the focus to the title field of the popover", async () => {
+      await openFull();
+      fireEvent.click(screen.getByRole("button", { name: i18n.t("common.close") }));
+      await waitFor(() =>
+        expect(document.activeElement).toBe(screen.getByLabelText(i18n.t("schedule.eventTitle"))),
+      );
+    });
+
+    it("7: Escape during IME composition keeps the dialog", async () => {
+      await openFull();
+      fireEvent.keyDown(document, { key: "Escape", isComposing: true });
+      expect(screen.getByRole("dialog", { name: i18n.t("schedule.fullEditLabel") })).toBeTruthy();
     });
   });
 

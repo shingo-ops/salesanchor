@@ -20,17 +20,16 @@ import { Popover } from "../../components/Popover";
 import { ButtonLink } from "../../components/ButtonLink";
 import { Modal } from "../../components/Modal";
 import { PageLayout } from "../../components/PageLayout";
-import { SelectControl } from "../../components/Select";
-import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
-import { Toggle } from "../../components/Toggle";
 import { CheckboxControl } from "../../components/CheckboxControl";
 import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from "../../constants/icons";
-import { CALENDARS, CALENDAR_MAP, type CalendarId } from "../../features/schedule/calendars.config";
+import { CALENDAR_MAP, type CalendarId } from "../../features/schedule/calendars.config";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import "../schedule.css";
+import { ScheduleDraftFields } from "./ScheduleDraftFields";
+import { ScheduleFullEditor } from "./ScheduleFullEditor";
 import {
   type AnchorRect,
   type ApiCalendarEvent,
@@ -50,11 +49,9 @@ import {
   fitCreatePopover,
   fitPopover,
   rangeToDraftDates,
-  shiftDraftStart,
   formatDateInput,
   formatDayKey,
   formatDayLabel,
-  formatDraftDateLine,
   formatSearchResultLine,
   formatMonthLabel,
   formatTimeInput,
@@ -78,9 +75,9 @@ import {
   type CalendarOwner,
 } from "./schedule-owner";
 
-type PopoverMode = "detail" | "edit" | "create";
+export type PopoverMode = "detail" | "edit" | "create";
 
-interface ScheduleDraft {
+export interface ScheduleDraft {
   title: string;
   category: CalendarId;
   startDate: string;
@@ -91,7 +88,7 @@ interface ScheduleDraft {
   visibleToStaff: boolean;
   description: string;
   location: string;
-  /** 「Google Meet を付ける」(保存時に add_meet として送る) */
+  /** Google Meet の行を押した印（保存時に add_meet として送る） */
   addMeet: boolean;
 }
 
@@ -211,30 +208,6 @@ function SectionTitle({ children }: { children: ReactNode }) {
   return <div className="schedule-section__title">{children}</div>;
 }
 
-/**
- * 作る小窓の 1 行（1 列目: 絵・2 列目: 中身）。直す小窓（creating が偽）は包まず中身だけ出す。
- * wrap が真のときは、複数の中身を 1 つの 2 列目の箱にまとめる（design §3.17 作り方 5）。
- */
-function CreateRow({
-  creating,
-  icon,
-  wrap = false,
-  children,
-}: {
-  creating: boolean;
-  icon: ReactNode;
-  wrap?: boolean;
-  children: ReactNode;
-}) {
-  if (!creating) return <>{children}</>;
-  return (
-    <div className="schedule-create-row">
-      <span className="schedule-create-row__icon">{icon}</span>
-      {wrap ? <div>{children}</div> : children}
-    </div>
-  );
-}
-
 function getOwnerMeta(
   ownerByUserId: Map<number, CalendarOwner>,
   ownerUserId: number | null,
@@ -261,6 +234,7 @@ function SchedulePopover({
   canEdit,
   canChangeVisibility,
   meetAvailable,
+  onMoreOptions,
   placement,
   calendarAreaRef,
 }: {
@@ -280,27 +254,16 @@ function SchedulePopover({
   canChangeVisibility: boolean;
   /** Google Meet を付けてよいか（つないだ本人の予定だけ。サーバーも同じ条件で断る） */
   meetAvailable: boolean;
+  /** 「その他のオプション」を押した（全画面の編集を開く） */
+  onMoreOptions: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const EditIcon = SCHEDULE_POPOVER_ICONS.edit;
   const DeleteIcon = SCHEDULE_POPOVER_ICONS.delete;
   const CloseIcon = SCHEDULE_POPOVER_ICONS.close;
-  const ClockIcon = SCHEDULE_POPOVER_ICONS.clock;
-  const LocationIcon = SCHEDULE_POPOVER_ICONS.location;
-  const DescriptionIcon = SCHEDULE_POPOVER_ICONS.description;
-  const CategoryIcon = SCHEDULE_POPOVER_ICONS.category;
-  const MeetIcon = SCHEDULE_POPOVER_ICONS.meet;
-  const ShareIcon = SCHEDULE_POPOVER_ICONS.share;
   const creating = mode === "create";
   const editable = canEdit || mode === "create";
   const { ref: popoverRef, style: position, placed } = usePopoverPlacement(anchor, creating && placement === "box");
-  // 作るときは日時・場所・説明を 1 行で閉じて出し、押すと開く（design §3.9・G3 ②③）
-  const [dateOpen, setDateOpen] = useState(false);
-  const [locationOpen, setLocationOpen] = useState(false);
-  const [descriptionOpen, setDescriptionOpen] = useState(false);
-  const showDate = !creating || dateOpen;
-  const showLocation = !creating || locationOpen || draft.location !== "";
-  const showDescription = !creating || descriptionOpen || draft.description !== "";
   // 作るときは、小窓が見えてから題名の欄に文字が入るようにする（隠れている間の autoFocus は効かない・G3 ①）
   const titleRef = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
@@ -442,189 +405,26 @@ function SchedulePopover({
               </label>
             )}
 
-            {showDate ? (
-              <CreateRow creating={creating} icon={<ClockIcon size={20} aria-hidden="true" />} wrap>
-                <div className="schedule-field schedule-field--inline">
-                  <span className="schedule-field__label">{t("schedule.allDay")}</span>
-                  <Toggle
-                    checked={draft.allDay}
-                    aria-label={t("schedule.allDay")}
-                    onCheckedChange={(next) => onDraftChange({
-                      ...draft,
-                      allDay: next,
-                      startTime: next ? "00:00" : draft.startTime,
-                      endTime: next ? "23:59" : draft.endTime,
-                    })}
-                  />
-                </div>
-
-                <div className="schedule-field-group">
-                  <label className="schedule-field">
-                    <span className="schedule-field__label">{t("schedule.eventStart")}</span>
-                    <TextFieldControl
-                      variant="schedule"
-                      type="date"
-                      value={draft.startDate}
-                      onChange={(event) => onDraftChange(creating ? shiftDraftStart(draft, event.target.value, draft.startTime) : { ...draft, startDate: event.target.value })}
-                    />
-                  </label>
-                  {!draft.allDay && (
-                    <label className="schedule-field">
-                      <span className="schedule-field__label">{t("schedule.time")}</span>
-                      <TextFieldControl
-                        variant="schedule"
-                        type="time"
-                        value={draft.startTime}
-                        onChange={(event) => onDraftChange(creating ? shiftDraftStart(draft, draft.startDate, event.target.value) : { ...draft, startTime: event.target.value })}
-                      />
-                    </label>
-                  )}
-                </div>
-
-                <div className="schedule-field-group">
-                  <label className="schedule-field">
-                    <span className="schedule-field__label">{t("schedule.eventEnd")}</span>
-                    <TextFieldControl
-                      variant="schedule"
-                      type="date"
-                      value={draft.endDate}
-                      onChange={(event) => onDraftChange({ ...draft, endDate: event.target.value })}
-                    />
-                  </label>
-                  {!draft.allDay && (
-                    <label className="schedule-field">
-                      <span className="schedule-field__label">{t("schedule.time")}</span>
-                      <TextFieldControl
-                        variant="schedule"
-                        type="time"
-                        value={draft.endTime}
-                        onChange={(event) => onDraftChange({ ...draft, endTime: event.target.value })}
-                      />
-                    </label>
-                  )}
-                </div>
-              </CreateRow>
-            ) : creating ? (
-              <CreateRow creating icon={<ClockIcon size={20} aria-hidden="true" />}>
-                <Button variant="ghost" size="md" fullWidth layoutClassName="schedule-popover__line" onClick={() => setDateOpen(true)}>
-                  <span className="schedule-popover__line-text">{formatDraftDateLine(draft, t, i18n.language)}</span>
-                </Button>
-              </CreateRow>
-            ) : null}
-
-            <CreateRow creating={creating} icon={<CategoryIcon size={20} aria-hidden="true" />}>
-              <label className="schedule-field">
-                {!creating && <span className="schedule-field__label">{t("schedule.category")}</span>}
-                <SelectControl
-                  size="sm"
-                  fullWidth
-                  aria-label={creating ? t("schedule.category") : undefined}
-                  value={draft.category}
-                  onChange={(event) => {
-                    const category = event.target.value as CalendarId;
-                    onDraftChange(
-                      mode === "create"
-                        ? { ...draft, category, visibleToStaff: category !== "personal" }
-                        : { ...draft, category },
-                    );
-                  }}
-                >
-                  {CALENDARS.map((calendar) => (
-                    <option key={calendar.id} value={calendar.id}>
-                      {t(calendar.labelKey)}
-                    </option>
-                  ))}
-                </SelectControl>
-              </label>
-            </CreateRow>
-
-            {joinMeetLink}
-            {meetAvailable && !item?.meetUrl && (
-              <CreateRow creating={creating} icon={<MeetIcon size={20} aria-hidden="true" />}>
-                <div className="schedule-field schedule-field--inline">
-                  <span className="schedule-field__label">{t("schedule.addMeet")}</span>
-                  <Toggle
-                    checked={draft.addMeet}
-                    aria-label={t("schedule.addMeet")}
-                    onCheckedChange={(next) => onDraftChange({ ...draft, addMeet: next })}
-                  />
-                </div>
-              </CreateRow>
-            )}
-
-            {canChangeVisibility && (
-              <CreateRow creating={creating} icon={<ShareIcon size={20} aria-hidden="true" />}>
-                <div className="schedule-field schedule-field--inline">
-                  <span className="schedule-field__label">{t("schedule.shareWithStaff")}</span>
-                  <Toggle
-                    checked={draft.visibleToStaff}
-                    aria-label={t("schedule.shareWithStaff")}
-                    onCheckedChange={(next) => onDraftChange({ ...draft, visibleToStaff: next })}
-                  />
-                </div>
-              </CreateRow>
-            )}
-
-            {showLocation ? (
-              <CreateRow creating={creating} icon={<LocationIcon size={20} aria-hidden="true" />}>
-                <label className="schedule-field">
-                  <span className="schedule-field__label">{t("schedule.eventLocation")}</span>
-                  <TextFieldControl
-                    variant="schedule"
-                    value={draft.location}
-                    onChange={(event) => onDraftChange({ ...draft, location: event.target.value })}
-                    placeholder={t("schedule.locationPlaceholder")}
-                    autoFocus={locationOpen}
-                  />
-                </label>
-              </CreateRow>
-            ) : (
-              <CreateRow creating icon={<LocationIcon size={20} aria-hidden="true" />}>
-                <Button variant="ghost" size="md" fullWidth layoutClassName="schedule-popover__line" onClick={() => setLocationOpen(true)}>
-                  <span className="schedule-popover__line-text">{t("schedule.locationPlaceholder")}</span>
-                </Button>
-              </CreateRow>
-            )}
-
-            {showDescription ? (
-              <CreateRow creating={creating} icon={<DescriptionIcon size={20} aria-hidden="true" />}>
-                <label className="schedule-field">
-                  <span className="schedule-field__label">{t("schedule.eventDescription")}</span>
-                  <TextareaControl
-                    variant="schedule"
-                    rows={4}
-                    value={draft.description}
-                    onChange={(event) => onDraftChange({ ...draft, description: event.target.value })}
-                    placeholder={t("schedule.descriptionPlaceholder")}
-                    autoFocus={descriptionOpen}
-                  />
-                </label>
-              </CreateRow>
-            ) : (
-              <CreateRow creating icon={<DescriptionIcon size={20} aria-hidden="true" />}>
-                <Button variant="ghost" size="md" fullWidth layoutClassName="schedule-popover__line" onClick={() => setDescriptionOpen(true)}>
-                  <span className="schedule-popover__line-text">{t("schedule.descriptionPlaceholder")}</span>
-                </Button>
-              </CreateRow>
-            )}
+            <ScheduleDraftFields
+              mode={mode}
+              creating={creating}
+              expanded={false}
+              item={item}
+              draft={draft}
+              onDraftChange={onDraftChange}
+              canChangeVisibility={canChangeVisibility}
+              meetAvailable={meetAvailable}
+              joinMeetLink={joinMeetLink}
+            />
           </div>
         )}
 
         <div className="schedule-popover__footer">
           {mode === "create" ? (
             <>
-              {!(showDate && showLocation && showDescription) && (
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setDateOpen(true);
-                    setLocationOpen(true);
-                    setDescriptionOpen(true);
-                  }}
-                >
-                  {t("schedule.moreOptions")}
-                </Button>
-              )}
+              <Button variant="ghost" onClick={onMoreOptions}>
+                {t("schedule.moreOptions")}
+              </Button>
               <Button variant="primary" onClick={onSave} disabled={!draft.title.trim()}>
                 {t("common.save")}
               </Button>
@@ -1031,6 +831,8 @@ export default function SchedulePage() {
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [popover, setPopover] = useState<SchedulePopoverState | null>(null);
   const [draft, setDraft] = useState<ScheduleDraft>(createDraft());
+  // 作る小窓の「その他のオプション」で開く全画面の編集（design §3.18 作り方 4）。下書きは draft 1 つのまま
+  const [fullEditOpen, setFullEditOpen] = useState(false);
   // 月の「他 N 件」の日の一覧の小窓（予定の小窓 popover とは別の状態。同時には開かない）
   const [dayList, setDayList] = useState<{ date: Date; anchor: AnchorRect | null } | null>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -1217,6 +1019,7 @@ export default function SchedulePage() {
       }
       setPopover(null);
       setError(null);
+      setFullEditOpen(false);
       if (wantsMeet && !saved?.meet_url) {
         // 予定そのものは保存済み。Meet だけ付かなかったことを知らせる
         setBanner({ type: "error", message: t("schedule.meetFailed") });
@@ -1304,6 +1107,12 @@ export default function SchedulePage() {
     popover?.item && currentOwnerUserId != null && popover.item.ownerUserId === currentOwnerUserId,
   );
 
+  // 小窓と全画面の編集の両方に渡す（式を 2 か所に書かない・design §3.18 作り方 4）
+  const popoverMeetAvailable = meetAvailable && popover !== null && (
+    popover.mode === "create"
+    || Boolean(popover.item && popover.item.ownerUserId === currentOwnerUserId && popover.item.googleEventId)
+  );
+
   // 1 件の予定を直せるか
   const canEditItem = (item: ScheduleItem) =>
     item.ownerUserId === currentOwnerUserId || canManageOwners;
@@ -1317,6 +1126,11 @@ export default function SchedulePage() {
   // 仮の箱は、作る小窓以外になったら消す（閉じる・保存・削除・Esc・詳細を開く、のどの道でも拾える）
   useEffect(() => {
     if (popover?.mode !== "create") setPendingVisible(false);
+  }, [popover]);
+
+  // 作る小窓でなくなったら（保存・閉じる・詳しく見る）全画面の編集も閉じる
+  useEffect(() => {
+    if (popover?.mode !== "create") setFullEditOpen(false);
   }, [popover]);
 
   // 押す・引っぱるで選んだ範囲から作る小窓を開く
@@ -1432,6 +1246,8 @@ export default function SchedulePage() {
   // キーボードの近道（5-5 の判定の順番）。最新の状態を ref 経由で読み、window には 1 つだけ付ける
   const shortcutRef = useRef<(event: KeyboardEvent) => void>(() => {});
   shortcutRef.current = (event: KeyboardEvent) => {
+    // 0. 全画面の編集が開いている間は何もしない（Esc は金型 FullScreenDialog が先に受ける・G56）
+    if (fullEditOpen) return;
     // 1. 変換中は何もしない（Safari は変換を決めた Enter で isComposing が偽になるため 229 も見る）
     if (event.isComposing || event.keyCode === 229) return;
     // 2. 近道の一覧が開いている間はページ側は何もしない（Esc は金型 Modal が閉じる）
@@ -1749,7 +1565,7 @@ export default function SchedulePage() {
 
       <ScheduleShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
-      {popover && (
+      {popover && !fullEditOpen && (
         <SchedulePopover
           mode={popover.mode}
           anchor={popover.anchor}
@@ -1763,17 +1579,21 @@ export default function SchedulePage() {
           canChangeVisibility={canChangeVisibility}
           placement={pendingVisible ? "box" : "point"}
           calendarAreaRef={calendarAreaRef}
-          meetAvailable={
-            meetAvailable
-            && (popover.mode === "create"
-              || Boolean(
-                popover.item
-                && popover.item.ownerUserId === currentOwnerUserId
-                && popover.item.googleEventId,
-              ))
-          }
+          meetAvailable={popoverMeetAvailable}
+          onMoreOptions={() => { setError(null); setFullEditOpen(true); }}
         />
       )}
+
+      <ScheduleFullEditor
+        open={fullEditOpen && popover?.mode === "create"}
+        draft={draft}
+        onDraftChange={setDraft}
+        onClose={() => { setFullEditOpen(false); setError(null); }}
+        onSave={saveEvent}
+        error={error}
+        canChangeVisibility={canChangeVisibility}
+        meetAvailable={popoverMeetAvailable}
+      />
     </div>
   );
 }

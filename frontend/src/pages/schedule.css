@@ -511,6 +511,31 @@
   grid-column: 2;
 }
 
+/* Google Meet の行（design §3.18 作り方 1・G51）。押した後は文と × を横に並べる */
+.schedule-meet-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.schedule-meet-row__text {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-primary);
+}
+
+/* 全画面の編集（design §3.18 作り方 4・G53）。項目は作る小窓と同じ行の形で縦に並べる */
+.schedule-full-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.schedule-full-editor .schedule-popover__line {
+  justify-content: flex-start;
+}
+
 .schedule-day-list__row {
   display: flex;
   align-items: center;
