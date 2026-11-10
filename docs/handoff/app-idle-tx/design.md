@@ -164,11 +164,11 @@ app.include_router(meta_inbox.stream_router, prefix="/api/v1", tags=["meta-inbox
 3. CI 緑・審査役（opus）APPROVE → マージ → 本番反映。危険なパス（migrations・deploy・本番 scripts・nginx）を含まないので GO の手順は不要。
 4. 本番反映の後に K1 を測る（読み取り専用の数え方。PO の同意票で流す）。K5 は次の移行ありの本番反映 3 回で数える。
 
-## 10. 外部事例
+## 10. 外部・過去事例の参照と我々への応用
 - FastAPI 公式文書（Context7 /websites/fastapi_tiangolo、2026-11-10 に参照）: yield 依存の既定の範囲は要求全体で、後始末は応答を送り終えた後。`scope="function"` は 0.121.0 から。今回の原因（流れの間ずっと後始末されない）はこの文書どおりの動き。
 - 数値付きの他社事例は使わない。理由: 原因と効き目は自分の本番の実測（recon B）で示せ、K1 で同じ物差しで測れるため。
 
 ## 11. 維持の仕組み
-- 守り手: backend/tests/test_sse_no_db_hold.py の見張り（新しい流し続ける口が get_db を依存に持った時点で CI が赤）。
+- 守り手: 人手で守る（この設計書だけの段階では関所のファイルがまだ無いため。便1の実装 PR で backend/tests/test_sse_no_db_hold.py の見張りを足し、新しい流し続ける口が yield 依存を持った時点で CI が赤になる。その PR でこの行を見張りのファイルに書き換える）。
 - 決まりの置き場: ADR-1016 の追記（§5-6）。
 - 本番の見張り: 本番反映の前の点検（`scripts/deploy-db-precheck.sh`、ADR-1037）が握り手の名前を記録し続ける。K5 で数える。
