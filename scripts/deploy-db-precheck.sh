@@ -14,6 +14,9 @@
 #     ROLLBACK_DISCORD_WEBHOOK があれば Discord に1通送る（なければ webhook not set と書く）。SQL の文面・接続元は書かない
 #   5 数えられなかった（docker/psql の失敗・10秒の時間切れ）ときも止まる（exit 1）。黙って通らない
 #   6 試しを止める・接続を切ることはしない
+#   7 毎回の数えの最後に、長い active の文（state が active で now() - query_start が LONG_ACTIVE_SEC 秒より長い）の本数を
+#     「info: long active statements=K」と書く。記録だけで、数には入れず、通る・止まるの判定は変えない。
+#     数えられなければ止めずに unknown と書く。偽の数の回は書かない
 #
 # 試験のためだけの環境変数: DB_PRECHECK_FAKE_COUNTS（例 0,1,0,0,0）。あれば DB の代わりにその数を順に使い、
 # 並びを使い切ったら最後の値を繰り返す。本番の deploy.yml はこの変数を渡さない（試験 P8）。
@@ -25,6 +28,7 @@ POLL_SEC="${DB_PRECHECK_POLL_SEC:-5}"        # 数える間隔（秒）
 CLEAN_STREAK="${DB_PRECHECK_STREAK:-3}"      # 何回続けて 0 本なら通すか
 WAIT_LIMIT_SEC="${DB_PRECHECK_LIMIT_SEC:-600}" # 待つ上限（秒。$SECONDS で測る）
 XACT_SEC="${DB_PRECHECK_XACT_SEC:-5}"        # この秒数より長く開いた取引を数える
+LONG_ACTIVE_SEC="${DB_PRECHECK_LONG_ACTIVE_SEC:-60}" # この秒数より長く active の文を記録だけする（数に入れない）
 # ---------------------------------------------------------
 
 # コンテナ名・接続先は本番の値を固定で書く（scripts/run_all_migrations.sh と同じ値。作業場所のファイルを読まない）
@@ -53,6 +57,22 @@ run_sql() { # run_sql <SQL>: 結果を標準出力へ。つながる前・docker
     -e PGOPTIONS="-c statement_timeout=5s -c lock_timeout=1s" \
     "${POSTGRES}" \
     psql -X -U "${PG_USER}" -d "${PG_DB}" -v ON_ERROR_STOP=1 -At -F '|' -c "$1" 2>/dev/null
+}
+
+log_long_active() { # 長い active の文の本数を記録だけする（動き7）。失敗しても止めない。偽の数の回は飛ばす
+  [ -n "${FAKE}" ] && return 0
+  local out
+  out=$(run_sql "SELECT count(*) FROM pg_stat_activity
+    WHERE state = 'active'
+      AND now() - query_start > interval '${LONG_ACTIVE_SEC} seconds'
+      AND pid <> pg_backend_pid()
+      AND backend_type = 'client backend'
+      AND datname = current_database()") || out=""
+  case "${out}" in
+    '' | *[!0-9]*) out=unknown ;;
+  esac
+  echo ">>> [precheck] info: long active statements=${out}"
+  return 0
 }
 
 FAKE_IDX=0
@@ -144,6 +164,7 @@ while true; do
     STREAK=0
   fi
   echo ">>> [precheck] sample ${N}: count=${COUNT} streak=${STREAK} elapsed=${SECONDS}"
+  log_long_active
   if [ "${STREAK}" -ge "${CLEAN_STREAK}" ]; then
     echo ">>> [precheck] clean: no open transactions for ${CLEAN_STREAK} samples in a row"
     finish
