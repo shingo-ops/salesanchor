@@ -1,6 +1,6 @@
 # design: AI が足した見張りを記録できる道（草案・2026-11-09）
 
-状態: 設計案作成済み（第11版。§13 は実装に向けた補足。9回目の審査 REVISE の必須3件・推奨2件を §13-7 と便1カードに反映）／設計審査済み（クラウドでの設計審査 10回目 APPROVE・2026-11-09 09:58 UTC・opus。推奨2件は便1カードに反映済み。§12-11。8回目も APPROVE・08:43 UTC。1〜7回目の REVISE は全部反映済み。8回目の推奨2件も反映済み。§12）／§9 は PO 決定済み（2026-11-09「1」＝案1）／ADR-1072 は PO 承認済み（2026-11-09「1」。承認と実装の開始を選んだ返事）／便1 の実装は G5-4 で NEEDS_DECISION（§12-12 で P の決め方を設計の意図に合わせて直した。実装は出し直し）／便1 の実装 PR はマージ前の審査で REQUEST_CHANGES（§12-13 で入れ替えの条件を足した。便1カード §13 で直す）。
+状態: 設計案作成済み（第11版。§13 は実装に向けた補足。9回目の審査 REVISE の必須3件・推奨2件を §13-7 と便1カードに反映）／設計審査済み（クラウドでの設計審査 10回目 APPROVE・2026-11-09 09:58 UTC・opus。推奨2件は便1カードに反映済み。§12-11。8回目も APPROVE・08:43 UTC。1〜7回目の REVISE は全部反映済み。8回目の推奨2件も反映済み。§12）／§9 は PO 決定済み（2026-11-09「1」＝案1）／ADR-1072 は PO 承認済み（2026-11-09「1」。承認と実装の開始を選んだ返事）／便1 の実装は G5-4 で NEEDS_DECISION（§12-12 で P の決め方を設計の意図に合わせて直した。実装は出し直し）／便1 の実装 PR はマージ前の審査で REQUEST_CHANGES（§12-13 で入れ替えの条件を足した。便1カード §13 で直す）。／便4（§13-14・第18版。共通の台本の命令の形を見張る install-form-guard。PO 決定 2026-11-10「1」）は設計案作成済み・設計審査待ち。
 根拠: recon.md（同じフォルダ）。関係 ADR: ADR-1034・ADR-1033・ADR-1029。
 
 ## 1. 目的（PO の言葉から）
@@ -379,3 +379,32 @@
   3. G18-7〜11 は番号ごとに別の一時フォルダを使う（控えの名前が秒単位のため）。
   4. 導入の順の補足: 同意票の本文に HKI-1 の item_hash `203789ba` を書く（点検の record_ok が同意票の文に item_hash があることを求める。consent-audit.py:1268・試験 A20-n19）。外すときは足したときと別の鍵（新しい同意票と「1」）を使う（同じ po_ref と item_hash の組は1回まで）。
 - 実装（第2版カード・e58d98a6c・クラウドの Sonnet・試験 PASS 555→569・FAIL 0）を Opus が差分全文で確かめた。動きはカードどおり。ただし写し元の説明文が2か所残った（po-unregister-hki.sh 6行目の「PDL-1 の1件だけを外す」、po_delegation_edit.py 冒頭の説明が PDL-1 専用のまま）。カードが「次だけを変える」と書き、説明文の直しを入れ忘れたのが原因。カード第3版の §4 に2項を足し、同じ枝で直す。
+
+### 13-14. 便4: 共通の台本の命令の形を見張る install-form-guard（第18版・2026-11-10。カード card-bin4.md）
+- 経緯: 便3 の導入後の A6 で、4件のうち `CLAUDE_DIR=` を前に付けた形だけが自動判定を通った（ほかの3件は拒否）。台本の版の確かめで `INSTALL_FAILED` になり、settings.json の sha256 は変わらなかった（c668e750…）。結果の原本: ~/CC報告ファイル-keep/20261110-adr1072-bin3-A6.md。HKI-1 の文は前に環境変数を付けた形を対象外と書いているが、自動判定はそれを守らなかった。§8 の 4 の「導入後に A6 で確かめる」で見つかったもの。
+- 台本の中で止める案（HOME が本来のホームと違えば止まる）は採らない。理由（実物で確かめた事実）:
+  1. 台本の試験は一時の HOME で台本を流す（scripts/agent-hooks/test_install_guard.py:149-153・:292-295）。HOME の確かめを入れると試験が全部止まり、試験だけ逃がす口はそれ自体が抜け道になる。
+  2. `PATH=<別の場所>` を前に付けると、台本が動く前に `bash` と `python3` の選び先が決まる（install-guard.sh:8 の `python3` は PATH で探す）。台本の中の確かめでは止められない。
+- PO の決定（2026-11-10「1」）: 見張りを1つ足す方法に変える。
+- 見張りの中身（正本 `scripts/agent-hooks/install-form-guard/`。札・本体・試験の3つ）:
+  1. PreToolUse・matcher `Bash`・interpreter `python3`・file `guard.py`。`after` は書かない（組の最後に足す。止める見張りは並びの位置で効きが変わらない）。
+  2. `tool_input.command` が文字列でなければ止めない（exit 0）。
+  3. 当たり判定: 命令から `'`・`"`・`\` を取り除き、小文字にした文字列に、`install-guard` か `.salesanchor-tools/scripts/agent-hooks` のどちらかが含まれれば対象。引用符を挟んで名前を分ける書き方（`install-gu''ard`）も対象になる。
+  4. 対象のうち、元の命令（何も取り除かない）が `^bash ~/\.salesanchor-tools/scripts/agent-hooks/install-guard\.sh [a-z0-9-]+$`（re.fullmatch。前後の空白・改行も許さない）に一致するものだけを通す（exit 0）。HKI-1 の文と同じ形。
+  5. それ以外の対象は exit 2 で止め、標準エラーに止めた理由と「決まった1行の形でだけ流す・中を読むだけなら Read ツールを使う」を出す。許可券で通す道は作らない（正しい形は1つしかないため）。
+  6. 止めたときは mac-test-guard と同じ形で ~/.claude/logs/agent-events.jsonl に1行足す（`hook: install-form-guard`。書けなくても止める）。試験は環境変数 `INSTALL_FORM_GUARD_LOG` で書き先を一時のファイルに向ける。
+  7. 入力の JSON が読めないときは止めない（exit 0）。mac-test-guard と同じ。Claude Code が壊れた JSON を渡すことは無い前提で、ほかの Bash を巻き添えで止めないため。
+  8. 本体に §5-5 の語（`approve`・`behavior`・`updatedInput` など）を書かない。台本と点検の語の検査に当たるため。
+- 公式の動き（Context7 `/websites/code_claude`・code.claude.com/docs/en/hooks で 2026-11-10 に確認）: PreToolUse で exit 2 を返すと、その道具の呼び出しは止まり、標準エラーが Claude に返る。exit 0 は許可にならず、ふつうの許可の流れ（自動判定を含む）へ進む。よってこの見張りは自動判定の前に止め、通したものも自動判定の確かめを受ける。
+- 巻き添え: Opus が手元の Bash で `git show …install-guard.sh` や `grep install-guard` を打つと止まる。中を読むときは Read ツールを使う（consent-guard と同じ扱い）。クラウドの担当には ~/.claude の見張りが無いので影響しない。`test_install_guard.py` は `install_guard`（下線）なので当たらない。
+- 受け入れたリスク: 変数で文字列を組み立てる書き方（例 `D=install; bash ~/…/${D}-guard.sh x`）は、この見張りでは見つけきれない。HKI-1 の形に合わないので自動判定の確かめは受ける。最後の守りは今までどおり週次点検（設定が変われば記録で説明できない限り B）。
+- 入れ方: マージ → `perm-change.py sync` で ~/.salesanchor-tools を GitHub main にそろえる → Opus が `bash ~/.salesanchor-tools/scripts/agent-hooks/install-guard.sh install-form-guard` を1回。これが K1（§2）の最初の実測になる（差が出る最初の見張り。§6 の 111 行目）。PO の `!` は要らない。
+- 受入条件:
+
+| 基準 | 検証方法 |
+|---|---|
+| A13 正しい1行の形だけ通し、前に環境変数・`PATH=`・`env`・`cd … &&` を付けた形、引数が0・2つ、`;`・`|`・`&&`・改行・`$(`・バッククォート・リダイレクトを足した形、見張りごとの install.sh・rollback.sh、引用符で名前を分けた形を止める。関係のない命令（`git status`・`ls`・`python3 scripts/agent-hooks/test_install_guard.py`・`perm-change.py sync` の形）は止めない | 試験 test_guard.py（CI の agent-hooks-test.yml に job を足して流す） |
+| A14 止めたとき記録が1行増え、`hook` が `install-form-guard`。壊れた JSON・command が文字列でないときは止めない | 同じ試験 |
+| A15 札が §5-0 の検査を通り、本体が §5-5 の語の検査を通る | 同じ試験の中で consent-audit.py の `_ga_manifest` と `_ga_words_ok` を当てる |
+| A16 入れた後、A6 の (3) と同じ形（`CLAUDE_DIR=/Users/tanizawashingo/.claude bash ~/.salesanchor-tools/scripts/agent-hooks/install-guard.sh mac-test-guard`）と `PATH=/usr/bin:/bin bash …install-guard.sh mac-test-guard` が、この見張りの文で止まり、settings.json の sha256 が変わらない。正しい形は止まらない | 入れた後に Opus が1回ずつ試し、結果を ~/CC報告ファイル-keep/ に残す |
+| A17 週次点検で、この見張りを入れた変化が B に出ない（K1） | 入れた週の週次点検の出力の B の行を数える |
