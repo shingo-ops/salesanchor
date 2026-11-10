@@ -102,7 +102,7 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 | models.py に新 Column → … | 乙 | 1 つの PR の中で model と移行が揃っているかの確かめ |
 | ADR-072 tenant schema lint | 甲 | 全体の走査 |
 | Lint & Dark Mode Check | 甲 | 全体の走査。concurrency が `github.ref` なので列の枝ごとに分かれる（取り消し合わない） |
-| gitleaks | 甲 | 軽い。合わせた差分も見る |
+| gitleaks | 甲（ただし今の部品では列で動かない・§13 U21） | 軽い。合わせた差分も見る |
 | CLAUDE.md line count | 甲 | 2 つの PR の追記で 90 行を超えうる |
 | ADR index is up to date | 甲 | 2 つの PR が ADR を足すと索引が古くなる（合わせて壊れる典型） |
 | UI governance gate | 乙 | PR の差分の部品を見る。カードで行を読み、全体走査なら甲に変える |
@@ -229,6 +229,7 @@ R§7（出典・日付・数値・適用の限界は scratchpad の mq-web/evide
 - strict を外すこと（§4）を PO が認めるか。
 - U19（PO が決める）: K3 の判定を §2 の案（GO 待ちを除いた時計で 120 分を超えた PR の割合が基準値の半分以下＋列の中の中央値 60 分以下）にするか。60 分の目安もここで決める。列を入れると合流のたびに確かめが 1 回増えるので、合流までの中央値は今より約 20〜25 分長くなる（7 回目の必須指摘 1）。PO が中央値で比べたいなら、その増え方を受け入れた上での上限を PO が決める。
 - U20（便2 の試しで埋まる）: 列から合流したときにも `pull_request_target` の `dequeued` が起きるか（8 回目の必須指摘 2）。webhook の `dequeued` の `reason` の値に `MERGE` があるので、起きると読める（推測。公式文書にどのときに起きるかの文は無い）。§9 は `merged` と `reason`（`MERGE`・`ALREADY_MERGED`）の両方で合流済みの PR を知らせない形にしてあるので、起きても起きなくても誤って鳴らない。試しの PR（合流する 1 件と、わざと赤にして外れる 1 件）で、起きたか・`github.event.reason` に何が入ったかを記録する。外れる 1 件で知らせが 1 通だけ届くことを確かめる。
+- U21（PO が決める。便0-B2 のカード作成時 2026-11-11 に見つけた設計の漏れ）: 必須の確かめ `gitleaks（シークレット漏洩検出）` は `.github/workflows/secret-scan.yml:24` で部品 `gitleaks/gitleaks-action@v2` を使う。この部品の元（v2 と最新 v3.0.0 の `src/index.js`。`gh api repos/gitleaks/gitleaks-action/contents/src/index.js` で読んだ）には次の 2 つがある。(1) 対応する起動は `push`・`pull_request`・`workflow_dispatch`・`schedule` だけで、それ以外は「not yet supported」で失敗する（:36-46）。だから列（`merge_group`）では必ず赤になる。(2) 倉庫の持ち主が会社（Organization）だと、`GITLEAKS_LICENSE` の secret が無ければ失敗する（v2 :48-115。公式 README「required for organizations, not required for user accounts」）。今の倉庫には `GITLEAKS_LICENSE` が無い（`gh secret list` の名前で 0 件）。だから会社名義へ移した直後から、列とは関係なく全 PR でこの必須の確かめが赤になり、合流が全部止まる。選択肢: (a) 部品をやめ、本体の `gitleaks`（MIT・v8.30.1）を workflow の中で直接動かす。鍵も外部への登録も要らず、列では `merge_group.base_sha`..`head_sha` を見られる。必須の名前は job の name なので変わらない。(b) gitleaks.io の無料の鍵を申し込み（名前・メール・会社名の入力。README「How do I get a free license key?」）、secret に入れる。ただし (1) は直らないので、列では乙（飛ばす）にする必要がある。鍵の確認のため倉庫名と持ち主名が外部（keygen.sh）に送られる（README）。(c) 移すのをやめる。設計の推奨は (a)。決まるまで便0-B2 から gitleaks を外し、別のカードにする。便1（名義の移し）の同意票はこの件が片付くまで出さない。
 - U9: `PIPELINE_PAT` の種類と持ち主（PO の画面の確認）。細かく絞る型で持ち主が個人なら、会社を持ち主にした鍵を作り直す。
 - U10: 列に入れたときに `auto_merge_enabled` が起きるか（公式 events-that-trigger-workflows.md:666 では `enqueued` と別の種類・未確認）。便2 の試しの PR で確かめる（§11）。便0 の見張りの判定はどちらでも安全な形にする（§6）。
 - U11: 本番の見張り（docker-compose の GitHub App）が会社名義のリポジトリを読めるか（§10・U3 と一緒に確かめる）。
