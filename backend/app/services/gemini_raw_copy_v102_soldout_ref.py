@@ -1,7 +1,8 @@
 """試作版 v102：〆（完売）の件の商品を、同じ仕入元の過去48時間の投稿の在庫の行から決める（純粋関数。DB を持たない）。
 
 規則は docs/handoff/v102-shime-inventory-ref/design.md §2（規則1〜7）と docs/handoff/v102-shime-multi-targets/design.md §2（規則8〜11）、
-docs/handoff/v102-shime-direct-inherit/design.md §2（規則12a〜12e）と docs/handoff/v102-shime-inherit-unit-priority/design.md §2（規則12f）。
+docs/handoff/v102-shime-direct-inherit/design.md §2（規則12a〜12e）と docs/handoff/v102-shime-inherit-unit-priority/design.md §2（規則12f）、
+docs/handoff/shime-box-all-states/design.md §2（規則12h）。
 同じ投稿の〆が在庫の件を Sold out にする規則13は docs/handoff/v102-shime-same-post-stock/design.md §3（line_analysis_v102_svc._sell_out_stock_closed_in_the_same_post）。
 過去の投稿を読む処理（同じ仕入元・48時間以内）は line_analysis_v102_svc.load_soldout_ref_posts が持つ。
 語の取り出しと当て方は gemini_raw_copy_v102_followup（#4090）と同じ部品を使う。
@@ -22,6 +23,7 @@ from app.services.gemini_raw_copy_v102_product_first import (
     FLAG_SINGLE_CANONICAL,
     NONE_VALUE,
     ProductFirstMasters,
+    ShimeBoxAllStatesRule,
     WorkName,
     match_text_g2,
 )
@@ -404,15 +406,49 @@ def _latest_single_state(product_id: int, posts: Sequence[SoldoutRefPost]) -> st
     return None
 
 
+def _soldout_target(product_id: int, canonical: str, post: SoldoutRefPost, stock: StockItem) -> SoldoutTarget:
+    return SoldoutTarget(
+        product_id, stock.condition_id, post.message_id, min(stock.lines, default=0), canonical, stock.unit_id, stock.unit_canonical,
+    )
+
+
+def _box_all_states_targets(
+    product_id: int, shime: str, stranded: Mapping[str, tuple[SoldoutRefPost, StockItem]],
+    box_rule: ShimeBoxAllStatesRule | None, post_text: str,
+) -> tuple[SoldoutTarget, ...] | None:
+    """規則12h：状態を書かない箱の〆が、取り残された箱の仲間の状態を全部完売の相手にする（先頭が〆の状態、残りは value_rank の小さい順）。
+
+    働かない（None）: 規則が無い／〆の状態が取り残しに無い／〆の状態が箱の仲間でない／今の投稿の原文に keep_words のどれかがある／
+    取り残しに〆の状態以外が無い／〆の状態以外に箱の仲間でない状態がある。
+    """
+    if box_rule is None or shime not in stranded:
+        return None
+    ranks = box_rule.box_ranks
+    shime_post, shime_stock = stranded[shime]
+    others = [(state, post, stock) for state, (post, stock) in stranded.items() if state != shime]
+    if shime_stock.condition_id not in ranks or _has_any(post_text, box_rule.keep_words):
+        return None
+    if not others or any(stock.condition_id not in ranks for _, _, stock in others):
+        return None
+    others.sort(key=lambda o: (ranks[o[2].condition_id], o[2].condition_id))
+    return (
+        _soldout_target(product_id, shime, shime_post, shime_stock),
+        *(_soldout_target(product_id, state, post, stock) for state, post, stock in others),
+    )
+
+
 def decide_soldout_inherit(
     extracted: Sequence[Mapping[str, Any]], posts: Sequence[SoldoutRefPost], fixed_products: Mapping[int, int] | None = None,
-) -> dict[int, SoldoutTarget]:
-    """規則12：商品名を書いた〆（商品が直接決まった完売の件）が、前の在庫の取り残された状態を引き継ぐ件（添字 → 相手）。
+    *, box_rule: ShimeBoxAllStatesRule | None = None, post_text: str = "",
+) -> dict[int, tuple[SoldoutTarget, ...]]:
+    """規則12：商品名を書いた〆（商品が直接決まった完売の件）が、前の在庫の取り残された状態を引き継ぐ件（添字 → 相手の組）。
 
     posts は新しい順。取り残しが2種類以上で、その商品の在庫の行がある最も新しい投稿の状態が1種類・〆の状態と違う・取り残しにあるときは、
-    その状態に決める（12g、12d より先）。それ以外は、〆と同じ状態の在庫が前にあれば決めない（12d）、取り残しの状態がちょうど1種類のときだけ決める（12e）。
+    その状態に決める（12g、12d より先）。それ以外は、〆と同じ状態の在庫が前にあれば決めない（12d。ただし 12h：box_rule があり、
+    〆の状態も取り残しの状態も全部箱の仲間で、今の投稿の原文 post_text に keep_words が無ければ、箱の仲間の取り残しを全部決める）、
+    取り残しの状態がちょうど1種類のときだけ決める（12e）。12g・12e の組は相手が 1 つ。
     """
-    decided: dict[int, SoldoutTarget] = {}
+    decided: dict[int, tuple[SoldoutTarget, ...]] = {}
     for i, item in enumerate(extracted):
         if not _is_inherit_candidate(item, i, fixed_products):
             continue
@@ -425,13 +461,13 @@ def decide_soldout_inherit(
         canonical = _latest_single_state(product_id, posts) if len(stranded) >= 2 else None
         if canonical is None or canonical == shime or canonical not in stranded:  # 12g に当たらなければ今の 12d・12e
             if any(it.product_id == product_id and it.condition_canonical == shime for p in posts for it in p.stock_items):
+                box_targets = _box_all_states_targets(product_id, shime, stranded, box_rule, post_text)  # 12h
+                if box_targets is not None:
+                    decided[i] = box_targets
                 continue  # 12d
             if len(stranded) != 1:
                 continue  # 12e
             (canonical, _), = stranded.items()
         post, stock = stranded[canonical]
-        decided[i] = SoldoutTarget(
-            product_id, stock.condition_id, post.message_id, min(stock.lines, default=0), canonical,
-            stock.unit_id, stock.unit_canonical,
-        )
+        decided[i] = (_soldout_target(product_id, canonical, post, stock),)
     return decided

@@ -83,3 +83,19 @@ def test_idle_limit_is_set_again_after_a_failed_post_and_next_post_is_processed(
     # 失敗の後に SET の execute と commit がもう一度呼ばれる
     after = seq.calls[first + 1:]
     assert any(after[i] == "execute" and after[i + 1] == "commit" for i in range(len(after) - 1))
+
+
+def test_shime_setting_file_is_read_with_the_box_states_and_the_option_is_accepted(tmp_path):
+    # Arrange
+    good = tmp_path / "good.json"
+    good.write_text('{"keep_words": ["有〆"]}', encoding="utf-8")
+    bad = tmp_path / "bad.json"
+    bad.write_text('{"words": ["x"]}', encoding="utf-8")
+    ranks = {22: 1, 24: 2}
+    # Act
+    rule = rd.load_shime_setting(good, ranks)
+    args = rd.parse_args(["--posts", "p.txt", "--out", "o.jsonl", "--shime-setting", str(good)])
+    # Assert
+    assert rule is not None and rule.keep_words == ("有〆",) and dict(rule.box_ranks) == ranks
+    assert rd.load_shime_setting(bad, ranks) is None
+    assert args.shime_setting == good

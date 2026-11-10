@@ -132,6 +132,14 @@ class ConditionHeadingRule:
 
 
 @dataclass(frozen=True)
+class ShimeBoxAllStatesRule:
+    """規則12h：状態を書かない箱の〆が、箱の仲間の状態をまとめて完売にする規則（設定 v102_shime_box_all_states から作る）。"""
+
+    keep_words: tuple[str, ...]  # 今の投稿の原文にあれば働かない語（NFKC・部分一致）
+    box_ranks: Mapping[int, int]  # 箱の仲間（value_group = 'box'）の状態 id → value_rank
+
+
+@dataclass(frozen=True)
 class ProductFirstMasters:
     """商品を先に決める流れに要るマスタ（読み取り専用）。"""
 
@@ -157,6 +165,8 @@ class ProductFirstMasters:
     kubun_allowed_units: Mapping[str, frozenset[str]] = field(default_factory=dict)
     # ADR-1041 What 5：状態の見出しの規則。設定 v102_condition_heading から読む。None なら働かない
     condition_heading: ConditionHeadingRule | None = None
+    # 規則12h：状態を書かない箱の〆の規則。設定 v102_shime_box_all_states と箱の仲間から読む。None なら働かない
+    shime_box_all_states: ShimeBoxAllStatesRule | None = None
 
 
 _RELEASE_DATE_SQL = """
@@ -172,6 +182,8 @@ _SET_UNIT_SQL = "SELECT canonical FROM public.line_units WHERE code = :code AND 
 _KUBUN_ALLOWED_UNITS_KEY = "v102_kubun_allowed_units"  # public.tcg_distribution_settings の key（値は JSON：区分名 → 単位名の配列）
 _KUBUN_ALLOWED_UNITS_SQL = "SELECT value FROM public.tcg_distribution_settings WHERE key = :key"
 _CONDITION_HEADING_KEY = "v102_condition_heading"  # 同じ表の key（値は JSON：max_lines・sentence_end・trailing_chars）
+_SHIME_BOX_ALL_STATES_KEY = "v102_shime_box_all_states"  # 同じ表の key（値は JSON：keep_words の配列）
+_BOX_RANKS_SQL = "SELECT id, value_rank FROM public.conditions WHERE is_active = TRUE AND value_group = 'box'"
 _ACTIVE_UNIT_NAMES_SQL = "SELECT canonical FROM public.line_units WHERE is_active = TRUE"
 _ACTIVE_KUBUN_TYPES_SQL = "SELECT kubun_type FROM public.tcg_product_categories WHERE is_active = TRUE"
 _IGNORE_PHRASES_SQL = """
@@ -399,6 +411,7 @@ def load_product_first_masters(session: Session) -> ProductFirstMasters:
         entries, kubun_map, cond_unit, phrases, g2_index, plural_words, work_names, set_unit, product_release=release,
         kubun_allowed_units=_load_kubun_allowed_units(session),
         condition_heading=_load_condition_heading(session),
+        shime_box_all_states=_load_shime_box_all_states(session),
     )
     check_product_first_masters(masters)
     return masters
@@ -494,6 +507,56 @@ def _load_condition_heading(session: Session) -> ConditionHeadingRule | None:
     rows = session.execute(text(_KUBUN_ALLOWED_UNITS_SQL), {"key": _CONDITION_HEADING_KEY}).fetchall()
     raw = str(rows[0][0]) if rows and rows[0][0] is not None else None
     return validate_condition_heading(raw)
+
+
+def parse_shime_box_all_states(raw: str | None, box_ranks: Mapping[int, int]) -> ShimeBoxAllStatesRule | None:
+    """設定 v102_shime_box_all_states の値（JSON 文字列）を検査して規則にする（純粋関数）。
+
+    値は {"keep_words": [空でない文字列, ...]}（key はこれだけ・配列は 1 つ以上）。key が無い（None）のは切り替え前の正常な状態なので debug だけ。
+    形が合わないとき・box_ranks が空のときは logger.warning（値そのものは出さない）を出して None を返す（None なら規則12h は働かない）。
+    語はコードに書かず、値から読む。
+    """
+    if raw is None:
+        logger.debug("[shime_box_all_states] 設定 %s がありません。規則12h は使いません", _SHIME_BOX_ALL_STATES_KEY)
+        return None
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        logger.warning("[shime_box_all_states] 設定 %s が JSON として読めません。規則12h は使いません", _SHIME_BOX_ALL_STATES_KEY)
+        return None
+    if not isinstance(data, dict) or set(data) != {"keep_words"}:
+        logger.warning("[shime_box_all_states] 設定 %s の key の組が違います。規則12h は使いません", _SHIME_BOX_ALL_STATES_KEY)
+        return None
+    words = data["keep_words"]
+    if not isinstance(words, list) or not words or not all(isinstance(w, str) and w for w in words):
+        logger.warning("[shime_box_all_states] 設定 %s の keep_words が空でない文字列の配列ではありません。規則12h は使いません", _SHIME_BOX_ALL_STATES_KEY)
+        return None
+    if not box_ranks:
+        logger.warning("[shime_box_all_states] 箱の仲間の状態（value_group = 'box'）がありません。規則12h は使いません")
+        return None
+    return ShimeBoxAllStatesRule(tuple(words), dict(box_ranks))
+
+
+def _load_box_ranks(session: Session) -> dict[int, int]:
+    """箱の仲間（public.conditions の value_group = 'box'・有効）の状態 id → value_rank（読み取りのみ）。
+
+    SoldoutTarget・StockItem の condition_id は public.conditions.id と同じ番号（line_analysis_v102_svc._load_condition_canonicals が同じ表で引く）。
+    value_rank が NULL の行は並べられないので、warning を出して箱の仲間に入れない。
+    """
+    ranks: dict[int, int] = {}
+    for r in session.execute(text(_BOX_RANKS_SQL)).fetchall():
+        if r[1] is None:
+            logger.warning("[shime_box_all_states] 箱の仲間の状態 id=%s の value_rank が空です。箱の仲間に入れません", r[0])
+            continue
+        ranks[int(r[0])] = int(r[1])
+    return ranks
+
+
+def _load_shime_box_all_states(session: Session) -> ShimeBoxAllStatesRule | None:
+    """設定と箱の仲間を読み、検査を通った規則だけを返す（読み取りのみ。設定の行が無ければ None）。"""
+    rows = session.execute(text(_KUBUN_ALLOWED_UNITS_SQL), {"key": _SHIME_BOX_ALL_STATES_KEY}).fetchall()
+    raw = str(rows[0][0]) if rows and rows[0][0] is not None else None
+    return parse_shime_box_all_states(raw, _load_box_ranks(session))
 
 
 def check_product_first_masters(masters: ProductFirstMasters) -> None:

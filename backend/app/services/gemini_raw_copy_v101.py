@@ -38,6 +38,7 @@ from app.services.gemini_raw_copy_v102_product_first import (
     REVIEW_PRODUCT_MULTIPLE,
     ConditionHeadingRule,
     ProductFirstMasters,
+    ShimeBoxAllStatesRule,
     _resolve_condition,
     resolve_product_first,
 )
@@ -1309,18 +1310,25 @@ def _apply_soldout_ref(
 
 def _apply_soldout_inherit(
     extracted: list[dict], soldout_posts: tuple[SoldoutRefPost, ...], fixed_products: dict[int, int] | None = None,
+    box_rule: ShimeBoxAllStatesRule | None = None, post_text: str = "",
 ) -> list[dict]:
-    """試作版 v102 の規則12：商品名を書いた〆の件に、前の在庫の取り残された状態を完売の相手として載せる（元の件は変えない）。"""
-    decisions = decide_soldout_inherit(extracted, soldout_posts, fixed_products)
+    """試作版 v102 の規則12：商品名を書いた〆の件に、前の在庫の取り残された状態を完売の相手として載せる（元の件は変えない）。
+
+    規則12h（box_rule があるとき）は、箱の仲間の取り残しを全部並べる。post_text は今の投稿の原文。
+    """
+    decisions = decide_soldout_inherit(extracted, soldout_posts, fixed_products, box_rule=box_rule, post_text=post_text)
     return [
         {
             **row,
-            "soldout_targets": [{
-                "product_id": d.product_id, "condition_id": d.condition_id, "ref_message_id": d.ref_message_id, "ref_line": d.ref_line,
-                "unit_id": d.unit_id, "unit_canonical": d.unit_canonical,
-            }],
+            "soldout_targets": [
+                {
+                    "product_id": d.product_id, "condition_id": d.condition_id, "ref_message_id": d.ref_message_id, "ref_line": d.ref_line,
+                    "unit_id": d.unit_id, "unit_canonical": d.unit_canonical,
+                }
+                for d in targets
+            ],
             "soldout_target_basis": CONDITION_BASIS_SOLDOUT_INHERIT,
-        } if (d := decisions.get(i)) is not None else row
+        } if (targets := decisions.get(i)) is not None else row
         for i, row in enumerate(extracted)
     ]
 
@@ -1499,7 +1507,9 @@ def _extract_v102(
                 extracted, build, lines, ctx.product_first, soldout_posts, ctx.unit_alias_to_info, ctx.sold_out_words,
                 fixed_products,
             )
-            extracted = _apply_soldout_inherit(extracted, soldout_posts, fixed_products)
+            extracted = _apply_soldout_inherit(
+                extracted, soldout_posts, fixed_products, ctx.product_first.shime_box_all_states, "\n".join(lines),
+            )
     flags = {
         "possible_missing_item": _possible_missing_lines(items, lines, until_last_price_line=True),
         "quantity_no_number": no_number, "possible_footer_line": footer_lines,

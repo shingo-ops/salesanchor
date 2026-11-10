@@ -2,11 +2,12 @@
 
 設計: docs/handoff/v102-heading-and-unit/design-heading.md「試験」
 起動:
-  python -m app.tools.v102_replay_diff --posts <投稿 id のファイル> --out <JSONL> [--heading-setting <JSON ファイル>]
+  python -m app.tools.v102_replay_diff --posts <投稿 id のファイル> --out <JSONL> [--heading-setting <JSON ファイル>] [--shime-setting <JSON ファイル>]
   python -m app.tools.v102_replay_diff diff <前の JSONL> <後の JSONL> --out-dir <ディレクトリ>
 
 line_analysis_v102_svc.run_v102_analysis の読み取りの部分だけを同じ順で行い、run_v102_pipeline までを呼ぶ。
 書き込み・commit・pg_advisory_xact_lock は呼ばない。--heading-setting があれば、マスタの condition_heading だけを差し替える（設定の表は書かない）。
+--shime-setting があれば、マスタの shime_box_all_states だけを、ファイルの JSON と本番の箱の仲間で作った規則に差し替える（箱の仲間の一覧も出す）。
 """
 from __future__ import annotations
 
@@ -23,7 +24,11 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.services import line_analysis_v102_svc as svc
-from app.services.gemini_raw_copy_v102_product_first import validate_condition_heading
+from app.services.gemini_raw_copy_v102_product_first import (
+    _load_box_ranks,
+    parse_shime_box_all_states,
+    validate_condition_heading,
+)
 from app.tools._tx_guard import release_before_compute, set_idle_tx_limit
 
 logger = logging.getLogger(__name__)
@@ -59,6 +64,11 @@ def read_posts(path: Path) -> list[str]:
 def load_heading_setting(path: Path):
     """--heading-setting の JSON ファイルを設定と同じ検査にかける（通らなければ None）。"""
     return validate_condition_heading(Path(path).read_text(encoding="utf-8"))
+
+
+def load_shime_setting(path: Path, box_ranks: dict[int, int]):
+    """--shime-setting の JSON ファイルを設定と同じ検査にかける（通らなければ None）。箱の仲間（id → value_rank）は本番から読んだもの。"""
+    return parse_shime_box_all_states(Path(path).read_text(encoding="utf-8"), box_ranks)
 
 
 def item_record(post_id: str, index: int, item: dict) -> dict:
@@ -102,15 +112,22 @@ def replay_post(session: Session, job_id: str, masters: dict) -> list[dict]:
     return [item_record(job_id, i, it) for i, it in enumerate(pipeline.get("v102_items") or [])]
 
 
-def replay(session: Session, posts: list[str], out_path: Path, heading_setting: Path | None = None) -> dict:
+def replay(
+    session: Session, posts: list[str], out_path: Path, heading_setting: Path | None = None, shime_setting: Path | None = None,
+) -> dict:
     """posts の各投稿をやり直して out_path（JSONL）に書く。1 投稿の失敗は記録して次へ進む。"""
     disable_gemini()
     set_idle_tx_limit(session)
     masters, _unit_ids = svc.load_v102_masters(session)  # 1 回だけ読む
+    box_ranks = _load_box_ranks(session) if shime_setting is not None else {}  # 読み取りは取引を閉じる前に済ませる
     release_before_compute(session)
     if heading_setting is not None and masters.get("product_first") is not None:
         rule = load_heading_setting(heading_setting)
         masters = {**masters, "product_first": dataclass_replace(masters["product_first"], condition_heading=rule)}
+    if shime_setting is not None and masters.get("product_first") is not None:
+        print("box_states (id, value_rank):", sorted(box_ranks.items()))
+        shime_rule = load_shime_setting(shime_setting, box_ranks)
+        masters = {**masters, "product_first": dataclass_replace(masters["product_first"], shime_box_all_states=shime_rule)}
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     Path(out_path).unlink(missing_ok=True)
     stats = {"posts": 0, "items": 0, "errors": 0}
@@ -189,6 +206,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--posts", type=Path, help="投稿（extraction_job）の id のファイル")
     p.add_argument("--out", type=Path, help="出力の JSONL")
     p.add_argument("--heading-setting", type=Path, help="v102_condition_heading と同じ形の JSON ファイル（任意）")
+    p.add_argument("--shime-setting", type=Path, help="v102_shime_box_all_states と同じ形の JSON ファイル（任意）")
     return p.parse_args(argv)
 
 
@@ -205,7 +223,7 @@ def main(argv: list[str] | None = None) -> int:
 
     session = _get_sync_session()
     try:
-        stats = replay(session, read_posts(args.posts), args.out, args.heading_setting)
+        stats = replay(session, read_posts(args.posts), args.out, args.heading_setting, args.shime_setting)
     finally:
         session.close()
     print(stats)
