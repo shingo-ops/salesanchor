@@ -3308,6 +3308,8 @@
     "deleteEvent": "Delete event",
     "deleteEventConfirm": "Delete this event?",
     "eventTitle": "Title",
+    "addTitle": "Add title",
+    "moreOptions": "More options",
     "eventStart": "Start",
     "eventEnd": "End",
     "eventDescription": "Description",
