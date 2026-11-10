@@ -26,7 +26,7 @@ ADR-1007（値は記録した SQL を 1 回だけ実行する）。ADR-1073。�
 
 | 項目 | 内容 |
 |---|---|
-| precheck | |
-| dryrun | |
-| 実施日時・commit | |
-| verify | |
+| precheck | 2026-11-10 20:37:52 JST・rc=0・`ROWS\|1`・`CAN_PROCEED\|1`・`PRECHECK_DONE` |
+| dryrun | 2026-11-10 20:37:54 JST・rc=0・`UPDATED\|1`・`CHECK_OK 1`・`ROLLBACK`・`DRYRUN_OK` |
+| 実施日時・commit | 2026-11-10 20:37:55 JST・rc=0・`UPDATED\|1`・`CHECK_OK 1`・`COMMIT`・`COMMIT_DONE`。実行は PO の `!`（manual-only の鍵・SQL は origin/main 1ac5ce51e の本ファイル群を git show で読んだもの） |
+| verify | 2026-11-10 20:37:56 JST・rc=0・`KW_NEW\|1`・`OTHERS_SAME\|1`・`ONLY_CN0003\|1`・`VERIFY_DONE`。生の出力は PO の Mac の `~/CC報告ファイル-keep/shime-bin2/` |
