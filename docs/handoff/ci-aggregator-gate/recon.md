@@ -9,7 +9,7 @@
 
 - `git grep -n "aggregator\|集約" origin/main -- docs/adr` は、この型を決めた ADR に当たらなかった（当たった 2 件は別の話）。
 - この型の由来は Issue #523 / PR #534（paths の絞り込みがあると、必須チェックが「報告なし」のまま待ち続け、PR を合流できなくなった）。`.github/workflows/e2e.yml:30` と `.github/workflows/schema-check.yml:20-23` の説明に書いてある。
-- この型を守る既存の検査: `.github/workflows/workflow-lint.yml:86-95`（migration-test.yml と e2e.yml に `has_aggregator_pattern`）と `:147-172`（`job.get("if") == "always()"` で needs を持つジョブがあるか、dorny/paths-filter を使うジョブがあるか）。この検査は「まとめ役が変更の判定の結果を見ているか」は見ない。workflow-lint.yml は PO だけが変えられる（CLAUDE.md「不可逆操作」、`workflow-lint.yml:28-41` が自分の変更を止める）。
+- この型を守る既存の検査: `.github/workflows/workflow-lint.yml:86-95`（migration-test.yml と e2e.yml に `has_aggregator_pattern`）と `:147-172`（`job.get("if") == "always()"` で needs を持つジョブがあるか、dorny/paths-filter を使うジョブがあるか）。この検査は「まとめ役が変更の判定の結果を見ているか」は見ない。この検査のファイルは PO だけが変えられる（CLAUDE.md「不可逆操作」、`.github/workflows/workflow-lint.yml:28-41` が自分の変更を止める）。
 - 関係する決まり: ADR-135・ADR-136（必須チェックと危険なパス）・ADR-1047（決まり台帳）・docs/specs/rule-enforcement/README.md（決まりを機械の検査に変える取り組み）。
 
 ## 1. まとめ役の今の形（事実）
@@ -55,7 +55,7 @@
 
 ## 4. 守る場所の候補（事実）
 
-- workflow-lint.yml の has_aggregator_pattern は `job.get("if") == "always()"` を文字の一致で確かめる（`.github/workflows/workflow-lint.yml:150-156`）。まとめ役の `if:` を `!cancelled()` などに変えると、この検査が落ちる。workflow-lint.yml は PO だけが変えられる。だから、まとめ役の `if: always()` は変えず、run の中の判定の式を変える。
+- workflow-lint.yml の has_aggregator_pattern は `job.get("if") == "always()"` を文字の一致で確かめる（`.github/workflows/workflow-lint.yml:150-156`）。まとめ役の `if:` を `!cancelled()` などに変えると、この検査が落ちる。この検査のファイルは PO だけが変えられる。だから、まとめ役の `if: always()` は変えず、run の中の判定の式を変える。
 - 必須チェックの一覧を変える（Ruleset）のは PO だけ（CLAUDE.md「不可逆操作」）。だから、新しい検査は、すでに必須で毎回動くジョブの中の 1 つの段として足す。
 - test.yml のまとめ役 `pytest` は毎回動き、必須チェック。今は checkout をしていない（`.github/workflows/test.yml:268-280` は run 1 つだけ）。
 - test.yml の判定ジョブの対象（`.github/workflows/test.yml:39-51`）は backend/・migrations/・scripts/・test.yml・deploy.yml など。e2e.yml・schema-check.yml などワークフローの変更だけの PR では、pytest-run は動かない。だから、検査を pytest の試験として足すだけだと、ワークフローだけを変える PR で検査が走らない。
