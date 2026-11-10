@@ -410,7 +410,7 @@ async def check_duplicates(
                 OR (
                     p.work_id::text = :work_id
                     AND p.manufacturer_id::text = :manufacturer_id
-                    AND p.product_category_id = :product_category_id
+                    AND p.product_category_id::text = :product_category_id
                 )
               )
             GROUP BY
@@ -424,7 +424,7 @@ async def check_duplicates(
             "title_pattern": f"%{japanese_title.strip()}%",
             "work_id": work_id,
             "manufacturer_id": manufacturer_id,
-            "product_category_id": product_category_id,
+            "product_category_id": str(product_category_id),
         },
     )
     candidates = _build_duplicate_candidates(
@@ -432,7 +432,7 @@ async def check_duplicates(
         japanese_title=japanese_title,
         work_id=work_id,
         manufacturer_id=manufacturer_id,
-        product_category_id=product_category_id,
+        product_category_id=str(product_category_id),
         mark=mark,
         search_keywords=search_keywords,
     )
@@ -522,6 +522,10 @@ async def create_product(
     if missing:
         raise ValueError("REQUIRED_FIELDS_MISSING:" + ",".join(missing))
     try:
+        _category_id_int = int(str(product_category_id).strip())
+    except (TypeError, ValueError):
+        raise ValueError("PRODUCT_CATEGORY_ID_INVALID") from None
+    try:
         _work_id_int: int | None = int(work_id) if str(work_id).strip() else None
     except (TypeError, ValueError):
         _work_id_int = None
@@ -582,7 +586,7 @@ async def create_product(
             "product_kind_id": product_kind_id_int,
             "work_id": work_id_int,
             "manufacturer_id": manufacturer_id,
-            "product_category_id": product_category_id,
+            "product_category_id": _category_id_int,
             "mark": mark.strip() or None,
             "english_title": english_title.strip() or None,
             "product_format_id": int(product_format_id) if product_format_id is not None else None,

@@ -4,6 +4,10 @@ services:
   # Nginxリバースプロキシ
   nginx:
     image: nginx:1.31.1
+    # 作り直しのときに丁寧な停止（SIGQUIT）で 10 秒待たない。流れ続ける接続が終わらず、
+    # 毎回 10 秒待ってから力ずくで止めていた（docs/handoff/nginx-reload-no-downtime/recon.md §3-2）
+    stop_signal: SIGTERM
+    stop_grace_period: 3s
     ports:
       - "80:80"
       - "443:443"

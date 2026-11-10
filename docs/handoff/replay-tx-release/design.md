@@ -144,10 +144,10 @@
 
 ### C5 接続を作り直しても上限が付く（指摘 1）
 
-- 事実: 道具の接続は `backend/app/tasks/tcg_extraction.py:94` の `_engine = create_engine(_DB_URL, echo=False)` から作る。接続ごとの設定は無い。`set_idle_tx_limit`（`backend/app/tools/_tx_guard.py:23`）の SET は、そのとき使っている 1 本の接続にだけ効く。失敗の後の置き直し（§12-5。`v102_replay_diff.py:126`・`prompt_ab_recompute.py:116`）は入っているが、失敗を経ずに接続が作り直された場合（プールが接続を捨てて新しく作る等）は上限が無い。
+- 事実: 道具の接続は `backend/app/tasks/tcg_extraction.py:94` の `_engine = create_engine(_DB_URL, echo=False)` から作る。接続ごとの設定は無い。`set_idle_tx_limit`（`backend/app/tools/_tx_guard.py:23`）の SET は、そのとき使っている 1 本の接続にだけ効く。失敗の後の置き直し（§12-5。`backend/app/tools/v102_replay_diff.py:126`・`backend/app/tools/prompt_ab_recompute.py:116`）は入っているが、失敗を経ずに接続が作り直された場合（プールが接続を捨てて新しく作る等）は上限が無い。
 - 前: `set_idle_tx_limit` は SET・commit・SHOW・rollback だけ。
 - （§14 C5' で置き換え: 登録は別の関数に分け、bind が Engine のときだけ呼ぶ。）
-- 後: `set_idle_tx_limit` が、`session.get_bind()` で得た engine に、SQLAlchemy の "connect" の受け手を 1 回だけ登録する（`sqlalchemy.event.contains` で登録済みかを見て、2 回目以降は登録しない）。受け手は新しい DBAPI 接続ができるたびに `cursor.execute("SET idle_in_transaction_session_timeout = '<秒>s'")`・`cursor.close()`・`dbapi_connection.commit()` を流す（commit しないと、プールへ返すときの rollback で SET が消えるため）。秒は `IDLE_TX_LIMIT_SECONDS`（`_tx_guard.py:16`）を正本にし、別の値を書かない。今の SET・commit・SHOW・rollback・ログはそのまま残す（今の接続の分）。
+- 後: `set_idle_tx_limit` が、`session.get_bind()` で得た engine に、SQLAlchemy の "connect" の受け手を 1 回だけ登録する（`sqlalchemy.event.contains` で登録済みかを見て、2 回目以降は登録しない）。受け手は新しい DBAPI 接続ができるたびに `cursor.execute("SET idle_in_transaction_session_timeout = '<秒>s'")`・`cursor.close()`・`dbapi_connection.commit()` を流す（commit しないと、プールへ返すときの rollback で SET が消えるため）。秒は `IDLE_TX_LIMIT_SECONDS`（`backend/app/tools/_tx_guard.py:16`）を正本にし、別の値を書かない。今の SET・commit・SHOW・rollback・ログはそのまま残す（今の接続の分）。
 - 根拠: SQLAlchemy 2.0 の文書（Context7 /websites/sqlalchemy_en_20_core で 2026-11-10 確認。engines.html「Modify DBAPI connection after connect」）は、"connect" の受け手を engine に付けると、新しい接続ができるたびに使われる前に呼ばれ、cursor で SET を流す例を示す。同じ文書（events.html の PoolEvents.reset・SQL Execution and Connection Events）は、プールが既定（reset_on_return='rollback'）で接続を返すときに rollback すると書く。PostgreSQL の SET は取引の中で流すと rollback で取り消されるので、受け手は commit まで流す。
 - 効く範囲: 受け手を登録するのは `set_idle_tx_limit` を呼んだ処理（道具の一時コンテナ）の中だけ。`backend/app` の中で `app.tools` を読み込む所は道具自身のほかに無い（`grep -rn "app\.tools" backend/app` で `backend/app/tools/` の外は 0 件）。アプリ・Celery の処理は `set_idle_tx_limit` を呼ばないので、同じ `_engine` を使っていても受け手は付かない（engine は処理（プロセス）ごとに別に作られる）。
 - 戻し方: 受け手の登録の数行を消す PR を revert。DB は変えない。
@@ -155,9 +155,9 @@
 ### C6 共通の関数を使わない道具を機械で止める（指摘 2）
 
 - 新しい試験 backend/tests/test_tools_tx_guard_required.py（必須チェック「pytest (SQLite + PostgreSQL RLS)」の中で走る）。
-- 中身: `backend/app/tools/*.py` を全部読み（`__init__.py` と `_tx_guard.py` を除く）、本文に `_get_sync_session` か `Session(` があるのに `app.tools._tx_guard` を import していないファイルがあれば赤。理由つきの例外表（ファイル名 → 理由）にあるものは除く。例外表に載っているのに本文に `_get_sync_session` も `Session(` も無いファイルがあっても赤（古い例外を残さない）。
-- 例外表（2026-11-10 の実物）: `reextract_v6_with_v102.py` → 書き込み（`_insert_rows`・`_update_job`）を含み、投稿ごとに読み取りの後で取引を閉じる（`backend/app/tools/reextract_v6_with_v102.py:456`）。共通の関数の rollback を足すと書き込みを捨てうるので対象外。開いたままの握りは本番反映の前の点検（deploy-db-stall §18 便2）が見つける。
-- `sync_review_reason_labels.py` は Session を使わないので例外表に載せない（試験は何もしない）。
+- 中身: backend/app/tools の下の .py を全部読み（__init__ と `backend/app/tools/_tx_guard.py` を除く）、本文に `_get_sync_session` か `Session(` があるのに `app.tools._tx_guard` を import していないファイルがあれば赤。理由つきの例外表（ファイル名 → 理由）にあるものは除く。例外表に載っているのに本文に `_get_sync_session` も `Session(` も無いファイルがあっても赤（古い例外を残さない）。
+- 例外表（2026-11-10 の実物）: `backend/app/tools/reextract_v6_with_v102.py` → 書き込み（`_insert_rows`・`_update_job`）を含み、投稿ごとに読み取りの後で取引を閉じる（`backend/app/tools/reextract_v6_with_v102.py:456`）。共通の関数の rollback を足すと書き込みを捨てうるので対象外。開いたままの握りは本番反映の前の点検（deploy-db-stall §18 便2）が見つける。
+- `backend/app/tools/sync_review_reason_labels.py` は Session を使わないので例外表に載せない（試験は何もしない）。
 - 範囲外: `scripts/` の下の道具（`scripts/accuracy/llm_compare/fhd_snapshot.py` など）。わざと 1 つの写しで読む作りで計算の待ちが無い（§2）。数が多く形もばらばらなので、本番反映の前の点検に任せる。
 - 赤の実演（実装 PR で 1 回、結果を PR に貼る）: (1) prompt_ab.py の `_tx_guard` の import を消すと赤 (2) 例外表から reextract_v6_with_v102.py を消すと赤 (3) 例外表に存在しないファイル名を足すと赤。
 
@@ -187,7 +187,7 @@ Q1 の結果: APPROVE（2026-11-10 01:38Z、クラウドの Architect＝Opus、�
 
 ### C5' 受け手の登録は本物の engine のときだけ（中2）
 
-- 事実: `backend/tests/test_v102_replay_diff.py` :18 は `session = MagicMock()` で、本物の `set_idle_tx_limit` をそのまま通す。差し替えているのは `test_prompt_ab.py` :50 と `test_prompt_ab_recompute.py` :74 だけ。`test_tx_guard.py` も MagicMock を使う。
+- 事実: `backend/tests/test_v102_replay_diff.py` :18 は `session = MagicMock()` で、本物の `set_idle_tx_limit` をそのまま通す。差し替えているのは `backend/tests/test_prompt_ab.py` :50 と `backend/tests/test_prompt_ab_recompute.py` :74 だけ。`backend/tests/test_tx_guard.py` も MagicMock を使う。
 - 後: 受け手の登録を `set_idle_tx_limit` の中に直に書かず、別の関数（例 `install_idle_tx_listener(bind)`）に分ける。`set_idle_tx_limit` は `session.get_bind()` が `sqlalchemy.engine.Engine` のときだけその関数を呼ぶ（偽物の session のときは登録しない）。登録の関数は `event.contains` で登録済みなら何もしない。
 - カードに書くこと: MagicMock を使う今の試験（上の3か所と test_tx_guard.py）が C5 の後も緑のままであること。赤になったら、試験の側でなく上の「Engine のときだけ」の判定を確かめる。
 
@@ -204,7 +204,7 @@ Q1 の結果: APPROVE（2026-11-10 01:38Z、クラウドの Architect＝Opus、�
 
 §13 の C6 をこう置き換える（同じ試験ファイル backend/tests/test_tools_tx_guard_required.py）。
 
-- 見る範囲: `backend/app/tools/` の下を下のフォルダまで（`rglob("*.py")`）。`__init__.py` と `_tx_guard.py` は除く。
+- 見る範囲: `backend/app/tools/` の下を下のフォルダまで（`rglob("*.py")`）。__init__ と `backend/app/tools/_tx_guard.py` は除く。
 - DB を使う道具の見分け方: 本文が次の正規表現のどれかに当たる（語の区切りを付ける。PR #5348 の審査の推奨2）。`\b_get_sync_session\b`・`\bSession\(`・`\bSessionLocal\(`・`\bAsyncSessionLocal\(`・`\b_engine\b`・`\bcreate_engine\(`・`\bsessionmaker\(`・`\.connect\(`・`from app\.database import`。例: `get_engine(`（reextract_v6_with_v102.py :214、解析の版の話）は `\b_engine\b` に当たらない（前が `get` で語の区切りが無い）。`SessionLocal(` は当たる。
 - 範囲外: 上の正規表現に当たらない取り方（別のモジュールの関数を通して接続を得る等）は、試験では見つけない。本番反映の前の点検（deploy-db-stall §18 便2）に任せる。
 - 判定: DB を使う道具なのに、本文で `set_idle_tx_limit(` を呼んでいなければ赤（import だけでは通さない）。例外表の扱いは §13 のまま（例外表にあるのに上の語が1つも無ければ赤）。
