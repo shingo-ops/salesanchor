@@ -1,7 +1,7 @@
 # Opus 審査記録: 規則12h の設計（同一 AI の自己審査・独立の審査ではない）
 
 - 日時: 2026-11-10
-- 対象: `docs/handoff/shime-box-all-states/recon.md`・`design.md`・`docs/adr/ADR-1073-shime-box-all-states.md`
+- 対象: `docs/handoff/shime-box-all-states/recon.md`・`docs/handoff/shime-box-all-states/design.md`・`docs/adr/ADR-1073-shime-box-all-states.md`
 - 判定: APPROVE（便1 は実装可能）。便4（設定を入れる）は design §6 の未解決（設定を消した後の古い相手の扱い）が片付くまで不可。
 - 確かめたこと（origin/main 96a63df05 以降の実物）:
   - `decide_soldout_inherit` の呼び出しは `backend/app/services/gemini_raw_copy_v101.py:1314` の 1 か所だけ（`git grep`）。
