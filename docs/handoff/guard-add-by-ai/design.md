@@ -387,7 +387,7 @@
   2. `PATH=<別の場所>` を前に付けると、台本が動く前に `bash` と `python3` の選び先が決まる（install-guard.sh:8 の `python3` は PATH で探す）。台本の中の確かめでは止められない。
 - PO の決定（2026-11-10「1」）: 見張りを1つ足す方法に変える。
 - 見張りの中身（正本 `scripts/agent-hooks/install-form-guard/`。札・本体・試験の3つ）:
-  1. PreToolUse・matcher `Bash`・interpreter `python3`・file `guard.py`。`after` は書かない（組の最後に足す。止める見張りは並びの位置で効きが変わらない）。
+  1. PreToolUse・matcher `Bash`・interpreter `python3`・file `scripts/agent-hooks/install-form-guard/guard.py`。`after` は書かない（組の最後に足す。止める見張りは並びの位置で効きが変わらない）。
   2. `tool_input.command` が文字列でなければ止めない（exit 0）。
   3. 当たり判定: 命令から `'`・`"`・`\` を取り除き、小文字にした文字列に、`install-guard` か `.salesanchor-tools/scripts/agent-hooks` のどちらかが含まれれば対象。引用符を挟んで名前を分ける書き方（`install-gu''ard`）も対象になる。
   4. 対象のうち、元の命令（何も取り除かない）が `^bash ~/\.salesanchor-tools/scripts/agent-hooks/install-guard\.sh [a-z0-9-]+$`（re.fullmatch。前後の空白・改行も許さない）に一致するものだけを通す（exit 0）。HKI-1 の文と同じ形。
@@ -396,7 +396,7 @@
   7. 入力の JSON が読めないときは止めない（exit 0）。mac-test-guard と同じ。Claude Code が壊れた JSON を渡すことは無い前提で、ほかの Bash を巻き添えで止めないため。
   8. 本体に §5-5 の語（`approve`・`behavior`・`updatedInput` など）を書かない。台本と点検の語の検査に当たるため。
 - 公式の動き（Context7 `/websites/code_claude`・code.claude.com/docs/en/hooks で 2026-11-10 に確認）: PreToolUse で exit 2 を返すと、その道具の呼び出しは止まり、標準エラーが Claude に返る。exit 0 は許可にならず、ふつうの許可の流れ（自動判定を含む）へ進む。よってこの見張りは自動判定の前に止め、通したものも自動判定の確かめを受ける。
-- 巻き添え: Opus が手元の Bash で `git show …install-guard.sh` や `grep install-guard` を打つと止まる。中を読むときは Read ツールを使う（consent-guard と同じ扱い）。クラウドの担当には ~/.claude の見張りが無いので影響しない。`test_install_guard.py` は `install_guard`（下線）なので当たらない。 Mac で台本の名前（`install-guard`）を含む PR の題・`--body`・commit の文・枝の名前を Bash の命令に直接書くと止まる。PR の本文と commit の文はファイルで渡し、題と枝の名前には台本の名前を入れない。
+- 巻き添え: Opus が手元の Bash で `git show …install-guard.sh` や `grep install-guard` を打つと止まる。中を読むときは Read ツールを使う（consent-guard と同じ扱い）。クラウドの担当には ~/.claude の見張りが無いので影響しない。`scripts/agent-hooks/test_install_guard.py` は `install_guard`（下線）なので当たらない。 Mac で台本の名前（`install-guard`）を含む PR の題・`--body`・commit の文・枝の名前を Bash の命令に直接書くと止まる。PR の本文と commit の文はファイルで渡し、題と枝の名前には台本の名前を入れない。
 - 受け入れたリスク: 変数で文字列を組み立てる書き方（例 `D=install; bash ~/…/${D}-guard.sh x`）と、グロブ・波かっこ・パスの書き換えを使う書き方（設計審査で exit 0 を実測した例: `cd ~/.salesanchor-tools/scripts && bash agent-hooks/install-g?ard.sh x`・`bash ~/.salesanchor-tools/scripts//agent-hooks/install-gu*.sh x`・`bash ~/.salesanchor-tools/scripts/./agent-hooks/install-{g,}uard.sh x`）は、この見張りでは見つけきれない。当たり判定を広げると普段の命令（`perm-change.py sync` など）を巻き添えにするため、広げない。HKI-1 の形に合わないので自動判定の確かめは受ける。最後の守りは今までどおり週次点検（設定が変われば記録で説明できない限り B）。
 - 入れ方: マージ → `perm-change.py sync` で ~/.salesanchor-tools を GitHub main にそろえる → Opus が `bash ~/.salesanchor-tools/scripts/agent-hooks/install-guard.sh install-form-guard` を1回。これが K1（§2）の最初の実測になる（差が出る最初の見張り。§6 の 111 行目）。PO の `!` は要らない。
 - 受入条件:
