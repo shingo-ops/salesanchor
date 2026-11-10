@@ -9,7 +9,7 @@
 
 - `git grep -n "aggregator\|集約" origin/main -- docs/adr` は、この型を決めた ADR に当たらなかった（当たった 2 件は別の話）。
 - この型の由来は Issue #523 / PR #534（paths の絞り込みがあると、必須チェックが「報告なし」のまま待ち続け、PR を合流できなくなった）。`.github/workflows/e2e.yml:30` と `.github/workflows/schema-check.yml:20-23` の説明に書いてある。
-- この型を守る既存の検査: `.github/workflows/workflow-lint.yml:86-95`（migration-test.yml と e2e.yml に `has_aggregator_pattern`）と `:147-172`（`job.get("if") == "always()"` で needs を持つジョブがあるか、dorny/paths-filter を使うジョブがあるか）。この検査は「まとめ役が変更の判定の結果を見ているか」は見ない。この検査のファイルは PO だけが変えられる（CLAUDE.md「不可逆操作」、`.github/workflows/workflow-lint.yml:28-41` が自分の変更を止める）。
+- この型を守る既存の検査: `.github/workflows/workflow-lint.yml:86-95`（migration-test.yml と e2e.yml に `has_aggregator_pattern`）と `:148-172`（`job.get("if") == "always()"` で needs を持つジョブがあるか、dorny/paths-filter を使うジョブがあるか）。この検査は「まとめ役が変更の判定の結果を見ているか」は見ない。この検査のファイルは PO だけが変えられる（CLAUDE.md「不可逆操作」、`.github/workflows/workflow-lint.yml:28-41` が自分の変更を止める）。
 - 関係する決まり: ADR-135・ADR-136（必須チェックと危険なパス）・ADR-1047（決まり台帳）・docs/specs/rule-enforcement/README.md（決まりを機械の検査に変える取り組み）。
 
 ## 1. まとめ役の今の形（事実）
@@ -18,11 +18,11 @@
 
 | ワークフロー | まとめ役（必須チェック名） | 場所 | needs | 判定に使う結果 | 必須か |
 |---|---|---|---|---|---|
-| test.yml | pytest (SQLite + PostgreSQL RLS) | `.github/workflows/test.yml:263-280` | detect-changes, pytest-run, lint-backend | pytest-run, lint-backend | はい |
+| test.yml | pytest (SQLite + PostgreSQL RLS) | `.github/workflows/test.yml:263-281` | detect-changes, pytest-run, lint-backend | pytest-run, lint-backend | はい |
 | e2e.yml | Lint & Dark Mode Check (ADR-067) | `.github/workflows/e2e.yml:126-145` | detect-changes, lint-run, unit-run | lint-run, unit-run | はい |
 | migration-test.yml | マイグレーションSQL 実行テスト（実DB） | `.github/workflows/migration-test.yml:2130-2152` | detect-changes, registration-exists, registration-exists-regression, test-run, full-dryrun | 4 つの実行役 | はい |
 | schema-check.yml | テナントスキーマ整合性チェック | `.github/workflows/schema-check.yml:222-238` | detect-changes, schema-check-run | schema-check-run | はい |
-| e2e.yml | 画面検査（受信箱 3幅 Playwright） | `.github/workflows/e2e.yml:230-245` | detect-changes, visual-language-run | visual-language-run | いいえ |
+| e2e.yml | 画面検査（受信箱 3幅 Playwright） | `.github/workflows/e2e.yml:230-246` | detect-changes, visual-language-run | visual-language-run | いいえ |
 | karte-gate.yml | Karte Visual Gate (chromium) | `.github/workflows/karte-gate.yml:121-137` | detect-changes, karte-gate-run | karte-gate-run | いいえ |
 
 - 必須かどうかは `docs/specs/rule-enforcement/required-checks.txt:1-16` で確かめた（上の 4 つが入っている。下の 2 つは入っていない）。
@@ -60,7 +60,7 @@
 
 - workflow-lint.yml の has_aggregator_pattern は `job.get("if") == "always()"` を文字の一致で確かめる（`.github/workflows/workflow-lint.yml:150-156`）。まとめ役の `if:` を `!cancelled()` などに変えると、この検査が落ちる。この検査のファイルは PO だけが変えられる。だから、まとめ役の `if: always()` は変えず、run の中の判定の式を変える。
 - 必須チェックの一覧を変える（Ruleset）のは PO だけ（CLAUDE.md「不可逆操作」）。だから、新しい検査は、すでに必須で毎回動くジョブの中の 1 つの段として足す。
-- test.yml のまとめ役 `pytest` は毎回動き、必須チェック。今は checkout をしていない（`.github/workflows/test.yml:268-280` は run 1 つだけ）。
+- test.yml のまとめ役 `pytest` は毎回動き、必須チェック。今は checkout をしていない（`.github/workflows/test.yml:268-281` は run 1 つだけ）。
 - test.yml の判定ジョブの対象（`.github/workflows/test.yml:39-51`）は backend/・migrations/・scripts/・test.yml・deploy.yml など。e2e.yml・schema-check.yml などワークフローの変更だけの PR では、pytest-run は動かない。だから、検査を pytest の試験として足すだけだと、ワークフローだけを変える PR で検査が走らない。
 - 既存の scripts/ci の検査と試験の置き場: `scripts/ci/check_rule_registry.py` とその試験 `scripts/tests/test_check_rule_registry.py`（`.github/workflows/rule-registry.yml:32-33` で `python3 -I` で流す）。この型にそろえる。
 - workflow-lint.yml は、GitHub の実行機に入っている python3 で `import yaml` を使っている（`.github/workflows/workflow-lint.yml:46-47`）。同じ実行機（ubuntu-latest）で PyYAML が使える実例。

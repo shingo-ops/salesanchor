@@ -2,7 +2,7 @@
 
 - 状態: 設計案（PO 未承認）。実装は未着手。
 - 根拠: docs/handoff/ci-aggregator-gate/recon.md（行番号は origin/main ae8def4d3）。
-- 関係する決まり: ADR-135・ADR-136（必須チェックと危険なパス。この設計は migrations・deploy.yml・本番の scripts に触らない）・ADR-1003（GO の委任。例外の 7 種のうち Ruleset と workflow-lint.yml には触らない）・ADR-1047（決まり台帳）・docs/specs/rule-enforcement/README.md。
+- 関係する決まり: ADR-135・ADR-136（必須チェックと危険なパス。この設計は migrations・deploy.yml に触らない。実装 PR は scripts/ci/ と scripts/tests/ を新しく作るので、scripts/check-process-artifacts.js:1025 の危険なパスに当たり、GO 記録が要る。実装カードにもそう書く）・ADR-1003（GO の委任。例外の 7 種のうち Ruleset と workflow-lint.yml には触らない）・ADR-1047（決まり台帳）・docs/specs/rule-enforcement/README.md。
 
 ## 1. 目的（KGI）
 
@@ -15,11 +15,11 @@
 
 | 区分 | 中身 | 理由 |
 |---|---|---|
-| 対象 | `.github/workflows/test.yml:263-280` まとめ役 pytest の判定の式 | 必須・穴あり（recon §1） |
+| 対象 | `.github/workflows/test.yml:263-281` まとめ役 pytest の判定の式 | 必須・穴あり（recon §1） |
 | 対象 | `.github/workflows/e2e.yml:126-145` まとめ役 lint の判定の式 | 同上 |
 | 対象 | `.github/workflows/migration-test.yml:2130-2152` まとめ役 migration-test の判定の式 | 同上 |
 | 対象 | `.github/workflows/schema-check.yml:222-238` まとめ役 schema-check の判定の式 | 同上 |
-| 対象 | `.github/workflows/e2e.yml:230-245` visual-language・`.github/workflows/karte-gate.yml:121-137` karte-gate の判定の式 | 必須ではないが同じ型。型をそろえ、§3 C7 の検査で 1 つの決まりとして守る |
+| 対象 | `.github/workflows/e2e.yml:230-246` visual-language・`.github/workflows/karte-gate.yml:121-137` karte-gate の判定の式 | 必須ではないが同じ型。型をそろえ、§3 C7 の検査で 1 つの決まりとして守る |
 | 対象 | 新しい検査 scripts/ci/check_ci_aggregators.py（新規） と試験 scripts/tests/test_check_ci_aggregators.py（新規） | 同じ穴が新しいまとめ役で再び生まれないように機械で止める |
 | 対象 | test.yml のまとめ役 pytest に、上の検査と試験を流す段を足す | 毎回動く必須チェックの中で流すため（recon §4） |
 | 対象外 | まとめ役の `if: always()` | workflow-lint.yml が文字の一致で確かめている（recon §4）。変えると PO だけが直せる検査が落ちる |
@@ -29,7 +29,7 @@
 
 ## 3. 変更前と変更後
 
-### C1 test.yml のまとめ役 pytest（`.github/workflows/test.yml:268-280` の run）
+### C1 test.yml のまとめ役 pytest（`.github/workflows/test.yml:268-281` の run）
 
 変更前（要点）:
 
@@ -82,12 +82,12 @@ C1 と同じ形。答えは frontend。karte-gate-run の条件には `|| github
 
 ### C7 新しい検査 scripts/ci/check_ci_aggregators.py（新規）（標準ライブラリと PyYAML だけ）
 
-.github/workflows の全部の yml を全部読み、`if` が `always()` で needs に `detect-changes` を含むジョブ（まとめ役）ごとに、次を確かめる。1 つでも外れたら、ファイル名・ジョブ名・足りないものを書いて終了コード 1。
+.github/workflows の直下にある拡張子 .yml のファイルだけを全部読み（README.md と _archive/ は対象外）、`if` が `always()` で needs に `detect-changes` を含むジョブ（まとめ役）ごとに、次を確かめる。1 つでも外れたら、ファイル名・ジョブ名・足りないものを書いて終了コード 1。
 
 - run の中に `needs.detect-changes.result` がある。
 - run の中に `needs.detect-changes.outputs.` がある。
 - needs に挙げた detect-changes 以外の全部のジョブについて、run の中に `needs.<そのジョブ>.result` がある（実行役を足したのに判定に入れ忘れたら赤）。
-- 真理値表の試験: run を取り出し、`${{ ... }}` を値に置き換えて bash で流し、次の全部の組で終了コードが §3 C1 の決まりどおりかを確かめる。判定ジョブの結果 4 通り（success・failure・cancelled・skipped）× 答え 3 通り（true・false・空）× 実行役の結果（success・failure・skipped・cancelled）。workflow_dispatch の扱い（C6）も組に入れる。
+- 真理値表の試験: run を取り出し（名前が「Report results」の段の run だけを取り出す。今の 6 つのまとめ役は全部この名前の段を持つ。名前の段が無ければ赤）、`${{ ... }}` を値に置き換えて bash で流し、次の全部の組で終了コードが §3 C1 の決まりどおりかを確かめる。判定ジョブの結果 4 通り（success・failure・cancelled・skipped）× 答え 3 通り（true・false・空）× 実行役の結果（success・failure・skipped・cancelled）。workflow_dispatch の扱い（C6）も組に入れる。
 
 ### C8 試験 scripts/tests/test_check_ci_aggregators.py（新規）
 
@@ -171,13 +171,13 @@ C1 と同じ形。答えは frontend。karte-gate-run の条件には `|| github
 | 新しいまとめ役が同じ穴を持って生まれない | C7 は `.github/workflows` の全部のファイルを見るので、新しいまとめ役も対象になる | 実装の後にできる | §3 C7 |
 | 実行役を足したのに判定に入れ忘れない | C7 の 3 つ目の確かめ | 実装の後にできる | §3 C7 |
 | 検査そのものが壊れても気づく | C8 の赤と緑の見本の試験 | 実装の後にできる | §3 C8 |
-| まとめ役の型（detect-changes＋always()）が消えない | workflow-lint.yml の has_aggregator_pattern（migration-test.yml・e2e.yml） | 有り | `.github/workflows/workflow-lint.yml:86-95`・`:147-172` |
+| まとめ役の型（detect-changes＋always()）が消えない | workflow-lint.yml の has_aggregator_pattern（migration-test.yml・e2e.yml） | 有り | `.github/workflows/workflow-lint.yml:86-95`・`:148-172` |
 
 - 守り手: .github/workflows/test.yml のまとめ役 pytest（必須チェック「pytest (SQLite + PostgreSQL RLS)」）。実装の後は、この中で scripts/ci/check_ci_aggregators.py が毎回動く。今は .github/workflows/workflow-lint.yml が型の有る無しだけを守っている。
-- 足りないもの: test.yml・schema-check.yml・karte-gate.yml の型の有る無しは workflow-lint.yml の対象に入っていない（`.github/workflows/workflow-lint.yml:86-95` は migration-test.yml と e2e.yml だけ）。C7 は「まとめ役がある場合の中身」を見るが、「まとめ役が消えた」ことは見ない。workflow-lint.yml に足すのは PO だけができるので、この設計では足さず、PO に示す。
+- 足りないもの: test.yml・schema-check.yml・karte-gate.yml の型の有る無しは workflow-lint.yml の対象に入っていない（`.github/workflows/workflow-lint.yml:86-95` は migration-test.yml と e2e.yml だけ）。C7 は「まとめ役がある場合の中身」を見るが、「まとめ役が消えた」ことは見ない。C7 はまとめ役を「needs に detect-changes という名前のジョブを持つ」ことで見つけるので、別の名前の判定ジョブを使うまとめ役は見逃す。workflow-lint.yml に足すのは PO だけができるので、この設計では足さず、PO に示す。
 
 ## 10. 自己審査（Architect・同じ AI による。独立した第二者の審査ではない）
 
-- 判定: 下の審査役の結果を待つ。
-- 確かめたこと: 触るのは CI の判定の式と新しい検査だけ。migrations・deploy.yml・本番の scripts・workflow-lint.yml・Ruleset に触らない（K5）。受入条件は全部、CI の結果か gh api の数で ○× が決まる。変更前と変更後の式、触らない範囲を書いた。
-- 残る未確認: recon §3-1（残り 3 つのワークフローの数え上げ）と recon §5。どちらも設計の形を変えない（穴の仕組みはファイルの中身と公式文書で確かめた）。
+- 判定: 審査役（opus）が 2026-11-10 に c85ddd1b6 で APPROVE。止める指摘 0 件。止めない指摘 5 件（危険なパスの GO・C7 の対象と段の名前・行番号の 1 行の差・§10 の古い文・判定ジョブの名前）は、この版で全部直した。
+- 確かめたこと: 触るのは CI の判定の式と新しい検査だけ。migrations・deploy.yml・workflow-lint.yml・Ruleset に触らない（K5）。scripts/ の下に新しい検査を作るので、実装 PR は GO 記録が要る。受入条件は全部、CI の結果か gh api の数で ○× が決まる。変更前と変更後の式、触らない範囲を書いた。
+- 残る未確認: recon §5（判定ジョブが失敗する頻度・取り消された回のまとめ役の出力）。必須でない 2 つのまとめ役の数え上げ。どちらも設計の形を変えない（穴の仕組みはファイルの中身と公式文書で確かめた）。
