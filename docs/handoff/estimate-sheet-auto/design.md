@@ -422,3 +422,8 @@ PO の要件（2026-11-07）: 「タブがある人には配信してない人�
   - 原因はまだ確かめていない。読み取り専用の鍵ではサーバーの記録を読めない。手がかり（未確認）: 11-07 に入った接続の返し方の変更（ADR-1070 便2）。
   - 未着手: 8商品の発売日・見分けの語（編集の画面は登録と別の入口）。
   - 新しく分かった問題: 検索ワードは「,」で区切って保存される。OP-19 の英語名「COME IN, WORLD」をそのまま検索ワードに入れると「COME IN」と「WORLD」の2語に分かれる。
+- 新規登録の失敗の原因（2026-11-10・PO「1」＝原因調べと直しを進める）:
+  - 観測: 11:19ごろ EB-06 でもう1回だけ作成を押し、本番 backend の記録（読むだけ）を流して取った。`POST /api/v1/tcg/products/create` 500。記録の文: `asyncpg.exceptions.DataError: invalid input for query argument $4: '1' ('str' object cannot be interpreted as an integer)`。止まった SQL は重複の確かめ（`check_duplicates` の `AND p.product_category_id = :product_category_id`）。渡った値 `('%EAST BLUE%', '2', '<Bandai>', '1')`。本番 DB で5商品の型番を数えて0件（何も書かれていない）。
+  - 原因（コードで確認）: 画面は商品区分を文字 "1" で送る（`TcgProductDetailDrawer.tsx` の saveCreate・`CreateProductBody.product_category_id: str`）。2026-09-20 の 90367c1a3 で比べ方の `::text` を外したため、数の列と文字の値の比べになり、asyncpg が止める。商品マスタ画面の「新規追加」は、それ以降どの商品でも失敗する。10-30 の登録がどの入口から入ったかはまだ確かめていない。
+  - 直し方の案（未承認・実装は PO の明示承認の後にクラウドの担当）: `create_product` の入口で商品区分を数に直し（`int(product_category_id)`）、重複の確かめと INSERT の両方にその数を渡す。数にできない値は 422。PostgreSQL の試験で「文字の "1" を渡しても登録できる」を足す。触らない: 画面・SQL の他の比べ・他の入口。
+  - 戻し方: その1コミットを戻す。測り方: 直った後、本番の商品マスタ画面から EB-06 を登録し、200 と DB の1件を確かめる。
