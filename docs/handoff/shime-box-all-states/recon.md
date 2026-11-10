@@ -41,8 +41,8 @@
 ### 2-4 設定の前例
 
 - `backend/app/services/gemini_raw_copy_v102_product_first.py:172-174`: 設定の key を定数で持ち、値（JSON）を純粋関数で検査（`:410`・`:456`）。key が無いと働かない。
-- やり直しの道具は設定を JSON ファイルで差し込める: `backend/app/tools/v102_replay_diff.py:182`（`--heading-setting`）。
-- 語の試しで使った道具（`scripts/accuracy/condition_words/`）は試しのブランチ `release/condition-abbr-trial` にだけあり、origin/main には無い（`git ls-tree origin/main` で 0 件）。
+- やり直しの道具は設定を JSON ファイルで差し込める: `backend/app/tools/v102_replay_diff.py` の `--heading-setting`（`:59-60`（読み込み）・`:105`（`replay` の引数）・`:111-112`（差し替え）・`:191`（`add_argument`）・`:208`（渡す所））。試験は `backend/tests/test_v102_replay_diff.py`。
+- 語の試しで使った道具（`scripts/accuracy/condition_words/`）は試しのブランチ `release/condition-abbr-trial` にだけあり、調査の時点の origin/main には無かった（`git ls-tree origin/main` で 0 件）。この設計の PR で記録として main に入れる。
 - 状態の `value_group`・`value_rank` は `public.conditions` から読む（`backend/app/services/tcg_analyzer_svc.py:695-712`）。
 
 ## 3. 数（社外秘の記録から、数だけ）
