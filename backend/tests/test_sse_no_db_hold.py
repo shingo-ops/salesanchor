@@ -64,7 +64,7 @@ def _gen_deps(dep: Dependant, seen=None):
         if id(sub) in seen:
             continue
         seen.add(id(sub))
-        if sub.is_gen_callable() or sub.is_async_gen_callable():
+        if sub.is_gen_callable or sub.is_async_gen_callable:
             out.append(getattr(sub.call, "__name__", repr(sub.call)))
         out.extend(_gen_deps(sub, seen))
     return out
