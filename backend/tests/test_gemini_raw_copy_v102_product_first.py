@@ -345,7 +345,7 @@ def test_loader_reads_condition_units_and_active_ignore_phrases(monkeypatch):
         sql = str(stmt)
         calls.append(sql)
         rows = (
-            [] if "type_master" in sql else [(7, date(2026, 10, 16))] if "release_date" in sql
+            [] if "type_master" in sql or "value_group" in sql else [(7, date(2026, 10, 16))] if "release_date" in sql
             else [("Set",)] if "line_units" in sql and "line_conditions" not in sql
             else [("Sealed box", "Box")] if "line_conditions" in sql else [("ONE PIECE",)]
         )
@@ -661,7 +661,7 @@ def test_loader_reads_kubun_allowed_units_through_validation(monkeypatch):
     def execute(stmt, params=None):
         sql = str(stmt)
         rows = (
-            [] if "type_master" in sql or "release_date" in sql else [(_OK_JSON,)] if "tcg_distribution_settings" in sql
+            [] if "type_master" in sql or "release_date" in sql or "value_group" in sql else [(_OK_JSON,)] if "tcg_distribution_settings" in sql
             else [(k,) for k in sorted(_VALID_KUBUNS)] if "tcg_product_categories" in sql
             else [("Sealed box", "Box")] if "line_conditions" in sql
             else [(u,) for u in sorted(_VALID_UNITS)] if "line_units" in sql and "code = " not in sql

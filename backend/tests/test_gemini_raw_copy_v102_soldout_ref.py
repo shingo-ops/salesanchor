@@ -18,7 +18,12 @@ import app.services.line_analysis_v102_svc as svc
 from app.services import gemini_raw_copy_v101 as v101
 from app.services import gemini_raw_copy_v102_soldout_ref as sr
 from app.services.extraction_judgement_svc import ProductEntry
-from app.services.gemini_raw_copy_v102_product_first import ProductFirstMasters, WorkName
+from app.services.gemini_raw_copy_v102_product_first import (
+    ProductFirstMasters,
+    ShimeBoxAllStatesRule,
+    WorkName,
+    parse_shime_box_all_states,
+)
 from tests.test_gemini_raw_copy_v102_context_work import _MASTERS, _STATUS
 from tests.test_tcg_work_matching_integration import MIGRATIONS, SCHEMA, seed_products
 from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture
@@ -461,6 +466,68 @@ def test_sold_items_and_stock_items_are_read_apart_from_the_latest_job_with_reso
     assert [(it.product_id, it.condition_canonical) for it in loaded.stock_items] == [(p1, "Sealed box")]
 
 
+def _seed_two_products_and_conditions(pg):
+    seed_products(pg[0])
+    with pg[0].cursor() as cur:
+        cur.execute("SELECT id FROM public.products ORDER BY id LIMIT 2")
+        p1, p2 = (r[0] for r in cur.fetchall())
+        cur.execute("SELECT id, canonical FROM public.conditions WHERE canonical IN ('Sealed box','Case')")
+        cond = {r[1]: r[0] for r in cur.fetchall()}
+    return p1, p2, cond["Case"], cond["Sealed box"]
+
+
+def test_same_created_at_jobs_read_only_the_larger_id_job(pg, channel):
+    p1, p2, case, box = _seed_two_products_and_conditions(pg)
+    post = _insert(pg[0], channel, "前", T0 - timedelta(hours=2))
+    small, large = sorted([str(uuid4()), str(uuid4())])
+    created = T0 - timedelta(hours=1)
+    with pg[0].cursor() as cur:
+        for job_id in (small, large):
+            cur.execute(
+                f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status,created_at) VALUES (%s,%s,'done',%s)",
+                (job_id, post, created),
+            )
+    _add_result(pg[0], small, 0, p2, case, "Case", "Sold out")
+    _add_result(pg[0], small, 1, p2, box, "Sealed box", "In Stock")
+    _add_result(pg[0], large, 0, p1, case, "Case", "Sold out")
+    _add_result(pg[0], large, 1, p1, box, "Sealed box", "In Stock")
+    job = _job(pg[0], _insert(pg[0], channel, "今", T0))
+    (loaded,) = _load(pg, job)
+    assert loaded.sold_items == (sr.SoldItem(p1, "Case"),)
+    assert [(it.product_id, it.condition_canonical) for it in loaded.stock_items] == [(p1, "Sealed box")]
+
+
+def test_two_reference_posts_each_read_their_own_latest_job_in_post_order(pg, channel):
+    p1, p2, case, box = _seed_two_products_and_conditions(pg)
+    post_a = _insert(pg[0], channel, "前A", T0 - timedelta(hours=3))
+    post_b = _insert(pg[0], channel, "前B", T0 - timedelta(hours=2))
+    jobs = {}
+    with pg[0].cursor() as cur:
+        for name, post in (("a", post_a), ("b", post_b)):
+            for kind, age in (("old", "1 hour"), ("latest", "0 seconds")):
+                job_id = str(uuid4())
+                jobs[(name, kind)] = job_id
+                cur.execute(
+                    f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status,created_at) VALUES (%s,%s,'done',now() - %s::interval)",
+                    (job_id, post, age),
+                )
+    _add_result(pg[0], jobs[("a", "old")], 0, p2, box, "Sealed box", "In Stock")  # 古い job の件は読まない
+    _add_result(pg[0], jobs[("b", "old")], 0, p2, box, "Sealed box", "In Stock")
+    _add_result(pg[0], jobs[("a", "latest")], 0, p1, box, "Sealed box", "In Stock")
+    _add_result(pg[0], jobs[("a", "latest")], 1, p1, case, "Case", "Sold out")
+    _add_result(pg[0], jobs[("b", "latest")], 0, p2, case, "Case", "In Stock")
+    _add_result(pg[0], jobs[("b", "latest")], 1, p2, box, "Sealed box", "In Stock")
+    job = _job(pg[0], _insert(pg[0], channel, "今", T0))
+    loaded = _load(pg, job)
+    assert len(loaded) == 2
+    by_id = {str(p.message_id): p for p in loaded}
+    a, b = by_id[str(post_a)], by_id[str(post_b)]
+    assert a.sold_items == (sr.SoldItem(p1, "Case"),)
+    assert [(it.product_id, it.condition_canonical) for it in a.stock_items] == [(p1, "Sealed box")]
+    assert b.sold_items == ()
+    assert [(it.product_id, it.condition_canonical) for it in b.stock_items] == [(p2, "Case"), (p2, "Sealed box")]
+
+
 def test_unknown_job_returns_empty(pg):
     assert _load(pg, str(uuid4())) == ()
 
@@ -565,7 +632,7 @@ def _inherit(items, posts, fixed=None):
 def test_inherit_takes_the_only_stranded_condition_of_the_product():
     post = _post("p1", "x", stock_items=(_inherit_si([3, 4], 62, 21, "Case"),))
     got = _inherit([_shime()], (post,))
-    assert got == {0: sr.SoldoutTarget(62, 21, "p1", 3, "Case")}
+    assert got == {0: (sr.SoldoutTarget(62, 21, "p1", 3, "Case"),)}
 
 
 @pytest.mark.parametrize("effect,status", [("excluded", "In Stock"), (None, "Sold out"), ("", "Sold out")])
@@ -646,13 +713,13 @@ def test_condition_with_a_newer_soldout_row_is_not_stranded():
 def test_condition_with_a_newer_stock_row_uses_the_newer_post_as_reference():
     older = _post("old", "x", 5, stock_items=(_inherit_si([1], 62, 21, "Case"),))
     newer = _post("new", "x", 1, stock_items=(_inherit_si([5, 6], 62, 21, "Case"),))
-    assert _inherit([_shime()], (newer, older)) == {0: sr.SoldoutTarget(62, 21, "new", 5, "Case")}
+    assert _inherit([_shime()], (newer, older)) == {0: (sr.SoldoutTarget(62, 21, "new", 5, "Case"),)}
 
 
 def test_a_condition_sold_in_the_newer_post_while_another_is_still_stranded():
     older = _post("old", "x", 5, stock_items=(_CASE_STOCK, _inherit_si([2], 62, 23, "Pack")))
     newer = dataclasses.replace(_post("new", "x", 1), sold_items=(sr.SoldItem(62, "Pack"),))
-    assert _inherit([_shime()], (newer, older)) == {0: sr.SoldoutTarget(62, 21, "old", 1, "Case")}
+    assert _inherit([_shime()], (newer, older)) == {0: (sr.SoldoutTarget(62, 21, "old", 1, "Case"),)}
 
 
 def test_inherit_does_not_mutate_the_input():
@@ -717,7 +784,7 @@ def test_targets_of_and_inherit_carry_the_unit_of_the_stock_item():
     item = sr.StockItem(frozenset({3}), 62, 21, "Case", 13, "Set")
     post = _post("p1", "x", stock_items=(item,))
     got = _inherit([_shime()], (post,))
-    assert got == {0: sr.SoldoutTarget(62, 21, "p1", 3, "Case", 13, "Set")}
+    assert got == {0: (sr.SoldoutTarget(62, 21, "p1", 3, "Case", 13, "Set"),)}
 
 
 # --- 規則12g：取り残しが2種類以上なら、最新の在庫の投稿の状態が1種類のときそれに当てる（design.md §13-10。(ee)〜(jj)）-----
@@ -731,14 +798,14 @@ def test_inherit_12g_latest_post_with_a_single_state_wins_over_12d():
     # (ee) 古い投稿に Sealed box、新しい投稿に Case だけ。〆の既定は Sealed box
     older = _post("old", "x", 5, stock_items=(_st([1], 22, "Sealed box"),))
     newer = _post("new", "x", 1, stock_items=(_st([4, 5], 21, "Case", 13, "Set"),))
-    assert _inherit([_shime()], (newer, older)) == {0: sr.SoldoutTarget(62, 21, "new", 4, "Case", 13, "Set")}
+    assert _inherit([_shime()], (newer, older)) == {0: (sr.SoldoutTarget(62, 21, "new", 4, "Case", 13, "Set"),)}
 
 
 def test_inherit_12g_other_stranded_state_without_a_box_stock():
     # (ef)
     older = _post("old", "x", 5, stock_items=(_st([1], 24, "No shrink box"),))
     newer = _post("new", "x", 1, stock_items=(_st([2], 21, "Case"),))
-    assert _inherit([_shime()], (newer, older)) == {0: sr.SoldoutTarget(62, 21, "new", 2, "Case")}
+    assert _inherit([_shime()], (newer, older)) == {0: (sr.SoldoutTarget(62, 21, "new", 2, "Case"),)}
 
 
 def test_inherit_12g_does_not_apply_when_the_latest_post_has_two_states():
@@ -783,3 +850,96 @@ def test_soldout_ref_row_carries_the_unit_of_the_stock_item():
     post = _post("p1", STOCK, stock_items=(sr.StockItem(frozenset({1}), 62, _COND_A, "", 13, "Set"),))
     row = _extract("ABC-123 〆", (post,))[0]
     assert row["soldout_targets"][0]["unit_id"] == 13 and row["soldout_targets"][0]["unit_canonical"] == "Set"
+
+
+# --- 規則12h：状態を書かない箱の〆が、取り残された箱の仲間の状態をまとめて完売にする（ADR-1073）----------------------
+
+
+_BOX_RANKS = {22: 1, 24: 2, 25: 3}  # 箱の仲間（状態 id → value_rank）。21（Case）は仲間でない
+_BOX_RULE = ShimeBoxAllStatesRule(("有〆",), _BOX_RANKS)
+_SEALED = _st([1], 22, "Sealed box")
+_NO_SHRINK = _st([2], 24, "No shrink box")
+_OTHER_BOX = _st([3], 25, "Other box")
+
+
+def _inherit_h(items, posts, rule=_BOX_RULE, text="商品 〆"):
+    return sr.decide_soldout_inherit(items, posts, None, box_rule=rule, post_text=text)
+
+
+def test_inherit_12h_closes_every_stranded_box_state_with_the_shime_state_first_then_by_rank():
+    # (a) 同じ 1 つの前の投稿に Sealed box と No shrink box（と Other box）の在庫。〆は Sealed box
+    post = _post("p1", "x", stock_items=(_OTHER_BOX, _SEALED, _NO_SHRINK))
+    got = _inherit_h([_shime()], (post,))
+    assert got == {0: (
+        sr.SoldoutTarget(62, 22, "p1", 1, "Sealed box"),
+        sr.SoldoutTarget(62, 24, "p1", 2, "No shrink box"),
+        sr.SoldoutTarget(62, 25, "p1", 3, "Other box"),
+    )}
+
+
+def test_inherit_12h_does_nothing_when_the_shime_state_was_decided_by_a_word():
+    # (b)
+    post = _post("p1", "x", stock_items=(_SEALED, _NO_SHRINK))
+    assert _inherit_h([_shime(condition_basis="R2:ボックス")], (post,)) == {}
+
+
+def test_inherit_12h_does_nothing_when_the_post_text_has_a_keep_word():
+    # (c)
+    post = _post("p1", "x", stock_items=(_SEALED, _NO_SHRINK))
+    assert _inherit_h([_shime()], (post,), text="商品 有〆") == {}
+    assert _inherit_h([_shime()], (post,), text="商品　有〆") == {}  # NFKC にして当てる（全角空白）
+    assert list(_inherit_h([_shime()], (post,), text="商品 〆")) == [0]
+
+
+def test_inherit_12h_does_nothing_when_a_non_box_state_is_stranded_too():
+    # (d)
+    post = _post("p1", "x", stock_items=(_SEALED, _NO_SHRINK, _CASE_STOCK))
+    assert _inherit_h([_shime()], (post,)) == {}
+
+
+def test_inherit_12h_without_a_rule_is_the_same_as_12d():
+    # (e)
+    post = _post("p1", "x", stock_items=(_SEALED, _NO_SHRINK))
+    assert _inherit_h([_shime()], (post,), rule=None) == {}
+    assert _inherit([_shime()], (post,)) == {}
+
+
+def test_inherit_12h_is_decided_first_by_12g_when_the_box_states_are_in_different_posts():
+    # (g) 別々の投稿に分かれた形は 12g が先に決める
+    older = _post("old", "x", 5, stock_items=(_st([1], 22, "Sealed box"),))
+    newer = _post("new", "x", 1, stock_items=(_st([2], 24, "No shrink box"),))
+    assert _inherit_h([_shime()], (newer, older)) == {0: (sr.SoldoutTarget(62, 24, "new", 2, "No shrink box"),)}
+
+
+def test_inherit_12h_does_nothing_when_only_the_shime_state_is_stranded():
+    post = _post("p1", "x", stock_items=(_SEALED,))
+    assert _inherit_h([_shime()], (post,)) == {}
+
+
+def test_inherit_12h_does_nothing_when_the_shime_state_is_not_a_box_state():
+    post = _post("p1", "x", stock_items=(_CASE_STOCK, _SEALED))
+    assert _inherit_h([_shime(condition="Case")], (post,)) == {}
+
+
+def test_extract_12h_puts_every_box_state_on_the_soldout_row():
+    post = _post("p1", "ふぁいぶ ABC-123 3@1,500円", stock_items=(_st([1], 22, "Sealed box"), _st([1], 24, "No shrink box")))
+    row = _extract("ふぁいぶ ABC-123 〆", (post,), master=dataclasses.replace(_MASTER, shime_box_all_states=_BOX_RULE))[0]
+    assert [(t["condition_id"], t["ref_line"]) for t in row["soldout_targets"]] == [(22, 1), (24, 1)]
+    assert row["soldout_target_basis"] == "SOLDOUT_INHERIT"
+
+
+@pytest.mark.parametrize("raw", [
+    None, "not json", "[]", "{}", '{"keep_words": []}', '{"keep_words": [""]}', '{"keep_words": [1]}', '{"keep_words": "x"}',
+    '{"words": ["x"]}', '{"keep_words": ["x"], "other": 1}',
+])
+def test_parse_shime_box_all_states_bad_value_gives_none(raw):
+    # (f)
+    assert parse_shime_box_all_states(raw, _BOX_RANKS) is None
+
+
+def test_parse_shime_box_all_states_good_value_gives_a_rule():
+    # (f)
+    rule = parse_shime_box_all_states('{"keep_words": ["有〆", "特定"]}', _BOX_RANKS)
+    assert rule == ShimeBoxAllStatesRule(("有〆", "特定"), _BOX_RANKS)
+    assert parse_shime_box_all_states('{"keep_words": ["有〆"]}', {}) is None  # 箱の仲間が空
+
