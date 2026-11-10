@@ -1046,6 +1046,14 @@ def test_stock_items_sql_reads_the_unit_columns():
     assert "ar.unit_id" in svc._STOCK_ITEMS_SQL and "unit_canonical" in svc._STOCK_ITEMS_SQL
 
 
+def test_soldout_ref_sqls_pick_the_latest_job_with_distinct_on_not_a_correlated_subquery():
+    # 設計 docs/handoff/soldout-ref-read-speed/design.md C3-3：遅い形（投稿ごとの副問い合わせ）に戻すと赤になる
+    for sql in (svc._STOCK_ITEMS_SQL, svc._SOLD_ITEMS_SQL):
+        assert "j2.source_message_id = ej.source_message_id" not in sql
+        assert "DISTINCT ON (j.source_message_id)" in sql
+        assert "ORDER BY j.source_message_id, j.created_at DESC, j.id DESC" in sql
+
+
 def test_load_stock_items_carries_unit_id_none_and_13_into_the_stock_items():
     # (dd) DB は使わず、行の結果をスタブで返す
     def row(unit_id, unit_canonical):

@@ -466,6 +466,68 @@ def test_sold_items_and_stock_items_are_read_apart_from_the_latest_job_with_reso
     assert [(it.product_id, it.condition_canonical) for it in loaded.stock_items] == [(p1, "Sealed box")]
 
 
+def _seed_two_products_and_conditions(pg):
+    seed_products(pg[0])
+    with pg[0].cursor() as cur:
+        cur.execute("SELECT id FROM public.products ORDER BY id LIMIT 2")
+        p1, p2 = (r[0] for r in cur.fetchall())
+        cur.execute("SELECT id, canonical FROM public.conditions WHERE canonical IN ('Sealed box','Case')")
+        cond = {r[1]: r[0] for r in cur.fetchall()}
+    return p1, p2, cond["Case"], cond["Sealed box"]
+
+
+def test_same_created_at_jobs_read_only_the_larger_id_job(pg, channel):
+    p1, p2, case, box = _seed_two_products_and_conditions(pg)
+    post = _insert(pg[0], channel, "前", T0 - timedelta(hours=2))
+    small, large = sorted([str(uuid4()), str(uuid4())])
+    created = T0 - timedelta(hours=1)
+    with pg[0].cursor() as cur:
+        for job_id in (small, large):
+            cur.execute(
+                f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status,created_at) VALUES (%s,%s,'done',%s)",
+                (job_id, post, created),
+            )
+    _add_result(pg[0], small, 0, p2, case, "Case", "Sold out")
+    _add_result(pg[0], small, 1, p2, box, "Sealed box", "In Stock")
+    _add_result(pg[0], large, 0, p1, case, "Case", "Sold out")
+    _add_result(pg[0], large, 1, p1, box, "Sealed box", "In Stock")
+    job = _job(pg[0], _insert(pg[0], channel, "今", T0))
+    (loaded,) = _load(pg, job)
+    assert loaded.sold_items == (sr.SoldItem(p1, "Case"),)
+    assert [(it.product_id, it.condition_canonical) for it in loaded.stock_items] == [(p1, "Sealed box")]
+
+
+def test_two_reference_posts_each_read_their_own_latest_job_in_post_order(pg, channel):
+    p1, p2, case, box = _seed_two_products_and_conditions(pg)
+    post_a = _insert(pg[0], channel, "前A", T0 - timedelta(hours=3))
+    post_b = _insert(pg[0], channel, "前B", T0 - timedelta(hours=2))
+    jobs = {}
+    with pg[0].cursor() as cur:
+        for name, post in (("a", post_a), ("b", post_b)):
+            for kind, age in (("old", "1 hour"), ("latest", "0 seconds")):
+                job_id = str(uuid4())
+                jobs[(name, kind)] = job_id
+                cur.execute(
+                    f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status,created_at) VALUES (%s,%s,'done',now() - %s::interval)",
+                    (job_id, post, age),
+                )
+    _add_result(pg[0], jobs[("a", "old")], 0, p2, box, "Sealed box", "In Stock")  # 古い job の件は読まない
+    _add_result(pg[0], jobs[("b", "old")], 0, p2, box, "Sealed box", "In Stock")
+    _add_result(pg[0], jobs[("a", "latest")], 0, p1, box, "Sealed box", "In Stock")
+    _add_result(pg[0], jobs[("a", "latest")], 1, p1, case, "Case", "Sold out")
+    _add_result(pg[0], jobs[("b", "latest")], 0, p2, case, "Case", "In Stock")
+    _add_result(pg[0], jobs[("b", "latest")], 1, p2, box, "Sealed box", "In Stock")
+    job = _job(pg[0], _insert(pg[0], channel, "今", T0))
+    loaded = _load(pg, job)
+    assert len(loaded) == 2
+    by_id = {str(p.message_id): p for p in loaded}
+    a, b = by_id[str(post_a)], by_id[str(post_b)]
+    assert a.sold_items == (sr.SoldItem(p1, "Case"),)
+    assert [(it.product_id, it.condition_canonical) for it in a.stock_items] == [(p1, "Sealed box")]
+    assert b.sold_items == ()
+    assert [(it.product_id, it.condition_canonical) for it in b.stock_items] == [(p2, "Case"), (p2, "Sealed box")]
+
+
 def test_unknown_job_returns_empty(pg):
     assert _load(pg, str(uuid4())) == ()
 
