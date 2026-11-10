@@ -733,7 +733,7 @@ PO の決定: 2026-11-10「1」（抜け道をふさぎ、古い記述も一緒�
 - `XACT_SEC` は SQL の文字列に直に入る（:50 `interval '${XACT_SEC} seconds'`、:112 も同じ）。大きな値（例 99999）にすると何も数えず通る。`LONG_ACTIVE_SEC` も SQL に入る（:67）。
 - 本番反映が失敗したときの段「Deployment Failure Notification」（`.github/workflows/deploy.yml` :1346〜:1351）は echo して exit 1 するだけで、Discord には送らない。知らせは GitHub の失敗の記録（実行の赤）だけ。
 - bash は、殻の外から渡された `BASH_ENV` が指すファイルを、台本の前に読む。審査（クラウドの Architect、2026-11-10）で、足す1行の後に `bash 台本` と流すと、そのファイルで入れた `DB_PRECHECK_STREAK=0` が台本に届くことを実際に流して確かめた。`env -u BASH_ENV bash 台本` なら届かない（同じ審査で実測）。
-- `backup-script-test.yml` の db-precheck の job（:83〜:104）は、注記「P7 が deploy.yml を読むのに使う」（:92）・setup-python（:93）・pyyaml（:97〜:98）を持つ。P7 は必須の pytest に移り、`scripts/tests/test-deploy-db-precheck.sh` は python も yaml も使わない（中で `python`・`yaml` を探して、頭の説明の :8 も含めて0件）。
+- `.github/workflows/backup-script-test.yml` の db-precheck の job（:83〜:104）は、注記「P7 が deploy.yml を読むのに使う」（:92）・setup-python（:93）・pyyaml（:97〜:98）を持つ。P7 は必須の pytest に移り、`scripts/tests/test-deploy-db-precheck.sh` は python も yaml も使わない（中で `python`・`yaml` を探して、頭の説明の :8 も含めて0件）。
 - 偽の数の変数がサーバー側の環境にあると、DB を見ずにその数で判定する（:80〜:89）。値が `0` なら3回目で clean になる。
 - deploy.yml の点検の段（`.github/workflows/deploy.yml` :195〜:222）は、これらの変数を渡さない（`envs: ROLLBACK_DISCORD_WEBHOOK` だけ）。ただし、台本は ssh の先の環境をそのまま受け継ぐ（:222 `bash "$TMP"`）。サーバー側の環境に `DB_PRECHECK_` の変数があれば効く。
 - 今の守り: P8（`backend/tests/ops/test_deploy_precheck_wiring.py` :164〜:165）は deploy.yml の文字列に偽の数の変数名が無いことだけを見る。サーバー側の環境は見ない。K18-4 は本番の記録の「FAKE」の行で後から見るだけで、止めない。
@@ -747,7 +747,7 @@ PO の決定: 2026-11-10「1」（抜け道をふさぎ、古い記述も一緒�
 |---|---|
 | K18-7 サーバー側の環境に `DB_PRECHECK_` で始まる変数や `BASH_ENV` があっても、点検の段は台本を流す前にそれを全部外す | 必須の pytest P9 が PASS（下の 18-14-4） |
 | K18-8 台本は設定が整数でなければ、または続けて0本の回数が1未満なら、数える前に止まる（exit 1・「invalid setting」の行・clean の行なし・sample の行なし） | 必須の pytest P4d・P4e が PASS |
-| K18-9 試験の説明の古い記述が無くなる | `.github/workflows/backup-script-test.yml` と ADR-1037 に「P1〜P8」「P1-P8」が0件。`backup-script-test.yml` の db-precheck の job に、注記「P7 が deploy.yml を読むのに使う」・setup-python・pyyaml が0件（新しい :100 の注記の「P7〜P9」は数えない） |
+| K18-9 試験の説明の古い記述が無くなる | `.github/workflows/backup-script-test.yml` と ADR-1037 に「P1〜P8」「P1-P8」が0件。`.github/workflows/backup-script-test.yml` の db-precheck の job に、注記「P7 が deploy.yml を読むのに使う」・setup-python・pyyaml が0件（新しい :100 の注記の「P7〜P9」は数えない） |
 | K18-10 本番: 本節の版が出た後の、移行の段が動く本番反映で、start の行が `poll=5s streak=3 limit=600s xact>5s long_active>60s` で、FAKE の行が無い | 本番反映の記録。本節の版が出た後、移行の段が動く本番反映の最初の1回で見る（K18-4 の残りの回と同じ記録） |
 
 #### 18-14-3. 変更前 → 変更後
@@ -798,7 +798,7 @@ env -u BASH_ENV bash "$TMP"
 
 #### 18-14-8. 計画
 審査の記録: 1回目（クラウドの Architect、2026-11-10 11:42Z〜11:45Z）は、試しの写しの置き直しで `rm -rf` を見張りに止められ、判定なしで終わった。止まる前の指摘（知らせの段の記述が実物と違う・BASH_ENV の抜け道・行番号のずれ・db-precheck の job の古い注記と使わない段・P9 の数え方・P4e の時間切れ）は本節に取り込んだ（第2稿）。
-2回目（クラウドの Architect、2026-11-10 11:51Z〜11:56Z、審査対象 faa5e25e0、origin/main ae8def4d3 で照合）→ **REVISE**（中2・軽5）。写しで deploy.yml の2行は bash・dash とも変数と BASH_ENV が消えて終了コード0、P4a〜P4e・P9 は29件すべて通り、赤の実演4つも赤になった。指摘（K18-9 が新しい注記の「P7〜P9」で必ず×になる・確かめの置き場所が finish の定義より前・P9 (b) が流す行を試験が自分で書いている・P4d の赤の実演の動き・K18-10 の回数・台帳の状態が古い・18-14-1 の「:8 以外」）は第3稿で取り込んだ。台帳のファイルを commit しない、という指摘は採らない（`.gitignore` :67〜:71 が `.claude-pipeline/active-work.d/*.md` を残す決まりで、origin/main に同じ形のファイルが439件ある）。状態の行だけ直した。軽7 の後半は記録の切れで読めていない（3回目の審査で確かめる）。
+2回目（クラウドの Architect、2026-11-10 11:51Z〜11:56Z、審査対象 faa5e25e0、origin/main ae8def4d3 で照合）→ **REVISE**（中2・軽5）。写しで deploy.yml の2行は bash・dash とも変数と BASH_ENV が消えて終了コード0、P4a〜P4e・P9 は29件すべて通り、赤の実演4つも赤になった。指摘（K18-9 が新しい注記の「P7〜P9」で必ず×になる・確かめの置き場所が finish の定義より前・P9 (b) が流す行を試験が自分で書いている・P4d の赤の実演の動き・K18-10 の回数・台帳の状態が古い・18-14-1 の「:8 以外」）は第3稿で取り込んだ。台帳のファイルを commit しない、という指摘は採らない（`.gitignore` :67〜:71 が active-work.d の下の .md ファイルを残す決まりで、origin/main に同じ形のファイルが439件ある）。状態の行だけ直した。軽7 の後半は記録の切れで読めていない（3回目の審査で確かめる）。
 3回目（クラウドの Architect、2026-11-10 12:04Z〜12:07Z、審査対象 22e158ee0、origin/main d06f150c7 で照合）→ **APPROVE**。2回目の指摘は軽6 を除き直っており、軽6 を採らない理由も正しいと判定（`.gitignore` :67〜:71、origin/main に439件）。写しで pytest 29件が通り、赤の実演4つがすべて赤（(2) は P9 (b) も BASH_ENV から変数が入る動きで赤）。新しい軽3件（P9 (b) の行の探し方・赤の実演(4) で `STREAK=-1` の1通りが緑のまま・`scripts/tests/test-deploy-db-precheck.sh` :8 の古い説明）は第3.1稿で取り込んだ。軽7 の後半は前の記録が無く、同じ内容かは確かめられないとされ、3件目として言い直された。
 
 (1) 本節をクラウドの Architect（新しく起動・読むだけ）で審査 (2) APPROVE の後、同じ枝でクラウドの Sonnet が 18-14-3 を実装し、試験と赤の実演 (3) reviewer（opus・手元で新しく起動）→ PR 本文に GO 記録（POの委任に基づくClaude Opus発行。deploy.yml・scripts を含む）→ マージ → 本番反映 (4) 移行の段が動く本番反映で K18-10 と K18-4 の残りを見る。
