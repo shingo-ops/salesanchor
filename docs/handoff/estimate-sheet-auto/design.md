@@ -516,3 +516,8 @@ PO の要件（2026-11-07）: 「タブがある人には配信してない人�
 - 見分けの語: PCC-LA2-BW（固有ID 420503）の除外に「スタートデッキ」を足した（前からの「麦わらの一味」は残した）。
 - 止めているもの: OP-19。英語名「COME IN, WORLD」の「,」が検索ワードの区切りと同じため、入れ方を PO に聞いている。
 - 候補表の範囲外で見つけたもの（直していない）: OP-06 の英語名が OP-08 と同じ「TWO LEGENDS」・OP-16 の英語名が空・EB-05 の検索ワードに型番・EB-05 のメーカーが未設定。
+- PO 指示（2026-11-10）: 上の4つを「併せて直して」。直した結果（画面で保存→別のタブで読み直して確認）:
+  - OP-06（固有ID 83）英語名 TWO LEGENDS → WINGS OF THE CAPTAIN（出典: https://en.onepiece-cardgame.com/products/boosters/op06.php「BOOSTER PACK -WINGS OF THE CAPTAIN- [OP-06]」・英語圏の販売店でも同じ名前）。
+  - OP-16（固有ID 440570）英語名 空 → THE TIME OF BATTLE（出典: https://en.onepiece-cardgame.com/products/op16.html「BOOSTER PACK -THE TIME OF BATTLE- [OP-16]」・英語圏の販売店でも同じ名前）。
+  - EB-05（固有ID 420436）メーカー 未設定 → Bandai（同じ作品の既存商品に合わせる前例）。検索ワード「Heroines Edition vol.2 / EB-05 / EB05」→「Heroines Edition vol.2」（型番は検索ワードに入れない・登録ルール U3）。
+- 新しく見えたもの（直していない・数えていない）: OP-06 と OP-16 の検索ワードにも型番が入っている。OP-06 のメーカーも未設定。ワンピース全体でどれだけあるかは、まだ数えていない。
