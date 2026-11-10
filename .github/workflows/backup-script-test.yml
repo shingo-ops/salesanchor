@@ -20,6 +20,8 @@ on:
       - '.github/workflows/deploy.yml'
       - '.github/workflows/backup-script-test.yml'
   push:
+    branches-ignore:
+      - 'gh-readonly-queue/**'
     paths:
       - 'scripts/backup.sh'
       - 'scripts/tests/test-backup-*.sh'

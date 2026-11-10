@@ -4,6 +4,7 @@ on:
   push:
     branches-ignore:
       - 'main'
+      - 'gh-readonly-queue/**'
     paths:
       - 'tasks/todo.md'
       - 'docs/runbooks/monitoring-vps-migration.md'
