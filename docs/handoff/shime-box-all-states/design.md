@@ -21,7 +21,7 @@ PO の発言: 2026-11-10「2,1」（先に〆の規則の直し方を設計し�
 
 ## 2. やり方（変更前後）
 
-- 変更前（recon §2-1）: 候補の〆で、〆と同じ状態の在庫が前の投稿にあると 12d で何もしない（`gemini_raw_copy_v102_soldout_ref.py:427-428`）。
+- 変更前（recon §2-1）: 候補の〆で、〆と同じ状態の在庫が前の投稿にあると 12d で何もしない（`backend/app/services/gemini_raw_copy_v102_soldout_ref.py:427-428`）。
 - 変更後: 12d で何もしない所の手前に 12h を足す。次の全部を満たすときだけ、〆の状態と、取り残された箱の仲間の状態を全部、完売の相手にする。
   1. 設定 `v102_shime_box_all_states` が読めている（無い・形が違うときは今と同じ）。
   2. 〆の件の状態が箱の仲間（状態マスタ `value_group='box'`）。
@@ -29,7 +29,7 @@ PO の発言: 2026-11-10「2,1」（先に〆の規則の直し方を設計し�
   4. 〆の状態の在庫が前の投稿にある（12d に来た形）。
   5. 取り残し（`_stranded_stock`）のうち〆の状態以外が 1 つ以上あり、その全部が箱の仲間。カートン・パック等が 1 つでも混ざれば今と同じ（何もしない）。
   6. 今の投稿の原文に、設定の `keep_words` のどれも含まれない（NFKC にして部分一致）。
-- 相手の並び: 先頭に〆の状態（最も新しい在庫の投稿の行）、続けて残りを `value_rank` の小さい順。先頭が〆の状態なので、〆の件の状態は変わらない（`line_analysis_v102_svc.py:941-964` が先頭で上書きするため）。2 つ目以降は既にある表 `analysis_soldout_extra_targets` に入り、在庫表の今の行から外れる（recon §2-2）。
+- 相手の並び: 先頭に〆の状態（最も新しい在庫の投稿の行）、続けて残りを `value_rank` の小さい順。先頭が〆の状態なので、〆の件の状態は変わらない（`backend/app/services/line_analysis_v102_svc.py:941-964` が先頭で上書きするため）。2 つ目以降は既にある表 `analysis_soldout_extra_targets` に入り、在庫表の今の行から外れる（recon §2-2）。
 - 印は今の 12 と同じ `SOLDOUT_INHERIT`。
 - 語と箱の仲間をコードに書かない: 語は設定、箱の仲間は状態マスタの `value_group` から読む（ADR-1041 の前例）。
 
@@ -47,7 +47,7 @@ PO の発言: 2026-11-10「2,1」（先に〆の規則の直し方を設計し�
 ## 4. 影響範囲
 
 - 変わるコード: `backend/app/services/gemini_raw_copy_v102_soldout_ref.py`（12h）、`backend/app/services/gemini_raw_copy_v101.py:1310-1325`（相手を複数載せる・規則と今の投稿の行を渡す）、`backend/app/services/gemini_raw_copy_v102_product_first.py`（設定と箱の仲間を読む。`ProductFirstMasters` に 1 欄）、`backend/app/tools/v102_replay_diff.py`（設定の差し込み）。
-- 呼び出し元: `decide_soldout_inherit` は `gemini_raw_copy_v101.py:1314` だけ（`git grep` で確認）。新しい引数は既定値つきで、今の呼び方はそのまま動く。
+- 呼び出し元: `decide_soldout_inherit` は `backend/app/services/gemini_raw_copy_v101.py:1314` だけ（`git grep` で確認）。新しい引数は既定値つきで、今の呼び方はそのまま動く。
 - DB: 形は変えない。設定 1 行（便4）と状態の語（便3）だけ。
 - 在庫表: 相手が増えた分だけ古い在庫の行が今の行でなくなる（既にある仕組み）。
 
@@ -68,13 +68,13 @@ PO の発言: 2026-11-10「2,1」（先に〆の規則の直し方を設計し�
 - 設定を消しても、それまでに書いた 2 つ目以降の相手（`analysis_soldout_extra_targets` の行）は残る。消えた在庫が戻るかは未確認 → 便1 のカードで、相手を書いた後に設定を消してやり直したときの動きを試験に入れるか、便4 の前に PO へ戻す。
 - 設定にまだ無い、在庫が残っていると書く言い方 → 朝の点検で消しすぎが出たら、設定の `keep_words` に足す（コードは変えない）。
 
-## 7. 維持する担当・仕組み
+## 7. 維持の仕組み
 
 - 規則は試験（K1）で守る。設定の形の検査は ADR-1041 の 2 つと同じ書き方。
 - 朝の〆点検（11/15 まで続けている）を、設定を入れた後 14 日延ばして K5 を数える。
 - 規則の決定は ADR-1073 に残す（Proposed）。
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 
 - 使わない。理由: 仕入元の書き方に合わせた自社の規則で、判断の根拠は自社の保存済みの投稿のやり直しだけで足りる。
 
@@ -82,16 +82,16 @@ PO の発言: 2026-11-10「2,1」（先に〆の規則の直し方を設計し�
 
 0. 場所: origin/main から `release/shime-box-all-states-bin1`（`bash scripts/new-worktree.sh release/shime-box-all-states-bin1`）。
 1. 読む（変えない）: `backend/app/services/gemini_raw_copy_v102_soldout_ref.py` 全部、`backend/app/services/gemini_raw_copy_v101.py:1285-1345` と `:1495-1505`、`backend/app/services/gemini_raw_copy_v102_product_first.py:126-175` と `:379-500`、`backend/app/services/line_analysis_v102_svc.py:941-975`、`backend/app/tools/v102_replay_diff.py` 全部。
-2. `gemini_raw_copy_v102_product_first.py`:
+2. `backend/app/services/gemini_raw_copy_v102_product_first.py`:
    - 定数 `_SHIME_BOX_ALL_STATES_KEY = "v102_shime_box_all_states"`。
    - dataclass `ShimeBoxAllStatesRule(keep_words: tuple[str, ...], box_ranks: Mapping[int, int])`（box_ranks は状態の id → value_rank）。
    - `ProductFirstMasters` の最後に `shime_box_all_states: ShimeBoxAllStatesRule | None = None`。
    - 純粋関数 `parse_shime_box_all_states(raw: str | None, box_ranks) -> ShimeBoxAllStatesRule | None`: 値が `{"keep_words": [空でない文字列, ...]}`（key はこれだけ・配列は 1 つ以上）なら規則、key が無いときは debug、形が違うときは warning を出して None。box_ranks が空なら warning で None。
    - `_load_shime_box_all_states(session)`: 設定を `_KUBUN_ALLOWED_UNITS_SQL` で読み、箱の仲間を `SELECT id, value_rank FROM public.conditions WHERE is_active = TRUE AND value_group = 'box'`（`load_condition_entries` が読む表と同じ。`backend/app/services/tcg_analyzer_svc.py:695-712`）。SoldoutTarget・StockItem の condition_id が `public.conditions.id` であることを 1 で確かめ、違えば止まる で読んで parse に渡す。`load_product_first_masters`（`:379`）で `shime_box_all_states=` に入れる。
-3. `gemini_raw_copy_v102_soldout_ref.py` の `decide_soldout_inherit` にキーワード引数 `box_rule: ShimeBoxAllStatesRule | None = None, post_text: str = ""` を足し、戻り値を `dict[int, tuple[SoldoutTarget, ...]]` に変える（12g・12e は 1 つの組）。`:427-428` の `continue  # 12d` を次に置き換える:
+3. `backend/app/services/gemini_raw_copy_v102_soldout_ref.py` の `decide_soldout_inherit` にキーワード引数 `box_rule: ShimeBoxAllStatesRule | None = None, post_text: str = ""` を足し、戻り値を `dict[int, tuple[SoldoutTarget, ...]]` に変える（12g・12e は 1 つの組）。`:427-428` の `continue  # 12d` を次に置き換える:
    - `box_rule` が None、〆の状態の id が box_ranks に無い、`post_text` に keep_words のどれかが含まれる（NFKC・部分一致）、取り残しの〆の状態以外が 0、取り残しの〆の状態以外に box_ranks に無い状態がある、取り残しに〆の状態が無い（在庫の行が最新でない）— のどれかなら `continue`（今と同じ）。
    - それ以外は、取り残しの〆の状態を先頭、残りを value_rank の小さい順にした SoldoutTarget の組を返す。〆の状態の id は取り残しの StockItem の condition_id を使う（canonical が〆の件の状態と同じもの）。
-4. `gemini_raw_copy_v101.py:1310-1325` の `_apply_soldout_inherit` に `box_rule` と `post_text`（今の投稿の原文。`lines` を `"\n"` でつないだもの）を渡し、組の全部を `soldout_targets` に並べる。`:1502` の呼び出しで `ctx.product_first.shime_box_all_states` と `"\n".join(lines)` を渡す。
+4. `backend/app/services/gemini_raw_copy_v101.py:1310-1325` の `_apply_soldout_inherit` に `box_rule` と `post_text`（今の投稿の原文。`lines` を `"\n"` でつないだもの）を渡し、組の全部を `soldout_targets` に並べる。`:1502` の呼び出しで `ctx.product_first.shime_box_all_states` と `"\n".join(lines)` を渡す。
 5. 試験（`backend/tests/` の soldout_ref の試験ファイルに足す。架空のデータ・実在の会社名・人名・商品名を書かない）: (a) 働く: Sealed box の〆、前に Sealed box と No shrink box の在庫 → 相手 2 つ、先頭が Sealed box (b) 語で決まった〆 → 何もしない (c) keep_words を含む → 何もしない (d) 取り残しにカートンが混ざる → 何もしない (e) box_rule=None → 今と同じ（既存の 12d の試験と同じ結果） (f) parse の形の検査（正しい・key 違い・空配列・JSON でない）。
 6. `backend/app/tools/v102_replay_diff.py` に `--shime-setting FILE`（任意。`--heading-setting`（`:182`・`:104-105`）と同じ作り）: 指定時、masters の product_first の `shime_box_all_states` を、ファイルの JSON と本番の箱の仲間で作った規則に差し替える。標準出力に箱の仲間の一覧（id・value_rank）を出す。この道具の既存の試験ファイルがあれば 1 つ足す。
 7. 確かめ: `ruff check` の対象ファイル、`cd backend && python -m pytest -q tests/<soldout_ref の試験> tests/test_gemini_raw_copy_v102_product_first.py` と v102_replay_diff の試験（あれば）。
@@ -102,5 +102,5 @@ PO の発言: 2026-11-10「2,1」（先に〆の規則の直し方を設計し�
 
 - 判定: APPROVE（便1 は実装可能）。便4（設定を入れる）は §6 の未解決が片付くまで不可。どれも PO の承認が前提。
 - 根拠: 変える所は 12d の 1 か所で、今は何もしない形だけが変わる（ほかの規則の結果は変わらない）。相手を複数書く仕組みと在庫表の外し方は既にある（recon §2-2）。設定が無ければ今と同じで、戻しは設定の行を消すだけ。受入条件はどれも数か○×で判定できる。
-- 審査で直した点: 状態の表の名前（`public.line_conditions` → `public.conditions`）、やり直しの道具（試しのブランチにしか無い道具 → main にある `v102_replay_diff.py`）、それに合わせて語を記憶の中で足さず本番へ先に入れる順へ変えた。
+- 審査で直した点: 状態の表の名前（`public.line_conditions` → `public.conditions`）、やり直しの道具（試しのブランチにしか無い道具 → main にある `backend/app/tools/v102_replay_diff.py`）、それに合わせて語を記憶の中で足さず本番へ先に入れる順へ変えた。
 - 未解決: 本番の `value_group` の今の値（便3 の道具の出力で確かめる）。設定を消した後の古い相手の扱い（§6）。K3 の数が 13/0/1 と違ったときの扱いは PO に戻す。
