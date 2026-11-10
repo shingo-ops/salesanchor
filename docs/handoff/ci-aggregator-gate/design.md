@@ -20,7 +20,7 @@
 | 対象 | `.github/workflows/migration-test.yml:2130-2152` まとめ役 migration-test の判定の式 | 同上 |
 | 対象 | `.github/workflows/schema-check.yml:222-238` まとめ役 schema-check の判定の式 | 同上 |
 | 対象 | `.github/workflows/e2e.yml:230-245` visual-language・`.github/workflows/karte-gate.yml:121-137` karte-gate の判定の式 | 必須ではないが同じ型。型をそろえ、§3 C7 の検査で 1 つの決まりとして守る |
-| 対象 | 新しい検査 `scripts/ci/check_ci_aggregators.py` と試験 `scripts/tests/test_check_ci_aggregators.py` | 同じ穴が新しいまとめ役で再び生まれないように機械で止める |
+| 対象 | 新しい検査 scripts/ci/check_ci_aggregators.py（新規） と試験 scripts/tests/test_check_ci_aggregators.py（新規） | 同じ穴が新しいまとめ役で再び生まれないように機械で止める |
 | 対象 | test.yml のまとめ役 pytest に、上の検査と試験を流す段を足す | 毎回動く必須チェックの中で流すため（recon §4） |
 | 対象外 | まとめ役の `if: always()` | workflow-lint.yml が文字の一致で確かめている（recon §4）。変えると PO だけが直せる検査が落ちる |
 | 対象外 | `.github/workflows/workflow-lint.yml`・Ruleset・`docs/specs/rule-enforcement/required-checks.txt` | PO だけが変えられる（CLAUDE.md「不可逆操作」）。この設計は必須チェックの名前を変えない |
@@ -80,16 +80,16 @@ C1 と同じ形。答えは `needs.detect-changes.outputs.relevant`、実行役�
 
 C1 と同じ形。答えは frontend。karte-gate-run の条件には `|| github.event_name == 'workflow_dispatch'` がある（`.github/workflows/karte-gate.yml:36`）。手動の実行では答えが false でも実行役が動くので、karte-gate では「workflow_dispatch のときは実行役が success なら緑」を足す。
 
-### C7 新しい検査 `scripts/ci/check_ci_aggregators.py`（標準ライブラリと PyYAML だけ）
+### C7 新しい検査 scripts/ci/check_ci_aggregators.py（新規）（標準ライブラリと PyYAML だけ）
 
-`.github/workflows/*.yml` を全部読み、`if` が `always()` で needs に `detect-changes` を含むジョブ（まとめ役）ごとに、次を確かめる。1 つでも外れたら、ファイル名・ジョブ名・足りないものを書いて終了コード 1。
+.github/workflows の全部の yml を全部読み、`if` が `always()` で needs に `detect-changes` を含むジョブ（まとめ役）ごとに、次を確かめる。1 つでも外れたら、ファイル名・ジョブ名・足りないものを書いて終了コード 1。
 
 - run の中に `needs.detect-changes.result` がある。
 - run の中に `needs.detect-changes.outputs.` がある。
 - needs に挙げた detect-changes 以外の全部のジョブについて、run の中に `needs.<そのジョブ>.result` がある（実行役を足したのに判定に入れ忘れたら赤）。
 - 真理値表の試験: run を取り出し、`${{ ... }}` を値に置き換えて bash で流し、次の全部の組で終了コードが §3 C1 の決まりどおりかを確かめる。判定ジョブの結果 4 通り（success・failure・cancelled・skipped）× 答え 3 通り（true・false・空）× 実行役の結果（success・failure・skipped・cancelled）。workflow_dispatch の扱い（C6）も組に入れる。
 
-### C8 試験 `scripts/tests/test_check_ci_aggregators.py`
+### C8 試験 scripts/tests/test_check_ci_aggregators.py（新規）
 
 `scripts/tests/test_check_rule_registry.py` と同じ形（`python3 -I` で流す unittest）。
 
@@ -101,7 +101,7 @@ C1 と同じ形。答えは frontend。karte-gate-run の条件には `|| github
 
 ### C9 test.yml のまとめ役 pytest に段を足す
 
-`Report results` の前に 3 段を足す: `actions/checkout@v5`（`.github` と `scripts` だけを sparse-checkout）→ `python3 -I scripts/tests/test_check_ci_aggregators.py -v` → `python3 -I scripts/ci/check_ci_aggregators.py`。どれかが落ちたら pytest のまとめ役は赤になる。pytest のまとめ役は毎回動く必須チェックなので、ワークフローだけを変える PR でも検査が走る。
+`Report results` の前に 3 段を足す: `actions/checkout@v5`（`.github` と `scripts` だけを sparse-checkout）→ python3 -I scripts/tests/test_check_ci_aggregators.py -v → python3 -I scripts/ci/check_ci_aggregators.py。どれかが落ちたら pytest のまとめ役は赤になる。pytest のまとめ役は毎回動く必須チェックなので、ワークフローだけを変える PR でも検査が走る。
 
 ## 4. 代替案と選んだ理由
 

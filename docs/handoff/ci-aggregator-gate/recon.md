@@ -27,7 +27,7 @@
 
 - 必須かどうかは `docs/specs/rule-enforcement/required-checks.txt:1-16` で確かめた（上の 4 つが入っている。下の 2 つは入っていない）。
 - 6 つとも、判定の式は「実行役が success か skipped なら 0」。`needs.detect-changes.result`（変更の判定ジョブ自体の結果）と、その出力（true/false）は、どれも見ていない（各場所の run の中身を全部読んだ）。
-- 実行役の動く条件は、どれも `needs.detect-changes.outputs.<名前> == 'true'`（`.github/workflows/test.yml:63`・`:118`、`.github/workflows/e2e.yml:64`・`:90`・`:156`、`.github/workflows/migration-test.yml:59`・`:94`・`:1388`、`schema-check.yml:50`、`karte-gate.yml:36`）。例外は migration-test.yml の registration-exists-regression で、条件も needs も無く毎回動く。
+- 実行役の動く条件は、どれも `needs.detect-changes.outputs.<名前> == 'true'`（`.github/workflows/test.yml:63`・`:118`、`.github/workflows/e2e.yml:64`・`:90`・`:156`、`.github/workflows/migration-test.yml:59`・`:94`・`:1388`、`.github/workflows/schema-check.yml:50`、`.github/workflows/karte-gate.yml:36`）。例外は migration-test.yml の registration-exists-regression で、条件も needs も無く毎回動く。
 - 変更の判定のやり方: test.yml・e2e.yml・migration-test.yml・karte-gate.yml は dorny/paths-filter@v4。schema-check.yml は `git diff`（`.github/workflows/schema-check.yml:38-45`）。
 
 ## 2. 穴の仕組み（事実＝GitHub の公式文書とファイルの中身から）
