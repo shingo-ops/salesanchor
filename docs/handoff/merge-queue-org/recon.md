@@ -159,3 +159,10 @@ shingo-cc 名義（権限 write）では runners 403・hooks 404・keys 404 で�
 | U9 `PIPELINE_PAT` | secret の作成 2026-05-07・更新 2026-09-02（名前と時刻だけ）。種類と持ち主は API で読めない | — | PO の画面（github.com/settings/personal-access-tokens と /settings/tokens）で確かめる |
 | U12 会社の合鍵の決まり | `GET orgs/GEN-RYU-System/personal-access-tokens` は 404。read:org では読めない（admin:org が要る） | — | PO の画面で確かめる |
 | 参考 | 会社 GEN-RYU-System の plan は free。shingo-ops は admin・active。リポジトリの Actions は enabled・allowed_actions all | 公開リポジトリなので free でも列が使える（R§2） | — |
+
+### 9-2. 残り 2 件を PO のブラウザー（shingo-ops でログイン中）で読んだ結果（2026-11-11・PO の選択「2」・読むだけ・ボタンは押していない）
+
+| 項目 | 画面で読んだ結果 | 判定 |
+|---|---|---|
+| U9 `PIPELINE_PAT` の種類と持ち主 | github.com/settings/tokens（shingo-ops）に classic の `salesanchor-pipeline-PAT`（scope: read:org, repo, workflow・期限なし・Last used within the last week）。細かく絞る型（/settings/personal-access-tokens）は `CloudShell-JARVIS-Access`（Never used）の 1 本だけ | 【推測】名前と「最近使った」から、`PIPELINE_PAT` はこの classic の鍵（secret の値は読めないので一致は名前での判断）。classic は持ち主を 1 つに絞らないので、会社の admin である shingo-ops の鍵のまま会社名義のリポジトリに届く見込み。design §8 移した直後 1 の「読むだけの API を 1 回呼んで届くことを確かめる」で確定させる |
+| U12 会社の合鍵の決まり | GEN-RYU-System の設定: classic は「Allow access」・classic の期限の上限なし。細かく絞る型は「Allow access」・「Require administrator approval」・期限の上限 366 日 | classic の鍵は承認も期限の上限も無く使える。鍵の作り直しは要らない見込み。細かく絞る型に替える場合は、管理者の承認と 366 日以内の期限が要る |
