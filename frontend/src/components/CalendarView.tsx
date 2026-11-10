@@ -6,7 +6,7 @@
  * 色・線・寸法はすべて CalendarView.css のトークン（var()）で決まる。
  * 送るボタン（前へ・次へ）は呼ぶ側が金型 Button で置く。
  */
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import FullCalendar from '@fullcalendar/react';
@@ -65,6 +65,8 @@ export function CalendarView({
   onEventMove,
   onEventResize,
   onMoreClick,
+  trackEventId,
+  onEventRect,
   ariaLabel,
   appearance = 'plain',
   className,
@@ -72,6 +74,45 @@ export function CalendarView({
   const { t, i18n } = useTranslation();
   const calendarRef = useRef<FullCalendar | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+  // trackEventId の予定の要素と、つかんでいる間かどうか（design schedule-gcal-clone §3.17 作り方 4）
+  const trackedElRef = useRef<HTMLElement | null>(null);
+  const draggingRef = useRef(false);
+  const trackRef = useRef({ trackEventId, onEventRect });
+  trackRef.current = { trackEventId, onEventRect };
+
+  const emitTrackedRect = useCallback(() => {
+    const { trackEventId: id, onEventRect: emit } = trackRef.current;
+    if (!id || !emit || draggingRef.current) return;
+    const el = trackedElRef.current;
+    if (!el || !el.isConnected) {
+      emit(id, null);
+      return;
+    }
+    const rect = rectOf(el);
+    const hidden = getComputedStyle(el).visibility === 'hidden' || !rect || rect.width === 0;
+    emit(id, hidden ? null : rect);
+  }, []);
+
+  const [trackedEl, setTrackedEl] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!trackedEl || typeof MutationObserver === 'undefined') return;
+    const target =
+      trackedEl.closest<HTMLElement>('.fc-timegrid-event-harness, .fc-daygrid-event-harness') ?? trackedEl;
+    const observer = new MutationObserver(() => emitTrackedRect());
+    observer.observe(target, { attributes: true, attributeFilter: ['style'] });
+    return () => observer.disconnect();
+  }, [trackedEl, emitTrackedRect]);
+
+  // 時間割の巻き上げで測り直す
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const onScroll = () => emitTrackedRect();
+    el.addEventListener('scroll', onScroll, true);
+    return () => el.removeEventListener('scroll', onScroll, true);
+  }, [emitTrackedRect]);
 
   const isMonth = mode === 'month';
   const viewName = isMonth ? MONTH_VIEW : DAYS_VIEW;
@@ -125,10 +166,11 @@ export function CalendarView({
     if (!el || typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(() => {
       calendarRef.current?.getApi?.().updateSize();
+      emitTrackedRect();
     });
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [emitTrackedRect]);
 
   const locale = i18n.language?.startsWith('ja') ? jaLocale : undefined;
 
@@ -294,7 +336,24 @@ export function CalendarView({
         eventDidMount={(arg) => {
           const color = (arg.event.extendedProps.source as CalendarViewEvent).color;
           if (color) arg.el.style.setProperty('--comp-calendar-owner-color', color);
+          if (trackRef.current.trackEventId && arg.event.id === trackRef.current.trackEventId) {
+            trackedElRef.current = arg.el;
+            setTrackedEl(arg.el);
+            requestAnimationFrame(() => emitTrackedRect());
+          }
         }}
+        eventWillUnmount={(arg) => {
+          // 別の日へ動かすと、新しい要素の mount の後に古い要素の unmount が来ることがある。同じ要素のときだけ忘れる
+          if (trackedElRef.current === arg.el) {
+            trackedElRef.current = null;
+            setTrackedEl(null);
+            requestAnimationFrame(() => emitTrackedRect());
+          }
+        }}
+        eventDragStart={() => { draggingRef.current = true; }}
+        eventDragStop={() => { draggingRef.current = false; }}
+        eventResizeStart={() => { draggingRef.current = true; }}
+        eventResizeStop={() => { draggingRef.current = false; }}
         eventContent={renderContent}
         selectable={Boolean(onSelectRange)}
         selectMirror={false}
@@ -307,10 +366,14 @@ export function CalendarView({
         eventStartEditable={Boolean(onEventMove)}
         eventDurationEditable={Boolean(onEventResize)}
         eventDrop={(arg) => {
+          draggingRef.current = false;
           onEventMove?.(arg.event.id, arg.event.start as Date, arg.event.end, arg.event.allDay, arg.revert);
+          requestAnimationFrame(() => emitTrackedRect());
         }}
         eventResize={(arg) => {
+          draggingRef.current = false;
           onEventResize?.(arg.event.id, arg.event.start as Date, arg.event.end, arg.revert);
+          requestAnimationFrame(() => emitTrackedRect());
         }}
         height={fillHeight ? '100%' : 'auto'}
         locale={locale}

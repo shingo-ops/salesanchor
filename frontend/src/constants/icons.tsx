@@ -60,6 +60,7 @@ import {
   DocumentTextIcon as DocumentTextOutlineIcon,
   ChartBarIcon as ChartBarOutlineIcon,
   CalendarIcon,
+  VideoCameraIcon as VideoCameraOutlineIcon,
   QuestionMarkCircleIcon,
   ShieldCheckIcon,
   Cog6ToothIcon as Cog6ToothOutlineIcon,
@@ -140,6 +141,7 @@ const FileTextOutline   = hi(DocumentTextOutlineIcon);
 const TruckOutline      = hi(TruckOutlineIcon);
 const ChartBarOutline   = hi(ChartBarOutlineIcon);
 const CalendarBlank     = hi(CalendarIcon);
+const VideoCameraOutline = hi(VideoCameraOutlineIcon);
 const QuestionOutline   = hi(QuestionMarkCircleIcon);
 const ShieldCheckOutline = hi(ShieldCheckIcon);
 const GearSixOutline    = hi(Cog6ToothOutlineIcon);
@@ -373,6 +375,9 @@ export const SCHEDULE_POPOVER_ICONS = {
   clock:       ClockOutline,           // ClockIcon outline — 日時の 1 行
   location:    MapPinOutline,          // MapPinIcon outline — 場所の 1 行
   description: Bars3BottomLeftOutline, // Bars3BottomLeftIcon outline — 説明の 1 行
+  category:    CalendarBlank,          // CalendarIcon outline — 種類の行（便12）
+  meet:        VideoCameraOutline,     // VideoCameraIcon outline — Google Meet の行（便12）
+  share:       UsersOutline,           // UsersIcon outline — 社員にも見せるの行（便12）
 } satisfies Record<string, Icon>;
 
 export const PASSWORD_FIELD_ICONS = {
