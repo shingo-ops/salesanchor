@@ -70,6 +70,8 @@ def fakes(monkeypatch, tmp_path):
     monkeypatch.setattr(rec, "load_followup_reference", m.followup)
     m.soldout = MagicMock(return_value=())  # 過去48時間の投稿なし。本番と同じ関数を呼ぶことは test_recompute_passes_soldout_ref_posts で見る
     monkeypatch.setattr(rec, "load_soldout_ref_posts", m.soldout)
+    m.idle_limit = MagicMock(return_value="30s")
+    monkeypatch.setattr(rec, "set_idle_tx_limit", m.idle_limit)
     return m
 
 
@@ -359,3 +361,40 @@ def test_recompute_passes_soldout_ref_posts_from_the_same_function_as_production
         pab._v102_row_fields = original
     assert seen["posts"] == posts
     assert fakes.soldout.call_args.args[1] == "job-r1"
+
+
+def test_transaction_is_closed_right_before_compute(fakes, monkeypatch):
+    # Arrange
+    calls: list[str] = []
+    fakes.session.rollback.side_effect = lambda: calls.append("rollback")
+
+    def compute(*a, **k):
+        calls.append("compute")
+        return {"v102_items": [], "v102_flags": {}}
+
+    monkeypatch.setattr(pab, "_v102_row_fields", compute)
+    # Act
+    summary, _out = _run(fakes, [_row("r1"), _row("r2")])
+    # Assert
+    assert summary.written == 2
+    idx = [i for i, c in enumerate(calls) if c == "compute"]
+    assert len(idx) == 2
+    assert all(calls[i - 1] == "rollback" for i in idx)
+    assert fakes.idle_limit.call_count == 1
+
+
+def test_idle_limit_is_set_again_after_a_failed_row_and_next_row_is_processed(fakes, monkeypatch):
+    # Arrange
+    def compute(*a, **k):
+        if compute.n == 0:
+            compute.n += 1
+            raise RuntimeError("boom")
+        return {"v102_items": [], "v102_flags": {}}
+
+    compute.n = 0
+    monkeypatch.setattr(pab, "_v102_row_fields", compute)
+    # Act
+    summary, _out = _run(fakes, [_row("r1"), _row("r2")])
+    # Assert
+    assert (summary.written, summary.errors) == (1, 1)
+    assert fakes.idle_limit.call_count == 2  # 最初に 1 回・失敗の後に 1 回
