@@ -84,3 +84,11 @@
 
 - `application_name=salesanchor_migration` の意味を広げた。run_py に加えて run_sql の接続にも付く（`PGAPPNAME`）。さらに、本番反映の取り残しを片付ける `scripts/deploy-db-orphan-cleanup.sh` が、この名前の接続を切る目印として使う。名前の正本は `scripts/lib/db-app-names.sh`。
 - 控え（backup.sh）にも `salesanchor_backup_deploy`（本番反映）と `salesanchor_backup_cron`（毎朝3時。片付けの対象外）を付けた。設計は docs/handoff/deploy-db-stall/design.md §16。
+
+## 追記（2026-11-10・deploy-db-stall 段6 便2）移行の前の点検
+
+- 移行の段の前に、開いたままの DB 取引を数えて待つか知らせる点検の段「Check open DB transactions before deploy」を足した。空き容量の点検の後・控えの前で、条件は移行の段と同じ（`steps.gate.outputs.migrations == 'true'`）。設計は docs/handoff/deploy-db-stall/design.md §18。
+- 台本は `scripts/deploy-db-precheck.sh`。サーバーの作業場所は入れ替えの段まで1つ前の版なので、段が `git show origin/main:...` で読んで流す（台本が origin/main に無ければ skipped で通る）。
+- 動き: idle in transaction で5秒より長く取引が開いた接続を5秒おきに数え、3回続けて0本なら通る。`$SECONDS` で測って600秒たっても0本が続かなければ、握り手（pid・ユーザー・application_name・状態・取引の秒数・握った表）と一時コンテナの名前を書き、Discord（既存の DISCORD_WEBHOOK_OWNER_PING）に知らせて止まる。試しの停止・接続の切断はしない。待ちの数は台本の頭の1か所が正本。
+- 点検の後に来た握り手は見えない（点検の段の終わりと移行の段の始まりの間の隙）。隙の長さは「precheck finished at」の行で記録に残る。
+- 見張りは `.github/workflows/backup-script-test.yml` の db-precheck（`scripts/tests/test-deploy-db-precheck.sh` の P1〜P8）。
