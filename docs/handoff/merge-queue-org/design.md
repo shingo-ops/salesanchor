@@ -25,6 +25,8 @@
 K3 の 60 分は「確かめ 1 回（20〜25 分）＋前に並ぶ分」の目安。PO の承認で確定する。
 
 起点の決め方（設計審査 5 回目の必須指摘 1 で替えた）: 「PR の commit のうち、必須の確かめが初めて全部 success になった commit」の、その必須の確かめの完了時刻のうち一番遅い物。
+- 「通った」と数える結果は check-run の conclusion が `success`・`skipped`・`neutral`、commit status の state が `success`（6 回目の推奨 1。便2 の後は乙の job が skipped になるため）。同じ名前の check-run が再実行で複数あるときは id が一番大きい物、同じ context の status が複数あるときは一番新しい物を使う。
+- 2026-11-10 の 6 回目の審査で、直近の合流 PR 12 件を REST で読み、12 件とも起点が取れた（取れない割合 0%）。
 - 替えた理由: 4 回目で決めた「最初の APPROVE」は、本線の ruleset で必要な承認数が 0（`required_approving_review_count: 0`）なので付かない PR が多い。2026-11-10 に合流した 30 件のうち APPROVE が付いていたのは 7 件（23%）だけだった（5 回目の審査の REST での数え）。約 8 割を外すと前後を比べられない。
 - 新しい起点は合流した PR の全件で取れる: 本線の ruleset が必須の確かめを求めるので、合流した PR の最後の head は必ず全部 success になっている。
 - 読み方: REST `pulls/{n}/commits` で commit を古い順に読み、各 commit の `commits/{sha}/check-runs`（job 型）と `commits/{sha}/status`（status 型。`guard-authoring/evaluation` 等）を読む。必須の名前は ruleset の `required_status_checks` から取る（前後で同じ名前の一覧を使い、一覧を記録に残す）。
@@ -32,7 +34,7 @@ K3 の 60 分は「確かめ 1 回（20〜25 分）＋前に並ぶ分」の目�
 - 起点が取れなかった PR（管理者の飛ばし等）は数から外し、外した数と割合を一緒に記録する。外した割合が 5% を超えたら、その 14 日の K2・K3 は判定しない（前後どちらでも同じ扱い）。
 - 前（便0 の基準値）と後（14 日後）で同じ起点・同じ式を使う。数える台本はカード（便0）で 1 本にし、前後で同じ台本を流す。台本は列の一時枝の commit（merge_group）を読まない（PR の commit だけを読む）。
 
-K4 の 40 分の理由（設計審査 4 回目の必須指摘 3）: 列の確かめの制限時間は 60 分（§4）で、止まった項目は 60 分で列から外される。しきい値を 60 分にすると、鳴る前に外されて鳴らない。今の確かめは 20〜25 分なので、40 分は普通の確かめでは鳴らず、制限時間の前に鳴る。数えるのは「先頭の項目の確かめが始まってから」で、「列に入れてから」ではない（同時 5 本の後ろで待つ間は止まりではないため）。列の外し（制限時間切れ・赤）は GitHub が PR に記録し、作者に知らせる。作者は主に shingo-cc なので PO には届かない（5 回目の推奨 4）。そこで、外れたことは scripts/gh-pr-merge-safe.sh（§6）が「列に入れた PR が MERGED にならず列からも消えた」を読んだときに Discord で PO に知らせる案を置く（U15・PO が決める）。「position が 1」と書かないのは、公式スキーマの説明（`The position of this entry in the queue`）に 0 から数えるか 1 から数えるかが書かれていないため（5 回目の推奨 1）。
+K4 の 40 分の理由（設計審査 4 回目の必須指摘 3）: 列の確かめの制限時間は 60 分（§4）で、止まった項目は 60 分で列から外される。しきい値を 60 分にすると、鳴る前に外されて鳴らない。今の確かめは 20〜25 分なので、40 分は普通の確かめでは鳴らず、制限時間の前に鳴る。数えるのは「先頭の項目の確かめが始まってから」で、「列に入れてから」ではない（同時 5 本の後ろで待つ間は止まりではないため）。列の外し（制限時間切れ・赤）は GitHub が PR に記録し、作者に知らせる。作者は主に shingo-cc なので PO には届かない（5 回目の推奨 4）。そこで、外れたことは §9 の列の見張りが PR の timeline の `REMOVED_FROM_MERGE_QUEUE_EVENT`（項目 `createdAt`・`pullRequest`・`reason`。2026-11-10 に公式スキーマ schema-pulls.json で確認）を前回の起動以降の分だけ読み、Discord で PO に知らせる案を置く（U15・PO が決める）。gh-pr-merge-safe.sh だけで読む形にしない。台本が「列に入れた」と報告して終わる場合や、画面から入れた場合に見落とすため（6 回目の推奨 2）。「position が 1」と書かないのは、公式スキーマの説明（`The position of this entry in the queue`）に 0 から数えるか 1 から数えるかが書かれていないため（5 回目の推奨 1）。
 
 ## 3. 選んだ案と、選ばなかった案
 
@@ -99,7 +101,7 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 | .github/workflows/ledger-auto-done-main.yml | `gh pr merge --auto --merge` は列が必須の枝では「緑になったら列に入る」になる（R§2）。動きはそのまま。便2 の後に 1 件で確かめる |
 | .github/workflows/ledger-done-update-branch.yml | 列が入ると不要。便3 で止める（便2 の前に止めると今の運用が詰まる） |
 | scripts/agent-hooks/review-gate/gate.py:53 | STRICT_CHECK_REPOS に新しい名前を足す（旧と新の両方。大文字小文字は区別しない）。`--admin` を止める行を足す。手元の写し（~/.claude/scripts/review-gate）は ADR-1011 どおり PO が `!` で反映 |
-| R§6-4 の直書き全部 | `${{ github.repository }}`・`gh repo view`・`GITHUB_REPOSITORY` から取る形に直す。試験の固定値（リポジトリ名として書かれた物）は新名へ。ただし次は例外（設計審査 5 回目の必須指摘 2）: `scripts/ci/is-ledger-done-pr.sh:21`（`LEDGER_PR_AUTHOR="shingo-ops"`）は PR の作者という人の名前なので変えない（変えると台帳 DONE の判定が壊れる）。`scripts/sop-health-collector.js:16,25` は便0 ではなく「移した直後の組」で変える。CODEOWNERS の `@shingo-ops` は人なので変えない。`backend/app/routers/discord_auto_setup.py:66`（手順書の URL）を変えると `frontend/api-contract/openapi.json:1552` の既定値も変わるので、同じ PR で API の契約を作り直す（必須の確かめ「API contract is up to date」）。`.github/workflows/publish-qa-checksheet.yml:5,60`（Pages の URL `shingo-ops.github.io`）は移すと URL が変わる物なので便3 で直す |
+| R§6-4 の直書き全部 | `${{ github.repository }}`・`gh repo view`・`GITHUB_REPOSITORY` から取る形に直す。試験の固定値（リポジトリ名として書かれた物）は新名へ。ただし次は例外（設計審査 5 回目の必須指摘 2）: `scripts/ci/is-ledger-done-pr.sh:21`（`LEDGER_PR_AUTHOR="shingo-ops"`）は PR の作者という人の名前なので変えない（変えると台帳 DONE の判定が壊れる）。`scripts/sop-health-collector.js:16,25` は便0 ではなく「移した直後の組」で変える。CODEOWNERS の `@shingo-ops` は人なので変えない。`backend/app/routers/discord_auto_setup.py:66`（手順書の URL）を変えると `frontend/api-contract/openapi.json:1552` の既定値も変わるので、同じ PR で API の契約を作り直す（必須の確かめ「API contract is up to date」）。この行は環境変数から取る形にせず、新しい名前の直書きにする（環境で値が変わると API の契約の比べ合わせが環境によって変わるため。6 回目の推奨 3）。`.github/workflows/publish-qa-checksheet.yml:5,60`（Pages の URL `shingo-ops.github.io`）は移すと URL が変わる物なので便3 で直す |
 | 設計審査で見つかった漏れ（必須指摘 3） | `scripts/validate-pr-ownership.sh:142`（REPO_SLUG の既定値）・`scripts/dev/test-agent-hooks.sh:12,52,392`（試験の origin）・`.github/workflows/weekly-stale-tasks.yml:36`（案内の URL）・`tools/claude-channels/README.md:18`（clone 先）を新名か自動で取る形に（便0）。**本番の見張りの設定**は便0 では変えず、下の「移した直後の組」の行で扱う。人の名前としての `shingo-ops`（`line-import-device.yml:29`・`line-import-operations.yml:20`・`sandbox-test.yml:18` の actor 比較・`feedback-issue-triage.yml:42`・CODEOWNERS の `@shingo-ops`・AGENTS.md）は人を指すので変えない |
 | .github/workflows/auto-merge-guard.yml（設計審査 2 回目の必須指摘 1） | 今は `pull_request_target` の `auto_merge_enabled`（:16）で起き、台帳 DONE の PR でなければ `gh pr merge --disable-auto`（:60）で予約を消す。列が必須の枝では、確かめが緑になる前に合流の命令を出すと auto-merge の予約になる（gh 2.85.0 の help・公式 merging-a-pull-request-with-a-merge-queue.md:53）。この見張りがその予約を消すので、PR は列に入らずに止まる。直し: (1) gh-pr-merge-safe.sh は必須の確かめが全部緑（check-pr-merge-ready.py の判定）になってから合流の命令を出す（今の動きのまま・カードで行を確かめる）。(2) 列に入れる操作で `auto_merge_enabled` が起きるかは未確認なので、§11 の試しの PR で確かめる。(3) 見張りは `pull_request_target` なので main 側の定義で動く（:7）。試しの PR で予約が消されると、見張りを直す PR も同じ見張りに消される。だから「列に入っている PR（GraphQL の `pullRequest.isInMergeQueue` が true。`gh pr view --json` には無い項目なので `gh api graphql` で読む。2026-11-10 に読めることを確認済み）は消さない」の判定は、起きるかどうかに関わらず便0 で前もって入れる（設計審査 3 回目の推奨 2）。判定の書き方と試験はカードで決める |
 | 見張りの数え先（設計審査 2 回目の必須指摘 2） | `scripts/sop-health-collector.js:25`（`REPO` の既定値 `shingo-ops/salesanchor`）が記録に付ける名前と、`monitoring/grafana/provisioning/dashboards/json/sop-health.json` の `repo="shingo-ops/salesanchor"` の絞り込み 5 行（`:72,137,202,267,341`。設計審査 4 回目の必須指摘 2 で 3 行から直した）は組。片方だけ変えるとグラフが黙って空になる。直し: 両方を下の「移した直後の組」で新名に変える。移す前の記録は旧名のまま残るので、5 行とも絞り込みを旧名・新名の両方にする（`repo=~"shingo-ops/salesanchor|GEN-RYU-System/salesanchor"`） |
@@ -125,9 +127,10 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 1. ruleset 2 件・リポジトリの設定・secret の名前の一覧（値は読めない・名前だけ）・Pages の設定を JSON で保存する。
 2. 開いている PR の数と、列の代わりに合流を止める時間帯を PO と決める（移す数分間は合流しない）。
 3. 便0 が本線に入り、直書きが残っていないことを確かめる（設計審査 5 回目の必須指摘 2 で、分け方を機械で決まる形に直した）。`shingo-ops` を含む行を、書き方で 2 つに分ける。
-   - 甲（リポジトリの名前）: 正規表現 `shingo-ops(/|__)salesanchor|shingo-ops\.github\.io` に当たる行。`git grep -n -E '<この式>' -- ':!docs' ':!.claude-pipeline' ':!tasks'` から、§6「移した直後の組」の 9 本と `publish-qa-checksheet.yml`（便3）を除いた残りが 0 件。
-   - 乙（人の名前）: `shingo-ops` を含み、甲の式に当たらない行。動かさない。ただし「移した直後の組」の `docker-compose.yml:558`（`--owner=shingo-ops`）と `docker-compose.monitoring.yml:111`（`GHA_OWNER=shingo-ops`）は持ち主の名前なので組で変える。それ以外の乙は、2026-11-10 の origin/main（bb9d147a9。`*.md` を除く）で次の 12 本・39 行: `.github/CODEOWNERS`（14 行）・`feedback-issue-triage.yml:42`・`line-import-device.yml:29`・`line-import-operations.yml:20`・`sandbox-test.yml:18`・`scripts/check-process-artifacts.js:43,1230,1277,1280`（GO の発行者）・`scripts/ci/is-ledger-done-pr.sh:21`・`scripts/tests/test-is-ledger-done-pr.sh:9,44`・`scripts/tests/test-pr-lifecycle.py:42`・`scripts/tests/test-process-artifacts.js`（14 行）。カードで最新の main で数え直し、この一覧と食い違ったら止める。
-   - 甲の件数（同じ main で 164 行）と除いた件数は、移した直後の組の PR の前後で数えて記録する。移した直後の組の PR の後は、甲を `publish-qa-checksheet.yml` だけ除いて数えて 0 件（§11）。便3 の後は除かずに 0 件。
+   - 甲（リポジトリの名前）: 正規表現 `shingo-ops(/|__)salesanchor|shingo-ops\.github\.io` に当たる行。数える範囲は甲・乙とも同じ1つの指定 `-- ':!docs' ':!.claude-pipeline' ':!tasks' ':!*.md'` に揃える（6 回目の必須指摘）。`git grep -n -E '<この式>' <この範囲>` から、§6「移した直後の組」の 9 本と `publish-qa-checksheet.yml`（便3）を除いた残りが 0 件。
+   - 範囲の外の `*.md` で甲に当たる行は、2026-11-10 の bb9d147a9 で `tools/claude-channels/README.md:18`（clone の URL）の 1 行だけ。これは便0 で直す物として別に数え、便0 の後に `git grep -n -E '<この式>' -- '*.md' ':!docs' ':!.claude-pipeline' ':!tasks'` が 0 件であることを確かめる。
+   - 乙（人の名前）: `shingo-ops` を含み、甲の式に当たらない行。動かさない。ただし「移した直後の組」の `docker-compose.yml:558`（`--owner=shingo-ops`）と `docker-compose.monitoring.yml:111`（`GHA_OWNER=shingo-ops`）は持ち主の名前なので組で変える。乙は同じ範囲で、2026-11-10 の origin/main（bb9d147a9）に 12 本・42 行ある（`git grep -n 'shingo-ops' <この範囲> | grep -v -E '<甲の式>'` で数えた）。うち docker-compose の 2 本・2 行は上のとおり組で変える。残りの動かさない乙は次の 10 本・40 行（6 回目の必須指摘で 39 行を直した）: `.github/CODEOWNERS`（14 行）・`feedback-issue-triage.yml:42`・`line-import-device.yml:29`・`line-import-operations.yml:20`・`sandbox-test.yml:18`・`scripts/check-process-artifacts.js:43,1230,1277,1280`（GO の発行者）・`scripts/ci/is-ledger-done-pr.sh:21`・`scripts/tests/test-is-ledger-done-pr.sh:9,44`・`scripts/tests/test-pr-lifecycle.py:42`・`scripts/tests/test-process-artifacts.js`（14 行）。カードで最新の main で数え直し、この一覧と食い違ったら止める。
+   - 甲の件数（同じ main・同じ範囲で 164 行。範囲の外の README.md:18 を足すと 165 行）と除いた件数は、移した直後の組の PR の前後で数えて記録する。移した直後の組の PR の後は、甲を `publish-qa-checksheet.yml` だけ除いて数えて 0 件（§11）。便3 の後は除かずに 0 件。
 4. （設計審査 2 回目の必須指摘 3）`PIPELINE_PAT` の種類を PO に画面で確かめてもらう（U9）。使う所は 8 本・14 か所（`deploy.yml:66,1161-1162`・`auto-merge-guard.yml:33`・`ledger-auto-done-main.yml:45,87,170,175`・`ledger-done-update-branch.yml:27`・`active-work-auto-done.yml:26,139`・`active-work-auto-review.yml:25`・`external-state-snapshot.yml:84`・`monthly-secret-expiry.yml:18`）。公式文書では、細かく権限を絞る型の鍵は「持ち主を 1 つ選び、その持ち主の物しか触れない」（github/docs `managing-your-personal-access-tokens.md:108`）。この型で持ち主が個人名義なら、移した後は 14 か所が全部失敗する。`deploy.yml:72` の「前回の配備が成功したか」の確かめも失敗し、毎回すべての移行を走らせる側に倒れる。手当て: この型なら、移す前に持ち主を GEN-RYU-System にした鍵を PO に作ってもらう（会社が鍵の承認を求める設定なら、その承認も）。移した直後、最初の合流より前に secret を差し替える（§8 移した直後 1）。古い型の鍵なら、会社が古い型の鍵を許しているかを確かめる。
 
 移す前（PO・画面で読むだけ）: R§8 の U2（実行機）・U3（webhook・deploy key・GitHub App）を読む。個人名義に入れた App（claude.ai の GitHub 連携を含む）が会社名義で要るかを決める。
@@ -147,7 +150,7 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 | 仕組み | 中身 | 守らせ方 |
 |---|---|---|
 | 列そのもの | ruleset の merge queue 必須・bypass 空 | GitHub が列を通らない合流を拒む（人も AI も） |
-| 列の見張り | 新しい workflow（schedule 15 分ごと・public なので無料・手で起動するときはしきい値を入力で変えられる）。GraphQL `repository.mergeQueue(branch:"main").entries` のうち `position` が一番小さい項目の `headCommit.checkSuites` の `createdAt` のうち一番早い物から 40 分を超えて、まだ合流していなければ scripts/notify/discord-owner-ping.sh で PO に知らせる（MergeQueueEntry に `position`・`headCommit`・`state`・`enqueuedAt` があること、CheckSuite に `createdAt` があることは 2026-11-10 に公式スキーマで確認済み）。列が作り直されると先頭の commit が変わり時刻もやり直しになる。便2 の試しの PR で、この時刻と列から外れた時刻の差を記録する（5 回目の推奨 2） | K4。Mergify の指摘「黙って止まる」への手当て |
+| 列の見張り | 新しい workflow（schedule 15 分ごと・public なので無料・手で起動するときはしきい値を入力で変えられる）。GraphQL `repository.mergeQueue(branch:"main").entries` のうち `position` が一番小さい項目の `headCommit.checkSuites` の `createdAt` のうち一番早い物から 40 分を超えて、まだ合流していなければ scripts/notify/discord-owner-ping.sh で PO に知らせる（MergeQueueEntry に `position`・`headCommit`・`state`・`enqueuedAt` があること、CheckSuite に `createdAt` があることは 2026-11-10 に公式スキーマで確認済み）。列が作り直されると先頭の commit が変わり時刻もやり直しになる。`headCommit` が null、または `checkSuites` が 0 件のときは、その回は数えずに記録だけ残す（6 回目の推奨 4）。便2 の試しの PR で、この時刻と列から外れた時刻の差を記録する（5 回目の推奨 2） | K4。Mergify の指摘「黙って止まる」への手当て |
 | 設定のずれの見張り | 週 1 で ruleset を読み、merge queue の規則が無い・bypass が空でない・strict が有効、のどれかで Discord | 誰かが外したら気付く |
 | 審査の見張り | review-gate に `--admin` を止める行 | 列を飛ばす命令を AI が出せない |
 | 数える | 週 1 で K2・K3 を数えて記録（14 日で判定） | 効果を数で確かめる |
@@ -178,7 +181,7 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 | 便0: 乙の job は列で飛ぶ | 便2 の後の試しの PR で、乙の確かめが merge_group の run で skipped・Success |
 | 便0: status 型の必須（guard-authoring/evaluation 等）が列で揃う | 便2 の後の試しの PR で、列の commit の `gh api repos/<新>/commits/<head_sha>/status` にその名前が success で載る |
 | 便0: 一時枝で余計に走らない | 5 本の `push:` に `gh-readonly-queue/**` の除外がある。便2 の後の試しの PR で、その 5 本の run が一時枝で 0 件 |
-| 便0: 直書き 0 | §8 移す前 3 の甲の grep が、移した直後の組の 9 本と `publish-qa-checksheet.yml` を除いて 0 件。乙の一覧が §8 の 12 本と一致 |
+| 便0: 直書き 0 | §8 移す前 3 の甲の grep が、移した直後の組の 9 本と `publish-qa-checksheet.yml` を除いて 0 件。`*.md` の甲も 0 件（README.md:18 を直した後）。動かさない乙が §8 の 10 本・40 行と一致 |
 | 便0: K2・K3 の起点が取れる | 便0 の台本を直近 14 日の合流 PR に流し、起点が取れなかった割合が 5% 以下 |
 | 便1 直後: 移した直後の組 | その PR の後、§8 移す前 3 の甲の grep が `publish-qa-checksheet.yml` だけを除いて 0 件。`monitoring-check.yml` が緑。`monitoring-config-drift` の手動起動でずれ 0（ずれの点検の 6 本に `sop-health.json` は入っていないので、グラフは下の「見張りのグラフが途切れない」で確かめる。5 回目の推奨 6） |
 | 便1: K5・K6 | §8 移した直後 1・5 |
@@ -205,5 +208,7 @@ R§7（出典・日付・数値・適用の限界は scratchpad の mq-web/evide
 - U13: 会社名の綴り（大文字小文字）。§6 の置き換えと review-gate の照合は大文字小文字を区別しない形にするが、表示の綴りは移した後の API の値で確かめる。
 - U15（PO が決める）: 列から外れたとき PO にも Discord で知らせるか（§2 K4 の注）。知らせない場合、外れたことに気付くのは作者（shingo-cc）だけになる。
 - U16（PO が決める）: K4 のしきい値を 40 分のままにするか、定時の起動の遅れに備えて 35 分にするか。設計の推奨は 40 分のまま遅れを数える（35 分だと普通の確かめ 20〜25 分との差が 10 分になり、混んだ日に誤って鳴りやすい）。14 日で遅れが 5 分を超えた回数が 1 回以上なら 35 分に下げる案を出す。
+- U17（PO が決める）: 便1（名義の移し）の間、本線への合流を止める時間帯（6 回目の観点 f）。移している最中の合流は行き先が変わる途中で起きるため、止める時間を決めてから同意票を出す。
+- U18（調査で埋まる）: 列の一時枝（gh-readonly-queue/…）が作られたとき push の event で workflow が起きるか。公式 events-that-trigger-workflows.md で確かめ、起きるなら push で動く workflow の重い仕事が二重に走らないかをカード（便0）で確かめる（6 回目の観点 f）。
 - U14: prod2（監視用サーバー）の `/opt/salesanchor-monitoring` に設定を置く正式な手順と担当（§6「移した直後の組」）。カードを作る前に正本を探し、無ければ PO に聞く。
 - 行番号: この設計の file:行 は 2026-11-10 の origin/main（2bf29d9e〜53b3b308）の値。カードを作るときに最新の main で確かめ直す（3 回目の推奨 4）。
