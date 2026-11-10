@@ -91,7 +91,7 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 | scripts/agent-hooks/review-gate/gate.py:53 | STRICT_CHECK_REPOS に新しい名前を足す（旧と新の両方。大文字小文字は区別しない）。`--admin` を止める行を足す。手元の写し（~/.claude/scripts/review-gate）は ADR-1011 どおり PO が `!` で反映 |
 | R§6-4 の直書き全部 | `${{ github.repository }}`・`gh repo view`・`GITHUB_REPOSITORY` から取る形に直す。試験の固定値と CODEOWNERS は新名へ |
 | 設計審査で見つかった漏れ（必須指摘 3） | `scripts/validate-pr-ownership.sh:142`（REPO_SLUG の既定値）・`scripts/dev/test-agent-hooks.sh:12,52,392`（試験の origin）・`.github/workflows/weekly-stale-tasks.yml:36`（案内の URL）・`monitoring/scripts/check_alert_rules.py:18`（手順書の URL）・`tools/claude-channels/README.md:18`（clone 先）を新名か自動で取る形に。**本番の見張りの設定** `docker-compose.yml:558`（`--owner=shingo-ops`）・`docker-compose.monitoring.yml:111`（`GHA_OWNER`）・`:157`（`GITHUB_REPO`）・`monitoring/github-collector/collector.py:27`（既定値）は、移した後に旧名のままだと GitHub の動きの記録が取れなくなる。旧名と新名のどちらでも動くかは未確認なので、便1 の直後に本番へ配る変更として扱う（§8 移した直後 5 に入れる）。人の名前としての `shingo-ops`（`line-import-device.yml:29`・`line-import-operations.yml:20`・`sandbox-test.yml:18` の actor 比較・`feedback-issue-triage.yml:42`・CODEOWNERS の `@shingo-ops`・AGENTS.md）は人を指すので変えない |
-| .github/workflows/auto-merge-guard.yml（設計審査 2 回目の必須指摘 1） | 今は `pull_request_target` の `auto_merge_enabled`（:16）で起き、台帳 DONE の PR でなければ `gh pr merge --disable-auto`（:60）で予約を消す。列が必須の枝では、確かめが緑になる前に合流の命令を出すと auto-merge の予約になる（gh 2.85.0 の help・公式 merging-a-pull-request-with-a-merge-queue.md:53）。この見張りがその予約を消すので、PR は列に入らずに止まる。直し: (1) gh-pr-merge-safe.sh は必須の確かめが全部緑（check-pr-merge-ready.py の判定）になってから合流の命令を出す（今の動きのまま・カードで行を確かめる）。(2) 列に入れる操作で `auto_merge_enabled` が起きるかは未確認なので、§11 の試しの PR で確かめる。(3) 起きる場合は、見張りの判定に「緑で列に入った PR は消さない」を足す形をカードで決める |
+| .github/workflows/auto-merge-guard.yml（設計審査 2 回目の必須指摘 1） | 今は `pull_request_target` の `auto_merge_enabled`（:16）で起き、台帳 DONE の PR でなければ `gh pr merge --disable-auto`（:60）で予約を消す。列が必須の枝では、確かめが緑になる前に合流の命令を出すと auto-merge の予約になる（gh 2.85.0 の help・公式 merging-a-pull-request-with-a-merge-queue.md:53）。この見張りがその予約を消すので、PR は列に入らずに止まる。直し: (1) gh-pr-merge-safe.sh は必須の確かめが全部緑（check-pr-merge-ready.py の判定）になってから合流の命令を出す（今の動きのまま・カードで行を確かめる）。(2) 列に入れる操作で `auto_merge_enabled` が起きるかは未確認なので、§11 の試しの PR で確かめる。(3) 見張りは `pull_request_target` なので main 側の定義で動く（:7）。試しの PR で予約が消されると、見張りを直す PR も同じ見張りに消される。だから「列に入っている PR（GraphQL の `pullRequest.isInMergeQueue` が true。`gh pr view --json` には無い項目なので `gh api graphql` で読む。2026-11-10 に読めることを確認済み）は消さない」の判定は、起きるかどうかに関わらず便0 で前もって入れる（設計審査 3 回目の推奨 2）。判定の書き方と試験はカードで決める |
 | 見張りの数え先（設計審査 2 回目の必須指摘 2） | `scripts/sop-health-collector.js:25`（`REPO` の既定値 `shingo-ops/salesanchor`）が記録に付ける名前と、`monitoring/grafana/provisioning/dashboards/json/sop-health.json:72,137,202` の `repo="shingo-ops/salesanchor"` の絞り込みは組。片方だけ変えるとグラフが黙って空になる。直し: 両方を同じ便（便1 の直後の本番への変更）で新名に変える。移す前の記録は旧名のまま残るので、グラフの絞り込みを旧名・新名の両方にする（`repo=~"shingo-ops/salesanchor|GEN-RYU-System/salesanchor"`）。`monitoring/prometheus/alert_rules.yml`（38 行）と `monitoring/prometheus/tests/alert_rules_test.yml`（44 行）の手順書の URL は、GitHub の転送で開けるが、同じ便で新名に直す（試験の期待値も同時に変える） |
 
 ## 7. 進め方（便ごとに 1 つ変え、測ってから次へ）
@@ -144,7 +144,8 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 | 危険 | 手当て |
 |---|---|
 | 移した後、旧名に戻せない | §8 の点検を移す前に全部済ませる。戻さない前提の計画 |
-| App・クラウドの連携が会社名義のリポジトリを読めない | U3・U5 を移す前と直後に確かめる。読めなければ会社名義に App を入れる（PO の画面操作） |
+| App・クラウドの連携が会社名義のリポジトリを読めない | U3・U5 を移す前と直後に確かめる。読めなければ会社名義に App を入れる（PO の画面操作）。本番の見張りも GitHub App と GITHUB_TOKEN を使う（`docker-compose.monitoring.yml:109-110,156`・`docker-compose.yml:551-556`）ので、U3 の確認先にこの App を名前で入れる（設計審査 3 回目の推奨 5） |
+| 便0 で入れた見張りの判定が効かず、試しの PR の列入りが消される（3 回目の推奨 2） | §7 の便2 の戻し（ruleset から列の規則を外す）を先に行い、見張りを直してから便2 をやり直す |
 | ruleset が移しで消える | 保存した JSON から作り直す（U1） |
 | 列の中の確かめが長くなり待ちが延びる | 同時 5 本・制限 60 分。K3 で測り、数を見て変える |
 | 列が止まって誰も気付かない | §9 の見張り（K4） |
@@ -181,3 +182,8 @@ R§7（出典・日付・数値・適用の限界は scratchpad の mq-web/evide
 - strict を外すこと（§4）を PO が認めるか。
 - K3 の 60 分を PO が認めるか。
 - U9: `PIPELINE_PAT` の種類と持ち主（PO の画面の確認）。細かく絞る型で持ち主が個人なら、会社を持ち主にした鍵を作り直す。
+- U10: 列に入れたときに `auto_merge_enabled` が起きるか（公式 events-that-trigger-workflows.md:666 では `enqueued` と別の種類・未確認）。便2 の試しの PR で確かめる（§11）。便0 の見張りの判定はどちらでも安全な形にする（§6）。
+- U11: 本番の見張り（docker-compose の GitHub App）が会社名義のリポジトリを読めるか（§10・U3 と一緒に確かめる）。
+- U12: 会社が鍵の承認と寿命の上限を求めているか（managing-your-personal-access-tokens.md:104-118）。U9 で作り直すときに PO が画面で確かめる。
+- U13: 会社名の綴り（大文字小文字）。§6 の置き換えと review-gate の照合は大文字小文字を区別しない形にするが、表示の綴りは移した後の API の値で確かめる。
+- 行番号: この設計の file:行 は 2026-11-10 の origin/main（2bf29d9e〜53b3b308）の値。カードを作るときに最新の main で確かめ直す（3 回目の推奨 4）。
