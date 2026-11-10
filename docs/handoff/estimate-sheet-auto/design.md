@@ -427,3 +427,28 @@ PO の要件（2026-11-07）: 「タブがある人には配信してない人�
   - 原因（コードで確認）: 画面は商品区分を文字 "1" で送る（`TcgProductDetailDrawer.tsx` の saveCreate・`CreateProductBody.product_category_id: str`）。2026-09-20 の 90367c1a3 で比べ方の `::text` を外したため、数の列と文字の値の比べになり、asyncpg が止める。商品マスタ画面の「新規追加」は、それ以降どの商品でも失敗する。10-30 の登録がどの入口から入ったかはまだ確かめていない。
   - 直し方の案（未承認・実装は PO の明示承認の後にクラウドの担当）: `create_product` の入口で商品区分を数に直し（`int(product_category_id)`）、重複の確かめと INSERT の両方にその数を渡す。数にできない値は 422。PostgreSQL の試験で「文字の "1" を渡しても登録できる」を足す。触らない: 画面・SQL の他の比べ・他の入口。
   - 戻し方: その1コミットを戻す。測り方: 直った後、本番の商品マスタ画面から EB-06 を登録し、200 と DB の1件を確かめる。
+- PO 承認（2026-11-10）: 「不具合なおして進めて」。上の直し方で実装してよい、5商品の登録と発売日の直しまで進めてよい、と読んだ。
+- 追加の調べ（2026-11-10・origin/main e27b1a522）: 入口は3つ。商品マスタ画面 `routers/tcg_product_import.py:406`・解析レビュー `routers/tcg_product_master.py:117`・重複の確かめ `routers/tcg_product_master.py:99` はどれも商品区分を文字で渡す（3つとも同じ失敗）。CSV は `tcg_product_import_svc.py` が数で渡す（9-20 の変更で数にした）ので登録は通るが、重複の候補の判定 `_build_duplicate_candidates`（文字の列と数の比べ）が常に偽になる。実 DB の試験 `tests/test_tcg_completion_safety.py:162` は数だけを渡しており、文字の道を試していなかった。
+- 直し方の確定（Planner）: 比べる側を9-20 より前の形（文字どうしの比べ）に戻し、書く側だけ数に直す。こうすると文字と数のどちらで来ても通る。
+
+#### 実装カード: 商品の新規登録の 500 を直す（便 F1）
+- 作業: origin/main 起点 `release/fix-product-create-category-id`。触るのは下の5ファイルと台帳だけ。画面・router・CSV の道・他の SQL は触らない。
+- C1 `backend/app/services/tcg_product_master_svc.py` `check_duplicates`:
+  - :413 `AND p.product_category_id = :product_category_id` → `AND p.product_category_id::text = :product_category_id`
+  - :427 `"product_category_id": product_category_id,` → `"product_category_id": str(product_category_id),`
+  - :435 `product_category_id=product_category_id,` → `product_category_id=str(product_category_id),`
+- C2 同ファイル `create_product`: :519 の足りない項目の確かめ（`if missing: raise`）の直後に、次を足す。
+  ```python
+  try:
+      _category_id_int = int(str(product_category_id).strip())
+  except (TypeError, ValueError):
+      raise ValueError("PRODUCT_CATEGORY_ID_INVALID") from None
+  ```
+  :585 の INSERT の `"product_category_id": product_category_id,` → `"product_category_id": _category_id_int,`。:535 の check_duplicates と :602 の filled_values は変えない。
+- C3 既存の試験の偽の値だけ直す（"c" は数にできないため）: `tests/test_product_required_fields.py:134`・`tests/test_tcg_product_code_collision_wiring.py:65`・`tests/test_tcg_product_import.py:363` の `product_category_id="c"` → `product_category_id="3"`。:153（足りない項目で先に止まる試験）は変えない。
+- C4 試験を足す（偽の DB）`tests/test_product_required_fields.py` の末尾に2つ: (a) `product_category_id="1"` で create_product を呼ぶと INSERT に渡る値が数の 1。(b) `product_category_id="x"` で `ValueError("PRODUCT_CATEGORY_ID_INVALID")`、INSERT は呼ばれない。書き方は同じファイルの :100〜140 の試験に合わせる。
+- C5 試験を足す（実 DB）`tests/test_tcg_completion_safety.py` の `test_new_product_registration_keeps_box_single_filter` の下に `test_new_product_registration_accepts_category_id_as_text` を1つ。中身は同じ形で、違うのは次だけ: refs の product_category_id を `str(raw_id)`（画面と同じ文字）にする・日本語名 '架空の文字区分検証デッキ'・型番 'ZZSAFE02'・細分類 code 'SAFETYFMT2'。確かめ: 1回目 ok、2回目 DUPLICATE_CANDIDATE、DB の product_category_id が int(raw_id)。PSA の解析の部分は写さない。
+- 確かめ: ruff check（触ったファイル）・`python -m pytest -q tests/test_product_required_fields.py tests/test_tcg_product_code_collision_wiring.py tests/test_tcg_product_import.py tests/test_tcg_product_master.py`。実 DB の試験は CI で確かめる。ほかの試験が落ちたら直さず NEEDS_DECISION:。
+- 受入（基準 → 検証方法）: 文字の "1" で登録できる → C5 が CI の PostgreSQL で通る ／ 数にできない値は 422 → C4 (b) ／ 既存の試験が通る → CI の pytest が緑 ／ 本番で直った → 反映後、商品マスタ画面から EB-06 を登録して成功、本番 DB で EB-06 が1件。
+- 戻し方: マージの1コミットを revert。DB の変更なし。
+- 審査（Architect・同じ AI の自己審査）: APPROVE。根拠: 行番号を origin/main e27b1a522 で照合済み。文字どうしの比べは 9-20 より前の形で、work_id・manufacturer_id の比べと同じ形。INSERT は数に直すので asyncpg の型の止まりに当たらない。既存の試験で "c" を渡す3か所を洗い出し済み。未解決: なし。
