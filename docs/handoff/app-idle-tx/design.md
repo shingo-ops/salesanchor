@@ -3,7 +3,7 @@
 
 **親**: `docs/handoff/deploy-db-stall/design.md`（ADR-1037 の移行前の点検）。**関連 ADR**: ADR-1016（即時反映の通り道）、ADR-1037、ADR-1070、ADR-131、ADR-1015（区分）。  
 **日付**: 2026-11-10。**担当**: Planner（Opus）。  
-**状態**: 設計案作成済み。設計審査はクラウドで実施（結果は review-architect.md）。PO 承認前。実装未着手。  
+**状態**: 設計案作成済み。設計審査1回目 REVISE（指摘4件）を反映済み・2回目の審査待ち（結果は docs/handoff/app-idle-tx/review-architect.md）。PO 承認前。実装未着手。  
 **PO の選択**: 2026-11-10「1」（理由を調べ、直す設計案を作る。実装の前に報告）。  
 **根拠**: `docs/handoff/app-idle-tx/recon.md`（以下 recon）。
 
@@ -25,6 +25,7 @@ KGI: アプリを開いている利用者がいても、本番反映の前の点
 | K4 | 最初のかたまりを送る時点で、受信箱の流れの DB セッションが閉じている | 新しい試験（§5-4、`backend/tests/test_realtime_events.py` :52-73 と同じ形） | 閉じていない（recon B-C2） |
 | K5 | 次の移行ありの本番反映 3 回で、点検の段の記録に salesanchor_backend の握り手が 1 行も出ない | deploy の記録の点検の段を読んで数える | 11/10 1 回目で 2 本（deploy-5364-failed.log） |
 | K6 | 即時反映の通り道（events/stream）の動きが変わらない | `backend/tests/test_realtime_events.py` が緑 | 緑 |
+| K7 | API の約束が変わらない。`frontend/api-contract/openapi.json` を触らずに `api-contract-check` が緑 | CI の `api-contract-check`。PR の変更ファイルに openapi.json が無いことを `git diff --name-only` で確かめる | 緑 |
 
 ## 3. 原因（recon の要約。全部事実）
 1. 全画面の外枠が `/api/v1/conversations/stream` を開く（recon A-10）。
@@ -102,7 +103,8 @@ async def stream_inbox_updates(
     request: Request,
     cred: HTTPAuthorizationCredentials = Depends(security),
 ) -> StreamingResponse:
-    ...（docstring に「DB 依存を持たない理由」を1行足す）
+    ...（docstring は 1 文字も変えない。理由は下の # の行に書く）
+    # DB 依存（Depends）は持たない。yield 依存は流れを送り終えるまで閉じないため（ADR-1016 追記）
     async with stream_db.short_db_scope() as db:
         user = await get_current_user(request, cred, db)
         tenant_id = await get_current_tenant(request, user, db)
@@ -114,6 +116,7 @@ async def stream_inbox_updates(
 # 受信箱の流れ（SSE）。認証は経路の中の短いセッションで行うので、登録時の依存を付けない（ADR-1016 追記）
 app.include_router(meta_inbox.stream_router, prefix="/api/v1", tags=["meta-inbox"])
 ```
+- API の約束（`frontend/api-contract/openapi.json` :46877-46902）は変えない。docstring・関数名・戻り型・tags `meta-inbox`・`security` による HTTPBearer は今と同じなので、書き出しは同じになる（`backend/tools/export_openapi.py` :17 は sort_keys で書くので、登録の順も差分にならない）。openapi.json は触らない。`api-contract-check` が緑であることを K7 で確かめる。
 - 道の重なり: `/api/v1/conversations/...` を持つ経路は meta_inbox の中だけ（`git grep` で確かめた。`/conversations` :866 と `/conversations/stream` :1046 の2本）。受信箱の経路の直前に置くので、今より前の経路との順は変わらない。
 
 ### 5-4. 受信箱の流れの試験（backend/tests/test_sse_no_db_hold.py）
@@ -124,10 +127,13 @@ app.include_router(meta_inbox.stream_router, prefix="/api/v1", tags=["meta-inbox
 - T4: アプリの経路表で `GET /api/v1/conversations/stream` が 1 本だけ。
 
 ### 5-5. 見張り（同じファイル）
-- `app.main.app` の全経路のうち、終点の戻りの型が `StreamingResponse` のものを集め、依存の木（登録時の依存を含む `route.dependant` をたどる）に `app.database.get_db` が無いことを確かめる。
+- 集め方（2つの和集合）: `app.main.app` の全経路（`APIRoute`）のうち、
+  (1) `typing.get_type_hints(route.endpoint).get("return")` が `StreamingResponse` かその子のもの（meta_inbox.py と leads.py は `from __future__ import annotations` なので、`__annotations__` の文字列を直接比べない）。
+  (2) `inspect.getsource(route.endpoint)` に `text/event-stream` を含むもの（戻り型を書かない流し口を拾う補助）。
+- 集めた経路の (メソッド, 道) の集合が、次の 3 本と完全に一致することを確かめる: `GET /api/v1/events/stream`・`GET /api/v1/conversations/stream`・`GET /api/v1/leads/stream`。増えたら赤（新しい流し口はこの表に足して審査を通す）。減っても赤（集め方の空振りを防ぐ）。
+- 集めた各経路の依存の木（登録時の依存を含む `route.dependant` を `dependencies` でたどり、各 `call` を見る）に、禁止の依存 `{app.database.get_db, app.database.get_admin_db}` が無いことを確かめる（`backend/app/database.py` :112 の get_admin_db も同じ yield 依存）。
 - 例外の表（理由付き）: `("GET", "/api/v1/leads/stream")` だけ。理由「`/leads/{lead_id}` が先に登録されていて流れに入らない（recon B の別の不具合）。直すときに例外を消す」。
 - 例外の表の経路がまだ在り、まだ get_db を持つことも確かめる（直したのに例外が残ったら赤）。
-- 集めた本数が 0 なら赤（見張りの空振りを防ぐ）。
 
 ### 5-6. ADR-1016 への追記（本文の決定は書き換えない）
 「流し続ける口（SSE）は、流している間 DB の接続と取引を持たない。認証・会社・権限は backend/app/realtime/stream_db.py の短いセッションで済ませ、流し始める前に閉じる。見張りは backend/tests/test_sse_no_db_hold.py。理由: yield 依存の後始末は応答を送り終えた後に走るので、流れ1本ごとに取引が開いたままになり、本番反映の前の点検（ADR-1037）を止めた（docs/handoff/app-idle-tx/recon.md）。」

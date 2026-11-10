@@ -19,7 +19,7 @@
    - `/api/v1/events/stream`: DB 依存を持たず、短いセッションで認証して閉じてから流す（`backend/app/routers/realtime_events.py` :53-71）。試験 `backend/tests/test_realtime_events.py` :52-73 が「最初のかたまりを受け取った時点で DB セッションが閉じている」を確かめている。
    - `/api/v1/conversations/stream`: 経路に `Depends(require_permission("messaging.view"))` と `Depends(get_current_tenant)`（`backend/app/routers/meta_inbox.py` :1045-1052）。さらに登録時に `dependencies=[Depends(get_current_tenant)]`（`backend/app/main.py` :556-559）。
    - `/api/v1/leads/stream`: 経路に `Depends(require_permission("leads.view"))` と `Depends(get_current_tenant)`（`backend/app/routers/leads.py` :2938-2945）。登録時にも `get_current_tenant`（`backend/app/main.py` :418-421）。
-10. 【事実】画面は `/api/v1/conversations/stream` を全画面の外枠から開く（`frontend/src/components/DesktopShell.tsx` :141・`frontend/src/components/MobileShell.tsx` :116）。`/api/v1/leads/stream` はリード画面だけ（`frontend/src/pages/leads/LeadsPage.tsx` :159）。
+10. 【事実】画面は `/api/v1/conversations/stream` を全画面の外枠から開く（`frontend/src/components/DesktopShell.tsx` :141・`frontend/src/components/MobileShell.tsx` :116）。受信箱の画面はさらに1本開く（`frontend/src/pages/inbox/useInboxState.ts` :594 → `frontend/src/hooks/useInboxSSE.ts` :14）。受信箱の画面ではタブ1枚で流れが2本になる（設計審査の指摘4で追記）。`/api/v1/leads/stream` はリード画面だけ（`frontend/src/pages/leads/LeadsPage.tsx` :159）。
 11. 【事実】`frontend/src/hooks/useSSE.ts` は、つながったら待ちを 2 秒に戻し（:63）、流れが終わると 2 秒後につなぎ直す（:90・:93-100）。
 12. 【事実】`/api/v1/events/stream` の docstring（`backend/app/routers/realtime_events.py` :65-67）に「yield 依存はストリーム送出が終わるまで閉じず、SSE 1 本ごとに DB 接続を握り続けてしまう」とある。ADR-1016 の本文に同じ趣旨の行は無い（`docs/adr/ADR-1016-realtime-change-signal-standard.md` を DB・接続・セッションで grep）。
 13. 【事実】`salesanchor_app` に idle_in_transaction_session_timeout を付ける設定は repo に無い。
@@ -47,4 +47,4 @@
 
 ## C. 未確認
 - U1: 本番反映 1 回目（11:12〜11:22Z）の握り手 pid 122539・122170 が conversations/stream だったこと（nginx の記録は 11:35:03Z の入れ替えで消えた。nginx-window-check.txt）。表と周期の一致（A-2・A-3・A-8）は実験（B-C1）と同じ形。
-- U2: 本番の Python 3.12 での wait_for の動き（C3 の手元確かめは 3.14.3）。
+- U2: 解けた。設計審査（クラウド・Python 3.12.3）で、wait_for の時間切れの次の呼び出しが StopAsyncIteration になることを確かめた（docs/handoff/app-idle-tx/review-architect.md）。
