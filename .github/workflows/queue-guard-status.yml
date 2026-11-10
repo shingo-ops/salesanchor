@@ -1,0 +1,59 @@
+name: Merge queue guard status
+
+# 順番待ちの列（merge queue）の commit に、必須の確かめ guard-authoring/evaluation を写す。
+# 元の確かめは guard-authoring-gate.yml の pull_request_target の job が PR の head に status で書く。
+# 列の commit にはその status が届かないので、列に入った PR の head が success のときだけ success を写す。
+# 列に入った PR は中身が止まっている（push すると列から外れる）ので、PR で通った結果をそのまま使える。
+# 設計: docs/handoff/merge-queue-org/design.md §5 の注。個人名義の倉庫では merge_group が起きないので動かない。
+
+on:
+  merge_group:
+    types: [checks_requested]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+  statuses: write
+
+concurrency:
+  group: queue-guard-status-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  copy:
+    name: copy guard-authoring status to merge group
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Copy guard-authoring/evaluation from the queued PR head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          MQ_HEAD_SHA: ${{ github.event.merge_group.head_sha }}
+          MQ_HEAD_REF: ${{ github.event.merge_group.head_ref }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          CONTEXT='guard-authoring/evaluation'
+          if ! [[ "$MQ_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::merge_group.head_sha is not a full commit SHA"
+            exit 1
+          fi
+          post() {
+            gh api -X POST "repos/${REPO}/statuses/${MQ_HEAD_SHA}" \
+              -f state="$1" -f context="$CONTEXT" -f description="$2" -f target_url="$RUN_URL" > /dev/null
+          }
+          if ! [[ "$MQ_HEAD_REF" =~ ^(refs/heads/)?gh-readonly-queue/main/pr-([0-9]+)- ]]; then
+            post failure "Queued PR number not found in merge group ref"
+            exit 1
+          fi
+          PR="${BASH_REMATCH[2]}"
+          PR_HEAD=$(gh api "repos/${REPO}/pulls/${PR}" --jq '.head.sha')
+          STATE=$(gh api "repos/${REPO}/commits/${PR_HEAD}/status" --jq "[.statuses[] | select(.context == \"${CONTEXT}\")][0].state // \"missing\"")
+          if [ "$STATE" = "success" ]; then
+            post success "Copied from PR #${PR} head ${PR_HEAD:0:7}"
+          else
+            post failure "PR #${PR} head has ${STATE} for ${CONTEXT}"
+            exit 1
+          fi
