@@ -38,7 +38,7 @@ evidence:
 confidence: high
 tradeoff: 画面の変化が無い変更のため、人の目視の確認は無い。代わりに本番での測定（読むだけ）で中身が同じことと速さを確かめた。K3 は出力の売り切れ欄が全部空のため証明の力が限られる（design §11-2）。
 decision: 完了。本番反映済み。
-follow_up: 本番の遅い問い合わせの見張り・_INHERIT_PRICE_SQL・必須チェックの集約の穴は tasks/todo.md（PO 判断）。
+follow_up: 本番の遅い問い合わせの見張り・_INHERIT_PRICE_SQL・pytest の結果をまとめる段の穴は tasks/todo.md（PO 判断）。
 ```
 
 ```text
