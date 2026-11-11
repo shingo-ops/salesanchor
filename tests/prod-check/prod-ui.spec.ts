@@ -1,5 +1,5 @@
 /**
- * 本番の画面点検 S1〜S12（S9 は通知の試験）（見るだけ。書き込み操作はしない）
+ * 本番の画面点検 S1〜S13（S9 は通知の試験）（見るだけ。書き込み操作はしない）
  *
  * 各 test 名は通知文にそのまま出る。何が壊れたか分かる名前にする。
  */
@@ -172,6 +172,93 @@ test.describe("本番の画面点検", () => {
     await expect(page.locator("main .schedule-loading")).toHaveCount(0);
     await expect(page.locator("main .schedule-error")).toHaveCount(0);
     await page.waitForTimeout(5_000);
+    expect(errors, `console.error が ${errors.length} 件`).toHaveLength(0);
+  });
+
+  test("S13 予定表の作る小窓と全画面の編集が開いて閉じる（保存しない）", async ({ authedPage: page }) => {
+    // 書き込みは送らせない。ログインの札の更新（/api/v1/auth/refresh）以外の GET でない通信は止めて数える
+    const blockedWrites: string[] = [];
+    await page.route("**/api/**", (route) => {
+      const req = route.request();
+      const path = new URL(req.url()).pathname;
+      if (req.method() !== "GET" && path !== "/api/v1/auth/refresh") {
+        blockedWrites.push(`${req.method()} ${path}`);
+        return route.abort();
+      }
+      return route.continue();
+    });
+    const errors: string[] = [];
+    page.on("console", (msg) => {
+      if (msg.type() === "error") errors.push(msg.text());
+    });
+
+    const events = apiOk(page, CALENDAR_EVENTS_API);
+    await page.goto("/schedule");
+    expect((await events).status(), "予定の API の応答").toBeLessThan(400);
+    await expect(page.locator("main .comp-calendar")).toBeVisible();
+    await expect(page.locator("main .schedule-loading")).toHaveCount(0);
+    const viewButton = page.locator('main button[aria-haspopup="menu"]').first();
+    const viewBefore = (await viewButton.innerText()).trim();
+
+    // 1. キー c で作る小窓を開き、題名を入れる
+    await page.keyboard.press("c");
+    const popover = page.locator(".schedule-popover--create");
+    await expect(popover, "キー c で作る小窓が開く").toBeVisible();
+    const popoverTitle = popover.getByRole("textbox", { name: "タイトル", exact: true });
+    await popoverTitle.fill("prod-ui-check-s13");
+
+    // 2. Google Meet の名前の付いた切り替えスイッチは無い
+    await expect(page.getByRole("switch", { name: /Google Meet/ }), "Meet のスイッチは 0 個").toHaveCount(0);
+
+    // 3. Meet の行（Google をつないだ管理者だけに出る）。出たときだけ押して外す
+    const addMeet = popover.getByRole("button", { name: "Google Meet のビデオ会議を追加", exact: true });
+    if ((await addMeet.count()) > 0) {
+      await addMeet.click();
+      await expect(popover.getByText("Google Meet のビデオ会議（保存すると参加用のリンクができます）", { exact: true })).toBeVisible();
+      await popover.getByRole("button", { name: "Google Meet を外す", exact: true }).click();
+      await expect(addMeet).toBeVisible();
+    } else {
+      test.info().annotations.push({ type: "note", description: "Meet の行は出ない（点検用の人は管理者でない）" });
+    }
+
+    // 4. その他のオプションで窓いっぱいの編集画面が開き、題名が引き継がれる
+    await popover.getByRole("button", { name: "その他のオプション", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "予定の編集", exact: true });
+    await expect(dialog, "全画面の編集が開く").toBeVisible();
+    const box = await dialog.boundingBox();
+    // 比べる相手はスクロール帯を除いた窓の中の大きさ（審査の指摘 2）
+    const viewport = await page.evaluate(() => ({ width: document.documentElement.clientWidth, height: window.innerHeight }));
+    expect(box, "全画面の編集の大きさ").not.toBeNull();
+    expect(Math.abs(box!.x), "左端").toBeLessThanOrEqual(1);
+    expect(Math.abs(box!.y), "上端").toBeLessThanOrEqual(1);
+    expect(Math.abs(box!.width - viewport.width), "幅が窓と同じ").toBeLessThanOrEqual(1);
+    expect(Math.abs(box!.height - viewport.height), "高さが窓と同じ").toBeLessThanOrEqual(1);
+    await expect(dialog.getByRole("textbox", { name: "タイトル", exact: true }), "題名の引き継ぎ").toHaveValue("prod-ui-check-s13");
+
+    // 5. 編集画面では近道のキーが効かない（入力欄の外で m を押す）
+    const closeButton = dialog.getByRole("button", { name: "閉じる", exact: true });
+    await closeButton.focus();
+    await page.keyboard.press("m");
+    await expect(dialog, "m を押しても編集画面は開いたまま").toBeVisible();
+    await expect(viewButton, "m を押しても表示は変わらない").toHaveText(viewBefore);
+
+    // 6. Tab を 25 回押してもフォーカスは編集画面の中
+    for (let i = 0; i < 25; i += 1) {
+      await page.keyboard.press("Tab");
+    }
+    await expect(dialog.locator(":focus"), "フォーカスは編集画面の中").toHaveCount(1);
+
+    // 7. Esc で編集画面が閉じ、作る小窓と題名が残る
+    await page.keyboard.press("Escape");
+    await expect(dialog, "Esc で編集画面が閉じる").toHaveCount(0);
+    await expect(popover, "作る小窓は残る").toBeVisible();
+    await expect(popoverTitle, "題名は残る").toHaveValue("prod-ui-check-s13");
+
+    // 8. もう一度 Esc で作る小窓も閉じる（保存はしない）
+    await page.keyboard.press("Escape");
+    await expect(popover, "Esc で作る小窓も閉じる").toHaveCount(0);
+
+    expect(blockedWrites, `止めた書き込み ${blockedWrites.length} 件`).toHaveLength(0);
     expect(errors, `console.error が ${errors.length} 件`).toHaveLength(0);
   });
 
