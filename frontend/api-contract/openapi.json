@@ -38977,7 +38977,7 @@
             "type": "string"
           },
           "status": {
-            "description": "pending／verified／trial／active／suspended",
+            "description": "pending／verified／trial／contracting／active／suspended",
             "title": "Status",
             "type": "string"
           },
@@ -38991,7 +38991,7 @@
                 "type": "null"
               }
             ],
-            "description": "お試しの期限",
+            "description": "お試しと契約手続き中の、見られる期限",
             "title": "Trial Expires At"
           }
         },
@@ -39634,7 +39634,7 @@
             "title": "Room Notice Text"
           },
           "status": {
-            "description": "pending／verified／trial／active／suspended",
+            "description": "pending／verified／trial／contracting／active／suspended",
             "title": "Status",
             "type": "string"
           },
@@ -39648,7 +39648,7 @@
                 "type": "null"
               }
             ],
-            "description": "お試しの期限",
+            "description": "お試しと契約手続き中の、見られる期限",
             "title": "Trial Expires At"
           }
         },
