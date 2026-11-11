@@ -1,7 +1,7 @@
 # ADR-（番号は空欄・PO が採番）: 本番サーバーでは組み立てず、GitHub で組み立てた完成品を会社の非公開の倉庫から指紋で受け取る
 
 - この文書は何か（素人向け1行）: 「アプリの箱を本番で作るのをやめ、GitHub で作って会社の非公開の倉庫にしまい、本番は指紋の一致する完成品を取って並べるだけにする」と決める下書き。
-- 設計: `docs/handoff/build-on-github/design.md`（現在地: `docs/handoff/build-on-github/recon.md`、目標: `docs/handoff/build-on-github/kgi.md`）。
+- 設計: `docs/handoff/build-on-github/design.md`（現在地: `docs/handoff/build-on-github/recon.md`、目標: `docs/specs/build-on-github/kgi.md`）。
 
 | 項目 | 内容 |
 |---|---|
