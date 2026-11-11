@@ -20,14 +20,14 @@
 |---|---|---|---|---|---|
 | test.yml | pytest (SQLite + PostgreSQL RLS) | `.github/workflows/test.yml:263-281` | detect-changes, pytest-run, lint-backend | pytest-run, lint-backend | はい |
 | e2e.yml | Lint & Dark Mode Check (ADR-067) | `.github/workflows/e2e.yml:126-145` | detect-changes, lint-run, unit-run | lint-run, unit-run | はい |
-| migration-test.yml | マイグレーションSQL 実行テスト（実DB） | `.github/workflows/migration-test.yml:2130-2152` | detect-changes, registration-exists, registration-exists-regression, test-run, full-dryrun | 4 つの実行役 | はい |
+| migration-test.yml | マイグレーションSQL 実行テスト（実DB） | `.github/workflows/migration-test.yml:2130-2152` | detect-changes, migration-registration-exists, migration-registration-exists-regression, migration-test-run, migration-full-dryrun | 4 つの実行役 | はい |
 | schema-check.yml | テナントスキーマ整合性チェック | `.github/workflows/schema-check.yml:222-238` | detect-changes, schema-check-run | schema-check-run | はい |
 | e2e.yml | 画面検査（受信箱 3幅 Playwright） | `.github/workflows/e2e.yml:230-246` | detect-changes, visual-language-run | visual-language-run | いいえ |
 | karte-gate.yml | Karte Visual Gate (chromium) | `.github/workflows/karte-gate.yml:121-137` | detect-changes, karte-gate-run | karte-gate-run | いいえ |
 
 - 必須かどうかは `docs/specs/rule-enforcement/required-checks.txt:1-16` で確かめた（上の 4 つが入っている。下の 2 つは入っていない）。
 - 6 つとも、判定の式は「実行役が success か skipped なら 0」。`needs.detect-changes.result`（変更の判定ジョブ自体の結果）と、その出力（true/false）は、どれも見ていない（各場所の run の中身を全部読んだ）。
-- 実行役の動く条件は、どれも `needs.detect-changes.outputs.<名前> == 'true'`（`.github/workflows/test.yml:63`・`:118`、`.github/workflows/e2e.yml:64`・`:90`・`:156`、`.github/workflows/migration-test.yml:59`・`:94`・`:1388`、`.github/workflows/schema-check.yml:50`、`.github/workflows/karte-gate.yml:36`）。例外は migration-test.yml の registration-exists-regression で、条件も needs も無く毎回動く。
+- 実行役の動く条件は、どれも `needs.detect-changes.outputs.<名前> == 'true'`（`.github/workflows/test.yml:63`・`:118`、`.github/workflows/e2e.yml:64`・`:90`・`:156`、`.github/workflows/migration-test.yml:59`・`:94`・`:1388`、`.github/workflows/schema-check.yml:50`、`.github/workflows/karte-gate.yml:36`）。例外は migration-test.yml の migration-registration-exists-regression で、条件も needs も無く毎回動く。
 - 変更の判定のやり方: test.yml・e2e.yml・migration-test.yml・karte-gate.yml は dorny/paths-filter@v4。schema-check.yml は `git diff`（`.github/workflows/schema-check.yml:38-45`）。
 
 ## 2. 穴の仕組み（事実＝GitHub の公式文書とファイルの中身から）
