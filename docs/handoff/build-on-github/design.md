@@ -846,3 +846,19 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - P6（推奨・直した）: §26-5 N7 の「理由:」の重なりを消した。
 - マージ前の審査（reviewer opus・head 4bf2244b4）で REVISE: カード 2-7 の 2. と §26-5 N2 が `scripts/rehearsal_phase2.sh` の置き換える行を 92 行目と書いていたが、実物は 90 行目（92 行目は一時ファイルへ書き出す `printf`）。カードのとおりに置き換えるとリハーサルの仕組みが壊れる。Opus が実物の 84-95 行目を読んで確かめ、90 行目に直した。
 判定（Opus）: 必須の指摘は無い。直したのは書き方と試験の足しだけで、手順は変えていない。カード発行に進む（実装には PO の明示の実装承認が要る）。
+
+### 26-8 v4 の後に入った secretary-codex への対応（カード v5・2026-11-11 Opus）
+事実: カード v4（#5403）の後、本線に #5399（ADR-1058 段3・ChatGPT の秘書 secretary-codex）が入った（`git log -1 origin/main` = f3ff55057）。deploy.yml は 1352 → 1390 行になり、`.github/workflows/deploy.yml:735-772` に「Start secretary-codex (ADR-1058)」の段が足された。その 751 行目で prod1 が `docker build -t astro-webapp-secretary-codex -f secretary-codex/Dockerfile .` を流す。`docker-compose.secretary-codex.yml:12-15` も `build:` を持つ。クラウドの実装役は v4 のまま進めず NEEDS_DECISION で止まった（P2・P3 の行番号ずれと、この組み立て）。
+
+決めたこと（Opus の技術判断。目的・K1〜K8 は変えない）:
+1. **secretary-codex を 6 つ目の完成品として GitHub で組み立てる。** 理由: 残すと prod1 での組み立てが 1 つ残り、K1（prod1 の組み立て 0）と §1 の目的（2026-11-08 のメモリ不足の再発防止）を満たさない。名前・走査・push の正本を build-images.yml の 1 か所に保つ（§26-1 1.）。context はリポジトリの根、`file: secretary-codex/Dockerfile`。BuildKit は Dockerfile の隣の `Dockerfile.dockerignore` を読むので、入る物は今と同じ許す一覧の 4 つ（`secretary-codex/Dockerfile.dockerignore`）。
+2. **「無くてもよい」完成品として扱う。** 今の deploy.yml は、この段が落ちてもアプリの反映を止めない（`continue-on-error: true`・警告だけで `exit 0`、735-737 行目の注記）。この性質を変えないため、build-images.yml の job は各段に `continue-on-error: true` を付け、全部通ったときだけ指紋を出す（落ちたら出力は空・run は緑）。job ごとの `continue-on-error` でなく段ごとにしたのは、出力を「全部通ったときだけ」に絞れるため。deploy の Step 2 の揃いの確かめ（必須 5 行）と rollback-images.sh の 5 行の確かめには入れない。
+3. **受け取れなかった指紋を残さない（§26-1 3. と同じ考え）。** pull-images.sh は必須の 5 つの後に secretary-codex を受け取り、3 回とも落ちたら `.env` のその 1 行だけ控えの行に戻して `exit 0`（警告）。deploy の段は `.env` の指紋がローカルに無ければ警告して `exit 0`。
+4. **compose は `image: ${SECRETARY_CODEX_IMAGE:-astro-webapp-secretary-codex}`。** 起動は今と同じ `-p astro-webapp-secretary-codex -f docker-compose.secretary-codex.yml up -d --force-recreate --no-build`。compose は `--env-file` が無ければ、最初の `-f` のファイルの置き場（リポジトリの根）の `.env` を読んで変数を埋める（Context7 /docker/docs・variable-interpolation.md「Project directory determination order」・2026-11-11 取得）。override には入れない（別の `-f` で読むため）。手元で組み立てるときは `secretary-codex/Dockerfile:2` の `docker build` に `-t` を付ける。
+5. **控え・戻し・掃除の正規表現に SECRETARY_CODEX を足す。** Step 0 の控え・Step 2 の書き込み・受け取り失敗と切替失敗の戻し（2-2 の 4.・5.・5b.）・Finalize の初回の戻し・prune-images.sh の残す一覧。rollback-images.sh（手で流す戻し）は secretary-codex を起こし直さない（付け足しの機能で、戻しの速さ K6 に入れない）。
+6. **行番号を 1390 行の本線に合わせた。** 732 行目より後は +38（例: 965 → 1003、933 → 971、1040 → 1078、builder prune 1044-1047 → 1082-1085）。P7 を足した（751 行目の組み立てと compose の `build:` が 1 つ）。
+
+未確認と扱い:
+- U32（新）: secretary-codex の組み立てに GitHub の実行機で何分かかるか。他の job と並んで動くので deploy の待ちは「一番遅い job」で決まる。K8 の関所（20 回の中央値 ≤ 3.1 分）の測り直しに secretary-codex は入っていない。便2 の最初の run の build job の時間を測り、K8 の超えがあれば PO に上げる。落ちたときは箱に触る前の話ではなく「秘書だけ古いまま」になるので安全側。
+- U33（新）: 段ごとの `continue-on-error` の段が落ちたとき、呼ばれる側の workflow の結果が緑になるか。公式は `jobs.<job_id>.steps[*].continue-on-error` を「段が落ちても job を落とさない」とする（Context7 /websites/github_en_actions・workflow-syntax・2026-11-11 取得）。呼ばれる側の workflow の結果が緑になることは便2 の最初の run で確かめる。job の `timeout-minutes: 30` に当たると job は落ちるので、そのときは deploy が止まる（他の 5 つと同じ扱い）。
+- 審査: 同じ Opus の系統によるクラウドの設計審査を 1 回行ってから実装に渡す（独立した第二者の審査ではない）。
