@@ -38,6 +38,7 @@ robots.txt は `User-agent: * Allow: /` と `User-agent: facebookexternalhit All
 | `lp/src/pages/deletion-status.astro:11` | `noindex={true}` を明示（既定値の変更の影響を受けない） |
 | `lp/src/pages/404.astro:9-12` | BaseLayout を `noindex` 指定なしで使う（既定値に従う） |
 | `lp/public/robots.txt` | Allow のみ。変更しない |
+| `docs/adr/ADR-1044-lp-meta-application-only.md:18` | LP 全ページを noindex にする決定（10/25）。今回はこの既定値を期限つきで外す |
 
 ## 既存 ADR 検索
 
