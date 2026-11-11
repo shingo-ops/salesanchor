@@ -4,10 +4,10 @@
 
 ## 0. 作業者への決まり
 
-- ブランチ `release/schedule-gcal-editor-page` の上で作業する（新しいブランチは作らない）。作業の前に `git pull` で最新にする。
+- ブランチ `release/schedule-gcal-editor-page` の上で作業する（新しいブランチは作らない）。作業の前に最新にする（クラウドでは `git fetch origin` のあと `git switch -C release/schedule-gcal-editor-page origin/release/schedule-gcal-editor-page`。`git pull` は使わない）。
 - 触るのは §1 の 3 ファイルだけ。frontend・docs・ほかの scripts・ほかの workflow は触らない。
 - 推測で埋めない。カードと実物が合わないとき、試験が通らないときは止まって `BLOCKED:` で返す。
-- コミットの最後の行: `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`。push は 1 回。force-push・rebase・amend はしない。
+- コミットの最後の行: `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`（実装役が Sonnet のとき）。push は 1 回。force-push・rebase・amend はしない。
 
 ## 1. 触るファイル
 
@@ -69,6 +69,8 @@ drop_gcal_palette_lines() {
 ```
 `frontend/src/pages/a.css` に `.a { color: var(--base-color); }` を書いて同じコミットに入れる。
 
+- 見張りは今いる場所の git を使う。試験は使い捨ての場所に `cd` してから見張りを流す。
+
 - 場合ごとに BASE から枝を作り（`git checkout -q -B case<N> <BASE>`）、変更をコミットし、その SHA を HEAD として `BASE_SHA=<BASE> HEAD_SHA=<HEAD> bash <見張り>` を流す。終了コードを比べる。
 
 | 場合 | 変更 | 期待する終了コード |
@@ -77,7 +79,7 @@ drop_gcal_palette_lines() {
 | 2 | index.css の `:root` に `  --gcal-extra: #123456;` を足す | 1 |
 | 3 | index.css の `:root` に `  --gcal-surface: #ffffff; --x: #000000;` の 1 行を足す | 1 |
 | 4 | index.css の `:root` に `  --other-color: #222222;` を足す | 1 |
-| 5 | `frontend/src/pages/a.css` に `  --gcal-surface: #ffffff;` の行を足す（`.a { }` の中） | 1 |
+| 5 | `frontend/src/pages/a.css` に `  --gcal-surface: #ffffff;` の行をファイルの最後に足す（位置で結果は変わらない） | 1 |
 | 6 | `frontend/src/pages/a.css` に `.b { color: var(--base-color); }` を足す（hex なし） | 0 |
 | 7 | 場合 1 と同じ 26 行を足し、さらに index.css の最後に `.x {` ／ `  --gcal-primary: #ff0000;` ／ `}` の 3 行を足す（同じ名前の 3 行目） | 1 |
 | 8 | index.css の `:root` に `  --gcal-surface: #010101;`・`  --gcal-surface: #020202;`・`  --gcal-surface: #030303;` の 3 行を足す | 1 |
