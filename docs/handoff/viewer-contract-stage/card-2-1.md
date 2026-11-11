@@ -4,7 +4,7 @@
 設計: docs/handoff/viewer-contract-stage/design.md §3-1・§3-2・§3-3（:91 履歴の操作）・§8 の A4・A6・A13・A34・§9。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。本番・GitHub の secret・DB には触らない。PR は作らない（Opus が作る）。
 基準: origin/main `e00216e2188f2174f6e188d4ccf4ce5e10bf2f57` で行番号を測った。行番号がずれていたら「変更前」の文で場所を探す（同じ文が 2 か所あれば BLOCKED: で停止）。
-危険便か: はい（`migrations/` と本番 `scripts/run_all_migrations.sh` を含む）。マージ前に Opus の審査役の APPROVE・CI 全通過・ADR-136 の GO 記録と直前のバックアップの確認を必須にする（担当の作業ではない）。
+危険便か: はい（`migrations/` と本番 `scripts/run_all_migrations.sh` を含む。CI の `.github/workflows/migration-test.yml` の前提の表も2か所変える）。マージ前に Opus の審査役の APPROVE・CI 全通過・ADR-136 の GO 記録と直前のバックアップの確認を必須にする（担当の作業ではない）。
 
 本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
 
@@ -18,7 +18,7 @@
 - D6 「本契約にする」（activate）は trial のままにする。お試しから本契約へ直接移す道を外すのは便4（§3-3 :92）。
 - D7 一覧の行の色は Badge の金型の variant `warning` を使う（frontend/src/components/Badge.tsx:16 の BadgeVariant に在る）。色を直書きしない。
 - D8 期限切れの理由の名前は viewer_contract_expired（§3-1 :53）。文は ja「閲覧期限が過ぎています。担当者にご連絡ください。」・en「Your viewing period has ended. Please contact your representative.」。案内の画面（NoticeView）の題は ja「閲覧期限が過ぎています」・en「Viewing period has ended」、説明は ja「担当者にご連絡ください。」・en「Please contact your representative.」。
-- D9 触らないと決めた場所（全件 grep で見つかったが変えない）: backend/app/discord_gateway/viewer_interview_notice.py:3・:57（面談案内はお試しだけ。§3-1 :55）・backend/app/discord_gateway/viewer_trial.py:352（申込中から来た人だけ trial にする行。contracting の人は :350 の if に入らず状態を保つ）・backend/app/services/viewer_admin.py:340・:350（初回登録の取り込み。trial と active だけを受ける）・backend/app/services/tcg_distribution_svc.py:725（active 以外は配らない。§3-1 :54）・frontend/src/pages/super-admin/ViewerAccountsPage.tsx:441（お試しの行のボタン。便4）・同 :725（請求先の欄の active。便4）・backend/app/viewer_admin_cli.py:13（便4）。
+- D9 触らないと決めた場所（全件 grep で見つかったが変えない）: backend/app/discord_gateway/viewer_interview_notice.py:3・:57（面談案内はお試しだけ。§3-1 :55）・backend/app/discord_gateway/viewer_trial.py:352（申込中から来た人だけ trial にする行。contracting の人は :350 の if に入らず状態を保つ）・backend/app/services/viewer_admin.py:340・:350（初回登録の取り込み。trial と active だけを受ける）・backend/app/services/tcg_distribution_svc.py:737（`va.status <> 'active'` で active 以外は配らない。§3-1 :54）・frontend/src/pages/super-admin/ViewerAccountsPage.tsx:441（お試しの行のボタン。便4）・同 :725（請求先の欄の active。便4）・backend/app/viewer_admin_cli.py:13（便4）。
 
 ## 0. カード発行前チェック（docs/ai-agents/design-partner.md §5.5）
 
@@ -114,8 +114,10 @@
 26. backend/tests/test_viewer_tokens.py
 27. backend/tests/test_tcg_distribution_viewer_link_pg.py
 28. frontend/src/pages/viewer/ViewerApp.test.tsx
+29. frontend/src/pages/super-admin/ViewerAccountsPage.test.tsx（試験の題名だけ）
+30. .github/workflows/migration-test.yml（CI の前提の表の最小定義だけ。2-2b）
 
-触らない: これ以外のすべて。特に D9 の場所・`.github/`・`deploy.yml`・`backend/app/services/tcg_distribution_svc.py`・`backend/app/viewer_admin_cli.py`・`frontend/src/components/`（金型は変えない）・既存の migration。
+触らない: これ以外のすべて。特に D9 の場所・`.github/` の migration-test.yml 以外（2-2b の2か所だけ変える）・`deploy.yml`・`backend/app/services/tcg_distribution_svc.py`・`backend/app/viewer_admin_cli.py`・`frontend/src/components/`（金型は変えない）・既存の migration。
 
 ## 2. 変更
 
@@ -161,6 +163,58 @@ run_sql migrations/20261111_120000_add_codex_secretary_choices.sql
 run_sql migrations/20261112_120000_add_viewer_contracting_status.sql
 ```
 `run_sql migrations/20261111_120000_add_codex_secretary_choices.sql` の後ろに別の行が在るときは、その行の後ろではなく、この行のすぐ後ろに足す。
+
+### 2-2b .github/workflows/migration-test.yml（CI の「マイグレーションSQL 実行」の前提の表）
+
+理由: このジョブは変わった移行だけを、前提の最小の表の上で流す。今の最小の表 public.viewer_accounts には trial_expires_at の列が無く、public.viewer_status_changes は無い。このままでは 2-1 の COMMENT と ALTER TABLE が失敗する。前例は同じ場所の viewer_login_tokens の最小定義（20261105_120000 のために足した）。審査 2026-11-12 の高の指摘で足した。
+
+(a) 変更前:
+```yaml
+          -- public.viewer_accounts: 20261016_150000_add_viewer_accounts.sql で本番作成済み。
+          --   20261104_220000_add_tcg_distribution_targets_viewer_account_id.sql が外部キーで参照するため、
+          --   前提として最小定義を登録する（id の型は本物と同じ BIGSERIAL）。
+          CREATE TABLE IF NOT EXISTS public.viewer_accounts (
+              id         BIGSERIAL   PRIMARY KEY,
+              email      TEXT        NOT NULL,
+              line_name  TEXT        NOT NULL,
+              status     TEXT        NOT NULL,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+```
+変更後:
+```yaml
+          -- public.viewer_accounts: 20261016_150000_add_viewer_accounts.sql で本番作成済み。
+          --   20261104_220000_add_tcg_distribution_targets_viewer_account_id.sql が外部キーで参照するため、
+          --   前提として最小定義を登録する（id の型は本物と同じ BIGSERIAL）。
+          --   trial_expires_at は 20261112_120000_add_viewer_contracting_status.sql が COMMENT を書くため（ADR-1061 便2-1）。
+          CREATE TABLE IF NOT EXISTS public.viewer_accounts (
+              id         BIGSERIAL   PRIMARY KEY,
+              email      TEXT        NOT NULL,
+              line_name  TEXT        NOT NULL,
+              status     TEXT        NOT NULL,
+              trial_expires_at TIMESTAMPTZ NULL,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+```
+
+(b) 変更前（viewer_login_tokens の最小定義の閉じ）:
+```yaml
+              CONSTRAINT ck_viewer_login_tokens_purpose CHECK (purpose IN ('signup_code', 'password_reset'))
+          );
+```
+変更後:
+```yaml
+              CONSTRAINT ck_viewer_login_tokens_purpose CHECK (purpose IN ('signup_code', 'password_reset'))
+          );
+          -- public.viewer_status_changes: 20261016_150000_add_viewer_accounts.sql で本番作成済み。
+          --   20261112_120000_add_viewer_contracting_status.sql が CHECK を付け替え COMMENT を書くため、
+          --   前提として最小定義を登録する（操作の CHECK は付け替え前の5値）。
+          CREATE TABLE IF NOT EXISTS public.viewer_status_changes (
+              id        BIGSERIAL   PRIMARY KEY,
+              viewer_id BIGINT      NOT NULL REFERENCES public.viewer_accounts(id) ON DELETE CASCADE,
+              action    TEXT        NOT NULL,
+              CONSTRAINT ck_viewer_status_changes_action CHECK (action IN ('activate', 'suspend', 'unsuspend', 'extend', 'start_trial'))
+          );
+```
+この2か所以外の .github/ は変えない。字下げは前後の行に合わせる（YAML の run: の中の SQL）。
 
 ### 2-3 （欠番。2-4 から順に行う）
 
@@ -540,7 +594,7 @@ const MENU_STATUSES = ["pending", "trial", "contracting", "active"] as const;
           {["pending", "trial", "contracting", "active"].includes(row.status) && !row.discord_channel_url && (
 ```
 
-(c) 同 :473〜:478 変更前:
+(c) 同 :474〜:479 変更前:
 ```tsx
   const menuCounts: Record<MenuKey, number> = {
     all: countOf("all"),
@@ -728,18 +782,17 @@ en.json の notice（:193〜:196）変更前:
 
 ### 2-15 試験
 
-(a) backend/tests/test_super_admin_viewers.py の `_prepare`（:186〜:188）変更前:
+(a) backend/tests/test_super_admin_viewers.py の `_prepare`（:188。この1行だけを old_string にする）変更前:
 ```python
     cur.execute((MIGRATIONS / "20261020_120000_create_viewer_message_templates.sql").read_text())
-    if seed_templates:
 ```
 変更後:
 ```python
     cur.execute((MIGRATIONS / "20261020_120000_create_viewer_message_templates.sql").read_text())
     # ADR-1061 便2-1: 状態 contracting と履歴の操作4つ
     cur.execute((MIGRATIONS / "20261112_120000_add_viewer_contracting_status.sql").read_text())
-    if seed_templates:
 ```
+すぐ下の `    if seed_templates:  # 送る側は…` の行は変えない。
 同じファイルの test_conflicts_are_409 の後ろに、次の試験を足す:
 ```python
 @needs_ci_pg
@@ -934,7 +987,7 @@ async def test_login_contracting_within_expiry_succeeds(redis):
     assert exc.value.status_code == 403 and exc.value.detail == "viewer_contract_expired"
 ```
 
-(f) backend/tests/test_tcg_distribution_viewer_link_pg.py:158 変更前:
+(f) backend/tests/test_tcg_distribution_viewer_link_pg.py:93 変更前:
 ```python
     for status in ("trial", "pending", "verified"):
 ```
@@ -953,6 +1006,15 @@ async def test_login_contracting_within_expiry_succeeds(redis):
     expect(screen.getByTestId("viewer-notice-contractExpired")).toBeTruthy();
     expect(clearToken).not.toHaveBeenCalled();
   });
+```
+
+(h) frontend/src/pages/super-admin/ViewerAccountsPage.test.tsx:206 の試験の題名だけ変える（判定の中身は変えない。左のメニューは5つになる）。変更前:
+```tsx
+it("shows a left menu with 4 entries (no Suspended) and counts, and filters by trial with ?status=trial", async () => {
+```
+変更後:
+```tsx
+it("shows a left menu with 5 entries (no Suspended) and counts, and filters by trial with ?status=trial", async () => {
 ```
 
 ## 3. 手順
@@ -991,7 +1053,8 @@ async def test_login_contracting_within_expiry_succeeds(redis):
     cd ~/sa && grep -c "status IN ('trial', 'contracting')" backend/app/tasks/maintenance.py
     cd ~/sa && grep -c "viewer_contract_expired" frontend/src/locales/viewer/ja.json frontend/src/locales/viewer/en.json | tail -2
     cd ~/sa && grep -c "statusContracting" frontend/src/locales/ja.json frontend/src/locales/en.json | tail -2
-  最後の2行は各ファイル 1（ファイルごとに `ファイル名:1` と出る）。
+    cd ~/sa && grep -c "trial_expires_at TIMESTAMPTZ NULL,\|ck_viewer_status_changes_action CHECK" .github/workflows/migration-test.yml
+  最後から2つ目と3つ目は各ファイル 1（ファイルごとに `ファイル名:1` と出る）。最後の grep は 2。
 
 手順6 API の形を作り直す（openapi.json は手で書かない）
     cd ~/sa/backend && ENVIRONMENT=test ~/venv312/bin/python -m tools.export_openapi ../frontend/api-contract/openapi.json 2>&1 | tail -3
@@ -1015,10 +1078,10 @@ async def test_login_contracting_within_expiry_succeeds(redis):
 手順9 変えたファイルの名前と数
     cd ~/sa && git status --short | tail -40
     cd ~/sa && git diff --stat | tail -40
-  期待: §1 の 28 ファイル（新規の migration は `??` で1行）だけ。frontend/src/api/generated の変化は git に載らない（追跡されていない）。
+  期待: §1 の 30 ファイル（新規の migration は `??` で1行）だけ。frontend/src/api/generated の変化は git に載らない（追跡されていない）。
 
 手順10 記録と送り出し
-    cd ~/sa && git add migrations/20261112_120000_add_viewer_contracting_status.sql scripts/run_all_migrations.sh backend/app frontend/api-contract/openapi.json frontend/src/pages frontend/src/locales backend/tests && git status --short | tail -40
+    cd ~/sa && git add migrations/20261112_120000_add_viewer_contracting_status.sql scripts/run_all_migrations.sh .github/workflows/migration-test.yml backend/app frontend/api-contract/openapi.json frontend/src/pages frontend/src/locales backend/tests && git status --short | tail -40
     cd ~/sa && git commit -q -m "feat(viewer): add contracting status foundation and 3-day billing form with expiry extension (ADR-1061 bin2-1)" && git log --oneline -1 | tail -1
     cd ~/sa && git push origin release/viewer-contracting-bin2-1 2>&1 | tail -3
     cd ~/sa && git log --oneline origin/release/viewer-contracting-bin2-1 -2 | tail -2
