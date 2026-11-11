@@ -36,7 +36,7 @@ Footer の他の欄（説明文・Legal 欄）、index・privacy・terms・data-
 |---|---|
 | 差分は Footer.astro だけ、+6/-7 | `git diff --stat origin/main` |
 | ビルドが通る | `cd lp && npm ci && npm run build` 終了コード 0 |
-| dist の全 html で `Ryokuyoudai` と `Representative:` が 0 件 | `grep -c` を dist/**/*.html に |
+| Footer.astro に `Ryokuyoudai` `Representative:` `Phone:` `Invoice Registration` が 0 件（本文ページの英語表記は対象外で残る） | `grep -c` を Footer.astro に |
 | dist/index.html に `代表者：谷澤 伸吾` `所在地：〒444-2141` `適格請求書発行事業者登録番号：T3810449547408` `電話番号：090-6072-7767` が各1件以上 | `grep -c` |
 | 本番トップを facebookexternalhit 名義で取得し、上の4語が出る | マージ後に curl |
 

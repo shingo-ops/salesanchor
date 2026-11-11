@@ -39,7 +39,7 @@
 ## §2 確かめ（生の出力を返す）
 
 1. `cd lp && npm ci && npm run build`（終了コード 0。失敗したら BLOCKED:）
-2. `grep -rc -e Ryokuyoudai -e 'Representative:' dist --include=*.html | grep -v ':0$'` が何も出さない
+2. `grep -c -e Ryokuyoudai -e 'Representative:' -e 'Phone:' -e 'Invoice Registration' lp/src/components/Footer.astro` が 0（本文の index・privacy・terms・data-deletion に残る英語の運営者表記は対象外なので数えない）
 3. `grep -c -e '代表者：谷澤 伸吾' -e '所在地：〒444-2141' -e '適格請求書発行事業者登録番号：T3810449547408' -e '電話番号：090-6072-7767' dist/index.html` が 1 以上（4語それぞれ `grep -c` で確認）
 4. `git diff --stat origin/main -- lp` が `lp/src/components/Footer.astro` の1ファイルだけ、6 insertions / 7 deletions
 
