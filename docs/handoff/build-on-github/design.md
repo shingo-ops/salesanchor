@@ -864,3 +864,12 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - U34（新・審査4回目 P2）: build-secretary-codex が落ちても deploy は成功扱いなので、次の run は差分どおりに戻り、secretary-codex のファイル（または common）が次に変わるまで組み直されない。その間、`.env` の SECRETARY_CODEX の行は古いまま（初回なら無いまま）で、警告もその 1 回だけ。扱い: 便2 では仕組みを足さない（一度に 1 つ・今も段3 の組み立てが落ちたときは警告だけで同じく古いまま）。最初の run の観測で警告が出たら PO に伝える（カード §6 の 5.）。落ちた回数が 2 回目になったら、知らせの仕組みを別の変更として設計する。
 - 審査: 同じ Opus の系統によるクラウドの設計審査を 1 回行ってから実装に渡す（独立した第二者の審査ではない）。
 - 審査4回目（2026-11-11・head 1817342d2）: REVISE。P1（必須）: 2-5 の 6. の compose の注記に「docker build」が入り K1 の検査に当たる → 言い方を変えた。P2（推奨）→ U34。P3（推奨）: Finalize の戻しで秘書は起こし直さないと 2-2 の 10. に明記。P4（推奨）: 段の範囲を 735-771 に直した（772 は空行）。P5（推奨）: §6 の 5. に `/app` が 4 つの確かめを足した。
+
+### 26-9 実装 PR のマージ前審査（2026-11-11・reviewer opus・head 4dbd9ca00）と直し（カード v5.2）
+結果: REQUEST_CHANGES。カード §2 と差分は一致、K1 の当たりはカード §4 の 10 件と一致、actionlint 0 件。手動の試験 4 本（test-rollback・test-phase2-rehearsal・sandbox-test の ai-reader-audit と secretary-codex）は head 4dbd9ca00 で success。
+- M1（必須）: `.github/workflows/deploy-script-test.yml` の job は setup-python だけで PyYAML が無く、`scripts/tests/test-deploy-pull-prune.sh` が deploy.yml の塊を抜き出す所で `ModuleNotFoundError: No module named 'yaml'` で止まる。T1〜T11 が CI で一度も合否判定されていない。カード 2-4 の書き漏れ。直し: カード 2-4 の 3.（試験の段の直前に `pip install pyyaml --quiet`。見本 `.github/workflows/test-phase2-rehearsal.yml:33-34`）。
+- M2（必須）: PR 本文の「削除するファイル:」の宣言漏れ（process-artifacts）。コードではなく本文の直し。
+- R1（推奨）: build-secretary-codex の job が時間切れ等で落ちると呼ばれる側の workflow が赤になり deploy が止まる。扱い: 変えない。§26-8 の 2.（段ごとにした理由）と U33（時間切れのときは他の 5 つと同じく deploy が止まる）で受け入れ済み。job の `continue-on-error` は公式に「job が落ちても run を落とさない」とある（Context7 /websites/github_en_actions・workflow-syntax・2026-11-11 取得）が、一度に 1 つの原則で便2 では足さない。最初の run で時間を測る（U32）。
+- R2（推奨）: rollback-images.sh で .env を入れ替えた後に切替が落ちると、.env と動いている箱がずれる。手で流す道具で、戻し先は `.deploy_rollback_from.env` に残る。扱い: 便2 では変えない。手順書（カード §6）で、手で流したときは結果を Opus が見る。
+- R3（記録）: `scripts/deploy/app-services-plan.sh` の実行権が 100644 → 100755。deploy.yml は `bash` で呼ぶので動きは同じ。カードに無い変更として記録。
+- R4・R5（推奨）: rollback-images.sh の確かめの順がカードより安全側にずれている・prune-images.sh の `cd` の失敗の扱い（失敗しても何も消さない）。扱い: 変えない（どちらも止まる向き・消さない向き）。

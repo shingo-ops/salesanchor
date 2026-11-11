@@ -1,6 +1,6 @@
 # card-bin2: 本番の受け取りを指紋に切り替える（prod1 で組み立てない）
 
-状態: カード草案（Opus、2026-11-11）。クラウドの設計審査 1 回目は REVISE（N1〜N7）→ v2、2 回目は REVISE（M1〜M4）→ v3、3 回目は APPROVE（推奨 P1〜P6）→ v4 で P3〜P6 を直し、P1・P2 は受け入れた（design.md §26-5〜§26-7）。v5（2026-11-11）: v4 の後に本線へ入った #5399（ChatGPT の秘書 secretary-codex・deploy.yml に 38 行）に合わせ、secretary-codex を 6 つ目の「無くてもよい」完成品として足し、行番号を直した（design.md §26-8）。v5.1（2026-11-11）: 審査4回目 REVISE の P1（必須）〜P5 を直した（design.md §26-8 末尾）。実装は PO 承認済み（2026-11-11「許可する」）。この PR を main に入れることは、deploy.yml・compose・本番の scripts を変えるので危険 PR（ADR-136）。PO の「GO #番号」が要る。切り替えは 14:00〜16:00（日本時間）、PO が見ている時間に限る（design.md §23）。
+状態: カード草案（Opus、2026-11-11）。クラウドの設計審査 1 回目は REVISE（N1〜N7）→ v2、2 回目は REVISE（M1〜M4）→ v3、3 回目は APPROVE（推奨 P1〜P6）→ v4 で P3〜P6 を直し、P1・P2 は受け入れた（design.md §26-5〜§26-7）。v5（2026-11-11）: v4 の後に本線へ入った #5399（ChatGPT の秘書 secretary-codex・deploy.yml に 38 行）に合わせ、secretary-codex を 6 つ目の「無くてもよい」完成品として足し、行番号を直した（design.md §26-8）。v5.1（2026-11-11）: 審査4回目 REVISE の P1（必須）〜P5 を直した（design.md §26-8 末尾）。v5.2（2026-11-11）: 実装 PR のマージ前審査 REQUEST_CHANGES の M1（試験の job に PyYAML が無い）を 2-4 の 3. で直した（design.md §26-9）。実装は PO 承認済み（2026-11-11「許可する」）。この PR を main に入れることは、deploy.yml・compose・本番の scripts を変えるので危険 PR（ADR-136）。PO の「GO #番号」が要る。切り替えは 14:00〜16:00（日本時間）、PO が見ている時間に限る（design.md §23）。
 親: [design.md](./design.md) §12 便2（中身の正本）・§26（このカードを出す前の直し）・§9（控えと戻し）。前の段のカード: [card-bin1-r3.md](./card-bin1-r3.md)。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。本番・GitHub の secret と Variables・組織の設定には触らない。PR は作らない（枝に push して報告するまで）。
 
@@ -338,6 +338,11 @@ jobs:
 ```yaml
       - name: Run pull/prune image tests (build-on-github 便2)
         run: bash scripts/tests/test-deploy-pull-prune.sh
+```
+3. （v5.2・design.md §26-9）2. で足した段の直前に次の段を足す（試験の台本は python3 の yaml で deploy.yml の塊を抜き出すが、この job は setup-python だけで PyYAML が無い。他の workflow と同じ入れ方。`.github/workflows/test-phase2-rehearsal.yml:33-34`）。
+```yaml
+      - name: Install PyYAML (pull/prune image tests)
+        run: pip install pyyaml --quiet
 ```
 
 ### 2-5. compose
