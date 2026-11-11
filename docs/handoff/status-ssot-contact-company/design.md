@@ -220,6 +220,13 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 3. 会社の書き出し（CSV）の状態の列を、記号のままにするか名前にするか。今回は記号のまま（§6-3-3）。
 4. 【決定 PO 2026-11-12「1」】「重複確認待ち」は作るときはどこにも出さず、直すときはどこでも出す。表に列 selectable_on_create を足して決める（§3・§4・§6-2-1）。PO の言葉:「新規で作成するときは必要ないステータスなら表示しなくていいと考える」「直すときだけ表示させるのが良い？」。
 5. 【実装前に PO に聞く】担当者の編集画面の押せない「重複としてマージ」ボタン（§6-3-4）を、既にある担当者をまとめる画面につなぐか、消すか。
+   - 事実（origin/main aec493c7f・cee9633b9 から対象パスの差分なし。生は同じフォルダの evidence-merge-button.md）:
+     - まとめる画面 `frontend/src/components/MergeContactModal.tsx:37-45` が要るのは open・companyId・source（id・contact_code・display_name・surname・given_name）・onMerged・onCancel。編集画面の `frontend/src/pages/contacts/ContactEditPage.tsx:29-43` の Contact にすべてある（company_id を companyId に渡す）。新しい API は要らない。
+     - 会社の担当者タブ `frontend/src/pages/company-detail/CompanyContactsTab.tsx:134-137`・`:241-256` が同じ窓を同じ形で開いている（手本）。
+     - まとめると、今開いている担当者が消える（`backend/app/routers/contacts.py:706-720`・`MergeContactModal.tsx:128-132`）。取り消せない。商談・注文・見積・請求がある担当者は 400 で止まる（`contacts.py:765-789`）。
+     - 消えるので、つなぐ場合は onMerged で残した側の編集画面 `/contacts/{masterId}/edit`（`ContactEditPage.tsx:2` の道）へ移る必要がある。
+   - 1 つなぐ: `:204-206` の生 button を金型 `Button`（variant="secondary" size="md"）に替え、押すと MergeContactModal を開く。onMerged で残した側の編集画面へ移る。K に「ボタンを押すと窓が開く」試験を足す。
+   - 2 消す: `:204-206` を消す。辞書キー contacts.mergeAsDuplicate は会社の担当者タブが使うので残す。
 6. 【別テーマ・PO 2026-11-12 依頼】作る画面で、すでに登録されている項目を赤枠で知らせる（名前・メール・電話番号＝PO「1」、加えて会社コード・担当者コード・FedEx口座番号・ウェブサイト＝PO「1」）。この設計とは別の設計 docs/handoff/create-duplicate-warning/ で扱う（1リリース1テーマ）。この設計の §6-2 の hook とは別の部品。
 
 ## 10. 弊害と対処
