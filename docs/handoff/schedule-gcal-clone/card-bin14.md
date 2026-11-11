@@ -34,7 +34,7 @@
 | `frontend/src/pages/schedule/ScheduleDraftFields.tsx` | 1 項目ずつの部品に分ける（§4） |
 | `frontend/src/pages/schedule/ScheduleFullEditor.tsx` | EditorPage に載せ替え（§5） |
 | `frontend/src/pages/schedule/SchedulePageImpl.tsx` | 直すときも全画面・小窓の直す形を消す（§7） |
-| `frontend/src/pages/schedule.css` | `.schedule-full-editor` の 2 つの規則とその上の説明（`:528-537`）を §5 の規則に置き換える。色の 6 行（§6-3） |
+| `frontend/src/pages/schedule.css` | `.schedule-full-editor` の 2 つの規則とその上の説明（`:528-537`）を §5 の規則に置き換える。色の 5 行（§6-3） |
 | `frontend/src/pages/schedule/SchedulePageImpl.test.tsx` | §9-2 |
 | `frontend/src/components/buttonShapeUsage.test.ts` | 使ってよい場所を 3 つ足す（§8） |
 | `frontend/src/components/editorVariantUsage.test.ts`（新規） | §8 |
@@ -439,7 +439,7 @@ interface FieldProps {
 
 - `frontend/src/index.css` の明るい表示（`--calendar-status-error-text` `:191` の次）:
 ```css
-  /* 予定の画面だけで使う Google カレンダーの色（実測 schedule-gcal-clone recon §8.6・使う場所は .gcal-colors だけ・ADR-1074） */
+  /* 予定の画面だけで使う Google カレンダーの色（実測 schedule-gcal-clone recon §8.6・使う場所は予定の画面の範囲の札だけ・ADR-1074） */
   --gcal-surface:                  #f8fafd;
   --gcal-surface-lowest:           #ffffff;
   --gcal-surface-container:        #f0f4f9;
@@ -457,8 +457,8 @@ interface FieldProps {
 - 暗い表示（`--calendar-status-error-text` `:392` の次）に同じ 13 個を次の値で: `#1b1b1b`・`#131314`・`#1e1f20`・`#282a2c`・`#e3e3e3`・`#c4c7c5`・`#444746`・`#333537`・`#a8c7fa`・`#062e6f`・`#004a77`・`#c2e7ff`・`#f55e57`（上の並びと同じ順）。
 - `frontend/src/tokens.css` の `--schedule-create-popover-bg`（`:413`）の次:
 ```css
-  --schedule-popover-bg:            var(--bg-surface); /* 詳しくの小窓の地（.gcal-colors の中で Google の色・ADR-1074） */
-  --schedule-today-text:            var(--on-solid);   /* 今日の丸の文字（.gcal-colors の中で Google の色・ADR-1074） */
+  --schedule-popover-bg:            var(--bg-surface); /* 詳しくの小窓の地（予定の画面の範囲の札の中で Google の色・ADR-1074） */
+  --schedule-today-text:            var(--on-solid);   /* 今日の丸の文字（予定の画面の範囲の札の中で Google の色・ADR-1074） */
 ```
 - `frontend/src/tokens.css` の最後（`:root.force-dark` の `}` `:687` の後）:
 ```css
@@ -473,6 +473,7 @@ interface FieldProps {
   --text-primary: var(--gcal-on-surface);
   --text-secondary: var(--gcal-on-surface-variant);
   --text-muted: var(--gcal-on-surface-variant);
+  --role-page-title-color: var(--gcal-on-surface);
   --border: var(--gcal-outline-variant);
   --accent: var(--gcal-primary);
   --accent-hover: var(--gcal-primary);
@@ -493,7 +494,7 @@ interface FieldProps {
   --schedule-popover-bg: var(--gcal-surface-container);
 }
 ```
-- 上の 24 行のほかに足さない。`--bg-hover`・影・`--focus-ring-shadow`・失敗/成功の色・`--schedule-slot-hover`・`--calendar-google-blue*`・`--on-solid` は決め直さない。
+- 上の 25 行のほかに足さない（`--role-page-title-color` は `frontend/src/tokens.css:45` で `:root` に決まり、`frontend/src/pages-layout.css:158` の `.text-page-title`（`frontend/src/components/PageLayout.tsx:49` の題名）が使うので決め直す・5 回目の審査 3）。`index.css` に書く説明の文には札の名前 `gcal-colors` を書かない（守り手が index.css を許していない・5 回目の審査 1）。`--bg-hover`・影・`--focus-ring-shadow`・失敗/成功の色・`--schedule-slot-hover`・`--calendar-google-blue*`・`--on-solid` は決め直さない。
 
 ### 6-3. 色の行を直す
 
@@ -521,7 +522,7 @@ interface FieldProps {
 
 ## 8. 守り手と決まりの文書
 
-- 新しい `frontend/src/components/gcalColorsUsage.test.ts`: `editorVariantUsage.test.ts` と同じ作り（`frontend/src` の .ts・.tsx・.css を全部読む）。(1) `gcal-colors` の文字が `pages/schedule/SchedulePageImpl.tsx`・`components/EditorPage.tsx`・`components/EditorPage.stories.tsx`・`components/EditorPage.test.tsx`・`components/gcalColorsUsage.test.ts`・`tokens.css` の外に 0 件。(2) `--gcal-` の文字が `index.css`・`tokens.css`・`components/gcalColorsUsage.test.ts` の外に 0 件。どちらも「今 1 件以上見つかる」ことも書く。
+- 新しい `frontend/src/components/gcalColorsUsage.test.ts`: `editorVariantUsage.test.ts` と同じ作り（`frontend/src` の .ts・.tsx・.css を全部読む）。(1) `gcal-colors` の文字が `pages/schedule/SchedulePageImpl.tsx`・`components/EditorPage.tsx`・`components/EditorPage.stories.tsx`・`components/EditorPage.test.tsx`・`components/gcalColorsUsage.test.ts`・`pages/schedule/SchedulePageImpl.test.tsx`（EP6）・`tokens.css` の外に 0 件。(2) `--gcal-` の文字が `index.css`・`tokens.css`・`components/gcalColorsUsage.test.ts` の外に 0 件。どちらも「今 1 件以上見つかる」ことも書く。
 - `docs/specs/design-system/design.md:31`（色の層の説明）の後に「例外: 予定の画面（SchedulePageImpl の根と金型 EditorPage）だけは範囲の札 `.gcal-colors` で Google カレンダーの色に置き換える（ADR-1074）。ほかで使うと `frontend/src/components/gcalColorsUsage.test.ts` が止める」を 1 文。
 
 - `frontend/src/components/buttonShapeUsage.test.ts` の `ALLOWED`（`:13-19`）に `"components/EditorPage.tsx"`・`"components/EditorPage.stories.tsx"`・`"components/EditorPage.test.tsx"` を足す。
@@ -554,5 +555,5 @@ interface FieldProps {
 
 ## 11. 終わりの確かめと返し方
 
-- §0 の 3 つの確かめが 0 件の失敗。`git grep -n FullScreenDialog -- frontend` が 0 件。`git grep -n gcal-colors -- frontend/src` が §6・§8 の場所だけ。`git diff --stat origin/main...HEAD` が §1 の「触る」の中だけ。
+- §0 の 3 つの確かめが 0 件の失敗。`git grep -n FullScreenDialog -- frontend` が 0 件。`git grep -n gcal-colors -- frontend/src` が §8 の (1) の 7 つのファイルの中だけ（`index.css` には 0 件）。`git diff --stat origin/main...HEAD` が §1 の「触る」の中だけ。
 - 返す: `DONE` と commit の sha・確かめの生出力の置き場所、または `BLOCKED:`／`NEEDS_DECISION:` と理由。
