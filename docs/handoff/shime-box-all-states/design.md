@@ -69,7 +69,7 @@ PO の発言: 2026-11-10「2,1」（先に〆の規則の直し方を設計し�
 ## 3-4. 便4（切り替え）の PO 判断（2026-11-11）
 
 - PO の発言: 「1」（切り替える。§6 の「設定を消しても、それまでに消えた在庫は戻らない恐れ（未確認）」を説明した後の選択）。
-- 入れる値: `{"keep_words": ["まだあります"]}`。記録 SQL: `docs/handoff/shime-box-all-states/data/switch-*.sql`（precheck → dryrun → commit → verify。戻しは switch-rollback.sql で行を 1 行消す）。手順と記録欄は `data/README.md` の「便4」。
+- 入れる値: `{"keep_words": ["まだあります"]}`。記録 SQL: `docs/handoff/shime-box-all-states/data/switch-precheck.sql` → `docs/handoff/shime-box-all-states/data/switch-dryrun.sql` → `docs/handoff/shime-box-all-states/data/switch-commit.sql` → `docs/handoff/shime-box-all-states/data/switch-verify.sql`。戻しは `docs/handoff/shime-box-all-states/data/switch-rollback.sql`（行を 1 行消す）。手順と記録欄は `docs/handoff/shime-box-all-states/data/README.md` の「便4」。
 
 ## 4. 影響範囲
 
