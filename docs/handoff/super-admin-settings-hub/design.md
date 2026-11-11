@@ -1,7 +1,7 @@
 # design: 運営のメニューを「利用者管理」「全体設定」へ組み替える
 
 - 状態: 設計案作成済み・同じ AI による自己審査済み（独立した第二者の審査ではない）・PO の方向の承認あり（2026-11-11「1、LINE解析に入っているマスタも全体設定に移動させてくれ」）・実装は本 PR で行う
-- 根拠: [recon.md](./recon.md)。対象 ADR: ADR-149（SubMenu）・ADR-087・ADR-067・ADR-144・ADR-027・ADR-1061 決定10
+- 根拠: [recon.md](./recon.md)（`docs/handoff/super-admin-settings-hub/recon.md`）。対象 ADR: ADR-149（SubMenu）・ADR-087・ADR-067・ADR-144・ADR-027・ADR-1061 決定10
 - 区分: 画面だけ（frontend）。backend・DB・CI の設定・本番の手順は触らない
 
 ## 1. 目的
@@ -133,6 +133,7 @@
 
 ## 維持の仕組み
 
+- 守り手: `frontend/src/pages/super-admin/settings/settingsNav.ts` の項目一覧を試験が守り、古い道の転送は `frontend/src/pages/super-admin/legacyPageRedirects.ts` の固定比較試験、文字と部品は CI の i18n 点検と ADR-144 の見張りが守る
 - 項目の正本は `frontend/src/pages/super-admin/settings/settingsNav.ts` の1か所。足すときはここに1行と Panel の表に1行
 - 古い道の転送は `frontend/src/pages/super-admin/legacyPageRedirects.ts` と、その配列を固定で比べる試験が守る
 - 文字は CI の i18n の点検（ja/en の同じキー・直書き禁止）が守る
