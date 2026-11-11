@@ -193,13 +193,13 @@ export default function MobileShell() {
                 "viewerAccounts",
                 "nav.superAdminViewers",
                 <NAV_ICONS.saasAdmin size={ICON.base} aria-hidden="true" />,
-                "/super-admin/viewers",
+                "/super-admin/users",
               ),
               resolveItem(
-                "loginRequests",
-                "nav.superAdminLoginRequests",
+                "superAdminSettings",
+                "nav.superAdminSettings",
                 <NAV_ICONS.saasAdmin size={ICON.base} aria-hidden="true" />,
-                "/super-admin/login-requests",
+                "/super-admin/settings",
               ),
             ]
           : []),

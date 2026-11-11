@@ -13,6 +13,13 @@
 export const ROUTE_TITLE_KEYS: Record<string, string> = {
   "/super-admin/analysis-rules":              "nav.superAdminAnalysisRules",
   "/super-admin/supplier-extraction-rules":   "nav.superAdminSupplierExtractionRules",
+  "/super-admin/settings":                    "nav.superAdminSettings",
+  "/super-admin/settings/fx-rate":            "nav.superAdminFxRate",
+  "/super-admin/settings/tax-rates":          "nav.superAdminTaxRates",
+  "/super-admin/settings/sa-products":        "nav.superAdminSaProducts",
+  "/super-admin/users/viewers":               "nav.superAdminViewers",
+  "/super-admin/users/login-requests":        "nav.superAdminLoginRequests",
+  "/super-admin/users/viewer-templates":      "nav.superAdminViewerTemplates",
   "/":                           "nav.dashboard",
   "/lead-chat":                  "nav.leadChat",
   "/crm/leads":                  "nav.leads",
