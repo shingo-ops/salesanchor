@@ -325,7 +325,7 @@ exit 0
 ### 2-7. 抜き出す試験・砂場（design.md §12 便2 12.〜15.・§26-3）
 1. `scripts/tests/test-deploy-nginx-recreate-guard.sh:27` の `for s in j["steps"]` を `for s in j.get("steps", [])` にする。ほかは変えない。
 2. `scripts/rehearsal_phase2.sh`: design.md §12 便2 12. の (i)〜(iii) のとおり。今の行番号: 自前 compose の backend の `build: .` は 183 行目（`image: \${BACKEND_IMAGE:-phase2-rehearsal-backend}` を足す。heredoc は 180 行目の引用符なしの `<< COMPOSE` なので `$` の前に `\` が要る）、`git reset --hard "${BAD_SHA}"` は 331 行目、B-1 の予備の `docker compose up -d` は 379 行目、SUBSTITUTIONS の一覧は 16-20 行目。309・332 行目の `docker compose build --quiet` は変えない。
-   さらに（design.md §26-5 N2・便2 の前からある不具合）: 92 行目を次の 2 行にする（字下げは今の 92 行目と同じ）。
+   さらに（design.md §26-5 N2・便2 の前からある不具合）: 90 行目（`| sed 's/\${{ steps\.changes\.outputs\.migrations }}/true/g')`。88 行目から続く sed の連なりの最後で、`)` で閉じる）を次の 2 行にする（字下げは今の 90 行目と同じ 4 空白）。91 行目の `mktemp` と 92 行目の `printf '%s\n' "${script}" > "${tmp}"` は変えない。
 ```bash
     | sed 's/\${{ steps\.changes\.outputs\.migrations }}/true/g' \
     | sed 's/\${{ steps\.gate\.outputs\.migrations }}/true/g')

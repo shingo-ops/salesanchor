@@ -820,7 +820,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 ### 26-5 クラウドの設計審査 1 回目（2026-11-11・architect opus）と直し（カード v2）
 判定: REVISE。行番号はすべて実物と一致、`uses:` の切替・secrets・trap の形は可、とされた。指摘と扱い:
 - N1（必須）: 2-2 の 4. の 5 行の検査で `exit 1` するとき、`.env` を控えに戻していなかった（§26-1 3. に反する）。→ `exit 1` の前に 2-2 の 5. と同じ戻しを足した。試験 T9 を足した。
-- N2（必須）: `scripts/rehearsal_phase2.sh:92` は `steps.changes` しか置き換えず、Finalize（`.github/workflows/deploy.yml:922`）の `steps.gate` が残って bash が落ちる。便2 の前からある不具合だが、カードの「リハーサルが緑」が通らない。Opus も 92 行目と 922 行目を読んで確かめた。→ 2-7 の 2. に `steps.gate` の置き換えと SUBSTITUTIONS の直しを足した。
+- N2（必須）: `scripts/rehearsal_phase2.sh:90` は `steps.changes` しか置き換えず、Finalize（`.github/workflows/deploy.yml:922`）の `steps.gate` が残って bash が落ちる。便2 の前からある不具合だが、カードの「リハーサルが緑」が通らない。Opus も 90 行目と 922 行目を読んで確かめた（v4 までは 92 行目と誤記。マージ前の審査で見つかり直した・§26-7）。→ 2-7 の 2. に `steps.gate` の置き換えと SUBSTITUTIONS の直しを足した。
 - N3: 2-2 の 5. の範囲は 470-492（492 行目が `fi`、493 行目からは blue-green の注記）。→ 直した。
 - N4: `.github/workflows/deploy-script-test.yml` の paths に deploy.yml が無く、deploy.yml だけを変えた PR で T7 が流れない。→ 両方の paths に足した。
 - N5: K1 の確かめを行番号で書いていた（実装で行がずれる）。`tests/sandbox/image-scan-survey.sh` は注記の行も当たる。→ 「ファイル＋文字列」の組で書き直した。
@@ -844,4 +844,5 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - P4（推奨・直した）: 秘書の旗の順を :731 と同じ `--force-recreate --no-build` にした。T8 は旗の順を数えない形にした。
 - P5（推奨・直した）: §9-2 の頭に、便2 の正本はカードと §26 だと書いた。
 - P6（推奨・直した）: §26-5 N7 の「理由:」の重なりを消した。
+- マージ前の審査（reviewer opus・head 4bf2244b4）で REVISE: カード 2-7 の 2. と §26-5 N2 が `scripts/rehearsal_phase2.sh` の置き換える行を 92 行目と書いていたが、実物は 90 行目（92 行目は一時ファイルへ書き出す `printf`）。カードのとおりに置き換えるとリハーサルの仕組みが壊れる。Opus が実物の 84-95 行目を読んで確かめ、90 行目に直した。
 判定（Opus）: 必須の指摘は無い。直したのは書き方と試験の足しだけで、手順は変えていない。カード発行に進む（実装には PO の明示の実装承認が要る）。
