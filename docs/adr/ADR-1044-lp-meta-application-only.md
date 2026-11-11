@@ -57,3 +57,12 @@
 - 触らないもの: `frontend/viewer/index.html`（noindex を設定済み）。robots.txt は作らない（Disallow にすると noindex が読まれなくなるため）。nginx の X-Robots-Tag は使わない（本文と同じ理由）。
 - 戻し方: その1行を消す revert を main にマージする。
 - 設計: docs/handoff/app-noindex/design.md
+
+## 追記（2026-11-12）: Meta の審査が通るまで LP を検索に出す
+
+- PO の決定（2026-11-12）: 「3. 検索に出すのは、審査が通るまでにする。審査が通ったら、検索に出ない形に戻します。」
+- 発端: Meta 6回目の却下「ウェブサイトが準備中またはアクセス不可のため…salesanchor.jp が…谷澤 伸吾に関連していることを確認できませんでした」。申請画面は「公的記録を検索して実在を確認する」と書いている。本番の実測では全ページ 200・名前あり・準備中の語 0 で、残る差は noindex だけだった（原因であるとの確証はない）。
+- 変更: What 3 を一時的に止める。`lp/src/layouts/BaseLayout.astro` と `lp/src/layouts/LegalLayout.astro` の `noindex` 既定値を `false` に戻す。`lp/src/pages/404.astro` と `lp/src/pages/deletion-status.astro` は `noindex={true}` を明示し、検索に出さない。
+- 変えないもの: アプリ（frontend/index.html）の noindex、robots.txt、nginx。
+- 期限: Meta のビジネス認証が「認証済み」になるまで。認証済みになったら既定値を `true` に戻し、What 3 に復帰する。
+- 設計: docs/handoff/lp-index-until-meta-verified/design.md
