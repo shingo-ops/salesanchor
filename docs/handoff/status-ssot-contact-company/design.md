@@ -219,7 +219,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 2. 他にも「名前が辞書にあり DB に無い」状態が13種ある（statusPresentation.ts の13ドメイン）。どこまで DB に移すかは別テーマ。
 3. 会社の書き出し（CSV）の状態の列を、記号のままにするか名前にするか。今回は記号のまま（§6-3-3）。
 4. 【決定 PO 2026-11-12「1」】「重複確認待ち」は作るときはどこにも出さず、直すときはどこでも出す。表に列 selectable_on_create を足して決める（§3・§4・§6-2-1）。PO の言葉:「新規で作成するときは必要ないステータスなら表示しなくていいと考える」「直すときだけ表示させるのが良い？」。
-5. 【実装前に PO に聞く】担当者の編集画面の押せない「重複としてマージ」ボタン（§6-3-4）を、既にある担当者をまとめる画面につなぐか、消すか。
+5. 【決定 PO 2026-11-12「1」＝選択肢1 つなぐ】担当者の編集画面の押せない「重複としてマージ」ボタン（§6-3-4）を、既にある担当者をまとめる画面につなぐ。便3 で下の「1 つなぐ」のとおり作る。PO に示した選択肢: 1 ボタンが使えるようにする／2 ボタンを消す／3 今のまま残す。
    - 事実（origin/main aec493c7f・cee9633b9 から対象パスの差分なし。生は同じフォルダの evidence-merge-button.md）:
      - まとめる画面 `frontend/src/components/MergeContactModal.tsx:37-45` が要るのは open・companyId・source（id・contact_code・display_name・surname・given_name）・onMerged・onCancel。編集画面の `frontend/src/pages/contacts/ContactEditPage.tsx:29-43` の Contact にすべてある（company_id を companyId に渡す）。新しい API は要らない。
      - 会社の担当者タブ `frontend/src/pages/company-detail/CompanyContactsTab.tsx:134-137`・`:241-256` が同じ窓を同じ形で開いている（手本）。
