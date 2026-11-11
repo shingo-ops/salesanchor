@@ -822,7 +822,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - N1（必須）: 2-2 の 4. の 5 行の検査で `exit 1` するとき、`.env` を控えに戻していなかった（§26-1 3. に反する）。→ `exit 1` の前に 2-2 の 5. と同じ戻しを足した。試験 T9 を足した。
 - N2（必須）: `scripts/rehearsal_phase2.sh:92` は `steps.changes` しか置き換えず、Finalize（`.github/workflows/deploy.yml:922`）の `steps.gate` が残って bash が落ちる。便2 の前からある不具合だが、カードの「リハーサルが緑」が通らない。Opus も 92 行目と 922 行目を読んで確かめた。→ 2-7 の 2. に `steps.gate` の置き換えと SUBSTITUTIONS の直しを足した。
 - N3: 2-2 の 5. の範囲は 470-492（492 行目が `fi`、493 行目からは blue-green の注記）。→ 直した。
-- N4: `deploy-script-test.yml` の paths に deploy.yml が無く、deploy.yml だけを変えた PR で T7 が流れない。→ 両方の paths に足した。
+- N4: `.github/workflows/deploy-script-test.yml` の paths に deploy.yml が無く、deploy.yml だけを変えた PR で T7 が流れない。→ 両方の paths に足した。
 - N5: K1 の確かめを行番号で書いていた（実装で行がずれる）。`tests/sandbox/image-scan-survey.sh` は注記の行も当たる。→ 「ファイル＋文字列」の組で書き直した。
 - N6: rollback-images.sh に秘書の起動・`/api/health` の確かめ・所要秒（K6）が無かった（§9-2 との食い違い）。→ 足した。試験 T8 を足した。
 - N7（推奨）: 受け取りは通ったが Step 3b の切替が落ちたとき、`.env` に動かしていない指紋が残る。→ v2 では直さず受け入れた（下の理由）。2 回目の審査でこの理由が実物と合わないと分かり、v3 で直した（§26-6 M1）。v2 の理由（取り下げ）: (1) 今の形でも Step 3 の組み立てがローカルの `astro-webapp-backend` を上書きした後で Step 3b が落ちると、同じく動かしていない完成品が残る（便2 で増える危険ではない）。(2) 残る指紋は GitHub で組み立てて走査を通し、prod1 に受け取り済みの完成品なので、起動できない物ではない。(3) Finalize は `if: always()` で走り（`.github/workflows/deploy.yml:907`）、健康確認が落ちれば控えに戻す。(4) 次の main への push で上書きされる。
