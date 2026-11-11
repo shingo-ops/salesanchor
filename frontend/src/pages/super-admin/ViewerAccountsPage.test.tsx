@@ -222,6 +222,15 @@ it("shows a left menu with 4 entries (no Suspended) and counts, and filters by t
   expect(screen.getByText("Ann")).toBeTruthy();
 });
 
+it("shows the login approvals link under the viewer menu (K7)", async () => {
+  mockMixed();
+  renderPage();
+  await screen.findByText("Taro");
+  const link = screen.getByRole("link", { name: i18n.t("nav.superAdminLoginRequests") });
+  expect(link.getAttribute("href")).toBe("/super-admin/users/login-requests");
+  expect(screen.getByText(i18n.t("superAdmin.users.groupViewers"))).toBeTruthy();
+});
+
 it("opens with ?status=active and shows only active rows", async () => {
   mockMixed();
   renderPage("/?status=active");
@@ -471,10 +480,10 @@ it("shows no room-notice guide when the notice was sent or there is none", async
 
 it("navigates to the viewer templates page with the header button", async () => {
   render(
-    <MemoryRouter initialEntries={["/super-admin/viewers"]}>
+    <MemoryRouter initialEntries={["/super-admin/users/viewers"]}>
       <Routes>
-        <Route path="/super-admin/viewers" element={<ViewerAccountsPage />} />
-        <Route path="/super-admin/viewer-templates" element={<div data-testid="templates-page" />} />
+        <Route path="/super-admin/users/viewers" element={<ViewerAccountsPage />} />
+        <Route path="/super-admin/users/viewer-templates" element={<div data-testid="templates-page" />} />
       </Routes>
     </MemoryRouter>,
   );

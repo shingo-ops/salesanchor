@@ -3,7 +3,8 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import DesktopShell from "./DesktopShell";
 
-const { mockHasPermission, mockHasAny } = vi.hoisted(() => ({
+const { mockHasPermission, mockHasAny, mockIsSuperAdmin } = vi.hoisted(() => ({
+  mockIsSuperAdmin: vi.fn<() => boolean>(() => false),
   mockHasPermission: vi.fn<(perm: string) => boolean>(() => false),
   mockHasAny: vi.fn<(...keys: string[]) => boolean>(() => false),
 }));
@@ -57,7 +58,7 @@ vi.mock("../hooks/usePermissions", () => ({
 }));
 
 vi.mock("../hooks/useSuperAdmin", () => ({
-  useSuperAdmin: () => ({ isSuperAdmin: false }),
+  useSuperAdmin: () => ({ isSuperAdmin: mockIsSuperAdmin() }),
 }));
 
 vi.mock("../hooks/useSSE", () => ({
@@ -115,6 +116,25 @@ describe("DesktopShell", () => {
   beforeEach(() => {
     mockHasPermission.mockImplementation((perm: string) => perm === "dashboard.view" || perm === "schedule.view");
     mockHasAny.mockReturnValue(false);
+    mockIsSuperAdmin.mockReturnValue(false);
+  });
+
+  // K1: the operator rows are only LINE analysis, buyback prices, user management and global settings.
+  it("shows exactly four operator rows for a super admin and none for others", () => {
+    const operatorPaths = ["/super-admin/analysis-rules", "/buyback-prices", "/super-admin/users", "/super-admin/settings"];
+    const hrefs = () =>
+      screen.queryAllByRole("link").map(a => a.getAttribute("href")).filter(h => h?.startsWith("/super-admin") || h === "/buyback-prices");
+    const none = renderDesktopShell();
+    expect(hrefs()).toEqual([]);
+    none.unmount();
+
+    mockIsSuperAdmin.mockReturnValue(true);
+    renderDesktopShell();
+    expect(hrefs()).toEqual(operatorPaths);
+    expect(screen.getByRole("link", { name: "nav.superAdminViewers" }).getAttribute("href")).toBe("/super-admin/users");
+    expect(screen.getByRole("link", { name: "nav.superAdminSettings" }).getAttribute("href")).toBe("/super-admin/settings");
+    expect(screen.queryByRole("link", { name: "nav.superAdminFxRate" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "nav.superAdminLoginRequests" })).toBeNull();
   });
 
   it("keeps the sidebar collapsed after nav click until mouse leaves", async () => {
