@@ -151,7 +151,7 @@ test("AC8 non-admin cannot request product list or see tabs", async ({ page }) =
   await mockApi(page, { "GET /me/permissions": { ...permissions, is_super_admin: false } });
   await page.goto("/super-admin/tcg-product-master");
   await expect(page).toHaveURL(/\/super-admin\/settings\/masters\/product-master$/);
-  await expect(page.getByText(/super_admin/)).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText(/admin/);
   await expect(page.getByRole("tablist")).toHaveCount(0);
   expect(productRequests).toBe(0);
 });
