@@ -3,7 +3,7 @@
 > この文書は何か（専門用語なしの1行）:
 > 会社と連絡先の「有効・無効・アーカイブ・重複確認待ち」を DB の1つの表にまとめ、画面の選択肢・札・まとめる画面の文・分析がすべてその表を読むようにする手順。
 
-- 状態: **設計案作成済み（Opus）／設計審査 4回目 APPROVE・推奨3件を反映済み（§14）／2026-11-12 PO 判断（§9 未決4）を反映して §1・§2・§3・§4・§6-2-1・§6-3-4・K4・K14・K15 を変えた＝5回目の審査が要る／PO 承認 未／実装未着手**
+- 状態: **設計案作成済み（Opus）／設計審査 4回目 APPROVE・5回目と6回目 REVISE の指摘を反映済み（§14）／2026-11-12 PO 判断（§9 未決4）を反映して §1・§2・§3・§4・§6-2-1・§6-3-4・K4・K14・K15 を変えた＝5回目の審査が要る／PO 承認 未／実装未着手**
 - recon: docs/handoff/status-ssot-contact-company/recon.md
 - 基準: origin/main a88194893（2026-11-11 取得）
 - PO の言葉（2026-11-11）: 「DBがバラバラに成っていていろいろなところからデータ撮ってきているならSSOTしてほしい」「分析機能に影響するから値の直書きは禁止、基本的に値はDBにSSOTさせて、後から分析の材料として使用できる状態にする必要がある」。同日「1」で、状態の1か所化とまとめる画面の文を1つの設計にする。
@@ -174,7 +174,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 - {{active}} には §6-2 の読み口から「有効」の名前を入れる（名前を文に直書きしない）。en も同じ意味に直す（今は `(activate)`）。
 - `frontend/src/pages/company-detail/CompanyContactsTab.tsx:136` は `t("contacts.mergeAsDuplicate").replace("（担当者単位は未実装）", "")` と日本語の文字を書いて消している（ADR-027 違反・英語画面では消えない）。文を直したので replace を消し `t("contacts.mergeAsDuplicate")` だけにする（新しいキーは作らない）。
 - `frontend/src/pages/contacts/ContactEditPage.tsx:204-206` は金型の Button でない生の `<button>` と直の style（ADR-144 違反）で、押せないまま。担当者をまとめる処理は既にある（`backend/app/routers/contacts.py:706` ADR-098 SA-04 J3・画面 `frontend/src/components/MergeContactModal.tsx:128`・`frontend/src/pages/company-detail/CompanyContactsTab.tsx:136` から開ける）。つなぐか消すかは §9 未決5。
-- 試験 `frontend/src/components/FullPageFormButtonMigration.test.tsx:176-177`・`:198` はキー名で探すので、キーを分けたら合わせる。
+- 試験 `frontend/src/components/FullPageFormButtonMigration.test.tsx:176-177`・`:198` はキー名で探す。§6-3-4 ではキーを分けないので、試験は変えずに通る（審査6回目で確認）。
 
 ### 6-3-3. 変えない所
 
@@ -205,7 +205,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 | K15 解消ボタンの文に「active」「未実装」が0件 | `git grep -n -E 'active 化|\(activate\)|未実装|not implemented' -- frontend/src/locales/ja.json frontend/src/locales/en.json` の行のうち companies.dedupConfirmAsDistinct・contacts.confirmAsDistinctFull・contacts.mergeAsDuplicate が0件（変更後の文の {{active}} は当たらない）。`git grep -n 'replace("（' -- frontend/src/pages/company-detail/CompanyContactsTab.tsx` が0件 |
 | K5 会社・連絡先の画面のコードに4つの記号の直書きが0件（定数ファイルを除く） | `git grep -n -E '"(active\|inactive\|archived\|pending_dedup_review)"' -- frontend/src/pages/contacts frontend/src/pages/companies frontend/src/pages/company-detail frontend/src/components/MergeCompanyModal.tsx frontend/src/components/MergeContactModal.tsx \| grep -v className` が0件。基準値（a88194893 で実測）: 10ファイル53件のうち tab の className の3件を除く50件 |
 | K6 状態の名前の辞書キーが0件 | `git grep -n -E 'customers\.status_(active\|inactive\|archived\|pending_dedup)\|contacts\.statusCode\|statusPendingDedupOption' -- frontend/src` が0件。基準値（a88194893 で実測）: 41件（辞書を除くと39件） |
-| K7 まとめる画面の文に master・pending_dedup_review・active・audit_logs が0件 | ja/en.json の mergeCompany・mergeContact の文から差し込み `{{…}}` を除いて（`sed -E 's/\{\{[A-Za-z_]+\}\}//g'`）から grep → 0件（`{{active}}` は数えない）。Chrome で会社をまとめる画面を開き文を読む（実行はしない） |
+| K7 まとめる画面の文に master・pending_dedup_review・active・audit_logs が0件 | ja/en.json それぞれで `jq -r '.mergeCompany[], .mergeContact[]' frontend/src/locales/<ja\|en>.json \| sed -E 's/\{\{[A-Za-z_]+\}\}//g' \| grep -c -E 'master\|pending_dedup_review\|active\|audit_logs'` が両方0（大小文字を区別。`{{active}}` は sed で除くので数えない）。基準値（origin/main cee9633b9 で Opus が同じ命令で実測）: ja 6・en 6 で ×。Chrome で会社をまとめる画面を開き文を読む（実行はしない） |
 | K8 分析で名前が引ける | 読み取りの鍵で companies と customer_statuses を結んだ件数の集計が名前付きで出る（tenant_004: 有効 51） |
 | K9 試験 | CI 全部緑。列挙＝表の試験が緑 |
 | K10 RLS の下で外部キーが働く | backend/tests/test_customer_statuses_pg.py が緑（会社の領域の利用者で会社を作れる・表に無い値は断られる） |
@@ -303,3 +303,4 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 - 5回目の前の変更（2026-11-12・Opus）: PO の答え「直すときだけ表示させるのが良い？」→「1」を反映した。表に列 selectable_on_create を足し（§3・§4）、7か所を作る2・直す4・両方1に分け直した（§6-2-1。前の「作る3・直す4」は数え違いで、会社の連絡先タブの窓は作ると直すの両方に使う `frontend/src/pages/company-detail/CompanyContactsTab.tsx:151-154`）。解消ボタンの文の「active 化」「担当者単位は未実装」と日本語の replace を §6-3-4 に足した。K4 を書き直し、K14・K15 を足した。押せない「重複としてマージ」ボタンを §9 未決5 に、作る画面の重複の警告を別テーマとして §9-6 に置いた。5回目の審査はまだ。
 - 5回目（2026-11-12 04:53 JST・クラウド Opus・48068620c）: **REVISE**。7か所の分類と行番号は実物と一致。直した3件: (1) §6-1 の API の列に selectable_on_create が無い→足した (2) K15 の grep が変更後の文 {{active}} に当たる→探す語を「active 化・(activate)・未実装・not implemented」に絞った (3) K14 の試験の種類が決まっていない→サーバーの試験と画面の試験の2本に分けた。
   - 5回目の推奨も反映した: K7 も {{active}} を数えない形に直した。is_active が FALSE の行の扱いを §6-2 に書いた。contacts.mergeAsDuplicate はキーを分けず文だけ直す（§6-3-4）。根拠の生ファイルをリポジトリの evidence-hide-on-create.md に置いた。ja.json の行番号の基準を §6-3-4 に書いた。
+- 6回目（2026-11-12 05:01 JST・クラウド Opus・d0d93a95d）: **REVISE**。K15 は流して○×が付くと確認した（今は6行で×、設計どおりの文の写しなら0行で○）。§6-3-4 の行番号・K4・K14 は実物と一致し、未決5・6 は実装役が迷わないと確認した。直した2件: (1) K7 にどの文を取り出すかが書かれておらず、ファイル全体を grep すると60行当たった。値だけを取り出す jq の命令を書き足した。基準値は Opus が同じ命令で origin/main に流して ja 6・en 6 と実測した。審査役の「14行」は別の取り出し方での数なので採らない。 (2) §6-3-2 の試験の項に残っていた古い文「キーを分けたら合わせる」を、キーを分けない今の方針に合わせて直した。
