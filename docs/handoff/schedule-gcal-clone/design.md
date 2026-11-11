@@ -1121,3 +1121,14 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
   - (7) 軽: 新しい試験の名前 H1〜H5 が祝日の試験（`SchedulePageImpl.test.tsx:1037`・`:1048`・`:1057`）とぶつかる → EP1〜EP5 に。
   - (8) 軽: Checkbox の `onChange` は出来事を受け取り、Toggle は真偽を受け取る（`frontend/src/components/Checkbox.tsx:25-26`・`frontend/src/pages/schedule/ScheduleDraftFields.tsx:121-126`）→ カード §4 に `event.target.checked` から読む式を書いた。
 - 審査役の最後の文は 8 件目の途中で切れていた。残りは 2 回目の審査で全部書いてもらう。
+
+### 17 回目 2 回目（2026-11-11・便14 の設計・クラウドの Opus architect・commit 0ea920725）: REVISE
+
+- 1 回目の 8 件のうち 7 件は直っていた。審査役が窓 1279 の Chromium でカードの CSS を写しに当てて測った: × 左端 x32・真ん中 x50、題名 x80 幅 594、保存 x706、日時の段の上端 y92、札 x16 幅 636、札の中の欄 x80（幅 556）、窓 390 ではみ出しなし。stylelint と CSS の検査 8 本は通った。
+- 指摘と直し:
+  - (1) 重: 日時の 5 つ目（終わりの日）が x80 y140 の 2 段目に落ちる。lead の幅の上限（652）から左の余白 64 を引くと 588 で、5 つに要る 622 に足りない → lead の幅の上限を消した（カード §2-2）。
+  - (2) 中: 「〜」は上端 y99 で欄と 7 ずれ、G60 の「上端の差 4 以内」が × になる → 「〜」に `schedule-editor-dates__sep`（`inline-flex`・高さ `--space-10`）を付けた（カード §4・§5）。
+  - (3) 中: 「DraftMeetField が null でないときだけ包む」は親が描く前に知れない → page のときは DraftMeetField 自身が `EditorPageRow` で包む形に替えた（カード §4・§5）。
+  - (4) 軽: `.schedule-full-editor .schedule-popover__line` を消すと Meet のボタンの文字が真ん中に寄る → `.schedule-editor-meet .schedule-popover__line { justify-content: flex-start; }` を残す（カード §5）。
+  - (5) 軽: 種類の選ぶ欄で文字と矢印が 4px 重なる → `.comp-select__control.comp-select--editor-filled { padding-right: var(--space-8); }` と判定（32px）をカード §3 に書いた。
+  - (6) 軽: 行番号のずれ（題名の規則 `:393-409`・`width: 100%` は `FormField.css:51`・鉛筆 `:321-332`・`:1054`/`:1163`/`:1175` は直す対象外）を直した。

@@ -199,7 +199,6 @@ export function EditorPageRow({ icon, children }: { icon: ReactNode; children: R
   flex-direction: column;
   gap: var(--space-2);
   padding-left: var(--comp-editor-rail-w);
-  width: min(calc(var(--comp-editor-main-w) + var(--space-4)), 100%);
   box-sizing: border-box;
 }
 
@@ -275,7 +274,7 @@ export function EditorPageRow({ icon, children }: { icon: ReactNode; children: R
 }
 ```
 
-- 位置の計算（窓 1279）: × の列は左 16（`--space-4`）から幅 64（`--comp-editor-rail-w`）。× は列の中で左に寄せ、列の左の余白 `--space-4` の後ろ（x32・Google と同じ左端）から幅 36 で、真ん中 x50。上の段の高さは題名の欄の 40 なので、日時の段の上端は 上の余白 20（`--space-5`）＋40＋札の上の余白 32（`--space-8`）= y92。題名は 16+64=x80 から（列の右の `margin-right` で間の `--space-8` を打ち消す）。保存は題名 594 の後に間 32 で x706。札は x16 から幅 636。札の中の欄は 16+64=x80 から。
+- 位置の計算（窓 1279）: × の列は左 16（`--space-4`）から幅 64（`--comp-editor-rail-w`）。× は列の中で左に寄せ、列の左の余白 `--space-4` の後ろ（x32・Google と同じ左端）から幅 36 で、真ん中 x50。上の段の高さは題名の欄の 40 なので、日時の段の上端は 上の余白 20（`--space-5`）＋40＋札の上の余白 32（`--space-8`）= y92。題名は 16+64=x80 から（列の右の `margin-right` で間の `--space-8` を打ち消す）。保存は題名 594 の後に間 32 で x706。札は x16 から幅 636。札の中の欄は 16+64=x80 から。lead には幅の上限を付けない（上限を札の幅に合わせると中身が 588 しかなく、日時の 5 つ（要る幅 622）の終わりの日が 2 段目に落ちる。設計の審査 2 回目に窓 1279 で実測）。5 つは x80 から x702 まで 1 段に並ぶ。
 - 書いた後、本番と同じ窓で測った値が G60 から外れたら、余白のトークンだけを直す（外れた値と直した値を返しの報告に書く）。
 
 ### 2-3. `frontend/src/components/EditorPage.stories.tsx`
@@ -293,7 +292,7 @@ export function EditorPageRow({ icon, children }: { icon: ReactNode; children: R
 - `frontend/src/components/TextField.tsx:35` の型に `"editor-filled" | "editor-title"` を足す。
 - `frontend/src/components/Select.tsx:18` の型に `"editor-filled"` を足す。
 - `frontend/src/components/Textarea.tsx:32` の型に `"editor-filled"` を足す。
-- `frontend/src/components/FormField.css` の `comp-input--schedule-title` の規則（`:393-408`）の次に足す:
+- `frontend/src/components/FormField.css` の `comp-input--schedule-title` の規則（`:393-409`。`:409` は規則を閉じる `}`）の次に足す:
 
 ```css
 /* editor-filled / editor-title: 編集の画面（金型 EditorPage）の欄。Google の予定の編集画面の実測（角 4px・枠なし・塗りの地・高さ 40）・ADR-1074 */
@@ -345,7 +344,7 @@ export function EditorPageRow({ icon, children }: { icon: ReactNode; children: R
 }
 ```
 
-- 日時の欄は 1 段に並べるので、幅を中身に合わせる（共通の `width: 100%`（`frontend/src/components/FormField.css:50`）のままだと 4 つが縦に積まれる）。上の規則の次に足す:
+- 日時の欄は 1 段に並べるので、幅を中身に合わせる（共通の `width: 100%`（`frontend/src/components/FormField.css:51`）のままだと 4 つが縦に積まれる）。上の規則の次に足す:
 
 ```css
 .comp-field__input.comp-input--editor-filled[type="date"],
@@ -354,7 +353,15 @@ export function EditorPageRow({ icon, children }: { icon: ReactNode; children: R
 }
 ```
 
-- Select の矢印の印（indicator）は今の金型のまま（`padding-right` が矢印と重なるなら、`comp-select--karte`（`:201`）と同じ考えで右だけ広げる。重なりは見本帳で目で確かめる）。
+- Select の矢印の印は今の金型のまま（右端から 8〜20px・`frontend/src/components/FormField.css:75-83`）。右の余白 16 だと文字と 4px 重なるので、日時の幅の規則の次に足す:
+
+```css
+.comp-select__control.comp-select--editor-filled {
+  padding-right: var(--space-8);
+}
+```
+
+  判定: 窓 1279 の種類の選ぶ欄で `getComputedStyle(...).paddingRight` が 32px。
 - 3 つの金型の見本帳にそれぞれ 1 例（`editor-filled`・TextField は `editor-title` も）。
 
 ## 4. 項目の部品（`frontend/src/pages/schedule/ScheduleDraftFields.tsx`）
@@ -374,10 +381,10 @@ interface FieldProps {
 
 - `DraftDateFields`（口 `creating`・`expanded` は popover のときだけ使う）:
   - popover: 今の `:114-182` と同じ（Toggle・文字つき・閉じた 1 行）。
-  - page: 1 段目 `<div className="schedule-editor-dates">` に 始まりの日（`editor-filled`・`type="date"`・`aria-label={t("schedule.eventStart")}`）・始まりの時刻（終日でないとき・`aria-label={`${t("schedule.eventStart")} ${t("schedule.time")}`}`）・`<span aria-hidden="true">{t("schedule.rangeSeparator")}</span>`・終わりの時刻（同じく `eventEnd`）・終わりの日（`eventEnd`）。2 段目に金型 `Checkbox`（`label={t("schedule.allDay")}`・`checked={draft.allDay}`・`onChange={(event) => { const next = event.target.checked; onDraftChange({ ...draft, allDay: next, startTime: next ? "00:00" : draft.startTime, endTime: next ? "23:59" : draft.endTime }); }}`。Toggle の `onCheckedChange` は真偽を受け取るが、Checkbox の `onChange` は入力の出来事を受け取るので `event.target.checked` から読む。値を変える中身は今の `:121-126` と同じ）。
+  - page: 1 段目 `<div className="schedule-editor-dates">` に 始まりの日（`editor-filled`・`type="date"`・`aria-label={t("schedule.eventStart")}`）・始まりの時刻（終日でないとき・`aria-label={`${t("schedule.eventStart")} ${t("schedule.time")}`}`）・`<span className="schedule-editor-dates__sep" aria-hidden="true">{t("schedule.rangeSeparator")}</span>`・終わりの時刻（同じく `eventEnd`）・終わりの日（`eventEnd`）。2 段目に金型 `Checkbox`（`label={t("schedule.allDay")}`・`checked={draft.allDay}`・`onChange={(event) => { const next = event.target.checked; onDraftChange({ ...draft, allDay: next, startTime: next ? "00:00" : draft.startTime, endTime: next ? "23:59" : draft.endTime }); }}`。Toggle の `onCheckedChange` は真偽を受け取るが、Checkbox の `onChange` は入力の出来事を受け取るので `event.target.checked` から読む。値を変える中身は今の `:121-126` と同じ）。
   - 始まりを変えたときの式: `mode === "create"` なら `shiftDraftStart`、そうでなければ値だけ替える（今の `creating` の分かれ方 `:137`・`:147` と同じ。作るは creating と mode=create が同じ）。
 - `DraftCategoryField`: 今の `:184-208`。page のときは `SelectControl variant="editor-filled"`・`fullWidth`・`aria-label={t("schedule.category")}`・文字なし。
-- `DraftMeetField`（口に `item: ScheduleItem | null`・`meetAvailable: boolean`）: 「Google Meet で参加」のリンク（今の `SchedulePageImpl.tsx:290-301` の式と `MEET_URL_PREFIX` `:96` をここへ移す）と、`meetAvailable && !item?.meetUrl` のときの `MeetRow`（`:44-72`）。page のときは `CreateRow` で包まない（行は呼ぶ側の `EditorPageRow`）。何も出さないときは `null` を返す。
+- `DraftMeetField`（口に `item: ScheduleItem | null`・`meetAvailable: boolean`）: 「Google Meet で参加」のリンク（今の `SchedulePageImpl.tsx:290-301` の式と `MEET_URL_PREFIX` `:96` をここへ移す）と、`meetAvailable && !item?.meetUrl` のときの `MeetRow`（`:44-72`）。page のときは `CreateRow` で包まず、部品自身が `EditorPageRow icon={<MeetIcon size={20} aria-hidden="true" />}`（`frontend/src/components/EditorPage.tsx` から読む）で包み、中身を `<div className="schedule-editor-meet">` に入れて返す（出すかどうかの式を呼ぶ側に書かない）。何も出さないときは `null` を返す。
 - `DraftShareField`（`canChangeVisibility` が偽なら null）: 今の `:215-226` の Toggle のまま（page でも Toggle。Google に同じ項目が無いため）。
 - `DraftLocationField`・`DraftDescriptionField`: 今の `:228-269`。page のときは `editor-filled`・文字なし・`aria-label` に今の文字のキー（`schedule.eventLocation`・`schedule.eventDescription`）・初めから開いた形。説明は `rows={8}`。
 - `ScheduleDraftFields`（作る小窓が使う）は口を `mode`・`creating`・`expanded`・`item`・`draft`・`onDraftChange`・`canChangeVisibility`・`meetAvailable` にし（`joinMeetLink` を外す）、中で `appearance="popover"` の部品を今と同じ順（日時・種類・Meet・社員にも見せる・場所・説明）に並べるだけ。作る小窓の DOM は今と同じになる。
@@ -387,8 +394,8 @@ interface FieldProps {
 - 口に `mode: "create" | "edit"` と `item: ScheduleItem | null` を足す。
 - `EditorPage` を使う: `ariaLabel={t("schedule.fullEditLabel")}`・`closeLabel={t("common.close")}`・`title` は今の題名の欄を `variant="editor-title"` に替えたもの（`ref={titleRef}`・`initialFocusRef={titleRef}` はそのまま）・`saveLabel={t("common.save")}`・`onSave={onSave}`・`saveDisabled={!draft.title.trim()}`・`cardTitle={t("schedule.eventDetail")}`。
 - `lead`: `{error && <div className="schedule-error" role="alert">{error}</div>}` と `<DraftDateFields appearance="page" …/>`。
-- 札の中（この順・G62）: `DraftMeetField`（null でないときだけ `EditorPageRow icon={Meet の絵}` で包む）→ `EditorPageRow`（場所の絵）`DraftLocationField` → `EditorPageRow`（種類の絵）`DraftCategoryField` → `canChangeVisibility` のとき `EditorPageRow`（共有の絵）`DraftShareField` → `EditorPageRow`（説明の絵）`DraftDescriptionField`。絵は `SCHEDULE_POPOVER_ICONS` の今のもの（`size={20}`・`aria-hidden="true"`）。
-- `frontend/src/pages/schedule.css` の `:528-537`（説明 1 行と規則 2 つ）を次に置き換える:
+- 札の中（この順・G62）: `DraftMeetField appearance="page"`（行は部品自身が描く・§4）→ `EditorPageRow`（場所の絵）`DraftLocationField` → `EditorPageRow`（種類の絵）`DraftCategoryField` → `canChangeVisibility` のとき `EditorPageRow`（共有の絵）`DraftShareField` → `EditorPageRow`（説明の絵）`DraftDescriptionField`。絵は `SCHEDULE_POPOVER_ICONS` の今のもの（`size={20}`・`aria-hidden="true"`）。
+- `frontend/src/pages/schedule.css` の `:528-537`（説明 1 行と規則 2 つ）を次の規則 3 つに置き換える:
 
 ```css
 /* 編集の画面の日時の段（design §3.19・G60）。狭い窓では折り返す */
@@ -397,6 +404,18 @@ interface FieldProps {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+}
+
+/* 「〜」を欄と同じ高さの箱にして、5 つの上端を揃える（G60。箱が無いと上端が 7 ずれる） */
+.schedule-editor-dates__sep {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--space-10);
+}
+
+/* Meet の行のボタンの文字を左に寄せる（今の .schedule-full-editor の規則の役目を引き継ぐ。金型 Button は既定で真ん中寄せ） */
+.schedule-editor-meet .schedule-popover__line {
+  justify-content: flex-start;
 }
 ```
 
@@ -418,7 +437,7 @@ interface FieldProps {
 2. 閉じる useEffect（`:1132-1134`）の条件を `if (popover === null || popover.mode === "detail") setFullEditOpen(false);` に。
 3. `ScheduleFullEditor`（`:1587-`）: `open={fullEditOpen && (popover?.mode === "create" || popover?.mode === "edit")}`・`mode={popover?.mode === "edit" ? "edit" : "create"}`・`item={popover?.item ?? null}`・`onClose={() => { setFullEditOpen(false); setError(null); if (popover?.mode === "edit") setPopover(null); }}`。
 4. 小窓（`SchedulePopover`）の直す形を消す: `:311` の見出しは `t("schedule.eventDetail")` だけに・`:394-406` の文字つきの題名の枝・`:432-440` の `mode !== "detail"` の下の段（保存・取り消し）。小窓の本体（`:380-418`）は作るときだけ描く形になる。`ScheduleDraftFields` へ渡していた `joinMeetLink`（`:417`）を外す。詳しくの中身（`:358`）は今と同じリンクを出し続けるが、リンクの宛先を決める式（`:290`・`MEET_URL_PREFIX` `:96`）は `ScheduleDraftFields.tsx` から出す関数 `meetJoinUrl(item: ScheduleItem | null): string | null` 1 つに移し、詳しくの小窓と `DraftMeetField` の両方がそれを呼ぶ（式を 2 か所に書かない）。
-5. 詳しくの小窓の鉛筆の絵（`:322-330`）と下の「予定を編集」のボタン（`:441` 以降）は今と同じく `openEdit` を呼ぶ（変えない）。
+5. 詳しくの小窓の鉛筆の絵（`:321-332`）と下の「予定を編集」のボタン（`:441` 以降）は今と同じく `openEdit` を呼ぶ（変えない）。
 6. 近道の判定（`:1249-1250`）は `fullEditOpen` だけを見ている（a7fbffdfe で確かめた）ので変えない。直すときも `fullEditOpen` が真になるので近道は効かない。コメントの金型の名前だけ `EditorPage` に替える。
 
 ## 8. 守り手と決まりの文書
@@ -436,7 +455,7 @@ interface FieldProps {
 
 ### 9-2. `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`
 
-- 今の直すの試験（`:171`・`:183`・`:507-547`・`:571-590`・`:1009`（T7）・`:1054`・`:1163`・`:1175`）: 「予定を編集」を押した後に探す場所を、名前「予定の編集」の dialog の中に替える。確かめる中身（送る宛先・中身・見え方）は変えない。題名の欄は `schedule.eventTitle` の名前で探す。
+- 今の直すの試験（`:171`・`:183`・`:507-547`・`:571-590`・`:1009`（T7））: 「予定を編集」を押した後に探す場所を、名前「予定の編集」の dialog の中に替える。確かめる中身（送る宛先・中身・見え方）は変えない。題名の欄は `schedule.eventTitle` の名前で探す。`:1054`（H2）・`:1163`（G26）・`:1175`（G27）は「予定を編集」を押さない試験なので変えない。
 - 全画面の試験（`:760-884`）: 札の中の並びに合わせて探し方だけ替える。
 - 足す:
   - 名前の頭は EP（同じファイルの祝日の試験が H1〜H3 を使っている `:1037`・`:1048`・`:1057`）。
