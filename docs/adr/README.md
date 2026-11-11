@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-11-11 / ADR 総数: 231 件
+最終更新: 2026-11-11 / ADR 総数: 232 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -250,6 +250,7 @@
 | [ADR-1072](./ADR-1072-guard-add-by-ai-record.md) | ADR-1072: AI が足した見張りを、マージ済み PR で記録できるようにする（ADR-1034 決定2の一部を改める） | Proposed | Amends ADR-1034 | — |
 | [ADR-1073](./ADR-1073-shime-box-all-states.md) | ADR-1073: 状態を書かない箱の〆は、箱の仲間の状態をまとめて完売にする（v102 規則12h） | Proposed | — | — |
 | [ADR-1074](./ADR-1074-editor-page-mold.md) | ADR-1074: 窓いっぱいの編集画面は金型 EditorPage 1 つで描く（Google の予定の編集画面の形・塗りの欄と丸い保存はこの金型の中だけ・予定の画面だけ Google の色） | Accepted | — | — |
+| [ADR-1076](./ADR-1076-customer-status-ssot.md) | ADR-1076: 会社と連絡先の状態は public.customer_statuses を正本にする | Proposed | — | — |
 
 ## ステータス凡例
 
