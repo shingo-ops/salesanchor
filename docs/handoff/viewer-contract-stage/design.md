@@ -291,7 +291,7 @@ mode: handoff
 
 最初の行（移行では入れない。ADR-1007 決定1）:
 - 中身: 商材「在庫解析ツール」、プラン「在庫解析の閲覧とシート配信」、買い切り、200,000円（税抜）、機能2つ、既定の支払日数 3。発行元の会社は HIGH LIFE JPN（2026-11-05 PO「1」）。
-- 入れ方: 便2b の本番反映の後、PO が「商材とプラン」の画面（§3-4d）で入れる（§4 の（２）。前の版の「1回だけのデータの変更」の案から変えた。§7-2 で PO の確認待ち）。発行元の会社は画面の選択肢から会社名で選ぶ。
+- 入れ方: 便2b の本番反映の後、PO が「商材とプラン」の画面（§3-4d）で入れる（§4 の（２）。前の版の「1回だけのデータの変更」の案から変えた。PO 2026-11-11「1」で決まった。ideal-state 51）。発行元の会社は画面の選択肢から会社名で選ぶ。
 - 試験は自分で行を用意する（試験の fixture）。本番の値を試験から読まない。
 
 RLS（ADR-1018 の段階①の型。会社ごとの4表は今の会社ごとの表と同じく ENABLE だけで FORCE は付けない。tenant.py に FORCE は0件）: 新しい public の表（sa_products・sa_plans・sa_plan_features・sa_contracts・tax_rates・viewer_invoices・viewer_invoice_lines・viewer_invoice_number_seq・prefectures）は、読むのは全行可、書くのは `app.is_operator='true'` のときだけにする。ENABLE と FORCE を付ける（ADR-1018 Decision 3）。
