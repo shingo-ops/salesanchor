@@ -1,6 +1,6 @@
 # 段階4 の試し — まとめ役が担当を起こせるか（A1）・クラウドから本番を安全に読めるか（A2）
 
-状態: 設計案作成済み／PO 承認済み（2026-11-09「1」＝先に小さく試す、2026-11-10「1」＝今登録できる 2 つの合言葉で A2 を試し、記録を書く窓は別に設計する、「1」＝手順書を 1 枚にまとめる）／A1 実施済み（○）／A2 は PO の画面操作待ち／実装なし（書類のみ）
+状態: 設計案作成済み／PO 承認済み（2026-11-09「1」＝先に小さく試す、2026-11-10「1」＝今登録できる 2 つの合言葉で A2 を試し、記録を書く窓は別に設計する、「1」＝手順書を 1 枚にまとめる、2026-11-11「1」＝調べ係は置き場を付けずに起動する形で A2 を閉じる）／A1 実施済み（○）／A2 実施済み（条件つき ○、§3-6）／実装なし（書類のみ）
 
 親: S docs/handoff/ai-ops-247/stage4-requirements.md、S docs/adr/ADR-1012-ai-ops-247.md
 
@@ -14,7 +14,7 @@ PO 2026-11-09 の望む流れ（原文）:
 | 記号 | 確かめること | 結果 |
 |---|---|---|
 | A1 | クラウドのまとめ役（Opus）が、調べ係（Sonnet）を自分で起こせるか | ○（§2） |
-| A2 | クラウドの調べ係が、本番の中身とグラフを読むだけで読めるか（書けないか・鍵が見えないか） | PO の登録待ち（§3） |
+| A2 | クラウドの調べ係が、本番の中身とグラフを読むだけで読めるか（書けないか・鍵が見えないか） | 置き場を付けない起動なら ○（§3-6） |
 
 ## 2. A1 の結果（2026-11-09 実施）
 
@@ -82,7 +82,28 @@ PO 2026-11-09 の望む流れ（原文）:
 
 1 つでも × なら、その場で止めて PO に報告する。
 
-## 4. PO の画面操作（順番どおり。値はチャットに貼らない）
+### 3-6. A2 の結果（2026-11-11 実施）
+
+PO の画面操作で環境 `ops-investigate`（ネットワーク None・network secret 2 つ）を作り、routine を `run` で 1 回ずつ動かした。どの回も routine の設定は builtin_tools 5 つ（session_context と session_request.config の両方）・mcp_connections `[]`・clear_mcp_connections:true を get で確かめてから動かした。
+
+| 回 | 開始 (UTC) | 置き場 | 確かめたこと | 結果 |
+|---|---|---|---|---|
+| A2 | 03:51:44 | salesanchor を付ける | K1〜K7 | K1 ○（200・728 件。手元で 03:52:06Z に同じ問い合わせ 200・728 件）、K2 ○（`UPDATE` は 400「only SELECT / WITH / SHOW / EXPLAIN are allowed」）、K3 ○（`count(up)` 200・9）、K4 ○（フォルダ作成 403・folders:create なし）、K5 ×（`env` の項目名に TOKEN 等を含むもの 6 件）、K6 ○（調べ係が claude-sonnet-5-5 と返した）、K7 ×（`mcp__github__` の道具 約 50 個。merge_pull_request・push_files・create_or_update_file・delete_file を含む。ほかに `mcp__claude-code-remote__` 3 個。PushNotification は無い） |
+| A2b | 03:57:16 | 付けない（sources `[]`） | 道具と `env` の項目名 | 道具は Agent・Bash・Glob・Grep・Read だけ、`mcp__` 0 個（K7 ○）。項目名は CLAUDE_CODE_MESSAGING_TOKEN・CLAUDE_SESSION_INGRESS_TOKEN_FILE・CLOUDSDK_AUTH_ACCESS_TOKEN・GH_TOKEN・GITHUB_TOKEN・MAX_THINKING_TOKENS。読む窓とグラフの鍵の項目は無い。K1 も再度 200・728 件 |
+| A2c | 04:00:23 | 付けない | GitHub の鍵が使えるか（状態番号だけ） | `GH_TOKEN`・`GITHUB_TOKEN` とも api.github.com/user に 200。2 つは同じ値 |
+| A2d | 04:06:48 | 付けない | その鍵で salesanchor を開けるか（読むだけ） | 403・permissions 欄なし・x-oauth-scopes の見出しなし |
+
+- 鍵の漏れの確かめ: 手元に保存した実行記録を、読む窓とグラフの控えの先頭 8 文字で探して 0 件。ただし手元で読める実行記録は要約されたもので、会話の全文ではない。
+- GitHub の設定（PO が画面で確認、2026-11-11）: Installed GitHub Apps の Claude は「All repositories」。Claude は 1 つ。別に「Claude Design Import」がある。
+- 置き場を付けない起動で、salesanchor 以外の置き場に入れるかは未確認。一覧を取る操作は手元の自動の安全チェックに 2 回止められた（言い換えて送り直していない）。
+
+判定（PO 2026-11-11「1」）:
+- 調べ係は置き場を付けずに起動する。この形で K1〜K4・K6・K7 は ○。K5 は「鍵の項目名が 0 件」の基準では × だが、読む窓とグラフの鍵の項目は無く、ある鍵（GH_TOKEN）は salesanchor を開けない。
+- 置き場を付けた起動は、実行係（コードを直す担当）用とする。PR を作る道具が付くため、調べ係には使わない。
+- 流れ: 見張り → Opus に知らせる → Opus が置き場なしの調べ係を起こす → Opus が設計し PO の許可をとる → Opus が置き場ありの実行係を起こす → Opus が確かめ、再発防止と効果の点検を予約する。
+- 残り: 夜中など手元の Opus が動いていないときに誰が知らせを受けるか、GitHub の許可が「All repositories」のままでよいかは、S docs/handoff/ai-ops-247/stage4-requirements.md の書き直しで決める。
+
+## 4. PO の画面操作（順番どおり。値はチャットに貼らない。2026-11-11 実施済み）
 
 （１）グラフ用のトークンを作る
 - https://app.salesanchor.jp/grafana/ に管理者で入る → Administration → Users and access → Service accounts → `claude-code-reader` → Add service account token。
