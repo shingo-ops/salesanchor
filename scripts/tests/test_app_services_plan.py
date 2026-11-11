@@ -32,6 +32,18 @@ case "$1" in
       echo "$4 $(cat "${FAKE_DIR}/hash_$4")"
       exit 0
     fi
+    if [ "$2" = "config" ] && [ "$3" = "--format" ] && [ "$4" = "json" ]; then
+      # compose の image: の応答（便2: {"services": {"<svc>": {"image": "astro-webapp-<svc>"}}} の形）
+      printf '{"services": {'
+      _first=1
+      for _s in backend frontend celery-worker celery-beat discord-gateway gemini-egress gha-exporter; do
+        [ "${_first}" = 1 ] || printf ', '
+        printf '"%s": {"image": "astro-webapp-%s"}' "${_s}" "${_s}"
+        _first=0
+      done
+      printf '}}\n'
+      exit 0
+    fi
     exit 0
     ;;
   image)
