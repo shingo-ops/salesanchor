@@ -1346,7 +1346,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 ## 12. 便15: 予定の繰り返し（2026-11-12・Opus・設計案）
 
-状態: 設計案。設計審査は審査7 で APPROVE（§12.13・2026-11-11 22:00 UTC）。そのあと PO の問い「繰り返しを消すときの動きも把握したか」（2026-11-12）で、消すときの Google 側の抜けが 2 つ見つかった。Google で消し方を測り（recon §9.5 U6）、§12.2 G74・§12.5・§12.7 を直した。審査8 の REVISE（§12.13）を直し、審査9 待ち。成功条件は PO の決定待ち。PO の範囲の承認は済み（2026-11-12 選択「1、」）。根拠は recon §9。ADR-1075（Proposed）。
+状態: 設計案。設計審査は審査7 で APPROVE（§12.13・2026-11-11 22:00 UTC）。そのあと PO の問い「繰り返しを消すときの動きも把握したか」（2026-11-12）で、消すときの Google 側の抜けが 2 つ見つかった。Google で消し方を測り（recon §9.5 U6）、§12.2 G74・§12.5・§12.7 を直した。審査8・審査9 の REVISE（§12.13）を直し、審査10 待ち。成功条件は PO の決定待ち。PO の範囲の承認は済み（2026-11-12 選択「1、」）。根拠は recon §9。ADR-1075（Proposed）。
 
 ### 12.1 目的
 
@@ -1461,8 +1461,10 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
     - this: 上の this と同じ道で、その回に `status: "cancelled"` を送る。元の予定の `recurrence` は送らない（Google でも決まりは「5 回」のまま変わらなかった）。
     - following: 元の予定に、`recurrence` を UNTIL 付きにした patch だけを送る。新しい予定は作らない。UNTIL の値は §12.5 following と同じ（前の日の終わり）。Google で「これ以降」を消したときの表示「2026年 12月 2日まで」と同じ日になる。あわせて、その回以降の例外の行のうち、`is_cancelled = false` で `google_event_id` を持つ行それぞれに `status: "cancelled"` の patch を送る（審査8 指摘1）。時刻などを直した回が UNTIL で切った後も Google に残るかは確かめていないため、残っても消えるように送る。行を消す前に id を読んでおき、表を消して commit した後に送る。すでに Google 側で消えていて失敗しても警告の記録だけにする（今の `:509-510` と同じ）。1 回目の following は all と同じ。
     - all: 元の行の `google_event_id` に今の `delete_event`（`backend/app/services/google_calendar.py:430`）を送る。Google では元の予定を消すと、直していない回は全部消えた（U6）。時刻などを直した回が一緒に消えるかは確かめていない（審査8 指摘1）。そのため、following と同じく、`is_cancelled = false` で `google_event_id` を持つ例外の行それぞれにも `status: "cancelled"` の patch を送る。行を消す前に id を読んでおき、表を消して commit した後に送る。失敗は警告の記録だけ。アプリの表の例外の行は ON DELETE CASCADE で消える。今の消す道（`backend/app/services/calendar_service.py:483-510`）は消す行の `google_event_id` を送るので、元の行の id に読み替えてから呼ぶ（§12.5 の「例外の行の id に送ったとき」）。
+    - 送る順番（審査9 指摘3）: 先に例外の回への cancelled を 1 件ずつ送り、そのあと元の予定への送り（following は UNTIL の patch・all は delete）を送る。元を先に消すと回への送りが毎回失敗するため。送りは 1 件ごとに別々の `try` で包み、1 件の失敗で残りを止めない（今の消す道は送り 1 件に `try` 1 つ・`backend/app/services/calendar_service.py:505-510`）。
     - どれも、送る先の判定は今と同じ（`google_event_id` があり、双方向か書くだけのとき・`backend/app/services/calendar_service.py:503-504`）。Google への送りに失敗しても、アプリの表は消したまま（今の `:509-510` と同じ。警告の記録だけ）。
   - all: 題名・場所・説明など、始まり・終わり・選び方以外だけが変わったときは元の予定を patch（`recurrence` は送らない）。始まり・終わり・選び方のどれかが変わったときは、下の「消して作り直す道」を使う（審査4 指摘2。アプリは例外の行を全部消すので、Google 側の直した回・消した回も一緒に消える形にそろえる）。
+- 例外の行を消す道はどれも同じ送りにする（審査9 指摘2）: アプリが例外の行を消すのは、消すときの following・all のほかに、直すときの following（その回以降の例外の行）と、下の「消して作り直す道」（all で始まり・終わり・選び方を変えたときと、all で none にしたとき）がある。どの道でも、消える例外の行のうち `is_cancelled = false` で `google_event_id` を持つ行に `status: "cancelled"` の patch を送る。Google の直した回が元の予定の切りや削除で一緒に消えるかは確かめていないため。順番と `try` は上の「送る順番」と同じ（例外の回を先・元の予定への送りを後）。直すときの following は、例外の回への送りのあとに元の UNTIL の patch と新しい予定の insert を送る。
 - 消して作り直す道（審査3 指摘1・審査4 指摘2）: 単発⇄繰り返しの切り替え（単発に決まりを入れる・all で none にする）は、Google の今の予定を消して（`backend/app/services/google_calendar.py:430` `delete_event`）、新しい予定として作り直す（`:390` `create_event`）。新しい id を `google_event_id` に、`sync_origin_id` も作る道と同じ形で入れ直す。すでにある予定に `recurrence` を patch で足す・外す動きは確かめていないため使わない。古い id の取り消しの知らせが取り込みで来ても、表にその id の行が無いので消す文は 0 行に当たるだけ（`backend/app/services/calendar_service.py:573-581`）。all で始まり・終わり・選び方を変えたとき（繰り返しのまま）も同じく消して作り直す（審査4 指摘2）。following は公式の勧める形（recon §9.2・元に UNTIL を patch して新しい予定を作る）のまま。
 - 取り込み（`upsert_from_google`・`backend/app/services/calendar_service.py:551`）:
   - 来た予定の `recurringEventId` が、アプリ起源の元の行の `google_event_id` と同じなら飛ばす（二重を防ぐ。recon §9.3 の危ないところ）。
@@ -1503,7 +1505,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 ### 12.10 守り手（維持の仕組み）
 
-- backend 試験（`backend/tests/test_calendar_service.py` に足す）: 6 つの決まりの作り方と 2 か月分の広げ方・例外で外す・消した印・1000 回の打ち切り・3 択の 3 結果×直す／消す・422 の 3 通り・Google から取り込んだ行への選び方は 422・all で none のとき押した回の日時が残る・選び方の変更（単発→繰り返し・all で none・this で 422・following で新しい選び方）と Google の消して作り直す道・Google の本文の `recurrence`・取り込みの飛ばし。消すときの Google への送り（§12.7 の消すとき）を 3 択ごとに: this はその回に `status: "cancelled"` の patch 1 件だけ／following は元の予定への `recurrence` の patch 1 件だけで insert 0 件、UNTIL は前の日の 23:59:59 日本時間（終日は前の日の日付）／all は元の `google_event_id` への delete 1 件だけ（例外の行の id への送り 0 件）。例外の行の id に all・following で送ったときも元の id に送ること。following・all では、消す範囲の例外の行（`is_cancelled = false` で `google_event_id` あり）の数だけ cancelled の patch が送られ、その 1 件が失敗しても表は消えたままで警告が 1 件残ること。
+- backend 試験（`backend/tests/test_calendar_service.py` に足す）: 6 つの決まりの作り方と 2 か月分の広げ方・例外で外す・消した印・1000 回の打ち切り・3 択の 3 結果×直す／消す・422 の 3 通り・Google から取り込んだ行への選び方は 422・all で none のとき押した回の日時が残る・選び方の変更（単発→繰り返し・all で none・this で 422・following で新しい選び方）と Google の消して作り直す道・Google の本文の `recurrence`・取り込みの飛ばし。消すときの Google への送り（§12.7 の消すとき）を 3 択ごとに: this はその回に `status: "cancelled"` の patch 1 件だけ／following は消す範囲の例外の行の数だけの cancelled の patch と、元の予定への `recurrence` の patch 1 件で、insert 0 件、UNTIL は前の日の 23:59:59 日本時間（終日は前の日の日付）／all は例外の行の数だけの cancelled の patch と、元の `google_event_id` への delete 1 件。どちらも例外の回への送りが元の予定への送りより先であること。直すときの following と、消して作り直す道でも、消える例外の行の数だけ cancelled が先に送られること（審査9 指摘1・2・3）。例外の行の id に all・following で送ったときも元の id に送ること。例外の回への送りの 1 件が失敗しても、表は消えたままで警告が 1 件残り、残りの送りは続くこと。
 - frontend 試験: 6 つの文字（開始日 2 通り）・id の形と `eventNumericId`・3 択の取り消しで送らない・選び方を変えたとき「この予定」を出さない・`occurrence_start` を Z 形で送る・Google から取り込んだ予定と Meet が付いた予定で選ぶ欄を出さない・繰り返しを選んだら Meet の行を出さない（審査5 指摘2）・Meet の行を押してから「毎週」を選んで保存すると `add_meet` を送らない（審査6 指摘2）。
 - 移行の見張り: `backend/tests/test_tenant_loop_migration_guard.py`（会社ごとに回す移行が試験の足場に載っているか）。
 - 分類表の T10 は calendar_events を見ない（会社の部屋を作る `bootstrap_tenant_schema` がこの表を作らないため・審査1 ③）。分類の行の抜けを見張る試験は今は無い。守り手に数えない。
@@ -1621,3 +1623,13 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 | 3 | 中 | G74 の「先に消した回・直した回も含む」を今の判定方法で○×にできない | §12.2 G74 の判定方法 |
 
 - 審査役は 3 択とも今のコードの道具（`backend/app/services/google_calendar.py:413,430`・`backend/app/services/calendar_service.py:503-504,509-510`）で作れること、UNTIL の前の日の終わりが U6 の表示と合うことを確かめた。
+
+#### 審査9（2026-11-11 23:16 UTC・対象 c81489a2e）: REVISE
+
+審査8 の指摘 1〜3 は直っていると確かめた。そのうえで次の 3 件。
+
+| # | 重さ | 指摘 | 直した所 |
+|---|---|---|---|
+| 1 | 中 | §12.10 の前半の件数（following は patch 1 件だけ・all は delete 1 件だけ）が §12.7 の直しと食い違う | §12.10 |
+| 2 | 中 | 直すときの following と消して作り直す道も例外の行を消すのに、Google の直した回へは送らず、消すときと扱いが割れた | §12.7（例外の行を消す道はどれも同じ送り） |
+| 3 | 低 | 例外の回と元の予定への送りの順番が無い。送りごとの `try` も無い | §12.7（例外の回を先・1 件ずつ別の `try`） |
