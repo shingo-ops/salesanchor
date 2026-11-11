@@ -35,6 +35,7 @@
   --accent-hover: #163171;
   --link: #1e3a8a;               /* ナビゲーションリンク */
   --link-active-bg: #ebeff8;
+  --comp-input-filled-bg: var(--gcal-surface-filled);  /* 編集の画面の塗りの欄の地（Google 実測 明るい rgb(233,238,246)・暗い rgb(40,42,44)・ADR-1074） */
   --avatar-bg: #f1f4f7;          /* アバター背景（会話リスト等） */
   --indicator: var(--accent);          /* 選択中インジケーター（会話リスト等） */
 
@@ -189,6 +190,20 @@
   --calendar-status-ok-text:     #1e7e34;
   --calendar-status-error-bg:    #fce8e6;
   --calendar-status-error-text:  #c5221f;
+  /* 予定の画面だけで使う Google カレンダーの色（実測 schedule-gcal-clone recon §8.6・使う場所は予定の画面の範囲の札だけ・ADR-1074） */
+  --gcal-surface:                   #f8fafd;
+  --gcal-surface-lowest:            #ffffff;
+  --gcal-surface-container:         #f0f4f9;
+  --gcal-surface-filled:            #e9eef6;
+  --gcal-on-surface:                #1f1f1f;
+  --gcal-on-surface-variant:        #444746;
+  --gcal-outline-variant:           #c4c7c5;
+  --gcal-gridline:                  #dde3ea;
+  --gcal-primary:                   #0b57d0;
+  --gcal-on-primary:                #ffffff;
+  --gcal-secondary-container:       #c2e7ff;
+  --gcal-on-secondary-container:    #004a77;
+  --gcal-now:                       #db372d;
   --icon-action: var(--text-secondary);
   --icon-action-hover: var(--text-primary);
   --icon-action-danger: var(--danger);
@@ -240,6 +255,7 @@
   --accent-hover: #4d7fc8;
   --link: var(--palette-blue-soft);
   --link-active-bg: #1e3a8a;
+  --comp-input-filled-bg: var(--gcal-surface-filled);  /* 編集の画面の塗りの欄の地（Google 実測 明るい rgb(233,238,246)・暗い rgb(40,42,44)・ADR-1074） */
   --avatar-bg: #334155;          /* アバター背景（ダーク） */
   --indicator: var(--accent);          /* 選択中インジケーター（ダーク） */
 
@@ -390,6 +406,20 @@
   --calendar-status-ok-text:     #4ade80;
   --calendar-status-error-bg:    #4c1d1d;
   --calendar-status-error-text:  #f87171;
+  /* 予定の画面だけで使う Google カレンダーの色（暗い表示・実測 schedule-gcal-clone recon §8.6・ADR-1074） */
+  --gcal-surface:                   #1b1b1b;
+  --gcal-surface-lowest:            #131314;
+  --gcal-surface-container:         #1e1f20;
+  --gcal-surface-filled:            #282a2c;
+  --gcal-on-surface:                #e3e3e3;
+  --gcal-on-surface-variant:        #c4c7c5;
+  --gcal-outline-variant:           #444746;
+  --gcal-gridline:                  #333537;
+  --gcal-primary:                   #a8c7fa;
+  --gcal-on-primary:                #062e6f;
+  --gcal-secondary-container:       #004a77;
+  --gcal-on-secondary-container:    #c2e7ff;
+  --gcal-now:                       #f55e57;
   --icon-action: var(--text-secondary);
   --icon-action-hover: var(--text-primary);
   --icon-action-danger: var(--danger);

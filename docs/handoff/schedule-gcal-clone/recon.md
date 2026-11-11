@@ -113,3 +113,63 @@ PO の依頼（原文）:
 
 - Google の後の予定の白い縁を何で描いているか（読み取れず）。こちらは 7.3 の面の色の縁で出る。
 - Google の 1 時間の高さが窓 900×1327 で 80 になる理由（幅か高さか）。今回の G15〜G19 は窓 1620×1448 だけで測る。
+
+## 8. 便14: 予定の編集画面を Google の形に（G58〜G64・2026-11-11）
+
+PO の言葉（2026-11-11）: 「予定の詳細画面だけどGoogleカレンダーをクローンしてほしくて左側に寄せたり入力欄の角の丸みも真似てほしい、今の金型だと実現できないから別途金型を作って」。範囲の問いへの答え: 「作るときと直すとき両方」。
+
+### 8.1 Google の編集画面の実測（2026-11-11・PO の Google（HIGH LIFE JPN）・Chrome 窓 1279×1448・明るい表示・getBoundingClientRect / getComputedStyle・保存していない）
+
+- 地: rgb(248,250,253)。× x32 y26 40×40 角 20。題名の欄 x80 y29 幅 594 高さ 30・24px・太さ 400・枠なしで下線 1px rgb(68,71,70)（押すと 3px rgb(11,87,208)）。保存 x706 y20 76×40 角 20（丸い）・地 rgb(11,87,208)・左右余白 24。
+- 日時の 1 段目 y92 高さ 40: 始まりの日 x80 幅 137・始まりの時刻 x225 幅 89・「〜」・終わりの時刻・終わりの日・「タイムゾーン」の文字リンク x587。2 段目 y140: 終日のチェック欄 x72（40×40）＋文字・「繰り返さない」の選ぶ欄 x170 幅 148 高さ 40。
+- 塗りの欄: 角 4px・地 rgb(233,238,246)・枠なし・左右余白 16・14px。
+- 白い札: x16 y206 幅 636 高さ 634・角 28・上下余白 4。札の頭に「予定の詳細」「時間を探す」の 2 つのタブ（x72 y210・各 102×48）。
+- 札の中: 絵の列の真ん中 x48・中身は x80〜636。行の間隔 48。上から Meet の行（文字のボタン x80 y272 高さ 40）・場所（塗りの欄 x80 y320 幅 556 高さ 40）・通知（y368）・カレンダーの選ぶ欄（y472 幅 169）と色・予定あり（y520）・説明（塗りの欄 x80 y576 幅 556 高さ 248・飾りの帯つき）。
+- 右の列: ゲスト（x680〜1024）。
+- 原本: scratchpad b15 `google-measure.txt`・`google-eventedit.jpg`（社外に出さない）。
+
+### 8.2 アプリの今の全画面の編集（2026-11-11・本番 app.salesanchor.jp・PO のログイン・同じ窓 1279×1448・保存していない）
+
+- 地は白（`--bg-surface`）。上の帯の高さ 56。中身は x200 幅 880 で真ん中寄せ（`frontend/src/components/FullScreenDialog.css:46-49` `width: min(var(--modal-wide-w), 100%); margin: 0 auto`）。
+- × x16 y10 36×36 角 6。題名 x64 y8 幅 1116 高さ 40・22px。保存 x1192 71×36 角 6・地 rgb(30,58,138)。
+- 日時の欄 高さ 28・角 9999（完全に丸い）・白地に 1px の枠 rgb(226,232,240)・13.6px・幅 414。上に「開始日時」「時刻」「終了日時」の文字。終日は切り替え（Toggle）。種類の選ぶ欄 高さ 30・丸い。Meet のボタン 幅 836 高さ 36。社員にも見せるは切り替え。場所 高さ 28・丸い。説明 高さ 80・角 12。
+- 直す（既にある予定）は全画面にならない。詳しくの小窓の「直す」で小窓の中が入力欄に変わる（`frontend/src/pages/schedule/SchedulePageImpl.tsx:975-982` `openEdit`・小窓の中身 `:380-418`・下の段 `:432-440`）。
+
+### 8.3 コード（origin/main a7fbffdfe）
+
+- 全画面の入れ物は金型 「frontend/src/components/FullScreenDialog.tsx」（106 行）。使うのは `frontend/src/pages/schedule/ScheduleFullEditor.tsx:38` の 1 か所だけ（`git grep FullScreenDialog -- ':!docs'` で見本帳と試験のほかに無い）。上の帯の真ん中に title・右に actions、中身は真ん中寄せの 1 列で、左に寄せる・札で包む・絵の列を作る口が無い（`:93-102`）。
+- 開く条件 `open={fullEditOpen && popover?.mode === "create"}`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1588`）。作る小窓でなくなると閉じる（`:1132-1134`）。保存は `saveEvent`（`:988-1031`）で、`popover.mode === "edit"` なら PATCH `/calendar/events/{id}`・そうでなければ POST。成功で `setFullEditOpen(false)`（`:1022`）。
+- 項目の部品 `frontend/src/pages/schedule/ScheduleDraftFields.tsx`（272 行）: 日時（`:114-182`・終日は Toggle `:118`・文字つきの日付と時刻 `:131-173`）・種類（`:184-208`）・Meet（`:210-213`・`MeetRow` `:44-72`）・社員にも見せる（`:215-226`）・場所（`:228-247`）・説明（`:249-269`）。
+- 入力欄の見た目は `frontend/src/components/FormField.css`（schedule `:382-390`・schedule-title `:393-409`・textarea schedule `:326-332`）。種類の一覧: TextFieldVariant 8 つ（`frontend/src/components/TextField.tsx:35`）・SelectVariant 6 つ（`frontend/src/components/Select.tsx:18`）・TextareaVariant 6 つ（`frontend/src/components/Textarea.tsx:32`）。
+- 決まり: 1 行の入力欄・選ぶ欄は完全に丸い（`--comp-input-radius` = `--radius-full`・`docs/specs/design-system/design.md:811`・`frontend/src/tokens.css:543`）。ボタンの `shape="pill"` はログイン画面だけ（`docs/specs/design-system/design.md:260,276,537,1115`・守り手 `frontend/src/components/buttonShapeUsage.test.ts:13-19`）。部品 1 つに定義 1 つ・違いは variant/size の口で（`docs/specs/design-system/design.md:32`）。
+- 使えるトークン: `--radius-sm` 4px・`--space-10` 40px・`--space-12` 48px・`--font-2xl` 24px（`--radius-sm` は `frontend/src/tokens.css:96`・`--font-2xl` は `:21`・余白は `:74-83`）・`--bg-primary`（明 #f5f7fa / 暗 `--palette-ink-deep`・`frontend/src/index.css:17,225`）・`--bg-surface`・`--link-active-bg`（明 #ebeff8 / 暗 #1e3a8a・`:37,242`）・`--bg-subtle`（明 #f7fafc / 暗 #243046・`:19,227`）。角 28px の汎用トークンは無い（`--schedule-create-popover-radius` は作る小窓専用）。
+- 金型 Checkbox（`frontend/src/components/Checkbox.tsx`・label は呼ぶ側で t() 済みの文字）が在る。
+- 本番の点検 S13（`tests/prod-check/prod-ui.spec.ts`）は、名前「予定の編集」の dialog・題名の引き継ぎ・m キー・Tab・Esc を見る（ADR-1051 2026-11-11 改訂）。
+
+### 8.4 ADR
+
+- ADR-144（金型。新しい金型は PO の許可・`docs/CC_UI_GOVERNANCE.md:14`）・ADR-067（色と寸法はトークン）・ADR-027（i18n）・ADR-073（見本帳）・ADR-1060（Meet は保存のときに作る）・ADR-1065（時間割の金型）・ADR-1051（本番の画面点検）。入力欄の角を丸から変える例外を決めた ADR は無い（`git grep -il "comp-input-radius\|角.*丸" docs/adr` で 0 件・2026-11-11）→ ADR-1074 を起こす。
+
+### 8.6 Google の予定の画面の色（2026-11-11 追加測定・PO の Google（HIGH LIFE JPN）・Chrome 窓 1914×1448・明るい表示・getComputedStyle・保存していない）
+
+PO の言葉（2026-11-11）: 「予定の色だけどGoogleと色を併せて、Googleのは移植は心理的な意識をした青を使った配色になっていたはず」。範囲の問いへの答え: 「予定の画面すべて」（編集画面・カレンダーの表・予定の箱・作る小窓・詳しくの小窓。ほかの画面は今のまま）。
+
+- 青を選んだ理由（心理の狙い）: Google の公式の説明は見つからなかった（WebSearch 2026-11-11。出てきたのは一般の色彩心理の記事と、Material 3 Expressive の研究が「元気・親しみ」などの評価を測ったという記事だけ）。→ **未確認**。設計の根拠には使わず、「PO が Google と同じ色を求めた」を根拠にする。
+- 週の表（/r/week）: ページの地 rgb(248,250,253)。表の白い札 rgb(255,255,255)・角 28。日の列の線 1px rgb(221,227,234)。今日の丸 rgb(11,87,208)・文字白。左の小さい暦の今日 rgb(11,87,208) 24×24。今の時刻の線と丸 rgb(219,55,45)（線 2px・丸 12px）。見出しの文字 rgb(31,31,31) 22px/400。曜日・時刻・絵 rgb(68,71,70)。外枠のある操作（「今日」等）の枠 1px rgb(116,119,117)。「作成」ボタン 白地・角 16・影 rgba(0,0,0,.3) 0 1px 2px, rgba(0,0,0,.15) 0 1px 3px 1px。選ばれた表示切替の地 rgb(194,231,255)。
+- 予定の箱: 地はカレンダーの色（このカレンダーは rgb(3,155,229)）・角 6・枠なし・文字 rgb(255,255,255) 12px/400。
+- 作る小窓: 地 rgb(240,244,249)・598×513・影 rgba(0,0,0,.14) 0 3px 4px, rgba(0,0,0,.12) 0 3px 3px -2px, rgba(0,0,0,.2) 0 1px 8px。選ばれた種類（「予定」）の地 rgb(194,231,255)・文字 rgb(0,74,119)・角 8。文字 rgb(31,31,31)・補足と絵 rgb(68,71,70)。保存 地 rgb(11,87,208)・文字白・76×40・角 20。
+- 詳しくの小窓（既にある予定）: 地 rgb(240,244,249)・496 幅。題名 rgb(31,31,31) 22px。補足と絵 rgb(68,71,70)。「Google Meet に参加」地 rgb(11,87,208)・文字白・角 20。文字のリンク rgb(11,87,208)。
+- 編集画面（/r/eventedit）: 地 rgb(248,250,253)・札 白・角 28。文字 rgb(31,31,31)・絵と補足 rgb(68,71,70)・欄の中の案内文 rgb(68,71,70)。塗りの欄 rgb(233,238,246)。題名の下線 1px rgb(68,71,70)・押すと 3px rgb(11,87,208)。選ばれたタブの文字と下の帯 rgb(11,87,208)・帯 3px。選ばれていないタブ rgb(68,71,70)。タブの下の線 1px rgb(196,199,197)。チェック欄（入）地と枠 rgb(11,87,208)・（切）枠 2px rgb(68,71,70)。保存 rgb(11,87,208)・文字 rgb(255,255,255)。
+- アプリの今（コード・origin/main a7fbffdfe）: 予定の画面は全体のトークンを使う（`frontend/src/pages/schedule.css` で `--text-primary` 15 回・`--text-secondary` 14・`--text-muted` 13・`--border` 10・`--accent` 5 ほか）。`--text-primary` #1a202c・`--text-secondary` #4a5568・`--text-muted` #718096・`--border` #e2e8f0・`--accent` #1e3a8a（`frontend/src/index.css:24-34`）。暗い値 `:231-239`。予定専用の古い Google 色のトークンが既に在る: `--calendar-google-blue` #1a73e8 / 暗 #8ab4f8・`--calendar-google-blue-light` #e8f0fe / #1e3a5f・`--calendar-today-bg` #1a73e8 / #8ab4f8・`--calendar-grid-border` #dadce0 / #3c4043（`frontend/src/index.css:184-187,385-388`）。今の時刻の線 `--schedule-now-line` #ea4335（`frontend/src/tokens.css:401`）。
+- 予定の箱の色は持ち主（社員）の色で、正本はサーバー（`frontend/src/pages/schedule/schedule-owner.ts:35` のコメント・`backend/app/routers/calendar.py` `_DEFAULT_OWNER_COLOR`）。Google も箱の色はカレンダーごとの色。→ 箱の地の色は変えない（DB の正本のまま）。
+- 暗い表示（PO の選択「1」2026-11-11 で Google の「デザイン」をライトモード→ダークモードに切り替えて測り、ライトモードに戻した。戻ったことは設定の選択「light=true」と画面で確かめた。保存していない）:
+  - 週の表: ページの地 rgb(27,27,27)・表の札 rgb(19,19,20)。日の列の線 1px rgb(51,53,55)。今日の丸 rgb(168,199,250)・文字 rgb(6,46,111)。今の時刻の丸 rgb(245,94,87)。文字 rgb(227,227,227)・絵と補足 rgb(196,199,197)。外枠のある操作の枠 1px rgb(142,145,143)。「作成」ボタンの地 rgb(55,57,59)。選ばれた表示切替の地 rgb(0,74,119)・文字 rgb(255,255,255)。予定の箱はカレンダーの色を暗い表示向けに変えた色（rgb(3,155,229)→rgb(75,153,210)）・文字 rgb(19,19,20)。
+  - 作る小窓: 地 rgb(30,31,32)。選ばれた種類の地 rgb(0,74,119)・文字 rgb(194,231,255)。文字 rgb(227,227,227)・絵と補足 rgb(196,199,197)。保存 地 rgb(168,199,250)・文字 rgb(6,46,111)。
+  - 詳しくの小窓: 地 rgb(30,31,32)。「Google Meet に参加」地 rgb(168,199,250)・文字 rgb(6,46,111)。文字のリンク rgb(168,199,250)。
+  - 編集画面: 地 rgb(27,27,27)・札 rgb(19,19,20)。塗りの欄 rgb(40,42,44)。文字 rgb(227,227,227)・絵と案内文 rgb(196,199,197)。題名の下線 1px rgb(196,199,197)・押すと 3px rgb(168,199,250)。選ばれたタブ rgb(168,199,250)・選ばれていないタブ rgb(196,199,197)・タブの下の線 1px rgb(68,71,70)。チェック欄（入）rgb(168,199,250)・（切）枠 2px rgb(196,199,197)。保存 地 rgb(168,199,250)・文字 rgb(6,46,111)。
+- 箱の色の暗い表示: Google はカレンダーの色を暗い表示で別の色に変える。アプリの箱の色はサーバーの持ち主の色をそのまま描く。→ 箱の色は今回変えない（正本はサーバー）。
+
+### 8.5 未確認
+
+- Google の暗い表示の編集画面 → §8.6 で測った（2026-11-11）。
+- Google の日付の欄は押すと Google の暦が開く。アプリはブラウザの日付・時刻の欄（native）のまま。

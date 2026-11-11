@@ -1,19 +1,29 @@
 /**
- * 全画面の編集（作る小窓の「その他のオプション」・design §3.18 G53〜G55）
- * 金型 FullScreenDialog の中に、小窓と同じ項目の部品を初めから開いた形で並べる。
+ * 予定の編集画面（作る小窓の「その他のオプション」・予定を直すとき・design §3.19 G58〜G64）
+ * 金型 EditorPage の中に、1 項目ずつの部品（appearance="page"）を Google の並びで置く。
  * ADR-027: 全 UI 文字列は t() 経由。ADR-067: 色・寸法は CSS 変数参照のみ。
  */
 
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "../../components/Button";
-import { FullScreenDialog } from "../../components/FullScreenDialog";
+import { EditorPage, EditorPageRow } from "../../components/EditorPage";
 import { TextFieldControl } from "../../components/TextField";
-import { ScheduleDraftFields } from "./ScheduleDraftFields";
+import { SCHEDULE_POPOVER_ICONS } from "../../constants/icons";
+import {
+  DraftCategoryField,
+  DraftDateFields,
+  DraftDescriptionField,
+  DraftLocationField,
+  DraftMeetField,
+  DraftShareField,
+} from "./ScheduleDraftFields";
 import type { ScheduleDraft } from "./SchedulePageImpl";
+import type { ScheduleItem } from "./schedule-utils";
 
 export function ScheduleFullEditor({
   open,
+  mode,
+  item,
   draft,
   onDraftChange,
   onClose,
@@ -23,6 +33,9 @@ export function ScheduleFullEditor({
   meetAvailable,
 }: {
   open: boolean;
+  mode: "create" | "edit";
+  /** 直すときの予定（作るときは null） */
+  item: ScheduleItem | null;
   draft: ScheduleDraft;
   onDraftChange: (next: ScheduleDraft) => void;
   onClose: () => void;
@@ -34,8 +47,13 @@ export function ScheduleFullEditor({
 }) {
   const { t } = useTranslation();
   const titleRef = useRef<HTMLInputElement | null>(null);
+  const LocationIcon = SCHEDULE_POPOVER_ICONS.location;
+  const CategoryIcon = SCHEDULE_POPOVER_ICONS.category;
+  const ShareIcon = SCHEDULE_POPOVER_ICONS.share;
+  const DescriptionIcon = SCHEDULE_POPOVER_ICONS.description;
+  const common = { appearance: "page" as const, draft, onDraftChange };
   return (
-    <FullScreenDialog
+    <EditorPage
       open={open}
       onClose={onClose}
       ariaLabel={t("schedule.fullEditLabel")}
@@ -43,7 +61,7 @@ export function ScheduleFullEditor({
       initialFocusRef={titleRef}
       title={
         <TextFieldControl
-          variant="schedule-title"
+          variant="editor-title"
           value={draft.title}
           onChange={(event) => onDraftChange({ ...draft, title: event.target.value })}
           placeholder={t("schedule.addTitle")}
@@ -51,26 +69,32 @@ export function ScheduleFullEditor({
           ref={titleRef}
         />
       }
-      actions={
-        <Button variant="primary" onClick={onSave} disabled={!draft.title.trim()}>
-          {t("common.save")}
-        </Button>
+      saveLabel={t("common.save")}
+      onSave={onSave}
+      saveDisabled={!draft.title.trim()}
+      cardTitle={t("schedule.eventDetail")}
+      lead={
+        <>
+          {error && <div className="schedule-error" role="alert">{error}</div>}
+          <DraftDateFields {...common} mode={mode} />
+        </>
       }
     >
-      <div className="schedule-full-editor">
-        {error && <div className="schedule-error" role="alert">{error}</div>}
-        <ScheduleDraftFields
-          mode="create"
-          creating
-          expanded
-          item={null}
-          draft={draft}
-          onDraftChange={onDraftChange}
-          canChangeVisibility={canChangeVisibility}
-          meetAvailable={meetAvailable}
-          joinMeetLink={null}
-        />
-      </div>
-    </FullScreenDialog>
+      <DraftMeetField {...common} item={item} meetAvailable={meetAvailable} />
+      <EditorPageRow icon={<LocationIcon size={20} aria-hidden="true" />}>
+        <DraftLocationField {...common} />
+      </EditorPageRow>
+      <EditorPageRow icon={<CategoryIcon size={20} aria-hidden="true" />}>
+        <DraftCategoryField {...common} mode={mode} />
+      </EditorPageRow>
+      {canChangeVisibility && (
+        <EditorPageRow icon={<ShareIcon size={20} aria-hidden="true" />}>
+          <DraftShareField {...common} canChangeVisibility={canChangeVisibility} />
+        </EditorPageRow>
+      )}
+      <EditorPageRow icon={<DescriptionIcon size={20} aria-hidden="true" />}>
+        <DraftDescriptionField {...common} />
+      </EditorPageRow>
+    </EditorPage>
   );
 }

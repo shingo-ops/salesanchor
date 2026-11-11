@@ -126,3 +126,8 @@ export const ControlCode: Story = {
     />
   ),
 }
+
+export const ControlEditorFilled: Story = {
+  name: 'TextareaControl editor-filled variant',
+  render: () => <TextareaControl variant="editor-filled" rows={4} aria-label="Editor filled textarea" defaultValue="Editor filled textarea" />,
+}

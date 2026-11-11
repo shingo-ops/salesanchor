@@ -29,7 +29,7 @@ export type TextareaProps = TextareaOwnProps &
   Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, keyof TextareaOwnProps>;
 
 /** 用途別の種類（design.md §AX-2）。standard 以外は現行ページの見た目を写した固定の見た目で、size は受けない。 */
-export type TextareaVariant = "standard" | "karte" | "embedded" | "composer" | "schedule" | "product-edit";
+export type TextareaVariant = "standard" | "karte" | "embedded" | "composer" | "schedule" | "product-edit" | "editor-filled";
 
 /** 文字の用途（design.md §Z :817 / §AX-2b）。code は等幅フォント。 */
 export type TextareaTextStyle = "normal" | "code";

@@ -3362,6 +3362,7 @@
     "meetPending": "Google Meet video conferencing (the join link is created when you save)",
     "removeMeet": "Remove Google Meet",
     "fullEditLabel": "Edit event",
+    "rangeSeparator": "–",
     "joinMeet": "Join with Google Meet",
     "meetFailed": "Couldn't add Google Meet",
     "shortcuts": {

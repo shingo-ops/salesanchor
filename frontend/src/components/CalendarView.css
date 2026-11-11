@@ -217,7 +217,7 @@
 
 .comp-calendar--schedule.comp-calendar--days .comp-calendar__daynum--today {
   background: var(--schedule-today);
-  color: var(--on-solid);
+  color: var(--schedule-today-text);
 }
 
 .comp-calendar--schedule.comp-calendar--days .fc-timegrid-now-indicator-line {
@@ -361,7 +361,7 @@
 
 .comp-calendar--schedule.comp-calendar--month .comp-calendar__monthnum--today {
   background: var(--schedule-today);
-  color: var(--on-solid);
+  color: var(--schedule-today-text);
 }
 
 .comp-calendar--schedule.comp-calendar--month .fc-daygrid-dot-event.comp-calendar__event {

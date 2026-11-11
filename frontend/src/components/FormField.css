@@ -408,6 +408,64 @@
   outline: none;
 }
 
+/* editor-filled / editor-title: 編集の画面（金型 EditorPage）の欄。Google の予定の編集画面の実測（角 4px・枠なし・塗りの地・高さ 40）・ADR-1074 */
+.comp-field__input.comp-input--editor-filled,
+.comp-select__control.comp-select--editor-filled,
+.comp-field__textarea.comp-textarea--editor-filled {
+  min-height: var(--space-10);
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: var(--comp-input-filled-bg);
+  font-family: revert;
+  font-size: var(--font-sm);
+  line-height: normal;
+  transition: initial;
+}
+
+/* Select の矢印（右端から 8〜20px・FormField.css:75-83）と文字が重ならないよう右だけ広げる。:focus の規則より前に置く（stylelint no-descending-specificity） */
+.comp-select__control.comp-select--editor-filled {
+  padding-right: var(--space-8);
+}
+
+.comp-field__textarea.comp-textarea--editor-filled {
+  padding: var(--space-2) var(--space-4);
+}
+
+.comp-field__input.comp-input--editor-filled:focus,
+.comp-field__input.comp-input--editor-filled:focus-visible,
+.comp-select__control.comp-select--editor-filled:focus,
+.comp-select__control.comp-select--editor-filled:focus-visible,
+.comp-field__textarea.comp-textarea--editor-filled:focus,
+.comp-field__textarea.comp-textarea--editor-filled:focus-visible {
+  border: none;
+  box-shadow: inset 0 -2px 0 var(--accent);
+  outline: none;
+}
+
+.comp-field__input.comp-input--editor-title {
+  min-height: var(--space-10);
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background-color: transparent;
+  font-size: var(--font-2xl);
+  line-height: normal;
+}
+
+.comp-field__input.comp-input--editor-title:focus,
+.comp-field__input.comp-input--editor-title:focus-visible {
+  border-bottom: 2px solid var(--accent);
+  box-shadow: none;
+  outline: none;
+}
+
+.comp-field__input.comp-input--editor-filled[type="date"],
+.comp-field__input.comp-input--editor-filled[type="time"] {
+  width: auto;
+}
+
 /* composer: WeeklyAdvisorSection.css db-weekly-composer-input（旧規則の border は --border-subtle が未定義のため無効化され枠なしで描画されていた。その見た目を写す） */
 .comp-field__input.comp-input--composer {
   min-height: auto;
