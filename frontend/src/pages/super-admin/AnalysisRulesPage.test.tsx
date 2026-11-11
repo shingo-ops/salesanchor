@@ -1,5 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { api } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
@@ -15,30 +15,60 @@ beforeEach(async () => {
 });
 afterEach(() => cleanup());
 
-// AY-2g: the standalone product master page (which had its own admin check) was
-// removed, so the admin check on AnalysisRulesPage is what keeps non-admins out.
-it("shows only the super-admin-only message and loads nothing for a non-admin on ?section=product-master", () => {
+function Where() {
+  const loc = useLocation();
+  return <output data-testid="where">{loc.pathname + loc.search}</output>;
+}
+
+// K6: the masters moved to the global settings hub, so the old ?section=<master> URL moves there.
+it.each([
+  "product-master",
+  "supplier-master",
+  "weight-classes-master",
+])("moves ?section=%s to the global settings master screen", (key) => {
+  vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: true });
+  render(
+    <MemoryRouter initialEntries={[`/super-admin/analysis-rules?section=${key}`]}>
+      <Routes>
+        <Route path="/super-admin/analysis-rules" element={<AnalysisRulesPage />} />
+        <Route path="/super-admin/settings/masters/:key" element={<Where />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+  expect(screen.getByTestId("where").textContent).toBe(`/super-admin/settings/masters/${key}`);
+  expect(api.get).not.toHaveBeenCalled();
+});
+
+// K5: the master group is gone from the sidebar; the rule screens for status and unit stay.
+it("has no master management group in the sidebar and keeps the condition and unit rules", () => {
+  vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: true });
+  vi.mocked(api.get).mockResolvedValue({});
+  render(
+    <MemoryRouter initialEntries={["/super-admin/analysis-rules?section=conditions-master"]}>
+      <AnalysisRulesPage />
+    </MemoryRouter>,
+  );
+  expect(screen.queryByText(i18n.t("analysisRules.sidebar.groupMasterManagement"))).toBeNull();
+  for (const key of [
+    "product-master", "product-categories-master", "product-kinds-master", "type-master",
+    "product-lines-master", "product-formats-master", "supplier-master", "note-master",
+    "quantity-units-master", "condition-defs-master", "weight-classes-master",
+  ]) {
+    expect(screen.queryByTestId(`analysis-subnav-${key}`)).toBeNull();
+  }
+  expect(screen.getByTestId("analysis-subnav-conditions-master")).toBeTruthy();
+  expect(screen.getByTestId("analysis-subnav-unit-master")).toBeTruthy();
+});
+
+it("shows only the super-admin-only message and loads nothing for a non-admin", () => {
   vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: false });
   render(
-    <MemoryRouter initialEntries={["/super-admin/analysis-rules?section=product-master"]}>
+    <MemoryRouter initialEntries={["/super-admin/analysis-rules"]}>
       <AnalysisRulesPage />
     </MemoryRouter>,
   );
   expect(screen.getByText(i18n.t("superAdmin.supplierQuality.superAdminOnly"))).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Export update CSV" })).toBeNull();
   expect(api.get).not.toHaveBeenCalled();
-});
-
-it("shows the product master panel with its export button for a super admin on ?section=product-master", async () => {
-  vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: true });
-  vi.mocked(api.get).mockResolvedValue({ total: 0, items: [], works: [] });
-  render(
-    <MemoryRouter initialEntries={["/super-admin/analysis-rules?section=product-master"]}>
-      <AnalysisRulesPage />
-    </MemoryRouter>,
-  );
-  expect(await screen.findByRole("button", { name: "Export update CSV" })).toBeTruthy();
-  expect(screen.queryByText(i18n.t("superAdmin.supplierQuality.superAdminOnly"))).toBeNull();
 });
 
 // AY-2i: the sold-out results screen now lives in the LINE analysis sidebar.

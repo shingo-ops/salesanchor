@@ -28,7 +28,7 @@ import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import "../schedule.css";
-import { ScheduleDraftFields } from "./ScheduleDraftFields";
+import { ScheduleDraftFields, meetJoinUrl } from "./ScheduleDraftFields";
 import { ScheduleFullEditor } from "./ScheduleFullEditor";
 import {
   type AnchorRect,
@@ -91,9 +91,6 @@ export interface ScheduleDraft {
   /** Google Meet の行を押した印（保存時に add_meet として送る） */
   addMeet: boolean;
 }
-
-/** Google Meet の参加リンクとして出してよい URL の頭 */
-const MEET_URL_PREFIX = "https://meet.google.com/";
 
 interface SchedulePopoverState {
   mode: PopoverMode;
@@ -287,10 +284,10 @@ function SchedulePopover({
   }, [creating, popoverRef, calendarAreaRef]);
   const meta = getCalendarMeta(draft.category);
   const timeLabel = item ? formatSearchResultLine(item, t, i18n.language) : "";
-  const meetUrl = item?.meetUrl && item.meetUrl.startsWith(MEET_URL_PREFIX) ? item.meetUrl : null;
+  const meetUrl = meetJoinUrl(item);
   const joinMeetLink = meetUrl ? (
     <ButtonLink
-      variant="secondary"
+      variant="primary"
       size="sm"
       href={meetUrl}
       target="_blank"
@@ -307,9 +304,7 @@ function SchedulePopover({
         <div className="schedule-popover__header">
           <div className="schedule-popover__header-meta">
             {!creating && (
-              <span className="schedule-popover__kicker">
-                {mode === "edit" ? t("schedule.editEvent") : t("schedule.eventDetail")}
-              </span>
+              <span className="schedule-popover__kicker">{t("schedule.eventDetail")}</span>
             )}
             {!creating && meta && (
               <Badge variant={meta.badgeVariant} size="md">
@@ -379,31 +374,17 @@ function SchedulePopover({
           </div>
         ) : (
           <div className="schedule-popover__body schedule-popover__body--form">
-            {creating ? (
-              <div className="schedule-create-row schedule-create-row--title">
-                <span className="schedule-create-row__icon" aria-hidden="true" />
-                <TextFieldControl
-                  variant="schedule-title"
-                  value={draft.title}
-                  onChange={(event) => onDraftChange({ ...draft, title: event.target.value })}
-                  placeholder={t("schedule.addTitle")}
-                  aria-label={t("schedule.eventTitle")}
-                  ref={titleRef}
-                />
-              </div>
-            ) : (
-              <label className="schedule-field">
-                <span className="schedule-field__label">{t("schedule.eventTitle")}</span>
-                <TextFieldControl
-                  variant="schedule"
-                  value={draft.title}
-                  onChange={(event) => onDraftChange({ ...draft, title: event.target.value })}
-                  placeholder={t("schedule.eventTitle")}
-                  aria-label={t("schedule.eventTitle")}
-                  ref={titleRef}
-                />
-              </label>
-            )}
+            <div className="schedule-create-row schedule-create-row--title">
+              <span className="schedule-create-row__icon" aria-hidden="true" />
+              <TextFieldControl
+                variant="schedule-title"
+                value={draft.title}
+                onChange={(event) => onDraftChange({ ...draft, title: event.target.value })}
+                placeholder={t("schedule.addTitle")}
+                aria-label={t("schedule.eventTitle")}
+                ref={titleRef}
+              />
+            </div>
 
             <ScheduleDraftFields
               mode={mode}
@@ -414,7 +395,6 @@ function SchedulePopover({
               onDraftChange={onDraftChange}
               canChangeVisibility={canChangeVisibility}
               meetAvailable={meetAvailable}
-              joinMeetLink={joinMeetLink}
             />
           </div>
         )}
@@ -427,15 +407,6 @@ function SchedulePopover({
               </Button>
               <Button variant="primary" onClick={onSave} disabled={!draft.title.trim()}>
                 {t("common.save")}
-              </Button>
-            </>
-          ) : mode !== "detail" ? (
-            <>
-              <Button variant="primary" onClick={onSave} disabled={!draft.title.trim()}>
-                {t("common.save")}
-              </Button>
-              <Button variant="ghost" onClick={onClose}>
-                {t("common.cancel")}
               </Button>
             </>
           ) : (
@@ -979,6 +950,8 @@ export default function SchedulePage() {
       ...popover,
       mode: "edit",
     });
+    setError(null);
+    setFullEditOpen(true);
   };
 
   const closePopover = () => {
@@ -1128,9 +1101,9 @@ export default function SchedulePage() {
     if (popover?.mode !== "create") setPendingVisible(false);
   }, [popover]);
 
-  // 作る小窓でなくなったら（保存・閉じる・詳しく見る）全画面の編集も閉じる
+  // 小窓が無くなる・詳しくの小窓に変わったら（保存・閉じる・詳しく見る）編集の画面も閉じる
   useEffect(() => {
-    if (popover?.mode !== "create") setFullEditOpen(false);
+    if (popover === null || popover.mode === "detail") setFullEditOpen(false);
   }, [popover]);
 
   // 押す・引っぱるで選んだ範囲から作る小窓を開く
@@ -1246,7 +1219,7 @@ export default function SchedulePage() {
   // キーボードの近道（5-5 の判定の順番）。最新の状態を ref 経由で読み、window には 1 つだけ付ける
   const shortcutRef = useRef<(event: KeyboardEvent) => void>(() => {});
   shortcutRef.current = (event: KeyboardEvent) => {
-    // 0. 全画面の編集が開いている間は何もしない（Esc は金型 FullScreenDialog が先に受ける・G56）
+    // 0. 全画面の編集が開いている間は何もしない（Esc は金型 EditorPage が先に受ける・G56）
     if (fullEditOpen) return;
     // 1. 変換中は何もしない（Safari は変換を決めた Enter で isComposing が偽になるため 229 も見る）
     if (event.isComposing || event.keyCode === 229) return;
@@ -1301,7 +1274,7 @@ export default function SchedulePage() {
   const BannerCloseIcon = SCHEDULE_POPOVER_ICONS.close;
 
   return (
-    <div className="schedule-page">
+    <div className="schedule-page gcal-colors">
       <PageLayout
         navKey="nav.schedule"
         headerStart={
@@ -1585,10 +1558,12 @@ export default function SchedulePage() {
       )}
 
       <ScheduleFullEditor
-        open={fullEditOpen && popover?.mode === "create"}
+        open={fullEditOpen && (popover?.mode === "create" || popover?.mode === "edit")}
+        mode={popover?.mode === "edit" ? "edit" : "create"}
+        item={popover?.item ?? null}
         draft={draft}
         onDraftChange={setDraft}
-        onClose={() => { setFullEditOpen(false); setError(null); }}
+        onClose={() => { setFullEditOpen(false); setError(null); if (popover?.mode === "edit") setPopover(null); }}
         onSave={saveEvent}
         error={error}
         canChangeVisibility={canChangeVisibility}

@@ -284,7 +284,10 @@
     "discordConfig": "Discord 連携設定",
     "discordAnnounce": "Discordアナウンス",
     "superAdminFxRate": "為替レート管理",
-    "superAdminViewers": "閲覧者管理",
+    "superAdminViewers": "利用者管理",
+    "superAdminSettings": "全体設定",
+    "superAdminTaxRates": "税率",
+    "superAdminSaProducts": "商材とプラン",
     "superAdminViewerTemplates": "閲覧者向けテンプレート",
     "superAdminTcgLineImport": "インポート",
     "superAdminTcgDistribution": "配信先管理",
@@ -2637,6 +2640,13 @@
     }
   },
   "superAdmin": {
+    "settings": {
+      "groupMoney": "金額の設定",
+      "comingSoon": "この画面は準備中です。"
+    },
+    "users": {
+      "groupViewers": "閲覧者"
+    },
     "loginRequests": {
       "subtitle": "いつもの機械も予備の合言葉も無い人のログイン依頼です。本人確認のうえ許可してください。",
       "colUser": "名前",
@@ -2869,7 +2879,7 @@
     },
     "viewerTemplates": {
       "subtitle": "閲覧者に送る文面の一覧です。行を押すと本文を確かめてコピーできます。",
-      "backToViewers": "閲覧者管理へ戻る",
+      "backToViewers": "利用者管理へ戻る",
       "detailTitle": "テンプレートの詳細",
       "colName": "名前",
       "colSendMode": "送り方",
@@ -3352,6 +3362,7 @@
     "meetPending": "Google Meet のビデオ会議（保存すると参加用のリンクができます）",
     "removeMeet": "Google Meet を外す",
     "fullEditLabel": "予定の編集",
+    "rangeSeparator": "〜",
     "joinMeet": "Google Meet で参加",
     "meetFailed": "Google Meet を付けられませんでした",
     "shortcuts": {

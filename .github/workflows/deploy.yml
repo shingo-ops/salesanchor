@@ -732,6 +732,44 @@ jobs:
               || echo "::warning::secretary-agent を起こせませんでした（アプリの反映には影響しません）"
             exit 0
 
+      # ADR-1058 段3: ChatGPT の秘書の容器（secretary-codex）を作って起こす。secretary-agent と同じく付け足しの機能なので、
+      # どの手順が失敗してもアプリの反映は止めない（警告だけ出して exit 0。continue-on-error と command_timeout も同じ）。
+      # 秘密のファイルは持たない（ログインの鍵は名前付きボリューム secretary-codex-home の中。PO が scripts/ops/secretary-codex-login.sh で入れる）。
+      # build はリポジトリの根を context にし、secretary-codex/Dockerfile.dockerignore の許す一覧の4ファイルだけを入れる（design.md §5-1・§5-4）。
+      - name: Start secretary-codex (ADR-1058)
+        if: ${{ success() }}
+        continue-on-error: true
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10m
+          script: |
+            cd /home/ubuntu/salesanchor
+            df -h / | tail -1
+            if ! DOCKER_BUILDKIT=1 docker build -t astro-webapp-secretary-codex -f secretary-codex/Dockerfile .; then
+              echo "::warning::secretary-codex のイメージを作れませんでした（アプリの反映には影響しません）"
+              exit 0
+            fi
+            codex_version="$(docker run --rm --entrypoint codex astro-webapp-secretary-codex --version 2>/dev/null || true)"
+            echo "codex_version=${codex_version}"
+            if [ "$codex_version" != "codex-cli 0.162.1" ]; then
+              echo "::warning::secretary-codex の codex の版が 0.162.1 ではないため起こしません"
+              exit 0
+            fi
+            probe_rc=0
+            docker run --rm --network astro-webapp_frontnet --read-only --cap-drop ALL --security-opt no-new-privileges:true \
+              -e PROBE_HTTPS_URL=https://chatgpt.com/ astro-webapp-secretary-codex node /app/probe.mjs || probe_rc=$?
+            if [ "$probe_rc" -eq 1 ]; then
+              echo "::warning::K4 不合格: secretary-codex から DB か redis に届きました"
+            elif [ "$probe_rc" -ne 0 ]; then
+              echo "::warning::secretary-codex の probe を流せませんでした（終了コード $probe_rc）"
+            fi
+            docker compose -p astro-webapp-secretary-codex -f docker-compose.secretary-codex.yml up -d --force-recreate --no-build \
+              || echo "::warning::secretary-codex を起こせませんでした（アプリの反映には影響しません）"
+            exit 0
+
       # SA-18 Phase2: salesanchor_app ロールの bootstrap（冪等）
       # migrations より前に実行する。ADMIN_DATABASE_URL を .env に注入。
       - name: Bootstrap salesanchor_app role (idempotent)

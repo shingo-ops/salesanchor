@@ -9,11 +9,16 @@ import { useTranslation } from "react-i18next";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
 import { LoadingBlock } from "../../components/loading";
+import { UserManagementSubMenu, type UserMenuStatus } from "./users/UserManagementSubMenu";
 import AdminLoginRequestList from "../../features/auth/AdminLoginRequestList";
+
+const STATUS_KEY = { pending: "statusPending", trial: "statusTrial", active: "statusActive" } as const;
 
 export default function LoginRequestsPage() {
   const { t } = useTranslation();
   const { isSuperAdmin, loading: authLoading } = useSuperAdmin();
+  const statusLabel = (key: UserMenuStatus) =>
+    key === "all" ? t("superAdmin.viewers.menuAll") : t(`superAdmin.viewers.${STATUS_KEY[key]}`);
 
   if (authLoading) return <LoadingBlock />;
 
@@ -29,10 +34,15 @@ export default function LoginRequestsPage() {
 
   return (
     <PageLayout navKey="nav.superAdminLoginRequests" subtitleKey="superAdmin.loginRequests.subtitle">
-      <AdminLoginRequestList
-        listPath="/super-admin/login-requests?status=pending"
-        approvePath={(id) => `/super-admin/login-requests/${id}/approve`}
-      />
+      <div className="hub-shell">
+        <UserManagementSubMenu statusLabel={statusLabel} />
+        <div className="hub-content">
+          <AdminLoginRequestList
+            listPath="/super-admin/login-requests?status=pending"
+            approvePath={(id) => `/super-admin/login-requests/${id}/approve`}
+          />
+        </div>
+      </div>
     </PageLayout>
   );
 }

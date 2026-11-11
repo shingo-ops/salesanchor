@@ -17,19 +17,11 @@ export type AnalysisRulesSidebarKey =
   | "rule-management"
   | "extraction-rules"
   | "knowledge-aliases"
+  // 全体設定へ移動済み。ダッシュボード・手順ガイドの中の key の文字だけが今も使うので型には残す（受け手が転送する）
   | "product-master"
-  | "product-categories-master"
-  | "product-kinds-master"
-  | "type-master"
   | "supplier-master"
   | "conditions-master"
   | "unit-master"
-  | "note-master"
-  | "product-lines-master"
-  | "product-formats-master"
-  | "quantity-units-master"
-  | "condition-defs-master"
-  | "weight-classes-master"
   | "prompt-config"
   | "pipeline-map"
   | "line-workflow-guide"
@@ -100,24 +92,6 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
         {navItem("prompt-config", t("analysisRules.sidebar.promptConfig"))}
         {navItem("conditions-master", t("analysisRules.sidebar.conditionsMaster"))}
         {navItem("unit-master", t("analysisRules.sidebar.unitMaster"))}
-      </div>
-
-      {/* マスタ管理グループ */}
-      <div className="hub-subnav-section">
-        <span className="hub-subnav-title">
-          {t("analysisRules.sidebar.groupMasterManagement")}
-        </span>
-        {navItem("product-master", t("analysisRules.sidebar.productMaster"))}
-        {navItem("product-categories-master", t("analysisRules.sidebar.productCategoriesMaster"))}
-        {navItem("product-kinds-master", t("analysisRules.sidebar.productKindsMaster"))}
-        {navItem("type-master", t("analysisRules.sidebar.typeMaster"))}
-        {navItem("product-lines-master", t("analysisRules.sidebar.productLinesMaster"))}
-        {navItem("product-formats-master", t("analysisRules.sidebar.productFormatsMaster"))}
-        {navItem("supplier-master", t("analysisRules.sidebar.supplierMaster"))}
-        {navItem("note-master", t("analysisRules.sidebar.noteMaster"))}
-        {navItem("quantity-units-master", t("analysisRules.sidebar.quantityUnitsMaster"))}
-        {navItem("condition-defs-master", t("analysisRules.sidebar.conditionDefsMaster"))}
-        {navItem("weight-classes-master", t("analysisRules.sidebar.weightClassesMaster"))}
       </div>
 
       {/* システムグループ */}

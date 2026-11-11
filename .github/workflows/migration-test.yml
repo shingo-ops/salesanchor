@@ -1041,6 +1041,20 @@ jobs:
             class text,
             mode text NOT NULL CHECK (mode IN ('pass', 'mask', 'mask_bare', 'excluded'))
           );
+          -- public.ai_job_choices: migrations/20261103_120000_create_ai_job_assignments.sql（ADR-1058 段1a）で本番作成済み。
+          --   20261111_120000_add_codex_secretary_choices.sql が INSERT ... ON CONFLICT DO NOTHING するため前提として登録する（定義は本物と同じ）。
+          CREATE TABLE IF NOT EXISTS public.ai_job_choices (
+              id SERIAL PRIMARY KEY,
+              job_key TEXT NOT NULL,
+              provider TEXT NOT NULL,
+              model TEXT NOT NULL,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              CONSTRAINT ai_job_choices_job_key_check CHECK (job_key IN ('line_extraction', 'translation_inbound', 'translation_inbound_escalation', 'translation_outbound', 'secretary_intent')),
+              CONSTRAINT ai_job_choices_provider_check CHECK (provider IN ('gemini', 'codex', 'claude')),
+              CONSTRAINT ai_job_choices_job_provider_model_key UNIQUE (job_key, provider, model),
+              CONSTRAINT ai_job_choices_id_job_key_key UNIQUE (id, job_key)
+          );
+
           PUBLIC_SQL
 
       # ── Step 2: Sprint 1 を適用（Sprint 2 の前提条件）──────────────────────────

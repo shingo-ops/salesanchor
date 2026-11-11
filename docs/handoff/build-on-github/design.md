@@ -2,7 +2,7 @@
 
 - この文書は何か（素人向け1行）: 「アプリの箱（Docker イメージ）を本番サーバーで作るのをやめ、GitHub で作って会社の非公開の倉庫にしまい、本番は『指紋（sha256）が一致する完成品』を取って並べるだけにする」ための設計図。
 - 状態: 設計案 v2（2026-11-04 Fable 作成・PO 指名。同日 Opus の審査 §20 の REVISE を受けて直した。直した箇所は §21）。実装は未着手・未承認。§19-1 の 4 件は 2026-11-04 に PO が決めた（§23）。Opus が決めた項目は §19-2。Opus の 2 回目の審査は APPROVE（§22）。
-- 目標: `docs/handoff/build-on-github/kgi.md`（K1〜K8・PO 承認済み）。現在地: `docs/handoff/build-on-github/recon.md`（§番号で参照）。
+- 目標: `docs/specs/build-on-github/kgi.md`（K1〜K8・PO 承認済み）。現在地: `docs/handoff/build-on-github/recon.md`（§番号で参照）。
 - 親（設計仕様書）: 無い。`docs/STANDARD-WORKFLOW.md` §1.5 は deploy.yml を含む開発に仕様書を必須としているが、`docs/specs/README.md` に本番反映（deploy）の領域は無い（2026-11-04 検索）。作る（§19-2 D10・Opus 決定）。便1 の PR で `docs/specs/build-on-github/`（README・ideal-state・kgi）を足す（§12 便1）。
 - 関係 ADR: ADR-135・ADR-136（deploy.yml を含む PR の GO）、ADR-1003（GO の委譲と例外）、ADR-092（deploy の直列化）、ADR-115（自動ロールバック）、ADR-1024・ADR-1042・ADR-1052（backend の完成品を使い回す読み取り窓口）、ADR-1056（secretary-agent の箱）、ADR-1058（K8 測定で空きメモリ不足が分かった経緯）、ADR-025（secrets の扱い）。新しい ADR 案は `docs/handoff/build-on-github/adr-draft.md`（番号は空欄）。
 - 根拠の照合: v1 は作業場所 `release/build-on-github-design` の先頭 3e0cc1a63（= origin/main 8d661d747 ＋ kgi/recon の docs コミット）。v2（§21）の行番号は同じ枝の 1fbc7df51 の版で確かめ直した。`.github/workflows/deploy.yml` の最終変更は ea08851a8（2026-11-03。v2 の時点でも同じ）。
@@ -223,6 +223,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - 控えの形は `.deploy_prev_sha`・`.deploy_nginx_good.conf`（`.github/workflows/deploy.yml:512-513` の注記）と同じ: `/home/ubuntu/salesanchor` 直下・git に入れない。
 
 ### 9-2 戻し方（2 通り）
+便2 の正本は [card-bin2.md](./card-bin2.md) と §26。この節の行番号と手順は 2026-11-04 時点のもので、今の本線とずれている（§26-7 P5）。
 - **自動**（Finalize の健康確認が落ちたとき `.github/workflows/deploy.yml:904-979`）: 今の `git reset --hard PREV_SHA`（`:911`）はそのまま（compose・nginx・scripts を戻すため）。`docker compose build` の 3 回試行（`:925-935`）を削り、代わりに `.deploy_prev_images.env` にある `*_IMAGE=` の行（本番は 5 行。行数は数えない — 控えにある行を全部戻す。リハーサル §12 便2 12. は 1 行で動かす）で `.env` の同名行を置き換え → 今と同じ `docker rm -f …`（`:939-941`）→ `docker compose up -d --no-build --remove-orphans`（`:942` に `--no-build` を足す）。完成品はローカルに残っているので取り直し無し。`.deploy_prev_images.env` が無いか空（初回）なら戻せないので「自動ロールバック失敗」の分岐（`:968-973`）に流す。
 - **手動**（K6 の練習・緊急）: 新しい scripts/deploy/rollback-images.sh。(1) `.deploy_prev_images.env` の 5 行があることを確かめる（無ければ止まる）、(2) 今の 5 行を `.deploy_rollback_from.env` に写す（さらに戻せるように）、(3) `.env` の 5 行を置き換える、(4) `docker compose pull --ignore-buildable`（ローカルにあるので 0 秒。無ければここで初めて取る＝鍵が要る → `GHCR_PULL_TOKEN` を env で渡したときだけ login する）、(5) backend は `bash scripts/blue-green-cutover.sh`（無停止）、他は `docker compose up -d --no-deps --no-build frontend celery-worker celery-beat discord-gateway gemini-egress`、secretary は `-p astro-webapp-secretary -f docker-compose.secretary-agent.yml up -d --no-build --force-recreate`、(6) `date +%s` を始めと終わりに出し、`/api/health` の 200 を確かめ、所要秒を出す。組み立ての命令は 1 つも含めない（K6）。
 - 戻した後の「次の deploy」: main に次の push が来ると新しい指紋で上書きされる（戻しは一時的）。恒久に戻すなら revert の PR。
@@ -635,3 +636,213 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 ### 24-8 §10-4 への記録（2026-11-09 の入れ直し・live-restore 無しの 1 回）
 - 段0 前: VmRSS 2,008,012 kB・VmSwap 記録なし・Threads 記録なし・LiveRestore false（2026-11-09 16:12:43 JST）
 - 段0 後: VmRSS 148,712 kB・VmSwap 0 kB・Threads 41（2026-11-09 17:04 JST）
+
+## 25. 便1 のカードを出す前の直し（v3・2026-11-04 Opus）
+
+> 2026-11-11 Opus: この節は 2026-11-04 に「§24」として書いた。後から本線に便0 の §24（2026-11-09）が入り番号が重なったので、便1 の作り直し（card-bin1-r3.md）で §25 に移した。card-bin1.md・card-bin1-r2.md は当時の記録なので「§24」のまま残す。
+
+- 照合した版: origin/main 648e2fcdc（§1〜§23 が入った版）。どれも実物か原本で確かめた。§1〜§23 の本文は消さず書き換えていない。この節が §12 便1 に優先する。
+- PO の決定（§23）は変えない。どれも技術の直しなので PO には聞かない。
+
+| 番号 | 直す前（§12 便1・§7-2） | 直した後 | 根拠（実物・原本） |
+|---|---|---|---|
+| C1 | `.gitleaks.toml` を新しく作る | 今の `.gitleaks.toml` の末尾に足す。既定の規則 `gcp-api-key` を名前で広げ、`[[rules.allowlists]]` の `paths = ['''(^\|/)usr/share/nginx/html/assets/[^/]+\.js$''']` だけを足す。ほかの規則と全体の `[allowlist]` は触らない | `.gitleaks.toml` は main に既にある（`:3-5` が `useDefault = true`、`:51-65` が独自の規則 2 つ）。`.github/workflows/secret-scan.yml:24` がこの設定で置き場を走査する。gitleaks v8.24.3 の README `:361-368` に「既定の規則を名前で広げる」例がある。v8.24.3 の既定の設定 `config/gitleaks.toml:545-549` に `id = "gcp-api-key"` がある。このパスは置き場に無いので、置き場の走査の結果は変わらない |
+| C2 | 仕様書を `docs/INDEX.md` に 1 行で載せる | `docs/specs/README.md` の一覧の表に 1 行で載せる。`docs/INDEX.md` は変えない | `docs/INDEX.md:19` は仕様書を一つずつ載せず、索引 `docs/specs/README.md` を指す。`docs/specs/README.md:9-15` が仕様書を 1 行ずつ並べる表 |
+| C3 | 道具の版は「SHA で pin」とだけ書いてある | 下の「固定する版」の表のとおり。gitleaks は 8.24.3 にする（8.30.1 にはしない） | `.github/workflows/secret-scan.yml` の最新の run 41777797436（main・2026-11-04）の記録に `gitleaks version: 8.24.3` とある。同じ `.gitleaks.toml` を同じ版で読めば、置き場の走査と完成品の走査で解釈がずれない |
+| C4 | K2（非公開）を便1 で確かめる命令が無い（§10-2 の K2 は便2 で作る `GHCR_PULL_TOKEN` を使う） | (a) 各 build job が push の後に「ログインしたまま読める」「ログイン無しでは読めない」の両方を確かめる。ログイン無しで読めたら job を落とす（.github/scripts/ghcr-private-check.sh）。(b) 最初の run の後に、PO が組織の Packages の画面で 5 つが Private と表示されていることを目で見る。`GHCR_PULL_TOKEN` で数える K2 の正式な測り方は便3 の見張りのまま | 手元の shingo-cc の鍵は `read:packages` が無く、`orgs/GEN-RYU-System/packages` が 403 を返した（2026-11-04）。`orgs/GEN-RYU-System/memberships/shingo-ops` の役割は `admin`・`active`（2026-11-04）なので、PO は組織の Packages の画面を見られる |
+| C5 | 走査（§7-2）を 5 つの job それぞれに書く | 走査は .github/scripts/image-scan.sh の 1 本にまとめ、5 つの job から呼ぶ。`changes` の 5 つの filter には、workflow ファイルと一緒に `.github/scripts/image-scan.sh`・.github/scripts/ghcr-private-check.sh・`.gitleaks.toml` も足す（走査の決まりを変えた回は 5 つとも作り直して走査し直す） | 同じ処理を 5 か所に書くと、直すときに食い違う。`.github/scripts/` には `.github/scripts/check_deprecated_columns.sh` という前例がある。`scripts/` の下に置かないのは、`.github/workflows/deploy.yml:39-43` の filter が `scripts/**` で本番の migration の段を起こすため。また `scripts/` は ADR-135 の危険なパスに当たるため |
+| C6 | 秘密らしい名前の型に `.*\.pem` がある | 型はそのまま。ただし公開の証明書の束（OS の `etc/ssl/` や Python の `certifi/cacert.pem` など）は当たる見込みが高い。そのため便1 では、合流の前に試しの実行（下の C8）で 5 つの完成品の当たりを全部出す。除く道は Opus が当たりの一覧を見て決め、この節に書き足す（推測で先に除かない） | `python:3.12-slim`（`backend/Dockerfile:1`）と `nginx:alpine`（`frontend/Dockerfile:27`）は、どちらも OS の証明書の束を持つ形の完成品。どのファイルが入っているかは、まだ確かめていない【未確認 U24】 |
+| C7 | 設定の値が空でも組み立てに進む | 各 build job の最初に「`GHCR_NAMESPACE`・`GHCR_USER` が空でない」「`GHCR_NAMESPACE` に大文字が無い」を確かめる。外れたら、何が足りないかを書いて落とす | `gh variable list` は 0 件（2026-11-04）。PO の登録より先に合流すると、最初の run が分かりにくい形で落ちるため |
+| C8 | 走査が通るかは、合流の後の最初の run で初めて分かる | 合流の前に、既存の試験場 `.github/workflows/sandbox-test.yml`（`workflow_dispatch`・tests/sandbox/ の下の台本 を流す・secrets を使わない・`:18` で shingo-cc か shingo-ops だけが起こせる）で tests/sandbox/image-scan-survey.sh を流す。5 つの完成品を GitHub の実行機で組み立て、走査を「当たりを全部出して止まらない」形で当て、当たりの一覧と所要秒を出す。倉庫へは送らない。frontend には試しの値を渡す。試しの鍵は `AIza` と、その場で作る 35 文字にする（置き場に書かない）。起こすのは手元の Opus | `.github/workflows/sandbox-test.yml:4-36`。`.github/workflows/build-images.yml` は `on: push: branches: [main]` なので、枝では動かない。試験場の記録は公開なので、走査の出力に値を出さない（gitleaks の `--redact`、名前の走査はパスだけ） |
+| C9 | `VITE_AUTH_PROVIDER` は Variables（§19-1 D6） | 便1 は D6 のとおり Variables から渡す。`.github/workflows/deploy.yml:380` の `VITE_AUTH_PROVIDER='self'` は便1 では残す（prod1 の組み立てがまだ使う）。便2 で prod1 の組み立てを無くすときに、この行を消す（値の正本を Variables 1 か所にする） | `.github/workflows/deploy.yml:380`。`frontend/Dockerfile:11,16` |
+| C10 | U21（secret `SALESANCHOR_APP_PASSWORD` の有無）が未確認 | ある。便2 の 12. の確かめはそのまま行える | `gh secret list` に名前が出る（2026-11-04・値は見ていない）。`VITE_FUNNEL_DASHBOARD` もある。中身は `mock`/`live` の切り替え（`frontend/src/api/funnel.ts:3,23`） |
+
+### 25-1 固定する版（2026-11-04 に原本で確かめた）
+
+| 道具 | 版 | 固定の値 | 確かめ方 |
+|---|---|---|---|
+| actions/checkout | v5 | `fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09` | 置き場の workflow 2 か所が既にこの SHA で固定している |
+| dorny/paths-filter | v4.0.3 | `ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d` | GitHub の tag。`.github/workflows/deploy.yml:34` が v4 を使う |
+| docker/setup-buildx-action | v4.4.1 | `f87e5991a6d7451dcb8d9637bfbc97413f497069` | GitHub の release（2026-09-16） |
+| docker/login-action | v4.7.0 | `81c6f93d4bc991e510b342a00b419b3bb4efc5c6` | GitHub の release（2026-10-23）。入力（registry・username・password・logout）は action.yml を直接読んだ。Context7 にこの action が無かったため |
+| docker/build-push-action | v7.4.0 | `c3c9e263c25d99ce0380d002d59b67737d91b0dc` | GitHub の release（2026-09-15）。入力の load・push・provenance・sbom・cache-from・cache-to・build-args・platforms・tags・context と、出力の imageid・digest |
+| gitleaks | 8.24.3 | linux_x64 の tar.gz の sha256 `9991e0b2903da4c8f6122b5c3186448b927a5da4deef1fe45271c3793f4ee29c` | 公式の release の `gitleaks_8.24.3_checksums.txt`。`dir` の命令・`--redact`・`--no-banner`・`--report-path` は v8.24.3 の README `:148,171,173,175,199` |
+
+### 25-2 新しい【未確認】
+| 番号 | 何が未確認か | どう確かめるか | 頼る選択 |
+|---|---|---|---|
+| U23 | ghcr.io がログイン無しで非公開の完成品を読まれたときに出す言葉 | 便1 の最初の run の ghcr-private-check.sh の出力 | 頼らない。ログイン無しで「読めた」ときだけ落とす。読めなかったときの言葉は記録に残すだけ |
+| U24 | 5 つの完成品に、秘密らしい名前の型に当たるファイルがどれだけあるか | C8 の試しの実行 | 除く道は当たりを見てから決める（C6） |
+| U25 | gitleaks の `dir` が完成品の中身全体（backend は Python の部品を含む）に当てたときの当たりと所要秒 | C8 の試しの実行 | 当たりが部品の中にあれば、Opus が 1 件ずつ見て、規則とパスを絞った例外にするかを決める。規則は外さない |
+
+### 25-3 便1 の進め方（C8 を入れた順番）
+1. 実行役（クラウドの Sonnet）が card-bin1.md のとおりに書いて push する。PR はまだ作らない。
+2. 手元の Opus が試験場で tests/sandbox/image-scan-survey.sh を流し、当たりの一覧（パスと規則の名前だけ）と所要秒を読む。
+3. 当たりがあれば、Opus が除く道を 1 件ずつ決めてこの節に書き足す。実行役に直しの短いカードを出し、2 に戻る。5 つとも当たり 0 になるまで続ける。
+4. Opus が PR を作る。審査役（reviewer）・CI・確認済みのコメントの後にマージする。PO が鍵と組織の設定を済ませた後に限る。
+5. 最初の main の run を Opus が見る。PO が組織の Packages の画面で 5 つが Private であることを見る（C4 (b)）。
+6. 20 回たまったら、§12 便1 の完了条件（K8 の関所）を Opus が出す。
+
+### 25-4 カードを書きながら直した点（v3 の続き・2026-11-04 Opus）
+
+| 番号 | 直す前 | 直した後 | 根拠（実物・原本） |
+|---|---|---|---|
+| C11 | §19-2 D10「ideal-state は kgi.md の PO の言葉を写す」・kgi.md は docs/handoff/build-on-github/ に置く | kgi.md を `docs/specs/build-on-github/kgi.md` へ移す（git mv）。PO の言葉は `docs/specs/build-on-github/ideal-state.md` にだけ置き、kgi.md からは消してリンクにする（写しを 2 つ作らない）。中身（K1〜K8・目的・対象外）は変えていない。仕様書の 3 文書は書類なので Opus がこの枝で書く（カードの範囲に入れない） | `docs/STANDARD-WORKFLOW.md` §1.5「構成（3ファイル標準）」で ideal-state が PO の言葉の正本・kgi が KGI の置き場。前例 `docs/specs/bundle-sale/kgi.md`（handoff 側に kgi.md を置かない） |
+| C12 | C7 の設定の確かめを各 build job の最初に置く | `changes` job に 1 回だけ置く（落ちれば 5 つの build は動かない）。Variables は `GHCR_NAMESPACE`・`GHCR_USER`・`VITE_FIREBASE_AUTH_DOMAIN`・`VITE_GCP_PROJECT_ID`・`VITE_AUTH_PROVIDER` の 5 つを確かめる。secret の `VITE_FIREBASE_API_KEY` は build-frontend の中で空でないかだけ確かめる（値は出さない） | 同じ確かめを 5 か所に書かない（C5 と同じ理由） |
+| C13 | 指紋は `docker inspect --format '{{index .RepoDigests 0}}'` | 倉庫に問い合わせて取る: `docker buildx imagetools inspect <タグ> --format '{{json .Manifest}}'` の `digest`。形（`sha256:` ＋ 64 桁）でなければ落とす | 本番が受け取るのは倉庫の指紋。buildx の公式の説明 （docker/buildx の置き場の docs/reference/buildx_imagetools_inspect.md）（`--format` の `.Manifest`・`{{json .Manifest}}` に `digest`。Context7 /docker/buildx・2026-11-04） |
+| C14 | 5 つの filter に共通の 4 行をそれぞれ書く | YAML の anchor（`common: &common` と `- *common`）で 1 か所に書く | dorny/paths-filter の README「Use YAML anchors to reuse path expression(s)」（Context7 /dorny/paths-filter v4.0.3・2026-11-04）。push のときは「同じ枝の push の前の commit」と比べ、checkout が要る（同 README「Supported workflows」） |
+| C15 | ghcr-private-check.sh はログイン無しの答えに unauthorized か denied が無ければ落とす（要約の案） | ログイン無しで「読めた」ときだけ落とす。読めなかったときの言葉は 300 文字まで記録に出し、unauthorized・denied が無ければ警告だけ出す | §25-2 U23「頼らない」。直前にログインしたままの読み取りが通っているので、通信の失敗で「非公開」と見誤る見込みは小さい。正式な K2 は便3 の一覧の見張り |
+| C16 | 走査の例外が効いたことは「当たり 0」でしか見えない | 試しの実行で frontend を 2 回走査する。1 回目は `.gitleaks.toml`、2 回目は既定の規則だけの設定（その場で作る 2 行）。2 回目で gcp-api-key が 1 件以上・1 回目で 0 件なら、例外が効いて当たりを消したと言える | 手元で gitleaks 8.24.3（darwin arm64・公式の checksums と一致 `b90f13bb…9013`）を試した（2026-11-04）。同じ試しの鍵を 2 つの道に置き、`.gitleaks.toml` ＋ C1 の足しで `gcp-api-key app/other.js` の 1 件だけ、既定だけの設定で 2 件。gitleaks の JSON の項目に `RuleID`・`File` がある |
+| C17 | `concurrency: { group: build-images, cancel-in-progress: false }` | 便1 は `concurrency` を書かない。run は重なっても並んで動き、取り消されない。完成品の名札は commit ごとに別（`$GITHUB_SHA`）なので、重なっても倉庫で取り合いにならない。`concurrency` を書くと、GitHub は同じ組で待っている run を取り消し、取り消された push の変更は次の run の filter（その push の前の commit と比べる）に入らないため。便2 で本番への入れ替えと順番を揃えるときの扱いは U27 で決める | GitHub の説明「Control the concurrency of workflows and jobs」（Context7 /websites/github_en_actions・2026-11-04）: 既定では同じ組で待っている run は取り消され、新しい run が代わりに待つ。C14 の push のときの比べ方 |
+
+- 便2 の 17.（workflow-lint の「deploy.yml に docker build が無い」）を作るとき、`tests/sandbox/image-scan-survey.sh` にも `docker build` がある。規則の対象は deploy.yml だけにする。
+- U27（便2 の設計で決める）: 取り消された run の変更の扱い。候補は (a) deploy.yml へ移すときに filter の比べ先を「本番で今動いている完成品の commit」にする、(b) `concurrency` の `queue: max`（同じ説明の「queue」: 最大 100 件まで取り消さずに順に待たせる）。ただし手元の actionlint 1.7.12 は `unexpected key "queue" for "concurrency" section` で止める（2026-11-04 実測）ので、(b) を選ぶなら検査道具の扱いも決める。便2 のカードの前に Opus が決める。
+
+### 25-5 便1 カードの設計審査（2026-11-04・クラウドの Opus・同じ AI の別の起動）
+
+1 回目（先頭 d4c02d6a5）: **REVISE**。前提の点検 P1〜P6・yaml の並び・toml の足し方は合格。直す点 3 件と軽い指摘 1 件。すべてカードに反映した。
+
+| 番号 | 指摘 | 直した後 |
+|---|---|---|
+| R1 | 名前の走査の型が §7-2 より狭い（「[^/]*credentials[^/]*\.json」 では 「app/credentials/sa.json」 が当たらない） | §7-2 の型のまま（「.*credentials.*\.json」 ほか）。手元の grep で 「app/credentials/sa.json」 に当たることを確かめた |
+| R2 | 後片付けで消せないと、通った走査が終了コード 1 になる | 片付けの前に書き込み権を戻し、消す命令の失敗は無視する。展開した木も `u+rwX` にする |
+| R3 | 試しの台本で、対照の走査が落ちると全体が無言で止まる | 対照の走査の終了コードを受け取り、落ちたら `CONTROL_FAILED` と出力を出して数に入れる |
+| R4（軽い） | `tags:` に名前を直接書いていて、`env.IMAGE` と二重 | `tags:` を `${{ env.IMAGE }}` にした |
+
+直した後の手元の検査: 3 つの台本の bash -n・shellcheck が rc=0、yaml の actionlint が rc=0。
+未確認のまま残すもの: OS の証明書の束（例 `etc/ssl/certs/*.pem`）が名前の走査に当たる見込み（C6・U24）。合流の前の試しの実行で当たりを全部出してから、Opus が除く道を決める。
+
+2 回目（先頭 6a8733f1d）: **APPROVE**。R1〜R4 はすべて写しの実物で直りを確かめた（R1 は型の文字列が §7-2 と一致、R2 は消せないファイルを置いた試しで直す前 rc=1・直した後 rc=0、R3 は `CONTROL_FAILED rc=1`・`SURVEY_FAILURES 1`・set -e が戻ることを確認、R4 は `tags:` が `${{ env.IMAGE }}`）。shellcheck と actionlint はクラウドに無く、審査役は回していない。手元の Opus が 6a8733f1d の中身で回した結果は rc=0（上の「直した後の手元の検査」）。
+
+### 25-6 試しの実行の結果と、除く道の決定（2026-11-04 Opus）
+
+試しの実行: `.github/workflows/sandbox-test.yml`（test=image-scan-survey）の run 41785498391。枝 release/build-on-github-bin1・先頭 0b29532e4（card-bin1 の実装）。結果は success（`SURVEY_FAILURES 0`）。
+
+| 完成品 | 組み立て秒 | 走査秒 | 大きさ（byte） | 名前の当たり | 中身の当たり | 履歴の当たり |
+|---|---|---|---|---|---|---|
+| backend | 71 | 17 | 274297267 | 156 | 3 | 0 |
+| frontend | 110 | 2 | 31118010 | 120 | 1 | 0 |
+| gemini-egress | 2 | 1 | 5424370 | 2 | 0 | 0 |
+| gha-exporter | 8 | 4 | 38820158 | 149 | 0 | 0 |
+| secretary-agent | 23 | 8 | 356411104 | 1 | 1 | 0 |
+
+- frontend の試しの鍵は画面の JS に載った（`KEY_IN_ASSETS 1`）。既定の規則だけの対照の走査では `gcp-api-key` が 1 件（`CONTROL_GCP_HITS 1`）。C1 の例外は効いた。
+- 名前の当たり 428 件の中身（パスだけ）: OS の証明書の束 `etc/ssl/certs/*.pem`（backend・gha-exporter 各 148、frontend 118）、OS と言語の証明書の束 1 つずつ（`usr/lib/ssl/cert.pem`・`etc/ssl/cert.pem`・`etc/ssl1.1/cert.pem`・Python の `certifi/cacert.pem` 2 つ・`grpc/_cython/_credentials/roots.pem`）、Google の部品の API の説明書 4 つ（「googleapiclient/discovery_cache/documents/*credentials*.json」）、npm に付いてくる `usr/local/lib/node_modules/npm/.npmrc`。gemini-egress の 2 件は証明書の束。
+- 中身の当たり 5 件は、どれも規則 `generic-api-key`。場所は次の 5 つ:
+  - backend の `usr/include/linux/netfilter/nf_tables.h`・`usr/include/linux/nl80211.h`・`usr/lib/x86_64-linux-gnu/perl/5.40.1/CORE/cop.h`
+  - secretary-agent の `usr/local/include/node/v8-internal.h`
+  - frontend の `usr/share/nginx/html/assets/main-hNR9bPDU.js`
+- 5 つの組み立て書がアプリのファイルを写す先は `/app`・`/usr/share/nginx/html`・`/etc/nginx/conf.d/default.conf`・「/docker-entrypoint.sh」 だけ（各 `Dockerfile` の `COPY`）。上の C の見出しファイルの場所には、アプリのファイルは入らない。
+- frontend の 1 件を手元の gitleaks 8.24.3 で再現した。置き場の `.gitleaks.toml`（C1 の足し入り）で試しの鍵 `AIza…` を画面の JS の形で置くと、`generic-api-key` が 1 件出る。既定だけの設定では `gcp-api-key` の 1 件だけ。gitleaks は同じ値に 2 つの規則が当たると 1 件にまとめる。`gcp-api-key` を例外にしたため、`generic-api-key` の 1 件が残る。【未確認 U28】実物の完成品で、この 1 件が試しの鍵そのものか。確かめ方は下の E4 の場所の出力と、2 回目の試しの対照の当たりの一覧。
+
+| 番号 | 決定 | 理由 | 確かめ（手元） |
+|---|---|---|---|
+| E1 | 名前の走査から除く道を 8 つに限る。`etc/ssl/certs/<1 段>.pem`、`etc/ssl/cert.pem`、`etc/ssl1.1/cert.pem`、`usr/lib/ssl/cert.pem`、`…/certifi/cacert.pem`、`…/grpc/_cython/_credentials/roots.pem`、`…/googleapiclient/discovery_cache/documents/<1 段>.json`、`usr/local/lib/node_modules/npm/.npmrc`。除いた件数は `NAME_SKIPPED <数>` で毎回出す。型（§7-2）は変えない | どれも OS・言語・部品の配布物で、公開の値だけを持つ。中身は gitleaks の走査（既定の規則に秘密鍵の型がある）がそのまま見る | 試しの 428 件に当てて 0 件残り。危ない名前 14 個の見本（`app/.env`・`root/.ssh/id_rsa`・`etc/ssl/certs/sub/x.pem`・`root/.npmrc` ほか）のうち型に当たる 13 個は、どれも除かれない |
+| E2 | E1 で除いたファイルのうち、繋ぎ（symlink）でない普通のファイルに `PRIVATE KEY` の文字があれば、`NAME_HIT_PRIVATE_KEY <パス>` を出して当たりに数える | 除く道に秘密鍵が置かれても見逃さない。繋ぎは辿らない。行き先が完成品の外（実行機の `/usr/share/ca-certificates`）になることがあるため。行き先の中身は gitleaks が見る | 偽の木（絶対パスの繋ぎの証明書・certifi・`etc/ssl/certs/Planted.pem` に秘密鍵・`app/.env`）で `NAME_HIT app/.env`・`NAME_HIT_PRIVATE_KEY etc/ssl/certs/Planted.pem`・`NAME_SKIPPED 3`・当たり 2 |
+| E3 | `.gitleaks.toml` の末尾に、既定の規則 `generic-api-key` を名前で広げる例外を 2 つ足す。(a) frontend の画面の JS の場所かつ値が `^AIza[0-9A-Za-z_\-]{35}$` のとき（両方そろったときだけ・`condition = "AND"`）。(b) OS と言語の配布物の C の見出しファイル（`usr/include/…/*.h`・`usr/local/include/…/*.h`・`usr/lib/<1 段>/perl/<1 段>/CORE/…/*.h`）。規則は外さない。全体の `[allowlist]` は触らない | (a) は C1 と同じ値に別の規則が当たるため。値の形も条件にするので、同じ JS に別の秘密があれば当たる。(b) はアプリのファイルが入らない場所（上の `COPY` の一覧） | 手元の gitleaks 8.24.3 で、画面の JS の試しの鍵は消え、同じ JS の別の形の秘密は当たり、`usr/include/x.h` は消え、「app/y.py」 の同じ鍵は `gcp-api-key` と `generic-api-key` の両方で当たる。置き場に (a)(b) の場所に当たるファイルは 0（`git ls-files` で確かめた）。置き場の走査の結果は変わらない |
+| E4 | 中身の当たりの出力に、行と桁を足す（`LEAK_HIT <規則> <パス> L<行>:C<始め>-<終わり>`）。値は出さない（`--redact` のまま） | 当たりを 1 件ずつ確かめるとき、ファイルのどこかが分かる | gitleaks 8.24.3 の JSON に `StartLine`・`StartColumn`・`EndColumn` がある（手元の出力） |
+
+- 試しの台本は、対照の走査の当たりを `CONTROL_LEAK_HIT <規則> <パス> L…` として全部出す（U28 を確かめるため）。
+- 2 回目の試しの合格の条件: 5 つとも `name_hits=0`・`leak_hits=0`・`history_hits=0`。`KEY_IN_ASSETS 1`。`CONTROL_GCP_HITS` が 1 以上。`CONTROL_LEAK_HIT` の場所が `usr/share/nginx/html/assets/` の JS だけ。`SURVEY_FAILURES 0`。外れたら当たりを見てから決め直す（推測で例外を広げない）。
+- 直しは card-bin1-r2.md で実行役に渡す。触るのは `.github/scripts/image-scan.sh`・`.gitleaks.toml`・`tests/sandbox/image-scan-survey.sh` の 3 つだけ。
+- U24・U25 はこの節で閉じる（当たりの一覧と所要秒は上の表）。
+
+### 25-7 2 回目の試しの結果（2026-11-04 Opus）
+
+- 直し: card-bin1-r2 の実装 f0d4e842f（クラウドの Sonnet）。3 つのファイルの sha256 がカードの値と一致することを、手元の Opus が取り込んだ写しで確かめた。2 本の .sh は 100755 のまま。commit の名義は前回と同じく `Claude`（shingo-cc ではない）。push は前に進めるだけで、書き換えはしていない。
+- 試しの実行: run 41787529283（先頭 f0d4e842f・success・`SURVEY_FAILURES 0`）。
+
+| 完成品 | 組み立て秒 | 走査秒 | 名前の当たり | 除いた数 | 中身の当たり | 履歴の当たり |
+|---|---|---|---|---|---|---|
+| backend | 74 | 20 | 0 | 156 | 0 | 0 |
+| frontend | 97 | 2 | 0 | 120 | 0 | 0 |
+| gemini-egress | 2 | 1 | 0 | 2 | 0 | 0 |
+| gha-exporter | 8 | 3 | 0 | 149 | 0 | 0 |
+| secretary-agent | 22 | 11 | 0 | 1 | 0 | 0 |
+
+- `NAME_HIT_PRIVATE_KEY` は 0 件（除いたファイルに秘密鍵の文字は無かった）。
+- frontend: `KEY_IN_ASSETS 1`・`CONTROL_GCP_HITS 1`。対照の当たりは `CONTROL_LEAK_HIT gcp-api-key usr/share/nginx/html/assets/main-DZhzfcpk.js L33:C86070-86109` の 1 件だけ。
+- U28 は閉じる。E3 (a) は「場所が画面の JS かつ値が `AIza` ＋ 35 文字」のときだけ外す。1 回目の `generic-api-key` の当たりが別の形の値なら、2 回目にも残る。2 回目に 0 件なので、1 回目の当たりは `AIza` の形の値だった。その JS にある `AIza` の形の値は、対照の走査で当たった 1 か所だけ。
+- §25-6 の合格の条件はすべて満たした。§25-3 の 3 は終わり。次は 4（PO の鍵と組織の設定→PR→審査役→合流）。
+
+### 25-8 PO の設定の前に確かめた事実（2026-11-04 Opus）
+
+| 事実 | 根拠 |
+|---|---|
+| 置き場の secret に `VITE_FIREBASE_API_KEY` は無い。`VITE_FUNNEL_DASHBOARD` はある。§23 の「VITE は secret に置く」は「新しく登録する」が正しい | `gh secret list`（名前だけ・2026-11-04 15:5x JST）。FIREBASE を含む名前は QA の 3 つだけ |
+| 置き場の Variables は 0 件。環境（Environment）は github-pages だけで、VITE・GHCR の名前は無い | `gh variable list`・`gh api repos/shingo-ops/salesanchor/environments` |
+| 本番の画面の値: authDomain は `auth.salesanchor.jp`、projectId は `sales-ops-with-claude`、Firebase web API key は 1 種（指紋 sha256 頭 16 字 `ef457eddf9b65693`・値は記録しない） | `https://app.salesanchor.jp/` の公開ファイル `assets/main-CQpfABgR.js` |
+| `VITE_AUTH_PROVIDER` の本番の値は `self` | `.github/workflows/deploy.yml:380` |
+| 組織の画面の手順（Packages → Package Creation・Personal access tokens → Tokens (classic)） | GitHub 公式 2 頁（po-setup-bin1.md 4：の出典） |
+
+- 手順は po-setup-bin1.md に分けた。初回の組み立ての後、完成品の画面の JS の Firebase の鍵の指紋が `ef457eddf9b65693` と一致するかを Opus が確かめる（一致しなければ便2 に進まない）。
+
+### 25-9 便1 の作り直し（r3・2026-11-11 Opus）
+
+- 本線は 2026-11-05 に Firebase を外した（317bfb653）。本線の `frontend/Dockerfile` の ARG は `VITE_FUNNEL_DASHBOARD` だけ（7 行目）、`docker-compose.yml:201` も同じ 1 つだけを渡す。便1 の枝（653cc9847）は Firebase の値 4 つ（secret `VITE_FIREBASE_API_KEY`・Variables `VITE_FIREBASE_AUTH_DOMAIN`／`VITE_GCP_PROJECT_ID`／`VITE_AUTH_PROVIDER`）を求めていた。
+- 置き場に在る名前（2026-11-11 `gh variable list`・`gh secret list` の名前だけ）: Variables は `GHCR_NAMESPACE`・`GHCR_USER`、secret は `GHCR_PUSH_TOKEN`・`VITE_FUNNEL_DASHBOARD`。Firebase の 4 つは登録されていない。
+- 決めたこと:
+  - D1 組み立てが求める値を本線の Dockerfile と同じ 1 つ（`VITE_FUNNEL_DASHBOARD`）にする。Firebase の 4 つの確かめと受け渡しを消す。
+  - D2 `.gitleaks.toml` の Firebase の鍵のための例外（gcp-api-key の場所の例外・generic-api-key の (a)）を消す。C の見出しファイルの例外（(b)）は残す。例外が減るので、走査は今より厳しくなる。
+  - D3 gitleaks の版と sha256 の正本を `.github/workflows/secret-scan.yml`（便0-B3・#5394）の 1 か所にし、`.github/scripts/image-scan.sh` はそこから読む。読めないときは `SCAN error` で止める（黙って別の版で走らない）。secret-scan.yml が変わったら 5 つとも組み直して走査し直す（paths-filter の common に足す）。
+  - D4 §25-8 の「完成品の中の Firebase の鍵の指紋 `ef457eddf9b65693` と比べる」は、鍵がもう載らないので行わない。
+  - D5 番号: 本線に便0 の §24 が先に入ったので、便1 の節は §25 にした（§25 冒頭の注記）。コードの中の `§24` も `§25` に付け替える。
+- 手順書: [card-bin1-r3.md](./card-bin1-r3.md)。確かめ: 試験場 sandbox-test（test=image-scan-survey）で 5 つとも当たり 0（名前・中身・履歴）、`SURVEY_FAILURES 0`。
+
+## 26. 便2 のカードを出す前の直し（v4・2026-11-11 Opus）
+
+§12 便2 は 2026-11-04 の行番号で書いた。その後の本線（26a050a10）で deploy.yml が 1352 行に増え、便1 で build-images.yml ができた。カードは [card-bin2.md](./card-bin2.md)。ここには §12 便2 から変えた点と、その理由だけを書く。目的・範囲・K1〜K8 は変えない。
+
+### 26-1 変えた点（Opus の技術判断）
+1. **組み立ての job を deploy.yml に写さない。** §12 便2 1. は「build job を deploy.yml に移し build-images.yml を消す」だった。代わりに build-images.yml を `on: workflow_call` にし、deploy.yml から `uses: ./.github/workflows/build-images.yml` で呼ぶ。理由: 名前・走査・push の手順の正本を 1 か所（build-images.yml）に保つ。deploy.yml は 1352 行あり、200 行を足すと読む人と抜き出す試験（26-3）の負担が増える。出典（Context7 /websites/github_en_actions・2026-11-11 取得）: 呼ばれる側の github の文脈と event は呼ぶ側のもの／呼ぶ側の workflow の env は渡らない／vars は呼ぶ側の置き場の値が使われる／出力は `on.workflow_call.outputs` で渡す／呼ばれる側の権限は呼ぶ側より下げることしかできない。
+2. **前回の deploy が通っていないときは 5 つ全部を組み立てる（U27）。** paths-filter は push の直前（`github.event.before`）との差しか見ない。前の run の組み立てか deploy が落ちると、その変更を次の run が見落とし、`.env` に古い指紋が残る。deploy.yml の「Check previous deploy completed」（`.github/workflows/deploy.yml:63-79`）と同じ形の判定を build-images.yml の `changes` job に置く。鍵は `github.token`（`actions: read`）。`concurrency` の `queue: max` は使わない（手元の actionlint 1.7.12 が拒む）。
+3. **受け取れなかった指紋を `.env` に残さない。** Step 3 の受け取りか守り（26-1 の 5.）が落ちたら、`.env` の 5 行を控え `.deploy_prev_images.env` の中身に戻してから `exit 1` する。理由: 残すと次の deploy の Step 0 がその行を「1 つ前」として控えに写し、自動の戻し先が受け取っていない完成品になる。
+4. **受け取りは `docker pull` で 5 つの指紋を直接取る。** §12 便2 は `docker compose pull` だった。秘書の compose（`docker-compose.secretary-agent.yml:17-18`）は env_file を必須で読むので、その置き場にファイルが無いと compose が設定を読めず、本体の deploy まで止まる。`docker pull <指紋>` は compose を読まないので、この依存が無い。
+5. **組み立ての残りを機械で止める。** 受け取りの前に `docker compose config --format json` を読み、`build` を持つサービスが 1 つでもあれば `exit 1`（箱に触る前）。これで U5（prod1 に override が在るか）を確かめなくても K1 が守られる。U4 は公式で解けた（Context7 /docker/docs: `COMPOSE_FILE` は `-f` と同じ扱いで、指定があると override を自動で読まない。prod1 の `.env` は COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml・`.github/workflows/deploy.yml:426`）。
+6. **初回の自動の戻し。** §12 便2 は「初回は自動ロールバックで戻せない」としていた。初回は控えが空で、戻り先（`PREV_SHA`）の compose はまだ `build:` の形。この場合は `.env` の 5 行を消して `up -d --no-build` にする。旧 compose は prod1 に残る `astro-webapp-*` の名前の完成品で起きる（便2 は `docker image prune -f` を呼ばなくなり、名前付きの完成品は消さない）。これで初回も戻せる。
+7. **鍵は受け取りの間だけ prod1 に置く。** `docker login` → pull → `trap` で `docker logout ghcr.io`。§23 の PO の決定（受け取りの鍵は GitHub の secret だけに置き、prod1 に残さない）に合わせる。確かめ: deploy の後に `grep -c ghcr.io ~/.docker/config.json` が 0（ファイルが無ければ合格）。
+8. **秘書の段の組み立てを消す。** `.github/workflows/deploy.yml:716` の `docker build` を消し、probe は `.env` の `SECRETARY_AGENT_IMAGE` で流す。
+9. **f2-cleanup.sh は範囲外。** `scripts/f2-cleanup.sh:34` の `docker buildx prune` は組み立てではない。§12 便2 17. の確かめの正規表現が拾わない形にする（カード §4）。
+
+### 26-2 未確認と扱い
+- U15（prod1 の docker compose の版）: pull-images.sh が最初に `docker compose version` を出す。受け取りで落ちても箱に触る前なので安全（26-1 の 3.）。
+- U30（新）: 指紋だけで取った完成品が `docker image prune -f` で消えるか。便2 は prune を呼ばないので結論に依らない。便3 で builder prune を消すときに測る。
+- U31（新）: 呼ばれる側の workflow の出力が、中の job が skip されたとき空になるか。公式は「出力は job の出力を写す」とだけ書く。空でなくても Step 2 の形の検査（`ghcr.io/…@sha256:` の 64 桁）で止まるので安全側。便2 の最初の run で確かめる。
+
+### 26-3 抜き出す試験への影響（見落とすと CI が赤）
+- `scripts/tests/test-deploy-nginx-recreate-guard.sh:27` は deploy.yml の全 job の `steps` を `j["steps"]` で読む。`uses:` の job には `steps` が無いので KeyError で落ちる。`j.get("steps", [])` に直す（`.github/workflows/backup-script-test.yml` が流す）。
+- `scripts/tests/test-deploy-orphan-cleanup.sh:104-105` は `job.get("steps") or []` なので直さない。
+- `scripts/rehearsal_phase2.sh:75` は `wf['jobs']['deploy']['steps']` を読む。deploy の job 名は変えないので直さない。
+
+### 26-4 審査（Opus 自己審査・2026-11-11）
+判定: カード発行に進む。根拠: 26-1 の 1.〜9. は §12 便2 の目的と K1〜K8 を変えず、公式の出典（Context7）と実物の行番号で裏付けた。未確認の U15・U30・U31 は、どれも落ちたとき箱に触る前に止まる。独立した第二者の審査ではないので、クラウドで設計審査を 1 回行ってから実装に渡す。
+
+### 26-5 クラウドの設計審査 1 回目（2026-11-11・architect opus）と直し（カード v2）
+判定: REVISE。行番号はすべて実物と一致、`uses:` の切替・secrets・trap の形は可、とされた。指摘と扱い:
+- N1（必須）: 2-2 の 4. の 5 行の検査で `exit 1` するとき、`.env` を控えに戻していなかった（§26-1 3. に反する）。→ `exit 1` の前に 2-2 の 5. と同じ戻しを足した。試験 T9 を足した。
+- N2（必須）: `scripts/rehearsal_phase2.sh:90` は `steps.changes` しか置き換えず、Finalize（`.github/workflows/deploy.yml:922`）の `steps.gate` が残って bash が落ちる。便2 の前からある不具合だが、カードの「リハーサルが緑」が通らない。Opus も 90 行目と 922 行目を読んで確かめた（v4 までは 92 行目と誤記。マージ前の審査で見つかり直した・§26-7）。→ 2-7 の 2. に `steps.gate` の置き換えと SUBSTITUTIONS の直しを足した。
+- N3: 2-2 の 5. の範囲は 470-492（492 行目が `fi`、493 行目からは blue-green の注記）。→ 直した。
+- N4: `.github/workflows/deploy-script-test.yml` の paths に deploy.yml が無く、deploy.yml だけを変えた PR で T7 が流れない。→ 両方の paths に足した。
+- N5: K1 の確かめを行番号で書いていた（実装で行がずれる）。`tests/sandbox/image-scan-survey.sh` は注記の行も当たる。→ 「ファイル＋文字列」の組で書き直した。
+- N6: rollback-images.sh に秘書の起動・`/api/health` の確かめ・所要秒（K6）が無かった（§9-2 との食い違い）。→ 足した。試験 T8 を足した。
+- N7（推奨）: 受け取りは通ったが Step 3b の切替が落ちたとき、`.env` に動かしていない指紋が残る。→ v2 では直さず受け入れた（下の理由）。2 回目の審査でこの理由が実物と合わないと分かり、v3 で直した（§26-6 M1）。v2 の理由（取り下げ）: (1) 今の形でも Step 3 の組み立てがローカルの `astro-webapp-backend` を上書きした後で Step 3b が落ちると、同じく動かしていない完成品が残る（便2 で増える危険ではない）。(2) 残る指紋は GitHub で組み立てて走査を通し、prod1 に受け取り済みの完成品なので、起動できない物ではない。(3) Finalize は `if: always()` で走り（`.github/workflows/deploy.yml:907`）、健康確認が落ちれば控えに戻す。(4) 次の main への push で上書きされる。
+判定（Opus）: N1〜N6 を直したので、クラウドで再審査を 1 回行う。
+
+### 26-6 クラウドの設計審査 2 回目（2026-11-11・architect opus）と直し（カード v3）
+判定: REVISE。N1〜N6 は直った。N7 の受け入れ理由が実物と合わない、とされた。Opus も実物を読んで確かめた。
+- M1（必須）: `scripts/blue-green-cutover.sh:130-134` は green が健康にならないと「旧 backend は接客継続中」と出して `exit 1` する。このとき動いているのは旧 backend なので、Finalize の健康確認（`.github/workflows/deploy.yml:933`）は通り、控えへの戻しは起きない。§26-5 の N7 の理由(2)(3) は成り立たない。→ カード 2-2 の 5b. で、498 行目の切替が落ちたら `.env` を控えに戻して `exit 1` する。試験 T9 に足した。
+- M2: rollback-images.sh の秘書の起動に、`.github/workflows/deploy.yml:727-732` の「env が読めるか」の確認と `|| echo ::warning` が無かった。→ 同じ形にした（試験で置き場を差し替えられるよう `SECRETARY_ENV_FILE`）。
+- M3: 健康確認の繰り返しは `if docker exec …; then` の形と明記した（`set -e` の下で `$?` で受けると 1 回目の失敗で止まる）。
+- M4: 戻しに `.github/workflows/deploy.yml:514-519` の celery-worker の `stop -t 60` と、discord-gateway などを先に消す手順が無かった。→ 同じ順で入れた。
+判定（Opus）: M1〜M4 を直したので、クラウドで 3 回目の審査を行う。
+
+### 26-7 クラウドの設計審査 3 回目（2026-11-11・architect opus）と直し（カード v4）
+判定: APPROVE。M1〜M4 は直った。5b. は `if !` の形なので `set -e`（`.github/workflows/deploy.yml:279`）の下でも正しく動く。`scripts/blue-green-cutover.sh` が失敗で終わるのは :140 の `set +e` より前（旧 backend が動いている間）だけ、とされた。推奨の指摘と扱い（Opus が実物を読んで確かめた）:
+- P1（推奨・受け入れ）: 通常の deploy（`.github/workflows/deploy.yml:520`・`:523`）は gha-exporter を起こさない。起こすのは Finalize の戻しの `docker compose up -d --remove-orphans`（:979）だけ。そのため `GHA_EXPORTER_IMAGE` は起動していない指紋のまま `.env` に残る。理由: 今も gha-exporter は組み立てだけして起こしておらず、便2 で変わらない。残る指紋は Step 3 で受け取り済みなので、控えに写っても戻し先は prod1 に在る。起こし方を変えるのは別の変更とする（一度に 1 つ）。
+- P2（推奨・受け入れ）: :520 が落ちると `set -e` で止まり、frontend などは起動していない指紋が `.env` に残る。理由: 今も同じ場所で止まる。残る指紋は受け取り済みで、§26-1 3. の守る対象（受け取っていない指紋を残さない）には当たらない。backend は新しい指紋で健康なので、Finalize の戻しは起きない。
+- P3（推奨・直した）: T8 に「1 回目の健康確認が落ち、2 回目で通る → 終了 0」を足した。待ち秒は `ROLLBACK_HC_SLEEP` で差し替える。
+- P4（推奨・直した）: 秘書の旗の順を :731 と同じ `--force-recreate --no-build` にした。T8 は旗の順を数えない形にした。
+- P5（推奨・直した）: §9-2 の頭に、便2 の正本はカードと §26 だと書いた。
+- P6（推奨・直した）: §26-5 N7 の「理由:」の重なりを消した。
+- マージ前の審査（reviewer opus・head 4bf2244b4）で REVISE: カード 2-7 の 2. と §26-5 N2 が `scripts/rehearsal_phase2.sh` の置き換える行を 92 行目と書いていたが、実物は 90 行目（92 行目は一時ファイルへ書き出す `printf`）。カードのとおりに置き換えるとリハーサルの仕組みが壊れる。Opus が実物の 84-95 行目を読んで確かめ、90 行目に直した。
+判定（Opus）: 必須の指摘は無い。直したのは書き方と試験の足しだけで、手順は変えていない。カード発行に進む（実装には PO の明示の実装承認が要る）。

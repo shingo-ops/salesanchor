@@ -67,3 +67,19 @@ regex = '''META_APP_SECRET\s*=\s*[a-f0-9]{32,}'''
 tags = ["secret", "meta"]
 [rules.allowlist]
 paths = [".env.example"]
+
+# =============================================================
+# build-on-github 便1（docs/handoff/build-on-github/design.md §25-6 E3・§25-9）
+# 既定の規則 generic-api-key を名前で広げ、OS と言語の配布物の C の見出しファイルだけを例外にする。規則は外さない。
+# アプリのファイルはここに入らない（5 つの Dockerfile の COPY の先）。この場所は置き場に無いので、置き場の走査（secret-scan.yml）の結果は変わらない。
+# Firebase の web API key の例外は、本線が Firebase を外した（2026-11-05）ので消した。
+# =============================================================
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "OS と言語の配布物の C の見出しファイル"
+paths = [
+  '''(^|/)usr/(local/)?include/.+\.h$''',
+  '''(^|/)usr/lib/[^/]+/perl/[^/]+/CORE/.+\.h$''',
+]

@@ -284,7 +284,10 @@
     "discordConfig": "Discord Integration",
     "discordAnnounce": "Discord Announce",
     "superAdminFxRate": "FX Rate Management",
-    "superAdminViewers": "Viewer Management",
+    "superAdminViewers": "User Management",
+    "superAdminSettings": "Global Settings",
+    "superAdminTaxRates": "Tax Rates",
+    "superAdminSaProducts": "Products & Plans",
     "superAdminViewerTemplates": "Viewer Templates",
     "superAdminTcgLineImport": "Import",
     "superAdminTcgDistribution": "Distribution Targets",
@@ -2637,6 +2640,13 @@
     }
   },
   "superAdmin": {
+    "settings": {
+      "groupMoney": "Pricing",
+      "comingSoon": "This page is coming soon."
+    },
+    "users": {
+      "groupViewers": "Viewers"
+    },
     "loginRequests": {
       "subtitle": "Sign-in requests from people with neither a usual device nor a recovery code. Verify identity before approving.",
       "colUser": "Name",
@@ -2869,7 +2879,7 @@
     },
     "viewerTemplates": {
       "subtitle": "Messages sent to viewers. Click a row to check the text and copy it.",
-      "backToViewers": "Back to Viewer Management",
+      "backToViewers": "Back to User Management",
       "detailTitle": "Template details",
       "colName": "Name",
       "colSendMode": "How it is sent",
@@ -3352,6 +3362,7 @@
     "meetPending": "Google Meet video conferencing (the join link is created when you save)",
     "removeMeet": "Remove Google Meet",
     "fullEditLabel": "Edit event",
+    "rangeSeparator": "–",
     "joinMeet": "Join with Google Meet",
     "meetFailed": "Couldn't add Google Meet",
     "shortcuts": {

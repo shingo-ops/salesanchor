@@ -14,6 +14,7 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import { HeaderButton } from "../../components/HeaderButton";
 import { TextField } from "../../components/TextField";
 import { LoadingBlock } from "../../components/loading";
+import { settingsMasterPath } from "./settings/settingsNav";
 
 interface PreviewResponse {
   digest: string;
@@ -135,8 +136,8 @@ export default function ProductCategoriesImportPage() {
   const { isSuperAdmin, loading } = useSuperAdmin();
   return (
     <PageLayout titleText={t("productCategoriesCsv.importTitle")}>
-      {loading ? <LoadingBlock /> : !isSuperAdmin ? <p role="alert">{t("productCsv.denied")}</p> : <ProductCategoriesImportPanel onDone={() => navigate("/super-admin/analysis-rules")} />}
-      {!loading && !isSuperAdmin && <HeaderButton variant="secondary" onClick={() => navigate("/super-admin/analysis-rules")}>{t("productCategoriesCsv.backToList")}</HeaderButton>}
+      {loading ? <LoadingBlock /> : !isSuperAdmin ? <p role="alert">{t("productCsv.denied")}</p> : <ProductCategoriesImportPanel onDone={() => navigate(settingsMasterPath("product-categories-master"))} />}
+      {!loading && !isSuperAdmin && <HeaderButton variant="secondary" onClick={() => navigate(settingsMasterPath("product-categories-master"))}>{t("productCategoriesCsv.backToList")}</HeaderButton>}
     </PageLayout>
   );
 }
