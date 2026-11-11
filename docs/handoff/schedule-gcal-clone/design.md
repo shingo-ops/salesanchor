@@ -139,7 +139,7 @@ PO 2026-11-11 の言葉: 「予定の詳細画面だけどGoogleカレンダー�
 |---|---|---|---|
 | G58 | 作る小窓の「その他のオプション」と、詳しくの小窓の「直す」（鉛筆の絵と下の「予定を編集」のボタンの両方）の 2 か所から、同じ編集画面が開く。直すときは今の予定の題名・日時・種類・場所・説明が入っている。編集画面の × か Esc で、作るときは作る小窓に戻り（今と同じ）、直すときはカレンダーに戻る（小窓は閉じる）。どちらも何も送らない | 本番の週で自分の予定を押し、「直す」を押す→編集画面の題名がその予定の題名・× で閉じると小窓が 0 個（保存しない）。単体の試験で、直すから開いて × と Esc で閉じる間の PATCH・POST が 0 回・閉じた後 `.schedule-popover` が 0 個 | R14-1・R14-4 |
 | G59 | 直すときの「保存」は今と同じ PATCH を送る（同じ関数）。うまくいくと編集画面が閉じて予定が直る。失敗すると編集画面は開いたままで失敗の文が中に出る。小窓の中で直す形（入力欄に変わる小窓）は無くなる | 単体の試験（今の「直す」の試験 T7・社員にも見せる・Meet の試験を編集画面で通す。PATCH の宛先が数字の番号）。小窓の中に `schedule.editEvent` の見出しの入力欄の形が 0 個 | R14-4 |
-| G60 | 中身が左に寄る。× は左上（真ん中が x52±4・Google 実測 x32 幅 40）、題名の欄は x80±4 から幅 594±8・24px、保存はその右（左端 x706±8）。日時の段は題名の下（1 段目の上端 y92±8）で x80±4 から。白い札は x16±4・幅 636±8・角 28px で、札の頭に「予定の詳細」。札の中の絵の真ん中は x48±4・欄の左端は x80±4・場所の欄の幅 556±8 | 本番の窓 1279×1448 で `getBoundingClientRect` を読み、Google の実測（recon §8.1）と並べた表を残す。目で並べた写しも残す | R14-1・R14-3 |
+| G60 | 中身が左に寄る。× は左上（左端 x32±4・真ん中 x52±4・Google 実測 x32 幅 40）、題名の欄は x80±4 から幅 594±8・24px、保存はその右（左端 x706±8）。日時の段は題名の下（1 段目の上端 y92±8）で x80±4 から、始まりの日・始まりの時刻・「〜」・終わりの時刻・終わりの日の 5 つが同じ 1 段に並ぶ（5 つの上端の差が 4 以内）。白い札は x16±4・幅 636±8・角 28px で、札の頭に「予定の詳細」。札の中の絵の真ん中は x48±4・欄の左端は x80±4・場所の欄の幅 556±8 | 本番の窓 1279×1448 で `getBoundingClientRect` を読み、Google の実測（recon §8.1）と並べた表を残す。目で並べた写しも残す | R14-1・R14-3 |
 | G61 | 入力欄・選ぶ欄は Google と同じ形: 高さ 40px・角 4px・枠なし・塗りの地・左右余白 16px・14px 前後の文字（日時 4 つ・種類・場所・説明）。題名の欄は枠なしで下線だけ。欄の上の「開始日時」などの文字は出さず、読み上げの名前（aria-label）で持つ。終日は切り替えではなくチェック欄（金型 Checkbox） | 本番で `getComputedStyle` を読む: 高さ 40・`border-radius` 4px・`border-top-width` 0・`background-color` が新しいトークン `--comp-input-filled-bg` の値・`padding-left` 16px。`role="switch"` で名前が「終日」のものが 0 個・`role="checkbox"` で名前が「終日」のものが 1 個 | R14-2・R14-3 |
 | G62 | 並び: 日時の段（始まりの日・始まりの時刻・〜・終わりの時刻・終わりの日。終日なら時刻が消える）→終日→札（予定の詳細）の中に Meet・場所・種類・社員にも見せる・説明。項目は今から 1 つも減らない（Meet はつないだ本人だけ・社員にも見せるは変えてよい人だけ、今と同じ） | 単体の試験で順番を DOM の並びで確かめる。本番で目で見る | R14-1 |
 | G63 | 暗い表示でも同じ並びで、色はトークンだけ。スマホの幅（390）でも横にはみ出さない。英語の画面でも文字が t() から出る | 本番で暗い表示に切り替えて地・札・塗りの欄の色がトークンの暗い値と一致。窓 390×844 で `document.documentElement.scrollWidth <= 390`。CI の「Lint & Dark Mode Check」と i18n の検査が緑 | R14-3 |
@@ -805,11 +805,11 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
    - `openEdit`（`:975-982`）の最後で `setError(null)` と `setFullEditOpen(true)`。
    - 編集画面を開く条件（`:1588`）を `fullEditOpen && (popover?.mode === "create" || popover?.mode === "edit")` に。閉じる useEffect（`:1132-1134`）は `popover === null || popover.mode === "detail"` のときに閉じる。
    - 閉じる（`:1591`）: 作るときは今と同じ（小窓に戻る）。直すときは `setPopover(null)` も（カレンダーに戻る）。
-   - 小窓の中の直す形（`:394-404` の文字つきの題名・`:432-440` の下の段）を消す。小窓は「作る」と「詳しく」の 2 つだけになる（`:311` の見出しは「予定の詳細」だけに）。
+   - 小窓の中の直す形（`:394-406` の文字つきの題名・`:432-440` の下の段）を消す。小窓は「作る」と「詳しく」の 2 つだけになる（`:311` の見出しは「予定の詳細」だけに）。
 6. 守り手（CI の試験）を足す。
    - `frontend/src/components/buttonShapeUsage.test.ts` の使ってよい場所に `components/EditorPage.tsx` と `components/EditorPage.stories.tsx`・`components/EditorPage.test.tsx` を足す（画面のファイルには足さない）。
    - 新しい `frontend/src/components/editorVariantUsage.test.ts`: `"editor-filled"`・`"editor-title"` の文字が、金型 3 つ（TextField・Select・Textarea）とその見本帳・試験、`components/EditorPage.*`、`pages/schedule/ScheduleDraftFields.tsx`・`pages/schedule/ScheduleFullEditor.tsx`、`pages/design-preview/` の外の tsx に 0 件。
-   - 決まりの文書 `docs/specs/design-system/design.md:262,276,811` に例外の 1 文（ADR-1074 を指す）。
+   - 決まりの文書 `docs/specs/design-system/design.md:260,276,537,1115,811` に例外の 1 文（ADR-1074 を指す）。
 7. 文言: 新しいキーは 1 つだけ `schedule.rangeSeparator`（ja「〜」・en「–」。日時の段の始まりと終わりの間の文字。`aria-hidden`。2026-11-11 に ja.json を探して同じ働きのキーが無いことを確かめた）。ほかは既存のキー（`schedule.eventDetail`・`schedule.fullEditLabel`・`schedule.allDay` など）を使う。日時 4 つの欄の読み上げの名前は、今の欄の上の文字と同じキーを `aria-label` に渡す。
 8. 触らない範囲: 裏側・DB・移行・deploy・scripts・Google の権限・本番の点検 S13。詳しくの小窓の中身（直す形を消すだけ）・作る小窓の見た目。招待する人・通知・繰り返し・タイムゾーン・「時間を探す」のタブ・説明の飾りの帯（Google に在るがアプリに機能が無い）。
 
@@ -1108,3 +1108,16 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - 2 回目の直す 1 は ○: G51（`:123`）と §3.18 の試験（`:738`）が同じ書き方。今の切り替えの名前は ja「Google Meet を付ける」・en "Add Google Meet"（どちらも `frontend/src/locales/ja.json:3351`・`frontend/src/locales/en.json:3351`）で、今は ×・直した後は ○ になり判定できる。終日（`:449`）・社員にも見せる（`:559`）の切り替えは当たらない。
 - 263889d6 から 5dc69e7 までに予定の画面と言葉の表の差は無し。
 - 未確認: 試験そのものは流していない（読むだけの役）。実装の CI で確かめる。
+
+### 17 回目（便14・G58〜G64）: 1 回目 REVISE（2026-11-11 03:56〜04:02 UTC・クラウドの Opus・origin/release/schedule-gcal-editor-page 3ff046d37・セッション cse_01HHUUpTA8twprbc7uYpw2mz）
+- 審査役はカードの CSS とトークンを写しに当てて Chromium で測り、stylelint と色・暗い表示の点検を流した。
+- 直したこと:
+  - (1) 重: 日時の 4 つの欄が共通の `width: 100%`（`frontend/src/components/FormField.css:50`）で 4 段に積まれ G60 を満たさない → カード §3 に日付と時刻の `editor-filled` だけ `width: auto` の規則を足した。G60 に「5 つが同じ 1 段（上端の差 4 以内）」を足した。
+  - (2) 重: `editorVariantUsage.test.ts` が金型 `EditorPage.tsx` の説明の文に当たって落ちる・§3.19 と §8 の食い違い → カード §8 の使ってよい場所に `components/EditorPage.tsx` を足した。
+  - (3) 中: × の真ん中が x48 で G60 の x52±4 のぎりぎり → × を列の中で左に寄せ、列の左に `--space-4` の余白（左端 x32 は Google と同じ・真ん中 x50）。G60 に左端 x32±4 を足した。
+  - (4) 中: 日時の段の上端が y76 で G60 の y92±8 の外 → 札の上の余白を `--space-8` に（20＋40＋32＝92）。
+  - (5) 中: 丸いボタンはログインだけと書いた場所は `docs/specs/design-system/design.md:260`・`:276`・`:537`・`:1115`（`:262` はトグルの行）。`frontend/src/components/Button.tsx:29` の説明も古くなる → 例外の 1 文の置き場所と Button の説明 2 行を直した。
+  - (6) 軽: 行番号のずれ（FullScreenDialog の useEffect は `:49-79` の 3 つ・Button の口は `:30`・`tokens.css` は `:415`・`--radius-sm` は `:96`・予定の画面の題名の枝は `:394-406`・`schedule.css` は説明を含め `:528-537`）を直した。
+  - (7) 軽: 新しい試験の名前 H1〜H5 が祝日の試験（`SchedulePageImpl.test.tsx:1037`・`:1048`・`:1057`）とぶつかる → EP1〜EP5 に。
+  - (8) 軽: Checkbox の `onChange` は出来事を受け取り、Toggle は真偽を受け取る（`frontend/src/components/Checkbox.tsx:25-26`・`frontend/src/pages/schedule/ScheduleDraftFields.tsx:121-126`）→ カード §4 に `event.target.checked` から読む式を書いた。
+- 審査役の最後の文は 8 件目の途中で切れていた。残りは 2 回目の審査で全部書いてもらう。
