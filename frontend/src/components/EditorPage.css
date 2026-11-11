@@ -1,0 +1,124 @@
+/**
+ * EditorPage 金型スタイル
+ * 名前空間: .comp-editor-page-*
+ * ADR-067: 色・寸法は var() のみ。寸法は Google の予定の編集画面の実測（schedule-gcal-clone recon §8.1）に合わせる
+ */
+
+.comp-editor-page {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  overflow-y: auto;
+}
+
+.comp-editor-page__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-5) var(--space-4) 0 var(--space-4);
+}
+
+.comp-editor-page__rail {
+  display: flex;
+  justify-content: flex-start;
+  box-sizing: border-box;
+  width: var(--comp-editor-rail-w);
+  padding-left: var(--space-4);
+  margin-right: calc(-1 * var(--space-8));
+  flex-shrink: 0;
+}
+
+.comp-editor-page__title {
+  flex: 0 1 var(--comp-editor-title-w);
+  min-width: 0;
+}
+
+.comp-editor-page__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-8) var(--space-4) var(--space-8) var(--space-4);
+}
+
+.comp-editor-page__lead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: var(--comp-editor-rail-w);
+  box-sizing: border-box;
+}
+
+.comp-editor-page__card {
+  width: min(var(--comp-editor-main-w), 100%);
+  box-sizing: border-box;
+  padding: var(--space-1) 0 var(--space-4) 0;
+  border-radius: var(--comp-editor-card-radius);
+  background: var(--bg-surface);
+}
+
+.comp-editor-page__card-head {
+  display: flex;
+  align-items: center;
+  min-height: var(--space-12);
+  padding-left: var(--comp-editor-rail-w);
+}
+
+.comp-editor-page__card-title {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--space-12);
+  border-bottom: 2px solid var(--accent);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--accent);
+}
+
+.comp-editor-page__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-right: var(--space-4);
+}
+
+.comp-editor-page__row {
+  display: flex;
+  align-items: flex-start;
+}
+
+.comp-editor-page__row-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--comp-editor-rail-w);
+  min-height: var(--space-10);
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.comp-editor-page__row-body {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .comp-editor-page__header {
+    gap: var(--space-2);
+  }
+
+  .comp-editor-page__rail {
+    margin-right: 0;
+    width: auto;
+  }
+
+  .comp-editor-page__title {
+    flex: 1 1 auto;
+  }
+
+  .comp-editor-page__lead {
+    padding-left: 0;
+  }
+}

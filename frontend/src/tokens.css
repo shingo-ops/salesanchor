@@ -411,8 +411,14 @@
   --schedule-create-popover-width:  37.5rem;  /* 作る小窓の幅（600px・Google の実測 598px・G42） */
   --schedule-create-popover-radius: 1.75rem;  /* 作る小窓の角の丸み（28px・G42） */
   --schedule-create-popover-bg:     var(--bg-subtle); /* 作る小窓の地（G42） */
+  --schedule-popover-bg:            var(--bg-surface); /* 詳しくの小窓の地（予定の画面の範囲の札の中で Google の色・ADR-1074） */
+  --schedule-today-text:            var(--on-solid);   /* 今日の丸の文字（予定の画面の範囲の札の中で Google の色・ADR-1074） */
   --schedule-create-icon-col:       2.75rem;  /* 作る小窓の絵の列の幅（絵 20px＋あき 24px・G42） */
   --schedule-create-title-size:     1.375rem; /* 作る小窓の題名の文字（22px・G42） */
+  --comp-editor-rail-w:      4rem;     /* 編集の画面の絵の列の幅（64px・Google 実測: 札の中の絵の真ん中 x48・欄 x80・ADR-1074） */
+  --comp-editor-title-w:     37.125rem; /* 編集の画面の題名の欄の幅（594px・Google 実測） */
+  --comp-editor-main-w:      39.75rem; /* 編集の画面の札の幅（636px・Google 実測） */
+  --comp-editor-card-radius: 1.75rem;  /* 編集の画面の札の角（28px・Google 実測） */
   --schedule-month-cell-min-h: 7.5rem; /* 月ビューのセル最小高 */
   --schedule-month-dot-size: 8px;      /* 月ビュー・一覧の担当者色の丸 */
   --schedule-month-daynum-size: 24px;  /* 月ビューの日付の丸（今日の丸・Google の実測 24px） */
@@ -684,4 +690,35 @@
   --color-success-border: rgba(34, 197, 94, 0.4);
   --color-warning-bg:     rgba(251, 191, 36, 0.12);
   --color-warning-border: rgba(251, 191, 36, 0.4);
+}
+
+/* ---- 予定の画面だけ Google カレンダーの色にする範囲（ADR-1074・design §3.20） ----
+   付ける場所は SchedulePageImpl の根と金型 EditorPage の根だけ（gcalColorsUsage.test.ts が止める）。
+   :root で var() から作ったトークンは :root で値が決まるので、使うものはここで決め直す。 */
+.gcal-colors {
+  --bg-primary: var(--gcal-surface);
+  --bg-surface: var(--gcal-surface-lowest);
+  --bg-subtle: var(--gcal-surface-container);
+  --text-primary: var(--gcal-on-surface);
+  --text-secondary: var(--gcal-on-surface-variant);
+  --text-muted: var(--gcal-on-surface-variant);
+  --role-page-title-color: var(--gcal-on-surface);
+  --border: var(--gcal-outline-variant);
+  --accent: var(--gcal-primary);
+  --accent-hover: var(--gcal-primary);
+  --on-accent: var(--gcal-on-primary);
+  --link-active-bg: var(--gcal-secondary-container);
+  --comp-btn-primary-text: var(--gcal-on-primary);
+  --comp-btn-primary-hover-bg: var(--gcal-primary);
+  --comp-btn-tab-selected-text: var(--gcal-on-secondary-container);
+  --comp-btn-focus-color: var(--gcal-on-surface);
+  --icon-empty: var(--gcal-on-surface-variant);
+  --indicator: var(--gcal-primary);
+  --comp-badge-count-ring-color: var(--gcal-surface-lowest);
+  --schedule-today: var(--gcal-primary);
+  --schedule-today-text: var(--gcal-on-primary);
+  --schedule-gridline: var(--gcal-gridline);
+  --schedule-now-line: var(--gcal-now);
+  --schedule-create-popover-bg: var(--gcal-surface-container);
+  --schedule-popover-bg: var(--gcal-surface-container);
 }

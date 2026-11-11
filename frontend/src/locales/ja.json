@@ -3352,6 +3352,7 @@
     "meetPending": "Google Meet のビデオ会議（保存すると参加用のリンクができます）",
     "removeMeet": "Google Meet を外す",
     "fullEditLabel": "予定の編集",
+    "rangeSeparator": "〜",
     "joinMeet": "Google Meet で参加",
     "meetFailed": "Google Meet を付けられませんでした",
     "shortcuts": {

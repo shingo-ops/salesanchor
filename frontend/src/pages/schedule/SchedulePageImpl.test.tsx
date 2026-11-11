@@ -8,6 +8,9 @@ import SchedulePage from "./SchedulePageImpl";
 import { formatTimeRange } from "../../components/calendarView.utils";
 import { formatDateInput, formatDayLabel, formatDraftDateLine, formatTimeInput, getWeekDays } from "./schedule-utils";
 
+/** 編集の画面（金型 EditorPage の dialog・名前は予定の編集） */
+const editorDialog = () => screen.findByRole("dialog", { name: i18n.t("schedule.fullEditLabel") });
+
 vi.mock("../../contexts/AuthContext", () => ({
   useAuth: () => ({ user: { uid: "user-a" } }),
 }));
@@ -173,8 +176,9 @@ describe("SchedulePage share-with-staff toggle", () => {
     view();
     fireEvent.click(await screen.findByText("Own Event"));
     fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
-    expect(await screen.findByRole("switch", { name: label() })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+    const dialog = await editorDialog();
+    expect(await within(dialog).findByRole("switch", { name: label() })).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
     await waitFor(() => expect(api.patch).toHaveBeenCalled());
     const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
     expect(body.calendar_type).toBe("shared");
@@ -187,9 +191,10 @@ describe("SchedulePage share-with-staff toggle", () => {
     fireEvent.click(await screen.findByRole("checkbox", { name: "Owner Other" }));
     fireEvent.click(await screen.findByText("Other Event"));
     fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
-    await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
-    expect(screen.queryByRole("switch", { name: label() })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+    const dialog = await editorDialog();
+    await within(dialog).findByLabelText(i18n.t("schedule.eventTitle"));
+    expect(within(dialog).queryByRole("switch", { name: label() })).toBeNull();
+    fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
     await waitFor(() => expect(api.patch).toHaveBeenCalled());
     const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
     expect("calendar_type" in body).toBe(false);
@@ -514,10 +519,11 @@ describe("SchedulePage Google Meet (K12)", () => {
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toBe("noopener noreferrer");
     fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
-    await screen.findByLabelText(i18n.t("schedule.eventTitle"));
-    expect(screen.queryByRole("button", { name: addMeetLabel() })).toBeNull();
-    expect(screen.getByRole("link", { name: joinLabel() })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+    const dialog = await editorDialog();
+    await within(dialog).findByLabelText(i18n.t("schedule.eventTitle"));
+    expect(within(dialog).queryByRole("button", { name: addMeetLabel() })).toBeNull();
+    expect(within(dialog).getByRole("link", { name: joinLabel() })).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
     await waitFor(() => expect(api.patch).toHaveBeenCalled());
     const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
     expect("add_meet" in body).toBe(false);
@@ -529,9 +535,10 @@ describe("SchedulePage Google Meet (K12)", () => {
     view();
     fireEvent.click(await screen.findByText("Own Event"));
     fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
-    fireEvent.click(await screen.findByRole("button", { name: addMeetLabel() }));
+    const dialog = await editorDialog();
+    fireEvent.click(await within(dialog).findByRole("button", { name: addMeetLabel() }));
     vi.mocked(api.patch).mockResolvedValueOnce({ id: 1, meet_url: MEET });
-    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+    fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
     await waitFor(() => expect(api.patch).toHaveBeenCalled());
     expect((vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>).add_meet).toBe(true);
   });
@@ -542,8 +549,9 @@ describe("SchedulePage Google Meet (K12)", () => {
     view();
     fireEvent.click(await screen.findByText("Own Event"));
     fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
-    await screen.findByLabelText(i18n.t("schedule.eventTitle"));
-    expect(screen.queryByRole("button", { name: addMeetLabel() })).toBeNull();
+    const dialog = await editorDialog();
+    await within(dialog).findByLabelText(i18n.t("schedule.eventTitle"));
+    expect(within(dialog).queryByRole("button", { name: addMeetLabel() })).toBeNull();
   });
 
   it("does not show a join link for a URL outside meet.google.com", async () => {
@@ -583,7 +591,8 @@ describe("SchedulePage Google Meet (K12)", () => {
     await waitFor(() => expect(screen.queryByLabelText(i18n.t("schedule.eventTitle"))).toBeNull());
     fireEvent.click(await screen.findByText("Own Event"));
     fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
-    await screen.findByRole("button", { name: addMeetLabel() });
+    const editDialog = await editorDialog();
+    await within(editDialog).findByRole("button", { name: addMeetLabel() });
     expect(screen.queryByRole("switch", { name: /Google Meet/ })).toBeNull();
   });
 });
@@ -767,9 +776,10 @@ describe("SchedulePage on CalendarView", () => {
       fireEvent.click(screen.getByRole("button", { name: i18n.t("schedule.moreOptions") }));
       const dialog = await screen.findByRole("dialog", { name: i18n.t("schedule.fullEditLabel") });
       expect((within(dialog).getByLabelText(i18n.t("schedule.eventTitle")) as HTMLInputElement).value).toBe("試し");
-      const times = within(dialog).getAllByLabelText(i18n.t("schedule.time")) as HTMLInputElement[];
-      expect(times[0].value).toBe("10:00");
-      expect(times[1].value).toBe("11:00");
+      const startTime = within(dialog).getByLabelText(`${i18n.t("schedule.eventStart")} ${i18n.t("schedule.time")}`) as HTMLInputElement;
+      const endTime = within(dialog).getByLabelText(`${i18n.t("schedule.eventEnd")} ${i18n.t("schedule.time")}`) as HTMLInputElement;
+      expect(startTime.value).toBe("10:00");
+      expect(endTime.value).toBe("11:00");
       expect((within(dialog).getAllByDisplayValue("2026-11-10") as HTMLInputElement[]).length).toBeGreaterThan(0);
       expect(within(dialog).getByPlaceholderText(i18n.t("schedule.locationPlaceholder"))).toBeTruthy();
       expect(within(dialog).getByPlaceholderText(i18n.t("schedule.descriptionPlaceholder"))).toBeTruthy();
@@ -882,6 +892,94 @@ describe("SchedulePage on CalendarView", () => {
       await openFull();
       fireEvent.keyDown(document, { key: "Escape", isComposing: true });
       expect(screen.getByRole("dialog", { name: i18n.t("schedule.fullEditLabel") })).toBeTruthy();
+    });
+  });
+
+  describe("SchedulePage edit page (EP1-EP6)", () => {
+    const openEdit = async (events: Array<Record<string, unknown>> = [apiEvent({})]) => {
+      answers.events = events;
+      view();
+      fireEvent.click(await screen.findByText("Own Event"));
+      fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
+      return editorDialog();
+    };
+
+    it("EP1: editing opens the dialog with the event title and no small popover", async () => {
+      const dialog = await openEdit();
+      expect((within(dialog).getByLabelText(i18n.t("schedule.eventTitle")) as HTMLInputElement).value).toBe("Own Event");
+      expect(document.querySelector(".schedule-popover")).toBeNull();
+    });
+
+    it("EP2: closing with the close button or Escape leaves no dialog, no popover and no save call", async () => {
+      const dialog = await openEdit();
+      fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.close") }));
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: i18n.t("schedule.fullEditLabel") })).toBeNull());
+      expect(document.querySelector(".schedule-popover")).toBeNull();
+      expect(api.patch).not.toHaveBeenCalled();
+      expect(api.post).not.toHaveBeenCalled();
+
+      fireEvent.click(await screen.findByText("Own Event"));
+      fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
+      await editorDialog();
+      fireEvent.keyDown(document, { key: "Escape" });
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: i18n.t("schedule.fullEditLabel") })).toBeNull());
+      expect(document.querySelector(".schedule-popover")).toBeNull();
+      expect(api.patch).not.toHaveBeenCalled();
+      expect(api.post).not.toHaveBeenCalled();
+    });
+
+    it("EP3: saving sends one PATCH and closes; a failed save keeps the dialog open with the alert inside", async () => {
+      const dialog = await openEdit();
+      vi.mocked(api.patch).mockRejectedValueOnce(new Error("boom"));
+      fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
+      const still = await editorDialog();
+      const alert = await within(still).findByRole("alert");
+      expect(alert.textContent).toContain("boom");
+      expect(api.patch).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(within(still).getByRole("button", { name: i18n.t("common.save") }));
+      await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(2));
+      expect(vi.mocked(api.patch).mock.calls[1][0]).toMatch(/^\/calendar\/events\/\d+$/);
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: i18n.t("schedule.fullEditLabel") })).toBeNull());
+    });
+
+    it("EP4: the card lists Meet, location, category, share with staff, description in this order", async () => {
+      answers.isTenantAdmin = true;
+      answers.connected = true;
+      answers.meetAvailable = true;
+      const dialog = await openEdit([apiEvent({ google_event_id: "g1" })]);
+      const meet = await within(dialog).findByRole("button", { name: i18n.t("schedule.addMeet") });
+      const location = within(dialog).getByLabelText(i18n.t("schedule.eventLocation"));
+      const category = within(dialog).getByLabelText(i18n.t("schedule.category"));
+      const share = within(dialog).getByRole("switch", { name: i18n.t("schedule.shareWithStaff") });
+      const description = within(dialog).getByLabelText(i18n.t("schedule.eventDescription"));
+      const follows = (a: Node, b: Node) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(follows(meet, location)).toBe(true);
+      expect(follows(location, category)).toBe(true);
+      expect(follows(category, share)).toBe(true);
+      expect(follows(share, description)).toBe(true);
+    });
+
+    it("EP5: all day is a checkbox in the edit page and a switch in the create popover", async () => {
+      const dialog = await openEdit();
+      expect(within(dialog).getByRole("checkbox", { name: i18n.t("schedule.allDay") })).toBeTruthy();
+      expect(within(dialog).queryByRole("switch", { name: i18n.t("schedule.allDay") })).toBeNull();
+      fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.close") }));
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: i18n.t("schedule.fullEditLabel") })).toBeNull());
+
+      cleanup();
+      calendarProps.current = null;
+      view();
+      fireEvent.click(await screen.findByRole("button", { name: i18n.t("schedule.create") }));
+      await screen.findByLabelText(i18n.t("schedule.eventTitle"));
+      fireEvent.click(document.querySelector(".schedule-popover__line") as HTMLElement);
+      expect(await screen.findByRole("switch", { name: i18n.t("schedule.allDay") })).toBeTruthy();
+    });
+
+    it("EP6: the schedule page root and the edit dialog carry the gcal-colors class", async () => {
+      const dialog = await openEdit();
+      expect(document.querySelector(".schedule-page")?.classList.contains("gcal-colors")).toBe(true);
+      expect(dialog.classList.contains("gcal-colors")).toBe(true);
     });
   });
 
@@ -1011,7 +1109,7 @@ describe("SchedulePage on CalendarView", () => {
     view();
     fireEvent.click(await screen.findByText("Own Event"));
     fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
-    fireEvent.click(await screen.findByRole("button", { name: i18n.t("common.save") }));
+    fireEvent.click(within(await editorDialog()).getByRole("button", { name: i18n.t("common.save") }));
     await waitFor(() => expect(api.patch).toHaveBeenCalled());
     expect(vi.mocked(api.patch).mock.calls[0][0]).toBe("/calendar/events/1");
 

@@ -28,7 +28,7 @@ mode: handoff
 | 層 | 理想のルール | 素人向けに言うと |
 |---|---|---|
 | 層0 パレット | 色そのものに名前を付ける。--color-{色相}-{階調}（例: --color-blue-700: #1d4ed8）。値はhex直値。index.css の :root / :root.force-dark にペアで定義（ADR-067 dark-parity必須） | 絵の具に名前を付ける |
-| 層1 用途トークン | 役割に色を割り当てる。--{役割}（例: --accent: var(--color-blue-700)）。値はパレットへのalias参照。hex直値を用途トークンに書かない。:root / :root.force-dark ペア | 「アクセントは青」と決める |
+| 層1 用途トークン | 役割に色を割り当てる。--{役割}（例: --accent: var(--color-blue-700)）。値はパレットへのalias参照。hex直値を用途トークンに書かない。:root / :root.force-dark ペア | 「アクセントは青」と決める 例外: 予定の画面（SchedulePageImpl の根と金型 EditorPage）だけは範囲の札 `.gcal-colors` で Google カレンダーの色に置き換える（ADR-1074）。ほかで使うと `frontend/src/components/gcalColorsUsage.test.ts` が止める。 |
 | 層2 共通部品 | プルダウン・検索欄・ボタン・アイコン・テキスト書式・ページ骨格・カード・表・バッジ・空状態は1部品=1定義。差分はprops(variant/size)で吸収。色は用途トークンのみ参照 | 部品の金型は各1つ |
 | 層3 ページ | 部品をimportして使うだけ。部品再定義・生値ベタ書き・パレット直参照を禁止（用途トークン経由のみ） | 画面は部品を並べるだけ |
 | 支え1 カタログ | 全共通部品と使用例をStorybookに常備（KGI④） | 部品の見本帳 |
@@ -257,7 +257,7 @@ JS側へ数値が必要な既存iconSizes.ts等は、正本CSSから生成する
 
 | 種類 | 定義元の案 | ページが選べるもの | ページが決めないもの |
 |---|---|---|---|
-| ボタン | 既存Button.tsx/Button.css、重複CSSを一本化 | 用途variant、size、disabled/loading、文字、実行処理 | 任意の色・角丸・字体・内側余白（shape は金型が持つ形の選択肢で、この禁止の例外ではなく金型の一部。使ってよい場所はログイン画面だけ） |
+| ボタン | 既存Button.tsx/Button.css、重複CSSを一本化 | 用途variant、size、disabled/loading、文字、実行処理 | 任意の色・角丸・字体・内側余白（shape は金型が持つ形の選択肢で、この禁止の例外ではなく金型の一部。使ってよい場所はログイン画面だけ） 例外: 金型 EditorPage の保存（ADR-1074）。 |
 | 入力・プルダウン・複数行入力 | TextField/Select/TextareaとFormField.css | 入力値、label、size、状態、選択肢 | 枠線・背景・文字・矢印を自前描画 |
 | トグル | 新規共通Toggle（既存同名部品なしを確認） | label、checked、disabled、変更処理 | ページ専用トラック・つまみ・移動量 |
 | 表 | 既存DataTableとDataTable.css | 列・データ・並べ替え・選択・density・ページ送り | ヘッダー背景・行罫線・文字・角丸を個別上書き |
@@ -273,7 +273,7 @@ JS側へ数値が必要な既存iconSizes.ts等は、正本CSSから生成する
 ### E. 基準となる外観
 
 確定値があるものは既存component-standard.mdと後続の承認済み子仕様を基準にする。
-- 通常ボタン角丸は同文書の6px（comp-btn-radius）。shape="pill" はログイン画面だけで、完全に丸い（comp-btn-radius-pill）（login-round-inputs/design.md）。現行primaryの4pxとの差は「同値置換」ではなく、統一に伴う意図した変更として見本確認に出す。
+- 通常ボタン角丸は同文書の6px（comp-btn-radius）。shape="pill" はログイン画面だけで、完全に丸い（comp-btn-radius-pill）（login-round-inputs/design.md）。現行primaryの4pxとの差は「同値置換」ではなく、統一に伴う意図した変更として見本確認に出す。 例外: 金型 EditorPage の保存（ADR-1074）。
 - カード角丸8px・標準内側余白24px、compact/mobile16pxを基準。業務ページが勝手に選ぶ独自寸法を残さない。
 - 表のdensityは既存compact/default/relaxedを維持。列幅、長文、折返し、横スクロールを壊さない。行高トークンを長文を切り捨てる固定上限と解釈しない。
 - トグルは44×24px（PO 2026-10-15 決定、幅 --size-toggle-w）。つまみ18px・余白3px・移動20px。操作領域44×44は未着手（§AY-3b）。最終仕様は見本・ラベル・キーボード確認後に確定する。
@@ -534,7 +534,7 @@ selectedはhover/activeより背景・文字の優先度が高い。通常ボタ
 
 #0f172aは現行darkのbg-primary、#7baee0は現行darkのlinkと同じ素材値。ボタンを「リンクの意味」に依存させないため、新しい素材名をindex.css内に各1か所置き、既存の用途名とボタン用途名がその素材を参照する。命名案: palette-ink-deep / palette-blue-soft。既存のlinkやbg-primaryの見た目はこのalias化で変えない。値をもう一つ手書きする案ではない。部品のCSSにhex値を置かない。
 
-primaryの前景とhover背景には部品用途のtokenを追加する。全体on-accent/accent-hoverを書き換え、他部品の外観を一括で変えることはしない。ボタン全体の角丸は既定6px（shape="pill" はログイン画面だけ。完全に丸い）、通常/hover/activeで寸法を変えない。
+primaryの前景とhover背景には部品用途のtokenを追加する。全体on-accent/accent-hoverを書き換え、他部品の外観を一括で変えることはしない。ボタン全体の角丸は既定6px（shape="pill" はログイン画面だけ。完全に丸い）、通常/hover/activeで寸法を変えない。 例外: 金型 EditorPage の保存（ADR-1074）。
 
 #### 計算結果と修正理由
 
@@ -808,7 +808,7 @@ PO原文: 「今回のフロントエンドのSSOTに関するものはまとめ
 
 #### 入力外観：上書き口を限定
 
-色・枠・角丸・文字・focus/disabledはFormField.cssが所有する。角は1行の入力欄・選ぶ欄が完全に丸い（comp-input-radius=radius-full）、複数行の欄が12px（comp-textarea-radius）、チェック欄は6px（comp-checkbox-radius）。タブ型の選ぶ欄（tabbar・tab）と枠のない欄（embedded）は変えない。丸い欄の左右余白は最小12px（space-3）。ログイン画面（login variant）は高さ56px（comp-input-height-auth）・左右余白20px（login-round-inputs/design.md）。154のclass属性と60のstyle属性（138プロパティ）の移管先は入力JSONで追跡する。利用元の任意class/styleによる内部外観上書きを最終公開APIに残さない。
+色・枠・角丸・文字・focus/disabledはFormField.cssが所有する。角は1行の入力欄・選ぶ欄が完全に丸い（comp-input-radius=radius-full）、複数行の欄が12px（comp-textarea-radius）、チェック欄は6px（comp-checkbox-radius）。タブ型の選ぶ欄（tabbar・tab）と枠のない欄（embedded）は変えない。丸い欄の左右余白は最小12px（space-3）。ログイン画面（login variant）は高さ56px（comp-input-height-auth）・左右余白20px（login-round-inputs/design.md）。154のclass属性と60のstyle属性（138プロパティ）の移管先は入力JSONで追跡する。利用元の任意class/styleによる内部外観上書きを最終公開APIに残さない。 例外: 金型 EditorPage の中の欄は種類 `editor-filled`（角 `--radius-sm`・塗りの地・ADR-1074）。使う場所は `frontend/src/components/editorVariantUsage.test.ts` が止める。
 
 | 本体props | 契約 |
 |---|---|
@@ -1112,7 +1112,7 @@ PO原文「GO」は直前の次便Button外観開始への続行指示。新PR�
 
 公開API: className/styleをOmitしlayoutClassName?:stringのみ同buttonへ付与。標準native残余propsの順序は維持。ページ実運用のclassName/style残0、fixtureの旧style試験は配置classと禁止型契約試験へ更新。layoutは今回既存margin-left:auto2件だけ。CompanyDetail6はvariant=tab・active既存条件・aria-pressed={undefined}で元属性なしを維持、switchTab/未保存確認は変更しない。dashboardのnowrap3を基底へ移して旧class除去、左auto2はlayoutClassName。Schedule7のclassは除去し共通角丸6pxと寸法へ。createはfullWidth、中央揃えの標準mdを採用（旧丸薬/左揃え/48pxとは意図的に異なる）。他6は既存size/iconOnly維持。検索の現在onClickなしも維持。
 
-寸法: 基底inline-flex/中央揃え/gap space-2/nowrap/box-sizing border-box、角丸comp-btn-radius=6px（shape=pillはログイン画面だけ・comp-btn-radius-pill=完全に丸い）、font-weight-medium、line-height-tight。sm=min-height field-h-sm28/padding space-1 space-3/font-xs、md=min-height field-h-md36/padding space-2 space-5/font-base、lg=min-height新comp-btn-height-lg48/padding space-3 space-6/font-md。auth（ログイン画面だけ）=min-height新comp-btn-height-auth52/padding space-3 space-5/font-md。ログイン画面の寸法（ChatGPT実測。login-round-inputs/design.md §7.4）: 中身の幅384px（card-login-max-w=464）、欄高56px・左右余白space-5、ボタン高52px、小見出しfont-3xl/400（role-auth-title-*）、見出し→欄・欄→欄・欄→ボタンの間space-5。tabは以前同様size修飾を受けずmd、選択時font-weight-semi。枠は全variant1px、secondary/outlineのみborder色、他transparent。iconOnlyはpadding0、幅/高/最小高をsm28/md36/lg44へ、mobile≤767pxは全部44。通常mobileの最小高44、lg48を縮めない。fullWidthはwidth100%。focus-visibleは2px実線/offset2px（tokens.cssにcomp-btn-focus-width/offset）、色comp-btn-focus-color→text-primary。通常hover/activeはenabledのみ、selectedはhover/activeより優先。loadingは通常色/opacity1を保持、disabledは通常色+opacity-disabled、操作disabled条件は維持。
+寸法: 基底inline-flex/中央揃え/gap space-2/nowrap/box-sizing border-box、角丸comp-btn-radius=6px（shape=pillはログイン画面だけ・comp-btn-radius-pill=完全に丸い）、font-weight-medium、line-height-tight。sm=min-height field-h-sm28/padding space-1 space-3/font-xs、md=min-height field-h-md36/padding space-2 space-5/font-base、lg=min-height新comp-btn-height-lg48/padding space-3 space-6/font-md。auth（ログイン画面だけ）=min-height新comp-btn-height-auth52/padding space-3 space-5/font-md。ログイン画面の寸法（ChatGPT実測。login-round-inputs/design.md §7.4）: 中身の幅384px（card-login-max-w=464）、欄高56px・左右余白space-5、ボタン高52px、小見出しfont-3xl/400（role-auth-title-*）、見出し→欄・欄→欄・欄→ボタンの間space-5。tabは以前同様size修飾を受けずmd、選択時font-weight-semi。枠は全variant1px、secondary/outlineのみborder色、他transparent。iconOnlyはpadding0、幅/高/最小高をsm28/md36/lg44へ、mobile≤767pxは全部44。通常mobileの最小高44、lg48を縮めない。fullWidthはwidth100%。focus-visibleは2px実線/offset2px（tokens.cssにcomp-btn-focus-width/offset）、色comp-btn-focus-color→text-primary。通常hover/activeはenabledのみ、selectedはhover/activeより優先。loadingは通常色/opacity1を保持、disabledは通常色+opacity-disabled、操作disabled条件は維持。 例外: 金型 EditorPage の保存（ADR-1074）。
 
 配色は§Pの190組。index.cssでcomp-btn-primary-text/primary-hover-bg/tab-selected-text/focus-colorを両テーマに定義。素材palette-ink-deep/palette-blue-softを両テーマ各1定義へ（既存パリティ要件）。同ファイルの既存dark bg-primary/tooltip-text/calendar-today-textの同値ink3箇所とlinkのsoft1箇所を素材参照へ移す。4既存用途の色は変えず、hex数も増やさない。以前の『各1箇所』はテーマ別正本という意味へ具体化、素材を新しいファイルへ増殖させない。部品内直色禁止。非色48px/2pxはtokens.cssのみ。全体on-accent/accent-hoverは変更しない。
 

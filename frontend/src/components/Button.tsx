@@ -6,7 +6,7 @@
  *
  * - variant: primary / secondary / ghost / danger / outline / tab
  * - size:    sm / md / lg / tap / auth（auth はログイン画面だけ）
- * - shape:   default / pill（pill はログイン画面だけ）
+ * - shape:   default / pill（pill はログイン画面と金型 EditorPage の保存だけ・ADR-1074）
  * - options: fullWidth / loading / iconOnly(aria-label必須) / active(tab用)
  *
  *
@@ -25,7 +25,7 @@ export type { ButtonShape, ButtonSize, ButtonVariant } from "./buttonAppearance"
 interface ButtonOwnProps {
   variant?: ButtonVariant;
   size?: ButtonSize;
-  /** pill は完全に丸い形。ログイン画面だけで使う（buttonShapeUsage.test.ts が強制） */
+  /** pill は完全に丸い形。ログイン画面と金型 EditorPage の保存（ADR-1074）だけで使う（buttonShapeUsage.test.ts が強制） */
   shape?: ButtonShape;
   fullWidth?: boolean;
   loading?: boolean;

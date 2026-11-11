@@ -135,3 +135,13 @@ export const ControlProductEdit: Story = {
   name: 'TextFieldControl product-edit variant',
   render: () => <TextFieldControl variant="product-edit" placeholder="Product edit field" aria-label="Product edit field" />,
 }
+
+export const ControlEditor: Story = {
+  name: 'TextFieldControl editor-filled / editor-title variant',
+  render: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+      <TextFieldControl variant="editor-title" placeholder="Add title" aria-label="Editor title" />
+      <TextFieldControl variant="editor-filled" placeholder="Editor filled field" aria-label="Editor filled field" />
+    </div>
+  ),
+}
