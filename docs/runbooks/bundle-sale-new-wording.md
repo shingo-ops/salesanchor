@@ -3,6 +3,7 @@
 対象: まとめ売り（N単位セット）の読み取り（ADR-1027）
 関連コード: `backend/app/services/v102_bundle_svc.py`（`detect_bundle`）、`backend/app/services/line_analysis_v102_svc.py`（`_write_results` の `_apply_bundle`）
 関連台本: `scripts/dev/bundle_replay.py`（本番データが要るため CI では走らない）
+対象外: 商品の区分がシングルセット系の行には当てない（ADR-1027 の 2026-11-11 追記）。本番・台本とも同じに外す。
 設計: `docs/handoff/bundle-sale/design.md`（§5-2・§12）
 
 ---
