@@ -137,7 +137,7 @@ PO の言葉（2026-11-11）: 「予定の詳細画面だけどGoogleカレン�
 
 ### 8.3 コード（origin/main a7fbffdfe）
 
-- 全画面の入れ物は金型 `frontend/src/components/FullScreenDialog.tsx`（106 行）。使うのは `frontend/src/pages/schedule/ScheduleFullEditor.tsx:38` の 1 か所だけ（`git grep FullScreenDialog -- ':!docs'` で見本帳と試験のほかに無い）。上の帯の真ん中に title・右に actions、中身は真ん中寄せの 1 列で、左に寄せる・札で包む・絵の列を作る口が無い（`:93-102`）。
+- 全画面の入れ物は金型 「frontend/src/components/FullScreenDialog.tsx」（106 行）。使うのは `frontend/src/pages/schedule/ScheduleFullEditor.tsx:38` の 1 か所だけ（`git grep FullScreenDialog -- ':!docs'` で見本帳と試験のほかに無い）。上の帯の真ん中に title・右に actions、中身は真ん中寄せの 1 列で、左に寄せる・札で包む・絵の列を作る口が無い（`:93-102`）。
 - 開く条件 `open={fullEditOpen && popover?.mode === "create"}`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1588`）。作る小窓でなくなると閉じる（`:1132-1134`）。保存は `saveEvent`（`:988-1031`）で、`popover.mode === "edit"` なら PATCH `/calendar/events/{id}`・そうでなければ POST。成功で `setFullEditOpen(false)`（`:1022`）。
 - 項目の部品 `frontend/src/pages/schedule/ScheduleDraftFields.tsx`（272 行）: 日時（`:114-182`・終日は Toggle `:118`・文字つきの日付と時刻 `:131-173`）・種類（`:184-208`）・Meet（`:210-213`・`MeetRow` `:44-72`）・社員にも見せる（`:215-226`）・場所（`:228-247`）・説明（`:249-269`）。
 - 入力欄の見た目は `frontend/src/components/FormField.css`（schedule `:382-390`・schedule-title `:393-409`・textarea schedule `:326-332`）。種類の一覧: TextFieldVariant 8 つ（`frontend/src/components/TextField.tsx:35`）・SelectVariant 6 つ（`frontend/src/components/Select.tsx:18`）・TextareaVariant 6 つ（`frontend/src/components/Textarea.tsx:32`）。
