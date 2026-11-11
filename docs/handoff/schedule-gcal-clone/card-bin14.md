@@ -1,7 +1,7 @@
 # 実装カード 便14: 予定の編集画面を Google の形に・直すときも全画面・予定の画面の色を Google に（G58〜G67）（2026-11-11）
 
 - 設計: `docs/handoff/schedule-gcal-clone/design.md` §2.7（G58〜G67）・§3.19・§3.20（色）（審査は §9 に記録）
-- PO の承認: 審査の後に PO へ聞く（新しい金型 EditorPage・古い金型 FullScreenDialog を消す・角の小さい塗りの欄・丸い保存・直すときも全画面・予定の画面の色を Google に）。承認の記録が §9 に無ければ着手しない。
+- PO の承認: 承認済み（2026-11-11「1」・design.md §9「PO の承認（2026-11-11・便14 の実装）」）。新しい金型 EditorPage・古い金型 FullScreenDialog を消す・角の小さい塗りの欄・丸い保存・直すときも全画面・予定の画面の色を Google に。
 - 土台: ブランチ `release/schedule-gcal-editor-page`（origin/main a7fbffdfe から作った）。このブランチの上にそのまま積む（設計・カード・実装を 1 つの PR にする。便13 と同じ形）。
 - 対象 ADR: ADR-1074（この便で起こす）・ADR-144（金型）・ADR-067（トークン）・ADR-027（i18n）・ADR-073（見本帳）・ADR-1060（Meet）・ADR-1051（本番の画面点検 S13）
 - 行番号はすべて a7fbffdfe の値。違っていたら中身で場所を探し、見つからなければ止める。
