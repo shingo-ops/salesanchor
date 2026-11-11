@@ -38,6 +38,7 @@
 | ├ LINE完売ルールの認識合わせ・引き継ぎ | [合意と未決事項](../handoff/tcg-import-latest-only/sold-out-rules-handoff.md) | C01〜C43合意・[詳細設計案](../handoff/tcg-import-latest-only/sold-out-rules-design.md)作成・本番DB/接続実測済・自己審査REVISE・Q24未決。実装未着手 | LINE の完売の読み取りの規則を変える前 |
 | │ ├ 同じ投稿の〆を在庫の件に効かせる（規則13。価格のない〆が同じ商品・状態の在庫の件を完売にする） | [設計](../handoff/v102-shime-same-post-stock/design.md) | KGI PO承認 2026-10-19・設計案・審査反映済・本番反映済（#4525、2026-10-19） | 〆の投稿で在庫を完売にする規則を変える前 |
 | │ └ v102 の決まりの直し（v102-rule-fixes。状態の言葉の表「傷あり」系・状態の語で単位を上書きする条件・状態の見出し・件の外の〆を、一度に1つずつ直す） | [設計](../handoff/v102-rule-fixes/design.md) | KGI・便の分け方 PO承認 2026-10-25・自己審査（便1・2 APPROVE／便3・4 REVISE）・実装未着手 | v102 の状態・単位・見出し・〆の決まりを変える前 |
+| ├ まとめ売りの区分（single-set-category。シングルカードのまとめ売りを状態シングル・単位セットで出す。まとめ売りの読み取りから外す） | [設計](../handoff/single-set-category/design.md) | 方針 PO 決定 2026-11-11・設計案・審査反映済・実装未着手 | 商品の区分「シングルセット系」やまとめ売りの単位を変える前 |
 | ├ 在庫の閲覧専用ページ（inventory-viewer。お客さんが自社サーバーで在庫表だけを見る・GAS 在庫一覧の置き換え） | [inventory-management/inventory-viewer/README.md](inventory-management/inventory-viewer/README.md) | あるべき姿・KGI 作成 2026-10-15・設計 PO 承認済 2026-10-16・実装着手 | お客さん向けの在庫閲覧ページを変える前 |
 | ├ 閲覧者の契約手続きと請求書（viewer-contract-invoicing。お試しから本契約までの手続き、商材とプラン、税率、請求書の発行とドライブ保存、名簿を3年残す決まり） | [viewer-contract-invoicing/README.md](viewer-contract-invoicing/README.md) | あるべき姿・KGI 案 2026-11-05・設計案作成済み・PO 未承認 | 閲覧者の状態・請求書・商材とプランを扱う前 |
 | └ 在庫解析（inventory-analytics） | [inventory-management/inventory-analytics/README.md](inventory-management/inventory-analytics/README.md) | あるべき姿・KGI・To-Be完成 2026-07-15 | 在庫の分析機能を変える前 |
