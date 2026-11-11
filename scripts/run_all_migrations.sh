@@ -1255,3 +1255,5 @@ run_sql migrations/20261108_100000_rebuild_company_stats_on_meta_messages.sql
 run_sql migrations/20261109_200000_drop_staff_firebase_uid.sql
 # ADR-1058 段3: 秘書の選択肢に ChatGPT（codex）の3つを足す（足すだけ・冪等・今の担当は変えない）
 run_sql migrations/20261111_120000_add_codex_secretary_choices.sql
+# 会社と連絡先の状態 便1: 状態の表 public.customer_statuses を作る（作るだけ・冪等）
+run_sql migrations/20261112_120000_create_public_customer_statuses.sql
