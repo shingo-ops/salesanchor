@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-11-10 / ADR 総数: 230 件
+最終更新: 2026-11-11 / ADR 総数: 230 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -229,7 +229,7 @@
 | [ADR-1049](./ADR-1049-lead-merge-all-tables-and-fill-blanks.md) | ADR-1049: リードの統合は13表すべてを付け替え、残す方の空欄だけを埋め、受信箱のカルテからも開ける | Accepted | Amends ADR-119 | — |
 | [ADR-1050](./ADR-1050-api-error-auto-retry.md) | ADR-1050: 一時的に断られた解析は自動で送り直し、諦めた分は知らせる | Proposed | — | — |
 | [ADR-1051](./ADR-1051-prod-ui-black-box-check.md) | ADR-1051: 本番の画面点検は、GitHub 提供の機械から HTTPS で見るだけの利用者がログインして毎日行い、本番 DB には触らない | Accepted | — | — |
-| [ADR-1052](./ADR-1052-cloud-case-ai.md) | ADR-1052: Discord の投稿を合図に、クラウドの相談係 AI が個人の値を伏せた本番を読み、中身は申請して Opus が許可したときだけ見る | Accepted | Amends ADR-1024, Amends ADR-1042, Amends ADR-1039 | — |
+| [ADR-1052](./ADR-1052-cloud-case-ai.md) | ADR-1052: Discord の投稿を合図に、クラウドの相談係 AI が個人の値を伏せた本番を読み、中身は申請して Opus が許可したときだけ見る | Accepted | Amended by ADR-1061, Amends ADR-1024, Amends ADR-1042, Amends ADR-1039 | — |
 | [ADR-1053](./ADR-1053-prod-page-speed-record.md) | ADR-1053: 本番の画面点検の「開き終わった」の決め方を 1 か所にし、全画面の開く速さを毎日記録する（合格ラインはまだ決めない） | Accepted | — | — |
 | [ADR-1054](./ADR-1054-screen-data-cache.md) | ADR-1054: 画面が取ったデータの写しを 1 か所（TanStack Query）に置き、前に見た画面をすぐ出してから裏で取り直す | Accepted | — | — |
 | [ADR-1055](./ADR-1055-new-device-login-approval.md) | ADR-1055: 知らない機械からのログインは、いつもの機械で番号を選んで許可するまで入れない（全員） | Accepted | — | — |
@@ -238,7 +238,7 @@
 | [ADR-1058](./ADR-1058-ai-job-assignments.md) | ADR-1058: アプリの中で働く AI の担当（AI とモデル）は DB の1か所で決め、スーパー管理の画面で見て切り替える・成功も失敗も使用の記録に1行ずつ残す・秘書は ChatGPT（Codex CLI・月額契約）も選べる | Accepted | — | — |
 | [ADR-1059](./ADR-1059-google-calendar-import-owner-private.md) | ADR-1059: Google カレンダーの予定をアプリに取り込む。取り込んだ予定は最初「自分だけ」で、アプリで1件ずつ「社員にも見せる」に切り替える | Accepted | — | — |
 | [ADR-1060](./ADR-1060-calendar-google-meet.md) | ADR-1060: 予定に Google Meet を付ける。付けられるのは Google をつないだ本人の予定だけで、URL は calendar_events.meet_url の 1 か所に置く | Accepted | — | — |
-| [ADR-1061](./ADR-1061-viewer-contract-stage-and-invoicing.md) | ADR-1061: 閲覧者に契約手続き中の状態を足し、商材・プラン・税率・請求書を専用の表に置き、お試しまで進んだ人を3年残す | Proposed | — | — |
+| [ADR-1061](./ADR-1061-viewer-contract-stage-and-invoicing.md) | ADR-1061: 閲覧者に契約手続き中の状態を足し、商材・プラン・税率・請求書を専用の表に置き、お試しまで進んだ人を3年残す | Proposed | Amends ADR-1052 | — |
 | [ADR-1062](./ADR-1062-gemini-auto-route-failover.md) | ADR-1062: Gemini への道は断られたら自動で切り替え、30分成功が無ければ知らせる | Proposed | — | — |
 | [ADR-1063](./ADR-1063-tenant-owner-login-approval-and-isolation-guards.md) | ADR-1063: 会社のオーナーが自社の社員の新しい機械のログインを許可する／会社の分け方を機械が毎回・毎日確かめる | Proposed | — | — |
 | [ADR-1065](./ADR-1065-calendar-view-component-fullcalendar-v6.md) | ADR-1065: 予定の時間割と月の升目は FullCalendar v6 を包んだ金型 CalendarView で出す | Proposed | — | — |
