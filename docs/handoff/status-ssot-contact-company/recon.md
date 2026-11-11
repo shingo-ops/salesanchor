@@ -64,6 +64,13 @@
   - `frontend/src/pages/companies/CompaniesPage.tsx:511-514`
   - `frontend/src/components/MergeContactModal.tsx:233`（辞書キーを値から直接組み立てる）
 - 【事実】値を直接書いた比較・初期値: `frontend/src/components/MergeCompanyModal.tsx:96`（archived を候補から外す）、`frontend/src/pages/companies/CompaniesPage.tsx:352`・`:428`、`frontend/src/pages/contacts/ContactsPage.tsx:236`・`:395`・`:411`、`frontend/src/pages/contacts/ContactEditPage.tsx:196`、`frontend/src/pages/company-detail/CompanyBasicTab.tsx:125`、`frontend/src/pages/design-system/DesignSystemPage.tsx:191`、`frontend/src/components.css:271`（`.status-badge.status-pending_dedup_review`）。
+- 【事実】審査2回目と、そのあとの Opus の実測で見つかった置き場（a88194893）:
+  - 記号から CSS の組み名を作る所: `frontend/src/pages/companies/CompaniesPage.tsx:408`・`frontend/src/pages/contacts/ContactsPage.tsx:386`・`frontend/src/pages/company-detail/CompanyContactsTab.tsx:124`・`frontend/src/pages/company-detail/CompanyDetailPage.tsx:98`。色の CSS は `frontend/src/components.css:268-271` の4つ
+  - 初期値と「有効に戻す」操作: `frontend/src/pages/company-detail/company-detail.types.ts:125`・`:138`・`:222`、`frontend/src/pages/company-detail/useCompanyDetail.ts:115`・`:236`・`:274`、`frontend/src/pages/contacts/ContactEditPage.tsx:62`・`:125`・`:126`、`frontend/src/pages/contacts/ContactsPage.tsx:86`・`:91`・`:171`・`:225`、`frontend/src/pages/companies/CompaniesPage.tsx:151`・`:159`・`:294`
+  - 選択肢の数（実物）: 7か所のフォームのうち4つ並ぶのは5か所、3つ（重複確認待ち無し）は連絡先を新しく作る2か所（`frontend/src/pages/contacts/ContactsPage.tsx:337` createForm・`frontend/src/pages/company-detail/CompanyContactsTab.tsx:198` contactForm）。一覧の絞り込みの選択肢はどこにも無い
+  - 記号の直書きの数（K5 の基準値）: 会社・連絡先の画面10ファイルで53件。うち3件は別物（`frontend/src/pages/companies/CompaniesPage.tsx:444-446` の tab の className "active"）
+  - サーバー: `backend/app/routers/companies.py:982`（`SET status='active'`）・`:1019`。契約 `frontend/api-contract/openapi.json:5904`・`:7712`
+  - CI: 土台の tenant_001.companies に status 列が無く contacts の表も無い（`.github/workflows/migration-test.yml:312-319`）。PR で変えた SQL だけ流す（`:1233-1235`）。前提の移行を先に流す前例 `:1305`。全件ドライラン `:2118`
 - 【事実】同じ名前の辞書キーが重なっている（ja.json）:
   - 「重複確認待ち」: `frontend/src/locales/ja.json:1161`（customers.status_pending_dedup）・`:1278`（contacts.statusPendingDedupOption）・`:1299`（contacts.statusCode.pending_dedup_review）
   - 「有効・無効・アーカイブ」: `frontend/src/locales/ja.json:1133-1135`（customers.status_*）と `:1297-1298`（contacts.statusCode.*）
