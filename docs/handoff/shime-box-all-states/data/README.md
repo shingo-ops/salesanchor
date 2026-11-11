@@ -45,7 +45,7 @@ ADR-1007・ADR-1073。設計: docs/handoff/shime-box-all-states/design.md §3-4�
 
 ## 手順（上から順に。1 つでも期待と違えばそこで止まる）
 
-1. `switch-precheck.sql`（読み取り）: `CAN_PROCEED|1`・`BOX|5`・`PRECHECK_DONE`。
+1. `switch-precheck.sql`（読み取り）: `TABLE|tcg_distribution_settings`・`CAN_PROCEED|1`・`BOX|5`・`PRECHECK_DONE`。
 2. `switch-dryrun.sql`: 入れて検査し、必ず ROLLBACK。`INSERTED|1`・`CHECK_OK 1`・`DRYRUN_OK`。
 3. `switch-commit.sql`: 2 の成功の後だけ。`INSERTED|1`・`CHECK_OK 1`・`COMMIT_DONE`。
 4. `switch-verify.sql`（読み取り）: `MATCH|1`・`ROWS|1`・`VERIFY_DONE`。
@@ -60,7 +60,7 @@ ADR-1007・ADR-1073。設計: docs/handoff/shime-box-all-states/design.md §3-4�
 
 | 項目 | 内容 |
 |---|---|
-| precheck | |
-| dryrun | |
-| 実施日時・commit | |
-| verify | |
+| precheck | 2026-11-11 13:12:23 JST・rc=0・`TABLE\|tcg_distribution_settings`・`CAN_PROCEED\|1`・`BOX\|5`・`PRECHECK_DONE` |
+| dryrun | 2026-11-11 13:12:24 JST・rc=0・`INSERTED\|1`・`CHECK_OK 1`・`ROLLBACK`・`DRYRUN_OK` |
+| 実施日時・commit | 2026-11-11 13:12:24 JST・rc=0・`INSERTED\|1`・`CHECK_OK 1`・`COMMIT`・`COMMIT_DONE`。実行は PO の `!`（manual-only の鍵・SQL は origin/main の本ファイル群を git show で読んだもの。流した写しと本ファイルが同じことを cmp で確認） |
+| verify | 2026-11-11 13:12:25 JST・rc=0・`MATCH\|1`・`ROWS\|1`・`VERIFY_DONE`。生の出力は PO の Mac の `~/CC報告ファイル-keep/shime-bin4/`。この時刻から新しく届く投稿の解析に規則12h が働く |

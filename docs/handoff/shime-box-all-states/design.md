@@ -70,6 +70,8 @@ PO の発言: 2026-11-10「2,1」（先に〆の規則の直し方を設計し�
 
 - PO の発言: 「1」（切り替える。§6 の「設定を消しても、それまでに消えた在庫は戻らない恐れ（未確認）」を説明した後の選択）。
 - 入れる値: `{"keep_words": ["まだあります"]}`。記録 SQL: `docs/handoff/shime-box-all-states/data/switch-precheck.sql` → `docs/handoff/shime-box-all-states/data/switch-dryrun.sql` → `docs/handoff/shime-box-all-states/data/switch-commit.sql` → `docs/handoff/shime-box-all-states/data/switch-verify.sql`。戻しは `docs/handoff/shime-box-all-states/data/switch-rollback.sql`（行を 1 行消す）。手順と記録欄は `docs/handoff/shime-box-all-states/data/README.md` の「便4」。
+- 実施: 2026-11-11 13:12:23〜13:12:25 JST に PO の `!` で 4 本とも rc=0・期待の印どおり（記録欄に転記）。
+- K5 の数え方: 朝の〆点検を 2026-11-26 まで延ばし、× に「消し忘れ」「消しすぎ」「その他」の種類を付ける。切り替え前（10/28〜11/11 12:00 の回）と後（11/12〜11/25 の回）を表にして合否を出す。「消しすぎ」が 1 件でも出たら、戻すかを PO に聞いて止まる。定期実行の書き換えは AI の操作が自動判定で止められたため PO の `!` で行う。
 
 ## 4. 影響範囲
 
