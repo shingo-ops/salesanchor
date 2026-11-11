@@ -924,11 +924,13 @@ jobs:
           -- public.viewer_accounts: 20261016_150000_add_viewer_accounts.sql で本番作成済み。
           --   20261104_220000_add_tcg_distribution_targets_viewer_account_id.sql が外部キーで参照するため、
           --   前提として最小定義を登録する（id の型は本物と同じ BIGSERIAL）。
+          --   trial_expires_at は 20261112_130000_add_viewer_contracting_status.sql が COMMENT を書くため（ADR-1061 便2-1）。
           CREATE TABLE IF NOT EXISTS public.viewer_accounts (
               id         BIGSERIAL   PRIMARY KEY,
               email      TEXT        NOT NULL,
               line_name  TEXT        NOT NULL,
               status     TEXT        NOT NULL,
+              trial_expires_at TIMESTAMPTZ NULL,
               created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
               updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
           );
@@ -940,6 +942,15 @@ jobs:
               viewer_account_id BIGINT      NOT NULL REFERENCES public.viewer_accounts(id) ON DELETE CASCADE,
               purpose           TEXT        NOT NULL,
               CONSTRAINT ck_viewer_login_tokens_purpose CHECK (purpose IN ('signup_code', 'password_reset'))
+          );
+          -- public.viewer_status_changes: 20261016_150000_add_viewer_accounts.sql で本番作成済み。
+          --   20261112_130000_add_viewer_contracting_status.sql が CHECK を付け替え COMMENT を書くため、
+          --   前提として最小定義を登録する（操作の CHECK は付け替え前の5値）。
+          CREATE TABLE IF NOT EXISTS public.viewer_status_changes (
+              id        BIGSERIAL   PRIMARY KEY,
+              viewer_id BIGINT      NOT NULL REFERENCES public.viewer_accounts(id) ON DELETE CASCADE,
+              action    TEXT        NOT NULL,
+              CONSTRAINT ck_viewer_status_changes_action CHECK (action IN ('activate', 'suspend', 'unsuspend', 'extend', 'start_trial'))
           );
           -- public.tcg_distribution_targets: 20260921_110000_pipeline_tables_public.sql で本番作成済み。
           --   20261012_210000_add_tcg_distribution_targets_review_sheet_name.sql が ALTER TABLE ... ADD COLUMN

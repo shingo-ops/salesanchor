@@ -23,6 +23,8 @@ export function loginErrorMessage(t: TFunction, err: unknown): string {
         return t("viewer.error.viewer_suspended");
       case "viewer_trial_expired":
         return t("viewer.error.viewer_trial_expired");
+      case "viewer_contract_expired":
+        return t("viewer.error.viewer_contract_expired");
       default:
         break;
     }
