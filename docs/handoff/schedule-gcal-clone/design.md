@@ -1346,7 +1346,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 ## 12. 便15: 予定の繰り返し（2026-11-12・Opus・設計案）
 
-状態: 設計案。設計審査は審査7 で APPROVE（§12.13・2026-11-11 22:00 UTC）。そのあと PO の問い「繰り返しを消すときの動きも把握したか」（2026-11-12）で、消すときの Google 側の抜けが 2 つ見つかった。Google で消し方を測り（recon §9.5 U6）、§12.2 G74・§12.5・§12.7 を直した。審査8〜審査11 の REVISE（§12.13）を直し、審査12 待ち。成功条件は PO の決定待ち。PO の範囲の承認は済み（2026-11-12 選択「1、」）。根拠は recon §9。ADR-1075（Proposed）。
+状態: 設計案。設計審査は審査7 で APPROVE（§12.13・2026-11-11 22:00 UTC）。そのあと PO の問い「繰り返しを消すときの動きも把握したか」（2026-11-12）で、消すときの Google 側の抜けが 2 つ見つかった。Google で消し方を測り（recon §9.5 U6）、§12.2 G74・§12.5・§12.7 を直した。審査8〜審査12 の REVISE（§12.13）を直し、審査13 待ち。成功条件は PO の決定待ち。PO の範囲の承認は済み（2026-11-12 選択「1、」）。根拠は recon §9。ADR-1075（Proposed）。
 
 ### 12.1 目的
 
@@ -1469,7 +1469,10 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
   - 失敗したときの扱いは**直す道だけ**に効く（審査11 指摘1）。消す道（this・following・all）は、どの送りが失敗しても今の消す道（`backend/app/services/calendar_service.py:483-510`）と同じく警告の記録だけで、`sync_status` は変えない。
   - 直す道で元の予定への送りが失敗したときは、そのあとの新しい予定の送り（following の insert・消して作り直す道の create）を送らない（審査10 指摘3）。送ると Google に古い繰り返しと新しい予定が両方残り、回が重なるため。警告を記録し、`sync_status` を `'failed'` にする（今の直す道の失敗と同じ値・`backend/app/services/calendar_service.py:420-423`）。`'failed'` にする行は次のとおり（審査11 指摘2・3）:
     - 直すときの following で元への UNTIL の patch が失敗: 元の行と新しい元の行の**両方**を `'failed'`。新しい元の行の `google_event_id` は NULL のまま。
-    - 直すときの following で UNTIL の patch は通り insert だけ失敗: 新しい元の行だけ `'failed'`（`google_event_id` は NULL）。元の行は `'synced'` のまま。
+    - 直すときの following で UNTIL の patch は通り insert だけ失敗: 新しい元の行だけ `'failed'`（`google_event_id` は NULL）。元の行は、UNTIL の patch が通った時点で `sync_status = 'synced'`・`last_synced_at = NOW()` に書く（審査12 指摘1。今の直す道は直す前に `'pending'` を書き（`backend/app/services/calendar_service.py:372`）、送りが通ったら `'synced'` に書く（`:409-415`）。同じ形にそろえる）。
+    - 直すときの this で `get_instance` か例外の回への patch が失敗: 例外の行を `'failed'`。新しく作った例外の行の `google_event_id` は NULL のまま（審査12 指摘2）。
+    - 直すときの all で、決まり以外だけを直す元の予定への patch が失敗: 元の行を `'failed'`。`google_event_id` はそのまま（今の直す道の失敗 `:420-423` と同じ・審査12 指摘2）。
+    - どの道も、送りが通った行は `'synced'`・`last_synced_at = NOW()` に書く。`'pending'` のまま残す行は作らない。
     - 消して作り直す道で delete が失敗: その行を `'failed'`。`google_event_id`・`sync_origin_id` は古い値のまま残す（Google にも古い予定が残っているため）。
     - 消して作り直す道で delete は通り create だけ失敗: その行を `'failed'` にし、`google_event_id` と `sync_origin_id` を NULL にする。今の作る道の失敗（`backend/app/services/calendar_service.py:316-324`）と同じ「Google の id を持たない行」の形にそろえ、Google で消えた古い id に patch を送らないため。
     - `'failed'` の行を後から送り直す仕組みは今の main に無い（`sync_status` を読むのは一覧の `backend/app/services/calendar_service.py:200` だけ）。便15 でも作らない。今の単発の予定の失敗と同じ扱い。
@@ -1514,7 +1517,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 ### 12.10 守り手（維持の仕組み）
 
-- backend 試験（`backend/tests/test_calendar_service.py` に足す）: 6 つの決まりの作り方と 2 か月分の広げ方・例外で外す・消した印・1000 回の打ち切り・3 択の 3 結果×直す／消す・422 の 3 通り・Google から取り込んだ行への選び方は 422・all で none のとき押した回の日時が残る・選び方の変更（単発→繰り返し・all で none・this で 422・following で新しい選び方）と Google の消して作り直す道・Google の本文の `recurrence`・取り込みの飛ばし。消すときの Google への送り（§12.7 の消すとき）を 3 択ごとに: this はその回に `status: "cancelled"` の patch 1 件だけ／following は消す範囲の例外の行のうち `is_cancelled = false` で `google_event_id` を持つ行の数だけの cancelled の patch と、元の予定への `recurrence` の patch 1 件で、insert 0 件、UNTIL は前の日の 23:59:59 日本時間（終日は前の日の日付）／all は同じ条件の例外の行の数だけの cancelled の patch と、元の `google_event_id` への delete 1 件（審査10 指摘1）。どちらも例外の回への送りが元の予定への送りより先であること。直すときの following と、消して作り直す道でも、消える例外の行の数だけ cancelled が先に送られること（審査9 指摘1・2・3）。例外の行の id に all・following で送ったときも元の id に送ること。例外の回への送りの 1 件が失敗しても、表は消えたままで警告が 1 件残り、残りの送りは続くこと。直すときの following と消して作り直す道で、例外の行の id が消す前に読まれ、送り先が 0 件にならないこと。直す道で元の予定への送り（UNTIL の patch・delete）を失敗させたとき、insert・create が 0 件で、§12.7 の表のとおりの行が `'failed'` になること（審査10 指摘2・3）。直すときの following で insert だけ失敗させたとき、新しい元の行だけ `'failed'` で `google_event_id` が NULL。消して作り直す道で create だけ失敗させたとき、行が `'failed'` で `google_event_id` と `sync_origin_id` が NULL。消す道で送りを失敗させたとき、`sync_status` が変わらず警告が残ること（審査11 指摘1〜3）。
+- backend 試験（`backend/tests/test_calendar_service.py` に足す）: 6 つの決まりの作り方と 2 か月分の広げ方・例外で外す・消した印・1000 回の打ち切り・3 択の 3 結果×直す／消す・422 の 3 通り・Google から取り込んだ行への選び方は 422・all で none のとき押した回の日時が残る・選び方の変更（単発→繰り返し・all で none・this で 422・following で新しい選び方）と Google の消して作り直す道・Google の本文の `recurrence`・取り込みの飛ばし。消すときの Google への送り（§12.7 の消すとき）を 3 択ごとに: this はその回に `status: "cancelled"` の patch 1 件だけ／following は消す範囲の例外の行のうち `is_cancelled = false` で `google_event_id` を持つ行の数だけの cancelled の patch と、元の予定への `recurrence` の patch 1 件で、insert 0 件、UNTIL は前の日の 23:59:59 日本時間（終日は前の日の日付）／all は同じ条件の例外の行の数だけの cancelled の patch と、元の `google_event_id` への delete 1 件（審査10 指摘1）。どちらも例外の回への送りが元の予定への送りより先であること。直すときの following と、消して作り直す道でも、消える例外の行の数だけ cancelled が先に送られること（審査9 指摘1・2・3）。例外の行の id に all・following で送ったときも元の id に送ること。例外の回への送りの 1 件が失敗しても、表は消えたままで警告が 1 件残り、残りの送りは続くこと。直すときの following と消して作り直す道で、例外の行の id が消す前に読まれ、送り先が 0 件にならないこと。直す道で元の予定への送り（UNTIL の patch・delete）を失敗させたとき、insert・create が 0 件で、§12.7 の表のとおりの行が `'failed'` になること（審査10 指摘2・3）。直すときの following で insert だけ失敗させたとき、新しい元の行だけ `'failed'` で `google_event_id` が NULL。消して作り直す道で create だけ失敗させたとき、行が `'failed'` で `google_event_id` と `sync_origin_id` が NULL。消す道で送りを失敗させたとき、`sync_status` が変わらず警告が残ること（審査11 指摘1〜3）。直すときの following で insert だけ失敗させたとき、元の行が `'synced'` であること。直すときの this・all の patch を失敗させたとき、その行が `'failed'` であること（審査12 指摘1・2）。
 - frontend 試験: 6 つの文字（開始日 2 通り）・id の形と `eventNumericId`・3 択の取り消しで送らない・選び方を変えたとき「この予定」を出さない・`occurrence_start` を Z 形で送る・Google から取り込んだ予定と Meet が付いた予定で選ぶ欄を出さない・繰り返しを選んだら Meet の行を出さない（審査5 指摘2）・Meet の行を押してから「毎週」を選んで保存すると `add_meet` を送らない（審査6 指摘2）。
 - 移行の見張り: `backend/tests/test_tenant_loop_migration_guard.py`（会社ごとに回す移行が試験の足場に載っているか）。
 - 分類表の T10 は calendar_events を見ない（会社の部屋を作る `bootstrap_tenant_schema` がこの表を作らないため・審査1 ③）。分類の行の抜けを見張る試験は今は無い。守り手に数えない。
@@ -1662,4 +1665,13 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 | 1 | 低 | 「失敗したら `'failed'`」が消す道にも効くと読め、消すときの「警告だけ」と食い違う | §12.7（直す道だけに効く・消す道は警告だけ）・§12.10 |
 | 2 | 中 | 消して作り直す道で delete は通り create だけ失敗すると、行が Google で消えた古い id を持ち続ける | §12.7（`google_event_id`・`sync_origin_id` を NULL）・§12.10 |
 | 3 | 低 | 直すときの following で `'failed'` にする行が決まっていない・送り直す仕組みが無い | §12.7（行ごとに決めた・送り直しは作らない）・§12.10 |
+
+#### 審査12（2026-11-11 23:35 UTC・対象 50ce0c15e）: REVISE
+
+審査11 の指摘 1〜3 は直っていると確かめた。そのうえで重さ低の 2 件。
+
+| # | 重さ | 指摘 | 直した所 |
+|---|---|---|---|
+| 1 | 低 | 「元の行は `'synced'` のまま」とあるが、今の直す道は直す前に `'pending'` を書く（`calendar_service.py:372`） | §12.7（UNTIL の patch が通ったら `'synced'` に書く）・§12.10 |
+| 2 | 低 | 直す道の this と all（決まり以外だけ）の送りが失敗したときの行の扱いが表に無い | §12.7（どちらも `'failed'`）・§12.10 |
 
