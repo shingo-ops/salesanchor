@@ -14,11 +14,11 @@ KGI: 毎朝と配備の後の本番の画面点検で、予定表の作る小窓
 
 | # | 基準 | 検証方法 | ○× |
 |---|---|---|---|
-| K1 | 本 PR の合流後の配備の後の点検（event=workflow_run）で S13 が passed（skipped・failed は×） | `gh run view <run> --log` の「本番の画面点検を実行」の段で `S13` の行が ✓ | ○× |
+| K1 | 本 PR の合流後の配備の後の点検（event=workflow_run）で S13 が passed（skipped・failed・flaky〔再試行で通った〕は×） | `gh run view <run> --log` の「本番の画面点検を実行」の段で `S13` の行が ✓ | ○× |
 | K2 | 同じ実行で S1〜S8・S10〜S12 も全部合格のまま | 同じ段で failed 0 | ○× |
-| K3 | S13 は本番に書き込みを送らない | ①コードで GET 以外（ログインの道 `/api/v1/auth/` を除く）を全部止め、止めた件数 0 を最後に確かめる（§4-1）②審査で S13 に `.click()` されるのが「その他のオプション」と Meet の行（出たときだけ）だけで、「保存」を押す行が 0 件であることを `grep` で確かめる | ①② 両方で○ |
+| K3 | S13 は本番に書き込みを送らない | ①コードで GET 以外（ログインの札の更新 `/api/v1/auth/refresh` だけを除く）を全部止め、止めた件数 0 を最後に確かめる（§4-1）②審査で S13 に `.click()` されるのが「その他のオプション」と Meet の行（出たときだけ）だけで、「保存」を押す行が 0 件であることを `grep` で確かめる | ①② 両方で○ |
 | K4 | 壊したら落ちる（点検が空振りしない） | 審査で、§3 の「○」の各行に S13 の expect が 1 つ以上あり、その expect は壊れたときに落ちる形（見えること・値・件数の一致）であることを確かめる。本番でわざと落とす試験はしない | 審査で○ |
-| K5 | 毎朝の実行（22:00Z）でも S13 が passed | 合流の翌朝の schedule の実行で同じく ✓ | ○× |
+| K5 | 毎朝の実行（22:00Z）でも S13 が passed | 合流の翌朝の schedule の実行で同じく ✓（skipped・failed・flaky は×） | ○× |
 
 ## 3. S13 が確かめる点（手作業の G51〜G57 との対応）
 
@@ -29,7 +29,7 @@ KGI: 毎朝と配備の後の本番の画面点検で、予定表の作る小窓
 | Meet の行を押すと「保存すると参加用のリンクができます」、× で元に戻る | G51 | × 点検用の人は管理者でないため行が出ない（recon §2）。出たときだけ確かめ、出ないときは注記を残す。守りは単体試験 |
 | 「その他のオプション」で窓いっぱいの編集画面（予定の編集）が開く | G53 | ○ |
 | 題名が編集画面に引き継がれる | G53 | ○ |
-| 編集画面で `m` を押しても表示が切り替わらない | G56 | ○ |
+| 編集画面で `m` を押しても表示が切り替わらない | G56 | ○（注: 全画面の止め SchedulePageImpl.tsx:1250 と小窓の止め :1266 の二重に守られている。:1250 だけが壊れたときはこの行では落ちない。単体試験 SchedulePageImpl.test.tsx:866 も同じ二重の状態で確かめている。:1250 は重ねの守りで、単独の壊れは今どこでも検出しない。利用者に見える動きは :1266 が守るため変わらない） |
 | Tab を 25 回押してもフォーカスが編集画面の外に出ない | G56 | ○ |
 | Esc で編集画面が閉じ、作る小窓と題名が残る | G54 | ○ |
 | もう一度 Esc で作る小窓も閉じる | 後片付け | ○ |
@@ -55,12 +55,12 @@ KGI: 毎朝と配備の後の本番の画面点検で、予定表の作る小窓
 
 ```ts
   test("S13 予定表の作る小窓と全画面の編集が開いて閉じる（保存しない）", async ({ authedPage: page }) => {
-    // 書き込みは送らせない。ログインの道（/api/v1/auth/）以外の GET でない通信は止めて数える
+    // 書き込みは送らせない。ログインの札の更新（/api/v1/auth/refresh）以外の GET でない通信は止めて数える
     const blockedWrites: string[] = [];
     await page.route("**/api/**", (route) => {
       const req = route.request();
       const path = new URL(req.url()).pathname;
-      if (req.method() !== "GET" && !path.startsWith("/api/v1/auth/")) {
+      if (req.method() !== "GET" && path !== "/api/v1/auth/refresh") {
         blockedWrites.push(`${req.method()} ${path}`);
         return route.abort();
       }
@@ -105,13 +105,13 @@ KGI: 毎朝と配備の後の本番の画面点検で、予定表の作る小窓
     const dialog = page.getByRole("dialog", { name: "予定の編集", exact: true });
     await expect(dialog, "全画面の編集が開く").toBeVisible();
     const box = await dialog.boundingBox();
-    const viewport = page.viewportSize();
+    // 比べる相手はスクロール帯を除いた窓の中の大きさ（審査の指摘 2）
+    const viewport = await page.evaluate(() => ({ width: document.documentElement.clientWidth, height: window.innerHeight }));
     expect(box, "全画面の編集の大きさ").not.toBeNull();
-    expect(viewport, "窓の大きさ").not.toBeNull();
     expect(Math.abs(box!.x), "左端").toBeLessThanOrEqual(1);
     expect(Math.abs(box!.y), "上端").toBeLessThanOrEqual(1);
-    expect(Math.abs(box!.width - viewport!.width), "幅が窓と同じ").toBeLessThanOrEqual(1);
-    expect(Math.abs(box!.height - viewport!.height), "高さが窓と同じ").toBeLessThanOrEqual(1);
+    expect(Math.abs(box!.width - viewport.width), "幅が窓と同じ").toBeLessThanOrEqual(1);
+    expect(Math.abs(box!.height - viewport.height), "高さが窓と同じ").toBeLessThanOrEqual(1);
     await expect(dialog.getByRole("textbox", { name: "タイトル", exact: true }), "題名の引き継ぎ").toHaveValue("prod-ui-check-s13");
 
     // 5. 編集画面では近道のキーが効かない（入力欄の外で m を押す）
@@ -148,7 +148,7 @@ KGI: 毎朝と配備の後の本番の画面点検で、予定表の作る小窓
 ### 4-2. `docs/adr/ADR-1051-prod-ui-black-box-check.md`
 
 - 備考の行の最後（`…docs/handoff/prod-ui-check-after-deploy/design.md）` の後）に次を足す: `。改訂 2026-11-11（予定表の作る小窓と全画面の編集を見る S13 を足す）は PO の選択 2026-11-11「1」と委任「PRマージ、デプロイまで完走させてくれ」に基づき Claude Opus が決めた（設計 docs/handoff/prod-ui-check-schedule-s13/design.md）`
-- What の「2026-11-08 改訂で、在庫表…を足した。」の文の後に次を足す: ` 2026-11-11 改訂で、予定表の作る小窓と全画面の編集が開いて閉じること（S13。保存しない。ログインの道以外の書き込みは点検の中で止めて 0 件を確かめる）を足した。Meet の行は点検用の人には出ない（管理者でないため）ので、本番の点検では確かめない。`
+- What の「2026-11-08 改訂で、在庫表…を足した。」の文の後に次を足す: ` 2026-11-11 改訂で、予定表の作る小窓と全画面の編集が開いて閉じること（S13。保存しない。ログインの札の更新以外の書き込みは点検の中で止めて 0 件を確かめる）を足した。Meet の行は点検用の人には出ない（管理者でないため）ので、本番の点検では確かめない。`
 - `node scripts/generate-adr-index.js` を実行し、`docs/adr/README.md` に差分が出たらコミットに含める。
 
 ### 4-3. 触らない範囲
@@ -210,3 +210,8 @@ KGI: 毎朝と配備の後の本番の画面点検で、予定表の作る小窓
   5. commit（本文の最後に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`）→ push。PR は作らない（Opus が作る）。
 - 止まる条件: §4-1 の挿入位置が recon の行番号と合わない／`--list` が読み込みで失敗する／触らない範囲に差分が出る → 何も直さず BLOCKED: と生出力を返す。
 - 本番の点検を手で流さない（workflow_dispatch しない）。それは合流後に Opus が配備の後の実行で見る。
+
+## 11. 設計の審査（2026-11-11・クラウドの Claude Opus・同一AIの審査）
+
+- 判定 APPROVE（止める指摘なし）。軽い指摘 4 件を本版で反映: ① m の行の二重の守りを §3 に注記 ② 大きさの比較をスクロール帯を除いた幅（clientWidth）と innerHeight に変更 ③ K1・K5 で flaky も×と明記 ④ 書き込みの除外を `/api/v1/auth/refresh` だけに絞った（根拠 frontend/src/lib/auth/selfAuth.ts:11・:181）。
+- 確かめて合っていた点: キー c は window の keydown に届く・画面の名前は ja.json と一致・表示切替ボタンの探し方は一意・Esc の順・Tab の閉じ込め・API の基点は同じ host の /api/v1（api.ts:32）・ログインの道の回数は想定内。
