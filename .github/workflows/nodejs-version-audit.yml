@@ -5,6 +5,7 @@ name: Node.js バージョン監査（四半期）
 #
 # 目的: Node.js のEOL・GHA廃止スケジュールによる CI クラッシュを事前に防ぐ。
 # 重複対策: ラベル "ci-maintenance" の open Issue が存在する場合は作成しない。
+# あわせて、secret-scan.yml に固定した gitleaks 本体の版が最新かを比べる（docs/handoff/merge-queue-org/design.md §14）。
 
 on:
   schedule:
@@ -66,6 +67,22 @@ jobs:
             echo "✅ npm install の使用は検出されませんでした（全て npm ci）"
           fi
 
+      - name: Compare pinned gitleaks version
+        id: scan-gitleaks
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          rm -f outdated_gitleaks.txt
+          PINNED=$(grep -m1 -E '^[[:space:]]+GITLEAKS_VERSION:' .github/workflows/secret-scan.yml | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
+          LATEST=$(gh api repos/gitleaks/gitleaks/releases/latest --jq '.tag_name' | sed 's/^v//' || true)
+          if [ -z "$PINNED" ] || [ -z "$LATEST" ]; then
+            echo "- gitleaks 本体の版を比べられませんでした（固定: '${PINNED}'・最新: '${LATEST}'）。手で確かめてください" > outdated_gitleaks.txt
+          elif [ "$PINNED" != "$LATEST" ]; then
+            echo "- .github/workflows/secret-scan.yml の gitleaks 本体 ${PINNED} → 最新 ${LATEST}（版と sha256 を一緒に替える。上げるのは別の変更で 1 つずつ）" > outdated_gitleaks.txt
+          else
+            echo "✅ gitleaks 本体は最新（${PINNED}）"
+          fi
+
       - name: Combine scan results
         id: scan
         run: |
@@ -81,6 +98,14 @@ jobs:
             echo "### npm install 使用箇所（npm ci に変更してください）" >> combined_issues.txt
             cat outdated_npm.txt >> combined_issues.txt
             echo "" >> combined_issues.txt
+            FOUND=true
+          fi
+          if [ -f outdated_gitleaks.txt ]; then
+            {
+              echo "### gitleaks 本体の版"
+              cat outdated_gitleaks.txt
+              echo ""
+            } >> combined_issues.txt
             FOUND=true
           fi
           echo "found=$FOUND" >> "$GITHUB_OUTPUT"
@@ -110,11 +135,11 @@ jobs:
           MONTH=$(date +%-m)
           QUARTER=$(( (MONTH - 1) / 3 + 1 ))
           YEAR_Q="$(date +%Y)-Q${QUARTER}"
-          OUTDATED_LIST=$(cat outdated.txt)
+          OUTDATED_LIST=$(cat combined_issues.txt)
 
           {
-            echo "以下のワークフローで古い Node.js バージョン（20以下）が検出されました。"
-            echo "GitHub Actions の Node.js 20 ランタイムは廃止済みのため、最新 LTS（22）への更新が必要です。"
+            echo "四半期の点検で、更新が要る箇所が見つかりました（内訳は下の「検出箇所」）。"
+            echo "Node.js は 20 以下なら最新 LTS（22）へ更新します。gitleaks 本体は版と sha256 を一緒に上げます。"
             echo ""
             echo "## 検出箇所"
             echo '```'
@@ -134,6 +159,6 @@ jobs:
           } > issue_body.txt
 
           gh issue create \
-            --title "CI Node.js バージョン要更新 ${YEAR_Q}（古いバージョン検出）" \
+            --title "CI 四半期点検 要更新 ${YEAR_Q}（古いバージョン検出）" \
             --body-file issue_body.txt \
             --label "ci-maintenance"
