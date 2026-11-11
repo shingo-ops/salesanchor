@@ -1,0 +1,21 @@
+# 手元で組み立てる人のためのファイル。本番は .env の COMPOSE_FILE で読むファイルを決めているので、このファイルは読まない（design.md §26-1 5.）。
+# docker compose build で、docker-compose.yml の image: の名前（既定値）の完成品ができる。
+services:
+  backend:
+    build: ./backend
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_FUNNEL_DASHBOARD: ${VITE_FUNNEL_DASHBOARD}
+  celery-worker:
+    build: ./backend
+  celery-beat:
+    build: ./backend
+  discord-gateway:
+    build: ./backend
+  gemini-egress:
+    build: ./monitoring/prod1/gemini-egress
+  gha-exporter:
+    build:
+      context: ./monitoring/gha-exporter
