@@ -1409,7 +1409,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
   - 直すときも同じ（審査1 ⑦）: 開始日を変えて今の選び方がその日で選べなくなったら 422。画面は開始日が変わるたびに選び方を作り直し、今の選び方が無くなったら送らずに i18n のキーの誤りの文を出す。これは設計の決定で、Google がこの場合にどう動くかは確かめていない。
 - 一覧 `GET /calendar/events?start&end`（`:143`）→ `list_events`（`backend/app/services/calendar_service.py:150`）:
   - 単発の行と例外の行（消した印でないもの）は今と同じ条件で取る。条件に `recurrence_rule IS NULL` を足して元の行を外す。
-  - 元の行は別に `recurrence_rule IS NOT NULL AND start_datetime < :end` で取り（審査2 指摘1: このときも単発と同じ type の絞り `calendar_service.py:176-181` と見せ方の絞り `:184-189`（他人の「自分だけ」は返さない）を必ず付ける。例外の行を期間に関係なく引くときも同じ絞りを付ける）、期間の中の回に広げる（python-dateutil の `rrulestr` と `between(期間の始まり − 長さ, 期間の終わり, inc=True)`）。回の終わり＝回の始まり＋元の長さ。
+  - 元の行は別に `recurrence_rule IS NOT NULL AND start_datetime < :end` で取り（審査2 指摘1: このときも単発と同じ type の絞り `backend/app/services/calendar_service.py:176-181` と見せ方の絞り `:184-189`（他人の「自分だけ」は返さない）を必ず付ける。例外の行を期間に関係なく引くときも同じ絞りを付ける）、期間の中の回に広げる（python-dateutil の `rrulestr` と `between(期間の始まり − 長さ, 期間の終わり, inc=True)`）。回の終わり＝回の始まり＋元の長さ。
   - 時刻つきは日本時間の始まりを dtstart にし、UNTIL は UTC の形。終日は日付だけで広げ、UNTIL は日付の形（RFC 5545 で dtstart と同じ型が要る）。
   - 例外の行がある回（同じ `original_start_datetime`）は広げた回から外す（審査1 ⑤）: 見つかった元の行の id で例外の行を**期間に関係なく**別に引き（`recurring_event_id = ANY(:ids)`）、その `original_start_datetime` の回を外す。回を別の日へ動かした例外でも元の回が残らない。消した印でない例外の行そのものは、上の普通の期間の条件で出る。消した印の例外は返さない。
   - 広げた回は、今と同じ厳しい比べ方で最後に絞る（審査1 ⑥）: 回の始まり < 期間の終わり かつ 回の終わり > 期間の始まり（`backend/app/services/calendar_service.py:168-172` と同じ）。`between` の inc=True で境目の回が入りすぎるのをここで落とす。
@@ -1597,6 +1597,6 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 #### 審査7（2026-11-11 21:59〜22:00 UTC・クラウドの Opus・対象 293a081d7）
 
 - 判定: **APPROVE**。実行記録 cse_01W47tdfZfmqTZPq847uepVp。指摘は 1 件ずつ別の echo で出させ、全文を読めた。
-- 観点(a): 6 回目の指摘 1・2 は直っている（根拠の行 `SchedulePageImpl.tsx:976`・`ScheduleDraftFields.tsx:300` は origin/main と一致）。観点(b): 新しい食い違いなし（下書きは開くとき `addMeet` が false で始まる `SchedulePageImpl.tsx:927`・`:1120`）。観点(c): 実装役が迷う所なし。
+- 観点(a): 6 回目の指摘 1・2 は直っている（根拠の行 `frontend/src/pages/schedule/SchedulePageImpl.tsx:976`・`frontend/src/pages/schedule/ScheduleDraftFields.tsx:300` は origin/main と一致）。観点(b): 新しい食い違いなし（下書きは開くとき `addMeet` が false で始まる `frontend/src/pages/schedule/SchedulePageImpl.tsx:927`・`:1120`）。観点(c): 実装役が迷う所なし。
 - 体裁の指摘 1 件（§12.5 の句点の後の余分な空白）は直した。
 - これは同じ AI（Opus）による審査で、独立した第二者の審査ではない。設計の合格は、PO の成功条件の決定・実装の開始の承認を兼ねない。
