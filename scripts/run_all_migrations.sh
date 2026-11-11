@@ -1257,3 +1257,5 @@ run_sql migrations/20261109_200000_drop_staff_firebase_uid.sql
 run_sql migrations/20261111_120000_add_codex_secretary_choices.sql
 # 会社と連絡先の状態 便1: 状態の表 public.customer_statuses を作る（作るだけ・冪等）
 run_sql migrations/20261112_120000_create_public_customer_statuses.sql
+# ADR-1061 便2-1: 閲覧者の状態に contracting と履歴の操作4つを足す（CHECK の付け替え・足すだけ・冪等）
+run_sql migrations/20261112_130000_add_viewer_contracting_status.sql

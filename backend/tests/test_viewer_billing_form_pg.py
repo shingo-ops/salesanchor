@@ -19,8 +19,10 @@ from app import cache
 from app.auth import self_tokens
 from app.database import get_db
 from tests.test_super_admin_viewers import (
+    ACTOR_ID,
     _account,
     _api,
+    _changes,
     _prepare,
     needs_ci_pg,
 )
@@ -203,10 +205,10 @@ def test_send_twice_leaves_one_key_and_old_link_is_invalid(pg):  # noqa: F811
 
 
 @needs_ci_pg
-def test_send_expiry_is_seven_days_and_room_and_mail_are_called(pg):  # noqa: F811
+def test_send_expiry_is_three_days_and_room_and_mail_are_called(pg):  # noqa: F811
     conn, _, async_url = pg
     cur = _prepare_billing(conn, async_url)
-    vid = _account(cur, "seven@x.com", "active")
+    vid = _account(cur, "three@x.com", "active")
     cur.execute("UPDATE public.viewer_accounts SET discord_channel_id = '123456789012345678' WHERE id = %s", (vid,))
     before = datetime.now(timezone.utc)
     resp, room_mock, mail_mock = _send(async_url, vid)
@@ -215,9 +217,9 @@ def test_send_expiry_is_seven_days_and_room_and_mail_are_called(pg):  # noqa: F8
     assert body["room_notice"] == "sent" and body["mail_queued"] is True
     cur.execute("SELECT expires_at FROM public.viewer_login_tokens WHERE viewer_account_id = %s", (vid,))
     expires = cur.fetchone()[0]
-    assert timedelta(days=7) - timedelta(minutes=2) <= expires - before <= timedelta(days=7, minutes=2)
+    assert timedelta(days=3) - timedelta(minutes=2) <= expires - before <= timedelta(days=3, minutes=2)
     assert room_mock.await_count == 1 and room_mock.await_args.args[0] == "123456789012345678"
-    assert mail_mock.call_count == 1 and mail_mock.call_args.args[0] == "seven@x.com"
+    assert mail_mock.call_count == 1 and mail_mock.call_args.args[0] == "three@x.com"
     assert "#billing=" in mail_mock.call_args.args[2] and "#billing=" in body["room_notice_text"]
 
 
@@ -252,6 +254,58 @@ def test_send_to_non_contracted_is_409_with_no_key(pg, status):  # noqa: F811
     resp, room_mock, mail_mock = _send(async_url, vid)
     assert resp.status_code == 409 and resp.json()["detail"] == "viewer_status_conflict"
     assert _tokens(cur, vid) == 0 and room_mock.await_count == 0 and mail_mock.call_count == 0
+    assert _changes(cur, vid) == []
+
+
+@needs_ci_pg
+def test_send_to_contracting_with_short_expiry_moves_it_to_key_expiry(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare_billing(conn, async_url)
+    vid = _account(cur, "c-short@x.com", "contracting", expires_in_days=-1)
+    before = datetime.now(timezone.utc)
+    resp, _, mail_mock = _send(async_url, vid)
+    assert resp.status_code == 200 and mail_mock.call_count == 1
+    cur.execute("SELECT expires_at FROM public.viewer_login_tokens WHERE viewer_account_id = %s", (vid,))
+    key_expires = cur.fetchone()[0]
+    cur.execute("SELECT status, trial_expires_at FROM public.viewer_accounts WHERE id = %s", (vid,))
+    status, expires = cur.fetchone()
+    assert status == "contracting" and expires == key_expires
+    assert timedelta(days=3) - timedelta(minutes=2) <= expires - before <= timedelta(days=3, minutes=2)
+    rows = _changes(cur, vid)
+    assert [(r[0], r[1], r[2], r[5], r[6], r[7]) for r in rows] == [
+        ("form_sent", "contracting", "contracting", None, "po", ACTOR_ID)
+    ]
+    assert rows[0][4] == key_expires and rows[0][3] < rows[0][4]
+
+
+@needs_ci_pg
+def test_send_to_contracting_with_long_expiry_keeps_it(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare_billing(conn, async_url)
+    vid = _account(cur, "c-long@x.com", "contracting", expires_in_days=10)
+    cur.execute("SELECT trial_expires_at FROM public.viewer_accounts WHERE id = %s", (vid,))
+    old = cur.fetchone()[0]
+    resp, _, _ = _send(async_url, vid)
+    assert resp.status_code == 200
+    cur.execute("SELECT trial_expires_at FROM public.viewer_accounts WHERE id = %s", (vid,))
+    assert cur.fetchone()[0] == old
+    rows = _changes(cur, vid)
+    assert [(r[0], r[3], r[4], r[6], r[7]) for r in rows] == [("form_sent", old, old, "po", ACTOR_ID)]
+
+
+@needs_ci_pg
+def test_send_to_active_records_form_sent_and_keeps_no_expiry(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare_billing(conn, async_url)
+    vid = _account(cur, "a-form@x.com", "active")
+    resp, _, _ = _send(async_url, vid)
+    assert resp.status_code == 200
+    cur.execute("SELECT status, trial_expires_at FROM public.viewer_accounts WHERE id = %s", (vid,))
+    assert cur.fetchone() == ("active", None)
+    rows = _changes(cur, vid)
+    assert [(r[0], r[1], r[2], r[3], r[4], r[6], r[7]) for r in rows] == [
+        ("form_sent", "active", "active", None, None, "po", ACTOR_ID)
+    ]
 
 
 @needs_ci_pg
