@@ -7,6 +7,9 @@ name: Dangling Route Gate
 on:
   pull_request:
     branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main]
 
 jobs:
   gate:
@@ -27,8 +30,8 @@ jobs:
 
       - name: Run dangling-route gate
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
         run: node scripts/check-dangling-routes.js
 
       - name: Run dangling-route tests

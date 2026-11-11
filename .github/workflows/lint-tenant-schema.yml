@@ -25,6 +25,9 @@ on:
     branches:
       - develop
       - main
+  merge_group:
+    types: [checks_requested]
+    branches: [main]
   push:
     branches:
       - develop
@@ -50,7 +53,7 @@ jobs:
       - name: Check relevant file changes
         id: changes
         run: |
-          BASE="${{ github.event.pull_request.base.sha || 'HEAD~1' }}"
+          BASE="${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || 'HEAD~1' }}"
           CHANGED=$(git diff --name-only "$BASE"...HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
           if echo "$CHANGED" | grep -qE "^(backend/app/|scripts/lint_tenant_schema\.py|\.github/workflows/lint-tenant-schema\.yml)"; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"

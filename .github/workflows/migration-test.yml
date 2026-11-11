@@ -24,6 +24,9 @@ name: Migration SQL Test
 on:
   pull_request:
     branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main]
 
 jobs:
   # マイグレーション関連ファイルの変更有無を判定
@@ -1194,8 +1197,8 @@ jobs:
       - name: 変更されたマイグレーションを検出
         id: detect
         run: |
-          BASE=${{ github.event.pull_request.base.sha }}
-          HEAD=${{ github.event.pull_request.head.sha }}
+          BASE=${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          HEAD=${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
 
           # fail-closed: base..head の diff を 1 回だけ取得し、失敗したらジョブを落とす。
           # shallow checkout 等で base SHA が無いと git diff は `fatal: bad object` になる。

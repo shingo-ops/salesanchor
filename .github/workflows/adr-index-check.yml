@@ -3,6 +3,9 @@ name: ADR Index Check
 on:
   pull_request:
     branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main]
 
 jobs:
   check:
@@ -15,8 +18,10 @@ jobs:
 
       - name: Check if ADR files changed
         id: adr_changed
+        env:
+          DIFF_BASE: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || format('origin/{0}', github.base_ref) }}
         run: |
-          git diff --name-only origin/${{ github.base_ref }}...HEAD \
+          git diff --name-only "${DIFF_BASE}...HEAD" \
             | grep -qE '^docs/adr/ADR-.*\.md$|^docs/adr/README\.md$|^scripts/generate-adr-index\.js$' \
             && echo "changed=true" >> "$GITHUB_OUTPUT" \
             || echo "changed=false" >> "$GITHUB_OUTPUT"

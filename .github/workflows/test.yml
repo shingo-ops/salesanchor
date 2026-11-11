@@ -10,6 +10,9 @@ on:
     # ワークフロー未実行（skipped）は「未通過」扱いになり frontend-only PR がブロックされる。
     # 代わりに detect-changes ジョブで変更範囲を判定し、
     # backend 変更がない場合は pytest ジョブを即時成功終了させる。
+  merge_group:
+    types: [checks_requested]
+    branches: [main]
   push:
     branches:
       - develop
