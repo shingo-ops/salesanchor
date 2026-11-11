@@ -150,6 +150,20 @@ PO の言葉（2026-11-11）: 「予定の詳細画面だけどGoogleカレン�
 
 - ADR-144（金型。新しい金型は PO の許可・`docs/CC_UI_GOVERNANCE.md:14`）・ADR-067（色と寸法はトークン）・ADR-027（i18n）・ADR-073（見本帳）・ADR-1060（Meet は保存のときに作る）・ADR-1065（時間割の金型）・ADR-1051（本番の画面点検）。入力欄の角を丸から変える例外を決めた ADR は無い（`git grep -il "comp-input-radius\|角.*丸" docs/adr` で 0 件・2026-11-11）→ ADR-1074 を起こす。
 
+### 8.6 Google の予定の画面の色（2026-11-11 追加測定・PO の Google（HIGH LIFE JPN）・Chrome 窓 1914×1448・明るい表示・getComputedStyle・保存していない）
+
+PO の言葉（2026-11-11）: 「予定の色だけどGoogleと色を併せて、Googleのは移植は心理的な意識をした青を使った配色になっていたはず」。範囲の問いへの答え: 「予定の画面すべて」（編集画面・カレンダーの表・予定の箱・作る小窓・詳しくの小窓。ほかの画面は今のまま）。
+
+- 青を選んだ理由（心理の狙い）: Google の公式の説明は見つからなかった（WebSearch 2026-11-11。出てきたのは一般の色彩心理の記事と、Material 3 Expressive の研究が「元気・親しみ」などの評価を測ったという記事だけ）。→ **未確認**。設計の根拠には使わず、「PO が Google と同じ色を求めた」を根拠にする。
+- 週の表（/r/week）: ページの地 rgb(248,250,253)。表の白い札 rgb(255,255,255)・角 28。日の列の線 1px rgb(221,227,234)。今日の丸 rgb(11,87,208)・文字白。左の小さい暦の今日 rgb(11,87,208) 24×24。今の時刻の線と丸 rgb(219,55,45)（線 2px・丸 12px）。見出しの文字 rgb(31,31,31) 22px/400。曜日・時刻・絵 rgb(68,71,70)。外枠のある操作（「今日」等）の枠 1px rgb(116,119,117)。「作成」ボタン 白地・角 16・影 rgba(0,0,0,.3) 0 1px 2px, rgba(0,0,0,.15) 0 1px 3px 1px。選ばれた表示切替の地 rgb(194,231,255)。
+- 予定の箱: 地はカレンダーの色（このカレンダーは rgb(3,155,229)）・角 6・枠なし・文字 rgb(255,255,255) 12px/400。
+- 作る小窓: 地 rgb(240,244,249)・598×513・影 rgba(0,0,0,.14) 0 3px 4px, rgba(0,0,0,.12) 0 3px 3px -2px, rgba(0,0,0,.2) 0 1px 8px。選ばれた種類（「予定」）の地 rgb(194,231,255)・文字 rgb(0,74,119)・角 8。文字 rgb(31,31,31)・補足と絵 rgb(68,71,70)。保存 地 rgb(11,87,208)・文字白・76×40・角 20。
+- 詳しくの小窓（既にある予定）: 地 rgb(240,244,249)・496 幅。題名 rgb(31,31,31) 22px。補足と絵 rgb(68,71,70)。「Google Meet に参加」地 rgb(11,87,208)・文字白・角 20。文字のリンク rgb(11,87,208)。
+- 編集画面（/r/eventedit）: 地 rgb(248,250,253)・札 白・角 28。文字 rgb(31,31,31)・絵と補足 rgb(68,71,70)・欄の中の案内文 rgb(68,71,70)。塗りの欄 rgb(233,238,246)。題名の下線 1px rgb(68,71,70)・押すと 3px rgb(11,87,208)。選ばれたタブの文字と下の帯 rgb(11,87,208)・帯 3px。選ばれていないタブ rgb(68,71,70)。タブの下の線 1px rgb(196,199,197)。チェック欄（入）地と枠 rgb(11,87,208)・（切）枠 2px rgb(68,71,70)。保存 rgb(11,87,208)・文字 rgb(255,255,255)。
+- アプリの今（コード・origin/main a7fbffdfe）: 予定の画面は全体のトークンを使う（`frontend/src/pages/schedule.css` で `--text-primary` 15 回・`--text-secondary` 14・`--text-muted` 13・`--border` 10・`--accent` 5 ほか）。`--text-primary` #1a202c・`--text-secondary` #4a5568・`--text-muted` #718096・`--border` #e2e8f0・`--accent` #1e3a8a（`frontend/src/index.css:24-34`）。暗い値 `:231-239`。予定専用の古い Google 色のトークンが既に在る: `--calendar-google-blue` #1a73e8 / 暗 #8ab4f8・`--calendar-google-blue-light` #e8f0fe / #1e3a5f・`--calendar-today-bg` #1a73e8 / #8ab4f8・`--calendar-grid-border` #dadce0 / #3c4043（`frontend/src/index.css:184-187,385-388`）。今の時刻の線 `--schedule-now-line` #ea4335（`frontend/src/tokens.css:401`）。
+- 予定の箱の色は持ち主（社員）の色で、正本はサーバー（`frontend/src/pages/schedule/schedule-owner.ts:35` のコメント・`backend/app/routers/calendar.py` `_DEFAULT_OWNER_COLOR`）。Google も箱の色はカレンダーごとの色。→ 箱の地の色は変えない（DB の正本のまま）。
+- 未確認: Google の暗い表示の色（Google の表示の設定を変えないと測れない。設定の変更は PO の許可が要る）。
+
 ### 8.5 未確認
 
 - Google の暗い表示の編集画面（測っていない）。暗い表示はアプリのトークンの暗い値で出す。
