@@ -72,7 +72,8 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 
 - 日本語名は今の ja.json の値（`frontend/src/locales/ja.json:1133-1135`・`:1299`）をそのまま写す。英語名の3つは今の en.json（`frontend/src/locales/en.json:1133-1135`）と同じ。重複確認待ちだけ、今の英語「Pending Dedup Review」（`frontend/src/locales/en.json:1161`）は仕組みの略語（Dedup）を含むため「Pending duplicate check」に直す（英語画面だけ見た目が変わる）。
 - bucket は今の `frontend/src/utils/statusPresentation.ts:164-176` と同じ。
-- 手順: SQL ファイルを docs/handoff/status-ssot-contact-company/ に置く → DRY-RUN（ROLLBACK）で4行と出るのを確かめる → PO の `!` で COMMIT（`SET LOCAL app.is_operator='true'`）→ 読み取りの鍵で4行を確かめる。
+- 4行の値を書くのは1ファイルだけ: docs/handoff/status-ssot-contact-company/insert-customer-statuses.sql。本番への投入も、試験の準備（§5-2）も、このファイルを読む。
+- 手順: そのファイルを DRY-RUN（ROLLBACK）で4行と出るのを確かめる → PO の `!` で COMMIT（`SET LOCAL app.is_operator='true'`）→ 読み取りの鍵で4行を確かめる。
 
 ## 5. 会社・連絡先の列を表に結ぶ（便2・migration）
 
@@ -84,6 +85,13 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 - 会社を作る処理 `backend/app/services/tenant.py:224`・`:255` も CHECK → 外部キーに直す（同じ PR）。
 - ロック待ち1秒（ADR-1037）。
 - ロールバック: 外部キーを DROP し CHECK を付け直す SQL を design に添える（カードに書く）。
+
+### 5-2. 試験の準備（審査1回目の指摘）
+
+- 単体試験（SQLite）: 会社・連絡先の表は `backend/tests/conftest.py` が自前で作り、外部キーが無い。ここは変えない（外部キーの確かめは PostgreSQL の試験で行う）。
+- PostgreSQL の試験: `backend/tests/rls_bootstrap.py` の `_PG_BOOTSTRAP_MIGRATIONS` に便1の migration を足す。`backend/tests/seed_data.py` に customer_statuses_seed_sql() を足し、§4 の SQL ファイルを読んで4行を入れる（値をもう1回書かない）。前例 `backend/tests/test_channel_masters_shared_pg.py`。
+- 新しい PostgreSQL の試験 backend/tests/test_customer_statuses_pg.py で K3（表に無い値は断られる）と K10（RLS の下で、会社の領域の書き込みが外部キーの検査に通る）を確かめる。
+- migration の全体の試し流し（.github/workflows/migration-test.yml）で便2が4行の無い DB で止まる（RAISE EXCEPTION）ことは、カードで実物を読んで扱いを決める（未確認・審査2回目で確かめる）。
 
 ## 6. 読み書きの付け替え（便3・アプリのコード）
 
@@ -98,7 +106,8 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 - 読み口: 新しい hook（useCustomerStatuses）で API を1回読み、言語で name_ja/name_en を選ぶ。
 - statusPresentation.ts の contact・company の組は、表の bucket から作る形に変える（入口は ADR-120 のまま）。
 - recon §3 の8か所を、この読み口から並べる形に直す。絞り込みの2か所（ContactsPage・CompanyContactsTab）は4つになる。
-- 値の直書き（recon §3 の比較・初期値）: 動きに関わる比較（まとめる時の pending 判定など）は記号の定数1か所（新しいファイルに CUSTOMER_STATUS_CODES）にまとめ、各所はそれを使う。
+- サーバーの比較 `backend/app/routers/duplicates.py:93`・`backend/app/routers/companies.py:767`・`:980` は記号の定数（サーバー側1か所: backend/app/services/customer_statuses.py）を使う。
+- 値の直書き（recon §3 の比較・初期値・`frontend/src/components/MergeCompanyModal.tsx:96`）: 動きに関わる比較（まとめる時の pending 判定など）は記号の定数1か所（新しいファイルに CUSTOMER_STATUS_CODES）にまとめ、各所はそれを使う。
 - 色の CSS `frontend/src/components.css:271` は bucket の共通クラスを使う形にし、記号名のクラスは消す。`frontend/src/pages/design-system/DesignSystemPage.tsx:191` も合わせる。
 - 辞書から消すキー: customers.status_active/inactive/archived/pending_dedup・contacts.statusPendingDedupOption・contacts.statusCode.*（ja/en 両方）。ただし他の画面が同じキーを使っていれば残す（カードで `git grep` して0件を確かめてから消す）。ja.json の 1475・1922・2114 行の status_active は別の画面のキーなので触らない。
 
@@ -116,10 +125,20 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 - {{pending}}・{{active}} には §6-2 の読み口から状態の名前を入れる（名前を文に直書きしない）。
 - en も同じ意味に直す。裏付け: `backend/app/routers/companies.py:978-985`（上げる動き）、`backend/app/routers/contacts.py:869`・`:875`（記録）。
 
+### 6-3-2. まとめる先がアーカイブのときの失敗の文（ADR-1071）
+
+- `backend/app/routers/companies.py:768` の文をやめ、理由コード merge_target_archived を返す。
+- 画面は理由コード → 文言キーの対応表（前例 `frontend/src/pages/inbox/discordSendError.ts`）で「残す方が{{archived}}のため、まとめられません。先に残す方を{{active}}に戻してください。」を出す。名前は §6-2 の読み口から入れる。
+- 文の場所: `frontend/src/components/MergeCompanyModal.tsx:141`。
+
+### 6-3-3. 変えない所
+
+- 会社の書き出し（`backend/app/tasks/reports.py:51`）は記号のまま出す。記号は分析で結ぶための鍵で、名前は表から引ける（K8）。書き出しの形を変えるかは別に PO に聞く（§9 未決3）。
+
 ### 6-4. 試験と見張り
 
 - サーバーの試験: 試験 DB に4行を用意し、CompanyStatus・ContactStatus の値の集合＝表の code の集合を確かめる。§4 の SQL ファイルの値とも一致を確かめる。
-- 画面の試験: statusPresentation.test.ts を表の行から作る形に直す。
+- 画面の試験: statusPresentation.test.ts を表の行から作る形に直す。記号を書いた試験（`backend/tests/test_companies.py`・`backend/tests/test_contacts.py`・`frontend/src/components/FullPageFormButtonMigration.test.tsx`）は、選択肢の数え方が変わる所だけ直す。
 - 見張り: 便3 の後、会社・連絡先の4つの記号を画面のコードに直書きしたら止める検査を scripts/check-ui-governance.js に足す（定数ファイル1か所だけ許す）。
 
 ## 7. 出す順番（前が本番で確かめ終わってから次へ）
@@ -142,16 +161,19 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 | K7 まとめる画面の文に master・pending_dedup_review・active・audit_logs が0件 | ja/en.json の mergeCompany・mergeContact を grep → 0件。Chrome で会社をまとめる画面を開き文を読む（実行はしない） |
 | K8 分析で名前が引ける | 読み取りの鍵で companies と customer_statuses を結んだ件数の集計が名前付きで出る（tenant_004: 有効 51） |
 | K9 試験 | CI 全部緑。列挙＝表の試験が緑 |
+| K10 RLS の下で外部キーが働く | backend/tests/test_customer_statuses_pg.py が緑（会社の領域の利用者で会社を作れる・表に無い値は断られる） |
+| K11 まとめる先がアーカイブのときの文に仕組みの言葉が0件 | 画面の試験で理由コード merge_target_archived → 文に master・archived・active が無い |
 
 ## 9. 未決（PO に1件ずつ）
 
 1. 見込み客の状態（ADR-109・名前は辞書）も同じ形（名前も DB）に寄せるか。今回は対象外。別テーマとして後で聞く。
 2. 他にも「名前が辞書にあり DB に無い」状態が13種ある（statusPresentation.ts の13ドメイン）。どこまで DB に移すかは別テーマ。
+3. 会社の書き出し（CSV）の状態の列を、記号のままにするか名前にするか。今回は記号のまま（§6-3-3）。
 
 ## 10. 弊害と対処
 
 1. 画面が API を読むまで選択肢が空になる → hook が読み込み中を返し、選択肢は読み込み後に出す。失敗時は失敗の文（ADR-1071 の形）。
-2. 試験 DB に4行が無いと会社・連絡先を作る試験が落ちる → 試験の準備で4行を入れる（ADR-1007 の「試験の側でデータを用意」）。
+2. PostgreSQL の試験で4行が無いと会社・連絡先を作る試験が落ちる → §5-2 の seed で入れる（ADR-1007 の「試験の側でデータを用意」）。SQLite の単体試験は外部キーが無いので影響なし。
 3. 新しい会社を作るとき、public の表に4行が無いと作れない → 本番は4行が入っている。開発の手元環境はデータ変更の SQL を流す手順を README に書く。
 4. 会社だけ・連絡先だけの状態が必要になった時、1つの表では足りない → その時に applies_to 列を足す別設計。今は両方同じ（recon §1）。
 5. 英語名を DB に置くと翻訳の置き場が2つになる → 状態の名前は DB だけ・固定の文は辞書だけ、と新 ADR で線を引く。
@@ -175,4 +197,4 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 
 ## 14. 審査記録
 
-- （未）
+- 1回目（2026-11-11 13:58 JST・クラウド Opus）: 判定なしで停止。原因は依頼文の確かめ方に見張りの止める語が入っていたこと（Opus の依頼の書き方の誤り）。途中の指摘6件（試験 DB が SQLite・recon の漏れ5か所・409 の文）は実物で確かめて recon §2・§3 と §5-2・§6-2・§6-3-2・§6-3-3・§8 K10/K11・§9-3 に反映した。

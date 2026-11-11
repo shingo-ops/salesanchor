@@ -20,7 +20,7 @@
 
 - 【事実】状態は各行の1列。会社 `companies.status`・連絡先 `contacts.status`、VARCHAR(20) DEFAULT 'active'、CHECK で4つの値だけ許す。
   - 会社を作るときの定義: `backend/app/services/tenant.py:224`、連絡先: `backend/app/services/tenant.py:255`（どちらも `CHECK (status IN ('active','inactive','archived','pending_dedup_review'))`）
-  - 経緯の migration: 015・028・037（037 で連絡先にも pending_dedup_review を足した。`backend/app/schemas/contact.py:31-33` の注記）
+  - 経緯の migration: 015・028・029・037（`migrations/029_create_contacts.sql:42` は3値の CHECK・037 で連絡先にも pending_dedup_review を足した。`backend/app/schemas/contact.py:31-33` の注記）
 - 【事実】本番の制約（ai_ro・prod-constraints.txt）: tenant_001/003/004/005/006 の companies・contacts 計10表すべてに companies_status_check / contacts_status_check（上と同じ4値）。
 - 【事実】本番の件数（prod-status-counts.txt）:
 
@@ -42,6 +42,14 @@
 - 【事実】連絡先をまとめると記録に残す: `backend/app/routers/contacts.py:869`・`:875`（record_audit_log）。
 - 【事実】状態の一覧を画面に渡す API は無い（画面は値を自前で持つ・§3）。
 - 【事実】分析（analytics）の中で会社・連絡先の状態を読む所は0件（recon4.txt の検索結果なし）。
+- 【事実】設計審査1回目で見つかった置き場（review1-verify.txt で実物を確認）:
+  - `backend/app/routers/duplicates.py:93` 重複候補の一覧から archived を外す（`WHERE c.status != 'archived'`）
+  - `backend/app/tasks/reports.py:51` 会社の書き出し（CSV）に status の記号をそのまま出す
+  - `backend/app/routers/companies.py:768` まとめる先が archived のときの 409 の文「master 会社が archived 状態のため…active に戻してください。」。画面はこの文をそのまま出す（`frontend/src/components/MergeCompanyModal.tsx:141` の e.message）。ADR-1071 決定3（仕組みの名前を画面に出さない）に反する
+- 【事実】試験:
+  - 単体試験の DB は SQLite。会社・連絡先の表は `backend/tests/conftest.py` が自前で作り、CHECK も外部キーも無い（審査1回目の指摘・conftest.py:340 付近）
+  - PostgreSQL の試験は `backend/tests/rls_bootstrap.py` が `create_tenant_schema` で会社の領域を作る（:9）。public の表は `_PG_BOOTSTRAP_MIGRATIONS`（:14-）の migration と `backend/tests/seed_data.py` の seed 関数（:50・:62・:75・:97）で用意する。前例 `backend/tests/test_channel_masters_shared_pg.py`
+  - 記号を書いた試験: `backend/tests/test_companies.py`（8行）・`backend/tests/test_contacts.py`（9行）・`frontend/src/components/FullPageFormButtonMigration.test.tsx`（4行）・`frontend/src/utils/statusPresentation.test.ts:141-144`
 
 ## 3. 画面（frontend）
 
@@ -55,7 +63,7 @@
   - `frontend/src/pages/company-detail/CompanyBasicTab.tsx:89-92`
   - `frontend/src/pages/companies/CompaniesPage.tsx:511-514`
   - `frontend/src/components/MergeContactModal.tsx:233`（辞書キーを値から直接組み立てる）
-- 【事実】値を直接書いた比較・初期値: `frontend/src/pages/companies/CompaniesPage.tsx:352`・`:428`、`frontend/src/pages/contacts/ContactsPage.tsx:236`・`:395`・`:411`、`frontend/src/pages/contacts/ContactEditPage.tsx:196`、`frontend/src/pages/company-detail/CompanyBasicTab.tsx:125`、`frontend/src/pages/design-system/DesignSystemPage.tsx:191`、`frontend/src/components.css:271`（`.status-badge.status-pending_dedup_review`）。
+- 【事実】値を直接書いた比較・初期値: `frontend/src/components/MergeCompanyModal.tsx:96`（archived を候補から外す）、`frontend/src/pages/companies/CompaniesPage.tsx:352`・`:428`、`frontend/src/pages/contacts/ContactsPage.tsx:236`・`:395`・`:411`、`frontend/src/pages/contacts/ContactEditPage.tsx:196`、`frontend/src/pages/company-detail/CompanyBasicTab.tsx:125`、`frontend/src/pages/design-system/DesignSystemPage.tsx:191`、`frontend/src/components.css:271`（`.status-badge.status-pending_dedup_review`）。
 - 【事実】同じ名前の辞書キーが重なっている（ja.json）:
   - 「重複確認待ち」: `frontend/src/locales/ja.json:1161`（customers.status_pending_dedup）・`:1278`（contacts.statusPendingDedupOption）・`:1299`（contacts.statusCode.pending_dedup_review）
   - 「有効・無効・アーカイブ」: `frontend/src/locales/ja.json:1133-1135`（customers.status_*）と `:1297-1298`（contacts.statusCode.*）
