@@ -3,7 +3,7 @@
 > この文書は何か（専門用語なしの1行）:
 > 会社と連絡先の「有効・無効・アーカイブ・重複確認待ち」を DB の1つの表にまとめ、画面の選択肢・札・まとめる画面の文・分析がすべてその表を読むようにする手順。
 
-- 状態: **設計案作成済み（Opus）／設計審査 4回目 APPROVE・推奨3件を反映済み（§14）／PO 承認 未／実装未着手**
+- 状態: **設計案作成済み（Opus）／設計審査 4回目 APPROVE・推奨3件を反映済み（§14）／2026-11-12 PO 判断（§9 未決4）を反映して §1・§2・§3・§4・§6-2-1・§6-3-4・K4・K14・K15 を変えた＝5回目の審査が要る／PO 承認 未／実装未着手**
 - recon: docs/handoff/status-ssot-contact-company/recon.md
 - 基準: origin/main a88194893（2026-11-11 取得）
 - PO の言葉（2026-11-11）: 「DBがバラバラに成っていていろいろなところからデータ撮ってきているならSSOTしてほしい」「分析機能に影響するから値の直書きは禁止、基本的に値はDBにSSOTさせて、後から分析の材料として使用できる状態にする必要がある」。同日「1」で、状態の1か所化とまとめる画面の文を1つの設計にする。
@@ -25,7 +25,9 @@
 
 - 目的: 4つの状態の「記号・日本語名・英語名・並び順」を DB の1つの表だけに置く。画面とサーバーと分析は、その表を読む。同じ値を別の場所に書かない。色の種類は見た目の決まり（ADR-120）なのでコードの1か所に残す（分析の材料ではない）。
 - 利用者に見える変化:
-  - 状態を選ぶフォームは7か所ある（recon §3）。そのうち連絡先を新しく作るフォーム2か所（連絡先一覧の「新規」・会社の連絡先タブの「追加」）だけ選択肢が3つで「重複確認待ち」が無い。残り5か所（会社の新規・会社の基本タブ・連絡先の編集など）は4つ。変更後は7か所すべて4つにそろう（審査2回目の指摘3。手で「重複確認待ち」を選べる所が2か所増える）。
+  - 状態を選ぶフォームは7か所ある（recon §3。2026-11-12 に Opus が数え直した内訳は §6-2-1）。作るときだけの2か所・直すときだけの4か所・両方で使う1か所（会社の詳細の「担当者管理」タブの小窓 `frontend/src/pages/company-detail/CompanyContactsTab.tsx:151-154`）。
+  - 変更後（PO 2026-11-12「1」= §9 未決4 の答え）: 作るときは、どこでも「重複確認待ち」を出さない（有効・無効・アーカイブの3つ）。直すときは、どこでも4つ出す。今と変わる所は2つ: 会社の「新規登録」から消える／担当者管理タブの小窓で直すときに出るようになる。
+  - 出すか出さないかは画面に書かない。表の列 `selectable_on_create`（§3）を読んで決める。
   - 一覧の絞り込みの選択肢はもともと無い（審査2回目の指摘3で確認）。
   - まとめる画面の文から「master」「pending_dedup_review」「active」「audit_logs」が消える。
   - 名前の見た目は今と同じ（有効／無効／アーカイブ／重複確認待ち）。
@@ -37,7 +39,7 @@
 | 4つの値 | DB の CHECK 10表＋会社を作る処理2か所＋サーバー列挙2か所＋画面8か所 | DB の表 `public.customer_statuses` の4行（正本）。会社・連絡先の status 列はこの表への外部キー |
 | 名前 | 辞書 11キー（ja/en） | 表の name_ja・name_en。辞書の重複キーは消す |
 | 色の種類 | statusPresentation.ts に2組 | 変えない（statusPresentation.ts の bucket・badgeVariant。名前の辞書キー labelKey だけ外す） |
-| 画面の選択肢 | 7か所で自前に並べる（2か所は3つ） | 1つの読み口（hook）から4つ並べる |
+| 画面の選択肢 | 7か所で自前に並べる（作るとき: 会社1か所は4つ・担当者2か所は3つ。直すとき: 4か所は4つ・担当者管理タブの小窓は3つ） | 1つの読み口（hook）から並べる。作るときは `selectable_on_create` が TRUE の行だけ（3つ）、直すときは全行（4つ） |
 | 分析 | 名前を引けない | 会社・連絡先の status を表と結んで名前・並び順が引ける |
 
 ## 3. 新しい表 `public.customer_statuses`（便1・migration・形だけ）
@@ -49,6 +51,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
     name_en     VARCHAR(50) NOT NULL,             -- 画面の英語名
     sort_order  SMALLINT    NOT NULL UNIQUE,      -- 選択肢・集計の並び順
     is_active   BOOLEAN     NOT NULL DEFAULT TRUE,  -- FALSE＝新しく選べない（過去の行は残る）
+    selectable_on_create BOOLEAN NOT NULL DEFAULT TRUE,  -- FALSE＝作る画面の選択肢に出さない（直す画面には出す）。PO 2026-11-12「1」
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -65,12 +68,15 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 
 ## 4. 4行の投入（1回だけのデータ変更・ADR-1007 決定1）
 
-| code | name_ja | name_en | sort_order |
-|---|---|---|---|
-| active | 有効 | Active | 10 |
-| inactive | 無効 | Inactive | 20 |
-| archived | アーカイブ | Archived | 30 |
-| pending_dedup_review | 重複確認待ち | Pending duplicate check | 40 |
+| code | name_ja | name_en | sort_order | selectable_on_create |
+|---|---|---|---|---|
+| active | 有効 | Active | 10 | TRUE |
+| inactive | 無効 | Inactive | 20 | TRUE |
+| archived | アーカイブ | Archived | 30 | TRUE |
+| pending_dedup_review | 重複確認待ち | Pending duplicate check | 40 | FALSE |
+
+- selectable_on_create の根拠（2026-11-12 origin/main・生は /tmp/CC報告ファイル/status/evidence-hide-on-create.md）: この状態を自動で付ける道は今のコードに無い。新規作成の道5本（`backend/app/routers/companies.py:404`・`backend/app/routers/contacts.py:439` は画面の値で既定 active＝`backend/app/schemas/company.py:134`・`backend/app/schemas/contact.py:109`／`backend/app/routers/registration_tokens.py:322` は 'active' 固定／`backend/app/routers/integrations.py:653`・`:671` は列を書かず DB 既定 'active'＝`migrations/028_create_companies.sql:78`）。付けたのは4月の移行の使い捨て `scripts/_archive/data_migration/migrate_customers_from_sheet.py:72`・`:198` だけ。状態の意図は「移行で二重の疑いがある記録を仮に入れ、人が別か同じかを決めるまでの保留」（PR #163 本文・`migrations/015_replace_customers_schema.sql:130`）。解消の操作は直す画面だけ（`frontend/src/pages/company-detail/CompanyBasicTab.tsx:124-125`・`frontend/src/pages/contacts/ContactEditPage.tsx:196`・`frontend/src/pages/contacts/ContactsPage.tsx:395`）。
+- サーバーは作るときに pending_dedup_review を受けても断らない（列挙は残す・§6-1）。画面で出さないだけにする。理由: 断る形にすると記号の判断がサーバーに増え、表の列と二重になる。必要になれば別設計。
 
 - 日本語名は今の ja.json の値（`frontend/src/locales/ja.json:1133-1135`・`:1299`）をそのまま写す。英語名の3つは今の en.json（`frontend/src/locales/en.json:1133-1135`）と同じ。重複確認待ちだけ、今の英語「Pending Dedup Review」（`frontend/src/locales/en.json:1161`）は仕組みの略語（Dedup）を含むため「Pending duplicate check」に直す（英語画面だけ見た目が変わる）。
 - 色の種類は表に置かない。今の `frontend/src/utils/statusPresentation.ts:164-176` の bucket・badgeVariant をそのまま使う（審査2回目の指摘4: statusPresentation.ts は同期の固定表で `:62`・`:190`、`frontend/src/pages/design-preview/sections/StatusSection.tsx:40-85` が回している。DB から作る形はつなぎ方が無い）。
@@ -113,7 +119,21 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 
 - 読み口: 新しい hook（useCustomerStatuses）で API を1回読み、言語で name_ja/name_en を選ぶ。
 - statusPresentation.ts の contact・company の組は bucket・badgeVariant を残し、labelKey（辞書キー）だけ外す。名前は hook から出す。`frontend/src/pages/design-preview/sections/StatusSection.tsx:40-85` は、この2組だけ hook の名前を使う（他の11組は今のまま）。
-- recon §3 のフォーム7か所とまとめる画面1か所を、この読み口から並べる形に直す。連絡先を新しく作る2か所（`frontend/src/pages/contacts/ContactsPage.tsx:337` の createForm・`frontend/src/pages/company-detail/CompanyContactsTab.tsx:198` の contactForm）は、§9 未決4 の PO の答えに従う。
+- recon §3 のフォーム7か所とまとめる画面1か所を、この読み口から並べる形に直す。hook は `options(mode: "create" | "edit")` を出し、create は `selectable_on_create` が TRUE の行だけ、edit は全行を sort_order 順に返す。記号で行を選び分ける書き方（`code !== "pending_dedup_review"` など）は画面に書かない。
+
+#### 6-2-1. 7か所とそれぞれの mode（2026-11-12 Opus が origin/main で数え直し）
+
+| # | 場所（画面の名前は ja.json） | 実物 | 使う場面 | 今 | 変更後の mode |
+|---|---|---|---|---|---|
+| 1 | 顧客情報の一覧 →「新規登録」の小窓 | `frontend/src/pages/companies/CompaniesPage.tsx:436-439`・選択肢 `:510-515` | 作るだけ | 4つ | create（3つ） |
+| 2 | 担当者の一覧 →「新規登録」の小窓 | `frontend/src/pages/contacts/ContactsPage.tsx:289-292`・選択肢 `:337-341` | 作るだけ | 3つ | create（3つ） |
+| 3 | 顧客情報の一覧 → 行の「顧客情報編集」の引き出し | `frontend/src/pages/companies/CompaniesPage.tsx:566-576` → `frontend/src/pages/companies/CompanyFormFields.tsx:32` | 直すだけ | 4つ | edit（4つ） |
+| 4 | 顧客情報の詳細 →「基本情報」タブ | `frontend/src/pages/company-detail/CompanyBasicTab.tsx:92` | 直すだけ | 4つ | edit（4つ） |
+| 5 | 担当者の一覧 → 行の「担当者編集」の引き出し | `frontend/src/pages/contacts/ContactsPage.tsx:360` → `frontend/src/pages/contacts/ContactFormFields.tsx:43` | 直すだけ | 4つ | edit（4つ） |
+| 6 | 担当者の編集画面 | `frontend/src/pages/contacts/ContactEditPage.tsx:189` | 直すだけ | 4つ | edit（4つ） |
+| 7 | 顧客情報の詳細 →「担当者管理」タブの小窓 | `frontend/src/pages/company-detail/CompanyContactsTab.tsx:151-154`（題 = `contactForm.id === null ? newContact : editContact`）・選択肢 `:196-204` | 両方 | 3つ | `contactForm.id === null` なら create、そうでなければ edit |
+
+- 7 は直すときに4つになる。直すときに今の値が pending_dedup_review の担当者を開くと、今は選択肢に無い値になっている（`:196-204` に無い）。変更後は選択肢にあるので正しく出る。
 - 記号から CSS の組み名を作る4か所（`frontend/src/pages/companies/CompaniesPage.tsx:408`・`frontend/src/pages/contacts/ContactsPage.tsx:386`・`frontend/src/pages/company-detail/CompanyContactsTab.tsx:124`・`frontend/src/pages/company-detail/CompanyDetailPage.tsx:98`）は statusPresentation の badgeVariant の共通の組に直す（審査2回目の指摘5）。
 - サーバーの比較 `backend/app/routers/duplicates.py:93`・`backend/app/routers/companies.py:767`・`:980` は記号の定数（サーバー側1か所: backend/app/services/customer_statuses.py）を使う。
 - 値の直書き（recon §3 の比較・初期値・`frontend/src/components/MergeCompanyModal.tsx:96`、審査2回目のあとに Opus が見つけた初期値と「有効に戻す」操作 `frontend/src/pages/company-detail/company-detail.types.ts:125`・`:138`・`:222`、`frontend/src/pages/company-detail/useCompanyDetail.ts:115`・`:236`・`:274`、`frontend/src/pages/contacts/ContactEditPage.tsx:62`・`:125`・`:126`、`frontend/src/pages/contacts/ContactsPage.tsx:86`・`:91`・`:171`・`:225`、`frontend/src/pages/companies/CompaniesPage.tsx:151`・`:159`・`:294`）: 動きに関わる比較（まとめる時の pending 判定など）は記号の定数1か所（新しいファイルに CUSTOMER_STATUS_CODES）にまとめ、各所はそれを使う。
@@ -141,6 +161,19 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 - 突き合わせの試験 `frontend/src/lib/apiErrorReason.test.ts`・`backend/tests/test_api_error_reason_sync.py` に足す。`backend/tests/error_detail_baseline.json` の数を1下げる。
 - 文の出る場所: `frontend/src/components/MergeCompanyModal.tsx:141`（e.message。`frontend/src/lib/api.ts` が表のコードのとき文に変える）。
 
+### 6-3-4. 重複の解消ボタンの文（2026-11-12 Opus が見つけた・PO に「設計書に載せる」と伝え済み）
+
+| キー | 今（ja・`frontend/src/locales/ja.json`） | 変更後（ja） |
+|---|---|---|
+| companies.dedupConfirmAsDistinct（`:1235`・使う所 `frontend/src/pages/company-detail/CompanyBasicTab.tsx:137`） | 別顧客情報として確定（active 化） | 別顧客情報として確定（{{active}}にする） |
+| contacts.confirmAsDistinctFull（`:1284`・使う所 `frontend/src/pages/contacts/ContactEditPage.tsx:202`） | 別人として確定（active 化） | 別人として確定（{{active}}にする） |
+| contacts.mergeAsDuplicate（`:1285`） | 重複としてマージ（担当者単位は未実装） | §9 未決5 の答えで決める |
+
+- {{active}} には §6-2 の読み口から「有効」の名前を入れる（名前を文に直書きしない）。en も同じ意味に直す（今は `(activate)`）。
+- `frontend/src/pages/company-detail/CompanyContactsTab.tsx:136` は `t("contacts.mergeAsDuplicate").replace("（担当者単位は未実装）", "")` と日本語の文字を書いて消している（ADR-027 違反・英語画面では消えない）。キーを分けて replace をやめる。
+- `frontend/src/pages/contacts/ContactEditPage.tsx:204-206` は金型の Button でない生の `<button>` と直の style（ADR-144 違反）で、押せないまま。担当者をまとめる処理は既にある（`backend/app/routers/contacts.py:706` ADR-098 SA-04 J3・画面 `frontend/src/components/MergeContactModal.tsx:128`・`frontend/src/pages/company-detail/CompanyContactsTab.tsx:136` から開ける）。つなぐか消すかは §9 未決5。
+- 試験 `frontend/src/components/FullPageFormButtonMigration.test.tsx:176-177`・`:198` はキー名で探すので、キーを分けたら合わせる。
+
 ### 6-3-3. 変えない所
 
 - 会社の書き出し（`backend/app/tasks/reports.py:51`）は記号のまま出す。記号は分析で結ぶための鍵で、名前は表から引ける（K8）。書き出しの形を変えるかは別に PO に聞く（§9 未決3）。
@@ -165,7 +198,9 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 | K1 表に4行・名前と並びが §4 のとおり | 読み取りの鍵で `SELECT * FROM ai_ro.public__customer_statuses ORDER BY sort_order`（見る名前は実装時の ai_ro の名前に合わせる）→ 4行 |
 | K2 本番10表の status 列が表に結ばれ、CHECK が無い | 読み取りの鍵で制約一覧 → 外部キー10本・status の CHECK 0本 |
 | K3 表に無い値を入れると DB が断る | CI の試験で `UPDATE companies SET status='xxx'` が外部キー違反 |
-| K4 状態を選ぶフォーム7か所の選択肢が §9 未決4 の答えどおり | Chrome で 会社一覧の「新規」・会社の詳細の基本タブ・会社の連絡先タブの「追加」・連絡先一覧の「新規」・連絡先の編集・会社の新規フォーム（CompanyFormFields）・連絡先のフォーム（ContactFormFields）を開いて数える。名前と並びが §4 のとおり |
+| K4 状態を選ぶフォーム7か所の選択肢が §6-2-1 の表のとおり | Chrome で §6-2-1 の 1〜7 を開いて数える（保存はしない）。作るとき（1・2・7の新規）は「有効・無効・アーカイブ」の3つ、直すとき（3〜6・7の編集）は「有効・無効・アーカイブ・重複確認待ち」の4つ。名前と並びが §4 のとおり。加えて画面のコードに `pending_dedup_review` で選択肢を選び分ける書き方が0件（K5 の grep に含まれる） |
+| K14 作る画面に出すかを表だけで変えられる | PostgreSQL の試験で、selectable_on_create を FALSE にした行が create の一覧に出ず edit の一覧に出る（API の行に列が含まれ、hook の試験で mode ごとの件数を確かめる） |
+| K15 解消ボタンの文に「active」「未実装」が0件 | ja/en.json の companies.dedupConfirmAsDistinct・contacts.confirmAsDistinctFull を grep → active・activate が0件。`git grep -n 'replace("（' -- frontend/src/pages/company-detail/CompanyContactsTab.tsx` が0件 |
 | K5 会社・連絡先の画面のコードに4つの記号の直書きが0件（定数ファイルを除く） | `git grep -n -E '"(active\|inactive\|archived\|pending_dedup_review)"' -- frontend/src/pages/contacts frontend/src/pages/companies frontend/src/pages/company-detail frontend/src/components/MergeCompanyModal.tsx frontend/src/components/MergeContactModal.tsx \| grep -v className` が0件。基準値（a88194893 で実測）: 10ファイル53件のうち tab の className の3件を除く50件 |
 | K6 状態の名前の辞書キーが0件 | `git grep -n -E 'customers\.status_(active\|inactive\|archived\|pending_dedup)\|contacts\.statusCode\|statusPendingDedupOption' -- frontend/src` が0件。基準値（a88194893 で実測）: 41件（辞書を除くと39件） |
 | K7 まとめる画面の文に master・pending_dedup_review・active・audit_logs が0件 | ja/en.json の mergeCompany・mergeContact を grep → 0件。Chrome で会社をまとめる画面を開き文を読む（実行はしない） |
@@ -181,7 +216,9 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 1. 見込み客の状態（ADR-109・名前は辞書）も同じ形（名前も DB）に寄せるか。今回は対象外。別テーマとして後で聞く。
 2. 他にも「名前が辞書にあり DB に無い」状態が13種ある（statusPresentation.ts の13ドメイン）。どこまで DB に移すかは別テーマ。
 3. 会社の書き出し（CSV）の状態の列を、記号のままにするか名前にするか。今回は記号のまま（§6-3-3）。
-4. 【実装前に PO に聞く】連絡先を新しく作る2か所（連絡先一覧の「新規」・会社の連絡先タブの「追加」）にも「重複確認待ち」を出すか。今は7か所中5か所で選べ、この2か所だけ選べない。決めた記録は無い（recon §3）。答えで §6-2 の並べ方が決まる（全部出す／作るときだけ出さない＝表に列を1つ足す／人の手では選べない）。
+4. 【決定 PO 2026-11-12「1」】「重複確認待ち」は作るときはどこにも出さず、直すときはどこでも出す。表に列 selectable_on_create を足して決める（§3・§4・§6-2-1）。PO の言葉:「新規で作成するときは必要ないステータスなら表示しなくていいと考える」「直すときだけ表示させるのが良い？」。
+5. 【実装前に PO に聞く】担当者の編集画面の押せない「重複としてマージ」ボタン（§6-3-4）を、既にある担当者をまとめる画面につなぐか、消すか。
+6. 【別テーマ・PO 2026-11-12 依頼】作る画面で、すでに登録されている項目を赤枠で知らせる（名前・メール・電話番号＝PO「1」、加えて会社コード・担当者コード・FedEx口座番号・ウェブサイト＝PO「1」）。この設計とは別の設計 docs/handoff/create-duplicate-warning/ で扱う（1リリース1テーマ）。この設計の §6-2 の hook とは別の部品。
 
 ## 10. 弊害と対処
 
@@ -261,3 +298,4 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 - 2回目（2026-11-11 14:14 JST・クラウド Opus・da68ab5af）: **REVISE**。指摘8件と直した所: (1) 便2 が CI で止まる → §5 の止める条件を絞り、§5-2 に前提の移行の step（K13） (2) VALIDATE は FORCE の下で読む決まりに絞られる（PG16 で実測）→ §3 に `USING (true)` (3) 「絞り込み」は実は作る・直すフォーム → §1・§6-2・K4 を直し、§9 未決4 で PO に聞く (4) statusPresentation.ts は同期の固定表 → 色は表に置かずコードに残す（§2・§3・§4・§11） (5) recon の漏れ → recon §2・§3 と §6-1・§6-2 (6) K5・K6 の grep の書き方の誤り → 書き直して基準値を実測（K5 50件・K6 41件） (7) 理由コードの形 → 共通の表 apiErrorReason.ts（§6-3-2） (8) ADR-1007 と値の書き込みの検査 → protected-tables.txt に足す（§3・K12）。8 の文の後半は記録の切れで読めず、検査の道具と一覧を Opus が実物で読んで補った（`scripts/check-migration-value-writes.py`・`scripts/migration-guard/protected-tables.txt`。customer_statuses は今は一覧に無い）。
 - 3回目（2026-11-11 17:11 JST・クラウド Opus・0cde60fe6）: **REVISE**。2回目の8件はすべて直っていると確認（design の行で照合）。recon の行番号11か所も実物と一致。必須1件 M1: 便1 で protected-tables.txt に足すと、確認8 が便2 の件数の SELECT（と便1 自身の GRANT の行）を止める。Opus が `scripts/check-migration-value-writes.py` の確認8・許す語・全件走査（`:260`）を読んで確かめ、(1) 一覧に足すのを便3 へ移す（§3・K12・§13）、(2) 便2 の件数の SELECT をやめて VALIDATE を止め役にする（§5）、と直した。指摘の文の後半は記録の切れで読めなかった。同時に §12 を外部事例に書き換えた。
 - 4回目（2026-11-11 17:17 JST・クラウド Opus・6fcfbacd8）: **APPROVE**（必須0件）。M1 が直っていることを確認した。確認8 は変えた migration の追加行だけを見る（`scripts/check-migration-value-writes.py:153-157`・`:175-180`）。全件走査（`:260-286`）は値の書き込みだけを当てる。便2 の外部キーの外し方は本人 GO の対象外で、委任の GO で足りる（`scripts/check-process-artifacts.js:569`・`:493`。ADR-1003 の例外は表と列を消す migration）。§12 の当社の数は、ADR-1037 と channel-master-shared/design.md の行とすべて一致した。外部の原文は審査役は開いていない（原文は Opus が取得して /tmp/CC報告ファイル/ext/ に置いた）。推奨3件を反映した: N1 済んだ領域は飛ばす・取引の単位の説明（§5・K13・§12-4）、N2 原文に無い「2015年ごろ」を消す（§12-2）、N3 便3 の後に便1・便2 を直すときの外し方（§3）。審査の途中で、見張りが DB の道具名を含む検索を止めた。取引の単位は Opus が `scripts/run_all_migrations.sh:25`・`:118` を読んで補った。
+- 5回目の前の変更（2026-11-12・Opus）: PO の答え「直すときだけ表示させるのが良い？」→「1」を反映した。表に列 selectable_on_create を足し（§3・§4）、7か所を作る2・直す4・両方1に分け直した（§6-2-1。前の「作る3・直す4」は数え違いで、会社の連絡先タブの窓は作ると直すの両方に使う `frontend/src/pages/company-detail/CompanyContactsTab.tsx:151-154`）。解消ボタンの文の「active 化」「担当者単位は未実装」と日本語の replace を §6-3-4 に足した。K4 を書き直し、K14・K15 を足した。押せない「重複としてマージ」ボタンを §9 未決5 に、作る画面の重複の警告を別テーマとして §9-6 に置いた。5回目の審査はまだ。
