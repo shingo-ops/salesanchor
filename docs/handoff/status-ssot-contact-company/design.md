@@ -3,7 +3,7 @@
 > この文書は何か（専門用語なしの1行）:
 > 会社と連絡先の「有効・無効・アーカイブ・重複確認待ち」を DB の1つの表にまとめ、画面の選択肢・札・まとめる画面の文・分析がすべてその表を読むようにする手順。
 
-- 状態: **設計案作成済み（Opus）／設計審査 4回目 APPROVE・5回目と6回目 REVISE の指摘を反映済み（§14）／2026-11-12 PO 判断（§9 未決4）を反映して §1・§2・§3・§4・§6-2-1・§6-3-4・K4・K14・K15 を変えた＝5回目の審査が要る／PO 承認 未／実装未着手**
+- 状態: **設計案作成済み（Opus）／設計審査 4回目 APPROVE・5回目と6回目 REVISE の指摘を反映済み（§14）／2026-11-12 PO 判断（§9 未決4）を反映して §1・§2・§3・§4・§6-2-1・§6-3-4・K4・K14・K15 を変えた（5〜7回目の審査で確認・§14）／PO 承認 未／実装未着手**
 - recon: docs/handoff/status-ssot-contact-company/recon.md
 - 基準: origin/main a88194893（2026-11-11 取得）
 - PO の言葉（2026-11-11）: 「DBがバラバラに成っていていろいろなところからデータ撮ってきているならSSOTしてほしい」「分析機能に影響するから値の直書きは禁止、基本的に値はDBにSSOTさせて、後から分析の材料として使用できる状態にする必要がある」。同日「1」で、状態の1か所化とまとめる画面の文を1つの設計にする。
@@ -174,7 +174,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 - {{active}} には §6-2 の読み口から「有効」の名前を入れる（名前を文に直書きしない）。en も同じ意味に直す（今は `(activate)`）。
 - `frontend/src/pages/company-detail/CompanyContactsTab.tsx:136` は `t("contacts.mergeAsDuplicate").replace("（担当者単位は未実装）", "")` と日本語の文字を書いて消している（ADR-027 違反・英語画面では消えない）。文を直したので replace を消し `t("contacts.mergeAsDuplicate")` だけにする（新しいキーは作らない）。
 - `frontend/src/pages/contacts/ContactEditPage.tsx:204-206` は金型の Button でない生の `<button>` と直の style（ADR-144 違反）で、押せないまま。担当者をまとめる処理は既にある（`backend/app/routers/contacts.py:706` ADR-098 SA-04 J3・画面 `frontend/src/components/MergeContactModal.tsx:128`・`frontend/src/pages/company-detail/CompanyContactsTab.tsx:136` から開ける）。つなぐか消すかは §9 未決5。
-- 試験 `frontend/src/components/FullPageFormButtonMigration.test.tsx:176-177`・`:198` はキー名で探す。§6-3-4 ではキーを分けないので、試験は変えずに通る（審査6回目で確認）。
+- 試験 `frontend/src/components/FullPageFormButtonMigration.test.tsx:176-177`・`:198` はキー名で探す。§6-3-4 の文言の直しだけなら、キーを分けないので試験は変えずに通る（審査6回目で確認）。ただし §9 未決5 を実行するときは、同じ試験の統合ボタンの行を直す（手順は未決5 の選択肢に書いた）。
 
 ### 6-3-3. 変えない所
 
@@ -225,8 +225,9 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
      - 会社の担当者タブ `frontend/src/pages/company-detail/CompanyContactsTab.tsx:134-137`・`:241-256` が同じ窓を同じ形で開いている（手本）。
      - まとめると、今開いている担当者が消える（`backend/app/routers/contacts.py:706-720`・`MergeContactModal.tsx:128-132`）。取り消せない。商談・注文・見積・請求がある担当者は 400 で止まる（`contacts.py:765-789`）。
      - 消えるので、つなぐ場合は onMerged で残した側の編集画面 `/contacts/{masterId}/edit`（`ContactEditPage.tsx:2` の道）へ移る必要がある。
-   - 1 つなぐ: `:204-206` の生 button を金型 `Button`（variant="secondary" size="md"）に替え、押すと MergeContactModal を開く。onMerged で残した側の編集画面へ移る。K に「ボタンを押すと窓が開く」試験を足す。
-   - 2 消す: `:204-206` を消す。辞書キー contacts.mergeAsDuplicate は会社の担当者タブが使うので残す。
+   - 既存の試験 `frontend/src/components/FullPageFormButtonMigration.test.tsx:171-205`（Opus が origin/main で行を確かめた）は「統合ボタンがあって押せない」ことを確かめている: `:177` ボタンを名前で探す、`:181` disabled が true、`:182-183` 押しても何も送らない、`:203` 失敗のあとも disabled が true。どちらの選択肢でもこの試験が落ちるので、同じ便で直す（審査7回目の指摘）。
+   - 1 つなぐ: `ContactEditPage.tsx:204-206` の生 button を金型 `Button`（variant="secondary" size="md" type="button"）に替え、押すと MergeContactModal を開く（companyId=contact.company_id、source は Contact の5項目）。onMerged(masterId) で `/contacts/{masterId}/edit` へ移る（道は `frontend/src/App.tsx:213`・Opus が origin/main で確認）。試験は `:181`・`:203` を「disabled が false」に、`:182-183` を「押すと窓の題 `mergeContact.title` が出て、patch は呼ばれない」に変える。`:177` はそのまま。
+   - 2 消す: `ContactEditPage.tsx:204-206` を消す。辞書キー contacts.mergeAsDuplicate は会社の担当者タブ（`CompanyContactsTab.tsx:136`）が使うので残す。試験は `:177`・`:181-183`・`:203` を消し、代わりに「`queryByRole('button', { name: 'contacts.mergeAsDuplicate' })` が null」を1行足す。
 6. 【別テーマ・PO 2026-11-12 依頼】作る画面で、すでに登録されている項目を赤枠で知らせる（名前・メール・電話番号＝PO「1」、加えて会社コード・担当者コード・FedEx口座番号・ウェブサイト＝PO「1」）。この設計とは別の設計 docs/handoff/create-duplicate-warning/ で扱う（1リリース1テーマ）。この設計の §6-2 の hook とは別の部品。
 
 ## 10. 弊害と対処
@@ -310,4 +311,5 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 - 5回目の前の変更（2026-11-12・Opus）: PO の答え「直すときだけ表示させるのが良い？」→「1」を反映した。表に列 selectable_on_create を足し（§3・§4）、7か所を作る2・直す4・両方1に分け直した（§6-2-1。前の「作る3・直す4」は数え違いで、会社の連絡先タブの窓は作ると直すの両方に使う `frontend/src/pages/company-detail/CompanyContactsTab.tsx:151-154`）。解消ボタンの文の「active 化」「担当者単位は未実装」と日本語の replace を §6-3-4 に足した。K4 を書き直し、K14・K15 を足した。押せない「重複としてマージ」ボタンを §9 未決5 に、作る画面の重複の警告を別テーマとして §9-6 に置いた。5回目の審査はまだ。
 - 5回目（2026-11-12 04:53 JST・クラウド Opus・48068620c）: **REVISE**。7か所の分類と行番号は実物と一致。直した3件: (1) §6-1 の API の列に selectable_on_create が無い→足した (2) K15 の grep が変更後の文 {{active}} に当たる→探す語を「active 化・(activate)・未実装・not implemented」に絞った (3) K14 の試験の種類が決まっていない→サーバーの試験と画面の試験の2本に分けた。
   - 5回目の推奨も反映した: K7 も {{active}} を数えない形に直した。is_active が FALSE の行の扱いを §6-2 に書いた。contacts.mergeAsDuplicate はキーを分けず文だけ直す（§6-3-4）。根拠の生ファイルをリポジトリの evidence-hide-on-create.md に置いた。ja.json の行番号の基準を §6-3-4 に書いた。
-- 6回目（2026-11-12 05:01 JST・クラウド Opus・d0d93a95d）: **REVISE**。K15 は流して○×が付くと確認した（今は6行で×、設計どおりの文の写しなら0行で○）。§6-3-4 の行番号・K4・K14 は実物と一致し、未決5・6 は実装役が迷わないと確認した。直した2件: (1) K7 にどの文を取り出すかが書かれておらず、ファイル全体を grep すると60行当たった。値だけを取り出す jq の命令を書き足した。基準値は Opus が同じ命令で origin/main に流して ja 6・en 6 と実測した。審査役の「14行」は別の取り出し方での数なので採らない。 (2) §6-3-2 の試験の項に残っていた古い文「キーを分けたら合わせる」を、キーを分けない今の方針に合わせて直した。
+- 6回目（2026-11-12 05:01 JST・クラウド Opus・d0d93a95d）: **REVISE**。K15 は流して○×が付くと確認した（今は6行で×、設計どおりの文の写しなら0行で○）。§6-3-4 の行番号・K4・K14 は実物と一致し、未決5・6 は実装役が迷わないと確認した。直した2件: (1) K7 にどの文を取り出すかが書かれておらず、ファイル全体を grep すると60行当たった。値だけを取り出す jq の命令を書き足した。基準値は Opus が同じ命令で origin/main に流して ja 6・en 6 と実測した。審査役の「14行」は別の取り出し方での数なので採らない。 (2) §6-3-4 の試験の項（design.md:177）に残っていた古い文「キーを分けたら合わせる」を、キーを分けない今の方針に合わせて直した。
+- 7回目（2026-11-12 05:19 JST・クラウド Opus・f0ee07d6e）: **REVISE**。K7 は ja 6・en 6 で基準値と一致し○×が付くと確認した。未決5 の事実（受け取る値・消える側・400 で止まる・編集画面の道）は実物と一致した。直した3件: (1) 重大: 未決5 のどちらの選択肢でも既存の試験 FullPageFormButtonMigration.test.tsx が落ちるのに手当てが無かった。Opus が行を確かめ（審査役の「:180」は実物では `:181`。ほかに `:182-183`・`:203` も当たる）、選択肢ごとの直し方を書いた。 (2) 6回目の記録の節番号を §6-3-2 から §6-3-4 に直した。 (3) 冒頭の状態の行の「5回目の審査が要る」を直した。
