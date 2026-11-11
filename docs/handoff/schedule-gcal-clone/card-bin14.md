@@ -34,7 +34,7 @@
 | `frontend/src/pages/schedule/ScheduleDraftFields.tsx` | 1 項目ずつの部品に分ける（§4） |
 | `frontend/src/pages/schedule/ScheduleFullEditor.tsx` | EditorPage に載せ替え（§5） |
 | `frontend/src/pages/schedule/SchedulePageImpl.tsx` | 直すときも全画面・小窓の直す形を消す（§7） |
-| `frontend/src/pages/schedule.css` | `.schedule-full-editor` の 2 つの規則とその上の説明（`:528-537`）を §5 の規則に置き換える。色の 5 行（§6-3） |
+| `frontend/src/pages/schedule.css` | `.schedule-full-editor` の 2 つの規則とその上の説明（`:528-537`）を §5 の規則に置き換える。色の 6 行（§6-3） |
 | `frontend/src/pages/schedule/SchedulePageImpl.test.tsx` | §9-2 |
 | `frontend/src/components/buttonShapeUsage.test.ts` | 使ってよい場所を 3 つ足す（§8） |
 | `frontend/src/components/editorVariantUsage.test.ts`（新規） | §8 |
@@ -501,7 +501,7 @@ interface FieldProps {
 | 場所 | 今 | 後 |
 |---|---|---|
 | `frontend/src/pages/schedule/SchedulePageImpl.tsx:1304` | `<div className="schedule-page">` | `<div className="schedule-page gcal-colors">` |
-| `frontend/src/pages/schedule.css:25` `.schedule-page {` の中 | （地なし） | `background: var(--bg-primary);` を 1 行足す |
+| `frontend/src/pages/schedule.css:25` `.schedule-page {` の中 | （地・文字の色なし） | `background: var(--bg-primary);` と `color: var(--text-primary);` の 2 行を足す（自分で色を決めていない文字が body の古い色を受け継がないように・6 回目の審査 2） |
 | `frontend/src/pages/schedule.css:351` `.schedule-popover` | `background: var(--bg-surface);` | `background: var(--schedule-popover-bg);` |
 | `frontend/src/pages/schedule.css:166`（`.schedule-mini-calendar__day--today`）・`:594`（`.schedule-list__num--today`）・`:1110`（`.gcal-day-header__num.today`） | `color: var(--on-solid);` | `color: var(--schedule-today-text);` |
 | `frontend/src/components/CalendarView.css:220`（daynum--today）・`:364`（monthnum--today） | `color: var(--on-solid);` | `color: var(--schedule-today-text);` |
@@ -522,7 +522,7 @@ interface FieldProps {
 
 ## 8. 守り手と決まりの文書
 
-- 新しい `frontend/src/components/gcalColorsUsage.test.ts`: `editorVariantUsage.test.ts` と同じ作り（`frontend/src` の .ts・.tsx・.css を全部読む）。(1) `gcal-colors` の文字が `pages/schedule/SchedulePageImpl.tsx`・`components/EditorPage.tsx`・`components/EditorPage.stories.tsx`・`components/EditorPage.test.tsx`・`components/gcalColorsUsage.test.ts`・`pages/schedule/SchedulePageImpl.test.tsx`（EP6）・`tokens.css` の外に 0 件。(2) `--gcal-` の文字が `index.css`・`tokens.css`・`components/gcalColorsUsage.test.ts` の外に 0 件。どちらも「今 1 件以上見つかる」ことも書く。
+- 新しい `frontend/src/components/gcalColorsUsage.test.ts`: `editorVariantUsage.test.ts` と同じ作り（`frontend/src` の .ts・.tsx・.css を全部読む）。(1) `gcal-colors` の文字が `pages/schedule/SchedulePageImpl.tsx`・`components/EditorPage.tsx`・`components/EditorPage.stories.tsx`・`components/EditorPage.test.tsx`・`components/gcalColorsUsage.test.ts`・`pages/schedule/SchedulePageImpl.test.tsx`（EP6）・`tokens.css` の外に 0 件。(2) `--gcal-` の文字が `index.css`・`tokens.css`・`components/gcalColorsUsage.test.ts` の外に 0 件。どちらも「今 1 件以上見つかる」ことも書くが、数えるのはこの試験のファイル自身を除いた物にする（自分の中の文字で必ず通るのを防ぐ・6 回目の審査 1）: (1) は見つかった物に `tokens.css` と `pages/schedule/SchedulePageImpl.tsx` が在ること、(2) は `index.css` と `tokens.css` が在ることを確かめる。
 - `docs/specs/design-system/design.md:31`（色の層の説明）の後に「例外: 予定の画面（SchedulePageImpl の根と金型 EditorPage）だけは範囲の札 `.gcal-colors` で Google カレンダーの色に置き換える（ADR-1074）。ほかで使うと `frontend/src/components/gcalColorsUsage.test.ts` が止める」を 1 文。
 
 - `frontend/src/components/buttonShapeUsage.test.ts` の `ALLOWED`（`:13-19`）に `"components/EditorPage.tsx"`・`"components/EditorPage.stories.tsx"`・`"components/EditorPage.test.tsx"` を足す。
