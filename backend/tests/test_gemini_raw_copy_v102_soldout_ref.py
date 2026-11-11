@@ -70,11 +70,14 @@ def _targets(row: dict) -> list[tuple[int, int, str, int]]:
     return [(t["product_id"], t["condition_id"], t["ref_message_id"], t["ref_line"]) for t in row.get("soldout_targets", [])]
 
 
-def _extract(raw: str, posts, plural_words: tuple[str, ...] = (), fixed_products: dict[int, int] | None = None, master=_MASTER):
-    """posts は新しい順。今の投稿の行に価格が無ければ「 3@1,500円」を足す。"""
-    raw = "\n".join(ln if "1,500円" in ln or not ln.strip() else f"{ln} 3@1,500円" for ln in raw.split("\n"))
+def _extract(raw: str, posts, plural_words: tuple[str, ...] = (), fixed_products: dict[int, int] | None = None, master=_MASTER,
+             priced: bool = True):
+    """posts は新しい順。今の投稿の行に価格が無ければ「 3@1,500円」を足す（priced=False のときは足さず、件の price・quantity を none にする）。"""
+    if priced:
+        raw = "\n".join(ln if "1,500円" in ln or not ln.strip() else f"{ln} 3@1,500円" for ln in raw.split("\n"))
     lines = raw.split("\n")
-    items = [{"lines": [i + 1], "price": "1,500円", "quantity": "3"} for i, ln in enumerate(lines) if ln.strip()]
+    price, quantity = ("1,500円", "3") if priced else ("none", "none")
+    items = [{"lines": [i + 1], "price": price, "quantity": quantity} for i, ln in enumerate(lines) if ln.strip()]
     parsed, errors = v101.parse_v101_response(json.dumps({"items": items}, ensure_ascii=False), raw, status_entries=_SOLD_STATUS)
     assert errors == []
     rows, _flags = v101.extract_v101_items(
@@ -921,11 +924,34 @@ def test_inherit_12h_does_nothing_when_the_shime_state_is_not_a_box_state():
     assert _inherit_h([_shime(condition="Case")], (post,)) == {}
 
 
-def test_extract_12h_puts_every_box_state_on_the_soldout_row():
+def test_extract_12h_does_nothing_when_the_shime_line_has_a_price():
     post = _post("p1", "ふぁいぶ ABC-123 3@1,500円", stock_items=(_st([1], 22, "Sealed box"), _st([1], 24, "No shrink box")))
     row = _extract("ふぁいぶ ABC-123 〆", (post,), master=dataclasses.replace(_MASTER, shime_box_all_states=_BOX_RULE))[0]
+    assert _targets(row) == []
+
+
+def test_extract_12h_puts_every_box_state_on_the_soldout_row_when_the_shime_has_no_price():
+    post = _post("p1", "ふぁいぶ ABC-123 3@1,500円", stock_items=(_st([1], 22, "Sealed box"), _st([1], 24, "No shrink box")))
+    row = _extract(
+        "ふぁいぶ ABC-123 〆", (post,), master=dataclasses.replace(_MASTER, shime_box_all_states=_BOX_RULE), priced=False,
+    )[0]
     assert [(t["condition_id"], t["ref_line"]) for t in row["soldout_targets"]] == [(22, 1), (24, 1)]
     assert row["soldout_target_basis"] == "SOLDOUT_INHERIT"
+
+
+def test_inherit_12h_does_nothing_when_the_shime_item_has_a_price_or_quantity():
+    # (k) 値段か数がある〆では 12h を呼ばない（0 は値あり）。両方 None なら働く
+    post = _post("p1", "x", stock_items=(_SEALED, _NO_SHRINK))
+    assert _inherit_h([_shime(price_normalized=1500)], (post,)) == {}
+    assert _inherit_h([_shime(quantity_normalized=3)], (post,)) == {}
+    assert _inherit_h([_shime(price_normalized=0, quantity_normalized=None)], (post,)) == {}
+    assert list(_inherit_h([_shime(price_normalized=None, quantity_normalized=None)], (post,))) == [0]
+
+
+def test_inherit_12h_without_a_rule_and_with_a_price_is_the_same_as_12d():
+    # (l)
+    post = _post("p1", "x", stock_items=(_SEALED, _NO_SHRINK))
+    assert _inherit_h([_shime(price_normalized=1500)], (post,), rule=None) == {}
 
 
 @pytest.mark.parametrize("raw", [

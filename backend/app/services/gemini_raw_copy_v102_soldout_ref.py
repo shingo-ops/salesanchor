@@ -419,7 +419,7 @@ def _box_all_states_targets(
     """規則12h：状態を書かない箱の〆が、取り残された箱の仲間の状態を全部完売の相手にする（先頭が〆の状態、残りは value_rank の小さい順）。
 
     働かない（None）: 規則が無い／〆の状態が取り残しに無い／〆の状態が箱の仲間でない／今の投稿の原文に keep_words のどれかがある／
-    取り残しに〆の状態以外が無い／〆の状態以外に箱の仲間でない状態がある。
+    取り残しに〆の状態以外が無い／〆の状態以外に箱の仲間でない状態がある／〆の件に値段か数がある（働くのは〆の件に値段も数も無いとき）。
     """
     if box_rule is None or shime not in stranded:
         return None
@@ -445,7 +445,7 @@ def decide_soldout_inherit(
 
     posts は新しい順。取り残しが2種類以上で、その商品の在庫の行がある最も新しい投稿の状態が1種類・〆の状態と違う・取り残しにあるときは、
     その状態に決める（12g、12d より先）。それ以外は、〆と同じ状態の在庫が前にあれば決めない（12d。ただし 12h：box_rule があり、
-    〆の状態も取り残しの状態も全部箱の仲間で、今の投稿の原文 post_text に keep_words が無ければ、箱の仲間の取り残しを全部決める）、
+    〆の状態も取り残しの状態も全部箱の仲間で、今の投稿の原文 post_text に keep_words が無く、〆の件に値段も数も無ければ、箱の仲間の取り残しを全部決める）、
     取り残しの状態がちょうど1種類のときだけ決める（12e）。12g・12e の組は相手が 1 つ。
     """
     decided: dict[int, tuple[SoldoutTarget, ...]] = {}
@@ -461,7 +461,10 @@ def decide_soldout_inherit(
         canonical = _latest_single_state(product_id, posts) if len(stranded) >= 2 else None
         if canonical is None or canonical == shime or canonical not in stranded:  # 12g に当たらなければ今の 12d・12e
             if any(it.product_id == product_id and it.condition_canonical == shime for p in posts for it in p.stock_items):
-                box_targets = _box_all_states_targets(product_id, shime, stranded, box_rule, post_text)  # 12h
+                no_price_or_quantity = item.get("price_normalized") is None and item.get("quantity_normalized") is None
+                box_targets = (
+                    _box_all_states_targets(product_id, shime, stranded, box_rule, post_text) if no_price_or_quantity else None
+                )  # 12h
                 if box_targets is not None:
                     decided[i] = box_targets
                 continue  # 12d
