@@ -1132,3 +1132,11 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
   - (4) 軽: `.schedule-full-editor .schedule-popover__line` を消すと Meet のボタンの文字が真ん中に寄る → `.schedule-editor-meet .schedule-popover__line { justify-content: flex-start; }` を残す（カード §5）。
   - (5) 軽: 種類の選ぶ欄で文字と矢印が 4px 重なる → `.comp-select__control.comp-select--editor-filled { padding-right: var(--space-8); }` と判定（32px）をカード §3 に書いた。
   - (6) 軽: 行番号のずれ（題名の規則 `:393-409`・`width: 100%` は `FormField.css:51`・鉛筆 `:321-332`・`:1054`/`:1163`/`:1175` は直す対象外）を直した。
+
+### 17 回目 3 回目（2026-11-11 04:22〜04:27 UTC・便14 の設計・クラウドの Opus architect・commit ed0bbbbe7・セッション cse_01HHUUpSXv3oAtkVqVS9RXjY）: REVISE
+
+- 2 回目の 6 件のうち 5 件は直っていた。審査役が写しで測った: 窓 1279 で × 左端 x32・真ん中 x50、題名 x80 幅 594、保存 x706、日時の 5 つは全部 y92・高さ 40 の 1 段（x80〜x702）、札 x16 幅 636、札の中の欄 x80 幅 556、種類の欄の右余白 32px、Meet の文字は左寄せ、欄は高さ 40・角 4px・枠 0。窓 390 ではみ出しなし。流れ（`SchedulePageImpl.tsx:1568`・`:1007-1009`）と S13 は成り立つ。
+- 指摘と直し:
+  - (1) 重: 種類の欄の右余白の規則を `:focus` の規則より後ろに置くと stylelint `no-descending-specificity` が 1 件落ちる（実測 `FormField.css 461:1`）→ カード §3 の塊の 2 つ目（共通の見た目の規則のすぐ後・`:focus` より前）に移した。審査役がこの置き方で stylelint 0 件・右余白 32px のままを実測。
+  - (2) 軽: Button の行番号 → 説明「ログイン画面だけで使う」は `frontend/src/components/Button.tsx:28`・口 `shape` は `:29` に直した（カード §1・§2-1）。
+  - (3) 軽: 小窓の本体は `SchedulePageImpl.tsx:380-420` に直した（カード §7）。

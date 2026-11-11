@@ -25,7 +25,7 @@
 | `frontend/src/components/EditorPage.test.tsx`（新規） | §9-1 |
 | `frontend/src/components/FullScreenDialog.tsx`・`.css`・`.stories.tsx`・`.test.tsx` | `git rm` で消す（§2-4） |
 | `frontend/src/components/TextField.tsx`・`Select.tsx`・`Textarea.tsx` | 種類の名前を足す（§3） |
-| `frontend/src/components/Button.tsx` | 先頭の説明 `:9` の 1 行だけ（§2-1） |
+| `frontend/src/components/Button.tsx` | 先頭の説明 `:9` と口の説明 `:28` の 2 行だけ（§2-1） |
 | `frontend/src/components/FormField.css` | 種類の見た目（§3） |
 | `frontend/src/components/TextField.stories.tsx`・`Select.stories.tsx`・`Textarea.stories.tsx` | 新しい種類の例を 1 つずつ（§3） |
 | `frontend/src/tokens.css`・`frontend/src/index.css` | トークン 5 つ（§6） |
@@ -40,7 +40,7 @@
 | `docs/specs/design-system/design.md` | `:260`・`:276`・`:537`・`:1115`・`:811` に例外の 1 文ずつ（§8） |
 
 触らない（変えたら差し戻し）:
-- 金型 `Button`（説明の 2 行 `:9`・`:29` を除く）・`Checkbox`・`Toggle`・`Modal`・`CalendarView` と `frontend/src/hooks/useFocusTrap.ts`
+- 金型 `Button`（説明の 2 行 `:9`・`:28` を除く）・`Checkbox`・`Toggle`・`Modal`・`CalendarView` と `frontend/src/hooks/useFocusTrap.ts`
 - 作る小窓の見た目と動き・詳しくの小窓の中身（見出しの 1 か所を除く）・「他 N 件」の小窓・仮の箱の動き
 - `saveEvent` の送る中身（`frontend/src/pages/schedule/SchedulePageImpl.tsx:988-1031`）
 - `tests/prod-check/`（本番の画面点検 S13 は変えない）
@@ -143,7 +143,7 @@ export function EditorPageRow({ icon, children }: { icon: ReactNode; children: R
 }
 ```
 
-- `Button` の口 `shape="pill"` は `frontend/src/components/Button.tsx:30` に在る（a7fbffdfe）。`:9` の説明「pill はログイン画面だけ」と `:29` の説明「ログイン画面だけで使う」の 2 か所に「と金型 EditorPage の保存（ADR-1074）」を足す（`frontend/src/components/Button.tsx` を「触る」に含める）。
+- `Button` の口 `shape="pill"` は `frontend/src/components/Button.tsx:29` に在る（a7fbffdfe）。`:9` の説明「pill はログイン画面だけ」と `:28` の説明「ログイン画面だけで使う」の 2 か所に「と金型 EditorPage の保存（ADR-1074）」を足す（`frontend/src/components/Button.tsx` を「触る」に含める）。
 
 ### 2-2. `frontend/src/components/EditorPage.css`
 
@@ -310,6 +310,11 @@ export function EditorPageRow({ icon, children }: { icon: ReactNode; children: R
   transition: initial;
 }
 
+/* Select の矢印（右端から 8〜20px・FormField.css:75-83）と文字が重ならないよう右だけ広げる。:focus の規則より前に置く（stylelint no-descending-specificity） */
+.comp-select__control.comp-select--editor-filled {
+  padding-right: var(--space-8);
+}
+
 .comp-field__textarea.comp-textarea--editor-filled {
   padding: var(--space-2) var(--space-4);
 }
@@ -353,13 +358,7 @@ export function EditorPageRow({ icon, children }: { icon: ReactNode; children: R
 }
 ```
 
-- Select の矢印の印は今の金型のまま（右端から 8〜20px・`frontend/src/components/FormField.css:75-83`）。右の余白 16 だと文字と 4px 重なるので、日時の幅の規則の次に足す:
-
-```css
-.comp-select__control.comp-select--editor-filled {
-  padding-right: var(--space-8);
-}
-```
+- Select の矢印の印は今の金型のまま（右端から 8〜20px・`frontend/src/components/FormField.css:75-83`）。右の余白 16 だと文字と 4px 重なるので、右だけ `--space-8` にする規則を上の塊の 2 つ目に入れた。この規則を `:focus` の規則より後ろ（例えば日時の幅の規則の次）に置くと stylelint の `no-descending-specificity` で落ちる（審査 17 回目 3 回目で実測）。置き場所を変えない。stylelint は 0 件になること。
 
   判定: 窓 1279 の種類の選ぶ欄で `getComputedStyle(...).paddingRight` が 32px。
 - 3 つの金型の見本帳にそれぞれ 1 例（`editor-filled`・TextField は `editor-title` も）。
@@ -436,7 +435,7 @@ interface FieldProps {
 1. `openEdit`（`:975-982`）: 今の `setPopover({ … mode: "edit" … })` の後に `setError(null);` と `setFullEditOpen(true);`。
 2. 閉じる useEffect（`:1132-1134`）の条件を `if (popover === null || popover.mode === "detail") setFullEditOpen(false);` に。
 3. `ScheduleFullEditor`（`:1587-`）: `open={fullEditOpen && (popover?.mode === "create" || popover?.mode === "edit")}`・`mode={popover?.mode === "edit" ? "edit" : "create"}`・`item={popover?.item ?? null}`・`onClose={() => { setFullEditOpen(false); setError(null); if (popover?.mode === "edit") setPopover(null); }}`。
-4. 小窓（`SchedulePopover`）の直す形を消す: `:311` の見出しは `t("schedule.eventDetail")` だけに・`:394-406` の文字つきの題名の枝・`:432-440` の `mode !== "detail"` の下の段（保存・取り消し）。小窓の本体（`:380-418`）は作るときだけ描く形になる。`ScheduleDraftFields` へ渡していた `joinMeetLink`（`:417`）を外す。詳しくの中身（`:358`）は今と同じリンクを出し続けるが、リンクの宛先を決める式（`:290`・`MEET_URL_PREFIX` `:96`）は `ScheduleDraftFields.tsx` から出す関数 `meetJoinUrl(item: ScheduleItem | null): string | null` 1 つに移し、詳しくの小窓と `DraftMeetField` の両方がそれを呼ぶ（式を 2 か所に書かない）。
+4. 小窓（`SchedulePopover`）の直す形を消す: `:311` の見出しは `t("schedule.eventDetail")` だけに・`:394-406` の文字つきの題名の枝・`:432-440` の `mode !== "detail"` の下の段（保存・取り消し）。小窓の本体（`:380-420`）は作るときだけ描く形になる。`ScheduleDraftFields` へ渡していた `joinMeetLink`（`:417`）を外す。詳しくの中身（`:358`）は今と同じリンクを出し続けるが、リンクの宛先を決める式（`:290`・`MEET_URL_PREFIX` `:96`）は `ScheduleDraftFields.tsx` から出す関数 `meetJoinUrl(item: ScheduleItem | null): string | null` 1 つに移し、詳しくの小窓と `DraftMeetField` の両方がそれを呼ぶ（式を 2 か所に書かない）。
 5. 詳しくの小窓の鉛筆の絵（`:321-332`）と下の「予定を編集」のボタン（`:441` 以降）は今と同じく `openEdit` を呼ぶ（変えない）。
 6. 近道の判定（`:1249-1250`）は `fullEditOpen` だけを見ている（a7fbffdfe で確かめた）ので変えない。直すときも `fullEditOpen` が真になるので近道は効かない。コメントの金型の名前だけ `EditorPage` に替える。
 
