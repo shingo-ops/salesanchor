@@ -1426,7 +1426,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 - 詳しくの小窓: 日時の行の下に繰り返しの行（選び方の文字）。
 - 3 択の小窓: 金型 `Modal`（`frontend/src/components/Modal.tsx`）と `RadioControl`。題・ボタンの文字は U1 の測りの後に決める。取り消すと何も送らない。
 - 回の id: `event-<元のid>-<回の始まりのミリ秒>`。`eventNumericId`（`frontend/src/pages/schedule/schedule-utils.ts:408`）は両方の形から元の id を返すように広げ、回の始まりを返す関数を足す。`normalizeEvent`（`:339`）で `occurrence_start` があればこの形の id にする。
-- 保存 `SchedulePageImpl.tsx:989,991`・消す `:1006`・動かす `:1192`（PATCH `:1203`）: 回なら 3 択の小窓を挟み、選んだ scope と回の始まりを付けて送る。動かすときに 3 択を出すかは U3 で決める。
+- 保存 `frontend/src/pages/schedule/SchedulePageImpl.tsx:989,991`・消す `:1006`・動かす `:1192`（PATCH `:1203`）: 回なら 3 択の小窓を挟み、選んだ scope と回の始まりを付けて送る。動かすときに 3 択を出すかは U3 で決める。
 
 ### 12.7 Google との同期（ADR-1057・ADR-1059 の範囲の中）
 
@@ -1435,7 +1435,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
   - this: `backend/app/services/google_calendar.py` に `get_instance(元の google_event_id, originalStart)`（`events.instances` を `originalStart` で引く）を足す。返った回の id を例外の行の `google_event_id` に入れ、その id に patch（消すは `status: "cancelled"`）。
   - following: 元の予定を patch して `recurrence` を UNTIL 付きにし、新しい元の行を insert（今の作る道と同じ）。
   - all: 元の予定を patch（`recurrence` を含める）。
-- 取り込み（`upsert_from_google`・`calendar_service.py:551`）:
+- 取り込み（`upsert_from_google`・`backend/app/services/calendar_service.py:551`）:
   - 来た予定の `recurringEventId` が、アプリ起源の元の行の `google_event_id` と同じなら飛ばす（二重を防ぐ。recon §9.3 の危ないところ）。
   - 例外の行に入れた回の id は今の完全一致（`_is_app_origin`・`:129`）で飛ばされる。
   - Google で作った繰り返しは今と同じ（1 回ずつ 1 行・source='google'）。3 択は出さない（`recurrence_rule` を持たないため）。
@@ -1444,7 +1444,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 ### 12.8 移行と便の分け方
 
-- 移行 `migrations/20261112_<時刻>_add_calendar_events_recurrence.sql`: meet_url の移行（`migrations/20261104_161223_add_calendar_events_meet_url.sql`）と同じ「会社ごとに回す・冪等」の形で、欄 4 つ・CHECK 4 つ・部分 UNIQUE 1 つ。欄はどれも NULL 可か一定の初期値なので、表を書き直さず速い（ロック待ち 1 秒の決まり ADR-1037 の中）。
+- 移行 migrations/20261112_<時刻>_add_calendar_events_recurrence.sql（新しく作るファイル）: meet_url の移行（`migrations/20261104_161223_add_calendar_events_meet_url.sql`）と同じ「会社ごとに回す・冪等」の形で、欄 4 つ・CHECK 4 つ・部分 UNIQUE 1 つ。欄はどれも NULL 可か一定の初期値なので、表を書き直さず速い（ロック待ち 1 秒の決まり ADR-1037 の中）。
   - 試験の足場 `backend/tests/rls_bootstrap.py:156-174` `_TENANT_LOOP_MIGRATIONS` に名前と回数を書く。
   - 分類表 `migrations/20261024_100300_create_ai_cloud_views.sql:351-354` に `recurrence_rule` の行（mask・理由「値の決まりが値の一覧でなく文字の形だけのため伏せる」）を足す。他の 3 つは数・真偽・日時で行が要らない（`backend/tests/ops/test_ai_cloud_views.py:50-53`）。
   - 道具: `backend/requirements.txt` に `python-dateutil==2.9.0.post0` を明示（既に間接に入っている版・recon §9.3）。
