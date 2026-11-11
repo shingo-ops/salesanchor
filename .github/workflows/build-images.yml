@@ -1,10 +1,28 @@
 name: Build images (GitHub → GHCR)
-# build-on-github 便1（docs/handoff/build-on-github/design.md §12 便1・§25）。
-# 5 つの完成品を GitHub で組み立てて走査し、組織の非公開の倉庫（ghcr.io）へ送る。本番（prod1）には触らない。
-# 便2 で deploy.yml に移してこのファイルは消す。
+# build-on-github 便1・便2（docs/handoff/build-on-github/design.md §12・§26）。
+# 6 つの完成品を GitHub で組み立てて走査し、組織の非公開の倉庫（ghcr.io）へ送る。
+# secretary-codex（ADR-1058）は付け足しの機能なので、落ちても run を赤にしない（design.md §26-8）。
+# 便2 から deploy.yml の build job が呼ぶ（uses:）。単独では動かない。名前・走査・push の正本はこのファイル 1 か所。
 on:
-  push:
-    branches: [main]
+  workflow_call:
+    secrets:
+      GHCR_PUSH_TOKEN:
+        required: true
+      VITE_FUNNEL_DASHBOARD:
+        required: false
+    outputs:
+      backend:
+        value: ${{ jobs.build-backend.outputs.ref }}
+      frontend:
+        value: ${{ jobs.build-frontend.outputs.ref }}
+      gemini_egress:
+        value: ${{ jobs.build-gemini-egress.outputs.ref }}
+      gha_exporter:
+        value: ${{ jobs.build-gha-exporter.outputs.ref }}
+      secretary_agent:
+        value: ${{ jobs.build-secretary-agent.outputs.ref }}
+      secretary_codex:
+        value: ${{ jobs.build-secretary-codex.outputs.ref }}
 permissions:
   contents: read   # 倉庫へは secrets.GHCR_PUSH_TOKEN（classic PAT・write:packages）で書く。GITHUB_TOKEN に packages は与えない
 env:
@@ -14,12 +32,16 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read   # 前回の deploy の成否を読むため（§26-1 の 2.）
     outputs:
-      backend: ${{ steps.f.outputs.backend }}
-      frontend: ${{ steps.f.outputs.frontend }}
-      gemini_egress: ${{ steps.f.outputs.gemini_egress }}
-      gha_exporter: ${{ steps.f.outputs.gha_exporter }}
-      secretary_agent: ${{ steps.f.outputs.secretary_agent }}
+      backend: ${{ steps.g.outputs.backend }}
+      frontend: ${{ steps.g.outputs.frontend }}
+      gemini_egress: ${{ steps.g.outputs.gemini_egress }}
+      gha_exporter: ${{ steps.g.outputs.gha_exporter }}
+      secretary_agent: ${{ steps.g.outputs.secretary_agent }}
+      secretary_codex: ${{ steps.g.outputs.secretary_codex }}
     steps:
       - name: Check settings (design.md §25 C7/C12)
         env:
@@ -46,6 +68,7 @@ jobs:
               - '.github/scripts/ghcr-private-check.sh'
               - '.gitleaks.toml'
               - '.github/workflows/secret-scan.yml'
+              - '.github/workflows/deploy.yml'
             backend:
               - *common
               - 'backend/**'
@@ -61,6 +84,32 @@ jobs:
             secretary_agent:
               - *common
               - 'secretary-agent/**'
+            secretary_codex:
+              - *common
+              - 'secretary-codex/**'
+              - 'secretary-agent/prompt.txt'
+              - 'secretary-agent/schema.json'
+              - 'secretary-agent/probe.mjs'
+      - name: Check previous deploy completed (design.md §26-1 2.)
+        id: g
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE: ${{ github.event.before }}
+          F_BACKEND: ${{ steps.f.outputs.backend }}
+          F_FRONTEND: ${{ steps.f.outputs.frontend }}
+          F_GEMINI_EGRESS: ${{ steps.f.outputs.gemini_egress }}
+          F_GHA_EXPORTER: ${{ steps.f.outputs.gha_exporter }}
+          F_SECRETARY_AGENT: ${{ steps.f.outputs.secretary_agent }}
+          F_SECRETARY_CODEX: ${{ steps.f.outputs.secretary_codex }}
+        run: |
+          last=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs?branch=main&event=push&status=success&per_page=1" --jq '.workflow_runs[0].head_sha // ""' 2>/dev/null || echo "")
+          if [ -n "$last" ] && [ "$last" = "$BEFORE" ]; then
+            echo "前回デプロイは成功（${last:0:7}）→ 差分どおり"
+            { echo "backend=$F_BACKEND"; echo "frontend=$F_FRONTEND"; echo "gemini_egress=$F_GEMINI_EGRESS"; echo "gha_exporter=$F_GHA_EXPORTER"; echo "secretary_agent=$F_SECRETARY_AGENT"; echo "secretary_codex=$F_SECRETARY_CODEX"; } >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::前回の成功デプロイ(${last:0:7})が push 直前(${BEFORE:0:7})と違う／取れない → 6 つ全部を組み立てる"
+            { echo "backend=true"; echo "frontend=true"; echo "gemini_egress=true"; echo "gha_exporter=true"; echo "secretary_agent=true"; echo "secretary_codex=true"; } >> "$GITHUB_OUTPUT"
+          fi
 
   build-backend:
     needs: changes
@@ -297,3 +346,84 @@ jobs:
         env:
           REF: ${{ steps.push.outputs.ref }}
         run: bash .github/scripts/ghcr-private-check.sh "$REF"
+
+  build-secretary-codex:
+    # ADR-1058 段3 の ChatGPT の秘書。付け足しの機能なので、落ちても run を赤にしない（design.md §26-8）。
+    # build はリポジトリの根を context にする。BuildKit が secretary-codex/Dockerfile.dockerignore（許す一覧の 4 つ）を読む。
+    needs: changes
+    if: needs.changes.outputs.secretary_codex == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      IMAGE: salesanchor-secretary-codex
+    outputs:
+      ref: ${{ steps.out.outputs.ref }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        id: co
+        continue-on-error: true
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        id: bx
+        if: steps.co.outcome == 'success'
+        continue-on-error: true
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        id: login
+        if: steps.bx.outcome == 'success'
+        continue-on-error: true
+        with:
+          registry: ghcr.io
+          username: ${{ vars.GHCR_USER }}
+          password: ${{ secrets.GHCR_PUSH_TOKEN }}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        id: build
+        if: steps.login.outcome == 'success'
+        continue-on-error: true
+        with:
+          context: .
+          file: secretary-codex/Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          provenance: false
+          sbom: false
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha,scope=secretary-codex
+          cache-to: type=gha,scope=secretary-codex
+      - name: Scan image (design.md §7-2)
+        id: scan
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        run: bash .github/scripts/image-scan.sh "$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
+      - name: Push and record digest (design.md §25 C13)
+        id: push
+        if: steps.scan.outcome == 'success'
+        continue-on-error: true
+        run: |
+          TAG="$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
+          docker push "$TAG"
+          DIGEST="$(docker buildx imagetools inspect "$TAG" --format '{{json .Manifest}}' | jq -r '.digest')"
+          if ! [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then echo "::error::digest の形が違う"; exit 1; fi
+          REF="$REGISTRY/$NAMESPACE/$IMAGE@$DIGEST"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "- $IMAGE: \`$REF\`" >> "$GITHUB_STEP_SUMMARY"
+      - name: Check package is private (design.md §25 C4/C15)
+        id: priv
+        if: steps.push.outcome == 'success'
+        continue-on-error: true
+        env:
+          REF: ${{ steps.push.outputs.ref }}
+        run: bash .github/scripts/ghcr-private-check.sh "$REF"
+      - name: Hand over digest only when every step passed (design.md §26-8)
+        id: out
+        if: always()
+        env:
+          PRIV: ${{ steps.priv.outcome }}
+          REF: ${{ steps.push.outputs.ref }}
+        run: |
+          if [ "$PRIV" = "success" ] && [ -n "$REF" ]; then
+            echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::secretary-codex を組み立て・走査・送れませんでした（本体の反映は続けます。prod1 の .env の行は今のまま）"
+          fi
