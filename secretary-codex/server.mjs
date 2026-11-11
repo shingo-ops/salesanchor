@@ -22,11 +22,12 @@ const PROMPT = fs.readFileSync(path.join(ASSET_DIR, "prompt.txt"), "utf8");
 const SCHEMA_PATH = path.join(ASSET_DIR, "schema.json");
 JSON.parse(fs.readFileSync(SCHEMA_PATH, "utf8")); // 起動の時に読めることだけ確かめる（読めなければ起動しない）
 
-// 止め設定（recon §5-2 の手元の試しと同じ18組）。web_search の値は引用符ごと渡す（手元の試しと同じ形）。
+// 止め設定（recon §5-2 の手元の試しの18組に、一時 VM で見つけた shell_snapshot を足した19組。card-3e）。web_search の値は引用符ごと渡す（手元の試しと同じ形）。
 const DISABLED_FEATURES = [
   "shell_tool", "unified_exec", "view_image", "multi_agent", "apps", "plugins",
   "browser_use", "browser_use_external", "computer_use", "image_generation", "goals",
   "hooks", "sleep_tool", "code_mode_host", "tool_suggest", "skill_search", "remote_plugin",
+  "shell_snapshot",
 ];
 const HARDEN = ["-c", 'web_search="disabled"', ...DISABLED_FEATURES.flatMap((f) => ["-c", `features.${f}=false`])];
 
