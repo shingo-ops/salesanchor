@@ -91,6 +91,8 @@ import AdminHubPage from "./pages/admin/AdminHubPage";
 // SA-02 Stage 3: チャネルマスタ管理
 import ChannelMastersPage from "./pages/admin/ChannelMastersPage";
 import ManagementCenterPage from "./pages/management-center/ManagementCenterPage";
+import SettingsHubPage from "./pages/super-admin/settings/SettingsHubPage";
+import SettingsMasterPage from "./pages/super-admin/settings/SettingsMasterPage";
 import FxRatePage from "./pages/super-admin/FxRatePage";
 import LoginRequestsPage from "./pages/super-admin/LoginRequestsPage";
 import TenantLoginRequestsPage from "./pages/management-center/TenantLoginRequestsPage";
@@ -317,14 +319,34 @@ function App() {
                     {/* AY-2g: 旧スタンドアロンページ3つは LINE解析へ転送（対応表は legacyPageRedirects.ts） */}
                     {LEGACY_SUPER_ADMIN_REDIRECTS.map(r => <Route key={r.from} path={r.from} element={<Navigate to={r.to} replace />} />)}
                     <Route path="/super-admin/tcg-product-master/import" element={<TcgProductImportPage />} />
-                    {/* 為替レート SSOT (is_super_admin 限定、Page 内で 403 ガード) */}
-                    <Route
-                      path="/super-admin/fx-rate"
-                      element={<FxRatePage />}
-                    />
+                    {/* 全体設定ハブ (is_super_admin 限定、ハブ内で 403 ガード)。項目の正本は settingsNav.ts */}
+                    <Route path="/super-admin/settings" element={<SettingsHubPage />}>
+                      <Route index element={<Navigate to="fx-rate" replace />} />
+                      {/* 為替レート SSOT */}
+                      <Route path="fx-rate" element={<FxRatePage />} />
+                      <Route
+                        path="tax-rates"
+                        element={
+                          <ComingSoonPage
+                            title={t("nav.superAdminTaxRates")}
+                            description={t("superAdmin.settings.comingSoon")}
+                          />
+                        }
+                      />
+                      <Route
+                        path="sa-products"
+                        element={
+                          <ComingSoonPage
+                            title={t("nav.superAdminSaProducts")}
+                            description={t("superAdmin.settings.comingSoon")}
+                          />
+                        }
+                      />
+                      <Route path="masters/:key" element={<SettingsMasterPage />} />
+                    </Route>
                     {/* ADR-1055: ログインの許可待ち (is_super_admin 限定、Page 内で 403 の表示) */}
                     <Route
-                      path="/super-admin/login-requests"
+                      path="/super-admin/users/login-requests"
                       element={<LoginRequestsPage />}
                     />
                     {/* CC_TASK_DISTUI-01: 配信先管理 (is_super_admin 限定) */}
@@ -370,8 +392,9 @@ function App() {
                       path="/super-admin/masters/product-categories/import"
                       element={<ProductCategoriesImportPage />}
                     />
-                    <Route path="/super-admin/viewers" element={<ViewerAccountsPage />} />
-                    <Route path="/super-admin/viewer-templates" element={<ViewerTemplatesPage />} />
+                    <Route path="/super-admin/users" element={<Navigate to="/super-admin/users/viewers" replace />} />
+                    <Route path="/super-admin/users/viewers" element={<ViewerAccountsPage />} />
+                    <Route path="/super-admin/users/viewer-templates" element={<ViewerTemplatesPage />} />
                     {/* SaaS 管理者ハブ（ボトムタブ統合） */}
                     <Route path="/admin" element={<AdminHubPage />}>
                       <Route index element={<Navigate to="tenant-profile" replace />} />

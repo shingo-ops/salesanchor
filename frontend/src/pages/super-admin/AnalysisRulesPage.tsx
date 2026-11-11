@@ -11,7 +11,7 @@
  * 2026-09-19: マスタ管理パネル（商品マスタ・仕入元マスタ）を追加。
  */
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
@@ -21,20 +21,9 @@ import {
   type AnalysisRulesSidebarKey,
 } from "./components/AnalysisRulesSidebar";
 import NeedsReviewTabsPanel from "./components/NeedsReviewTabsPanel";
-import { ProductMasterPanel } from "./components/ProductMasterPanel";
-import { ProductCategoriesMasterPanel } from "./components/ProductCategoriesMasterPanel";
-import { ProductKindsMasterPanel } from "./components/ProductKindsMasterPanel";
-import { TypeMasterPanel } from "./components/TypeMasterPanel";
-import { SupplierMasterPanel } from "./components/SupplierMasterPanel";
 import { ConditionsMasterPanel } from "./components/ConditionsMasterPanel";
 import { UnitMasterPanel } from "./components/UnitMasterPanel";
 import { UnitIgnorePhrasesPanel } from "./components/UnitIgnorePhrasesPanel";
-import { NoteMasterPanel } from "./components/NoteMasterPanel";
-import { ProductLinesMasterPanel } from "./components/ProductLinesMasterPanel";
-import { ProductFormatsMasterPanel } from "./components/ProductFormatsMasterPanel";
-import { QuantityUnitsMasterPanel } from "./components/QuantityUnitsMasterPanel";
-import { ConditionDefsMasterPanel } from "./components/ConditionDefsMasterPanel";
-import { WeightClassesMasterPanel } from "./components/WeightClassesMasterPanel";
 import { RuleManagementPanel } from "./components/RuleManagementPanel";
 import { AnalysisDashboardPanel } from "./components/AnalysisDashboardPanel";
 import { ExtractionErrorLogPanel } from "./components/ExtractionErrorLogPanel";
@@ -42,6 +31,7 @@ import { SoldOutResultsPanel } from "./components/SoldOutResultsPanel";
 import SupplierExtractionRulesPage from "./SupplierExtractionRulesPage";
 import ExtractionPromptConfigTab from "./ExtractionPromptConfigTab";
 import KnowledgeAliasesTab from "./KnowledgeAliasesTab";
+import { isSettingsMasterKey, settingsMasterPath } from "./settings/settingsNav";
 import "./AnalysisRulesPage.css";
 import { SupplierQualityList } from "../../features/tcg-analysis-review/SupplierQualityList";
 import { SupplierDetailView } from "../../features/tcg-analysis-review/SupplierDetailView";
@@ -105,14 +95,25 @@ export default function AnalysisRulesPage() {
     useState<AnalysisRulesSidebarKey>(initialSection);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const handleSectionChange = (key: AnalysisRulesSidebarKey) => {
+  const handleSectionChange = (key: string) => {
     if (key === "import") {
       navigate("/super-admin/tcg-line-import");
+      return;
+    }
+    if (isSettingsMasterKey(key)) {
+      // マスタ11件は全体設定へ移動した
+      navigate(settingsMasterPath(key));
       return;
     }
     setActiveSection(key);
     setSearchParams({ section: key }, { replace: true });
   };
+
+  // 旧 URL（?section=<マスタ>）は全体設定の同じマスタへ置き換えで転送する
+  const requestedSection = searchParams.get("section");
+  if (isSettingsMasterKey(requestedSection)) {
+    return <Navigate to={settingsMasterPath(requestedSection)} replace />;
+  }
 
   if (superAdminLoading) {
     return (
@@ -158,18 +159,13 @@ export default function AnalysisRulesPage() {
 
         {/* 右コンテンツ */}
         <div className="hub-content">
-          {activeSection === "dashboard" && <AnalysisDashboardPanel onNavigate={setActiveSection} />}
+          {activeSection === "dashboard" && <AnalysisDashboardPanel onNavigate={handleSectionChange} />}
           {activeSection !== "dashboard" && (
             <div className="analysis-panel-content">
               {activeSection === "accuracy-management" && <AccuracyManagementPanel />}
               {activeSection === "needs-review" && <NeedsReviewTabsPanel />}
               {activeSection === "error-log" && <ExtractionErrorLogPanel />}
               {activeSection === "sold-out-results" && <SoldOutResultsPanel />}
-              {activeSection === "product-master" && <ProductMasterPanel />}
-              {activeSection === "product-categories-master" && <ProductCategoriesMasterPanel />}
-              {activeSection === "product-kinds-master" && <ProductKindsMasterPanel />}
-              {activeSection === "type-master" && <TypeMasterPanel />}
-              {activeSection === "supplier-master" && <SupplierMasterPanel />}
               {activeSection === "conditions-master" && <ConditionsMasterPanel />}
               {activeSection === "unit-master" && (
                 <>
@@ -177,12 +173,6 @@ export default function AnalysisRulesPage() {
                   <UnitIgnorePhrasesPanel />
                 </>
               )}
-              {activeSection === "note-master" && <NoteMasterPanel />}
-              {activeSection === "product-lines-master" && <ProductLinesMasterPanel />}
-              {activeSection === "product-formats-master" && <ProductFormatsMasterPanel />}
-              {activeSection === "quantity-units-master" && <QuantityUnitsMasterPanel />}
-              {activeSection === "condition-defs-master" && <ConditionDefsMasterPanel />}
-              {activeSection === "weight-classes-master" && <WeightClassesMasterPanel />}
               {activeSection === "rule-management" && <RuleManagementPanel />}
               {activeSection === "extraction-rules" && <SupplierExtractionRulesPage embedded />}
               {activeSection === "knowledge-aliases" && <KnowledgeAliasesTab />}

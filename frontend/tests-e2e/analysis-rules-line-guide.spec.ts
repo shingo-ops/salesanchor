@@ -139,7 +139,7 @@ test("guide actions keep hub query navigation and use existing external paths", 
   const supplierButton = supplierStep.getByRole("button", { name: "仕入元マスタを開く" });
   await supplierButton.focus();
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/\/super-admin\/analysis-rules\?section=supplier-master$/);
+  await expect(page).toHaveURL(/\/super-admin\/settings\/masters\/supplier-master$/);
   await expect(page.getByRole("heading", { name: "LINE解析の業務手順" })).toHaveCount(0);
   await expect(page.getByTestId("suppliers-search")).toBeVisible();
 

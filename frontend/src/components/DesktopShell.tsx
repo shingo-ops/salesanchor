@@ -193,13 +193,12 @@ export default function DesktopShell() {
 
   // SaaS管理者専用メニュー項目（is_super_admin のみに表示）
   // 「抽出ルール設定」は解析管理ページ内サブナビに統合済み（ADR-144 hub-shell構造）
-  // 順序: LINE解析 → 買取相場 → 為替レート管理
+  // 順序: LINE解析 → 買取相場 → 利用者管理 → 全体設定
   const saasAdminItems: NavItem[] = isSuperAdmin ? [
     { to: "/super-admin/analysis-rules",              labelKey: "nav.superAdminAnalysisRules" },
     { to: "/buyback-prices",                          labelKey: "nav.buybackPrices" },
-    { to: "/super-admin/fx-rate",                     labelKey: "nav.superAdminFxRate" },
-    { to: "/super-admin/viewers",                     labelKey: "nav.superAdminViewers" },
-    { to: "/super-admin/login-requests",              labelKey: "nav.superAdminLoginRequests" },
+    { to: "/super-admin/users",                       labelKey: "nav.superAdminViewers" },
+    { to: "/super-admin/settings",                    labelKey: "nav.superAdminSettings" },
   ] : [];
 
   const moreItems: NavItem[] = [];
