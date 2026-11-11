@@ -76,8 +76,8 @@ paths = [
 
 ### 2-4. `tests/sandbox/image-scan-survey.sh`
 1. 2 行目の `§24 C8・C16` を `§25 C8・§25-9` にする。
-2. 8 行目 `CTRL="$(mktemp)"`、15 行目 `printf '[extend]\nuseDefault = true\n' > "$CTRL"`、16 行目 `DUMMY_KEY=…` を消す。
-3. cleanup の `rm -rf "$LOGDIR" "$CTRL"` を `rm -rf "$LOGDIR"` にする。
+2. 15 行目 `printf '[extend]\nuseDefault = true\n' > "$CTRL"`、16 行目 `DUMMY_KEY=…` を消す。
+3. 8 行目 `CTRL="$(mktemp)"` と cleanup の行は変えない（2026-11-11 改訂: cleanup の行を書き換える編集は、クラウドの見張りが不可逆操作の文字列として止めた。空の一時ファイルが 1 つ作られて消えるだけなので、残しても動きは変わらない）。
 4. `survey_one frontend ./frontend \` から `--build-arg VITE_AUTH_PROVIDER=self` までの 6 行を次の 1 行にする:
    `survey_one frontend ./frontend --build-arg VITE_FUNNEL_DASHBOARD=mock`
 5. その直後の `if docker image inspect survey/frontend:local …` から対応する `fi` まで（試しの鍵と対照の走査の塊）を消す。
