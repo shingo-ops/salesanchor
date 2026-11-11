@@ -23,7 +23,7 @@ const ROW = {
 
 function renderPage() {
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={["/super-admin/users/login-requests"]}>
       <LoginRequestsPage />
     </MemoryRouter>,
   );
@@ -62,4 +62,13 @@ it("lists pending requests and needs a note to approve", async () => {
   await waitFor(() =>
     expect(api.post).toHaveBeenCalledWith("/super-admin/login-requests/req-9/approve", { note: "confirmed by phone" }),
   );
+});
+
+it("shows the user management menu with login approvals highlighted (K7)", async () => {
+  vi.mocked(useSuperAdmin).mockReturnValue({ isSuperAdmin: true, loading: false } as never);
+  renderPage();
+  await screen.findAllByText("Android · Chrome");
+  expect(screen.getByText(i18n.t("superAdmin.users.groupViewers"))).toBeTruthy();
+  expect(screen.getByRole("button", { name: i18n.t("superAdmin.viewers.menuAll") })).toBeTruthy();
+  expect(screen.getByRole("link", { name: i18n.t("nav.superAdminLoginRequests") }).className).toContain("comp-subnav__item--active");
 });
