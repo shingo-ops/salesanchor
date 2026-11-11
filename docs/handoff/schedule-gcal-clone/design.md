@@ -1346,7 +1346,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 ## 12. 便15: 予定の繰り返し（2026-11-12・Opus・設計案）
 
-状態: 設計案。設計審査は審査7 で APPROVE（§12.13・2026-11-11 22:00 UTC）。そのあと PO の問い「繰り返しを消すときの動きも把握したか」（2026-11-12）で、消すときの Google 側の抜けが 2 つ見つかった。Google で消し方を測り（recon §9.5 U6）、§12.2 G74・§12.5・§12.7 を直した。審査8〜審査12 の REVISE（§12.13）を直し、審査13 待ち。成功条件は PO の決定待ち。PO の範囲の承認は済み（2026-11-12 選択「1、」）。根拠は recon §9。ADR-1075（Proposed）。
+状態: 設計案。設計審査は審査7 で APPROVE（§12.13・2026-11-11 22:00 UTC）。そのあと PO の問い「繰り返しを消すときの動きも把握したか」（2026-11-12）で、消すときの Google 側の抜けが 2 つ見つかった。Google で消し方を測り（recon §9.5 U6）、§12.2 G74・§12.5・§12.7 を直した。審査8〜審査13 の REVISE（§12.13）を直し、審査14 待ち。成功条件は PO の決定待ち。PO の範囲の承認は済み（2026-11-12 選択「1、」）。根拠は recon §9。ADR-1075（Proposed）。
 
 ### 12.1 目的
 
@@ -1472,7 +1472,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
     - 直すときの following で UNTIL の patch は通り insert だけ失敗: 新しい元の行だけ `'failed'`（`google_event_id` は NULL）。元の行は、UNTIL の patch が通った時点で `sync_status = 'synced'`・`last_synced_at = NOW()` に書く（審査12 指摘1。今の直す道は直す前に `'pending'` を書き（`backend/app/services/calendar_service.py:372`）、送りが通ったら `'synced'` に書く（`:409-415`）。同じ形にそろえる）。
     - 直すときの this で `get_instance` か例外の回への patch が失敗: 例外の行を `'failed'`。新しく作った例外の行の `google_event_id` は NULL のまま（審査12 指摘2）。
     - 直すときの all で、決まり以外だけを直す元の予定への patch が失敗: 元の行を `'failed'`。`google_event_id` はそのまま（今の直す道の失敗 `:420-423` と同じ・審査12 指摘2）。
-    - どの道も、送りが通った行は `'synced'`・`last_synced_at = NOW()` に書く。`'pending'` のまま残す行は作らない。
+    - どの道も、Google への送りを試して通った行は `'synced'`・`last_synced_at = NOW()` に書く。Google に送らない場合（`google_event_id` が無い・同期の向きが双方向でも書くだけでもない。今の直す道の `backend/app/services/calendar_service.py:391` の条件）は、今と同じく `'pending'` のまま残す（審査13 指摘1）。
     - 消して作り直す道で delete が失敗: その行を `'failed'`。`google_event_id`・`sync_origin_id` は古い値のまま残す（Google にも古い予定が残っているため）。
     - 消して作り直す道で delete は通り create だけ失敗: その行を `'failed'` にし、`google_event_id` と `sync_origin_id` を NULL にする。今の作る道の失敗（`backend/app/services/calendar_service.py:316-324`）と同じ「Google の id を持たない行」の形にそろえ、Google で消えた古い id に patch を送らないため。
     - `'failed'` の行を後から送り直す仕組みは今の main に無い（`sync_status` を読むのは一覧の `backend/app/services/calendar_service.py:200` だけ）。便15 でも作らない。今の単発の予定の失敗と同じ扱い。
@@ -1674,4 +1674,12 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 |---|---|---|---|
 | 1 | 低 | 「元の行は `'synced'` のまま」とあるが、今の直す道は直す前に `'pending'` を書く（`calendar_service.py:372`） | §12.7（UNTIL の patch が通ったら `'synced'` に書く）・§12.10 |
 | 2 | 低 | 直す道の this と all（決まり以外だけ）の送りが失敗したときの行の扱いが表に無い | §12.7（どちらも `'failed'`）・§12.10 |
+
+#### 審査13（2026-11-11 23:42 UTC・対象 31152d584）: REVISE
+
+審査12 の指摘 1〜2 は直っていると確かめた。そのうえで重さ低の 1 件。
+
+| # | 重さ | 指摘 | 直した所 |
+|---|---|---|---|
+| 1 | 低 | 「`'pending'` のまま残す行は作らない」が、Google に送らない場合の今の動き（`calendar_service.py:372`・`:391`）と食い違う | §12.7（送りを試して通った行だけ `'synced'`・送らない場合は今と同じく `'pending'`） |
 
