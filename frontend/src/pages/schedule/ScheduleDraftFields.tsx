@@ -1,13 +1,16 @@
 /**
  * 予定の項目の部品（日時・種類・Meet・社員にも見せる・場所・説明）
- * 作る小窓・直す小窓・全画面の編集で同じ並びを使う（design §3.18）。
+ * 1 項目ずつの部品。作る小窓は appearance="popover"、編集の画面（金型 EditorPage）は appearance="page"（design §3.19）。
  * ADR-027: 全 UI 文字列は t() 経由。ADR-067: 色・寸法は CSS 変数参照のみ。
  */
 
 import { useState } from "react";
-import type { ReactNode } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { ButtonLink } from "../../components/ButtonLink";
+import { Checkbox } from "../../components/Checkbox";
+import { EditorPageRow } from "../../components/EditorPage";
 import { SelectControl } from "../../components/Select";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
@@ -71,6 +74,369 @@ function MeetRow({
   );
 }
 
+/** Google Meet の参加リンクとして出してよい URL の頭 */
+const MEET_URL_PREFIX = "https://meet.google.com/";
+
+/** 詳しくの小窓と DraftMeetField が使う「Google Meet で参加」の宛先（出してよい URL でなければ null） */
+export function meetJoinUrl(item: ScheduleItem | null): string | null {
+  return item?.meetUrl && item.meetUrl.startsWith(MEET_URL_PREFIX) ? item.meetUrl : null;
+}
+
+type Appearance = "popover" | "page";
+
+interface FieldProps {
+  appearance: Appearance;
+  mode: PopoverMode;
+  draft: ScheduleDraft;
+  onDraftChange: (next: ScheduleDraft) => void;
+}
+
+export function DraftDateFields({
+  appearance,
+  mode,
+  draft,
+  onDraftChange,
+  creating = false,
+  expanded = false,
+}: FieldProps & { creating?: boolean; expanded?: boolean }) {
+  const { t, i18n } = useTranslation();
+  const ClockIcon = SCHEDULE_POPOVER_ICONS.clock;
+  // 作るときは日時を 1 行で閉じて出し、押すと開く（design §3.9・G3 ②）。全画面の編集は初めから開く
+  const [dateOpen, setDateOpen] = useState(false);
+  const shiftsStart = mode === "create";
+
+  const changeAllDay = (next: boolean) =>
+    onDraftChange({
+      ...draft,
+      allDay: next,
+      startTime: next ? "00:00" : draft.startTime,
+      endTime: next ? "23:59" : draft.endTime,
+    });
+  const changeStartDate = (value: string) =>
+    onDraftChange(shiftsStart ? shiftDraftStart(draft, value, draft.startTime) : { ...draft, startDate: value });
+  const changeStartTime = (value: string) =>
+    onDraftChange(shiftsStart ? shiftDraftStart(draft, draft.startDate, value) : { ...draft, startTime: value });
+
+  if (appearance === "page") {
+    return (
+      <>
+        <div className="schedule-editor-dates">
+          <TextFieldControl
+            variant="editor-filled"
+            type="date"
+            value={draft.startDate}
+            aria-label={t("schedule.eventStart")}
+            onChange={(event) => changeStartDate(event.target.value)}
+          />
+          {!draft.allDay && (
+            <TextFieldControl
+              variant="editor-filled"
+              type="time"
+              value={draft.startTime}
+              aria-label={`${t("schedule.eventStart")} ${t("schedule.time")}`}
+              onChange={(event) => changeStartTime(event.target.value)}
+            />
+          )}
+          <span className="schedule-editor-dates__sep" aria-hidden="true">{t("schedule.rangeSeparator")}</span>
+          {!draft.allDay && (
+            <TextFieldControl
+              variant="editor-filled"
+              type="time"
+              value={draft.endTime}
+              aria-label={`${t("schedule.eventEnd")} ${t("schedule.time")}`}
+              onChange={(event) => onDraftChange({ ...draft, endTime: event.target.value })}
+            />
+          )}
+          <TextFieldControl
+            variant="editor-filled"
+            type="date"
+            value={draft.endDate}
+            aria-label={t("schedule.eventEnd")}
+            onChange={(event) => onDraftChange({ ...draft, endDate: event.target.value })}
+          />
+        </div>
+        <div>
+          <Checkbox
+            label={t("schedule.allDay")}
+            checked={draft.allDay}
+            onChange={(event) => changeAllDay(event.target.checked)}
+          />
+        </div>
+      </>
+    );
+  }
+
+  const showDate = !creating || expanded || dateOpen;
+  if (showDate) {
+    return (
+      <CreateRow creating={creating} icon={<ClockIcon size={20} aria-hidden="true" />} wrap>
+        <div className="schedule-field schedule-field--inline">
+          <span className="schedule-field__label">{t("schedule.allDay")}</span>
+          <Toggle checked={draft.allDay} aria-label={t("schedule.allDay")} onCheckedChange={changeAllDay} />
+        </div>
+
+        <div className="schedule-field-group">
+          <label className="schedule-field">
+            <span className="schedule-field__label">{t("schedule.eventStart")}</span>
+            <TextFieldControl
+              variant="schedule"
+              type="date"
+              value={draft.startDate}
+              onChange={(event) => changeStartDate(event.target.value)}
+            />
+          </label>
+          {!draft.allDay && (
+            <label className="schedule-field">
+              <span className="schedule-field__label">{t("schedule.time")}</span>
+              <TextFieldControl
+                variant="schedule"
+                type="time"
+                value={draft.startTime}
+                onChange={(event) => changeStartTime(event.target.value)}
+              />
+            </label>
+          )}
+        </div>
+
+        <div className="schedule-field-group">
+          <label className="schedule-field">
+            <span className="schedule-field__label">{t("schedule.eventEnd")}</span>
+            <TextFieldControl
+              variant="schedule"
+              type="date"
+              value={draft.endDate}
+              onChange={(event) => onDraftChange({ ...draft, endDate: event.target.value })}
+            />
+          </label>
+          {!draft.allDay && (
+            <label className="schedule-field">
+              <span className="schedule-field__label">{t("schedule.time")}</span>
+              <TextFieldControl
+                variant="schedule"
+                type="time"
+                value={draft.endTime}
+                onChange={(event) => onDraftChange({ ...draft, endTime: event.target.value })}
+              />
+            </label>
+          )}
+        </div>
+      </CreateRow>
+    );
+  }
+  return creating ? (
+    <CreateRow creating icon={<ClockIcon size={20} aria-hidden="true" />}>
+      <Button variant="ghost" size="md" fullWidth layoutClassName="schedule-popover__line" onClick={() => setDateOpen(true)}>
+        <span className="schedule-popover__line-text">{formatDraftDateLine(draft, t, i18n.language)}</span>
+      </Button>
+    </CreateRow>
+  ) : null;
+}
+
+export function DraftCategoryField({ appearance, mode, draft, onDraftChange }: FieldProps) {
+  const { t } = useTranslation();
+  const CategoryIcon = SCHEDULE_POPOVER_ICONS.category;
+  const page = appearance === "page";
+  const changeCategory = (event: ChangeEvent<HTMLSelectElement>) => {
+    const category = event.target.value as CalendarId;
+    onDraftChange(
+      mode === "create"
+        ? { ...draft, category, visibleToStaff: category !== "personal" }
+        : { ...draft, category },
+    );
+  };
+  const options = CALENDARS.map((calendar) => (
+    <option key={calendar.id} value={calendar.id}>
+      {t(calendar.labelKey)}
+    </option>
+  ));
+  if (page) {
+    return (
+      <SelectControl
+        variant="editor-filled"
+        fullWidth
+        aria-label={t("schedule.category")}
+        value={draft.category}
+        onChange={changeCategory}
+      >
+        {options}
+      </SelectControl>
+    );
+  }
+  return (
+    <CreateRow creating icon={<CategoryIcon size={20} aria-hidden="true" />}>
+      <label className="schedule-field">
+        <SelectControl
+          size="sm"
+          fullWidth
+          aria-label={t("schedule.category")}
+          value={draft.category}
+          onChange={changeCategory}
+        >
+          {options}
+        </SelectControl>
+      </label>
+    </CreateRow>
+  );
+}
+
+export function DraftMeetField({
+  appearance,
+  draft,
+  onDraftChange,
+  item,
+  meetAvailable,
+}: Omit<FieldProps, "mode"> & { item: ScheduleItem | null; meetAvailable: boolean }) {
+  const { t } = useTranslation();
+  const MeetIcon = SCHEDULE_POPOVER_ICONS.meet;
+  const page = appearance === "page";
+  const meetUrl = meetJoinUrl(item);
+  const joinLink = meetUrl ? (
+    <ButtonLink variant="primary" size="sm" href={meetUrl} target="_blank" rel="noopener noreferrer">
+      {t("schedule.joinMeet")}
+    </ButtonLink>
+  ) : null;
+  const addRow =
+    meetAvailable && !item?.meetUrl ? (
+      <MeetRow creating={!page} addMeet={draft.addMeet} onChange={(next) => onDraftChange({ ...draft, addMeet: next })} />
+    ) : null;
+
+  if (!page) {
+    return (
+      <>
+        {joinLink}
+        {addRow}
+      </>
+    );
+  }
+  if (!joinLink && !addRow) return null;
+  return (
+    <EditorPageRow icon={<MeetIcon size={20} aria-hidden="true" />}>
+      <div className="schedule-editor-meet">
+        {joinLink}
+        {addRow}
+      </div>
+    </EditorPageRow>
+  );
+}
+
+export function DraftShareField({
+  appearance,
+  draft,
+  onDraftChange,
+  canChangeVisibility,
+}: Omit<FieldProps, "mode"> & { canChangeVisibility: boolean }) {
+  const { t } = useTranslation();
+  const ShareIcon = SCHEDULE_POPOVER_ICONS.share;
+  if (!canChangeVisibility) return null;
+  const toggle = (
+    <div className="schedule-field schedule-field--inline">
+      <span className="schedule-field__label">{t("schedule.shareWithStaff")}</span>
+      <Toggle
+        checked={draft.visibleToStaff}
+        aria-label={t("schedule.shareWithStaff")}
+        onCheckedChange={(next) => onDraftChange({ ...draft, visibleToStaff: next })}
+      />
+    </div>
+  );
+  if (appearance === "page") return toggle;
+  return (
+    <CreateRow creating icon={<ShareIcon size={20} aria-hidden="true" />}>
+      {toggle}
+    </CreateRow>
+  );
+}
+
+export function DraftLocationField({
+  appearance,
+  draft,
+  onDraftChange,
+  creating = false,
+  expanded = false,
+}: Omit<FieldProps, "mode"> & { creating?: boolean; expanded?: boolean }) {
+  const { t } = useTranslation();
+  const LocationIcon = SCHEDULE_POPOVER_ICONS.location;
+  const [locationOpen, setLocationOpen] = useState(false);
+  if (appearance === "page") {
+    return (
+      <TextFieldControl
+        variant="editor-filled"
+        value={draft.location}
+        onChange={(event) => onDraftChange({ ...draft, location: event.target.value })}
+        placeholder={t("schedule.locationPlaceholder")}
+        aria-label={t("schedule.eventLocation")}
+      />
+    );
+  }
+  const showLocation = !creating || expanded || locationOpen || draft.location !== "";
+  return showLocation ? (
+    <CreateRow creating={creating} icon={<LocationIcon size={20} aria-hidden="true" />}>
+      <label className="schedule-field">
+        <span className="schedule-field__label">{t("schedule.eventLocation")}</span>
+        <TextFieldControl
+          variant="schedule"
+          value={draft.location}
+          onChange={(event) => onDraftChange({ ...draft, location: event.target.value })}
+          placeholder={t("schedule.locationPlaceholder")}
+          autoFocus={locationOpen}
+        />
+      </label>
+    </CreateRow>
+  ) : (
+    <CreateRow creating icon={<LocationIcon size={20} aria-hidden="true" />}>
+      <Button variant="ghost" size="md" fullWidth layoutClassName="schedule-popover__line" onClick={() => setLocationOpen(true)}>
+        <span className="schedule-popover__line-text">{t("schedule.locationPlaceholder")}</span>
+      </Button>
+    </CreateRow>
+  );
+}
+
+export function DraftDescriptionField({
+  appearance,
+  draft,
+  onDraftChange,
+  creating = false,
+  expanded = false,
+}: Omit<FieldProps, "mode"> & { creating?: boolean; expanded?: boolean }) {
+  const { t } = useTranslation();
+  const DescriptionIcon = SCHEDULE_POPOVER_ICONS.description;
+  const [descriptionOpen, setDescriptionOpen] = useState(false);
+  if (appearance === "page") {
+    return (
+      <TextareaControl
+        variant="editor-filled"
+        rows={8}
+        value={draft.description}
+        onChange={(event) => onDraftChange({ ...draft, description: event.target.value })}
+        placeholder={t("schedule.descriptionPlaceholder")}
+        aria-label={t("schedule.eventDescription")}
+      />
+    );
+  }
+  const showDescription = !creating || expanded || descriptionOpen || draft.description !== "";
+  return showDescription ? (
+    <CreateRow creating={creating} icon={<DescriptionIcon size={20} aria-hidden="true" />}>
+      <label className="schedule-field">
+        <span className="schedule-field__label">{t("schedule.eventDescription")}</span>
+        <TextareaControl
+          variant="schedule"
+          rows={4}
+          value={draft.description}
+          onChange={(event) => onDraftChange({ ...draft, description: event.target.value })}
+          placeholder={t("schedule.descriptionPlaceholder")}
+          autoFocus={descriptionOpen}
+        />
+      </label>
+    </CreateRow>
+  ) : (
+    <CreateRow creating icon={<DescriptionIcon size={20} aria-hidden="true" />}>
+      <Button variant="ghost" size="md" fullWidth layoutClassName="schedule-popover__line" onClick={() => setDescriptionOpen(true)}>
+        <span className="schedule-popover__line-text">{t("schedule.descriptionPlaceholder")}</span>
+      </Button>
+    </CreateRow>
+  );
+}
+
+/** 作る小窓が使う並び（日時・種類・Meet・社員にも見せる・場所・説明）。作る小窓の DOM は変えない */
 export function ScheduleDraftFields({
   mode,
   creating,
@@ -80,193 +446,27 @@ export function ScheduleDraftFields({
   onDraftChange,
   canChangeVisibility,
   meetAvailable,
-  joinMeetLink,
 }: {
   mode: PopoverMode;
   /** 作る形（1 列目に絵を置く行で並べる） */
   creating: boolean;
-  /** 真なら日時・場所・説明を初めから開いた形で出す（全画面の編集） */
+  /** 真なら日時・場所・説明を初めから開いた形で出す */
   expanded: boolean;
   item: ScheduleItem | null;
   draft: ScheduleDraft;
   onDraftChange: (next: ScheduleDraft) => void;
   canChangeVisibility: boolean;
   meetAvailable: boolean;
-  /** 小窓が作った「Google Meet で参加」のリンク（無ければ null）。作り方は小窓の 1 か所のまま */
-  joinMeetLink: ReactNode;
 }) {
-  const { t, i18n } = useTranslation();
-  const ClockIcon = SCHEDULE_POPOVER_ICONS.clock;
-  const LocationIcon = SCHEDULE_POPOVER_ICONS.location;
-  const DescriptionIcon = SCHEDULE_POPOVER_ICONS.description;
-  const CategoryIcon = SCHEDULE_POPOVER_ICONS.category;
-  const ShareIcon = SCHEDULE_POPOVER_ICONS.share;
-  // 作るときは日時・場所・説明を 1 行で閉じて出し、押すと開く（design §3.9・G3 ②③）。全画面の編集は初めから開く
-  const [dateOpen, setDateOpen] = useState(false);
-  const [locationOpen, setLocationOpen] = useState(false);
-  const [descriptionOpen, setDescriptionOpen] = useState(false);
-  const showDate = !creating || expanded || dateOpen;
-  const showLocation = !creating || expanded || locationOpen || draft.location !== "";
-  const showDescription = !creating || expanded || descriptionOpen || draft.description !== "";
-
+  const common = { appearance: "popover" as const, draft, onDraftChange };
   return (
     <>
-      {showDate ? (
-        <CreateRow creating={creating} icon={<ClockIcon size={20} aria-hidden="true" />} wrap>
-          <div className="schedule-field schedule-field--inline">
-            <span className="schedule-field__label">{t("schedule.allDay")}</span>
-            <Toggle
-              checked={draft.allDay}
-              aria-label={t("schedule.allDay")}
-              onCheckedChange={(next) => onDraftChange({
-                ...draft,
-                allDay: next,
-                startTime: next ? "00:00" : draft.startTime,
-                endTime: next ? "23:59" : draft.endTime,
-              })}
-            />
-          </div>
-
-          <div className="schedule-field-group">
-            <label className="schedule-field">
-              <span className="schedule-field__label">{t("schedule.eventStart")}</span>
-              <TextFieldControl
-                variant="schedule"
-                type="date"
-                value={draft.startDate}
-                onChange={(event) => onDraftChange(creating ? shiftDraftStart(draft, event.target.value, draft.startTime) : { ...draft, startDate: event.target.value })}
-              />
-            </label>
-            {!draft.allDay && (
-              <label className="schedule-field">
-                <span className="schedule-field__label">{t("schedule.time")}</span>
-                <TextFieldControl
-                  variant="schedule"
-                  type="time"
-                  value={draft.startTime}
-                  onChange={(event) => onDraftChange(creating ? shiftDraftStart(draft, draft.startDate, event.target.value) : { ...draft, startTime: event.target.value })}
-                />
-              </label>
-            )}
-          </div>
-
-          <div className="schedule-field-group">
-            <label className="schedule-field">
-              <span className="schedule-field__label">{t("schedule.eventEnd")}</span>
-              <TextFieldControl
-                variant="schedule"
-                type="date"
-                value={draft.endDate}
-                onChange={(event) => onDraftChange({ ...draft, endDate: event.target.value })}
-              />
-            </label>
-            {!draft.allDay && (
-              <label className="schedule-field">
-                <span className="schedule-field__label">{t("schedule.time")}</span>
-                <TextFieldControl
-                  variant="schedule"
-                  type="time"
-                  value={draft.endTime}
-                  onChange={(event) => onDraftChange({ ...draft, endTime: event.target.value })}
-                />
-              </label>
-            )}
-          </div>
-        </CreateRow>
-      ) : creating ? (
-        <CreateRow creating icon={<ClockIcon size={20} aria-hidden="true" />}>
-          <Button variant="ghost" size="md" fullWidth layoutClassName="schedule-popover__line" onClick={() => setDateOpen(true)}>
-            <span className="schedule-popover__line-text">{formatDraftDateLine(draft, t, i18n.language)}</span>
-          </Button>
-        </CreateRow>
-      ) : null}
-
-      <CreateRow creating={creating} icon={<CategoryIcon size={20} aria-hidden="true" />}>
-        <label className="schedule-field">
-          {!creating && <span className="schedule-field__label">{t("schedule.category")}</span>}
-          <SelectControl
-            size="sm"
-            fullWidth
-            aria-label={creating ? t("schedule.category") : undefined}
-            value={draft.category}
-            onChange={(event) => {
-              const category = event.target.value as CalendarId;
-              onDraftChange(
-                mode === "create"
-                  ? { ...draft, category, visibleToStaff: category !== "personal" }
-                  : { ...draft, category },
-              );
-            }}
-          >
-            {CALENDARS.map((calendar) => (
-              <option key={calendar.id} value={calendar.id}>
-                {t(calendar.labelKey)}
-              </option>
-            ))}
-          </SelectControl>
-        </label>
-      </CreateRow>
-
-      {joinMeetLink}
-      {meetAvailable && !item?.meetUrl && (
-        <MeetRow creating={creating} addMeet={draft.addMeet} onChange={(next) => onDraftChange({ ...draft, addMeet: next })} />
-      )}
-
-      {canChangeVisibility && (
-        <CreateRow creating={creating} icon={<ShareIcon size={20} aria-hidden="true" />}>
-          <div className="schedule-field schedule-field--inline">
-            <span className="schedule-field__label">{t("schedule.shareWithStaff")}</span>
-            <Toggle
-              checked={draft.visibleToStaff}
-              aria-label={t("schedule.shareWithStaff")}
-              onCheckedChange={(next) => onDraftChange({ ...draft, visibleToStaff: next })}
-            />
-          </div>
-        </CreateRow>
-      )}
-
-      {showLocation ? (
-        <CreateRow creating={creating} icon={<LocationIcon size={20} aria-hidden="true" />}>
-          <label className="schedule-field">
-            <span className="schedule-field__label">{t("schedule.eventLocation")}</span>
-            <TextFieldControl
-              variant="schedule"
-              value={draft.location}
-              onChange={(event) => onDraftChange({ ...draft, location: event.target.value })}
-              placeholder={t("schedule.locationPlaceholder")}
-              autoFocus={locationOpen}
-            />
-          </label>
-        </CreateRow>
-      ) : (
-        <CreateRow creating icon={<LocationIcon size={20} aria-hidden="true" />}>
-          <Button variant="ghost" size="md" fullWidth layoutClassName="schedule-popover__line" onClick={() => setLocationOpen(true)}>
-            <span className="schedule-popover__line-text">{t("schedule.locationPlaceholder")}</span>
-          </Button>
-        </CreateRow>
-      )}
-
-      {showDescription ? (
-        <CreateRow creating={creating} icon={<DescriptionIcon size={20} aria-hidden="true" />}>
-          <label className="schedule-field">
-            <span className="schedule-field__label">{t("schedule.eventDescription")}</span>
-            <TextareaControl
-              variant="schedule"
-              rows={4}
-              value={draft.description}
-              onChange={(event) => onDraftChange({ ...draft, description: event.target.value })}
-              placeholder={t("schedule.descriptionPlaceholder")}
-              autoFocus={descriptionOpen}
-            />
-          </label>
-        </CreateRow>
-      ) : (
-        <CreateRow creating icon={<DescriptionIcon size={20} aria-hidden="true" />}>
-          <Button variant="ghost" size="md" fullWidth layoutClassName="schedule-popover__line" onClick={() => setDescriptionOpen(true)}>
-            <span className="schedule-popover__line-text">{t("schedule.descriptionPlaceholder")}</span>
-          </Button>
-        </CreateRow>
-      )}
+      <DraftDateFields {...common} mode={mode} creating={creating} expanded={expanded} />
+      <DraftCategoryField {...common} mode={mode} />
+      <DraftMeetField {...common} item={item} meetAvailable={meetAvailable} />
+      <DraftShareField {...common} canChangeVisibility={canChangeVisibility} />
+      <DraftLocationField {...common} creating={creating} expanded={expanded} />
+      <DraftDescriptionField {...common} creating={creating} expanded={expanded} />
     </>
   );
 }

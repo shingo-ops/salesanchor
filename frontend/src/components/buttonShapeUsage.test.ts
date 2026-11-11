@@ -1,5 +1,5 @@
 /**
- * 守り手: Button / ButtonLink の `shape="pill"` と `size="auth"` は、ログイン画面だけで使う
+ * 守り手: Button / ButtonLink の `shape="pill"` と `size="auth"` は、ログイン画面と金型 EditorPage だけで使う（ADR-1074）
  * （docs/handoff/login-round-inputs/design.md §5・§7.4・K8）。
  * frontend/src 配下の tsx を読み、許可パス以外にこの書き方が 1 件も無いことを確かめる。
  */
@@ -15,6 +15,9 @@ const ALLOWED = [
   "components/Button.stories.tsx",
   "components/Button.test.tsx",
   "components/ButtonLink.test.tsx",
+  "components/EditorPage.tsx",
+  "components/EditorPage.stories.tsx",
+  "components/EditorPage.test.tsx",
   "pages/design-preview/",
 ];
 

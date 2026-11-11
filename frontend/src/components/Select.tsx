@@ -15,7 +15,7 @@ import "./FormField.css";
 
 export type SelectSize = "sm" | "md" | "lg";
 export type SelectIndicator = "default" | "none";
-export type SelectVariant = "standard" | "karte" | "header" | "tabbar" | "tab" | "product-edit";
+export type SelectVariant = "standard" | "karte" | "header" | "tabbar" | "tab" | "product-edit" | "editor-filled";
 
 export interface SelectOption {
   value: string;
