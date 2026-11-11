@@ -10,6 +10,9 @@ on:
     # ワークフロー未実行（skipped）は「未通過」扱いになり frontend-only PR がブロックされる。
     # 代わりに detect-changes ジョブで変更範囲を判定し、
     # backend 変更がない場合は pytest ジョブを即時成功終了させる。
+  merge_group:
+    types: [checks_requested]
+    branches: [main]
   push:
     branches:
       - develop
@@ -272,10 +275,15 @@ jobs:
           sparse-checkout: |
             .github
             scripts
+            docs/specs/rule-enforcement
       - name: Test the aggregator checker
         run: python3 -I scripts/tests/test_check_ci_aggregators.py -v
       - name: Check aggregator decision logic
         run: python3 -I scripts/ci/check_ci_aggregators.py
+      - name: Test the queue trigger checker
+        run: python3 -I scripts/tests/test_check_queue_triggers.py -v
+      - name: Check queue triggers of required checks
+        run: python3 -I scripts/ci/check_queue_triggers.py
       - name: Report results
         run: |
           det="${{ needs.detect-changes.result }}"
