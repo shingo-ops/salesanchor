@@ -38,7 +38,7 @@
 | ログインの許可待ち | `/super-admin/login-requests` | `/super-admin/users/login-requests` |
 | テンプレート | `/super-admin/viewer-templates` | `/super-admin/users/viewer-templates` |
 
-古い4つの道（fx-rate・viewers・login-requests・viewer-templates）は `legacyPageRedirects.ts` に足して転送する。既存の2件（tcg-product-master・supplier-master）の行き先も新しい道へ直す。`?section=<マスタ11件>` で LINE解析を開いたら、新しい道へ置き換えで転送する。
+古い4つの道（fx-rate・viewers・login-requests・viewer-templates）は `frontend/src/pages/super-admin/legacyPageRedirects.ts` に足して転送する。既存の2件（tcg-product-master・supplier-master）の行き先も新しい道へ直す。`?section=<マスタ11件>` で LINE解析を開いたら、新しい道へ置き換えで転送する。
 
 ### 3-2. 正本（1か所）
 
@@ -47,27 +47,27 @@
 - `SETTINGS_MASTER_ITEMS`: 11件 `{ key, labelKey }`。key は今の section の名前、labelKey は今の `analysisRules.sidebar.*`（新しい言葉を作らない）。並びは今の LINE解析と同じ
 - `settingsMasterPath(key)` → `/super-admin/settings/masters/${key}`、`isSettingsMasterKey(key)`
 
-部品の対応（key → Panel）は `SettingsMasterPage.tsx` の1つの表に持つ。App.tsx の Route・全体設定の小さなメニュー・LINE解析の転送・転送表・取込画面の戻り先は、すべてこの正本を読む。
+部品の対応（key → Panel）は `frontend/src/pages/super-admin/settings/SettingsMasterPage.tsx` の1つの表に持つ。App.tsx の Route・全体設定の小さなメニュー・LINE解析の転送・転送表・取込画面の戻り先は、すべてこの正本を読む。
 
 ### 3-3. 新しい画面
 
-- `pages/super-admin/settings/SettingsHubPage.tsx`: 管理センターと同じ形。`useSuperAdmin` で守り、読み込み中は `LoadingBlock`、運営でなければ `superAdmin.accessDenied` を出して Outlet を出さない。`<PageLayout navKey="nav.superAdminSettings" noScroll><div className="hub-shell"><SubMenu variant="grouped" className="hub-subnav" groups activeKey/><div className="hub-content"><Outlet/></div></div></PageLayout>`。組の題: 金額の設定 `superAdmin.settings.groupMoney`・マスタ管理 `analysisRules.sidebar.groupMasterManagement`。項目の `to` は相対（`fx-rate`・`masters/product-master` など）。activeKey は管理センターと同じく pathname の末尾で決める
-- `pages/super-admin/settings/SettingsMasterPage.tsx`: `useParams` の key を表で引き、`<PageLayout titleText={t(labelKey)}><Panel/></PageLayout>`。表に無い key は `Navigate to="/super-admin/settings" replace`
+- `frontend/src/pages/super-admin/settings/SettingsHubPage.tsx`: 管理センターと同じ形。`useSuperAdmin` で守り、読み込み中は `LoadingBlock`、運営でなければ `superAdmin.accessDenied` を出して Outlet を出さない。`<PageLayout navKey="nav.superAdminSettings" noScroll><div className="hub-shell"><SubMenu variant="grouped" className="hub-subnav" groups activeKey/><div className="hub-content"><Outlet/></div></div></PageLayout>`。組の題: 金額の設定 `superAdmin.settings.groupMoney`・マスタ管理 `analysisRules.sidebar.groupMasterManagement`。項目の `to` は相対（`fx-rate`・`masters/product-master` など）。activeKey は管理センターと同じく pathname の末尾で決める
+- `frontend/src/pages/super-admin/settings/SettingsMasterPage.tsx`: `useParams` の key を表で引き、`<PageLayout titleText={t(labelKey)}><Panel/></PageLayout>`。表に無い key は `Navigate to="/super-admin/settings" replace`
 - 税率・商材とプラン: 既存の `ComingSoonPage`（title は nav の言葉、description は `superAdmin.settings.comingSoon`）
-- `pages/super-admin/users/UserManagementSubMenu.tsx`: 閲覧者の画面とログインの画面が共有する SubMenu（`variant="grouped"`・`className="hub-subnav"`）。1つ目の組は題「閲覧者」（すべて＋状態ごと）。2つ目の組は題を付けず、ログインの許可待ちの1項目だけ（`to: "/super-admin/users/login-requests"`）。閲覧者の画面では今の数と `?status=` の切り替えをそのまま渡す。ログインの画面では数を出さず、状態を押すと `/super-admin/users/viewers?status=<key>`（すべては `?` 無し）へ移る
+- `frontend/src/pages/super-admin/users/UserManagementSubMenu.tsx`: 閲覧者の画面とログインの画面が共有する SubMenu（`variant="grouped"`・`className="hub-subnav"`）。1つ目の組は題「閲覧者」（すべて＋状態ごと）。2つ目の組は題を付けず、ログインの許可待ちの1項目だけ（`to: "/super-admin/users/login-requests"`）。閲覧者の画面では今の数と `?status=` の切り替えをそのまま渡す。ログインの画面では数を出さず、状態を押すと `/super-admin/users/viewers?status=<key>`（すべては `?` 無し）へ移る
 - `LoginRequestsPage` は中身を `hub-shell`（小さなメニュー＋`hub-content`）で包む。`ViewerAccountsPage` は今の flat の SubMenu を共有の部品に置き換える
 - 新しい色・大きさの直書きは無し。部品は SubMenu・PageLayout・ComingSoonPage・既存の hub-shell の class だけ（ADR-144）
 
 ### 3-4. LINE解析
 
-- `AnalysisRulesSidebar.tsx`: マスタ管理の組（`:106-121` あたりの見出しと11行）を消す。型 `AnalysisSection` から11件を外す
-- `AnalysisRulesPage.tsx`: 11件の Panel の import と描き分けを消す。最初の `?section=` が `isSettingsMasterKey` なら `<Navigate to={settingsMasterPath(key)} replace />`。`handleSectionChange` は `isSettingsMasterKey` なら `navigate(settingsMasterPath(key))`。ダッシュボードの `onNavigate` を `handleSectionChange` に変える（押すとマスタの新しい場所へ移る）
+- `frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx`: マスタ管理の組（`:106-121` あたりの見出しと11行）を消す。型 `AnalysisSection` から11件を外す
+- `frontend/src/pages/super-admin/AnalysisRulesPage.tsx`: 11件の Panel の import と描き分けを消す。最初の `?section=` が `isSettingsMasterKey` なら `<Navigate to={settingsMasterPath(key)} replace />`。`handleSectionChange` は `isSettingsMasterKey` なら `navigate(settingsMasterPath(key))`。ダッシュボードの `onNavigate` を `handleSectionChange` に変える（押すとマスタの新しい場所へ移る）
 - AnalysisDashboardPanel・LineWorkflowGuidePanel の中の key の文字は変えない（受け手が転送する）
 
 ### 3-5. 左メニュー
 
-- `DesktopShell.tsx` の `saasAdminItems`: LINE解析・買取相場・利用者管理 `{ to: "/super-admin/users", labelKey: "nav.superAdminViewers" }`・全体設定 `{ to: "/super-admin/settings", labelKey: "nav.superAdminSettings" }`。為替とログインの行を消す
-- `MobileShell.tsx`: viewerAccounts の道を `/super-admin/users` に、loginRequests を消し、`resolveItem("superAdminSettings", "nav.superAdminSettings", <NAV_ICONS.saasAdmin …/>, "/super-admin/settings")` を足す
+- `frontend/src/components/DesktopShell.tsx` の `saasAdminItems`: LINE解析・買取相場・利用者管理 `{ to: "/super-admin/users", labelKey: "nav.superAdminViewers" }`・全体設定 `{ to: "/super-admin/settings", labelKey: "nav.superAdminSettings" }`。為替とログインの行を消す
+- `frontend/src/components/MobileShell.tsx`: viewerAccounts の道を `/super-admin/users` に、loginRequests を消し、`resolveItem("superAdminSettings", "nav.superAdminSettings", <NAV_ICONS.saasAdmin …/>, "/super-admin/settings")` を足す
 
 ### 3-6. 言葉（ja / en・同じキー）
 
@@ -82,7 +82,7 @@
 | superAdmin.users.groupViewers（新） | 閲覧者 | Viewers |
 | superAdmin.viewers.backToViewers（値を変更） | 利用者管理へ戻る | Back to User Management |
 
-`routeTitles.ts` に新しい道（settings・settings/fx-rate・tax-rates・sa-products・users/viewers・users/login-requests・users/viewer-templates）を足す。
+`frontend/src/config/routeTitles.ts` に新しい道（settings・settings/fx-rate・tax-rates・sa-products・users/viewers・users/login-requests・users/viewer-templates）を足す。
 
 ### 3-7. 道を指す所の直し
 
@@ -133,7 +133,7 @@
 
 ## 維持の仕組み
 
-- 項目の正本は `settingsNav.ts` の1か所。足すときはここに1行と Panel の表に1行
-- 古い道の転送は `legacyPageRedirects.ts` と、その配列を固定で比べる試験が守る
+- 項目の正本は `frontend/src/pages/super-admin/settings/settingsNav.ts` の1か所。足すときはここに1行と Panel の表に1行
+- 古い道の転送は `frontend/src/pages/super-admin/legacyPageRedirects.ts` と、その配列を固定で比べる試験が守る
 - 文字は CI の i18n の点検（ja/en の同じキー・直書き禁止）が守る
 - 部品は ADR-144 の見張り（生の部品・色の直書き禁止）が守る

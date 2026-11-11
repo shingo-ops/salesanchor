@@ -27,7 +27,7 @@
 ## 3. 先例: 管理センター（形1 と同じ形）
 
 - `frontend/src/pages/management-center/ManagementCenterPage.tsx:138-237`: 項目表 → SubMenu `variant="grouped"` `className="hub-subnav"`、項目は `to` 付き（相対）。`<PageLayout navKey noScroll><div className="hub-shell"><SubMenu/><div className="hub-content"><Outlet/></div></div>`
-- 道: `frontend/src/App.tsx` 管理センターの Route（index は `Navigate to="staff"`）。子の画面（例 StaffPage `pages/staff/StaffPage.tsx:214`）は自分の PageLayout を持ち、ハブの中に入れ子で出る
+- 道: `frontend/src/App.tsx` 管理センターの Route（index は `Navigate to="staff"`）。子の画面（例 StaffPage `frontend/src/pages/staff/StaffPage.tsx:214`）は自分の PageLayout を持ち、ハブの中に入れ子で出る
 - `.hub-content` は `overflow: hidden`（`frontend/src/hub-shell.css:81-86`）。子の PageLayout が自分で縦に流す
 
 ## 4. LINE解析の中のマスタ
@@ -43,14 +43,14 @@
 - LineWorkflowGuidePanel.tsx: supplier-master（:28 :44）・product-master（:37 :43）
 - 取込画面の戻り先: TcgProductImportPage.tsx:14-15（?section=product-master）・SupplierImportPage.tsx:132-133（?section=supplier-master）・NoteMasterImportPage.tsx:132-133・ProductCategoriesImportPage.tsx:138-139（区画なしの analysis-rules）
 - 旧 URL の転送表: `frontend/src/pages/super-admin/legacyPageRedirects.ts:3-9`（App.tsx の Route と legacyPageRedirects.test.tsx だけが読む）。product-master と supplier-master への転送が2件
-- 試験: `AnalysisRulesPage.test.tsx`・`LineWorkflowGuidePanel.test.tsx`・`legacyPageRedirects.test.tsx`・`frontend/tests-e2e/analysis-rules-line-guide.spec.ts:142`・`tcg-product-import.spec.ts`・`tcg-product-detail.spec.ts:43`
+- 試験: `frontend/src/pages/super-admin/AnalysisRulesPage.test.tsx`・`frontend/src/pages/super-admin/components/LineWorkflowGuidePanel.test.tsx`・`frontend/src/pages/super-admin/legacyPageRedirects.test.tsx`・`frontend/tests-e2e/analysis-rules-line-guide.spec.ts:142`・`frontend/tests-e2e/tcg-product-import.spec.ts`・`frontend/tests-e2e/tcg-product-detail.spec.ts:43`
 - 本番の速さ記録の対象: `tests/prod-check/page-speed-targets.ts:73`（fx-rate）・`:85-97`（マスタ区画）・`:109-110`（viewers・viewer-templates）
 
 ## 6. 利用者まわりの画面
 
-- 閲覧者: `ViewerAccountsPage.tsx`。PageLayout `nav.superAdminViewers`＋見出しのボタン3つ（テンプレートは `navigate("/super-admin/viewer-templates")`）、`hub-shell` の中に SubMenu `variant="flat"`（すべて＋状態ごと、数つき、`?status=`）
-- ログインの許可待ち: `LoginRequestsPage.tsx`（全文 recon4.txt）。useSuperAdmin で守り、AdminLoginRequestList を出すだけ
-- テンプレート: `ViewerTemplatesPage.tsx:204` の戻るボタンが `/super-admin/viewers`
+- 閲覧者: `frontend/src/pages/super-admin/ViewerAccountsPage.tsx`。PageLayout `nav.superAdminViewers`＋見出しのボタン3つ（テンプレートは `navigate("/super-admin/viewer-templates")`）、`hub-shell` の中に SubMenu `variant="flat"`（すべて＋状態ごと、数つき、`?status=`）
+- ログインの許可待ち: `frontend/src/pages/super-admin/LoginRequestsPage.tsx`（全文 recon4.txt）。useSuperAdmin で守り、AdminLoginRequestList を出すだけ
+- テンプレート: `frontend/src/pages/super-admin/ViewerTemplatesPage.tsx:204` の戻るボタンが `/super-admin/viewers`
 - 外から画面の道を作っている所: backend は API の道（`/api/v1/super-admin/...`）だけで、画面の道を Discord 等に書く所は無い（`git grep` で frontend と docs 以外0件、recon6.txt）
 - `tests/prod-check/device-k7.spec.ts:82` は API の道。触らない
 
