@@ -1253,3 +1253,55 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 - PO の答え（原文）: 「1」（選択肢「1. この設計で作り始める【おすすめ】」）
 - これで新しい金型 EditorPage・古い金型 FullScreenDialog を消す・塗りの欄の種類・丸い保存・範囲の札 `.gcal-colors` と `--gcal-*` トークンを承認とする（ADR-144）。
 
+
+## 10. 追補: 色の数の見張りの例外（2026-11-11・便14 の PR の CI で見つかった）
+
+### 10-1. 何が起きたか（事実）
+
+- 便14 の PR の CI `guard-hex-increase`（`.github/workflows/design-token-guard.yml:20` が `scripts/check-design-token-ratchet.sh` を流す）が失敗した。出力は `frontend/src/index.css 171->197`。ほかの変更ファイルは増加 0。
+- 増えた 26 個の hex は全部 `--gcal-*` の 13 個の名前の行（明るい `:root` と暗い `:root.force-dark` に 13 行ずつ）。1 行に 1 宣言・`--gcal-<名前>: #hex;` の形。それ以外の行の hex 増加は 0（`git diff origin/main...HEAD -- frontend/src/index.css` の追加行を数えた）。
+- 21 種の新しい値のうち、origin/main の index.css に同じ値があるのは 1 種だけ。今の色の素材で代えられない。
+- この見張りが入った 2026-09-05 以降、index.css の hex の数は増えたことが無い（origin/main の index.css の各版を数えた: 190→188→179→179→172→172→172→171）。
+- 設計の時にこの見張りを確かめ忘れた（設計漏れ）。§9 の PO の承認にはこの件が入っていない。
+- 見張りの例外は `scripts/check-design-token-ratchet.sh:12` に「変更はPO承認必須」と書かれている。
+
+### 10-2. 考えた案
+
+| 案 | 中身 | 採るか | 理由 |
+|---|---|---|---|
+| A | 見張りに、index.css の `--gcal-*` 13 個の名前の 1 行 1 宣言だけを数えない例外を足す | 採る（PO の選択「1」） | 色の正本は index.css（`docs/specs/design-system/design.md:794`）のまま。明るい・暗いの対の検査 `frontend/scripts/check-dark-parity.js:19`（index.css だけを読む）も効いたまま。名前を 13 個に固定するので 14 個目の色や他の色の増加は今どおり止まる |
+| B | index.css 全体を見張りから外す | 採らない | 今後ほかの色が増えても止まらない |
+| C | `--gcal-*` を tokens.css へ移す（前例: `docs/handoff/inventory-table-nine-columns/design.md:166` の追補2。予定の分類の色 `--cal-*` も tokens.css にある） | 採らない | 見張りは変えずに済むが、`check-dark-parity.js` は index.css しか読まないため明るい・暗いの対が機械で守られなくなる。色の正本は index.css という決まり（design-system design.md:794）からも外れる |
+| D | 色を `rgb()` で書いて数えられないようにする | 採らない | 見張りの抜け道で、決まりの趣旨に反する |
+| E | Google の色をやめる | 採らない | PO の願い「予定の色だけどGoogleと色を併せて」がかなわない |
+
+### 10-3. 作り方（案 A）
+
+- `scripts/check-design-token-ratchet.sh`: 例外の対象を「ファイル `frontend/src/index.css` の中で、名前が次の 13 個のどれかで、1 行に宣言が 1 つだけ（`--gcal-<名前>: #hex;` の後ろは空白だけ）の行」に限る。数える前にこの行だけを除く。ほかのファイル・ほかの行・1 行に 2 つ以上の宣言がある行は今どおり数える。
+  - 13 個: surface・surface-lowest・surface-container・surface-filled・on-surface・on-surface-variant・outline-variant・gridline・primary・on-primary・secondary-container・on-secondary-container・now
+- `scripts/tests/test-design-token-ratchet.sh`（新規）: 使い捨ての git の倉庫を作り、見張りを流して結果を確かめる。場合は §10-4 の表。
+- `.github/workflows/design-token-guard.yml`: 起動の条件に `scripts/check-design-token-ratchet.sh` と `scripts/tests/test-design-token-ratchet.sh` を足す（見張り自身だけを変えた PR でも動くように）。見張りの前に試験を流す 1 段を足す。job 名 `guard-hex-increase` は変えない。
+
+### 10-4. 成功の条件（G68）
+
+| 基準 | 検証方法 |
+|---|---|
+| 便14 の PR の `guard-hex-increase` が PASS | PR の CI の結果 |
+| 13 個の名前の 1 行 1 宣言を index.css に足しても PASS | 試験の場合 1 |
+| 14 個目の名前 `--gcal-extra: #123456;` を足すと FAIL | 試験の場合 2 |
+| `--gcal-surface: #ffffff; --x: #000000;` の 1 行を足すと FAIL | 試験の場合 3 |
+| index.css にほかの名前の hex を足すと FAIL | 試験の場合 4 |
+| index.css 以外の CSS に `--gcal-surface: #ffffff;` を足すと FAIL | 試験の場合 5 |
+| hex を足さない変更は PASS | 試験の場合 6 |
+| 試験が CI で流れる | design-token-guard の job の記録に試験の段がある |
+
+### 10-5. 影響と戻し方
+
+- 影響: この見張りを使うのは `.github/workflows/design-token-guard.yml:20` の 1 か所だけ（`git grep -n check-design-token-ratchet -- .github` の結果）。`scripts/` を触るため、この PR は GO 記録が要る種類になる（`scripts/check-process-artifacts.js:1025`）。
+- 戻し方: この追補のコミットを戻す。戻すと便14 の色の追加は見張りで止まる。
+
+### 10-6. PO の承認（2026-11-11）
+
+- PO に聞いた中身: 見張りに例外を 1 つ足す（Google の色の名前が付いた色だけ、色の置き場で増えてもよい）。画面の色の直書きは今どおり止まる。直しはクラウドの担当が作り、審査を通して合流する。
+- PO の答え（原文）: 「1、推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ。…確立したなら進める。」
+- 案 C の前例（tokens.css）は PO に聞いた後で見つけた。§10-2 の理由で案 A のままとする。
