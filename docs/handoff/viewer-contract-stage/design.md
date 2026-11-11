@@ -11,7 +11,7 @@ mode: handoff
 - 現状の記録: [docs/handoff/viewer-contract-stage/recon.md](./recon.md)
 - 決めごとの控え: [decisions-draft.md](./decisions-draft.md)
 - 関係 ADR: [ADR-1061](../../adr/ADR-1061-viewer-contract-stage-and-invoicing.md)（草案）、閲覧者の名簿の90日の決まり（docs/handoff/gas-viewer-fresh-fast/review-fable.md:172 の Q7 に答えた docs/handoff/gas-viewer-fresh-fast/design.md:523〜:524。backend/app/tasks/maintenance.py:202 が参照）を改訂。ADR-1019 には Q7 も90日も無い（2026-11-06 grep で0件）、ADR-101（B2B 請求書。別の表にする）、ADR-144・ADR-067（金型とトークン）、ADR-027（i18n）、ADR-135・ADR-136（危険な変更の GO）
-- 状態: **設計案作成済み・PO の答え（ideal-state 41〜51）と商材とプランの画面（§3-4d）を反映。2026-11-11 に税率と商材とプランの画面の置き場を「全体設定」へ直した・この版の審査待ち（審査の記録は [review.md](./review.md)）・§7-2 に PO の答えの無い項目が2つ残る・PO の設計承認は未・実装未着手**
+- 状態: **設計案作成済み・PO の答え（ideal-state 41〜52）と商材とプランの画面（§3-4d）を反映。2026-11-11 に税率と商材とプランの画面の置き場を「全体設定」へ直した・この版の審査待ち（審査の記録は [review.md](./review.md)）・§7-2 に PO の答えの無い項目が1つ残る・PO の設計承認は未・実装未着手**
 
 ## 1. 目的（PO の言葉から）
 
@@ -87,11 +87,11 @@ mode: handoff
   - 「フォーム送信済み」は viewer_status_changes の新しい操作 form_sent の有無。
   - 「発行済み」は有効な請求書（status = issued）の有無。
 - 請求先が未入力のときは「請求書を作成」を押せなくし、「フォームの入力待ち」と出す。宛先が無いと請求書を作れないため。
-- 手続き中の人にも「延長」を出す。支払いが少し遅れる人のための手作業の逃げ道。PO の言葉には無い追加で、§7-2 で確認する。
+- 手続き中の人にも「延長」を出す。支払いが少し遅れる人のための手作業の逃げ道。AI の追加の案で、PO が 2026-11-11「1」で認めた（ideal-state 49）。
 - 履歴の操作に start_contract・form_sent・invoice_issued・confirm_payment を足す（migrations/20261016_150000_add_viewer_accounts.sql:91 の決まりを変更）。
 - 切り替えの便で、お試しから本契約へ直接移す道を、画面と API とコマンド（backend/app/viewer_admin_cli.py:13）から外す。
 - 新しい部品は ViewerAccountsPage.tsx に足さず、別ファイルにする（922 行で上限が近い）。
-- 三点ボタンは金型 `MoreMenuButton`（NAV_ICONS.more と ContextMenu を組む）を登録して使う。金型の新設は PO の許可が要る（§7-2）。
+- 三点ボタンは金型 `MoreMenuButton`（NAV_ICONS.more と ContextMenu を組む）を登録して使う。金型の新設は PO が許可した（PO 2026-11-12「1」。ideal-state 52。ほかの画面でも使える共通の型にする）。
 
 ### 3-4. 表（書類に載せる会社情報と振込先の4表は会社ごとのスキーマ、他は public・金額は円の整数）
 
@@ -319,7 +319,7 @@ RLS（ADR-1018 の段階①の型。会社ごとの4表は今の会社ごとの�
 | 「前の会社情報」（古い値を読むだけで見せる欄） | Textarea.tsx（今のページの TextareaControl。TenantProfilePage.tsx:25）を readOnly で使う |
 | 入れ直しの案内 | Callout.tsx |
 | 自由に書く欄（Wise の note・bank_address） | Textarea.tsx |
-| 行の三点ボタン | 新設の MoreMenuButton（§3-3・§7-2） |
+| 行の三点ボタン | 新設の MoreMenuButton（§3-3。PO 2026-11-12「1」） |
 
 - 新しい画面の部品は別ファイルに置く: IssuerProfileSection.tsx（書類に載せる会社情報の区切り。国内用と海外用のタブ）、InvoiceRegistrationField.tsx（タブの中の登録の欄）、PaymentMethodList.tsx、PaymentMethodForm.tsx、TaxRatesPage.tsx、ViewerInvoiceCreateModal.tsx、ViewerPaymentConfirmModal.tsx、SaProductsPage.tsx（§3-4d）。
 - 色と寸法はトークンだけ（ADR-067）。文字はすべて t()（ADR-027）。生の select・input・自作タブは使わない（ADR-144）。
@@ -589,7 +589,7 @@ commit の後、裏で順に行う:
 - ~~手続き中の人にも手作業の「延長」を出す。~~ → 出す（PO 2026-11-11「1」。ideal-state 49）。
 - ~~税率の画面と「商材とプラン」の画面を、閲覧者の一覧の見出しのボタンから開く（AI の案）。~~ → 左メニュー「全体設定」の中に置く（PO 2026-11-11 のメニューの組み替え。ideal-state 50。§3-4d）。
 - ~~最初の商材・プラン・機能は、便2b の「商材とプラン」の画面で PO が入れる（前の版は「1回だけのデータの変更」で AI が入れる案。§4 の（２））。~~ → PO が画面で入れる（PO 2026-11-11「1」。ideal-state 51。他の案は「AI が最初の1件だけ直接入れる」「画面ができてから考える」）。
-- 三点ボタンの金型を新設する。
+- ~~三点ボタンの金型を新設する。~~ → 共通の型として新設する（PO 2026-11-12「1」。ideal-state 52。他の案は「行の中に直す・消すのボタンを並べる」「作る直前に決める」）。
 - ~~商材とプランの登録画面は今回作らない。~~ → 今回作る（PO 2026-11-09「2」）。中身は §2（PO 2026-11-09「1」）。
 - 税の端数は切り捨て。値引きは金額のみ。
 - ~~3年保持を始める前に、専門家に確かめるか。~~ → 確かめずに進める（PO 2026-11-07「2」）。新しいポリシーを公開し、14日以上たってから新旧の決まりで結果に差が出るようにする（消す処理の変更自体はマージの時点で本番に入る。§3-9）。
