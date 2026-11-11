@@ -272,7 +272,7 @@ test("(8) 読めない時は 502 unreadable", async () => {
   });
 });
 
-test("(9) 引数: 止め設定18組・-m のすぐ後に model・最後は -・答えの形のファイルがある・頼みの文は引数に無く標準入力にある", async () => {
+test("(9) 引数: 止め設定19組・-m のすぐ後に model・最後は -・答えの形のファイルがある・頼みの文は引数に無く標準入力にある", async () => {
   login();
   writeFake({ events: okEvents() });
   await withServer({}, async ({ port }) => {
@@ -289,10 +289,11 @@ test("(9) 引数: 止め設定18組・-m のすぐ後に model・最後は -・�
   const schema = a[a.indexOf("--output-schema") + 1];
   assert.equal(schema, path.join(ASSETS, "schema.json"));
   assert.ok(fs.existsSync(schema));
-  assert.equal(a.filter((x) => x === "-c").length, 18);
+  assert.equal(a.filter((x) => x === "-c").length, 19);
   assert.ok(a.includes('web_search="disabled"'));
   assert.ok(a.includes("features.shell_tool=false"));
   assert.ok(a.includes("features.remote_plugin=false"));
+  assert.ok(a.includes("features.shell_snapshot=false"));
   assert.equal(a.some((x) => x.includes(TEXT)), false);
   const stdin = fs.readFileSync(stdinLog, "utf8");
   const prompt = fs.readFileSync(path.join(ASSETS, "prompt.txt"), "utf8");

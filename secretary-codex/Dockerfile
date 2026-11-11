@@ -3,6 +3,8 @@
 # 入れる物は secretary-codex/Dockerfile.dockerignore の許す一覧の4つだけ（指示文・答えの形・つながりの試しは secretary-agent と同じファイル）。
 # DB・redis を持たない。ログインの鍵は名前付きボリューム（/home/node/.codex）の auth.json だけで、イメージに入れない。
 FROM node:22-bookworm-slim
+# codex（Rust）は OS の証明書置き場から根の証明書を読む。slim には無いので入れる（card-3e・一時 VM で UnknownIssuer を観測）
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 RUN npm install -g @openai/codex@0.162.1 && npm cache clean --force
 ENV CODEX_HOME=/home/node/.codex
 # 空の名前付きボリュームは初回にここの持ち主と権限を写す（design.md §5-1）
