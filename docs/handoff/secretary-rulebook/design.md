@@ -2,8 +2,8 @@
 
 - 目標: [kgi.md](kgi.md) R1〜R10（PO 承認済み 2026-11-12）。現在地: `docs/handoff/secretary-rulebook/recon.md`。外部事例: [research.md](research.md)。
 - あるべき姿: `docs/specs/secretary-chat/ideal-state.md`。
-- 関係する ADR: ADR-1056・ADR-1058（§2 で一部を改める）・ADR-027（翻訳キー）・ADR-067／ADR-144（金型とトークン）。新しい ADR は未採番。
-- 状態: 設計案 5 版（審査 1〜5 回目と Fable の DB の評価を反映・§10）・目標は PO 承認済み（kgi.md・2026-11-12）・実装未着手。
+- 関係する ADR: ADR-1056・ADR-1058（§2 で一部を改める）・ADR-027（翻訳キー）・ADR-067／ADR-144（金型とトークン）。新しい ADR は ADR-1077（`docs/adr/ADR-1077-secretary-rulebook.md`・Proposed）。
+- 状態: 設計案 6 版（審査 1〜6 回目と Fable の DB の評価を反映・2026-11-12 PO の指示で記録の置き場を専用メニューへ移した・§7・§10）・目標は PO 承認済み（kgi.md・2026-11-12）・実装未着手。
 
 ## 1. 何を作るか（一言）
 印のある人（システム管理者）が秘書との会話で「次からは〜」と言うと、秘書が決まりの文の案を出す。人が「承認」を押したときだけ、その会社の決まり帳に入る。秘書は頼みのたびに、その会社の承認済みの決まりだけを読む。AI の頭は変えない（research.md §5・F1 Tay）。
@@ -41,6 +41,7 @@
 | AI に渡す文の組み立て | server.mjs 2 つに同じ形の写し | 新しい 1 ファイル secretary-agent/compose.mjs に移す（写しを作らない）。配り方: ①secretary-agent/Dockerfile の 6 行目の COPY に足す ②secretary-codex/Dockerfile の 12 行目の COPY に足す ③secretary-codex/Dockerfile.dockerignore に `!secretary-agent/compose.mjs` を足す ④codex の server.mjs は prompt.txt と同じく `ASSET_DIR`（secretary-codex/server.mjs の 11〜13 行目）から動的 import で読む。codex の build の失敗は本番反映で警告だけになるので、容器の試験（CI）と試験場（tests/sandbox/secretary-codex.sh）で compose.mjs を読めることを確かめる |
 | 保存 | 無し | 表 `public.secretary_rules`（決まりと候補）と `public.secretary_rule_checks`（試しの結果）の 2 つ（§4） |
 | 画面 | 下書きの確認 | ＋ 案の確認（文を直せる・承認・捨てる）・一覧（承認・捨てる・外す）・答えごとの「違う」。部品は今使っている金型 Button・ChatBubble・Textarea（`frontend/src/features/secretary/SecretaryChat.tsx` の 13〜17 行目）だけ |
+| サイドメニューの「SaaS管理者」の区画（`frontend/src/components/DesktopShell.tsx:194-202`・`frontend/src/components/MobileShell.tsx:172-205`） | デスクトップは 4 つ（LINE解析・買取相場・利用者管理・全体設定）。スマホは 5 つ（同じ 4 つ＋抽出ルール設定・`frontend/src/components/MobileShell.tsx:187-192`） | 両方に ＋「秘書の決まり帳」（専用のページ。毎週の数と試しの結果を置く・§7） |
 
 - 大きさ: 決まり 20 件 × 150 字 ＋ 利用者の文 1000 字は、日本語で 12,169 バイト・絵文字だけだと 16,143 バイト（審査 2 回目の計算）。容器の上限は 16,384 バイト（recon.md §2）。そこで ①決まりの文は改行を除く制御文字を断る ②backend は容器に送る前に本文のバイト数を測り、15,000 バイトを超えたら送らずに「決まりが長すぎます」と返す（backend は error_code を返し、画面が翻訳キーで文を出す・ADR-027）。容器の上限は変えない。絵文字で上限近くまで埋めた頼みの試験を置く。
 
@@ -89,7 +90,7 @@
 - **段0（作る前に測る・便0）**: 試しの頼み 20 件（請求書 8・予定 8・わからない 4）に正しい種類を付けた表を backend/app/assistant_regression/cases.json に置く（backend の image は ./backend だけを材料に作るため。`.github/workflows/build-images.yml:86`）。決まり無しで今の担当 AI に、20 件と「次からは〜」3 件を 3 回ずつ流す（69 回）。種類が合う数と 1 件の秒数を数え、docs/handoff/secretary-rulebook/baseline.md（便0で作る） に残す。
 - **合格の線は段0の数を見て PO が決める。決まるまで便2に進まない。**
 - 流し方: 人が「前と同じか試す」を押したときだけ、backend が裏で 20 件を 1 件ずつ流す。
-  - アプリ全体で試しは 1 本だけ。試しは DB 接続を 1 つ取って終わるまで持ち、2 つの数の鍵 `pg_try_advisory_lock(1076, 0)` を取る（google_webhook の `(1059, 会社)` とぶつからない）。取れなければ「いま試し中です」と返す。finally で rollback の後に `pg_advisory_unlock(1076, 0)` を呼び、接続を閉じる（`backend/app/services/google_webhook.py:247-252` と同じ形）。接続の束へ返すときの後片付けは鍵を外さない（`backend/app/database.py:37-47`）ので、finally の unlock を必ず通す。
+  - アプリ全体で試しは 1 本だけ。試しは DB 接続を 1 つ取って終わるまで持ち、2 つの数の鍵 `pg_try_advisory_lock(1077, 0)`（1 つ目の数は本件の ADR 番号） を取る（google_webhook の `(1059, 会社)` とぶつからない）。取れなければ「いま試し中です」と返す。finally で rollback の後に `pg_advisory_unlock(1077, 0)` を呼び、接続を閉じる（`backend/app/services/google_webhook.py:247-252` と同じ形）。接続の束へ返すときの後片付けは鍵を外さない（`backend/app/database.py:37-47`）ので、finally の unlock を必ず通す。
   - 試しの行（`secretary_rule_checks`）を書くときは、その会社の文脈を自分で付け、書いた後に戻す。始めるときに sdk・model・rules_count を入れる。
   - 1 件が 429 `busy` か時間切れのときは、合わないに数えず 1 回だけやり直す。それでも取れなければ「測れなかった数」として別に出す（合う数・合わない数・測れなかった数の 3 つ）。
   - 試しの間、容器は利用者の頼みに 429 `busy` を返す（待ち行列は無い・recon.md §2）。画面は今の「混んでいます」の文に、「試し中は約 N 分使えません」を足す（N は段0の秒数 × 20 から出す）。
@@ -97,8 +98,16 @@
 - 使用の記録: purpose に `secretary_regression` を 1 つ足す。同じ PR で直す場所: ①CHECK を広げる migration（migrations/20261103_120000_create_ai_job_assignments.sql の 148〜175 行目と同じ「定義に値が無ければ広げる」形）②`backend/app/services/llm_budget.py:159-169` の一覧 ③照合試験 `backend/tests/test_llm_usage_isolated.py` ④`backend/app/routers/assistant.py:135` の purpose の決め打ちを引数にする ⑤画面の使用量の区画の一覧 KNOWN_PURPOSES（`frontend/src/pages/super-admin/components/LlmUsageSection.tsx:151-159`）と ja.json・en.json の名前のキー ⑥色は 7 色を順に回すので、8 つ目は 1 つ目と同じ色になる。これを許し、トークンも色も足さない（`frontend/src/tokens.css` の `--chart-series-*` は 7 色・ADR-067 で新しい色は足さない）。区別は翻訳キーの名前で付く。AI 担当の画面の集計（`backend/app/routers/super_admin_ai_jobs.py:42-60`）は purpose で絞るので、試しはふだんの回数とログインの○×に混ざらない。
 - 基準値より合う数が減ったら、画面に「前より合う数が減りました」と出す。外すかは人が選ぶ（自動では外さない）。
 
-## 7. 毎週の数（R8）
-- 今ある super admin の AI 担当の画面に 1 区画足す。数える元は使用の記録・決まり帳・試しの結果の 3 つだけ（新しい集計の表は作らない）。
+## 7. 毎週の数と試しの結果の置き場（R7・R8）
+- PO の言葉（2026-11-12）: 「置き場所だが専用のメニューを作成してほしいサイドメニューのSaas管理メニュー内に作ってくれ」。前の版の「AI の担当タブに 1 区画足す」はやめた。
+- メニュー: サイドメニューの「SaaS管理者」の区画に 1 行足す。名前の翻訳キーは `nav.superAdminSecretaryRules`（ja「秘書の決まり帳」・en「Secretary rulebook」）。行き先は `/super-admin/secretary-rules`。並びは「LINE解析」の次（AI の仕事が並ぶ）。
+  - 足す場所: ①`frontend/src/components/DesktopShell.tsx:197-202` の `saasAdminItems` に 1 行（同じファイル 196 行目の並びの説明も直す）②`frontend/src/components/MobileShell.tsx:172-205` の `isSuperAdmin` の一覧に `resolveItem` 1 つ（アイコンは今と同じ `NAV_ICONS.saasAdmin`）③`frontend/src/config/routeTitles.ts:13-22` に 3 行（親と子 2 つ）④`frontend/src/App.tsx` の `/super-admin/users` の経路（395〜397 行目）と同じ形で、親は子の「毎週の数」へ転送、子 2 つ（`weekly`・`checks`）⑤`frontend/src/locales/ja.json`・`frontend/src/locales/en.json` の `nav` にキー 3 つ（親・毎週の数・試しの結果）。
+  - アイコンも色も足さない。新しい部品も作らない。
+- ページの部品（金型だけ）: 外枠 `PageLayout`（`navKey` に上のキー）・ページの中の小さなメニュー `SubMenu`（前例 `frontend/src/pages/super-admin/users/UserManagementSubMenu.tsx`。項目は「毎週の数」「試しの結果」の 2 つ）・表 `DataTable`・状態の印 `Badge`・空のとき `EmptyState`・読み込み中 `LoadingBlock`（すべて `frontend/src/components/` にある金型。前例 `frontend/src/pages/super-admin/ViewerAccountsPage.tsx:15-28`）。
+- 見られる人: メニューは `isSuperAdmin` のときだけ出す（今の区画と同じ）。ページは `useSuperAdmin` で印が無ければ見せない。読む口は backend で `require_super_admin` を付ける（R6 の判定 1 か所のまま）。
+- 「前と同じか試す」ボタンは、今の設計どおりチャットの承認・外すの後に出す（§5（６））。このページの「試しの結果」でも同じ口を押せるようにする（口は 1 つ・2 本目は断る §6）。どちらから押しても、試すのは押した人のログインの会社の決まり（§6 の会社の文脈と同じ）。ほかの会社を選んで試す道は作らない。
+- 今ある `LlmUsageSection` の使用量の区画（§6 の purpose）は動かさない。
+- 毎週の数を出す区画の元: 使用の記録・決まり帳・試しの結果の 3 つだけ（新しい集計の表は作らない）。
 - 決まり帳と試しの結果は RLS がかかるので、運営文脈を付けて 2 表を読み、読んだ後に `reset_operator_context`（`backend/app/auth/dependencies.py:471`）を呼ぶ。前例 `backend/app/routers/fx_rate_admin.py:135-149`（set_operator_context → try → finally reset）と同じ形。
 - 出す数（直近 7 日・会社ごと）: 頼みの数・「違う」の数（source_kind ごと）・候補の数・承認の数・外した数・最後の試しの合う数と、その時の担当 AI。
 
@@ -136,6 +145,10 @@
 - 5 回目（2026-11-12・同じ審査役・変わった所だけ・/tmp/CC報告ファイル/secretary-meet/rb-review5.md）: **REVISE（軽い）**・3 件。鍵・会社文脈・RLS・欄名・出典・分数の計算は合っていた。
   - 反映: P1 表 2 つに §3・§7 を合わせた／P2 札の初期値は invoice・event の行だけ（§2）／P3 冒頭の状態の行（§0）。
 - 6 回目（2026-11-12・同じ審査役・P1〜P3 だけ・/tmp/CC報告ファイル/secretary-meet/rb-review6.md）: **APPROVE**。補足 1 語（冒頭の目標の行を「承認済み」に）も反映。
+- 7 回目（2026-11-12・同じ審査役・PO の指示で専用メニューへ移した所だけ・/tmp/CC報告ファイル/secretary-meet/rb-review7.md）: **REVISE（軽い）**・3 件。行番号・金型・印の判定 1 か所・前の版との食い違いは問題なし。
+  - 反映: Q1 デスクトップ 4 つ・スマホ 5 つと書き分けた（§3）／Q2 試験の題と説明を 5 つに直す（§11）／Q3 試すのは押した人のログインの会社（§7）。
+- 8 回目（2026-11-12・同じ審査役・Q1〜Q3 と ADR-1077・/tmp/CC報告ファイル/secretary-meet/rb-review8.md）: **REVISE（軽い）**・3 件。Q1〜Q3 は直っていた。ADR と設計・引用の食い違いは無し。
+  - 反映: 冒頭の ADR 番号／鍵の 1 つ目の数を ADR-1076 と重ならない 1077 に／ADR の索引を作り直す。
 
 ## 11. 受け入れ基準と確かめ方
 | 基準 | 検証方法 |
@@ -147,6 +160,7 @@
 | R6 判定 1 か所 | pytest（印を外した人は新しい口すべてで 403）＋grep（新しい口に名前・番号の直書きが無い） |
 | R7 試しの数 | pytest（試しの後に数と sdk・model が `secretary_rule_checks` の行に入る・やり直しても前の行が残る・2 本目は断る・途中の例外の後も次の試しを始められる・busy は 1 回やり直して「測れなかった数」に入る・10 分進まないと failed）＋段0の基準値（baseline.md） |
 | R8 毎週の数 | pytest（6 つの数・運営文脈を戻す）＋PO が画面で 1 回 |
+| 専用メニュー（§7） | vitest（`frontend/src/components/DesktopShell.test.tsx:124` の印なしで出ない一覧に足す・同じファイル 122 行目の説明 K1「四つだけ」と 123 行目の題 "exactly four" を 5 つに直す・印ありで行き先が `/super-admin/secretary-rules`）＋PO がサイドメニューで 1 回 |
 | R9 全文を残さない | 試験（2 表の欄が §4 の一覧と同じ） |
 | R10 金型・トークン・翻訳キー | 既存の必須チェック（ui-governance-gate・design-token-guard・frontend-check） |
 | 上限いっぱいでも届く | 容器を直接たたく試験（絵文字で 20 件×150 字＋1000 字近くまで埋めて 200）＋pytest（15,000 バイトを超えたら送らない・制御文字の決まりは断る） |
@@ -157,7 +171,7 @@
 - 便0: 段0の測定（本番の秘書に 69 回。足すのは cases.json と baseline.md だけで、動く部分は変えない）→ PO が合格の線を決める。purpose を足す前なので、69 回は秘書の 24 時間の回数に混ざる。流す時刻を記録し、PO に先に伝える。誰がどの道で流すか（本番の秘書の口を印のある人のログインで呼ぶ道）は、便0のカードで決める（まだ確かめていない）。
 - 便1: 表・RLS・purpose を足す migration（危険 PR・GO 記録）。
 - 便2: backend の口・種類 2 つ・compose.mjs・prompt.txt・schema.json・容器の試験を CI へ。本番に出した後、画面に出す前に、仮の決まり 20 件を付けて試しを 1 回流し、1 件の秒数と合う数を baseline.md に足す（20 件付けたときの遅さと当たりを測る）。
-- 便3: 画面（案・一覧・「違う」・試すボタン）と毎週の数。
+- 便3: 画面（案・一覧・「違う」・試すボタン）と、SaaS管理者のメニューの「秘書の決まり帳」のページ（毎週の数・試しの結果・§7）。
 
 ## 維持の仕組み
 - 守り手: .github/workflows/test.yml
