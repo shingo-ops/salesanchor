@@ -14,11 +14,11 @@
 | E1 | 相談係専用の入口 case-api.salesanchor.jp がある。入口に通るのは、伏せた読む窓・報告・値を見たい申請・申請の状態・値を 1 回だけ返す口（`/ops/unmask/read`）だけ。ほかの 443 の server は TLS の名前が case-api なら 421 を返す | `nginx/nginx.conf:11-17`・`nginx/nginx.conf:694-814`（`/ops/unmask/read` は `:784-802`）・`nginx/nginx.conf:43`・`:85`・`:414`・`:843`・`:899` |
 | E2 | 報告は `POST /api/v1/ops/case/{incident_id}/report`。相談係の鍵と札（X-Case-Ticket）が要る。中身は status（investigating / reported）・summary・cause・evidence・proposal・risk・needs_decision | `backend/app/routers/ops_case.py:497-540` |
 | E3 | 報告は 1 件につき 1 通。2 通目は 409（OPS_CASE_REPORT_EXISTS） | `migrations/20261031_210000_create_ops_case.sql:20-32`（`incident_id ... UNIQUE`）・`backend/app/routers/ops_case.py:516`・`:531` |
-| E4 | 札は管理者が作る。有効 24 時間。作り直すと上書きされる | `backend/app/routers/ops_case.py:49`・`:272-292` |
+| E4 | 札は管理者が作る。有効 24 時間。作り直すと上書きされる | `backend/app/routers/ops_case.py:49`・`:271-292`（:271 が管理者だけの確かめ） |
 | E5 | 伏せた読む窓では、障害記録の alertname・severity は伏せてある（理由「初期は最小」）。status と出来事の kind は見える | `migrations/20261024_100300_create_ai_cloud_views.sql:164-169` |
-| E6 | 記録への注記は `POST /ops/incidents/{id}/events`。kind は annotated / first_aid / ai。ai のときだけ round（step と reason）を付けられる。step に「許可」を表す値は無い | `backend/app/routers/ops.py:429`（道）・`:411-428`・`:370-380`・`:438-442`（round は detail に入る） |
+| E6 | 記録への注記は `POST /ops/incidents/{id}/events`。kind は annotated / first_aid / ai。ai のときだけ round（step と reason）を付けられる。step に「許可」を表す値は無い | `backend/app/routers/ops.py:429`（道）・`:411-428`・`:371-381`・`:438-442`（round は detail に入る） |
 | E7 | 出来事の kind の決まりは notified / resolved / annotated / first_aid / ai / halt | `migrations/20261016_100000_create_ops_incident_tables.sql:54-55` |
-| E8 | クラウドの会話では merge が止められる（mcp__github__merge_pull_request・gh pr merge・merge の API） | `scripts/agent-hooks/cloud/guard_pre_tool.py:413-431`・`.claude/settings.json:79-90` |
+| E8 | クラウドの会話では merge が止められる（mcp__github__merge_pull_request・gh pr merge・merge の API） | `scripts/agent-hooks/cloud/guard_pre_tool.py:413-431`・`.claude/settings.json:84-86` |
 | E9 | クラウドの Opus から別の routine を起こす道具は使えなかった | 試し `:24` |
 | E10 | 置き場なしの会話の GitHub の鍵で salesanchor を開くと 403 | 試し §3-6 A2d（`:94`） |
 | E11 | 置き場ありの会話には mcp__github__ の道具が約 50 個付く（merge・push・ファイル書き換え・削除を含む） | 試し `:91`（K7） |
@@ -34,7 +34,8 @@
 - X1: /fire で渡せる文の長さの上限（公式資料には text が任意とだけある。Context7 で上限は見つからなかった）。
 - X2: 置き場なしの会話から、ダミーの network secret を付けた raw.githubusercontent.com（または codeload.github.com）に届くか。GitHub の中継がこのホストも横取りするかは分からない。
 - X3: E15 と E16 のずれの理由（どのアカウント・どの導入先の画面だったか）。
-- X4: 新しい環境に入れる相談係の鍵の値を PO が持っているか。
+- X4: 新しい環境に入れる相談係の鍵の値を PO が持っているか（鍵の正本は GitHub secret の CASE_AGENT_TOKEN: `docs/handoff/cloud-case-ai/design.md:103`。PO の手元の控えが同じ値かも含めて確かめる）。
+- X5: 相談係の週次点検（E15 の §4-6）が、今 GitHub のアプリの範囲を読んでいるか。
 
 ## 2. U3 調べた結果を記録に書く道
 
@@ -44,7 +45,7 @@
 
 ### 選んだ案: 相談係の入口（case-api）をそのまま使う
 
-- 読むのも書くのも case-api の 1 ホスト・1 本の鍵（相談係の鍵）で足りる。1 ホスト 1 つの secret の制約に当たらない（E1・E2）。
+- 読むのも書くのも case-api の 1 ホスト・1 本の鍵（相談係の鍵）で足りる（読む窓・報告の口・値の口が同じ鍵を受ける: `docs/handoff/cloud-case-ai/design.md:187`）。1 ホスト 1 つの secret の制約に当たらない（E1・E2）。
 - 読む窓は伏せた窓なので、要件の「相談係の伏せ方に合わせる」（E13）のうち伏せ方を満たす。道具の絞り方は、コネクタ 0 を守る。使える道具は試しで 5 つ（Bash・Read・Glob・Grep に、Sonnet に任せるための Agent を足したもの。試し `:68`・`:111`）で、要件の 4 つより 1 つ多い。R4（調べは Sonnet に任せる）から来る差として、PO の承認を得る（§8）。試しで使った読む窓（api.salesanchor.jp の読むだけの窓）は伏せていないので、本番の調べ係では使わない。
 - 流れ:
   （１）サーバーが記録 1 件ごとに札を作る（E4 の作り方をサーバーの中で呼ぶ。管理者の操作は要らない）。
@@ -54,7 +55,7 @@
 
 ### 実装カードで足すこと（この設計では作らない）
 
-- C3-0（正本を 1 か所に保つ）: 報告を受けたら、サーバーが同じ処理の中で障害記録の出来事の表（`ops_incident_events`）に kind=ai の注記を 1 行書く。中身は報告の id・status・summary・needs_decision（detail の上限 8192 バイトの中に収める。`migrations/20261016_100000_create_ops_incident_tables.sql` の `ops_incident_events_detail_size_check`）。報告の本文（evidence・proposal）は `ops_case.reports` に残し、注記から id で辿る。要件 R7「結果は記録への書き込み（注記）」・要件 `:121`「保守の記録が唯一の正本」・ADR-1012 決定 2（`docs/adr/ADR-1012-ai-ops-247.md:26`）に合わせるため。Discord（R2）は今と同じく出来事の表の写しを出す。`ops_case.reports` を障害記録の一部に数えてよいかは PO 判断として §8 に挙げる。数えない場合も、この注記で正本は 1 か所に保てる。
+- C3-0（正本を 1 か所に保つ）: 報告を受けたら、サーバーが同じ処理の中で障害記録の出来事の表（`ops_incident_events`）に kind=ai の注記を 1 行書く。中身は報告の id・status・summary・needs_decision（detail の上限 8192 バイトの中に収める。`migrations/20261016_100000_create_ops_incident_tables.sql` の `ops_incident_events_detail_size_check`）。報告の本文（evidence・proposal）は `ops_case.reports` に残し、注記から id で辿る。要件 R7「結果は記録への書き込み（注記）」・要件 `:121`「保守の記録が唯一の正本」・ADR-1012 決定 2（`docs/adr/ADR-1012-ai-ops-247.md:26`）に合わせるため。Discord（R2）は今と同じく出来事の表の写しを出す。注記は要約と参照だけ。F4 の設計（proposal）を含む本文の置き場（`ops_case.reports`）が ADR-1012 決定 2 の「障害記録の表 1 か所」に入るかは PO 判断として §8 に挙げる。入らないと決まった場合は、本文を出来事の表に移す形に直す。出来事の表の actor は alertmanager / ops_token / super_admin に限られる（`migrations/20261016_100000_create_ops_incident_tables.sql:56-57`）。報告の口から書くときにどの値を使うか（新しい値なら表の変更が要る）は実装カードで決める。
 - C3-1: 報告を 1 件に複数通にする。kind（investigation / verification / effect）を足し、一意を（incident_id, kind）にする。F7（直ったかの確かめ）と F9（効果確認）でも書けるようにするため。今は 2 通目が 409（E3）。表の変更なので migration と GO #番号が要る。
 - C3-2（おすすめ・PO 判断）: alertname と severity を伏せる対象から外す。値は自分たちの見張りの規則から来るので、自由入力ではない。外すまでは（２）のとおりサーバーが文で渡す。
 
@@ -86,7 +87,7 @@
 ### 実装カードで足すこと
 
 - C1-1: round の step に「許可」を足す。誰が許可したか（PO の言葉の写し）を detail に残す。
-- C1-2（予備）: 報告を読む GET の窓。X1 の試しで入りきらないと分かったときだけ。
+- C1-2（予備）: 報告を読む GET の窓。X1 の試しで入りきらないと分かったときだけ。札は有効 24 時間で、作り直すと上書きされる（E4）。PO の許可が 24 時間より後になると札が切れるので、実行係を起こすときにサーバーが札を作り直して文で渡す形をカードで決める。
 
 ### 選ばなかった案
 
@@ -100,7 +101,7 @@
 
 ### 選んだ案: 案 A（試しで確かめる）、だめなら案 B
 
-- 案 A: salesanchor は公開のリポジトリ。置き場なしの環境に、ダミーの network secret を raw.githubusercontent.com（または codeload.github.com）に付け、そのホストにだけ届くようにして、コードを GET で読む。書く道具は増えない。届くかは X2。
+- 案 A: salesanchor は公開のリポジトリ（`docs/adr/ADR-1012-ai-ops-247.md:21`）。置き場なしの環境に、ダミーの network secret を raw.githubusercontent.com（または codeload.github.com）に付け、そのホストにだけ届くようにして、コードを GET で読む。書く道具は増えない。届くかは X2。
 - 案 B（予備）: 置き場ありの実行係の routine を「設計だけ」の指示で起こし、設計を PR で出す。PO が設計を許可したら、もう一度起こして実装する。1 件あたり起こす回数が 1 回増える。
 
 ### 選ばなかった案
@@ -120,7 +121,7 @@
 
 - 新しい決め事は作らない。E15 の決まりに揃える。実行係のために salesanchor が一覧に入っていることを確かめる。E15 の一覧は相談係用に決めたもので、salesanchor が入っていない場合は、足すかを PO に聞く（足すまで実行係は動かせない）。
 - E15（11/03 に絞った）と E16（11/11 に All repositories）が食い違う。PO が画面を 1 回見る（GitHub の Settings → Applications → Installed GitHub Apps → Claude → Repository access）。All repositories なら「Only select repositories」に戻し、一覧を E15 の記録と同じにする。
-- 週次点検で範囲を読む（E15 の §4-6）。今その点検が動いているかは未確認（C5-1 で確かめる）。
+- 週次点検で範囲を読む（E15 の §4-6）。今その点検が動いているかは未確認（X5。§6 の P5 で確かめる）。
 
 ## 6. 試し（実装カードの前に行う）
 
@@ -130,6 +131,7 @@
 | P2 | X2: 置き場なし・ダミー secret 付きの環境から raw.githubusercontent.com の salesanchor のファイルを GET できるか | 200 で、中身の sha256 が手元の origin/main と一致 | 試し用の環境（PO の画面操作で作る） |
 | P3 | X3: Claude のアプリの範囲 | 2 つのアカウントとも「指定したリポジトリだけ」で、一覧が E15 の記録と一致（salesanchor が無い場合は §5 のとおり PO に聞く） | PO の画面（読むだけ） |
 | P4 | X4: 相談係の鍵の値の控えを PO が持っているか | PO が「ある／ない」を答える（値はチャットに貼らない）。ない場合は §2 の弊害のとおり、作り直しの影響を示して PO に聞く | PO の答え |
+| P5 | X5: 相談係の週次点検が GitHub のアプリの範囲を読んでいるか | 直近の週次点検の記録に、範囲を読んだ結果が残っている。無ければ実装カードで足す | 手元の週次点検の記録（読むだけ） |
 
 ## 7. 受け入れ基準（この設計）
 
@@ -138,13 +140,13 @@
 | U1・U2・U3・U5 のそれぞれに、選んだ案・選ばなかった案と理由・弊害がある | この文書の §2〜§5 を読む |
 | 事実に file:line か試しの記録が付いている | §1 の表の根拠の欄を、origin/main e3244a40f で開いて一致を確かめる |
 | 要件の決まり（E13・E14）に反する案を選んでいない | §2〜§5 の選んだ案と要件 `:112-115`・`:121`・`:123`・`:157-158`・`:171`、ADR-1012 決定 2（`docs/adr/ADR-1012-ai-ops-247.md:26`）を突き合わせる |
-| 未確認のことを前提にしていない | X1〜X4 がすべて §6 の試しか PO の操作に割り当てられている |
+| 未確認のことを前提にしていない | X1〜X5 がすべて §6 の試しか PO の操作に割り当てられている |
 | 実装は 1 つも始めていない | PR の差分が docs と台帳だけ |
 
 ## 8. 未解決事項
 
 - U6（新）: グラフの Loki に個人情報が入りうる。v1 では使わない。使うなら伏せ方の設計が要る。
-- X1〜X4（§1）。
+- X1〜X5（§1）。
 - C3-2（alertname・severity を見せるか）は PO 判断。
 - `ops_case.reports` を障害記録の一部に数えてよいか（C3-0 の注記で正本は 1 か所に保つ）は PO 判断。
 - 調べ係の道具が 5 つ（要件の 4 つ＋Agent）になる点の承認（§2）は PO 判断。
