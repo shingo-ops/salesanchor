@@ -15,8 +15,9 @@
 #
 # SUBSTITUTIONS (documented, minimal):
 #   1. `cd /home/ubuntu/salesanchor` → `cd ${REHEARSAL_DIR}` (path only)
-#   2. `${{ steps.changes.outputs.migrations }}` → `true` (GHA expression)
+#   2. `${{ steps.changes.outputs.migrations }}` と `${{ steps.gate.outputs.migrations }}` → `true` (GHA expression)
 #   3. ROLLBACK_DISCORD_WEBHOOK → "" (no notification in rehearsal)
+#   4. `.deploy_prev_images.env` は Phase B の前に script が置く（deploy の Step 0 の写し・build-on-github 便2）
 #   上記以外は deploy.yml script ブロックをそのまま実行する
 
 set -euo pipefail
@@ -87,7 +88,8 @@ run_extracted_step() {
   local raw; raw=$(extract_step_script "${step_name}")
   local script; script=$(printf '%s' "${raw}" \
     | sed "s|cd /home/ubuntu/salesanchor|cd ${REHEARSAL_DIR}|g" \
-    | sed 's/\${{ steps\.changes\.outputs\.migrations }}/true/g')
+    | sed 's/\${{ steps\.changes\.outputs\.migrations }}/true/g' \
+    | sed 's/\${{ steps\.gate\.outputs\.migrations }}/true/g')
   local tmp; tmp=$(mktemp /tmp/deploy_step_XXXXXX.sh)
   printf '%s\n' "${script}" > "${tmp}"
   env "$@" ROLLBACK_DISCORD_WEBHOOK="" bash "${tmp}" 2>&1
@@ -181,6 +183,7 @@ cat > docker-compose.yml << COMPOSE
 services:
   backend:
     build: .
+    image: \${BACKEND_IMAGE:-phase2-rehearsal-backend}
     container_name: ${BACKEND_CONTAINER}
     environment:
       - DATABASE_URL=\${DATABASE_URL:-postgresql://jarvis:testpass@postgres:5432/testdb}
@@ -328,6 +331,8 @@ echo "Phase B: 失敗 → Finalize inline rollback（verbatim）"
 echo "======================================================"
 
 # BAD コードに切り替えてコンテナ再起動（rebuild 必須: GOOD image を上書き）
+docker tag phase2-rehearsal-backend phase2-rehearsal-backend:good
+echo 'BACKEND_IMAGE=phase2-rehearsal-backend:good' > "${REHEARSAL_DIR}/.deploy_prev_images.env"
 git reset --hard "${BAD_SHA}" -q
 docker compose build --quiet 2>&1 | tail -2
 _durl_cur=$(grep '^DATABASE_URL=' .env | head -1 | cut -d= -f2-)
@@ -376,7 +381,7 @@ if wait_healthy "${BACKEND_CONTAINER}"; then
 else
   # Finalize の up が成功していれば不要だが念のため retry
   _durl_rb=$(grep '^DATABASE_URL=' .env | head -1 | cut -d= -f2-)
-  DATABASE_URL="${_durl_rb}" docker compose up -d 2>&1 | tail -2
+  DATABASE_URL="${_durl_rb}" docker compose up -d --no-build 2>&1 | tail -2
   if wait_healthy "${BACKEND_CONTAINER}"; then
     pass "B-1: rollback 後 health 200（追加 up で復帰）"
   else

@@ -9,6 +9,8 @@ on:
     paths:
       - 'scripts/deploy/**'
       - 'scripts/tests/test_app_services_plan.py'
+      - 'scripts/tests/test-deploy-pull-prune.sh'
+      - '.github/workflows/deploy.yml'
       - 'scripts/ops/container_state.py'
       - 'scripts/tests/test_container_state.py'
       - 'scripts/ops/dockerd_state.py'
@@ -20,6 +22,8 @@ on:
     paths:
       - 'scripts/deploy/**'
       - 'scripts/tests/test_app_services_plan.py'
+      - 'scripts/tests/test-deploy-pull-prune.sh'
+      - '.github/workflows/deploy.yml'
       - 'scripts/ops/container_state.py'
       - 'scripts/tests/test_container_state.py'
       - 'scripts/ops/dockerd_state.py'
@@ -48,3 +52,9 @@ jobs:
 
       - name: Run dockerd_state tests
         run: python3 scripts/tests/test_dockerd_state.py
+
+      - name: Install PyYAML (pull/prune image tests)
+        run: pip install pyyaml --quiet
+
+      - name: Run pull/prune image tests (build-on-github 便2)
+        run: bash scripts/tests/test-deploy-pull-prune.sh

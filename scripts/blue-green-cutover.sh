@@ -6,7 +6,7 @@
 #   「新起動 → health 確認 → nginx 切替 → 旧停止」に変える。
 #
 # 前提条件（呼び出し元が保証すること）:
-#   - docker compose build が完了済み（backend イメージが astro-webapp-backend タグで存在）
+#   - .env の BACKEND_IMAGE（無ければ astro-webapp-backend）の完成品がローカルにある（deploy の Step 3 で受け取り済み）
 #   - astro-webapp-backend-1 が稼働中（旧 backend が接客中）
 #   - nginx が astro-webapp_frontnet の backend エイリアスを参照中
 #   - .env が最新（DATABASE_URL 等が呼び出し前に更新済み）
@@ -66,11 +66,11 @@ fi
 
 # ── Step 1: ビルド済みイメージを特定 ────────────────────────────────────────────
 echo "Step 1: Identifying built backend image..."
-# docker compose build が作成するイメージ名は {project}-{service}
-BACKEND_IMAGE="${COMPOSE_PROJECT}-backend"
+# compose の image: と同じ名前。prod1 では .env（38 行目で読み込み済み）の指紋
+BACKEND_IMAGE="${BACKEND_IMAGE:-${COMPOSE_PROJECT}-backend}"
 if ! docker image inspect "${BACKEND_IMAGE}" >/dev/null 2>&1; then
   echo "❌ Image '${BACKEND_IMAGE}' not found."
-  echo "   docker compose build を先に実行してください。"
+  echo "   deploy の Step 3（pull-images.sh）を先に実行してください。"
   exit 1
 fi
 echo "  Image: ${BACKEND_IMAGE}"
