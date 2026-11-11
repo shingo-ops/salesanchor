@@ -3,7 +3,7 @@
 状態: カード発行（Opus、2026-11-12）。PO の設計承認と実装承認は 2026-11-12「1、推測は禁止して…確立したなら進める。」（ideal-state 54。review.md「2026-11-12 PO の設計承認」）。
 設計: docs/handoff/viewer-contract-stage/design.md §3-1・§3-2・§3-3（:91 履歴の操作）・§8 の A4・A6・A13・A34・§9。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。本番・GitHub の secret・DB には触らない。PR は作らない（Opus が作る）。
-基準: origin/main `e00216e2188f2174f6e188d4ccf4ce5e10bf2f57` で行番号を測った。行番号がずれていたら「変更前」の文で場所を探す（同じ文が 2 か所あれば BLOCKED: で停止）。
+基準: origin/main `e00216e2188f2174f6e188d4ccf4ce5e10bf2f57` で行番号を測った。`a26c89fda`（#5422 合流後）で P2・P5・P6 と 2-2 を測り直した（変わったのは run_all_migrations.sh の最後の登録だけ）。行番号がずれていたら「変更前」の文で場所を探す（同じ文が 2 か所あれば BLOCKED: で停止）。
 危険便か: はい（`migrations/` と本番 `scripts/run_all_migrations.sh` を含む。CI の `.github/workflows/migration-test.yml` の前提の表も2か所変える）。マージ前に Opus の審査役の APPROVE・CI 全通過・ADR-136 の GO 記録と直前のバックアップの確認を必須にする（担当の作業ではない）。
 
 本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
@@ -18,7 +18,7 @@
 - D6 「本契約にする」（activate）は trial のままにする。お試しから本契約へ直接移す道を外すのは便4（§3-3 :92）。
 - D7 一覧の行の色は Badge の金型の variant `warning` を使う（frontend/src/components/Badge.tsx:16 の BadgeVariant に在る）。色を直書きしない。
 - D8 期限切れの理由の名前は viewer_contract_expired（§3-1 :53）。文は ja「閲覧期限が過ぎています。担当者にご連絡ください。」・en「Your viewing period has ended. Please contact your representative.」。案内の画面（NoticeView）の題は ja「閲覧期限が過ぎています」・en「Viewing period has ended」、説明は ja「担当者にご連絡ください。」・en「Please contact your representative.」。
-- D9 触らないと決めた場所（全件 grep で見つかったが変えない）: backend/app/discord_gateway/viewer_interview_notice.py:3・:57（面談案内はお試しだけ。§3-1 :55）・backend/app/discord_gateway/viewer_trial.py:352（申込中から来た人だけ trial にする行。contracting の人は :350 の if に入らず状態を保つ）・backend/app/services/viewer_admin.py:340・:350（初回登録の取り込み。trial と active だけを受ける）・backend/app/services/tcg_distribution_svc.py:737（`va.status <> 'active'` で active 以外は配らない。§3-1 :54）・frontend/src/pages/super-admin/ViewerAccountsPage.tsx:441（お試しの行のボタン。便4）・同 :725（請求先の欄の active。便4）・backend/app/viewer_admin_cli.py:13（便4）。
+- D9 触らないと決めた場所（全件 grep で見つかったが変えない）: backend/app/discord_gateway/viewer_interview_notice.py:3・:57（面談案内はお試しだけ。§3-1 :55）・backend/app/discord_gateway/viewer_trial.py:352（申込中から来た人だけ trial にする行。contracting の人は :348 の if に入らず状態を保つ）・backend/app/services/viewer_admin.py:340・:350（初回登録の取り込み。trial と active だけを受ける）・backend/app/services/tcg_distribution_svc.py:737（`va.status <> 'active'` で active 以外は配らない。§3-1 :54）・frontend/src/pages/super-admin/ViewerAccountsPage.tsx:441（お試しの行のボタン。便4）・同 :725（請求先の欄の active。便4）・backend/app/viewer_admin_cli.py:13（便4）。
 
 ## 0. カード発行前チェック（docs/ai-agents/design-partner.md §5.5）
 
@@ -53,7 +53,7 @@
 ## 0-3. 実装前点検（手順2 で流す。外れたら実装せず BLOCKED: で停止）
 
 - P1 `docs/handoff/viewer-contract-stage/card-2-1.md`（このカード）が枝に在る。
-- P2 `ls migrations | sort | tail -1` が `20261111_120000_add_codex_secretary_choices.sql`。
+- P2 `ls migrations | sort | tail -1` が `20261112_120000_create_public_customer_statuses.sql`（a26c89fda で実測）。
 - P3 `grep -c "ck_viewer_accounts_status CHECK (status IN ('pending', 'verified', 'trial', 'active', 'suspended'))" migrations/20261016_150000_add_viewer_accounts.sql` が 1。
 - P4 `grep -c "BILLING_FORM_TTL = timedelta(days=7)" backend/app/services/viewer_billing_form.py` が 1。
 - P5 `grep -rn "contracting" backend/app frontend/src migrations | wc -l` が 0。
@@ -86,7 +86,7 @@
 
 ## 1. 触るファイル
 
-1. migrations/20261112_120000_add_viewer_contracting_status.sql（新規）
+1. migrations/20261112_130000_add_viewer_contracting_status.sql（新規）
 2. scripts/run_all_migrations.sh
 3. backend/app/auth/viewer_dependencies.py
 4. backend/app/routers/viewer.py
@@ -121,7 +121,7 @@
 
 ## 2. 変更
 
-### 2-1 migrations/20261112_120000_add_viewer_contracting_status.sql（新規。この全文で作る）
+### 2-1 migrations/20261112_130000_add_viewer_contracting_status.sql（新規。この全文で作る）
 
 ```sql
 -- ADR-1061 便2-1: 閲覧者の状態に contracting（契約手続き中）を足し、
@@ -150,19 +150,19 @@ COMMIT;
 
 ### 2-2 scripts/run_all_migrations.sh（最後の登録の後ろに2行足す）
 
-変更前:
+変更前（a26c89fda の scripts/run_all_migrations.sh:1258-1259。#5422 の会社と連絡先の状態の表が最後）:
 ```bash
-# ADR-1058 段3: 秘書の選択肢に ChatGPT（codex）の3つを足す（足すだけ・冪等・今の担当は変えない）
-run_sql migrations/20261111_120000_add_codex_secretary_choices.sql
+# 会社と連絡先の状態 便1: 状態の表 public.customer_statuses を作る（作るだけ・冪等）
+run_sql migrations/20261112_120000_create_public_customer_statuses.sql
 ```
 変更後:
 ```bash
-# ADR-1058 段3: 秘書の選択肢に ChatGPT（codex）の3つを足す（足すだけ・冪等・今の担当は変えない）
-run_sql migrations/20261111_120000_add_codex_secretary_choices.sql
+# 会社と連絡先の状態 便1: 状態の表 public.customer_statuses を作る（作るだけ・冪等）
+run_sql migrations/20261112_120000_create_public_customer_statuses.sql
 # ADR-1061 便2-1: 閲覧者の状態に contracting と履歴の操作4つを足す（CHECK の付け替え・足すだけ・冪等）
-run_sql migrations/20261112_120000_add_viewer_contracting_status.sql
+run_sql migrations/20261112_130000_add_viewer_contracting_status.sql
 ```
-`run_sql migrations/20261111_120000_add_codex_secretary_choices.sql` の後ろに別の行が在るときは、その行の後ろではなく、この行のすぐ後ろに足す。
+`run_sql migrations/20261112_120000_create_public_customer_statuses.sql` の後ろに別の行が在るときは、実装せず `BLOCKED: P2`（main がまた進んだ。Opus が指示書を直す）。ファイル名の時刻を 130000 にしたのは、同じ日の 120000 を #5422 が先に使ったため（同じ時刻の名前を2つ作らない）。
 
 ### 2-2b .github/workflows/migration-test.yml（CI の「マイグレーションSQL 実行」の前提の表）
 
@@ -185,7 +185,7 @@ run_sql migrations/20261112_120000_add_viewer_contracting_status.sql
           -- public.viewer_accounts: 20261016_150000_add_viewer_accounts.sql で本番作成済み。
           --   20261104_220000_add_tcg_distribution_targets_viewer_account_id.sql が外部キーで参照するため、
           --   前提として最小定義を登録する（id の型は本物と同じ BIGSERIAL）。
-          --   trial_expires_at は 20261112_120000_add_viewer_contracting_status.sql が COMMENT を書くため（ADR-1061 便2-1）。
+          --   trial_expires_at は 20261112_130000_add_viewer_contracting_status.sql が COMMENT を書くため（ADR-1061 便2-1）。
           CREATE TABLE IF NOT EXISTS public.viewer_accounts (
               id         BIGSERIAL   PRIMARY KEY,
               email      TEXT        NOT NULL,
@@ -205,7 +205,7 @@ run_sql migrations/20261112_120000_add_viewer_contracting_status.sql
               CONSTRAINT ck_viewer_login_tokens_purpose CHECK (purpose IN ('signup_code', 'password_reset'))
           );
           -- public.viewer_status_changes: 20261016_150000_add_viewer_accounts.sql で本番作成済み。
-          --   20261112_120000_add_viewer_contracting_status.sql が CHECK を付け替え COMMENT を書くため、
+          --   20261112_130000_add_viewer_contracting_status.sql が CHECK を付け替え COMMENT を書くため、
           --   前提として最小定義を登録する（操作の CHECK は付け替え前の5値）。
           CREATE TABLE IF NOT EXISTS public.viewer_status_changes (
               id        BIGSERIAL   PRIMARY KEY,
@@ -790,7 +790,7 @@ en.json の notice（:193〜:196）変更前:
 ```python
     cur.execute((MIGRATIONS / "20261020_120000_create_viewer_message_templates.sql").read_text())
     # ADR-1061 便2-1: 状態 contracting と履歴の操作4つ
-    cur.execute((MIGRATIONS / "20261112_120000_add_viewer_contracting_status.sql").read_text())
+    cur.execute((MIGRATIONS / "20261112_130000_add_viewer_contracting_status.sql").read_text())
 ```
 すぐ下の `    if seed_templates:  # 送る側は…` の行は変えない。
 同じファイルの test_conflicts_are_409 の後ろに、次の試験を足す:
@@ -820,7 +820,7 @@ def test_extend_is_allowed_for_contracting(pg):  # noqa: F811
 ```python
     cur.execute((MIGRATIONS / "20261105_120000_create_viewer_billing_profiles.sql").read_text())
     # ADR-1061 便2-1: 状態 contracting
-    cur.execute((MIGRATIONS / "20261112_120000_add_viewer_contracting_status.sql").read_text())
+    cur.execute((MIGRATIONS / "20261112_130000_add_viewer_contracting_status.sql").read_text())
     return cur
 ```
 test_trial_is_kept_3_years_after_expiry の後ろに、次の試験を足す（A13）:
@@ -1047,7 +1047,7 @@ it("shows a left menu with 5 entries (no Suspended) and counts, and filters by t
 手順5 形（期待: ruff は All checks passed!、残りの grep は順に 1・1・1・1・1・2・2）
     cd ~/sa && ~/venv312/bin/ruff check backend/app/auth/viewer_dependencies.py backend/app/routers/viewer.py backend/app/services/viewer_admin.py backend/app/services/viewer_billing_form.py backend/app/routers/super_admin_viewers.py backend/app/discord_gateway/viewer_trial.py backend/app/tasks/maintenance.py backend/tests/test_super_admin_viewers.py backend/tests/test_viewer_billing_form_pg.py backend/tests/test_viewer_purge.py backend/tests/test_viewer_api.py backend/tests/test_viewer_tokens.py backend/tests/test_tcg_distribution_viewer_link_pg.py 2>&1 | tail -10
     cd ~/sa && grep -c "BILLING_FORM_TTL = timedelta(days=3)" backend/app/services/viewer_billing_form.py
-    cd ~/sa && grep -c "^run_sql migrations/20261112_120000_add_viewer_contracting_status.sql" scripts/run_all_migrations.sh
+    cd ~/sa && grep -c "^run_sql migrations/20261112_130000_add_viewer_contracting_status.sql" scripts/run_all_migrations.sh
     cd ~/sa && grep -c "viewer_contract_expired" backend/app/auth/viewer_dependencies.py
     cd ~/sa && grep -c "viewer_contract_expired" backend/app/routers/viewer.py
     cd ~/sa && grep -c "status IN ('trial', 'contracting')" backend/app/tasks/maintenance.py
@@ -1081,7 +1081,7 @@ it("shows a left menu with 5 entries (no Suspended) and counts, and filters by t
   期待: §1 の 30 ファイル（新規の migration は `??` で1行）だけ。frontend/src/api/generated の変化は git に載らない（追跡されていない）。
 
 手順10 記録と送り出し
-    cd ~/sa && git add migrations/20261112_120000_add_viewer_contracting_status.sql scripts/run_all_migrations.sh .github/workflows/migration-test.yml backend/app frontend/api-contract/openapi.json frontend/src/pages frontend/src/locales backend/tests && git status --short | tail -40
+    cd ~/sa && git add migrations/20261112_130000_add_viewer_contracting_status.sql scripts/run_all_migrations.sh .github/workflows/migration-test.yml backend/app frontend/api-contract/openapi.json frontend/src/pages frontend/src/locales backend/tests && git status --short | tail -40
     cd ~/sa && git commit -q -m "feat(viewer): add contracting status foundation and 3-day billing form with expiry extension (ADR-1061 bin2-1)" && git log --oneline -1 | tail -1
     cd ~/sa && git push origin release/viewer-contracting-bin2-1 2>&1 | tail -3
     cd ~/sa && git log --oneline origin/release/viewer-contracting-bin2-1 -2 | tail -2

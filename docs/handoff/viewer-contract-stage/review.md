@@ -339,3 +339,5 @@
 - 状態を読む場所は e00216e21 で全件 grep（30 行）し、直す・触らないを1行ずつ決めた（card-2-1.md §0-3 P6）。
 - design.md:505 の便1 の期限の文に「済み」を足した（前の審査の低の指摘）。
 - マージ前の審査役 Opus（b4280e207 対象）: REVISE（高 1・低 3）。高: CI の「マイグレーションSQL 実行」は前提の最小の表の上で変わった移行を流すが、その表に trial_expires_at の列と viewer_status_changes の表が無く、指示書は `.github/` を禁じていた → 指示書に 2-2b（migration-test.yml の最小定義に列と表を足す。viewer_login_tokens の前例と同じ形）を足し、触るファイルに入れた。低: 試験の `_prepare` の変更前の文（:188 の1行だけにした）・行番号（:93・:474〜:479・配信の :737。design.md と recon.md も :737 に直した）・一覧の試験の題名（5 entries に直す手順を足した）。
+- 2回目の審査役 Opus（ef68fbe21 対象）: APPROVE（高・中 0、低 2）。低1: D9 の viewer_trial.py の if は :348（:350 と書いていた）→ 直した。低2: 実装の枝はまだ無い（Opus が作る予定どおり）。
+- マージの直前に main が進んだ（#5422 が migrations/20261112_120000_create_public_customer_statuses.sql を足し、run_all_migrations.sh の最後の登録になった）。a26c89fda で測り直し、この便の移行の名前を 20261112_130000 に変え（同じ時刻の名前を2つ作らない）、P2 と 2-2 の変更前の文をその最後の登録に合わせた。P5（0 件）・P6（30 行）・migration-test.yml は変わっていないと確かめた。
