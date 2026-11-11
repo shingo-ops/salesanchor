@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 | archived | アーカイブ | Archived | 30 | TRUE |
 | pending_dedup_review | 重複確認待ち | Pending duplicate check | 40 | FALSE |
 
-- selectable_on_create の根拠（2026-11-12 origin/main・生は /tmp/CC報告ファイル/status/evidence-hide-on-create.md）: この状態を自動で付ける道は今のコードに無い。新規作成の道5本（`backend/app/routers/companies.py:404`・`backend/app/routers/contacts.py:439` は画面の値で既定 active＝`backend/app/schemas/company.py:134`・`backend/app/schemas/contact.py:109`／`backend/app/routers/registration_tokens.py:322` は 'active' 固定／`backend/app/routers/integrations.py:653`・`:671` は列を書かず DB 既定 'active'＝`migrations/028_create_companies.sql:78`）。付けたのは4月の移行の使い捨て `scripts/_archive/data_migration/migrate_customers_from_sheet.py:72`・`:198` だけ。状態の意図は「移行で二重の疑いがある記録を仮に入れ、人が別か同じかを決めるまでの保留」（PR #163 本文・`migrations/015_replace_customers_schema.sql:130`）。解消の操作は直す画面だけ（`frontend/src/pages/company-detail/CompanyBasicTab.tsx:124-125`・`frontend/src/pages/contacts/ContactEditPage.tsx:196`・`frontend/src/pages/contacts/ContactsPage.tsx:395`）。
+- selectable_on_create の根拠（2026-11-12 origin/main・生は同じフォルダの evidence-hide-on-create.md）: この状態を自動で付ける道は今のコードに無い。新規作成の道5本（`backend/app/routers/companies.py:404`・`backend/app/routers/contacts.py:439` は画面の値で既定 active＝`backend/app/schemas/company.py:134`・`backend/app/schemas/contact.py:109`／`backend/app/routers/registration_tokens.py:322` は 'active' 固定／`backend/app/routers/integrations.py:653`・`:671` は列を書かず DB 既定 'active'＝`migrations/028_create_companies.sql:78`）。付けたのは4月の移行の使い捨て `scripts/_archive/data_migration/migrate_customers_from_sheet.py:72`・`:198` だけ。状態の意図は「移行で二重の疑いがある記録を仮に入れ、人が別か同じかを決めるまでの保留」（PR #163 本文・`migrations/015_replace_customers_schema.sql:130`）。解消の操作は直す画面だけ（`frontend/src/pages/company-detail/CompanyBasicTab.tsx:124-125`・`frontend/src/pages/contacts/ContactEditPage.tsx:196`・`frontend/src/pages/contacts/ContactsPage.tsx:395`）。
 - サーバーは作るときに pending_dedup_review を受けても断らない（列挙は残す・§6-1）。画面で出さないだけにする。理由: 断る形にすると記号の判断がサーバーに増え、表の列と二重になる。必要になれば別設計。
 
 - 日本語名は今の ja.json の値（`frontend/src/locales/ja.json:1133-1135`・`:1299`）をそのまま写す。英語名の3つは今の en.json（`frontend/src/locales/en.json:1133-1135`）と同じ。重複確認待ちだけ、今の英語「Pending Dedup Review」（`frontend/src/locales/en.json:1161`）は仕組みの略語（Dedup）を含むため「Pending duplicate check」に直す（英語画面だけ見た目が変わる）。
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 ### 6-1. サーバーの読み口1か所
 
 - 新しいファイル backend/app/services/customer_statuses.py に表名の定数と読む SQL を置く（チャネル名簿の `backend/app/services/channel_masters.py:1-13` と同じ型）。
-- API: `GET /api/customer-statuses` → 4行（code・name_ja・name_en・sort_order・is_active）。ログインした人なら誰でも読める。
+- API: `GET /api/customer-statuses` → 4行（code・name_ja・name_en・sort_order・is_active・selectable_on_create）。ログインした人なら誰でも読める。
 - 会社をまとめる処理の `backend/app/routers/companies.py:982`（`SET status='active'`）と `:1019`（記録）も記号の定数を使う（審査2回目の指摘5）。
 - `frontend/api-contract/openapi.json:5904`・`:7712` は、サーバーの列挙を残すので変わらない。新しい API の分だけ契約の書き出しを更新する。
 - サーバーの列挙（`backend/app/schemas/company.py:33-37`・`backend/app/schemas/contact.py:26-36`）は残す。理由: 動きが記号に頼るため、記号はコードでも名前を持つ。代わりに §6-4 の試験で「列挙＝表の行」を毎回確かめる。受け取り時の正しさは DB の外部キーが最後に守る。
@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 
 - 読み口: 新しい hook（useCustomerStatuses）で API を1回読み、言語で name_ja/name_en を選ぶ。
 - statusPresentation.ts の contact・company の組は bucket・badgeVariant を残し、labelKey（辞書キー）だけ外す。名前は hook から出す。`frontend/src/pages/design-preview/sections/StatusSection.tsx:40-85` は、この2組だけ hook の名前を使う（他の11組は今のまま）。
-- recon §3 のフォーム7か所とまとめる画面1か所を、この読み口から並べる形に直す。hook は `options(mode: "create" | "edit")` を出し、create は `selectable_on_create` が TRUE の行だけ、edit は全行を sort_order 順に返す。記号で行を選び分ける書き方（`code !== "pending_dedup_review"` など）は画面に書かない。
+- recon §3 のフォーム7か所とまとめる画面1か所を、この読み口から並べる形に直す。hook は `options(mode: "create" | "edit")` を出し、create は `selectable_on_create` が TRUE の行だけ、edit は全行を sort_order 順に返す。記号で行を選び分ける書き方（`code !== "pending_dedup_review"` など）は画面に書かない。is_active が FALSE の行は create・edit とも出さない。ただし edit で今の値がその行のときは、その1行だけ残す（今の値が空に見えるのを防ぐ。§3 の「過去の行は残す」と同じ考え）。
 
 #### 6-2-1. 7か所とそれぞれの mode（2026-11-12 Opus が origin/main で数え直し）
 
@@ -163,14 +163,16 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 
 ### 6-3-4. 重複の解消ボタンの文（2026-11-12 Opus が見つけた・PO に「設計書に載せる」と伝え済み）
 
+- この節の ja.json の行番号は origin/main cee9633b9 のもの（他の節の a88194893 とは3行ずれる。画面ファイルの行は両方で同じ）。
+
 | キー | 今（ja・`frontend/src/locales/ja.json`） | 変更後（ja） |
 |---|---|---|
 | companies.dedupConfirmAsDistinct（`:1235`・使う所 `frontend/src/pages/company-detail/CompanyBasicTab.tsx:137`） | 別顧客情報として確定（active 化） | 別顧客情報として確定（{{active}}にする） |
 | contacts.confirmAsDistinctFull（`:1284`・使う所 `frontend/src/pages/contacts/ContactEditPage.tsx:202`） | 別人として確定（active 化） | 別人として確定（{{active}}にする） |
-| contacts.mergeAsDuplicate（`:1285`） | 重複としてマージ（担当者単位は未実装） | §9 未決5 の答えで決める |
+| contacts.mergeAsDuplicate（`:1285`） | 重複としてマージ（担当者単位は未実装） | 重複としてマージ（en: Merge as duplicate）。キーは分けず文だけ直す |
 
 - {{active}} には §6-2 の読み口から「有効」の名前を入れる（名前を文に直書きしない）。en も同じ意味に直す（今は `(activate)`）。
-- `frontend/src/pages/company-detail/CompanyContactsTab.tsx:136` は `t("contacts.mergeAsDuplicate").replace("（担当者単位は未実装）", "")` と日本語の文字を書いて消している（ADR-027 違反・英語画面では消えない）。キーを分けて replace をやめる。
+- `frontend/src/pages/company-detail/CompanyContactsTab.tsx:136` は `t("contacts.mergeAsDuplicate").replace("（担当者単位は未実装）", "")` と日本語の文字を書いて消している（ADR-027 違反・英語画面では消えない）。文を直したので replace を消し `t("contacts.mergeAsDuplicate")` だけにする（新しいキーは作らない）。
 - `frontend/src/pages/contacts/ContactEditPage.tsx:204-206` は金型の Button でない生の `<button>` と直の style（ADR-144 違反）で、押せないまま。担当者をまとめる処理は既にある（`backend/app/routers/contacts.py:706` ADR-098 SA-04 J3・画面 `frontend/src/components/MergeContactModal.tsx:128`・`frontend/src/pages/company-detail/CompanyContactsTab.tsx:136` から開ける）。つなぐか消すかは §9 未決5。
 - 試験 `frontend/src/components/FullPageFormButtonMigration.test.tsx:176-177`・`:198` はキー名で探すので、キーを分けたら合わせる。
 
@@ -199,11 +201,11 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 | K2 本番10表の status 列が表に結ばれ、CHECK が無い | 読み取りの鍵で制約一覧 → 外部キー10本・status の CHECK 0本 |
 | K3 表に無い値を入れると DB が断る | CI の試験で `UPDATE companies SET status='xxx'` が外部キー違反 |
 | K4 状態を選ぶフォーム7か所の選択肢が §6-2-1 の表のとおり | Chrome で §6-2-1 の 1〜7 を開いて数える（保存はしない）。作るとき（1・2・7の新規）は「有効・無効・アーカイブ」の3つ、直すとき（3〜6・7の編集）は「有効・無効・アーカイブ・重複確認待ち」の4つ。名前と並びが §4 のとおり。加えて画面のコードに `pending_dedup_review` で選択肢を選び分ける書き方が0件（K5 の grep に含まれる） |
-| K14 作る画面に出すかを表だけで変えられる | PostgreSQL の試験で、selectable_on_create を FALSE にした行が create の一覧に出ず edit の一覧に出る（API の行に列が含まれ、hook の試験で mode ごとの件数を確かめる） |
-| K15 解消ボタンの文に「active」「未実装」が0件 | ja/en.json の companies.dedupConfirmAsDistinct・contacts.confirmAsDistinctFull を grep → active・activate が0件。`git grep -n 'replace("（' -- frontend/src/pages/company-detail/CompanyContactsTab.tsx` が0件 |
+| K14 作る画面に出すかを表だけで変えられる | 2本とも緑: (a) サーバーの試験（PostgreSQL・backend/tests）で `GET /api/customer-statuses` の各行に selectable_on_create があり、表の値と同じ (b) 画面の試験（vitest・useCustomerStatuses の隣）で、API の返事を作り替えて1行の selectable_on_create を FALSE にすると、options("create") から消え options("edit") には残る。件数は create 3・edit 4（§4 の値のとき） |
+| K15 解消ボタンの文に「active」「未実装」が0件 | `git grep -n -E 'active 化|\(activate\)|未実装|not implemented' -- frontend/src/locales/ja.json frontend/src/locales/en.json` の行のうち companies.dedupConfirmAsDistinct・contacts.confirmAsDistinctFull・contacts.mergeAsDuplicate が0件（変更後の文の {{active}} は当たらない）。`git grep -n 'replace("（' -- frontend/src/pages/company-detail/CompanyContactsTab.tsx` が0件 |
 | K5 会社・連絡先の画面のコードに4つの記号の直書きが0件（定数ファイルを除く） | `git grep -n -E '"(active\|inactive\|archived\|pending_dedup_review)"' -- frontend/src/pages/contacts frontend/src/pages/companies frontend/src/pages/company-detail frontend/src/components/MergeCompanyModal.tsx frontend/src/components/MergeContactModal.tsx \| grep -v className` が0件。基準値（a88194893 で実測）: 10ファイル53件のうち tab の className の3件を除く50件 |
 | K6 状態の名前の辞書キーが0件 | `git grep -n -E 'customers\.status_(active\|inactive\|archived\|pending_dedup)\|contacts\.statusCode\|statusPendingDedupOption' -- frontend/src` が0件。基準値（a88194893 で実測）: 41件（辞書を除くと39件） |
-| K7 まとめる画面の文に master・pending_dedup_review・active・audit_logs が0件 | ja/en.json の mergeCompany・mergeContact を grep → 0件。Chrome で会社をまとめる画面を開き文を読む（実行はしない） |
+| K7 まとめる画面の文に master・pending_dedup_review・active・audit_logs が0件 | ja/en.json の mergeCompany・mergeContact の文から差し込み `{{…}}` を除いて（`sed -E 's/\{\{[A-Za-z_]+\}\}//g'`）から grep → 0件（`{{active}}` は数えない）。Chrome で会社をまとめる画面を開き文を読む（実行はしない） |
 | K8 分析で名前が引ける | 読み取りの鍵で companies と customer_statuses を結んだ件数の集計が名前付きで出る（tenant_004: 有効 51） |
 | K9 試験 | CI 全部緑。列挙＝表の試験が緑 |
 | K10 RLS の下で外部キーが働く | backend/tests/test_customer_statuses_pg.py が緑（会社の領域の利用者で会社を作れる・表に無い値は断られる） |
@@ -299,3 +301,5 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 - 3回目（2026-11-11 17:11 JST・クラウド Opus・0cde60fe6）: **REVISE**。2回目の8件はすべて直っていると確認（design の行で照合）。recon の行番号11か所も実物と一致。必須1件 M1: 便1 で protected-tables.txt に足すと、確認8 が便2 の件数の SELECT（と便1 自身の GRANT の行）を止める。Opus が `scripts/check-migration-value-writes.py` の確認8・許す語・全件走査（`:260`）を読んで確かめ、(1) 一覧に足すのを便3 へ移す（§3・K12・§13）、(2) 便2 の件数の SELECT をやめて VALIDATE を止め役にする（§5）、と直した。指摘の文の後半は記録の切れで読めなかった。同時に §12 を外部事例に書き換えた。
 - 4回目（2026-11-11 17:17 JST・クラウド Opus・6fcfbacd8）: **APPROVE**（必須0件）。M1 が直っていることを確認した。確認8 は変えた migration の追加行だけを見る（`scripts/check-migration-value-writes.py:153-157`・`:175-180`）。全件走査（`:260-286`）は値の書き込みだけを当てる。便2 の外部キーの外し方は本人 GO の対象外で、委任の GO で足りる（`scripts/check-process-artifacts.js:569`・`:493`。ADR-1003 の例外は表と列を消す migration）。§12 の当社の数は、ADR-1037 と channel-master-shared/design.md の行とすべて一致した。外部の原文は審査役は開いていない（原文は Opus が取得して /tmp/CC報告ファイル/ext/ に置いた）。推奨3件を反映した: N1 済んだ領域は飛ばす・取引の単位の説明（§5・K13・§12-4）、N2 原文に無い「2015年ごろ」を消す（§12-2）、N3 便3 の後に便1・便2 を直すときの外し方（§3）。審査の途中で、見張りが DB の道具名を含む検索を止めた。取引の単位は Opus が `scripts/run_all_migrations.sh:25`・`:118` を読んで補った。
 - 5回目の前の変更（2026-11-12・Opus）: PO の答え「直すときだけ表示させるのが良い？」→「1」を反映した。表に列 selectable_on_create を足し（§3・§4）、7か所を作る2・直す4・両方1に分け直した（§6-2-1。前の「作る3・直す4」は数え違いで、会社の連絡先タブの窓は作ると直すの両方に使う `frontend/src/pages/company-detail/CompanyContactsTab.tsx:151-154`）。解消ボタンの文の「active 化」「担当者単位は未実装」と日本語の replace を §6-3-4 に足した。K4 を書き直し、K14・K15 を足した。押せない「重複としてマージ」ボタンを §9 未決5 に、作る画面の重複の警告を別テーマとして §9-6 に置いた。5回目の審査はまだ。
+- 5回目（2026-11-12 04:53 JST・クラウド Opus・48068620c）: **REVISE**。7か所の分類と行番号は実物と一致。直した3件: (1) §6-1 の API の列に selectable_on_create が無い→足した (2) K15 の grep が変更後の文 {{active}} に当たる→探す語を「active 化・(activate)・未実装・not implemented」に絞った (3) K14 の試験の種類が決まっていない→サーバーの試験と画面の試験の2本に分けた。
+  - 5回目の推奨も反映した: K7 も {{active}} を数えない形に直した。is_active が FALSE の行の扱いを §6-2 に書いた。contacts.mergeAsDuplicate はキーを分けず文だけ直す（§6-3-4）。根拠の生ファイルをリポジトリの evidence-hide-on-create.md に置いた。ja.json の行番号の基準を §6-3-4 に書いた。
