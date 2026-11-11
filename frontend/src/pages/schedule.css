@@ -28,6 +28,8 @@
   gap: var(--schedule-shell-gap);
   min-height: 0;
   height: 100%; /* fill .app-content so page-level overflow-y never fires */
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .schedule-shell__range {
@@ -163,7 +165,7 @@
 
 .schedule-mini-calendar__day--today {
   background: var(--schedule-today);
-  color: var(--on-solid);
+  color: var(--schedule-today-text);
 }
 
 .schedule-mini-calendar__day--active {
@@ -348,7 +350,7 @@
   padding: var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: var(--bg-surface);
+  background: var(--schedule-popover-bg);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
 }
@@ -525,14 +527,23 @@
   color: var(--text-primary);
 }
 
-/* 全画面の編集（design §3.18 作り方 4・G53）。項目は作る小窓と同じ行の形で縦に並べる */
-.schedule-full-editor {
+/* 編集の画面の日時の段（design §3.19・G60）。狭い窓では折り返す */
+.schedule-editor-dates {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.schedule-full-editor .schedule-popover__line {
+/* 「〜」を欄と同じ高さの箱にして、5 つの上端を揃える（G60。箱が無いと上端が 7 ずれる） */
+.schedule-editor-dates__sep {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--space-10);
+}
+
+/* Meet の行のボタンの文字を左に寄せる（今の .schedule-full-editor の規則の役目を引き継ぐ。金型 Button は既定で真ん中寄せ） */
+.schedule-editor-meet .schedule-popover__line {
   justify-content: flex-start;
 }
 
@@ -591,7 +602,7 @@
 
 .schedule-list__num--today {
   background: var(--schedule-today);
-  color: var(--on-solid);
+  color: var(--schedule-today-text);
 }
 
 .schedule-list__label {
@@ -1107,7 +1118,7 @@
 
 .gcal-day-header__num.today {
   background: var(--schedule-today);
-  color: var(--on-solid);
+  color: var(--schedule-today-text);
 }
 
 .gcal-month-col-name {

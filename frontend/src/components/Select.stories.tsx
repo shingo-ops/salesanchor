@@ -167,3 +167,16 @@ export const TabVariant: Story = {
     </div>
   ),
 }
+
+export const ControlEditorFilled: Story = {
+  name: 'SelectControl editor-filled variant',
+  render: () => (
+    <SelectControl
+      variant="editor-filled"
+      aria-label="Editor filled select"
+      value="a"
+      onChange={() => {}}
+      options={[{ value: 'a', label: 'ホロライブ' }, { value: 'b', label: 'その他' }]}
+    />
+  ),
+}
