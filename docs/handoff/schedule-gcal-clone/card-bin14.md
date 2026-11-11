@@ -1,15 +1,15 @@
-# 実装カード 便14: 予定の編集画面を Google の形に・直すときも全画面（G58〜G64）（2026-11-11）
+# 実装カード 便14: 予定の編集画面を Google の形に・直すときも全画面・予定の画面の色を Google に（G58〜G67）（2026-11-11）
 
-- 設計: `docs/handoff/schedule-gcal-clone/design.md` §2.7（G58〜G64）・§3.19（審査は §9 に記録）
-- PO の承認: 審査の後に PO へ聞く（新しい金型 EditorPage・古い金型 FullScreenDialog を消す・角の小さい塗りの欄・丸い保存・直すときも全画面）。承認の記録が §9 に無ければ着手しない。
+- 設計: `docs/handoff/schedule-gcal-clone/design.md` §2.7（G58〜G67）・§3.19・§3.20（色）（審査は §9 に記録）
+- PO の承認: 審査の後に PO へ聞く（新しい金型 EditorPage・古い金型 FullScreenDialog を消す・角の小さい塗りの欄・丸い保存・直すときも全画面・予定の画面の色を Google に）。承認の記録が §9 に無ければ着手しない。
 - 土台: ブランチ `release/schedule-gcal-editor-page`（origin/main a7fbffdfe から作った）。このブランチの上にそのまま積む（設計・カード・実装を 1 つの PR にする。便13 と同じ形）。
 - 対象 ADR: ADR-1074（この便で起こす）・ADR-144（金型）・ADR-067（トークン）・ADR-027（i18n）・ADR-073（見本帳）・ADR-1060（Meet）・ADR-1051（本番の画面点検 S13）
 - 行番号はすべて a7fbffdfe の値。違っていたら中身で場所を探し、見つからなければ止める。
 
 ## 0. 作業者への決まり
 
-- このカードに書いたこと以外はしない。迷ったら止めて `NEEDS_DECISION:` で返す。設計 §3.19 とこのカードが食い違ったら止める。
-- 色・寸法は var() だけ（px・色・rem の直書き禁止。トークンは §6 の 5 つだけ足す）。UI の文字は t() だけ（見本帳の中の見本の文字は除く）。
+- このカードに書いたこと以外はしない。迷ったら止めて `NEEDS_DECISION:` で返す。設計 §3.19・§3.20 とこのカードが食い違ったら止める。
+- 色・寸法は var() だけ（px・色・rem の直書き禁止。トークンは §6 に書いたものだけ足す: 寸法 4 つ・`--comp-input-filled-bg`・`--gcal-*` 13 個・`--schedule-today-text`・`--schedule-popover-bg`、と範囲の札 `.gcal-colors` 1 つ）。UI の文字は t() だけ（見本帳の中の見本の文字は除く）。
 - 確かめはクラウドの作業場所で回す: `cd frontend && npx vitest run src/components/ src/pages/schedule/`・`npx tsc --noEmit`・`npm run check:all`。全部 0 件の失敗になるまで直す。
 - 試験が落ちたら直してよいのは §9 に書いた試験だけ。ほかの試験が落ちたら止めて返す。
 - commit は `git add` に触ったファイルを名前で並べる（`git add -A`・`git add .` は使わない。消すファイルは `git rm`）。push は `git push origin release/schedule-gcal-editor-page`（force・rebase・amend は禁止）。
@@ -28,19 +28,23 @@
 | `frontend/src/components/Button.tsx` | 先頭の説明 `:9` と口の説明 `:28` の 2 行だけ（§2-1） |
 | `frontend/src/components/FormField.css` | 種類の見た目（§3） |
 | `frontend/src/components/TextField.stories.tsx`・`Select.stories.tsx`・`Textarea.stories.tsx` | 新しい種類の例を 1 つずつ（§3） |
-| `frontend/src/tokens.css`・`frontend/src/index.css` | トークン 5 つ（§6） |
+| `frontend/src/tokens.css`・`frontend/src/index.css` | トークンと範囲の札（§6） |
+| `frontend/src/components/CalendarView.css` | `:220`・`:364` の 2 行だけ（今日の丸の文字・§6-3） |
+| `frontend/src/components/gcalColorsUsage.test.ts`（新規） | §8 |
 | `frontend/src/pages/schedule/ScheduleDraftFields.tsx` | 1 項目ずつの部品に分ける（§4） |
 | `frontend/src/pages/schedule/ScheduleFullEditor.tsx` | EditorPage に載せ替え（§5） |
 | `frontend/src/pages/schedule/SchedulePageImpl.tsx` | 直すときも全画面・小窓の直す形を消す（§7） |
-| `frontend/src/pages/schedule.css` | `.schedule-full-editor` の 2 つの規則とその上の説明（`:528-537`）を §5 の規則に置き換える |
+| `frontend/src/pages/schedule.css` | `.schedule-full-editor` の 2 つの規則とその上の説明（`:528-537`）を §5 の規則に置き換える。色の 6 行（§6-3） |
 | `frontend/src/pages/schedule/SchedulePageImpl.test.tsx` | §9-2 |
 | `frontend/src/components/buttonShapeUsage.test.ts` | 使ってよい場所を 3 つ足す（§8） |
 | `frontend/src/components/editorVariantUsage.test.ts`（新規） | §8 |
 | `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` | キー 1 つ（§10） |
-| `docs/specs/design-system/design.md` | `:260`・`:276`・`:537`・`:1115`・`:811` に例外の 1 文ずつ（§8） |
+| `docs/specs/design-system/design.md` | `:260`・`:276`・`:537`・`:1115`・`:811`・`:31` に例外の 1 文ずつ（§8） |
 
 触らない（変えたら差し戻し）:
-- 金型 `Button`（説明の 2 行 `:9`・`:28` を除く）・`Checkbox`・`Toggle`・`Modal`・`CalendarView` と `frontend/src/hooks/useFocusTrap.ts`
+- 金型 `Button`（説明の 2 行 `:9`・`:28` を除く）・`Checkbox`・`Toggle`・`Modal`・`Popover`・`ContextMenu`・`CalendarView`（`CalendarView.css` の 2 行 `:220`・`:364` を除く）と `frontend/src/hooks/useFocusTrap.ts`
+- 予定の設定の画面（`.schedule-settings`・`frontend/src/pages/schedule/ScheduleSettingsPage.tsx`）には `gcal-colors` を付けない
+- 予定の箱の地と文字の色（持ち主の色・`--on-solid`）
 - 作る小窓の見た目と動き・詳しくの小窓の中身（見出しの 1 か所を除く）・「他 N 件」の小窓・仮の箱の動き
 - `saveEvent` の送る中身（`frontend/src/pages/schedule/SchedulePageImpl.tsx:988-1031`）
 - `tests/prod-check/`（本番の画面点検 S13 は変えない）
@@ -106,7 +110,7 @@ export function EditorPage({ open, onClose, ariaLabel, closeLabel, title, saveLa
   if (!open) return null;
 
   return ReactDOM.createPortal(
-    <div ref={dialogRef} className="comp-editor-page" role="dialog" aria-modal="true" aria-label={ariaLabel}>
+    <div ref={dialogRef} className="comp-editor-page gcal-colors" role="dialog" aria-modal="true" aria-label={ariaLabel}>
       <div className="comp-editor-page__header">
         <div className="comp-editor-page__rail">
           <Button variant="ghost" size="md" iconOnly aria-label={closeLabel} onClick={onClose}>
@@ -419,7 +423,9 @@ interface FieldProps {
 }
 ```
 
-## 6. トークン（G60・G61・G63）
+## 6. トークン（G60・G61・G63・G65〜G67）
+
+### 6-1. 寸法と塗りの欄
 
 - `frontend/src/tokens.css` の `--schedule-create-title-size`（`:415`）の次:
 ```css
@@ -428,8 +434,81 @@ interface FieldProps {
   --comp-editor-main-w:      39.75rem; /* 編集の画面の札の幅（636px・Google 実測） */
   --comp-editor-card-radius: 1.75rem;  /* 編集の画面の札の角（28px・Google 実測） */
 ```
-- `frontend/src/index.css` の明るい表示（`--link-active-bg` `:37` の次）に `--comp-input-filled-bg: var(--link-active-bg);  /* 編集の画面の塗りの欄の地（Google 実測 rgb(233,238,246) に最も近い既存の色・ADR-1074） */`、暗い表示（`:242` の次）に `--comp-input-filled-bg: var(--bg-subtle);  /* 暗い札 --bg-surface の上で見える地 */`。
+- `frontend/src/index.css` の明るい表示（`--link-active-bg` `:37` の次）と暗い表示（`:242` の次）の両方に `--comp-input-filled-bg: var(--gcal-surface-filled);  /* 編集の画面の塗りの欄の地（Google 実測 明るい rgb(233,238,246)・暗い rgb(40,42,44)・ADR-1074） */`。
+### 6-2. Google の色（設計 §3.20 作り方 1・3・4）
+
+- `frontend/src/index.css` の明るい表示（`--calendar-status-error-text` `:191` の次）:
+```css
+  /* 予定の画面だけで使う Google カレンダーの色（実測 schedule-gcal-clone recon §8.6・使う場所は .gcal-colors だけ・ADR-1074） */
+  --gcal-surface:                  #f8fafd;
+  --gcal-surface-lowest:           #ffffff;
+  --gcal-surface-container:        #f0f4f9;
+  --gcal-surface-filled:           #e9eef6;
+  --gcal-on-surface:               #1f1f1f;
+  --gcal-on-surface-variant:       #444746;
+  --gcal-outline-variant:          #c4c7c5;
+  --gcal-gridline:                 #dde3ea;
+  --gcal-primary:                  #0b57d0;
+  --gcal-on-primary:               #ffffff;
+  --gcal-secondary-container:      #c2e7ff;
+  --gcal-on-secondary-container:   #004a77;
+  --gcal-now:                      #db372d;
+```
+- 暗い表示（`--calendar-status-error-text` `:392` の次）に同じ 13 個を次の値で: `#1b1b1b`・`#131314`・`#1e1f20`・`#282a2c`・`#e3e3e3`・`#c4c7c5`・`#444746`・`#333537`・`#a8c7fa`・`#062e6f`・`#004a77`・`#c2e7ff`・`#f55e57`（上の並びと同じ順）。
+- `frontend/src/tokens.css` の `--schedule-create-popover-bg`（`:413`）の次:
+```css
+  --schedule-popover-bg:            var(--bg-surface); /* 詳しくの小窓の地（.gcal-colors の中で Google の色・ADR-1074） */
+  --schedule-today-text:            var(--on-solid);   /* 今日の丸の文字（.gcal-colors の中で Google の色・ADR-1074） */
+```
+- `frontend/src/tokens.css` の最後（`:root.force-dark` の `}` `:687` の後）:
+```css
+
+/* ---- 予定の画面だけ Google カレンダーの色にする範囲（ADR-1074・design §3.20） ----
+   付ける場所は SchedulePageImpl の根と金型 EditorPage の根だけ（gcalColorsUsage.test.ts が止める）。
+   :root で var() から作ったトークンは :root で値が決まるので、使うものはここで決め直す。 */
+.gcal-colors {
+  --bg-primary: var(--gcal-surface);
+  --bg-surface: var(--gcal-surface-lowest);
+  --bg-subtle: var(--gcal-surface-container);
+  --text-primary: var(--gcal-on-surface);
+  --text-secondary: var(--gcal-on-surface-variant);
+  --text-muted: var(--gcal-on-surface-variant);
+  --border: var(--gcal-outline-variant);
+  --accent: var(--gcal-primary);
+  --accent-hover: var(--gcal-primary);
+  --on-accent: var(--gcal-on-primary);
+  --link-active-bg: var(--gcal-secondary-container);
+  --comp-btn-primary-text: var(--gcal-on-primary);
+  --comp-btn-primary-hover-bg: var(--gcal-primary);
+  --comp-btn-tab-selected-text: var(--gcal-on-secondary-container);
+  --comp-btn-focus-color: var(--gcal-on-surface);
+  --icon-empty: var(--gcal-on-surface-variant);
+  --indicator: var(--gcal-primary);
+  --comp-badge-count-ring-color: var(--gcal-surface-lowest);
+  --schedule-today: var(--gcal-primary);
+  --schedule-today-text: var(--gcal-on-primary);
+  --schedule-gridline: var(--gcal-gridline);
+  --schedule-now-line: var(--gcal-now);
+  --schedule-create-popover-bg: var(--gcal-surface-container);
+  --schedule-popover-bg: var(--gcal-surface-container);
+}
+```
+- 上の 24 行のほかに足さない。`--bg-hover`・影・`--focus-ring-shadow`・失敗/成功の色・`--schedule-slot-hover`・`--calendar-google-blue*`・`--on-solid` は決め直さない。
+
+### 6-3. 色の行を直す
+
+| 場所 | 今 | 後 |
+|---|---|---|
+| `frontend/src/pages/schedule/SchedulePageImpl.tsx:1304` | `<div className="schedule-page">` | `<div className="schedule-page gcal-colors">` |
+| `frontend/src/pages/schedule.css:25` `.schedule-page {` の中 | （地なし） | `background: var(--bg-primary);` を 1 行足す |
+| `frontend/src/pages/schedule.css:351` `.schedule-popover` | `background: var(--bg-surface);` | `background: var(--schedule-popover-bg);` |
+| `frontend/src/pages/schedule.css:166`（`.schedule-mini-calendar__day--today`）・`:594`（`.schedule-list__num--today`）・`:1110`（`.gcal-day-header__num.today`） | `color: var(--on-solid);` | `color: var(--schedule-today-text);` |
+| `frontend/src/components/CalendarView.css:220`（daynum--today）・`:364`（monthnum--today） | `color: var(--on-solid);` | `color: var(--schedule-today-text);` |
+| 詳しくの小窓の Meet のリンク（今 `frontend/src/pages/schedule/SchedulePageImpl.tsx:291-292`）と `DraftMeetField` のリンク | `variant="secondary"` | `variant="primary"` |
+
 - PR 本文の「デザイントークン変更時」の点検を ✅ にする（`check-new-tokens.js`）。
+
+
 
 ## 7. 予定の画面（`frontend/src/pages/schedule/SchedulePageImpl.tsx`）
 
@@ -441,6 +520,9 @@ interface FieldProps {
 6. 近道の判定（`:1249-1250`）は `fullEditOpen` だけを見ている（a7fbffdfe で確かめた）ので変えない。直すときも `fullEditOpen` が真になるので近道は効かない。コメントの金型の名前だけ `EditorPage` に替える。
 
 ## 8. 守り手と決まりの文書
+
+- 新しい `frontend/src/components/gcalColorsUsage.test.ts`: `editorVariantUsage.test.ts` と同じ作り（`frontend/src` の .ts・.tsx・.css を全部読む）。(1) `gcal-colors` の文字が `pages/schedule/SchedulePageImpl.tsx`・`components/EditorPage.tsx`・`components/EditorPage.stories.tsx`・`components/EditorPage.test.tsx`・`components/gcalColorsUsage.test.ts`・`tokens.css` の外に 0 件。(2) `--gcal-` の文字が `index.css`・`tokens.css`・`components/gcalColorsUsage.test.ts` の外に 0 件。どちらも「今 1 件以上見つかる」ことも書く。
+- `docs/specs/design-system/design.md:31`（色の層の説明）の後に「例外: 予定の画面（SchedulePageImpl の根と金型 EditorPage）だけは範囲の札 `.gcal-colors` で Google カレンダーの色に置き換える（ADR-1074）。ほかで使うと `frontend/src/components/gcalColorsUsage.test.ts` が止める」を 1 文。
 
 - `frontend/src/components/buttonShapeUsage.test.ts` の `ALLOWED`（`:13-19`）に `"components/EditorPage.tsx"`・`"components/EditorPage.stories.tsx"`・`"components/EditorPage.test.tsx"` を足す。
 - 新しい `frontend/src/components/editorVariantUsage.test.ts`: `buttonShapeUsage.test.ts` と同じ作り（src の .tsx を全部読み、使ってよい場所の外で見つけたら落ちる）。探す形は `/["']editor-(?:filled|title)["']/`。使ってよい場所: `components/TextField.tsx`・`components/Select.tsx`・`components/Textarea.tsx`・`components/TextField.stories.tsx`・`components/Select.stories.tsx`・`components/Textarea.stories.tsx`・`components/EditorPage.tsx`（説明の文に種類の名前が出る）・`components/EditorPage.stories.tsx`・`components/EditorPage.test.tsx`・`pages/schedule/ScheduleDraftFields.tsx`・`pages/schedule/ScheduleFullEditor.tsx`・`pages/schedule/SchedulePageImpl.test.tsx`・`pages/design-preview/`。試験の中に「今 1 件以上見つかる」ことも書く（探し方が壊れて 0 件で通るのを防ぐ）。
@@ -464,6 +546,7 @@ interface FieldProps {
   - EP3 直すの保存で PATCH が `/calendar/events/<数字>` へ 1 回・成功で dialog が閉じる。失敗（500）では dialog が開いたままで `role="alert"` が dialog の中に在る。
   - EP4 札の中の並び: Meet（出るとき）→場所→種類→社員にも見せる→説明（DOM の順）。
   - EP5 編集画面の終日は `role="checkbox"`（名前「終日」）で、`role="switch"`（名前「終日」）が 0 個。作る小窓では今どおり switch。
+  - EP6 予定の画面の根（`.schedule-page`）と編集画面の dialog に class `gcal-colors` が在る。
 
 ## 10. 文言（ADR-027）
 
@@ -471,5 +554,5 @@ interface FieldProps {
 
 ## 11. 終わりの確かめと返し方
 
-- §0 の 3 つの確かめが 0 件の失敗。`git grep -n FullScreenDialog -- frontend` が 0 件。`git diff --stat origin/main...HEAD` が §1 の「触る」の中だけ。
+- §0 の 3 つの確かめが 0 件の失敗。`git grep -n FullScreenDialog -- frontend` が 0 件。`git grep -n gcal-colors -- frontend/src` が §6・§8 の場所だけ。`git diff --stat origin/main...HEAD` が §1 の「触る」の中だけ。
 - 返す: `DONE` と commit の sha・確かめの生出力の置き場所、または `BLOCKED:`／`NEEDS_DECISION:` と理由。

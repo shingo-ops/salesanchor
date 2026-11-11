@@ -142,8 +142,11 @@ PO 2026-11-11 の言葉: 「予定の詳細画面だけどGoogleカレンダー�
 | G60 | 中身が左に寄る。× は左上（左端 x32±4・真ん中 x52±4・Google 実測 x32 幅 40）、題名の欄は x80±4 から幅 594±8・24px、保存はその右（左端 x706±8）。日時の段は題名の下（1 段目の上端 y92±8）で x80±4 から、始まりの日・始まりの時刻・「〜」・終わりの時刻・終わりの日の 5 つが同じ 1 段に並ぶ（5 つの上端の差が 4 以内）。白い札は x16±4・幅 636±8・角 28px で、札の頭に「予定の詳細」。札の中の絵の真ん中は x48±4・欄の左端は x80±4・場所の欄の幅 556±8 | 本番の窓 1279×1448 で `getBoundingClientRect` を読み、Google の実測（recon §8.1）と並べた表を残す。目で並べた写しも残す | R14-1・R14-3 |
 | G61 | 入力欄・選ぶ欄は Google と同じ形: 高さ 40px・角 4px・枠なし・塗りの地・左右余白 16px・14px 前後の文字（日時 4 つ・種類・場所・説明）。題名の欄は枠なしで下線だけ。欄の上の「開始日時」などの文字は出さず、読み上げの名前（aria-label）で持つ。終日は切り替えではなくチェック欄（金型 Checkbox） | 本番で `getComputedStyle` を読む: 高さ 40・`border-radius` 4px・`border-top-width` 0・`background-color` が新しいトークン `--comp-input-filled-bg` の値・`padding-left` 16px。`role="switch"` で名前が「終日」のものが 0 個・`role="checkbox"` で名前が「終日」のものが 1 個 | R14-2・R14-3 |
 | G62 | 並び: 日時の段（始まりの日・始まりの時刻・〜・終わりの時刻・終わりの日。終日なら時刻が消える）→終日→札（予定の詳細）の中に Meet・場所・種類・社員にも見せる・説明。項目は今から 1 つも減らない（Meet はつないだ本人だけ・社員にも見せるは変えてよい人だけ、今と同じ） | 単体の試験で順番を DOM の並びで確かめる。本番で目で見る | R14-1 |
-| G63 | 暗い表示でも同じ並びで、色はトークンだけ。スマホの幅（390）でも横にはみ出さない。英語の画面でも文字が t() から出る | 本番で暗い表示に切り替えて地・札・塗りの欄の色がトークンの暗い値と一致。窓 390×844 で `document.documentElement.scrollWidth <= 390`。CI の「Lint & Dark Mode Check」と i18n の検査が緑 | R14-3 |
+| G63 | 暗い表示でも同じ並びで、色はトークンだけ。スマホの幅（390）でも横にはみ出さない。英語の画面でも文字が t() から出る | 暗い表示の色は G66 で測る。窓 390×844 で `document.documentElement.scrollWidth <= 390`。CI の「Lint & Dark Mode Check」と i18n の検査が緑 | R14-3 |
 | G64 | 新しい金型（編集の画面の入れ物 `EditorPage`）に見本帳の例と単体の試験が在り、使わなくなる古い金型 `FullScreenDialog` は消える。塗りの欄・丸い保存は決めた場所の外で使うと CI の試験が止める。本番の画面点検 S13 は変えずに合格のまま | CI の「UI governance gate」「Lint & Dark Mode Check」が緑。`git grep FullScreenDialog -- frontend` が 0 件。新しい守り手の試験が緑。合流の後の本番の画面点検で S13 が合格 | R14-2・R14-5 |
+| G65 | 予定の画面すべて（ページ・カレンダーの表・作る小窓・詳しくの小窓・編集画面）の色が、明るい表示で Google の実測（recon §8.6）と同じ。PO 2026-11-11「予定の色だけどGoogleと色を併せて」・範囲「予定の画面すべて」 | 本番の窓 1279×1448・明るい表示で `getComputedStyle` を読み、次の値と一致（rgb の各数の差 2 以内）: `.schedule-page` の地 rgb(248,250,253)／`.schedule-main__surface` の地 rgb(255,255,255)／`.comp-calendar` の `--fc-border-color` が #dde3ea／日の数字の文字 rgb(31,31,31)／今日の数字の丸 rgb(11,87,208)・文字 rgb(255,255,255)／左の小さい暦の今日 rgb(11,87,208)／今の時刻の丸 rgb(219,55,45)／作る小窓と詳しくの小窓の地 rgb(240,244,249)／作る小窓の保存 地 rgb(11,87,208)・文字白／編集画面の地 rgb(248,250,253)・札 白・塗りの欄 rgb(233,238,246)・文字 rgb(31,31,31)・保存 地 rgb(11,87,208)・文字白。保存は押さない | R14-6 |
+| G66 | 同じ点が暗い表示で Google の暗い実測（recon §8.6 の暗い表示）と同じ | 本番で JS で `html` に `force-dark` を足して（設定は保存しない）G65 と同じ点を読む: ページ rgb(27,27,27)／表の札 rgb(19,19,20)／線 #333537／日の数字 rgb(227,227,227)／今日の丸 rgb(168,199,250)・文字 rgb(6,46,111)／今の時刻の丸 rgb(245,94,87)／小窓の地 rgb(30,31,32)／保存 地 rgb(168,199,250)・文字 rgb(6,46,111)／編集画面の地 rgb(27,27,27)・札 rgb(19,19,20)・塗りの欄 rgb(40,42,44)・文字 rgb(227,227,227) | R14-6 |
+| G67 | 予定の画面の外は色が変わらない。予定の箱は持ち主の色のまま・文字は白のまま | 本番で 予定の設定の画面・取引先の一覧の画面の主ボタンの地が rgb(30,58,138)（今と同じ）。予定の箱の地がサーバーの持ち主の色（例 #1a73e8）・文字 rgb(255,255,255)。新しい守り手の試験 `frontend/src/components/gcalColorsUsage.test.ts` が緑 | R14-6・R14-7 |
 
 ## 3. 作り方（How）
 
@@ -794,7 +797,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
    - TextFieldControl に `editor-filled` と `editor-title`、SelectControl と TextareaControl に `editor-filled`。
    - `editor-filled`（`frontend/src/components/FormField.css`）: `min-height: var(--space-10)`・`border: none`・`border-radius: var(--radius-sm)`・`background-color: var(--comp-input-filled-bg)`・`padding: 0 var(--space-4)`・`font-size: var(--font-sm)`。押した時は下に 2px の `--accent` の線（`box-shadow: inset 0 -2px 0 var(--accent)`）。Textarea は上下にも `--space-2`。
    - `editor-title`: schedule-title と同じ形で文字だけ `--font-2xl`。
-   - 新しいトークン `--comp-input-filled-bg` は明るい表示 `var(--link-active-bg)`（#ebeff8・Google の rgb(233,238,246) に最も近い既存の色）、暗い表示 `var(--bg-subtle)`（#243046・暗い札 #1e293b の上で見える）。`frontend/src/index.css` の明るい・暗いの両方に置く（`check:dark-parity`）。
+   - 新しいトークン `--comp-input-filled-bg` の値は §3.20 作り方 2（`var(--gcal-surface-filled)`・明るい #e9eef6／暗い #282a2c）。【2026-11-11 色の追加で置き換え。元の案: 明るい表示 `var(--link-active-bg)`、暗い表示 `var(--bg-subtle)`（#243046・暗い札 #1e293b の上で見える）】。`frontend/src/index.css` の明るい・暗いの両方に置く（`check:dark-parity`）。
 3. 項目の部品（`frontend/src/pages/schedule/ScheduleDraftFields.tsx`）を 1 項目ずつの部品に分ける。
    - `DraftDateFields`・`DraftCategoryField`・`DraftMeetField`・`DraftShareField`・`DraftLocationField`・`DraftDescriptionField` を同じファイルに置き、それぞれ口 `appearance: "popover" | "page"` を持つ。値を変える式（`shiftDraftStart`・種類で社員にも見せるを変える式）は各部品の中の 1 か所のまま。
    - `ScheduleDraftFields`（作る小窓が使う）は今と同じ順で `appearance="popover"` の部品を並べるだけにする（作る小窓の見た目と動きは変えない）。
@@ -821,7 +824,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 選ばなかった案:
 - FullScreenDialog に口（layout）を足す: PO が「別途金型を作って」と言った。今の真ん中寄せの形を使う画面はほかに無く、2 つの形を 1 つの金型に持たせる理由が無い。
 - 今の丸い欄（schedule）の角だけ変える: 作る小窓も一緒に変わる（作る小窓の欄は Google でも丸くない別の形で、PO は編集画面の話をしている）。
-- 欄の地を Google の色 rgb(233,238,246) で新しく足す: 既存の `--link-active-bg`（#ebeff8）と差が 2〜3 で、色を増やさない（ADR-067）。
+- （2026-11-11 色の追加で取り下げ）欄の地を既存の `--link-active-bg` で代える案: PO が Google と同じ色を求めたので、§3.20 の `--gcal-surface-filled` を使う。
 - 保存を今の角 6px のまま: PO は「真似て」と言った。丸い形は金型 Button に既に在り、使う場所を金型 1 つ足すだけで済む。
 - 右の列（ゲスト）・繰り返し・通知も作る: 裏側に機能が無い。今回は見た目と並びだけ。
 
@@ -833,6 +836,71 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - 消す金型を誰かが使い始めている: 合流の前に `git grep FullScreenDialog` を取り直す。
 
 戻し方: 便14 の PR を revert する（frontend と書類だけ・DB・移行・設定は変えない）。
+
+### 3.20 便14: 予定の画面の色を Google に合わせる（G65〜G67・2026-11-11 追加）
+
+PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Googleのは移植は心理的な意識をした青を使った配色になっていたはず」。範囲: 「予定の画面すべて」（編集画面・カレンダーの表・予定の箱・作る小窓・詳しくの小窓。ほかの画面は今のまま）。
+
+アプリの行番号は origin/main a7fbffdfe（2026-11-11 に読んだ）。
+
+確かめた事実:
+- R14-6（Google の色）: recon §8.6 に明るい・暗いの両方を測った。青を選んだ心理の理由は Google の公式の説明が見つからず **未確認**。根拠は「PO が Google と同じ色を求めた」だけにする。
+- R14-7（予定の箱）: 箱の地は持ち主（社員）の色で、正本はサーバー（`backend/app/routers/calendar.py:50` `_DEFAULT_OWNER_COLOR = "#1a73e8"`）。文字は白（`--on-solid` #fff・`frontend/src/tokens.css:558`）。`--on-solid` を暗い文字に変えると #1a73e8 の上で読みにくくなる（明るさの比 約 2.7）。→ 箱の色と文字は変えない。
+- R14-8（範囲の作り）: 予定の画面の根は `frontend/src/pages/schedule/SchedulePageImpl.tsx:1304` の `<div className="schedule-page">`。作る小窓（`:306`）・日の一覧の小窓（`:633`）はこの中に描かれる。表示の選び（`:1348` 金型 Popover）・近道の表（`:754` 金型 Modal）・右クリックの表（ContextMenu）・編集画面（`:1587`）は body の直下に出る（portal）。
+- R14-9（CSS の決まり）: `:root` で `var()` を使って決めたトークンは `:root` で値が決まり、子の要素で元のトークンを変えても変わらない。予定の画面で使う、変える元のトークンから作られたトークンを機械で全部探した（2026-11-11 に Python の短い式で、`frontend/src/index.css`・`frontend/src/tokens.css` の `:root` の定義をたどり、`frontend/src/pages/schedule.css` と予定が読み込む金型の CSS（CalendarView・FormField・Button・Checkbox・CheckboxControl・Badge・EmptyState・ListRow・PageLayout・Toggle）の `var()` と突き合わせた）: `--schedule-today`（`frontend/src/tokens.css:399`）・`--schedule-gridline`（`:400`・暗い表示は `:675` の #2d3b52）・`--schedule-create-popover-bg`（`:413`）・`--comp-btn-primary-text`・`--comp-btn-primary-hover-bg`・`--comp-btn-tab-selected-text`・`--comp-btn-focus-color`（`frontend/src/index.css:12-15`・暗い `:221-224`）・`--icon-empty`（`frontend/src/components/EmptyState.css:32`）・`--indicator`（`frontend/src/components/ListRow.css:64`）・`--comp-badge-count-ring-color`（`frontend/src/components/Badge.css:64`）。これらは範囲の札の中でも決め直す。`frontend/src/pages/schedule.css:3-17` の `.schedule-page` の中の決め直し（`--schedule-rail-bg` など）は同じ要素で決まるので、範囲の札の値を拾う。今の時刻の線 `--schedule-now-line` は色の直書き（`frontend/src/tokens.css:401` #ea4335）。
+
+作り方:
+1. Google の色のトークン 13 個を `frontend/src/index.css` に足す。明るい表示は `:root` の `--calendar-*` の後（`:191` の後）、暗い表示は `:root.force-dark` の `--calendar-*` の後（`:392` の後）。両方に置く（`check:dark-parity`）。名前は `--gcal-` で始める（色のトークンの見本帳の検査 `check-color-token-sync` は bg/text/accent/border/success/warning/danger/info で始まる名前だけを見るので、見本帳には足さない）。値は色の直書きで、予定専用の既存の `--calendar-*`（`frontend/src/index.css:184-191`・暗い `:385-392`）と同じ形（決まりの文書の層0〜1 の理想 `docs/specs/design-system/design.md:30-31` とは違うが、今の予定の色のトークンと揃える）。
+
+| トークン | 明るい | 暗い | Google のどこ（recon §8.6） |
+|---|---|---|---|
+| `--gcal-surface` | #f8fafd | #1b1b1b | ページの地・編集画面の地 |
+| `--gcal-surface-lowest` | #ffffff | #131314 | 表の札・編集画面の札 |
+| `--gcal-surface-container` | #f0f4f9 | #1e1f20 | 作る小窓・詳しくの小窓の地 |
+| `--gcal-surface-filled` | #e9eef6 | #282a2c | 塗りの欄 |
+| `--gcal-on-surface` | #1f1f1f | #e3e3e3 | 文字 |
+| `--gcal-on-surface-variant` | #444746 | #c4c7c5 | 絵・補足・曜日・時刻 |
+| `--gcal-outline-variant` | #c4c7c5 | #444746 | タブの下の線 |
+| `--gcal-gridline` | #dde3ea | #333537 | 日の列の線 |
+| `--gcal-primary` | #0b57d0 | #a8c7fa | 保存・今日の丸・リンク・押した欄の線 |
+| `--gcal-on-primary` | #ffffff | #062e6f | 保存と今日の丸の文字 |
+| `--gcal-secondary-container` | #c2e7ff | #004a77 | 選ばれた表示切替・種類の地 |
+| `--gcal-on-secondary-container` | #004a77 | #c2e7ff | 選ばれた種類の文字 |
+| `--gcal-now` | #db372d | #f55e57 | 今の時刻の線と丸 |
+
+2. 塗りの欄のトークン `--comp-input-filled-bg`（§3.19 作り方 2）は、明るい・暗いとも `var(--gcal-surface-filled)` にする（§3.19 の `--link-active-bg`／`--bg-subtle` の案を置き換える）。使うのは編集画面の中だけなので、ほかの画面は変わらない。
+3. `frontend/src/tokens.css` の `:root` に 2 つ足す（今の値と同じなので、範囲の外は変わらない）: `--schedule-today-text: var(--on-solid);`（今日の丸の文字）・`--schedule-popover-bg: var(--bg-surface);`（詳しくの小窓の地）。
+4. 範囲の札 `.gcal-colors` を `frontend/src/tokens.css` の最後（`:687` の後）に 1 つ置く。中身（すべて var()）:
+   - 地: `--bg-primary: var(--gcal-surface)`・`--bg-surface: var(--gcal-surface-lowest)`・`--bg-subtle: var(--gcal-surface-container)`。
+   - 文字と線: `--text-primary: var(--gcal-on-surface)`・`--text-secondary: var(--gcal-on-surface-variant)`・`--text-muted: var(--gcal-on-surface-variant)`・`--border: var(--gcal-outline-variant)`。
+   - 青: `--accent: var(--gcal-primary)`・`--accent-hover: var(--gcal-primary)`・`--on-accent: var(--gcal-on-primary)`・`--link-active-bg: var(--gcal-secondary-container)`。
+   - ボタンほか（R14-9 で見つけた作られたトークン）: `--comp-btn-primary-text: var(--gcal-on-primary)`・`--comp-btn-primary-hover-bg: var(--gcal-primary)`・`--comp-btn-tab-selected-text: var(--gcal-on-secondary-container)`・`--comp-btn-focus-color: var(--gcal-on-surface)`・`--icon-empty: var(--gcal-on-surface-variant)`・`--indicator: var(--gcal-primary)`・`--comp-badge-count-ring-color: var(--gcal-surface-lowest)`。
+   - 予定: `--schedule-today: var(--gcal-primary)`・`--schedule-today-text: var(--gcal-on-primary)`・`--schedule-gridline: var(--gcal-gridline)`・`--schedule-now-line: var(--gcal-now)`・`--schedule-create-popover-bg: var(--gcal-surface-container)`・`--schedule-popover-bg: var(--gcal-surface-container)`。
+   - 変えない: `--bg-hover`・影・押した時の輪（`--focus-ring-shadow`）・失敗や成功の色・`--schedule-slot-hover`・`--calendar-google-blue*`・`--on-solid`・予定の箱の色と文字（Google の値を測っていない、または R14-7）。
+5. 札を付ける場所は 2 つだけ: `frontend/src/pages/schedule/SchedulePageImpl.tsx:1304` を `className="schedule-page gcal-colors"` に。金型 `EditorPage` の根（portal の中の dialog）にいつも `gcal-colors` を付ける（編集画面は予定でしか使わない・ADR-1074）。
+6. CSS の行を直す:
+   - `frontend/src/pages/schedule.css:25` の `.schedule-page` に `background: var(--bg-primary);` を足す（今は `.app-content` が透明で地が無い・`frontend/src/styles/topbar.css:97`）。
+   - `frontend/src/pages/schedule.css:351`（`.schedule-popover` の地）を `var(--schedule-popover-bg)` に。
+   - 今日の丸の文字 5 か所を `var(--on-solid)` から `var(--schedule-today-text)` に: `frontend/src/pages/schedule.css:166`（左の小さい暦）・`:594`（一覧）・`:1110`（日の見出し）・`frontend/src/components/CalendarView.css:220`（日・週の数字）・`:364`（月の数字）。
+7. 「Google Meet で参加」のリンク（`DraftMeetField` の中・§3.19 作り方 3）は金型 ButtonLink の `variant="primary"`（Google は青い地・白い字。今は secondary・`frontend/src/pages/schedule/SchedulePageImpl.tsx:290-301`）。
+8. 守り手（CI の試験）`frontend/src/components/gcalColorsUsage.test.ts`（新規）: `gcal-colors` の文字は `pages/schedule/SchedulePageImpl.tsx`・`components/EditorPage.*`・`tokens.css` の外の `frontend/src` に 0 件。`--gcal-` は `index.css`・`tokens.css` の外に 0 件。どちらも「探して 1 件以上見つかった」ことも確かめる（探し方が壊れて 0 件になるのを防ぐ）。
+9. 決まりの文書 `docs/specs/design-system/design.md:30-31`（色の層の説明）の後に 1 文: 「予定の画面だけは範囲の札 `.gcal-colors` で Google の色に置き換える（ADR-1074）。ほかの画面で使わない（`gcalColorsUsage.test.ts`）」。
+
+触らない: ほかの画面・予定の設定の画面（`.schedule-settings` には札を付けない）・body の直下に出る金型（表示の選び Popover・近道の表 Modal・右クリックの表 ContextMenu。ほかの画面と共通の金型で、範囲の外に描かれる）・予定の箱の色・裏側・DB。
+
+選ばなかった案:
+- アプリ全体の `--accent` を Google の青にする: PO の範囲は「予定の画面すべて」で、ほかの画面は今のまま。
+- 予定の CSS の `var(--text-primary)` などを 1 行ずつ `var(--gcal-*)` に書き換える: 予定の CSS と金型の CSS の色の行は 149 行（2026-11-11 に数えた）。金型（Button・TextField など）の CSS も予定のためだけに書き換えることになり、ほかの画面との共有が崩れる。範囲の札で元のトークンを置き換えるほうが、触る行が少なく、戻すのも札を外すだけ。
+- 予定の箱も Google のように暗い表示で色を変える: 色の正本はサーバーで、Google の変え方の決まりを測っていない（R14-7）。
+- body の直下に出る金型にも札を付ける: ほかの画面と共通の金型で、予定から開いたときだけ色を変える口が要る。今回は見送る（未対応として報告する）。
+
+心配と対処:
+- 札の中で作られたトークンを決め直し忘れ、古い色が残る: R14-9 の機械の洗い出しで全部挙げた。G65・G66 で本番の値を読んで確かめる。
+- 札がほかの画面に広がる: 守り手の試験（作り方 8）で止める。G67 で外の画面の主ボタンの色が rgb(30,58,138) のままか読む。
+- 暗い表示の保存の文字（#062e6f）が読めない: 地 #a8c7fa との明るさの比は 7 以上（Google と同じ組み合わせ）。
+- 押した時の輪（`--focus-ring-shadow`）は古い青のまま: Google の値を測っていない。未対応として報告する。
+
+戻し方: 便14 の PR を revert する。色だけ戻すときは 2 か所の `gcal-colors` を外す。
 
 ## 4. 便の分け方（作る順）
 
@@ -884,7 +952,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - 使う事例: Google カレンダー本体（2026-11-06 に同じ窓で並べて観測・recon §3）。比べたのは画面の形と手の動きだけで、速さや使われ方の数字は持っていない。
 - 便12 の事例: Google カレンダーの作る小窓と、開いたまま仮の箱を動かす動き（2026-11-09 に PO のログインの画面で測った・§3.17 R12-1・R12-3・R12-5。保存はしていない）。Google の絵・名前・色は使わず、並びと手の動きだけ合わせる。
 - 便13 の事例: Google カレンダーの Meet の行と「その他のオプション」の全画面の編集（PO の言葉 2026-11-10）。寸法は未測定で、受入れで並べて比べる。Google の絵・名前・色は使わない。
-- 便14 の事例: Google カレンダーの予定の編集画面（2026-11-11 に PO のログインの画面で窓 1279×1448 で測った・recon §8.1。保存はしていない）。位置・大きさ・角・地の色の実測を成功条件 G60・G61 に使う。Google の絵・名前・色（青）は使わず、色はアプリのトークン（ADR-067）で置き換える。Google の数字は「同じ形になったか」の比べる相手で、使われ方の効果の証拠ではない。
+- 便14 の事例: Google カレンダーの予定の編集画面（2026-11-11 に PO のログインの画面で窓 1279×1448 で測った・recon §8.1。保存はしていない）。位置・大きさ・角・地の色の実測を成功条件 G60・G61 に使う。Google の絵・名前は使わない。色は PO の言葉（2026-11-11「Googleと色を併せて」）で、予定の画面だけ Google の実測の色（recon §8.6）にする（§3.20）。青の心理の効果は Google の公式の説明が無く未確認で、根拠に使わない。Google の数字は「同じ形・同じ色になったか」の比べる相手で、使われ方の効果の証拠ではない。
 - 他社の導入事例の数字は使わない。理由: 今回の成功条件はすべて「Google と同じ画面・同じ操作になったか」で、本物を横に置いて直接比べられるため。
 
 ## 8. 維持の仕組み
