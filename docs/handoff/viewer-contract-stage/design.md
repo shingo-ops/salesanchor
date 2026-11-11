@@ -91,7 +91,7 @@ mode: handoff
 - 履歴の操作に start_contract・form_sent・invoice_issued・confirm_payment を足す（migrations/20261016_150000_add_viewer_accounts.sql:91 の決まりを変更）。
 - 切り替えの便で、お試しから本契約へ直接移す道を、画面と API とコマンド（backend/app/viewer_admin_cli.py:13）から外す。
 - 新しい部品は ViewerAccountsPage.tsx に足さず、別ファイルにする（922 行で上限が近い）。
-- 三点ボタンは金型 `MoreMenuButton`（NAV_ICONS.more と ContextMenu を組む）を登録して使う。金型の新設は PO が許可した（PO 2026-11-12「1」。ideal-state 52。ほかの画面でも使える共通の型にする）。ADR-144 §4 に沿って、frontend/src/components/ に本体 `MoreMenuButton.tsx`・見た目 `MoreMenuButton.css`（トークンの値だけ）・見本集 `MoreMenuButton.stories.tsx` の3つをそろえる。ContextMenu は画面上の点（x, y）で出す作りなので、ボタンの位置から x, y を出す決め方（例: ボタンの右下）と置き方は実装カードで決める（審査 2026-11-12 の低2件）。
+- 三点ボタンは金型 `MoreMenuButton`（NAV_ICONS.more と ContextMenu を組む）を登録して使う。金型の新設は PO が許可した（PO 2026-11-12「1」。ideal-state 52。ほかの画面でも使える共通の型にする）。ADR-144 §4 に沿って、frontend/src/components/ に本体 MoreMenuButton.tsx・見た目 MoreMenuButton.css（トークンの値だけ）・見本集 MoreMenuButton.stories.tsx の3つ（まだ無いファイル）をそろえる。ContextMenu は画面上の点（x, y）で出す作りなので、ボタンの位置から x, y を出す決め方（例: ボタンの右下）と置き方は実装カードで決める（審査 2026-11-12 の低2件）。
 
 ### 3-4. 表（書類に載せる会社情報と振込先の4表は会社ごとのスキーマ、他は public・金額は円の整数）
 
