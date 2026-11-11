@@ -26,6 +26,7 @@ GitHub の一時 VM での確かめ（run 42981257700・2026-11-11・b2805f8e3�
 - どれかが違えば停止して NEEDS_DECISION。
 
 ## 1. secretary-codex/Dockerfile
+この 1. は **Edit ツールで** 行う（Bash の文に足す行を書かない。クラウドの見張りは Bash の文に `rm -rf` の字があると止める。1 回目の実行 cse_01W47tdgeNaRU8vwKpivXYo9 で観測）。2〜4 も Edit ツールで行ってよい。Edit ツールが止められたら言い換えず BLOCKED:。
 `FROM node:22-bookworm-slim` の行の直後（`RUN npm install -g ...` の前）に次の 2 行を足す:
 
 ```
