@@ -315,7 +315,7 @@ async def on_code_submit(interaction: Any, db_factory: Any, config: ViewerDiscor
                 ).first()
                 if (
                     v is None
-                    or v[2] not in ("pending", "trial", "active")
+                    or v[2] not in ("pending", "trial", "contracting", "active")
                     or v[4] is not None  # もう Discord と結び付いている
                 ):
                     await session.rollback()

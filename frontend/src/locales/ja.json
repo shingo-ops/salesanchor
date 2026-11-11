@@ -2963,6 +2963,7 @@
       "statusPending": "申込中",
       "statusVerified": "確認済み",
       "statusTrial": "お試し",
+      "statusContracting": "契約手続き中",
       "statusActive": "本契約",
       "statusSuspended": "停止中",
       "flagManyIps": "IP多数",

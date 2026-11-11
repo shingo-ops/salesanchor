@@ -77,6 +77,7 @@ type ExtendMode = "days" | "date";
 const STATUS_VARIANT: Record<string, BadgeVariant> = {
   active: "success",
   trial: "info",
+  contracting: "warning",
   suspended: "danger",
   pending: "neutral",
   verified: "neutral",
@@ -86,12 +87,13 @@ const STATUS_KEY: Record<string, string> = {
   pending: "statusPending",
   verified: "statusVerified",
   trial: "statusTrial",
+  contracting: "statusContracting",
   active: "statusActive",
   suspended: "statusSuspended",
 };
 
 /** 左メニューに出す状態（この順）。verified・suspended は出さない（「すべて」には含まれる） */
-const MENU_STATUSES = ["pending", "trial", "active"] as const;
+const MENU_STATUSES = ["pending", "trial", "contracting", "active"] as const;
 type MenuKey = UserMenuStatus;
 
 interface ReissueResult {
@@ -448,7 +450,7 @@ export default function ViewerAccountsPage() {
               </Button>
             </>
           )}
-          {["pending", "trial", "active"].includes(row.status) && !row.discord_channel_url && (
+          {["pending", "trial", "contracting", "active"].includes(row.status) && !row.discord_channel_url && (
             <Button size="sm" variant="secondary" onClick={() => { setError(""); setReissueTarget(row); }}>
               {t(`${f}.reissue`)}
             </Button>
@@ -475,6 +477,7 @@ export default function ViewerAccountsPage() {
     all: countOf("all"),
     pending: countOf("pending"),
     trial: countOf("trial"),
+    contracting: countOf("contracting"),
     active: countOf("active"),
   };
   const handleMenuChange = (key: MenuKey) => {

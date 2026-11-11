@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { SubMenu, type SubMenuGroup } from "../../../components/SubMenu";
 
-export const USER_MENU_STATUSES = ["pending", "trial", "active"] as const;
+export const USER_MENU_STATUSES = ["pending", "trial", "contracting", "active"] as const;
 export type UserMenuStatus = "all" | (typeof USER_MENU_STATUSES)[number];
 
 interface Props {
