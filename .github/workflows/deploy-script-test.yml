@@ -53,5 +53,8 @@ jobs:
       - name: Run dockerd_state tests
         run: python3 scripts/tests/test_dockerd_state.py
 
+      - name: Install PyYAML (pull/prune image tests)
+        run: pip install pyyaml --quiet
+
       - name: Run pull/prune image tests (build-on-github 便2)
         run: bash scripts/tests/test-deploy-pull-prune.sh
