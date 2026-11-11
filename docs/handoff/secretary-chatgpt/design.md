@@ -136,8 +136,10 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
   - run 42970885998（6d1f98e30）: V1 合格。ログインなしの codex exec が返らず、台本に時間の上限が無かったため 60 分で取り消し → card-3d で `timeout 150` を付けた。本番の道は auth.json が無ければ codex を呼ばず 503（§5-1）、ログイン後は 80 秒の上限があるので変わらない。
   - run 42981257700（b2805f8e3）: V1・V3（目印0件・2回とも）・V4（許す一覧の外0件）・V5（最大 54.6MiB）合格。ただし次の2つを見つけた。
     - codex の標準エラーに `invalid peer certificate: UnknownIssuer`（wss://api.openai.com/v1/responses）。slim の土台に OS の公開の証明書の束（ca-certificates）が無く、codex（Rust）は OS の置き場から根の証明書を読む（Context7 openai/codex）。node の probe は node 内蔵の束で 200 だったので見逃した。→ card-3e で Dockerfile に ca-certificates を入れ、台本で UnknownIssuer を NG にする。
-    - 実行のたびに CODEX_HOME に `shell_snapshots/<id>.sh`（約1.7KB・目印は無し）ができた。鍵のボリュームに auth.json 以外を貯めないため、card-3e で止め設定に `features.shell_snapshot=false` を足し（止め設定は 18 組→19 組）、台本で shell_snapshots ができたら NG にする。
+    - 実行のたびに CODEX_HOME に `shell_snapshots/<id>.sh`（約1.7KB・目印は無し）ができた。呼ぶたびに1つずつ増えるファイルを鍵のボリュームに貯めないため、card-3e で止め設定に `features.shell_snapshot=false` を足し（止め設定は 18 組→19 組）、台本で shell_snapshots ができたら NG にする。
   - card-3e の後の再確かめで、UnknownIssuer 0 件・shell_snapshots 無し・V1〜V5 合格を見て次へ進む。違えば止めて設計を直す。
+  - run 42987879891（c55c54868・card-3e の後）: 合格。`ca-certificates ok`・UnknownIssuer 0 件（ログインなしの標準エラーは `HTTP error: 401 Unauthorized` 7 行・exec rc=1 で返った。150 秒の時間切れには届かなかった）・shell_snapshots 無し（2回とも）・V1（node:node 700）・V3（目印0件・2回とも）・V4（許す一覧の外0件）・V5（最大 55.7MiB）。server.mjs の道は偽の鍵で 502 auth_failed（13.52 秒）。生の記録は `/tmp/CC報告ファイル/secretary-mem/s3/vm_run3.log`。
+  - CODEX_HOME には codex が自分で作る状態のファイル（`*.sqlite`・`*-wal`・`*-shm`・`skills/.system/`・`tmp/arg0/`・`installation_id`。合計 約2.6MB）も残る。run 42981257700 と run 42987879891 の両方で、1回目と2回目の後の一覧と大きさが同じ（呼ぶたびに増えない）・目印0件。auth.json 以外を一切置かない形にはしていない（`--ephemeral` でも codex が作る。消す仕組みは足さない）。
 
 ### 5-3 backend
 - `backend/app/routers/assistant.py` は `:139` の commit より前に `get_ai_assignment("secretary_intent")` を読む（後に読むと新しい取引が始まり、AI を待つ最大85秒〔`:51`〕の間 DB の取引を開いたままにする。`:138` の決まりに反する）。読み取りが例外になった時（行が無い・DB の失敗）は、`_log(user_id, tenant_id, started, "not_ready", None)` を出して `raise _fail(503, "not_ready")`（`_fail` は例外を返す関数、`backend/app/routers/assistant.py:60-63`）。台帳の行は書かない（provider と model が分からず、sdk と model を埋められないため。審査6回目 P4）。読んだ担当で、provider が codex なら secretary-codex、claude なら secretary-agent に送る。送る body に model を足す。容器は model を受け取って -m（claude は --model）に渡す。容器の側で選択肢の一覧は持たない（正本は ai_job_choices）。
