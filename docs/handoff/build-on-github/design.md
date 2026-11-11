@@ -223,6 +223,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - 控えの形は `.deploy_prev_sha`・`.deploy_nginx_good.conf`（`.github/workflows/deploy.yml:512-513` の注記）と同じ: `/home/ubuntu/salesanchor` 直下・git に入れない。
 
 ### 9-2 戻し方（2 通り）
+便2 の正本は [card-bin2.md](./card-bin2.md) と §26。この節の行番号と手順は 2026-11-04 時点のもので、今の本線とずれている（§26-7 P5）。
 - **自動**（Finalize の健康確認が落ちたとき `.github/workflows/deploy.yml:904-979`）: 今の `git reset --hard PREV_SHA`（`:911`）はそのまま（compose・nginx・scripts を戻すため）。`docker compose build` の 3 回試行（`:925-935`）を削り、代わりに `.deploy_prev_images.env` にある `*_IMAGE=` の行（本番は 5 行。行数は数えない — 控えにある行を全部戻す。リハーサル §12 便2 12. は 1 行で動かす）で `.env` の同名行を置き換え → 今と同じ `docker rm -f …`（`:939-941`）→ `docker compose up -d --no-build --remove-orphans`（`:942` に `--no-build` を足す）。完成品はローカルに残っているので取り直し無し。`.deploy_prev_images.env` が無いか空（初回）なら戻せないので「自動ロールバック失敗」の分岐（`:968-973`）に流す。
 - **手動**（K6 の練習・緊急）: 新しい scripts/deploy/rollback-images.sh。(1) `.deploy_prev_images.env` の 5 行があることを確かめる（無ければ止まる）、(2) 今の 5 行を `.deploy_rollback_from.env` に写す（さらに戻せるように）、(3) `.env` の 5 行を置き換える、(4) `docker compose pull --ignore-buildable`（ローカルにあるので 0 秒。無ければここで初めて取る＝鍵が要る → `GHCR_PULL_TOKEN` を env で渡したときだけ login する）、(5) backend は `bash scripts/blue-green-cutover.sh`（無停止）、他は `docker compose up -d --no-deps --no-build frontend celery-worker celery-beat discord-gateway gemini-egress`、secretary は `-p astro-webapp-secretary -f docker-compose.secretary-agent.yml up -d --no-build --force-recreate`、(6) `date +%s` を始めと終わりに出し、`/api/health` の 200 を確かめ、所要秒を出す。組み立ての命令は 1 つも含めない（K6）。
 - 戻した後の「次の deploy」: main に次の push が来ると新しい指紋で上書きされる（戻しは一時的）。恒久に戻すなら revert の PR。
@@ -824,7 +825,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - N4: `deploy-script-test.yml` の paths に deploy.yml が無く、deploy.yml だけを変えた PR で T7 が流れない。→ 両方の paths に足した。
 - N5: K1 の確かめを行番号で書いていた（実装で行がずれる）。`tests/sandbox/image-scan-survey.sh` は注記の行も当たる。→ 「ファイル＋文字列」の組で書き直した。
 - N6: rollback-images.sh に秘書の起動・`/api/health` の確かめ・所要秒（K6）が無かった（§9-2 との食い違い）。→ 足した。試験 T8 を足した。
-- N7（推奨）: 受け取りは通ったが Step 3b の切替が落ちたとき、`.env` に動かしていない指紋が残る。→ v2 では直さず受け入れた（下の理由）。2 回目の審査でこの理由が実物と合わないと分かり、v3 で直した（§26-6 M1）。v2 の理由（取り下げ）:理由: (1) 今の形でも Step 3 の組み立てがローカルの `astro-webapp-backend` を上書きした後で Step 3b が落ちると、同じく動かしていない完成品が残る（便2 で増える危険ではない）。(2) 残る指紋は GitHub で組み立てて走査を通し、prod1 に受け取り済みの完成品なので、起動できない物ではない。(3) Finalize は `if: always()` で走り（`.github/workflows/deploy.yml:907`）、健康確認が落ちれば控えに戻す。(4) 次の main への push で上書きされる。
+- N7（推奨）: 受け取りは通ったが Step 3b の切替が落ちたとき、`.env` に動かしていない指紋が残る。→ v2 では直さず受け入れた（下の理由）。2 回目の審査でこの理由が実物と合わないと分かり、v3 で直した（§26-6 M1）。v2 の理由（取り下げ）: (1) 今の形でも Step 3 の組み立てがローカルの `astro-webapp-backend` を上書きした後で Step 3b が落ちると、同じく動かしていない完成品が残る（便2 で増える危険ではない）。(2) 残る指紋は GitHub で組み立てて走査を通し、prod1 に受け取り済みの完成品なので、起動できない物ではない。(3) Finalize は `if: always()` で走り（`.github/workflows/deploy.yml:907`）、健康確認が落ちれば控えに戻す。(4) 次の main への push で上書きされる。
 判定（Opus）: N1〜N6 を直したので、クラウドで再審査を 1 回行う。
 
 ### 26-6 クラウドの設計審査 2 回目（2026-11-11・architect opus）と直し（カード v3）
@@ -834,3 +835,13 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - M3: 健康確認の繰り返しは `if docker exec …; then` の形と明記した（`set -e` の下で `$?` で受けると 1 回目の失敗で止まる）。
 - M4: 戻しに `.github/workflows/deploy.yml:514-519` の celery-worker の `stop -t 60` と、discord-gateway などを先に消す手順が無かった。→ 同じ順で入れた。
 判定（Opus）: M1〜M4 を直したので、クラウドで 3 回目の審査を行う。
+
+### 26-7 クラウドの設計審査 3 回目（2026-11-11・architect opus）と直し（カード v4）
+判定: APPROVE。M1〜M4 は直った。5b. は `if !` の形なので `set -e`（`.github/workflows/deploy.yml:279`）の下でも正しく動く。`scripts/blue-green-cutover.sh` が失敗で終わるのは :140 の `set +e` より前（旧 backend が動いている間）だけ、とされた。推奨の指摘と扱い（Opus が実物を読んで確かめた）:
+- P1（推奨・受け入れ）: 通常の deploy（`.github/workflows/deploy.yml:520`・`:523`）は gha-exporter を起こさない。起こすのは Finalize の戻しの `docker compose up -d --remove-orphans`（:979）だけ。そのため `GHA_EXPORTER_IMAGE` は起動していない指紋のまま `.env` に残る。理由: 今も gha-exporter は組み立てだけして起こしておらず、便2 で変わらない。残る指紋は Step 3 で受け取り済みなので、控えに写っても戻し先は prod1 に在る。起こし方を変えるのは別の変更とする（一度に 1 つ）。
+- P2（推奨・受け入れ）: :520 が落ちると `set -e` で止まり、frontend などは起動していない指紋が `.env` に残る。理由: 今も同じ場所で止まる。残る指紋は受け取り済みで、§26-1 3. の守る対象（受け取っていない指紋を残さない）には当たらない。backend は新しい指紋で健康なので、Finalize の戻しは起きない。
+- P3（推奨・直した）: T8 に「1 回目の健康確認が落ち、2 回目で通る → 終了 0」を足した。待ち秒は `ROLLBACK_HC_SLEEP` で差し替える。
+- P4（推奨・直した）: 秘書の旗の順を :731 と同じ `--force-recreate --no-build` にした。T8 は旗の順を数えない形にした。
+- P5（推奨・直した）: §9-2 の頭に、便2 の正本はカードと §26 だと書いた。
+- P6（推奨・直した）: §26-5 N7 の「理由:」の重なりを消した。
+判定（Opus）: 必須の指摘は無い。直したのは書き方と試験の足しだけで、手順は変えていない。カード発行に進む（実装には PO の明示の実装承認が要る）。
