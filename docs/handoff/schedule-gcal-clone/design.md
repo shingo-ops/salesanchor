@@ -129,6 +129,22 @@ PO 2026-11-10 の言葉（要旨）: 予定の箱の UI/UX を Google と同じ�
 | G56 | 編集画面が開いている間、近道のキー（例: m で月表示）は効かない。Tab で動く先は編集画面の中だけ。閉じると作る小窓の題名の欄に文字を打てる状態（フォーカス）になる。題名の欄で日本語を変換している途中の Esc では閉じない | 単体の試験で、編集画面が開いた状態で body に「m」を送っても表示が変わらない・Tab が編集画面の外へ出ない・× で閉じた後 `document.activeElement` が作る小窓の題名の欄・変換中（`isComposing`）の Esc で dialog が残る。本番で目で見る | R13-4 |
 | G57 | 明るい・ダークどちらも色はトークンだけ。英語の画面でも文字が t() から出る。新しい金型（全画面の入れ物）に見本帳の例と単体の試験が在る | 本番でダークに切り替えて編集画面の地が `--bg-surface` のダークの値と一致。CI の「Lint & Dark Mode Check」（色・数値・i18n・見本帳の検査を含む）と「UI governance gate」が緑 | R13-5 |
 
+### 2.7 予定の編集画面を Google の形に（左に寄せる・角の小さい塗りの欄・直すときも全画面）（G58〜G64・便14・2026-11-11 追加）
+
+PO 2026-11-11 の言葉: 「予定の詳細画面だけどGoogleカレンダーをクローンしてほしくて左側に寄せたり入力欄の角の丸みも真似てほしい、今の金型だと実現できないから別途金型を作って」。範囲: 「作るときと直すとき両方」（PO の選択・2026-11-11）。
+
+測る窓はすべて 1279×1448（Google を測った窓と同じ・recon §8.1）。位置の許し幅は ±4px（幅は ±8px）。
+
+| # | 成功条件 | 確かめ方 | 根拠 |
+|---|---|---|---|
+| G58 | 作る小窓の「その他のオプション」と、詳しくの小窓の「直す」（鉛筆の絵と下の「予定を編集」のボタンの両方）の 2 か所から、同じ編集画面が開く。直すときは今の予定の題名・日時・種類・場所・説明が入っている。編集画面の × か Esc で、作るときは作る小窓に戻り（今と同じ）、直すときはカレンダーに戻る（小窓は閉じる）。どちらも何も送らない | 本番の週で自分の予定を押し、「直す」を押す→編集画面の題名がその予定の題名・× で閉じると小窓が 0 個（保存しない）。単体の試験で、直すから開いて × と Esc で閉じる間の PATCH・POST が 0 回・閉じた後 `.schedule-popover` が 0 個 | R14-1・R14-4 |
+| G59 | 直すときの「保存」は今と同じ PATCH を送る（同じ関数）。うまくいくと編集画面が閉じて予定が直る。失敗すると編集画面は開いたままで失敗の文が中に出る。小窓の中で直す形（入力欄に変わる小窓）は無くなる | 単体の試験（今の「直す」の試験 T7・社員にも見せる・Meet の試験を編集画面で通す。PATCH の宛先が数字の番号）。小窓の中に `schedule.editEvent` の見出しの入力欄の形が 0 個 | R14-4 |
+| G60 | 中身が左に寄る。× は左上（真ん中が x52±4・Google 実測 x32 幅 40）、題名の欄は x80±4 から幅 594±8・24px、保存はその右（左端 x706±8）。日時の段は題名の下（1 段目の上端 y92±8）で x80±4 から。白い札は x16±4・幅 636±8・角 28px で、札の頭に「予定の詳細」。札の中の絵の真ん中は x48±4・欄の左端は x80±4・場所の欄の幅 556±8 | 本番の窓 1279×1448 で `getBoundingClientRect` を読み、Google の実測（recon §8.1）と並べた表を残す。目で並べた写しも残す | R14-1・R14-3 |
+| G61 | 入力欄・選ぶ欄は Google と同じ形: 高さ 40px・角 4px・枠なし・塗りの地・左右余白 16px・14px 前後の文字（日時 4 つ・種類・場所・説明）。題名の欄は枠なしで下線だけ。欄の上の「開始日時」などの文字は出さず、読み上げの名前（aria-label）で持つ。終日は切り替えではなくチェック欄（金型 Checkbox） | 本番で `getComputedStyle` を読む: 高さ 40・`border-radius` 4px・`border-top-width` 0・`background-color` が新しいトークン `--comp-input-filled-bg` の値・`padding-left` 16px。`role="switch"` で名前が「終日」のものが 0 個・`role="checkbox"` で名前が「終日」のものが 1 個 | R14-2・R14-3 |
+| G62 | 並び: 日時の段（始まりの日・始まりの時刻・〜・終わりの時刻・終わりの日。終日なら時刻が消える）→終日→札（予定の詳細）の中に Meet・場所・種類・社員にも見せる・説明。項目は今から 1 つも減らない（Meet はつないだ本人だけ・社員にも見せるは変えてよい人だけ、今と同じ） | 単体の試験で順番を DOM の並びで確かめる。本番で目で見る | R14-1 |
+| G63 | 暗い表示でも同じ並びで、色はトークンだけ。スマホの幅（390）でも横にはみ出さない。英語の画面でも文字が t() から出る | 本番で暗い表示に切り替えて地・札・塗りの欄の色がトークンの暗い値と一致。窓 390×844 で `document.documentElement.scrollWidth <= 390`。CI の「Lint & Dark Mode Check」と i18n の検査が緑 | R14-3 |
+| G64 | 新しい金型（編集の画面の入れ物 `EditorPage`）に見本帳の例と単体の試験が在り、使わなくなる古い金型 `FullScreenDialog` は消える。塗りの欄・丸い保存は決めた場所の外で使うと CI の試験が止める。本番の画面点検 S13 は変えずに合格のまま | CI の「UI governance gate」「Lint & Dark Mode Check」が緑。`git grep FullScreenDialog -- frontend` が 0 件。新しい守り手の試験が緑。合流の後の本番の画面点検で S13 が合格 | R14-2・R14-5 |
+
 ## 3. 作り方（How）
 
 ### 3.1 時間割を金型 1 か所にする（SSOT）
@@ -755,6 +771,69 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 
 戻し方: 便13 の PR を revert する（frontend だけ・DB・移行・設定は変えない）。
 
+### 3.19 便14: 予定の編集画面を Google の形に（左に寄せる・角の小さい塗りの欄・直すときも全画面）（G58〜G64・2026-11-11）
+
+アプリの行番号は origin/main a7fbffdfe（2026-11-11 に読んだ）。
+
+確かめた事実:
+- R14-1（Google の形）: recon §8.1。中身は左に寄り（題名 x80・札 x16 幅 636）、白い札の中に絵の列（真ん中 x48）と欄（x80〜）。欄は塗りの地・角 4px・枠なし・高さ 40。保存は丸い。
+- R14-2（今の金型で作れない理由）: 金型 FullScreenDialog は中身を真ん中寄せの 1 列にする（`frontend/src/components/FullScreenDialog.css:46-49`）だけで、左に寄せる・札で包む・絵の列を作る口が無い（`frontend/src/components/FullScreenDialog.tsx:93-102`）。入力欄は決まりで完全に丸く（`docs/specs/design-system/design.md:811`）、角 4px の塗りの欄の種類（variant）が無い。保存の丸い形はログイン画面だけ（`frontend/src/components/buttonShapeUsage.test.ts:13-19`）。
+- R14-3（今の画面）: recon §8.2。真ん中寄せ・丸い白地の欄・文字つき・終日は切り替え。
+- R14-4（直す流れ）: 直すは小窓の中で入力欄に変わる（`frontend/src/pages/schedule/SchedulePageImpl.tsx:975-982`・`:380-418`・`:432-440`）。全画面は作るときだけ（`:1588`）。保存は 1 つの関数 `saveEvent`（`:988-1031`）で、直すときは PATCH。
+- R14-5（使う所）: FullScreenDialog を使うのは `frontend/src/pages/schedule/ScheduleFullEditor.tsx` だけ。本番の点検 S13 は dialog の名前「予定の編集」（`schedule.fullEditLabel`）で探す。
+
+作り方:
+1. 新しい金型 `EditorPage`（PO の許可の後に作る・ADR-144・ADR-1074）。
+   - 置き場所: `frontend/src/components/EditorPage.tsx`・`frontend/src/components/EditorPage.css`・`frontend/src/components/EditorPage.stories.tsx`・`frontend/src/components/EditorPage.test.tsx`。
+   - 振る舞いは FullScreenDialog と同じ（portal・`role="dialog"`・`aria-modal`・`aria-label`・`useFocusTrap`・開くと `initialFocusRef` へ・閉じると元の要素がまだ在ればそこへ・Esc は document で受けて `stopPropagation`・変換中の Esc は何もしない）。中身は FullScreenDialog.tsx の振る舞いの部分をそのまま移す（書き直さない）。
+   - 口: `open`・`onClose`・`ariaLabel`・`closeLabel`・`title`（題名の欄）・`saveLabel`・`onSave`・`saveDisabled`・`initialFocusRef`・`lead`（札の上に置く中身。日時の段）・`cardTitle`（札の頭の文字）・`children`（札の中の行）。行の部品 `EditorPageRow`（口 `icon`・`children`）も同じファイルから出す（絵の列は金型が持つ）。
+   - 保存のボタンは金型が描く: 金型 Button `variant="primary"`・`shape="pill"`。× は金型 Button（ghost・iconOnly）。
+   - 見た目（`EditorPage.css`・var() だけ）: 地 `--bg-primary`。左の余白 `--space-4`、絵の列の幅 `--comp-editor-rail-w`（新しいトークン 4rem）。上の段は [× の列][題名（最大幅 `--comp-editor-title-w`・新しいトークン 37.125rem）][間 `--space-8`][保存]。`lead` は題名と同じ左端。札は地 `--bg-surface`・角 `--comp-editor-card-radius`（新しいトークン 1.75rem）・幅 `min(var(--comp-editor-main-w), 100%)`（新しいトークン 39.75rem）。札の頭は高さ `--space-12` で `cardTitle` を出し、下に 2px の `--accent` の線（Google の選ばれたタブの線に合わせる。押せる物ではない）。行は [絵の列][中身]・行の間 `--space-2`。狭い窓（`@media (max-width: 767px)`・ほかの金型と同じ区切り。例 `frontend/src/components/Card.css:34`）では札の幅を 100% にし、上の段の題名が縮む。
+   - 古い金型 FullScreenDialog の 4 ファイルは消す（使う所が無くなるため。同じ働きの金型を 2 つ置かない・`docs/specs/design-system/design.md:32`）。
+2. 塗りの欄の種類（variant）を足す（金型の口を 1 つずつ・ADR-1074）。
+   - TextFieldControl に `editor-filled` と `editor-title`、SelectControl と TextareaControl に `editor-filled`。
+   - `editor-filled`（`frontend/src/components/FormField.css`）: `min-height: var(--space-10)`・`border: none`・`border-radius: var(--radius-sm)`・`background-color: var(--comp-input-filled-bg)`・`padding: 0 var(--space-4)`・`font-size: var(--font-sm)`。押した時は下に 2px の `--accent` の線（`box-shadow: inset 0 -2px 0 var(--accent)`）。Textarea は上下にも `--space-2`。
+   - `editor-title`: schedule-title と同じ形で文字だけ `--font-2xl`。
+   - 新しいトークン `--comp-input-filled-bg` は明るい表示 `var(--link-active-bg)`（#ebeff8・Google の rgb(233,238,246) に最も近い既存の色）、暗い表示 `var(--bg-subtle)`（#243046・暗い札 #1e293b の上で見える）。`frontend/src/index.css` の明るい・暗いの両方に置く（`check:dark-parity`）。
+3. 項目の部品（`frontend/src/pages/schedule/ScheduleDraftFields.tsx`）を 1 項目ずつの部品に分ける。
+   - `DraftDateFields`・`DraftCategoryField`・`DraftMeetField`・`DraftShareField`・`DraftLocationField`・`DraftDescriptionField` を同じファイルに置き、それぞれ口 `appearance: "popover" | "page"` を持つ。値を変える式（`shiftDraftStart`・種類で社員にも見せるを変える式）は各部品の中の 1 か所のまま。
+   - `ScheduleDraftFields`（作る小窓が使う）は今と同じ順で `appearance="popover"` の部品を並べるだけにする（作る小窓の見た目と動きは変えない）。
+   - `appearance="page"` のとき: 欄は `editor-filled`・欄の上の文字を出さず `aria-label` で持つ・終日は金型 Checkbox（label は `schedule.allDay`）・日時は 1 段（始まりの日・始まりの時刻・〜・終わりの時刻・終わりの日）。
+   - 「Google Meet で参加」のリンク（今は小窓 `frontend/src/pages/schedule/SchedulePageImpl.tsx:290-301` で作る）は `DraftMeetField` の中に移す（小窓と編集画面の 2 か所で作らない）。`MEET_URL_PREFIX`（`:96`）も一緒に移す。
+4. `frontend/src/pages/schedule/ScheduleFullEditor.tsx` を金型 `EditorPage` に載せ替える: `lead` に失敗の文（`role="alert"`）・`DraftDateFields`・終日、札の中に `EditorPageRow` で Meet・場所・種類・社員にも見せる・説明（G62 の順）。札の頭は `schedule.eventDetail`（「予定の詳細」・既存のキー）。dialog の名前は今の `schedule.fullEditLabel` のまま（S13 が探す名前）。口 `mode` と `item` を足す。
+5. 直すときも編集画面（`frontend/src/pages/schedule/SchedulePageImpl.tsx`）。
+   - `openEdit`（`:975-982`）の最後で `setError(null)` と `setFullEditOpen(true)`。
+   - 編集画面を開く条件（`:1588`）を `fullEditOpen && (popover?.mode === "create" || popover?.mode === "edit")` に。閉じる useEffect（`:1132-1134`）は `popover === null || popover.mode === "detail"` のときに閉じる。
+   - 閉じる（`:1591`）: 作るときは今と同じ（小窓に戻る）。直すときは `setPopover(null)` も（カレンダーに戻る）。
+   - 小窓の中の直す形（`:394-404` の文字つきの題名・`:432-440` の下の段）を消す。小窓は「作る」と「詳しく」の 2 つだけになる（`:311` の見出しは「予定の詳細」だけに）。
+6. 守り手（CI の試験）を足す。
+   - `frontend/src/components/buttonShapeUsage.test.ts` の使ってよい場所に `components/EditorPage.tsx` と `components/EditorPage.stories.tsx`・`components/EditorPage.test.tsx` を足す（画面のファイルには足さない）。
+   - 新しい `frontend/src/components/editorVariantUsage.test.ts`: `"editor-filled"`・`"editor-title"` の文字が、金型 3 つ（TextField・Select・Textarea）とその見本帳・試験、`components/EditorPage.*`、`pages/schedule/ScheduleDraftFields.tsx`・`pages/schedule/ScheduleFullEditor.tsx`、`pages/design-preview/` の外の tsx に 0 件。
+   - 決まりの文書 `docs/specs/design-system/design.md:262,276,811` に例外の 1 文（ADR-1074 を指す）。
+7. 文言: 新しいキーは 1 つだけ `schedule.rangeSeparator`（ja「〜」・en「–」。日時の段の始まりと終わりの間の文字。`aria-hidden`。2026-11-11 に ja.json を探して同じ働きのキーが無いことを確かめた）。ほかは既存のキー（`schedule.eventDetail`・`schedule.fullEditLabel`・`schedule.allDay` など）を使う。日時 4 つの欄の読み上げの名前は、今の欄の上の文字と同じキーを `aria-label` に渡す。
+8. 触らない範囲: 裏側・DB・移行・deploy・scripts・Google の権限・本番の点検 S13。詳しくの小窓の中身（直す形を消すだけ）・作る小窓の見た目。招待する人・通知・繰り返し・タイムゾーン・「時間を探す」のタブ・説明の飾りの帯（Google に在るがアプリに機能が無い）。
+
+試験:
+- `frontend/src/components/EditorPage.test.tsx`: `frontend/src/components/FullScreenDialog.test.tsx` の 7 本（F1〜F7: dialog と aria-modal と名前・× で `onClose`・Esc で `onClose` と window へ届かない・変換中の Esc・初めのフォーカス・Tab が中を回る・閉じると元の要素へ）をそのまま移す。足す: 保存のボタンが `onSave` を呼ぶ・`saveDisabled` で押せない・`lead`・`cardTitle`・`EditorPageRow` の絵と中身が出る。
+- `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`: 今の直すの試験（`:171`・`:183`・`:507-547`・`:571-590`・`:1009`）を編集画面の中で通す。足す: 直すから開いて題名が予定の題名／× と Esc で閉じると小窓が 0 個で PATCH・POST が 0 回／直すの保存で PATCH・成功で閉じる・失敗で開いたまま文が中／G62 の順／終日がチェック欄。
+- `frontend/src/components/editorVariantUsage.test.ts`（新規）・`frontend/src/components/buttonShapeUsage.test.ts`（場所を足す）。
+
+選ばなかった案:
+- FullScreenDialog に口（layout）を足す: PO が「別途金型を作って」と言った。今の真ん中寄せの形を使う画面はほかに無く、2 つの形を 1 つの金型に持たせる理由が無い。
+- 今の丸い欄（schedule）の角だけ変える: 作る小窓も一緒に変わる（作る小窓の欄は Google でも丸くない別の形で、PO は編集画面の話をしている）。
+- 欄の地を Google の色 rgb(233,238,246) で新しく足す: 既存の `--link-active-bg`（#ebeff8）と差が 2〜3 で、色を増やさない（ADR-067）。
+- 保存を今の角 6px のまま: PO は「真似て」と言った。丸い形は金型 Button に既に在り、使う場所を金型 1 つ足すだけで済む。
+- 右の列（ゲスト）・繰り返し・通知も作る: 裏側に機能が無い。今回は見た目と並びだけ。
+
+心配と対処:
+- 小窓の中の直す形を消すと、今の試験が落ちる: 落ちる試験は上に挙げた行だけ。編集画面で同じ確かめをし、確かめの数を減らさない。
+- 狭い窓で日時の段がはみ出す: 段を折り返す（flex-wrap）。G63 で 390 の幅を測る。
+- 塗りの欄が他の画面に広がる: 守り手の試験（作り方 6）で止める。
+- 本番の点検 S13 が落ちる: dialog の名前・題名の欄・Esc の動きは変えない。合流の後の点検で確かめる（G64）。
+- 消す金型を誰かが使い始めている: 合流の前に `git grep FullScreenDialog` を取り直す。
+
+戻し方: 便14 の PR を revert する（frontend と書類だけ・DB・移行・設定は変えない）。
+
 ## 4. 便の分け方（作る順）
 
 | 便 | 中身 | 成功条件 | 危険な道 |
@@ -773,6 +852,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 | 便11 | 日・3日間・週の枠線を Google に揃える（§3.16）。金型 CalendarView の css に規則 8 つ・トークン 1 つ | G37〜G41 | なし（frontend の css だけ。移行・deploy・scripts・DB は無い） |
 | 便12 | 作る小窓を Google の形に・作っている途中の箱を動かせる（§3.17）。金型 CalendarView に口 1 つ（ADR-1065 What 6 に 1 文）・金型 TextFieldControl に種類 1 つ・絵 3 つ・トークン 5 つ・文言 2 つ・予定の画面 | G42〜G50 | なし（frontend だけ。移行・deploy・scripts・DB は無い）。PO 承認（G42〜G50・金型 2 つ・ADR-1065 What 6）の後に着手 |
 | 便13 | Google Meet を押す行に・「その他のオプション」で全画面の編集（§3.18）。新しい金型 FullScreenDialog 1 つ・項目の部品を 1 か所に・文言 3 つ足し 1 つ替え・予定の画面 | G51〜G57 | なし（frontend だけ。移行・deploy・scripts・DB・Google の権限は無い）。PO 承認済み（2026-11-11「1」・G51〜G57・新しい金型）。カード `docs/handoff/schedule-gcal-clone/card-bin13.md` |
+| 便14 | 予定の編集画面を Google の形に・直すときも全画面（§3.19）。新しい金型 EditorPage（古い金型 FullScreenDialog は消す）・塗りの欄の種類 4 つ・トークン 5 つ・文言 1 つ・項目の部品を 1 項目ずつに・予定の画面・守り手の試験 1 つ足し 1 つ直し・決まりの文書に例外 3 文・ADR-1074 | G58〜G64 | なし（frontend と書類だけ。移行・deploy・scripts・DB・Google の権限は無い）。PO 承認（G58〜G64・新しい金型・古い金型を消す・塗りの欄・丸い保存）の後に着手。カード `docs/handoff/schedule-gcal-clone/card-bin14.md` |
 
 便0 を先に出す理由: 今の本番で毎回起きる間違いで、1 行で直り、載せ替えを待つ理由がない。
 
@@ -804,6 +884,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - 使う事例: Google カレンダー本体（2026-11-06 に同じ窓で並べて観測・recon §3）。比べたのは画面の形と手の動きだけで、速さや使われ方の数字は持っていない。
 - 便12 の事例: Google カレンダーの作る小窓と、開いたまま仮の箱を動かす動き（2026-11-09 に PO のログインの画面で測った・§3.17 R12-1・R12-3・R12-5。保存はしていない）。Google の絵・名前・色は使わず、並びと手の動きだけ合わせる。
 - 便13 の事例: Google カレンダーの Meet の行と「その他のオプション」の全画面の編集（PO の言葉 2026-11-10）。寸法は未測定で、受入れで並べて比べる。Google の絵・名前・色は使わない。
+- 便14 の事例: Google カレンダーの予定の編集画面（2026-11-11 に PO のログインの画面で窓 1279×1448 で測った・recon §8.1。保存はしていない）。位置・大きさ・角・地の色の実測を成功条件 G60・G61 に使う。Google の絵・名前・色（青）は使わず、色はアプリのトークン（ADR-067）で置き換える。Google の数字は「同じ形になったか」の比べる相手で、使われ方の効果の証拠ではない。
 - 他社の導入事例の数字は使わない。理由: 今回の成功条件はすべて「Google と同じ画面・同じ操作になったか」で、本物を横に置いて直接比べられるため。
 
 ## 8. 維持の仕組み
@@ -817,6 +898,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - 便11 の線は `frontend/src/components/CalendarView.css` の `.comp-calendar--schedule.comp-calendar--days` の 1 か所だけ。数値と色の見張り（同上）が CI で直書きを止める。jsdom は見た目の規則を計算しないので単体の試験は置かず、FullCalendar の版を上げる時は G37〜G41 の確かめ方で本番の値を読み直す（版は ADR-1065 で 6.1.22 に固定）。
 - 便12 の仮の箱の日時は下書き 1 か所から出す（`draftToRange`）。`frontend/src/pages/schedule/schedule-utils.test.ts` と `frontend/src/pages/schedule/SchedulePageImpl.test.tsx` が、箱を動かすと日時が変わり保存まで何も送らないこと・作る小窓に幕が無いことを CI で毎回確かめる。作る小窓の見た目は `.schedule-popover--create` の下と `frontend/src/tokens.css` だけで、数値と色の見張り（同上）が直書きを止める。
 - 便13 の全画面の入れ物は金型 `frontend/src/components/FullScreenDialog.tsx` 1 か所（見本帳の例が無いと CI の `check:stories` が止める）。入れる項目の描き方は `frontend/src/pages/schedule/ScheduleDraftFields.tsx` 1 か所で、小窓と全画面が同じ部品を使う。`frontend/src/pages/schedule/SchedulePageImpl.test.tsx` が、Meet が切り替えでなくボタンであること・全画面を閉じても下書きが残り何も送らないこと・全画面の保存が小窓と同じ中身を送ることを CI で毎回確かめる。これらの試験と色・数値・i18n・見本帳の検査は main に入る前の必須の確かめ「Lint & Dark Mode Check (ADR-067)」の中で走り、赤のままでは合流できない。新しい金型は「UI governance gate」も通る。
+- 便14 の編集画面の入れ物は金型 `frontend/src/components/EditorPage.tsx` 1 か所（古い金型 FullScreenDialog は消し、同じ働きの金型を 2 つ置かない）。塗りの欄の種類 `editor-filled`・`editor-title` は金型 TextField・Select・Textarea の中だけで定め、新しい `frontend/src/components/editorVariantUsage.test.ts` が決めた場所の外での使用を CI で止める。丸い保存は `frontend/src/components/buttonShapeUsage.test.ts` の使ってよい場所に金型 EditorPage だけを足す。`frontend/src/pages/schedule/SchedulePageImpl.test.tsx` が、直すから編集画面が開き閉じても何も送らないこと・直すの保存が PATCH を送ること・並びの順を CI で毎回確かめる。本番の画面点検 S13（ADR-1051）が毎日 07:00 と配備の後に編集画面を開いて閉じる。
 - 守り手: frontend/src/pages/schedule/SchedulePageImpl.test.tsx（押した時刻で小窓が開くことを CI の試験で毎回確かめる。金型に載せ替えた後は frontend/src/components/CalendarView.test.tsx が加わる）
 
 ## 9. 審査
