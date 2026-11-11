@@ -11,7 +11,7 @@
 
 | # | 事実 | 根拠 |
 |---|---|---|
-| E1 | 相談係専用の入口 case-api.salesanchor.jp がある。入口に通るのは、伏せた読む窓・報告・値を見たい申請・申請の状態・値を 1 回だけ返す口（`/ops/unmask/read`）だけ。ほかの 443 の server は TLS の名前が case-api なら 421 を返す | `nginx/nginx.conf:11-17`・`nginx/nginx.conf:694-814`（`/ops/unmask/read` は `:784-802`）・`nginx/nginx.conf:43`・`:85`・`:414`・`:843`・`:899` |
+| E1 | 相談係専用の入口 case-api.salesanchor.jp がある。入口に通るのは、伏せた読む窓・報告・値を見たい申請・申請の状態・値を 1 回だけ返す口（`/ops/unmask/read`）だけ。ほかの 443 の server は TLS の名前が case-api なら 421 を返す | `nginx/nginx.conf:11-17`・`nginx/nginx.conf:694-814`（`/ops/unmask/read` は `:785-802`）・`nginx/nginx.conf:43`・`:85`・`:414`・`:843`・`:899` |
 | E2 | 報告は `POST /api/v1/ops/case/{incident_id}/report`。相談係の鍵と札（X-Case-Ticket）が要る。中身は status（investigating / reported）・summary・cause・evidence・proposal・risk・needs_decision | `backend/app/routers/ops_case.py:497-540` |
 | E3 | 報告は 1 件につき 1 通。2 通目は 409（OPS_CASE_REPORT_EXISTS） | `migrations/20261031_210000_create_ops_case.sql:20-32`（`incident_id ... UNIQUE`）・`backend/app/routers/ops_case.py:516`・`:531` |
 | E4 | 札は管理者が作る。有効 24 時間。作り直すと上書きされる | `backend/app/routers/ops_case.py:49`・`:271-292`（:271 が管理者だけの確かめ） |
@@ -55,7 +55,7 @@
 
 ### 実装カードで足すこと（この設計では作らない）
 
-- C3-0（正本を 1 か所に保つ）: 報告を受けたら、サーバーが同じ処理の中で障害記録の出来事の表（`ops_incident_events`）に kind=ai の注記を 1 行書く。中身は報告の id・status・summary・needs_decision（detail の上限 8192 バイトの中に収める。`migrations/20261016_100000_create_ops_incident_tables.sql` の `ops_incident_events_detail_size_check`）。報告の本文（evidence・proposal）は `ops_case.reports` に残し、注記から id で辿る。要件 R7「結果は記録への書き込み（注記）」・要件 `:121`「保守の記録が唯一の正本」・ADR-1012 決定 2（`docs/adr/ADR-1012-ai-ops-247.md:26`）に合わせるため。Discord（R2）は今と同じく出来事の表の写しを出す。注記は要約と参照だけ。F4 の設計（proposal）を含む本文の置き場（`ops_case.reports`）が ADR-1012 決定 2 の「障害記録の表 1 か所」に入るかは PO 判断として §8 に挙げる。入らないと決まった場合は、本文を出来事の表に移す形に直す。出来事の表の actor は alertmanager / ops_token / super_admin に限られる（`migrations/20261016_100000_create_ops_incident_tables.sql:56-57`）。報告の口から書くときにどの値を使うか（新しい値なら表の変更が要る）は実装カードで決める。
+- C3-0（正本を 1 か所に寄せる。PO 判断つき）: 報告を受けたら、サーバーが同じ処理の中で障害記録の出来事の表（`ops_incident_events`）に kind=ai の注記を 1 行書く。中身は報告の id・status・summary・needs_decision（detail の上限 8192 バイトの中に収める。`migrations/20261016_100000_create_ops_incident_tables.sql` の `ops_incident_events_detail_size_check`）。報告の本文（evidence・proposal）は `ops_case.reports` に残し、注記から id で辿る。要件 R7「結果は記録への書き込み（注記）」・要件 `:121`「保守の記録が唯一の正本」・ADR-1012 決定 2（`docs/adr/ADR-1012-ai-ops-247.md:26`）に合わせるため。Discord（R2）は今と同じく出来事の表の写しを出す。注記は要約と参照だけ。F4 の設計（proposal）を含む本文の置き場（`ops_case.reports`）が ADR-1012 決定 2 の「障害記録の表 1 か所」に入るかは PO 判断として §8 に挙げる。入らないと決まった場合は、本文を出来事の表に移す形に直す。出来事の表の actor は alertmanager / ops_token / super_admin に限られる（`migrations/20261016_100000_create_ops_incident_tables.sql:56-57`）。報告の口から書くときにどの値を使うか（新しい値なら表の変更が要る）は実装カードで決める。
 - C3-1: 報告を 1 件に複数通にする。kind（investigation / verification / effect）を足し、一意を（incident_id, kind）にする。F7（直ったかの確かめ）と F9（効果確認）でも書けるようにするため。今は 2 通目が 409（E3）。表の変更なので migration と GO #番号が要る。
 - C3-2（おすすめ・PO 判断）: alertname と severity を伏せる対象から外す。値は自分たちの見張りの規則から来るので、自由入力ではない。外すまでは（２）のとおりサーバーが文で渡す。
 
@@ -139,7 +139,7 @@
 |---|---|
 | U1・U2・U3・U5 のそれぞれに、選んだ案・選ばなかった案と理由・弊害がある | この文書の §2〜§5 を読む |
 | 事実に file:line か試しの記録が付いている | §1 の表の根拠の欄を、origin/main e3244a40f で開いて一致を確かめる |
-| 要件の決まり（E13・E14）に反する案を選んでいない | §2〜§5 の選んだ案と要件 `:112-115`・`:121`・`:123`・`:157-158`・`:171`、ADR-1012 決定 2（`docs/adr/ADR-1012-ai-ops-247.md:26`）を突き合わせる |
+| 要件の決まり（E13・E14）に反する案を選んでいない（例外は調べ係の道具が 5 つになる 1 点だけで、§8 で PO 判断） | §2〜§5 の選んだ案と要件 `:112-115`・`:121`・`:123`・`:157-158`・`:171`、ADR-1012 決定 2（`docs/adr/ADR-1012-ai-ops-247.md:26`）を突き合わせる |
 | 未確認のことを前提にしていない | X1〜X5 がすべて §6 の試しか PO の操作に割り当てられている |
 | 実装は 1 つも始めていない | PR の差分が docs と台帳だけ |
 
@@ -148,7 +148,7 @@
 - U6（新）: グラフの Loki に個人情報が入りうる。v1 では使わない。使うなら伏せ方の設計が要る。
 - X1〜X5（§1）。
 - C3-2（alertname・severity を見せるか）は PO 判断。
-- `ops_case.reports` を障害記録の一部に数えてよいか（C3-0 の注記で正本は 1 か所に保つ）は PO 判断。
+- `ops_case.reports` を障害記録の一部に数えてよいかは PO 判断。
 - 調べ係の道具が 5 つ（要件の 4 つ＋Agent）になる点の承認（§2）は PO 判断。
 - 2 つ目のアカウントのグラフの鍵をクラウド専用に替える（試し §3-7 の残り）。
 - 古い環境 ops-investigate の片付け（PO の画面操作）。
@@ -161,7 +161,7 @@
 
 - 判定: APPROVE（設計として。実装は §6 の試しの後）。
 - 根拠: 選んだ案はどれも今ある仕組み（case-api・報告・記録の注記・サーバーが起こす形）の上に乗っており、新しい読む道・新しい伏せ方を作らない（E13）。
-- 残る点: 案 A（U2）は X2 しだい。X1 で入りきらないときは C1-2 が要る。どちらも予備の道を書いてある。
+- 残る点: 調べ係の道具は要件の 4 つより 1 つ多い 5 つ（§2・§8 の PO 判断待ち）。案 A（U2）は X2 しだい。X1 で入りきらないときは C1-2 が要る。どちらも予備の道を書いてある。
 
 ## 11. 外部・過去事例
 
@@ -171,7 +171,7 @@
 ## 維持の仕組み
 
 - 守り手: nginx/nginx.conf（case-api の 421 の守り）・scripts/agent-hooks/cloud/guard_pre_tool.py（クラウドの merge の見張り）・docs/handoff/cloud-case-ai/design.md §4-6 の週次点検（GitHub のアプリの範囲を含む）。
-- 対象: 調べ係が伏せた窓以外を読めないこと・記録の正本が 1 か所であること・クラウドから merge できないこと・GitHub のアプリの範囲が「指定したリポジトリだけ」であること。
+- 対象: 調べ係が伏せた窓以外を読めないこと・記録の正本が 1 か所であること（§8 の PO 判断までは未確定）・クラウドから merge できないこと・GitHub のアプリの範囲が「指定したリポジトリだけ」であること。
 - 関所なしの部分: 起こす回数の見込み（§4）と PO の許可の注記の中身は人手で守る。理由: 実装前で、守る仕組みがまだ無い。実装カードで見張りを足す。
 - 担当: ADR-1012 のテーマとして Opus が設計し、便ごとのカード → PR → 審査 → GO → 反映の順で足す。
 - 見直し: 実行係を本番で動かしてから 30 日の記録で、起こした回数・止まった回数・needs_decision の数を数え、B3 と案 A/B を見直す。
