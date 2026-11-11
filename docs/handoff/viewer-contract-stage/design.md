@@ -11,7 +11,7 @@ mode: handoff
 - 現状の記録: [docs/handoff/viewer-contract-stage/recon.md](./recon.md)
 - 決めごとの控え: [decisions-draft.md](./decisions-draft.md)
 - 関係 ADR: [ADR-1061](../../adr/ADR-1061-viewer-contract-stage-and-invoicing.md)（草案）、閲覧者の名簿の90日の決まり（docs/handoff/gas-viewer-fresh-fast/review-fable.md:172 の Q7 に答えた docs/handoff/gas-viewer-fresh-fast/design.md:523〜:524。backend/app/tasks/maintenance.py:202 が参照）を改訂。ADR-1019 には Q7 も90日も無い（2026-11-06 grep で0件）、ADR-101（B2B 請求書。別の表にする）、ADR-144・ADR-067（金型とトークン）、ADR-027（i18n）、ADR-135・ADR-136（危険な変更の GO）
-- 状態: **設計案作成済み・PO の8つの答え（ideal-state 41〜48）と商材とプランの画面（§3-4d）を 2026-11-11 に反映・この版の審査待ち（審査の記録は [review.md](./review.md)）・§7-2 に PO の答えの無い項目が5つ残る・PO の設計承認は未・実装未着手**
+- 状態: **設計案作成済み・PO の答え（ideal-state 41〜50）と商材とプランの画面（§3-4d）を反映。2026-11-11 に税率と商材とプランの画面の置き場を「全体設定」へ直した・この版の審査待ち（審査の記録は [review.md](./review.md)）・§7-2 に PO の答えの無い項目が3つ残る・PO の設計承認は未・実装未着手**
 
 ## 1. 目的（PO の言葉から）
 
@@ -202,7 +202,7 @@ mode: handoff
   - **決められないときは作らない（PO 2026-11-07「請求書は顧客情報が登録されていないと作れない仕組みにしたいので1」。1 は「作るのを止めて、『請求先の国を入れてください』と案内を出す」）**: 既定の請求先の住所が無いとき、または国が空のとき。2つの口は請求書の行を INSERT する前に止め、422 を返す。detail は理由のキー bill_to_country（画面が t() で文に直す。ADR-027）。作る画面は「請求先の国を入れてください」の案内と、その取引先の画面への道を出す。見積書から作るボタンの側も同じ案内を出す。本番の主な会社で51社のうち3社がこれに当たる（国が空1社・既定の請求先が無い2社。recon §14）。既定の印の無い請求先の住所しか無い取引先も、既定の請求先が無い側に入る（2社にそういう住所があるかは数えていない）。
   - 国が JP 以外のとき、その国が public.countries にあるかは確かめない。取引先の住所の国は今は自由記入で入る（frontend/src/pages/companies/CompaniesPage.tsx:550 は2文字の制限だけ。CompanyAddressModal.tsx:143〜:144 は大文字と2文字を確かめる）。判定は「JP かどうか」だけに使うので、小文字の 'jp' も JP として扱う（大文字にしてから比べる）。本番の主な会社に形の崩れた値は0件（recon §14）。国の欄に違う国が入っていると、その国のとおりに決まる（PO に 2026-11-07 に伝えた）。
   - PDF は今と同じく、出すたびにその時点の会社情報から作る（同 :829・:875 が毎回読む。写しの列は無い）。そのため、会社情報を直した後に出し直すと、決まった側の新しい会社情報が載る。今の動きと同じで、今回は変えない。
-  - 前に作った請求書（値が空）は、PDF を出すときに overseas として読む。見出しが英語のため（invoice_renderer.py:267）。移行で値を書き込まない（ADR-1007 決定1）。本番で値が空になる請求書は、主な会社で0件、他の会社で1件（recon §14）。この扱いは §7-2 で PO に確かめる。
+  - 前に作った請求書（値が空）は、PDF を出すときに overseas として読む。見出しが英語のため（invoice_renderer.py:267）。移行で値を書き込まない（ADR-1007 決定1）。本番で値が空になる請求書は、主な会社で0件、他の会社で1件（recon §14）。その1件は試しの請求書で、PO の指示で消した（2026-11-09。§7-2 の1つ目）。この扱いが当たる請求書は本番に無い。
   - invoices は会社ごとのスキーマの表（backend/app/services/tenant.py:864）。ADR-142 に従い、全会社へ足す移行と _TENANT_TABLES_SQL を同じ変更で揃える。値は決まった2つなので、相談係の道では隠さない（決まった値しか入らない列の扱い）。
   - B2B の請求書の PDF の登録番号（PO 2026-11-07「1」。1 は「登録があるときだけ、番号を請求書に印刷する」）: 今の PDF に番号を描く処理は無い（origin/main の backend/app/services/invoice_renderer.py を grep して0件。生出力 /tmp/CC報告ファイル/contract-status/invoice-renderer-1107.py）。変える点は3つ。(1) InvoiceRenderData（同 :148〜:152 の tenant_* の並び）の後ろに tenant_registration_number: Optional[str] = None を足す。(2) 発行者の欄の Web の行（同 :260〜:263）の直後に、値があるときだけ同じ字の大きさ 8 で「Registration No.: 番号」の1行を描き、y を 4mm 下げる。今の欄の見出し（TEL:・Email:・Web:）が英語の決まった文字なので、それに揃える。(3) 値を詰める場所は2つに分ける。請求書の PDF を作る口（origin/main の backend/app/routers/invoices.py:829 と :875。今は _fetch_tenant_profile の dict を渡す）を get_issuer(tenant, その請求書の region) に切り替え、渡す dict に registration_number のキーを含める。render_invoice_pdf（invoice_renderer.py:435〜）は get_issuer を呼ばず、受け取った dict から :513 の直後に tenant_registration_number=tenant_profile.get("registration_number") を足すだけにする。get_issuer は登録無の行と古い値のときは None を返すので、そのときは行を描かない。render_quote_pdf（同 :520〜。会社情報を渡すのは :579〜:583）には足さない（見積書は今回変えない）。
   - 見積書（PO 2026-11-07「見積もりは今回はパス」）: 見積書の表と作る口と画面は変えない。quotes に列を足さない。見積書の PDF（invoices.py:972〜。会社情報を読むのは :1007）は、get_issuer(tenant, overseas) で海外用の行を載せる（PO 2026-11-07「1,見積もりは顧客名は必須にしない、成約前の顧客にも使用するため顧客情報がない場合があるので」。1 は「見積書にも新しい海外向けの情報を載せる」）。取引先の国では決めない。理由は PO の言葉のとおり、見積書は取引先の情報が無い場面でも使うため。海外用の行が無い会社では、get_issuer の決まりどおり古い値が載る（今と同じ）。
@@ -373,10 +373,13 @@ RLS（ADR-1018 の段階①の型。会社ごとの4表は今の会社ごとの�
 
 PO の決定（2026-11-09「2」で今回作る。中身は 2026-11-09「1」）: 最高管理者のみ・税率の画面と同じ場所・商材と料金を足せる・名前と金額を後から直せる・消さずに「使わない」へ切り替える・発行済みの請求書の金額は写しのまま。
 
-置き場（2026-11-11 origin/main bfe2e4e7a で確かめた事実に合わせる）:
-- 文面の画面（/super-admin/viewer-templates。frontend/src/App.tsx:374）はメニューに載せず、閲覧者の一覧の見出しのボタン（frontend/src/pages/super-admin/ViewerAccountsPage.tsx:512〜:513。キーは superAdmin.viewers.templates）から開き、戻るボタン（ViewerTemplatesPage.tsx:204）で一覧へ戻る。
-- 税率の画面（/super-admin/tax-rates・TaxRatesPage.tsx）と商材とプランの画面（/super-admin/sa-products・SaProductsPage.tsx）も同じ形にする。閲覧者の一覧の見出しの「文面」のボタンの右に「税率」「商材とプラン」の2つのボタンを足す（Button variant="secondary" size="sm"）。どちらの画面にも一覧へ戻るボタンを置く。これを PO の「税率の画面と同じ場所」とする。メニュー（DesktopShell.tsx:197〜:203・MobileShell.tsx）には足さない。
-- 道は App.tsx:374（文面の画面の道）の直後に2行足す。画面の中で useSuperAdmin を使い、最高管理者でなければ「権限がありません」（superAdmin.accessDenied）を出す（ViewerTemplatesPage.tsx:171 と同じ）。
+置き場（2026-11-11 に PO の決めた運営のメニューの組み替えに合わせて直した。組み替えは本番反映済み。設計 docs/handoff/super-admin-settings-hub/design.md、PO 2026-11-11「1、LINE解析に入っているマスタも全体設定に移動させてくれ」）:
+- 税率の画面と商材とプランの画面は、左メニュー「全体設定」の中の小さなメニュー「金額の設定」に置く。項目の正本は frontend/src/pages/super-admin/settings/settingsNav.ts:11〜:15（fx-rate・tax-rates・sa-products）で、今回この並びは変えない。前の版の「閲覧者の一覧の見出しのボタンから開く」案は取らない。
+- 道は /super-admin/settings/tax-rates と /super-admin/settings/sa-products。今は frontend/src/App.tsx:327〜:344 で2つとも「準備中」の画面（ComingSoonPage）を出している。この2つの element を TaxRatesPage と SaProductsPage に差し替えるだけで、道とメニューは足さない。
+- 2つの画面は全体設定の中（SettingsHubPage の Outlet）に出るので、一覧へ戻るボタンは置かない（小さなメニューで移れる）。
+- 全体設定の入口（SettingsHubPage）が、最高管理者でない人には中身を出さず「権限がありません」を出す。そのうえで、2つの画面の中でも useSuperAdmin を使い、最高管理者でなければ「権限がありません」（superAdmin.accessDenied）を出す（FxRatePage と同じ二重の守り）。
+- 画面の見出しの名前は、メニューと同じ nav.superAdminTaxRates・nav.superAdminSaProducts のキーを使う（言葉の正本を2つに分けない）。
+- テンプレートの画面（/super-admin/users/viewer-templates）は利用者管理の側のまま、閲覧者の一覧の見出しの「テンプレート」ボタンから開く（変えない）。
 
 商材とプランの画面（SaProductsPage.tsx）:
 - 一覧: 商材ごとに1行（DataTable）。列は 名前・コード・発行元の会社・既定の支払日数・状態（Badge で「使う」「使わない」）・プランの数。使わないの行も出す（灰色の Badge）。
@@ -403,10 +406,11 @@ API（/api/v1 の下。すべて dependencies=[Depends(require_super_admin)]。�
 
 - 値の決まり: code は英小文字・数字・ハイフン・下線の1〜50字。name は1〜100字。default_payment_days は1〜90の整数。unit_price_jpy は0以上の整数（税抜）。feature_keys は0個以上で重なり無し。
 - 誤りの detail はキー（例 sa_product.code_taken）で返し、画面が t() で文にする（§3-4b と同じ）。
+- PUT の受け取りの形（直せない項目の扱い）: 2つの PUT の受け取りの形は、直せない項目（商材は code・seller_tenant_id、プランは code・billing_type・billing_interval）も「省いてよい欄」として持つ。処理の最初で、どれかが送られていたら何も書かずに 422（sa_product.immutable／sa_plan.immutable）を返す。表に無い欄が来たら受け付けない（model_config = ConfigDict(extra="forbid")。今の書き方 backend/app/routers/ops.py:352 と同じ）。直せない項目を形から外すだけだと、送られても黙って捨てられ 422 にならないため。
 - DELETE の道は作らない。
 - 一覧の発行元の会社の名前は public.tenants を読むだけで、別に写さない（配線とデータの正本は tenants）。super_admin_tenants.py には今 DELETE の道しか無いので、会社の一覧は GET /super-admin/sa-products の sellers で一緒に返し、新しい会社一覧の口は作らない。
 
-税率の画面（TaxRatesPage.tsx）の置き場と道は上と同じ。中身は §3-4 の tax_rates と §3-4b の /super-admin/tax-rates のとおり。
+税率の画面（TaxRatesPage.tsx）の置き場と道は上のとおり（/super-admin/settings/tax-rates）。中身は §3-4 の tax_rates と §3-4b の /super-admin/tax-rates のとおり。
 
 ### 3-4c. 他のテーマとの境界
 
@@ -582,8 +586,8 @@ commit の後、裏で順に行う:
 - ~~前に作った請求書（国内向けか海外向けかの値が空）を、海外向けとして読む扱い。~~ → 確かめる対象が無くなった。本番の請求書は試しの1枚だけで、PO の指示で消した（PO 2026-11-09「アプリで作った請求書はテストデータだけだから消して良い」。同日 16:19 に消し、読み取り専用の鍵で0件を確かめた。記録 docs/handoff/viewer-contract-stage/delete-test-invoice/）。
 - ~~成功条件の11番の見出し~~ → 「請求書に載せる自社情報と振込先を、国内用と海外用で分けて持てる」に変える（PO 2026-11-09「2」）。
 - ~~状態の表示名「契約手続き中」。~~ → このまま（PO 2026-11-09「1」）。
-- 手続き中の人にも手作業の「延長」を出す。
-- 税率の画面と「商材とプラン」の画面を、閲覧者の一覧の見出しのボタンから開く（§3-4d の置き場。AI の案）。
+- ~~手続き中の人にも手作業の「延長」を出す。~~ → 出す（PO 2026-11-11「1」。ideal-state 49）。
+- ~~税率の画面と「商材とプラン」の画面を、閲覧者の一覧の見出しのボタンから開く（AI の案）。~~ → 左メニュー「全体設定」の中に置く（PO 2026-11-11 のメニューの組み替え。ideal-state 50。§3-4d）。
 - 最初の商材・プラン・機能は、便2b の「商材とプラン」の画面で PO が入れる（前の版は「1回だけのデータの変更」で AI が入れる案。§4 の（２））。
 - 三点ボタンの金型を新設する。
 - ~~商材とプランの登録画面は今回作らない。~~ → 今回作る（PO 2026-11-09「2」）。中身は §2（PO 2026-11-09「1」）。

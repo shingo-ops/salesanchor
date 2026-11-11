@@ -1,7 +1,7 @@
 # ADR-（番号は空欄・PO が採番）: 本番サーバーでは組み立てず、GitHub で組み立てた完成品を会社の非公開の倉庫から指紋で受け取る
 
 - この文書は何か（素人向け1行）: 「アプリの箱を本番で作るのをやめ、GitHub で作って会社の非公開の倉庫にしまい、本番は指紋の一致する完成品を取って並べるだけにする」と決める下書き。
-- 設計: `docs/handoff/build-on-github/design.md`（現在地: `docs/handoff/build-on-github/recon.md`、目標: `docs/handoff/build-on-github/kgi.md`）。
+- 設計: `docs/handoff/build-on-github/design.md`（現在地: `docs/handoff/build-on-github/recon.md`、目標: `docs/specs/build-on-github/kgi.md`）。
 
 | 項目 | 内容 |
 |---|---|
@@ -20,7 +20,7 @@
 - 完成品は組織 GEN-RYU-System の倉庫（ghcr.io）に、非公開で、5 つの名前（`salesanchor-backend`・`salesanchor-frontend`・`salesanchor-gemini-egress`・`salesanchor-gha-exporter`・`salesanchor-secretary-agent`）でしまう。倉庫側のタグは commit の sha だけ（`latest` は作らない）。
 - 本番は指紋（`@sha256:`）で受け取る。compose は `image: ${<名前>_IMAGE:-<今の名前>}` の形（変数と、今 prod1 で付いている名前の既定値。例 `${BACKEND_IMAGE:-astro-webapp-backend}`）だけを書き、倉庫の名前も指紋も書かない。既定値を置くのは、変数を持たない場所（CI の試験・砂場・手元の開発）で `docker compose` が止まらないようにするため（design §5-2）。本番の守りは compose ではなく deploy に一本化する: deploy が build job の出力を `.env` に書いた後、5 行が揃っていなければ箱に触る前に止まる（exit 1）。指紋の正本は prod1 の `.env` の 5 行。1 つ前は `.deploy_prev_images.env`（git に入れない）。
 - 倉庫に書く鍵は classic PAT の `write:packages` だけ（`repo` は付けない・期限付き・`monthly-secret-expiry.yml` の見張りに入れる）。本番が読む鍵は別の classic PAT の `read:packages` だけで、GitHub の secret にだけ置き、入れ替えの段で `docker login` → 取得 → 同じ段で `docker logout` する（prod1 に鍵を残さない）。
-- 倉庫へ push する前に、完成品の中身を走査する（名前の走査・gitleaks・履歴）。見つかれば push しない。許す例外は画面の JS に載る Firebase の web API key（`VITE_FIREBASE_API_KEY`）1 つだけで、経路と規則を 1 つに限って allowlist にする。
+- 倉庫へ push する前に、完成品の中身を走査する（名前の走査・gitleaks・履歴）。見つかれば push しない。アプリのファイルに例外は置かない（例外は OS と言語の配布物の C の見出しファイルだけ）。当初は画面の JS に載る Firebase の web API key を例外にする予定だったが、本線が 2026-11-05 に Firebase を外したので例外ごと消した（design §25-9）。
 - 完成品を公開にする操作（GitHub の Danger Zone）は戻せないので、不可逆操作として PO 本人の確認が無ければ行わない。組織の「Package Creation」は Private にする。週 1 の見張りが非公開と 5 つの名前を確かめ、違えば Discord と fail で知らせる。
 - 1 つ前の完成品へ戻すときは、控え `.deploy_prev_images.env` にある行（本番は 5 行）を `.env` に戻して `docker compose up --no-build` する。prod1 に残した完成品を使い、取り直しも組み立てもしない。片付けは現行と 1 つ前の指紋だけ残す自前の手順で行い、`docker image prune` は呼ばない。
 - 最初の段として、dockerd を入れ直して（live-restore を先に有効化）メモリの基準を取り、入れ替え 1 回ごとの増え方を黒板（node-exporter の textfile）で測る。これは本番の危険操作なので PO の `!` 実行に限る。
