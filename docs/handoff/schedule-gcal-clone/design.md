@@ -1346,7 +1346,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 ## 12. 便15: 予定の繰り返し（2026-11-12・Opus・設計案）
 
-状態: 設計案。設計審査は未実施。PO の範囲の承認は済み（2026-11-12 選択「1、」）。根拠は recon §9。ADR-1075（Proposed）。
+状態: 設計案。設計審査1 は REVISE で直し済み（§12.13）・審査2 待ち。PO の範囲の承認は済み（2026-11-12 選択「1、」）。根拠は recon §9。ADR-1075（Proposed）。
 
 ### 12.1 目的
 
@@ -1363,7 +1363,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 | G71 | 選び方のどれかで保存すると、日・週・月の表示で決まりどおりの日に回が並ぶ（毎日 7 日・毎週 1 週 1 回・毎月 第 2 木曜・毎月 最終月曜・毎年・平日 5 日）。保存したのは表の 1 行だけ | 選び方を 1 つずつ作り 2 か月分を見る。本番の表は reader 鍵で数える（予定 1 件＝1 行） | §12.4 |
 | G72 | 回を押したときの詳しくの小窓に、日時の行の下に繰り返しの行（例「毎週 木曜日, 4 回」のうち選び方の文字）が出る | 画面で見る | recon §9.5 |
 | G73 | 回を保存・削除すると小窓が出る。題は「定期的な予定の編集」（保存）・「定期的な予定の削除」（削除）、選び方は「この予定／これ以降のすべての予定／すべての予定」、ボタンは「キャンセル」「OK」、初めの選択は「この予定」。**1 回目**の回では「これ以降のすべての予定」を出さず 2 択。キャンセルすると何も送られない | 1 回目と 2 回目で開いて読み、キャンセルしたときの送信 0 件を通信の記録で読む | recon §9.5・§12.6 |
-| G74 | 3 択の結果: 「この予定」はその回だけ変わる（消える）／「これ以降」はその回と後の回だけ／「すべて」は全部 | 4 回ある毎週の予定の 3 回目でそれぞれ試し、前後の回を読む | §12.5 |
+| G74 | 3 択の結果: 「この予定」はその回だけ変わる（消える）／「これ以降」はその回と後の回だけ／「すべて」は全部 | 終わりの無い毎週の予定を作り、3 回目でそれぞれ試し、1〜5 回目を読む（試すごとに作り直す） | §12.5 |
 | G75 | 回を引っぱって動かすと「定期的な予定の編集」の 2 択が出る。2 回目以降は「この予定／これ以降のすべての予定」、1 回目は「この予定／すべての予定」。キャンセルすると元の位置に戻り何も送られない | 1 回目と 2 回目を動かして読み、キャンセルで戻ることと送信 0 件を見る | recon §9.5 |
 | G76 | Google とつないだ本人の繰り返しの予定は、Google にも同じ繰り返しで出る。アプリには二重に出ない（取り込みの後も 1 回は 1 つ） | 作って Google で回を見る。15 分の取り込みを待ってアプリの回の数を数える | recon §9.3 の危ないところ |
 | G77 | 今ある予定は変わらない（数・時刻・表示）。繰り返しでない予定の保存・削除では 3 択は出ない | 便A の本番反映の前後で予定の行数と画面を比べる。単発の予定で保存・削除して見る | §12.8 |
@@ -1396,6 +1396,8 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
   - 決まりの形: `recurrence_rule ~ '^FREQ=(DAILY|WEEKLY|MONTHLY|YEARLY)(;[A-Z]+=[A-Z0-9,+-]+)*$'`
 - 重なり禁止: `(recurring_event_id, original_start_datetime)` に部分の UNIQUE（`WHERE recurring_event_id IS NOT NULL`）。同じ回の例外は 1 行だけ。
 - 例外の行は、題名・日時など他の欄を普通の予定と同じに持つ（直した後の値）。消した回は元の値の写しで `is_cancelled = true`。
+- 例外の行の `calendar_type`・`user_id` は**いつも元の行の値の写し**（審査1 ①）。今の一覧は `(ce.calendar_type = 'shared' OR ce.user_id = :me)` で見える行を絞る（`backend/app/services/calendar_service.py:184-189`）ため、例外の行だけ見える人が違うと、元の回は消えて例外が見えない人が出る。→ this で持ち主・共有の別を変える送信は 422。all は例外の行の 2 つも一緒に直す。following は新しい元の行に直した値を入れる（それより前の例外は元の値のまま）。
+- 終日の例外の行の `original_start_datetime` は、その日の日本時間 0:00（審査1 終日）。
 - 選び方は表に持たない。決まりの文字から 1 対 1 で読み戻す（`FREQ=DAILY`→毎日、`WEEKLY;BYDAY=<1つ>`→毎週、`WEEKLY;BYDAY=MO,TU,WE,TH,FR`→平日、`MONTHLY;BYDAY=<n><曜>`（n は 1〜4）→毎月 第 n、`MONTHLY;BYDAY=-1<曜>`→毎月 最終、`YEARLY`→毎年）。読み戻せない決まりは自由に決める選び方として表示だけする（今回は作らないが、Google から来る可能性に備える）。
 
 ### 12.5 受け口（API）
@@ -1403,11 +1405,14 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 - 作る `POST /calendar/events`（`backend/app/routers/calendar.py:405`）: `CreateEventBody`（`:111`）に `recurrence: Literal["none","daily","weekly","monthly_nth","monthly_last","yearly","weekdays"] = "none"` を足す。サーバーが開始日（日本時間）から決まりの文字を作り、元の行に入れる。
   - weekly: `FREQ=WEEKLY;BYDAY=<開始日の曜>`／monthly_nth: `FREQ=MONTHLY;BYDAY=<n><曜>`（n は `(日-1)//7+1`）／monthly_last: `FREQ=MONTHLY;BYDAY=-1<曜>`／yearly: `FREQ=YEARLY`／weekdays: `FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR`／daily: `FREQ=DAILY`。
   - 開始日で選べないもの（n が 5 の monthly_nth・その月の最後の同じ曜日でない日の monthly_last）は 422。画面も Google と同じく出さない（recon §9.5 U2）。
+  - 直すときも同じ（審査1 ⑦）: 開始日を変えて今の選び方がその日で選べなくなったら 422。画面は開始日が変わるたびに選び方を作り直し、今の選び方が無くなったら送らずに i18n のキーの誤りの文を出す。これは設計の決定で、Google がこの場合にどう動くかは確かめていない。
 - 一覧 `GET /calendar/events?start&end`（`:143`）→ `list_events`（`backend/app/services/calendar_service.py:150`）:
   - 単発の行と例外の行（消した印でないもの）は今と同じ条件で取る。条件に `recurrence_rule IS NULL` を足して元の行を外す。
   - 元の行は別に `recurrence_rule IS NOT NULL AND start_datetime < :end` で取り、期間の中の回に広げる（python-dateutil の `rrulestr` と `between(期間の始まり − 長さ, 期間の終わり, inc=True)`）。回の終わり＝回の始まり＋元の長さ。
   - 時刻つきは日本時間の始まりを dtstart にし、UNTIL は UTC の形。終日は日付だけで広げ、UNTIL は日付の形（RFC 5545 で dtstart と同じ型が要る）。
-  - 例外の行がある回（同じ `original_start_datetime`）は広げた回から外す。消した印の例外は返さない。
+  - 例外の行がある回（同じ `original_start_datetime`）は広げた回から外す（審査1 ⑤）: 見つかった元の行の id で例外の行を**期間に関係なく**別に引き（`recurring_event_id = ANY(:ids)`）、その `original_start_datetime` の回を外す。回を別の日へ動かした例外でも元の回が残らない。消した印でない例外の行そのものは、上の普通の期間の条件で出る。消した印の例外は返さない。
+  - 広げた回は、今と同じ厳しい比べ方で最後に絞る（審査1 ⑥）: 回の始まり < 期間の終わり かつ 回の終わり > 期間の始まり（`backend/app/services/calendar_service.py:168-172` と同じ）。`between` の inc=True で境目の回が入りすぎるのをここで落とす。
+  - 終日は日付で広げる（dtstart は日付・回の始まりはその日の日本時間 0:00）。
   - 1 つの元から返す回は 1000 まで（毎日でも約 2 年 9 か月分）。超えたら打ち切って記録に残す。
   - 回は元の行の欄を写し、`id`＝元の id・`recurring_event_id`＝元の id・`occurrence_start`＝その回の元の始まり・`recurrence`＝選び方・`recurrence_rule` を足して返す。例外の行は自分の id と `recurring_event_id`・`occurrence_start`（＝`original_start_datetime`）と、元の `recurrence`。
 - 探す `title_query`（`list_events` の同じ関数・`backend/app/routers/calendar.py:166`）: 広げない。元の行を 1 件だけ返す（消した印の例外は返さない）。Google の探す結果の出方は確かめていない（未確認・G の条件には入れない）。
@@ -1416,8 +1421,10 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
   - `occurrence_start` が決まりの回に当たらなければ 422（その時刻 ±1 秒で `between` して 0 件）。
   - 例外の行の id に送ったとき: this はその行を直す（消すは `is_cancelled = true`）、following と all は元の行の id に読み替える。
   - this: 例外の行を作る（あれば直す）。消すは `is_cancelled = true` の例外の行。
-  - following: 元の決まりに UNTIL（その回の 1 秒前・終日はその前の日）を付けて切り、新しい元の行（その回の日時・直した値・同じ選び方から開始日で作り直した決まり）を作る。その回以降の例外の行は消す。1 回目で following を選んだら all と同じ。消すときは元の決まりを切るだけ（1 回目なら全部消す）。
-  - all: 元の行を直す。始まり・終わり・選び方が変わったら例外の行を消し、決まりを開始日から作り直す。変わらなければ題名・場所・説明などの変わった欄だけを例外の行にも写す。消すは元の行を消す（例外は一緒に消える）。
+  - following: 元の決まりに UNTIL（その回の 1 秒前・終日はその前の日）を付けて切り、新しい元の行（その回の日時・直した値・同じ選び方から開始日で作り直した決まり）を作る。その回以降の例外の行は消す。1 回目で following を選んだら all と同じ。消すときは元の決まりを切り、`original_start_datetime` がその回以降の例外の行も消す（審査1 ⑨。1 回目なら全部消す）。
+  - all: 元の行を直す。始まり・終わり・選び方が変わったら例外の行を消し、決まりを開始日から作り直す。変わらなければ題名・場所・説明・`calendar_type`・`user_id` などの変わった欄だけを例外の行にも写す。消すは元の行を消す（例外は一緒に消える）。
+  - all で始まりを変えたとき（審査1 ④）: 送られる始まりは「押した回」の新しい始まり。元の行の新しい始まり＝元の行の始まり＋（新しい始まり − `occurrence_start`）。終わりも同じだけずらす。1 回目以外の回で直しても、1 回目から全部が同じだけ動く。
+  - UNTIL の扱い（審査1 UNTIL・⑧）: 既に UNTIL がある決まりを following で切るときは、古い UNTIL と新しい UNTIL の早い方にする。all で決まりを作り直すときは今の UNTIL を引き継ぐ。following の新しい元の行は元の UNTIL を引き継ぐ。新しい始まりが UNTIL より後なら 422。
   - 持ち主の確かめ（`:465`・`:546`）は元の行の id で今と同じに行う。
 
 ### 12.6 画面
@@ -1432,12 +1439,12 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 - 送る（つないだ本人の自分だけの予定・双方向か書くだけのときだけ。今と同じ）:
   - `_to_google_event_body`（`backend/app/services/calendar_service.py:652`）に、元の行なら `"recurrence": ["RRULE:" + 決まり]` を足す。時刻つきは今と同じ `timeZone: "Asia/Tokyo"` 付き（繰り返しでは必須・recon §9.2）。終日は今と同じ日付だけで `timeZone` を付けない（公式の終日の繰り返しの例が日付だけ・「終日では時間帯は意味を持たない」・recon §9.5 U5）。
-  - this: `backend/app/services/google_calendar.py` に `get_instance(元の google_event_id, originalStart)`（`events.instances` を `originalStart` で引く）を足す。返った回の id を例外の行の `google_event_id` に入れ、その id に patch（消すは `status: "cancelled"`）。
+  - this: `backend/app/services/google_calendar.py` に `get_instance(元の google_event_id, originalStart)`（`events.instances` を `originalStart` で引く）を足す。返った回の id を例外の行の `google_event_id` に入れ、その id に patch（消すは `status: "cancelled"`）。同時に例外の行の `sync_origin_id` を `app:<会社>:<例外の行の id>` にする（審査1 ⑩。作る道の `backend/app/services/calendar_service.py:305-309` と同じ書き方）。
   - following: 元の予定を patch して `recurrence` を UNTIL 付きにし、新しい元の行を insert（今の作る道と同じ）。
   - all: 元の予定を patch（`recurrence` を含める）。
 - 取り込み（`upsert_from_google`・`backend/app/services/calendar_service.py:551`）:
   - 来た予定の `recurringEventId` が、アプリ起源の元の行の `google_event_id` と同じなら飛ばす（二重を防ぐ。recon §9.3 の危ないところ）。
-  - 例外の行に入れた回の id は今の完全一致（`_is_app_origin`・`:129`）で飛ばされる。
+  - 例外の行に入れた回の id は今の完全一致（`_is_app_origin`・`:129`）で飛ばされる（google_event_id の一致と sync_origin_id の `app:<会社>:` のどちらでも当たる）。
   - Google で作った繰り返しは今と同じ（1 回ずつ 1 行・source='google'）。3 択は出さない（`recurrence_rule` を持たないため）。
   - 全部取り直しの掃除（`backend/app/services/google_webhook.py:340-346`）は source='google' の行だけを消すので、アプリの元の行と例外の行には触れない。
 - Google 側で回を直したとき（アプリ起源の繰り返し）: 上の飛ばす決まりで取り込まない。アプリの表示とずれる。Google からの直しを反映するのは今回の範囲の外（今のアプリ起源の単発の予定も Google での直しを取り込まない・`_is_app_origin` で飛ばす）。
@@ -1445,8 +1452,12 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 ### 12.8 移行と便の分け方
 
 - 移行 migrations/20261112_<時刻>_add_calendar_events_recurrence.sql（新しく作るファイル）: meet_url の移行（`migrations/20261104_161223_add_calendar_events_meet_url.sql`）と同じ「会社ごとに回す・冪等」の形で、欄 4 つ・CHECK 4 つ・部分 UNIQUE 1 つ。欄はどれも NULL 可か一定の初期値なので、表を書き直さず速い（ロック待ち 1 秒の決まり ADR-1037 の中）。
-  - 試験の足場 `backend/tests/rls_bootstrap.py:156-174` `_TENANT_LOOP_MIGRATIONS` に名前と回数を書く。
-  - 分類表 `migrations/20261024_100300_create_ai_cloud_views.sql:351-354` に `recurrence_rule` の行（mask・理由「値の決まりが値の一覧でなく文字の形だけのため伏せる」）を足す。他の 3 つは数・真偽・日時で行が要らない（`backend/tests/ops/test_ai_cloud_views.py:50-53`）。
+  - 何度流しても同じになる書き方（審査1 冪等）: 欄は `ADD COLUMN IF NOT EXISTS`（`recurring_event_id` の参照の決まりは欄の行の中に書く）。CHECK は名前を付け、`pg_constraint` にその表（`format('%I.calendar_events', 会社)::regclass`）でその名前が無いときだけ `NOT VALID` で足してから `VALIDATE`。部分 UNIQUE は `CREATE UNIQUE INDEX IF NOT EXISTS`。
+  - 試験の足場（審査1 ②）: 新しい移行の名前を次の 3 か所に足す（meet_url の移行が載っている所と同じ）。
+    - `backend/tests/rls_bootstrap.py` `_TENANT_LOOP_MIGRATIONS`（:159-176 付近）に名前と「会社を選ぶ条件」の回数。
+    - `backend/tests/test_calendar_sync_tenant_reset_pg.py` `_MIGRATIONS`（:44-53）に `(名前, True)`。
+    - `backend/tests/test_tenant_loop_migration_guard.py` `_REVIEWED` の 2 つの組（"rls_bootstrap.py" と "test_calendar_sync_tenant_reset_pg.py"）。
+  - 分類表 `migrations/20261024_100300_create_ai_cloud_views.sql:351-354` に `recurrence_rule` の行（mask・理由「値の決まりが値の一覧でなく文字の形だけのため伏せる」）を足す（審査1 ③）。他の 3 つは数・真偽・日時で行が要らない（`backend/tests/ops/test_ai_cloud_views.py:50-53`）。今の `meet_url` も分類表に無い（recon §9.4 U4）。この便では直さず、別の件として台帳に残す。
   - 道具: `backend/requirements.txt` に `python-dateutil==2.9.0.post0` を明示（既に間接に入っている版・recon §9.3）。
 - 便A（裏側だけ・画面は変わらない）: 移行・受け口・広げ方・3 択の処理・Google 同期・試験。移行を含むので危ない PR（ADR-136）。GO は委任の手順で記録する。便A の後は、繰り返しの元の行が 0 件なので一覧の結果は今と同じ（G77）。
 - 便B（画面）: 選ぶ欄・詳しくの行・3 択の小窓・id の形・文言・試験。便A の本番反映の後。
@@ -1471,7 +1482,8 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 - backend 試験（`backend/tests/test_calendar_service.py` に足す）: 6 つの決まりの作り方と 2 か月分の広げ方・例外で外す・消した印・1000 回の打ち切り・3 択の 3 結果×直す／消す・422 の 3 通り・Google の本文の `recurrence`・取り込みの飛ばし。
 - frontend 試験: 6 つの文字（開始日 2 通り）・id の形と `eventNumericId`・3 択の取り消しで送らない。
-- 分類表の T10（CI で走る・recon §9.4 U4）。
+- 移行の見張り: `backend/tests/test_tenant_loop_migration_guard.py`（会社ごとに回す移行が試験の足場に載っているか）。
+- 分類表の T10 は calendar_events を見ない（会社の部屋を作る `bootstrap_tenant_schema` がこの表を作らないため・審査1 ③）。分類の行の抜けを見張る試験は今は無い。守り手に数えない。
 
 ### 12.11 外部の事例
 
@@ -1484,4 +1496,23 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 ### 12.13 審査
 
-（未実施）
+#### 審査1（2026-11-11 20:46〜20:54 UTC・クラウドの Opus・対象 0d7056a4f）
+
+- 判定: REVISE（直す所あり）。実行記録 cse_01W47tdiy8F1wU8h4rCL5f9v と続き cse_01W47tdg8tXvf9HS6xXLK6gs。記録の文が途中で切れて読めない所があったため、続きの審査で残りの点を聞いた（続きの各点の本文は読めず、判定の行だけ読めた）。
+- 指摘と直し:
+
+| # | 指摘 | 直した所 |
+|---|---|---|
+| ① | 例外の行の持ち主・共有の別が元と違うと、見える人がずれる | §12.4（いつも元の写し・this で変えたら 422・all と following の扱い） |
+| ② | 試験の足場の 3 か所に新しい移行が無いと CI の見張りが止める | §12.8 |
+| ③ | T10 は calendar_events を見ない | §12.8・§12.10 |
+| 冪等 | CHECK・索引を 2 回流すと失敗する | §12.8 |
+| ④ | all で 1 回目以外の始まりを変えたときの元の始まりが決まっていない | §12.5 |
+| ⑤ | 別の日へ動かした例外が期間の外だと元の回が残る | §12.5 |
+| ⑥ | `between` の inc=True で境目の回が今の一覧と違って入る | §12.5 |
+| ⑦ | 開始日を変えて選び方が成り立たないとき | §12.5（422・画面は送らない） |
+| 終日 | 終日の広げ方と例外の元の始まり | §12.4・§12.5 |
+| UNTIL・⑧ | UNTIL の重ね・引き継ぎ | §12.5 |
+| ⑨ | following の削除で後の例外が残る | §12.5 |
+| ⑩ | 例外の行の sync_origin_id | §12.7 |
+| ⑪ | G74 の確かめ方が 4 回だと 5 回目以降を見られない | §12.2 G74 |
