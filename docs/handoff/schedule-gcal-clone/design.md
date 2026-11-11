@@ -9,7 +9,7 @@
 追加（2026-11-09）: 便11（日・3日間・週の枠線を Google に揃える・G37〜G41）は PO の選択「1」（2026-11-09・枠線を揃える設計を作り、PO の承認を得てから直す）。作り方は §3.16。設計審査は §9 の 14 回目（APPROVE）。G37〜G41 は **PO 承認済み**（2026-11-09、PO の選択「1」＝「この直し方で作り、本番に出して Google と並べて確かめる」）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin11.md`。
 追加（2026-11-09）: 便12（作る小窓を Google の形に・作っている途中の箱を動かせる・G42〜G50）は PO の言葉「つぎは新規の予定を追加するときの表示の仕方と編集途中でもドラッグで動かせる機能を実装してくれ、Googleカレンダーと同じUI/UXで」（2026-11-09）。作り方は §3.17。G42〜G50 と金型 2 つの変更（ADR-144）は **PO 承認済み**（2026-11-10、PO の選択「1」＝「この設計で作り、本番に出してGoogleと並べて確かめる」）。設計審査は §9 の 15 回目（2 回目 APPROVE）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin12.md`。
 追加（2026-11-11）: 便13（Google Meet を押す行に・「その他のオプション」で全画面の編集・G51〜G57）は PO の言葉（2026-11-10・§2.6）。作り方は §3.18。設計審査は §9 の 16 回目（3 回目 APPROVE）。G51〜G57 と新しい金型 `FullScreenDialog`（ADR-144）は **PO 承認済み**（2026-11-11、PO の選択「1」＝「この形で作り、本番に出す」）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin13.md`。
-追加（2026-11-12）: 便15（予定の繰り返し・G69〜G78）は PO の選択「1」「1、」（2026-11-12・Google の決まった選び方 6 つと 3 択・自由に決める選び方は後で）。作り方は §12。ADR-1075（Proposed）。成功条件は案（PO 未承認）・設計審査は未実施・実装は未着手。
+追加（2026-11-12）: 便15（予定の繰り返し・G69〜G79）は PO の選択「1」「1、」（2026-11-12・Google の決まった選び方 6 つと 3 択・自由に決める選び方は後で）。作り方は §12。ADR-1075（Proposed）。成功条件は案（PO 未承認）・設計審査は審査3 まで REVISE を直し済み・実装は未着手。
 根拠: `docs/handoff/schedule-gcal-clone/recon.md`（以下 recon）。前の設計 `docs/handoff/schedule-gcal-alignment/design.md`（K1〜K14）を引き継ぎ、便2（K8〜K11）はこの設計に入れ直す。
 
 ## 1. 目的
@@ -922,7 +922,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 | 便12 | 作る小窓を Google の形に・作っている途中の箱を動かせる（§3.17）。金型 CalendarView に口 1 つ（ADR-1065 What 6 に 1 文）・金型 TextFieldControl に種類 1 つ・絵 3 つ・トークン 5 つ・文言 2 つ・予定の画面 | G42〜G50 | なし（frontend だけ。移行・deploy・scripts・DB は無い）。PO 承認（G42〜G50・金型 2 つ・ADR-1065 What 6）の後に着手 |
 | 便13 | Google Meet を押す行に・「その他のオプション」で全画面の編集（§3.18）。新しい金型 FullScreenDialog 1 つ・項目の部品を 1 か所に・文言 3 つ足し 1 つ替え・予定の画面 | G51〜G57 | なし（frontend だけ。移行・deploy・scripts・DB・Google の権限は無い）。PO 承認済み（2026-11-11「1」・G51〜G57・新しい金型）。カード `docs/handoff/schedule-gcal-clone/card-bin13.md` |
 | 便14 | 予定の編集画面を Google の形に・直すときも全画面（§3.19）。新しい金型 EditorPage（古い金型 FullScreenDialog は消す）・塗りの欄の種類 4 つ・トークン 5 つ・文言 1 つ・項目の部品を 1 項目ずつに・予定の画面・守り手の試験 1 つ足し 1 つ直し・決まりの文書に例外 5 文・ADR-1074 | G58〜G64 | なし（frontend と書類だけ。移行・deploy・scripts・DB・Google の権限は無い）。PO 承認済み（2026-11-11「1」・G58〜G67・新しい金型・古い金型を消す・塗りの欄・丸い保存・直すときも全画面・予定の画面の色を Google に）。カード `docs/handoff/schedule-gcal-clone/card-bin14.md` |
-| 便15A・便15B | 予定の繰り返し（§12）。便15A は裏側（欄 4 つの移行・受け口・広げ方・3 択・Google 同期）、便15B は画面 | G69〜G78 | 便15A は**あり**（`migrations/`・ADR-136 の GO）。便15B はなし（frontend だけ） |
+| 便15A・便15B | 予定の繰り返し（§12）。便15A は裏側（欄 4 つの移行・受け口・広げ方・3 択・Google 同期）、便15B は画面 | G69〜G79 | 便15A は**あり**（`migrations/`・ADR-136 の GO）。便15B はなし（frontend だけ） |
 
 便0 を先に出す理由: 今の本番で毎回起きる間違いで、1 行で直り、載せ替えを待つ理由がない。
 
@@ -1346,7 +1346,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 ## 12. 便15: 予定の繰り返し（2026-11-12・Opus・設計案）
 
-状態: 設計案。設計審査1・2 は REVISE で直し済み（§12.13）・審査3 待ち。PO の範囲の承認は済み（2026-11-12 選択「1、」）。根拠は recon §9。ADR-1075（Proposed）。
+状態: 設計案。設計審査1〜3 は REVISE で直し済み（§12.13）・審査4 待ち。PO の範囲の承認は済み（2026-11-12 選択「1、」）。根拠は recon §9。ADR-1075（Proposed）。
 
 ### 12.1 目的
 
@@ -1367,6 +1367,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 | G75 | 回を引っぱって動かすと「定期的な予定の編集」の 2 択が出る。2 回目以降は「この予定／これ以降のすべての予定」、1 回目は「この予定／すべての予定」。キャンセルすると元の位置に戻り何も送られない | 1 回目と 2 回目を動かして読み、キャンセルで戻ることと送信 0 件を見る | recon §9.5 |
 | G76 | Google とつないだ本人の繰り返しの予定は、Google にも同じ繰り返しで出る。アプリには二重に出ない（取り込みの後も 1 回は 1 つ） | 作って Google で回を見る。15 分の取り込みを待ってアプリの回の数を数える | recon §9.3 の危ないところ |
 | G77 | 今ある予定は変わらない（数・時刻・表示）。繰り返しでない予定の保存・削除では 3 択は出ない | 便A の本番反映の前後で予定の行数と画面を比べる。単発の予定で保存・削除して見る | §12.8 |
+| G79 | 選び方を後から変えられる（審査3 指摘1）: 単発の予定を「毎週」に直すと回が並ぶ。繰り返しの回を「すべての予定」で「繰り返さない」に直すと 1 件だけ残る。回で選び方を変えて保存すると、小窓は「これ以降のすべての予定／すべての予定」の 2 択（「この予定」は出ない・1 回目は「すべての予定」だけで小窓は出さない） | 単発→毎週、毎週→繰り返さない（すべて）、2 回目で毎週→毎日（これ以降）を試し、2 か月分の回を読む。小窓の選び方を読む | §12.5 選び方を変える |
 | G78 | 守り手: 選び方（7 つの値）の決まりの広げ方・3 択の 3 つの結果・取り込みの二重の防ぎを試験が見張る。CI 緑 | CI の結果 | §12.10 |
 
 ### 12.3 選ばなかった案
@@ -1417,6 +1418,10 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
   - 回は元の行の欄を写し、`id`＝元の id・`recurring_event_id`＝元の id・`occurrence_start`＝その回の元の始まり・`recurrence`＝選び方・`recurrence_rule` を足して返す。例外の行は自分の id と `recurring_event_id`・`occurrence_start`（＝`original_start_datetime`）と、元の `recurrence`。
 - 探す `title_query`（`list_events` の同じ関数・`backend/app/routers/calendar.py:166`）: 広げない。探すときは `recurrence_rule IS NULL` の条件を**足さない**（審査2 指摘7）。返すのは、単発の行・元の行（1 件）・消した印でない例外の行。消した印の例外（`is_cancelled = true`）は返さない。Google の探す結果の出方は確かめていない（未確認・G の条件には入れない）。
 - 直す `PATCH /calendar/events/{id}`（`:446`）・消す `DELETE`（`:538`）: `scope: Literal["this","following","all"]` と `occurrence_start`（ISO）を足す（DELETE は query）。
+  - 選び方を変える（審査3 指摘1）: `UpdateEventBody`（`backend/app/routers/calendar.py:122`）にも `recurrence: Optional[Literal[...7 つ...]] = None` を足す（None は「変えない」）。値が今の選び方と同じなら変えないのと同じに扱う。
+    - 単発の行に `recurrence`（none 以外）: scope 無しで受ける。その行に決まりを入れて元の行にする（開始日から作る・選べない値は 422）。その行に `meet_url` があれば 422（Meet と繰り返しを組み合わせない・下の Meet の項）。
+    - 元の行・例外の行で選び方を変える: scope が this なら 422（例外の行は自分の決まりを持たない）。following はその回で元を切り、新しい元の行をその回から新しい選び方で作る（none なら新しい行は単発）。all は元の行の決まりを作り直し（none なら決まりを NULL にして単発に戻す）、例外の行は全部消す。1 回目の following は all と同じ。
+    - 画面は回で選び方を変えたとき、3 択から「この予定」を外す（§12.6）。Google が同じ場面でどう聞くかは確かめていない（設計の決定）。
   - 422 を出す判定（この §12.5 と §12.4 に書いた 422 の全部）は、受け口の `try` の**前**で行う（審査2 指摘2）。直す受け口は `try` の中の例外を全部 500 に変える（`backend/app/routers/calendar.py:523` の `except Exception`。作る受け口は `:431`）。今の Meet の判定（`:417-418` の注意書き・`:497-508`）と同じ置き方にする。判定はサービスに `check_recurrence_request(...)`（誤りの文か None を返す・表は読むだけ）を作り、受け口が `try` の前に呼んで None でなければ 422。消す受け口も、`cal_svc.delete_event` を呼ぶ前に同じ判定を呼ぶ。
   - 元の行に scope が無ければ 422（3 択を飛ばした古い画面からの送信を止める）。単発の行に scope があれば 422。
   - `occurrence_start` が決まりの回に当たらなければ 422（その時刻 ±1 秒で `between` して 0 件）。
@@ -1438,6 +1443,8 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 - 選ぶ欄: `frontend/src/pages/schedule/ScheduleDraftFields.tsx:159` の終日の Checkbox と同じ段の右に、金型 `SelectControl` の `editor-filled`（`:254` と同じ使い方）。文字は i18n のキー（ja・en 同じキー）と、曜日・月日を `Intl.DateTimeFormat` で開始日から作る。直書きの日本語は入れない（ADR-027）。新しい部品・色の直値は作らない（ADR-144・ADR-067）。
 - 詳しくの小窓: 日時の行の下に繰り返しの行（選び方の文字）。
 - 3 択の小窓: 金型 `Modal`（`frontend/src/components/Modal.tsx`）と `RadioControl`。題は保存・動かすとき「定期的な予定の編集」、消すとき「定期的な予定の削除」。選び方「この予定／これ以降のすべての予定／すべての予定」、ボタン「キャンセル」「OK」、初めは「この予定」（recon §9.5 U1）。1 回目の回では「これ以降のすべての予定」を出さない（1 回目の following は all と同じのため・§12.5）。キャンセルすると何も送らない。
+- 選び方を回で変えて保存するとき（審査3 指摘1）: 3 択から「この予定」を外し「これ以降のすべての予定／すべての予定」（初めの選択は「これ以降のすべての予定」）。1 回目の回なら「すべての予定」だけなので小窓を出さずに all で送る。単発の予定で選び方を変えたときは小窓を出さない。
+- `occurrence_start` の送り方（審査3 指摘2）: 回の始まりは UTC の `Z` の形（`Date.prototype.toISOString()`）で送る。消すときは URL の後ろに付くので `URLSearchParams` で組む（`+09:00` の `+` が空白に化けて 422 になるのを防ぐ）。サーバーは受けた時刻を日本時間に直してから回と比べる。
 - 回の id: `event-<元のid>-<回の始まりのミリ秒>`。`eventNumericId`（`frontend/src/pages/schedule/schedule-utils.ts:408`）は両方の形から元の id を返すように広げ、回の始まりを返す関数を足す。`normalizeEvent`（`:339`）で `occurrence_start` があればこの形の id にする。
 - 保存 `frontend/src/pages/schedule/SchedulePageImpl.tsx:989,991`・消す `:1006`・動かす `:1192`（PATCH `:1203`）: 回なら小窓を挟み、選んだ scope と回の始まりを付けて送る。動かすときは 2 択（2 回目以降「この予定／これ以降のすべての予定」・1 回目「この予定／すべての予定」）で、キャンセルなら元の位置に戻す（recon §9.5 U3）。
 
@@ -1448,6 +1455,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
   - this: `backend/app/services/google_calendar.py` に `get_instance(元の google_event_id, originalStart)`（`events.instances` を `originalStart` で引く）を足す。返った回の id を例外の行の `google_event_id` に入れ、その id に patch（消すは `status: "cancelled"`）。同時に例外の行の `sync_origin_id` を `app:<会社>:<例外の行の id>` にする（審査1 ⑩。作る道の `backend/app/services/calendar_service.py:305-309` と同じ書き方）。
   - following: 元の予定を patch して `recurrence` を UNTIL 付きにし、新しい元の行を insert（今の作る道と同じ）。
   - all: 元の予定を patch（`recurrence` を含める）。
+- 選び方を変えたとき（審査3 指摘1）: 単発⇄繰り返しの切り替え（単発に決まりを入れる・all で none にする）は、Google の今の予定を消して（`backend/app/services/google_calendar.py:430` `delete_event`）、新しい予定として作り直す（`:390` `create_event`）。新しい id を `google_event_id` に、`sync_origin_id` も作る道と同じ形で入れ直す。すでにある予定に `recurrence` を patch で足す・外す動きは確かめていないため使わない。古い id の取り消しの知らせが取り込みで来ても、表にその id の行が無いので消す文は 0 行に当たるだけ（`backend/app/services/calendar_service.py:573-581`）。following と all で選び方を変える（繰り返しのまま）のは上の following・all と同じ道。
 - 取り込み（`upsert_from_google`・`backend/app/services/calendar_service.py:551`）:
   - 来た予定の `recurringEventId` が、アプリ起源の元の行の `google_event_id` と同じなら飛ばす（二重を防ぐ。recon §9.3 の危ないところ）。
   - 例外の行に入れた回の id は今の完全一致（`_is_app_origin`・`:129`）で飛ばされる（`_is_app_origin` は google_event_id の一致**かつ** sync_origin_id が `app:<会社>:` で始まるときだけ当たる。だから §12.7 の this で両方を入れる。審査2 指摘6）。
@@ -1471,8 +1479,8 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 | 便 | 中身 | 成功条件 | 危険な道 |
 |---|---|---|---|
-| 便15A | 繰り返しの裏側（§12.4・§12.5・§12.7・§12.8）。欄 4 つの移行・受け口・広げ方・3 択・Google 同期・試験 | G71（裏側）・G74・G76〜G78 | **あり**（`migrations/`）。ADR-136 の GO（委任）・直前のバックアップの確認 |
-| 便15B | 繰り返しの画面（§12.6）。選ぶ欄・詳しくの行・3 択の小窓・文言・試験 | G69〜G75 | なし（frontend だけ） |
+| 便15A | 繰り返しの裏側（§12.4・§12.5・§12.7・§12.8）。欄 4 つの移行・受け口・広げ方・3 択・Google 同期・試験 | G71（裏側）・G74・G76〜G79（裏側） | **あり**（`migrations/`）。ADR-136 の GO（委任）・直前のバックアップの確認 |
+| 便15B | 繰り返しの画面（§12.6）。選ぶ欄・詳しくの行・3 択の小窓・文言・試験 | G69〜G75・G79 | なし（frontend だけ） |
 
 ### 12.9 心配と対処・戻し方
 
@@ -1487,8 +1495,8 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 ### 12.10 守り手（維持の仕組み）
 
-- backend 試験（`backend/tests/test_calendar_service.py` に足す）: 6 つの決まりの作り方と 2 か月分の広げ方・例外で外す・消した印・1000 回の打ち切り・3 択の 3 結果×直す／消す・422 の 3 通り・Google の本文の `recurrence`・取り込みの飛ばし。
-- frontend 試験: 6 つの文字（開始日 2 通り）・id の形と `eventNumericId`・3 択の取り消しで送らない。
+- backend 試験（`backend/tests/test_calendar_service.py` に足す）: 6 つの決まりの作り方と 2 か月分の広げ方・例外で外す・消した印・1000 回の打ち切り・3 択の 3 結果×直す／消す・422 の 3 通り・選び方の変更（単発→繰り返し・all で none・this で 422・following で新しい選び方）と Google の消して作り直す道・Google の本文の `recurrence`・取り込みの飛ばし。
+- frontend 試験: 6 つの文字（開始日 2 通り）・id の形と `eventNumericId`・3 択の取り消しで送らない・選び方を変えたとき「この予定」を出さない・`occurrence_start` を Z 形で送る。
 - 移行の見張り: `backend/tests/test_tenant_loop_migration_guard.py`（会社ごとに回す移行が試験の足場に載っているか）。
 - 分類表の T10 は calendar_events を見ない（会社の部屋を作る `bootstrap_tenant_schema` がこの表を作らないため・審査1 ③）。分類の行の抜けを見張る試験は今は無い。守り手に数えない。
 
@@ -1540,3 +1548,14 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 | 7 | 低 | 探すときの分け方 | §12.5 探す |
 | 8 | 低 | Meet と繰り返しの組み合わせ | §12.5（今回は組み合わせない・422・画面で出さない） |
 | G72 | — | 期待する文字を書く | §12.2 G72 |
+
+#### 審査3（2026-11-11 21:29〜21:31 UTC・クラウドの Opus・対象 12f9a9d60）
+
+- 判定: REVISE。実行記録 cse_01W47tdivuYnS6chLre2YLov。指摘は echo で出させ、全文を読めた。2 回目の指摘 1〜8 と G72 は直っており、引いた行は origin/main と合うとの判定（観点(a) 指摘なし）。観点(b)(c) は下の 3 件のほか無し。
+- 指摘 1 の Google の消す・作るの関数と、取り消しの知らせの扱いは Opus が origin/main で確かめた（`backend/app/services/google_calendar.py:390,430`・`backend/app/services/calendar_service.py:573-581`）。
+
+| # | 重さ | 指摘 | 直した所 |
+|---|---|---|---|
+| 1 | 高 | 直す受け口で選び方を変える道（単発→繰り返し・繰り返し→繰り返さない・回で選び方を変える）が決まっていない。成功条件にも無い | §12.5 選び方を変える・§12.6・§12.7・G79 を足した |
+| 2 | 低 | 消すとき URL に付ける `occurrence_start` の `+` が空白に化ける | §12.6（UTC の Z 形・URLSearchParams） |
+| 3 | 低 | recon §9.3 に「T10 が数える」が残り §12.10 と食い違う | recon §9.3 |
