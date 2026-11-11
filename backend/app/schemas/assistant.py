@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
 
 class AssistantMessageIn(BaseModel):
@@ -69,11 +69,25 @@ class Intent(BaseModel):
         return self
 
 
+class AgentUsage(BaseModel):
+    """ADR-1058 段3: secretary-codex が返す使用量（turn.completed の4つ。どれも 0 以上の整数か None。design.md §5-1）。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    input_tokens: StrictInt | None = Field(default=None, ge=0)
+    cached_input_tokens: StrictInt | None = Field(default=None, ge=0)
+    output_tokens: StrictInt | None = Field(default=None, ge=0)
+    reasoning_output_tokens: StrictInt | None = Field(default=None, ge=0)
+
+
 class AgentEnvelope(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     intent: Intent
     total_cost_usd: float | None = None
+    # ADR-1058 段3: secretary-codex だけが返す2欄（secretary-agent は返さないので None のまま。design.md §5-3）
+    usage: AgentUsage | None = None
+    error_events: StrictInt | None = Field(default=None, ge=0)
 
 
 def parse_iso(value: str) -> datetime:

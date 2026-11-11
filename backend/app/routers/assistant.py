@@ -1,6 +1,6 @@
 """ADR-1056 段2: チャット秘書の口 POST /api/v1/assistant/messages。
 
-利用者の文を容器 secretary-agent（DB を持たない）に渡し、頼みの形（請求書／予定／聞き返し）に
+利用者の文を担当表の provider の容器（claude は secretary-agent・codex は secretary-codex。どちらも DB を持たない）に渡し、頼みの形（請求書／予定／聞き返し）に
 書き換えた下書きを返す。ここでは何も作らない（請求書・予定を作るのは画面が今の口を本人のログインで呼ぶとき）。
 
 順番（厳守）: ①守りを通す・担当表を読む ②db.commit() ③容器を呼ぶ・使用の記録に1行 ④会社の文脈を張り直す ⑤名前探し ⑥返す。
@@ -32,6 +32,7 @@ from app.database import get_db
 from app.models import User
 from app.schemas.assistant import (
     AgentEnvelope,
+    AgentUsage,
     AssistantMessageIn,
     AssistantMessageOut,
     Candidates,
@@ -42,7 +43,7 @@ from app.schemas.assistant import (
     parse_iso,
 )
 from app.services.ai_assignment import get_ai_assignment
-from app.services.llm_budget import UsageCounts, record_usage_isolated
+from app.services.llm_budget import USAGE_SDKS_BY_PROVIDER, UsageCounts, record_usage_isolated
 from app.services.secretary_resolve import resolve_names
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 SECRETARY_AGENT_URL = os.getenv("SECRETARY_AGENT_URL", "http://secretary-agent:8090")
+SECRETARY_CODEX_URL = os.getenv("SECRETARY_CODEX_URL", "http://secretary-codex:8090")
 AGENT_TIMEOUT_SECONDS = 85.0
 _JST = ZoneInfo("Asia/Tokyo")
 
@@ -58,8 +60,22 @@ _feature_secretary_chat = require_feature("secretary_chat")
 _perm_customers_view = require_permission("customers.view")
 _perm_invoices_create = require_permission("invoices.create")
 
-# ADR-1058 秘1: 担当表の provider → 使用の記録の sdk。ここに無い provider は容器が無いので not_ready（codex は段3で足す）。
-_SDK_BY_PROVIDER = {"claude": "claude-code"}
+
+def agent_url(provider: str) -> str | None:
+    """ADR-1058 段3: 担当表の provider → 秘書の容器の宛先（配線の正本はここ1か所。design.md §5-3）。
+
+    ここに無い provider は容器が無いので None（呼び手は not_ready にする）。
+    呼ぶたびにこのモジュールの値を読む（試験で宛先を差し替えられるように）。
+    """
+    return {"claude": SECRETARY_AGENT_URL, "codex": SECRETARY_CODEX_URL}.get(provider)
+
+
+def _sdk_for(provider: str) -> str | None:
+    """使用の記録の sdk（正本は llm_budget.USAGE_SDKS_BY_PROVIDER）。1つに決まらなければ None。"""
+    sdks = USAGE_SDKS_BY_PROVIDER.get(provider, frozenset())
+    return next(iter(sdks)) if len(sdks) == 1 else None
+
+
 # 使用の記録の error_code にそのまま使うログの code（design.md §4-2-1 の秘書の読み替え）。ほかは "other"。
 _LEDGER_ERROR_CODES = frozenset({"auth_failed", "timeout", "unreadable", "tool_used", "not_ready", "busy"})
 
@@ -70,14 +86,23 @@ def _fail(status_code: int, code: str, log_code: str | None = None) -> HTTPExcep
     return exc
 
 
-def _log(user_id: int, tenant_id: int, started: float, code: str, cost: float | None = None) -> None:
+def _log(
+    user_id: int,
+    tenant_id: int,
+    started: float,
+    code: str,
+    cost: float | None = None,
+    error_events: int | None = None,
+) -> None:
+    # error_events は secretary-codex の error の合図の数（1回あたり1を超えた件数を段3で数える。design.md §5-1）
     logger.info(
-        "assistant_message user_id=%s tenant_id=%s seconds=%.2f code=%s total_cost_usd=%s",
+        "assistant_message user_id=%s tenant_id=%s seconds=%.2f code=%s total_cost_usd=%s error_events=%s",
         user_id,
         tenant_id,
         time.monotonic() - started,
         code,
         cost if cost is not None else "-",
+        error_events if error_events is not None else "-",
     )
 
 
@@ -85,26 +110,45 @@ def _ledger_error_code(log_code: str) -> str:
     return log_code if log_code in _LEDGER_ERROR_CODES else "other"
 
 
-async def _record_ledger(tenant_id: int, model: str, sdk: str, outcome: str, error_code: str | None) -> None:
+def _counts_from(usage: AgentUsage | None) -> UsageCounts:
+    """容器の使用量を台帳の列へ（design.md §5-1。tool_use_prompt_tokens・total_tokens は足し算で埋めず None）。"""
+    if usage is None:
+        return UsageCounts()
+    return UsageCounts(
+        prompt_tokens=usage.input_tokens,
+        cached_content_tokens=usage.cached_input_tokens,
+        candidates_tokens=usage.output_tokens,
+        thoughts_tokens=usage.reasoning_output_tokens,
+    )
+
+
+async def _record_ledger(
+    tenant_id: int,
+    model: str,
+    sdk: str,
+    outcome: str,
+    error_code: str | None,
+    counts: UsageCounts | None = None,
+) -> None:
     """秘書の1回の頼みを使用の記録に1行（別の取引ですぐ commit。失敗は record_usage_isolated がログに出して飲み込む）。"""
     await record_usage_isolated(
         purpose="secretary_intent",
         model=model,
         sdk=sdk,
-        counts=UsageCounts(),
+        counts=counts if counts is not None else UsageCounts(),
         outcome=outcome,
         error_code=error_code,
         tenant_id=tenant_id,
     )
 
 
-async def _call_agent(text: str, model: str) -> dict:
-    """容器を呼ぶ（model は担当表から読んだ値）。失敗は (HTTPException, ログの code) に直す。"""
+async def _call_agent(text: str, model: str, url: str) -> dict:
+    """容器を呼ぶ（model は担当表から読んだ値・url は agent_url の値）。失敗は (HTTPException, ログの code) に直す。"""
     now = datetime.now(_JST).isoformat(timespec="seconds")
     try:
         async with httpx.AsyncClient(timeout=AGENT_TIMEOUT_SECONDS) as client:
             resp = await client.post(
-                f"{SECRETARY_AGENT_URL}/intent",
+                f"{url}/intent",
                 json={"text": text, "now": now, "model": model},
             )
     except httpx.TimeoutException:
@@ -136,6 +180,9 @@ async def _call_agent(text: str, model: str) -> dict:
             raise _fail(503, "auth_failed")
         if agent_code == "cli_failed":
             raise _fail(502, "agent_failed", "cli_failed")
+        if agent_code == "tool_used":
+            # ADR-1058 段3: 道具を使った合図で答えを捨てた（K2②。台帳の error_code も tool_used）
+            raise _fail(502, "agent_failed", "tool_used")
         raise _fail(502, "unreadable")
     raise _fail(502, "unreadable")
 
@@ -166,8 +213,9 @@ async def post_assistant_message(
     except Exception:  # noqa: BLE001
         _log(user_id, tenant_id, started, "not_ready", None)
         raise _fail(503, "not_ready") from None
-    sdk = _SDK_BY_PROVIDER.get(assignment.provider)
-    if sdk is None:
+    url = agent_url(assignment.provider)
+    sdk = _sdk_for(assignment.provider)
+    if url is None or sdk is None:
         _log(user_id, tenant_id, started, "not_ready", None)
         raise _fail(503, "not_ready")
 
@@ -176,13 +224,15 @@ async def post_assistant_message(
 
     # ③ 容器を呼ぶ
     cost: float | None = None
+    error_events: int | None = None
     try:
-        raw = await _call_agent(body.text, assignment.model)
+        raw = await _call_agent(body.text, assignment.model, url)
         try:
             envelope = AgentEnvelope.model_validate(raw)
         except ValidationError:
             raise _fail(502, "unreadable")
         cost = envelope.total_cost_usd
+        error_events = envelope.error_events
         intent = envelope.intent
 
         # 予定の日時の検査（AI が unknown で聞き返すべきところを予定で返した場合もここで止まる）
@@ -199,12 +249,12 @@ async def post_assistant_message(
                 raise _fail(502, "unreadable")
     except HTTPException as exc:
         log_code = getattr(exc, "_log_code", "unreadable")
-        _log(user_id, tenant_id, started, log_code, cost)
+        _log(user_id, tenant_id, started, log_code, cost, error_events)
         await _record_ledger(tenant_id, assignment.model, sdk, "failed", _ledger_error_code(log_code))
         raise
 
     # AI の呼び出しが成功した（容器が 200・形と日時の検査を通った）。この後の失敗でも ok のまま（design.md §4-2-3）
-    await _record_ledger(tenant_id, assignment.model, sdk, "ok", None)
+    await _record_ledger(tenant_id, assignment.model, sdk, "ok", None, _counts_from(envelope.usage))
 
     # ④ 会社の文脈を張り直す
     await reset_tenant_context(db, tenant_id)
@@ -243,7 +293,7 @@ async def post_assistant_message(
         candidates = {"companies": [], "contacts": []}
         draft = UnknownDraft(reply=intent.reply)
 
-    _log(user_id, tenant_id, started, "ok", cost)
+    _log(user_id, tenant_id, started, "ok", cost, error_events)
     return AssistantMessageOut(
         kind=intent.kind,
         draft=draft,
