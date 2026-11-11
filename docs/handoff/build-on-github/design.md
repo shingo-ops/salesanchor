@@ -815,3 +815,14 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 
 ### 26-4 審査（Opus 自己審査・2026-11-11）
 判定: カード発行に進む。根拠: 26-1 の 1.〜9. は §12 便2 の目的と K1〜K8 を変えず、公式の出典（Context7）と実物の行番号で裏付けた。未確認の U15・U30・U31 は、どれも落ちたとき箱に触る前に止まる。独立した第二者の審査ではないので、クラウドで設計審査を 1 回行ってから実装に渡す。
+
+### 26-5 クラウドの設計審査 1 回目（2026-11-11・architect opus）と直し（カード v2）
+判定: REVISE。行番号はすべて実物と一致、`uses:` の切替・secrets・trap の形は可、とされた。指摘と扱い:
+- N1（必須）: 2-2 の 4. の 5 行の検査で `exit 1` するとき、`.env` を控えに戻していなかった（§26-1 3. に反する）。→ `exit 1` の前に 2-2 の 5. と同じ戻しを足した。試験 T9 を足した。
+- N2（必須）: `scripts/rehearsal_phase2.sh:92` は `steps.changes` しか置き換えず、Finalize（`.github/workflows/deploy.yml:922`）の `steps.gate` が残って bash が落ちる。便2 の前からある不具合だが、カードの「リハーサルが緑」が通らない。Opus も 92 行目と 922 行目を読んで確かめた。→ 2-7 の 2. に `steps.gate` の置き換えと SUBSTITUTIONS の直しを足した。
+- N3: 2-2 の 5. の範囲は 470-492（492 行目が `fi`、493 行目からは blue-green の注記）。→ 直した。
+- N4: `deploy-script-test.yml` の paths に deploy.yml が無く、deploy.yml だけを変えた PR で T7 が流れない。→ 両方の paths に足した。
+- N5: K1 の確かめを行番号で書いていた（実装で行がずれる）。`tests/sandbox/image-scan-survey.sh` は注記の行も当たる。→ 「ファイル＋文字列」の組で書き直した。
+- N6: rollback-images.sh に秘書の起動・`/api/health` の確かめ・所要秒（K6）が無かった（§9-2 との食い違い）。→ 足した。試験 T8 を足した。
+- N7（推奨）: 受け取りは通ったが Step 3b の切替が落ちたとき、`.env` に動かしていない指紋が残る。→ 直さず受け入れる。理由: (1) 今の形でも Step 3 の組み立てがローカルの `astro-webapp-backend` を上書きした後で Step 3b が落ちると、同じく動かしていない完成品が残る（便2 で増える危険ではない）。(2) 残る指紋は GitHub で組み立てて走査を通し、prod1 に受け取り済みの完成品なので、起動できない物ではない。(3) Finalize は `if: always()` で走り（`.github/workflows/deploy.yml:907`）、健康確認が落ちれば控えに戻す。(4) 次の main への push で上書きされる。
+判定（Opus）: N1〜N6 を直したので、クラウドで再審査を 1 回行う。

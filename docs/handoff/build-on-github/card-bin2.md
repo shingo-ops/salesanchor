@@ -1,6 +1,6 @@
 # card-bin2: 本番の受け取りを指紋に切り替える（prod1 で組み立てない）
 
-状態: カード草案（Opus、2026-11-11）。設計審査はまだ。実装の承認はまだ（PO の明示の実装承認が要る）。この PR を main に入れることは、deploy.yml・compose・本番の scripts を変えるので危険 PR（ADR-136）。PO の「GO #番号」が要る。切り替えは 14:00〜16:00（日本時間）、PO が見ている時間に限る（design.md §23）。
+状態: カード草案（Opus、2026-11-11）。クラウドの設計審査 1 回目は REVISE（N1〜N7）→ v2 で直した（design.md §26-5）。再審査はまだ。実装の承認はまだ（PO の明示の実装承認が要る）。この PR を main に入れることは、deploy.yml・compose・本番の scripts を変えるので危険 PR（ADR-136）。PO の「GO #番号」が要る。切り替えは 14:00〜16:00（日本時間）、PO が見ている時間に限る（design.md §23）。
 親: [design.md](./design.md) §12 便2（中身の正本）・§26（このカードを出す前の直し）・§9（控えと戻し）。前の段のカード: [card-bin1-r3.md](./card-bin1-r3.md)。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。本番・GitHub の secret と Variables・組織の設定には触らない。PR は作らない（枝に push して報告するまで）。
 
@@ -152,11 +152,14 @@ jobs:
             for _k in BACKEND_IMAGE FRONTEND_IMAGE GEMINI_EGRESS_IMAGE GHA_EXPORTER_IMAGE SECRETARY_AGENT_IMAGE; do
               if ! grep -qE "^${_k}=ghcr\.io/[a-z0-9-]+/salesanchor-[a-z0-9-]+@sha256:[0-9a-f]{64}$" .env; then
                 echo "❌ .env に ${_k} の指紋の行がありません（箱には触っていません）"
+                # 受け取っていない指紋を .env に残さない（design.md §26-1 3.・§26-5 N1）。5. と同じ戻し方
+                sed -i -E '/^(BACKEND|FRONTEND|GEMINI_EGRESS|GHA_EXPORTER|SECRETARY_AGENT)_IMAGE=/d' .env
+                cat .deploy_prev_images.env >> .env
                 exit 1
               fi
             done
 ```
-5. 470-495 行目（`echo "Step 3: Rebuilding and restarting containers..."` から `fi`（`exit 1` の次の行）まで）を次にする。
+5. 470-492 行目（`echo "Step 3: Rebuilding and restarting containers..."` から 492 行目の `fi`（`exit 1` の次の行）まで）を次にする。493 行目からの blue-green の注記と 497 行目の `echo "Step 3b: …"` は変えない。
 ```bash
             echo "Step 3: Pulling images by digest (build-on-github 便2)..."
             # prod1 では組み立てない（2026-11-08 のメモリ不足の再発防止・design.md §1）。
@@ -207,7 +210,7 @@ jobs:
 22 行目の WATCH_LIST の最後の `GHCR_PUSH_TOKEN` の後に ` GHCR_PULL_TOKEN` を足す。
 
 ### 2-4. `.github/workflows/deploy-script-test.yml`
-1. `pull_request.paths` と `push.paths` の両方の `- 'scripts/tests/test_app_services_plan.py'` の次の行に `      - 'scripts/tests/test-deploy-pull-prune.sh'` を足す。
+1. `pull_request.paths` と `push.paths` の両方の `- 'scripts/tests/test_app_services_plan.py'` の次の行に `      - 'scripts/tests/test-deploy-pull-prune.sh'` と `      - '.github/workflows/deploy.yml'` の 2 行を足す（理由: T7・T9 は deploy.yml から塊を抜き出すので、deploy.yml だけを変えた PR でも流す）。
 2. 最後の段の後に足す。
 ```yaml
       - name: Run pull/prune image tests (build-on-github 便2)
@@ -298,7 +301,7 @@ docker images --digests --format '{{.Repository}}@{{.Digest}}' | sort -u | while
 done
 exit 0
 ```
-6. `scripts/deploy/rollback-images.sh`（新規・手で流す戻し・design.md §9-2「手動」）: (1) `.deploy_prev_images.env` が 5 行（`^(BACKEND|FRONTEND|GEMINI_EGRESS|GHA_EXPORTER|SECRETARY_AGENT)_IMAGE=` の行数が 5）でなければ止まる、(2) 今の 5 行を `.deploy_rollback_from.env` に写す、(3) `.env` の 5 行を控えで置き換える、(4) 5 つの指紋が `docker image inspect` でローカルに在ることを確かめる（無ければ「GHCR_PULL_TOKEN と GHCR_USER を渡して pull-images.sh を流す」と出して止まる）、(5) `bash scripts/blue-green-cutover.sh`、(6) `docker compose up -d --no-build --no-deps frontend celery-worker celery-beat discord-gateway gemini-egress gha-exporter`。冒頭に `set -euo pipefail` と `cd "${REPO_DIR:-/home/ubuntu/salesanchor}"`。
+6. `scripts/deploy/rollback-images.sh`（新規・手で流す戻し・design.md §9-2「手動」）: (1) `.deploy_prev_images.env` が 5 行（`^(BACKEND|FRONTEND|GEMINI_EGRESS|GHA_EXPORTER|SECRETARY_AGENT)_IMAGE=` の行数が 5）でなければ止まる、(2) 今の 5 行を `.deploy_rollback_from.env` に写す、(3) `.env` の 5 行を控えで置き換える、(4) 5 つの指紋が `docker image inspect` でローカルに在ることを確かめる（無ければ「GHCR_PULL_TOKEN と GHCR_USER を渡して pull-images.sh を流す」と出して止まる）、(5) `bash "${CUTOVER_SCRIPT:-scripts/blue-green-cutover.sh}"`（試験で偽に差し替えるため）、(6) `docker compose up -d --no-build --no-deps frontend celery-worker celery-beat discord-gateway gemini-egress gha-exporter`、(7) `docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml up -d --no-build --force-recreate`（deploy.yml:731 と同じ形）、(8) `docker exec astro-webapp-backend-1 python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"` を 5 秒おきに最大 12 回（deploy.yml:933 と同じ確かめ方）。12 回とも落ちたら終了 1、(9) 始めと終わりに `date +%s` を出し、`rollback done in <秒> s` を出す（K6）。冒頭に `set -euo pipefail` と `cd "${REPO_DIR:-/home/ubuntu/salesanchor}"`。組み立ての命令は 1 つも含めない（K6）。
 7. `scripts/tests/test-deploy-pull-prune.sh`（新規）: `scripts/tests/test-deploy-nginx-recreate-guard.sh` と同じ「偽の docker を PATH の先頭に置き、呼ばれ方をファイルに記録する」型。一時ディレクトリに偽の `.env` を置き `REPO_DIR` で指す。`PULL_RETRY_SLEEP=0`。最低限の場合:
    - T1 正しい 5 行・偽の docker が全部成功 → 終了 0、`docker pull` が 5 回、`docker logout ghcr.io` が 1 回、`build` を含む呼び出しが 0 回。
    - T2 compose config の応答に `build` を持つサービスが 1 つ → 終了 1、`docker login` が 0 回。
@@ -307,10 +310,18 @@ exit 0
    - T5 prune: 偽の `docker images` が 4 つの ghcr 指紋（今・1 つ前・古い 2 つ）と `astro-webapp-backend@<none>` を返す → `docker image rm` は古い 2 つだけ。
    - T6 prune: `.env` と控えの両方に指紋が無い → `docker image rm` が 0 回、終了 0。
    - T7 deploy.yml の Finalize の戻しの塊（2-2 の 10.）を YAML から抜き出し、控えが 1 行のとき `.env` のその行だけが入れ替わること。控えが空で `git show HEAD:docker-compose.yml` に `BACKEND_IMAGE` が無いとき 5 行が消えること（偽の git を置く）。
+   - T8 rollback-images.sh: 控えが 5 行・偽の docker が全部成功 → 終了 0、`.env` の 5 行が控えと同じ、`.deploy_rollback_from.env` が元の 5 行、`CUTOVER_SCRIPT` で渡した偽の切替が 1 回呼ばれ、`up -d --no-build` が 2 回（本体・秘書）、`build` を含む呼び出しが 0 回、出力に `rollback done in`。控えが 4 行 → 終了 1、`.env` は変わらない。
+   - T9 deploy.yml の 2-2 の 4. の塊を YAML から抜き出し、`BACKEND_REF` に `@sha256:` の無い値を渡す → 終了 1、`.env` の 5 行が控えの 5 行と同じ（受け取っていない指紋が残らない）。
 
 ### 2-7. 抜き出す試験・砂場（design.md §12 便2 12.〜15.・§26-3）
 1. `scripts/tests/test-deploy-nginx-recreate-guard.sh:27` の `for s in j["steps"]` を `for s in j.get("steps", [])` にする。ほかは変えない。
 2. `scripts/rehearsal_phase2.sh`: design.md §12 便2 12. の (i)〜(iii) のとおり。今の行番号: 自前 compose の backend の `build: .` は 183 行目（`image: \${BACKEND_IMAGE:-phase2-rehearsal-backend}` を足す。heredoc は 180 行目の引用符なしの `<< COMPOSE` なので `$` の前に `\` が要る）、`git reset --hard "${BAD_SHA}"` は 331 行目、B-1 の予備の `docker compose up -d` は 379 行目、SUBSTITUTIONS の一覧は 16-20 行目。309・332 行目の `docker compose build --quiet` は変えない。
+   さらに（design.md §26-5 N2・便2 の前からある不具合）: 92 行目を次の 2 行にする（字下げは今の 92 行目と同じ）。
+```bash
+    | sed 's/\${{ steps\.changes\.outputs\.migrations }}/true/g' \
+    | sed 's/\${{ steps\.gate\.outputs\.migrations }}/true/g')
+```
+   18 行目の SUBSTITUTIONS の 2. を `` `${{ steps.changes.outputs.migrations }}` と `${{ steps.gate.outputs.migrations }}` → `true` (GHA expression) `` にする。理由: Finalize（deploy.yml:922）は `steps.gate` を使い、置き換わらないと bash が `bad substitution` で落ちるので、リハーサルが緑にならない。
 3. `scripts/test_rollback_simulation.sh`: design.md §12 便2 13. のとおり。今の行番号: 自前 compose の backend は 52-55 行目（heredoc は 37 行目の `'DCEOF'` で引用符付きなので `\` は要らない）、戻しの写しは 397-402 行目（2-2 の 10. と同じ形にする）、408 行目に `--no-build`。282・346 行目の `docker compose build -q` は変えない。
 4. `scripts/dry-run-blue-green.sh`: design.md §12 便2 14. のとおり（9・27・47-58 行目）。
 5. `tests/sandbox/ai-reader-audit.sh:34` `docker compose -f "$COMPOSE" build ai-reader` → `docker build -t astro-webapp-backend ./backend`。
@@ -324,7 +335,7 @@ exit 0
 - `docker compose -f docker-compose.yml config -q`（`.env.example` を `.env` に写した一時の場所で）が終了 0。手元の組み立ての確かめに、`docker compose config --format json | python3 -c '…build の数…'` が override ありで 7、COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml ありで 0。
 
 ## 4. 確かめ（PR の審査で貼る）
-- K1 の形: `git grep -nE 'docker( compose)?( -[fp] \S+)* build([[:space:]]|$)|docker build([[:space:]]|$)' -- ':!docs' ':!*.md'` の当たりが、`scripts/rehearsal_phase2.sh:309,332`・`scripts/test_rollback_simulation.sh:282,346`・`tests/sandbox/ai-reader-audit.sh:34`・`tests/sandbox/image-scan-survey.sh:22`（すべて GitHub の実行機の上）だけ。deploy.yml の当たりは 0。
+- K1 の形: `git grep -nE 'docker( compose)?( -[fp] \S+)* build([[:space:]]|$)|docker build([[:space:]]|$)' -- ':!docs' ':!*.md'` の当たりが、次の「ファイル＋文字列」の組だけ（行番号は実装で動くので見ない。すべて GitHub の実行機の上で動く）。`scripts/rehearsal_phase2.sh` の `docker compose build --quiet` 2 件・`scripts/test_rollback_simulation.sh` の `docker compose build -q` 2 件・`tests/sandbox/ai-reader-audit.sh` の `docker build -t astro-webapp-backend ./backend` 1 件・`tests/sandbox/image-scan-survey.sh` の `survey_one()` の注記 1 件と `docker build --progress=plain` 1 件。deploy.yml・`scripts/deploy/`・`scripts/ops/`・`scripts/blue-green-cutover.sh` の当たりは 0。
 - `gh workflow run test-rollback.yml --ref release/build-on-github-bin2` が緑。`gh workflow run test-phase2-rehearsal.yml --ref release/build-on-github-bin2` が緑（secret が無くて動かないときは、そのことを報告に書く）。`gh workflow run sandbox-test.yml --ref release/build-on-github-bin2 -f test=ai-reader-audit` が緑。
 - 報告: 枝の HEAD の 40 桁、触ったファイルの一覧（`git diff --stat origin/main...HEAD`）、上の試験の生の出力の置き場。
 
