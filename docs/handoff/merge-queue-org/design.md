@@ -102,7 +102,7 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 | models.py に新 Column → … | 乙 | 1 つの PR の中で model と移行が揃っているかの確かめ |
 | ADR-072 tenant schema lint | 甲 | 全体の走査 |
 | Lint & Dark Mode Check | 甲 | 全体の走査。concurrency が `github.ref` なので列の枝ごとに分かれる（取り消し合わない） |
-| gitleaks | 甲（ただし今の部品では列で動かない・§13 U21） | 軽い。合わせた差分も見る |
+| gitleaks | 甲（部品をやめて本体を直接動かす形に作り直す・§5-1。U21 は PO 2026-11-11「1」で決定） | 軽い。合わせた差分も見る |
 | CLAUDE.md line count | 甲 | 2 つの PR の追記で 90 行を超えうる |
 | ADR index is up to date | 甲 | 2 つの PR が ADR を足すと索引が古くなる（合わせて壊れる典型） |
 | UI governance gate | 乙 | PR の差分の部品を見る。カードで行を読み、全体走査なら甲に変える |
@@ -117,6 +117,43 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 - 注（設計審査 2026-11-10 の必須指摘 1）: `guard-authoring/evaluation` は job の名前ではない。`scripts/run-guard-evaluation.js:5` の `CONTEXT` で、`pull_request_target` の job（`.github/workflows/guard-authoring-gate.yml:16-18,43-44`・`statuses: write` は :51）が PR の head の commit に status を書く（同 js:18-19）。列の commit にはこの status が届かないので、job に if を付けても列で Pending のまま止まる。便0 では、merge_group のときに列の commit（`merge_group.head_sha`）へ同じ名前の status を書く job を足す。中身は「列に入った PR の head に success の status があることを API で読み、あれば success を書く」。PR の中身は列に入ると変わらないので、PR で通った結果を写すだけでよい。ほかの乙 4 件（migration-guard・UI governance・warn-direct-lesson-edit・process-artifacts）も、必須の名前が job の名前か status かをカードで 1 件ずつ確かめ、status なら同じ形にする。ruleset で integration_id 15368 に結び付いた 5 件（R§3）の、status を書く側の名義が合うかもカードで確かめる。
 - 列の一時枝（`gh-readonly-queue/main/...`）で余計に走る push 起動の workflow（設計審査の必須指摘 2・origin/main の実物で確認）: branches の指定が無い `.github/workflows/backup-script-test.yml`・`.github/workflows/deploy-script-test.yml`、`branches-ignore: [main]` だけの `.github/workflows/active-work-lint.yml`・`.github/workflows/aeon-script-check.yml`・`.github/workflows/task-state-check.yml` の 5 本。便0 でそれぞれの `push:` の `branches-ignore` に `'gh-readonly-queue/**'` を足す（指定が無い 2 本は `branches-ignore: ['gh-readonly-queue/**']` を新たに置く）。数え方: `.github/workflows` 直下の 81 本（`_archive/` の 2 本は GitHub が動かさない）。一時枝で push の event が起きるかは、公式文書だけでは決まらない（§13 U18。8 回目の推奨 2）。起きなくても足して害はないので前もって足し、便2 の試しで確かめる。
 - 個人名義のうちは merge_group が起きないので、便0 を入れても今の動きは変わらない（入れて安全）。
+
+### 5-1. gitleaks の作り直し（U21・PO 2026-11-11「1」で (a) に決定。便0-B3）
+
+なぜ: §13 U21 のとおり、今の部品 `gitleaks/gitleaks-action@v2` は (1) 列（`merge_group`）では必ず失敗し、(2) 会社名義では `GITLEAKS_LICENSE` が無いと全 PR で失敗する。部品の中身の検査道具 `gitleaks` 本体は MIT で、鍵の確認は部品の側にだけある（部品 v2 `src/index.js:109-115` の「missing gitleaks license」は部品の文。本体の README v8.30.1 の使い方に鍵は出てこない。Context7 `/gitleaks/gitleaks/v8.30.1` で確認）。
+
+変更前（origin/main 00dfd6cb1 の `.github/workflows/secret-scan.yml`）:
+- `:7-12` 起動は `pull_request`（枝の指定なし）と `push`（develop・main）。
+- `:23-28` 手順は `uses: gitleaks/gitleaks-action@v2` 1 つ。`:27-28` の注「GITLEAKS_LICENSE は PR へのコメント機能が必要な場合のみ。未設定でも動作する（OSS / プライベートリポジトリ共通）」は、会社名義では誤り（部品の README「required for organizations」）。
+- 部品が実際に流している命令（部品 v2 `src/gitleaks.js:93-117`・`src/index.js:137`）: 本体の版は `GITLEAKS_VERSION` が無いので既定の 8.24.3。`gitleaks detect --redact -v --exit-code=2 --report-format=sarif --report-path=results.sarif --log-level=debug --log-opts=--no-merges --first-parent <最初>^..<最後>`。PR では「最初」「最後」を PR の commit の一覧 API（`GET /pulls/{n}/commits`）から取る。見つかったら PR にコメントを書き、SARIF を成果物として残す。
+
+変更後（同じファイルを書き換える。job の id `gitleaks` と name `gitleaks（シークレット漏洩検出）` は変えない＝必須の名前はそのまま）:
+1. `on:` に `merge_group: types: [checks_requested] branches: [main]` を足す。`pull_request:`・`push:` はそのまま。
+2. `permissions: contents: read` を置く（今は書いていない。部品が PR にコメントを書くための `GITHUB_TOKEN` は要らなくなる）。
+3. 手順 1: `actions/checkout@v5`（`fetch-depth: 0` のまま）。
+4. 手順 2「本体を入れる」: `https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz` を取り、sha256 が `9991e0b2903da4c8f6122b5c3186448b927a5da4deef1fe45271c3793f4ee29c`（公式の `gitleaks_8.24.3_checksums.txt` を 2026-11-11 に `gh release download` で読んだ値）と一致しなければ失敗させる。`$RUNNER_TEMP` に展開し、`gitleaks version` を記録に出す。版は今の部品の既定と同じ 8.24.3 にする（検出の決まりを変えない。版を上げるのは別の変更で 1 つずつ）。
+5. 手順 3「見る範囲を決める」: 値は `run:` に `${{ }}` で埋め込まず `env:` で渡す。
+   - `pull_request`: `BASE=github.event.pull_request.base.sha`・`HEAD=github.event.pull_request.head.sha`。
+   - `merge_group`: `BASE=github.event.merge_group.base_sha`・`HEAD=github.event.merge_group.head_sha`。
+   - `push`: `BASE=github.event.before`・`HEAD=github.event.after`。
+   - BASE か HEAD が空・全部 0・`git cat-file -e` で手元に無いときは、範囲を推測で決めずに失敗させる（fail-closed。`::error::` に理由を書く）。
+6. 手順 4「調べる」: `gitleaks git --redact --verbose --no-banner --exit-code 1 --config .gitleaks.toml --log-opts="--no-merges ${BASE}..${HEAD}" .`。見つかれば終了コード 1 で job が赤になる。値は伏せ字で記録に出る（`--redact`）。
+7. 変わること・やめること: PR へのコメントと SARIF の成果物はやめる（見つかった場所は job の記録に伏せ字で出る）。PR の commit 一覧 API の上限（250 件）に縛られなくなる。外部（keygen.sh）へ倉庫名を送る道が無くなる。
+8. 直す注: `:27-28` の注を消し、`:3-5` の説明に「部品は使わず本体を直接動かす（会社名義・列のため。design §5-1）」を足す。`docs/B-11_credential_management_policy.md:87`・`docs/adr/ADR-075-github-secrets-only-policy.md:62,88` は workflow の名前を指すだけなので変えない（カードで読み直して確かめる）。
+
+範囲 `BASE..HEAD` を選んだ理由: 部品の「最初^..最後」は PR の commit 一覧が 250 件を超えると先頭を取り違える。`BASE..HEAD` は「HEAD から辿れて BASE から辿れない commit」＝ PR（列では列に入った分）で増えた commit そのもの。`--no-merges` は部品と同じで、合流の commit 自体は見ない（中身は元の commit で見る）。列の一時の commit は合流の commit なので除かれ、元の PR の commit は `head_sha` から辿れるので見られる。
+
+失敗したときの戻し方: この 1 ファイルを戻す PR（`git revert`）。必須の名前は変わらないので ruleset は触らない。
+
+### 5-2. 列の起動漏れを機械で止める見張り（便0-B3 と同じ PR）
+
+なぜ: 必須の確かめの workflow に `merge_group` が無いと、列は黙って待ち続ける（外部の失敗事例・§12）。今回の gitleaks のように「起動はあるが中身が列に対応しない」部品も同じ止まり方をする。人の注意ではなく、毎回の PR で機械に確かめさせる。
+
+- 置き場: `scripts/ci/check_queue_triggers.py`（新規）と試験 `scripts/tests/test_check_queue_triggers.py`（新規）。`.github/workflows/test.yml` の必須の job `pytest`（`if: always()` で全 PR で動く。今も `:276-278` で `check_ci_aggregators.py` を流している）に 2 行足して流す。
+- 中身: (1) `docs/specs/rule-enforcement/required-checks.txt` の名前のうち、`.github/workflows/*.yml` の job の `name` と一致する物について、その workflow の `on:` に `merge_group` があること。(2) どの workflow にも `gitleaks/gitleaks-action` が無いこと。(3) 名前が job の name と一致しない物（status 型。`guard-authoring/evaluation` 等・§5 の注）は、別の表 `QUEUE_STATUS_CHECKS`（台本の中）に載っていて、§5 の注の「status を写す job」があることを確かめる。どれにも当たらない名前があれば失敗。
+- 効き始め: 便0 の B2（10 本）・B3（gitleaks）・status を写す job がそろった PR から。そろう前に入れると今の main で赤になるので、そろえる PR と同じ PR か、その後に入れる。
+- `scripts/` は `scripts/check-process-artifacts.js:1025` の危険な道なので GO 記録が要る（ADR-1003 の委任の範囲）。
+- 戻し方: `test.yml` の 2 行を消す PR。
 
 ## 6. 合流の道の直し（便0 に含める。列の前後どちらでも動く形）
 
@@ -204,6 +241,10 @@ develop の ruleset 16619490 は触らない（新しい作業に使わない・
 | 基準 | 検証方法 |
 |---|---|
 | 便0: 16 件全部に merge_group | `git grep -L 'merge_group' -- <16 本>` が空 |
+| 便0-B3: gitleaks が鍵なしで動き、漏れを止める | (1) 写しの使い捨ての倉庫で、偽の鍵の形（gitleaks の既定の決まりに当たる作り物）を入れた commit に §5-1 の命令を流し終了コード 1・記録の値が伏せ字。(2) 偽の鍵が無い commit では 0。(3) `.gitleaks.toml` の allowlist の道（`.env.example`）に入れた場合は 0。(4) 直近 14 日の main の合流 PR から 5 件を選び、部品（8.24.3・`detect`）と §5-1 の命令（8.24.3・`git`）で同じ範囲を流して、見つかった件数が一致（どちらも 0 を想定）。(5) この PR 自身の `gitleaks（シークレット漏洩検出）` が緑で、記録に `gitleaks version` が 8.24.3・sha256 一致の行がある |
+| 便0-B3: 列の起動漏れの見張り | 試験で「merge_group の無い必須 workflow」「gitleaks-action を使う workflow」「表に無い status 型の名前」の 3 つの作り物がそれぞれ失敗、今の main（便0 の後）で 0 件。`test.yml` の `pytest` の記録にその行が出る |
+| 便1 直後: gitleaks が会社名義で緑 | 移した後の最初の PR で `gitleaks（シークレット漏洩検出）` が緑。`GITLEAKS_LICENSE` は 0 件のまま |
+| 便2: gitleaks が列で動く | 試しの PR の merge_group の run で `gitleaks（シークレット漏洩検出）` が緑、記録の範囲が `merge_group.base_sha..head_sha` |
 | 便0: 乙の job は列で飛ぶ | 便2 の後の試しの PR で、乙の確かめが merge_group の run で skipped・Success |
 | 便0: status 型の必須（guard-authoring/evaluation 等）が列で揃う | 便2 の後の試しの PR で、列の commit の `gh api repos/<新>/commits/<head_sha>/status` にその名前が success で載る |
 | 便0: 一時枝で余計に走らない | 5 本の `push:` に `gh-readonly-queue/**` の除外がある。便2 の後の試しの PR で、その 5 本の run が一時枝で 0 件 |
@@ -229,7 +270,8 @@ R§7（出典・日付・数値・適用の限界は scratchpad の mq-web/evide
 - strict を外すこと（§4）を PO が認めるか。
 - U19（PO が決める）: K3 の判定を §2 の案（GO 待ちを除いた時計で 120 分を超えた PR の割合が基準値の半分以下＋列の中の中央値 60 分以下）にするか。60 分の目安もここで決める。列を入れると合流のたびに確かめが 1 回増えるので、合流までの中央値は今より約 20〜25 分長くなる（7 回目の必須指摘 1）。PO が中央値で比べたいなら、その増え方を受け入れた上での上限を PO が決める。
 - U20（便2 の試しで埋まる）: 列から合流したときにも `pull_request_target` の `dequeued` が起きるか（8 回目の必須指摘 2）。webhook の `dequeued` の `reason` の値に `MERGE` があるので、起きると読める（推測。公式文書にどのときに起きるかの文は無い）。§9 は `merged` と `reason`（`MERGE`・`ALREADY_MERGED`）の両方で合流済みの PR を知らせない形にしてあるので、起きても起きなくても誤って鳴らない。試しの PR（合流する 1 件と、わざと赤にして外れる 1 件）で、起きたか・`github.event.reason` に何が入ったかを記録する。外れる 1 件で知らせが 1 通だけ届くことを確かめる。
-- U21（PO が決める。便0-B2 のカード作成時 2026-11-11 に見つけた設計の漏れ）: 必須の確かめ `gitleaks（シークレット漏洩検出）` は `.github/workflows/secret-scan.yml:24` で部品 `gitleaks/gitleaks-action@v2` を使う。この部品の元（v2 と最新 v3.0.0 の `src/index.js`。`gh api repos/gitleaks/gitleaks-action/contents/src/index.js` で読んだ）には次の 2 つがある。(1) 対応する起動は `push`・`pull_request`・`workflow_dispatch`・`schedule` だけで、それ以外は「not yet supported」で失敗する（:36-46）。だから列（`merge_group`）では必ず赤になる。(2) 倉庫の持ち主が会社（Organization）だと、`GITLEAKS_LICENSE` の secret が無ければ失敗する（v2 :48-115。公式 README「required for organizations, not required for user accounts」）。今の倉庫には `GITLEAKS_LICENSE` が無い（`gh secret list` の名前で 0 件）。だから会社名義へ移した直後から、列とは関係なく全 PR でこの必須の確かめが赤になり、合流が全部止まる。選択肢: (a) 部品をやめ、本体の `gitleaks`（MIT・v8.30.1）を workflow の中で直接動かす。鍵も外部への登録も要らず、列では `merge_group.base_sha`..`head_sha` を見られる。必須の名前は job の name なので変わらない。(b) gitleaks.io の無料の鍵を申し込み（名前・メール・会社名の入力。README「How do I get a free license key?」）、secret に入れる。ただし (1) は直らないので、列では乙（飛ばす）にする必要がある。鍵の確認のため倉庫名と持ち主名が外部（keygen.sh）に送られる（README）。(c) 移すのをやめる。設計の推奨は (a)。決まるまで便0-B2 から gitleaks を外し、別のカードにする。便1（名義の移し）の同意票はこの件が片付くまで出さない。
+- U21 は PO 2026-11-11「1」（部品をやめ本体を直接動かす）で決定。中身は §5-1・§5-2。以下は見つけたときの記録。
+- U21（決定済み。便0-B2 のカード作成時 2026-11-11 に見つけた設計の漏れ）: 必須の確かめ `gitleaks（シークレット漏洩検出）` は `.github/workflows/secret-scan.yml:24` で部品 `gitleaks/gitleaks-action@v2` を使う。この部品の元（v2 と最新 v3.0.0 の `src/index.js`。`gh api repos/gitleaks/gitleaks-action/contents/src/index.js` で読んだ）には次の 2 つがある。(1) 対応する起動は `push`・`pull_request`・`workflow_dispatch`・`schedule` だけで、それ以外は「not yet supported」で失敗する（:36-46）。だから列（`merge_group`）では必ず赤になる。(2) 倉庫の持ち主が会社（Organization）だと、`GITLEAKS_LICENSE` の secret が無ければ失敗する（v2 :48-115。公式 README「required for organizations, not required for user accounts」）。今の倉庫には `GITLEAKS_LICENSE` が無い（`gh secret list` の名前で 0 件）。だから会社名義へ移した直後から、列とは関係なく全 PR でこの必須の確かめが赤になり、合流が全部止まる。選択肢: (a) 部品をやめ、本体の `gitleaks`（MIT・v8.30.1）を workflow の中で直接動かす。鍵も外部への登録も要らず、列では `merge_group.base_sha`..`head_sha` を見られる。必須の名前は job の name なので変わらない。(b) gitleaks.io の無料の鍵を申し込み（名前・メール・会社名の入力。README「How do I get a free license key?」）、secret に入れる。ただし (1) は直らないので、列では乙（飛ばす）にする必要がある。鍵の確認のため倉庫名と持ち主名が外部（keygen.sh）に送られる（README）。(c) 移すのをやめる。設計の推奨は (a)。決まるまで便0-B2 から gitleaks を外し、別のカードにする。便1（名義の移し）の同意票はこの件が片付くまで出さない。
 - U9: `PIPELINE_PAT` の種類と持ち主（PO の画面の確認）。細かく絞る型で持ち主が個人なら、会社を持ち主にした鍵を作り直す。
 - U10: 列に入れたときに `auto_merge_enabled` が起きるか（公式 events-that-trigger-workflows.md:666 では `enqueued` と別の種類・未確認）。便2 の試しの PR で確かめる（§11）。便0 の見張りの判定はどちらでも安全な形にする（§6）。
 - U11: 本番の見張り（docker-compose の GitHub App）が会社名義のリポジトリを読めるか（§10・U3 と一緒に確かめる）。
@@ -246,6 +288,7 @@ R§7（出典・日付・数値・適用の限界は scratchpad の mq-web/evide
 ## 14. 維持の仕組み
 
 - 守り手: scripts/agent-hooks/review-gate/gate.py（便0 で `--admin` を止める行を足し、列を飛ばす合流の命令を AI が出せないようにする。この行が効き始めるのは便0 の後から。それまでは列がまだ無いので、守る対象も無い）。列そのものは GitHub の ruleset が守る（ファイルではないので、下の見張りで外れに気付く）。
+- 列の起動漏れの見張り `scripts/ci/check_queue_triggers.py`（§5-2・便0-B3 で作る。必須の job `pytest` で全 PR に流れる）。必須の確かめに `merge_group` が無い・列に対応しない gitleaks の部品が戻る、のどちらも PR の段で赤にする。
 - 便0・便2 で作る見張りの workflow（列の見張り・外れの知らせ・設定のずれの見張り。§9）は、まだファイルが無い。作ったら、この欄の守り手にパスを足す（便3 の片付けで行う）。
 - 対象: 本線への合流が全件列を通ること（ruleset の merge queue の規則・bypass が空・strict が無効）。列が止まったときに PO に知らせが届くこと（K4）。
 - 親子リンクの宿題（STANDARD-WORKFLOW §1.6）: 親の仕様書 docs/specs/branch-operations/README.md の §7 に、この recon.md・design.md へのリンクがまだ無い。設計を PO が承認した直後の文書だけの変更で足す（遅くとも便3 の片付けで）。
