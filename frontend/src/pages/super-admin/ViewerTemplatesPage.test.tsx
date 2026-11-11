@@ -43,10 +43,10 @@ const ITEMS = KEYS.map(key => ({
 
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={["/super-admin/viewer-templates"]}>
+    <MemoryRouter initialEntries={["/super-admin/users/viewer-templates"]}>
       <Routes>
-        <Route path="/super-admin/viewer-templates" element={<ViewerTemplatesPage />} />
-        <Route path="/super-admin/viewers" element={<div data-testid="viewers-page" />} />
+        <Route path="/super-admin/users/viewer-templates" element={<ViewerTemplatesPage />} />
+        <Route path="/super-admin/users/viewers" element={<div data-testid="viewers-page" />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -120,10 +120,10 @@ it("shows the unregistered label and disables copy when the body is null", async
   expect(writeText).not.toHaveBeenCalled();
 });
 
-it("goes back to the viewer management page with the back button", async () => {
+it("goes back to the user management page with the back button", async () => {
   renderPage();
   await screen.findByText(i18n.t("superAdmin.viewerTemplates.names.signup_request"));
-  fireEvent.click(screen.getByText("Back to Viewer Management"));
+  fireEvent.click(screen.getByText("Back to User Management"));
   expect(await screen.findByTestId("viewers-page")).toBeTruthy();
 });
 

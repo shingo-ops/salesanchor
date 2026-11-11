@@ -8,6 +8,7 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import { HeaderButton } from "../../components/HeaderButton";
 import { TextField } from "../../components/TextField";
 import { LoadingBlock } from "../../components/loading";
+import { settingsMasterPath } from "./settings/settingsNav";
 
 interface PreviewResponse {
   digest: string;
@@ -129,8 +130,8 @@ export default function NoteMasterImportPage() {
   const { isSuperAdmin, loading } = useSuperAdmin();
   return (
     <PageLayout titleText={t("noteMasterCsv.importTitle")}>
-      {loading ? <LoadingBlock /> : !isSuperAdmin ? <p role="alert">{t("productCsv.denied")}</p> : <NoteMasterImportPanel onDone={() => navigate("/super-admin/analysis-rules")} />}
-      {!loading && !isSuperAdmin && <HeaderButton variant="secondary" onClick={() => navigate("/super-admin/analysis-rules")}>{t("noteMasterCsv.backToList")}</HeaderButton>}
+      {loading ? <LoadingBlock /> : !isSuperAdmin ? <p role="alert">{t("productCsv.denied")}</p> : <NoteMasterImportPanel onDone={() => navigate(settingsMasterPath("note-master"))} />}
+      {!loading && !isSuperAdmin && <HeaderButton variant="secondary" onClick={() => navigate(settingsMasterPath("note-master"))}>{t("noteMasterCsv.backToList")}</HeaderButton>}
     </PageLayout>
   );
 }

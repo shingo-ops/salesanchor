@@ -12,13 +12,17 @@ function Where() {
 
 afterEach(() => cleanup());
 
-it("(a) the redirect table is exactly the five expected pairs", () => {
+it("(a) the redirect table is exactly the nine expected pairs", () => {
   expect(LEGACY_SUPER_ADMIN_REDIRECTS.map(r => ({ ...r }))).toEqual([
-    { from: "/super-admin/tcg-product-master", to: "/super-admin/analysis-rules?section=product-master" },
+    { from: "/super-admin/tcg-product-master", to: "/super-admin/settings/masters/product-master" },
     { from: "/super-admin/tcg-supplier-quality", to: "/super-admin/analysis-rules?section=accuracy-management" },
-    { from: "/super-admin/supplier-master", to: "/super-admin/analysis-rules?section=supplier-master" },
+    { from: "/super-admin/supplier-master", to: "/super-admin/settings/masters/supplier-master" },
     { from: "/super-admin/tcg-parallel-report", to: "/super-admin/analysis-rules" },
     { from: "/super-admin/tcg-sold-out", to: "/super-admin/analysis-rules?section=sold-out-results" },
+    { from: "/super-admin/fx-rate", to: "/super-admin/settings/fx-rate" },
+    { from: "/super-admin/viewers", to: "/super-admin/users/viewers" },
+    { from: "/super-admin/login-requests", to: "/super-admin/users/login-requests" },
+    { from: "/super-admin/viewer-templates", to: "/super-admin/users/viewer-templates" },
   ]);
 });
 
@@ -29,6 +33,8 @@ it.each(LEGACY_SUPER_ADMIN_REDIRECTS.map(r => [r.from, r.to] as const))("(b) %s 
         {LEGACY_SUPER_ADMIN_REDIRECTS.map(r => <Route key={r.from} path={r.from} element={<Navigate to={r.to} replace />} />)}
         <Route path="/super-admin/tcg-product-master/import" element={<output data-testid="where">import</output>} />
         <Route path="/super-admin/analysis-rules" element={<Where />} />
+        <Route path="/super-admin/settings/*" element={<Where />} />
+        <Route path="/super-admin/users/*" element={<Where />} />
       </Routes>
     </MemoryRouter>,
   );

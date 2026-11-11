@@ -201,7 +201,7 @@ export default function ViewerTemplatesPage() {
       navKey="nav.superAdminViewerTemplates"
       subtitleKey="superAdmin.viewerTemplates.subtitle"
       headerAction={
-        <Button variant="secondary" size="sm" onClick={() => navigate("/super-admin/viewers")}>
+        <Button variant="secondary" size="sm" onClick={() => navigate("/super-admin/users/viewers")}>
           {t(`${f}.backToViewers`)}
         </Button>
       }
