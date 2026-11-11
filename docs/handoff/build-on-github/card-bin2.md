@@ -321,7 +321,7 @@ exit 0
 - `bash scripts/tests/test-deploy-nginx-recreate-guard.sh`・`bash scripts/tests/test-deploy-orphan-cleanup.sh` が全部 PASS。
 - `actionlint .github/workflows/build-images.yml .github/workflows/deploy.yml .github/workflows/deploy-script-test.yml .github/workflows/monthly-secret-expiry.yml` が 0 件。
 - `bash -n` を新しい 3 つの script と変えた script に。`shellcheck` がある場合は新しい 3 つに。
-- `docker compose -f docker-compose.yml config -q`（`.env.example` を `.env` に写した一時の場所で）が終了 0。手元の組み立ての確かめに、`docker compose config --format json | python3 -c '…build の数…'` が override ありで 7、`COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml` ありで 0。
+- `docker compose -f docker-compose.yml config -q`（`.env.example` を `.env` に写した一時の場所で）が終了 0。手元の組み立ての確かめに、`docker compose config --format json | python3 -c '…build の数…'` が override ありで 7、COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml ありで 0。
 
 ## 4. 確かめ（PR の審査で貼る）
 - K1 の形: `git grep -nE 'docker( compose)?( -[fp] \S+)* build([[:space:]]|$)|docker build([[:space:]]|$)' -- ':!docs' ':!*.md'` の当たりが、`scripts/rehearsal_phase2.sh:309,332`・`scripts/test_rollback_simulation.sh:282,346`・`tests/sandbox/ai-reader-audit.sh:34`・`tests/sandbox/image-scan-survey.sh:22`（すべて GitHub の実行機の上）だけ。deploy.yml の当たりは 0。
