@@ -113,7 +113,7 @@ def wired(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", _FAKE_GEMINI_KEY)
     monkeypatch.setattr(mod, "list_ai_jobs", AsyncMock(return_value=_jobs()))
     monkeypatch.setattr(mod, "_usage_stats", AsyncMock(return_value=_stats()))
-    monkeypatch.setattr(mod, "_secretary_agent_ready", AsyncMock(return_value=True))
+    monkeypatch.setattr(mod, "_secretary_health", AsyncMock(return_value={"ready": True, "last_refresh": None}))
     change = AsyncMock(return_value=True)
     monkeypatch.setattr(mod, "change_ai_assignment", change)
     history = AsyncMock(
@@ -247,7 +247,7 @@ def test_login_state(provider, newest, key, ready, expected):
 
 @pytest.mark.asyncio
 async def test_secretary_row_is_not_ready_when_agent_is_down(wired, monkeypatch):
-    monkeypatch.setattr(mod, "_secretary_agent_ready", AsyncMock(return_value=False))
+    monkeypatch.setattr(mod, "_secretary_health", AsyncMock(return_value=None))
     db = _FakeDb()
     async with _client(_app(db, _user(super_admin=True, role="admin"))) as c:
         r = await c.get("/api/v1/super-admin/ai-jobs")
@@ -267,10 +267,9 @@ async def test_gemini_rows_are_key_missing_without_key(wired, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_agent_health_unreachable_is_false(monkeypatch):
-    """容器に届かない時は例外を出さず False（2 秒の打ち切りと同じ扱い）。"""
-    monkeypatch.setattr(mod, "SECRETARY_AGENT_URL", "http://127.0.0.1:9")
-    assert await mod._secretary_agent_ready() is False
+async def test_agent_health_unreachable_is_none():
+    """容器に届かない時は例外を出さず None（2 秒の打ち切りと同じ扱い）。"""
+    assert await mod._secretary_health("http://127.0.0.1:9") is None
 
 
 def test_usage_sdks_belong_to_exactly_one_provider():
@@ -314,3 +313,78 @@ async def test_k4_responses_have_no_secret_or_email(wired):
         assert r.status_code == 200, r.text
         for pattern in _K4_PATTERNS:
             assert pattern.search(r.text) is None, (pattern.pattern, r.text)
+
+
+# --- ADR-1058 段3: ChatGPT の容器の ready とログインの更新日時 ------------------------
+
+
+def _codex_jobs() -> list[AiJobRow]:
+    rows = _jobs()
+    return [
+        AiJobRow(j.job_key, j.choice_id, "codex", "gpt-5.6-luna", (AiChoice(j.choice_id, "codex", "gpt-5.6-luna"),))
+        if j.job_key == "secretary_intent"
+        else j
+        for j in rows
+    ]
+
+
+@pytest.mark.asyncio
+async def test_codex_row_reads_codex_health_and_refreshed_at(wired, monkeypatch):
+    monkeypatch.setattr(mod, "list_ai_jobs", AsyncMock(return_value=_codex_jobs()))
+    health = AsyncMock(return_value={"ready": True, "last_refresh": "2026-11-11T00:00:00.123456789Z"})
+    monkeypatch.setattr(mod, "_secretary_health", health)
+    db = _FakeDb()
+    async with _client(_app(db, _user(super_admin=True, role="admin"))) as c:
+        r = await c.get("/api/v1/super-admin/ai-jobs")
+    assert r.status_code == 200, r.text
+    health.assert_awaited_once()
+    from app.routers.assistant import agent_url
+
+    assert health.await_args.args == (agent_url("codex"),)
+    row = next(j for j in r.json()["jobs"] if j["job_key"] == "secretary_intent")
+    assert (row["login_ok"], row["login_reason"]) == (True, None)
+    got = datetime.fromisoformat(row["login_refreshed_at"].replace("Z", "+00:00"))
+    assert got == datetime(2026, 11, 11, 0, 0, 0, 123456, tzinfo=timezone.utc)
+    others = [j for j in r.json()["jobs"] if j["job_key"] != "secretary_intent"]
+    assert all(j["login_refreshed_at"] is None for j in others)
+
+
+@pytest.mark.asyncio
+async def test_claude_row_has_no_refreshed_at(wired, monkeypatch):
+    monkeypatch.setattr(
+        mod, "_secretary_health", AsyncMock(return_value={"ready": True, "last_refresh": "2026-11-11T00:00:00Z"})
+    )
+    db = _FakeDb()
+    async with _client(_app(db, _user(super_admin=True, role="admin"))) as c:
+        r = await c.get("/api/v1/super-admin/ai-jobs")
+    row = next(j for j in r.json()["jobs"] if j["job_key"] == "secretary_intent")
+    assert row["login_ok"] is True
+    assert row["login_refreshed_at"] is None
+
+
+@pytest.mark.asyncio
+async def test_codex_row_not_logged_in_is_not_ready(wired, monkeypatch):
+    monkeypatch.setattr(mod, "list_ai_jobs", AsyncMock(return_value=_codex_jobs()))
+    monkeypatch.setattr(mod, "_secretary_health", AsyncMock(return_value={"ready": False, "last_refresh": None}))
+    db = _FakeDb()
+    async with _client(_app(db, _user(super_admin=True, role="admin"))) as c:
+        r = await c.get("/api/v1/super-admin/ai-jobs")
+    row = next(j for j in r.json()["jobs"] if j["job_key"] == "secretary_intent")
+    assert (row["login_ok"], row["login_reason"], row["login_refreshed_at"]) == (False, "not_ready", None)
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("2026-11-11T00:00:00Z", datetime(2026, 11, 11, tzinfo=timezone.utc)),
+        ("2026-11-11T09:00:00+09:00", datetime(2026, 11, 11, tzinfo=timezone.utc)),
+        ("2026-11-11T00:00:00.5Z", datetime(2026, 11, 11, 0, 0, 0, 500000, tzinfo=timezone.utc)),
+        ("2026-11-11", None),
+        ("あした", None),
+        (123, None),
+        (None, None),
+        ("2026-13-40T00:00:00Z", None),
+    ],
+)
+def test_parse_refreshed(value, expected):
+    assert mod._parse_refreshed(value) == expected
