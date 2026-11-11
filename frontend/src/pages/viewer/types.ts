@@ -53,7 +53,7 @@ export interface ViewerSignupResponse {
 }
 
 /** ④ 案内の種類 */
-export type ViewerNoticeKind = "preparing" | "suspended" | "expired" | "error";
+export type ViewerNoticeKind = "preparing" | "suspended" | "expired" | "contractExpired" | "error";
 
 /** 請求先フォームの値（open の応答。まだ無ければ party_type が null で他は空文字） */
 export interface ViewerBillingFormValues {

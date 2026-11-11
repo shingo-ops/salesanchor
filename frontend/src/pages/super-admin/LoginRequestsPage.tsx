@@ -12,7 +12,12 @@ import { LoadingBlock } from "../../components/loading";
 import { UserManagementSubMenu, type UserMenuStatus } from "./users/UserManagementSubMenu";
 import AdminLoginRequestList from "../../features/auth/AdminLoginRequestList";
 
-const STATUS_KEY = { pending: "statusPending", trial: "statusTrial", active: "statusActive" } as const;
+const STATUS_KEY = {
+  pending: "statusPending",
+  trial: "statusTrial",
+  contracting: "statusContracting",
+  active: "statusActive",
+} as const;
 
 export default function LoginRequestsPage() {
   const { t } = useTranslation();
