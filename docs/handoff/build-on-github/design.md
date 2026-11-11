@@ -223,6 +223,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - 控えの形は `.deploy_prev_sha`・`.deploy_nginx_good.conf`（`.github/workflows/deploy.yml:512-513` の注記）と同じ: `/home/ubuntu/salesanchor` 直下・git に入れない。
 
 ### 9-2 戻し方（2 通り）
+便2 の正本は [card-bin2.md](./card-bin2.md) と §26。この節の行番号と手順は 2026-11-04 時点のもので、今の本線とずれている（§26-7 P5）。
 - **自動**（Finalize の健康確認が落ちたとき `.github/workflows/deploy.yml:904-979`）: 今の `git reset --hard PREV_SHA`（`:911`）はそのまま（compose・nginx・scripts を戻すため）。`docker compose build` の 3 回試行（`:925-935`）を削り、代わりに `.deploy_prev_images.env` にある `*_IMAGE=` の行（本番は 5 行。行数は数えない — 控えにある行を全部戻す。リハーサル §12 便2 12. は 1 行で動かす）で `.env` の同名行を置き換え → 今と同じ `docker rm -f …`（`:939-941`）→ `docker compose up -d --no-build --remove-orphans`（`:942` に `--no-build` を足す）。完成品はローカルに残っているので取り直し無し。`.deploy_prev_images.env` が無いか空（初回）なら戻せないので「自動ロールバック失敗」の分岐（`:968-973`）に流す。
 - **手動**（K6 の練習・緊急）: 新しい scripts/deploy/rollback-images.sh。(1) `.deploy_prev_images.env` の 5 行があることを確かめる（無ければ止まる）、(2) 今の 5 行を `.deploy_rollback_from.env` に写す（さらに戻せるように）、(3) `.env` の 5 行を置き換える、(4) `docker compose pull --ignore-buildable`（ローカルにあるので 0 秒。無ければここで初めて取る＝鍵が要る → `GHCR_PULL_TOKEN` を env で渡したときだけ login する）、(5) backend は `bash scripts/blue-green-cutover.sh`（無停止）、他は `docker compose up -d --no-deps --no-build frontend celery-worker celery-beat discord-gateway gemini-egress`、secretary は `-p astro-webapp-secretary -f docker-compose.secretary-agent.yml up -d --no-build --force-recreate`、(6) `date +%s` を始めと終わりに出し、`/api/health` の 200 を確かめ、所要秒を出す。組み立ての命令は 1 つも含めない（K6）。
 - 戻した後の「次の deploy」: main に次の push が来ると新しい指紋で上書きされる（戻しは一時的）。恒久に戻すなら revert の PR。
@@ -787,3 +788,61 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
   - D4 §25-8 の「完成品の中の Firebase の鍵の指紋 `ef457eddf9b65693` と比べる」は、鍵がもう載らないので行わない。
   - D5 番号: 本線に便0 の §24 が先に入ったので、便1 の節は §25 にした（§25 冒頭の注記）。コードの中の `§24` も `§25` に付け替える。
 - 手順書: [card-bin1-r3.md](./card-bin1-r3.md)。確かめ: 試験場 sandbox-test（test=image-scan-survey）で 5 つとも当たり 0（名前・中身・履歴）、`SURVEY_FAILURES 0`。
+
+## 26. 便2 のカードを出す前の直し（v4・2026-11-11 Opus）
+
+§12 便2 は 2026-11-04 の行番号で書いた。その後の本線（26a050a10）で deploy.yml が 1352 行に増え、便1 で build-images.yml ができた。カードは [card-bin2.md](./card-bin2.md)。ここには §12 便2 から変えた点と、その理由だけを書く。目的・範囲・K1〜K8 は変えない。
+
+### 26-1 変えた点（Opus の技術判断）
+1. **組み立ての job を deploy.yml に写さない。** §12 便2 1. は「build job を deploy.yml に移し build-images.yml を消す」だった。代わりに build-images.yml を `on: workflow_call` にし、deploy.yml から `uses: ./.github/workflows/build-images.yml` で呼ぶ。理由: 名前・走査・push の手順の正本を 1 か所（build-images.yml）に保つ。deploy.yml は 1352 行あり、200 行を足すと読む人と抜き出す試験（26-3）の負担が増える。出典（Context7 /websites/github_en_actions・2026-11-11 取得）: 呼ばれる側の github の文脈と event は呼ぶ側のもの／呼ぶ側の workflow の env は渡らない／vars は呼ぶ側の置き場の値が使われる／出力は `on.workflow_call.outputs` で渡す／呼ばれる側の権限は呼ぶ側より下げることしかできない。
+2. **前回の deploy が通っていないときは 5 つ全部を組み立てる（U27）。** paths-filter は push の直前（`github.event.before`）との差しか見ない。前の run の組み立てか deploy が落ちると、その変更を次の run が見落とし、`.env` に古い指紋が残る。deploy.yml の「Check previous deploy completed」（`.github/workflows/deploy.yml:63-79`）と同じ形の判定を build-images.yml の `changes` job に置く。鍵は `github.token`（`actions: read`）。`concurrency` の `queue: max` は使わない（手元の actionlint 1.7.12 が拒む）。
+3. **受け取れなかった指紋を `.env` に残さない。** Step 3 の受け取りか守り（26-1 の 5.）が落ちたら、`.env` の 5 行を控え `.deploy_prev_images.env` の中身に戻してから `exit 1` する。理由: 残すと次の deploy の Step 0 がその行を「1 つ前」として控えに写し、自動の戻し先が受け取っていない完成品になる。
+4. **受け取りは `docker pull` で 5 つの指紋を直接取る。** §12 便2 は `docker compose pull` だった。秘書の compose（`docker-compose.secretary-agent.yml:17-18`）は env_file を必須で読むので、その置き場にファイルが無いと compose が設定を読めず、本体の deploy まで止まる。`docker pull <指紋>` は compose を読まないので、この依存が無い。
+5. **組み立ての残りを機械で止める。** 受け取りの前に `docker compose config --format json` を読み、`build` を持つサービスが 1 つでもあれば `exit 1`（箱に触る前）。これで U5（prod1 に override が在るか）を確かめなくても K1 が守られる。U4 は公式で解けた（Context7 /docker/docs: `COMPOSE_FILE` は `-f` と同じ扱いで、指定があると override を自動で読まない。prod1 の `.env` は COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml・`.github/workflows/deploy.yml:426`）。
+6. **初回の自動の戻し。** §12 便2 は「初回は自動ロールバックで戻せない」としていた。初回は控えが空で、戻り先（`PREV_SHA`）の compose はまだ `build:` の形。この場合は `.env` の 5 行を消して `up -d --no-build` にする。旧 compose は prod1 に残る `astro-webapp-*` の名前の完成品で起きる（便2 は `docker image prune -f` を呼ばなくなり、名前付きの完成品は消さない）。これで初回も戻せる。
+7. **鍵は受け取りの間だけ prod1 に置く。** `docker login` → pull → `trap` で `docker logout ghcr.io`。§23 の PO の決定（受け取りの鍵は GitHub の secret だけに置き、prod1 に残さない）に合わせる。確かめ: deploy の後に `grep -c ghcr.io ~/.docker/config.json` が 0（ファイルが無ければ合格）。
+8. **秘書の段の組み立てを消す。** `.github/workflows/deploy.yml:716` の `docker build` を消し、probe は `.env` の `SECRETARY_AGENT_IMAGE` で流す。
+9. **f2-cleanup.sh は範囲外。** `scripts/f2-cleanup.sh:34` の `docker buildx prune` は組み立てではない。§12 便2 17. の確かめの正規表現が拾わない形にする（カード §4）。
+
+### 26-2 未確認と扱い
+- U15（prod1 の docker compose の版）: pull-images.sh が最初に `docker compose version` を出す。受け取りで落ちても箱に触る前なので安全（26-1 の 3.）。
+- U30（新）: 指紋だけで取った完成品が `docker image prune -f` で消えるか。便2 は prune を呼ばないので結論に依らない。便3 で builder prune を消すときに測る。
+- U31（新）: 呼ばれる側の workflow の出力が、中の job が skip されたとき空になるか。公式は「出力は job の出力を写す」とだけ書く。空でなくても Step 2 の形の検査（`ghcr.io/…@sha256:` の 64 桁）で止まるので安全側。便2 の最初の run で確かめる。
+
+### 26-3 抜き出す試験への影響（見落とすと CI が赤）
+- `scripts/tests/test-deploy-nginx-recreate-guard.sh:27` は deploy.yml の全 job の `steps` を `j["steps"]` で読む。`uses:` の job には `steps` が無いので KeyError で落ちる。`j.get("steps", [])` に直す（`.github/workflows/backup-script-test.yml` が流す）。
+- `scripts/tests/test-deploy-orphan-cleanup.sh:104-105` は `job.get("steps") or []` なので直さない。
+- `scripts/rehearsal_phase2.sh:75` は `wf['jobs']['deploy']['steps']` を読む。deploy の job 名は変えないので直さない。
+
+### 26-4 審査（Opus 自己審査・2026-11-11）
+判定: カード発行に進む。根拠: 26-1 の 1.〜9. は §12 便2 の目的と K1〜K8 を変えず、公式の出典（Context7）と実物の行番号で裏付けた。未確認の U15・U30・U31 は、どれも落ちたとき箱に触る前に止まる。独立した第二者の審査ではないので、クラウドで設計審査を 1 回行ってから実装に渡す。
+
+### 26-5 クラウドの設計審査 1 回目（2026-11-11・architect opus）と直し（カード v2）
+判定: REVISE。行番号はすべて実物と一致、`uses:` の切替・secrets・trap の形は可、とされた。指摘と扱い:
+- N1（必須）: 2-2 の 4. の 5 行の検査で `exit 1` するとき、`.env` を控えに戻していなかった（§26-1 3. に反する）。→ `exit 1` の前に 2-2 の 5. と同じ戻しを足した。試験 T9 を足した。
+- N2（必須）: `scripts/rehearsal_phase2.sh:90` は `steps.changes` しか置き換えず、Finalize（`.github/workflows/deploy.yml:922`）の `steps.gate` が残って bash が落ちる。便2 の前からある不具合だが、カードの「リハーサルが緑」が通らない。Opus も 90 行目と 922 行目を読んで確かめた（v4 までは 92 行目と誤記。マージ前の審査で見つかり直した・§26-7）。→ 2-7 の 2. に `steps.gate` の置き換えと SUBSTITUTIONS の直しを足した。
+- N3: 2-2 の 5. の範囲は 470-492（492 行目が `fi`、493 行目からは blue-green の注記）。→ 直した。
+- N4: `.github/workflows/deploy-script-test.yml` の paths に deploy.yml が無く、deploy.yml だけを変えた PR で T7 が流れない。→ 両方の paths に足した。
+- N5: K1 の確かめを行番号で書いていた（実装で行がずれる）。`tests/sandbox/image-scan-survey.sh` は注記の行も当たる。→ 「ファイル＋文字列」の組で書き直した。
+- N6: rollback-images.sh に秘書の起動・`/api/health` の確かめ・所要秒（K6）が無かった（§9-2 との食い違い）。→ 足した。試験 T8 を足した。
+- N7（推奨）: 受け取りは通ったが Step 3b の切替が落ちたとき、`.env` に動かしていない指紋が残る。→ v2 では直さず受け入れた（下の理由）。2 回目の審査でこの理由が実物と合わないと分かり、v3 で直した（§26-6 M1）。v2 の理由（取り下げ）: (1) 今の形でも Step 3 の組み立てがローカルの `astro-webapp-backend` を上書きした後で Step 3b が落ちると、同じく動かしていない完成品が残る（便2 で増える危険ではない）。(2) 残る指紋は GitHub で組み立てて走査を通し、prod1 に受け取り済みの完成品なので、起動できない物ではない。(3) Finalize は `if: always()` で走り（`.github/workflows/deploy.yml:907`）、健康確認が落ちれば控えに戻す。(4) 次の main への push で上書きされる。
+判定（Opus）: N1〜N6 を直したので、クラウドで再審査を 1 回行う。
+
+### 26-6 クラウドの設計審査 2 回目（2026-11-11・architect opus）と直し（カード v3）
+判定: REVISE。N1〜N6 は直った。N7 の受け入れ理由が実物と合わない、とされた。Opus も実物を読んで確かめた。
+- M1（必須）: `scripts/blue-green-cutover.sh:130-134` は green が健康にならないと「旧 backend は接客継続中」と出して `exit 1` する。このとき動いているのは旧 backend なので、Finalize の健康確認（`.github/workflows/deploy.yml:933`）は通り、控えへの戻しは起きない。§26-5 の N7 の理由(2)(3) は成り立たない。→ カード 2-2 の 5b. で、498 行目の切替が落ちたら `.env` を控えに戻して `exit 1` する。試験 T9 に足した。
+- M2: rollback-images.sh の秘書の起動に、`.github/workflows/deploy.yml:727-732` の「env が読めるか」の確認と `|| echo ::warning` が無かった。→ 同じ形にした（試験で置き場を差し替えられるよう `SECRETARY_ENV_FILE`）。
+- M3: 健康確認の繰り返しは `if docker exec …; then` の形と明記した（`set -e` の下で `$?` で受けると 1 回目の失敗で止まる）。
+- M4: 戻しに `.github/workflows/deploy.yml:514-519` の celery-worker の `stop -t 60` と、discord-gateway などを先に消す手順が無かった。→ 同じ順で入れた。
+判定（Opus）: M1〜M4 を直したので、クラウドで 3 回目の審査を行う。
+
+### 26-7 クラウドの設計審査 3 回目（2026-11-11・architect opus）と直し（カード v4）
+判定: APPROVE。M1〜M4 は直った。5b. は `if !` の形なので `set -e`（`.github/workflows/deploy.yml:279`）の下でも正しく動く。`scripts/blue-green-cutover.sh` が失敗で終わるのは :140 の `set +e` より前（旧 backend が動いている間）だけ、とされた。推奨の指摘と扱い（Opus が実物を読んで確かめた）:
+- P1（推奨・受け入れ）: 通常の deploy（`.github/workflows/deploy.yml:520`・`:523`）は gha-exporter を起こさない。起こすのは Finalize の戻しの `docker compose up -d --remove-orphans`（:979）だけ。そのため `GHA_EXPORTER_IMAGE` は起動していない指紋のまま `.env` に残る。理由: 今も gha-exporter は組み立てだけして起こしておらず、便2 で変わらない。残る指紋は Step 3 で受け取り済みなので、控えに写っても戻し先は prod1 に在る。起こし方を変えるのは別の変更とする（一度に 1 つ）。
+- P2（推奨・受け入れ）: :520 が落ちると `set -e` で止まり、frontend などは起動していない指紋が `.env` に残る。理由: 今も同じ場所で止まる。残る指紋は受け取り済みで、§26-1 3. の守る対象（受け取っていない指紋を残さない）には当たらない。backend は新しい指紋で健康なので、Finalize の戻しは起きない。
+- P3（推奨・直した）: T8 に「1 回目の健康確認が落ち、2 回目で通る → 終了 0」を足した。待ち秒は `ROLLBACK_HC_SLEEP` で差し替える。
+- P4（推奨・直した）: 秘書の旗の順を :731 と同じ `--force-recreate --no-build` にした。T8 は旗の順を数えない形にした。
+- P5（推奨・直した）: §9-2 の頭に、便2 の正本はカードと §26 だと書いた。
+- P6（推奨・直した）: §26-5 N7 の「理由:」の重なりを消した。
+- マージ前の審査（reviewer opus・head 4bf2244b4）で REVISE: カード 2-7 の 2. と §26-5 N2 が `scripts/rehearsal_phase2.sh` の置き換える行を 92 行目と書いていたが、実物は 90 行目（92 行目は一時ファイルへ書き出す `printf`）。カードのとおりに置き換えるとリハーサルの仕組みが壊れる。Opus が実物の 84-95 行目を読んで確かめ、90 行目に直した。
+判定（Opus）: 必須の指摘は無い。直したのは書き方と試験の足しだけで、手順は変えていない。カード発行に進む（実装には PO の明示の実装承認が要る）。
