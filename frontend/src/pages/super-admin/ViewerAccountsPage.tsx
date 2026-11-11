@@ -24,7 +24,7 @@ import { Modal } from "../../components/Modal";
 import { TextField } from "../../components/TextField";
 import { Radio } from "../../components/Radio";
 import { Select } from "../../components/Select";
-import { SubMenu, type SubMenuGroup } from "../../components/SubMenu";
+import { UserManagementSubMenu, type UserMenuStatus } from "./users/UserManagementSubMenu";
 import { LoadingBlock } from "../../components/loading";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { ViewerBillingSection } from "./components/ViewerBillingSection";
@@ -92,7 +92,7 @@ const STATUS_KEY: Record<string, string> = {
 
 /** 左メニューに出す状態（この順）。verified・suspended は出さない（「すべて」には含まれる） */
 const MENU_STATUSES = ["pending", "trial", "active"] as const;
-type MenuKey = "all" | (typeof MENU_STATUSES)[number];
+type MenuKey = UserMenuStatus;
 
 interface ReissueResult {
   signup_code: string;
@@ -471,15 +471,12 @@ export default function ViewerAccountsPage() {
   const countOf = (key: MenuKey) =>
     key === "all" ? items.length : items.filter(i => i.status === key).length;
   const menuLabel = (key: MenuKey) => (key === "all" ? t(`${f}.menuAll`) : t(`${f}.${STATUS_KEY[key]}`));
-  const menuGroups: SubMenuGroup<MenuKey>[] = [
-    {
-      items: (["all", ...MENU_STATUSES] as MenuKey[]).map(key => ({
-        key,
-        label: menuLabel(key),
-        badge: countOf(key),
-      })),
-    },
-  ];
+  const menuCounts: Record<MenuKey, number> = {
+    all: countOf("all"),
+    pending: countOf("pending"),
+    trial: countOf("trial"),
+    active: countOf("active"),
+  };
   const handleMenuChange = (key: MenuKey) => {
     if (key === "all") setSearchParams({}, { replace: true });
     else setSearchParams({ status: key }, { replace: true });
@@ -509,19 +506,18 @@ export default function ViewerAccountsPage() {
           <Button variant="secondary" size="sm" onClick={copySignupRequest}>
             {copiedKey === "signupRequest" ? t(`${f}.copied`) : t(`${f}.copySignupRequest`)}
           </Button>
-          <Button variant="secondary" size="sm" onClick={() => navigate("/super-admin/viewer-templates")}>
+          <Button variant="secondary" size="sm" onClick={() => navigate("/super-admin/users/viewer-templates")}>
             {t(`${f}.templates`)}
           </Button>
         </>
       }
     >
       <div className="hub-shell">
-        <SubMenu
-          variant="flat"
-          className="hub-subnav"
-          groups={menuGroups}
+        <UserManagementSubMenu
           activeKey={activeKey}
+          counts={menuCounts}
           onChange={handleMenuChange}
+          statusLabel={menuLabel}
         />
         <div className="hub-content">
       {error && (

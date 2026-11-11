@@ -1,6 +1,6 @@
 # 秘書チャットを ChatGPT に・アプリの AI を画面で管理 — 設計（v13・PO 承認済み）
 
-- 状態: 設計案作成済み／設計審査 1回目〜8回目 REVISE・9回目 APPROVE（§14）→ v10 で9回目の軽い指摘 R1〜R3 を反映／PO 承認済み（2026-11-03 PO が「この設計で決める」の選択肢に「1」。秘書は今の Claude のまま始める。月額契約の判断は 2026-11-04 PO「1,まず私と担当エンジニアだけで使用する」で決定・§13-5）／実装 未着手（実装は段ごとのカードと PO の実装の許可が揃ってから）
+- 状態: 設計案作成済み／設計審査 1回目〜8回目 REVISE・9回目 APPROVE（§14）→ v10 で9回目の軽い指摘 R1〜R3 を反映／PO 承認済み（2026-11-03 PO が「この設計で決める」の選択肢に「1」。秘書は今の Claude のまま始める。月額契約の判断は 2026-11-04 PO「1,まず私と担当エンジニアだけで使用する」で決定・§13-5）／段1a・1a-2・秘1・2 は本番反映済み・段3 はカード作成中（2026-11-11。実装は段ごとのカードと PO の実装の許可が揃ってから。段3の実装の許可は §13 の14）
 - 目標: `docs/handoff/secretary-chatgpt/kgi.md`（K1〜K10）。現在地: `docs/handoff/secretary-chatgpt/recon.md`（§番号で参照）。根拠の照合は origin/main d828bb269（引用したパスは 44098dc31・c60ea6eb3・90ee0c15f から差分なし。生出力 `review4_fix.txt`・`review5_fix.txt`・`review6_fix*.txt`・`review7_fix.txt`・review8.md・review9.md）。
 - 関係 ADR: ADR-1056（秘書）・ADR-1004（使用量台帳）・ADR-027・ADR-067・ADR-144・ADR-1016（即時反映の表）・ADR-135/136（危険 PR の GO）。新しい ADR-1058「アプリの AI の担当は DB の1か所で決め、画面で見て切り替える」を実装カードより先に起案し、ADR-1056 の「Claude Code に固定」「ledger に書かない」を置き換える（§13）。
 
@@ -106,12 +106,12 @@
 - 頼みの文は標準入力で渡す（`codex exec` は PROMPT を省くと標準入力から読む。`codex-cli-help.txt:154-157`。今の作り `server.mjs:117` と同じ）。コマンドの引数に頼みの文を入れない。
 - auth.json が無い時は codex を呼ばずに 503 `not_ready` を返す（今の作り `server.mjs:133` と同じ形）。
 - 標準エラーは失敗の種類（auth_failed）を見分けるためだけに読み、記録・ログには出さない。
-- 呼び方（1回ごと）: 空の一時フォルダを cwd に、`codex exec --ephemeral --ignore-user-config --ignore-rules --skip-git-repo-check --sandbox read-only --json --output-schema <schema> -m <model>` ＋ recon §5-2 の止め設定（web_search disabled・features 17個 false）。指示文と答えの形のファイルは今の secretary-agent のものを同じファイルとして両方の容器に入れる（写しを作らない）。そのため secretary-codex の build context はリポジトリの根にする: `docker build -f secretary-codex/Dockerfile .`、compose は `build: {context: ., dockerfile: secretary-codex/Dockerfile}`。Dockerfile は `COPY secretary-agent/prompt.txt secretary-agent/schema.json secretary-agent/probe.mjs ...` と `COPY secretary-codex/server.mjs ...` のように根からの道で書く（今の secretary-agent は自分のフォルダが context、`secretary-agent/Dockerfile:6`・compose `:14`。審査4回目⑤）。根に `.dockerignore` は無い（`git ls-tree origin/main`）。根を context にすると VPS のリポジトリ全部（`.env` を含む）が build の入力になりうるので、`secretary-codex/Dockerfile.dockerignore`（Dockerfile ごとの除外。BuildKit で効く）に「`*` で全部外し、COPY する物だけ `!` で戻す」許す一覧を置く。build は `DOCKER_BUILDKIT=1` で流す（§5-4）。
+- 呼び方（1回ごと）: 空の一時フォルダを cwd に、`codex exec --ephemeral --ignore-user-config --ignore-rules --skip-git-repo-check --sandbox read-only --json --output-schema <schema> -m <model>` ＋ recon §5-2 の止め設定（web_search disabled・features 17個 false。2026-11-11 一時 VM の観測で shell_snapshot を足し 18 個。§5-2）。土台には OS の公開の証明書の束（ca-certificates）を入れる（§5-2）。指示文と答えの形のファイルは今の secretary-agent のものを同じファイルとして両方の容器に入れる（写しを作らない）。そのため secretary-codex の build context はリポジトリの根にする: `docker build -f secretary-codex/Dockerfile .`、compose は `build: {context: ., dockerfile: secretary-codex/Dockerfile}`。Dockerfile は `COPY secretary-agent/prompt.txt secretary-agent/schema.json secretary-agent/probe.mjs ...` と `COPY secretary-codex/server.mjs ...` のように根からの道で書く（今の secretary-agent は自分のフォルダが context、`secretary-agent/Dockerfile:6`・compose `:14`。審査4回目⑤）。根に `.dockerignore` は無い（`git ls-tree origin/main`）。根を context にすると VPS のリポジトリ全部（`.env` を含む）が build の入力になりうるので、`secretary-codex/Dockerfile.dockerignore`（Dockerfile ごとの除外。BuildKit で効く）に「`*` で全部外し、COPY する物だけ `!` で戻す」許す一覧を置く。build は `DOCKER_BUILDKIT=1` で流す（§5-4）。
 - 合図の点検（許す一覧で決める。文面では見分けない）:
   - 通してよい合図: `thread.started`・`turn.started`・`turn.completed`・`turn.failed`・`error`。
-  - 通してよい item の種類（`item.started`・`item.updated`・`item.completed` の item.type）: `agent_message`・`reasoning`・`todo_list` の3つだけ。
+  - 通してよい item の種類（`item.started`・`item.updated`・`item.completed` の item.type）: `agent_message`・`reasoning`・`todo_list`・`error` の4つだけ（`error` の item は止め設定のとき毎回1件出る。手元の試し 〔`~/CC報告ファイル-keep/secretary-chatgpt/probe/` の h_・hs_・m_ の全回〕 で `item.completed` の item.type が error。2026-11-11 カード段3の作成で見つけた設計漏れ）。
   - それ以外の合図・item の種類（command_execution・web_search・file_change・mcp_tool_call 等、将来の新しい種類も含む）が1つでもあれば答えを捨て、502 `tool_used` を返して記録する（K2 の二重の守り）。
-  - `error` の合図は文面を見ない。成否の決め手にも使わない。数だけ数えて応答に `error_events` として返す（止め設定のとき毎回1件出る。手元で見た文面は「Code mode will fail closed」の1種類だけ。recon §5-2）。`turn.failed` は cli_failed として扱う。
+  - `error` の合図は文面を見ない。成否の決め手にも使わない。数だけ数えて応答に `error_events` として返す（error の item も同じく数に入れ、道具の数には入れない。止め設定のとき毎回1件出る。手元で見た文面は「Code mode will fail closed」の1種類だけ。recon §5-2）。`turn.failed` は cli_failed として扱う。
   - 成功の条件は3つ全部: ①`turn.completed` がある ②最後の `agent_message` が答えの形（schema）で読める ③許す一覧の外が0件。error の種類が増えても、道具が動いたかは item の種類で見るので守りは変わらない（error の文面の種類は【未確認】のまま残し、段3で `error_events` の数が1回あたり1を超えた呼び出しの件数を数える）。
   - 容器の失敗の code は4つに閉じる: `auth_failed`・`cli_failed`・`tool_used`・`unreadable`（答えが読めない）。
 - ログイン: CODEX_HOME を `/home/node/.codex` にし、専用の名前付きボリューム `secretary-codex-home` をそこに付ける。Dockerfile で `RUN mkdir -p /home/node/.codex && chown node:node /home/node/.codex && chmod 700 /home/node/.codex` を `USER node` の前に置く（空の名前付きボリュームは初回にイメージ側の持ち主と権限を写すため）。容器のほかの場所は read_only・/tmp だけ tmpfs のまま。cap_drop ALL・no-new-privileges・mem_limit 512m・frontnet だけ（`docker-compose.secretary-agent.yml:10-39` と同じ）。
@@ -119,7 +119,7 @@
 - ログインのし方: PO が手元で台本 scripts/ops/secretary-codex-login.sh を流す（manual-only 鍵）。中で `docker exec -it secretary-codex codex login --device-auth` を動かし、出てきたアドレスとコードを PO が手元のブラウザで入れる。AI は流さない。手元の Mac のログインとは別に持つ。
 - `/health` は {ready: auth.json がある, last_refresh: 日時} だけを返す。
 - 失敗の読み替え: exit≠0 で標準エラーに refresh_token_invalidated・token_revoked・401 があれば auth_failed（標準エラーは記録しない。種類の名前だけ）。そのほかは今の作り（`server.mjs:86-115`）と同じ。
-- 使用量: turn.completed の input_tokens・cached_input_tokens・output_tokens・reasoning_output_tokens を返す。台帳の列（`UsageCounts`、`backend/app/services/llm_budget.py:174-187`）への入れ方: input_tokens→prompt_tokens・cached_input_tokens→cached_content_tokens・output_tokens→candidates_tokens・reasoning_output_tokens→thoughts_tokens。tool_use_prompt_tokens と total_tokens は NULL（output_tokens が reasoning を含むかは【未確認】なので足し算で埋めない）。cost_usd は月額のため NULL。
+- 使用量: turn.completed の input_tokens・cached_input_tokens・output_tokens・reasoning_output_tokens を返す。台帳の列（`UsageCounts`、`backend/app/services/llm_budget.py:174-187`）への入れ方: input_tokens→prompt_tokens・cached_input_tokens→cached_content_tokens・output_tokens→candidates_tokens・reasoning_output_tokens→thoughts_tokens。tool_use_prompt_tokens と total_tokens は NULL（output_tokens が reasoning を含むかは【未確認】なので足し算で埋めない）。usage に `cache_write_input_tokens` も来る（手元の試し）が、入れる列が無いので読まない。cost_usd は月額のため NULL。
 - Claude の容器（secretary-agent）は使用量を返さない（`server.mjs:110-111` は intent と total_cost_usd だけ）。claude-code の行は使用量の列をすべて NULL、cost_usd も NULL（サブスクのため。total_cost_usd は今どおりログにだけ出す）。
 ### 5-2 容器を入れる前に確かめること（一時 VM・ログイン不要の範囲。合格しなければ先へ進まない）
 GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only・tmpfs /tmp・cap_drop ALL・no-new-privileges・名前付きボリューム）で起動して測る。VM と VPS の Docker の版・seccomp の設定を両方記録する（同じでない点を表で残す）。
@@ -132,6 +132,14 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 | V5 | 1回のメモリ | 容器の最大使用量（docker stats）を記録。512m 未満 |
 - V3 で頼みの文が残ったら、ADR-1056 の「頼みの文は書かない」に反するので止めて設計を直す（呼ぶたびに一時フォルダへ auth.json を写して動かし、終わったら更新された auth.json だけ戻す形を検討）。
 - 本番 VPS との違いは、便3で Claude のまま並べて起動したとき、ログイン前の1回（auth で失敗するはず）で囲いの失敗の出方が V2 と同じかを見る。
+- 一時 VM の観測（2026-11-11。生の記録は `/tmp/CC報告ファイル/secretary-mem/s3/vm_run1.log`・`vm_run2.log`）と直し:
+  - run 42970885998（6d1f98e30）: V1 合格。ログインなしの codex exec が返らず、台本に時間の上限が無かったため 60 分で取り消し → card-3d で `timeout 150` を付けた。本番の道は auth.json が無ければ codex を呼ばず 503（§5-1）、ログイン後は 80 秒の上限があるので変わらない。
+  - run 42981257700（b2805f8e3）: V1・V3（目印0件・2回とも）・V4（許す一覧の外0件）・V5（最大 54.6MiB）合格。ただし次の2つを見つけた。
+    - codex の標準エラーに `invalid peer certificate: UnknownIssuer`（wss://api.openai.com/v1/responses）。slim の土台に OS の公開の証明書の束（ca-certificates）が無く、codex（Rust）は OS の置き場から根の証明書を読む（Context7 openai/codex）。node の probe は node 内蔵の束で 200 だったので見逃した。→ card-3e で Dockerfile に ca-certificates を入れ、台本で UnknownIssuer を NG にする。
+    - 実行のたびに CODEX_HOME に shell_snapshots フォルダの中に1回ごとの .sh（約1.7KB・目印は無し）ができた。呼ぶたびに1つずつ増えるファイルを鍵のボリュームに貯めないため、card-3e で止め設定に `features.shell_snapshot=false` を足し（止め設定は 18 組→19 組）、台本で shell_snapshots ができたら NG にする。
+  - card-3e の後の再確かめで、UnknownIssuer 0 件・shell_snapshots 無し・V1〜V5 合格を見て次へ進む。違えば止めて設計を直す。
+  - run 42987879891（c55c54868・card-3e の後）: 合格。`ca-certificates ok`・UnknownIssuer 0 件（ログインなしの標準エラーは `HTTP error: 401 Unauthorized` 7 行・exec rc=1 で返った。150 秒の時間切れには届かなかった）・shell_snapshots 無し（2回とも）・V1（node:node 700）・V3（目印0件・2回とも）・V4（許す一覧の外0件）・V5（最大 55.7MiB）。server.mjs の道は偽の鍵で 502 auth_failed（13.52 秒）。生の記録は `/tmp/CC報告ファイル/secretary-mem/s3/vm_run3.log`。
+  - CODEX_HOME には codex が自分で作る状態のファイル（`*.sqlite`・`*-wal`・`*-shm`・`skills/.system/`・`tmp/arg0/`・`installation_id`。合計 約2.6MB）も残る。run 42981257700 と run 42987879891 の両方で、1回目と2回目の後の一覧と大きさが同じ（呼ぶたびに増えない）・目印0件。auth.json 以外を一切置かない形にはしていない（`--ephemeral` でも codex が作る。消す仕組みは足さない）。
 
 ### 5-3 backend
 - `backend/app/routers/assistant.py` は `:139` の commit より前に `get_ai_assignment("secretary_intent")` を読む（後に読むと新しい取引が始まり、AI を待つ最大85秒〔`:51`〕の間 DB の取引を開いたままにする。`:138` の決まりに反する）。読み取りが例外になった時（行が無い・DB の失敗）は、`_log(user_id, tenant_id, started, "not_ready", None)` を出して `raise _fail(503, "not_ready")`（`_fail` は例外を返す関数、`backend/app/routers/assistant.py:60-63`）。台帳の行は書かない（provider と model が分からず、sdk と model を埋められないため。審査6回目 P4）。読んだ担当で、provider が codex なら secretary-codex、claude なら secretary-agent に送る。送る body に model を足す。容器は model を受け取って -m（claude は --model）に渡す。容器の側で選択肢の一覧は持たない（正本は ai_job_choices）。
@@ -141,7 +149,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 - 呼ぶたびに ledger に1行（ok・failed とも §4-2-3 の別取引ですぐ commit）。
 
 ### 5-4 本番に出す手順（deploy.yml）
-- 今は「Start secretary-agent (ADR-1056)」の1段だけ（`.github/workflows/deploy.yml:670-699`、説明のコメント `:666-669`）。中身: `if: success()`・`continue-on-error: true`・`command_timeout: 10m`・ディスクの残り（`df`）→ `docker build`（失敗は警告で exit 0）→ probe（`docker run ... node /app/probe.mjs`。終了コード1なら「DB か redis に届いた」の警告）→ 専用ファイルの有無 → `docker compose ... up -d --force-recreate --no-build`（失敗は警告）→ exit 0。どの失敗でもアプリの反映は止めない。
+- 今は「Start secretary-agent (ADR-1056)」の1段だけ（`.github/workflows/deploy.yml:704-733`、説明のコメント `:700-703`。2026-11-11 origin/main 11c732285）。中身: `if: success()`・`continue-on-error: true`・`command_timeout: 10m`・ディスクの残り（`df`）→ `docker build`（失敗は警告で exit 0）→ probe（`docker run ... node /app/probe.mjs`。終了コード1なら「DB か redis に届いた」の警告）→ 専用ファイルの有無 → `docker compose ... up -d --force-recreate --no-build`（失敗は警告）→ exit 0。どの失敗でもアプリの反映は止めない。
 - 同じ形で「Start secretary-codex (ADR-1058)」を直後に足す: 同じ `if`・`continue-on-error: true`・`command_timeout: 10m`・df → `DOCKER_BUILDKIT=1 docker build -t astro-webapp-secretary-codex -f secretary-codex/Dockerfile .`（根を context に・Dockerfile ごとの除外が効く。§5-1。失敗は警告で exit 0）→ `docker run --rm` で `codex --version` が 0.162.1 か（違えば警告で exit 0、起こさない）→ 同じ probe（frontnet・read-only・cap-drop ALL で DB と redis に届かないこと。終了コード1なら警告。容器に probe.mjs を入れる）→ `docker compose -p astro-webapp-secretary-codex -f docker-compose.secretary-codex.yml up -d --force-recreate --no-build`（失敗は警告）→ exit 0。秘密の値は持たないので専用ファイルの確かめは無い（ログインは名前付きボリュームの中）。
 - deploy.yml は危険なパスなので、段3は GO の手順（ADR-136）に従う。
 
@@ -269,6 +277,11 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 11. （2026-11-03）段 秘1 は本番反映済み。PO は「秘書の動作の確かめは後にして、画面の段の準備を進める」に「3」。段2のカード `docs/handoff/secretary-chatgpt/card-2.md` を作り、card-lint で違反0（長い行の警告だけ）。作る時に実物で見つけたこと: 段2の時点で秘書の選択肢は `('secretary_intent', 'claude', 'sonnet')` の1つだけ（`migrations/20261103_120000_create_ai_job_assignments.sql`）なので、画面の「変える」は選べる先が今と同じ1つになる。ChatGPT の選択肢は段3の migration で足し、それまで本物の DB の試験は試験用の選択肢を足して切り替えを確かめる。provider から使用の記録の sdk への対応は `backend/app/services/llm_budget.py` に `USAGE_SDKS_BY_PROVIDER` として1か所に置く。秘書の口 `backend/app/routers/assistant.py` の `_SDK_BY_PROVIDER` は段2では触らず、段3でこの対応にまとめる。`public.users` に役割の列は無く、スーパー管理の判定は `is_super_admin` だけ（`backend/app/models.py`）。
 12. （2026-11-04）PO は月額契約の判断に「1,まず私と担当エンジニアだけで使用する」と答えた（選択肢1「使ってよい」に、使う人の範囲を添えた答え）。段3は「使ってよい」の進め方で進め、合格なら秘書を ChatGPT にしたままにする。使う人は PO と担当エンジニアだけ。秘書の API は今もスーパー管理者だけ（`backend/app/routers/assistant.py:143-148`）なので新しい制限は足さず、段3の切り替えの前にスーパー管理者を数えて（§7）PO と担当エンジニアのアカウントだけであることを確かめる（行番号はこの日の origin/main 7be89bbfa）。ほかの人がいれば切り替えずに PO に聞く。お客さんにも秘書を出す時は、その前にもう一度 PO に聞く。
 13. （2026-11-04）§13-6 の K8 の基準値を測ると、prod1 の空きメモリは平均 19.85% で、K8 の ② の20%を段3の前から下回った。1日平均は 10/5 の 1502MiB から 10/27 ごろまで減り、その後は 745〜815MiB で横ばい。段3（secretary-codex を足す）は止め、空きメモリが減った原因を先に調べるかを PO に聞く。
+14. （2026-11-11）空きメモリの測り直しと段3の再開。
+   - 【事実】直近24時間（2026-11-09 18:55〜11-10 18:55 UTC・5分おき289点。問い合わせは §13 の6と同じ node-exporter・instance app-vps の MemAvailable/MemTotal）: 平均 43.23%・最小 28.7%・20%を下回った点は0点。生出力 `docs/handoff/secretary-chatgpt/evidence-k8-20261111/k8_24h_pct.json`。§13 の13 の時（平均 19.85%）から K8 の ② の20%を上回る所まで戻った。
+   - 【事実】2026-11-11 14:26 JST に PO の手元の台本で prod1 の docker の土台（dockerd）を止めずに入れ直し、その常駐の量は 388,356kB から 126,284kB に減った（記録は手元の `~/CC報告ファイル-keep/dockerd-restart-window/`。リポジトリには入れない）。
+   - 判断: §13 の13 の止めは解く。PO は Docker のたまりを片付けてメモリを空けてから ChatGPT の作業に戻るよう指示し（要旨）、2026-11-11 に「PRマージ、デプロイまで完走させてくれ。」と段3の実装・審査・本番反映までを任せた。K8 の基準値は上の 43.23% に置き換え、K8 の ② は今のまま（段3のあとの平均が20%以上）。
+   - 段3のカードは2つに分ける: `docs/handoff/secretary-chatgpt/card-3a.md`（容器・compose・ログインの台本・一時 VM の試し V1〜V5）と `docs/handoff/secretary-chatgpt/card-3b.md`（選択肢の migration・backend・deploy.yml）。PR は1つ。PO のログイン・ログインの打ち消し合いの確かめ・スーパー管理者の数え・K1/K2/K6/K8 は本番反映の後（§7）。
 
 ## 14. 審査（Architect・クラウドの Opus。同じ種類の AI による審査で、独立した第二者の審査ではない）
 - 1回目（2026-11-02 14:05〜14:10 UTC・head 2fd362023・2回に分けて実行）: VERDICT: REVISE。

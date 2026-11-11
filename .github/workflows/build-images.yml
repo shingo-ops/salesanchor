@@ -1,0 +1,299 @@
+name: Build images (GitHub → GHCR)
+# build-on-github 便1（docs/handoff/build-on-github/design.md §12 便1・§25）。
+# 5 つの完成品を GitHub で組み立てて走査し、組織の非公開の倉庫（ghcr.io）へ送る。本番（prod1）には触らない。
+# 便2 で deploy.yml に移してこのファイルは消す。
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: read   # 倉庫へは secrets.GHCR_PUSH_TOKEN（classic PAT・write:packages）で書く。GITHUB_TOKEN に packages は与えない
+env:
+  REGISTRY: ghcr.io
+  NAMESPACE: ${{ vars.GHCR_NAMESPACE }}   # 名前の正本はここ 1 か所（design.md §5-1）
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      backend: ${{ steps.f.outputs.backend }}
+      frontend: ${{ steps.f.outputs.frontend }}
+      gemini_egress: ${{ steps.f.outputs.gemini_egress }}
+      gha_exporter: ${{ steps.f.outputs.gha_exporter }}
+      secretary_agent: ${{ steps.f.outputs.secretary_agent }}
+    steps:
+      - name: Check settings (design.md §25 C7/C12)
+        env:
+          GHCR_NAMESPACE: ${{ vars.GHCR_NAMESPACE }}
+          GHCR_USER: ${{ vars.GHCR_USER }}
+        run: |
+          missing=""
+          for n in GHCR_NAMESPACE GHCR_USER; do
+            if [ -z "${!n}" ]; then missing="$missing $n"; fi
+          done
+          if [ -n "$missing" ]; then echo "::error::Variables が未登録:$missing"; exit 1; fi
+          if ! [[ "$GHCR_NAMESPACE" =~ ^[a-z0-9-]+$ ]]; then echo "::error::GHCR_NAMESPACE は英小文字・数字・ハイフンだけにする"; exit 1; fi
+          echo "settings ok"
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: f
+        with:
+          filters: |
+            common: &common
+              - '.github/workflows/build-images.yml'
+              - '.github/scripts/image-scan.sh'
+              - '.github/scripts/ghcr-private-check.sh'
+              - '.gitleaks.toml'
+              - '.github/workflows/secret-scan.yml'
+            backend:
+              - *common
+              - 'backend/**'
+            frontend:
+              - *common
+              - 'frontend/**'
+            gemini_egress:
+              - *common
+              - 'monitoring/prod1/gemini-egress/**'
+            gha_exporter:
+              - *common
+              - 'monitoring/gha-exporter/**'
+            secretary_agent:
+              - *common
+              - 'secretary-agent/**'
+
+  build-backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      IMAGE: salesanchor-backend
+    outputs:
+      ref: ${{ steps.push.outputs.ref }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ vars.GHCR_USER }}
+          password: ${{ secrets.GHCR_PUSH_TOKEN }}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ./backend
+          platforms: linux/amd64
+          push: false
+          load: true
+          provenance: false
+          sbom: false
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend
+      - name: Scan image (design.md §7-2)
+        run: bash .github/scripts/image-scan.sh "$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
+      - name: Push and record digest (design.md §25 C13)
+        id: push
+        run: |
+          TAG="$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
+          docker push "$TAG"
+          DIGEST="$(docker buildx imagetools inspect "$TAG" --format '{{json .Manifest}}' | jq -r '.digest')"
+          if ! [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then echo "::error::digest の形が違う"; exit 1; fi
+          REF="$REGISTRY/$NAMESPACE/$IMAGE@$DIGEST"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "- $IMAGE: \`$REF\`" >> "$GITHUB_STEP_SUMMARY"
+      - name: Check package is private (design.md §25 C4/C15)
+        env:
+          REF: ${{ steps.push.outputs.ref }}
+        run: bash .github/scripts/ghcr-private-check.sh "$REF"
+
+  build-frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      IMAGE: salesanchor-frontend
+    outputs:
+      ref: ${{ steps.push.outputs.ref }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ vars.GHCR_USER }}
+          password: ${{ secrets.GHCR_PUSH_TOKEN }}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ./frontend
+          platforms: linux/amd64
+          push: false
+          load: true
+          provenance: false
+          sbom: false
+          # frontend は第 1 段の ENV VITE_* が層に残るためキャッシュを使わない（design.md §7-3）
+          build-args: |
+            VITE_FUNNEL_DASHBOARD=${{ secrets.VITE_FUNNEL_DASHBOARD }}
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE }}:${{ github.sha }}
+      - name: Scan image (design.md §7-2)
+        run: bash .github/scripts/image-scan.sh "$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
+      - name: Push and record digest (design.md §25 C13)
+        id: push
+        run: |
+          TAG="$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
+          docker push "$TAG"
+          DIGEST="$(docker buildx imagetools inspect "$TAG" --format '{{json .Manifest}}' | jq -r '.digest')"
+          if ! [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then echo "::error::digest の形が違う"; exit 1; fi
+          REF="$REGISTRY/$NAMESPACE/$IMAGE@$DIGEST"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "- $IMAGE: \`$REF\`" >> "$GITHUB_STEP_SUMMARY"
+      - name: Check package is private (design.md §25 C4/C15)
+        env:
+          REF: ${{ steps.push.outputs.ref }}
+        run: bash .github/scripts/ghcr-private-check.sh "$REF"
+
+  build-gemini-egress:
+    needs: changes
+    if: needs.changes.outputs.gemini_egress == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      IMAGE: salesanchor-gemini-egress
+    outputs:
+      ref: ${{ steps.push.outputs.ref }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ vars.GHCR_USER }}
+          password: ${{ secrets.GHCR_PUSH_TOKEN }}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ./monitoring/prod1/gemini-egress
+          platforms: linux/amd64
+          push: false
+          load: true
+          provenance: false
+          sbom: false
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha,scope=gemini-egress
+          cache-to: type=gha,scope=gemini-egress
+      - name: Scan image (design.md §7-2)
+        run: bash .github/scripts/image-scan.sh "$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
+      - name: Push and record digest (design.md §25 C13)
+        id: push
+        run: |
+          TAG="$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
+          docker push "$TAG"
+          DIGEST="$(docker buildx imagetools inspect "$TAG" --format '{{json .Manifest}}' | jq -r '.digest')"
+          if ! [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then echo "::error::digest の形が違う"; exit 1; fi
+          REF="$REGISTRY/$NAMESPACE/$IMAGE@$DIGEST"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "- $IMAGE: \`$REF\`" >> "$GITHUB_STEP_SUMMARY"
+      - name: Check package is private (design.md §25 C4/C15)
+        env:
+          REF: ${{ steps.push.outputs.ref }}
+        run: bash .github/scripts/ghcr-private-check.sh "$REF"
+
+  build-gha-exporter:
+    needs: changes
+    if: needs.changes.outputs.gha_exporter == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      IMAGE: salesanchor-gha-exporter
+    outputs:
+      ref: ${{ steps.push.outputs.ref }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ vars.GHCR_USER }}
+          password: ${{ secrets.GHCR_PUSH_TOKEN }}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ./monitoring/gha-exporter
+          platforms: linux/amd64
+          push: false
+          load: true
+          provenance: false
+          sbom: false
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha,scope=gha-exporter
+          cache-to: type=gha,scope=gha-exporter
+      - name: Scan image (design.md §7-2)
+        run: bash .github/scripts/image-scan.sh "$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
+      - name: Push and record digest (design.md §25 C13)
+        id: push
+        run: |
+          TAG="$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
+          docker push "$TAG"
+          DIGEST="$(docker buildx imagetools inspect "$TAG" --format '{{json .Manifest}}' | jq -r '.digest')"
+          if ! [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then echo "::error::digest の形が違う"; exit 1; fi
+          REF="$REGISTRY/$NAMESPACE/$IMAGE@$DIGEST"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "- $IMAGE: \`$REF\`" >> "$GITHUB_STEP_SUMMARY"
+      - name: Check package is private (design.md §25 C4/C15)
+        env:
+          REF: ${{ steps.push.outputs.ref }}
+        run: bash .github/scripts/ghcr-private-check.sh "$REF"
+
+  build-secretary-agent:
+    needs: changes
+    if: needs.changes.outputs.secretary_agent == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      IMAGE: salesanchor-secretary-agent
+    outputs:
+      ref: ${{ steps.push.outputs.ref }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ vars.GHCR_USER }}
+          password: ${{ secrets.GHCR_PUSH_TOKEN }}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ./secretary-agent
+          platforms: linux/amd64
+          push: false
+          load: true
+          provenance: false
+          sbom: false
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha,scope=secretary-agent
+          cache-to: type=gha,scope=secretary-agent
+      - name: Scan image (design.md §7-2)
+        run: bash .github/scripts/image-scan.sh "$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
+      - name: Push and record digest (design.md §25 C13)
+        id: push
+        run: |
+          TAG="$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
+          docker push "$TAG"
+          DIGEST="$(docker buildx imagetools inspect "$TAG" --format '{{json .Manifest}}' | jq -r '.digest')"
+          if ! [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then echo "::error::digest の形が違う"; exit 1; fi
+          REF="$REGISTRY/$NAMESPACE/$IMAGE@$DIGEST"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "- $IMAGE: \`$REF\`" >> "$GITHUB_STEP_SUMMARY"
+      - name: Check package is private (design.md §25 C4/C15)
+        env:
+          REF: ${{ steps.push.outputs.ref }}
+        run: bash .github/scripts/ghcr-private-check.sh "$REF"

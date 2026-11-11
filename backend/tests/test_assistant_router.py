@@ -180,6 +180,7 @@ async def test_unknown_fixture(allowed, monkeypatch):
         (429, {"code": "busy"}, 429, "busy"),
         (504, {"code": "timeout"}, 504, "timeout"),
         (502, {"code": "cli_failed"}, 502, "agent_failed"),
+        (502, {"code": "tool_used"}, 502, "agent_failed"),
         (502, {"code": "auth_failed"}, 503, "auth_failed"),
         (502, {"code": "unreadable"}, 502, "unreadable"),
     ],
@@ -345,12 +346,13 @@ async def _raise_db_down(db, job_key):
     raise RuntimeError("db down")
 
 
-async def _codex_assignment(db, job_key):
-    return AiAssignment("codex", "gpt-x")
+async def _gemini_assignment(db, job_key):
+    # 秘書の容器が無い provider（ADR-1058 段3 で codex は secretary-codex に送るようになった）
+    return AiAssignment("gemini", "gemini-x")
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("reader", [_raise_db_down, _codex_assignment])
+@pytest.mark.parametrize("reader", [_raise_db_down, _gemini_assignment])
 async def test_assignment_read_failure_is_503_without_agent_or_ledger(allowed, monkeypatch, caplog, reader):
     calls = []
 
@@ -407,6 +409,7 @@ def _assert_failed_row(expected_error_code: str) -> None:
         (429, {"code": "busy"}, "busy"),
         (504, {"code": "timeout"}, "timeout"),
         (502, {"code": "cli_failed"}, "other"),
+        (502, {"code": "tool_used"}, "tool_used"),
         (502, {"code": "auth_failed"}, "auth_failed"),
         (502, {"code": "unreadable"}, "unreadable"),
         (200, {"kind": "invoice"}, "unreadable"),
@@ -447,3 +450,152 @@ def test_ledger_unit_mapping():
     assert assistant._ledger_error_code("tool_used") == "tool_used"
     assert assistant._ledger_error_code("auth_failed") == "auth_failed"
     assert assistant._LEDGER_ERROR_CODES <= USAGE_ERROR_CODES
+
+
+# ---- ADR-1058 段3: ChatGPT の容器（secretary-codex） ------------------------------
+
+
+def _codex_envelope(**over) -> dict:
+    env = _fixture("envelope-invoice.json")
+    env.pop("total_cost_usd", None)
+    env["usage"] = {"input_tokens": 10, "cached_input_tokens": 2, "output_tokens": 5, "reasoning_output_tokens": 3}
+    env["error_events"] = 1
+    env.update(over)
+    return env
+
+
+@pytest.fixture
+def codex(allowed, monkeypatch):
+    async def _assignment(db, job_key):
+        return AiAssignment("codex", "gpt-5.6-luna")
+
+    monkeypatch.setattr(assistant, "get_ai_assignment", _assignment)
+    monkeypatch.setattr(assistant, "SECRETARY_AGENT_URL", "http://agent.test")
+    monkeypatch.setattr(assistant, "SECRETARY_CODEX_URL", "http://codex.test")
+    return allowed
+
+
+def test_agent_url_mapping(monkeypatch):
+    monkeypatch.setattr(assistant, "SECRETARY_AGENT_URL", "http://agent.test")
+    monkeypatch.setattr(assistant, "SECRETARY_CODEX_URL", "http://codex.test")
+    assert assistant.agent_url("claude") == "http://agent.test"
+    assert assistant.agent_url("codex") == "http://codex.test"
+    assert assistant.agent_url("gemini") is None
+    assert assistant._sdk_for("claude") == "claude-code"
+    assert assistant._sdk_for("codex") == "codex-cli"
+
+
+@pytest.mark.asyncio
+async def test_codex_goes_to_codex_container_with_model(codex, monkeypatch):
+    sent = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.update(json.loads(request.content))
+        sent["url"] = str(request.url)
+        return httpx.Response(200, json=_codex_envelope())
+
+    _mock_agent(monkeypatch, handler)
+    resp = await codex.post(URL, json={"text": "請求書"})
+    assert resp.status_code == 200, resp.text
+    assert sent["url"] == "http://codex.test/intent"
+    assert sent["model"] == "gpt-5.6-luna"
+    assert resp.json()["draft"]["company_name"] == "サンプル商事"
+
+
+@pytest.mark.asyncio
+async def test_claude_still_goes_to_agent_container(allowed, monkeypatch):
+    monkeypatch.setattr(assistant, "SECRETARY_AGENT_URL", "http://agent.test")
+    monkeypatch.setattr(assistant, "SECRETARY_CODEX_URL", "http://codex.test")
+    sent = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent["url"] = str(request.url)
+        return httpx.Response(200, json=_fixture("envelope-invoice.json"))
+
+    _mock_agent(monkeypatch, handler)
+    resp = await allowed.post(URL, json={"text": "a"})
+    assert resp.status_code == 200, resp.text
+    assert sent["url"] == "http://agent.test/intent"
+
+
+@pytest.mark.asyncio
+async def test_codex_ledger_ok_row_has_usage(codex, monkeypatch):
+    _mock_agent(monkeypatch, _respond(200, _codex_envelope()))
+    resp = await codex.post(URL, json={"text": "a"})
+    assert resp.status_code == 200, resp.text
+    kwargs = assistant.record_usage_isolated.await_args.kwargs
+    assert kwargs["sdk"] == "codex-cli"
+    assert kwargs["model"] == "gpt-5.6-luna"
+    assert kwargs["outcome"] == "ok"
+    assert kwargs["counts"] == UsageCounts(
+        prompt_tokens=10, cached_content_tokens=2, candidates_tokens=5, thoughts_tokens=3
+    )
+
+
+@pytest.mark.asyncio
+async def test_codex_usage_nulls_stay_null(codex, monkeypatch):
+    usage = {"input_tokens": None, "cached_input_tokens": None, "output_tokens": None, "reasoning_output_tokens": None}
+    _mock_agent(monkeypatch, _respond(200, _codex_envelope(usage=usage)))
+    resp = await codex.post(URL, json={"text": "a"})
+    assert resp.status_code == 200, resp.text
+    assert assistant.record_usage_isolated.await_args.kwargs["counts"] == UsageCounts()
+
+
+@pytest.mark.asyncio
+async def test_codex_tool_used_is_recorded(codex, monkeypatch, caplog):
+    _mock_agent(monkeypatch, _respond(502, {"code": "tool_used"}))
+    with caplog.at_level(logging.INFO, logger=assistant.logger.name):
+        resp = await codex.post(URL, json={"text": "a"})
+    assert resp.status_code == 502
+    assert resp.json()["detail"] == {"code": "agent_failed"}
+    kwargs = assistant.record_usage_isolated.await_args.kwargs
+    assert (kwargs["outcome"], kwargs["error_code"], kwargs["sdk"]) == ("failed", "tool_used", "codex-cli")
+    lines = [r.getMessage() for r in caplog.records if "assistant_message" in r.getMessage()]
+    assert len(lines) == 1
+    assert "code=tool_used" in lines[0]
+
+
+@pytest.mark.asyncio
+async def test_codex_log_has_error_events_without_text(codex, monkeypatch, caplog):
+    _mock_agent(monkeypatch, _respond(200, _codex_envelope(error_events=2)))
+    with caplog.at_level(logging.INFO, logger=assistant.logger.name):
+        resp = await codex.post(URL, json={"text": SECRET_TEXT})
+    assert resp.status_code == 200, resp.text
+    lines = [r.getMessage() for r in caplog.records if "assistant_message" in r.getMessage()]
+    assert len(lines) == 1
+    assert "code=ok" in lines[0] and "error_events=2" in lines[0] and "total_cost_usd=-" in lines[0]
+    assert SECRET_TEXT not in "\n".join(r.getMessage() for r in caplog.records)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "label,over",
+    [
+        ("usage extra key", {"usage": {"input_tokens": 1, "cache_write_input_tokens": 0}}),
+        ("usage negative", {"usage": {"input_tokens": -1}}),
+        ("usage string", {"usage": {"input_tokens": "5"}}),
+        ("usage float", {"usage": {"input_tokens": 1.5}}),
+        ("usage bool", {"usage": {"input_tokens": True}}),
+        ("error_events negative", {"error_events": -1}),
+        ("error_events string", {"error_events": "1"}),
+    ],
+)
+async def test_codex_bad_envelope_is_unreadable(codex, monkeypatch, label, over):
+    _mock_agent(monkeypatch, _respond(200, _codex_envelope(**over)))
+    resp = await codex.post(URL, json={"text": "a"})
+    assert resp.status_code == 502, label
+    assert resp.json()["detail"] == {"code": "unreadable"}
+    assert assistant.record_usage_isolated.await_args.kwargs["error_code"] == "unreadable"
+
+
+@pytest.mark.asyncio
+async def test_codex_unreachable_is_not_ready(codex, monkeypatch):
+    def handler(request):
+        raise httpx.ConnectError("refused")
+
+    _mock_agent(monkeypatch, handler)
+    resp = await codex.post(URL, json={"text": "a"})
+    assert resp.status_code == 503
+    assert resp.json()["detail"] == {"code": "not_ready"}
+    kwargs = assistant.record_usage_isolated.await_args.kwargs
+    assert (kwargs["error_code"], kwargs["sdk"]) == ("not_ready", "codex-cli")

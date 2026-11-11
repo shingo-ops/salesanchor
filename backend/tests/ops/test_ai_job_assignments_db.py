@@ -34,6 +34,7 @@ _ROLE_SQL = "20261024_100100_create_ai_reader_cloud_role.sql"
 _PIPELINE_PUBLIC_SQL = "20260921_110000_pipeline_tables_public.sql"
 _LLM_USAGE_SQL = "20260930_150000_create_llm_usage_events.sql"
 _AI_JOB_SQL = "20261103_120000_create_ai_job_assignments.sql"
+_CODEX_CHOICES_SQL = "20261111_120000_add_codex_secretary_choices.sql"
 
 _JOB_KEYS = (
     "line_extraction",
@@ -428,3 +429,19 @@ def test_h_history_names_fall_back(db):
         ("sonnet", "test-model-h"),
     ]
     assert len(_run_async(db, lambda s: list_ai_job_history(s, 2))) == 2
+
+
+def test_g_codex_choices_added_once_and_assignment_kept(db):
+    """ADR-1058 段3: codex の選択肢3つが足され、流し直しても増えず、秘書の担当は claude・sonnet のまま。"""
+    c = db.cursor()
+    c.execute(_read(_AI_JOB_SQL))
+    c.execute(_read(_CODEX_CHOICES_SQL))
+    c.execute(_read(_AI_JOB_SQL))
+    c.execute(_read(_CODEX_CHOICES_SQL))
+    assert _count(db, "ai_job_choices") == 20
+    assert _rows(
+        db,
+        "SELECT model FROM public.ai_job_choices WHERE job_key = 'secretary_intent' AND provider = 'codex' ORDER BY model",
+    ) == [("gpt-5.6-luna",), ("gpt-5.6-terra",), ("gpt-6-luna",)]
+    assert _assignment(db, "secretary_intent") == ("claude", "sonnet")
+    assert _count(db, "ai_job_assignment_history") == 0

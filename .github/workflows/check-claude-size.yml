@@ -6,6 +6,9 @@ name: CLAUDE.md Size Guard
 on:
   pull_request:
     branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main]
 
 jobs:
   check:
@@ -19,7 +22,7 @@ jobs:
       - name: CLAUDE.md が変更されているか判定
         id: changed
         run: |
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          BASE_SHA="${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}"
           CHANGED=$(git diff --name-only "${BASE_SHA}...HEAD" -- 'CLAUDE.md' 'AGENTS.md' '**/CLAUDE.md' '**/AGENTS.md' 'docs/INDEX.md' 2>/dev/null || echo "")
           if [ -n "$CHANGED" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
