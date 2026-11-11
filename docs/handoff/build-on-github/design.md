@@ -848,7 +848,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 判定（Opus）: 必須の指摘は無い。直したのは書き方と試験の足しだけで、手順は変えていない。カード発行に進む（実装には PO の明示の実装承認が要る）。
 
 ### 26-8 v4 の後に入った secretary-codex への対応（カード v5・2026-11-11 Opus）
-事実: カード v4（#5403）の後、本線に #5399（ADR-1058 段3・ChatGPT の秘書 secretary-codex）が入った（`git log -1 origin/main` = f3ff55057）。deploy.yml は 1352 → 1390 行になり、`.github/workflows/deploy.yml:735-772` に「Start secretary-codex (ADR-1058)」の段が足された。その 751 行目で prod1 が `docker build -t astro-webapp-secretary-codex -f secretary-codex/Dockerfile .` を流す。`docker-compose.secretary-codex.yml:12-15` も `build:` を持つ。クラウドの実装役は v4 のまま進めず NEEDS_DECISION で止まった（P2・P3 の行番号ずれと、この組み立て）。
+事実: カード v4（#5403）の後、本線に #5399（ADR-1058 段3・ChatGPT の秘書 secretary-codex）が入った（`git log -1 origin/main` = f3ff55057）。deploy.yml は 1352 → 1390 行になり、`.github/workflows/deploy.yml:735-771` に「Start secretary-codex (ADR-1058)」の段が足された。その 751 行目で prod1 が `docker build -t astro-webapp-secretary-codex -f secretary-codex/Dockerfile .` を流す。`docker-compose.secretary-codex.yml:12-15` も `build:` を持つ。クラウドの実装役は v4 のまま進めず NEEDS_DECISION で止まった（P2・P3 の行番号ずれと、この組み立て）。
 
 決めたこと（Opus の技術判断。目的・K1〜K8 は変えない）:
 1. **secretary-codex を 6 つ目の完成品として GitHub で組み立てる。** 理由: 残すと prod1 での組み立てが 1 つ残り、K1（prod1 の組み立て 0）と §1 の目的（2026-11-08 のメモリ不足の再発防止）を満たさない。名前・走査・push の正本を build-images.yml の 1 か所に保つ（§26-1 1.）。context はリポジトリの根、`file: secretary-codex/Dockerfile`。BuildKit は Dockerfile の隣の `Dockerfile.dockerignore` を読むので、入る物は今と同じ許す一覧の 4 つ（`secretary-codex/Dockerfile.dockerignore`）。
@@ -861,4 +861,6 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 未確認と扱い:
 - U32（新）: secretary-codex の組み立てに GitHub の実行機で何分かかるか。他の job と並んで動くので deploy の待ちは「一番遅い job」で決まる。K8 の関所（20 回の中央値 ≤ 3.1 分）の測り直しに secretary-codex は入っていない。便2 の最初の run の build job の時間を測り、K8 の超えがあれば PO に上げる。落ちたときは箱に触る前の話ではなく「秘書だけ古いまま」になるので安全側。
 - U33（新）: 段ごとの `continue-on-error` の段が落ちたとき、呼ばれる側の workflow の結果が緑になるか。公式は `jobs.<job_id>.steps[*].continue-on-error` を「段が落ちても job を落とさない」とする（Context7 /websites/github_en_actions・workflow-syntax・2026-11-11 取得）。呼ばれる側の workflow の結果が緑になることは便2 の最初の run で確かめる。job の `timeout-minutes: 30` に当たると job は落ちるので、そのときは deploy が止まる（他の 5 つと同じ扱い）。
+- U34（新・審査4回目 P2）: build-secretary-codex が落ちても deploy は成功扱いなので、次の run は差分どおりに戻り、secretary-codex のファイル（または common）が次に変わるまで組み直されない。その間、`.env` の SECRETARY_CODEX の行は古いまま（初回なら無いまま）で、警告もその 1 回だけ。扱い: 便2 では仕組みを足さない（一度に 1 つ・今も段3 の組み立てが落ちたときは警告だけで同じく古いまま）。最初の run の観測で警告が出たら PO に伝える（カード §6 の 5.）。落ちた回数が 2 回目になったら、知らせの仕組みを別の変更として設計する。
 - 審査: 同じ Opus の系統によるクラウドの設計審査を 1 回行ってから実装に渡す（独立した第二者の審査ではない）。
+- 審査4回目（2026-11-11・head 1817342d2）: REVISE。P1（必須）: 2-5 の 6. の compose の注記に「docker build」が入り K1 の検査に当たる → 言い方を変えた。P2（推奨）→ U34。P3（推奨）: Finalize の戻しで秘書は起こし直さないと 2-2 の 10. に明記。P4（推奨）: 段の範囲を 735-771 に直した（772 は空行）。P5（推奨）: §6 の 5. に `/app` が 4 つの確かめを足した。

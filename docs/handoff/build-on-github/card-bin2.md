@@ -1,6 +1,6 @@
 # card-bin2: 本番の受け取りを指紋に切り替える（prod1 で組み立てない）
 
-状態: カード草案（Opus、2026-11-11）。クラウドの設計審査 1 回目は REVISE（N1〜N7）→ v2、2 回目は REVISE（M1〜M4）→ v3、3 回目は APPROVE（推奨 P1〜P6）→ v4 で P3〜P6 を直し、P1・P2 は受け入れた（design.md §26-5〜§26-7）。v5（2026-11-11）: v4 の後に本線へ入った #5399（ChatGPT の秘書 secretary-codex・deploy.yml に 38 行）に合わせ、secretary-codex を 6 つ目の「無くてもよい」完成品として足し、行番号を直した（design.md §26-8）。実装は PO 承認済み（2026-11-11「許可する」）。この PR を main に入れることは、deploy.yml・compose・本番の scripts を変えるので危険 PR（ADR-136）。PO の「GO #番号」が要る。切り替えは 14:00〜16:00（日本時間）、PO が見ている時間に限る（design.md §23）。
+状態: カード草案（Opus、2026-11-11）。クラウドの設計審査 1 回目は REVISE（N1〜N7）→ v2、2 回目は REVISE（M1〜M4）→ v3、3 回目は APPROVE（推奨 P1〜P6）→ v4 で P3〜P6 を直し、P1・P2 は受け入れた（design.md §26-5〜§26-7）。v5（2026-11-11）: v4 の後に本線へ入った #5399（ChatGPT の秘書 secretary-codex・deploy.yml に 38 行）に合わせ、secretary-codex を 6 つ目の「無くてもよい」完成品として足し、行番号を直した（design.md §26-8）。v5.1（2026-11-11）: 審査4回目 REVISE の P1（必須）〜P5 を直した（design.md §26-8 末尾）。実装は PO 承認済み（2026-11-11「許可する」）。この PR を main に入れることは、deploy.yml・compose・本番の scripts を変えるので危険 PR（ADR-136）。PO の「GO #番号」が要る。切り替えは 14:00〜16:00（日本時間）、PO が見ている時間に限る（design.md §23）。
 親: [design.md](./design.md) §12 便2（中身の正本）・§26（このカードを出す前の直し）・§9（控えと戻し）。前の段のカード: [card-bin1-r3.md](./card-bin1-r3.md)。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。本番・GitHub の secret と Variables・組織の設定には触らない。PR は作らない（枝に push して報告するまで）。
 
@@ -291,7 +291,7 @@ jobs:
               exit 0
             fi
 ```
-8b. secretary-codex の段（735-772 行目・「Start secretary-codex (ADR-1058)」）を次のとおり直す（design.md §26-8）。
+8b. secretary-codex の段（735-771 行目・「Start secretary-codex (ADR-1058)」）を次のとおり直す（design.md §26-8）。
    - 738 行目の注記を `      # 完成品は GitHub で組み立て、deploy の Step 3 で .env の SECRETARY_CODEX_IMAGE の指紋で受け取る（build-on-github 便2・design.md §26-8）。prod1 では組み立てない。` にする。
    - 751-754 行目（`if ! DOCKER_BUILDKIT=1 docker build -t astro-webapp-secretary-codex -f secretary-codex/Dockerfile .; then` から `fi` まで）を次にする。
 ```bash
@@ -305,7 +305,7 @@ jobs:
    - 769 行目の `docker compose -p astro-webapp-secretary-codex -f docker-compose.secretary-codex.yml up -d --force-recreate --no-build` は変えない（compose が `.env` の `SECRETARY_CODEX_IMAGE` を読む・2-5 の 6.）。
    - ほかの行（版の確かめ・probe・`exit 0`）は変えない。
 9. 820 行目 `docker compose up -d --force-recreate celery-worker celery-beat discord-gateway` の `up -d` の後に ` --no-build` を足す。
-10. 1000-1009 行目（`# 旧コードでビルド（最大3回リトライ）` から `done` まで）を次にする。
+10. 1000-1009 行目（`# 旧コードでビルド（最大3回リトライ）` から `done` まで）を次にする。この戻しで `.env` の SECRETARY_CODEX の行も控えに戻るが、秘書の箱は起こし直さない（769 行目で起こした新しい完成品のまま動く。prune-images.sh は使用中の完成品を消さないので害は無い。審査4回目 P3）。
 ```bash
                 # build-on-github 便2（design.md §9-2・§26-1 6.）: 組み立てずに、控えの指紋を .env に戻す
                 _rb_build=false
@@ -350,7 +350,7 @@ jobs:
 3. `docker-compose.secretary-agent.yml`: 14-15 行目 → `    image: ${SECRETARY_AGENT_IMAGE:-astro-webapp-secretary-agent}` の 1 行。3 行目の注記の後に `# 完成品は deploy が .env の SECRETARY_AGENT_IMAGE の指紋で受け取る（design.md §26）。` を足す。
 4. `docker-compose.ai-reader.yml`: 12-14 行目（注記・`build:`・`image:`）→ `    # backend と同じ完成品（.env の BACKEND_IMAGE。無ければ既定の名前）。` と `    image: ${BACKEND_IMAGE:-astro-webapp-backend}` の 2 行。
 5. `docker-compose.ai-reader-http.yml:14-15`・`docker-compose.ai-reader-cloud-http.yml:15-16`・`docker-compose.ai-unmask-http.yml:15-16`: 注記を `    # backend と同じ完成品（deploy が .env の BACKEND_IMAGE の指紋で受け取る）。`、`image:` を `    image: ${BACKEND_IMAGE:-astro-webapp-backend}` にする。
-6. `docker-compose.secretary-codex.yml`（v5・design.md §26-8）: 12-15 行目（`    build:`・`      context: .`・`      dockerfile: secretary-codex/Dockerfile`・`    image: astro-webapp-secretary-codex`）→ `    image: ${SECRETARY_CODEX_IMAGE:-astro-webapp-secretary-codex}` の 1 行。7 行目の注記の後に `# 完成品は deploy が .env の SECRETARY_CODEX_IMAGE の指紋で受け取る（build-on-github 便2・design.md §26-8）。手元で組み立てるときは secretary-codex/Dockerfile の 2 行目の docker build に -t astro-webapp-secretary-codex を付ける。` を足す。override には入れない（この compose は本体と別の `-f` で読むため）。`tests/sandbox/secretary-codex.sh:50` の `docker compose -f docker-compose.secretary-codex.yml config -q` は既定の値で通る。
+6. `docker-compose.secretary-codex.yml`（v5・design.md §26-8）: 12-15 行目（`    build:`・`      context: .`・`      dockerfile: secretary-codex/Dockerfile`・`    image: astro-webapp-secretary-codex`）→ `    image: ${SECRETARY_CODEX_IMAGE:-astro-webapp-secretary-codex}` の 1 行。7 行目の注記の後に `# 完成品は deploy が .env の SECRETARY_CODEX_IMAGE の指紋で受け取る（build-on-github 便2・design.md §26-8）。手元で組み立てるときは secretary-codex/Dockerfile の 2 行目の組み立ての命令に -t astro-webapp-secretary-codex を付ける。` を足す（この注記は §4 の K1 の検査に当たらない言い方にしてある。「docker build」と書かない・審査4回目 P1）。override には入れない（この compose は本体と別の `-f` で読むため）。`tests/sandbox/secretary-codex.sh:50` の `docker compose -f docker-compose.secretary-codex.yml config -q` は既定の値で通る。
 
 ### 2-6. 本番の scripts
 1. `scripts/blue-green-cutover.sh`: 9 行目を `#   - .env の BACKEND_IMAGE（無ければ astro-webapp-backend）の完成品がローカルにある（deploy の Step 3 で受け取り済み）`、69 行目を `# compose の image: と同じ名前。prod1 では .env（38 行目で読み込み済み）の指紋`、70 行目を `BACKEND_IMAGE="${BACKEND_IMAGE:-${COMPOSE_PROJECT}-backend}"`、73 行目の文を `deploy の Step 3（pull-images.sh）を先に実行してください。` にする。
@@ -501,5 +501,5 @@ exit 0
 2. PO が GitHub に secret `GHCR_PULL_TOKEN`（classic PAT・read:packages だけ・180 日）を登録する（design.md §23）。
 3. K8 の関所（20 回の見込みの中央値 ≤ 3.1 分・design.md §12 便1 の完了条件 5.）が通っている。
 4. 審査役（reviewer・opus）の APPROVE と CI の全部の緑。
-5. PO の「GO #番号」→ 14:00〜16:00 に PO が見ている状態でマージ。最初の run を見る: 組み立て 6 つ（secretary-codex は落ちても警告だけ）→ Step 2 の 5 行（＋ secretary-codex の 1 行）→ pull の `pull ok (5 images)` と `pulled salesanchor-secretary-codex@…` → 切替 → 健康確認 → `grep -c ghcr.io ~/.docker/config.json` が 0。
+5. PO の「GO #番号」→ 14:00〜16:00 に PO が見ている状態でマージ。最初の run を見る: 組み立て 6 つ（secretary-codex は落ちても警告だけ）→ Step 2 の 5 行（＋ secretary-codex の 1 行）→ pull の `pull ok (5 images)` と `pulled salesanchor-secretary-codex@…` → 切替 → 健康確認 → `grep -c ghcr.io ~/.docker/config.json` が 0。secretary-codex は、prod1 で `docker run --rm --entrypoint sh "<.env の SECRETARY_CODEX_IMAGE の値>" -c 'ls -1 /app | wc -l'` が 4（GitHub の build-push-action で組み立てた物も今と同じ中身かの確かめ・審査4回目 P5）。build-secretary-codex の警告が出ていたら、その回の秘書は古いままなので PO に伝える（design.md §26-8 U34）。
 6. 戻し方: 前進の revert の PR（compose の `build:` と Step 3 の組み立てが戻る）。`.env` の 5 行（と SECRETARY_CODEX の 1 行）は残しても害は無い（旧 compose は `image:` の変数を読まない）。
