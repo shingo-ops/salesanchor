@@ -1,6 +1,6 @@
 -- ADR-1052 段1: 相談係用の伏せたビュー ai_cloud を作る（冪等・1 トランザクション）。
 -- 一覧には載せない。run_all_migrations.sh の EXIT trap が、毎回の実行の最後に流す（ai_ro と同じ形）。
--- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1083 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
+-- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1086 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
 -- 2) ai_cloud を作り直す。3) ai_cloud_meta.build_views() で全ビューを作り、build_log に 1 行書く。
 -- 4) ai_reader_cloud に ai_cloud の USAGE と SELECT だけを付ける。
 -- 分類表の元: docs/handoff/cloud-case-ai/stage1-column-class.tsv（表ごと・class ごとにまとめて unnest で入れる）。
@@ -76,6 +76,9 @@ FROM (VALUES
   ('public','countries',ARRAY['code'],'allow','共用マスタ（運営が入れる一覧）。共用の一覧表の記号（tenant 側も一覧表だけに出る）'),
   ('public','countries',ARRAY['dial_code'],'mask',''),
   ('public','countries',ARRAY['name'],'allow','【名前を含む】共用マスタ（運営が入れる一覧）。国名の一覧'),
+  ('public','customer_statuses',ARRAY['code'],'allow','共用マスタ（運営が入れる一覧）。会社・連絡先の状態の記号（tenant 側の status 列が外部キーで指す）'),
+  ('public','customer_statuses',ARRAY['name_en'],'allow','【名前を含む】共用マスタ（運営が入れる一覧）。状態の英語名'),
+  ('public','customer_statuses',ARRAY['name_ja'],'allow','【名前を含む】共用マスタ（運営が入れる一覧）。状態の日本語名'),
   ('public','data_access_events',ARRAY['client_ip'],'mask',''),
   ('public','data_access_events',ARRAY['event_type','method'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
   ('public','data_access_events',ARRAY['path','user_agent','user_email'],'mask',''),
