@@ -3,7 +3,7 @@
 > この文書は何か（専門用語なしの1行）:
 > 会社と連絡先の「有効・無効・アーカイブ・重複確認待ち」を DB の1つの表にまとめ、画面の選択肢・札・まとめる画面の文・分析がすべてその表を読むようにする手順。
 
-- 状態: **設計案作成済み（Opus）／設計審査 3回目 REVISE→直し済み・4回目待ち（§14）／PO 承認 未／実装未着手**
+- 状態: **設計案作成済み（Opus）／設計審査 4回目 APPROVE・推奨3件を反映済み（§14）／PO 承認 未／実装未着手**
 - recon: docs/handoff/status-ssot-contact-company/recon.md
 - 基準: origin/main a88194893（2026-11-11 取得）
 - PO の言葉（2026-11-11）: 「DBがバラバラに成っていていろいろなところからデータ撮ってきているならSSOTしてほしい」「分析機能に影響するから値の直書きは禁止、基本的に値はDBにSSOTさせて、後から分析の材料として使用できる状態にする必要がある」。同日「1」で、状態の1か所化とまとめる画面の文を1つの設計にする。
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 - 読む決まりは必ず `USING (true)`（誰でも全行）。審査2回目が PostgreSQL 16 を使い捨てで立てて実測した: 行ごとの外部キーの検査は RLS を飛ばして通るが、`VALIDATE CONSTRAINT` は FORCE の下では表の持ち主でも読む決まりで行が絞られ、読む決まりが狭いと違反で失敗した。`USING (true)` では通った。
 - 消す操作は受けない（外部キーで止まる）。取り下げは is_active=FALSE。
 - 行を入れる文は書かない（ADR-1007）。この便では作るだけで、どこからも読まれない。
-- `scripts/migration-guard/protected-tables.txt` に customer_statuses を足すのは便1 ではなく便3（審査3回目の指摘 M1）。理由: 確認8（`scripts/check-migration-value-writes.py:70-72`・`:181-186`）は、変えた migration の追加行で守る表の名前を含み、許す語（`:39-45`）を含まない行を止める。便1 の migration は前例どおり `GRANT SELECT ... ON public.customer_statuses` を持つので、同じ PR で一覧に足すと便1 自身が止まる。全件走査（`:260` の run_repo）は確認8 を全ファイルには当てないので、便1・便2 が合流した後の便3 で足せば、以後に新しく足す migration だけが止まる（ADR-1007 決定5 を機械で守る）。
+- `scripts/migration-guard/protected-tables.txt` に customer_statuses を足すのは便1 ではなく便3（審査3回目の指摘 M1）。理由: 確認8（`scripts/check-migration-value-writes.py:70-72`・`:181-186`）は、変えた migration の追加行で守る表の名前を含み、許す語（`:39-45`）を含まない行を止める。便1 の migration は前例どおり `GRANT SELECT ... ON public.customer_statuses` を持つので、同じ PR で一覧に足すと便1 自身が止まる。全件走査（`:260` の run_repo）は確認8 を全ファイルには当てないので、便1・便2 が合流した後の便3 で足せば、以後に新しく足す migration だけが止まる（ADR-1007 決定5 を機械で守る）。注意（審査4回目 N3）: 便3 の後で便1・便2 の migration ファイルを直すと、customer_statuses を含む追加行（GRANT など）が確認8 に止められる。そのときは `scripts/migration-guard/reference-allowlist.tsv` にそのファイルを足して外す（`scripts/check-migration-value-writes.py:11`）。
 - ロールバック: 表を残してプログラムが使わない。
 
 ## 4. 4行の投入（1回だけのデータ変更・ADR-1007 決定1）
@@ -85,6 +85,8 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
   3. 旧 CHECK（companies_status_check / contacts_status_check）を DROP
 - 会社の領域ごとに、表（companies・contacts）や status 列が無ければ飛ばす（CI の土台の tenant_001.companies には status 列が無く、contacts の表も無い: `.github/workflows/migration-test.yml:312-319`）。
 - 件数を数える SELECT と RAISE EXCEPTION は置かない（審査3回目の指摘 M1: 表の名前を含む SELECT は、便3 で一覧に足した後に確認8 が止める形になるため）。代わりに `VALIDATE CONSTRAINT` そのものが止め役になる: 会社・連絡先に行があり4行が足りなければ外部キー違反で失敗し、移行全体が止まる。行が0の空の DB（CI の全件ドライラン `.github/workflows/migration-test.yml:2118`）では通る。本番は105行あるので、4行の投入前に流すと止まる。理由の説明は RAISE NOTICE（許す語 `:39-45`）で書く。外部キーの行は REFERENCES を含むので許される。
+- 済んでいる会社の領域は飛ばす（審査4回目 N1）: 入れ替えのたびに全 migration を流し直す（ADR-1037）ので、`pg_constraint` で「`..._status_fkey` が有り、かつ旧 CHECK が無い」なら ALTER を1つも出さない。2周目で鍵を取りに行かない。
+- 取引の単位（審査4回目 N1）: `scripts/run_all_migrations.sh:118` はファイルを1つずつ流し、まとめて1つの取引にする指定は無い（`:25` は失敗で止める指定だけ）。会社の領域を回す DO ブロックは1つの取引になるので、その中の NOT VALID・VALIDATE・DROP は同じ取引で、ADD が取った鍵は VALIDATE の終わりまで続く。つまり NOT VALID に分けても鍵を軽くする効果は無い。それでもよい理由: 本番は合計105行で VALIDATE はすぐ終わる。鍵待ちは ADR-1037 の1秒で諦めて流し直す。参照先は便3 まで誰も読まない（§12-4）。NOT VALID を残すのは、書き方を GitLab の決まりにそろえるためだけ。
 - 会社を作る処理 `backend/app/services/tenant.py:224`・`:255` も CHECK → 外部キーに直す（同じ PR）。
 - ロック待ち1秒（ADR-1037）。
 - ロールバック: 外部キーを DROP し CHECK を付け直す SQL を design に添える（カードに書く）。
@@ -172,7 +174,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 | K10 RLS の下で外部キーが働く | backend/tests/test_customer_statuses_pg.py が緑（会社の領域の利用者で会社を作れる・表に無い値は断られる） |
 | K11 まとめる先がアーカイブのときの文に仕組みの言葉が0件 | `frontend/src/lib/apiErrorReason.test.ts` で merge_target_archived → 文に master・archived・active・merge_target が無い。`backend/tests/test_api_error_reason_sync.py` が緑 |
 | K12 migration が新しい表に値を書くと止まる | 便3 の後、`scripts/migration-guard/protected-tables.txt` に customer_statuses がある。`python3 scripts/check-migration-value-writes.py repo` が緑。便1・便2 の PR の Migration guard が緑（一覧に足すのが便3 なので確認8 に当たらない） |
-| K13 便2 が CI の migration 検査を通る | 便2 の PR の Migration SQL Test が緑（変更 SQL・全件ドライラン・2周目の冪等） |
+| K13 便2 が CI の migration 検査を通る | 便2 の PR の Migration SQL Test が緑（変更 SQL・全件ドライラン・2周目の冪等）。加えて、2周目の記録に便2 の ALTER が1つも出ない（§5 の飛ばす条件） |
 
 ## 9. 未決（PO に1件ずつ）
 
@@ -217,7 +219,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 | どれだけ | API 停止 約15秒 | 平均最大 13.5 秒・失敗4件/300回 | 状態の書き込みが毎回失敗（件数は記事に無い） |
 | 失敗の要因 | 鍵待ちの上限（lock_timeout）が無かった | 同じ（上限が無かった） | 値の置き場が2つで、ずれを止める試験が無かった |
 
-- 適用の限界: 事例1 は2015年ごろの版の PostgreSQL の話で、今の版の鍵は軽い（12-1）。ただし「鍵待ちの列で後ろが全部止まる」仕組みは今も同じ。事例3 は小さな個人の作品で、規模は当社より小さい。
+- 適用の限界: 事例1 の記事は年も PostgreSQL の版も書いていない（脚注で「9.4 は VALIDATE の鍵を軽くした」と触れるだけ）。今の版 16 の鍵は記事の説明（AccessExclusive）より軽い（12-1）。ただし「鍵待ちの列で後ろが全部止まる」仕組みは今も同じ。事例3 は小さな個人の作品で、規模は当社より小さい。
 
 ### 12-3. 成功事例
 
@@ -237,7 +239,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 
 ### 12-4. この設計への応用
 
-1. 便2 の外部キーは NOT VALID → VALIDATE に分ける（§5。事例1・GitLab と同じ）。
+1. 便2 の外部キーは NOT VALID → VALIDATE の書き方にする（§5）。ただし1つの取引の中なので、GitLab のように鍵を軽くする効果は無い。当社は105行と小さく、鍵待ちは1秒で諦める（2）ことで守る。
 2. 鍵待ちは1秒で諦めて流し直す（ADR-1037 が既に機械で入っている。事例1 の要因を消している）。
 3. 便2 の時点で、参照先の public.customer_statuses は誰も読んでいない（便3 まで使われない）。事例1 の「参照先に長い読み取り」が起きない。
 4. 値の正本を DB の表1つにし、サーバーの列挙とのずれは試験で止める（§6-4。事例3 の要因を消す）。
@@ -258,3 +260,4 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 - 1回目（2026-11-11 13:58 JST・クラウド Opus）: 判定なしで停止。原因は依頼文の確かめ方に見張りの止める語が入っていたこと（Opus の依頼の書き方の誤り）。途中の指摘6件（試験 DB が SQLite・recon の漏れ5か所・409 の文）は実物で確かめて recon §2・§3 と §5-2・§6-2・§6-3-2・§6-3-3・§8 K10/K11・§9-3 に反映した。
 - 2回目（2026-11-11 14:14 JST・クラウド Opus・da68ab5af）: **REVISE**。指摘8件と直した所: (1) 便2 が CI で止まる → §5 の止める条件を絞り、§5-2 に前提の移行の step（K13） (2) VALIDATE は FORCE の下で読む決まりに絞られる（PG16 で実測）→ §3 に `USING (true)` (3) 「絞り込み」は実は作る・直すフォーム → §1・§6-2・K4 を直し、§9 未決4 で PO に聞く (4) statusPresentation.ts は同期の固定表 → 色は表に置かずコードに残す（§2・§3・§4・§11） (5) recon の漏れ → recon §2・§3 と §6-1・§6-2 (6) K5・K6 の grep の書き方の誤り → 書き直して基準値を実測（K5 50件・K6 41件） (7) 理由コードの形 → 共通の表 apiErrorReason.ts（§6-3-2） (8) ADR-1007 と値の書き込みの検査 → protected-tables.txt に足す（§3・K12）。8 の文の後半は記録の切れで読めず、検査の道具と一覧を Opus が実物で読んで補った（`scripts/check-migration-value-writes.py`・`scripts/migration-guard/protected-tables.txt`。customer_statuses は今は一覧に無い）。
 - 3回目（2026-11-11 17:11 JST・クラウド Opus・0cde60fe6）: **REVISE**。2回目の8件はすべて直っていると確認（design の行で照合）。recon の行番号11か所も実物と一致。必須1件 M1: 便1 で protected-tables.txt に足すと、確認8 が便2 の件数の SELECT（と便1 自身の GRANT の行）を止める。Opus が `scripts/check-migration-value-writes.py` の確認8・許す語・全件走査（`:260`）を読んで確かめ、(1) 一覧に足すのを便3 へ移す（§3・K12・§13）、(2) 便2 の件数の SELECT をやめて VALIDATE を止め役にする（§5）、と直した。指摘の文の後半は記録の切れで読めなかった。同時に §12 を外部事例に書き換えた。
+- 4回目（2026-11-11 17:17 JST・クラウド Opus・6fcfbacd8）: **APPROVE**（必須0件）。M1 が直っていることを確認した。確認8 は変えた migration の追加行だけを見る（`scripts/check-migration-value-writes.py:153-157`・`:175-180`）。全件走査（`:260-286`）は値の書き込みだけを当てる。便2 の外部キーの外し方は本人 GO の対象外で、委任の GO で足りる（`scripts/check-process-artifacts.js:569`・`:493`。ADR-1003 の例外は表と列を消す migration）。§12 の当社の数は、ADR-1037 と channel-master-shared/design.md の行とすべて一致した。外部の原文は審査役は開いていない（原文は Opus が取得して /tmp/CC報告ファイル/ext/ に置いた）。推奨3件を反映した: N1 済んだ領域は飛ばす・取引の単位の説明（§5・K13・§12-4）、N2 原文に無い「2015年ごろ」を消す（§12-2）、N3 便3 の後に便1・便2 を直すときの外し方（§3）。審査の途中で、見張りが DB の道具名を含む検索を止めた。取引の単位は Opus が `scripts/run_all_migrations.sh:25`・`:118` を読んで補った。
