@@ -69,34 +69,13 @@ tags = ["secret", "meta"]
 paths = [".env.example"]
 
 # =============================================================
-# build-on-github 便1（docs/handoff/build-on-github/design.md §7-2・§24 C1）
-# frontend の完成品の画面の JS には Firebase の web API key が載る（設計どおり・画面を開く人に届く値）。
-# 既定の規則 gcp-api-key を名前で広げ、その場所だけを例外にする。他の規則・他の場所は今のまま当てる。
-# この場所は置き場に無いので、置き場の走査（secret-scan.yml）の結果は変わらない。
-# =============================================================
-[[rules]]
-id = "gcp-api-key"
-
-[[rules.allowlists]]
-description = "frontend 完成品の画面の JS（Firebase web API key は設計どおり載る）"
-paths = ['''(^|/)usr/share/nginx/html/assets/[^/]+\.js$''']
-
-# =============================================================
-# build-on-github 便1 の 2 回目（docs/handoff/build-on-github/design.md §24-6 E3）
-# 既定の規則 generic-api-key を名前で広げ、2 つの場所だけを例外にする。規則は外さない。
-# (a) frontend の画面の JS の Firebase web API key。gcp-api-key を例外にすると同じ値に generic-api-key が残るため。
-#     場所と値の形の両方がそろったときだけ外す。同じ JS の別の秘密は当たる。
-# (b) OS と言語の配布物の C の見出しファイル。アプリのファイルはここに入らない（5 つの Dockerfile の COPY の先）。
-# どちらの場所も置き場に無いので、置き場の走査（secret-scan.yml）の結果は変わらない。
+# build-on-github 便1（docs/handoff/build-on-github/design.md §25-6 E3・§25-9）
+# 既定の規則 generic-api-key を名前で広げ、OS と言語の配布物の C の見出しファイルだけを例外にする。規則は外さない。
+# アプリのファイルはここに入らない（5 つの Dockerfile の COPY の先）。この場所は置き場に無いので、置き場の走査（secret-scan.yml）の結果は変わらない。
+# Firebase の web API key の例外は、本線が Firebase を外した（2026-11-05）ので消した。
 # =============================================================
 [[rules]]
 id = "generic-api-key"
-
-[[rules.allowlists]]
-description = "frontend 完成品の画面の JS の Firebase web API key（gcp-api-key の例外と同じ値に別の規則が当たる）"
-condition = "AND"
-paths = ['''(^|/)usr/share/nginx/html/assets/[^/]+\.js$''']
-regexes = ['''^AIza[0-9A-Za-z_\-]{35}$''']
 
 [[rules.allowlists]]
 description = "OS と言語の配布物の C の見出しファイル"

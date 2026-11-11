@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# build-on-github 便1: 完成品の秘密検査（docs/handoff/build-on-github/design.md §7-2・§24 C1/C5/C6/C16・§24-6 E1〜E4）
+# build-on-github 便1: 完成品の秘密検査（docs/handoff/build-on-github/design.md §7-2・§25 C1/C5/C6/C16・§25-6 E1〜E4）
 # 使い方: image-scan.sh <image ref>
 #   SCAN_REPORT_ONLY=1 … 当たりがあっても 0 で終わる（試験場の調べ用・tests/sandbox/image-scan-survey.sh）
 #   GITLEAKS_CONFIG=<path> … gitleaks の設定を差し替える（既定は置き場の .gitleaks.toml）
@@ -8,8 +8,13 @@ set -euo pipefail
 REF="${1:?usage: image-scan.sh <image ref>}"
 ROOT="$(git rev-parse --show-toplevel)"
 CONFIG="${GITLEAKS_CONFIG:-$ROOT/.gitleaks.toml}"
-GL_VERSION="8.24.3"
-GL_SHA256="9991e0b2903da4c8f6122b5c3186448b927a5da4deef1fe45271c3793f4ee29c"
+PIN_FILE="$ROOT/.github/workflows/secret-scan.yml"  # gitleaks の版と sha256 の正本（design.md §25-9）
+GL_VERSION="$( (grep -m1 -E '^[[:space:]]+GITLEAKS_VERSION:' "$PIN_FILE" || true) | sed -E 's/^[^:]*:[[:space:]]*"?([^"[:space:]]*)"?.*$/\1/')"
+GL_SHA256="$( (grep -m1 -E '^[[:space:]]+GITLEAKS_SHA256:' "$PIN_FILE" || true) | sed -E 's/^[^:]*:[[:space:]]*"?([^"[:space:]]*)"?.*$/\1/')"
+if ! [[ "$GL_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || ! [[ "$GL_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+  echo "SCAN error: gitleaks pin not found in .github/workflows/secret-scan.yml"
+  exit 1
+fi
 WORK="$(mktemp -d)"
 CID=""
 cleanup() {  # 片付けの失敗で、通った走査を落とさない（設計審査 REVISE 2）
@@ -19,7 +24,7 @@ cleanup() {  # 片付けの失敗で、通った走査を落とさない（設�
 }
 trap cleanup EXIT
 
-# 0. gitleaks（版と sha256 を固定・design.md §24-1）
+# 0. gitleaks（版と sha256 を固定・design.md §25-1）
 GL_TGZ="gitleaks_${GL_VERSION}_linux_x64.tar.gz"
 curl -fsSL -o "$WORK/$GL_TGZ" "https://github.com/gitleaks/gitleaks/releases/download/v${GL_VERSION}/${GL_TGZ}"
 echo "${GL_SHA256}  $WORK/$GL_TGZ" | sha256sum -c -
@@ -41,7 +46,7 @@ chmod -R u+rwX "$WORK/fs"
 
 # 2. 名前の走査（パスだけ出す）
 NAME_RE='(^|/)(\.env(\..*)?|.*\.pem|.*\.key|id_(rsa|ed25519).*|.*credentials.*\.json|auth\.json|\.npmrc|\.netrc|\.git/.*)$'  # design.md §7-2 の型のまま（C6）
-# 公開の配布物だけを除く（§24-6 E1）。除いたファイルも、中に PRIVATE KEY があれば当たりに戻す（E2）
+# 公開の配布物だけを除く（§25-6 E1）。除いたファイルも、中に PRIVATE KEY があれば当たりに戻す（E2）
 NAME_EXCLUDE_RE='^(etc/ssl/certs/[^/]+\.pem|etc/ssl/cert\.pem|etc/ssl1\.1/cert\.pem|usr/lib/ssl/cert\.pem|.+/certifi/cacert\.pem|.+/grpc/_cython/_credentials/roots\.pem|.+/googleapiclient/discovery_cache/documents/[^/]+\.json|usr/local/lib/node_modules/npm/\.npmrc)$'
 grep -E "$NAME_RE" "$WORK/list.txt" > "$WORK/name_all.txt" || true
 grep -vE "$NAME_EXCLUDE_RE" "$WORK/name_all.txt" > "$WORK/name_hit.txt" || true

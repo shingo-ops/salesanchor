@@ -1,5 +1,5 @@
 name: Build images (GitHub → GHCR)
-# build-on-github 便1（docs/handoff/build-on-github/design.md §12 便1・§24）。
+# build-on-github 便1（docs/handoff/build-on-github/design.md §12 便1・§25）。
 # 5 つの完成品を GitHub で組み立てて走査し、組織の非公開の倉庫（ghcr.io）へ送る。本番（prod1）には触らない。
 # 便2 で deploy.yml に移してこのファイルは消す。
 on:
@@ -21,16 +21,13 @@ jobs:
       gha_exporter: ${{ steps.f.outputs.gha_exporter }}
       secretary_agent: ${{ steps.f.outputs.secretary_agent }}
     steps:
-      - name: Check settings (design.md §24 C7/C12)
+      - name: Check settings (design.md §25 C7/C12)
         env:
           GHCR_NAMESPACE: ${{ vars.GHCR_NAMESPACE }}
           GHCR_USER: ${{ vars.GHCR_USER }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
-          VITE_GCP_PROJECT_ID: ${{ vars.VITE_GCP_PROJECT_ID }}
-          VITE_AUTH_PROVIDER: ${{ vars.VITE_AUTH_PROVIDER }}
         run: |
           missing=""
-          for n in GHCR_NAMESPACE GHCR_USER VITE_FIREBASE_AUTH_DOMAIN VITE_GCP_PROJECT_ID VITE_AUTH_PROVIDER; do
+          for n in GHCR_NAMESPACE GHCR_USER; do
             if [ -z "${!n}" ]; then missing="$missing $n"; fi
           done
           if [ -n "$missing" ]; then echo "::error::Variables が未登録:$missing"; exit 1; fi
@@ -48,6 +45,7 @@ jobs:
               - '.github/scripts/image-scan.sh'
               - '.github/scripts/ghcr-private-check.sh'
               - '.gitleaks.toml'
+              - '.github/workflows/secret-scan.yml'
             backend:
               - *common
               - 'backend/**'
@@ -96,7 +94,7 @@ jobs:
           cache-to: type=gha,scope=backend
       - name: Scan image (design.md §7-2)
         run: bash .github/scripts/image-scan.sh "$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
-      - name: Push and record digest (design.md §24 C13)
+      - name: Push and record digest (design.md §25 C13)
         id: push
         run: |
           TAG="$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
@@ -106,7 +104,7 @@ jobs:
           REF="$REGISTRY/$NAMESPACE/$IMAGE@$DIGEST"
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
           echo "- $IMAGE: \`$REF\`" >> "$GITHUB_STEP_SUMMARY"
-      - name: Check package is private (design.md §24 C4/C15)
+      - name: Check package is private (design.md §25 C4/C15)
         env:
           REF: ${{ steps.push.outputs.ref }}
         run: bash .github/scripts/ghcr-private-check.sh "$REF"
@@ -125,12 +123,6 @@ jobs:
         with:
           persist-credentials: false
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      - name: Check secret (design.md §24 C12)
-        env:
-          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
-        run: |
-          if [ -z "$VITE_FIREBASE_API_KEY" ]; then echo "::error::secret VITE_FIREBASE_API_KEY が未登録"; exit 1; fi
-          echo "secret ok"
       - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
@@ -146,15 +138,11 @@ jobs:
           sbom: false
           # frontend は第 1 段の ENV VITE_* が層に残るためキャッシュを使わない（design.md §7-3）
           build-args: |
-            VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}
             VITE_FUNNEL_DASHBOARD=${{ secrets.VITE_FUNNEL_DASHBOARD }}
-            VITE_FIREBASE_AUTH_DOMAIN=${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
-            VITE_GCP_PROJECT_ID=${{ vars.VITE_GCP_PROJECT_ID }}
-            VITE_AUTH_PROVIDER=${{ vars.VITE_AUTH_PROVIDER }}
           tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE }}:${{ github.sha }}
       - name: Scan image (design.md §7-2)
         run: bash .github/scripts/image-scan.sh "$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
-      - name: Push and record digest (design.md §24 C13)
+      - name: Push and record digest (design.md §25 C13)
         id: push
         run: |
           TAG="$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
@@ -164,7 +152,7 @@ jobs:
           REF="$REGISTRY/$NAMESPACE/$IMAGE@$DIGEST"
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
           echo "- $IMAGE: \`$REF\`" >> "$GITHUB_STEP_SUMMARY"
-      - name: Check package is private (design.md §24 C4/C15)
+      - name: Check package is private (design.md §25 C4/C15)
         env:
           REF: ${{ steps.push.outputs.ref }}
         run: bash .github/scripts/ghcr-private-check.sh "$REF"
@@ -201,7 +189,7 @@ jobs:
           cache-to: type=gha,scope=gemini-egress
       - name: Scan image (design.md §7-2)
         run: bash .github/scripts/image-scan.sh "$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
-      - name: Push and record digest (design.md §24 C13)
+      - name: Push and record digest (design.md §25 C13)
         id: push
         run: |
           TAG="$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
@@ -211,7 +199,7 @@ jobs:
           REF="$REGISTRY/$NAMESPACE/$IMAGE@$DIGEST"
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
           echo "- $IMAGE: \`$REF\`" >> "$GITHUB_STEP_SUMMARY"
-      - name: Check package is private (design.md §24 C4/C15)
+      - name: Check package is private (design.md §25 C4/C15)
         env:
           REF: ${{ steps.push.outputs.ref }}
         run: bash .github/scripts/ghcr-private-check.sh "$REF"
@@ -248,7 +236,7 @@ jobs:
           cache-to: type=gha,scope=gha-exporter
       - name: Scan image (design.md §7-2)
         run: bash .github/scripts/image-scan.sh "$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
-      - name: Push and record digest (design.md §24 C13)
+      - name: Push and record digest (design.md §25 C13)
         id: push
         run: |
           TAG="$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
@@ -258,7 +246,7 @@ jobs:
           REF="$REGISTRY/$NAMESPACE/$IMAGE@$DIGEST"
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
           echo "- $IMAGE: \`$REF\`" >> "$GITHUB_STEP_SUMMARY"
-      - name: Check package is private (design.md §24 C4/C15)
+      - name: Check package is private (design.md §25 C4/C15)
         env:
           REF: ${{ steps.push.outputs.ref }}
         run: bash .github/scripts/ghcr-private-check.sh "$REF"
@@ -295,7 +283,7 @@ jobs:
           cache-to: type=gha,scope=secretary-agent
       - name: Scan image (design.md §7-2)
         run: bash .github/scripts/image-scan.sh "$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
-      - name: Push and record digest (design.md §24 C13)
+      - name: Push and record digest (design.md §25 C13)
         id: push
         run: |
           TAG="$REGISTRY/$NAMESPACE/$IMAGE:$GITHUB_SHA"
@@ -305,7 +293,7 @@ jobs:
           REF="$REGISTRY/$NAMESPACE/$IMAGE@$DIGEST"
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
           echo "- $IMAGE: \`$REF\`" >> "$GITHUB_STEP_SUMMARY"
-      - name: Check package is private (design.md §24 C4/C15)
+      - name: Check package is private (design.md §25 C4/C15)
         env:
           REF: ${{ steps.push.outputs.ref }}
         run: bash .github/scripts/ghcr-private-check.sh "$REF"

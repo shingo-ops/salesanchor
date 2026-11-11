@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# build-on-github 便1: 倉庫の完成品が非公開かを確かめる（docs/handoff/build-on-github/design.md §24 C4・C15）
+# build-on-github 便1: 倉庫の完成品が非公開かを確かめる（docs/handoff/build-on-github/design.md §25 C4・C15）
 # ログインしたままなら読める・ログイン無しでは読めない、の両方。ログイン無しで読めたら落とす。
 # 使い方: ghcr-private-check.sh <ghcr.io/<namespace>/<name>@sha256:<64桁>>
 set -euo pipefail
@@ -18,5 +18,5 @@ fi
 echo "ANON_MESSAGE ${ANON_OUT:0:300}"
 case "$ANON_OUT" in
   *unauthorized*|*UNAUTHORIZED*|*denied*|*DENIED*) echo "PRIVATE_CHECK ok" ;;
-  *) echo "::warning::PRIVATE_CHECK anonymous read failed without unauthorized/denied (design.md §24-2 U23)" ;;
+  *) echo "::warning::PRIVATE_CHECK anonymous read failed without unauthorized/denied (design.md §25-2 U23)" ;;
 esac
