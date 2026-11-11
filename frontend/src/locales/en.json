@@ -2963,6 +2963,7 @@
       "statusPending": "Pending",
       "statusVerified": "Verified",
       "statusTrial": "Trial",
+      "statusContracting": "Contracting",
       "statusActive": "Active",
       "statusSuspended": "Suspended",
       "flagManyIps": "Many IPs",

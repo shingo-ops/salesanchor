@@ -172,6 +172,7 @@
       "viewer_invalid_credentials": "The email or password is incorrect.",
       "viewer_suspended": "This account is suspended.",
       "viewer_trial_expired": "Your trial period has ended.",
+      "viewer_contract_expired": "Your viewing period has ended. Please contact your representative.",
       "viewer_invalid_current_password": "The current password is incorrect.",
       "password_too_short": "The password must be at least 15 characters.",
       "password_too_long": "The password must be 64 characters or fewer.",
@@ -193,6 +194,10 @@
       "expired": {
         "title": "Trial period ended",
         "description": "Your usage period has ended."
+      },
+      "contractExpired": {
+        "title": "Viewing period has ended",
+        "description": "Please contact your representative."
       },
       "error": {
         "title": "Could not load",

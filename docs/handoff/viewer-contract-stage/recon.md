@@ -24,7 +24,7 @@
 - 申込コードの再発行を通す状態: backend/app/services/viewer_admin.py:381。
 - 本契約にする・延長の前提: backend/app/services/viewer_admin.py:231・:255。
 - 停止の解除は、最後の停止記録の前の状態へ戻す: backend/app/services/viewer_admin.py:240 付近（from_status を読む）。新しい状態でも値の追加だけで動く。
-- 配信は本契約のみ: backend/app/services/tcg_distribution_svc.py:725（`va.status <> 'active'` は not_contracted）。
+- 配信は本契約のみ: backend/app/services/tcg_distribution_svc.py:737（`va.status <> 'active'` は not_contracted）。
 - 期限前日の面談案内はお試しのみ: backend/app/discord_gateway/viewer_interview_notice.py:57。
 - 閲覧ページの停止の扱い: frontend/src/pages/viewer/ViewerApp.tsx:52・:60、frontend/src/pages/viewer/LoginView.tsx:24。
 - 管理画面: frontend/src/pages/super-admin/ViewerAccountsPage.tsx:94（左メニュー）・:441（行のボタン）。ファイルは 922 行。上限は frontend/scripts/check-page-size.js:7 の 1000 行で、便2 の審査で 1043 行が差し戻しになった（release-viewer-billing-form-bin2 の台帳）。
