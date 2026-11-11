@@ -779,7 +779,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - R14-1（Google の形）: recon §8.1。中身は左に寄り（題名 x80・札 x16 幅 636）、白い札の中に絵の列（真ん中 x48）と欄（x80〜）。欄は塗りの地・角 4px・枠なし・高さ 40。保存は丸い。
 - R14-2（今の金型で作れない理由）: 金型 FullScreenDialog は中身を真ん中寄せの 1 列にする（`frontend/src/components/FullScreenDialog.css:46-49`）だけで、左に寄せる・札で包む・絵の列を作る口が無い（`frontend/src/components/FullScreenDialog.tsx:93-102`）。入力欄は決まりで完全に丸く（`docs/specs/design-system/design.md:811`）、角 4px の塗りの欄の種類（variant）が無い。保存の丸い形はログイン画面だけ（`frontend/src/components/buttonShapeUsage.test.ts:13-19`）。
 - R14-3（今の画面）: recon §8.2。真ん中寄せ・丸い白地の欄・文字つき・終日は切り替え。
-- R14-4（直す流れ）: 直すは小窓の中で入力欄に変わる（`frontend/src/pages/schedule/SchedulePageImpl.tsx:975-982`・`:380-418`・`:432-440`）。全画面は作るときだけ（`:1588`）。保存は 1 つの関数 `saveEvent`（`:988-1031`）で、直すときは PATCH。
+- R14-4（直す流れ）: 直すは小窓の中で入力欄に変わる（`frontend/src/pages/schedule/SchedulePageImpl.tsx:975-982`・`:380-420`・`:432-440`）。全画面は作るときだけ（`:1587`）。保存は 1 つの関数 `saveEvent`（`:988-1031`）で、直すときは PATCH。
 - R14-5（使う所）: FullScreenDialog を使うのは `frontend/src/pages/schedule/ScheduleFullEditor.tsx` だけ。本番の点検 S13 は dialog の名前「予定の編集」（`schedule.fullEditLabel`）で探す。
 
 作り方:
@@ -852,7 +852,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 | 便11 | 日・3日間・週の枠線を Google に揃える（§3.16）。金型 CalendarView の css に規則 8 つ・トークン 1 つ | G37〜G41 | なし（frontend の css だけ。移行・deploy・scripts・DB は無い） |
 | 便12 | 作る小窓を Google の形に・作っている途中の箱を動かせる（§3.17）。金型 CalendarView に口 1 つ（ADR-1065 What 6 に 1 文）・金型 TextFieldControl に種類 1 つ・絵 3 つ・トークン 5 つ・文言 2 つ・予定の画面 | G42〜G50 | なし（frontend だけ。移行・deploy・scripts・DB は無い）。PO 承認（G42〜G50・金型 2 つ・ADR-1065 What 6）の後に着手 |
 | 便13 | Google Meet を押す行に・「その他のオプション」で全画面の編集（§3.18）。新しい金型 FullScreenDialog 1 つ・項目の部品を 1 か所に・文言 3 つ足し 1 つ替え・予定の画面 | G51〜G57 | なし（frontend だけ。移行・deploy・scripts・DB・Google の権限は無い）。PO 承認済み（2026-11-11「1」・G51〜G57・新しい金型）。カード `docs/handoff/schedule-gcal-clone/card-bin13.md` |
-| 便14 | 予定の編集画面を Google の形に・直すときも全画面（§3.19）。新しい金型 EditorPage（古い金型 FullScreenDialog は消す）・塗りの欄の種類 4 つ・トークン 5 つ・文言 1 つ・項目の部品を 1 項目ずつに・予定の画面・守り手の試験 1 つ足し 1 つ直し・決まりの文書に例外 3 文・ADR-1074 | G58〜G64 | なし（frontend と書類だけ。移行・deploy・scripts・DB・Google の権限は無い）。PO 承認（G58〜G64・新しい金型・古い金型を消す・塗りの欄・丸い保存）の後に着手。カード `docs/handoff/schedule-gcal-clone/card-bin14.md` |
+| 便14 | 予定の編集画面を Google の形に・直すときも全画面（§3.19）。新しい金型 EditorPage（古い金型 FullScreenDialog は消す）・塗りの欄の種類 4 つ・トークン 5 つ・文言 1 つ・項目の部品を 1 項目ずつに・予定の画面・守り手の試験 1 つ足し 1 つ直し・決まりの文書に例外 5 文・ADR-1074 | G58〜G64 | なし（frontend と書類だけ。移行・deploy・scripts・DB・Google の権限は無い）。PO 承認（G58〜G64・新しい金型・古い金型を消す・塗りの欄・丸い保存）の後に着手。カード `docs/handoff/schedule-gcal-clone/card-bin14.md` |
 
 便0 を先に出す理由: 今の本番で毎回起きる間違いで、1 行で直り、載せ替えを待つ理由がない。
 
@@ -1140,3 +1140,13 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
   - (1) 重: 種類の欄の右余白の規則を `:focus` の規則より後ろに置くと stylelint `no-descending-specificity` が 1 件落ちる（実測 `FormField.css 461:1`）→ カード §3 の塊の 2 つ目（共通の見た目の規則のすぐ後・`:focus` より前）に移した。審査役がこの置き方で stylelint 0 件・右余白 32px のままを実測。
   - (2) 軽: Button の行番号 → 説明「ログイン画面だけで使う」は `frontend/src/components/Button.tsx:28`・口 `shape` は `:29` に直した（カード §1・§2-1）。
   - (3) 軽: 小窓の本体は `SchedulePageImpl.tsx:380-420` に直した（カード §7）。
+
+### 17 回目 4 回目（2026-11-11 04:34〜04:39 UTC・便14 の設計・クラウドの Opus architect・commit 3aef82a37・セッション cse_01HHUUpPga7mkexiNwyoAsSx）: APPROVE
+
+- 3 回目の 3 件は 3 件とも直っていた。審査役が写しにカード §2-2・§3・§5・§6 をカードどおりの順で入れ、`npx stylelint "src/**/*.css"` が rc=0（0 件）。窓 1279 で × 左端 x32・真ん中 x50、題名 x80 幅 594、保存 x706（角 9999px）、日時の 5 つは全部 y92・高さ 40、札 x16 幅 636、札の中の欄 x80 幅 556、欄は高さ 40・角 4px・枠 0・地 rgb(235,239,248)、種類の欄の右余白 32px、Meet の文字は左寄せ。窓 390 で scrollWidth 390。
+- 流れ（直すから開く・× と Esc でカレンダーに戻る・保存成功で閉じる・失敗で開いたまま）と S13 は成り立つ。写しで dark-parity（132）・css-values・css-var-fallbacks・css-colors・color-token-sync・stories・page-size・page-layout・page-folder・i18n が緑。EditorPage.tsx の型の誤り 0 件（クラウドに生成物の無い api/generated/schema 由来を除く）。check-new-tokens は CI と PR 本文で確かめる。
+- 軽い指摘 3 件と直し（この commit）:
+  - (1) `frontend/src/pages/schedule/ScheduleFullEditor.tsx:3` の説明の文に `FullScreenDialog` が残るのにカードに直す指示が無い → カード §2-4 に 1 行足した。
+  - (2) §4 の便14 の行の「例外 3 文」は実際は 5 か所 → 「例外 5 文」に直した。
+  - (3) R14-4 の行番号 `:380-418`・`:1588` が古い → `:380-420`・`:1587` に直した。
+- 判定: APPROVE。残りは PO の承認（新しい金型・古い金型を消す・角の小さい塗りの欄・丸い保存・直すときも全画面）。

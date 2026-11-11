@@ -285,6 +285,7 @@ export function EditorPageRow({ icon, children }: { icon: ReactNode; children: R
 
 - `git rm frontend/src/components/FullScreenDialog.tsx frontend/src/components/FullScreenDialog.css frontend/src/components/FullScreenDialog.stories.tsx frontend/src/components/FullScreenDialog.test.tsx`
 - `frontend/src/pages/schedule/SchedulePageImpl.tsx:1249` 前後のコメントの `FullScreenDialog` を `EditorPage` に替える。
+- `frontend/src/pages/schedule/ScheduleFullEditor.tsx:3` の先頭の説明の文「金型 FullScreenDialog の中に」を「金型 EditorPage の中に」に替える（§5 の載せ替えと同じ commit で）。
 - 終わりに `git grep -n FullScreenDialog -- frontend` が 0 件（コメントを含む）。
 
 ## 3. 塗りの欄の種類（金型 3 つ・G61）
