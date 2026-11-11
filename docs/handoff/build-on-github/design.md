@@ -787,3 +787,31 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
   - D4 §25-8 の「完成品の中の Firebase の鍵の指紋 `ef457eddf9b65693` と比べる」は、鍵がもう載らないので行わない。
   - D5 番号: 本線に便0 の §24 が先に入ったので、便1 の節は §25 にした（§25 冒頭の注記）。コードの中の `§24` も `§25` に付け替える。
 - 手順書: [card-bin1-r3.md](./card-bin1-r3.md)。確かめ: 試験場 sandbox-test（test=image-scan-survey）で 5 つとも当たり 0（名前・中身・履歴）、`SURVEY_FAILURES 0`。
+
+## 26. 便2 のカードを出す前の直し（v4・2026-11-11 Opus）
+
+§12 便2 は 2026-11-04 の行番号で書いた。その後の本線（26a050a10）で deploy.yml が 1352 行に増え、便1 で build-images.yml ができた。カードは [card-bin2.md](./card-bin2.md)。ここには §12 便2 から変えた点と、その理由だけを書く。目的・範囲・K1〜K8 は変えない。
+
+### 26-1 変えた点（Opus の技術判断）
+1. **組み立ての job を deploy.yml に写さない。** §12 便2 1. は「build job を deploy.yml に移し build-images.yml を消す」だった。代わりに build-images.yml を `on: workflow_call` にし、deploy.yml から `uses: ./.github/workflows/build-images.yml` で呼ぶ。理由: 名前・走査・push の手順の正本を 1 か所（build-images.yml）に保つ。deploy.yml は 1352 行あり、200 行を足すと読む人と抜き出す試験（26-3）の負担が増える。出典（Context7 /websites/github_en_actions・2026-11-11 取得）: 呼ばれる側の github の文脈と event は呼ぶ側のもの／呼ぶ側の workflow の env は渡らない／vars は呼ぶ側の置き場の値が使われる／出力は `on.workflow_call.outputs` で渡す／呼ばれる側の権限は呼ぶ側より下げることしかできない。
+2. **前回の deploy が通っていないときは 5 つ全部を組み立てる（U27）。** paths-filter は push の直前（`github.event.before`）との差しか見ない。前の run の組み立てか deploy が落ちると、その変更を次の run が見落とし、`.env` に古い指紋が残る。deploy.yml の「Check previous deploy completed」（`.github/workflows/deploy.yml:63-79`）と同じ形の判定を build-images.yml の `changes` job に置く。鍵は `github.token`（`actions: read`）。`concurrency` の `queue: max` は使わない（手元の actionlint 1.7.12 が拒む）。
+3. **受け取れなかった指紋を `.env` に残さない。** Step 3 の受け取りか守り（26-1 の 5.）が落ちたら、`.env` の 5 行を控え `.deploy_prev_images.env` の中身に戻してから `exit 1` する。理由: 残すと次の deploy の Step 0 がその行を「1 つ前」として控えに写し、自動の戻し先が受け取っていない完成品になる。
+4. **受け取りは `docker pull` で 5 つの指紋を直接取る。** §12 便2 は `docker compose pull` だった。秘書の compose（`docker-compose.secretary-agent.yml:17-18`）は env_file を必須で読むので、その置き場にファイルが無いと compose が設定を読めず、本体の deploy まで止まる。`docker pull <指紋>` は compose を読まないので、この依存が無い。
+5. **組み立ての残りを機械で止める。** 受け取りの前に `docker compose config --format json` を読み、`build` を持つサービスが 1 つでもあれば `exit 1`（箱に触る前）。これで U5（prod1 に override が在るか）を確かめなくても K1 が守られる。U4 は公式で解けた（Context7 /docker/docs: `COMPOSE_FILE` は `-f` と同じ扱いで、指定があると override を自動で読まない。prod1 の `.env` は `COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml`・`.github/workflows/deploy.yml:426`）。
+6. **初回の自動の戻し。** §12 便2 は「初回は自動ロールバックで戻せない」としていた。初回は控えが空で、戻り先（`PREV_SHA`）の compose はまだ `build:` の形。この場合は `.env` の 5 行を消して `up -d --no-build` にする。旧 compose は prod1 に残る `astro-webapp-*` の名前の完成品で起きる（便2 は `docker image prune -f` を呼ばなくなり、名前付きの完成品は消さない）。これで初回も戻せる。
+7. **鍵は受け取りの間だけ prod1 に置く。** `docker login` → pull → `trap` で `docker logout ghcr.io`。§23 の PO の決定（受け取りの鍵は GitHub の secret だけに置き、prod1 に残さない）に合わせる。確かめ: deploy の後に `grep -c ghcr.io ~/.docker/config.json` が 0（ファイルが無ければ合格）。
+8. **秘書の段の組み立てを消す。** `.github/workflows/deploy.yml:716` の `docker build` を消し、probe は `.env` の `SECRETARY_AGENT_IMAGE` で流す。
+9. **f2-cleanup.sh は範囲外。** `scripts/f2-cleanup.sh:34` の `docker buildx prune` は組み立てではない。§12 便2 17. の確かめの正規表現が拾わない形にする（カード §4）。
+
+### 26-2 未確認と扱い
+- U15（prod1 の docker compose の版）: pull-images.sh が最初に `docker compose version` を出す。受け取りで落ちても箱に触る前なので安全（26-1 の 3.）。
+- U30（新）: 指紋だけで取った完成品が `docker image prune -f` で消えるか。便2 は prune を呼ばないので結論に依らない。便3 で builder prune を消すときに測る。
+- U31（新）: 呼ばれる側の workflow の出力が、中の job が skip されたとき空になるか。公式は「出力は job の出力を写す」とだけ書く。空でなくても Step 2 の形の検査（`ghcr.io/…@sha256:` の 64 桁）で止まるので安全側。便2 の最初の run で確かめる。
+
+### 26-3 抜き出す試験への影響（見落とすと CI が赤）
+- `scripts/tests/test-deploy-nginx-recreate-guard.sh:27` は deploy.yml の全 job の `steps` を `j["steps"]` で読む。`uses:` の job には `steps` が無いので KeyError で落ちる。`j.get("steps", [])` に直す（`.github/workflows/backup-script-test.yml` が流す）。
+- `scripts/tests/test-deploy-orphan-cleanup.sh:104-105` は `job.get("steps") or []` なので直さない。
+- `scripts/rehearsal_phase2.sh:75` は `wf['jobs']['deploy']['steps']` を読む。deploy の job 名は変えないので直さない。
+
+### 26-4 審査（Opus 自己審査・2026-11-11）
+判定: カード発行に進む。根拠: 26-1 の 1.〜9. は §12 便2 の目的と K1〜K8 を変えず、公式の出典（Context7）と実物の行番号で裏付けた。未確認の U15・U30・U31 は、どれも落ちたとき箱に触る前に止まる。独立した第二者の審査ではないので、クラウドで設計審査を 1 回行ってから実装に渡す。
