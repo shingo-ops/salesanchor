@@ -1,6 +1,6 @@
 # card-bin2: 本番の受け取りを指紋に切り替える（prod1 で組み立てない）
 
-状態: カード草案（Opus、2026-11-11）。クラウドの設計審査 1 回目は REVISE（N1〜N7）→ v2 で直した（design.md §26-5）。再審査はまだ。実装の承認はまだ（PO の明示の実装承認が要る）。この PR を main に入れることは、deploy.yml・compose・本番の scripts を変えるので危険 PR（ADR-136）。PO の「GO #番号」が要る。切り替えは 14:00〜16:00（日本時間）、PO が見ている時間に限る（design.md §23）。
+状態: カード草案（Opus、2026-11-11）。クラウドの設計審査 1 回目は REVISE（N1〜N7）→ v2、2 回目は REVISE（M1〜M4）→ v3 で直した（design.md §26-5・§26-6）。3 回目の審査はまだ。実装の承認はまだ（PO の明示の実装承認が要る）。この PR を main に入れることは、deploy.yml・compose・本番の scripts を変えるので危険 PR（ADR-136）。PO の「GO #番号」が要る。切り替えは 14:00〜16:00（日本時間）、PO が見ている時間に限る（design.md §23）。
 親: [design.md](./design.md) §12 便2（中身の正本）・§26（このカードを出す前の直し）・§9（控えと戻し）。前の段のカード: [card-bin1-r3.md](./card-bin1-r3.md)。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。本番・GitHub の secret と Variables・組織の設定には触らない。PR は作らない（枝に push して報告するまで）。
 
@@ -171,6 +171,15 @@ jobs:
               exit 1
             fi
 ```
+5b. 498 行目 `bash scripts/blue-green-cutover.sh` を次にする（design.md §26-6 M1）。理由: 切替が落ちても旧 backend が動き続けるので Finalize の健康確認（933 行目）は通り、控えへの戻しが起きない。ここで戻さないと、健康確認に通っていない指紋が `.env` に残る。
+```bash
+            if ! bash scripts/blue-green-cutover.sh; then
+              sed -i -E '/^(BACKEND|FRONTEND|GEMINI_EGRESS|GHA_EXPORTER|SECRETARY_AGENT)_IMAGE=/d' .env
+              cat .deploy_prev_images.env >> .env
+              echo "❌ backend の切替に失敗しました。旧 backend は動いたまま。.env の指紋は控えに戻しました"
+              exit 1
+            fi
+```
 6. 520 行目 `docker compose up -d --no-deps --remove-orphans frontend …` の `up -d` の後に ` --no-build` を足す。523 行目 `docker compose up -d --no-deps node-exporter promtail` も同じ。
 7. 647 行目の注記の `image は backend と同じ astro-webapp-backend。` を `image は backend と同じ（.env の BACKEND_IMAGE。無ければ既定の astro-webapp-backend）。` にする。
 8. 716-719 行目（`if ! docker build -t astro-webapp-secretary-agent ./secretary-agent; then` から `fi` まで）を次にする。721 行目の `docker run … astro-webapp-secretary-agent node /app/probe.mjs` の `astro-webapp-secretary-agent` を `"${_sa_img}"` にする。
@@ -301,7 +310,7 @@ docker images --digests --format '{{.Repository}}@{{.Digest}}' | sort -u | while
 done
 exit 0
 ```
-6. `scripts/deploy/rollback-images.sh`（新規・手で流す戻し・design.md §9-2「手動」）: (1) `.deploy_prev_images.env` が 5 行（`^(BACKEND|FRONTEND|GEMINI_EGRESS|GHA_EXPORTER|SECRETARY_AGENT)_IMAGE=` の行数が 5）でなければ止まる、(2) 今の 5 行を `.deploy_rollback_from.env` に写す、(3) `.env` の 5 行を控えで置き換える、(4) 5 つの指紋が `docker image inspect` でローカルに在ることを確かめる（無ければ「GHCR_PULL_TOKEN と GHCR_USER を渡して pull-images.sh を流す」と出して止まる）、(5) `bash "${CUTOVER_SCRIPT:-scripts/blue-green-cutover.sh}"`（試験で偽に差し替えるため）、(6) `docker compose up -d --no-build --no-deps frontend celery-worker celery-beat discord-gateway gemini-egress gha-exporter`、(7) `docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml up -d --no-build --force-recreate`（deploy.yml:731 と同じ形）、(8) `docker exec astro-webapp-backend-1 python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"` を 5 秒おきに最大 12 回（deploy.yml:933 と同じ確かめ方）。12 回とも落ちたら終了 1、(9) 始めと終わりに `date +%s` を出し、`rollback done in <秒> s` を出す（K6）。冒頭に `set -euo pipefail` と `cd "${REPO_DIR:-/home/ubuntu/salesanchor}"`。組み立ての命令は 1 つも含めない（K6）。
+6. `scripts/deploy/rollback-images.sh`（新規・手で流す戻し・design.md §9-2「手動」）: (1) `.deploy_prev_images.env` が 5 行（`^(BACKEND|FRONTEND|GEMINI_EGRESS|GHA_EXPORTER|SECRETARY_AGENT)_IMAGE=` の行数が 5）でなければ止まる、(2) 今の 5 行を `.deploy_rollback_from.env` に写す、(3) `.env` の 5 行を控えで置き換える、(4) 5 つの指紋が `docker image inspect` でローカルに在ることを確かめる（無ければ「GHCR_PULL_TOKEN と GHCR_USER を渡して pull-images.sh を流す」と出して止まる）、(5) `bash "${CUTOVER_SCRIPT:-scripts/blue-green-cutover.sh}"`（試験で偽に差し替えるため）、(6) deploy.yml:514-519 と同じ順で止めて消す（`docker compose stop -t 60 celery-worker`（実行中の仕事を終えさせる）→ frontend・celery-beat・discord-gateway・celery-worker の `oneoff=False` の箱を `docker rm -f`。discord-gateway の二重起動を防ぐため）→ `docker compose up -d --no-build --no-deps frontend celery-worker celery-beat discord-gateway gemini-egress gha-exporter`、(7) 秘書は deploy.yml:727-732 と同じ形: `${SECRETARY_ENV_FILE:-/home/ubuntu/.config/salesanchor/secretary-agent.env}` が読めなければ `::warning::` を出して起こさない。読めれば `docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml up -d --no-build --force-recreate || echo "::warning::…"`（秘書が落ちても (8)(9) まで進む）、(8) 健康確認は `if docker exec astro-webapp-backend-1 python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"; then _ok=true; break; fi` の形で 5 秒おきに最大 12 回（deploy.yml:933 と同じ確かめ方。`set -e` の下で 1 回目の失敗で止まらないよう `$?` で受けない）。12 回とも落ちたら終了 1、(9) 始めと終わりに `date +%s` を出し、`rollback done in <秒> s` を出す（K6）。冒頭に `set -euo pipefail` と `cd "${REPO_DIR:-/home/ubuntu/salesanchor}"`。組み立ての命令は 1 つも含めない（K6）。
 7. `scripts/tests/test-deploy-pull-prune.sh`（新規）: `scripts/tests/test-deploy-nginx-recreate-guard.sh` と同じ「偽の docker を PATH の先頭に置き、呼ばれ方をファイルに記録する」型。一時ディレクトリに偽の `.env` を置き `REPO_DIR` で指す。`PULL_RETRY_SLEEP=0`。最低限の場合:
    - T1 正しい 5 行・偽の docker が全部成功 → 終了 0、`docker pull` が 5 回、`docker logout ghcr.io` が 1 回、`build` を含む呼び出しが 0 回。
    - T2 compose config の応答に `build` を持つサービスが 1 つ → 終了 1、`docker login` が 0 回。
@@ -310,8 +319,8 @@ exit 0
    - T5 prune: 偽の `docker images` が 4 つの ghcr 指紋（今・1 つ前・古い 2 つ）と `astro-webapp-backend@<none>` を返す → `docker image rm` は古い 2 つだけ。
    - T6 prune: `.env` と控えの両方に指紋が無い → `docker image rm` が 0 回、終了 0。
    - T7 deploy.yml の Finalize の戻しの塊（2-2 の 10.）を YAML から抜き出し、控えが 1 行のとき `.env` のその行だけが入れ替わること。控えが空で `git show HEAD:docker-compose.yml` に `BACKEND_IMAGE` が無いとき 5 行が消えること（偽の git を置く）。
-   - T8 rollback-images.sh: 控えが 5 行・偽の docker が全部成功 → 終了 0、`.env` の 5 行が控えと同じ、`.deploy_rollback_from.env` が元の 5 行、`CUTOVER_SCRIPT` で渡した偽の切替が 1 回呼ばれ、`up -d --no-build` が 2 回（本体・秘書）、`build` を含む呼び出しが 0 回、出力に `rollback done in`。控えが 4 行 → 終了 1、`.env` は変わらない。
-   - T9 deploy.yml の 2-2 の 4. の塊を YAML から抜き出し、`BACKEND_REF` に `@sha256:` の無い値を渡す → 終了 1、`.env` の 5 行が控えの 5 行と同じ（受け取っていない指紋が残らない）。
+   - T8 rollback-images.sh: 控えが 5 行・偽の docker が全部成功 → 終了 0、`.env` の 5 行が控えと同じ、`.deploy_rollback_from.env` が元の 5 行、`CUTOVER_SCRIPT` で渡した偽の切替が 1 回呼ばれ、`stop -t 60 celery-worker` が 1 回、`up -d --no-build` が 2 回（本体・秘書。秘書の env の置き場は `SECRETARY_ENV_FILE` で一時ファイルに差し替える）、`build` を含む呼び出しが 0 回、出力に `rollback done in`。控えが 4 行 → 終了 1、`.env` は変わらない。
+   - T9 deploy.yml の 2-2 の 4. の塊を YAML から抜き出し、`BACKEND_REF` に `@sha256:` の無い値を渡す → 終了 1、`.env` の 5 行が控えの 5 行と同じ（受け取っていない指紋が残らない）。2-2 の 5b. の塊を抜き出し、偽の `scripts/blue-green-cutover.sh` が終了 1 を返す → 終了 1、`.env` の 5 行が控えと同じ。
 
 ### 2-7. 抜き出す試験・砂場（design.md §12 便2 12.〜15.・§26-3）
 1. `scripts/tests/test-deploy-nginx-recreate-guard.sh:27` の `for s in j["steps"]` を `for s in j.get("steps", [])` にする。ほかは変えない。

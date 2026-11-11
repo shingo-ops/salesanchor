@@ -824,5 +824,13 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - N4: `deploy-script-test.yml` の paths に deploy.yml が無く、deploy.yml だけを変えた PR で T7 が流れない。→ 両方の paths に足した。
 - N5: K1 の確かめを行番号で書いていた（実装で行がずれる）。`tests/sandbox/image-scan-survey.sh` は注記の行も当たる。→ 「ファイル＋文字列」の組で書き直した。
 - N6: rollback-images.sh に秘書の起動・`/api/health` の確かめ・所要秒（K6）が無かった（§9-2 との食い違い）。→ 足した。試験 T8 を足した。
-- N7（推奨）: 受け取りは通ったが Step 3b の切替が落ちたとき、`.env` に動かしていない指紋が残る。→ 直さず受け入れる。理由: (1) 今の形でも Step 3 の組み立てがローカルの `astro-webapp-backend` を上書きした後で Step 3b が落ちると、同じく動かしていない完成品が残る（便2 で増える危険ではない）。(2) 残る指紋は GitHub で組み立てて走査を通し、prod1 に受け取り済みの完成品なので、起動できない物ではない。(3) Finalize は `if: always()` で走り（`.github/workflows/deploy.yml:907`）、健康確認が落ちれば控えに戻す。(4) 次の main への push で上書きされる。
+- N7（推奨）: 受け取りは通ったが Step 3b の切替が落ちたとき、`.env` に動かしていない指紋が残る。→ v2 では直さず受け入れた（下の理由）。2 回目の審査でこの理由が実物と合わないと分かり、v3 で直した（§26-6 M1）。v2 の理由（取り下げ）:理由: (1) 今の形でも Step 3 の組み立てがローカルの `astro-webapp-backend` を上書きした後で Step 3b が落ちると、同じく動かしていない完成品が残る（便2 で増える危険ではない）。(2) 残る指紋は GitHub で組み立てて走査を通し、prod1 に受け取り済みの完成品なので、起動できない物ではない。(3) Finalize は `if: always()` で走り（`.github/workflows/deploy.yml:907`）、健康確認が落ちれば控えに戻す。(4) 次の main への push で上書きされる。
 判定（Opus）: N1〜N6 を直したので、クラウドで再審査を 1 回行う。
+
+### 26-6 クラウドの設計審査 2 回目（2026-11-11・architect opus）と直し（カード v3）
+判定: REVISE。N1〜N6 は直った。N7 の受け入れ理由が実物と合わない、とされた。Opus も実物を読んで確かめた。
+- M1（必須）: `scripts/blue-green-cutover.sh:130-134` は green が健康にならないと「旧 backend は接客継続中」と出して `exit 1` する。このとき動いているのは旧 backend なので、Finalize の健康確認（`.github/workflows/deploy.yml:933`）は通り、控えへの戻しは起きない。§26-5 の N7 の理由(2)(3) は成り立たない。→ カード 2-2 の 5b. で、498 行目の切替が落ちたら `.env` を控えに戻して `exit 1` する。試験 T9 に足した。
+- M2: rollback-images.sh の秘書の起動に、`.github/workflows/deploy.yml:727-732` の「env が読めるか」の確認と `|| echo ::warning` が無かった。→ 同じ形にした（試験で置き場を差し替えられるよう `SECRETARY_ENV_FILE`）。
+- M3: 健康確認の繰り返しは `if docker exec …; then` の形と明記した（`set -e` の下で `$?` で受けると 1 回目の失敗で止まる）。
+- M4: 戻しに `.github/workflows/deploy.yml:514-519` の celery-worker の `stop -t 60` と、discord-gateway などを先に消す手順が無かった。→ 同じ順で入れた。
+判定（Opus）: M1〜M4 を直したので、クラウドで 3 回目の審査を行う。
