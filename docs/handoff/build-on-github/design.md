@@ -775,3 +775,15 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 | 組織の画面の手順（Packages → Package Creation・Personal access tokens → Tokens (classic)） | GitHub 公式 2 頁（po-setup-bin1.md 4：の出典） |
 
 - 手順は po-setup-bin1.md に分けた。初回の組み立ての後、完成品の画面の JS の Firebase の鍵の指紋が `ef457eddf9b65693` と一致するかを Opus が確かめる（一致しなければ便2 に進まない）。
+
+### 25-9 便1 の作り直し（r3・2026-11-11 Opus）
+
+- 本線は 2026-11-05 に Firebase を外した（317bfb653）。本線の `frontend/Dockerfile` の ARG は `VITE_FUNNEL_DASHBOARD` だけ（7 行目）、`docker-compose.yml:201` も同じ 1 つだけを渡す。便1 の枝（653cc9847）は Firebase の値 4 つ（secret `VITE_FIREBASE_API_KEY`・Variables `VITE_FIREBASE_AUTH_DOMAIN`／`VITE_GCP_PROJECT_ID`／`VITE_AUTH_PROVIDER`）を求めていた。
+- 置き場に在る名前（2026-11-11 `gh variable list`・`gh secret list` の名前だけ）: Variables は `GHCR_NAMESPACE`・`GHCR_USER`、secret は `GHCR_PUSH_TOKEN`・`VITE_FUNNEL_DASHBOARD`。Firebase の 4 つは登録されていない。
+- 決めたこと:
+  - D1 組み立てが求める値を本線の Dockerfile と同じ 1 つ（`VITE_FUNNEL_DASHBOARD`）にする。Firebase の 4 つの確かめと受け渡しを消す。
+  - D2 `.gitleaks.toml` の Firebase の鍵のための例外（gcp-api-key の場所の例外・generic-api-key の (a)）を消す。C の見出しファイルの例外（(b)）は残す。例外が減るので、走査は今より厳しくなる。
+  - D3 gitleaks の版と sha256 の正本を `.github/workflows/secret-scan.yml`（便0-B3・#5394）の 1 か所にし、`image-scan.sh` はそこから読む。読めないときは `SCAN error` で止める（黙って別の版で走らない）。secret-scan.yml が変わったら 5 つとも組み直して走査し直す（paths-filter の common に足す）。
+  - D4 §25-8 の「完成品の中の Firebase の鍵の指紋 `ef457eddf9b65693` と比べる」は、鍵がもう載らないので行わない。
+  - D5 番号: 本線に便0 の §24 が先に入ったので、便1 の節は §25 にした（§25 冒頭の注記）。コードの中の `§24` も `§25` に付け替える。
+- 手順書: [card-bin1-r3.md](./card-bin1-r3.md)。確かめ: 試験場 sandbox-test（test=image-scan-survey）で 5 つとも当たり 0（名前・中身・履歴）、`SURVEY_FAILURES 0`。

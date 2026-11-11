@@ -1,6 +1,7 @@
 # 便1 の前に PO が行う設定（鍵・組織・置き場の値）
 
 - 書いた日: 2026-11-04（Opus）。根拠: design.md §3-2・§7-3・§8・§23・§24-8。
+- 2026-11-11 追記（Opus）: 1：・4：と、2：の `GHCR_PUSH_TOKEN`・3：の `GHCR_NAMESPACE`／`GHCR_USER` は PO が済ませた（名前を `gh secret list`・`gh variable list` で確認）。本線が 2026-11-05 に Firebase を外したので、2：の `VITE_FIREBASE_API_KEY` と 3：の `VITE_FIREBASE_AUTH_DOMAIN`・`VITE_GCP_PROJECT_ID`・`VITE_AUTH_PROVIDER` は**登録しなくてよい**（design.md §25-9 D1）。下の表は当時の記録として残す。指紋の照らし合わせ（2：の 2 つめの点）も行わない（§25-9 D4）。
 - この設定が終わるまで、便1 の PR はマージしない（マージすると組み立てが動き、値が無いので赤になる）。
 - 値（鍵の中身）はこのファイル・チャット・PR に書かない。
 
