@@ -22,7 +22,7 @@ PO の発言: 2026-11-10「2,1」（先に〆の規則の直し方を設計し�
 
 ## 2. やり方（変更前後）
 
-- 変更前（recon §2-1）: 候補の〆で、〆と同じ状態の在庫が前の投稿にあると 12d で何もしない（`backend/app/services/gemini_raw_copy_v102_soldout_ref.py:427-428`）。
+- 変更前（recon §2-1）: 候補の〆で、〆と同じ状態の在庫が前の投稿にあると 12d で何もしない（`backend/app/services/gemini_raw_copy_v102_soldout_ref.py:427-428`。便1 の後の main では `:462-467`）。
 - 変更後: 12d で何もしない所の手前に 12h を足す。次の全部を満たすときだけ、〆の状態と、取り残された箱の仲間の状態を全部、完売の相手にする。
   1. 設定 `v102_shime_box_all_states` が読めている（無い・形が違うときは今と同じ）。
   2. 〆の件の状態が箱の仲間（状態マスタ `value_group='box'`）。
@@ -52,7 +52,7 @@ PO の発言: 2026-11-10「2,1」（先に〆の規則の直し方を設計し�
 社外秘の原文・件ごとの記録は Mac の記録フォルダだけに置く。ここには数だけを書く。
 
 - 実行: 3 回とも終了コード 0・失敗 0。接続は READ ONLY。箱の仲間は 5 つ（id・value_rank）で、記録 SQL `docs/handoff/condition-value-rank/data/value_rank_commit.sql` と数と順が同じ（§6 の未確認は解けた）。
-- 設定なしの 2 回の差は 0（途中で本番が動いた分は無い）。設定ありと設定なしの差は 12 件で、変わった列は `soldout_targets` と `soldout_target_basis` だけ。相手に Opened box と CN20261008072213 は 0 件。
+- 設定なしの 2 回の差は 0（途中で本番が動いた分は無い）。設定ありと設定なしの差は 12 件（K3 の狙いの件で変わった 6 と、それ以外で変わった 6。後の 6 を K4 で判定した）で、変わった列は `soldout_targets` と `soldout_target_basis` だけ。相手に Opened box と CN20261008072213 は 0 件。
 - K3（投稿ごと）: 直る 6・壊す 0・直らない 8。期待の 13/0/1 と違う。直らない 8 件の内訳は、前の〆が先に同じ在庫を消している 4、もともと消す在庫が残っていない 2、カートンが残る（設計どおり）1、測れない 1。在庫で見ると、狙いの 14 件のうち消える 10・もともと無い 2・設計どおり残る 1・測れない 1。2026-10 の数え方は「前の〆が先に消す」つながりを数えていなかった。
 - K4: 相手が増えた件を原文で判定し、正しい 5・誤り 1。誤りの 1 件は「値段×数」の行の〆で、意味はその行の品だけの売り切れ（K3 の「特定の状態だけ」7 件の 1 件と同じ型）。17 時間前の別の〆が同じ在庫を消しているので、在庫表への害は 0。
 - 〆の件 27 件のうち、値段か数があるのはこの型の 2 件だけ（ほかは両方 None）。→ 条件 7 を足せば誤りは消え、直る件は減らない見込み。K7 で確かめる。
@@ -116,13 +116,13 @@ PO の発言: 2026-11-10「2,1」（先に〆の規則の直し方を設計し�
 
 ## 9-2. 実装カード（便3.5 条件 7。クラウドの Sonnet 向け）
 
-0. 場所: origin/main から `release/shime-box-price-guard-code`（`bash scripts/new-worktree.sh release/shime-box-price-guard-code`）。
+0. 場所: origin/main から `release/shime-box-price-guard-code`（`bash scripts/new-worktree.sh release/shime-box-price-guard-code --claude`）。
 1. 読む（変えない）: `backend/app/services/gemini_raw_copy_v102_soldout_ref.py:415-480`（`_box_all_states_targets`・`decide_soldout_inherit`）、`backend/app/services/gemini_raw_copy_v101.py:1311-1333` と `:980-990`（件の `price_normalized`・`quantity_normalized`）、`backend/tests/test_gemini_raw_copy_v102_soldout_ref.py:612-625`（`_shime`）と `:855-945`（12h の試験）。
-2. `backend/app/services/gemini_raw_copy_v102_soldout_ref.py` の `decide_soldout_inherit` の 12h の呼び出し（今の `box_targets = _box_all_states_targets(...)  # 12h` の行）を、〆の件 `item` の `price_normalized` と `quantity_normalized` がどちらも None のときだけ呼ぶ形に変える。どちらかが None でなければ 12h を呼ばず、そのまま `continue  # 12d`（今と同じ）。`_box_all_states_targets` の引数と中身・12g・12e・候補の条件（`_is_inherit_candidate`）は変えない。docstring の 12h の説明に「〆の件に値段も数も無いとき」を足す。
-3. 試験（同じ試験ファイルの 12h の試験の並びに足す。架空のデータだけ）: (g) `_shime(price_normalized=26500)` → `{}`、`_shime(quantity_normalized=3)` → `{}`、`_shime(price_normalized=None, quantity_normalized=None)` → 12h が働く（既存の (a) と同じ相手）。(h) box_rule=None で値段つきの〆 → 今と同じ（`{}`）。
+2. `backend/app/services/gemini_raw_copy_v102_soldout_ref.py` の `decide_soldout_inherit` の 12h の呼び出し（今の `box_targets = _box_all_states_targets(...)  # 12h` の行）を、〆の件 `item` の `price_normalized` と `quantity_normalized` がどちらも None のときだけ呼ぶ形に変える。判定は `item.get("price_normalized") is None and item.get("quantity_normalized") is None`（キーが無い件は None として読む。0 は値ありとして扱う）。どちらかが None でなければ 12h を呼ばず、そのまま `continue  # 12d`（今と同じ）。`_box_all_states_targets` の引数と中身・12g・12e・候補の条件（`_is_inherit_candidate`）は変えない。docstring の 12h の説明に「〆の件に値段も数も無いとき」を足す。
+3. 試験（同じ試験ファイルの 12h の試験の並びに足す。架空のデータだけ）: (g) `_shime(price_normalized=26500)` → `{}`、`_shime(quantity_normalized=3)` → `{}`、`_shime(price_normalized=None, quantity_normalized=None)` → 12h が働く（既存の (a) と同じ相手）。(h) box_rule=None で値段つきの〆 → 今と同じ（`{}`）。(i) 既存の `test_extract_12h_puts_every_box_state_on_the_soldout_row`（`:924-929`）は、`_extract`（`:73-86`）が〆の行に「 3@1,500円」を足すので、条件 7 の後は 12h が働かず落ちる。次の 2 つに書き換える: ①試験の名前を `test_extract_12h_does_nothing_when_the_shime_line_has_a_price` に変え、同じ入力で `_targets(row) == []` を確かめる。②`_extract` に既定値つきの引数 `priced: bool = True` を足し、`False` のときは今の投稿の行に値段を足さず、Gemini の件にも `price`・`quantity` を入れない（既定値のままのほかの試験は変わらない）。新しい試験 `test_extract_12h_puts_every_box_state_on_the_soldout_row_when_the_shime_has_no_price` で、元の試験と同じ post・同じ master に `priced=False` を渡し、元の 2 つの assert（相手 `[(22, 1), (24, 1)]`・印 `SOLDOUT_INHERIT`）がそのまま通ることを確かめる。この 2 つ以外の既存の試験は変えない。
 4. 確かめ: `ruff check backend/app/services/gemini_raw_copy_v102_soldout_ref.py backend/tests/test_gemini_raw_copy_v102_soldout_ref.py`、`cd backend && python -m pytest -q tests/test_gemini_raw_copy_v102_soldout_ref.py tests/test_gemini_raw_copy_v102_product_first.py tests/test_v102_replay_diff.py`。
 5. 合格基準（出力を貼り、判定は Opus）: ruff 合格／pytest の failed・error 0／`git diff --stat origin/main..HEAD` に出るのは上の 2 ファイルだけ／migrations・workflows に差が無い。
-6. 止まる条件: 1 で読んだ関数・行・キーの名前がカードと違うとき、推測で直さず `NEEDS_DECISION:` で止まる。
+6. 止まる条件: 1 で読んだ関数・行・キーの名前がカードと違うとき、推測で直さず `NEEDS_DECISION:` で止まる。3 の (i) のほかに落ちる試験が出たとき、または `priced=False` の試験が 2 つの assert 以外の所（解析の誤り等）で落ちるときも、直さず `NEEDS_DECISION:` で生の出力を返す。
 
 ## 10. 設計審査（Opus の自己審査・独立の審査ではない）
 
@@ -131,4 +131,5 @@ PO の発言: 2026-11-10「2,1」（先に〆の規則の直し方を設計し�
 - マージ前の審査役（Opus・2026-11-10）の指摘で直した点: 戻り値の型を変えたときの既存の試験 6 か所の書き換えをカード 3 と K1 に書いた。カード 2 の壊れた文、§8→§9、便3→便2、`backend/app/tools/v102_replay_diff.py` の行番号、試験ファイルの名指し、カード 3 の判定の順を直した。
 - 自己審査で直した点: 状態の表の名前（`public.line_conditions` → `public.conditions`）、やり直しの道具（試しのブランチにしか無い道具 → main にある `backend/app/tools/v102_replay_diff.py`）、それに合わせて語を記憶の中で足さず本番へ先に入れる順へ変えた。
 - 未解決: 本番の `value_group` の今の値（便3 の道具の出力で確かめる）。設定を消した後の古い相手の扱い（§6）。K3 の数が 13/0/1 と違ったときの扱いは PO に戻す。
+- 便3.5 のマージ前の審査役（Opus・2026-11-11）の指摘で直した点: 値段・数が付く `_extract` を使う既存の試験の扱い（カード 3 の (i)）、キーが無い件の読み方（カード 2）、カード 0 の `--claude`、§3-2 の 12 件の内訳、§2 の行番号。
 - 便3.5 の追記（2026-11-11・自己審査）: APPROVE。根拠: 変える所は 12h を呼ぶ手前の 1 か所で、値段か数がある〆は今と同じ 12d に戻るだけ（消す側に広がらない）。便3 の 27 件のうち値段か数を持つのは誤りの型の 2 件だけなので、直る件は減らない見込み。それを K7 で確かめる。未解決: 設定を消した後の古い相手の扱い（§6）は便4 の前に PO へ。
