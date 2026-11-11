@@ -110,7 +110,7 @@ S docs/handoff/ai-ops-247/stage4-requirements.md の U4（置き場なしで調�
 形:
 - routine 1 つ（クラウドの Opus がまとめ役）。置き場なし（sources `[]`）、builtin_tools `["Bash","Read","Glob","Grep","Agent"]`、mcp_connections `[]`、clear_mcp_connections:true。各回の前に get でこの設定を確かめてから run。
 - 環境: ネットワーク None。network secret は §3-4 と同じ宛先と名前の 2 つ（読む窓 `api.salesanchor.jp` `X-Read-Window-Token` 前置きなし／グラフ `app.salesanchor.jp` `Authorization` 前置き `Bearer `）。値は 3 回目に PO が貼り直した 64 文字（読む窓）と 46 文字（グラフ）。出典: PO が Opus の用意した写しの命令を自分の端末で流し、出た文字数（64・46）を会話で返した（2026-11-11。値はチャットにも記録にも出していない）。
-- §3-4 との違い: グラフの値は §3-4 で決めた「クラウド専用の新しい鍵」ではなく、手元の調べ係が使う Viewer の鍵と同じもの（K4 の「同じ鍵」はこれが前提）。このため、手元の鍵を止めるとクラウドも止まり、片方だけ取り消せない。本番で使う前に、このアカウント用のクラウド専用の鍵に替える（S docs/handoff/ai-ops-247/stage4-requirements.md の U4 の行）。
+- §3-4 との違い: グラフの値は §3-4 で決めた新しく作るグラフ用のトークン（手元用と分け、別に取り消せるようにする）ではなく、手元の調べ係が使う Viewer の鍵と同じもの（K4 の「同じ鍵」はこれが前提）。このため、手元の鍵を止めるとクラウドも止まり、片方だけ取り消せない。本番で使う前に、このアカウント用のクラウド専用の鍵に替える（S docs/handoff/ai-ops-247/stage4-requirements.md の U4 の行）。
 
 | 回 | 開始 (UTC) | 環境 | 結果 |
 |---|---|---|---|
@@ -127,7 +127,7 @@ S docs/handoff/ai-ops-247/stage4-requirements.md の U4（置き場なしで調�
 | K2 読む窓で書けない | クラウドの調べ係が `UPDATE` 1 文の送信を「読むだけの仕事で書き込みの試み」として自分で断った（送っていない）。読む窓そのものは、SELECT / WITH / SHOW / EXPLAIN 以外の文を窓の側で 400 で断る（§3-6 A2。文の種類で断るもので、どの鍵や環境かでは変わらない） | ○（§3-6 の窓の実測による。今回のクラウドでは未実施） |
 | K3 グラフで数を読める | クラウド 20:18:49Z 200・`count(up)` 9 | ○ |
 | K4 グラフで書けない | まとめ役が調べ係への依頼から落とした（クラウドでは未実施）。同じグラフの鍵で手元から 20:19:27Z にフォルダ作成 403、`k4-probe` の検索 0 件 | ○（同じ鍵の手元の実測による） |
-| K5 鍵が AI から見えない | `env` の項目名は MAX_THINKING_TOKENS・GH_TOKEN・GITHUB_TOKEN・CLOUDSDK_AUTH_ACCESS_TOKEN・CLAUDE_SESSION_INGRESS_TOKEN_FILE・CLAUDE_CODE_MESSAGING_TOKEN。読む窓とグラフの鍵の項目は無い（§3-6 A2b と同じ 6 つ）。Opus が手元に書いた実行の要約（会話の全文ではない）をグラフの鍵の前半で探して 0 件。読む窓の鍵では探していない | 基準上 ×（§3-6 と同じ理由。§3-5 の「両方の控えで探す」を満たしていない） |
+| K5 鍵が AI から見えない | `env` の項目名は MAX_THINKING_TOKENS・GH_TOKEN・GITHUB_TOKEN・CLOUDSDK_AUTH_ACCESS_TOKEN・CLAUDE_SESSION_INGRESS_TOKEN_FILE・CLAUDE_CODE_MESSAGING_TOKEN。読む窓とグラフの鍵の項目は無い（§3-6 A2b と同じ 6 つ）。Opus が手元に書いた実行の要約（会話の全文ではない）をグラフの鍵の頭の一部（長さは記録に無い）で探して 0 件。読む窓の鍵では探していない | 基準上 ×（§3-6 と同じ理由。§3-5 の「会話記録を手元で控えの先頭 8 文字で探して 0 件」に対し、探したのは要約だけ・グラフの鍵だけ） |
 | K6 置き場なしで調べ係が動く | まとめ役（claude-opus-5-5）が Agent で調べ係を起こし、調べ係が claude-sonnet-5-5 と返した。1〜4 回目すべて。4 回目に調べ係が行ったのは K1・K3 だけ（K2 は自分で断り、K4 は依頼から外れた） | ○（起動と読み取り。§3-5 の「K1〜K4 を調べ係が行う」は K1・K3 だけ満たした） |
 | K7 余計な道具が無い | まとめ役の道具は Agent・Bash・Glob・Grep・Read だけ。PushNotification・`mcp__` なし | ○ |
 
