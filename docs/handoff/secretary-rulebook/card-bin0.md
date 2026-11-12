@@ -30,7 +30,14 @@
 
 ## やること（この順）
 
-1. 作業場所: `/Users/tanizawashingo/worktrees/salesanchor/release-secretary-rulebook-bin0` と同じブランチ `release/secretary-rulebook-bin0` を取って使う（クラウドでは `git fetch origin release/secretary-rulebook-bin0 && git switch release/secretary-rulebook-bin0`）。`./scripts/dev/executor-preflight.sh` を流し、生出力を報告に貼る。クラウドでは [1/3] network と [2/3] gh auth の FAIL は起こるものとして先へ進む。[3/3] と [4/4] が OK でなければ BLOCKED:。台帳の札は作らない。
+1. 作業場所を公式の台本で作る（リポジトリの pre-commit は `~/worktrees/` 配下でない場所からの commit を「worktree 外での作業は禁止」で止める。クラウドでも同じ。docs/handoff/cloud-parity/recon.md:23。2 回目の流し 2026-11-12 13:26 はこれを入れ忘れて commit で止まった）。`<main>` はクラウドが最初に置いた場所（例 `/home/user/salesanchor`）。1 つずつ流し、出力を報告に書く。
+   - (1a) `cd <main> && git fetch origin release/secretary-rulebook-bin0 main`
+   - (1b) `cd <main> && git branch --list release/secretary-rulebook-bin0`。空であること。空でなければ消さずに BLOCKED:（`git checkout -B` は使わない）。
+   - (1c) `cd <main> && bash scripts/new-worktree.sh release/secretary-rulebook-bin0`。`--claude` は付けない（scripts/new-worktree.sh:164-168）。出力はパイプに通さない。
+   - (1d) `cd <main> && git worktree list`。`$HOME/worktrees/salesanchor/release-secretary-rulebook-bin0` が出ること。出なければ BLOCKED:。以後の `<repo>` はこの絶対パス。
+   - (1e) `cd <repo> && git merge --ff-only origin/release/secretary-rulebook-bin0`。続けて `cd <repo> && git rev-parse HEAD origin/release/secretary-rulebook-bin0` の 2 行が同じであること。ff-only が失敗したら BLOCKED:。
+   - (1f) `cd <repo> && ./scripts/dev/executor-preflight.sh`。生出力を報告に貼る。クラウドでは [1/3] network と [2/3] gh auth の FAIL は起こるものとして先へ進む。[3/3] と [4/4] が OK でなければ BLOCKED:。台帳の札は作らない（台本が作った .claude-pipeline/active-work.d/ の未追跡ファイルは commit しない）。
+   - 以後のやること 2〜7 はすべて `<repo>` の中で行う。
 2. 表 `backend/app/assistant_regression/cases.json` を作る。中身は下の「試しの頼みの表」を 1 文字も変えずに使う（UTF-8・末尾改行 1 つ・字下げ 2 空白）。同じフォルダに空の `__init__.py` は作らない（読み物で、import しない）。
 3. 台本 `docs/handoff/secretary-rulebook/bin0/run_baseline.py` を作る。決まりは下の「台本の決まり」。
 4. 台本の確かめ（クラウドの中だけ・本番は呼ばない）: 偽の容器（`http.server` で `/intent` に決まった答えを返す小さな台本。`/tmp` に置き、commit しない）を立て、`--url http://127.0.0.1:18090 --rounds 1` で流す。次の 4 つの答えを順に試し、各行の outcome が期待どおりかを生の出力で示す。
@@ -40,8 +47,8 @@
    - 200 だが形が違う JSON → unreadable
    import は `cd backend && PYTHONPATH=. uv run --no-project --with httpx==0.28.1 --with pydantic==2.10.6 python ../docs/handoff/secretary-rulebook/bin0/run_baseline.py ...` の形で通す（uv が無ければ BLOCKED:）。版は backend/requirements.txt の httpx==0.28.1・pydantic[email]==2.10.6 に合わせた。`--no-project` は backend/pyproject.toml に依存の宣言が無いため（1 回目の流しで `uv run` だけでは `ModuleNotFoundError: No module named 'httpx'` になった・2026-11-12 13:21）。`backend/uv.lock` ができたら commit に入れない。
 5. `python3 -c "import json;d=json.load(open('backend/app/assistant_regression/cases.json'));print(len(d['cases']))"` が 23 を出すことを示す。
-6. 提出前: `bash scripts/dev/check-before-submit.sh` を流し、生の結果をファイルに残してパスを報告する。
-7. commit（1 つ。題は `chore(secretary): 便0 試しの頼み23件の表と測る台本を置く（動く部分は変えない）`。末尾に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`）→ `git log --oneline -1` で commit があることを確かめてから `git push origin release/secretary-rulebook-bin0`。
+6. commit（1 つ。`git add` は 2 ファイルを名前で指定する。題は `chore(secretary): 便0 試しの頼み23件の表と測る台本を置く（動く部分は変えない）`。末尾に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`）。`git log --oneline -1` で commit があることを確かめる。
+7. 提出前: `cd <repo> && bash scripts/dev/check-before-submit.sh` を流す（commit の前だと「commit していない変更があります」で止まる。2 回目の流しで確認）。生の結果をファイルに残し、パスと最後の 5 行を報告する。通ったら `cd <repo> && git push origin release/secretary-rulebook-bin0`。
 
 ## 試しの頼みの表
 
