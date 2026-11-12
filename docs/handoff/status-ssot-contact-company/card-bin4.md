@@ -111,3 +111,60 @@
 - 2(c) の `END IF;` が `:71` に無い（行がずれている）: 「contacts テーブルが存在すること」の IF の `END IF;` の直後に足す。見つからなければ `BLOCKED:`。
 - `_fresh()` の領域で、試験の最初の2つの assert が落ちる（tenant.py の表の形に status の CHECK が残っている等）: 直さずに `BLOCKED:` と、落ちた値を書く。
 - check-migration-value-writes.py が 037 の足した行で止まる: 止めた行と理由を生のまま貼って `BLOCKED:`。言い換えて回避しない。
+
+## 追加の直し 便4-2（CI の落ちた2件・2026-11-12 Opus）
+
+CI（PR #5448・HEAD 94f9a597a）で2件落ちた。生ログは Opus の手元 /tmp/CC報告ファイル/m037/ci/ にある。
+
+- (A) `.github/scripts/check_deprecated_columns.sh` が `DEPRECATED: trust_level found in new code in backend/tests/test_customer_statuses_pg.py` で止めた。足した行の `NOT ILIKE '%trust_level%'` が当たった。
+- (B) `backend/tests/test_tenant_loop_migration_guard.py::test_every_tenant_loop_migration_reference_is_classified` が、分類表 `_REVIEWED` に `test_customer_statuses_pg.py -> 037_add_pending_dedup_review_to_contacts_check.sql` と `-> 20261112_140000_customer_status_fk.sql` が無いとして落ちた。`_fresh()` は使い捨ての DB を作る（`backend/tests/test_customer_statuses_pg.py:53` の `CREATE DATABASE`）ので、分類は `own_database`。
+
+やること（この2ファイルだけ。他は変えない）:
+
+1. `backend/tests/test_customer_statuses_pg.py` の `_status_check_count` の SQL を、文字の照合でなく「status の列に掛かる CHECK」で数える形に変える。次の8行
+
+   ```
+                       "SELECT count(*) FROM pg_constraint con "
+                       "JOIN pg_class cls ON cls.oid = con.conrelid "
+                       "JOIN pg_namespace nsp ON nsp.oid = cls.relnamespace "
+                       "WHERE nsp.nspname = :s AND cls.relname IN ('companies', 'contacts') "
+                       "AND con.contype = 'c' "
+                       "AND pg_get_constraintdef(con.oid) ILIKE '%status%' "
+                       "AND pg_get_constraintdef(con.oid) NOT ILIKE '%trust_level%'"
+   ```
+
+   を次に置き換える:
+
+   ```
+                       "SELECT count(*) FROM pg_constraint con "
+                       "JOIN pg_class cls ON cls.oid = con.conrelid "
+                       "JOIN pg_namespace nsp ON nsp.oid = cls.relnamespace "
+                       "JOIN pg_attribute att ON att.attrelid = con.conrelid "
+                       "AND att.attnum = ANY(con.conkey) "
+                       "WHERE nsp.nspname = :s AND cls.relname IN ('companies', 'contacts') "
+                       "AND con.contype = 'c' AND att.attname = 'status'"
+   ```
+
+2. `backend/tests/test_tenant_loop_migration_guard.py` の `_REVIEWED` の最後の項目 `"test_conversation_unify_bin1.py": (...),` の直後（閉じの `}` の前）に次を足す:
+
+   ```
+       "test_customer_statuses_pg.py": (
+           "own_database",
+           "",
+           frozenset(
+               {
+                   "037_add_pending_dedup_review_to_contacts_check.sql",
+                   "20261112_140000_customer_status_fk.sql",
+               }
+           ),
+       ),
+   ```
+
+3. 確かめ（生出力を報告に貼る）:
+   - `git diff origin/main...HEAD -- backend/tests/test_customer_statuses_pg.py | grep '^+' | grep -c trust_level` が 0。
+   - `python3 -m py_compile` を2ファイルに流して 0。
+   - `cd backend && python -m pytest tests/test_tenant_loop_migration_guard.py -q` が通る（DB は要らない）。
+   - `git diff --stat origin/main...HEAD` が6ファイル（前の5つと guard の試験）。
+4. commit（文は `test: K16 の CHECK の数え方を列で絞り、分類表に足す（ADR-1076 便4-2）`）して push。最後の行は `DONE` か `BLOCKED: <理由>`。
+
+想定される分岐: 置き換え元の8行が1字でも違う／guard の試験が他の理由で落ちる → 直さずに `BLOCKED:` と生出力。
