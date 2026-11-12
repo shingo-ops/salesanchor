@@ -3,7 +3,7 @@
 状態: カード発行（Opus、2026-11-12）。PO の設計承認と実装承認は 2026-11-12「1、推測は禁止して…確立したなら進める。」（ideal-state 54。review.md「2026-11-12 PO の設計承認」）。
 設計: docs/handoff/viewer-contract-stage/design.md §3-4（public の表・tax_rates・RLS :297〜:310）・§3-4b（/super-admin/tax-rates）・§3-4d（税率の画面の置き場）・§8 の A14・A15・A31。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。本番・GitHub の secret・DB には触らない。PR は作らない（Opus が作る）。
-基準: origin/main `9747e2cf1`（#5431 合流後）で行番号を測った。行番号がずれていたら「変更前」の文で場所を探す（同じ文が 2 か所あれば BLOCKED: で停止）。
+基準: origin/main `9747e2cf1`（#5431 合流後）で行番号を測った（審査の時点 4a8893528 までの間は docs だけの変更で、変更前の文はすべて一致することを審査役が確かめた）。行番号がずれていたら「変更前」の文で場所を探す（同じ文が 2 か所あれば BLOCKED: で停止）。
 危険便か: はい（`migrations/` と本番 `scripts/run_all_migrations.sh` を含む。CI の `.github/workflows/migration-guard.yml` の許可一覧も1行変える）。マージ前に Opus の審査役の APPROVE・CI 全通過・ADR-136 の GO 記録と直前のバックアップの確認を必須にする（担当の作業ではない）。
 
 本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
@@ -13,7 +13,7 @@
 - D1 便2-2 をさらに分ける。2-2a＝public の9表（形だけ）と税率の口・画面。2-2b＝AI の読み取りの区分（ai_cloud の見せない列・ops_case の個人情報の一覧・deny の正規表現 3 か所と A46）と都道府県 47 行の試験用の読み込み。2-2c＝会社ごとの4表と会社情報のページ。理由: 1便1目的（design-partner.md §5.5 の4）。2-2a は「表が在り、書けるのは運営の印のときだけ」と「税率を PO が画面で入れられる」で閉じる。
 - D2 移行で行を入れない。税率の最初の行（10.00・2019-10-01）は本番反映の後に PO が画面で足す（design.md §3-4 tax_rates の2行目・ADR-1007 決定1）。都道府県 47 行は 2-2b 以降（design.md :182）。商材とプランは便2b の画面で PO が入れる。
 - D3 新しい列は AI の読み取りでは既定で見せない（migrations/20261024_100300_create_ai_cloud_views.sql の作りで、区分の無い列は見せない側）。区分は 2-2b で付ける。請求書を作る便3 は 2-2b より前に出さない。
-- D4 書き込みは `set_operator_context`／`reset_operator_context`（backend/app/auth/dependencies.py:454・:471）で、ハンドラの中だけ印を張り finally で戻す（先例: backend/app/routers/super_admin_suppliers.py:60〜:75 の `_operator_writes`）。backend/app/services/fx_rate_updater.py:70 の形は写さない。
+- D4 書き込みは `set_operator_context`／`reset_operator_context`（backend/app/auth/dependencies.py:454・:471）で、ハンドラの中だけ印を張り finally で戻す（先例: backend/app/routers/super_admin_suppliers.py:60〜:75 の `_operator_writes`）。backend/app/tasks/fx_rate_updater.py:70 の形は写さない。
 - D5 印が接続に残らない根拠: backend/app/database.py:33（pool_reset_on_return=None）と :37〜:52（ADR-1070。返すたびに rollback → RESET ALL → commit）。PostgreSQL の SET は commit 後は接続に残り、rollback で取り消される（Context7 /websites/postgresql の sql-set.html で確かめた）。commit の後の `SET app.is_operator = ''` は commit されないまま返却時に rollback されるが、続く RESET ALL で消える。
 - D6 税率の追加の決まり（design.md §3-4 tax_rates の5行目）: 表が空でないとき、適用日が「今ある最も新しい行の適用日以前」または「今日（日本時間）以前」なら 422 `tax_rate.effective_from_invalid`。表が空のときだけ過去の日付も通す。同じ日付が同時に2つ来たときは一意の制約で止め 409 `tax_rate.effective_from_taken`。
 - D7 税率の削除の決まり（同 4行目）: 適用日が今日（日本時間）以前の行は 409 `tax_rate.not_deletable`。無い id は 404 `tax_rate.not_found`。消した行数が1でなければ RuntimeError で止める（A31 の処理の動き）。過去の行を直す口は作らない（PUT・PATCH なし）。
@@ -34,7 +34,7 @@
 | 2 | PR は担当が作らない（Opus が作る） | ○（冒頭・§5） |
 | 3 | 報告の宛先と生出力の扱い | ○（§5。完了報告の本文に各手順の出力を tail の範囲でそのまま貼る） |
 | 4 | 1便1目的 | ○（public の9表と、それに書く最初の口＝税率。D1） |
-| 5 | 既存ブランチへの追記ではない | ○（Opus が origin/main から作った新しい枝 `release/viewer-contract-card-2-2a` にこのカードだけが載っている） |
+| 5 | 既存ブランチへの追記ではない | ○（このカードが main に入った後、Opus が origin/main から新しい実装の枝 `release/viewer-contract-bin2-2a` を作る。その枝にはこのカードだけが載っている） |
 | 6 | 書式は実例で示した | ○（§2 に変更前・変更後の全文） |
 | 7 | 合格基準を出力まで縛った | ○（§3 の各手順の期待） |
 | 8 | 件数の判定に名前を出す手順を対で置いた | ○（手順9 の `git status --short` と `git diff --stat`） |
@@ -80,7 +80,7 @@
 11. frontend/src/locales/ja.json
 12. frontend/src/locales/en.json
 
-触らない: これ以外のすべて。特に `.github/workflows/migration-test.yml`（D14）・`deploy.yml`・`migrations/20261024_100300_create_ai_cloud_views.sql`（D3。2-2b）・`backend/app/services/fx_rate_updater.py`（D4）・`frontend/src/components/`（金型は変えない）・`frontend/src/pages/super-admin/settings/settingsNav.ts`（並びは変えない。design.md §3-4d）・既存の migration。
+触らない: これ以外のすべて。特に `.github/workflows/migration-test.yml`（D14）・`deploy.yml`・`migrations/20261024_100300_create_ai_cloud_views.sql`（D3。2-2b）・`backend/app/tasks/fx_rate_updater.py`（D4）・`frontend/src/components/`（金型は変えない）・`frontend/src/pages/super-admin/settings/settingsNav.ts`（並びは変えない。design.md §3-4d）・既存の migration。
 
 ## 2. 変更
 
@@ -465,6 +465,11 @@ async def list_tax_rates(db: AsyncSession = Depends(get_db)) -> TaxRateListOut:
     return TaxRateListOut(rates=[TaxRateOut(**row) for row in rows], today=_today_jst())
 
 
+async def _latest_effective_from(db: AsyncSession) -> date | None:
+    """今ある最も新しい適用日（表が空なら None）。"""
+    return (await db.execute(text("SELECT max(effective_from) FROM public.tax_rates"))).scalar_one()
+
+
 @router.post("", response_model=TaxRateOut, status_code=status.HTTP_201_CREATED)
 async def create_tax_rate(
     body: TaxRateIn,
@@ -472,7 +477,7 @@ async def create_tax_rate(
     db: AsyncSession = Depends(get_db),
 ) -> TaxRateOut:
     today = _today_jst()
-    latest = (await db.execute(text("SELECT max(effective_from) FROM public.tax_rates"))).scalar_one()
+    latest = await _latest_effective_from(db)
     if latest is not None and (body.effective_from <= latest or body.effective_from <= today):
         raise HTTPException(status_code=422, detail="tax_rate.effective_from_invalid")
     try:
@@ -803,7 +808,7 @@ def _api_or_error(url, method, path, body=None):
 
 @needs_ci_pg
 def test_tax_rate_api_rules_and_operator_flag(pg, monkeypatch):  # noqa: F811
-    """A15 の後半（422・409・404）と A31 の処理の動き（印が張られないと止まり、行は変わらない）。"""
+    """A15 の後半（422・409 の2種・404）と A31 の処理の動き（印が張られないと止まり、行は変わらない）。"""
     conn, _, async_url = pg
     cur = _setup(conn, async_url)
     app_conn, app_async_url = _app_conn_and_url(conn)
@@ -832,6 +837,21 @@ def test_tax_rate_api_rules_and_operator_flag(pg, monkeypatch):  # noqa: F811
     future_id = resp.json()["id"]
     resp = _api(app_async_url, "POST", BASE, {"rate_percent": "8.00", "effective_from": tomorrow.isoformat()})
     assert resp.status_code == 422
+
+    # 同時に2つ来たとき（前の確かめを素通りした）: 一意の制約で 409。行は増えない
+    async def _no_latest(db):
+        return None
+
+    import app.routers.super_admin_tax_rates as tax_router
+
+    real_latest = tax_router._latest_effective_from
+    monkeypatch.setattr(tax_router, "_latest_effective_from", _no_latest)
+    resp = _api(app_async_url, "POST", BASE, {"rate_percent": "8.00", "effective_from": tomorrow.isoformat()})
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["detail"] == "tax_rate.effective_from_taken"
+    monkeypatch.setattr(tax_router, "_latest_effective_from", real_latest)
+    cur.execute("SELECT count(*) FROM public.tax_rates")
+    assert cur.fetchone()[0] == 2
 
     # 一覧: 新しい順・今日は日本時間
     resp = _api(app_async_url, "GET", BASE)
@@ -1342,7 +1362,7 @@ ComingSoonPage の import は他の道（:258・:312・:339）が使うので消
 ## 3. 手順
 
 手順1 枝を取る
-    cd ~ && git clone https://github.com/shingo-ops/salesanchor.git sa && cd sa && git checkout release/viewer-contract-card-2-2a && git log --oneline -1 | tail -1
+    cd ~ && git clone https://github.com/shingo-ops/salesanchor.git sa && cd sa && git checkout release/viewer-contract-bin2-2a && git log --oneline -1 | tail -1
 
 手順2 実装前点検 P1〜P6 を流し、結果をそのまま報告に貼る
     cd ~/sa && git rev-parse HEAD | tail -1
@@ -1382,8 +1402,8 @@ ComingSoonPage の import は他の道（:258・:312・:339）が使うので消
 手順6 API の形を作り直す（openapi.json は手で書かない）
     cd ~/sa/backend && ENVIRONMENT=test ~/venv312/bin/python -m tools.export_openapi ../frontend/api-contract/openapi.json 2>&1 | tail -3
     cd ~/sa && git diff --stat frontend/api-contract/openapi.json | tail -3
-    cd ~/sa && grep -c "/api/v1/super-admin/tax-rates" frontend/api-contract/openapi.json
-  期待: diff は openapi.json の数十行。最後の grep は 2（一覧と追加の道・削除の道）。
+    cd ~/sa && grep -c -E '^ *"/api/v1/super-admin/tax-rates(/\{rate_id\})?": \{' frontend/api-contract/openapi.json
+  期待: diff は openapi.json の数十行。最後の grep は 2（道の見出しの行だけを数える。一覧と追加の道・削除の道）。
 
 手順7 backend の試験（実 PostgreSQL の試験は CI だけで動く。ここでは skip と出てよい。failed と error は 0 であること）
     cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/test_viewer_contract_public_tables_pg.py tests/test_super_admin_viewers.py 2>&1 | tail -15
@@ -1406,8 +1426,8 @@ ComingSoonPage の import は他の道（:258・:312・:339）が使うので消
     cd ~/sa && ~/venv312/bin/python scripts/check-migration-value-writes.py diff origin/main HEAD --check all 2>&1 | tail -10
     cd ~/sa && git commit -q -m "feat(viewer): add public contract and invoice tables with operator-only RLS and tax rate screen (ADR-1061 bin2-2a)" && git log --oneline -1 | tail -1
     cd ~/sa && ~/venv312/bin/python scripts/check-migration-value-writes.py diff origin/main HEAD --check all 2>&1 | tail -10; echo "exit=$?"
-    cd ~/sa && git push origin release/viewer-contract-card-2-2a 2>&1 | tail -3
-    cd ~/sa && git log --oneline origin/release/viewer-contract-card-2-2a -2 | tail -2
+    cd ~/sa && git push origin release/viewer-contract-bin2-2a 2>&1 | tail -3
+    cd ~/sa && git log --oneline origin/release/viewer-contract-bin2-2a -2 | tail -2
   `git add` の後の status に §1 に無いファイルが出たら、commit せずに `BLOCKED: 範囲外のファイル` で停止する。2行目（commit 前の diff 検査）は HEAD に新規の移行がまだ無いので結果は見るだけ。commit の後の4行目が失敗したら push せずに最後の 10 行を貼って `BLOCKED: value-writes`。
 
 ## 4. 想定される分かれ道
