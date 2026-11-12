@@ -1,0 +1,122 @@
+<!-- バッククォート内のパスはリポジトリルートからのフルパスのみ。このPRに含まれない新しいファイルにはバッククォートを付けない。 -->
+# 設計 — 本番の解析（システム段）が計算の間に DB の取引を開いたままにする件
+
+**親**: `docs/handoff/app-idle-tx/design.md`（K5 の残り）・`docs/handoff/replay-tx-release/design.md`（試しの道具の同じ型。§2 で本番の解析は別の設計で扱うとした）。**関連 ADR**: ADR-1037（移行の鍵待ち・反映前の点検）、ADR-1070（接続の返却時の後始末）、ADR-1032（復活止め）、ADR-1015（区分）。  
+**日付**: 2026-11-12。**担当**: Planner（Opus）。  
+**状態**: 設計案作成済み。自己審査（同一 AI）済み。PO 承認済み（2026-11-12「1」＝クラウドで設計を審査し、直す所を直してから実装に進む）。クラウドの設計審査 1 回目 REVISE（中 2・低 5）→ 全件を本文に反映。2 回目 REVISE（中 1・低 2）→ 全件を本文に反映（記録は `docs/handoff/analysis-tx-release/review-architect.md`）。3 回目 APPROVE。実装カード作成済み（`docs/handoff/analysis-tx-release/card.md`）。実装未着手。  
+**PO の選択**: 2026-11-12「1」（直し方の設計に進む。実装の前にもう一度確認）。  
+**根拠**: `docs/handoff/analysis-tx-release/recon.md`（以下 recon）。行番号は origin/main a3e93f053。
+
+---
+
+## 1. 目的（PO の言葉に沿って）
+- 投稿の解析が、計算の間に DB の取引を開いたままにしない。そのため、本番反映の前の点検が解析で待たされない。
+- 同じ投稿でスタッフが要確認の画面で値を直して保存するとき、解析の計算の間ずっと待たされない。
+- スタッフの直しが解析の結果に必ず入る今の約束は変えない（直しが黙って上書きされることを作らない）。
+
+## 2. KGI と KPI
+
+KGI: 本番の作業係（celery worker）の解析で、「投稿日を読んだ後に 5 秒より長く開いた取引」が 0 本になる。
+
+| 番号 | 基準 | 検証方法 | 基準値（今） |
+|---|---|---|---|
+| K1 | 本番で 30 分読み取り、解析が 5 回以上ある時間帯に、作業係の送り元で「最後の文が投稿日の SELECT」の 5 秒より長い取引が 0 本 | recon §1 と同じ読み取り専用の数え方（2 秒ごと 900 回）を PO の同意票で流す。作業係の記録の「starting v102 analysis」の回数で 5 回以上を確かめる | 30 分で 7 本（最長 39 秒以上）。2026-11-12 |
+| K2 | 計算（run_v102_pipeline）を呼ぶ時点と、計算が終わった時点の両方で、セッションに開いた取引が無い（計算が裏で DB を読まない） | 新しい試験（実 DB）。run_v102_pipeline を本物を呼ぶ包みに差し替え、呼ぶ前と返った後に `session.in_transaction()` が False であることを確かめる。直す前の main に当てると赤になる出力を PR に貼る | 開いている（recon §2-1） |
+| K3 | 計算の間に同じ投稿の人の判断が保存されたら、その判断が結果に入る | 新しい試験。差し替えた計算の中で人の判断を別セッションで保存し、結果の行にその判断が反映されることと、記録「inputs changed」が 1 行出ること、計算の呼ばれた回数が 2 であることを確かめる（保存は 1 回目の計算の中だけ。§5-2） | 今は鍵で待たせて守っている |
+| K3b | 計算の間に何も変わらなければ、計算は 1 回だけで「inputs changed」の記録が出ない | 新しい試験（実 DB。`backend/tests/test_line_analysis_v102_pg.py` と同じ組み立て）。計算の呼ばれた回数が 1 | 1 回 |
+| K4 | 解析の結果が変わらない | 既存の試験が CI で緑。特に `backend/tests/test_line_analysis_v102_pg.py`・`backend/tests/test_line_analysis_v102_svc.py`（:600-663 の 3 本は計算で例外を出す形。読み直しの前で止まるので、commit が 1 回増えても判定は変わらない見込み。実装役が実際に流して確かめる）・`backend/tests/test_adr1032_revival_guard.py`・`backend/tests/test_analysis_failed_record.py`・`backend/tests/test_reextract_v6_with_v102_pg.py`・`backend/tests/test_v102_human_decisions.py` | 緑 |
+| K5 | 次の移行ありの本番反映 3 回で、点検の段の記録に作業係の握り手が 1 行も出ない | deploy の記録の点検の段を読んで数える | 未計測（11/12 の 2 回は移行なし） |
+
+## 3. 原因（recon の要約。全部事実）
+1. 解析は取引の最初に投稿ごとの鍵（`pg_advisory_xact_lock`）を取る（`backend/app/services/line_analysis_v102_svc.py` :1537）。この鍵は取引が終わるまで外れず、途中で外す方法は無い（PostgreSQL 公式文書 9.28.10・13.3.5、Context7 /websites/postgresql、2026-11-12 参照）。
+2. 入力を読み終える（:1538-1567、1 秒未満）と、DB を使わない計算（:1568）に入る。計算の間、取引は開いたまま。取引が閉じるのは書き込みの後の commit（:1570）。
+3. 本番の 30 分で、解析と同じ時刻に始まり計算と同じ長さだけ開いた取引を 3 件、秒まで一致で確かめた（recon §1）。残り 4 件は記録が反映で消えて確定できない（recon U1）。
+4. 同じ鍵をスタッフの値の保存（`backend/app/services/v102_human_decisions_svc.py` :593）と書き写しの直しの保存（`backend/app/services/v102_transcription_svc.py` :358）も取る。解析の計算の間、同じ投稿の保存は待つ（recon §2-2。実際に待った回数は U2 で未確認）。
+
+同じファイルの Gemini 段は「外部呼び出しの間、DB の取引を持ち越さない」として呼ぶ前に commit している（:491）。今回は計算の段を同じ考え方に揃える。
+
+## 4. 方法の比較
+
+| 案 | 中身 | 効き目 | 弊害 | 判定 |
+|---|---|---|---|---|
+| A（採用） | 取引を 2 つに分ける。①鍵を取って入力を読み、commit する。②計算は取引の外。③もう一度鍵を取り、入力を読み直す。同じなら書いて commit。違えば鍵を持ったまま計算し直して書く（今と同じ動き） | 計算の間の握りが消える。保存の待ちも消える | 入力が変わったときだけ計算が 2 回になる。最悪でも今と同じ長さの握り | 採用 |
+| B | 取引をまたぐ鍵（`pg_advisory_lock`）に替え、計算の間も鍵だけ持つ | 取引の握りは消える | 接続の使い回し（プール）で鍵が別の接続に残る・外し忘れで鍵が漏れる。保存の待ちは消えない | 不採用 |
+| C | 作業係の DB 利用者に「取引を開いたまま」の上限を付ける | 握りを切る | 正しい解析を途中で切り、失敗を増やす | 不採用 |
+| D | 点検で作業係を数えない | 点検は通る | 移行を本当に止める握り手を見逃す。隠すだけ | 不採用 |
+| E | 計算を速くする | 握りが短くなる | 何が時間を決めるか未確認（recon U3）。0 にはならない | 不採用（別の仕事） |
+| F | 読み直しをせず、①で commit した後そのまま書く | 一番簡単 | 計算の間に保存されたスタッフの直しを、古い入力の結果で上書きする | 約束を破るので不採用 |
+
+## 5. 変更前 → 変更後（触るのはこの表のファイルだけ）
+
+| ファイル | 変更 |
+|---|---|
+| `backend/app/services/line_analysis_v102_svc.py` | `run_v102_analysis`（:1526-1583）の中の取引の切り方だけを変える。下の 5-1 |
+| backend/tests/test_v102_analysis_tx_release.py（新規） | K2・K3・K3b の試験。下の 5-2。直す前の main で赤になるのは K2・K3 だけ（K3b は直す前も緑） |
+
+### 5-1. `run_v102_analysis` の新しい流れ
+
+変更前（要約）: 鍵 → 読む（:1538-1567）→ 計算（:1568）→ 書く（:1569）→ commit（:1570）。
+
+変更後（審査 1 回目の指摘を反映。今の「try の外で読む物／try の中で読む物」の境目を変えない）:
+1. 読む部分を、同じファイルの新しい関数 2 つに分ける。
+   - `_read_v102_head(session, extraction_job_id)`: :1537 の鍵 → ctx（無ければ今と同じ ValueError :1539-1540）→ job（gemini_unsure・review_reasons）→ rows。今と同じく try の外。
+   - `_read_v102_tail(session, extraction_job_id, rows)`: decisions（:1559）・previous_pairs（:1561）・prior_current（:1563）・followup_reference・soldout_ref_posts・posted_date（:1564-1566）。今と同じく try の中で呼ぶ（今これらの読みで出た例外は :1571 の except で受けている。それを変えない）。
+   - 2 つの返り値を合わせて frozen dataclass `_V102Inputs`（ctx・gemini_unsure・review_reasons・rows・decisions・previous_pairs・prior_current・followup_reference・soldout_ref_posts・posted_date）にする。rows は `tuple(rows)` のまま持つ（SQLAlchemy 2.0 の Row は名前付きの tuple と同じに振る舞う＝ Context7 /websites/sqlalchemy_en_20_core「class sqlalchemy.engine.Row」2026-11-12 参照。要素を作り直さないのは、既存の試験が件を SimpleNamespace で渡すため）。どれも `==` で中身を比べられる（recon §2-4）。
+2. 早い return（:1552-1553）は今と同じ位置・同じ動き（commit も rollback もしない）。
+3. マスタと unit_ids（:1554）は今と同じく try の外で 1 回だけ読む。読み直しの比べる対象に入れない（今もマスタの変更は鍵で守っていないので、動きは変わらない）。
+4. ここから try（:1555 と同じ位置で始まる）。`_MappingError` の判定（:1556-1557）→ `_read_v102_tail` → 計算の前の準備（`_response_from_rows`・`_fixed_products`・`masters_with_followup`）を、入力とマスタだけから作る関数 `_prepare_v102(inputs, masters)` で作る（DB を使わない）。
+5. 準備の後、計算の前に `session.commit()` を置く。コメントに「計算の間、DB の取引と投稿の鍵を持ち越さない（:491 と同じ考え方）」と書く。
+6. 計算（`run_v102_pipeline`）を取引の外で呼ぶ。
+7. もう一度 `_read_v102_head` と `_read_v102_tail` を呼ぶ（鍵を取り直す）。前と同じなら、その計算の結果と**2 回目に読んだ値**（rows・decisions）で `_write_results` → commit。
+8. 違えば `logger.info("[line_analysis] v102 inputs changed; recomputing under lock: job=%s", ...)` を 1 行出し、鍵を持ったまま 2 回目に読んだ値で `_MappingError` の判定・準備・計算をやり直し、書いて commit する（今と同じ動き。やり直しは 1 回だけ）。
+9. 4〜8 は全部 1 つの try の中。例外の扱い（:1571-1577：rollback → 理由を書く → commit → empty_stats を返す）は今と同じ。
+   - 7 の 2 回目の読みで ctx が無い（計算の間に job が消えた）ときは、`_read_v102_head` が ValueError を出し、この try の except で受ける。理由を書く UPDATE は 0 行になり、empty_stats を返す（送出しない。1 回目の ValueError だけが今と同じく呼び出し元へ出る）。
+   - 7 の 2 回目の読みでも、早い return の判定は head の直後・tail の前に置く（1 回目と同じ位置）。条件（件が 0 で応答が読めなかった理由あり）になったときは、今の早い return と同じく empty_stats を返す（commit も rollback もしない）。
+   - empty_stats の total は、最後に読み終えた rows の件数にする（2 回目の head が読めたら 2 回目の件数。2 回目の head で ValueError が出たときは 1 回目の件数）。今の「その時読んだ件数」と同じ意味。
+10. 付け直し（:1578-1580 `_merge_supplier_products`）に渡す previous_pairs と prior_current は、**2 回目に読んだ値**を使う。記録（:1581）は今と同じ。
+
+触らない範囲: 書き込み（`_write_results`）・計算（`run_v102_pipeline`）・付け直し（`_merge_supplier_products`）の中身、鍵の名前（`v102_analysis_lock_key`）、保存側の 2 か所、呼び出し元 5 か所。
+
+### 5-2. 試験
+- 実 DB の試験は `backend/tests/test_line_analysis_v102_pg.py` の組み立て（:80-105 の make_job・run_analysis）を使う。2 つ目のセッションは同じ engine から開く。
+- K3b: 何も変えずに解析し、計算の呼ばれた回数が 1 で、「inputs changed」の記録が無いことを確かめる。
+- K2: `run_v102_pipeline` を本物を呼ぶ包みに差し替え、呼ぶ前と返った後の `session.in_transaction()` を記録する。両方 False で合格。直す前は True。マスタは辞書と dataclass で返る（`backend/app/services/line_analysis_v102_svc.py` :217-241）ので、commit 後に読み直しは起きない見込み。返った後の確かめでそれを守る。
+- K3: 差し替えた計算の中で、別のセッションから同じ投稿の人の値の直し（`save_value_override`）を保存する。終わった後の結果の行にその直しが入っていることと、「inputs changed」の記録が 1 行あることを確かめる。
+  - `save_value_override` は非同期の関数（`backend/app/services/v102_human_decisions_svc.py` :574-575、引数は `db: AsyncSession` とキーワード引数）。同期の差し替えの中から、`create_async_engine(pg[2])` と `AsyncSession` で開き、`asyncio.run(...)` で呼ぶ。前例は `backend/tests/test_line_analysis_v102_pg.py` :273-280（URL 型のまま渡す。`engine.dispose()` を finally で）。
+  - 保存は差し替えた計算の **1 回目の呼び出しのときだけ** 行う（呼ばれた回数を数え、2 回目以降は保存せず本物の計算だけ呼ぶ）。直した後は §5-1 の 8 で鍵を持ったまま 2 回目の計算をするので、そこで保存すると鍵待ちで赤になるため。確かめる項目に「計算の呼ばれた回数が 2」を足す。
+  - 直す前の main では保存が鍵で待ち、試験が止まる。そのため保存の取引の最初に `SET LOCAL lock_timeout = '2s'` を流す。直す前の main では、計算の差し替えの中で例外が出て、:1571 の except が empty_stats を返すので、結果の行に直しが入らず赤になる。
+
+## 6. 弊害と対処
+| 弊害 | 対処 |
+|---|---|
+| 呼び出し元が書きかけの変更を持っていたら、計算の前の commit でそれが先に確定する | 呼び出し元 5 か所を読み、全部が呼ぶ前に commit 済みか読むだけと確かめた（`backend/app/tasks/tcg_extraction.py` :476（直前の Gemini 段 `run_v102_extraction` の最後 `backend/app/services/line_analysis_v102_svc.py` :596 で commit 済み）・:626（:615 で commit 済み。`analyze_extraction_job` の振り分け `backend/app/services/tcg_analyzer_svc.py` :1438-1442 は SELECT だけ）・:746（読むだけ）、`backend/app/services/tcg_product_master_svc.py` :939（:911 で commit 済み・後は読むだけ。これも :1442 の振り分けを通る）、`backend/app/tools/reextract_v6_with_v102.py` :393（新しいセッション））。数え方: 呼び出しの場所 5 か所。recon §2-3 の「4 つ」は振り分け :1442 を 1 つと数えた数え方で、同じ場所を指す。実装カードで同じ点検をやり直し、書きかけがあれば止める |
+| 計算の間に別のやり直しが同じ投稿を書き換える | 読み直しで入力の違いを見つけ、鍵を持ったまま計算し直す（5-1 の 8）。書く時は必ず鍵を持っている |
+| 入力が変わると計算が 2 回になる | やり直しは 1 回だけ。2 回目は鍵を持ったまま（今と同じ）なので、それ以上は繰り返さない |
+| マスタが計算の間に変わる | 今も同じ（マスタの変更は鍵を取らない）。動きは変わらない |
+| 入力を 2 回読むので DB の読みが増える | 読みは 1 回 1 秒未満（recon §1）。解析 1 回あたり 1 秒未満が増える |
+
+戻し方: 実装 PR のマージを `git revert -m 1` で戻して本番反映する。DB・設定・画面の変更は無い。
+
+## 7. 対象外（別の仕事として記録する）
+- recon U1（11:41・11:44 の 4 件、最長 39 秒以上の正体）。K1 で同じ形が消えたかで確かめる。
+- recon U2（スタッフの保存が実際に待った回数）。今回の直しで待ちの元は消える。数えるのは別。
+- recon U3（計算の時間が何で決まるか）。案 E と一緒に扱う。
+- v6 の解析（`backend/app/services/tcg_analyzer_svc.py` :1546-1549 の同じ鍵）。v6 は新しい投稿で使われていないため。
+
+## 8. 区分（ADR-1015）
+`backend/app/` とテストだけを触る。B-1 には「期待値の ADR の行」が要るが、解析の取引の切り方を決めた ADR は無い（recon 冒頭の検索）。だから **A**（PO 判断）とする。PO の 2026-11-12 の指示（実装の前にもう一度確認）とも合う。
+
+## 9. 計画
+1. この設計をクラウドの architect で審査する → PO に報告し、実装の承認をもらう。
+2. 承認後、実装カードを作り、クラウドの Sonnet に実装を頼む（§5 の表のファイルだけ）。
+3. CI 緑・審査役（opus）APPROVE → マージ → 本番反映。危険なパス（migrations・deploy・本番 scripts）を含まないので GO の手順は不要。
+4. 本番反映の後に K1 を測る（読み取り専用。PO の同意票で流す）。K5 は次の移行ありの本番反映 3 回で数える。
+
+## 10. 外部・過去事例の参照と我々への応用
+- PostgreSQL 公式文書（Context7 /websites/postgresql、2026-11-12 参照）: 取引の鍵は取引の終わりで自動で外れ、手で外す方法は無い。取引をまたぐ鍵は rollback でも残り、外す回数を合わせる必要がある。案 A は前者だけを使い、案 B の弊害（鍵の漏れ）を避ける。
+- 過去事例: 同じファイルの Gemini 段の先例（:491）と、試しの道具の同じ型の直し（`docs/handoff/replay-tx-release/design.md`、2026-11-10 本番反映）。
+- 数値付きの他社事例は使わない。理由: 原因と効き目は自分の本番の実測（recon §1）で示せ、K1 で同じ物差しで測れるため。
+
+## 11. 維持の仕組み
+- 守り手: backend/tests/test_v102_analysis_tx_release.py（計算の中で取引が開いた時点で CI が赤になる。K2）。
+- 本番の見張り: 本番反映の前の点検（`scripts/deploy-db-precheck.sh`、ADR-1037）が握り手を記録し続ける。K5 で数える。

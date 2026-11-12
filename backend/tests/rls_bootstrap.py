@@ -41,6 +41,11 @@ _PG_BOOTSTRAP_MIGRATIONS = [
 _PG_AFTER_TENANTS_MIGRATIONS = (
     "20261106_190000_create_public_channel_masters.sql",
     "20261112_120000_create_public_customer_statuses.sql",
+    # ADR-1061 便2-2c1: 発行元の会社情報が public.countries と public.prefectures を外部キーで指す。
+    # prefectures を作る 20261112_150000 は public.viewer_accounts（20261016_150000）を指すので、この順で流す
+    "20260621_010000_create_countries_master.sql",
+    "20261016_150000_add_viewer_accounts.sql",
+    "20261112_150000_create_viewer_contract_public_tables.sql",
 )
 _TENANT_BOOTSTRAP_MIGRATIONS = [
     "20260611_100000_create_channel_masters.sql",
@@ -182,6 +187,7 @@ _TENANT_LOOP_MIGRATIONS = {
     "20261112_160000_add_calendar_events_recurrence.sql": 1,
     "20261005_150000_add_roles_system_key.sql": 1,
     "20261106_150000_add_discord_role_link_tables.sql": 1,
+    "20261112_160000_create_tenant_issuer_and_payment_tables.sql": 1,
 }
 
 

@@ -1263,5 +1263,7 @@ run_sql migrations/20261112_130000_add_viewer_contracting_status.sql
 run_sql migrations/20261112_140000_customer_status_fk.sql
 # ADR-1061 便2-2a: 契約と請求書の public の9表を作る（形だけ・行なし・FORCE RLS・冪等）
 run_sql migrations/20261112_150000_create_viewer_contract_public_tables.sql
+# ADR-1061 便2-2c1: 発行元の会社情報と振込先の4表・請求書の発行元区分・Drive の海外用フォルダを作る（形だけ・行なし・冪等）
+run_sql migrations/20261112_160000_create_tenant_issuer_and_payment_tables.sql
 # ADR-1075 便15A: 予定の繰り返し（calendar_events に欄 4 つ・CHECK 4 つ・部分 UNIQUE）
 run_sql migrations/20261112_160000_add_calendar_events_recurrence.sql
