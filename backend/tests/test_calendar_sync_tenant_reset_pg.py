@@ -50,7 +50,7 @@ _MIGRATIONS = (
     ("20260621_020000_add_schedule_calendar_category_and_owner_settings.sql", True),
     ("20261103_200000_add_google_calendar_import_sync.sql", True),
     ("20261104_161223_add_calendar_events_meet_url.sql", True),
-    ("20261112_160000_add_calendar_events_recurrence.sql", True),
+    ("20261112_170000_add_calendar_events_recurrence.sql", True),
 )
 
 
