@@ -59,6 +59,17 @@ def country_seed_sql() -> str:
     )
 
 
+def customer_statuses_seed_sql() -> str:
+    """public.customer_statuses の4行。値は docs/handoff/status-ssot-contact-company/insert-customer-statuses.sql が正本（ここに値を書かない・ADR-1076）。"""
+    return (Path(__file__).resolve().parents[2] / "docs" / "handoff" / "status-ssot-contact-company" / "insert-customer-statuses.sql").read_text("utf-8")
+
+
+def prefectures_seed_sql() -> str:
+    """public.prefectures の47行。値は docs/handoff/viewer-contract-stage/data/prefectures.sql が正本（ここに値を書かない・ADR-1061）。
+    書けるのは運営だけ。流す側が同じ取引の中で set_config('app.is_operator', 'true', true) を張る。"""
+    return (Path(__file__).resolve().parents[2] / "docs" / "handoff" / "viewer-contract-stage" / "data" / "prefectures.sql").read_text("utf-8")
+
+
 def type_master_seed_sql() -> str:
     """public.type_master へ 12 種別を入れる SQL。sort_order は SQLite の試験 DB と同じ 100。"""
     values = ",\n".join(

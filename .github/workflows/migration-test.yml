@@ -924,11 +924,13 @@ jobs:
           -- public.viewer_accounts: 20261016_150000_add_viewer_accounts.sql で本番作成済み。
           --   20261104_220000_add_tcg_distribution_targets_viewer_account_id.sql が外部キーで参照するため、
           --   前提として最小定義を登録する（id の型は本物と同じ BIGSERIAL）。
+          --   trial_expires_at は 20261112_130000_add_viewer_contracting_status.sql が COMMENT を書くため（ADR-1061 便2-1）。
           CREATE TABLE IF NOT EXISTS public.viewer_accounts (
               id         BIGSERIAL   PRIMARY KEY,
               email      TEXT        NOT NULL,
               line_name  TEXT        NOT NULL,
               status     TEXT        NOT NULL,
+              trial_expires_at TIMESTAMPTZ NULL,
               created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
               updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
           );
@@ -940,6 +942,15 @@ jobs:
               viewer_account_id BIGINT      NOT NULL REFERENCES public.viewer_accounts(id) ON DELETE CASCADE,
               purpose           TEXT        NOT NULL,
               CONSTRAINT ck_viewer_login_tokens_purpose CHECK (purpose IN ('signup_code', 'password_reset'))
+          );
+          -- public.viewer_status_changes: 20261016_150000_add_viewer_accounts.sql で本番作成済み。
+          --   20261112_130000_add_viewer_contracting_status.sql が CHECK を付け替え COMMENT を書くため、
+          --   前提として最小定義を登録する（操作の CHECK は付け替え前の5値）。
+          CREATE TABLE IF NOT EXISTS public.viewer_status_changes (
+              id        BIGSERIAL   PRIMARY KEY,
+              viewer_id BIGINT      NOT NULL REFERENCES public.viewer_accounts(id) ON DELETE CASCADE,
+              action    TEXT        NOT NULL,
+              CONSTRAINT ck_viewer_status_changes_action CHECK (action IN ('activate', 'suspend', 'unsuspend', 'extend', 'start_trial'))
           );
           -- public.tcg_distribution_targets: 20260921_110000_pipeline_tables_public.sql で本番作成済み。
           --   20261012_210000_add_tcg_distribution_targets_review_sheet_name.sql が ALTER TABLE ... ADD COLUMN
@@ -1316,6 +1327,16 @@ jobs:
           echo "✅ 全検証パス"
       # ── Step 5: PR で変更された生 SQL マイグレーションを実行 ─────────────────────
       # {schema} プレースホルダ含む旧テンプレート（018, 019 等）は検出時に除外済み
+      - name: 変更 SQL の前提の移行を先に実行（ai_reader）
+        if: steps.detect.outputs.has_sql_changes == 'true' && contains(steps.detect.outputs.changed_sql, 'migrations/20261017_130100_create_ai_ro_views.sql')
+        run: |
+          # 20261017_130100 は 130000（ai_reader の役）が先に流れている前提（本番は役が先に在る）
+          for sqlfile in migrations/20261017_130000_create_ai_reader_role.sql; do
+            echo "▶ $sqlfile を前提として実行中..."
+            psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
+            echo "✅ $sqlfile 成功"
+          done
+
       - name: 変更 SQL の前提の移行を先に実行（ai_cloud_meta・ai_reader_cloud）
         if: steps.detect.outputs.has_sql_changes == 'true' && contains(steps.detect.outputs.changed_sql, 'migrations/20261024_100300_create_ai_cloud_views.sql')
         run: |
@@ -1371,6 +1392,16 @@ jobs:
         run: |
           # 20261107_150000 は google_webhook_subscriptions（077）と、その列を足す 20261103_200000 が先にある前提（本番と同じ順）
           for sqlfile in migrations/077_calendar_sync_mode_and_webhook_subscriptions.sql migrations/20261103_200000_add_google_calendar_import_sync.sql; do
+            echo "▶ $sqlfile を前提として実行中..."
+            psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
+            echo "✅ $sqlfile 成功"
+          done
+
+      - name: 変更 SQL の前提の移行を先に実行（会社と連絡先の状態の表）
+        if: steps.detect.outputs.has_sql_changes == 'true' && contains(steps.detect.outputs.changed_sql, 'migrations/20261112_140000_customer_status_fk.sql')
+        run: |
+          # 20261112_140000 は public.customer_statuses（20261112_120000）を外部キーで指すので、その表を本番と同じ順で先に作る
+          for sqlfile in migrations/20261112_120000_create_public_customer_statuses.sql; do
             echo "▶ $sqlfile を前提として実行中..."
             psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
             echo "✅ $sqlfile 成功"

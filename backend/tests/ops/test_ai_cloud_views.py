@@ -20,6 +20,8 @@ from urllib.parse import urlsplit, urlunsplit
 
 import pytest
 
+from app.ops.readonly_query import DENY_COLUMN_RE
+
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 
 pytestmark = pytest.mark.skipif(
@@ -40,7 +42,7 @@ _WEB_PUSH_SQL = "20261102_090000_add_user_push_subscriptions.sql"
 _AI_JOB_SQL = "20261103_120000_create_ai_job_assignments.sql"
 _PIPELINE_PUBLIC_SQL = "20260921_110000_pipeline_tables_public.sql"
 _LLM_USAGE_SQL = "20260930_150000_create_llm_usage_events.sql"
-_DENY_RE = re.compile(r"^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential")
+_DENY_RE = DENY_COLUMN_RE  # 正本は backend/app/ops/readonly_query.py（ADR-1061 A46）
 _NAME_RE = re.compile(
     r"(name|email|mail|phone|tel|fax|addr|zip|postal|message|text|body|note|comment|memo|sender|display|contact"
     r"|line_id|wa_id|birthday|payload|snapshot|raw|data|values|identity|span)"
@@ -481,7 +483,7 @@ def test_role_migration_is_idempotent(pg):
     # meta の migration も冪等（分類表の中身は消えない）
     n0 = _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0]
     c.execute(_read(_META_SQL))
-    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1083
+    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1109
 
 
 # ---------------------------------------------------------------- T10（CI の見張り）
@@ -730,6 +732,80 @@ def test_t10_ai_job_assignment_columns_are_classified_on_bootstrapped_db(cluster
         new_tables = {"ai_job_choices", "ai_job_assignments", "ai_job_assignment_history", "llm_usage_events"}
         gaps = [g for g in _classification_gaps(conn) if g[1] in new_tables]
         assert gaps == [], f"分類の漏れ（表名・列名）: {[(g[1], g[2]) for g in gaps]}"
+    finally:
+        conn.close()
+        cur = cluster.control.cursor()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+# ADR-1061 便2-2b: 契約と請求書の public の9表の23列に column_class の行があることを名前で確かめる。
+_VIEWER_ACCOUNTS_SQL = "20261016_150000_add_viewer_accounts.sql"
+_VIEWER_CONTRACT_SQL = "20261112_150000_create_viewer_contract_public_tables.sql"
+_VIEWER_CONTRACT_TABLES = {
+    "prefectures", "sa_products", "sa_plans", "sa_plan_features", "sa_contracts", "tax_rates",
+    "viewer_invoices", "viewer_invoice_number_seq", "viewer_invoice_lines",
+}  # fmt: skip
+_VIEWER_INVOICE_MASKED = {
+    "bill_to_snapshot", "drive_error", "drive_file_id", "drive_web_link",
+    "invoice_number", "issuer_snapshot", "mail_error", "mail_to",
+}  # fmt: skip
+_VIEWER_CONTRACT_CLASSIFIED = (
+    {("prefectures", c) for c in ("code", "name_en", "name_ja")}
+    | {("sa_contracts", "status"), ("sa_plan_features", "feature_key")}
+    | {("sa_plans", c) for c in ("billing_interval", "billing_type", "code", "name")}
+    | {("sa_products", c) for c in ("code", "name")}
+    | {("viewer_invoice_lines", c) for c in ("description", "line_type")}
+    | {("viewer_invoices", c) for c in _VIEWER_INVOICE_MASKED | {"status", "mail_sent_at"}}
+)
+
+
+def test_t10_viewer_contract_columns_are_classified_on_bootstrapped_db(cluster):
+    """本番の migration 順に近い DB に便2-2a の migration を流し、23列に column_class の行があり、9表に分類の漏れが無い。
+
+    流す順: bootstrap → 閲覧者の名簿 → 便2-2a（2回・冪等）→ ai_cloud の分類。
+    請求書の表の8列は mask、status と mail_sent_at は pass で作られる。専用の DB を作り、終わったら消す。"""
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    assert len(_VIEWER_CONTRACT_CLASSIFIED) == 23
+    assert len(_VIEWER_CONTRACT_TABLES) == 9
+    name, conn = _new_db(cluster.control, "ai_cloud_t10_vcontract")
+    try:
+        c = conn.cursor()
+        c.execute(_read(_AI_READER_SQL))
+        c.execute(_read(_ROLE_SQL))
+        c.execute(_read(_META_SQL))
+        url = _psycopg_url(ADMIN_PG_URL, name).replace("postgresql://", "postgresql+asyncpg://", 1)
+        from tests.rls_bootstrap import bootstrap_tenant_schema
+
+        async def build():
+            eng = create_async_engine(url)
+            try:
+                await bootstrap_tenant_schema(eng, 1)
+            finally:
+                await eng.dispose()
+
+        asyncio.run(build())
+        c.execute(_read(_VIEWER_ACCOUNTS_SQL))
+        c.execute(_read(_VIEWER_CONTRACT_SQL))
+        c.execute(_read(_VIEWER_CONTRACT_SQL))  # 冪等
+        c.execute(_read(_CREATE_SQL))
+        rows = _rows(
+            conn, "SELECT table_name, column_name FROM ai_cloud_meta.column_class WHERE schema_pattern = 'public'"
+        )
+        have = {(r[0], r[1]) for r in rows}
+        missing = _VIEWER_CONTRACT_CLASSIFIED - have
+        assert missing == set(), f"column_class に行が無い: {sorted(missing)}"
+
+        gaps = [g for g in _classification_gaps(conn) if g[1] in _VIEWER_CONTRACT_TABLES]
+        assert gaps == [], f"分類の漏れ（表名・列名）: {[(g[1], g[2]) for g in gaps]}"
+
+        modes = dict(
+            _rows(conn, "SELECT column_name, mode FROM ai_cloud_meta.build_columns WHERE source = 'public.viewer_invoices'")
+        )
+        for col in sorted(_VIEWER_INVOICE_MASKED):
+            assert modes[col] == "mask", col
+        assert modes["status"] == "pass"
+        assert modes["mail_sent_at"] == "pass"
     finally:
         conn.close()
         cur = cluster.control.cursor()

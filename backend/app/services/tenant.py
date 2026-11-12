@@ -221,8 +221,8 @@ CREATE TABLE IF NOT EXISTS {schema}.companies (
     fedex_account VARCHAR(100),
     shipping_note TEXT,
     status VARCHAR(20) NOT NULL DEFAULT 'active'
-        CHECK (status IN ('active','inactive','archived','pending_dedup_review')),
-    sales_rep_id INTEGER,                              -- FK は public.users(id) へ付与（ADR-1008）
+        REFERENCES public.customer_statuses(code),
+    sales_rep_id INTEGER,                             -- FK は public.users(id) へ付与（ADR-1008）
     notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -248,11 +248,10 @@ CREATE TABLE IF NOT EXISTS {schema}.contacts (
     is_primary_contact BOOLEAN NOT NULL DEFAULT FALSE,
     primary_email VARCHAR(255),
     primary_phone VARCHAR(50),
-    -- PR #163 (PR #145 残課題 Q2): pending_dedup_review 解消フローのため
-    -- companies.status と CHECK 制約を揃える（migration 037 で既存テナントには
-    -- backport 済）。新テナント作成時は最初からこの 4 値を許容する。
+    -- 状態の記号は public.customer_statuses の4行が正本（ADR-1076・便2）。
+    -- companies.status と同じく外部キーで結ぶ（値の一覧をここに書かない）。
     status VARCHAR(20) NOT NULL DEFAULT 'active'
-        CHECK (status IN ('active','inactive','archived','pending_dedup_review')),
+        REFERENCES public.customer_statuses(code),
     notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

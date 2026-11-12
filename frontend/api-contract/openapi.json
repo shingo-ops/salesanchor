@@ -35760,6 +35760,90 @@
         "title": "SystemFields",
         "type": "object"
       },
+      "TaxRateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "rate_percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Rate Percent"
+          }
+        },
+        "required": [
+          "rate_percent",
+          "effective_from"
+        ],
+        "title": "TaxRateIn",
+        "type": "object"
+      },
+      "TaxRateListOut": {
+        "properties": {
+          "rates": {
+            "items": {
+              "$ref": "#/components/schemas/TaxRateOut"
+            },
+            "title": "Rates",
+            "type": "array"
+          },
+          "today": {
+            "description": "サーバーの今日（日本時間）。画面はこれより後の行だけに削除を出す",
+            "format": "date",
+            "title": "Today",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rates",
+          "today"
+        ],
+        "title": "TaxRateListOut",
+        "type": "object"
+      },
+      "TaxRateOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "effective_from": {
+            "description": "この日から使う（日本時間の日付）",
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "rate_percent": {
+            "description": "消費税率（%）。例 10.00",
+            "title": "Rate Percent",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "rate_percent",
+          "effective_from",
+          "created_at"
+        ],
+        "title": "TaxRateOut",
+        "type": "object"
+      },
       "TcgNoteMasterCreate": {
         "properties": {
           "category": {
@@ -38977,7 +39061,7 @@
             "type": "string"
           },
           "status": {
-            "description": "pending／verified／trial／active／suspended",
+            "description": "pending／verified／trial／contracting／active／suspended",
             "title": "Status",
             "type": "string"
           },
@@ -38991,7 +39075,7 @@
                 "type": "null"
               }
             ],
-            "description": "お試しの期限",
+            "description": "お試しと契約手続き中の、見られる期限",
             "title": "Trial Expires At"
           }
         },
@@ -39634,7 +39718,7 @@
             "title": "Room Notice Text"
           },
           "status": {
-            "description": "pending／verified／trial／active／suspended",
+            "description": "pending／verified／trial／contracting／active／suspended",
             "title": "Status",
             "type": "string"
           },
@@ -39648,7 +39732,7 @@
                 "type": "null"
               }
             ],
-            "description": "お試しの期限",
+            "description": "お試しと契約手続き中の、見られる期限",
             "title": "Trial Expires At"
           }
         },
@@ -46926,6 +47010,37 @@
         "summary": "国マスタ一覧",
         "tags": [
           "countries"
+        ]
+      }
+    },
+    "/api/v1/customer-statuses": {
+      "get": {
+        "operationId": "list_customer_statuses_api_v1_customer_statuses_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "title": "Response List Customer Statuses Api V1 Customer Statuses Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "会社・連絡先の状態の一覧（名前・並び・作るときに出すか）",
+        "tags": [
+          "customer-statuses",
+          "customer-statuses"
         ]
       }
     },
@@ -67538,6 +67653,119 @@
         ],
         "summary": "仕入元の原文メッセージ一覧取得",
         "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/tax-rates": {
+      "get": {
+        "operationId": "list_tax_rates_api_v1_super_admin_tax_rates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxRateListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Tax Rates",
+        "tags": [
+          "super-admin",
+          "super-admin"
+        ]
+      },
+      "post": {
+        "operationId": "create_tax_rate_api_v1_super_admin_tax_rates_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaxRateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxRateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Tax Rate",
+        "tags": [
+          "super-admin",
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/tax-rates/{rate_id}": {
+      "delete": {
+        "operationId": "delete_tax_rate_api_v1_super_admin_tax_rates__rate_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rate_id",
+            "required": true,
+            "schema": {
+              "title": "Rate Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Tax Rate",
+        "tags": [
+          "super-admin",
           "super-admin"
         ]
       }

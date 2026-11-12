@@ -12,13 +12,15 @@ import re
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.viewer_admin import ViewerAdminError
 
-BILLING_FORM_TTL = timedelta(days=7)
+BILLING_FORM_TTL = timedelta(days=3)  # ADR-1061 §3-2
 PURPOSE = "billing_form"
+# フォームを送れる・開ける・保存できる状態（契約手続き中と本契約。ADR-1061 §3-1）
+FORM_STATUSES = ("contracting", "active")
 
 _POSTAL_RE = re.compile(r"^[0-9]{7}$")
 _PHONE_RE = re.compile(r"^[0-9]{10,11}$")
@@ -81,33 +83,63 @@ def token_sha256(raw: str) -> bytes:
     return hashlib.sha256(raw.encode()).digest()
 
 
-async def issue_billing_form_token(db: AsyncSession, viewer_id: int) -> tuple[str, datetime]:
-    """請求先フォームの鍵の唯一の作り口。本契約（active）の人だけ。
+async def issue_billing_form_token(db: AsyncSession, viewer_id: int, *, actor_user_id: int) -> tuple[str, datetime]:
+    """請求先フォームの鍵の唯一の作り口。契約手続き中（contracting）と本契約（active）の人だけ。
 
-    名簿に無ければ ViewerAdminError("not_found")、active でなければ ViewerAdminError("conflict")。
+    名簿に無ければ ViewerAdminError("not_found")、FORM_STATUSES でなければ ViewerAdminError("conflict")。
     同じ人の古い billing_form の鍵を消してから1本作り、(鍵, 期限) を返す。
+    契約手続き中の人は、見られる期限を max(今の期限, 鍵の期限) にする（短くしない。ADR-1061 §3-2）。
+    送った記録 form_sent を viewer_status_changes に残す（actor='po'・actor_user_id は押した人）。
     """
     row = (
         await db.execute(
-            text("SELECT status FROM public.viewer_accounts WHERE id = :id"), {"id": viewer_id}
+            text("SELECT status, trial_expires_at FROM public.viewer_accounts WHERE id = :id FOR UPDATE"),
+            {"id": viewer_id},
         )
     ).first()
     if row is None:
         raise ViewerAdminError("not_found")
-    if row.status != "active":
+    if row.status not in FORM_STATUSES:
         raise ViewerAdminError("conflict")
     await db.execute(
         text("DELETE FROM public.viewer_login_tokens WHERE viewer_account_id = :id AND purpose = 'billing_form'"),
         {"id": viewer_id},
     )
+    now = datetime.now(timezone.utc)
     raw = secrets.token_urlsafe(32)
-    expires_at = datetime.now(timezone.utc) + BILLING_FORM_TTL
+    expires_at = now + BILLING_FORM_TTL
     await db.execute(
         text(
             "INSERT INTO public.viewer_login_tokens (viewer_account_id, token_sha256, purpose, expires_at) "
             "VALUES (:id, :h, 'billing_form', :exp)"
         ),
         {"id": viewer_id, "h": token_sha256(raw), "exp": expires_at},
+    )
+    from_expires = row.trial_expires_at
+    if from_expires is not None and from_expires.tzinfo is None:
+        from_expires = from_expires.replace(tzinfo=timezone.utc)
+    to_expires = from_expires
+    if row.status == "contracting":
+        to_expires = expires_at if from_expires is None else max(from_expires, expires_at)
+        await db.execute(
+            text("UPDATE public.viewer_accounts SET trial_expires_at = :exp, updated_at = :now WHERE id = :id"),
+            {"exp": to_expires, "now": now, "id": viewer_id},
+        )
+    await db.execute(
+        text(
+            "INSERT INTO public.viewer_status_changes "
+            "(viewer_id, action, from_status, to_status, from_expires_at, to_expires_at, "
+            "extend_days, actor, actor_user_id, created_at) "
+            "VALUES (:vid, 'form_sent', :st, :st, :from_expires, :to_expires, NULL, 'po', :uid, :now)"
+        ),
+        {
+            "vid": viewer_id,
+            "st": row.status,
+            "from_expires": from_expires,
+            "to_expires": to_expires,
+            "uid": actor_user_id,
+            "now": now,
+        },
     )
     return raw, expires_at
 
@@ -128,16 +160,16 @@ async def get_profile(db: AsyncSession, viewer_id: int) -> dict | None:
 
 
 async def peek_token(db: AsyncSession, raw: str) -> int | None:
-    """鍵を使い切らずに確かめる。有効で本契約（active）の人なら viewer_account_id、それ以外は None。"""
+    """鍵を使い切らずに確かめる。有効で FORM_STATUSES の人なら viewer_account_id、それ以外は None。"""
     row = (
         await db.execute(
             text(
                 "SELECT t.viewer_account_id FROM public.viewer_login_tokens t "
                 "JOIN public.viewer_accounts a ON a.id = t.viewer_account_id "
                 "WHERE t.token_sha256 = :h AND t.purpose = 'billing_form' "
-                "AND t.expires_at > :now AND a.status = 'active'"
-            ),
-            {"h": token_sha256(raw), "now": datetime.now(timezone.utc)},
+                "AND t.expires_at > :now AND a.status IN :statuses"
+            ).bindparams(bindparam("statuses", expanding=True)),
+            {"h": token_sha256(raw), "now": datetime.now(timezone.utc), "statuses": list(FORM_STATUSES)},
         )
     ).first()
     return None if row is None else int(row.viewer_account_id)
@@ -164,7 +196,7 @@ async def is_active(db: AsyncSession, viewer_id: int) -> bool:
             text("SELECT status FROM public.viewer_accounts WHERE id = :id"), {"id": viewer_id}
         )
     ).first()
-    return row is not None and row.status == "active"
+    return row is not None and row.status in FORM_STATUSES
 
 
 async def upsert_profile(db: AsyncSession, viewer_id: int, values: dict) -> None:

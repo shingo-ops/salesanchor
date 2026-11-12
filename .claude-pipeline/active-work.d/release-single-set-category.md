@@ -1,0 +1,5 @@
+branch: release/single-set-category
+
+| ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
+|-----------|--------------|---------|------|-----|------|------|
+| release/single-set-category | 解析v102: 区分シングルセット系（まとめ売りを状態Single・単位Setに） | 2026-11-11 | DONE | 5413 | | 設計審査5回目APPROVE・PO承認(2026-11-12「1」)・文書PR起票中。便1は実装カード発行前。design: docs/handoff/single-set-category/design.md |

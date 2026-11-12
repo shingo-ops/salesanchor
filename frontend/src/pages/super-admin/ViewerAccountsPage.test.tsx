@@ -203,7 +203,7 @@ function mockMixed() {
   });
 }
 
-it("shows a left menu with 4 entries (no Suspended) and counts, and filters by trial with ?status=trial", async () => {
+it("shows a left menu with 5 entries (no Suspended) and counts, and filters by trial with ?status=trial", async () => {
   mockMixed();
   renderPage();
   await screen.findByText("Taro");

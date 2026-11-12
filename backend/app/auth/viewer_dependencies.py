@@ -89,6 +89,10 @@ async def get_current_viewer(
         expires = _as_utc(row.trial_expires_at)
         if expires is None or expires <= now:
             raise _forbidden("viewer_trial_expired")
+    elif row.status == "contracting":  # 契約手続き中（ADR-1061）。期限まで見られる
+        expires = _as_utc(row.trial_expires_at)
+        if expires is None or expires <= now:
+            raise _forbidden("viewer_contract_expired")
     elif row.status == "suspended":
         raise _forbidden("viewer_suspended")
     else:  # pending・verified・未知の値

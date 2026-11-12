@@ -154,6 +154,10 @@ async def test_statuses():
     with pytest.raises(HTTPException) as exc:
         await _call(token, _row(status="trial", trial_expires_at=now - timedelta(seconds=1)))
     assert exc.value.status_code == 403 and exc.value.detail == "viewer_trial_expired"
+    assert await _status_of(token, _row(status="contracting", trial_expires_at=now + timedelta(days=1))) == 200
+    with pytest.raises(HTTPException) as exc:
+        await _call(token, _row(status="contracting", trial_expires_at=now - timedelta(seconds=1)))
+    assert exc.value.status_code == 403 and exc.value.detail == "viewer_contract_expired"
 
 
 async def test_missing_row_blacklist_and_bad_tokens():

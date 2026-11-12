@@ -51,6 +51,7 @@ PRODUCT_KUBUN_BULK = "バルク系"  # 状態語が無いとき、状態を Bulk
 PRODUCT_KUBUN_SINGLE = "シングル系"  # 状態を single 群の行（PSA10 等）で判定し、語が無ければ Single にする（ADR-1031）
 PRODUCT_KUBUN_PROMO_PACK = "プロモパック系"  # 状態を promo_pack 群の行で判定し、語が無ければ 未開封 にする（ADR-1031）
 PRODUCT_KUBUN_SET = "セット系"  # 単位の語が無ければ単位を Set にし、状態は箱系と同じく既定で Sealed box にする
+PRODUCT_KUBUN_SINGLE_SET = "シングルセット系"  # 状態はシングル系と同じ群・同じ既定（Single）。単位は書かれた語に関わらず Set（ADR-1031 What 6）
 PRODUCT_KUBUN_SUPPLY = "サプライ系"  # 状態を supply 群の行で判定し、語が無ければ Supply にする。単位は状態の単位（Bag）にそろえる（ADR-1035 追補）
 PRODUCT_KUBUN_BOOKLET = "ブックレット系"  # 状態を booklet 群の行で判定し、語が無ければ With booklet にする（ADR-1035）
 # 商品を特定できない・分類が無いときの、この道具の出力用の値（マスタの値ではない）
@@ -77,6 +78,7 @@ UNIT_SET_CODE = "UN0005"
 _STATE_WORD_BASIS_RE = re.compile(r"^R[123]:")
 UNIT_BASIS_STATE_WORD = "state_word"  # unit_basis の from_condition に添える理由
 UNIT_BASIS_FROM_CATEGORY = "from_category"  # 分類から単位を決めたときの unit_basis のキー
+UNIT_BASIS_SINGLE_SET_FROM = "single_set_unit_from"  # シングルセット系で Set に置き換える前の、書かれた単位（Set 以外のときだけ）
 
 # --- この道具が決める出力の言葉（マスタの値ではない） ------------------------------------------
 NONE_VALUE = "none"
@@ -763,10 +765,16 @@ def _undecided_condition(cond: str | None, basis: str, cond_entries: list[dict])
 
 _KUBUN_TO_VALUE_GROUP = {
     PRODUCT_KUBUN_SINGLE: (VALUE_GROUP_SINGLE, CONDITION_SINGLE_DEFAULT, BASIS_SINGLE_DEFAULT),
+    PRODUCT_KUBUN_SINGLE_SET: (VALUE_GROUP_SINGLE, CONDITION_SINGLE_DEFAULT, BASIS_SINGLE_DEFAULT),
     PRODUCT_KUBUN_PROMO_PACK: (VALUE_GROUP_PROMO_PACK, CONDITION_PROMO_PACK_DEFAULT, BASIS_PROMO_PACK_DEFAULT),
     PRODUCT_KUBUN_BOOKLET: (VALUE_GROUP_BOOKLET, CONDITION_BOOKLET_DEFAULT, BASIS_BOOKLET_DEFAULT),
     PRODUCT_KUBUN_SUPPLY: (VALUE_GROUP_SUPPLY, CONDITION_SUPPLY_DEFAULT, BASIS_SUPPLY_DEFAULT),
 }
+
+# 状態の行の適用区分（app_kubun）と当てるときに使う区分名。app_kubun は区分名の部分一致で当てる
+# （tcg_analyzer_svc.app_kubun_matches）ので、適用区分「シングル系」の行は「シングルセット系」に当たらない。
+# シングルセット系はシングル系の名前で当てる（ADR-1031 What 6）。
+_KUBUN_MATCHED_AS = {PRODUCT_KUBUN_SINGLE_SET: PRODUCT_KUBUN_SINGLE}
 
 
 def _resolve_scoped_condition(
@@ -780,7 +788,8 @@ def _resolve_scoped_condition(
     _group, default_condition, default_basis = _KUBUN_TO_VALUE_GROUP[product_kubun]
     entries = list(group_entries)
     cond, _cid, basis = resolve_condition_v2(
-        block, "", product_kubun, entries, cond_canonical_to_uuid, raw_memo=block, prefer_lowest_value=True
+        block, "", _KUBUN_MATCHED_AS.get(product_kubun, product_kubun), entries, cond_canonical_to_uuid,
+        raw_memo=block, prefer_lowest_value=True,
     )
     if cond == FLAG_SINGLE_CANONICAL and BASIS_UNIT_UNKNOWN in basis:
         return default_condition, default_basis, []
@@ -861,11 +870,17 @@ def _resolve_unit_from_state(
 ) -> tuple[str | None, str, dict]:
     """(単位, 単位の区分, unit_basis)。分類と状態から単位を決め直す。
 
+    シングルセット系：masters.set_unit があれば、書かれた単位・単位の語の有無に関わらず単位 Set。書かれた単位が
+    Set 以外なら unit_basis の single_set_unit_from に残す（ADR-1031 What 6）。set_unit が無ければ、下のほかの区分の規則と同じ。
     セット系：単位の語が無ければ単位 Set（状態の単位では置き換えない）。書かれた単位はそのまま。
     サプライ系：状態の単位があれば、書かれた単位（「100枚入」の枚など）に関わらず状態の単位（Bag）にする。
     それ以外：単位が無い・箱系で「条件つき」なら状態の単位。状態が原文の語（R1〜R3）で決まり、その状態の単位が今の単位と違えば、
     状態の単位を優先する（理由 state_word）。
     """
+    if product_kubun == PRODUCT_KUBUN_SINGLE_SET and masters.set_unit:
+        set_unit, set_kubun, _resolved = resolve_unit_v2(masters.set_unit, unit_alias_to_info)
+        extra = {UNIT_BASIS_SINGLE_SET_FROM: unit} if unit and unit != set_unit else {}
+        return set_unit, set_kubun, {**unit_basis, UNIT_BASIS_FROM_CATEGORY: PRODUCT_KUBUN_SINGLE_SET, **extra}
     if product_kubun == PRODUCT_KUBUN_SET:
         if unit is None and masters.set_unit:
             set_unit, set_kubun, _resolved = resolve_unit_v2(masters.set_unit, unit_alias_to_info)

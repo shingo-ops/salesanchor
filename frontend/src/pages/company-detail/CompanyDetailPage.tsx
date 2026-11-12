@@ -13,6 +13,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { usePermissions } from "../../hooks/usePermissions";
+import { useCustomerStatuses } from "../../hooks/useCustomerStatuses";
 import { api } from "../../lib/api";
 import { Button } from "../../components/Button";
 import ConfirmModal from "../../components/ConfirmModal";
@@ -31,6 +32,7 @@ import { LoadingBlock, Spinner } from "../../components/loading";
 
 export default function CompanyDetailPage() {
   const { t } = useTranslation();
+  const customerStatuses = useCustomerStatuses();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
@@ -95,7 +97,7 @@ export default function CompanyDetailPage() {
         headerLeft={refreshing ? <Spinner size="sm" /> : undefined}
         headerAction={
             <div className="page-header-actions">
-              <span className={`status-badge status-${company.status}`}>{t(getStatusPresentation("company", company.status).labelKey ?? company.status)}</span>
+              <span className={`badge badge-${getStatusPresentation("company", company.status).badgeVariant}`}>{customerStatuses.nameOf(company.status)}</span>
             </div>
         }
       >

@@ -25,6 +25,7 @@
 - [../../handoff/secretary-chat/design.md](../../handoff/secretary-chat/design.md)（設計 第3版）
 - [../../handoff/secretary-chat/card-a.md](../../handoff/secretary-chat/card-a.md)・[card-b1.md](../../handoff/secretary-chat/card-b1.md)・[card-b2.md](../../handoff/secretary-chat/card-b2.md)（実装カード）
 - [../../handoff/secretary-chat/external-cases.md](../../handoff/secretary-chat/external-cases.md)（外部事例 5W2H・ベクトル DB。要件定義と設計の外部事例欄に使う・2026-11-07）
+- 秘書の「決まり帳」（育てる仕組み・2026-11-12 目標は PO 承認済み・設計審査済み・実装未着手）: [kgi.md](../../handoff/secretary-rulebook/kgi.md)・[recon.md](../../handoff/secretary-rulebook/recon.md)・[design.md](../../handoff/secretary-rulebook/design.md)・[research.md](../../handoff/secretary-rulebook/research.md)
 
 ## ステータス
 - あるべき姿: PO 発言を転記（2026-11-01）
