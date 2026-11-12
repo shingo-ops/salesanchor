@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date
-from typing import Optional
+from typing import Annotated, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -107,6 +107,9 @@ class OwnerRosterResponse(BaseModel):
 
 MEET_NOT_ALLOWED_DETAIL = "Google Meet は Google カレンダーをつないだ本人の予定にだけ付けられます"
 
+RecurrenceValue = Literal["none", "daily", "weekly", "monthly_nth", "monthly_last", "yearly", "weekdays"]
+RecurrenceScope = Literal["this", "following", "all"]
+
 
 class CreateEventBody(BaseModel):
     title: str
@@ -117,6 +120,7 @@ class CreateEventBody(BaseModel):
     location: Optional[str] = None
     is_all_day: bool = False
     add_meet: bool = False
+    recurrence: RecurrenceValue = "none"
 
 
 class UpdateEventBody(BaseModel):
@@ -128,6 +132,9 @@ class UpdateEventBody(BaseModel):
     is_all_day: Optional[bool] = None
     calendar_type: Optional[str] = None
     add_meet: Optional[bool] = None
+    recurrence: Optional[RecurrenceValue] = None
+    scope: Optional[RecurrenceScope] = None
+    occurrence_start: Optional[str] = None
 
 
 class SyncModeBody(BaseModel):
@@ -414,6 +421,10 @@ async def create_event(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="calendar_type は 'shared' または 'personal' を指定してください",
         )
+    # 繰り返しの判定（Meet の判定より前。繰り返しと add_meet が両方あれば recurrence_meet_not_allowed）
+    recurrence_error = cal_svc.check_create_recurrence(body.model_dump())
+    if recurrence_error:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=recurrence_error)
     # Meet は Google をつないだ本人の予定にだけ付ける。判定はサービスを呼ぶ try の前で行う
     # （下の except Exception が HTTPException を 500 に変えてしまうため）
     if body.add_meet and not await cal_svc.can_add_meet(db, tenant_id, user.id):
@@ -452,6 +463,8 @@ async def update_event(
 ):
     """アプリ内のイベントを更新し、Google Calendar に同期する。"""
     payload = body.model_dump(exclude_none=True)
+    scope = payload.pop("scope", None)
+    occurrence_start = payload.pop("occurrence_start", None)
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -459,19 +472,22 @@ async def update_event(
         )
 
     # 権限確認: 自分のイベントか tenant admin（owner / admin のシステムロール）のみ
-    row = await db.execute(
-        text(
-            "SELECT created_by_user_id, calendar_type, user_id, google_event_id, meet_url"
-            " FROM calendar_events WHERE id = :id"
-        ),
-        {"id": event_id},
-    )
-    record = row.first()
-    if not record:
+    event = await cal_svc.read_event(db, event_id)
+    if not event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:calendar_event")
+    # 例外の行は元の行の値で持ち主・見せ方を判定する
+    owner_row = event
+    if event["recurring_event_id"] is not None:
+        owner_row = await cal_svc.read_event(db, event["recurring_event_id"])
+        if not owner_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:calendar_event")
 
-    created_by, event_calendar_type, event_user_id = record[0], record[1], record[2]
-    event_google_id, event_meet_url = record[3], record[4]
+    created_by, event_calendar_type, event_user_id = (
+        owner_row["created_by_user_id"],
+        owner_row["calendar_type"],
+        owner_row["user_id"],
+    )
+    event_google_id, event_meet_url = event["google_event_id"], event["meet_url"]
     event_owner = event_user_id if event_user_id is not None else created_by
     # 他人の「自分だけ」予定は存在しないものとして扱う（管理者でも）
     if event_calendar_type == "personal" and event_owner != user.id:
@@ -494,6 +510,13 @@ async def update_event(
         if payload["calendar_type"] == "personal":
             payload["user_id"] = user.id
 
+    # 繰り返しの判定（Meet の判定より前。422 はどれも下の try の前）
+    recurrence_error = await cal_svc.check_recurrence_request(
+        db, event=event, payload=payload, scope=scope, occurrence_start=occurrence_start
+    )
+    if recurrence_error:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=recurrence_error)
+
     if payload.get("add_meet"):
         # Meet を付けてよいのは、つないだ本人が持ち主の、Google に送ってある予定だけ。
         # 欠けていれば 422 で何も変えない（判定は try の前。上の create_event と同じ理由）
@@ -512,14 +535,26 @@ async def update_event(
             if not payload:
                 return {"id": event_id, "meet_url": event_meet_url}
 
+    is_recurring = event["recurrence_rule"] is not None or event["recurring_event_id"] is not None
     try:
-        result = await cal_svc.update_event(
-            db,
-            tenant_id=tenant_id,
-            event_id=event_id,
-            user_id=user.id,
-            payload=payload,
-        )
+        if not is_recurring and payload.get("recurrence") in (None, "none"):
+            result = await cal_svc.update_event(
+                db,
+                tenant_id=tenant_id,
+                event_id=event_id,
+                user_id=user.id,
+                payload=payload,
+            )
+        else:
+            result = await cal_svc.update_recurring_event(
+                db,
+                tenant_id,
+                user.id,
+                event,
+                payload,
+                scope,
+                cal_svc.parse_occurrence(occurrence_start),
+            )
     except Exception as e:
         logger.error("イベント更新エラー: %s", e)
         raise HTTPException(
@@ -540,24 +575,41 @@ async def delete_event(
     tenant_id: int = Depends(get_current_tenant),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    scope: Annotated[Optional[RecurrenceScope], Query()] = None,
+    occurrence_start: Annotated[Optional[str], Query()] = None,
 ):
     """アプリ内のイベントを削除し、Google Calendar からも削除する。"""
-    row = await db.execute(
-        text("SELECT created_by_user_id, calendar_type, user_id FROM calendar_events WHERE id = :id"),
-        {"id": event_id},
-    )
-    record = row.first()
-    if not record:
+    event = await cal_svc.read_event(db, event_id)
+    if not event:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:calendar_event")
+    # 例外の行は元の行の値で持ち主を確かめる
+    owner_row = event
+    if event["recurring_event_id"] is not None:
+        owner_row = await cal_svc.read_event(db, event["recurring_event_id"])
+        if not owner_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:calendar_event")
+
+    event_owner = owner_row["user_id"] if owner_row["user_id"] is not None else owner_row["created_by_user_id"]
+    if owner_row["calendar_type"] == "personal" and event_owner != user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:calendar_event")
 
-    event_owner = record[2] if record[2] is not None else record[0]
-    if record[1] == "personal" and event_owner != user.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:calendar_event")
-
-    if record[0] != user.id and not is_tenant_admin(await get_user_system_keys(db, user.id)):
+    if owner_row["created_by_user_id"] != user.id and not is_tenant_admin(
+        await get_user_system_keys(db, user.id)
+    ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="削除権限がありません")
 
-    await cal_svc.delete_event(db, tenant_id=tenant_id, event_id=event_id)
+    recurrence_error = await cal_svc.check_recurrence_request(
+        db, event=event, payload=None, scope=scope, occurrence_start=occurrence_start
+    )
+    if recurrence_error:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=recurrence_error)
+
+    if event["recurrence_rule"] is None and event["recurring_event_id"] is None:
+        await cal_svc.delete_event(db, tenant_id=tenant_id, event_id=event_id)
+    else:
+        await cal_svc.delete_recurring_event(
+            db, tenant_id, event, scope, cal_svc.parse_occurrence(occurrence_start)
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -8218,6 +8218,20 @@
             ],
             "title": "Location"
           },
+          "recurrence": {
+            "default": "none",
+            "enum": [
+              "none",
+              "daily",
+              "weekly",
+              "monthly_nth",
+              "monthly_last",
+              "yearly",
+              "weekdays"
+            ],
+            "title": "Recurrence",
+            "type": "string"
+          },
           "start_datetime": {
             "title": "Start Datetime",
             "type": "string"
@@ -38643,6 +38657,53 @@
             ],
             "title": "Location"
           },
+          "occurrence_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurrence Start"
+          },
+          "recurrence": {
+            "anyOf": [
+              {
+                "enum": [
+                  "none",
+                  "daily",
+                  "weekly",
+                  "monthly_nth",
+                  "monthly_last",
+                  "yearly",
+                  "weekdays"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recurrence"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "enum": [
+                  "this",
+                  "following",
+                  "all"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          },
           "start_datetime": {
             "anyOf": [
               {
@@ -44647,6 +44708,43 @@
             "schema": {
               "title": "Event Id",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "this",
+                    "following",
+                    "all"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "occurrence_start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Occurrence Start"
             }
           }
         ],

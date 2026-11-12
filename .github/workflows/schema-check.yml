@@ -168,6 +168,19 @@ jobs:
           { echo "BEGIN;"; echo "SET LOCAL app.is_operator = 'true';"; cat docs/handoff/status-ssot-contact-company/insert-customer-statuses.sql; echo "COMMIT;"; } \
             | psql -h localhost -U jarvis -d jarvis_schema_check_db -v ON_ERROR_STOP=1
 
+      # public.countries と public.prefectures（tenant_NNN.tenant_issuer_profiles の外部キーの参照先・ADR-1061 便2-2c1）
+      # 新しい会社の作り方（tenant.py）が参照するので、テナントを作る前に本物の migration で作る（行は入れない）
+      - name: Create countries and prefectures masters
+        env:
+          PGPASSWORD: testpass
+        run: |
+          psql -h localhost -U jarvis -d jarvis_schema_check_db -v ON_ERROR_STOP=1 \
+            -f migrations/20260621_010000_create_countries_master.sql
+          psql -h localhost -U jarvis -d jarvis_schema_check_db -v ON_ERROR_STOP=1 \
+            -f migrations/20261016_150000_add_viewer_accounts.sql
+          psql -h localhost -U jarvis -d jarvis_schema_check_db -v ON_ERROR_STOP=1 \
+            -f migrations/20261112_150000_create_viewer_contract_public_tables.sql
+
       # public.permissions に最低限のデータを seed する（migration 042 の依存）
       - name: Seed permissions master
         env:

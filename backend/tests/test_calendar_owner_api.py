@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
@@ -177,11 +178,42 @@ async def test_update_sync_mode_none():
 # ---- 便1: 「自分だけ」予定の守り（design.md §13-5） ----
 
 
-def _event_db(created_by, calendar_type, owner, google_event_id=None, meet_url=None):
+def _event_row(created_by, calendar_type, owner, google_event_id=None, meet_url=None, **over):
+    """cal_svc.EVENT_COLUMNS（18 欄）の並びの組。5 つの引数のほかは初期値（上書きは名前で）。"""
+    from app.services import calendar_service as cal_svc
+
+    when = datetime(2026, 11, 12, 10, 0, tzinfo=timezone.utc)
+    values = {
+        "created_by_user_id": created_by,
+        "calendar_type": calendar_type,
+        "user_id": owner,
+        "google_event_id": google_event_id,
+        "meet_url": meet_url,
+        "id": 1,
+        "source": "app",
+        "recurrence_rule": None,
+        "recurring_event_id": None,
+        "original_start_datetime": None,
+        "start_datetime": when,
+        "end_datetime": when + timedelta(hours=1),
+        "is_all_day": False,
+        "is_cancelled": False,
+        "title": "予定",
+        "description": None,
+        "location": None,
+        "category": "meeting",
+    }
+    values.update(over)
+    return tuple(values[name] for name in cal_svc.EVENT_COLUMNS)
+
+
+def _event_db(created_by, calendar_type, owner, google_event_id=None, meet_url=None, **over):
     db = AsyncMock()
     db.commit = AsyncMock()
     db.execute = AsyncMock(
-        return_value=_QueryResult(first=(created_by, calendar_type, owner, google_event_id, meet_url))
+        return_value=_QueryResult(
+            first=_event_row(created_by, calendar_type, owner, google_event_id, meet_url, **over)
+        )
     )
     return db
 
@@ -357,3 +389,102 @@ async def test_update_with_meet_passes_add_meet_when_allowed():
         )
     assert result["meet_url"] == "https://meet.google.com/abc-defg-hij"
     assert upd.call_args.kwargs["payload"]["add_meet"] is True
+
+
+# ---- 便15A: 予定の繰り返し（ADR-1075）の 422 ----
+
+_RULE = "FREQ=WEEKLY;BYDAY=TH"
+_OCC = "2026-11-26T19:00:00+09:00"
+
+
+async def _patch_422(db, body):
+    with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
+        "app.routers.calendar.is_tenant_admin", return_value=False
+    ), patch("app.routers.calendar.cal_svc.update_event", new=AsyncMock()) as upd, patch(
+        "app.routers.calendar.cal_svc.update_recurring_event", new=AsyncMock()
+    ) as upd_rec:
+        with pytest.raises(HTTPException) as exc:
+            await update_event(9, body, tenant_id=1, user=_mock_user(101), db=db)
+    upd.assert_not_called()
+    upd_rec.assert_not_called()
+    assert exc.value.status_code == 422
+    return exc.value.detail
+
+
+@pytest.mark.asyncio
+async def test_single_event_with_scope_is_422():
+    db = _event_db(created_by=101, calendar_type="shared", owner=101)
+    detail = await _patch_422(db, UpdateEventBody(title="x", scope="this", occurrence_start=_OCC))
+    assert detail == "recurrence_scope_not_allowed"
+
+
+@pytest.mark.asyncio
+async def test_recurring_event_without_scope_is_422():
+    db = _event_db(created_by=101, calendar_type="shared", owner=101, recurrence_rule=_RULE)
+    detail = await _patch_422(db, UpdateEventBody(title="x"))
+    assert detail == "recurrence_scope_required"
+
+
+@pytest.mark.asyncio
+async def test_google_source_event_with_recurrence_is_422():
+    db = _event_db(created_by=101, calendar_type="personal", owner=101, source="google")
+    detail = await _patch_422(db, UpdateEventBody(recurrence="weekly"))
+    assert detail == "recurrence_google_source"
+
+
+@pytest.mark.asyncio
+async def test_recurring_event_with_add_meet_is_422_without_patching_can_add_meet():
+    db = _event_db(created_by=101, calendar_type="shared", owner=101, recurrence_rule=_RULE)
+    detail = await _patch_422(
+        db, UpdateEventBody(add_meet=True, scope="all", occurrence_start=_OCC)
+    )
+    assert detail == "recurrence_meet_not_allowed"
+
+
+@pytest.mark.asyncio
+async def test_create_with_recurrence_and_add_meet_is_422():
+    db = AsyncMock()
+    with patch("app.routers.calendar.cal_svc.create_event", new=AsyncMock()) as created:
+        with pytest.raises(HTTPException) as exc:
+            await create_event(
+                CreateEventBody(
+                    title="定例",
+                    start_datetime="2026-11-12T10:00:00+09:00",
+                    end_datetime="2026-11-12T11:00:00+09:00",
+                    add_meet=True,
+                    recurrence="weekly",
+                ),
+                tenant_id=1,
+                user=_mock_user(101),
+                db=db,
+            )
+    assert exc.value.status_code == 422 and exc.value.detail == "recurrence_meet_not_allowed"
+    created.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_delete_recurring_event_without_scope_is_422():
+    db = _event_db(created_by=101, calendar_type="shared", owner=101, recurrence_rule=_RULE)
+    with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
+        "app.routers.calendar.is_tenant_admin", return_value=False
+    ), patch("app.routers.calendar.cal_svc.delete_event", new=AsyncMock()) as dele, patch(
+        "app.routers.calendar.cal_svc.delete_recurring_event", new=AsyncMock()
+    ) as dele_rec:
+        with pytest.raises(HTTPException) as exc:
+            await delete_event(9, tenant_id=1, user=_mock_user(101), db=db, scope=None, occurrence_start=None)
+    assert exc.value.status_code == 422 and exc.value.detail == "recurrence_scope_required"
+    dele.assert_not_called()
+    dele_rec.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_delete_recurring_event_with_scope_routes_to_recurring_service():
+    db = _event_db(created_by=101, calendar_type="shared", owner=101, recurrence_rule=_RULE)
+    with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
+        "app.routers.calendar.is_tenant_admin", return_value=False
+    ), patch("app.routers.calendar.cal_svc.delete_event", new=AsyncMock()) as dele, patch(
+        "app.routers.calendar.cal_svc.delete_recurring_event", new=AsyncMock()
+    ) as dele_rec:
+        await delete_event(9, tenant_id=1, user=_mock_user(101), db=db, scope="all", occurrence_start=_OCC)
+    dele.assert_not_called()
+    assert dele_rec.await_count == 1 and dele_rec.await_args.args[3] == "all"
