@@ -1720,6 +1720,15 @@ class TestUpdateRecurring:
         assert _statuses(db, "synced") == [1] and result["id"] == 1
 
     @pytest.mark.asyncio
+    async def test_d2_moved_exception_shifts_master_from_pressed_occurrence(self):
+        exc = {**_exc(), "start_datetime": _jt(2026, 11, 27, 10), "end_datetime": _jt(2026, 11, 27, 11)}
+        db = _master_db(exc_row=exc)
+        payload = {"start_datetime": _jt(2026, 11, 27, 11).isoformat(), "end_datetime": _jt(2026, 11, 27, 12).isoformat()}
+        await self._run(db, exc, payload, "all", occ=_jt(2026, 11, 26))
+        upd = [p for _i, s, p in db.find("UPDATE calendar_events SET") if p.get("id") == 1][0]
+        assert upd["f_start_datetime"] == _jt(2026, 11, 13, 11) and upd["f_end_datetime"] == _jt(2026, 11, 13, 12)
+
+    @pytest.mark.asyncio
     async def test_d2_recreate_delete_failure(self):
         db = _master_db()
         g = _G(fail=lambda n, a: n == "delete_event")

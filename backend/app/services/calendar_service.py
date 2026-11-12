@@ -711,8 +711,8 @@ def _plan(master: dict, event: dict, payload: dict, occ_dt: datetime, scope: str
     changed_fields = {
         k: payload[k] for k in _TEXT_FIELDS if k in payload and payload[k] != event.get(k)
     }
-    start_shift = (new_start - cur_start) if "start_datetime" in payload else timedelta(0)
-    end_shift = (new_end - cur_end) if "end_datetime" in payload else start_shift
+    start_shift = (new_start - occ) if "start_datetime" in payload else timedelta(0)
+    end_shift = (new_end - (occ + duration)) if "end_datetime" in payload else start_shift
     first = rec.is_first_occurrence(m_start, m_all_day, occ)
     eff = "all" if (scope == "following" and first) else scope
     kind = "this"
@@ -1215,7 +1215,7 @@ async def delete_recurring_event(
         row = event if is_exc else await _find_exception(db, master["id"], occ)
         if row is not None:
             await db.execute(
-                text("UPDATE calendar_events SET is_cancelled = true, sync_status = 'pending' WHERE id = :id"),
+                text("UPDATE calendar_events SET is_cancelled = true WHERE id = :id"),
                 {"id": row["id"]},
             )
             row_id, row_gid = row["id"], row.get("google_event_id")
@@ -1259,7 +1259,7 @@ async def delete_recurring_event(
         cut_rule = rec.with_until(master["recurrence_rule"], rec.until_before(occ, m_all_day))
         gone_ids = await _exception_google_ids(db, master["id"], occ)
         await db.execute(
-            text("UPDATE calendar_events SET recurrence_rule = :r, sync_status = 'pending' WHERE id = :id"),
+            text("UPDATE calendar_events SET recurrence_rule = :r WHERE id = :id"),
             {"r": cut_rule, "id": master["id"]},
         )
         await db.execute(
