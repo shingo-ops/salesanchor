@@ -14,7 +14,7 @@
 | 基準 | 検証方法 |
 |---|---|
 | K0 受け取り側を直しても、ほかの投稿の結果が変わらない | 前（測定済み・recon §7）: 直近30日の v102 のジョブ 2738 件で、保存済みの Gemini の件（extraction_items）のうち「価格 none の2件が同じ価格の行を持つ」ジョブ N0 = 0。便1の変更は条件2・3からこの形でしか結果を変えないので、直近30日の結果は1件も変わらない。後: 便1の反映から14日目に同じ問い合わせ（recon §7 の SQL）を流し、出たジョブを全部目で見る。○ = 出たジョブがすべて「名前の行が並び、その下に売り切れだけの行」の形（0件でも○）。× = それ以外の形が1件でもある |
-| K1 単体試験 | §3-2 の試験を含め、`backend/tests/test_gemini_raw_copy_v101.py`・`test_line_analysis_v102_svc.py`・`test_v102_gap_lines.py`・`test_prompt_ab.py` が CI で緑。既存の重複の試験（recon §4）は書き換えずに緑 |
+| K1 単体試験 | §3-2 の試験を含め、`backend/tests/test_gemini_raw_copy_v101.py`・`backend/tests/test_line_analysis_v102_svc.py`・`backend/tests/test_v102_gap_lines.py`・`backend/tests/test_prompt_ab.py` が CI で緑。既存の重複の試験（recon §4）は書き換えずに緑 |
 | K2 試験でまとめ〆が全部閉じ、似た形を割らない | K2 集合（recon §7。直近30日の候補34投稿を仕分けたもの。仕分けは社外秘の作業記録 bundle-design/k2_labels.md）を新しい指示書と f_dm で2回ずつ読み、v102_items（`run_v102_pipeline` の結果。prompt_ab の item_count は keep_rejected 無しで数えるので使わない）で判定する。○ の条件は3つ全部: (a) 正の集合4投稿で、並んだ商品の行ごとに Sold out の件がある割合が2回とも100%。(b) 負の集合27投稿（商品名の行＋補足の行＋完売）で、Sold out の件の数が f_dm より増えた投稿が2回とも0。(c) 迷う3投稿は合否に入れず、結果を PO への報告に書く。PO への報告には「(a) は4投稿だけで確かめた」と明記する。1回でも (a)(b) を外したら便3の切り替えに進まず、指示書の文を直して PO に報告する |
 | K3 試験でほかの投稿が悪くならない | 前例と同じ157投稿を新しい指示書と f_dm で2回ずつ読み、前例の判定（judge、FINAL=PASS の形）で f_dm に比べて合格。status='none' の行は前例と同じ数え方で0行 |
 | K4 本番でまとめ〆の閉じ漏れが無い | 切り替えの反映から14日、毎朝の〆の点検の手順2c で「まとめ〆の閉じ漏れ」0件、かつ「消しすぎ」0件 |
@@ -44,7 +44,7 @@
 2. 同じファイルの価格の行の辞書4か所を「先に来た件を残す」にする（重なりが無いときの中身は今と同じ）。
    - `:602` `by_price_line`、`:1212` `by_price_line`、`:1474` `owners`、`:1571` `owners`
    - 書き方は、内包表記を `for` と `setdefault` に替える。行番号は実装の時点の origin/main で読み直す。
-3. 触らないもの: `_unpriced_line`（:189-196）、規則13（`line_analysis_v102_svc.py:1135-1165`）、価格の行を集合で使う所（recon §3）、`gemini_raw_copy_v10.py`、`backend/app/tools/prompt_ab.py`（item_count は参考の数で、K2・K3 の判定には使わない）、DB、migrations/、deploy.yml、scripts/、指示書の定数。
+3. 触らないもの: `_unpriced_line`（:189-196）、規則13（`backend/app/services/line_analysis_v102_svc.py:1135-1165`）、価格の行を集合で使う所（recon §3）、`backend/app/services/gemini_raw_copy_v10.py`、`backend/app/tools/prompt_ab.py`（item_count は参考の数で、K2・K3 の判定には使わない）、DB、migrations/、deploy.yml、scripts/、指示書の定数。
 
 ### 3-2. 便1 の試験（新しく足す。既存の試験は書き換えない）
 - T1: 3行「型番A／型番B／〆」に、Gemini が [1,3] と [2,3] の価格 none の2件を返す → 2件とも受理、price_line は2件とも3、rejected なし。
@@ -56,7 +56,7 @@
 - T7: 4か所の辞書は、重なりがあるとき先の件を返す（`:1474` の owners で、〆の行から作る名前が1件目と2件目で同じになる）。
 - T8: 4行「型番A／型番B／型番C／〆」に [1,4]・[2,4]・[2,4] が返る → 1件目と2件目は受理、3件目は duplicate_price_line（3件目の行2は2件目に入っている）。[1,4]・[2,4]・[3,4] なら3件とも受理。
 - T9: 「型番A／（空行）／〆」に [1,3]・[2,3] が返る → 2件目は自分の名前の行が空行だけなので duplicate_price_line。行2が「＝＝＝」や「【〇〇】」だけの行でも同じく落とす。
-- T10: 解析の作り直しの経路（`line_analysis_v102_svc.py:1238` `_fixed_products`、`:1587-1591` `_prepare_v102`）に T1 の保存済みの件を通す → 2件とも残り、2件とも Sold out。
+- T10: 解析の作り直しの経路（`backend/app/services/line_analysis_v102_svc.py:1238` `_fixed_products`、`:1587-1591` `_prepare_v102`）に T1 の保存済みの件を通す → 2件とも残り、2件とも Sold out。
 - T11: 「商品名の行／補足の行／完売」に [1,2,3] の1件だけが返る（今の正しい読み方）→ 今までどおり1件（便1は件を増やさない）。
 - T12: 「型番A／型番B／〆」に [2,3]・[1,2,3] が返る → 2件目は行2も重なるので duplicate_price_line（条件4）。
 
@@ -88,7 +88,7 @@
 
 ### 3-4. 便3 試験と切り替え（定数の PR。GO 記録が要る）
 1. 試験（K2・K3）: 便1の反映後、前例と同じく本番の別のコンテナで prompt_ab を `--config v102 --prompt-key raw_copy_v101_f_bc --repeat 2` で流す。K2 の34投稿は f_dm でも2回流して比べる。費用の上限は `--max-cost-usd 5`（157投稿×2回＋34投稿×2回×2つの指示書＝450回×約0.0089 USD＝約4.0 USD）。前払い残高を PO に見てもらってから流す。判定は v102_items で行う（K2・K3）。
-2. 切り替え PR: 前例 `docs/handoff/v102-prompt-fdm/design.md` §3 の1〜3と同じ箇所の f_dm を f_bc に替える（`line_analysis_v102_svc.py:104,106`、prompt_ab.py・試験の固定値、`docs/specs/line-analysis-tuning/README.md` に1行足す）。行番号は切り替えの時点で読み直す。
+2. 切り替え PR: 前例 `docs/handoff/v102-prompt-fdm/design.md` §3 の1〜3と同じ箇所の f_dm を f_bc に替える（`backend/app/services/line_analysis_v102_svc.py:104,106`、prompt_ab.py・試験の固定値、`docs/specs/line-analysis-tuning/README.md` に1行足す）。行番号は切り替えの時点で読み直す。
 3. 見張りと戻し方は前例 §6・§7 と同じ形（f_dm を f_bc に、f_ct を f_dm に読み替える）。戻し先は f_dm の行（残す）。
 
 ## 4. 影響範囲
@@ -101,7 +101,7 @@
 - 先に来た件を残す辞書で、迷う行の付け直し（:602）が1件目にだけ寄る → 重なりは「価格 none・売り切れの行」に限るので、付け直す行は〆の行の前後の空行か区切りだけ。T7 で確かめる。
 - 便2の書き込みは本番の DB を変える。新しい行を1行足すだけで、precheck で同じ key があれば止まる。戻すときは、その行を使わなければよい（消さない）。
 - 新しい指示書で、補足の行まで別の商品として割ってしまう → 指示書に補足の決まりと例を入れ、K2 (b) の27投稿で確かめる。外したら便3に進まない。
-- 2件を受理したとき、Gemini が「迷う」に〆の行を挙げていると、2件とも要確認になる（`line_analysis_v102_svc.py:264`）。閉じ漏れよりは安全側なので、この設計では変えない。K4 の点検で要確認の件として数えられる。
+- 2件を受理したとき、Gemini が「迷う」に〆の行を挙げていると、2件とも要確認になる（`backend/app/services/line_analysis_v102_svc.py:264`）。閉じ漏れよりは安全側なので、この設計では変えない。K4 の点検で要確認の件として数えられる。
 
 ## 6. 進め方と GO
 - 順番: 設計審査（クラウドの architect）→ 便1の実装カード → クラウドの Sonnet が実装 → CI・reviewer(opus) → GO（ADR-1003 の委任発行）→ マージ・反映 → 便2（PO が `!`）→ 便3の試験 → 結果を PO に報告 → 切り替え PR → GO → マージ・反映 → K4・K5 を見る。
@@ -113,6 +113,7 @@
 - 便1は指示書を替えないので、ADR-1003 の3条件だけで GO を出す（PO への3行のまとめに「直近30日の結果は変わらない（N0=0）」を書く）。
 
 ## 7. 維持の仕組み
+- 守り手: Opus（ccopusgo の設計担当。毎朝の〆の点検の結果と K0 の後の測定を読む）
 - 毎朝の〆の点検（agent-console の定期実行、手順2c）が「まとめ〆の閉じ漏れ」を毎日数える。K4 はこれで見る。
 - 便1の T1〜T12 が、受け取り側の条件が崩れたら CI で止める。
 - K0 の後の測定（便1の反映から14日目）は、Opus が読み取り鍵で recon §7 の SQL を流して数える。結果は社外秘の作業記録と、この設計の台帳に書く。
