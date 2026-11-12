@@ -1,6 +1,7 @@
 # card: 便2-2a 契約と請求書の public の9表・税率の口と画面（ADR-1061）
 
 状態: カード発行（Opus、2026-11-12）。PO の設計承認と実装承認は 2026-11-12「1、推測は禁止して…確立したなら進める。」（ideal-state 54。review.md「2026-11-12 PO の設計承認」）。
+改訂（Opus、2026-11-12）: §2-8 の試験の判定 8 か所を、jest-dom の判定（toHaveTextContent・toBeInTheDocument）から、既存の試験と同じ `.textContent` と `toContain`・`toBeTruthy` へ直した。理由: frontend に jest-dom が入っておらず、1回目の実装が手順8の tsc で TS2339 ×8 で止まったため（`frontend/src/test-setup.ts` は jest-dom を読まない。先例 `frontend/src/pages/super-admin/ViewerAccountsPage.test.tsx:70`）。
 設計: docs/handoff/viewer-contract-stage/design.md §3-4（public の表・tax_rates・RLS :297〜:310）・§3-4b（/super-admin/tax-rates）・§3-4d（税率の画面の置き場）・§8 の A14・A15・A31。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。本番・GitHub の secret・DB には触らない。PR は作らない（Opus が作る）。
 基準: origin/main `9747e2cf1`（#5431 合流後）で行番号を測った（審査の時点 4a8893528 までの間は docs だけの変更で、変更前の文はすべて一致することを審査役が確かめた）。行番号がずれていたら「変更前」の文で場所を探す（同じ文が 2 か所あれば BLOCKED: で停止）。
@@ -1191,16 +1192,16 @@ afterEach(() => {
 it("shows access denied for a non super admin and does not call the API", () => {
   vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: false });
   renderPage();
-  expect(screen.getByRole("alert")).toHaveTextContent(i18n.t("superAdmin.accessDenied"));
+  expect((screen.getByRole("alert")).textContent).toContain(i18n.t("superAdmin.accessDenied"));
   expect(api.get).not.toHaveBeenCalled();
 });
 
 it("lists rates newest first and shows delete only for a rate that has not started", async () => {
   vi.mocked(api.get).mockResolvedValue(LIST);
   renderPage();
-  expect(await screen.findByTestId("tax-rate-row-2")).toHaveTextContent("12.00%");
-  expect(screen.getByTestId("tax-rate-row-1")).toHaveTextContent("10.00%");
-  expect(screen.getByTestId("tax-rate-delete-2")).toBeInTheDocument();
+  expect((await screen.findByTestId("tax-rate-row-2")).textContent).toContain("12.00%");
+  expect((screen.getByTestId("tax-rate-row-1")).textContent).toContain("10.00%");
+  expect(screen.getByTestId("tax-rate-delete-2")).toBeTruthy();
   expect(screen.queryByTestId("tax-rate-delete-1")).toBeNull();
   expect(api.get).toHaveBeenCalledWith("/super-admin/tax-rates");
 });
@@ -1208,7 +1209,7 @@ it("lists rates newest first and shows delete only for a rate that has not start
 it("shows the empty state when there is no rate", async () => {
   vi.mocked(api.get).mockResolvedValue({ today: "2026-11-12", rates: [] });
   renderPage();
-  expect(await screen.findByText(i18n.t("superAdmin.taxRates.noData"))).toBeInTheDocument();
+  expect(await screen.findByText(i18n.t("superAdmin.taxRates.noData"))).toBeTruthy();
 });
 
 it("sends the rate as a string and reloads after adding", async () => {
@@ -1222,7 +1223,7 @@ it("sends the rate as a string and reloads after adding", async () => {
   await waitFor(() =>
     expect(api.post).toHaveBeenCalledWith("/super-admin/tax-rates", { rate_percent: "10.00", effective_from: "2028-01-01" }),
   );
-  expect(await screen.findByTestId("tax-rate-success")).toHaveTextContent(i18n.t("superAdmin.taxRates.addSuccess"));
+  expect((await screen.findByTestId("tax-rate-success")).textContent).toContain(i18n.t("superAdmin.taxRates.addSuccess"));
   expect(api.get).toHaveBeenCalledTimes(2);
 });
 
@@ -1234,7 +1235,7 @@ it("shows the date rule message when the API answers effective_from_invalid", as
   fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.ratePercent")), { target: { value: "10" } });
   fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.effectiveFrom")), { target: { value: "2026-11-12" } });
   fireEvent.submit(screen.getByTestId("tax-rate-form"));
-  expect(await screen.findByTestId("tax-rate-error")).toHaveTextContent(i18n.t("superAdmin.taxRates.errorDateInvalid"));
+  expect((await screen.findByTestId("tax-rate-error")).textContent).toContain(i18n.t("superAdmin.taxRates.errorDateInvalid"));
 });
 
 it("deletes a future rate after confirmation", async () => {
@@ -1245,7 +1246,7 @@ it("deletes a future rate after confirmation", async () => {
   const confirmButtons = await screen.findAllByRole("button", { name: i18n.t("superAdmin.taxRates.deleteBtn") });
   fireEvent.click(confirmButtons[confirmButtons.length - 1]);
   await waitFor(() => expect(api.delete).toHaveBeenCalledWith("/super-admin/tax-rates/2"));
-  expect(await screen.findByTestId("tax-rate-success")).toHaveTextContent(i18n.t("superAdmin.taxRates.deleteSuccess"));
+  expect((await screen.findByTestId("tax-rate-success")).textContent).toContain(i18n.t("superAdmin.taxRates.deleteSuccess"));
 });
 ```
 
