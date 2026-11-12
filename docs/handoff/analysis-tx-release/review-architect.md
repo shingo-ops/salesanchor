@@ -26,5 +26,24 @@ VERDICT: REVISE — 中 2 つ（例外を受け止める範囲、K3 の非同期
 | 低 | やり直したとき previous_pairs・prior_current は 2 回目の値を使うと明記 | §5-1 の 7・10 |
 | 低 | recon §2-3 は 4 か所、design §6 は 5 か所で数え方がそろわない | §6 の表に数え方を書いた |
 
-## 2 回目
+## 2 回目（2026-11-12 08:09〜08:10 UTC・クラウド architect・claude-opus-5-5・読むだけ）
+
+- 対象: 枝の先頭 1f7260c84（審査役が `git log -1` で確かめた）。試験は流していない。
+
+### 結論
+VERDICT: REVISE — K3 で保存を 1 回目の計算のときだけにすると書き足せば実装に渡せる。
+
+### 確かめて問題なしとした点（要約）
+- 1 回目の指摘 7 件は全部 design.md に入っていた。
+- §5-1 の新しい流れは `backend/app/services/line_analysis_v102_svc.py` :1526-1583 と食い違わない（head :1537-1550 は try の外、tail :1559-1566 は try の中、マスタ :1554 は try の外）。2 回目の ValueError は except で受け、理由の UPDATE が 0 行になるだけ。
+- K3 の SET LOCAL は `save_value_override` とぶつからない。鍵（`backend/app/services/v102_human_decisions_svc.py` :593）より前の rollback は断るとき（:590）と `find_job_of_item` の失敗（:305）だけ、commit は最後の :627 だけ。直す前の main では 2 秒で例外 → except → empty_stats で赤。
+
+### 指摘と直した場所（design.md）
+| 重さ | 指摘 | 直した場所 |
+|---|---|---|
+| 中 | K3: 保存が「1 回目の計算のときだけ」と書かれていない。直した後は鍵を持ったまま 2 回目の計算をするので、そこでも保存すると直した後も赤になる。呼ばれた回数 2 も確かめる | §5-2 K3 |
+| 低 | 2 回目の読みで早い return の判定をどこに置くか。empty_stats の total は何回目の件数か | §5-1 の 9 |
+| 低 | 状態の欄が「低 4」、表は低 5 | 冒頭の状態の欄 |
+
+## 3 回目
 （審査待ち）

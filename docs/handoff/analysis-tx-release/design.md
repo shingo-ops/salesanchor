@@ -3,7 +3,7 @@
 
 **親**: `docs/handoff/app-idle-tx/design.md`（K5 の残り）・`docs/handoff/replay-tx-release/design.md`（試しの道具の同じ型。§2 で本番の解析は別の設計で扱うとした）。**関連 ADR**: ADR-1037（移行の鍵待ち・反映前の点検）、ADR-1070（接続の返却時の後始末）、ADR-1032（復活止め）、ADR-1015（区分）。  
 **日付**: 2026-11-12。**担当**: Planner（Opus）。  
-**状態**: 設計案作成済み。自己審査（同一 AI）済み。PO 承認済み（2026-11-12「1」＝クラウドで設計を審査し、直す所を直してから実装に進む）。クラウドの設計審査 1 回目 REVISE（中 2・低 4。`docs/handoff/analysis-tx-release/review-architect.md`）→ 全件を本文に反映。2 回目の審査待ち。実装未着手。  
+**状態**: 設計案作成済み。自己審査（同一 AI）済み。PO 承認済み（2026-11-12「1」＝クラウドで設計を審査し、直す所を直してから実装に進む）。クラウドの設計審査 1 回目 REVISE（中 2・低 5）→ 全件を本文に反映。2 回目 REVISE（中 1・低 2）→ 全件を本文に反映（記録は `docs/handoff/analysis-tx-release/review-architect.md`）。3 回目の審査待ち。実装未着手。  
 **PO の選択**: 2026-11-12「1」（直し方の設計に進む。実装の前にもう一度確認）。  
 **根拠**: `docs/handoff/analysis-tx-release/recon.md`（以下 recon）。行番号は origin/main a3e93f053。
 
@@ -22,7 +22,7 @@ KGI: 本番の作業係（celery worker）の解析で、「投稿日を読ん�
 |---|---|---|---|
 | K1 | 本番で 30 分読み取り、解析が 5 回以上ある時間帯に、作業係の送り元で「最後の文が投稿日の SELECT」の 5 秒より長い取引が 0 本 | recon §1 と同じ読み取り専用の数え方（2 秒ごと 900 回）を PO の同意票で流す。作業係の記録の「starting v102 analysis」の回数で 5 回以上を確かめる | 30 分で 7 本（最長 39 秒以上）。2026-11-12 |
 | K2 | 計算（run_v102_pipeline）を呼ぶ時点と、計算が終わった時点の両方で、セッションに開いた取引が無い（計算が裏で DB を読まない） | 新しい試験（実 DB）。run_v102_pipeline を本物を呼ぶ包みに差し替え、呼ぶ前と返った後に `session.in_transaction()` が False であることを確かめる。直す前の main に当てると赤になる出力を PR に貼る | 開いている（recon §2-1） |
-| K3 | 計算の間に同じ投稿の人の判断が保存されたら、その判断が結果に入る | 新しい試験。差し替えた計算の中で人の判断を別セッションで保存し、結果の行にその判断が反映されることと、記録「inputs changed」が 1 行出ることを確かめる | 今は鍵で待たせて守っている |
+| K3 | 計算の間に同じ投稿の人の判断が保存されたら、その判断が結果に入る | 新しい試験。差し替えた計算の中で人の判断を別セッションで保存し、結果の行にその判断が反映されることと、記録「inputs changed」が 1 行出ること、計算の呼ばれた回数が 2 であることを確かめる（保存は 1 回目の計算の中だけ。§5-2） | 今は鍵で待たせて守っている |
 | K3b | 計算の間に何も変わらなければ、計算は 1 回だけで「inputs changed」の記録が出ない | 新しい試験（実 DB。`backend/tests/test_line_analysis_v102_pg.py` と同じ組み立て）。計算の呼ばれた回数が 1 | 1 回 |
 | K4 | 解析の結果が変わらない | 既存の試験が CI で緑。特に `backend/tests/test_line_analysis_v102_pg.py`・`backend/tests/test_line_analysis_v102_svc.py`（:600-663 の 3 本は計算で例外を出す形。読み直しの前で止まるので、commit が 1 回増えても判定は変わらない見込み。実装役が実際に流して確かめる）・`backend/tests/test_adr1032_revival_guard.py`・`backend/tests/test_analysis_failed_record.py`・`backend/tests/test_reextract_v6_with_v102_pg.py`・`backend/tests/test_v102_human_decisions.py` | 緑 |
 | K5 | 次の移行ありの本番反映 3 回で、点検の段の記録に作業係の握り手が 1 行も出ない | deploy の記録の点検の段を読んで数える | 未計測（11/12 の 2 回は移行なし） |
@@ -71,7 +71,8 @@ KGI: 本番の作業係（celery worker）の解析で、「投稿日を読ん�
 8. 違えば `logger.info("[line_analysis] v102 inputs changed; recomputing under lock: job=%s", ...)` を 1 行出し、鍵を持ったまま 2 回目に読んだ値で `_MappingError` の判定・準備・計算をやり直し、書いて commit する（今と同じ動き。やり直しは 1 回だけ）。
 9. 4〜8 は全部 1 つの try の中。例外の扱い（:1571-1577：rollback → 理由を書く → commit → empty_stats を返す）は今と同じ。
    - 7 の 2 回目の読みで ctx が無い（計算の間に job が消えた）ときは、`_read_v102_head` が ValueError を出し、この try の except で受ける。理由を書く UPDATE は 0 行になり、empty_stats を返す（送出しない。1 回目の ValueError だけが今と同じく呼び出し元へ出る）。
-   - 7 の 2 回目の読みで早い return の条件（件が 0 で応答が読めなかった理由あり）になったときは、今の早い return と同じく empty_stats を返す（commit も rollback もしない）。
+   - 7 の 2 回目の読みでも、早い return の判定は head の直後・tail の前に置く（1 回目と同じ位置）。条件（件が 0 で応答が読めなかった理由あり）になったときは、今の早い return と同じく empty_stats を返す（commit も rollback もしない）。
+   - empty_stats の total は、最後に読み終えた rows の件数にする（2 回目の head が読めたら 2 回目の件数。2 回目の head で ValueError が出たときは 1 回目の件数）。今の「その時読んだ件数」と同じ意味。
 10. 付け直し（:1578-1580 `_merge_supplier_products`）に渡す previous_pairs と prior_current は、**2 回目に読んだ値**を使う。記録（:1581）は今と同じ。
 
 触らない範囲: 書き込み（`_write_results`）・計算（`run_v102_pipeline`）・付け直し（`_merge_supplier_products`）の中身、鍵の名前（`v102_analysis_lock_key`）、保存側の 2 か所、呼び出し元 5 か所。
@@ -82,6 +83,7 @@ KGI: 本番の作業係（celery worker）の解析で、「投稿日を読ん�
 - K2: `run_v102_pipeline` を本物を呼ぶ包みに差し替え、呼ぶ前と返った後の `session.in_transaction()` を記録する。両方 False で合格。直す前は True。マスタは辞書と dataclass で返る（`backend/app/services/line_analysis_v102_svc.py` :217-241）ので、commit 後に読み直しは起きない見込み。返った後の確かめでそれを守る。
 - K3: 差し替えた計算の中で、別のセッションから同じ投稿の人の値の直し（`save_value_override`）を保存する。終わった後の結果の行にその直しが入っていることと、「inputs changed」の記録が 1 行あることを確かめる。
   - `save_value_override` は非同期の関数（`backend/app/services/v102_human_decisions_svc.py` :574-575、引数は `db: AsyncSession` とキーワード引数）。同期の差し替えの中から、`create_async_engine(pg[2])` と `AsyncSession` で開き、`asyncio.run(...)` で呼ぶ。前例は `backend/tests/test_line_analysis_v102_pg.py` :273-280（URL 型のまま渡す。`engine.dispose()` を finally で）。
+  - 保存は差し替えた計算の **1 回目の呼び出しのときだけ** 行う（呼ばれた回数を数え、2 回目以降は保存せず本物の計算だけ呼ぶ）。直した後は §5-1 の 8 で鍵を持ったまま 2 回目の計算をするので、そこで保存すると鍵待ちで赤になるため。確かめる項目に「計算の呼ばれた回数が 2」を足す。
   - 直す前の main では保存が鍵で待ち、試験が止まる。そのため保存の取引の最初に `SET LOCAL lock_timeout = '2s'` を流す。直す前の main では、計算の差し替えの中で例外が出て、:1571 の except が empty_stats を返すので、結果の行に直しが入らず赤になる。
 
 ## 6. 弊害と対処
