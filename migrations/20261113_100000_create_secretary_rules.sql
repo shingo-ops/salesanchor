@@ -2,7 +2,7 @@
 -- 設計: docs/handoff/secretary-rulebook/design.md §4・§6 の①・§12 便1。手順書: docs/handoff/secretary-rulebook/card-bin1.md
 -- RLS: 2 表とも ENABLE と FORCE。読む・書くとも「自社の会社文脈 OR 運営文脈」（型 C の書く側の式。読む側の USING (true) は使わない）
 -- 冪等: 表と索引は IF NOT EXISTS。CHECK は表を作る文の中に書く。方針は DROP POLICY IF EXISTS の後に作る。使いみちの CHECK は定義に値が無いときだけ付け替える
--- ロールバック: migrations/20261113_100000_create_secretary_rules_down.sql（手動実行のみ）
+-- ロールバック: migrations/20261113_100001_create_secretary_rules_down.sql（手動実行のみ）
 
 BEGIN;
 
