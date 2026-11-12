@@ -639,7 +639,7 @@ def reassign_ambiguous(
     by_price_line: dict = {}
     for i, it in enumerate(items):
         by_price_line.setdefault(it["price_line"], i)
-    new_lines =[list(it["lines"]) for it in items]
+    new_lines = [list(it["lines"]) for it in items]
     reassigned: dict[int, list[dict]] = {}
     review: dict[int, list[dict]] = {}
     for n, kind in sorted(ambiguous.items()):
@@ -1251,7 +1251,7 @@ def _f2_prefixes(
     by_price_line: dict = {}
     for i, it in enumerate(items):
         by_price_line.setdefault(it["price_line"], i)
-    found:dict[int, tuple[str, dict]] = {}
+    found: dict[int, tuple[str, dict]] = {}
     for i, item in enumerate(items):
         before = prev.get(item["price_line"])
         j = by_price_line.get(before) if before is not None else None
