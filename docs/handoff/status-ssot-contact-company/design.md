@@ -211,7 +211,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 | K10 RLS の下で外部キーが働く | backend/tests/test_customer_statuses_pg.py が緑（会社の領域の利用者で会社を作れる・表に無い値は断られる） |
 | K11 まとめる先がアーカイブのときの文に仕組みの言葉が0件 | `frontend/src/lib/apiErrorReason.test.ts` で merge_target_archived → 文に master・archived・active・merge_target が無い。`backend/tests/test_api_error_reason_sync.py` が緑 |
 | K12 migration が新しい表に値を書くと止まる | 便3 の後、`scripts/migration-guard/protected-tables.txt` に customer_statuses がある。`python3 scripts/check-migration-value-writes.py repo` が緑。便1・便2 の PR の Migration guard が緑（一覧に足すのが便3 なので確認8 に当たらない） |
-| K13 便2 が CI の migration 検査を通る | 便2 の PR の Migration SQL Test が緑（変更 SQL・全件ドライラン・2周目の冪等）。加えて、2周目の記録に便2 の ALTER が1つも出ない（§5 の飛ばす条件） |
+| K13 便2 が CI の migration 検査を通る | 便2 の PR の Migration SQL Test が緑（変更 SQL・全件ドライラン・2周目の冪等）。加えて、2周目の記録に便2 の ALTER が1つも出ない（§5 の飛ばす条件）。後半は CI では確かめられず（tenant_001 に contacts が無い）、本番で不合格だった → §15 便4 で直し、デプロイの記録で確かめる |
 
 ## 9. 未決（PO に1件ずつ）
 
@@ -315,3 +315,58 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 - 6回目（2026-11-12 05:01 JST・クラウド Opus・d0d93a95d）: **REVISE**。K15 は流して○×が付くと確認した（今は6行で×、設計どおりの文の写しなら0行で○）。§6-3-4 の行番号・K4・K14 は実物と一致し、未決5・6 は実装役が迷わないと確認した。直した2件: (1) K7 にどの文を取り出すかが書かれておらず、ファイル全体を grep すると60行当たった。値だけを取り出す jq の命令を書き足した。基準値は Opus が同じ命令で origin/main に流して ja 6・en 6 と実測した。審査役の「14行」は別の取り出し方での数なので採らない。 (2) §6-3-4 の試験の項（design.md:177）に残っていた古い文「キーを分けたら合わせる」を、キーを分けない今の方針に合わせて直した。
 - 7回目（2026-11-12 05:19 JST・クラウド Opus・f0ee07d6e）: **REVISE**。K7 は ja 6・en 6 で基準値と一致し○×が付くと確認した。未決5 の事実（受け取る値・消える側・400 で止まる・編集画面の道）は実物と一致した。直した3件: (1) 重大: 未決5 のどちらの選択肢でも既存の試験 FullPageFormButtonMigration.test.tsx が落ちるのに手当てが無かった。Opus が行を確かめ（審査役の「:180」は実物では `:181`。ほかに `:182-183`・`:203` も当たる）、選択肢ごとの直し方を書いた。 (2) 6回目の記録の節番号を §6-3-2 から §6-3-4 に直した。 (3) 冒頭の状態の行の「5回目の審査が要る」を直した。
 - 8回目（2026-11-12 05:29 JST・クラウド Opus・ee66d38c7）: **APPROVE**。未決5 の試験の行（`:177`・`:181-183`・`:203`）と道（`frontend/src/App.tsx:213`）が実物と合うと確認した。小さな書き足し2件を反映した: (1) 選択肢1 で窓が読む道の答えを試験の偽の GET に足す（Opus が `frontend/src/components/FullPageFormButtonMigration.test.tsx:78-83` で、知らない道は例外を投げると確かめた） (2) 冒頭の状態の行に7回目の反映を書いた。
+
+## 15. 便4: 古い移行 037 が CHECK を足し直す件の直し（2026-11-12 追加）
+
+### 15-1. 目的と成功条件（KGI）
+
+- PO の言葉（2026-11-12）: 「11」＝「古い移行の直しを、設計から始める」。目的: 移行を流すデプロイのたびに、担当者（contacts）の表に鍵を取りに行く処理を0回にする。
+- 成功条件（○×）: この便を入れたデプロイの記録で (a) `migration 037: … CHECK 制約に pending_dedup_review を追加` が0行・037 の完了の行が「新規追加 0 テナント」 (b) `customer_status_fk: … を外部キーに付け替えた` が0行 (c) 読み取りの鍵で K2（外部キー10本・convalidated・status の CHECK 0本）が変わらず ○。
+
+### 15-2. 現在地（事実）
+
+- デプロイ 43149812899（2026-11-12 12:48 JST）の記録 `/tmp/CC報告ファイル/bin3/deploy-43149812899.log`:
+  - `:3468` `[21/398] psql < migrations/037_add_pending_dedup_review_to_contacts_check.sql`、`:3470-3474` tenant_001/003/004/005/006 の5行「CHECK 制約に pending_dedup_review を追加」、`:3475`「新規追加 5 テナント」。
+  - `:7529` `[397/398] … 20261112_140000_customer_status_fk.sql`、`:7531-7535` 同じ5領域の contacts を「外部キーに付け替えた」。companies の行は0（028 は CREATE TABLE の中の CHECK で、足し直さない）。
+- 原因: `migrations/037_add_pending_dedup_review_to_contacts_check.sql:118-133` は「pending_dedup_review を含む status の CHECK があれば飛ばす」だけ。便2 が CHECK を外したので、CHECK が無い → `:136-140` で `ADD CONSTRAINT contacts_status_check` に進む。続いて `migrations/20261112_140000_customer_status_fk.sql:41-46` の飛ばす条件（外部キーが有効・かつ CHECK が無い）が崩れ、`:56` で DROP する。2つで毎回足して外すを繰り返す。
+- 順番: `scripts/run_all_migrations.sh:311`（037）→ `:1263`（便2）。全件を毎回流す（ADR-1037）。
+- CI が見逃した理由（2026-11-12 CI run 43164959836 の記録で直した。前の版の「tenant_001 に contacts が無い」は誤り）: 1周目・2周目を流す段（127本）は tenant_001・tenant_002 に contacts があり、037 は「新規追加 2 テナント」を出す。ただしこの段は便2 の migration（20261112_140000）を流さないので、往復は起きない。便2 まで流す全件ドライラン（372本）は ✅ の行だけを出し、NOTICE を出さないので、往復が起きても見えない。§8 K13 の後半（2周目に便2 の ALTER が出ない）を CI で確かめる手段が無かったのに、K13 を CI の項目にした（Opus の設計漏れ）。
+- 既存 migration を直す前例: ADR-1002（`docs/adr/ADR-1002-unify-product-id-and-fix-migration-compat.md:39`・`:132`）は、既存 migration に先頭のガードを足して冪等を保つ。テーブルがある場合の動きは変えない、という形。CI に「既存 migration の編集を止める」検査は無い（`git grep -n -i -E "immutable|diff-filter=M" origin/main -- .github/workflows scripts` の当たりは workflow-lint.yml の注釈1件だけ）。
+- 新しい会社の領域: `backend/app/services/tenant.py:224`・`:254` は status 列に名前なしの `REFERENCES public.customer_statuses(code)` を付ける。PostgreSQL は名前なしの列の外部キーに `<表>_<列>_fkey` と名前を付ける（公式 tutorial-fk.html の例 `weather_city_fkey`、Context7 /websites/postgresql で確認）。便2 の migration も同じ名前 `contacts_status_fkey` を使う（`:24`）。
+
+### 15-3. 変更（案と選んだ理由）
+
+- 選ぶ案: 037 の会社の領域ごとのループで、contacts の表の有無を見た直後（`:64-71` の後）に、「contacts に名前 `contacts_status_fkey` の外部キー（contype='f'）があれば、何もせず次へ」を足す。数えて完了の行に「外部キー済 % テナント」を足す。
+  - 外部キーがあるなら値の決まりは表 public.customer_statuses が持つ（ADR-1076）。CHECK を足す理由が無い。
+  - 外部キーが無い領域（空の DB で 029→037 と流すとき・CI）は今までと同じ動き。
+  - 足すのは pg_constraint を読むだけ。contacts の表に鍵を取らない。
+  - 表の名前 customer_statuses を足す行に書かない（`scripts/migration-guard/protected-tables.txt` に載っているため、`scripts/check-migration-value-writes.py` の確認8 が足した行に表の名前を見ると止める。§14 3回目 M1 と同じ理由）。名前と contype で見分ける。
+- 採らない案:
+  - 便2 の migration 側で CHECK を見逃す: 037 は毎回 CHECK を足すので、contacts の鍵は1回は取る。目的に届かない。
+  - 037 を run_all_migrations.sh から外す: 空の DB から作る道（CI の全件ドライラン）で、029 の3つの値の CHECK のまま便2 まで進む。便2 で外れるので結果は同じだが、登録の一覧を変えるのは影響が広い（全件ドライランと登録先の点検 `.github/workflows/migration-test.yml:56`）。ガード1つの方が小さい。
+  - 新しい migration で 037 の後始末をする: 037 が足す → 新しいものが外す、の往復が残る。
+- 便2 の migration は変えない（037 が足さなければ `:41-46` で飛ぶ）。
+
+### 15-4. 機械の見張り（同じ種類を二度と通さない）
+
+- PostgreSQL の試験 `backend/tests/test_customer_statuses_pg.py` に1つ足す: tenant.py の表の形の使い捨て DB（`_fresh()`）で、管理役で 037 → 便2 の migration をこの順に2回流す（`tests.rls_bootstrap._apply_migration`）。037 を流した直後に (1) その領域の companies・contacts に status の CHECK が0本、便2 を流した直後に (2) `contacts_status_fkey` と `companies_status_fkey` の oid が流す前と同じ（外して付け直していない）を確かめる。
+  - 037 のガードを消すと (1) が落ちる（便2 のあとでは CHECK は外れているので、037 の直後に見る）。便2 が外部キーを付け直す形に壊れると (2) が落ちる。
+  - CI の全件ドライランで見えない理由（§15-2: 便2 まで流す372本の段は NOTICE を出さない）を、本番と同じ表の形の試験で埋める。
+- 残る隙（この便では作らない・次の候補）: 372本の全件ドライランは NOTICE を出さないので、別の表で同じ往復が起きても CI は気づかない。NOTICE を出す・往復を数える件は別テーマとして台帳に置く。
+
+### 15-5. 受入条件と確かめ方
+
+| 基準 | 検証方法 |
+|---|---|
+| K16 037 は外部キーのある領域で何もしない | 15-4 の試験が CI（PostgreSQL の試験）で緑。ガードの行を消すと落ちることを、実装役がクラウドで1回確かめて報告に書く（消したまま commit しない） |
+| K17 外部キーの無い空の DB では今までと同じ | PR の Migration SQL Test（変更 SQL の1回目・2回目・全件ドライラン1周目・2周目）が緑 |
+| K13 後半（直し） | この便のデプロイの記録で `/usr/bin/grep -a -c "CHECK 制約に pending_dedup_review を追加"` が0、`/usr/bin/grep -a -c "外部キーに付け替えた"` が0、037 の完了の行で「新規追加 0 テナント」、かつ「外部キー済」の数が contacts のある領域の数と同じ（今の本番は5。領域が増えたらその数） |
+| K2 変わらない | 読み取りの鍵で、5領域の companies・contacts に `*_status_fkey` 10本（convalidated）・status の CHECK 0本 |
+
+### 15-6. 弊害・戻し方・GO
+
+- 弊害: 名前が `contacts_status_fkey` でない外部キーには効かない。いまの作り方は2つ（便2・tenant.py）とも同じ名前になる（15-2）。名前を変えるときは K16 の試験が落ちて気づく。
+- 戻し方: この便の commit を戻す PR（037 の動きが元に戻るだけ。DB の形は変わらない）。
+- GO: migrations を含むので危険 PR（ADR-136）。委任の GO（ADR-1003）で Opus が出す。DB の形は変えない（この便のデプロイで流れても ALTER は0のはず）が、デプロイ前の自動バックアップを確かめて GO 記録に書く。
+- 外部事例: 使わない。理由: 当社の移行の流し方（毎回全件）と当社の記録で原因が決まり、効果は K13 の記録の行数で直接測れる。§12 の GitLab・GoCardless は「鍵を取る移行は短く・少なく」の根拠として引き続き当てはまる。
+- 審査: 1回目（2026-11-12 14:17 JST・クラウド Opus・a886aa22b）**APPROVE**（必須0件）。ガードの名前が便2 と tenant.py の外部キーの名前と合う・CI の tenant_001 は contacts が無く動きが変わらない・確認8 に当たらない・試験はガードを消すと落ちる・037 の行番号は実物と合う・companies を含めほかの往復は無い、を確認。推奨2件を反映: K13 後半の「外部キー済」を領域の数で書く／カード手順4 の diff に台帳の札も出ると書く。
