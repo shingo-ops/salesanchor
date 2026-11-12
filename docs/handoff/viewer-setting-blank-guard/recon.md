@@ -4,7 +4,7 @@
 
 - 親（あるべき姿・KGI）: [在庫の閲覧専用ページ](../../specs/inventory-management/inventory-viewer/README.md)（既存の延長）
 - 設計: [design.md](./design.md)
-- 日付: 2026-11-12 ／ 土台: `origin/main` = 6b086f13c ／ 担当: Claude Opus（設計担当）
+- 日付: 2026-11-12 ／ 土台: origin/main（6b086f13c） ／ 担当: Claude Opus（設計担当）
 
 ## 0. 既存 ADR の検索（STANDARD-WORKFLOW Phase 2）
 
@@ -19,7 +19,7 @@
 
 | 時刻 | 出来事 | 根拠 |
 |---|---|---|
-| 11/10 18:35 | 配信の設定「何時間以内の投稿を出すか」が空で保存された | 本番 Loki の PUT `/api/v1/tcg/distribution/settings/max_age_hours` の記録（調査メモ loki-*.json） |
+| 11/10 18:35 | 配信の設定「何時間以内の投稿を出すか」が空で保存された | 本番 Loki の PUT /api/v1/tcg/distribution/settings/max_age_hours の記録（調査メモ loki-*.json） |
 | 11/10 18:36〜 | 在庫の作り置きが毎分失敗（理由: 未設定のため配信しない） | worker のログ `[viewer-cache]` |
 | 11/10 18:47〜 | 警報 ViewerInventoryStale が鳴る。11/12 まで 14 件 | `public.ops_incidents`（reader 鍵で集計） |
 | 11/11 12:51 | 同じ空保存がもう一度起きた | 本番 Loki の PUT 記録 |

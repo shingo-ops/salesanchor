@@ -48,7 +48,7 @@
 - 確かめ方: 読む側と同じ関数 `_max_age_hours`（:202）を使う。`_max_age_hours({"max_age_hours": value})` が None なら `InvalidSettingValue` を送出する。読む規則と書く規則が 1 か所になる。
 - backend/app/routers/tcg_distribution.py:216-228 は `InvalidSettingValue` を受けて 422（detail `invalid_setting_value`）を返す。UPDATE は走らせない。
 - 変更前: 何でも保存する。変更後: 空・空白・整数でない・負は 422。`0`（無制限）と正の整数は今までどおり。
-- 試験: backend/tests/ に `test_distribution_settings_validation.py` を新設。K1 の 4 種で 422 と値が変わらないこと、K2 の 2 種で 200。
+- 試験: backend/tests/ に test_distribution_settings_validation.py を新設。K1 の 4 種で 422 と値が変わらないこと、K2 の 2 種で 200。
 - 触らない: 読む側の `_max_age_hours` と `build_distribution_rows`。key が他の設定の扱い。
 
 ### 5-2. 画面で押させない（便2・frontend）
@@ -70,7 +70,7 @@
   - 札: `tier: page`、`severity: critical`。
   - 6 時間の理由: 写しの寿命は 24 時間（viewer_inventory_cache.py:33）。夜中に鳴っても、朝に直す時間が 12 時間以上残る。
 - 届け先: monitoring/alertmanager/alertmanager.yml の routes に `tier="page"` の受け先を足す。今の受け先（認証の警報も来る場所）とは別の Discord の場所へ送る。`continue: true` で ops-api にも今までどおり送る。
-- 新しい Discord の場所と webhook の鍵は PO が作る（secrets の変更は PO）。鍵は prod2 の `/etc/alertmanager/secrets/` に置く。
+- 新しい Discord の場所と webhook の鍵は PO が作る（secrets の変更は PO）。鍵は prod2 の /etc/alertmanager/secrets/ に置く。
 - 試験: monitoring/prometheus/tests/alert_rules_test.yml に「6 時間で鳴る」「5 時間 59 分では鳴らない」の 2 件。monitoring/scripts/check_alert_rules.py の検査を通す。
 - 手順書: docs/runbooks/alerts.md に `ViewerInventoryExpiring` の節を足す。最初に見るものは設定の値と `[viewer-cache]` のログ。
 - 除く: backend/app/tasks/viewer_inventory_cache.py:62-70 のテナント 4 宛ての Discord 通知。届け先が 0 件で 1 度も届いていない。届け先の正本は Alertmanager（ADR-1012）。失敗の記録（ログと回数）は残す。
@@ -104,7 +104,7 @@
 
 | 基準 | 検証方法 |
 |------|---------|
-| K1: 空・空白・`abc`・`-1` が 422 で値が変わらない | CI pytest `backend/tests/test_distribution_settings_validation.py`（便1で新設） |
+| K1: 空・空白・`abc`・`-1` が 422 で値が変わらない | CI pytest backend/tests/test_distribution_settings_validation.py（便1で新設） |
 | K2: `0` と `48` が保存できる | CI pytest 同上 |
 | K3: 閉じているとき「保存」0 個 | Evaluator（Playwright の画面試験・便2で新設） |
 | K4: 読み込み失敗で保存を押せない | Evaluator（Playwright の画面試験・便2で新設） |
