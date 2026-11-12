@@ -8,6 +8,7 @@
  */
 import { STATUS_PRESENTATION_MAP, type StatusDomain } from "../../../utils/statusPresentation";
 import { SectionHeader } from "./_shared";
+import { useCustomerStatuses } from "../../../hooks/useCustomerStatuses";
 
 const DOMAIN_LABELS: Record<StatusDomain, string> = {
   lead:          "リード (LeadStatus)",
@@ -38,6 +39,7 @@ const BUCKET_LABELS: Record<Bucket, string> = {
 
 export function StatusSection() {
   const domains = Object.keys(STATUS_PRESENTATION_MAP) as StatusDomain[];
+  const customerStatuses = useCustomerStatuses();
 
   return (
     <>
@@ -65,7 +67,7 @@ export function StatusSection() {
                   className={`badge badge-${presentation.badgeVariant}`}
                   title={`bucket: ${presentation.bucket}`}
                 >
-                  {status}
+                  {domain === "contact" || domain === "company" ? customerStatuses.nameOf(status) : status}
                 </span>
               ))}
             </div>

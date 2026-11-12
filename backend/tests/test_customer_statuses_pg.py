@@ -162,3 +162,84 @@ async def test_status_foreign_keys_exist_and_old_checks_are_gone():
         assert found.get(("contacts", "contacts_status_fkey")) == ("f", True)
         assert ("companies", "companies_status_check") not in found
         assert ("contacts", "contacts_status_check") not in found
+
+
+def _repo_sql_codes() -> set[str]:
+    """docs/handoff/status-ssot-contact-company/insert-customer-statuses.sql の4行の code。"""
+    import re
+    from pathlib import Path
+
+    sql = (
+        Path(__file__).resolve().parents[2]
+        / "docs" / "handoff" / "status-ssot-contact-company" / "insert-customer-statuses.sql"
+    ).read_text("utf-8")
+    return set(re.findall(r"^\s*\('([a-z_]+)'\s*,", sql, re.MULTILINE))
+
+
+async def test_k14_enums_match_table_codes_and_insert_sql():
+    from sqlalchemy import text
+
+    from app.schemas.company import CompanyStatus
+    from app.schemas.contact import ContactStatus
+
+    async with _fresh() as (admin_engine, _app, _lead):
+        async with admin_engine.connect() as conn:
+            table_codes = {
+                r[0] for r in (await conn.execute(text("SELECT code FROM public.customer_statuses"))).all()
+            }
+    assert {s.value for s in CompanyStatus} == table_codes
+    assert {s.value for s in ContactStatus} == table_codes
+    assert _repo_sql_codes() == table_codes
+
+
+async def test_k14_list_customer_statuses_has_selectable_on_create_like_table():
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.services.customer_statuses import (
+        STATUS_PENDING_DEDUP_REVIEW,
+        list_customer_statuses,
+    )
+
+    async with _fresh() as (admin_engine, _app, _lead):
+        async with AsyncSession(admin_engine) as db:
+            rows = await list_customer_statuses(db)
+            table = (
+                await db.execute(
+                    text(
+                        "SELECT code, selectable_on_create FROM public.customer_statuses ORDER BY sort_order"
+                    )
+                )
+            ).all()
+    assert [r["code"] for r in rows] == [r[0] for r in table]
+    assert all("selectable_on_create" in r and "name_ja" in r and "name_en" in r for r in rows)
+    assert {r["code"]: r["selectable_on_create"] for r in rows} == {r[0]: r[1] for r in table}
+    assert {r["code"] for r in rows if not r["selectable_on_create"]} == {STATUS_PENDING_DEDUP_REVIEW}
+
+
+async def test_k14_api_customer_statuses_returns_table_rows():
+    from types import SimpleNamespace
+
+    from fastapi import FastAPI
+    from httpx import ASGITransport, AsyncClient
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.auth import dependencies as auth_deps
+    from app.auth.dependencies import get_current_tenant, get_current_user
+    from app.routers import customer_statuses as router_mod
+    from app.services.customer_statuses import list_customer_statuses
+
+    async with _fresh() as (_admin, app_engine, _lead):
+        async with AsyncSession(app_engine) as db:
+            app = FastAPI()
+            app.include_router(router_mod.router, prefix="/api/v1")
+            app.dependency_overrides[router_mod.get_db] = lambda: db
+            app.dependency_overrides[auth_deps.get_db] = lambda: db
+            app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=7, is_super_admin=False)
+            app.dependency_overrides[get_current_tenant] = lambda: _TENANT
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                res = await client.get("/api/v1/customer-statuses")
+            expected = await list_customer_statuses(db)
+    assert res.status_code == 200
+    assert res.json() == expected
+    assert all("selectable_on_create" in row for row in res.json())

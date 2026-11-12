@@ -24,6 +24,9 @@ import { RadioControl } from "./RadioControl";
 import { TextField } from "./TextField";
 import { Textarea } from "./Textarea";
 import { LoadingBlock } from "./loading";
+import { getStatusPresentation } from "../utils/statusPresentation";
+import { useCustomerStatuses } from "../hooks/useCustomerStatuses";
+import { CUSTOMER_STATUS_CODES } from "../lib/customerStatuses";
 
 interface CompanyOption {
   id: number;
@@ -49,6 +52,7 @@ const SEARCH_DEBOUNCE_MS = 250;
 
 export default function MergeCompanyModal({ open, source, onMerged, onCancel }: Props) {
   const { t } = useTranslation();
+  const customerStatuses = useCustomerStatuses();
   const [candidates, setCandidates] = useState<CompanyOption[]>([]);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -93,7 +97,7 @@ export default function MergeCompanyModal({ open, source, onMerged, onCancel }: 
           // （重複の両方が候補登録されているケース）。ただし backend 側で master が
           // archived だと 409 を返すので archived はリスト時点で外しておく。
           const filtered = rows.filter(
-            (r) => r.id !== source.id && r.status !== "archived",
+            (r) => r.id !== source.id && r.status !== CUSTOMER_STATUS_CODES.archived,
           );
           setCandidates(filtered);
           setResultsCapped(rows.length >= PER_PAGE_CAP);
@@ -231,7 +235,7 @@ export default function MergeCompanyModal({ open, source, onMerged, onCancel }: 
                         <td>{c.company_code}</td>
                         <td>{c.name}</td>
                         <td>
-                          <span className={`status-badge status-${c.status}`}>
+                          <span className={`badge badge-${getStatusPresentation("company", c.status).badgeVariant}`}>
                             {c.status}
                           </span>
                         </td>
@@ -293,7 +297,10 @@ export default function MergeCompanyModal({ open, source, onMerged, onCancel }: 
                   {t("mergeCompany.confirmDesc2", { sourceName: source.name })}
                 </li>
                 <li>
-                  {t("mergeCompany.confirmDesc3")}
+                  {t("mergeCompany.confirmDesc3", {
+                    pending: customerStatuses.nameOf(CUSTOMER_STATUS_CODES.pendingDedupReview),
+                    active: customerStatuses.nameOf(CUSTOMER_STATUS_CODES.active),
+                  })}
                 </li>
                 <li>{t("mergeCompany.confirmDesc4")}</li>
               </ul>

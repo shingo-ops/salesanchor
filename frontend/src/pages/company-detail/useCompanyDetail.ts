@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { useAuth } from "../../contexts/AuthContext";
 import { useApiQuery } from "../../lib/query/apiQuery";
+import { CUSTOMER_STATUS_CODES } from "../../lib/customerStatuses";
 import type {
   Company, Contact, Tab, AddressFormState, BasicFormState, CompanyAddress,
   ContactFormState, DiscordFormState,
@@ -112,7 +113,7 @@ export function useCompanyDetail(id: string | undefined) {
         payment_recipient_name: toNull(basicForm.payment_recipient_name),
         fedex_account: toNull(basicForm.fedex_account),
         shipping_note: toNull(basicForm.shipping_note),
-        status: basicForm.status || "active",
+        status: basicForm.status || CUSTOMER_STATUS_CODES.active,
         notes: toNull(basicForm.notes),
       };
       await api.patch(`/companies/${company.id}`, payload);
@@ -233,7 +234,7 @@ export function useCompanyDetail(id: string | undefined) {
     setError("");
     setDedupSubmitting(true);
     try {
-      await api.patch(`/companies/${company.id}`, { status: "active" });
+      await api.patch(`/companies/${company.id}`, { status: CUSTOMER_STATUS_CODES.active });
       setDedupConfirmOpen(false);
       await load();
     } catch (err) {
@@ -271,7 +272,7 @@ export function useCompanyDetail(id: string | undefined) {
         is_primary_contact: contactForm.is_primary_contact,
         primary_email: toNull(contactForm.primary_email),
         primary_phone: toNull(contactForm.primary_phone),
-        status: contactForm.status || "active",
+        status: contactForm.status || CUSTOMER_STATUS_CODES.active,
       };
       if (contactForm.id === null) {
         await api.post("/contacts", payload);
