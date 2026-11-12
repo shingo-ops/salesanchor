@@ -85,7 +85,10 @@ origin/main の次の行が、表の「基準の中身」を含むこと。1 つ
 
 手順6 構文と書式の確かめ（失敗したら直してから進む。§2・§3 の外を直す必要が出たら NEEDS_DECISION:）
     cd "$(git rev-parse --show-toplevel)" && python3 -m py_compile docs/handoff/single-set-category/data/bin3/rejudge_single_set.py backend/tests/test_single_set_rejudge_tool.py
-    cd "$(git rev-parse --show-toplevel)/backend" && ruff check ../docs/handoff/single-set-category/data/bin3/rejudge_single_set.py tests/test_single_set_rejudge_tool.py 2>&1 | tail -20
+    cd "$(git rev-parse --show-toplevel)/backend" && ruff check --select F ../docs/handoff/single-set-category/data/bin3/rejudge_single_set.py 2>&1 | tail -20
+    cd "$(git rev-parse --show-toplevel)/backend" && ruff check tests/test_single_set_rejudge_tool.py 2>&1 | tail -20
+
+    道具のファイルは手本の書き方（1 行に複数の文など）を残すので、名前の誤りと使っていない import だけを見る（`--select F`）。CI の ruff は `app/` だけを見る（`.github/workflows/test.yml:90`）。
 
 手順7 §4 の検索を流す（出力は報告に入れる）
 
@@ -103,7 +106,7 @@ origin/main の次の行が、表の「基準の中身」を含むこと。1 つ
 
 ## 2. 直し（`docs/handoff/single-set-category/data/bin3/rejudge_single_set.py`）
 
-手本の動き（仕入元ごとに 1 つの取引で流す・`s.commit = s.flush` に差し替える・最後に必ず ROLLBACK・元に戻ったかを `back != before` で確かめる・commit モードは expected.json と全件同じ仕入元だけ書く・書く前を SNAP_PATH に足す・書いた後に読み戻して試走と比べる）は変えない。直すのは次の 12 点だけ。
+手本の動き（仕入元ごとに 1 つの取引で流す・`s.commit = s.flush` に差し替える・最後に必ず ROLLBACK・元に戻ったかを `back != before` で確かめる・commit モードは expected.json と全件同じ仕入元だけ書く・書く前を SNAP_PATH に足す・書いた後に読み戻して試走と比べる）は変えない。直すのは次の 14 点だけ。
 
 2-1 冒頭の説明文（docstring）を、この便の説明に書き換える。中身: 13 商品をシングルセット系へ付け替えた後、その商品の行を持つ投稿をシステム段だけ解析し直す。目当ての合格は「商品はそのまま・単位 Set・状態の群 single・bundle_size なし」。PO 2026-11-13「1」。手本の 466062 と「30周年」の語は残さない。
 
@@ -111,12 +114,17 @@ origin/main の次の行が、表の「基準の中身」を含むこと。1 つ
 ```python
 PIDS = (465992, 466031, 466062, 466088, 466165, 466166, 466167, 466168, 466169, 466170, 466171, 466172, 466173)
 SINGLE_SET_CATEGORY = 15  # PC_SINGLE_SET（便2 で本番に入れた区分）
-SOLDOUT_BASES = (svc.CONDITION_BASIS_SOLDOUT_REF, "SOLDOUT_INHERIT")  # 〆が前の行の状態を写した印（design.md §2 KGI 1）
+SOLDOUT_BASES = (svc.CONDITION_BASIS_SOLDOUT_REF, soldout_ref.CONDITION_BASIS_SOLDOUT_INHERIT)  # 〆が前の行の状態を写した印（design.md §2 KGI 1）
 EXCL_PATH = os.environ.get("EXCL_PATH", "/m/excluded.json")
 LOCK_TIMEOUT = "1s"  # ADR-1037。PO の台本が PGOPTIONS で付ける。付いていなければ止まる
 ```
+import の所に `from app.services import gemini_raw_copy_v102_soldout_ref as soldout_ref` を 1 行足す（`from app.services import line_analysis_v102_svc as svc` の次の行）。
 
 2-3 `DISCOVER` の内側の条件 `WHERE ar.product_id = :pid AND ar.condition_canonical = 'Single'` を `WHERE ar.product_id = ANY(:pids)` にする（置き換え済みの行も含める＝design.md §5 便3 手順 3）。`discover` の中の `q(s, DISCOVER, pid=PID)` を `q(s, DISCOVER, pids=list(PIDS))` にする。
+さらに `DISCOVER` を次のとおり直す。
+- 並べ方 `ORDER BY sm.received_at, ej.id` を `ORDER BY COALESCE(sm.line_posted_at, sm.received_at), sm.received_at, ej.id` にする（〆の参照と価格の引き継ぎは `line_posted_at` で前の投稿を決める＝`backend/app/services/line_analysis_v102_svc.py:1344-1374`）。
+- 選ぶ列に `sm.line_posted_at` と、13 商品の現行の行の数 `(SELECT count(*) FROM public.analysis_results ar3 JOIN public.extraction_items e3 ON e3.id = ar3.extraction_item_id WHERE e3.extraction_job_id = ej.id AND ar3.product_id = ANY(:pids) AND ar3.is_current) AS cur_rows` を足す。
+- `discover` の終わりで、`line_posted_at` が空の投稿の数を `[PRE] line_posted_at が空の投稿 N 件` で出す。
 
 2-4 `ROWS` に 2 列を足す。`ar.ship_en` の後ろに `, ar.bundle_size::text AS bundle_size, lc.value_group` を足し、`LEFT JOIN public.analysis_results ar ON ar.extraction_item_id = ei.id` の後ろに `LEFT JOIN public.line_conditions lc ON lc.id = ar.condition_id` を足す（状態の群は `public.line_conditions.value_group`。`public.conditions` はその写しの view＝`migrations/20260922_080000_rename_line_analysis_tables.sql:83`）。
 
@@ -131,31 +139,42 @@ def exclusion_reasons(r):
     if r["status"] != "done": why.append(f"status={r['status']}")
     return why
 ```
-`discover` の戻り値の 2 つ目（外した投稿）を、id の一覧から `[{"job": r["job"], "ch": r["ch"], "received_at": str(r["received_at"]), "why": why} ...]` に変える（K5 の数え方がこの一覧を使う）。
+`discover` の戻り値の 2 つ目（外した投稿）を、id の一覧から `[{"job": r["job"], "ch": r["ch"], "received_at": str(r["received_at"]), "cur_rows": r["cur_rows"], "why": why} ...]` に変える（K5 の数え方がこの一覧を使う。`cur_rows` は PO に見せる「外した投稿の行の数」＝design.md §5 便3 手順 3）。`[EXCLUDE]` の行にも `cur_rows` を出す。
 
 2-7 目当ての行の判定を関数に出す。
 ```python
 def classify_target(t, a):
-    """t=前の行・a=後の行（無ければ None）。戻り値 (判定, 後の形)。判定は OK / NG / SOLDOUT。"""
+    """t=前の行・a=後の行（無ければ None）。戻り値 (判定, 後の形)。判定は OK / NG / SOLDOUT。
+    単位と bundle_size は SOLDOUT でも見る（KGI 2 は〆の行を外さない）。状態の群だけ SOLDOUT を別にする（KGI 1）。"""
     if a is None:
         return "NG", "行が無い"
     key = f"{a['product_id']}/{a['unit_canonical']}/{a['condition_canonical']}/{a['value_group']}/bundle={a['bundle_size']}/cur={a['is_current']}"
-    if a["product_id"] != t["product_id"]:
+    if a["product_id"] not in PIDS:
         return "NG", key
+    if t["product_id"] in PIDS and a["product_id"] != t["product_id"]:
+        return "NG", key
+    if a["unit_canonical"] != "Set" or a["bundle_size"] is not None:
+        return "NG", key
+    if a["value_group"] == "single":
+        return "OK", key
     if a["condition_basis"] in SOLDOUT_BASES:
         return "SOLDOUT", key
-    if a["unit_canonical"] == "Set" and a["value_group"] == "single" and a["bundle_size"] is None:
-        return "OK", key
     return "NG", key
 ```
 
-2-8 `judge_channel` の目当ての行を、`r["product_id"] == PID and r["condition_canonical"] == "Single"` から `r["product_id"] in PIDS` に替える。`good` と `key` を作る所は `classify_target(t, a)` を呼ぶ形にし、tally のキーは `(判定, 後の形)`、出力の印は `[TARGET-OK]`・`[TARGET-NG]`・`[TARGET-SOLDOUT]` の 3 つにする。印の行には前の形（`unit_canonical`/`condition_canonical`/`value_group`/`bundle_size`/`condition_basis`/`is_current`）と `p`・`q` を出す。`out["jobs"][ej]` に `"targets": [{"item": 行の id, "before": 前の形, "after": 後の形, "label": 判定}]` を足す（changes.json に入り、commit の照合にも入る）。
+2-8 `judge_channel` の目当ての行を、`r["product_id"] == PID and r["condition_canonical"] == "Single"` から「前の行か後の行（同じ item_id）の product_id が `PIDS` に入る行」に替える（解析し直しで後から 13 商品に変わった行も目当てに入れる。K5 はその行も数えるため）。`good` と `key` を作る所は `classify_target(t, a)` を呼ぶ形にし、tally のキーは `(判定, 後の形)`、出力の印は `[TARGET-OK]`・`[TARGET-NG]`・`[TARGET-SOLDOUT]` の 3 つにする。印の行には前の形（`unit_canonical`/`condition_canonical`/`value_group`/`bundle_size`/`condition_basis`/`is_current`）と `p`・`q` を出す。`out["jobs"][ej]` に `"targets": [{"item": 行の id, "before": 前の形, "after": 後の形, "label": 判定}]` を足す（changes.json に入り、commit の照合にも入る）。
 
-2-9 ロック待ちの上限。`main` の最初（`_get_sync_session()` の直後）で `SHOW lock_timeout` を読み、`[PRE] lock_timeout=値` を出す。`LOCK_TIMEOUT` と違えば `stop("lock_timeout が 1s でない（PGOPTIONS が付いていない）")`。
+2-9 ロック待ちの上限。`main` の最初（`_get_sync_session()` の直後）で `SHOW lock_timeout` を読み、`[PRE] lock_timeout=値` を出す。`LOCK_TIMEOUT` と違えば `stop("lock_timeout が 1s でない（PGOPTIONS が付いていない）")`。読んだ後に `s.rollback()` を呼ぶ。
 
-2-10 解析の失敗印を投稿ごとに見る。`run_v102_analysis` は中で失敗すると `session.rollback()` する（`backend/app/services/line_analysis_v102_svc.py` の `run_v102_analysis` の `except Exception:` の所）。試走中にこれが起きると、同じ仕入元の前の投稿の試走まで消える。そこで、`trial` の中で `run_v102_analysis` を呼ぶたびに、その投稿の `extraction_jobs.review_reasons` を読み、`svc.REASON_SEPARATOR` で分けた中に `svc.REASON_EXTRACT_EXCEPTION` があれば、その仕入元の試走をそこで止める（`finally` の ROLLBACK と `s.commit` の戻しは今のまま通す）。戻り値は `None, None, "仕入元 {ch[:8]} の投稿 {ej[:8]} で extract_exception が付いた"`。commit モードの本実行でも、呼ぶたびに同じものを読み、あれば `stop(...)` で全体を止める。
+2-10 解析の失敗印を投稿ごとに見る。`run_v102_analysis` は中で失敗すると `session.rollback()` する（`backend/app/services/line_analysis_v102_svc.py` の `run_v102_analysis` の `except Exception:` の所）。試走中にこれが起きると、同じ仕入元の前の投稿の試走まで消える。そこで、`trial` の中で `run_v102_analysis` を呼ぶたびに、その投稿の `extraction_jobs.review_reasons` を読み、`svc.REASON_SEPARATOR` で分けた中に `svc.REASON_EXTRACT_EXCEPTION` があれば、その仕入元の試走をそこで止める。止め方: 印（例 `broke = ej`）を立てて繰り返しを `break` で抜け、`after` は作らない。`finally` の ROLLBACK と `s.commit` の戻しは今のまま通し、その後の `back != before` の確かめも今のまま通す（確かめが合わなければ手本どおりそちらの err を返す）。確かめが合ったら `None, None, "仕入元 {ch[:8]} の投稿 {broke[:8]} で extract_exception が付いた"` を返す。commit モードの本実行でも、呼ぶたびに同じものを読み、あれば `stop(...)` で全体を止める。
 
-2-11 例外で全体を落とさない（dryrun だけ）。`main` の仕入元の繰り返しで、`trial` と `judge_channel` を `try:` で包む。`except Exception as e:` では `s.rollback()` を呼び、`[NG] 仕入元 {ch[:8]} 例外 {type(e).__name__}: {str(e)[:300]}` を出し、その仕入元を飛ばした仕入元に入れて次へ進む。commit モードでは包まずに今のまま落とす（`stop` と同じく、書いた投稿の数を出してから終える）。
+2-11 例外の扱い。
+- dryrun: `main` の仕入元の繰り返しで、`trial` と `judge_channel` を `try:` で包む。`except Exception as e:` では `s.rollback()` を呼び、`[NG] 仕入元 {ch[:8]} 例外 {type(e).__name__}: {str(e)[:300]}` を出し、その仕入元を飛ばした仕入元に入れて次へ進む。
+- commit: 仕入元の繰り返しの中身全部（試走・照合・本実行・読み戻し）を `try:` で包む。本実行の `run_v102_analysis` を呼ぶ直前に、その投稿の id を `IN_FLIGHT = ej`（モジュールの変数）に入れる。`COMMITTED.append(ej)` は今のまま成功の後に置く。`except Exception as e:` では `s.rollback()` を呼び、`stop(f"仕入元 {ch[:8]} 途中の投稿 {IN_FLIGHT} で例外 {type(e).__name__}: {str(e)[:300]}。この投稿の review_reasons と system_review_detail が書き換わったかもしれない。戻す材料は before_snapshot の job")` で全体を止める（`stop` は書いた投稿の数を出す）。`stop` の `SystemExit` は包みの外へそのまま出す（`except Exception` は `SystemExit` を拾わない）。
+
+2-13 商品の確かめを 13 商品に広げる（手本の `main` の `[PRE] 商品` の所）。`WHERE id=:i` を `WHERE id = ANY(:pids)` にし、`pids=list(PIDS)` で読む。13 行あること・すべて `is_active` が True・すべて `product_category_id` が `SINGLE_SET_CATEGORY` であることを確かめ、違えば `stop("13 商品のどれかが無い・止まっている・区分がシングルセット系(15)でない")`。`[PRE]` には id と区分と is_active だけを出す（名前は出さない）。
+
+2-14 仕入元ごとの所要時間。`[SUM-CH]` の行の終わりに、その仕入元の試走にかかった秒数を足す（試走の間は投稿の鍵を握り続けるので、本番の解析を待たせた長さの目安になる）。
 
 2-12 書いた後の不一致で全体を止める（commit モード）。手本は `[NG-WRITE]` の後も次の仕入元へ進む。これを、`[NG-WRITE]` を出したらすぐ `stop("仕入元 {ch[:8]} の読み戻しが試走と違う。ここで止めた")` にする。dryrun の終わりでは、changes.json と別に `EXCL_PATH` へ外した投稿の一覧（2-6 の形）を書き、`[excluded] 外した投稿 N 件を保存 パス` を出す。
 
@@ -227,6 +246,20 @@ def test_classify_soldout_is_separate():
         assert t.classify_target(_row(), after)[0] == "SOLDOUT"
 
 
+def test_classify_soldout_still_checks_unit_and_bundle():
+    t = _tool()
+    assert t.classify_target(_row(), _row(condition_basis="SOLDOUT_REF", unit_canonical="Piece"))[0] == "NG"
+    assert t.classify_target(_row(), _row(condition_basis="SOLDOUT_REF", bundle_size="3"))[0] == "NG"
+    assert t.classify_target(_row(), _row(condition_basis="SOLDOUT_REF"))[0] == "OK"
+
+
+def test_classify_row_that_moved_in_or_out():
+    t = _tool()
+    assert t.classify_target(_row(product_id=1), _row())[0] == "OK"
+    assert t.classify_target(_row(), _row(product_id=1))[0] == "NG"
+    assert t.classify_target(_row(), _row(product_id=466031))[0] == "NG"
+
+
 def test_classify_key_shows_shape():
     t = _tool()
     label, key = t.classify_target(_row(), _row(bundle_size="5", is_current=False))
@@ -238,11 +271,12 @@ ruff が行の長さ（120 字）で止めた行は、引数の切れ目で折�
 ## 4. 検索（出力を報告に入れる）
 
 手順7 の命令
-    cd "$(git rev-parse --show-toplevel)" && grep -n "PID\b\|SET_CATEGORY\|466062\|30周年" docs/handoff/single-set-category/data/bin3/rejudge_single_set.py | head -20
-    cd "$(git rev-parse --show-toplevel)" && grep -n "PIDS\|SINGLE_SET_CATEGORY\|SOLDOUT_BASES\|EXCL_PATH\|LOCK_TIMEOUT\|bundle_size\|value_group\|exclusion_reasons\|classify_target\|REASON_EXTRACT_EXCEPTION\|NG-WRITE" docs/handoff/single-set-category/data/bin3/rejudge_single_set.py | head -60
-    cd "$(git rev-parse --show-toplevel)" && git diff origin/main --stat | tail -10
+    cd "$(git rev-parse --show-toplevel)" && grep -n -w "PID\|SET_CATEGORY\|30周年" docs/handoff/single-set-category/data/bin3/rejudge_single_set.py | head -20
+    cd "$(git rev-parse --show-toplevel)" && grep -n "466062" docs/handoff/single-set-category/data/bin3/rejudge_single_set.py | head -5
+    cd "$(git rev-parse --show-toplevel)" && grep -n "PIDS\|SINGLE_SET_CATEGORY\|SOLDOUT_BASES\|EXCL_PATH\|LOCK_TIMEOUT\|IN_FLIGHT\|line_posted_at\|cur_rows\|bundle_size\|value_group\|exclusion_reasons\|classify_target\|REASON_EXTRACT_EXCEPTION\|NG-WRITE" docs/handoff/single-set-category/data/bin3/rejudge_single_set.py | head -80
+    cd "$(git rev-parse --show-toplevel)" && git diff origin/main...HEAD --stat | tail -10
 
-期待: 1 つ目は `PIDS` の中の 466062 の 1 行だけ（`PID` 単独・`SET_CATEGORY` 単独・「30周年」は 0 行）。2 つ目は §2 で足した所。3 つ目は §5 の 2 本と、この枝に先にある Opus の 3 本（このカード・手本・台帳）だけ。
+期待: 1 つ目は 0 行（単独の `PID`・単独の `SET_CATEGORY`・「30周年」が残っていない）。2 つ目は `PIDS` の定義の 1 行だけ。2 つ目は §2 で足した所。3 つ目は §5 の 2 本と、この枝に先にある Opus の 3 本（このカード・手本・台帳）だけ。
 
 ## 5. 変えるファイル（これ以外は変えない）
 
@@ -275,7 +309,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 
 ## 7. 合格の形
 
-- 手順6: py_compile は何も出さずに終わる。ruff は `All checks passed!`
+- 手順6: py_compile は何も出さずに終わる。ruff は 2 本とも `All checks passed!`（道具は `--select F`）
 - 手順7: §4 の期待のとおり
 - 手順10: HEAD と origin の枝が同じ sha。`--stat` に削除の行が無い（`-` だけの行が無い）
 
