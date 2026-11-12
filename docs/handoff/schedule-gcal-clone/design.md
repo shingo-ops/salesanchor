@@ -1455,13 +1455,13 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 - G1 1 回目かどうか: 画面は回が 1 回目かを自分で決めない（例外の行は元の行の始まりを持たないため）。一覧の 1 件ごとに `is_first_occurrence`（真偽）を足す。広げた回は `rec.is_first_occurrence(元の始まり, 終日か, 回の始まり)`（`backend/app/services/calendar_recurrence.py:235`）。例外の行は元の行の始まりと終日で同じ関数に `original_start_datetime` を渡す。元の行が同じ結果に無いときの引き直し（`backend/app/services/calendar_service.py:302-308`）で `start_datetime`・`is_all_day` も読む。単発の行は偽、検索で返る元の行は真。危ない道（`migrations/` 等）は含まない。
 - G2 422 の文: 受け口が返す 8 つの識別の文字（`backend/app/services/calendar_service.py:677-831`）を、画面の共通の表 `frontend/src/lib/apiErrorReason.ts` `API_ERROR_REASON_KEYS` に 8 行足し、ja・en の `apiError` に「起きたこと＋次にすること」の文を足す（ADR-1071）。突き合わせの試験 2 つの数を 9 → 17 に直す。
-- G3 Esc と近道: 3 択の小窓が開いている間、近道（`SchedulePageImpl.tsx:1219` の window の keydown）は何もしない。全画面の編集の閉じる（`:1566`）も何もしない（金型 Modal と金型 EditorPage が両方 document で Esc を受けるため・Esc で 3 択だけを閉じる）。3 択の小窓はページの一番外（近道の一覧 `:1539` の隣）に置く。
+- G3 Esc と近道: 3 択の小窓が開いている間、近道（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1221` の window の keydown）は何もしない。全画面の編集の閉じる（`:1566`）も何もしない（金型 Modal と金型 EditorPage が両方 document で Esc を受けるため・Esc で 3 択だけを閉じる）。3 択の小窓はページの一番外（近道の一覧 `:1539` の隣）に置く。
 - G4 「custom」: 一覧の `recurrence` が `custom`（7 つの値で表せない決まり）の予定は選ぶ欄と詳しくの行を出さない。3 択は出す。`recurrence` は下書きの値が予定の値と違うときだけ送る（作るときは「繰り返さない」以外のときだけ送る）。
 - G5 選べる値と開始日: 選び方は下書きの開始日から作る（G70）。画面で「この開始日では使えない」を先に止めることはしない（サーバーの決まりの始まりは回の日と違うことがあるため）。サーバーの 422 を G2 の文で出す。すでに繰り返している予定で、今の選び方が開始日から作った並びに無いときは、その値を回の始まりの日から作った文字で並びに足す。新しい予定・単発の予定で開始日を変えて選んでいた「毎月 第 N」「毎月 最終」が使えなくなったときは、もう一方に入れ替える（どの日もどちらかは必ず使える。1〜28 日は「第 N」、29〜31 日は「最終」が必ず在る）。これは §12.5（:1409）の「画面は開始日が変わるたびに選び方を作り直し、今の選び方が無くなったら送らずに i18n のキーの誤りの文を出す」を置き換える（新しい予定・単発は入れ替えで選べない形が起きない。繰り返している予定はサーバーの決まりの始まりが回の日と違うことがあり、画面では正しく判定できないため、サーバーの 422 を G2 の文で出す）。
 - G6 動かすとき: 動かした予定・始まり・終わり・終日・元に戻す関数を覚えておき、2 択の「キャンセル」と Esc で元に戻す関数を呼ぶ。
 - G7 金型: 3 択の小窓は金型 `ConfirmModal`（`frontend/src/components/ConfirmModal.tsx`。金型 Modal の size sm・「キャンセル」と「OK」のボタン）に、選び方を金型 `Radio`（`frontend/src/components/Radio.tsx`）で入れる。§12.6 の「Modal と RadioControl」より、ボタンの並びを新しく書かずに済む。並べる箱は新しい CSS の 1 クラス（`display: flex`・`flex-direction: column`・`gap: var(--space-2)`）だけ。
 - G8 並べ方: 終日のチェックと選ぶ欄を 1 段に並べる新しい CSS の 1 クラス（`display: flex`・`flex-wrap: wrap`・`align-items: center`・`gap: var(--space-3)`）を `frontend/src/pages/schedule.css` の `.schedule-editor-dates`（:531）の隣に足す。色・寸法の直値は書かない（ADR-067）。
-- G9 社員への見せ方を変えたとき: サーバーは「この予定」で見せ方を変えると 422（`recurrence_this_not_allowed`・`calendar_service.py:828-829`）。選び方を変えたときと同じく、3 択から「この予定」を外す（1 回目は小窓を出さず all）。G2 の文は残す（守りの二重）。
+- G9 社員への見せ方を変えたとき: サーバーは「この予定」で見せ方を変えると 422（`recurrence_this_not_allowed`・`backend/app/services/calendar_service.py:828-829`）。選び方を変えたときと同じく、3 択から「この予定」を外す（1 回目は小窓を出さず all）。G2 の文は残す（守りの二重）。
 - G10 回でない予定（単発）: 今と同じ。小窓を出さず、scope と回の始まりを送らない（G77）。
 
 ### 12.7 Google との同期（ADR-1057・ADR-1059 の範囲の中）
