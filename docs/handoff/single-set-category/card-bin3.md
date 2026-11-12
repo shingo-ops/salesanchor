@@ -139,7 +139,7 @@ def exclusion_reasons(r):
     if r["status"] != "done": why.append(f"status={r['status']}")
     return why
 ```
-`discover` の戻り値の 2 つ目（外した投稿）を、id の一覧から `[{"job": r["job"], "ch": r["ch"], "received_at": str(r["received_at"]), "cur_rows": r["cur_rows"], "why": why} ...]` に変える（K5 の数え方がこの一覧を使う。`cur_rows` は PO に見せる「外した投稿の行の数」＝design.md §5 便3 手順 3）。`[EXCLUDE]` の行にも `cur_rows` を出す。
+`discover` の戻り値の 2 つ目（外した投稿）を、id の一覧から `[{"job": r["job"], "ch": r["ch"], "received_at": str(r["received_at"]), "cur_rows": r["cur_rows"], "why": why} ...]` に変える（K5 の数え方がこの一覧を使う。`cur_rows` は PO に見せる「外した投稿の行の数」＝design.md §5 便3 手順 3）。`[EXCLUDE]` の行にも `cur_rows` を出す。この一覧は commit の照合にも入るので、試走から書き込みまでの間に同じ仕入元へ新しい投稿が届くと、照合が合わずに書く前に止まる（安全な向き。その時は試走からやり直す）。
 
 2-7 目当ての行の判定を関数に出す。
 ```python
@@ -168,19 +168,19 @@ def classify_target(t, a):
 
 2-10 解析の失敗印を投稿ごとに見る。`run_v102_analysis` は中で失敗すると `session.rollback()` する（`backend/app/services/line_analysis_v102_svc.py` の `run_v102_analysis` の `except Exception:` の所）。その後に `extract_exception` を書き、`system_review_detail` を空にして確定する（同ファイル :1631-1637）。ロック待ち 1s の切れもこの道を通る。
 - dryrun: `trial` の中で `run_v102_analysis` を呼ぶたびに、その投稿の `extraction_jobs.review_reasons` を読む。`svc.REASON_SEPARATOR` で分けた中に `svc.REASON_EXTRACT_EXCEPTION` があれば、その仕入元の試走をそこで止める。止め方: 印（例 `broke = ej`）を立てて繰り返しを `break` で抜け、`after` は作らない。`finally` の ROLLBACK と `s.commit` の戻しは今のまま通す。その後の `back != before` の確かめも今のまま通す（合わなければ手本どおりそちらの err を返す）。合ったら `None, None, "仕入元 {ch[:8]} の投稿 {broke[:8]} で extract_exception が付いた"` を返す。
-- commit: 本実行で呼ぶたびに同じものを読む。あれば、その投稿は本番に書かれている（失敗印が確定済み）。`stop(f"仕入元 {ch[:8]} の投稿 {IN_FLIGHT} で extract_exception が付いた。この投稿は本番に review_reasons=extract_exception・system_review_detail=NULL が入った。戻す材料は SNAP_PATH のこの仕入元の before")` で全体を止める（`IN_FLIGHT` は戻さずに残し、`stop` が数える＝2-11 の `stop` の直し）。
+- commit: 本実行の 1 投稿ごとの順番は次の 6 つで固定する。(1) `IN_FLIGHT = ej` (2) `run_v102_analysis` (3) その投稿の review_reasons を読む (4) extract_exception があれば下の `stop` (5) 無ければ `COMMITTED.append(ej)` (6) `IN_FLIGHT = None`。(4) で失敗印があれば、その投稿は本番に書かれている（失敗印が確定済み）。`stop(f"仕入元 {ch[:8]} の投稿 {IN_FLIGHT} で extract_exception が付いた。この投稿は本番に review_reasons=extract_exception・system_review_detail=NULL が入った。戻す材料は SNAP_PATH のこの仕入元の before")` で全体を止める（`IN_FLIGHT` は戻さずに残し、`stop` が数える＝2-11 の `stop` の直し）。
 
 2-11 例外の扱いと、途中の投稿の数え方。
 - `IN_FLIGHT = None` をモジュールの頭（定数の下）に置く。`main` の頭で `global IN_FLIGHT` を宣言する。
 - `stop()` を直す。RESULT の行は「書き終えた投稿 {len(COMMITTED)} 件」と出す。`IN_FLIGHT` が None でなければ、続けて「書いたかもしれない投稿 1 件: {IN_FLIGHT}」を出す。`COMMITTED` が空で `IN_FLIGHT` も None のときだけ、手本どおり「何も書いていません」と出す。
 - dryrun: `main` の仕入元の繰り返しで、`trial` と `judge_channel` を `try:` で包む。`except Exception as e:` では `s.rollback()` を呼び、`[NG] 仕入元 {ch[:8]} 例外 {type(e).__name__}: {str(e)[:300]}` を出し、その仕入元を飛ばした仕入元に入れて次へ進む。dryrun では `IN_FLIGHT` に何も入れない。
-- commit: 仕入元の繰り返しの中身全部（試走・照合・本実行・読み戻し）を `try:` で包む。本実行の `run_v102_analysis` を呼ぶ直前に `IN_FLIGHT = ej` を入れる。成功の後に `COMMITTED.append(ej)` を置き（今のまま）、その直後に `IN_FLIGHT = None` に戻す。`except Exception as e:` では `s.rollback()` を呼び、`stop(f"仕入元 {ch[:8]} 例外 {type(e).__name__}: {str(e)[:300]}。途中の投稿 {IN_FLIGHT} は、review_reasons と system_review_detail だけでなく結果の行まで本番に書かれた可能性がある。戻す材料は SNAP_PATH のこの仕入元の before")` で全体を止める。`IN_FLIGHT` が None なら（試走・照合の段での例外）、文の「途中の投稿」の部分は「本番には書いていない」にする。`stop` の `SystemExit` は包みの外へそのまま出す（`except Exception` は `SystemExit` を拾わない）。
+- commit: 仕入元の繰り返しの中身全部（試走・照合・本実行・読み戻し）を `try:` で包む。本実行の `run_v102_analysis` を呼ぶ直前に `IN_FLIGHT = ej` を入れる。成功の後に `COMMITTED.append(ej)` を置き（今のまま）、その直後に `IN_FLIGHT = None` に戻す。`except Exception as e:` では `s.rollback()` を呼び、`stop(f"仕入元 {ch[:8]} 例外 {type(e).__name__}: {str(e)[:300]}。途中の投稿 {IN_FLIGHT} は、review_reasons と system_review_detail だけでなく結果の行まで本番に書かれた可能性がある。戻す材料は SNAP_PATH のこの仕入元の before")` で全体を止める。`IN_FLIGHT` が None のときは 2 通りに分ける。この仕入元の投稿（`jobs`）が `COMMITTED` に 1 件も無ければ（試走・照合の段での例外）、文の「途中の投稿」の部分を「この仕入元は本番には書いていない」にする。1 件以上あれば（読み戻し・比べる段での例外）、「この仕入元は {k} 件書き終えた後、読み戻し・比べる段で止まった。戻す材料は SNAP_PATH のこの仕入元の before」にする（k はこの仕入元の書き終えた件数）。`stop` の `SystemExit` は包みの外へそのまま出す（`except Exception` は `SystemExit` を拾わない）。
 
 2-12 書いた後の不一致で全体を止める（commit モード）。手本は `[NG-WRITE]` の後も次の仕入元へ進む。これを、`[NG-WRITE]` を出したらすぐ `stop("仕入元 {ch[:8]} の読み戻しが試走と違う。ここで止めた")` にする。dryrun の終わりでは、changes.json と別に `EXCL_PATH` へ外した投稿の一覧（2-6 の形）を書き、`[excluded] 外した投稿 N 件を保存 パス` を出す。
 
 2-13 商品の確かめを 13 商品に広げる（手本の `main` の `[PRE] 商品` の所）。`WHERE id=:i` を `WHERE id = ANY(:pids)` にし、`pids=list(PIDS)` で読む。13 行あること・すべて `is_active` が True・すべて `product_category_id` が `SINGLE_SET_CATEGORY` であることを確かめ、違えば `stop("13 商品のどれかが無い・止まっている・区分がシングルセット系(15)でない")`。`[PRE]` には id と区分と is_active だけを出す（名前は出さない）。
 
-2-14 仕入元ごとの所要時間。`main` で `trial` の呼び出しの前後を `time.monotonic()` で測る。その秒数を `judge_channel` の新しい引数 `secs` で渡し、`[SUM-CH]` の行の終わりに `{secs:.1f}秒` を足す（試走の間は投稿の鍵を握り続けるので、本番の解析を待たせた長さの目安になる）。秒数は表示だけにし、`out` には入れない（入れると commit の照合で毎回食い違い、全部の仕入元が飛ばされる）。
+2-14 仕入元ごとの所要時間。`main` で `trial` の呼び出しの前後を `time.monotonic()` で測る。その秒数を `judge_channel` の新しい引数 `secs=None`（既定値 None）で渡し、`[SUM-CH]` の行の終わりに `{secs:.1f}秒` を足す。None のときは秒数を出さない。手本は `judge_channel` を 2 か所で呼ぶ（試走の後と、commit の読み戻しの後）。試走の後の呼び出しだけ `secs=` を渡し、読み戻しの後の呼び出しは今のまま変えない（試走の間は投稿の鍵を握り続けるので、本番の解析を待たせた長さの目安になる）。秒数は表示だけにし、`out` には入れない（入れると commit の照合で毎回食い違い、全部の仕入元が飛ばされる）。
 
 ## 3. 新しい試験（`backend/tests/test_single_set_rejudge_tool.py`・丸ごと）
 
