@@ -166,17 +166,21 @@ def classify_target(t, a):
 
 2-9 ロック待ちの上限。`main` の最初（`_get_sync_session()` の直後）で `SHOW lock_timeout` を読み、`[PRE] lock_timeout=値` を出す。`LOCK_TIMEOUT` と違えば `stop("lock_timeout が 1s でない（PGOPTIONS が付いていない）")`。読んだ後に `s.rollback()` を呼ぶ。
 
-2-10 解析の失敗印を投稿ごとに見る。`run_v102_analysis` は中で失敗すると `session.rollback()` する（`backend/app/services/line_analysis_v102_svc.py` の `run_v102_analysis` の `except Exception:` の所）。試走中にこれが起きると、同じ仕入元の前の投稿の試走まで消える。そこで、`trial` の中で `run_v102_analysis` を呼ぶたびに、その投稿の `extraction_jobs.review_reasons` を読み、`svc.REASON_SEPARATOR` で分けた中に `svc.REASON_EXTRACT_EXCEPTION` があれば、その仕入元の試走をそこで止める。止め方: 印（例 `broke = ej`）を立てて繰り返しを `break` で抜け、`after` は作らない。`finally` の ROLLBACK と `s.commit` の戻しは今のまま通し、その後の `back != before` の確かめも今のまま通す（確かめが合わなければ手本どおりそちらの err を返す）。確かめが合ったら `None, None, "仕入元 {ch[:8]} の投稿 {broke[:8]} で extract_exception が付いた"` を返す。commit モードの本実行でも、呼ぶたびに同じものを読み、あれば `stop(...)` で全体を止める。
+2-10 解析の失敗印を投稿ごとに見る。`run_v102_analysis` は中で失敗すると `session.rollback()` する（`backend/app/services/line_analysis_v102_svc.py` の `run_v102_analysis` の `except Exception:` の所）。その後に `extract_exception` を書き、`system_review_detail` を空にして確定する（同ファイル :1631-1637）。ロック待ち 1s の切れもこの道を通る。
+- dryrun: `trial` の中で `run_v102_analysis` を呼ぶたびに、その投稿の `extraction_jobs.review_reasons` を読む。`svc.REASON_SEPARATOR` で分けた中に `svc.REASON_EXTRACT_EXCEPTION` があれば、その仕入元の試走をそこで止める。止め方: 印（例 `broke = ej`）を立てて繰り返しを `break` で抜け、`after` は作らない。`finally` の ROLLBACK と `s.commit` の戻しは今のまま通す。その後の `back != before` の確かめも今のまま通す（合わなければ手本どおりそちらの err を返す）。合ったら `None, None, "仕入元 {ch[:8]} の投稿 {broke[:8]} で extract_exception が付いた"` を返す。
+- commit: 本実行で呼ぶたびに同じものを読む。あれば、その投稿は本番に書かれている（失敗印が確定済み）。`stop(f"仕入元 {ch[:8]} の投稿 {IN_FLIGHT} で extract_exception が付いた。この投稿は本番に review_reasons=extract_exception・system_review_detail=NULL が入った。戻す材料は SNAP_PATH のこの仕入元の before")` で全体を止める（`IN_FLIGHT` は戻さずに残し、`stop` が数える＝2-11 の `stop` の直し）。
 
-2-11 例外の扱い。
-- dryrun: `main` の仕入元の繰り返しで、`trial` と `judge_channel` を `try:` で包む。`except Exception as e:` では `s.rollback()` を呼び、`[NG] 仕入元 {ch[:8]} 例外 {type(e).__name__}: {str(e)[:300]}` を出し、その仕入元を飛ばした仕入元に入れて次へ進む。
-- commit: 仕入元の繰り返しの中身全部（試走・照合・本実行・読み戻し）を `try:` で包む。本実行の `run_v102_analysis` を呼ぶ直前に、その投稿の id を `IN_FLIGHT = ej`（モジュールの変数）に入れる。`COMMITTED.append(ej)` は今のまま成功の後に置く。`except Exception as e:` では `s.rollback()` を呼び、`stop(f"仕入元 {ch[:8]} 途中の投稿 {IN_FLIGHT} で例外 {type(e).__name__}: {str(e)[:300]}。この投稿の review_reasons と system_review_detail が書き換わったかもしれない。戻す材料は before_snapshot の job")` で全体を止める（`stop` は書いた投稿の数を出す）。`stop` の `SystemExit` は包みの外へそのまま出す（`except Exception` は `SystemExit` を拾わない）。
+2-11 例外の扱いと、途中の投稿の数え方。
+- `IN_FLIGHT = None` をモジュールの頭（定数の下）に置く。`main` の頭で `global IN_FLIGHT` を宣言する。
+- `stop()` を直す。RESULT の行は「書き終えた投稿 {len(COMMITTED)} 件」と出す。`IN_FLIGHT` が None でなければ、続けて「書いたかもしれない投稿 1 件: {IN_FLIGHT}」を出す。`COMMITTED` が空で `IN_FLIGHT` も None のときだけ、手本どおり「何も書いていません」と出す。
+- dryrun: `main` の仕入元の繰り返しで、`trial` と `judge_channel` を `try:` で包む。`except Exception as e:` では `s.rollback()` を呼び、`[NG] 仕入元 {ch[:8]} 例外 {type(e).__name__}: {str(e)[:300]}` を出し、その仕入元を飛ばした仕入元に入れて次へ進む。dryrun では `IN_FLIGHT` に何も入れない。
+- commit: 仕入元の繰り返しの中身全部（試走・照合・本実行・読み戻し）を `try:` で包む。本実行の `run_v102_analysis` を呼ぶ直前に `IN_FLIGHT = ej` を入れる。成功の後に `COMMITTED.append(ej)` を置き（今のまま）、その直後に `IN_FLIGHT = None` に戻す。`except Exception as e:` では `s.rollback()` を呼び、`stop(f"仕入元 {ch[:8]} 例外 {type(e).__name__}: {str(e)[:300]}。途中の投稿 {IN_FLIGHT} は、review_reasons と system_review_detail だけでなく結果の行まで本番に書かれた可能性がある。戻す材料は SNAP_PATH のこの仕入元の before")` で全体を止める。`IN_FLIGHT` が None なら（試走・照合の段での例外）、文の「途中の投稿」の部分は「本番には書いていない」にする。`stop` の `SystemExit` は包みの外へそのまま出す（`except Exception` は `SystemExit` を拾わない）。
+
+2-12 書いた後の不一致で全体を止める（commit モード）。手本は `[NG-WRITE]` の後も次の仕入元へ進む。これを、`[NG-WRITE]` を出したらすぐ `stop("仕入元 {ch[:8]} の読み戻しが試走と違う。ここで止めた")` にする。dryrun の終わりでは、changes.json と別に `EXCL_PATH` へ外した投稿の一覧（2-6 の形）を書き、`[excluded] 外した投稿 N 件を保存 パス` を出す。
 
 2-13 商品の確かめを 13 商品に広げる（手本の `main` の `[PRE] 商品` の所）。`WHERE id=:i` を `WHERE id = ANY(:pids)` にし、`pids=list(PIDS)` で読む。13 行あること・すべて `is_active` が True・すべて `product_category_id` が `SINGLE_SET_CATEGORY` であることを確かめ、違えば `stop("13 商品のどれかが無い・止まっている・区分がシングルセット系(15)でない")`。`[PRE]` には id と区分と is_active だけを出す（名前は出さない）。
 
-2-14 仕入元ごとの所要時間。`[SUM-CH]` の行の終わりに、その仕入元の試走にかかった秒数を足す（試走の間は投稿の鍵を握り続けるので、本番の解析を待たせた長さの目安になる）。
-
-2-12 書いた後の不一致で全体を止める（commit モード）。手本は `[NG-WRITE]` の後も次の仕入元へ進む。これを、`[NG-WRITE]` を出したらすぐ `stop("仕入元 {ch[:8]} の読み戻しが試走と違う。ここで止めた")` にする。dryrun の終わりでは、changes.json と別に `EXCL_PATH` へ外した投稿の一覧（2-6 の形）を書き、`[excluded] 外した投稿 N 件を保存 パス` を出す。
+2-14 仕入元ごとの所要時間。`main` で `trial` の呼び出しの前後を `time.monotonic()` で測る。その秒数を `judge_channel` の新しい引数 `secs` で渡し、`[SUM-CH]` の行の終わりに `{secs:.1f}秒` を足す（試走の間は投稿の鍵を握り続けるので、本番の解析を待たせた長さの目安になる）。秒数は表示だけにし、`out` には入れない（入れると commit の照合で毎回食い違い、全部の仕入元が飛ばされる）。
 
 ## 3. 新しい試験（`backend/tests/test_single_set_rejudge_tool.py`・丸ごと）
 
@@ -271,12 +275,13 @@ ruff が行の長さ（120 字）で止めた行は、引数の切れ目で折�
 ## 4. 検索（出力を報告に入れる）
 
 手順7 の命令
-    cd "$(git rev-parse --show-toplevel)" && grep -n -w "PID\|SET_CATEGORY\|30周年" docs/handoff/single-set-category/data/bin3/rejudge_single_set.py | head -20
+    cd "$(git rev-parse --show-toplevel)" && grep -n -w "PID\|SET_CATEGORY" docs/handoff/single-set-category/data/bin3/rejudge_single_set.py | head -20
+    cd "$(git rev-parse --show-toplevel)" && grep -n "30周年" docs/handoff/single-set-category/data/bin3/rejudge_single_set.py | head -5
     cd "$(git rev-parse --show-toplevel)" && grep -n "466062" docs/handoff/single-set-category/data/bin3/rejudge_single_set.py | head -5
     cd "$(git rev-parse --show-toplevel)" && grep -n "PIDS\|SINGLE_SET_CATEGORY\|SOLDOUT_BASES\|EXCL_PATH\|LOCK_TIMEOUT\|IN_FLIGHT\|line_posted_at\|cur_rows\|bundle_size\|value_group\|exclusion_reasons\|classify_target\|REASON_EXTRACT_EXCEPTION\|NG-WRITE" docs/handoff/single-set-category/data/bin3/rejudge_single_set.py | head -80
     cd "$(git rev-parse --show-toplevel)" && git diff origin/main...HEAD --stat | tail -10
 
-期待: 1 つ目は 0 行（単独の `PID`・単独の `SET_CATEGORY`・「30周年」が残っていない）。2 つ目は `PIDS` の定義の 1 行だけ。2 つ目は §2 で足した所。3 つ目は §5 の 2 本と、この枝に先にある Opus の 3 本（このカード・手本・台帳）だけ。
+期待: 1 つ目は 0 行（単独の `PID`・単独の `SET_CATEGORY` が残っていない）。2 つ目は 0 行（「30周年」が残っていない）。3 つ目は `PIDS` の定義の 1 行だけ。4 つ目は §2 で足した所。5 つ目は §5 の 2 本と、この枝に先にある Opus の 3 本（このカード・手本・台帳）だけ。
 
 ## 5. 変えるファイル（これ以外は変えない）
 
