@@ -25,6 +25,8 @@ interface Props {
   company: Company;
   contacts: Contact[];
   canEdit: boolean;
+  /** 担当者をまとめてよいか（customers.delete・サーバーの merge と同じ決まり） */
+  canMerge: boolean;
   contactModalOpen: boolean;
   contactForm: ContactFormState;
   setContactForm: (f: ContactFormState) => void;
@@ -39,7 +41,7 @@ interface Props {
 }
 
 export function CompanyContactsTab({
-  company, contacts, canEdit,
+  company, contacts, canEdit, canMerge,
   contactModalOpen, contactForm, setContactForm, contactSubmitting,
   setContactDeleteTarget,
   openContactNew, openContactEdit,
@@ -133,9 +135,11 @@ export function CompanyContactsTab({
                       <Button size="sm" variant="secondary" onClick={() => openContactEdit(c)}>
                         {t("common.edit")}
                       </Button>
-                      <Button size="sm" variant="secondary" onClick={() => openMergeModal(c)}>
-                        {t("contacts.mergeAsDuplicate")}
-                      </Button>
+                      {canMerge && (
+                        <Button size="sm" variant="secondary" onClick={() => openMergeModal(c)}>
+                          {t("contacts.mergeAsDuplicate")}
+                        </Button>
+                      )}
                       <Button size="sm" variant="danger" onClick={() => setContactDeleteTarget(c)}>
                         {t("common.delete")}
                       </Button>
@@ -231,7 +235,7 @@ export function CompanyContactsTab({
             onContactsRefresh?.();
           }}
           onCancel={() => setChannelFormOpen(false)}
-          onRequestMerge={handleRequestMerge}
+          onRequestMerge={canMerge ? handleRequestMerge : undefined}
         />
       )}
 

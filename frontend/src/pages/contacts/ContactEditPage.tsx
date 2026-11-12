@@ -20,6 +20,7 @@ import { TextFieldControl } from "../../components/TextField";
 import { Checkbox } from "../../components/Checkbox";
 import { LoadingBlock } from "../../components/loading";
 import MergeContactModal from "../../components/MergeContactModal";
+import { usePermissions } from "../../hooks/usePermissions";
 import { useCustomerStatuses } from "../../hooks/useCustomerStatuses";
 import { CUSTOMER_STATUS_CODES } from "../../lib/customerStatuses";
 
@@ -95,6 +96,8 @@ export default function ContactEditPage() {
   const invalidate = useInvalidateApi();
   const [dedupSubmitting, setDedupSubmitting] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
+  const { hasPermission } = usePermissions();
+  const canMerge = hasPermission("customers.delete");
 
   const toNull = (v: string) => (v ? v : null);
 
@@ -202,7 +205,14 @@ export default function ContactEditPage() {
                 <Button variant="primary" size="md" type="button" onClick={handleResolveAsDistinct} disabled={dedupSubmitting}>
                   {t("contacts.confirmAsDistinctFull", { active: customerStatuses.nameOf(CUSTOMER_STATUS_CODES.active) })}
                 </Button>
-                <Button variant="secondary" size="md" type="button" onClick={() => setMergeOpen(true)}>
+                <Button
+                  variant="secondary"
+                  size="md"
+                  type="button"
+                  onClick={() => setMergeOpen(true)}
+                  disabled={!canMerge}
+                  title={canMerge ? "" : t("companies.dedupMergeNoPermission")}
+                >
                   {t("contacts.mergeAsDuplicate")}
                 </Button>
               </div>
