@@ -31,6 +31,8 @@ import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 import { LoadingBlock, Spinner } from "../../components/loading";
 import { getStatusPresentation } from "../../utils/statusPresentation";
+import { useCustomerStatuses } from "../../hooks/useCustomerStatuses";
+import { CUSTOMER_STATUS_CODES } from "../../lib/customerStatuses";
 
 const PHONE_RE = /^(\+?\d{10,15}|0\d{9,10})$/;
 const validatePhoneClient = (raw: string): string | null => {
@@ -148,7 +150,7 @@ const emptyForm: FormState = {
   payment_recipient_name: "",
   fedex_account: "",
   shipping_note: "",
-  status: "active",
+  status: CUSTOMER_STATUS_CODES.active,
   notes: "",
   billing: { ...emptyBilling },
   delivery: { ...emptyDelivery },
@@ -156,7 +158,7 @@ const emptyForm: FormState = {
 };
 
 const emptyEditForm: CompanyFormState = {
-  name: "", status: "active", industry: "", priority_focus: "", notes: "",
+  name: "", status: CUSTOMER_STATUS_CODES.active, industry: "", priority_focus: "", notes: "",
 };
 
 const toForm = (c: Company): CompanyFormState => ({
@@ -188,6 +190,7 @@ const COMPANIES_HEAD = ["companies"] as const;
 
 export default function CompaniesPage() {
   const { t } = useTranslation();
+  const customerStatuses = useCustomerStatuses();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -291,7 +294,7 @@ export default function CompaniesPage() {
       payment_recipient_name: toNull(createForm.payment_recipient_name),
       fedex_account: toNull(createForm.fedex_account),
       shipping_note: toNull(createForm.shipping_note),
-      status: createForm.status || "active",
+      status: createForm.status || CUSTOMER_STATUS_CODES.active,
       notes: toNull(createForm.notes),
       sales_channels: salesChannels,
       addresses,
@@ -349,7 +352,7 @@ export default function CompaniesPage() {
   };
 
   // PR #145 Q2: pending_dedup_review の件数を一覧サマリで提示し、解消フローへの導線を強める
-  const pendingDedupCount = companies.filter((c) => c.status === "pending_dedup_review").length;
+  const pendingDedupCount = companies.filter((c) => c.status === CUSTOMER_STATUS_CODES.pendingDedupReview).length;
   const headerAction = (
     <div className="page-header-actions">
       {pendingDedupCount > 0 && (
@@ -405,7 +408,7 @@ export default function CompaniesPage() {
             <Link to={`/companies/${c.id}`}>{companyDisplayName(c)}</Link>
           )},
           { key: "industry", header: t("companies.industry"), renderCell: (c) => c.industry || "-" },
-          { key: "status", header: t("common.status"), renderCell: (c) => <span className={`status-badge status-${c.status}`}>{t(getStatusPresentation("company", c.status).labelKey ?? c.status)}</span> },
+          { key: "status", header: t("common.status"), renderCell: (c) => <span className={`badge badge-${getStatusPresentation("company", c.status).badgeVariant}`}>{customerStatuses.nameOf(c.status)}</span> },
           { key: "billing", header: t("companies.billing"), renderCell: (c) => addressDisplay(defaultAddress(c, "billing")) },
           { key: "delivery", header: t("companies.delivery"), renderCell: (c) => addressDisplay(defaultAddress(c, "delivery")) },
           { key: "actions", header: t("common.actions"), renderCell: (c) => (
@@ -425,7 +428,7 @@ export default function CompaniesPage() {
             columns={columns}
             data={companies}
             rowKey={(c) => String(c.id)}
-            rowClassName={(c) => c.status === "pending_dedup_review" ? "row-pending-dedup" : ""}
+            rowClassName={(c) => c.status === CUSTOMER_STATUS_CODES.pendingDedupReview ? "row-pending-dedup" : ""}
             onRowClick={hasPermission("customers.update") ? handleRowClick : undefined}
             emptyState={t("companies.noCompanies")}
           />
@@ -508,11 +511,11 @@ export default function CompaniesPage() {
                   <div className="form-row">
                     <label>{t("common.status")}</label>
                     <SelectControl fullWidth value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
-                      <option value="active">{t("customers.status_active")}</option>
-                      <option value="inactive">{t("customers.status_inactive")}</option>
-                      <option value="archived">{t("customers.status_archived")}</option>
-                      <option value="pending_dedup_review">{t("customers.status_pending_dedup")}</option>
+                      {customerStatuses.options("create").map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
                     </SelectControl>
+                    {customerStatuses.isError && <div className="comp-field__hint comp-field__hint--error" role="alert">{t("common.fetchError")}</div>}
                   </div>
                   <div className="form-row">
                     <label>{t("common.notes")}</label>

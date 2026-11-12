@@ -23,6 +23,7 @@ import { RadioControl } from "./RadioControl";
 import { TextField } from "./TextField";
 import { Textarea } from "./Textarea";
 import { getStatusPresentation } from "../utils/statusPresentation";
+import { useCustomerStatuses } from "../hooks/useCustomerStatuses";
 import { LoadingBlock } from "./loading";
 
 interface ContactOption {
@@ -57,6 +58,7 @@ function contactDisplayName(c: ContactOption | Props["source"]): string {
 
 export default function MergeContactModal({ open, companyId, source, onMerged, onCancel }: Props) {
   const { t } = useTranslation();
+  const customerStatuses = useCustomerStatuses();
   const [candidates, setCandidates] = useState<ContactOption[]>([]);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -230,7 +232,7 @@ export default function MergeContactModal({ open, companyId, source, onMerged, o
                         <td>{contactDisplayName(c)}</td>
                         <td>
                           <span className={`badge badge-${getStatusPresentation("contact", c.status).badgeVariant}`}>
-                            {t(`contacts.statusCode.${c.status}`, { defaultValue: c.status })}
+                            {customerStatuses.nameOf(c.status)}
                           </span>
                         </td>
                       </tr>

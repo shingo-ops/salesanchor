@@ -48,6 +48,7 @@ def test_table_rows_are_read():
         "role_permissions_not_editable_here",
         "role_page_keys_not_savable",
         "role_not_assignable",
+        "merge_target_archived",
     ]
 
 
