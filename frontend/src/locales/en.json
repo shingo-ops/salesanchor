@@ -1795,6 +1795,7 @@
     "editFromThisQuote": "Create from this quote (edit items)",
     "editingFromQuote": "Creating from quote {{code}} (you can edit quantities & amounts)",
     "createBtn": "Create invoice",
+    "openCompanyForBillTo": "Open customer page",
     "invoiceCode": "Invoice code",
     "dueDate": "Due date",
     "allStatuses": "All statuses",
@@ -6147,6 +6148,7 @@
     "rolePageKeysNotSavable": "Who can open the Roles page is set by role, so this was not saved. Reload the page and save again.",
     "roleNotAssignable": "Only the owner or system admin can give this role. Ask the owner to give it.",
     "mergeTargetArchived": "The customer you chose to keep cannot be merged in its current status. Change its status first, then try again.",
+    "billToCountry": "The invoice can't be created because the customer's billing country is missing. Add a default billing address with a country on the customer page.",
     "notFound": "{{target}} could not be found. Reload the page and try again.",
     "notFoundUnknown": "What you were looking for could not be found. Reload the page and try again.",
     "notFoundTarget": {

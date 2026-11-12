@@ -14017,6 +14017,17 @@
             ],
             "title": "Issued At"
           },
+          "issuer_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer Region"
+          },
           "items": {
             "default": [],
             "items": {
@@ -14724,6 +14735,17 @@
               }
             ],
             "title": "Issued At"
+          },
+          "issuer_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer Region"
           },
           "notes": {
             "anyOf": [
