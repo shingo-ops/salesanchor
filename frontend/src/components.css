@@ -253,9 +253,9 @@
 .badge-completed { background: var(--success-bg); color: var(--success-text); }
 .badge-trouble { background: var(--danger-bg); color: var(--danger-text); }
 
-/* PR #145 Q2: pending_dedup_review の status badge と行ハイライト
-   companies / contacts の <span class="status-badge status-pending_dedup_review">
-   と <tr class="row-pending-dedup"> から参照される */
+/* status-badge の土台と、重複確認待ちの行ハイライト。
+   会社・連絡先の状態の札は badge badge-<variant>（statusPresentation）を使う。
+   <tr class="row-pending-dedup"> から参照される */
 .status-badge {
   display: inline-block;
   padding: var(--space-2px) var(--space-2);
@@ -265,10 +265,9 @@
   background: var(--bg-hover);
   color: var(--text-primary);
 }
+/* 自社在庫の状態（OwnInventoryPage の status-${row.status}）が使う。会社・担当者の状態には使わない */
 .status-badge.status-active { background: var(--success-bg); color: var(--success-text); }
 .status-badge.status-inactive { background: var(--bg-hover); color: var(--text-muted); }
-.status-badge.status-archived { background: var(--bg-active); color: var(--text-secondary); }
-.status-badge.status-pending_dedup_review { background: var(--warning-bg); color: var(--warning-text); }
 
 /* stylelint-disable-next-line no-descending-specificity -- intentional: dedup row overrides hover td */
 .row-pending-dedup td {

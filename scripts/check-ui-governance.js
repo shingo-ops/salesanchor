@@ -5,7 +5,7 @@
  * PRで追加・変更された frontend/src/pages/ 配下の .tsx ファイルに
  * 新規の「生UI部品」が増えていないかを検査する。
  *
- * 検出対象（7種）:
+ * 検出対象（9種）:
  *   - 生 <select>
  *   - 生 <input type="text"|"search"|type省略>  ← 複数行対応
  *   - 生 <input type="checkbox">（AY-4d）
@@ -16,6 +16,10 @@
  *     金型 Button の loading={条件} を使う）。この種別だけ pages/・features/・components/ を見る
  *   - 英語の直書き（englishUiLiteral。JSX の文字・aria-label 等の属性・?? 'English text' の既定値。
  *     t("key") を使う）。loadingTernary と同じ pages/・features/・components/ を見る
+ *   - 会社・連絡先の状態の記号の直書き（customerStatusLiteral。"active"・"inactive"・"archived"・
+ *     "pending_dedup_review"（シングルクォート・バッククォートも）のうち className の行でないもの。
+ *     frontend/src/lib/customerStatuses.ts の CUSTOMER_STATUS_CODES を使う。ADR-1076）。
+ *     見る所は contacts/・companies/・company-detail/ と MergeCompanyModal・MergeContactModal だけ
  *
  * 判定方式:
  *   各変更ファイルについて BASE/HEAD 両 SHA の全文を取得し、
@@ -47,6 +51,14 @@ const COMPONENTS_DIR = 'frontend/src/components/';
 const LOADING_TERNARY_DIRS = [PAGES_DIR, FEATURES_DIR, COMPONENTS_DIR];
 // englishUiLiteral が見るディレクトリ（中身は LOADING_TERNARY_DIRS と同じ。意味を分けるため別名）
 const ENGLISH_LITERAL_DIRS = [PAGES_DIR, FEATURES_DIR, COMPONENTS_DIR];
+// customerStatusLiteral が見る場所（先頭が一致するパス。ディレクトリ1つ・ファイル2つ）
+const CUSTOMER_STATUS_LITERAL_TARGETS = [
+  'frontend/src/pages/contacts/',
+  'frontend/src/pages/companies/',
+  'frontend/src/pages/company-detail/',
+  'frontend/src/components/MergeCompanyModal.tsx',
+  'frontend/src/components/MergeContactModal.tsx',
+];
 
 // ---------------------------------------------------------------------------
 // ユーティリティ
@@ -112,6 +124,7 @@ function getChangedFiles(baseSha, headSha, dirs = [PAGES_DIR]) {
  *   legacyFiles : 既存6種別を数えるファイル（PAGES_DIR 配下のみ。今までと同じ）
  *   loadingFiles: loadingTernary を数えるファイル（pages/・features/・components/。.test.tsx は除く）
  *   englishFiles: englishUiLiteral を数えるファイル（pages/・features/・components/。.test.tsx は除く）
+ *   statusFiles : customerStatusLiteral を数えるファイル（CUSTOMER_STATUS_LITERAL_TARGETS の中。.test.tsx は除く）
  */
 function splitTargets(files) {
   const legacyFiles = files.filter((f) => f.headPath.startsWith(PAGES_DIR));
@@ -125,7 +138,12 @@ function splitTargets(files) {
       ENGLISH_LITERAL_DIRS.some((d) => f.headPath.startsWith(d)) &&
       !f.headPath.endsWith('.test.tsx')
   );
-  return { legacyFiles, loadingFiles, englishFiles };
+  const statusFiles = files.filter(
+    (f) =>
+      CUSTOMER_STATUS_LITERAL_TARGETS.some((d) => f.headPath.startsWith(d)) &&
+      !f.headPath.endsWith('.test.tsx')
+  );
+  return { legacyFiles, loadingFiles, englishFiles, statusFiles };
 }
 
 // ---------------------------------------------------------------------------
@@ -752,6 +770,25 @@ function countEnglishUiLiteral(content) {
 }
 
 // ---------------------------------------------------------------------------
+// 会社・連絡先の状態の記号の直書き（customerStatusLiteral）
+// ---------------------------------------------------------------------------
+
+/**
+ * "active"・"inactive"・"archived"・"pending_dedup_review"（シングルクォート・バッククォートも）の件数。
+ * className を含む行は数えない。
+ */
+function countCustomerStatusLiteral(content) {
+  const re = /(["'`])(active|inactive|archived|pending_dedup_review)\1/g;
+  let count = 0;
+  for (const line of content.split('\n')) {
+    if (line.includes('className')) continue;
+    const matches = line.match(re);
+    if (matches) count += matches.length;
+  }
+  return count;
+}
+
+// ---------------------------------------------------------------------------
 // 集計
 // ---------------------------------------------------------------------------
 
@@ -765,6 +802,7 @@ function countAll(content) {
     loadingText: countLoadingText(content),
     loadingTernary: countLoadingTernary(content),
     englishUiLiteral: countEnglishUiLiteral(content),
+    customerStatusLiteral: countCustomerStatusLiteral(content),
   };
 }
 
@@ -784,15 +822,20 @@ function main() {
   console.log(`[INFO] BASE_SHA=${BASE_SHA} HEAD_SHA=${HEAD_SHA}`);
 
   const allFiles = getChangedFiles(BASE_SHA, HEAD_SHA, LOADING_TERNARY_DIRS);
-  const { legacyFiles, loadingFiles, englishFiles } = splitTargets(allFiles);
+  const { legacyFiles, loadingFiles, englishFiles, statusFiles } = splitTargets(allFiles);
   const legacyPaths = new Set(legacyFiles.map((f) => f.headPath));
   const loadingPaths = new Set(loadingFiles.map((f) => f.headPath));
   const englishPaths = new Set(englishFiles.map((f) => f.headPath));
+  const statusPaths = new Set(statusFiles.map((f) => f.headPath));
   const changedFiles = allFiles.filter(
-    (f) => legacyPaths.has(f.headPath) || loadingPaths.has(f.headPath) || englishPaths.has(f.headPath)
+    (f) =>
+      legacyPaths.has(f.headPath) ||
+      loadingPaths.has(f.headPath) ||
+      englishPaths.has(f.headPath) ||
+      statusPaths.has(f.headPath)
   );
   console.log(
-    `[INFO] 対象ファイル数: ${changedFiles.length}（pages/ ${legacyFiles.length} 件・読み込み中の三項 ${loadingFiles.length} 件・英語の直書き ${englishFiles.length} 件）`
+    `[INFO] 対象ファイル数: ${changedFiles.length}（pages/ ${legacyFiles.length} 件・読み込み中の三項 ${loadingFiles.length} 件・英語の直書き ${englishFiles.length} 件・状態の記号の直書き ${statusFiles.length} 件）`
   );
 
   if (changedFiles.length === 0) {
@@ -819,11 +862,16 @@ function main() {
       loadingText: '読み込み中の文字だけの表示 → <LoadingBlock> を使うこと',
       loadingTernary: 'ボタン等の言葉を読み込み中に入れ替える三項 → 金型 Button の loading={条件} を使い、言葉は元のままにすること',
       englishUiLiteral: '英語の直書き → t("key") を使い、ja.json と en.json に同じキーを足すこと（固有名詞も t() を通す。ADR-027 追記）',
+      customerStatusLiteral: '会社・連絡先の状態の記号の直書き → frontend/src/lib/customerStatuses.ts の CUSTOMER_STATUS_CODES を使うこと（ADR-1076）',
     };
 
-    for (const type of ['select', 'input', 'tab', 'checkbox', 'radio', 'loadingText', 'loadingTernary', 'englishUiLiteral']) {
-      // loadingTernary・englishUiLiteral だけが features/・components/ も見る。既存6種別は pages/ のみ（今までと同じ）
-      const scope = type === 'loadingTernary' ? loadingPaths : type === 'englishUiLiteral' ? englishPaths : legacyPaths;
+    for (const type of ['select', 'input', 'tab', 'checkbox', 'radio', 'loadingText', 'loadingTernary', 'englishUiLiteral', 'customerStatusLiteral']) {
+      // loadingTernary・englishUiLiteral だけが features/・components/ も見る。customerStatusLiteral は決まった場所だけ。既存6種別は pages/ のみ（今までと同じ）
+      const scope =
+        type === 'loadingTernary' ? loadingPaths
+        : type === 'englishUiLiteral' ? englishPaths
+        : type === 'customerStatusLiteral' ? statusPaths
+        : legacyPaths;
       if (!scope.has(headPath)) continue;
       if (headCounts[type] > baseCounts[type]) {
         violations.push({
@@ -893,6 +941,7 @@ if (require.main === module) {
     countLoadingText,
     countLoadingTernary,
     countEnglishUiLiteral,
+    countCustomerStatusLiteral,
     isLoadingKey,
     LOADING_VERBS,
     splitTargets,

@@ -17,6 +17,7 @@ export const API_ERROR_REASON_KEYS: Readonly<Record<string, string>> = {
   role_permissions_not_editable_here: "apiError.rolePermissionsNotEditableHere",
   role_page_keys_not_savable: "apiError.rolePageKeysNotSavable",
   role_not_assignable: "apiError.roleNotAssignable",
+  merge_target_archived: "apiError.mergeTargetArchived",
 };
 
 /** detail が表のコードなら文言キー、そうでなければ null */

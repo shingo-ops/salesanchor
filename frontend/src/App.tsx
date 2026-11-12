@@ -94,6 +94,7 @@ import ManagementCenterPage from "./pages/management-center/ManagementCenterPage
 import SettingsHubPage from "./pages/super-admin/settings/SettingsHubPage";
 import SettingsMasterPage from "./pages/super-admin/settings/SettingsMasterPage";
 import FxRatePage from "./pages/super-admin/FxRatePage";
+import TaxRatesPage from "./pages/super-admin/TaxRatesPage";
 import LoginRequestsPage from "./pages/super-admin/LoginRequestsPage";
 import TenantLoginRequestsPage from "./pages/management-center/TenantLoginRequestsPage";
 import ViewerAccountsPage from "./pages/super-admin/ViewerAccountsPage";
@@ -324,15 +325,8 @@ function App() {
                       <Route index element={<Navigate to="fx-rate" replace />} />
                       {/* 為替レート SSOT */}
                       <Route path="fx-rate" element={<FxRatePage />} />
-                      <Route
-                        path="tax-rates"
-                        element={
-                          <ComingSoonPage
-                            title={t("nav.superAdminTaxRates")}
-                            description={t("superAdmin.settings.comingSoon")}
-                          />
-                        }
-                      />
+                      {/* 消費税率（ADR-1061 便2-2a） */}
+                      <Route path="tax-rates" element={<TaxRatesPage />} />
                       <Route
                         path="sa-products"
                         element={

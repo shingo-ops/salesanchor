@@ -99,7 +99,12 @@ BEGIN
         ('viewer_login_tokens', '閲覧者ログインの札'),
         ('webauthn_credentials', 'パスキーの公開鍵・資格情報'),
         ('tenant_carrier_credentials', '運送会社の資格情報'),
-        ('viewer_billing_profiles', '請求先（宛名・住所・電話）');
+        ('viewer_billing_profiles', '請求先（宛名・住所・電話）'),
+        ('viewer_invoices', '閲覧者の請求書（宛先と発行元の写し・送り先のメール）'),
+        ('tenant_issuer_profiles', '請求書の発行元（会社名・住所・電話・登録番号）'),
+        ('tenant_invoice_payment_methods', '請求書の振込先の一覧'),
+        ('tenant_invoice_payment_bank', '振込先の銀行口座'),
+        ('tenant_invoice_payment_wise', '振込先の Wise 口座');
 END
 $deny$;
 

@@ -20,7 +20,7 @@ DECLARE
   failed_list text := '';
   vname text;
   prefix text;
-  deny constant text := '^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential';
+  deny constant text := '^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential|account_number|^iban$';
 BEGIN
   FOR t IN
     SELECT c.oid AS oid, n.nspname AS sch, c.relname AS rel

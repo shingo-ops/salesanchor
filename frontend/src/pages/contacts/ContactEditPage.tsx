@@ -19,6 +19,9 @@ import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 import { Checkbox } from "../../components/Checkbox";
 import { LoadingBlock } from "../../components/loading";
+import MergeContactModal from "../../components/MergeContactModal";
+import { useCustomerStatuses } from "../../hooks/useCustomerStatuses";
+import { CUSTOMER_STATUS_CODES } from "../../lib/customerStatuses";
 
 interface CompanyMini {
   id: number;
@@ -59,7 +62,7 @@ type FormState = {
 const emptyForm: FormState = {
   company_id: "", surname: "", given_name: "", display_name: "",
   job_title: "", department: "", is_primary_contact: false,
-  primary_email: "", primary_phone: "", status: "active", notes: "",
+  primary_email: "", primary_phone: "", status: CUSTOMER_STATUS_CODES.active, notes: "",
 };
 
 const formFromContact = (contact: Contact): FormState => ({
@@ -78,6 +81,7 @@ const formFromContact = (contact: Contact): FormState => ({
 
 export default function ContactEditPage() {
   const { t }      = useTranslation();
+  const customerStatuses = useCustomerStatuses();
   const { id }     = useParams<{ id: string }>();
   const navigate   = useNavigate();
   const contactQ = useApiQuery<Contact>(`/contacts/${id}`, { enabled: id !== undefined });
@@ -90,6 +94,7 @@ export default function ContactEditPage() {
   const shownError = error || (loadError ? (loadError instanceof Error ? loadError.message : t("common.fetchError")) : "");
   const invalidate = useInvalidateApi();
   const [dedupSubmitting, setDedupSubmitting] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
 
   const toNull = (v: string) => (v ? v : null);
 
@@ -122,8 +127,8 @@ export default function ContactEditPage() {
     setError("");
     setDedupSubmitting(true);
     try {
-      await api.patch(`/contacts/${id}`, { status: "active" });
-      setForm((p) => ({ ...p, status: "active" }));
+      await api.patch(`/contacts/${id}`, { status: CUSTOMER_STATUS_CODES.active });
+      setForm((p) => ({ ...p, status: CUSTOMER_STATUS_CODES.active }));
       void invalidate(["contacts", id ?? ""]);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.operationError"));
@@ -182,28 +187,24 @@ export default function ContactEditPage() {
             label={t("common.status")}
             value={form.status}
             onChange={(e) => setForm({ ...form, status: e.target.value })}
-            options={[
-              { value: "active", label: t("customers.status_active") },
-              { value: "inactive", label: t("customers.status_inactive") },
-              { value: "archived", label: t("customers.status_archived") },
-              { value: "pending_dedup_review", label: t("contacts.statusPendingDedupOption") },
-            ]}
+            options={customerStatuses.options("edit", form.status)}
+            error={customerStatuses.isError ? t("common.fetchError") : undefined}
           />
           <div className="form-group"><label>{t("common.notes")}</label>
             <TextareaControl value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
 
-          {form.status === "pending_dedup_review" && (
+          {form.status === CUSTOMER_STATUS_CODES.pendingDedupReview && (
             <div className="dedup-resolve-section">
               <h3>{t("contacts.dedupResolveTitle")}</h3>
               <p>{t("contacts.dedupResolveDesc")}</p>
               <div className="dedup-resolve-actions">
                 <Button variant="primary" size="md" type="button" onClick={handleResolveAsDistinct} disabled={dedupSubmitting}>
-                  {t("contacts.confirmAsDistinctFull")}
+                  {t("contacts.confirmAsDistinctFull", { active: customerStatuses.nameOf(CUSTOMER_STATUS_CODES.active) })}
                 </Button>
-                <button type="button" disabled style={{ opacity: "var(--opacity-disabled)", cursor: "not-allowed" }}>
+                <Button variant="secondary" size="md" type="button" onClick={() => setMergeOpen(true)}>
                   {t("contacts.mergeAsDuplicate")}
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -213,6 +214,21 @@ export default function ContactEditPage() {
             <Button type="submit" variant="primary" size="md">{t("common.update")}</Button>
           </div>
         </form>
+      )}
+      {mergeOpen && contactQ.data && (
+        <MergeContactModal
+          open={mergeOpen}
+          companyId={contactQ.data.company_id}
+          source={{
+            id: contactQ.data.id,
+            contact_code: contactQ.data.contact_code,
+            display_name: contactQ.data.display_name,
+            surname: contactQ.data.surname,
+            given_name: contactQ.data.given_name,
+          }}
+          onMerged={(masterId) => { setMergeOpen(false); navigate(`/contacts/${masterId}/edit`); }}
+          onCancel={() => setMergeOpen(false)}
+        />
       )}
     </PageLayout>
   );
