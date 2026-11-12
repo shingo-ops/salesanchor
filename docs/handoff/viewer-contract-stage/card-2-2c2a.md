@@ -1,6 +1,6 @@
 # card: 便2-2c2a 請求書・見積書の発行元を新しい表から読み、請求先の国で地域を決める（ADR-1061）
 
-状態: カード発行（Opus、2026-11-12）。直し r1（Opus、2026-11-13）: 1回目の実行は手順6 で `BLOCKED: pytest`（試験の SQLite で請求先の住所の写しが文字で返り、応答の形の検査が落ちた）。D13・P5・2-4・手順6・§4 を直した。PO の設計承認と実装承認は 2026-11-12「1、推測は禁止して…確立したなら進める。」（ideal-state 54。review.md「2026-11-12 PO の設計承認」）。
+状態: カード発行（Opus、2026-11-12）。直し r1（Opus、2026-11-13）: 1回目の実行は手順6 で `BLOCKED: pytest`（試験の SQLite で請求先の住所の写しが文字で返り、応答の形の検査が落ちた）。D13・P5・2-4・手順6・§4 を直した。直し r2（Opus、2026-11-13）: 2回目の実行は手順8 で `BLOCKED: vitest`（請求書作成画面の試験2件で、作成ボタンを押しても送信されなかった）。D15・2-18 を直した。PO の設計承認と実装承認は 2026-11-12「1、推測は禁止して…確立したなら進める。」（ideal-state 54。review.md「2026-11-12 PO の設計承認」）。
 設計: docs/handoff/viewer-contract-stage/design.md §3-4（発行元の会社情報・請求書の発行元区分）・§8・A40。ADR-1061。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。本番・GitHub の secret・DB には触らない。PR は作らない（Opus が作る）。
 基準: origin/main `b6b444eff`（便2-2c1 #5460 合流後）で行番号を測った。カード起票時の origin/main `e7bc71f71` との差は §1 の外のファイルだけ（`git diff --stat b6b444eff e7bc71f71 -- 触るファイル` で 0）。直し r1 の時点の origin/main `95acec44f` と 1回目の実行の基準 `32379cb00` の差も、§1 の19ファイル・`backend/app` 全体・都道府県の seed で 0（`git diff --stat 32379cb00 95acec44f -- …` が空）。行番号がずれていたら「変更前」の文で場所を探す（同じ文が決めた数と違えば BLOCKED: で停止）。
@@ -25,6 +25,7 @@
 
 - D13（直し r1）請求書の応答の形 `InvoiceResponse` に、住所・為替などの写しの4列（`ship_to_snapshot`・`bill_to_snapshot`・`duty_policy_snapshot`・`fx_rate_snapshot`）が文字で来たら JSON として読み直して dict にする検査前の変換（pydantic の `field_validator(..., mode="before")`）を足す。根拠: (a) 本番の列は JSONB（migrations/20260604_160000_add_invoice_snapshot_columns.sql:31）で、本番の接続は asyncpg（backend/app/database.py:9）。SQLAlchemy の asyncpg 方言は jsonb を `json.loads` で読み dict で返す（SQLAlchemy 公式文書 dialects/postgresql「asyncpg」の注記。Context7 `/sqlalchemy/sqlalchemy` で確認）。(b) 試験の SQLite では同じ列が TEXT（backend/tests/conftest.py:1192-1196）で、文字のまま返る。今までの試験は請求先の住所を持たない会社だけで写しが NULL だったので落ちなかった。D10 で会社に請求先を持たせると `InvoiceDetailResponse` の `bill_to_snapshot: dict | None` が文字を受け取り 422 ではなく 500 になる（1回目の実行の `pydantic_core.ValidationError: 1 validation error for InvoiceDetailResponse … Input should be a valid dictionary … input_type=str`）。(c) 本番は dict がそのまま通るので本番の応答は変わらない。文字と dict の両方を受ける形は先例がある（backend/app/routers/tenant_commission_settings.py:56-64 の「PostgreSQL JSONB は SQLAlchemy が自動で dict に…SQLite テスト環境では TEXT…両方を受け付ける」・backend/app/routers/archives.py:140）。(d) 応答の形の1か所で直すので、一覧（invoices.py:182 の `list[InvoiceResponse]`）・詳細・作成の3つの返し方がそろって直る。PDF の3入口は手を入れない（試験は D12 のとおり描画の関数を直接呼び、本番は dict）。
 - D14（直し r1）手順6 の pytest は一部のファイルだけを流すので、設定の網羅率の下限（60%）で必ず「FAIL Required test coverage」が出る（1回目の実行で 29.65%）。試験の合否と混ざらないよう `--no-cov` を付ける（網羅率は CI の全件の試験で見る）。
+- D15（直し r2）2-18 の試験で、会社の一覧と担当者の一覧を空ではなく、見積の会社（4）と担当者（5）の1件ずつにする。読み込み後に担当者の選択肢が出るまで待つ。根拠: (a) 請求書作成画面の会社・担当者の選択欄は必須（frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:296 の `required`）で、選択欄は本物の select に `required` を渡し、空の選択肢を選べなくする（frontend/src/components/Select.tsx:93-102）。(b) 一覧が空だと選択肢に 4 と 5 が無く、select の値は空になる。必須が満たされないので、試験の画面（jsdom）はボタンを押しても送信しない（同じ動きの先例: frontend/src/components/CommerceSubmitButtonMigration.test.tsx:103 は数量が不正なときボタンを押しても送信されないことを確かめている。同じファイルの送信の試験は一覧に会社と担当者を1件ずつ入れている: 同ファイル 20-21・54-55）。(c) 2回目の実行で落ちたのは作成画面の2件だけで、form を使わない見積詳細の1件は通った。製品の書き方は変えない。
 
 ## 0. カード発行前チェック（docs/ai-agents/design-partner.md §5.5）
 
@@ -1221,7 +1222,7 @@ import { api, ApiError } from "../../lib/api";
       )}
 ```
 
-### 2-18 frontend/src/components/BillToCountryGuidance.test.tsx（新規。Write ツールでこの全文）
+### 2-18 frontend/src/components/BillToCountryGuidance.test.tsx（新規。Write ツールでこの全文。直し r2 の D15 を含む）
 
 ```tsx
 // ADR-1061 便2-2c2a: 請求先の国が無くて請求書を作れなかったとき、取引先の画面へ移るボタンを出す
@@ -1247,6 +1248,8 @@ function routed(node: React.ReactNode, path: string, entries: string[]) { return
 const summary = { id: 7, quote_code: 'Q-7', company_id: 4, currency: 'USD', total_amount: 10, status: 'approved', created_at: '' };
 const detail = { id: 7, quote_code: 'Q-7', company_id: 4, contact_id: 5, currency: 'USD', items: [{ product_id: 2, product_name: 'Card', quantity: 1, unit_price: 10, weight: null }] };
 const approvedQuote = { id: 7, quote_code: 'Q-7', company_id: 4, currency: 'USD', subtotal: 10, shipping_fee: null, tax_amount: null, total_amount: 10, status: 'approved', validity_date: null, notes: null, created_at: '', items: [] };
+const company = { id: 4, company_code: 'C-4', name: 'Company' };
+const contact = { id: 5, company_id: 4, surname: 'Buyer', given_name: 'One', surname_en: null, given_name_en: null, email: 'buyer@example.com', is_primary_contact: true };
 
 beforeEach(async () => {
   vi.resetAllMocks(); instance = createInstance();
@@ -1256,8 +1259,8 @@ beforeEach(async () => {
     if (url === '/me/permissions') return { permissions: ['invoices.create'] };
     if (url === '/quotes?status=approved') return [summary];
     if (url === '/quotes/7') return detail;
-    if (url === '/companies?per_page=100') return [];
-    if (url.startsWith('/contacts')) return [];
+    if (url === '/companies?per_page=100') return [company];
+    if (url === '/contacts?company_id=4&per_page=100') return [contact];
     throw new Error(`Unexpected GET ${url}`);
   });
   mock.post.mockImplementation(() => { throw new Error('Unexpected post'); });
@@ -1270,6 +1273,7 @@ async function loadQuoteIntoCreatePage() {
   render(wrap(<InvoiceCreatePage />));
   fireEvent.click(await screen.findByTestId('invoice-edit-from-quote-7'));
   expect(await screen.findByDisplayValue('Card')).toBeTruthy();
+  expect(await screen.findByRole('option', { name: /Buyer/ })).toBeTruthy();
 }
 
 describe('bill-to country guidance (ADR-1061 bin2-2c2a)', () => {
