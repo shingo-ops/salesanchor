@@ -1267,3 +1267,6 @@ run_sql migrations/20261112_150000_create_viewer_contract_public_tables.sql
 run_sql migrations/20261112_160000_create_tenant_issuer_and_payment_tables.sql
 # ADR-1075 便15A: 予定の繰り返し（calendar_events に欄 4 つ・CHECK 4 つ・部分 UNIQUE）
 run_sql migrations/20261112_170000_add_calendar_events_recurrence.sql
+# ADR-1077 便1: 秘書の決まり帳の表 2 つ（public.secretary_rules・public.secretary_rule_checks・FORCE RLS）と使いみち secretary_regression を足す（作るだけ・行なし・冪等）
+run_sql migrations/20261113_100000_create_secretary_rules.sql
+# ADR-1077 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261113_100001_create_secretary_rules_down.sql
