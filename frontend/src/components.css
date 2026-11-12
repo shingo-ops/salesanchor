@@ -265,6 +265,9 @@
   background: var(--bg-hover);
   color: var(--text-primary);
 }
+/* 自社在庫の状態（OwnInventoryPage の status-${row.status}）が使う。会社・担当者の状態には使わない */
+.status-badge.status-active { background: var(--success-bg); color: var(--success-text); }
+.status-badge.status-inactive { background: var(--bg-hover); color: var(--text-muted); }
 
 /* stylelint-disable-next-line no-descending-specificity -- intentional: dedup row overrides hover td */
 .row-pending-dedup td {

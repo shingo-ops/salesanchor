@@ -226,7 +226,7 @@ export default function ContactEditPage() {
             surname: contactQ.data.surname,
             given_name: contactQ.data.given_name,
           }}
-          onMerged={(masterId) => navigate(`/contacts/${masterId}/edit`)}
+          onMerged={(masterId) => { setMergeOpen(false); navigate(`/contacts/${masterId}/edit`); }}
           onCancel={() => setMergeOpen(false)}
         />
       )}
