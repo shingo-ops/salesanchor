@@ -1,9 +1,9 @@
 # card: 便2-2c2a 請求書・見積書の発行元を新しい表から読み、請求先の国で地域を決める（ADR-1061）
 
-状態: カード発行（Opus、2026-11-12）。PO の設計承認と実装承認は 2026-11-12「1、推測は禁止して…確立したなら進める。」（ideal-state 54。review.md「2026-11-12 PO の設計承認」）。
+状態: カード発行（Opus、2026-11-12）。直し r1（Opus、2026-11-13）: 1回目の実行は手順6 で `BLOCKED: pytest`（試験の SQLite で請求先の住所の写しが文字で返り、応答の形の検査が落ちた）。D13・P5・2-4・手順6・§4 を直した。PO の設計承認と実装承認は 2026-11-12「1、推測は禁止して…確立したなら進める。」（ideal-state 54。review.md「2026-11-12 PO の設計承認」）。
 設計: docs/handoff/viewer-contract-stage/design.md §3-4（発行元の会社情報・請求書の発行元区分）・§8・A40。ADR-1061。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。本番・GitHub の secret・DB には触らない。PR は作らない（Opus が作る）。
-基準: origin/main `b6b444eff`（便2-2c1 #5460 合流後）で行番号を測った。カード起票時の origin/main `e7bc71f71` との差は §1 の外のファイルだけ（`git diff --stat b6b444eff e7bc71f71 -- 触るファイル` で 0）。行番号がずれていたら「変更前」の文で場所を探す（同じ文が決めた数と違えば BLOCKED: で停止）。
+基準: origin/main `b6b444eff`（便2-2c1 #5460 合流後）で行番号を測った。カード起票時の origin/main `e7bc71f71` との差は §1 の外のファイルだけ（`git diff --stat b6b444eff e7bc71f71 -- 触るファイル` で 0）。直し r1 の時点の origin/main `95acec44f` と 1回目の実行の基準 `32379cb00` の差も、§1 の19ファイル・`backend/app` 全体・都道府県の seed で 0（`git diff --stat 32379cb00 95acec44f -- …` が空）。行番号がずれていたら「変更前」の文で場所を探す（同じ文が決めた数と違えば BLOCKED: で停止）。
 危険便か: いいえ（`migrations/`・`deploy.yml`・本番 `scripts/` を変えない。表と列は便2-2c1 で本番に在る）。マージ前に Opus の審査役の APPROVE と CI 全通過を必須にする（担当の作業ではない）。
 
 本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
@@ -22,6 +22,9 @@
 - D10 既存の試験で請求書を作る会社に、既定の請求先の住所（国 US）を持たせる（test_invoices・test_company_stats・test_products・test_paypal_invoicing の4ファイル）。持たせないと D3 の 422 で今の試験が落ちる。
 - D11 試験の SQLite（backend/tests/conftest.py）に都道府県の表 `prefectures`・発行元の表 `tenant_issuer_profiles`・請求書の列 `issuer_region` を足し、`public.prefectures` を読み替える。試験の後片付けに発行元の表を足す。都道府県の値は試験に書かず、正本の seed ファイル（docs/handoff/viewer-contract-stage/data/prefectures.sql）から読む。国名も試験に書かず国の表から読む。
 - D12 PDF の中身の試験は、`get_issuer` と描画の関数を直接呼んで pdfminer で文字を取り出して確かめる（先例 backend/tests/test_po_renderer.py:80-89。PDF の入口を通す試験は前例が無く、SQLite では日時が文字で返るため作らない）。3つの入口が正しい地域で `get_issuer` を呼ぶことはソースの検査で確かめる。
+
+- D13（直し r1）請求書の応答の形 `InvoiceResponse` に、住所・為替などの写しの4列（`ship_to_snapshot`・`bill_to_snapshot`・`duty_policy_snapshot`・`fx_rate_snapshot`）が文字で来たら JSON として読み直して dict にする検査前の変換（pydantic の `field_validator(..., mode="before")`）を足す。根拠: (a) 本番の列は JSONB（migrations/20260604_160000_add_invoice_snapshot_columns.sql:31）で、本番の接続は asyncpg（backend/app/database.py:9）。SQLAlchemy の asyncpg 方言は jsonb を `json.loads` で読み dict で返す（SQLAlchemy 公式文書 dialects/postgresql「asyncpg」の注記。Context7 `/sqlalchemy/sqlalchemy` で確認）。(b) 試験の SQLite では同じ列が TEXT（backend/tests/conftest.py:1192-1196）で、文字のまま返る。今までの試験は請求先の住所を持たない会社だけで写しが NULL だったので落ちなかった。D10 で会社に請求先を持たせると `InvoiceDetailResponse` の `bill_to_snapshot: dict | None` が文字を受け取り 422 ではなく 500 になる（1回目の実行の `pydantic_core.ValidationError: 1 validation error for InvoiceDetailResponse … Input should be a valid dictionary … input_type=str`）。(c) 本番は dict がそのまま通るので本番の応答は変わらない。文字と dict の両方を受ける形は先例がある（backend/app/routers/tenant_commission_settings.py:56-64 の「PostgreSQL JSONB は SQLAlchemy が自動で dict に…SQLite テスト環境では TEXT…両方を受け付ける」・backend/app/routers/archives.py:140）。(d) 応答の形の1か所で直すので、一覧（invoices.py:182 の `list[InvoiceResponse]`）・詳細・作成の3つの返し方がそろって直る。PDF の3入口は手を入れない（試験は D12 のとおり描画の関数を直接呼び、本番は dict）。
+- D14（直し r1）手順6 の pytest は一部のファイルだけを流すので、設定の網羅率の下限（60%）で必ず「FAIL Required test coverage」が出る（1回目の実行で 29.65%）。試験の合否と混ざらないよう `--no-cov` を付ける（網羅率は CI の全件の試験で見る）。
 
 ## 0. カード発行前チェック（docs/ai-agents/design-partner.md §5.5）
 
@@ -59,7 +62,7 @@
 - P2 `ls backend/app/services/issuer.py backend/tests/test_issuer.py frontend/src/components/BillToCountryGuidance.test.tsx` が3つとも「無い」。
 - P3 backend/app/routers/invoices.py で次の数: `ship_to_snapshot, bill_to_snapshot, fx_rate_snapshot$` 2・`:ship_to, :bill_to, :fx_rate$` 2・`"fx_rate": json.dumps(fx_snap) if fx_snap else None,$` 2・`    paypal_invoicer_view_url, paypal_copy_pdf_at$` 1・`    tenant_schema = await _get_tenant_schema(tenant_id)` 3・`from app.services.payment_dates import PAID_AT_SQL, paid_at_from_date, paypal_paid_at` 1・`issuer_region` 0。
 - P4 backend/app/services/invoice_renderer.py で `    tenant_website: Optional\[str\] = None` 1・`        tenant_website=tenant_profile.get("website"),` 2・`registration_number` 0。
-- P5 backend/app/schemas/invoice.py で `    paypal_copy_pdf_at: datetime | None = None` 1・`issuer_region` 0。
+- P5 backend/app/schemas/invoice.py で `    paypal_copy_pdf_at: datetime | None = None` 1・`issuer_region` 0・`^from pydantic import BaseModel, Field$` 1・`^import json$` 0・`field_validator` 0・`^class InvoiceDetailResponse(InvoiceResponse):$` 1。
 - P6 backend/tests/conftest.py で `if "public.countries" in statement:` 1・`                paypal_copy_pdf_at TIMESTAMP$` 1・`        # === Phase 4 テーブル ===` 1・`DELETE FROM tenant_profile` 1・`prefectures` 0・`tenant_issuer_profiles` 0・`issuer_region` 0。
 - P7 `grep -c 'json={"name": company_name, "lead_id": lead_id})'` が backend/tests/test_invoices.py で 1。
 - P8 `grep -c '"merge_target_archived",'` が backend/tests/test_api_error_reason_sync.py で 1。`grep -c "toBe(9)"` が frontend/src/lib/apiErrorReason.test.ts で 1。
@@ -372,7 +375,7 @@ async def _fetch_tenant_profile(db: AsyncSession, tenant_schema: str) -> dict:
         paypal_copy=paypal_copy,
 ```
 
-### 2-4 backend/app/schemas/invoice.py（1か所）
+### 2-4 backend/app/schemas/invoice.py（4か所。(2)〜(4) は直し r1 の D13）
 
 変更前:
 ```
@@ -383,6 +386,52 @@ async def _fetch_tenant_profile(db: AsyncSession, tenant_schema: str) -> dict:
     paypal_copy_pdf_at: datetime | None = None
     # ADR-1061 便2-2c2a: 発行元の地域（domestic / overseas。作成時に請求先の国で決める。古い請求書は NULL）
     issuer_region: str | None = None
+```
+
+(2) 取り込み。変更前（1か所だけ）:
+```
+from datetime import date, datetime
+```
+変更後:
+```
+import json
+from datetime import date, datetime
+```
+
+(3) 取り込み。変更前（1か所だけ）:
+```
+from pydantic import BaseModel, Field
+```
+変更後:
+```
+from pydantic import BaseModel, Field, field_validator
+```
+
+(4) InvoiceResponse の最後（InvoiceDetailResponse の直前）。変更前（1か所だけ。`model_config` の行はファイルに2つあるので、すぐ下の `class InvoiceDetailResponse` の行まで含めて探す）:
+```
+    model_config = {"from_attributes": True}
+
+
+class InvoiceDetailResponse(InvoiceResponse):
+```
+変更後:
+```
+    model_config = {"from_attributes": True}
+
+    # ADR-1061 便2-2c2a（D13）: 写しの列は本番（PostgreSQL の JSONB）では dict で返るが、
+    # 試験の SQLite では TEXT に JSON の文字で入っているため、文字なら dict に読み直す。
+    # 先例: routers/tenant_commission_settings.py の commission_rates の読み方。
+    @field_validator(
+        "ship_to_snapshot", "bill_to_snapshot", "duty_policy_snapshot", "fx_rate_snapshot", mode="before"
+    )
+    @classmethod
+    def _parse_json_snapshot(cls, v):
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
+
+
+class InvoiceDetailResponse(InvoiceResponse):
 ```
 
 ### 2-5 backend/tests/conftest.py（5か所）
@@ -1270,7 +1319,7 @@ describe('bill-to country guidance (ADR-1061 bin2-2c2a)', () => {
     cd ~/sa && ls backend/app/services/issuer.py backend/tests/test_issuer.py frontend/src/components/BillToCountryGuidance.test.tsx 2>&1 | tail -3
     cd ~/sa && F=backend/app/routers/invoices.py && grep -c "ship_to_snapshot, bill_to_snapshot, fx_rate_snapshot$" $F; grep -c ":ship_to, :bill_to, :fx_rate$" $F; grep -c '"fx_rate": json.dumps(fx_snap) if fx_snap else None,$' $F; grep -c "    paypal_invoicer_view_url, paypal_copy_pdf_at$" $F; grep -c "    tenant_schema = await _get_tenant_schema(tenant_id)" $F; grep -c "from app.services.payment_dates import PAID_AT_SQL, paid_at_from_date, paypal_paid_at" $F; grep -c "issuer_region" $F
     cd ~/sa && F=backend/app/services/invoice_renderer.py && grep -c "    tenant_website: Optional\[str\] = None" $F; grep -c '        tenant_website=tenant_profile.get("website"),' $F; grep -c "registration_number" $F
-    cd ~/sa && F=backend/app/schemas/invoice.py && grep -c "    paypal_copy_pdf_at: datetime | None = None" $F; grep -c "issuer_region" $F
+    cd ~/sa && F=backend/app/schemas/invoice.py && grep -c "    paypal_copy_pdf_at: datetime | None = None" $F; grep -c "issuer_region" $F; grep -c "^from pydantic import BaseModel, Field$" $F; grep -c "^import json$" $F; grep -c "field_validator" $F; grep -c "^class InvoiceDetailResponse(InvoiceResponse):$" $F
     cd ~/sa && F=backend/tests/conftest.py && grep -c 'if "public.countries" in statement:' $F; grep -c "                paypal_copy_pdf_at TIMESTAMP$" $F; grep -c "        # === Phase 4 テーブル ===" $F; grep -c "DELETE FROM tenant_profile" $F; grep -c "prefectures" $F; grep -c "tenant_issuer_profiles" $F; grep -c "issuer_region" $F
     cd ~/sa && grep -c 'json={"name": company_name, "lead_id": lead_id})' backend/tests/test_invoices.py
     cd ~/sa && grep -c '"merge_target_archived",' backend/tests/test_api_error_reason_sync.py; grep -c "toBe(9)" frontend/src/lib/apiErrorReason.test.ts
@@ -1280,7 +1329,7 @@ describe('bill-to country guidance (ADR-1061 bin2-2c2a)', () => {
     cd ~/sa && grep -c "issuer_region" frontend/api-contract/openapi.json; grep -c '"paypal_copy_pdf_at": {' frontend/api-contract/openapi.json
     cd ~/sa && grep -c 'json={"name": "統計テスト会社", "lead_id": lead_id})' backend/tests/test_company_stats.py; grep -c 'json={"name": "他社", "lead_id": other_lead_id})' backend/tests/test_company_stats.py; grep -c 'json={"name": "請求FK会社", "lead_id": lead_id})' backend/tests/test_products.py; grep -c 'json={"name": "Invoicingテスト会社", "lead_id": lead_id})' backend/tests/test_paypal_invoicing.py
     cd ~/sa && grep -c "ON CONFLICT (code) DO NOTHING;" docs/handoff/viewer-contract-stage/data/prefectures.sql
-  期待（行の順に）: P1 ファイル名1行／P2 3つとも「No such file or directory」／P3 `2 2 2 1 3 1 0`（1行に1つずつ）／P4 `1 2 0`／P5 `1 0`／P6 `1 1 1 1 0 0 0`／P7 1／P8 `1 1`／P9 3ファイルとも `:0`／P10 437 と 216／P11 §0-3 の10行と同じ／P12 `0 2`／P13 `1 1 1 1`／P14 1。
+  期待（行の順に）: P1 ファイル名1行／P2 3つとも「No such file or directory」／P3 `2 2 2 1 3 1 0`（1行に1つずつ）／P4 `1 2 0`／P5 `1 0 1 0 0 1`／P6 `1 1 1 1 0 0 0`／P7 1／P8 `1 1`／P9 3ファイルとも `:0`／P10 437 と 216／P11 §0-3 の10行と同じ／P12 `0 2`／P13 `1 1 1 1`／P14 1。
 
 手順3 §2 の変更をする（2-1 から 2-18 の順。2-2 は (1)〜(7)、(8)、(9) の順。新規の3ファイルは Write ツール、それ以外は Edit ツールで行う）
 
@@ -1304,8 +1353,8 @@ describe('bill-to country guidance (ADR-1061 bin2-2c2a)', () => {
   ※ lint の `echo "lint exit=$?"` は tail の終了コードを示すので、判定は lint の出力の中身（`violation`・`error` の行が無いこと）で行う。
 
 手順6 backend の試験（failed と error は 0 であること）
-    cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/test_issuer.py tests/test_api_error_reason_sync.py tests/test_prefectures_seed.py 2>&1 | tail -15
-    cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/test_invoices.py tests/test_company_stats.py tests/test_products.py tests/test_paypal_invoicing.py 2>&1 | tail -15
+    cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider --no-cov tests/test_issuer.py tests/test_api_error_reason_sync.py tests/test_prefectures_seed.py 2>&1 | tail -15
+    cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider --no-cov tests/test_invoices.py tests/test_company_stats.py tests/test_products.py tests/test_paypal_invoicing.py 2>&1 | tail -15
   期待: どちらも failed 0・error 0。1本目の passed に test_issuer.py の試験を含む（pdfminer が無くて skipped が出たら §4 のとおり記録）。
 
 手順7 API の形を作り直す（CI「API の形」の検査と同じ道具）
@@ -1345,10 +1394,10 @@ describe('bill-to country guidance (ADR-1061 bin2-2c2a)', () => {
   - 手順5 の数・A40 の期待が外れた → 出力を貼って `BLOCKED: 手順5`。
   - 手順6 か手順8 で failed か error が 1 件でも出た → 試験も本体も直さず最後の行を貼って `BLOCKED: pytest` か `BLOCKED: vitest`。ただしカードからの書き写し間違い（字・字下げ）が出力から分かるときだけ、カードの文に合わせて直してよい。直したら何をどう直したかを書く。
   - tsc・check:all が失敗した → 最後の行を貼って `BLOCKED: tsc` か `BLOCKED: check:all`。
+  - ruff が何か出した → `--fix` は流さず、出力を貼って `BLOCKED: ruff`。
   - 手順7 の期待が外れた → `BLOCKED: openapi`。
   - push が拒まれた → 最後の 3 行を貼って `BLOCKED: push`（force はしない）。
 - 記録して続ける（値を報告に書き、判定は Opus がする）:
-  - ruff が何か出した → `--fix` は流さず、出力を貼って `BLOCKED: ruff`。
   - 手順6 で skipped が出る（pdfminer が無い・実 PostgreSQL の試験）→ そのまま件数を書く。
   - 手順8 で node か npm が無い → `frontend 未実行（node なし）` と書いて手順9 へ進む（CI の frontend の検査で Opus が確かめる）。
 
