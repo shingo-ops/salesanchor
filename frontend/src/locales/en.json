@@ -3048,6 +3048,26 @@
       "currency": "Currency",
       "rateJpy": "1 Foreign = N JPY"
     },
+    "taxRates": {
+      "subtitle": "Consumption tax rates used for invoices. An invoice uses the rate in effect on its issue date. Add a new rate with a date from tomorrow onward.",
+      "effectiveFrom": "Effective from",
+      "ratePercent": "Rate (%)",
+      "ratePercentValue": "{{rate}}%",
+      "actions": "Actions",
+      "addBtn": "Add",
+      "addSuccess": "Tax rate added.",
+      "deleteBtn": "Delete",
+      "deleteSuccess": "Tax rate deleted.",
+      "deleteConfirmTitle": "Delete tax rate",
+      "deleteConfirmMessage": "Delete the {{rate}}% rate effective from {{date}}?",
+      "noData": "No tax rate yet. Enter a rate and an effective date above, then add it.",
+      "errorDateInvalid": "This effective date cannot be added. Choose a date after the newest rate and from tomorrow onward.",
+      "errorDateTaken": "A rate with the same effective date already exists. Check the list and choose another date.",
+      "errorNotDeletable": "A rate that has already started cannot be deleted. Check the list.",
+      "errorNotFound": "This tax rate was not found. Reload the page and check again.",
+      "errorInput": "The input is not valid. Enter a rate from 0 to 100 with up to 2 decimals, and a date.",
+      "errorGeneric": "Failed to save the tax rate. Please wait a moment and try again."
+    },
     "inbound": {
       "title": "Discord Inbound Messages",
       "subtitle": "Inbound message log from suppliers on Discord. Inspect parse results and approval status.",
