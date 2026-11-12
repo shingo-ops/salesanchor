@@ -243,3 +243,57 @@ async def test_k14_api_customer_statuses_returns_table_rows():
     assert res.status_code == 200
     assert res.json() == expected
     assert all("selectable_on_create" in row for row in res.json())
+
+
+async def _status_fkey_oids(admin_engine) -> dict[str, int]:
+    from sqlalchemy import text
+
+    async with admin_engine.connect() as conn:
+        rows = (
+            await conn.execute(
+                text(
+                    "SELECT con.conname, con.oid FROM pg_constraint con "
+                    "JOIN pg_namespace nsp ON nsp.oid = con.connamespace "
+                    "WHERE nsp.nspname = :s AND con.contype = 'f' "
+                    "AND con.conname IN ('companies_status_fkey', 'contacts_status_fkey')"
+                ),
+                {"s": _SCHEMA},
+            )
+        ).all()
+    return {r[0]: int(r[1]) for r in rows}
+
+
+async def _status_check_count(admin_engine) -> int:
+    from sqlalchemy import text
+
+    async with admin_engine.connect() as conn:
+        return (
+            await conn.execute(
+                text(
+                    "SELECT count(*) FROM pg_constraint con "
+                    "JOIN pg_class cls ON cls.oid = con.conrelid "
+                    "JOIN pg_namespace nsp ON nsp.oid = cls.relnamespace "
+                    "JOIN pg_attribute att ON att.attrelid = con.conrelid "
+                    "AND att.attnum = ANY(con.conkey) "
+                    "WHERE nsp.nspname = :s AND cls.relname IN ('companies', 'contacts') "
+                    "AND con.contype = 'c' AND att.attname = 'status'"
+                ),
+                {"s": _SCHEMA},
+            )
+        ).scalar_one()
+
+
+async def test_k16_rerunning_037_and_fk_migration_changes_nothing():
+    """デプロイのたびに全 migration を流し直しても、037 は CHECK を足さず、便2 は外部キーを付け直さない（design.md §15-4）。"""
+    from tests.rls_bootstrap import _apply_migration
+
+    async with _fresh() as (admin_engine, _app_engine, _lead_id):
+        before = await _status_fkey_oids(admin_engine)
+        assert set(before) == {"companies_status_fkey", "contacts_status_fkey"}
+        assert await _status_check_count(admin_engine) == 0
+        for _ in range(2):
+            await _apply_migration(admin_engine, "037_add_pending_dedup_review_to_contacts_check.sql")
+            assert await _status_check_count(admin_engine) == 0
+            await _apply_migration(admin_engine, "20261112_140000_customer_status_fk.sql")
+            assert await _status_fkey_oids(admin_engine) == before
+            assert await _status_check_count(admin_engine) == 0
