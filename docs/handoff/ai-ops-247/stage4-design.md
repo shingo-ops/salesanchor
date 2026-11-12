@@ -56,7 +56,7 @@
 ### 実装カードで足すこと（この設計では作らない）
 
 - C3-0（正本は 1 か所・写しを持たない。PO 決定 D1・D4）: 報告の中身（status・summary・cause・evidence・proposal・risk・needs_decision）の正本は `ops_case.reports` の 1 行だけ（列は `migrations/20261031_210000_create_ops_case.sql:22-33`）。PO 決定 D1 で、この表を障害記録の一部として扱う。報告を受けたら、サーバーが同じ処理の中で出来事の表（`ops_incident_events`）に「報告が届いた」という出来事を 1 行書く。detail に入れるのは報告の id（参照）だけで、status・summary などの値は写さない（PO 決定 D4「データを分散させることは禁止」）。中身を見る側（手元の Opus・将来の画面）は id で `ops_case.reports` を読む。値を写さないので、detail の上限 8192 バイト（`ops_incident_events_detail_size_check`）の切り詰めは起きない。
-  - 出来事の表の kind は今 `annotated`・`first_aid`・`ai` の 3 つ（`backend/app/routers/ops.py:414`）。`ai` は今、Discord 発の件の「回」の記録（round）にも使われている（`backend/app/routers/ops.py:366-427`）。報告が届いた出来事と U1 の「許可」の出来事をどう見分けるか（kind を足すか、detail の形で分けるか）は実装カードで決め、カードに見分け方の試験を入れる。
+  - 注記の口（`POST /ops/incidents/{id}/events`）が受ける kind は `annotated`・`first_aid`・`ai` の 3 つ（`backend/app/routers/ops.py:414`）。出来事の表の決まりが許す kind は 6 つ（notified・resolved・annotated・first_aid・ai・halt。`migrations/20261016_100000_create_ops_incident_tables.sql:54-55`）。kind を足すなら、口と表の決まりの両方の変更が要る（表は migration と GO #番号が要る）。`ai` は今、Discord 発の件の「回」の記録（round）にも使われている（`backend/app/routers/ops.py:366-427`）。報告が届いた出来事と U1 の「許可」の出来事をどう見分けるか（kind を足すか、detail の形で分けるか）は実装カードで決め、カードに見分け方の試験を入れる。
   - 出来事の表の actor は alertmanager / ops_token / super_admin に限られる（`migrations/20261016_100000_create_ops_incident_tables.sql:56-57`）。報告の口から書くときの actor の値（新しい値なら表の変更が要る）は実装カードで決める。
   - Discord について（事実の訂正）: 前の版では「Discord は出来事の表の写しを出す」と書いたが、事実と違った。今の障害通知は Alertmanager が Discord と保守 API（ops-api）に別々に送っている（`monitoring/alertmanager/alertmanager.yml:13-24`）。出来事の表から Discord を作る道は今は無い。AI の報告を Discord に出すかどうか・出し方は、この設計では決めない。要件 R2・G1・K1（送り手を記録経由に付け替える仕事）で、記録を正本にして表示だけする形で設計する（§8）。
 - C3-1: 報告を 1 件に複数通にする。kind（investigation / verification / effect）を足し、一意を（incident_id, kind）にする。F7（直ったかの確かめ）と F9（効果確認）でも書けるようにするため。今は 2 通目が 409（E3）。表の変更なので migration と GO #番号が要る。
@@ -181,7 +181,7 @@
 
 ## 12. PO の決定（2026-11-12）
 
-- PO の答え（原文の抜き書き）: 「1,推測は禁止して事実確認を怠らずに確実性を重視して」「配線とDBのSSOTは遵守してデータを分散させることは禁止」「フロントエンドのパーツもデザイントークンとデザインシステム を遵守して、金型登録のないハードコードを禁止する」「分からないことは聞いてくれ。確立したなら進める。」
+- PO の答え（原文の全文）: 「1,推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ。また配線とDBのSSOTは遵守してデータを分散させることは禁止。フロントエンドのパーツもデザイントークンとデザインシステム を遵守して、金型登録のないハードコードを禁止する。推測で自身で判断したり不透明無まま進めることは禁止、分からないことは聞いてくれ。確立したなら進める。」
 - 「1」が指す選択肢: 「設計書と上の3つのおすすめを、まとめて承認する」。
 - D0: この設計（U1・U2・U3・U5）を承認。次は §6 の試し。作り始める前に、実装カードで改めて PO の承認を得る。
 - D1: AI の報告の置き場（`ops_case.reports`）を障害記録の一部として扱う。
