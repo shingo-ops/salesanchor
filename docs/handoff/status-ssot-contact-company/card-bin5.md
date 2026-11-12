@@ -78,7 +78,7 @@
      ```
          if (url === '/me/permissions') return { permissions: ['customers.delete'] };
      ```
-   - ほかは変えない（`:181` の `merge.disabled` が false のまま通ることを確かめる）。
+   - `:184` と `:209` の `expect(merge.disabled).toBe(false);` は、権限の取得を待つため `await waitFor(() => expect(merge.disabled).toBe(false));` にする（審査の推奨。確かめる中身は同じ）。ほかは変えない。
 
 7. 新しい試験 `frontend/src/pages/contacts/ContactEditPageMerge.test.tsx`（K19・K20）。既存の `FullPageFormButtonMigration.test.tsx` の `afterEach` は `mock.post` が呼ばれないことを確かめるので、まとめる試験は別のファイルにする。
    - 頭（mock・LocationProbe・`contact` の形）は `FullPageFormButtonMigration.test.tsx:1-31` と同じ書き方にする。違いは次だけ:
@@ -86,8 +86,8 @@
      - 偽の GET: `/contacts/52`→`{ ...contact, status: 'pending_dedup_review' }`、`/contacts/53`→`{ ...contact, id: 53, contact_code: 'C53', surname: 'Master fixture', status: 'active' }`、`/companies?per_page=100`→`[{ id: 41, name: 'Fixture company', company_code: 'CO41' }]`、`/customer-statuses`→`CUSTOMER_STATUS_TEST_ROWS`、`/me/permissions`→`{ permissions }`（試験ごとに変える変数）、`/companies/41/contacts?per_page=100`→`[{ id: 53, contact_code: 'C53', display_name: null, surname: 'Master fixture', given_name: null, status: 'active' }]`。知らない道は例外を投げる。
      - `afterEach` は `cleanup(); queryClient.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals();` と `expect(fetch).not.toHaveBeenCalled()`・`expect(mock.patch).not.toHaveBeenCalled()`・`expect(mock.delete).not.toHaveBeenCalled()`。
      - 画面は `MemoryRouter initialEntries={['/contacts/52/edit']}` と `<Route path="/contacts/:id/edit" element={<ContactEditPage />} />`。
-   - 試験1「権限が無いと押せず理由が出る」: `permissions = []`。画面を出し、`getByRole('button', { name: 'contacts.mergeAsDuplicate' })` が `disabled === true`、`title === 'companies.dedupMergeNoPermission'`。押しても `mergeContact.title` の窓は出ない（`queryByRole('dialog')` が null）。
-   - 試験2「まとめると窓が閉じ、残した側の編集画面へ移る」: `permissions = ['customers.delete']`、`mock.post.mockResolvedValue({})`。ボタンが `disabled === false` → 押す → `findByText('mergeContact.title')` → `within(dialog).getByRole('radio')` を押す → `mergeContact.nextStep` を押す → 名前が `mergeContact.executeLabel` のボタンを押す。そのあと `waitFor` で (a) `mock.post` が `('/contacts/53/merge', { loser_id: 52, reason: null })` で1回だけ呼ばれた (b) `queryByRole('dialog')` が null (c) `getByTestId('location').textContent` が `/contacts/53/edit`。
+   - 試験1「権限が無いと押せず理由が出る」: `permissions = []`。画面を出し、`await waitFor` で権限の取得を待ってから、`getByRole('button', { name: 'contacts.mergeAsDuplicate' })` が `disabled === true`、`title === 'companies.dedupMergeNoPermission'`。押しても `mergeContact.title` の窓は出ない（`queryByRole('dialog')` が null）。
+   - 試験2「まとめると窓が閉じ、残した側の編集画面へ移る」: `permissions = ['customers.delete']`、`mock.post.mockResolvedValue({})`。`await waitFor` でボタンが `disabled === false` になるのを待つ → 押す → `findByText('mergeContact.title')` → `within(dialog).getByRole('radio')` を押す → `mergeContact.nextStep` を押す → 名前が `mergeContact.executeLabel` のボタンを押す。そのあと `waitFor` で (a) `mock.post` が `('/contacts/53/merge', { loser_id: 52, reason: null })` で1回だけ呼ばれた (b) `queryByRole('dialog')` が null (c) `getByTestId('location').textContent` が `/contacts/53/edit`。
    - ボタンや窓の名前が上と合わないとき（例: 実行ボタンの名前）は、`MergeContactModal.tsx` の実物に合わせ、合わせた点を報告に書く。試験の中身（何を確かめるか）は変えない。
 
 8. 新しい試験 `frontend/src/components/MergeCompanyModal.test.tsx`（K18）:

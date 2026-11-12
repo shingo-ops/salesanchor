@@ -385,7 +385,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 ### 16-2. 現在地（事実・origin/main cee15756b）
 
 - 候補1（K18）: `frontend/src/components/MergeCompanyModal.tsx:238-240` は札の色は `getStatusPresentation("company", c.status)` で決め、文字は `{c.status}`（記号のまま）。同じ窓の `:301-302` と担当者の窓 `frontend/src/components/MergeContactModal.tsx:235` はすでに `customerStatuses.nameOf(...)` を使う。`customerStatuses` は `MergeCompanyModal.tsx:55` で取り済み。
-- 候補2（K19）: サーバーは止めている。`backend/app/routers/contacts.py:696-699` と `backend/app/routers/companies.py:703-708` はどちらも `require_permission("customers.delete")`。画面は3か所で確かめていない。
+- 候補2（K19）: サーバーは止めている。`backend/app/routers/contacts.py:694-699` と `backend/app/routers/companies.py:703-708` はどちらも `require_permission("customers.delete")`。画面は3か所で確かめていない。
   - `frontend/src/pages/contacts/ContactEditPage.tsx:205-207` のボタンは、状態が重複確認待ちなら誰にでも出て押せる。このファイルは権限を読んでいない（import に usePermissions が無い）。
   - `frontend/src/pages/company-detail/CompanyContactsTab.tsx:131-142` の行のボタンは canEdit（`CompanyDetailPage.tsx:39` の customers.update）だけで出る。
   - `CompanyContactsTab.tsx:234` は連絡手段の窓に `onRequestMerge` をいつも渡す。`frontend/src/components/ContactChannelForm.tsx:253-260` は渡されたときだけ「まとめる」ボタンを出す。
@@ -429,4 +429,4 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 - GO: migrations・deploy.yml・本番 scripts を含まないので危険 PR ではない（ADR-136 の対象外）。画面の変更なので、CI 緑・審査役 APPROVE で Opus がマージする（ADR-1003 の委任）。
 - 外部事例: 使わない。理由: 既にある当社の手本（会社の側の権限の確かめ方・担当者の窓の名前の出し方）に合わせるだけで、新しいやり方を選ばない。
 - 実装カード: [card-bin5.md](card-bin5.md)。
-- 審査: （設計審査の結果をここに書く）
+- 審査: 1回目（2026-11-13 08:16 JST・クラウド Opus・46d234e09）**APPROVE**（必須0件）。§16-2 の行・カードの変更前の文字列が実物（origin/main 4892f2c6a、対象ファイルは cee15756b から差分0）と合う・CompanyContactsTab を使うのは CompanyDetailPage.tsx:158 だけ・試験の流れ（POST の形・ボタン名・ラジオ・Provider なし）が成り立つ・辞書の新しいキーは要らない・§16-4 の grep は1件、を確認。推奨3件を反映: (中) ボタンが押せるかは権限の取得を待ってから確かめる（カード手順6・7）／(低) カード手順6 の行を `:184`・`:209` に直した／(低) contacts.py の行を `:694-699` に直した。
