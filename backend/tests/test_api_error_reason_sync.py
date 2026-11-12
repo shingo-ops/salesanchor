@@ -49,6 +49,7 @@ def test_table_rows_are_read():
         "role_page_keys_not_savable",
         "role_not_assignable",
         "merge_target_archived",
+        "bill_to_country",
     ]
 
 

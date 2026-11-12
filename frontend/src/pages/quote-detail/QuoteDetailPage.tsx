@@ -9,7 +9,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { api } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { usePermissions } from "../../hooks/usePermissions";
 import { getStatusPresentation } from "../../utils/statusPresentation";
@@ -61,6 +61,8 @@ export default function QuoteDetailPage() {
   const quoteQ = useApiQuery<QuoteDetail>(`/quotes/${id}`, { enabled: id !== undefined });
   const quote = quoteQ.data ?? null;
   const [error, setError] = useState("");
+  // ADR-1061 便2-2c2a: 請求先の国が無くて請求書を作れなかったとき、取引先の画面へ移るボタンを出す会社の番号
+  const [billToCompanyId, setBillToCompanyId] = useState<number | null>(null);
   const shownError = error || (quoteQ.error ? (quoteQ.error instanceof Error ? quoteQ.error.message : t("common.fetchError")) : "");
   const invalidate = useInvalidateApi();
   const [fxRate, setFxRate] = useState<FxRateResult | null>(null);
@@ -71,6 +73,7 @@ export default function QuoteDetailPage() {
   };
 
   const doAction = async (action: string) => {
+    setBillToCompanyId(null);
     try {
       await api.post(`/quotes/${id}/${action}`, {});
       load();
@@ -80,11 +83,13 @@ export default function QuoteDetailPage() {
   };
 
   const convertToInvoice = async () => {
+    setBillToCompanyId(null);
     try {
       const result = await api.post<{ id: number }>(`/invoices/from-quote/${id}`, {});
       navigate(`/invoices/${result.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.operationError"));
+      if (e instanceof ApiError && e.responseDetail === "bill_to_country" && quote) setBillToCompanyId(quote.company_id);
     }
   };
 
@@ -100,6 +105,7 @@ export default function QuoteDetailPage() {
       setFxRate(result);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.fetchError"));
+      setBillToCompanyId(null);
     } finally {
       setFxLoading(false);
     }
@@ -148,6 +154,13 @@ export default function QuoteDetailPage() {
       />
 
       {shownError && <div className="error-message">{shownError}</div>}
+      {billToCompanyId !== null && (
+        <div style={{ marginBottom: "var(--space-4)" }}>
+          <Button type="button" variant="secondary" size="sm" onClick={() => navigate(`/crm/companies/${billToCompanyId}`)}>
+            {t("invoices.openCompanyForBillTo")}
+          </Button>
+        </div>
+      )}
 
       {fxRate && (
         <div style={{ background: "var(--bg-surface)", padding: "var(--space-3)", borderRadius: "var(--radius-md)", marginBottom: "var(--space-4)", border: "1px solid var(--border)", fontSize: "var(--font-sm)" }}>

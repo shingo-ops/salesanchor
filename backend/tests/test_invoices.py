@@ -20,10 +20,14 @@ from decimal import Decimal
 # ヘルパー
 # ---------------------------------------------------------------------------
 
-async def _create_company_contact(client, company_name="請求テスト会社"):
+async def _create_company_contact(client, company_name="請求テスト会社", country="US"):
+    """会社と担当を作る。country を渡すと既定の請求先の住所を付ける（ADR-1061 便2-2c2a: 請求書は請求先の国が要る）"""
     from tests.helpers_txn import create_lead
     lead_id = await create_lead(client, company_name)
-    co = await client.post("/api/v1/companies", json={"name": company_name, "lead_id": lead_id})
+    body = {"name": company_name, "lead_id": lead_id}
+    if country is not None:
+        body["addresses"] = [{"address_type": "billing", "country_code": country, "is_default": True}]
+    co = await client.post("/api/v1/companies", json=body)
     assert co.status_code == 201, co.text
     company_id = co.json()["id"]
 
