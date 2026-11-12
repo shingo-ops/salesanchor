@@ -1,6 +1,6 @@
 # 段階4 AI 保守運用 — 残りの設計の宿題 U1・U2・U3・U5 の設計
 
-- 状態: PO 承認済み（2026-11-12「1」・§12）。実装は未着手。§6 の試しは P1・P2・P3・P5 済み、P4 は PO の答え待ち（§13）。実装カードは便ごとに出し、作り始める前に改めて PO の承認を得る。
+- 状態: PO 承認済み（2026-11-12「1」・§12）。実装は未着手。§6 の試しは P1〜P5 すべて済み（§13）。実装カードは便ごとに出し、作り始める前に改めて PO の承認を得る。
 - 親: `docs/handoff/ai-ops-247/stage4-requirements.md`（以下「要件」。2026-11-09 PO 承認）・`docs/handoff/ai-ops-247/stage4-trials.md`（以下「試し」）
 - 関係する ADR: ADR-1012（AI 保守運用）・ADR-1052（相談係 AI）・ADR-136（危険な変更の GO）
 - 基準: origin/main e3244a40f（2026-11-12）。行番号はすべてこの版。
@@ -34,7 +34,7 @@
 - X1【§13 P1 RemoteTrigger の run で ○（約 8000 字）。/fire の道は未確認】: /fire で渡せる文の長さの上限（公式資料には text が任意とだけある。Context7 で上限は見つからなかった）。
 - X2【§13 P2 ○（raw.githubusercontent.com）】: 置き場なしの会話から、ダミーの network secret を付けた raw.githubusercontent.com（または codeload.github.com）に届くか。GitHub の中継がこのホストも横取りするかは分からない。
 - X3【§13 P3 解決】: E15 と E16 のずれの理由（どのアカウント・どの導入先の画面だったか）。
-- X4: 新しい環境に入れる相談係の鍵の値を PO が持っているか（鍵の正本は GitHub secret の CASE_AGENT_TOKEN: `docs/handoff/cloud-case-ai/design.md:103`。PO の手元の控えが同じ値かも含めて確かめる）。
+- X4【§13 P4 ○（Mac の Keychain に控えあり）】: 新しい環境に入れる相談係の鍵の値を PO が持っているか（鍵の正本は GitHub secret の CASE_AGENT_TOKEN: `docs/handoff/cloud-case-ai/design.md:103`。PO の手元の控えが同じ値かも含めて確かめる）。
 - X5【§13 P5 ×（読んでいない）】: 相談係の週次点検（E15 の §4-6）が、今 GitHub のアプリの範囲を読んでいるか。
 
 ## 2. U3 調べた結果を記録に書く道
@@ -149,7 +149,7 @@
 ## 8. 未解決事項
 
 - U6（新）: グラフの Loki に個人情報が入りうる。v1 では使わない。使うなら伏せ方の設計が要る。
-- X4（§1）。P4 の PO の答え待ち。X1・X2・X3・X5 は §13。X1 の /fire での同じ試しと、組織（GEN-RYU-System）側の App 許可の読み取りは、実装カードで行う。
+- X1〜X5 は §13。X1 の /fire での同じ試しと、組織（GEN-RYU-System）側の App 許可の読み取りは、実装カードで行う。
 - C3-2・`ops_case.reports` の扱い・道具 5 つは PO が決めた（§12 の D1〜D3）。
 - AI の報告を Discord に出すか・出し方（§2 C3-0 の訂正）。要件 R2・G1・K1 の付け替えの仕事で、記録を正本にして表示だけする形で設計する。それまでは、報告は手元の Opus が記録から読んで PO にチャットで伝える。
 - 報告が届いた出来事と「許可」の出来事の見分け方（§2 C3-0）。実装カードで決める。
@@ -198,7 +198,7 @@
 | P1 | ○ 届いた文が送った文と一致 | 8227 字（17207 バイト）・162 行・末尾の印まで欠けなし。sha256 が送る前と一致。省略の印 0 件。試しの routine はリポジトリなし・コネクタなし。届いた文は 4 字の字下げ付きで、字下げを外した中身が一致 |
 | P2 | ○ raw.githubusercontent.com から読めた | ネットワーク None・ダミーの network secret 2 つ（raw.githubusercontent.com・codeload.github.com）・リポジトリなしの試し用の環境で、`docs/adr/ADR-1012-ai-ops-247.md`（コミット c97c5fec9）を GET。200・5111 バイト・sha256 が手元の origin/main と一致。比べ用の example.com は中継の 403。codeload.github.com の tar.gz は 403 |
 | P3 | 解決 | 2026-11-12、個人の導入先は「All repositories」だった。PO の答え: 「広がった理由は私が手動で切り替えた」・目的は特に無かった（PO「1」）。同じ日に PO が画面で「Only select repositories」に戻した。並んだ一覧は PO が決めた一覧（相談係 U10・非公開の記録）と一致。読み方は画面（個人の導入先は API が 403）。組織の導入先は、この試しでは読めていない（shingo-cc の鍵に admin:org が無く 404）|
-| P4 | 未 | PO の答え待ち |
+| P4 | ○ 控えあり（作り直し不要） | PO の答えは 2026-11-12「3」（分からない）。そこで属性だけを読んだ（値は見ていない）。Mac の Keychain に service salesanchor-case-agent-token・acct case の項目があり、作成と更新の時刻はどちらも 2026-10-31T06:49:14Z。GitHub secret CASE_AGENT_TOKEN の更新時刻は 2026-10-31T06:49:15Z（`gh secret list`）。同じ台本の 1 回の実行で置いたもので、その後どちらも書き換わっていない。新しい環境へは、値を画面に出さない写しの台本で PO が貼る（非公開の記録の手順と同じ）。§2 の作り直しと相談係の停止は起きない |
 | P5 | × 読んでいない | 手元の agent-console の定期実行 11 件の指示文に、GitHub のアプリの範囲を読む項目は 0 件。相談係の週次点検（§4-6）は設計にあるが、まだ動いていない |
 
 ### 試しから設計に足すこと
