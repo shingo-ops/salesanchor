@@ -63,8 +63,8 @@
 - Google の呼び口 `backend/app/services/google_calendar.py`: `create_event` `:390`・`update_event` `:410`（patch）・`delete_event` `:430`・`__all__` `:443`。32 行目は `from datetime import datetime, timezone`。
 - python-dateutil 2.9.0.post0 は今も間接に入っている（設計 recon §9.3）。
 - Google の `events.instances`（公式 reference・Context7 /websites/developers_google_workspace_calendar_api・2026-11-12）: `timeMin` は「回の終わりの下限（含む）」、`timeMax` は「回の始まりの上限（含まない）」、どちらも時差つきの RFC3339。回には `originalStartTime`（`dateTime` か `date`）が付き、動かした回でも元の始まりで 1 つに決まる。
-- 本カードで決めた細部（設計に書いていない）:
-  1. `get_instance` は `originalStart` の引数を使わず、`timeMin`・`timeMax` で 1 回分の窓を引いてから `originalStartTime` が一致する回を選ぶ（`originalStart` の値の形が終日で公式に書かれていないため）。
+- 本カードで決めた細部:
+  1. 設計 §12.7 からの変更（設計側も同じ枝で直した）: `get_instance` は `originalStart` の引数を使わず、`timeMin`・`timeMax` で回の前後の窓を引いてから `originalStartTime` が一致する回を選ぶ（`originalStart` の値の形が終日で公式に書かれていないため）。
   2. 一覧は、期間の始まりと終わりの両方があるとき、元の行も同じ 1 本の SELECT で取る（§4-6）。元の行が 1 件も無ければ SELECT は今と同じ 1 回だけなので、今の一覧の試験の多くはそのまま通る。
   3. 422 の `detail` は §4-5 の 8 つの識別の文字（画面の文言は便15B で i18n のキーに当てる）。
 
@@ -438,7 +438,7 @@ async def get_instance(
 ) -> dict:
     """繰り返しの予定の 1 回分を、決まりでの元の始まり（originalStartTime）で引いて返す（ADR-1075 §12.7 this）。
 
-    timeMin（回の終わりの下限・含む）と timeMax（回の始まりの上限・含まない）で 1 回分の窓を作り、
+    timeMin（回の終わりの下限・含む）と timeMax（回の始まりの上限・含まない）で窓を作り（終日は前後 1 日ずつ広く）、
     返った回のうち originalStartTime が一致するものを返す。見つからなければ RuntimeError。
     """
     service = await _get_service(db, tenant_id)
@@ -448,10 +448,13 @@ async def get_instance(
         original_start = original_start.replace(tzinfo=jst)
     start_jst = original_start.astimezone(jst)
     if is_all_day:
-        window_start = datetime.combine(start_jst.date(), datetime.min.time(), tzinfo=jst)
+        # 終日の範囲は Google のカレンダーの時間帯で解かれるので、前後 1 日ずつ広く引いて originalStartTime で選ぶ
+        day0 = datetime.combine(start_jst.date(), datetime.min.time(), tzinfo=jst)
+        window_start = day0 - timedelta(days=1)
+        window_end = day0 + timedelta(days=2)
     else:
         window_start = start_jst
-    window_end = window_start + timedelta(seconds=1)
+        window_end = start_jst + timedelta(seconds=1)
 
     try:
         result = await asyncio.to_thread(
@@ -559,8 +562,8 @@ async def check_recurrence_request(
 - 読み込みを `from typing import Annotated, Literal, Optional` にする。
 - `RecurrenceValue = Literal["none", "daily", "weekly", "monthly_nth", "monthly_last", "yearly", "weekdays"]` と `RecurrenceScope = Literal["this", "following", "all"]` を `MEET_NOT_ALLOWED_DETAIL` の近くに置く。
 - `CreateEventBody` に `recurrence: RecurrenceValue = "none"`。`UpdateEventBody` に `recurrence: Optional[RecurrenceValue] = None`・`scope: Optional[RecurrenceScope] = None`・`occurrence_start: Optional[str] = None`。
-- 作る（`:405`）: Meet の判定の後、`try` の前で `detail = cal_svc.check_create_recurrence(body.model_dump())`。None でなければ 422。
-- 直す（`:446`）: `payload` から `scope` と `occurrence_start` を取り出して（`pop`）残りを直す値とする。持ち主の確かめの 5 欄の SELECT を `cal_svc.read_event(db, event_id)` に置き換え、例外の行なら元の行を読み、持ち主・見せ方の 404・403 は**元の行の値**で今と同じに判定する（今の `record[0]`〜`record[4]` は辞書の名前で読む）。今の `calendar_type`・`add_meet` の判定は今のまま残す。`try` の前で `check_recurrence_request` を呼び、None でなければ 422。そのあと、単発の行で `recurrence` が無い（または none）なら今の `cal_svc.update_event`、それ以外は `cal_svc.update_recurring_event(...)` を同じ `try` の中で呼ぶ。
+- 作る（`:405`）: `calendar_type` の判定の直後・**Meet の判定（`:417-423`）より前**で `detail = cal_svc.check_create_recurrence(body.model_dump())`。None でなければ 422（繰り返しと `add_meet` が両方あるときは、つないでいるかに関係なく `recurrence_meet_not_allowed`）。
+- 直す（`:446`）: `payload` から `scope` と `occurrence_start` を取り出して（`pop`）残りを直す値とする。持ち主の確かめの 5 欄の SELECT を `cal_svc.read_event(db, event_id)` に置き換え、例外の行なら元の行を読み、持ち主・見せ方の 404・403 は**元の行の値**で今と同じに判定する（今の `record[0]`〜`record[4]` は辞書の名前で読む）。`pop` の後に直す値が空なら今と同じ 422 `no_fields_to_update`。今の `calendar_type` の判定（`:484-495`）は今のまま残し、その**直後・Meet の判定（`:497-513`）より前**で `check_recurrence_request` を呼び、None でなければ 422。だから元の行・例外の行への `add_meet` は、つないだ本人かや Google の id の有無に関係なく `recurrence_meet_not_allowed` になる（試験で `can_add_meet` を patch しなくてよい）。Meet の判定は今のまま後ろに残す。そのあと、単発の行で `recurrence` が無い（または none）なら今の `cal_svc.update_event`、それ以外は `cal_svc.update_recurring_event(...)` を同じ `try` の中で呼ぶ。
 - 消す（`:538`）: 引数に次の 2 つを足す。3 欄の SELECT を `read_event` に置き換え、例外の行なら元の行の値で持ち主を確かめる。判定を呼んで 422 の後、単発の行は今の `cal_svc.delete_event`、それ以外は `cal_svc.delete_recurring_event(...)`。
 
 ```python
@@ -572,7 +575,7 @@ async def check_recurrence_request(
 
 ### 4-6. 一覧 `list_events`（`:150`）
 
-- 期間の始まりと終わりの**両方**があり、`title_query` が無いとき: 期間の 2 つの条件の代わりに次の 1 つを入れる（`ce.` を付けて今と同じ形に並ぶ）。片方だけのときと探すときは今のままで、探すときは `ce.recurrence_rule IS NULL` を足さない。
+- 期間の始まりと終わりの**両方**があり、`title_query` が無いとき: 期間の 2 つの条件（`:169-174`）を `filters` に**入れず**、`where = " AND ".join(...) or "TRUE"`（`:183`）の行の**後ろ**で `where += " AND " + 下の 1 本` とする（`filters` に入れると頭に `ce.` がもう 1 つ付いて SQL が壊れるため。`params` の `start`・`end` は今と同じに入れる）。片方だけのときと探すときは今のまま `filters` に入れ、探すときは `ce.recurrence_rule IS NULL` を足さない。一覧の試験では、SQL の文に `(ce.start_datetime < :end AND ce.end_datetime > :start AND ce.recurrence_rule IS NULL) OR` がそのまま入り、`ce.(` が入らないことを確かめる。
 
 ```
 ((ce.start_datetime < :end AND ce.end_datetime > :start AND ce.recurrence_rule IS NULL) OR (ce.recurrence_rule IS NOT NULL AND ce.start_datetime < :end))
@@ -602,6 +605,8 @@ async def update_recurring_event(
 - `send_ok` は `m["google_event_id"]` があり、`_get_sync_mode` が `bidirectional` か `write_only`。偽なら Google に何も送らず、直した行・新しい行は `'pending'` のまま。
 - 新しく入れる行は INSERT の文で `sync_status = 'pending'` と `source = 'app'` を明示し、`created_by_user_id`・`category` は `m` の写し。例外の行の `calendar_type`・`user_id` は `m` の写し、`meet_url` は NULL。
 - 消える例外の行の Google の id（`is_cancelled = false` で `google_event_id` を持つ行）は、表を消す**前**に読む。表の変更を commit して `reset_tenant_context` の後に、先にそれぞれへ `update_event(id, {"status": "cancelled"})` を 1 件ずつ別の `try` で送り（失敗は警告だけ）、そのあと元の予定への送りを行う。
+- 表を直す UPDATE の文（A・B'・C・D1〜D3 の `m` も例外の行も新しい行も）には、今の `update_event`（`:372`）と同じく必ず `sync_status = 'pending'` を入れる。`send_ok` が偽なら全部 `'pending'` のまま残る。
+- 「変わる」かの比べ方: 直す値（`payload`）に入っている欄だけを、押した回の今の値（例外の行の id ならその行、それ以外は `occ`・`occ + dur`・`m` の終日）と比べる。日時は `_parse_dt` で読み日本時間の datetime どうしで比べ、`recurrence` は §4-5 の「変えない」の決まりで比べる。`payload` に無い欄は変わらないとみなす。だから動かした例外の回で題名だけを all で直すと D1 になる。
 - Google への送りが通った行は `sync_status = 'synced', last_synced_at = NOW()`。commit のたびに `reset_tenant_context(db, tenant_id)`（Rule C）。
 
 場合ごと:
@@ -644,7 +649,7 @@ async def delete_recurring_event(
 - `test_build_rule_six_kinds`: 2026-11-12 10:00 日本時間で daily・weekly（`BYDAY=TH`）・weekdays・yearly・monthly_nth（`BYDAY=2TH`）、2026-11-30 で monthly_last（`BYDAY=-1MO`）
 - `test_build_rule_not_available`: 2026-10-29（第 5 木曜）の monthly_nth と 2026-11-12 の monthly_last が ValueError
 - `test_rule_to_recurrence_round_trip`: 6 つの決まりと UNTIL 付きが元の選び方に戻る・読めない決まりは `"custom"`・None は `"none"`
-- `test_expand_two_months`: 6 つの決まりそれぞれで 2026-11-01〜2027-01-01 の回の数と最初の 2 つの日付
+- `test_expand_two_months`: 期間は 2026-11-01 0:00〜2027-01-01 0:00 日本時間。2026-11-12 10:00 日本時間に始まる 1 時間の毎週（`FREQ=WEEKLY;BYDAY=TH`）は 8 回で最初の 2 つが 11/12 10:00・11/19 10:00。2026-11-30 10:00 に始まる毎月最終月曜（`FREQ=MONTHLY;BYDAY=-1MO`）は 2 回で 11/30 10:00・12/28 10:00。ほかの 4 つ（daily・weekdays・yearly・monthly_nth）は 2026-11-12 10:00 始まりで、回の数と最初の 2 つは daily 50（11/12・11/13）・weekdays 36（11/12・11/13）・yearly 1（11/12）・monthly_nth 2（11/12・12/10）。どれも 10:00 日本時間（数は Opus が §4-2 をそのまま Python 3.12・dateutil 2.9.0.post0 で動かして得た値）
 - `test_expand_strict_window`: 期間の終わりちょうどに始まる回と、期間の始まりちょうどに終わる回が入らない
 - `test_expand_all_day`: 終日の毎週で回の始まりが日本時間 0:00
 - `test_expand_limit_1000`: 毎日・10 年の期間で 1000 件で止まり警告が 1 件（`caplog`）
@@ -660,6 +665,7 @@ async def delete_recurring_event(
 - 消す: this・following・all の表の文と送り（this は cancelled の patch 1 件だけ・following は例外の数だけの cancelled と recurrence の patch 1 件で insert 0 件・all は例外の数だけの cancelled と delete 1 件）。どれも例外の回が先。送りを失敗させても `sync_status` を変える文が出ない
 - 取り込み: `recurringEventId` がアプリ起源なら `"skipped"`
 - 判定: §4-5 の 8 つの識別の文字がそれぞれ出る場合
+- 次の 3 つは名前を付けて足す（設計 §12.10）: `test_update_all_none_keeps_pressed_occurrence`（all で none のとき、残る 1 件の始まり・終わりが押した回の日時。直す値に日時があればその値）／`test_update_and_delete_exception_id_routes_to_master`（例外の行の id に following・all で直す・消すと、表の文も Google への送りも元の行の id・元の Google の id に向く）／`test_send_ok_new_rows_synced`（元の行が `google_event_id` を持ち双方向のとき、following の新しい元の行は `create_event` が 1 件呼ばれ、this の例外の行は `get_instance` と `update_event` が 1 件ずつ呼ばれ、どちらの行も `sync_status = 'synced'` にする文が出る）
 
 `backend/tests/test_calendar_owner_api.py`:
 - `_event_db`（180 行目）を `cal_svc.EVENT_COLUMNS` の 18 欄の並びの組を返す形に広げる（今の 5 つの引数はそのまま・残りは初期値。`id` は 1・`source` は `"app"`・時刻は固定の値・`is_all_day` と `is_cancelled` は False）。今の 8 か所の呼び出し（192・205・218・232・245・314・330・348 行目）が変えずに通ること
@@ -672,14 +678,15 @@ async def delete_recurring_event(
 
 ## 5. 確かめ（担当が行う）
 
-5-1. push の前（作業場所の一番上で、1 行ずつ）:
-1. `cd backend && python -m pytest tests/test_calendar_recurrence.py tests/test_calendar_service.py tests/test_calendar_owner_api.py tests/test_tenant_loop_migration_guard.py tests/ops/test_ai_cloud_views.py -q 2>&1 | tail -n 60` … 最後の行が `passed` だけで `failed` と `error` が 0
-2. `cd backend && python -m pytest tests/test_calendar_sync_tenant_reset_pg.py -q 2>&1 | tail -n 30` … 手元に PostgreSQL が無くて skip になったら、skip の行をそのまま報告に写す（CI で走る）
-3. `cd backend && python -m pytest tests/test_calendar_recurrence.py -v 2>&1 | grep -E "PASSED|FAILED|ERROR" | head -n 40` … §4-9 の 10 個の名前がすべて PASSED
-4. `git diff --stat origin/main | tail -n 25` … 変わったファイルが §3 の 16 件だけ
-5. `grep -c "tenant_" migrations/20261112_160000_add_calendar_events_recurrence.sql` と `grep -n "recurrence" scripts/run_all_migrations.sh | tail -n 3` … 移行の名前が末尾に 1 回
+5-1. commit の前（どれも 1 回の Bash で `cd` から始める。`W` は作業場所の絶対パス `$HOME/worktrees/salesanchor/release-schedule-recurrence-backend`。Bash の呼び出しごとに場所は元に戻るので、毎回この形で書く）:
+1. `cd "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend/backend" && python -m pytest tests/test_calendar_recurrence.py tests/test_calendar_service.py tests/test_calendar_owner_api.py tests/test_tenant_loop_migration_guard.py tests/ops/test_ai_cloud_views.py -q 2>&1 | tail -n 60` … 最後の行に `failed` と `error` が無い（`skipped` はあってよい。手元に PostgreSQL が無いと要る試験は skip になる）
+2. `cd "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend/backend" && python -m pytest tests/test_calendar_sync_tenant_reset_pg.py -q 2>&1 | tail -n 30` … `failed`・`error` が無い。skip になったら skip の行をそのまま報告に写す（CI で走る）
+3. `cd "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend/backend" && python -m pytest tests/test_calendar_recurrence.py -v 2>&1 | grep -E "PASSED|FAILED|ERROR" | head -n 40` … §4-9 の 10 個の名前がすべて PASSED で、FAILED・ERROR が 0 行
+4. `grep -c "20261112_160000_add_calendar_events_recurrence.sql" "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend/scripts/run_all_migrations.sh"` … 出力が `1`
 
-5-2. push の後: `git log origin/release/schedule-recurrence-backend -1 --oneline` が手元の `git log -1 --oneline` と同じ
+5-2. commit の後・push の前: `git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" diff --stat origin/main...HEAD | tail -n 25` … 変わったファイルが §3 の 16 件だけ（新しいファイルも含まれる）。違えば止まる
+
+5-3. push の後: `git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" log origin/release/schedule-recurrence-backend -1 --oneline` が `git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" log -1 --oneline` と同じ
 
 ## 6. 止まる条件
 
@@ -705,14 +712,14 @@ async def delete_recurring_event(
 1. クラウドの写しの一番上（`git rev-parse --show-toplevel` の場所）で `git fetch origin && bash scripts/new-worktree.sh release/schedule-recurrence-backend`（origin/main 起点。`--claude` は付けない）。作成後に `git worktree list` で実在を確かめ、以後はその作業場所で行う
 2. `git log origin/main -1 --oneline` で、このカードが origin/main にあることを `ls docs/handoff/schedule-gcal-clone/card-bin15a.md` で確かめる
 3. 台帳 `.claude-pipeline/active-work.d/release-schedule-recurrence-backend.md` を Write ツールで作る（1 行目 `branch: release/schedule-recurrence-backend`、空行、表の頭 `| ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |` と区切りの行、`| release/schedule-recurrence-backend | 予定の繰り返しの裏側（ADR-1075 便15A） | 2026-11-12 | IN_PROGRESS | | | |`）
-4. §4 のとおりに書く（既にあるファイルは Edit ツール、新しいファイルは Write ツール）。§5-1 を通す
-5. commit（`--no-verify` は使わない。文: `feat(calendar): recurring events backend (ADR-1075 bin15A)`）→ `git log -1 --oneline`
-6. `git push -u origin release/schedule-recurrence-backend` → `git log origin/release/schedule-recurrence-backend -1 --oneline`
+4. §4 のとおりに書く（既にあるファイルは Edit ツール、新しいファイルは Write ツール。パスは作業場所の絶対パス）。§5-1 を通す
+5. commit（`git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" add` と `git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" commit`。`--no-verify` は使わない。文: `feat(calendar): recurring events backend (ADR-1075 bin15A)`）→ `git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" log -1 --oneline` → §5-2
+6. `git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" push -u origin release/schedule-recurrence-backend` → §5-3
 
 ## 9. 報告
 
 - 冒頭に受領文。1 行目は DONE／BLOCKED: 理由／NEEDS_DECISION: 内容 のどれか
-- 本文に: §5-1・§5-2 の出力（生のまま）・push した commit・判断を要した点（事実のみ）
+- 本文に: §5-1〜§5-3 の出力（生のまま）・push した commit・判断を要した点（事実のみ）
 - 停止したときは: 停止した手順番号／最後に実行したコマンド／停止した理由の原文
 
 ## 10. 委任の定型

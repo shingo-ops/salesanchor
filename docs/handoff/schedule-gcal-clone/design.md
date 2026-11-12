@@ -1455,7 +1455,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 - 送る（つないだ本人の自分だけの予定・双方向か書くだけのときだけ。今と同じ）:
   - `_to_google_event_body`（`backend/app/services/calendar_service.py:652`）に、元の行なら `"recurrence": ["RRULE:" + 決まり]` を足す。時刻つきは今と同じ `timeZone: "Asia/Tokyo"` 付き（繰り返しでは必須・recon §9.2）。終日は今と同じ日付だけで `timeZone` を付けない（公式の終日の繰り返しの例が日付だけ・「終日では時間帯は意味を持たない」・recon §9.5 U5）。
-  - this: `backend/app/services/google_calendar.py` に `get_instance(元の google_event_id, originalStart)`（`events.instances` を `originalStart` で引く）を足す。返った回の id を例外の行の `google_event_id` に入れ、その id に patch（消すは `status: "cancelled"`）。同時に例外の行の `sync_origin_id` を `app:<会社>:<例外の行の id>` にする（審査1 ⑩。作る道の `backend/app/services/calendar_service.py:305-309` と同じ書き方）。
+  - this: `backend/app/services/google_calendar.py` に `get_instance(元の google_event_id, 回の元の始まり, 終日か)`（`events.instances` を回の前後の窓（`timeMin`・`timeMax`）で引き、`originalStartTime` が一致する回を選ぶ。`originalStart` の引数は終日の値の形が公式に書かれていないため使わない。実装カード便15A の審査で直した・2026-11-12）を足す。返った回の id を例外の行の `google_event_id` に入れ、その id に patch（消すは `status: "cancelled"`）。同時に例外の行の `sync_origin_id` を `app:<会社>:<例外の行の id>` にする（審査1 ⑩。作る道の `backend/app/services/calendar_service.py:305-309` と同じ書き方）。
   - following: 元の予定を patch して `recurrence` を UNTIL 付きにし、新しい元の行を insert（今の作る道と同じ）。
   - 消すとき（recon §9.5 U6 で Google の結果を測った。PO の問い 2026-11-12 で抜けを直した）:
     - this: 上の this と同じ道で、その回に `status: "cancelled"` を送る。元の予定の `recurrence` は送らない（Google でも決まりは「5 回」のまま変わらなかった）。
