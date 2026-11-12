@@ -1,6 +1,7 @@
 # card: 便2-2a 契約と請求書の public の9表・税率の口と画面（ADR-1061）
 
 状態: カード発行（Opus、2026-11-12）。PO の設計承認と実装承認は 2026-11-12「1、推測は禁止して…確立したなら進める。」（ideal-state 54。review.md「2026-11-12 PO の設計承認」）。
+改訂（Opus、2026-11-12）: §2-8 の試験の判定 8 か所を、jest-dom の判定（toHaveTextContent・toBeInTheDocument）から、既存の試験と同じ `.textContent` と `toContain`・`toBeTruthy` へ直した。理由: frontend に jest-dom が入っておらず、1回目の実装が手順8の tsc で TS2339 ×8 で止まったため（`frontend/src/test-setup.ts` は jest-dom を読まない。先例 `frontend/src/pages/super-admin/ViewerAccountsPage.test.tsx:70`）。 2回目の改訂: §2-8 の欄の探し方 4 か所に `{ exact: false }` を足した。理由: 必須欄はラベルの後ろに `*` が付き（`frontend/src/components/TextField.tsx:88`〜:90）、完全一致では見つからず、2回目の実装が手順8の vitest で 2 件落ちたため（画面に名前の付いた欄はこの 2 つだけ）。
 設計: docs/handoff/viewer-contract-stage/design.md §3-4（public の表・tax_rates・RLS :297〜:310）・§3-4b（/super-admin/tax-rates）・§3-4d（税率の画面の置き場）・§8 の A14・A15・A31。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。本番・GitHub の secret・DB には触らない。PR は作らない（Opus が作る）。
 基準: origin/main `9747e2cf1`（#5431 合流後）で行番号を測った（審査の時点 4a8893528 までの間は docs だけの変更で、変更前の文はすべて一致することを審査役が確かめた）。行番号がずれていたら「変更前」の文で場所を探す（同じ文が 2 か所あれば BLOCKED: で停止）。
@@ -1191,16 +1192,16 @@ afterEach(() => {
 it("shows access denied for a non super admin and does not call the API", () => {
   vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: false });
   renderPage();
-  expect(screen.getByRole("alert")).toHaveTextContent(i18n.t("superAdmin.accessDenied"));
+  expect((screen.getByRole("alert")).textContent).toContain(i18n.t("superAdmin.accessDenied"));
   expect(api.get).not.toHaveBeenCalled();
 });
 
 it("lists rates newest first and shows delete only for a rate that has not started", async () => {
   vi.mocked(api.get).mockResolvedValue(LIST);
   renderPage();
-  expect(await screen.findByTestId("tax-rate-row-2")).toHaveTextContent("12.00%");
-  expect(screen.getByTestId("tax-rate-row-1")).toHaveTextContent("10.00%");
-  expect(screen.getByTestId("tax-rate-delete-2")).toBeInTheDocument();
+  expect((await screen.findByTestId("tax-rate-row-2")).textContent).toContain("12.00%");
+  expect((screen.getByTestId("tax-rate-row-1")).textContent).toContain("10.00%");
+  expect(screen.getByTestId("tax-rate-delete-2")).toBeTruthy();
   expect(screen.queryByTestId("tax-rate-delete-1")).toBeNull();
   expect(api.get).toHaveBeenCalledWith("/super-admin/tax-rates");
 });
@@ -1208,7 +1209,7 @@ it("lists rates newest first and shows delete only for a rate that has not start
 it("shows the empty state when there is no rate", async () => {
   vi.mocked(api.get).mockResolvedValue({ today: "2026-11-12", rates: [] });
   renderPage();
-  expect(await screen.findByText(i18n.t("superAdmin.taxRates.noData"))).toBeInTheDocument();
+  expect(await screen.findByText(i18n.t("superAdmin.taxRates.noData"))).toBeTruthy();
 });
 
 it("sends the rate as a string and reloads after adding", async () => {
@@ -1216,13 +1217,13 @@ it("sends the rate as a string and reloads after adding", async () => {
   vi.mocked(api.post).mockResolvedValue({ id: 3, rate_percent: "10.00", effective_from: "2028-01-01", created_at: "" });
   renderPage();
   await screen.findByTestId("tax-rate-row-2");
-  fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.ratePercent")), { target: { value: "10.00" } });
-  fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.effectiveFrom")), { target: { value: "2028-01-01" } });
+  fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.ratePercent"), { exact: false }), { target: { value: "10.00" } });
+  fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.effectiveFrom"), { exact: false }), { target: { value: "2028-01-01" } });
   fireEvent.submit(screen.getByTestId("tax-rate-form"));
   await waitFor(() =>
     expect(api.post).toHaveBeenCalledWith("/super-admin/tax-rates", { rate_percent: "10.00", effective_from: "2028-01-01" }),
   );
-  expect(await screen.findByTestId("tax-rate-success")).toHaveTextContent(i18n.t("superAdmin.taxRates.addSuccess"));
+  expect((await screen.findByTestId("tax-rate-success")).textContent).toContain(i18n.t("superAdmin.taxRates.addSuccess"));
   expect(api.get).toHaveBeenCalledTimes(2);
 });
 
@@ -1231,10 +1232,10 @@ it("shows the date rule message when the API answers effective_from_invalid", as
   vi.mocked(api.post).mockRejectedValue(new ApiError("x", 422, "tax_rate.effective_from_invalid"));
   renderPage();
   await screen.findByTestId("tax-rate-row-2");
-  fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.ratePercent")), { target: { value: "10" } });
-  fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.effectiveFrom")), { target: { value: "2026-11-12" } });
+  fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.ratePercent"), { exact: false }), { target: { value: "10" } });
+  fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.effectiveFrom"), { exact: false }), { target: { value: "2026-11-12" } });
   fireEvent.submit(screen.getByTestId("tax-rate-form"));
-  expect(await screen.findByTestId("tax-rate-error")).toHaveTextContent(i18n.t("superAdmin.taxRates.errorDateInvalid"));
+  expect((await screen.findByTestId("tax-rate-error")).textContent).toContain(i18n.t("superAdmin.taxRates.errorDateInvalid"));
 });
 
 it("deletes a future rate after confirmation", async () => {
@@ -1245,7 +1246,7 @@ it("deletes a future rate after confirmation", async () => {
   const confirmButtons = await screen.findAllByRole("button", { name: i18n.t("superAdmin.taxRates.deleteBtn") });
   fireEvent.click(confirmButtons[confirmButtons.length - 1]);
   await waitFor(() => expect(api.delete).toHaveBeenCalledWith("/super-admin/tax-rates/2"));
-  expect(await screen.findByTestId("tax-rate-success")).toHaveTextContent(i18n.t("superAdmin.taxRates.deleteSuccess"));
+  expect((await screen.findByTestId("tax-rate-success")).textContent).toContain(i18n.t("superAdmin.taxRates.deleteSuccess"));
 });
 ```
 
@@ -1460,5 +1461,82 @@ ComingSoonPage の import は他の道（:258・:312・:339）が使うので消
 - ファイルの編集は Edit ツールで行う（新規の5ファイルだけ Write ツール）。ヒアドキュメントで書かない。
 - PR は作らない（Opus が作り、`scripts/dev/validate-pr-body.sh` で確かめる）。
 - フックや自動判定に止められたら、言い換えて再試行せず、止まった手順・最後のコマンド・理由の原文を報告して終える。
+
+## 7. 改訂3（CI の赤2件の直し。§1〜§3 は済み。この改訂ではこの §7 だけを行う）
+
+### 7-0. Opus の決めごと（根拠つき）
+
+- 赤1: CI の pytest で `tests/test_realtime_topics.py::test_every_write_route_is_in_exactly_one_table` が `どちらの表にも無い書き込みルート: [('DELETE', '/api/v1/super-admin/tax-rates/{rate_id}'), ('POST', '/api/v1/super-admin/tax-rates')]` で落ちた（run 43137843774、1 failed・8804 passed）。新しい書き込みの口は backend/app/realtime/topics.py の WRITE_ROUTE_TOPICS か NO_SIGNAL_ROUTES のどちらか一方に載せる決まり（ADR-1016・同ファイル :4）。カードに入れ忘れた。税率は最高管理者だけの画面で、保存のあと画面が自分で読み直す（TaxRatesPage.tsx :94・:111 の `await load()`）。閲覧者の文面テンプレート（topics.py :143）と同じ扱いで NO_SIGNAL_ROUTES に載せる。
+- 赤2（PR が衝突）: main に `migrations/20261112_140000_customer_status_fk.sql` が入った（main 0d58e6952）。刻印 20261112_140000 が本件の移行と重なる。migration-guard.yml の刻印重複の検査（main の :306〜:334）は、main に既にある刻印と同じ新規の移行を止める。本件の移行を 20261112_150000 に改名する（中身は1文字も変えない）。scripts/run_all_migrations.sh は main の2行の後ろに本件の2行を置く（刻印の順と実行の順が揃う）。
+
+### 7-1. 触るファイル（この改訂で変わるのはこれだけ）
+
+1. scripts/run_all_migrations.sh（衝突の解消と名前の付け替え）
+2. migrations/20261112_140000_create_viewer_contract_public_tables.sql → migrations/20261112_150000_create_viewer_contract_public_tables.sql（git mv。中身は不変）
+3. backend/tests/test_viewer_contract_public_tables_pg.py（:31 の1行）
+4. backend/app/realtime/topics.py（:143 の後ろに2行）
+
+main の取り込みで main 側のファイル（customer_status_fk の移行・試験・台帳など）が合流の記録に入るのは正しい。手で触らない。
+
+### 7-2. 手順
+
+手順A 枝を取り、先端を確かめる
+    cd ~ && git clone https://github.com/shingo-ops/salesanchor.git sa && cd sa && git checkout release/viewer-contract-bin2-2a && git log --oneline -1 | tail -1
+    cd ~/sa && git config user.name "shingo-cc" && git config user.email "shingo-cc@users.noreply.github.com"
+    cd ~/sa && grep -c "^## 7. 改訂3" docs/handoff/viewer-contract-stage/card-2-2a.md
+  期待: 最後の grep は 1。
+
+手順B main を取り込む（衝突は scripts/run_all_migrations.sh の1か所だけのはず）
+    cd ~/sa && git fetch -q origin main && git merge --no-edit origin/main 2>&1 | tail -5
+    cd ~/sa && git diff --name-only --diff-filter=U | tail -5
+  期待: 2行目は `scripts/run_all_migrations.sh` だけ。ほかのファイルが出たら `git merge --abort` して `BLOCKED: 想定外の衝突`。
+  scripts/run_all_migrations.sh の最後を Edit ツールで次の5行にする（衝突の印 `<<<<<<<`・`=======`・`>>>>>>>` の行を消し、main の2行を先、本件の2行を後ろにする。本件の行はこの時点で新しい名前にする）:
+
+    run_sql migrations/20261112_130000_add_viewer_contracting_status.sql
+    # 会社と連絡先の状態 便2: status 列を public.customer_statuses に外部キーで結び、旧 CHECK を外す（済みの領域は飛ばす・冪等）
+    run_sql migrations/20261112_140000_customer_status_fk.sql
+    # ADR-1061 便2-2a: 契約と請求書の public の9表を作る（形だけ・行なし・FORCE RLS・冪等）
+    run_sql migrations/20261112_150000_create_viewer_contract_public_tables.sql
+
+手順C 改名と2か所の変更
+    cd ~/sa && git mv migrations/20261112_140000_create_viewer_contract_public_tables.sql migrations/20261112_150000_create_viewer_contract_public_tables.sql && ls migrations | grep -c "create_viewer_contract_public_tables"
+  backend/tests/test_viewer_contract_public_tables_pg.py :31 を Edit ツールで
+    変更前: NEW_MIGRATION = "20261112_140000_create_viewer_contract_public_tables.sql"
+    変更後: NEW_MIGRATION = "20261112_150000_create_viewer_contract_public_tables.sql"
+  backend/app/realtime/topics.py を Edit ツールで、次の1行（変更前の文）の直後に2行を足す:
+    変更前の文（:143・この1行は変えない）:
+    ("PUT", "/api/v1/super-admin/viewer-templates/{key}"): "閲覧者管理 段11: 文面テンプレートの本文を直すだけで画面更新の通知対象外（保存した画面は応答で差し替える）",
+    足す2行（字下げは上の行と同じ空白4つ）:
+    ("POST", "/api/v1/super-admin/tax-rates"): "消費税率 ADR-1061 便2-2a: 最高管理者だけが使う税率の追加で画面更新の通知対象外（保存した画面は自分で読み直す）",
+    ("DELETE", "/api/v1/super-admin/tax-rates/{rate_id}"): "消費税率 ADR-1061 便2-2a: 最高管理者だけが使う税率の削除で画面更新の通知対象外（保存した画面は自分で読み直す）",
+
+手順D 形の確かめ
+    cd ~/sa && grep -c -E "^(<<<<<<<|=======|>>>>>>>)" scripts/run_all_migrations.sh
+    cd ~/sa && tail -5 scripts/run_all_migrations.sh
+    cd ~/sa && grep -c "20261112_140000_create_viewer_contract_public_tables" scripts/run_all_migrations.sh backend/tests/test_viewer_contract_public_tables_pg.py | tail -2
+    cd ~/sa && grep -c "super-admin/tax-rates" backend/app/realtime/topics.py
+    cd ~/sa && git diff --cached -M --stat HEAD -- migrations/ | tail -3
+    cd ~/sa && ls migrations | grep "^20261112_" | tail -5
+  期待: 0／上の5行と同じ／両方 :0／2／rename の1行（`=> 20261112_150000_...` で 0 の増減）／120000・130000・140000_customer_status_fk・150000_create_viewer の4行。
+
+手順E 試験（道具は §3 手順4 と同じ ~/venv312 を作る）
+    （§3 手順4 の6行をそのまま流す）
+    cd ~/sa && ~/venv312/bin/ruff check backend/app/realtime/topics.py backend/tests/test_viewer_contract_public_tables_pg.py 2>&1 | tail -5
+    cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/test_realtime_topics.py tests/test_viewer_contract_public_tables_pg.py 2>&1 | tail -15
+  期待: ruff は `All checks passed!`。pytest は failed 0・error 0（実 PostgreSQL の試験は skipped でよい）。
+
+手順F 記録と送り出し（合流の記録は1つ。改名と2か所は同じ合流の記録に入れる）
+    cd ~/sa && git add scripts/run_all_migrations.sh backend/tests/test_viewer_contract_public_tables_pg.py backend/app/realtime/topics.py && git status --short | tail -20
+    cd ~/sa && git commit -q --no-edit && git log --oneline -1 | tail -1
+    cd ~/sa && ~/venv312/bin/python scripts/check-migration-value-writes.py diff origin/main HEAD --check all 2>&1 | tail -10; echo "exit=$?"
+    cd ~/sa && git diff --name-only origin/main...HEAD | tail -20
+    cd ~/sa && git push origin release/viewer-contract-bin2-2a 2>&1 | tail -3
+  期待: status に出るのは main 側から来たファイル（M か A）と、7-1 の4つだけ。値の書き込みの検査は exit=0。4行目は本件の14ファイル（移行は 20261112_150000 の名前）に topics.py を足した15ファイルだけ。外れたら push せず `BLOCKED: 範囲`。
+
+### 7-3. 分かれ道
+
+- 衝突が run_all_migrations.sh 以外にも出た／手順D・E・F の期待が外れた → その場で止め、出力を貼って `BLOCKED: 手順の記号`。別のやり方を試さない。
+- push が拒まれた → `BLOCKED: push`（force はしない）。
+- 報告は §5 の形（1 行目は `RECEIVED viewer-contract-bin2-2a-rev3 HEAD=…`、手順A〜F の出力をそのまま貼る、最後は `DONE` か `BLOCKED: 理由`）。
 
 END OF CARD
