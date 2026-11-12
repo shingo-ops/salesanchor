@@ -28,7 +28,7 @@ needs_ci_pg = pytest.mark.skipif(
     reason="Disposable CI PostgreSQL service and app role required",
 )
 
-NEW_MIGRATION = "20261112_140000_create_viewer_contract_public_tables.sql"
+NEW_MIGRATION = "20261112_150000_create_viewer_contract_public_tables.sql"
 BASE = "/api/v1/super-admin/tax-rates"
 
 ROUTES = [

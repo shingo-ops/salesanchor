@@ -141,6 +141,8 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/super-admin/viewers/{viewer_id}/send-billing-form"): "閲覧者管理 ADR-1019: 鍵を作って部屋とメールへ送るだけで一覧に出る値を変えないので通知対象外",
     ("PATCH", "/api/v1/super-admin/viewers/{viewer_id}"): "閲覧者管理 ADR-1019: 社外の閲覧者の LINE名の訂正で画面更新の通知対象外（保存した画面は応答で差し替える）",
     ("PUT", "/api/v1/super-admin/viewer-templates/{key}"): "閲覧者管理 段11: 文面テンプレートの本文を直すだけで画面更新の通知対象外（保存した画面は応答で差し替える）",
+    ("POST", "/api/v1/super-admin/tax-rates"): "消費税率 ADR-1061 便2-2a: 最高管理者だけが使う税率の追加で画面更新の通知対象外（保存した画面は自分で読み直す）",
+    ("DELETE", "/api/v1/super-admin/tax-rates/{rate_id}"): "消費税率 ADR-1061 便2-2a: 最高管理者だけが使う税率の削除で画面更新の通知対象外（保存した画面は自分で読み直す）",
     ("POST", "/api/v1/ops/alertmanager"): "保守 API ADR-1012: 運用者向けで画面更新の通知対象外",
     ("POST", "/api/v1/ops/control/halt"): "保守 API ADR-1012: 運用者向けで画面更新の通知対象外",
     ("POST", "/api/v1/ops/control/resume"): "保守 API ADR-1012: 運用者向けで画面更新の通知対象外",

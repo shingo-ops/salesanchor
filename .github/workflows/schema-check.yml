@@ -157,6 +157,17 @@ jobs:
           );
           SQL
 
+      # public.customer_statuses（tenant_NNN.companies / contacts の status の外部キーの参照先・ADR-1076 便2）
+      # 表は本物の migration で作り、4行は正本の SQL ファイルから入れる（値をここに書かない）
+      - name: Create customer statuses master
+        env:
+          PGPASSWORD: testpass
+        run: |
+          psql -h localhost -U jarvis -d jarvis_schema_check_db -v ON_ERROR_STOP=1 \
+            -f migrations/20261112_120000_create_public_customer_statuses.sql
+          { echo "BEGIN;"; echo "SET LOCAL app.is_operator = 'true';"; cat docs/handoff/status-ssot-contact-company/insert-customer-statuses.sql; echo "COMMIT;"; } \
+            | psql -h localhost -U jarvis -d jarvis_schema_check_db -v ON_ERROR_STOP=1
+
       # public.permissions に最低限のデータを seed する（migration 042 の依存）
       - name: Seed permissions master
         env:
