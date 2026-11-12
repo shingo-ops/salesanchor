@@ -225,7 +225,7 @@ class TestListEvents:
     async def test_returns_events(self):
         from app.services.calendar_service import list_events
         now = datetime(2026, 6, 1, 10, 0, 0, tzinfo=timezone.utc)
-        row = (1, 2, "shared", "meeting", "テスト会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木 花子", "田中 太郎", None)
+        row = (1, 2, "shared", "meeting", "テスト会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木 花子", "田中 太郎", None, None, None, None)
         db = _make_db(fetchall_return=[row])
         result = await list_events(db, tenant_id=1, start="2026-06-01", end="2026-06-30")
         assert len(result) == 1
@@ -1342,10 +1342,601 @@ class TestListEventsMeetUrl:
         from app.services.calendar_service import list_events
 
         now = datetime(2026, 6, 1, 10, 0, 0, tzinfo=timezone.utc)
-        row = (1, 2, "shared", "meeting", "会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木", "田中", MEET)
+        row = (1, 2, "shared", "meeting", "会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木", "田中", MEET, None, None, None)
         db = _make_db(fetchall_return=[row])
         result = await list_events(db, tenant_id=1, start="2026-06-01", end="2026-06-30")
         assert result[0]["meet_url"] == MEET
         assert result[0]["created_by_name"] == "田中"
         sql = db.execute.call_args.args[0].text
         assert sql.index("created_by_name") < sql.index("ce.meet_url")
+
+
+# ===========================================================================
+# 便15A: 予定の繰り返し（ADR-1075）
+# ===========================================================================
+
+import contextlib  # noqa: E402
+from datetime import timedelta  # noqa: E402
+from zoneinfo import ZoneInfo  # noqa: E402
+
+_JST = ZoneInfo("Asia/Tokyo")
+
+
+def _jt(y, mo, d, h=10, mi=0):
+    return datetime(y, mo, d, h, mi, tzinfo=_JST)
+
+
+class _Res:
+    def __init__(self, rows):
+        self._rows = rows
+
+    def first(self):
+        return self._rows[0] if self._rows else None
+
+    def fetchall(self):
+        return list(self._rows)
+
+    def scalar_one(self):
+        return self._rows[0][0]
+
+
+class _FakeDB:
+    """実行された SQL を順に記録し、文に含まれる文字で行を返す偽の接続。"""
+
+    def __init__(self, handlers=(), sync_mode="bidirectional"):
+        self.calls: list[tuple[str, dict]] = []
+        self.handlers = list(handlers)
+        if sync_mode is not None:
+            self.handlers.append(("tenant_google_calendar_config", [(sync_mode,)]))
+        self.commit = AsyncMock()
+
+    async def execute(self, stmt, params=None):
+        sql = stmt.text if hasattr(stmt, "text") else str(stmt)
+        self.calls.append((sql, params or {}))
+        for needle, rows in self.handlers:
+            if needle in sql:
+                return _Res(rows)
+        return _Res([])
+
+    def find(self, needle):
+        return [(i, s, p) for i, (s, p) in enumerate(self.calls) if needle in s]
+
+
+def _ev(**over) -> dict:
+    d = {
+        "created_by_user_id": 5, "calendar_type": "shared", "user_id": 5, "google_event_id": "gm",
+        "meet_url": None, "id": 1, "source": "app", "recurrence_rule": "FREQ=WEEKLY;BYDAY=TH",
+        "recurring_event_id": None, "original_start_datetime": None,
+        "start_datetime": _jt(2026, 11, 12), "end_datetime": _jt(2026, 11, 12, 11),
+        "is_all_day": False, "is_cancelled": False, "title": "定例", "description": None,
+        "location": None, "category": "meeting",
+    }
+    d.update(over)
+    return d
+
+
+def _tup(ev: dict) -> tuple:
+    from app.services.calendar_service import EVENT_COLUMNS
+
+    return tuple(ev[c] for c in EVENT_COLUMNS)
+
+
+def _exc(**over) -> dict:
+    """2026-11-26 の回の例外の行（id 9・元の行 1）。"""
+    return _ev(
+        id=9, recurrence_rule=None, recurring_event_id=1, original_start_datetime=_jt(2026, 11, 26),
+        start_datetime=_jt(2026, 11, 26, 14), end_datetime=_jt(2026, 11, 26, 15),
+        google_event_id="gx", **over,
+    )
+
+
+class _G:
+    """Google の呼び口の偽物。送った順と引数を log に残す。"""
+
+    def __init__(self, fail=lambda name, args: False):
+        self.log: list[tuple] = []
+        self.fail = fail
+
+    def fn(self, name, ret):
+        async def f(*args, **kwargs):
+            self.log.append((name,) + args[2:])
+            if self.fail(name, args[2:]):
+                raise RuntimeError("boom")
+            return ret
+
+        return f
+
+    def names(self):
+        return [entry[0] for entry in self.log]
+
+
+@contextlib.contextmanager
+def _google(g: _G):
+    with patch("app.services.google_calendar.update_event", new=g.fn("update_event", {"id": "gu"})), patch(
+        "app.services.google_calendar.create_event", new=g.fn("create_event", {"id": "gnew"})
+    ), patch("app.services.google_calendar.delete_event", new=g.fn("delete_event", None)), patch(
+        "app.services.google_calendar.get_instance", new=g.fn("get_instance", {"id": "ginst"})
+    ), patch("app.services.calendar_service.reset_tenant_context", new=AsyncMock()):
+        yield
+
+
+def _master_db(master=None, exceptions=(), exc_row=None, new_id=77, **kw):
+    master = master or _ev()
+    handlers = [
+        ("SELECT google_event_id FROM calendar_events WHERE recurring_event_id", [(g,) for g in exceptions]),
+        ("original_start_datetime = :orig", [_tup(exc_row)] if exc_row else []),
+        ("INSERT INTO calendar_events", [(new_id,)]),
+        ("WHERE id = :id", [_tup(master)]),
+    ]
+    return _FakeDB(handlers, **kw)
+
+
+def _statuses(db, status):
+    return [p.get("id") for _i, s, p in db.find(f"sync_status = '{status}'")]
+
+
+class TestListRecurrence:
+    def _master_row(self, **over):
+        now = _jt(2026, 11, 12)
+        base = [1, 5, "shared", "meeting", "定例", None, None, now, now + timedelta(hours=1), False,
+                "gm", "app", "synced", 5, now, now, "鈴木", "田中", None,
+                "FREQ=WEEKLY;BYDAY=TH", None, None]
+        for k, v in over.items():
+            base[k] = v
+        return tuple(base)
+
+    @pytest.mark.asyncio
+    async def test_weekly_master_expands(self):
+        from app.services.calendar_service import list_events
+
+        db = _FakeDB([("SELECT ce.id", [self._master_row()])], sync_mode=None)
+        out = await list_events(db, 1, start="2026-11-01T00:00:00+09:00", end="2026-12-01T00:00:00+09:00")
+        starts = [o["start_datetime"][:16] for o in out]
+        assert starts == ["2026-11-12T10:00", "2026-11-19T10:00", "2026-11-26T10:00"]
+        assert all(o["occurrence_start"] == o["start_datetime"] and o["id"] == 1 for o in out)
+        assert all(o["recurring_event_id"] == 1 and o["recurrence"] == "weekly" for o in out)
+        assert out[0]["end_datetime"][:16] == "2026-11-12T11:00"
+
+    @pytest.mark.asyncio
+    async def test_exception_replaces_occurrence(self):
+        from app.services.calendar_service import list_events
+
+        exc_start = _jt(2026, 11, 26, 14)
+        exc_row = self._master_row()
+        exc_row = list(exc_row)
+        exc_row[0], exc_row[7], exc_row[8] = 9, exc_start, exc_start + timedelta(hours=1)
+        exc_row[19], exc_row[20], exc_row[21] = None, 1, _jt(2026, 11, 26)
+        handlers = [
+            ("SELECT ce.recurring_event_id, ce.original_start_datetime", [(1, _jt(2026, 11, 26))]),
+            ("SELECT ce.id", [self._master_row(), tuple(exc_row)]),
+        ]
+        db = _FakeDB(handlers, sync_mode=None)
+        out = await list_events(db, 1, start="2026-11-01T00:00:00+09:00", end="2026-12-01T00:00:00+09:00")
+        assert [o["start_datetime"][:16] for o in out] == [
+            "2026-11-12T10:00", "2026-11-19T10:00", "2026-11-26T14:00",
+        ]
+        last = out[-1]
+        assert last["id"] == 9 and last["occurrence_start"].startswith("2026-11-26T10:00")
+        assert last["recurrence"] == "weekly"
+
+    @pytest.mark.asyncio
+    async def test_sql_shape_and_cancelled_not_returned(self):
+        from app.services.calendar_service import list_events
+
+        db = _FakeDB([("SELECT ce.id", [self._master_row()])], sync_mode=None)
+        await list_events(db, 1, start="2026-11-01T00:00:00+09:00", end="2026-12-01T00:00:00+09:00", user_id=5)
+        main = db.calls[0][0]
+        assert "(ce.start_datetime < :end AND ce.end_datetime > :start AND ce.recurrence_rule IS NULL) OR" in main
+        assert "ce.(" not in main
+        assert "AND NOT ce.is_cancelled" in main
+        assert main.index("ce.user_id = :me") < main.index("AND NOT ce.is_cancelled")
+        assert "ce.recurrence_rule, ce.recurring_event_id, ce.original_start_datetime" in main
+
+    @pytest.mark.asyncio
+    async def test_exception_requery_has_visibility(self):
+        from app.services.calendar_service import list_events
+
+        db = _FakeDB([("SELECT ce.id", [self._master_row()])], sync_mode=None)
+        await list_events(db, 1, start="2026-11-01T00:00:00+09:00", end="2026-12-01T00:00:00+09:00", user_id=5)
+        sql, params = db.calls[1]
+        assert "ce.recurring_event_id = ANY(:ids)" in sql
+        assert "(ce.calendar_type = 'shared' OR ce.user_id = :me)" in sql
+        assert "is_cancelled" not in sql  # 消した印の行も含めて引く
+        assert params["ids"] == [1] and params["me"] == 5
+
+        db = _FakeDB([("SELECT ce.id", [self._master_row()])], sync_mode=None)
+        await list_events(db, 1, start="2026-11-01T00:00:00+09:00", end="2026-12-01T00:00:00+09:00")
+        assert "ce.calendar_type = 'shared'" in db.calls[1][0] and ":me" not in db.calls[1][0]
+
+    @pytest.mark.asyncio
+    async def test_search_does_not_expand(self):
+        from app.services.calendar_service import list_events
+
+        db = _FakeDB([("SELECT ce.id", [self._master_row()])], sync_mode=None)
+        out = await list_events(db, 1, user_id=5, title_query="定例", limit=10)
+        assert len(db.calls) == 1
+        assert "ce.recurrence_rule IS NULL" not in db.calls[0][0]
+        assert len(out) == 1 and out[0]["occurrence_start"] is None and out[0]["recurrence"] == "weekly"
+
+
+class TestCreateRecurrence:
+    @pytest.mark.asyncio
+    async def test_rule_saved_and_sent_to_google(self):
+        from app.services.calendar_service import create_event
+
+        db = _FakeDB([("INSERT INTO calendar_events", [(31,)])], sync_mode=None)
+        g = _G()
+        payload = {
+            "title": "定例", "start_datetime": "2026-11-12T10:00:00+09:00",
+            "end_datetime": "2026-11-12T11:00:00+09:00", "recurrence": "weekly",
+        }
+        with _google(g), patch("app.services.calendar_service.can_add_meet", new=AsyncMock(return_value=True)):
+            await create_event(db, 1, 5, payload)
+        insert = db.find("INSERT INTO calendar_events")[0]
+        assert "recurrence_rule" in insert[1] and insert[2]["rrule"] == "FREQ=WEEKLY;BYDAY=TH"
+        body = g.log[0][1]
+        assert g.names() == ["create_event"] and body["recurrence"] == ["RRULE:FREQ=WEEKLY;BYDAY=TH"]
+
+    @pytest.mark.asyncio
+    async def test_no_recurrence_keeps_null(self):
+        from app.services.calendar_service import create_event
+
+        db = _FakeDB([("INSERT INTO calendar_events", [(31,)])], sync_mode=None)
+        payload = {"title": "単発", "start_datetime": "2026-11-12T10:00:00+09:00",
+                   "end_datetime": "2026-11-12T11:00:00+09:00"}
+        with _google(_G()), patch("app.services.calendar_service.can_add_meet", new=AsyncMock(return_value=False)):
+            await create_event(db, 1, 5, payload)
+        assert db.find("INSERT INTO calendar_events")[0][2]["rrule"] is None
+
+
+OCC = _jt(2026, 11, 26).isoformat()
+
+
+class TestUpdateRecurring:
+    async def _run(self, db, event, payload, scope, g=None, occ=None):
+        from app.services.calendar_service import update_recurring_event
+
+        g = g or _G()
+        with _google(g):
+            result = await update_recurring_event(
+                db, 1, 5, event, payload, scope, occ or _jt(2026, 11, 26)
+            )
+        return result, g
+
+    @pytest.mark.asyncio
+    async def test_a_single_to_recurring_recreates_in_google(self):
+        single = _ev(recurrence_rule=None, google_event_id="gs", id=3)
+        db = _FakeDB([], sync_mode="bidirectional")
+        result, g = await self._run(db, single, {"recurrence": "weekly"}, None)
+        upd = db.find("UPDATE calendar_events SET")[0]
+        assert "sync_status = 'pending'" in upd[1] and upd[2]["f_recurrence_rule"] == "FREQ=WEEKLY;BYDAY=TH"
+        assert g.names() == ["delete_event", "create_event"] and g.log[0][1] == "gs"
+        assert g.log[1][1]["recurrence"] == ["RRULE:FREQ=WEEKLY;BYDAY=TH"]
+        assert result["id"] == 3 and 3 in _statuses(db, "synced")
+
+    @pytest.mark.asyncio
+    async def test_b_this_inserts_exception_and_patches_instance(self):
+        db = _master_db()
+        result, g = await self._run(db, _ev(), {"title": "この回だけ"}, "this")
+        ins = db.find("INSERT INTO calendar_events")[0][2]
+        assert ins["recurring_event_id"] == 1 and ins["original_start_datetime"] == _jt(2026, 11, 26)
+        assert ins["title"] == "この回だけ" and ins["is_cancelled"] is False
+        assert g.names() == ["get_instance", "update_event"]
+        assert g.log[0][1:] == ("gm", _jt(2026, 11, 26), False)
+        assert g.log[1][1] == "ginst" and "recurrence" not in g.log[1][2]
+        synced = db.find("sync_status = 'synced'")[0][2]
+        assert synced["id"] == 77 and synced["gid"] == "ginst" and synced["oid"] == "app:1:77"
+        assert result["id"] == 77
+
+    @pytest.mark.asyncio
+    async def test_b_this_patch_failure_marks_failed(self):
+        db = _master_db()
+        g = _G(fail=lambda n, a: n == "update_event")
+        await self._run(db, _ev(), {"title": "x"}, "this", g=g)
+        assert 77 in _statuses(db, "failed") and 77 not in _statuses(db, "synced")
+
+    @pytest.mark.asyncio
+    async def test_b2_this_existing_exception_updates_row(self):
+        db = _master_db(exc_row=_exc())
+        result, g = await self._run(db, _ev(), {"title": "更新"}, "this")
+        upd = db.find("UPDATE calendar_events SET")[0]
+        assert upd[2]["id"] == 9 and upd[2]["f_title"] == "更新" and "sync_status = 'pending'" in upd[1]
+        assert db.find("INSERT INTO calendar_events") == []
+        assert g.names() == ["update_event"] and g.log[0][1] == "gx"
+        assert result["id"] == 9
+
+    @pytest.mark.asyncio
+    async def test_c_following_cuts_and_creates(self):
+        db = _master_db(exceptions=["ge1", "ge2"])
+        result, g = await self._run(db, _ev(), {"title": "これ以降"}, "following")
+        cut = db.find("SET recurrence_rule = :r")[0]
+        assert cut[2]["r"] == "FREQ=WEEKLY;BYDAY=TH;UNTIL=20261125T145959Z" and cut[2]["id"] == 1
+        read_idx = db.find("SELECT google_event_id FROM calendar_events WHERE recurring_event_id")[0][0]
+        del_idx = db.find("DELETE FROM calendar_events")[0][0]
+        assert read_idx < del_idx
+        assert db.find("DELETE FROM calendar_events")[0][2]["occ"] == _jt(2026, 11, 26)
+        ins = db.find("INSERT INTO calendar_events")[0][2]
+        assert ins["recurrence_rule"] == "FREQ=WEEKLY;BYDAY=TH" and ins["title"] == "これ以降"
+        assert ins["start_datetime"] == _jt(2026, 11, 26)
+        assert g.names() == ["update_event", "update_event", "update_event", "create_event"]
+        assert [e[1] for e in g.log[:3]] == ["ge1", "ge2", "gm"]
+        assert g.log[0][2] == {"status": "cancelled"}
+        assert g.log[2][2] == {"recurrence": ["RRULE:FREQ=WEEKLY;BYDAY=TH;UNTIL=20261125T145959Z"]}
+        assert sorted(_statuses(db, "synced")) == [1, 77] and result["id"] == 77
+
+    @pytest.mark.asyncio
+    async def test_c_patch_failure_inserts_no_google_and_both_failed(self):
+        db = _master_db()
+        g = _G(fail=lambda n, a: n == "update_event" and a[1].get("recurrence"))
+        await self._run(db, _ev(), {"title": "x"}, "following", g=g)
+        assert "create_event" not in g.names()
+        assert sorted(_statuses(db, "failed")) == [1, 77] and _statuses(db, "synced") == []
+
+    @pytest.mark.asyncio
+    async def test_c_insert_failure_only_new_row_failed(self):
+        db = _master_db()
+        g = _G(fail=lambda n, a: n == "create_event")
+        await self._run(db, _ev(), {"title": "x"}, "following", g=g)
+        assert _statuses(db, "synced") == [1] and _statuses(db, "failed") == [77]
+
+    @pytest.mark.asyncio
+    async def test_d1_all_patches_without_recurrence(self):
+        db = _master_db()
+        result, g = await self._run(db, _ev(), {"title": "全部"}, "all")
+        ups = db.find("UPDATE calendar_events SET")
+        assert any(p["id"] == 1 and p["f_title"] == "全部" and "recurring_event_id" not in s for _i, s, p in ups)
+        assert any("recurring_event_id = :id" in s and p["f_title"] == "全部" for _i, s, p in ups)
+        assert g.names() == ["update_event"] and g.log[0][1] == "gm"
+        assert "recurrence" not in g.log[0][2] and g.log[0][2]["summary"] == "全部"
+        assert _statuses(db, "synced") == [1] and result["id"] == 1
+
+    @pytest.mark.asyncio
+    async def test_d1_patch_failure_marks_failed(self):
+        db = _master_db()
+        await self._run(db, _ev(), {"title": "x"}, "all", g=_G(fail=lambda n, a: True))
+        assert _statuses(db, "failed") == [1]
+
+    @pytest.mark.asyncio
+    async def test_d1_moved_exception_title_only(self):
+        db = _master_db()
+        exc = _exc()
+        payload = {"title": "題名", "start_datetime": exc["start_datetime"].isoformat()}
+        _r, g = await self._run(db, exc, payload, "all")
+        assert g.names() == ["update_event"] and g.log[0][1] == "gm"
+        assert db.find("DELETE FROM calendar_events") == []
+
+    @pytest.mark.asyncio
+    async def test_d2_all_time_change_recreates(self):
+        db = _master_db(exceptions=["ge1"])
+        payload = {"start_datetime": _jt(2026, 11, 26, 11).isoformat(), "end_datetime": _jt(2026, 11, 26, 12).isoformat()}
+        result, g = await self._run(db, _ev(), payload, "all")
+        upd = [p for _i, s, p in db.find("UPDATE calendar_events SET") if p.get("id") == 1][0]
+        assert upd["f_start_datetime"] == _jt(2026, 11, 12, 11) and upd["f_end_datetime"] == _jt(2026, 11, 12, 12)
+        assert upd["f_recurrence_rule"] == "FREQ=WEEKLY;BYDAY=TH"
+        assert db.find("DELETE FROM calendar_events")[0][2] == {"mid": 1}
+        assert g.names() == ["update_event", "delete_event", "create_event"]
+        assert g.log[0][1:] == ("ge1", {"status": "cancelled"}) and g.log[1][1] == "gm"
+        assert g.log[2][1]["recurrence"] == ["RRULE:FREQ=WEEKLY;BYDAY=TH"]
+        assert _statuses(db, "synced") == [1] and result["id"] == 1
+
+    @pytest.mark.asyncio
+    async def test_d2_recreate_delete_failure(self):
+        db = _master_db()
+        g = _G(fail=lambda n, a: n == "delete_event")
+        await self._run(db, _ev(), {"recurrence": "daily"}, "all", g=g)
+        assert "create_event" not in g.names() and _statuses(db, "failed") == [1]
+        assert not any("google_event_id = NULL" in s for _i, s, _p in db.find("sync_status = 'failed'"))
+
+    @pytest.mark.asyncio
+    async def test_d2_recreate_create_failure_clears_ids(self):
+        db = _master_db()
+        g = _G(fail=lambda n, a: n == "create_event")
+        await self._run(db, _ev(), {"recurrence": "daily"}, "all", g=g)
+        failed = db.find("sync_status = 'failed'")
+        assert len(failed) == 1 and "google_event_id = NULL, sync_origin_id = NULL" in failed[0][1]
+
+    @pytest.mark.asyncio
+    async def test_d3_all_none_to_single(self):
+        db = _master_db(exceptions=["ge1"])
+        _r, g = await self._run(db, _ev(), {"recurrence": "none"}, "all")
+        upd = [p for _i, s, p in db.find("UPDATE calendar_events SET") if p.get("id") == 1][0]
+        assert upd["f_recurrence_rule"] is None
+        assert db.find("DELETE FROM calendar_events")[0][2] == {"mid": 1}
+        assert g.names() == ["update_event", "delete_event", "create_event"]
+        assert "recurrence" not in g.log[2][1]
+
+    @pytest.mark.asyncio
+    async def test_update_all_none_keeps_pressed_occurrence(self):
+        db = _master_db()
+        await self._run(db, _ev(), {"recurrence": "none"}, "all")
+        upd = [p for _i, s, p in db.find("UPDATE calendar_events SET") if p.get("id") == 1][0]
+        assert upd["f_start_datetime"] == _jt(2026, 11, 26) and upd["f_end_datetime"] == _jt(2026, 11, 26, 11)
+
+        db = _master_db()
+        payload = {"recurrence": "none", "start_datetime": _jt(2026, 11, 27, 9).isoformat(),
+                   "end_datetime": _jt(2026, 11, 27, 10).isoformat()}
+        await self._run(db, _ev(), payload, "all")
+        upd = [p for _i, s, p in db.find("UPDATE calendar_events SET") if p.get("id") == 1][0]
+        assert upd["f_start_datetime"] == _jt(2026, 11, 27, 9) and upd["f_end_datetime"] == _jt(2026, 11, 27, 10)
+
+    @pytest.mark.asyncio
+    async def test_send_ok_false_sends_nothing(self):
+        for master, mode in ((_ev(), "none"), (_ev(google_event_id=None), "bidirectional")):
+            for scope, payload in (("this", {"title": "x"}), ("following", {"title": "x"}),
+                                   ("all", {"title": "x"}), ("all", {"recurrence": "daily"})):
+                db = _master_db(master=master, sync_mode=mode)
+                _r, g = await self._run(db, master, payload, scope)
+                assert g.log == []
+                assert _statuses(db, "synced") == [] and _statuses(db, "failed") == []
+
+    @pytest.mark.asyncio
+    async def test_cancel_failure_does_not_stop_the_rest(self):
+        db = _master_db(exceptions=["ge1", "ge2"])
+        g = _G(fail=lambda n, a: a[0] == "ge1")
+        await self._run(db, _ev(), {"recurrence": "daily"}, "all", g=g)
+        assert [e[1] for e in g.log[:2]] == ["ge1", "ge2"]
+        assert g.names()[2:] == ["delete_event", "create_event"]
+
+    @pytest.mark.asyncio
+    async def test_update_and_delete_exception_id_routes_to_master(self):
+        from app.services.calendar_service import delete_recurring_event
+
+        # 直す: following（1 回目でない）は元の行を切って新しい行を作る
+        db = _master_db()
+        exc = _exc()
+        _r, g = await self._run(db, exc, {"title": "x"}, "following")
+        assert db.find("SET recurrence_rule = :r")[0][2]["id"] == 1
+        assert ("update_event", "gm") == g.log[0][:2] or any(e[1] == "gm" for e in g.log)
+        assert not any(e[1] == "gx" and e[0] != "update_event" for e in g.log)
+        # 直す: all
+        db = _master_db()
+        _r, g = await self._run(db, _exc(), {"title": "x"}, "all")
+        assert g.log[0][1] == "gm"
+        titled = [p["id"] for _i, s, p in db.find("UPDATE calendar_events SET") if "f_title" in p and "recurring_event_id" not in s]
+        assert titled == [1]
+        # 消す: all は元の行を消す
+        db = _master_db()
+        g = _G()
+        with _google(g):
+            await delete_recurring_event(db, 1, _exc(), "all", _jt(2026, 11, 26))
+        assert db.find("DELETE FROM calendar_events WHERE id = :id")[0][2] == {"id": 1}
+        assert g.names()[-1] == "delete_event" and g.log[-1][1] == "gm"
+        # 消す: following
+        db = _master_db()
+        g = _G()
+        with _google(g):
+            await delete_recurring_event(db, 1, _exc(), "following", _jt(2026, 11, 26))
+        assert db.find("SET recurrence_rule = :r")[0][2]["id"] == 1
+        assert g.log[-1][1] == "gm"
+
+    @pytest.mark.asyncio
+    async def test_send_ok_new_rows_synced(self):
+        db = _master_db()
+        _r, g = await self._run(db, _ev(), {"title": "x"}, "following")
+        assert g.names().count("create_event") == 1 and 77 in _statuses(db, "synced")
+        db = _master_db()
+        _r, g = await self._run(db, _ev(), {"title": "x"}, "this")
+        assert g.names().count("get_instance") == 1 and g.names().count("update_event") == 1
+        assert 77 in _statuses(db, "synced")
+
+
+class TestDeleteRecurring:
+    async def _run(self, db, event, scope, g=None):
+        from app.services.calendar_service import delete_recurring_event
+
+        g = g or _G()
+        with _google(g):
+            await delete_recurring_event(db, 1, event, scope, _jt(2026, 11, 26))
+        return g
+
+    @pytest.mark.asyncio
+    async def test_this_inserts_cancelled_exception(self):
+        db = _master_db()
+        g = await self._run(db, _ev(), "this")
+        ins = db.find("INSERT INTO calendar_events")[0][2]
+        assert ins["is_cancelled"] is True and ins["original_start_datetime"] == _jt(2026, 11, 26)
+        assert g.names() == ["get_instance", "update_event"]
+        assert g.log[1][1:] == ("ginst", {"status": "cancelled"})
+        ids = db.find("SET google_event_id = :gid, sync_origin_id = :oid WHERE id = :id")[0][2]
+        assert ids["gid"] == "ginst" and ids["id"] == 77
+
+    @pytest.mark.asyncio
+    async def test_this_existing_exception_marked_cancelled(self):
+        db = _master_db(exc_row=_exc())
+        g = await self._run(db, _ev(), "this")
+        assert db.find("INSERT INTO calendar_events") == []
+        assert "is_cancelled = true" in db.find("UPDATE calendar_events SET is_cancelled")[0][1]
+        assert g.log == [("update_event", "gx", {"status": "cancelled"})]
+
+    @pytest.mark.asyncio
+    async def test_following_cuts_without_insert(self):
+        db = _master_db(exceptions=["ge1", "ge2"])
+        g = await self._run(db, _ev(), "following")
+        assert db.find("INSERT INTO calendar_events") == []
+        assert g.names() == ["update_event"] * 3
+        assert [e[1] for e in g.log] == ["ge1", "ge2", "gm"]
+        assert g.log[2][2] == {"recurrence": ["RRULE:FREQ=WEEKLY;BYDAY=TH;UNTIL=20261125T145959Z"]}
+
+    @pytest.mark.asyncio
+    async def test_all_cancels_exceptions_then_deletes(self):
+        db = _master_db(exceptions=["ge1", "ge2"])
+        g = await self._run(db, _ev(), "all")
+        assert g.names() == ["update_event", "update_event", "delete_event"]
+        assert g.log[2][1] == "gm"
+        read_idx = db.find("SELECT google_event_id FROM calendar_events WHERE recurring_event_id")[0][0]
+        del_idx = db.find("DELETE FROM calendar_events WHERE id = :id")[0][0]
+        assert read_idx < del_idx
+
+    @pytest.mark.asyncio
+    async def test_failures_never_change_sync_status(self):
+        for scope in ("this", "following", "all"):
+            db = _master_db(exceptions=["ge1"])
+            await self._run(db, _ev(), scope, g=_G(fail=lambda n, a: True))
+            assert _statuses(db, "failed") == [] and _statuses(db, "synced") == []
+
+
+class TestUpsertRecurringInstance:
+    @pytest.mark.asyncio
+    async def test_instance_of_app_origin_is_skipped(self):
+        from app.services.calendar_service import upsert_from_google
+
+        db = _make_db()
+        event = {"id": "gm_20261126T010000Z", "recurringEventId": "gm",
+                 "start": {"dateTime": "2026-11-26T10:00:00+09:00"}, "end": {"dateTime": "2026-11-26T11:00:00+09:00"}}
+        with patch("app.services.calendar_service._is_app_origin", new=AsyncMock(side_effect=[False, True])) as origin:
+            assert await upsert_from_google(db, 1, event, 5) == "skipped"
+        assert origin.await_args_list[1].args[1] == "gm"
+        db.execute.assert_not_called()
+
+
+class TestCheckRecurrenceRequest:
+    async def _check(self, event, payload, scope, occ, db=None):
+        from app.services.calendar_service import check_recurrence_request
+
+        db = db or _master_db(master=_ev())
+        return await check_recurrence_request(db, event=event, payload=payload, scope=scope, occurrence_start=occ)
+
+    @pytest.mark.asyncio
+    async def test_all_eight_identifiers(self):
+        single = _ev(recurrence_rule=None)
+        master = _ev()
+        # recurrence_meet_not_allowed
+        assert await self._check(master, {"add_meet": True}, "all", OCC) == "recurrence_meet_not_allowed"
+        assert await self._check(_ev(recurrence_rule=None, meet_url="u"), {"recurrence": "weekly"}, None, None) == "recurrence_meet_not_allowed"
+        # recurrence_not_available（第 5 木曜）
+        fifth = _ev(recurrence_rule=None, start_datetime=_jt(2026, 10, 29), end_datetime=_jt(2026, 10, 29, 11))
+        assert await self._check(fifth, {"recurrence": "monthly_nth"}, None, None) == "recurrence_not_available"
+        # recurrence_scope_not_allowed
+        assert await self._check(single, {"title": "x"}, "this", OCC) == "recurrence_scope_not_allowed"
+        # recurrence_scope_required
+        assert await self._check(master, {"title": "x"}, None, OCC) == "recurrence_scope_required"
+        # recurrence_occurrence_invalid
+        assert await self._check(master, {"title": "x"}, "all", None) == "recurrence_occurrence_invalid"
+        assert await self._check(master, {"title": "x"}, "all", "bad") == "recurrence_occurrence_invalid"
+        assert await self._check(master, {"title": "x"}, "all", _jt(2026, 11, 27).isoformat()) == "recurrence_occurrence_invalid"
+        exc = _exc()
+        assert await self._check(exc, {"title": "x"}, "this", _jt(2026, 11, 19).isoformat()) == "recurrence_occurrence_invalid"
+        assert await self._check(exc, {"title": "x"}, "this", OCC) is None
+        # recurrence_this_not_allowed
+        assert await self._check(master, {"recurrence": "daily"}, "this", OCC) == "recurrence_this_not_allowed"
+        assert await self._check(master, {"calendar_type": "personal"}, "this", OCC) == "recurrence_this_not_allowed"
+        # recurrence_google_source
+        assert await self._check(_ev(recurrence_rule=None, source="google"), {"recurrence": "weekly"}, None, None) == "recurrence_google_source"
+        # recurrence_after_until
+        until = _ev(recurrence_rule="FREQ=WEEKLY;BYDAY=TH;UNTIL=20261130T145959Z")
+        late = {"start_datetime": _jt(2026, 12, 31).isoformat(), "end_datetime": _jt(2026, 12, 31, 11).isoformat()}
+        assert await self._check(until, late, "all", OCC) == "recurrence_after_until"
+        # 正常
+        assert await self._check(master, {"title": "x"}, "all", OCC) is None
+        assert await self._check(master, {"recurrence": "weekly"}, "this", OCC) is None
+        assert await self._check(single, {"recurrence": "none"}, None, None) is None
+        assert await self._check(master, None, "all", OCC) is None
+
+    def test_create_checks(self):
+        from app.services.calendar_service import check_create_recurrence
+
+        base = {"start_datetime": "2026-11-12T10:00:00+09:00"}
+        assert check_create_recurrence({**base, "recurrence": "none", "add_meet": True}) is None
+        assert check_create_recurrence({**base, "recurrence": "weekly", "add_meet": True}) == "recurrence_meet_not_allowed"
+        assert check_create_recurrence({"start_datetime": "2026-10-29T10:00:00+09:00", "recurrence": "monthly_nth"}) == "recurrence_not_available"
+        assert check_create_recurrence({**base, "recurrence": "weekly"}) is None
