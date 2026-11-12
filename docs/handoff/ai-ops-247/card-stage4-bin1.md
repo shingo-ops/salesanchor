@@ -49,7 +49,7 @@
 - 相談係の窓口は case-api.salesanchor.jp の `POST /api/v1/ops/read-window/query` で、ヘッダ `Authorization: Bearer <鍵>` を受ける（`docs/handoff/cloud-case-ai/design.md:187`・`nginx/nginx.conf:725-733`）。
 - 窓口の返し方（`backend/app/ops/read_window_http.py:64-95`）:
   - 401（本文 `unauthorized`）: :68-73。ヘッダの名前・前置き `Bearer ` が違うときも、鍵の値が違うときも同じ 401 になる。401 だけでは、どれが違うかは分からない。
-  - 鍵が通ったあと: 413（本文が大きすぎる :76-78）・429（本文 `busy`。同時に 1 本だけ :80-81）・200（:88-89）・400（:90-93）・503（:94）。200・400・503 には、窓が付けるヘッダ `X-Read-Window-Rc` が付く（:39-41）。
+  - 鍵が通ったあと: 413（本文が大きすぎる :75-77）・429（本文 `busy`。同時に 1 本だけ :79-80）・200（:86-87）・400（:88-91）・503（:92）。200・400・503 には、窓が付けるヘッダ `X-Read-Window-Rc` が付く（:39-41）。
 - 窓の手前の nginx と、クラウドの中継も数を返す。nginx: 421（名前違い `nginx/nginx.conf:715-716`）・429（回数の上限 :728-729）・503（窓が落ちている :741）。中継: 403（許されていないホスト。設計 §13 P2 の example.com）。これらは鍵を見る前に返るので、鍵の合否は分からない。
 - network secret は 1 つのホストに 1 つ・ヘッダ 1 行（`docs/handoff/ai-ops-247/stage4-trials.md:35`）。None のネットワークでも secret のホストには届く（`docs/handoff/cloud-case-ai/design.md:184`）。
 
@@ -86,14 +86,14 @@
 
 手順:
 （１）PO が画面で、P1 の試しの routine に API の口を足し、鍵を作る。鍵は 1 回だけ画面に出る。routine の名前は「ops trial P1: fire text size (sonnet, no repo)」（2026-11-12 に Opus が RemoteTrigger で読んだ routine 一覧の名前）。リポジトリなし・コネクタなし。
-（２）PO が画面の「コピー」で鍵をクリップボードに入れ、Mac の「ターミナル」の窓（この会話の `!` ではない。入力を求める画面が要るため）で次を流す。`-w` を最後に置くと、値を引数に置かずに入力を求める（`man security` の add-generic-password「Put at end of command to be prompted (recommended)」）。求められたら貼り付けて Enter を押す。打った値は画面に出ない。
+（２）PO が画面の「コピー」で鍵をクリップボードに入れ、Mac の「ターミナル」の窓（この会話の `!` ではない。入力を求める画面が要るため）で次を流す。`-w` を最後に置くと、値を引数に置かずに入力を求める（`man security` の add-generic-password「Put at end of command to be prompted (recommended)」）。「password data for new item:」と求められたら貼り付けて Enter を押す。もう一度「retype password for new item:」と求められたら、同じく貼り付けて Enter を押す（`/usr/bin/security` の中にこの 2 つの文言がある。2 回目が出るかは試していない）。打った値は画面に出ない。
   `security add-generic-password -s salesanchor-ops-trial-fire -a trial -w`
-  続けて `pbcopy < /dev/null`（クリップボードを空にする）。Opus は値を見ない。
+  入れ終えてから `pbcopy < /dev/null`（クリップボードを空にする）。Opus は値を見ない。
 （３）PO が `!` で、Opus が用意した送る台本（作業用のフォルダに置き、中身を会話で見せてから）を流す。台本の決まり:
   - 鍵は `security find-generic-password -s salesanchor-ops-trial-fire -a trial -w` で変数に読み、シェルの組み込みの `printf 'Authorization: Bearer %s\n' "$tok"` から curl の `-H @-` へ標準入力で渡す（curl の引数に値を置かない）。
   - `set -x` と curl の `-v` は使わない。
   - 本文は P1 と同じ文を JSON の text に入れたファイル（P1 の `body_8k.json` と同じ作り）を `--data-binary @` で送る。
-  - 出すのは HTTP の数と、返事の中の会話の id だけ。返事の全文はファイルに残し、鍵が入っていないことを `grep -c` の件数で確かめる。
+  - 出すのは HTTP の数と、返事の中の会話の id だけ。返事の全文はファイルに残し、鍵が入っていないことを件数で確かめる。探す文字は引数に置かず、`grep -cF -f <(printf '%s\n' "$tok") <ファイル>` のように標準入力の側から渡す。
 （４）Opus が list_runs と get_run_log で、届いた文を読む。比べる前の外し方は 2 つだけに決めておく: ①P1 と同じく、各行の頭の 4 字の字下げを 1 回だけ外す ②文の前後に包みの印の行（`<routine-fire-payload>` など、送った文に無い行）があれば、その開きと閉じの行だけを外す。外した行は全部記録する。そのうえで行数・最後の行・wc -m・sha256 を出し、P1 の値と比べる。この 2 つ以外の違いは外さず、× の材料として記録する。
 （５）終わったら PO が画面で API の口の鍵を消す（試しの鍵を残さない）。Keychain の項目も PO が `!` で `security delete-generic-password -s salesanchor-ops-trial-fire -a trial` を流して消す。
 
