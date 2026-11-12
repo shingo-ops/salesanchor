@@ -3,7 +3,7 @@
 
 **親**: `docs/handoff/app-idle-tx/design.md`（K5 の残り）・`docs/handoff/replay-tx-release/design.md`（試しの道具の同じ型。§2 で本番の解析は別の設計で扱うとした）。**関連 ADR**: ADR-1037（移行の鍵待ち・反映前の点検）、ADR-1070（接続の返却時の後始末）、ADR-1032（復活止め）、ADR-1015（区分）。  
 **日付**: 2026-11-12。**担当**: Planner（Opus）。  
-**状態**: 設計案作成済み。自己審査（同一 AI）済み。PO 承認済み（2026-11-12「1」＝クラウドで設計を審査し、直す所を直してから実装に進む）。クラウドの設計審査は実施中。実装未着手。  
+**状態**: 設計案作成済み。自己審査（同一 AI）済み。PO 承認済み（2026-11-12「1」＝クラウドで設計を審査し、直す所を直してから実装に進む）。クラウドの設計審査 1 回目 REVISE（中 2・低 4。`docs/handoff/analysis-tx-release/review-architect.md`）→ 全件を本文に反映。2 回目の審査待ち。実装未着手。  
 **PO の選択**: 2026-11-12「1」（直し方の設計に進む。実装の前にもう一度確認）。  
 **根拠**: `docs/handoff/analysis-tx-release/recon.md`（以下 recon）。行番号は origin/main a3e93f053。
 
@@ -51,22 +51,28 @@ KGI: 本番の作業係（celery worker）の解析で、「投稿日を読ん�
 | ファイル | 変更 |
 |---|---|
 | `backend/app/services/line_analysis_v102_svc.py` | `run_v102_analysis`（:1526-1583）の中の取引の切り方だけを変える。下の 5-1 |
-| backend/tests/test_v102_analysis_tx_release.py（新規） | K2・K3 の試験。下の 5-2 |
+| backend/tests/test_v102_analysis_tx_release.py（新規） | K2・K3・K3b の試験。下の 5-2。直す前の main で赤になるのは K2・K3 だけ（K3b は直す前も緑） |
 
 ### 5-1. `run_v102_analysis` の新しい流れ
 
 変更前（要約）: 鍵 → 読む（:1538-1567）→ 計算（:1568）→ 書く（:1569）→ commit（:1570）。
 
-変更後:
-1. 読む部分（:1537 の鍵から :1567 の投稿日まで。マスタ :1554 を除く）を、同じファイルの新しい関数 `_read_v102_inputs(session, extraction_job_id)` にまとめる。返り値は frozen dataclass `_V102Inputs`（ctx・job の gemini_unsure と review_reasons・rows（`tuple(rows)` のまま持つ。SQLAlchemy 2.0 の Row は名前付きの tuple と同じに振る舞う＝ Context7 /websites/sqlalchemy_en_20_core「class sqlalchemy.engine.Row」2026-11-12 参照。要素を作り直さないのは、既存の試験が件を SimpleNamespace で渡すため）・decisions・previous_pairs・prior_current・followup_reference・soldout_ref_posts・posted_date）。どれも `==` で中身を比べられる（recon §2-4）。
-2. 早い return（:1552-1553）と ctx が無いときの ValueError（:1539-1540）は今と同じ位置・同じ動き。
-3. マスタ（:1554）は今と同じく 1 回だけ読む。読み直しの比べる対象に入れない（今もマスタの変更は鍵で守っていないので、動きは変わらない）。
-4. 計算の前の準備（`_response_from_rows`・`_fixed_products`・`masters_with_followup`）は、入力とマスタだけから作る関数 `_prepare_v102(inputs, masters)` にまとめる（DB を使わない）。`_MappingError` の判定（:1556-1557）もここ。
+変更後（審査 1 回目の指摘を反映。今の「try の外で読む物／try の中で読む物」の境目を変えない）:
+1. 読む部分を、同じファイルの新しい関数 2 つに分ける。
+   - `_read_v102_head(session, extraction_job_id)`: :1537 の鍵 → ctx（無ければ今と同じ ValueError :1539-1540）→ job（gemini_unsure・review_reasons）→ rows。今と同じく try の外。
+   - `_read_v102_tail(session, extraction_job_id, rows)`: decisions（:1559）・previous_pairs（:1561）・prior_current（:1563）・followup_reference・soldout_ref_posts・posted_date（:1564-1566）。今と同じく try の中で呼ぶ（今これらの読みで出た例外は :1571 の except で受けている。それを変えない）。
+   - 2 つの返り値を合わせて frozen dataclass `_V102Inputs`（ctx・gemini_unsure・review_reasons・rows・decisions・previous_pairs・prior_current・followup_reference・soldout_ref_posts・posted_date）にする。rows は `tuple(rows)` のまま持つ（SQLAlchemy 2.0 の Row は名前付きの tuple と同じに振る舞う＝ Context7 /websites/sqlalchemy_en_20_core「class sqlalchemy.engine.Row」2026-11-12 参照。要素を作り直さないのは、既存の試験が件を SimpleNamespace で渡すため）。どれも `==` で中身を比べられる（recon §2-4）。
+2. 早い return（:1552-1553）は今と同じ位置・同じ動き（commit も rollback もしない）。
+3. マスタと unit_ids（:1554）は今と同じく try の外で 1 回だけ読む。読み直しの比べる対象に入れない（今もマスタの変更は鍵で守っていないので、動きは変わらない）。
+4. ここから try（:1555 と同じ位置で始まる）。`_MappingError` の判定（:1556-1557）→ `_read_v102_tail` → 計算の前の準備（`_response_from_rows`・`_fixed_products`・`masters_with_followup`）を、入力とマスタだけから作る関数 `_prepare_v102(inputs, masters)` で作る（DB を使わない）。
 5. 準備の後、計算の前に `session.commit()` を置く。コメントに「計算の間、DB の取引と投稿の鍵を持ち越さない（:491 と同じ考え方）」と書く。
 6. 計算（`run_v102_pipeline`）を取引の外で呼ぶ。
-7. もう一度 `_read_v102_inputs`（鍵を取り直す）。前と同じなら、その計算の結果で `_write_results` → commit。
-8. 違えば `logger.info("[line_analysis] v102 inputs changed; recomputing under lock: job=%s", ...)` を 1 行出し、鍵を持ったまま準備と計算をやり直し、書いて commit する（今と同じ動き。やり直しは 1 回だけ）。
-9. 例外の扱い（:1571-1577）・付け直し（:1578-1580）・記録（:1581）は今と同じ。2・6 の間に例外が出ても、今と同じく rollback して理由を書いて commit する。
+7. もう一度 `_read_v102_head` と `_read_v102_tail` を呼ぶ（鍵を取り直す）。前と同じなら、その計算の結果と**2 回目に読んだ値**（rows・decisions）で `_write_results` → commit。
+8. 違えば `logger.info("[line_analysis] v102 inputs changed; recomputing under lock: job=%s", ...)` を 1 行出し、鍵を持ったまま 2 回目に読んだ値で `_MappingError` の判定・準備・計算をやり直し、書いて commit する（今と同じ動き。やり直しは 1 回だけ）。
+9. 4〜8 は全部 1 つの try の中。例外の扱い（:1571-1577：rollback → 理由を書く → commit → empty_stats を返す）は今と同じ。
+   - 7 の 2 回目の読みで ctx が無い（計算の間に job が消えた）ときは、`_read_v102_head` が ValueError を出し、この try の except で受ける。理由を書く UPDATE は 0 行になり、empty_stats を返す（送出しない。1 回目の ValueError だけが今と同じく呼び出し元へ出る）。
+   - 7 の 2 回目の読みで早い return の条件（件が 0 で応答が読めなかった理由あり）になったときは、今の早い return と同じく empty_stats を返す（commit も rollback もしない）。
+10. 付け直し（:1578-1580 `_merge_supplier_products`）に渡す previous_pairs と prior_current は、**2 回目に読んだ値**を使う。記録（:1581）は今と同じ。
 
 触らない範囲: 書き込み（`_write_results`）・計算（`run_v102_pipeline`）・付け直し（`_merge_supplier_products`）の中身、鍵の名前（`v102_analysis_lock_key`）、保存側の 2 か所、呼び出し元 5 か所。
 
@@ -74,12 +80,14 @@ KGI: 本番の作業係（celery worker）の解析で、「投稿日を読ん�
 - 実 DB の試験は `backend/tests/test_line_analysis_v102_pg.py` の組み立て（:80-105 の make_job・run_analysis）を使う。2 つ目のセッションは同じ engine から開く。
 - K3b: 何も変えずに解析し、計算の呼ばれた回数が 1 で、「inputs changed」の記録が無いことを確かめる。
 - K2: `run_v102_pipeline` を本物を呼ぶ包みに差し替え、呼ぶ前と返った後の `session.in_transaction()` を記録する。両方 False で合格。直す前は True。マスタは辞書と dataclass で返る（`backend/app/services/line_analysis_v102_svc.py` :217-241）ので、commit 後に読み直しは起きない見込み。返った後の確かめでそれを守る。
-- K3: 差し替えた計算の中で、別のセッションから同じ投稿の人の値の直し（`save_value_override`）を保存する。終わった後の結果の行にその直しが入っていることと、「inputs changed」の記録が 1 行あることを確かめる。直す前の main では保存が鍵で待ち、試験が止まるので、差し替えた計算の中の保存に待ち時間の上限（`SET lock_timeout`）を付けて赤で終わらせる。
+- K3: 差し替えた計算の中で、別のセッションから同じ投稿の人の値の直し（`save_value_override`）を保存する。終わった後の結果の行にその直しが入っていることと、「inputs changed」の記録が 1 行あることを確かめる。
+  - `save_value_override` は非同期の関数（`backend/app/services/v102_human_decisions_svc.py` :574-575、引数は `db: AsyncSession` とキーワード引数）。同期の差し替えの中から、`create_async_engine(pg[2])` と `AsyncSession` で開き、`asyncio.run(...)` で呼ぶ。前例は `backend/tests/test_line_analysis_v102_pg.py` :273-280（URL 型のまま渡す。`engine.dispose()` を finally で）。
+  - 直す前の main では保存が鍵で待ち、試験が止まる。そのため保存の取引の最初に `SET LOCAL lock_timeout = '2s'` を流す。直す前の main では、計算の差し替えの中で例外が出て、:1571 の except が empty_stats を返すので、結果の行に直しが入らず赤になる。
 
 ## 6. 弊害と対処
 | 弊害 | 対処 |
 |---|---|
-| 呼び出し元が書きかけの変更を持っていたら、計算の前の commit でそれが先に確定する | 呼び出し元 5 か所を読み、全部が呼ぶ前に commit 済みか読むだけと確かめた（`backend/app/tasks/tcg_extraction.py` :476（:455 で commit 済み）・:626（:615 で commit 済み）・:746（読むだけ）、`backend/app/services/tcg_product_master_svc.py` :939（:911 で commit 済み・後は読むだけ）、`backend/app/tools/reextract_v6_with_v102.py` :393（新しいセッション））。実装カードで同じ点検をやり直し、書きかけがあれば止める |
+| 呼び出し元が書きかけの変更を持っていたら、計算の前の commit でそれが先に確定する | 呼び出し元 5 か所を読み、全部が呼ぶ前に commit 済みか読むだけと確かめた（`backend/app/tasks/tcg_extraction.py` :476（直前の Gemini 段 `run_v102_extraction` の最後 `backend/app/services/line_analysis_v102_svc.py` :596 で commit 済み）・:626（:615 で commit 済み。`analyze_extraction_job` の振り分け `backend/app/services/tcg_analyzer_svc.py` :1438-1442 は SELECT だけ）・:746（読むだけ）、`backend/app/services/tcg_product_master_svc.py` :939（:911 で commit 済み・後は読むだけ。これも :1442 の振り分けを通る）、`backend/app/tools/reextract_v6_with_v102.py` :393（新しいセッション））。数え方: 呼び出しの場所 5 か所。recon §2-3 の「4 つ」は振り分け :1442 を 1 つと数えた数え方で、同じ場所を指す。実装カードで同じ点検をやり直し、書きかけがあれば止める |
 | 計算の間に別のやり直しが同じ投稿を書き換える | 読み直しで入力の違いを見つけ、鍵を持ったまま計算し直す（5-1 の 8）。書く時は必ず鍵を持っている |
 | 入力が変わると計算が 2 回になる | やり直しは 1 回だけ。2 回目は鍵を持ったまま（今と同じ）なので、それ以上は繰り返さない |
 | マスタが計算の間に変わる | 今も同じ（マスタの変更は鍵を取らない）。動きは変わらない |
