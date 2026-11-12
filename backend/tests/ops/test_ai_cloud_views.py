@@ -483,7 +483,7 @@ def test_role_migration_is_idempotent(pg):
     # meta の migration も冪等（分類表の中身は消えない）
     n0 = _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0]
     c.execute(_read(_META_SQL))
-    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1109
+    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1142
 
 
 # ---------------------------------------------------------------- T10（CI の見張り）
@@ -806,6 +806,77 @@ def test_t10_viewer_contract_columns_are_classified_on_bootstrapped_db(cluster):
             assert modes[col] == "mask", col
         assert modes["status"] == "pass"
         assert modes["mail_sent_at"] == "pass"
+    finally:
+        conn.close()
+        cur = cluster.control.cursor()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+# ADR-1061 便2-2c1: 発行元の会社情報と振込先のテナントの4表・請求書の発行元区分・Drive の海外用フォルダに column_class の行があることを名前で確かめる。
+_ISSUER_TABLES = {
+    "tenant_issuer_profiles", "tenant_invoice_payment_methods",
+    "tenant_invoice_payment_bank", "tenant_invoice_payment_wise",
+}  # fmt: skip
+_ISSUER_CLASSIFIED = (
+    {("tenant_issuer_profiles", c) for c in (
+        "address1", "address2", "city", "company_name", "country_code", "email", "phone",
+        "postal_code", "prefecture_code", "registration_number", "state_region", "website", "region",
+    )}
+    | {("tenant_invoice_payment_methods", c) for c in ("display_name", "method_type", "region")}
+    | {("tenant_invoice_payment_bank", c) for c in (
+        "account_holder", "bank_account_type", "bank_address", "bank_branch", "bank_name", "swift_code", "method_type",
+    )}
+    | {("tenant_invoice_payment_wise", c) for c in (
+        "account_holder", "bank_address", "bank_name", "note", "swift_bic", "wise_email", "method_type", "wise_currency",
+    )}
+    | {("invoices", "issuer_region")}
+)  # fmt: skip
+
+
+def test_t10_issuer_columns_are_classified_on_bootstrapped_db(cluster):
+    """新しい会社の作り方（tenant.py）で作ったテナントに、便2-2c1 の 32 列の column_class の行があり、4表と請求書の発行元区分に分類の漏れが無い。
+
+    口座番号（bank_account_number）と IBAN（iban）は名前の決まりで読めない列なので分類の行を持たない。
+    public の Drive 設定の海外用フォルダ（overseas_folder_id）の行もあることを確かめる。専用の DB を作り、終わったら消す。"""
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    assert len(_ISSUER_CLASSIFIED) == 32
+    name, conn = _new_db(cluster.control, "ai_cloud_t10_issuer")
+    try:
+        c = conn.cursor()
+        c.execute(_read(_AI_READER_SQL))
+        c.execute(_read(_ROLE_SQL))
+        c.execute(_read(_META_SQL))
+        url = _psycopg_url(ADMIN_PG_URL, name).replace("postgresql://", "postgresql+asyncpg://", 1)
+        from tests.rls_bootstrap import bootstrap_tenant_schema
+
+        async def build():
+            eng = create_async_engine(url)
+            try:
+                await bootstrap_tenant_schema(eng, 1)
+            finally:
+                await eng.dispose()
+
+        asyncio.run(build())
+        c.execute(_read(_CREATE_SQL))
+        rows = _rows(
+            conn, "SELECT table_name, column_name FROM ai_cloud_meta.column_class WHERE schema_pattern = 'tenant_*'"
+        )
+        have = {(r[0], r[1]) for r in rows}
+        missing = _ISSUER_CLASSIFIED - have
+        assert missing == set(), f"column_class に行が無い: {sorted(missing)}"
+        drive = _rows(
+            conn,
+            "SELECT 1 FROM ai_cloud_meta.column_class WHERE schema_pattern = 'public'"
+            " AND table_name = 'tenant_google_drive_config' AND column_name = 'overseas_folder_id'",
+        )
+        assert len(drive) == 1
+
+        gaps = [
+            g for g in _classification_gaps(conn)
+            if g[1] in _ISSUER_TABLES or (g[1] == "invoices" and g[2] == "issuer_region")
+        ]  # fmt: skip
+        assert gaps == [], f"分類の漏れ（表名・列名）: {[(g[1], g[2]) for g in gaps]}"
     finally:
         conn.close()
         cur = cluster.control.cursor()

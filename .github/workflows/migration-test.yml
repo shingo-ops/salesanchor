@@ -1407,6 +1407,16 @@ jobs:
             echo "✅ $sqlfile 成功"
           done
 
+      - name: 変更 SQL の前提の移行を先に実行（国と都道府県の表）
+        if: steps.detect.outputs.has_sql_changes == 'true' && contains(steps.detect.outputs.changed_sql, 'migrations/20261112_160000_create_tenant_issuer_and_payment_tables.sql')
+        run: |
+          # 20261112_160000 は public.countries（20260621_010000）と public.prefectures（20261112_150000）を外部キーで指すので、本番と同じ順で先に作る
+          for sqlfile in migrations/20260621_010000_create_countries_master.sql migrations/20261112_150000_create_viewer_contract_public_tables.sql; do
+            echo "▶ $sqlfile を前提として実行中..."
+            psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
+            echo "✅ $sqlfile 成功"
+          done
+
       - name: 変更 SQL を 1回目実行（実行可否・構文チェック）
         if: steps.detect.outputs.has_sql_changes == 'true'
         run: |

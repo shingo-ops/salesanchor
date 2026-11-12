@@ -48,6 +48,7 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
                 "20261103_200000_add_google_calendar_import_sync.sql",
                 "20261104_161223_add_calendar_events_meet_url.sql",
                 "20261106_150000_add_discord_role_link_tables.sql",
+                "20261112_160000_create_tenant_issuer_and_payment_tables.sql",
             }
         ),
     ),
@@ -103,6 +104,11 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
         "scoped",
         "",
         frozenset({"20261106_150000_add_discord_role_link_tables.sql"}),
+    ),
+    "test_tenant_issuer_tables_pg.py": (
+        "scoped",
+        "",
+        frozenset({"20261112_160000_create_tenant_issuer_and_payment_tables.sql"}),
     ),
     "test_notification_channels_blueprint_key_ddl.py": (
         "text_only",

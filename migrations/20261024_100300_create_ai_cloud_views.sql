@@ -1,6 +1,6 @@
 -- ADR-1052 段1: 相談係用の伏せたビュー ai_cloud を作る（冪等・1 トランザクション）。
 -- 一覧には載せない。run_all_migrations.sh の EXIT trap が、毎回の実行の最後に流す（ai_ro と同じ形）。
--- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1109 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
+-- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1142 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
 -- 2) ai_cloud を作り直す。3) ai_cloud_meta.build_views() で全ビューを作り、build_log に 1 行書く。
 -- 4) ai_reader_cloud に ai_cloud の USAGE と SELECT だけを付ける。
 -- 分類表の元: docs/handoff/cloud-case-ai/stage1-column-class.tsv（表ごと・class ごとにまとめて unnest で入れる）。
@@ -287,7 +287,7 @@ FROM (VALUES
   ('public','tenant_features',ARRAY['feature_key'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
   ('public','tenant_google_calendar_config',ARRAY['calendar_id'],'mask',''),
   ('public','tenant_google_calendar_config',ARRAY['sync_mode'],'allow','値の決まり calendar_config_sync_mode_check で値が限られる'),
-  ('public','tenant_google_drive_config',ARRAY['account_email','folder_id'],'mask',''),
+  ('public','tenant_google_drive_config',ARRAY['account_email','folder_id','overseas_folder_id'],'mask',''),
   ('public','tenant_paypal_config',ARRAY['environment'],'allow','値の決まり config_environment_check で値が限られる'),
   ('public','tenant_paypal_config',ARRAY['webhook_id'],'mask',''),
   ('public','tenant_settings',ARRAY['default_currency','document_language'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
@@ -439,6 +439,7 @@ FROM (VALUES
   ('tenant_*','invoices',ARRAY['currency'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
   ('tenant_*','invoices',ARRAY['duty_policy_snapshot','erp_key','fx_rate_snapshot','invoice_number'],'mask',''),
   ('tenant_*','invoices',ARRAY['issue_mode'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
+  ('tenant_*','invoices',ARRAY['issuer_region'],'allow','値の決まり chk_invoices_issuer_region で値が限られる'),
   ('tenant_*','invoices',ARRAY['notes'],'mask',''),
   ('tenant_*','invoices',ARRAY['payment_method'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
   ('tenant_*','invoices',ARRAY['paypal_approval_url','paypal_copy_pdf','paypal_invoicer_view_url','paypal_order_id','pdf_url','ship_to_snapshot'],'mask',''),
@@ -591,6 +592,16 @@ FROM (VALUES
   ('tenant_*','teams',ARRAY['description','name'],'mask',''),
   ('tenant_*','tenant_calibrations',ARRAY['label_weights'],'mask',''),
   ('tenant_*','tenant_commission_settings',ARRAY['commission_rates'],'mask',''),
+  ('tenant_*','tenant_invoice_payment_bank',ARRAY['account_holder','bank_account_type','bank_address','bank_branch','bank_name','swift_code'],'mask',''),
+  ('tenant_*','tenant_invoice_payment_bank',ARRAY['method_type'],'allow','値の決まり chk_tenant_invoice_payment_bank_method_type で値が限られる'),
+  ('tenant_*','tenant_invoice_payment_methods',ARRAY['display_name'],'mask',''),
+  ('tenant_*','tenant_invoice_payment_methods',ARRAY['method_type'],'allow','値の決まり chk_tenant_invoice_payment_methods_method_type で値が限られる'),
+  ('tenant_*','tenant_invoice_payment_methods',ARRAY['region'],'allow','値の決まり chk_tenant_invoice_payment_methods_region で値が限られる'),
+  ('tenant_*','tenant_invoice_payment_wise',ARRAY['account_holder','bank_address','bank_name','note','swift_bic','wise_email'],'mask',''),
+  ('tenant_*','tenant_invoice_payment_wise',ARRAY['method_type'],'allow','値の決まり chk_tenant_invoice_payment_wise_method_type で値が限られる'),
+  ('tenant_*','tenant_invoice_payment_wise',ARRAY['wise_currency'],'mask','値の決まりが値の一覧でなく文字の形だけのため伏せる（初期は最小）'),
+  ('tenant_*','tenant_issuer_profiles',ARRAY['address1','address2','city','company_name','country_code','email','phone','postal_code','prefecture_code','registration_number','state_region','website'],'mask',''),
+  ('tenant_*','tenant_issuer_profiles',ARRAY['region'],'allow','値の決まり chk_tenant_issuer_profiles_region で値が限られる'),
   ('tenant_*','tenant_meta_config',ARRAY['granted_scopes','instagram_business_account_id','instagram_username','notes','page_id','page_name','subscribed_fields'],'mask',''),
   ('tenant_*','tenant_profile',ARRAY['address','company_name','company_name_en'],'mask',''),
   ('tenant_*','tenant_profile',ARRAY['default_language'],'allow','値の決まり default_language_check で値が限られる'),
