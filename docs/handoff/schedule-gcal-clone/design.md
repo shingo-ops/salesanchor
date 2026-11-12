@@ -1346,7 +1346,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 ## 12. 便15: 予定の繰り返し（2026-11-12・Opus・設計案）
 
-状態: 設計案。設計審査は審査7 で APPROVE（§12.13・2026-11-11 22:00 UTC）。そのあと PO の問い「繰り返しを消すときの動きも把握したか」（2026-11-12）で、消すときの Google 側の抜けが 2 つ見つかった。Google で消し方を測り（recon §9.5 U6）、§12.2 G74・§12.5・§12.7 を直した。審査8〜審査14 の REVISE（§12.13）を直し、審査15 待ち。成功条件は PO の決定待ち。PO の範囲の承認は済み（2026-11-12 選択「1、」）。根拠は recon §9。ADR-1075（Proposed）。
+状態: 設計案。設計審査は審査7 で APPROVE（§12.13・2026-11-11 22:00 UTC）。そのあと PO の問い「繰り返しを消すときの動きも把握したか」（2026-11-12）で、消すときの Google 側の抜けが 2 つ見つかった。Google で消し方を測り（recon §9.5 U6）、§12.2 G74・§12.5・§12.7 を直した。審査8〜審査14 の REVISE（§12.13）を直し、審査15 で **APPROVE**（2026-11-12 00:02 UTC・対象 ac42be185）。審査15 の推奨 1 件も直した。成功条件は PO の決定待ち。PO の範囲の承認は済み（2026-11-12 選択「1、」）。根拠は recon §9。ADR-1075（Proposed）。
 
 ### 12.1 目的
 
@@ -1475,6 +1475,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
     - どの道も、Google への送りを試して通った行は `'synced'`・`last_synced_at = NOW()` に書く。Google に送らない場合（`google_event_id` が無い・同期の向きが双方向でも書くだけでもない。今の直す道の `backend/app/services/calendar_service.py:391` の条件）は、今と同じく `'pending'` のまま残す（審査13 指摘1）。
     - 新しく作る行（直すときの following の新しい元の行・this の例外の行）は、insert の文で `sync_status = 'pending'` を明示して書く（審査14 指摘2）。列の既定値は `'synced'`（`migrations/078_create_calendar_events_tenant.sql:59`）なので、書かないと送っていない行が `'synced'` になる。今の作る道も `'pending'` を明示している（`backend/app/services/calendar_service.py:266`）。
     - 新しく作る行を送るかどうかは、**元の行**の `google_event_id` があり、同期の向きが双方向か書くだけのときに送る（審査14 指摘3。新しい行は insert の直後は必ず id を持たないため、上の「`google_event_id` が無い」を新しい行に当てない）。元の行が id を持たない・同期の向きが合わないときは、新しい行も送らず `'pending'` のまま残す。
+    - 消すときの this で新しく作る消した印の例外の行（`is_cancelled = true`）も、insert の文で `sync_status = 'pending'` を明示して書く（審査15 の推奨）。消す道は送りの後も `sync_status` を変えないので、この行は `'pending'` のまま残る。一覧はこの行を返さない（§12.4）ので画面には出ない。
     - 消して作り直す道で delete が失敗: その行を `'failed'`。`google_event_id`・`sync_origin_id` は古い値のまま残す（Google にも古い予定が残っているため）。
     - 消して作り直す道で delete は通り create だけ失敗: その行を `'failed'` にし、`google_event_id` と `sync_origin_id` を NULL にする。今の作る道の失敗（`backend/app/services/calendar_service.py:316-324`）と同じ「Google の id を持たない行」の形にそろえ、Google で消えた古い id に patch を送らないため。
     - `'failed'` の行を後から送り直す仕組みは今の main に無い（`sync_status` を読むのは一覧の `backend/app/services/calendar_service.py:200` だけ）。便15 でも作らない。今の単発の予定の失敗と同じ扱い。
@@ -1694,3 +1695,11 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 | 1 | 低 | 送らない場合に `'pending'` のまま残ることを確かめる試験が §12.10 に無い | §12.10 |
 | 2 | 低 | 新しく作る行（following の新しい元の行・this の例外の行）の insert のときの `sync_status` が書かれていない。列の既定値は `'synced'` | §12.7（`'pending'` を明示） |
 | 3 | 低 | 送らない条件「`google_event_id` が無い」を新しく作る行に当てると一度も送らない読みになる | §12.7（新しい行は元の行の id と同期の向きで決める） |
+
+#### 審査15（2026-11-12 00:02 UTC・対象 ac42be185）: APPROVE
+
+審査14 の指摘 1〜3 は origin/main の `migrations/078_create_calendar_events_tenant.sql:59`・`backend/app/services/calendar_service.py:266`・`:391` と合う形で直っていると確かめた。§12 の他の所との食い違いは無い。作り始めを止めない重さ低の推奨が 1 件。
+
+| # | 重さ | 推奨 | 直した所 |
+|---|---|---|---|
+| 1 | 低 | 消すときの this で新しく作る消した印の例外の行の `sync_status` が決まっていない（書かないと既定値の `'synced'`） | §12.7（insert で `'pending'` を明示・消す道は変えない・一覧に出ない）。再審査はしない（審査7 までの推奨の直しと同じ扱い） |
