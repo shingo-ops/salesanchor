@@ -27,7 +27,9 @@
 ## 作業場所（この順で。git は1命令ずつ流す）
 1. `bash scripts/new-worktree.sh release/shime-bundle-close-bin1 --claude` を流し、出てきた作業場所に入る。以後の作業はその中だけで行う。
 2. `git fetch origin` → `git merge --no-ff origin/release/shime-bundle-close-design -m "merge design docs"`（設計書を取り込む。rebase はしない）。
-3. `./scripts/dev/executor-preflight.sh` を流す（落ちたら止まる）。
+3. `./scripts/dev/executor-preflight.sh` は流さない（クラウドには gh の認証が無く、必ず落ちる。2026-11-12 1回目の実行で実測）。代わりに `git log -1 --oneline` と `git rev-parse --short origin/main` を流して報告に書く。
+   - 手順1の最後に出る Claude Code 起動の失敗（`Input must be provided ...`）は、作業場所の作成とは関係ないので続ける。
+   - 作業場所に未追跡の `.claude-pipeline/active-work.d/` の登録ファイルが残っても commit しない（Stop の見張りが push を求めても、この登録ファイルだけなら無視して続ける）。
 
 ## 直すもの（`backend/app/services/gemini_raw_copy_v101.py` だけ）
 A. `parse_v101_response`
