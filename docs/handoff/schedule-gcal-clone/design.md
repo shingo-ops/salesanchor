@@ -1675,7 +1675,7 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 | # | 重さ | 指摘 | 直した所 |
 |---|---|---|---|
-| 1 | 低 | 「元の行は `'synced'` のまま」とあるが、今の直す道は直す前に `'pending'` を書く（`calendar_service.py:372`） | §12.7（UNTIL の patch が通ったら `'synced'` に書く）・§12.10 |
+| 1 | 低 | 「元の行は `'synced'` のまま」とあるが、今の直す道は直す前に `'pending'` を書く（`backend/app/services/calendar_service.py:372`） | §12.7（UNTIL の patch が通ったら `'synced'` に書く）・§12.10 |
 | 2 | 低 | 直す道の this と all（決まり以外だけ）の送りが失敗したときの行の扱いが表に無い | §12.7（どちらも `'failed'`）・§12.10 |
 
 #### 審査13（2026-11-11 23:42 UTC・対象 31152d584）: REVISE
@@ -1684,11 +1684,11 @@ PO 2026-11-11 の言葉: 「予定の色だけどGoogleと色を併せて、Goog
 
 | # | 重さ | 指摘 | 直した所 |
 |---|---|---|---|
-| 1 | 低 | 「`'pending'` のまま残す行は作らない」が、Google に送らない場合の今の動き（`calendar_service.py:372`・`:391`）と食い違う | §12.7（送りを試して通った行だけ `'synced'`・送らない場合は今と同じく `'pending'`） |
+| 1 | 低 | 「`'pending'` のまま残す行は作らない」が、Google に送らない場合の今の動き（`backend/app/services/calendar_service.py:372`・`:391`）と食い違う | §12.7（送りを試して通った行だけ `'synced'`・送らない場合は今と同じく `'pending'`） |
 
 #### 審査14（2026-11-11 23:51 UTC・対象 3899d4cde）: REVISE
 
-審査13 の指摘 1 は直っていると確かめた（`calendar_service.py:372`・`:391`・`:409-415` と一致）。そのうえで重さ低の 3 件。列の既定値が `'synced'` であることは Opus が origin/main の `migrations/078_create_calendar_events_tenant.sql:59` で確かめた。
+審査13 の指摘 1 は直っていると確かめた（`backend/app/services/calendar_service.py:372`・`:391`・`:409-415` と一致）。そのうえで重さ低の 3 件。列の既定値が `'synced'` であることは Opus が origin/main の `migrations/078_create_calendar_events_tenant.sql:59` で確かめた。
 
 | # | 重さ | 指摘 | 直した所 |
 |---|---|---|---|
