@@ -1,0 +1,12 @@
+[
+  {"condId":"CN0001","canonical":"Case","aliases":["case","Case"]},
+  {"condId":"CN0002","canonical":"Damaged case","aliases":["damaged case","damagedcase","Damaged case"]},
+  {"condId":"CN0003","canonical":"Sealed box","aliases":["sealed box","sealedbox","未開封","新品未開封","unopened","Sealed box"]},
+  {"condId":"CN0004","canonical":"Damaged sealed box","aliases":["damaged sealed box","damagedsealedbox","Damaged sealed box"]},
+  {"condId":"CN0005","canonical":"No shrink box","aliases":["no shrink box","noshrinkbox","No shrink box"]},
+  {"condId":"CN0006","canonical":"Opened box","aliases":["opened box","ペリなし","ペリ無","ペリ無し","Opened box"]},
+  {"condId":"CN0007","canonical":"Unsearched pack","aliases":["unsearched pack","Unsearched pack"]},
+  {"condId":"CN0008","canonical":"FLAG_SINGLE","aliases":["single","flag_single","FLAG_SINGLE"]},
+  {"condId":"CN0009","canonical":"Opened case","aliases":["opened case","Opened case"]},
+  {"condId":"CN0010","canonical":"Searched pack","aliases":["searched pack","Searched pack"]}
+]
