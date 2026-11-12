@@ -330,7 +330,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
   - `:7529` `[397/398] … 20261112_140000_customer_status_fk.sql`、`:7531-7535` 同じ5領域の contacts を「外部キーに付け替えた」。companies の行は0（028 は CREATE TABLE の中の CHECK で、足し直さない）。
 - 原因: `migrations/037_add_pending_dedup_review_to_contacts_check.sql:118-133` は「pending_dedup_review を含む status の CHECK があれば飛ばす」だけ。便2 が CHECK を外したので、CHECK が無い → `:136-140` で `ADD CONSTRAINT contacts_status_check` に進む。続いて `migrations/20261112_140000_customer_status_fk.sql:41-46` の飛ばす条件（外部キーが有効・かつ CHECK が無い）が崩れ、`:56` で DROP する。2つで毎回足して外すを繰り返す。
 - 順番: `scripts/run_all_migrations.sh:311`（037）→ `:1263`（便2）。全件を毎回流す（ADR-1037）。
-- CI が見逃した理由: 全件ドライランの土台の tenant_001 には contacts の表が無い（`.github/workflows/migration-test.yml:312-319`）。037 も便2 も contacts を飛ばすので、2周目でも往復が起きない。§8 K13 の後半（2周目に便2 の ALTER が出ない）を CI で確かめる手段が無かったのに、K13 を CI の項目にした（Opus の設計漏れ）。
+- CI が見逃した理由（2026-11-12 CI run 43164959836 の記録で直した。前の版の「tenant_001 に contacts が無い」は誤り）: 1周目・2周目を流す段（127本）は tenant_001・tenant_002 に contacts があり、037 は「新規追加 2 テナント」を出す。ただしこの段は便2 の migration（20261112_140000）を流さないので、往復は起きない。便2 まで流す全件ドライラン（372本）は ✅ の行だけを出し、NOTICE を出さないので、往復が起きても見えない。§8 K13 の後半（2周目に便2 の ALTER が出ない）を CI で確かめる手段が無かったのに、K13 を CI の項目にした（Opus の設計漏れ）。
 - 既存 migration を直す前例: ADR-1002（`docs/adr/ADR-1002-unify-product-id-and-fix-migration-compat.md:39`・`:132`）は、既存 migration に先頭のガードを足して冪等を保つ。テーブルがある場合の動きは変えない、という形。CI に「既存 migration の編集を止める」検査は無い（`git grep -n -i -E "immutable|diff-filter=M" origin/main -- .github/workflows scripts` の当たりは workflow-lint.yml の注釈1件だけ）。
 - 新しい会社の領域: `backend/app/services/tenant.py:224`・`:254` は status 列に名前なしの `REFERENCES public.customer_statuses(code)` を付ける。PostgreSQL は名前なしの列の外部キーに `<表>_<列>_fkey` と名前を付ける（公式 tutorial-fk.html の例 `weather_city_fkey`、Context7 /websites/postgresql で確認）。便2 の migration も同じ名前 `contacts_status_fkey` を使う（`:24`）。
 
@@ -351,8 +351,8 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 
 - PostgreSQL の試験 `backend/tests/test_customer_statuses_pg.py` に1つ足す: tenant.py の表の形の使い捨て DB（`_fresh()`）で、管理役で 037 → 便2 の migration をこの順に2回流す（`tests.rls_bootstrap._apply_migration`）。037 を流した直後に (1) その領域の companies・contacts に status の CHECK が0本、便2 を流した直後に (2) `contacts_status_fkey` と `companies_status_fkey` の oid が流す前と同じ（外して付け直していない）を確かめる。
   - 037 のガードを消すと (1) が落ちる（便2 のあとでは CHECK は外れているので、037 の直後に見る）。便2 が外部キーを付け直す形に壊れると (2) が落ちる。
-  - CI の全件ドライランで見えない理由（tenant_001 に contacts が無い）を、本番と同じ表の形で埋める。
-- 残る隙（この便では作らない・次の候補）: 全件ドライランの土台に本番の会社の領域の形が無いので、別の表で同じ往復が起きても CI は気づかない。土台を tenant.py の形にする件は別テーマとして台帳に置く。
+  - CI の全件ドライランで見えない理由（§15-2: 便2 まで流す372本の段は NOTICE を出さない）を、本番と同じ表の形の試験で埋める。
+- 残る隙（この便では作らない・次の候補）: 372本の全件ドライランは NOTICE を出さないので、別の表で同じ往復が起きても CI は気づかない。NOTICE を出す・往復を数える件は別テーマとして台帳に置く。
 
 ### 15-5. 受入条件と確かめ方
 
