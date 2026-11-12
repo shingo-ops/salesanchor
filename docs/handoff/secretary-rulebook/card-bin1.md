@@ -219,7 +219,7 @@ COMMIT;
 ## 試験の決まり（`backend/tests/test_secretary_rules_tables_pg.py`）
 
 - 先例の形をそのまま使う: `backend/tests/test_viewer_contract_public_tables_pg.py` の `needs_ci_pg`（:27-30）・`_app_conn_and_url`（:82-88）・`pg` fixture の import（:23-24）。表の定義を試験に写さない（`scripts/check_test_schema_dup.py`）。表は本物の migration を流して作る。
-- 下ごしらえ（管理者の接続）: `pg` fixture が試験ごとに使い捨ての DB を作り、`public.tenants`・`public.users`（`_ensure_public_users`）・`public.llm_usage_events`（今の 7 値の CHECK）まで用意し、試験の後に DB ごと消す（`backend/tests/test_tcg_work_matching_integration.py:385-432`・`:338`）。だから試験では新しい migration を 2 回流す（冪等）だけにし、`_ensure_public_users` や使用の記録の migration を流し直さない。後片付けの DELETE も書かない（DB ごと消える）。会社は 999（`_ensure_public_users` が入れる）に加えて 998 を管理者で入れ、利用者を各社 1 人ずつ管理者で入れる。名前やメールは作り物。
+- 下ごしらえ（管理者の接続）: `pg` fixture が試験ごとに使い捨ての DB を作り、`public.tenants`・`public.users`（`_ensure_public_users`）・`public.llm_usage_events`（`:338` で作り、`:421` の `20261103_120000_create_ai_job_assignments.sql` で今の 7 値の CHECK に広がる）まで用意し、試験の後に DB ごと消す（`backend/tests/test_tcg_work_matching_integration.py:385-432`）。だから試験では新しい migration を 2 回流す（冪等）だけにし、`_ensure_public_users` や使用の記録の migration を流し直さない。後片付けの DELETE も書かない（DB ごと消える）。会社は 999（`_ensure_public_users` が入れる）に加えて 998 を管理者で入れ、利用者を各社 1 人ずつ管理者で入れる。名前やメールは作り物。
 - 試験（すべて `@needs_ci_pg`）:
   1. `test_tables_and_columns_match_design`: 2 表の列の名前の集合が、design.md §4 の一覧（secretary_rules 11 列・secretary_rule_checks 14 列）と同じ（R9）。`information_schema.columns` で読む。
   2. `test_rls_four_cells`: アプリの役割（`rolsuper`・`rolbypassrls` が両方 False であることを先に確かめる）で、`SET app.tenant_id = '999'` のとき 999 の行だけが見え、998 の行は見えない・998 の行の UPDATE は 0 行・998 の会社番号での INSERT は 42501。承認済みと候補の 2 状態 × 2 社の 4 マスを管理者で入れておき、見える数が 2 であることを確かめる（R5）。`secretary_rule_checks` も 1 社 1 行ずつで同じことを確かめる。
