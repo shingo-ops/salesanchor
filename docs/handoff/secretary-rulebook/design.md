@@ -95,7 +95,7 @@
   - 1 件が 429 `busy` か時間切れのときは、合わないに数えず 1 回だけやり直す。それでも取れなければ「測れなかった数」として別に出す（合う数・合わない数・測れなかった数の 3 つ）。
   - 試しの間、容器は利用者の頼みに 429 `busy` を返す（待ち行列は無い・recon.md §2）。画面は今の「混んでいます」の文に、「試し中は約 N 分使えません」を足す（N は段0の秒数 × 20 から出す）。
   - 行に status（running・done・failed）と数を書き、1 件進むたびに progress_at を更新する。progress_at から 10 分進まない running の行は failed と見なす（1 件の上限 85 秒 × やり直し 2 回より長い）。試しが途中で例外を出した後に、鍵が外れていることを `pg_locks` で確かめ、次の試しを始められる試験を置く。
-- 使用の記録: purpose に `secretary_regression` を 1 つ足す。同じ PR で直す場所: ①CHECK を広げる migration（migrations/20261103_120000_create_ai_job_assignments.sql の 148〜175 行目と同じ「定義に値が無ければ広げる」形）②`backend/app/services/llm_budget.py:159-169` の一覧 ③照合試験 `backend/tests/test_llm_usage_isolated.py` ④`backend/app/routers/assistant.py:135` の purpose の決め打ちを引数にする ⑤画面の使用量の区画の一覧 KNOWN_PURPOSES（`frontend/src/pages/super-admin/components/LlmUsageSection.tsx:151-159`）と ja.json・en.json の名前のキー ⑥色は 7 色を順に回すので、8 つ目は 1 つ目と同じ色になる。これを許し、トークンも色も足さない（`frontend/src/tokens.css` の `--chart-series-*` は 7 色・ADR-067 で新しい色は足さない）。区別は翻訳キーの名前で付く。AI 担当の画面の集計（`backend/app/routers/super_admin_ai_jobs.py:42-60`）は purpose で絞るので、試しはふだんの回数とログインの○×に混ざらない。
+- 使用の記録: purpose に `secretary_regression` を 1 つ足す。①は便1（DB が先に値を 1 つ多く許しても、書くコードが無いので行は増えない）、②〜⑥は便2 で `secretary_regression` を書くコードと同じ PR に入れる（手順書 [card-bin1.md](card-bin1.md)「この便で決めたこと」）。直す場所: ①CHECK を広げる migration（migrations/20261103_120000_create_ai_job_assignments.sql の 148〜175 行目と同じ「定義に値が無ければ広げる」形）②`backend/app/services/llm_budget.py:159-169` の一覧 ③照合試験 `backend/tests/test_llm_usage_isolated.py` ④`backend/app/routers/assistant.py:135` の purpose の決め打ちを引数にする ⑤画面の使用量の区画の一覧 KNOWN_PURPOSES（`frontend/src/pages/super-admin/components/LlmUsageSection.tsx:151-159`）と ja.json・en.json の名前のキー ⑥色は 7 色を順に回すので、8 つ目は 1 つ目と同じ色になる。これを許し、トークンも色も足さない（`frontend/src/tokens.css` の `--chart-series-*` は 7 色・ADR-067 で新しい色は足さない）。区別は翻訳キーの名前で付く。AI 担当の画面の集計（`backend/app/routers/super_admin_ai_jobs.py:42-60`）は purpose で絞るので、試しはふだんの回数とログインの○×に混ざらない。
 - 基準値より合う数が減ったら、画面に「前より合う数が減りました」と出す。外すかは人が選ぶ（自動では外さない）。
 
 ## 7. 毎週の数と試しの結果の置き場（R7・R8）
@@ -170,7 +170,7 @@
 
 ## 12. 便の分け方
 - 便0: 段0の測定（本番の秘書に 69 回。足すのは cases.json・測る台本・baseline.md だけで、動く部分は変えない）→ PO が合格の線を決める。流す時刻を記録し、PO に先に伝える。道は [card-bin0.md](card-bin0.md) で決めた: 本番の backend の image の使い捨ての容器から秘書の容器を直接呼ぶ（口の検査と同じ関数を使う・ログインの札は使わない）。この道では使用の記録に行が入らないので、69 回は秘書の 24 時間の回数に混ざらない。
-- 便1: 表・RLS・purpose を足す migration（危険 PR・GO 記録）。
+- 便1: 表・RLS・purpose の CHECK（§6 の①）を足す migration と、相談係の読み取り用の分類（`migrations/20261024_100300_create_ai_cloud_views.sql`）に 2 表の 8 列を足す（危険 PR・GO 記録）。手順は [card-bin1.md](card-bin1.md)。
 - 便2: backend の口・種類 2 つ・compose.mjs・prompt.txt・schema.json・容器の試験を CI へ。本番に出した後、画面に出す前に、仮の決まり 20 件を付けて試しを 1 回流し、1 件の秒数と合う数を baseline.md に足す（20 件付けたときの遅さと当たりを測る）。
 - 便3: 画面（案・一覧・「違う」・試すボタン）と、SaaS管理者のメニューの「秘書の決まり帳」のページ（毎週の数・試しの結果・§7）。
 
