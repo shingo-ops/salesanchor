@@ -19,7 +19,7 @@
 触らない: `_write_results`・`run_v102_pipeline`・`load_v102_masters`・`_merge_supplier_products` の中身、鍵の名前（`v102_analysis_lock_key`）、`backend/app/services/v102_human_decisions_svc.py`、`backend/app/services/v102_transcription_svc.py`、呼び出し元（`backend/app/tasks/tcg_extraction.py`・`backend/app/services/tcg_product_master_svc.py`・`backend/app/services/tcg_analyzer_svc.py`・`backend/app/tools/reextract_v6_with_v102.py`）、既存の試験ファイル、`migrations/`、`.github/`、`frontend/`、docs。
 
 ## 2. 手順
-1. `./scripts/dev/executor-preflight.sh || exit 1`。origin/main から release/analysis-tx-release-impl を作る。
+1. クラウドの事前確認（`scripts/dev/executor-preflight.sh` の4項目のうち、クラウドで確かめられる2つ）: `git config user.name shingo-cc` と `git rev-parse --verify origin/main`。どちらかが失敗したら BLOCKED:。残りの2つ（api.github.com への到達・gh の名義）はクラウドに gh が無いため流さない（2026-11-12 の1回目で preflight が [1/3] と [2/3] で FAIL して止まったことを受けた変更。前例 `docs/handoff/conversation-unification/card-bin1.md` §1 の 1）。そのあと origin/main から release/analysis-tx-release-impl を作る。
 2. 呼び出し元の点検をやり直す（設計 §6 の 1 行目）。`backend/app/tasks/tcg_extraction.py` の run_v102_analysis を呼ぶ 2 か所と analyze_extraction_job を呼ぶ所、`backend/app/services/tcg_product_master_svc.py` の analyze_extraction_job を呼ぶ所、`backend/app/tools/reextract_v6_with_v102.py` の呼ぶ所の、それぞれ直前 30 行を生で出す。直前に commit が無く、書き込み（INSERT・UPDATE・DELETE）がある所があれば止まる。
 3. 設計 §5-1 の 1〜10 のとおりに `run_v102_analysis` を書き換える。守ること:
    - try の外で読む物（鍵・ctx・job・rows・早い return・マスタと unit_ids）と try の中で読む物（decisions 以降）の境目を今と同じにする。
