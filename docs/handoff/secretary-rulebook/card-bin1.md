@@ -1,7 +1,7 @@
 # 実装カード 便1: 決まり帳の表 2 つ・会社ごとの鍵（RLS）・使いみち 1 つを足す migration
 
 - 設計: [design.md](design.md) §4・§6 の①・§12 便1（審査 9 回目 APPROVE）。目標: [kgi.md](kgi.md) R5・R7・R9。調査: [recon.md](recon.md)。ADR: `docs/adr/ADR-1077-secretary-rulebook.md`（Proposed のまま）。
-- 状態: 手順書の案（Opus 作成・2026-11-12）。**PO の実装承認あり（2026-11-12「1」）。** 2026-11-12 に今の本体（origin/main b6b444eff）と照らし、古くなった数字（分類の列数・登録の最後の行・最後の T10 の試験）を直した。同じ日に、提出前の確認で落ちた点（分類のファイルの照合の印＝sha256 を例外の一覧で直す手順が無かった）を受けて、やること 5b・5c を足した（origin/main e2addb796 で照合）。
+- 状態: 手順書の案（Opus 作成・2026-11-12）。**PO の実装承認あり（2026-11-12「1」）。** 2026-11-12 に今の本体（origin/main b6b444eff）と照らし、古くなった数字（分類の列数・登録の最後の行・最後の T10 の試験）を直した。同じ日に、提出前の確認で落ちた点（分類のファイルの照合の印＝sha256 を例外の一覧で直す手順が無かった）を受けて、やること 5b・5c を足した（origin/main e2addb796 で照合）。2026-11-13 に、戻しのファイルの刻印を本体と同じ `20261113_100000` にしていた手順書の誤りを直した（`20261113_100001` へ）。1 回目の実装（commit 73c36e352）は MIGRATION GUARD の刻印の確認（`.github/workflows/migration-guard.yml:322-333`「PR内で刻印が重複しています」）で落ちた。直しは下の「2 回目の直し」だけを行う。
 - ブランチ: `release/secretary-rulebook-bin1`（実装役が origin/main から作る）。PR は作らない（Opus が作る・危険 PR＝`migrations/` を含む）。
 - 行番号は origin/main b55dcc0af（2026-11-12）で読んだもの。
 - 試験は Mac で流さない（PG の試験は CI の使い捨ての DB だけで動く）。
@@ -30,7 +30,7 @@
 | 相談係の読み取り用の分類（`migrations/20261024_100300_create_ai_cloud_views.sql`）に 2 表の 8 列を足す | 足さないと分類の漏れになる（`backend/tests/ops/test_ai_cloud_views.py:492-498` の判定）。先例: 契約の表は分類を別便（ADR-1061 便2-2b・commit 108da716a）にしたが、本件は 8 列なので同じ便に入れる |
 | 分類のファイルを直したら、確認 8 の例外の一覧 `scripts/migration-guard/reference-allowlist.tsv` の同じファイルの行の sha256 を直した後の中身の値に直し、決めた根拠の欄の末尾に ` / secretary-rulebook card-bin1（分類5行追加）` を足す | 一覧の sha256 が中身と違うと、例外が効かず確認 8・repo モード・`scripts/tests/test_migration_value_writes.py` が落ちる（`scripts/check-migration-value-writes.py:166-173`・`:243-254`）。2026-11-12 の実装の 1 回目はこれで止まった。先例: 同じファイルを直した commit 788d535ef・c7ecbcf2d も一覧の 1 行を同じ形で直した |
 | 新しい 2 表の名前を `.github/workflows/migration-guard.yml` の `PUBLIC_TABLES` の末尾に足す | 同ファイル 226-227 行目「新しいテーブルを public に追加した場合はここを更新すること（SSoT）」。今の 2 表を指す外部キーは無いので足さなくても落ちないが、正本の一覧を最新に保つ。先例: commit 788d535ef（customer_statuses）・c7ecbcf2d（countries） |
-| 戻しの SQL は別ファイル `_down.sql` にし、`scripts/run_all_migrations.sh` には「手動実行のみ」の注記の行で載せる（run_sql にしない） | 先例 `scripts/run_all_migrations.sh:555`。MIGRATION GUARD は「ファイル名が run_all_migrations.sh に書かれているか」だけを見る（`.github/workflows/migration-guard.yml:133-136`） |
+| 戻しの SQL は別ファイル `_down.sql` にし、`scripts/run_all_migrations.sh` には「手動実行のみ」の注記の行で載せる（run_sql にしない） | 先例 `scripts/run_all_migrations.sh:555`（本体 `20260609_090000_…` に対し戻しは `20260609_090001_…_down.sql` と刻印を 1 秒ずらす）。戻しの刻印は本体と同じにしない: MIGRATION GUARD は PR の新しい migration の刻印が互いに重なると落とす（`.github/workflows/migration-guard.yml:322-333`）。だから戻しは `20261113_100001`。MIGRATION GUARD は「ファイル名が run_all_migrations.sh に書かれているか」だけを見る（`.github/workflows/migration-guard.yml:133-136`） |
 
 ## やること（この順）
 
@@ -42,12 +42,12 @@
    - (1e) `cd <repo> && ./scripts/dev/executor-preflight.sh`。生出力を報告に貼る。クラウドでは [1/3] network と [2/3] gh auth の FAIL は起こるものとして先へ進む。[3/3] と [4/4] が OK でなければ BLOCKED:。
    - (1f) `cd <repo> && ls migrations | tail -3`。いちばん新しいファイルの名前が `20261113_100000` より前であること。同じか後のものがあれば BLOCKED:（採番を Opus が決め直す）。
 2. `migrations/20261113_100000_create_secretary_rules.sql` を作る。中身は下の「migration の中身」を 1 文字も変えずに使う。
-3. `migrations/20261113_100000_create_secretary_rules_down.sql` を作る。中身は下の「戻しの中身」を 1 文字も変えずに使う。
+3. `migrations/20261113_100001_create_secretary_rules_down.sql` を作る。中身は下の「戻しの中身」を 1 文字も変えずに使う。
 4. `scripts/run_all_migrations.sh` の最後の行（今は 1269 行目 `run_sql migrations/20261112_170000_add_calendar_events_recurrence.sql`）の後ろに、次の 3 行を足す。ほかの行は変えない。
    ```
    # ADR-1077 便1: 秘書の決まり帳の表 2 つ（public.secretary_rules・public.secretary_rule_checks・FORCE RLS）と使いみち secretary_regression を足す（作るだけ・行なし・冪等）
    run_sql migrations/20261113_100000_create_secretary_rules.sql
-   # ADR-1077 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261113_100000_create_secretary_rules_down.sql
+   # ADR-1077 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261113_100001_create_secretary_rules_down.sql
    ```
    （空行は足さない。足した後に `tail -4 scripts/run_all_migrations.sh` の生出力を報告に貼る。）
 5. `migrations/20261024_100300_create_ai_cloud_views.sql` の分類の行に、下の「分類に足す行」の 5 行（8 列）を、表の名前の ABC 順に合う位置へ足す（`secretary_` で始まる表の位置。今は `('public','sa_products',…)` の行（230 行目）と `('public','source_messages',…)` の行（231 行目）の間。前後の行の表名を報告に書く）。同じファイルの 3 行目の「下の 1143 行」を、足した後の列の数に直す（今 1143 に 8 を足して 1151 になるはず）。`backend/tests/ops/test_ai_cloud_views.py:486` の `1143` も同じ数に直す。足す前に `grep -n "1143" migrations/20261024_100300_create_ai_cloud_views.sql backend/tests/ops/test_ai_cloud_views.py` を流し、1143 がこの 2 か所だけであることを報告に貼る。違えば BLOCKED:。
@@ -58,6 +58,23 @@
 8. commit（1 つ。`git add` は 8 ファイルを名前で指定する: 2・3 の 2 つ・`scripts/run_all_migrations.sh`・`migrations/20261024_100300_create_ai_cloud_views.sql`・`scripts/migration-guard/reference-allowlist.tsv`・`.github/workflows/migration-guard.yml`・`backend/tests/ops/test_ai_cloud_views.py`・`backend/tests/test_secretary_rules_tables_pg.py`。題は `feat(db): 秘書の決まり帳の表2つと使いみちsecretary_regressionを足す（ADR-1077 便1・作るだけ）`。末尾に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`）。`git log --oneline -1` を報告に貼る。
 9. 提出前: `cd <repo> && bash scripts/dev/check-before-submit.sh`。生の結果をファイルに残し、パスと最後の 5 行を報告する。通ったら `cd <repo> && git push origin release/secretary-rulebook-bin1`。
 
+## 2 回目の直し（2026-11-13・既にあるブランチで行う。上のやること 1〜9 はやり直さない）
+
+クラウドで行う（Mac には同じ名前の作業場所が既にあるので (R1) は止まる）。ブランチ `release/secretary-rulebook-bin1` は既に push 済み（1 回目の commit 73c36e352）。新しく作らず、その上に commit を 1 つ足す。強制 push・rebase・commit の書き換えはしない。
+
+- (R1) `cd <main> && git fetch origin release/secretary-rulebook-bin1:release/secretary-rulebook-bin1`。続けて `cd <main> && git worktree add $HOME/worktrees/salesanchor/release-secretary-rulebook-bin1 release/secretary-rulebook-bin1`。以後の `<repo>` はこの絶対パス。`cd <repo> && git log --oneline -1` が `73c36e352` で始まること。違えば BLOCKED:。
+- (R2) `cd <repo> && ./scripts/dev/executor-preflight.sh`。扱いはやること (1e) と同じ。
+- (R3) `cd <repo> && git mv migrations/20261113_100000_create_secretary_rules_down.sql migrations/20261113_100001_create_secretary_rules_down.sql`。中身は変えない。
+- (R4) `migrations/20261113_100000_create_secretary_rules.sql` の 5 行目 `-- ロールバック: migrations/20261113_100000_create_secretary_rules_down.sql（手動実行のみ）` を Edit で `-- ロールバック: migrations/20261113_100001_create_secretary_rules_down.sql（手動実行のみ）` に直す。ほかの行は変えない。
+- (R5) `scripts/run_all_migrations.sh` の行 `# ADR-1077 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261113_100000_create_secretary_rules_down.sql` を Edit で、末尾のファイル名だけ `migrations/20261113_100001_create_secretary_rules_down.sql` に直す。ほかの行は変えない。
+- (R6) 確かめ（生出力を報告に貼る）:
+  - `cd <repo> && grep -rn "20261113_100000_create_secretary_rules_down" migrations scripts backend .github` が 0 件。
+  - `cd <repo> && git diff --stat HEAD` が 3 ファイル（戻しの名前の変更・本体の migration 1 行・`scripts/run_all_migrations.sh` 1 行）。
+  - `cd <repo> && sha256sum migrations/20261024_100300_create_ai_cloud_views.sql` が `472bfcd14f935118dadadb351601de91944964b031842ba9eee5f3d4d99fa6a6`（分類のファイルは触らないので変わらない）。違えば BLOCKED:。
+- (R7) commit（1 つ）。`cd <repo> && git add migrations/20261113_100001_create_secretary_rules_down.sql migrations/20261113_100000_create_secretary_rules.sql scripts/run_all_migrations.sh`（この 3 つだけ。古い戻しの名前は渡さない: (R3) の git mv で消す分はもう commit 待ちに入っており、渡すと `fatal: pathspec … did not match any files` で add 全体が止まる）。commit の前に `cd <repo> && git status --short` を報告に貼る。`R  migrations/20261113_100000_create_secretary_rules_down.sql -> migrations/20261113_100001_create_secretary_rules_down.sql` と、`M  migrations/20261113_100000_create_secretary_rules.sql`・`M  scripts/run_all_migrations.sh` の 3 行だけであること。違えば commit せずに BLOCKED:。題は `fix(db): 戻しのファイルの刻印を本体と分ける（ADR-1077 便1）`。末尾に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`。`git log --oneline -2` を報告に貼る。
+- (R8) 提出前: `cd <repo> && bash scripts/dev/check-before-submit.sh`。扱いはやること 9 と同じ。通ったら `cd <repo> && git push origin release/secretary-rulebook-bin1`（強制を付けない）。
+- 終わりの報告は下の「終わりの報告」と同じ形（(1f)・やること 4 と 5 の出力の代わりに (R1)・(R6) の生出力）。
+
 ## migration の中身
 
 ```sql
@@ -65,7 +82,7 @@
 -- 設計: docs/handoff/secretary-rulebook/design.md §4・§6 の①・§12 便1。手順書: docs/handoff/secretary-rulebook/card-bin1.md
 -- RLS: 2 表とも ENABLE と FORCE。読む・書くとも「自社の会社文脈 OR 運営文脈」（型 C の書く側の式。読む側の USING (true) は使わない）
 -- 冪等: 表と索引は IF NOT EXISTS。CHECK は表を作る文の中に書く。方針は DROP POLICY IF EXISTS の後に作る。使いみちの CHECK は定義に値が無いときだけ付け替える
--- ロールバック: migrations/20261113_100000_create_secretary_rules_down.sql（手動実行のみ）
+-- ロールバック: migrations/20261113_100001_create_secretary_rules_down.sql（手動実行のみ）
 
 BEGIN;
 
