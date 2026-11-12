@@ -202,10 +202,10 @@ from app.services.payment_dates import PAID_AT_SQL, paid_at_from_date, paypal_pa
 ```
 変更後:
 ```
-from app.services.payment_dates import PAID_AT_SQL, paid_at_from_date, paypal_paid_at
 from app.services.issuer import decide_issuer_region, get_issuer
+from app.services.payment_dates import PAID_AT_SQL, paid_at_from_date, paypal_paid_at
 ```
-（ruff の I が並び順を出したら §4 のとおり `--fix --select I` で直す）
+（並び順は invoice_renderer → issuer → payment_dates の字の順。ruff の I001 が出ない位置）
 
 (2) `_get_tenant_schema` を消す。変更前:
 ```
@@ -1296,11 +1296,11 @@ describe('bill-to country guidance (ADR-1061 bin2-2c2a)', () => {
     cd ~ && ~/venv312/bin/python -m ensurepip 2>&1 | tail -1
 
 手順5 形と数（backend）
-    cd ~/sa && ~/venv312/bin/ruff check backend/app/services/issuer.py backend/app/routers/invoices.py backend/app/services/invoice_renderer.py backend/app/schemas/invoice.py backend/tests/conftest.py backend/tests/test_invoices.py backend/tests/test_company_stats.py backend/tests/test_products.py backend/tests/test_paypal_invoicing.py backend/tests/test_api_error_reason_sync.py backend/tests/test_issuer.py 2>&1 | tail -10
+    cd ~/sa/backend && ~/venv312/bin/ruff check app/ 2>&1 | tail -10
     cd ~/sa && python3 scripts/lint_tenant_schema.py --mode strict backend/app/ 2>&1 | tail -5; echo "lint exit=$?"
     cd ~/sa && python3 -c "import re,pathlib;r=pathlib.Path('backend/app');p=re.compile(r'\{[A-Za-z_]+\}\.tenant_profile\b|\"tenant_profile\"\s*\)|\bFROM\s+tenant_profile\b|\bINTO\s+tenant_profile\b|\bUPDATE\s+tenant_profile\b',re.I);[print(f.relative_to(r),i) for f in sorted(r.rglob('*.py')) for i,l in enumerate(f.read_text('utf-8').splitlines(),1) if p.search(l)]" | tail -15
     cd ~/sa && F=backend/app/routers/invoices.py && grep -c "tenant_schema" $F; grep -c "_fetch_tenant_profile\|_get_tenant_schema" $F; grep -c 'get_issuer(db, tenant_id, row\["issuer_region"\] or "overseas")' $F; grep -c 'get_issuer(db, tenant_id, "overseas")' $F; grep -c 'detail="bill_to_country"' $F; grep -c "issuer_region" $F
-  期待（上から順に）: ruff は `All checks passed!`／lint は失敗の行が無く `lint exit=0`／A40 は10行で、`routers/invoices.py` の行が無く `services/issuer.py` の行がちょうど1つ（残り9行は P11 の tenant_profile.py・label_validation.py・po_renderer.py・tenant.py の行と同じ）／`0 0 2 1 2` ・`13`（列の一覧1・2経路で決める行と if の行が計4・INSERT の列名2・値2・パラメータ2・PDF の入口2。違えば出力を貼って `BLOCKED: 手順5 数`）。
+  期待（上から順に）: ruff は `All checks passed!`（CI と同じく backend で `app/` だけを見る。tests は設定で対象外）／lint は失敗の行が無く `lint exit=0`／A40 は10行で、`routers/invoices.py` の行が無く `services/issuer.py` の行がちょうど1つ（残り9行は P11 の tenant_profile.py・label_validation.py・po_renderer.py・tenant.py の行と同じ）／`0 0 2 1 2` ・`14`（取り込み1・列の一覧1・2経路で決める行と if の行が計4・INSERT の列名2・値2・パラメータ2・PDF の入口2。違えば出力を貼って `BLOCKED: 手順5 数`）。
   ※ lint の `echo "lint exit=$?"` は tail の終了コードを示すので、判定は lint の出力の中身（`violation`・`error` の行が無いこと）で行う。
 
 手順6 backend の試験（failed と error は 0 であること）
@@ -1323,7 +1323,7 @@ describe('bill-to country guidance (ADR-1061 bin2-2c2a)', () => {
     cd ~/sa/frontend && npm run test:unit -- src/components/BillToCountryGuidance.test.tsx src/lib/apiErrorReason.test.ts src/components/CommerceNavigationButtonMigration.test.tsx 2>&1 | tail -20
     cd ~/sa/frontend && npm run check:all 2>&1 | tail -30
     cd ~/sa/frontend && wc -l src/pages/invoice-create/InvoiceCreatePage.tsx src/pages/quote-detail/QuoteDetailPage.tsx | tail -3
-  期待: tsc はエラーの行が無く `tsc done`。試験は failed 0（3ファイルとも passed）。check:all はどの検査も失敗しない（最後に失敗の行が無い）。行数は 448 前後と 233 前後（どちらも 800 未満）。
+  期待: tsc はエラーの行が無く `tsc done`。試験は failed 0（3ファイルとも passed）。check:all はどの検査も失敗しない（最後に失敗の行が無い）。行数はどちらも 800 未満。
 
 手順9 変えたファイルの名前と数
     cd ~/sa && git status --short | tail -25
@@ -1348,7 +1348,7 @@ describe('bill-to country guidance (ADR-1061 bin2-2c2a)', () => {
   - 手順7 の期待が外れた → `BLOCKED: openapi`。
   - push が拒まれた → 最後の 3 行を貼って `BLOCKED: push`（force はしない）。
 - 記録して続ける（値を報告に書き、判定は Opus がする）:
-  - ruff が I（並び順）だけを出した → `~/venv312/bin/ruff check --fix --select I` を同じファイルに流して、その結果を書く。I 以外を出したら `BLOCKED: ruff`。
+  - ruff が何か出した → `--fix` は流さず、出力を貼って `BLOCKED: ruff`。
   - 手順6 で skipped が出る（pdfminer が無い・実 PostgreSQL の試験）→ そのまま件数を書く。
   - 手順8 で node か npm が無い → `frontend 未実行（node なし）` と書いて手順9 へ進む（CI の frontend の検査で Opus が確かめる）。
 
