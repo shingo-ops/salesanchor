@@ -1,7 +1,7 @@
 # card: 便2-2a 契約と請求書の public の9表・税率の口と画面（ADR-1061）
 
 状態: カード発行（Opus、2026-11-12）。PO の設計承認と実装承認は 2026-11-12「1、推測は禁止して…確立したなら進める。」（ideal-state 54。review.md「2026-11-12 PO の設計承認」）。
-改訂（Opus、2026-11-12）: §2-8 の試験の判定 8 か所を、jest-dom の判定（toHaveTextContent・toBeInTheDocument）から、既存の試験と同じ `.textContent` と `toContain`・`toBeTruthy` へ直した。理由: frontend に jest-dom が入っておらず、1回目の実装が手順8の tsc で TS2339 ×8 で止まったため（`frontend/src/test-setup.ts` は jest-dom を読まない。先例 `frontend/src/pages/super-admin/ViewerAccountsPage.test.tsx:70`）。
+改訂（Opus、2026-11-12）: §2-8 の試験の判定 8 か所を、jest-dom の判定（toHaveTextContent・toBeInTheDocument）から、既存の試験と同じ `.textContent` と `toContain`・`toBeTruthy` へ直した。理由: frontend に jest-dom が入っておらず、1回目の実装が手順8の tsc で TS2339 ×8 で止まったため（`frontend/src/test-setup.ts` は jest-dom を読まない。先例 `frontend/src/pages/super-admin/ViewerAccountsPage.test.tsx:70`）。 2回目の改訂: §2-8 の欄の探し方 4 か所に `{ exact: false }` を足した。理由: 必須欄はラベルの後ろに `*` が付き（`frontend/src/components/TextField.tsx:88`〜:90）、完全一致では見つからず、2回目の実装が手順8の vitest で 2 件落ちたため（画面に名前の付いた欄はこの 2 つだけ）。
 設計: docs/handoff/viewer-contract-stage/design.md §3-4（public の表・tax_rates・RLS :297〜:310）・§3-4b（/super-admin/tax-rates）・§3-4d（税率の画面の置き場）・§8 の A14・A15・A31。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。本番・GitHub の secret・DB には触らない。PR は作らない（Opus が作る）。
 基準: origin/main `9747e2cf1`（#5431 合流後）で行番号を測った（審査の時点 4a8893528 までの間は docs だけの変更で、変更前の文はすべて一致することを審査役が確かめた）。行番号がずれていたら「変更前」の文で場所を探す（同じ文が 2 か所あれば BLOCKED: で停止）。
@@ -1217,8 +1217,8 @@ it("sends the rate as a string and reloads after adding", async () => {
   vi.mocked(api.post).mockResolvedValue({ id: 3, rate_percent: "10.00", effective_from: "2028-01-01", created_at: "" });
   renderPage();
   await screen.findByTestId("tax-rate-row-2");
-  fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.ratePercent")), { target: { value: "10.00" } });
-  fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.effectiveFrom")), { target: { value: "2028-01-01" } });
+  fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.ratePercent"), { exact: false }), { target: { value: "10.00" } });
+  fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.effectiveFrom"), { exact: false }), { target: { value: "2028-01-01" } });
   fireEvent.submit(screen.getByTestId("tax-rate-form"));
   await waitFor(() =>
     expect(api.post).toHaveBeenCalledWith("/super-admin/tax-rates", { rate_percent: "10.00", effective_from: "2028-01-01" }),
@@ -1232,8 +1232,8 @@ it("shows the date rule message when the API answers effective_from_invalid", as
   vi.mocked(api.post).mockRejectedValue(new ApiError("x", 422, "tax_rate.effective_from_invalid"));
   renderPage();
   await screen.findByTestId("tax-rate-row-2");
-  fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.ratePercent")), { target: { value: "10" } });
-  fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.effectiveFrom")), { target: { value: "2026-11-12" } });
+  fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.ratePercent"), { exact: false }), { target: { value: "10" } });
+  fireEvent.change(screen.getByLabelText(i18n.t("superAdmin.taxRates.effectiveFrom"), { exact: false }), { target: { value: "2026-11-12" } });
   fireEvent.submit(screen.getByTestId("tax-rate-form"));
   expect((await screen.findByTestId("tax-rate-error")).textContent).toContain(i18n.t("superAdmin.taxRates.errorDateInvalid"));
 });
