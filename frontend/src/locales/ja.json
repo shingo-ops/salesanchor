@@ -3059,6 +3059,26 @@
       "currency": "通貨",
       "rateJpy": "1 外貨 = N 円"
     },
+    "taxRates": {
+      "subtitle": "請求書に使う消費税率です。請求書は発行した日に効いている率で計算します。新しい率は明日以降の日付で足してください。",
+      "effectiveFrom": "適用日",
+      "ratePercent": "税率（%）",
+      "ratePercentValue": "{{rate}}%",
+      "actions": "操作",
+      "addBtn": "追加",
+      "addSuccess": "税率を追加しました。",
+      "deleteBtn": "削除",
+      "deleteSuccess": "税率を削除しました。",
+      "deleteConfirmTitle": "税率の削除",
+      "deleteConfirmMessage": "{{date}} から使う {{rate}}% の行を削除します。よろしいですか？",
+      "noData": "まだ税率がありません。上の欄に率と適用日を入れて追加してください。",
+      "errorDateInvalid": "この適用日では追加できません。いちばん新しい行より後で、明日以降の日付を選んでください。",
+      "errorDateTaken": "同じ適用日の行がすでにあります。一覧を確認して、別の日付を選んでください。",
+      "errorNotDeletable": "すでに始まった税率は削除できません。一覧を確認してください。",
+      "errorNotFound": "この税率の行が見つかりません。画面を読み込み直して確認してください。",
+      "errorInput": "入力の形が正しくありません。税率は 0〜100 で小数2桁まで、日付は必ず入れてください。",
+      "errorGeneric": "税率の保存に失敗しました。しばらく待ってからもう一度お試しください。"
+    },
     "inbound": {
       "title": "Discord 受信メッセージ",
       "subtitle": "仕入元からの Discord メッセージ受信ログ。解析結果と承認状況を確認できます。",

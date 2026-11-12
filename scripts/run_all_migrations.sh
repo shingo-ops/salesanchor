@@ -1259,3 +1259,5 @@ run_sql migrations/20261111_120000_add_codex_secretary_choices.sql
 run_sql migrations/20261112_120000_create_public_customer_statuses.sql
 # ADR-1061 便2-1: 閲覧者の状態に contracting と履歴の操作4つを足す（CHECK の付け替え・足すだけ・冪等）
 run_sql migrations/20261112_130000_add_viewer_contracting_status.sql
+# ADR-1061 便2-2a: 契約と請求書の public の9表を作る（形だけ・行なし・FORCE RLS・冪等）
+run_sql migrations/20261112_140000_create_viewer_contract_public_tables.sql

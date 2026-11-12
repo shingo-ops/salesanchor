@@ -123,6 +123,7 @@ from app.routers import (
     super_admin_quantity_units,  # 数量単位マスタ中央 admin
     super_admin_status_master,  # ステータスマスタ中央 admin
     super_admin_suppliers,
+    super_admin_tax_rates,  # ADR-1061 便2-2a: 消費税率
     super_admin_tcg,
     super_admin_tenants,
     super_admin_unit_ignore_phrases,  # 単位にしない言い回し中央 admin
@@ -579,6 +580,10 @@ app.include_router(
 )
 app.include_router(
     super_admin_tcg.router, prefix="/api/v1", tags=["super-admin"],
+)
+# ADR-1061 便2-2a: 消費税率（public.tax_rates）
+app.include_router(
+    super_admin_tax_rates.router, prefix="/api/v1", tags=["super-admin"],
 )
 # 各種マスタ (public.product_attribute_masters) 中央 admin
 app.include_router(
