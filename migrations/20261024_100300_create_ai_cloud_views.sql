@@ -1,6 +1,6 @@
 -- ADR-1052 段1: 相談係用の伏せたビュー ai_cloud を作る（冪等・1 トランザクション）。
 -- 一覧には載せない。run_all_migrations.sh の EXIT trap が、毎回の実行の最後に流す（ai_ro と同じ形）。
--- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1086 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
+-- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1109 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
 -- 2) ai_cloud を作り直す。3) ai_cloud_meta.build_views() で全ビューを作り、build_log に 1 行書く。
 -- 4) ai_reader_cloud に ai_cloud の USAGE と SELECT だけを付ける。
 -- 分類表の元: docs/handoff/cloud-case-ai/stage1-column-class.tsv（表ごと・class ごとにまとめて unnest で入れる）。
@@ -180,6 +180,8 @@ FROM (VALUES
   ('public','pokemon_dex',ARRAY['name_en'],'allow','【名前を含む】共用マスタ（運営が入れる一覧）。作品のキャラクター名（実在の人ではない）'),
   ('public','pokemon_dex',ARRAY['name_ja'],'allow','【名前を含む】共用マスタ（運営が入れる一覧）。同上'),
   ('public','pokemon_dex',ARRAY['region'],'allow','共用マスタ（運営が入れる一覧）。作品の地方区分'),
+  ('public','prefectures',ARRAY['code'],'allow','値の決まり ck_prefectures_code で値が限られる（JIS X 0401 の 01〜47）'),
+  ('public','prefectures',ARRAY['name_en','name_ja'],'allow','【名前を含む】共用マスタ（運営だけが入れる一覧）。都道府県の名前（実在の人ではない）'),
   ('public','product_attribute_masters',ARRAY['attribute'],'mask',''),
   ('public','product_attribute_masters',ARRAY['code'],'allow','共用マスタ（運営が入れる一覧）。共用の一覧表の記号（tenant 側も一覧表だけに出る）'),
   ('public','product_attribute_masters',ARRAY['label_en'],'allow','共用マスタ（運営が入れる一覧）。商品の属性の表示名'),
@@ -220,6 +222,12 @@ FROM (VALUES
   ('public','rule_test_run_results',ARRAY['input_text'],'mask',''),
   ('public','rule_test_runs',ARRAY['error_message','started_by'],'mask',''),
   ('public','rule_test_runs',ARRAY['state'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
+  ('public','sa_contracts',ARRAY['status'],'allow','値の決まり ck_sa_contracts_status で値が限られる'),
+  ('public','sa_plan_features',ARRAY['feature_key'],'allow','値の決まり ck_sa_plan_features_feature_key で値が限られる'),
+  ('public','sa_plans',ARRAY['billing_interval'],'allow','値の決まり ck_sa_plans_billing_interval で値が限られる（NULL か month・year）'),
+  ('public','sa_plans',ARRAY['billing_type'],'allow','値の決まり ck_sa_plans_billing_type で値が限られる'),
+  ('public','sa_plans',ARRAY['code','name'],'allow','【名前を含む】運営だけが入れる一覧。自社の売り物のプランの記号と名前（人や取引先の情報ではない）'),
+  ('public','sa_products',ARRAY['code','name'],'allow','【名前を含む】運営だけが入れる一覧。自社の売り物の商材の記号と名前（人や取引先の情報ではない）'),
   ('public','source_messages',ARRAY['raw_sha256','raw_text'],'mask',''),
   ('public','supplier_aliases',ARRAY['alias_text'],'mask',''),
   ('public','supplier_aliases',ARRAY['language'],'allow','値の決まり supplier_aliases_language_check で値が限られる'),
@@ -308,6 +316,10 @@ FROM (VALUES
   ('public','viewer_billing_profiles',ARRAY['address','bill_to_name','contact_name','invoice_email','phone','postal_code'],'mask',''),
   ('public','viewer_billing_profiles',ARRAY['party_type'],'allow','値の決まり ck_viewer_billing_profiles_party_type で値が限られる'),
   ('public','viewer_discord_config',ARRAY['guild_id','reception_channel_id','staff_role_id','ticket_category_id'],'mask',''),
+  ('public','viewer_invoice_lines',ARRAY['description'],'mask',''),
+  ('public','viewer_invoice_lines',ARRAY['line_type'],'allow','値の決まり ck_viewer_invoice_lines_line_type で値が限られる'),
+  ('public','viewer_invoices',ARRAY['bill_to_snapshot','drive_error','drive_file_id','drive_web_link','invoice_number','issuer_snapshot','mail_error','mail_to'],'mask',''),
+  ('public','viewer_invoices',ARRAY['status'],'allow','値の決まり ck_viewer_invoices_status で値が限られる'),
   ('public','viewer_login_events',ARRAY['client_ip'],'mask',''),
   ('public','viewer_login_events',ARRAY['event_type'],'allow','値の決まり ck_viewer_login_events_event_type で値が限られる'),
   ('public','viewer_login_events',ARRAY['user_agent'],'mask',''),
@@ -607,6 +619,7 @@ FROM (VALUES
   ('public','product_lines',ARRAY['display_order'],'allow','数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）'),
   ('public','products',ARRAY['display_order','product_line_id'],'allow','数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）'),
   ('public','quantity_units',ARRAY['display_order'],'allow','数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）'),
+  ('public','viewer_invoices',ARRAY['mail_sent_at'],'allow','数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）'),
   ('public','weight_classes',ARRAY['display_order'],'allow','数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）'),
   ('tenant_*','analysis_run_snapshots',ARRAY['snapshotted_at'],'allow','数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）'),
   ('tenant_*','contact_contact_channels',ARRAY['contact_id'],'allow','数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）'),
