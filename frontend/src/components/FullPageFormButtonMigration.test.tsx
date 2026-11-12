@@ -1,10 +1,11 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ContactEditPage from '../pages/contacts/ContactEditPage';
 import SupplierEditPage from '../pages/suppliers/SupplierEditPage';
 import { queryClient } from '../lib/query/apiQuery';
+import { CUSTOMER_STATUS_TEST_ROWS } from '../test-utils/customerStatusRows.test.fixture';
 
 const mock = vi.hoisted(() => ({
   get: vi.fn(), patch: vi.fn(), post: vi.fn(), delete: vi.fn(), t: (key: string) => key,
@@ -79,6 +80,8 @@ beforeEach(() => {
     if (url === '/contacts/52') return { ...contact, status: contactStatus };
     if (url === '/companies?per_page=100') return [{ id: 41, name: 'Fixture company', company_code: 'CO41' }];
     if (url === '/suppliers/63') return supplier;
+    if (url === '/customer-statuses') return CUSTOMER_STATUS_TEST_ROWS;
+    if (url === '/companies/41/contacts?per_page=100') return [];
     throw new Error('Unexpected GET ' + url);
   });
   mock.patch.mockImplementation(() => { throw new Error('Unexpected PATCH'); });
@@ -178,9 +181,12 @@ describe('full-page form Button migration', () => {
     expect(distinct.classList.contains('comp-btn--primary')).toBe(true);
     expect(distinct.classList.contains('comp-btn')).toBe(true);
     expect(distinct.type).toBe('button');
-    expect(merge.disabled).toBe(true);
+    expect(merge.disabled).toBe(false);
     fireEvent.click(merge);
+    expect(await screen.findByText('mergeContact.title')).toBeTruthy();
     expect(mock.patch).not.toHaveBeenCalled();
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'common.cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     fireEvent.click(distinct);
     expect(distinct.disabled).toBe(true);
     expect(updateButton().disabled).toBe(false);
@@ -200,7 +206,7 @@ describe('full-page form Button migration', () => {
       expect(screen.getByText('Fixture dedup failure')).toBeTruthy();
       expect(field('common.status').value).toBe('pending_dedup_review');
       expect(distinct.disabled).toBe(false);
-      expect(merge.disabled).toBe(true);
+      expect(merge.disabled).toBe(false);
     }
   });
 });

@@ -51,8 +51,9 @@ describe("getStatusPresentation — 正常系", () => {
     expect(getStatusPresentation("deal", "open").bucket).toBe("neutral");
   });
 
-  it("全ドメインに i18n labelKey が設定されている", () => {
+  it("全ドメインに i18n labelKey が設定されている（contact・company は名前を DB が持つので除く）", () => {
     for (const [domain, statuses] of Object.entries(STATUS_PRESENTATION_MAP)) {
+      if (domain === "contact" || domain === "company") continue;
       for (const [status, p] of Object.entries(statuses)) {
         expect(p.labelKey, `${domain}.${status} に labelKey がない`).toBeTruthy();
       }
@@ -135,16 +136,15 @@ describe("STATUS_PRESENTATION_MAP — 網羅性", () => {
   });
 });
 
-describe("STATUS_PRESENTATION_MAP — company", () => {
-  it("company の4値が customers の辞書キーを指す", () => {
-    const expected: Record<string, string> = {
-      active: "customers.status_active",
-      inactive: "customers.status_inactive",
-      archived: "customers.status_archived",
-      pending_dedup_review: "customers.status_pending_dedup",
-    };
-    for (const [status, key] of Object.entries(expected)) {
-      expect(getStatusPresentation("company", status).labelKey).toBe(key);
+describe("STATUS_PRESENTATION_MAP — contact・company", () => {
+  it("名前の辞書キー（labelKey）を持たず、色の種類だけを持つ", () => {
+    const codes = ["active", "inactive", "archived", "pending_dedup_review"];
+    for (const domain of ["contact", "company"] as const) {
+      for (const code of codes) {
+        const p = getStatusPresentation(domain, code);
+        expect(p.labelKey, `${domain}.${code}`).toBeUndefined();
+        expect(p.badgeVariant, `${domain}.${code}`).toBeTruthy();
+      }
     }
   });
 });

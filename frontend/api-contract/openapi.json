@@ -46929,6 +46929,37 @@
         ]
       }
     },
+    "/api/v1/customer-statuses": {
+      "get": {
+        "operationId": "list_customer_statuses_api_v1_customer_statuses_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "title": "Response List Customer Statuses Api V1 Customer Statuses Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "会社・連絡先の状態の一覧（名前・並び・作るときに出すか）",
+        "tags": [
+          "customer-statuses",
+          "customer-statuses"
+        ]
+      }
+    },
     "/api/v1/dashboard": {
       "get": {
         "description": "ダッシュボードKPIを取得する（キャッシュ優先）",

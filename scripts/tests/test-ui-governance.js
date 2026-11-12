@@ -20,6 +20,7 @@ const {
   countLoadingText,
   countLoadingTernary,
   countEnglishUiLiteral,
+  countCustomerStatusLiteral,
   LOADING_VERBS,
   splitTargets,
   countAll,
@@ -424,6 +425,21 @@ assert('E15: .test.tsx は englishFiles に入らない', splitTargets([fileOf('
 assert('E16: components/ の .tsx は englishFiles に入る', splitTargets([fileOf('frontend/src/components/C.tsx')]).englishFiles.length, 1);
 assert('E17: countAll の戻りに englishUiLiteral がある', countAll('<span>No data</span>').englishUiLiteral, 1);
 assert('E18: (A) と (C) の両方に当たる文字列は1件', en("<input placeholder={x || 'Search items'} />"), 1);
+
+// C1-: 会社・連絡先の状態の記号の直書き（customerStatusLiteral）
+const cs = countCustomerStatusLiteral;
+assert('C1: status: "active" は1件', cs('const a = { status: "active" };'), 1);
+assert("C2: シングルクォート 'archived' は1件", cs("c.status !== 'archived'"), 1);
+assert('C3: バッククォート `pending_dedup_review` は1件', cs('const k = `pending_dedup_review`;'), 1);
+assert('C4: className の行は0件', cs('<span className={x === "inactive" ? "a" : "b"}>'), 0);
+assert('C5: CUSTOMER_STATUS_CODES.active は0件', cs('status: CUSTOMER_STATUS_CODES.active'), 0);
+assert('C6: 別の語 "activated" は0件', cs('const a = "activated";'), 0);
+assert('C7: 1行に2つあれば2件', cs('x === "active" || x === "inactive"'), 2);
+assert('C8: 決めた場所の .tsx は statusFiles に入る', splitTargets([fileOf('frontend/src/pages/contacts/ContactEditPage.tsx')]).statusFiles.length, 1);
+assert('C9: MergeCompanyModal.tsx は statusFiles に入る', splitTargets([fileOf('frontend/src/components/MergeCompanyModal.tsx')]).statusFiles.length, 1);
+assert('C10: .test.tsx は statusFiles に入らない', splitTargets([fileOf('frontend/src/pages/contacts/ContactsPage.test.tsx')]).statusFiles.length, 0);
+assert('C11: 決めた場所の外は statusFiles に入らない', splitTargets([fileOf('frontend/src/pages/leads/LeadsPage.tsx')]).statusFiles.length, 0);
+assert('C12: countAll の戻りに customerStatusLiteral がある', countAll('const a = "active";').customerStatusLiteral, 1);
 
 // ---------------------------------------------------------------------------
 // 結果サマリ
