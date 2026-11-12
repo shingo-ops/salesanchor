@@ -38,7 +38,7 @@
    - event で end が start より前 → unreadable
    - 429 を 2 回続けて返す → unmeasured（attempts=2・error_code=busy）
    - 200 だが形が違う JSON → unreadable
-   import は `cd backend && uv run python ../docs/handoff/secretary-rulebook/bin0/run_baseline.py ...` の形で通す（uv が無ければ BLOCKED:）。
+   import は `cd backend && PYTHONPATH=. uv run --no-project --with httpx==0.28.1 --with pydantic==2.10.6 python ../docs/handoff/secretary-rulebook/bin0/run_baseline.py ...` の形で通す（uv が無ければ BLOCKED:）。版は backend/requirements.txt の httpx==0.28.1・pydantic[email]==2.10.6 に合わせた。`--no-project` は backend/pyproject.toml に依存の宣言が無いため（1 回目の流しで `uv run` だけでは `ModuleNotFoundError: No module named 'httpx'` になった・2026-11-12 13:21）。`backend/uv.lock` ができたら commit に入れない。
 5. `python3 -c "import json;d=json.load(open('backend/app/assistant_regression/cases.json'));print(len(d['cases']))"` が 23 を出すことを示す。
 6. 提出前: `bash scripts/dev/check-before-submit.sh` を流し、生の結果をファイルに残してパスを報告する。
 7. commit（1 つ。題は `chore(secretary): 便0 試しの頼み23件の表と測る台本を置く（動く部分は変えない）`。末尾に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`）→ `git log --oneline -1` で commit があることを確かめてから `git push origin release/secretary-rulebook-bin0`。
