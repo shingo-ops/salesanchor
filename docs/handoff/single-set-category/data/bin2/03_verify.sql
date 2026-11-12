@@ -6,6 +6,8 @@ SELECT 'ROW|' || id || '|' || code || '|' || display_name || '|' || kubun_type |
 SELECT CASE WHEN count(*) = 1 THEN 'VERIFY_OK category 1' ELSE (1 / (count(*) - count(*)))::text END
   FROM public.tcg_product_categories
  WHERE code = 'PC_SINGLE_SET' AND display_name = 'Single set' AND kubun_type = 'シングルセット系' AND is_active AND tenant_id IS NULL;
+SELECT CASE WHEN count(*) = 7 THEN 'VERIFY_OK categories_total 7' ELSE (1 / (count(*) - count(*)))::text END
+  FROM public.tcg_product_categories;
 SELECT CASE WHEN count(*) = 0 THEN 'VERIFY_OK single_set_products 0' ELSE (1 / (count(*) - count(*)))::text END
   FROM public.products p JOIN public.tcg_product_categories c ON c.id = p.product_category_id
  WHERE c.kubun_type = 'シングルセット系';
