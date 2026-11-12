@@ -18,6 +18,7 @@ import pytest
 from sqlalchemy.engine import make_url
 
 from app.database import get_db
+from tests.seed_data import prefectures_seed_sql
 from tests.test_super_admin_viewers import _account, _api, _call, _make_user, _prepare
 from tests.test_super_admin_viewers import override_user as override_user  # noqa: F401  fixture
 from tests.test_tcg_work_matching_integration import MIGRATIONS
@@ -320,3 +321,30 @@ def test_tax_rate_api_rules_and_operator_flag(pg, monkeypatch):  # noqa: F811
     assert message == "" or "row-level security" in message, message
     cur.execute("SELECT count(*) FROM public.tax_rates")
     assert cur.fetchone()[0] == 2
+
+
+@needs_ci_pg
+def test_prefectures_seed_loads_47_rows_with_operator_flag(pg):  # noqa: F811
+    """A30 の一部: 正本ファイルの47行は、運営の印があるときだけ入る。2回流しても47行のまま（冪等）。"""
+    conn, _, async_url = pg
+    _setup(conn, async_url)
+    app_conn, _ = _app_conn_and_url(conn)
+    try:
+        acur = app_conn.cursor()
+        with pytest.raises(psycopg2.Error) as exc_info:
+            acur.execute(prefectures_seed_sql())
+        assert exc_info.value.pgcode == "42501"
+        app_conn.rollback()
+
+        for _ in range(2):
+            acur.execute("SELECT set_config('app.is_operator', 'true', true)")
+            acur.execute(prefectures_seed_sql())
+            app_conn.commit()
+
+        acur.execute("SELECT count(*), min(code), max(code), count(DISTINCT sort_order) FROM public.prefectures")
+        assert acur.fetchone() == (47, "01", "47", 47)
+        acur.execute("SELECT name_ja, name_en FROM public.prefectures WHERE code = '13'")
+        assert acur.fetchone() == ("東京都", "Tokyo")
+        app_conn.rollback()
+    finally:
+        app_conn.close()

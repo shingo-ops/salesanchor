@@ -38,8 +38,11 @@ AUDIT_IDENT = "ai-reader-audit"
 AUDIT_PRI = 38  # auth(4) * 8 + info(6)
 AUDIT_TIMEOUT = 2.0
 
-# ai_ro ビュー生成（migrations/*_create_ai_ro_views.sql）の拒否リストと同じ正規表現
-DENY_COLUMN_RE = re.compile(r"^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential")
+# 列名の拒否リストの正本（ADR-1061 決定9）。migrations/20261017_130100_create_ai_ro_views.sql と
+# migrations/20261024_100000_create_ai_cloud_meta.sql の deny は同じ文字（backend/tests/ops/test_deny_column_regex_sync.py が確かめる）
+DENY_COLUMN_RE = re.compile(
+    r"^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential|account_number|^iban$"
+)
 
 _ALLOWED_FIRST_WORDS = {"select", "with", "show", "explain"}
 _FORBIDDEN_RES = [
