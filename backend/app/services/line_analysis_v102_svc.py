@@ -17,6 +17,7 @@ import os
 import time
 import uuid
 from collections.abc import Callable
+from dataclasses import dataclass
 from dataclasses import replace as dataclass_replace
 from datetime import date, datetime, timezone
 from decimal import Decimal
@@ -52,6 +53,7 @@ from app.services.gemini_raw_copy_v102_product_first import (
     PRODUCT_KUBUN_BULK,
     PRODUCT_KUBUN_PROMO_PACK,
     PRODUCT_KUBUN_SINGLE,
+    PRODUCT_KUBUN_SINGLE_SET,
     PRODUCT_KUBUN_SUPPLY,
     VALUE_GROUP_BOOKLET,
     VALUE_GROUP_PROMO_PACK,
@@ -689,6 +691,7 @@ def _bounded_number(value: object) -> object:
 # 商品の分類 → 状態の群（ADR-1031）。「PSA10」は single と promo_pack の2行あるので、状態の名前から id を引くときは群の中で引く
 _SCOPED_GROUP_OF_KUBUN = {
     PRODUCT_KUBUN_SINGLE: VALUE_GROUP_SINGLE,
+    PRODUCT_KUBUN_SINGLE_SET: VALUE_GROUP_SINGLE,
     PRODUCT_KUBUN_PROMO_PACK: VALUE_GROUP_PROMO_PACK,
     PRODUCT_KUBUN_BOOKLET: VALUE_GROUP_BOOKLET,
     PRODUCT_KUBUN_SUPPLY: VALUE_GROUP_SUPPLY,
@@ -1067,10 +1070,15 @@ def _bulk_review(values: dict) -> dict:
     return {**values, "review_reasons": reasons, "needs_review": True}
 
 
+def _reads_bundle(item: dict) -> bool:
+    """まとめ売りの読み取り（ADR-1027）を当てる件か。シングルセット系は当てない（ADR-1027 追記 2026-11-11・PO「1」）。"""
+    return item.get("product_category") != PRODUCT_KUBUN_SINGLE_SET
+
+
 def _apply_bundle(
     values: dict, block: str, unit_words: dict[str, str], set_words: frozenset[str], unit_ids: dict, bulk_shapes: bool = False,
 ) -> dict:
-    """まとめ売り（N単位セット）を読む（ADR-1027。規則は v102_bundle_svc）。全ての行に当てる。
+    """まとめ売り（N単位セット）を読む（ADR-1027。規則は v102_bundle_svc）。全ての行に当てる（シングルセット系を除く。ADR-1027 追記 2026-11-11）。
 
     決まった: bundle_size=N、単位を中身の単位にそろえる。値段・数量は Gemini の読みのまま（割らない・掛けない）。
     決まらない: 値は変えず、理由 bundle_unverified で要確認にする。当たりなしは values をそのまま返す。
@@ -1183,8 +1191,9 @@ def _write_results(
     blocks = [_source_block(raw_text, row) for _item, row in pairs]  # 原文ブロックは投稿の raw_text から。追加の問い合わせなし
     base_values = [
         _apply_bundle(values, block, unit_words, set_words, unit_ids, bulk_shapes=item.get("product_category") == PRODUCT_KUBUN_BULK)
+        if _reads_bundle(item) else values
         for values, (item, _row), block in zip(base_values, pairs, blocks)
-    ]  # ADR-1027：全ての行。バルク系だけ P1・P2 も見る
+    ]  # ADR-1027：全ての行（シングルセット系を除く。ADR-1027 追記 2026-11-11）。バルク系だけ P1・P2 も見る
     base_values = [  # 便2：バルク系の価格を1枚の値段に（まとめ売りと決まった行は通らない）
         _apply_bulk_price(values, item, block if item.get("product_category") == PRODUCT_KUBUN_BULK else "", unit_ids)
         for values, (item, _row), block in zip(base_values, pairs, blocks)
@@ -1523,13 +1532,24 @@ def load_posted_at(session: Session, extraction_job_id: str) -> datetime | None:
     return row.line_posted_at if row is not None else None
 
 
-def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
-    """システム段。保存済みの件（extraction_items）から analysis_results を作る。Gemini を呼ばない。冪等。
+@dataclass(frozen=True)
+class _V102Inputs:
+    """システム段の入力（DB から読んだもの）。計算の間に変わったかを `==` で比べる。"""
 
-    戻り値は analyze_extraction_job と同じ形のキー（total / pid_resolved / unit_resolved / needs_review）。
-    v102 の処理の例外・件の対応付けの失敗は、extraction_jobs.review_reasons に extract_exception を残し、件は消さない（再送出しない）。
-    マスタが空などの設定の誤りは呼び出し元へ送出する（黙って進まない）。
-    """
+    ctx: object
+    gemini_unsure: object
+    review_reasons: object
+    rows: tuple
+    decisions: dict
+    previous_pairs: object
+    prior_current: object
+    followup_reference: object
+    soldout_ref_posts: object
+    posted_date: date | None
+
+
+def _read_v102_head(session: Session, extraction_job_id: str) -> tuple:
+    """投稿ごとの鍵を取り、(ctx, gemini_unsure, review_reasons, rows) を読む。ctx が無ければ ValueError。"""
     from app.tasks.tcg_extraction import load_extraction_context  # noqa: PLC0415  循環 import を避ける
 
     schema = analyzer.TCG_SCHEMA
@@ -1548,25 +1568,65 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
         """),
         {"ej": extraction_job_id},
     ).fetchall()
+    return ctx, job.gemini_unsure, job.review_reasons, tuple(rows)
+
+
+def _read_v102_tail(session: Session, extraction_job_id: str, rows) -> tuple:
+    """(decisions, previous_pairs, prior_current, followup_reference, soldout_ref_posts, posted_date) を読む。読み取りのみ。"""
+    decisions = load_v102_decisions(session, [str(r.id) for r in rows])
+    previous_pairs = _load_resolved_pairs(session, extraction_job_id)
+    # ADR-1032: 書き直す前（_write_results より前）に「現行だった組」を控える。前の行が無ければ None（控え無し）
+    prior_current = _load_current_pairs(session, extraction_job_id) if previous_pairs else None
+    return (
+        decisions, previous_pairs, prior_current, load_followup_reference(session, extraction_job_id),
+        load_soldout_ref_posts(session, extraction_job_id), load_posted_date(session, extraction_job_id),
+    )
+
+
+def _prepare_v102(inputs: _V102Inputs, masters: dict) -> tuple:
+    """(response_text, fixed_products, followup_masters)。入力とマスタだけから作る（DB を使わない）。"""
+    response_text = _response_from_rows(inputs.rows, inputs.gemini_unsure)
+    fixed_products = _fixed_products(response_text, inputs.ctx, masters, inputs.rows, inputs.decisions)
+    followup_masters = masters_with_followup(masters, inputs.followup_reference, inputs.soldout_ref_posts, inputs.posted_date)
+    return response_text, fixed_products, followup_masters
+
+
+def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
+    """システム段。保存済みの件（extraction_items）から analysis_results を作る。Gemini を呼ばない。冪等。
+
+    戻り値は analyze_extraction_job と同じ形のキー（total / pid_resolved / unit_resolved / needs_review）。
+    v102 の処理の例外・件の対応付けの失敗は、extraction_jobs.review_reasons に extract_exception を残し、件は消さない（再送出しない）。
+    マスタが空などの設定の誤りは呼び出し元へ送出する（黙って進まない）。
+
+    計算（run_v102_pipeline）の間は DB の取引と投稿の鍵を持ち越さない。計算の後に鍵を取り直して入力を読み直し、
+    同じなら書く。違えば鍵を持ったまま 1 回だけ計算し直して書く（人の判断が必ず結果に入る約束を守る）。
+    """
+    schema = analyzer.TCG_SCHEMA
+    ctx, gemini_unsure, review_reasons, rows = _read_v102_head(session, extraction_job_id)
     empty_stats = {"total": len(rows), "pid_resolved": 0, "unit_resolved": 0, "needs_review": 0}
-    if not rows and REASON_RESPONSE_UNREADABLE in (job.review_reasons or "").split(REASON_SEPARATOR):
+    if not rows and REASON_RESPONSE_UNREADABLE in (review_reasons or "").split(REASON_SEPARATOR):
         return empty_stats  # 応答が読めなかった投稿の理由を、件が無いことの理由で上書きしない
     masters, unit_ids = load_v102_masters(session)
     try:
         if any(r.gemini_index is None for r in rows):
             raise _MappingError("gemini_index が無い件があります（v6 の件）")
-        response_text = _response_from_rows(rows, job.gemini_unsure)
-        decisions = load_v102_decisions(session, [str(r.id) for r in rows])
-        fixed_products = _fixed_products(response_text, ctx, masters, rows, decisions)
-        previous_pairs = _load_resolved_pairs(session, extraction_job_id)
-        # ADR-1032: 書き直す前（_write_results より前）に「現行だった組」を控える。前の行が無ければ None（控え無し）
-        prior_current = _load_current_pairs(session, extraction_job_id) if previous_pairs else None
-        followup_masters = masters_with_followup(
-            masters, load_followup_reference(session, extraction_job_id), load_soldout_ref_posts(session, extraction_job_id),
-            load_posted_date(session, extraction_job_id),
-        )
-        pipeline = run_v102_pipeline(response_text, ctx, followup_masters, fixed_products=fixed_products)
-        stats = _write_results(session, extraction_job_id, pipeline, rows, masters, unit_ids, decisions, ctx.raw_text)
+        inputs = _V102Inputs(ctx, gemini_unsure, review_reasons, rows, *_read_v102_tail(session, extraction_job_id, rows))
+        response_text, fixed_products, followup_masters = _prepare_v102(inputs, masters)
+        # 計算の間、DB の取引と投稿の鍵を持ち越さない（Gemini 段の commit と同じ考え方）。読み直しで入力の変化を確かめる
+        session.commit()
+        pipeline = run_v102_pipeline(response_text, inputs.ctx, followup_masters, fixed_products=fixed_products)
+        ctx2, unsure2, reasons2, rows2 = _read_v102_head(session, extraction_job_id)  # 鍵を取り直す
+        empty_stats["total"] = len(rows2)
+        if not rows2 and REASON_RESPONSE_UNREADABLE in (reasons2 or "").split(REASON_SEPARATOR):
+            return empty_stats
+        after = _V102Inputs(ctx2, unsure2, reasons2, rows2, *_read_v102_tail(session, extraction_job_id, rows2))
+        if after != inputs:
+            logger.info("[line_analysis] v102 inputs changed; recomputing under lock: job=%s", extraction_job_id)
+            if any(r.gemini_index is None for r in rows2):
+                raise _MappingError("gemini_index が無い件があります（v6 の件）")
+            response_text, fixed_products, followup_masters = _prepare_v102(after, masters)
+            pipeline = run_v102_pipeline(response_text, after.ctx, followup_masters, fixed_products=fixed_products)
+        stats = _write_results(session, extraction_job_id, pipeline, after.rows, masters, unit_ids, after.decisions, after.ctx.raw_text)
         session.commit()
     except Exception:  # noqa: BLE001
         session.rollback()
@@ -1576,7 +1636,7 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
         session.commit()
         return empty_stats
     analyzer._merge_supplier_products(  # ADR-158（is_current）+ ADR-1032（復活止め）
-        session, extraction_job_id, schema, extra_pairs=previous_pairs, prior_current_pairs=prior_current,
+        session, extraction_job_id, schema, extra_pairs=after.previous_pairs, prior_current_pairs=after.prior_current,
     )
     logger.info("[line_analysis] v102 job=%s stats=%s", extraction_job_id, stats)
     return stats
