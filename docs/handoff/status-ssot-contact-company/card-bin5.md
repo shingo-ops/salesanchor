@@ -8,7 +8,14 @@
 
 ## やること（この順）
 
-1. 作業場所: `git fetch origin && git switch release/status-ssot-followups`。`./scripts/dev/executor-preflight.sh` を流し、生出力を報告に貼る。クラウドでは [1/3] network と [2/3] gh auth の FAIL は起こるものとして先へ進む。[3/3] と [4/4] が OK でなければ `BLOCKED:`。台帳の札は作らない（Opus が作る）。
+1. 作業場所を公式の台本で作る（リポジトリの pre-commit は `~/worktrees/` 配下でない場所からの commit を「worktree 外での作業は禁止」で止める。クラウドでも同じ。docs/handoff/cloud-parity/recon.md:23。2026-11-13 08:26 JST の1回目はこれを入れ忘れて commit で止まった）。`<main>` はクラウドが最初に置いた場所（例 `/home/user/salesanchor`）。1 つずつ流し、出力を報告に書く。
+   - (1a) `cd <main> && git fetch origin release/status-ssot-followups main`
+   - (1b) `cd <main> && git branch --list release/status-ssot-followups`。空であること。空でなければ消さずに `BLOCKED:`（`git checkout -B` は使わない）。
+   - (1c) `cd <main> && bash scripts/new-worktree.sh release/status-ssot-followups`。`--claude` は付けない。出力はパイプに通さない。
+   - (1d) `cd <main> && git worktree list`。`$HOME/worktrees/salesanchor/release-status-ssot-followups` が出ること。出なければ `BLOCKED:`。以後の `<repo>` はこの絶対パス。
+   - (1e) `cd <repo> && git merge --no-edit origin/release/status-ssot-followups`（ff でなく合わせの commit になってよい）。続けて `cd <repo> && git merge-base --is-ancestor origin/release/status-ssot-followups HEAD; echo rc=$?` が `rc=0` であること。衝突したら `git merge --abort` をして `BLOCKED:`。
+   - (1f) `cd <repo> && ./scripts/dev/executor-preflight.sh`。生出力を報告に貼る。クラウドでは [1/3] network と [2/3] gh auth の FAIL は起こるものとして先へ進む。[3/3] と [4/4] が OK でなければ `BLOCKED:`。台帳の札は作らない（台本が作った .claude-pipeline/active-work.d/ の未追跡ファイルは commit しない）。
+   - 以後のやること 2〜11 はすべて `<repo>` の中で行う。push は `git push origin HEAD:release/status-ssot-followups` を単独で流す。
 
 2. `frontend/src/components/MergeCompanyModal.tsx:239`（K18）:
    - 変更前: `                            {c.status}`
