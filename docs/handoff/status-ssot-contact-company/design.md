@@ -427,6 +427,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 - 弊害: customers.update はあるが customers.delete が無い人は、今まで押せた（押すとサーバーで失敗した）ボタンが押せない・見えなくなる。結果は変わらない（今も失敗する）。
 - 戻し方: この便の commit を戻す PR。DB は変えない。
 - GO: migrations・deploy.yml・本番 scripts を含まないので危険 PR ではない（ADR-136 の対象外）。画面の変更なので、CI 緑・審査役 APPROVE で Opus がマージする（ADR-1003 の委任）。
+- 守る決まり: ADR-067（デザイントークン）・ADR-144（UI 金型）は、新しい色・大きさ・部品を足さず、既にある金型の Button と既にある文言キーだけを使うことで守る。ADR-135（main にマージ＝本番に出してよいという宣言）は、migrations・deploy.yml・本番 scripts を含まない画面だけの変更なので、CI 緑と審査役 APPROVE のあとで main にマージしてよい。
 - 外部事例: 使わない。理由: 既にある当社の手本（会社の側の権限の確かめ方・担当者の窓の名前の出し方）に合わせるだけで、新しいやり方を選ばない。
 - 実装カード: [card-bin5.md](card-bin5.md)。
 - 審査: 1回目（2026-11-13 08:16 JST・クラウド Opus・46d234e09）**APPROVE**（必須0件）。§16-2 の行・カードの変更前の文字列が実物（origin/main 4892f2c6a、対象ファイルは cee15756b から差分0）と合う・CompanyContactsTab を使うのは CompanyDetailPage.tsx:158 だけ・試験の流れ（POST の形・ボタン名・ラジオ・Provider なし）が成り立つ・辞書の新しいキーは要らない・§16-4 の grep は1件、を確認。推奨3件を反映: (中) ボタンが押せるかは権限の取得を待ってから確かめる（カード手順6・7）／(低) カード手順6 の行を `:184`・`:209` に直した／(低) contacts.py の行を `:694-699` に直した。
