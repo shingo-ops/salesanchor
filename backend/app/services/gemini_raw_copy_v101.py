@@ -228,6 +228,39 @@ def _rejected_entry(kind: str, index: int, obj: object, error: str, max_line: in
     }
 
 
+def _bundle_shime_ok(
+    obj: dict, numbers: list[int], price_line: int, lines: list[str], status_entries: list[dict] | None,
+    keep_rejected: bool, accepted_same_line: list[dict],
+) -> bool:
+    """まとめて〆る投稿で、価格 none の件どうしが同じ売り切れの行を持つことを許すか（design shime-bundle-close §3-1）。"""
+    # 条件1: v102 の経路だけ
+    if not keep_rejected:
+        return False
+    # 条件2: 今の件も、同じ行を持つ受理済みの件も、price が none
+    if obj["price"].strip().lower() != _NONE:
+        return False
+    if any(str(it["price"]).strip().lower() != _NONE for it in accepted_same_line):
+        return False
+    # 条件3: 重なった行が売り切れの行
+    if not _is_sold_out(lines[price_line - 1], status_entries):
+        return False
+    # 条件4: 重なる行は価格の行だけ
+    if any(set(numbers) & set(it["lines"]) != {price_line} for it in accepted_same_line):
+        return False
+    # 条件5: 自分の名前の行が1行以上ある
+    taken = {n for it in accepted_same_line for n in it["lines"]}
+    for n in numbers:
+        if n in taken:
+            continue
+        text = lines[n - 1]
+        if not text.strip() or _is_sold_out(text, status_entries):
+            continue
+        if not re.search(r"\w", text) or re.fullmatch(r"\s*【[^】]*】\s*", text):
+            continue
+        return True
+    return False
+
+
 def parse_v101_response(
     response_text: str, raw_text: str, *, status_entries: list[dict] | None = None, keep_rejected: bool = False,
 ) -> tuple[list[dict], list[dict]]:
@@ -239,6 +272,8 @@ def parse_v101_response(
     rejected・gemini_index などを付けて items の後ろに足し、半角「/」でつないだ価格も最初の価格で探す。
     このとき受理した件にも gemini_index（応答の中の位置）を付ける（件の対応付け用。便G）。
     円・¥ を除いた探し直しで価格の行を見つけた件だけ price_basis も付ける。False のときの出力は変えない。
+    価格の行が重複した件は落とす。ただし v102 で、価格 none の件どうしが同じ売り切れの行を持ち、ほかに重なる行が無く、
+    自分の名前の行があるときは受理する（まとめて〆る投稿。design shime-bundle-close §3-1）。
     """
     lines = raw_text.split("\n")
     objs, whole_errors = v8._load_items(response_text)
@@ -248,7 +283,7 @@ def parse_v101_response(
     items: list[dict] = []
     rejected: list[dict] = []
     errors: list[dict] = []
-    seen_price_lines: set[int] = set()
+    accepted_by_price_line: dict[int, list[dict]] = {}
     for index, obj in enumerate(objs):
         reason = _shape_error(obj, len(lines))
         if reason is not None:
@@ -263,17 +298,19 @@ def parse_v101_response(
             errors.append({"index": index, "error": "価格の行が見つからない", "item": obj})
             rejected.append(_rejected_entry(REJECTED_PRICE, index, obj, "価格の行が見つからない", len(lines)))
             continue
-        if price_line in seen_price_lines:
+        if price_line in accepted_by_price_line and not _bundle_shime_ok(
+            obj, numbers, price_line, lines, status_entries, keep_rejected, accepted_by_price_line[price_line],
+        ):
             message = f"price_line {price_line} がほかの件と同じ"
             errors.append({"index": index, "error": message, "item": obj})
             rejected.append(_rejected_entry(REJECTED_DUPLICATE, index, obj, message, len(lines), price_line))
             continue
-        seen_price_lines.add(price_line)
         accepted = {"lines": numbers, "price": obj["price"], "quantity": obj["quantity"], "price_line": price_line}
         if keep_rejected:
             accepted = {**accepted, "gemini_index": index}
             if via_yen_free:
                 accepted = {**accepted, "price_basis": PRICE_BASIS_YEN_FREE}
+        accepted_by_price_line.setdefault(price_line, []).append(accepted)
         items.append(accepted)
     return ([*items, *rejected] if keep_rejected else items), errors
 
@@ -599,8 +636,10 @@ def reassign_ambiguous(
     """
     ambiguous = _ambiguous_lines(items, lines, ctx)
     prev, nxt = _neighbors(lines)
-    by_price_line = {it["price_line"]: i for i, it in enumerate(items)}
-    new_lines = [list(it["lines"]) for it in items]
+    by_price_line: dict = {}
+    for i, it in enumerate(items):
+        by_price_line.setdefault(it["price_line"], i)
+    new_lines =[list(it["lines"]) for it in items]
     reassigned: dict[int, list[dict]] = {}
     review: dict[int, list[dict]] = {}
     for n, kind in sorted(ambiguous.items()):
@@ -1209,8 +1248,10 @@ def _f2_prefixes(
 ) -> dict[int, tuple[str, dict]]:
     """F2 名前の無い件（名前が空になる）の price_line のすぐ前の行が、名前の行を持たないほかの件の price_line なら、その件の名前を前に付ける。"""
     prev, _nxt = _neighbors(lines)
-    by_price_line = {it["price_line"]: i for i, it in enumerate(items)}
-    found: dict[int, tuple[str, dict]] = {}
+    by_price_line: dict = {}
+    for i, it in enumerate(items):
+        by_price_line.setdefault(it["price_line"], i)
+    found:dict[int, tuple[str, dict]] = {}
     for i, item in enumerate(items):
         before = prev.get(item["price_line"])
         j = by_price_line.get(before) if before is not None else None
@@ -1471,7 +1512,9 @@ def _extract_v102(
     roles = assign_roles(items, lines, ctx)
     roles, f3_fixes = _apply_f3(items, roles, lines, ctx)
     name_roles, f5_fixes, footer_lines = _apply_f5(items, roles, lines, ctx)
-    owners = {it["price_line"]: it for it in items}
+    owners: dict = {}
+    for it in items:
+        owners.setdefault(it["price_line"], it)
     shared = _shared_line_numbers(items)
     f2 = _f2_prefixes(items, name_roles, lines, owners, shared, ctx)
 
@@ -1568,7 +1611,9 @@ def extract_v101_items(
             gemini_trust=gemini_trust,
         )
     roles = assign_roles(adjusted, lines, ctx)
-    owners = {it["price_line"]: it for it in adjusted}
+    owners: dict = {}
+    for it in adjusted:
+        owners.setdefault(it["price_line"], it)
     shared = _shared_line_numbers(adjusted)
     extracted = [
         _extract_one(
