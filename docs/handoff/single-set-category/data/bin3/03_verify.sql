@@ -15,6 +15,12 @@ SELECT CASE WHEN count(*) = 13 THEN 'VERIFY_OK single_set_products 13' ELSE (1 /
 SELECT CASE WHEN count(*) = 7 THEN 'VERIFY_OK pc_set_products 7' ELSE (1 / (count(*) - count(*)))::text END
   FROM public.products p JOIN public.tcg_product_categories c ON c.id = p.product_category_id
  WHERE c.code = 'PC_SET';
+SELECT CASE WHEN count(*) = 1 THEN 'VERIFY_OK audit 1' ELSE (1 / (count(*) - count(*)))::text END
+  FROM public.audit_log
+ WHERE table_name = 'products' AND new_values LIKE '%single-set-bin3-20261112%' AND changed_by LIKE 'claude-opus (single-set-bin3-20261112;%';
+SELECT 'AUDIT|' || id || '|' || changed_at || '|' || old_values
+  FROM public.audit_log
+ WHERE table_name = 'products' AND new_values LIKE '%single-set-bin3-20261112%' ORDER BY id;
 SELECT 'COUNT|' || coalesce(c.code, 'NULL') || '|' || count(*)
   FROM public.products p LEFT JOIN public.tcg_product_categories c ON c.id = p.product_category_id
  GROUP BY c.code ORDER BY 1;

@@ -1,5 +1,5 @@
 -- ADR-1031 What 6 便3 手順 2 事前確認（読むだけ）。設計 docs/handoff/single-set-category/design.md §5「### 便3」。
--- 期待: PRECHECK_OK が 4 行。1つでも違えば 1/0 で失敗して止まる。
+-- 期待: PRECHECK_OK が 5 行。1つでも違えば 1/0 で失敗して止まる。
 -- 前提: 便2 で区分 PC_SINGLE_SET が本番に入っていること（2026-11-12 19:58 JST）。
 -- 対象: PO が 2026-11-12「1」で決めた 13 商品（設計 §5 便3 手順 1）。
 \set ON_ERROR_STOP on
@@ -25,7 +25,11 @@ SELECT CASE WHEN count(*) = 0 THEN 'PRECHECK_OK single_set_products 0' ELSE (1 /
 SELECT CASE WHEN count(*) = 20 THEN 'PRECHECK_OK pc_set_products 20' ELSE (1 / (count(*) - count(*)))::text END
   FROM public.products p JOIN public.tcg_product_categories c ON c.id = p.product_category_id
  WHERE c.code = 'PC_SET';
--- 6. 区分ごとの商品数（03_verify と手で突き合わせる）
+-- 6. 付け替えの記録（audit_log の印 single-set-bin3-20261112）がまだ無い（二重に流していない）
+SELECT CASE WHEN count(*) = 0 THEN 'PRECHECK_OK audit_absent 0' ELSE (1 / (count(*) - count(*)))::text END
+  FROM public.audit_log
+ WHERE table_name = 'products' AND new_values LIKE '%single-set-bin3-20261112%';
+-- 7. 区分ごとの商品数（03_verify と手で突き合わせる）
 SELECT 'COUNT|' || coalesce(c.code, 'NULL') || '|' || count(*)
   FROM public.products p LEFT JOIN public.tcg_product_categories c ON c.id = p.product_category_id
  GROUP BY c.code ORDER BY 1;
