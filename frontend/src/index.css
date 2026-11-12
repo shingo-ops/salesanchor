@@ -33,7 +33,7 @@
   /* アクセント（SalesAnchor ブランドネイビー） */
   --accent: #1e3a8a;             /* プライマリボタン・フォーカス */
   --accent-hover: #163171;
-  --link: #1e3a8a;               /* ナビゲーションリンク */
+  --link: #1a73e8;               /* ナビゲーションリンク */
   --link-active-bg: #ebeff8;
   --comp-input-filled-bg: var(--gcal-surface-filled);  /* 編集の画面の塗りの欄の地（Google 実測 明るい rgb(233,238,246)・暗い rgb(40,42,44)・ADR-1074） */
   --avatar-bg: #f1f4f7;          /* アバター背景（会話リスト等） */
