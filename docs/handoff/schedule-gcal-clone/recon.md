@@ -173,3 +173,89 @@ PO の言葉（2026-11-11）: 「予定の色だけどGoogleと色を併せて�
 
 - Google の暗い表示の編集画面 → §8.6 で測った（2026-11-11）。
 - Google の日付の欄は押すと Google の暦が開く。アプリはブラウザの日付・時刻の欄（native）のまま。
+
+## 9. 便15: 予定の繰り返し（2026-11-12・origin/main cee9633b9・読むだけ）
+
+PO の言葉（2026-11-12）: 繰り返しを付ける（選択「1」）。範囲は選択「1、」＝ Google の決まった選び方（繰り返さない／毎日／毎週○曜日／毎月第N○曜日／毎年○月○日／毎週平日（月～金））と、直す・消すときの 3 択（この予定／これ以降／すべて）。自由に決める選び方（Google の 7 番目）は後で。
+
+### 9.0 ADR の検索結果
+
+- `git grep -inE "recurr|rrule|繰り返し" origin/main -- docs/adr` の予定に関わる当たりは 1 件だけ: `docs/adr/ADR-1074-editor-page-mold.md:37`「招待する人・通知・繰り返し…は、アプリに機能が無いので作らない」（便14 の範囲の外として書いたもの）。繰り返しを決めた ADR は 0 件。
+- 関わる ADR（`docs/adr/FEATURE-INDEX.md:34`）: ADR-1057（Google への接続は会社で 1 つ・送るのはつないだ本人の予定だけ）・ADR-1059（取り込みは双方向のとき 15 分おき）・ADR-1060（Meet の URL は `calendar_events.meet_url` の 1 か所）・ADR-1018。画面の決まり: ADR-1065（時間割の金型）・ADR-1074（編集画面の金型 EditorPage）・ADR-144・ADR-067・ADR-027。移行の決まり: ADR-135（main＝本番に出してよい）・ADR-136（危ない PR の GO）・ADR-1037（ロック待ち 1 秒）。
+- → 新しく ADR-1075 を起こす（決まった番号の最後は ADR-1074。開いている PR・リモートのブランチ・ほかの作業場所に ADR-1075〜1079 は 0 件・2026-11-12 確認）。
+
+### 9.1 Google の「繰り返し」の欄（2026-11-12・PO の Google（HIGH LIFE JPN）・Chrome・/calendar/r/eventedit・明るい表示・保存していない）
+
+- 欄: 選ぶ欄（combobox）・読み上げの名前「繰り返し」。終日のチェック欄（x72・y140）と**同じ段の右**（x170・y140・148×40）。地 rgb(233,238,246)・角 4px・文字 14px rgb(31,31,31)・左余白 16px・枠 0。→ アプリの塗りの欄 `editor-filled`（ADR-1074・G61）と同じ形。
+- 選び方（開始日 2026-11-12（木）で開いたときの並び）:
+
+| 並び | 画面の文字 | 決まり（RFC 5545 の RRULE） |
+|---|---|---|
+| 1 | 繰り返さない | なし |
+| 2 | 毎日 | `FREQ=DAILY` |
+| 3 | 毎週 木曜日 | `FREQ=WEEKLY;BYDAY=TH` |
+| 4 | 毎月 第 2 木曜日 | `FREQ=MONTHLY;BYDAY=2TH` |
+| 5 | 毎年 11月12日 | `FREQ=YEARLY` |
+| 6 | 毎週平日（月～金） | `FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR` |
+| 7 | 自由に決める選び方（Google の 7 番目・文字は画面のとおり） | （今回は作らない） |
+
+- 文字は開始日から作られる（曜日・第何週・月日）。
+- Google のヘルプ（support.google.com/calendar/answer/37115・2026-11-12 閲覧）: 繰り返しの予定を直すと、保存のときにどの回に当てるかを選ぶ。3 択の画面の文字そのものはヘルプに出ていない。
+
+### 9.2 Google Calendar API の繰り返し（Context7 `/websites/developers_google_workspace_calendar_api`・2026-11-12）
+
+- 作る: 予定の `recurrence` に `"RRULE:..."` の文字の配列を入れる。始まり・終わりは 1 回目の日時。**繰り返しの予定では `start.timeZone`・`end.timeZone` が必須**（繰り返しを広げる時間帯）。COUNT と UNTIL は同時に使わない。UNTIL は「その日時まで（含む）」。終日の予定の EXDATE・RDATE は日付の形。
+- 1 回ずつの予定（instance）: `recurringEventId`（元の繰り返しの id）と `originalStartTime`（元の決まりでの始まり。動かしても変わらず、その回を一意に決める）を持つ。`recurrence` は持たない。
+- `events.list` で `singleEvents=true` にすると、1 回ずつが返り、元の繰り返しの予定は返らない。
+- 1 回だけ直す・消す: 1 回ずつの予定の id に PUT（消すのは `status: "cancelled"`）。その回の id は `events.instances(eventId=元の id, originalStart=...)` で引ける（`originalStart` は省略できる引数）。
+- 公式の注意: 「全部」や「これ以降」を直すのに 1 回ずつを直してはいけない（例外が増えて遅くなる）。→「これ以降」は元の決まりに UNTIL を付けて切り、新しい繰り返しを作る。「全部」は元の予定を直す。
+
+### 9.3 アプリの今（コード）
+
+- 表: 各会社の部屋の `calendar_events`（`migrations/078_create_calendar_events_tenant.sql:44-65`。NOT NULL は calendar_type・title・start_datetime・end_datetime・is_all_day・source・created_at・updated_at）。繰り返しの欄は無い。後から category（`migrations/20260621_020000_add_schedule_calendar_category_and_owner_settings.sql`）と meet_url（`migrations/20261104_161223_add_calendar_events_meet_url.sql`・会社ごとに回す形）。`google_event_id` に重なり禁止の索引（`migrations/078_create_calendar_events_tenant.sql:79`）。
+- 表を読み書きするコードは 3 ファイルだけ: `backend/app/services/calendar_service.py`（20 か所）・`backend/app/routers/calendar.py:465,546`（持ち主の確かめ）・`backend/app/services/google_webhook.py:343`（全部取り直しのときの Google 起源の行の掃除。`source = 'google'` の行だけ）。
+- 受け口: 一覧 `backend/app/routers/calendar.py:143`（期間 start・end）・作る `:405`・直す `:446`・消す `:538`。受け取る欄 `CreateEventBody` `:111`・`UpdateEventBody` `:122` に繰り返しは無い。
+- 一覧: `backend/app/services/calendar_service.py:150` `list_events` は表の 1 行を 1 件で返す（`start_datetime < :end` と終わりで期間を絞る）。
+- 作る: `:247` `create_event`。Google へ送るのはつないだ本人の予定だけ（ADR-1057）。送る形 `:652` `_to_google_event_body`: 時刻つきは `{"dateTime", "timeZone": "Asia/Tokyo"}`（`:684-685`）、終日は日付（終わりは次の日）。`recurrence` は無い。
+- 直す `:336`・消す `:483`: google_event_id があり、双方向か書くだけのとき Google にも送る。
+- 取り込み: `backend/app/services/google_calendar.py:365` と `backend/app/services/google_webhook.py:300` が `singleEvents=True`。1 件ずつ `upsert_from_google`（`backend/app/services/calendar_service.py:551`）へ。アプリ起源かの見分けは `_is_app_origin`（`:129`）: **google_event_id の完全一致**と `sync_origin_id LIKE 'app:<会社>:%'`。
+- **危ないところ（構造から）**: アプリで作った繰り返しを Google に送ると、取り込みでは 1 回ずつの予定（元とは別の id・`recurringEventId` が元の id）が返る。今の見分けは完全一致なので、アプリ起源と分からず Google 起源の行として 1 回ずつ入り、二重になる。→ `recurringEventId` でも見分ける直しが要る。
+- 画面: 一覧は `/calendar/events?start&end` で期間を渡す（`frontend/src/pages/schedule/SchedulePageImpl.tsx:831`）。予定の id は `event-<数>`（`frontend/src/pages/schedule/schedule-utils.ts:339` `normalizeEvent`）で、送る先の番号は `eventNumericId`（`:408`・`^event-(\d+)$`）。消す `frontend/src/pages/schedule/SchedulePageImpl.tsx:1006`・保存 `:989,991`・動かす `:1192`（PATCH `:1203`）はどれも 1 件の番号に送る。
+- 編集画面の終日は `frontend/src/pages/schedule/ScheduleDraftFields.tsx:159` の金型 Checkbox（`EditorPage` の中）。選ぶ欄は金型 `SelectControl` の `editor-filled`（`:254`）。確かめの小窓の金型は `frontend/src/components/Modal.tsx`・`frontend/src/components/ConfirmModal.tsx`、選び欄は `frontend/src/components/Radio.tsx`・`frontend/src/components/RadioControl.tsx` が在る。
+- 繰り返しを広げる道具: `python-dateutil` は `backend/requirements.txt` に直接は無い。PyPI の依存の記録（2026-11-12）で、既にある `holidays==0.108` が `python-dateutil<3,>=2.9.0.post0`、`celery>=5.4.0` が `python-dateutil>=2.8.2` を必要とする → 本番の中に入っている。backend のコードで `dateutil` を使っている所は 0 件。PyPI の最新は 4.0.0 だが holidays が `<3` を求める。Context7 `/dateutil/dateutil`（2.9.0.post0）: `rrule.between(after, before, inc=True)` で期間の中の回を取れる。回は dtstart の時間帯を持つ。UNTIL と COUNT の併用は非推奨。
+- 相談係（AI）の伏せたビュー: 文字の欄を足したら `migrations/20261024_100300_create_ai_cloud_views.sql`（分類表の正本・`:351-354` が calendar_events）に分類の行を足す決まり。`backend/tests/ops/test_ai_cloud_views.py:526` T10 は calendar_events を見ない（design §12.10・審査1 ③）ので、抜けは試験では見張れない。真偽値・数・日時は行が要らない（`migrations/20261107_130000_add_users_password_must_change.sql` の説明）。
+- 会社ごとに回す移行は、試験の足場 `backend/tests/rls_bootstrap.py:156-174` `_TENANT_LOOP_MIGRATIONS` に名前と「会社を選ぶ条件」の回数を書く。
+
+### 9.4 未確認
+
+- U1: → §9.5 で測って決めた。
+- U2: → §9.5 で測って決めた。
+- U3: → §9.5 で測って決めた。
+- U4: 既に `meet_url`（文字の欄）が分類表に無い（`git grep meet_url migrations/20261024_100300_create_ai_cloud_views.sql` 0 件）。T10 は実の PostgreSQL の URL（`RLS_ADMIN_DATABASE_URL` か `TEST_PG_URL`）が無いと飛ばされる（`backend/tests/ops/test_ai_cloud_views.py:24-27`）。CI では `.github/workflows/test.yml:240` が pytest に `RLS_ADMIN_DATABASE_URL` を渡すので T10 は走る。分類が要るのは「そのまま出す型」（`backend/tests/ops/test_ai_cloud_views.py:50-53`・数・真偽・日時など）でない列と、名前の見張り（`:44-47`）に当たる列（`:509-517`）。text の meet_url に行が無くても CI が通っている理由は確かめていない（T10 の足場 `bootstrap_tenant_schema` がこの移行を流すかを見ていない）。→ 便15 では text の `recurrence_rule` に分類の行を足す（理由の有無に関わらず決まりに沿う）。
+
+### 9.5 Google での実測（2026-11-12・PO の許可「1」・PO の Google（HIGH LIFE JPN）・Chrome）
+
+試しの予定「【試し】繰り返しの測り（後で消します）」を 1 件作った（2026-11-19（木）10:00〜11:00・毎週木曜・4 回・通知なし）。小窓はすべてキャンセルし、最後に「すべての予定」で消した。11 月と 12 月の月表示の文字に「試し」が 0 件で、消えたことを確かめた。ほかの予定には触っていない。
+
+- U1（3 択の小窓の文字）:
+  - 編集画面で 2 回目（11-26）の題名を変えて「保存」→ 題「定期的な予定の編集」、選び方「この予定／これ以降のすべての予定／すべての予定」、ボタン「キャンセル」「OK」、初めの選択「この予定」。
+  - 2 回目の詳しくの小窓のごみ箱 → 題「定期的な予定の削除」、選び方は上と同じ 3 つ、初め「この予定」。
+  - 1 回目（11-19）のごみ箱 → 題「定期的な予定の削除」、選び方は「この予定／すべての予定」の 2 つだけ。
+  - 1 回目で「保存」の小窓は開いていない（未確認）。
+  - 詳しくの小窓: 題名の下に「11月 26日 (木曜日) ・ 午前10:00〜11:00」、その下に「毎週 木曜日, 4 回」。
+- U2（「毎月」の選び方）: 新しい予定の編集画面で開始日を変えて「繰り返し」の選び方を読んだ（保存していない）。
+  - 2026-11-30（月・その月の第 5 月曜＝最後の月曜）: 繰り返さない／毎日／毎週 月曜日／**毎月 最終月曜日**／毎年 11月30日／毎週平日（月～金）／（7 番目の自由に決める選び方）（第 5 は出ない）
+  - 2026-11-26（木・第 4 木曜＝最後の木曜）: 繰り返さない／毎日／毎週 木曜日／**毎月 第 4 木曜日／毎月 最終木曜日**／毎年 11月26日／毎週平日（月～金）／（7 番目の自由に決める選び方）
+  - 2026-11-12（木・第 2 木曜）: §9.1 のとおり「毎月 第 2 木曜日」だけ。
+  - → 「第 N」は第 1〜4 週だけ、「最終」はその月の最後の同じ曜日のときだけ出る。
+- U3（引っぱって動かす）:
+  - 1 回目（11-19）を金曜の午後へ引っぱる → 題「定期的な予定の編集」、選び方「この予定／すべての予定」の 2 つ。
+  - 2 回目（11-26）を引っぱる → 題「定期的な予定の編集」、選び方「この予定／これ以降のすべての予定」の 2 つ（「すべての予定」は出ない）。
+  - キャンセルで予定は元の位置のまま。
+- U5（終日の繰り返しの時間帯）: アプリの Google 用の道具は期限切れで試しの予定を API で作れなかった。代わりに公式の説明で確かめた（Context7 `/websites/developers_google_workspace_calendar_api`・2026-11-12）: 終日の予定は `start.date`・`end.date` を使い「終日の予定では時間帯の欄は意味を持たない」。公式の終日の繰り返しの例は `start: {"date": ...}` だけで `timeZone` が無い。`start.timeZone` を必須とする説明は時刻の欄の説明の中にある。→ 終日の繰り返しは今と同じ日付だけで送る。
+- U6（消したときの結果・2026-11-12・PO の選択「1」で測り直し）: Google のつなぎの道具（MCP）は期限切れで使えなかった。そのため Chrome の予定を作る URL（`/calendar/render?action=TEMPLATE&recur=RRULE:FREQ=WEEKLY;BYDAY=TH;COUNT=5`）で試しの予定を 2 件作った。A は 10:00〜11:00、B は 13:00〜14:00 で、どちらも 2026-11-19 から毎週木曜に 5 回。通知は外した。結果は 11 月と 12 月の月表示で読んだ。
+  - A の 3 回目（12-03）を、詳しくの小窓のごみ箱から「この予定」（初めから選ばれている）で消した → 12-03 の A だけが消えた。1・2・4・5 回目（11-19・11-26・12-10・12-17）は残った。2 回目の詳しくの小窓の繰り返しの行は「毎週 木曜日, 5 回」のままで、決まりは変わらなかった。
+  - B の 3 回目（12-03）を「これ以降のすべての予定」で消した → 12-03・12-10・12-17 の B が消えた。11-19・11-26 は残った。残った回の詳しくの小窓の繰り返しの行は「毎週 木曜日, 2026年 12月 2日まで」に変わった（「5 回」から「消した回の前の日まで」に置き換わった）。Google が中で持つ決まりの文字そのもの（UNTIL の値）は、道具が期限切れのため読めていない。
+  - A の 2 回目（11-26）を「すべての予定」で消した → 11-19 と 11-26 の A も消え、A は 0 件になった。先に消した 12-03 の回も含めて、全部消えた。
+  - B の 1 回目（11-19）のごみ箱 → 選び方は「この予定／すべての予定」の 2 つ（U1 と同じ）。「すべての予定」で消した → B は 0 件になった。
+  - 片付け: 11 月の月表示の画面と 12 月の月表示の文字に「試し」は 0 件。ほかの予定には触っていない。途中で空いた所を 1 回押して新しい予定の小窓が開いたが、保存せずに閉じた。
