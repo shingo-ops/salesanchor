@@ -7,7 +7,12 @@ from pathlib import Path
 from sqlalchemy import text
 
 from app.services.tenant import create_tenant_schema
-from tests.seed_data import aggregation_rules_seed_sql, country_seed_sql, type_master_seed_sql
+from tests.seed_data import (
+    aggregation_rules_seed_sql,
+    country_seed_sql,
+    customer_statuses_seed_sql,
+    type_master_seed_sql,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _MIGRATIONS_DIR = _REPO_ROOT / "migrations"
@@ -33,7 +38,10 @@ _PG_BOOTSTRAP_MIGRATIONS = [
     "20261015_130000_add_permissions_rls.sql",
 ]
 # public.tenants を参照するため、tenants を用意した後に流す
-_PG_AFTER_TENANTS_MIGRATIONS = ("20261106_190000_create_public_channel_masters.sql",)
+_PG_AFTER_TENANTS_MIGRATIONS = (
+    "20261106_190000_create_public_channel_masters.sql",
+    "20261112_120000_create_public_customer_statuses.sql",
+)
 _TENANT_BOOTSTRAP_MIGRATIONS = [
     "20260611_100000_create_channel_masters.sql",
     "20260614_100000_create_sales_form_tables.sql",
@@ -360,6 +368,10 @@ async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:
                     # この transaction の中で流すので BEGIN/COMMIT は除く
                     sql = (_MIGRATIONS_DIR / filename).read_text("utf-8").replace("BEGIN;", "").replace("COMMIT;", "")
                     await raw_after_tenants.driver_connection.execute(sql)
+                # 状態の4行（便2 で tenant.py の status が外部キーで指す・ADR-1076）。書けるのは運営だけ
+                await conn.execute(text("SELECT set_config('app.is_operator', 'true', true)"))
+                await conn.exec_driver_sql(customer_statuses_seed_sql())
+                await conn.execute(text("SELECT set_config('app.is_operator', '', true)"))
                 await conn.execute(
                     text("""
                         INSERT INTO public.tenants (
