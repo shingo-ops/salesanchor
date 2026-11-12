@@ -11,7 +11,7 @@
 - 実行: `git grep -l -i -e max_age_hours -e "viewer:inventory" -e ViewerInventoryStale -e distribution_settings origin/main -- docs/adr`
 - 結果: ADR-1014（配信の行の正本）、ADR-1041、ADR-1066 の 3 本。設定値の入力チェックを決めた ADR は無い。
 - `docs/adr/FEATURE-INDEX.md` の 51 行目: 24 時間保守運用は ADR-1012（Proposed）。経路の正本は Alertmanager、障害記録の正本はアプリ DB。
-- 閲覧ページは ADR-1019（docs/specs/inventory-management/inventory-viewer/README.md の 15 行目）。
+- 閲覧ページは ADR-1019（docs/specs/inventory-management/inventory-viewer/README.md の 16 行目）。
 - 閉じたパネルの無効化は docs/handoff/drawer-inert-when-closed/design.md（2026-10-27）。
 - 個人側の見張りの置き場は docs/specs/local-hooks-ssot/README.md（原本を repo に置き PR で変える。前例 ADR-1029・ADR-1045）。
 
@@ -36,25 +36,25 @@
 
 - 画面: frontend/src/pages/super-admin/AnalysisRulesPage.tsx:149 が設定パネルを常に置く（開閉は `open` だけで切り替え）。
 - パネル: frontend/src/pages/super-admin/components/DistributionSettingsDrawer.tsx:34 で入力の初期値は空文字。
-- 読み込み: 同ファイル:40-53。開いたときだけ GET する。取得に失敗しても「空のまま編集可能」（:50 のコメント）。
-- 保存: 同ファイル:55-68。中身を確かめずに PUT する。ボタンが押せなくなるのは保存中だけ（:110）。
+- 読み込み: frontend/src/pages/super-admin/components/DistributionSettingsDrawer.tsx:40-53。開いたときだけ GET する。取得に失敗しても「空のまま編集可能」（frontend/src/pages/super-admin/components/DistributionSettingsDrawer.tsx:50 のコメント）。
+- 保存: frontend/src/pages/super-admin/components/DistributionSettingsDrawer.tsx:55-68。中身を確かめずに PUT する。ボタンが押せなくなるのは保存中だけ（frontend/src/pages/super-admin/components/DistributionSettingsDrawer.tsx:110）。
 - API: backend/app/routers/tcg_distribution.py:63-64 で受け取る形は `value: str` だけ。中身の確認は無い。
 - 保存の処理: backend/app/services/tcg_distribution_svc.py:859-871 はそのまま UPDATE する。
 - 読む側: backend/app/services/tcg_distribution_svc.py:202-213 は空・整数でない・負を None（配信しない）として読む。
 - 作り置き: backend/app/services/tcg_distribution_svc.py:999-1001 で None なら kind="unset" を返す。
-- 作り置きタスク: backend/app/tasks/viewer_inventory_cache.py:81-98 は unset を失敗として数え、前回の写しは残す。
+- 作り置きタスク: backend/app/tasks/viewer_inventory_cache.py:79-98（保留 :79-84・成功 :85-94・失敗 :95-98）は unset を失敗として数え、前回の写しは残す。
 - 写しの寿命: backend/app/tasks/viewer_inventory_cache.py:33 の 86400 秒（24 時間）。
 - 閲覧 API: backend/app/routers/viewer.py:248 は写しが無いと 503 `viewer_inventory_not_ready` を返す。
 
 ### 観点2: 共用部品
 
-- 設定パネルの枠は共用の金型 frontend/src/components/Drawer.tsx。中身は常に DOM に置かれる（同ファイル:131 のコメント「DOM は常にマウント」）。
+- 設定パネルの枠は共用の金型 frontend/src/components/Drawer.tsx。中身は常に DOM に置かれる（frontend/src/components/Drawer.tsx:131 のコメント「DOM は常にマウント」）。
 - 閉じている間は `useInertWhenClosed` で無効化する（frontend/src/components/Drawer.tsx:116）。人の操作・Tab・読み上げは止まる。
 - 設定値の読み口は 1 か所（backend/app/services/tcg_distribution_svc.py:202 `_max_age_hours`）。書き口に同じ確認は無い。
 
 ### 観点3: 非共用部品
 
-- 失敗 3 回目の Discord 通知は backend/app/tasks/viewer_inventory_cache.py:48-73 の独自の道。宛先はテナント 4（:66）。
+- 失敗 3 回目の Discord 通知は backend/app/tasks/viewer_inventory_cache.py:48-69 の独自の道。宛先はテナント 4（backend/app/tasks/viewer_inventory_cache.py:63）。
 - テナント 4 の通知の届け先は 0 件（reader 鍵で `notification_channels` を数えた結果）。この道は 1 度も届いていない。
 
 ### 観点4: ルールの所在
@@ -74,7 +74,7 @@
 | 写しが消える前に人か AI が気づく | 警報は鳴った（14 件）。対応した記録は 0 件 | **不足** |
 | AI がブラウザで画面外のボタンを押さない | 無し（ブラウザ操作の道具に見張りが無い） | **不足** |
 
-- 警報の届き方（実測。調査メモ ops-incidents.txt・am-logs.txt）:
+- 警報の届き方（2026-11-12 に本番を読み取りで実測。生出力は repo 外の調査メモ ops-incidents.txt・am-logs.txt。repo からは確かめられない）:
   - Alertmanager から Discord への送信は 10/23 以降 1085 回で失敗 0 回。
   - ops-api への送信は 1516 回中 438 回失敗。
   - 11/1 以降の障害記録の出来事は、送り手が alertmanager だけ（通知 346・解決 327）。人や AI が対応した記録は 0 件。
