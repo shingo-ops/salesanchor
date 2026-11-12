@@ -384,22 +384,22 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 
 ### 16-2. 現在地（事実・origin/main cee15756b）
 
-- 候補1（K18）: `frontend/src/components/MergeCompanyModal.tsx:238-240` は札の色は `getStatusPresentation("company", c.status)` で決め、文字は `{c.status}`（記号のまま）。同じ窓の `:301-302` と担当者の窓 `frontend/src/components/MergeContactModal.tsx:235` はすでに `customerStatuses.nameOf(...)` を使う。`customerStatuses` は `MergeCompanyModal.tsx:55` で取り済み。
+- 候補1（K18）: `frontend/src/components/MergeCompanyModal.tsx:238-240` は札の色は `getStatusPresentation("company", c.status)` で決め、文字は `{c.status}`（記号のまま）。同じ窓の `:301-302` と担当者の窓 `frontend/src/components/MergeContactModal.tsx:235` はすでに `customerStatuses.nameOf(...)` を使う。`customerStatuses` は `frontend/src/components/MergeCompanyModal.tsx:55` で取り済み。
 - 候補2（K19）: サーバーは止めている。`backend/app/routers/contacts.py:694-699` と `backend/app/routers/companies.py:703-708` はどちらも `require_permission("customers.delete")`。画面は3か所で確かめていない。
   - `frontend/src/pages/contacts/ContactEditPage.tsx:205-207` のボタンは、状態が重複確認待ちなら誰にでも出て押せる。このファイルは権限を読んでいない（import に usePermissions が無い）。
-  - `frontend/src/pages/company-detail/CompanyContactsTab.tsx:131-142` の行のボタンは canEdit（`CompanyDetailPage.tsx:39` の customers.update）だけで出る。
-  - `CompanyContactsTab.tsx:234` は連絡手段の窓に `onRequestMerge` をいつも渡す。`frontend/src/components/ContactChannelForm.tsx:253-260` は渡されたときだけ「まとめる」ボタンを出す。
-  - 手本: 会社の側は確かめている。`CompanyDetailPage.tsx:40-41` の `canMerge = hasPermission("customers.delete")`、`frontend/src/pages/company-detail/CompanyBasicTab.tsx:146-152` は重複確認待ちの欄のボタンを `disabled={!canMerge …}` にし、`title` に `companies.dedupMergeNoPermission` を出す。一覧の行の消すボタンは権限が無ければ出さない（`frontend/src/pages/companies/CompaniesPage.tsx:420`・`frontend/src/pages/contacts/ContactsPage.tsx:404`）。
-- 候補3（openapi の tags が2回出る）: `frontend/api-contract/openapi.json` で tags が2回並ぶ道は74本ある（暦・翻訳・買取価格など多くの機能。生は `/tmp/CC報告ファイル/m037/recon-next/openapi-dup.txt`）。原因は `backend/app/main.py:361` の include_router の tags と、各道の `tags=[...]`（例 `contacts.py:349`・`:661`・`:697`）の両方に書く形。この機能だけの話ではない。
+  - `frontend/src/pages/company-detail/CompanyContactsTab.tsx:131-142` の行のボタンは canEdit（`frontend/src/pages/company-detail/CompanyDetailPage.tsx:39` の customers.update）だけで出る。
+  - `frontend/src/pages/company-detail/CompanyContactsTab.tsx:234` は連絡手段の窓に `onRequestMerge` をいつも渡す。`frontend/src/components/ContactChannelForm.tsx:253-260` は渡されたときだけ「まとめる」ボタンを出す。
+  - 手本: 会社の側は確かめている。`frontend/src/pages/company-detail/CompanyDetailPage.tsx:40-41` の `canMerge = hasPermission("customers.delete")`、`frontend/src/pages/company-detail/CompanyBasicTab.tsx:146-152` は重複確認待ちの欄のボタンを `disabled={!canMerge …}` にし、`title` に `companies.dedupMergeNoPermission` を出す。一覧の行の消すボタンは権限が無ければ出さない（`frontend/src/pages/companies/CompaniesPage.tsx:420`・`frontend/src/pages/contacts/ContactsPage.tsx:404`）。
+- 候補3（openapi の tags が2回出る）: `frontend/api-contract/openapi.json` で tags が2回並ぶ道は74本ある（暦・翻訳・買取価格など多くの機能。生は `/tmp/CC報告ファイル/m037/recon-next/openapi-dup.txt`）。原因は `backend/app/main.py:361` の include_router の tags と、各道の `tags=[...]`（例 `backend/app/routers/contacts.py:349`・`:661`・`:697`）の両方に書く形。この機能だけの話ではない。
 - 候補4（K20）: 会社・担当者をまとめる処理の試験は、サーバー・画面とも1本も無い（`git grep -l "/merge" origin/main -- backend/tests frontend/src` は見込み客の `backend/tests/test_lead_merge_pg.py` と窓の本体3つだけ）。画面の試験 `frontend/src/components/FullPageFormButtonMigration.test.tsx:172-205` は、担当者の編集画面で窓が開いて閉じられるところまでで、まとめる処理を流していない。
 
 ### 16-3. 変更（案と選んだ理由）
 
 - 対象: 候補1・2・4。画面のコードと画面の試験だけ。サーバー・DB・辞書のキーは変えない。
 - 対象外: 候補3（openapi の tags）。74本・十数の機能にまたがり、この機能のテーマから外れる（1リリース1テーマ）。画面にも数値にも影響しない（説明書の並びの重なりだけ）。台帳に別テーマとして置く。便4 の残りの隙（372本の全件ドライランが NOTICE を出さない・§15-4）も同じく別テーマ。
-- (1) K18: `MergeCompanyModal.tsx:239` の `{c.status}` を `{customerStatuses.nameOf(c.status)}` にする。担当者の窓 `MergeContactModal.tsx:235` と同じ形。
+- (1) K18: `frontend/src/components/MergeCompanyModal.tsx:239` の `{c.status}` を `{customerStatuses.nameOf(c.status)}` にする。担当者の窓 `frontend/src/components/MergeContactModal.tsx:235` と同じ形。
 - (2) K19: 権限の確かめ方は、場所ごとに既にある手本に合わせる（新しい見せ方を作らない）。
-  - 重複確認待ちの欄のボタン（担当者の編集画面）: 会社の同じ欄 `CompanyBasicTab.tsx:142-152` に合わせ、押せなくして理由を `title` に出す。理由の文は既にある `companies.dedupMergeNoPermission` を使う（同じ文を2か所に持たない）。
+  - 重複確認待ちの欄のボタン（担当者の編集画面）: 会社の同じ欄 `frontend/src/pages/company-detail/CompanyBasicTab.tsx:142-152` に合わせ、押せなくして理由を `title` に出す。理由の文は既にある `companies.dedupMergeNoPermission` を使う（同じ文を2か所に持たない）。
   - 行のボタン・連絡手段の知らせのボタン: 一覧の消すボタンに合わせ、権限が無ければ出さない。
   - 権限の名前は会社と同じ customers.delete（サーバーの決まりと同じ）。
 - (3) K20: 新しい画面の試験に、まとめる処理を最後まで流す1本と、権限の無い人の1本を書く（16-4 の理由で既存のファイルとは分ける）。会社の窓の名前の試験を1本足す。サーバーの試験は今回は足さない（サーバーの決まりは変えないため。足すなら別の便）。
@@ -410,16 +410,16 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 ### 16-4. 機械の見張り
 
 - K18: 新しい試験 `frontend/src/components/MergeCompanyModal.test.tsx` が、候補の状態の欄に「有効」が出て、`active` だけの欄が無いことを確かめる。`{c.status}` に戻すと落ちる。
-- K19・K20: 新しい試験 `frontend/src/pages/contacts/ContactEditPageMerge.test.tsx` の2本（権限なし・まとめる流れ）と、新しい試験 `frontend/src/pages/company-detail/CompanyContactsTab.test.tsx` の2本。権限の確かめを消すと落ちる。まとめたあと移る先を変えると落ちる。まとめる2本を既存の `FullPageFormButtonMigration.test.tsx` に足さない理由: その `afterEach`（`:91-99`）が「POST が1回も呼ばれない」ことを確かめているため。既存のファイルには偽の GET に `/me/permissions` の1行だけ足す（足さないと知らない道で例外になり、`:172-205` のボタンが押せる試験が落ちる）。
-- 同じ種類（状態の記号をそのまま画面の文字に出す）を探す grep は、§8 に無かった（K5 は記号の直書き、K7 は辞書の文を数える）ので見逃した。K18 の受入に grep を足す: `git grep -n -E '^[[:space:]]*\{[A-Za-z_]+\.status\}[[:space:]]*$|>\{[A-Za-z_]+\.status\}<' -- frontend/src/pages/contacts frontend/src/pages/companies frontend/src/pages/company-detail frontend/src/components/MergeCompanyModal.tsx frontend/src/components/MergeContactModal.tsx`。基準値（cee15756b で Opus が実測）: 1件（`MergeCompanyModal.tsx:239`）。変更後は0件。選ぶ欄の `value={form.status}` は当たらない。
+- K19・K20: 新しい試験 `frontend/src/pages/contacts/ContactEditPageMerge.test.tsx` の2本（権限なし・まとめる流れ）と、新しい試験 `frontend/src/pages/company-detail/CompanyContactsTab.test.tsx` の2本。権限の確かめを消すと落ちる。まとめたあと移る先を変えると落ちる。まとめる2本を既存の `frontend/src/components/FullPageFormButtonMigration.test.tsx` に足さない理由: その `afterEach`（`:91-99`）が「POST が1回も呼ばれない」ことを確かめているため。既存のファイルには偽の GET に `/me/permissions` の1行だけ足す（足さないと知らない道で例外になり、`:172-205` のボタンが押せる試験が落ちる）。
+- 同じ種類（状態の記号をそのまま画面の文字に出す）を探す grep は、§8 に無かった（K5 は記号の直書き、K7 は辞書の文を数える）ので見逃した。K18 の受入に grep を足す: `git grep -n -E '^[[:space:]]*\{[A-Za-z_]+\.status\}[[:space:]]*$|>\{[A-Za-z_]+\.status\}<' -- frontend/src/pages/contacts frontend/src/pages/companies frontend/src/pages/company-detail frontend/src/components/MergeCompanyModal.tsx frontend/src/components/MergeContactModal.tsx`。基準値（cee15756b で Opus が実測）: 1件（`frontend/src/components/MergeCompanyModal.tsx:239`）。変更後は0件。選ぶ欄の `value={form.status}` は当たらない。
 
 ### 16-5. 受入条件と確かめ方
 
 | 基準 | 検証方法 |
 |---|---|
-| K18 会社の窓で状態が名前で出る | `MergeCompanyModal.test.tsx` が CI の画面の試験で緑。16-4 の grep が0件。デプロイ後、Chrome で会社の詳細→重複確認待ちの会社→まとめる窓で、状態の欄が「有効」等の名前（保存・まとめるはしない） |
-| K19 権限の無い人にはボタンを押させない | `ContactEditPageMerge.test.tsx` の権限なしの1本（ボタンが押せず title が `companies.dedupMergeNoPermission`）と、`CompanyContactsTab.test.tsx` の2本（canMerge が false なら行のボタンが無い・true ならある）が緑 |
-| K20 まとめたあと窓が閉じて残した側の画面に移る | `ContactEditPageMerge.test.tsx` のまとめる1本（`POST /contacts/53/merge` に `{loser_id: 52, reason: null}` を1回送る・窓が消える・場所が `/contacts/53/edit`）が緑 |
+| K18 会社の窓で状態が名前で出る | `frontend/src/components/MergeCompanyModal.test.tsx` が CI の画面の試験で緑。16-4 の grep が0件。デプロイ後、Chrome で会社の詳細→重複確認待ちの会社→まとめる窓で、状態の欄が「有効」等の名前（保存・まとめるはしない） |
+| K19 権限の無い人にはボタンを押させない | `frontend/src/pages/contacts/ContactEditPageMerge.test.tsx` の権限なしの1本（ボタンが押せず title が `companies.dedupMergeNoPermission`）と、`frontend/src/pages/company-detail/CompanyContactsTab.test.tsx` の2本（canMerge が false なら行のボタンが無い・true ならある）が緑 |
+| K20 まとめたあと窓が閉じて残した側の画面に移る | `frontend/src/pages/contacts/ContactEditPageMerge.test.tsx` のまとめる1本（`POST /contacts/53/merge` に `{loser_id: 52, reason: null}` を1回送る・窓が消える・場所が `/contacts/53/edit`）が緑 |
 | 既存が壊れない | 画面の試験全体・型の確かめ・ESLint・UI governance gate・i18n のキー数（変わらない）が CI で緑 |
 
 ### 16-6. 弊害・戻し方・GO
