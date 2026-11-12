@@ -250,7 +250,7 @@
 | [ADR-1072](./ADR-1072-guard-add-by-ai-record.md) | ADR-1072: AI が足した見張りを、マージ済み PR で記録できるようにする（ADR-1034 決定2の一部を改める） | Proposed | Amends ADR-1034 | — |
 | [ADR-1073](./ADR-1073-shime-box-all-states.md) | ADR-1073: 状態を書かない箱の〆は、箱の仲間の状態をまとめて完売にする（v102 規則12h） | Proposed | — | — |
 | [ADR-1074](./ADR-1074-editor-page-mold.md) | ADR-1074: 窓いっぱいの編集画面は金型 EditorPage 1 つで描く（Google の予定の編集画面の形・塗りの欄と丸い保存はこの金型の中だけ・予定の画面だけ Google の色） | Accepted | — | — |
-| [ADR-1075](./ADR-1075-schedule-recurrence.md) | ADR-1075: 予定の繰り返しは元の予定 1 行に決まり（RRULE）1 つで持ち、表示のときに広げる（回を作り置かない・例外は元を指す行） | Accepted | — | — |
+| [ADR-1075](./ADR-1075-schedule-recurrence.md) | ADR-1075: 予定の繰り返しは元の予定 1 行に決まり（RRULE）1 つで持ち、表示のときに広げる（回を作り置かない・例外は元を指す行） | Proposed | — | — |
 
 ## ステータス凡例
 
