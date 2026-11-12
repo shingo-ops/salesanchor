@@ -88,7 +88,7 @@
 
 ## 6. 前と同じか確かめる試し（R7）
 - **段0（作る前に測る・便0）**: 試しの頼み 20 件（請求書 8・予定 8・わからない 4）に正しい種類を付けた表を backend/app/assistant_regression/cases.json に置く（backend の image は ./backend だけを材料に作るため。`.github/workflows/build-images.yml:86`）。決まり無しで今の担当 AI に、20 件と「次からは〜」3 件を 3 回ずつ流す（69 回）。種類が合う数と 1 件の秒数を数え、docs/handoff/secretary-rulebook/baseline.md（便0で作る） に残す。
-- **合格の線は段0の数を見て PO が決める。決まるまで便2に進まない。**
+- **合格の線（PO 2026-11-12「1」・baseline.md §6）: 20 件すべての種類が合ったときだけ合格。合わない・読めない・測れなかったが 1 件でもあれば合格にしない。段0の今の秘書は 69/69 で合った。**
 - 流し方: 人が「前と同じか試す」を押したときだけ、backend が裏で 20 件を 1 件ずつ流す。
   - アプリ全体で試しは 1 本だけ。試しは DB 接続を 1 つ取って終わるまで持ち、2 つの数の鍵 `pg_try_advisory_lock(1077, 0)`（1 つ目の数は本件の ADR 番号） を取る（google_webhook の `(1059, 会社)` とぶつからない）。取れなければ「いま試し中です」と返す。finally で rollback の後に `pg_advisory_unlock(1077, 0)` を呼び、接続を閉じる（`backend/app/services/google_webhook.py:247-252` と同じ形）。接続の束へ返すときの後片付けは鍵を外さない（`backend/app/database.py:37-47`）ので、finally の unlock を必ず通す。
   - 試しの行（`secretary_rule_checks`）を書くときは、その会社の文脈を自分で付け、書いた後に戻す。始めるときに sdk・model・rules_count を入れる。
