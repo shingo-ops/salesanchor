@@ -3,7 +3,7 @@
 
 **親**: `docs/handoff/app-idle-tx/design.md`（K5 の残り）・`docs/handoff/replay-tx-release/design.md`（試しの道具の同じ型。§2 で本番の解析は別の設計で扱うとした）。**関連 ADR**: ADR-1037（移行の鍵待ち・反映前の点検）、ADR-1070（接続の返却時の後始末）、ADR-1032（復活止め）、ADR-1015（区分）。  
 **日付**: 2026-11-12。**担当**: Planner（Opus）。  
-**状態**: 設計案作成済み。自己審査（同一 AI）済み。PO 承認済み（2026-11-12「1」＝クラウドで設計を審査し、直す所を直してから実装に進む）。クラウドの設計審査 1 回目 REVISE（中 2・低 5）→ 全件を本文に反映。2 回目 REVISE（中 1・低 2）→ 全件を本文に反映（記録は `docs/handoff/analysis-tx-release/review-architect.md`）。3 回目の審査待ち。実装未着手。  
+**状態**: 設計案作成済み。自己審査（同一 AI）済み。PO 承認済み（2026-11-12「1」＝クラウドで設計を審査し、直す所を直してから実装に進む）。クラウドの設計審査 1 回目 REVISE（中 2・低 5）→ 全件を本文に反映。2 回目 REVISE（中 1・低 2）→ 全件を本文に反映（記録は `docs/handoff/analysis-tx-release/review-architect.md`）。3 回目 APPROVE。実装カード作成済み（`docs/handoff/analysis-tx-release/card.md`）。実装未着手。  
 **PO の選択**: 2026-11-12「1」（直し方の設計に進む。実装の前にもう一度確認）。  
 **根拠**: `docs/handoff/analysis-tx-release/recon.md`（以下 recon）。行番号は origin/main a3e93f053。
 
