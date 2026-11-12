@@ -98,7 +98,32 @@ class TestCalendarEventOwnership:
     @staticmethod
     def _db_with_event(created_by: int) -> AsyncMock:
         result = MagicMock()
-        result.first.return_value = (created_by, "shared", None, None, None)
+        from datetime import datetime, timedelta, timezone
+
+        from app.services import calendar_service as cal_svc
+
+        when = datetime(2026, 11, 12, 10, 0, tzinfo=timezone.utc)
+        values = {
+            "created_by_user_id": created_by,
+            "calendar_type": "shared",
+            "user_id": None,
+            "google_event_id": None,
+            "meet_url": None,
+            "id": 1,
+            "source": "app",
+            "recurrence_rule": None,
+            "recurring_event_id": None,
+            "original_start_datetime": None,
+            "start_datetime": when,
+            "end_datetime": when + timedelta(hours=1),
+            "is_all_day": False,
+            "is_cancelled": False,
+            "title": "予定",
+            "description": None,
+            "location": None,
+            "category": "meeting",
+        }
+        result.first.return_value = tuple(values[n] for n in cal_svc.EVENT_COLUMNS)
         db = AsyncMock()
         db.execute = AsyncMock(return_value=result)
         return db

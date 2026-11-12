@@ -184,6 +184,7 @@ _TENANT_LOOP_MIGRATIONS = {
     "20260621_020000_add_schedule_calendar_category_and_owner_settings.sql": 1,
     "20261103_200000_add_google_calendar_import_sync.sql": 1,
     "20261104_161223_add_calendar_events_meet_url.sql": 1,
+    "20261112_170000_add_calendar_events_recurrence.sql": 1,
     "20261005_150000_add_roles_system_key.sql": 1,
     "20261106_150000_add_discord_role_link_tables.sql": 1,
     "20261112_160000_create_tenant_issuer_and_payment_tables.sql": 1,
