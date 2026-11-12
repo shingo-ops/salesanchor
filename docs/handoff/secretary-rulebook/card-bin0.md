@@ -35,7 +35,7 @@
    - (1b) `cd <main> && git branch --list release/secretary-rulebook-bin0`。空であること。空でなければ消さずに BLOCKED:（`git checkout -B` は使わない）。
    - (1c) `cd <main> && bash scripts/new-worktree.sh release/secretary-rulebook-bin0`。`--claude` は付けない（scripts/new-worktree.sh:164-168）。出力はパイプに通さない。
    - (1d) `cd <main> && git worktree list`。`$HOME/worktrees/salesanchor/release-secretary-rulebook-bin0` が出ること。出なければ BLOCKED:。以後の `<repo>` はこの絶対パス。
-   - (1e) `cd <repo> && git merge --ff-only origin/release/secretary-rulebook-bin0`。続けて `cd <repo> && git rev-parse HEAD origin/release/secretary-rulebook-bin0` の 2 行が同じであること。ff-only が失敗したら BLOCKED:。
+   - (1e) `cd <repo> && git merge --no-edit origin/release/secretary-rulebook-bin0`（作業場所は今の origin/main 起点で、この枝は前の main 起点のため、ff ではなく合わせの commit になってよい。2026-11-12 13:30 の 3 回目は ff-only で止まった）。続けて `cd <repo> && git merge-base --is-ancestor origin/release/secretary-rulebook-bin0 HEAD; echo rc=$?` が `rc=0` であること。merge が衝突したら `git merge --abort` をして BLOCKED:。
    - (1f) `cd <repo> && ./scripts/dev/executor-preflight.sh`。生出力を報告に貼る。クラウドでは [1/3] network と [2/3] gh auth の FAIL は起こるものとして先へ進む。[3/3] と [4/4] が OK でなければ BLOCKED:。台帳の札は作らない（台本が作った .claude-pipeline/active-work.d/ の未追跡ファイルは commit しない）。
    - 以後のやること 2〜7 はすべて `<repo>` の中で行う。
 2. 表 `backend/app/assistant_regression/cases.json` を作る。中身は下の「試しの頼みの表」を 1 文字も変えずに使う（UTF-8・末尾改行 1 つ・字下げ 2 空白）。同じフォルダに空の `__init__.py` は作らない（読み物で、import しない）。
