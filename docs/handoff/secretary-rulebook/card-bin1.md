@@ -60,7 +60,7 @@
 
 ## 2 回目の直し（2026-11-13・既にあるブランチで行う。上のやること 1〜9 はやり直さない）
 
-ブランチ `release/secretary-rulebook-bin1` は既に push 済み（1 回目の commit 73c36e352）。新しく作らず、その上に commit を 1 つ足す。強制 push・rebase・commit の書き換えはしない。
+クラウドで行う（Mac には同じ名前の作業場所が既にあるので (R1) は止まる）。ブランチ `release/secretary-rulebook-bin1` は既に push 済み（1 回目の commit 73c36e352）。新しく作らず、その上に commit を 1 つ足す。強制 push・rebase・commit の書き換えはしない。
 
 - (R1) `cd <main> && git fetch origin release/secretary-rulebook-bin1:release/secretary-rulebook-bin1`。続けて `cd <main> && git worktree add $HOME/worktrees/salesanchor/release-secretary-rulebook-bin1 release/secretary-rulebook-bin1`。以後の `<repo>` はこの絶対パス。`cd <repo> && git log --oneline -1` が `73c36e352` で始まること。違えば BLOCKED:。
 - (R2) `cd <repo> && ./scripts/dev/executor-preflight.sh`。扱いはやること (1e) と同じ。
@@ -71,7 +71,7 @@
   - `cd <repo> && grep -rn "20261113_100000_create_secretary_rules_down" migrations scripts backend .github` が 0 件。
   - `cd <repo> && git diff --stat HEAD` が 3 ファイル（戻しの名前の変更・本体の migration 1 行・`scripts/run_all_migrations.sh` 1 行）。
   - `cd <repo> && sha256sum migrations/20261024_100300_create_ai_cloud_views.sql` が `472bfcd14f935118dadadb351601de91944964b031842ba9eee5f3d4d99fa6a6`（分類のファイルは触らないので変わらない）。違えば BLOCKED:。
-- (R7) commit（1 つ。`git add` は 4 つのパスを名前で指定: 新しい戻しのファイル・消えた古い戻しのファイル・本体の migration・`scripts/run_all_migrations.sh`）。題は `fix(db): 戻しのファイルの刻印を本体と分ける（ADR-1077 便1）`。末尾に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`。`git log --oneline -2` を報告に貼る。
+- (R7) commit（1 つ）。`cd <repo> && git add migrations/20261113_100001_create_secretary_rules_down.sql migrations/20261113_100000_create_secretary_rules.sql scripts/run_all_migrations.sh`（この 3 つだけ。古い戻しの名前は渡さない: (R3) の git mv で消す分はもう commit 待ちに入っており、渡すと `fatal: pathspec … did not match any files` で add 全体が止まる）。commit の前に `cd <repo> && git status --short` を報告に貼る。`R  migrations/20261113_100000_create_secretary_rules_down.sql -> migrations/20261113_100001_create_secretary_rules_down.sql` と、`M  migrations/20261113_100000_create_secretary_rules.sql`・`M  scripts/run_all_migrations.sh` の 3 行だけであること。違えば commit せずに BLOCKED:。題は `fix(db): 戻しのファイルの刻印を本体と分ける（ADR-1077 便1）`。末尾に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`。`git log --oneline -2` を報告に貼る。
 - (R8) 提出前: `cd <repo> && bash scripts/dev/check-before-submit.sh`。扱いはやること 9 と同じ。通ったら `cd <repo> && git push origin release/secretary-rulebook-bin1`（強制を付けない）。
 - 終わりの報告は下の「終わりの報告」と同じ形（(1f)・やること 4 と 5 の出力の代わりに (R1)・(R6) の生出力）。
 
