@@ -53,7 +53,7 @@
 - 関係する設計: `docs/handoff/v102-shime-same-post-stock/design.md`（規則13）、`docs/handoff/v102-prompt-fdm/design.md`（指示書の切り替えの前例）。
 
 ## 7. 数えた結果（読み取り鍵、2026-11-12）
-生出力と仕分けは社外秘の作業記録 shime-auto-check/bundle-design/（k0_cand.txt・k2_cand.txt・k2_labels.md）。件数の生出力は手元の /tmp/CC報告ファイル/shime-bundle/k0_count.txt・k2_count.txt。
+生出力と仕分けは社外秘の作業記録 shime-auto-check/bundle-design/（k0_cand.txt・k2_cand.txt・k2_labels.md）。件数の生出力も同じ社外秘の作業記録に写した（k0_count.txt・k2_count.txt）。
 - 母数: `extraction_jobs` で `prompt_version LIKE 'v102:%'` かつ `created_at >= now() - interval '30 days'` のジョブ 2738 件（AUDIT ts=2026-11-12T11:25:29Z）。
 - K0（価格 none の件どうしの重なり）:
   - 問い合わせ: 同じジョブの extraction_items の2件で、`raw_price` が none（NULL・空も含む）どうし、かつ `source_lines` が重なる（`&&`）組を数える。
