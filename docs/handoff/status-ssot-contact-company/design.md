@@ -360,7 +360,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 |---|---|
 | K16 037 は外部キーのある領域で何もしない | 15-4 の試験が CI（PostgreSQL の試験）で緑。ガードの行を消すと落ちることを、実装役がクラウドで1回確かめて報告に書く（消したまま commit しない） |
 | K17 外部キーの無い空の DB では今までと同じ | PR の Migration SQL Test（変更 SQL の1回目・2回目・全件ドライラン1周目・2周目）が緑 |
-| K13 後半（直し） | この便のデプロイの記録で `/usr/bin/grep -a -c "CHECK 制約に pending_dedup_review を追加"` が0、`/usr/bin/grep -a -c "外部キーに付け替えた"` が0、037 の完了の行が「新規追加 0 テナント、…外部キー済 5 テナント」 |
+| K13 後半（直し） | この便のデプロイの記録で `/usr/bin/grep -a -c "CHECK 制約に pending_dedup_review を追加"` が0、`/usr/bin/grep -a -c "外部キーに付け替えた"` が0、037 の完了の行で「新規追加 0 テナント」、かつ「外部キー済」の数が contacts のある領域の数と同じ（今の本番は5。領域が増えたらその数） |
 | K2 変わらない | 読み取りの鍵で、5領域の companies・contacts に `*_status_fkey` 10本（convalidated）・status の CHECK 0本 |
 
 ### 15-6. 弊害・戻し方・GO
@@ -369,4 +369,4 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
 - 戻し方: この便の commit を戻す PR（037 の動きが元に戻るだけ。DB の形は変わらない）。
 - GO: migrations を含むので危険 PR（ADR-136）。委任の GO（ADR-1003）で Opus が出す。DB の形は変えない（この便のデプロイで流れても ALTER は0のはず）が、デプロイ前の自動バックアップを確かめて GO 記録に書く。
 - 外部事例: 使わない。理由: 当社の移行の流し方（毎回全件）と当社の記録で原因が決まり、効果は K13 の記録の行数で直接測れる。§12 の GitLab・GoCardless は「鍵を取る移行は短く・少なく」の根拠として引き続き当てはまる。
-- 審査: 未（クラウドの Opus で行う）。
+- 審査: 1回目（2026-11-12 14:17 JST・クラウド Opus・a886aa22b）**APPROVE**（必須0件）。ガードの名前が便2 と tenant.py の外部キーの名前と合う・CI の tenant_001 は contacts が無く動きが変わらない・確認8 に当たらない・試験はガードを消すと落ちる・037 の行番号は実物と合う・companies を含めほかの往復は無い、を確認。推奨2件を反映: K13 後半の「外部キー済」を領域の数で書く／カード手順4 の diff に台帳の札も出ると書く。

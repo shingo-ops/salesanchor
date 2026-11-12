@@ -100,7 +100,7 @@
                assert await _status_check_count(admin_engine) == 0
    ```
 4. 確かめ（クラウドで・生出力を報告に貼る）:
-   - `git diff --stat origin/main...HEAD` が、このカード・design.md と上の2ファイルだけ。
+   - `git diff --stat origin/main...HEAD` が、このカード・design.md・台帳の札 `.claude-pipeline/active-work.d/release-status-ssot-m037-skip.md` と上の2ファイルだけ（合わせて5ファイル）。
    - `python3 scripts/check-migration-value-writes.py repo` の終了コードと末尾。
    - `python3 -m py_compile backend/tests/test_customer_statuses_pg.py` が0。
    - PostgreSQL が使えるなら（`RLS_ADMIN_DATABASE_URL` と `RLS_TEST_DATABASE_URL` がある）`cd backend && python -m pytest tests/test_customer_statuses_pg.py -q` を流す。さらに 2(c) の IF ブロックを一時的に消して同じ試験が落ちることを確かめ、元に戻す（消したまま commit しない）。PostgreSQL が無ければ「skip・CI で確かめる」と書く。
