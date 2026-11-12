@@ -343,7 +343,7 @@ CREATE TABLE IF NOT EXISTS public.customer_statuses (
   - 表の名前 customer_statuses を足す行に書かない（`scripts/migration-guard/protected-tables.txt` に載っているため、`scripts/check-migration-value-writes.py` の確認8 が足した行に表の名前を見ると止める。§14 3回目 M1 と同じ理由）。名前と contype で見分ける。
 - 採らない案:
   - 便2 の migration 側で CHECK を見逃す: 037 は毎回 CHECK を足すので、contacts の鍵は1回は取る。目的に届かない。
-  - 037 を run_all_migrations.sh から外す: 空の DB から作る道（CI の全件ドライラン）で、029 の3つの値の CHECK のまま便2 まで進む。便2 で外れるので結果は同じだが、登録の一覧を変えるのは影響が広い（全件ドライランと登録先の点検 `migration-test.yml:56`）。ガード1つの方が小さい。
+  - 037 を run_all_migrations.sh から外す: 空の DB から作る道（CI の全件ドライラン）で、029 の3つの値の CHECK のまま便2 まで進む。便2 で外れるので結果は同じだが、登録の一覧を変えるのは影響が広い（全件ドライランと登録先の点検 `.github/workflows/migration-test.yml:56`）。ガード1つの方が小さい。
   - 新しい migration で 037 の後始末をする: 037 が足す → 新しいものが外す、の往復が残る。
 - 便2 の migration は変えない（037 が足さなければ `:41-46` で飛ぶ）。
 
