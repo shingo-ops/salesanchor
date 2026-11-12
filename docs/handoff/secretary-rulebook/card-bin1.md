@@ -25,6 +25,7 @@
 | アプリの役割に付けるのは SELECT・INSERT・UPDATE だけ（DELETE は付けない） | 決まりは消さず status を変える（設計 §4 の status）。試しの行も消さない（「やり直しても前の数が消えない」設計 §4）。付け方の形は `migrations/20261112_150000_create_viewer_contract_public_tables.sql:259-269` |
 | 会社の行は `public.tenants(id) ON DELETE RESTRICT`、人は `public.users(id)`（作った人は NOT NULL・決めた人は NULL 可）。どちらの人の列も `ON DELETE SET NULL` にはせず、作った人は RESTRICT、決めた人は SET NULL | 会社を消すと決まりが黙って消える形を避ける（先例 `migrations/20261112_150000_create_viewer_contract_public_tables.sql:25`）。人の列の先例は `migrations/20261107_120000_create_staff_join_invites.sql:17`（NOT NULL・指定なし＝RESTRICT 相当）と `migrations/20261103_120000_create_ai_job_assignments.sql:54`（NULL 可・SET NULL） |
 | 試しの表の sdk・model は値の一覧の CHECK を付けず、長さだけ決める | 一覧は `backend/app/services/llm_budget.py:173`（USAGE_SDKS）と `llm_usage_events_sdk_check` にある。3 か所目の写しを作らない（設計の「データを 1 か所」）。model の先例: `public.ai_job_choices.model` も一覧の決まりが無い（`migrations/20261024_100300_create_ai_cloud_views.sql` の分類行「値の決まりが無く自由に入る列」） |
+| 2 表の全部の列（25 列）と表に日本語の説明（COMMENT）を付ける | `backend/AGENTS.md:66`「新テーブル作成時は全カラムに `COMMENT ON COLUMN`」。先例 `migrations/20261107_120000_create_staff_join_invites.sql`（16 個） |
 | 決まりの文の制御文字は DB で断らない | 設計 §3「大きさ」で backend が断る（便2）。決まりを 2 か所に書かない |
 | 相談係の読み取り用の分類（`migrations/20261024_100300_create_ai_cloud_views.sql`）に 2 表の 8 列を足す | 足さないと分類の漏れになる（`backend/tests/ops/test_ai_cloud_views.py:492-498` の判定）。先例: 契約の表は分類を別便（ADR-1061 便2-2b・commit 108da716a）にしたが、本件は 8 列なので同じ便に入れる |
 | 戻しの SQL は別ファイル `_down.sql` にし、`scripts/run_all_migrations.sh` には「手動実行のみ」の注記の行で載せる（run_sql にしない） | 先例 `scripts/run_all_migrations.sh:555`。MIGRATION GUARD は「ファイル名が run_all_migrations.sh に書かれているか」だけを見る（`.github/workflows/migration-guard.yml:133-136`） |
@@ -48,7 +49,7 @@
    ```
    （空行は足さない。足した後に `tail -4 scripts/run_all_migrations.sh` の生出力を報告に貼る。）
 5. `migrations/20261024_100300_create_ai_cloud_views.sql` の分類の行に、下の「分類に足す行」の 5 行（8 列）を、表の名前の ABC 順に合う位置へ足す（`secretary_` で始まる表の位置。前後の行の表名を報告に書く）。同じファイルの 3 行目の「下の 1109 行」を、足した後の列の数に直す（今 1109 に 8 を足して 1117 になるはず）。`backend/tests/ops/test_ai_cloud_views.py:486` の `1109` も同じ数に直す。足す前に `grep -n "1109" migrations/20261024_100300_create_ai_cloud_views.sql backend/tests/ops/test_ai_cloud_views.py` を流し、1109 がこの 2 か所だけであることを報告に貼る。違えば BLOCKED:。
-6. `backend/tests/ops/test_ai_cloud_views.py` の最後の T10 の試験（`test_t10_viewer_contract_columns_are_classified_on_bootstrapped_db`・今 762 行目から）の後ろに、同じ形の試験を 1 つ足す。題は `test_t10_secretary_rules_columns_are_classified_on_bootstrapped_db`。違いは: 流す migration は `_read(_SECRETARY_RULES_SQL)` を 2 回（冪等）、表の集合は `{"secretary_rules", "secretary_rule_checks"}`、行があるべき列は下の「分類に足す行」の 8 列。`_VIEWER_ACCOUNTS_SQL` は流さない。新しい migration は `public.llm_usage_events` を直すので、その前に `_read("20260930_150000_create_llm_usage_events.sql")` を流す（表が無いと DO の中で落ちる）。ファイル上の定数は `_SECRETARY_RULES_SQL = "20261113_100000_create_secretary_rules.sql"` を 1 行足す。
+6. `backend/tests/ops/test_ai_cloud_views.py` の最後の T10 の試験（`test_t10_viewer_contract_columns_are_classified_on_bootstrapped_db`・今 762 行目から）の後ろに、同じ形の試験を 1 つ足す。題は `test_t10_secretary_rules_columns_are_classified_on_bootstrapped_db`。違いは: 流す migration は `_read(_SECRETARY_RULES_SQL)` を 2 回（冪等）、表の集合は `{"secretary_rules", "secretary_rule_checks"}`、行があるべき列は下の「分類に足す行」の 8 列。`_VIEWER_ACCOUNTS_SQL` は流さない。新しい migration は `public.llm_usage_events` を直すので、流す順は AI 担当の T10（`backend/tests/ops/test_ai_cloud_views.py:703-724`）と同じにする: bootstrap → `_read(_PIPELINE_PUBLIC_SQL)` → `_read(_LLM_USAGE_SQL)` → 新しい migration 2 回 → `_read(_CREATE_SQL)`。`_PIPELINE_PUBLIC_SQL` を抜くと、使用の記録の表が参照する `public.extraction_attempts` が無くて落ちる（`migrations/20260930_150000_create_llm_usage_events.sql:40`）。どちらの定数もファイルに既にあるので足さない。ファイル上の定数は `_SECRETARY_RULES_SQL = "20261113_100000_create_secretary_rules.sql"` を 1 行足す。
 7. 試験ファイル `backend/tests/test_secretary_rules_tables_pg.py` を新しく作る。決まりは下の「試験の決まり」。
 8. commit（1 つ。`git add` は 6 ファイルを名前で指定する: 2・3 の 2 つ・`scripts/run_all_migrations.sh`・`migrations/20261024_100300_create_ai_cloud_views.sql`・`backend/tests/ops/test_ai_cloud_views.py`・`backend/tests/test_secretary_rules_tables_pg.py`。題は `feat(db): 秘書の決まり帳の表2つと使いみちsecretary_regressionを足す（ADR-1077 便1・作るだけ）`。末尾に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`）。`git log --oneline -1` を報告に貼る。
 9. 提出前: `cd <repo> && bash scripts/dev/check-before-submit.sh`。生の結果をファイルに残し、パスと最後の 5 行を報告する。通ったら `cd <repo> && git push origin release/secretary-rulebook-bin1`。
@@ -113,6 +114,35 @@ CREATE TABLE IF NOT EXISTS public.secretary_rule_checks (
 );
 CREATE INDEX IF NOT EXISTS ix_secretary_rule_checks_tenant_started
     ON public.secretary_rule_checks (tenant_id, started_at DESC);
+
+-- 列の説明（backend/AGENTS.md「書き方の決まり」: 新しい表は全部の列に COMMENT ON COLUMN）
+COMMENT ON TABLE public.secretary_rules IS '秘書の決まり帳。会社ごとの決まりと候補をこの 1 表だけに持つ（ADR-1077）';
+COMMENT ON COLUMN public.secretary_rules.id IS '番号';
+COMMENT ON COLUMN public.secretary_rules.tenant_id IS '会社の番号（public.tenants.id）';
+COMMENT ON COLUMN public.secretary_rules.status IS '状態: candidate=候補・approved=使う・rejected=捨てた・removed=外した';
+COMMENT ON COLUMN public.secretary_rules.rule_text IS '決まりの文（150 字まで。approved のときは空白以外が 1 字以上）';
+COMMENT ON COLUMN public.secretary_rules.source_text IS '元になった利用者の文 1 つ（1000 字まで）';
+COMMENT ON COLUMN public.secretary_rules.source_kind IS '元になった秘書の答えの種類（invoice・event・unknown・rule_proposal・rule_list）';
+COMMENT ON COLUMN public.secretary_rules.source_reply IS '元になった秘書の答えの文（200 字まで）';
+COMMENT ON COLUMN public.secretary_rules.created_by IS '作った人（public.users.id）';
+COMMENT ON COLUMN public.secretary_rules.decided_by IS '使う・捨てる・外すを決めた人（public.users.id）。人が消えたら空になる';
+COMMENT ON COLUMN public.secretary_rules.created_at IS '作った時刻';
+COMMENT ON COLUMN public.secretary_rules.decided_at IS '決めた時刻。候補のあいだは空';
+COMMENT ON TABLE public.secretary_rule_checks IS '前と同じに読めるか確かめる試しの結果。1 回の試しごとに 1 行（ADR-1077）';
+COMMENT ON COLUMN public.secretary_rule_checks.id IS '番号';
+COMMENT ON COLUMN public.secretary_rule_checks.tenant_id IS '会社の番号（public.tenants.id）';
+COMMENT ON COLUMN public.secretary_rule_checks.started_by IS '試しを始めた人（public.users.id）。人が消えたら空になる';
+COMMENT ON COLUMN public.secretary_rule_checks.sdk IS '試しに使った AI の道具の名前（値の一覧は backend/app/services/llm_budget.py の USAGE_SDKS が正本）';
+COMMENT ON COLUMN public.secretary_rule_checks.model IS '試しに使った AI のモデルの名前';
+COMMENT ON COLUMN public.secretary_rule_checks.rules_count IS '試しのときに付けていた決まりの数';
+COMMENT ON COLUMN public.secretary_rule_checks.status IS '状態: running=実行中・done=終わった・failed=途中で失敗';
+COMMENT ON COLUMN public.secretary_rule_checks.ok IS '種類が合った件数';
+COMMENT ON COLUMN public.secretary_rule_checks.ng IS '種類が合わなかった件数';
+COMMENT ON COLUMN public.secretary_rule_checks.unmeasured IS '測れなかった件数（混み合い・時間切れでやり直しても取れなかった）';
+COMMENT ON COLUMN public.secretary_rule_checks.total IS '試しの件数';
+COMMENT ON COLUMN public.secretary_rule_checks.started_at IS '始めた時刻';
+COMMENT ON COLUMN public.secretary_rule_checks.progress_at IS '最後に進んだ時刻（止まっていないかを見る）';
+COMMENT ON COLUMN public.secretary_rule_checks.finished_at IS '終わった時刻。実行中のあいだは空';
 
 ALTER TABLE public.secretary_rules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.secretary_rules FORCE ROW LEVEL SECURITY;
@@ -189,7 +219,7 @@ COMMIT;
 ## 試験の決まり（`backend/tests/test_secretary_rules_tables_pg.py`）
 
 - 先例の形をそのまま使う: `backend/tests/test_viewer_contract_public_tables_pg.py` の `needs_ci_pg`（:27-30）・`_app_conn_and_url`（:82-88）・`pg` fixture の import（:23-24）。表の定義を試験に写さない（`scripts/check_test_schema_dup.py`）。表は本物の migration を流して作る。
-- 下ごしらえ（管理者の接続）: `tests.rls_bootstrap._ensure_public_users` を `test_super_admin_viewers.py:175-184` と同じ形で流し、`20260930_150000_create_llm_usage_events.sql` を流し、新しい migration を 2 回流す（冪等）。会社は 999（`_ensure_public_users` が入れる）に加えて 998 を管理者で入れ、利用者を各社 1 人ずつ管理者で入れる。名前やメールは作り物。
+- 下ごしらえ（管理者の接続）: `pg` fixture が試験ごとに使い捨ての DB を作り、`public.tenants`・`public.users`（`_ensure_public_users`）・`public.llm_usage_events`（今の 7 値の CHECK）まで用意し、試験の後に DB ごと消す（`backend/tests/test_tcg_work_matching_integration.py:385-432`・`:338`）。だから試験では新しい migration を 2 回流す（冪等）だけにし、`_ensure_public_users` や使用の記録の migration を流し直さない。後片付けの DELETE も書かない（DB ごと消える）。会社は 999（`_ensure_public_users` が入れる）に加えて 998 を管理者で入れ、利用者を各社 1 人ずつ管理者で入れる。名前やメールは作り物。
 - 試験（すべて `@needs_ci_pg`）:
   1. `test_tables_and_columns_match_design`: 2 表の列の名前の集合が、design.md §4 の一覧（secretary_rules 11 列・secretary_rule_checks 14 列）と同じ（R9）。`information_schema.columns` で読む。
   2. `test_rls_four_cells`: アプリの役割（`rolsuper`・`rolbypassrls` が両方 False であることを先に確かめる）で、`SET app.tenant_id = '999'` のとき 999 の行だけが見え、998 の行は見えない・998 の行の UPDATE は 0 行・998 の会社番号での INSERT は 42501。承認済みと候補の 2 状態 × 2 社の 4 マスを管理者で入れておき、見える数が 2 であることを確かめる（R5）。`secretary_rule_checks` も 1 社 1 行ずつで同じことを確かめる。
