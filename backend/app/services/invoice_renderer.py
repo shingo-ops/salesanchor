@@ -150,6 +150,8 @@ class InvoiceRenderData:
     tenant_phone: Optional[str] = None
     tenant_email: Optional[str] = None
     tenant_website: Optional[str] = None
+    # ADR-1061 便2-2c2a: 適格請求書の登録番号（請求書だけに載せる。見積書では渡さない）
+    tenant_registration_number: Optional[str] = None
     # ADR-101改訂(2): PayPal 請求書の写し注記（{"pp_invoice_number", "original_url"}）。
     # 指定時はフッターに「写し」帯＋原本リンク＋QR を描画する。
     paypal_copy: Optional[dict] = None
@@ -260,6 +262,10 @@ def _render_doc_pdf(data: InvoiceRenderData) -> bytes:
     if data.tenant_website:
         c.setFont(font, 8)
         c.drawString(20 * mm, y, f"Web: {data.tenant_website}")
+        y -= 4 * mm
+    if data.tenant_registration_number:
+        c.setFont(font, 8)
+        c.drawString(20 * mm, y, f"Registration No.: {data.tenant_registration_number}")
         y -= 4 * mm
 
     # ── 2. タイトル + 番号 + 発行日 ────────────────────────────────────
@@ -511,6 +517,7 @@ def render_invoice_pdf(invoice_data: dict, tenant_profile: dict,
         tenant_phone=tenant_profile.get("phone"),
         tenant_email=tenant_profile.get("email"),
         tenant_website=tenant_profile.get("website"),
+        tenant_registration_number=tenant_profile.get("registration_number"),
         paypal_copy=paypal_copy,
     )
 

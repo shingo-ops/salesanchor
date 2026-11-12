@@ -1795,6 +1795,7 @@
     "editFromThisQuote": "この見積から作成（明細を編集）",
     "editingFromQuote": "見積 {{code}} から作成中（明細の数量・金額を編集できます）",
     "createBtn": "請求書を作成",
+    "openCompanyForBillTo": "取引先の画面を開く",
     "invoiceCode": "請求書コード",
     "dueDate": "支払期限",
     "allStatuses": "全ステータス",
@@ -6147,6 +6148,7 @@
     "rolePageKeysNotSavable": "ロール画面を開ける人は役割で決まるため、保存できませんでした。画面を開き直してから、もう一度保存してください。",
     "roleNotAssignable": "このロールを付けられるのは、オーナーとシステム管理者だけです。付けたいときはオーナーに頼んでください。",
     "mergeTargetArchived": "残す方の顧客は今の状態ではまとめられません。先に残す方の状態を変えてから、やり直してください。",
+    "billToCountry": "請求先の国が入っていないため、請求書を作れません。取引先の画面で、既定の請求先の住所と国を入れてください。",
     "notFound": "{{target}}が見つかりませんでした。画面を読み込み直してから、もう一度お試しください。",
     "notFoundUnknown": "お探しのものが見つかりませんでした。画面を読み込み直してから、もう一度お試しください。",
     "notFoundTarget": {
