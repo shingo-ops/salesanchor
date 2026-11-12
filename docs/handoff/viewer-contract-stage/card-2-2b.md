@@ -666,15 +666,15 @@ def test_frontend_source_has_no_prefecture_name():
   期待: 1行目は sha256sum と同じ 64 文字。2行目 4（列の数が変わっていない）。3行目 1。
 
 手順5 道具を入れる（本番と同じ Python 3.12 の venv を作業場所の外 ~/venv312 に作る。素の pip は見張り py312-guard が止めるので使わない）
-    python3.12 --version 2>&1 | tail -1
-    python3.12 -m venv ~/venv312 2>&1 | tail -3
-    ~/venv312/bin/python --version 2>&1 | tail -1
+    cd ~ && python3.12 --version 2>&1 | tail -1
+    cd ~ && python3.12 -m venv ~/venv312 2>&1 | tail -3
+    cd ~ && ~/venv312/bin/python --version 2>&1 | tail -1
     cd ~/sa/backend && ~/venv312/bin/pip install -q -r requirements.txt 2>&1 | tail -3
     cd ~/sa/backend && ~/venv312/bin/pip install -q -r requirements-dev.txt 2>&1 | tail -3
-    ~/venv312/bin/ruff --version | tail -1
-  python3.12 が無いときだけ、1行目と2行目の代わりに次を流す（それも失敗したら `BLOCKED: python3.12 なし`）:
-    uv venv --python 3.12 ~/venv312 2>&1 | tail -3
-    ~/venv312/bin/python -m ensurepip 2>&1 | tail -1
+    cd ~ && ~/venv312/bin/ruff --version | tail -1
+  手順5 の python3.12 が無いときだけ、1行目と2行目の代わりに次を流す（それも失敗したら `BLOCKED: python3.12 なし`）。
+    cd ~ && uv venv --python 3.12 ~/venv312 2>&1 | tail -3
+    cd ~ && ~/venv312/bin/python -m ensurepip 2>&1 | tail -1
 
 手順6 形と数
     cd ~/sa && ~/venv312/bin/ruff check backend/app/ops/readonly_query.py backend/tests/ops/test_ai_cloud_views.py backend/tests/ops/test_ai_ro_views.py backend/tests/ops/test_deny_column_regex_sync.py backend/tests/ops/test_ops_case_db.py backend/tests/seed_data.py backend/tests/test_viewer_contract_public_tables_pg.py backend/tests/test_prefectures_seed.py 2>&1 | tail -10
@@ -735,5 +735,65 @@ def test_frontend_source_has_no_prefecture_name():
 - ファイルの編集は Edit ツールで行う（新規の2ファイルだけ Write ツール）。ヒアドキュメントで書かない。
 - PR は作らない（Opus が作り、`scripts/dev/validate-pr-body.sh` で確かめる）。
 - フックや自動判定に止められたら、言い換えて再試行せず、止まった手順・最後のコマンド・理由の原文を報告して終える。
+
+## 7. 改訂1（2026-11-12 Opus。審査役の REQUEST_CHANGES H1・H2 への対処）
+
+この節は §1〜§6 を上書きしない。この節の作業だけを行う。§2 の変更は 108da716a で済んでいる。やり直さない。
+
+### 7-1. 事実（Opus が確かめた）
+- H1: CI の移行の試験は、変えた SQL を名前の順に素の DB で流す。最初の migrations/20261017_130100_create_ai_ro_views.sql:78 の `GRANT USAGE ON SCHEMA ai_ro TO ai_reader;` が `role "ai_reader" does not exist` で落ちた。ai_reader の役は migrations/20261017_130000_create_ai_reader_role.sql が作る（役が無ければ作り、あれば属性を確かめるだけ。何度流しても同じ結果）。.github/workflows/migration-test.yml には、この前提を先に流す手順が無い（同じ形の先例は「変更 SQL の前提の移行を先に実行（ai_cloud_meta・ai_reader_cloud）」の手順）。
+- H2: guard-authoring/evaluation の error は scripts/run-guard-evaluation.js:25 の `git merge-base --is-ancestor base head` の失敗による。PR の宛先の main（730ed6a3a）が枝の HEAD（108da716a）の祖先でない（Opus の手元で exit=1 を確認）。main 側の先行2コミットは台帳だけ（#5445）。枝に origin/main を取り込めば直る。.github/workflows/migration-test.yml は scripts/check-guard-evaluations.js の管理対象ではない（評価の JSON は要らない）。
+
+### 7-2. 触るファイル（改訂1）
+- .github/workflows/migration-test.yml（手順を1つ足すだけ。消す行は無い）
+- 取り込みのコミット（origin/main の取り込み。中身の変更はしない）
+
+### 7-3. 変更
+変更前（この行は1か所だけ。行番号は origin/main 730ed6a3a で 1330）:
+
+          - name: 変更 SQL の前提の移行を先に実行（ai_cloud_meta・ai_reader_cloud）
+
+この行の直前に、次の10行（最後は空行）を足す。字下げは今ある `- name:` の行と同じ6文字の空白:
+
+          - name: 変更 SQL の前提の移行を先に実行（ai_reader）
+            if: steps.detect.outputs.has_sql_changes == 'true' && contains(steps.detect.outputs.changed_sql, 'migrations/20261017_130100_create_ai_ro_views.sql')
+            run: |
+              # 20261017_130100 は 130000（ai_reader の役）が先に流れている前提（本番は役が先に在る）
+              for sqlfile in migrations/20261017_130000_create_ai_reader_role.sql; do
+                echo "▶ $sqlfile を前提として実行中..."
+                psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
+                echo "✅ $sqlfile 成功"
+              done
+
+（上の表示は本文の字下げとして全体に4文字の空白が付いている。ファイルに入れるときは各行の先頭4文字を除く。つまり `- name:` は6文字、`if:` と `run: |` は8文字、`#` と `for` と `done` は10文字、`echo` と `psql` は12文字の空白で始まる。）
+
+### 7-4. 手順（改訂1）
+手順R1 枝を取り、main を取り込む
+    cd ~ && git clone https://github.com/shingo-ops/salesanchor.git sa && cd sa && git checkout release/viewer-contract-bin2-2b && git log --oneline -1 | tail -1
+    cd ~/sa && git config user.name "shingo-cc" && git config user.email "shingo-cc@users.noreply.github.com" && git merge --no-edit origin/main 2>&1 | tail -3
+    cd ~/sa && git merge-base --is-ancestor origin/main HEAD; echo "is-ancestor exit=$?"
+    cd ~/sa && git diff --name-only HEAD~1 HEAD | tail -10
+  期待: 2行目は衝突なし。3行目 `is-ancestor exit=0`。4行目は台帳（.claude-pipeline/ の下）だけ。衝突したら `git merge --abort` して `BLOCKED: merge`。
+
+手順R2 変更前の行を確かめる
+    cd ~/sa && grep -n "変更 SQL の前提の移行を先に実行（ai_cloud_meta・ai_reader_cloud）" .github/workflows/migration-test.yml | tail -3
+    cd ~/sa && grep -c "20261017_130000_create_ai_reader_role" .github/workflows/migration-test.yml
+  期待: 1行目は1件。2行目 0。外れたら `BLOCKED: R2`。
+
+手順R3 7-3 の変更を Edit ツールで行い、確かめる
+    cd ~/sa && grep -n -A9 "変更 SQL の前提の移行を先に実行（ai_reader）" .github/workflows/migration-test.yml | tail -12
+    cd ~/sa && ~/venv312/bin/python -c "import yaml,sys; yaml.safe_load(open('.github/workflows/migration-test.yml')); print('yaml ok')" 2>&1 | tail -1
+    cd ~/sa && git diff --stat | tail -3
+  期待: 1行目は 7-3 の10行と同じ並び（足した手順の次に ai_cloud_meta の手順が来る）。2行目 `yaml ok`（~/venv312 が無いときは §3 手順5 の1〜3行目で作り `pip install -q pyyaml` を足す）。3行目は `.github/workflows/migration-test.yml | 10 +` の1ファイルだけ。
+
+手順R4 記録と送り出し
+    cd ~/sa && git add .github/workflows/migration-test.yml && git status --short | tail -5
+    cd ~/sa && git commit -q -m "ci(migration-test): create ai_reader role before running changed 20261017_130100 (ADR-1061 bin2-2b)" && git log --oneline -3 | tail -3
+    cd ~/sa && git push origin release/viewer-contract-bin2-2b 2>&1 | tail -3
+    cd ~/sa && git log --oneline origin/release/viewer-contract-bin2-2b -3 | tail -3
+  status に migration-test.yml 以外が出たら commit せずに `BLOCKED: 範囲外のファイル`。push が拒まれたら force せずに `BLOCKED: push`。
+
+### 7-5. 報告
+1行目 `RECEIVED viewer-contract-bin2-2b-r1 HEAD=`（手順R1 の後の `git rev-parse HEAD` の40桁）。手順R1〜R4 の出力を tail の範囲でそのまま貼る。停止したときは「停止した手順番号／最後に実行したコマンド／停止した理由」の3点。最後の行は `DONE` か `BLOCKED: 理由`。§6 の定型（sleep しない・PR を作らない・止められたら言い換えない）はこの改訂にも効く。
 
 END OF CARD
