@@ -250,6 +250,16 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
         "文字として読むだけ",
         frozenset({"20261108_100000_rebuild_company_stats_on_meta_messages.sql"}),
     ),
+    "test_customer_statuses_pg.py": (
+        "own_database",
+        "",
+        frozenset(
+            {
+                "037_add_pending_dedup_review_to_contacts_check.sql",
+                "20261112_140000_customer_status_fk.sql",
+            }
+        ),
+    ),
 }
 
 # 同じファイルに2種類の扱いがあるもの（消した表の照合は文字だけ）

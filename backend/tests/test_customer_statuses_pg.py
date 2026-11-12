@@ -273,10 +273,10 @@ async def _status_check_count(admin_engine) -> int:
                     "SELECT count(*) FROM pg_constraint con "
                     "JOIN pg_class cls ON cls.oid = con.conrelid "
                     "JOIN pg_namespace nsp ON nsp.oid = cls.relnamespace "
+                    "JOIN pg_attribute att ON att.attrelid = con.conrelid "
+                    "AND att.attnum = ANY(con.conkey) "
                     "WHERE nsp.nspname = :s AND cls.relname IN ('companies', 'contacts') "
-                    "AND con.contype = 'c' "
-                    "AND pg_get_constraintdef(con.oid) ILIKE '%status%' "
-                    "AND pg_get_constraintdef(con.oid) NOT ILIKE '%trust_level%'"
+                    "AND con.contype = 'c' AND att.attname = 'status'"
                 ),
                 {"s": _SCHEMA},
             )
