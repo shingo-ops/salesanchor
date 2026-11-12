@@ -1,7 +1,7 @@
 # 実装カード 便0: 秘書の今の当たり具合を測る道具を置く（試しの頼み 23 件の表と、流す台本）
 
 - 設計: [design.md](design.md) §6 段0・§12 便0（審査 9 回目 APPROVE・origin/main e2a2ce2）。目標: [kgi.md](kgi.md) R7。調査: [recon.md](recon.md)。
-- PO の実装承認: 2026-11-12 12:4x の返事「1」（選択肢 1「この手順書で作って、今日の15時から流す」）。本番で流すのは Opus（同日 15:00 JST から約 1 時間）。
+- PO の実装承認: 2026-11-12 13:18 ごろの返事「1」（選択肢 1「この手順書で作って、今日の15時から流す」）。本番で流すのは Opus（同日 15:00 JST から約 1 時間）。
 - ブランチ: `release/secretary-rulebook-bin0`（origin/main 6b086f13c から作成済み）。PR は作らない（Opus が作る）。
 - 試験は Mac で流さない。行番号は origin/main 6b086f13c。
 - この便では動く部分（backend/app の .py・frontend・migrations・workflows・secretary-* の容器）は変えない。足すのは表 1 つと台本 1 つだけ。
