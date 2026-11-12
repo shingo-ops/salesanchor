@@ -43,7 +43,6 @@
 7. `backend/app/services/calendar_service.py`: 予定 1 行の読み方・判定 `check_recurrence_request`・作る道の繰り返し・一覧の広げ方・直す 3 択・消す 3 択・取り込みの飛ばし・Google の本文
 8. `backend/app/routers/calendar.py`: 作る・直す・消すの受け口に繰り返しの値と 422
 9. 試験: 新しい `backend/tests/test_calendar_recurrence.py`、`backend/tests/test_calendar_service.py`・`backend/tests/test_calendar_owner_api.py`・`backend/tests/test_calendar_sync_tenant_reset_pg.py` への追加
-10. 台帳 `.claude-pipeline/active-work.d/release-schedule-recurrence-backend.md`（新しいファイル）
 
 入れない:
 - `frontend/` の全部（便15B）。i18n の文言ファイル
@@ -52,6 +51,7 @@
 - 失敗した行を後から送り直す仕組み（設計 §12.7 で作らないと決めた）
 - Google 側で直した回を取り込むこと（設計 §12.7 の範囲の外）
 - `.github/workflows/`・`deploy.yml`・secrets・本番
+- 台帳 `.claude-pipeline/active-work.d/release-schedule-recurrence-backend.md` の commit（作るが commit しない。クラウドの決まりで active-work.d は commit しない）
 
 ## 2. 前提の事実（origin/main 63709b0eb）
 
@@ -87,7 +87,6 @@
 | `backend/tests/test_calendar_recurrence.py` | 新規（§4-9） |
 | `backend/tests/test_calendar_service.py` | 追加・1 か所の直し（§4-9） |
 | `backend/tests/test_calendar_owner_api.py` | `_event_db` の直し・追加（§4-9） |
-| `.claude-pipeline/active-work.d/release-schedule-recurrence-backend.md` | 新規（§8） |
 
 ## 4. 変更前後
 
@@ -563,7 +562,7 @@ async def check_recurrence_request(
 - `RecurrenceValue = Literal["none", "daily", "weekly", "monthly_nth", "monthly_last", "yearly", "weekdays"]` と `RecurrenceScope = Literal["this", "following", "all"]` を `MEET_NOT_ALLOWED_DETAIL` の近くに置く。
 - `CreateEventBody` に `recurrence: RecurrenceValue = "none"`。`UpdateEventBody` に `recurrence: Optional[RecurrenceValue] = None`・`scope: Optional[RecurrenceScope] = None`・`occurrence_start: Optional[str] = None`。
 - 作る（`:405`）: `calendar_type` の判定の直後・**Meet の判定（`:417-423`）より前**で `detail = cal_svc.check_create_recurrence(body.model_dump())`。None でなければ 422（繰り返しと `add_meet` が両方あるときは、つないでいるかに関係なく `recurrence_meet_not_allowed`）。
-- 直す（`:446`）: `payload` から `scope` と `occurrence_start` を取り出して（`pop`）残りを直す値とする。持ち主の確かめの 5 欄の SELECT を `cal_svc.read_event(db, event_id)` に置き換え、例外の行なら元の行を読み、持ち主・見せ方の 404・403 は**元の行の値**で今と同じに判定する（今の `record[0]`〜`record[4]` は辞書の名前で読む）。`pop` の後に直す値が空なら今と同じ 422 `no_fields_to_update`。今の `calendar_type` の判定（`:484-495`）は今のまま残し、その**直後・Meet の判定（`:497-513`）より前**で `check_recurrence_request` を呼び、None でなければ 422。だから元の行・例外の行への `add_meet` は、つないだ本人かや Google の id の有無に関係なく `recurrence_meet_not_allowed` になる（試験で `can_add_meet` を patch しなくてよい）。Meet の判定は今のまま後ろに残す。そのあと、単発の行で `recurrence` が無い（または none）なら今の `cal_svc.update_event`、それ以外は `cal_svc.update_recurring_event(...)` を同じ `try` の中で呼ぶ。
+- 直す（`:446`）: `payload` から `scope` と `occurrence_start` を取り出して（`pop`）残りを直す値とする。持ち主の確かめの 5 欄の SELECT を `cal_svc.read_event(db, event_id)` に置き換え、例外の行なら元の行を読み、持ち主・見せ方の 404・403 は**元の行の値**で今と同じに判定する（今の `record[0]`〜`record[4]` は辞書の名前で読む）。`pop` の後に直す値が空なら今と同じ 422 `no_fields_to_update`。今の `calendar_type` の判定（`:483-495`）は今のまま残し、その**直後・Meet の判定（`:497-513`）より前**で `check_recurrence_request` を呼び、None でなければ 422。だから元の行・例外の行への `add_meet` は、つないだ本人かや Google の id の有無に関係なく `recurrence_meet_not_allowed` になる（試験で `can_add_meet` を patch しなくてよい）。Meet の判定は今のまま後ろに残す。そのあと、単発の行で `recurrence` が無い（または none）なら今の `cal_svc.update_event`、それ以外は `cal_svc.update_recurring_event(...)` を同じ `try` の中で呼ぶ。
 - 消す（`:538`）: 引数に次の 2 つを足す。3 欄の SELECT を `read_event` に置き換え、例外の行なら元の行の値で持ち主を確かめる。判定を呼んで 422 の後、単発の行は今の `cal_svc.delete_event`、それ以外は `cal_svc.delete_recurring_event(...)`。
 
 ```python
@@ -682,9 +681,10 @@ async def delete_recurring_event(
 1. `cd "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend/backend" && python -m pytest tests/test_calendar_recurrence.py tests/test_calendar_service.py tests/test_calendar_owner_api.py tests/test_tenant_loop_migration_guard.py tests/ops/test_ai_cloud_views.py -q 2>&1 | tail -n 60` … 最後の行に `failed` と `error` が無い（`skipped` はあってよい。手元に PostgreSQL が無いと要る試験は skip になる）
 2. `cd "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend/backend" && python -m pytest tests/test_calendar_sync_tenant_reset_pg.py -q 2>&1 | tail -n 30` … `failed`・`error` が無い。skip になったら skip の行をそのまま報告に写す（CI で走る）
 3. `cd "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend/backend" && python -m pytest tests/test_calendar_recurrence.py -v 2>&1 | grep -E "PASSED|FAILED|ERROR" | head -n 40` … §4-9 の 10 個の名前がすべて PASSED で、FAILED・ERROR が 0 行
-4. `grep -c "20261112_160000_add_calendar_events_recurrence.sql" "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend/scripts/run_all_migrations.sh"` … 出力が `1`
+4. `cd "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend/backend" && python -m pytest tests/test_calendar_service.py -v 2>&1 | grep -E "test_update_all_none_keeps_pressed_occurrence|test_update_and_delete_exception_id_routes_to_master|test_send_ok_new_rows_synced" | head -n 10` … 3 つの名前がすべて PASSED
+5. `grep -c "20261112_160000_add_calendar_events_recurrence.sql" "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend/scripts/run_all_migrations.sh"` … 出力が `1`
 
-5-2. commit の後・push の前: `git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" diff --stat origin/main...HEAD | tail -n 25` … 変わったファイルが §3 の 16 件だけ（新しいファイルも含まれる）。違えば止まる
+5-2. commit の後・push の前: `git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" diff --stat origin/main...HEAD | tail -n 25` … 変わったファイルが §3 の表の 15 件だけ（台帳は入らない）（新しいファイルも含まれる）。違えば止まる
 
 5-3. push の後: `git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" log origin/release/schedule-recurrence-backend -1 --oneline` が `git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" log -1 --oneline` と同じ
 
@@ -711,9 +711,9 @@ async def delete_recurring_event(
 
 1. クラウドの写しの一番上（`git rev-parse --show-toplevel` の場所）で `git fetch origin && bash scripts/new-worktree.sh release/schedule-recurrence-backend`（origin/main 起点。`--claude` は付けない）。作成後に `git worktree list` で実在を確かめ、以後はその作業場所で行う
 2. `git log origin/main -1 --oneline` で、このカードが origin/main にあることを `ls docs/handoff/schedule-gcal-clone/card-bin15a.md` で確かめる
-3. 台帳 `.claude-pipeline/active-work.d/release-schedule-recurrence-backend.md` を Write ツールで作る（1 行目 `branch: release/schedule-recurrence-backend`、空行、表の頭 `| ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |` と区切りの行、`| release/schedule-recurrence-backend | 予定の繰り返しの裏側（ADR-1075 便15A） | 2026-11-12 | IN_PROGRESS | | | |`）
+3. 台帳 `.claude-pipeline/active-work.d/release-schedule-recurrence-backend.md` を Write ツールで作る（1 行目 `branch: release/schedule-recurrence-backend`、空行、表の頭 `| ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |` と区切りの行、`| release/schedule-recurrence-backend | 予定の繰り返しの裏側（ADR-1075 便15A） | 2026-11-12 | IN_PROGRESS | | | |`）。この台帳は commit しない（§5 の add にも入れない）
 4. §4 のとおりに書く（既にあるファイルは Edit ツール、新しいファイルは Write ツール。パスは作業場所の絶対パス）。§5-1 を通す
-5. commit（`git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" add` と `git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" commit`。`--no-verify` は使わない。文: `feat(calendar): recurring events backend (ADR-1075 bin15A)`）→ `git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" log -1 --oneline` → §5-2
+5. commit（`git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" add migrations/20261112_160000_add_calendar_events_recurrence.sql scripts/run_all_migrations.sh backend/tests/rls_bootstrap.py backend/tests/test_tenant_loop_migration_guard.py backend/tests/test_calendar_sync_tenant_reset_pg.py migrations/20261024_100300_create_ai_cloud_views.sql backend/tests/ops/test_ai_cloud_views.py backend/requirements.txt backend/app/services/calendar_recurrence.py backend/app/services/google_calendar.py backend/app/services/calendar_service.py backend/app/routers/calendar.py backend/tests/test_calendar_recurrence.py backend/tests/test_calendar_service.py backend/tests/test_calendar_owner_api.py`（§3 の 15 件だけを名前で足す。`-A`・`.` は使わない）と `git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" commit`。`--no-verify` は使わない。文: `feat(calendar): recurring events backend (ADR-1075 bin15A)`）→ `git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" log -1 --oneline` → §5-2
 6. `git -C "$HOME/worktrees/salesanchor/release-schedule-recurrence-backend" push -u origin release/schedule-recurrence-backend` → §5-3
 
 ## 9. 報告
