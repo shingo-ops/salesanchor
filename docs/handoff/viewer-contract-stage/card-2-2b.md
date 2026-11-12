@@ -678,7 +678,7 @@ def test_frontend_source_has_no_prefecture_name():
 
 手順6 形と数
     cd ~/sa && ~/venv312/bin/ruff check backend/app/ops/readonly_query.py backend/tests/ops/test_ai_cloud_views.py backend/tests/ops/test_ai_ro_views.py backend/tests/ops/test_deny_column_regex_sync.py backend/tests/ops/test_ops_case_db.py backend/tests/seed_data.py backend/tests/test_viewer_contract_public_tables_pg.py backend/tests/test_prefectures_seed.py 2>&1 | tail -10
-    cd ~/sa && ~/venv312/bin/python scripts/check-migration-value-writes.py repo 2>&1 | tail -10; echo "exit=$?"
+    cd ~/sa && ~/venv312/bin/python scripts/check-migration-value-writes.py repo > ~/vw-repo.txt 2>&1; echo "exit=$?"; tail -10 ~/vw-repo.txt
     cd ~/sa && grep -c "credential|account_number|^iban\$';" migrations/20261017_130100_create_ai_ro_views.sql migrations/20261024_100000_create_ai_cloud_meta.sql | tail -2
     cd ~/sa && grep -c 'credential|account_number|^iban\$"' backend/app/ops/readonly_query.py
     cd ~/sa && git diff -U0 migrations/20261024_100300_create_ai_cloud_views.sql | grep -c "^+  ('public'"
@@ -701,7 +701,7 @@ def test_frontend_source_has_no_prefecture_name():
 手順9 記録と送り出し
     cd ~/sa && git add migrations/20261017_130100_create_ai_ro_views.sql migrations/20261024_100000_create_ai_cloud_meta.sql backend/app/ops/readonly_query.py migrations/20261024_100300_create_ai_cloud_views.sql scripts/migration-guard/reference-allowlist.tsv migrations/20261031_210000_create_ops_case.sql backend/tests/ops/test_ai_cloud_views.py backend/tests/ops/test_ai_ro_views.py backend/tests/ops/test_deny_column_regex_sync.py backend/tests/ops/test_ops_case_db.py backend/tests/seed_data.py backend/tests/test_viewer_contract_public_tables_pg.py backend/tests/test_prefectures_seed.py && git status --short | tail -20
     cd ~/sa && git commit -q -m "feat(ai-read): hide account number and iban, classify viewer contract columns, load prefecture seed in tests (ADR-1061 bin2-2b)" && git log --oneline -1 | tail -1
-    cd ~/sa && ~/venv312/bin/python scripts/check-migration-value-writes.py diff origin/main HEAD --check all 2>&1 | tail -10; echo "exit=$?"
+    cd ~/sa && ~/venv312/bin/python scripts/check-migration-value-writes.py diff origin/main HEAD --check all > ~/vw-diff.txt 2>&1; echo "exit=$?"; tail -10 ~/vw-diff.txt
     cd ~/sa && git push origin release/viewer-contract-bin2-2b 2>&1 | tail -3
     cd ~/sa && git log --oneline origin/release/viewer-contract-bin2-2b -2 | tail -2
   `git add` の後の status に §1 に無いファイルが出たら、commit せずに `BLOCKED: 範囲外のファイル` で停止する。3行目の diff 検査が exit=0 でなかったら push せずに最後の 10 行を貼って `BLOCKED: value-writes`。
