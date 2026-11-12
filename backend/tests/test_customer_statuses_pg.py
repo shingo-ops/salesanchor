@@ -147,7 +147,7 @@ async def test_status_foreign_keys_exist_and_old_checks_are_gone():
             rows = (
                 await conn.execute(
                     text(
-                        "SELECT c.relname, con.conname, con.contype, con.convalidated "
+                        "SELECT c.relname, con.conname, con.contype::text, con.convalidated "
                         "FROM pg_constraint con JOIN pg_class c ON c.oid = con.conrelid "
                         "JOIN pg_namespace n ON n.oid = c.relnamespace "
                         "WHERE n.nspname = :s AND c.relname IN ('companies', 'contacts') "
