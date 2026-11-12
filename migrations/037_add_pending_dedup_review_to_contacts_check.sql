@@ -45,6 +45,9 @@
 -- 依存: migration 029（contacts テーブル存在）
 --
 -- 作成日: 2026-04-27 (PR #163 Critical fix)
+-- 追記 2026-11-12（ADR-1076 便4・docs/handoff/status-ssot-contact-company/design.md §15）:
+--   contacts.status が外部キー contacts_status_fkey で結ばれた領域は何もしない。
+--   値の決まりは外部キーの先の表が持つ。CHECK を足すと便2 の移行が毎回外し直すため。
 
 DO $$
 DECLARE
@@ -54,6 +57,7 @@ DECLARE
     applied_count INTEGER := 0;          -- CHECK 制約を更新したテナント数
     skipped_already_ok INTEGER := 0;     -- 既に pending_dedup_review を含む（no-op）
     skipped_no_table INTEGER := 0;       -- contacts テーブルが無いスキーマ
+    skipped_fk INTEGER := 0;             -- contacts.status が外部キーで結ばれている（便4・no-op）
 BEGIN
     FOR schema_rec IN
         SELECT nspname FROM pg_namespace
@@ -67,6 +71,20 @@ BEGIN
               AND tablename = 'contacts'
         ) THEN
             skipped_no_table := skipped_no_table + 1;
+            CONTINUE;
+        END IF;
+
+        -- 便4（design.md §15）: 外部キー contacts_status_fkey があれば CHECK は要らないので何もしない
+        IF EXISTS (
+            SELECT 1 FROM pg_constraint con
+            JOIN pg_class cls ON cls.oid = con.conrelid
+            JOIN pg_namespace nsp ON nsp.oid = cls.relnamespace
+            WHERE nsp.nspname = schema_rec.nspname
+              AND cls.relname = 'contacts'
+              AND con.contype = 'f'
+              AND con.conname = 'contacts_status_fkey'
+        ) THEN
+            skipped_fk := skipped_fk + 1;
             CONTINUE;
         END IF;
 
@@ -145,8 +163,8 @@ BEGIN
     END LOOP;
 
     RAISE NOTICE
-        'migration 037: 完了。新規追加 % テナント、既存対応済 % テナント、contacts 未存在 % テナント',
-        applied_count, skipped_already_ok, skipped_no_table;
+        'migration 037: 完了。新規追加 % テナント、既存対応済 % テナント、外部キー済 % テナント、contacts 未存在 % テナント',
+        applied_count, skipped_already_ok, skipped_fk, skipped_no_table;
 END $$;
 
 -- =====================================================================
