@@ -102,10 +102,7 @@ origin/main の次の行が、表の「基準の中身」を含むこと。1 つ
 
     道具のファイルは手本の書き方（1 行に複数の文など）を残すので、名前の誤りと使っていない import だけを見る（`--select F`）。CI の ruff は `app/` だけを見る（`.github/workflows/test.yml:90`）。
 
-手順6b 判定試験を流す（DB 不要）。準備は CI と同じ入れ方（`.github/workflows/test.yml:170`）。
-    cd "$(git rev-parse --show-toplevel)/backend" && pip install -q -r requirements.txt -r requirements-dev.txt 2>&1 | tail -5
-    cd "$(git rev-parse --show-toplevel)/backend" && python3 -m pytest tests/test_single_set_rejudge_tool.py -q 2>&1 | tail -25
-    入れられない・流せないときは生の文を報告に書いて先へ進む（CI の pytest が同じ試験を流す）。落ちたときは §2・§3 の範囲で直す。範囲の外なら NEEDS_DECISION:。
+手順6b 判定試験はクラウドでは流さない。pip install もしない（py312-guard が止める。2026-11-13 10:58 JST の 2 回目はここで止まった）。§3 の試験は CI の「Run pytest (full suite + PostgreSQL RLS)」（`.github/workflows/test.yml` の backend の pytest 全件）が流し、Opus が PR の CI 結果で確かめる。報告には「pytest: クラウドでは流していない（CI で確かめる）」と書く。
 
 手順7 §4 の検索を流す（出力は報告に入れる）
 
