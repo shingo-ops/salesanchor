@@ -81,6 +81,7 @@ beforeEach(() => {
     if (url === '/companies?per_page=100') return [{ id: 41, name: 'Fixture company', company_code: 'CO41' }];
     if (url === '/suppliers/63') return supplier;
     if (url === '/customer-statuses') return CUSTOMER_STATUS_TEST_ROWS;
+    if (url === '/me/permissions') return { permissions: ['customers.delete'] };
     if (url === '/companies/41/contacts?per_page=100') return [];
     throw new Error('Unexpected GET ' + url);
   });
@@ -181,7 +182,7 @@ describe('full-page form Button migration', () => {
     expect(distinct.classList.contains('comp-btn--primary')).toBe(true);
     expect(distinct.classList.contains('comp-btn')).toBe(true);
     expect(distinct.type).toBe('button');
-    expect(merge.disabled).toBe(false);
+    await waitFor(() => expect(merge.disabled).toBe(false));
     fireEvent.click(merge);
     expect(await screen.findByText('mergeContact.title')).toBeTruthy();
     expect(mock.patch).not.toHaveBeenCalled();
@@ -206,7 +207,7 @@ describe('full-page form Button migration', () => {
       expect(screen.getByText('Fixture dedup failure')).toBeTruthy();
       expect(field('common.status').value).toBe('pending_dedup_review');
       expect(distinct.disabled).toBe(false);
-      expect(merge.disabled).toBe(false);
+      await waitFor(() => expect(merge.disabled).toBe(false));
     }
   });
 });

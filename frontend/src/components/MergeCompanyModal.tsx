@@ -236,7 +236,7 @@ export default function MergeCompanyModal({ open, source, onMerged, onCancel }: 
                         <td>{c.name}</td>
                         <td>
                           <span className={`badge badge-${getStatusPresentation("company", c.status).badgeVariant}`}>
-                            {c.status}
+                            {customerStatuses.nameOf(c.status)}
                           </span>
                         </td>
                       </tr>
