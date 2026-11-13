@@ -159,6 +159,7 @@ export default function CompanyDetailPage() {
           company={company}
           contacts={contacts}
           canEdit={canEdit}
+          canMerge={canMerge}
           contactModalOpen={contactModalOpen}
           contactForm={contactForm}
           setContactForm={setContactForm}

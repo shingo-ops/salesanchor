@@ -95,7 +95,7 @@
   - 1 件が 429 `busy` か時間切れのときは、合わないに数えず 1 回だけやり直す。それでも取れなければ「測れなかった数」として別に出す（合う数・合わない数・測れなかった数の 3 つ）。
   - 試しの間、容器は利用者の頼みに 429 `busy` を返す（待ち行列は無い・recon.md §2）。画面は今の「混んでいます」の文に、「試し中は約 N 分使えません」を足す（N は段0の秒数 × 20 から出す）。
   - 行に status（running・done・failed）と数を書き、1 件進むたびに progress_at を更新する。progress_at から 10 分進まない running の行は failed と見なす（1 件の上限 85 秒 × やり直し 2 回より長い）。試しが途中で例外を出した後に、鍵が外れていることを `pg_locks` で確かめ、次の試しを始められる試験を置く。
-- 使用の記録: purpose に `secretary_regression` を 1 つ足す。①は便1（DB が先に値を 1 つ多く許しても、書くコードが無いので行は増えない）、②〜⑥は便2 で `secretary_regression` を書くコードと同じ PR に入れる（手順書 [card-bin1.md](card-bin1.md)「この便で決めたこと」）。直す場所: ①CHECK を広げる migration（migrations/20261103_120000_create_ai_job_assignments.sql の 148〜175 行目と同じ「定義に値が無ければ広げる」形）②`backend/app/services/llm_budget.py:159-169` の一覧 ③照合試験 `backend/tests/test_llm_usage_isolated.py` ④`backend/app/routers/assistant.py:135` の purpose の決め打ちを引数にする ⑤画面の使用量の区画の一覧 KNOWN_PURPOSES（`frontend/src/pages/super-admin/components/LlmUsageSection.tsx:151-159`）と ja.json・en.json の名前のキー ⑥色は 7 色を順に回すので、8 つ目は 1 つ目と同じ色になる。これを許し、トークンも色も足さない（`frontend/src/tokens.css` の `--chart-series-*` は 7 色・ADR-067 で新しい色は足さない）。区別は翻訳キーの名前で付く。AI 担当の画面の集計（`backend/app/routers/super_admin_ai_jobs.py:42-60`）は purpose で絞るので、試しはふだんの回数とログインの○×に混ざらない。
+- 使用の記録: purpose に `secretary_regression` を 1 つ足す。①は便1（DB が先に値を 1 つ多く許しても、書くコードが無いので行は増えない）、②〜⑥は `secretary_regression` を書くコードと同じ PR に入れる（手順書 [card-bin1.md](card-bin1.md)「この便で決めたこと」）。書くコードは便3（§12）。直す場所: ①CHECK を広げる migration（migrations/20261103_120000_create_ai_job_assignments.sql の 148〜175 行目と同じ「定義に値が無ければ広げる」形）②`backend/app/services/llm_budget.py:159-169` の一覧 ③照合試験 `backend/tests/test_llm_usage_isolated.py` ④`backend/app/routers/assistant.py:135` の purpose の決め打ちを引数にする ⑤画面の使用量の区画の一覧 KNOWN_PURPOSES（`frontend/src/pages/super-admin/components/LlmUsageSection.tsx:151-159`）と ja.json・en.json の名前のキー ⑥色は 7 色を順に回すので、8 つ目は 1 つ目と同じ色になる。これを許し、トークンも色も足さない（`frontend/src/tokens.css` の `--chart-series-*` は 7 色・ADR-067 で新しい色は足さない）。区別は翻訳キーの名前で付く。AI 担当の画面の集計（`backend/app/routers/super_admin_ai_jobs.py:42-60`）は purpose で絞るので、試しはふだんの回数とログインの○×に混ざらない。
 - 基準値より合う数が減ったら、画面に「前より合う数が減りました」と出す。外すかは人が選ぶ（自動では外さない）。
 
 ## 7. 毎週の数と試しの結果の置き場（R7・R8）
@@ -125,7 +125,7 @@
 | 決まりで AI の答えが崩れる | 型の検査は今のまま。§6 の試し。外せば次の頼みから戻る |
 | 決まりに「ほかの会社の〜」と書いても | AI は会社のデータを持たない。名前を探すのは backend の自社の範囲だけ（ADR-1056 のまま） |
 | 試しの間、全社の秘書が使えない | 押したときだけ流す・画面に分数を出す・1 本だけ。1 件 6〜8 秒（`docs/handoff/secretary-chatgpt/design.md:262` の試験の値）なら 20 件で約 2〜3 分、全件が 85 秒の打ち切りとやり直しなら最悪約 57 分。同時 1 本（ADR-1056:19）は変えず、新しい ADR のリスク欄にこの分数と「秘書を使う会社が 2 社を超えたら見直す」を書く |
-| 試しは種類が合うかだけを数え、決まりが効いたかは測らない | 便2で cases.json に「決まりが効いたか」を見る頼みを足すかを決める（今は種類の判定が壊れていないことだけを守る） |
+| 試しは種類が合うかだけを数え、決まりが効いたかは測らない | 便3で cases.json に「決まりが効いたか」を見る頼みを足すかを決める（今は種類の判定が壊れていないことだけを守る） |
 | 2 つの容器で組み立てがずれる | compose.mjs 1 ファイルを両方が読む。容器の試験を CI で流す（§11） |
 | 戻し方 | backend が `rules` を空で送れば前と同じ答えに戻る。表は戻しの SQL で消せる |
 
@@ -171,13 +171,15 @@
 ## 12. 便の分け方
 - 便0: 段0の測定（本番の秘書に 69 回。足すのは cases.json・測る台本・baseline.md だけで、動く部分は変えない）→ PO が合格の線を決める。流す時刻を記録し、PO に先に伝える。道は [card-bin0.md](card-bin0.md) で決めた: 本番の backend の image の使い捨ての容器から秘書の容器を直接呼ぶ（口の検査と同じ関数を使う・ログインの札は使わない）。この道では使用の記録に行が入らないので、69 回は秘書の 24 時間の回数に混ざらない。
 - 便1: 表・RLS・purpose の CHECK（§6 の①）を足す migration と、相談係の読み取り用の分類（`migrations/20261024_100300_create_ai_cloud_views.sql`）に 2 表の 8 列を足す（危険 PR・GO 記録）。手順は [card-bin1.md](card-bin1.md)。
-- 便2: backend の口・種類 2 つ・compose.mjs・prompt.txt・schema.json・容器の試験を CI へ。本番に出した後、画面に出す前に、仮の決まり 20 件を付けて試しを 1 回流し、1 件の秒数と合う数を baseline.md に足す（20 件付けたときの遅さと当たりを測る）。
-- 便3: 画面（案・一覧・「違う」・試すボタン）と、SaaS管理者のメニューの「秘書の決まり帳」のページ（毎週の数・試しの結果・§7）。
+- 便2（決定 PO 2026-11-13「1」: 「次からは〜」の聞き分けは便3 で画面と一緒に出す。便2 では画面の見た目は何も変わらない）: 決まりを秘書に渡す仕組み・決まりを出し入れする裏側の窓口・決まり 20 件での速さの試しだけ。種類 2 つ（rule_proposal・rule_list）・prompt.txt・schema.json・画面の型は便3 へ移す（便2 で種類だけ先に出すと、画面が知らない答えが空の吹き出しになるため）。2 つに分ける（Opus の決定）:
+  - 便2a: compose.mjs・容器 2 つが `rules` を受け取る・容器の試験を CI へ・測る台本に `--rules`。手順は [card-bin2a.md](card-bin2a.md)。本番に出した後、便0 と同じ道で仮の決まり 20 件（[bin2/dummy-rules.json](bin2/dummy-rules.json)・種類を変えない中身だけの決まり）を付けて 23 件 × 3 回を流し、1 件の秒数と合う数を baseline.md に足す。
+  - 便2b: backend が承認済みの決まりを送る（15,000 バイト・制御文字の検査）・§5 の口。§6 の試しの仕組みと②〜⑥の使いみちは便3 へ移す（PO の決定は便2 を 3 つ「だけ」に限っている。試しを始めるボタンも便3 にある。Opus の決定・2026-11-13 審査の指摘 D）。毎週の数を読む口（§7）は、それを見せるページと同じ便3 に置く。
+- 便3: 種類 2 つ・prompt.txt・schema.json・画面の型・画面（案・一覧・「違う」・試すボタン）・§6 の試しの仕組みと②〜⑥の使いみちと、SaaS管理者のメニューの「秘書の決まり帳」のページ（毎週の数とそれを読む口・試しの結果・§7）。聞き分けと画面が同時に使えるようになる。
 
 ## 維持の仕組み
 - 守り手: .github/workflows/test.yml
 - 対象: 承認できる人が印のある人だけであること・ほかの会社の決まりを読まないこと・AI の答えだけで行が増えないこと（pytest と RLS 試験）。
 - ほかの守り手（PR ごと・機械）: `.github/workflows/migration-test.yml`（便1の表と RLS）・`.github/workflows/ui-governance-gate.yml`・`.github/workflows/design-token-guard.yml`・`.github/workflows/frontend-check.yml`（画面）。
 - 今は無く便2で足す: 容器 2 つの `node --test` を流す CI（recon.md §4）。
-- 今は無く便2・便3で足す: §6 の試し（人がボタンを押したとき）。
+- 今は無く便3で足す: §6 の試し（人がボタンを押したとき）。
 - 人手で守る: 毎週の数を PO が見ること。理由: 数を見て決まりを足すか外すかを決めるのは人の判断で、機械に任せない（Tay の教訓）。見忘れを知らせる仕組みは便3の後に、今ある週次の知らせに足すかを決める。

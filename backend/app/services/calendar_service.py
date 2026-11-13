@@ -293,20 +293,24 @@ async def list_events(
             "recurrence": rec.rule_to_recurrence(r[19]),
             "recurring_event_id": r[20],
             "occurrence_start": r[21].isoformat() if r[20] is not None and r[21] else None,
+            "is_first_occurrence": bool(r[19]) and r[20] is None,
         }
 
     masters = [r for r in rows if r[19]]
     master_rules: dict = {r[0]: r[19] for r in masters}
+    # 1 回目かの判定に使う元の行の始まりと終日（design §12.6.1 G1）
+    master_starts: dict = {r[0]: (r[7], bool(r[9])) for r in masters}
     exception_rows = [r for r in rows if r[20] is not None]
-    # 例外の行の recurrence は元の行の選び方。同じ結果に元の行が無いときだけ 1 本で引く
+    # 例外の行の recurrence と 1 回目かは元の行から決める。同じ結果に元の行が無いときだけ 1 本で引く
     missing_ids = sorted({r[20] for r in exception_rows if r[20] not in master_rules})
     if missing_ids:
         found = await db.execute(
-            text("SELECT id, recurrence_rule FROM calendar_events WHERE id = ANY(:ids)"),
+            text("SELECT id, recurrence_rule, start_datetime, is_all_day FROM calendar_events WHERE id = ANY(:ids)"),
             {"ids": missing_ids},
         )
-        for mid, mrule in found.fetchall():
+        for mid, mrule, mstart, mall_day in found.fetchall():
             master_rules[mid] = mrule
+            master_starts[mid] = (mstart, bool(mall_day))
 
     items: list[dict] = []
     for r in rows:
@@ -315,6 +319,10 @@ async def list_events(
         item = _item(r)
         if r[20] is not None:
             item["recurrence"] = rec.rule_to_recurrence(master_rules.get(r[20]))
+            ms = master_starts.get(r[20])
+            item["is_first_occurrence"] = bool(
+                ms and ms[0] and r[21] and rec.is_first_occurrence(ms[0], ms[1], r[21])
+            )
         items.append(item)
 
     if not expand_recurring:
@@ -355,6 +363,7 @@ async def list_events(
                 item["end_datetime"] = (occ + duration).isoformat()
                 item["recurring_event_id"] = r[0]
                 item["occurrence_start"] = occ.isoformat()
+                item["is_first_occurrence"] = rec.is_first_occurrence(m_start, all_day, occ)
                 items.append(item)
 
     def _sort_key(item: dict) -> datetime:

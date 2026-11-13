@@ -32,6 +32,11 @@ export interface ApiCalendarEvent {
   created_by_name: string | null;
   category?: string | null;
   meet_url?: string | null;
+  recurrence_rule?: string | null;
+  recurrence?: string | null;
+  recurring_event_id?: number | null;
+  occurrence_start?: string | null;
+  is_first_occurrence?: boolean;
 }
 
 export interface ApiShift {
@@ -63,6 +68,14 @@ export interface ScheduleItem {
   createdByName?: string | null;
   meetUrl?: string | null;
   googleEventId?: string | null;
+  /** 繰り返しの選び方（design §12.6）。単発は "none" */
+  recurrence?: ScheduleRecurrence;
+  /** 回のとき元の行の id。単発は null */
+  recurringEventId?: number | null;
+  /** 回の元の始まり（直した回でも元の日時）。単発は null */
+  occurrenceStart?: Date | null;
+  /** 1 回目の回か（サーバーが決める・§12.6.1 G1） */
+  isFirstOccurrence?: boolean;
 }
 
 function parseLocalDate(date: string): Date {
@@ -342,8 +355,10 @@ export function normalizeEvent(event: ApiCalendarEvent): ScheduleItem {
   const category = (event.category ?? (event.calendar_type === "personal" ? "personal" : "meeting")) as ScheduleItem["category"];
   const ownerUserId = event.user_id ?? event.created_by_user_id ?? null;
   const ownerName = event.owner_name ?? event.created_by_name ?? null;
+  const occurrenceStart = event.occurrence_start ? parseLocalDate(event.occurrence_start) : null;
   return {
-    id: `event-${event.id}`,
+    // 回は同じ元の行から何件も出るので、回の元の始まりで id を分ける（design §12.6.1）
+    id: occurrenceStart ? `event-${event.id}-${occurrenceStart.getTime()}` : `event-${event.id}`,
     title: event.title,
     start,
     end,
@@ -359,6 +374,10 @@ export function normalizeEvent(event: ApiCalendarEvent): ScheduleItem {
     createdByName: event.created_by_name ?? null,
     meetUrl: event.meet_url ?? null,
     googleEventId: event.google_event_id ?? null,
+    recurrence: toScheduleRecurrence(event.recurrence),
+    recurringEventId: event.recurring_event_id ?? null,
+    occurrenceStart,
+    isFirstOccurrence: event.is_first_occurrence === true,
   };
 }
 
@@ -404,9 +423,9 @@ export function toHolidayEvents(holidays: ApiHoliday[] | undefined): CalendarVie
   });
 }
 
-/** "event-12" → 12。シフト・仮の箱など予定でない id は null */
+/** "event-12" と回の "event-12-1762909200000" → 12。シフト・仮の箱など予定でない id は null */
 export function eventNumericId(id: string): number | null {
-  const m = /^event-(\d+)$/.exec(id);
+  const m = /^event-(\d+)(?:-\d+)?$/.exec(id);
   return m ? Number(m[1]) : null;
 }
 
@@ -430,4 +449,98 @@ export function toCalendarEnd(
   if (end) return end;
   if (item.allDay) return new Date(start.getTime() + 60 * 60 * 1000);
   return new Date(start.getTime() + (item.end.getTime() - item.start.getTime()));
+}
+
+/** 繰り返しの選び方（backend/app/routers/calendar.py の RecurrenceValue と、表せない決まりの "custom"） */
+export type ScheduleRecurrence =
+  | "none" | "daily" | "weekly" | "monthly_nth" | "monthly_last" | "yearly" | "weekdays" | "custom";
+
+const RECURRENCE_VALUES: readonly ScheduleRecurrence[] = [
+  "none", "daily", "weekly", "monthly_nth", "monthly_last", "yearly", "weekdays", "custom",
+];
+
+export function toScheduleRecurrence(value: string | null | undefined): ScheduleRecurrence {
+  return RECURRENCE_VALUES.includes(value as ScheduleRecurrence) ? (value as ScheduleRecurrence) : "none";
+}
+
+/** 開始日で選べる値（design §12.2 G70。サーバーの build_rule と同じ決まり） */
+export function recurrenceChoicesFor(date: Date): ScheduleRecurrence[] {
+  const choices: ScheduleRecurrence[] = ["none", "daily", "weekly"];
+  if (date.getDate() <= 28) choices.push("monthly_nth");
+  if (addDays(date, 7).getMonth() !== date.getMonth()) choices.push("monthly_last");
+  choices.push("yearly", "weekdays");
+  return choices;
+}
+
+/** 選ぶ欄に並べる値。すでに繰り返している予定の今の値（keep）は開始日で選べなくても残す（§12.6.1 G5） */
+export function recurrenceOptionsFor(date: Date, keep: ScheduleRecurrence | null): ScheduleRecurrence[] {
+  const choices = recurrenceChoicesFor(date);
+  return RECURRENCE_VALUES.filter((v) => v !== "custom" && (choices.includes(v) || v === keep));
+}
+
+const ORDINAL_KEYS = [
+  "schedule.recurrence.ordinal1",
+  "schedule.recurrence.ordinal2",
+  "schedule.recurrence.ordinal3",
+  "schedule.recurrence.ordinal4",
+] as const;
+
+/** 選び方の文字（例「毎週 木曜日」）。日付が読めないときと custom は空 */
+export function recurrenceLabel(value: ScheduleRecurrence, date: Date, t: Translate, language: string): string {
+  if (Number.isNaN(date.getTime())) return "";
+  const weekday = new Intl.DateTimeFormat(language, { weekday: "long" }).format(date);
+  switch (value) {
+    case "none":
+      return t("schedule.recurrence.none");
+    case "daily":
+      return t("schedule.recurrence.daily");
+    case "weekly":
+      return t("schedule.recurrence.weekly", { weekday });
+    case "monthly_nth":
+      return t("schedule.recurrence.monthlyNth", {
+        ordinal: t(ORDINAL_KEYS[Math.min(Math.ceil(date.getDate() / 7), 4) - 1]),
+        weekday,
+      });
+    case "monthly_last":
+      return t("schedule.recurrence.monthlyLast", { weekday });
+    case "yearly":
+      return t("schedule.recurrence.yearly", {
+        date: new Intl.DateTimeFormat(language, { month: "long", day: "numeric" }).format(date),
+      });
+    case "weekdays":
+      return t("schedule.recurrence.weekdays");
+    default:
+      return "";
+  }
+}
+
+/** 新しい予定・単発の予定で開始日を変えたとき、使えなくなった「第 N」「最終」をもう一方へ入れ替える（§12.6.1 G5） */
+export function fitRecurrenceToDate(value: ScheduleRecurrence, date: Date): ScheduleRecurrence {
+  if (Number.isNaN(date.getTime())) return value;
+  if (value !== "monthly_nth" && value !== "monthly_last") return value;
+  if (recurrenceChoicesFor(date).includes(value)) return value;
+  return value === "monthly_nth" ? "monthly_last" : "monthly_nth";
+}
+
+export type RecurrenceScope = "this" | "following" | "all";
+export type ScopeKind = "save" | "delete" | "move";
+
+/**
+ * 3 択の小窓に出す値（design §12.2 G73・G75・G79、§12.6.1 G9）。
+ * changesSeries は「選び方か社員への見せ方を変えた」（サーバーは「この予定」で 422 にする）。
+ */
+export function scopeChoices(kind: ScopeKind, isFirst: boolean, changesSeries: boolean): RecurrenceScope[] {
+  if (kind === "move") return isFirst ? ["this", "all"] : ["this", "following"];
+  if (kind === "save" && changesSeries) return isFirst ? ["all"] : ["following", "all"];
+  return isFirst ? ["this", "all"] : ["this", "following", "all"];
+}
+
+/** 繰り返しの予定の回（または検索で返る元の行）か */
+export function isRecurringItem(item: ScheduleItem): boolean {
+  return item.recurringEventId != null || (item.recurrence != null && item.recurrence !== "none");
+}
+
+/** 送る回の始まり。回の元の始まりが無いとき（検索で返る元の行）は予定の始まり */
+export function occurrenceStartOf(item: ScheduleItem): Date {
+  return item.occurrenceStart ?? item.start;
 }

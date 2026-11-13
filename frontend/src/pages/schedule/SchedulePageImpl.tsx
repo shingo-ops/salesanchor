@@ -19,6 +19,8 @@ import { ListRow } from "../../components/ListRow";
 import { Popover } from "../../components/Popover";
 import { ButtonLink } from "../../components/ButtonLink";
 import { Modal } from "../../components/Modal";
+import ConfirmModal from "../../components/ConfirmModal";
+import { Radio } from "../../components/Radio";
 import { PageLayout } from "../../components/PageLayout";
 import { TextFieldControl } from "../../components/TextField";
 import { CheckboxControl } from "../../components/CheckboxControl";
@@ -59,8 +61,15 @@ import {
   getWeekDays,
   isSameDay,
   eventNumericId,
+  isRecurringItem,
   normalizeEvent,
   normalizeShift,
+  occurrenceStartOf,
+  recurrenceLabel,
+  scopeChoices,
+  type RecurrenceScope,
+  type ScheduleRecurrence,
+  type ScopeKind,
   startOfMonth,
   toCalendarEnd,
   toHolidayEvents,
@@ -90,7 +99,22 @@ export interface ScheduleDraft {
   location: string;
   /** Google Meet の行を押した印（保存時に add_meet として送る） */
   addMeet: boolean;
+  recurrence: ScheduleRecurrence;
 }
+
+/** 繰り返しの予定を直す・消す・動かすときの 3 択の小窓（design §12.6.1） */
+type ScopeRequest = {
+  kind: ScopeKind;
+  choices: RecurrenceScope[];
+  run: (scope: RecurrenceScope) => Promise<void>;
+  cancel?: () => void;
+};
+
+const SCOPE_LABEL_KEYS: Record<RecurrenceScope, string> = {
+  this: "schedule.recurrence.scopeThis",
+  following: "schedule.recurrence.scopeFollowing",
+  all: "schedule.recurrence.scopeAll",
+};
 
 interface SchedulePopoverState {
   mode: PopoverMode;
@@ -131,6 +155,7 @@ function createDraft(item?: ScheduleItem | null): ScheduleDraft {
     description: item?.description ?? "",
     location: item?.location ?? "",
     addMeet: false,
+    recurrence: item?.recurrence ?? "none",
   };
 }
 
@@ -347,6 +372,11 @@ function SchedulePopover({
           <div className="schedule-popover__body">
             <p className="schedule-popover__title">{item.title || t("schedule.noTitle")}</p>
             <p className="schedule-popover__time">{timeLabel}</p>
+            {item.recurrence && item.recurrence !== "none" && item.recurrence !== "custom" && (
+              <p className="schedule-popover__meta">
+                {recurrenceLabel(item.recurrence, occurrenceStartOf(item), t, i18n.language)}
+              </p>
+            )}
             {item.ownerName && <p className="schedule-popover__meta">{item.ownerName}</p>}
             {item.location && <p className="schedule-popover__meta">{item.location}</p>}
             {item.description && <p className="schedule-popover__description">{item.description}</p>}
@@ -804,6 +834,24 @@ export default function SchedulePage() {
   const [draft, setDraft] = useState<ScheduleDraft>(createDraft());
   // 作る小窓の「その他のオプション」で開く全画面の編集（design §3.18 作り方 4）。下書きは draft 1 つのまま
   const [fullEditOpen, setFullEditOpen] = useState(false);
+  // 繰り返しの予定の 3 択の小窓（design §12.6.1 G3・G6）
+  const [scopeRequest, setScopeRequest] = useState<ScopeRequest | null>(null);
+  const [scopeChoice, setScopeChoice] = useState<RecurrenceScope>("this");
+  const askScope = (request: ScopeRequest) => {
+    setScopeChoice(request.choices[0]);
+    setScopeRequest(request);
+  };
+  const confirmScope = () => {
+    const request = scopeRequest;
+    if (!request) return;
+    setScopeRequest(null);
+    void request.run(scopeChoice);
+  };
+  const cancelScope = () => {
+    const cancel = scopeRequest?.cancel;
+    setScopeRequest(null);
+    cancel?.();
+  };
   // 月の「他 N 件」の日の一覧の小窓（予定の小窓 popover とは別の状態。同時には開かない）
   const [dayList, setDayList] = useState<{ date: Date; anchor: AnchorRect | null } | null>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -925,6 +973,7 @@ export default function SchedulePage() {
       description: "",
       location: "",
       addMeet: false,
+      recurrence: "none",
     });
     setPopover({
       mode: "create",
@@ -972,52 +1021,94 @@ export default function SchedulePage() {
       if (canChangeVisibility) {
         body.calendar_type = draft.visibleToStaff ? "shared" : "personal";
       }
-      // Meet を付けるのは、つないだ本人で、Toggle が入っていて、まだ Meet が無い予定だけ
-      const wantsMeet = meetAvailable && draft.addMeet && !popover?.item?.meetUrl;
+      // Meet を付けるのは、つないだ本人で、Toggle が入っていて、まだ Meet が無い、繰り返さない予定だけ
+      const wantsMeet = meetAvailable && draft.addMeet && !popover?.item?.meetUrl && draft.recurrence === "none";
       if (wantsMeet) {
         body.add_meet = true;
       }
+      const editing = popover?.mode === "edit" && popover.item ? popover.item : null;
+      // 繰り返しは今の値と違うときだけ送る（作るときは「繰り返さない」以外のとき・§12.6.1 G4）
+      const recurrenceChanged = draft.recurrence !== "custom" && draft.recurrence !== (editing?.recurrence ?? "none");
+      if (recurrenceChanged) {
+        body.recurrence = draft.recurrence;
+      }
 
-      type SaveResult = { id: number; meet_url: string | null };
-      let saved: SaveResult | undefined;
-      if (popover?.mode === "edit" && popover.item) {
-        const numericId = eventNumericId(popover.item.id);
+      let numericId: number | null = null;
+      if (editing) {
+        numericId = eventNumericId(editing.id);
         if (numericId === null) {
           setError(t("common.saveError"));
           return;
         }
-        saved = await api.patch<SaveResult>(`/calendar/events/${numericId}`, body);
-      } else {
-        saved = await api.post<SaveResult>("/calendar/events", body);
       }
-      setPopover(null);
-      setError(null);
-      setFullEditOpen(false);
-      if (wantsMeet && !saved?.meet_url) {
-        // 予定そのものは保存済み。Meet だけ付かなかったことを知らせる
-        setBanner({ type: "error", message: t("schedule.meetFailed") });
+      type SaveResult = { id: number; meet_url: string | null };
+      const send = async (scope: RecurrenceScope | null) => {
+        try {
+          let saved: SaveResult | undefined;
+          if (editing && numericId !== null) {
+            const payload = scope
+              ? { ...body, scope, occurrence_start: occurrenceStartOf(editing).toISOString() }
+              : body;
+            saved = await api.patch<SaveResult>(`/calendar/events/${numericId}`, payload);
+          } else {
+            saved = await api.post<SaveResult>("/calendar/events", body);
+          }
+          setPopover(null);
+          setError(null);
+          setFullEditOpen(false);
+          if (wantsMeet && !saved?.meet_url) {
+            // 予定そのものは保存済み。Meet だけ付かなかったことを知らせる
+            setBanner({ type: "error", message: t("schedule.meetFailed") });
+          }
+          void invalidate(["calendar", "events"]);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : t("common.saveError"));
+        }
+      };
+
+      if (editing && isRecurringItem(editing)) {
+        const visibilityChanged =
+          canChangeVisibility && (draft.visibleToStaff ? "shared" : "personal") !== editing.calendarType;
+        const choices = scopeChoices("save", editing.isFirstOccurrence === true, recurrenceChanged || visibilityChanged);
+        if (choices.length === 1) {
+          await send(choices[0]);
+          return;
+        }
+        askScope({ kind: "save", choices, run: send });
+        return;
       }
-      void invalidate(["calendar", "events"]);
+      await send(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.saveError"));
     }
   };
 
   const deleteEvent = async () => {
-    if (!popover?.item) return;
-    const numericId = eventNumericId(popover.item.id);
+    const item = popover?.item;
+    if (!item) return;
+    const numericId = eventNumericId(item.id);
     if (numericId === null) {
       setError(t("common.deleteError"));
       return;
     }
-    try {
-      await api.delete(`/calendar/events/${numericId}`);
-      setPopover(null);
-      setError(null);
-      void invalidate(["calendar", "events"]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("common.deleteError"));
+    const send = async (scope: RecurrenceScope | null) => {
+      try {
+        const query = scope
+          ? `?${new URLSearchParams({ scope, occurrence_start: occurrenceStartOf(item).toISOString() }).toString()}`
+          : "";
+        await api.delete(`/calendar/events/${numericId}${query}`);
+        setPopover(null);
+        setError(null);
+        void invalidate(["calendar", "events"]);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t("common.deleteError"));
+      }
+    };
+    if (isRecurringItem(item)) {
+      askScope({ kind: "delete", choices: scopeChoices("delete", item.isFirstOccurrence === true, false), run: send });
+      return;
     }
+    await send(null);
   };
 
   const jumpToDate = (date: Date) => {
@@ -1118,6 +1209,7 @@ export default function SchedulePage() {
       description: "",
       location: "",
       addMeet: false,
+      recurrence: "none",
     });
     setPendingVisible(true);
     setPopover({ mode: "create", anchor, item: null });
@@ -1199,27 +1291,41 @@ export default function SchedulePage() {
     const startDay = formatDateInput(start);
     const startTime = allDay ? "00:00" : formatTimeInput(start);
     const endValue = toCalendarEnd(start, end, allDay, item);
-    try {
-      await api.patch(`/calendar/events/${numericId}`, {
-        title: item.title,
-        start_datetime: combineDateTime(startDay, startTime).toISOString(),
-        end_datetime: endValue.toISOString(),
-        is_all_day: allDay,
-        description: item.description || undefined,
-        location: item.location || undefined,
-      });
-      setError(null);
-      void invalidate(["calendar", "events"]);
-    } catch (err) {
-      revert();
-      setError(err instanceof Error ? err.message : t("common.saveError"));
+    const send = async (scope: RecurrenceScope | null) => {
+      try {
+        const body: Record<string, unknown> = {
+          title: item.title,
+          start_datetime: combineDateTime(startDay, startTime).toISOString(),
+          end_datetime: endValue.toISOString(),
+          is_all_day: allDay,
+          description: item.description || undefined,
+          location: item.location || undefined,
+        };
+        await api.patch(
+          `/calendar/events/${numericId}`,
+          scope ? { ...body, scope, occurrence_start: occurrenceStartOf(item).toISOString() } : body,
+        );
+        setError(null);
+        void invalidate(["calendar", "events"]);
+      } catch (err) {
+        revert();
+        setError(err instanceof Error ? err.message : t("common.saveError"));
+      }
+    };
+    if (isRecurringItem(item)) {
+      // キャンセルと Esc で元の位置に戻す（§12.6.1 G6）
+      askScope({ kind: "move", choices: scopeChoices("move", item.isFirstOccurrence === true, false), run: send, cancel: revert });
+      return;
     }
+    await send(null);
   };
 
   // キーボードの近道（5-5 の判定の順番）。最新の状態を ref 経由で読み、window には 1 つだけ付ける
   const shortcutRef = useRef<(event: KeyboardEvent) => void>(() => {});
   shortcutRef.current = (event: KeyboardEvent) => {
     // 0. 全画面の編集が開いている間は何もしない（Esc は金型 EditorPage が先に受ける・G56）
+    // 3 択の小窓が開いている間は何もしない（Esc は金型 Modal が受ける・§12.6.1 G3）
+    if (scopeRequest) return;
     if (fullEditOpen) return;
     // 1. 変換中は何もしない（Safari は変換を決めた Enter で isComposing が偽になるため 229 も見る）
     if (event.isComposing || event.keyCode === 229) return;
@@ -1537,6 +1643,28 @@ export default function SchedulePage() {
       )}
 
       <ScheduleShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <ConfirmModal
+        open={scopeRequest !== null}
+        title={t(scopeRequest?.kind === "delete" ? "schedule.recurrence.deleteTitle" : "schedule.recurrence.editTitle")}
+        message={
+          <div className="schedule-scope-choices">
+            {(scopeRequest?.choices ?? []).map((choice) => (
+              <Radio
+                key={choice}
+                name="schedule-recurrence-scope"
+                value={choice}
+                label={t(SCOPE_LABEL_KEYS[choice])}
+                checked={scopeChoice === choice}
+                onChange={() => setScopeChoice(choice)}
+              />
+            ))}
+          </div>
+        }
+        confirmLabel={t("common.ok")}
+        cancelLabel={t("common.cancel")}
+        onConfirm={confirmScope}
+        onCancel={cancelScope}
+      />
 
       {popover && !fullEditOpen && (
         <SchedulePopover
@@ -1563,7 +1691,7 @@ export default function SchedulePage() {
         item={popover?.item ?? null}
         draft={draft}
         onDraftChange={setDraft}
-        onClose={() => { setFullEditOpen(false); setError(null); if (popover?.mode === "edit") setPopover(null); }}
+        onClose={() => { if (scopeRequest) return; setFullEditOpen(false); setError(null); if (popover?.mode === "edit") setPopover(null); }}
         onSave={saveEvent}
         error={error}
         canChangeVisibility={canChangeVisibility}

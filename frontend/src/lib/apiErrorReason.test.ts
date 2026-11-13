@@ -73,7 +73,7 @@ describe("merge_target_archived", () => {
 
 describe("backend sync", () => {
   it("every table code is used in backend/app", () => {
-    expect(Object.keys(API_ERROR_REASON_KEYS).length).toBe(10);
+    expect(Object.keys(API_ERROR_REASON_KEYS).length).toBe(18);
     for (const code of Object.keys(API_ERROR_REASON_KEYS)) {
       expect(sources.includes(`"${code}"`), code).toBe(true);
     }

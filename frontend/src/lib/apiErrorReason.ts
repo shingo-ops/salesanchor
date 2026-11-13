@@ -19,6 +19,14 @@ export const API_ERROR_REASON_KEYS: Readonly<Record<string, string>> = {
   role_not_assignable: "apiError.roleNotAssignable",
   merge_target_archived: "apiError.mergeTargetArchived",
   bill_to_country: "apiError.billToCountry",
+  recurrence_meet_not_allowed: "apiError.recurrenceMeetNotAllowed",
+  recurrence_not_available: "apiError.recurrenceNotAvailable",
+  recurrence_after_until: "apiError.recurrenceAfterUntil",
+  recurrence_scope_not_allowed: "apiError.recurrenceScopeNotAllowed",
+  recurrence_google_source: "apiError.recurrenceGoogleSource",
+  recurrence_scope_required: "apiError.recurrenceScopeRequired",
+  recurrence_occurrence_invalid: "apiError.recurrenceOccurrenceInvalid",
+  recurrence_this_not_allowed: "apiError.recurrenceThisNotAllowed",
 };
 
 /** detail が表のコードなら文言キー、そうでなければ null */

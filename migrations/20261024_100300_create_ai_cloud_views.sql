@@ -1,6 +1,6 @@
 -- ADR-1052 段1: 相談係用の伏せたビュー ai_cloud を作る（冪等・1 トランザクション）。
 -- 一覧には載せない。run_all_migrations.sh の EXIT trap が、毎回の実行の最後に流す（ai_ro と同じ形）。
--- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1143 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
+-- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1151 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
 -- 2) ai_cloud を作り直す。3) ai_cloud_meta.build_views() で全ビューを作り、build_log に 1 行書く。
 -- 4) ai_reader_cloud に ai_cloud の USAGE と SELECT だけを付ける。
 -- 分類表の元: docs/handoff/cloud-case-ai/stage1-column-class.tsv（表ごと・class ごとにまとめて unnest で入れる）。
@@ -228,6 +228,11 @@ FROM (VALUES
   ('public','sa_plans',ARRAY['billing_type'],'allow','値の決まり ck_sa_plans_billing_type で値が限られる'),
   ('public','sa_plans',ARRAY['code','name'],'allow','【名前を含む】運営だけが入れる一覧。自社の売り物のプランの記号と名前（人や取引先の情報ではない）'),
   ('public','sa_products',ARRAY['code','name'],'allow','【名前を含む】運営だけが入れる一覧。自社の売り物の商材の記号と名前（人や取引先の情報ではない）'),
+  ('public','secretary_rule_checks',ARRAY['model','sdk'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
+  ('public','secretary_rule_checks',ARRAY['status'],'allow','値の決まり ck_secretary_rule_checks_status で値が限られる'),
+  ('public','secretary_rules',ARRAY['rule_text','source_reply','source_text'],'mask',''),
+  ('public','secretary_rules',ARRAY['source_kind'],'allow','値の決まり ck_secretary_rules_source_kind で値が限られる'),
+  ('public','secretary_rules',ARRAY['status'],'allow','値の決まり ck_secretary_rules_status で値が限られる'),
   ('public','source_messages',ARRAY['raw_sha256','raw_text'],'mask',''),
   ('public','supplier_aliases',ARRAY['alias_text'],'mask',''),
   ('public','supplier_aliases',ARRAY['language'],'allow','値の決まり supplier_aliases_language_check で値が限られる'),

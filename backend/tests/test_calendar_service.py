@@ -1558,6 +1558,50 @@ class TestListRecurrence:
         assert "ce.recurrence_rule IS NULL" not in db.calls[0][0]
         assert len(out) == 1 and out[0]["occurrence_start"] is None and out[0]["recurrence"] == "weekly"
 
+    @pytest.mark.asyncio
+    async def test_is_first_occurrence_on_expanded(self):
+        from app.services.calendar_service import list_events
+
+        db = _FakeDB([("SELECT ce.id", [self._master_row()])], sync_mode=None)
+        out = await list_events(db, 1, start="2026-11-01T00:00:00+09:00", end="2026-12-01T00:00:00+09:00")
+        assert [o["is_first_occurrence"] for o in out] == [True, False, False]
+
+    @pytest.mark.asyncio
+    async def test_is_first_occurrence_missing_master(self):
+        from app.services.calendar_service import list_events
+
+        first = list(self._master_row())
+        first[19], first[20], first[21] = None, 1, _jt(2026, 11, 12)
+        second = list(self._master_row())
+        second[0], second[7], second[8] = 9, _jt(2026, 11, 19), _jt(2026, 11, 19, 11)
+        second[19], second[20], second[21] = None, 1, _jt(2026, 11, 19)
+        handlers = [
+            (
+                "SELECT id, recurrence_rule, start_datetime, is_all_day",
+                [(1, "FREQ=WEEKLY;BYDAY=TH", _jt(2026, 11, 12), False)],
+            ),
+            ("SELECT ce.id", [tuple(first), tuple(second)]),
+        ]
+        db = _FakeDB(handlers, sync_mode=None)
+        out = await list_events(db, 1, start="2026-11-01T00:00:00+09:00", end="2026-12-01T00:00:00+09:00")
+        assert len(out) == 2
+        assert [o["is_first_occurrence"] for o in out] == [True, False]
+        assert all(o["recurrence"] == "weekly" for o in out)
+
+    @pytest.mark.asyncio
+    async def test_is_first_occurrence_single_and_search(self):
+        from app.services.calendar_service import list_events
+
+        single = list(self._master_row())
+        single[19], single[20] = None, None
+        db = _FakeDB([("SELECT ce.id", [tuple(single)])], sync_mode=None)
+        out = await list_events(db, 1, start="2026-11-01T00:00:00+09:00", end="2026-12-01T00:00:00+09:00")
+        assert len(out) == 1 and out[0]["is_first_occurrence"] is False
+
+        db = _FakeDB([("SELECT ce.id", [self._master_row()])], sync_mode=None)
+        out = await list_events(db, 1, user_id=5, title_query="定例", limit=10)
+        assert len(out) == 1 and out[0]["is_first_occurrence"] is True
+
 
 class TestCreateRecurrence:
     @pytest.mark.asyncio

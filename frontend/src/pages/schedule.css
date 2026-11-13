@@ -542,6 +542,21 @@
   min-height: var(--space-10);
 }
 
+/* 終日のチェックと繰り返しの選ぶ欄を 1 段に並べる（design §12.6.1 G8） */
+.schedule-editor-all-day-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* 3 択の小窓の選び方を縦に並べる（design §12.6.1 G7） */
+.schedule-scope-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 /* Meet の行のボタンの文字を左に寄せる（今の .schedule-full-editor の規則の役目を引き継ぐ。金型 Button は既定で真ん中寄せ） */
 .schedule-editor-meet .schedule-popover__line {
   justify-content: flex-start;
