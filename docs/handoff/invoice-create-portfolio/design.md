@@ -1,6 +1,6 @@
 # design: 請求書作成画面をポートフォリオの形に作り直す（住所・税・関税・支払方法を記録の表から）
 
-状態: 設計案 第7版（Opus 作成 2026-11-13）。第1版はクラウドの設計審査で REVISE（止める2・直すべき11・覚え書き6）、第2版は REVISE（止める0・直すべき9・覚え書き5）、第3版は REVISE 相当（止める0・直すべき5・覚え書き6）、第4版は REVISE（止める0・直すべき1・覚え書き5）、第5版は REVISE（止める0・直すべき3・覚え書き4）、第6版は REVISE（止める0・直すべき1・覚え書き3）。本版はすべてを反映した（§11〜§16 に対応表）。再審査前。PO 承認前。
+状態: 設計案 第8版（Opus 作成 2026-11-13）。第1版はクラウドの設計審査で REVISE（止める2・直すべき11・覚え書き6）、第2版は REVISE（止める0・直すべき9・覚え書き5）、第3版は REVISE 相当（止める0・直すべき5・覚え書き6）、第4版は REVISE（止める0・直すべき1・覚え書き5）、第5版は REVISE（止める0・直すべき3・覚え書き4）、第6版は REVISE（止める0・直すべき1・覚え書き3）、第7版は REVISE（止める0・直すべき1・覚え書き2）。本版はすべてを反映した（§11〜§17 に対応表）。再審査前。PO 承認前。
 根拠: 同じ場所の recon.md（§番号で指す）。基準 origin/main `c296af3bb`（第6版の審査で `56bd5c3ef` と照らし、引いた行番号はすべて一致。実装カードでは基準をその時の origin/main に更新する）。対象 ADR: ADR-101（§7 関税・実装上の注意）、ADR-095 付録1-4、ADR-106（テナント別ポリシー）、ADR-125 D5、ADR-1061（振込先・税率・発行元の表）、ADR-027（i18n）、ADR-144（UI の金型）、ADR-072（commit 後の reset）、ADR-135/136（危険な PR）。あるべき姿: docs/specs/quote-invoice/（KGI Q1〜Q15）。
 
 ## 1. 目的（PO の言葉から）
@@ -73,7 +73,7 @@
 - effective_from（DATE NOT NULL）、effective_to（DATE NULL）
 - source_url（TEXT NOT NULL。値の根拠。空は不可。ADR-095 付録1-4「エビデンス確立」）
 - note、is_active、created_at、updated_at
-- 同じ国・同じ送料の会社で有効期間が重なる行は作れない（書く道で 409 duty_rule_overlap）。会社の比べは保存した形（上の小文字の形）どうしで行い、carrier が NULL の行どうしも同じ会社とみなす（SQL では IS NOT DISTINCT FROM を使う。= だと NULL どうしの重なりを見逃す。第7版で足した）。有効期間の終わりが NULL の行は終わりの無い行として重なりを見る。
+- 同じ国・同じ送料の会社で有効期間が重なる行は作れない（書く道で 409 duty_rule_overlap）。会社の比べは保存した形（上の小文字の形）どうしで行い、carrier が NULL の行どうしも同じ会社とみなす（SQL では IS NOT DISTINCT FROM を使う。= だと NULL どうしの重なりを見逃す。第7版で足した）。有効期間の終わりが NULL の行は終わりの無い行として重なりを見る。PUT で行を直すときは、その行自身（id <> :id）を重なりの相手から除く。同時に2つの書き込みが来ても重なりがすり抜けないように、検査の前に同じ取引の中で pg_advisory_xact_lock（会社と国から作った鍵）を取り、同じ会社・同じ国の書き込みを1つずつ順に通す（第8版で足した）。
 
 **tenant_duty_rule_components**（関税の中身。1つの決まりに複数）
 - id、rule_id（外部キー。決まりを消すと一緒に消える）、tenant_id（NOT NULL）
@@ -172,7 +172,7 @@ payment_account_number には行を置かない。名前の見張りが先に外
 |---|---|---|---|
 | A | 移行: 関税の表2つ・請求書の7列・tenant.py の同じ形と欠けた12列・明細2表の hs_code・クラウドの読み取りの見え方の表への分類（§3-5 の表。SQL と元の表の両方） | 無し | **危険**（migrations/。ADR-135/136 の GO とバックアップ確認） |
 | B | 関税の額の道と設定画面 | 管理センターに「関税の額」 | 普通 |
-| C | invoice_totals・draft-context・preview・作る／見積から作る／発行／直す道・為替を表だけに（GET /fx-rate も表の最新行を返す）・PDF の支払方法と率 | PDF に支払方法が出る。作る道が新しい形になる | 普通（**C と D は同じ PR で出す**。今の作成画面は tax_amount を送るので、C だけ先に出すと作成画面が 422 になる） |
+| C | invoice_totals・draft-context・preview・作る／見積から作る／発行／直す道・為替を表だけに（GET /fx-rate も表の最新行を返す）・PDF の支払方法と率 | PDF に支払方法が出る。作る道が新しい形になる。新しい理由コード（duty_needs_carrier・duty_rule_overlap・shipping_required・fx_rate・tax_rate・payment_method）を、frontend/src/lib/apiErrorReason.ts の API_ERROR_REASON_KEYS（:11-30）、ja.json と en.json の apiError、backend/tests/test_api_error_reason_sync.py の固定の一覧、frontend/src/lib/apiErrorReason.test.ts:76 の件数（今は18）に足す（第8版で足した。足さないと画面と秘書チャットにコードの文字がそのまま出る。api.ts:129-131） | 普通（**C と D は同じ PR で出す**。今の作成画面は tax_amount を送るので、C だけ先に出すと作成画面が 422 になる） |
 | D | 作成画面の作り直し・FedExRateModal に任意の originCountryCode を足し請求書の画面から渡す（渡さない見積の画面は今のまま）・秘書チャットの送料の選択と通貨の選択肢・詳細画面の下書きのときだけの支払方法の選択 | 作成画面が見本の並びになる。下書きの詳細画面で支払方法を選び直せる | 普通 |
 
 - 1便1目的。C と D だけは上の理由で1つの PR にする（実装は C→D の順に2つのコミットで分ける）。
@@ -239,9 +239,9 @@ payment_account_number には行を置かない。名前の見張りが先に外
 | K14 関税の条件の正本は1つ | 新しい表に incoterm の列が無い（移行の試験）。会社の設定を DAP→DDP に変えると preview の関税が出る |
 | K15 発行で計算し直す | サーバーの試験: 作成の後に税率の行を足して発行すると、発行日の率で tax_amount が変わる。作成の後に為替の行を足して発行すると、送料が shipping_snapshot の元の額から新しい率で換算し直され、exchange_rate・amount・合計が変わる。明細・運送会社・送料の元の額・支払方法は変わらない |
 | K16 見積から作っても同じ計算 | サーバーの試験: 同じ明細・送料で、作る道と見積から作る道の税・関税・合計が一致。送料0の見積から作ると「送料を請求しない」になり 422 にならない |
-| K17 新しい表の会社の分け | 移行の試験: 別の会社の文脈で tenant_duty_rules・中身の行が0行に見える。便 A の移行は全テナントを回すので、backend/tests/rls_bootstrap.py の _TENANT_LOOP_MIGRATIONS（:172-191。前例 20261112_160000 が :190）にテナントを選ぶ条件の回数と一緒に登録する。あわせて backend/tests/test_tenant_loop_migration_guard.py の _REVIEWED（:5「書くまでこの試験は落ちる」）に、キー rls_bootstrap.py の行の集合（同じファイルの :28-53。前例 20261112_160000 が :52）へ同じ移行の名前を足し、移行の試験の新しいファイルを 'scoped' の行として足す（前例 test_tenant_issuer_tables_pg.py が :110-113） |
-| K18 誤りの返し方 | サーバーの試験: 409 duty_needs_carrier・duty_rule_overlap・fx_rate・tax_rate、422 shipping_required・payment_method、作る道に tax_amount・exchange_rate_jpy・exchange_rate_usd・amount_jpy・amount_usd・shipping_fee・payment_method（文字）のどれかを送ると 422。PATCH に exchange_rate_jpy・exchange_rate_usd・payment_method（文字）を送ると 422。下書きでない請求書の PATCH は今と同じ 400。409 duty_needs_carrier は作る・見積から作る・発行の3つの道それぞれで、DDP・会社つきの行だけの国に「会社が空」と「会社が一致しない」の2通りを試す。比べ方は、前後に空白がある大文字まじりの会社名の見積と、同じ名前を小文字だけで書いた行が一致する。409 duty_rule_overlap は、大文字まじりと空白つきで書いた同じ会社名の行と、carrier が NULL の行どうしの2通りで、有効期間が重なると返る。書いた行の carrier は小文字・空白なしで保存され、空の文字は NULL で保存される |
-| K19 秘書チャットが壊れない | 画面の試験: 秘書チャットで「送料を請求しない」を選んで作成でき、POST の中身に tax_amount が無い。DDP で運送会社つきの関税の行しか無い国の取引先では、409 duty_needs_carrier の理由の文言が返事に出て、請求書は作られない |
+| K17 新しい表の会社の分け | 移行の試験: 別の会社の文脈で tenant_duty_rules・中身の行が0行に見える。便 A の移行は全テナントを回すので、backend/tests/rls_bootstrap.py の _TENANT_LOOP_MIGRATIONS（:172-191。前例 20261112_160000 が :190）にテナントを選ぶ条件の回数と一緒に登録する。あわせて backend/tests/test_tenant_loop_migration_guard.py の _REVIEWED（:5「書くまでこの試験は落ちる」）に、キー rls_bootstrap.py の行の集合（同じファイルの :28-53。前例 20261112_160000 が :52）へ同じ移行の名前を足し、移行の試験の新しいファイルを 'scoped' の行として足す（前例 test_tenant_issuer_tables_pg.py が :110-113）。同じ移行の試験で、道を通さず直接 INSERT した carrier が大文字まじり・前に空白つき・空の文字の3通りとも CHECK で拒まれることを確かめる（第8版で足した） |
+| K18 誤りの返し方 | サーバーの試験: 409 duty_needs_carrier・duty_rule_overlap・fx_rate・tax_rate、422 shipping_required・payment_method、作る道に tax_amount・exchange_rate_jpy・exchange_rate_usd・amount_jpy・amount_usd・shipping_fee・payment_method（文字）のどれかを送ると 422。PATCH に exchange_rate_jpy・exchange_rate_usd・payment_method（文字）を送ると 422。下書きでない請求書の PATCH は今と同じ 400。409 duty_needs_carrier は作る・見積から作る・発行の3つの道それぞれで、DDP・会社つきの行だけの国に「会社が空」と「会社が一致しない」の2通りを試す。比べ方は、前後に空白がある大文字まじりの会社名の見積と、同じ名前を小文字だけで書いた行が一致する。409 duty_rule_overlap は、大文字まじりと空白つきで書いた同じ会社名の行と、carrier が NULL の行どうしの2通りで、有効期間が重なると返る。書いた行の carrier は小文字・空白なしで保存され、空の文字は NULL で保存される。PUT で行の金額だけを直すとき、自分の行とは重ならないとみなされて 200 になり、ほかの行と期間が重なるように直すと 409 duty_rule_overlap になる |
+| K19 秘書チャットが壊れない | 画面の試験: 秘書チャットで「送料を請求しない」を選んで作成でき、POST の中身に tax_amount が無い。DDP で運送会社つきの関税の行しか無い国の取引先では、409 duty_needs_carrier の理由として ja.json の apiError の日本語の文言が返事に出て、コードの文字 duty_needs_carrier はそのまま出ない。請求書は作られない。あわせて apiErrorReason.test.ts で新しい6つのコードが日本語の文言に変わることを確かめる |
 | K20 関税の額の変更が記録に残る | サーバーの試験: 足す・直す・消すで audit_logs が1行ずつ増える |
 | K21 口座番号が AI の読み取りに出ない | 移行の試験: ai_ro の請求書の見え方の列に payment_account_number が無い。クラウドの見え方の試験 T10 が通る（新しい文字・JSONB の列がすべて分類済み）。便 A の後、reader 鍵で ai_ro の請求書の見え方の列を数えて payment_account_number が0件 |
 | K22 新しいテナントでも作れる | サーバーの試験: tenant.py で作ったスキーマに対して、作る道・見積から作る道・詳細（_INVOICE_COLUMNS を読む）が通る |
@@ -351,6 +351,14 @@ payment_account_number には行を置かない。名前の見張りが先に外
 | N1 GET /fx-rate の JPY が 503 に読める | §3-4 に JPY は今と同じ返し方（invoices.py:1040-1041）と書いた。K24 に足した |
 | N2 「送料を請求しない」で DDP・会社つきの行だけの国は、作成画面と秘書チャットでいつも 409 になるのに §6 に無い | §6 に行を足した（作成画面は未計算と理由を見せる。秘書チャットは理由を返事に出す。対処は carrier NULL の行）。K19 に期待を足した |
 | N3 基準の origin/main が古い | 冒頭の基準に、56bd5c3ef で行番号が一致したことと、実装カードで基準を更新することを書いた |
+
+## 17. 第7版の審査の指摘と対応
+
+| 指摘 | 対応 |
+|---|---|
+| F1 K19 の「理由の文言が出る」が判定できない（新しいコードが理由の表に無く、コードの文字がそのまま出る） | 便 C に、6つのコードを apiErrorReason.ts の表・ja.json/en.json の apiError・test_api_error_reason_sync.py の固定の一覧・apiErrorReason.test.ts の件数に足すと書いた。K19 を日本語の文言が出てコードの文字が出ないことの確かめに直した |
+| M1 PUT で自分の行と重なる・同時の書き込みで重なりがすり抜ける | §3-3 に、PUT は id <> :id で自分を除き、会社と国ごとの pg_advisory_xact_lock で順に通すと書いた。K18 に PUT の2通りを足した |
+| M2 CHECK が直接 INSERT を拒むかの試験が無い | K17 の移行の試験に、大文字まじり・前に空白・空の3通りの直接 INSERT が拒まれることを足した |
 
 ## 維持の仕組み
 
