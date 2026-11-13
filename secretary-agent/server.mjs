@@ -7,6 +7,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { compose, readRules } from "./compose.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 8090);
@@ -50,7 +51,7 @@ function readBody(req) {
 const MODEL_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
 // claude を 1 回動かす。返り値: { status, body }
-function runClaude(text, now, model) {
+function runClaude(text, now, model, rules) {
   return new Promise((resolve) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sec-"));
     let settled = false;
@@ -118,7 +119,7 @@ function runClaude(text, now, model) {
       }
     });
     child.stdin.on("error", () => {});
-    child.stdin.end(`${PROMPT}\n\n今の日時: ${now}\n\n利用者の文:\n${text}`);
+    child.stdin.end(compose(PROMPT, now, text, rules));
   });
 }
 
@@ -135,9 +136,9 @@ const server = http.createServer(async (req, res) => {
         return send(res, e.status || 400, { code: "bad_request" });
       }
       if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) return send(res, 503, { code: "not_ready" });
-      let text, now, model;
+      let text, now, model, rules;
       try {
-        ({ text, now, model } = JSON.parse(raw));
+        ({ text, now, model, rules } = JSON.parse(raw));
       } catch {
         return send(res, 400, { code: "bad_request" });
       }
@@ -147,11 +148,13 @@ const server = http.createServer(async (req, res) => {
       if (typeof model !== "string" || !MODEL_RE.test(model)) {
         return send(res, 400, { code: "bad_request" });
       }
+      rules = readRules(rules);
+      if (rules === null) return send(res, 400, { code: "bad_request" });
       if (busy) return send(res, 429, { code: "busy" });
       busy = true;
       const started = process.hrtime.bigint();
       try {
-        const { status, body } = await runClaude(text, now, model);
+        const { status, body } = await runClaude(text, now, model, rules);
         log(Number(process.hrtime.bigint() - started) / 1e9, status === 200 ? "ok" : body.code);
         return send(res, status, body);
       } finally {

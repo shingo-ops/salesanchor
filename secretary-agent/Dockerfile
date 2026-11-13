@@ -3,6 +3,6 @@
 FROM node:22-bookworm-slim
 RUN npm install -g @anthropic-ai/claude-code@2.1.314
 ENV DISABLE_AUTOUPDATER=1 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
-COPY server.mjs probe.mjs prompt.txt schema.json /app/
+COPY server.mjs probe.mjs prompt.txt schema.json compose.mjs /app/
 USER node
 CMD ["node","/app/server.mjs"]
