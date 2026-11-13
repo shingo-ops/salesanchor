@@ -803,8 +803,8 @@ env -u BASH_ENV bash "$TMP"
 
 (1) 本節をクラウドの Architect（新しく起動・読むだけ）で審査 (2) APPROVE の後、同じ枝でクラウドの Sonnet が 18-14-3 を実装し、試験と赤の実演 (3) reviewer（opus・手元で新しく起動）→ PR 本文に GO 記録（POの委任に基づくClaude Opus発行。deploy.yml・scripts を含む）→ マージ → 本番反映 (4) 移行の段が動く本番反映で K18-10 と K18-4 の残りを見る。
 
-## 19. 段7 設計 — 試しと本番反映が重なっても移行が止まらないようにする（第1版、2026-11-13）
-状態: 設計案作成済み（2026-11-13）。審査はまだ。実装は未着手。
+## 19. 段7 設計 — 試しと本番反映が重なっても移行が止まらないようにする（第2版、2026-11-13）
+状態: 第1版はクラウドの Architect（opus）審査で REVISE（必須6・推奨4、19-14）。第2版で全件を直した。再審査はまだ。実装は未着手。
 PO の依頼（2026-11-13）: 「試作や本番反映が被っても止まらないようには出来る？」。説明の後の PO の選択は「1」（3つの直し方をまとめて設計し、作って試すのは1つずつにして効果を数えながら進める）。
 3つの直し方: (c) 本番反映が止まった回数を毎週機械が数えて知らせる／(a) 済んだ移行は流さない／(b) 試しの道具に長く表を押さえさせない。
 番号の (a)〜(c) は PO に説明した順。作る順は 19-3 のとおり (c)→(a)→(b)。
@@ -831,7 +831,10 @@ PO の依頼（2026-11-13）: 「試作や本番反映が被っても止まら�
 - 試しの道具の取引を守る仕組みは `backend/app/tools/_tx_guard.py`（30秒の上限）と、それを呼ばない道具を赤にする試験 `backend/tests/test_tools_tx_guard_required.py`（§18 の C6'）。
   - 試験が見るのは `backend/app/tools/` の下だけ（:11〜:13）。backend の外にある、DB を使う Python の道具は7本: `docs/handoff/s1-rls-stage5/pool_reset_measure.py`、`docs/handoff/single-set-category/data/bin3/ref/rejudge_pika30.py`、`docs/handoff/single-set-category/data/bin3/rejudge_single_set.py`、`scripts/accuracy/condition_words/replay_words.py`、`scripts/accuracy/llm_compare/fhd_snapshot.py`、`scripts/check_priority_scoring_state.py`、`scripts/check_public_tenant_rls.py`（`git grep -lE '_get_sync_session|create_engine\(|psycopg|asyncpg\.connect'`）。
   - このうち `from app.` を読み込んで本番のアプリの入れ物で動く形は4本（rejudge の2本・replay_words・fhd_snapshot）。残り3本は psycopg2 で直接つなぐ（CI 用・使い捨ての DB 用・月次の点検）。
-  - 必須の pytest が動くかを決める filters に docs/ は無い（`.github/workflows/test.yml` :176〜:184）。docs/ の下に道具を足すだけの PR では、守りの試験が走らない。
+  - 必須の pytest が動くかを決める detect-changes の filters（`.github/workflows/test.yml` :45〜:54）と、push の paths（:20〜:29）に docs/ は無い。docs/ の下に道具を足すだけの PR では、守りの試験が走らない。
+- 点検の段が exit 1 で止まる道は3つある: 600秒で0にならない（`scripts/deploy-db-precheck.sh` :199 `STOP:`・:207）、数えられない（:177 `could not count`・:179）、設定の誤り（:55・:57、:62・:64 `invalid setting`）。
+- 移行の段は `command_timeout: 10m`（`.github/workflows/deploy.yml` :848）、点検の段は 12m（:205）で切れる。切れたときは台本の文言が出ない。2つの段とも continue-on-error は無い（:195〜:205・:840〜:848）。
+- 握り手の行（`scripts/run_all_migrations.sh` :66〜:68）は、ロック待ちの1回目（:95・:125）と上限に達したとき（:104・:134）に出る。形は `>>> [段/全段]   pid | DB ユーザー | application_name | state | 待ち | 取引秒 | 命令 | 握る表`。11/13 の1回目の行は application_name が空だった（作業メモの記録 :3508）。
 
 ### 19-2. 目的と成功の条件（KGI）
 目的: 試しが本番で動いていても、本番反映が移行のロック待ちで失敗しない。失敗した回は、人が数えなくても毎週知らせが届く。
@@ -854,30 +857,40 @@ PO の依頼（2026-11-13）: 「試作や本番反映が被っても止まら�
 |---|---|---|
 | `scripts/ops/count-deploy-lock-failures.sh`（新規） | 無い | 本番反映の記録を回ごとに読み、数を出す台本 |
 | `.github/workflows/weekly-deploy-lock-count.yml`（新規） | 無い | 毎週月曜 01:00 UTC（10:00 JST）と手動で、上の台本を流し、0でなければ Discord に送る |
-| `backend/tests/ops/test_deploy_lock_count.py`（新規） | 無い | 台本と workflow の試験（必須の pytest の中で走る） |
+| `backend/tests/ops/test_deploy_lock_count.py`（新規） | 無い | 台本と workflow の試験（必須の pytest の中で走る。置き場所は既にある `backend/tests/ops/test_deploy_precheck_wiring.py` と同じ並び） |
+| `.github/workflows/test.yml` | filters（:45〜:54）と push の paths（:20〜:29）に新しい workflow が無い | 両方に `.github/workflows/weekly-deploy-lock-count.yml` を1行ずつ足す |
 
 台本の動き:
 1. 引数: `--days N`（既定 7）または `--since YYYY-MM-DD --until YYYY-MM-DD`、試験用に `--from-dir DIR`（API を呼ばずに DIR の記録を読む）。
-2. deploy.yml の run を、期間内に作られたものだけページを送って全部引く（`GET .../actions/workflows/deploy.yml/runs?created=A..B&per_page=100`）。
+2. deploy.yml の run を1日ずつ引く（`GET .../actions/workflows/deploy.yml/runs?created=D..D&per_page=100` をページを送って全部）。この API は created などの絞りを付けると1回の検索で1,000件までしか返さない（GitHub REST API の公式資料「List workflow runs for a workflow」、2026-11-13 に Context7 で確かめた）。1日の run は11/12〜11/13 の約22時間で40本なので、1日ずつなら上限に届かない。1日の結果が1,000件に達したら、読めなかったとして扱う（黙って切らない）。期間の両端は1日ずつ広げて引き、(run id・回) で重ねを除く（日付の境目と時刻帯の取りこぼしを防ぐ）。
 3. 各 run について、回 1〜run_attempt を全部見る。各回の job を引き、段の一覧（job の steps）で「Run database migrations」か「Check open DB transactions before deploy」の結論が skipped でない job だけ記録を読む（2026-11-13 の1回目で、段の名前と結論が steps に出ることを確かめた。移行の段が動いた回は10/29〜11/9 で447回中34回）。
-4. 記録の数え方（`grep -a`）:
-   - 失敗: `lock conflict; retry limit reached` が1行以上ある回。
-   - 待ちあり: `lock conflict; retry [0-9]` が1行以上ある回（行数も出す）。
-   - 点検で停止: `[precheck] STOP:` がある回。
-   - 握り手: 失敗の回で `lock holders (xact > 1s):` に続く行の、ユーザーと application_name の列（`scripts/run_all_migrations.sh` :68 の列の順）。接続元の場所は出さない（:65 の注記と同じ）。
-   - 読めなかった: 記録を引けなかった回。0でなければ知らせる（黙って0と数えない）。
-5. 出力: 1行1回の表（run id・回・時刻・失敗・待ち行数・停止・握り手のユーザーと名前）と合計。job の要約（`$GITHUB_STEP_SUMMARY`）にも同じものを書く。
-6. 失敗＋点検で停止＋読めなかった が0でなければ、合計と run id の一覧を `scripts/notify/discord-owner-ping.sh` で送る。0なら「0回」の1行を job の要約に残す（Discord には送らない）。
-7. 台本は数えるだけで、本番のサーバーと DB には触らない。使う鍵は workflow の GITHUB_TOKEN（permissions は actions: read と contents: read だけ）。
+4. 回ごとの分け方（段ごとに分ける。19-1 の止まる道を全部数える）:
+   | 段 | 分け | 判定 |
+   |---|---|---|
+   | 移行の段 | 上限失敗 | 段の結論が failure で、記録に `lock conflict; retry limit reached` がある |
+   | 移行の段 | その他の失敗 | 段の結論が failure・cancelled・timed_out で、上の文言が無い（10分で切れた回を含む） |
+   | 移行の段 | 待ちあり | 記録に `lock conflict; retry [0-9]` がある（行数も出す。成功した回も数える） |
+   | 点検の段 | STOP停止 | 段の結論が failure で、記録に `[precheck] STOP:` がある |
+   | 点検の段 | その他の停止 | 段の結論が failure・cancelled・timed_out で、STOP の文言が無い（`could not count`・`invalid setting`・12分で切れた回） |
+   | どちらも | 読めなかった | job の一覧か記録を引けなかった、または 2. の1,000件に達した |
+   記録の文字は `grep -a` で読む（19-1）。
+5. 握り手: 失敗の回だけでなく、待ちのあった全部の回から取る（K19-7 で (b) の後に名前の空の行を数えるため。成功した回の待ちにも握り手の行が出る、19-1）。取り方: `lock holders (xact > 1s):` の見出しの行に続き、先頭が `>>> [段/全段]   ` の行を、` | ` で8つに分けられるものだけ読む。2つ目の列が DB ユーザー、3つ目が application_name（空なら「名前なし」）。8つに分けられない行は数だけ出す。接続元の場所は SELECT に無い（`scripts/run_all_migrations.sh` :65 の注記）ので出さない。
+6. 出力: 1行1回の表（run id・回・時刻・段・分け・待ち行数・握り手のユーザーと名前）と、合計（移行の段が動いた回数・点検の段が動いた回数・分けごとの回数・名前ごとの握り手の行数）。job の要約（`$GITHUB_STEP_SUMMARY`）にも同じものを書く。API を呼んだ回数も出す。
+7. 終わり方: 全部数えられたら 0。API の呼び出しが失敗したか、読めなかった回が1つでもあれば 2（数えた分は出す）。
+8. 知らせ: 上限失敗・その他の失敗・STOP停止・その他の停止・読めなかった の合計が0でなければ、合計と run id（最大10件、それより多ければ「ほか N 件」）を `scripts/notify/discord-owner-ping.sh` で送る（Discord の上限で本文が1,900字で切られるため、`scripts/notify/discord-owner-ping.sh` :45）。0なら「0回」の1行を job の要約に残す（Discord には送らない）。
+9. workflow の失敗: 台本の終わりが0でないとき、または Discord への送信が失敗したとき（`scripts/notify/discord-owner-ping.sh` :61〜:63 が 200・204 以外で 1 を返す）は、job を失敗にする。知らせが届かないのを黙って緑にしない。
+10. 鍵: 台本は数えるだけで、本番のサーバーと DB には触らない。GitHub は workflow の GITHUB_TOKEN（permissions は actions: read と contents: read だけ）。Discord は前例と同じ secret DISCORD_WEBHOOK_SCHEDULED_REPORT を env DISCORD_WEBHOOK_OWNER_PING に渡す（`.github/workflows/weekly-stale-pr.yml` :19。secret は登録済み）。
 
 試験（`backend/tests/ops/test_deploy_lock_count.py`。§18 の P7・P8 と同じ必須の pytest で走る。scripts/ の変更で filters に当たる）:
-- D1 `--from-dir` に作り物の記録を置き、失敗1回・待ちだけ1回・停止1回・何も無い1回・文字以外のバイトを混ぜた1回で、数が合う。
-- D2 握り手の行から接続元の場所の列を出さない。
-- D3 記録を読めなかった回があると、終了の知らせの対象になる（0扱いにしない）。
-- D4 workflow に schedule と workflow_dispatch があり、台本を呼び、permissions が読みだけ。
-- 赤の実演（実装 PR に貼る）: `-a` を外すと D1 が赤／読めなかった回を0にすると D3 が赤。
+- D1 `--from-dir` に作り物の記録を置き、4. の6つの分けをそれぞれ1回ずつと、何も無い1回、文字以外のバイトを混ぜた1回で、数が合う。
+- D2 握り手の取り方: 作り物の行の列の順が `scripts/run_all_migrations.sh` :68 の SELECT の列の順（pid・usename・application_name・…）と同じことを、台本の実物の SELECT の文から確かめる（列の順を変えた PR が赤になる）。名前が空の行が「名前なし」に、8つに分けられない行が数だけに入る。成功した回の待ちの握り手も数える。
+- D3 読めなかった回・1日1,000件に達した日があると、終わりが2になり、知らせの対象になる（0扱いにしない）。
+- D4 workflow に schedule と workflow_dispatch があり、台本を呼び、permissions が読みだけ、secret の渡し方が前例と同じ、台本か送信の失敗で job が失敗する形。
+- D5 文言の守り: 4. の文言（`lock conflict; retry limit reached`・`lock conflict; retry `・`[precheck] STOP:`・`lock holders (xact > 1s):`）が `scripts/run_all_migrations.sh` と `scripts/deploy-db-precheck.sh` にあること。
+- 赤の実演（実装 PR に貼る）: `-a` を外すと D1 が赤／読めなかった回を0にすると D3 が赤／握り手を失敗の回だけから取ると D2 が赤。
+- `.github/workflows/test.yml` の filters（:45〜:54）と push の paths（:20〜:29）に `.github/workflows/weekly-deploy-lock-count.yml` を足す。workflow だけを変える PR でも D4 が走るようにする。
 
-基準の数え（実装 PR の後、手で1回）: workflow_dispatch で 2026-10-29〜2026-11-13 を数える。§18-1 の手数え（11/9 までの34回中6回）の run がすべて「失敗」に入ることを確かめる。新しく見つかった前の回の失敗は、run id つきで本節に書き足す。合わなければ止めて、数え方を直す。
+基準の数え（実装 PR の後、手で1回）: workflow_dispatch で 2026-10-29〜2026-11-13 を数える。§18-1 の手数え（11/9 までの34回中6回）の run がすべて「上限失敗」に入ることを確かめる。新しく見つかった前の回の失敗は、run id つきで本節に書き足す。合わなければ止めて、数え方を直す。
 
 ### 19-5. (a) 済んだ移行は流さない
 - 正本は `docs/handoff/migration-runner-redesign/design.md` §5（第7版）と ADR-1005・ADR-1007。本節では順番と測り方だけを決める。
@@ -886,9 +899,11 @@ PO の依頼（2026-11-13）: 「試作や本番反映が被っても止まら�
 - 注意: 毎回流す一覧（§5-7）の手順は (a) の後も流れる。その手順が表を押さえるかは 5-0 で確かめる。押さえるなら、(a) の後も新しい移行の無い回で待ちが出うる。
 
 ### 19-6. (b) 試しの道具に名前と上限を付ける（概要。(a) の本番測定の後に詳細を書く）
-- b1 アプリの接続の名前（段4a、§17）を先に実装する。試しの道具も使う `_engine` に名前が付き、握り手が「試し」か「アプリ」かを記録で分けられるようになる。
-- b2 試しの道具の名前: `backend/app/tools/_tx_guard.py` の接続ごとの設定（`_on_connect_set_idle_limit`）で、上限と同時に application_name を道具用の名前にする。名前は §17-2 の名前の表に足す（正本を増やさない）。
-- b3 守りの試験を広げる: `backend/tests/test_tools_tx_guard_required.py` の対象に、`from app.` を読み込んで DB を使う scripts/ と docs/ の下の .py を足す。`.github/workflows/test.yml` の filters に `docs/**/*.py` を足し、docs に道具を足す PR でも必須の pytest が走るようにする。
+- b1 アプリの接続の名前（段4a、§17）を先に実装する。§17-2 の名前の表に役割 `tool`（試しの道具）を1行足す。名前は §17 の1つの関数で作る `salesanchor_tool_<道>` で、別の作り方を足さない。
+  - 試しの道具は本番のアプリの入れ物に、`docker exec -e SA_PROCESS_ROLE=tool ...` で流す。§17-2 のとおり役割は名前の関数が呼ばれたときに読むので、道具の process が import した `_engine`（`backend/app/tasks/tcg_extraction.py` :94・:97）は、その process の中で `salesanchor_tool_<道>` を名乗る。同じ入れ物の中のアプリ（backend）の接続は SA_PROCESS_ROLE が無いので今の名前のまま。これで、同じ入れ物・同じ `_engine` の作り方でも、握り手が試しかアプリかを名前で分けられる。
+  - 道具が最初に開く接続も、engine を作るときの名前（connect_args）で名乗るので、connect の受け手を付ける前の接続に名前が無い、ということは起きない。
+- b2 試しの道具の確かめ: `backend/app/tools/_tx_guard.py` の `set_idle_tx_limit`（:43〜:52）で、上限を置いた後に `current_setting('application_name')` を読み、`salesanchor_tool_` で始まらなければ止める（`-e SA_PROCESS_ROLE=tool` の付け忘れを、流し始めに見つける）。名前を SET で付け直す道は作らない（名前の作り方は §17 の1つだけにする）。
+- b3 守りの試験を広げる: `backend/tests/test_tools_tx_guard_required.py` の対象に、`from app.` を読み込んで DB を使う scripts/ と docs/ の下の .py を足す。`.github/workflows/test.yml` の filters（:45〜:54）と push の paths（:20〜:29）に `docs/**/*.py` を足し、docs に道具を足す PR でも必須の pytest が走るようにする。
   - 今ある4本（19-1）は直すか、理由つきの例外にする。例外の理由と、直すときの試しの作り（仕入元1件を1つの取引にするのをやめるか）は詳細設計で決める。
   - psycopg2 で直接つなぐ3本は対象外（CI 用・使い捨ての DB 用・月次の点検）。開いたままの取引は点検の段が見つける。
 - b4 の候補（今は作らない）: 本番反映の移行の間だけ、試しの道具が新しい取引を始めずに待つ仕組み（例: DB の合図の鍵を、移行は独り占めで、道具は取引の初めに共有で取る）。(a)・b1〜b3 の後も (c) で失敗が出たときに設計する。
@@ -896,18 +911,19 @@ PO の依頼（2026-11-13）: 「試作や本番反映が被っても止まら�
 ### 19-7. 受け入れ基準
 | 基準 | 検証方法 |
 |---|---|
-| K19-1 (c) の台本が作り物の記録で正しく数える | D1〜D3 PASS（必須の pytest） |
+| K19-1 (c) の台本が作り物の記録で正しく数える | D1〜D3・D5 PASS（必須の pytest） |
 | K19-2 (c) の workflow が毎週と手動で動き、読みだけの権限 | D4 PASS |
-| K19-3 試験が壊れた台本を捕まえる | 赤の実演2つ（19-4） |
+| K19-3 試験が壊れた台本を捕まえる | 赤の実演3つ（19-4） |
 | K19-4 基準の数えが §18-1 の手数えの失敗6回をすべて含む | workflow_dispatch の1回の記録 |
-| K19-5 毎週の実行が届く | 実装の後の最初の月曜 10:00 JST の run が success で、要約に数が出る（0でなければ Discord にも出る） |
-| K19-6 (a) の効果 | 5-3 の本番反映の後の4週、(c) の「失敗」が毎週0（KGI-7） |
-| K19-7 (b) の効果 | b1〜b3 の本番反映の後の4週、(c) の握り手の列に名前の空の行が0 |
+| K19-5 毎週の実行が届く | 実装の後の最初の月曜 10:00 JST の run が success（＝全部数えられ、知らせが要るときは Discord への送信も成功した、19-4 の 9.）で、要約に数が出る |
+| K19-6 (a) の効果 | 5-3 の本番反映の後の4週、(c) の「上限失敗」が毎週0（KGI-7）。数える週は、移行の段が5回以上動いた週だけ（基準は10/29〜11/9 の34回で週に約21回）。5回未満の週は「保留」として飛ばし、数える週が4つそろうまで続ける |
+| K19-7 (b) の効果 | b1〜b3 の本番反映の後の4週、(c) の握り手（待ちのあった全部の回）に名前なしの行が0。数える週は K19-6 と同じ決まり |
 
 ### 19-8. 弊害・トレードオフ
-- (c) は GitHub の API を週に1回、run の一覧・回ごとの job の一覧・移行か点検の段が動いた job の記録の分だけ呼ぶ。11/12〜11/13 の約22時間で40 run あった。GITHUB_TOKEN の呼び出し回数の上限は、実装の前に GitHub の公式資料で確かめて本節に書く（まだ確かめていない）。基準の数え（K19-4）の呼び出し回数を記録に出し、上限との差を見る。
+- (c) は GitHub の API を週に1回、1日ごとの run の一覧・回ごとの job の一覧・移行か点検の段が動いた job の記録の分だけ呼ぶ。11/12〜11/13 の約22時間で40 run あった。run の一覧の1回の検索は1,000件まで（19-4 の 2.）なので1日ずつ引く。GITHUB_TOKEN の1時間あたりの呼び出し回数の上限は、まだ確かめていない。台本は呼んだ回数を出すので、基準の数え（K19-4。16日分で最も多い）の回数を記録して本節に書き足す。上限に当たって呼び出しが失敗したときは、19-4 の 7. のとおり終わりが2になり job が失敗するので、黙って少なく数えることはない。
 - (c) は数えて知らせるだけで、止まりを防がない。防ぐのは (a)・(b)。
-- 記録の文言（`lock conflict; ...`・`[precheck] STOP:`）が変わると数えが0になる。D1 の作り物の記録は、台本の echo の文と同じ文字を使い、試験で `scripts/run_all_migrations.sh` と `scripts/deploy-db-precheck.sh` にその文字があることも確かめる（文言を変えた PR が赤になる）。
+- 記録の文言（`lock conflict; ...`・`[precheck] STOP:`）が変わると数えが0になる。D5 で、その文字が `scripts/run_all_migrations.sh` と `scripts/deploy-db-precheck.sh` にあることを確かめる（文言を変えた PR が赤になる）。文言の無い失敗・停止は「その他」に入るので、文言が変わっても失敗の回は数から消えない。
+- 移行の段が少ない週（5回未満）は効果の判定に使わない（K19-6）。判定が延びることがある。
 - (a) の弊害は migration-runner-redesign §5 の弊害の節のとおり。
 
 ### 19-9. 選ばなかった案
@@ -932,7 +948,7 @@ PO の依頼（2026-11-13）: 「試作や本番反映が被っても止まら�
 ### 19-12. 継続（維持の仕組み）
 - 守り手: `.github/workflows/weekly-deploy-lock-count.yml`（毎週月曜に数えて、0でなければ Discord）と `backend/tests/ops/test_deploy_lock_count.py`（数え方と記録の文言を必須の pytest で守る）。
 - 数えた結果の記録は、毎週の job の要約と Discord に残る。KGI-7 の判定は (a)・(b) の本番反映のあと4週分を読む。
-- 数えの文言の正本は `scripts/run_all_migrations.sh` と `scripts/deploy-db-precheck.sh` の echo の文。変えると D1 が赤になる。
+- 数えの文言の正本は `scripts/run_all_migrations.sh` と `scripts/deploy-db-precheck.sh` の echo の文。変えると D5 が赤になる。握り手の列の正本は `scripts/run_all_migrations.sh` :68 の SELECT。変えると D2 が赤になる。
 
 ### 19-13. 範囲外（記録のみ）
 - アプリ（salesanchor_backend）が SET の後に取引を開いたまま置く件（§18-7）。
@@ -940,4 +956,15 @@ PO の依頼（2026-11-13）: 「試作や本番反映が被っても止まら�
 - 毎週の数えをほかの workflow（失敗の数一般）へ広げること。
 
 ### 19-14. 審査の記録
-（まだ無い）
+- 第1版 REVISE（2026-11-13、クラウドの Architect（opus）新規起動・読むだけ）。指摘はすべて実物で確かめた（記録は社内の作業メモ）。
+  - 必須1 test.yml の行番号の誤り（作業メモの行番号を書いていた）→ 19-1・19-6 を :45〜:54 と :20〜:29 に直した。recon.md も直した。
+  - 必須2 文言だけの数えでは、点検の段の他の止まり方と時間切れを数えない → 19-4 の 4. を段ごとの6つの分けにした。19-1 に止まる道を足した。
+  - 必須3 握り手を失敗の回からだけ取ると K19-7 が測れない → 19-4 の 5. で待ちのあった全部の回から取る。
+  - 必須4 毎週の判定に分母が無い → K19-6・K19-7 に「移行の段が5回以上の週だけ数える」を足した。19-4 の 6. で動いた回数を出す。
+  - 必須5 Discord の secret と送信失敗の扱いが無い → 19-4 の 8.〜10.。
+  - 必須6 b1 で試しとアプリを分けられない（同じ入れ物）・b2 の SET の道が §17 の1つの関数と食い違う → 19-6 で役割 tool を §17 の表に足し、`-e SA_PROCESS_ROLE=tool` で名乗る形にした。SET の道はやめた。
+  - 推奨7 最初の接続が受け手を通らない → 19-6 の b1（engine を作るときに名乗る）で解消。
+  - 推奨8 握り手の行の取り方が無い・D2 が何も守っていない → 19-4 の 5. と D2 を書き直した。
+  - 推奨9 一覧の1,000件の上限 → 公式資料で確かめ、1日ずつ引く形にした（19-4 の 2.）。
+  - 推奨10 workflow だけの PR で D4 が走らない・Discord の1,900字 → test.yml に足す行（19-4 の表）と、run id を最大10件にする（19-4 の 8.）。
+- 第2版: 再審査はまだ。

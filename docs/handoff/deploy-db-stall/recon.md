@@ -36,6 +36,6 @@
 ## 6. 追記（2026-11-13）— 段7（§19）の現在地
 - PO の依頼（2026-11-13）: 「試作や本番反映が被っても止まらないようには出来る？」。選択「1」（3つの直し方をまとめて設計し、1つずつ作って測る）。
 - 既存 ADR の検索: `git grep -i -l 'lock_timeout\|run-once\|applied' docs/adr/` は ADR-1024・ADR-1037・ADR-1038・ADR-1067 に当たり、関係するのは ADR-1037（移行のロック待ちの上限）だけ。`ls docs/adr | grep -i migration` で ADR-1005（済んだ移行を流さない。段階2は未実装）と ADR-1007（移行は形の変更だけ・1回だけ。Accepted・実装は未着手）が見つかった。新しい ADR は作らず、この3つの続きとして扱う。
-- 実物の照合: `scripts/run_all_migrations.sh` :57〜:60（上限1秒・やり直し40）・:66〜:68（握り手の行）・:103・:133（上限に達した行）、`scripts/deploy-db-precheck.sh` :186〜:199（点検の数えと STOP の行）、`backend/app/tasks/tcg_extraction.py` :94・:97（名前なしの接続）、`backend/tests/test_tools_tx_guard_required.py` :11〜:13（守りの範囲）、`.github/workflows/test.yml` :176〜:184（filters に docs/ が無い）、`docs/handoff/single-set-category/data/bin3/rejudge_single_set.py` :30・:171〜:193・:204〜:207。
+- 実物の照合: `scripts/run_all_migrations.sh` :57〜:60（上限1秒・やり直し40）・:66〜:68（握り手の行）・:103・:133（上限に達した行）、`scripts/deploy-db-precheck.sh` :186〜:199（点検の数えと STOP の行）、`backend/app/tasks/tcg_extraction.py` :94・:97（名前なしの接続）、`backend/tests/test_tools_tx_guard_required.py` :11〜:13（守りの範囲）、`.github/workflows/test.yml` :45〜:54（filters）・:20〜:29（push の paths）に docs/ が無い、`docs/handoff/single-set-category/data/bin3/rejudge_single_set.py` :30・:171〜:193・:204〜:207。
 - 本番の観測: 2026-11-13 run 43372532867 の1回目の記録（回ごとの API で読んだ）。握り手の突き合わせは社内の作業メモ。
 - 未確認: 11/5・11/7 の止まりの握り手。毎回流す一覧（migration-runner-redesign §5-7）の手順が表を押さえるか（5-0 で確かめる）。
