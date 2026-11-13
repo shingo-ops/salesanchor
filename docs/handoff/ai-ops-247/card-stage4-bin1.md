@@ -4,7 +4,7 @@
 
 - 設計: `docs/handoff/ai-ops-247/stage4-design.md` §1 X1・X4、§2 弊害、§8、§13
 - 対象ADR: ADR-1012
-- 状態: 設計審査済み（Opus 審査役 APPROVE on 44ac6c22a）。PO 承認済み（2026-11-13「1」= 確かめの作業を始める）。2026-11-13 に K1・K2・K3 とも ○（結果は設計 §13「実装の最初の便の確かめ」）。残りは試しの環境と routine の片付け（PO の画面）
+- 状態: 設計審査済み（Opus 審査役 APPROVE on 44ac6c22a）。PO 承認済み（2026-11-13「1」= 確かめの作業を始める）。2026-11-13 に K1・K2・K3 とも ○（結果は設計 §13「実装の最初の便の確かめ」）。残りは K1 の routine（無効）の片付け（PO の画面）。環境 ops-investigate-3 は調べ係の環境として残す
 - 危険便: いいえ（コード・表・本番の設定・`deploy.yml`・本番 `scripts/` を変えない）。ただし K1 で本番の読み取りの窓へ 1 回だけ問い（`SELECT 1`）を送る。本番の表は読まないが、窓の監査の記録に 1 行残る。クラウドの環境と secret を PO の画面で作るので、PO の承認を得てから始める
 - 担当: Opus（段取り・クラウドへの依頼・結果の確かめ・記録）／PO（画面の操作・`!` の命令・Mac の「ターミナル」の窓で 1 回）。実装役（Sonnet）は使わない
 
@@ -37,7 +37,7 @@
 - コード・表・本番サーバー・`deploy.yml`・本番 `scripts/` の変更
 - 本番の secret（GitHub secret・サーバーの .env）の変更
 - 相談係の環境と、その鍵の変更
-- 試し用の環境 ops-trial-p2・古い環境 ops-investigate・ops-investigate-2 の片付け（設計 §13 :210 のとおり、別に PO と行う）。3 つの名前は、2026-11-12 に Opus が RemoteTrigger で読んだ claude.ai の環境一覧にあるもの
+- 試し用の環境 ops-trial-p2・古い環境 ops-investigate・ops-investigate-2 の片付け（設計 §13「試しから設計に足すこと」のとおり、別に PO と行う）。3 つの名前は、2026-11-12 に Opus が RemoteTrigger で読んだ claude.ai の環境一覧にあるもの
 - App の範囲を変えること（K3 は読むだけ。広ければ止めて PO に聞く）
 
 ## 2. 確かめ 3 つ
