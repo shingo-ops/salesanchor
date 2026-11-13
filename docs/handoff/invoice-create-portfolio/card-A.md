@@ -18,6 +18,7 @@
 - D6 分類表（migrations/20261024_100300_create_ai_cloud_views.sql）に 12 列分の行を足す（請求書 4・関税の決まり 5・中身 3）。数・日付・真偽の型の列は型で通るので行を持たない。payment_account_number は列名の拒否の一覧（account_number）に当たって読めないので行を持たない（銀行の口座番号の前例と同じ）。1151 を 1163 にする。元の表 docs/handoff/cloud-case-ai/stage1-column-class.tsv にも同じ 12 行を足す（design.md §3-5「SQL と元の表の両方」）。
 - D7 分類表のファイルは reference-allowlist.tsv:7 に sha256 で登録されているので、同じ変更で sha256 と4列目を直す。4列目の最後に ` / invoice-create-portfolio card-A（分類12行追加）` を足す。
 - D8 新しい2表は public の表を外部キーで指さないので、CI の手順（.github/workflows/）は変えない（前例の便2-2c1 は public.countries を指したので手順を足した）。
+- D10 K21 の「読み取りの鍵の見え方（ai_ro）に請求書の口座番号の列が出ない」は、backend/tests/ops/test_ai_ro_views.py の前例 test_bank_account_number_and_iban_are_hidden（:239〜:265）と同じ形の試験で確かめる（2026-11-13 審査の指摘）。運用の確認の道（ops_case.unmask_fetch）は、分類で外された列（build_columns の excluded）を返さないので、口座番号の列はそこでも出ない（migrations/20261031_210000_create_ops_case.sql の「8. 列は全部そのビューの列で、秘密列として外された列でない」）。関税の2表は個人の情報を持たないので ops_case.deny_tables に足さない。
 - D9 移行の試験のテナント番号は 962（2026-11-13 に 11694eaf6 で backend・migrations・scripts を git grep して、試験と移行には 0 件。当たるのは backend/app/auth/data/common-passwords.txt と scripts/accuracy/llm_compare/README.md だけ）。
 
 ## 0. カード発行前チェック（docs/ai-agents/design-partner.md §5.5）
@@ -56,7 +57,7 @@
 - P2 `ls migrations | sort | tail -1` が `20261113_100001_create_secretary_rules_down.sql`。
 - P3 `sha256sum migrations/20261024_100300_create_ai_cloud_views.sql` の値と `sed -n 7p scripts/migration-guard/reference-allowlist.tsv | cut -f2` が、どちらも `472bfcd14f935118dadadb351601de91944964b031842ba9eee5f3d4d99fa6a6`。
 - P4 `grep -c "1151"` が migrations/20261024_100300_create_ai_cloud_views.sql と backend/tests/ops/test_ai_cloud_views.py でそれぞれ 1。
-- P5 `grep -c -E "tenant_duty|payment_method_snapshot|shipping_snapshot|tax_rate_percent|payment_account_number|shipping_carrier|shipping_service"` が backend/app/services/tenant.py・migrations/20261024_100300_create_ai_cloud_views.sql・backend/tests/rls_bootstrap.py でそれぞれ 0。
+- P5 `grep -c -E "tenant_duty|payment_method_snapshot|shipping_snapshot|tax_rate_percent|payment_account_number|shipping_service"` が backend/app/services/tenant.py・migrations/20261024_100300_create_ai_cloud_views.sql・backend/tests/rls_bootstrap.py でそれぞれ 0（`shipping_carrier` は注文・見積の表に既にあるので数えない。2026-11-13 審査の指摘で直した）。
 - P6 `grep -c "962"` が backend/tests/rls_bootstrap.py と backend/tests/test_tenant_loop_migration_guard.py でそれぞれ 0。
 - P7 `grep -c "    hs_code VARCHAR(20),"` が backend/app/services/tenant.py で 1（order_items の行だけ）。`grep -c "    subtotal NUMERIC(15, 2) NOT NULL,"` が 4。
 - P8 `grep -c "ALTER TABLE {schema}.tenant_invoice_payment_wise ENABLE ROW LEVEL SECURITY;"` が backend/app/services/tenant.py で 1。`grep -c "CREATE POLICY tenant_invoice_payment_wise_tenant_isolation ON {schema}.tenant_invoice_payment_wise"` が 1。
@@ -77,6 +78,7 @@
 8. backend/tests/test_tenant_loop_migration_guard.py（2か所）
 9. backend/tests/ops/test_ai_cloud_views.py（数1か所と試験1本）
 10. backend/tests/test_tenant_duty_rules_pg.py（新規）
+11. backend/tests/ops/test_ai_ro_views.py（最後に試験1本を足す）
 
 触らない: 上の 5 以外の docs/ 全部・frontend/・backend/app のほかのファイル・migrations のほかのファイル・.github/workflows の全部（特に workflow-lint.yml）。
 
@@ -662,6 +664,7 @@ def test_t10_duty_and_invoice_columns_are_classified_on_bootstrapped_db(cluster)
 """
 from __future__ import annotations
 
+import datetime
 import os
 import uuid
 from pathlib import Path
@@ -866,7 +869,7 @@ _RULE_OK = {
     "country": "US",
     "carrier": "fedex",
     "label": "Duty",
-    "from_date": "2026-01-01",
+    "from_date": datetime.date(2026, 1, 1),  # asyncpg は DATE に date 型が要る（文字列は DataError）
     "to_date": None,
     "url": "https://example.com/duty",
 }
@@ -900,7 +903,7 @@ async def _check_rules(conn) -> None:
     await _expect_error(conn, _RULE_SQL, {**_RULE_OK, "url": ""}, "23514")  # 根拠の URL は空にできない
     await _expect_error(conn, _RULE_SQL, {**_RULE_OK, "url": "   "}, "23514")
     await _expect_error(conn, _RULE_SQL, {**_RULE_OK, "label": "  "}, "23514")  # 名前は空にできない
-    await _expect_error(conn, _RULE_SQL, {**_RULE_OK, "to_date": "2025-12-31"}, "23514")  # 終わりは始まり以降
+    await _expect_error(conn, _RULE_SQL, {**_RULE_OK, "to_date": datetime.date(2025, 12, 31)}, "23514")  # 終わりは始まり以降
 
     ok = {"rule_id": rule_id, "label": "Duty", "base": "subtotal", "rate": 10, "min_amount": None, "max_amount": None, "currency": None}
     await _expect_error(conn, _COMPONENT_SQL, {**ok, "base": "x"}, "23514")  # 基準は3つだけ
@@ -975,6 +978,31 @@ async def test_new_tenant_shape_equals_migration_and_rules_hold():
         await admin_engine.dispose()
 ```
 
+### 2-11. backend/tests/ops/test_ai_ro_views.py（ファイルの最後に足す）
+
+最後の行 `        assert got == want, view`（:265）の後ろに、空行2つと次の文を足す（ファイルの最後は改行で終わる形のままにする）。
+
+```python
+def test_invoice_payment_account_number_is_hidden(pg):
+    """invoice-create-portfolio 便A（K21）: 請求書に写した口座番号（payment_account_number）は ai_ro に出ない。ほかの列は出る。"""
+    c = pg.cursor()
+    _make_table(
+        c,
+        "tenant_005.invoices",
+        [("id", "int"), ("payment_method_id", "int"), ("payment_account_number", "text"), ("tax_rate_percent", "numeric")],
+    )
+    _rebuild_views(pg)
+    got = [
+        r[0]
+        for r in _rows(
+            pg,
+            "SELECT column_name FROM information_schema.columns"
+            " WHERE table_schema = 'ai_ro' AND table_name = 'tenant_005__invoices' ORDER BY column_name",
+        )
+    ]
+    assert got == ["id", "payment_method_id", "tax_rate_percent"]
+```
+
 ## 3. 手順
 
 手順1 枝を取る
@@ -989,7 +1017,7 @@ async def test_new_tenant_shape_equals_migration_and_rules_hold():
     cd ~/sa && sha256sum migrations/20261024_100300_create_ai_cloud_views.sql | tail -1
     cd ~/sa && sed -n 7p scripts/migration-guard/reference-allowlist.tsv | cut -f2
     cd ~/sa && grep -c "1151" migrations/20261024_100300_create_ai_cloud_views.sql backend/tests/ops/test_ai_cloud_views.py | tail -2
-    cd ~/sa && grep -c -E "tenant_duty|payment_method_snapshot|shipping_snapshot|tax_rate_percent|payment_account_number|shipping_carrier|shipping_service" backend/app/services/tenant.py migrations/20261024_100300_create_ai_cloud_views.sql backend/tests/rls_bootstrap.py | tail -3
+    cd ~/sa && grep -c -E "tenant_duty|payment_method_snapshot|shipping_snapshot|tax_rate_percent|payment_account_number|shipping_service" backend/app/services/tenant.py migrations/20261024_100300_create_ai_cloud_views.sql backend/tests/rls_bootstrap.py | tail -3
     cd ~/sa && grep -c "962" backend/tests/rls_bootstrap.py backend/tests/test_tenant_loop_migration_guard.py | tail -2
     cd ~/sa && grep -c "    hs_code VARCHAR(20)," backend/app/services/tenant.py
     cd ~/sa && grep -c "    subtotal NUMERIC(15, 2) NOT NULL," backend/app/services/tenant.py
@@ -1002,7 +1030,7 @@ async def test_new_tenant_shape_equals_migration_and_rules_hold():
     cd ~/sa && ls migrations/20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql backend/tests/test_tenant_duty_rules_pg.py 2>&1 | tail -2
   期待: 3行目 `20261113_100001_create_secretary_rules_down.sql`。4行目と5行目の値は `472bfcd14f935118dadadb351601de91944964b031842ba9eee5f3d4d99fa6a6`。6行目は2ファイルとも `:1`。7行目は3ファイルとも `:0`。8行目は2ファイルとも `:0`。9行目 1。10行目 4。11行目 1。12行目 1。13行目 1058。14行目 1272。15行目 `# ADR-1077 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261113_100001_create_secretary_rules_down.sql`。16行目 1。17行目は2つとも「No such file or directory」。
 
-手順3 §2 の変更をする（2-1、2-2、2-3、2-5 から 2-10 の順。2-4 は手順4 で行う。新規の2ファイルは Write ツール、それ以外は Edit ツールで行う）
+手順3 §2 の変更をする（2-1、2-2、2-3、2-5 から 2-11 の順。2-4 は手順4 で行う。新規の2ファイルは Write ツール、それ以外は Edit ツールで行う）
 
 手順4 許可一覧の sha256 を直す（2-3 の後）
     cd ~/sa && sha256sum migrations/20261024_100300_create_ai_cloud_views.sql | tail -1
@@ -1024,7 +1052,7 @@ async def test_new_tenant_shape_equals_migration_and_rules_hold():
     cd ~ && ~/venv312/bin/python -m ensurepip 2>&1 | tail -1
 
 手順6 形と数
-    cd ~/sa && ~/venv312/bin/ruff check backend/app/services/tenant.py backend/tests/rls_bootstrap.py backend/tests/test_tenant_loop_migration_guard.py backend/tests/ops/test_ai_cloud_views.py backend/tests/test_tenant_duty_rules_pg.py 2>&1 | tail -10
+    cd ~/sa && ~/venv312/bin/ruff check backend/app/services/tenant.py backend/tests/rls_bootstrap.py backend/tests/test_tenant_loop_migration_guard.py backend/tests/ops/test_ai_cloud_views.py backend/tests/test_tenant_duty_rules_pg.py backend/tests/ops/test_ai_ro_views.py 2>&1 | tail -10
     cd ~/sa && ~/venv312/bin/python -c "import ast; ast.parse(open('backend/app/services/tenant.py').read()); print('tenant.py ok')" 2>&1 | tail -1
     cd ~/sa && ~/venv312/bin/python scripts/check-migration-value-writes.py repo > ~/vw-repo.txt 2>&1; echo "exit=$?"; tail -10 ~/vw-repo.txt
     cd ~/sa && git diff -U0 migrations/20261024_100300_create_ai_cloud_views.sql | grep -c "^+  ('tenant_\*'"
@@ -1043,16 +1071,16 @@ async def test_new_tenant_shape_equals_migration_and_rules_hold():
 
 手順7 backend の試験（実 PostgreSQL の試験は CI だけで動く。ここでは skip と出てよい。failed と error は 0 であること）
     cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/test_tenant_duty_rules_pg.py tests/test_tenant_loop_migration_guard.py 2>&1 | tail -15
-    cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/ops/test_ai_cloud_views.py 2>&1 | tail -15
+    cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/ops/test_ai_cloud_views.py tests/ops/test_ai_ro_views.py 2>&1 | tail -15
   期待: 1本目は failed 0・error 0 で、passed に test_tenant_duty_rules_pg.py の単体5件を含む（PG の1件は skipped でよい）。2本目は failed 0・error 0（skipped は出てよい）。
 
 手順8 変えたファイルの名前と数
     cd ~/sa && git status --short | tail -20
     cd ~/sa && git diff --stat | tail -20
-  期待: §1 の 10 ファイルだけ（新規の2ファイルは `??` で各1行）。
+  期待: §1 の 11 ファイルだけ（新規の2ファイルは `??` で各1行）。
 
 手順9 記録と送り出し
-    cd ~/sa && git add migrations/20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql backend/app/services/tenant.py migrations/20261024_100300_create_ai_cloud_views.sql scripts/migration-guard/reference-allowlist.tsv docs/handoff/cloud-case-ai/stage1-column-class.tsv scripts/run_all_migrations.sh backend/tests/rls_bootstrap.py backend/tests/test_tenant_loop_migration_guard.py backend/tests/ops/test_ai_cloud_views.py backend/tests/test_tenant_duty_rules_pg.py && git status --short | tail -20
+    cd ~/sa && git add migrations/20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql backend/app/services/tenant.py migrations/20261024_100300_create_ai_cloud_views.sql scripts/migration-guard/reference-allowlist.tsv docs/handoff/cloud-case-ai/stage1-column-class.tsv scripts/run_all_migrations.sh backend/tests/rls_bootstrap.py backend/tests/test_tenant_loop_migration_guard.py backend/tests/ops/test_ai_cloud_views.py backend/tests/test_tenant_duty_rules_pg.py backend/tests/ops/test_ai_ro_views.py && git status --short | tail -20
     cd ~/sa && git config user.name "shingo-cc" && git config user.email "shingo-cc@users.noreply.github.com" && git commit -q -m "feat(tenant): create duty rule tables and invoice payment/tax/shipping columns per tenant (invoice-create-portfolio bin A)" && git log --oneline -1 | tail -1
     cd ~/sa && ~/venv312/bin/python scripts/check-migration-value-writes.py diff origin/main HEAD --check all > ~/vw-diff.txt 2>&1; echo "exit=$?"; tail -10 ~/vw-diff.txt
     cd ~/sa && git push origin release/invoice-create-portfolio-bin-a 2>&1 | tail -3
