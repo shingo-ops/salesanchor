@@ -18,6 +18,7 @@ export const API_ERROR_REASON_KEYS: Readonly<Record<string, string>> = {
   role_page_keys_not_savable: "apiError.rolePageKeysNotSavable",
   role_not_assignable: "apiError.roleNotAssignable",
   merge_target_archived: "apiError.mergeTargetArchived",
+  bill_to_country: "apiError.billToCountry",
   recurrence_meet_not_allowed: "apiError.recurrenceMeetNotAllowed",
   recurrence_not_available: "apiError.recurrenceNotAvailable",
   recurrence_after_until: "apiError.recurrenceAfterUntil",

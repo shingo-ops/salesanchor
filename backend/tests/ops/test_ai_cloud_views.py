@@ -483,7 +483,7 @@ def test_role_migration_is_idempotent(pg):
     # meta の migration も冪等（分類表の中身は消えない）
     n0 = _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0]
     c.execute(_read(_META_SQL))
-    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1143
+    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1151
 
 
 # ---------------------------------------------------------------- T10（CI の見張り）
@@ -876,6 +876,65 @@ def test_t10_issuer_columns_are_classified_on_bootstrapped_db(cluster):
             g for g in _classification_gaps(conn)
             if g[1] in _ISSUER_TABLES or (g[1] == "invoices" and g[2] == "issuer_region")
         ]  # fmt: skip
+        assert gaps == [], f"分類の漏れ（表名・列名）: {[(g[1], g[2]) for g in gaps]}"
+    finally:
+        conn.close()
+        cur = cluster.control.cursor()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+_SECRETARY_RULES_SQL = "20261113_100000_create_secretary_rules.sql"
+_SECRETARY_RULES_TABLES = {"secretary_rules", "secretary_rule_checks"}
+_SECRETARY_RULES_CLASSIFIED = {
+    ("secretary_rule_checks", "model"),
+    ("secretary_rule_checks", "sdk"),
+    ("secretary_rule_checks", "status"),
+    ("secretary_rules", "rule_text"),
+    ("secretary_rules", "source_reply"),
+    ("secretary_rules", "source_text"),
+    ("secretary_rules", "source_kind"),
+    ("secretary_rules", "status"),
+}
+
+
+def test_t10_secretary_rules_columns_are_classified_on_bootstrapped_db(cluster):
+    """ADR-1077 便1: 秘書の決まり帳の2表の8列に column_class の行があり、分類の漏れが無い。
+
+    流す順: bootstrap → pipeline の public 表 → llm_usage_events → 便1（2回・冪等）→ ai_cloud の分類。
+    専用の DB を作り、終わったら消す。"""
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    assert len(_SECRETARY_RULES_CLASSIFIED) == 8
+    name, conn = _new_db(cluster.control, "ai_cloud_t10_secretary")
+    try:
+        c = conn.cursor()
+        c.execute(_read(_AI_READER_SQL))
+        c.execute(_read(_ROLE_SQL))
+        c.execute(_read(_META_SQL))
+        url = _psycopg_url(ADMIN_PG_URL, name).replace("postgresql://", "postgresql+asyncpg://", 1)
+        from tests.rls_bootstrap import bootstrap_tenant_schema
+
+        async def build():
+            eng = create_async_engine(url)
+            try:
+                await bootstrap_tenant_schema(eng, 1)
+            finally:
+                await eng.dispose()
+
+        asyncio.run(build())
+        c.execute(_read(_PIPELINE_PUBLIC_SQL))
+        c.execute(_read(_LLM_USAGE_SQL))
+        c.execute(_read(_SECRETARY_RULES_SQL))
+        c.execute(_read(_SECRETARY_RULES_SQL))  # 冪等
+        c.execute(_read(_CREATE_SQL))
+        rows = _rows(
+            conn, "SELECT table_name, column_name FROM ai_cloud_meta.column_class WHERE schema_pattern = 'public'"
+        )
+        have = {(r[0], r[1]) for r in rows}
+        missing = _SECRETARY_RULES_CLASSIFIED - have
+        assert missing == set(), f"column_class に行が無い: {sorted(missing)}"
+
+        gaps = [g for g in _classification_gaps(conn) if g[1] in _SECRETARY_RULES_TABLES]
         assert gaps == [], f"分類の漏れ（表名・列名）: {[(g[1], g[2]) for g in gaps]}"
     finally:
         conn.close()
