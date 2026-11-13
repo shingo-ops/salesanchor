@@ -53,7 +53,7 @@ export function sendSecretaryMessage(text: string): Promise<AssistantReply> {
   return api.postWithTimeout<AssistantReply>("/assistant/messages", { text }, SECRETARY_TIMEOUT_MS);
 }
 
-export type SecretaryErrorKind = "notReady" | "busy" | "timeout" | "unreadable" | "generic" | "forbidden" | "authFailed" | "agentFailed";
+export type SecretaryErrorKind = "notReady" | "busy" | "timeout" | "unreadable" | "generic" | "forbidden" | "authFailed" | "agentFailed" | "rulesTooLong";
 
 const KNOWN_CODES: Record<string, SecretaryErrorKind> = {
   not_ready: "notReady",
@@ -62,6 +62,7 @@ const KNOWN_CODES: Record<string, SecretaryErrorKind> = {
   unreadable: "unreadable",
   auth_failed: "authFailed",
   agent_failed: "agentFailed",
+  rules_too_long: "rulesTooLong",
 };
 
 /** 失敗を言葉の種類に分ける。403 は forbidden（呼ぶ側が印を消す） */

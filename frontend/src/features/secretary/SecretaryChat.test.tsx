@@ -180,6 +180,15 @@ describe("SecretaryChat sending", () => {
     expect(screen.queryByText(/Please try again/)).toBeNull();
   });
 
+  it("shows the rulesTooLong text on 413 rules_too_long", async () => {
+    mock.postWithTimeout.mockRejectedValue(new ApiError("x", 413, { code: "rules_too_long" }));
+    renderChat();
+    await sendMessage();
+    expect(
+      await screen.findByText("Your message and the company rules are too long together. Shorten the message or remove some rules."),
+    ).toBeTruthy();
+  });
+
   it("shows the unreadable text on 502 unreadable", async () => {
     mock.postWithTimeout.mockRejectedValue(new ApiError("x", 502, { code: "unreadable" }));
     renderChat();
