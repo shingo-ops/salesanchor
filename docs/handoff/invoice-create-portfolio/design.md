@@ -1,6 +1,6 @@
 # design: 請求書作成画面をポートフォリオの形に作り直す（住所・税・関税・支払方法を記録の表から）
 
-状態: 設計案 第3版（Opus 作成 2026-11-13）。第1版はクラウドの設計審査で REVISE（止める2・直すべき11・覚え書き6）、第2版は REVISE（止める0・直すべき9・覚え書き5）。本版は両方を反映した（§11・§12 に対応表）。再審査前。PO 承認前。
+状態: 設計案 第4版（Opus 作成 2026-11-13）。第1版はクラウドの設計審査で REVISE（止める2・直すべき11・覚え書き6）、第2版は REVISE（止める0・直すべき9・覚え書き5）、第3版は REVISE 相当（止める0・直すべき5・覚え書き6）。本版はすべてを反映した（§11・§12・§13 に対応表）。再審査前。PO 承認前。
 根拠: 同じ場所の recon.md（§番号で指す）。基準 origin/main `c296af3bb`。対象 ADR: ADR-101（§7 関税・実装上の注意）、ADR-095 付録1-4、ADR-106（テナント別ポリシー）、ADR-125 D5、ADR-1061（振込先・税率・発行元の表）、ADR-027（i18n）、ADR-144（UI の金型）、ADR-072（commit 後の reset）、ADR-135/136（危険な PR）。あるべき姿: docs/specs/quote-invoice/（KGI Q1〜Q15）。
 
 ## 1. 目的（PO の言葉から）
@@ -98,15 +98,16 @@
 - 合計＝小計＋送料＋消費税＋関税（関税が NULL のときは0として足す）。tax_amount と duty_amount は別の列に入れる。
 - 端数: 消費税と関税の中身の1つずつを、通貨の最小単位（円は1円、ドルは1セント）で処理する。処理の仕方は §7 の1で PO が決める。決まるまで便 C を始めない。
 - 基準日: 税率と関税の行は「基準日」に有効な行を使う。作成・試算では今日（日本時間）、発行では発行の日（日本時間）。発行の道（invoices.py:474-501。今は状態を変えるだけ）で invoice_totals を発行日で計算し直し、税・関税・合計・写しを上書きしてから issued にする。理由: 税率の表の決まり「請求書は発行日に有効な行の率を写す」（migrations/20261112_150000_create_viewer_contract_public_tables.sql:166）。
-- 発行で計算し直すものは次のすべて。どれも発行の時点の同じ為替の行の組（通貨ごとに最新の1行）を使う: ①税率の行 ②関税の行と中身（min・max の換算を含む） ③送料の換算（shipping_snapshot に残した元の額と元の通貨から、発行時の率で換算し直す。元の通貨が請求書の通貨と同じなら額は変わらない） ④exchange_rate_jpy・exchange_rate_usd・amount_jpy・amount_usd・fx_rate_snapshot ⑤合計。明細の単価と数量・選んだ送料の会社と元の額・支払方法は変えない。
+- 発行で計算し直すものは次のすべて。どれも発行の時点の同じ為替の行の組（通貨ごとに最新の1行）を使う: ①税率の行 ②関税の行と中身（min・max の換算を含む） ③送料の換算（shipping_snapshot に残した元の額と元の通貨から、発行時の率で換算し直す。元の通貨が請求書の通貨と同じなら額は変わらない） ④exchange_rate_jpy・exchange_rate_usd・amount_jpy・amount_usd・fx_rate_snapshot ⑤合計。写しの形: fx_rate_snapshot は今の形 {currency, rate, fetched_at}（invoice_renderer.py:146・:371-380 と InvoiceDetailPage.tsx:86 が読む）のまま、請求書の通貨の1行だけを入れる。送料の換算に使った率は shipping_snapshot に、関税の換算に使った率は duty_policy_snapshot に、それぞれ {currency, rate_jpy, fetched_at} で入れる。明細の単価と数量・選んだ送料の会社と元の額・支払方法は変えない。
 - 消費税: 届け先の国（§3-3 の1と同じ）が JP のときだけ。基準は小計＋送料（見本 js_app.js:117・国税庁 No.6301）。外国宛はかけない（輸出免税。国税庁 No.6551）。基準日に有効な行が無い日本宛は、試算で「未計算」、作成・発行は 409 tax_rate。使った率を tax_rate_percent に残す。
 - 消費税と支払方法の決まり方は別: 消費税は届け先の国、発行元の地域と支払方法は請求先の国で決まる。例: 請求先が日本・発送先が米国 → 国内の振込先を選び、消費税なし、DDP なら関税あり。
 - 為替の規則（為替の正本は app_fx_rate_history だけ）: 通貨ごとに fetched_at が一番新しい行を使う（作成と発行の時点で）。fx_rate_snapshot・exchange_rate_jpy・amount_jpy はこの行から作る。作る道の外部のライブ取得（invoices.py:253・:356 の get_fx_rate）は外す。表は今 fx_rate_updater（backend/app/tasks/fx_rate_updater.py:42-83）が同じ外部の値を1日2回入れている。換算が要るのに行が無い通貨は 409 fx_rate。2つの外貨の間は円を通して換算する。
-- 為替の列の作り方（今の _calc_currency_amounts invoices.py:135-153 と同じ意味を保つ。値の出どころだけを表に変える）: exchange_rate_jpy＝請求書の通貨の表の rate_jpy（JPY の請求書は NULL）。exchange_rate_usd＝USD の表の rate_jpy（1ドル＝何円。USD の請求書は NULL）。amount_jpy＝合計×exchange_rate_jpy（JPY は合計そのまま）。amount_usd＝amount_jpy÷exchange_rate_usd を1セントに丸める（USD は合計そのまま）。USD の行が無いときは amount_usd を NULL にし、止めない（請求の額は変わらないため）。
-- 為替を見せる道 GET /fx-rate/{currency}（invoices.py:1024-1049。今は get_fx_rate で外部から取る）も、表の最新行を同じ形（currency・rate・fetched_at）で返すように直す。呼ぶのは見積の詳細画面だけ（QuoteDetailPage.tsx:104。2026-11-13 git grep）。表に行が無ければ今と同じ 503。理由: 見積の詳細画面で見せた率と、同じ画面から見積を請求書にしたとき（:88）に保存する率を同じにする。
+- 為替の列の作り方（今の _calc_currency_amounts invoices.py:135-153 の JPY と USD の枝と同じ意味を保ち、値の出どころだけを表に変える。EUR の枝 :150-152 は total×rate_usd で意味が合わないので使わない。下の式に置き換える。丸めは今と同じく amount_jpy・amount_usd とも小数2桁の round（:142・:147）。これは表示用の換算額で、§7 の1の請求の額の端数とは別）: exchange_rate_jpy＝請求書の通貨の表の rate_jpy（JPY の請求書は NULL）。exchange_rate_usd＝USD の表の rate_jpy（1ドル＝何円。USD の請求書は NULL）。amount_jpy＝合計×exchange_rate_jpy（JPY は合計そのまま）。amount_usd＝amount_jpy÷exchange_rate_usd を1セントに丸める（USD は合計そのまま）。USD の行が無いときは amount_usd を NULL にし、止めない（請求の額は変わらないため）。
+- 為替を見せる道 GET /api/v1/fx-rate/{currency}（invoices.py:1026-1050。今は get_fx_rate で外部から取る）も、表の最新行を同じ形（currency・rate・fetched_at）で返すように直す。呼ぶのは見積の詳細画面だけ（QuoteDetailPage.tsx:104。2026-11-13 git grep）。表に行が無ければ今と同じ 503。理由: 見積の詳細画面で見せた率と、同じ画面から見積を請求書にしたとき（:88）に保存する率を同じにする。
 - 送料の規則: 送料は次のどちらかでないと作成できない。（ア）/shipping/calculate の結果の1つを選んだ（carrier・service_type・fee・currency を受ける。送料の通貨が請求書の通貨と違えば為替の規則で換算し、元の額と率を duty_policy_snapshot と同じ形で shipping の写しに残す）。（イ）人が「送料を請求しない」を選んだ（送料0・carrier は NULL）。どちらでもないと 422 shipping_required。理由: ADR-101:171「未連携なら0でなく未計算」。黙って0にしない。日本国内宛は今は FedEx 国際しか取れず静的表も0行なので、（イ）しか選べない（§7 の3）。送料の額は画面が選んだ値を受ける（見積は時間で変わるため取り直さない。今の道も同じ）。
 - 見積から作るときの送料の規則: 見積の画面は送料の額だけを保存し、送料の会社と通貨を保存しない（QuoteCreatePage.tsx:293）。そこで、見積の shipping_fee が 0 より大きいときは（ア）として扱い、元の額＝見積の送料、元の通貨＝見積の通貨（請求書の通貨も見積の通貨なので換算しない）、送料の会社＝quotes.shipping_carrier（NULL のことがある）、source＝'quote' を shipping_snapshot に写す。shipping_fee が 0 または NULL のときは（イ）「送料を請求しない」として扱う。見積はすでに人が送料を決めた書類なので、見積から作る道では 422 shipping_required を返さない。送料の会社が NULL で、届け先の国の DDP の行が会社つきだけのときは、関税の規則（§3-3 の6）のとおり 409 duty_needs_carrier で止まる（§6）。
 - FedEx の部品（frontend/src/components/FedExRateModal.tsx）の発送元: 任意の受け取り口 originCountryCode を足す。請求書作成画面は draft-context の発送元の国を渡し、部品はその値を使って発送元の欄を直せない形にする。渡された値が null のときは見積を取らず「未計算」と会社情報のページへの案内を出す。受け取り口を渡さない呼び出し（見積の作成画面 QuoteCreatePage.tsx:289）は今のまま（:112 の初期値 "JP" と :130 の `|| "JP"` を残す。見積の画面は §2 で対象外）。
+- FedEx の部品の宛先・重量・運送会社（第4版で足した）: 部品は今、宛先の国（:113・:187）と重量（:197）を人が直せ、onSelectRate（:57・:340）は運送会社を渡さない。請求書作成画面からは、宛先＝draft-context の発送先の国、重量＝明細の重さの合計を渡し、部品はこの2つも直せない形にする（originCountryCode を渡したときだけ。任意の受け取り口 lockInputs のような別の口は作らず、originCountryCode が渡された呼び出しを「請求書から」とみなす）。onSelectRate に4つめの引数 carrier（結果の r.carrier）を足す。見積の作成画面は受け取っても使わない。部品の内側の useState（:112-114）は開いた時の値しか読まないので、請求書作成画面は部品を開くたびに key を変えて作り直し、最新の宛先と重量で始める。
 
 | 道 | 中身 | 権限 |
 |---|---|---|
@@ -115,9 +116,9 @@
 | POST /invoices （直す） | 受ける値に payment_method_ref（method_type と id）と shipping を足す。tax_amount・shipping_fee・payment_method（文字）・exchange_rate_jpy・exchange_rate_usd は受けない（InvoiceCreate からこの5つの欄を消し（今は schemas/invoice.py:45-49 にある）、extra="forbid" にして、送られたら 422）。計算は invoice_totals。payment_method_ref は draft-context と同じ選び方の中にあるか確かめ、無ければ 422 payment_method。支払方法は任意（秘書チャットは送らない）。作成画面は必須にする | 同上 |
 | POST /invoices/from-quote/{id} （直す） | 明細は見積から写す。送料は上の「見積から作るときの送料の規則」で写す（送料の会社は quotes.shipping_carrier。tenant.py:811）。消費税・関税・合計は invoice_totals で計算する（見積の tax_amount・total_amount は写さない）。見積の送料の会社が空で、DDP の行が会社つきだけなら 409 duty_needs_carrier。支払方法はここでは付けない（体は今と同じ空。付けるのは詳細画面の下書きの欄で、下の PATCH を通る） | 今のまま（invoices.create） |
 | POST /invoices/{id}/issue （直す） | §3-4 の基準日の規則で計算し直してから issued にする | 今のまま |
-| PATCH /invoices/{id} （直す） | _UPDATABLE_COLUMNS（invoices.py:120）から payment_method・exchange_rate_jpy・exchange_rate_usd を外す。支払方法を直すときは payment_method_ref で受け、作る道と同じ検査と写しの作り直しをする。支払方法を直せるのは下書き（draft）のあいだだけ（発行後に案内の口座が変わらないように。それ以外は 409 invoice_not_draft）。為替は直せない（正本は表）。今は画面に PATCH を呼ぶ所は無い（2026-11-13 git grep。詳細画面は表示だけ InvoiceDetailPage.tsx:296・:300-301）。便 D で詳細画面に下書きのときだけ支払方法を選ぶ欄を足し、この道を呼ぶ（選択肢は draft-context と同じ） | 今のまま（invoices.update） |
+| PATCH /invoices/{id} （直す） | _UPDATABLE_COLUMNS（invoices.py:120）から payment_method・exchange_rate_jpy・exchange_rate_usd を外す。支払方法を直すときは payment_method_ref で受け、作る道と同じ検査と写しの作り直しをする。支払方法を直せるのは下書き（draft）のあいだだけ（発行後に案内の口座が変わらないように）。下書きでないときは、今ある門（invoices.py:449-450。どの欄でも 400「draft状態の請求書のみ編集できます」）がそのまま止める。新しい返し方は作らない。InvoiceUpdate（schemas/invoice.py:55-60）からも payment_method・exchange_rate_jpy・exchange_rate_usd を外して payment_method_ref を足し、extra="forbid" にする。支払方法の検査は、請求書に保存した issuer_region と currency を基準にする（今の請求先から地域を決め直さない）。為替は直せない（正本は表）。今は画面に PATCH を呼ぶ所は無い（2026-11-13 git grep。詳細画面は表示だけ InvoiceDetailPage.tsx:296・:300-301）。便 D で詳細画面に下書きのときだけ支払方法を選ぶ欄を足し、この道を呼ぶ（選択肢は draft-context と同じ） | 今のまま（invoices.update） |
 
-- 支払方法を受けたら、作る道は payment_method（文字）に display_name（PayPal は 'paypal'。invoices.py:672）、payment_method_id に行の id、写しの列に詳細を入れる（§3-5）。
+- 支払方法を受けたら、作る道は payment_method（文字）に行の method_type（'bank'・'wise'。PayPal は今と同じ 'paypal'。invoices.py:672・:766）、payment_method_id に行の id、写しの列に詳細（display_name を含む）を入れる（§3-5）。display_name を入れないのは、payment_method が VARCHAR(50)（tenant.py:878）で display_name は長さの上限が無い TEXT（tenant.py:1251）のため。列を広げる案は取らない。理由: PostgreSQL はビューが使っている列の型の変更を断るので、この列を読む ai_ro・ai_cloud の見え方を作り直す移行が要り、便 A が大きくなる。詳細画面の支払方法の表示（InvoiceDetailPage.tsx:296）は、写しの display_name があればそれを、無ければ payment_method を出す（便 D）。
 - 2つの支払方法の列の意味を分ける: payment_method_id・payment_method_snapshot・payment_account_number は「請求書で案内した支払い先」。payment_method（文字）は今のまま「実際に払われた方法」も兼ね、PayPal の入金確認で 'paypal' に上書きされる（invoices.py:766）。案内の列は入金確認で変えない。PDF の支払方法の区切りは案内の列から描く。
 - 秘書チャット（SecretaryDraftInvoice.tsx:92）は同じ POST /invoices を通る。tax_amount・shipping を送っていないので、shipping が無いと 422 shipping_required になる。便 D で秘書チャットにも送料の選択（少なくとも「送料を請求しない」）を足し、同じ便で通貨の選択肢を draft-context から読む。
 - 新しい道は realtime/topics.py の請求書の道（:228-235）に同じ扱いで登録する（test_realtime_topics.py が落ちないように）。
@@ -140,12 +141,13 @@ backend/app/services/tenant.py（新しいテナント用）には次を足す�
 クラウドの読み取りの見え方（便 A に入れる）: 分類表は migrations/20261024_100300_create_ai_cloud_views.sql が正本で、毎回全行を入れ直す（同ファイル :3）。分類の無い文字・JSONB の列があると試験 T10（backend/tests/ops/test_ai_cloud_views.py:5）が落ちる。そこで同じファイルと元の表（docs/handoff/cloud-case-ai/stage1-column-class.tsv）に次の行を足す。数・日付の型の列（payment_method_id・tax_rate_percent・rate_pct・min_amount・max_amount・sort_order・rule_id・effective_from・effective_to・is_active）は型で通るので行を足さない（名前の見張りに当たる列は無い）。
 | 表 | 列 | 分類 | 理由 |
 |---|---|---|---|
-| invoices | payment_method_snapshot・payment_account_number・shipping_snapshot | mask | 振込先・口座・送料の写し |
+| invoices | payment_method_snapshot・shipping_snapshot | mask | 振込先・送料の写し |
 | invoices | shipping_carrier・shipping_service | mask | 値の決まりが無く自由に入る列（初期は最小） |
 | tenant_duty_rules | destination_country_code・carrier・label・source_url・note | mask | 値の決まりが無く自由に入る列（初期は最小） |
 | tenant_duty_rule_components | label・amount_currency | mask | 同上 |
 | tenant_duty_rule_components | base | allow | CHECK で3つの値に限られる |
-ファイル先頭の行数の注記（:3 の「1151 行」）も足した数に直す。
+payment_account_number には行を置かない。名前の見張りが先に外し（migrations/20261024_100000_create_ai_cloud_meta.sql:111）、銀行の account_number にも行が無い（create_ai_cloud_views.sql:601）前例に合わせる。
+足す行は上の表の列の数で12（invoices 4・tenant_duty_rules 5・中身の表 3）。分類表の行数は2か所で固定されているので、両方を 1151 から 1163 に直す: ファイル先頭の注記（:3）と試験 backend/tests/ops/test_ai_cloud_views.py:486 の `== n0 == 1151`。実装では足した後の行数を数え直して一致を確かめる。
 
 ### 3-6. 関税の額の設定画面
 
@@ -204,6 +206,8 @@ backend/app/services/tenant.py（新しいテナント用）には次を足す�
 | 運送会社が NULL の見積（QuoteCreatePage.tsx:293 は送料の額だけ保存）から作り、関税の行が運送会社つきしか無い | 409 duty_needs_carrier で理由が出る。運送会社を問わない行（carrier NULL）を入れれば作れる。見積の画面で運送会社を保存するのは対象外 |
 | 見積の画面の発送元は今の "JP" のまま残る（FedExRateModal.tsx:112・:130） | 請求書の画面だけ渡す値に替える。見積の画面の直しは別のテーマ（§2 対象外） |
 | PayPal で支払われると payment_method が 'paypal' に上書きされ（invoices.py:766）、案内の列と違って見える | 列の意味を分ける（§3-4）。payment_method は実際に使われた方法、案内の3列は請求書に書いた振込先。PDF は案内の列を描く。上書きしても案内の列は変えない |
+| 見積の送料の通貨が見積の通貨と違うことがある（QuoteCreatePage.tsx:293 は FedEx の通貨を捨て、額を Math.round で丸めて保存する） | 見積から作る道は、見積の送料を見積の通貨の額とみなす（人が見積で見て決めた額のため）。FedEx の料金の通貨が見積の通貨と違ったときの誤りは、見積の画面の今の作りから来るもので、この設計では直さない（§2 対象外）。PO の目視（§9）で見積の送料の通貨を確かめる |
+| 詳細画面の支払方法の選択には2つの権限が要る（材料の draft-context は invoices.create、PATCH は invoices.update） | 選択は両方の権限を持つ人にだけ出す。便 D の実装カードで、片方だけ持つ役割が本番の役割の表にあるかを数える。あれば止めて PO へ |
 | 為替の表に USD の行が無い | amount_usd を NULL にして止めない（§3-4）。JPY 以外の通貨で行が無いときは 409 fx_rate |
 
 ## 7. 未決（PO に決めてもらうこと）
@@ -220,7 +224,7 @@ backend/app/services/tenant.py（新しいテナント用）には次を足す�
 | K2 作成画面と秘書チャットの通貨・支払方法の選択肢は材料の道の値だけ | 画面の試験: draft-context の応答の通貨と支払方法を変えると、選択肢がその通りに変わる（直書きの配列が残ると落ちる） |
 | K3 支払方法は表の行だけ（Q7） | サーバーの試験: 表に無い id を作る道と PATCH に送ると 422 payment_method。Wise は通貨が違う行を送ると 422 payment_method。画面の試験: 通貨を USD→JPY に変えると wise_currency が USD の Wise の行が選択肢から消え、選んでいた値が外れる |
 | K4 送料が取れないとき 0 でなく「未計算」、選ばないと作れない（ADR-101:171・Q3） | 画面の試験: /shipping/calculate が空のとき送料の欄が「未計算」。サーバーの試験: shipping 無しの作成が 422 shipping_required、「送料を請求しない」なら送料0で作れる |
-| K5 送料の会社の一覧が出て選べる（Q4。今あるのは FedEx だけ） | 画面の試験: 結果の会社が一覧に出て、選ぶと送料と合計が変わる。本番で FedEx のライブ見積が出るかは PO の目視（§9） |
+| K5 送料の会社の一覧が出て選べる（Q4。今あるのは FedEx だけ） | 画面の試験: 結果の会社が一覧に出て、選ぶと送料と合計が変わり、保存される送料の会社が選んだ会社になる。請求書作成画面から開いた部品では宛先・重量・発送元の欄を直せず、値が draft-context の発送先の国・明細の重さの合計・発行元の国と同じ。本番で FedEx のライブ見積が出るかは PO の目視（§9） |
 | K6 関税の値を直すと請求書の額が変わる（Q5 = 1） | サーバーの試験: 条件 DDP で中身の率を変えると preview と作成の duty_amount が変わる。DAP・DDU・行が無いときは duty_amount が NULL で関税の行が出ない |
 | K7 消費税は日本宛だけ・税率の表の値で | サーバーの試験: JP 宛 10% の行で (小計＋送料)×10%（§7 の1の端数）、US 宛は0で行が出ない。税率の行が無い JP 宛は 409 tax_rate |
 | K8 小計・送料・税または関税・合計が入力の間ずっと見える（Q8） | 画面の試験: 明細を足す前・後で合計の区切りが出ている |
@@ -233,12 +237,12 @@ backend/app/services/tenant.py（新しいテナント用）には次を足す�
 | K15 発行で計算し直す | サーバーの試験: 作成の後に税率の行を足して発行すると、発行日の率で tax_amount が変わる。作成の後に為替の行を足して発行すると、送料が shipping_snapshot の元の額から新しい率で換算し直され、exchange_rate・amount・合計が変わる。明細・運送会社・送料の元の額・支払方法は変わらない |
 | K16 見積から作っても同じ計算 | サーバーの試験: 同じ明細・送料で、作る道と見積から作る道の税・関税・合計が一致。送料0の見積から作ると「送料を請求しない」になり 422 にならない |
 | K17 新しい表の会社の分け | 移行の試験: 別の会社の文脈で tenant_duty_rules・中身の行が0行に見える |
-| K18 誤りの返し方 | サーバーの試験: 409 duty_needs_carrier・duty_rule_overlap・fx_rate・tax_rate、422 shipping_required・payment_method、tax_amount・exchange_rate_jpy・exchange_rate_usd・amount_jpy・amount_usd のどれかを送ると 422・下書きでない請求書の支払方法を PATCH すると 409 invoice_not_draft |
+| K18 誤りの返し方 | サーバーの試験: 409 duty_needs_carrier・duty_rule_overlap・fx_rate・tax_rate、422 shipping_required・payment_method、作る道に tax_amount・exchange_rate_jpy・exchange_rate_usd・amount_jpy・amount_usd・shipping_fee・payment_method（文字）のどれかを送ると 422。PATCH に exchange_rate_jpy・exchange_rate_usd・payment_method（文字）を送ると 422。下書きでない請求書の PATCH は今と同じ 400 |
 | K19 秘書チャットが壊れない | 画面の試験: 秘書チャットで「送料を請求しない」を選んで作成でき、POST の中身に tax_amount が無い |
 | K20 関税の額の変更が記録に残る | サーバーの試験: 足す・直す・消すで audit_logs が1行ずつ増える |
 | K21 口座番号が AI の読み取りに出ない | 移行の試験: ai_ro の請求書の見え方の列に payment_account_number が無い。クラウドの見え方の試験 T10 が通る（新しい文字・JSONB の列がすべて分類済み）。便 A の後、reader 鍵で ai_ro の請求書の見え方の列を数えて payment_account_number が0件 |
 | K22 新しいテナントでも作れる | サーバーの試験: tenant.py で作ったスキーマに対して、作る道・見積から作る道・詳細（_INVOICE_COLUMNS を読む）が通る |
-| K23 支払方法は下書きのときだけ選び直せる | 画面の試験: 下書きの詳細画面に支払方法の選択があり、発行済みには無い。サーバーの試験: 下書きでない請求書への PATCH が 409 invoice_not_draft |
+| K23 支払方法は下書きのときだけ選び直せる | 画面の試験: 下書きの詳細画面に支払方法の選択があり、発行済みには無い。サーバーの試験: 下書きでない請求書への payment_method_ref の PATCH が 400 で、案内の3列が変わらない。下書きなら変わり、payment_method が行の method_type になる |
 | K24 GET /fx-rate は表を読む | サーバーの試験: get_fx_rate を呼ぶと失敗する差し替えのもとで 200 と表の最新行（currency・rate・fetched_at）を返す。行が無い通貨は 503 |
 
 ## 9. PO の確かめ方（本番）
@@ -296,6 +300,22 @@ backend/app/services/tenant.py（新しいテナント用）には次を足す�
 | N3 K1 の数え方 | K1 を data-testid の中の入力欄を数える形にした |
 | N4 ai_ro から外れることの試験 | K21 に移行の試験を足した |
 | N5 PayPal で支払われたときと写し | §3-4 で列の意味を分けた。§6 |
+
+## 13. 第3版の審査の指摘と対応
+
+| 指摘 | 対応 |
+|---|---|
+| F1 分類表の行数 1151 が試験 test_ai_cloud_views.py:486 にも固定 | §3-5 の分類の後に、注記（:3）と試験（:486）の両方を 1163 に直すと書いた。実装で数え直す |
+| F2 PATCH は draft 以外を既に 400 で止める（invoices.py:449-450） | §3-4 の PATCH の行で、今の 400 を残し新しい 409 は作らないとした。K23 を 400 に合わせた |
+| F3 payment_method は VARCHAR(50)、振込先の表示名は長さ無制限 | §3-4 で列には method_type（'bank'・'wise'・'paypal'）を入れ、表示名は写しに入れる。列は広げない（理由を書いた）。詳細は写しの表示名を出す（便 D） |
+| F4 FedEx の部品は宛先・重量を直せ、運送会社を渡さない | §3-4 の部品の項に、宛先・重量を固定、onSelectRate に carrier、開くたびに key を変えると書いた。K5 に足した |
+| F5 fx_rate_snapshot の形 | 今の形（請求書の通貨の1行）を変えない。送料・関税に使った率はそれぞれの写しに入れる（§3-4） |
+| F6 為替の道の名前と行番号 | /api/v1/fx-rate/{currency}（invoices.py:1026-1050）に直した（design・recon） |
+| F7 見積の送料の通貨は保証されない（QuoteCreatePage.tsx:293） | §6 にリスクと対処（見積の通貨の額とみなす・見積の画面は直さない・PO の目視） |
+| F8 payment_account_number にクラウドの行は要らない | §3-5 の表から外し、名前の見張りで外れる前例を書いた |
+| F9 PATCH は保存済みの発行元・通貨で確かめる／権限が2つに分かれる | §3-4 の PATCH の行に保存済みの値で確かめると書いた。§6 に権限の行（両方を持つ人にだけ出す・便 D で数える） |
+| F10 K18 に shipping_fee・payment_method が無い | K18 に足した（作成7つ・PATCH 3つで 422） |
+| F11 為替の列の計算の枝と丸め | §3-4 で JPY・USD の枝だけを使い、EUR の枝（:150-152）は使わない、丸めは小数2桁（:142・:147）と書いた。§7 の丸めとは別 |
 
 ## 維持の仕組み
 

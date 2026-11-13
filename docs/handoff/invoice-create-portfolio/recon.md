@@ -88,7 +88,7 @@
 ### 5-1. 為替（第2版で足した）
 
 - 作る道と見積から作る道は外部の値をその場で取る（invoices.py:356・:253 の get_fx_rate。backend/app/services/fx_rate.py:27 の open.er-api.com）。
-- GET /invoices/fx-rate/{currency}（invoices.py:1024-1049）も get_fx_rate をその場で呼ぶ。画面から呼ぶのは frontend/src/pages/quote-detail/QuoteDetailPage.tsx:104 の1か所だけ（frontend/src を git grep。第3版で足した）。
+- GET /api/v1/fx-rate/{currency}（invoices.py:1026-1050。道の頭は main.py:447 の prefix=/api/v1）も get_fx_rate をその場で呼ぶ。画面から呼ぶのは frontend/src/pages/quote-detail/QuoteDetailPage.tsx:104 の1か所だけ（frontend/src を git grep。第3版で足した）。
 - 見積の作成画面は FedEx の見積の送料の額だけを保存し、運送会社と通貨は保存しない（frontend/src/pages/quote-create/QuoteCreatePage.tsx:293。第3版で足した）。
 - Wise の振込先の表（tenant.py:1283-1301）には口座番号の列が無く、iban・wise_email（必須）がある（第3版で足した）。
 - 為替の表 app_fx_rate_history は backend/app/tasks/fx_rate_updater.py:42-83 が同じ get_fx_rate("USD") で1日2回（日本時間6時・18時）USD だけを足す。EUR は取っていない。
