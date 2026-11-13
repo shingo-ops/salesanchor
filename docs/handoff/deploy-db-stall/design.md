@@ -802,3 +802,142 @@ env -u BASH_ENV bash "$TMP"
 3回目（クラウドの Architect、2026-11-10 12:04Z〜12:07Z、審査対象 22e158ee0、origin/main d06f150c7 で照合）→ **APPROVE**。2回目の指摘は軽6 を除き直っており、軽6 を採らない理由も正しいと判定（`.gitignore` :67〜:71、origin/main に439件）。写しで pytest 29件が通り、赤の実演4つがすべて赤（(2) は P9 (b) も BASH_ENV から変数が入る動きで赤）。新しい軽3件（P9 (b) の行の探し方・赤の実演(4) で `STREAK=-1` の1通りが緑のまま・`scripts/tests/test-deploy-db-precheck.sh` :8 の古い説明）は第3.1稿で取り込んだ。軽7 の後半は前の記録が無く、同じ内容かは確かめられないとされ、3件目として言い直された。
 
 (1) 本節をクラウドの Architect（新しく起動・読むだけ）で審査 (2) APPROVE の後、同じ枝でクラウドの Sonnet が 18-14-3 を実装し、試験と赤の実演 (3) reviewer（opus・手元で新しく起動）→ PR 本文に GO 記録（POの委任に基づくClaude Opus発行。deploy.yml・scripts を含む）→ マージ → 本番反映 (4) 移行の段が動く本番反映で K18-10 と K18-4 の残りを見る。
+
+## 19. 段7 設計 — 試しと本番反映が重なっても移行が止まらないようにする（第1版、2026-11-13）
+状態: 設計案作成済み（2026-11-13）。審査はまだ。実装は未着手。
+PO の依頼（2026-11-13）: 「試作や本番反映が被っても止まらないようには出来る？」。説明の後の PO の選択は「1」（3つの直し方をまとめて設計し、作って試すのは1つずつにして効果を数えながら進める）。
+3つの直し方: (c) 本番反映が止まった回数を毎週機械が数えて知らせる／(a) 済んだ移行は流さない／(b) 試しの道具に長く表を押さえさせない。
+番号の (a)〜(c) は PO に説明した順。作る順は 19-3 のとおり (c)→(a)→(b)。
+
+### 19-1. 事実（2026-11-13 調べ。行番号は origin/main 11694eaf6）
+- 2026-11-13 の本番反映（run 43372532867）の1回目は、移行の段でロック待ちの上限（40/40）に達して失敗した。2回目で成功した。
+  - 1回目の記録で `lock conflict; retry [0-9]` の行は40行、`lock conflict; retry limit reached` は1行（`gh api .../actions/jobs/131711407349/logs` を `grep -a -c` で数えた。記録は社内の作業メモ）。
+  - この PR #5491 は試験と docs/handoff だけの変更だった。それでも backend 以下を変えたので移行の段が動き、401段を全部流し直した（`.github/workflows/deploy.yml` :38〜:43 の filters、`scripts/run_all_migrations.sh` に適用済みの記録を読む行は無い）。
+- 握り手は、本番に向けて流した試しの道具 `docs/handoff/single-set-category/data/bin3/rejudge_single_set.py`（MODE=dryrun）の接続だった。
+  - 握り手は salesanchor_app・application_name 空・idle in transaction。移行の記録に出た5回の取引の始まりが、試しの記録の仕入元の始まりと5回とも1秒以内で一致した（記録は社内の作業メモ）。
+  - 道具は仕入元1件を1つの取引で流す（:8 の説明・:171〜:193 の trial）。最長の取引は1169.6秒だった。
+  - 道具は lock_timeout だけを確かめ（:30・:204〜:207）、application_name と idle_in_transaction_session_timeout を置かない。
+- 移行の前の点検（`scripts/deploy-db-precheck.sh`、§18）は 05:34:03Z に clean で通った。
+  - 点検は「idle in transaction かつ取引5秒超」を5秒おきに数え、3回続けて0なら通る（:69〜:73・:186〜:189）。
+  - 3回の0は、試しの10.0秒の短い仕入元の間だった。34秒後に128.7秒の取引が始まり、05:35:50Z からの移行と重なった。§18-6 で書いた「点検の後に来た握り手」の隙が本番で起きた。
+- 本番反映の一覧（`gh run list`・runs の API）は、各 run の最後の回の結論しか出さない。
+  - 11/1 以降で2回目以上の回がある run は6本（43372532867・42805522437・42612168629・42596881194・42331938658・41950091268）。前の回の失敗は一覧に出ない。
+  - 回ごとの記録は `GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{n}/jobs` で job を引き、`GET .../actions/jobs/{job_id}/logs` で読める（上の1回目で実際に読めた）。記録には文字以外のバイトが混じるので、grep は `-a` が要る（`-a` なしでは数が出なかった）。
+- 止まった回の数え（§18 の K18-5）は手作業で、決まった日に自動で数える仕組みは無い（`.github/workflows/` の schedule を持つ18本に該当なし）。
+- 毎週の見張りの前例は `.github/workflows/weekly-stale-pr.yml`（cron・workflow_dispatch・`scripts/notify/discord-owner-ping.sh` と secret DISCORD_WEBHOOK_SCHEDULED_REPORT で Discord に送る）。
+- 済んだ移行を流さない作り（ADR-1005）は、`docs/handoff/migration-runner-redesign/design.md` §5（第7版、設計審査 APPROVE 2026-10-30）にある。5-0 の前調査（読むだけ）から始まる。5-0 は手つかず。
+- アプリの接続に名前を付ける段4a（§17）は、設計審査済みで実装されていない（`git grep SA_PROCESS_ROLE` が設計書の行だけ）。
+  - 試しの道具とアプリの抽出の仕事は、同じ名前なしの `_engine` を使う（`backend/app/tasks/tcg_extraction.py` :94・:97）。
+- 試しの道具の取引を守る仕組みは `backend/app/tools/_tx_guard.py`（30秒の上限）と、それを呼ばない道具を赤にする試験 `backend/tests/test_tools_tx_guard_required.py`（§18 の C6'）。
+  - 試験が見るのは `backend/app/tools/` の下だけ（:11〜:13）。backend の外にある、DB を使う Python の道具は7本: `docs/handoff/s1-rls-stage5/pool_reset_measure.py`、`docs/handoff/single-set-category/data/bin3/ref/rejudge_pika30.py`、`docs/handoff/single-set-category/data/bin3/rejudge_single_set.py`、`scripts/accuracy/condition_words/replay_words.py`、`scripts/accuracy/llm_compare/fhd_snapshot.py`、`scripts/check_priority_scoring_state.py`、`scripts/check_public_tenant_rls.py`（`git grep -lE '_get_sync_session|create_engine\(|psycopg|asyncpg\.connect'`）。
+  - このうち `from app.` を読み込んで本番のアプリの入れ物で動く形は4本（rejudge の2本・replay_words・fhd_snapshot）。残り3本は psycopg2 で直接つなぐ（CI 用・使い捨ての DB 用・月次の点検）。
+  - 必須の pytest が動くかを決める filters に docs/ は無い（`.github/workflows/test.yml` :176〜:184）。docs/ の下に道具を足すだけの PR では、守りの試験が走らない。
+
+### 19-2. 目的と成功の条件（KGI）
+目的: 試しが本番で動いていても、本番反映が移行のロック待ちで失敗しない。失敗した回は、人が数えなくても毎週知らせが届く。
+
+| 成功の条件 | 判定 |
+|---|---|
+| KGI-7 移行の段がロック待ちの上限で失敗した回（同じ run の前の回を含む）が、(a)・(b) の本番反映の後の連続4週で毎週0回 | (c) の毎週の数え（4回分の Discord と job の記録）。基準: 10/29〜11/9 は移行の段が動いた34回中6回（§18-1）、11/13 に1回 |
+| KGI-7b 点検の段で止まった回も数え、毎週の記録に出る（止まるのは「入れ替えの前に安全に止まった」形で、失敗には数えない。ただし多ければ (b) の続きを考える材料にする） | (c) の毎週の記録 |
+
+### 19-3. 作る順と理由（一度に1つ）
+1. (c) 毎週の数え — 先に作る。直す前の基準の数を、後の数と同じ数え方で取るため（測る前に基準値を取る）。本番のアプリは触らない。
+2. (a) 済んだ移行は流さない — 次に作る。11/13 のように新しい移行が無い本番反映では、移行の段が表を押さえに行かなくなる。最も効く。設計は migration-runner-redesign §5 のまま進める（本節で書き直さない）。
+3. (b) 試しの道具に名前と上限を付け、守りの試験を backend の外へ広げる — 最後に作る。(a) の後も新しい移行がある回は表を押さえるので、そのときの握り手を減らし、名前で特定できるようにする。
+
+各段は、前の段の本番反映の後に (c) の数えを1回以上読んでから始める。
+
+### 19-4. (c) 毎週の数え（詳細）
+変更するファイル（実装 PR の全部）:
+| 場所 | 変更前 | 変更後 |
+|---|---|---|
+| `scripts/ops/count-deploy-lock-failures.sh`（新規） | 無い | 本番反映の記録を回ごとに読み、数を出す台本 |
+| `.github/workflows/weekly-deploy-lock-count.yml`（新規） | 無い | 毎週月曜 01:00 UTC（10:00 JST）と手動で、上の台本を流し、0でなければ Discord に送る |
+| `backend/tests/ops/test_deploy_lock_count.py`（新規） | 無い | 台本と workflow の試験（必須の pytest の中で走る） |
+
+台本の動き:
+1. 引数: `--days N`（既定 7）または `--since YYYY-MM-DD --until YYYY-MM-DD`、試験用に `--from-dir DIR`（API を呼ばずに DIR の記録を読む）。
+2. deploy.yml の run を、期間内に作られたものだけページを送って全部引く（`GET .../actions/workflows/deploy.yml/runs?created=A..B&per_page=100`）。
+3. 各 run について、回 1〜run_attempt を全部見る。各回の job を引き、段の一覧（job の steps）で「Run database migrations」か「Check open DB transactions before deploy」の結論が skipped でない job だけ記録を読む（2026-11-13 の1回目で、段の名前と結論が steps に出ることを確かめた。移行の段が動いた回は10/29〜11/9 で447回中34回）。
+4. 記録の数え方（`grep -a`）:
+   - 失敗: `lock conflict; retry limit reached` が1行以上ある回。
+   - 待ちあり: `lock conflict; retry [0-9]` が1行以上ある回（行数も出す）。
+   - 点検で停止: `[precheck] STOP:` がある回。
+   - 握り手: 失敗の回で `lock holders (xact > 1s):` に続く行の、ユーザーと application_name の列（`scripts/run_all_migrations.sh` :68 の列の順）。接続元の場所は出さない（:65 の注記と同じ）。
+   - 読めなかった: 記録を引けなかった回。0でなければ知らせる（黙って0と数えない）。
+5. 出力: 1行1回の表（run id・回・時刻・失敗・待ち行数・停止・握り手のユーザーと名前）と合計。job の要約（`$GITHUB_STEP_SUMMARY`）にも同じものを書く。
+6. 失敗＋点検で停止＋読めなかった が0でなければ、合計と run id の一覧を `scripts/notify/discord-owner-ping.sh` で送る。0なら「0回」の1行を job の要約に残す（Discord には送らない）。
+7. 台本は数えるだけで、本番のサーバーと DB には触らない。使う鍵は workflow の GITHUB_TOKEN（permissions は actions: read と contents: read だけ）。
+
+試験（`backend/tests/ops/test_deploy_lock_count.py`。§18 の P7・P8 と同じ必須の pytest で走る。scripts/ の変更で filters に当たる）:
+- D1 `--from-dir` に作り物の記録を置き、失敗1回・待ちだけ1回・停止1回・何も無い1回・文字以外のバイトを混ぜた1回で、数が合う。
+- D2 握り手の行から接続元の場所の列を出さない。
+- D3 記録を読めなかった回があると、終了の知らせの対象になる（0扱いにしない）。
+- D4 workflow に schedule と workflow_dispatch があり、台本を呼び、permissions が読みだけ。
+- 赤の実演（実装 PR に貼る）: `-a` を外すと D1 が赤／読めなかった回を0にすると D3 が赤。
+
+基準の数え（実装 PR の後、手で1回）: workflow_dispatch で 2026-10-29〜2026-11-13 を数える。§18-1 の手数え（11/9 までの34回中6回）の run がすべて「失敗」に入ることを確かめる。新しく見つかった前の回の失敗は、run id つきで本節に書き足す。合わなければ止めて、数え方を直す。
+
+### 19-5. (a) 済んだ移行は流さない
+- 正本は `docs/handoff/migration-runner-redesign/design.md` §5（第7版）と ADR-1005・ADR-1007。本節では順番と測り方だけを決める。
+- 始め方: §5-3 の 5-0（P1〜P13 の前調査、読むだけ）をクラウドの Sonnet に出す。そのあと 5-1・5-2・5-3・5-4 を §5 の順に進める。5-2 は PO の決定（1A/1B）、5-3 は PO 本人の GO が要る（§5 のまま）。
+- 本節で足す測り方: 5-3 の本番反映の後、(c) の数えで「失敗」が0の週が続くか。§5 の K5-6（新しい手順が0本の回で流す本数が0）とあわせて読む。
+- 注意: 毎回流す一覧（§5-7）の手順は (a) の後も流れる。その手順が表を押さえるかは 5-0 で確かめる。押さえるなら、(a) の後も新しい移行の無い回で待ちが出うる。
+
+### 19-6. (b) 試しの道具に名前と上限を付ける（概要。(a) の本番測定の後に詳細を書く）
+- b1 アプリの接続の名前（段4a、§17）を先に実装する。試しの道具も使う `_engine` に名前が付き、握り手が「試し」か「アプリ」かを記録で分けられるようになる。
+- b2 試しの道具の名前: `backend/app/tools/_tx_guard.py` の接続ごとの設定（`_on_connect_set_idle_limit`）で、上限と同時に application_name を道具用の名前にする。名前は §17-2 の名前の表に足す（正本を増やさない）。
+- b3 守りの試験を広げる: `backend/tests/test_tools_tx_guard_required.py` の対象に、`from app.` を読み込んで DB を使う scripts/ と docs/ の下の .py を足す。`.github/workflows/test.yml` の filters に `docs/**/*.py` を足し、docs に道具を足す PR でも必須の pytest が走るようにする。
+  - 今ある4本（19-1）は直すか、理由つきの例外にする。例外の理由と、直すときの試しの作り（仕入元1件を1つの取引にするのをやめるか）は詳細設計で決める。
+  - psycopg2 で直接つなぐ3本は対象外（CI 用・使い捨ての DB 用・月次の点検）。開いたままの取引は点検の段が見つける。
+- b4 の候補（今は作らない）: 本番反映の移行の間だけ、試しの道具が新しい取引を始めずに待つ仕組み（例: DB の合図の鍵を、移行は独り占めで、道具は取引の初めに共有で取る）。(a)・b1〜b3 の後も (c) で失敗が出たときに設計する。
+
+### 19-7. 受け入れ基準
+| 基準 | 検証方法 |
+|---|---|
+| K19-1 (c) の台本が作り物の記録で正しく数える | D1〜D3 PASS（必須の pytest） |
+| K19-2 (c) の workflow が毎週と手動で動き、読みだけの権限 | D4 PASS |
+| K19-3 試験が壊れた台本を捕まえる | 赤の実演2つ（19-4） |
+| K19-4 基準の数えが §18-1 の手数えの失敗6回をすべて含む | workflow_dispatch の1回の記録 |
+| K19-5 毎週の実行が届く | 実装の後の最初の月曜 10:00 JST の run が success で、要約に数が出る（0でなければ Discord にも出る） |
+| K19-6 (a) の効果 | 5-3 の本番反映の後の4週、(c) の「失敗」が毎週0（KGI-7） |
+| K19-7 (b) の効果 | b1〜b3 の本番反映の後の4週、(c) の握り手の列に名前の空の行が0 |
+
+### 19-8. 弊害・トレードオフ
+- (c) は GitHub の API を週に1回、run の一覧・回ごとの job の一覧・移行か点検の段が動いた job の記録の分だけ呼ぶ。11/12〜11/13 の約22時間で40 run あった。GITHUB_TOKEN の呼び出し回数の上限は、実装の前に GitHub の公式資料で確かめて本節に書く（まだ確かめていない）。基準の数え（K19-4）の呼び出し回数を記録に出し、上限との差を見る。
+- (c) は数えて知らせるだけで、止まりを防がない。防ぐのは (a)・(b)。
+- 記録の文言（`lock conflict; ...`・`[precheck] STOP:`）が変わると数えが0になる。D1 の作り物の記録は、台本の echo の文と同じ文字を使い、試験で `scripts/run_all_migrations.sh` と `scripts/deploy-db-precheck.sh` にその文字があることも確かめる（文言を変えた PR が赤になる）。
+- (a) の弊害は migration-runner-redesign §5 の弊害の節のとおり。
+
+### 19-9. 選ばなかった案
+- 移行の前の点検（§18）をもっと厳しくする（3回続けての0を増やす・一時の入れ物が動いていたら待つ）: 11/13 の試しは45分動いた。待つ上限600秒を超えて本番反映が止まる回が増えるだけで、止まらないことにはならない。
+- 試しを流してよい時間を人の決まりで決める: GoCardless は時間をずらす運用を人の決まりで続け、重く作る速さを妨げたと書いている（§18-10 の F3）。機械で守れない。
+- K18-5 を手で数え続ける: 11/13 の止まりは一覧に出ない前の回で起き、手の数えでは見落としうる（19-1）。
+
+### 19-10. 外部の事例（2026-11-13 に読んだもの。方向が合うことの裏付けで、成功の証明ではない）
+| 事例 | いつ・どこ | 数値 | この設計との関係 |
+|---|---|---|---|
+| GitLab.com 本番の障害票 #20494 | 2025-09-08、本番反映の後の移行 | 移行を「実行済み」の印にするまで本番反映が全部止まった（時間の数値なし） | 適用の記録があるので印を付けて先へ進めた。当社には印を付ける場所が無い＝(a) |
+| GitLab.com 本番の障害票 #22642 | 2026-08-05、DB の自動掃除が表を握った | 掃除の後もロック待ちで2回失敗、印を付けて通った | やり直しだけでは足りない日がある＝(a) |
+| GoCardless の記事（zero-downtime-postgres-migrations-the-hard-parts） | 2015年1月、決済の API | API が約15秒停止。後に移行へ lock_timeout 750ms を既定で付けた | ADR-1037 と同じ形。今はある |
+| postgres.ai（2021-09-23） | 手法の記事 | 数値なし | 短いロック待ち＋やり直しが標準。今はある |
+- 見つからなかったもの: 試しと本番反映を重ねても止まらなくなった前後の回数を数値で出した事例。効果は (c) の自社の数で測る。
+
+### 19-11. 戻し方・計画
+- 戻し方: (c) は PR を revert して main にマージ。本番のアプリと DB は変わらない。(a) は §5 の戻し方（全件モード）。(b) は各 PR の revert。
+- 計画: (1) 本節をクラウドの Architect（新しく起動・読むだけ）で審査 (2) 設計 PR → reviewer（opus）→ マージ (3) PO に結果を伝える (4) (c) の実装をクラウドの Sonnet に出す → reviewer（opus）→ マージ。scripts/ と workflow を足すが、本番の動き（deploy.yml）は変えない (5) 基準の数え（K19-4）と最初の月曜（K19-5） (6) migration-runner-redesign の 5-0 をクラウドの Sonnet に出す (7) 以後は §5 の順。(b) は (a) の本番測定の後に詳細を書く。
+- 近い危険: rejudge_single_set.py の MODE=commit はまだ流していない。同じ仕入元ごとの長い取引で動くので、移行のある本番反映と重なると同じ止まりが起きうる。(a)・(b) が入るまでは、MODE=commit を流す前に本番反映が動いていないこと（`gh run list --workflow deploy.yml --status in_progress` が0件）を見てから流し、流している間は backend・scripts を変える PR をマージしない。
+
+### 19-12. 継続（維持の仕組み）
+- 守り手: `.github/workflows/weekly-deploy-lock-count.yml`（毎週月曜に数えて、0でなければ Discord）と `backend/tests/ops/test_deploy_lock_count.py`（数え方と記録の文言を必須の pytest で守る）。
+- 数えた結果の記録は、毎週の job の要約と Discord に残る。KGI-7 の判定は (a)・(b) の本番反映のあと4週分を読む。
+- 数えの文言の正本は `scripts/run_all_migrations.sh` と `scripts/deploy-db-precheck.sh` の echo の文。変えると D1 が赤になる。
+
+### 19-13. 範囲外（記録のみ）
+- アプリ（salesanchor_backend）が SET の後に取引を開いたまま置く件（§18-7）。
+- 11/5・11/7 の止まりの握り手（K19-4 の基準の数えで名前の列だけは出る）。
+- 毎週の数えをほかの workflow（失敗の数一般）へ広げること。
+
+### 19-14. 審査の記録
+（まだ無い）
