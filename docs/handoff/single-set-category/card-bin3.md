@@ -7,7 +7,7 @@
 
 - 親: `docs/handoff/single-set-category/design.md` §5 便3 手順 3〜6・§2 KGI 1〜3・§8 K5・K6
 - 手本: `docs/handoff/single-set-category/data/bin3/ref/rejudge_pika30.py`（2026-11-11 に 1 商品で本番の試走と書き込みに使った台本。sha256 先頭 `df1e1752275e843ed7bf`）
-- PO の承認: 便3 の付け替え 2026-11-12「1」、やり直しの準備 2026-11-13「1」。このカードの実装は、カードを PO に見せて「1」を受けてから渡す
+- PO の承認: 便3 の付け替え 2026-11-12「1」、やり直しの準備 2026-11-13「1」。カードの実装 2026-11-13 10:04 ごろ「1」（作り方を PO に見せた後）。カードの審査は reviewer（opus）4 回目で APPROVE（commit 541ea9a10）
 - 基準: origin/main 4892f2c6a。行番号はこの版で Opus が読んで確かめた
 - ブランチ: `release/single-set-category-bin3-rejudge-card`（このカードと同じ枝）。既にある枝を checkout して、その上に commit する
 - 読んだ決まり: docs/handoff/design-partner-card-ops/guards/00-common.md・03-file.md・10-executor.md
