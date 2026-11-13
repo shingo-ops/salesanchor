@@ -6,7 +6,7 @@
 > この文書は何か（専門用語なしの1行）:
 > シングルカードのまとめ売りを、在庫の表で「未開封」ではなく「シングル・1セット」と出すための作り方。
 
-親（あるべき姿）: [在庫管理](../../specs/inventory-management/README.md)。現状の調べは [recon.md](./recon.md)。決めごとは [ADR-1031](../../adr/ADR-1031-single-and-promo-pack-conditions.md) の追補 What 6。型は ADR-1035 追補（サプライ系）の設計 [supply-category/design.md](../supply-category/design.md) に合わせる。
+親（あるべき姿）: [在庫管理](../../specs/inventory-management/README.md)。現状の調べは [recon.md](./recon.md)（docs/handoff/single-set-category/recon.md）。決めごとは [ADR-1031](../../adr/ADR-1031-single-and-promo-pack-conditions.md) の追補 What 6。型は ADR-1035 追補（サプライ系）の設計 [supply-category/design.md](../supply-category/design.md) に合わせる。
 
 状態: **方針は PO が決めた**（2026-11-11「1」＝商品区分に作る）。設計の起案は 2026-11-11、Opus。設計は審査 5 回目で APPROVE（2026-11-11）。**PO の承認と作業開始の許可**: 2026-11-12「1」（作り方の書類を保存して作業を始める）。便1 の本番反映は別に PO の「GO #番号」を受ける（ADR-136）。審査は末尾。
 
