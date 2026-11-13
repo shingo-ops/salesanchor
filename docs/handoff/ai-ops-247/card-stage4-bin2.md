@@ -6,7 +6,7 @@
 - 設計: `docs/handoff/ai-ops-247/stage4-design.md` §2「実装カードで足すこと」C3-0・C3-1（:58-62）、§8（:155）、§12 D1・D4（:187・:190）
 - 便の分け方: `docs/handoff/ai-ops-247/card-stage4-bin1.md` §0（:11-26）。便1 の K1 は ○（設計 §13）
 - 対象ADR: ADR-1012
-- 状態: 設計案作成済み。設計審査（クラウド）1 回目は REVISE で、指摘を反映済み。2 回目の審査と PO 承認はまだ。実装は未着手
+- 状態: 設計案作成済み。設計審査（クラウド）1 回目は REVISE で指摘 4 件を反映、2 回目（337f72540）は APPROVE で推奨 2 件を反映済み。PO 承認はまだ。実装は未着手
 - 危険便: はい（`migrations/` と `scripts/run_all_migrations.sh` を変える。ADR-135・ADR-136）。下の 2a・2b とも GO #番号が要る
 - 実装担当: クラウドの Sonnet（RemoteTrigger の一回実行）。push して止まる。PR は Opus が作る
 - 決めること（PO）: §3 の出来事の kind と actor（案 A／案 B）
@@ -354,7 +354,7 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
 | 起きたこと | すること |
 |---|---|
 | 行番号が実物とずれる | 中身で同じ場所を探す。中身も違えば止まる |
-| `migrations/` に 20261113_200000 より新しいファイルがある | 名前の時刻をそれより後ろにする（2b は 2a より後ろ）。`scripts/run_all_migrations.sh` の最後の行の後ろに足す |
+| `migrations/` に 20261113_200000 より新しいファイルがある | 名前の時刻をそれより後ろにする（2b は 2a より後ろ）。`scripts/run_all_migrations.sh` の最後の行の後ろに足す。変えた名前は、次のすべてで同じ名前に直す: §5-2a（６）の `contains` / §5-2b（１０）の `contains` と `for` の中の 200000・210000 の名前 / `backend/tests/test_ops_case_router.py` に足す行（§5-2a（４）・2b の試験）/ 戻しのファイルの名前と `scripts/run_all_migrations.sh` の注記の行。直し忘れると CI の ALTER が失敗して止まる |
 | `ops_case.reports` に incident_id だけの一意が 1 つでない（0 個・2 個） | 止まる |
 | 2a の後、今ある試験（`backend/tests/test_ops_case_router.py`・`backend/tests/test_ops_router.py`・`backend/tests/test_ops_incident_tables_rls.py`・`backend/tests/ops/test_ops_case_db.py`）が 1 つでも赤 | 名前と生の出力を出して止まる（2a は古いコードを変えない約束のため） |
 | `from app.routers.ops import _INSERT_EVENT_SQL` で読み込みの輪のエラー | 止まる。SQL を写して 2 つ目を作らない |
@@ -400,6 +400,8 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
 （３）すぐに 2b の PR を revert して本番に出す。revert でコードが古い口に戻り、`scripts/run_all_migrations.sh` から 210000 の行が消える。古いコードの `ON CONFLICT (incident_id)` は（２）で戻した古い一意で動く。
   - （２）と（３）の間に別の本番反映をはさまない。はさむと、まだ残っている 210000 の行が流れ、古い一意をまた消す。
   - 逆の順（先に revert）にすると、古いコードが古い一意の無い表の上で動き、戻しのファイルを流すまで報告が全部 503 になる。だからこの順にする。
+（４）（３）の本番反映の後、読み取りの鍵で `pg_constraint` を読み、`ops_case.reports` に incident_id だけの一意が 1 つあることを確かめる。0 なら止めて PO に聞く。
+  - 理由: 前の本番反映が失敗していると、次の反映は移行を全部流す（`.github/workflows/deploy.yml:73-78` の else）。（２）と（３）の間に別の反映が入ると 210000 が流れて古い一意が消え、（３）の後も古いコードの報告が 503 のまま自動では直らない。はさまない約束だけでは止められないので、終わりに確かめる。
 - 2b の戻しは「2 通以上の件が 0」のときだけできる。2b の本番反映から、実行係が種類を送り始める（便5）までの間がその期間。
 
 2a を戻す（2b を戻した後にだけ。先にコード、そのあと表）:
@@ -431,6 +433,7 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
   - 本番の出し方（コードが先・移行が後）で、2a の後も 2b の入れ替え中も、今の報告（investigation）が 503 にならない順になっている（§1）。戻すときも、表とコードが合わない時間ができない順にした（§9）。
   - CI の移行試験に、前もって流す移行の手順を足した（§5-2a（６）・§5-2b（１０））。戻しのファイルも CI で 2 回流れることを前提に書いた。
 - クラウドの設計審査 1 回目（REVISE）の指摘 4 件を反映した: CI の前提の移行・2b の戻す順・503・戻しのファイルも CI で流れること。
+- クラウドの設計審査 2 回目（APPROVE）の推奨 2 件を反映した: §9 の 2b の戻しの終わりに古い一意を確かめる（４）・§6 の名前を変えたときの直しの範囲。
   - 出来事の detail は報告の id だけで、値を写さない（D4）。試験で見張る（§5-2b（７））。
   - 出来事を書く SQL を写さず、今の 1 つを使う（配線の正本は 1 か所）。
   - 伏せた窓の分類の理由が指す決まりの名前を変えない。
