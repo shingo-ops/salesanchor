@@ -39,6 +39,7 @@
    - (1d) `cd <main> && git worktree list`。`$HOME/worktrees/salesanchor/release-secretary-rulebook-bin2a` が出ること。以後の `<repo>` はこの絶対パス。
    - (1e) `cd <repo> && ./scripts/dev/executor-preflight.sh`。生出力を報告に貼る。クラウドでは [1/3] network と [2/3] gh auth の FAIL は起こるものとして先へ進む。[3/3] と [4/4] が OK でなければ BLOCKED:。
    - (1f) `cd <repo> && git diff --stat fce60d9f5 HEAD -- secretary-agent secretary-codex tests/sandbox/secretary-codex.sh docs/handoff/secretary-rulebook/bin0/run_baseline.py`。空であること（行番号を読んだ後に誰も触っていない）。空でなければ BLOCKED:（差分の生出力を添える）。
+   - (1g) `mkdir -p /tmp/CC報告ファイル`。結果ファイルの置き場を作る（やること 8・12・14 が書き込む）。
 2. 新しいファイル `secretary-agent/compose.mjs` を作る。中身は下の「compose.mjs の中身」を 1 文字も変えずに使う。
 3. 新しいファイル `secretary-agent/compose.test.mjs` を作る。中身は下の「compose.test.mjs の中身」を 1 文字も変えずに使う。
 4. `secretary-agent/server.mjs` を 5 か所直す（下の「agent の直し」）。
@@ -46,8 +47,8 @@
 6. `secretary-agent/server.test.mjs` の最後（今は 303 行目で終わる）の後ろに、下の「agent の試験に足す」を足す。ファイルの先頭の import の並び（今は 2〜9 行目）の最後の行 `import { fileURLToPath } from "node:url";` の次の行に `import { compose } from "./compose.mjs";` を 1 行足す。ほかの行は変えない。
 7. `secretary-codex/server.test.mjs` の最後（今は 391 行目で終わる）の後ろに、下の「codex の試験に足す」を足す。ファイルの先頭の import の並びの最後の行（`import { fileURLToPath } from "node:url";`）の次の行に `import { compose } from "../secretary-agent/compose.mjs";` を 1 行足す。ほかの行は変えない。
 8. 容器の試験を流す: `cd <repo> && node --test secretary-agent/compose.test.mjs secretary-agent/server.test.mjs secretary-codex/server.test.mjs > /tmp/CC報告ファイル/bin2a-node-test.txt 2>&1; echo "exit=$?"`。exit=0 であること。結果ファイルの最後の 12 行（`tail -12`）を報告に貼る。0 でなければ直さずに NEEDS_DECISION:（落ちた試験の題と、そのあたりの 40 行）。
-9. 配り方の 4 か所を直す（下の「配り方の直し」）。
-10. 試験場の台本 `tests/sandbox/secretary-codex.sh` を 4 か所直す（下の「試験場の台本の直し」）。
+9. 配り方の 5 か所を直す（下の「配り方の直し」）。
+10. 試験場の台本 `tests/sandbox/secretary-codex.sh` を 5 か所直す（下の「試験場の台本の直し」）。
 11. 新しいファイル `.github/workflows/secretary-containers-test.yml` を作る。中身は下の「workflow の中身」を 1 文字も変えずに使う。
 12. 測る台本 `docs/handoff/secretary-rulebook/bin0/run_baseline.py` を 3 か所直す（下の「測る台本の直し」）。直した後に `cd <repo>/backend && PYTHONPATH=. uv run --no-project --with httpx==0.28.1 --with pydantic==2.10.6 python ../docs/handoff/secretary-rulebook/bin0/run_baseline.py --cases app/assistant_regression/cases.json --model x --url http://127.0.0.1:9 --rounds 1 --rules ../docs/handoff/secretary-rulebook/bin2/dummy-rules.json > /tmp/CC報告ファイル/bin2a-baseline-dry.txt 2>&1; echo "exit=$?"` を流し（つながらない宛先なので 1 件 5 秒待ってやり直し、全体で約 2 分かかる）、exit=0 と、結果ファイルの `grep -E '^(group=|rules_count=)'` の生出力を報告に貼る。`rules_count=20` の行があり、4 つの group の行の unmeasured の和が 23（ほかの数は 0）であること。`docs/handoff/secretary-rulebook/bin2/dummy-rules.json` が無ければ BLOCKED:（Opus が手順書と同じ PR で置く）。
 13. commit（1 つ）。`git add` は 12 ファイルを名前で指定する: `secretary-agent/compose.mjs`・`secretary-agent/compose.test.mjs`・`secretary-agent/server.mjs`・`secretary-agent/server.test.mjs`・`secretary-agent/Dockerfile`・`secretary-codex/server.mjs`・`secretary-codex/server.test.mjs`・`secretary-codex/Dockerfile`・`secretary-codex/Dockerfile.dockerignore`・`tests/sandbox/secretary-codex.sh`・`.github/workflows/secretary-containers-test.yml`・`docs/handoff/secretary-rulebook/bin0/run_baseline.py`（12 個。数え直して 12 であること）。commit の前に `cd <repo> && git status --short` を報告に貼る（この 12 個だけであること。違えば commit せずに BLOCKED:）。題は `feat(secretary): 容器が会社の決まりを受け取り指示文の後ろに入れる（ADR-1077 便2a）`。末尾に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`。`git log --oneline -1` を報告に貼る。
@@ -139,7 +140,7 @@ const { compose, readRules } = await import(pathToFileURL(path.join(ASSET_DIR, "
 - (d) 213 行目。前: ``    child.stdin.end(`${PROMPT}\n\n今の日時: ${now}\n\n利用者の文:\n${text}`);`` → 後: `    child.stdin.end(compose(PROMPT, now, text, rules));`
 - (e) 230〜232 行目の `let text, now, model;` と `({ text, now, model } = JSON.parse(raw));` を agent の (d) と同じに直す。239〜241 行目の model の検査の直後、`if (busy) return send(res, 429, { code: "busy" });` の前に agent の (e) と同じ 2 行を足す。246 行目の `await runCodex(text, now, model);` を `await runCodex(text, now, model, rules);` に直す。
 
-（(b) で 3 行増えるので、(c) 以後の実際の行番号は 2 つずつ後ろにずれる。「前」の文字で探す。）
+（(b) で 2 行増えるので、(c) 以後の実際の行番号は 2 つずつ後ろにずれる。「前」の文字で探す。）
 
 ## agent の試験に足す（`secretary-agent/server.test.mjs` の最後）
 
@@ -327,7 +328,7 @@ jobs:
 
 - やること 8 で今ある試験（(1)〜(10)・codex の (1)〜(14)）が落ちる → 直さずに NEEDS_DECISION:（今の組み立てを変えてしまった恐れ。落ちた題と 40 行）。
 - codex の試験で「top-level await」が使えないという誤り → Node の版（`node --version`）を添えて BLOCKED:（容器も CI も 22 の前提）。
-- (12)・(16) の bytes の検査が落ちる（16,000 以下・16,384 以上）→ 数を添えて NEEDS_DECISION:（設計の計算は 16,143 バイト）。
+- (12)・(16) の bytes の検査が落ちる（16,000 以下・16,384 以上）→ 数を添えて NEEDS_DECISION:（試験の頼みを数え直すと agent 16,132・codex 16,131 バイト）。
 - (12)・(16) が 413 など 200 以外で返る → 容器の上限 `MAX_BODY`（`secretary-agent/server.mjs:14`）は変えずに、返った状態と bytes を添えて NEEDS_DECISION:。
 - check-before-submit が落ちる → 直さずに、落ちた検査の名前とログの最後 30 行を添えて NEEDS_DECISION:。
 - 「前」の文字が見つからない（誰かが先に直した）→ 補わずに BLOCKED:（その行の今の中身を添える）。
