@@ -1,7 +1,7 @@
 # 実装カード 便2b: backend が承認済みの決まりを秘書の容器へ送り、決まり帳の口を足す（画面の見た目は変わらない）
 
 - 設計: [design.md](design.md) §3（大きさ）・§4（表）・§5（手順と口の条件）・§11（R1・R3・R4・R5・R6・上限いっぱい・21 件目）・§12 便2b。ADR: `docs/adr/ADR-1077-secretary-rulebook.md`（Proposed のまま）。前の便: [card-bin1.md](card-bin1.md)（表）・[card-bin2a.md](card-bin2a.md)（容器が `rules` を受け取る）。
-- 状態: 手順書の案（Opus 作成・2026-11-13）。**PO の実装承認はまだ無い。** 承認があるまで実装役に渡さない。
+- 状態: 手順書の案（Opus 作成・2026-11-13）。設計審査 1 回目 APPROVE（クラウドの審査役 Opus・2026-11-13。低の指摘 1 件＝R1 の決めた人の検査を PG 試験に 1 行足した）。**PO の実装承認はまだ無い。** 承認があるまで実装役に渡さない。
 - ブランチ: `release/secretary-rulebook-bin2b`（実装役が origin/main から作る）。PR は作らない（Opus が作る）。危険 PR ではない（`migrations/`・`deploy.yml`・本番 `scripts/` を触らない）。
 - 行番号は origin/main e930f1b24（2026-11-13 12:25）で読んだもの。
 - 便2b では表（migration）・容器（secretary-agent・secretary-codex）・指示文（prompt.txt）・答えの形（schema.json）・画面の部品を変えない。画面は失敗の言葉を 1 つ足すだけ（決まりが長すぎるときの 413）。決まりが 0 件の会社では、容器へ送る頼みは `"rules":[]` が増えるだけで、AI に渡る文は今と 1 文字も違わない（便2a の compose.mjs）。
@@ -1233,6 +1233,8 @@ def test_twenty_approved_refuses_more(pg):  # noqa: F811
     asyncio.run(main())
     assert _approved_count(cur, 999) == 20
     assert _approved_count(cur, 998) == 2
+    cur.execute("SELECT created_by, decided_by FROM public.secretary_rules WHERE rule_text = %s", ("fake other",))
+    assert cur.fetchone() == (998, 998)  # R1: 決めた人が入る
 
 
 @needs_ci_pg
