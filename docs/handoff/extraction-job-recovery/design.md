@@ -72,3 +72,128 @@ recon.md 参照。要点のみ再掲する。
 
 ## 追記（2026-10-17）解析失敗のやり直し
 同じ10分ごとの回収に、解析段で失敗した v102 job（status='done' かつ error_message='ANALYSIS_FAILED'）を1回だけ再解析に積む段を足した。新しい表・列は増やしていない。詳細: docs/handoff/analysis-failed-record/design.md
+
+## 追記（2026-11-13）試験が時々落ちる件の直し（区分 B-3: 試験と正本でない文書だけ）
+事実は recon.md「追記（2026-11-13）」。審査の記録は review-opus.md。
+
+### KGI（ADR-1015 B 区分のため PO 承認は不要。AI が書いて残す）
+- K1: `test_tcg_extraction_recovery_pg.py` の7件が、試験全体の長さに関係なく、時刻の境目で落ちない。判定: 下の T1〜T3。
+- K2: 試験ファイルの一番外で「今」を1回だけ決める書き方が、試験全体（backend/tests 配下）で 0 か所。新しく書かれたら CI の Backend Tests が赤になる。判定: T4・T5。
+- K3: マージ後14日（〜2026-11-27）、Backend Tests の失敗のうち `test_tcg_extraction_recovery_pg.py` が原因のものが 0 回。判定: T6。
+
+### 直し方（選んだ案）
+1. `test_tcg_extraction_recovery_pg.py` は、試験本体の始めに **DB の時計**（`SELECT clock_timestamp()`）を読み、それを基準に行を作る。判定側も DB の `NOW()` を使うので、同じ時計どうしで比べることになる。基準を読んでから判定までは、行を入れて1回 SELECT するだけ（ミリ秒の単位）。
+2. `test_viewer_api.py` の `NOW` も、使う所で毎回作る形にする（実害は無いが、K2 の見張りを例外なしにするため）。
+3. 見張りの試験 `backend/tests/test_no_import_time_clock.py` を新しく足す。backend/tests 配下の全 .py を `ast` で読み、モジュールの一番外とクラスの本体（読み込みのときに実行される所）にある代入の右辺が `.now()`・`.utcnow()`・`.today()`・`time.time()` を呼んでいたら、ファイル名と行番号を並べて落とす。`lambda` と `def` の中は数えない（呼ばれたときに動くため）。
+
+### 採らなかった案
+- しきい値の15分を試験で小さくする／大きくする: 試験全体の長さは増え続けるので、いつかまた超える。根本の「時刻が古くなる」は直らない。
+- 時刻を止める道具（freezegun 等）を入れる: 判定は DB の `NOW()` で、Python の時計を止めても効かない。依存も増える。
+- Python の `datetime.now()` を試験本体で読む: 経過の問題は消えるが、CI の DB と Python の時計の差が残る。DB の時計なら差が無い。
+
+### 変更前後（実装役はこのとおりに書く）
+`backend/tests/test_tcg_extraction_recovery_pg.py`
+- 11行目 `from datetime import datetime, timedelta, timezone` → `from datetime import timedelta`
+- 20行目 `_NOW = datetime.now(timezone.utc)` を消し、次の関数に置き換える:
+```python
+def _db_now(connection):
+    """DB の時計で「今」を読む。判定側（NOW()）と同じ時計にするため、試験本体の始めで毎回読む。"""
+    with connection.cursor() as cur:
+        cur.execute("SELECT clock_timestamp()")
+        return cur.fetchone()[0]
+```
+- 7つの試験すべてで、`connection, _, _ = pg` の次の行に `now = _db_now(connection)` を足し、その試験の中の `_NOW` を `now` に置き換える（対象行: 61・62・76・77・94・110・124・138・139・155）。ほかの行は変えない。
+
+`backend/tests/test_viewer_api.py`
+- 34行目 `NOW = datetime.now(timezone.utc)` を消す。
+- 311・313・347行目の `NOW` を `datetime.now(timezone.utc)` に置き換える。ほかは変えない。
+
+`backend/tests/test_no_import_time_clock.py`（新規）
+```python
+"""試験ファイルの読み込みのときに「今」を1回だけ決める書き方を止める。
+
+読み込みのときに決めた時刻は、試験全体が長くなるほど古くなる。時刻の境目を確かめる試験が時々落ちる
+（2026-11-11〜13 に3回。docs/handoff/extraction-job-recovery/recon.md「追記（2026-11-13）」）。
+"""
+from __future__ import annotations
+
+import ast
+from pathlib import Path
+
+TESTS = Path(__file__).resolve().parent
+_CLOCK_METHODS = {"now", "utcnow", "today"}
+
+
+def _calls_clock(node: ast.AST) -> bool:
+    """node の中で時計を読む呼び出しがあれば True。lambda と関数の中は呼ばれたときに動くので数えない。"""
+    stack = [node]
+    while stack:
+        cur = stack.pop()
+        if isinstance(cur, (ast.Lambda, ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if isinstance(cur, ast.Call) and isinstance(cur.func, ast.Attribute):
+            if cur.func.attr in _CLOCK_METHODS:
+                return True
+            if cur.func.attr == "time" and isinstance(cur.func.value, ast.Name) and cur.func.value.id == "time":
+                return True
+        stack.extend(ast.iter_child_nodes(cur))
+    return False
+
+
+def _import_time_assignments(body: list[ast.stmt]):
+    """読み込みのときに実行される代入（モジュールの一番外とクラスの本体）を返す。"""
+    for stmt in body:
+        if isinstance(stmt, ast.ClassDef):
+            yield from _import_time_assignments(stmt.body)
+        elif isinstance(stmt, (ast.Assign, ast.AnnAssign)) and stmt.value is not None:
+            yield stmt
+
+
+def _findings() -> list[str]:
+    found = []
+    for path in sorted(TESTS.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for stmt in _import_time_assignments(tree.body):
+            if _calls_clock(stmt.value):
+                found.append(f"{path.relative_to(TESTS)}:{stmt.lineno}")
+    return found
+
+
+def test_detector_catches_the_pattern():
+    assert _calls_clock(ast.parse("_NOW = datetime.now(timezone.utc)").body[0].value)
+    assert _calls_clock(ast.parse("T = time.time()").body[0].value)
+    assert _calls_clock(ast.parse("D = date.today() - timedelta(days=1)").body[0].value)
+    assert not _calls_clock(ast.parse("f = lambda: datetime.now()").body[0].value)
+    assert not _calls_clock(ast.parse("X = timedelta(minutes=5)").body[0].value)
+
+
+def test_no_clock_read_at_import_time():
+    found = _findings()
+    assert found == [], (
+        "試験ファイルの読み込みのときに時刻を決めています。試験の中で毎回読んでください"
+        "（DB と比べるなら SELECT clock_timestamp()）: " + ", ".join(found)
+    )
+```
+
+### 検証（基準と方法）
+| # | 基準 | 方法 |
+|---|---|---|
+| T1 | 回収の試験7件が合格する | CI の Backend Tests（pg 試験は CI でだけ動く）。PR の run のログで7件の PASSED を数える |
+| T2 | `_NOW` がファイルに残っていない | `grep -n "_NOW" backend/tests/test_tcg_extraction_recovery_pg.py` が 0 件 |
+| T3 | 試験の中身（行の古さ・期待）は変えていない | diff で、変わった行が上の対象行と import と関数の足しだけであること（reviewer） |
+| T4 | 見張りが今の試験全体で 0 件 | `pytest backend/tests/test_no_import_time_clock.py` 合格（実装役の手元とCI） |
+| T5 | 見張りが本当に止める | `test_detector_catches_the_pattern` 合格。加えて実装役が一時的に `_NOW = datetime.now(timezone.utc)` を足して赤になることを確かめ、戻す（報告に生出力） |
+| T6 | 14日間落ちない | 2026-11-27 に `gh run list --status failure` の Backend Tests を走査し、このファイルの FAILED を数える（Opus） |
+
+### リスクと戻し方
+- `clock_timestamp()` が返す時刻は psycopg2 で時差つきの datetime になる。`timedelta` を引いて INSERT する使い方は今と同じ。
+- 見張りが関係ない書き方を拾うおそれ: 設計担当が上の見張りの中身をそのまま c296af3bb の backend/tests 全478ファイルに当てた結果は `['test_tcg_extraction_recovery_pg.py:20', 'test_viewer_api.py:34']` の2件だけで、読めないファイルは0件。自己点検の5件も期待どおりだった。拾ったら行番号が出るので、その場で直せる。
+- 戻し方: この PR を revert する。本番のコードは触らない。
+
+### 維持の仕組み
+- 守り手: `backend/tests/test_no_import_time_clock.py`（CI の Backend Tests の一部。必須チェック）
+- 対象: 試験ファイルの読み込みのときに時刻を決める書き方
+- 14日後の数え直し（T6）は Opus が台帳に予定として残す。
+
+### 外部・過去事例
+- 該当なし（理由: 試験の作り方の小さな直しで、社内の実際の失敗3回の記録が直接の根拠になる。外の事例で判断が変わる所が無い）。
