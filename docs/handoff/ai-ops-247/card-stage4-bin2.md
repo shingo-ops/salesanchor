@@ -6,7 +6,7 @@
 - 設計: `docs/handoff/ai-ops-247/stage4-design.md` §2「実装カードで足すこと」C3-0・C3-1（:58-62）、§8（:155）、§12 D1・D4（:187・:190）
 - 便の分け方: `docs/handoff/ai-ops-247/card-stage4-bin1.md` §0（:11-26）。便1 の K1 は ○（設計 §13）
 - 対象ADR: ADR-1012
-- 状態: 設計案作成済み。設計審査（クラウド）と PO 承認はまだ。実装は未着手
+- 状態: 設計案作成済み。設計審査（クラウド）1 回目は REVISE で、指摘を反映済み。2 回目の審査と PO 承認はまだ。実装は未着手
 - 危険便: はい（`migrations/` と `scripts/run_all_migrations.sh` を変える。ADR-135・ADR-136）。下の 2a・2b とも GO #番号が要る
 - 実装担当: クラウドの Sonnet（RemoteTrigger の一回実行）。push して止まる。PR は Opus が作る
 - 決めること（PO）: §3 の出来事の kind と actor（案 A／案 B）
@@ -31,12 +31,16 @@
 - 本番反映では、先に backend を入れ替え（`.github/workflows/deploy.yml:497-498` の blue-green）、そのあとで移行を流す（同 :840-857）。新しいコードが、古い表の上で数分動く。
 - 移行は毎回すべてのファイルを流す。各ファイルは psql の 1 回の流しで、`ON_ERROR_STOP=1`・ロック待ち 1 秒・再試行つき（`scripts/run_all_migrations.sh:25,57,110-130`）。1 ファイルをまとめて 1 つの取引にはしない（`-1` が無い）ので、文ごとに確定する。
 - PostgreSQL の決まり（Context7 /websites/postgresql、sql-insert「ON CONFLICT Clause」）: `ON CONFLICT (列)` は、その列とちょうど同じ一意の索引を探し、無ければ失敗する。つまり、
-  - 古い一意（incident_id だけ）を先に消すと、古いコードの `ON CONFLICT (incident_id)` が失敗し、報告が全部 500 になる。
-  - 新しいコード（kind の列を入れる）を先に出すと、列が無い間、報告が全部 500 になる。
+  - 古い一意（incident_id だけ）を先に消すと、古いコードの `ON CONFLICT (incident_id)` が失敗し、報告が全部 503 になる。
+  - 新しいコード（kind の列を入れる）を先に出すと、列が無い間、報告が全部 503 になる。
+  - 503 になる理由: 口は DB のエラー（`DBAPIError`。一意違反・列が無いエラーもこれ）を受けると `_unavailable` で 503 を返す（`backend/app/routers/ops_case.py:533-535`・`:124-127`）。nginx の数え方では 5xx に入る。
 - 同じく（sql-altertable「Notes」）: CHECK を `NOT VALID` で足すと表を読まずにすぐ確定し、あとの `VALIDATE CONSTRAINT` は書き込みを止めない弱いロックで済む。
 
 CI:
 - 移行の試験は、変えた SQL ファイルを 2 回流して冪等を確かめ（`.github/workflows/migration-test.yml:1437`）、全ファイルを `scripts/run_all_migrations.sh` の run_sql の順で流す（同 :1441-1443）。
+- 変えた SQL を流す試験の DB には、前もって作る表として `public.ops_incidents` だけがある（`.github/workflows/migration-test.yml:998-1034`）。`ops_case.reports` と `public.ops_incident_events` は無い。これまでこの 2 つの表を後から変えた移行は無い（`git grep -E "ALTER TABLE (ops_case\.|public\.ops_incident_events)" -- migrations` は、作った 2 ファイルの中の RLS の行だけ）。
+- 前もって流す移行は、ファイルごとに手順を 1 つ足す形（同 :1330-1418。例: :1410-1418 は `contains(changed_sql, '<ファイル>')` のときに前のファイルを先に流す）。手順を足さないと、2a の 1 回目の流しが `ALTER TABLE ops_case.reports` で失敗する。
+- 変えた SQL の集め方は `^migrations/[0-9][0-9][0-9].*\.sql$` で、戻しのファイル（`_down`）も除かない（同 :1258-1260）。名前の順に並ぶので、毎回「上げる→戻す」の順で 2 回流れる。
 - 報告の口の試験は、使い捨て DB に移行ファイルを 1 つずつ名指しで流す（`backend/tests/test_ops_case_router.py:145-159`）。新しいファイルは、ここにも足さないと試験の DB に入らない。
 
 ## 1. 便2 を 2a と 2b に分ける
@@ -47,14 +51,14 @@ CI:
 | 2b | 口を変える: 本文に kind・同じ取引で出来事を 1 行。古い一意を消す | 変える | 消す（コードの入れ替えの後） | GO #番号（2b の PR） |
 
 - 2a を出したあと: 古いコードのまま。kind は既定の investigation が入り、`ON CONFLICT (incident_id)` は古い一意で今までどおり動く。報告の数・409 の出方は変わらない。
-- 2b を出したあと: 入れ替えから移行までの数分、新しいコードと古い一意が並ぶ。investigation の報告は今までどおり動く。この間に investigation 以外の 2 通目を送ると、古い一意にぶつかって 500 になる。今その種類を送る係はいない（指示書は kind を書かない＝investigation。§0）。移行で古い一意が消えたら、種類ごとに 1 通ずつ受けられる。
+- 2b を出したあと: 入れ替えから移行までの数分、新しいコードと古い一意が並ぶ。investigation の報告は今までどおり動く。この間に investigation 以外の 2 通目を送ると、古い一意にぶつかって 503 になる。今その種類を送る係はいない（指示書は kind を書かない＝investigation。§0）。移行で古い一意が消えたら、種類ごとに 1 通ずつ受けられる。
 - 2b は 2a が本番に出て、§7 の確かめが済んでから始める。
 
 ## 2. 範囲
 
 入れる:
-- 2a: 移行 1 つと戻し 1 つ、`scripts/run_all_migrations.sh` に 2 行、試験 1 つ
-- 2b: `backend/app/routers/ops_case.py` の報告の口、移行 1 つと戻し 1 つ、`scripts/run_all_migrations.sh` に 2 行、試験の追加と直し、`frontend/api-contract/openapi.json` の書き出し、書類の直し（§5-2b-5）
+- 2a: 移行 1 つと戻し 1 つ、`scripts/run_all_migrations.sh` に 2 行、試験 1 つ、`.github/workflows/migration-test.yml` に前もって流す手順 1 つ（§5-2a（６））
+- 2b: `backend/app/routers/ops_case.py` の報告の口、移行 1 つと戻し 1 つ、`scripts/run_all_migrations.sh` に 2 行、試験の追加と直し、`.github/workflows/migration-test.yml` に前もって流す手順 1 つ（§5-2b（１０））、`frontend/api-contract/openapi.json` の書き出し、書類の直し（§5-2b（９））
 
 入れない:
 - 注記の口（`backend/app/routers/ops.py:411-484`）の kind・round。許可の出来事は便4（C1-1）
@@ -192,6 +196,24 @@ run_sql migrations/20261113_200000_add_ops_case_report_kind.sql
 - 2 つの決まりが VALID（`pg_constraint.convalidated` が true）
 - 古い一意（incident_id だけの一意）がまだある（`contype = 'u'` で列が incident_id だけのものが 1 つ）
 
+（６）`.github/workflows/migration-test.yml` の「変更 SQL の前提の移行を先に実行（国と都道府県の表）」（:1410-1418）の後ろ、「変更 SQL を 1回目実行」（:1420）の前に、同じ形の手順を 1 つ足す（今ある手順は変えない）:
+
+```yaml
+      - name: 変更 SQL の前提の移行を先に実行（障害の出来事の表と相談係の表）
+        if: steps.detect.outputs.has_sql_changes == 'true' && contains(steps.detect.outputs.changed_sql, 'migrations/20261113_200000_add_ops_case_report_kind.sql')
+        run: |
+          # 20261113_200000 は public.ops_incident_events（20261016_100000）と ops_case.reports（20261031_210000）を変えるので、本番と同じ順で先に作る
+          for sqlfile in migrations/20261016_100000_create_ops_incident_tables.sql migrations/20261031_210000_create_ops_case.sql; do
+            echo "▶ $sqlfile を前提として実行中..."
+            psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
+            echo "✅ $sqlfile 成功"
+          done
+```
+
+- ファイル名の時刻を変えたら（§6 の 1 行目）、`contains` の名前も同じに直す。
+- CI では戻しのファイル（200001）も上げるファイルの後に 2 回流れる（§0）。戻しは `IF EXISTS` だけなので 2 回流れても通る。
+- 行番号はカード作成時（origin/main 097be5be7）。ずれていたら手順の名前で探す。
+
 ### 5-2b 口を変える（ブランチ release/ai-ops-stage4-bin2b。2a が本番に出てから）
 
 （１）`backend/app/routers/ops_case.py` の import に 1 行足す（出来事を書く SQL を 2 つ持たないため。ops.py は ops_case を読み込まないので輪にならない）:
@@ -311,6 +333,22 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
 - `docs/handoff/cloud-case-ai/design.md:354`: 「二重の報告」→「同じ種類の二重の報告」。
 - `docs/handoff/ai-ops-247/stage4-design.md` §13 に便2 の結果の行を足す（Opus が本番の確かめの後に行う。Sonnet は触らない）。
 
+（１０）`.github/workflows/migration-test.yml` の 5-2a（６）で足した手順の後ろに、同じ形の手順をもう 1 つ足す（2a の手順は変えない）:
+
+```yaml
+      - name: 変更 SQL の前提の移行を先に実行（相談係の報告の種類）
+        if: steps.detect.outputs.has_sql_changes == 'true' && contains(steps.detect.outputs.changed_sql, 'migrations/20261113_210000_drop_ops_case_report_single_unique.sql')
+        run: |
+          # 20261113_210000 は ops_case.reports（20261031_210000）と種類の列（20261113_200000）の後に流れる前提（本番と同じ順）
+          for sqlfile in migrations/20261016_100000_create_ops_incident_tables.sql migrations/20261031_210000_create_ops_case.sql migrations/20261113_200000_add_ops_case_report_kind.sql; do
+            echo "▶ $sqlfile を前提として実行中..."
+            psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
+            echo "✅ $sqlfile 成功"
+          done
+```
+
+- CI では戻しのファイル（210001）も 210000 の後に 2 回流れる（§0）。210001 の `ADD CONSTRAINT` は単独では 2 回流せないが、毎回その前に 210000 が古い一意を消すので通る。この順が崩れて失敗したら §6 のとおり止まる（戻しのファイルに `IF NOT EXISTS` の形を足して直さない。本番で手で流す戻しは 1 回だけのため）。
+
 ## 6. 想定される分岐（ここに無い分岐は止まって報告）
 
 | 起きたこと | すること |
@@ -323,6 +361,8 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
 | openapi.json の差分が kind 以外にも出る | 止まる。手で書き換えない |
 | 伏せた窓の分類の試験（`backend/tests/ops/test_ai_cloud_views.py:486` の 1151）が変わる | 止まる（public に列を足していないはずのため） |
 | 移行の 2 回目の流しで失敗 | 止まる |
+| CI の「前提の移行を先に実行」の手順（§5-2a（６）・§5-2b（１０））で前提のファイルが失敗 | 名前と生の出力を出して止まる。前提のファイルは変えない |
+| CI で戻しのファイル（200001・210001）の 1 回目か 2 回目の流しが失敗 | 名前と生の出力を出して止まる |
 
 ## 7. 本番での確かめ（Opus。各便の本番反映の後）
 
@@ -343,6 +383,7 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
 |---|---|
 | 2a の後も、報告の口の動き（200・2 通目の 409・413・422）が変わらない | 2a の PR の CI で `backend/tests/test_ops_case_router.py` が緑（今ある試験を変えずに） |
 | 移行が冪等 | migration-test の 2 回目の流しが緑・新しい試験の 2 回流しが緑 |
+| CI の移行試験が前提の表の上で流れる | migration-test の「前提の移行を先に実行（…）」の手順が、2a・2b の PR でそれぞれ走って緑（skip でない）。戻しのファイルを含む 1 回目・2 回目の流しが緑 |
 | 種類ごとに 1 通ずつ受け、同じ種類の 2 通目は 409 | 2b の新しい試験（3 通 200・4 通目 409・3 行） |
 | 報告 1 通ごとに出来事が 1 行、detail は報告の id だけ | 2b の新しい試験（D4 の見張り）。本番は §7 |
 | 報告と出来事は一緒に残るか、一緒に残らないか | 2b の新しい試験（出来事が書けないと 503・報告 0 行） |
@@ -353,10 +394,22 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
 
 ## 9. 戻し方
 
-- 2b を戻す: PR を revert（コードが古い口に戻る）。そのあと、戻しのファイルの冒頭の数え方で 2 通以上の件が 0 なら、2b の戻しを手で流す（古い一意が戻る）。0 でなければ流さず、古いコードのまま（古いコードは `ON CONFLICT (incident_id)` を使うので、古い一意が無いと報告が全部 500 になる）。この場合は revert せず、口を直す前の版を出し直すか PO に聞く。
-  - つまり 2b の revert は「2 通以上の件が 0」のときだけ安全。2b の本番反映から、実行係が種類を送り始める（便5）までの間がその期間。
-- 2a を戻す: 2b を戻した後にだけ。PR を revert し、2a の戻しを手で流す。出来事の決まりは広げたまま残す（§5-2a（２）の理由）。
+2b を戻す（順番が大事。先に表、そのあとコード）:
+（１）戻しのファイルの冒頭の数え方で、2 通以上の件が 0 か確かめる。0 でなければ戻さない。戻し方を PO に聞く（報告は消さない）。
+（２）0 なら、2b の戻しのファイルを手で流す（古い一意が戻る）。このとき新しいコードは、新しい一意と古い一意の両方がある表の上で動く。`ON CONFLICT (incident_id, kind)` は新しい一意で動くので、investigation の報告は今までどおり 200・2 通目は 409。investigation 以外の 2 通目は古い一意にぶつかって 503 になるが、それを送る係はまだいない（§1）。
+（３）すぐに 2b の PR を revert して本番に出す。revert でコードが古い口に戻り、`scripts/run_all_migrations.sh` から 210000 の行が消える。古いコードの `ON CONFLICT (incident_id)` は（２）で戻した古い一意で動く。
+  - （２）と（３）の間に別の本番反映をはさまない。はさむと、まだ残っている 210000 の行が流れ、古い一意をまた消す。
+  - 逆の順（先に revert）にすると、古いコードが古い一意の無い表の上で動き、戻しのファイルを流すまで報告が全部 503 になる。だからこの順にする。
+- 2b の戻しは「2 通以上の件が 0」のときだけできる。2b の本番反映から、実行係が種類を送り始める（便5）までの間がその期間。
+
+2a を戻す（2b を戻した後にだけ。先にコード、そのあと表）:
+（１）2a の PR を revert して本番に出す。2a はコードを変えていないので、コードと表はこの間も合っている（古いコードは kind の列を使わず、古い一意で動く）。`scripts/run_all_migrations.sh` から 200000 の行が消える。
+（２）2a の戻しのファイルを手で流す（kind の列と新しい一意が消える）。古いコードは kind を使わないので、この後も動く。
+  - 逆の順（先に戻しのファイル）にすると、次の本番反映でまだ残っている 200000 の行が流れ、列が戻る。だからこの順にする。
+- 出来事の決まりは広げたまま残す（§5-2a（２）の理由）。
+
 - 戻しのファイルを本番で流すのは、PO の許可（危険操作の同意）を得てから。
+- どちらの戻しも、反映の後に §7 と同じ数え方で報告の口の 5xx が増えていないことを確かめる。
 
 ## 10. 実装を頼む手順（Opus）
 
@@ -375,7 +428,9 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
 
 - 判定: APPROVE（段取り表として。PO の案の選択と、クラウドの設計審査の後に実装可）。
 - 根拠:
-  - 本番の出し方（コードが先・移行が後）で、2a の後も 2b の入れ替え中も、今の報告（investigation）が 500 にならない順になっている（§1）。
+  - 本番の出し方（コードが先・移行が後）で、2a の後も 2b の入れ替え中も、今の報告（investigation）が 503 にならない順になっている（§1）。戻すときも、表とコードが合わない時間ができない順にした（§9）。
+  - CI の移行試験に、前もって流す移行の手順を足した（§5-2a（６）・§5-2b（１０））。戻しのファイルも CI で 2 回流れることを前提に書いた。
+- クラウドの設計審査 1 回目（REVISE）の指摘 4 件を反映した: CI の前提の移行・2b の戻す順・503・戻しのファイルも CI で流れること。
   - 出来事の detail は報告の id だけで、値を写さない（D4）。試験で見張る（§5-2b（７））。
   - 出来事を書く SQL を写さず、今の 1 つを使う（配線の正本は 1 か所）。
   - 伏せた窓の分類の理由が指す決まりの名前を変えない。
