@@ -78,13 +78,15 @@ recon.md 参照。要点のみ再掲する。
 
 ### KGI（ADR-1015 B 区分のため PO 承認は不要。AI が書いて残す）
 - K1: `test_tcg_extraction_recovery_pg.py` の7件が、試験全体の長さに関係なく、時刻の境目で落ちない。判定: 下の T1〜T3。
-- K2: 試験ファイルの一番外で「今」を1回だけ決める書き方が、試験全体（backend/tests 配下）で 0 か所。新しく書かれたら CI の Backend Tests が赤になる。判定: T4・T5。
+- K2: 試験ファイルの読み込みのときに「今」を読む書き方（一番外・クラスの本体・その中の if/try/with/for・デコレータの引数・関数と lambda の既定値）が、試験全体（backend/tests 配下）で 0 か所。新しく書かれたら CI の Backend Tests が赤になる。判定: T4・T5。
 - K3: マージ後14日（〜2026-11-27）、Backend Tests の失敗のうち `test_tcg_extraction_recovery_pg.py` が原因のものが 0 回。判定: T6。
 
 ### 直し方（選んだ案）
 1. `test_tcg_extraction_recovery_pg.py` は、試験本体の始めに **DB の時計**（`SELECT clock_timestamp()`）を読み、それを基準に行を作る。判定側も DB の `NOW()` を使うので、同じ時計どうしで比べることになる。基準を読んでから判定までは、行を入れて1回 SELECT するだけ（ミリ秒の単位）。
 2. `test_viewer_api.py` の `NOW` も、使う所で毎回作る形にする（実害は無いが、K2 の見張りを例外なしにするため）。
-3. 見張りの試験 `backend/tests/test_no_import_time_clock.py` を新しく足す。backend/tests 配下の全 .py を `ast` で読み、モジュールの一番外とクラスの本体（読み込みのときに実行される所）にある代入の右辺が `.now()`・`.utcnow()`・`.today()`・`time.time()` を呼んでいたら、ファイル名と行番号を並べて落とす。`lambda` と `def` の中は数えない（呼ばれたときに動くため）。
+（審査1 REVISE の指摘で、3 と 4 の見張りの範囲を広げた。記録は review-opus.md）
+3. `test_line_import_devices.py` のデコレータの引数の `svc.now()` 2か所も、時刻を読まない形にする（実害は無いが、K2 の見張りを例外なしにするため）。「過去の時刻」の意味は固定の過去日 `_PAST` で保ち、「1秒前に切れた」の意味は試験本体で時刻を読む新しい試験1件で保つ。
+4. 見張りの試験 `backend/tests/test_no_import_time_clock.py` を新しく足す。backend/tests 配下の全 .py を `ast` で読み、読み込みのときに評価される所（一番外とクラスの本体の文・その中の if/try/with/for の中・デコレータの引数・関数と lambda の既定値）で時計を読む呼び出しがあれば、ファイル名と行番号を並べて落とす。時計を読む呼び出しは `.now()`・`.utcnow()`・`.today()`、`time.` の `time`・`time_ns`・`monotonic`・`monotonic_ns`・`perf_counter`・`perf_counter_ns`、`from time import …` で取り込んだ同じ名前（別名を含む）。関数と lambda の本体は数えない（呼ばれたときに動くため）。
 
 ### 採らなかった案
 - しきい値の15分を試験で小さくする／大きくする: 試験全体の長さは増え続けるので、いつかまた超える。根本の「時刻が古くなる」は直らない。
@@ -108,12 +110,27 @@ def _db_now(connection):
 - 34行目 `NOW = datetime.now(timezone.utc)` を消す。
 - 311・313・347行目の `NOW` を `datetime.now(timezone.utc)` に置き換える。ほかは変えない。
 
+`backend/tests/test_line_import_devices.py`
+- 1行目 `from datetime import timedelta` → `from datetime import datetime, timedelta, timezone`
+- 14行目 `TOKEN = ...` の次の行に足す: `_PAST = datetime(2000, 1, 1, tzinfo=timezone.utc)  # 固定の過去日。読み込みのときに時計を読まないため`
+- 25行目 `('revoked_at', svc.now())` → `('revoked_at', _PAST)`
+- 26行目 `('expires_at', svc.now()-timedelta(seconds=1))` → `('expires_at', _PAST)`
+- `test_invalid_grants_denied` の次に、この試験を足す:
+```python
+def test_just_expired_grant_denied():
+    # 1秒前に切れた鍵も拒否する（時刻は試験本体で読む）。
+    assert not svc.valid(row(expires_at=svc.now() - timedelta(seconds=1)))
+```
+- ほかの行は変えない。
+
 `backend/tests/test_no_import_time_clock.py`（新規）
 ```python
-"""試験ファイルの読み込みのときに「今」を1回だけ決める書き方を止める。
+"""試験ファイルの読み込みのときに「今」を読む書き方を止める。
 
 読み込みのときに決めた時刻は、試験全体が長くなるほど古くなる。時刻の境目を確かめる試験が時々落ちる
 （2026-11-11〜13 に3回。docs/handoff/extraction-job-recovery/recon.md「追記（2026-11-13）」）。
+読み込みのときに動くのは、一番外とクラスの本体（if/try/with/for の中も）・デコレータの引数・
+関数と lambda の既定値。関数と lambda の本体は呼ばれたときに動くので見ない。
 """
 from __future__ import annotations
 
@@ -121,73 +138,124 @@ import ast
 from pathlib import Path
 
 TESTS = Path(__file__).resolve().parent
-_CLOCK_METHODS = {"now", "utcnow", "today"}
+_CLOCK_ATTRS = {"now", "utcnow", "today"}
+_TIME_FUNCS = {
+    "time", "time_ns", "monotonic", "monotonic_ns", "perf_counter", "perf_counter_ns",
+}
 
 
-def _calls_clock(node: ast.AST) -> bool:
-    """node の中で時計を読む呼び出しがあれば True。lambda と関数の中は呼ばれたときに動くので数えない。"""
-    stack = [node]
-    while stack:
-        cur = stack.pop()
-        if isinstance(cur, (ast.Lambda, ast.FunctionDef, ast.AsyncFunctionDef)):
-            continue
-        if isinstance(cur, ast.Call) and isinstance(cur.func, ast.Attribute):
-            if cur.func.attr in _CLOCK_METHODS:
-                return True
-            if cur.func.attr == "time" and isinstance(cur.func.value, ast.Name) and cur.func.value.id == "time":
-                return True
-        stack.extend(ast.iter_child_nodes(cur))
+def _time_names(tree: ast.Module) -> set[str]:
+    """from time import time などで取り込んだ名前（別名を含む）。"""
+    names = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module == "time":
+            for alias in node.names:
+                if alias.name in _TIME_FUNCS:
+                    names.add(alias.asname or alias.name)
+    return names
+
+
+def _is_clock_call(node: ast.AST, time_names: set[str]) -> bool:
+    if not isinstance(node, ast.Call):
+        return False
+    func = node.func
+    if isinstance(func, ast.Attribute):
+        if func.attr in _CLOCK_ATTRS:
+            return True
+        if func.attr in _TIME_FUNCS and isinstance(func.value, ast.Name) and func.value.id == "time":
+            return True
+    if isinstance(func, ast.Name) and func.id in time_names:
+        return True
     return False
 
 
-def _import_time_assignments(body: list[ast.stmt]):
-    """読み込みのときに実行される代入（モジュールの一番外とクラスの本体）を返す。"""
-    for stmt in body:
-        if isinstance(stmt, ast.ClassDef):
-            yield from _import_time_assignments(stmt.body)
-        elif isinstance(stmt, (ast.Assign, ast.AnnAssign)) and stmt.value is not None:
-            yield stmt
+def _import_time_nodes(node: ast.AST):
+    """読み込みのときに評価される式の木を返す。関数と lambda は本体を飛ばし、既定値とデコレータだけ見る。"""
+    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        yield from node.decorator_list
+        yield from node.args.defaults
+        yield from (d for d in node.args.kw_defaults if d is not None)
+        return
+    if isinstance(node, ast.Lambda):
+        yield from node.args.defaults
+        yield from (d for d in node.args.kw_defaults if d is not None)
+        return
+    yield node
+
+
+def _clock_lines(tree: ast.Module) -> list[int]:
+    time_names = _time_names(tree)
+    lines = []
+    stack: list[ast.AST] = list(tree.body)
+    while stack:
+        cur = stack.pop()
+        for part in _import_time_nodes(cur):
+            if part is not cur:
+                stack.append(part)
+                continue
+            if _is_clock_call(cur, time_names):
+                lines.append(cur.lineno)
+            stack.extend(ast.iter_child_nodes(cur))
+    return sorted(set(lines))
 
 
 def _findings() -> list[str]:
     found = []
     for path in sorted(TESTS.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        for stmt in _import_time_assignments(tree.body):
-            if _calls_clock(stmt.value):
-                found.append(f"{path.relative_to(TESTS)}:{stmt.lineno}")
+        for line in _clock_lines(tree):
+            found.append(f"{path.relative_to(TESTS)}:{line}")
     return found
 
 
+_SELF_CHECKS = [
+    ("_NOW = datetime.now(timezone.utc)", True),
+    ("T = time.time()", True),
+    ("D = date.today() - timedelta(days=1)", True),
+    ("from time import time as t\nX = t()", True),
+    ("X: float = time.monotonic()", True),
+    ("if True:\n    N = datetime.now()", True),
+    ("try:\n    N = datetime.now()\nexcept Exception:\n    pass", True),
+    ("@pytest.mark.parametrize('v', [svc.now()])\ndef test_a(v):\n    pass", True),
+    ("def f(t=datetime.now()):\n    pass", True),
+    ("class C:\n    N = datetime.utcnow()", True),
+    ("f = lambda t=datetime.now(): t", True),
+    ("f = lambda: datetime.now()", False),
+    ("def test_a():\n    n = datetime.now()", False),
+    ("X = timedelta(minutes=5)", False),
+    ("class C:\n    def m(self):\n        return time.time()", False),
+]
+
+
 def test_detector_catches_the_pattern():
-    assert _calls_clock(ast.parse("_NOW = datetime.now(timezone.utc)").body[0].value)
-    assert _calls_clock(ast.parse("T = time.time()").body[0].value)
-    assert _calls_clock(ast.parse("D = date.today() - timedelta(days=1)").body[0].value)
-    assert not _calls_clock(ast.parse("f = lambda: datetime.now()").body[0].value)
-    assert not _calls_clock(ast.parse("X = timedelta(minutes=5)").body[0].value)
+    for source, expected in _SELF_CHECKS:
+        assert bool(_clock_lines(ast.parse(source))) is expected, source
 
 
 def test_no_clock_read_at_import_time():
     found = _findings()
     assert found == [], (
-        "試験ファイルの読み込みのときに時刻を決めています。試験の中で毎回読んでください"
-        "（DB と比べるなら SELECT clock_timestamp()）: " + ", ".join(found)
+        "試験ファイルの読み込みのときに時刻を読んでいます。試験本体の中で読んでください"
+        "（読み込み時の時刻は試験全体が長いほど古くなり、時刻の境目の試験が時々落ちます）: "
+        + ", ".join(found)
     )
 ```
 
 ### 検証（基準と方法）
 | # | 基準 | 方法 |
 |---|---|---|
-| T1 | 回収の試験7件が合格する | CI の Backend Tests（pg 試験は CI でだけ動く）。PR の run のログで7件の PASSED を数える |
+| T1 | 回収の試験7件が合格し、飛ばされていない | CI は `pytest -q` で試験ごとの行が出ない（recon 追記）。そのため PR の Backend Tests の最後の合計の1行を、PR の土台（merge-base）の main の push run の合計の1行と比べる（Opus）。判定: `failed` が無い、`skipped` が同じ数、`passed` がちょうど +3（見張り2件と「1秒前に切れた」1件）。土台と PR の間に main へ試験が足されていたら、その数を `git diff --stat` で数えて差に足し、計算を記録に残す |
 | T2 | `_NOW` がファイルに残っていない | `grep -n "_NOW" backend/tests/test_tcg_extraction_recovery_pg.py` が 0 件 |
-| T3 | 試験の中身（行の古さ・期待）は変えていない | diff で、変わった行が上の対象行と import と関数の足しだけであること（reviewer） |
-| T4 | 見張りが今の試験全体で 0 件 | `pytest backend/tests/test_no_import_time_clock.py` 合格（実装役の手元とCI） |
-| T5 | 見張りが本当に止める | `test_detector_catches_the_pattern` 合格。加えて実装役が一時的に `_NOW = datetime.now(timezone.utc)` を足して赤になることを確かめ、戻す（報告に生出力） |
-| T6 | 14日間落ちない | 2026-11-27 に `gh run list --status failure` の Backend Tests を走査し、このファイルの FAILED を数える（Opus） |
+| T3 | 試験の中身（行の古さ・期待）は変えていない | diff で、変わった行が上の「変更前後」の対象行と import と関数・試験1件の足しだけであること（reviewer） |
+| T4 | 見張りが今の試験全体で 0 件 | `pytest backend/tests/test_no_import_time_clock.py backend/tests/test_line_import_devices.py backend/tests/test_viewer_api.py -p no:cacheprovider -o addopts=""` 合格（実装役の手元。生出力を報告に）と CI |
+| T5 | 見張りが本当に止める | `test_detector_catches_the_pattern`（15例: 拾うべき11・拾わない4）合格。加えて実装役が一時的に `test_tcg_extraction_recovery_pg.py` の一番外へ `_NOW = datetime.now(timezone.utc)` を足して `test_no_clock_read_at_import_time` が赤になり行番号が出ることを確かめ、戻す（報告に生出力。戻したことは `git diff` で示す） |
+| T6 | 14日間落ちない | 2026-11-27 に Opus が数える: `gh run list --workflow test.yml --status failure --created 2026-11-13..2026-11-27 --limit 500 --json databaseId,createdAt` で全件を取り、件数が 500 未満であることを確かめる。各 run を `gh run view <id> --log-failed` で読み、`test_tcg_extraction_recovery_pg.py` を含む run の数を数える（このPRのマージより前の run は除く）。生出力は `/tmp/CC報告ファイル/flaky/` に残す。0 なら合格 |
 
 ### リスクと戻し方
 - `clock_timestamp()` が返す時刻は psycopg2 で時差つきの datetime になる。`timedelta` を引いて INSERT する使い方は今と同じ。
-- 見張りが関係ない書き方を拾うおそれ: 設計担当が上の見張りの中身をそのまま c296af3bb の backend/tests 全478ファイルに当てた結果は `['test_tcg_extraction_recovery_pg.py:20', 'test_viewer_api.py:34']` の2件だけで、読めないファイルは0件。自己点検の5件も期待どおりだった。拾ったら行番号が出るので、その場で直せる。
+- 見張りが関係ない書き方を拾うおそれ: 設計担当が上の見張りの中身をそのまま c296af3bb の backend/tests 全470ファイル（`git archive` で取り出したもの）に当てた結果は `['test_line_import_devices.py:25', 'test_line_import_devices.py:26', 'test_tcg_extraction_recovery_pg.py:20', 'test_viewer_api.py:34']` の4件だけで、どれも上で直す所。読めないファイルは0件。自己点検の15例もすべて期待どおりだった（生出力 `/tmp/CC報告ファイル/flaky/detector-v2-probe.txt`）。拾ったら行番号が出るので、その場で直せる。
+- 見張らない形（わざと対象外）: `time.time` を別の名前の変数に入れてから呼ぶ形、`datetime` 以外のライブラリの時計（`pendulum` 等。今の試験では使っていない）、`exec`・`eval` の中。拾える形を増やすほど誤検知の危険が増えるので、実際に起きた形と、その近い仲間だけを見る。
+- 実装の土台が main の新しい版になったとき、新しく足された試験に同じ書き方があれば見張りが赤にする。その場合、実装役は止めて Opus に報告する（勝手に直す範囲を広げない）。
 - 戻し方: この PR を revert する。本番のコードは触らない。
 
 ### 維持の仕組み
