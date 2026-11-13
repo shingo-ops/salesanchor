@@ -16,6 +16,20 @@
 | 4 | T1「ログで7件の PASSED を数える」は、CI が `pytest -q` で試験ごとの行を出さないので測れない | T1 を、合計の1行（failed 無し・skipped 同数・passed +3）を土台の main の run と比べる形に変えた | main run 43339095971 のログで合計の1行だけが出ることを確かめた（recon 追記） |
 | 5 | T6 の数え方が曖昧 | `gh run list` の条件と件数上限の確かめ、`--log-failed` の読み方、生出力の置き場を書いた | — |
 
-## 審査2
+## 審査2（2026-11-13・土台 c296af3bb・設計 HEAD f42ca59ca）: APPROVE
 
-（再審査の結果をここに書く）
+クラウドの Opus（session cse_01W47tdgtT9qm83DJtmtMUQP）。確かめたこと:
+- 審査1の5件はすべて直っている。ファイル数は `git ls-tree` と `git archive` の両方で 470。
+- 設計の見張りを c296af3bb の backend/tests に当てると4か所ちょうど。自己点検15例すべて合格。設計どおりに3ファイルを直し見張りを足した版では0件（見張り自身も拾わない）。
+- `_PAST` と新しい試験で意味は保たれる（`backend/app/services/line_import_devices.py:98-102`）。変更対象の行は実物と一致。
+- 未確認: クラウドに pytest・fastapi・PostgreSQL が無く、直した後の試験そのものは流せていない。合否は T4（実装役）と T1（CI）で確かめる。
+
+軽い指摘3件（直さなくても実装は進められる、との判定）と、その直し:
+
+| # | 指摘 | 直し |
+|---|---|---|
+| 1 | T1 の「`git diff --stat` で試験の数を数える」は件数を数えられない | 比べる相手の run の決め方を書き、間に backend/tests の変更があれば passed の差では判定せず failed と skipped の2点で判定する形にした |
+| 2 | 行を足す・消すと後ろの行番号がずれる | 「行番号はすべて変更前のもの。場所は文の一致で決める」と書き添えた |
+| 3 | `import time as t` のあと `t.time()` を拾わない | 見張りが `import time as X` の `X` も拾うようにした。自己点検は16例（拾うべき12）。c296af3bb に当て直して4か所ちょうど・16例すべて合格（生出力 `/tmp/CC報告ファイル/flaky/detector-v3-probe.txt`）。`import time as` は今の試験に0件 |
+
+直しは軽微で、審査の結論を変えないため、3回目の審査はしない（Opus の判断）。

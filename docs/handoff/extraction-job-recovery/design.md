@@ -86,7 +86,7 @@ recon.md 参照。要点のみ再掲する。
 2. `test_viewer_api.py` の `NOW` も、使う所で毎回作る形にする（実害は無いが、K2 の見張りを例外なしにするため）。
 （審査1 REVISE の指摘で、3 と 4 の見張りの範囲を広げた。記録は review-opus.md）
 3. `test_line_import_devices.py` のデコレータの引数の `svc.now()` 2か所も、時刻を読まない形にする（実害は無いが、K2 の見張りを例外なしにするため）。「過去の時刻」の意味は固定の過去日 `_PAST` で保ち、「1秒前に切れた」の意味は試験本体で時刻を読む新しい試験1件で保つ。
-4. 見張りの試験 `backend/tests/test_no_import_time_clock.py` を新しく足す。backend/tests 配下の全 .py を `ast` で読み、読み込みのときに評価される所（一番外とクラスの本体の文・その中の if/try/with/for の中・デコレータの引数・関数と lambda の既定値）で時計を読む呼び出しがあれば、ファイル名と行番号を並べて落とす。時計を読む呼び出しは `.now()`・`.utcnow()`・`.today()`、`time.` の `time`・`time_ns`・`monotonic`・`monotonic_ns`・`perf_counter`・`perf_counter_ns`、`from time import …` で取り込んだ同じ名前（別名を含む）。関数と lambda の本体は数えない（呼ばれたときに動くため）。
+4. 見張りの試験 `backend/tests/test_no_import_time_clock.py` を新しく足す。backend/tests 配下の全 .py を `ast` で読み、読み込みのときに評価される所（一番外とクラスの本体の文・その中の if/try/with/for の中・デコレータの引数・関数と lambda の既定値）で時計を読む呼び出しがあれば、ファイル名と行番号を並べて落とす。時計を読む呼び出しは `.now()`・`.utcnow()`・`.today()`、`time.`（`import time as X` の `X.` も）の `time`・`time_ns`・`monotonic`・`monotonic_ns`・`perf_counter`・`perf_counter_ns`、`from time import …` で取り込んだ同じ名前（別名を含む）。関数と lambda の本体は数えない（呼ばれたときに動くため）。
 
 ### 採らなかった案
 - しきい値の15分を試験で小さくする／大きくする: 試験全体の長さは増え続けるので、いつかまた超える。根本の「時刻が古くなる」は直らない。
@@ -94,6 +94,8 @@ recon.md 参照。要点のみ再掲する。
 - Python の `datetime.now()` を試験本体で読む: 経過の問題は消えるが、CI の DB と Python の時計の差が残る。DB の時計なら差が無い。
 
 ### 変更前後（実装役はこのとおりに書く）
+行番号はすべて変更前のファイル（c296af3bb）のもの。足したり消したりすると後ろの行はずれるので、場所は書いてある文の一致で決める。
+
 `backend/tests/test_tcg_extraction_recovery_pg.py`
 - 11行目 `from datetime import datetime, timedelta, timezone` → `from datetime import timedelta`
 - 20行目 `_NOW = datetime.now(timezone.utc)` を消し、次の関数に置き換える:
@@ -144,27 +146,33 @@ _TIME_FUNCS = {
 }
 
 
-def _time_names(tree: ast.Module) -> set[str]:
-    """from time import time などで取り込んだ名前（別名を含む）。"""
-    names = set()
+def _time_names(tree: ast.Module) -> tuple[set[str], set[str]]:
+    """time の取り込み方を集める。(import time [as X] の名前, from time import time [as t] の名前)。"""
+    modules = {"time"}
+    funcs = set()
     for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "time":
+                    modules.add(alias.asname or alias.name)
         if isinstance(node, ast.ImportFrom) and node.module == "time":
             for alias in node.names:
                 if alias.name in _TIME_FUNCS:
-                    names.add(alias.asname or alias.name)
-    return names
+                    funcs.add(alias.asname or alias.name)
+    return modules, funcs
 
 
-def _is_clock_call(node: ast.AST, time_names: set[str]) -> bool:
+def _is_clock_call(node: ast.AST, time_names: tuple[set[str], set[str]]) -> bool:
     if not isinstance(node, ast.Call):
         return False
+    modules, funcs = time_names
     func = node.func
     if isinstance(func, ast.Attribute):
         if func.attr in _CLOCK_ATTRS:
             return True
-        if func.attr in _TIME_FUNCS and isinstance(func.value, ast.Name) and func.value.id == "time":
+        if func.attr in _TIME_FUNCS and isinstance(func.value, ast.Name) and func.value.id in modules:
             return True
-    if isinstance(func, ast.Name) and func.id in time_names:
+    if isinstance(func, ast.Name) and func.id in funcs:
         return True
     return False
 
@@ -213,6 +221,7 @@ _SELF_CHECKS = [
     ("T = time.time()", True),
     ("D = date.today() - timedelta(days=1)", True),
     ("from time import time as t\nX = t()", True),
+    ("import time as tm\nX = tm.time()", True),
     ("X: float = time.monotonic()", True),
     ("if True:\n    N = datetime.now()", True),
     ("try:\n    N = datetime.now()\nexcept Exception:\n    pass", True),
@@ -244,17 +253,17 @@ def test_no_clock_read_at_import_time():
 ### 検証（基準と方法）
 | # | 基準 | 方法 |
 |---|---|---|
-| T1 | 回収の試験7件が合格し、飛ばされていない | CI は `pytest -q` で試験ごとの行が出ない（recon 追記）。そのため PR の Backend Tests の最後の合計の1行を、PR の土台（merge-base）の main の push run の合計の1行と比べる（Opus）。判定: `failed` が無い、`skipped` が同じ数、`passed` がちょうど +3（見張り2件と「1秒前に切れた」1件）。土台と PR の間に main へ試験が足されていたら、その数を `git diff --stat` で数えて差に足し、計算を記録に残す |
+| T1 | 回収の試験7件が合格し、飛ばされていない | CI は `pytest -q` で試験ごとの行が出ない（recon 追記）。そのため PR の Backend Tests の最後の合計の1行を、PR の土台（merge-base）の main の push run の合計の1行と比べる（Opus）。判定: `failed` が無い、`skipped` が同じ数、`passed` がちょうど +3（見張り2件と「1秒前に切れた」1件）。比べる相手は、PR の CI が試したマージの第1の親（その時の main の先頭）の main push run。その commit で Backend Tests が走っていなければ、その前で一番近い main の Backend Tests の run を使い、2つの commit の間の `backend/tests` の変更を `git diff --name-only <A> <B> -- backend/tests` で記録する。0 ファイルなら上の判定のまま。1 ファイル以上なら passed の差の判定はやめ、`failed` が無いことと `skipped` が同じ数の2点で判定し、理由を記録に残す（`pytest --collect-only` は pg と依存が要り手元で流せないため） |
 | T2 | `_NOW` がファイルに残っていない | `grep -n "_NOW" backend/tests/test_tcg_extraction_recovery_pg.py` が 0 件 |
 | T3 | 試験の中身（行の古さ・期待）は変えていない | diff で、変わった行が上の「変更前後」の対象行と import と関数・試験1件の足しだけであること（reviewer） |
 | T4 | 見張りが今の試験全体で 0 件 | `pytest backend/tests/test_no_import_time_clock.py backend/tests/test_line_import_devices.py backend/tests/test_viewer_api.py -p no:cacheprovider -o addopts=""` 合格（実装役の手元。生出力を報告に）と CI |
-| T5 | 見張りが本当に止める | `test_detector_catches_the_pattern`（15例: 拾うべき11・拾わない4）合格。加えて実装役が一時的に `test_tcg_extraction_recovery_pg.py` の一番外へ `_NOW = datetime.now(timezone.utc)` を足して `test_no_clock_read_at_import_time` が赤になり行番号が出ることを確かめ、戻す（報告に生出力。戻したことは `git diff` で示す） |
+| T5 | 見張りが本当に止める | `test_detector_catches_the_pattern`（16例: 拾うべき12・拾わない4）合格。加えて実装役が一時的に `test_tcg_extraction_recovery_pg.py` の一番外へ `_NOW = datetime.now(timezone.utc)` を足して `test_no_clock_read_at_import_time` が赤になり行番号が出ることを確かめ、戻す（報告に生出力。戻したことは `git diff` で示す） |
 | T6 | 14日間落ちない | 2026-11-27 に Opus が数える: `gh run list --workflow test.yml --status failure --created 2026-11-13..2026-11-27 --limit 500 --json databaseId,createdAt` で全件を取り、件数が 500 未満であることを確かめる。各 run を `gh run view <id> --log-failed` で読み、`test_tcg_extraction_recovery_pg.py` を含む run の数を数える（このPRのマージより前の run は除く）。生出力は `/tmp/CC報告ファイル/flaky/` に残す。0 なら合格 |
 
 ### リスクと戻し方
 - `clock_timestamp()` が返す時刻は psycopg2 で時差つきの datetime になる。`timedelta` を引いて INSERT する使い方は今と同じ。
-- 見張りが関係ない書き方を拾うおそれ: 設計担当が上の見張りの中身をそのまま c296af3bb の backend/tests 全470ファイル（`git archive` で取り出したもの）に当てた結果は `['test_line_import_devices.py:25', 'test_line_import_devices.py:26', 'test_tcg_extraction_recovery_pg.py:20', 'test_viewer_api.py:34']` の4件だけで、どれも上で直す所。読めないファイルは0件。自己点検の15例もすべて期待どおりだった（生出力 `/tmp/CC報告ファイル/flaky/detector-v2-probe.txt`）。拾ったら行番号が出るので、その場で直せる。
-- 見張らない形（わざと対象外）: `time.time` を別の名前の変数に入れてから呼ぶ形、`datetime` 以外のライブラリの時計（`pendulum` 等。今の試験では使っていない）、`exec`・`eval` の中。拾える形を増やすほど誤検知の危険が増えるので、実際に起きた形と、その近い仲間だけを見る。
+- 見張りが関係ない書き方を拾うおそれ: 設計担当が上の見張りの中身をそのまま c296af3bb の backend/tests 全470ファイル（`git archive` で取り出したもの）に当てた結果は `['test_line_import_devices.py:25', 'test_line_import_devices.py:26', 'test_tcg_extraction_recovery_pg.py:20', 'test_viewer_api.py:34']` の4件だけで、どれも上で直す所。読めないファイルは0件。自己点検の16例もすべて期待どおりだった（生出力 `/tmp/CC報告ファイル/flaky/detector-v3-probe.txt`。審査2の指摘3で `import time as X` を足した版）。拾ったら行番号が出るので、その場で直せる。
+- 見張らない形（わざと対象外）: `time.time` を別の名前の変数に入れてから呼ぶ形（`f = time.time` のあと `f()`）、`datetime` 以外のライブラリの時計（`pendulum` 等。今の試験では使っていない）、`exec`・`eval` の中。拾える形を増やすほど誤検知の危険が増えるので、実際に起きた形と、その近い仲間だけを見る。
 - 実装の土台が main の新しい版になったとき、新しく足された試験に同じ書き方があれば見張りが赤にする。その場合、実装役は止めて Opus に報告する（勝手に直す範囲を広げない）。
 - 戻し方: この PR を revert する。本番のコードは触らない。
 
