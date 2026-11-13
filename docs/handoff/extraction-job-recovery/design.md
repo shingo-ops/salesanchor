@@ -77,15 +77,15 @@ recon.md 参照。要点のみ再掲する。
 事実は recon.md「追記（2026-11-13）」。審査の記録は review-opus.md。
 
 ### KGI（ADR-1015 B 区分のため PO 承認は不要。AI が書いて残す）
-- K1: `test_tcg_extraction_recovery_pg.py` の7件が、試験全体の長さに関係なく、時刻の境目で落ちない。判定: 下の T1〜T3。
+- K1: `backend/tests/test_tcg_extraction_recovery_pg.py` の7件が、試験全体の長さに関係なく、時刻の境目で落ちない。判定: 下の T1〜T3。
 - K2: 試験ファイルの読み込みのときに「今」を読む書き方（一番外・クラスの本体・その中の if/try/with/for・デコレータの引数・関数と lambda の既定値）が、試験全体（backend/tests 配下）で 0 か所。新しく書かれたら CI の Backend Tests が赤になる。判定: T4・T5。
-- K3: マージ後14日（〜2026-11-27）、Backend Tests の失敗のうち `test_tcg_extraction_recovery_pg.py` が原因のものが 0 回。判定: T6。
+- K3: マージ後14日（〜2026-11-27）、Backend Tests の失敗のうち `backend/tests/test_tcg_extraction_recovery_pg.py` が原因のものが 0 回。判定: T6。
 
 ### 直し方（選んだ案）
-1. `test_tcg_extraction_recovery_pg.py` は、試験本体の始めに **DB の時計**（`SELECT clock_timestamp()`）を読み、それを基準に行を作る。判定側も DB の `NOW()` を使うので、同じ時計どうしで比べることになる。基準を読んでから判定までは、行を入れて1回 SELECT するだけ（ミリ秒の単位）。
-2. `test_viewer_api.py` の `NOW` も、使う所で毎回作る形にする（実害は無いが、K2 の見張りを例外なしにするため）。
+1. `backend/tests/test_tcg_extraction_recovery_pg.py` は、試験本体の始めに **DB の時計**（`SELECT clock_timestamp()`）を読み、それを基準に行を作る。判定側も DB の `NOW()` を使うので、同じ時計どうしで比べることになる。基準を読んでから判定までは、行を入れて1回 SELECT するだけ（ミリ秒の単位）。
+2. `backend/tests/test_viewer_api.py` の `NOW` も、使う所で毎回作る形にする（実害は無いが、K2 の見張りを例外なしにするため）。
 （審査1 REVISE の指摘で、3 と 4 の見張りの範囲を広げた。記録は review-opus.md）
-3. `test_line_import_devices.py` のデコレータの引数の `svc.now()` 2か所も、時刻を読まない形にする（実害は無いが、K2 の見張りを例外なしにするため）。「過去の時刻」の意味は固定の過去日 `_PAST` で保ち、「1秒前に切れた」の意味は試験本体で時刻を読む新しい試験1件で保つ。
+3. `backend/tests/test_line_import_devices.py` のデコレータの引数の `svc.now()` 2か所も、時刻を読まない形にする（実害は無いが、K2 の見張りを例外なしにするため）。「過去の時刻」の意味は固定の過去日 `_PAST` で保ち、「1秒前に切れた」の意味は試験本体で時刻を読む新しい試験1件で保つ。
 4. 見張りの試験 `backend/tests/test_no_import_time_clock.py` を新しく足す。backend/tests 配下の全 .py を `ast` で読み、読み込みのときに評価される所（一番外とクラスの本体の文・その中の if/try/with/for の中・デコレータの引数・関数と lambda の既定値）で時計を読む呼び出しがあれば、ファイル名と行番号を並べて落とす。時計を読む呼び出しは `.now()`・`.utcnow()`・`.today()`、`time.`（`import time as X` の `X.` も）の `time`・`time_ns`・`monotonic`・`monotonic_ns`・`perf_counter`・`perf_counter_ns`、`from time import …` で取り込んだ同じ名前（別名を含む）。関数と lambda の本体は数えない（呼ばれたときに動くため）。
 
 ### 採らなかった案
@@ -257,8 +257,8 @@ def test_no_clock_read_at_import_time():
 | T2 | `_NOW` がファイルに残っていない | `grep -n "_NOW" backend/tests/test_tcg_extraction_recovery_pg.py` が 0 件 |
 | T3 | 試験の中身（行の古さ・期待）は変えていない | diff で、変わった行が上の「変更前後」の対象行と import と関数・試験1件の足しだけであること（reviewer） |
 | T4 | 見張りが今の試験全体で 0 件 | `pytest backend/tests/test_no_import_time_clock.py backend/tests/test_line_import_devices.py backend/tests/test_viewer_api.py -p no:cacheprovider -o addopts=""` 合格（実装役の手元。生出力を報告に）と CI |
-| T5 | 見張りが本当に止める | `test_detector_catches_the_pattern`（16例: 拾うべき12・拾わない4）合格。加えて実装役が一時的に `test_tcg_extraction_recovery_pg.py` の一番外へ `_NOW = datetime.now(timezone.utc)` を足して `test_no_clock_read_at_import_time` が赤になり行番号が出ることを確かめ、戻す（報告に生出力。戻したことは `git diff` で示す） |
-| T6 | 14日間落ちない | 2026-11-27 に Opus が数える: `gh run list --workflow test.yml --status failure --created 2026-11-13..2026-11-27 --limit 500 --json databaseId,createdAt` で全件を取り、件数が 500 未満であることを確かめる。各 run を `gh run view <id> --log-failed` で読み、`test_tcg_extraction_recovery_pg.py` を含む run の数を数える（このPRのマージより前の run は除く）。生出力は `/tmp/CC報告ファイル/flaky/` に残す。0 なら合格 |
+| T5 | 見張りが本当に止める | `test_detector_catches_the_pattern`（16例: 拾うべき12・拾わない4）合格。加えて実装役が一時的に `backend/tests/test_tcg_extraction_recovery_pg.py` の一番外へ `_NOW = datetime.now(timezone.utc)` を足して `test_no_clock_read_at_import_time` が赤になり行番号が出ることを確かめ、戻す（報告に生出力。戻したことは `git diff` で示す） |
+| T6 | 14日間落ちない | 2026-11-27 に Opus が数える: `gh run list --workflow test.yml --status failure --created 2026-11-13..2026-11-27 --limit 500 --json databaseId,createdAt` で全件を取り、件数が 500 未満であることを確かめる。各 run を `gh run view <id> --log-failed` で読み、`backend/tests/test_tcg_extraction_recovery_pg.py` を含む run の数を数える（このPRのマージより前の run は除く）。生出力は `/tmp/CC報告ファイル/flaky/` に残す。0 なら合格 |
 
 ### リスクと戻し方
 - `clock_timestamp()` が返す時刻は psycopg2 で時差つきの datetime になる。`timedelta` を引いて INSERT する使い方は今と同じ。
