@@ -11,7 +11,7 @@
 - 実装担当: クラウドの Sonnet（RemoteTrigger の一回実行）。push して止まる。PR は Opus が作る
 - 決めたこと（PO）: §3 の出来事の kind と actor は案 A（PO「1」2026-11-14。問いは「案A で手順書を承認する【おすすめ】」）
 
-## 0. 前提の事実（origin/main b1f73d2da で読んだ）
+## 0. 前提の事実（origin/main 097be5be7 で行番号を確かめた）
 
 報告の表と口:
 - `ops_case.reports` は incident_id に名前の無い一意の決まりを持つ: `incident_id uuid NOT NULL UNIQUE REFERENCES ops_case.cases(incident_id)`（`migrations/20261031_210000_create_ops_case.sql:22-33`）。表の説明は「1 件につき 1 通」（同 :81）。
@@ -261,13 +261,15 @@ from app.routers.ops import _INSERT_EVENT_SQL
         await db.execute(
             _INSERT_EVENT_SQL,
             {
-                "incident_id": incident_id,
+                "incident_id": uuid.UUID(incident_id),
                 "kind": "case_report",
                 "actor": "case_agent",
                 "detail": json.dumps({"report_id": row[0]}),
             },
         )
 ```
+
+- `uuid.UUID(...)` で包む理由: `post_report` の incident_id は str（`require_case_ticket` が `str(incident_id)` を返す。`backend/app/routers/ops_case.py:161-163`）。報告の表の SQL は `CAST(:iid AS uuid)` で受けている（同 :514）が、`_INSERT_EVENT_SQL` は CAST を持たない（`backend/app/routers/ops.py:195-198`）。今の呼び出し元は UUID 型を渡している（同 :431・:475）ので、同じ型にそろえる。`uuid` は読み込み済み（`backend/app/routers/ops_case.py:28`）。`_INSERT_EVENT_SQL` は変えない。
 
 返す値に kind を足す: `return {"id": row[0], "incident_id": incident_id, "kind": body.kind}`。
 docstring を直す: :9 の「報告（1 件 1 通）」→「報告（1 件に種類ごと 1 通）」、:500 の「報告（1 件 1 通。2 回目は 409。…）」→「報告（1 件に種類ごと 1 通。同じ種類の 2 通目は 409。届いたら出来事の表に報告の id だけを 1 行。本文は 32KB まで）。」。ほかの行は変えない。
@@ -358,6 +360,7 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
 | `ops_case.reports` に incident_id だけの一意が 1 つでない（0 個・2 個） | 止まる |
 | 2a の後、今ある試験（`backend/tests/test_ops_case_router.py`・`backend/tests/test_ops_router.py`・`backend/tests/test_ops_incident_tables_rls.py`・`backend/tests/ops/test_ops_case_db.py`）が 1 つでも赤 | 名前と生の出力を出して止まる（2a は古いコードを変えない約束のため） |
 | `from app.routers.ops import _INSERT_EVENT_SQL` で読み込みの輪のエラー | 止まる。SQL を写して 2 つ目を作らない |
+| 2b の試験で、出来事を書くところが incident_id の型のエラーで失敗する | 名前と生の出力を出して止まる。`_INSERT_EVENT_SQL` に CAST を足したり、SQL を写したりして直さない |
 | openapi.json の差分が kind 以外にも出る | 止まる。手で書き換えない |
 | 伏せた窓の分類の試験（`backend/tests/ops/test_ai_cloud_views.py:486` の 1151）が変わる | 止まる（public に列を足していないはずのため） |
 | 移行の 2 回目の流しで失敗 | 止まる |
@@ -400,6 +403,7 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
 （３）すぐに 2b の PR を revert して本番に出す。revert でコードが古い口に戻り、`scripts/run_all_migrations.sh` から 210000 の行が消える。古いコードの `ON CONFLICT (incident_id)` は（２）で戻した古い一意で動く。
   - （２）と（３）の間に別の本番反映をはさまない。はさむと、まだ残っている 210000 の行が流れ、古い一意をまた消す。
   - 逆の順（先に revert）にすると、古いコードが古い一意の無い表の上で動き、戻しのファイルを流すまで報告が全部 503 になる。だからこの順にする。
+  - revert の PR は `migrations/` と `scripts/run_all_migrations.sh` を変えるので危険 PR（ADR-136）で、GO #番号が要る。（２）より前に revert の PR を作り、審査役 APPROVE・CI 緑・GO #番号まで揃えてから（２）を流す。そうすれば（２）から（３）までの間が、合流と本番反映の時間だけになる。
 （４）（３）の本番反映の後、読み取りの鍵で `pg_constraint` を読み、`ops_case.reports` に incident_id だけの一意が 1 つあることを確かめる。0 なら止めて PO に聞く。
   - 理由: 前の本番反映が失敗していると、次の反映は移行を全部流す（`.github/workflows/deploy.yml:73-78` の else）。（２）と（３）の間に別の反映が入ると 210000 が流れて古い一意が消え、（３）の後も古いコードの報告が 503 のまま自動では直らない。はさまない約束だけでは止められないので、終わりに確かめる。
 - 2b の戻しは「2 通以上の件が 0」のときだけできる。2b の本番反映から、実行係が種類を送り始める（便5）までの間がその期間。
@@ -441,6 +445,8 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
   - §4 の本番の数はまだ読んでいない（GO の前に読む）。
   - 2b の後、本物の件が来るまで本番での出来事の行は確かめられない（§7。来るまで「未確認」）。
   - 2b の戻しは、種類を送り始めると古い一意に戻せなくなる（§9）。便5 の前に、戻し方を「口を直した版を出す」に切り替える。
+  - 2b の後は 1 件に報告が種類ごとに並ぶ。このリポジトリで `ops_case.reports` を読むコードは試験だけ（`git grep`）。リポジトリの外で報告を拾う側（agent-console。`docs/handoff/cloud-case-ai/design.md:351`）が「1 件 1 行」を前提にしていないかは未確認。種類を送り始める便5 の前に確かめる（2b の時点では investigation の 1 通だけなので、読み方は変わらない）。
+- 合流前の審査（reviewer・Opus）の推奨 4 件を反映した: §0 の読んだ版の書き方・2b の incident_id の型（§5-2b（３）と §6）・§9 の revert の PR の GO・便5 の前の確かめ。
 
 ## 維持の仕組み
 
