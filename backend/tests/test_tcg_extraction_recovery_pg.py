@@ -8,7 +8,7 @@ pg フィクスチャは disposable CI PostgreSQL サービス限定
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from uuid import uuid4
 
 from sqlalchemy.orm import sessionmaker
@@ -17,7 +17,12 @@ from app.tasks import tcg_extraction_recovery as recovery
 from tests.test_tcg_work_matching_integration import SCHEMA
 from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401
 
-_NOW = datetime.now(timezone.utc)
+
+def _db_now(connection):
+    """DB の時計で「今」を読む。判定側（NOW()）と同じ時計にするため、試験本体の始めで毎回読む。"""
+    with connection.cursor() as cur:
+        cur.execute("SELECT clock_timestamp()")
+        return cur.fetchone()[0]
 
 
 def _insert_job(connection, *, status, created_at):
@@ -58,8 +63,9 @@ class TestRecoverStaleRunningJobsPg:
         """T1: attempt started_at が15分未満の running ジョブは対象外"""
         monkeypatch.setattr(recovery, "TCG_SCHEMA", SCHEMA)
         connection, _, _ = pg
-        sid, jid = _insert_job(connection, status="running", created_at=_NOW - timedelta(minutes=30))
-        _insert_attempt(connection, jid, sid, started_at=_NOW - timedelta(minutes=5))
+        now = _db_now(connection)
+        sid, jid = _insert_job(connection, status="running", created_at=now - timedelta(minutes=30))
+        _insert_attempt(connection, jid, sid, started_at=now - timedelta(minutes=5))
 
         session = _sync_session(pg)
         try:
@@ -73,8 +79,9 @@ class TestRecoverStaleRunningJobsPg:
         """T2: attempt started_at が15分以上前の running ジョブは pending に戻る"""
         monkeypatch.setattr(recovery, "TCG_SCHEMA", SCHEMA)
         connection, _, _ = pg
-        sid, jid = _insert_job(connection, status="running", created_at=_NOW - timedelta(minutes=30))
-        _insert_attempt(connection, jid, sid, started_at=_NOW - timedelta(minutes=20))
+        now = _db_now(connection)
+        sid, jid = _insert_job(connection, status="running", created_at=now - timedelta(minutes=30))
+        _insert_attempt(connection, jid, sid, started_at=now - timedelta(minutes=20))
 
         session = _sync_session(pg)
         try:
@@ -91,7 +98,8 @@ class TestRecoverStaleRunningJobsPg:
         """attempt が無い running ジョブは created_at を基準にする"""
         monkeypatch.setattr(recovery, "TCG_SCHEMA", SCHEMA)
         connection, _, _ = pg
-        _sid, jid = _insert_job(connection, status="running", created_at=_NOW - timedelta(minutes=20))
+        now = _db_now(connection)
+        _sid, jid = _insert_job(connection, status="running", created_at=now - timedelta(minutes=20))
 
         session = _sync_session(pg)
         try:
@@ -107,7 +115,8 @@ class TestFindStalePendingJobIdsPg:
         """T1: created_at が15分未満の pending ジョブは対象外"""
         monkeypatch.setattr(recovery, "TCG_SCHEMA", SCHEMA)
         connection, _, _ = pg
-        _sid, jid = _insert_job(connection, status="pending", created_at=_NOW - timedelta(minutes=5))
+        now = _db_now(connection)
+        _sid, jid = _insert_job(connection, status="pending", created_at=now - timedelta(minutes=5))
 
         session = _sync_session(pg)
         try:
@@ -121,7 +130,8 @@ class TestFindStalePendingJobIdsPg:
         """T2: created_at が15分以上前で attempt が無い pending ジョブは対象"""
         monkeypatch.setattr(recovery, "TCG_SCHEMA", SCHEMA)
         connection, _, _ = pg
-        _sid, jid = _insert_job(connection, status="pending", created_at=_NOW - timedelta(minutes=20))
+        now = _db_now(connection)
+        _sid, jid = _insert_job(connection, status="pending", created_at=now - timedelta(minutes=20))
 
         session = _sync_session(pg)
         try:
@@ -135,8 +145,9 @@ class TestFindStalePendingJobIdsPg:
         """created_at は古いが、直近に attempt が始まっている pending ジョブは対象外"""
         monkeypatch.setattr(recovery, "TCG_SCHEMA", SCHEMA)
         connection, _, _ = pg
-        sid, jid = _insert_job(connection, status="pending", created_at=_NOW - timedelta(minutes=30))
-        _insert_attempt(connection, jid, sid, started_at=_NOW - timedelta(minutes=2))
+        now = _db_now(connection)
+        sid, jid = _insert_job(connection, status="pending", created_at=now - timedelta(minutes=30))
+        _insert_attempt(connection, jid, sid, started_at=now - timedelta(minutes=2))
 
         session = _sync_session(pg)
         try:
@@ -151,8 +162,9 @@ class TestFindStalePendingJobIdsPg:
         monkeypatch.setattr(recovery, "TCG_SCHEMA", SCHEMA)
         monkeypatch.setattr(recovery, "MAX_RECOVER_PER_RUN", 2)
         connection, _, _ = pg
+        now = _db_now(connection)
         for _ in range(3):
-            _insert_job(connection, status="pending", created_at=_NOW - timedelta(minutes=20))
+            _insert_job(connection, status="pending", created_at=now - timedelta(minutes=20))
 
         session = _sync_session(pg)
         try:
