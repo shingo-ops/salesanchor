@@ -50,6 +50,14 @@ def test_table_rows_are_read():
         "role_not_assignable",
         "merge_target_archived",
         "bill_to_country",
+        "recurrence_meet_not_allowed",
+        "recurrence_not_available",
+        "recurrence_after_until",
+        "recurrence_scope_not_allowed",
+        "recurrence_google_source",
+        "recurrence_scope_required",
+        "recurrence_occurrence_invalid",
+        "recurrence_this_not_allowed",
     ]
 
 
