@@ -31521,6 +31521,167 @@
         "title": "RoleVisibilityPermission",
         "type": "object"
       },
+      "RuleFeedbackIn": {
+        "additionalProperties": false,
+        "description": "「違う」の 1 往復（POST /assistant/rules/feedback。候補として入る。rule_text は空でよい）。",
+        "properties": {
+          "rule_text": {
+            "default": "",
+            "title": "Rule Text",
+            "type": "string"
+          },
+          "source_kind": {
+            "enum": [
+              "invoice",
+              "event",
+              "unknown",
+              "rule_proposal",
+              "rule_list"
+            ],
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "source_reply": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Reply"
+          },
+          "source_text": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Source Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_text",
+          "source_kind"
+        ],
+        "title": "RuleFeedbackIn",
+        "type": "object"
+      },
+      "RuleListOut": {
+        "properties": {
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleOut"
+            },
+            "title": "Rules",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rules"
+        ],
+        "title": "RuleListOut",
+        "type": "object"
+      },
+      "RuleOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "rule_text": {
+            "title": "Rule Text",
+            "type": "string"
+          },
+          "source_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Kind"
+          },
+          "source_reply": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Reply"
+          },
+          "source_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Text"
+          },
+          "status": {
+            "enum": [
+              "candidate",
+              "approved",
+              "rejected",
+              "removed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "rule_text",
+          "source_text",
+          "source_kind",
+          "source_reply",
+          "created_at",
+          "decided_at"
+        ],
+        "title": "RuleOut",
+        "type": "object"
+      },
+      "RuleTextIn": {
+        "additionalProperties": false,
+        "description": "承認する決まりの文（POST /assistant/rules・POST /assistant/rules/{rule_id}/approve）。",
+        "properties": {
+          "rule_text": {
+            "title": "Rule Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_text"
+        ],
+        "title": "RuleTextIn",
+        "type": "object"
+      },
       "SalesFormOptionResponse": {
         "description": "GET /leads/sales-form-options レスポンス用: テナント別選択肢マスタ",
         "properties": {
@@ -42404,6 +42565,298 @@
           }
         ],
         "summary": "Post Assistant Message",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/rules": {
+      "get": {
+        "operationId": "get_assistant_rules_api_v1_assistant_rules_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": true,
+            "schema": {
+              "enum": [
+                "candidate",
+                "approved"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Assistant Rules",
+        "tags": [
+          "assistant"
+        ]
+      },
+      "post": {
+        "operationId": "post_assistant_rule_api_v1_assistant_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleTextIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Assistant Rule",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/rules/feedback": {
+      "post": {
+        "operationId": "post_assistant_rule_feedback_api_v1_assistant_rules_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleFeedbackIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Assistant Rule Feedback",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/rules/{rule_id}/approve": {
+      "post": {
+        "operationId": "approve_assistant_rule_api_v1_assistant_rules__rule_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "title": "Rule Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleTextIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Approve Assistant Rule",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/rules/{rule_id}/reject": {
+      "post": {
+        "operationId": "reject_assistant_rule_api_v1_assistant_rules__rule_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "title": "Rule Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reject Assistant Rule",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/rules/{rule_id}/remove": {
+      "post": {
+        "operationId": "remove_assistant_rule_api_v1_assistant_rules__rule_id__remove_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "title": "Rule Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove Assistant Rule",
         "tags": [
           "assistant"
         ]

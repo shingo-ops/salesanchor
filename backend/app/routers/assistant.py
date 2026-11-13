@@ -3,12 +3,14 @@
 利用者の文を担当表の provider の容器（claude は secretary-agent・codex は secretary-codex。どちらも DB を持たない）に渡し、頼みの形（請求書／予定／聞き返し）に
 書き換えた下書きを返す。ここでは何も作らない（請求書・予定を作るのは画面が今の口を本人のログインで呼ぶとき）。
 
-順番（厳守）: ①守りを通す・担当表を読む ②db.commit() ③容器を呼ぶ・使用の記録に1行 ④会社の文脈を張り直す ⑤名前探し ⑥返す。
+順番（厳守）: ①守りを通す・担当表と承認済みの決まりを読む・頼みの大きさを測る ②db.commit() ③容器を呼ぶ・使用の記録に1行 ④会社の文脈を張り直す ⑤名前探し ⑥返す。
 DB の取引を開いたまま AI を待たない。ログは 1 回 1 行（text と答えの中身は書かない）。
+ADR-1077 便2b: 決まり帳の口（/assistant/rules・design.md §5）もここに置き、秘書の口と同じ守り _SECRETARY_DEPENDENCIES を使う。
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
@@ -42,9 +44,23 @@ from app.schemas.assistant import (
     UnknownDraft,
     parse_iso,
 )
+from app.schemas.secretary_rules import RuleFeedbackIn, RuleListOut, RuleOut, RuleStatus, RuleTextIn
 from app.services.ai_assignment import get_ai_assignment
 from app.services.llm_budget import USAGE_SDKS_BY_PROVIDER, UsageCounts, record_usage_isolated
 from app.services.secretary_resolve import resolve_names
+from app.services.secretary_rules import (
+    RuleNotFound,
+    RulesFull,
+    RuleWrongStatus,
+    SecretaryRule,
+    add_approved_rule,
+    add_candidate,
+    approve_candidate,
+    list_approved_rule_texts,
+    list_rules,
+    reject_candidate,
+    remove_rule,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,12 +69,22 @@ router = APIRouter()
 SECRETARY_AGENT_URL = os.getenv("SECRETARY_AGENT_URL", "http://secretary-agent:8090")
 SECRETARY_CODEX_URL = os.getenv("SECRETARY_CODEX_URL", "http://secretary-codex:8090")
 AGENT_TIMEOUT_SECONDS = 85.0
+# 容器へ送る頼みの大きさの上限（バイト）。容器の上限 MAX_BODY 16,384（secretary-agent/server.mjs）より小さくする（design.md §3「大きさ」）
+AGENT_BODY_MAX_BYTES = 15_000
 _JST = ZoneInfo("Asia/Tokyo")
 
 # 守りの Depends。テストは router 側のこの名前で上書きする（require_feature は呼ぶたびに別の関数を返すため）
 _feature_secretary_chat = require_feature("secretary_chat")
 _perm_customers_view = require_permission("customers.view")
 _perm_invoices_create = require_permission("invoices.create")
+
+# 秘書の口と決まり帳の口が同じ 4 つの守りを使う（ADR-1077 便2b・design.md §5。承認できる人の判定は require_super_admin だけ）
+_SECRETARY_DEPENDENCIES = [
+    Depends(_feature_secretary_chat),
+    Depends(require_super_admin),
+    Depends(_perm_customers_view),
+    Depends(_perm_invoices_create),
+]
 
 
 def agent_url(provider: str) -> str | None:
@@ -142,14 +168,21 @@ async def _record_ledger(
     )
 
 
-async def _call_agent(text: str, model: str, url: str) -> dict:
-    """容器を呼ぶ（model は担当表から読んだ値・url は agent_url の値）。失敗は (HTTPException, ログの code) に直す。"""
+def _agent_payload(text: str, model: str, rules: list[str]) -> bytes:
+    """容器への頼みの本文（ADR-1077 便2b）。測ったバイト数と送るバイト数を同じにするため、ここで JSON にする。"""
     now = datetime.now(_JST).isoformat(timespec="seconds")
+    body = {"text": text, "now": now, "model": model, "rules": rules}
+    return json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+async def _call_agent(payload: bytes, url: str) -> dict:
+    """容器を呼ぶ（payload は _agent_payload の値・url は agent_url の値）。失敗は (HTTPException, ログの code) に直す。"""
     try:
         async with httpx.AsyncClient(timeout=AGENT_TIMEOUT_SECONDS) as client:
             resp = await client.post(
                 f"{url}/intent",
-                json={"text": text, "now": now, "model": model},
+                content=payload,
+                headers={"Content-Type": "application/json"},
             )
     except httpx.TimeoutException:
         raise _fail(504, "timeout")
@@ -190,12 +223,7 @@ async def _call_agent(text: str, model: str, url: str) -> dict:
 @router.post(
     "/assistant/messages",
     response_model=AssistantMessageOut,
-    dependencies=[
-        Depends(_feature_secretary_chat),
-        Depends(require_super_admin),
-        Depends(_perm_customers_view),
-        Depends(_perm_invoices_create),
-    ],
+    dependencies=_SECRETARY_DEPENDENCIES,
 )
 async def post_assistant_message(
     body: AssistantMessageIn,
@@ -219,6 +247,18 @@ async def post_assistant_message(
         _log(user_id, tenant_id, started, "not_ready", None)
         raise _fail(503, "not_ready")
 
+    # ①' 承認済みの決まりを読み、頼みの大きさを測る（commit の前。ADR-1077 便2b・design.md §3「大きさ」）
+    # 読めない・大きすぎる時は容器を呼ばず、台帳にも書かない（AI を呼んでいないため）。
+    try:
+        rules = await list_approved_rule_texts(db, tenant_id)
+    except Exception:  # noqa: BLE001
+        _log(user_id, tenant_id, started, "rules_unreadable", None)
+        raise _fail(503, "not_ready", "rules_unreadable") from None
+    payload = _agent_payload(body.text, assignment.model, rules)
+    if len(payload) > AGENT_BODY_MAX_BYTES:
+        _log(user_id, tenant_id, started, "rules_too_long", None)
+        raise _fail(413, "rules_too_long")
+
     # ② 取引を閉じる（AI を待つ間 DB を開いたままにしない）
     await db.commit()
 
@@ -226,7 +266,7 @@ async def post_assistant_message(
     cost: float | None = None
     error_events: int | None = None
     try:
-        raw = await _call_agent(body.text, assignment.model, url)
+        raw = await _call_agent(payload, url)
         try:
             envelope = AgentEnvelope.model_validate(raw)
         except ValidationError:
@@ -299,3 +339,137 @@ async def post_assistant_message(
         draft=draft,
         candidates=Candidates(**candidates),
     )
+
+
+# ---- ADR-1077 便2b: 決まり帳の口（design.md §5）----------------------------------------
+# 守りは秘書の口と同じ _SECRETARY_DEPENDENCIES。承認できる人の判定は require_super_admin だけ（R6）。
+# 書く口は commit の後に会社の文脈を張り直す（ADR-072）。
+
+
+def _rule_out(rule: SecretaryRule) -> RuleOut:
+    return RuleOut.model_validate(rule, from_attributes=True)
+
+
+@router.get("/assistant/rules", response_model=RuleListOut, dependencies=_SECRETARY_DEPENDENCIES)
+async def get_assistant_rules(
+    status: RuleStatus,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+) -> RuleListOut:
+    rules = await list_rules(db, tenant_id, status)
+    return RuleListOut(rules=[_rule_out(r) for r in rules])
+
+
+@router.post(
+    "/assistant/rules",
+    response_model=RuleOut,
+    status_code=201,
+    dependencies=_SECRETARY_DEPENDENCIES,
+)
+async def post_assistant_rule(
+    body: RuleTextIn,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+) -> RuleOut:
+    user_id = current_user.id
+    try:
+        rule = await add_approved_rule(db, tenant_id, user_id, body.rule_text)
+    except RulesFull:
+        raise _fail(409, "rules_full") from None
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)
+    return _rule_out(rule)
+
+
+@router.post(
+    "/assistant/rules/feedback",
+    response_model=RuleOut,
+    status_code=201,
+    dependencies=_SECRETARY_DEPENDENCIES,
+)
+async def post_assistant_rule_feedback(
+    body: RuleFeedbackIn,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+) -> RuleOut:
+    user_id = current_user.id
+    rule = await add_candidate(
+        db, tenant_id, user_id, body.rule_text, body.source_text, body.source_kind, body.source_reply
+    )
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)
+    return _rule_out(rule)
+
+
+@router.post(
+    "/assistant/rules/{rule_id}/approve",
+    response_model=RuleOut,
+    dependencies=_SECRETARY_DEPENDENCIES,
+)
+async def approve_assistant_rule(
+    rule_id: int,
+    body: RuleTextIn,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+) -> RuleOut:
+    user_id = current_user.id
+    try:
+        rule = await approve_candidate(db, tenant_id, rule_id, user_id, body.rule_text)
+    except RuleNotFound:
+        raise _fail(404, "rule_not_found") from None
+    except RuleWrongStatus:
+        raise _fail(409, "wrong_status") from None
+    except RulesFull:
+        raise _fail(409, "rules_full") from None
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)
+    return _rule_out(rule)
+
+
+@router.post(
+    "/assistant/rules/{rule_id}/reject",
+    response_model=RuleOut,
+    dependencies=_SECRETARY_DEPENDENCIES,
+)
+async def reject_assistant_rule(
+    rule_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+) -> RuleOut:
+    user_id = current_user.id
+    try:
+        rule = await reject_candidate(db, tenant_id, rule_id, user_id)
+    except RuleNotFound:
+        raise _fail(404, "rule_not_found") from None
+    except RuleWrongStatus:
+        raise _fail(409, "wrong_status") from None
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)
+    return _rule_out(rule)
+
+
+@router.post(
+    "/assistant/rules/{rule_id}/remove",
+    response_model=RuleOut,
+    dependencies=_SECRETARY_DEPENDENCIES,
+)
+async def remove_assistant_rule(
+    rule_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+) -> RuleOut:
+    user_id = current_user.id
+    try:
+        rule = await remove_rule(db, tenant_id, rule_id, user_id)
+    except RuleNotFound:
+        raise _fail(404, "rule_not_found") from None
+    except RuleWrongStatus:
+        raise _fail(409, "wrong_status") from None
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)
+    return _rule_out(rule)

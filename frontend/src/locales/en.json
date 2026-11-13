@@ -6085,7 +6085,8 @@
       "unreadable": "I could not understand that. Please rephrase",
       "generic": "Something went wrong. Please try again",
       "authFailed": "The assistant's key no longer works. Please tell your administrator.",
-      "agentFailed": "Something went wrong. Please wait a moment and send it again."
+      "agentFailed": "Something went wrong. Please wait a moment and send it again.",
+      "rulesTooLong": "Your message and the company rules are too long together. Shorten the message or remove some rules."
     },
     "invoice": {
       "title": "Invoice draft",
