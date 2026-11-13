@@ -65,11 +65,23 @@ origin/main の次の行が、表の「基準の中身」を含むこと。1 つ
 
 ## 1. 手順（この順）
 
-手順1 枝を取る（失敗したら BLOCKED:）
-    cd "$(git rev-parse --show-toplevel)" && git fetch origin release/single-set-category-bin3-rejudge-card
-    cd "$(git rev-parse --show-toplevel)" && git checkout -B release/single-set-category-bin3-rejudge-card origin/release/single-set-category-bin3-rejudge-card
-    cd "$(git rev-parse --show-toplevel)" && git config user.name shingo-cc
-    cd "$(git rev-parse --show-toplevel)" && git log -1 --oneline
+手順1 作業場所を公式の台本で作る（リポジトリの pre-commit は `~/worktrees/` 配下でない場所からの commit を「worktree 外での作業は禁止」で止める。クラウドでも同じ。docs/handoff/cloud-parity/recon.md:23。2026-11-13 10:08 JST の 1 回目はこれを入れ忘れて手順8で止まった）。`<main>` はクラウドが最初に置いた場所（例 `/home/user/salesanchor`）。1 つずつ流し、出力を報告に書く。失敗したら BLOCKED:。
+    cd <main> && git fetch origin release/single-set-category-bin3-rejudge-card main
+    cd <main> && git branch --list release/single-set-category-bin3-rejudge-card
+    cd <main> && bash scripts/new-worktree.sh release/single-set-category-bin3-rejudge-card
+    cd <main> && git worktree list
+    cd <repo> && git merge --no-edit origin/release/single-set-category-bin3-rejudge-card
+    cd <repo> && git merge-base --is-ancestor origin/release/single-set-category-bin3-rejudge-card HEAD; echo rc=$?
+    cd <repo> && git config user.name shingo-cc
+    cd <repo> && git log -1 --oneline
+
+上の 8 行の確かめ方（上から順に）:
+・2 行目の出力が空であること。空でなければ消さずに BLOCKED:（git checkout -B は使わない）。
+・3 行目は --claude を付けない。出力はパイプに通さない。
+・4 行目に $HOME/worktrees/salesanchor/release-single-set-category-bin3-rejudge-card が出ること。出なければ BLOCKED:。以後の <repo> はこの絶対パス。
+・5 行目は ff でなく合わせの commit になってよい。衝突したら git merge --abort をして BLOCKED:。
+・6 行目は rc=0 であること。
+以後の手順 2〜10 はすべて <repo> の中で行う（下の `cd "$(git rev-parse --show-toplevel)"` は <repo> を指す）。台本が作った .claude-pipeline/active-work.d/ の未追跡ファイルは commit しない。
 
 手順2 §0 の表の行を読む
     cd "$(git rev-parse --show-toplevel)" && sed -n '123p;130p;138p;168p;1594p' backend/app/services/line_analysis_v102_svc.py
@@ -89,6 +101,11 @@ origin/main の次の行が、表の「基準の中身」を含むこと。1 つ
     cd "$(git rev-parse --show-toplevel)/backend" && ruff check tests/test_single_set_rejudge_tool.py 2>&1 | tail -20
 
     道具のファイルは手本の書き方（1 行に複数の文など）を残すので、名前の誤りと使っていない import だけを見る（`--select F`）。CI の ruff は `app/` だけを見る（`.github/workflows/test.yml:90`）。
+
+手順6b 判定試験を流す（DB 不要）。準備は CI と同じ入れ方（`.github/workflows/test.yml:170`）。
+    cd "$(git rev-parse --show-toplevel)/backend" && pip install -q -r requirements.txt -r requirements-dev.txt 2>&1 | tail -5
+    cd "$(git rev-parse --show-toplevel)/backend" && python3 -m pytest tests/test_single_set_rejudge_tool.py -q 2>&1 | tail -25
+    入れられない・流せないときは生の文を報告に書いて先へ進む（CI の pytest が同じ試験を流す）。落ちたときは §2・§3 の範囲で直す。範囲の外なら NEEDS_DECISION:。
 
 手順7 §4 の検索を流す（出力は報告に入れる）
 
