@@ -28,16 +28,16 @@ docker info --format 'security={{json .SecurityOptions}} cgroup={{.CgroupVersion
 node --version
 
 echo "== 1. node の試験（容器の外）"
-node --test secretary-agent/server.test.mjs secretary-codex/server.test.mjs
+node --test secretary-agent/compose.test.mjs secretary-agent/server.test.mjs secretary-codex/server.test.mjs
 
-echo "== 2. build の入力に入る物が許す一覧の4つだけ（根に偽の .env を置いて確かめる）"
+echo "== 2. build の入力に入る物が許す一覧の5つだけ（根に偽の .env を置いて確かめる）"
 printf 'DUMMY_SECRET=sandbox-only\n' > .env
 printf 'FROM scratch\nCOPY . /\n' > "$OUT/ctx.Dockerfile"
 cp secretary-codex/Dockerfile.dockerignore "$OUT/ctx.Dockerfile.dockerignore"
 DOCKER_BUILDKIT=1 docker build -f "$OUT/ctx.Dockerfile" -o "type=local,dest=$OUT/ctx" .
 (cd "$OUT/ctx" && find . -type f | sort) | tee "$OUT/ctx_files.txt"
-test "$(wc -l < "$OUT/ctx_files.txt")" -eq 4 || { echo "NG: build の入力が4ファイルでない"; exit 1; }
-for f in ./secretary-agent/prompt.txt ./secretary-agent/schema.json ./secretary-agent/probe.mjs ./secretary-codex/server.mjs; do
+test "$(wc -l < "$OUT/ctx_files.txt")" -eq 5 || { echo "NG: build の入力が5ファイルでない"; exit 1; }
+for f in ./secretary-agent/prompt.txt ./secretary-agent/schema.json ./secretary-agent/probe.mjs ./secretary-agent/compose.mjs ./secretary-codex/server.mjs; do
   grep -qxF "$f" "$OUT/ctx_files.txt" || { echo "NG: $f が無い"; exit 1; }
 done
 
@@ -46,7 +46,7 @@ DOCKER_BUILDKIT=1 docker build --progress=plain -t "$IMG" -f secretary-codex/Doc
 docker run --rm --entrypoint sh "$IMG" -c 'ls -la /app; codex --version' | tee "$OUT/img.txt"
 grep -qx 'codex-cli 0.162.1' "$OUT/img.txt" || { echo "NG: codex の版"; exit 1; }
 docker run --rm --entrypoint sh "$IMG" -c 'test -s /etc/ssl/certs/ca-certificates.crt' && echo "ca-certificates ok" || { echo "NG: 公開の証明書の束が無い"; exit 1; }
-test "$(docker run --rm --entrypoint sh "$IMG" -c 'ls -1 /app | wc -l')" -eq 4 || { echo "NG: /app が4ファイルでない"; exit 1; }
+test "$(docker run --rm --entrypoint sh "$IMG" -c 'ls -1 /app | wc -l')" -eq 5 || { echo "NG: /app が5ファイルでない"; exit 1; }
 docker compose -f docker-compose.secretary-codex.yml config -q && echo "compose config ok"
 
 echo "== 4. つながりの試し（probe が動くこと。試験場に DB は無いので TCP の宛先は閉じた口）"

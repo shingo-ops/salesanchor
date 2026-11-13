@@ -8,6 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
+import { compose } from "../secretary-agent/compose.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ASSETS = path.join(HERE, "..", "secretary-agent");
@@ -388,4 +389,47 @@ test("(14) ログは秒と code だけ（頼みの文・答え・鍵の値を出
     },
     { captureStdout: true },
   );
+});
+
+test("(15) rules: 無いときは今までと同じ文・あるときは指示文の後に入る・形が違えば 400 で codex を呼ばない（ADR-1077 便2a）", async () => {
+  login();
+  const prompt = fs.readFileSync(path.join(ASSETS, "prompt.txt"), "utf8");
+  writeFake({ events: okEvents() });
+  await withServer({}, async ({ port }) => {
+    assert.equal((await post(port)).status, 200);
+  });
+  assert.equal(fs.readFileSync(stdinLog, "utf8"), `${prompt}\n\n今の日時: ${NOW}\n\n利用者の文:\n${TEXT}`);
+  const rules = ["決まりA", "決まりB"];
+  writeFake({ events: okEvents() });
+  await withServer({}, async ({ port }) => {
+    assert.equal((await post(port, { text: TEXT, now: NOW, model: "gpt-x", rules })).status, 200);
+  });
+  const stdin = fs.readFileSync(stdinLog, "utf8");
+  assert.equal(stdin, compose(prompt, NOW, TEXT, rules));
+  assert.ok(stdin.includes(`\n- 決まりA\n- 決まりB\n\n今の日時: ${NOW}`));
+  writeFake({ events: okEvents() });
+  await withServer({}, async ({ port }) => {
+    for (const bad of [null, "決まり", [1], [""]]) {
+      const r = await post(port, { text: TEXT, now: NOW, model: "gpt-x", rules: bad });
+      assert.equal(r.status, 400, JSON.stringify(bad));
+      assert.deepEqual(r.json, { code: "bad_request" });
+    }
+  });
+  assert.equal(fs.existsSync(argsLog), false);
+});
+
+test("(16) 上限いっぱい: 絵文字で決まり 20 件×150 字＋文 1000 字の頼みが 16KB に収まり 200 で通る（design.md §3「大きさ」）", async () => {
+  login();
+  writeFake({ events: okEvents() });
+  const body = {
+    text: "😀".repeat(1000),
+    now: NOW,
+    model: "gpt-x",
+    rules: Array.from({ length: 20 }, () => "😀".repeat(150)),
+  };
+  const bytes = Buffer.byteLength(JSON.stringify(body));
+  assert.ok(bytes > 16000 && bytes < 16384, String(bytes));
+  await withServer({}, async ({ port }) => {
+    assert.equal((await post(port, body)).status, 200);
+  });
 });

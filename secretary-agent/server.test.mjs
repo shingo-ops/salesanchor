@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
+import { compose } from "./compose.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FIX = path.join(HERE, "fixtures");
@@ -299,5 +300,48 @@ test("probe: TCP の宛先が connected なら終了コード 1", async () => {
     assert.deepEqual(JSON.parse(r.out.split("\n")[0]), { target: `127.0.0.1:${port}`, result: "connected" });
   } finally {
     srv.close();
+  }
+});
+
+test("(11) rules: 無いときは今までと同じ文・あるときは指示文の後に入る・形が違えば 400 で claude を呼ばない（ADR-1077 便2a）", async () => {
+  const stdinLog = path.join(work, "stdin.log");
+  writeFake(`cat > "${stdinLog}"; echo '{"structured_output":{"kind":"unknown","invoice":null,"event":null,"reply":"r"}}'`);
+  const { port, child } = await startServer({ CLAUDE_CODE_OAUTH_TOKEN: "dummy" });
+  const prompt = fs.readFileSync(path.join(HERE, "prompt.txt"), "utf8");
+  try {
+    assert.equal((await request(port, "POST", "/intent", { text: "a", now: "n", model: "sonnet" })).status, 200);
+    assert.equal(fs.readFileSync(stdinLog, "utf8"), `${prompt}\n\n今の日時: n\n\n利用者の文:\na`);
+    const rules = ["決まりA", "決まりB"];
+    assert.equal((await request(port, "POST", "/intent", { text: "a", now: "n", model: "sonnet", rules })).status, 200);
+    const stdin = fs.readFileSync(stdinLog, "utf8");
+    assert.equal(stdin, compose(prompt, "n", "a", rules));
+    assert.ok(stdin.includes("\n- 決まりA\n- 決まりB\n\n今の日時: n"));
+    fs.rmSync(stdinLog);
+    for (const bad of [null, "決まり", [1], [""]]) {
+      const r = await request(port, "POST", "/intent", { text: "a", now: "n", model: "sonnet", rules: bad });
+      assert.equal(r.status, 400, JSON.stringify(bad));
+      assert.deepEqual(r.json, { code: "bad_request" });
+    }
+    assert.equal(fs.existsSync(stdinLog), false);
+  } finally {
+    child.kill();
+  }
+});
+
+test("(12) 上限いっぱい: 絵文字で決まり 20 件×150 字＋文 1000 字の頼みが 16KB に収まり 200 で通る（design.md §3「大きさ」）", async () => {
+  writeFake(`cat >/dev/null; echo '{"structured_output":{"kind":"unknown","invoice":null,"event":null,"reply":"r"}}'`);
+  const { port, child } = await startServer({ CLAUDE_CODE_OAUTH_TOKEN: "dummy" });
+  try {
+    const body = {
+      text: "😀".repeat(1000),
+      now: "2026-11-16T10:00:00+09:00",
+      model: "sonnet",
+      rules: Array.from({ length: 20 }, () => "😀".repeat(150)),
+    };
+    const bytes = Buffer.byteLength(JSON.stringify(body));
+    assert.ok(bytes > 16000 && bytes < 16384, String(bytes));
+    assert.equal((await request(port, "POST", "/intent", body)).status, 200);
+  } finally {
+    child.kill();
   }
 });
