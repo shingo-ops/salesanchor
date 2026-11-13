@@ -28,7 +28,7 @@
 
 **第2版で足した事実（コードの検索。第1版は docs だけを検索して見落とした）**: `git grep -n -i -e duty -e incoterm origin/main -- backend/app frontend/src migrations` で、関税の条件の会社の設定が既にある。
 
-- public.tenant_settings.duty_incoterms（DAP・DDU・DDP。既定 DAP）: migrations/20260604_050000_add_tenant_policy_columns.sql:31、backend/app/schemas/tenant_policy.py:20、backend/app/routers/tenant_policy.py:41（権限 tenant.profile.view）、画面 frontend/src/pages/admin/TenantPolicyPage.tsx:258-265。
+- public.tenant_settings.duty_incoterms（DAP・DDU・DDP。既定 DAP）: migrations/20260604_050000_add_tenant_policy_columns.sql:31、backend/app/schemas/tenant_policy.py:20、backend/app/routers/tenant_policy.py:38-42 の _POLICY_COLS（権限 tenant.profile.view は :48）、画面 frontend/src/pages/admin/TenantPolicyPage.tsx:258-265。
 - 同じ表の default_currency（既定 "JPY"。backend/app/schemas/tenant_policy.py:18）。
 
 ## 2. 今の請求書作成画面（frontend/src/pages/invoice-create/InvoiceCreatePage.tsx、449行）
@@ -59,7 +59,12 @@
 
 ### 4-1. 新しいテナントの請求書の表（第2版で足した）
 
-- backend/app/services/tenant.py:861-893 の請求書の表には ship_to_snapshot・bill_to_snapshot・duty_amount・duty_policy_snapshot・fx_rate_snapshot・paypal の4列・payment_fee の9列が無い（tenant.py を grep して0件）。列は migrations/20260604_160000_add_invoice_snapshot_columns.sql だけにある。新しいテナントでは作る道の INSERT（invoices.py:382-387）がこの列を書くので動かない。
+- backend/app/services/tenant.py:861-893 の請求書の表には次の12列が無い（第3版で数え直し。2026-11-13 origin/main c296af3bb で列名ごとに grep して0件。issue_mode の1件は tenant_settings の行 :1887）。
+  - ship_to_snapshot・bill_to_snapshot・issue_mode・duty_amount・duty_policy_snapshot・fx_rate_snapshot（migrations/20260604_160000_add_invoice_snapshot_columns.sql:30-35）
+  - paypal_order_id・paypal_approval_url・payment_fee（migrations/20260611_020000_add_invoice_paypal_columns.sql:26-28）
+  - paypal_invoicer_view_url・paypal_copy_pdf・paypal_copy_pdf_at（migrations/20260612_131520_add_invoice_copypdf.sql:32-34）
+- 明細の hs_code も無い: quote_items（tenant.py:844-857）と invoice_items（:898-）。移行は migrations/20260604_160000_add_invoice_snapshot_columns.sql:74・:86。tenant.py:928 の hs_code は order_items のもの。
+- 新しいテナントでは、一覧・詳細が読む _INVOICE_COLUMNS（invoices.py:105-118）、作る道の INSERT（invoices.py:382-387）、見積から作る道の明細の写し（invoices.py:287・:293）がこの列を読み書きするので動かない。
 - tenant.py の請求書の表（:861）は振込先の表（:1246）より前に作られる。
 - 見積の表に shipping_carrier がある（tenant.py:811）。
 - 道の一覧（invoices.py）: :211 見積から作る、:314 作る、:432 直す（PATCH）、:474 発行（状態を変えるだけ）。直す道で変えられる列は :120 _UPDATABLE_COLUMNS（payment_method・due_date・exchange_rate_jpy・exchange_rate_usd・notes）。画面から PATCH を呼ぶ所は無い（frontend/src を git grep。詳細画面 InvoiceDetailPage.tsx:296・:300-301 は表示だけ）。
@@ -83,6 +88,9 @@
 ### 5-1. 為替（第2版で足した）
 
 - 作る道と見積から作る道は外部の値をその場で取る（invoices.py:356・:253 の get_fx_rate。backend/app/services/fx_rate.py:27 の open.er-api.com）。
+- GET /invoices/fx-rate/{currency}（invoices.py:1024-1049）も get_fx_rate をその場で呼ぶ。画面から呼ぶのは frontend/src/pages/quote-detail/QuoteDetailPage.tsx:104 の1か所だけ（frontend/src を git grep。第3版で足した）。
+- 見積の作成画面は FedEx の見積の送料の額だけを保存し、運送会社と通貨は保存しない（frontend/src/pages/quote-create/QuoteCreatePage.tsx:293。第3版で足した）。
+- Wise の振込先の表（tenant.py:1283-1301）には口座番号の列が無く、iban・wise_email（必須）がある（第3版で足した）。
 - 為替の表 app_fx_rate_history は backend/app/tasks/fx_rate_updater.py:42-83 が同じ get_fx_rate("USD") で1日2回（日本時間6時・18時）USD だけを足す。EUR は取っていない。
 - 口座番号の見張り: 読み取りの鍵の見え方は列名が account_number などに当たる列を外す（migrations/20261017_130100_create_ai_ro_views.sql:23）。JSONB の中身は外さない。クラウドの読み取りの見え方は列ごとの分類の表（migrations/20261024_100300_create_ai_cloud_views.sql:446 に invoices、:601-608 に振込先の表）。
 
