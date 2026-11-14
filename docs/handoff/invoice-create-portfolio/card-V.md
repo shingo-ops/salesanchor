@@ -22,7 +22,7 @@
 - D10 移行の試験のテナント番号は 957（2026-11-15 に 25cc56065 で backend/tests・migrations・scripts を git grep して 0 件）。
 - D11 本番の振込先と請求書の行は 2026-11-14 に読み取り用の鍵で数えて全社 0 件。足す列は NULL 可なので、既にある行があっても書き換えは起きない。
 - D12 見張りの関数は一覧の行を `FOR SHARE` で読む（同時に版を付けかえる取引とぶつからないように）。`FOR SHARE` は表の UPDATE 権限が要り、アプリの役は持っている（既存の振込先の表の権限のまま。この便で権限は変えない）。
-- D13 既存の試験 backend/tests/test_tenant_issuer_tables_pg.py は「振込先を消すと詳細も消える」を確かめていた。この便で行は消せなくなるので、「消そうとすると P0001 で止まり、詳細は残る」に直す。あわせて、表を作り直す PG 試験で便Vの移行も2回流す（§2-4）。
+- D13 既存の試験 backend/tests/test_tenant_issuer_tables_pg.py は「振込先を消すと詳細も消える」を確かめていた。この便で行は消せなくなるので、「消そうとすると P0001 で止まり、詳細は残る」に直す。あわせて、表を作り直す PG 試験で便Vの移行も2回流し、形の比べ（_shape）に索引・見張り6つの定義・関数3つの中身（pg_get_functiondef）を足す（設計 K25・§2-4）。
 
 ## 0. カード発行前チェック（docs/ai-agents/design-partner.md §5.5）
 
@@ -70,7 +70,7 @@
 
 1. migrations/20261115_100000_add_payment_method_versioning.sql（新規）
 2. backend/app/services/tenant.py（3か所。1行を直し、ほかは足すだけ）
-3. backend/tests/test_tenant_issuer_tables_pg.py（4か所）
+3. backend/tests/test_tenant_issuer_tables_pg.py（5か所）
 4. backend/tests/test_tenant_payment_versioning_pg.py（新規）
 5. backend/tests/rls_bootstrap.py（1か所に足す）
 6. backend/tests/test_tenant_loop_migration_guard.py（3か所）
@@ -746,7 +746,7 @@ async def test_new_tenant_shape_equals_migration_and_versioning_holds():
         await admin_engine.dispose()
 ````
 
-### 2-4. backend/tests/test_tenant_issuer_tables_pg.py（4か所）
+### 2-4. backend/tests/test_tenant_issuer_tables_pg.py（5か所）
 
 (1) 説明の行（:5）
 
@@ -779,7 +779,58 @@ _VERSIONING_FUNCTIONS = (
 )
 ```
 
-(3) 消したときの確かめ（:248-252）
+(3) 形の比べ _shape の返し（:147-152）
+
+変更前:
+```
+    return {
+        "columns": [tuple(row) for row in columns.all()],
+        "constraints": [tuple(row) for row in constraints.all()],
+        "policies": [tuple(row) for row in policies.all()],
+        "rls": [tuple(row) for row in rls.all()],
+    }
+```
+
+変更後:
+```
+    # 便V（ADR-1079）: 索引・見張り・見張りの関数の中身も比べる（K25）
+    indexes = await conn.execute(
+        text(
+            "SELECT tablename, indexname, indexdef FROM pg_indexes"
+            " WHERE schemaname = :s AND tablename = ANY(:t) ORDER BY tablename, indexname"
+        ),
+        {"s": _SCHEMA, "t": tables},
+    )
+    triggers = await conn.execute(
+        text(
+            "SELECT c.relname, t.tgname, pg_get_triggerdef(t.oid), t.tgenabled"
+            " FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid"
+            " JOIN pg_namespace n ON n.oid = c.relnamespace"
+            " WHERE n.nspname = :s AND c.relname = ANY(:t) AND NOT t.tgisinternal"
+            " ORDER BY c.relname, t.tgname"
+        ),
+        {"s": _SCHEMA, "t": tables},
+    )
+    functions = await conn.execute(
+        text(
+            "SELECT p.proname, pg_get_functiondef(p.oid) FROM pg_proc p"
+            " JOIN pg_namespace n ON n.oid = p.pronamespace"
+            " WHERE n.nspname = :s AND p.proname = ANY(:f) ORDER BY p.proname"
+        ),
+        {"s": _SCHEMA, "f": list(_VERSIONING_FUNCTIONS)},
+    )
+    return {
+        "columns": [tuple(row) for row in columns.all()],
+        "constraints": [tuple(row) for row in constraints.all()],
+        "policies": [tuple(row) for row in policies.all()],
+        "rls": [tuple(row) for row in rls.all()],
+        "indexes": [tuple(row) for row in indexes.all()],
+        "triggers": [tuple(row) for row in triggers.all()],
+        "functions": [tuple(row) for row in functions.all()],
+    }
+```
+
+(4) 消したときの確かめ（:248-252）
 
 変更前:
 ```
@@ -800,7 +851,7 @@ _VERSIONING_FUNCTIONS = (
     assert left.scalar_one() == 1
 ```
 
-(4) 表を作り直す PG 試験（:276-278）
+(5) 表を作り直す PG 試験（:276-278）
 
 変更前:
 ```
@@ -974,7 +1025,7 @@ run_sql migrations/20261115_100000_add_payment_method_versioning.sql
     cd ~/sa && wc -l < backend/tests/test_tenant_payment_versioning_pg.py
     cd ~/sa && wc -l < scripts/run_all_migrations.sh
     cd ~/sa && grep -c "run_sql migrations/20261115_100000_add_payment_method_versioning.sql" scripts/run_all_migrations.sh
-  期待（上から順に）: ruff は `All checks passed!`／`tenant.py ok`／値の書き込みの検査は `exit=0`／2（消した行1つと見出しの `--- a/` の1行）／117（足した行 116 と `+++ b/` の1行）／2206／4（直した行3つと `--- a/` の1行）／17（足した・直した行 16 と `+++ b/` の1行）／2ファイルとも `:6`／149／349／1279／1。
+  期待（上から順に）: ruff は `All checks passed!`／`tenant.py ok`／値の書き込みの検査は `exit=0`／2（消した行1つと見出しの `--- a/` の1行）／117（足した行 116 と `+++ b/` の1行）／2206／4（直した行3つと `--- a/` の1行）／46（足した・直した行 45 と `+++ b/` の1行）／2ファイルとも `:6`／149／349／1279／1。
   repo の検査が exit=0 でなかったら、最後の 10 行を貼って `BLOCKED: value-writes`。
 
 手順6 backend の試験（実 PostgreSQL の試験は CI だけで動く。ここでは skip と出てよい。failed と error は 0 であること）
