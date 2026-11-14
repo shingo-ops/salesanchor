@@ -846,7 +846,7 @@ def test_payload_at_max_size_is_within_limit():
   - `test_read_meet_available_failed_sql_keeps_transaction_usable`: `monkeypatch.setattr(assistant, "can_add_meet", 失敗する関数)`（失敗する関数は `await db.execute(text("SELECT * FROM no_such_table_adr1078"))` を流す async 関数）。`_read_meet_available(db, 989, 98901)` が False。その後 `await db.commit()` が例外なく通り、`await reset_tenant_context(db, 989)` が例外なく通り、monkeypatch を戻して（`monkeypatch.undo()`）本物の `assistant.can_add_meet(db, 989, 98901)` が True。
 - 手元（クラウド）で PostgreSQL が無く 2 つとも skipped になるのは構わない。そのときは報告に「PG の試験は skipped（環境に PostgreSQL なし）」と書く。CI で passed になったかは Opus が確かめる。
 
-(6-3) SQLite の試験で `async with db.begin_nested()` が失敗して `test_assistant_karte.py` の口の試験が落ちる（`meet` の差し替えの有無に関係なく 500 になる）ときは、直さずに `NEEDS_DECISION: SQLite で begin_nested が失敗（生の出力のパス）` で止まる。
+(6-3) SQLite の試験で `async with db.begin_nested()` が失敗して `backend/tests/test_assistant_karte.py` の口の試験が落ちる（`meet` の差し替えの有無に関係なく 500 になる）ときは、直さずに `NEEDS_DECISION: SQLite で begin_nested が失敗（生の出力のパス）` で止まる。
 
 ### 7. 試しの台本（`docs/handoff/secretary-rulebook/bin0/run_baseline.py`）
 
@@ -1096,7 +1096,7 @@ test("(17) karte・asked: 渡せば今の日時の前に入る・形が違えば
 
 ### 9. 画面（`frontend/src/features/secretary/`）
 
-(9-1) `secretaryApi.ts` 前（:37-54）:
+(9-1) `frontend/src/features/secretary/secretaryApi.ts` 前（:37-54）:
 
 ```ts
 export interface EventDraftData {
@@ -1181,7 +1181,7 @@ export function sendSecretaryMessage(text: string, karte: EventKarte | null = nu
 }
 ```
 
-(9-2) 新規 `SecretaryKarteAsk.tsx` 全文:
+(9-2) 新規 `frontend/src/features/secretary/SecretaryKarteAsk.tsx` 全文:
 
 ```tsx
 /**
@@ -1241,7 +1241,7 @@ export function SecretaryKarteAsk({ draft }: Props) {
 
 - `formatDraftDateLine` の引数 `t` の型（schedule-utils の `Translate`）と `useTranslation()` の `t` が型で合わないときは、`frontend/src/pages/schedule/` で `formatDraftDateLine(` を呼んでいる既存の箇所を `grep -rn "formatDraftDateLine(" frontend/src` で探し、同じ渡し方に合わせる。合わせ方が見つからなければ `NEEDS_DECISION:`。
 
-(9-3) `SecretaryChat.css` の末尾に足す（色・余白・文字はトークンだけ。数値の直書きをしない）:
+(9-3) `frontend/src/features/secretary/SecretaryChat.css` の末尾に足す（色・余白・文字はトークンだけ。数値の直書きをしない）:
 
 ```css
 .secretary-karte {
@@ -1283,7 +1283,7 @@ export function SecretaryKarteAsk({ draft }: Props) {
 }
 ```
 
-(9-4) `SecretaryChat.tsx`:
+(9-4) `frontend/src/features/secretary/SecretaryChat.tsx`:
 
 - 前（:22） `import { SecretaryDraftEvent } from "./SecretaryDraftEvent";` → 後:
 
@@ -1408,7 +1408,7 @@ import {
       case "created":
 ```
 
-(9-5) `SecretaryDraftEvent.tsx`:
+(9-5) `frontend/src/features/secretary/SecretaryDraftEvent.tsx`:
 
 - 前（:30） `  const [title, setTitle] = useState(draft.title);` → 後 `  const [title, setTitle] = useState(draft.title ?? "");`
 - 前（:32-36）:
@@ -1536,7 +1536,7 @@ en 後:
 
 - 確かめ: `node -e 'for (const f of ["ja","en"]) JSON.parse(require("fs").readFileSync("frontend/src/locales/"+f+".json","utf8"))'` が何も出さずに終わること。
 
-(9-7) `SecretaryChat.test.tsx`:
+(9-7) `frontend/src/features/secretary/SecretaryChat.test.tsx`:
 
 - 前（:72） `    calendar_type: "personal",` は eventReply の中の 1 か所だけのはず（ちょうど 1 回でなければ BLOCKED:）。後:
 
@@ -1652,10 +1652,10 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 ## 触らない
 
 - `backend/app/routers/calendar.py`（予定の口）・`backend/app/services/calendar_service.py`（`can_add_meet`）・`/google-calendar/status` の口
-- 予定の画面（`frontend/src/pages/schedule/`）・請求書の下書き（`SecretaryDraftInvoice.tsx`）
+- 予定の画面（`frontend/src/pages/schedule/`）・請求書の下書き（`frontend/src/features/secretary/SecretaryDraftInvoice.tsx`）
 - 決まり帳の口と表（`backend/app/services/secretary_rules.py`・`/assistant/rules`）・使用量の台帳の書き方（`record_usage_isolated`）
 - 容器の見本 `secretary-agent/fixtures/`・`migrations/`・`.github/`・`deploy.yml`・本番の `scripts/`
-- 既存の試験の期待値（この手順書で書き換えると書いた `SecretaryChat.test.tsx` の 2 か所だけは除く）
+- 既存の試験の期待値（この手順書で書き換えると書いた `frontend/src/features/secretary/SecretaryChat.test.tsx` の 2 か所だけは除く）
 - PR は作らない（Opus が作る）
 
 ## 想定される分かれ道
