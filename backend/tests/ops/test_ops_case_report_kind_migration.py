@@ -18,6 +18,14 @@ from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
 import pytest
+from tests.conftest import (
+    OPS_CASE_HAS_SECRET_DDL,
+    OPS_CASE_PLAIN_DEMO_DDL,
+    OPS_CASE_SMALL_PK_DDL,
+    OPS_CASE_TENANT_LEADS_NO_EMAIL_DDL,
+    OPS_CASE_TENANT_VIEWER_ACCOUNTS_DDL,
+    OPS_CASE_TWO_PK_DDL,
+)
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 
@@ -31,7 +39,7 @@ _INCIDENTS_SQL = "20261016_100000_create_ops_incident_tables.sql"
 _CASE_SQL = "20261031_210000_create_ops_case.sql"
 _KIND_SQL = "20261113_200000_add_ops_case_report_kind.sql"
 
-_ROLES = ("salesanchor_app", "ai_unmask", "ai_unmask_owner")
+_ROLES = ("ai_unmask", "ai_unmask_owner", "ai_reader_cloud", "ai_reader", "salesanchor_app", "aic_owner")
 
 
 def _psycopg_url(url: str, dbname: str | None = None) -> str:
@@ -67,7 +75,25 @@ def pg():
         c.execute("SELECT 1 FROM pg_roles WHERE rolname = 'salesanchor_app'")
         if c.fetchone() is None:
             c.execute("CREATE ROLE salesanchor_app NOLOGIN NOSUPERUSER NOBYPASSRLS")
+        c.execute("SELECT 1 FROM pg_roles WHERE rolname = 'aic_owner'")
+        if c.fetchone() is None:
+            c.execute("CREATE ROLE aic_owner LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS")
+        c.execute(_read("20261017_130000_create_ai_reader_role.sql"))
+        c.execute(_read("20261024_100100_create_ai_reader_cloud_role.sql"))
         c.execute(_read(_INCIDENTS_SQL))
+        c.execute(f'GRANT CREATE ON DATABASE "{name}" TO aic_owner')
+        c.execute("ALTER SCHEMA public OWNER TO aic_owner")
+        c.execute("SET ROLE aic_owner")
+        c.execute(OPS_CASE_PLAIN_DEMO_DDL)
+        c.execute(OPS_CASE_SMALL_PK_DDL)
+        c.execute(OPS_CASE_HAS_SECRET_DDL)
+        c.execute(OPS_CASE_TWO_PK_DDL)
+        c.execute("CREATE SCHEMA tenant_001")
+        c.execute(OPS_CASE_TENANT_LEADS_NO_EMAIL_DDL)
+        c.execute(OPS_CASE_TENANT_VIEWER_ACCOUNTS_DDL)
+        c.execute(_read("20261024_100000_create_ai_cloud_meta.sql"))
+        c.execute(_read("20261024_100300_create_ai_cloud_views.sql"))
+        c.execute("RESET ROLE")
         c.execute(_read(_CASE_SQL))
         yield conn
     finally:
