@@ -6,7 +6,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // 指示文と答えの形は secretary-agent のものを同じファイルとして使う（容器では /app に並ぶ。試験では secretary-agent を指す）。
@@ -21,6 +21,8 @@ const MAX_STDERR = 64 * 1024;
 const PROMPT = fs.readFileSync(path.join(ASSET_DIR, "prompt.txt"), "utf8");
 const SCHEMA_PATH = path.join(ASSET_DIR, "schema.json");
 JSON.parse(fs.readFileSync(SCHEMA_PATH, "utf8")); // 起動の時に読めることだけ確かめる（読めなければ起動しない）
+// 頼みの文の組み立ては secretary-agent/compose.mjs を同じファイルとして使う（ADR-1077 便2a。容器では /app に並ぶ。試験では secretary-agent を指す）。
+const { compose, readRules } = await import(pathToFileURL(path.join(ASSET_DIR, "compose.mjs")).href);
 
 // 止め設定（recon §5-2 の手元の試しの18組に、一時 VM で見つけた shell_snapshot を足した19組。card-3e）。web_search の値は引用符ごと渡す（手元の試しと同じ形）。
 const DISABLED_FEATURES = [
@@ -123,7 +125,7 @@ function readEvents(out) {
 }
 
 // codex を 1 回動かす。返り値: { status, body }
-function runCodex(text, now, model) {
+function runCodex(text, now, model, rules) {
   return new Promise((resolve) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sec-"));
     let settled = false;
@@ -210,7 +212,7 @@ function runCodex(text, now, model) {
       finish(200, { intent, usage, error_events: r.errorEvents });
     });
     child.stdin.on("error", () => {});
-    child.stdin.end(`${PROMPT}\n\n今の日時: ${now}\n\n利用者の文:\n${text}`);
+    child.stdin.end(compose(PROMPT, now, text, rules));
   });
 }
 
@@ -227,9 +229,9 @@ const server = http.createServer(async (req, res) => {
         return send(res, e.status || 400, { code: "bad_request" });
       }
       if (!fs.existsSync(AUTH_FILE)) return send(res, 503, { code: "not_ready" });
-      let text, now, model;
+      let text, now, model, rules;
       try {
-        ({ text, now, model } = JSON.parse(raw));
+        ({ text, now, model, rules } = JSON.parse(raw));
       } catch {
         return send(res, 400, { code: "bad_request" });
       }
@@ -239,11 +241,13 @@ const server = http.createServer(async (req, res) => {
       if (typeof model !== "string" || !MODEL_RE.test(model)) {
         return send(res, 400, { code: "bad_request" });
       }
+      rules = readRules(rules);
+      if (rules === null) return send(res, 400, { code: "bad_request" });
       if (busy) return send(res, 429, { code: "busy" });
       busy = true;
       const started = process.hrtime.bigint();
       try {
-        const { status, body } = await runCodex(text, now, model);
+        const { status, body } = await runCodex(text, now, model, rules);
         log(Number(process.hrtime.bigint() - started) / 1e9, status === 200 ? "ok" : body.code);
         return send(res, status, body);
       } finally {

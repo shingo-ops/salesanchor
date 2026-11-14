@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""便0: 秘書の今の当たり具合を測る台本（card-bin0.md）。
+"""便0: 秘書の今の当たり具合を測る台本（card-bin0.md）。便2a で --rules（決まりの JSON の配列）を足した（card-bin2a.md）。
 
 秘書の容器の /intent を表の順に 1 件ずつ呼び、口と同じ順で判定して TSV を出す。
 利用者の文・AI の答えの中身は出力にもログにも出さない。
@@ -123,6 +123,7 @@ def main() -> int:
     parser.add_argument("--url", default="http://secretary-codex:8090")
     parser.add_argument("--model", required=True)
     parser.add_argument("--rounds", type=int, default=3)
+    parser.add_argument("--rules")
     try:
         args = parser.parse_args()
     except SystemExit:
@@ -138,6 +139,18 @@ def main() -> int:
     if args.rounds < 1:
         print("--rounds は 1 以上", file=sys.stderr)
         return 2
+    rules: list[str] = []
+    if args.rules:
+        try:
+            with open(args.rules, encoding="utf-8") as f:
+                rules = json.load(f)
+        except (OSError, ValueError):
+            print("rules が読めません", file=sys.stderr)
+            return 2
+        if not isinstance(rules, list) or not all(isinstance(r, str) and r for r in rules):
+            print("rules は空でない文字の配列にする", file=sys.stderr)
+            return 2
+    print(f"rules_count={len(rules)}", file=sys.stderr)
 
     counts = {g: dict.fromkeys(OUTCOMES, 0) for g in GROUPS}
     all_seconds: list[float] = []
@@ -147,6 +160,8 @@ def main() -> int:
         for rnd in range(1, args.rounds + 1):
             for case in cases:
                 payload = {"text": case["text"], "now": fixed_now, "model": args.model}
+                if rules:
+                    payload["rules"] = rules
                 r = run_case(client, args.url, payload, case["expected"])
                 counts.setdefault(case["group"], dict.fromkeys(OUTCOMES, 0))[r["outcome"]] += 1
                 all_seconds.append(r["seconds"])
