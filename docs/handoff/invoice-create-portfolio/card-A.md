@@ -18,7 +18,7 @@
 - D6 分類表（migrations/20261024_100300_create_ai_cloud_views.sql）に 11 列分の行を足す（請求書 3・関税の決まり 5・中身 3）。数・日付・真偽の型の列は型で通るので行を持たない。1151 を 1162 にする。元の表 docs/handoff/cloud-case-ai/stage1-column-class.tsv にも同じ 11 行を足す（design.md §3-5「SQL と元の表の両方」）。
 - D7 分類表のファイルは reference-allowlist.tsv:7 に sha256 で登録されているので、同じ変更で sha256 と4列目を直す。4列目の最後に ` / invoice-create-portfolio card-A（分類11行追加）` を足す。
 - D8 新しい2表は public の表を外部キーで指さないので、CI の手順（.github/workflows/）は変えない（前例の便2-2c1 は public.countries を指したので手順を足した）。
-- D10 K21 は「請求書の表に振込先の写しと口座番号の列が無い」を §2-10 の試験 test_invoices_hold_no_payment_copy で確かめる。口座番号は振込先の詳細の表だけに残り、ADR-1061 決定9 の列名による隠し方がそのまま効く（ADR-1079）。関税の2表は個人の情報を持たないので ops_case.deny_tables に足さない。
+- D10 K21 は「請求書の表に振込先の写しと口座番号の列が無い」を §2-10 の2つの試験で確かめる。単体の test_invoices_hold_no_payment_copy は DDL と移行の文字を見る。PG の test_new_tenant_shape_equals_migration_and_rules_hold は、実物の請求書の表の列を引き、列名の決まり DENY_COLUMN_RE（backend/app/ops/readonly_query.py:43）に当たる列が0個かを見る（2026-11-14 の設計審査の指摘）。口座番号は振込先の詳細の表だけに残り、ADR-1061 決定9 の列名による隠し方がそのまま効く（ADR-1079）。関税の2表は個人の情報を持たないので ops_case.deny_tables に足さない。
 - D9 移行の試験のテナント番号は 962（2026-11-13 に 11694eaf6、2026-11-14 に 73bf937a8 で backend・migrations・scripts を git grep して、試験と移行には 0 件。当たるのは backend/app/auth/data/common-passwords.txt と scripts/accuracy/llm_compare/README.md だけ）。
 
 ## 0. カード発行前チェック（docs/ai-agents/design-partner.md §5.5）
@@ -639,6 +639,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from app.ops.readonly_query import DENY_COLUMN_RE
 from app.services import tenant as tenant_service
 from tests.rls_bootstrap import (
     _apply_migration_on_conn,
@@ -907,7 +908,7 @@ async def test_new_tenant_shape_equals_migration_and_rules_hold():
                 assert len(before["rls"]) == 2
                 assert all(row[1] for row in before["rls"])
                 assert len(before["policies"]) == 2
-                assert len([c for c in before["columns"] if c[0] == "invoices"]) == 7
+                assert len([c for c in before["columns"] if c[0] == "invoices"]) == 5
                 # 表と列を消してから、全テナントを回す正本をこの試験のテナントだけに絞って 2 回流す
                 async with admin_engine.begin() as conn:
                     for table in reversed(_TABLES):
@@ -919,6 +920,19 @@ async def test_new_tenant_shape_equals_migration_and_rules_hold():
                 async with admin_engine.connect() as conn:
                     after = await _shape(conn)
                 assert before == after
+                # K21（ADR-1079）: 実物の請求書の表に、読み取りの鍵の列名の決まりに当たる列が0個
+                async with admin_engine.connect() as conn:
+                    names = (
+                        await conn.execute(
+                            text(
+                                "SELECT column_name FROM information_schema.columns"
+                                " WHERE table_schema = :s AND table_name = 'invoices'"
+                            ),
+                            {"s": _SCHEMA},
+                        )
+                    ).scalars().all()
+                assert len(names) >= 47  # tenant.py の30列＋移行だけにあった12列＋便Aの5列
+                assert [n for n in names if DENY_COLUMN_RE.search(n.lower())] == []
 
                 conn = await admin_engine.connect()
                 try:
