@@ -111,7 +111,7 @@ class AssistantMessageIn(BaseModel):
     karte: KarteIn | None = None
 ```
 
-(3-3) 前（:38-46）:
+(3-3) 前（:40-48）:
 
 ```python
 class IntentEvent(BaseModel):
@@ -142,7 +142,7 @@ class IntentEvent(BaseModel):
     add_meet: bool | None = None
 ```
 
-(3-4) 前（:124-131）:
+(3-4) 前（:126-133）:
 
 ```python
 class EventDraft(BaseModel):
