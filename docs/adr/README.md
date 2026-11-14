@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-11-14 / ADR 総数: 235 件
+最終更新: 2026-11-14 / ADR 総数: 236 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -254,6 +254,7 @@
 | [ADR-1076](./ADR-1076-customer-status-ssot.md) | ADR-1076: 会社と連絡先の状態は public.customer_statuses を正本にする | Proposed | — | — |
 | [ADR-1077](./ADR-1077-secretary-rulebook.md) | ADR-1077: 秘書の「決まり帳」— 直しは人が承認してから秘書に効かせ、決まりと試しの結果は会社ごとの DB の表 2 つだけに置く | Proposed | — | — |
 | [ADR-1078](./ADR-1078-secretary-event-karte.md) | ADR-1078: 秘書の「予定のカルテ」— 予定の頼みは予定と決め、空いている必須の欄だけを決まった順で 1 つずつ聞く | Proposed | Amends ADR-1056 | — |
+| [ADR-1079](./ADR-1079-payment-method-versions.md) | ADR-1079: 請求書の振込先を「版」で持ち、直しても消しても前の内容を残す | Accepted | Amends ADR-1061 | — |
 
 ## ステータス凡例
 

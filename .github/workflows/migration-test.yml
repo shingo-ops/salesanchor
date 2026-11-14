@@ -1417,6 +1417,16 @@ jobs:
             echo "✅ $sqlfile 成功"
           done
 
+      - name: 変更 SQL の前提の移行を先に実行（障害の出来事の表と相談係の表）
+        if: steps.detect.outputs.has_sql_changes == 'true' && contains(steps.detect.outputs.changed_sql, 'migrations/20261113_200000_add_ops_case_report_kind.sql')
+        run: |
+          # 20261113_200000 は public.ops_incident_events（20261016_100000）と ops_case.reports（20261031_210000）を変えるので、本番と同じ順で先に作る
+          for sqlfile in migrations/20261016_100000_create_ops_incident_tables.sql migrations/20261031_210000_create_ops_case.sql; do
+            echo "▶ $sqlfile を前提として実行中..."
+            psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
+            echo "✅ $sqlfile 成功"
+          done
+
       - name: 変更 SQL を 1回目実行（実行可否・構文チェック）
         if: steps.detect.outputs.has_sql_changes == 'true'
         run: |
