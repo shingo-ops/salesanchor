@@ -111,7 +111,12 @@ fetch() {
     return 0
   fi
   API_CALLS=$((API_CALLS + 1))
-  if gh api "${api_path}" > "${out}" 2> "${WORK}/fetch-err.txt"; then
+  # job の記録（/logs で終わる）は端末の制御文字を含みうる。新しい gh は既定で断るので、記録のときだけ許す（design.md §19-16 決め1）
+  local -a gh_flags=()
+  case "${api_path}" in
+    */logs) gh_flags=(--allow-escape-sequences) ;;
+  esac
+  if gh api "${gh_flags[@]}" "${api_path}" > "${out}" 2> "${WORK}/fetch-err.txt"; then
     LAST_FETCH_REASON=""
     return 0
   fi
@@ -124,6 +129,14 @@ fetch() {
   [ -n "${reason}" ] || reason="理由なし"
   LAST_FETCH_REASON="${reason}"
   return 1
+}
+
+# 記録のファイルから端末の制御文字を消す（design.md §19-16 決め2）。引数: 記録のファイル
+strip_esc() {
+  local lf="$1" esc
+  esc="$(printf '\033')"
+  LC_ALL=C sed "s/${esc}\[[0-9;]*[A-Za-z]//g" "${lf}" | LC_ALL=C tr -d '\033' > "${lf}.clean"
+  mv "${lf}.clean" "${lf}"
 }
 
 # 読めなかった回を1つ数える。引数: 段の名前（回・job一覧・記録・一覧・未完了・時刻なし）、理由（省略時は -）
@@ -248,6 +261,7 @@ process_attempt() {
       add_row "${id}" "${n}" "${started}" "-" "読めなかった" "-" "-"
       continue
     fi
+    strip_esc "${lf}"
 
     # grep -a で行を取り出してから、ここで数える（-c・-q は使わない）
     local limit_lines retry_lines stop_lines
