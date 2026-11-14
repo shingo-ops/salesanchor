@@ -1272,3 +1272,6 @@ run_sql migrations/20261113_100000_create_secretary_rules.sql
 # ADR-1077 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261113_100001_create_secretary_rules_down.sql
 # invoice-create-portfolio 便A: 関税の額の表2つ・請求書の5列を作る（形だけ・行なし・冪等）
 run_sql migrations/20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql
+# ADR-1012 段階4 便2a: 報告の種類の列と種類ごとの一意・出来事の kind case_report と actor case_agent を足す（古い一意は残す・冪等）
+run_sql migrations/20261113_200000_add_ops_case_report_kind.sql
+# ADR-1012 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261113_200001_add_ops_case_report_kind_down.sql
