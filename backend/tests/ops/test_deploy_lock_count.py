@@ -445,6 +445,59 @@ def test_d6_last_attempt_uses_list_fields(tmp_path):
     assert _num("読めなかった", r.stdout) == 0
 
 
+# ---------------------------------------------------------------- D7（第3.4版: 読めなかった理由を残す）
+def test_d7_unreadable_reasons_from_fixture(tmp_path):
+    f = Fixture(tmp_path)
+    # 7001: job の記録のファイルだけ置かない
+    f.run(7001, created="2026-11-10T01:00:00Z")
+    f.attempt(7001, 1, started="2026-11-10T01:00:05Z", mig="failure", chk="success", log=None)
+    # 7002: job 一覧のファイルだけ置かない
+    f.run(7002, created="2026-11-10T02:00:00Z")
+    f.attempt(7002, 1, started="2026-11-10T02:00:05Z", jobs=False)
+    f.write()
+    notify = tmp_path / "notify.txt"
+    r = _run(tmp_path, "--notify-file", str(notify))
+    out = r.stdout
+    assert r.returncode == 2, out
+    assert _num("読めなかった", out) == 2, out
+    assert "読めなかった理由:" in out, out
+    assert re.search(r"^  記録 / 作り物なし: 1$", out, flags=re.MULTILINE), out
+    assert re.search(r"^  job一覧 / 作り物なし: 1$", out, flags=re.MULTILINE), out
+    body = notify.read_text(encoding="utf-8")
+    assert "  記録 / 作り物なし: 1" in body, body
+    assert "  job一覧 / 作り物なし: 1" in body, body
+
+
+def test_d7_reason_strips_query_from_gh_error(tmp_path):
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    fake_gh = bindir / "gh"
+    fake_gh.write_text(
+        "#!/bin/bash\n"
+        "echo 'HTTP 403: x (https://a.example/b?sig=SECRET)' >&2\n"
+        "exit 1\n",
+        encoding="utf-8",
+    )
+    fake_gh.chmod(0o755)
+    env = dict(os.environ)
+    env.pop("GITHUB_STEP_SUMMARY", None)
+    env["PATH"] = f"{bindir}:{env['PATH']}"
+    env["GH_TOKEN"] = "dummy-token-for-test"
+    r = subprocess.run(
+        ["bash", str(SCRIPT), "--since", SINCE, "--until", UNTIL],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    out = r.stdout
+    assert r.returncode == 2, out + r.stderr
+    assert "SECRET" not in out and "SECRET" not in r.stderr
+    assert "https://a.example/b" in out, out
+    assert re.search(r"^  一覧 / HTTP 403: x \(https://a\.example/b: \d+$", out, flags=re.MULTILINE), out
+
+
 # ---------------------------------------------------------------- D5
 def test_d5_counted_phrases_exist_in_the_sources():
     migrations = RUN_MIGRATIONS.read_text(encoding="utf-8")
