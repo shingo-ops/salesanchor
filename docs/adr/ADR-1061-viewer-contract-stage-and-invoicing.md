@@ -6,7 +6,7 @@
 | 起案日 | 2026-11-05 |
 | 方針の決定者 | Shingo（PO） |
 | 改める | Amends ADR-1052（決定5 の「Mac の AI の道 ai_ro は変えない」を、振込先の口座番号の2列に限って改める。決定9。本 ADR が Accepted になったときに効く） |
-| 関連 | ADR-142（会社ごとの表の置き場と作成処理）、ADR-072（文脈の張り直し）、閲覧者の名簿の90日の決まり（docs/handoff/gas-viewer-fresh-fast/review-fable.md:172 の Q7 に答えた docs/handoff/gas-viewer-fresh-fast/design.md:523〜:524。backend/app/tasks/maintenance.py:202 が参照）を改訂、ADR-101（B2B 請求書とは別の表）、ADR-144・ADR-067（金型とトークン）、ADR-027（i18n）、ADR-135・ADR-136（危険な変更の GO） |
+| 関連 | ADR-1079 が本 ADR を一部改める（振込先を版で持ち、直す＝新しい版を足す・消す＝隠す。B2B の請求書は版の番号だけを持つ。閲覧者の請求書の写しは変えない）。ADR-142（会社ごとの表の置き場と作成処理）、ADR-072（文脈の張り直し）、閲覧者の名簿の90日の決まり（docs/handoff/gas-viewer-fresh-fast/review-fable.md:172 の Q7 に答えた docs/handoff/gas-viewer-fresh-fast/design.md:523〜:524。backend/app/tasks/maintenance.py:202 が参照）を改訂、ADR-101（B2B 請求書とは別の表）、ADR-144・ADR-067（金型とトークン）、ADR-027（i18n）、ADR-135・ADR-136（危険な変更の GO） |
 | 設計 | docs/handoff/viewer-contract-stage/design.md |
 
 ---
