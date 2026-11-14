@@ -253,7 +253,7 @@
 | [ADR-1075](./ADR-1075-schedule-recurrence.md) | ADR-1075: 予定の繰り返しは元の予定 1 行に決まり（RRULE）1 つで持ち、表示のときに広げる（回を作り置かない・例外は元を指す行） | Proposed | — | — |
 | [ADR-1076](./ADR-1076-customer-status-ssot.md) | ADR-1076: 会社と連絡先の状態は public.customer_statuses を正本にする | Proposed | — | — |
 | [ADR-1077](./ADR-1077-secretary-rulebook.md) | ADR-1077: 秘書の「決まり帳」— 直しは人が承認してから秘書に効かせ、決まりと試しの結果は会社ごとの DB の表 2 つだけに置く | Proposed | — | — |
-| [ADR-1078](./ADR-1078-payment-method-versions.md) | ADR-1078: 請求書の振込先を「版」で持ち、直しても消しても前の内容を残す | Proposed | Amends ADR-1061 | — |
+| [ADR-1079](./ADR-1079-payment-method-versions.md) | ADR-1079: 請求書の振込先を「版」で持ち、直しても消しても前の内容を残す | Proposed | Amends ADR-1061 | — |
 
 ## ステータス凡例
 

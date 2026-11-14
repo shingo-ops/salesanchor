@@ -1,7 +1,7 @@
 # card: 便A 関税の額の表2つと請求書の5列を作る（invoice-create-portfolio）
 
-状態: カード発行（Opus、2026-11-13）。PO の設計承認と実装承認は 2026-11-13「1,（２）決済手数料を合計に足す仕組みは、今回は作りません。別の作業に回します。→次便で」と、同じ日の常設の指示「…確立したなら進める。…PRマージ、デプロイまで完走させてくれ。」（design.md 第8版・審査 APPROVE）。第9版（2026-11-14）: PO が振込先を版で持つ案を「1,」で選んだ（ADR-1078）。請求書の写しの2列（payment_method_snapshot・payment_account_number）を外し、請求書の列は5列になった。K21 は「請求書の表に写しと口座番号の列が無い」に変わった。
-設計: docs/handoff/invoice-create-portfolio/design.md §3-3（関税）・§3-5（請求書の列・tenant.py・分類表）・§5 の便 A・§8 の K17・K21（第9版）・ADR-1078。
+状態: カード発行（Opus、2026-11-13）。PO の設計承認と実装承認は 2026-11-13「1,（２）決済手数料を合計に足す仕組みは、今回は作りません。別の作業に回します。→次便で」と、同じ日の常設の指示「…確立したなら進める。…PRマージ、デプロイまで完走させてくれ。」（design.md 第8版・審査 APPROVE）。第9版（2026-11-14）: PO が振込先を版で持つ案を「1,」で選んだ（ADR-1079）。請求書の写しの2列（payment_method_snapshot・payment_account_number）を外し、請求書の列は5列になった。K21 は「請求書の表に写しと口座番号の列が無い」に変わった。
+設計: docs/handoff/invoice-create-portfolio/design.md §3-3（関税）・§3-5（請求書の列・tenant.py・分類表）・§5 の便 A・§8 の K17・K21（第9版）・ADR-1079。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。本番・GitHub の secret・DB には触らない。PR は作らない（Opus が作る）。
 基準: origin/main `73bf937a8` で行番号を測った（11694eaf6 で測った値を 2026-11-14 に 73bf937a8 で測り直し、変わっていない）。行番号がずれていたら「変更前」の文で場所を探す（同じ文が 2 か所あれば BLOCKED: で停止）。
 危険便か: はい（`migrations/` に新しい SQL を足し、毎回流れる分類表の SQL と `scripts/migration-guard/reference-allowlist.tsv`・`scripts/run_all_migrations.sh` を変える）。マージ前に Opus の審査役の APPROVE・CI 全通過・ADR-136 の GO 記録と直前のバックアップの確認を必須にする（担当の作業ではない）。
@@ -13,12 +13,12 @@
 - D1 この便は「表と列を作るだけ」。計算・API・画面・PDF は便 B〜D で行う。値は入れない（ADR-155）。
 - D2 会社ごとのスキーマに2表を作る: 関税の決まり `tenant_duty_rules`（国・送料の会社・有効期間・根拠の URL）と、その中身 `tenant_duty_rule_components`（関税・手数料などの率と下限・上限）。中身は決まりを外部キーで指し、決まりを消すと中身も消える（ON DELETE CASCADE）。関税の条件（DAP・DDU・DDP）の列は持たない（正本は tenant_settings.duty_incoterms だけ。design.md §3-3）。
 - D3 設計 §3-3 の「note、is_active、created_at、updated_at」のとおり、関税の表に更新した人の列（updated_by_user_id）は作らない。
-- D4 請求書 `invoices` に5列を足す: payment_method_id（INTEGER・外部キーなし。振込先の版の番号。ADR-1078）・tax_rate_percent（NUMERIC(5, 2)）・shipping_carrier（VARCHAR(50)）・shipping_service（VARCHAR(100)）・shipping_snapshot（JSONB）。どれも NULL 可（design.md §3-5）。振込先の写しと口座番号の列は作らない（第9版。口座番号は振込先の詳細の表だけに置く）。
+- D4 請求書 `invoices` に5列を足す: payment_method_id（INTEGER・外部キーなし。振込先の版の番号。ADR-1079）・tax_rate_percent（NUMERIC(5, 2)）・shipping_carrier（VARCHAR(50)）・shipping_service（VARCHAR(100)）・shipping_snapshot（JSONB）。どれも NULL 可（design.md §3-5）。振込先の写しと口座番号の列は作らない（第9版。口座番号は振込先の詳細の表だけに置く）。
 - D5 新しい会社は backend/app/services/tenant.py で同じ形に作る。あわせて、移行だけで足してあって tenant.py に無い請求書の12列（ship_to_snapshot など。型は 20260604_160000・20260611_020000・20260612_131520 の移行と同じ）と、見積の明細・請求書の明細の hs_code を tenant.py に足す（design.md §2・recon §4-1）。
 - D6 分類表（migrations/20261024_100300_create_ai_cloud_views.sql）に 11 列分の行を足す（請求書 3・関税の決まり 5・中身 3）。数・日付・真偽の型の列は型で通るので行を持たない。1151 を 1162 にする。元の表 docs/handoff/cloud-case-ai/stage1-column-class.tsv にも同じ 11 行を足す（design.md §3-5「SQL と元の表の両方」）。
 - D7 分類表のファイルは reference-allowlist.tsv:7 に sha256 で登録されているので、同じ変更で sha256 と4列目を直す。4列目の最後に ` / invoice-create-portfolio card-A（分類11行追加）` を足す。
 - D8 新しい2表は public の表を外部キーで指さないので、CI の手順（.github/workflows/）は変えない（前例の便2-2c1 は public.countries を指したので手順を足した）。
-- D10 K21 は「請求書の表に振込先の写しと口座番号の列が無い」を §2-10 の試験 test_invoices_hold_no_payment_copy で確かめる。口座番号は振込先の詳細の表だけに残り、ADR-1061 決定9 の列名による隠し方がそのまま効く（ADR-1078）。関税の2表は個人の情報を持たないので ops_case.deny_tables に足さない。
+- D10 K21 は「請求書の表に振込先の写しと口座番号の列が無い」を §2-10 の試験 test_invoices_hold_no_payment_copy で確かめる。口座番号は振込先の詳細の表だけに残り、ADR-1061 決定9 の列名による隠し方がそのまま効く（ADR-1079）。関税の2表は個人の情報を持たないので ops_case.deny_tables に足さない。
 - D9 移行の試験のテナント番号は 962（2026-11-13 に 11694eaf6、2026-11-14 に 73bf937a8 で backend・migrations・scripts を git grep して、試験と移行には 0 件。当たるのは backend/app/auth/data/common-passwords.txt と scripts/accuracy/llm_compare/README.md だけ）。
 
 ## 0. カード発行前チェック（docs/ai-agents/design-partner.md §5.5）
@@ -92,7 +92,7 @@
 -- 中身（各テナントのスキーマ）:
 --   tenant_duty_rules              関税の決まり（行き先の国・送料の会社・有効期間・根拠の URL。DDP のときに使う）
 --   tenant_duty_rule_components    関税の決まりの中身（関税・手数料などの率と下限・上限）
---   invoices.payment_method_id         請求書で案内した振込先の版の番号（外部キーなし。版は消えない。ADR-1078）
+--   invoices.payment_method_id         請求書で案内した振込先の版の番号（外部キーなし。版は消えない。ADR-1079）
 --   invoices.tax_rate_percent          使った消費税の率
 --   invoices.shipping_carrier          送料の会社
 --   invoices.shipping_service          送料のサービス名
@@ -622,7 +622,7 @@ def test_t10_duty_and_invoice_columns_are_classified_on_bootstrapped_db(cluster)
 """invoice-create-portfolio 便A: 関税の決まりの表 2 つ・請求書の 5 列の構造と決まりの試験。
 
 - 単体（PostgreSQL 不要）: 新テナント用 DDL に表 2 つと請求書の列（移行だけにあった 12 列を含む）と明細の hs_code が含まれ、
-  移行ファイルが登録され、値を入れない。請求書に振込先の写しと口座番号の列が無い（K21・ADR-1078）。
+  移行ファイルが登録され、値を入れない。請求書に振込先の写しと口座番号の列が無い（K21・ADR-1079）。
 - PG（CI で実行）: 新テナントを作った形（tenant.py）と、表と列を消して移行ファイルを 2 回流した形が同じ。
   決まり（CHECK・外部キー・消したときの連鎖）が設計どおりに効き、別の会社の文脈では行が見えない（K17）。
   試験の中で入れた行と役割は最後に戻す。ゲートは CI が実際に設定する RLS_ADMIN_DATABASE_URL（前例 test_tenant_issuer_tables_pg.py と同じ形）。
@@ -749,7 +749,7 @@ def test_migration_writes_no_values():
 
 
 def test_invoices_hold_no_payment_copy():
-    """K21（ADR-1078）: 請求書は振込先の版の番号だけを持つ。振込先の写しと口座番号の列は、新しい会社の DDL にも移行にも無い。"""
+    """K21（ADR-1079）: 請求書は振込先の版の番号だけを持つ。振込先の写しと口座番号の列は、新しい会社の DDL にも移行にも無い。"""
     invoices = _block(tenant_service._TENANT_TABLES_SQL, "{schema}.invoices (")
     body = (_REPO_ROOT / "migrations" / _MIGRATION).read_text(encoding="utf-8")
     for name in ("payment_method_snapshot", "payment_account_number", "account_number", "iban"):
