@@ -1237,7 +1237,7 @@ K9 の報告で案 1 を「push が止まる回数は増えません」と書い
 | 基準 | 検証方法 |
 |---|---|
 | L1 記録していないファイルだけがある状態で入口を手で流すと、写しで流れて終了コード 0・行は 1 行・8 列目 untracked-copy・2 列目は元の枝の名・印が元の git の場所に HEAD で書かれる | test_uncommitted_change_exits_2 を書き換え（名も変える）。名前のある枝（`git checkout -b zz-orig`）で流し、2 列目が zz-orig であることを確かめる（切り離しのままだと空＝空で空振りする）。印は read_stamp() で確かめる |
-| L2 その記録していないファイルが写しに入らない：記録していない `backend/app/routers/zz_fixture_router.py` を置いて `--only tenant-lint` で流すと 0 | 試験 1 本。中身は既存の test_tenant_schema_violation_fails（test_check_before_submit.py:137-145）と同じ見本 `scripts/tests/rule-fixtures/tenant-schema/fail-commit-without-reset/files/backend/app/routers/zz_fixture_router.py.fixture`。同じファイルを commit した場合は 1 になることも同じ試験で確かめ、空振りでないことを示す |
+| L2 その記録していないファイルが写しに入らない：記録していない backend/app/routers/zz_fixture_router.py（試験の中で置く見本。リポジトリには無い）を置いて `--only tenant-lint` で流すと 0 | 試験 1 本。中身は既存の test_tenant_schema_violation_fails（test_check_before_submit.py:137-145）と同じ見本 `scripts/tests/rule-fixtures/tenant-schema/fail-commit-without-reset/files/backend/app/routers/zz_fixture_router.py.fixture`。同じファイルを commit した場合は 1 になることも同じ試験で確かめ、空振りでないことを示す |
 | L3 写しの中身が確認に落ちると終了コード 1 になり、pre-push が止める | 試験 1 本（違反を commit した上で記録していないファイルを置き、pre-push の rc 1） |
 | L4 pre-push 経由：記録していないファイルだけで rc 0・行は 1 行・6 列目 pre-push・8 列目 untracked-copy | test_prepush_does_not_stop_on_uncommitted_change を書き換える |
 | L5 追跡中の変更は今までどおり 2・dirty-tracked | 既存 test_prepush_dirty_tracked_reason がそのまま pass。手で流す版を 1 本足す |
