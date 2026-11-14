@@ -1270,3 +1270,5 @@ run_sql migrations/20261112_170000_add_calendar_events_recurrence.sql
 # ADR-1077 便1: 秘書の決まり帳の表 2 つ（public.secretary_rules・public.secretary_rule_checks・FORCE RLS）と使いみち secretary_regression を足す（作るだけ・行なし・冪等）
 run_sql migrations/20261113_100000_create_secretary_rules.sql
 # ADR-1077 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261113_100001_create_secretary_rules_down.sql
+# invoice-create-portfolio 便A: 関税の額の表2つ・請求書の5列を作る（形だけ・行なし・冪等）
+run_sql migrations/20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql
