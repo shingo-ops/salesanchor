@@ -88,6 +88,8 @@ OTHER_HALT=0
 UNPARSED_HOLDERS=0
 declare -A SEEN
 declare -A HOLDERS
+declare -A REASONS
+LAST_FETCH_REASON=""
 ROWS=""
 FAILED_DAYS=""
 UNREADABLE_RUNS=""
@@ -100,21 +102,35 @@ OTHER_HALT_RUNS=""
 fetch() {
   local api_path="$1" rel="$2" out="$3"
   if [ -n "${FROM_DIR}" ]; then
-    [ -f "${FROM_DIR}/${rel}" ] || return 1
+    if [ ! -f "${FROM_DIR}/${rel}" ]; then
+      LAST_FETCH_REASON="作り物なし"
+      return 1
+    fi
     cp "${FROM_DIR}/${rel}" "${out}"
+    LAST_FETCH_REASON=""
     return 0
   fi
   API_CALLS=$((API_CALLS + 1))
-  if gh api "${api_path}" > "${out}" 2>/dev/null; then
+  if gh api "${api_path}" > "${out}" 2> "${WORK}/fetch-err.txt"; then
+    LAST_FETCH_REASON=""
     return 0
   fi
   API_FAILED=1
+  # 失敗の文の最初の空でない行。? から後ろ（署名つき URL）を消し、160字で切る（design.md §19-15 決め1）
+  local reason
+  reason="$(grep -a -m1 '[^[:space:]]' "${WORK}/fetch-err.txt" 2>/dev/null | tr -d '\0')"
+  reason="${reason%%\?*}"
+  reason="${reason:0:160}"
+  [ -n "${reason}" ] || reason="理由なし"
+  LAST_FETCH_REASON="${reason}"
   return 1
 }
 
-# 読めなかった回を1つ数える
+# 読めなかった回を1つ数える。引数: 段の名前（回・job一覧・記録・一覧・未完了・時刻なし）、理由（省略時は -）
 mark_unreadable() {
+  local stage="$1" reason="${2:--}"
   UNREADABLE=$((UNREADABLE + 1))
+  REASONS["${stage} / ${reason}"]=$(( ${REASONS["${stage} / ${reason}"]:-0} + 1 ))
 }
 
 # 行の頭の時刻（最初の空白までの1語とその後の空白1つ）を外す
@@ -174,7 +190,7 @@ process_attempt() {
     af="${WORK}/att-${key}.json"
     if ! fetch "repos/${REPO}/actions/runs/${id}/attempts/${n}" "attempts/${key}.json" "${af}" \
        || ! jq -e . "${af}" >/dev/null 2>&1; then
-      mark_unreadable
+      mark_unreadable "回" "${LAST_FETCH_REASON:--}"
       UNREADABLE_RUNS="${UNREADABLE_RUNS} ${id}"
       add_row "${id}" "${n}" "-" "-" "読めなかった" "-" "-"
       return 0
@@ -186,7 +202,7 @@ process_attempt() {
   se=""
   [ -n "${window_ts}" ] && se="$(date -d "${window_ts}" +%s 2>/dev/null)"
   if [ -z "${se}" ]; then
-    mark_unreadable
+    mark_unreadable "時刻なし" "-"
     UNREADABLE_RUNS="${UNREADABLE_RUNS} ${id}"
     add_row "${id}" "${n}" "-" "-" "読めなかった" "-" "-"
     return 0
@@ -196,7 +212,7 @@ process_attempt() {
     return 0
   fi
   if [ "${status}" != "completed" ]; then
-    mark_unreadable
+    mark_unreadable "未完了" "-"
     UNREADABLE_RUNS="${UNREADABLE_RUNS} ${id}"
     add_row "${id}" "${n}" "${started}" "-" "読めなかった" "-" "-"
     return 0
@@ -205,7 +221,7 @@ process_attempt() {
   local jf="${WORK}/jobs-${key}.json"
   if ! fetch "repos/${REPO}/actions/runs/${id}/attempts/${n}/jobs?per_page=100" "jobs/${key}.json" "${jf}" \
      || ! jq -e . "${jf}" >/dev/null 2>&1; then
-    mark_unreadable
+    mark_unreadable "job一覧" "${LAST_FETCH_REASON:--}"
     UNREADABLE_RUNS="${UNREADABLE_RUNS} ${id}"
     add_row "${id}" "${n}" "${started}" "-" "読めなかった" "-" "-"
     return 0
@@ -227,7 +243,7 @@ process_attempt() {
 
     local lf="${WORK}/log-${job}.log"
     if ! fetch "repos/${REPO}/actions/jobs/${job}/logs" "logs/${job}.log" "${lf}"; then
-      mark_unreadable
+      mark_unreadable "記録" "${LAST_FETCH_REASON:--}"
       UNREADABLE_RUNS="${UNREADABLE_RUNS} ${id}"
       add_row "${id}" "${n}" "${started}" "-" "読めなかった" "-" "-"
       continue
@@ -291,14 +307,14 @@ list_day() {
     [ "${page}" -eq 1 ] || rel="runs/${d}-p${page}.json"
     if ! fetch "repos/${REPO}/actions/workflows/deploy.yml/runs?created=${d}..${d}&per_page=100&page=${page}" "${rel}" "${pf}" \
        || ! jq -e . "${pf}" >/dev/null 2>&1; then
-      mark_unreadable
+      mark_unreadable "一覧" "${LAST_FETCH_REASON:--}"
       FAILED_DAYS="${FAILED_DAYS} ${d}"
       return 0
     fi
     total="$(jq -r '.total_count // 0' "${pf}")"
     if [ "${total}" -ge 1000 ]; then
       # 1回の検索は1,000件まで。黙って切らず、読めなかったとして扱う
-      mark_unreadable
+      mark_unreadable "一覧" "-"
       FAILED_DAYS="${FAILED_DAYS} ${d}"
       return 0
     fi
@@ -371,6 +387,10 @@ OUT="${WORK}/out.txt"
   echo "STOP停止: ${STOP_HALT}"
   echo "その他の停止: ${OTHER_HALT}"
   echo "読めなかった: ${UNREADABLE}"
+  echo "読めなかった理由:"
+  for k in "${!REASONS[@]}"; do
+    echo "  ${k}: ${REASONS[${k}]}"
+  done | sort
   echo "握り手の行（名前ごと）:"
   for k in "${!HOLDERS[@]}"; do
     echo "  ${k}: ${HOLDERS[${k}]}"
@@ -420,6 +440,11 @@ if [ -n "${NOTIFY_FILE}" ] && [ "${NOTIFY_TOTAL}" -ne 0 ]; then
 STOP停止 ${STOP_HALT}: $(ids_text "${STOP_RUNS}")
 その他の停止 ${OTHER_HALT}: $(ids_text "${OTHER_HALT_RUNS}")
 読めなかった ${UNREADABLE}: $(ids_text "${UNREADABLE_RUNS}")"
+  reason_lines="$(for k in "${!REASONS[@]}"; do echo "  ${k}: ${REASONS[${k}]}"; done | sort | head -n 5)"
+  if [ -n "${reason_lines}" ]; then
+    body="${body}
+${reason_lines}"
+  fi
   if [ -n "${FAILED_DAYS}" ]; then
     body="${body}
 一覧を引けなかった日:${FAILED_DAYS}"
