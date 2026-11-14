@@ -51,6 +51,7 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
                 "20261106_150000_add_discord_role_link_tables.sql",
                 "20261112_160000_create_tenant_issuer_and_payment_tables.sql",
                 "20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql",
+                "20261115_100000_add_payment_method_versioning.sql",
             }
         ),
     ),
@@ -111,12 +112,22 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
     "test_tenant_issuer_tables_pg.py": (
         "scoped",
         "",
-        frozenset({"20261112_160000_create_tenant_issuer_and_payment_tables.sql"}),
+        frozenset(
+            {
+                "20261112_160000_create_tenant_issuer_and_payment_tables.sql",
+                "20261115_100000_add_payment_method_versioning.sql",
+            }
+        ),
     ),
     "test_tenant_duty_rules_pg.py": (
         "scoped",
         "",
         frozenset({"20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql"}),
+    ),
+    "test_tenant_payment_versioning_pg.py": (
+        "scoped",
+        "",
+        frozenset({"20261115_100000_add_payment_method_versioning.sql"}),
     ),
     "test_notification_channels_blueprint_key_ddl.py": (
         "text_only",
