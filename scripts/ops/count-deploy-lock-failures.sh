@@ -161,21 +161,27 @@ collect_holders() {
 
 # 1つの (run, 回) を数える
 process_attempt() {
-  local id="$1" n="$2" created="$3" key="$1-$2"
+  local id="$1" n="$2" created="$3" list_started="${4:-}" list_status="${5:-}" list_attempt="${6:-}" key="$1-$2"
   [ -z "${SEEN[${key}]:-}" ] || return 0
   SEEN["${key}"]=1
 
-  local af="${WORK}/att-${key}.json"
-  if ! fetch "repos/${REPO}/actions/runs/${id}/attempts/${n}" "attempts/${key}.json" "${af}" \
-     || ! jq -e . "${af}" >/dev/null 2>&1; then
-    mark_unreadable
-    UNREADABLE_RUNS="${UNREADABLE_RUNS} ${id}"
-    add_row "${id}" "${n}" "-" "-" "読めなかった" "-" "-"
-    return 0
+  local started status window_ts se af
+  if [ "${n}" = "${list_attempt}" ] && [ -n "${list_started}" ] && [ -n "${list_status}" ]; then
+    # 最後の回は、一覧の run_started_at と status を使い、回の API を呼ばない（design.md §19-4 の 2b. (ii)）
+    started="${list_started}"
+    status="${list_status}"
+  else
+    af="${WORK}/att-${key}.json"
+    if ! fetch "repos/${REPO}/actions/runs/${id}/attempts/${n}" "attempts/${key}.json" "${af}" \
+       || ! jq -e . "${af}" >/dev/null 2>&1; then
+      mark_unreadable
+      UNREADABLE_RUNS="${UNREADABLE_RUNS} ${id}"
+      add_row "${id}" "${n}" "-" "-" "読めなかった" "-" "-"
+      return 0
+    fi
+    started="$(jq -r '.run_started_at // empty' "${af}")"
+    status="$(jq -r '.status // empty' "${af}")"
   fi
-  local started status window_ts se
-  started="$(jq -r '.run_started_at // empty' "${af}")"
-  status="$(jq -r '.status // empty' "${af}")"
   window_ts="${started}"
   se=""
   [ -n "${window_ts}" ] && se="$(date -d "${window_ts}" +%s 2>/dev/null)"
@@ -296,7 +302,7 @@ list_day() {
       FAILED_DAYS="${FAILED_DAYS} ${d}"
       return 0
     fi
-    jq -r '.workflow_runs[]? | [(.id | tostring), (.created_at // ""), ((.run_attempt // 1) | tostring)] | @tsv' "${pf}" >> "${WORK}/runs.tsv"
+    jq -r '.workflow_runs[]? | [(.id | tostring), (.created_at // ""), ((.run_attempt // 1) | tostring), ((.run_started_at // "") | if . == "" then "-" else . end), ((.status // "") | if . == "" then "-" else . end)] | @tsv' "${pf}" >> "${WORK}/runs.tsv"
     count="$(jq -r '(.workflow_runs // []) | length' "${pf}")"
     [ "${count}" -ge 100 ] || return 0
     page=$((page + 1))
@@ -315,11 +321,27 @@ while [ "$(date -u -d "${d}" +%s)" -le "$(date -u -d "${END_D}" +%s)" ]; do
   d="$(date -u -d "${d} +1 day" +%F)"
 done
 
-while IFS=$'\t' read -r rid rcreated rattempt; do
+# 一覧の列: id・created_at・run_attempt・run_started_at・status（空の列は "-"。タブの連続で列が詰まるのを防ぐ）
+while IFS=$'\t' read -r rid rcreated rattempt rstart rstatus; do
   [ -n "${rid}" ] || continue
+  [ "${rstart}" != "-" ] || rstart=""
+  [ "${rstatus}" != "-" ] || rstatus=""
+  # 決まり (i): 期間の外の run は、回の API も job の API も呼ばずに飛ばす（出力にも数にも入れない）
+  if [ -n "${rstart}" ]; then
+    rse="$(date -d "${rstart}" +%s 2>/dev/null)"
+    if [ -n "${rse}" ] && [ "${rse}" -lt "${SINCE_E}" ]; then
+      continue
+    fi
+  fi
+  if [ -n "${rcreated}" ]; then
+    rce="$(date -d "${rcreated}" +%s 2>/dev/null)"
+    if [ -n "${rce}" ] && [ "${rce}" -ge "${UNTIL_E}" ]; then
+      continue
+    fi
+  fi
   a=1
   while [ "${a}" -le "${rattempt}" ]; do
-    process_attempt "${rid}" "${a}" "${rcreated}"
+    process_attempt "${rid}" "${a}" "${rcreated}" "${rstart}" "${rstatus}" "${rattempt}"
     a=$((a + 1))
   done
 done < "${WORK}/runs.tsv"

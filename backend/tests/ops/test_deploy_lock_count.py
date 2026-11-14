@@ -58,8 +58,21 @@ class Fixture:
         for sub in ("runs", "attempts", "jobs", "logs"):
             (root / sub).mkdir(parents=True, exist_ok=True)
 
-    def run(self, run_id: int, *, created: str, attempts: int = 1) -> None:
-        self.runs[created[:10]].append({"id": run_id, "created_at": created, "run_attempt": attempts})
+    def run(
+        self,
+        run_id: int,
+        *,
+        created: str,
+        attempts: int = 1,
+        list_started: str | None = None,
+        list_status: str | None = None,
+    ) -> None:
+        entry: dict = {"id": run_id, "created_at": created, "run_attempt": attempts}
+        if list_started is not None:
+            entry["run_started_at"] = list_started
+        if list_status is not None:
+            entry["status"] = list_status
+        self.runs[created[:10]].append(entry)
 
     def attempt(
         self,
@@ -400,6 +413,36 @@ def test_d4_secret_handoff_matches_the_precedent():
 def test_d4_test_yml_runs_when_the_workflow_changes():
     text = TEST_YML.read_text(encoding="utf-8")
     assert text.count(".github/workflows/weekly-deploy-lock-count.yml") == 2
+
+
+# ---------------------------------------------------------------- D6（第3.3版: 呼び出しを減らす）
+def test_d6_skips_out_of_window_runs_without_calls(tmp_path):
+    f = Fixture(tmp_path)
+    # 一覧の run_started_at が期間の始めより前（日本時間 11/09 00:00 = UTC 11/08 15:00Z より前）。回・job・記録のファイルは置かない
+    f.run(6001, created="2026-11-05T01:00:00Z", attempts=2, list_started="2026-11-05T01:10:00Z", list_status="completed")
+    # 一覧の created_at が期間の終わり以後（日本時間 11/16 00:00 = UTC 11/15 15:00Z 以後）
+    f.run(6002, created="2026-11-15T16:00:00Z", list_started="2026-11-15T16:00:05Z", list_status="completed")
+    f.write()
+    r = _run(tmp_path)
+    out = r.stdout
+    assert r.returncode == 0, out + r.stderr
+    assert _rows(out) == [], out
+    assert "6001" not in out and "6002" not in out
+    assert _num("読めなかった", out) == 0
+
+
+def test_d6_last_attempt_uses_list_fields(tmp_path):
+    f = Fixture(tmp_path)
+    log = _with_ts([b">>> [40/401] lock conflict; retry limit reached (file 40/40, total 40/40): migrations/0400.sql"])
+    f.run(6101, created="2026-11-10T01:00:00Z", list_started="2026-11-10T01:00:05Z", list_status="completed")
+    # 回のファイルは置かず（attempts/ を呼ばずに済む）、job と記録だけ置く
+    f.attempt(6101, 1, started="2026-11-10T01:00:05Z", mig="failure", chk="success", log=log)
+    (tmp_path / "attempts" / "6101-1.json").unlink()
+    f.write()
+    r = _run(tmp_path)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert _klass(r.stdout, 6101, 1) == ["上限失敗", "停止なし"], r.stdout
+    assert _num("読めなかった", r.stdout) == 0
 
 
 # ---------------------------------------------------------------- D5
