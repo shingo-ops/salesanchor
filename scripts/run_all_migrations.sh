@@ -1275,3 +1275,5 @@ run_sql migrations/20261113_120000_create_tenant_duty_rules_and_invoice_columns.
 # ADR-1012 段階4 便2a: 報告の種類の列と種類ごとの一意・出来事の kind case_report と actor case_agent を足す（古い一意は残す・冪等）
 run_sql migrations/20261113_200000_add_ops_case_report_kind.sql
 # ADR-1012 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261113_200001_add_ops_case_report_kind_down.sql
+# invoice-create-portfolio 便V: 振込先を版で持つ（列2つ・見張りの関数3つ・見張り6つ。全テナント・冪等・ADR-1079）
+run_sql migrations/20261115_100000_add_payment_method_versioning.sql

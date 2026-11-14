@@ -1275,11 +1275,18 @@ CREATE TABLE IF NOT EXISTS {schema}.tenant_invoice_payment_methods (
     updated_by_user_id INTEGER,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    superseded_by_id INTEGER,
+    deleted_at TIMESTAMPTZ,
     CONSTRAINT uq_tenant_invoice_payment_methods_id_type UNIQUE (id, tenant_id, method_type),
     CONSTRAINT chk_tenant_invoice_payment_methods_region CHECK (region IN ('domestic', 'overseas')),
     CONSTRAINT chk_tenant_invoice_payment_methods_method_type CHECK (method_type IN ('bank', 'wise')),
-    CONSTRAINT chk_tenant_invoice_payment_methods_display_name CHECK (btrim(display_name) <> '')
+    CONSTRAINT chk_tenant_invoice_payment_methods_display_name CHECK (btrim(display_name) <> ''),
+    CONSTRAINT chk_tenant_invoice_payment_methods_superseded_not_self CHECK (superseded_by_id <> id),
+    CONSTRAINT fk_tenant_invoice_payment_methods_superseded_by FOREIGN KEY (superseded_by_id) REFERENCES {schema}.tenant_invoice_payment_methods (id)
 );
+
+-- invoice-create-portfolio 便V: 次の版を指せるのは前の版1つだけ（ADR-1079）
+CREATE UNIQUE INDEX IF NOT EXISTS uq_tenant_invoice_payment_methods_superseded_by ON {schema}.tenant_invoice_payment_methods (superseded_by_id) WHERE superseded_by_id IS NOT NULL;
 
 -- ADR-1061 2-2c1: 銀行振込先の詳細（振込先の一覧 1 行に 1 行）
 CREATE TABLE IF NOT EXISTS {schema}.tenant_invoice_payment_bank (
@@ -1320,6 +1327,114 @@ CREATE TABLE IF NOT EXISTS {schema}.tenant_invoice_payment_wise (
     CONSTRAINT chk_tenant_invoice_payment_wise_required CHECK (btrim(account_holder) <> '' AND btrim(wise_email) <> ''),
     CONSTRAINT fk_tenant_invoice_payment_wise_method FOREIGN KEY (payment_method_id, tenant_id, method_type) REFERENCES {schema}.tenant_invoice_payment_methods (id, tenant_id, method_type) ON DELETE CASCADE
 );
+
+-- invoice-create-portfolio 便V: 振込先は版で持つ。詳細は書き足すだけ・振込先の行は消さない・表を空にしない（ADR-1079）
+CREATE OR REPLACE FUNCTION {schema}.trg_payment_detail_immutable()
+RETURNS TRIGGER AS $pv_detail$
+DECLARE
+    v_id INTEGER;
+    v_superseded INTEGER;
+    v_deleted TIMESTAMPTZ;
+BEGIN
+    IF TG_OP <> 'INSERT' THEN
+        RAISE EXCEPTION 'payment detail rows are immutable (versioned). Add a new version instead.';
+    END IF;
+    IF NEW.payment_method_id IS NOT NULL THEN
+        EXECUTE 'SELECT id, superseded_by_id, deleted_at FROM ' || quote_ident(TG_TABLE_SCHEMA)
+            || '.tenant_invoice_payment_methods WHERE id = ' || NEW.payment_method_id || ' FOR SHARE'
+            INTO v_id, v_superseded, v_deleted;
+        IF v_id IS NULL OR v_superseded IS NOT NULL OR v_deleted IS NOT NULL THEN
+            RAISE EXCEPTION 'payment detail can be added only to the current version of a payment method';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$pv_detail$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION {schema}.trg_payment_method_version_guard()
+RETURNS TRIGGER AS $pv_method$
+DECLARE
+    v_id INTEGER;
+    v_region VARCHAR(20);
+    v_type VARCHAR(10);
+    v_superseded INTEGER;
+    v_deleted TIMESTAMPTZ;
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'payment methods cannot be deleted. Set deleted_at instead.';
+    END IF;
+    IF TG_OP = 'INSERT' THEN
+        IF NEW.superseded_by_id IS NOT NULL OR NEW.deleted_at IS NOT NULL THEN
+            RAISE EXCEPTION 'a new payment method must start as the current version';
+        END IF;
+        RETURN NEW;
+    END IF;
+    IF NEW.id IS DISTINCT FROM OLD.id
+        OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+        OR NEW.region IS DISTINCT FROM OLD.region
+        OR NEW.method_type IS DISTINCT FROM OLD.method_type
+        OR NEW.display_name IS DISTINCT FROM OLD.display_name
+        OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+        RAISE EXCEPTION 'payment method versions are immutable. Add a new version instead.';
+    END IF;
+    IF OLD.superseded_by_id IS NOT NULL AND NEW.superseded_by_id IS DISTINCT FROM OLD.superseded_by_id THEN
+        RAISE EXCEPTION 'superseded_by_id can be set only once';
+    END IF;
+    IF OLD.deleted_at IS NOT NULL AND NEW.deleted_at IS DISTINCT FROM OLD.deleted_at THEN
+        RAISE EXCEPTION 'deleted_at can be set only once';
+    END IF;
+    IF OLD.deleted_at IS NULL AND NEW.deleted_at IS NOT NULL
+        AND (OLD.superseded_by_id IS NOT NULL OR NEW.superseded_by_id IS NOT NULL) THEN
+        RAISE EXCEPTION 'only the current version can be deleted';
+    END IF;
+    IF OLD.superseded_by_id IS NULL AND NEW.superseded_by_id IS NOT NULL THEN
+        IF OLD.deleted_at IS NOT NULL OR NEW.deleted_at IS NOT NULL THEN
+            RAISE EXCEPTION 'a deleted payment method cannot be superseded';
+        END IF;
+        IF NEW.superseded_by_id <= OLD.id THEN
+            RAISE EXCEPTION 'the next version must be newer than the current version';
+        END IF;
+        EXECUTE 'SELECT id, region, method_type, superseded_by_id, deleted_at FROM ' || quote_ident(TG_TABLE_SCHEMA)
+            || '.tenant_invoice_payment_methods WHERE id = ' || NEW.superseded_by_id || ' FOR SHARE'
+            INTO v_id, v_region, v_type, v_superseded, v_deleted;
+        IF v_id IS NULL OR v_region IS DISTINCT FROM OLD.region OR v_type IS DISTINCT FROM OLD.method_type
+            OR v_superseded IS NOT NULL OR v_deleted IS NOT NULL THEN
+            RAISE EXCEPTION 'the next version must be a current version of the same region and type';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$pv_method$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION {schema}.trg_payment_version_no_wipe()
+RETURNS TRIGGER AS $pv_wipe$
+BEGIN
+    RAISE EXCEPTION 'payment version tables cannot be truncated';
+    RETURN NULL;
+END;
+$pv_wipe$ LANGUAGE plpgsql;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_tenant_invoice_payment_methods_version_guard' AND tgrelid = '{schema}.tenant_invoice_payment_methods'::regclass) THEN
+        CREATE TRIGGER trg_tenant_invoice_payment_methods_version_guard BEFORE INSERT OR UPDATE OR DELETE ON {schema}.tenant_invoice_payment_methods FOR EACH ROW EXECUTE FUNCTION {schema}.trg_payment_method_version_guard();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_tenant_invoice_payment_bank_immutable' AND tgrelid = '{schema}.tenant_invoice_payment_bank'::regclass) THEN
+        CREATE TRIGGER trg_tenant_invoice_payment_bank_immutable BEFORE INSERT OR UPDATE OR DELETE ON {schema}.tenant_invoice_payment_bank FOR EACH ROW EXECUTE FUNCTION {schema}.trg_payment_detail_immutable();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_tenant_invoice_payment_wise_immutable' AND tgrelid = '{schema}.tenant_invoice_payment_wise'::regclass) THEN
+        CREATE TRIGGER trg_tenant_invoice_payment_wise_immutable BEFORE INSERT OR UPDATE OR DELETE ON {schema}.tenant_invoice_payment_wise FOR EACH ROW EXECUTE FUNCTION {schema}.trg_payment_detail_immutable();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_tenant_invoice_payment_methods_no_wipe' AND tgrelid = '{schema}.tenant_invoice_payment_methods'::regclass) THEN
+        CREATE TRIGGER trg_tenant_invoice_payment_methods_no_wipe BEFORE TRUNCATE ON {schema}.tenant_invoice_payment_methods FOR EACH STATEMENT EXECUTE FUNCTION {schema}.trg_payment_version_no_wipe();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_tenant_invoice_payment_bank_no_wipe' AND tgrelid = '{schema}.tenant_invoice_payment_bank'::regclass) THEN
+        CREATE TRIGGER trg_tenant_invoice_payment_bank_no_wipe BEFORE TRUNCATE ON {schema}.tenant_invoice_payment_bank FOR EACH STATEMENT EXECUTE FUNCTION {schema}.trg_payment_version_no_wipe();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_tenant_invoice_payment_wise_no_wipe' AND tgrelid = '{schema}.tenant_invoice_payment_wise'::regclass) THEN
+        CREATE TRIGGER trg_tenant_invoice_payment_wise_no_wipe BEFORE TRUNCATE ON {schema}.tenant_invoice_payment_wise FOR EACH STATEMENT EXECUTE FUNCTION {schema}.trg_payment_version_no_wipe();
+    END IF;
+END $$;
 
 -- invoice-create-portfolio 便A: 関税の決まり（行き先の国・送料の会社ごと。DDP のときに使う）
 CREATE TABLE IF NOT EXISTS {schema}.tenant_duty_rules (
