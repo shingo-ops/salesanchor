@@ -1148,3 +1148,129 @@ APPROVE。根拠：呼び出し元・時間切れ・所要秒は origin/main と
 
 ### Opus 自己審査（同じ AI の審査。独立の審査は reviewer が行う）
 APPROVE（reviewer 3 回目 APPROVE）。根拠：止める・通すの判定を変えないので誤止めは増えない（K7）。壊れる既存の試験 2 本（:318・:340）は書き換えを受入条件に入れた。未確認：終了コード 2 の 5 回の理由（作業場所が消えており確かめられない）→ この便の K4・K9 で今後の分を数える。CI の bash 5 で trap を前へ動かした形が同じ動きか（K5・K8 の CI 結果で確かめる）。
+
+## R4b-2 第2便 記録していないファイルだけが残るときは、HEAD のきれいな写しで確認を流す（2026-11-14 PO「1」で着手）
+
+### 目的（PO の言葉で）
+確認を通っていない中身が PR に載る件数を 0 にする。第1便の数え（K9）で見つかった唯一の型「記録していないファイルが残っていて確認が始められず、そのまま push が通った」を無くす。手元の作業場所の散らかりで誤って止める回数は 0 のまま保つ。
+
+### PO の選択（2026-11-14）
+K9 の報告で示した 3 案のうち「1. 記録していないファイルが残っていたら、そのファイルを除いて確認を流す」。PO の原文は「1」。
+
+### K9 の数え（第1便の反映 2026-11-06T08:43:41Z 〜 最終行 2026-11-13T08:28:50Z）
+生出力 /tmp/CC報告ファイル/k9-r4b2/（summary.txt・rows8_since.tsv・report.md）。
+- 8 列の行 909：manual 0 が 24・2 が 3、pre-push 0 が 849・1 が 1・2 が 1・skip-empty 5・stamp 26。skip-otherhead・skip-head・skip-tag・skip-delete は 0。
+- 抜け 1 件：19ae5ce361a6（2026-11-06T13:32:50Z・release/case-claude-version-auto-design・終了コード 2・dirty-untracked）。PR #5208（2026-11-06T14:01:09Z マージ）・origin/main に含まれる。同じ枝の次の push 99e50e76（13:39:06Z）以降は 0・full（K9 の判定には使わない参考）。
+- PR に結び付かない SHA 0・origin に届かず外したもの 0・終了コード 3 以上 0。
+- 終了コード 2 の理由：pre-push dirty-untracked 1・manual dirty-tracked 3。ほかの理由 0。
+- 数えられない場面：--no-verify・入口の強制終了・クラウドの push（第1便の設計どおり）。加えて設計に入れ忘れていた場面：第1便より古い土台の作業場所では古い pre-push が動き 6 列の行しか残らない（期間中 pre-push 0 の 6 列の行 26・4 枝、2026-11-06T09:30:08Z〜11-07T06:09:22Z。生 rows6_since_nonvpb.tsv）。これらの作業場所の飛ばし・印通過は数えられていない。古い土台の作業場所は作り直しで消えていくため、この便では直さない（第3案「まだ止めない」を PO は選ばなかった）。
+
+### PO への説明の訂正
+K9 の報告で案 1 を「push が止まる回数は増えません」と書いた。正確には「散らかりで誤って止める回数は増えない。中身が本当に確認に落ちるときだけ、今まで素通りしていた push が止まる」。期間中その型は 1 回（19ae5ce3）で、その中身が確認に落ちたかは確かめられない（作業場所が消えている）。
+
+### 現在地（origin/main 73bf937a8 で確認）
+- scripts/dev/check-before-submit.sh:100-106：`git status --porcelain` が空でなければ終了コード 2。全部 `??` なら理由 dirty-untracked、1 行でも追跡中なら dirty-tracked。
+- 同 :73：作業場所の一番上へ cd してから検査を流す。検査（:232-240 の速い組・:282 の heading-dup など）は作業場所のファイルを読む。そのうち記録していないファイルも読む検査がある：lint_tenant_schema.py:491（rglob）・check_rule_registry.py:206・generate-adr-index.js:123・check-dangling-routes.js:223・check-claude-size.js:41。→ 記録していないファイルを残したまま流すと、その分だけ CI と違う結果になる（誤って落ちる・誤って通る）。なので「無視して流す」では足りず、HEAD の中身だけの写しで流す。なお check_doc_index.py:57 は `git ls-files` で集めるので記録していないファイルを見ない（例に使わない）。
+- 同 :122 HEAD_SHA・:45 ブランチ・:417-423 印（`--git-dir` の下）・:30-53 記録の trap。
+- frontend/.husky/pre-push:90-100：入口の終了コード 1 だけ止め、2 と想定外は通す。この便では変えない。
+- 空の一時フォルダ（mktemp -d）へ置けること・写しの枝の名が空・片付けでフォルダごと消えることを git 2.39.3 で実測（/tmp/CC報告ファイル/k9-r4b2/measure-mktemp-dir.txt）。
+- 写しの作り方の実測（/tmp/CC報告ファイル/k9-r4b2/measure-clean-copy.txt。手元の Mac・本体を --shared で写した clone で `git worktree add --detach <dir> 73bf937a8`）：作成 30.03・26.35・35.33 秒、片付け（`git worktree remove --force`）10.28・9.00・8.58 秒、ファイル 9349・186MB。
+- 入口の検査の node 台本は標準の部品だけを使う（check-ui-governance.js・check-dangling-routes.js・check-claude-size.js・generate-adr-index.js・test-*.js・check-migration-column-churn.js の require/import を確認）→ 写しに node_modules が無くても流せる。
+- 作業場所の一覧を読む仕組み：scripts/reaper-worktree.sh は切り離し（branch 行なし）の作業場所を候補にしない（本番モードの走査「detached HEAD もスキップ」）。最後に `git worktree prune` を流すので、強制終了で残った登録は一時フォルダが消えた後に掃除される。~/.claude/scripts/pr-body-guard.sh:152 と agent-start-hook.sh:43 は枝の名で作業場所を探すので、枝の無い写しには当たらない。
+- scripts/new-worktree.sh:71-88：`git worktree list | tail -n +2 | wc -l` が WORKTREE_LIMIT（既定 100）以上なら exit 1 で作業開始を止める。2026-11-14 の手元は本体を除いて 99 件。写しがある約 40 秒の間は 100 件になり、ほかのセッションの作業開始が止まり得る。同ファイルは `set -e` だけで pipefail なし（:19）。
+- 自社の前例：scripts/tests/run_rule_fixtures.py:36・:163・:169・:222 も一時の切り離しの写し（mkdtemp prefix "rule-fixture-"）を作り、元のリポジトリへの add と remove は 1 本ずつにしている。
+- 既存の試験で変わるもの：scripts/tests/test_check_before_submit.py の test_uncommitted_change_exits_2（:179-184）と test_prepush_does_not_stop_on_uncommitted_change（:335-346）。test_prepush_skips_when_pushed_content_differs_from_head（:348）は入口が流れない道なので変わらない。
+
+### 対象と対象外
+- 対象：scripts/dev/check-before-submit.sh・scripts/tests/test_check_before_submit.py・scripts/new-worktree.sh（上限の数えから写しを外す 1 行）
+- 対象外（変えない）：frontend/.husky/pre-push（終了コード 2 と想定外は通す決まりのまま）・追跡中の変更（dirty-tracked は今までどおり 2 で通す）・validate-pr-body.sh・reaper-worktree.sh・CI・必須チェック・記録の 1〜7 列目の意味・記録ファイルの場所。
+
+### 変える前と後
+| 場面 | 今 | 第2便の後 |
+|---|---|---|
+| 記録していないファイルだけが残る | 終了コード 2（dirty-untracked）で何も流さない。pre-push は通す | 「記録していないファイルがあります。HEAD の写しで流します（約 40 秒増えます）」と表示し、HEAD の切り離しの写しを一時フォルダに作って、同じ引数で入口をその中で流す。結果の終了コードをそのまま返す（0 なら pre-push は通す・1 なら止める） |
+| 写しが作れない（容量・権限・HEAD に入口の台本が無い） | — | 終了コード 2、理由 `copy-fail`。pre-push は今までどおり通す |
+| 追跡中の変更がある | 2（dirty-tracked） | 変えない |
+| new-worktree.sh の上限の数え | 写しも 1 件と数える | パスに `/cbs-copy.` を含む行を数えない |
+
+決め：
+1. 写しの作り方：`D=$(mktemp -d "${TMPDIR:-/tmp}/cbs-copy.XXXXXX")` の後、`git worktree add -q --detach "$D" "$(git rev-parse HEAD)"`。mktemp が失敗したら copy-fail。add が失敗したら `rmdir "$D" 2>/dev/null || true` で空のフォルダを消して copy-fail。add の後に `"$D/scripts/dev/check-before-submit.sh"` が無ければ（HEAD に入口が無い古い枝）片付けて copy-fail。
+2. 変数の決まり（ここを唯一の正とする。以下「印」は check-before-submit.ok のファイルだけを指す）：
+   - 外から来る環境変数 `CBS_IN_COPY`・`CBS_ORIG_BRANCH`・`CBS_ORIG_GITDIR` は、どこで読むときも `${X:-}` の形で読む（set -u で未設定のときに落ちないため。必須）。
+   - 台本の中だけのシェル変数を 3 つ足し、:33-35（CBS_MODE・CBS_REASON・HEAD_SHA の初期化の所。trap 登録 :53 より前）で必ず初期化する（外の環境変数の値を引き継がない）：`CBS_COPY_OK=0`（写しの中で流れていると確かめた合図）・`CBS_ORIG_GITDIR_OK=""`（確かめた後の印の行き先）・`CBS_SKIP_LOG=0`（記録の trap に行を書かせない合図。印とは別物）。
+   - `CBS_COPY_OK` の決め方：:73 の cd の後・:100 の止める所の前で 1 回だけ決める。次の 4 つが全部そろったときだけ 1：①`${CBS_IN_COPY:-}` が 1 ②自分の枝の名が空 ③今の一番上のフォルダ（`pwd -P`）の名が `cbs-copy.` で始まる ④`test -n "${CBS_ORIG_GITDIR:-}"`（bash 3.2 の `cd ""` は成功して今の場所を返すため、空の値はここで先に落とす）で、`g=$(cd "${CBS_ORIG_GITDIR:-}" 2>/dev/null && pwd -P)` が空でなく、`c=$(cd "$(git rev-parse --git-common-dir)" && pwd -P)` と同じか `$c/worktrees/` で始まる（`pwd -P` で `..` と別名を解いてから比べる）。そろったら `CBS_ORIG_GITDIR_OK="$g"`。
+   - 写しの道を入れる位置：:101-106 の中、:102 の理由の分け方の後。条件は「CBS_REASON が dirty-untracked、かつ LIST_FIX が 0、かつ `${CBS_IN_COPY:-}` が 1 でない」。そろったら :103 の「commit してから流してください」は出さず、`git status --short | head -20`（:104 と同じ一覧）と「記録していないファイルがあります。HEAD の写しで流します（約 40 秒増えます）」を表示してから決め 1・決め 3 へ進む。そろわなければ今までどおり :103-105。
+   - 写しを作らない判断：`${CBS_IN_COPY:-}` が 1 なら（CBS_COPY_OK に関わらず）、記録していないファイルがあっても写しを作らず今までどおり 2・dirty-untracked（入れ子を作らない・外からの値で写しを作らせない）。
+   - 2 列目（枝の名）：自分の枝の名が空で、かつ CBS_COPY_OK が 1 のときだけ `${CBS_ORIG_BRANCH:-}` を使う。
+   - 印の行き先（:417-423）：CBS_COPY_OK が 1 なら `$CBS_ORIG_GITDIR_OK/check-before-submit.ok`、それ以外は今までどおり自分の `--git-dir` の下。
+   - 外側の入口は写しを呼ぶ所でだけ 3 つの環境変数を付ける（`CBS_IN_COPY=1 CBS_ORIG_BRANCH="<自分の枝>" CBS_ORIG_GITDIR="<自分の git rev-parse --path-format=absolute --git-dir>"`）。
+3. 写しを呼ぶ順番（この順で書く）：
+   ① `(cd "$D" 2>/dev/null || exit 3; CBS_IN_COPY=1 CBS_ORIG_BRANCH=… CBS_ORIG_GITDIR=… bash scripts/dev/check-before-submit.sh ${CBS_ARGS[@]+"${CBS_ARGS[@]}"} </dev/null)`（cd の失敗は 3 にして、下の copy-rc に回す。1 にしない）
+   ② `rc=$?`
+   ③ rc が 0・1・2 なら `CBS_SKIP_LOG=1`（行は写しの中の入口が書いた 1 行だけにする）。それ以外なら `CBS_REASON=copy-rc` にして CBS_SKIP_LOG は 0 のまま（外側の trap が 1 行書く）
+   ④ `git worktree remove --force "$D" >/dev/null 2>&1 || true`（待って流す。失敗しても rc は変えない）
+   ⑤ `exit $rc`
+   copy-fail（決め 1）のときは `CBS_REASON=copy-fail` にして `exit 2`（外側の trap が 1 行書く）。
+4. 記録の行は 1 回の流しで必ず 1 行。行を書くのはいつも記録の trap（_cbs_log）だけで、明示して書く所は作らない。_cbs_log（:38-52）の変え方：
+   - 変える前（:39 の後）：なし → 変えた後：`local rc=$?` の直後に `test "$CBS_SKIP_LOG" = 1 && return $rc`
+   - 変える前（:45）：`branch=$(git branch --show-current 2>/dev/null)` → 変えた後：その次の行に `test -n "$branch" || { test "$CBS_COPY_OK" = 1 && branch="${CBS_ORIG_BRANCH:-}"; }`
+   - 変える前（:47-48）：`reason="-"` / `test "$rc" = "2" && reason="$CBS_REASON"` → 変えた後：`reason="-"` / `case "$rc" in 0|1) test "$CBS_COPY_OK" = 1 && reason=untracked-copy ;; 2) reason="$CBS_REASON" ;; *) test "$CBS_REASON" = copy-rc && reason=copy-rc ;; esac`
+   - 3 列目は HEAD_SHA（写しも外側と同じ）、7 列目は今までどおり full・only・list。
+   - 外から `CBS_IN_COPY=1` を渡したふつうの作業場所では、③（フォルダの名が cbs-copy. で始まる）がそろわないので CBS_COPY_OK は 0 のまま（本物の git の場所を渡されても ④ はそろい得るが、③ で止まる）。名が cbs-copy. で始まる偽の写しでは ④ で止まる。8 列目は untracked-copy にならず、L11 の数えは濁らない。
+   - 写しの中が 2（写しの中で別の理由）で終わった行は、8 列目がその理由になり、写しで流したことは残らない。untracked-copy の回数は 0・1 の分だけ。
+5. 印は写しの中の入口が、全部 ○・--only なし・list でないときに、決め 2 の行き先へ書く。
+   - 写しの中の行の 5 列目（秒）は、写しの中の入口の時間だけ。写しを作る約 30 秒と片付けの約 9 秒は入らない。
+6. 引数は外側で読み取る前に `CBS_ARGS=("$@")` で保存して、そのまま写しへ渡す。bash 3.2 と set -u で空の配列が落ちないよう `${CBS_ARGS[@]+"${CBS_ARGS[@]}"}` の形で渡す。
+7. 写しの中の入口の台本は写しの中のもの（= HEAD の版）を使う。
+8. `--list-fixtures`（見本の一覧を出すだけ）のときは写しを作らない。:100 の止める所は今までどおり（記録していないファイルでも追跡中の変更でも 2。約 40 秒を払う理由が無く、確かめの道でもない）。
+9. 9 列目は足さない（記録の列の数は 8 のまま。第1便の数え方がそのまま使える）。8 列目の値が untracked-copy・copy-fail・copy-rc の 3 つ増える。
+10. new-worktree.sh:71 の数えを `git worktree list | tail -n +2 | grep -v '/cbs-copy\.' | wc -l | tr -d ' '` にする（pipefail なしなので grep が 0 件でも止まらない）。
+
+### ほかの案と選ばなかった理由
+- 記録していないファイルを無視して今の作業場所で流す：上の現在地のとおり tenant-lint などが記録していないファイルも読むので、誤って落ちる・誤って通る。
+- `git stash -u` で一時的に退ける：作業中のファイルを動かす。途中で落ちると戻らない危険がある。
+- 別の clone を作る：origin/main などの参照が本体と変わり、比べる元がずれる。作業場所の写しなら参照が同じ。
+- 追跡中の変更（dirty-tracked）も写しで流す：手で流した 3 回だけで、送る前の確認では 0 回。PO が選んだ範囲の外。
+- new-worktree.sh を変えず上限を受け入れる：いま 99 件で、写しがある間にほかのセッションの作業開始が止まる場面が現に起こり得る。1 行の変更で防げるので対象に入れる。
+
+### 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| L1 記録していないファイルだけがある状態で入口を手で流すと、写しで流れて終了コード 0・行は 1 行・8 列目 untracked-copy・2 列目は元の枝の名・印が元の git の場所に HEAD で書かれる | test_uncommitted_change_exits_2 を書き換え（名も変える）。名前のある枝（`git checkout -b zz-orig`）で流し、2 列目が zz-orig であることを確かめる（切り離しのままだと空＝空で空振りする）。印は read_stamp() で確かめる |
+| L2 その記録していないファイルが写しに入らない：記録していない `backend/app/routers/zz_fixture_router.py` を置いて `--only tenant-lint` で流すと 0 | 試験 1 本。中身は既存の test_tenant_schema_violation_fails（test_check_before_submit.py:137-145）と同じ見本 `scripts/tests/rule-fixtures/tenant-schema/fail-commit-without-reset/files/backend/app/routers/zz_fixture_router.py.fixture`。同じファイルを commit した場合は 1 になることも同じ試験で確かめ、空振りでないことを示す |
+| L3 写しの中身が確認に落ちると終了コード 1 になり、pre-push が止める | 試験 1 本（違反を commit した上で記録していないファイルを置き、pre-push の rc 1） |
+| L4 pre-push 経由：記録していないファイルだけで rc 0・行は 1 行・6 列目 pre-push・8 列目 untracked-copy | test_prepush_does_not_stop_on_uncommitted_change を書き換える |
+| L5 追跡中の変更は今までどおり 2・dirty-tracked | 既存 test_prepush_dirty_tracked_reason がそのまま pass。手で流す版を 1 本足す |
+| L6 写しが作れないとき 2・copy-fail・行は 1 行 | 試験 1 本（TMPDIR を存在しないフォルダにする） |
+| L7 終わった後に写しが残らない：`git worktree list` の行数と一時フォルダの cbs-copy.* が流す前と同じ（0・1・copy-fail・copy-rc の 4 通り） | L1・L3・L6・L9c の試験の中で確かめる |
+| L8 外からの値で道が変わらない：(a) 外から `CBS_IN_COPY=1` を渡し記録していないファイルがあれば 2・dirty-untracked（写しを作らない）(b) 名が cbs-copy. で始まる偽の写し（条件 ①②③ はそろい ④ だけが違う）の中で、外から `CBS_IN_COPY=1`・`CBS_ORIG_GITDIR=<別の一時フォルダ>` を渡して --only なしで流すと、8 列目は untracked-copy でなく、別のフォルダに印が無い (c) 同じ偽の写しで、先に解決先のフォルダ `self.wt/x` を mkdir しておき（無いと誤った実装でも書き込みに失敗して空振りする）、`CBS_ORIG_GITDIR=<元の git の場所>/worktrees/../../x` を渡しても、`self.wt/x` に印が無く、8 列目が untracked-copy でない。(b)(c) とも終了コードが 0 であること（印は × が 0 件かつ --only なしのときだけ書かれる＝check-before-submit.sh:407-410・:418。1・2 では印の確かめが空振りするので、その場合は試験を失敗にする）。(c) で渡す `<元の git の場所>` は os.path.realpath で解いた値にする（macOS の /var は /private/var の別名で、解かずに渡すと文字だけで比べる誤った実装を捕まえられない） (d) 外から `CBS_SKIP_LOG=1` を渡しても行は 1 行書かれる | 試験 1 本（4 つを確かめる）。(b)(c) の偽の写しは、試験の元のリポジトリから `git worktree add --detach <self.tmp>/cbs-copy.fake HEAD` で作る（self.wt は名が wt なので ③ で先に落ち、④ を確かめられないため使わない）。印は全部の検査を流したときだけ書かれる（check-before-submit.sh:418）ので --only を付けない |
+| L9 new-worktree.sh の数えが `/cbs-copy.` を含む行を数えない | 試験 1 本：scripts/new-worktree.sh の `WORKTREE_COUNT=` の行を実物から取り出し、`cbs-copy.x` という名の切り離しの写しを置いた一時リポジトリで評価して 0（実物の行を使うので、new-worktree.sh を変えないと × になる） |
+| L9b `--list-fixtures` は記録していないファイルがあっても写しを作らず 2・dirty-untracked | 試験 1 本（`git worktree list` の行数が変わらないことも確かめる） |
+| L9c 写しの中の入口が 0・1・2 以外で終わったとき、外側は 5 を返し、行は 1 行・8 列目 copy-rc | 試験 1 本：台本を `exit 5` にした commit を作り、記録していないファイルを置いて、外側は HEAD の外にある本物の台本で流す（cwd=self.wt のまま `bash <ROOT>/scripts/dev/check-before-submit.sh`。入口は :73 で cwd のリポジトリの一番上へ移り、写しの中では相対パスで HEAD の `exit 5` の版を呼ぶ）。self.wt の台本で流すと外側も即 5 で終わり写しが作られないため使わない。commit する台本は中身を丸ごと `#!/usr/bin/env bash` と `exit 5` の 2 行にする。環境は run_script と同じ（`GIT_*` を外し `TMPDIR=self.tmp`。test_check_before_submit.py:105-110）。L7 の写しが残らない確かめもこの道で行う |
+| L10 既存の試験（書き換える 2 本を除く）がそのまま pass。CI の必須チェックが pass | PR の CI 結果 |
+| L11（反映後 7 日）手元の記録のうち、3 列目の HEAD が第2便の合流の commit を含む行（`git merge-base --is-ancestor <第2便の合流> <3 列目>` が 0）だけで、次の 3 つが全部そろえば ○、1 つでも欠ければ ×：(a) K9 と同じ数え方の抜けが 0 件 (b) pre-push の 4 列目 2・8 列目 dirty-untracked が 0 件 (c) 8 列目 copy-fail と copy-rc の合計が 0 件。× のときは 1 件ごとに枝・時刻・理由を示す。○×に関わらず untracked-copy の回数と終了コードの内訳も添える。第2便の合流を含まない行（`--is-ancestor` が 1。反映前に作られた作業場所の古い入口）は判定に使わず、4 列目と 8 列目ごとの件数だけ別に添える。`--is-ancestor` が 0・1 以外（記録の SHA が手元に無いと 128）の行も判定に使わず、件数を別に添える。判定に使う行（合流を含む pre-push の行）が 0 件なら ○ にせず「保留」とし、7 日延ばして数え直す | Opus 設計担当が agent-console の予約で数え、PO に報告する |
+
+### リスクと対処
+- 送る前の確認が約 40 秒長くなる（記録していないファイルがあるときだけ。期間中は 1 回）→ 表示で知らせる。片付けの約 9 秒も含めて待つ（決め 3 の順番）。
+- 強制終了で写しが残る → 登録は reaper-worktree.sh の最後の `git worktree prune` で、一時フォルダが消えた後に消える。一時フォルダを OS がいつ消すかは未確認（macOS の TMPDIR の掃除の周期を確かめていない）。残っても new-worktree.sh の上限には数えない（決め 10）。
+- ほかのセッションの `git worktree add` と同時に動く → run_rule_fixtures.py は「元のリポジトリへの add・remove は 1 本ずつ」と書いている。同時に動いて安全かは未確認。git は登録の書き込みに lock を使うので、ぶつかったときは add が失敗し copy-fail（今までどおり通す）になる想定。L11 で copy-fail の回数を数えて確かめる。
+- 写しを作っている間に、ほかのセッションの見張りが作業場所の一覧を読む → 枝の名で探す見張りは枝の無い写しに当たらない（上の現在地）。
+- 容量：1 回 186MB を一時的に使う → 作れなければ copy-fail で今までどおり通す。
+- 中身が本当に落ちるときに止まる → 止まるのは CI でも落ちる中身なので誤止めではない。PO への説明の訂正に書いた。
+- クラウドの bash 5 で set -u の未設定で終わったときの rc は未確認 → 決め 2 で新しい変数は全部 `${X:-}` で読むので、その道に入らない。
+
+### 維持する担当・仕組み
+- 試験 scripts/tests/test_check_before_submit.py（CI の existing rule tests で毎回流れる）。
+- 数える人：Claude Opus 設計担当が反映から 7 日目に L11 を数える（agent-console の予約に登録）。
+
+### 外部事例
+外部の事例は該当なし（手元の入口の内部の道の直しで、外部の事例が判断を変えない）。自社の前例として scripts/tests/run_rule_fixtures.py が同じ「一時の切り離しの写しで検査を流す」形を使っている（上の現在地）。git の `worktree add --detach`・`worktree remove --force` の動きは git の公式文書（git-worktree）と上の実測で確かめる。
+
+### 審査の記録
+- 1 回目（2026-11-14・審査役 opus）：REVISE。採否に関わる指摘 4 件：R1 L2 の確かめ方が空振り（doc-index は git ls-files で集める）→ tenant-lint の見本へ替えた。R2 決め 2 と L8 の食い違い → 環境変数の決まりを決め 2 に 1 か所でまとめた。R3 片付け・記録・終了コードの順番が無い → 決め 3 に ①〜⑤。R4 new-worktree.sh の上限が影響範囲から抜けている → 対象に足した（決め 10・L9）。任意の指摘 a〜i（行番号・未定義の変数・想定外の rc・HEAD に入口が無いとき・add 失敗の空フォルダ・L6 の作り方・--list-fixtures・自社の前例・OS の掃除は未確認）も反映した。生の出力 /tmp/CC報告ファイル/rev-r4b2-bin2/。
+- 2 回目（2026-11-14・審査役 opus）：REVISE。R1・R4 は直ったと確認。採否に関わる指摘 4 件：B1 写しの中の入口が自分は写しの中だと知る方法が無く、:47-48 が 2 以外で理由を書かない → 決め 2 に CBS_COPY_OK の決め方（4 条件）、決め 4 に :39・:45・:47-48 の変える前と後を書いた。B2 ③の「印を立てる」が印のファイルと紛らわしく、copy-rc の書き手が 2 通りに読める → 合図の変数 CBS_SKIP_LOG を決め、行を書くのは trap だけに 1 本化した。B3 L1 の枝の名が空＝空で空振り → 名前のある枝で流す形にした。B4 L11 に合格の線が無い → 3 条件の ○× にした。任意 a〜g（L2 の見本の出どころ・`..` での抜け道・cd 失敗の扱い・--list-fixtures の条件・L9 の空振り・5 列目の秒・行番号 :348）も反映した（L8 に (c)(d)、L9b・L9c を追加）。生の出力 /tmp/CC報告ファイル/rev-r4b2-bin2-r2/。
+- 3 回目（2026-11-14・審査役 opus）：REVISE。B1〜B4 と任意 a〜g は直ったと確認。bash 3.2 で変数と trap の決まりが動き、本物の写しで 4 条件がそろうことを実測。採否に関わる指摘 3 件：C1 L9c は self.wt の台本で流すと外側も即終わり写しが作られない → 外側は HEAD の外にある本物の台本で流す形にした。C2 L8 (b)(c) は self.wt の名で条件③に先に落ち④を確かめない → 名が cbs-copy.fake の偽の写しの中で --only なしで流す形にした。C3 L11 は反映前に作られた作業場所の古い入口の行で誤って × になる → 第2便の合流を含む行だけで判定する形にした。任意 a〜e（行番号 :33-35・空の値の扱い・③④の言い方・写しの道を入れる位置・2 で終わった行の 8 列目）も反映した。生の出力 /tmp/CC報告ファイル/rev-r4b2-bin2-r3/。
+- 4 回目（2026-11-14・審査役 opus）：REVISE。C1・C3 と C2 の (b) は直ったと実物で確認。採否に関わる指摘 1 件：D1 L8 (c) は解決先のフォルダが無いと誤った実装でも書き込みに失敗して空振りする → 先に `self.wt/x` を作り、8 列目も確かめる形にした。任意 a〜c（(b)(c) の終了コード 2 を失敗にする・L11 の `--is-ancestor` が 128 の行・L9c の台本の中身と環境と L7 の道）も反映した。生の出力 /tmp/CC報告ファイル/rev-r4b2-bin2-r4/。
+- 5 回目（2026-11-14・審査役 opus）：APPROVE（設計合格）。D1 と任意 a〜c は直ったと実物と bash 3.2 の実測で確認。採否に関わる指摘なし。任意 E1〜E3 を合格の後に反映した：E1 L8 (b)(c) の終了コードを「2 でない」から「0 である」へ（印の確かめの空振りを防ぐ）、E2 L8 (c) に渡す git の場所は realpath で解いた値、E3 L11 で判定に使う行が 0 件なら保留。いずれも受入条件を厳しくする向きの直しで、決め 1〜10 は変えていない。生の出力 /tmp/CC報告ファイル/rev-r4b2-bin2-r5/。
+- 未解決：ほかのセッションの `git worktree add` と同時に動いて安全か・強制終了で残った一時フォルダを OS がいつ消すか・CI の bash 5 での実測（いずれもリスクの欄に対処を書き、L11 の copy-fail・copy-rc の数えで確かめる）。
+- 状態：設計案作成済み・設計審査済み（APPROVE）。PO が選んだのは範囲（2026-11-14「1」）で、実装の承認はまだ。実装は未着手。
