@@ -6116,6 +6116,15 @@
       "shared": "Everyone in the company",
       "sharedNote": "Visible to everyone in your company"
     },
+    "ask": {
+      "title": "What is the event called?",
+      "start": "When does it start?",
+      "end": "When does it end? If it lasts all day, answer \"all day\".",
+      "add_meet": "Add a Google Meet link? (yes / no)"
+    },
+    "karte": {
+      "filled": "Event so far"
+    },
     "created": {
       "invoice": "Invoice created.",
       "event": "Event created."

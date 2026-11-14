@@ -27,20 +27,28 @@ interface Props {
 
 export function SecretaryDraftEvent({ draft, onCreated, onCancel }: Props) {
   const { t } = useTranslation();
-  const [title, setTitle] = useState(draft.title);
+  const [title, setTitle] = useState(draft.title ?? "");
   const [allDay, setAllDay] = useState(draft.is_all_day);
-  // 下書きの start・end（+09:00 付き）は、今の画面と同じくブラウザの時間帯で欄に入れる
-  const [startDate, setStartDate] = useState(() => formatDateInput(new Date(draft.start)));
-  const [startTime, setStartTime] = useState(() => formatTimeInput(new Date(draft.start)));
-  const [endDate, setEndDate] = useState(() => formatDateInput(new Date(draft.end)));
-  const [endTime, setEndTime] = useState(() => formatTimeInput(new Date(draft.end)));
+  // 下書きの start・end（+09:00 付き）は、今の画面と同じくブラウザの時間帯で欄に入れる。
+  // ADR-1078: 空（null）なら欄も空にする（new Date(null) は 1970 年になるため呼ばない）
+  const [startDate, setStartDate] = useState(() => (draft.start ? formatDateInput(new Date(draft.start)) : ""));
+  const [startTime, setStartTime] = useState(() => (draft.start ? formatTimeInput(new Date(draft.start)) : ""));
+  const [endDate, setEndDate] = useState(() => (draft.end ? formatDateInput(new Date(draft.end)) : ""));
+  const [endTime, setEndTime] = useState(() => (draft.end ? formatTimeInput(new Date(draft.end)) : ""));
   const [location, setLocation] = useState(draft.location ?? "");
   const [description, setDescription] = useState(draft.description ?? "");
   const [calendarType, setCalendarType] = useState<"personal" | "shared">(draft.calendar_type);
+  // ADR-1078: Meet は付けてよい人（meet_available）にだけ出す。最初の値は「はい」と答えたときだけ印あり
+  const [addMeet, setAddMeet] = useState(draft.add_meet === true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const canCreate = title.trim() !== "" && startDate !== "" && endDate !== "" && !saving;
+  const canCreate =
+    title.trim() !== "" &&
+    startDate !== "" &&
+    endDate !== "" &&
+    (allDay || (startTime !== "" && endTime !== "")) &&
+    !saving;
 
   const submit = async () => {
     if (!canCreate) return;
@@ -55,6 +63,8 @@ export function SecretaryDraftEvent({ draft, onCreated, onCancel }: Props) {
         calendar_type: calendarType,
         description: description || undefined,
         location: location || undefined,
+        // 予定の画面と同じく、印があるときだけ add_meet を送る
+        ...(draft.meet_available && addMeet ? { add_meet: true } : {}),
       });
       onCreated();
     } catch (e) {
@@ -78,6 +88,9 @@ export function SecretaryDraftEvent({ draft, onCreated, onCancel }: Props) {
           checked={allDay}
           onChange={(e) => setAllDay(e.target.checked)}
         />
+        {draft.meet_available && (
+          <Checkbox label={t("schedule.addMeet")} checked={addMeet} onChange={(e) => setAddMeet(e.target.checked)} />
+        )}
         <div className="secretary-draft__row">
           <TextField
             fullWidth
