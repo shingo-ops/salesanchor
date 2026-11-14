@@ -51,14 +51,14 @@
 
 ## 5. 容器（2 つ）と配り方
 
-- 2 つの容器は同じ `secretary-agent/prompt.txt`・`schema.json`・`compose.mjs` を使う: `secretary-agent/Dockerfile:6`、`secretary-codex/Dockerfile:12`。
+- 2 つの容器は同じ `secretary-agent/prompt.txt`・`secretary-agent/schema.json`・`secretary-agent/compose.mjs` を使う: `secretary-agent/Dockerfile:6`、`secretary-codex/Dockerfile:12`。
 - AI に渡す文の組み立て `secretary-agent/compose.mjs:7-10`。決まりが無いときは前と 1 文字も違わない（:6 の注記）。
 - 容器は頼みの本文のうち `text`・`now`・`model`・`rules` だけを取り出す（`secretary-agent/server.mjs:139-152`、`secretary-codex/server.mjs:232-245`）。ほかの欄は読まずに捨てる。
 - 本番反映の順: `.github/workflows/deploy.yml:272`（backend を含む本体）→ :704（secretary-agent）→ :739（secretary-codex）。容器の作り直しが失敗しても警告だけ（:717・:752）。
 
 ## 6. 決まり帳（ADR-1077）との関係
 
-- 決まり帳の便3 は `secretary-agent/prompt.txt`・`schema.json`・画面の型を変える予定（`docs/handoff/secretary-rulebook/design.md:177`）。便3 は設計済み・手順書未作成・実装未着手。
+- 決まり帳の便3 は `secretary-agent/prompt.txt`・`secretary-agent/schema.json`・画面の型を変える予定（`docs/handoff/secretary-rulebook/design.md:177`）。便3 は設計済み・手順書未作成・実装未着手。
 - 試しの 23 件 `backend/app/assistant_regression/cases.json`: 予定 8 件のうち終わりの無いもの e3「来週の月曜 13 時に佐藤さんと電話の予定」・e7「金曜の 14 時からオンラインで仕入れの相談、場所は Zoom」。今は種類 event で合格（`docs/handoff/secretary-rulebook/baseline.md` §2・69/69）。試しは種類だけを見る。
 
 ## 7. 未確認

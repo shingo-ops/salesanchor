@@ -52,7 +52,7 @@ backend
 
 ## 4. 変更の中身（ファイルごとの前と後）
 
-### 4-1. 次に聞く欄を決める関数（新規 `backend/app/services/secretary_karte.py`）
+### 4-1. 次に聞く欄を決める関数（新規 backend/app/services/secretary_karte.py）
 
 ```python
 ASK_ORDER = ("title", "start", "end", "add_meet")
@@ -130,17 +130,17 @@ def next_ask(ev, meet_available: bool, asked: str | None, asked_count: int) -> t
 
 ### 4-5. 画面（`frontend/src/features/secretary/`）
 
-- `secretaryApi.ts:37-45` `EventDraftData`: `title`/`start`/`end` を `string | null`、`is_meeting`・`add_meet`・`meet_available`・`ask`・`ask_count` を足す。
-- `secretaryApi.ts:52-54` `sendSecretaryMessage(text, karte?)`: カルテがあるときだけ本文に `karte` を載せる。
-- `SecretaryChat.tsx`:
+- `frontend/src/features/secretary/secretaryApi.ts:37-45` `EventDraftData`: `title`/`start`/`end` を `string | null`、`is_meeting`・`add_meet`・`meet_available`・`ask`・`ask_count` を足す。
+- `frontend/src/features/secretary/secretaryApi.ts:52-54` `sendSecretaryMessage(text, karte?)`: カルテがあるときだけ本文に `karte` を載せる。
+- `frontend/src/features/secretary/SecretaryChat.tsx`:
   - `useState` でカルテ（`EventDraftData` から欄と `ask`・`ask_count` を取ったもの）を持つ。保存しない。閉じたら消す（:52-57 に 1 行足す）。
   - :75 送るときにカルテを渡す。
   - :76-82 `kind === "event"` で `ask` があれば、新しい吹き出し（埋まった欄の一覧＋`t("secretary.ask." + ask)`）を出し、カルテを入れ替える。`ask` が無ければ今の下書きを出し、カルテを消す。`kind` が invoice・unknown ならカルテを消す。
-- 新しい吹き出し `SecretaryKarteAsk.tsx`: 埋まった欄は「予定の名前・始まり・終わり」を `secretary.event.*` の既存キーで見出しにし、日時は `pages/schedule/schedule-utils` の既存関数で書く。色・余白はデザイントークンだけ。生の select / input は使わない。
-- `SecretaryDraftEvent.tsx`:
+- 新しい吹き出し frontend/src/features/secretary/SecretaryKarteAsk.tsx（新規）: 埋まった欄は「予定の名前・始まり・終わり」を `secretary.event.*` の既存キーで見出しにし、日時は `pages/schedule/schedule-utils` の既存関数で書く。色・余白はデザイントークンだけ。生の select / input は使わない。
+- `frontend/src/features/secretary/SecretaryDraftEvent.tsx`:
   - :33-36 `draft.start`/`draft.end` が null なら欄を空にする。:30 `title` が null なら空。
   - `meet_available` が真のときだけ、:80 の後に `components/Checkbox`（文言は既存キー `schedule.addMeet`）を出す。最初の値は `draft.add_meet === true`。
-  - :50-58 送るとき、Meet の選択が入っていて `meet_available` のときだけ `add_meet: true` を足す（予定の画面 `SchedulePageImpl.tsx:1024-1028` と同じ条件。繰り返しは秘書では作らない）。
+  - :50-58 送るとき、Meet の選択が入っていて `meet_available` のときだけ `add_meet: true` を足す（予定の画面 `frontend/src/pages/schedule/SchedulePageImpl.tsx:1024-1028` と同じ条件。繰り返しは秘書では作らない）。
   - 場所・内容のメモ（:117-128）と見せる範囲（:129-139・最初は自分だけ）は今のまま。PO の「最後に決定するときに入力欄・プルダウンを見せて」は今の画面で満たしている。
 - 翻訳キー（ja / en 同じキー）: `secretary.ask.title`「予定の名前を教えてください。」・`secretary.ask.start`「始まりの日時を教えてください。」・`secretary.ask.end`「終わりの日時を教えてください。一日中の予定なら「終日」と答えてください。」・`secretary.ask.add_meet`「Google Meet のリンクを付けますか？（はい／いいえ）」・吹き出しの見出し `secretary.karte.filled`「ここまでの予定」。
 
@@ -171,7 +171,7 @@ def next_ask(ev, meet_available: bool, asked: str | None, asked_count: int) -> t
 | 「予定の頼みは unknown にしない」で、やり方を頼む文（試し r2）が event になる | 指示文に「次からは・これからは」の 1 行（§4-4）。C8 の 69/69 で確かめる |
 | 画面が送るカルテは書き換えられる | 字数・型・聞いた回数の上限を backend で守る（§4-2）。カルテは下書きの値だけで、予定は「作成」を押すまで作らない（C7）。書き換えても自分の下書きが変わるだけ |
 | 頼みの大きさ（文 1000 字＋決まり 20 件＋カルテ）が 15,000 バイトを超える | 上限いっぱいの日本語で約 15,200 バイト。超えたときは今の 413 の文が出る。全部の欄が上限いっぱいのときだけ起きるので受け入れ、実装の試験で上限いっぱいの大きさを測って記録する |
-| Meet を付けられない人に聞いてしまう | 聞く条件に `can_add_meet` の値を使う（1 か所）。予定の口でも 422 で止まる（`calendar.py:425-434`） |
+| Meet を付けられない人に聞いてしまう | 聞く条件に `can_add_meet` の値を使う（1 か所）。予定の口でも 422 で止まる（`backend/app/routers/calendar.py:425-434`） |
 | 決まり帳の便3 と同じファイル（指示文・答えの形・画面の型）を触る | 本件を先に出す。便3 の手順書は本件の合流後の origin/main から作り直す（`docs/handoff/secretary-rulebook/design.md` に注記を足す） |
 
 ## 8. 試しの会話 10 本（C2・C3・C4・C6 の判定表）
@@ -212,7 +212,7 @@ PO のアカウントが Google をつないだ本人（`meet_available` 真）�
 | カルテ無しの頼みの文が今と同じ | `compose` の試験で、`karte` 無しの出力が今と 1 文字も違わないこと |
 | 画面の決まり | i18n の検査（ja/en 同じキー）・金型の検査（ADR-144）・デザイントークンの検査が CI で緑 |
 
-## 10. 外部の事例
+## 10. 外部・過去事例の参照と我々への応用
 
 - Rasa の forms 機能（出典: Rasa 公式文書 https://legacy-docs-oss.rasa.com/docs/rasa/forms ・Context7 `/websites/legacy-docs-oss_rasa_rasa` で 2026-11-14 に確認）
   - 何を: 会話で必須の欄（slot）を集める仕組み。欄ごとに決まった質問 `utter_ask_<欄名>` を持つ。
@@ -223,6 +223,7 @@ PO のアカウントが Google をつないだ本人（`meet_available` 真）�
 
 ## 11. 維持の仕組み
 
+- 守り手: backend の試験（next_ask の全部の分かれ道）・容器の試験（compose のカルテ無しの出力が今と同じ）・画面の試験が .github/workflows/test.yml で PR ごとに走る。指示文は決まり帳の試し 23 件。
 - 聞く順と回数: `next_ask` の試験（backend）が CI で毎回走る。順を変えるにはこの試験と ADR-1078 を同時に変える必要がある。
 - 欄の一覧の正本: 予定の口（`CreateEventBody`）。秘書の欄を足すときは ADR-1078 の表を改める。
 - 指示文: 決まり帳の試し 23 件（`backend/app/assistant_regression/cases.json`）を、指示文を変える PR のたびに流す（ADR-1077 便0 の手順）。
