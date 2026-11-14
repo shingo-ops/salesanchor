@@ -1,6 +1,6 @@
 # 設計 — 秘書の「予定のカルテ」（足りない欄だけを順に聞く）
 
-作った人: Opus（Planner）2026-11-14。状態: 設計案 第5版（第4版への設計の審査（クラウド・同じ AI）は「合格」。添えられた細かい点 4 件を書き足した）。PO の実装承認は未。
+作った人: Opus（Planner）2026-11-14。状態: 設計案 第5版（第4版への設計の審査（クラウド・同じ AI）は「合格」。添えられた細かい点 4 件を書き足した）。PO 承認済み（2026-11-14 23:41「1. この目標と約束で作り始める」＝目標と実装の承認）。実装の手順書: [card.md](card.md)。
 
 親: [kgi.md](kgi.md) ／ 現在地: [recon.md](recon.md)（docs/handoff/secretary-event-karte/recon.md）／ ADR: [ADR-1078](../../adr/ADR-1078-secretary-event-karte.md)（Proposed）／ 改める ADR: ADR-1056（一部）。ADR-1077 とは指示文と答えの形を共有する（改めない）
 
@@ -200,7 +200,7 @@ def next_ask(ev, meet_available: bool, asked: str | None, asked_count: int) -> t
 |---|---|---|
 | A. AI に次の質問も書かせる | 指示文に聞く順を書く | 順と回数を試験で確かめられない。AI の答えが揺れる（C3・C6 を ○ にできない） |
 | B. 会話の全文を毎回 AI に送る | 画面が履歴を全部送る | 送る量が増え、決まり帳の 15,000 バイトの上限（`backend/app/routers/assistant.py:73`）に近づく。過去の文のどれが今の値か AI が取り違える |
-| C. カルテを DB に置く | 会話の途中を保存する | カルテは保存しないという約束（docs/handoff/secretary-event-karte/kgi.md「変えない約束」。PO の承認待ちの目標に置く）に反する。表が増える |
+| C. カルテを DB に置く | 会話の途中を保存する | カルテは保存しないという約束（docs/handoff/secretary-event-karte/kgi.md「変えない約束」。PO 承認済み 2026-11-14）に反する。表が増える |
 | **D. 画面がカルテを持ち、backend が次の質問を決める（選んだ）** | 欄の値だけを往復させる | 状態は会話の間だけ・表は増えない・順と回数は関数の試験で 100% |
 
 ## 7. 危ない点と手当て

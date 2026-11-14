@@ -4,7 +4,7 @@
 
 親: [../../specs/secretary-chat/README.md](../../specs/secretary-chat/README.md) ／ 設計: [design.md](design.md) ／ 現在地: [recon.md](recon.md)
 
-状態: 草案（Opus 作成 2026-11-14）。PO 承認待ち。
+状態: PO 承認済み（2026-11-14 23:41「1. この目標と約束で作り始める」）。「変えない約束」のカルテを保存しない点も含めて承認。
 
 ## PO の言葉（2026-11-14 チャット・転記）
 
