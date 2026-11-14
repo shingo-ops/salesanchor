@@ -119,7 +119,7 @@ def next_ask(ev, meet_available: bool, asked: str | None, asked_count: int) -> t
 - ①'' 新規: 決まりを読んで大きさを測った後（:260 の後）、commit（:263）の前に `meet_available = await can_add_meet(db, tenant_id, user_id)`。読めなければ `False`（Meet を聞かないだけで、予定は作れる）。判定の式は書かない（`backend/app/services/calendar_service.py:73-80` の 1 か所だけ）。
 - 前 :278-289 終わりが無ければ +1 時間（:285）、終わり < 始まりなら 502。
 - 後（新しい画面の道 = 頼みに karte の鍵がある）:
-  - ④ 合わせる（新しい関数 `merge_karte(ev, karte)` を `secretary_karte.py` に置く）: `title`・`start`・`end`・`location`・`description`・`add_meet` は「AI の値が null ならカルテの値」。`is_meeting` は AI かカルテのどちらかが真なら真。`is_all_day` は AI かカルテのどちらかが真なら真。AI が null でない値を返したら、それを使う（利用者が言い直した値）。
+  - ④ 合わせる（新しい関数 `merge_karte(ev, karte)` を backend/app/services/secretary_karte.py（新規・§4-1 と同じファイル）に置く）: `title`・`start`・`end`・`location`・`description`・`add_meet` は「AI の値が null ならカルテの値」。`is_meeting` は AI かカルテのどちらかが真なら真。`is_all_day` は AI かカルテのどちらかが真なら真。AI が null でない値を返したら、それを使う（利用者が言い直した値）。
   - ④' カルテが null でなく、AI が unknown を返したとき: カルテの値だけで予定として続ける（`kind` は event・欄はカルテのまま）。`next_ask` に渡すと、直前と同じ欄が空のままなので同じ欄を聞き、回数が 1 増える（3 回目は聞かない）。AI が invoice を返したときは、話が変わったとして今と同じ請求書の下書きを返す（画面はカルテを捨てる）。
   - ⑤ 始まりがあれば読む。読めなければ今と同じ 502。終日で終わりが空なら、終わり＝始まり。終わりがあれば読む。読めなければ 502。終わり < 始まりなら終わりを null に戻す（もう一度聞く）。+1 時間は足さない。
 - 後（古い画面の道 = 頼みに karte の鍵が無い）: 今の動きを 1 つも変えない。題名か始まりが null なら 502 unreadable（今の形の検査で止まるのと同じ結果）。終わりが無ければ +1 時間（:285・:325 はこの道にだけ残す）。終わり < 始まりなら 502。`ask` は null・`ask_count` は 0・`add_meet` は null で返す。
