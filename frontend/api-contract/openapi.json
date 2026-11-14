@@ -1404,6 +1404,16 @@
       },
       "AssistantMessageIn": {
         "properties": {
+          "karte": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KarteIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "text": {
             "maxLength": 1000,
             "minLength": 1,
@@ -10345,6 +10355,39 @@
       },
       "EventDraft": {
         "properties": {
+          "add_meet": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Add Meet"
+          },
+          "ask": {
+            "anyOf": [
+              {
+                "enum": [
+                  "title",
+                  "start",
+                  "end",
+                  "add_meet"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ask"
+          },
+          "ask_count": {
+            "default": 0,
+            "title": "Ask Count",
+            "type": "integer"
+          },
           "calendar_type": {
             "const": "personal",
             "default": "personal",
@@ -10363,12 +10406,24 @@
             "title": "Description"
           },
           "end": {
-            "title": "End",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
           },
           "is_all_day": {
             "default": false,
             "title": "Is All Day",
+            "type": "boolean"
+          },
+          "is_meeting": {
+            "default": false,
+            "title": "Is Meeting",
             "type": "boolean"
           },
           "location": {
@@ -10382,13 +10437,32 @@
             ],
             "title": "Location"
           },
+          "meet_available": {
+            "default": false,
+            "title": "Meet Available",
+            "type": "boolean"
+          },
           "start": {
-            "title": "Start",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
           },
           "title": {
-            "title": "Title",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           }
         },
         "required": [
@@ -15050,6 +15124,119 @@
           }
         },
         "title": "InvoiceUpdate",
+        "type": "object"
+      },
+      "KarteIn": {
+        "additionalProperties": false,
+        "description": "ADR-1078: 画面が会話の間だけ持つ予定のカルテ（保存しない）。字数・型・回数の上限をここで守る。",
+        "properties": {
+          "add_meet": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Add Meet"
+          },
+          "asked": {
+            "anyOf": [
+              {
+                "enum": [
+                  "title",
+                  "start",
+                  "end",
+                  "add_meet"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asked"
+          },
+          "asked_count": {
+            "default": 0,
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Asked Count",
+            "type": "integer"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "is_all_day": {
+            "default": false,
+            "title": "Is All Day",
+            "type": "boolean"
+          },
+          "is_meeting": {
+            "default": false,
+            "title": "Is Meeting",
+            "type": "boolean"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "KarteIn",
         "type": "object"
       },
       "KnowledgeRuleCreate": {

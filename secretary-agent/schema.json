@@ -31,14 +31,16 @@
     "event": {
       "type": ["object", "null"],
       "additionalProperties": false,
-      "required": ["title", "start", "end", "is_all_day", "location", "description"],
+      "required": ["title", "start", "end", "is_all_day", "location", "description", "is_meeting", "add_meet"],
       "properties": {
-        "title": { "type": "string" },
-        "start": { "type": "string" },
+        "title": { "type": ["string", "null"] },
+        "start": { "type": ["string", "null"] },
         "end": { "type": ["string", "null"] },
         "is_all_day": { "type": "boolean" },
         "location": { "type": ["string", "null"] },
-        "description": { "type": ["string", "null"] }
+        "description": { "type": ["string", "null"] },
+        "is_meeting": { "type": "boolean" },
+        "add_meet": { "type": ["boolean", "null"] }
       }
     },
     "reply": { "type": ["string", "null"] }

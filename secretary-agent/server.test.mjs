@@ -345,3 +345,24 @@ test("(12) 上限いっぱい: 絵文字で決まり 20 件×150 字＋文 1000 
     child.kill();
   }
 });
+
+test("(13) karte・asked: 渡せば今の日時の前に入る・形が違えば 400 で claude を呼ばない（ADR-1078）", async () => {
+  const stdinLog = path.join(work, "stdin.log");
+  writeFake(`cat > "${stdinLog}"; echo '{"structured_output":{"kind":"unknown","invoice":null,"event":null,"reply":"r"}}'`);
+  const { port, child } = await startServer({ CLAUDE_CODE_OAUTH_TOKEN: "dummy" });
+  const prompt = fs.readFileSync(path.join(HERE, "prompt.txt"), "utf8");
+  const karte = { start: "2026-11-02T10:00:00+09:00", end: null, is_all_day: false };
+  try {
+    assert.equal((await request(port, "POST", "/intent", { text: "a", now: "n", model: "sonnet", karte, asked: "end" })).status, 200);
+    assert.equal(fs.readFileSync(stdinLog, "utf8"), compose(prompt, "n", "a", [], karte, "end"));
+    fs.rmSync(stdinLog);
+    for (const bad of [{ karte: "x" }, { karte: [] }, { asked: "location" }, { asked: 1 }]) {
+      const r = await request(port, "POST", "/intent", { text: "a", now: "n", model: "sonnet", ...bad });
+      assert.equal(r.status, 400, JSON.stringify(bad));
+      assert.deepEqual(r.json, { code: "bad_request" });
+    }
+    assert.equal(fs.existsSync(stdinLog), false);
+  } finally {
+    child.kill();
+  }
+});

@@ -79,10 +79,12 @@ def judge_envelope(resp: httpx.Response, expected: str) -> tuple[str, str, str, 
         ev = intent.event
         try:
             assert ev is not None
-            start = parse_iso(ev.start)
-            end = parse_iso(ev.end) if ev.end is not None else start + timedelta(hours=1)
-            if end < start:
-                raise ValueError("end before start")
+            # ADR-1078: 始まりが null の予定（足りない欄を後で聞く）は種類だけで判定する
+            if ev.start is not None:
+                start = parse_iso(ev.start)
+                end = parse_iso(ev.end) if ev.end is not None else start + timedelta(hours=1)
+                if end < start:
+                    raise ValueError("end before start")
         except (ValueError, TypeError, AssertionError):
             return "unreadable", intent.kind, in_tok, out_tok
     return ("match" if intent.kind == expected else "mismatch"), intent.kind, in_tok, out_tok
