@@ -1,7 +1,7 @@
 # design: 請求書作成画面をポートフォリオの形に作り直す（住所・税・関税・支払方法を記録の表から）
 
 状態: 設計案 第9版（Opus 作成 2026-11-14。PO が振込先を版で持つ案を「1,」で選んだ。§18・§19）。以下は第8版までの経緯。第8版（Opus 作成 2026-11-13）。第1版はクラウドの設計審査で REVISE（止める2・直すべき11・覚え書き6）、第2版は REVISE（止める0・直すべき9・覚え書き5）、第3版は REVISE 相当（止める0・直すべき5・覚え書き6）、第4版は REVISE（止める0・直すべき1・覚え書き5）、第5版は REVISE（止める0・直すべき3・覚え書き4）、第6版は REVISE（止める0・直すべき1・覚え書き3）、第7版は REVISE（止める0・直すべき1・覚え書き2）。本版はすべてを反映した（§11〜§17 に対応表）。第8版はクラウドの設計審査で APPROVE（止める0・直すべき0・覚え書き3。覚え書きは実装カードで決める。PR #5486 のコメント）。PO 承認済み（2026-11-13「1,（２）決済手数料を合計に足す仕組みは、今回は作りません。別の作業に回します。→次便で」。§7 の決定のとおり）。
-第9版（Opus 作成 2026-11-14）: PO が振込先を「版」で残す案を選んだ（2026-11-14「1,」）。振込先の表に版の仕組みを足し（§3-8・便 V・ADR-1079）、請求書は選んだ版の番号だけを持つ形に変えた（§3-5・§3-7）。変えた所は §18。第9版の審査は1回目が途中で止まり、2回目が REVISE。対応は §19。3回目の審査待ち。
+第9版（Opus 作成 2026-11-14）: PO が振込先を「版」で残す案を選んだ（2026-11-14「1,」）。振込先の表に版の仕組みを足し（§3-8・便 V・ADR-1079）、請求書は選んだ版の番号だけを持つ形に変えた（§3-5・§3-7）。変えた所は §18。第9版の審査は1回目が途中で止まり、2回目が REVISE、3回目は判定前に止まった（指摘は直した）。対応は §19・§19-2・§19-3。4回目の審査待ち。
 根拠: 同じ場所の recon.md（§番号で指す）。基準 origin/main `c296af3bb`（第6版の審査で `56bd5c3ef` と照らし、引いた行番号はすべて一致。実装カードでは基準をその時の origin/main に更新する）。対象 ADR: ADR-101（§7 関税・実装上の注意）、ADR-095 付録1-4、ADR-106（テナント別ポリシー）、ADR-125 D5、ADR-1061（振込先・税率・発行元の表）、ADR-027（i18n）、ADR-144（UI の金型）、ADR-072（commit 後の reset）、ADR-135/136（危険な PR）。あるべき姿: docs/specs/quote-invoice/（KGI Q1〜Q15）。
 
 ## 1. 目的（PO の言葉から）
@@ -178,8 +178,10 @@ backend/app/services/tenant.py（新しいテナント用）には次を足す�
 - 今の版＝superseded_by_id が NULL かつ deleted_at が NULL。選択肢に出すのは今の版で is_active のものだけ。
 
 **DB の見張り（トリガー。テナントごとのスキーマに関数を置く。tenant.py:553-593 の trg_set_updated_at と同じ置き方）**:
-- 詳細の2表: BEFORE INSERT OR UPDATE OR DELETE（関数 trg_payment_detail_immutable）。UPDATE と DELETE は必ず断る（詳細は版の中身なので後から変えない）。INSERT は、親の一覧の行（payment_method_id）が今の版（superseded_by_id と deleted_at が NULL）のときだけ通す。古い版や消した版に後から詳細を足すことを断る。
-- 一覧の表: BEFORE UPDATE OR DELETE（関数 trg_payment_method_version_guard）。DELETE は断る。UPDATE は、id・tenant_id・region・method_type・display_name・created_at のどれかが変わると断る。superseded_by_id と deleted_at は NULL から値へ1回だけ入れられ、値が入った後に変えると断る。sort_order・is_active・updated_by_user_id・updated_at は直せる（並び順と「使う・使わない」は版を作らない）。superseded_by_id を入れるときは、指す先の行が同じ表にあり、id が自分より大きく、region と method_type が自分と同じで、今の版であることを確かめ、違えば断る。id が大きい向きにしか指せないので、2つの版が互いを指す輪はできない。
+- 詳細の2表: BEFORE INSERT OR UPDATE OR DELETE（関数 trg_payment_detail_immutable）。UPDATE と DELETE は必ず断る（詳細は版の中身なので後から変えない）。INSERT は、親の一覧の行（payment_method_id）が今の版（superseded_by_id と deleted_at が NULL）のときだけ通す。古い版や消した版に後から詳細を足すことを断る。親の行は `SELECT ... FOR SHARE` で読む（読んだ後に別の取引が親を直す・消すのを、取引が終わるまで待たせる。鍵なしで読むと、外部キーの鍵は親の更新とぶつからないので古い版に詳細が付きうる）。
+- 一覧の表: BEFORE UPDATE OR DELETE（関数 trg_payment_method_version_guard）。DELETE は断る。UPDATE は、id・tenant_id・region・method_type・display_name・created_at のどれかが変わると断る。superseded_by_id と deleted_at は NULL から値へ1回だけ入れられ、値が入った後に変えると断る。sort_order・is_active・updated_by_user_id・updated_at は直せる（並び順と「使う・使わない」は版を作らない）。superseded_by_id を入れるときは、指す先の行が同じ表にあり、id が自分より大きく、region と method_type が自分と同じで、今の版であることを確かめ、違えば断る。指す先の行も `SELECT ... FOR SHARE` で読む。superseded_by_id を入れられるのは自分の deleted_at が NULL のときだけ（消した版に次の版を付けて生き返らせることを断る）。id が大きい向きにしか指せないので、2つの版が互いを指す輪はできない。
+- 見張りの関数がほかの行を読むときは、表の名前に見張りが動いた表のスキーマ（TG_TABLE_SCHEMA）を付けて読む（`EXECUTE format('... %I.tenant_invoice_payment_methods ...', TG_TABLE_SCHEMA)`）。接続の search_path に頼らない。関数の文は全テナントで同じになる。
+- 詳細の無い一覧の行（今の版）は DB では止めない。止め方は ADR-1061 の決まり（docs/handoff/viewer-contract-stage/design.md:266。書く口を1つにして一覧と詳細を1つの取引で書く・詳細の無い行は選択肢に出さず発行も 409 payment_method で止める）をそのまま使う。
 - 3表（一覧と詳細2表）に、表を丸ごと空にする命令を断る見張りも置く（`BEFORE TRUNCATE ... FOR EACH STATEMENT`。関数 trg_payment_version_no_wipe）。
 - 見張りは1テナントに6つ（行ごとの見張りが詳細2表に1つずつと一覧に1つ、表を丸ごと空にする命令を断る見張りが3表に1つずつ）。断るときは RAISE EXCEPTION で、SQLSTATE は既定の P0001。
 - 会社を消すときは DROP SCHEMA ... CASCADE（backend/app/routers/super_admin_tenants.py:167）なので、行ごとの見張りには当たらない。
@@ -190,7 +192,7 @@ backend/app/services/tenant.py（新しいテナント用）には次を足す�
 
 **請求書との関係**: 請求書は payment_method_id（版の id）だけを持つ。作る道・直す道（PATCH）は今の版で is_active のものだけを受け、ほかは 422 payment_method（§3-4）。下書きの請求書が指す版が今の版でなくなったら、発行は 409 payment_method で止まり、下書きの詳細画面で選び直す（§3-4）。発行済みの請求書は、版が直されても消されても、PDF でその版を出し続ける（§3-7）。
 
-**影響を数えた結果（recon §11）**: 振込先の表を読む・書くアプリの道は今0本。本番の振込先の表は全社0行、請求書も全社0行（2026-11-14 reader 鍵）。試験 backend/tests/test_tenant_issuer_tables_pg.py の「一覧を消すと詳細も消える」（:248 付近）は「消すことを断る」に変わる（便 V）。同じ試験の形の比べ（:259-277。tenant.py で作った形と、表を消して 20261112_160000 の移行だけを流し直した形を比べる）は、便 V の後は tenant.py の側にだけ2列と見張りがあるので落ちる。便 V で、流し直しを「20261112_160000 の後に便 V の移行も2回流す」に変え、2列・索引・見張り6つも比べる形に足す。
+**影響を数えた結果（recon §11）**: 振込先の表を読む・書くアプリの道は今0本。本番の振込先の表は全社0行、請求書も全社0行（2026-11-14 reader 鍵）。試験 backend/tests/test_tenant_issuer_tables_pg.py の「一覧を消すと詳細も消える」（:248 付近）は「消すことを断る」に変わる（便 V）。同じ試験の形の比べ（:259-277。tenant.py で作った形と、表を消して 20261112_160000 の移行だけを流し直した形を比べる）は、便 V の後は tenant.py の側にだけ2列と見張りがあるので落ちる。便 V で、流し直しを「20261112_160000 の後に便 V の移行も2回流す」に変え、2列・索引・見張り6つも比べる形に足す。比べる中身は、列と制約に加えて、索引の定義（pg_indexes.indexdef）・見張り6つの定義（pg_get_triggerdef）・関数3つの中身（pg_get_functiondef）。関数は表を消しても残り、移行の CREATE OR REPLACE で上書きされるので、tenant.py で作った直後に取った中身と、移行の後の中身を比べれば、tenant.py 側だけ中身が違うことを見つけられる。
 
 ## 4. 便の順番
 
@@ -282,7 +284,7 @@ backend/app/services/tenant.py（新しいテナント用）には次を足す�
 | K22 新しいテナントでも作れる | サーバーの試験: tenant.py で作ったスキーマに対して、作る道・見積から作る道・詳細（_INVOICE_COLUMNS を読む）が通る |
 | K23 支払方法は下書きのときだけ選び直せる | 画面の試験: 下書きの詳細画面に支払方法の選択があり、発行済みには無い。サーバーの試験: 下書きでない請求書への payment_method_ref の PATCH が 400 で、payment_method_id が変わらない。下書きなら変わり、payment_method が行の method_type になる。請求書を作った後に取引先の請求先の国を JP と外国の間で変えても、invoice_id 付きの draft-context が返す候補は保存済みの issuer_region のもので、その候補を PATCH すると 200 になる |
 | K24 GET /fx-rate は表を読む | サーバーの試験: get_fx_rate を呼ぶと失敗する差し替えのもとで 200 と表の最新行（currency・rate・fetched_at）を返す。行が無い通貨は 503。fetched_at は UTC の ISO 8601 の文字（末尾が Z か +00:00）。draft-context の為替の取得日時も同じ形。JPY は表を読まず 200 で rate 1.0・fetched_at null |
-| K25 振込先の版（§3-8） | 移行の試験（便 V）: 詳細の2表の UPDATE と DELETE が断られる。一覧の DELETE が断られる。一覧の region・method_type・display_name・tenant_id・created_at の UPDATE が断られる。superseded_by_id・deleted_at は NULL から値へ1回入れられ、2回目の変更は断られる。sort_order・is_active は直せる。superseded_by_id に自分の id は CHECK で断られ、2つの版が同じ次の版を指すと UNIQUE で断られる。superseded_by_id が自分より小さい id・別の region か method_type の行・今の版でない行を指すと断られる。古い版と消した版への詳細の INSERT は断られ、今の版への詳細の INSERT は通る。3表それぞれを丸ごと空にする命令が断られる（表の持ち主の役でも）。既存の試験 test_tenant_issuer_tables_pg.py の形の比べ（:259-277）は、20261112_160000 の後に便 V の移行も2回流して、2列・索引・見張り6つまで同じ。便 V の移行は全テナントを回すので、K17 と同じく backend/tests/rls_bootstrap.py の _TENANT_LOOP_MIGRATIONS と backend/tests/test_tenant_loop_migration_guard.py の _REVIEWED（rls_bootstrap.py の集合と、新しい試験ファイルの 'scoped' の行）に登録する。tenant.py で作ったスキーマと移行で作ったスキーマで、2列・索引・見張り6つが同じ。サーバーの試験（便 C）: 版 X で請求書を発行し、X を直して版 Y を作ると、PDF は X の口座番号を出す。draft-context の候補は Y だけ。X の id で作ると 422 payment_method。X を指す下書きを発行すると 409 payment_method。本番（便 V の後）: reader 鍵で全テナントの2列と見張り6つを数える |
+| K25 振込先の版（§3-8） | 移行の試験（便 V）: 詳細の2表の UPDATE と DELETE が断られる。一覧の DELETE が断られる。一覧の region・method_type・display_name・tenant_id・created_at の UPDATE が断られる。superseded_by_id・deleted_at は NULL から値へ1回入れられ、2回目の変更は断られる。sort_order・is_active は直せる。superseded_by_id に自分の id は CHECK で断られ、2つの版が同じ次の版を指すと UNIQUE で断られる。superseded_by_id が自分より小さい id・別の region か method_type の行・今の版でない行を指すと断られる。古い版と消した版への詳細の INSERT は断られ、今の版への詳細の INSERT は通る。3表それぞれを丸ごと空にする命令が断られる（表の持ち主の役でも）。既存の試験 test_tenant_issuer_tables_pg.py の形の比べ（:259-277）は、20261112_160000 の後に便 V の移行も2回流して、2列・索引の定義・見張り6つの定義・関数3つの中身（pg_get_functiondef）まで同じ。消した版に superseded_by_id を入れると断られる。search_path を public だけにした接続で、今の版への詳細の INSERT が通り、古い版への詳細の INSERT が断られる（スキーマ名つきで読んでいる確かめ）。便 V の移行は全テナントを回すので、K17 と同じく backend/tests/rls_bootstrap.py の _TENANT_LOOP_MIGRATIONS と backend/tests/test_tenant_loop_migration_guard.py の _REVIEWED（rls_bootstrap.py の集合と、新しい試験ファイルの 'scoped' の行）に登録する。tenant.py で作ったスキーマと移行で作ったスキーマで、2列・索引・見張り6つが同じ。サーバーの試験（便 C）: 版 X で請求書を発行し、X を直して版 Y を作ると、PDF は X の口座番号を出す。draft-context の候補は Y だけ。X の id で作ると 422 payment_method。X を指す下書きを発行すると 409 payment_method。本番（便 V の後）: reader 鍵で全テナントの2列と見張り6つを数える |
 
 ## 9. PO の確かめ方（本番）
 
@@ -436,6 +438,18 @@ file:line と card-A の数はすべて実物と合うと確かめられた。�
 | ADR-1079 が ADR-1061 決定6 を範囲を限らずに改める | ADR-1079 の「改める」を「B2B の請求書に限って」と書き直した |
 | 覚え書き: 地域を変える直しの決まりが無く、見張りが断ると 500 になる | §3-8: 地域を変えるのも「消す＋足す」。見張りが断ったときは 409 か 422 に置き換える、と登録画面の便へ申し送った |
 | （Opus が見つけた）card-A §2-10 の PG の試験が請求書の新しい列を7と数えたまま | 5 に直した（_shape は _NEW_INVOICE_COLUMNS の5列だけを引く） |
+
+### 19-3. 3回目（2026-11-14・クラウド）への対応
+
+審査役の命令が見張りに止められ、判定は出ないまま終わった。止まるまでに出た指摘を直した。2回目の指摘は文の上で閉じていた。表を空にする処理が CASCADE で3表に届く道は無い。見張り6つ・関数3つの数は §3-8・§4・K25 で揃っている。「改める」は B2B の請求書に限られている。ここまでは確かめられた。
+
+| 指摘 | 対応 |
+|---|---|
+| 直すべき: 形の比べが列・制約・ポリシーだけで、tenant.py で作った見張りの関数の中身をどこも確かめない | §3-8 の影響と K25 に、索引の定義・見張りの定義・関数の中身（pg_get_functiondef）の比べを足した |
+| 直すべき: ADR-1061 と viewer-contract-stage/design.md の :267・A44 に ADR-1079 への差し戻しが無い | ADR-1061 の関連の欄、design.md :267 の下、A44 に1行ずつ足した |
+| 覚え書き: 見張りが親の行を鍵なしで読むと、読んだ後に親が直されて古い版に詳細が付きうる（前回切れた5件目） | §3-8: 親と指す先を FOR SHARE で読む |
+| 覚え書き: 消した版に後から superseded_by_id を入れると生き返る。詳細の無い今の版を DB が止めない | §3-8: 自分の deleted_at が NULL のときだけ入れられる。詳細の無い行は ADR-1061 の決まり（:266）で止める。K25 に試験を足した |
+| 覚え書き: 見張りの関数が表をスキーマ名つきで読むかが書かれていない | §3-8: TG_TABLE_SCHEMA を付けて読む。K25 に search_path を public だけにした接続の試験を足した |
 
 ## 維持の仕組み
 
