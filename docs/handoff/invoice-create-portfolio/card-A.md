@@ -1,9 +1,9 @@
-# card: 便A 関税の額の表2つと請求書の7列を作る（invoice-create-portfolio）
+# card: 便A 関税の額の表2つと請求書の5列を作る（invoice-create-portfolio）
 
-状態: カード発行（Opus、2026-11-13）。PO の設計承認と実装承認は 2026-11-13「1,（２）決済手数料を合計に足す仕組みは、今回は作りません。別の作業に回します。→次便で」と、同じ日の常設の指示「…確立したなら進める。…PRマージ、デプロイまで完走させてくれ。」（design.md 第8版・審査 APPROVE）。
-設計: docs/handoff/invoice-create-portfolio/design.md §3-3（関税）・§3-5（請求書の列・tenant.py・分類表）・§5 の便 A・§8 の K17・K21。
+状態: カード発行（Opus、2026-11-13）。PO の設計承認と実装承認は 2026-11-13「1,（２）決済手数料を合計に足す仕組みは、今回は作りません。別の作業に回します。→次便で」と、同じ日の常設の指示「…確立したなら進める。…PRマージ、デプロイまで完走させてくれ。」（design.md 第8版・審査 APPROVE）。第9版（2026-11-14）: PO が振込先を版で持つ案を「1,」で選んだ（ADR-1078）。請求書の写しの2列（payment_method_snapshot・payment_account_number）を外し、請求書の列は5列になった。K21 は「請求書の表に写しと口座番号の列が無い」に変わった。
+設計: docs/handoff/invoice-create-portfolio/design.md §3-3（関税）・§3-5（請求書の列・tenant.py・分類表）・§5 の便 A・§8 の K17・K21（第9版）・ADR-1078。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。本番・GitHub の secret・DB には触らない。PR は作らない（Opus が作る）。
-基準: origin/main `11694eaf6` で行番号を測った。行番号がずれていたら「変更前」の文で場所を探す（同じ文が 2 か所あれば BLOCKED: で停止）。
+基準: origin/main `73bf937a8` で行番号を測った（11694eaf6 で測った値を 2026-11-14 に 73bf937a8 で測り直し、変わっていない）。行番号がずれていたら「変更前」の文で場所を探す（同じ文が 2 か所あれば BLOCKED: で停止）。
 危険便か: はい（`migrations/` に新しい SQL を足し、毎回流れる分類表の SQL と `scripts/migration-guard/reference-allowlist.tsv`・`scripts/run_all_migrations.sh` を変える）。マージ前に Opus の審査役の APPROVE・CI 全通過・ADR-136 の GO 記録と直前のバックアップの確認を必須にする（担当の作業ではない）。
 
 本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
@@ -13,13 +13,13 @@
 - D1 この便は「表と列を作るだけ」。計算・API・画面・PDF は便 B〜D で行う。値は入れない（ADR-155）。
 - D2 会社ごとのスキーマに2表を作る: 関税の決まり `tenant_duty_rules`（国・送料の会社・有効期間・根拠の URL）と、その中身 `tenant_duty_rule_components`（関税・手数料などの率と下限・上限）。中身は決まりを外部キーで指し、決まりを消すと中身も消える（ON DELETE CASCADE）。関税の条件（DAP・DDU・DDP）の列は持たない（正本は tenant_settings.duty_incoterms だけ。design.md §3-3）。
 - D3 設計 §3-3 の「note、is_active、created_at、updated_at」のとおり、関税の表に更新した人の列（updated_by_user_id）は作らない。
-- D4 請求書 `invoices` に7列を足す: payment_method_id（INTEGER・外部キーなし）・payment_method_snapshot（JSONB）・payment_account_number（TEXT）・tax_rate_percent（NUMERIC(5, 2)）・shipping_carrier（VARCHAR(50)）・shipping_service（VARCHAR(100)）・shipping_snapshot（JSONB）。どれも NULL 可（design.md §3-5）。
+- D4 請求書 `invoices` に5列を足す: payment_method_id（INTEGER・外部キーなし。振込先の版の番号。ADR-1078）・tax_rate_percent（NUMERIC(5, 2)）・shipping_carrier（VARCHAR(50)）・shipping_service（VARCHAR(100)）・shipping_snapshot（JSONB）。どれも NULL 可（design.md §3-5）。振込先の写しと口座番号の列は作らない（第9版。口座番号は振込先の詳細の表だけに置く）。
 - D5 新しい会社は backend/app/services/tenant.py で同じ形に作る。あわせて、移行だけで足してあって tenant.py に無い請求書の12列（ship_to_snapshot など。型は 20260604_160000・20260611_020000・20260612_131520 の移行と同じ）と、見積の明細・請求書の明細の hs_code を tenant.py に足す（design.md §2・recon §4-1）。
-- D6 分類表（migrations/20261024_100300_create_ai_cloud_views.sql）に 12 列分の行を足す（請求書 4・関税の決まり 5・中身 3）。数・日付・真偽の型の列は型で通るので行を持たない。payment_account_number は列名の拒否の一覧（account_number）に当たって読めないので行を持たない（銀行の口座番号の前例と同じ）。1151 を 1163 にする。元の表 docs/handoff/cloud-case-ai/stage1-column-class.tsv にも同じ 12 行を足す（design.md §3-5「SQL と元の表の両方」）。
-- D7 分類表のファイルは reference-allowlist.tsv:7 に sha256 で登録されているので、同じ変更で sha256 と4列目を直す。4列目の最後に ` / invoice-create-portfolio card-A（分類12行追加）` を足す。
+- D6 分類表（migrations/20261024_100300_create_ai_cloud_views.sql）に 11 列分の行を足す（請求書 3・関税の決まり 5・中身 3）。数・日付・真偽の型の列は型で通るので行を持たない。1151 を 1162 にする。元の表 docs/handoff/cloud-case-ai/stage1-column-class.tsv にも同じ 11 行を足す（design.md §3-5「SQL と元の表の両方」）。
+- D7 分類表のファイルは reference-allowlist.tsv:7 に sha256 で登録されているので、同じ変更で sha256 と4列目を直す。4列目の最後に ` / invoice-create-portfolio card-A（分類11行追加）` を足す。
 - D8 新しい2表は public の表を外部キーで指さないので、CI の手順（.github/workflows/）は変えない（前例の便2-2c1 は public.countries を指したので手順を足した）。
-- D10 K21 の「読み取りの鍵の見え方（ai_ro）に請求書の口座番号の列が出ない」は、backend/tests/ops/test_ai_ro_views.py の前例 test_bank_account_number_and_iban_are_hidden（:239〜:265）と同じ形の試験で確かめる（2026-11-13 審査の指摘）。運用の確認の道（ops_case.unmask_fetch）は、分類で外された列（build_columns の excluded）を返さないので、口座番号の列はそこでも出ない（migrations/20261031_210000_create_ops_case.sql の「8. 列は全部そのビューの列で、秘密列として外された列でない」）。関税の2表は個人の情報を持たないので ops_case.deny_tables に足さない。
-- D9 移行の試験のテナント番号は 962（2026-11-13 に 11694eaf6 で backend・migrations・scripts を git grep して、試験と移行には 0 件。当たるのは backend/app/auth/data/common-passwords.txt と scripts/accuracy/llm_compare/README.md だけ）。
+- D10 K21 は「請求書の表に振込先の写しと口座番号の列が無い」を §2-10 の試験 test_invoices_hold_no_payment_copy で確かめる。口座番号は振込先の詳細の表だけに残り、ADR-1061 決定9 の列名による隠し方がそのまま効く（ADR-1078）。関税の2表は個人の情報を持たないので ops_case.deny_tables に足さない。
+- D9 移行の試験のテナント番号は 962（2026-11-13 に 11694eaf6、2026-11-14 に 73bf937a8 で backend・migrations・scripts を git grep して、試験と移行には 0 件。当たるのは backend/app/auth/data/common-passwords.txt と scripts/accuracy/llm_compare/README.md だけ）。
 
 ## 0. カード発行前チェック（docs/ai-agents/design-partner.md §5.5）
 
@@ -35,7 +35,7 @@
 | 8 | 件数の判定に名前を出す手順を対で置いた | ○（手順8 の `git status --short` と `git diff --stat`） |
 | 9 | 出力量に上限のないコマンドを使わない | ○（すべて tail か wc） |
 | 10 | 停止時の報告3点・受領確認・終端合図 | ○（§4・§5・末尾） |
-| 11 | 期待値は実測から | ○（P2〜P12 は 11694eaf6 で実測。tenant.py の足す行の数は写しに §2-2 を当てて実測） |
+| 11 | 期待値は実測から | ○（P2〜P12 は 11694eaf6 で実測し、2026-11-14 に 73bf937a8 で同じ値を確かめた。tenant.py の足す行の数は写しに §2-2 を当てて実測） |
 | 12 | 停止は本番影響のあるものに限る | ○（§4） |
 | 13 | 委任文の定型4点 | ○（§6） |
 
@@ -49,7 +49,7 @@
 
 ## 受領確認（最初の報告の 1 行目に書く）
 
-`RECEIVED invoice-create-portfolio-A HEAD=`（続けて `git rev-parse HEAD` の 40 桁）。2 行目に「本報告はカード 便A 関税の額の表2つと請求書の7列を作る の実行結果である」と書く。
+`RECEIVED invoice-create-portfolio-A HEAD=`（続けて `git rev-parse HEAD` の 40 桁）。2 行目に「本報告はカード 便A 関税の額の表2つと請求書の5列を作る の実行結果である」と書く。
 
 ## 0-3. 実装前点検（手順2 で流す。外れたら実装せず BLOCKED: で停止）
 
@@ -72,13 +72,12 @@
 2. backend/app/services/tenant.py（6か所に足す）
 3. migrations/20261024_100300_create_ai_cloud_views.sql（説明1行を直し、分類の行を7行足す）
 4. scripts/migration-guard/reference-allowlist.tsv（7行目の sha256 と4列目）
-5. docs/handoff/cloud-case-ai/stage1-column-class.tsv（12行足す）
+5. docs/handoff/cloud-case-ai/stage1-column-class.tsv（11行足す）
 6. scripts/run_all_migrations.sh（最後に2行足す）
 7. backend/tests/rls_bootstrap.py（1か所）
 8. backend/tests/test_tenant_loop_migration_guard.py（2か所）
 9. backend/tests/ops/test_ai_cloud_views.py（数1か所と試験1本）
 10. backend/tests/test_tenant_duty_rules_pg.py（新規）
-11. backend/tests/ops/test_ai_ro_views.py（最後に試験1本を足す）
 
 触らない: 上の 5 以外の docs/ 全部・frontend/・backend/app のほかのファイル・migrations のほかのファイル・.github/workflows の全部（特に workflow-lint.yml）。
 
@@ -87,15 +86,13 @@
 ### 2-1. migrations/20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql（新規。全文）
 
 ```sql
--- invoice-create-portfolio 便A: 関税の額の表 2 つと、請求書の 7 列を作る（作るだけ・冪等）
+-- invoice-create-portfolio 便A: 関税の額の表 2 つと、請求書の 5 列を作る（作るだけ・冪等）
 --
 -- 設計: docs/handoff/invoice-create-portfolio/design.md §3-3（関税）・§3-5（請求書の列）
 -- 中身（各テナントのスキーマ）:
 --   tenant_duty_rules              関税の決まり（行き先の国・送料の会社・有効期間・根拠の URL。DDP のときに使う）
 --   tenant_duty_rule_components    関税の決まりの中身（関税・手数料などの率と下限・上限）
---   invoices.payment_method_id         請求書で案内した支払い先の行の番号（外部キーなし）
---   invoices.payment_method_snapshot   案内した支払い先の写し（口座番号と IBAN は入れない）
---   invoices.payment_account_number    案内した口座番号・IBAN（列名で読み取りの鍵から外れる）
+--   invoices.payment_method_id         請求書で案内した振込先の版の番号（外部キーなし。版は消えない。ADR-1078）
 --   invoices.tax_rate_percent          使った消費税の率
 --   invoices.shipping_carrier          送料の会社
 --   invoices.shipping_service          送料のサービス名
@@ -109,8 +106,8 @@
 -- ロールバック（この順・各テナント）:
 --   DROP TABLE IF EXISTS <tenant>.tenant_duty_rule_components;
 --   DROP TABLE IF EXISTS <tenant>.tenant_duty_rules;
---   ALTER TABLE <tenant>.invoices DROP COLUMN IF EXISTS payment_method_id, DROP COLUMN IF EXISTS payment_method_snapshot,
---     DROP COLUMN IF EXISTS payment_account_number, DROP COLUMN IF EXISTS tax_rate_percent, DROP COLUMN IF EXISTS shipping_carrier,
+--   ALTER TABLE <tenant>.invoices DROP COLUMN IF EXISTS payment_method_id, DROP COLUMN IF EXISTS tax_rate_percent,
+--     DROP COLUMN IF EXISTS shipping_carrier,
 --     DROP COLUMN IF EXISTS shipping_service, DROP COLUMN IF EXISTS shipping_snapshot;
 
 DO $$
@@ -191,15 +188,11 @@ BEGIN
 
         IF to_regclass(format('%I.invoices', r.nspname)) IS NOT NULL THEN
             EXECUTE format('ALTER TABLE %I.invoices ADD COLUMN IF NOT EXISTS payment_method_id INTEGER', r.nspname);
-            EXECUTE format('ALTER TABLE %I.invoices ADD COLUMN IF NOT EXISTS payment_method_snapshot JSONB', r.nspname);
-            EXECUTE format('ALTER TABLE %I.invoices ADD COLUMN IF NOT EXISTS payment_account_number TEXT', r.nspname);
             EXECUTE format('ALTER TABLE %I.invoices ADD COLUMN IF NOT EXISTS tax_rate_percent NUMERIC(5, 2)', r.nspname);
             EXECUTE format('ALTER TABLE %I.invoices ADD COLUMN IF NOT EXISTS shipping_carrier VARCHAR(50)', r.nspname);
             EXECUTE format('ALTER TABLE %I.invoices ADD COLUMN IF NOT EXISTS shipping_service VARCHAR(100)', r.nspname);
             EXECUTE format('ALTER TABLE %I.invoices ADD COLUMN IF NOT EXISTS shipping_snapshot JSONB', r.nspname);
-            EXECUTE format('COMMENT ON COLUMN %I.invoices.payment_method_id IS %L', r.nspname, '請求書で案内した支払い先の行の番号（振込先の一覧の id。外部キーは張らない。PayPal は NULL）');
-            EXECUTE format('COMMENT ON COLUMN %I.invoices.payment_method_snapshot IS %L', r.nspname, '案内した支払い先の写し（選んだ時点の項目。口座番号と IBAN は入れない）');
-            EXECUTE format('COMMENT ON COLUMN %I.invoices.payment_account_number IS %L', r.nspname, '案内した銀行の口座番号か Wise の IBAN（名前で読み取りの鍵から外れる）');
+            EXECUTE format('COMMENT ON COLUMN %I.invoices.payment_method_id IS %L', r.nspname, '請求書で案内した振込先の版の番号（振込先の一覧の id。版は消えない。外部キーは張らない。PayPal は NULL）');
             EXECUTE format('COMMENT ON COLUMN %I.invoices.tax_rate_percent IS %L', r.nspname, '計算に使った消費税の率（パーセント。日本宛のときだけ）');
             EXECUTE format('COMMENT ON COLUMN %I.invoices.shipping_snapshot IS %L', r.nspname, '送料の元の額・元の通貨・換算の率・出どころ（calculate / quote / none）');
         END IF;
@@ -242,7 +235,7 @@ END $$;
     issuer_region VARCHAR(20) CONSTRAINT chk_invoices_issuer_region CHECK (issuer_region IN ('domestic', 'overseas')),
     notes TEXT,
 ```
-変更後（2行の間に 21 行足す）:
+変更後（2行の間に 19 行足す）:
 ```
     issuer_region VARCHAR(20) CONSTRAINT chk_invoices_issuer_region CHECK (issuer_region IN ('domestic', 'overseas')),
     -- 移行で全テナントに入っている列（20260604_160000・20260611_020000・20260612_131520）を新しいテナントにも作る
@@ -260,8 +253,6 @@ END $$;
     paypal_copy_pdf_at TIMESTAMPTZ,
     -- invoice-create-portfolio 便A: 案内した支払い先・使った税率・選んだ送料（移行 20261113_120000 と同じ形）
     payment_method_id INTEGER,
-    payment_method_snapshot JSONB,
-    payment_account_number TEXT,
     tax_rate_percent NUMERIC(5, 2),
     shipping_carrier VARCHAR(50),
     shipping_service VARCHAR(100),
@@ -383,7 +374,7 @@ END $$
 END $$
 ```
 
-### 2-3. migrations/20261024_100300_create_ai_cloud_views.sql（4か所）
+### 2-3. migrations/20261024_100300_create_ai_cloud_views.sql（3か所）
 
 (1) :3
 
@@ -393,24 +384,10 @@ END $$
 ```
 変更後:
 ```
--- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1163 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
+-- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1162 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
 ```
 
-(2) :450 の行の後ろに1行足す。
-
-変更前:
-```
-  ('tenant_*','invoices',ARRAY['payment_method'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
-  ('tenant_*','invoices',ARRAY['paypal_approval_url','paypal_copy_pdf','paypal_invoicer_view_url','paypal_order_id','pdf_url','ship_to_snapshot'],'mask',''),
-```
-変更後:
-```
-  ('tenant_*','invoices',ARRAY['payment_method'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
-  ('tenant_*','invoices',ARRAY['payment_method_snapshot','shipping_snapshot'],'mask',''),
-  ('tenant_*','invoices',ARRAY['paypal_approval_url','paypal_copy_pdf','paypal_invoicer_view_url','paypal_order_id','pdf_url','ship_to_snapshot'],'mask',''),
-```
-
-(3) :451 の行（(2) の後は :452）の後ろに1行足す。
+(2) :451 の行の後ろに2行足す。
 
 変更前:
 ```
@@ -421,10 +398,11 @@ END $$
 ```
   ('tenant_*','invoices',ARRAY['paypal_approval_url','paypal_copy_pdf','paypal_invoicer_view_url','paypal_order_id','pdf_url','ship_to_snapshot'],'mask',''),
   ('tenant_*','invoices',ARRAY['shipping_carrier','shipping_service'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
+  ('tenant_*','invoices',ARRAY['shipping_snapshot'],'mask',''),
   ('tenant_*','invoices',ARRAY['status'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
 ```
 
-(4) :600 の行の後ろに5行足す（`tenant_commission_settings` の `commission_rates` の行は1か所だけ）。
+(3) :600 の行の後ろに5行足す（`tenant_commission_settings` の `commission_rates` の行は1か所だけ）。
 
 変更前:
 ```
@@ -443,25 +421,13 @@ END $$
 ### 2-4. scripts/migration-guard/reference-allowlist.tsv（7行目。手順4 で行う）
 
 (1) 2列目の `472bfcd14f935118dadadb351601de91944964b031842ba9eee5f3d4d99fa6a6` を、手順4 で測った 2-3 の後の sha256（64 文字）に置き換える。
-(2) 4列目（行の最後）の `secretary-rulebook card-bin1（分類5行追加）` を `secretary-rulebook card-bin1（分類5行追加） / invoice-create-portfolio card-A（分類12行追加）` に置き換える。タブの数は変えない（列は4つのまま）。
+(2) 4列目（行の最後）の `secretary-rulebook card-bin1（分類5行追加）` を `secretary-rulebook card-bin1（分類5行追加） / invoice-create-portfolio card-A（分類11行追加）` に置き換える。タブの数は変えない（列は4つのまま）。
 
-### 2-5. docs/handoff/cloud-case-ai/stage1-column-class.tsv（3か所に足す。列はタブ区切りの6列: schema_pattern・table・column・class・reason・data_type）
+### 2-5. docs/handoff/cloud-case-ai/stage1-column-class.tsv（2か所に足す。列はタブ区切りの6列: schema_pattern・table・column・class・reason・data_type）
 
 下の表示ではタブを `<TAB>` と書く。ファイルには本物のタブ文字を入れる（Edit ツールの文字列にタブを入れる）。reason が空の行は `mask<TAB><TAB>jsonb` のようにタブが2つ続く。
 
-(1) :708 の行の後ろに1行足す。
-
-変更前:
-```
-tenant_*<TAB>invoices<TAB>payment_method<TAB>mask<TAB>値の決まりが無く自由に入る列のため伏せる（初期は最小）<TAB>character varying
-```
-変更後:
-```
-tenant_*<TAB>invoices<TAB>payment_method<TAB>mask<TAB>値の決まりが無く自由に入る列のため伏せる（初期は最小）<TAB>character varying
-tenant_*<TAB>invoices<TAB>payment_method_snapshot<TAB>mask<TAB><TAB>jsonb
-```
-
-(2) `ship_to_snapshot` の行（:714。(1) の後は :715）の後ろに3行足す。
+(1) `ship_to_snapshot` の行（:714）の後ろに3行足す。
 
 変更前:
 ```
@@ -475,7 +441,7 @@ tenant_*<TAB>invoices<TAB>shipping_service<TAB>mask<TAB>値の決まりが無く
 tenant_*<TAB>invoices<TAB>shipping_snapshot<TAB>mask<TAB><TAB>jsonb
 ```
 
-(3) `commission_rates` の行（:991。(1)(2) の後は :995）の後ろに8行足す。
+(2) `commission_rates` の行（:991。(1) の後は :994）の後ろに8行足す。
 
 変更前:
 ```
@@ -503,7 +469,7 @@ tenant_*<TAB>tenant_duty_rules<TAB>source_url<TAB>mask<TAB><TAB>text
 変更後:
 ```
 # ADR-1077 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261113_100001_create_secretary_rules_down.sql
-# invoice-create-portfolio 便A: 関税の額の表2つ・請求書の7列を作る（形だけ・行なし・冪等）
+# invoice-create-portfolio 便A: 関税の額の表2つ・請求書の5列を作る（形だけ・行なし・冪等）
 run_sql migrations/20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql
 ```
 （ファイルの最後は改行で終わる形のままにする。）
@@ -572,7 +538,7 @@ run_sql migrations/20261113_120000_create_tenant_duty_rules_and_invoice_columns.
 ```
 変更後:
 ```
-    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1163
+    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1162
 ```
 
 (2) `def test_t10_detects_added_columns(pg):`（:945。1か所だけ）の行の直前に、次の文と空行2つを足す（この文の最後の行の後ろに空行2つ、その次が `def test_t10_detects_added_columns(pg):`）。
@@ -581,7 +547,6 @@ run_sql migrations/20261113_120000_create_tenant_duty_rules_and_invoice_columns.
 # invoice-create-portfolio 便A: 関税の決まりの2表・請求書の新しい列と tenant.py に足した列・明細の hs_code に分類の漏れが無いことを確かめる。
 _DUTY_TABLES = {"tenant_duty_rules", "tenant_duty_rule_components"}
 _DUTY_CLASSIFIED = {
-    ("invoices", "payment_method_snapshot"),
     ("invoices", "shipping_snapshot"),
     ("invoices", "shipping_carrier"),
     ("invoices", "shipping_service"),
@@ -599,22 +564,22 @@ _DUTY_CHECKED_COLUMNS = {
         "ship_to_snapshot", "bill_to_snapshot", "issue_mode", "duty_amount", "duty_policy_snapshot",
         "fx_rate_snapshot", "paypal_order_id", "paypal_approval_url", "payment_fee",
         "paypal_invoicer_view_url", "paypal_copy_pdf", "paypal_copy_pdf_at",
-        "payment_method_id", "payment_method_snapshot", "payment_account_number", "tax_rate_percent",
+        "payment_method_id", "tax_rate_percent",
         "shipping_carrier", "shipping_service", "shipping_snapshot",
     )
 } | {("quote_items", "hs_code"), ("invoice_items", "hs_code")}  # fmt: skip
 
 
 def test_t10_duty_and_invoice_columns_are_classified_on_bootstrapped_db(cluster):
-    """invoice-create-portfolio 便A: 新しい会社の作り方（tenant.py）で作ったテナントに 12 列の column_class の行があり、
+    """invoice-create-portfolio 便A: 新しい会社の作り方（tenant.py）で作ったテナントに 11 列の column_class の行があり、
     関税の2表と、請求書・明細に足した列に分類の漏れが無い。
 
-    数・日付・真偽の型の列は型で通る。payment_account_number は名前の決まりで読めない列なので分類の行を持たない。
+    数・日付・真偽の型の列は型で通る。
     専用の DB を作り、終わったら消す。"""
     from sqlalchemy.ext.asyncio import create_async_engine
 
-    assert len(_DUTY_CLASSIFIED) == 12
-    assert len(_DUTY_CHECKED_COLUMNS) == 21
+    assert len(_DUTY_CLASSIFIED) == 11
+    assert len(_DUTY_CHECKED_COLUMNS) == 19
     name, conn = _new_db(cluster.control, "ai_cloud_t10_duty")
     try:
         c = conn.cursor()
@@ -654,10 +619,10 @@ def test_t10_duty_and_invoice_columns_are_classified_on_bootstrapped_db(cluster)
 ### 2-10. backend/tests/test_tenant_duty_rules_pg.py（新規。全文）
 
 ```python
-"""invoice-create-portfolio 便A: 関税の決まりの表 2 つ・請求書の 7 列の構造と決まりの試験。
+"""invoice-create-portfolio 便A: 関税の決まりの表 2 つ・請求書の 5 列の構造と決まりの試験。
 
 - 単体（PostgreSQL 不要）: 新テナント用 DDL に表 2 つと請求書の列（移行だけにあった 12 列を含む）と明細の hs_code が含まれ、
-  移行ファイルが登録され、値を入れない。口座番号の列が読み取りの鍵の見張りに名前で当たる（K21）。
+  移行ファイルが登録され、値を入れない。請求書に振込先の写しと口座番号の列が無い（K21・ADR-1078）。
 - PG（CI で実行）: 新テナントを作った形（tenant.py）と、表と列を消して移行ファイルを 2 回流した形が同じ。
   決まり（CHECK・外部キー・消したときの連鎖）が設計どおりに効き、別の会社の文脈では行が見えない（K17）。
   試験の中で入れた行と役割は最後に戻す。ゲートは CI が実際に設定する RLS_ADMIN_DATABASE_URL（前例 test_tenant_issuer_tables_pg.py と同じ形）。
@@ -692,8 +657,6 @@ _SCHEMA = f"tenant_{_TENANT_ID:03d}"
 _TABLES = ("tenant_duty_rules", "tenant_duty_rule_components")
 _NEW_INVOICE_COLUMNS = (
     "payment_method_id",
-    "payment_method_snapshot",
-    "payment_account_number",
     "tax_rate_percent",
     "shipping_carrier",
     "shipping_service",
@@ -735,8 +698,6 @@ def test_tenant_ddl_has_duty_tables_and_invoice_columns():
         assert f"    {line}" in invoices, line
     for line in (
         "payment_method_id INTEGER,",
-        "payment_method_snapshot JSONB,",
-        "payment_account_number TEXT,",
         "tax_rate_percent NUMERIC(5, 2),",
         "shipping_carrier VARCHAR(50),",
         "shipping_service VARCHAR(100),",
@@ -787,15 +748,13 @@ def test_migration_writes_no_values():
         assert word not in code
 
 
-def test_account_number_column_is_hidden_from_readers():
-    """K21: 口座番号の列は、本番の読み取りの道（readonly_query）と読み取りの鍵の見え方（ai_ro）の両方で名前で外れる。"""
-    from app.ops.readonly_query import DENY_COLUMN_RE
-
-    assert DENY_COLUMN_RE.search("payment_account_number")
-    ai_ro = (_REPO_ROOT / "migrations" / "20261017_130100_create_ai_ro_views.sql").read_text(encoding="utf-8")
-    deny_lines = [line for line in ai_ro.splitlines() if "deny constant text :=" in line]
-    assert len(deny_lines) == 1
-    assert "account_number" in deny_lines[0]
+def test_invoices_hold_no_payment_copy():
+    """K21（ADR-1078）: 請求書は振込先の版の番号だけを持つ。振込先の写しと口座番号の列は、新しい会社の DDL にも移行にも無い。"""
+    invoices = _block(tenant_service._TENANT_TABLES_SQL, "{schema}.invoices (")
+    body = (_REPO_ROOT / "migrations" / _MIGRATION).read_text(encoding="utf-8")
+    for name in ("payment_method_snapshot", "payment_account_number", "account_number", "iban"):
+        assert name not in invoices, name
+        assert name not in body, name
 
 
 def test_migration_is_scoped_to_own_tenant():
@@ -978,31 +937,6 @@ async def test_new_tenant_shape_equals_migration_and_rules_hold():
         await admin_engine.dispose()
 ```
 
-### 2-11. backend/tests/ops/test_ai_ro_views.py（ファイルの最後に足す）
-
-最後の行 `        assert got == want, view`（:265）の後ろに、空行2つと次の文を足す（ファイルの最後は改行で終わる形のままにする）。
-
-```python
-def test_invoice_payment_account_number_is_hidden(pg):
-    """invoice-create-portfolio 便A（K21）: 請求書に写した口座番号（payment_account_number）は ai_ro に出ない。ほかの列は出る。"""
-    c = pg.cursor()
-    _make_table(
-        c,
-        "tenant_005.invoices",
-        [("id", "int"), ("payment_method_id", "int"), ("payment_account_number", "text"), ("tax_rate_percent", "numeric")],
-    )
-    _rebuild_views(pg)
-    got = [
-        r[0]
-        for r in _rows(
-            pg,
-            "SELECT column_name FROM information_schema.columns"
-            " WHERE table_schema = 'ai_ro' AND table_name = 'tenant_005__invoices' ORDER BY column_name",
-        )
-    ]
-    assert got == ["id", "payment_method_id", "tax_rate_percent"]
-```
-
 ## 3. 手順
 
 手順1 枝を取る
@@ -1030,14 +964,14 @@ def test_invoice_payment_account_number_is_hidden(pg):
     cd ~/sa && ls migrations/20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql backend/tests/test_tenant_duty_rules_pg.py 2>&1 | tail -2
   期待: 3行目 `20261113_100001_create_secretary_rules_down.sql`。4行目と5行目の値は `472bfcd14f935118dadadb351601de91944964b031842ba9eee5f3d4d99fa6a6`。6行目は2ファイルとも `:1`。7行目は3ファイルとも `:0`。8行目は2ファイルとも `:0`。9行目 1。10行目 4。11行目 1。12行目 1。13行目 1058。14行目 1272。15行目 `# ADR-1077 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261113_100001_create_secretary_rules_down.sql`。16行目 1。17行目は2つとも「No such file or directory」。
 
-手順3 §2 の変更をする（2-1、2-2、2-3、2-5 から 2-11 の順。2-4 は手順4 で行う。新規の2ファイルは Write ツール、それ以外は Edit ツールで行う）
+手順3 §2 の変更をする（2-1、2-2、2-3、2-5 から 2-10 の順。2-4 は手順4 で行う。新規の2ファイルは Write ツール、それ以外は Edit ツールで行う）
 
 手順4 許可一覧の sha256 を直す（2-3 の後）
     cd ~/sa && sha256sum migrations/20261024_100300_create_ai_cloud_views.sql | tail -1
   出た 64 文字で §2-4 の(1)を Edit ツールで置き換え、§2-4 の(2)も Edit ツールで行う。その後:
     cd ~/sa && sed -n 7p scripts/migration-guard/reference-allowlist.tsv | cut -f2
     cd ~/sa && sed -n 7p scripts/migration-guard/reference-allowlist.tsv | awk -F'\t' '{print NF}'
-    cd ~/sa && sed -n 7p scripts/migration-guard/reference-allowlist.tsv | grep -c "invoice-create-portfolio card-A（分類12行追加）$"
+    cd ~/sa && sed -n 7p scripts/migration-guard/reference-allowlist.tsv | grep -c "invoice-create-portfolio card-A（分類11行追加）$"
   期待: 1行目は sha256sum と同じ 64 文字。2行目 4（列の数が変わっていない）。3行目 1。
 
 手順5 道具を入れる（本番と同じ Python 3.12 の venv を作業場所の外 ~/venv312 に作る。素の pip は見張り py312-guard が止めるので使わない）
@@ -1052,12 +986,12 @@ def test_invoice_payment_account_number_is_hidden(pg):
     cd ~ && ~/venv312/bin/python -m ensurepip 2>&1 | tail -1
 
 手順6 形と数
-    cd ~/sa && ~/venv312/bin/ruff check backend/app/services/tenant.py backend/tests/rls_bootstrap.py backend/tests/test_tenant_loop_migration_guard.py backend/tests/ops/test_ai_cloud_views.py backend/tests/test_tenant_duty_rules_pg.py backend/tests/ops/test_ai_ro_views.py 2>&1 | tail -10
+    cd ~/sa && ~/venv312/bin/ruff check backend/app/services/tenant.py backend/tests/rls_bootstrap.py backend/tests/test_tenant_loop_migration_guard.py backend/tests/ops/test_ai_cloud_views.py backend/tests/test_tenant_duty_rules_pg.py 2>&1 | tail -10
     cd ~/sa && ~/venv312/bin/python -c "import ast; ast.parse(open('backend/app/services/tenant.py').read()); print('tenant.py ok')" 2>&1 | tail -1
     cd ~/sa && ~/venv312/bin/python scripts/check-migration-value-writes.py repo > ~/vw-repo.txt 2>&1; echo "exit=$?"; tail -10 ~/vw-repo.txt
     cd ~/sa && git diff -U0 migrations/20261024_100300_create_ai_cloud_views.sql | grep -c "^+  ('tenant_\*'"
     cd ~/sa && git diff -U0 migrations/20261024_100300_create_ai_cloud_views.sql | grep -c "^-  ('"
-    cd ~/sa && grep -c "1163" migrations/20261024_100300_create_ai_cloud_views.sql backend/tests/ops/test_ai_cloud_views.py | tail -2
+    cd ~/sa && grep -c "1162" migrations/20261024_100300_create_ai_cloud_views.sql backend/tests/ops/test_ai_cloud_views.py | tail -2
     cd ~/sa && git diff -U0 backend/app/services/tenant.py | grep -c "^-"
     cd ~/sa && git diff -U0 backend/app/services/tenant.py | grep -c "^+"
     cd ~/sa && grep -c "CREATE TABLE IF NOT EXISTS {schema}.tenant_duty_rule" backend/app/services/tenant.py
@@ -1066,21 +1000,21 @@ def test_invoice_payment_account_number_is_hidden(pg):
     cd ~/sa && git diff -U0 docs/handoff/cloud-case-ai/stage1-column-class.tsv | grep -c "^+tenant_\*"
     cd ~/sa && awk -F'\t' 'NF != 6' docs/handoff/cloud-case-ai/stage1-column-class.tsv | wc -l
     cd ~/sa && grep -c "run_sql migrations/20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql" scripts/run_all_migrations.sh
-  期待（上から順に）: ruff は `All checks passed!`／`tenant.py ok`／値の書き込みの検査は `exit=0`／7（足した分類の行）／0（消した分類の行は無い）／2ファイルとも `:1`／1（消した行は無いので、当たるのは見出しの `--- a/backend/app/services/tenant.py` の1行だけ）／81（足した行 80 と `+++ b/` の1行）／2／3／1070／12／0（どの行も6列）／1。
+  期待（上から順に）: ruff は `All checks passed!`／`tenant.py ok`／値の書き込みの検査は `exit=0`／7（足した分類の行）／0（消した分類の行は無い）／2ファイルとも `:1`／1（消した行は無いので、当たるのは見出しの `--- a/backend/app/services/tenant.py` の1行だけ）／79（足した行 78 と `+++ b/` の1行）／2／3／1069／11／0（どの行も6列）／1。
   repo の検査が exit=0 でなかったら、最後の 10 行を貼って `BLOCKED: value-writes`。
 
 手順7 backend の試験（実 PostgreSQL の試験は CI だけで動く。ここでは skip と出てよい。failed と error は 0 であること）
     cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/test_tenant_duty_rules_pg.py tests/test_tenant_loop_migration_guard.py 2>&1 | tail -15
-    cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/ops/test_ai_cloud_views.py tests/ops/test_ai_ro_views.py 2>&1 | tail -15
+    cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/ops/test_ai_cloud_views.py 2>&1 | tail -15
   期待: 1本目は failed 0・error 0 で、passed に test_tenant_duty_rules_pg.py の単体5件を含む（PG の1件は skipped でよい）。2本目は failed 0・error 0（skipped は出てよい）。
 
 手順8 変えたファイルの名前と数
     cd ~/sa && git status --short | tail -20
     cd ~/sa && git diff --stat | tail -20
-  期待: §1 の 11 ファイルだけ（新規の2ファイルは `??` で各1行）。
+  期待: §1 の 10 ファイルだけ（新規の2ファイルは `??` で各1行）。
 
 手順9 記録と送り出し
-    cd ~/sa && git add migrations/20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql backend/app/services/tenant.py migrations/20261024_100300_create_ai_cloud_views.sql scripts/migration-guard/reference-allowlist.tsv docs/handoff/cloud-case-ai/stage1-column-class.tsv scripts/run_all_migrations.sh backend/tests/rls_bootstrap.py backend/tests/test_tenant_loop_migration_guard.py backend/tests/ops/test_ai_cloud_views.py backend/tests/test_tenant_duty_rules_pg.py backend/tests/ops/test_ai_ro_views.py && git status --short | tail -20
+    cd ~/sa && git add migrations/20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql backend/app/services/tenant.py migrations/20261024_100300_create_ai_cloud_views.sql scripts/migration-guard/reference-allowlist.tsv docs/handoff/cloud-case-ai/stage1-column-class.tsv scripts/run_all_migrations.sh backend/tests/rls_bootstrap.py backend/tests/test_tenant_loop_migration_guard.py backend/tests/ops/test_ai_cloud_views.py backend/tests/test_tenant_duty_rules_pg.py && git status --short | tail -20
     cd ~/sa && git config user.name "shingo-cc" && git config user.email "shingo-cc@users.noreply.github.com" && git commit -q -m "feat(tenant): create duty rule tables and invoice payment/tax/shipping columns per tenant (invoice-create-portfolio bin A)" && git log --oneline -1 | tail -1
     cd ~/sa && ~/venv312/bin/python scripts/check-migration-value-writes.py diff origin/main HEAD --check all > ~/vw-diff.txt 2>&1; echo "exit=$?"; tail -10 ~/vw-diff.txt
     cd ~/sa && git push origin release/invoice-create-portfolio-bin-a 2>&1 | tail -3
@@ -1105,7 +1039,7 @@ def test_invoice_payment_account_number_is_hidden(pg):
 ## 5. 報告の形
 
 - 宛先: 完了報告の本文（クラウドの実行の最後の返事）。ファイルに書かない。
-- 1 行目: `RECEIVED invoice-create-portfolio-A HEAD=…`。2 行目: 「本報告はカード 便A 関税の額の表2つと請求書の7列を作る の実行結果である」。
+- 1 行目: `RECEIVED invoice-create-portfolio-A HEAD=…`。2 行目: 「本報告はカード 便A 関税の額の表2つと請求書の5列を作る の実行結果である」。
 - 手順1・2・4・5・6・7・8・9 の出力（tail の範囲）をそのまま貼る。要約しない。
 - 停止したときは「停止した手順番号／最後に実行したコマンド／停止した理由」の 3 点。
 - 秘密の値・鍵・パスワードは貼らない。

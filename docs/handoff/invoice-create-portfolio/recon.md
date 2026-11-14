@@ -128,3 +128,14 @@
 
 - FedEx ライブ見積が tenant_004 の認証で本当に料金を返すか（呼んでいない。本番の外部 API を試しに呼ばないため）。
 - 関税の値そのもの（率・手数料・下限・上限）。ADR-095 付録1-4 で未決。AI は入れない。
+
+## 11. 振込先の版（第9版で足した。2026-11-14・基準 origin/main 73bf937a8）
+
+- 振込先の表を作った移行: migrations/20261112_160000_create_tenant_issuer_and_payment_tables.sql。一覧の表は :72-87（id・tenant_id・region・method_type・display_name・sort_order・is_active・updated_by_user_id・created_at・updated_at。UNIQUE (id, tenant_id, method_type)）。詳細の2表は主キー payment_method_id で、一覧へ (payment_method_id, tenant_id, method_type) の外部キー ON DELETE CASCADE（:106・:128）。見張り（トリガー）は無い。
+- 新しいテナント用: backend/app/services/tenant.py:1246（一覧）・:1264（銀行）・:1279（銀行の外部キー CASCADE）・:1283（Wise）・:1300（Wise の外部キー CASCADE）。請求書の表は :861 で、振込先の表より前に作られる。
+- 見張りの置き方の前例: tenant.py:553-593（{schema}.trg_set_updated_at() を会社ごとのスキーマに置き、pg_trigger を見てから CREATE TRIGGER）。
+- 振込先の表を使うアプリのコード: `git grep -l tenant_invoice_payment origin/main -- backend/app frontend/src` の結果は tenant.py の1件だけ（表を作る所）。読む道・書く道は0本。
+- 会社を消す道: backend/app/routers/super_admin_tenants.py:165-168（DROP SCHEMA IF EXISTS ... CASCADE）。行を1つずつ消さない。
+- 運用の確かめの道: migrations/20261031_210000_create_ops_case.sql:202-227 の ops_case.is_denied_source は、隠す列を1つでも持つ表をまるごと断る。隠す列の名前の決まりは backend/app/ops/readonly_query.py:43（account_number・iban）。→ 請求書の表に口座番号の列を作ると、請求書の表が丸ごと確かめられなくなる。
+- 試験: backend/tests/test_tenant_issuer_tables_pg.py:248 は一覧の行を消して詳細も消えることを確かめている（版の仕組みでは「消すことを断る」に変わる）。
+- 本番（2026-11-14 20:08〜20:10 日本時間・reader 鍵・生出力 /tmp/CC報告ファイル/pay_counts.txt・pay_counts2.txt・pay_counts3.txt）: 振込先の一覧は tenant_001・003・004・005・006 のすべてで0行。銀行・Wise の詳細は tenant_001・003 で0行（ほかのテナントも、一覧が0行なので外部キーにより0行）。請求書は tenant_001・003〜006 のすべてで0行。
