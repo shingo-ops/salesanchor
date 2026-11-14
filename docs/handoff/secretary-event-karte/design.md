@@ -1,8 +1,8 @@
 # 設計 — 秘書の「予定のカルテ」（足りない欄だけを順に聞く）
 
-作った人: Opus（Planner）2026-11-14。状態: 設計案 第2版（第1版への設計の審査（クラウド・同じ AI）の「直す点あり」9 件を直した。再審査前）。PO の実装承認は未。
+作った人: Opus（Planner）2026-11-14。状態: 設計案 第3版（第2版への設計の審査（クラウド・同じ AI）の「直す点あり」6 件を直した。再審査前）。PO の実装承認は未。
 
-親: [kgi.md](kgi.md) ／ 現在地: [recon.md](recon.md) ／ ADR: [ADR-1078](../../adr/ADR-1078-secretary-event-karte.md)（Proposed）／ 改める ADR: ADR-1056（一部）。ADR-1077 とは指示文と答えの形を共有する（改めない）
+親: [kgi.md](kgi.md) ／ 現在地: [recon.md](recon.md)（docs/handoff/secretary-event-karte/recon.md）／ ADR: [ADR-1078](../../adr/ADR-1078-secretary-event-karte.md)（Proposed）／ 改める ADR: ADR-1056（一部）。ADR-1077 とは指示文と答えの形を共有する（改めない）
 
 根拠の行番号はすべて origin/main = 73bf937a8 のもの。
 
@@ -103,7 +103,7 @@ def next_ask(ev, meet_available: bool, asked: str | None, asked_count: int) -> t
 
 - 前 :15-16 `AssistantMessageIn` は `text` だけ。
 - 後: `karte: KarteIn | None = None` を足す。鍵が送られたかは `body.model_fields_set` に `"karte"` があるかで見る（pydantic v2。null を送った頼みと、鍵の無い頼みを分ける）。`KarteIn`（extra=forbid）:
-  - `title`・`location`・`description` はどれも 1000 字まで（AI の答えの上限と同じにする。小さいと、AI が長く書いた下書きを次の頼みで送ったときに 422 になるため）・`start`/`end` は ISO 8601 か null（読めなければ 422）
+  - `title`・`location`・`description` はどれも 1000 字まで（AI の答えの上限と同じにする。小さいと、AI が長く書いた下書きを次の頼みで送ったときに 422 になるため）・`start`/`end` は ISO 8601 か null で 40 字まで（`max_length=40`。超えるか読めなければ 422。上限が無いと小数の桁が長い時刻で送る量が膨らみ、原因と合わない 413 になるため）
   - `is_all_day: bool`・`is_meeting: bool`・`add_meet: bool | None`
   - `asked: Literal["title","start","end","add_meet"] | None`・`asked_count: int`（0〜2）
 - 前 :40-48 `IntentEvent` は `title: str`・`start: str`、字数の上限が無い。
@@ -116,10 +116,10 @@ def next_ask(ev, meet_available: bool, asked: str | None, asked_count: int) -> t
 - 前 :171-175 `_agent_payload(text, model, rules)`。
 - 後: カルテが null でないときだけ `"karte": {"start", "end", "is_all_day"}` と `"asked"` を足す。題名・場所・メモ・打ち合わせか・Meet は送らない（④で backend が合わせるので AI に要らない。送る量を増やさないため）。カルテが無いときは今と 1 バイトも違わない。
 - 大きさ（実測の計算・`json.dumps(ensure_ascii=False, separators=(",",":"))` で数えた値）: 今の上限いっぱい（文 1000 字＋決まり 150 字×20 件）が 12,143 バイト。カルテ（始まり・終わり・終日）と `asked` を足して 12,261 バイト。上限 15,000（:73）より 2,739 バイト小さい。題名・場所・メモ（各 1000 字）まで送ると 21,303 バイトで超えるため、送らない。
-- ①'' 新規: 決まりを読んで大きさを測った後（:260 の後）、commit（:263）の前に `meet_available = await can_add_meet(db, tenant_id, user_id)`。読めなければ `False`（Meet を聞かないだけで、予定は作れる）。判定の式は書かない（`backend/app/services/calendar_service.py:73-80` の 1 か所だけ）。
+- ①'' 新規: 決まりを読んで大きさを測った後（:260 の後）、commit（:263）の前に `meet_available = await can_add_meet(db, tenant_id, user_id)`。この呼び出しは `async with db.begin_nested():` の中で行う。読めなければ `False`（Meet を聞かないだけで、予定は作れる）。入れ子の取引にするのは、PostgreSQL で失敗した文が外の取引を中断のまま残し、その後の commit と会社の文脈の張り直しを壊さないため（試験は SQLite なので、失敗を起こす試験で入れ子の巻き戻しを確かめる）。判定の式は書かない（`backend/app/services/calendar_service.py:73-80` の 1 か所だけ）。
 - 前 :278-289 終わりが無ければ +1 時間（:285）、終わり < 始まりなら 502。
 - 後（新しい画面の道 = 頼みに karte の鍵がある）:
-  - ④ 合わせる（新しい関数 `merge_karte(ev, karte)` を backend/app/services/secretary_karte.py（新規・§4-1 と同じファイル）に置く）: `title`・`start`・`end`・`location`・`description`・`add_meet` は「AI の値が null ならカルテの値」。`is_meeting` は AI かカルテのどちらかが真なら真。`is_all_day` は AI かカルテのどちらかが真なら真。AI が null でない値を返したら、それを使う（利用者が言い直した値）。
+  - ④ 合わせる（新しい関数 `merge_karte(ev, karte)` を backend/app/services/secretary_karte.py（新規・§4-1 と同じファイル）に置く）: `title`・`start`・`end`・`location`・`description`・`add_meet` の各欄は次の順で決める。(1) カルテに値があり、その欄が直前に聞いた欄（`karte.asked`）でなければ、カルテの値を使う（AI は題名・場所・メモを見ていないので、AI の値で上書きさせない）。(2) それ以外は、AI の値が null でなければ AI の値、null ならカルテの値。`is_meeting` は AI かカルテのどちらかが真なら真。`is_all_day` は AI かカルテのどちらかが真なら真。聞いていない欄を会話の途中で言い直した値は取り込まない。最後の確かめの欄で手で直す。
   - ④' カルテが null でなく、AI が unknown を返したとき: カルテの値だけで予定として続ける（`kind` は event・欄はカルテのまま）。`next_ask` に渡すと、直前と同じ欄が空のままなので同じ欄を聞き、回数が 1 増える（3 回目は聞かない）。AI が invoice を返したときは、話が変わったとして今と同じ請求書の下書きを返す（画面はカルテを捨てる）。
   - ⑤ 始まりがあれば読む。読めなければ今と同じ 502。終日で終わりが空なら、終わり＝始まり。終わりがあれば読む。読めなければ 502。終わり < 始まりなら終わりを null に戻す（もう一度聞く）。+1 時間は足さない。
 - 後（古い画面の道 = 頼みに karte の鍵が無い）: 今の動きを 1 つも変えない。題名か始まりが null なら 502 unreadable（今の形の検査で止まるのと同じ結果）。終わりが無ければ +1 時間（:285・:325 はこの道にだけ残す）。終わり < 始まりなら 502。`ask` は null・`ask_count` は 0・`add_meet` は null で返す。
@@ -141,7 +141,8 @@ def next_ask(ev, meet_available: bool, asked: str | None, asked_count: int) -> t
 - 日時だけを渡す理由: 「11 時に終わる」のような短い答えを、始まりの日付に合わせて読ませるため。題名などは backend が④で合わせるので渡さない（§4-3 の大きさ）。
 
 - `readKarte(value)` を足す（無ければ null・オブジェクトならそのまま・それ以外は null を返して呼ぶ側が 400）。
-- `secretary-agent/server.mjs:139-152`・`secretary-codex/server.mjs:232-245`: 取り出す欄に `karte`・`asked` を足し、`compose` に渡す。
+- `secretary-agent/server.mjs:139-152`・`secretary-codex/server.mjs:232-245`: 取り出す欄に `karte`・`asked` を足し、次の関数に渡す。
+- `secretary-agent/server.mjs:54` `runClaude(text, now, model, rules)` と `secretary-codex/server.mjs:128` `runCodex(...)`: 引数に `karte`・`asked` を足す。`compose` を呼ぶ `secretary-agent/server.mjs:122` と `secretary-codex/server.mjs:215` で、それを `compose` に渡す。
 - `secretary-agent/prompt.txt` の変更:
 
 | 行 | 前 | 後 |
@@ -196,7 +197,7 @@ def next_ask(ev, meet_available: bool, asked: str | None, asked_count: int) -> t
 |---|---|---|
 | A. AI に次の質問も書かせる | 指示文に聞く順を書く | 順と回数を試験で確かめられない。AI の答えが揺れる（C3・C6 を ○ にできない） |
 | B. 会話の全文を毎回 AI に送る | 画面が履歴を全部送る | 送る量が増え、決まり帳の 15,000 バイトの上限（`backend/app/routers/assistant.py:73`）に近づく。過去の文のどれが今の値か AI が取り違える |
-| C. カルテを DB に置く | 会話の途中を保存する | ADR-1056「会話を残さない」に反する。表が増える |
+| C. カルテを DB に置く | 会話の途中を保存する | カルテは保存しないという約束（docs/handoff/secretary-event-karte/kgi.md「変えない約束」。PO の承認待ちの目標に置く）に反する。表が増える |
 | **D. 画面がカルテを持ち、backend が次の質問を決める（選んだ）** | 欄の値だけを往復させる | 状態は会話の間だけ・表は増えない・順と回数は関数の試験で 100% |
 
 ## 7. 危ない点と手当て
@@ -248,7 +249,10 @@ PO のアカウントが Google をつないだ本人（`meet_available` 真）�
 | C8 試し 23 件の種類 69/69 | 本番反映後に `docs/handoff/secretary-rulebook/bin0/run_baseline.py` を 1 回 |
 | 古い版の容器でも壊れない | backend の試験で、2 欄の無い答えが初期値で通ること |
 | 古い画面でも壊れない | backend の試験で、karte の鍵の無い頼みが今と同じ結果になること（今の試験 `backend/tests/test_assistant_router.py:151-159`・:239-241 がそのまま緑。題名か始まりが null の答えは 502） |
-| 埋まった欄は AI が落としても消えない | `merge_karte` の試験（AI が null・カルテに値 → カルテの値。AI に値 → AI の値。is_meeting は一度真なら真） |
+| 埋まった欄は AI が落としても上書きしても消えない | `merge_karte` の試験（AI が null・カルテに値 → カルテの値。聞いた欄で AI に値 → AI の値。聞いていない欄でカルテに値・AI に別の値 → カルテの値（題名・メモを上書きしない）。is_meeting は一度真なら真） |
+| Meet を読めなくても頼みが壊れない | backend の試験: `can_add_meet` が例外を出したとき、`meet_available` は偽で 200 が返り、その後の名前探しも動く（入れ子の取引の巻き戻し） |
+| カルテの時刻の長さ | backend の試験: 41 字以上の `start` は 422 |
+| 画面の今の試験の書き直し | `frontend/src/features/secretary/SecretaryChat.test.tsx:137` は送る本文を `{ text: "make something" }` ちょうどで確かめている。`{ text: "make something", karte: null }` に書き直す |
 | カルテの途中の unknown | backend の試験: カルテあり＋unknown の答え → event・同じ欄・回数＋1。回数 2 のとき → ask は null |
 | 時刻が空なら「作成」を押せない | 画面の試験: 終日でなく時刻が空のとき、作成のボタンが押せない |
 | 送る量 | backend の試験: 文 1000 字・決まり 150 字×20 件・カルテありの頼みが 15,000 バイト以下 |
@@ -263,7 +267,7 @@ PO のアカウントが Google をつないだ本人（`meet_available` 真）�
   - どう: 埋まった欄は飛ばし、空いている欄を順に 1 つずつ聞く。必須の欄がすべて埋まると欄集めを終える。
   - 本件に使ったところ: 「必須の欄の一覧」「決まった質問の文」「埋まった欄は聞かない」「全部埋まったら次へ」の 4 点。質問の文を AI でなく決まった文にした（§3）のもこの形。
   - 数値: 公式文書に成功率などの数は無い。成功の証明には使わず、作りの型としてだけ使う。
-  - 適用の限界: Rasa は会話の状態をサーバーに持つ。本件は ADR-1056 の「会話を残さない」のため画面が持つ（§6 の案 D）。
+  - 適用の限界: Rasa は会話の状態をサーバーに持つ。本件はカルテを保存しない約束（docs/handoff/secretary-event-karte/kgi.md「変えない約束」）のため画面が持つ（§6 の案 D）。
 
 ## 11. 維持の仕組み
 
