@@ -71,7 +71,7 @@ def _sqlstate(exc) -> str | None:
 
 def test_tenant_ddl_has_versioning():
     sql = tenant_service._TENANT_TABLES_SQL
-    marker = "CREATE TABLE IF NOT EXISTS {schema}.tenant_invoice_payment_methods ("
+    marker = "CREATE TABLE IF NOT EXISTS " + "{schema}.tenant_invoice_payment_methods ("
     assert sql.count(marker) == 1
     methods = sql.split(marker)[1]
     methods = methods[: methods.index("\n);")]

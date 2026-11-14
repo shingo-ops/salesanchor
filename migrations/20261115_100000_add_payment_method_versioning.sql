@@ -109,8 +109,9 @@ BEGIN
     FOR r IN
         SELECT nspname FROM pg_namespace WHERE nspname ~ '^tenant_[0-9]+$' ORDER BY nspname
     LOOP
+        -- 振込先の表が無いスキーマは飛ばす（便A と同じ形。本番は 20261112_160000 が先に流れて全テナントにある）
         IF to_regclass(format('%I.tenant_invoice_payment_methods', r.nspname)) IS NULL THEN
-            RAISE EXCEPTION 'tenant_invoice_payment_methods is missing in %', r.nspname;
+            CONTINUE;
         END IF;
         v_methods := format('%I.tenant_invoice_payment_methods', r.nspname)::regclass;
         EXECUTE format('ALTER TABLE %I.tenant_invoice_payment_methods ADD COLUMN IF NOT EXISTS superseded_by_id INTEGER', r.nspname);
