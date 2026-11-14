@@ -33,24 +33,32 @@ set -u
 CBS_MODE="-"
 CBS_REASON="-"
 HEAD_SHA=""
+CBS_COPY_OK=0
+CBS_ORIG_GITDIR_OK=""
+CBS_SKIP_LOG=0
 _cbs_now() { perl -MTime::HiRes=time -e 'printf "%.2f", time'; }
 CBS_T0=$(_cbs_now)
 _cbs_log() {
   local rc=$? t1 secs common head branch caller reason
+  test "$CBS_SKIP_LOG" = 1 && return $rc
   t1=$(_cbs_now)
   secs=$(perl -e 'printf "%.1f", $ARGV[1] - $ARGV[0]' "$CBS_T0" "$t1" 2>/dev/null)
   common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return $rc
   head="$HEAD_SHA"
   test -n "$head" || head=$(git rev-parse HEAD 2>/dev/null)
   branch=$(git branch --show-current 2>/dev/null)
+  test -n "$branch" || { test "$CBS_COPY_OK" = 1 && branch="${CBS_ORIG_BRANCH:-}"; }
   caller="${CHECK_BEFORE_SUBMIT_CALLER:-manual}"
   reason="-"
-  test "$rc" = "2" && reason="$CBS_REASON"
+  case "$rc" in 0|1) test "$CBS_COPY_OK" = 1 && reason=untracked-copy ;; 2) reason="$CBS_REASON" ;; *) test "$CBS_REASON" = copy-rc && reason=copy-rc ;; esac
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$branch" "$head" "$rc" "$secs" "$caller" "$CBS_MODE" "$reason" \
     >> "${common}/check-before-submit.log" 2>/dev/null
   return $rc
 }
 trap _cbs_log EXIT
+
+# 写しへそのまま渡すため、読み取る前の引数を保存する（R4b-2 第2便 決め 6）
+CBS_ARGS=("$@")
 
 FULL=0
 ONLY=""
@@ -96,10 +104,58 @@ else
   CBS_MODE=full
 fi
 
+# 写しの中で流れているかを 1 回だけ決める（R4b-2 第2便 決め 2）。4 つがそろったときだけ 1 にする。
+# ① CBS_IN_COPY が 1 ② 枝の名が空 ③ 一番上のフォルダの名が cbs-copy. で始まる
+# ④ CBS_ORIG_GITDIR が空でなく、解いた場所が共通の git の場所そのものか、その worktrees/ の下
+if test "${CBS_IN_COPY:-}" = "1" && test -z "$(git branch --show-current 2>/dev/null)"; then
+  case "$(basename "$(pwd -P)")" in
+    cbs-copy.*)
+      if test -n "${CBS_ORIG_GITDIR:-}"; then
+        cbs_g=$(cd "${CBS_ORIG_GITDIR:-}" 2>/dev/null && pwd -P)
+        cbs_c=$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd -P)
+        if test -n "$cbs_g" && test -n "$cbs_c"; then
+          case "$cbs_g" in
+            "$cbs_c"|"$cbs_c"/worktrees/*) CBS_COPY_OK=1; CBS_ORIG_GITDIR_OK="$cbs_g" ;;
+          esac
+        fi
+      fi
+      ;;
+  esac
+fi
+
 # --- commit していない変更があれば止める（見本の runner は commit 済みの HEAD から写しを作るため） ---
 CBS_PORC=$(git status --porcelain)
 if test -n "$CBS_PORC"; then
   if printf '%s\n' "$CBS_PORC" | grep -qv '^??'; then CBS_REASON=dirty-tracked; else CBS_REASON=dirty-untracked; fi
+  # R4b-2 第2便: 記録していないファイルだけなら、HEAD の切り離しの写しを一時フォルダに作り、その中で同じ引数で流す。
+  # --list-fixtures のときと、写しの中（外から CBS_IN_COPY=1 が来たときも含む）では作らない
+  if test "$CBS_REASON" = "dirty-untracked" && test "$LIST_FIX" = "0" && test "${CBS_IN_COPY:-}" != "1"; then
+    git status --short | head -20
+    echo "記録していないファイルがあります。HEAD の写しで流します（約 40 秒増えます）"
+    cbs_branch=$(git branch --show-current 2>/dev/null)
+    cbs_gitdir=$(git rev-parse --path-format=absolute --git-dir 2>/dev/null)
+    cbs_dir=$(mktemp -d "${TMPDIR:-/tmp}/cbs-copy.XXXXXX" 2>/dev/null) || { CBS_REASON=copy-fail; echo "写しの一時フォルダが作れません（終了コード 2）"; exit 2; }
+    if ! git worktree add -q --detach "$cbs_dir" "$(git rev-parse HEAD)" >/dev/null 2>&1; then
+      rmdir "$cbs_dir" 2>/dev/null || true
+      CBS_REASON=copy-fail
+      echo "HEAD の写しが作れません（終了コード 2）"
+      exit 2
+    fi
+    if ! test -f "$cbs_dir/scripts/dev/check-before-submit.sh"; then
+      git worktree remove --force "$cbs_dir" >/dev/null 2>&1 || true
+      CBS_REASON=copy-fail
+      echo "HEAD に入口の台本がありません（終了コード 2）"
+      exit 2
+    fi
+    (cd "$cbs_dir" 2>/dev/null || exit 3; CBS_IN_COPY=1 CBS_ORIG_BRANCH="$cbs_branch" CBS_ORIG_GITDIR="$cbs_gitdir" bash scripts/dev/check-before-submit.sh ${CBS_ARGS[@]+"${CBS_ARGS[@]}"} </dev/null)
+    cbs_rc=$?
+    case "$cbs_rc" in
+      0|1|2) CBS_SKIP_LOG=1 ;;
+      *) CBS_REASON=copy-rc ;;
+    esac
+    git worktree remove --force "$cbs_dir" >/dev/null 2>&1 || true
+    exit $cbs_rc
+  fi
   echo "commit していない変更があります。commit してから流してください（終了コード 2）。"
   git status --short | head -20
   exit 2
@@ -416,7 +472,11 @@ fi
 echo "結果: ○ 流した検査は全部通りました（終了コード 0）"
 # 全部 ○ で --only なしのときだけ、流した印を書く（書けなくても結果は変えない）
 if test -z "$ONLY"; then
-  STAMP_DIR=$(git rev-parse --path-format=absolute --git-dir 2>/dev/null)
+  if test "$CBS_COPY_OK" = "1"; then
+    STAMP_DIR="$CBS_ORIG_GITDIR_OK"
+  else
+    STAMP_DIR=$(git rev-parse --path-format=absolute --git-dir 2>/dev/null)
+  fi
   if test -n "$STAMP_DIR" && printf '%s\n' "$HEAD_SHA" > "${STAMP_DIR}/check-before-submit.ok" 2>/dev/null; then
     echo "流した印を書きました: ${STAMP_DIR}/check-before-submit.ok"
   fi

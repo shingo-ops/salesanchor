@@ -22,6 +22,7 @@
   14 一時のリポジトリと git worktree add の作業場所の両方で共通の設定に frontend/.husky が書かれる / 15 .git の無い場所・16 git の無い PATH・17 外のリポジトリの深い所は rc=0 で外の値を変えない / 18 3 か所の値が同じ
 設計: docs/handoff/rule-enforcement/design.md の R4a / R4b / R4c 便3
 """
+import glob
 import os
 import shutil
 import subprocess
@@ -102,11 +103,12 @@ class CheckBeforeSubmit(unittest.TestCase):
             with open(dst, "a", encoding="utf-8") as fh:
                 fh.write(text)
 
-    def run_script(self, *args):
+    def run_script(self, *args, extra_env=None, cwd=None):
         env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
         env["TMPDIR"] = self.tmp  # 入口のログ置き場も、終わりに消す一時フォルダの中に作らせる
-        r = subprocess.run(["bash", SCRIPT_REL] + list(args), cwd=self.wt, env=env,
-                           capture_output=True, text=True, timeout=600)
+        env.update(extra_env or {})
+        r = subprocess.run(["bash", SCRIPT_REL] + list(args), cwd=cwd or self.wt, env=env,
+                           capture_output=True, text=True, timeout=900)
         return r.returncode, (r.stdout or "") + (r.stderr or "")
 
     # 1 main と同じ中身
@@ -176,11 +178,146 @@ class CheckBeforeSubmit(unittest.TestCase):
         self.assertEqual(self.log_rows()[-1][6], "list")
 
     # 4 commit していない変更
-    def test_uncommitted_change_exits_2(self):
+    def test_untracked_only_runs_in_copy(self):
+        git(self.wt, "checkout", "-q", "-b", "zz-orig")
+        before = self.copy_state()
         self.put("docs/zz-uncommitted.md", "x\n")
+        rc, out = self.run_script()
+        self.assertEqual(rc, 0, out)
+        self.assertIn("HEAD の写しで流します", out)
+        rows = self.log_rows()
+        self.assertEqual(len(rows), 1, rows)
+        self.assertEqual(len(rows[0]), 8, rows)
+        self.assertEqual(rows[0][1], "zz-orig")
+        self.assertEqual(rows[0][3], "0")
+        self.assertEqual(rows[0][5], "manual")
+        self.assertEqual(rows[0][6], "full")
+        self.assertEqual(rows[0][7], "untracked-copy")
+        self.assertEqual(self.read_stamp(), git(self.wt, "rev-parse", "HEAD"))
+        self.assertEqual(self.copy_state(), before)
+
+    def test_untracked_file_is_not_in_copy(self):
+        src = os.path.join(ROOT, "scripts/tests/rule-fixtures/tenant-schema/fail-commit-without-reset/files/"
+                           "backend/app/routers/zz_fixture_router.py.fixture")
+        self.put("backend/app/routers/zz_fixture_router.py", src=src)  # commit しない
+        rc, out = self.run_script("--only", "tenant-lint")
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.log_rows()[-1][7], "untracked-copy")
+        self.commit("test: tenant schema violation")
+        rc, out = self.run_script("--only", "tenant-lint")
+        self.assertEqual(rc, 1, out)
+        self.assertIn("× lint_tenant_schema (strict)", out)
+
+    def test_prepush_stops_when_copy_fails_check(self):
+        src = os.path.join(ROOT, "scripts/tests/rule-fixtures/tenant-schema/fail-commit-without-reset/files/"
+                           "backend/app/routers/zz_fixture_router.py.fixture")
+        self.put("backend/app/routers/zz_fixture_router.py", src=src)
+        self.install_prepush()
+        before = self.copy_state()
+        self.put("docs/zz-uncommitted.md", "x\n")
+        rc, out = self.run_prepush(self.push_line())
+        self.assertEqual(rc, 1, out)
+        self.assertIn("push を中断しました", out)
+        rows = self.log_rows()
+        self.assertEqual(len(rows), 1, rows)
+        self.assertEqual((rows[0][3], rows[0][5], rows[0][7]), ("1", "pre-push", "untracked-copy"))
+        self.assertIsNone(self.read_stamp())
+        self.assertEqual(self.copy_state(), before)
+
+    def test_dirty_tracked_manual_exits_2(self):
+        self.put("docs/zz-tracked.md", "x\n")
+        self.commit("test: add tracked file")
+        before = self.copy_state()
+        self.put("docs/zz-tracked.md", "y\n")
         rc, out = self.run_script()
         self.assertEqual(rc, 2, out)
         self.assertIn("commit していない変更", out)
+        self.assertEqual(self.log_rows()[-1][7], "dirty-tracked")
+        self.assertEqual(self.copy_state(), before)
+
+    def test_copy_fail_when_tmpdir_missing(self):
+        before = self.copy_state()
+        self.put("docs/zz-uncommitted.md", "x\n")
+        rc, out = self.run_script(extra_env={"TMPDIR": os.path.join(self.tmp, "no-such-dir")})
+        self.assertEqual(rc, 2, out)
+        rows = self.log_rows()
+        self.assertEqual(len(rows), 1, rows)
+        self.assertEqual((rows[0][3], rows[0][7]), ("2", "copy-fail"))
+        self.assertEqual(self.copy_state(), before)
+
+    def test_outside_values_do_not_change_path(self):
+        # (d) 外から CBS_SKIP_LOG=1 を渡しても行は 1 行書かれる
+        n0 = len(self.log_rows())
+        rc, out = self.run_script("--only", "rule-registry", extra_env={"CBS_SKIP_LOG": "1"})
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(len(self.log_rows()), n0 + 1)
+        # (a) 外から CBS_IN_COPY=1 を渡すと写しを作らず 2・dirty-untracked
+        marker = os.path.join(self.wt, "docs", "zz-uncommitted.md")
+        self.put("docs/zz-uncommitted.md", "x\n")
+        before = self.copy_state()
+        rc, out = self.run_script("--only", "rule-registry", extra_env={"CBS_IN_COPY": "1"})
+        self.assertEqual(rc, 2, out)
+        self.assertEqual(self.log_rows()[-1][7], "dirty-untracked")
+        self.assertEqual(self.copy_state(), before)
+        os.remove(marker)
+        # (b) 名が cbs-copy. の偽の写し + 別の git の場所
+        fake = os.path.join(self.tmp, "cbs-copy.fake")
+        git(self.wt, "worktree", "add", "-q", "--detach", fake, "HEAD")
+        other = os.path.join(self.tmp, "other")
+        os.makedirs(other)
+        rc, out = self.run_script(extra_env={"CBS_IN_COPY": "1", "CBS_ORIG_GITDIR": other}, cwd=fake)
+        self.assertEqual(rc, 0, out)
+        self.assertNotEqual(self.log_rows()[-1][7], "untracked-copy")
+        self.assertFalse(os.path.exists(os.path.join(other, "check-before-submit.ok")))
+        # (c) .. を使った抜け道
+        os.makedirs(os.path.join(self.wt, "x"))
+        orig = os.path.realpath(os.path.join(self.wt, ".git"))
+        rc, out = self.run_script(extra_env={"CBS_IN_COPY": "1", "CBS_ORIG_GITDIR": orig + "/worktrees/../../x"},
+                                  cwd=fake)
+        self.assertEqual(rc, 0, out)
+        self.assertNotEqual(self.log_rows()[-1][7], "untracked-copy")
+        self.assertFalse(os.path.exists(os.path.join(self.wt, "x", "check-before-submit.ok")))
+
+    def test_new_worktree_count_skips_copies(self):
+        with open(os.path.join(ROOT, "scripts", "new-worktree.sh"), encoding="utf-8") as fh:
+            lines = [l.strip() for l in fh if l.strip().startswith("WORKTREE_COUNT=")]
+        self.assertEqual(len(lines), 1, lines)
+        line = lines[0]
+
+        def count():
+            r = subprocess.run(["bash", "-c", line + '; printf "%s" "$WORKTREE_COUNT"'], cwd=self.wt,
+                               env=git_env(), capture_output=True, text=True)
+            return r.stdout
+        git(self.wt, "worktree", "add", "-q", "--detach", os.path.join(self.tmp, "cbs-copy.x"), "HEAD")
+        self.assertEqual(len(git(self.wt, "worktree", "list").splitlines()), 2)
+        self.assertEqual(count(), "0")
+        git(self.wt, "worktree", "add", "-q", "--detach", os.path.join(self.tmp, "normal"), "HEAD")
+        self.assertEqual(len(git(self.wt, "worktree", "list").splitlines()), 3)
+        self.assertEqual(count(), "1")
+
+    def test_list_fixtures_does_not_copy(self):
+        before = self.copy_state()
+        self.put("docs/zz-uncommitted.md", "x\n")
+        rc, out = self.run_script("--list-fixtures")
+        self.assertEqual(rc, 2, out)
+        self.assertEqual(self.log_rows()[-1][6:], ["list", "dirty-untracked"])
+        self.assertEqual(self.copy_state(), before)
+
+    def test_copy_unexpected_exit_code_is_copy_rc(self):
+        with open(os.path.join(self.wt, SCRIPT_REL), "w", encoding="utf-8") as fh:
+            fh.write("#!/usr/bin/env bash\nexit 5\n")
+        self.commit("test: script exits 5")
+        before = self.copy_state()
+        self.put("docs/zz-uncommitted.md", "x\n")
+        env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+        env["TMPDIR"] = self.tmp
+        r = subprocess.run(["bash", os.path.join(ROOT, SCRIPT_REL)], cwd=self.wt, env=env,
+                           capture_output=True, text=True, timeout=900)
+        self.assertEqual(r.returncode, 5, (r.stdout or "") + (r.stderr or ""))
+        rows = self.log_rows()
+        self.assertEqual(len(rows), 1, rows)
+        self.assertEqual((rows[0][3], rows[0][7]), ("5", "copy-rc"))
+        self.assertEqual(self.copy_state(), before)
 
     # 5 黙って通る道をふさぐ（すべて --only で速くしてある）
     def test_missing_or_empty_required_list_exits_2(self):
@@ -251,6 +388,11 @@ class CheckBeforeSubmit(unittest.TestCase):
                 return [l.rstrip("\n").split("\t") for l in fh if l.strip()]
         except OSError:
             return []
+
+    def copy_state(self):
+        # 作業場所の一覧の行数と、一時フォルダに残った cbs-copy.* の数
+        return (len(git(self.wt, "worktree", "list").splitlines()),
+                len(glob.glob(os.path.join(self.tmp, "cbs-copy.*"))))
 
     def install_prepush(self):
         # 試験の写しでは所有権チェック（本物の作業場所が前提）を外し、pre-push の R4b 部分だけを試す
@@ -332,18 +474,16 @@ class CheckBeforeSubmit(unittest.TestCase):
         self.assertEqual(len(rows[0]), 8, rows)
         self.assertEqual((rows[0][3], rows[0][5], rows[0][6], rows[0][7]), ("stamp", "pre-push", head, "-"))
 
-    def test_prepush_does_not_stop_on_uncommitted_change(self):
+    def test_prepush_runs_in_copy_on_untracked(self):
         self.install_prepush()
         self.put("docs/zz-uncommitted.md", "x\n")
         rc, out = self.run_prepush(self.push_line())
         self.assertEqual(rc, 0, out)
-        self.assertIn("commit していない変更", out)
-        self.assertIn("終了コード 2", out)
+        self.assertIn("HEAD の写しで流します", out)
         rows = self.log_rows()
         self.assertEqual(len(rows), 1, rows)
-        self.assertEqual((rows[0][3], rows[0][5]), ("2", "pre-push"))
         self.assertEqual(len(rows[0]), 8, rows)
-        self.assertEqual(rows[0][7], "dirty-untracked")
+        self.assertEqual((rows[0][3], rows[0][5], rows[0][7]), ("0", "pre-push", "untracked-copy"))
 
     def test_prepush_skips_when_pushed_content_differs_from_head(self):
         self.install_prepush()
