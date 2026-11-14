@@ -1,6 +1,6 @@
 # 設計 — 秘書の「予定のカルテ」（足りない欄だけを順に聞く）
 
-作った人: Opus（Planner）2026-11-14。状態: 設計案 第3版（第2版への設計の審査（クラウド・同じ AI）の「直す点あり」6 件を直した。再審査前）。PO の実装承認は未。
+作った人: Opus（Planner）2026-11-14。状態: 設計案 第4版（第3版への設計の審査（クラウド・同じ AI）の「直す点あり」5 件を直した。再審査前）。PO の実装承認は未。
 
 親: [kgi.md](kgi.md) ／ 現在地: [recon.md](recon.md)（docs/handoff/secretary-event-karte/recon.md）／ ADR: [ADR-1078](../../adr/ADR-1078-secretary-event-karte.md)（Proposed）／ 改める ADR: ADR-1056（一部）。ADR-1077 とは指示文と答えの形を共有する（改めない）
 
@@ -116,15 +116,17 @@ def next_ask(ev, meet_available: bool, asked: str | None, asked_count: int) -> t
 - 前 :171-175 `_agent_payload(text, model, rules)`。
 - 後: カルテが null でないときだけ `"karte": {"start", "end", "is_all_day"}` と `"asked"` を足す。題名・場所・メモ・打ち合わせか・Meet は送らない（④で backend が合わせるので AI に要らない。送る量を増やさないため）。カルテが無いときは今と 1 バイトも違わない。
 - 大きさ（実測の計算・`json.dumps(ensure_ascii=False, separators=(",",":"))` で数えた値）: 今の上限いっぱい（文 1000 字＋決まり 150 字×20 件）が 12,143 バイト。カルテ（始まり・終わり・終日）と `asked` を足して 12,261 バイト。上限 15,000（:73）より 2,739 バイト小さい。題名・場所・メモ（各 1000 字）まで送ると 21,303 バイトで超えるため、送らない。
-- ①'' 新規: 決まりを読んで大きさを測った後（:260 の後）、commit（:263）の前に `meet_available = await can_add_meet(db, tenant_id, user_id)`。この呼び出しは `async with db.begin_nested():` の中で行う。読めなければ `False`（Meet を聞かないだけで、予定は作れる）。入れ子の取引にするのは、PostgreSQL で失敗した文が外の取引を中断のまま残し、その後の commit と会社の文脈の張り直しを壊さないため（試験は SQLite なので、失敗を起こす試験で入れ子の巻き戻しを確かめる）。判定の式は書かない（`backend/app/services/calendar_service.py:73-80` の 1 か所だけ）。
+- ①'' 新規: 決まりを読んで大きさを測った後（:260 の後）、commit（:263）の前に `meet_available = await can_add_meet(db, tenant_id, user_id)`。この呼び出しは `async with db.begin_nested():` の中で行う。読めなければ `False`（Meet を聞かないだけで、予定は作れる）。入れ子の取引にするのは、PostgreSQL で失敗した文が外の取引を中断のまま残し、その後の commit と会社の文脈の張り直しを壊さないため。試験の DB は SQLite（`backend/tests/conftest.py:18`）で、文が失敗しても外の取引が中断にならないため、SQLite の試験ではこの直しを見分けられない。確かめは PostgreSQL の試験（既存の `backend/tests/test_calendar_sync_tenant_reset_pg.py` と同じ型）で書く。秘書の SQLite の試験では表が無く `can_add_meet` が失敗して偽になるので、Meet の道を通す試験は `can_add_meet` を差し替える。判定の式は書かない（`backend/app/services/calendar_service.py:73-80` の 1 か所だけ）。
 - 前 :278-289 終わりが無ければ +1 時間（:285）、終わり < 始まりなら 502。
 - 後（新しい画面の道 = 頼みに karte の鍵がある）:
   - ④ 合わせる（新しい関数 `merge_karte(ev, karte)` を backend/app/services/secretary_karte.py（新規・§4-1 と同じファイル）に置く）: `title`・`start`・`end`・`location`・`description`・`add_meet` の各欄は次の順で決める。(1) カルテに値があり、その欄が直前に聞いた欄（`karte.asked`）でなければ、カルテの値を使う（AI は題名・場所・メモを見ていないので、AI の値で上書きさせない）。(2) それ以外は、AI の値が null でなければ AI の値、null ならカルテの値。`is_meeting` は AI かカルテのどちらかが真なら真。`is_all_day` は AI かカルテのどちらかが真なら真。聞いていない欄を会話の途中で言い直した値は取り込まない。最後の確かめの欄で手で直す。
   - ④' カルテが null でなく、AI が unknown を返したとき: カルテの値だけで予定として続ける（`kind` は event・欄はカルテのまま）。`next_ask` に渡すと、直前と同じ欄が空のままなので同じ欄を聞き、回数が 1 増える（3 回目は聞かない）。AI が invoice を返したときは、話が変わったとして今と同じ請求書の下書きを返す（画面はカルテを捨てる）。
   - ⑤ 始まりがあれば読む。読めなければ今と同じ 502。終日で終わりが空なら、終わり＝始まり。終わりがあれば読む。読めなければ 502。終わり < 始まりなら終わりを null に戻す（もう一度聞く）。+1 時間は足さない。
 - 後（古い画面の道 = 頼みに karte の鍵が無い）: 今の動きを 1 つも変えない。題名か始まりが null なら 502 unreadable（今の形の検査で止まるのと同じ結果）。終わりが無ければ +1 時間（:285・:325 はこの道にだけ残す）。終わり < 始まりなら 502。`ask` は null・`ask_count` は 0・`add_meet` は null で返す。
-- 前 :318-330 `EventDraft(...)`。
-- 後: 新しい画面の道では `next_ask(ev, meet_available, karte.asked, karte.asked_count)` の結果を `ask`・`ask_count` に入れる（カルテが null なら `asked=None`・`asked_count=0`）。`add_meet` は `meet_available` が偽なら常に null。
+- 置き場所（新しい画面の道）: ④ 合わせると ④' と ⑤ 日時の検査は、今の日時の検査（:276-289）と同じ `try` の中、使用の記録 ok（:296）の前に置く。合わせた結果は「最終の kind」と「最終の ev」として持ち、:303 以降の分かれ道はこの 2 つで分ける（④' で unknown から event に変えたときも予定の分かれ道に入る）。カルテが null（新しい画面の 1 通目）なら合わせない（AI の値をそのまま使う）。
+- `backend/app/routers/assistant.py:6` の「順番（厳守）」の 1 行を書き直す: ③ の中に「容器の答えをカルテと合わせ、日時を検査する（新しい画面の道）」を足す。①〜⑥ の番号の意味（④＝会社の文脈を張り直す）は変えない。本書の ④・④'・⑤ は §3 の流れの番号で、:6 の番号とは別。
+- 前 :318-330 `EventDraft(...)`。:320 に `assert ev is not None and event_start is not None and event_end is not None` がある。
+- 後: 新しい画面の道では :320 の assert を `assert ev is not None` だけにする（始まり・終わりが null の下書きを返すため。null で 500 にしない）。古い画面の道は :320 を今のまま残す。新しい画面の道では `next_ask(ev, meet_available, karte.asked, karte.asked_count)` の結果を `ask`・`ask_count` に入れる（カルテが null なら `asked=None`・`asked_count=0`）。`add_meet` は `meet_available` が偽なら常に null。
 - 今の試験はそのまま通る: `backend/tests/test_assistant_router.py:151-159`（終わりに +1 時間）と :239-241（終わり < 始まりで 502）は karte の鍵を送らないので古い画面の道を通り、同じ結果になる。新しい道の試験は別に足す（§9）。
 
 ### 4-4. 容器（`secretary-agent/`・`secretary-codex/`）
@@ -250,7 +252,9 @@ PO のアカウントが Google をつないだ本人（`meet_available` 真）�
 | 古い版の容器でも壊れない | backend の試験で、2 欄の無い答えが初期値で通ること |
 | 古い画面でも壊れない | backend の試験で、karte の鍵の無い頼みが今と同じ結果になること（今の試験 `backend/tests/test_assistant_router.py:151-159`・:239-241 がそのまま緑。題名か始まりが null の答えは 502） |
 | 埋まった欄は AI が落としても上書きしても消えない | `merge_karte` の試験（AI が null・カルテに値 → カルテの値。聞いた欄で AI に値 → AI の値。聞いていない欄でカルテに値・AI に別の値 → カルテの値（題名・メモを上書きしない）。is_meeting は一度真なら真） |
-| Meet を読めなくても頼みが壊れない | backend の試験: `can_add_meet` が例外を出したとき、`meet_available` は偽で 200 が返り、その後の名前探しも動く（入れ子の取引の巻き戻し） |
+| Meet を読めなくても頼みが壊れない | PostgreSQL の試験（`backend/tests/test_calendar_sync_tenant_reset_pg.py` と同じ型）: `can_add_meet` の文を失敗させたとき、`meet_available` は偽で 200 が返り、その後の commit と名前探しも動く。SQLite の試験では見分けられないので使わない |
+| Meet の道 | SQLite の試験で `can_add_meet` を真に差し替え、打ち合わせの予定で Meet を聞くこと・偽なら聞かないこと |
+| 始まりが null でも 500 にならない | backend の試験: カルテありで AI が題名だけの event を返したとき、200 で `ask` が start |
 | カルテの時刻の長さ | backend の試験: 41 字以上の `start` は 422 |
 | 画面の今の試験の書き直し | `frontend/src/features/secretary/SecretaryChat.test.tsx:137` は送る本文を `{ text: "make something" }` ちょうどで確かめている。`{ text: "make something", karte: null }` に書き直す |
 | カルテの途中の unknown | backend の試験: カルテあり＋unknown の答え → event・同じ欄・回数＋1。回数 2 のとき → ask は null |
