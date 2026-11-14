@@ -483,7 +483,7 @@ def test_role_migration_is_idempotent(pg):
     # meta の migration も冪等（分類表の中身は消えない）
     n0 = _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0]
     c.execute(_read(_META_SQL))
-    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1151
+    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1162
 
 
 # ---------------------------------------------------------------- T10（CI の見張り）
@@ -935,6 +935,78 @@ def test_t10_secretary_rules_columns_are_classified_on_bootstrapped_db(cluster):
         assert missing == set(), f"column_class に行が無い: {sorted(missing)}"
 
         gaps = [g for g in _classification_gaps(conn) if g[1] in _SECRETARY_RULES_TABLES]
+        assert gaps == [], f"分類の漏れ（表名・列名）: {[(g[1], g[2]) for g in gaps]}"
+    finally:
+        conn.close()
+        cur = cluster.control.cursor()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+# invoice-create-portfolio 便A: 関税の決まりの2表・請求書の新しい列と tenant.py に足した列・明細の hs_code に分類の漏れが無いことを確かめる。
+_DUTY_TABLES = {"tenant_duty_rules", "tenant_duty_rule_components"}
+_DUTY_CLASSIFIED = {
+    ("invoices", "shipping_snapshot"),
+    ("invoices", "shipping_carrier"),
+    ("invoices", "shipping_service"),
+    ("tenant_duty_rule_components", "amount_currency"),
+    ("tenant_duty_rule_components", "base"),
+    ("tenant_duty_rule_components", "label"),
+    ("tenant_duty_rules", "carrier"),
+    ("tenant_duty_rules", "destination_country_code"),
+    ("tenant_duty_rules", "label"),
+    ("tenant_duty_rules", "note"),
+    ("tenant_duty_rules", "source_url"),
+}
+_DUTY_CHECKED_COLUMNS = {
+    ("invoices", c) for c in (
+        "ship_to_snapshot", "bill_to_snapshot", "issue_mode", "duty_amount", "duty_policy_snapshot",
+        "fx_rate_snapshot", "paypal_order_id", "paypal_approval_url", "payment_fee",
+        "paypal_invoicer_view_url", "paypal_copy_pdf", "paypal_copy_pdf_at",
+        "payment_method_id", "tax_rate_percent",
+        "shipping_carrier", "shipping_service", "shipping_snapshot",
+    )
+} | {("quote_items", "hs_code"), ("invoice_items", "hs_code")}  # fmt: skip
+
+
+def test_t10_duty_and_invoice_columns_are_classified_on_bootstrapped_db(cluster):
+    """invoice-create-portfolio 便A: 新しい会社の作り方（tenant.py）で作ったテナントに 11 列の column_class の行があり、
+    関税の2表と、請求書・明細に足した列に分類の漏れが無い。
+
+    数・日付・真偽の型の列は型で通る。
+    専用の DB を作り、終わったら消す。"""
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    assert len(_DUTY_CLASSIFIED) == 11
+    assert len(_DUTY_CHECKED_COLUMNS) == 19
+    name, conn = _new_db(cluster.control, "ai_cloud_t10_duty")
+    try:
+        c = conn.cursor()
+        c.execute(_read(_AI_READER_SQL))
+        c.execute(_read(_ROLE_SQL))
+        c.execute(_read(_META_SQL))
+        url = _psycopg_url(ADMIN_PG_URL, name).replace("postgresql://", "postgresql+asyncpg://", 1)
+        from tests.rls_bootstrap import bootstrap_tenant_schema
+
+        async def build():
+            eng = create_async_engine(url)
+            try:
+                await bootstrap_tenant_schema(eng, 1)
+            finally:
+                await eng.dispose()
+
+        asyncio.run(build())
+        c.execute(_read(_CREATE_SQL))
+        rows = _rows(
+            conn, "SELECT table_name, column_name FROM ai_cloud_meta.column_class WHERE schema_pattern = 'tenant_*'"
+        )
+        have = {(r[0], r[1]) for r in rows}
+        missing = _DUTY_CLASSIFIED - have
+        assert missing == set(), f"column_class に行が無い: {sorted(missing)}"
+
+        gaps = [
+            g for g in _classification_gaps(conn)
+            if g[1] in _DUTY_TABLES or (g[1], g[2]) in _DUTY_CHECKED_COLUMNS
+        ]  # fmt: skip
         assert gaps == [], f"分類の漏れ（表名・列名）: {[(g[1], g[2]) for g in gaps]}"
     finally:
         conn.close()
