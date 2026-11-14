@@ -1,0 +1,65 @@
+name: weekly deploy lock count
+
+# 本番反映（deploy.yml）がロック待ちの上限などで止まった回を、毎週機械が数えて知らせる。
+# 設計: docs/handoff/deploy-db-stall/design.md §19-4。数えるだけで、本番のサーバーと DB には触らない。
+
+on:
+  schedule:
+    - cron: '0 1 * * 1'  # 毎週月曜 01:00 UTC = 10:00 JST
+  workflow_dispatch:
+    inputs:
+      since:
+        description: '数え始めの日 YYYY-MM-DD（日本時間 00:00 以上）。空なら直近7日'
+        required: false
+        default: ''
+      until:
+        description: '数え終わりの日 YYYY-MM-DD（日本時間 00:00 未満）。空なら直近7日'
+        required: false
+        default: ''
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  count:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Count deploy lock-wait failures
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          DISCORD_WEBHOOK_OWNER_PING: ${{ secrets.DISCORD_WEBHOOK_SCHEDULED_REPORT }}
+          INPUT_SINCE: ${{ github.event.inputs.since }}
+          INPUT_UNTIL: ${{ github.event.inputs.until }}
+        run: |
+          if [ -n "${INPUT_SINCE}" ] && [ -n "${INPUT_UNTIL}" ]; then
+            RANGE_ARGS=(--since "${INPUT_SINCE}" --until "${INPUT_UNTIL}")
+          elif [ -z "${INPUT_SINCE}" ] && [ -z "${INPUT_UNTIL}" ]; then
+            RANGE_ARGS=(--days 7)
+          else
+            echo "since と until は両方入れるか、両方空にしてください" >&2
+            exit 1
+          fi
+
+          # 実行機は毎回新しいので、この場所には何も無い。台本は知らせが要るときだけ書く
+          NOTIFY_FILE="${RUNNER_TEMP}/deploy-lock-notify.txt"
+
+          set +e
+          bash scripts/ops/count-deploy-lock-failures.sh "${RANGE_ARGS[@]}" --notify-file "${NOTIFY_FILE}"
+          COUNT_RC=$?
+          set -e
+
+          if [ -f "${NOTIFY_FILE}" ]; then
+            if ! bash scripts/notify/discord-owner-ping.sh "$(cat "${NOTIFY_FILE}")"; then
+              echo "Discord への送信に失敗しました" >&2
+              exit 1
+            fi
+          fi
+
+          if [ "${COUNT_RC}" -ne 0 ]; then
+            echo "数えの終わりが ${COUNT_RC}（0 でない）ため job を失敗にします" >&2
+            exit 1
+          fi
