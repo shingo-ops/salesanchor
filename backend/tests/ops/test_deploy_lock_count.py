@@ -498,6 +498,87 @@ def test_d7_reason_strips_query_from_gh_error(tmp_path):
     assert re.search(r"^  一覧 / HTTP 403: x \(https://a\.example/b: \d+$", out, flags=re.MULTILINE), out
 
 
+# ---------------------------------------------------------------- D8（第3.5版: 記録の制御文字）
+ESC_LOG = _with_ts(
+    [
+        b">>> [40/401] psql < migrations/0400.sql",
+        b"\x1b[31m>>> [40/401] lock conflict; retry 2/40 in 3s (total 1/40): migrations/0400.sql\x1b[0m",
+        b">>> [40/401] \x1b[31mlock conflict; \x1b[0mretry limit reached (file 40/40, total 40/40): migrations/0400.sql",
+        b"tail \x1b[0m\x1b",
+    ]
+)
+
+
+def _build_esc_fixture(root: Path) -> Path:
+    f = Fixture(root)
+    f.run(8001, created="2026-11-10T01:00:00Z")
+    f.attempt(8001, 1, started="2026-11-10T01:00:05Z", mig="failure", chk="success", log=ESC_LOG)
+    return f.write()
+
+
+def test_d8_escape_sequences_are_stripped_before_counting(tmp_path):
+    fixture = _build_esc_fixture(tmp_path / "fx")
+    notify = tmp_path / "notify.txt"
+    r = _run(fixture, "--notify-file", str(notify))
+    out = r.stdout
+    assert r.returncode == 0, out + r.stderr
+    assert _num("上限失敗", out) == 1, out
+    assert _klass(out, 8001, 1) == ["上限失敗", "停止なし"], out
+    assert "\x1b" not in out and "\x1b" not in r.stderr
+    assert "\x1b" not in notify.read_text(encoding="utf-8")
+
+
+def test_d8_allow_escape_flag_only_on_log_calls(tmp_path):
+    fixture = _build_esc_fixture(tmp_path / "fx")
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    fake_gh = bindir / "gh"
+    fake_gh.write_text(
+        "#!/bin/bash\n"
+        'echo "$*" >> "$FAKE_ARGS"\n'
+        'p="${@: -1}"\n'
+        'rel=""\n'
+        'if [[ "$p" == */logs ]]; then\n'
+        '  j="${p%/logs}"; rel="logs/${j##*/}.log"\n'
+        'elif [[ "$p" =~ /runs/([0-9]+)/attempts/([0-9]+)/jobs ]]; then\n'
+        '  rel="jobs/${BASH_REMATCH[1]}-${BASH_REMATCH[2]}.json"\n'
+        'elif [[ "$p" =~ /runs/([0-9]+)/attempts/([0-9]+)$ ]]; then\n'
+        '  rel="attempts/${BASH_REMATCH[1]}-${BASH_REMATCH[2]}.json"\n'
+        'elif [[ "$p" =~ created=([0-9-]+)\\.\\.[0-9-]+\\&per_page=100\\&page=([0-9]+) ]]; then\n'
+        '  if [ "${BASH_REMATCH[2]}" = 1 ]; then rel="runs/${BASH_REMATCH[1]}.json"; else rel="runs/${BASH_REMATCH[1]}-p${BASH_REMATCH[2]}.json"; fi\n'
+        "fi\n"
+        'if [ -n "$rel" ] && [ -f "$FAKE_FIXTURE/$rel" ]; then cat "$FAKE_FIXTURE/$rel"; exit 0; fi\n'
+        "echo 'HTTP 404: Not Found' >&2\n"
+        "exit 1\n",
+        encoding="utf-8",
+    )
+    fake_gh.chmod(0o755)
+    args_file = tmp_path / "args.txt"
+    env = dict(os.environ)
+    env.pop("GITHUB_STEP_SUMMARY", None)
+    env["PATH"] = f"{bindir}:{env['PATH']}"
+    env["GH_TOKEN"] = "dummy-token-for-test"
+    env["FAKE_ARGS"] = str(args_file)
+    env["FAKE_FIXTURE"] = str(fixture)
+    r = subprocess.run(
+        ["bash", str(SCRIPT), "--since", SINCE, "--until", UNTIL],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    out = r.stdout
+    assert r.returncode == 0, out + r.stderr
+    assert _num("上限失敗", out) == 1, out
+    lines = args_file.read_text(encoding="utf-8").splitlines()
+    log_lines = [ln for ln in lines if ln.endswith("/logs")]
+    other_lines = [ln for ln in lines if not ln.endswith("/logs")]
+    assert len(log_lines) >= 1, lines
+    assert all("--allow-escape-sequences" in ln for ln in log_lines), log_lines
+    assert other_lines and all("--allow-escape-sequences" not in ln for ln in other_lines), other_lines
+
+
 # ---------------------------------------------------------------- D5
 def test_d5_counted_phrases_exist_in_the_sources():
     migrations = RUN_MIGRATIONS.read_text(encoding="utf-8")
