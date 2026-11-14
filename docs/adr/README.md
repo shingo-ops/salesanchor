@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-11-12 / ADR 総数: 234 件
+最終更新: 2026-11-14 / ADR 総数: 235 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -233,7 +233,7 @@
 | [ADR-1053](./ADR-1053-prod-page-speed-record.md) | ADR-1053: 本番の画面点検の「開き終わった」の決め方を 1 か所にし、全画面の開く速さを毎日記録する（合格ラインはまだ決めない） | Accepted | — | — |
 | [ADR-1054](./ADR-1054-screen-data-cache.md) | ADR-1054: 画面が取ったデータの写しを 1 か所（TanStack Query）に置き、前に見た画面をすぐ出してから裏で取り直す | Accepted | — | — |
 | [ADR-1055](./ADR-1055-new-device-login-approval.md) | ADR-1055: 知らない機械からのログインは、いつもの機械で番号を選んで許可するまで入れない（全員） | Accepted | — | — |
-| [ADR-1056](./ADR-1056-secretary-chat.md) | ADR-1056: アプリ内のチャット秘書は、AI に会社のデータも道具も渡さず「頼みの文を決まった形に直す」だけをさせ、作成は利用者が「作る」を押したときに今の口で行う | Accepted | — | — |
+| [ADR-1056](./ADR-1056-secretary-chat.md) | ADR-1056: アプリ内のチャット秘書は、AI に会社のデータも道具も渡さず「頼みの文を決まった形に直す」だけをさせ、作成は利用者が「作る」を押したときに今の口で行う | Accepted | Amended by ADR-1078 | — |
 | [ADR-1057](./ADR-1057-google-calendar-owner-only-sync.md) | ADR-1057: Google カレンダーの接続は会社で1つとし、送るのはつないだ本人の予定だけ・Google の予定を直接扱う口は本人だけ・Google→アプリの取り込みは止める | Accepted | — | — |
 | [ADR-1058](./ADR-1058-ai-job-assignments.md) | ADR-1058: アプリの中で働く AI の担当（AI とモデル）は DB の1か所で決め、スーパー管理の画面で見て切り替える・成功も失敗も使用の記録に1行ずつ残す・秘書は ChatGPT（Codex CLI・月額契約）も選べる | Accepted | — | — |
 | [ADR-1059](./ADR-1059-google-calendar-import-owner-private.md) | ADR-1059: Google カレンダーの予定をアプリに取り込む。取り込んだ予定は最初「自分だけ」で、アプリで1件ずつ「社員にも見せる」に切り替える | Accepted | — | — |
@@ -253,6 +253,7 @@
 | [ADR-1075](./ADR-1075-schedule-recurrence.md) | ADR-1075: 予定の繰り返しは元の予定 1 行に決まり（RRULE）1 つで持ち、表示のときに広げる（回を作り置かない・例外は元を指す行） | Proposed | — | — |
 | [ADR-1076](./ADR-1076-customer-status-ssot.md) | ADR-1076: 会社と連絡先の状態は public.customer_statuses を正本にする | Proposed | — | — |
 | [ADR-1077](./ADR-1077-secretary-rulebook.md) | ADR-1077: 秘書の「決まり帳」— 直しは人が承認してから秘書に効かせ、決まりと試しの結果は会社ごとの DB の表 2 つだけに置く | Proposed | — | — |
+| [ADR-1078](./ADR-1078-secretary-event-karte.md) | ADR-1078: 秘書の「予定のカルテ」— 予定の頼みは予定と決め、空いている必須の欄だけを決まった順で 1 つずつ聞く | Proposed | Amends ADR-1056 | — |
 
 ## ステータス凡例
 

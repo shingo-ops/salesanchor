@@ -26,6 +26,7 @@
 - [../../handoff/secretary-chat/card-a.md](../../handoff/secretary-chat/card-a.md)・[card-b1.md](../../handoff/secretary-chat/card-b1.md)・[card-b2.md](../../handoff/secretary-chat/card-b2.md)（実装カード）
 - [../../handoff/secretary-chat/external-cases.md](../../handoff/secretary-chat/external-cases.md)（外部事例 5W2H・ベクトル DB。要件定義と設計の外部事例欄に使う・2026-11-07）
 - 秘書の「決まり帳」（育てる仕組み・2026-11-12 目標は PO 承認済み・設計審査済み・実装未着手）: [kgi.md](../../handoff/secretary-rulebook/kgi.md)・[recon.md](../../handoff/secretary-rulebook/recon.md)・[design.md](../../handoff/secretary-rulebook/design.md)・[research.md](../../handoff/secretary-rulebook/research.md)
+- 秘書の「予定のカルテ」（予定の頼みで空いている必須の欄だけを順に聞く・2026-11-14 設計案・PO 承認待ち・ADR-1078）: [kgi.md](../../handoff/secretary-event-karte/kgi.md)・[recon.md](../../handoff/secretary-event-karte/recon.md)・[design.md](../../handoff/secretary-event-karte/design.md)。決まり帳の便3 と同じファイルを触るため、こちらを先に出す
 
 ## ステータス
 - あるべき姿: PO 発言を転記（2026-11-01）

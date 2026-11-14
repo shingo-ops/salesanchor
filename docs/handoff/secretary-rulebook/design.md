@@ -175,6 +175,7 @@
   - 便2a: compose.mjs・容器 2 つが `rules` を受け取る・容器の試験を CI へ・測る台本に `--rules`。手順は [card-bin2a.md](card-bin2a.md)。本番に出した後、便0 と同じ道で仮の決まり 20 件（[bin2/dummy-rules.json](bin2/dummy-rules.json)・種類を変えない中身だけの決まり）を付けて 23 件 × 3 回を流し、1 件の秒数と合う数を baseline.md に足す。
   - 便2b: backend が承認済みの決まりを送る（15,000 バイト・制御文字の検査）・§5 の口。§6 の試しの仕組みと②〜⑥の使いみちは便3 へ移す（PO の決定は便2 を 3 つ「だけ」に限っている。試しを始めるボタンも便3 にある。Opus の決定・2026-11-13 審査の指摘 D）。毎週の数を読む口（§7）は、それを見せるページと同じ便3 に置く。
 - 便3: 種類 2 つ・prompt.txt・schema.json・画面の型・画面（案・一覧・「違う」・試すボタン）・§6 の試しの仕組みと②〜⑥の使いみちと、SaaS管理者のメニューの「秘書の決まり帳」のページ（毎週の数とそれを読む口・試しの結果・§7）。聞き分けと画面が同時に使えるようになる。
+  - 注記（2026-11-14 Opus）: 秘書の「予定のカルテ」（ADR-1078・[../secretary-event-karte/design.md](../secretary-event-karte/design.md)）も prompt.txt・schema.json・画面の型を変える。カルテを先に出し、便3 の手順書はその合流後の origin/main から作る。
 
 ## 維持の仕組み
 - 守り手: .github/workflows/test.yml
