@@ -1774,10 +1774,10 @@ backend/tests/test_invoice_pdf_payment.py（DB なし。4 本。前例 test_invo
     cd ~/sa && grep -c -x -F '        paypal_copy=paypal_copy,' backend/app/services/invoice_renderer.py
     cd ~/sa && grep -c -x -F '    ("POST", "/api/v1/invoices"): _PENDING,' backend/app/realtime/topics.py
     cd ~/sa && grep -c -x -F '                issuer_region VARCHAR(20)' backend/tests/conftest.py
-    cd ~/sa && grep -c "^import pytest" backend/tests/conftest.py
+    cd ~/sa && grep -c -x "import pytest" backend/tests/conftest.py
     cd ~/sa && grep -c '"dutyRuleOverlap"' frontend/src/locales/ja.json frontend/src/locales/en.json | tail -2
     cd ~/sa && grep -c "tax_amount\|shipping_fee" backend/tests/test_invoices.py backend/tests/test_issuer.py backend/tests/test_paypal_invoicing.py backend/tests/test_company_stats.py backend/tests/test_products.py | tail -5
-  期待（番号は上の命令の順番。1 本の命令が 2 行以上を出すものがあるので、出力の行の数ではなく命令の番号で見る）: 1番は 40 桁。2番 2。3番 6。4〜7番はどれも 1 以上。8番は2ファイルとも `:0`（2 行）。9番 0。10番 3。11番〜26番はどれも 1（ただし 17番 `        "notes": row["notes"],` が 2 以上なら、PDF の道 `download_invoice_pdf` の中のものを使い、数を報告に書いて続ける）。27番（`^import pytest`）1。28番（dutyRuleOverlap・2 行）は数をそのまま書く（どちらも 0 なら §2-8 の (3)(4) で 6 つ足す。1 なら 5 つ）。29番（tax_amount・shipping_fee・5 行）は数をそのまま書く。
+  期待（番号は上の命令の順番。1 本の命令が 2 行以上を出すものがあるので、出力の行の数ではなく命令の番号で見る）: 1番は 40 桁。2番 2。3番 6。4〜7番はどれも 1 以上。8番は2ファイルとも `:0`（2 行）。9番 0。10番 3。11番〜26番はどれも 1（ただし 17番 `        "notes": row["notes"],` が 2 以上なら、PDF の道 `download_invoice_pdf` の中のものを使い、数を報告に書いて続ける）。27番（`import pytest` の行そのもの。`import pytest_asyncio` は数えない）1。28番（dutyRuleOverlap・2 行）は数をそのまま書く（どちらも 0 なら §2-8 の (3)(4) で 6 つ足す。1 なら 5 つ）。29番（tax_amount・shipping_fee・5 行）は数をそのまま書く。
 
 手順3 §2 の変更をする（2-1 から順に。新規の 6 ファイルは Write ツール、それ以外は Edit ツールで行う。2-12 の openapi.json は手順7 で作る）
 
