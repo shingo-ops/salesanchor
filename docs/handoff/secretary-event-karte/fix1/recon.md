@@ -24,8 +24,8 @@
 
 - `docs/handoff/secretary-event-karte/design.md:124` ⑤「始まりがあれば読む。読めなければ今と同じ 502。…終わりがあれば読む。読めなければ 502」。AI が欄に文字を入れる場面を想定していなかった（入れ忘れ）。
 - `backend/tests/test_assistant_karte.py:105-106`: `settle_dates(start="あした")` が `ValueError`。
-- `backend/tests/test_assistant_karte.py:222-227` `test_unreadable_start_on_new_path_is_502`: 新しい道で始まり「あした」→ 502。
-- 古い画面の道（karte の鍵が無い頼み）は `backend/app/routers/assistant.py:328-339` で別に読む。`settle_dates` を通らない。古い道の試験 `backend/tests/test_assistant_router.py` は karte の鍵を送らない。
+- `backend/tests/test_assistant_karte.py:221-227` `test_unreadable_start_on_new_path_is_502`: 新しい道で始まり「あした」→ 502。
+- 古い画面の道（karte の鍵が無い頼み）は `backend/app/routers/assistant.py:327-339` で別に読む。`settle_dates` を通らない。古い道の試験 `backend/tests/test_assistant_router.py` は karte の鍵を送らない。
 
 ## 4. 既存 ADR の検索
 

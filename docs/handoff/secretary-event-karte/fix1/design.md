@@ -19,7 +19,7 @@
 ## 2. 対象と対象外
 
 - 対象: `backend/app/services/secretary_karte.py` の `settle_dates` だけ。試験 `backend/tests/test_assistant_karte.py`。
-- 対象外: 容器の指示文（AI に「分からなければ null」を強く言う案は §5 で不採用）・画面・古い画面の道（`backend/app/routers/assistant.py:328-339`）・`merge_karte`・`next_ask`・`KarteIn`（カルテの読めない時刻は今どおり 422）。
+- 対象外: 容器の指示文（AI に「分からなければ null」を強く言う案は §5 で不採用）・画面・古い画面の道（`backend/app/routers/assistant.py:327-339`）・`merge_karte`・`next_ask`・`KarteIn`（カルテの読めない時刻は今どおり 422）。
 
 ## 3. 変更の中身（前と後）
 
@@ -35,7 +35,7 @@
 - 使用の記録: これまで failed だったこの場面は ok になる（AI は答えを返している。`backend/app/routers/assistant.py:343` の失敗の道を通らないため）。
 - 試験の変更（card.md に全文）:
   - `test_settle_dates_all_day_end_equals_start_and_end_before_start_is_cleared` の `pytest.raises(ValueError)`（:105-106）を「始まり『あした』は null」「終わり『わからない』は null」「時差の印の無い終わりは null」に替える。
-  - `test_unreadable_start_on_new_path_is_502`（:222-227）を `test_unreadable_start_on_new_path_is_200_and_asks_start` に替える（200・始まり空・`ask=start`）。
+  - `test_unreadable_start_on_new_path_is_502`（:221-227）を `test_unreadable_start_on_new_path_is_200_and_asks_start` に替える（200・始まり空・`ask=start`）。
   - 足す: `test_unreadable_end_after_two_asks_shows_final_draft`（F1 の場面そのもの）。
 
 ## 4. 古い版と新しい版が混ざる間
@@ -57,6 +57,7 @@
 | 危ない点 | 手当て |
 |---|---|
 | 本当に壊れた答え（AI が時刻を全部でたらめに返す）も失敗にならず、聞き直しになる | 聞き直しは同じ欄 2 回まで（`MAX_ASKS_PER_FIELD`）。その後は確かめの欄で人が手で入れる。予定は「作成」を押すまで作られない（親の C7）。失敗として数えられなくなる点は §9「残る見えない点」に書く |
+| 直前に聞いた欄にカルテが値を持っていたとき、AI の読めない値がその値を上書きし、空になる（`backend/app/services/secretary_karte.py:28-31`） | 聞いた欄はふつう空なので起きにくい。起きても空になって聞き直すだけで、予定は作られない |
 | 時差の印の無い時刻を空にすると、正しい時刻を捨てる | 本番の AI の答えは時差の印付き（本番の T1〜T10 の答えは全部 `+09:00`・recon.md §1）。印の無い答えは観測していない（recon.md §5）。捨てても聞き直すだけで、予定は間違って作られない |
 
 ## 7. 受け入れの条件と確かめ方

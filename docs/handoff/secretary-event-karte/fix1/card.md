@@ -177,10 +177,10 @@ async def test_unreadable_end_after_two_asks_shows_final_draft(allowed, monkeypa
 ### 5. 確かめ（どれも生の出力を /tmp/CC報告ファイル/ に保存し、全文を読んでから判定する）
 
 - (5a) `cd "$REPO/backend" && uv run --no-project --python 3.12 --with ruff ruff check app/ tests/test_assistant_karte.py > /tmp/CC報告ファイル/ruff.txt 2>&1; echo "exit=$?"` → exit=0
-- (5b) `cd "$REPO/backend" && ENVIRONMENT=test uv run --no-project --python 3.12 --with-requirements requirements.txt --with-requirements requirements-dev.txt python -m pytest tests/test_assistant_router.py tests/test_assistant_karte.py tests/test_assistant_rules_router.py tests/test_assistant_karte_pg.py -q > /tmp/CC報告ファイル/pytest.txt 2>&1; echo "exit=$?"` → exit=0。最後の 1 行（passed・skipped の数）を報告に貼る。
+- (5b) `cd "$REPO/backend" && ENVIRONMENT=test uv run --no-project --python 3.12 --with-requirements requirements.txt --with-requirements requirements-dev.txt python -m pytest --no-cov tests/test_assistant_router.py tests/test_assistant_karte.py tests/test_assistant_rules_router.py tests/test_assistant_karte_pg.py -q > /tmp/CC報告ファイル/pytest.txt 2>&1; echo "exit=$?"` → exit=0。最後の 1 行（passed・skipped の数）を報告に貼る。
 - (5c) `cd "$REPO" && git diff --check > /tmp/CC報告ファイル/diff-check.txt 2>&1; echo "exit=$?"` → exit=0
 - (5d) `cd "$REPO" && git diff --stat` を報告に貼る。変わるのは `backend/app/services/secretary_karte.py` と `backend/tests/test_assistant_karte.py` の 2 つだけ。
-- `pytest` が `F401`（未使用の import）など ruff で落ちたら、この手順書の書き損じだけ直す。手順書と違う作りに変えないと通らないときは `NEEDS_DECISION:` で止まる。
+- (5a) の ruff が `F401`（未使用の import）などで落ちたら、この手順書の書き損じだけ直す。手順書と違う作りに変えないと通らないときは `NEEDS_DECISION:` で止まる。
 
 ### 6. 記録（commit）と送り出し（push）
 
@@ -216,7 +216,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 |(1f) で 65a2bb376 から変わったファイルがある|直さずに `NEEDS_DECISION:` で一覧を出す|
 |「前」がちょうど 1 回一致しない|`BLOCKED:` でファイル名と節の番号を出す|
 |既存の試験（`test_assistant_router.py` など）が落ちる|直さずに、落ちた試験の名前と生の出力のパスを添えて `NEEDS_DECISION:`|
-|`test_assistant_karte.py` で `pytest` の import が未使用と言われる|`pytest` は fixture と `pytest.mark` で今も使うので起きない想定。起きたら `NEEDS_DECISION:`|
+|(5a) の ruff で `pytest` の import が未使用と言われる|`pytest` は fixture と `pytest.mark` で今も使うので起きない想定。起きたら `NEEDS_DECISION:`|
 |PG の試験が skipped|続けてよい。報告に書く|
 |push が見張りに止められる|言い換えずに止められた文面を貼って `BLOCKED:`|
 
