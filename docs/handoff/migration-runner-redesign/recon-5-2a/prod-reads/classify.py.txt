@@ -1,4 +1,4 @@
-"""q2-diff.md の組(A)「差の全件（147件）」を、Opus が決めた規則で4つに分ける（読むだけ・DBにつながない）。
+"""q2-diff.md の組(A)「差の全件（147件）」を、Opus が決めた規則でA〜E の5つに分ける（読むだけ・DBにつながない）。
 出力: 1行ごとの分け（tsv）と、分けごとの件数。規則に当たらない行は「未分類」として出す。"""
 import re
 import sys
@@ -44,7 +44,7 @@ for kind, side, name, prod, tmp, *_ in rows:
     elif n in NAME_ONLY:
         g = "C3 本番の癖：名前だけ違う（中身同じ・直さない）"
     elif kind == "方針" and side == "中身が違う":
-        g = "D1 差ではない：同じ意味の書き方（014:11）"
+        g = "D1 差ではない：同じ意味の書き方（014:5）"
     elif n == "chk_tenant_issuer_profiles_phone":
         g = "D2 差ではない：書き出しの記号の違い（本番5社を読んで確認）"
     elif tbl == "suppliers" or n.startswith("suppliers") or n == "suppliers.tenant_isolation_suppliers":

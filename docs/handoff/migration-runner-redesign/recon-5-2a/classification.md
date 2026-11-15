@@ -36,12 +36,13 @@ Opus の設計判断（PO の言葉ではない）。§5-6（`docs/handoff/migra
 | E ひな形のまま | 3 | `companies.tenant_id`・`contacts.tenant_id` の既定値、`trg_lead_playbook_updated_at` | 006（ひな形で作った会社）と同じ（`prod-reads/prod-cols.txt`・`prod-reads/prod-5co.txt`） |
 | 合計 | 147 | | |
 
-## 3. 外部キーの指し先の置き場所（5-2a の比べ方に入っていなかった）
+## 3. 外部キーの指し先の置き場所
 
-- 5-2a の書き出しは外部キーを `REFERENCES suppliers(id)` のように、指す表の置き場所（schema）を書かずに残した（`docs/handoff/migration-runner-redesign/recon-5-2a/q1-shape/constraints.tsv:49`）。そのため「会社の中の表を指すか、共用（public）の表を指すか」の違いは 147 件に出ない。
+- 5-2a の書き出し（`docs/handoff/migration-runner-redesign/recon-5-2a/q1-run.md:103`）は `pg_get_constraintdef` の結果の `tenant_003` を `X` に置き換えている。会社の中の表を指す外部キーは `REFERENCES X.<表>`（46 本）、それ以外は置き場所なし（25 本。`users` 13・`products` 5・`suppliers` 2・`customer_statuses` 2・`countries`・`permissions`・`prefectures` 各1）で出る（`q1-shape/constraints.tsv` を数えた値）。そのため置き場所の違いは「`X.` が付くか付かないか」として比べの対象に入っている。例: 仕入先を指す 2 本は、ひな形の直後は `X.suppliers`、全件を流した後と本番 003 は置き場所なし（`q2-diff.md:984`・`:988`・`:1766`）。
+- 本番 003 の外部キー全部を置き場所つきで読んだ（`prod-reads/fk003.txt`。会社の中 51・共用 24）。共用を指す 24 本と、使い捨て側の置き場所なしの 25 本を、表と指す表の組で1本ずつ比べた（`prod-reads/fk-public-compare.txt`）。違いは 3 本で、どれも分け済み: 使い捨てだけの `bots → users`・`tenant_meta_config → users`（B2 の `bots_owner_staff_id_fkey`・`tenant_meta_config_connected_by_staff_id_fkey`）、本番だけの `calendar_owner_settings → users`（A2）。
 - 本番 5 社で共用の表を指す外部キーは 128 本（003 は 24 本。`prod-reads/fk-public.txt`）。発注と商品の仕入先は 5 社とも `public.suppliers` を指す。
 - ひな形 `backend/app/services/tenant.py` の `_TENANT_TABLES_SQL` は、仕入先を `{schema}.suppliers` で指す（2 か所）。B1 で会社ごとの仕入先の表を外すと、この 2 か所は `public.suppliers` に直す必要がある。
-- 使い捨て側で各外部キーがどの置き場所を指すかは**まだ確かめていない**。5-2 の実装カードの最初の手順で、置き場所つきで書き出して本番の 128 本と1本ずつ比べる。§5-6 の CI 検査（K5-2）も、置き場所つきで比べる形にする。
+- **まだ確かめていないこと**: 使い捨て側の「置き場所なし＝共用（public）」は、書き出したときの検索の順（search_path）に頼る。`q1-run.md` にその記録は無い（`search_path` で検索して 0 件）。5-2 の実装カードでは、置き場所を必ず付けて書き出し（指す表の schema 名を別の列で取る）、本番と比べる。§5-6 の CI 検査（K5-2）も同じ取り方にする。
 
 ## 4. 分けの外で分かったこと
 
