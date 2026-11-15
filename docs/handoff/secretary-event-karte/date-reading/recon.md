@@ -34,6 +34,7 @@
 - `backend/tests/test_assistant_karte.py`（348 行）: `_event`・`_unknown`・`_karte`・`meet` の補助と、`tests.test_assistant_router` の `_fixture`・`_mock_agent`・`_respond`・`allowed` を使う。日付の言い方を見る試験は無い。
 - `backend/tests/test_assistant_karte.py:324-333` `test_payload_without_karte_is_unchanged`: 古い画面の道の頼みの鍵が `{"text","now","model","rules"}` だけ。
 - 「今」を固定する仕組みは試験にも本体にも無い（`datetime.now` を直接呼ぶ）。
+- `backend/tests/test_assistant_karte.py:21-22` の `S`・`E`（2026-11-02）と :220 の金曜（2026-11-06）は、今日を 2026-11-01（日）とした日付。:151-160 は「明日の10時に打ち合わせを入れて」で始まり `S` を期待し、:218-224 は「金曜の14時から12時まで仕入れ」。日付の決まりを入れると本当の今日で日付が決まり :151 が落ちる（クラウドの審査 1 回目で実測。design.md §11）。
 
 ## 4. 既存 ADR の検索
 

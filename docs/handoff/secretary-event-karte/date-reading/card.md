@@ -24,6 +24,7 @@
 |替えるのは時刻の文字の先頭の日付だけ。時刻と時差の印は AI の読みのまま|design.md §3-2・kgi.md §2|
 |「今」は `_now_jst()` で 1 回だけ作り、AI に渡す今と「今日」を同じにする|design.md §3-3|
 |新しい画面の道で AI が予定で答えたときだけ通す。古い画面の道・`merge_karte`・`settle_dates`・`next_ask` は触らない|design.md §2・§3-3|
+|既存の `test_assistant_karte.py` は「今」を 2026-11-01（日）に固定する 2 か所だけ足す。期待は変えない|design.md §7・§11（審査 1 回目の指摘 1）|
 
 ## やること（この順）
 
@@ -71,11 +72,11 @@ _JST_OFFSET = timedelta(hours=9)
 
 # 表に無い日付の言い方。1 つでもあれば AI の読んだ日付のまま（design.md §3 (2)）
 _OTHER_DATE_WORDS = re.compile(
-    r"\d+\s*年|月末|月初|週末|年末|年始|再来月|来月|今月|先月|翌日|翌週|前日|先週|一昨日|昨日|おととい|きのう|"
+    r"\d+\s*年|再来年|来年|今年|去年|昨年|月末|月初|週末|年末|年始|再来月|来月|今月|先月|翌日|翌週|前日|先週|一昨日|昨日|おととい|きのう|"
     r"毎|隔週|\d+\s*(?:日|週間?|か月|ヶ月|カ月|ヵ月)\s*(?:後|前|間)"
 )
 _MONTH_DAY = re.compile(r"(\d{1,2})\s*月\s*(\d{1,2})\s*日")
-_DAY_ONLY = re.compile(r"(?<![月\d])(\d{1,2})\s*日(?!\s*曜)")
+_DAY_ONLY = re.compile(r"(?<![月\d])(\d{1,2})\s*日(?!\s*(?:曜|中))")
 _WEEKDAY = re.compile(r"(再来週|来週|今週)?\s*の?\s*([月火水木金土日])\s*曜")
 _RELATIVE = {"しあさって": 3, "あさって": 2, "明後日": 2, "明日": 1, "あした": 1, "今日": 0, "本日": 0}
 _RELATIVE_RE = re.compile("|".join(sorted(_RELATIVE, key=len, reverse=True)))
@@ -251,7 +252,7 @@ def _agent_payload(
     payload = _agent_payload(body.text, assignment.model, rules, karte, now=now)
 ```
 
-#### 4-4. :321-323 を置き換える（`settle_dates` の前に `apply_day` を通す）
+#### 4-4. :321-324 を置き換える（`settle_dates` の前に `apply_day` を通す）
 
 前:
 
@@ -391,6 +392,9 @@ def test_table_examples(text, today, expected):
         "3日後",
         "明日から3日間",
         "2027年1月5日",
+        "来年の11月25日",  # 年の言い方は表に無い
+        "再来年の1月5日",
+        "1日中研修",  # 「1 日中」は日付ではない
         "11月31日",  # あり得ない日付
         "2月30日",
         "31日",  # 11 月 31 日は無い（今日 11/15）
@@ -508,18 +512,66 @@ async def test_old_path_keeps_ai_date(allowed, monkeypatch, sunday):
     assert "2026-11-16" not in json.dumps(resp.json(), ensure_ascii=False)
 ```
 
+### 5b. 既存の試験 `backend/tests/test_assistant_karte.py`（「今」を固定するだけ。期待は変えない）
+
+この試験の日付（:21-22 の `S`・`E` と :220 の金曜 11/6）は、今日を 2026-11-01（日）として書いてある。日付の決まりが入ると「明日」「金曜」が本当の今日で決まり、:151 の試験が落ちる。「今」を 2026-11-01 10:00 に固定する 2 か所だけを足す。
+
+5b-1. :8-9 の import に 1 行足す
+
+前:
+
+```python
+import json
+from unittest.mock import AsyncMock
+```
+
+後:
+
+```python
+import json
+from datetime import datetime
+from unittest.mock import AsyncMock
+```
+
+5b-2. :68-71 の `meet` の後に「今」を固定する仕組みを足す
+
+前:
+
+```python
+    return _set
+
+
+# ---- next_ask（全部の分かれ道） -------------------------------------------------
+```
+
+後:
+
+```python
+    return _set
+
+
+@pytest.fixture(autouse=True)
+def _fixed_now(monkeypatch):
+    # date-reading: S・E と「金曜」の日付は今日を 2026-11-01（日）として書いてある。
+    # 日付の決まりが本当の今日に左右されないよう「今」を固定する（期待は変えない）
+    monkeypatch.setattr(assistant, "_now_jst", lambda: datetime(2026, 11, 1, 10, 0, tzinfo=assistant._JST))
+
+
+# ---- next_ask（全部の分かれ道） -------------------------------------------------
+```
+
 ### 6. 確かめ（どれも生の出力を /tmp/CC報告ファイル/ に保存し、全文を読んでから判定する）
 
-- (6a) `cd "$REPO/backend" && uv run --no-project --python 3.12 --with ruff ruff check app/ tests/test_secretary_dates.py > /tmp/CC報告ファイル/ruff.txt 2>&1; echo "exit=$?"` → exit=0
-- (6b) `cd "$REPO/backend" && uv run --no-project --python 3.12 --with ruff ruff format --check app/services/secretary_dates.py app/routers/assistant.py tests/test_secretary_dates.py > /tmp/CC報告ファイル/ruff-format.txt 2>&1; echo "exit=$?"` → exit=0。落ちたら `ruff format` でその 3 ファイルだけ整え、整えた差分を報告に貼る（中身は変えない）。
-- (6c) `cd "$REPO/backend" && ENVIRONMENT=test uv run --no-project --python 3.12 --with-requirements requirements.txt --with-requirements requirements-dev.txt python -m pytest --no-cov tests/test_secretary_dates.py tests/test_assistant_router.py tests/test_assistant_karte.py tests/test_assistant_rules_router.py tests/test_assistant_karte_pg.py -q > /tmp/CC報告ファイル/pytest.txt 2>&1; echo "exit=$?"` → exit=0。最後の 1 行（passed・skipped の数）を報告に貼る。続けて同じ形で `tests/test_secretary_dates.py` だけを流し（保存先 `/tmp/CC報告ファイル/pytest-dates.txt`）、最後の 1 行を貼る（期待 342 passed）。
+- (6a) `cd "$REPO/backend" && uv run --no-project --python 3.12 --with ruff ruff check app/ > /tmp/CC報告ファイル/ruff.txt 2>&1; echo "exit=$?"` → exit=0（CI と同じ範囲。`.github/workflows/test.yml:92`。試験のファイルは CI の ruff の対象外）
+- (6b) `cd "$REPO/backend" && uv run --no-project --python 3.12 --with ruff ruff format --check app/services/secretary_dates.py > /tmp/CC報告ファイル/ruff-format.txt 2>&1; echo "exit=$?"` → exit=0。落ちたら `ruff format app/services/secretary_dates.py` で整え、整えた差分を報告に貼る（中身は変えない）。`app/routers/assistant.py` は元から整っていない行（:373-374）があるので format をかけない。
+- (6c) `cd "$REPO/backend" && ENVIRONMENT=test uv run --no-project --python 3.12 --with-requirements requirements.txt --with-requirements requirements-dev.txt python -m pytest --no-cov tests/test_secretary_dates.py tests/test_assistant_router.py tests/test_assistant_karte.py tests/test_assistant_rules_router.py tests/test_assistant_karte_pg.py -q > /tmp/CC報告ファイル/pytest.txt 2>&1; echo "exit=$?"` → exit=0。最後の 1 行（passed・skipped の数）を報告に貼る。続けて同じ形で `tests/test_secretary_dates.py` だけを流し（保存先 `/tmp/CC報告ファイル/pytest-dates.txt`）、最後の 1 行を貼る（期待 345 passed）。
 - (6d) `cd "$REPO" && git diff --check > /tmp/CC報告ファイル/diff-check.txt 2>&1; echo "exit=$?"` → exit=0
-- (6e) `cd "$REPO" && git status --short` を報告に貼る。変わるのは `backend/app/routers/assistant.py`（変更）と `backend/app/services/secretary_dates.py`・`backend/tests/test_secretary_dates.py`（新規）の 3 つだけ。
+- (6e) `cd "$REPO" && git status --short` を報告に貼る。変わるのは `backend/app/routers/assistant.py`・`backend/tests/test_assistant_karte.py`（変更）と `backend/app/services/secretary_dates.py`・`backend/tests/test_secretary_dates.py`（新規）の 4 つだけ。
 - (6a)〜(6c) が手順書の書き損じ（import の並び・未使用の名前・行の長さ）で落ちたら、その書き損じだけ直し、直した所を報告に書く。試験の期待の日付を変えないと通らないとき、または手順書と違う作りに変えないと通らないときは `NEEDS_DECISION:` で止まる（期待の日付は PO 承認の決まりの表なので変えない）。
 
 ### 7. 記録（commit）と送り出し（push）
 
-- (7a) `git -C "$REPO" add backend/app/routers/assistant.py backend/app/services/secretary_dates.py backend/tests/test_secretary_dates.py`（`git add -A`・`git add .` は使わない）。
+- (7a) `git -C "$REPO" add backend/app/routers/assistant.py backend/app/services/secretary_dates.py backend/tests/test_secretary_dates.py backend/tests/test_assistant_karte.py`（`git add -A`・`git add .` は使わない）。
 - (7b) commit の文:
 
 ```
@@ -540,7 +592,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 
 - `backend/app/services/secretary_karte.py`（`merge_karte`・`settle_dates`・`next_ask`）・`backend/app/schemas/assistant.py`
 - `backend/app/routers/assistant.py` の古い画面の道（:327 以降の `elif intent.kind == "event":`）と、4-1〜4-4 以外の行
-- 既存の試験 `backend/tests/test_assistant_router.py`・`backend/tests/test_assistant_karte.py`・`backend/tests/test_assistant_rules_router.py`・`backend/tests/test_assistant_karte_pg.py`
+- 既存の試験 `backend/tests/test_assistant_router.py`・`backend/tests/test_assistant_rules_router.py`・`backend/tests/test_assistant_karte_pg.py`。`backend/tests/test_assistant_karte.py` は 5b の 2 か所だけ（期待の値は変えない）
 - 容器（`secretary-agent/`・`secretary-codex/`）・画面（`frontend/`）・`migrations/`・`.github/`・`deploy.yml`・本番の `scripts/`
 - PR は作らない（Opus が作る）
 
@@ -552,6 +604,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 |「前」がちょうど 1 回一致しない|`BLOCKED:` でファイル名と節の番号を出す|
 |`test_secretary_dates.py` の日付の試験が落ちる|期待を変えずに、落ちた試験の名前（引数つき）と生の出力のパスを添えて `NEEDS_DECISION:`|
 |既存の試験（`test_assistant_router.py` など）が落ちる|直さずに、落ちた試験の名前と生の出力のパスを添えて `NEEDS_DECISION:`|
+|5b を足しても `test_assistant_karte.py` の試験が落ちる|期待を変えずに、落ちた試験の名前と生の出力のパスを添えて `NEEDS_DECISION:`|
 |`tests.test_assistant_karte` から `meet` を読み込むと fixture が見つからない|`NEEDS_DECISION:`（試験の置き場を Opus が決める）|
 |PG の試験が skipped|続けてよい。報告に書く|
 |push が見張りに止められる|言い換えずに止められた文面を貼って `BLOCKED:`|
