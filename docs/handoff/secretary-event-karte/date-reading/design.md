@@ -10,7 +10,7 @@
 
 | # | 条件（○×） | 判定のしかた |
 |---|---|---|
-| D1 | 決まりの表（kgi.md §2）の言い方 × 7 つの曜日（月〜日の「今日」）で、決まった日付と合う | backend の試験 `backend/tests/test_secretary_dates.py`（食い違い 0 件） |
+| D1 | 決まりの表（kgi.md §2）の言い方 × 7 つの曜日（月〜日の「今日」）で、決まった日付と合う | backend の試験 backend/tests/test_secretary_dates.py（新規）（食い違い 0 件） |
 | D2 | 本番で「来週の月曜 13 時から会議」「来週の月曜 13 時に佐藤さんと電話の予定」を 5 回ずつ | 10 回とも表どおりの日付・時刻は 13:00 のまま |
 | D3 | 試しの会話 10 本（T1〜T10）の聞く順 | 10 本とも直し1 の本番確認と同じ順 |
 | D4 | 今の答えの見本 69 件の種類 | 69 件とも一致 |
@@ -19,9 +19,9 @@
 ## 2. 対象と対象外
 
 - 対象:
-  - 新しい部品 `backend/app/services/secretary_dates.py`（`resolve_day`・`apply_day`）。
+  - 新しい部品 backend/app/services/secretary_dates.py（新規）（`resolve_day`・`apply_day`）。
   - `backend/app/routers/assistant.py`: 「今」を 1 回だけ作る `_now_jst()` を足し、`_agent_payload` に `now` を渡せるようにし、新しい画面の道で `settle_dates` の前に `apply_day` を通す。
-  - 試験: 新しい `backend/tests/test_secretary_dates.py`。既存の `backend/tests/test_assistant_karte.py` に「今」を 2026-11-01（日）に固定する仕組みだけ足す（期待は変えない。§7）。
+  - 試験: 新しい backend/tests/test_secretary_dates.py（新規）。既存の `backend/tests/test_assistant_karte.py` に「今」を 2026-11-01（日）に固定する仕組みだけ足す（期待は変えない。§7）。
 - 対象外: AI への指示文（`secretary-agent/prompt.txt`）・容器（`secretary-agent`・`secretary-codex`）・画面・聞く順（`next_ask`）・`merge_karte`・`settle_dates`・古い画面の道（`backend/app/routers/assistant.py:327-` 以降）・時刻（何時か）の読み方・DB。
 
 ## 3. 変更の中身（前と後）
@@ -96,7 +96,7 @@
 
 | 基準 | 検証方法 |
 |---|---|
-| D1 表の言い方 × 7 曜日で決まった日付 | `backend/tests/test_secretary_dates.py`。今日・本日・明日・あした・あさって・明後日・しあさって × 7 曜日（49 件）、今週の・来週の・再来週の・来週（の無し）・〇曜だけ × 7 曜日 × 7 曜日（245 件。期待の日付は月曜の差で数える別の数え方で出す）、〇月〇日・〇日だけ（来年・来月・年の終わりの繰り越し）、替えない言い方。CI の pytest で食い違い 0 件 |
+| D1 表の言い方 × 7 曜日で決まった日付 | backend/tests/test_secretary_dates.py（新規）。今日・本日・明日・あした・あさって・明後日・しあさって × 7 曜日（49 件）、今週の・来週の・再来週の・来週（の無し）・〇曜だけ × 7 曜日 × 7 曜日（245 件。期待の日付は月曜の差で数える別の数え方で出す）、〇月〇日・〇日だけ（来年・来月・年の終わりの繰り越し）、替えない言い方。CI の pytest で食い違い 0 件 |
 | D1 AI の答えへの当て方 | 同じ試験で `apply_day`（始まり・同じ日の終わりが動く・日をまたぐ終わりは動かない・終わりを聞いた後は終わり・カルテの始まりは替えない・`Z` は替えない）と、窓口を通した試験（「今」を 2026-11-15 14:00 日曜に固定。AI が 11/17 と答えても下書きは 11/16 13:00〜14:00・AI に渡した `now` が固定した今・古い画面の道は替えない） |
 | D2 本番で 10 回とも表どおり | 本番反映後、本番の使い捨ての backend 容器から 2 つの文を 5 回ずつ流す（tenant 1・user 1・karte null）。下書きの始まりを表に並べる |
 | D3 聞く順が同じ | 本番反映後に T1〜T10 を 1 回ずつ。直し1 の本番確認の聞く順と比べる |
@@ -112,8 +112,8 @@
 ## 9. 維持の仕組み
 
 - 守り手: 秘書チャットの持ち主（Opus の設計担当）。
-- 仕組み: `backend/tests/test_secretary_dates.py` が CI の必須の pytest で毎回走る。決まりの表から外れる変更をすると落ちる。
-- 表を変えるとき: kgi.md §2 の表を PO が改め、`secretary_dates.py` と試験の期待を同じ PR で直す。
+- 仕組み: backend/tests/test_secretary_dates.py（新規） が CI の必須の pytest で毎回走る。決まりの表から外れる変更をすると落ちる。
+- 表を変えるとき: kgi.md §2 の表を PO が改め、secretary_dates.py（新規） と試験の期待を同じ PR で直す。
 - 残る見えない点: 「日付を替えた」回数は記録に残らない。数える必要が出たら秘書の記録の項目を足す別の便にする（今回は足さない・変更は一度に 1 つ）。
 
 ## 10. 進め方（1 便）
