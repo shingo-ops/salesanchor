@@ -46,21 +46,37 @@ mode: handoff
 - 27 表は移行で作られた物: `20260906_120000_create_tcg_tables_t001.sql`（登録 :794）の 27 表のうち 25 表と、`20260906_130100_create_tcg_product_import_history_t001.sql`（:810）の 2 表。
 - 残り 3 表のうち 2 表は「全社を回す形」の移行で作られた: extraction_attempts（`20260914_010000_tcg_extraction_attempts.sql:188` `FOR target IN SELECT nspname FROM pg_namespace WHERE nspname LIKE 'tenant_%'`・:198 で作る。登録 :858）、import_job_messages（`20260910_010000_tcg_import_message_links.sql:6-7` で `^tenant_[0-9]{3}$` を回し、:9-10 で import_jobs と source_messages がある会社だけ・:21 で作る。登録 :834）。どちらも「前提の表がある会社だけ」に作るため、tenant_001 にだけある。
 - 残り 1 表 tenant_suppliers は、`migrations/` に作る文も名前を変える文も無い（`git grep -nE 'RENAME TO tenant_suppliers|tenant_suppliers'` の当たりは試験3本の `ALTER TABLE IF EXISTS ... tcg_suppliers RENAME TO tenant_suppliers` と `docs/handoff/fix-supplier-table-name/design.md:21`「適用済み」の記述と ai_cloud のビューの一覧だけ）。手で名前を変えた表。
-- 移行で作ったのに今の tenant_001 に無い表: tcg_products・tcg_suppliers（`20260906_120000` :144・:165）。本番の読み取り（`p7-check.txt`）で tenant_001 に両方とも無い。tcg_suppliers は上の名前の変更で tenant_suppliers になった物（設計文書の記述による・本番の履歴は確かめていない）。tcg_products が無くなった移行はまだ特定していない。
-- `20260917_000000_create_analysis_rule_tables.sql` の 13 表は、今の tenant_001 に無い（30 表の一覧に無い）。`20260921_010000_drop_analysis_rule_tables.sql`（:934）が消す物と名前が合う（中身の照合は 5-0b）。
+- 移行で作ったのに今の tenant_001 に無い表: tcg_products・tcg_suppliers（`20260906_120000` :144・:165）。本番の読み取り（`p7-check.txt`）で tenant_001 に両方とも無い。tcg_suppliers は上の名前の変更で tenant_suppliers になった物（設計文書の記述による・本番の履歴は確かめていない）。tcg_products は `20260915_010000` が消した（4-2b）。
+- `20260917_000000_create_analysis_rule_tables.sql` の 13 表は、今の tenant_001 に無い（30 表の一覧に無い）。`20260921_010000_drop_analysis_rule_tables.sql`（:934）が消す物と名前が合う（4-2b）。
 
 ### 4-2. tenant_004 の 22 表
 - 7 表は移行で作られた: item_notes・products_logistics・tcg_suppliers・unparsed_lines（`20260831_110000` :341・:189・:111・:358）、tcg_manufacturers・tcg_series（`20260902_110000` :53・:39）、tcg_unit_evidence_rules（`20260903_120000` :25）。
 - tenant_suppliers: 4-1 と同じく手で名前を変えた表。ただし tenant_004 には tcg_suppliers も残っている（`p7-check.txt`: tenant_004 に tcg_suppliers と tenant_suppliers の両方）。
 - 日付つきの控え 14 表: `migrations/` のコメント（例 `20260904_160000_tcg_magazine_promo_products_t004.sql:6-8`・`20260905_010000_tcg_pokemon_master_batch1_t004.sql:8-10`）に名前と件数が書かれているが、作る文はコメント以外の本文に無い（`git grep -nE '_bak' -- 'migrations/2026090*.sql'` からコメント行を除くと0件）。手で作った控え。
-- `20260831_110000` の残り 11 表などは今の tenant_004 に無い。`20260921_050000`（:947）・`20260921_130000`（:959）が消す物と名前が合うかは 5-0b で照合する。
+- 移行で作ったのに今の tenant_004 に無い表は、消す移行と名前が合う（4-2b）。
+
+### 4-2b. 消す移行との照合（Opus・repo を読んだ。2026-11-15）
+- tenant_001 の tcg_products: `20260915_010000_drop_tcg_products_phase2c.sql`（登録 :868）が消す。`:32-39` で `nspname LIKE 'tenant_%'` を全部回し、`:72` 以降で「まだ指している外部キーが0本」のときだけ `:86` 付近の `DROP TABLE %I.tcg_products` を流す。`20260906_120000` の `:38` に「tcg_products が不在 = Phase 2c で意図的に DROP 済み」とあり、作り直さない形になっている。
+- tenant_004 の照合: `20260831_110000` は 18 表、`20260902_110000` は 4 表、`20260903_120000` は 1 表を作る（`CREATE TABLE IF NOT EXISTS %I.<名>` の文）。合わせて 23 表のうち 15 表（`20260831_110000` の 13 表と `20260902_110000` の tcg_major_categories・tcg_product_categories）を `20260921_050000`（:947）・`20260921_130000`（:959）が消し、tcg_products を `20260915_010000` が消す。残りは item_notes・products_logistics・tcg_suppliers・unparsed_lines・tcg_manufacturers・tcg_series・tcg_unit_evidence_rules の 7 表。4-2 の「移行で作られた 7 表」と名前が全部合う。
+- 解析の規則の 13 表: `20260917_000000_create_analysis_rule_tables.sql`（登録 :883）が tenant_001 に作り（`:15` `_schema TEXT := 'tenant_001'`）、`20260921_010000_drop_analysis_rule_tables.sql`（登録 :934）が public・tenant_004・tenant_001 から消す。作る 13 表と消す 13 表の名前は全部同じ。
+- 気づいたこと: 登録の順は「:883 で作る → :934 で消す」。`20260917_000000` の `:21` は会社のスキーマがあるかだけを見る。本番反映のたびに 13 表を作って消している疑いがある（まだ確かめていない。5-0b の P8 で、:883 の直後と :934 の直後に表の数を数えて確かめる）。
 
 ### 4-3. 分かったこと（事実）
 - 会社ごとの形の違いは、(1) 会社を名指しして作る移行、(2) 「前提の表がある会社だけ」に作る移行、(3) 手で足した物（名前の変更1種・控え14表）の3つから来ている。
 - (3) は移行の記録から作り直せない。済んだ移行を飛ばす直しでは、(3) を「移行が作る形」に数えない。
 
-## 5. まだ分からないこと
+## 5. P3：制約・関数・連番・権限の差（台本 `prod-shape3.sh`・生の出力 `prod-shape3-summary.txt`）
+- 制約: 005 にあって 003 に無い制約は 0 件。同じ名前で定義が違う制約（003 と 005、会社名を伏せて比べた）も 0 件。
+- 制約の名前の違い（005 と 006）: 同じ3本の外部キーの名前が違う。005 = `companies_lead_id_fkey`・`contacts_lead_id_fkey`・`products_supplier_default_id_fkey`（自動でついた名前）／006 = `fk_companies_lead`・`fk_contacts_lead`・`fk_products_supplier_default`（`backend/app/services/tenant.py:443-457`・`:1009-1012` が付ける名前）。005 の名前がどの文から来たかはまだ確かめていない。
+- 関数: 5社とも同じ 15 個の名前。本文（会社名を伏せて比べた）も 003 と 005・006 で違いは 0 件。
+- 連番: 003 にだけ `customer_code_seq`・`deal_code_seq`・`lead_code_seq` がある（`migrations/003_add_phase1_tenant_tables.sql:26-28` が作る物）。005・006 の間の差は 0 件。
+- 表の権限: 003 と 005 は全ての表で同じ（違う表 0 件）。006 は全 79 表に `qa_tenant006_rw=arwdD` が足されている。それ以外は 005 と同じ。
+- `qa_tenant006_rw` を与える文は `migrations/`・`backend/` に無い（`git grep` の当たりは `docs/` の4ファイルだけ）。手で足した権限。
+- スキーマの権限: 5社とも `jarvis=UC`・`salesanchor_app=U`・`ai_unmask_owner=U`。006 だけ `qa_tenant006_rw=U` が多い。
+- 既定の権限: public と5社とも、jarvis が作る表に `salesanchor_app=arwd`、連番に `salesanchor_app=rU`。006 だけ `qa_tenant006_rw` の分が多い。
+- 持ち主: 5社とも全ての表が jarvis。
+
+## 6. まだ分からないこと
 - 003 の 13 索引・2 制約が、移行の登録にある文から来たのか、手で足された物か（repo の文と突き合わせる。5-0b）。
-- 会社ごとの権限の中身の違い。
-- tenant_001 の tcg_products が無くなった移行の特定。
+- 005 の自動の外部キー名がどの文から来たか（5-0b）。
 - 会社を新しく作る道（`backend/app/services/tenant.py`）で作った形と 003 の違い（P1。使い捨ての DB で 5-0b）。
