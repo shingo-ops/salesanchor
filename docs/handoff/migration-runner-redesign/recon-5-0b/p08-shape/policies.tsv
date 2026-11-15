@@ -1,0 +1,26 @@
+relname	n	string_agg
+channel_masters	1	channel_masters_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+companies	1	tenant_isolation_companies|*|true|public|(tenant_id = current_tenant_id())|
+company_addresses	1	tenant_isolation_company_addresses|*|true|public|(EXISTS ( SELECT 1\n   FROM X.companies c\n  WHERE ((c.id = company_addresses.company_id) AND (c.tenant_id = current_tenant_id()))))|
+company_discord	1	tenant_isolation_company_discord|*|true|public|(EXISTS ( SELECT 1\n   FROM X.companies c\n  WHERE ((c.id = company_discord.company_id) AND (c.tenant_id = current_tenant_id()))))|
+company_sales_channels	1	tenant_isolation_company_sales_channels|*|true|public|(EXISTS ( SELECT 1\n   FROM X.companies c\n  WHERE ((c.id = company_sales_channels.company_id) AND (c.tenant_id = current_tenant_id()))))|
+contact_contact_channels	1	tenant_isolation_contact_contact_channels|*|true|public|(EXISTS ( SELECT 1\n   FROM X.contacts ct\n  WHERE ((ct.id = contact_contact_channels.contact_id) AND (ct.tenant_id = current_tenant_id()))))|
+contact_discord	1	tenant_isolation_contact_discord|*|true|public|(EXISTS ( SELECT 1\n   FROM X.contacts ct\n  WHERE ((ct.id = contact_discord.contact_id) AND (ct.tenant_id = current_tenant_id()))))|
+contact_emails	1	tenant_isolation_contact_emails|*|true|public|(EXISTS ( SELECT 1\n   FROM X.contacts ct\n  WHERE ((ct.id = contact_emails.contact_id) AND (ct.tenant_id = current_tenant_id()))))|
+contacts	1	tenant_isolation_contacts|*|true|public|(tenant_id = current_tenant_id())|
+conversation_logs	1	conversation_logs_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+customer_scores	1	customer_scores_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+discord_channel_webhooks	1	tenant_isolation_discord_channel_webhooks|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+lead_attachments	1	tenant_isolation_lead_attachments|*|true|public|(EXISTS ( SELECT 1\n   FROM X.leads l\n  WHERE ((l.id = lead_attachments.lead_id) AND (l.tenant_id = current_tenant_id()))))|
+message_labels	1	message_labels_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+message_translations	1	message_translations_tenant_isolation|*|true|public|(tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::integer)|
+meta_message_reactions	1	tenant_isolation_meta_message_reactions|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+order_items	1	tenant_isolation_order_items|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+own_inventory	1	own_inventory_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+tenant_calibrations	1	tenant_calibrations_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+tenant_duty_rule_components	1	tenant_duty_rule_components_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+tenant_duty_rules	1	tenant_duty_rules_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+tenant_invoice_payment_bank	1	tenant_invoice_payment_bank_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+tenant_invoice_payment_methods	1	tenant_invoice_payment_methods_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+tenant_invoice_payment_wise	1	tenant_invoice_payment_wise_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+tenant_issuer_profiles	1	tenant_issuer_profiles_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|

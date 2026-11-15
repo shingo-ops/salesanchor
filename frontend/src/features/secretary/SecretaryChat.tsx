@@ -20,12 +20,15 @@ import { useFeatures } from "../../hooks/useFeatures";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { SecretaryDraftEvent } from "./SecretaryDraftEvent";
+import { SecretaryKarteAsk } from "./SecretaryKarteAsk";
 import { SecretaryDraftInvoice } from "./SecretaryDraftInvoice";
 import {
   SECRETARY_MAX_TEXT,
   classifySecretaryError,
+  karteFromDraft,
   sendSecretaryMessage,
   type AssistantReply,
+  type EventKarte,
 } from "./secretaryApi";
 import "./SecretaryChat.css";
 
@@ -34,6 +37,7 @@ type ChatMessage =
   | { id: number; side: "assistant"; kind: "text"; text: string; status?: "sending" | "error" }
   | { id: number; side: "assistant"; kind: "invoice"; reply: Extract<AssistantReply, { kind: "invoice" }> }
   | { id: number; side: "assistant"; kind: "event"; reply: Extract<AssistantReply, { kind: "event" }> }
+  | { id: number; side: "assistant"; kind: "ask"; reply: Extract<AssistantReply, { kind: "event" }> }
   | { id: number; side: "assistant"; kind: "created"; target: "invoice" | "event"; to: string };
 
 interface InnerProps {
@@ -47,13 +51,16 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  // ADR-1078: 予定のカルテ（会話の間だけ持つ。保存しない。閉じたら消す）
+  const [karte, setKarte] = useState<EventKarte | null>(null);
   const nextId = useRef(1);
 
   const close = () => {
-    // 閉じたら会話を消す
+    // 閉じたら会話とカルテを消す
     setOpen(false);
     setMessages([]);
     setText("");
+    setKarte(null);
   };
 
   const replaceMessage = (id: number, next: ChatMessage) =>
@@ -72,13 +79,21 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
     setText("");
     setSending(true);
     try {
-      const reply = await sendSecretaryMessage(trimmed);
-      if (reply.kind === "invoice") {
-        replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "invoice", reply });
-      } else if (reply.kind === "event") {
-        replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "event", reply });
+      const reply = await sendSecretaryMessage(trimmed, karte);
+      if (reply.kind === "event" && reply.draft.ask) {
+        // まだ聞く欄がある: 埋まった欄と質問を出し、カルテを持ち続ける
+        setKarte(karteFromDraft(reply.draft));
+        replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "ask", reply });
       } else {
-        replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "text", text: reply.draft.reply });
+        // 最後の確かめの欄・請求書・聞き返しではカルテを捨てる（失敗したときは捨てない）
+        setKarte(null);
+        if (reply.kind === "invoice") {
+          replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "invoice", reply });
+        } else if (reply.kind === "event") {
+          replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "event", reply });
+        } else {
+          replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "text", text: reply.draft.reply });
+        }
       }
     } catch (err) {
       const kind = classifySecretaryError(err);
@@ -137,6 +152,12 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
               onCreated={() => markCreated(m.id, "event", "/schedule")}
               onCancel={() => markCancelled(m.id)}
             />
+          </ChatBubble>
+        );
+      case "ask":
+        return (
+          <ChatBubble key={m.id} layout="panel" direction="inbound" wide>
+            <SecretaryKarteAsk draft={m.reply.draft} />
           </ChatBubble>
         );
       case "created":

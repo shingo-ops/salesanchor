@@ -1,0 +1,6 @@
+proname	pg_get_function_identity_arguments	md5	prosecdef
+sync_meta_page_routing		0c51060a5fa45cc85e12934ff3684c56	True
+trg_payment_detail_immutable		9f422754bf928106ca83911e0bf16f2f	False
+trg_payment_method_version_guard		800c3c5e4ad9e8241bda090cb864ac62	False
+trg_payment_version_no_wipe		7ab01ed4e93b7afb1dec9bff248e5880	False
+trg_set_updated_at		06bcf30ac3d0a7f279a54cbf228a7bec	False

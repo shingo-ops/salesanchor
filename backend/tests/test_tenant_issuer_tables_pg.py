@@ -2,7 +2,7 @@
 
 - 単体（PostgreSQL 不要）: 新テナント用 DDL に表 4 つと列が含まれ、移行ファイルが登録され、値を入れない。
 - PG（CI で実行）: 新テナントを作った形（tenant.py）と、表と列を消して移行ファイルを 2 回流した形が同じ。
-  決まり（CHECK・一意・外部キー・消したときの連鎖）が設計どおりに効く。試験の中で入れた行は最後に戻す。
+  決まり（CHECK・一意・外部キー）が設計どおりに効き、振込先の行は消せない（便V・ADR-1079）。試験の中で入れた行は最後に戻す。
   ゲートは CI が実際に設定する RLS_ADMIN_DATABASE_URL（test_discord_role_link_ddl.py と同じ形）。
 """
 from __future__ import annotations
@@ -28,6 +28,13 @@ ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _MIGRATION = "20261112_160000_create_tenant_issuer_and_payment_tables.sql"
+# 便V（ADR-1079）: 振込先の一覧に足した列・決まり・見張り。表を作り直したあとに一緒に流す
+_VERSIONING_MIGRATION = "20261115_100000_add_payment_method_versioning.sql"
+_VERSIONING_FUNCTIONS = (
+    "trg_payment_detail_immutable",
+    "trg_payment_method_version_guard",
+    "trg_payment_version_no_wipe",
+)
 # 試験・移行のどこにも無い 963 を使う（2026-11-12 に origin/main で git grep して 0 件）
 _TENANT_ID = 963
 _SCHEMA = f"tenant_{_TENANT_ID:03d}"
@@ -144,11 +151,40 @@ async def _shape(conn) -> dict:
         ),
         {"s": _SCHEMA, "t": tables},
     )
+    # 便V（ADR-1079）: 索引・見張り・見張りの関数の中身も比べる（K25）
+    indexes = await conn.execute(
+        text(
+            "SELECT tablename, indexname, indexdef FROM pg_indexes"
+            " WHERE schemaname = :s AND tablename = ANY(:t) ORDER BY tablename, indexname"
+        ),
+        {"s": _SCHEMA, "t": tables},
+    )
+    triggers = await conn.execute(
+        text(
+            "SELECT c.relname, t.tgname, pg_get_triggerdef(t.oid), t.tgenabled"
+            " FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid"
+            " JOIN pg_namespace n ON n.oid = c.relnamespace"
+            " WHERE n.nspname = :s AND c.relname = ANY(:t) AND NOT t.tgisinternal"
+            " ORDER BY c.relname, t.tgname"
+        ),
+        {"s": _SCHEMA, "t": tables},
+    )
+    functions = await conn.execute(
+        text(
+            "SELECT p.proname, pg_get_functiondef(p.oid) FROM pg_proc p"
+            " JOIN pg_namespace n ON n.oid = p.pronamespace"
+            " WHERE n.nspname = :s AND p.proname = ANY(:f) ORDER BY p.proname"
+        ),
+        {"s": _SCHEMA, "f": list(_VERSIONING_FUNCTIONS)},
+    )
     return {
         "columns": [tuple(row) for row in columns.all()],
         "constraints": [tuple(row) for row in constraints.all()],
         "policies": [tuple(row) for row in policies.all()],
         "rls": [tuple(row) for row in rls.all()],
+        "indexes": [tuple(row) for row in indexes.all()],
+        "triggers": [tuple(row) for row in triggers.all()],
+        "functions": [tuple(row) for row in functions.all()],
     }
 
 
@@ -245,11 +281,12 @@ async def _check_rules(conn) -> None:
     await _expect_error(conn, wise_sql, {"id": wise_id, "cur": "jpy"}, "23514")  # 通貨は英大文字3字
     await conn.execute(text(wise_sql), {"id": wise_id, "cur": "USD"})
 
-    await conn.execute(text(f"DELETE FROM {_SCHEMA}.tenant_invoice_payment_methods WHERE id = :id"), {"id": bank_id})
+    # 便V（ADR-1079）: 振込先の行は消せない（消すときは deleted_at を付ける）。詳細も残る
+    await _expect_error(conn, f"DELETE FROM {_SCHEMA}.tenant_invoice_payment_methods WHERE id = :id", {"id": bank_id}, "P0001")
     left = await conn.execute(
         text(f"SELECT count(*) FROM {_SCHEMA}.tenant_invoice_payment_bank WHERE payment_method_id = :id"), {"id": bank_id}
     )
-    assert left.scalar_one() == 0  # 振込先を消すと詳細も消える
+    assert left.scalar_one() == 1
 
 
 @pytest.mark.skipif(
@@ -274,8 +311,13 @@ async def test_new_tenant_shape_equals_migration_and_rules_hold():
                     for table in reversed(_TABLES):
                         await conn.execute(text(f"DROP TABLE {_SCHEMA}.{table}"))
                     await conn.execute(text(f"ALTER TABLE {_SCHEMA}.invoices DROP COLUMN issuer_region"))
+                    # 表と一緒に見張りは消えた。残った見張りの関数も外す（便V）
+                    for name in _VERSIONING_FUNCTIONS:
+                        await conn.execute(text(f"DROP FUNCTION {_SCHEMA}.{name}()"))
                     await _apply_migration_on_conn(conn, _MIGRATION, schema_name=_SCHEMA)  # 1 回目
                     await _apply_migration_on_conn(conn, _MIGRATION, schema_name=_SCHEMA)  # 2 回目（冪等）
+                    await _apply_migration_on_conn(conn, _VERSIONING_MIGRATION, schema_name=_SCHEMA)  # 便V 1 回目
+                    await _apply_migration_on_conn(conn, _VERSIONING_MIGRATION, schema_name=_SCHEMA)  # 便V 2 回目（冪等）
                 async with admin_engine.connect() as conn:
                     after = await _shape(conn)
                 assert before == after

@@ -189,6 +189,7 @@ _TENANT_LOOP_MIGRATIONS = {
     "20261106_150000_add_discord_role_link_tables.sql": 1,
     "20261112_160000_create_tenant_issuer_and_payment_tables.sql": 1,
     "20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql": 1,
+    "20261115_100000_add_payment_method_versioning.sql": 1,
 }
 
 

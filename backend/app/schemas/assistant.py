@@ -9,11 +9,41 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator, model_validator
+
+# ADR-1078: 予定のカルテで聞く欄（聞く順は app/services/secretary_karte.py の ASK_ORDER）
+AskField = Literal["title", "start", "end", "add_meet"]
+
+
+class KarteIn(BaseModel):
+    """ADR-1078: 画面が会話の間だけ持つ予定のカルテ（保存しない）。字数・型・回数の上限をここで守る。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str | None = Field(None, max_length=1000)
+    start: str | None = Field(None, max_length=40)
+    end: str | None = Field(None, max_length=40)
+    is_all_day: bool = False
+    location: str | None = Field(None, max_length=1000)
+    description: str | None = Field(None, max_length=1000)
+    is_meeting: bool = False
+    add_meet: bool | None = None
+    asked: AskField | None = None
+    asked_count: int = Field(0, ge=0, le=2)
+
+    @field_validator("start", "end")
+    @classmethod
+    def _iso_or_none(cls, value: str | None) -> str | None:
+        # 読めない時刻は 422（parse_iso が ValueError を出す）
+        if value is not None:
+            parse_iso(value)
+        return value
 
 
 class AssistantMessageIn(BaseModel):
     text: str = Field(min_length=1, max_length=1000)
+    # ADR-1078: 新しい画面は 1 通目から必ずこの鍵を送る（1 通目は null）。鍵の有無は model_fields_set で見る
+    karte: KarteIn | None = None
 
 
 # ---- 容器の答え -------------------------------------------------------------
@@ -40,12 +70,15 @@ class IntentInvoice(BaseModel):
 class IntentEvent(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    title: str
-    start: str
+    # ADR-1078: AI は分からない欄を null で返す。is_meeting・add_meet は初期値があるので古い容器の答えも通る
+    title: str | None = Field(None, max_length=1000)
+    start: str | None = None
     end: str | None = None
     is_all_day: bool = False
-    location: str | None = None
-    description: str | None = None
+    location: str | None = Field(None, max_length=1000)
+    description: str | None = Field(None, max_length=1000)
+    is_meeting: bool = False
+    add_meet: bool | None = None
 
 
 class Intent(BaseModel):
@@ -124,13 +157,19 @@ class InvoiceDraft(BaseModel):
 
 
 class EventDraft(BaseModel):
-    title: str
-    start: str
-    end: str
+    # ADR-1078: 新しい画面の道では空いた欄を null で返し、ask で次に聞く欄を知らせる
+    title: str | None
+    start: str | None
+    end: str | None
     is_all_day: bool = False
     location: str | None = None
     description: str | None = None
     calendar_type: Literal["personal"] = "personal"
+    is_meeting: bool = False
+    add_meet: bool | None = None
+    meet_available: bool = False
+    ask: AskField | None = None
+    ask_count: int = 0
 
 
 class UnknownDraft(BaseModel):
