@@ -6,6 +6,7 @@ design.md §9 の行ごとに 1 つ以上。next_ask の全部の分かれ道は
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from unittest.mock import AsyncMock
 
 import httpx
@@ -66,6 +67,13 @@ def meet(monkeypatch):
         return mock
 
     return _set
+
+
+@pytest.fixture(autouse=True)
+def _fixed_now(monkeypatch):
+    # date-reading: S・E と「金曜」の日付は今日を 2026-11-01（日）として書いてある。
+    # 日付の決まりが本当の今日に左右されないよう「今」を固定する（期待は変えない）
+    monkeypatch.setattr(assistant, "_now_jst", lambda: datetime(2026, 11, 1, 10, 0, tzinfo=assistant._JST))
 
 
 # ---- next_ask（全部の分かれ道） -------------------------------------------------
