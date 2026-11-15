@@ -6,7 +6,6 @@
 DO $body$
 DECLARE
     _schema TEXT    := 'tenant_004';
-    _count  INTEGER;
 BEGIN
     -- -------------------------------------------------------------------------
     -- ガード: tenant_004 が存在しない場合はスキップ（CI 環境対応）
@@ -36,100 +35,10 @@ BEGIN
         )
     $ddl$, _schema);
 
-    -- -------------------------------------------------------------------------
-    -- 4件 seed（GAS: MasterRegistry.gs:251-265 の確定値）
-    -- structure_pattern は JavaScript string escape を展開した実値を格納
-    -- ON CONFLICT DO NOTHING で冪等
-    -- -------------------------------------------------------------------------
-
-    -- UER_E2_PRICE_X_QTY_UNIT: Enabled=false（審査前ルール）
-    EXECUTE format($q$
-        INSERT INTO %I.tcg_unit_evidence_rules
-            (id, evidence_type, priority, enabled,
-             requires_unique_pid, requires_unique_unit_candidate,
-             exclude_product_matched_terms, structure_pattern, note)
-        VALUES (
-            'UER_E2_PRICE_X_QTY_UNIT',
-            'E2_PRICE_X_QTY_UNIT',
-            1,
-            FALSE,
-            FALSE,
-            TRUE,
-            FALSE,
-            $p$(?:[@＠¥￥]\s*)?\d[\d,]*(?:\s*(?:円|¥|￥))?\s*(?:×|x|X)\s*\d[\d,]*\s*{{UNIT}}$p$,
-            $n$価格→乗算→数量+Unitのみ。Unit語・乗算記号・構造patternは各Masterを正本とする。$n$
-        )
-        ON CONFLICT (id) DO NOTHING
-    $q$, _schema);
-
-    -- UER_E2_AT_PRICE_X_QTY_UNIT: Enabled=true（@付き価格パターン）
-    EXECUTE format($q$
-        INSERT INTO %I.tcg_unit_evidence_rules
-            (id, evidence_type, priority, enabled,
-             requires_unique_pid, requires_unique_unit_candidate,
-             exclude_product_matched_terms, structure_pattern, note)
-        VALUES (
-            'UER_E2_AT_PRICE_X_QTY_UNIT',
-            'AT_PRICE_X_QTY_UNIT',
-            1,
-            TRUE,
-            TRUE,
-            FALSE,
-            TRUE,
-            $p$[@＠]\s*\d[\d,]*(?:\s*(?:円|¥|￥))?\s*(?:×|x|X)\s*\d[\d,]*\s*{{UNIT}}$p$,
-            $n$監査済み: @付き価格→乗算→数量+Unit。$n$
-        )
-        ON CONFLICT (id) DO NOTHING
-    $q$, _schema);
-
-    -- UER_E2_CURRENCY_PRICE_X_QTY_UNIT: Enabled=true（通貨表記パターン）
-    EXECUTE format($q$
-        INSERT INTO %I.tcg_unit_evidence_rules
-            (id, evidence_type, priority, enabled,
-             requires_unique_pid, requires_unique_unit_candidate,
-             exclude_product_matched_terms, structure_pattern, note)
-        VALUES (
-            'UER_E2_CURRENCY_PRICE_X_QTY_UNIT',
-            'CURRENCY_PRICE_X_QTY_UNIT',
-            2,
-            TRUE,
-            TRUE,
-            FALSE,
-            TRUE,
-            $p$\d[\d,]*\s*(?:円|¥|￥)\s*(?:×|x|X)\s*\d[\d,]*\s*{{UNIT}}$p$,
-            $n$監査済み: 通貨表記付き価格→乗算→数量+Unit。$n$
-        )
-        ON CONFLICT (id) DO NOTHING
-    $q$, _schema);
-
-    -- UER_E3: Enabled=true（商品照合残余ルール）
-    EXECUTE format($q$
-        INSERT INTO %I.tcg_unit_evidence_rules
-            (id, evidence_type, priority, enabled,
-             requires_unique_pid, requires_unique_unit_candidate,
-             exclude_product_matched_terms, structure_pattern, note)
-        VALUES (
-            'UER_E3',
-            'E3_PRODUCT_RESIDUAL',
-            3,
-            TRUE,
-            TRUE,
-            TRUE,
-            TRUE,
-            '',
-            $n$PID一意・商品照合残余のみ。Unit語は単位マスタを正本とする。$n$
-        )
-        ON CONFLICT (id) DO NOTHING
-    $q$, _schema);
-
-    -- -------------------------------------------------------------------------
-    -- 件数確認（4件でなければ RAISE EXCEPTION）
-    -- -------------------------------------------------------------------------
-    EXECUTE format('SELECT count(*) FROM %I.tcg_unit_evidence_rules', _schema)
-        INTO _count;
-    IF _count != 4 THEN
-        RAISE EXCEPTION 'tcg_unit_evidence_rules: 期待4件、実際%件', _count;
-    END IF;
-
-    RAISE NOTICE 'tcg_unit_evidence_rules: % 件確認 OK', _count;
+    -- NEUTRALIZED (ADR-1007 / ADR-155, 2026-11-15): 4件の seed（INSERT … ON CONFLICT DO NOTHING 4つ）と、4件でなければ止める件数の確かめを外した。
+    -- 毎回の本番反映で、消した行が戻り、行を足すと反映が止まっていた。表を作る文は残す。
+    -- 件数の確かめも外すのは、値の文だけ外すと表が空の環境で 0件になり反映が止まるため（p11-classification.md §3）。
+    -- 決定: PO 2026-11-15。分け方: docs/handoff/migration-runner-redesign/p11-classification.md §3 #17
+    -- 元の内容は git history で参照可能。
+    RAISE NOTICE 'ADR-1007 neutralized: tcg_unit_evidence_rules seed and count check removed (20260903_120000)';
 END $body$;
