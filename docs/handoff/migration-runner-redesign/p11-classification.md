@@ -1,6 +1,6 @@
 # 値を書く移行 52本の分け方（段5 5-1・§5-5）
 
-- 状態: 設計案（Opus 作成・2026-11-15・第4版）。PO の承認待ち。承認の前に 5-1 の実装カードは出さない。
+- 状態: 第4版。無効にする8本は PO 2026-11-15「1」で決定（「8本を止める」）。5-1 の実装カードは `docs/handoff/migration-runner-redesign/card-5-1.md`。固めてよい44本は、5-3 の起点の回で取り消せなくなる。その回の PO 本人の GO で改めて添える。
 - 事実の出どころ: `docs/handoff/migration-runner-redesign/recon-5-1a/p11-detail.md`（52本の中身・commit `a6d59cc36`）、`docs/handoff/migration-runner-redesign/recon-5-0a/p12.md`（依存する試験）、登録の順番 `scripts/run_all_migrations.sh`、本番の構造の読み取り（reader 鍵・表と列の有無だけ。行の中身は読まない。生出力 `/tmp/CC報告ファイル/deploy-lock-1113/p11-prod-tables.txt`・`p11-prod-recheck.txt`・`p11-prod-recheck-cols.txt`。後の2つは問い合わせの文を AUDIT 行に残した。2026-11-15 16:02-16:03 JST）、番号と登録行の対応 `/tmp/CC報告ファイル/deploy-lock-1113/p11-midrun.txt`。
 - 固める判断は、5-3 の記録を始めた後は取り消せない（記録の後は流し終えたファイルの書き換えを CI で止める。§5-7）。無効にする書き換えは 5-3 より前にしかできない。
 
