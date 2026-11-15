@@ -58,6 +58,12 @@ def test_table_rows_are_read():
         "recurrence_scope_required",
         "recurrence_occurrence_invalid",
         "recurrence_this_not_allowed",
+        "duty_needs_carrier",
+        "duty_rule_overlap",
+        "shipping_required",
+        "fx_rate",
+        "tax_rate",
+        "payment_method",
     ]
 
 

@@ -9945,6 +9945,362 @@
         "title": "DistributionTargetUpdate",
         "type": "object"
       },
+      "DraftContextAddress": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "billing_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Billing Display Name"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          }
+        },
+        "title": "DraftContextAddress",
+        "type": "object"
+      },
+      "DraftContextFx": {
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "fetched_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fetched At"
+          },
+          "rate": {
+            "title": "Rate",
+            "type": "number"
+          }
+        },
+        "required": [
+          "currency",
+          "rate",
+          "fetched_at"
+        ],
+        "title": "DraftContextFx",
+        "type": "object"
+      },
+      "DraftContextPayment": {
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "method_type": {
+            "title": "Method Type",
+            "type": "string"
+          },
+          "wise_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wise Currency"
+          }
+        },
+        "required": [
+          "id",
+          "method_type",
+          "display_name",
+          "wise_currency"
+        ],
+        "title": "DraftContextPayment",
+        "type": "object"
+      },
+      "DraftContextResponse": {
+        "properties": {
+          "bill_to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DraftContextAddress"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "company_id": {
+            "title": "Company Id",
+            "type": "integer"
+          },
+          "contact_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Email"
+          },
+          "contact_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Name"
+          },
+          "currencies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Currencies",
+            "type": "array"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "default_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Currency"
+          },
+          "destination_country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Destination Country Code"
+          },
+          "destination_postal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Destination Postal Code"
+          },
+          "fx_rates": {
+            "items": {
+              "$ref": "#/components/schemas/DraftContextFx"
+            },
+            "title": "Fx Rates",
+            "type": "array"
+          },
+          "incoterms": {
+            "title": "Incoterms",
+            "type": "string"
+          },
+          "issuer_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer Region"
+          },
+          "origin_country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin Country Code"
+          },
+          "payment_methods": {
+            "items": {
+              "$ref": "#/components/schemas/DraftContextPayment"
+            },
+            "title": "Payment Methods",
+            "type": "array"
+          },
+          "ship_to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DraftContextAddress"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tax_rate_percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Rate Percent"
+          }
+        },
+        "required": [
+          "company_id",
+          "ship_to",
+          "bill_to",
+          "contact_name",
+          "contact_email",
+          "issuer_region",
+          "origin_country_code",
+          "destination_country_code",
+          "destination_postal_code",
+          "currencies",
+          "fx_rates",
+          "default_currency",
+          "currency",
+          "payment_methods",
+          "tax_rate_percent",
+          "incoterms"
+        ],
+        "title": "DraftContextResponse",
+        "type": "object"
+      },
       "DraftItem": {
         "properties": {
           "product_name": {
@@ -14127,7 +14483,8 @@
         "type": "object"
       },
       "InvoiceCreate": {
-        "description": "請求書登録リクエスト（Step 5d 以降は company_id + contact_id 必須）",
+        "additionalProperties": false,
+        "description": "請求書登録リクエスト。額（送料・消費税・為替）は受けず、サーバーが計算する（invoice-create-portfolio 便C）。",
         "properties": {
           "company_id": {
             "description": "会社ID",
@@ -14143,7 +14500,8 @@
           },
           "currency": {
             "default": "JPY",
-            "maxLength": 10,
+            "maxLength": 3,
+            "minLength": 3,
             "title": "Currency",
             "type": "string"
           },
@@ -14158,36 +14516,6 @@
               }
             ],
             "title": "Due Date"
-          },
-          "exchange_rate_jpy": {
-            "anyOf": [
-              {
-                "exclusiveMinimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Exchange Rate Jpy"
-          },
-          "exchange_rate_usd": {
-            "anyOf": [
-              {
-                "exclusiveMinimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Exchange Rate Usd"
           },
           "items": {
             "items": {
@@ -14209,47 +14537,25 @@
             ],
             "title": "Notes"
           },
-          "payment_method": {
+          "payment_method_ref": {
             "anyOf": [
               {
-                "maxLength": 50,
-                "type": "string"
+                "$ref": "#/components/schemas/PaymentMethodRef"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Payment Method"
+            ]
           },
-          "shipping_fee": {
+          "shipping": {
             "anyOf": [
               {
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "string"
+                "$ref": "#/components/schemas/ShippingInput"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Shipping Fee"
-          },
-          "tax_amount": {
-            "anyOf": [
-              {
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tax Amount"
+            ]
           }
         },
         "required": [
@@ -14521,6 +14827,39 @@
             ],
             "title": "Payment Method"
           },
+          "payment_method_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method Display Name"
+          },
+          "payment_method_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method Id"
+          },
+          "payment_method_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method Type"
+          },
           "paypal_approval_url": {
             "anyOf": [
               {
@@ -14599,6 +14938,17 @@
             ],
             "title": "Ship To Snapshot"
           },
+          "shipping_carrier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shipping Carrier"
+          },
           "shipping_fee": {
             "anyOf": [
               {
@@ -14609,6 +14959,28 @@
               }
             ],
             "title": "Shipping Fee"
+          },
+          "shipping_service": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shipping Service"
+          },
+          "shipping_snapshot": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shipping Snapshot"
           },
           "status": {
             "title": "Status",
@@ -14635,6 +15007,17 @@
               }
             ],
             "title": "Tax Amount"
+          },
+          "tax_rate_percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Rate Percent"
           },
           "total_amount": {
             "anyOf": [
@@ -14978,6 +15361,185 @@
         "title": "InvoiceItemResponse",
         "type": "object"
       },
+      "InvoicePreviewItem": {
+        "additionalProperties": false,
+        "properties": {
+          "quantity": {
+            "minimum": 1.0,
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "unit_price": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Unit Price"
+          }
+        },
+        "required": [
+          "quantity",
+          "unit_price"
+        ],
+        "title": "InvoicePreviewItem",
+        "type": "object"
+      },
+      "InvoicePreviewRequest": {
+        "additionalProperties": false,
+        "description": "試算（書かない）。作る道と同じ材料で額だけを返す。",
+        "properties": {
+          "company_id": {
+            "minimum": 1.0,
+            "title": "Company Id",
+            "type": "integer"
+          },
+          "currency": {
+            "maxLength": 3,
+            "minLength": 3,
+            "title": "Currency",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InvoicePreviewItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "shipping": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ShippingInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "company_id",
+          "currency"
+        ],
+        "title": "InvoicePreviewRequest",
+        "type": "object"
+      },
+      "InvoicePreviewResponse": {
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "duty_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duty Amount"
+          },
+          "duty_components": {
+            "items": {
+              "type": "object"
+            },
+            "title": "Duty Components",
+            "type": "array"
+          },
+          "duty_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duty Label"
+          },
+          "incoterms": {
+            "title": "Incoterms",
+            "type": "string"
+          },
+          "shipping_fee": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shipping Fee"
+          },
+          "subtotal": {
+            "title": "Subtotal",
+            "type": "string"
+          },
+          "tax_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Amount"
+          },
+          "tax_rate_percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Rate Percent"
+          },
+          "total_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Amount"
+          },
+          "uncomputed": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Uncomputed",
+            "type": "array"
+          }
+        },
+        "required": [
+          "currency",
+          "subtotal",
+          "shipping_fee",
+          "tax_amount",
+          "tax_rate_percent",
+          "duty_amount",
+          "duty_label",
+          "duty_components",
+          "total_amount",
+          "uncomputed",
+          "incoterms"
+        ],
+        "title": "InvoicePreviewResponse",
+        "type": "object"
+      },
       "InvoiceResponse": {
         "description": "請求書情報レスポンス。\n\nNote: PR γ (Step 5d) で `contact_id` を必須化したが、対象は tenant_004 のみ\n(migration 035 の precondition で 0 件保証)。`invoices.contact_id` は migration 032 で\nnullable に追加され NOT NULL 化されておらず、後発作成テナント (例: tenant_006) には\ndemo/seed で contact_id IS NULL の行が存在しうる。一覧/詳細レスポンスがそれで 500 に\nならないよう `int | None` で許容する (作成リクエスト InvoiceCreate は引き続き必須)。",
         "properties": {
@@ -15232,6 +15794,17 @@
             ],
             "title": "Payment Method"
           },
+          "payment_method_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method Id"
+          },
           "paypal_approval_url": {
             "anyOf": [
               {
@@ -15310,6 +15883,17 @@
             ],
             "title": "Ship To Snapshot"
           },
+          "shipping_carrier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shipping Carrier"
+          },
           "shipping_fee": {
             "anyOf": [
               {
@@ -15320,6 +15904,28 @@
               }
             ],
             "title": "Shipping Fee"
+          },
+          "shipping_service": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shipping Service"
+          },
+          "shipping_snapshot": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shipping Snapshot"
           },
           "status": {
             "title": "Status",
@@ -15346,6 +15952,17 @@
               }
             ],
             "title": "Tax Amount"
+          },
+          "tax_rate_percent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Rate Percent"
           },
           "total_amount": {
             "anyOf": [
@@ -15421,6 +16038,8 @@
         "type": "object"
       },
       "InvoiceUpdate": {
+        "additionalProperties": false,
+        "description": "下書きの直し（design.md §3-4 の PATCH）。為替と支払方法の文字は受けない。",
         "properties": {
           "due_date": {
             "anyOf": [
@@ -15434,36 +16053,6 @@
             ],
             "title": "Due Date"
           },
-          "exchange_rate_jpy": {
-            "anyOf": [
-              {
-                "exclusiveMinimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Exchange Rate Jpy"
-          },
-          "exchange_rate_usd": {
-            "anyOf": [
-              {
-                "exclusiveMinimum": 0.0,
-                "type": "number"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Exchange Rate Usd"
-          },
           "notes": {
             "anyOf": [
               {
@@ -15476,17 +16065,15 @@
             ],
             "title": "Notes"
           },
-          "payment_method": {
+          "payment_method_ref": {
             "anyOf": [
               {
-                "maxLength": 50,
-                "type": "string"
+                "$ref": "#/components/schemas/PaymentMethodRef"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Payment Method"
+            ]
           }
         },
         "title": "InvoiceUpdate",
@@ -25489,6 +26076,38 @@
         "title": "PaymentFeeSettingUpdate",
         "type": "object"
       },
+      "PaymentMethodRef": {
+        "additionalProperties": false,
+        "description": "支払方法の選び方（design.md §3-4）。bank・wise は版の id、paypal は id なし。",
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "method_type": {
+            "enum": [
+              "bank",
+              "wise",
+              "paypal"
+            ],
+            "title": "Method Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "method_type"
+        ],
+        "title": "PaymentMethodRef",
+        "type": "object"
+      },
       "PaypalCredentialsRequest": {
         "properties": {
           "client_id": {
@@ -33249,6 +33868,77 @@
           "currency"
         ],
         "title": "ShippingCalcResult",
+        "type": "object"
+      },
+      "ShippingInput": {
+        "additionalProperties": false,
+        "description": "送料の選び方（design.md §3-4 の送料の規則）。calculate=/shipping/calculate の結果の1つ、none=送料を請求しない。",
+        "properties": {
+          "carrier": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carrier"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "maxLength": 3,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "fee": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fee"
+          },
+          "mode": {
+            "enum": [
+              "calculate",
+              "none"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "service_type": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service Type"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "ShippingInput",
         "type": "object"
       },
       "ShippingRateCreate": {
@@ -49094,7 +49784,7 @@
     },
     "/api/v1/fx-rate/{currency}": {
       "get": {
-        "description": "指定通貨の為替レートをライブ取得する（C-7）。\n\nJPY 指定時は {\"currency\":\"JPY\",\"rate\":1.0,\"fetched_at\":null} を返す。\n取得失敗時は 503 を返す。",
+        "description": "指定通貨の為替レートを為替の表（public.app_fx_rate_history）の最新行から返す（invoice-create-portfolio 便C・K24）。\n\nJPY 指定時は {\"currency\":\"JPY\",\"rate\":1.0,\"fetched_at\":null} を返す。\n取得失敗時は 503 を返す。",
         "operationId": "fetch_fx_rate_api_v1_fx_rate__currency__get",
         "parameters": [
           {
@@ -51048,6 +51738,96 @@
         ]
       }
     },
+    "/api/v1/invoices/draft-context": {
+      "get": {
+        "description": "作成画面と下書きの詳細画面の材料（書かない。design.md §3-4 の表の1行目）。",
+        "operationId": "get_invoice_draft_context_api_v1_invoices_draft_context_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "company_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Company Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "contact_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Contact Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "invoice_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Invoice Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftContextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Invoice Draft Context",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
     "/api/v1/invoices/from-quote/{quote_id}": {
       "post": {
         "description": "承認済み見積もりから請求書を作成する（atomic変換）",
@@ -51091,6 +51871,53 @@
           }
         ],
         "summary": "Create Invoice From Quote",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/api/v1/invoices/preview": {
+      "post": {
+        "description": "試算（書かない）。未計算でも 200 で理由を返す（D5）。",
+        "operationId": "preview_invoice_api_v1_invoices_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoicePreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoicePreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview Invoice",
         "tags": [
           "invoices"
         ]

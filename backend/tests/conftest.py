@@ -1212,7 +1212,12 @@ async def setup_test_db(test_engine):
                 paypal_invoicer_view_url TEXT,
                 paypal_copy_pdf BLOB,
                 paypal_copy_pdf_at TIMESTAMP,
-                issuer_region VARCHAR(20)
+                issuer_region VARCHAR(20),
+                payment_method_id INTEGER,
+                tax_rate_percent NUMERIC(5, 2),
+                shipping_carrier VARCHAR(50),
+                shipping_service VARCHAR(100),
+                shipping_snapshot TEXT
             )
         """))
         await conn.execute(text("""
@@ -2345,3 +2350,42 @@ async def create_user_notice_tables(conn):
 RLS_PROBE_TABLE_DDL = "CREATE TABLE public.ci_rls_probe (id int PRIMARY KEY, tenant_id int NOT NULL)"
 RLS_PROBE_NO_TENANT_DDL = "CREATE TABLE public.ci_no_tenant (id int PRIMARY KEY)"
 RLS_PROBE_OTHER_SCHEMA_DDL = "CREATE TABLE ci_other.ci_rls_probe (id int PRIMARY KEY, tenant_id int NOT NULL)"
+
+
+@pytest.fixture
+def stub_invoice_totals(monkeypatch):
+    """SQLite の試験用: invoice_totals.load_totals_inputs を差し替える（public の表を読まない）。
+
+    既定は DAP・税率 10%（2019-10-01）・為替 USD=150。試験は返り値の .set(...) で中身を変えられる。
+    """
+    from datetime import date, datetime, timezone
+    from decimal import Decimal
+
+    from app.services import invoice_totals as it
+
+    state = {
+        "incoterms": "DAP",
+        "tax": it.TaxRow(rate_percent=Decimal("10.00"), effective_from=date(2019, 10, 1)),
+        "duty_rules": (),
+        "fx": {"USD": it.FxRow(currency="USD", rate_jpy=Decimal("150.0000"), fetched_at=datetime(2026, 11, 15, 1, 0, tzinfo=timezone.utc))},
+        "calls": [],
+    }
+
+    async def _fake(db, tenant_id, *, destination, base_date):
+        state["calls"].append({"destination": destination, "base_date": base_date})
+        return it.TotalsInputs(
+            base_date=base_date, incoterms=state["incoterms"], tax=state["tax"],
+            duty_rules=state["duty_rules"], fx=state["fx"],
+        )
+
+    class _Handle:
+        def set(self, **kw):
+            state.update(kw)
+            return self
+
+        @property
+        def calls(self):
+            return state["calls"]
+
+    monkeypatch.setattr(it, "load_totals_inputs", _fake)
+    return _Handle()

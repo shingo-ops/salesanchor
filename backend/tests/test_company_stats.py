@@ -15,8 +15,11 @@ ADR-136: v_company_stats 集計テスト
   - 他社の請求書は含まない（テナント内分離）
 """
 
+import pytest
 import pytest_asyncio
 from sqlalchemy import text  # noqa: F401  (used in fixture)
+
+pytestmark = pytest.mark.usefixtures("stub_invoice_totals")
 
 # ---------------------------------------------------------------------------
 # SQLite 互換 v_company_stats ビュー（公式定義 ADR-136 / ADR-108）
@@ -79,6 +82,7 @@ async def _create_invoice(client, company_id: int, contact_id: int, amount: floa
     res = await client.post("/api/v1/invoices", json={
         "company_id": company_id,
         "contact_id": contact_id,
+        "shipping": {"mode": "none"},
         "items": [{"product_name": "テスト商品", "quantity": 1, "unit_price": str(amount)}],
     })
     assert res.status_code == 201, res.text
