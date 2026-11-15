@@ -1,6 +1,6 @@
 # 値を書く移行 52本の分け方（段5 5-1・§5-5）
 
-- 状態: 設計案（Opus 作成・2026-11-15・第2版）。PO の承認待ち。承認の前に 5-1 の実装カードは出さない。
+- 状態: 設計案（Opus 作成・2026-11-15・第3版）。PO の承認待ち。承認の前に 5-1 の実装カードは出さない。
 - 事実の出どころ: `docs/handoff/migration-runner-redesign/recon-5-1a/p11-detail.md`（52本の中身・commit `a6d59cc36`）、`docs/handoff/migration-runner-redesign/recon-5-0a/p12.md`（依存する試験）、登録の順番 `scripts/run_all_migrations.sh`、本番の構造の読み取り（reader 鍵・表と列の有無だけ。行の中身は読まない。生出力 `/tmp/CC報告ファイル/deploy-lock-1113/p11-prod-tables.txt`・`p11-prod-recheck.txt`・`p11-prod-recheck-cols.txt`。後の2つは問い合わせの文を AUDIT 行に残した。2026-11-15 16:02-16:03 JST）、番号と登録行の対応 `/tmp/CC報告ファイル/deploy-lock-1113/p11-midrun.txt`。
 - 固める判断は、5-3 の記録を始めた後は取り消せない（記録の後は流し終えたファイルの書き換えを CI で止める。§5-7）。無効にする書き換えは 5-3 より前にしかできない。
 
@@ -21,9 +21,9 @@
 
 - `migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:40-44` は「tenant_004.audit_log が有り、かつ tcg_products が無い」ときだけ飛ばす。
 - tenant_004.audit_log は毎回 `migrations/20260921_050000_drop_tenant004_pipeline_tables.sql:51`（登録 `scripts/run_all_migrations.sh:947`）で消える。反映の後の本番にも無い（p11-prod-recheck.txt に tenant_004.audit_log の行が無い）。
-- そのため、毎回 :733 で飛ばされず、conditions・tcg_products・tcg_suppliers・supplier_channels・source_messages・extraction_jobs・analysis_results・product_exclude_keywords などを作る（IF NOT EXISTS）。
-- その後、同じ反映の中で次の3本が消す: :868（`migrations/20260915_010000_drop_tcg_products_phase2c.sql:86`、tcg_products）、:947（`20260921_050000` :18・:30・:42・:50・:51・:56・:57）、:959（`migrations/20260921_130000_drop_tenant004_master_copies.sql` :28・:33・:35・:36・:41・:42）。
-- tcg_suppliers だけは、どれも消さない。反映の後も本番に残る（p11-prod-recheck.txt）。
+- そのため、毎回 :733 で飛ばされず、次の18表を作る（IF NOT EXISTS。行番号は `20260831_110000` の中）: audit_log :55・conditions :79・tcg_products :92・tcg_suppliers :111・units :123・condition_aliases :140・product_exclude_keywords :157・product_search_keywords :173・products_logistics :189・supplier_channels :199・unit_aliases :212・source_messages :233・extraction_jobs :253・extraction_items :271・analysis_results :293・item_notes :341・unparsed_lines :358・import_jobs :373。
+- その後、同じ反映の中で次の3本が消す: :868（`migrations/20260915_010000_drop_tcg_products_phase2c.sql:86`、tcg_products）、:947（`20260921_050000` :18・:30・:42・:50・:51・:56・:57）、:959（`migrations/20260921_130000_drop_tenant004_master_copies.sql` :27・:28・:33・:35・:36・:41・:42）。
+- どれも消さない表がある: tcg_suppliers・item_notes・unparsed_lines・products_logistics など。これらは反映の後も残る（tcg_suppliers は p11-prod-recheck.txt で確かめた）。この18表のうち残る表を書く先に挙げるのは、p11-detail の書く先の列では #24・#25（tcg_suppliers）と #38（products_logistics。§4 のとおり値は書かない）だけ。
 - 【未確認】本番の反映ログで、:47 の NOTICE（creating TCG analysis tables in schema tenant_004）が毎回出ているかは見ていない。上は本文と登録の順番から読んだ事実。分け方の答えは、この NOTICE が出ていなくても変わらない（出ていなければ C の物は書く先が無く飛ばすだけ）。#24・#25 は、tcg_suppliers と supplier_channels が両方ある回に行を戻す。
 
 ## 2. 結果の数
@@ -37,11 +37,13 @@
 | 固めてよい（D 新しい環境の初期値の出どころで、試験も値を使う） | 8 | 11・16・42・45・46・49・50・51 |
 | 合計 | 52 | |
 
-設計 §5-5 が「無効にする」の例に挙げた2本のうち、`migrations/20260903_120000_tcg_unit_evidence_rules_t004.sql`（#17）は無効にする。`migrations/20260902_110000_tcg_classification_masters.sql`（#16）は D に変えた。理由: 試験 `backend/tests/test_tcg_product_list_pg.py:60` がこのファイルを流して値を使う。書く4表のうち2表は同じ反映の中で消え（`migrations/20260921_130000_drop_tenant004_master_copies.sql:35-36`、登録 `scripts/run_all_migrations.sh:959`）、残る2表（tenant_004 の tcg_series・tcg_manufacturers）はアプリが名指ししない（`backend/app` で `tenant_004` と表名が同じ行に出る所 0件。アプリの TCG_SCHEMA は既定 `public`、`backend/app/tcg_config.py:20`）。例は P11 の詳細を読む前に書いた物で、事実に合わせて直した。
+設計 §5-5 が「無効にする」の例に挙げた2本のうち、`migrations/20260903_120000_tcg_unit_evidence_rules_t004.sql`（#17）は無効にする。`migrations/20260902_110000_tcg_classification_masters.sql`（#16）は D に変えた。理由: 試験 `backend/tests/test_tcg_product_list_pg.py:60` がこのファイルを流して値を使う。書く4表のうち2表は同じ反映の中で消え（`migrations/20260921_130000_drop_tenant004_master_copies.sql:35-36`、登録 `scripts/run_all_migrations.sh:959`）、残る2表（tenant_004 の tcg_series・tcg_manufacturers）はアプリが名指ししない（`backend/app` で `tenant_004` と表名が同じ行に出る所 0件。アプリは TCG の表を `public` で直書きする: `backend/app/routers/tcg_line_import.py:60`・`backend/app/routers/tcg_product_import.py:54`・`backend/app/line_import_admin.py:26` の `TCG_SCHEMA = "public"`。`backend/app/tcg_config.py` は `backend/app` のどこからも読まれていない）。例は P11 の詳細を読む前に書いた物で、事実に合わせて直した。
 
 ## 3. 無効にする 8本
 
 無効にするのは値を書く文だけ。表・列を作る文は残す（§5-5）。値の文は NOTICE を1行出すだけにする。
+
+ただし #17 は、値の文と一緒に件数の確かめ（`migrations/20260903_120000_tcg_unit_evidence_rules_t004.sql:128-132`、4件でなければ RAISE）も外す。値の文だけ外すと、表が空の環境では件数が0になり反映が止まる。CI（`.github/workflows/migration-test.yml`）は tenant_004 を作らないので、CI ではこの止まりを見つけられない。5-1 のカードにこの2か所を書く。
 
 | # | ファイル | 本番で毎回起きていること | 新しい環境での意味 | 試験 |
 |---|---|---|---|---|
@@ -90,7 +92,7 @@
 | 35 | C | 書く先の tenant_004.conditions は :733 が作り直し、:959 で消える（`20260921_130000:33`）。第1版の A の理由は誤り |
 | 36 | C | 書く先の tenant_004.product_exclude_keywords は :733 が作り直し、:851 で書いた後 :959 で消える（`20260921_130000:28`）。試験が流す（`test_tcg_work_matching_integration.py:1216`） |
 | 37 | A | tcg_uuid が UUID でなければ全体を飛ばす（:106-123） |
-| 38 | A | 列が既に整数なら飛ばす（:53-55）。tenant_004 の作り直された表（product_exclude_keywords・analysis_results）に当たっても、その表は :947・:959 で消える |
+| 38 | A | 列が既に整数なら飛ばす（:53-55 ほか）。整数でない表（tenant_004 で作り直された表）に当たったときは、public.products.tcg_uuid が本番に無いので（`/tmp/CC報告ファイル/deploy-lock-1113/p11-prod-tcguuid.txt`、0行、2026-11-15 07:20:47Z）書く道（:62-68 ほか）に入らず、件数を数える道（:69-76 ほか）に入る。行があれば RAISE、0行なら NOTICE だけで、値は書かない。作り直された表は空なので通る |
 | 39 | C | tenant_001.analysis_policies は :934 で消える（`migrations/20260921_010000_drop_analysis_rule_tables.sql:55`）。本番に無い（p11-prod-tables.txt） |
 | 40 | A | 列が既に整数なら飛ばす（:49-50・:144-145）。tenant_004.analysis_results に当たっても :947 で消える |
 | 41 | A | 古い値の行だけ（:23） |
@@ -99,7 +101,7 @@
 | 45 | D | 試験がこの埋め直しそのものを確かめる（`backend/tests/test_llm_usage_events_backfill_migration_pg.py:30`）。無効にすると試験が落ちる |
 | 46 | D | 為替の履歴の初期値。試験が流す（`backend/tests/test_llm_usage_outcome_filter_pg.py:45`） |
 | 47 | A | 値の文は関数の本文の中だけ。移行を流した時には書かない |
-| 48 | A | 毎回同じ16行に入れ直す（:88-109）。アプリから足す道は無い（書き込み ×）。:369-370 は関数の本文 |
+| 48 | A | 毎回、表を空にして同じ16行を入れ直す（TRUNCATE :90・INSERT :91-109、1つの取引）。:88 に「拒否表は migration が正本」と明記。アプリから足す・消す道は無い（書き込み ×）ので、毎回の結果は同じ16行で、戻る行は無い。:369-370 は関数の本文 |
 | 49 | D | 秘書チャットの使用可の初期値。止めた設定は上書きしない（:11）。試験が流す（`backend/tests/test_rls_secretary_resolve.py:29`） |
 | 50 | D | AI の担当の選択肢と割り当ての初期値の出どころ。画面で切り替えた担当は上書きしない（:124）。試験が期待値を持つ（`backend/tests/ops/test_ai_job_assignments_db.py:46-52`） |
 | 51 | D | 同上の選択肢3件（`ops/test_ai_job_assignments_db.py:37`） |
@@ -107,7 +109,7 @@
 
 ## 5. この分け方で残ること（5-3 までの間）
 
-- D の8本と #16 の残る2表は、5-3 までの間、消した行が戻る形のまま。D の8本の書く先はアプリが上書きしない形（ON CONFLICT DO NOTHING）で、PO やアプリが消したときだけ戻る。
+- D の8本と #16 の残る2表は、5-3 までの間、消した行が戻る形のまま。D の8本は、既にある行を上書きしない形（ON CONFLICT DO NOTHING、#45 は NOT EXISTS `migrations/20260930_160000_backfill_llm_usage_events.sql:28`）で、PO やアプリが消したときだけ戻る。
 - C の18本は、毎回の反映で作り直して消す表に書いている（構造の出し入れ）。値の始末ではなく、5-3（流し終えた物は流さない）で止まる。
 - 無効にする8本を書き換えた後、依存する試験（なし）と CI の全件のドライラン（`.github/workflows/migration-test.yml`）が通ることを K5-1b で確かめる。
 - 試験との当たりの確かめ（2026-11-15、`backend` 配下の .py と `.github` 配下でファイル名を探した。生出力 `/tmp/CC報告ファイル/deploy-lock-1113/p11-cls-check.txt`）: 無効にする8本を名指しする試験は0件（#24・#25 は同じ日に `backend`・`.github` を grep して0件）。`backend/tests/test_inventory_aggregated.py:244` は同じ番号で始まる別のファイル（`20260622_020000_add_inventory_raw_condition.sql`）。`.github/workflows/migration-test.yml:179`・`:181`・`:797`・`:805` は #43 のために最小の表を用意するだけで、値の文を NOTICE にしても困らない（表を作る文は残る）。
@@ -116,3 +118,5 @@
 
 - 第1版（HEAD `8ea69e0f3`）: 合流前の審査役（Opus・新規起動、2026-11-15）REVISE。指摘: (1) tenant_004 の表が反映の途中で作り直される点を見ていない (2) そのため #24・#25 は「無効にする」に当たる (3) #34・#35・#36 と #27・#29・#30・#31・#33 の理由が仕組みと合わない (4) #6 の「tenant_006.products が無い」の根拠を生出力からたどれない (5) #17 を読む移行用の台本がある (6) design.md §5-6 の1行の変更は頼まれた範囲の外。
 - 第2版での直し: (1) §1 に判断の時点と §1-1 を足した (2) #24・#25 を無効にするへ（6本→8本） (3) C に移して理由を書き直した（C 9本→18本、A 26本→16本、B 3本→2本） (4) 問い合わせの文を残して読み直した。tenant_006.products は本番に有った。#6 は work_id の NOT NULL で飛ばす、に直した（答えは固めてよいのまま） (5) #17 の行に一言足した (6) §5-6 の1行は、PO の言葉と設計の根拠を分けるための直しで、意図して入れた（PR 本文に書く）。
+- 第2版（HEAD `9e9b9d63f`）: 合流前の審査役（Opus・新規起動、2026-11-15）REVISE。分け方そのものは妥当。直す3点: (1) #17 の件数の確かめは値の文ではないが、一緒に外さないと空の環境で止まる (2) design.md §5-5 の決まりが古いまま (3) §1-1 の「tcg_suppliers だけは、どれも消さない」は誤り（item_notes ほかも残る）、#38 の理由が tcg_uuid の有無に触れていない。細かい点: #45 は NOT EXISTS、#48 は TRUNCATE＋入れ直し、tcg_config.py はアプリから読まれていない。
+- 第3版での直し: (1) §3 の頭に #17 の件数の確かめも外すと書いた (2) design.md §5-5 に「決まりはこの文書 §1 で細かくした（PO 承認待ち）」の1行を足した (3) §1-1 に作る18表を全部並べ、残る表を直した。#38 は本番で tcg_uuid が無いこと（0行）を読んで理由を書き直した。細かい点も直した。分け方の本数は変わらない（無効8・固め44）。
