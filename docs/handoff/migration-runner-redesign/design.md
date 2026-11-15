@@ -264,7 +264,7 @@ P1〜P13 がそろうまで、5-1〜5-3 の実装カードは出さない。
   - 固めてよい: 一度きりの埋め直しで、記録が始まれば二度と流れないもの。固めてよい理由をファイルごとに書く。
 - 分けた結果は PO に見せる前に表にする。固める判断は記録の後には取り消せないと明記する。
 - 依存する試験（P12）が、無効にした後も通ることを確かめる。
-- 分けた表（今の数52本。2026-11-15 案・PO 承認待ち）: `docs/handoff/migration-runner-redesign/p11-classification.md`。無効にする6本・固めてよい46本。上の例の `migrations/20260902_110000_tcg_classification_masters.sql` は、試験が値を使い、書く表がアプリから名指しされないか同じ反映の中で消えるため、固めてよいに直した（理由は同ファイル §2）。
+- 分けた表（今の数52本。2026-11-15 案・PO 承認待ち）: `docs/handoff/migration-runner-redesign/p11-classification.md`。無効にする8本・固めてよい44本。上の例の `migrations/20260902_110000_tcg_classification_masters.sql` は、試験が値を使い、書く表がアプリから名指しされないか同じ反映の中で消えるため、固めてよいに直した（理由は同ファイル §2）。
 
 ### 5-6. 会社のひな形を1つにする（5-2）
 
@@ -363,7 +363,7 @@ P1〜P13 がそろうまで、5-1〜5-3 の実装カードは出さない。
 ### 5-10. PO に確認すること（1件ずつ）
 
 1. ひな形の持ち方（1A か 1B か）: **決定済み（PO 2026-11-15「1」= 1A）**。§5-6。
-2. 値を書く移行の分け方: 表は `docs/handoff/migration-runner-redesign/p11-classification.md`（無効にする6本・固めてよい46本）。次の PO への確認はこれ。固める判断は記録の後に取り消せないと添えて聞く。
+2. 値を書く移行の分け方: 表は `docs/handoff/migration-runner-redesign/p11-classification.md`（無効にする8本・固めてよい44本）。次の PO への確認はこれ。固める判断は記録の後に取り消せないと添えて聞く。
 3. 5-3 の本体を本番に出す日（PO 本人の GO。この回が起点になる）。
 P11 の中身の読み取り（カード `docs/handoff/migration-runner-redesign/card-5-1a.md`、結果 `docs/handoff/migration-runner-redesign/recon-5-1a/p11-detail.md`）は済み。残りは 2 の PO 確認と、§5-6 の P1 の差の分け方の表。
 
