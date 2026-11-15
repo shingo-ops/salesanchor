@@ -81,6 +81,10 @@ _DAY_ONLY = re.compile(
     r"(?<![月\d])(\d{1,2})\s*日(?=\s*(?:$|\d|まで|から|ごろ|頃|午前|午後|朝|昼|夕方|夜|[のにはも、。,.!?]))"
 )
 _WEEKDAY = re.compile(r"(再来週|来週|今週)?\s*の?\s*([月火水木金土日])\s*曜")
+# 数えた言い方を除いた残りに日付らしい形があれば AI の読んだ日付のまま（design.md §3-1 (2)）
+_LEFTOVER = re.compile(
+    r"\d+\s*[日月]|\d+\s*[/-]\s*\d+|[月火水木金土日]\s*[・〜~\-、,]?\s*〒|〒\s*[・〜~\-、,]\s*[月火水木金土日]"
+)
 _RELATIVE = {"しあさって": 3, "あさって": 2, "明後日": 2, "明日": 1, "あした": 1, "今日": 0, "本日": 0}
 _RELATIVE_RE = re.compile("|".join(sorted(_RELATIVE, key=len, reverse=True)))
 _WEEK_SHIFT = {"今週": 0, "来週": 1, "再来週": 2}
@@ -133,9 +137,12 @@ def _resolve(text: str, today: date) -> tuple[date, bool] | None:
     s = _MONTH_DAY.sub("〓", s)
     for m in _DAY_ONLY.finditer(s):
         found.append((_day_only(today, int(m.group(1))), True))
+    s = _DAY_ONLY.sub("〓", s)
     for m in _WEEKDAY.finditer(s):
         found.append((_weekday(today, m.group(1), m.group(2)), False))
-    s = _WEEKDAY.sub("〓", s)
+    s = _WEEKDAY.sub("〒", s)
+    if _LEFTOVER.search(s):
+        return None
     for m in _RELATIVE_RE.finditer(s):
         found.append((today + timedelta(days=_RELATIVE[m.group(0)]), False))
     if len(found) != 1:
@@ -452,6 +459,18 @@ def test_table_examples(text, today, expected):
         "2日の延長 14時から",  # 期間の「〇日の延長」など
         "5日の猶予で 10時に返事",
         "3日の日程で研修 10時から",
+        "25日水曜 10時から",  # 〇日に曜日を足した形は、残りの「〇日」で替えない（design.md §3-1 (2)）
+        "25日(水曜)10時",
+        "25日（水曜）10時",
+        "3日(木曜) 10時から",
+        "12/3 木曜 10時から",  # 「/」「-」の日付の形
+        "2026-12-03 木曜 10時",
+        "12月 月曜 10時",  # 月だけの言い方
+        "土日曜の展示会 10時から",  # 曜日を並べる形
+        "月・水・金曜の10時から研修",
+        "月〜金曜 9時から研修",
+        "月~金曜 9時から",
+        "月-金曜 9時",
         "11月31日",  # あり得ない日付
         "2月30日",
         "31日",  # 11 月 31 日は無い（今日 11/15）
@@ -639,7 +658,7 @@ def _fixed_now(monkeypatch):
 
 - (6a) `cd "$REPO/backend" && uv run --no-project --python 3.12 --with ruff ruff check app/ > /tmp/CC報告ファイル/ruff.txt 2>&1; echo "exit=$?"` → exit=0（CI と同じ範囲。`.github/workflows/test.yml:92`。試験のファイルは CI の ruff の対象外）
 - (6b) `cd "$REPO/backend" && uv run --no-project --python 3.12 --with ruff ruff format --check app/services/secretary_dates.py > /tmp/CC報告ファイル/ruff-format.txt 2>&1; echo "exit=$?"` → exit=0。落ちたら `ruff format app/services/secretary_dates.py` で整え、整えた差分を報告に貼る（中身は変えない）。`app/routers/assistant.py` は元から整っていない行（:373-374）があるので format をかけない。
-- (6c) `cd "$REPO/backend" && ENVIRONMENT=test uv run --no-project --python 3.12 --with-requirements requirements.txt --with-requirements requirements-dev.txt python -m pytest --no-cov tests/test_secretary_dates.py tests/test_assistant_router.py tests/test_assistant_karte.py tests/test_assistant_rules_router.py tests/test_assistant_karte_pg.py -q > /tmp/CC報告ファイル/pytest.txt 2>&1; echo "exit=$?"` → exit=0。最後の 1 行（passed・skipped の数）を報告に貼る。続けて同じ形で `tests/test_secretary_dates.py` だけを流し（保存先 `/tmp/CC報告ファイル/pytest-dates.txt`）、最後の 1 行を貼る（期待 381 passed）。
+- (6c) `cd "$REPO/backend" && ENVIRONMENT=test uv run --no-project --python 3.12 --with-requirements requirements.txt --with-requirements requirements-dev.txt python -m pytest --no-cov tests/test_secretary_dates.py tests/test_assistant_router.py tests/test_assistant_karte.py tests/test_assistant_rules_router.py tests/test_assistant_karte_pg.py -q > /tmp/CC報告ファイル/pytest.txt 2>&1; echo "exit=$?"` → exit=0。最後の 1 行（passed・skipped の数）を報告に貼る。続けて同じ形で `tests/test_secretary_dates.py` だけを流し（保存先 `/tmp/CC報告ファイル/pytest-dates.txt`）、最後の 1 行を貼る（期待 393 passed）。
 - (6d) `cd "$REPO" && git diff --check > /tmp/CC報告ファイル/diff-check.txt 2>&1; echo "exit=$?"` → exit=0
 - (6e) `cd "$REPO" && git status --short` を報告に貼る。変わるのは `backend/app/routers/assistant.py`・`backend/tests/test_assistant_karte.py`（変更）と `backend/app/services/secretary_dates.py`・`backend/tests/test_secretary_dates.py`（新規）の 4 つだけ。
 - (6a)〜(6c) が手順書の書き損じ（import の並び・未使用の名前・行の長さ）で落ちたら、その書き損じだけ直し、直した所を報告に書く。試験の期待の日付を変えないと通らないとき、または手順書と違う作りに変えないと通らないときは `NEEDS_DECISION:` で止まる（期待の日付は PO 承認の決まりの表なので変えない）。
