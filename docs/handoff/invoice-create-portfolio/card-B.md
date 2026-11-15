@@ -1697,12 +1697,18 @@ vi.mock("../../lib/api", () => ({
   },
 }));
 vi.mock("../../hooks/usePermissions", () => ({ usePermissions: vi.fn() }));
-// 国の選択は自分で /countries を取りに行く部品なので、ここでは文字の欄に差し替える
-vi.mock("../../components/CountryCombobox", () => ({
-  CountryCombobox: ({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) => (
-    <input id={id} value={value} onChange={(e) => onChange(e.target.value)} />
-  ),
-}));
+// 国の選択は自分で /countries を取りに行く部品なので、ここでは金型の文字の欄（TextFieldControl）に差し替える
+// （生の input は UI の決まりの点検 check-ui-governance が止める。ADR-144）
+vi.mock("../../components/CountryCombobox", async () => {
+  const { TextFieldControl } = await vi.importActual<typeof import("../../components/TextField")>(
+    "../../components/TextField",
+  );
+  return {
+    CountryCombobox: ({ id, value, onChange }: { id: string; value: string; onChange: (v: string) => void }) => (
+      <TextFieldControl id={id} value={value} onChange={(e) => onChange(e.target.value)} />
+    ),
+  };
+});
 
 const RULE = {
   id: 7,
