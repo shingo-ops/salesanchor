@@ -3167,76 +3167,76 @@ import { InvoicePaymentPicker } from "./InvoicePaymentPicker";
 ## 3. 手順
 
 手順D1 枝と便 C のコミットを確かめる（枝を取り直さない。card-C.md 手順10 の続き）
-    cd ~/sa && git branch --show-current | tail -1
-    cd ~/sa && git log --oneline -1 | tail -1
-    cd ~/sa && git status --short | wc -l
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git branch --show-current | tail -1
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git log --oneline -1 | tail -1
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git status --short -- . ':!.claude-pipeline/active-work.d' | wc -l
   期待: 1行目 `release/invoice-create-portfolio-bin-cd`。2行目の題に `invoice-create-portfolio bin C`。3行目 0。外れたら `BLOCKED: 手順D1`。
 
 手順D2 実装前点検 Q1〜Q6 と変更前の文を流し、結果をそのまま報告に貼る
-    cd ~/sa && git rev-parse HEAD | tail -1
-    cd ~/sa && ls frontend/src/lib/invoiceDraftContext.ts frontend/src/lib/invoiceDraftContext.test.ts frontend/src/pages/invoice-create/useInvoicePreview.ts frontend/src/pages/invoice-create/InvoiceShipToSection.tsx frontend/src/pages/invoice-create/InvoicePaymentTotalsSection.tsx frontend/src/pages/invoice-create/InvoiceCreatePage.test.tsx frontend/src/pages/invoice-detail/InvoicePaymentPicker.tsx frontend/src/pages/invoice-detail/InvoicePaymentPicker.test.tsx 2>&1 | grep -c "No such file or directory"
-    cd ~/sa && git hash-object frontend/src/pages/invoice-create/InvoiceCreatePage.tsx frontend/src/features/secretary/SecretaryDraftInvoice.tsx frontend/src/components/FedExRateModal.tsx frontend/src/features/secretary/SecretaryChat.test.tsx frontend/src/components/BillToCountryGuidance.test.tsx | tail -5
-    cd ~/sa && grep -c '"/invoices/draft-context"' backend/app/routers/invoices.py
-    cd ~/sa && grep -c '"/invoices/preview"' backend/app/routers/invoices.py
-    cd ~/sa && grep -c '"taxRate"' frontend/src/locales/ja.json
-    cd ~/sa && grep -c '"invoiceForm"' frontend/src/locales/ja.json frontend/src/locales/en.json | tail -2
-    cd ~/sa && grep -c -x -F 'import { LoadingBlock, Spinner } from "../../components/loading";' frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx
-    cd ~/sa && grep -c -x -F '  payment_method: string | null;' frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx
-    cd ~/sa && grep -c -x -F '          <div><strong>{t("invoices.paymentMethod")}:</strong> {invoice.payment_method || "-"}</div>' frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx
-    cd ~/sa && grep -c -x -F '          {invoice.notes && <div style={{ gridColumn: "1 / -1" }}><strong>{t("common.notes")}:</strong> {invoice.notes}</div>}' frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx
-    cd ~/sa && grep -c -x -F '        "fedexRateModal.colCurrency": "Currency",' frontend/src/components/FedExRateModal.test.tsx
-    cd ~/sa && grep -c -x -F '    expect(onSelectRate).toHaveBeenCalledWith(5000, "JPY", "FEDEX_IP");' frontend/src/components/FedExRateModal.test.tsx
-    cd ~/sa && grep -c -x -F '  "invoices": {' frontend/src/locales/ja.json frontend/src/locales/en.json | tail -2
-    cd ~/sa && grep -c -x -F '    "colCurrency": "通貨",' frontend/src/locales/ja.json
-    cd ~/sa && grep -c -x -F '    "colCurrency": "Currency",' frontend/src/locales/en.json
-    cd ~/sa && grep -c -x -F '      "dueDate": "支払期限",' frontend/src/locales/ja.json
-    cd ~/sa && grep -c -x -F '      "dueDate": "Due date",' frontend/src/locales/en.json
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git rev-parse HEAD | tail -1
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && ls frontend/src/lib/invoiceDraftContext.ts frontend/src/lib/invoiceDraftContext.test.ts frontend/src/pages/invoice-create/useInvoicePreview.ts frontend/src/pages/invoice-create/InvoiceShipToSection.tsx frontend/src/pages/invoice-create/InvoicePaymentTotalsSection.tsx frontend/src/pages/invoice-create/InvoiceCreatePage.test.tsx frontend/src/pages/invoice-detail/InvoicePaymentPicker.tsx frontend/src/pages/invoice-detail/InvoicePaymentPicker.test.tsx 2>&1 | grep -c "No such file or directory"
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git hash-object frontend/src/pages/invoice-create/InvoiceCreatePage.tsx frontend/src/features/secretary/SecretaryDraftInvoice.tsx frontend/src/components/FedExRateModal.tsx frontend/src/features/secretary/SecretaryChat.test.tsx frontend/src/components/BillToCountryGuidance.test.tsx | tail -5
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c '"/invoices/draft-context"' backend/app/routers/invoices.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c '"/invoices/preview"' backend/app/routers/invoices.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c '"taxRate"' frontend/src/locales/ja.json
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c '"invoiceForm"' frontend/src/locales/ja.json frontend/src/locales/en.json | tail -2
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F 'import { LoadingBlock, Spinner } from "../../components/loading";' frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '  payment_method: string | null;' frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '          <div><strong>{t("invoices.paymentMethod")}:</strong> {invoice.payment_method || "-"}</div>' frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '          {invoice.notes && <div style={{ gridColumn: "1 / -1" }}><strong>{t("common.notes")}:</strong> {invoice.notes}</div>}' frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '        "fedexRateModal.colCurrency": "Currency",' frontend/src/components/FedExRateModal.test.tsx
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '    expect(onSelectRate).toHaveBeenCalledWith(5000, "JPY", "FEDEX_IP");' frontend/src/components/FedExRateModal.test.tsx
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '  "invoices": {' frontend/src/locales/ja.json frontend/src/locales/en.json | tail -2
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '    "colCurrency": "通貨",' frontend/src/locales/ja.json
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '    "colCurrency": "Currency",' frontend/src/locales/en.json
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '      "dueDate": "支払期限",' frontend/src/locales/ja.json
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '      "dueDate": "Due date",' frontend/src/locales/en.json
   期待: 2行目 8。3行目は上から `a2635433740012bde73d665c65889a71c4557c69`・`8ac4490f3893c3e1b1dc73934f55866f76e0e319`・`dd673984cd00033d9e859be352c4742833b97c6a`・`33efe1087f87cb90f61cd0983bc7de3b2983d823`・`284ea2bf4ac3fe88d5f1ff0e5234baea075211d3`。4〜6行目 1。7行目は2ファイルとも `:0`。8〜13行目 1。14行目は2ファイルとも `:1`。15〜18行目 1。
 
 手順D3 §2 の変更をする（2-1 から順に。新規の 8 ファイルと全部書き換えの 5 ファイルは Write ツールで全文、2-14〜2-17 は Edit ツール）
 
 手順D4 言葉のファイルの形と画面の決まり
-    cd ~/sa/frontend && node -e 'for (const f of ["src/locales/ja.json","src/locales/en.json"]) { const j = JSON.parse(require("fs").readFileSync(f,"utf8")); console.log(f, Object.keys(j.invoiceForm).length, j.fedexRateModal.colCarrier ? 1 : 0, j.secretary.invoice.shippingNoneHelp ? 1 : 0); }' | tail -2
-    cd ~/sa && grep -c "ui-allow" frontend/src/lib/invoiceDraftContext.ts frontend/src/pages/invoice-create/useInvoicePreview.ts frontend/src/pages/invoice-create/InvoiceShipToSection.tsx frontend/src/pages/invoice-create/InvoicePaymentTotalsSection.tsx frontend/src/pages/invoice-create/InvoiceCreatePage.tsx frontend/src/pages/invoice-detail/InvoicePaymentPicker.tsx frontend/src/features/secretary/SecretaryDraftInvoice.tsx frontend/src/components/FedExRateModal.tsx | tail -8
-    cd ~/sa && grep -c "<input\|<textarea\|<select" frontend/src/pages/invoice-create/InvoiceCreatePage.tsx frontend/src/pages/invoice-create/InvoiceShipToSection.tsx frontend/src/pages/invoice-create/InvoicePaymentTotalsSection.tsx frontend/src/pages/invoice-detail/InvoicePaymentPicker.tsx | tail -4
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && node -e 'for (const f of ["src/locales/ja.json","src/locales/en.json"]) { const j = JSON.parse(require("fs").readFileSync(f,"utf8")); console.log(f, Object.keys(j.invoiceForm).length, j.fedexRateModal.colCarrier ? 1 : 0, j.secretary.invoice.shippingNoneHelp ? 1 : 0); }' | tail -2
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c "ui-allow" frontend/src/lib/invoiceDraftContext.ts frontend/src/pages/invoice-create/useInvoicePreview.ts frontend/src/pages/invoice-create/InvoiceShipToSection.tsx frontend/src/pages/invoice-create/InvoicePaymentTotalsSection.tsx frontend/src/pages/invoice-create/InvoiceCreatePage.tsx frontend/src/pages/invoice-detail/InvoicePaymentPicker.tsx frontend/src/features/secretary/SecretaryDraftInvoice.tsx frontend/src/components/FedExRateModal.tsx | tail -8
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c "<input\|<textarea\|<select" frontend/src/pages/invoice-create/InvoiceCreatePage.tsx frontend/src/pages/invoice-create/InvoiceShipToSection.tsx frontend/src/pages/invoice-create/InvoicePaymentTotalsSection.tsx frontend/src/pages/invoice-detail/InvoicePaymentPicker.tsx | tail -4
   期待: 1本目は2行とも `38 1 1`（JSON として読めること）。2本目・3本目はどれも `:0`。
 
 手順D5 型の点検（便 C と便 D を合わせた形で通ること）
-    cd ~/sa/frontend && npx tsc -b 2>&1 | tail -30
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && npx tsc -b 2>&1 | tail -30
   期待: 何も出ない（終了 0）。
 
 手順D6 言葉と画面の決まりの点検
-    cd ~/sa/frontend && npm run check:all 2>&1 | tail -30
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && npm run check:all 2>&1 | tail -30
   期待: 最後まで通り、失敗の行が無い（終了 0）。
 
 手順D7 新しい試験と、触ったファイルの試験
-    cd ~/sa/frontend && npx vitest run --config vitest.unit.config.ts --project unit src/lib/invoiceDraftContext.test.ts src/pages/invoice-create/InvoiceCreatePage.test.tsx src/pages/invoice-detail/InvoicePaymentPicker.test.tsx 2>&1 | tail -25
-    cd ~/sa/frontend && npx vitest run --config vitest.unit.config.ts --project unit src/features/secretary/SecretaryChat.test.tsx src/components/BillToCountryGuidance.test.tsx src/components/FedExRateModal.test.tsx src/lib/apiErrorReason.test.ts 2>&1 | tail -25
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && npx vitest run --config vitest.unit.config.ts --project unit src/lib/invoiceDraftContext.test.ts src/pages/invoice-create/InvoiceCreatePage.test.tsx src/pages/invoice-detail/InvoicePaymentPicker.test.tsx 2>&1 | tail -25
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && npx vitest run --config vitest.unit.config.ts --project unit src/features/secretary/SecretaryChat.test.tsx src/components/BillToCountryGuidance.test.tsx src/components/FedExRateModal.test.tsx src/lib/apiErrorReason.test.ts 2>&1 | tail -25
   期待: どちらも failed 0（Test Files と Tests の行をそのまま書く）。
 
 手順D8 同じ部品を使う今の試験（変えていないファイル。落ちたら §4 の決まった直し方だけ）
-    cd ~/sa/frontend && npx vitest run --config vitest.unit.config.ts --project unit src/lib/query/batch3aPages.test.tsx src/lib/query/batch3cPages.test.tsx src/components/AllLegacyButtonDynamicMigration.test.tsx src/components/AllLegacyButtonOperationMigration.test.tsx src/components/CommerceNavigationButtonMigration.test.tsx src/components/CommerceSubmitButtonMigration.test.tsx 2>&1 | tail -25
-    cd ~/sa/frontend && npx vitest run --config vitest.unit.config.ts --project unit 2>&1 | tail -15
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && npx vitest run --config vitest.unit.config.ts --project unit src/lib/query/batch3aPages.test.tsx src/lib/query/batch3cPages.test.tsx src/components/AllLegacyButtonDynamicMigration.test.tsx src/components/AllLegacyButtonOperationMigration.test.tsx src/components/CommerceNavigationButtonMigration.test.tsx src/components/CommerceSubmitButtonMigration.test.tsx 2>&1 | tail -25
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && npx vitest run --config vitest.unit.config.ts --project unit 2>&1 | tail -15
   期待: 1本目は failed 0。2本目（unit の全部）は failed 0（本数はそのまま書く。時間がかかってよい）。1本目で落ちたファイルが §1 の 18 に当たるときだけ §4 の直し方をして、もう一度同じ行を流す。
 
 手順D9 変えたファイルの名前と数
-    cd ~/sa && git status --short | tail -40
-    cd ~/sa && git diff --stat | tail -25
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git status --short | tail -40
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git diff --stat | tail -25
   期待: §1 のファイルだけ（新規の 8 ファイルは `??` で各1行。既存は 9 ファイル。§1 の 18 を直したときはそのファイルも）。
 
 手順D10 記録と送り出し
-    cd ~/sa && git add frontend/src/lib/invoiceDraftContext.ts frontend/src/lib/invoiceDraftContext.test.ts frontend/src/pages/invoice-create/useInvoicePreview.ts frontend/src/pages/invoice-create/InvoiceShipToSection.tsx frontend/src/pages/invoice-create/InvoicePaymentTotalsSection.tsx frontend/src/pages/invoice-create/InvoiceCreatePage.tsx frontend/src/pages/invoice-create/InvoiceCreatePage.test.tsx && git status --short | tail -40
-    cd ~/sa && git add frontend/src/pages/invoice-detail/InvoicePaymentPicker.tsx frontend/src/pages/invoice-detail/InvoicePaymentPicker.test.tsx frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx frontend/src/features/secretary/SecretaryDraftInvoice.tsx frontend/src/features/secretary/SecretaryChat.test.tsx && git status --short | tail -40
-    cd ~/sa && git add frontend/src/components/FedExRateModal.tsx frontend/src/components/FedExRateModal.test.tsx frontend/src/components/BillToCountryGuidance.test.tsx frontend/src/locales/ja.json frontend/src/locales/en.json && git status --short | tail -40
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git add frontend/src/lib/invoiceDraftContext.ts frontend/src/lib/invoiceDraftContext.test.ts frontend/src/pages/invoice-create/useInvoicePreview.ts frontend/src/pages/invoice-create/InvoiceShipToSection.tsx frontend/src/pages/invoice-create/InvoicePaymentTotalsSection.tsx frontend/src/pages/invoice-create/InvoiceCreatePage.tsx frontend/src/pages/invoice-create/InvoiceCreatePage.test.tsx && git status --short | tail -40
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git add frontend/src/pages/invoice-detail/InvoicePaymentPicker.tsx frontend/src/pages/invoice-detail/InvoicePaymentPicker.test.tsx frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx frontend/src/features/secretary/SecretaryDraftInvoice.tsx frontend/src/features/secretary/SecretaryChat.test.tsx && git status --short | tail -40
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git add frontend/src/components/FedExRateModal.tsx frontend/src/components/FedExRateModal.test.tsx frontend/src/components/BillToCountryGuidance.test.tsx frontend/src/locales/ja.json frontend/src/locales/en.json && git status --short | tail -40
   §1 の 18 を直したときだけ、次の 1 行も流す（変えていないファイルは add しても何も起きない）。
-    cd ~/sa && git add frontend/src/lib/query/batch3aPages.test.tsx frontend/src/lib/query/batch3cPages.test.tsx frontend/src/components/AllLegacyButtonDynamicMigration.test.tsx frontend/src/components/AllLegacyButtonOperationMigration.test.tsx frontend/src/components/CommerceNavigationButtonMigration.test.tsx frontend/src/components/CommerceSubmitButtonMigration.test.tsx && git status --short | tail -40
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git add frontend/src/lib/query/batch3aPages.test.tsx frontend/src/lib/query/batch3cPages.test.tsx frontend/src/components/AllLegacyButtonDynamicMigration.test.tsx frontend/src/components/AllLegacyButtonOperationMigration.test.tsx frontend/src/components/CommerceNavigationButtonMigration.test.tsx frontend/src/components/CommerceSubmitButtonMigration.test.tsx && git status --short | tail -40
  最後の status に §1 に無いファイルが出たら、commit せずに `BLOCKED: 範囲外のファイル` で停止する。
-    cd ~/sa && git config user.name "shingo-cc" && git config user.email "shingo-cc@users.noreply.github.com" && git commit -q -m "feat(invoices): let people pick ship-to, currency, payment and shipping instead of typing amounts (invoice-create-portfolio bin D)" && git log --oneline -2 | tail -2
-    cd ~/sa && BASE_SHA=origin/main HEAD_SHA=HEAD node scripts/check-ui-governance.js 2>&1 | tail -15
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git config user.name "shingo-cc" && git config user.email "shingo-cc@users.noreply.github.com" && git commit -q -m "feat(invoices): let people pick ship-to, currency, payment and shipping instead of typing amounts (invoice-create-portfolio bin D)" && git log --oneline -2 | tail -2
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && BASE_SHA=origin/main HEAD_SHA=HEAD node scripts/check-ui-governance.js 2>&1 | tail -15
   期待: 最後の行が `✅ UI governance: 新規ハードコードなし`。`❌` の行が出て、数が増えたファイルが §1 のファイルなら、push せずに `BLOCKED: 手順D10 UI governance` で止めて出力を貼る（§1 に無いファイルが出たときは、origin/main が進んだための出力なので、そのファイル名を書いて続ける）。
-    cd ~/sa && git push -u origin release/invoice-create-portfolio-bin-cd 2>&1 | tail -5
-    cd ~/sa && git rev-parse HEAD | tail -1
-    cd ~/sa && git ls-remote origin refs/heads/release/invoice-create-portfolio-bin-cd | tail -1
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git push -u origin release/invoice-create-portfolio-bin-cd 2>&1 | tail -5
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git rev-parse HEAD | tail -1
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git ls-remote origin refs/heads/release/invoice-create-portfolio-bin-cd | tail -1
   期待: log の 2 行が上から便 D・便 C。push は拒否の行が無い。最後の 2 行の 40 桁が同じ。
 
 ## 4. 想定される分かれ道
