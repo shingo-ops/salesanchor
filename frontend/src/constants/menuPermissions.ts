@@ -41,6 +41,7 @@ export type MenuId =
   | "integrationPaypal"
   | "channels"
   | "channelMasters"
+  | "dutyRules"
   | "bots"
   | "notifications";
 
@@ -83,6 +84,7 @@ export const MENUS: Record<MenuId, MenuDef> = {
   integrationPaypal: { labelKey: "nav.integrationPaypal", anyOf: ["erp.view"] },
   channels: { labelKey: "nav.channels", anyOf: ["channels.view"] },
   channelMasters: { labelKey: "nav.channelMasters", anyOf: ["tenant.profile.edit"] },
+  dutyRules: { labelKey: "nav.dutyRules", anyOf: ["tenant.profile.edit", "tenant.profile.view"] },
   bots: { labelKey: "nav.bots", anyOf: ["bots.view"] },
   notifications: { labelKey: "nav.notifications", anyOf: ["notifications.manage"] },
 };
@@ -204,7 +206,7 @@ export const ROLE_ROWS: readonly RoleRowDef[] = [
   // ── 事業 ──
   {
     id: "tenant", section: "business",
-    menus: ["tenantProfile", "tenantPolicy", "discordConfig", "discordAnnounce", "channelMasters"],
+    menus: ["tenantProfile", "tenantPolicy", "discordConfig", "discordAnnounce", "channelMasters", "dutyRules"],
     keys: ["tenant.profile.view", "tenant.profile.edit"], noteKey: "roles.noteChannelMasters",
   },
   { id: "channels", section: "business", menus: ["channels"], keys: ["channels.view", "channels.manage"] },
