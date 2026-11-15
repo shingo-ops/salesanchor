@@ -56,6 +56,7 @@ from app.routers import (
     discord_role_resync,  # ADR-091 KPI7: ロール手動再同期 API
     discord_ticket_config,  # ADR-091 KPI3: チケット機能設定 admin API
     duplicates,
+    duty_rules,  # invoice-create-portfolio 便B: 関税の額の決まり
     erp,
     fx_rate_admin,  # 為替レート SSOT API (GET /fx-rates/{currency} / POST /super-admin/fx-rate/refresh)
     goals,  # ダッシュボード強化: 目標管理
@@ -497,6 +498,10 @@ app.include_router(
 )
 app.include_router(
     duplicates.router, prefix="/api/v1", tags=["duplicates"],
+    dependencies=[Depends(get_current_tenant)],
+)
+app.include_router(
+    duty_rules.router, prefix="/api/v1", tags=["duty-rules"],
     dependencies=[Depends(get_current_tenant)],
 )
 app.include_router(
