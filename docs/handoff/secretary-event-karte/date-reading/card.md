@@ -73,6 +73,7 @@ _JST_OFFSET = timedelta(hours=9)
 # 表に無い日付の言い方。1 つでもあれば AI の読んだ日付のまま（design.md §3-1 (1)）
 _OTHER_DATE_WORDS = re.compile(
     r"\d+\s*年|再来年|来年|今年|去年|昨年|月末|月初|週末|年末|年始|再来月|来月|今月|先月|翌日|翌週|前日|先週|一昨日|昨日|おととい|きのう|"
+    r"今夜|今晩|今宵|今朝|今夕|明朝|明晩|明夕|昨夜|昨晩|今から|これから|当日|近日|今度|近々|平日|土日|"
     r"毎|隔週|第\s*[\d一二三四五六七八九十]|\d+\s*日\s*(?:中|\d+\s*(?:回|時間)|あたり|当たり|おき|ごと)|\d+\s*日\s*に\s*(?:わた|渡|またが|跨|分け|分割|[\d一二三四五六七八九十]+\s*(?:回|度|件))|"
     r"(?:丸|まる)\s*\d+\s*日|\d+\s*日\s*の?\s*(?:延長|猶予|日程|遅れ|遅延|期間|休暇)|\d+\s*泊|\d+\s*(?:日|週間?|か月|ヶ月|カ月|ヵ月)\s*(?:後|前|間)"
 )
@@ -594,6 +595,19 @@ def test_table_examples(text, today, expected):
         "仕事納めは28日 17時から納会",
         "新年会は8日 18時から",
         "打ち合わせは25日 10時",
+        "明日は朝から出張なので、今夜20時に打ち合わせ",
+        "明日は朝が早いので今晩21時から電話",
+        "明日は朝から出張なので今から30分打ち合わせ",
+        "明日は終日外出なので、これから1時間電話",
+        "あさっては朝から研修なので今晩20時",
+        "今日は夜まで外出なので明朝9時から会議",
+        "本日は終日不在のため明朝10時に電話",
+        "11月25日は終日不在なので今夜20時に会議",
+        "来週の月曜は朝から出張なので今夜20時",
+        "今週の金曜は朝から出張なので今夜20時",
+        "今日は夜まで仕事なので、明晩19時から食事",
+        "月曜は朝から外出なので今朝のうちに電話",
+        "明日は終日外出なので当日の連絡は不要、今度の金曜10時",
         "25日はクリスマス会 19時から",  # 言い方の後ろの「は・も・を・が・、」・空白に、時刻でない語が続く（design.md §3-1 (2)）
         "28日は仕事納め、17時から納会",
         "8日は新年会 18時から",
@@ -833,7 +847,7 @@ def _fixed_now(monkeypatch):
 
 - (6a) `cd "$REPO/backend" && uv run --no-project --python 3.12 --with ruff ruff check app/ > /tmp/CC報告ファイル/ruff.txt 2>&1; echo "exit=$?"` → exit=0（CI と同じ範囲。`.github/workflows/test.yml:92`。試験のファイルは CI の ruff の対象外）
 - (6b) `cd "$REPO/backend" && uv run --no-project --python 3.12 --with ruff ruff format --check app/services/secretary_dates.py > /tmp/CC報告ファイル/ruff-format.txt 2>&1; echo "exit=$?"` → exit=0。落ちたら `ruff format app/services/secretary_dates.py` で整え、整えた差分を報告に貼る（中身は変えない）。`app/routers/assistant.py` は元から整っていない行（:373-374）があるので format をかけない。
-- (6c) `cd "$REPO/backend" && ENVIRONMENT=test uv run --no-project --python 3.12 --with-requirements requirements.txt --with-requirements requirements-dev.txt python -m pytest --no-cov tests/test_secretary_dates.py tests/test_assistant_router.py tests/test_assistant_karte.py tests/test_assistant_rules_router.py tests/test_assistant_karte_pg.py -q > /tmp/CC報告ファイル/pytest.txt 2>&1; echo "exit=$?"` → exit=0。最後の 1 行（passed・skipped の数）を報告に貼る。続けて同じ形で `tests/test_secretary_dates.py` だけを流し（保存先 `/tmp/CC報告ファイル/pytest-dates.txt`）、最後の 1 行を貼る（期待 484 passed）。
+- (6c) `cd "$REPO/backend" && ENVIRONMENT=test uv run --no-project --python 3.12 --with-requirements requirements.txt --with-requirements requirements-dev.txt python -m pytest --no-cov tests/test_secretary_dates.py tests/test_assistant_router.py tests/test_assistant_karte.py tests/test_assistant_rules_router.py tests/test_assistant_karte_pg.py -q > /tmp/CC報告ファイル/pytest.txt 2>&1; echo "exit=$?"` → exit=0。最後の 1 行（passed・skipped の数）を報告に貼る。続けて同じ形で `tests/test_secretary_dates.py` だけを流し（保存先 `/tmp/CC報告ファイル/pytest-dates.txt`）、最後の 1 行を貼る（期待 497 passed）。
 - (6d) `cd "$REPO" && git diff --check > /tmp/CC報告ファイル/diff-check.txt 2>&1; echo "exit=$?"` → exit=0
 - (6e) `cd "$REPO" && git status --short` を報告に貼る。変わるのは `backend/app/routers/assistant.py`・`backend/tests/test_assistant_karte.py`（変更）と `backend/app/services/secretary_dates.py`・`backend/tests/test_secretary_dates.py`（新規）の 4 つだけ。
 - (6a)〜(6c) が手順書の書き損じ（import の並び・未使用の名前・行の長さ）で落ちたら、その書き損じだけ直し、直した所を報告に書く。試験の期待の日付を変えないと通らないとき、または手順書と違う作りに変えないと通らないときは `NEEDS_DECISION:` で止まる（期待の日付は PO 承認の決まりの表なので変えない）。
