@@ -1,0 +1,42 @@
+relname	n	string_agg
+audit_logs	1	tenant_isolation_audit_logs|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+bots	1	tenant_isolation_bots|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+companies	1	tenant_isolation_companies|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+company_addresses	1	tenant_isolation_company_addresses|*|true|public|(EXISTS ( SELECT 1\n   FROM X.companies c\n  WHERE ((c.id = company_addresses.company_id) AND (c.tenant_id = (current_setting('app.tenant_id'::text, true))::integer))))|
+company_discord	1	tenant_isolation_company_discord|*|true|public|(EXISTS ( SELECT 1\n   FROM X.companies c\n  WHERE ((c.id = company_discord.company_id) AND (c.tenant_id = (current_setting('app.tenant_id'::text, true))::integer))))|
+company_sales_channels	1	tenant_isolation_company_sales_channels|*|true|public|(EXISTS ( SELECT 1\n   FROM X.companies c\n  WHERE ((c.id = company_sales_channels.company_id) AND (c.tenant_id = (current_setting('app.tenant_id'::text, true))::integer))))|
+contact_contact_channels	1	tenant_isolation_contact_contact_channels|*|true|public|(EXISTS ( SELECT 1\n   FROM X.contacts ct\n  WHERE ((ct.id = contact_contact_channels.contact_id) AND (ct.tenant_id = (current_setting('app.tenant_id'::text, true))::integer))))|
+contact_discord	1	tenant_isolation_contact_discord|*|true|public|(EXISTS ( SELECT 1\n   FROM X.contacts ct\n  WHERE ((ct.id = contact_discord.contact_id) AND (ct.tenant_id = (current_setting('app.tenant_id'::text, true))::integer))))|
+contact_emails	1	tenant_isolation_contact_emails|*|true|public|(EXISTS ( SELECT 1\n   FROM X.contacts ct\n  WHERE ((ct.id = contact_emails.contact_id) AND (ct.tenant_id = (current_setting('app.tenant_id'::text, true))::integer))))|
+contacts	1	tenant_isolation_contacts|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+invoice_items	1	tenant_isolation_invoice_items|*|true|public|(EXISTS ( SELECT 1\n   FROM X.invoices inv\n  WHERE ((inv.id = invoice_items.invoice_id) AND (inv.tenant_id = (current_setting('app.tenant_id'::text, true))::integer))))|
+invoices	1	tenant_isolation_invoices|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+lead_playbook	1	tenant_isolation_lead_playbook|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+leads	1	tenant_isolation_leads|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+meta_messages	1	tenant_isolation_meta_messages|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+order_items	1	tenant_isolation_order_items|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+orders	1	tenant_isolation_orders|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+own_inventory	1	own_inventory_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+products	1	tenant_isolation_products|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+purchase_order_items	1	tenant_isolation_po_items|*|true|public|(EXISTS ( SELECT 1\n   FROM X.purchase_orders po\n  WHERE ((po.id = purchase_order_items.purchase_order_id) AND (po.tenant_id = (current_setting('app.tenant_id'::text, true))::integer))))|
+purchase_orders	1	tenant_isolation_purchase_orders|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+quote_items	1	tenant_isolation_quote_items|*|true|public|(EXISTS ( SELECT 1\n   FROM X.quotes q\n  WHERE ((q.id = quote_items.quote_id) AND (q.tenant_id = (current_setting('app.tenant_id'::text, true))::integer))))|
+quotes	1	tenant_isolation_quotes|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+role_permissions	1	tenant_isolation_role_permissions|*|true|public|(EXISTS ( SELECT 1\n   FROM X.roles r\n  WHERE ((r.id = role_permissions.role_id) AND (r.tenant_id = (current_setting('app.tenant_id'::text, true))::integer))))|
+roles	1	tenant_isolation_roles|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+shipping_rates	1	tenant_isolation_shipping_rates|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+shipping_zones	1	tenant_isolation_shipping_zones|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+staff	1	tenant_isolation_staff|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+staff_emails	1	tenant_isolation_staff_emails|*|true|public|(EXISTS ( SELECT 1\n   FROM X.staff s\n  WHERE ((s.id = staff_emails.staff_id) AND (s.tenant_id = (current_setting('app.tenant_id'::text, true))::integer))))|
+staff_ui_preferences	1	tenant_isolation_staff_ui_preferences|*|true|public|(EXISTS ( SELECT 1\n   FROM X.staff s\n  WHERE ((s.id = staff_ui_preferences.staff_id) AND (s.tenant_id = (current_setting('app.tenant_id'::text, true))::integer))))|
+suppliers	1	tenant_isolation_suppliers|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+team_members	1	tenant_isolation_team_members|*|true|public|(EXISTS ( SELECT 1\n   FROM X.teams t\n  WHERE ((t.id = team_members.team_id) AND (t.tenant_id = (current_setting('app.tenant_id'::text, true))::integer))))|
+teams	1	tenant_isolation_teams|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+tenant_duty_rule_components	1	tenant_duty_rule_components_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+tenant_duty_rules	1	tenant_duty_rules_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+tenant_invoice_payment_bank	1	tenant_invoice_payment_bank_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+tenant_invoice_payment_methods	1	tenant_invoice_payment_methods_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+tenant_invoice_payment_wise	1	tenant_invoice_payment_wise_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+tenant_issuer_profiles	1	tenant_issuer_profiles_tenant_isolation|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+tenant_meta_config	1	tenant_isolation_tenant_meta_config|*|true|public|(tenant_id = (current_setting('app.tenant_id'::text, true))::integer)|
+user_roles	1	tenant_isolation_user_roles|*|true|public|(EXISTS ( SELECT 1\n   FROM X.roles r\n  WHERE ((r.id = user_roles.role_id) AND (r.tenant_id = (current_setting('app.tenant_id'::text, true))::integer))))|
