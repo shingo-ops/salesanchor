@@ -1,6 +1,6 @@
 # 値を書く移行 52本の分け方（段5 5-1・§5-5）
 
-- 状態: 設計案（Opus 作成・2026-11-15・第3版）。PO の承認待ち。承認の前に 5-1 の実装カードは出さない。
+- 状態: 設計案（Opus 作成・2026-11-15・第4版）。PO の承認待ち。承認の前に 5-1 の実装カードは出さない。
 - 事実の出どころ: `docs/handoff/migration-runner-redesign/recon-5-1a/p11-detail.md`（52本の中身・commit `a6d59cc36`）、`docs/handoff/migration-runner-redesign/recon-5-0a/p12.md`（依存する試験）、登録の順番 `scripts/run_all_migrations.sh`、本番の構造の読み取り（reader 鍵・表と列の有無だけ。行の中身は読まない。生出力 `/tmp/CC報告ファイル/deploy-lock-1113/p11-prod-tables.txt`・`p11-prod-recheck.txt`・`p11-prod-recheck-cols.txt`。後の2つは問い合わせの文を AUDIT 行に残した。2026-11-15 16:02-16:03 JST）、番号と登録行の対応 `/tmp/CC報告ファイル/deploy-lock-1113/p11-midrun.txt`。
 - 固める判断は、5-3 の記録を始めた後は取り消せない（記録の後は流し終えたファイルの書き換えを CI で止める。§5-7）。無効にする書き換えは 5-3 より前にしかできない。
 
@@ -22,8 +22,9 @@
 - `migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:40-44` は「tenant_004.audit_log が有り、かつ tcg_products が無い」ときだけ飛ばす。
 - tenant_004.audit_log は毎回 `migrations/20260921_050000_drop_tenant004_pipeline_tables.sql:51`（登録 `scripts/run_all_migrations.sh:947`）で消える。反映の後の本番にも無い（p11-prod-recheck.txt に tenant_004.audit_log の行が無い）。
 - そのため、毎回 :733 で飛ばされず、次の18表を作る（IF NOT EXISTS。行番号は `20260831_110000` の中）: audit_log :55・conditions :79・tcg_products :92・tcg_suppliers :111・units :123・condition_aliases :140・product_exclude_keywords :157・product_search_keywords :173・products_logistics :189・supplier_channels :199・unit_aliases :212・source_messages :233・extraction_jobs :253・extraction_items :271・analysis_results :293・item_notes :341・unparsed_lines :358・import_jobs :373。
-- その後、同じ反映の中で次の3本が消す: :868（`migrations/20260915_010000_drop_tcg_products_phase2c.sql:86`、tcg_products）、:947（`20260921_050000` :18・:30・:42・:50・:51・:56・:57）、:959（`migrations/20260921_130000_drop_tenant004_master_copies.sql` :27・:28・:33・:35・:36・:41・:42）。
-- どれも消さない表がある: tcg_suppliers・item_notes・unparsed_lines・products_logistics など。これらは反映の後も残る（tcg_suppliers は p11-prod-recheck.txt で確かめた）。この18表のうち残る表を書く先に挙げるのは、p11-detail の書く先の列では #24・#25（tcg_suppliers）と #38（products_logistics。§4 のとおり値は書かない）だけ。
+- その後、同じ反映の中で次の3本が、この18表のうち14表を消す: :868（`migrations/20260915_010000_drop_tcg_products_phase2c.sql:86`、tcg_products）、:947（`migrations/20260921_050000_drop_tenant004_pipeline_tables.sql` :18・:29・:30・:36・:51・:56・:57）、:959（`migrations/20260921_130000_drop_tenant004_master_copies.sql` :21・:22・:27・:28・:33・:34）。
+- 18表のほかに §4 の C の物が書く表（:733 では作らない、前の移行が作る表）は、:947 の :42・:50 と、:959 の :35・:36・:41・:42 で消える。
+- 18表のうち、どの移行も消さない表はちょうど4つ: tcg_suppliers・item_notes・unparsed_lines・products_logistics（`migrations/` の DROP TABLE を探した結果。`20260921_050000:26-27` は item_notes・unparsed_lines の外部キーを外すだけ）。これらは反映の後も残る（tcg_suppliers は p11-prod-recheck.txt で確かめた）。この18表のうち残る表を書く先に挙げるのは、p11-detail の書く先の列では #24・#25（tcg_suppliers）と #38（products_logistics。§4 のとおり値は書かない）だけ。
 - 【未確認】本番の反映ログで、:47 の NOTICE（creating TCG analysis tables in schema tenant_004）が毎回出ているかは見ていない。上は本文と登録の順番から読んだ事実。分け方の答えは、この NOTICE が出ていなくても変わらない（出ていなければ C の物は書く先が無く飛ばすだけ）。#24・#25 は、tcg_suppliers と supplier_channels が両方ある回に行を戻す。
 
 ## 2. 結果の数
@@ -90,7 +91,7 @@
 | 33 | C | #27 と同じ（extraction_jobs・:947） |
 | 34 | C | :841 の時点で tenant_004.conditions（:733）と tcg_note_master（#18）が両方あるので :12-19 を通って書くが、tcg_note_master は :959 で消える（`20260921_130000:41`）。試験が流す（`test_tcg_work_matching_integration.py:612`）。第1版の B の理由は誤り |
 | 35 | C | 書く先の tenant_004.conditions は :733 が作り直し、:959 で消える（`20260921_130000:33`）。第1版の A の理由は誤り |
-| 36 | C | 書く先の tenant_004.product_exclude_keywords は :733 が作り直し、:851 で書いた後 :959 で消える（`20260921_130000:28`）。試験が流す（`test_tcg_work_matching_integration.py:1216`） |
+| 36 | C | 書く先の tenant_004.product_exclude_keywords は :733 が作り直す。作り直した直後の product_search_keywords.product_id は整数でないので tcg_uuid の道に進み、本番に public.products.tcg_uuid が無い（p11-prod-tcguuid.txt、0行）ため :35-40 で何も書かずに終わる（`migrations/20260913_200000_tcg_cardset_exclusion.sql:16-41`）。表は :959 で消える（`20260921_130000:28`）。試験が流す（`test_tcg_work_matching_integration.py:1216`） |
 | 37 | A | tcg_uuid が UUID でなければ全体を飛ばす（:106-123） |
 | 38 | A | 列が既に整数なら飛ばす（:53-55 ほか）。整数でない表（tenant_004 で作り直された表）に当たったときは、public.products.tcg_uuid が本番に無いので（`/tmp/CC報告ファイル/deploy-lock-1113/p11-prod-tcguuid.txt`、0行、2026-11-15 07:20:47Z）書く道（:62-68 ほか）に入らず、件数を数える道（:69-76 ほか）に入る。行があれば RAISE、0行なら NOTICE だけで、値は書かない。作り直された表は空なので通る |
 | 39 | C | tenant_001.analysis_policies は :934 で消える（`migrations/20260921_010000_drop_analysis_rule_tables.sql:55`）。本番に無い（p11-prod-tables.txt） |
@@ -120,3 +121,5 @@
 - 第2版での直し: (1) §1 に判断の時点と §1-1 を足した (2) #24・#25 を無効にするへ（6本→8本） (3) C に移して理由を書き直した（C 9本→18本、A 26本→16本、B 3本→2本） (4) 問い合わせの文を残して読み直した。tenant_006.products は本番に有った。#6 は work_id の NOT NULL で飛ばす、に直した（答えは固めてよいのまま） (5) #17 の行に一言足した (6) §5-6 の1行は、PO の言葉と設計の根拠を分けるための直しで、意図して入れた（PR 本文に書く）。
 - 第2版（HEAD `9e9b9d63f`）: 合流前の審査役（Opus・新規起動、2026-11-15）REVISE。分け方そのものは妥当。直す3点: (1) #17 の件数の確かめは値の文ではないが、一緒に外さないと空の環境で止まる (2) design.md §5-5 の決まりが古いまま (3) §1-1 の「tcg_suppliers だけは、どれも消さない」は誤り（item_notes ほかも残る）、#38 の理由が tcg_uuid の有無に触れていない。細かい点: #45 は NOT EXISTS、#48 は TRUNCATE＋入れ直し、tcg_config.py はアプリから読まれていない。
 - 第3版での直し: (1) §3 の頭に #17 の件数の確かめも外すと書いた (2) design.md §5-5 に「決まりはこの文書 §1 で細かくした（PO 承認待ち）」の1行を足した (3) §1-1 に作る18表を全部並べ、残る表を直した。#38 は本番で tcg_uuid が無いこと（0行）を読んで理由を書き直した。細かい点も直した。分け方の本数は変わらない（無効8・固め44）。
+- 第3版（HEAD `be94595df`）: 合流前の審査役（Opus・新規起動、2026-11-15）REVISE。前の3点は直っていた。新しい直す点: (R1) #36 の「:851 で書いた後」は誤りで、本番では tcg_uuid が無いので何も書かない (R2) §1-1 の消す行に18表以外の行が混じり、18表の5表の行が抜けていた。残る表は「など」でなくちょうど4つ。
+- 第4版での直し: (R1) #36 の理由を書き直した（区分 C のまま） (R2) §1-1 を、18表を消す行・18表以外を消す行・残る4表に分けて書いた。本数は変わらない。
