@@ -25,7 +25,7 @@
 - 読み書きとも運用者の旗が要る（同 :98-103）。アプリのロールは SELECT と INSERT だけ（同 :122-124）。
 - 出来事を書く SQL は保守の口に 1 つだけある: `_INSERT_EVENT_SQL`（`backend/app/routers/ops.py:195-198`）。出来事の表に書くコードは今この 1 ファイルだけ（`git grep ops_incident_events -- backend/app` で ops.py 以外 0 件）。
 - 伏せた窓のビューでは、kind は「値の決まり ops_incident_events_kind_check で値が限られる」理由で見せ、actor と detail は伏せる（`migrations/20261024_100300_create_ai_cloud_views.sql:164-165`）。決まりの名前を変えなければ、この理由はそのまま正しい。
-- 伏せた窓のビューを作る範囲は public と tenant_* だけで、ops_case は入らない（`migrations/20261024_100000_create_ai_cloud_meta.sql:85`）。報告の表に列を足しても、伏せる分類（1151 行）は変わらない。
+- 伏せた窓のビューを作る範囲は public と tenant_* だけで、ops_case は入らない（`migrations/20261024_100000_create_ai_cloud_meta.sql:85`）。報告の表に列を足しても、伏せる分類の行数は変わらない（2b を作る時点の origin/main 65a2bb376 で 1162 行。2a の審査のときは 1151 行で、その後に別の便がテナントの表に列を足して増えた）。
 
 本番への出し方（ここが便を 2 つに分ける理由）:
 - 本番反映では、先に backend を入れ替え（`.github/workflows/deploy.yml:497-498` の blue-green）、そのあとで移行を流す（同 :840-857）。新しいコードが、古い表の上で数分動く。
@@ -57,8 +57,8 @@ CI:
 ## 2. 範囲
 
 入れる:
-- 2a: 移行 1 つと戻し 1 つ、`scripts/run_all_migrations.sh` に 2 行、試験 1 つ、`.github/workflows/migration-test.yml` に前もって流す手順 1 つ（§5-2a（６））
-- 2b: `backend/app/routers/ops_case.py` の報告の口、移行 1 つと戻し 1 つ、`scripts/run_all_migrations.sh` に 2 行、試験の追加と直し、`.github/workflows/migration-test.yml` に前もって流す手順 1 つ（§5-2b（１０））、`frontend/api-contract/openapi.json` の書き出し、書類の直し（§5-2b（９））
+- 2a: 移行 1 つと戻し 1 つ、`scripts/run_all_migrations.sh` に 3 行（説明の注記・移行・戻しの注記）、試験 1 つ、`.github/workflows/migration-test.yml` に前もって流す手順 1 つ（§5-2a（６））
+- 2b: `backend/app/routers/ops_case.py` の報告の口、移行 1 つと戻し 1 つ、`scripts/run_all_migrations.sh` に 3 行（説明の注記・移行・戻しの注記）、試験の追加と直し、`.github/workflows/migration-test.yml` に前もって流す手順 1 つ（§5-2b（１０））、`frontend/api-contract/openapi.json` の書き出し、書類の直し（§5-2b（９））
 
 入れない:
 - 注記の口（`backend/app/routers/ops.py:411-484`）の kind・round。許可の出来事は便4（C1-1）
@@ -92,7 +92,7 @@ PO は案 A に決めた（2026-11-14）。以下は案 A で書く。（参考:
 
 ## 5. 作り方
 
-ファイルの名前の時刻は、作る時点の `migrations/` で一番新しいものより後ろにする（今の最後は 20261113_100001。`scripts/run_all_migrations.sh:1271-1272`）。下の名前はその例。2b の時刻は 2a より後ろ。
+ファイルの名前の時刻は、作る時点の `migrations/` で一番新しいものより後ろにする（2a を作ったときの最後は 20261113_100001。`scripts/run_all_migrations.sh:1271-1272`）。下の名前はその例。2b の時刻は 2a より後ろ。2b を作る時点（origin/main 65a2bb376）の最後は 20261115_100000 なので、2b の 2 つのファイルの名前はそれより後ろにし、§6 の 2 行目のとおり全部の名前をそろえる。
 
 ### 5-2a 表だけ足す（ブランチ release/ai-ops-stage4-bin2a）
 
@@ -177,7 +177,7 @@ ALTER TABLE ops_case.reports DROP COLUMN IF EXISTS kind;
 COMMIT;
 ```
 
-（３）`scripts/run_all_migrations.sh` の最後の行の後ろに 2 行:
+（３）`scripts/run_all_migrations.sh` の最後の行の後ろに 3 行:
 
 ```
 # ADR-1012 段階4 便2a: 報告の種類の列と種類ごとの一意・出来事の kind case_report と actor case_agent を足す（古い一意は残す・冪等）
@@ -269,7 +269,7 @@ from app.routers.ops import _INSERT_EVENT_SQL
         )
 ```
 
-- `uuid.UUID(...)` で包む理由: `post_report` の incident_id は str（`require_case_ticket` が `str(incident_id)` を返す。`backend/app/routers/ops_case.py:161-163`）。報告の表の SQL は `CAST(:iid AS uuid)` で受けている（同 :514）が、`_INSERT_EVENT_SQL` は CAST を持たない（`backend/app/routers/ops.py:195-198`）。今の呼び出し元は UUID 型を渡している（同 :431・:475）ので、同じ型にそろえる。`uuid` は読み込み済み（`backend/app/routers/ops_case.py:28`）。`_INSERT_EVENT_SQL` は変えない。
+- `uuid.UUID(...)` で包む理由: `post_report` の incident_id は str（`require_case_ticket` が `str(incident_id)` を返す。`backend/app/routers/ops_case.py:163` で `str(incident_id)` にし、:174 で返す）。報告の表の SQL は `CAST(:iid AS uuid)` で受けている（同 :514）が、`_INSERT_EVENT_SQL` は CAST を持たない（`backend/app/routers/ops.py:195-198`）。今の呼び出し元は UUID 型を渡している（同 :431・:475）ので、同じ型にそろえる。`uuid` は読み込み済み（`backend/app/routers/ops_case.py:28`）。`_INSERT_EVENT_SQL` は変えない。
 
 返す値に kind を足す: `return {"id": row[0], "incident_id": incident_id, "kind": body.kind}`。
 docstring を直す: :9 の「報告（1 件 1 通）」→「報告（1 件に種類ごと 1 通）」、:500 の「報告（1 件 1 通。2 回目は 409。…）」→「報告（1 件に種類ごと 1 通。同じ種類の 2 通目は 409。届いたら出来事の表に報告の id だけを 1 行。本文は 32KB まで）。」。ほかの行は変えない。
@@ -309,7 +309,7 @@ COMMENT ON TABLE ops_case.reports IS '相談係の報告。1 件につき 1 通'
 COMMIT;
 ```
 
-（６）`scripts/run_all_migrations.sh` の最後に 2 行（2a の 2 行の後ろ）:
+（６）`scripts/run_all_migrations.sh` の最後に 3 行（2a の 3 行の後ろ）:
 
 ```
 # ADR-1012 段階4 便2b: 報告の古い一意（incident_id だけ）を消す（種類ごとに 1 通・冪等）
@@ -362,7 +362,7 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
 | `from app.routers.ops import _INSERT_EVENT_SQL` で読み込みの輪のエラー | 止まる。SQL を写して 2 つ目を作らない |
 | 2b の試験で、出来事を書くところが incident_id の型のエラーで失敗する | 名前と生の出力を出して止まる。`_INSERT_EVENT_SQL` に CAST を足したり、SQL を写したりして直さない |
 | openapi.json の差分が kind 以外にも出る | 止まる。手で書き換えない |
-| 伏せた窓の分類の試験（`backend/tests/ops/test_ai_cloud_views.py:486` の 1151）が変わる | 止まる（public に列を足していないはずのため） |
+| 伏せた窓の分類の試験（`backend/tests/ops/test_ai_cloud_views.py:486` の数。origin/main 65a2bb376 で 1162）が変わる | 止まる（public に列を足していないはずのため） |
 | 移行の 2 回目の流しで失敗 | 止まる |
 | CI の「前提の移行を先に実行」の手順（§5-2a（６）・§5-2b（１０））で前提のファイルが失敗 | 名前と生の出力を出して止まる。前提のファイルは変えない |
 | CI で戻しのファイル（200001・210001）の 1 回目か 2 回目の流しが失敗 | 名前と生の出力を出して止まる |
@@ -391,7 +391,7 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
 | 報告 1 通ごとに出来事が 1 行、detail は報告の id だけ | 2b の新しい試験（D4 の見張り）。本番は §7 |
 | 報告と出来事は一緒に残るか、一緒に残らないか | 2b の新しい試験（出来事が書けないと 503・報告 0 行） |
 | 誰が書いたかが正しい（案 A） | 出来事の actor が case_agent（試験と本番の §7） |
-| 伏せた窓の分類が変わらない | `backend/tests/ops/test_ai_cloud_views.py` が緑（1151 のまま） |
+| 伏せた窓の分類が変わらない | `backend/tests/ops/test_ai_cloud_views.py` が緑（作る時点の origin/main の数のまま。65a2bb376 で 1162） |
 | 戻し方が書いてあり、流せる | 戻しのファイル 2 つ。§9 |
 | 触ったファイルが §2 の範囲だけ | `git diff --name-only origin/main...HEAD` を Opus が読む |
 
@@ -399,18 +399,18 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
 
 2b を戻す（順番が大事。先に表、そのあとコード）:
 （１）戻しのファイルの冒頭の数え方で、2 通以上の件が 0 か確かめる。0 でなければ戻さない。戻し方を PO に聞く（報告は消さない）。
-（２）0 なら、2b の戻しのファイルを手で流す（古い一意が戻る）。このとき新しいコードは、新しい一意と古い一意の両方がある表の上で動く。`ON CONFLICT (incident_id, kind)` は新しい一意で動くので、investigation の報告は今までどおり 200・2 通目は 409。investigation 以外の 2 通目は古い一意にぶつかって 503 になるが、それを送る係はまだいない（§1）。
+（２）0 なら、2b の戻しのファイルを手で流す（古い一意が戻る）。流す直前に `bash /home/ubuntu/salesanchor/scripts/backup.sh` で控えを取り、成功を確かめる（手で流すときは本番反映の Pre-deploy DB backup が走らないため）。手で流すこと自体が危険操作で、PO の同意が要る。このとき新しいコードは、新しい一意と古い一意の両方がある表の上で動く。`ON CONFLICT (incident_id, kind)` は新しい一意で動くので、investigation の報告は今までどおり 200・2 通目は 409。investigation 以外の 2 通目は古い一意にぶつかって 503 になるが、それを送る係はまだいない（§1）。
 （３）すぐに 2b の PR を revert して本番に出す。revert でコードが古い口に戻り、`scripts/run_all_migrations.sh` から 210000 の行が消える。古いコードの `ON CONFLICT (incident_id)` は（２）で戻した古い一意で動く。
   - （２）と（３）の間に別の本番反映をはさまない。はさむと、まだ残っている 210000 の行が流れ、古い一意をまた消す。
   - 逆の順（先に revert）にすると、古いコードが古い一意の無い表の上で動き、戻しのファイルを流すまで報告が全部 503 になる。だからこの順にする。
-  - revert の PR は `migrations/` と `scripts/run_all_migrations.sh` を変えるので危険 PR（ADR-136）で、GO #番号が要る。（２）より前に revert の PR を作り、審査役 APPROVE・CI 緑・GO #番号まで揃えてから（２）を流す。そうすれば（２）から（３）までの間が、合流と本番反映の時間だけになる。
+  - revert の PR は `migrations/` と `scripts/run_all_migrations.sh` を変えるので危険 PR（ADR-136）で、GO #番号が要る。（２）より前に revert の PR を作り、審査役 APPROVE・CI 緑・GO #番号まで揃えてから（２）を流す。revert の PR の GO 記録の「バックアップ確認」には、（２）の直前の控えのファイル名と、本番反映の Pre-deploy DB backup の成功の両方を書く。そうすれば（２）から（３）までの間が、合流と本番反映の時間だけになる。
 （４）（３）の本番反映の後、読み取りの鍵で `pg_constraint` を読み、`ops_case.reports` に incident_id だけの一意が 1 つあることを確かめる。0 なら止めて PO に聞く。
   - 理由: 前の本番反映が失敗していると、次の反映は移行を全部流す（`.github/workflows/deploy.yml:73-78` の else）。（２）と（３）の間に別の反映が入ると 210000 が流れて古い一意が消え、（３）の後も古いコードの報告が 503 のまま自動では直らない。はさまない約束だけでは止められないので、終わりに確かめる。
 - 2b の戻しは「2 通以上の件が 0」のときだけできる。2b の本番反映から、実行係が種類を送り始める（便5）までの間がその期間。
 
 2a を戻す（2b を戻した後にだけ。先にコード、そのあと表）:
 （１）2a の PR を revert して本番に出す。2a はコードを変えていないので、コードと表はこの間も合っている（古いコードは kind の列を使わず、古い一意で動く）。`scripts/run_all_migrations.sh` から 200000 の行が消える。
-（２）2a の戻しのファイルを手で流す（kind の列と新しい一意が消える）。古いコードは kind を使わないので、この後も動く。
+（２）2a の戻しのファイルを手で流す（kind の列と新しい一意が消える）。流す直前に 2b の（２）と同じく控えを取り、PO の同意を得る。古いコードは kind を使わないので、この後も動く。
   - 逆の順（先に戻しのファイル）にすると、次の本番反映でまだ残っている 200000 の行が流れ、列が戻る。だからこの順にする。
 - 出来事の決まりは広げたまま残す（§5-2a（２）の理由）。
 
