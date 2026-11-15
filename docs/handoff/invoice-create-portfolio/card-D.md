@@ -83,7 +83,7 @@
 12. frontend/src/features/secretary/SecretaryChat.test.tsx（全部書き換え）
 13. frontend/src/components/BillToCountryGuidance.test.tsx（全部書き換え）
 14. frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx（4 か所を直す）
-15. frontend/src/components/FedExRateModal.test.tsx（2 か所を直す）
+15. frontend/src/components/FedExRateModal.test.tsx（3 か所を直す）
 16. frontend/src/locales/ja.json（3 か所に足す）
 17. frontend/src/locales/en.json（3 か所に足す）
 18. 手順D6 の分かれ道に当たったときだけ: frontend/src/lib/query/batch3aPages.test.tsx・frontend/src/lib/query/batch3cPages.test.tsx・frontend/src/components/AllLegacyButtonDynamicMigration.test.tsx・frontend/src/components/AllLegacyButtonOperationMigration.test.tsx・frontend/src/components/CommerceNavigationButtonMigration.test.tsx・frontend/src/components/CommerceSubmitButtonMigration.test.tsx のうち落ちたもの（§4 の決まった直し方だけ）
@@ -3001,7 +3001,7 @@ import { InvoicePaymentPicker } from "./InvoicePaymentPicker";
           )}
 ```
 
-### 2-15. frontend/src/components/FedExRateModal.test.tsx（2 か所。Edit ツール）
+### 2-15. frontend/src/components/FedExRateModal.test.tsx（3 か所。Edit ツール）
 
 (1) 変更前:
 ```tsx
@@ -3020,6 +3020,16 @@ import { InvoicePaymentPicker } from "./InvoicePaymentPicker";
 変更後:
 ```tsx
     expect(onSelectRate).toHaveBeenCalledWith(5000, "JPY", "FEDEX_IP", "FedEx");
+```
+
+(3) 変更前（このファイルを触ると、記録の前の自動点検 `eslint --max-warnings=0` がファイル全体を見て、前からあるこの行の日本語の目印で止まる。止まらないように、この行の直前に1行足す）:
+```tsx
+      live_error: "FedEx\u672a\u9023\u643a\u3067\u3059", // "FedEx未連携です"
+```
+変更後:
+```tsx
+      // eslint-disable-next-line local/no-japanese-literal -- サーバーが返す未連携の目印（FedExRateModal.tsx の includes("未連携")）をそのまま試す（ADR-027・precedent: src/pages/viewer/InventoryView.test.tsx:380）
+      live_error: "FedEx\u672a\u9023\u643a\u3067\u3059", // "FedEx未連携です"
 ```
 
 ### 2-16. frontend/src/locales/ja.json（3 か所。Edit ツール）
@@ -3191,6 +3201,8 @@ import { InvoicePaymentPicker } from "./InvoicePaymentPicker";
     cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '    "colCurrency": "Currency",' frontend/src/locales/en.json
     cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '      "dueDate": "支払期限",' frontend/src/locales/ja.json
     cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '      "dueDate": "Due date",' frontend/src/locales/en.json
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -F 'live_error: "FedEx\u672a\u9023\u643a\u3067\u3059", // "FedEx未連携です"' frontend/src/components/FedExRateModal.test.tsx
+  期待（19行目）: 1。
   期待: 2行目 8。3行目は上から `a2635433740012bde73d665c65889a71c4557c69`・`8ac4490f3893c3e1b1dc73934f55866f76e0e319`・`dd673984cd00033d9e859be352c4742833b97c6a`・`33efe1087f87cb90f61cd0983bc7de3b2983d823`・`284ea2bf4ac3fe88d5f1ff0e5234baea075211d3`。4〜6行目 1。7行目は2ファイルとも `:0`。8〜13行目 1。14行目は2ファイルとも `:1`。15〜18行目 1。
 
 手順D3 §2 の変更をする（2-1 から順に。新規の 8 ファイルと全部書き換えの 5 ファイルは Write ツールで全文、2-14〜2-17 は Edit ツール）
@@ -3206,9 +3218,12 @@ import { InvoicePaymentPicker } from "./InvoicePaymentPicker";
     cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && npx tsc -b 2>&1 | tail -30
   期待: 1本目は終了 0（`src/api/generated/schema.d.ts` を作る。.gitignore の生成物なので commit しない。CI の frontend-check.yml も tsc の前に同じことをする）。2本目は何も出ない（終了 0）。
 
-手順D6 言葉と画面の決まりの点検
+手順D6 言葉と画面の決まりの点検（2本目は、記録の前の自動点検 lint-staged と同じ点検を、§1 の .ts/.tsx の 15 ファイルに先に流すもの）
     cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && npm run check:all 2>&1 | tail -30
-  期待: 最後まで通り、失敗の行が無い（終了 0）。
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && npx eslint --max-warnings=0 src/lib/invoiceDraftContext.ts src/lib/invoiceDraftContext.test.ts src/pages/invoice-create/useInvoicePreview.ts src/pages/invoice-create/InvoiceShipToSection.tsx src/pages/invoice-create/InvoicePaymentTotalsSection.tsx src/pages/invoice-create/InvoiceCreatePage.tsx src/pages/invoice-create/InvoiceCreatePage.test.tsx src/pages/invoice-detail/InvoicePaymentPicker.tsx src/pages/invoice-detail/InvoicePaymentPicker.test.tsx src/pages/invoice-detail/InvoiceDetailPage.tsx src/features/secretary/SecretaryDraftInvoice.tsx src/features/secretary/SecretaryChat.test.tsx src/components/FedExRateModal.tsx src/components/FedExRateModal.test.tsx src/components/BillToCountryGuidance.test.tsx 2>&1 | tail -30; echo "eslint exit=${PIPESTATUS[0]}"
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && node scripts/check-jsx-emoji.js src/pages/invoice-create/InvoiceShipToSection.tsx src/pages/invoice-create/InvoicePaymentTotalsSection.tsx src/pages/invoice-create/InvoiceCreatePage.tsx src/pages/invoice-detail/InvoicePaymentPicker.tsx src/pages/invoice-detail/InvoiceDetailPage.tsx src/features/secretary/SecretaryDraftInvoice.tsx src/components/FedExRateModal.tsx 2>&1 | tail -10; echo "emoji exit=${PIPESTATUS[0]}"
+  期待: 1本目は最後まで通り、失敗の行が無い（終了 0）。2本目は問題の行が無く `eslint exit=0`（警告 1 件でも記録が止まる）。3本目は `emoji exit=0`。
+  2本目・3本目で止まったら、直さずに出力を貼って `BLOCKED: 手順D6 lint`（カードからの書き写し間違いだと出力から分かるときだけ直してよい）。手順D10 の commit は記録の前に同じ点検をもう一度流す（frontend/.husky/pre-commit → lint-staged）。
 
 手順D7 新しい試験と、触ったファイルの試験
     cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && npx vitest run --config vitest.unit.config.ts --project unit src/lib/invoiceDraftContext.test.ts src/pages/invoice-create/InvoiceCreatePage.test.tsx src/pages/invoice-detail/InvoicePaymentPicker.test.tsx 2>&1 | tail -25
