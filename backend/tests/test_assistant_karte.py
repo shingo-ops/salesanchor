@@ -102,8 +102,12 @@ def test_settle_dates_all_day_end_equals_start_and_end_before_start_is_cleared()
     assert settle_dates(_ev(title="t", start=S, is_all_day=True)).end == S
     assert settle_dates(_ev(title="t", start=S, end="2026-11-02T09:00:00+09:00")).end is None
     assert settle_dates(_ev(title="t", start=S)).end is None
-    with pytest.raises(ValueError):
-        settle_dates(_ev(title="t", start="あした"))
+    # fix1: 時刻として読めない文字は null（例外を出さない）
+    assert settle_dates(_ev(title="t", start="あした")).start is None
+    assert settle_dates(_ev(title="t", start="あした", end=E)).end == E
+    assert settle_dates(_ev(title="t", start=S, end="わからない")).end is None
+    # 片方だけ時差の印が無く比べられないときは終わりを null
+    assert settle_dates(_ev(title="t", start=S, end="2026-11-02T11:00:00")).end is None
 
 
 # ---- merge_karte -----------------------------------------------------------------
@@ -219,12 +223,33 @@ async def test_end_before_start_is_cleared_and_asked(allowed, monkeypatch, meet)
 
 
 @pytest.mark.asyncio
-async def test_unreadable_start_on_new_path_is_502(allowed, monkeypatch, meet):
+async def test_unreadable_start_on_new_path_is_200_and_asks_start(allowed, monkeypatch, meet):
     meet(False)
     _mock_agent(monkeypatch, _respond(200, _event(title="t", start="あした")))
     resp = await allowed.post(URL, json={"text": "a", "karte": None})
-    assert resp.status_code == 502
-    assert resp.json()["detail"] == {"code": "unreadable"}
+    assert resp.status_code == 200, resp.text
+    d = resp.json()["draft"]
+    assert (d["title"], d["start"], d["ask"], d["ask_count"]) == ("t", None, "start", 1)
+
+
+@pytest.mark.asyncio
+async def test_unreadable_end_after_two_asks_shows_final_draft(allowed, monkeypatch, meet):
+    # fix1 F1: T10 の 3 通目。AI が終わりに「わからない」の文字を入れても確かめの欄（ask null・終わり空）
+    meet(False)
+    karte = _karte(title="棚卸し", start=S, asked="end", asked_count=1)
+    _mock_agent(monkeypatch, _respond(200, _event(end="うーん")))
+    resp = await allowed.post(URL, json={"text": "うーん", "karte": karte})
+    assert resp.status_code == 200, resp.text
+    d = resp.json()["draft"]
+    assert (d["ask"], d["ask_count"], d["end"]) == ("end", 2, None)
+    karte["asked_count"] = 2
+    _mock_agent(monkeypatch, _respond(200, _event(end="わからない")))
+    resp = await allowed.post(URL, json={"text": "わからない", "karte": karte})
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["kind"] == "event"
+    d = data["draft"]
+    assert (d["ask"], d["end"], d["title"], d["start"]) == (None, None, "棚卸し", S)
 
 
 @pytest.mark.asyncio

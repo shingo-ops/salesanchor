@@ -36,22 +36,36 @@ def merge_karte(ev: IntentEvent | None, karte: KarteIn) -> IntentEvent:
     return IntentEvent(**values)
 
 
-def settle_dates(ev: IntentEvent) -> IntentEvent:
-    """日時の検査（design.md §4-3 ⑤）。読めなければ ValueError / TypeError をそのまま出す（呼ぶ側が 502）。
+def _readable_time(value: str | None) -> str | None:
+    """時刻として読めない文字は null にする（fix1/design.md §3。AI が「わからない」を時刻の欄に入れる場合）。"""
+    if value is None:
+        return None
+    try:
+        parse_iso(value)
+    except ValueError:
+        return None
+    return value
 
-    終日で終わりが空なら終わり＝始まり。終わり < 始まりなら終わりを null に戻す（もう一度聞く）。+1 時間は足さない。
+
+def settle_dates(ev: IntentEvent) -> IntentEvent:
+    """日時の検査（design.md §4-3 ⑤・fix1/design.md §3）。例外は出さない。
+
+    始まり・終わりが時刻として読めなければ null に戻す（もう一度聞く）。終日で終わりが空なら終わり＝始まり。
+    終わり < 始まり、または片方だけ時差の印が無く比べられなければ、終わりを null に戻す。+1 時間は足さない。
     """
-    if ev.start is None:
-        if ev.end is not None:
-            parse_iso(ev.end)
-        return ev
-    start = parse_iso(ev.start)
-    end_text = ev.end
+    start_text = _readable_time(ev.start)
+    end_text = _readable_time(ev.end)
+    if start_text is None:
+        return ev.model_copy(update={"start": None, "end": end_text})
     if ev.is_all_day and end_text is None:
-        end_text = ev.start
-    if end_text is not None and parse_iso(end_text) < start:
-        end_text = None
-    return ev.model_copy(update={"end": end_text})
+        end_text = start_text
+    if end_text is not None:
+        try:
+            if parse_iso(end_text) < parse_iso(start_text):
+                end_text = None
+        except TypeError:
+            end_text = None
+    return ev.model_copy(update={"start": start_text, "end": end_text})
 
 
 def next_ask(ev: IntentEvent, meet_available: bool, asked: str | None, asked_count: int) -> tuple[str | None, int]:
