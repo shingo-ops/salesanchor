@@ -81,7 +81,7 @@ _OTHER_DATE_WORDS = re.compile(
 _DATE_MODIFIERS = re.compile(
     r"明け|開け|末|旬|初め|始め|頭|半ば|次|翌|(?<!午)前|(?<![午明])後|過ぎ|以降|以前|以外|以内|以来|最初|最後|年内|月内|週内|"
     r"ついたち|ふつか|みっか|よっか|いつか|むいか|なのか|ようか|ここのか|とおか|はつか|みそか|つごもり|晦|朔|"
-    r"ではなく|じゃなく|でなく|除|抜き|違|別の日|別日|都合|正月|盆|連休|休み|祝|年度|期|元旦|元日|締|〆"
+    r"ではなく|じゃなく|でなく|除|抜き|違|別の日|別日|都合|だめ|ダメ|駄目|無理|ほか|他の日|つぎ|正月|盆|連休|休み|祝|年度|期|元旦|元日|締|〆"
 )
 _MONTH_DAY = re.compile(r"(\d{1,2})\s*月\s*(\d{1,2})\s*日")
 _DAY_ONLY = re.compile(
@@ -166,7 +166,8 @@ def _resolve(text: str, today: date) -> tuple[date, str | None] | None:
         found.append((_month_day(today, int(m.group(1)), int(m.group(2))), None))
     s = _MONTH_DAY.sub("〓", s)
     for m in _DAY_ONLY.finditer(s):
-        if not _bounded(s, m):
+        # 〇日だけの言い方は文の頭にあるときだけ。前に語があれば（「クリスマスは25日」など）AI の読んだ日付のまま（design.md §3-2）
+        if s[: m.start()].strip() or not _bounded(s, m):
             return None
         found.append((_day_only(today, int(m.group(1))), "day"))
     s = _DAY_ONLY.sub("〓", s)
@@ -583,6 +584,13 @@ def test_table_examples(text, today, expected):
         "来週の月曜の前日",
         "月曜は都合が悪いので別の日で",
         "月曜は別日で",
+        "月曜はだめ、ほかの日の10時",  # 打ち消し・言い替えの語（だめ・ほか・つぎ など）
+        "月曜、つぎの日 10時から会議",
+        "月曜は無理",
+        "クリスマスは25日 19時からパーティー",  # 〇日だけの言い方の前に語がある（design.md §3-2）
+        "仕事納めは28日 17時から納会",
+        "新年会は8日 18時から",
+        "打ち合わせは25日 10時",
         "11月31日",  # あり得ない日付
         "2月30日",
         "31日",  # 11 月 31 日は無い（今日 11/15）
@@ -687,6 +695,15 @@ def test_apply_bare_weekday_far_keeps_end():
     ev = IntentEvent(start="2026-11-16T13:00:00+09:00", end="2026-11-24T14:00:00+09:00")
     karte = KarteIn(start="2026-11-16T13:00:00+09:00", asked="end", asked_count=1)
     assert apply_day(ev, "火曜の14時まで", SUN, karte) == ev
+
+
+def test_apply_day_after_words_keeps_ai_date():
+    # 〇日だけの言い方は文の頭にあるときだけ替える（design.md §3-2）
+    ev = IntentEvent(start="2026-12-25T19:00:00+09:00", end=None)
+    assert apply_day(ev, "クリスマスは25日 19時からパーティー", SUN, None) == ev
+    ev = IntentEvent(start="2026-11-16T13:00:00+09:00", end="2026-12-28T17:00:00+09:00")
+    karte = KarteIn(start="2026-11-16T13:00:00+09:00", asked="end", asked_count=1)
+    assert apply_day(ev, "仕事納めは28日 17時まで", SUN, karte) == ev
 
 
 def test_apply_without_date_words_changes_nothing():
@@ -798,7 +815,7 @@ def _fixed_now(monkeypatch):
 
 - (6a) `cd "$REPO/backend" && uv run --no-project --python 3.12 --with ruff ruff check app/ > /tmp/CC報告ファイル/ruff.txt 2>&1; echo "exit=$?"` → exit=0（CI と同じ範囲。`.github/workflows/test.yml:92`。試験のファイルは CI の ruff の対象外）
 - (6b) `cd "$REPO/backend" && uv run --no-project --python 3.12 --with ruff ruff format --check app/services/secretary_dates.py > /tmp/CC報告ファイル/ruff-format.txt 2>&1; echo "exit=$?"` → exit=0。落ちたら `ruff format app/services/secretary_dates.py` で整え、整えた差分を報告に貼る（中身は変えない）。`app/routers/assistant.py` は元から整っていない行（:373-374）があるので format をかけない。
-- (6c) `cd "$REPO/backend" && ENVIRONMENT=test uv run --no-project --python 3.12 --with-requirements requirements.txt --with-requirements requirements-dev.txt python -m pytest --no-cov tests/test_secretary_dates.py tests/test_assistant_router.py tests/test_assistant_karte.py tests/test_assistant_rules_router.py tests/test_assistant_karte_pg.py -q > /tmp/CC報告ファイル/pytest.txt 2>&1; echo "exit=$?"` → exit=0。最後の 1 行（passed・skipped の数）を報告に貼る。続けて同じ形で `tests/test_secretary_dates.py` だけを流し（保存先 `/tmp/CC報告ファイル/pytest-dates.txt`）、最後の 1 行を貼る（期待 462 passed）。
+- (6c) `cd "$REPO/backend" && ENVIRONMENT=test uv run --no-project --python 3.12 --with-requirements requirements.txt --with-requirements requirements-dev.txt python -m pytest --no-cov tests/test_secretary_dates.py tests/test_assistant_router.py tests/test_assistant_karte.py tests/test_assistant_rules_router.py tests/test_assistant_karte_pg.py -q > /tmp/CC報告ファイル/pytest.txt 2>&1; echo "exit=$?"` → exit=0。最後の 1 行（passed・skipped の数）を報告に貼る。続けて同じ形で `tests/test_secretary_dates.py` だけを流し（保存先 `/tmp/CC報告ファイル/pytest-dates.txt`）、最後の 1 行を貼る（期待 470 passed）。
 - (6d) `cd "$REPO" && git diff --check > /tmp/CC報告ファイル/diff-check.txt 2>&1; echo "exit=$?"` → exit=0
 - (6e) `cd "$REPO" && git status --short` を報告に貼る。変わるのは `backend/app/routers/assistant.py`・`backend/tests/test_assistant_karte.py`（変更）と `backend/app/services/secretary_dates.py`・`backend/tests/test_secretary_dates.py`（新規）の 4 つだけ。
 - (6a)〜(6c) が手順書の書き損じ（import の並び・未使用の名前・行の長さ）で落ちたら、その書き損じだけ直し、直した所を報告に書く。試験の期待の日付を変えないと通らないとき、または手順書と違う作りに変えないと通らないときは `NEEDS_DECISION:` で止まる（期待の日付は PO 承認の決まりの表なので変えない）。
