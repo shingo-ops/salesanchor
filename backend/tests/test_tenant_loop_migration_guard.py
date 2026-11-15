@@ -129,6 +129,11 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
         "",
         frozenset({"20261115_100000_add_payment_method_versioning.sql"}),
     ),
+    "test_duty_rules_router.py": (
+        "text_only",
+        "基準の並びを表の CHECK の文字と照合するだけ（test_duty_bases_match_migration_check）。流さない",
+        frozenset({"20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql"}),
+    ),
     "test_notification_channels_blueprint_key_ddl.py": (
         "text_only",
         "文字として読むだけ",
