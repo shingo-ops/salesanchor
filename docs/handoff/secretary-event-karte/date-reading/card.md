@@ -74,6 +74,8 @@ _JST_OFFSET = timedelta(hours=9)
 _OTHER_DATE_WORDS = re.compile(
     r"\d+\s*年|再来年|来年|今年|去年|昨年|月末|月初|週末|年末|年始|再来月|来月|今月|先月|翌日|翌週|前日|先週|一昨日|昨日|おととい|きのう|"
     r"今夜|今晩|今宵|今朝|今夕|明朝|明晩|明夕|昨夜|昨晩|今から|これから|当日|近日|今度|近々|平日|土日|"
+    r"あす|あくる|明くる|みょうにち|こんや|こんばん|けさ|このあと|あとで|のちほど|すぐ|ただちに|直ちに|即日|深夜|未明|夜中|"
+    r"いまから|いますぐ|今のうち|いまのうち|クリスマス|イブ|"
     r"毎|隔週|第\s*[\d一二三四五六七八九十]|\d+\s*日\s*(?:中|\d+\s*(?:回|時間)|あたり|当たり|おき|ごと)|\d+\s*日\s*に\s*(?:わた|渡|またが|跨|分け|分割|[\d一二三四五六七八九十]+\s*(?:回|度|件))|"
     r"(?:丸|まる)\s*\d+\s*日|\d+\s*日\s*の?\s*(?:延長|猶予|日程|遅れ|遅延|期間|休暇)|\d+\s*泊|\d+\s*(?:日|週間?|か月|ヶ月|カ月|ヵ月)\s*(?:後|前|間)"
 )
@@ -84,6 +86,15 @@ _DATE_MODIFIERS = re.compile(
     r"ついたち|ふつか|みっか|よっか|いつか|むいか|なのか|ようか|ここのか|とおか|はつか|みそか|つごもり|晦|朔|"
     r"ではなく|じゃなく|でなく|除|抜き|違|別の日|別日|都合|だめ|ダメ|駄目|無理|ほか|他の日|つぎ|正月|盆|連休|休み|祝|年度|期|元旦|元日|締|〆"
 )
+# 理由や前置きの句をつなぐ形。文のどこかに 1 つでもあれば AI の読んだ日付のまま（design.md §3-1 (1b)・§11-14）
+# 「今日は終日外出なので、あす10時」「明日は出張です。あとで電話」のように、別の句に一覧に無い日付の言葉が入りうる
+_CLAUSE_LINK = re.compile(
+    r"ので|ため|だから|から\s*[、,]|けど|けれど|が\s*[、,]|で\s*[、,]|(?:です|ます|でした|ました)\s*[。.!?]\s*\S"
+)
+# 言い方の後ろが「は・も・が」＋朝・昼・夕方・夜・終日（その日の様子を言う形）のとき、
+# その先に句読点と続きの文があれば AI の読んだ日付のまま（「明日は朝から出張。このあと30分」。design.md §3-1 (1b)）
+_STATE_AFTER = re.compile(r"\s*[はもが]\s*(?:朝|昼|夕方|夜|終日)")
+_BREAK_THEN_MORE = re.compile(r"[、,。.!?]\s*\S")
 _MONTH_DAY = re.compile(r"(\d{1,2})\s*月\s*(\d{1,2})\s*日")
 _DAY_ONLY = re.compile(
     r"(?<![月\d])(\d{1,2})\s*日(?=\s*(?:$|\d|まで|から|ごろ|頃|午前|午後|朝|昼|夕方|夜|[のにはも、。,.!?]))"
@@ -152,6 +163,8 @@ def _bounded(s: str, m: re.Match[str]) -> bool:
     """数える言い方 m の前後が、文の始め・終わり・空白・句読点・決まった助詞と時刻だけか。"""
     if m.start() > 0 and s[m.start() - 1] not in _BEFORE_OK and not s[m.start() - 1].isspace():
         return False
+    if _STATE_AFTER.match(s, m.end()) and _BREAK_THEN_MORE.search(s, m.end()):
+        return False
     return _AFTER_OK.match(s, m.end()) is not None
 
 
@@ -161,7 +174,7 @@ def _resolve(text: str, today: date) -> tuple[date, str | None] | None:
     守りの種類: "day" は〇日だけの言い方、"weekday" は「来週」などの付かない〇曜だけの言い方、None は守りなし。
     """
     s = unicodedata.normalize("NFKC", text)
-    if _OTHER_DATE_WORDS.search(s) or _DATE_MODIFIERS.search(s):
+    if _OTHER_DATE_WORDS.search(s) or _DATE_MODIFIERS.search(s) or _CLAUSE_LINK.search(s):
         return None
     found: list[tuple[date | None, str | None]] = []
     for m in _MONTH_DAY.finditer(s):
@@ -472,6 +485,9 @@ def test_bare_weekday_is_nearest_from_tomorrow(today, wd):
         ("会議は明日の朝", date(2026, 11, 15), date(2026, 11, 16)),
         ("明後日の午後3時", date(2026, 11, 15), date(2026, 11, 17)),  # 「午後」「明後日」の「後」は言い直しの語に当てない
         ("明日の午前10時", date(2026, 11, 15), date(2026, 11, 16)),
+        # その日の様子を言う形でも、続きの句が無ければ数える（design.md §3-1 (1b)・§11-14）
+        ("明日は朝10時から会議", date(2026, 11, 15), date(2026, 11, 16)),
+        ("明日は終日 展示会", date(2026, 11, 15), date(2026, 11, 16)),
     ],
 )
 def test_table_examples(text, today, expected):
@@ -608,6 +624,22 @@ def test_table_examples(text, today, expected):
         "今日は夜まで仕事なので、明晩19時から食事",
         "月曜は朝から外出なので今朝のうちに電話",
         "明日は終日外出なので当日の連絡は不要、今度の金曜10時",
+        # 審査 14 回目 §11-14: 理由や前置きの句の後ろに一覧に無い日付の言葉が続く
+        "今日は終日外出なので、あす10時に会議",
+        "今日は夜まで外出です。あす10時に会議",
+        "今日は夜まで外出だから、あす10時に会議",
+        "明日は朝から出張で、このあと30分打ち合わせ",
+        "明日は終日外出なので、あとで電話",
+        "明日は朝から出張だから、すぐ電話",
+        "明日は朝から出張。このあと30分打ち合わせ",
+        "明日は朝から出張です。あとで電話ください",
+        "明日は朝から出張なので、クリスマスに会議",
+        "今日は夜まで外出なので、あくる日の朝9時",
+        "明日は朝から出張 このあと30分打ち合わせ",
+        "明日は終日外出、いまから電話",
+        "明日は10時に出社なので、すぐ電話",
+        "明日は朝から出張。北風商会へ電話",
+        "今日は夜まで外出。みょうにち10時に会議",
         "25日はクリスマス会 19時から",  # 言い方の後ろの「は・も・を・が・、」・空白に、時刻でない語が続く（design.md §3-1 (2)）
         "28日は仕事納め、17時から納会",
         "8日は新年会 18時から",
@@ -847,7 +879,7 @@ def _fixed_now(monkeypatch):
 
 - (6a) `cd "$REPO/backend" && uv run --no-project --python 3.12 --with ruff ruff check app/ > /tmp/CC報告ファイル/ruff.txt 2>&1; echo "exit=$?"` → exit=0（CI と同じ範囲。`.github/workflows/test.yml:92`。試験のファイルは CI の ruff の対象外）
 - (6b) `cd "$REPO/backend" && uv run --no-project --python 3.12 --with ruff ruff format --check app/services/secretary_dates.py > /tmp/CC報告ファイル/ruff-format.txt 2>&1; echo "exit=$?"` → exit=0。落ちたら `ruff format app/services/secretary_dates.py` で整え、整えた差分を報告に貼る（中身は変えない）。`app/routers/assistant.py` は元から整っていない行（:373-374）があるので format をかけない。
-- (6c) `cd "$REPO/backend" && ENVIRONMENT=test uv run --no-project --python 3.12 --with-requirements requirements.txt --with-requirements requirements-dev.txt python -m pytest --no-cov tests/test_secretary_dates.py tests/test_assistant_router.py tests/test_assistant_karte.py tests/test_assistant_rules_router.py tests/test_assistant_karte_pg.py -q > /tmp/CC報告ファイル/pytest.txt 2>&1; echo "exit=$?"` → exit=0。最後の 1 行（passed・skipped の数）を報告に貼る。続けて同じ形で `tests/test_secretary_dates.py` だけを流し（保存先 `/tmp/CC報告ファイル/pytest-dates.txt`）、最後の 1 行を貼る（期待 497 passed）。
+- (6c) `cd "$REPO/backend" && ENVIRONMENT=test uv run --no-project --python 3.12 --with-requirements requirements.txt --with-requirements requirements-dev.txt python -m pytest --no-cov tests/test_secretary_dates.py tests/test_assistant_router.py tests/test_assistant_karte.py tests/test_assistant_rules_router.py tests/test_assistant_karte_pg.py -q > /tmp/CC報告ファイル/pytest.txt 2>&1; echo "exit=$?"` → exit=0。最後の 1 行（passed・skipped の数）を報告に貼る。続けて同じ形で `tests/test_secretary_dates.py` だけを流し（保存先 `/tmp/CC報告ファイル/pytest-dates.txt`）、最後の 1 行を貼る（期待 514 passed）。
 - (6d) `cd "$REPO" && git diff --check > /tmp/CC報告ファイル/diff-check.txt 2>&1; echo "exit=$?"` → exit=0
 - (6e) `cd "$REPO" && git status --short` を報告に貼る。変わるのは `backend/app/routers/assistant.py`・`backend/tests/test_assistant_karte.py`（変更）と `backend/app/services/secretary_dates.py`・`backend/tests/test_secretary_dates.py`（新規）の 4 つだけ。
 - (6a)〜(6c) が手順書の書き損じ（import の並び・未使用の名前・行の長さ）で落ちたら、その書き損じだけ直し、直した所を報告に書く。試験の期待の日付を変えないと通らないとき、または手順書と違う作りに変えないと通らないときは `NEEDS_DECISION:` で止まる（期待の日付は PO 承認の決まりの表なので変えない）。
