@@ -25,7 +25,7 @@
 - 読み書きとも運用者の旗が要る（同 :98-103）。アプリのロールは SELECT と INSERT だけ（同 :122-124）。
 - 出来事を書く SQL は保守の口に 1 つだけある: `_INSERT_EVENT_SQL`（`backend/app/routers/ops.py:195-198`）。出来事の表に書くコードは今この 1 ファイルだけ（`git grep ops_incident_events -- backend/app` で ops.py 以外 0 件）。
 - 伏せた窓のビューでは、kind は「値の決まり ops_incident_events_kind_check で値が限られる」理由で見せ、actor と detail は伏せる（`migrations/20261024_100300_create_ai_cloud_views.sql:164-165`）。決まりの名前を変えなければ、この理由はそのまま正しい。
-- 伏せた窓のビューを作る範囲は public と tenant_* だけで、ops_case は入らない（`migrations/20261024_100000_create_ai_cloud_meta.sql:85`）。報告の表に列を足しても、伏せる分類（1151 行）は変わらない。
+- 伏せた窓のビューを作る範囲は public と tenant_* だけで、ops_case は入らない（`migrations/20261024_100000_create_ai_cloud_meta.sql:85`）。報告の表に列を足しても、伏せる分類の行数は変わらない（2b を作る時点の origin/main 65a2bb376 で 1162 行。2a の審査のときは 1151 行で、その後に別の便がテナントの表に列を足して増えた）。
 
 本番への出し方（ここが便を 2 つに分ける理由）:
 - 本番反映では、先に backend を入れ替え（`.github/workflows/deploy.yml:497-498` の blue-green）、そのあとで移行を流す（同 :840-857）。新しいコードが、古い表の上で数分動く。
@@ -92,7 +92,7 @@ PO は案 A に決めた（2026-11-14）。以下は案 A で書く。（参考:
 
 ## 5. 作り方
 
-ファイルの名前の時刻は、作る時点の `migrations/` で一番新しいものより後ろにする（今の最後は 20261113_100001。`scripts/run_all_migrations.sh:1271-1272`）。下の名前はその例。2b の時刻は 2a より後ろ。
+ファイルの名前の時刻は、作る時点の `migrations/` で一番新しいものより後ろにする（2a を作ったときの最後は 20261113_100001。`scripts/run_all_migrations.sh:1271-1272`）。下の名前はその例。2b の時刻は 2a より後ろ。2b を作る時点（origin/main 65a2bb376）の最後は 20261115_100000 なので、2b の 2 つのファイルの名前はそれより後ろにし、§6 の 2 行目のとおり全部の名前をそろえる。
 
 ### 5-2a 表だけ足す（ブランチ release/ai-ops-stage4-bin2a）
 
@@ -362,7 +362,7 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
 | `from app.routers.ops import _INSERT_EVENT_SQL` で読み込みの輪のエラー | 止まる。SQL を写して 2 つ目を作らない |
 | 2b の試験で、出来事を書くところが incident_id の型のエラーで失敗する | 名前と生の出力を出して止まる。`_INSERT_EVENT_SQL` に CAST を足したり、SQL を写したりして直さない |
 | openapi.json の差分が kind 以外にも出る | 止まる。手で書き換えない |
-| 伏せた窓の分類の試験（`backend/tests/ops/test_ai_cloud_views.py:486` の 1151）が変わる | 止まる（public に列を足していないはずのため） |
+| 伏せた窓の分類の試験（`backend/tests/ops/test_ai_cloud_views.py:486` の数。origin/main 65a2bb376 で 1162）が変わる | 止まる（public に列を足していないはずのため） |
 | 移行の 2 回目の流しで失敗 | 止まる |
 | CI の「前提の移行を先に実行」の手順（§5-2a（６）・§5-2b（１０））で前提のファイルが失敗 | 名前と生の出力を出して止まる。前提のファイルは変えない |
 | CI で戻しのファイル（200001・210001）の 1 回目か 2 回目の流しが失敗 | 名前と生の出力を出して止まる |
@@ -391,7 +391,7 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
 | 報告 1 通ごとに出来事が 1 行、detail は報告の id だけ | 2b の新しい試験（D4 の見張り）。本番は §7 |
 | 報告と出来事は一緒に残るか、一緒に残らないか | 2b の新しい試験（出来事が書けないと 503・報告 0 行） |
 | 誰が書いたかが正しい（案 A） | 出来事の actor が case_agent（試験と本番の §7） |
-| 伏せた窓の分類が変わらない | `backend/tests/ops/test_ai_cloud_views.py` が緑（1151 のまま） |
+| 伏せた窓の分類が変わらない | `backend/tests/ops/test_ai_cloud_views.py` が緑（作る時点の origin/main の数のまま。65a2bb376 で 1162） |
 | 戻し方が書いてあり、流せる | 戻しのファイル 2 つ。§9 |
 | 触ったファイルが §2 の範囲だけ | `git diff --name-only origin/main...HEAD` を Opus が読む |
 
