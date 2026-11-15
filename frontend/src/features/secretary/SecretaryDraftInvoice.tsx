@@ -1,12 +1,29 @@
 /**
  * 請求書の下書き（ADR-1056 段2）。送る欄は全部見せて、全部直せる。
  * 「作る」は今の請求書の作成画面と同じ口 POST /invoices を、本人のログインで呼ぶ。
+ *
+ * invoice-create-portfolio 便D（design.md §3-2）: 通貨と支払方法の候補は請求書の材料
+ * （GET /invoices/draft-context）から出す（直書きしない）。チャットでは送料の見積を出さないので、
+ * 「送料を請求しない」に人がチェックしたときだけ作れる。送料を付けるときは請求書の作成画面で作る。
  */
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery } from "../../lib/query/apiQuery";
+import {
+  PAYMENT_METHOD_LABEL_KEYS,
+  currencyChoices,
+  draftContextPath,
+  effectivePaymentKey,
+  paymentChoicesFor,
+  paymentKey,
+  paymentRefFromKey,
+  resolveCurrency,
+  type DraftContext,
+} from "../../lib/invoiceDraftContext";
 import { Button } from "../../components/Button";
+import { Checkbox } from "../../components/Checkbox";
 import { Select } from "../../components/Select";
 import { TextField } from "../../components/TextField";
 import { Textarea } from "../../components/Textarea";
@@ -27,8 +44,6 @@ interface ItemState {
   quantity: string;
   unitPrice: string;
 }
-
-const CURRENCIES = ["JPY", "USD", "EUR"] as const;
 
 /** 数は整数で 1 以上（口は int・ge=1） */
 function isValidQuantity(value: string): boolean {
@@ -55,7 +70,10 @@ export function SecretaryDraftInvoice({ draft, candidates, onCreated, onCancel }
       unitPrice: i.unit_price === null ? "" : String(i.unit_price),
     })),
   );
-  const [currency, setCurrency] = useState<string>(draft.currency || "JPY");
+  // 秘書が読んだ通貨。使う通貨は材料の候補にあるときだけ（resolveCurrency）。
+  const [currencyChoice, setCurrencyChoice] = useState<string>(draft.currency ?? "");
+  const [paymentChoice, setPaymentChoice] = useState("");
+  const [shippingNone, setShippingNone] = useState(false);
   const [dueDate, setDueDate] = useState(draft.due_date ?? "");
   const [notes, setNotes] = useState(draft.notes ?? "");
   const [changing, setChanging] = useState(false);
@@ -79,7 +97,21 @@ export function SecretaryDraftInvoice({ draft, candidates, onCreated, onCancel }
   const priceMissing = items.some((i) => i.unitPrice.trim() === "");
   const priceTooPrecise = items.some((i) => hasTooManyDecimals(i.unitPrice));
   const customerReady = customer.companyId !== null && customer.contactId !== null;
-  const canCreate = itemsValid && customerReady && !saving;
+
+  // 請求書の材料（会社と担当者が決まったときだけ取りに行く）
+  const ctxQ = useApiQuery<DraftContext>(
+    customerReady ? draftContextPath(customer.companyId as number, customer.contactId) : "/invoices/draft-context",
+    { enabled: customerReady },
+  );
+  const rawCtx: unknown = ctxQ.data;
+  const ctx = customerReady && rawCtx !== null && typeof rawCtx === "object" && !Array.isArray(rawCtx) ? (rawCtx as DraftContext) : null;
+  const currencyOptions = currencyChoices(ctx);
+  const currency = resolveCurrency(ctx, currencyChoice);
+  const paymentChoices = paymentChoicesFor(ctx, currency);
+  const paymentValue = effectivePaymentKey(paymentChoices, paymentChoice);
+  const paymentReady = paymentChoices.length === 0 || paymentValue !== "";
+  const canCreate =
+    itemsValid && customerReady && ctx !== null && ctx.issuer_region !== null && currency !== "" && paymentReady && shippingNone && !saving;
 
   const updateItem = (index: number, patch: Partial<ItemState>) =>
     setItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)));
@@ -93,6 +125,8 @@ export function SecretaryDraftInvoice({ draft, candidates, onCreated, onCancel }
         company_id: customer.companyId,
         contact_id: customer.contactId,
         currency,
+        shipping: { mode: "none" },
+        payment_method_ref: paymentRefFromKey(paymentChoices, paymentValue),
         due_date: dueDate || null,
         notes: notes || null,
         items: items.map((i) => ({
@@ -121,9 +155,10 @@ export function SecretaryDraftInvoice({ draft, candidates, onCreated, onCancel }
             fullWidth
             label={t("secretary.invoice.contact")}
             value={customer.contactId === null ? "" : String(customer.contactId)}
-            onChange={(e) =>
-              setCustomer({ companyId: customer.companyId, contactId: e.target.value ? Number(e.target.value) : null })
-            }
+            onChange={(e) => {
+              setPaymentChoice("");
+              setCustomer({ companyId: customer.companyId, contactId: e.target.value ? Number(e.target.value) : null });
+            }}
             placeholder={t("companyContactSelector.selectContact")}
             options={candidates.contacts.map((c) => ({ value: String(c.id), label: c.name }))}
           />
@@ -135,7 +170,7 @@ export function SecretaryDraftInvoice({ draft, candidates, onCreated, onCancel }
         <div className="secretary-draft__section">
           <CompanyContactSelector
             value={customer}
-            onChange={setCustomer}
+            onChange={(next) => { setPaymentChoice(""); setCustomer(next); }}
             companies={selectorCompanies}
           />
         </div>
@@ -182,12 +217,44 @@ export function SecretaryDraftInvoice({ draft, candidates, onCreated, onCancel }
       </div>
 
       <div className="secretary-draft__section">
+        {ctx !== null && ctx.issuer_region === null && (
+          <p className="secretary-draft__hint" data-testid="secretary-invoice-bill-to">{t("apiError.billToCountry")}</p>
+        )}
         <Select
           fullWidth
+          required
           label={t("secretary.invoice.currency")}
           value={currency}
-          onChange={(e) => setCurrency(e.target.value)}
-          options={CURRENCIES.map((c) => ({ value: c, label: c }))}
+          onChange={(e) => { setCurrencyChoice(e.target.value); setPaymentChoice(""); }}
+          placeholder={t("invoiceForm.currencyPlaceholder")}
+          options={currencyOptions.map((c) => ({ value: c, label: c }))}
+          data-testid="secretary-invoice-currency"
+        />
+        {paymentChoices.length > 0 ? (
+          <Select
+            fullWidth
+            required
+            label={t("invoiceForm.payment")}
+            value={paymentValue}
+            onChange={(e) => setPaymentChoice(e.target.value)}
+            placeholder={t("invoiceForm.paymentPlaceholder")}
+            options={paymentChoices.map((p) => ({
+              value: paymentKey(p),
+              label: p.display_name !== null && p.display_name !== "" ? p.display_name : t(PAYMENT_METHOD_LABEL_KEYS[p.method_type]),
+            }))}
+            data-testid="secretary-invoice-payment"
+          />
+        ) : (
+          ctx !== null && ctx.issuer_region !== null && (
+            <p className="secretary-draft__hint" data-testid="secretary-invoice-no-payment">{t("invoiceForm.noPaymentMethods")}</p>
+          )
+        )}
+        <Checkbox
+          label={t("invoiceForm.shippingNone")}
+          description={t("secretary.invoice.shippingNoneHelp")}
+          checked={shippingNone}
+          onChange={(e) => setShippingNone(e.target.checked)}
+          data-testid="secretary-invoice-shipping-none"
         />
         <TextField
           fullWidth
