@@ -1722,6 +1722,13 @@ backend/tests/test_invoices_create_flow.py（SQLite。`pytestmark = pytest.mark.
 - F16 為替は表だけ（K13）: `monkeypatch.setattr("app.services.fx_rate.get_fx_rate", 呼ぶと例外を投げる関数)` のもとで、作成・見積から作成・発行が通る。PATCH に `exchange_rate_jpy`・`payment_method`（文字）を送ると 422、`payment_method_ref: null` を送ると 422 `payment_method`、発行済みの請求書に `{"notes": "x"}` を送ると 400「draft状態の請求書のみ編集できます」（K18・K23）。
 
 backend/tests/test_invoice_totals_pg.py（実 PostgreSQL。CI だけで動く。テナント 953。前例 backend/tests/test_duty_rules_pg.py の skip の決まり・テナントの作り方・後始末をそのまま使う。1 つの試験関数 `test_invoice_totals_pg_end_to_end` の中で順に確かめる）
+- G0 表の準備（共有の準備 `bootstrap_tenant_schema` は public.tax_rates・振込先の表・関税の表は作るが、次の 4 つの public の表は作らない）: `bootstrap_tenant_schema(admin_engine, 953)` の直後、G1 より前に、`async with public_bootstrap_lock(admin_engine):` と `async with admin_engine.begin() as conn:` の中で `_apply_migration_on_conn(conn, name)`（schema_name なし・backend/tests/rls_bootstrap.py から import）を次の順で流す。どれも本番と同じ migration で、何度流しても同じ結果になる（前例 backend/tests/test_permission_resolution_pg.py:107-108・backend/tests/test_llm_usage_outcome_filter_pg.py:45）。
+  1. `070_add_spreadsheet_phase.sql`（public.tenant_settings）
+  2. `20260604_050000_add_tenant_policy_columns.sql`（duty_incoterms・default_currency の列）
+  3. `20260610_071110_add_paypal_config.sql`（public.tenant_paypal_config）
+  4. `20260628_170000_add_app_fx_rates.sql`（public.app_fx_rates。5 の前提）
+  5. `20261003_100000_create_app_fx_rate_history.sql`（public.app_fx_rate_history）
+  G0 は後始末の `try` の外（前）に置く。表が無いまま後始末が動いて本当の失敗が隠れるのを防ぐ。
 - G1 読み方: public.tax_rates に試験の行（基準日 2100-01-01 の 9.00%。試験の後で消す）を入れ、`load_tax_row(db, date(2100, 1, 2))` が 9.00 を返し、`date(2099, 12, 31)` では前の行（無ければ None）になる。public.app_fx_rate_history に `ZZT`（試験だけの通貨）の 2 行（古い 100・新しい 120）を入れ、`load_latest_fx` の `ZZT` が 120。試験の後で ZZT の行と 2100 の行を消す。
 - G2 関税の行の読み方: テナント 953 に DDP の行（US・carrier NULL・2026-01-01〜2026-12-31・中身 2 つ）と止めた行（is_active false）を入れ、`load_duty_rules(db, 953, "US", date(2026, 12, 31))` が 1 行（止めた行は出ない・終わりの日を含む）・中身が sort_order 順。`date(2027, 1, 1)` で 0 行。
 - G3 新しいテナント（K22）: 953 のスキーマを backend/app/services/tenant.py の作り方（前例の PG 試験と同じ関数）で作り、`_INSERT_INVOICE_SQL` を `invoice_totals.to_db_params` の値で流して 1 行が入り、`SELECT {_INVOICE_COLUMNS} FROM tenant_953.invoices` が読め、`InvoiceDetailResponse` に入れられる。
@@ -1729,7 +1736,9 @@ backend/tests/test_invoice_totals_pg.py（実 PostgreSQL。CI だけで動く。
 - G5 版（K25 の便 C 側）: X を直す手順（design.md §3-8 の直す手順: 新しい行 Y と詳細を足し `UPDATE ... SET superseded_by_id = Y WHERE id = X AND superseded_by_id IS NULL AND deleted_at IS NULL`）の後、候補は Y だけ・X で `resolve_payment_ref` は PaymentMethodInvalid・`is_current_choice(X)` は False・`load_payment_version(X)` は X の口座番号を返す。
 - G6 draft-context の形（K24 の後半・K23）: 試験用の FastAPI の client を使わず、道の関数 `get_invoice_draft_context` を直接 await で呼ぶ（引数に db・tenant_id 953・current_user は None）。fx_rates の ZZT の fetched_at が "+00:00" で終わる。invoice_id を渡すと保存した issuer_region（domestic）で候補を返し、会社の請求先の国を US に変えた後も同じ候補。
 - G7 GET /fx-rate（K24）: `fetch_fx_rate("ZZT", db=db, ...)` を直接呼んで rate 120.0・fetched_at が "+00:00" で終わる。`"ZZQ"`（行なし）で HTTPException 503。`"JPY"` は rate 1.0・fetched_at None。`app.services.fx_rate.get_fx_rate` を呼ぶと例外を投げる関数に差し替えた上で行う。
-- G8 後始末: 入れた public の行（tax_rates 2100・app_fx_rate_history ZZT・必要なら tenant_settings 953）とテナント 953 のスキーマを消す（前例の後始末の書き方を写す。命令の文は前例と同じものを使う）。
+- G8 後始末: 入れた public の行（tax_rates 2100・app_fx_rate_history ZZT・必要なら tenant_settings 953）とテナント 953 のスキーマを消す（前例の後始末の書き方を写す。命令の文は前例と同じものを使う）。tenant_settings の 953 の行は、準備の順によって有る時も無い時もあるので、無くても失敗しない書き方（行を消す命令は 0 行でも通る）にする。
+- この試験ファイルは Write か Edit の道具で書く。Bash（python の heredoc・sed を含む）で書かない。後始末の命令の文が Bash の見張りに止められるため。
+- 実 PostgreSQL を手元で立てない（initdb・pg_ctl・createdb を使わない）。この試験は CI だけで動く。手順6 で skipped と出れば足りる。
 
 backend/tests/test_invoice_pdf_payment.py（DB なし。4 本。前例 test_invoices.py:676-750 の PDF の試験の書き方を写す）
 - 文字の取り方: `reportlab.pdfgen.canvas.Canvas.drawString` と `drawRightString` を、引数の文字を list に足してから元の関数を呼ぶ関数に monkeypatch で包み、`render_invoice_pdf` を呼んだ後の list を見る。
