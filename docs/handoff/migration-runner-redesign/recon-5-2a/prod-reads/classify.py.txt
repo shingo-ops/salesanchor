@@ -1,0 +1,73 @@
+"""q2-diff.md の組(A)「差の全件（147件）」を、Opus が決めた規則で4つに分ける（読むだけ・DBにつながない）。
+出力: 1行ごとの分け（tsv）と、分けごとの件数。規則に当たらない行は「未分類」として出す。"""
+import re
+import sys
+from collections import Counter
+
+src = open(sys.argv[1], encoding="utf-8").read().splitlines()
+start = next(i for i, l in enumerate(src) if l.startswith("## 差の全件（147件）"))
+rows = []
+for l in src[start + 1:]:
+    if l.startswith("## "):
+        break
+    if l.startswith("| ") and not l.startswith("| 種類") and not l.startswith("|---"):
+        cells = [c.strip() for c in l.strip().strip("|").split(" | ")]
+        rows.append(cells)
+
+BUDDY = ("badge_definitions", "buddy_pairs", "buddy_feedbacks", "user_badges")
+OLD_001_003 = {"idx_invoices_status", "idx_leads_assigned_to", "idx_leads_status", "leads_tenant_id_lead_code_key",
+               "idx_products_category", "idx_products_status", "idx_po_status", "idx_po_supplier", "idx_quotes_status",
+               "idx_shipping_rates_lookup", "idx_team_members_team", "idx_team_members_user", "idx_user_roles_user",
+               "fk_orders_invoice", "customer_code_seq", "deal_code_seq", "lead_code_seq", "leads.lead_code"}
+NAME_ONLY = {"companies_lead_id_fkey", "fk_companies_lead", "contacts_lead_id_fkey", "fk_contacts_lead",
+             "products_supplier_default_id_fkey", "fk_products_supplier_default"}
+TPL_ONLY_FK = {"deal_close_reasons_lead_id_fkey", "quotes_lead_id_fkey", "purchase_order_items_order_item_id_fkey",
+               "bots_owner_staff_id_fkey", "tenant_meta_config_connected_by_staff_id_fkey"}
+ADD = {"calendar_events.category", "calendar_events_category_check", "close_reasons_type_check",
+       "leads_initiative_check", "idx_bots_status", "close_reasons.created_at", "close_reasons.is_active",
+       "deal_close_reasons.is_primary"}
+KEEP_006 = {"companies.tenant_id", "contacts.tenant_id", "trg_lead_playbook_updated_at"}
+
+
+def base(name: str) -> str:
+    return re.sub(r" \(表 .*\)$", "", name)
+
+
+out = []
+for kind, side, name, prod, tmp, *_ in rows:
+    n = base(name)
+    tbl = n.split(".")[0]
+    if tbl in BUDDY or n.startswith(BUDDY) or n == "staff_ui_preferences.show_buddy_menu" or any(n.startswith(b) for b in BUDDY):
+        g = "C1 本番の癖：使っていない機能の表（足さない）"
+    elif n in OLD_001_003:
+        g = "C2 本番の癖：001・003だけにある物（足さない）"
+    elif n in NAME_ONLY:
+        g = "C3 本番の癖：名前だけ違う（中身同じ・直さない）"
+    elif kind == "方針" and side == "中身が違う":
+        g = "D1 差ではない：同じ意味の書き方（014:11）"
+    elif n == "chk_tenant_issuer_profiles_phone":
+        g = "D2 差ではない：書き出しの記号の違い（本番5社を読んで確認）"
+    elif tbl == "suppliers" or n.startswith("suppliers") or n == "suppliers.tenant_isolation_suppliers":
+        g = "B1 ひな形から外す：会社ごとの仕入先の表（本番5社に無い）"
+    elif n in TPL_ONLY_FK:
+        g = "B2 ひな形から外す：本番5社に無い外部キー"
+    elif n.startswith("orders."):
+        g = "A1 ひな形に足す：注文の8列（本番5社にある・画面が読む）"
+    elif tbl == "calendar_owner_settings" or "calendar_owner_settings" in n:
+        g = "A2 ひな形に足す：予定の表示設定の表（本番5社にある・画面が使う）"
+    elif n in ADD:
+        g = "A3 ひな形に足す・直す：本番5社と同じ型・制約・索引"
+    elif n in KEEP_006:
+        g = "E ひな形のまま：006と同じ（006はひな形で作った会社）"
+    else:
+        g = "未分類"
+    out.append((g, kind, side, n))
+
+with open(sys.argv[2], "w", encoding="utf-8") as f:
+    f.write("分け\t種類\t分け方\t名前\n")
+    for r in out:
+        f.write("\t".join(r) + "\n")
+c = Counter(r[0] for r in out)
+print("行数", len(out))
+for k in sorted(c):
+    print(c[k], k)

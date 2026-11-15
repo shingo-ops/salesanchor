@@ -1,0 +1,5 @@
+conname	double_bs	single_bs	t
+chk_tenant_issuer_profiles_phone	False	True	001,003,004,005,006
+contacts_lead_id_fkey	False	False	001,003,004,005
+fk_contacts_lead	False	False	006
+AUDIT ts=2026-11-15T23:42:02Z sha=7dcab2b3bb06 rows=3 ms=53 result=ok sql=SELECT c.conname, position(chr(92)||chr(92) in pg_get_constraintdef(c.oid))>0 AS double_bs, position(chr(92)||'+' in pg_get_constraintdef(c.oid))>0 AS single_bs, string_agg(right(n.nspname,3), ',' ORDER BY n.nspname) AS t FROM pg_constraint c JOIN pg_namespace n ON n.oid=c.connamespace WHERE n.nspname ~ '^tenant_[0-9]{3}$' AND c.conname IN ('chk_tenant_issuer_profiles_phone','contacts_lead_id_fkey','fk_contacts_lead') GROUP BY 1,2,3 ORDER BY 1 LIMIT 150; 
