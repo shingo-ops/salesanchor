@@ -3202,8 +3202,9 @@ import { InvoicePaymentPicker } from "./InvoicePaymentPicker";
   期待: 1本目は2行とも `38 1 1`（JSON として読めること）。2本目・3本目はどれも `:0`。
 
 手順D5 型の点検（便 C と便 D を合わせた形で通ること）
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && npm run generate:api-types 2>&1 | tail -3
     cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && npx tsc -b 2>&1 | tail -30
-  期待: 何も出ない（終了 0）。
+  期待: 1本目は終了 0（`src/api/generated/schema.d.ts` を作る。.gitignore の生成物なので commit しない。CI の frontend-check.yml も tsc の前に同じことをする）。2本目は何も出ない（終了 0）。
 
 手順D6 言葉と画面の決まりの点検
     cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && npm run check:all 2>&1 | tail -30
