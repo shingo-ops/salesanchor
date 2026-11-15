@@ -1,6 +1,6 @@
 # design — 予定のカルテ 直し1（時刻として読めない答えは空として扱う）
 
-親: [../design.md](../design.md)（§4-3 ⑤ を本書で改める） ／ 現在地: [recon.md](recon.md) ／ 手順書: [card.md](card.md) ／ ADR: `docs/adr/ADR-1078-secretary-event-karte.md`（変更なし・recon.md §4）
+親: [../design.md](../design.md)（§4-3 ⑤ を本書で改める） ／ 現在地: [recon.md](recon.md)（`docs/handoff/secretary-event-karte/fix1/recon.md`） ／ 手順書: [card.md](card.md) ／ ADR: `docs/adr/ADR-1078-secretary-event-karte.md`（変更なし・recon.md §4）
 
 状態: PO 承認済み（2026-11-15 チャット「1」。選択肢の文「時刻として読めない答えは「空いたまま」と扱うように直し、設計の書き直しから本番まで進める（「わからない」でも確かめの欄が出るようになります）」）。実装承認もこの「1」に含む。
 
