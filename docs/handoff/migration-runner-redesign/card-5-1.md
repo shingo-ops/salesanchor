@@ -167,7 +167,8 @@ DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: received_at realign removed (202
 5. 8本を上の「1本ずつの変更」のとおり Edit する。1本ごとに「変更前」の行と中身が合っているか先に Read で確かめる。
 6. 新しい試験を Write する。
 7. 確かめ（DB 不要の物だけ）:
-   - `python -m pytest backend/tests/test_value_migrations_neutralized_5_1.py backend/tests/test_value_migrations_neutralized_3c.py -q`（全部通る。落ちたら直さずに **停止**）。
+   - 先に Python 3.12 の専用の環境を作って依存を入れる（クラウドの見張り py312-guard は 3.12 以外の環境作りと、環境の外の `pip install` を止める。`scripts/agent-hooks/cloud/python_version_guard.py`。前例 `docs/handoff/extraction-job-recovery/card-test-clock-fix.md:34-35`）。(a) `command -v uv python3.12` を記録する。(b) uv があれば `uv venv --python 3.12 /tmp/v312` のあと `cd backend && uv pip install --python /tmp/v312/bin/python -r requirements.txt -r requirements-dev.txt; echo "exit=$?"; cd ..`。uv が無く python3.12 があれば `python3.12 -m venv /tmp/v312` のあと `cd backend && /tmp/v312/bin/python -m pip install -q -r requirements.txt -r requirements-dev.txt; echo "exit=$?"; cd ..`。出力の最後の20行と `exit=` を記録する。(c) どちらも無い・依存が入らないときは、その出力を記録して **停止**（環境を作り直す別の書き方は試さない）。
+   - `/tmp/v312/bin/python -m pytest backend/tests/test_value_migrations_neutralized_5_1.py backend/tests/test_value_migrations_neutralized_3c.py -p no:cacheprovider -o addopts="" -q`（`backend/pyproject.toml:65` の既定の `-n auto` とカバー率60%の線を外すため `-o addopts=""` を付ける。全部通る。落ちたら直さずに **停止**）。
    - `python3 scripts/check-migration-value-writes.py repo`（通る）。
    - 4 と同じ台本を流し `/tmp/m51/after.txt` へ。本数を記録する（期待 44。`diff /tmp/m51/before.txt /tmp/m51/after.txt` で、消えた名前がちょうど8本で、増えた名前が0）。**44 でなければ停止**。
    - `git diff --stat` と `git diff` の全文を記録。8本の `-` の行が、上の「変更前」で消すと書いた範囲だけであること。
@@ -192,7 +193,7 @@ DO $$ BEGIN RAISE NOTICE 'ADR-1007 neutralized: received_at realign removed (202
 - 最後の行: 合格なら `DONE`、止まったら `BLOCKED: <理由>`。
 
 ## この後（Opus がする。カードの範囲外）
-- PR 起票（危険な道 `migrations/` を含む。ADR-1003 の除外に当たらない＝下の照合）、合流前の審査役、CI（K5-1b: `.github/workflows/migration-test.yml` の全件のドライランと backend の試験）、委任の GO 記録、合流。
+- PR 起票（危険な道 `migrations/` を含む。ADR-1003 の除外に当たらない＝下の照合）、合流前の審査役、CI（K5-1b: `.github/workflows/migration-test.yml` の全件のドライランと backend の試験）、PO への3行まとめ（対象・変更内容・バックアップ確認。ADR-1003 の委譲の条件3 `docs/adr/ADR-1003-go-delegation-to-opus.md:25-29`・ADR-136）、委任の GO 記録、合流。
 - 本番反映の後の見方（4つを分けて見る）: ①反映が成功した ②移行の段のログに8本の `ADR-1007 neutralized:` の NOTICE が出た（時刻つき） ③控えの段が流れた ④ほかに変わった物が無い（移行の段のログで、8本以外の NOTICE と失敗の行が前の回と同じ形）。
 
 ## ADR-1003 の除外の照合（Opus・2026-11-15）
