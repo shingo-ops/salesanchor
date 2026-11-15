@@ -28,7 +28,7 @@
 - D15 PDF: Tax の行に率を添える（`Tax (10%):`。tax_rate_percent が NULL なら今のまま `Tax:`）。合計の下（為替の脚注の前）に支払方法の区切りを描く（design.md §3-7）。PayPal の写しの PDF（`_render_paypal_copy_pdf`）と見積の PDF は変えない。
 - D16 新しい理由コード 6 つ（`duty_needs_carrier`・`duty_rule_overlap`・`shipping_required`・`fx_rate`・`tax_rate`・`payment_method`）を frontend/src/lib/apiErrorReason.ts の一覧（18→24）・ja.json と en.json の apiError・backend/tests/test_api_error_reason_sync.py の固定の一覧に足す（design.md §4 の便 C の行）。`draft_context_target`・`invoice_company_mismatch` は画面が送らない形の誤り（画面は必ず片方だけを送る）なので足さない。
 - D17 SQLite の試験は DB の外の表（public.tax_rates など）を持たないので、`load_totals_inputs` を差し替える fixture `stub_invoice_totals` を conftest.py に足し、請求書を作る試験のファイルでは `pytestmark` で使う。DB の読み方そのもの・draft-context・支払方法・PDF・新しいテナント（K22）・GET /fx-rate は実 PostgreSQL の試験 backend/tests/test_invoice_totals_pg.py で確かめる（CI だけで動く）。
-- D18 PG の試験のテナント番号は 976（2026-11-15 に b80c23725 で `git grep -w 976 -- backend migrations scripts` が 0 件。P7 で担当がもう一度数える）。
+- D18 PG の試験のテナント番号は 953（2026-11-16 に origin/main 2cc593393 で `git grep -w 953 -- backend migrations scripts` が 0 件。最初に選んだ 976 は PG の試験2本が使っていたため替えた。P7 で担当がもう一度数える）。
 - D19 API の形が変わるので frontend/api-contract/openapi.json を作り直して入れる（.github/workflows/api-contract-check.yml が照合する）。
 
 ## 0. カード発行前チェック（docs/ai-agents/design-partner.md §5.5）
@@ -65,11 +65,11 @@
 
 - P1 このカードと card-D.md が枝に在る。
 - P2 §1 の新規 6 ファイルがどれも無い。
-- P3 列は便A で入り済み: `grep -c "payment_method_id INTEGER" backend/app/services/tenant.py` が 1 以上、`grep -c "shipping_snapshot JSONB" backend/app/services/tenant.py` が 1 以上、`grep -c "tax_rate_percent NUMERIC(5,2)" backend/app/services/tenant.py` が 1 以上。
+- P3 列は便A で入り済み: `grep -c "payment_method_id INTEGER" backend/app/services/tenant.py` が 1 以上、`grep -c "shipping_snapshot JSONB" backend/app/services/tenant.py` が 1 以上、`grep -c "tax_rate_percent NUMERIC(5, 2)" backend/app/services/tenant.py` が 1 以上。
 - P4 版の列は便V で入り済み: `grep -c "superseded_by_id" backend/app/services/tenant.py` が 1 以上。
 - P5 まだ計算の道が無い: `grep -c "draft-context\|invoices/preview\|invoice_totals" backend/app/routers/invoices.py backend/app/realtime/topics.py` がどちらも 0。
 - P6 §2 の「変更前」の目印の行が、それぞれのファイルに 1 回ずつある（手順2 の `grep -c -x -F` がどれも 1）。
-- P7 `git grep -c -w 976 -- backend migrations scripts | wc -l` が 0（試験のテナント番号 976 は未使用。D18）。
+- P7 `git grep -c -w 953 -- backend migrations scripts | wc -l` が 0（試験のテナント番号 953 は未使用。D18）。
 - P8 `get_fx_rate` を呼ぶのは router では invoices.py の 3 か所だけ: `grep -c "get_fx_rate(" backend/app/routers/invoices.py` が 3。
 
 ## 1. 触るファイル
@@ -1721,15 +1721,15 @@ backend/tests/test_invoices_create_flow.py（SQLite。`pytestmark = pytest.mark.
 - F15 発行で止まる: 作成後に stub を DDP・会社つきの行だけにして発行 → 409 `duty_needs_carrier`・status は draft のまま（K18 の発行の道）。
 - F16 為替は表だけ（K13）: `monkeypatch.setattr("app.services.fx_rate.get_fx_rate", 呼ぶと例外を投げる関数)` のもとで、作成・見積から作成・発行が通る。PATCH に `exchange_rate_jpy`・`payment_method`（文字）を送ると 422、`payment_method_ref: null` を送ると 422 `payment_method`、発行済みの請求書に `{"notes": "x"}` を送ると 400「draft状態の請求書のみ編集できます」（K18・K23）。
 
-backend/tests/test_invoice_totals_pg.py（実 PostgreSQL。CI だけで動く。テナント 976。前例 backend/tests/test_duty_rules_pg.py の skip の決まり・テナントの作り方・後始末をそのまま使う。1 つの試験関数 `test_invoice_totals_pg_end_to_end` の中で順に確かめる）
+backend/tests/test_invoice_totals_pg.py（実 PostgreSQL。CI だけで動く。テナント 953。前例 backend/tests/test_duty_rules_pg.py の skip の決まり・テナントの作り方・後始末をそのまま使う。1 つの試験関数 `test_invoice_totals_pg_end_to_end` の中で順に確かめる）
 - G1 読み方: public.tax_rates に試験の行（基準日 2100-01-01 の 9.00%。試験の後で消す）を入れ、`load_tax_row(db, date(2100, 1, 2))` が 9.00 を返し、`date(2099, 12, 31)` では前の行（無ければ None）になる。public.app_fx_rate_history に `ZZT`（試験だけの通貨）の 2 行（古い 100・新しい 120）を入れ、`load_latest_fx` の `ZZT` が 120。試験の後で ZZT の行と 2100 の行を消す。
-- G2 関税の行の読み方: テナント 976 に DDP の行（US・carrier NULL・2026-01-01〜2026-12-31・中身 2 つ）と止めた行（is_active false）を入れ、`load_duty_rules(db, 976, "US", date(2026, 12, 31))` が 1 行（止めた行は出ない・終わりの日を含む）・中身が sort_order 順。`date(2027, 1, 1)` で 0 行。
-- G3 新しいテナント（K22）: 976 のスキーマを backend/app/services/tenant.py の作り方（前例の PG 試験と同じ関数）で作り、`_INSERT_INVOICE_SQL` を `invoice_totals.to_db_params` の値で流して 1 行が入り、`SELECT {_INVOICE_COLUMNS} FROM tenant_976.invoices` が読め、`InvoiceDetailResponse` に入れられる。
-- G4 支払方法の候補（K3・K25）: 国内の銀行の版 X（詳細つき）・海外の Wise（USD）・詳細の無い行・is_active false の行を入れる。`list_payment_choices(db, 976, "domestic")` は X だけ。`"overseas"` は Wise だけで wise_currency "USD"。`resolve_payment_ref` は Wise を JPY で渡すと PaymentMethodInvalid、詳細の無い行の id も PaymentMethodInvalid、PayPal は public.tenant_paypal_config に 976 の行が無いので PaymentMethodInvalid。
+- G2 関税の行の読み方: テナント 953 に DDP の行（US・carrier NULL・2026-01-01〜2026-12-31・中身 2 つ）と止めた行（is_active false）を入れ、`load_duty_rules(db, 953, "US", date(2026, 12, 31))` が 1 行（止めた行は出ない・終わりの日を含む）・中身が sort_order 順。`date(2027, 1, 1)` で 0 行。
+- G3 新しいテナント（K22）: 953 のスキーマを backend/app/services/tenant.py の作り方（前例の PG 試験と同じ関数）で作り、`_INSERT_INVOICE_SQL` を `invoice_totals.to_db_params` の値で流して 1 行が入り、`SELECT {_INVOICE_COLUMNS} FROM tenant_953.invoices` が読め、`InvoiceDetailResponse` に入れられる。
+- G4 支払方法の候補（K3・K25）: 国内の銀行の版 X（詳細つき）・海外の Wise（USD）・詳細の無い行・is_active false の行を入れる。`list_payment_choices(db, 953, "domestic")` は X だけ。`"overseas"` は Wise だけで wise_currency "USD"。`resolve_payment_ref` は Wise を JPY で渡すと PaymentMethodInvalid、詳細の無い行の id も PaymentMethodInvalid、PayPal は public.tenant_paypal_config に 953 の行が無いので PaymentMethodInvalid。
 - G5 版（K25 の便 C 側）: X を直す手順（design.md §3-8 の直す手順: 新しい行 Y と詳細を足し `UPDATE ... SET superseded_by_id = Y WHERE id = X AND superseded_by_id IS NULL AND deleted_at IS NULL`）の後、候補は Y だけ・X で `resolve_payment_ref` は PaymentMethodInvalid・`is_current_choice(X)` は False・`load_payment_version(X)` は X の口座番号を返す。
-- G6 draft-context の形（K24 の後半・K23）: 試験用の FastAPI の client を使わず、道の関数 `get_invoice_draft_context` を直接 await で呼ぶ（引数に db・tenant_id 976・current_user は None）。fx_rates の ZZT の fetched_at が "+00:00" で終わる。invoice_id を渡すと保存した issuer_region（domestic）で候補を返し、会社の請求先の国を US に変えた後も同じ候補。
+- G6 draft-context の形（K24 の後半・K23）: 試験用の FastAPI の client を使わず、道の関数 `get_invoice_draft_context` を直接 await で呼ぶ（引数に db・tenant_id 953・current_user は None）。fx_rates の ZZT の fetched_at が "+00:00" で終わる。invoice_id を渡すと保存した issuer_region（domestic）で候補を返し、会社の請求先の国を US に変えた後も同じ候補。
 - G7 GET /fx-rate（K24）: `fetch_fx_rate("ZZT", db=db, ...)` を直接呼んで rate 120.0・fetched_at が "+00:00" で終わる。`"ZZQ"`（行なし）で HTTPException 503。`"JPY"` は rate 1.0・fetched_at None。`app.services.fx_rate.get_fx_rate` を呼ぶと例外を投げる関数に差し替えた上で行う。
-- G8 後始末: 入れた public の行（tax_rates 2100・app_fx_rate_history ZZT・必要なら tenant_settings 976）とテナント 976 のスキーマを消す（前例の後始末の書き方を写す。命令の文は前例と同じものを使う）。
+- G8 後始末: 入れた public の行（tax_rates 2100・app_fx_rate_history ZZT・必要なら tenant_settings 953）とテナント 953 のスキーマを消す（前例の後始末の書き方を写す。命令の文は前例と同じものを使う）。
 
 backend/tests/test_invoice_pdf_payment.py（DB なし。4 本。前例 test_invoices.py:676-750 の PDF の試験の書き方を写す）
 - 文字の取り方: `reportlab.pdfgen.canvas.Canvas.drawString` と `drawRightString` を、引数の文字を list に足してから元の関数を呼ぶ関数に monkeypatch で包み、`render_invoice_pdf` を呼んだ後の list を見る。
@@ -1753,10 +1753,10 @@ backend/tests/test_invoice_pdf_payment.py（DB なし。4 本。前例 test_invo
     cd ~/sa && ls backend/app/services/invoice_totals.py backend/app/services/invoice_payment_methods.py backend/tests/test_invoice_totals.py backend/tests/test_invoices_create_flow.py backend/tests/test_invoice_totals_pg.py backend/tests/test_invoice_pdf_payment.py 2>&1 | grep -c "No such file or directory"
     cd ~/sa && grep -c "payment_method_id INTEGER" backend/app/services/tenant.py
     cd ~/sa && grep -c "shipping_snapshot JSONB" backend/app/services/tenant.py
-    cd ~/sa && grep -c "tax_rate_percent NUMERIC(5,2)" backend/app/services/tenant.py
+    cd ~/sa && grep -c "tax_rate_percent NUMERIC(5, 2)" backend/app/services/tenant.py
     cd ~/sa && grep -c "superseded_by_id" backend/app/services/tenant.py
     cd ~/sa && grep -c "draft-context\|invoices/preview\|invoice_totals" backend/app/routers/invoices.py backend/app/realtime/topics.py | tail -2
-    cd ~/sa && git grep -c -w 976 -- backend migrations scripts | wc -l
+    cd ~/sa && git grep -c -w 953 -- backend migrations scripts | wc -l
     cd ~/sa && grep -c "get_fx_rate(" backend/app/routers/invoices.py
     cd ~/sa && grep -c -x -F 'from app.services.fx_rate import get_fx_rate' backend/app/routers/invoices.py
     cd ~/sa && grep -c -x -F '_UPDATABLE_COLUMNS = {"payment_method", "due_date", "exchange_rate_jpy", "exchange_rate_usd", "notes"}' backend/app/routers/invoices.py
