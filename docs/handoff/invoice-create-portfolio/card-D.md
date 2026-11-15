@@ -20,7 +20,7 @@
 - D7 見出しの並びは 発送先→支払いと合計→商品一覧→クリア・作成（K10）。届け先と請求先の住所は会社の画面で直す（直すボタンで会社の画面へ移る。K1）。請求書を出す側の地域が決まらない（請求先の国が無い）ときは、作れない理由（apiError.billToCountry）と会社の画面へ移るボタンを出し、作成ボタンを押せなくする（今の ADR-1061 便2-2c2a の導線を、作る前に出す形にする）。
 - D8 秘書チャットの下書き（SecretaryDraftInvoice.tsx）は送料の見積を出さない。「送料を請求しない」に人がチェックしたときだけ作れる。通貨と支払方法は draft-context の候補から選ぶ。サーバーの 409 `duty_needs_carrier` などは apiError の日本語で出し、請求書を作らない（K19）。
 - D9 詳細画面: 支払方法の行は版の表示名（`payment_method_display_name`。card-C.md D14）を先に出し、無ければ今の文字。下書きのときだけ支払方法を選び直す欄（新しい InvoicePaymentPicker.tsx。PATCH の `payment_method_ref` だけを送る）を出す（K23。発行済みには出さない）。
-- D10 選び直す欄と作成画面の支払方法は「作る権限と直す権限の両方」を持つ人にだけ出す（design.md §6）。本番の役割では、マネージャーは直す権限だけ、テナント 4・5・6 の営業は作る権限だけを持つ（2026-11-15 に manual-only の鍵で読んだ。/tmp/CC報告ファイル/binc/prod_roles.txt）。設計 §6 は「食い違いがあれば止めて PO へ」なので、Opus は役割を変えず、画面は設計どおり両方の権限で出し、最後の PO の確認で聞く（担当は役割に触らない）。
+- D10 詳細画面の支払方法を選び直す欄（InvoicePaymentPicker）は「作る権限と直す権限の両方」を持つ人にだけ出す（design.md §6 の表の「詳細画面の支払方法の選択には2つの権限が要る」の行。材料の draft-context は invoices.create、PATCH は invoices.update）。作成画面と秘書チャットの下書きの支払方法の欄は、作る道（POST /invoices と draft-context）がどちらも invoices.create だけなので、作る権限だけで出す（今の作成ボタンの条件のまま。候補が 0 件なら会社情報の画面への案内を出す）。本番の役割では、マネージャーは直す権限だけ、テナント 4・5・6 の営業は作る権限だけを持つ（2026-11-15 に manual-only の鍵で読んだ。/tmp/CC報告ファイル/binc/prod_roles.txt）。設計 §6 は「食い違いがあれば止めて PO へ」なので、Opus は役割を変えず、画面は設計どおり両方の権限で出し、最後の PO の確認で聞く（担当は役割に触らない）。
 - D11 画面の言葉は新しい最上位の区切り `invoiceForm`（38 キー）と、`fedexRateModal.colCarrier`・`secretary.invoice.shippingNoneHelp` の 2 つ。ja と en に同じキーで入れる（ADR-027）。生の input・select・textarea・色の直値・新しい `ui-allow` を足さない（ADR-144・K11）。
 
 ## 0. カード発行前チェック（docs/ai-agents/design-partner.md §5.5）
@@ -490,6 +490,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { Callout } from "../../components/Callout";
+import { LoadingBlock } from "../../components/loading";
 import { addressLine, type DraftContext } from "../../lib/invoiceDraftContext";
 
 export interface InvoiceShipToSectionProps {
@@ -516,7 +517,7 @@ export function InvoiceShipToSection({ companyId, ctx, loading, errorText }: Inv
   if (ctx === null) {
     return (
       <div data-testid="invoice-ship-to">
-        <p style={{ color: "var(--text-secondary)" }}>{loading ? t("common.loading") : t("invoiceForm.chooseCompany")}</p>
+        {loading ? <LoadingBlock /> : <p style={{ color: "var(--text-secondary)" }}>{t("invoiceForm.chooseCompany")}</p>}
       </div>
     );
   }
@@ -3066,7 +3067,7 @@ import { InvoicePaymentPicker } from "./InvoicePaymentPicker";
     "duty": "関税",
     "total": "合計",
     "notComputed": "未計算",
-    "uncomputedTitle": "まだ計算できない項目があるため、作成できません",
+    "uncomputedTitle": "まだ計算できない項目があるため、作成できません。下の理由を見て、選び直してください",
     "clear": "入力を全部消す"
   },
   "invoices": {
@@ -3137,7 +3138,7 @@ import { InvoicePaymentPicker } from "./InvoicePaymentPicker";
     "duty": "Duty",
     "total": "Total",
     "notComputed": "Not calculated",
-    "uncomputedTitle": "Some amounts cannot be calculated yet, so the invoice cannot be created",
+    "uncomputedTitle": "Some amounts cannot be calculated yet, so the invoice cannot be created. Check the reasons below and choose again",
     "clear": "Clear all input"
   },
   "invoices": {
@@ -3231,6 +3232,8 @@ import { InvoicePaymentPicker } from "./InvoicePaymentPicker";
     cd ~/sa && git add frontend/src/lib/query/batch3aPages.test.tsx frontend/src/lib/query/batch3cPages.test.tsx frontend/src/components/AllLegacyButtonDynamicMigration.test.tsx frontend/src/components/AllLegacyButtonOperationMigration.test.tsx frontend/src/components/CommerceNavigationButtonMigration.test.tsx frontend/src/components/CommerceSubmitButtonMigration.test.tsx && git status --short | tail -40
  最後の status に §1 に無いファイルが出たら、commit せずに `BLOCKED: 範囲外のファイル` で停止する。
     cd ~/sa && git config user.name "shingo-cc" && git config user.email "shingo-cc@users.noreply.github.com" && git commit -q -m "feat(invoices): let people pick ship-to, currency, payment and shipping instead of typing amounts (invoice-create-portfolio bin D)" && git log --oneline -2 | tail -2
+    cd ~/sa && BASE_SHA=origin/main HEAD_SHA=HEAD node scripts/check-ui-governance.js 2>&1 | tail -15
+  期待: 最後の行が `✅ UI governance: 新規ハードコードなし`。`❌` の行が出て、数が増えたファイルが §1 のファイルなら、push せずに `BLOCKED: 手順D10 UI governance` で止めて出力を貼る（§1 に無いファイルが出たときは、origin/main が進んだための出力なので、そのファイル名を書いて続ける）。
     cd ~/sa && git push -u origin release/invoice-create-portfolio-bin-cd 2>&1 | tail -5
     cd ~/sa && git rev-parse HEAD | tail -1
     cd ~/sa && git ls-remote origin refs/heads/release/invoice-create-portfolio-bin-cd | tail -1

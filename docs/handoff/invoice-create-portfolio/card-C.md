@@ -3,7 +3,7 @@
 状態: カード発行（Opus、2026-11-15）。PO の設計承認と実装承認は 2026-11-13「1,（２）決済手数料を合計に足す仕組みは、今回は作りません。別の作業に回します。→次便で」と、同じ日の常設の指示「…確立したなら進める。…PRマージ、デプロイまで完走させてくれ。」（design.md 第9版・審査 APPROVE）。2026-11-15 に PO が「1」で「請求書の画面の作業を先に進め、最後にまとめて見てもらう」を選んだ。
 設計: docs/handoff/invoice-create-portfolio/design.md §3-2・§3-3（計算 1〜6）・§3-4（規則・道の表・為替・送料）・§3-5・§3-7・§3-8（請求書との関係）・§4 の便 C・§6・§8 の K3・K4・K6・K7・K9・K12・K13・K15・K16・K18・K22・K23（サーバー側）・K24・K25（便 C 側）。事実の行番号は docs/handoff/invoice-create-portfolio/recon-cd.md（基準 2ccb6a94e。b80c23725 まで backend と frontend/src に差分なし）。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。本番・GitHub の secret・DB には触らない。PR は作らない（Opus が作る）。
-基準: origin/main `b80c23725` で行番号を測った（2026-11-15 の `8a148e732` まで backend と frontend/src に差分なし。表と列の名前は 8a148e732 の tenant.py:1267-1330・:1440-1482 と migrations で照合済み）。行番号がずれていたら「変更前」の文で場所を探す（同じ文が 2 か所あれば BLOCKED: で停止）。
+基準: origin/main `b80c23725` で行番号を測った（2026-11-15 の `8a148e732` まで backend と frontend/src に差分なし。表と列の名前は 8a148e732 の tenant.py:1267-1330・:1440-1482 と migrations で照合済み）。行番号がずれていたら「変更前」の文で場所を探す（同じ文が 2 か所あれば BLOCKED: で停止。ただし ` invoice_id = inv_result.scalar_one()` は invoices.py に 2 か所あり、§2-5 で示した関数（create_invoice_from_quote・create_invoice）の中のものをそれぞれ使う。これは止めない）。
 危険便か: いいえ（`migrations/`・`.github/workflows/`・本番の `scripts/` を触らない。列と表は便A・便V で作り済み）。マージ前に Opus の審査役の APPROVE と CI 全通過を必須にする（担当の作業ではない）。
 同じ枝: この便 C と便 D（docs/handoff/invoice-create-portfolio/card-D.md）は同じ枝 `release/invoice-create-portfolio-bin-cd` に、C→D の順に別のコミットで入れ、1つの PR で出す（design.md §4。C だけ出すと今の作成画面が 422 になるため）。便 C のコミットの時点では frontend の型の点検（tsc）が落ちてよい。便 D のコミットの後に全部が通ること。
 
@@ -1777,7 +1777,7 @@ backend/tests/test_invoice_pdf_payment.py（DB なし。4 本。前例 test_invo
     cd ~/sa && grep -c "^import pytest" backend/tests/conftest.py
     cd ~/sa && grep -c '"dutyRuleOverlap"' frontend/src/locales/ja.json frontend/src/locales/en.json | tail -2
     cd ~/sa && grep -c "tax_amount\|shipping_fee" backend/tests/test_invoices.py backend/tests/test_issuer.py backend/tests/test_paypal_invoicing.py backend/tests/test_company_stats.py backend/tests/test_products.py | tail -5
-  期待: 2行目 2。3行目 6。4〜7行目はどれも 1 以上。8行目は2ファイルとも `:0`。9行目 0。10行目 3。11行目から27行目はどれも 1（ただし `        "notes": row["notes"],` が 2 以上なら、PDF の道 `download_invoice_pdf` の中のものを使い、数を報告に書いて続ける）。28行目 1。29行目は数をそのまま書く（0 なら §2-8 の (3)(4) で 6 つ足す。1 なら 5 つ）。30行目は数をそのまま書く。
+  期待（番号は上の命令の順番。1 本の命令が 2 行以上を出すものがあるので、出力の行の数ではなく命令の番号で見る）: 1番は 40 桁。2番 2。3番 6。4〜7番はどれも 1 以上。8番は2ファイルとも `:0`（2 行）。9番 0。10番 3。11番〜26番はどれも 1（ただし 17番 `        "notes": row["notes"],` が 2 以上なら、PDF の道 `download_invoice_pdf` の中のものを使い、数を報告に書いて続ける）。27番（`^import pytest`）1。28番（dutyRuleOverlap・2 行）は数をそのまま書く（どちらも 0 なら §2-8 の (3)(4) で 6 つ足す。1 なら 5 つ）。29番（tax_amount・shipping_fee・5 行）は数をそのまま書く。
 
 手順3 §2 の変更をする（2-1 から順に。新規の 6 ファイルは Write ツール、それ以外は Edit ツールで行う。2-12 の openapi.json は手順7 で作る）
 
@@ -1837,7 +1837,7 @@ backend/tests/test_invoice_pdf_payment.py（DB なし。4 本。前例 test_invo
 
 - 停止する（その場で作業を停止し、それまでの出力と §5 の報告を返して終わる。別のやり方を試さない）:
   - 手順1 の is-ancestor が 0 でない・P1〜P8 のどれかが外れた → `BLOCKED: 手順1` か `BLOCKED: P番号`。
-  - §2 の変更前の文が見つからない・2 か所ある（手順2 の注記のものを除く） → `BLOCKED: ファイル名 変更前の文`。
+  - §2 の変更前の文が見つからない・2 か所ある（手順2 の注記のものと、冒頭「基準」の行の `invoice_id = inv_result.scalar_one()` を除く） → `BLOCKED: ファイル名 変更前の文`。
   - apiErrorReason.ts の一覧の形が §2-8 (1) の想定と違い、同じ形で足す方法が 1 つに決まらない → `BLOCKED: apiErrorReason の形`。
   - SQLite の contacts に surname・given_name・primary_email の列が無く、draft-context の道が SQLite の試験の import で落ちる → 出力を貼って `BLOCKED: contacts の列`（道の SQL は変えない）。
   - 手順5 の数・手順7 の数の期待が外れた → 出力を貼って `BLOCKED: 手順5` か `BLOCKED: 手順7`。
