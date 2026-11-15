@@ -11,18 +11,23 @@
   - 行 3acb0463: 「テープに切れ込みがある品」と書いた行（原文の行 3・6・7）。残1・170,000。状態 Case、根拠 `R4:単位既定`。
   - 両方とも raw_state は空（detail.txt）。
 - 11/13 09:19 JST の投稿 Y（同じ仕入元）の1行目が「そのカートン 切れ込み有り〆」。行 cad02664: 状態 Case・Sold out・根拠 `R4:単位既定`・is_current True（detail.txt）。
-- 結果: A品の行 cc01bec5 も is_current False になった（cur.txt・after.txt）。配信は `ar.is_current = TRUE` の行だけを読む（`/Users/tanizawashingo/worktrees/salesanchor/release-shime-grade-keep-design/backend/app/services/tcg_distribution_svc.py:373`・`:496`・`:539`）。A品3カートンは「売り切れ」と同じ扱いで外に出ない。
+- 結果: A品の行 cc01bec5 も is_current False になった（cur.txt・after.txt）。配信は `ar.is_current = TRUE` の行だけを読む（`backend/app/services/tcg_distribution_svc.py:373`・`:496`・`:539`）。A品3カートンは「売り切れ」と同じ扱いで外に出ない。
 - 14:07 JST の時点で、Y より後にこの仕入元からこの商品の投稿は無い（after.txt）。
 
 ## 2. 仕組み（コードの実物）
 
-1. 状態の判定は、その件の行を全部つないだ文 `block` で行う（`/Users/tanizawashingo/worktrees/salesanchor/release-shime-grade-keep-design/backend/app/services/gemini_raw_copy_v101.py:964`）。`block` は `resolve_condition_v2` に `raw_state` として渡る（`/Users/tanizawashingo/worktrees/salesanchor/release-shime-grade-keep-design/backend/app/services/gemini_raw_copy_v102_product_first.py:825`）。
-2. `resolve_condition_v2` は状態の辞書（public.line_conditions の search_kw / exclude_kw）を `block` に当てる。どれにも当たらないと箱系大は Case（`R4:単位既定`）になる（`/Users/tanizawashingo/worktrees/salesanchor/release-shime-grade-keep-design/backend/app/services/tcg_analyzer_svc.py:950-963`）。
+1. 状態の判定は、その件の行を全部つないだ文 `block` で行う（`backend/app/services/gemini_raw_copy_v101.py:964`）。`block` は `resolve_condition_v2` に `raw_state` として渡る（`backend/app/services/gemini_raw_copy_v102_product_first.py:825`）。
+2. `resolve_condition_v2` は状態の辞書（public.line_conditions の search_kw / exclude_kw）を `block` に当てる。どれにも当たらないと箱系大は Case（`R4:単位既定`）になる（`backend/app/services/tcg_analyzer_svc.py:950-963`）。
 3. 状態の辞書（dict.txt）に「切れ込み」「A品」はどの状態の search_kw にも無い。カートンの開封の状態（CN0009 Opened case）の語は「カートンテープカット・テープカット済・テープカット・テープ切」。今回の行は「テープ」と「切」の間に別の字が入っていて、「テープ切」と続いていないので当たらない。カートンの傷みの状態（CN0002 Damaged case）にも「切れ込み」は無い。
-4. 〆の行は状態が語で決まっていないので、前の在庫の状態を引き継ぐ候補になる（`/Users/tanizawashingo/worktrees/salesanchor/release-shime-grade-keep-design/backend/app/services/gemini_raw_copy_v102_soldout_ref.py:47-54`・`:369`）。前に同じ状態（Case）の在庫があるので規則12d で引き継ぎをせず、〆の行は Case のまま（同 `:462-470`）。規則12h（設定 keep_words）は値段・数の無い箱の仲間の取り残しにだけ働く。今回、投稿 Y の追加の相手（analysis_soldout_extra_targets）は 0件（extra.txt）で、12h は相手を作っていない。〆の行は 12d の `continue` のとおり Case のまま。
-7. 再解析での直しは ADR-1032 の見張りに止められる: 古い投稿 X の行が「新しく現行になる」には、(i) 同じ仕入元のより新しい投稿に同じ商品の行が無い か (ii) 付け直しの前から現行だった が要る（`tcg_analyzer_svc.py:2118-2140`）。投稿 Y に同じ商品の行がある限り (i) は成り立たず、A品の行は前から現行でないので (ii) も成り立たない。→ 辞書を直して X・Y を再解析しても、A品の行は現行に戻らない（コードの読み取りによる。試験では未確認）。
-5. 現行の行の決め方: 同じ仕入元の (商品, 状態) の組ごとに、最新の投稿を1つ決め、その投稿の行だけを現行にする（`/Users/tanizawashingo/worktrees/salesanchor/release-shime-grade-keep-design/backend/app/services/tcg_analyzer_svc.py:2043-2046`・`:2111-2117`・`:2118-2147`）。投稿 Y が (420436, Case) の最新になったので、投稿 X の (420436, Case) の2行（A品と切れ込み）が両方とも現行から外れた。
+4. 〆の行は状態が語で決まっていないので、前の在庫の状態を引き継ぐ候補になる（`backend/app/services/gemini_raw_copy_v102_soldout_ref.py:47-54`・`:369`）。前に同じ状態（Case）の在庫があるので規則12d で引き継ぎをせず、〆の行は Case のまま（同 `:462-470`）。規則12h（設定 keep_words）は値段・数の無い箱の仲間の取り残しにだけ働く。今回、投稿 Y の追加の相手（analysis_soldout_extra_targets）は 0件（extra.txt）で、12h は相手を作っていない。〆の行は 12d の `continue` のとおり Case のまま。
+5. 現行の行の決め方: 同じ仕入元の (商品, 状態) の組ごとに、最新の投稿を1つ決め、その投稿の行だけを現行にする（`backend/app/services/tcg_analyzer_svc.py:2043-2046`・`:2111-2117`・`:2119-2148`）。投稿 Y が (420436, Case) の最新になったので、投稿 X の (420436, Case) の2行（A品と切れ込み）が両方とも現行から外れた。
 6. 要確認の印（needs_review）はこの現行の決め方に入らない（`_merge_supplier_products` の対象は `pid_resolved = TRUE` だけ。`tcg_analyzer_svc.py:2050-2056`）。配信は needs_review の行を読まない（`tcg_distribution_svc.py:374`・`:497`）。→ 〆の行を要確認にするだけでは、A品は外れたまま（隠れる害は同じで、要確認が1件増える）。
+7. 再解析での直しは ADR-1032 の見張りに止められる: 古い投稿 X の行が「新しく現行になる」には、(i) 同じ仕入元のより新しい投稿に同じ商品の行が無い か (ii) 付け直しの前から現行だった が要る（`backend/app/services/tcg_analyzer_svc.py:2121-2138`）。投稿 Y に同じ商品の行がある限り (i) は成り立たず、A品の行は前から現行でないので (ii) も成り立たない。→ 辞書を直して X・Y を再解析しても、A品の行は現行に戻らない（コードの読み取りによる。試験では未確認）。
+8. 語を足したときの当たり方の前提（2026-11-15 設計審査1回目の指摘を受けて作業記録で確認）:
+   - id 13（Damaged case）の exclude_kw は空（dict.txt の xkw 欄）。今回の文が除外語で外れることはない。
+   - 投稿 X で「切れ込み」を含む原文の行は6行目の1行だけ。その行を件の行に持つ解析行は 3acb0463 だけ（kirekomi.txt。件の行の一覧 source_lines との照合）。A品の行 cc01bec5 の件の行は 3〜4 行目（detail.txt）。A品の行の `block` にこの語は入らないので、A品の行は Case のまま。
+   - 6行目の文は Opened case の語（「テープ切」など）にも Case の語にも当たらない形（recon §2-3）。当たる状態は Damaged case の1つだけなので、価値の順位で選び直す場面（`backend/app/services/tcg_analyzer_svc.py:879-883`）にならない。
+   - 投稿 Y の〆の行は語で状態が決まり（Damaged case）、引き継ぎの候補から外れる（`backend/app/services/gemini_raw_copy_v102_soldout_ref.py:47-54`・`:375`）。
 
 ## 3. 規模（本番の読み取り）
 

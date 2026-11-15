@@ -10,3 +10,10 @@
 | 4 | `03_verify.sql`（読み取り専用の道） | VERIFY 行が1行: 「切れ込み」を含む行は id 13 だけ。search_kw の末尾が `,切れ込み` |
 
 戻し: `04_rollback.sql`（ROLLBACK 1）。状態の辞書は解析のたびに読み直される（`backend/app/services/tcg_analyzer_svc.py` の `load_condition_entries` は毎回 `public.conditions` を読む。`public.conditions` は `public.line_conditions` の VIEW：`migrations/20261017_120000_line_conditions_value_rank.sql:47`）ので、再起動は要らない。過去の解析結果は変えない（再解析しない）。
+
+## 見張りの問い合わせ（設計 K4・K5）
+
+`05_detect.sql`（読み取り専用の道で1文として流す）: 直近30日で、1投稿に同じ商品×状態の In Stock が値段違いで2行以上あり、同じ仕入元の次の同じ組の行が Sold out の組を出す。出力には原文の一部が入るので、作業記録（リポジトリ外）にだけ置く。
+
+- K4: 2026-12-13 までに流すと、2026-11-13 の今回の組（product_id 420436）が出る。2026-11-13 の実行では 15 行・11 組（作業記録 dup_soldout.txt）。
+- K5: 便1 の反映から14日たった後に1回流す。そのとき `interval '30 days'` を、便1 の反映の時刻からの範囲に書き換える（例: `sm.line_posted_at > timestamptz '2026-11-15 18:00+09'`）。出た組を1組ずつ原文で見る。
