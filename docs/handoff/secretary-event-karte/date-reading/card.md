@@ -73,10 +73,10 @@ _JST_OFFSET = timedelta(hours=9)
 # 表に無い日付の言い方。1 つでもあれば AI の読んだ日付のまま（design.md §3-1 (1)）
 _OTHER_DATE_WORDS = re.compile(
     r"\d+\s*年|再来年|来年|今年|去年|昨年|月末|月初|週末|年末|年始|再来月|来月|今月|先月|翌日|翌週|前日|先週|一昨日|昨日|おととい|きのう|"
-    r"毎|隔週|第\s*[\d一二三四五六七八九十]|\d+\s*日\s*(?:中|\d+\s*(?:回|時間)|あたり|当たり|おき|ごと)|\d+\s*(?:日|週間?|か月|ヶ月|カ月|ヵ月)\s*(?:後|前|間)"
+    r"毎|隔週|第\s*[\d一二三四五六七八九十]|\d+\s*日\s*(?:中|\d+\s*(?:回|時間)|あたり|当たり|おき|ごと)|\d+\s*日\s*に\s*[\d一二三]\s*(?:回|度)|\d+\s*泊|\d+\s*(?:日|週間?|か月|ヶ月|カ月|ヵ月)\s*(?:後|前|間)"
 )
 _MONTH_DAY = re.compile(r"(\d{1,2})\s*月\s*(\d{1,2})\s*日")
-_DAY_ONLY = re.compile(r"(?<![月\d])(\d{1,2})\s*日(?!\s*曜)")
+_DAY_ONLY = re.compile(r"(?<![月\d])(\d{1,2})\s*日(?=\s*(?:$|\d|まで|から|ごろ|頃|午前|午後|朝|昼|夕方|夜|[のにはも、。,.!?]))")
 _WEEKDAY = re.compile(r"(再来週|来週|今週)?\s*の?\s*([月火水木金土日])\s*曜")
 _RELATIVE = {"しあさって": 3, "あさって": 2, "明後日": 2, "明日": 1, "あした": 1, "今日": 0, "本日": 0}
 _RELATIVE_RE = re.compile("|".join(sorted(_RELATIVE, key=len, reverse=True)))
@@ -370,6 +370,8 @@ def test_bare_weekday_is_nearest_from_tomorrow(today, wd):
         ("25日", date(2026, 11, 15), date(2026, 11, 25)),
         ("10日", date(2026, 11, 18), date(2026, 12, 10)),
         ("10日", date(2026, 12, 20), date(2027, 1, 10)),
+        ("25日 10時から", date(2026, 11, 15), date(2026, 11, 25)),
+        ("25日に会議", date(2026, 11, 15), date(2026, 11, 25)),
         # 試しの会話の文
         ("明日の10時に打ち合わせを入れて", date(2026, 11, 15), date(2026, 11, 16)),
         ("あさって 9 時、北風商会の山田さんと商談。1 時間", date(2026, 11, 15), date(2026, 11, 17)),
@@ -403,6 +405,18 @@ def test_table_examples(text, today, expected):
         "第一日曜",  # 漢数字の「第〇」
         "25日 2時間の打ち合わせ",  # 長さの「〇日〇時間」に見えるので替えない（design.md §6）
         "来週月曜 第2会議室",  # 部屋の名前の「第〇」でも替えない（design.md §6）
+        "研修1日目 10時から",  # 日数の「〇日」（後ろが日付の続き方でない。design.md §3-1 (2)）
+        "3日分の資料を準備 10時から",
+        "1日がかりの作業 9時から",
+        "3日連続の研修 10時から",
+        "5日以内に返事",
+        "2日程度の作業",
+        "5日ぶりの面談 14時",
+        "2日で終わる作業 10時",
+        "1日休み 9時から",
+        "10日(火)",  # 括弧の曜日は日付と照合しないので替えない（design.md §6）
+        "2泊3日の出張",  # 「〇泊」は表に無い
+        "5日に1回",  # 回数の「〇日に〇回」
         "11月31日",  # あり得ない日付
         "2月30日",
         "31日",  # 11 月 31 日は無い（今日 11/15）
@@ -572,7 +586,7 @@ def _fixed_now(monkeypatch):
 
 - (6a) `cd "$REPO/backend" && uv run --no-project --python 3.12 --with ruff ruff check app/ > /tmp/CC報告ファイル/ruff.txt 2>&1; echo "exit=$?"` → exit=0（CI と同じ範囲。`.github/workflows/test.yml:92`。試験のファイルは CI の ruff の対象外）
 - (6b) `cd "$REPO/backend" && uv run --no-project --python 3.12 --with ruff ruff format --check app/services/secretary_dates.py > /tmp/CC報告ファイル/ruff-format.txt 2>&1; echo "exit=$?"` → exit=0。落ちたら `ruff format app/services/secretary_dates.py` で整え、整えた差分を報告に貼る（中身は変えない）。`app/routers/assistant.py` は元から整っていない行（:373-374）があるので format をかけない。
-- (6c) `cd "$REPO/backend" && ENVIRONMENT=test uv run --no-project --python 3.12 --with-requirements requirements.txt --with-requirements requirements-dev.txt python -m pytest --no-cov tests/test_secretary_dates.py tests/test_assistant_router.py tests/test_assistant_karte.py tests/test_assistant_rules_router.py tests/test_assistant_karte_pg.py -q > /tmp/CC報告ファイル/pytest.txt 2>&1; echo "exit=$?"` → exit=0。最後の 1 行（passed・skipped の数）を報告に貼る。続けて同じ形で `tests/test_secretary_dates.py` だけを流し（保存先 `/tmp/CC報告ファイル/pytest-dates.txt`）、最後の 1 行を貼る（期待 353 passed）。
+- (6c) `cd "$REPO/backend" && ENVIRONMENT=test uv run --no-project --python 3.12 --with-requirements requirements.txt --with-requirements requirements-dev.txt python -m pytest --no-cov tests/test_secretary_dates.py tests/test_assistant_router.py tests/test_assistant_karte.py tests/test_assistant_rules_router.py tests/test_assistant_karte_pg.py -q > /tmp/CC報告ファイル/pytest.txt 2>&1; echo "exit=$?"` → exit=0。最後の 1 行（passed・skipped の数）を報告に貼る。続けて同じ形で `tests/test_secretary_dates.py` だけを流し（保存先 `/tmp/CC報告ファイル/pytest-dates.txt`）、最後の 1 行を貼る（期待 367 passed）。
 - (6d) `cd "$REPO" && git diff --check > /tmp/CC報告ファイル/diff-check.txt 2>&1; echo "exit=$?"` → exit=0
 - (6e) `cd "$REPO" && git status --short` を報告に貼る。変わるのは `backend/app/routers/assistant.py`・`backend/tests/test_assistant_karte.py`（変更）と `backend/app/services/secretary_dates.py`・`backend/tests/test_secretary_dates.py`（新規）の 4 つだけ。
 - (6a)〜(6c) が手順書の書き損じ（import の並び・未使用の名前・行の長さ）で落ちたら、その書き損じだけ直し、直した所を報告に書く。試験の期待の日付を変えないと通らないとき、または手順書と違う作りに変えないと通らないときは `NEEDS_DECISION:` で止まる（期待の日付は PO 承認の決まりの表なので変えない）。
