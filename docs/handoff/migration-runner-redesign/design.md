@@ -293,6 +293,7 @@ P1〜P13 がそろうまで、5-1〜5-3 の実装カードは出さない。
 
 設計としての 1A の根拠（PO の言葉ではない）: 1B は本番 003 にしかない索引・制約・連番・権限（`docs/handoff/migration-runner-redesign/recon-5-0b/p01.md:45-68`・`:102`）まで新しい会社に写す。1A は、正しい形を決める場所を手順とひな形の直書きの1か所に保ったまま、差を1件ずつ審査を通して足せる。
 1A で最初にすること: P1 の差（本番 003 だけ 691・ひな形だけ 30・中身が違う 72。`docs/handoff/migration-runner-redesign/recon-5-0b/p01.md:100`）を、ひな形に足す・ひな形から外す・本番 003 の癖として足さない、の3つに1件ずつ分ける。分け方の表は 5-2 の実装カードを出す前に作る。上の CI 検査の差0（K5-2）はこの後に測る。
+分ける材料（ひな形の会社に登録全件を流した後の形と、本番 003・ひな形の直後との比べ）は前調査 5-2a で取る（カード `docs/handoff/migration-runner-redesign/card-5-2a.md`、結果 `docs/handoff/migration-runner-redesign/recon-5-2a/`）。
 第1版の 1B'（CI の会社から書き出す）は取り下げた。理由は上の前提の事実のとおり、今の CI の会社が本番の形にならないため。
 どちらの案でも、データ（役割・権限・会社の設定）はひな形に含めない。今の入れ方（tenant.py の seed_system_roles など）を残す。
 ひな形を直接使う5か所（setup の3本、backend/tests/rls_bootstrap.py、backend/tests/test_roles_system_key_ddl.py :29）も同じ PR で新しいひな形に揃え、古い直書きは消す（残すなら理由を書く）。
