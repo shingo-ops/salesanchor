@@ -10137,6 +10137,372 @@
         "title": "DuplicatesResponse",
         "type": "object"
       },
+      "DutyComponentIn": {
+        "additionalProperties": false,
+        "description": "関税の中身の1行（例: 関税・DDP 手数料・MPF）。",
+        "properties": {
+          "amount_currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Currency"
+          },
+          "base": {
+            "enum": [
+              "subtotal",
+              "subtotal_shipping",
+              "subtotal_shipping_prior"
+            ],
+            "title": "Base",
+            "type": "string"
+          },
+          "label": {
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "max_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Amount"
+          },
+          "min_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Amount"
+          },
+          "rate_pct": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Rate Pct"
+          }
+        },
+        "required": [
+          "label",
+          "base",
+          "rate_pct"
+        ],
+        "title": "DutyComponentIn",
+        "type": "object"
+      },
+      "DutyComponentRead": {
+        "properties": {
+          "amount_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Currency"
+          },
+          "base": {
+            "title": "Base",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "max_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Amount"
+          },
+          "min_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Amount"
+          },
+          "rate_pct": {
+            "title": "Rate Pct",
+            "type": "string"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "sort_order",
+          "label",
+          "base",
+          "rate_pct"
+        ],
+        "title": "DutyComponentRead",
+        "type": "object"
+      },
+      "DutyRuleIn": {
+        "additionalProperties": false,
+        "description": "関税の額の決まり1件（足す・直すで同じ形。中身の行は丸ごと置き換える）。",
+        "properties": {
+          "carrier": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carrier"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/DutyComponentIn"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Components",
+            "type": "array"
+          },
+          "destination_country_code": {
+            "pattern": "^[A-Z]{2}$",
+            "title": "Destination Country Code",
+            "type": "string"
+          },
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "is_active": {
+            "default": true,
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "label": {
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "source_url": {
+            "pattern": "^https?://\\S+$",
+            "title": "Source Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "destination_country_code",
+          "label",
+          "effective_from",
+          "source_url",
+          "components"
+        ],
+        "title": "DutyRuleIn",
+        "type": "object"
+      },
+      "DutyRuleOptions": {
+        "description": "画面の選択肢（正本はそれぞれ tenant_settings・為替の表・DutyBase）。",
+        "properties": {
+          "bases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Bases",
+            "type": "array"
+          },
+          "currencies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Currencies",
+            "type": "array"
+          },
+          "duty_incoterms": {
+            "title": "Duty Incoterms",
+            "type": "string"
+          }
+        },
+        "required": [
+          "duty_incoterms",
+          "currencies",
+          "bases"
+        ],
+        "title": "DutyRuleOptions",
+        "type": "object"
+      },
+      "DutyRuleRead": {
+        "properties": {
+          "carrier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carrier"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/DutyComponentRead"
+            },
+            "title": "Components",
+            "type": "array"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "destination_country_code": {
+            "title": "Destination Country Code",
+            "type": "string"
+          },
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "id",
+          "destination_country_code",
+          "label",
+          "effective_from",
+          "source_url",
+          "is_active",
+          "components"
+        ],
+        "title": "DutyRuleRead",
+        "type": "object"
+      },
       "EngineInfo": {
         "properties": {
           "current_engine_version": {
@@ -41420,6 +41786,201 @@
         "summary": "Take Own Server Snapshot",
         "tags": [
           "discord"
+        ]
+      }
+    },
+    "/api/v1/admin/duty-rules": {
+      "get": {
+        "operationId": "list_rules_api_v1_admin_duty_rules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DutyRuleRead"
+                  },
+                  "title": "Response List Rules Api V1 Admin Duty Rules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "関税の額の決まりの一覧",
+        "tags": [
+          "duty-rules"
+        ]
+      },
+      "post": {
+        "operationId": "create_rule_api_v1_admin_duty_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DutyRuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DutyRuleRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "関税の額の決まりを足す",
+        "tags": [
+          "duty-rules"
+        ]
+      }
+    },
+    "/api/v1/admin/duty-rules/options": {
+      "get": {
+        "operationId": "get_options_api_v1_admin_duty_rules_options_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DutyRuleOptions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "関税の額の画面の選択肢（関税の条件・通貨・基準）",
+        "tags": [
+          "duty-rules"
+        ]
+      }
+    },
+    "/api/v1/admin/duty-rules/{rule_id}": {
+      "delete": {
+        "operationId": "delete_rule_api_v1_admin_duty_rules__rule_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "title": "Rule Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "関税の額の決まりを消す",
+        "tags": [
+          "duty-rules"
+        ]
+      },
+      "put": {
+        "operationId": "update_rule_api_v1_admin_duty_rules__rule_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "title": "Rule Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DutyRuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DutyRuleRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "関税の額の決まりを直す",
+        "tags": [
+          "duty-rules"
         ]
       }
     },

@@ -23,6 +23,7 @@ const PAGES = {
   "discord-announce": "Discord Announce",
   "tenant-policy": "Tenant Policy",
   "channel-masters": "Channel Management",
+  "duty-rules": "Duty Amounts",
 };
 
 const view = (path: string) =>
@@ -38,7 +39,7 @@ const view = (path: string) =>
     </MemoryRouter>,
   );
 
-it("links the 4 admin pages under the management-center layout", () => {
+it("links the 5 admin pages under the management-center layout", () => {
   mockPermissions(true);
   view("staff");
   for (const [path, label] of Object.entries(PAGES)) {
@@ -52,7 +53,7 @@ it.each(Object.entries(PAGES))("keeps the left menu and highlights %s when opene
   expect(screen.getByTestId("child").textContent).toBe(path);
   const link = screen.getByRole("link", { name: label });
   expect(link.className).toContain("comp-subnav__item--active");
-  expect(screen.getAllByRole("link").length).toBeGreaterThan(4);
+  expect(screen.getAllByRole("link").length).toBeGreaterThan(5);
 });
 
 it("hides the admin page entries without permission", () => {
