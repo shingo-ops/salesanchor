@@ -2237,7 +2237,7 @@ it("links the 5 admin pages under the management-center layout", () => {
 手順6 backend の試験（実 PostgreSQL の試験は CI だけで動く。ここでは skip と出てよい。failed と error は 0 であること）
     cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/test_duty_rules_router.py tests/test_duty_rules_pg.py 2>&1 | tail -15
     cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/test_realtime_topics.py 2>&1 | tail -15
-  期待: 1本目は `19 passed`（router の試験 13 本、うち1本は入力の誤り 7 通り）と `1 skipped`（PG の1本）で failed 0・error 0。2本目は failed 0・error 0。
+  期待: 1本目は `21 passed`（router の試験 15 本、うち1本は入力の誤り 7 通り）と `1 skipped`（PG の1本）で failed 0・error 0。2本目は failed 0・error 0。
 
 手順7 API の形を書き出す
     cd ~/sa/backend && ENVIRONMENT=test ~/venv312/bin/python -m tools.export_openapi ../frontend/api-contract/openapi.json 2>&1 | tail -5
