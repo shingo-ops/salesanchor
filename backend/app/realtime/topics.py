@@ -103,6 +103,9 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/admin/discord/auto-setup"): _PENDING,
     ("POST", "/api/v1/admin/discord/own-server/snapshot"): _PENDING,
     ("POST", "/api/v1/admin/discord/own-server/apply"): _PENDING,
+    ("POST", "/api/v1/admin/duty-rules"): _PENDING,
+    ("PUT", "/api/v1/admin/duty-rules/{rule_id}"): _PENDING,
+    ("DELETE", "/api/v1/admin/duty-rules/{rule_id}"): _PENDING,
     ("PUT", "/api/v1/admin/inventory-visibility/roles/{role_id}"): _PENDING,
     ("PUT", "/api/v1/admin/tenant-policy"): _PENDING,
     ("PUT", "/api/v1/admin/tenant-profile"): _PENDING,
@@ -111,6 +114,12 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/archives/{archive_id}/restore"): _PENDING,
     # ADR-1056: 下書きを返すだけで何も作らない
     ("POST", "/api/v1/assistant/messages"): _PENDING,
+    # ADR-1077 便2b: 決まり帳の口。決まり帳の画面を作るときに決める
+    ("POST", "/api/v1/assistant/rules"): _PENDING,
+    ("POST", "/api/v1/assistant/rules/feedback"): _PENDING,
+    ("POST", "/api/v1/assistant/rules/{rule_id}/approve"): _PENDING,
+    ("POST", "/api/v1/assistant/rules/{rule_id}/reject"): _PENDING,
+    ("POST", "/api/v1/assistant/rules/{rule_id}/remove"): _PENDING,
     ("POST", "/api/v1/auth/login"): _PENDING,
     ("POST", "/api/v1/auth/logout"): _PENDING,
     ("POST", "/api/v1/auth/login-requests/poll"): "人宛ての合図は口の中で直接送る（ADR-1055）。書き込みの口の自動合図にしない",

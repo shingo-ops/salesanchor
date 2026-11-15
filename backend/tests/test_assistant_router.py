@@ -44,6 +44,8 @@ def allowed(client, monkeypatch):
 
     monkeypatch.setattr(assistant, "get_ai_assignment", _assignment)
     monkeypatch.setattr(assistant, "record_usage_isolated", AsyncMock())
+    # ADR-1077 便2b: 決まり帳は SQLite に無いので、承認済みの決まりの読み取りは「0 件」を返す偽物にする
+    monkeypatch.setattr(assistant, "list_approved_rule_texts", AsyncMock(return_value=[]))
 
     from app.main import app
 

@@ -265,6 +265,7 @@ mode: handoff
 - 一覧の行の種類は後から変えられない（変えると外部キーが切れて誤りになる）。種類を変えるときは消して作り直す。画面も同じ動きにする（種類を変えると、他の種類の入力値は保存しない）。API は PUT で今と違う method_type が来たら 422（payment_method.type_immutable）を返し、何も書かない。
 - 「一覧の行に詳細が必ずある」ことは、書く口を1つにして守る。足す・直すは1つの取引の中で一覧と詳細の両方を書き、どちらかが失敗したら全部戻す。読む口は一覧と詳細をつないで読み、詳細の無い一覧の行は選択肢に出さず、発行も止める（409 payment_method）。DB の遅らせる見張り（CONSTRAINT TRIGGER の DEFERRABLE）は使わない。理由: リポジトリの migrations と backend/app に先例が0件（2026-11-10 git grep）。
 - 消せる。一覧の行を消すと詳細も消える（CASCADE）。発行済みの請求書は写しを持つので変わらない。使わなくするだけなら is_active を false にする。
+  - （ADR-1079 で改める）消すと隠れるが行は残る（deleted_at を入れる）。直すと新しい版を足す。一覧と詳細の行は DB の見張りが消すことと中身を直すことを断る。種類や地域を変えるのは「消す＋足す」。見張りが断ったとき（P0001）は 500 にせず 409 か 422 の理由コードに置き換える。正: docs/handoff/invoice-create-portfolio/design.md §3-8
 - 請求書から振込先の行へ外部キーは張らない。理由: 請求書は public の1つの表で、振込先は会社ごとに別のスキーマの表にある。外部キーは参照先の表を1つに決める必要があり、会社の数だけある表を1本の外部キーで指せない。会社ごとの表から public を指す向きの外部キーは先例がある（tenant.py:518・:605）が、今回は逆向き。発行時の写し（issuer_snapshot）に振込先の全項目と行の id を残す。
 - 変更の履歴: 会社情報と振込先の3表（一覧・銀行・Wise）を足す・直す・消すたびに、会社ごとの audit_logs（tenant.py:484〜:494）へ record_audit_log（backend/app/services/audit.py:277）で1行残す。一覧と詳細は1つの記録にまとめる。old_data と new_data には全項目を入れ、bank_account_number と iban だけは下4桁にする（全桁を履歴に広げないため。表示の伏せ方は PCI DSS の「見せるのは下4桁まで」を手本にする。evidence-payment-methods.md）。画面に履歴の一覧は今回作らない。
 - 編集できる人: tenant.profile.edit を持つ人（会社情報と同じ）。オーナーだけに絞らない（PO 2026-11-10「1」。ideal-state 41）。
@@ -642,7 +643,7 @@ commit の後、裏で順に行う:
 | A30 | 都道府県の選択肢が DB の47行から出て、画面のコードに都道府県名が無い | backend pytest（試験の seed で47行・API が47行を返す・frontend/src を読んで「北海道」が0件）。CI に専用の手順名は作らず、backend の試験の中で確かめる |
 | A31 | DB の動き: 運営の印なしで新しい public の9表へ書くと、INSERT は RLS の誤りで止まり、UPDATE と DELETE は0行になる。運営の印ありなら書ける。処理の動き: 行を直す処理（契約・請求書・税率の削除・採番）は、変えた行数が1でないと誤りで止まる | backend pytest（実 PostgreSQL・salesanchor_app。DB の動きは9表それぞれ。処理の動きは UPDATE・DELETE を持つ処理ごと。都道府県・明細・機能の表には UPDATE の処理が無いので処理の動きの対象外） |
 | A32 | 住所・登録・振込先を足す・直す・消すと audit_logs に1行ずつ残り、口座番号と IBAN は下4桁だけ | backend pytest |
-| A44 | 振込先の1対1: bank の一覧の行に Wise の詳細を付けると DB の誤りで止まる。1つの一覧の行に詳細を2行付けられない。一覧の種類を直すと誤りで止まる（API は 422 payment_method.type_immutable）。詳細の method_type か tenant_id を NULL にすると NOT NULL で止まる。詳細の tenant_id が一覧と違うと外部キーで止まる。一覧を消すと詳細も消える。詳細の書き込みが失敗すると一覧の行も残らない。詳細の無い一覧の行は選択肢に出ず、発行は 409 payment_method で止まる | backend pytest（実 PostgreSQL・salesanchor_app） |
+| A44 | 振込先の1対1: bank の一覧の行に Wise の詳細を付けると DB の誤りで止まる。1つの一覧の行に詳細を2行付けられない。一覧の種類を直すと誤りで止まる（API は 422 payment_method.type_immutable）。詳細の method_type か tenant_id を NULL にすると NOT NULL で止まる。詳細の tenant_id が一覧と違うと外部キーで止まる。一覧を消すと詳細も消える（ADR-1079 で「一覧も詳細も DB が消すことを断る」に改める。invoice-create-portfolio/design.md K25）。詳細の書き込みが失敗すると一覧の行も残らない。詳細の無い一覧の行は選択肢に出ず、発行は 409 payment_method で止まる | backend pytest（実 PostgreSQL・salesanchor_app） |
 | A33 | 番号の採番を同時に2つ走らせても番号が重ならない | backend pytest（実 PostgreSQL・2接続） |
 | A34 | 閲覧者に結び付いた配信先（viewer_account_id あり）で、契約手続き中（contracting）の閲覧者には配信されず、理由が not_contracted になる。入金確認で active になると配信される。配信の処理（tcg_distribution_svc.py:737 の `va.status <> 'active'`）は変えない | backend pytest（contracting の人の配信先の行の reason） |
 | A35 | 日本語のフォントが登録できないとき、発行が止まり請求書の行が作られない | backend pytest（フォントの読み込みを失敗させる） |

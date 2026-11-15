@@ -50,6 +50,8 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
                 "20261112_170000_add_calendar_events_recurrence.sql",
                 "20261106_150000_add_discord_role_link_tables.sql",
                 "20261112_160000_create_tenant_issuer_and_payment_tables.sql",
+                "20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql",
+                "20261115_100000_add_payment_method_versioning.sql",
             }
         ),
     ),
@@ -110,7 +112,27 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
     "test_tenant_issuer_tables_pg.py": (
         "scoped",
         "",
-        frozenset({"20261112_160000_create_tenant_issuer_and_payment_tables.sql"}),
+        frozenset(
+            {
+                "20261112_160000_create_tenant_issuer_and_payment_tables.sql",
+                "20261115_100000_add_payment_method_versioning.sql",
+            }
+        ),
+    ),
+    "test_tenant_duty_rules_pg.py": (
+        "scoped",
+        "",
+        frozenset({"20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql"}),
+    ),
+    "test_tenant_payment_versioning_pg.py": (
+        "scoped",
+        "",
+        frozenset({"20261115_100000_add_payment_method_versioning.sql"}),
+    ),
+    "test_duty_rules_router.py": (
+        "text_only",
+        "基準の並びを表の CHECK の文字と照合するだけ（test_duty_bases_match_migration_check）。流さない",
+        frozenset({"20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql"}),
     ),
     "test_notification_channels_blueprint_key_ddl.py": (
         "text_only",

@@ -90,6 +90,8 @@ import DiscordAnnouncePage from "./pages/admin/DiscordAnnouncePage";
 import AdminHubPage from "./pages/admin/AdminHubPage";
 // SA-02 Stage 3: チャネルマスタ管理
 import ChannelMastersPage from "./pages/admin/ChannelMastersPage";
+// invoice-create-portfolio 便B: 関税の額の決まり
+import DutyRulesPage from "./pages/admin/DutyRulesPage";
 import ManagementCenterPage from "./pages/management-center/ManagementCenterPage";
 import SettingsHubPage from "./pages/super-admin/settings/SettingsHubPage";
 import SettingsMasterPage from "./pages/super-admin/settings/SettingsMasterPage";
@@ -428,6 +430,7 @@ function App() {
                       <Route path="discord-config"      element={<DiscordConfigPage />} />
                       <Route path="discord-announce"    element={<DiscordAnnouncePage />} />
                       <Route path="channel-masters"     element={<ChannelMastersPage />} />
+                      <Route path="duty-rules"          element={<DutyRulesPage />} />
                       <Route path="channels"            element={<ChannelsPage />} />
                       <Route path="bots"                element={<BotsPage />} />
                       <Route path="login-requests"      element={<TenantLoginRequestsPage />} />

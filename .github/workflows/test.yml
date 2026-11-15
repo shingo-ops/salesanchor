@@ -25,6 +25,7 @@ on:
       - 'docker-compose.yml'
       - 'docker-compose.test.yml'
       - '.github/workflows/test.yml'
+      - '.github/workflows/weekly-deploy-lock-count.yml'
       - 'backend/pyproject.toml'
       - 'backend/Makefile'
   # schedule 削除（2026-05-28）: PR + push トリガーで十分にカバーされるため冗長。
@@ -52,6 +53,7 @@ jobs:
               - 'docker-compose.test.yml'
               - '.github/workflows/test.yml'
               - '.github/workflows/deploy.yml'
+              - '.github/workflows/weekly-deploy-lock-count.yml'
 
   # 静的解析（ruff/bandit/mypy）— pytest-run と並列実行
   # 設定: backend/pyproject.toml（ruff/mypy/bandit/pytest の SSoT）

@@ -70,6 +70,11 @@ const eventReply = {
     location: null,
     description: null,
     calendar_type: "personal",
+    is_meeting: false,
+    add_meet: null,
+    meet_available: false,
+    ask: null,
+    ask_count: 0,
   },
   candidates: none,
 };
@@ -134,7 +139,7 @@ describe("SecretaryChat sending", () => {
     renderChat();
     await sendMessage("make something");
     await screen.findByText("ok");
-    expect(mock.postWithTimeout).toHaveBeenCalledWith("/assistant/messages", { text: "make something" }, 100000);
+    expect(mock.postWithTimeout).toHaveBeenCalledWith("/assistant/messages", { text: "make something", karte: null }, 100000);
   });
 
   it("shows the reply as plain text, not HTML", async () => {
@@ -178,6 +183,15 @@ describe("SecretaryChat sending", () => {
       await screen.findByText("Something went wrong. Please wait a moment and send it again."),
     ).toBeTruthy();
     expect(screen.queryByText(/Please try again/)).toBeNull();
+  });
+
+  it("shows the rulesTooLong text on 413 rules_too_long", async () => {
+    mock.postWithTimeout.mockRejectedValue(new ApiError("x", 413, { code: "rules_too_long" }));
+    renderChat();
+    await sendMessage();
+    expect(
+      await screen.findByText("Your message and the company rules are too long together. Shorten the message or remove some rules."),
+    ).toBeTruthy();
   });
 
   it("shows the unreadable text on 502 unreadable", async () => {
@@ -312,5 +326,60 @@ describe("SecretaryChat event draft", () => {
     expect(path).toBe("/calendar/events");
     expect(body).toMatchObject({ title: "Meeting", is_all_day: false, calendar_type: "personal" });
     expect(body).not.toHaveProperty("category");
+  });
+
+  it("asks one missing field, then sends the karte back on the next message", async () => {
+    const askReply = {
+      ...eventReply,
+      draft: { ...eventReply.draft, end: null, is_meeting: true, ask: "end", ask_count: 1 },
+    };
+    mock.postWithTimeout.mockResolvedValueOnce(askReply).mockResolvedValueOnce(eventReply);
+    renderChat();
+    await sendMessage("meeting tomorrow at 10");
+    expect(await screen.findByText(i18n.t("secretary.ask.end"))).toBeTruthy();
+    expect(screen.getByText("Meeting")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Create" })).toBeNull();
+
+    const box = screen.getByLabelText(/Tell me what you need/);
+    fireEvent.change(box, { target: { value: "until 11" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByRole("button", { name: "Create" });
+    const [, body] = mock.postWithTimeout.mock.calls[1];
+    expect(body.karte).toMatchObject({ title: "Meeting", end: null, is_meeting: true, asked: "end", asked_count: 1 });
+  });
+
+  it("cannot create while a time is empty", async () => {
+    mock.postWithTimeout.mockResolvedValue({ ...eventReply, draft: { ...eventReply.draft, end: null } });
+    renderChat();
+    await sendMessage();
+    const create = (await screen.findByRole("button", { name: "Create" })) as HTMLButtonElement;
+    expect(create.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("End date"), { target: { value: "2026-11-02" } });
+    expect(create.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("End time"), { target: { value: "11:00" } });
+    expect(create.disabled).toBe(false);
+  });
+
+  it("shows the Meet checkbox only when Meet is available and sends add_meet when checked", async () => {
+    mock.postWithTimeout.mockResolvedValue({ ...eventReply, draft: { ...eventReply.draft, meet_available: true, add_meet: true } });
+    mock.post.mockResolvedValue({});
+    renderChat();
+    await sendMessage();
+    const meet = (await screen.findByLabelText(i18n.t("schedule.addMeet"))) as HTMLInputElement;
+    expect(meet.checked).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1));
+    expect(mock.post.mock.calls[0][1]).toMatchObject({ add_meet: true });
+  });
+
+  it("hides the Meet checkbox and never sends add_meet when Meet is not available", async () => {
+    mock.postWithTimeout.mockResolvedValue(eventReply);
+    mock.post.mockResolvedValue({});
+    renderChat();
+    await sendMessage();
+    fireEvent.click(await screen.findByRole("button", { name: "Create" }));
+    await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1));
+    expect(screen.queryByLabelText(i18n.t("schedule.addMeet"))).toBeNull();
+    expect(mock.post.mock.calls[0][1]).not.toHaveProperty("add_meet");
   });
 });

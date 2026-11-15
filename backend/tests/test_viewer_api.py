@@ -31,7 +31,6 @@ from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fix
 SECRET = "v" * 48
 PASSWORD = "correct-horse-battery"
 _HASH = hash_password(PASSWORD)
-NOW = datetime.now(timezone.utc)
 LOGIN = "/api/v1/viewer/login"
 LOGOUT = "/api/v1/viewer/logout"
 INVENTORY = "/api/v1/viewer/inventory"
@@ -308,9 +307,9 @@ async def test_login_null_hash_is_failure(redis):
 async def test_login_suspended_and_expired_trial_with_correct_password(redis):
     db = FakeDb(
         make_viewer(vid=1, email="s@x.com", status="suspended"),
-        make_viewer(vid=2, email="t@x.com", status="trial", trial_expires_at=NOW - timedelta(days=1)),
+        make_viewer(vid=2, email="t@x.com", status="trial", trial_expires_at=datetime.now(timezone.utc) - timedelta(days=1)),
         make_viewer(vid=3, email="n@x.com", status="trial", trial_expires_at=None),
-        make_viewer(vid=4, email="c@x.com", status="contracting", trial_expires_at=NOW - timedelta(days=1)),
+        make_viewer(vid=4, email="c@x.com", status="contracting", trial_expires_at=datetime.now(timezone.utc) - timedelta(days=1)),
     )
     async with _Client(db) as http:
         suspended = await _login(http, email="s@x.com")
@@ -344,7 +343,7 @@ async def test_login_success_returns_token_and_must_change_flag(redis):
 
 
 async def test_login_contracting_within_expiry_succeeds(redis):
-    db = FakeDb(make_viewer(status="contracting", trial_expires_at=NOW + timedelta(days=2)))
+    db = FakeDb(make_viewer(status="contracting", trial_expires_at=datetime.now(timezone.utc) + timedelta(days=2)))
     async with _Client(db) as http:
         resp = await _login(http)
     assert resp.status_code == 200

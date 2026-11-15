@@ -712,6 +712,9 @@ tenant_*	invoices	paypal_invoicer_view_url	mask		text
 tenant_*	invoices	paypal_order_id	mask		text
 tenant_*	invoices	pdf_url	mask		character varying
 tenant_*	invoices	ship_to_snapshot	mask		jsonb
+tenant_*	invoices	shipping_carrier	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	invoices	shipping_service	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	invoices	shipping_snapshot	mask		jsonb
 tenant_*	invoices	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
 tenant_*	invoices	void_reason	mask		character varying
 tenant_*	item_corrections	corrected_by	mask		text
@@ -989,6 +992,14 @@ tenant_*	teams	description	mask		character varying
 tenant_*	teams	name	mask		character varying
 tenant_*	tenant_calibrations	label_weights	mask		jsonb
 tenant_*	tenant_commission_settings	commission_rates	mask		jsonb
+tenant_*	tenant_duty_rule_components	amount_currency	mask	値の決まりが値の一覧でなく文字の形だけのため伏せる（初期は最小）	character
+tenant_*	tenant_duty_rule_components	base	allow	値の決まり chk_tenant_duty_rule_components_base で値が限られる	character varying
+tenant_*	tenant_duty_rule_components	label	mask		text
+tenant_*	tenant_duty_rules	carrier	mask	値の決まりが値の一覧でなく文字の形だけのため伏せる（初期は最小）	character varying
+tenant_*	tenant_duty_rules	destination_country_code	mask	値の決まりが値の一覧でなく文字の形だけのため伏せる（初期は最小）	character
+tenant_*	tenant_duty_rules	label	mask		text
+tenant_*	tenant_duty_rules	note	mask		text
+tenant_*	tenant_duty_rules	source_url	mask		text
 tenant_*	tenant_meta_config	granted_scopes	mask		jsonb
 tenant_*	tenant_meta_config	instagram_business_account_id	mask		character varying
 tenant_*	tenant_meta_config	instagram_username	mask		character varying

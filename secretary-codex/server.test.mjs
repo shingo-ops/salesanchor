@@ -433,3 +433,24 @@ test("(16) 上限いっぱい: 絵文字で決まり 20 件×150 字＋文 1000 
     assert.equal((await post(port, body)).status, 200);
   });
 });
+
+test("(17) karte・asked: 渡せば今の日時の前に入る・形が違えば 400 で codex を呼ばない（ADR-1078）", async () => {
+  login();
+  const prompt = fs.readFileSync(path.join(ASSETS, "prompt.txt"), "utf8");
+  const karte = { start: "2026-11-02T10:00:00+09:00", end: null, is_all_day: false };
+  writeFake({ events: okEvents() });
+  await withServer({}, async ({ port }) => {
+    assert.equal((await post(port, { text: TEXT, now: NOW, model: "gpt-x", karte, asked: "end" })).status, 200);
+  });
+  assert.equal(fs.readFileSync(stdinLog, "utf8"), compose(prompt, NOW, TEXT, [], karte, "end"));
+  fs.rmSync(argsLog, { force: true });
+  writeFake({ events: okEvents() });
+  await withServer({}, async ({ port }) => {
+    for (const bad of [{ karte: "x" }, { karte: [] }, { asked: "location" }, { asked: 1 }]) {
+      const r = await post(port, { text: TEXT, now: NOW, model: "gpt-x", ...bad });
+      assert.equal(r.status, 400, JSON.stringify(bad));
+      assert.deepEqual(r.json, { code: "bad_request" });
+    }
+  });
+  assert.equal(fs.existsSync(argsLog), false);
+});

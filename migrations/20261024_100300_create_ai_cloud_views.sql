@@ -1,6 +1,6 @@
 -- ADR-1052 段1: 相談係用の伏せたビュー ai_cloud を作る（冪等・1 トランザクション）。
 -- 一覧には載せない。run_all_migrations.sh の EXIT trap が、毎回の実行の最後に流す（ai_ro と同じ形）。
--- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1151 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
+-- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1162 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
 -- 2) ai_cloud を作り直す。3) ai_cloud_meta.build_views() で全ビューを作り、build_log に 1 行書く。
 -- 4) ai_reader_cloud に ai_cloud の USAGE と SELECT だけを付ける。
 -- 分類表の元: docs/handoff/cloud-case-ai/stage1-column-class.tsv（表ごと・class ごとにまとめて unnest で入れる）。
@@ -449,6 +449,8 @@ FROM (VALUES
   ('tenant_*','invoices',ARRAY['notes'],'mask',''),
   ('tenant_*','invoices',ARRAY['payment_method'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
   ('tenant_*','invoices',ARRAY['paypal_approval_url','paypal_copy_pdf','paypal_invoicer_view_url','paypal_order_id','pdf_url','ship_to_snapshot'],'mask',''),
+  ('tenant_*','invoices',ARRAY['shipping_carrier','shipping_service'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
+  ('tenant_*','invoices',ARRAY['shipping_snapshot'],'mask',''),
   ('tenant_*','invoices',ARRAY['status'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
   ('tenant_*','invoices',ARRAY['void_reason'],'mask',''),
   ('tenant_*','item_corrections',ARRAY['corrected_by','field_name','human_value','system_value'],'mask',''),
@@ -598,6 +600,11 @@ FROM (VALUES
   ('tenant_*','teams',ARRAY['description','name'],'mask',''),
   ('tenant_*','tenant_calibrations',ARRAY['label_weights'],'mask',''),
   ('tenant_*','tenant_commission_settings',ARRAY['commission_rates'],'mask',''),
+  ('tenant_*','tenant_duty_rule_components',ARRAY['amount_currency'],'mask','値の決まりが値の一覧でなく文字の形だけのため伏せる（初期は最小）'),
+  ('tenant_*','tenant_duty_rule_components',ARRAY['base'],'allow','値の決まり chk_tenant_duty_rule_components_base で値が限られる'),
+  ('tenant_*','tenant_duty_rule_components',ARRAY['label'],'mask',''),
+  ('tenant_*','tenant_duty_rules',ARRAY['carrier','destination_country_code'],'mask','値の決まりが値の一覧でなく文字の形だけのため伏せる（初期は最小）'),
+  ('tenant_*','tenant_duty_rules',ARRAY['label','note','source_url'],'mask',''),
   ('tenant_*','tenant_invoice_payment_bank',ARRAY['account_holder','bank_account_type','bank_address','bank_branch','bank_name','swift_code'],'mask',''),
   ('tenant_*','tenant_invoice_payment_bank',ARRAY['method_type'],'allow','値の決まり chk_tenant_invoice_payment_bank_method_type で値が限られる'),
   ('tenant_*','tenant_invoice_payment_methods',ARRAY['display_name'],'mask',''),
