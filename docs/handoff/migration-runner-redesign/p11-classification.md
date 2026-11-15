@@ -23,7 +23,7 @@
 - tenant_004.audit_log は毎回 `migrations/20260921_050000_drop_tenant004_pipeline_tables.sql:51`（登録 `scripts/run_all_migrations.sh:947`）で消える。反映の後の本番にも無い（p11-prod-recheck.txt に tenant_004.audit_log の行が無い）。
 - そのため、毎回 :733 で飛ばされず、次の18表を作る（IF NOT EXISTS。行番号は `20260831_110000` の中）: audit_log :55・conditions :79・tcg_products :92・tcg_suppliers :111・units :123・condition_aliases :140・product_exclude_keywords :157・product_search_keywords :173・products_logistics :189・supplier_channels :199・unit_aliases :212・source_messages :233・extraction_jobs :253・extraction_items :271・analysis_results :293・item_notes :341・unparsed_lines :358・import_jobs :373。
 - その後、同じ反映の中で次の3本が、この18表のうち14表を消す: :868（`migrations/20260915_010000_drop_tcg_products_phase2c.sql:86`、tcg_products）、:947（`migrations/20260921_050000_drop_tenant004_pipeline_tables.sql` :18・:29・:30・:36・:51・:56・:57）、:959（`migrations/20260921_130000_drop_tenant004_master_copies.sql` :21・:22・:27・:28・:33・:34）。
-- 18表のほかに §4 の C の物が書く表（:733 では作らない、前の移行が作る表）は、:947 の :42・:50 と、:959 の :35・:36・:41・:42 で消える。
+- 18表のほかに、前の移行が作る表（:733 では作らない表）も同じ反映の中で消える。§4 の C の物が書く表は :947 の :42・:50 と、:959 の :41・:42 で消える。#16（D）が書く4表のうち2表は :959 の :35・:36 で消える（§2）。
 - 18表のうち、どの移行も消さない表はちょうど4つ: tcg_suppliers・item_notes・unparsed_lines・products_logistics（`migrations/` の DROP TABLE を探した結果。`20260921_050000:26-27` は item_notes・unparsed_lines の外部キーを外すだけ）。これらは反映の後も残る（tcg_suppliers は p11-prod-recheck.txt で確かめた）。この18表のうち残る表を書く先に挙げるのは、p11-detail の書く先の列では #24・#25（tcg_suppliers）と #38（products_logistics。§4 のとおり値は書かない）だけ。
 - 【未確認】本番の反映ログで、:47 の NOTICE（creating TCG analysis tables in schema tenant_004）が毎回出ているかは見ていない。上は本文と登録の順番から読んだ事実。分け方の答えは、この NOTICE が出ていなくても変わらない（出ていなければ C の物は書く先が無く飛ばすだけ）。#24・#25 は、tcg_suppliers と supplier_channels が両方ある回に行を戻す。
 
