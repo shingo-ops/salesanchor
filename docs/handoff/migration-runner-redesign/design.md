@@ -177,14 +177,14 @@
 
 | 項目 | 第7版（10/30） | 今（11/15） | 根拠 |
 |---|---|---|---|
-| 登録の数 | 363（run_sql 337・run_py 26） | 404（run_sql 378・run_py 26） | `recon-5-0a/p11.md:30`・`recon-5-0a/p13.md:12` |
-| 移行の段の所要時間 | 86秒（run 40997826435） | 123〜129秒（runs 43630802044・43624476653・43613573022） | `recon-5-0a/p09.md:20-22`。増えた理由が登録の増加かは未確認（同 :27） |
-| 値を書く移行 | 39本（許可一覧 15行） | 52本（許可一覧 15行。一覧に無い物 36本） | `recon-5-0a/p11.md:33-35`・表 :39 以降 |
-| 自分で BEGIN/COMMIT を書く手順 | 13本 | 27本（全て run_sql） | `recon-5-0a/p06.md:18-20`・:63 |
-| 会社のスキーマの既定の権限 | `tenant.py` :1696-1704 | `backend/app/services/tenant.py:2017-2019`（関数 create_tenant_schema は :1951） | `recon-5-0a/p04.md:20-27` |
-| 共通の表の数 | 69表（列 898） | 79表（列 1006） | `recon-5-0-opus-prod.md` §2・§3 |
+| 登録の数 | 363（run_sql 337・run_py 26） | 404（run_sql 378・run_py 26） | `docs/handoff/migration-runner-redesign/recon-5-0a/p11.md:30`・`docs/handoff/migration-runner-redesign/recon-5-0a/p13.md:12` |
+| 移行の段の所要時間 | 86秒（run 40997826435） | 123〜129秒（runs 43630802044・43624476653・43613573022） | `docs/handoff/migration-runner-redesign/recon-5-0a/p09.md:20-22`。増えた理由が登録の増加かは未確認（同 :27） |
+| 値を書く移行 | 39本（許可一覧 15行） | 52本（許可一覧 15行。一覧に無い物 36本） | `docs/handoff/migration-runner-redesign/recon-5-0a/p11.md:33-35`・表 :39 以降 |
+| 自分で BEGIN/COMMIT を書く手順 | 13本 | 27本（全て run_sql） | `docs/handoff/migration-runner-redesign/recon-5-0a/p06.md:18-20`・:63 |
+| 会社のスキーマの既定の権限 | `backend/app/services/tenant.py` :1696-1704 | `backend/app/services/tenant.py:2017-2019`（関数 create_tenant_schema は :1951） | `docs/handoff/migration-runner-redesign/recon-5-0a/p04.md:20-27` |
+| 共通の表の数 | 69表（列 898） | 79表（列 1006） | `docs/handoff/migration-runner-redesign/recon-5-0-opus-prod.md` §2・§3 |
 
-本番の5社の形（今。`recon-5-0-opus-prod.md` §2、`pg_catalog` で数えた。値は読んでいない）:
+本番の5社の形（今。`docs/handoff/migration-runner-redesign/recon-5-0-opus-prod.md` §2、`pg_catalog` で数えた。値は読んでいない）:
 
 | 会社 | 表 | 索引 | 列 | 制約 | 違い（同 §3〜§5） |
 |---|---|---|---|---|---|
@@ -194,8 +194,8 @@
 | tenant_005 | 79 | 243 | 1006 | 262 | 外部キー3本が自動の名前 |
 | tenant_006 | 79 | 242 | 1006 | 262 | 手で足した権限 `qa_tenant006_rw`（全79表）、トリガが1つ多い |
 
-- 本番 tenant_003 の形（構造だけ・会社名を伏せた）: `recon-5-0b/prod003/`（取り方の全文は同 README）。会社のひな形（§5-6）と CI の全件ドライラン（P8）の形を、これと1件ずつ比べる（カード `card-5-0b.md`）。
-- 手で足した物（名前の変更・控え 14 表・`qa_tenant006_rw`）は、移行の記録から作り直せない。済んだ移行を飛ばす直しでは「移行が作る形」に数えない（`recon-5-0-opus-prod.md` §4-3）。
+- 本番 tenant_003 の形（構造だけ・会社名を伏せた）: `docs/handoff/migration-runner-redesign/recon-5-0b/prod003/`（取り方の全文は同 README）。会社のひな形（§5-6）と CI の全件ドライラン（P8）の形を、これと1件ずつ比べる（カード `docs/handoff/migration-runner-redesign/card-5-0b.md`）。
+- 手で足した物（名前の変更・控え 14 表・`qa_tenant006_rw`）は、移行の記録から作り直せない。済んだ移行を飛ばす直しでは「移行が作る形」に数えない（`docs/handoff/migration-runner-redesign/recon-5-0-opus-prod.md` §4-3）。
 
 ### 5-1c. 前調査 5-0b（使い捨ての DB）で分かったこと（2026-11-15）
 
@@ -203,15 +203,15 @@
 
 | 調べたこと | 結果 | 根拠 |
 |---|---|---|
-| P1 ひな形だけで作った会社の形 | 表 53・列 641・索引 140・制約 181（本番 003 は 79・1006・256・264）。本番 003 だけにある差 691 件・ひな形だけ 30 件・中身が違う 72 件 | `recon-5-0b/p01.md:29-43`・`:87-102` |
-| P1 003 だけの索引 13・制約 2・連番 3 | 全部ひな形に無い（×） | `recon-5-0b/p01.md:45-68` |
-| P1 表の権限 | 本番 003 にある `ai_unmask_owner=r/jarvis` がひな形の会社に無い | `recon-5-0b/p01.md:102` |
-| P8 CI の全件ドライラン | 378 本・2周とも 378 成功／0 失敗。後の tenant_001 は表 78・列 836（本番 003 は 79・1006） | `recon-5-0b/p08.md:18-35`・`:50-68` |
-| P8 CI が先に要る役 | `ai_unmask_owner` を BYPASSRLS 無しで先に作ると `20261031_210000_create_ops_case.sql:189` で止まる。属性を合わせると通る | `recon-5-0b/p08.md:37-48` |
-| P8 手で名前を変えた表 | CI の tenant_001 は `tcg_suppliers`、本番は `tenant_suppliers`。30 表のうち名前が合うのは 29 | `recon-5-0b/p08.md:70-75` |
-| P8 解析の規則の 13 表 | 全件を流した後は 0 表。作る移行（登録 :883）をもう1回流すと 13 表。＝反映のたびに作って消す（:934）動きを使い捨ての DB で確認。本番での動きは未確認 | `recon-5-0b/p08.md:77-87` |
-| P9 自分で COMMIT を書くファイルを会社を作る取引の中で流す | 取引が途中で確定し、巻き戻しても前後の表・RLS・方針が残る（○） | `recon-5-0b/p09.md` 「結果」「合否の線」 |
-| P10 run_py 26 本 | 22 本通る。`:342`〜`:345`（`migrate_adr021_sprint2`〜`5`）の 4 本は `relation "tenant_001.orders" does not exist` で落ちる。`:657` は `PYTHONPATH` 無しで `ModuleNotFoundError`（中身は何もしない台本） | `recon-5-0b/p10-trial.md` 「26本の表」「合否の線」 |
+| P1 ひな形だけで作った会社の形 | 表 53・列 641・索引 140・制約 181（本番 003 は 79・1006・256・264）。本番 003 だけにある差 691 件・ひな形だけ 30 件・中身が違う 72 件 | `docs/handoff/migration-runner-redesign/recon-5-0b/p01.md:29-43`・`:87-102` |
+| P1 003 だけの索引 13・制約 2・連番 3 | 全部ひな形に無い（×） | `docs/handoff/migration-runner-redesign/recon-5-0b/p01.md:45-68` |
+| P1 表の権限 | 本番 003 にある `ai_unmask_owner=r/jarvis` がひな形の会社に無い | `docs/handoff/migration-runner-redesign/recon-5-0b/p01.md:102` |
+| P8 CI の全件ドライラン | 378 本・2周とも 378 成功／0 失敗。後の tenant_001 は表 78・列 836（本番 003 は 79・1006） | `docs/handoff/migration-runner-redesign/recon-5-0b/p08.md:18-35`・`:50-68` |
+| P8 CI が先に要る役 | `ai_unmask_owner` を BYPASSRLS 無しで先に作ると `migrations/20261031_210000_create_ops_case.sql:189` で止まる。属性を合わせると通る | `docs/handoff/migration-runner-redesign/recon-5-0b/p08.md:37-48` |
+| P8 手で名前を変えた表 | CI の tenant_001 は `tcg_suppliers`、本番は `tenant_suppliers`。30 表のうち名前が合うのは 29 | `docs/handoff/migration-runner-redesign/recon-5-0b/p08.md:70-75` |
+| P8 解析の規則の 13 表 | 全件を流した後は 0 表。作る移行（登録 :883）をもう1回流すと 13 表。＝反映のたびに作って消す（:934）動きを使い捨ての DB で確認。本番での動きは未確認 | `docs/handoff/migration-runner-redesign/recon-5-0b/p08.md:77-87` |
+| P9 自分で COMMIT を書くファイルを会社を作る取引の中で流す | 取引が途中で確定し、巻き戻しても前後の表・RLS・方針が残る（○） | `docs/handoff/migration-runner-redesign/recon-5-0b/p09.md` 「結果」「合否の線」 |
+| P10 run_py 26 本 | 22 本通る。`:342`〜`:345`（`migrate_adr021_sprint2`〜`5`）の 4 本は `relation "tenant_001.orders" does not exist` で落ちる。`:657` は `PYTHONPATH` 無しで `ModuleNotFoundError`（中身は何もしない台本） | `docs/handoff/migration-runner-redesign/recon-5-0b/p10-trial.md` 「26本の表」「合否の線」 |
 
 ここから言えること（事実の組み合わせ。新しい推測はしない）:
 - ひな形だけの会社は、本番の会社と 26 表違う。本番の 005・006 は、ひな形で作った後に登録全件を流して 79 表になっている（§5-1b）。なので「ひな形＝今の会社の形」には、今は全くなっていない。
