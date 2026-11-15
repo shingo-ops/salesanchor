@@ -83,6 +83,7 @@ export default function ManagementCenterPage() {
           visible: can("tenantProfile") },
         { to: "channels",       labelKey: "nav.channels",       visible: can("channels") },
         { to: "channel-masters", labelKey: "nav.channelMasters", visible: can("channelMasters") },
+        { to: "duty-rules",      labelKey: "nav.dutyRules",      visible: can("dutyRules") },
         { to: "bots",           labelKey: "nav.bots",           visible: can("bots") },
         { to: "notifications",  labelKey: "nav.notifications",  visible: can("notifications") },
         { to: "login-requests", labelKey: "nav.tenantLoginRequests", visible: isTenantOwner },
