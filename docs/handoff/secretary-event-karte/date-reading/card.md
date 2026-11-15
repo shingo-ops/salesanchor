@@ -81,7 +81,7 @@ _OTHER_DATE_WORDS = re.compile(
 _DATE_MODIFIERS = re.compile(
     r"明け|開け|末|旬|初め|始め|頭|半ば|次|翌|(?<!午)前|(?<![午明])後|過ぎ|以降|以前|以外|以内|以来|最初|最後|年内|月内|週内|"
     r"ついたち|ふつか|みっか|よっか|いつか|むいか|なのか|ようか|ここのか|とおか|はつか|みそか|つごもり|晦|朔|"
-    r"ではなく|じゃなく|でなく|除|抜き|違|正月|盆|連休|休み|祝|年度|期|元旦|元日|締|〆"
+    r"ではなく|じゃなく|でなく|除|抜き|違|別の日|別日|都合|正月|盆|連休|休み|祝|年度|期|元旦|元日|締|〆"
 )
 _MONTH_DAY = re.compile(r"(\d{1,2})\s*月\s*(\d{1,2})\s*日")
 _DAY_ONLY = re.compile(
@@ -151,39 +151,43 @@ def _bounded(s: str, m: re.Match[str]) -> bool:
     return _AFTER_OK.match(s, m.end()) is not None
 
 
-def _resolve(text: str, today: date) -> tuple[date, bool] | None:
-    """resolve_day の中身。(日付, 〇日だけの言い方で決めたか) を返す。決まらなければ None。"""
+def _resolve(text: str, today: date) -> tuple[date, str | None] | None:
+    """resolve_day の中身。(日付, 守りの種類) を返す。決まらなければ None。
+
+    守りの種類: "day" は〇日だけの言い方、"weekday" は「来週」などの付かない〇曜だけの言い方、None は守りなし。
+    """
     s = unicodedata.normalize("NFKC", text)
     if _OTHER_DATE_WORDS.search(s) or _DATE_MODIFIERS.search(s):
         return None
-    found: list[tuple[date | None, bool]] = []
+    found: list[tuple[date | None, str | None]] = []
     for m in _MONTH_DAY.finditer(s):
         if not _bounded(s, m):
             return None
-        found.append((_month_day(today, int(m.group(1)), int(m.group(2))), False))
+        found.append((_month_day(today, int(m.group(1)), int(m.group(2))), None))
     s = _MONTH_DAY.sub("〓", s)
     for m in _DAY_ONLY.finditer(s):
         if not _bounded(s, m):
             return None
-        found.append((_day_only(today, int(m.group(1))), True))
+        found.append((_day_only(today, int(m.group(1))), "day"))
     s = _DAY_ONLY.sub("〓", s)
     for m in _WEEKDAY.finditer(s):
         if not _bounded(s, m):
             return None
-        found.append((_weekday(today, m.group(1), m.group(2)), False))
+        guard = "weekday" if m.group(1) is None else None
+        found.append((_weekday(today, m.group(1), m.group(2)), guard))
     s = _WEEKDAY.sub("〒", s)
     if _LEFTOVER.search(_TIME_OR_LENGTH.sub("", s)):
         return None
     for m in _RELATIVE_RE.finditer(s):
         if not _bounded(s, m):
             return None
-        found.append((today + timedelta(days=_RELATIVE[m.group(0)]), False))
+        found.append((today + timedelta(days=_RELATIVE[m.group(0)]), None))
     if len(found) != 1:
         return None
-    day, bare = found[0]
+    day, guard = found[0]
     if day is None:
         return None
-    return day, bare
+    return day, guard
 
 
 def resolve_day(text: str, today: date) -> date | None:
@@ -213,10 +217,21 @@ def _with_day(value: str | None, day: date) -> str | None:
     return day.isoformat() + value[10:]
 
 
-def _same_date_number(value: str | None, day: date) -> bool:
-    """AI の読んだ日付の「日にち」が day と同じか（〇日だけの言い方は、月だけを直す。design.md §3-2）。"""
+def _guard_ok(value: str | None, day: date, guard: str | None, today: date) -> bool:
+    """AI の読んだ日付を替えてよいか（design.md §3-2）。
+
+    〇日だけの言い方は、AI の読んだ日にちが同じときだけ（月を直すだけ）。
+    「来週」などの付かない〇曜だけの言い方は、AI の読んだ日付が明日から 7 日のうち（決まりの数え方の範囲）のときだけ。
+    範囲の外なら、AI は「クリスマスは金曜」のように別の言い方で日付を読んだとみて替えない。
+    """
+    if guard is None:
+        return True
     old = _day_of(value)
-    return old is not None and old.day == day.day
+    if old is None:
+        return False
+    if guard == "day":
+        return old.day == day.day
+    return today + timedelta(days=1) <= old <= today + timedelta(days=7)
 
 
 def apply_day(ev: IntentEvent, text: str, today: date, karte: KarteIn | None) -> IntentEvent:
@@ -224,20 +239,20 @@ def apply_day(ev: IntentEvent, text: str, today: date, karte: KarteIn | None) ->
 
     直前に終わりを聞いたなら終わりに、それ以外は始まりに当てる。始まりがカルテの値（この文で読んだものでない）なら替えない。
     始まりを替えたとき、終わりが元の始まりと同じ日なら終わりも同じ日に動かす。
-    〇日だけの言い方は、AI の読んだ日付の日にちが同じときだけ替える（月を直すだけ）。
+    〇日だけの言い方と、「来週」などの付かない〇曜だけの言い方は、_guard_ok が通すときだけ替える。
     """
     resolved = _resolve(text, today)
     if resolved is None:
         return ev
-    day, bare = resolved
+    day, guard = resolved
     if karte is not None and karte.asked == "end":
-        if bare and not _same_date_number(ev.end, day):
+        if not _guard_ok(ev.end, day, guard, today):
             return ev
         new_end = _with_day(ev.end, day)
         return ev if new_end is None else ev.model_copy(update={"end": new_end})
     if karte is not None and karte.start is not None and karte.asked != "start":
         return ev
-    if bare and not _same_date_number(ev.start, day):
+    if not _guard_ok(ev.start, day, guard, today):
         return ev
     new_start = _with_day(ev.start, day)
     if new_start is None:
@@ -566,6 +581,8 @@ def test_table_examples(text, today, expected):
         "月曜じゃなくて火曜",
         "明日以外",
         "来週の月曜の前日",
+        "月曜は都合が悪いので別の日で",
+        "月曜は別日で",
         "11月31日",  # あり得ない日付
         "2月30日",
         "31日",  # 11 月 31 日は無い（今日 11/15）
@@ -610,7 +627,7 @@ def test_apply_keeps_start_from_karte():
 
 
 def test_apply_after_asking_start_moves_start():
-    ev = IntentEvent(title="歯医者", start="2026-11-27T10:00:00+09:00")
+    ev = IntentEvent(title="歯医者", start="2026-11-21T10:00:00+09:00")
     karte = KarteIn(title="歯医者", asked="start", asked_count=1)
     assert apply_day(ev, "金曜 10 時", SUN, karte).start == "2026-11-20T10:00:00+09:00"
 
@@ -648,6 +665,28 @@ def test_apply_modifier_word_keeps_start():
     # 離れた所に言い直しの語があれば、AI の読んだ日付のまま（design.md §3-1 (2)）
     ev = IntentEvent(start="2027-01-04T10:00:00+09:00")
     assert apply_day(ev, "年明けは月曜 10時から仕事始め", SUN, None) == ev
+
+
+@pytest.mark.parametrize(
+    ("text", "start"),
+    [
+        ("クリスマスは金曜 19時からパーティー", "2026-12-25T19:00:00+09:00"),
+        ("仕事納めは月曜 17時から納会", "2026-12-28T17:00:00+09:00"),
+        ("新年は金曜 10時から初詣", "2027-01-01T10:00:00+09:00"),
+        ("一か月先、月曜 10時", "2026-12-14T10:00:00+09:00"),
+        ("金曜 10 時", "2026-11-27T10:00:00+09:00"),
+    ],
+)
+def test_apply_bare_weekday_far_keeps_start(text, start):
+    # 「来週」などの付かない〇曜は、AI の読んだ日付が明日から 7 日のうちのときだけ替える（design.md §3-2）
+    ev = IntentEvent(start=start)
+    assert apply_day(ev, text, SUN, None) == ev
+
+
+def test_apply_bare_weekday_far_keeps_end():
+    ev = IntentEvent(start="2026-11-16T13:00:00+09:00", end="2026-11-24T14:00:00+09:00")
+    karte = KarteIn(start="2026-11-16T13:00:00+09:00", asked="end", asked_count=1)
+    assert apply_day(ev, "火曜の14時まで", SUN, karte) == ev
 
 
 def test_apply_without_date_words_changes_nothing():
@@ -759,7 +798,7 @@ def _fixed_now(monkeypatch):
 
 - (6a) `cd "$REPO/backend" && uv run --no-project --python 3.12 --with ruff ruff check app/ > /tmp/CC報告ファイル/ruff.txt 2>&1; echo "exit=$?"` → exit=0（CI と同じ範囲。`.github/workflows/test.yml:92`。試験のファイルは CI の ruff の対象外）
 - (6b) `cd "$REPO/backend" && uv run --no-project --python 3.12 --with ruff ruff format --check app/services/secretary_dates.py > /tmp/CC報告ファイル/ruff-format.txt 2>&1; echo "exit=$?"` → exit=0。落ちたら `ruff format app/services/secretary_dates.py` で整え、整えた差分を報告に貼る（中身は変えない）。`app/routers/assistant.py` は元から整っていない行（:373-374）があるので format をかけない。
-- (6c) `cd "$REPO/backend" && ENVIRONMENT=test uv run --no-project --python 3.12 --with-requirements requirements.txt --with-requirements requirements-dev.txt python -m pytest --no-cov tests/test_secretary_dates.py tests/test_assistant_router.py tests/test_assistant_karte.py tests/test_assistant_rules_router.py tests/test_assistant_karte_pg.py -q > /tmp/CC報告ファイル/pytest.txt 2>&1; echo "exit=$?"` → exit=0。最後の 1 行（passed・skipped の数）を報告に貼る。続けて同じ形で `tests/test_secretary_dates.py` だけを流し（保存先 `/tmp/CC報告ファイル/pytest-dates.txt`）、最後の 1 行を貼る（期待 454 passed）。
+- (6c) `cd "$REPO/backend" && ENVIRONMENT=test uv run --no-project --python 3.12 --with-requirements requirements.txt --with-requirements requirements-dev.txt python -m pytest --no-cov tests/test_secretary_dates.py tests/test_assistant_router.py tests/test_assistant_karte.py tests/test_assistant_rules_router.py tests/test_assistant_karte_pg.py -q > /tmp/CC報告ファイル/pytest.txt 2>&1; echo "exit=$?"` → exit=0。最後の 1 行（passed・skipped の数）を報告に貼る。続けて同じ形で `tests/test_secretary_dates.py` だけを流し（保存先 `/tmp/CC報告ファイル/pytest-dates.txt`）、最後の 1 行を貼る（期待 462 passed）。
 - (6d) `cd "$REPO" && git diff --check > /tmp/CC報告ファイル/diff-check.txt 2>&1; echo "exit=$?"` → exit=0
 - (6e) `cd "$REPO" && git status --short` を報告に貼る。変わるのは `backend/app/routers/assistant.py`・`backend/tests/test_assistant_karte.py`（変更）と `backend/app/services/secretary_dates.py`・`backend/tests/test_secretary_dates.py`（新規）の 4 つだけ。
 - (6a)〜(6c) が手順書の書き損じ（import の並び・未使用の名前・行の長さ）で落ちたら、その書き損じだけ直し、直した所を報告に書く。試験の期待の日付を変えないと通らないとき、または手順書と違う作りに変えないと通らないときは `NEEDS_DECISION:` で止まる（期待の日付は PO 承認の決まりの表なので変えない）。
