@@ -14,7 +14,7 @@
 
 ## 2. 失敗の道（コード）
 
-- `backend/app/services/secretary_karte.py:28-30`: 直前に聞いた欄（`asked`）は、AI の値が null でなければ AI の値を使う。→ `end = "わからない"`。
+- `backend/app/services/secretary_karte.py:28-31`: 直前に聞いた欄（`asked`）は、AI の値が null でなければ AI の値を使う。→ `end = "わからない"`。
 - `backend/app/services/secretary_karte.py:39-54` `settle_dates`: 始まりがあれば `parse_iso(ev.start)`（:48）、終わりがあれば `parse_iso(end_text)`（:52）。読めないと `ValueError` をそのまま出す（:46 は始まりが空のときの終わり）。
 - `backend/app/schemas/assistant.py:126-128` `parse_iso` は `datetime.fromisoformat`。読めなければ `ValueError`。片方だけ時差の印（+09:00 など）が無い 2 つを `<` で比べると `TypeError`（Python の datetime の決まり）。
 - `backend/app/routers/assistant.py:324-326`: 新しい画面の道で `settle_dates` が `ValueError`/`TypeError` を出すと 502 unreadable。:343 で使用の記録は failed。
