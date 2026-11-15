@@ -214,8 +214,8 @@
 | P10 run_py 26 本 | 22 本通る。`:342`〜`:345`（`migrate_adr021_sprint2`〜`5`）の 4 本は `relation "tenant_001.orders" does not exist` で落ちる。`:657` は `PYTHONPATH` 無しで `ModuleNotFoundError`（中身は何もしない台本） | `docs/handoff/migration-runner-redesign/recon-5-0b/p10-trial.md` 「26本の表」「合否の線」 |
 
 ここから言えること（事実の組み合わせ。新しい推測はしない）:
-- ひな形だけの会社と本番 003 は、表の数の差が 26（本番だけの表 27・ひな形だけの表 1。`docs/handoff/migration-runner-redesign/recon-5-0b/p01.md:96`）。本番の 005・006 は今 79 表で 003 と同じ形（§5-1b）。005・006 がどの手順で作られたかは未確認。なので「ひな形＝今の会社の形」には、今はなっていない。
-- §5-6 の CI 検査（ひな形で作る→全件流す→前後を比べる）を入れると、今のひな形では差が数百件出る。どちらの案でも、最初に差を0にする作業が要る。
+- ひな形だけの会社と本番 003 は、表の数の差が 26（本番だけの表 27・ひな形だけの表 1。`docs/handoff/migration-runner-redesign/recon-5-0b/p01.md:96`）。本番の 005・006 は、表の名前（79）と列の数（1006）が 003 と同じ。索引・制約・トリガ・外部キーの名前・権限には差がある（§5-1b）。005・006 がどの手順で作られたかは未確認。なので「ひな形＝今の会社の形」には、今はなっていない。
+- P1 では、ひな形の会社と本番 003 の差が 691＋30＋72 件（`docs/handoff/migration-runner-redesign/recon-5-0b/p01.md:100`）。§5-6 の CI 検査（ひな形で作る→全件流す→前後を比べる）で差がいくつ出るかは未測定。
 - P9 のとおり、自分で COMMIT を書く 27 本（§5-1b）は、会社を作る取引の中で流してはいけない。今の `rls_bootstrap.py:142・:155・:378` は BEGIN/COMMIT を取り除いて流している。本体でも同じ扱いが要る。
 - P10 の 4 本は、CI の全件ドライランの後の tenant_001（`orders` 表が無い）では流れない（`docs/handoff/migration-runner-redesign/recon-5-0b/p10-trial.md` 「合否の線」）。CI 検査で流す前に、外す一覧（`scripts/migration-guard/dryrun-exclusions.tsv`）へ足すか、前提の表を用意するかを決める（実装カードで書く）。
 
