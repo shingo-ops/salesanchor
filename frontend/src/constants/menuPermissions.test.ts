@@ -44,6 +44,7 @@ const LEGACY: Record<MenuId, (has: Has) => boolean> = {
   integrationPaypal: (h) => h("erp.view"),
   channels: (h) => h("channels.view"),
   channelMasters: (h) => h("tenant.profile.edit"),
+  dutyRules: (h) => h("tenant.profile.edit") || h("tenant.profile.view"),
   bots: (h) => h("bots.view"),
   notifications: (h) => h("notifications.manage"),
 };
