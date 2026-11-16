@@ -60,7 +60,8 @@ EOF
 
   local expected_hash expected_image current_image
   expected_hash="$(docker compose config --hash "${svc}" 2>/dev/null | awk 'NR==1 {print $2}')"
-  expected_image="$(docker image inspect -f '{{.Id}}' "${PROJECT}-${svc}" 2>/dev/null)"
+  expected_ref="$(docker compose config --format json 2>/dev/null | python3 -c 'import json,sys;print(json.load(sys.stdin)["services"][sys.argv[1]].get("image",""))' "${svc}" 2>/dev/null)"
+  expected_image="$(docker image inspect -f '{{.Id}}' "${expected_ref:-${PROJECT}-${svc}}" 2>/dev/null)"
   current_image="$(docker inspect -f '{{.Image}}' "${keeper_id}" 2>/dev/null)"
 
   if [ -z "${expected_hash}" ] || [ -z "${keeper_label_hash}" ] || [ -z "${expected_image}" ] || [ -z "${current_image}" ]; then

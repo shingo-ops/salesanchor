@@ -16,7 +16,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # build-on-github 便2（docs/handoff/build-on-github/design.md §26）: 6 つの完成品を GitHub で組み立てて倉庫へ。
+  # 正本は build-images.yml。落ちたら deploy は動かない（prod1 には触らない）。secretary-codex だけは落ちても止めない（§26-8）。
+  build:
+    uses: ./.github/workflows/build-images.yml
+    permissions:
+      contents: read
+      actions: read
+    secrets:
+      GHCR_PUSH_TOKEN: ${{ secrets.GHCR_PUSH_TOKEN }}
+      VITE_FUNNEL_DASHBOARD: ${{ secrets.VITE_FUNNEL_DASHBOARD }}
+
   deploy:
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
@@ -270,11 +282,21 @@ jobs:
       #     3. Finalize (health check + cleanup)
       # ============================================
       - name: Deploy to VPS (code + env + docker compose)
+        env:
+          GHCR_USER: ${{ vars.GHCR_USER }}
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+          BACKEND_REF: ${{ needs.build.outputs.backend }}
+          FRONTEND_REF: ${{ needs.build.outputs.frontend }}
+          GEMINI_EGRESS_REF: ${{ needs.build.outputs.gemini_egress }}
+          GHA_EXPORTER_REF: ${{ needs.build.outputs.gha_exporter }}
+          SECRETARY_AGENT_REF: ${{ needs.build.outputs.secretary_agent }}
+          SECRETARY_CODEX_REF: ${{ needs.build.outputs.secretary_codex }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GHCR_USER,GHCR_PULL_TOKEN,BACKEND_REF,FRONTEND_REF,GEMINI_EGRESS_REF,GHA_EXPORTER_REF,SECRETARY_AGENT_REF,SECRETARY_CODEX_REF
           script: |
             set -e
             echo "============================================"
@@ -288,6 +310,8 @@ jobs:
             # .deploy_prev_sha は Finalize ステップ（別 SSH セッション）で読み取る
             PREV_SHA=$(git rev-parse HEAD 2>/dev/null || echo "")
             echo "${PREV_SHA}" > .deploy_prev_sha
+            # build-on-github 便2（design.md §9-1）: 書き換える前の指紋の行（必須 5 行と、在れば SECRETARY_CODEX の 1 行）を控える（無ければ空）。Finalize の戻し先
+            grep -E '^(BACKEND|FRONTEND|GEMINI_EGRESS|GHA_EXPORTER|SECRETARY_AGENT|SECRETARY_CODEX)_IMAGE=' .env > .deploy_prev_images.env 2>/dev/null || : > .deploy_prev_images.env
             echo "  PREV_SHA=${PREV_SHA:0:7}"
 
             echo "Step 1: Pulling latest code from GitHub..."
@@ -436,6 +460,22 @@ jobs:
             fi
             cat .env.secrets.new >> .env
             rm -f .env.secrets.new .env.bak
+            # build-on-github 便2（design.md §26）: GitHub で組み立てた完成品の指紋を .env に書く。
+            # 組み立てなかった完成品（出力が空）は今の行を残す。必須の 5 行が揃わなければ箱に触る前に止める。
+            # SECRETARY_CODEX_IMAGE は無くてもよい（付け足しの機能・design.md §26-8）ので、下の揃いの確かめには入れない。
+            for _pair in "BACKEND_IMAGE=${BACKEND_REF:-}" "FRONTEND_IMAGE=${FRONTEND_REF:-}" "GEMINI_EGRESS_IMAGE=${GEMINI_EGRESS_REF:-}" "GHA_EXPORTER_IMAGE=${GHA_EXPORTER_REF:-}" "SECRETARY_AGENT_IMAGE=${SECRETARY_AGENT_REF:-}" "SECRETARY_CODEX_IMAGE=${SECRETARY_CODEX_REF:-}"; do
+              _k="${_pair%%=*}"; _v="${_pair#*=}"
+              if [ -n "${_v}" ]; then sed -i "/^${_k}=/d" .env; echo "${_k}=${_v}" >> .env; fi
+            done
+            for _k in BACKEND_IMAGE FRONTEND_IMAGE GEMINI_EGRESS_IMAGE GHA_EXPORTER_IMAGE SECRETARY_AGENT_IMAGE; do
+              if ! grep -qE "^${_k}=ghcr\.io/[a-z0-9-]+/salesanchor-[a-z0-9-]+@sha256:[0-9a-f]{64}$" .env; then
+                echo "❌ .env に ${_k} の指紋の行がありません（箱には触っていません）"
+                # 受け取っていない指紋を .env に残さない（design.md §26-1 3.・§26-5 N1）。5. と同じ戻し方
+                sed -i -E '/^(BACKEND|FRONTEND|GEMINI_EGRESS|GHA_EXPORTER|SECRETARY_AGENT|SECRETARY_CODEX)_IMAGE=/d' .env
+                cat .deploy_prev_images.env >> .env
+                exit 1
+              fi
+            done
 
             echo "Step 2b: DATABASE_URL ホスト修正 + Phase2 フラグ確認..."
             # SA-18: localhost:5432 は必ずコンテナ内到達可能な postgres:5432 に修正する。
@@ -467,27 +507,13 @@ jobs:
               echo "ℹ️  DATABASE_URL は既に jarvis モード — スキップ"
             fi
 
-            echo "Step 3: Rebuilding and restarting containers..."
-            # build と up を分離してダウンタイムを最小化する。
-            # --build を up と一体で実行すると旧コンテナ停止後にビルドが走り（最大2分程度）
-            # その間 nginx が 502 を返す問題があった（2026-05-30 障害）。
-            # build を先に完了させてから up（切り替えのみ）を実行することで
-            # ダウンタイムをコンテナ再起動の数秒に短縮する。
-            #
-            # Docker bridge 一時エラー対策（2026-06-02 調査）:
-            # VPS カーネルが "adding interface veth to bridge docker0 failed: Device does not exist"
-            # を返す場合がある（一時的な netns 状態異常）。15秒待ってリトライすると解消する。
-            BUILD_OK=false
-            for _build_attempt in 1 2 3; do
-              if docker compose build; then
-                BUILD_OK=true
-                break
-              fi
-              echo "Build attempt ${_build_attempt} failed. 15秒後にリトライ..."
-              sleep 15
-            done
-            if [ "$BUILD_OK" != "true" ]; then
-              echo "docker compose build が3回失敗しました"
+            echo "Step 3: Pulling images by digest (build-on-github 便2)..."
+            # prod1 では組み立てない（2026-11-08 のメモリ不足の再発防止・design.md §1）。
+            # 受け取れなければ .env の指紋を控えに戻して止める（箱には触らない・design.md §26-1 3.）。
+            if ! bash scripts/deploy/pull-images.sh; then
+              sed -i -E '/^(BACKEND|FRONTEND|GEMINI_EGRESS|GHA_EXPORTER|SECRETARY_AGENT|SECRETARY_CODEX)_IMAGE=/d' .env
+              cat .deploy_prev_images.env >> .env
+              echo "❌ 完成品を受け取れませんでした。.env の指紋は控えに戻し、箱には触っていません"
               exit 1
             fi
             # blue-green: backend を無停止で切替（scripts/blue-green-cutover.sh）
@@ -495,7 +521,12 @@ jobs:
             #   [before] docker rm -f backend → up → 22s 502 → healthy
             #   [after]  green 起動 → health 確認 → nginx 切替 → 旧停止 → 502 ゼロ
             echo "Step 3b: Blue-green backend cutover..."
-            bash scripts/blue-green-cutover.sh
+            if ! bash scripts/blue-green-cutover.sh; then
+              sed -i -E '/^(BACKEND|FRONTEND|GEMINI_EGRESS|GHA_EXPORTER|SECRETARY_AGENT|SECRETARY_CODEX)_IMAGE=/d' .env
+              cat .deploy_prev_images.env >> .env
+              echo "❌ backend の切替に失敗しました。旧 backend は動いたまま。.env の指紋は控えに戻しました"
+              exit 1
+            fi
 
             # backend 以外（frontend/celery-beat/discord）は従来の force-rm + up で切替。
             # これらは nginx 経由の同期 API のリクエストパスに関与しないため
@@ -517,10 +548,10 @@ jobs:
               docker ps -a --filter "name=astro-webapp-${_svc}" --filter "label=com.docker.compose.oneoff=False" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
             done
             docker ps -a --filter "name=astro-webapp-celery-worker" --filter "label=com.docker.compose.oneoff=False" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
-            docker compose up -d --no-deps --remove-orphans frontend celery-worker celery-beat discord-gateway gemini-egress
+            docker compose up -d --no-build --no-deps --remove-orphans frontend celery-worker celery-beat discord-gateway gemini-egress
             bash scripts/deploy/app-services-plan.sh --verify || true
             echo "Step 3d: Ensuring monitoring collectors are up..."
-            docker compose up -d --no-deps node-exporter promtail
+            docker compose up -d --no-build --no-deps node-exporter promtail
 
             echo "Step 4: Backend is already healthy (confirmed by blue-green cutover)."
             echo "Step 4b: nginx reload already done inside blue-green-cutover.sh."
@@ -644,7 +675,7 @@ jobs:
             exit 1
 
       # ADR-1042: AI 読み取り窓口（ai-reader-http）を起こす。付け足しの機能なので、
-      # 失敗してもアプリの反映は止めない（警告だけ出す）。image は backend と同じ astro-webapp-backend。
+      # 失敗してもアプリの反映は止めない（警告だけ出す）。image は backend と同じ（.env の BACKEND_IMAGE。無ければ既定の astro-webapp-backend）。
       - name: Start ai-reader-http (read window)
         if: ${{ success() }}
         uses: appleboy/ssh-action@v1
@@ -713,12 +744,13 @@ jobs:
           script: |
             cd /home/ubuntu/salesanchor
             df -h / | tail -1
-            if ! docker build -t astro-webapp-secretary-agent ./secretary-agent; then
-              echo "::warning::secretary-agent のイメージを作れませんでした（アプリの反映には影響しません）"
+            _sa_img="$(grep -m1 '^SECRETARY_AGENT_IMAGE=' .env | cut -d= -f2-)"
+            if [ -z "${_sa_img}" ] || ! docker image inspect "${_sa_img}" >/dev/null 2>&1; then
+              echo "::warning::secretary-agent の完成品が prod1 にありません（アプリの反映には影響しません）"
               exit 0
             fi
             probe_rc=0
-            docker run --rm --network astro-webapp_frontnet --read-only --cap-drop ALL --security-opt no-new-privileges:true astro-webapp-secretary-agent node /app/probe.mjs || probe_rc=$?
+            docker run --rm --network astro-webapp_frontnet --read-only --cap-drop ALL --security-opt no-new-privileges:true "${_sa_img}" node /app/probe.mjs || probe_rc=$?
             if [ "$probe_rc" -eq 1 ]; then
               echo "::warning::K4 不合格: secretary-agent から DB か redis に届きました"
             elif [ "$probe_rc" -ne 0 ]; then
@@ -735,7 +767,7 @@ jobs:
       # ADR-1058 段3: ChatGPT の秘書の容器（secretary-codex）を作って起こす。secretary-agent と同じく付け足しの機能なので、
       # どの手順が失敗してもアプリの反映は止めない（警告だけ出して exit 0。continue-on-error と command_timeout も同じ）。
       # 秘密のファイルは持たない（ログインの鍵は名前付きボリューム secretary-codex-home の中。PO が scripts/ops/secretary-codex-login.sh で入れる）。
-      # build はリポジトリの根を context にし、secretary-codex/Dockerfile.dockerignore の許す一覧の4ファイルだけを入れる（design.md §5-1・§5-4）。
+      # 完成品は GitHub で組み立て、deploy の Step 3 で .env の SECRETARY_CODEX_IMAGE の指紋で受け取る（build-on-github 便2・design.md §26-8）。prod1 では組み立てない。
       - name: Start secretary-codex (ADR-1058)
         if: ${{ success() }}
         continue-on-error: true
@@ -748,11 +780,12 @@ jobs:
           script: |
             cd /home/ubuntu/salesanchor
             df -h / | tail -1
-            if ! DOCKER_BUILDKIT=1 docker build -t astro-webapp-secretary-codex -f secretary-codex/Dockerfile .; then
-              echo "::warning::secretary-codex のイメージを作れませんでした（アプリの反映には影響しません）"
+            _sc_img="$(grep -m1 '^SECRETARY_CODEX_IMAGE=' .env | cut -d= -f2-)"
+            if [ -z "${_sc_img}" ] || ! docker image inspect "${_sc_img}" >/dev/null 2>&1; then
+              echo "::warning::secretary-codex の完成品が prod1 にありません（アプリの反映には影響しません）"
               exit 0
             fi
-            codex_version="$(docker run --rm --entrypoint codex astro-webapp-secretary-codex --version 2>/dev/null || true)"
+            codex_version="$(docker run --rm --entrypoint codex "${_sc_img}" --version 2>/dev/null || true)"
             echo "codex_version=${codex_version}"
             if [ "$codex_version" != "codex-cli 0.162.1" ]; then
               echo "::warning::secretary-codex の codex の版が 0.162.1 ではないため起こしません"
@@ -760,7 +793,7 @@ jobs:
             fi
             probe_rc=0
             docker run --rm --network astro-webapp_frontnet --read-only --cap-drop ALL --security-opt no-new-privileges:true \
-              -e PROBE_HTTPS_URL=https://chatgpt.com/ astro-webapp-secretary-codex node /app/probe.mjs || probe_rc=$?
+              -e PROBE_HTTPS_URL=https://chatgpt.com/ "${_sc_img}" node /app/probe.mjs || probe_rc=$?
             if [ "$probe_rc" -eq 1 ]; then
               echo "::warning::K4 不合格: secretary-codex から DB か redis に届きました"
             elif [ "$probe_rc" -ne 0 ]; then
@@ -817,7 +850,7 @@ jobs:
                 echo "ℹ️  SA18: DATABASE_URL が変更 → blue-green で backend を再起動します..."
                 BG_HEALTH_TIMEOUT=90 bash scripts/blue-green-cutover.sh
                 echo "ℹ️  SA18: celery/discord を --force-recreate で切替..."
-                docker compose up -d --force-recreate celery-worker celery-beat discord-gateway
+                docker compose up -d --no-build --force-recreate celery-worker celery-beat discord-gateway
               else
                 echo "ℹ️  SA18: DATABASE_URL 変更なし → blue-green をスキップ（切替1回のみ）"
               fi
@@ -997,16 +1030,20 @@ jobs:
                 sed -i '/^SA18_PHASE2_ENABLED=/d' .env
                 echo "ℹ️  ロールバック: DATABASE_URL を jarvis@postgres:5432 に復元、SA18_PHASE2_ENABLED を削除"
 
-                # 旧コードでビルド（最大3回リトライ）
+                # build-on-github 便2（design.md §9-2・§26-1 6.）: 組み立てずに、控えの指紋を .env に戻す
                 _rb_build=false
-                for _attempt in 1 2 3; do
-                  if docker compose build 2>&1; then
-                    _rb_build=true
-                    break
-                  fi
-                  echo "Rollback build attempt ${_attempt} failed. 15秒後にリトライ..."
-                  sleep 15
-                done
+                if [ -s .deploy_prev_images.env ]; then
+                  while IFS= read -r _l; do
+                    _k="${_l%%=*}"
+                    sed -i "/^${_k}=/d" .env
+                    echo "${_l}" >> .env
+                  done < .deploy_prev_images.env
+                  _rb_build=true
+                elif ! git show HEAD:docker-compose.yml | grep -q 'BACKEND_IMAGE'; then
+                  # 便2 の初回の戻し: 戻り先の compose は build: の形。prod1 に残る astro-webapp-* の完成品で起こす
+                  sed -i -E '/^(BACKEND|FRONTEND|GEMINI_EGRESS|GHA_EXPORTER|SECRETARY_AGENT|SECRETARY_CODEX)_IMAGE=/d' .env
+                  _rb_build=true
+                fi
 
                 if [ "${_rb_build}" = "true" ]; then
                   # コンテナ差し替え（通常デプロイと同じパターン）
@@ -1014,7 +1051,7 @@ jobs:
                   for _svc in backend frontend celery-worker celery-beat discord-gateway; do
                     docker ps -a --filter "name=astro-webapp-${_svc}" --filter "label=com.docker.compose.oneoff=False" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
                   done
-                  docker compose up -d --remove-orphans
+                  docker compose up -d --no-build --remove-orphans
 
                   # 旧コンテナが healthy になるまで最大 180s 待つ（backend 起動 ~120s + 60s margin）
                   echo "Waiting for rollback to stabilize (max 180s)..."
@@ -1075,8 +1112,8 @@ jobs:
               echo "  ℹ️  Grafana not running in this stack"
             fi
 
-            echo "Step 8: Cleaning up old Docker images..."
-            docker image prune -f
+            echo "Step 8: Cleaning up old pulled images (keep current and previous digests)..."
+            bash scripts/deploy/prune-images.sh || echo "::warning::prune-images.sh が失敗しました（反映には影響しません）"
 
             echo "Step 8b: Cleaning up Docker build cache (keep 3GB)..."
             # 2026-10-02 prod1 ディスクフル事故の再発防止（ADR-135/136）:

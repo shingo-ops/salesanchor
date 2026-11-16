@@ -846,3 +846,30 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - P6（推奨・直した）: §26-5 N7 の「理由:」の重なりを消した。
 - マージ前の審査（reviewer opus・head 4bf2244b4）で REVISE: カード 2-7 の 2. と §26-5 N2 が `scripts/rehearsal_phase2.sh` の置き換える行を 92 行目と書いていたが、実物は 90 行目（92 行目は一時ファイルへ書き出す `printf`）。カードのとおりに置き換えるとリハーサルの仕組みが壊れる。Opus が実物の 84-95 行目を読んで確かめ、90 行目に直した。
 判定（Opus）: 必須の指摘は無い。直したのは書き方と試験の足しだけで、手順は変えていない。カード発行に進む（実装には PO の明示の実装承認が要る）。
+
+### 26-8 v4 の後に入った secretary-codex への対応（カード v5・2026-11-11 Opus）
+事実: カード v4（#5403）の後、本線に #5399（ADR-1058 段3・ChatGPT の秘書 secretary-codex）が入った（`git log -1 origin/main` = f3ff55057）。deploy.yml は 1352 → 1390 行になり、`.github/workflows/deploy.yml:735-771` に「Start secretary-codex (ADR-1058)」の段が足された。その 751 行目で prod1 が `docker build -t astro-webapp-secretary-codex -f secretary-codex/Dockerfile .` を流す。`docker-compose.secretary-codex.yml:12-15` も `build:` を持つ。クラウドの実装役は v4 のまま進めず NEEDS_DECISION で止まった（P2・P3 の行番号ずれと、この組み立て）。
+
+決めたこと（Opus の技術判断。目的・K1〜K8 は変えない）:
+1. **secretary-codex を 6 つ目の完成品として GitHub で組み立てる。** 理由: 残すと prod1 での組み立てが 1 つ残り、K1（prod1 の組み立て 0）と §1 の目的（2026-11-08 のメモリ不足の再発防止）を満たさない。名前・走査・push の正本を build-images.yml の 1 か所に保つ（§26-1 1.）。context はリポジトリの根、`file: secretary-codex/Dockerfile`。BuildKit は Dockerfile の隣の `Dockerfile.dockerignore` を読むので、入る物は今と同じ許す一覧の 4 つ（`secretary-codex/Dockerfile.dockerignore`）。
+2. **「無くてもよい」完成品として扱う。** 今の deploy.yml は、この段が落ちてもアプリの反映を止めない（`continue-on-error: true`・警告だけで `exit 0`、735-737 行目の注記）。この性質を変えないため、build-images.yml の job は各段に `continue-on-error: true` を付け、全部通ったときだけ指紋を出す（落ちたら出力は空・run は緑）。job ごとの `continue-on-error` でなく段ごとにしたのは、出力を「全部通ったときだけ」に絞れるため。deploy の Step 2 の揃いの確かめ（必須 5 行）と rollback-images.sh の 5 行の確かめには入れない。
+3. **受け取れなかった指紋を残さない（§26-1 3. と同じ考え）。** pull-images.sh は必須の 5 つの後に secretary-codex を受け取り、3 回とも落ちたら `.env` のその 1 行だけ控えの行に戻して `exit 0`（警告）。deploy の段は `.env` の指紋がローカルに無ければ警告して `exit 0`。
+4. **compose は `image: ${SECRETARY_CODEX_IMAGE:-astro-webapp-secretary-codex}`。** 起動は今と同じ `-p astro-webapp-secretary-codex -f docker-compose.secretary-codex.yml up -d --force-recreate --no-build`。compose は `--env-file` が無ければ、最初の `-f` のファイルの置き場（リポジトリの根）の `.env` を読んで変数を埋める（Context7 /docker/docs・variable-interpolation.md「Project directory determination order」・2026-11-11 取得）。override には入れない（別の `-f` で読むため）。手元で組み立てるときは `secretary-codex/Dockerfile:2` の `docker build` に `-t` を付ける。
+5. **控え・戻し・掃除の正規表現に SECRETARY_CODEX を足す。** Step 0 の控え・Step 2 の書き込み・受け取り失敗と切替失敗の戻し（2-2 の 4.・5.・5b.）・Finalize の初回の戻し・prune-images.sh の残す一覧。rollback-images.sh（手で流す戻し）は secretary-codex を起こし直さない（付け足しの機能で、戻しの速さ K6 に入れない）。
+6. **行番号を 1390 行の本線に合わせた。** 732 行目より後は +38（例: 965 → 1003、933 → 971、1040 → 1078、builder prune 1044-1047 → 1082-1085）。P7 を足した（751 行目の組み立てと compose の `build:` が 1 つ）。
+
+未確認と扱い:
+- U32（新）: secretary-codex の組み立てに GitHub の実行機で何分かかるか。他の job と並んで動くので deploy の待ちは「一番遅い job」で決まる。K8 の関所（20 回の中央値 ≤ 3.1 分）の測り直しに secretary-codex は入っていない。便2 の最初の run の build job の時間を測り、K8 の超えがあれば PO に上げる。落ちたときは箱に触る前の話ではなく「秘書だけ古いまま」になるので安全側。
+- U33（新）: 段ごとの `continue-on-error` の段が落ちたとき、呼ばれる側の workflow の結果が緑になるか。公式は `jobs.<job_id>.steps[*].continue-on-error` を「段が落ちても job を落とさない」とする（Context7 /websites/github_en_actions・workflow-syntax・2026-11-11 取得）。呼ばれる側の workflow の結果が緑になることは便2 の最初の run で確かめる。job の `timeout-minutes: 30` に当たると job は落ちるので、そのときは deploy が止まる（他の 5 つと同じ扱い）。
+- U34（新・審査4回目 P2）: build-secretary-codex が落ちても deploy は成功扱いなので、次の run は差分どおりに戻り、secretary-codex のファイル（または common）が次に変わるまで組み直されない。その間、`.env` の SECRETARY_CODEX の行は古いまま（初回なら無いまま）で、警告もその 1 回だけ。扱い: 便2 では仕組みを足さない（一度に 1 つ・今も段3 の組み立てが落ちたときは警告だけで同じく古いまま）。最初の run の観測で警告が出たら PO に伝える（カード §6 の 5.）。落ちた回数が 2 回目になったら、知らせの仕組みを別の変更として設計する。
+- 審査: 同じ Opus の系統によるクラウドの設計審査を 1 回行ってから実装に渡す（独立した第二者の審査ではない）。
+- 審査4回目（2026-11-11・head 1817342d2）: REVISE。P1（必須）: 2-5 の 6. の compose の注記に「docker build」が入り K1 の検査に当たる → 言い方を変えた。P2（推奨）→ U34。P3（推奨）: Finalize の戻しで秘書は起こし直さないと 2-2 の 10. に明記。P4（推奨）: 段の範囲を 735-771 に直した（772 は空行）。P5（推奨）: §6 の 5. に `/app` が 4 つの確かめを足した。
+
+### 26-9 実装 PR のマージ前審査（2026-11-11・reviewer opus・head 4dbd9ca00）と直し（カード v5.2）
+結果: REQUEST_CHANGES。カード §2 と差分は一致、K1 の当たりはカード §4 の 10 件と一致、actionlint 0 件。手動の試験 4 本（test-rollback・test-phase2-rehearsal・sandbox-test の ai-reader-audit と secretary-codex）は head 4dbd9ca00 で success。
+- M1（必須）: `.github/workflows/deploy-script-test.yml` の job は setup-python だけで PyYAML が無く、`scripts/tests/test-deploy-pull-prune.sh` が deploy.yml の塊を抜き出す所で `ModuleNotFoundError: No module named 'yaml'` で止まる。T1〜T11 が CI で一度も合否判定されていない。カード 2-4 の書き漏れ。直し: カード 2-4 の 3.（試験の段の直前に `pip install pyyaml --quiet`。見本 `.github/workflows/test-phase2-rehearsal.yml:33-34`）。
+- M2（必須）: PR 本文の「削除するファイル:」の宣言漏れ（process-artifacts）。コードではなく本文の直し。
+- R1（推奨）: build-secretary-codex の job が時間切れ等で落ちると呼ばれる側の workflow が赤になり deploy が止まる。扱い: 変えない。§26-8 の 2.（段ごとにした理由）と U33（時間切れのときは他の 5 つと同じく deploy が止まる）で受け入れ済み。job の `continue-on-error` は公式に「job が落ちても run を落とさない」とある（Context7 /websites/github_en_actions・workflow-syntax・2026-11-11 取得）が、一度に 1 つの原則で便2 では足さない。最初の run で時間を測る（U32）。
+- R2（推奨）: rollback-images.sh で .env を入れ替えた後に切替が落ちると、.env と動いている箱がずれる。手で流す道具で、戻し先は `.deploy_rollback_from.env` に残る。扱い: 便2 では変えない。手順書（カード §6）で、手で流したときは結果を Opus が見る。
+- R3（記録）: `scripts/deploy/app-services-plan.sh` の実行権が 100644 → 100755。deploy.yml は `bash` で呼ぶので動きは同じ。カードに無い変更として記録。
+- R4・R5（推奨）: rollback-images.sh の確かめの順がカードより安全側にずれている・prune-images.sh の `cd` の失敗の扱い（失敗しても何も消さない）。扱い: 変えない（どちらも止まる向き・消さない向き）。
