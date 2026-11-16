@@ -154,7 +154,7 @@
 | ADR-1007 決定3・4・5 | 済み（#4012・#4097・#4019・#4476） | recon4 |
 | ADR-1007 決定6（1回だけ流す） | 未着手。「2〜5を終えてから。そうしないと値を書く移行を無効にする書き換えができなくなる」 | `docs/adr/ADR-1007-migration-structure-only-run-once.md` :58・:100 |
 | 新しい会社の作り方 | `backend/app/services/tenant.py` の create_tenant_schema（:1635）が、直書きの表の定義（:193 の _TENANT_TABLES_SQL）から作る。権限は :1696-1704（会社のスキーマに付与と既定の権限）。ai_ro のビューは作らない（tenant.py に ai_ro の文字0件） | 実物 |
-| ひな形を直接使う所 | create_tenant_schema のほか、scripts/setup_tenant.py・scripts/setup_review_tenant.py・scripts/setup_test_users.py・backend/tests/rls_bootstrap.py・backend/tests/test_roles_system_key_ddl.py（:29）の5か所 | stage5-recon3 の q3_callers.txt |
+| ひな形を直接使う所 | （第3版の時点の記録。今の一覧は §5-6 末尾）create_tenant_schema のほか、scripts/setup_tenant.py・scripts/setup_review_tenant.py・setup_test_users・backend/tests/rls_bootstrap.py・backend/tests/test_roles_system_key_ddl.py（:29）の5か所 | stage5-recon3 の q3_callers.txt |
 | CI の全件ドライラン | 会社 tenant_001 は手書きの最小の表から作る（create_tenant_schema は使わない）。流すのは run_sql だけ。run_py 26本のうち CI で流れるのは2本 | `.github/workflows/migration-test.yml` :1362 付近・:1787・:1868・:1903、`scripts/migration-dryrun-report.py` :27 |
 | 移行の本体と CI | 本体はコンテナ名が固定で、CI では本体を流していない | `scripts/run_all_migrations.sh` :23-24 |
 | ai_ro のビュー | 本体の最初に外し（:219）、終わりに作り直す（:226-249）。作る対象は流した時点の public の表と会社の表だけ。新しい会社は、ビューが作られるまで読めない（意図した止め方） | `migrations/20261017_130100_create_ai_ro_views.sql` :30、`docs/adr/ADR-1024-ai-readonly-db-path.md` :67 |
@@ -294,9 +294,10 @@ P1〜P13 がそろうまで、5-1〜5-3 の実装カードは出さない。
 設計としての 1A の根拠（PO の言葉ではない）: 1B は本番 003 にしかない索引・制約・連番・権限（`docs/handoff/migration-runner-redesign/recon-5-0b/p01.md:45-68`・`:102`）まで新しい会社に写す。1A は、正しい形を決める場所を手順とひな形の直書きの1か所に保ったまま、差を1件ずつ審査を通して足せる。
 1A で最初にすること: P1 の差（本番 003 だけ 691・ひな形だけ 30・中身が違う 72。`docs/handoff/migration-runner-redesign/recon-5-0b/p01.md:100`）を、ひな形に足す・ひな形から外す・本番 003 の癖として足さない、の3つに1件ずつ分ける。分け方の表は 5-2 の実装カードを出す前に作る。上の CI 検査の差0（K5-2）はこの後に測る。
 分ける材料（ひな形の会社に登録全件を流した後の形と、本番 003・ひな形の直後との比べ）は前調査 5-2a で取る（カード `docs/handoff/migration-runner-redesign/card-5-2a.md`、結果 `docs/handoff/migration-runner-redesign/recon-5-2a/`）。
+分け方の表は `docs/handoff/migration-runner-redesign/recon-5-2a/classification.md`（147 件・未分類 0。足す 27・外す 22・003 の癖として写さない 82・差ではない 13・ひな形のまま 3）。外部キーの指し先の置き場所（会社の中か共用か）は、5-2a の書き出しでは「会社の中は `X.` 付き・それ以外は置き場所なし」で比べに入っており、本番 003 を置き場所つきで読んで1本ずつ比べた違いは分け済みの 3 本だけ（同 §3）。置き場所なしが共用を指すことは書き出したときの検索の順に頼るため、5-2 の実装カードでは置き場所を必ず付けて書き出して比べる。
 第1版の 1B'（CI の会社から書き出す）は取り下げた。理由は上の前提の事実のとおり、今の CI の会社が本番の形にならないため。
 どちらの案でも、データ（役割・権限・会社の設定）はひな形に含めない。今の入れ方（tenant.py の seed_system_roles など）を残す。
-ひな形を直接使う5か所（setup の3本、backend/tests/rls_bootstrap.py、backend/tests/test_roles_system_key_ddl.py :29）も同じ PR で新しいひな形に揃え、古い直書きは消す（残すなら理由を書く）。
+ひな形を直接使う所も同じ PR で新しいひな形に揃え、古い直書きは消す（残すなら理由を書く）。2026-11-16 に origin/main（a7537ec54）で数え直した今の一覧: `backend/app/services/tenant.py` の同じ文字列を読み込んで自分で流すのは `scripts/setup_review_tenant.py:149`・`:160` と `scripts/setup_tenant.py:171` の2本。SQL の写しは持たないので、ひな形の直しはそのまま届く。この2本は `create_tenant_schema` に差し替えない（失敗するとスキーマを丸ごと消す処理が、本番の審査用の会社に向くため。カード手順7）。`create_tenant_schema` を呼ぶだけの所は `backend/app/routers/admin.py:74`・`backend/tests/rls_bootstrap.py:411`・`backend/tests/test_channel_type_control.py:73`・`backend/tests/test_system_roles.py:182`（変えない）。ひな形の文字列を読んで中身を確かめる試験は `backend/tests/test_roles_system_key_ddl.py:35`・`backend/tests/test_tenant_issuer_tables_pg.py:63`・`backend/tests/test_tenant_payment_versioning_pg.py:73`・`:97`・`backend/tests/test_tenant_duty_rules_pg.py:75`・`:133`・`backend/tests/test_discord_role_link_ddl.py:41`（読むだけ）。第3版の「5か所」にあった setup_test_users という台本は今は無い。実装カードは `docs/handoff/migration-runner-redesign/card-5-2.md`。K5-2c の段（ひな形だけ変えて migrations/ を足さない PR を止める）は、ひな形を直す PR 自身を赤にするため、その PR の合流の後に別のカードで足す。A2 の予定の表示設定の表は、本番 003 と同じく RLS を切ったまま足す（`recon-5-0b/prod003/table_flags.tsv:9`）。RLS を付けるかは別のテーマ。
 
 ### 5-7. 実行済みの記録（5-3）
 
@@ -350,7 +351,7 @@ P1〜P13 がそろうまで、5-1〜5-3 の実装カードは出さない。
 | K5-1 | 39本が全部「無効にした」か「固めてよい（理由つき）」に分かれている。無効にした本数だけ、値の操作を持つ本数が減る | P11 の表と、stage5-recon4 と同じ数え方の前後の本数 |
 | K5-1b | 値を書く移行に依存する試験（P12）が、無効にした後も通る | CI |
 | K5-2 | ひな形で作った会社に登録全件（run_py を含む）を流しても、形の差が0 | §5-6 の CI の検査 |
-| K5-2b | ひな形を直接使う5か所が新しいひな形を使い、古い直書きが0 | grep の件数 |
+| K5-2b | ひな形を直接使う所（§5-6 末尾の今の一覧）が新しいひな形を使い、古い直書きが0 | grep の件数 |
 | K5-2c | ひな形だけを変えて migrations/ に手順を足さない PR が CI で止まる | 赤の実演 |
 | K5-3 | 今ある5社の形が 5-2・5-3 の前後で変わらない | stage5-prod と同じ問い合わせを前後で取り、差0 |
 | K5-4 | 起点の本番反映の後、記録の件数が「記録の対象」の数（登録の行数から、ai_ro を外す手順と毎回の一覧を引いた数）と一致。作り直しのファイルは今も登録の行に数えない（`scripts/run_all_migrations.sh` :225） | 本番の記録の件数と登録の行数 |
