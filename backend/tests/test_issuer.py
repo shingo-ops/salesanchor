@@ -20,6 +20,8 @@ from app.services.invoice_renderer import render_invoice_pdf, render_quote_pdf
 from app.services.issuer import decide_issuer_region, format_issuer_address, get_issuer
 from tests.test_invoices import _create_approved_quote, _create_company_contact
 
+pytestmark = pytest.mark.usefixtures("stub_invoice_totals")
+
 _ROOT = Path(__file__).resolve().parents[2]
 _APP = _ROOT / "backend" / "app"
 _PREF_SEED = _ROOT / "docs" / "handoff" / "viewer-contract-stage" / "data" / "prefectures.sql"
@@ -264,7 +266,7 @@ async def test_get_issuer_without_any_row_returns_blank(db_session):
 async def test_direct_create_stores_region(client, country, expected):
     company_id, contact_id = await _company_with_billing(client, f"地域{country}", country)
     res = await client.post("/api/v1/invoices", json={
-        "company_id": company_id, "contact_id": contact_id,
+        "company_id": company_id, "contact_id": contact_id, "shipping": {"mode": "none"},
         "items": [{"product_name": "P", "quantity": 1, "unit_price": "10.00"}],
     })
     assert res.status_code == 201, res.text
@@ -285,7 +287,7 @@ async def test_direct_create_without_bill_to_country_is_422(client, db_session, 
     company_id, contact_id = await _company_with_billing(client, "国なし直接", country)
     before = await _invoice_count(db_session)
     res = await client.post("/api/v1/invoices", json={
-        "company_id": company_id, "contact_id": contact_id,
+        "company_id": company_id, "contact_id": contact_id, "shipping": {"mode": "none"},
         "items": [{"product_name": "P", "quantity": 1, "unit_price": "10.00"}],
     })
     assert res.status_code == 422, res.text
@@ -307,7 +309,7 @@ async def test_from_quote_without_bill_to_country_is_422(client, db_session, cou
 async def test_region_does_not_follow_later_address_change(client):
     company_id, contact_id = await _company_with_billing(client, "あとで変える会社", "JP")
     res = await client.post("/api/v1/invoices", json={
-        "company_id": company_id, "contact_id": contact_id,
+        "company_id": company_id, "contact_id": contact_id, "shipping": {"mode": "none"},
         "items": [{"product_name": "P", "quantity": 1, "unit_price": "10.00"}],
     })
     assert res.status_code == 201, res.text

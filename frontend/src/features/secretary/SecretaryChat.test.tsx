@@ -37,6 +37,8 @@ vi.mock("../../hooks/usePermissions", () => ({
 }));
 
 import { ApiError } from "../../lib/api";
+import { queryClient } from "../../lib/query/apiQuery";
+import { apiErrorReasonMessage } from "../../lib/apiErrorReason";
 
 const FAB = "Ask the assistant";
 
@@ -47,6 +49,16 @@ const allowAll = () => {
 };
 
 const none = { companies: [], contacts: [] };
+// invoice-create-portfolio 便D: 会社 1・担当者 2 の請求書の材料（通貨と支払方法の候補の正本）
+const DRAFT_CTX_PATH = "/invoices/draft-context?company_id=1&contact_id=2";
+const DRAFT_CTX = {
+  company_id: 1, ship_to: null, bill_to: null, contact_name: "Taro", contact_email: null,
+  issuer_region: "JP", origin_country_code: "JP", destination_country_code: "US", destination_postal_code: null,
+  currencies: ["JPY", "USD"], fx_rates: [], default_currency: "JPY", currency: null,
+  payment_methods: [{ id: 3, method_type: "bank", display_name: "Main bank", wise_currency: null }],
+  tax_rate_percent: null, incoterms: "DAP",
+};
+let draftCtx: Record<string, unknown> = DRAFT_CTX;
 const invoiceReply = (overrides: Record<string, unknown> = {}) => ({
   kind: "invoice",
   draft: {
@@ -96,10 +108,22 @@ async function sendMessage(text = "hello") {
 beforeEach(async () => {
   vi.clearAllMocks();
   allowAll();
-  mock.get.mockResolvedValue([]);
+  draftCtx = DRAFT_CTX;
+  mock.get.mockImplementation(async (url: string) => (url === DRAFT_CTX_PATH ? draftCtx : []));
   await i18n.changeLanguage("en");
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  queryClient.clear();
+});
+
+/** 便D: 支払方法を選び「送料を請求しない」にチェックする（チャットで作れる条件） */
+async function decideInvoice() {
+  const payment = (await screen.findByTestId("secretary-invoice-payment")) as HTMLSelectElement;
+  await waitFor(() => expect(Array.from(payment.options).map((o) => o.value)).toEqual(["", "bank:3"]));
+  fireEvent.change(payment, { target: { value: "bank:3" } });
+  fireEvent.click(screen.getByTestId("secretary-invoice-shipping-none"));
+}
 
 describe("SecretaryChat visibility", () => {
   it("shows the button only when the feature and super admin are both on", () => {
@@ -222,6 +246,8 @@ describe("SecretaryChat invoice draft", () => {
     expect(mock.post).not.toHaveBeenCalled();
 
     fireEvent.change(screen.getByLabelText("Unit price"), { target: { value: "1500" } });
+    expect(create.disabled).toBe(true);
+    await decideInvoice();
     expect(create.disabled).toBe(false);
     fireEvent.click(create);
 
@@ -233,6 +259,8 @@ describe("SecretaryChat invoice draft", () => {
       due_date: null,
       notes: null,
       items: [{ product_name: "Widget", quantity: 2, unit_price: 1500 }],
+      shipping: { mode: "none" },
+      payment_method_ref: { method_type: "bank", id: 3 },
     });
     expect(await screen.findByText(/Invoice created/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "Open invoice" }).getAttribute("href")).toBe("/invoices/77");
@@ -256,6 +284,7 @@ describe("SecretaryChat invoice draft", () => {
     const create = (await screen.findByRole("button", { name: "Create" })) as HTMLButtonElement;
     fireEvent.change(screen.getByLabelText("Unit price"), { target: { value: String(price) } });
     expect(screen.queryByText("Unit price can have up to 2 decimal places.")).toBeNull();
+    await decideInvoice();
     expect(create.disabled).toBe(false);
     fireEvent.click(create);
     await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1));
@@ -295,9 +324,88 @@ describe("SecretaryChat invoice draft", () => {
     renderChat();
     await sendMessage();
     const create = (await screen.findByRole("button", { name: "Create" })) as HTMLButtonElement;
+    await decideInvoice();
     expect(create.disabled).toBe(false);
     fireEvent.change(screen.getByLabelText("Quantity"), { target: { value: qty } });
     expect(create.disabled).toBe(true);
+  });
+});
+
+describe("SecretaryChat invoice draft (invoice-create-portfolio bin D)", () => {
+  const ready = () => invoiceReply({ items: [{ product_name: "Widget", quantity: 1, unit_price: 100 }] });
+
+  it("K2: currency and payment choices come from draft-context, not a fixed list", async () => {
+    mock.postWithTimeout.mockResolvedValue(ready());
+    renderChat();
+    await sendMessage();
+    const currency = (await screen.findByTestId("secretary-invoice-currency")) as HTMLSelectElement;
+    await waitFor(() => expect(Array.from(currency.options).map((o) => o.value)).toEqual(["", "JPY", "USD"]));
+    expect(currency.value).toBe("JPY");
+    expect(mock.get).toHaveBeenCalledWith(DRAFT_CTX_PATH);
+  });
+
+  it("K19: Create stays disabled until \"Do not charge shipping\" is ticked, and the body has no tax or shipping fee", async () => {
+    mock.postWithTimeout.mockResolvedValue(ready());
+    mock.post.mockResolvedValue({ id: 80 });
+    renderChat();
+    await sendMessage();
+    const create = (await screen.findByRole("button", { name: "Create" })) as HTMLButtonElement;
+    const payment = (await screen.findByTestId("secretary-invoice-payment")) as HTMLSelectElement;
+    await waitFor(() => expect(payment.options.length).toBe(2));
+    fireEvent.change(payment, { target: { value: "bank:3" } });
+    expect(create.disabled).toBe(true);
+    fireEvent.click(screen.getByTestId("secretary-invoice-shipping-none"));
+    expect(create.disabled).toBe(false);
+    fireEvent.click(create);
+    await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1));
+    const body = mock.post.mock.calls[0][1] as Record<string, unknown>;
+    expect(body.shipping).toEqual({ mode: "none" });
+    expect("tax_amount" in body).toBe(false);
+    expect("shipping_fee" in body).toBe(false);
+  });
+
+  it("K19: a 409 duty_needs_carrier shows the Japanese wording, not the code, and creates nothing", async () => {
+    await i18n.changeLanguage("ja");
+    const wording = apiErrorReasonMessage("duty_needs_carrier");
+    expect(wording).toBeTruthy();
+    expect(wording).not.toBe("duty_needs_carrier");
+    mock.postWithTimeout.mockResolvedValue(ready());
+    mock.post.mockRejectedValue(new ApiError(wording as string, 409, "duty_needs_carrier"));
+    renderChat();
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("secretary.open") }));
+    const box = await screen.findByLabelText(i18n.t("secretary.placeholder"));
+    fireEvent.change(box, { target: { value: "hello" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("secretary.send") }));
+    await decideInvoice();
+    fireEvent.click(await screen.findByRole("button", { name: i18n.t("secretary.create") }));
+    expect(await screen.findByText(wording as string)).toBeTruthy();
+    expect(screen.queryByText("duty_needs_carrier")).toBeNull();
+    expect(screen.queryByRole("link", { name: i18n.t("secretary.link.invoice") })).toBeNull();
+  });
+
+  it("no payment destinations: Create is allowed without one and the hint is shown", async () => {
+    draftCtx = { ...DRAFT_CTX, payment_methods: [] };
+    mock.postWithTimeout.mockResolvedValue(ready());
+    mock.post.mockResolvedValue({ id: 81 });
+    renderChat();
+    await sendMessage();
+    expect(await screen.findByTestId("secretary-invoice-no-payment")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("secretary-invoice-shipping-none"));
+    const create = screen.getByRole("button", { name: "Create" }) as HTMLButtonElement;
+    expect(create.disabled).toBe(false);
+    fireEvent.click(create);
+    await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1));
+    expect((mock.post.mock.calls[0][1] as Record<string, unknown>).payment_method_ref).toBeNull();
+  });
+
+  it("issuer region missing: the bill-to hint is shown and Create stays disabled", async () => {
+    draftCtx = { ...DRAFT_CTX, issuer_region: null };
+    mock.postWithTimeout.mockResolvedValue(ready());
+    renderChat();
+    await sendMessage();
+    expect(await screen.findByTestId("secretary-invoice-bill-to")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("secretary-invoice-shipping-none"));
+    expect((screen.getByRole("button", { name: "Create" }) as HTMLButtonElement).disabled).toBe(true);
   });
 });
 

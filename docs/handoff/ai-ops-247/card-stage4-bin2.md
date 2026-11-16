@@ -328,7 +328,7 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
   - kind に決まりの外の値は 422 で、本文の値が応答に出ない
 - 2b の移行ファイルを 2 回流しても失敗しない・古い一意が 0 個・新しい一意が 1 個、を 5-2a（５）の試験ファイルに足す。
 
-（８）`frontend/api-contract/openapi.json` を `backend/tools/export_openapi.py` で書き出し直す（ReportBody に kind が増えるため）。差分が報告の口の本文の kind だけであることを確かめる。
+（８）`frontend/api-contract/openapi.json` を `backend/tools/export_openapi.py` で書き出し直す（報告の口の説明文が変わるため）。差分が報告の口の description 1 行だけであることを確かめる（ReportBody は口の中で手で読むので、openapi.json に kind は出ない。2026-11-15 実装で確認し訂正）。
 
 （９）書類の直し（どれも「1 件 1 通」を「種類ごとに 1 通」に合わせるだけ）:
 - `docs/ai-agents/ops-incident-agent.md:79`: 「2 回目の報告は 409 で断られます。」の後ろに「（`kind` を書かない報告は「調べた結果」の 1 種類として扱われます）」を足す。:69 の見出し「報告（1 回だけ）」は変えない（相談係の送り方は変えないため）。
@@ -361,7 +361,7 @@ run_sql migrations/20261113_210000_drop_ops_case_report_single_unique.sql
 | 2a の後、今ある試験（`backend/tests/test_ops_case_router.py`・`backend/tests/test_ops_router.py`・`backend/tests/test_ops_incident_tables_rls.py`・`backend/tests/ops/test_ops_case_db.py`）が 1 つでも赤 | 名前と生の出力を出して止まる（2a は古いコードを変えない約束のため） |
 | `from app.routers.ops import _INSERT_EVENT_SQL` で読み込みの輪のエラー | 止まる。SQL を写して 2 つ目を作らない |
 | 2b の試験で、出来事を書くところが incident_id の型のエラーで失敗する | 名前と生の出力を出して止まる。`_INSERT_EVENT_SQL` に CAST を足したり、SQL を写したりして直さない |
-| openapi.json の差分が kind 以外にも出る | 止まる。手で書き換えない |
+| openapi.json の差分が報告の口の description 1 行以外にも出る | 止まる。手で書き換えない |
 | 伏せた窓の分類の試験（`backend/tests/ops/test_ai_cloud_views.py:486` の数。origin/main 65a2bb376 で 1162）が変わる | 止まる（public に列を足していないはずのため） |
 | 移行の 2 回目の流しで失敗 | 止まる |
 | CI の「前提の移行を先に実行」の手順（§5-2a（６）・§5-2b（１０））で前提のファイルが失敗 | 名前と生の出力を出して止まる。前提のファイルは変えない |

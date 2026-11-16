@@ -675,6 +675,7 @@
     "colTransitDays": "Transit",
     "colFee": "Fee",
     "colCurrency": "Currency",
+    "colCarrier": "Carrier",
     "colSource": "Source",
     "errorNotConnected": "FedEx is not connected. Go to Integrations > FedEx to set up credentials.",
     "goToIntegrationSettings": "Open FedEx integration settings →",
@@ -1780,6 +1781,46 @@
       "fetchRate": "Fetch exchange rate",
       "rateInfo": "Fetched rate"
     }
+  },
+  "invoiceForm": {
+    "sectionShipTo": "Ship to / Bill to",
+    "sectionPaymentTotals": "Currency, payment, shipping and totals",
+    "sectionActions": "Create",
+    "chooseCompany": "Choose a company to show the ship-to and bill-to addresses registered on the company page.",
+    "contextError": "Could not load the invoice details",
+    "shipTo": "Ship to",
+    "billTo": "Bill to",
+    "contact": "Contact",
+    "noAddress": "Not registered",
+    "openCompany": "Fix the address on the company page",
+    "currency": "Currency",
+    "currencyPlaceholder": "Choose a currency",
+    "noCurrency": "No currency can be chosen. Check the company page and the exchange rates.",
+    "fxRateLine": "Exchange rate {{currency}}: {{rate}} (as of {{at}})",
+    "payment": "Payment method",
+    "paymentPlaceholder": "Choose a payment method",
+    "noPaymentMethods": "No payment method is registered for this currency",
+    "openTenantProfile": "Register a payment method on the company profile page",
+    "changePayment": "Choose the payment method again",
+    "method_bank": "Bank transfer",
+    "method_wise": "Wise",
+    "method_paypal": "PayPal",
+    "shipping": "Shipping",
+    "shippingPlaceholder": "Choose how to handle shipping",
+    "shippingNone": "Do not charge shipping",
+    "shippingChosen": "{{carrier}} {{service}} ({{fee}})",
+    "shippingQuote": "Get shipping quotes and choose one",
+    "shippingNeedsCountries": "Shipping quotes are not available because the origin or destination country is not set. Check the company profile page and the company address.",
+    "shippingStale": "The item weight changed. Choose the shipping again.",
+    "totalWeight": "Total weight",
+    "subtotal": "Subtotal",
+    "shippingFee": "Shipping",
+    "tax": "Consumption tax ({{rate}}%)",
+    "duty": "Duty",
+    "total": "Total",
+    "notComputed": "Not calculated",
+    "uncomputedTitle": "Some amounts cannot be calculated yet, so the invoice cannot be created. Check the reasons below and choose again",
+    "clear": "Clear all input"
   },
   "invoices": {
     "erpKeyLabel": "ERP Key:",
@@ -6153,6 +6194,7 @@
       "addItem": "Add item",
       "currency": "Currency",
       "dueDate": "Due date",
+      "shippingNoneHelp": "Shipping quotes are not available in chat. To charge shipping, create the invoice on the invoice page.",
       "notes": "Notes"
     },
     "event": {
@@ -6309,6 +6351,14 @@
       "discord_routing": "The Discord routing",
       "knowledge_link": "The link",
       "team_member": "The member"
-    }
+    },
+    "dutyNeedsCarrier": "Duty for this country depends on the shipping carrier, so it cannot be calculated without one. Choose a carrier, or add an \"any carrier\" rule on the duty amounts screen.",
+    "dutyRuleOverlap": "Another rule for the same country and carrier overlaps this period, so it cannot be saved. Change the period or turn off the earlier rule.",
+    "shippingRequired": "Shipping has not been decided, so the invoice cannot be created. Choose a shipping rate or select \"Do not charge shipping\".",
+    "fxRate": "No exchange rate is available for this currency, so amounts cannot be calculated. Choose JPY or USD, or try again after the rate is loaded.",
+    "taxRate": "No consumption tax rate is registered for today, so invoices to Japan cannot be created. Ask a super admin to register the rate on the tax rate screen.",
+    "paymentMethod": "The selected payment method is no longer available, so the invoice cannot be saved. Choose a payment method again.",
+    "contactCompanyMismatch": "The selected contact does not belong to this company, so the invoice details cannot be loaded. Choose the contact again.",
+    "invoiceNotDraft": "This invoice is no longer a draft, so it cannot be issued. Reload the page."
   }
 }

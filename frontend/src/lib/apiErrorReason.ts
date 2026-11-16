@@ -27,6 +27,14 @@ export const API_ERROR_REASON_KEYS: Readonly<Record<string, string>> = {
   recurrence_scope_required: "apiError.recurrenceScopeRequired",
   recurrence_occurrence_invalid: "apiError.recurrenceOccurrenceInvalid",
   recurrence_this_not_allowed: "apiError.recurrenceThisNotAllowed",
+  duty_needs_carrier: "apiError.dutyNeedsCarrier",
+  duty_rule_overlap: "apiError.dutyRuleOverlap",
+  shipping_required: "apiError.shippingRequired",
+  fx_rate: "apiError.fxRate",
+  tax_rate: "apiError.taxRate",
+  payment_method: "apiError.paymentMethod",
+  contact_company_mismatch: "apiError.contactCompanyMismatch",
+  invoice_not_draft: "apiError.invoiceNotDraft",
 };
 
 /** detail が表のコードなら文言キー、そうでなければ null */

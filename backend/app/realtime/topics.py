@@ -235,6 +235,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/integrations/paypal/test-invoice"): _PENDING,
     ("POST", "/api/v1/integrations/paypal/webhook"): _PENDING,
     ("POST", "/api/v1/invoices"): _PENDING,
+    ("POST", "/api/v1/invoices/preview"): _PENDING,
     ("POST", "/api/v1/invoices/from-quote/{quote_id}"): _PENDING,
     ("PATCH", "/api/v1/invoices/{invoice_id}"): _PENDING,
     ("POST", "/api/v1/invoices/{invoice_id}/issue"): _PENDING,
