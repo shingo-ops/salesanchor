@@ -4,7 +4,7 @@
 親の設計: `docs/handoff/shime-bundle-close/design.md`（縦に並べて〆る形。便1 本番済・便2 本番の表に行を追加済・便3 試験前）
 関連 ADR: ADR-1073（規則12h・箱の仲間）、ADR-158（商品単位の差分更新）、ADR-1003（委任 GO）、ADR-135（main にマージ＝本番投入可）。〆の相手を複数の商品に広げる決まりは前例の設計 `docs/handoff/v102-shime-multi-targets/design.md`（規則8〜11）が正。
 
-状態: 設計案作成済み（草案。2026-11-16、Opus。行番号は 2026-11-17 の origin/main 2adefae2e で確かめ直した）。PO の方針の決定 2026-11-16「1」（1行に品名を並べて〆る形を、まとめ〆の直しに加えてから便3の試験をする）。設計審査 1回目 REVISE（2026-11-17、指摘6件。`docs/handoff/shime-bundle-close/review-oneline.md`）→ 直し済み・2回目は未。実装は未着手。
+状態: 設計案作成済み（草案。2026-11-16、Opus。行番号は 2026-11-17 の origin/main 2adefae2e で確かめ直した）。PO の方針の決定 2026-11-16「1」（1行に品名を並べて〆る形を、まとめ〆の直しに加えてから便3の試験をする）。設計審査 1回目 REVISE（2026-11-17、指摘6件。`docs/handoff/shime-bundle-close/review-oneline.md`）→ 直し済み。2回目 REVISE（2026-11-17、新しい指摘5件）→ 直し済み・3回目は未。実装は未着手。
 
 ## 1. 目的と成功条件
 - 目的: 「品名A、品名B〆」のように1行に品名を区切って並べた〆で、並んだ商品をすべて Sold out にする。今は2品とも閉じないか、片方だけ閉じる（recon §2: 直近30日の3投稿すべて）。
@@ -14,7 +14,7 @@
 | 基準 | 検証方法 |
 |---|---|
 | K0 今の数（基準値） | 測定済み（recon §2）: 直近30日で本物の1行の並び〆は3投稿、3投稿とも並んだ商品のうち少なくとも1つが閉じていない（閉じていない商品は5つ（2+2+1。内訳は作業記録 `oneline/`））。 |
-| K1 単体試験 | §3-2 の T1〜T9 と、既存の `backend/tests/test_gemini_raw_copy_v102_soldout_ref.py`・`backend/tests/test_gemini_raw_copy_v101.py`・`backend/tests/test_line_analysis_v102_svc.py` が CI で緑。既存の試験は書き換えない |
+| K1 単体試験 | §3-2 の T1〜T13 と、既存の `backend/tests/test_gemini_raw_copy_v102_soldout_ref.py`・`backend/tests/test_gemini_raw_copy_v101.py`・`backend/tests/test_line_analysis_v102_svc.py` が CI で緑。既存の試験は書き換えない |
 | K2 正の3投稿で並んだ商品が全部閉じる | 本番の別のコンテナで `python -m app.tools.v102_replay_diff` を直す前のコード（今の本番）と直した後のコード（ブランチ）で流し、diff を見る。○ = 3投稿とも、行に並んだ商品のうち「同じ仕入元の過去48時間に In Stock の行がある商品」が全部、件の (商品, 状態) か `soldout_targets` に入る。× = 1つでも入らない |
 | K3 ほかの投稿が変わらない | K2 と同じ道具で、直近30日の v102 の投稿のうち「Sold out・1行だけ・照合が ambiguous の件」を1件以上持つ投稿を全部（数は流す前に読み取り鍵で数えて記録）流す。○ = 前後で結果が変わった投稿が、正の3投稿だけ。× = それ以外が1投稿でも変わる（目で見て PO に報告し、直すまで先へ進まない） |
 | K4 本番で1行の並び〆の閉じ漏れが無い | 反映から14日、毎朝の〆の点検の手順2c で「まとめ〆の閉じ漏れ」のうち1行の形が0件、かつ「消しすぎ」0件 |
@@ -43,14 +43,16 @@
      2. `lines` の行がちょうど1行。
      3. `match_status` が ambiguous で、規則14の商品の組が全部その件の候補（`match_candidates`）にある。
      4. 人が決めた商品が無い（`fixed_products` に無い）。
+     5. 件の状態が語で決まっていない（`condition_decided_by_word(condition_basis)` が False）。理由: 状態は行全体から決まる（`backend/app/services/tcg_analyzer_svc.py:938-953` `resolve_condition_v2` は状態の語が1つでも当たれば basis を `R{priority}:{語}` にする）ので、「品名A 未開封、品名B 開封〆」のように区切りごとに状態の語が違うと、B の相手の状態を取り違える。状態の語がある1行の並び〆は、今と同じく閉じない（悪くはならない）。正の3投稿のうち2投稿は状態が決まっていない（理由 condition_unknown。作業記録 `oneline/it.txt`）。
    - 完売の相手（`soldout_targets`）は、商品ごとに次の順で求める。
      1. 規則12: `extracted` の i 番目だけを `build(i, 商品)` に差し替えた並びを `decide_soldout_inherit(並び, soldout_posts, fixed_products, box_rule=box_rule, post_text=post_text)` に渡し、`decisions.get(i)` を取る（12d・12e・12g・12h は今のまま）。
-     2. 1が無いとき: `soldout_posts`（新しい順）の在庫の行のうち、その商品で、状態が `build(i, 商品)` の〆の状態（`_shime_condition`）と同じ行がある最も新しい投稿の行から、`_soldout_target` で1つ作る（12d に当たる件や、語で状態が決まった件（`condition_decided_by_word`）はここに来る）。
+     2. 1が無いとき: `_stranded_stock(商品, soldout_posts, same_post)` から〆の状態（`build(i, 商品)` の `_shime_condition`）の物を取り、あれば `_soldout_target(商品, 〆の状態, 投稿, 在庫の行)` で1つ作る（`gemini_raw_copy_v102_soldout_ref.py:380-397`・:409。same_post は1の並びで規則12が作るのと同じ値）。`_stranded_stock` は、その状態の行（在庫・完売）がある最も新しい投稿を見て、そこに在庫の行があるときだけ返すので、新しい投稿ですでに完売になった在庫は相手にしない（12e と同じ）。12d に当たる件（〆と同じ状態の在庫が前にある件）はここに来る。
      3. 1も2も無い商品は、閉じる在庫が無いので相手に入れない。
    - 件の作り直し: 相手のある商品のうち区切りの順で最初の物を「先頭の商品」とし、`build(i, 先頭の商品)` で作り直す。相手のある商品が1つも無ければ、規則14は何もしない（件は今のまま）。相手は先頭の商品の物を先に、残りを区切りの順に並べ、(商品, 状態) の重なりは最初だけ残す（書く行の状態が先頭の相手で上書きされるため。`backend/app/services/line_analysis_v102_svc.py:944-967`。相手は必ず condition_id・ref_message_id・ref_line を持つ（`analysis_soldout_extra_targets` の NOT NULL の列））。
    - 作り直した件に付ける物: `match_status` は新しい定数 `matched_list_shime`、根拠の欄 `product_list_shime` に区切りの字と区切りの順の商品 ID、`soldout_target_basis` は新しい定数 `SOLDOUT_LIST_SHIME`。
+   - 規則12を後の段より前に流すことの食い違い（受け入れる）: 1の規則12は `_apply_context_work`・`_apply_followup` の前の並びで動くので、同じ投稿のほかの件の商品がまだ決まっていない。そのため same_post（`gemini_raw_copy_v102_soldout_ref.py:457-459`）に入らない状態があり、最後に流す規則12と結果が違い得る。違うのは「同じ投稿に、後の段で同じ商品に決まる別の件がある」ときだけで、閉じるのは過去の投稿の在庫の行（相手は ref_message_id・ref_line で行を指す）なので、今の投稿の行は閉じない。T8 で確かめ、K3 で変わった投稿を目で見る。
    - 後の段で上書きされないこと（審査で実物を確かめ済み）: `_apply_context_work`・`_apply_followup`（`backend/app/services/gemini_raw_copy_v102_followup.py:125`）・`_apply_soldout_ref`（`gemini_raw_copy_v102_soldout_ref.py:159`）は ambiguous / unmatched の件だけを見る。規則12は `soldout_targets` を持つ件を外す（`_is_inherit_candidate` :374）。
-3. 保存で商品が決まった扱いにする: `backend/app/services/line_analysis_v102_svc.py:732-734` の `_RESOLVED_MATCH_STATUSES` に `matched_list_shime` を足す（足さないと :765 で product_id が None・pid_resolved が False で保存され、先頭の商品も閉じない）。pid_basis は :786 で `V102:matched_list_shime` になる。2026-11-17 に origin/main で `matched_followup`・`matched_soldout_ref` を使う所を grep し、`backend/app` の4ファイル（`gemini_raw_copy_v101.py`・`gemini_raw_copy_v102_followup.py`・`gemini_raw_copy_v102_soldout_ref.py`・`gemini_raw_copy_v102_product_first.py`）と保存の1か所だけで、`frontend/src`・`scripts` には無いことを確かめた。実装の最初に同じ grep を流し、ほかに出たら止めて Opus に戻す。
+3. 保存で商品が決まった扱いにする: `backend/app/services/line_analysis_v102_svc.py:732-734` の `_RESOLVED_MATCH_STATUSES` に `matched_list_shime` を足す（足さないと :765 で product_id が None・pid_resolved が False で保存され、先頭の商品も閉じない）。pid_basis は :786 で `V102:matched_list_shime` になる。2026-11-17 に origin/main で `SOLDOUT_INHERIT`・`SOLDOUT_REF`（`soldout_target_basis` の値。`line_analysis_v102_svc.py:961` で condition_basis に書かれる）を grep し、使うのは `gemini_raw_copy_v101.py:46`・:1371、`gemini_raw_copy_v102_soldout_ref.py:33`、`line_analysis_v102_svc.py:138`・:961 だけで、値を読んで分ける所が無いことを確かめた（`condition_decided_by_word` も `R\d+:` で始まらない値は語と見ない）。同じ日に `matched_followup`・`matched_soldout_ref` を使う所も grep し、`backend/app` の4ファイル（`gemini_raw_copy_v101.py`・`gemini_raw_copy_v102_followup.py`・`gemini_raw_copy_v102_soldout_ref.py`・`gemini_raw_copy_v102_product_first.py`）と保存の1か所だけで、`frontend/src`・`scripts` には無いことを確かめた。実装の最初に `matched_list_shime`・`SOLDOUT_LIST_SHIME` の比べ先として同じ2つの grep を流し、ほかに出たら止めて Opus に戻す。
 4. 触らないもの: 指示書（DB の行・定数）、`parse_v101_response` と親の設計の5条件、規則1〜13、`backend/app/tools/v102_replay_diff.py`、DB の形、migrations/、deploy.yml、scripts/。`line_analysis_v102_svc.py` は3の1行だけ。
 
 ### 3-2. 試験（新しく足す。既存の試験は書き換えない）
@@ -61,13 +63,15 @@
 - T5: 試験用に作った「値段,数×個数 〆」の形（数字だけの区切り）→ None。
 - T6: `_extract_v102` に T1 の件（ambiguous・候補 A,B・完売・price/quantity なし・1行）と、A・B それぞれに In Stock の行がある過去の投稿を渡す → 件は A で作り直され `match_status` は `matched_list_shime`、`soldout_targets` は A の相手が先頭で B の相手が続く。どの相手も condition_id・ref_message_id・ref_line を持つ。
 - T7: T6 で、件に価格がある・2行ある・人が決めた商品がある・`soldout_posts` が空、のどれかなら規則14は動かない（今と同じ結果）。
-- T8: T6 で、直前の投稿（`followup_ref`）が A だけを含む場合と、前後の件の作品が A だけを指す場合（`_apply_context_work` が A に決める形）の両方で、件は規則14で決まり B も相手に入る（11/16 の形）。
+- T8: T6 で、直前の投稿（`followup_ref`）が A だけを含む場合と、前後の件の作品が A だけを指す場合（`_apply_context_work` が A に決める形）の両方で、件は規則14で決まり B も相手に入る（11/16 の形）。あわせて、同じ投稿に後の段で A に決まる在庫の件がある形で、規則14の相手が過去の投稿の行だけを指し、今の投稿の行を指さないこと。
 - T9: T6 の件を `line_analysis_v102_svc` の保存まで通す → A の行は product_id が A・pid_resolved が True・pid_basis が `V102:matched_list_shime`・Sold out、B は `analysis_soldout_extra_targets` に1行。
 - T10: A に在庫の行が無く B だけにある → 件は B で作り直され、相手は B だけ。A にも B にも無い → 件は今のまま。
 - T11: A の過去の在庫が〆と同じ状態（規則12d で何も返らない形）→ 3-1 の2の2で A の相手が1つ作られる。
+- T12: 「品名A 未開封、品名B 開封〆」のように状態の語がある（件の condition_basis が `R2:…` 等）→ 規則14は動かない（今と同じ結果）。
+- T13: T11 で、A の〆の状態の行がより新しい投稿で完売になっている → 3-1 の2の2は A の相手を作らない。
 
 ## 4. 影響範囲
-- 結果が変わるのは、§3-1 の対象の件の4条件と規則14の3条件が全部当たり、相手のある商品が1つ以上ある件だけ。直近30日では正の3投稿だけのはず（K3 で確かめる）。
+- 結果が変わるのは、§3-1 の対象の件の5条件と規則14の3条件が全部当たり、相手のある商品が1つ以上ある件だけ。直近30日では正の3投稿だけのはず（K3 で確かめる）。
 - 呼び出し元: `_extract_v102` は v102 の解析・作り直し・`prompt_ab`・`v102_replay_diff` から呼ばれる。どれも同じ後処理を通るので、試験の道具でも同じ結果になる。v101 の経路（`extract_v101_items`）は通らないので変わらない。
 - 便3の試験（K2・K3、293回）は、規則14が先に本番に入っていても、ほかの投稿の結果は変わらない（K3 で確かめる）ので、試験の形・費用はそのまま。
 
@@ -87,7 +91,7 @@
 ## 7. 維持の仕組み
 - 守り手: Opus（ccopusgo の設計担当）。
 - 毎朝の〆の点検（agent-console の定期実行、手順2c）が「まとめ〆の閉じ漏れ」を毎日数える。1行の形も同じ欄で数え、点検の記録に「1行の形」と書き分ける。
-- T1〜T9 が、規則14の条件が崩れたら CI で止める。
+- T1〜T13 が、規則14の条件が崩れたら CI で止める。
 
 ## 8. 外部・過去事例の参照と我々への応用
 - 外部事例: 該当なし。理由: 仕入元ごとの〆の書き方に合わせた後処理の規則で、外の事例に同じ数の根拠は無い。
