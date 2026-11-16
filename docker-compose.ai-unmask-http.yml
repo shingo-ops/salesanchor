@@ -12,8 +12,8 @@ name: astro-webapp-unmask
 
 services:
   ai-unmask-http:
-    # backend と同じイメージ（astro-webapp-backend）。deploy の docker compose build で作られる。
-    image: astro-webapp-backend
+    # backend と同じ完成品（deploy が .env の BACKEND_IMAGE の指紋で受け取る）。
+    image: ${BACKEND_IMAGE:-astro-webapp-backend}
     container_name: ai-unmask-http
     command:
       - uvicorn

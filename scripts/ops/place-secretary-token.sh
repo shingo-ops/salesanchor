@@ -22,7 +22,7 @@ unset TOKEN
 
 # 2) イメージを作って容器を作り直す
 ssh "${SSH_OPTS[@]}" "$HOST" \
-  'cd /home/ubuntu/salesanchor && docker build -t astro-webapp-secretary-agent ./secretary-agent && docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml up -d --force-recreate --no-build'
+  'cd /home/ubuntu/salesanchor && docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml up -d --force-recreate --no-build'
 
 # 3) /health の ready だけ出す（true/false。値は出ない）
 ssh "${SSH_OPTS[@]}" "$HOST" \

@@ -24,7 +24,7 @@ python3 -I - "${YML}" "${T}/tpl" <<'PYEOF'
 import sys, yaml
 yml, out = sys.argv[1], sys.argv[2]
 d = yaml.safe_load(open(yml))
-steps = d["jobs"][[k for k, j in d["jobs"].items() if any(s.get("id") == "nginx_recreate" for s in j["steps"])][0]]["steps"]
+steps = d["jobs"][[k for k, j in d["jobs"].items() if any(s.get("id") == "nginx_recreate" for s in j.get("steps", []))][0]]["steps"]
 names = [s.get("name", "") for s in steps]
 def find(prefix):
     m = [i for i, n in enumerate(names) if n.startswith(prefix)]
