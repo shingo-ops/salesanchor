@@ -5,8 +5,7 @@
 #       切替中に 502 が発生しないことを確認する。
 #
 # 使い方:
-#   bash scripts/dry-run-blue-green.sh              # 通常実行
-#   SKIP_BUILD=1 bash scripts/dry-run-blue-green.sh # ビルドスキップ
+#   bash scripts/dry-run-blue-green.sh              # 通常実行（組み立てはしない。deploy の Step 3 で受け取った完成品を使う）
 #
 # 受け入れ基準:
 #   AC1: 502 ゼロ（切替中の health poll が 200 継続）
@@ -24,7 +23,6 @@ cd "${REPO_DIR}"
 COMPOSE_PROJECT="astro-webapp"
 BACKEND="${COMPOSE_PROJECT}-backend-1"
 TEST_FAIL="${TEST_FAIL:-0}"         # AC2 確認用: 1 にすると green の health を強制失敗させる
-SKIP_BUILD="${SKIP_BUILD:-0}"
 POLL_INTERVAL=1                     # 監視 curl の間隔（秒）
 POLL_DURATION=120                   # 監視期間（秒）
 FAIL_COUNT=0
@@ -44,18 +42,14 @@ if ! docker ps --filter "name=^/${BACKEND}$" --format "{{.Names}}" | grep -q "${
 fi
 echo "  ✅ ${BACKEND} is running"
 
-# ── ビルド ────────────────────────────────────────────────────────────────────
-if [ "${SKIP_BUILD}" != "1" ]; then
-  echo ""
-  echo "Building backend image..."
-  if ! docker compose build backend; then
-    echo "❌ docker compose build failed"
-    exit 1
-  fi
-  echo "  ✅ Build complete"
-else
-  echo "SKIP_BUILD=1 — ビルドをスキップ"
+# ── 完成品の確認（build-on-github 便2: prod1 では組み立てない）─────────────────
+echo ""
+_img="$(grep -m1 '^BACKEND_IMAGE=' .env 2>/dev/null | cut -d= -f2- || true)"
+if [ -z "${_img}" ] || ! docker image inspect "${_img}" >/dev/null 2>&1; then
+  echo "❌ .env の BACKEND_IMAGE の完成品がローカルにありません。deploy の Step 3（pull）を先に実行してください。"
+  exit 1
 fi
+echo "  ✅ backend の完成品あり: ${_img##*/}"
 
 # ── バックグラウンドで health を連続 poll ────────────────────────────────────
 echo ""
