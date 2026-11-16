@@ -1,0 +1,59 @@
+# 共用の表を指す外部キーの比べ（左=本番 003 の ref_schema=public、右=q1-shape/constraints.tsv の置き場所なしの参照）。diff の生出力
+## 本番 003（24本）
+bots -> users
+calendar_events -> users
+calendar_events -> users
+calendar_owner_settings -> users
+companies -> customer_statuses
+companies -> users
+contacts -> customer_statuses
+goals -> users
+goals -> users
+invoice_items -> products
+meta_messages -> users
+meta_messages -> users
+order_commissions -> users
+order_items -> products
+own_inventory -> products
+products -> suppliers
+purchase_order_items -> products
+purchase_orders -> suppliers
+quote_items -> products
+role_permissions -> permissions
+staff -> users
+tenant_issuer_profiles -> countries
+tenant_issuer_profiles -> prefectures
+tenant_meta_config -> users
+## 使い捨て（25本）
+bots -> users
+bots -> users
+calendar_events -> users
+calendar_events -> users
+companies -> customer_statuses
+companies -> users
+contacts -> customer_statuses
+goals -> users
+goals -> users
+invoice_items -> products
+meta_messages -> users
+meta_messages -> users
+order_commissions -> users
+order_items -> products
+own_inventory -> products
+products -> suppliers
+purchase_order_items -> products
+purchase_orders -> suppliers
+quote_items -> products
+role_permissions -> permissions
+staff -> users
+tenant_issuer_profiles -> countries
+tenant_issuer_profiles -> prefectures
+tenant_meta_config -> users
+tenant_meta_config -> users
+## diff
+1a2
+> bots -> users
+4d4
+< calendar_owner_settings -> users
+24a25
+> tenant_meta_config -> users

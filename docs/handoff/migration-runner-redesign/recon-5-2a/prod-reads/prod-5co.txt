@@ -1,0 +1,21 @@
+k	n	t
+con	calendar_events_category_check	001,003,004,005,006
+con	calendar_owner_settings_share_mode_check	001,003,004,005,006
+con	close_reasons_type_check	001,003,004,005,006
+con	companies_lead_id_fkey	001,003,004,005
+con	fk_companies_lead	006
+con	fk_orders_invoice	001,003
+con	fk_products_supplier_default	006
+con	leads_initiative_check	001,003,004,005,006
+con	products_supplier_default_id_fkey	001,003,004,005
+idx	idx_bots_status	001,003,004,005
+idx	idx_calendar_owner_settings_staff_id	001,003,004,005,006
+idx	idx_invoices_status	001,003
+idx	idx_products_status	001,003
+tbl	badge_definitions	001,003,004,005,006
+tbl	buddy_feedbacks	001,003,004,005,006
+tbl	buddy_pairs	001,003,004,005,006
+tbl	calendar_owner_settings	001,003,004,005,006
+tbl	user_badges	001,003,004,005,006
+trg	trg_lead_playbook_updated_at	006
+AUDIT ts=2026-11-15T23:24:12Z sha=d881e3bf7fc1 rows=19 ms=114 result=ok sql=SELECT 'con' k, c.conname n, string_agg(right(s.nspname,3), ',' ORDER BY s.nspname) t FROM pg_constraint c JOIN pg_namespace s ON s.oid=c.connamespace WHERE s.nspname ~ '^tenant_[0-9]{3}$' AND c.conname IN ('leads_initiative_check','close_reasons_type_check','calendar_events_category_check','calendar_owner_settings_share_mode_check','deal_close_reasons_lead_id_fkey','quotes_lead_id_fkey','purchase_order_items_order_item_id_fkey','bots_owner_staff_id_fkey','tenant_meta_config_connected_by_staff_i
