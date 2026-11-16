@@ -235,7 +235,16 @@ class _Env:
                 p,
             )
         elif table == "quotes":
-            await self.run(f"INSERT INTO {_SCHEMA}.quotes (lead_id) VALUES (:l)", p)
+            # quotes.company_id は NOT NULL（本番 5 社と、登録を全件流した後の形に合わせたひな形。段5 5-2）。
+            # 統合の対象の lead とは別の lead に会社を 1 つ置き、それを見積の会社にする
+            anchor = await self.lead(f"quote-anchor-{u[:8]}")
+            company_id = (await self.run(
+                f"INSERT INTO {_SCHEMA}.companies (company_code, lead_id, name) VALUES (:u, :a, :u) RETURNING id",
+                {**p, "a": anchor},
+            ))[0]["id"]
+            await self.run(
+                f"INSERT INTO {_SCHEMA}.quotes (lead_id, company_id) VALUES (:l, :c)", {**p, "c": company_id}
+            )
         elif table == "deal_close_reasons":
             await self.run(
                 f"INSERT INTO {_SCHEMA}.deal_close_reasons (lead_id, reason_id) VALUES (:l, :r)",

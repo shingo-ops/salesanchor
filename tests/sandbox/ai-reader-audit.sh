@@ -31,7 +31,7 @@ ng() { echo "NG: $1"; exit 1; }
 
 echo "== 0. 準備（ネットワーク・イメージ）"
 docker network create astro-webapp_backnet >/dev/null
-docker compose -f "$COMPOSE" build ai-reader
+docker build -t astro-webapp-backend ./backend
 ls -l /dev/log
 
 echo "== 1. (a)(b) 64KB 超の SQL → rc=2、stderr に AUDIT、journald に同じ行"

@@ -6,7 +6,7 @@ ADR-1052 段2: 相談係（クラウドの Claude）の「件」の口 8 つ。
   POST /api/v1/ops/case/unmask-requests/{request_id}/decision        ADMIN  申請の許可・拒否
   POST /api/v1/ops/case/audits                                       ADMIN  週次点検の結果を残す
   GET  /api/v1/ops/case/audit-inputs                                 ADMIN  点検の材料（数だけ）
-  POST /api/v1/ops/case/{incident_id}/report                         AGENT＋札  報告（1 件 1 通）
+  POST /api/v1/ops/case/{incident_id}/report                         AGENT＋札  報告（1 件に種類ごと 1 通）
   POST /api/v1/ops/case/{incident_id}/unmask-requests                AGENT＋札  値を見たい申請
   GET  /api/v1/ops/case/unmask-requests/{request_id}                 AGENT＋札  申請の状態
 
@@ -37,6 +37,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import reset_operator_context, set_operator_context
 from app.database import get_db
+from app.routers.ops import _INSERT_EVENT_SQL
 
 logger = logging.getLogger(__name__)
 
@@ -189,6 +190,7 @@ async def _safe_clear(db: AsyncSession) -> None:
 class ReportBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    kind: Literal["investigation", "verification", "effect"] = "investigation"
     status: Literal["investigating", "reported"]
     summary: str | None = Field(default=None, max_length=8000)
     cause: str | None = Field(default=None, max_length=8000)
@@ -497,7 +499,7 @@ async def audit_inputs(days: int = 7, db: AsyncSession = Depends(get_db)) -> dic
 async def post_report(
     request: Request, incident_id: str = Depends(require_case_ticket), db: AsyncSession = Depends(get_db)
 ) -> dict[str, Any]:
-    """報告（1 件 1 通。2 回目は 409。本文は 32KB まで）。"""
+    """報告（1 件に種類ごと 1 通。同じ種類の 2 通目は 409。届いたら出来事の表に報告の id だけを 1 行。本文は 32KB まで）。"""
     try:
         body: ReportBody = _parse(ReportBody, await _read_limited(request, _REPORT_MAX_BYTES))
     except HTTPException:
@@ -510,13 +512,14 @@ async def post_report(
         row = (
             await db.execute(
                 text(
-                    "INSERT INTO ops_case.reports (incident_id, status, summary, cause, evidence, proposal, risk, "
-                    "needs_decision) VALUES (CAST(:iid AS uuid), :status, :summary, :cause, CAST(:evidence AS jsonb), "
+                    "INSERT INTO ops_case.reports (incident_id, kind, status, summary, cause, evidence, proposal, risk, "
+                    "needs_decision) VALUES (CAST(:iid AS uuid), :kind, :status, :summary, :cause, CAST(:evidence AS jsonb), "
                     "CAST(:proposal AS jsonb), :risk, :needs) "
-                    "ON CONFLICT (incident_id) DO NOTHING RETURNING id::text"
+                    "ON CONFLICT (incident_id, kind) DO NOTHING RETURNING id::text"
                 ),
                 {
                     "iid": incident_id,
+                    "kind": body.kind,
                     "status": body.status,
                     "summary": body.summary,
                     "cause": body.cause,
@@ -529,6 +532,15 @@ async def post_report(
         ).first()
         if row is None:
             raise HTTPException(status_code=409, detail="OPS_CASE_REPORT_EXISTS")
+        await db.execute(
+            _INSERT_EVENT_SQL,
+            {
+                "incident_id": uuid.UUID(incident_id),
+                "kind": "case_report",
+                "actor": "case_agent",
+                "detail": json.dumps({"report_id": row[0]}),
+            },
+        )
         await db.commit()
     except DBAPIError as exc:
         await _safe_clear(db)
@@ -537,7 +549,7 @@ async def post_report(
         await _safe_clear(db)
         raise
     await _clear_operator(db)
-    return {"id": row[0], "incident_id": incident_id}
+    return {"id": row[0], "incident_id": incident_id, "kind": body.kind}
 
 
 async def _check_request_content(db: AsyncSession, view_name: str, columns: list[str], keys: list[str]) -> None:

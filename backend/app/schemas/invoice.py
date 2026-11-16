@@ -13,8 +13,9 @@ import json
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
+from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class InvoiceStatus(str, Enum):
@@ -37,26 +38,131 @@ class InvoiceItemInput(BaseModel):
     weight: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=3)
 
 
+class PaymentMethodRef(BaseModel):
+    """支払方法の選び方（design.md §3-4）。bank・wise は版の id、paypal は id なし。"""
+    model_config = ConfigDict(extra="forbid")
+    method_type: Literal["bank", "wise", "paypal"]
+    id: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def _id_matches_type(self):
+        if self.method_type == "paypal" and self.id is not None:
+            raise ValueError("paypal_takes_no_id")
+        if self.method_type != "paypal" and self.id is None:
+            raise ValueError("id_required")
+        return self
+
+
+class ShippingInput(BaseModel):
+    """送料の選び方（design.md §3-4 の送料の規則）。calculate=/shipping/calculate の結果の1つ、none=送料を請求しない。"""
+    model_config = ConfigDict(extra="forbid")
+    mode: Literal["calculate", "none"]
+    carrier: str | None = Field(default=None, max_length=50)
+    service_type: str | None = Field(default=None, max_length=100)
+    fee: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)
+    currency: str | None = Field(default=None, min_length=3, max_length=3)
+
+    @model_validator(mode="after")
+    def _fields_match_mode(self):
+        if self.mode == "calculate":
+            if not (self.carrier and self.carrier.strip()) or self.fee is None or not self.currency:
+                raise ValueError("calculate_needs_carrier_fee_currency")
+        elif any(v is not None for v in (self.carrier, self.service_type, self.fee, self.currency)):
+            raise ValueError("none_takes_no_fields")
+        return self
+
+
 class InvoiceCreate(BaseModel):
-    """請求書登録リクエスト（Step 5d 以降は company_id + contact_id 必須）"""
+    """請求書登録リクエスト。額（送料・消費税・為替）は受けず、サーバーが計算する（invoice-create-portfolio 便C）。"""
+    model_config = ConfigDict(extra="forbid")
     company_id: int = Field(ge=1, description="会社ID")
     contact_id: int = Field(ge=1, description="担当者ID")
-    currency: str = Field(default="JPY", max_length=10)
-    shipping_fee: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)
-    tax_amount: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)
-    exchange_rate_jpy: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=4)
-    exchange_rate_usd: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=4)
-    payment_method: str | None = Field(default=None, max_length=50)
+    currency: str = Field(default="JPY", min_length=3, max_length=3)
+    shipping: ShippingInput | None = None
+    payment_method_ref: PaymentMethodRef | None = None
     due_date: date | None = None
     notes: str | None = Field(default=None, max_length=5000)
     items: list[InvoiceItemInput] = Field(min_length=1)
 
 
+class InvoicePreviewItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    quantity: int = Field(ge=1)
+    unit_price: Decimal = Field(ge=0, max_digits=15, decimal_places=2)
+
+
+class InvoicePreviewRequest(BaseModel):
+    """試算（書かない）。作る道と同じ材料で額だけを返す。"""
+    model_config = ConfigDict(extra="forbid")
+    company_id: int = Field(ge=1)
+    currency: str = Field(min_length=3, max_length=3)
+    items: list[InvoicePreviewItem] = Field(default_factory=list)
+    shipping: ShippingInput | None = None
+
+
+class InvoicePreviewResponse(BaseModel):
+    currency: str
+    subtotal: Decimal
+    shipping_fee: Decimal | None
+    tax_amount: Decimal | None
+    tax_rate_percent: Decimal | None
+    duty_amount: Decimal | None
+    duty_label: str | None
+    duty_components: list[dict]
+    total_amount: Decimal | None
+    uncomputed: list[str]
+    incoterms: str
+
+
+class DraftContextAddress(BaseModel):
+    company_name: str | None = None
+    billing_display_name: str | None = None
+    label: str | None = None
+    postal_code: str | None = None
+    address: str | None = None
+    city: str | None = None
+    state: str | None = None
+    country: str | None = None
+    phone: str | None = None
+
+
+class DraftContextFx(BaseModel):
+    currency: str
+    rate: float
+    fetched_at: str | None
+
+
+class DraftContextPayment(BaseModel):
+    id: int | None
+    method_type: str
+    display_name: str | None
+    wise_currency: str | None
+
+
+class DraftContextResponse(BaseModel):
+    company_id: int
+    ship_to: DraftContextAddress | None
+    bill_to: DraftContextAddress | None
+    contact_name: str | None
+    contact_email: str | None
+    issuer_region: str | None
+    origin_country_code: str | None
+    destination_country_code: str | None
+    destination_postal_code: str | None
+    currencies: list[str]
+    fx_rates: list[DraftContextFx]
+    default_currency: str | None
+    currency: str | None
+    payment_methods: list[DraftContextPayment]
+    tax_rate_percent: Decimal | None
+    incoterms: str
+
+
 class InvoiceUpdate(BaseModel):
-    payment_method: str | None = Field(default=None, max_length=50)
+    """下書きの直し（design.md §3-4 の PATCH）。為替と支払方法の文字は受けない。"""
+    model_config = ConfigDict(extra="forbid")
+    payment_method_ref: PaymentMethodRef | None = None
     due_date: date | None = None
-    exchange_rate_jpy: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=4)
-    exchange_rate_usd: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=4)
     notes: str | None = Field(default=None, max_length=5000)
 
 
@@ -136,6 +242,12 @@ class InvoiceResponse(BaseModel):
     paypal_copy_pdf_at: datetime | None = None
     # ADR-1061 便2-2c2a: 発行元の地域（domestic / overseas。作成時に請求先の国で決める。古い請求書は NULL）
     issuer_region: str | None = None
+    # invoice-create-portfolio 便A・便C: 案内した振込先の版・使った税率・送料の会社とサービス・送料の写し
+    payment_method_id: int | None = None
+    tax_rate_percent: Decimal | None = None
+    shipping_carrier: str | None = None
+    shipping_service: str | None = None
+    shipping_snapshot: dict | None = None
 
     model_config = {"from_attributes": True}
 
@@ -143,7 +255,8 @@ class InvoiceResponse(BaseModel):
     # 試験の SQLite では TEXT に JSON の文字で入っているため、文字なら dict に読み直す。
     # 先例: routers/tenant_commission_settings.py の commission_rates の読み方。
     @field_validator(
-        "ship_to_snapshot", "bill_to_snapshot", "duty_policy_snapshot", "fx_rate_snapshot", mode="before"
+        "ship_to_snapshot", "bill_to_snapshot", "duty_policy_snapshot", "fx_rate_snapshot", "shipping_snapshot",
+        mode="before",
     )
     @classmethod
     def _parse_json_snapshot(cls, v):
@@ -154,3 +267,6 @@ class InvoiceResponse(BaseModel):
 
 class InvoiceDetailResponse(InvoiceResponse):
     items: list[InvoiceItemResponse] = []
+    # 便C: payment_method_id の版の表示（口座番号は返さない。design.md §3-4）
+    payment_method_display_name: str | None = None
+    payment_method_type: str | None = None

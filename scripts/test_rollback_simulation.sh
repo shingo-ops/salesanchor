@@ -51,6 +51,7 @@ services:
 
   backend:
     container_name: phase2-test-backend-1
+    image: ${BACKEND_IMAGE:-phase2-test-backend}
     build:
       context: ./backend
     ports:
@@ -342,6 +343,10 @@ git add .
 git commit -q -m "BAD: Phase2 health 503"
 echo "▶ BAD_SHA: $(git rev-parse HEAD | cut -c1-7)"
 
+# build-on-github 便2: BAD の組み立ての前に GOOD の完成品へ tag を付け、控えを 1 行書く（deploy の Step 0 の写し）
+docker tag phase2-test-backend phase2-test-backend:good
+echo 'BACKEND_IMAGE=phase2-test-backend:good' > .deploy_prev_images.env
+
 export DB_USER=salesanchor_app DB_PASS="${FAKE_APP_PASS}" SET_TENANT_CTX=1
 docker compose build -q
 
@@ -394,18 +399,26 @@ if [ -n "${PREV_SHA}" ]; then
 
   # ビルド（GOOD_SHA server.py = pre-Phase2 + DB_USER=jarvis で起動）
   export DB_USER=jarvis DB_PASS=testpass SET_TENANT_CTX=0
+  # build-on-github 便2（design.md §9-2・§26-1 6.）: 組み立てずに、控えの指紋を .env に戻す（deploy.yml Finalize と同じ形）
   _rb_build=false
-  for _attempt in 1 2 3; do
-    docker compose build -q 2>&1 && { _rb_build=true; break; }
-    echo "Rollback build attempt ${_attempt} failed. Retrying in 5s..."
-    sleep 5
-  done
+  if [ -s .deploy_prev_images.env ]; then
+    while IFS= read -r _l; do
+      _k="${_l%%=*}"
+      sed -i "/^${_k}=/d" .env
+      echo "${_l}" >> .env
+    done < .deploy_prev_images.env
+    _rb_build=true
+  elif ! git show HEAD:docker-compose.yml | grep -q 'BACKEND_IMAGE'; then
+    # 便2 の初回の戻し: 戻り先の compose は build: の形。残っている完成品で起こす
+    sed -i -E '/^(BACKEND|FRONTEND|GEMINI_EGRESS|GHA_EXPORTER|SECRETARY_AGENT|SECRETARY_CODEX)_IMAGE=/d' .env
+    _rb_build=true
+  fi
 
   if [ "${_rb_build}" = "true" ]; then
     for _svc in backend; do
       docker ps -a --filter "name=phase2-test-${_svc}" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
     done
-    docker compose up -d --remove-orphans
+    docker compose up -d --no-build --remove-orphans
 
     echo "Waiting for rollback to stabilize (max 60s)..."
     for _i in $(seq 1 12); do

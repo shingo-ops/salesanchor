@@ -1,0 +1,148 @@
+分け	種類	分け方	名前	tenant.py の行	メモ
+C1	列	本番だけ	badge_definitions.created_at		ひな形は変えない
+C1	列	本番だけ	badge_definitions.criteria		ひな形は変えない
+C1	列	本番だけ	badge_definitions.description		ひな形は変えない
+C1	列	本番だけ	badge_definitions.icon		ひな形は変えない
+C1	列	本番だけ	badge_definitions.id		ひな形は変えない
+C1	列	本番だけ	badge_definitions.is_active		ひな形は変えない
+C1	列	本番だけ	badge_definitions.name		ひな形は変えない
+C1	列	本番だけ	badge_definitions.points		ひな形は変えない
+C1	列	本番だけ	badge_definitions.tenant_id		ひな形は変えない
+C1	列	本番だけ	buddy_feedbacks.context		ひな形は変えない
+C1	列	本番だけ	buddy_feedbacks.created_at		ひな形は変えない
+C1	列	本番だけ	buddy_feedbacks.created_by		ひな形は変えない
+C1	列	本番だけ	buddy_feedbacks.feedback_type		ひな形は変えない
+C1	列	本番だけ	buddy_feedbacks.id		ひな形は変えない
+C1	列	本番だけ	buddy_feedbacks.pair_id		ひな形は変えない
+C1	列	本番だけ	buddy_feedbacks.reason		ひな形は変えない
+C1	列	本番だけ	buddy_feedbacks.tenant_id		ひな形は変えない
+C1	列	本番だけ	buddy_pairs.coach_user_id		ひな形は変えない
+C1	列	本番だけ	buddy_pairs.ended_at		ひな形は変えない
+C1	列	本番だけ	buddy_pairs.id		ひな形は変えない
+C1	列	本番だけ	buddy_pairs.is_active		ひな形は変えない
+C1	列	本番だけ	buddy_pairs.mentee_user_id		ひな形は変えない
+C1	列	本番だけ	buddy_pairs.notes		ひな形は変えない
+C1	列	本番だけ	buddy_pairs.started_at		ひな形は変えない
+C1	列	本番だけ	buddy_pairs.tenant_id		ひな形は変えない
+A3	列	本番だけ	calendar_events.category	1574,1575	
+A2	列	本番だけ	calendar_owner_settings.color	1606	
+A2	列	本番だけ	calendar_owner_settings.is_visible	1607	
+A2	列	本番だけ	calendar_owner_settings.share_mode	1608,1611	
+A2	列	本番だけ	calendar_owner_settings.staff_id	1605,1610,1612	
+A2	列	本番だけ	calendar_owner_settings.updated_at	1609	
+A3	列	中身が違う	close_reasons.created_at	832	
+A3	列	中身が違う	close_reasons.is_active	831	
+E	列	中身が違う	companies.tenant_id		ひな形は変えない
+E	列	中身が違う	contacts.tenant_id		ひな形は変えない
+A3	列	中身が違う	deal_close_reasons.is_primary	841	
+C2	列	中身が違う	leads.lead_code		ひな形は変えない
+A1	列	本番だけ	orders.currency	1488	
+A1	列	本番だけ	orders.delivered_at	1493	
+A1	列	本番だけ	orders.invoice_id	1487	
+A1	列	本番だけ	orders.shipped_at	1492	
+A1	列	本番だけ	orders.shipping_carrier	1489	
+A1	列	本番だけ	orders.shipping_country	1494	
+A1	列	本番だけ	orders.shipping_fee	1490	
+A1	列	本番だけ	orders.tracking_number	1491	
+C1	列	本番だけ	staff_ui_preferences.show_buddy_menu		ひな形は変えない
+B1	列	使い捨てだけ	suppliers.address	991	外した（表・索引・方針・RLS の印・連番）
+B1	列	使い捨てだけ	suppliers.contact_name	991	外した（表・索引・方針・RLS の印・連番）
+B1	列	使い捨てだけ	suppliers.created_at	991	外した（表・索引・方針・RLS の印・連番）
+B1	列	使い捨てだけ	suppliers.email	991	外した（表・索引・方針・RLS の印・連番）
+B1	列	使い捨てだけ	suppliers.id	991	外した（表・索引・方針・RLS の印・連番）
+B1	列	使い捨てだけ	suppliers.is_active	991	外した（表・索引・方針・RLS の印・連番）
+B1	列	使い捨てだけ	suppliers.name	991	外した（表・索引・方針・RLS の印・連番）
+B1	列	使い捨てだけ	suppliers.notes	991	外した（表・索引・方針・RLS の印・連番）
+B1	列	使い捨てだけ	suppliers.phone	991	外した（表・索引・方針・RLS の印・連番）
+B1	列	使い捨てだけ	suppliers.supplier_code	991	外した（表・索引・方針・RLS の印・連番）
+B1	列	使い捨てだけ	suppliers.tenant_id	991	外した（表・索引・方針・RLS の印・連番）
+B1	列	使い捨てだけ	suppliers.updated_at	991	外した（表・索引・方針・RLS の印・連番）
+C1	列	本番だけ	user_badges.badge_id		ひな形は変えない
+C1	列	本番だけ	user_badges.earned_at		ひな形は変えない
+C1	列	本番だけ	user_badges.id		ひな形は変えない
+C1	列	本番だけ	user_badges.tenant_id		ひな形は変えない
+C1	列	本番だけ	user_badges.user_id		ひな形は変えない
+C1	索引	本番だけ	badge_definitions_pkey		ひな形は変えない
+C1	索引	本番だけ	buddy_feedbacks_pkey		ひな形は変えない
+C1	索引	本番だけ	buddy_pairs_pkey		ひな形は変えない
+C1	索引	本番だけ	buddy_pairs_tenant_id_coach_user_id_mentee_user_id_key		ひな形は変えない
+A2	索引	本番だけ	calendar_owner_settings_pkey	1610	
+A3	索引	本番だけ	idx_bots_status	692	
+A2	索引	本番だけ	idx_calendar_owner_settings_staff_id	1614	
+C2	索引	本番だけ	idx_invoices_status		ひな形は変えない
+C2	索引	本番だけ	idx_leads_assigned_to		ひな形は変えない
+C2	索引	本番だけ	idx_leads_status		ひな形は変えない
+C2	索引	本番だけ	idx_po_status		ひな形は変えない
+C2	索引	本番だけ	idx_po_supplier		ひな形は変えない
+C2	索引	本番だけ	idx_products_category		ひな形は変えない
+C2	索引	本番だけ	idx_products_status		ひな形は変えない
+C2	索引	本番だけ	idx_quotes_status		ひな形は変えない
+C2	索引	本番だけ	idx_shipping_rates_lookup		ひな形は変えない
+C2	索引	本番だけ	idx_team_members_team		ひな形は変えない
+C2	索引	本番だけ	idx_team_members_user		ひな形は変えない
+C2	索引	本番だけ	idx_user_roles_user		ひな形は変えない
+C2	索引	本番だけ	leads_tenant_id_lead_code_key		ひな形は変えない
+B1	索引	使い捨てだけ	suppliers_pkey	991	外した（表・索引・方針・RLS の印・連番）
+C1	索引	本番だけ	user_badges_pkey		ひな形は変えない
+C1	索引	本番だけ	user_badges_tenant_id_user_id_badge_id_key		ひな形は変えない
+C1	制約	本番だけ	badge_definitions_pkey		ひな形は変えない
+B2	制約	使い捨てだけ	bots_owner_staff_id_fkey	679,800,838,1032,1137	外した（直書きの REFERENCES を無くし、別名の外部キーは「既存の表に足す外部キー」の DO ブロック）
+C1	制約	本番だけ	buddy_feedbacks_pair_id_fkey		ひな形は変えない
+C1	制約	本番だけ	buddy_feedbacks_pkey		ひな形は変えない
+C1	制約	本番だけ	buddy_pairs_pkey		ひな形は変えない
+C1	制約	本番だけ	buddy_pairs_tenant_id_coach_user_id_mentee_user_id_key		ひな形は変えない
+A3	制約	本番だけ	calendar_events_category_check	1575	
+A2	制約	本番だけ	calendar_owner_settings_pkey	1610	
+A2	制約	本番だけ	calendar_owner_settings_share_mode_check	1611	
+A2	制約	本番だけ	fk_calendar_owner_settings_staff_id_user	1612	
+A3	制約	本番だけ	close_reasons_type_check	828	
+C3	制約	本番だけ	companies_lead_id_fkey		ひな形は変えない
+C3	制約	使い捨てだけ	fk_companies_lead		ひな形は変えない
+C3	制約	本番だけ	contacts_lead_id_fkey		ひな形は変えない
+C3	制約	使い捨てだけ	fk_contacts_lead		ひな形は変えない
+B2	制約	使い捨てだけ	deal_close_reasons_lead_id_fkey	679,800,838,1032,1137	外した（直書きの REFERENCES を無くし、別名の外部キーは「既存の表に足す外部キー」の DO ブロック）
+A3	制約	本番だけ	leads_initiative_check	364	
+C2	制約	本番だけ	leads_tenant_id_lead_code_key		ひな形は変えない
+C2	制約	本番だけ	fk_orders_invoice		ひな形は変えない
+C3	制約	使い捨てだけ	fk_products_supplier_default		ひな形は変えない
+C3	制約	本番だけ	products_supplier_default_id_fkey		ひな形は変えない
+B2	制約	使い捨てだけ	purchase_order_items_order_item_id_fkey	679,800,838,1032,1137	外した（直書きの REFERENCES を無くし、別名の外部キーは「既存の表に足す外部キー」の DO ブロック）
+B2	制約	使い捨てだけ	quotes_lead_id_fkey	679,800,838,1032,1137	外した（直書きの REFERENCES を無くし、別名の外部キーは「既存の表に足す外部キー」の DO ブロック）
+B1	制約	使い捨てだけ	suppliers_pkey	991	外した（表・索引・方針・RLS の印・連番）
+D2	制約	中身が違う	chk_tenant_issuer_profiles_phone		ひな形は変えない
+B2	制約	使い捨てだけ	tenant_meta_config_connected_by_staff_id_fkey	679,800,838,1032,1137	外した（直書きの REFERENCES を無くし、別名の外部キーは「既存の表に足す外部キー」の DO ブロック）
+C1	制約	本番だけ	user_badges_badge_id_fkey		ひな形は変えない
+C1	制約	本番だけ	user_badges_pkey		ひな形は変えない
+C1	制約	本番だけ	user_badges_tenant_id_user_id_badge_id_key		ひな形は変えない
+E	トリガ	使い捨てだけ	trg_lead_playbook_updated_at		ひな形は変えない
+C1	方針	本番だけ	badge_definitions.tenant_isolation_badge_definitions		ひな形は変えない
+D1	方針	中身が違う	bots.tenant_isolation_bots		ひな形は変えない
+C1	方針	本番だけ	buddy_feedbacks.tenant_isolation_buddy_feedbacks		ひな形は変えない
+C1	方針	本番だけ	buddy_pairs.tenant_isolation_buddy_pairs		ひな形は変えない
+D1	方針	中身が違う	companies.tenant_isolation_companies		ひな形は変えない
+D1	方針	中身が違う	company_addresses.tenant_isolation_company_addresses		ひな形は変えない
+D1	方針	中身が違う	company_discord.tenant_isolation_company_discord		ひな形は変えない
+D1	方針	中身が違う	company_sales_channels.tenant_isolation_company_sales_channels		ひな形は変えない
+D1	方針	中身が違う	contact_contact_channels.tenant_isolation_contact_contact_channels		ひな形は変えない
+D1	方針	中身が違う	contact_discord.tenant_isolation_contact_discord		ひな形は変えない
+D1	方針	中身が違う	contact_emails.tenant_isolation_contact_emails		ひな形は変えない
+D1	方針	中身が違う	contacts.tenant_isolation_contacts		ひな形は変えない
+D1	方針	中身が違う	staff.tenant_isolation_staff		ひな形は変えない
+D1	方針	中身が違う	staff_emails.tenant_isolation_staff_emails		ひな形は変えない
+D1	方針	中身が違う	staff_ui_preferences.tenant_isolation_staff_ui_preferences		ひな形は変えない
+B1	方針	使い捨てだけ	suppliers.tenant_isolation_suppliers	991	外した（表・索引・方針・RLS の印・連番）
+C1	方針	本番だけ	user_badges.tenant_isolation_user_badges		ひな形は変えない
+C1	表の印	本番だけ	badge_definitions		ひな形は変えない
+C1	表の印	本番だけ	buddy_feedbacks		ひな形は変えない
+C1	表の印	本番だけ	buddy_pairs		ひな形は変えない
+A2	表の印	本番だけ	calendar_owner_settings	1604	
+B1	表の印	使い捨てだけ	suppliers	991	外した（表・索引・方針・RLS の印・連番）
+C1	表の印	本番だけ	user_badges		ひな形は変えない
+C1	連番	本番だけ	badge_definitions_id_seq		ひな形は変えない
+C1	連番	本番だけ	buddy_feedbacks_id_seq		ひな形は変えない
+C1	連番	本番だけ	buddy_pairs_id_seq		ひな形は変えない
+C2	連番	本番だけ	customer_code_seq		ひな形は変えない
+C2	連番	本番だけ	deal_code_seq		ひな形は変えない
+C2	連番	本番だけ	lead_code_seq		ひな形は変えない
+B1	連番	使い捨てだけ	suppliers_id_seq	991	外した（表・索引・方針・RLS の印・連番）
+C1	連番	本番だけ	user_badges_id_seq		ひな形は変えない

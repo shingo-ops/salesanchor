@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import os
 import uuid
@@ -158,6 +159,7 @@ async def env(monkeypatch):
     a.execute("RESET ROLE")
     a.execute(_read("20261031_210000_create_ops_case.sql"))
     a.execute(_read("20261113_200000_add_ops_case_report_kind.sql"))
+    a.execute(_read("20261115_110000_drop_ops_case_report_single_unique.sql"))
 
     # backend の接続は salesanchor_app（接続のとき role を切り替える。パスワードを持たない試験 DB 用）
     engine = create_async_engine(_asyncpg_url(dbname), echo=False, connect_args={"server_settings": {"role": "salesanchor_app"}})
@@ -311,6 +313,69 @@ async def test_report_once_then_409_and_oversize_413(env):
     assert env.one("SELECT count(*) FROM ops_case.reports WHERE incident_id = %s", (iid2,)) == 0
     bad = await env.client.post(f"{_BASE}/{iid2}/report", json={"status": "weird"}, headers=agent(ticket2))
     assert bad.status_code == 422 and "weird" not in bad.text
+
+
+_CASE_REPORT_EVENTS_SQL = "SELECT count(*) FROM public.ops_incident_events WHERE incident_id = %s AND kind = 'case_report'"
+
+
+async def test_report_three_kinds_then_409_and_one_event_each(env):
+    iid, ticket = await env.new_case()
+    url = f"{_BASE}/{iid}/report"
+    ids = []
+    for n, kind in enumerate(("investigation", "verification", "effect"), start=1):
+        r = await env.client.post(url, json={"kind": kind, "status": "reported", "summary": "要約"}, headers=agent(ticket))
+        assert r.status_code == 200, r.text
+        assert r.json()["kind"] == kind
+        ids.append(r.json()["id"])
+        assert env.one(_CASE_REPORT_EVENTS_SQL, (iid,)) == n
+    dup = await env.client.post(url, json={"kind": "effect", "status": "reported"}, headers=agent(ticket))
+    assert dup.status_code == 409
+    assert env.one("SELECT count(*) FROM ops_case.reports WHERE incident_id = %s", (iid,)) == 3
+    assert env.one(_CASE_REPORT_EVENTS_SQL, (iid,)) == 3  # 409 のときは増えない
+    assert env.one(
+        "SELECT count(*) FROM public.ops_incident_events WHERE incident_id = %s AND kind = 'case_report'"
+        " AND actor = 'case_agent'",
+        (iid,),
+    ) == 3
+    assert len(set(ids)) == 3
+
+
+async def test_report_event_detail_has_only_report_id(env):
+    iid, ticket = await env.new_case()
+    body = {"status": "reported", "summary": "秘密の要約", "cause": "原因の文", "risk": "危険の文"}
+    r = await env.client.post(f"{_BASE}/{iid}/report", json=body, headers=agent(ticket))
+    assert r.status_code == 200, r.text
+    rows = env.rows(
+        "SELECT detail::text FROM public.ops_incident_events WHERE incident_id = %s AND kind = 'case_report'", (iid,)
+    )
+    assert len(rows) == 1
+    detail = json.loads(rows[0][0])
+    assert detail == {"report_id": r.json()["id"]}
+    assert list(detail.keys()) == ["report_id"]
+    for leaked in ("秘密の要約", "原因の文", "危険の文"):
+        assert leaked not in rows[0][0]
+
+
+async def test_report_503_and_no_row_when_event_cannot_be_written(env):
+    iid, ticket = await env.new_case()
+    admin_cur = env.admin.cursor()
+    admin_cur.execute("REVOKE INSERT ON public.ops_incident_events FROM salesanchor_app")
+    try:
+        r = await env.client.post(f"{_BASE}/{iid}/report", json={"status": "reported"}, headers=agent(ticket))
+    finally:
+        admin_cur.execute("GRANT INSERT ON public.ops_incident_events TO salesanchor_app")
+    assert r.status_code == 503, r.text
+    assert env.one("SELECT count(*) FROM ops_case.reports WHERE incident_id = %s", (iid,)) == 0  # 同じ取引
+    assert env.one(_CASE_REPORT_EVENTS_SQL, (iid,)) == 0
+
+
+async def test_report_kind_outside_rule_is_422_and_value_not_echoed(env):
+    iid, ticket = await env.new_case()
+    bad = await env.client.post(
+        f"{_BASE}/{iid}/report", json={"kind": "weirdkind", "status": "reported"}, headers=agent(ticket)
+    )
+    assert bad.status_code == 422 and "weirdkind" not in bad.text
+    assert env.one("SELECT count(*) FROM ops_case.reports WHERE incident_id = %s", (iid,)) == 0
 
 
 # ---------------------------------------------------------------------------------------------------

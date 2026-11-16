@@ -32,13 +32,14 @@ jobs:
     # 配備が失敗・取り消しで終わったときは点検しない
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
-    # 速さの記録の段（最大 40 分で打ち切る）を含めて 60 分
-    timeout-minutes: 60
+    # 配備の待ち（最大 50 分）と速さの記録の段（最大 46 分）を含めて 110 分
+    timeout-minutes: 110
     steps:
       - name: 配備中の確認
         id: gate
         env:
           GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           count_active() {
             total=0
@@ -49,14 +50,29 @@ jobs:
             echo "$total"
           }
           n=$(count_active)
-          if [ "${n:-0}" -ge 1 ]; then
-            sleep 600
-            n=$(count_active)
-          fi
-          if [ "${n:-0}" -ge 1 ]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "配備中のため見送り" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            # 配備の後の点検は今までどおり: 10 分待って 1 回だけ確かめ直す
+            if [ "${n:-0}" -ge 1 ]; then
+              sleep 600
+              n=$(count_active)
+            fi
+            if [ "${n:-0}" -ge 1 ]; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              echo "配備中のため見送り" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "skip=false" >> "$GITHUB_OUTPUT"
+            fi
           else
+            # 毎朝・手動の点検は見送らない: 配備が終わるまで 1 分ごとに数え直す（最大 50 分）
+            deadline=$(( $(date +%s) + 3000 ))
+            while [ "${n:-0}" -ge 1 ] && [ "$(date +%s)" -lt "$deadline" ]; do
+              sleep 60
+              n=$(count_active)
+            done
+            if [ "${n:-0}" -ge 1 ]; then
+              echo "配備が 50 分以上続き、点検を始められませんでした（未実行）" >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -121,6 +137,7 @@ jobs:
           DISCORD_WEBHOOK_OWNER_PING: ${{ secrets.DISCORD_WEBHOOK_OWNER_PING }}
           EVENT_NAME: ${{ github.event_name }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GATE_OUTCOME: ${{ steps.gate.outcome }}
         run: |
           if [ -z "${DISCORD_WEBHOOK_OWNER_PING:-}" ]; then
             echo "webhook が未設定のため通知を送りません"
@@ -142,7 +159,10 @@ jobs:
                   walk(s)
           except Exception:
               pass
-          label = " / ".join(names) if names else "点検を最後まで実行できませんでした"
+          if os.environ.get("GATE_OUTCOME") == "failure":
+              label = "配備が 50 分以上続き、点検を始められませんでした（未実行）"
+          else:
+              label = " / ".join(names) if names else "点検を最後まで実行できませんでした"
           kind = {"workflow_run": "配備の後", "schedule": "毎朝", "workflow_dispatch": "手動"}.get(os.environ.get("EVENT_NAME", ""), "")
           head = "🚨 本番の画面点検（%s）が不合格" % kind if kind else "🚨 本番の画面点検が不合格"
           content = "%s: %s。%s" % (head, label, os.environ.get("RUN_URL", ""))
@@ -155,9 +175,9 @@ jobs:
 
       # 全画面の速さを記録する（ADR-1053）。判定も知らせもしない。この段の失敗で仕事全体を失敗にしない
       - name: 画面の速さを記録（判定なし）
-        if: always() && steps.gate.outputs.skip != 'true' && github.event_name != 'workflow_run'
+        if: always() && steps.gate.outcome == 'success' && steps.gate.outputs.skip != 'true' && github.event_name != 'workflow_run'
         continue-on-error: true
-        # 試験の上限 45 分 + 1 分。この段が延びても仕事の上限 60 分の中で終わらせる（設計 5-8）
+        # 試験の上限 45 分 + 1 分。配備の待ち（最大 50 分）があってもこの段が仕事の上限 110 分の中で終わる（設計 5-8・prod-ui-check-wait-deploy §4-1）
         timeout-minutes: 46
         env:
           CI: "true"

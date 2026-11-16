@@ -50,6 +50,7 @@ from app.schemas.secretary_rules import RuleFeedbackIn, RuleListOut, RuleOut, Ru
 from app.services.ai_assignment import get_ai_assignment
 from app.services.calendar_service import can_add_meet
 from app.services.llm_budget import USAGE_SDKS_BY_PROVIDER, UsageCounts, record_usage_isolated
+from app.services.secretary_dates import apply_day
 from app.services.secretary_karte import merge_karte, next_ask, settle_dates
 from app.services.secretary_resolve import resolve_names
 from app.services.secretary_rules import (
@@ -172,14 +173,21 @@ async def _record_ledger(
     )
 
 
-def _agent_payload(text: str, model: str, rules: list[str], karte: KarteIn | None = None) -> bytes:
+def _now_jst() -> datetime:
+    """今の日本時間（date-reading/design.md §3-3。AI に渡す今と日付の決まりの「今日」を同じにする。試験で差し替える）。"""
+    return datetime.now(_JST)
+
+
+def _agent_payload(
+    text: str, model: str, rules: list[str], karte: KarteIn | None = None, now: datetime | None = None
+) -> bytes:
     """容器への頼みの本文（ADR-1077 便2b）。測ったバイト数と送るバイト数を同じにするため、ここで JSON にする。
 
     ADR-1078: カルテがあるときだけ日時の 3 欄と直前に聞いた欄を足す（題名・場所・メモは送らない。design.md §4-3「大きさ」）。
-    カルテが無いときは今と 1 バイトも違わない。
+    カルテが無いときは今と 1 バイトも違わない。now を省くとその場の今を使う（送る形は同じ）。
     """
-    now = datetime.now(_JST).isoformat(timespec="seconds")
-    body: dict[str, object] = {"text": text, "now": now, "model": model, "rules": rules}
+    now_text = (now or _now_jst()).isoformat(timespec="seconds")
+    body: dict[str, object] = {"text": text, "now": now_text, "model": model, "rules": rules}
     if karte is not None:
         body["karte"] = {"start": karte.start, "end": karte.end, "is_all_day": karte.is_all_day}
         body["asked"] = karte.asked
@@ -281,7 +289,8 @@ async def post_assistant_message(
     # ADR-1078: karte の鍵がある頼み＝新しい画面の道（1 通目は null）。鍵が無い頼み（開いたままの古い画面）は今と同じ動き
     new_path = "karte" in body.model_fields_set
     karte = body.karte
-    payload = _agent_payload(body.text, assignment.model, rules, karte)
+    now = _now_jst()
+    payload = _agent_payload(body.text, assignment.model, rules, karte, now=now)
     if len(payload) > AGENT_BODY_MAX_BYTES:
         _log(user_id, tenant_id, started, "rules_too_long", None)
         raise _fail(413, "rules_too_long")
@@ -320,6 +329,9 @@ async def post_assistant_message(
                 final_ev = merge_karte(intent.event, karte)
             if final_kind == "event":
                 assert final_ev is not None
+                if intent.kind == "event":
+                    # date-reading: 今の文の日付の言い方を決まりの表で日付にする（AI の数えた日付の揺れを止める）
+                    final_ev = apply_day(final_ev, body.text, now.date(), karte)
                 try:
                     final_ev = settle_dates(final_ev)
                 except (ValueError, TypeError):

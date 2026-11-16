@@ -51,6 +51,9 @@ jobs:
               - 'scripts/migration-dryrun-report.py'
               - 'scripts/check_public_tenant_rls.py'
               - 'backend/app/ops/tenant_rls_allowlist.py'
+              - 'backend/app/services/tenant.py'
+              - 'scripts/check_tenant_template_shape.py'
+              - 'backend/tests/test_check_tenant_template_shape.py'
               - '.github/workflows/migration-test.yml'
 
   # run_all_migrations.sh の登録先ファイルが実在するかを全件点検する。
@@ -1427,6 +1430,16 @@ jobs:
             echo "✅ $sqlfile 成功"
           done
 
+      - name: 変更 SQL の前提の移行を先に実行（相談係の報告の種類）
+        if: steps.detect.outputs.has_sql_changes == 'true' && contains(steps.detect.outputs.changed_sql, 'migrations/20261115_110000_drop_ops_case_report_single_unique.sql')
+        run: |
+          # 20261115_110000 は ops_case.reports（20261031_210000）と種類の列（20261113_200000）の後に流れる前提（本番と同じ順）
+          for sqlfile in migrations/20261016_100000_create_ops_incident_tables.sql migrations/20261031_210000_create_ops_case.sql migrations/20261113_200000_add_ops_case_report_kind.sql; do
+            echo "▶ $sqlfile を前提として実行中..."
+            psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
+            echo "✅ $sqlfile 成功"
+          done
+
       - name: 変更 SQL を 1回目実行（実行可否・構文チェック）
         if: steps.detect.outputs.has_sql_changes == 'true'
         run: |
@@ -2192,12 +2205,89 @@ jobs:
         run: |
           python3 scripts/check_public_tenant_rls.py --db jarvis_report
 
+  # 段5 5-2（K5-2）: 新しい会社のひな形（create_tenant_schema）に登録を全件流しても形が変わらないことを確かめる。
+  # 前と後で形の差が 1 件でもあれば失敗。許す一覧は scripts/check_tenant_template_shape.py の ALLOWED_TABLES（channel_masters の 1 表だけ）。
+  tenant-template-shape:
+    name: 会社のひな形の形の差0（実DB）
+    needs: detect-changes
+    if: needs.detect-changes.outputs.migrations == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: jarvis
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: jarvis_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jarvis -d jarvis_db"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/requirements.txt
+
+      - name: Install dependencies
+        working-directory: backend
+        run: uv pip install --system -r requirements.txt -r requirements-dev.txt
+
+      - name: PostgreSQL 待機
+        run: |
+          for i in $(seq 1 10); do
+            pg_isready -h localhost -U jarvis -d jarvis_db && exit 0
+            sleep 2
+          done
+          echo "PostgreSQL が起動しませんでした" && exit 1
+
+      - name: ひな形の形の差を検査する
+        env:
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: jarvis
+          PGPASSWORD: testpass
+          PYTHONPATH: ${{ github.workspace }}/backend
+        run: |
+          python3 scripts/check_tenant_template_shape.py --db tenant_shape_check --out-dir "$RUNNER_TEMP/tenant-shape"
+
+      - name: 形の差の出力を保存
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenant-template-shape
+          path: ${{ runner.temp }}/tenant-shape
+          if-no-files-found: ignore
+
+      - name: 検査の台本の試験
+        env:
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: jarvis
+          PGPASSWORD: testpass
+          PYTHONPATH: ${{ github.workspace }}/backend
+        working-directory: backend
+        run: python3 -m pytest tests/test_check_tenant_template_shape.py -q --no-cov
+
   # ルールセット必須 Check の名前と一致させる。always() で常に実行し、
   # - migration 変更あり: migration-test-run / migration-full-dryrun の結果を報告
   # - migration 変更なし: 両ジョブが skipped → 成功として報告
   migration-test:
     name: マイグレーションSQL 実行テスト（実DB）
-    needs: [detect-changes, migration-registration-exists, migration-registration-exists-regression, migration-test-run, migration-full-dryrun]
+    needs: [detect-changes, migration-registration-exists, migration-registration-exists-regression, migration-test-run, migration-full-dryrun, tenant-template-shape]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -2209,11 +2299,13 @@ jobs:
           d="${{ needs.migration-full-dryrun.result }}"
           e="${{ needs.migration-registration-exists.result }}"
           g="${{ needs.migration-registration-exists-regression.result }}"
+          t="${{ needs.tenant-template-shape.result }}"
           echo "detect-changes: $det (migrations=$out)"
           echo "migration-test-run: $r"
           echo "migration-full-dryrun: $d"
           echo "migration-registration-exists: $e"
           echo "migration-registration-exists-regression: $g"
+          echo "tenant-template-shape: $t"
           if [[ "$det" != "success" ]]; then
             echo "FAIL: detect-changes is not success (detect-changes=$det)"
             exit 1
@@ -2224,19 +2316,19 @@ jobs:
           fi
           case "$out" in
             true)
-              if [[ "$e" == "success" && "$r" == "success" && "$d" == "success" ]]; then
+              if [[ "$e" == "success" && "$r" == "success" && "$d" == "success" && "$t" == "success" ]]; then
                 echo "OK: migrations changed and all migration tests passed"
                 exit 0
               fi
-              echo "FAIL: migrations changed but tests did not succeed: migration-registration-exists=$e, migration-test-run=$r, migration-full-dryrun=$d"
+              echo "FAIL: migrations changed but tests did not succeed: migration-registration-exists=$e, migration-test-run=$r, migration-full-dryrun=$d, tenant-template-shape=$t"
               exit 1
               ;;
             false)
-              if [[ "$e" == "skipped" && "$r" == "skipped" && "$d" == "skipped" ]]; then
+              if [[ "$e" == "skipped" && "$r" == "skipped" && "$d" == "skipped" && "$t" == "skipped" ]]; then
                 echo "OK: migrations not changed and migration tests were skipped"
                 exit 0
               fi
-              echo "FAIL: migrations not changed but tests were not skipped: migration-registration-exists=$e, migration-test-run=$r, migration-full-dryrun=$d"
+              echo "FAIL: migrations not changed but tests were not skipped: migration-registration-exists=$e, migration-test-run=$r, migration-full-dryrun=$d, tenant-template-shape=$t"
               exit 1
               ;;
             *)

@@ -65,7 +65,7 @@ services:
 
   # バックエンドAPI（FastAPI）
   backend:
-    build: ./backend
+    image: ${BACKEND_IMAGE:-astro-webapp-backend}
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - ADMIN_DATABASE_URL=${ADMIN_DATABASE_URL:-}
@@ -195,10 +195,7 @@ services:
 
   # フロントエンド（React + TypeScript + Vite）
   frontend:
-    build:
-      context: ./frontend
-      args:
-        VITE_FUNNEL_DASHBOARD: ${VITE_FUNNEL_DASHBOARD}
+    image: ${FRONTEND_IMAGE:-astro-webapp-frontend}
     restart: unless-stopped
     healthcheck:
       # localhost が IPv6 (::1) に解決され nginx の IPv4-only listen と
@@ -228,7 +225,7 @@ services:
 
   # Celeryワーカー（非同期タスク実行）
   celery-worker:
-    build: ./backend
+    image: ${BACKEND_IMAGE:-astro-webapp-backend}
     command: celery -A app.celery_app worker --loglevel=info --concurrency=2
     environment:
       - DATABASE_URL=${DATABASE_URL}
@@ -333,7 +330,7 @@ services:
 
   # Celery Beat（定期タスクスケジューラー）
   celery-beat:
-    build: ./backend
+    image: ${BACKEND_IMAGE:-astro-webapp-backend}
     command: celery -A app.celery_app beat --loglevel=info --schedule=/tmp/celerybeat-schedule --scheduler app.celery_alive:AliveScheduler
     environment:
       - DATABASE_URL=${DATABASE_URL}
@@ -377,7 +374,7 @@ services:
   # WebSocket 常駐プロセス。共通 Bot Token 1本で全テナントのサーバーを受信し、
   # guild_id → public.tenant_discord_config で tenant_id を逆引きして振り分ける。
   discord-gateway:
-    build: ./backend
+    image: ${BACKEND_IMAGE:-astro-webapp-backend}
     command: python -m app.discord_gateway.main
     volumes:
       - attachments_data:/data/attachments
@@ -432,7 +429,7 @@ services:
   # ホストには公開しない（ports なし、backnet 内のみ到達可能）。
   # イメージは monitoring/prod1/gemini-egress/Dockerfile でビルド（起動時の apk 取得なし、design §5-4）
   gemini-egress:
-    build: ./monitoring/prod1/gemini-egress
+    image: ${GEMINI_EGRESS_IMAGE:-astro-webapp-gemini-egress}
     restart: unless-stopped
     # ADR-1012 段階3 便D: トンネルの先の tinyproxy が 403 Filtered を返すか（tinyproxy 自身の答え・外へは出ない）。口が開いているだけでは固まりが見えない
     healthcheck:
@@ -545,8 +542,7 @@ services:
   # ワークフロー/ジョブ/ステップの実行時間・成否をPrometheus形式で :8080 に公開。
   # prometheus.yml の gha-exporter scrape job が 60s 間隔で収集する。
   gha-exporter:
-    build:
-      context: ./monitoring/gha-exporter
+    image: ${GHA_EXPORTER_IMAGE:-astro-webapp-gha-exporter}
     environment:
       - GHA_APP_ID=${GHA_APP_ID}
       # 秘密鍵はファイルマウント方式（.envにPEM内容を直書きしない）
