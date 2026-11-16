@@ -4,7 +4,7 @@
 親の設計: `docs/handoff/shime-bundle-close/design.md`（縦に並べて〆る形。便1 本番済・便2 本番の表に行を追加済・便3 試験前）
 関連 ADR: ADR-1073（規則12h・箱の仲間）、ADR-158（商品単位の差分更新）、ADR-1003（委任 GO）、ADR-135（main にマージ＝本番投入可）。〆の相手を複数の商品に広げる決まりは前例の設計 `docs/handoff/v102-shime-multi-targets/design.md`（規則8〜11）が正。
 
-状態: 設計案作成済み（草案。2026-11-16、Opus。行番号は 2026-11-17 の origin/main 2adefae2e で確かめ直した）。PO の方針の決定 2026-11-16「1」（1行に品名を並べて〆る形を、まとめ〆の直しに加えてから便3の試験をする）。設計審査 1回目 REVISE（2026-11-17、指摘6件。`docs/handoff/shime-bundle-close/review-oneline.md`）→ 直し済み。2回目 REVISE（2026-11-17、新しい指摘5件）→ 直し済み。3回目 REVISE（2026-11-17、新しい指摘3件）→ 直し済み・4回目は未。実装は未着手。
+状態: 設計案作成済み（草案。2026-11-16、Opus。行番号は 2026-11-17 の origin/main 2adefae2e で確かめ直した）。PO の方針の決定 2026-11-16「1」（1行に品名を並べて〆る形を、まとめ〆の直しに加えてから便3の試験をする）。設計審査 1回目 REVISE（2026-11-17、指摘6件。`docs/handoff/shime-bundle-close/review-oneline.md`）→ 直し済み。2回目 REVISE（2026-11-17、新しい指摘5件）→ 直し済み。3回目 REVISE（2026-11-17、新しい指摘3件）→ 直し済み。4回目 REVISE（2026-11-17、新しい指摘2件）→ 直し済み・5回目は未。実装は未着手。
 
 ## 1. 目的と成功条件
 - 目的: 「品名A、品名B〆」のように1行に品名を区切って並べた〆で、並んだ商品をすべて Sold out にする。今は2品とも閉じないか、片方だけ閉じる（recon §2: 直近30日の3投稿すべて）。
@@ -14,7 +14,7 @@
 | 基準 | 検証方法 |
 |---|---|
 | K0 今の数（基準値） | 測定済み（recon §2）: 直近30日で本物の1行の並び〆は3投稿、3投稿とも並んだ商品のうち少なくとも1つが閉じていない（閉じていない商品は5つ（2+2+1。内訳は作業記録 `oneline/`））。 |
-| K1 単体試験 | §3-2 の T1〜T15 と、既存の `backend/tests/test_gemini_raw_copy_v102_soldout_ref.py`・`backend/tests/test_gemini_raw_copy_v101.py`・`backend/tests/test_line_analysis_v102_svc.py` が CI で緑。既存の試験は書き換えない |
+| K1 単体試験 | §3-2 の T1〜T16 と、既存の `backend/tests/test_gemini_raw_copy_v102_soldout_ref.py`・`backend/tests/test_gemini_raw_copy_v101.py`・`backend/tests/test_line_analysis_v102_svc.py` が CI で緑。既存の試験は書き換えない |
 | K2 正の3投稿で並んだ商品が全部閉じる | 本番の別のコンテナで `python -m app.tools.v102_replay_diff` を直す前のコード（今の本番）と直した後のコード（ブランチ）で流し、diff を見る。○ = 3投稿とも、行に並んだ商品のうち「同じ仕入元の過去48時間に In Stock の行がある商品」が全部、件の (商品, 状態) か `soldout_targets` に入る。× = 1つでも入らない |
 | K3 ほかの投稿が変わらない | K2 と同じ道具で、直近30日の v102 の投稿のうち「Sold out・1行だけ・照合が ambiguous の件」を1件以上持つ投稿を全部（数は流す前に読み取り鍵で数えて記録）流す。○ = 前後で結果が変わった投稿が、正の3投稿だけ。× = それ以外が1投稿でも変わる（目で見て PO に報告し、直すまで先へ進まない） |
 | K4 本番で1行の並び〆の閉じ漏れが無い | 反映から14日、毎朝の〆の点検の手順2c で「まとめ〆の閉じ漏れ」のうち1行の形が0件、かつ「消しすぎ」0件 |
@@ -43,8 +43,8 @@
      2. `lines` の行がちょうど1行。
      3. `match_status` が ambiguous で、規則14の商品の組が全部その件の候補（`match_candidates`）にある。
      4. 人が決めた商品が無い（`fixed_products` に無い）。
-     5. 件の状態が語で決まっていない。規則14の組の**全部の商品 p について** `build(i, p)` の `condition_basis` を `condition_decided_by_word` で見て、全部 False のときだけ動かす。照合前の件では見ない（照合前は商品の分類が空なので、商品が箱系で単位の区分が「条件つき・複合・数量専用」のときだけ箱系として状態を決め直す道（`backend/app/services/gemini_raw_copy_v102_product_first.py:819-824`）を通らず、箱系にだけ効く語（開封など）を見落とすため）。理由: 状態は行全体から決まる（`backend/app/services/tcg_analyzer_svc.py:938-953` `resolve_condition_v2` は状態の語が1つでも当たれば basis を `R{priority}:{語}` にする）ので、「品名A 未開封、品名B 開封〆」のように区切りごとに状態の語が違うと、B の相手の状態を取り違える。状態の語がある1行の並び〆は、今と同じく閉じない（悪くはならない）。正の3投稿のうち2投稿は状態が決まっていない（理由 condition_unknown。作業記録 `oneline/it.txt`）。
-     6. 同じ投稿のほかの件のうち完売でない件（在庫の件）の `product_id` と `match_candidates` に、組の商品が1つも無い。理由: 先頭の商品の書く行は、先頭の相手の状態で上書きされる（`backend/app/services/line_analysis_v102_svc.py:957-962`）。同じ投稿に同じ (商品, 状態) の在庫の行があると、同じ投稿の行どうしは現行の順位が同じになり（`backend/app/services/tcg_analyzer_svc.py:2104-2117`）、売り切れと在庫ありの行が両方とも現行のまま残る。規則14は後の段より前に動くので、後で決まる件も候補で見る。
+     5. 件の状態が語で決まっていない。規則14の組の**全部の商品 p について** `build(i, p)` の `condition_basis` を `condition_decided_by_word` で見て、全部 False のときだけ動かす。ただし商品の分類の既定（`R7:単品既定`・`R6:バルク既定`・`R8:プロモパック既定`・`R9:ブックレット既定`・`R10:サプライ既定`。`backend/app/services/gemini_raw_copy_v102_product_first.py:99-103`。flag_note の接頭辞を除いた basis がこの5つのどれかと同じ物）は、行の語ではなくその商品の分類から決まるので、規則14の中だけ「語で決まっていない」と見る（`condition_decided_by_word` は `R\d+:` に当たるので True を返す。`backend/app/services/gemini_raw_copy_v102_soldout_ref.py:43-54`。この関数自体は変えない）。この形の商品は2の1の規則12では相手が出ない（規則12は語で決まった件を外す）ので、2の2で `build(i, 商品)` の状態（例: Single）の在庫から相手を作る。照合前の件では見ない（照合前は商品の分類が空なので、商品が箱系で単位の区分が「条件つき・複合・数量専用」のときだけ箱系として状態を決め直す道（`backend/app/services/gemini_raw_copy_v102_product_first.py:819-824`）を通らず、箱系にだけ効く語（開封など）を見落とすため）。理由: 状態は行全体から決まる（`backend/app/services/tcg_analyzer_svc.py:938-953` `resolve_condition_v2` は状態の語が1つでも当たれば basis を `R{priority}:{語}` にする）ので、「品名A 未開封、品名B 開封〆」のように区切りごとに状態の語が違うと、B の相手の状態を取り違える。状態の語がある1行の並び〆は、今と同じく閉じない（悪くはならない）。正の3投稿のうち2投稿は状態が決まっていない（理由 condition_unknown。作業記録 `oneline/it.txt`）。これは照合前の件の理由で、商品を決めた後の `build(i, p)` の basis は保存の列に無く確かめていない（未確認）。K3 のやり直しで、正の3投稿が規則14で閉じるかを見る。
+     6. 同じ投稿のほかの件のうち完売でない件（在庫の件）の `product_id` と `match_candidates` に、組の商品が1つも無い。あわせて `followup_ref` があるときは、今の並びで `decide_followup`（`backend/app/services/gemini_raw_copy_v102_followup.py:116-130`）を流し、在庫の件が組の商品に決まるなら動かない（unmatched の在庫の件は候補を持たないまま、後の段の `_apply_followup`（`backend/app/services/gemini_raw_copy_v101.py:1544-1547`）で組の商品に決まり得るため。候補の制約は ambiguous にしか掛からない（同 `gemini_raw_copy_v102_followup.py:108`））。理由: 先頭の商品の書く行は、先頭の相手の状態で上書きされる（`backend/app/services/line_analysis_v102_svc.py:957-962`）。同じ投稿に同じ (商品, 状態) の在庫の行があると、同じ投稿の行どうしは現行の順位が同じになり（`backend/app/services/tcg_analyzer_svc.py:2104-2117`）、売り切れと在庫ありの行が両方とも現行のまま残る。規則14は後の段より前に動くので、後で決まる件も候補で見る。
    - 完売の相手（`soldout_targets`）は、商品ごとに次の順で求める。
      1. 規則12: `extracted` の i 番目だけを `build(i, 商品)` に差し替えた並びを `decide_soldout_inherit(並び, soldout_posts, fixed_products, box_rule=box_rule, post_text=post_text)` に渡し、`decisions.get(i)` を取る（12d・12e・12g・12h は今のまま）。
      2. 1が無いとき: `_stranded_stock(商品, soldout_posts, same_post)` から〆の状態（`build(i, 商品)` の `_shime_condition`）の物を取り、あれば `_soldout_target(商品, 〆の状態, 投稿, 在庫の行)` で1つ作る（`gemini_raw_copy_v102_soldout_ref.py:380-397`・:409。same_post は1の並びで規則12が作るのと同じ値）。`_stranded_stock` は、その状態の行（在庫・完売）がある最も新しい投稿を見て、そこに在庫の行があるときだけ返すので、新しい投稿ですでに完売になった在庫は相手にしない（12e と同じ）。12d に当たる件（〆と同じ状態の在庫が前にある件）はここに来る。
@@ -71,7 +71,8 @@
 - T12: 「品名A 未開封、品名B 開封〆」のように状態の語がある（件の condition_basis が `R2:…` 等）→ 規則14は動かない（今と同じ結果）。
 - T13: T11 で、A の〆の状態の行がより新しい投稿で完売になっている → 3-1 の2の2は A の相手を作らない。
 - T14: 箱系の商品 A・B で、単位の区分が「条件つき」、行に箱系にだけ効く状態の語がある（照合前の件は `R4:単位既定` 系で、`build(i, A)` の後だけ語で決まる形）→ 規則14は動かない。
-- T15: 同じ投稿に、候補に A を含む在庫の件（完売でない件）がある → 規則14は動かない。
+- T15: 同じ投稿に、候補に A を含む在庫の件（完売でない件）がある → 規則14は動かない。あわせて、候補を持たない unmatched の在庫の件が `followup_ref` で A に決まる形 → 規則14は動かない。
+- T16: シングル系の商品 A と箱系の商品 B で行に状態の語が無い（A の `build(i, A)` の basis が `R7:単品既定`）→ 規則14は動き、A の相手は Single の在庫の行から2の2で作られる。
 
 ## 4. 影響範囲
 - 結果が変わるのは、§3-1 の対象の件の6条件と規則14の3条件が全部当たり、相手のある商品が1つ以上ある件だけ。直近30日では正の3投稿だけのはず（K3 で確かめる）。
@@ -94,7 +95,7 @@
 ## 7. 維持の仕組み
 - 守り手: Opus（ccopusgo の設計担当）。
 - 毎朝の〆の点検（agent-console の定期実行、手順2c）が「まとめ〆の閉じ漏れ」を毎日数える。1行の形も同じ欄で数え、点検の記録に「1行の形」と書き分ける。
-- T1〜T15 が、規則14の条件が崩れたら CI で止める。
+- T1〜T16 が、規則14の条件が崩れたら CI で止める。
 
 ## 8. 外部・過去事例の参照と我々への応用
 - 外部事例: 該当なし。理由: 仕入元ごとの〆の書き方に合わせた後処理の規則で、外の事例に同じ数の根拠は無い。
