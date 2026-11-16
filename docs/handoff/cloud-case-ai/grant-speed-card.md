@@ -4,7 +4,7 @@
 
 - 設計: `docs/handoff/cloud-case-ai/grant-speed-design.md`（§1 K1〜K5・§3 変更前後・§4 対象外）
 - 対象ADR: ADR-1052
-- 状態: 設計案作成済み。設計審査 1 回目 REVISE の指摘を直した版（設計 §11）。2 回目の審査は未実施。実装は未着手（PO の実装承認が要る）
+- 状態: 設計案作成済み・設計審査済み（2 回目 APPROVE。設計 §11-2）。実装は未着手（PO の実装承認が要る）
 - 危険便: はい（`migrations/`。ADR-135・ADR-136。GO #番号が要る）
 - 実装担当: クラウドの Sonnet（RemoteTrigger の一回実行）。push して止まる。PR は Opus が作る
 - ブランチ: `release/unmask-grant-speed`（origin/main 7faae9090 起点。設計の書類はこのブランチに入っている）
@@ -28,7 +28,7 @@
 - 直す 1 文: `migrations/20261031_210000_create_ops_case.sql:397-405`（設計 §3-1 と同じ文字）。
 - 判定の関数は plpgsql・STABLE（同 :202-226）。
 - 試験の DB は autocommit（`backend/tests/ops/test_ops_case_db.py:113`）。`_one` は 1 行目の 1 列目を返す（同 :195-198）。
-- 既存の付け直しの試験は :680-694 と :697-713。新しい試験はその間（:695 の空行のあと、:697 の前）に入れる。
+- 既存の付け直しの試験は :680-694 と :697-713（:695・:696 は空行）。新しい試験は :694 の後ろに入れ、:694 と新しい試験の間を空行 2 行、新しい試験と :697 の関数の間も空行 2 行にする。
 - 試験の DB の `public.plain_demo` は 3 列（`backend/tests/conftest.py:2165`）。つまり build_columns の行の数は名前の数より多い（段 A の試験で `rows > sources` として確かめる）。
 - CI の DB は `postgres:16`・`POSTGRES_USER: jarvis`（`.github/workflows/test.yml:129-131`）。試験は `RLS_ADMIN_DATABASE_URL`（jarvis）で動く（同 :242、`backend/tests/ops/test_ops_case_db.py:37`）。
 
@@ -44,7 +44,7 @@
 
 - 段 A の CI で新しい試験が緑（元のコードで呼ぶ回数が名前の数以下）だった: 試験が違いを見分けられていない。段 B に進まず止まる（Opus が設計を直す）。
 - 段 A の CI で `SET LOCAL track_functions` が権限のエラー（42501）: 迂回せず止まる。
-- 段 B の CI で既存の試験（:627・:680・:697）が赤: 直し方が振る舞いを変えた。直さずに止まる。
+- 段 B の CI で既存の試験（`test_migration_is_idempotent`・`test_grant_unmask_owner_first_run_is_fast_and_second_is_zero`・`test_grant_unmask_owner_revokes_when_table_is_added_to_deny_tables`）が赤: 直し方が振る舞いを変えた。直さずに止まる。
 - 段 B で `WITH ... SELECT ... INTO` が構文エラー: 直さずに止まる（Opus が設計を直す）。
 
 ## 3-0. 作業場所（段 A・段 B とも最初に流す）
@@ -121,7 +121,7 @@ def test_grant_unmask_owner_calls_judge_once_per_source(pg):
     assert 0 < calls <= sources
 ```
 
-- `pg_stat_xact_user_functions` は、今の取引の中の呼び出しの数をその場で見せる（PostgreSQL 公式 27.2.2）。`track_functions` を `pl` にすると plpgsql の関数を数える（公式 19.9.1）。
+- `pg_stat_xact_user_functions` は、今の取引の中の呼び出しの数をその場で見せる（PostgreSQL 公式ページ monitoring-stats「pg_stat_user_functions」）。`track_functions` を `pl` にすると plpgsql の関数を数える（公式ページ runtime-config-statistics「track_functions」）。
 - 最後に ROLLBACK するので、試験の DB の権限は試験の前のまま。
 
 ## 5. 段 B の手順（直す本体。段 A の CI で新しい試験が赤だと Opus が確かめてから。先に §3-0。手順0-5 の log の先頭が段 A の commit であること）
@@ -181,6 +181,6 @@ SELECT 'same', (SELECT a FROM new) = (SELECT a FROM old), cardinality((SELECT a 
 ```
 
 その後、`EXPLAIN (ANALYZE, BUFFERS, TIMING OFF, SUMMARY ON)` で new の部分だけを流し、Execution Time を読む。
-- 結果は設計の §11（新設）に書く。
+- 結果は設計の §10-3（本番反映の後。新設）に書く。
 
 END OF CARD
