@@ -1,0 +1,22 @@
+col	typ	nn	def	t
+calendar_events.category	character varying(50)	True	'meeting'::character varying	001,003,004,005,006
+close_reasons.created_at	timestamp with time zone	True	now()	001,003,004,005,006
+close_reasons.is_active	boolean	True	true	001,003,004,005,006
+companies.tenant_id	integer	True		001,003,004,005
+companies.tenant_id	integer	True	6	006
+contacts.tenant_id	integer	True		001,003,004,005
+contacts.tenant_id	integer	True	6	006
+deal_close_reasons.is_primary	boolean	True	false	001,003,004,005,006
+leads.lead_code	character varying(20)	True	('LD-'::text || lpad((nextval('tenant_001.lead_code_seq'::regclass))::text, 5, '0'::text))	001
+leads.lead_code	character varying(20)	True	('LD-'::text || lpad((nextval('tenant_003.lead_code_seq'::regclass))::text, 5, '0'::text))	003
+leads.lead_code	character varying(20)	False		004,005,006
+orders.currency	character varying(10)	False	'JPY'::character varying	001,003,004,005,006
+orders.delivered_at	timestamp with time zone	False		001,003,004,005,006
+orders.invoice_id	integer	False		001,003,004,005,006
+orders.shipped_at	timestamp with time zone	False		001,003,004,005,006
+orders.shipping_carrier	character varying(50)	False		001,003,004,005,006
+orders.shipping_country	character varying(100)	False		001,003,004,005,006
+orders.shipping_fee	numeric(15,2)	False		001,003,004,005,006
+orders.tracking_number	character varying(200)	False		001,003,004,005,006
+staff_ui_preferences.show_buddy_menu	boolean	True	true	001,003,004,005,006
+AUDIT ts=2026-11-15T23:41:17Z sha=d76ca79b1347 rows=20 ms=56 result=ok sql=SELECT c.relname||'.'||a.attname AS col, format_type(a.atttypid,a.atttypmod) AS typ, a.attnotnull AS nn, coalesce(pg_get_expr(d.adbin,d.adrelid),'') AS def, string_agg(right(n.nspname,3), ',' ORDER BY n.nspname) AS t FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum WHERE n.nspname ~ '^tenant_[0-9]{3}$' AND a.attnum>0 AND NOT a.attisdropped AND ((c.relname='orders' AND a.attname 
