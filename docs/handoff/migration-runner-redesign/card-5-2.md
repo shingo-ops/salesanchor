@@ -3,7 +3,9 @@ mode: handoff
 ---
 # 実装カード：会社のひな形を1つにする（段5 5-2・1A）— ひな形の直書きを分け表どおりに直し、CI に形の差0の検査を足す（Sonnet・クラウド）
 
-状態: **草案。PO の明示の実装承認の前は流さない。**
+状態: **第2版（2026-11-16）。PO の実装承認（2026-11-16「1」）は受領済み。第2版の直しは承認の範囲（1A: 足りない表と列を書き足す）の中。**
+
+第2版の直し（Opus の設計判断・PO の言葉ではない）: 第1版は「手順6の後に形の差0」としていたが、分け表の 147 件だけでは足りなかった。登録の手順が作る 645 件をひな形に足すことが抜けていた（設計の入れ忘れ）。手順6に足す作業（流した後だけ・前だけ・中身違いの3つ）を足し、手順8は「形の差の許す一覧は0件で始め、要れば止まる」とした。1つの PR で全部入れる（検査を必須にしないまま分けると、検査が使われなくなるため）。
 
 ## 発行前の照合（design-partner.md 5.5）
 | # | 項目 | 結果 |
@@ -42,19 +44,26 @@ mode: handoff
    - B1 会社ごとの `suppliers`（表・索引・方針・RLS の印・連番）を外し、`{schema}.suppliers` を指す 2 本の外部キー（`backend/app/services/tenant.py:1013`・`:1021` 付近）を `public.suppliers` に直す。
    - B2 の外部キー 5 本を外す。
    - C1・C2・C3・D・E はひな形を変えない。
+   - **(第2版で追加) 登録の手順が作る物を全部ひな形に足す**: 第1回の実行（2026-11-16、`NEEDS_DECISION` で停止）で、今のひな形の会社に登録全件を流すと、流した後だけにある物が 632 件（表 26・列 352・索引 103・制約 85・連番 25・方針 20・トリガ 11・関数 10）、流す前だけ 4 件、中身が違う 9 件出た。分け表の 147 件は「本番 003 と、ひな形＋登録全件」の比べなので、この 645 件は分け表に入っていない（`classification.md` §1「対象にしない物」の印1・印3）。第1回の生の一覧は commit されずに消えたので、まず手順5の使い捨て DB で同じ比べを取り直し、645 件の一覧（種類・名前・作った/変えた登録の移行のファイル）を報告に表で出す（件数が違えば記録して続ける）。そのうえで次の3つに分けて直す。
+     - (a) 流した後だけの物: ひな形に足す（`calendar_events` のように表ごと無い物は表ごと足す。別名の外部キーもここ）。
+     - (b) 流す前だけの物（移行が消す・付け替える物）: ひな形から外す。
+     - (c) 中身が違う物: 流した後の中身にひな形を直す。
+     - どれも、直す前に分け表 A・B と食い違わないか照らす（例: (a) に B1・B2 の名前そのものや C の物が出たら足さずに止まる `NEEDS_DECISION:`）。
+     - 書き写す元は、使い捨て DB で登録全件を流した後のその会社の形（`pg_dump --schema-only` の会社のスキーマ分など）。会社の番号・スキーマ名は `{schema}`・`{tenant_id}` に置き換える。ひな形はファイルに書き出す形にせず、直書きの SQL のまま足す（1A）。直した物は (a)(b)(c) ごとの件数と、元の登録の移行のファイル名を表にする。
 7. **ひな形を直接使う所は変えない（K5-2b の確かめだけ）**: `scripts/setup_review_tenant.py:149`・`:160` と `scripts/setup_tenant.py:171` は、`backend/app/services/tenant.py` の同じ文字列（`_TENANT_TABLES_SQL`・`_RLS_*`・`get_tenant_tables_sql` など）を読み込んで流しているだけで、SQL の写しは持っていない。なので手順6の直しはそのまま届く。この2本を `create_tenant_schema` に差し替えない。理由: `create_tenant_schema` は失敗するとスキーマを丸ごと消す（`backend/app/services/tenant.py` の try/except）。`setup_review_tenant.py` は本番のコンテナで、すでにある審査用の会社に流す手順（`docs/runbooks/review-tenant-operations.md:24-29`）なので、差し替えるとその会社を消すおそれがある。`backend/app/routers/admin.py:74`・`backend/tests/rls_bootstrap.py:411`・`backend/tests/test_channel_type_control.py:73`・`backend/tests/test_system_roles.py:182` も変えない。ひな形の文字列を読んで中身を確かめる試験（`backend/tests/test_roles_system_key_ddl.py:35`・`backend/tests/test_tenant_issuer_tables_pg.py:63`・`backend/tests/test_tenant_payment_versioning_pg.py:73`・`:97`・`backend/tests/test_tenant_duty_rules_pg.py:75`・`:133`・`backend/tests/test_discord_role_link_ddl.py:41`）は、手順6の直しの後も通ることを CI で確かめる。`setup_tenant.py` を使う `.github/workflows/schema-check.yml:224`（テナントスキーマ整合性チェック）と `scripts/check_schema_catchup_sync.py:89` も緑のままであること。合否の線: `git grep -n "CREATE TABLE IF NOT EXISTS {schema" -- scripts/setup_review_tenant.py scripts/setup_tenant.py` が 0 件（ひな形の写しが無い。`{schema}` と `{schema_name}` の両方に当たる。`setup_tenant.py:25`・`:207` の説明の文と、`:281` の移行のファイルの置き換えは写しではないので数えない）で、上の CI が緑（件数と URL を書く）。`backend/tests/test_rls_tenant_meta_config.py:81` は、わざとひな形を使わず最小の表だけを作る試験なので K5-2b の数えに入れず、変えない。設計 §5-6 の第3版の「5か所」にあった setup_test_users という台本は今は無い。
 
 8. **CI の検査を足す**（K5-2・K5-2c）: `.github/workflows/migration-test.yml` に新しい job を足す（既存の job は変えない。集約の `migration-test` の `needs` に足す）。中身:
    - (1) 使い捨て DB に public の前準備をし（`recon-5-2a/q1-run.md` の前準備と同じ）、`create_tenant_schema` で会社を1つ作る。**schema の無い会社の行（例 id 999）を前準備で入れない**（5-2a で run_py 12 本がこれで落ちた。`classification.md` §4 の1）。
    - (2) 形を取る（前）。(3) 登録全件を本体と同じ流し方で流す（run_sql と run_py。`scripts/run_all_migrations.sh` の登録の順）。(4) 形を取る（後）。
    - (5) 前と後の差を出す。比べる物は表・列・型・既定値・NOT NULL・索引・制約（外部キーは指す表の置き場所つき）・トリガ・RLS の印・方針・連番・権限（表ごとの `relacl` と、会社のスキーマの既定の権限 `pg_default_acl`。設計 §5-6 の比べる物に権限が入っているため）。差が0なら合格、1件でもあれば差の全件を出して失敗。
+   - **(第2版で追加) 形の差の許す一覧は0件の見込み**: 審査で確かめた事実（2026-11-16）: B1 の会社ごとの `suppliers` を作る登録の移行は無い（`migrations/038_add_products_phase1c_columns.sql:76-90` は表が有る時だけ外部キーを付け、表は作らない）。B2 の5本の名前（`*_fkey`）そのものを作る登録の移行も無い。登録の移行が付けるのは別名の外部キー（`fk_quotes_lead`・`fk_deal_close_reasons_lead`・`fk_poi_order_item`・`fk_bots_owner_staff_id_user`・`fk_tenant_meta_config_connected_by_staff_id_user`。後の2本は `migrations/20261013_110000_repoint_person_columns_to_users.sql:51-61`）で、5本とも本番 003 にある（`recon-5-2a/prod-reads/fk003.txt:4`・`:24`・`:54`・`:62`・`:76`）。これらは手順6でひな形に足す物で、形の差の許す一覧には入れない。検査の中に「形の差の許す一覧」の置き場所は作ってよいが、中身は0件で始める。1件でも入れたくなったら止まる（`NEEDS_DECISION:`。物の名前・作った移行のファイルと行・本番 003 に有るか無いかを書く）。
    - 前提が無くて落ちる run_sql 3 本（`public.auth_events` が無い 2 本・`jarvis_db` が無い 1 本。`q1-run.md:370-372`）は、検査の中の「外す一覧」に名前と理由つきで書く（会社の形に関わらないため）。それ以外の本が落ちたら検査は失敗。
    - K5-2c（ひな形を変えて `migrations/` を足さない PR を止める段）は**このカードでは足さない**。このカードの PR 自身がひな形を変え、`migrations/` を足さない（手順6の直しは、登録済みの移行が作る形にひな形を合わせるだけなので、新しい移行は要らない）。同じ PR に足すと自分を赤にするため、この PR の合流の後に別のカードで足す。
 9. 試験: 新しい検査の台本の試験（差0で緑・ひな形に列を1つ足すと赤）を `backend/tests/` に足す。Mac では流さない。CI で確かめる。
 10. commit・push（force 禁止）。Draft の PR を `--base main` で作る。本文は `.github/pull_request_template.md` から書き、「触るファイル:」に全ファイルを列挙する。マージしない。
 
 ## 停止
-- 止めるのは、手順5で分け表に無い違いが出たとき、設計と食い違うとき、push・PR の拒否、フックや自動判定に止められたとき。言い換えて再試行しない。
+- 止めるのは、手順5の外部キーの比べ（許す12組）で分け表に無い違いが出たとき（手順6の 645 件の比べはここに入らない。手順6の中の止まる条件に従う）、設計と食い違うとき、push・PR の拒否、フックや自動判定に止められたとき。言い換えて再試行しない。
 - `migrations/` にファイルを足さない。本番に接続しない。`deploy.yml` を変えない。
 - 試験の本文と台本に SQL の危険語を書かない（repo の移行を読んで流すのはよい）。Bash に psql の語を書かない。sleep しない。rm しない。
 - 停止したら報告に「止まった手順の番号／最後に流した命令／止まった理由の原文」を書く。
