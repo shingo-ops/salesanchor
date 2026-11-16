@@ -146,6 +146,12 @@ jobs:
               id SERIAL PRIMARY KEY
           );
 
+          -- public.suppliers（tenant_NNN.products.supplier_default_id / purchase_orders.supplier_id の FK 参照先）
+          -- 段5 5-2 B1: 会社ごとの suppliers 表をやめ、tenant.py の FK が public.suppliers を指すようになったため追加
+          CREATE TABLE IF NOT EXISTS public.suppliers (
+              id SERIAL PRIMARY KEY
+          );
+
           -- public.permissions（seed_system_roles が参照）
           CREATE TABLE IF NOT EXISTS public.permissions (
               id          SERIAL PRIMARY KEY,

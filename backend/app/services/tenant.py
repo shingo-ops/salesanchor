@@ -361,7 +361,7 @@ CREATE TABLE IF NOT EXISTS {schema}.leads (
     email VARCHAR(255),
     phone VARCHAR(50),
     channel_type VARCHAR(30),
-    initiative VARCHAR(10),
+    initiative VARCHAR(10) CONSTRAINT leads_initiative_check CHECK (initiative IS NULL OR initiative IN ('outbound', 'inbound')),
     type VARCHAR(50),
     status VARCHAR(50) DEFAULT 'lead',
     temperature VARCHAR(20),
@@ -375,7 +375,6 @@ CREATE TABLE IF NOT EXISTS {schema}.leads (
     prospect_rank VARCHAR(10),
     assigned_to INTEGER,
     assignment_opened_at TIMESTAMPTZ,
-    converted_deal_id INTEGER,
     notes TEXT,
     -- ADR-015 §1/§2: AI 自動収集データ
     country VARCHAR(100),
@@ -463,7 +462,7 @@ CREATE TABLE IF NOT EXISTS {schema}.orders (
     id SERIAL PRIMARY KEY,
     tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
     -- Phase 1-B-2 Step 5d / PR γ: 旧 customer_id 列は migration 035 で DROP 済。
-    company_id INTEGER CONSTRAINT fk_orders_company REFERENCES {schema}.companies(id),
+    company_id INTEGER NOT NULL CONSTRAINT fk_orders_company REFERENCES {schema}.companies(id),
     contact_id INTEGER CONSTRAINT fk_orders_contact REFERENCES {schema}.contacts(id),
     order_number VARCHAR(100) NOT NULL,
     total_amount NUMERIC(15, 2),
@@ -677,7 +676,8 @@ CREATE TABLE IF NOT EXISTS {schema}.bots (
     api_key_hash VARCHAR(128) NOT NULL,
     discord_user_id VARCHAR(50),
     sender_email VARCHAR(255),
-    owner_staff_id INTEGER NOT NULL REFERENCES public.users(id),
+    -- owner_staff_id の外部キー fk_bots_owner_staff_id_user は下の「既存の表に足す外部キー」で付ける
+    owner_staff_id INTEGER NOT NULL,
     last_executed_at TIMESTAMPTZ,
     execution_count BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -689,6 +689,7 @@ CREATE TABLE IF NOT EXISTS {schema}.bots (
 CREATE INDEX IF NOT EXISTS idx_bots_tenant_id ON {schema}.bots (tenant_id);
 CREATE INDEX IF NOT EXISTS idx_bots_owner_staff_id ON {schema}.bots (owner_staff_id);
 CREATE INDEX IF NOT EXISTS idx_bots_purpose ON {schema}.bots (purpose);
+CREATE INDEX IF NOT EXISTS idx_bots_status ON {schema}.bots (status);
 
 -- staff / staff_ui_preferences / bots の updated_at 自動更新トリガ
 DO $$
@@ -796,9 +797,10 @@ CREATE TABLE IF NOT EXISTS {schema}.quotes (
     id SERIAL PRIMARY KEY,
     tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
     quote_code VARCHAR(20),
-    lead_id INTEGER REFERENCES {schema}.leads(id),
+    -- lead_id の外部キー fk_quotes_lead は下の「既存の表に足す外部キー」で付ける
+    lead_id INTEGER NOT NULL,
     -- Phase 1-B-2 Step 5d / PR γ: 旧 customer_id 列は migration 035 で DROP 済。
-    company_id INTEGER CONSTRAINT fk_quotes_company REFERENCES {schema}.companies(id),
+    company_id INTEGER NOT NULL CONSTRAINT fk_quotes_company REFERENCES {schema}.companies(id),
     contact_id INTEGER CONSTRAINT fk_quotes_contact REFERENCES {schema}.contacts(id),
     currency VARCHAR(10) DEFAULT 'JPY',
     subtotal NUMERIC(15, 2) DEFAULT 0,
@@ -823,19 +825,20 @@ CREATE INDEX IF NOT EXISTS idx_quotes_lead_id ON {schema}.quotes (lead_id);
 -- 成約・失注理由マスタ
 CREATE TABLE IF NOT EXISTS {schema}.close_reasons (
     id SERIAL PRIMARY KEY,
-    type VARCHAR(10) NOT NULL,
+    type VARCHAR(10) NOT NULL CONSTRAINT close_reasons_type_check CHECK (type IN ('won', 'lost')),
     label TEXT NOT NULL,
     sort_order INTEGER NOT NULL DEFAULT 0,
-    is_active INTEGER NOT NULL DEFAULT 1,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (type, label)
 );
 
 CREATE TABLE IF NOT EXISTS {schema}.deal_close_reasons (
     id SERIAL PRIMARY KEY,
-    lead_id INTEGER REFERENCES {schema}.leads(id),
+    -- lead_id の外部キー fk_deal_close_reasons_lead は下の「既存の表に足す外部キー」で付ける
+    lead_id INTEGER NOT NULL,
     reason_id INTEGER NOT NULL REFERENCES {schema}.close_reasons(id),
-    is_primary INTEGER NOT NULL DEFAULT 0,
+    is_primary BOOLEAN NOT NULL DEFAULT FALSE,
     UNIQUE (lead_id, reason_id)
 );
 CREATE INDEX IF NOT EXISTS idx_deal_close_reasons_lead_id ON {schema}.deal_close_reasons (lead_id);
@@ -844,7 +847,7 @@ CREATE INDEX IF NOT EXISTS idx_deal_close_reasons_lead_id ON {schema}.deal_close
 CREATE TABLE IF NOT EXISTS {schema}.quote_items (
     id SERIAL PRIMARY KEY,
     quote_id INTEGER NOT NULL REFERENCES {schema}.quotes(id) ON DELETE CASCADE,
-    product_id INTEGER REFERENCES public.products(id),
+    product_id INTEGER CONSTRAINT quote_items_product_id_public_fkey REFERENCES public.products(id) ON DELETE RESTRICT,
     product_name VARCHAR(255) NOT NULL,
     -- 海外顧客向け明細: name_en=英語タイトル / condition=状態 / unit=形態
     name_en VARCHAR(255),
@@ -865,7 +868,7 @@ CREATE TABLE IF NOT EXISTS {schema}.invoices (
     invoice_number VARCHAR(30),
     quote_id INTEGER REFERENCES {schema}.quotes(id),
     -- Phase 1-B-2 Step 5d / PR γ: 旧 customer_id 列は migration 035 で DROP 済。
-    company_id INTEGER CONSTRAINT fk_invoices_company REFERENCES {schema}.companies(id),
+    company_id INTEGER NOT NULL CONSTRAINT fk_invoices_company REFERENCES {schema}.companies(id),
     contact_id INTEGER CONSTRAINT fk_invoices_contact REFERENCES {schema}.contacts(id),
     currency VARCHAR(10) DEFAULT 'JPY',
     subtotal NUMERIC(15, 2) DEFAULT 0,
@@ -918,7 +921,7 @@ CREATE INDEX IF NOT EXISTS idx_invoices_contact_id ON {schema}.invoices (contact
 CREATE TABLE IF NOT EXISTS {schema}.invoice_items (
     id SERIAL PRIMARY KEY,
     invoice_id INTEGER NOT NULL REFERENCES {schema}.invoices(id) ON DELETE CASCADE,
-    product_id INTEGER REFERENCES public.products(id),
+    product_id INTEGER CONSTRAINT invoice_items_product_id_public_fkey REFERENCES public.products(id) ON DELETE RESTRICT,
     product_name VARCHAR(255) NOT NULL,
     -- 海外顧客向け明細: name_en=英語タイトル / condition=状態 / unit=形態
     name_en VARCHAR(255),
@@ -984,22 +987,10 @@ END $order_items_trigger$;
 
 -- === Phase 3: 仕入れ・調達管理 ===
 
-CREATE TABLE IF NOT EXISTS {schema}.suppliers (
-    id SERIAL PRIMARY KEY,
-    tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
-    supplier_code VARCHAR(20),
-    name VARCHAR(255) NOT NULL,
-    contact_name VARCHAR(255),
-    email VARCHAR(255),
-    phone VARCHAR(50),
-    address TEXT,
-    notes TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- 仕入先は public.suppliers 1 つにまとめる（docs/handoff/supplier-ssot-phase2/design.md）。
+-- 会社ごとの suppliers 表は作らない（段5 5-2 B1。本番 5 社にも無い）。
 
--- products.supplier_default_id の FK を suppliers 作成後に付与
+-- products.supplier_default_id の FK は共用の public.suppliers を指す
 -- （Phase 1-C M-MVP / 2026-04-28）
 DO $supplier_fk$
 BEGIN
@@ -1010,7 +1001,7 @@ BEGIN
     ) THEN
         ALTER TABLE {schema}.products
         ADD CONSTRAINT fk_products_supplier_default
-        FOREIGN KEY (supplier_default_id) REFERENCES {schema}.suppliers(id);
+        FOREIGN KEY (supplier_default_id) REFERENCES public.suppliers(id);
     END IF;
 END $supplier_fk$;
 
@@ -1018,7 +1009,7 @@ CREATE TABLE IF NOT EXISTS {schema}.purchase_orders (
     id SERIAL PRIMARY KEY,
     tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
     po_number VARCHAR(20),
-    supplier_id INTEGER NOT NULL REFERENCES {schema}.suppliers(id),
+    supplier_id INTEGER NOT NULL REFERENCES public.suppliers(id),
     status VARCHAR(20) DEFAULT 'draft',
     total_amount NUMERIC(15, 2) DEFAULT 0,
     ordered_at TIMESTAMPTZ,
@@ -1034,11 +1025,12 @@ CREATE TABLE IF NOT EXISTS {schema}.purchase_orders (
 CREATE TABLE IF NOT EXISTS {schema}.purchase_order_items (
     id SERIAL PRIMARY KEY,
     purchase_order_id INTEGER NOT NULL REFERENCES {schema}.purchase_orders(id) ON DELETE CASCADE,
-    product_id INTEGER NOT NULL REFERENCES public.products(id),
+    product_id INTEGER NOT NULL CONSTRAINT purchase_order_items_product_id_public_fkey REFERENCES public.products(id) ON DELETE RESTRICT,
     quantity INTEGER NOT NULL DEFAULT 1,
     unit_cost NUMERIC(15, 2) NOT NULL,
     subtotal NUMERIC(15, 2) NOT NULL,
-    order_item_id INTEGER REFERENCES {schema}.order_items(id),
+    -- order_item_id の外部キー fk_poi_order_item は下の「既存の表に足す外部キー」で付ける
+    order_item_id INTEGER,
     sort_order INTEGER DEFAULT 0
 );
 
@@ -1142,8 +1134,9 @@ CREATE TABLE IF NOT EXISTS {schema}.tenant_meta_config (
     instagram_business_account_id   VARCHAR(50),
     instagram_username              VARCHAR(100),
     subscribed_fields               JSONB,
-    connected_by_staff_id           INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
-    connected_at                    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    -- connected_by_staff_id の外部キー fk_tenant_meta_config_connected_by_staff_id_user は下の「既存の表に足す外部キー」で付ける
+    connected_by_staff_id           INTEGER,
+    connected_at                   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_token_refreshed_at         TIMESTAMPTZ,
     is_active                       BOOLEAN NOT NULL DEFAULT TRUE,
     deactivated_at                  TIMESTAMPTZ,
@@ -1192,7 +1185,8 @@ CREATE TABLE IF NOT EXISTS {schema}.goals (
     kpi_type     VARCHAR(30)    NOT NULL
                      CHECK (kpi_type IN (
                          'revenue', 'deal_count', 'close_rate',
-                         'lead_count', 'conversion_rate'
+                         'lead_count', 'conversion_rate',
+                         'won_count', 'gross_profit'
                      )),
     target_value NUMERIC(15, 2) NOT NULL CHECK (target_value >= 0),
     created_by   INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
@@ -1480,6 +1474,836 @@ CREATE TABLE IF NOT EXISTS {schema}.tenant_duty_rule_components (
     CONSTRAINT chk_tenant_duty_rule_components_currency_required CHECK ((min_amount IS NULL AND max_amount IS NULL) OR amount_currency IS NOT NULL)
 );
 CREATE INDEX IF NOT EXISTS idx_tenant_duty_rule_components_rule_id ON {schema}.tenant_duty_rule_components (rule_id);
+-- ============================================================================
+-- 段5 5-2: 登録の移行（scripts/run_all_migrations.sh）が会社に作る物を、ひな形にも持たせる。
+-- 新しい会社を作った直後と、登録を全件流した後で形が変わらないようにする（CI: scripts/check_tenant_template_shape.py）。
+-- 書き写す元は、登録を全件流した後の会社の形。冪等（IF NOT EXISTS・名前の有無の確認）で、既にある会社に流しても壊さない。
+-- ============================================================================
+
+-- 既存の表に足す列
+-- 分け表 A1: 注文の 8 列（本番 5 社全部にある。backend/app/routers/orders.py と backend/app/tasks/reports.py が読む。
+-- 作る SQL migrations/005_add_phase2_tenant_tables.sql は登録に無い）。型・既定値は本番 003 と同じ
+ALTER TABLE {schema}.orders
+    ADD COLUMN IF NOT EXISTS invoice_id INTEGER,
+    ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'JPY',
+    ADD COLUMN IF NOT EXISTS shipping_carrier VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS shipping_fee NUMERIC(15, 2),
+    ADD COLUMN IF NOT EXISTS tracking_number VARCHAR(200),
+    ADD COLUMN IF NOT EXISTS shipped_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS shipping_country VARCHAR(100);
+ALTER TABLE {schema}.company_discord
+    ADD COLUMN IF NOT EXISTS guild_id character varying(50);
+ALTER TABLE {schema}.contact_contact_channels
+    ADD COLUMN IF NOT EXISTS guild_id character varying(50);
+ALTER TABLE {schema}.leads
+    ADD COLUMN IF NOT EXISTS discord_dm_channel_id character varying(50),
+    ADD COLUMN IF NOT EXISTS discord_guild_channel_id character varying(50),
+    ADD COLUMN IF NOT EXISTS discord_id character varying(255),
+    ADD COLUMN IF NOT EXISTS discord_role_sync_at timestamp with time zone,
+    ADD COLUMN IF NOT EXISTS discord_role_sync_status character varying(20),
+    ADD COLUMN IF NOT EXISTS discord_user_id character varying(50),
+    ADD COLUMN IF NOT EXISTS english_name character varying(255),
+    ADD COLUMN IF NOT EXISTS instagram_link character varying(1000),
+    ADD COLUMN IF NOT EXISTS messenger_link character varying(1000),
+    ADD COLUMN IF NOT EXISTS whatsapp_link character varying(1000);
+ALTER TABLE {schema}.meta_messages
+    ADD COLUMN IF NOT EXISTS attachment_type character varying(20),
+    ADD COLUMN IF NOT EXISTS attachment_url text,
+    ADD COLUMN IF NOT EXISTS error_code character varying(50),
+    ADD COLUMN IF NOT EXISTS error_message text,
+    ADD COLUMN IF NOT EXISTS message_tag character varying(50),
+    ADD COLUMN IF NOT EXISTS messaging_type character varying(20),
+    ADD COLUMN IF NOT EXISTS page_id character varying(50),
+    ADD COLUMN IF NOT EXISTS recipient_id character varying(100),
+    ADD COLUMN IF NOT EXISTS seen_at timestamp with time zone,
+    ADD COLUMN IF NOT EXISTS seen_by_staff_id integer,
+    ADD COLUMN IF NOT EXISTS sent_by_staff_id integer;
+ALTER TABLE {schema}.purchase_orders
+    ADD COLUMN IF NOT EXISTS company_name_snapshot character varying(255),
+    ADD COLUMN IF NOT EXISTS contact_info_snapshot text;
+ALTER TABLE {schema}.staff
+    ADD COLUMN IF NOT EXISTS avatar_token text,
+    ADD COLUMN IF NOT EXISTS is_employee boolean DEFAULT false NOT NULL,
+    ADD COLUMN IF NOT EXISTS phone character varying(20);
+ALTER TABLE {schema}.tenant_meta_config
+    ADD COLUMN IF NOT EXISTS granted_scopes jsonb;
+
+-- 新しい表（依存の順）
+-- 登録の移行: scripts/migrate_009_phase4_tenant_tables.py（作る SQL: migrations/009_add_phase4_tenant_tables.sql）
+CREATE TABLE IF NOT EXISTS {schema}.archives (
+    id SERIAL,
+    tenant_id integer DEFAULT {tenant_id} NOT NULL,
+    source_table character varying(100) NOT NULL,
+    source_id integer NOT NULL,
+    archived_data jsonb NOT NULL,
+    archived_by integer,
+    archived_at timestamp with time zone DEFAULT now(),
+    restored_at timestamp with time zone,
+    restored_by integer,
+    CONSTRAINT archives_pkey PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS idx_archives_source ON {schema}.archives USING btree (source_table, source_id);
+
+-- 登録の移行: migrations/078_create_calendar_events_tenant.sql
+CREATE TABLE IF NOT EXISTS {schema}.calendar_events (
+    id SERIAL,
+    user_id integer,
+    calendar_type character varying(10) DEFAULT 'shared'::character varying NOT NULL,
+    title character varying(500) NOT NULL,
+    description text,
+    location text,
+    start_datetime timestamp with time zone NOT NULL,
+    end_datetime timestamp with time zone NOT NULL,
+    is_all_day boolean DEFAULT false NOT NULL,
+    google_event_id character varying(255),
+    google_calendar_id character varying(255),
+    source character varying(10) DEFAULT 'app'::character varying NOT NULL,
+    sync_status character varying(10) DEFAULT 'synced'::character varying,
+    sync_origin_id character varying(500),
+    last_synced_at timestamp with time zone,
+    created_by_user_id integer,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    meet_url text,
+    recurrence_rule text,
+    recurring_event_id integer,
+    original_start_datetime timestamp with time zone,
+    is_cancelled boolean DEFAULT false NOT NULL,
+    -- 分け表 A3: 予定の分類（本番 5 社全部にある。作る SQL migrations/20260621_020000_add_schedule_calendar_category_and_owner_settings.sql は登録に無い）
+    category character varying(50) DEFAULT 'meeting'::character varying NOT NULL,
+    CONSTRAINT calendar_events_category_check CHECK (category IN ('meeting', 'personal', 'procurement', 'shipping', 'billing', 'release', 'holiday')),
+    CONSTRAINT calendar_events_pkey PRIMARY KEY (id),
+    CONSTRAINT calendar_events_calendar_type_check CHECK (calendar_type IN ('shared', 'personal')),
+    CONSTRAINT calendar_events_cancelled_exception_check CHECK (((NOT is_cancelled) OR (recurring_event_id IS NOT NULL))),
+    CONSTRAINT calendar_events_created_by_user_id_fkey FOREIGN KEY (created_by_user_id) REFERENCES public.users(id) ON DELETE SET NULL,
+    CONSTRAINT calendar_events_exception_pair_check CHECK (((recurring_event_id IS NULL) = (original_start_datetime IS NULL))),
+    CONSTRAINT calendar_events_recurrence_role_check CHECK ((NOT ((recurrence_rule IS NOT NULL) AND (recurring_event_id IS NOT NULL)))),
+    CONSTRAINT calendar_events_recurring_event_id_fkey FOREIGN KEY (recurring_event_id) REFERENCES {schema}.calendar_events(id) ON DELETE CASCADE,
+    CONSTRAINT calendar_events_source_check CHECK (source IN ('app', 'google')),
+    CONSTRAINT calendar_events_sync_status_check CHECK (sync_status IN ('synced', 'pending', 'failed')),
+    CONSTRAINT calendar_events_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL
+);
+-- 繰り返しの書式の制約は文字列の中にセミコロンを含み、ひな形の分割に壊されるので DO ブロックで付ける
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'calendar_events_recurrence_rule_format_check' AND conrelid = '{schema}.calendar_events'::regclass) THEN
+        ALTER TABLE {schema}.calendar_events ADD CONSTRAINT calendar_events_recurrence_rule_format_check CHECK ((recurrence_rule ~ '^FREQ=(DAILY|WEEKLY|MONTHLY|YEARLY)(;[A-Z]+=[A-Z0-9,+-]+)*$'::text));
+    END IF;
+END $$;
+CREATE UNIQUE INDEX IF NOT EXISTS calendar_events_exception_unique_idx ON {schema}.calendar_events USING btree (recurring_event_id, original_start_datetime) WHERE (recurring_event_id IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_google_id ON {schema}.calendar_events USING btree (google_event_id) WHERE (google_event_id IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_range ON {schema}.calendar_events USING btree (start_datetime, end_datetime);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_sync_origin ON {schema}.calendar_events USING btree (sync_origin_id) WHERE (sync_origin_id IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_user_type ON {schema}.calendar_events USING btree (user_id, calendar_type);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_calendar_events_google_event_id ON {schema}.calendar_events USING btree (google_event_id) WHERE (google_event_id IS NOT NULL);
+
+-- 分け表 A2: 予定の表示設定（本番 5 社全部にある。backend/app/routers/calendar.py が使う）。
+-- 作る SQL migrations/20260621_020000_add_schedule_calendar_category_and_owner_settings.sql は登録に無い。
+-- RLS は本番 003 と同じく切ったまま・方針は足さない（recon-5-0b/prod003/table_flags.tsv。RLS を付けるかは別のテーマ）
+CREATE TABLE IF NOT EXISTS {schema}.calendar_owner_settings (
+    staff_id integer NOT NULL,
+    color character varying(32) DEFAULT '#1a73e8'::character varying NOT NULL,
+    is_visible boolean DEFAULT false NOT NULL,
+    share_mode character varying(16) DEFAULT 'self'::character varying NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT calendar_owner_settings_pkey PRIMARY KEY (staff_id),
+    CONSTRAINT calendar_owner_settings_share_mode_check CHECK (share_mode IN ('self', 'view', 'edit')),
+    CONSTRAINT fk_calendar_owner_settings_staff_id_user FOREIGN KEY (staff_id) REFERENCES public.users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_calendar_owner_settings_staff_id ON {schema}.calendar_owner_settings USING btree (staff_id);
+
+-- 登録の移行: migrations/20260611_100000_create_channel_masters.sql
+CREATE TABLE IF NOT EXISTS {schema}.channel_masters (
+    id SERIAL,
+    tenant_id integer NOT NULL,
+    platform character varying(30) NOT NULL,
+    display_name character varying(100) NOT NULL,
+    connection_type character varying(10) NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT channel_masters_pkey PRIMARY KEY (id),
+    CONSTRAINT channel_masters_platform_key UNIQUE (platform),
+    CONSTRAINT channel_masters_connection_type_check CHECK (connection_type IN ('auto', 'manual'))
+);
+
+-- 登録の移行: migrations/20260604_090000_create_conversation_logs.sql
+CREATE TABLE IF NOT EXISTS {schema}.conversation_logs (
+    id SERIAL,
+    tenant_id integer NOT NULL,
+    lead_id integer NOT NULL,
+    contact_id integer,
+    company_id integer,
+    deal_id integer,
+    channel_type character varying(30) NOT NULL,
+    channel_identity character varying(255),
+    direction character varying(10) NOT NULL,
+    sender character varying(100),
+    content_text text,
+    original_language character varying(10),
+    external_message_id character varying(255),
+    raw_payload jsonb,
+    status character varying(20) DEFAULT 'sent'::character varying,
+    translated_text text,
+    analysis jsonb,
+    occurred_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp with time zone,
+    recorded_by_user_id integer,
+    is_manual boolean,
+    CONSTRAINT conversation_logs_pkey PRIMARY KEY (id),
+    CONSTRAINT conversation_logs_external_message_id_key UNIQUE (external_message_id),
+    CONSTRAINT conversation_logs_direction_check CHECK (direction IN ('inbound', 'outbound')),
+    CONSTRAINT fk_conversation_logs_lead FOREIGN KEY (lead_id) REFERENCES {schema}.leads(id) ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+CREATE INDEX IF NOT EXISTS idx_conv_logs_company_id ON {schema}.conversation_logs USING btree (company_id);
+CREATE INDEX IF NOT EXISTS idx_conv_logs_contact_id ON {schema}.conversation_logs USING btree (contact_id);
+CREATE INDEX IF NOT EXISTS idx_conv_logs_deleted_at ON {schema}.conversation_logs USING btree (deleted_at) WHERE (deleted_at IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_conv_logs_occurred_at ON {schema}.conversation_logs USING btree (occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_conv_logs_tenant_id ON {schema}.conversation_logs USING btree (tenant_id);
+
+-- 登録の移行: migrations/20260604_180000_analytics_agent_a_tables.sql
+CREATE TABLE IF NOT EXISTS {schema}.customer_scores (
+    id SERIAL,
+    tenant_id integer NOT NULL,
+    lead_id integer NOT NULL,
+    score numeric(5,3) NOT NULL,
+    confidence numeric(4,3) NOT NULL,
+    tier character varying(10) NOT NULL,
+    signal_summary jsonb DEFAULT '{{}}'::jsonb NOT NULL,
+    sample_size integer DEFAULT 0 NOT NULL,
+    is_cold_start boolean DEFAULT true NOT NULL,
+    override_score numeric(5,3),
+    override_note text,
+    override_by integer,
+    override_at timestamp with time zone,
+    calibration_id integer,
+    scored_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT customer_scores_pkey PRIMARY KEY (id),
+    CONSTRAINT customer_scores_confidence_check CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))),
+    CONSTRAINT customer_scores_override_score_check CHECK (((override_score IS NULL) OR ((override_score >= (0)::numeric) AND (override_score <= (1)::numeric)))),
+    CONSTRAINT customer_scores_score_check CHECK (((score >= (0)::numeric) AND (score <= (1)::numeric))),
+    CONSTRAINT customer_scores_tier_check CHECK (tier IN ('要観察', '有望', '最有望'))
+);
+CREATE INDEX IF NOT EXISTS idx_customer_scores_tier ON {schema}.customer_scores USING btree (tier);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_customer_scores_lead_id ON {schema}.customer_scores USING btree (lead_id);
+
+-- 登録の移行: migrations/20261001_150000_create_discord_channel_webhooks.sql
+CREATE TABLE IF NOT EXISTS {schema}.discord_channel_webhooks (
+    id SERIAL,
+    tenant_id integer DEFAULT (current_setting('app.tenant_id'::text, true))::integer NOT NULL,
+    channel_id text NOT NULL,
+    webhook_id text NOT NULL,
+    webhook_token_encrypted text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT discord_channel_webhooks_pkey PRIMARY KEY (id),
+    CONSTRAINT uq_discord_channel_webhooks_channel UNIQUE (channel_id)
+);
+CREATE INDEX IF NOT EXISTS idx_dcw_tenant ON {schema}.discord_channel_webhooks USING btree (tenant_id);
+
+-- 登録の移行: scripts/migrate_011_phase5_tenant_tables.py（作る SQL: migrations/011_add_phase5_tenant_tables.sql）
+CREATE TABLE IF NOT EXISTS {schema}.erp_sync_logs (
+    id SERIAL,
+    tenant_id integer DEFAULT {tenant_id} NOT NULL,
+    sync_type character varying(50) NOT NULL,
+    direction character varying(10) DEFAULT 'export'::character varying NOT NULL,
+    record_count integer DEFAULT 0,
+    status character varying(20) DEFAULT 'pending'::character varying,
+    error_message text,
+    started_at timestamp with time zone DEFAULT now(),
+    completed_at timestamp with time zone,
+    created_by integer,
+    CONSTRAINT erp_sync_logs_pkey PRIMARY KEY (id)
+);
+
+-- 登録の移行: migrations/20260902_100000_create_lead_attachments.sql
+CREATE TABLE IF NOT EXISTS {schema}.lead_attachments (
+    id SERIAL,
+    tenant_id integer NOT NULL,
+    lead_id integer NOT NULL,
+    message_id character varying(64) NOT NULL,
+    platform character varying(32) NOT NULL,
+    file_path text NOT NULL,
+    file_size bigint NOT NULL,
+    content_type character varying(128),
+    original_filename text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT lead_attachments_pkey PRIMARY KEY (id),
+    CONSTRAINT lead_attachments_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES {schema}.leads(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_la_lead_id ON {schema}.lead_attachments USING btree (lead_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_la_message_id ON {schema}.lead_attachments USING btree (message_id);
+CREATE INDEX IF NOT EXISTS idx_la_tenant_created ON {schema}.lead_attachments USING btree (tenant_id, created_at);
+
+-- 登録の移行: migrations/20260614_100000_create_sales_form_tables.sql
+CREATE TABLE IF NOT EXISTS {schema}.tenant_sales_form_options (
+    id SERIAL,
+    tenant_id integer NOT NULL,
+    label character varying(100) NOT NULL,
+    value character varying(100) NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT tenant_sales_form_options_pkey PRIMARY KEY (id),
+    CONSTRAINT tenant_sales_form_options_tenant_id_value_key UNIQUE (tenant_id, value)
+);
+CREATE INDEX IF NOT EXISTS idx_tenant_sales_form_options_tenant_active ON {schema}.tenant_sales_form_options USING btree (tenant_id, is_active);
+
+-- 登録の移行: migrations/20260614_100000_create_sales_form_tables.sql
+CREATE TABLE IF NOT EXISTS {schema}.lead_sales_form_selections (
+    id SERIAL,
+    lead_id integer NOT NULL,
+    option_id integer NOT NULL,
+    other_text text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT lead_sales_form_selections_pkey PRIMARY KEY (id),
+    CONSTRAINT lead_sales_form_selections_lead_id_option_id_key UNIQUE (lead_id, option_id),
+    CONSTRAINT lead_sales_form_selections_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES {schema}.leads(id) ON DELETE CASCADE,
+    CONSTRAINT lead_sales_form_selections_option_id_fkey FOREIGN KEY (option_id) REFERENCES {schema}.tenant_sales_form_options(id) ON DELETE RESTRICT
+);
+CREATE INDEX IF NOT EXISTS idx_lead_sales_form_selections_lead_id ON {schema}.lead_sales_form_selections USING btree (lead_id);
+
+-- 登録の移行: migrations/20260604_180000_analytics_agent_a_tables.sql
+CREATE TABLE IF NOT EXISTS {schema}.message_labels (
+    id SERIAL,
+    tenant_id integer NOT NULL,
+    message_id integer NOT NULL,
+    lead_id integer,
+    label character varying(30) NOT NULL,
+    confidence numeric(4,3) NOT NULL,
+    direction character varying(10) NOT NULL,
+    source character varying(20) DEFAULT 'rule'::character varying NOT NULL,
+    override_by integer,
+    override_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT message_labels_pkey PRIMARY KEY (id),
+    CONSTRAINT message_labels_confidence_check CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))),
+    CONSTRAINT message_labels_direction_check CHECK (direction IN ('inbound', 'outbound')),
+    CONSTRAINT message_labels_label_check CHECK (label IN ('price_focus', 'substance_talk', 'self_disclosure', 'early_purchase_signal', 'other')),
+    CONSTRAINT message_labels_source_check CHECK (source IN ('rule', 'llm', 'human'))
+);
+CREATE INDEX IF NOT EXISTS idx_message_labels_lead_id ON {schema}.message_labels USING btree (lead_id);
+CREATE INDEX IF NOT EXISTS idx_message_labels_message_id ON {schema}.message_labels USING btree (message_id);
+
+-- 登録の移行: migrations/094_create_message_translations.sql
+CREATE TABLE IF NOT EXISTS {schema}.message_translations (
+    id SERIAL,
+    message_id text NOT NULL,
+    target_language character varying(10) NOT NULL,
+    translated_text text NOT NULL,
+    engine character varying(50) DEFAULT 'gemini-2.5-flash'::character varying NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    tenant_id integer,
+    confidence real,
+    original_language character varying(10),
+    CONSTRAINT message_translations_pkey PRIMARY KEY (id),
+    CONSTRAINT uq_message_translations UNIQUE (message_id, target_language)
+);
+CREATE INDEX IF NOT EXISTS idx_message_translations_message_id ON {schema}.message_translations USING btree (message_id);
+
+-- 登録の移行: migrations/20260927_100000_create_meta_message_reactions.sql
+CREATE TABLE IF NOT EXISTS {schema}.meta_message_reactions (
+    id SERIAL,
+    tenant_id integer DEFAULT (current_setting('app.tenant_id'::text, true))::integer NOT NULL,
+    meta_message_id integer NOT NULL,
+    emoji_name text NOT NULL,
+    emoji_id text,
+    emoji_animated boolean DEFAULT false,
+    reactor_discord_user_id text NOT NULL,
+    reactor_display_name text,
+    is_bot_reaction boolean DEFAULT false,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT meta_message_reactions_pkey PRIMARY KEY (id),
+    CONSTRAINT uq_reaction_per_user_emoji UNIQUE (meta_message_id, emoji_name, emoji_id, reactor_discord_user_id),
+    CONSTRAINT meta_message_reactions_meta_message_id_fkey FOREIGN KEY (meta_message_id) REFERENCES {schema}.meta_messages(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_mmr_meta_message_id ON {schema}.meta_message_reactions USING btree (meta_message_id);
+CREATE INDEX IF NOT EXISTS idx_mmr_tenant ON {schema}.meta_message_reactions USING btree (tenant_id);
+
+-- 登録の移行: scripts/migrate_009_phase4_tenant_tables.py（作る SQL: migrations/009_add_phase4_tenant_tables.sql）
+CREATE TABLE IF NOT EXISTS {schema}.notification_channels (
+    id SERIAL,
+    tenant_id integer DEFAULT {tenant_id} NOT NULL,
+    channel_type character varying(20) DEFAULT 'discord'::character varying NOT NULL,
+    channel_name character varying(100) NOT NULL,
+    webhook_url character varying(500) NOT NULL,
+    event_types text DEFAULT '[]'::text,
+    is_active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    blueprint_key text,
+    CONSTRAINT notification_channels_pkey PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_notification_channels_blueprint_key ON {schema}.notification_channels USING btree (blueprint_key) WHERE (blueprint_key IS NOT NULL);
+
+-- 登録の移行: scripts/migrate_009_phase4_tenant_tables.py（作る SQL: migrations/009_add_phase4_tenant_tables.sql）
+CREATE TABLE IF NOT EXISTS {schema}.notification_logs (
+    id SERIAL,
+    tenant_id integer DEFAULT {tenant_id} NOT NULL,
+    channel_id integer,
+    event_type character varying(50) NOT NULL,
+    title character varying(255) NOT NULL,
+    message text,
+    status character varying(20) DEFAULT 'pending'::character varying,
+    sent_at timestamp with time zone,
+    error_message text,
+    created_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT notification_logs_pkey PRIMARY KEY (id),
+    CONSTRAINT notification_logs_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES {schema}.notification_channels(id)
+);
+
+-- 登録の移行: scripts/migrate_adr021_sprint5_commissions.py（作る SQL: migrations/050_add_commissions.sql）
+CREATE TABLE IF NOT EXISTS {schema}.order_commissions (
+    id SERIAL,
+    order_id integer NOT NULL,
+    tenant_id integer DEFAULT {tenant_id} NOT NULL,
+    role text NOT NULL,
+    staff_id integer,
+    calculated_amount numeric(14,2) DEFAULT 0 NOT NULL,
+    calculated_at timestamp with time zone,
+    notes text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT order_commissions_pkey PRIMARY KEY (id),
+    CONSTRAINT order_commissions_order_id_role_key UNIQUE (order_id, role),
+    CONSTRAINT fk_order_commissions_staff_id_user FOREIGN KEY (staff_id) REFERENCES public.users(id) ON DELETE SET NULL,
+    CONSTRAINT order_commissions_order_id_fkey FOREIGN KEY (order_id) REFERENCES {schema}.orders(id) ON DELETE CASCADE,
+    CONSTRAINT order_commissions_role_check CHECK ((role = ANY (ARRAY['sales'::text, 'order'::text, 'ship'::text, 'purchase'::text, 'trouble'::text])))
+);
+CREATE INDEX IF NOT EXISTS idx_order_commissions_order ON {schema}.order_commissions USING btree (order_id);
+CREATE INDEX IF NOT EXISTS idx_order_commissions_staff ON {schema}.order_commissions USING btree (staff_id);
+CREATE INDEX IF NOT EXISTS idx_order_commissions_tenant ON {schema}.order_commissions USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_order_commissions_tenant_calc ON {schema}.order_commissions USING btree (tenant_id, calculated_at);
+
+-- 登録の移行: scripts/migrate_adr021_sprint2_financials.py（作る SQL: migrations/047_create_order_financials.sql）
+CREATE TABLE IF NOT EXISTS {schema}.order_financials (
+    id SERIAL,
+    order_id integer NOT NULL,
+    tenant_id integer DEFAULT {tenant_id} NOT NULL,
+    revenue_amount numeric(14,2) DEFAULT 0,
+    purchase_cost numeric(14,2),
+    purchase_shipping numeric(14,2) DEFAULT 0,
+    paypal_fee numeric(14,2) DEFAULT 0,
+    wise_fee numeric(14,2) DEFAULT 0,
+    exchange_fee numeric(14,2) DEFAULT 0,
+    outsource_fee numeric(14,2) DEFAULT 0,
+    packing_fee numeric(14,2) DEFAULT 0,
+    ad_cost numeric(14,2) DEFAULT 0,
+    return_fee numeric(14,2) DEFAULT 0,
+    refund_amount numeric(14,2) DEFAULT 0,
+    commission_base_amount numeric(14,2) DEFAULT 0,
+    tax_refund numeric(14,2) DEFAULT 0,
+    notes text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT order_financials_pkey PRIMARY KEY (id),
+    CONSTRAINT order_financials_order_id_key UNIQUE (order_id),
+    CONSTRAINT order_financials_order_id_fkey FOREIGN KEY (order_id) REFERENCES {schema}.orders(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_order_financials_created_at ON {schema}.order_financials USING btree (created_at);
+CREATE INDEX IF NOT EXISTS idx_order_financials_order ON {schema}.order_financials USING btree (order_id);
+CREATE INDEX IF NOT EXISTS idx_order_financials_tenant ON {schema}.order_financials USING btree (tenant_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_order_financials_tenant_order ON {schema}.order_financials USING btree (tenant_id, order_id);
+
+-- 登録の移行: scripts/migrate_adr021_sprint4_purchase.py（作る SQL: migrations/049_create_order_purchase_details.sql）
+CREATE TABLE IF NOT EXISTS {schema}.order_purchase_details (
+    id SERIAL,
+    order_id integer NOT NULL,
+    tenant_id integer DEFAULT {tenant_id} NOT NULL,
+    purchase_staff text,
+    purchase_date date,
+    transaction_no text,
+    supplier_name text,
+    supplier_url text,
+    purchase_amount numeric(14,2) DEFAULT 0,
+    purchase_quantity integer DEFAULT 0,
+    purchase_total numeric(14,2) DEFAULT 0,
+    purchase_shipping numeric(14,2) DEFAULT 0,
+    carrier_name text,
+    waybill_no text,
+    purchase_note text,
+    purchase_status text DEFAULT ''::text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT order_purchase_details_pkey PRIMARY KEY (id),
+    CONSTRAINT order_purchase_details_order_id_key UNIQUE (order_id),
+    CONSTRAINT order_purchase_details_order_id_fkey FOREIGN KEY (order_id) REFERENCES {schema}.orders(id) ON DELETE CASCADE,
+    CONSTRAINT order_purchase_details_purchase_status_check CHECK ((purchase_status = ANY (ARRAY[''::text, 'confirmed'::text])))
+);
+CREATE INDEX IF NOT EXISTS idx_order_purchase_details_order ON {schema}.order_purchase_details USING btree (order_id);
+CREATE INDEX IF NOT EXISTS idx_order_purchase_details_status ON {schema}.order_purchase_details USING btree (purchase_status);
+CREATE INDEX IF NOT EXISTS idx_order_purchase_details_tenant ON {schema}.order_purchase_details USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_order_purchase_details_tenant_supplier ON {schema}.order_purchase_details USING btree (tenant_id, supplier_name);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_order_purchase_details_tenant_order ON {schema}.order_purchase_details USING btree (tenant_id, order_id);
+
+-- 登録の移行: scripts/migrate_adr021_sprint3_shipping.py（作る SQL: migrations/048_create_order_shipping_details.sql）
+CREATE TABLE IF NOT EXISTS {schema}.order_shipping_details (
+    id SERIAL,
+    order_id integer NOT NULL,
+    tenant_id integer DEFAULT {tenant_id} NOT NULL,
+    recipient_name character varying(255),
+    phone character varying(50),
+    email character varying(255),
+    tax_number character varying(100),
+    address1 character varying(255),
+    address2 character varying(255),
+    address3 character varying(255),
+    city character varying(100),
+    state_code character varying(20),
+    zip_code character varying(50),
+    country_code character varying(10),
+    length_cm numeric(8,2),
+    width_cm numeric(8,2),
+    height_cm numeric(8,2),
+    weight_kg numeric(8,3),
+    volume_g numeric(10,2),
+    box_count integer,
+    packing_memo text,
+    packing_type character varying(50),
+    inspection_status character varying(50),
+    item_description character varying(500),
+    item_price_usd numeric(12,2),
+    exchange_rate numeric(12,6),
+    hs_code character varying(50),
+    tax_id character varying(100),
+    fedex_id character varying(100),
+    carrier character varying(20),
+    ship_method character varying(50),
+    ship_date date,
+    tracking_number character varying(200),
+    est_shipping_fee numeric(12,2),
+    label_issued_at timestamp with time zone,
+    pickup_requested_at timestamp with time zone,
+    shipped_at timestamp with time zone,
+    notified_at timestamp with time zone,
+    ship_memo text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    address_type character varying(20),
+    confirmed_shipping_fee numeric(12,2),
+    confirmed_currency character varying(10),
+    label_drive_url text,
+    pickup_confirmation_code character varying(100),
+    surcharges jsonb,
+    CONSTRAINT order_shipping_details_pkey PRIMARY KEY (id),
+    CONSTRAINT order_shipping_details_order_id_key UNIQUE (order_id),
+    CONSTRAINT order_shipping_details_address_type_check CHECK (((address_type IS NULL) OR address_type IN ('RESIDENTIAL', 'BUSINESS'))),
+    CONSTRAINT order_shipping_details_carrier_check CHECK (((carrier IS NULL) OR carrier IN ('elogi', 'fedex', 'dhl', 'yamato', 'other'))),
+    CONSTRAINT order_shipping_details_order_id_fkey FOREIGN KEY (order_id) REFERENCES {schema}.orders(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_order_shipping_details_carrier ON {schema}.order_shipping_details USING btree (carrier);
+CREATE INDEX IF NOT EXISTS idx_order_shipping_details_order ON {schema}.order_shipping_details USING btree (order_id);
+CREATE INDEX IF NOT EXISTS idx_order_shipping_details_tenant ON {schema}.order_shipping_details USING btree (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_order_shipping_details_tracking ON {schema}.order_shipping_details USING btree (tracking_number);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_order_shipping_details_tenant_order ON {schema}.order_shipping_details USING btree (tenant_id, order_id);
+
+-- 登録の移行: migrations/20260604_220000_create_translation_glossary.sql
+CREATE TABLE IF NOT EXISTS {schema}.outbound_translation_drafts (
+    id SERIAL,
+    tenant_id integer NOT NULL,
+    lead_id integer,
+    original_text text NOT NULL,
+    draft_text text NOT NULL,
+    confidence real,
+    flagged_terms jsonb,
+    model character varying(50) NOT NULL,
+    confirmed_at timestamp with time zone,
+    final_text text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    meta_message_id integer,
+    is_edited boolean,
+    CONSTRAINT outbound_translation_drafts_pkey PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS idx_outbound_drafts_tenant_lead ON {schema}.outbound_translation_drafts USING btree (tenant_id, lead_id);
+CREATE INDEX IF NOT EXISTS idx_outbound_drafts_unconfirmed ON {schema}.outbound_translation_drafts USING btree (tenant_id, confirmed_at) WHERE (confirmed_at IS NULL);
+
+-- 登録の移行: migrations/20260612_154322_create_paypal_disputes.sql
+CREATE TABLE IF NOT EXISTS {schema}.paypal_disputes (
+    id SERIAL,
+    dispute_id text NOT NULL,
+    invoice_id integer,
+    pp_status text,
+    reason text,
+    amount numeric(15,2),
+    currency text,
+    raw jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT paypal_disputes_pkey PRIMARY KEY (id),
+    CONSTRAINT paypal_disputes_dispute_id_key UNIQUE (dispute_id),
+    CONSTRAINT paypal_disputes_invoice_id_fkey FOREIGN KEY (invoice_id) REFERENCES {schema}.invoices(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_paypal_disputes_invoice ON {schema}.paypal_disputes USING btree (invoice_id);
+
+-- 登録の移行: scripts/migrate_011_phase5_tenant_tables.py（作る SQL: migrations/011_add_phase5_tenant_tables.sql）
+CREATE TABLE IF NOT EXISTS {schema}.shifts (
+    id SERIAL,
+    tenant_id integer DEFAULT {tenant_id} NOT NULL,
+    user_id integer NOT NULL,
+    shift_date date NOT NULL,
+    start_time time without time zone NOT NULL,
+    end_time time without time zone NOT NULL,
+    shift_type character varying(20) DEFAULT 'normal'::character varying,
+    notes text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT shifts_pkey PRIMARY KEY (id),
+    CONSTRAINT shifts_tenant_id_user_id_shift_date_key UNIQUE (tenant_id, user_id, shift_date)
+);
+CREATE INDEX IF NOT EXISTS idx_shifts_date ON {schema}.shifts USING btree (shift_date);
+CREATE INDEX IF NOT EXISTS idx_shifts_user ON {schema}.shifts USING btree (user_id);
+
+-- 登録の移行: scripts/migrate_009_phase4_tenant_tables.py（作る SQL: migrations/009_add_phase4_tenant_tables.sql）
+CREATE TABLE IF NOT EXISTS {schema}.staff_reports (
+    id SERIAL,
+    tenant_id integer DEFAULT {tenant_id} NOT NULL,
+    report_code character varying(20),
+    report_type character varying(20) NOT NULL,
+    user_id integer NOT NULL,
+    period character varying(20) NOT NULL,
+    review text,
+    goals text,
+    challenges text,
+    self_evaluation text,
+    ai_feedback text,
+    reviewer_id integer,
+    reviewer_comment text,
+    reviewed_at timestamp with time zone,
+    submitted_at timestamp with time zone DEFAULT now(),
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT staff_reports_pkey PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS idx_staff_reports_type ON {schema}.staff_reports USING btree (report_type);
+CREATE INDEX IF NOT EXISTS idx_staff_reports_user ON {schema}.staff_reports USING btree (user_id);
+
+-- 登録の移行: migrations/20260604_180000_analytics_agent_a_tables.sql
+CREATE TABLE IF NOT EXISTS {schema}.tenant_calibrations (
+    id SERIAL,
+    tenant_id integer NOT NULL,
+    label_weights jsonb DEFAULT '{{}}'::jsonb NOT NULL,
+    win_sample_size integer DEFAULT 0 NOT NULL,
+    loss_sample_size integer DEFAULT 0 NOT NULL,
+    is_cold_start boolean DEFAULT true NOT NULL,
+    calibrated_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT tenant_calibrations_pkey PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS idx_tenant_calibrations_latest ON {schema}.tenant_calibrations USING btree (tenant_id, calibrated_at DESC);
+
+-- 登録の移行: scripts/migrate_adr021_sprint5_commissions.py（作る SQL: migrations/050_add_commissions.sql）
+CREATE TABLE IF NOT EXISTS {schema}.tenant_commission_settings (
+    id SERIAL,
+    tenant_id integer DEFAULT {tenant_id} NOT NULL,
+    commission_rates jsonb DEFAULT '{{"ship": {{"type": "fixed", "value": 200}}, "order": {{"type": "rate", "value": 0.10}}, "sales": {{"type": "rate", "value": 0.10}}, "trouble": {{"type": "fixed", "value": 500}}, "purchase": {{"type": "fixed", "value": 100}}}}'::jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT tenant_commission_settings_pkey PRIMARY KEY (id),
+    CONSTRAINT tenant_commission_settings_tenant_id_key UNIQUE (tenant_id)
+);
+CREATE INDEX IF NOT EXISTS idx_tenant_commission_settings_tenant ON {schema}.tenant_commission_settings USING btree (tenant_id);
+
+-- 既存の表に足す索引
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ccc_unique_channel_purpose ON {schema}.contact_contact_channels USING btree (contact_id, channel, COALESCE(purpose, ''::character varying));
+CREATE INDEX IF NOT EXISTS idx_leads_channel_type ON {schema}.leads USING btree (channel_type);
+CREATE INDEX IF NOT EXISTS idx_leads_discord_guild_channel_id ON {schema}.leads USING btree (tenant_id, discord_guild_channel_id) WHERE (discord_guild_channel_id IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_leads_discord_user_id ON {schema}.leads USING btree (tenant_id, discord_user_id) WHERE (discord_user_id IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_leads_initiative ON {schema}.leads USING btree (initiative) WHERE (initiative IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_meta_messages_discord ON {schema}.meta_messages USING btree (tenant_id, platform, lead_id) WHERE ((platform)::text = 'discord'::text);
+CREATE INDEX IF NOT EXISTS idx_meta_messages_lead_created ON {schema}.meta_messages USING btree (lead_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_meta_messages_lead_unread ON {schema}.meta_messages USING btree (lead_id) WHERE (((direction)::text = 'inbound'::text) AND (seen_at IS NULL));
+CREATE INDEX IF NOT EXISTS idx_meta_messages_tenant_page ON {schema}.meta_messages USING btree (tenant_id, page_id) WHERE (page_id IS NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_poi_order_item_id ON {schema}.purchase_order_items USING btree (order_item_id);
+CREATE INDEX IF NOT EXISTS idx_staff_phone ON {schema}.staff USING btree (phone) WHERE (phone IS NOT NULL);
+
+-- 既存の表に足す外部キー（別名。名前があれば何もしない）
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_bots_owner_staff_id_user' AND conrelid = '{schema}.bots'::regclass) THEN
+        ALTER TABLE {schema}.bots ADD CONSTRAINT fk_bots_owner_staff_id_user FOREIGN KEY (owner_staff_id) REFERENCES public.users(id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_deal_close_reasons_lead' AND conrelid = '{schema}.deal_close_reasons'::regclass) THEN
+        ALTER TABLE {schema}.deal_close_reasons ADD CONSTRAINT fk_deal_close_reasons_lead FOREIGN KEY (lead_id) REFERENCES {schema}.leads(id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_meta_messages_seen_by_staff_id_user' AND conrelid = '{schema}.meta_messages'::regclass) THEN
+        ALTER TABLE {schema}.meta_messages ADD CONSTRAINT fk_meta_messages_seen_by_staff_id_user FOREIGN KEY (seen_by_staff_id) REFERENCES public.users(id) ON DELETE SET NULL;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_meta_messages_sent_by_staff_id_user' AND conrelid = '{schema}.meta_messages'::regclass) THEN
+        ALTER TABLE {schema}.meta_messages ADD CONSTRAINT fk_meta_messages_sent_by_staff_id_user FOREIGN KEY (sent_by_staff_id) REFERENCES public.users(id) ON DELETE SET NULL;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_poi_order_item' AND conrelid = '{schema}.purchase_order_items'::regclass) THEN
+        ALTER TABLE {schema}.purchase_order_items ADD CONSTRAINT fk_poi_order_item FOREIGN KEY (order_item_id) REFERENCES {schema}.order_items(id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_quotes_lead' AND conrelid = '{schema}.quotes'::regclass) THEN
+        ALTER TABLE {schema}.quotes ADD CONSTRAINT fk_quotes_lead FOREIGN KEY (lead_id) REFERENCES {schema}.leads(id);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_tenant_meta_config_connected_by_staff_id_user' AND conrelid = '{schema}.tenant_meta_config'::regclass) THEN
+        ALTER TABLE {schema}.tenant_meta_config ADD CONSTRAINT fk_tenant_meta_config_connected_by_staff_id_user FOREIGN KEY (connected_by_staff_id) REFERENCES public.users(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
+-- updated_at を更新する関数とトリガ
+CREATE OR REPLACE FUNCTION {schema}.set_updated_at_calendar_events()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+      BEGIN
+        NEW.updated_at = NOW();
+        RETURN NEW;
+      END;
+      $function$;
+
+CREATE OR REPLACE FUNCTION {schema}.set_updated_at_goals()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+            BEGIN
+                NEW.updated_at = NOW();
+                RETURN NEW;
+            END;
+            $function$;
+
+CREATE OR REPLACE FUNCTION {schema}.set_updated_at_lead_playbook()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION {schema}.set_updated_at_order_commissions()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION {schema}.set_updated_at_order_financials()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION {schema}.set_updated_at_order_purchase_details()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION {schema}.set_updated_at_order_shipping_details()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION {schema}.set_updated_at_tenant_commission_settings()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION {schema}.set_updated_at_tenant_meta_config()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION {schema}.set_updated_at_tenant_profile()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+            BEGIN
+                NEW.updated_at = NOW();
+                RETURN NEW;
+            END;
+            $function$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_calendar_events_updated_at' AND tgrelid = '{schema}.calendar_events'::regclass) THEN
+        CREATE TRIGGER trg_calendar_events_updated_at BEFORE UPDATE ON {schema}.calendar_events FOR EACH ROW EXECUTE FUNCTION {schema}.set_updated_at_calendar_events();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trigger_set_updated_at_goals' AND tgrelid = '{schema}.goals'::regclass) THEN
+        CREATE TRIGGER trigger_set_updated_at_goals BEFORE UPDATE ON {schema}.goals FOR EACH ROW EXECUTE FUNCTION {schema}.set_updated_at_goals();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_la_updated_at' AND tgrelid = '{schema}.lead_attachments'::regclass) THEN
+        CREATE TRIGGER trg_la_updated_at BEFORE UPDATE ON {schema}.lead_attachments FOR EACH ROW EXECUTE FUNCTION {schema}.trg_set_updated_at();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trigger_set_updated_at_lead_playbook' AND tgrelid = '{schema}.lead_playbook'::regclass) THEN
+        CREATE TRIGGER trigger_set_updated_at_lead_playbook BEFORE UPDATE ON {schema}.lead_playbook FOR EACH ROW EXECUTE FUNCTION {schema}.set_updated_at_lead_playbook();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trigger_set_updated_at_order_commissions' AND tgrelid = '{schema}.order_commissions'::regclass) THEN
+        CREATE TRIGGER trigger_set_updated_at_order_commissions BEFORE UPDATE ON {schema}.order_commissions FOR EACH ROW EXECUTE FUNCTION {schema}.set_updated_at_order_commissions();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trigger_set_updated_at_order_financials' AND tgrelid = '{schema}.order_financials'::regclass) THEN
+        CREATE TRIGGER trigger_set_updated_at_order_financials BEFORE UPDATE ON {schema}.order_financials FOR EACH ROW EXECUTE FUNCTION {schema}.set_updated_at_order_financials();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trigger_set_updated_at_order_purchase_details' AND tgrelid = '{schema}.order_purchase_details'::regclass) THEN
+        CREATE TRIGGER trigger_set_updated_at_order_purchase_details BEFORE UPDATE ON {schema}.order_purchase_details FOR EACH ROW EXECUTE FUNCTION {schema}.set_updated_at_order_purchase_details();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trigger_set_updated_at_order_shipping_details' AND tgrelid = '{schema}.order_shipping_details'::regclass) THEN
+        CREATE TRIGGER trigger_set_updated_at_order_shipping_details BEFORE UPDATE ON {schema}.order_shipping_details FOR EACH ROW EXECUTE FUNCTION {schema}.set_updated_at_order_shipping_details();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trigger_set_updated_at_tenant_commission_settings' AND tgrelid = '{schema}.tenant_commission_settings'::regclass) THEN
+        CREATE TRIGGER trigger_set_updated_at_tenant_commission_settings BEFORE UPDATE ON {schema}.tenant_commission_settings FOR EACH ROW EXECUTE FUNCTION {schema}.set_updated_at_tenant_commission_settings();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trigger_set_updated_at_tenant_meta_config' AND tgrelid = '{schema}.tenant_meta_config'::regclass) THEN
+        CREATE TRIGGER trigger_set_updated_at_tenant_meta_config BEFORE UPDATE ON {schema}.tenant_meta_config FOR EACH ROW EXECUTE FUNCTION {schema}.set_updated_at_tenant_meta_config();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trigger_set_updated_at_tenant_profile' AND tgrelid = '{schema}.tenant_profile'::regclass) THEN
+        CREATE TRIGGER trigger_set_updated_at_tenant_profile BEFORE UPDATE ON {schema}.tenant_profile FOR EACH ROW EXECUTE FUNCTION {schema}.set_updated_at_tenant_profile();
+    END IF;
+END $$;
+
+-- 会社の集計ビュー
+-- 元: migrations/20261108_100000_rebuild_company_stats_on_meta_messages.sql（同じ書き方にして、流した後と形を揃える）
+CREATE OR REPLACE VIEW {schema}.v_company_stats AS
+SELECT
+    c.id AS company_id,
+    COALESCE(SUM(i.total_amount), 0) AS total_deal_amount,
+    COUNT(DISTINCT i.id) AS paid_invoice_count,
+    MAX(i.paid_at) AS last_paid_at,
+    COUNT(CASE WHEN l.status IN ('negotiating', 'existing_customer', 'lost') THEN 1 END) AS deal_count,
+    COUNT(DISTINCT m.id) AS conversation_count,
+    MAX(COALESCE(m.occurred_at, m.created_at)) AS last_conversation_at
+FROM {schema}.companies c
+LEFT JOIN {schema}.invoices i
+    ON i.company_id = c.id
+    AND i.paid_at IS NOT NULL
+    AND i.voided_at IS NULL
+LEFT JOIN {schema}.leads l
+    ON l.id = c.lead_id
+LEFT JOIN {schema}.meta_messages m
+    ON m.company_id = c.id
+    AND m.deleted_at IS NULL
+GROUP BY c.id;
 """
 
 # RLS有効化のALTER TABLE群（;で安全に分割可能）
@@ -1504,7 +2328,6 @@ ALTER TABLE {schema}.quotes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.quote_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.invoice_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE {schema}.suppliers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.purchase_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.purchase_order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.team_members ENABLE ROW LEVEL SECURITY;
@@ -1540,7 +2363,28 @@ ALTER TABLE {schema}.tenant_invoice_payment_bank ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.tenant_invoice_payment_wise ENABLE ROW LEVEL SECURITY;
 -- invoice-create-portfolio 便A: 関税の決まりの表2つ
 ALTER TABLE {schema}.tenant_duty_rules ENABLE ROW LEVEL SECURITY;
-ALTER TABLE {schema}.tenant_duty_rule_components ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.tenant_duty_rule_components ENABLE ROW LEVEL SECURITY;-- 段5 5-2: 登録の移行が作る表の RLS
+ALTER TABLE {schema}.archives ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.channel_masters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.conversation_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.customer_scores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.discord_channel_webhooks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.erp_sync_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.lead_attachments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.message_labels ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.message_translations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.message_translations FORCE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.meta_message_reactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.notification_channels ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.notification_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.order_commissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.order_financials ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.order_purchase_details ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.order_shipping_details ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.shifts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.staff_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.tenant_calibrations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.tenant_commission_settings ENABLE ROW LEVEL SECURITY;
 """
 
 # テナント分離ポリシー（DO $$ ... END $$ ブロックは1ステートメントとして実行する。
@@ -1643,10 +2487,6 @@ BEGIN
             ));
     END IF;
     -- Phase 3: 仕入れ・調達管理
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_suppliers' AND schemaname = '{schema_raw}') THEN
-        CREATE POLICY tenant_isolation_suppliers ON {schema}.suppliers
-            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
-    END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_purchase_orders' AND schemaname = '{schema_raw}') THEN
         CREATE POLICY tenant_isolation_purchase_orders ON {schema}.purchase_orders
             USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
@@ -1791,6 +2631,91 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_duty_rule_components_tenant_isolation' AND schemaname = '{schema_raw}') THEN
         CREATE POLICY tenant_duty_rule_components_tenant_isolation ON {schema}.tenant_duty_rule_components
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    -- 段5 5-2: 登録の移行が作る表の方針
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_archives' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_isolation_archives ON {schema}.archives
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'channel_masters_tenant_isolation' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY channel_masters_tenant_isolation ON {schema}.channel_masters
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'conversation_logs_tenant_isolation' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY conversation_logs_tenant_isolation ON {schema}.conversation_logs
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'customer_scores_tenant_isolation' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY customer_scores_tenant_isolation ON {schema}.customer_scores
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_discord_channel_webhooks' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_isolation_discord_channel_webhooks ON {schema}.discord_channel_webhooks
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_erp_sync_logs' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_isolation_erp_sync_logs ON {schema}.erp_sync_logs
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_lead_attachments' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_isolation_lead_attachments ON {schema}.lead_attachments
+            USING (EXISTS (
+                SELECT 1 FROM {schema}.leads l
+                WHERE l.id = lead_attachments.lead_id
+                  AND l.tenant_id = current_setting('app.tenant_id', true)::INTEGER
+            ));
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'message_labels_tenant_isolation' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY message_labels_tenant_isolation ON {schema}.message_labels
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'message_translations_tenant_isolation' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY message_translations_tenant_isolation ON {schema}.message_translations
+            USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::integer));
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_meta_message_reactions' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_isolation_meta_message_reactions ON {schema}.meta_message_reactions
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_notification_channels' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_isolation_notification_channels ON {schema}.notification_channels
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_notification_logs' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_isolation_notification_logs ON {schema}.notification_logs
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_order_commissions' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_isolation_order_commissions ON {schema}.order_commissions
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_order_financials' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_isolation_order_financials ON {schema}.order_financials
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_order_purchase_details' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_isolation_order_purchase_details ON {schema}.order_purchase_details
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_order_shipping_details' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_isolation_order_shipping_details ON {schema}.order_shipping_details
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_shifts' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_isolation_shifts ON {schema}.shifts
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_staff_reports' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_isolation_staff_reports ON {schema}.staff_reports
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_calibrations_tenant_isolation' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_calibrations_tenant_isolation ON {schema}.tenant_calibrations
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_tenant_commission_settings' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_isolation_tenant_commission_settings ON {schema}.tenant_commission_settings
             USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
     END IF;
 END $$
