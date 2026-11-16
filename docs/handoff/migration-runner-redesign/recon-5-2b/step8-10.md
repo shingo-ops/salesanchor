@@ -92,3 +92,23 @@ OK: 形の差 0
 - 代わりに `backend/app/services/tenant.py` の `trg_set_updated_at()` の本文を、登録の順で最後に流れる `CREATE OR REPLACE`（`migrations/20260902_100000_create_lead_attachments.sql`・登録の 742 行目）の本文と一字一句同じにした（`BEGIN` から `$fn$` の前の行までの字下げを含む）。
 - 手元（使い捨て PostgreSQL 16・localhost:55432・Python 3.12 の venv）: `check_tenant_template_shape.py` は `OK: 形の差 0`（登録 405 本・外す 3 本は前と同じ）。`tests/test_check_tenant_template_shape.py` は `10 passed`（`--no-cov`）。
 - preflight は FAIL のまま続けた（GitHub API に到達不可・gh の認証切り替え失敗。この実行では gh を使わない）。
+
+## CI の Backend Tests 赤（test_real_repo）の直し
+
+- 流したもの: `python3 -I scripts/ci/check_ci_aggregators.py`（直す前・終わりの番号 1）。生の出力:
+
+```
+OK e2e.yml:lint 組 192 外れ 0
+OK e2e.yml:visual-language 組 48 外れ 0
+OK karte-gate.yml:karte-gate 組 96 外れ 0
+NG migration-test.yml:migration-test 組 0 外れ 0
+  問題: run が参照する needs.detect-changes.outputs.<鍵> が 1 種類でない: ['migrations', 'tenant_template']
+OK schema-check.yml:schema-check 組 48 外れ 0
+OK test.yml:pytest 組 192 外れ 0
+合計 まとめ役 6 組 576 外れ 0 問題 1
+```
+
+- 原因: この枝で足した `migration-test.yml` の集約 `migration-test` の run が、`detect-changes` の出力を `migrations` と `tenant_template` の 2 種類見ていた。点検の決まりは「鍵は 1 種類」。枝の中の原因。
+- 直し: `tenant_template` の出力と絞り込みを外し、ひな形の 3 ファイル（`backend/app/services/tenant.py`・`scripts/check_tenant_template_shape.py`・`backend/tests/test_check_tenant_template_shape.py`）を `migrations` の絞り込みに足した。`tenant-template-shape` の `if` は `migrations == 'true'`。集約の run は `migrations` の値で、`$t` が true なら success・false なら skipped を求める（他の 3 ジョブと同じ形）。
+- 直した後: 点検は `OK migration-test.yml:migration-test 組 12288 外れ 0`・合計 `問題 0`・終わりの番号 0。`scripts/tests/test_check_ci_aggregators.py` は `5 passed`（Python 3.12 の使い捨て venv）。
+- preflight は FAIL（GitHub API 不達・gh 切り替え失敗）のまま続けた。

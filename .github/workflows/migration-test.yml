@@ -35,7 +35,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       migrations: ${{ steps.filter.outputs.migrations }}
-      tenant_template: ${{ steps.filter.outputs.tenant_template }}
     steps:
       - uses: actions/checkout@v5
       - uses: dorny/paths-filter@v4
@@ -52,13 +51,8 @@ jobs:
               - 'scripts/migration-dryrun-report.py'
               - 'scripts/check_public_tenant_rls.py'
               - 'backend/app/ops/tenant_rls_allowlist.py'
-              - '.github/workflows/migration-test.yml'
-            tenant_template:
-              - 'migrations/**'
               - 'backend/app/services/tenant.py'
               - 'scripts/check_tenant_template_shape.py'
-              - 'scripts/run_all_migrations.sh'
-              - 'scripts/migration_py_entry.py'
               - 'backend/tests/test_check_tenant_template_shape.py'
               - '.github/workflows/migration-test.yml'
 
@@ -2216,7 +2210,7 @@ jobs:
   tenant-template-shape:
     name: 会社のひな形の形の差0（実DB）
     needs: detect-changes
-    if: needs.detect-changes.outputs.tenant_template == 'true'
+    if: needs.detect-changes.outputs.migrations == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -2306,22 +2300,12 @@ jobs:
           e="${{ needs.migration-registration-exists.result }}"
           g="${{ needs.migration-registration-exists-regression.result }}"
           t="${{ needs.tenant-template-shape.result }}"
-          tt="${{ needs.detect-changes.outputs.tenant_template }}"
           echo "detect-changes: $det (migrations=$out)"
           echo "migration-test-run: $r"
           echo "migration-full-dryrun: $d"
           echo "migration-registration-exists: $e"
           echo "migration-registration-exists-regression: $g"
-          echo "tenant-template-shape: $t (tenant_template=$tt)"
-          # ひな形の検査は、ひな形・検査の台本・移行のどれかが変わった時だけ動く。動いたなら success、動かないなら skipped。
-          if [[ "$tt" == "true" && "$t" != "success" ]]; then
-            echo "FAIL: tenant-template-shape must succeed when the template or migrations changed: $t"
-            exit 1
-          fi
-          if [[ "$tt" != "true" && "$t" != "skipped" ]]; then
-            echo "FAIL: tenant-template-shape ran without a trigger or failed: $t"
-            exit 1
-          fi
+          echo "tenant-template-shape: $t"
           if [[ "$det" != "success" ]]; then
             echo "FAIL: detect-changes is not success (detect-changes=$det)"
             exit 1
@@ -2332,19 +2316,19 @@ jobs:
           fi
           case "$out" in
             true)
-              if [[ "$e" == "success" && "$r" == "success" && "$d" == "success" ]]; then
+              if [[ "$e" == "success" && "$r" == "success" && "$d" == "success" && "$t" == "success" ]]; then
                 echo "OK: migrations changed and all migration tests passed"
                 exit 0
               fi
-              echo "FAIL: migrations changed but tests did not succeed: migration-registration-exists=$e, migration-test-run=$r, migration-full-dryrun=$d"
+              echo "FAIL: migrations changed but tests did not succeed: migration-registration-exists=$e, migration-test-run=$r, migration-full-dryrun=$d, tenant-template-shape=$t"
               exit 1
               ;;
             false)
-              if [[ "$e" == "skipped" && "$r" == "skipped" && "$d" == "skipped" ]]; then
+              if [[ "$e" == "skipped" && "$r" == "skipped" && "$d" == "skipped" && "$t" == "skipped" ]]; then
                 echo "OK: migrations not changed and migration tests were skipped"
                 exit 0
               fi
-              echo "FAIL: migrations not changed but tests were not skipped: migration-registration-exists=$e, migration-test-run=$r, migration-full-dryrun=$d"
+              echo "FAIL: migrations not changed but tests were not skipped: migration-registration-exists=$e, migration-test-run=$r, migration-full-dryrun=$d, tenant-template-shape=$t"
               exit 1
               ;;
             *)
