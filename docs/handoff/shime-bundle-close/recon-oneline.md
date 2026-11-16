@@ -20,8 +20,8 @@
 - 件の照合: `backend/app/services/gemini_raw_copy_v102_product_first.py:946-948` `resolve_product_first` は件の行全体から照合文を作り `match_text_g2` で照合する。`:318-343` `match_product_g2` は候補が2つ以上なら ambiguous。→ 「品名A、品名B〆」は候補2つの ambiguous になる（読み取り鍵で見た2投稿の `pid_basis=V102:ambiguous`・`review_reasons=product_multiple` と合う）。
 - 後処理の順: `backend/app/services/gemini_raw_copy_v101.py:1541-1556` `_extract_v102` は、作品で決める（`_apply_context_work` :1277）→ 直前の投稿で決める（`_apply_followup` :1302）→ 〆の相手を過去の在庫から決める（`_apply_soldout_ref` :1327）→ 規則12（`_apply_soldout_inherit` :1352）。
 - 〆の相手を過去の在庫から決める規則: `backend/app/services/gemini_raw_copy_v102_soldout_ref.py:313-314` 規則10「複数を指す言葉が無く、当たる商品が2つ以上なら決めない」。→ 1行に2品の〆はここで止まる（2投稿の観測と合う）。
-- 規則12: `gemini_raw_copy_v102_soldout_ref.py:440-470` `decide_soldout_inherit` は、商品が直接決まった完売の件1つにつき、その**1商品**の取り残しだけを相手にする（12d・12e・12g・12h）。
-- 複数の商品を閉じる受け皿はすでにある: 件の `soldout_targets` に複数の (商品, 状態) を並べると、`backend/app/services/line_analysis_v102_svc.py:1211-1214` で先頭の相手を書く行の状態にし（`_apply_soldout_targets` :944-967）、残りを `analysis_soldout_extra_targets` に書く（`_extra_targets` :969-、`_write_extra_targets`）。規則11（複数語の〆）がこの道で2商品以上を閉じている（`gemini_raw_copy_v101.py:1334` の説明）。
+- 規則12: `backend/app/services/gemini_raw_copy_v102_soldout_ref.py:440-470` `decide_soldout_inherit` は、商品が直接決まった完売の件1つにつき、その**1商品**の取り残しだけを相手にする（12d・12e・12g・12h）。
+- 複数の商品を閉じる受け皿はすでにある: 件の `soldout_targets` に複数の (商品, 状態) を並べると、`backend/app/services/line_analysis_v102_svc.py:1211-1214` で先頭の相手を書く行の状態にし（`_apply_soldout_targets` :944-967）、残りを `analysis_soldout_extra_targets` に書く（`_extra_targets` :969-、`_write_extra_targets`）。規則11（複数語の〆）がこの道で2商品以上を閉じている（`backend/app/services/gemini_raw_copy_v101.py:1334` の説明）。
 - 保存済みの件から後処理だけをやり直して前後の差を見る道具がある: `backend/app/tools/v102_replay_diff.py`（Gemini を呼ばない・DB は読むだけ。列に `soldout_targets` を含む）。
 
 ## 4. 未確認

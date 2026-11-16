@@ -43,10 +43,10 @@
      3. `match_status` が ambiguous で、規則14の商品の組が全部その件の候補（`match_candidates`）にある。
      4. 人が決めた商品が無い（`fixed_products` に無い）。
    - 決めた件は、先頭の商品で作り直す（`build(i, 先頭の商品)`）。`match_status` は新しい定数（例 `matched_list_shime`）、根拠の欄（例 `product_list_shime`）に区切りの文字と商品 ID を残す。
-   - 完売の相手（`soldout_targets`）: 商品ごとに「その商品だけを書いた〆の件」（`build(i, 商品)` の結果）を作り、今の規則12（`decide_soldout_inherit`。12d・12e・12g・12h、box_rule と post_text も今と同じ物を渡す）で相手を求める。規則12が何も返さない商品は、その件の (商品, 状態) を相手にする。全部の商品の相手を区切りの順に並べ、重なりは最初だけ残す。先頭は先頭の商品の相手にする（書く行の状態が先頭の相手で上書きされるため。`line_analysis_v102_svc.py:944-967`）。`soldout_target_basis` は新しい定数（例 `soldout_list_shime`）。
-   - 規則14で決めた件は、そのあとの段（`_apply_followup`・`_apply_soldout_ref`・`_apply_soldout_inherit`）で上書きしない（`soldout_targets` を持つので規則12の対象外になる。`gemini_raw_copy_v102_soldout_ref.py` `_is_inherit_candidate` の `not item.get("soldout_targets")`）。`_apply_followup`・`_apply_soldout_ref` は ambiguous / unmatched の件だけを見るので、作り直した件には触らない。
-3. 新しい `match_status` と `soldout_target_basis` が、保存（`line_analysis_v102_svc.py`）・要確認の理由・画面の根拠の表示で、今の matched_followup / soldout_inherit と同じ扱いになることを実装の最初に確かめる（定数を使う所を `grep` で全部挙げ、カードに file:line で書く）。新しい値で扱いが変わる所があれば実装を止めて Opus に戻す。
-4. 触らないもの: 指示書（DB の行・定数）、`parse_v101_response` と親の設計の5条件、規則1〜13、`v102_replay_diff.py`、DB の形、migrations/、deploy.yml、scripts/。
+   - 完売の相手（`soldout_targets`）: 商品ごとに「その商品だけを書いた〆の件」（`build(i, 商品)` の結果）を作り、今の規則12（`decide_soldout_inherit`。12d・12e・12g・12h、box_rule と post_text も今と同じ物を渡す）で相手を求める。規則12が何も返さない商品は、その件の (商品, 状態) を相手にする。全部の商品の相手を区切りの順に並べ、重なりは最初だけ残す。先頭は先頭の商品の相手にする（書く行の状態が先頭の相手で上書きされるため。`backend/app/services/line_analysis_v102_svc.py:944-967`）。`soldout_target_basis` は新しい定数（例 `soldout_list_shime`）。
+   - 規則14で決めた件は、そのあとの段（`_apply_followup`・`_apply_soldout_ref`・`_apply_soldout_inherit`）で上書きしない（`soldout_targets` を持つので規則12の対象外になる。`backend/app/services/gemini_raw_copy_v102_soldout_ref.py` `_is_inherit_candidate` の `not item.get("soldout_targets")`）。`_apply_followup`・`_apply_soldout_ref` は ambiguous / unmatched の件だけを見るので、作り直した件には触らない。
+3. 新しい `match_status` と `soldout_target_basis` が、保存（`backend/app/services/line_analysis_v102_svc.py`）・要確認の理由・画面の根拠の表示で、今の matched_followup / soldout_inherit と同じ扱いになることを実装の最初に確かめる（定数を使う所を `grep` で全部挙げ、カードに file:line で書く）。新しい値で扱いが変わる所があれば実装を止めて Opus に戻す。
+4. 触らないもの: 指示書（DB の行・定数）、`parse_v101_response` と親の設計の5条件、規則1〜13、`backend/app/tools/v102_replay_diff.py`、DB の形、migrations/、deploy.yml、scripts/。
 
 ### 3-2. 試験（新しく足す。既存の試験は書き換えない）
 - T1: 「品名A、品名B〆」（A・B は試験用の名簿で別の商品）→ 規則14の組は (A, B)。
@@ -68,7 +68,7 @@
 - 区切りで分けた語が偶然別の商品に当たり、並びでない〆で余計な商品を閉じる（消しすぎ）→ 全部か無しか・候補の中に限る・数字だけの語を除く、の3つで狭くする。K3 で直近30日の全部の対象の件を流して確かめ、K4 の「消しすぎ」で見張る。1件でも出たら戻す（PR を revert する）。
 - 区切りの照合が型番だけで決まらず、本物の並び〆でも動かない（11/04 の投稿のように型番だけを並べた形）→ 閉じ漏れは今と同じで、悪くはならない。K2 で数え、動かなければ PO に報告する（名簿に検索ワードを足すかは別に決める）。
 - 新しい `match_status` の値が、どこかで「知らない値」として要確認や表示の崩れになる → §3-1 の3で実装の最初に全部挙げる。
-- 戻し方: 規則14は新しい関数と1か所の呼び出しだけなので、PR を revert すれば元に戻る。保存済みの `analysis_soldout_extra_targets` の行は、次の作り直しで今の規則の結果に置き換わる（DELETE してから INSERT する。`line_analysis_v102_svc.py` `_DELETE_EXTRA_TARGETS_SQL`）。
+- 戻し方: 規則14は新しい関数と1か所の呼び出しだけなので、PR を revert すれば元に戻る。保存済みの `analysis_soldout_extra_targets` の行は、次の作り直しで今の規則の結果に置き換わる（DELETE してから INSERT する。`backend/app/services/line_analysis_v102_svc.py` `_DELETE_EXTRA_TARGETS_SQL`）。
 
 ## 6. 進め方と GO
 1. 設計審査（クラウドの architect opus）→ 実装カード → PO の実装の承認（便1と同じく委任の範囲かを確かめる）→ クラウドの Sonnet が実装。実装の最初に recon §4 の未確認2点を `v102_replay_diff` で確かめ、結果をカードの報告に書く（予想と違えば止めて Opus に戻す）。
