@@ -1117,7 +1117,7 @@ PO 2026-11-16「3」（GitHub 側の時刻の遅れを直す）のあと、Opus 
   - 毎日 00:23Z（毎時ちょうどでない）の Monitoring config drift check も、11/5〜11/16 の12回で約5.9〜7.2時間遅れた。分をずらしても遅れは消えない。
   - 9週のあいだ、毎週の定時の実行が丸ごと抜けた週は無かった（説明書のとおり、抜けはありうる）。
 - 期間の決め方: 台本は `--days 7`（定時の実行の道）のとき、`UNTIL` を「流した時の日本時間の日付」にする（`scripts/ops/count-deploy-lock-failures.sh` の :63、`SINCE` は :64 で UNTIL の7日前）。月曜のうちに流れれば期間は前の月曜〜この月曜で正しい。遅れが約14時間を超えて火曜 0:00 JST（月曜 15:00Z）を過ぎると、期間が火曜〜火曜に1日ずれる（前の週と月曜の1日が重なり、次の週は月曜が2回数えられる）。
-- workflow の道（`.github/workflows/weekly-deploy-lock-count.yml`）: 定時は `cron: '0 1 * * 1'` の1本（:8）。手動の入力が両方空なら `--days 7`（:42〜:43）。台本の知らせの本文は、対象が0でないときだけ書かれる（台本 :450）。0のとき Discord には何も届かない。
+- workflow の道（`.github/workflows/weekly-deploy-lock-count.yml`）: 定時は `cron: '0 1 * * 1'` の1本（:8）。手動の入力が両方空なら `--days 7`（:42。分かれ目は :41）。台本の知らせの本文は、対象が0でないときだけ書かれる（台本 :450）。0のとき Discord には何も届かない。
 - 同じ workflow が重なって流れないようにする決まり（concurrency）は今は無い。
 
 #### 19-19-2. 目的と成功の条件
@@ -1136,7 +1136,7 @@ PO 2026-11-16「3」（GitHub 側の時刻の遅れを直す）のあと、Opus 
 
 plan の台本の決まり:
 1. 週を決める: 今の日本時間の日付から、その日以前で一番近い月曜を `until`、その7日前を `since` にする（月曜はその日、火曜〜日曜は前の月曜）。月曜 23:59 JST に流れても、火曜に流れても、日曜に流れても、同じ週になる。
-2. 数え済みか調べる: GitHub の API で、この workflow の run を `event=schedule`・`status=success`・`created=>=<until の 00:00 JST を UTC にした時刻>`・`per_page=100` で1回引く。自分の run（`GITHUB_RUN_ID`）を除いて1件でもあれば `decision=skip`、無ければ `decision=count`。
+2. 数え済みか調べる: GitHub の API で、この workflow の run を `event=schedule`・`status=success`・`created=>=<until の 00:00 JST を UTC にした時刻>`・`per_page=100` で1回引く（`>=` は `%3E%3D` と書く）。返ってきた run を台本の側でも `created_at` が until の 00:00 JST（UTC にした時刻）以後のものだけに絞り、自分の run（`GITHUB_RUN_ID`）を除いて1件でもあれば `decision=skip`、無ければ `decision=count`。GitHub 側の絞り込みが効かなかったとき、前の週の run を見て黙って数えを飛ばさないため。
 3. 引けなかったとき（API の失敗・JSON が読めない）は `decision=count` にし、`reason=` に理由を書く（数え忘れより、2回数えて2回知らせるほうを選ぶ）。
 4. `late`: 今の日本時間の曜日が月曜でなければ `late=1`、月曜なら `late=0`。
 - 出力の行: `since=YYYY-MM-DD`・`until=YYYY-MM-DD`・`decision=count|skip`・`late=0|1`・`reason=<短い文>`・`api_calls=<数>`。
@@ -1146,10 +1146,10 @@ plan の台本の決まり:
 | 基準 | 検証方法 |
 |---|---|
 | K19-10 週の決め方 | D9: `--now` を月曜 2026-11-16 00:00 JST・月曜 23:59 JST・火曜 2026-11-17 12:17 JST・日曜 2026-11-22 23:59 JST の4つにして、どれも `since=2026-11-09`・`until=2026-11-16` が出る。日曜 2026-11-15 23:59 JST では `since=2026-11-02`・`until=2026-11-09` が出る（必須の pytest） |
-| K19-11 数え済みの判定 | D9: runs の作り物で (i) 自分以外の success の run が1件 → `skip`、(ii) 自分の run だけ → `count`、(iii) 0件 → `count`、(iv) runs-file が無い → `count` で reason が空でない、が出る |
+| K19-11 数え済みの判定 | D9: runs の作り物で (i) 自分以外の success の run が1件 → `skip`、(ii) 自分の run だけ → `count`、(iii) 0件 → `count`、(iv) runs-file が無い → `count` で reason が空でない、(v) 自分以外の success の run が until より前に作られたものだけ → `count`、が出る |
 | K19-12 遅れの印 | D9: 月曜の `--now` で `late=0`、火曜・日曜で `late=1` |
 | K19-13 workflow の形 | D4: schedule の cron が `0 1 * * 1` と `17 3 * * 2` の2本、concurrency の group と `cancel-in-progress: false`、schedule の道で plan の台本を数えの台本より前に流す、`decision=skip` で数えの台本を流さない、`late=1` で対象0でも Discord に送る文がある、手動の道の `--days 7` と since・until の片方だけの失敗が残る、権限は actions: read・contents: read のまま |
-| K19-14 試験が壊れた台本を捕まえる | 赤の実演8: 写しの plan の台本で「月曜に戻す」計算を消すと D9 の週の試験が赤。赤の実演9: 自分の run を除く処理を消すと D9 の (ii) が赤 |
+| K19-14 試験が壊れた台本を捕まえる | 赤の実演8: 写しの plan の台本で「月曜に戻す」計算を消すと D9 の週の試験が赤。赤の実演9: 自分の run を除く処理を消すと D9 の (ii) が赤。赤の実演10: 台本の側の `created_at` の絞り込みを消すと D9 の (v) が赤 |
 | K19-15 本番の月曜の回 | 反映の後の最初の月曜の定時の実行の記録に `decision=count`・前の月曜〜その月曜の期間が出て success。同じ週の火曜の回の記録に `decision=skip` が出て、数えの台本が流れず、Discord に何も届かない（Opus が gh run view --log の全文で確かめる） |
 | K19-16 API の回数 | 本番の月曜の回の API呼び出し回数が、K19-5 の 332 に plan の1回を足した程度（期間の run の数で前後する。上限1時間1,000回の内） |
 
@@ -1163,6 +1163,7 @@ plan の台本の決まり:
 - 月曜の回と火曜の回の両方が捨てられた週は、数えも知らせも抜ける。9週で抜けは0回だった（19-19-1）。抜けた週は、次の月曜の知らせが無いことでは分からない（0件の週も知らせは無い）。必要になったら手動の実行（since・until）で数え直す。
 - plan の台本の API が引けなかったときは数えに倒すので、月曜と火曜の両方で数えて2回知らせることがある（数え忘れよりよいと選んだ）。
 - concurrency の決まり（既定の queue: single）では、待っている run は1つまでで、新しいものが来ると待っている古いものが取り消される。月曜の回が流れている間に火曜の回と手動の実行が両方待つと、先に待っていたほうが取り消される。手動は流し直せばよい。
+- 月曜の回が失敗で終わった（数えの台本の終わりが0でない・Discord への送信の失敗）ときは success でないので、火曜の回がもう一度数えて知らせる。やり直しとして受け入れる。
 - API の呼び出しは毎回1回増える（月曜と火曜で週に2回。火曜の skip の回は数えを流さないので plan の1回だけ）。
 - 火曜の回の遅れ（実測で最大約7時間）があっても、同じ週に決まるので数えは変わらない。
 
