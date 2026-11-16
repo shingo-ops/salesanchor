@@ -3,7 +3,7 @@
 > この文書は何か: 本番反映の最後に流れる「AI の値を返す口の持ち主（ai_unmask_owner）の権限の付け直し」が、30 秒の打ち切りに近づき、2 回の本番反映で時間切れになった件の、現在地（実測）と直し方です。付ける権限・外す権限は変えず、計算の順番だけを直します。
 
 - 対象ADR: ADR-1052（`docs/adr/ADR-1052-cloud-case-ai.md`）。部品の設計は `docs/handoff/cloud-case-ai/design.md` §4-3
-- 状態: 設計案作成済み。実装前の本番照合で K2・K3 合格（10-1）。設計審査は未実施（クラウドで行う）。PO は直し方の方向（計算の順番だけを直す）を選択済み（PO「1」2026-11-17。問いは「案のとおり、計算の順番だけを直す【おすすめ】」）。実装は未着手（実装の承認は審査のあとに PO へ聞く）
+- 状態: 設計案作成済み。設計審査 1 回目は REVISE（11）。指摘 4 件を直した版で、K2・K3 を本番で照合し直す（1 回目の形での照合は 10-1）。設計審査の 2 回目は未実施（クラウドで行う）。PO は直し方の方向（計算の順番だけを直す）を選択済み（PO「1」2026-11-17。問いは「案のとおり、計算の順番だけを直す【おすすめ】」）。実装は未着手（実装の承認は審査のあとに PO へ聞く）
 - 危険便: はい（`migrations/` を変える。ADR-135・ADR-136。GO #番号が要る）
 - 段取り表: `docs/handoff/cloud-case-ai/grant-speed-card.md`
 
@@ -73,14 +73,16 @@
        AND NOT ops_case.is_denied_source(s.source);
 ```
 
-### 3-2. 変更後
+### 3-2. 変更後（審査 1 回目の指摘 2 を受けて、判定を WITH の中へ移した版）
 
 ```sql
     -- 1. 付けるべき表: build_columns の source のうち、拒否に当たらないもの
-    --    判定は source ごとに 1 回だけ呼ぶ。MATERIALIZED で、判定が build_columns の各行へ押し込まれるのを止める
+    --    判定は source ごとに 1 回だけ呼ぶ。d と s を MATERIALIZED にして、判定が build_columns の各行へ押し込まれるのも、結合で読み直されるのも止める
     --    （押し込まれると列の数だけ呼ばれ、本番で 14.7 秒かかった。docs/handoff/cloud-case-ai/grant-speed-design.md）
-    WITH s AS MATERIALIZED (
+    WITH d AS MATERIALIZED (
         SELECT DISTINCT b.source FROM ai_cloud_meta.build_columns b
+    ), s AS MATERIALIZED (
+        SELECT d.source FROM d WHERE NOT ops_case.is_denied_source(d.source)
     )
     SELECT coalesce(array_agg(DISTINCT c.oid), '{}'::oid[])
       INTO v_want
@@ -88,11 +90,12 @@
       JOIN pg_catalog.pg_namespace n ON true
       JOIN pg_catalog.pg_class c ON c.relnamespace = n.oid
      WHERE n.nspname || '.' || c.relname = s.source
-       AND c.relkind IN ('r', 'p')
-       AND NOT ops_case.is_denied_source(s.source);
+       AND c.relkind IN ('r', 'p');
 ```
 
-- 条件・結合・戻す配列は変えない。変えるのは「判定をどの行に当てるか」だけ。判定は STABLE（`:206`）で、1 つの文の中では同じ source に同じ答えを返すので、付けるべき表の一覧は変わらない（K2 で本番の実物で照合する）。
+- d は名前を 1 つずつにした一覧（571 行）。s は d に判定を当てて通ったものだけを残した一覧。どちらも MATERIALIZED なので、1 回だけ計算して取っておかれる。
+- 判定は s を作るときに d の各行へ 1 回ずつ当たる。外側の結合で s が何度読み直されても、取っておいた結果を読むだけで判定は呼ばれない。1 回目の案（判定を外側の WHERE に置く形）では、判定が `CTE Scan on s` の Filter に付いており、s が結合の内側に回ると読み直しのたびに呼ばれうる（審査の指摘 2）。
+- 条件・結合・戻す配列は変えない。変えるのは「判定をどの行に当てるか」だけ（判定の条件は外側の WHERE から s の中へ移るが、AND でつないだ条件なので一覧は同じ）。判定は STABLE（`:206`）で、1 つの文の中では同じ source に同じ答えを返すので、付けるべき表の一覧は変わらない（K2 で本番の実物で照合する）。
 - `MATERIALIZED` は、親の条件を WITH の中へ押し込まない（PostgreSQL 公式 sql-select「WITH Clause」: 「such folding can be prevented by marking the WITH query as MATERIALIZED」）。本番は PostgreSQL 16（12 以上で使える）。
 - PL/pgSQL の `INTO` は文のほぼどこに置いてもよく、WITH から始まる SELECT も同じ（公式 plpgsql-statements 41.5.3）。
 - 見込み（推測。K1・K3 で実測して確かめる）: 判定が 571 回以下になり、2.18 ms × 571 ＝ 約 1.2 秒。付け直し全体は 約 16〜17 秒 − 14.7 秒 ＋ 1.2 秒 ＝ 約 3〜4 秒。PO への前の説明「約 1〜2 秒」は計算 (B) だけの見込みで、手順全体では約 3〜4 秒になる。
@@ -157,3 +160,16 @@
 
 - 判定 1 回あたりの読み取りは 191,580 ÷ 571 ≒ 335 ページで、元の計算（約 334）と同じ。判定そのものの重さは変わらず、回数だけが 6,749 → 571 に減った。
 - 見込み（推測）: 付け直し全体は 約 16〜17 秒 − 14.7 秒 ＋ 2.2 秒 ＝ 約 4 秒。K1 の判定基準（6 秒以下）に入る。本番反映の記録で K1 として確かめる。
+
+## 11. 設計審査の記録
+
+### 11-1. 1 回目（2026-11-17 05:53 JST・クラウドの Opus・commit 3833b06c4・読むだけ）
+
+判定: REVISE。(1) 原因の裏付け ○／(2) 文法・一覧が同じ ○／(3) 試験の権限・取引 ○／(4) 手順の行番号・作業場所 ×／(5) KPI ○／(6) その場で直す方針 ○。
+
+| 指摘 | 中身 | 直したところ |
+|---|---|---|
+| 1（事実） | 段取り表の作業場所が `git switch`・`git pull` で、決まりの `new-worktree.sh` を使っていない | 段取り表 §3-0 を新設。クラウドで実績のある形（`docs/handoff/error-message-plain-language/card-bin2.md:383-388`）: fetch → 枝が無いことを確かめる → `new-worktree.sh` → 実在の確認 → `git switch -C` と HEAD の一致。`executor-preflight.sh` は、クラウドでは GitHub の API が使えないため流さない（前例 `docs/handoff/auth-new-device-approval/stageC-geoip-mount-impl-report.md:5`） |
+| 2（推測） | 判定が `CTE Scan on s` の Filter に付く形では、s が結合の内側に回ると呼ぶ回数が掛け算になりうる | 3-2 を、判定を MATERIALIZED の中に入れた形へ変えた。本番で K2・K3 を照合し直す |
+| 3（事実） | 試験を足す位置の空行の数が決まっていない | 段取り表 段A 手順3 に「前後とも空行 2 行」と書いた |
+| 4（事実） | K1 の基準（設計）と確かめ方（段取り表 §6）で「戻り値 0」の有無がずれていた | 段取り表 §6 から「戻り値 0」を外し、設計の K1 に揃えた（失敗の警告 0 行で判定する） |
