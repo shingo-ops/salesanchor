@@ -69,13 +69,16 @@ mode: handoff
 
 1. **`channel_masters` は K6 を守る（ひな形に入れない）**。K6 は PO が承認した設計で、ひな形と移行が食い違うときは設計を正とする（このカードの「前提」）。会社ごとの表は PR-C で消える予定で、ひな形に足すと逆向きになる。
    - ひな形（`backend/app/services/tenant.py`）に `channel_masters` の物（表・列・索引・制約・方針・RLS の印・連番・権限）を足していたら外す。`backend/tests/test_channel_type_control.py::test_create_tenant_schema_does_not_copy_channel_masters` が通ること。
-   - 形の差の検査の「許す一覧」に、表 `channel_masters` に属する物だけを入れる（第2版の「0件で始める」をこの1表に限って改める）。書き方は表の名前1つで、物ごとの名前の羅列にしない。理由の欄に「K6（`docs/handoff/channel-master-shared/design.md`）。登録の `migrations/20260611_100000_create_channel_masters.sql` が全会社に作るが、PR-C（ADR-1069）で消す予定。PR-C の合流後にこの行を外す」と書く。
+   - 形の差の検査の「許す一覧」に、表 `channel_masters` に属する物だけを入れる（第2版の「0件で始める」をこの1表に限って改める）。これは設計 `design.md` §5-6 の追記2と K5-2 の表の注記に書いた例外なので、「設計と食い違ったら止まる」には当たらない。書き方は表の名前1つで、物ごとの名前の羅列にしない。理由の欄に「K6（`docs/handoff/channel-master-shared/design.md`）。登録の `migrations/20260611_100000_create_channel_masters.sql` が全会社に作るが、PR-C（ADR-1069）で消す予定。PR-C の合流後にこの行を外す」と書く。
    - 許す一覧の行が使われなかった（差が出なかった）ときは、検査は失敗にせず、行の名前を出して知らせる（PR-C の後に外し忘れを見つけるため）。
    - `channel_masters` 以外の物を許す一覧に入れたくなったら止まる（`NEEDS_DECISION:`）。
 2. **`calendar_events.meet_url` の分類の行は、別の小さい PR で先に足す**（この PR の試験は変えない）。本番の分類表にも行が無い（本番の AI 用の写しでは、文字の列の既定どおり形だけで出ている）。行を `mask` で足しても AI 用の写しの出し方は変わらない。
    - `origin/main` から新しいブランチ `release/ai-class-meet-url` を作り（`bash scripts/new-worktree.sh release/ai-class-meet-url`）、`migrations/20261024_100300_create_ai_cloud_views.sql` の `calendar_events` の `mask`・理由空の行（:373）に `meet_url` を足す。分類表の元 `docs/handoff/cloud-case-ai/stage1-column-class.tsv` にも同じ行を足す。行の総数を書いた所（`backend/tests/ops/test_ai_cloud_views.py:486` の `1162` と、同じ数を書いた他の所。`git grep -n 1162 -- migrations backend docs/handoff/cloud-case-ai` で全部出す）を 1 増やす。ほかは変えない。
    - Draft の PR を `--base main` で作る（本文はひな形から。「触るファイル:」に全部）。このブランチの作業は手順8より先に終える。`release/migration-template-5-2` に混ぜない。
-   - `release/migration-template-5-2` の t10 は、上の PR の合流の後に main を取り込んで通る。それまで落ちたままでよい（報告に書く）。
+   - `release/migration-template-5-2` の t10 は、上の PR の合流まで落ちたままでよい（報告に書く）。実装役は main を取り込まない（手順2の禁止のまま）。上の PR の合流の後、Opus が `gh pr update-branch` で取り込む。
+   - 行の総数 1162 を書き換えるのは `backend/tests/ops/test_ai_cloud_views.py:486` と `migrations/20261024_100300_create_ai_cloud_views.sql:3` の2か所。`docs/handoff/cloud-case-ai/stage1-h-decision.md:62` は実行の番号の一部なので変えない。`stage1-column-class.tsv` の行は、ほかの `calendar_events` の行と同じ列の形（型の列は `text`）で足す。
+   - 合流の順の注意: Draft の PR #5248（PR-C）も同じ行の総数を書き換える。後から合流する側が数を合わせ直す（Opus が合流のときに確かめる）。
+   - この別の PR は `migrations/` を変えるので危険 PR（ADR-136）に当たる。GO は ADR-1003 の委任の道で Opus が出す（前例 #5507）。
 3. **第2回のカードに無かった変更は残してよい**: (a) `.github/workflows/schema-check.yml` に `public.suppliers`（`id` だけ）を足した物。B1 でひな形が `public.suppliers` を指すため要る。`IF NOT EXISTS` で作り、行の上に理由（B1・このカード）を1行書く。(b) `backend/tests/test_lead_merge_pg.py` の見積の種に会社を足した物（`quotes.company_id` が本番と同じく NOT NULL になったため）。
 4. **方針（policy）の書き方の違い**: 新しい表 6 つの方針を `current_setting('app.tenant_id', true)::INTEGER` で書いたのはよい。検査で `public.current_tenant_id()` と同じ物として比べる置き換えは、この1つの書き換えだけにし、台本の中に理由（会社を作る時点で public の包み関数が無い環境がある）を書く。ほかの書き方の違いを同じにする置き換えは足さない。
 5. **登録の数**: 登録は 405 本（第1版の 404 は古い）。新しい会社に流すと前提が無くて落ちる 3 本（`migrations/072_add_retention_indexes.sql`・`migrations/20261101_130000_add_new_device_approval.sql`・`migrations/20260605_030000_create_salesanchor_app_role.sql`）は手順8の「外す一覧」に入れる（第2版のとおり）。数え方は固定の数を書かず、`scripts/run_all_migrations.sh` の登録から数える。
