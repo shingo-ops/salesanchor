@@ -26,7 +26,7 @@
 
 ## 4. 変更の中身（ファイルごとの前と後）
 
-### 4-1. 声の一覧の正本（新規 `backend/app/services/secretary_voice.py`）
+### 4-1. 声の一覧の正本（新規 backend/app/services/secretary_voice.py）
 
 - 前: 無い。
 - 後: 声の一覧と既定はこのファイル 1 か所だけに書く。
@@ -75,7 +75,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 - 文は必ず POST の中身で送る（URL に載せない）。
 - 声は画面から受け取らない。backend が本人の値を読む。PC とスマホで同じ声になる（K2）。
 
-### 4-4. 読み上げの口の中身（新規 `backend/app/services/secretary_tts.py`）
+### 4-4. 読み上げの口の中身（新規 backend/app/services/secretary_tts.py）
 
 1. 今月（日本時間の月初から）の `purpose='secretary_tts'` の `billed_characters` の合計を数える。合計＋今回の字数 ＞ `MONTHLY_CHAR_CAP` なら 429（`tts_monthly_cap_reached`）を返し、Google には送らない。
 2. 鍵ファイル `GOOGLE_TTS_SA_KEY_FILE` が未設定・読めないなら 503（`tts_not_configured`）。起動は止めない（今の Google の鍵 `TCG_SHEETS_SA_KEY_FILE` と同じ扱い・recon.md §6）。
@@ -109,11 +109,11 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 ### 4-8. チャットの画面（`frontend/src/features/secretary/`）
 
 - 入力欄の並び（`frontend/src/features/secretary/SecretaryChat.tsx:188`）に `Toggle`（金型）で「声で返事」を置く。最初は切れている。状態は画面の中だけで持ち、保存しない（窓を閉じたら切れに戻る）。K3。
-- 読み上げの部品は新しいファイル `useSecretaryVoice.ts` 1 つにまとめる（文の分け方・順に取る・順に鳴らす・止める）。
+- 読み上げの部品は新しいファイル useSecretaryVoice.ts（新規） 1 つにまとめる（文の分け方・順に取る・順に鳴らす・止める）。
 - 通信は `frontend/src/lib/api.ts` に POST で中身を受け取る口 `postBlob` を足して使う（今は GET の `getBlob` だけ・`frontend/src/lib/api.ts:280`）。通信の部品を別に作らない。
 - 鳴らし方は `AudioContext.decodeAudioData` と `AudioBufferSourceNode`。`<audio>` と `blob:` の URL は使わない。理由: 画面の安全設定（`nginx/nginx.conf:96`）に `media-src` が無く `default-src 'self'` に落ちるため、`<audio>` に `blob:` を渡すと止められる（research.md T6）。音の中身は同じ場所の `/api/v1` から取るので `connect-src 'self'` で通る。安全設定は変えない。
 - 失敗したら、返事の文の下に `t("secretary.voiceFailed")`（「声を出せませんでした。文はそのまま読めます。もう一度送ると試します」の形・ADR-1071）を 1 行出す。上限に達したら `t("secretary.voiceCapReached")`。文の返事は今まで通り出る。
-- 新しい文字はすべて `t()`。`ja.json` と `en.json` に同じキーを足す（ADR-027）。
+- 新しい文字はすべて `t()`。`frontend/src/locales/ja.json` と `frontend/src/locales/en.json` に同じキーを足す（ADR-027）。
 
 ### 4-9. 鍵の置き場（`docker-compose.yml`）
 
@@ -184,6 +184,8 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 
 ## 11. 維持の仕組み
 
+守り手: 設計担当の Opus（月 1 回の請求の照合と 30 日後の利用の数えを週次点検の項目に足す）。機械の見張りは下の表の CI と DB の決まり。
+
 | 何を守るか | 仕組み（機械か手か） | 置き場所 |
 |---|---|---|
 | 設計書の形（目標・基準表・事例・この節） | 機械: PR の確かめ「process-artifacts-gate」 | `.github/workflows/process-artifacts-gate.yml`・`scripts/check-process-artifacts.js` |
@@ -191,7 +193,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 | 文書がたどれる | 機械: doc-index-reachability | `.github/workflows/doc-index-reachability.yml` |
 | 使いみちと SDK の値が決まった一覧の中 | 機械: DB の値の決まり（CHECK） | §4-5 の移行 |
 | 声の一覧の翻訳の足し忘れ | 機械: V6 の試験（便1・便2 で足す） | `backend/tests/` |
-| 月の上限 | 機械: V7 の試験と backend の判定 | `backend/app/services/secretary_tts.py` |
+| 月の上限 | 機械: V7 の試験と backend の判定 | backend/app/services/secretary_tts.py |
 | 「声で返事」は最初は切れ | 機械: V3 の画面の試験 | `frontend/src/features/secretary/` |
 | 画面の文字は `t()` | 機械: 今ある lint（`local/no-japanese-literal`）と ja/en の同じキーの確かめ | 既存 |
 | 部品の金型と色の印 | 機械: 今ある UI ガバナンスの確かめ（ADR-144・ADR-067） | 既存 |

@@ -12,7 +12,7 @@
 
 ## What（何を決めたか）
 
-1. 秘書の声は Google Cloud Text-to-Speech の Chirp 3: HD の 4 つ（Aoede・Charon・Erinome・Zubenelgenubi）。既定は Charon。一覧と既定の正本は `backend/app/services/secretary_voice.py` 1 か所。
+1. 秘書の声は Google Cloud Text-to-Speech の Chirp 3: HD の 4 つ（Aoede・Charon・Erinome・Zubenelgenubi）。既定は Charon。一覧と既定の正本は backend/app/services/secretary_voice.py（新規） 1 か所。
 2. 一人ずつの声は `public.users.secretary_voice`（NULL＝未選択＝既定）に置く。言語・画面の色と同じ置き場。DB に値の決まりは付けず、書く口が一覧で拒み、読むときは既定に倒す。
 3. 読み上げは backend の口 `POST /api/v1/assistant/speech` だけが行う。声は backend が本人の値を読む。守りは秘書と同じ 4 つ。
 4. チャットの「声で返事」は最初は切れていて、保存しない。音は同じ場所の API から取り、`AudioContext` で鳴らす。画面の安全設定は変えない。

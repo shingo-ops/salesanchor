@@ -22,7 +22,7 @@
 - 窓が出る条件は super admin など 4 つ: `frontend/src/features/secretary/SecretaryChat.tsx:220`（`features.isEnabled("secretary_chat")`）・`frontend/src/features/secretary/SecretaryChat.tsx:221`（`superAdmin.isSuperAdmin`）
 - 会話は保存しない。閉じたら消える: `frontend/src/features/secretary/SecretaryChat.tsx:5`・`frontend/src/features/secretary/SecretaryChat.tsx:61`（`setMessages([])`）
 - 入力欄と送るボタンの並び（切り替えを置く候補の場所）: `frontend/src/features/secretary/SecretaryChat.tsx:188`（`secretary-chat__composer`）〜 `frontend/src/features/secretary/SecretaryChat.tsx:198`（`<Button onClick={send}`）
-- 返事の文: 画面側の決まった文（`ja.json` の `secretary.*` は 52 個・`en.json` も 52 個）。AI が自由に書くのは「わからない」ときの返事だけ
+- 返事の文: 画面側の決まった文（`frontend/src/locales/ja.json` の `secretary.*` は 52 個・`frontend/src/locales/en.json` も 52 個）。AI が自由に書くのは「わからない」ときの返事だけ
 - サーバー側の守り 4 つ（秘書の口と決まり帳の口で共通）: `backend/app/routers/assistant.py:88`〜`backend/app/routers/assistant.py:91`（`_feature_secretary_chat`・`require_super_admin`・`customers.view`・`invoices.create`）
 
 ## 3. 一人ずつの好み（声を置く場所の候補）
