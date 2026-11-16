@@ -172,6 +172,7 @@
       "viewer_invalid_credentials": "メールアドレスまたはパスワードが違います。",
       "viewer_suspended": "このアカウントは停止中です。",
       "viewer_trial_expired": "お試し期間が終了しています。",
+      "viewer_contract_expired": "閲覧期限が過ぎています。担当者にご連絡ください。",
       "viewer_invalid_current_password": "今のパスワードが違います。",
       "password_too_short": "パスワードは15文字以上にしてください。",
       "password_too_long": "パスワードは64文字以内にしてください。",
@@ -193,6 +194,10 @@
       "expired": {
         "title": "お試し期間が終了しました",
         "description": "ご利用期間が終了しています。"
+      },
+      "contractExpired": {
+        "title": "閲覧期限が過ぎています",
+        "description": "担当者にご連絡ください。"
       },
       "error": {
         "title": "読み込めませんでした",

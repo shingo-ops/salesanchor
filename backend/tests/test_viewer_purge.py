@@ -38,6 +38,8 @@ def _prepare(conn, async_url):
     cur.execute((MIGRATIONS / "20261104_220000_add_tcg_distribution_targets_viewer_account_id.sql").read_text())
     # 請求先の表（名簿の行が消えると請求先も消えることを確かめる）
     cur.execute((MIGRATIONS / "20261105_120000_create_viewer_billing_profiles.sql").read_text())
+    # ADR-1061 便2-1: 状態 contracting
+    cur.execute((MIGRATIONS / "20261112_130000_add_viewer_contracting_status.sql").read_text())
     return cur
 
 
@@ -100,6 +102,17 @@ def test_trial_is_kept_3_years_after_expiry(pg):  # noqa: F811
     result = _run_purge(engine)
     assert result["trial_expired"] == 1
     assert _emails(cur) == ["active@x.com", "t1090@x.com", "t91@x.com"]
+
+
+@needs_ci_pg
+def test_contracting_is_kept_3_years_after_expiry(pg):  # noqa: F811
+    conn, engine, async_url = pg
+    cur = _prepare(conn, async_url)
+    _account(cur, "c1100@x.com", "contracting", trial_days_ago=1100)
+    _account(cur, "c1090@x.com", "contracting", trial_days_ago=1090)
+    result = _run_purge(engine)
+    assert result["trial_expired"] == 1
+    assert _emails(cur) == ["c1090@x.com"]
 
 
 @needs_ci_pg

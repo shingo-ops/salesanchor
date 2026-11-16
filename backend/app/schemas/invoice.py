@@ -9,11 +9,12 @@ from __future__ import annotations
     company_id / contact_id を必須化（新 B2B モデル唯一の正）
 """
 
+import json
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class InvoiceStatus(str, Enum):
@@ -133,8 +134,22 @@ class InvoiceResponse(BaseModel):
     # ADR-101改訂(2) Inc1: 発行者ビュー URL（原本ワンクリック）。写しPDF blob は Response に含めない
     paypal_invoicer_view_url: str | None = None
     paypal_copy_pdf_at: datetime | None = None
+    # ADR-1061 便2-2c2a: 発行元の地域（domestic / overseas。作成時に請求先の国で決める。古い請求書は NULL）
+    issuer_region: str | None = None
 
     model_config = {"from_attributes": True}
+
+    # ADR-1061 便2-2c2a（D13）: 写しの列は本番（PostgreSQL の JSONB）では dict で返るが、
+    # 試験の SQLite では TEXT に JSON の文字で入っているため、文字なら dict に読み直す。
+    # 先例: routers/tenant_commission_settings.py の commission_rates の読み方。
+    @field_validator(
+        "ship_to_snapshot", "bill_to_snapshot", "duty_policy_snapshot", "fx_rate_snapshot", mode="before"
+    )
+    @classmethod
+    def _parse_json_snapshot(cls, v):
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
 
 
 class InvoiceDetailResponse(InvoiceResponse):

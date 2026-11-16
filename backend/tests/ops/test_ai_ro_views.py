@@ -10,12 +10,13 @@ ai_reader はクラスタ共通のロールなので、このテストが作っ�
 from __future__ import annotations
 
 import os
-import re
 import uuid
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
 import pytest
+
+from app.ops.readonly_query import DENY_COLUMN_RE
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 
@@ -27,7 +28,7 @@ pytestmark = pytest.mark.skipif(
 _MIGRATIONS_DIR = Path(__file__).resolve().parents[3] / "migrations"
 _ROLE_SQL = "20261017_130000_create_ai_reader_role.sql"
 _VIEWS_SQL = "20261017_130100_create_ai_ro_views.sql"
-_DENY_RE = re.compile(r"^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential")
+_DENY_RE = DENY_COLUMN_RE  # 正本は backend/app/ops/readonly_query.py（ADR-1061 A46）
 _LEADS_COLUMNS = (
     "id",
     "name",
@@ -233,3 +234,32 @@ def test_one_uncreatable_table_does_not_stop_other_views(pg):
     assert "tenant_001__leads" in views
     # ai_reader は作れた分を読める
     assert _rows(pg, "SELECT * FROM ai_ro.tenant_009__after_collision", role="ai_reader") == []
+
+
+def test_bank_account_number_and_iban_are_hidden(pg):
+    """ADR-1061 決定9（A46）: 振込先の口座番号（bank_account_number・iban）は ai_ro に出ない。名前の列は出る。"""
+    c = pg.cursor()
+    _make_table(
+        c,
+        "tenant_003.tenant_invoice_payment_bank",
+        [("id", "int"), ("bank_name", "text"), ("bank_account_number", "text")],
+    )
+    _make_table(
+        c,
+        "tenant_003.tenant_invoice_payment_wise",
+        [("id", "int"), ("account_holder_name", "text"), ("iban", "text")],
+    )
+    _rebuild_views(pg)
+    for view, want in (
+        ("tenant_003__tenant_invoice_payment_bank", ["bank_name", "id"]),
+        ("tenant_003__tenant_invoice_payment_wise", ["account_holder_name", "id"]),
+    ):
+        got = [
+            r[0]
+            for r in _rows(
+                pg,
+                "SELECT column_name FROM information_schema.columns"
+                f" WHERE table_schema = 'ai_ro' AND table_name = '{view}' ORDER BY column_name",
+            )
+        ]
+        assert got == want, view

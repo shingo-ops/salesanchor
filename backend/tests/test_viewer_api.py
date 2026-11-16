@@ -31,7 +31,6 @@ from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fix
 SECRET = "v" * 48
 PASSWORD = "correct-horse-battery"
 _HASH = hash_password(PASSWORD)
-NOW = datetime.now(timezone.utc)
 LOGIN = "/api/v1/viewer/login"
 LOGOUT = "/api/v1/viewer/logout"
 INVENTORY = "/api/v1/viewer/inventory"
@@ -308,17 +307,20 @@ async def test_login_null_hash_is_failure(redis):
 async def test_login_suspended_and_expired_trial_with_correct_password(redis):
     db = FakeDb(
         make_viewer(vid=1, email="s@x.com", status="suspended"),
-        make_viewer(vid=2, email="t@x.com", status="trial", trial_expires_at=NOW - timedelta(days=1)),
+        make_viewer(vid=2, email="t@x.com", status="trial", trial_expires_at=datetime.now(timezone.utc) - timedelta(days=1)),
         make_viewer(vid=3, email="n@x.com", status="trial", trial_expires_at=None),
+        make_viewer(vid=4, email="c@x.com", status="contracting", trial_expires_at=datetime.now(timezone.utc) - timedelta(days=1)),
     )
     async with _Client(db) as http:
         suspended = await _login(http, email="s@x.com")
         expired = await _login(http, email="t@x.com")
         no_expiry = await _login(http, email="n@x.com")
+        contract_expired = await _login(http, email="c@x.com")
     assert (suspended.status_code, suspended.json()["detail"]) == (403, "viewer_suspended")
     assert (expired.status_code, expired.json()["detail"]) == (403, "viewer_trial_expired")
     assert (no_expiry.status_code, no_expiry.json()["detail"]) == (403, "viewer_trial_expired")
-    assert [e["event_type"] for e in db.events] == ["login_failed"] * 3
+    assert (contract_expired.status_code, contract_expired.json()["detail"]) == (403, "viewer_contract_expired")
+    assert [e["event_type"] for e in db.events] == ["login_failed"] * 4
     assert not any(k.startswith("viewer_login_fail:") for k in redis.store)  # 失敗の回数には数えない
 
 
@@ -338,6 +340,13 @@ async def test_login_success_returns_token_and_must_change_flag(redis):
     claims = viewer_tokens.decode_viewer_token(body["access_token"])
     assert claims["sub"] == "viewer:1"
     assert datetime.fromisoformat(body["expires_at"]) == datetime.fromtimestamp(claims["exp"], timezone.utc)
+
+
+async def test_login_contracting_within_expiry_succeeds(redis):
+    db = FakeDb(make_viewer(status="contracting", trial_expires_at=datetime.now(timezone.utc) + timedelta(days=2)))
+    async with _Client(db) as http:
+        resp = await _login(http)
+    assert resp.status_code == 200
 
 
 async def test_login_trims_and_lowercases_email(redis):

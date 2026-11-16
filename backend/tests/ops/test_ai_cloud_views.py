@@ -20,6 +20,8 @@ from urllib.parse import urlsplit, urlunsplit
 
 import pytest
 
+from app.ops.readonly_query import DENY_COLUMN_RE
+
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 
 pytestmark = pytest.mark.skipif(
@@ -40,7 +42,7 @@ _WEB_PUSH_SQL = "20261102_090000_add_user_push_subscriptions.sql"
 _AI_JOB_SQL = "20261103_120000_create_ai_job_assignments.sql"
 _PIPELINE_PUBLIC_SQL = "20260921_110000_pipeline_tables_public.sql"
 _LLM_USAGE_SQL = "20260930_150000_create_llm_usage_events.sql"
-_DENY_RE = re.compile(r"^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential")
+_DENY_RE = DENY_COLUMN_RE  # 正本は backend/app/ops/readonly_query.py（ADR-1061 A46）
 _NAME_RE = re.compile(
     r"(name|email|mail|phone|tel|fax|addr|zip|postal|message|text|body|note|comment|memo|sender|display|contact"
     r"|line_id|wa_id|birthday|payload|snapshot|raw|data|values|identity|span)"
@@ -481,7 +483,7 @@ def test_role_migration_is_idempotent(pg):
     # meta の migration も冪等（分類表の中身は消えない）
     n0 = _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0]
     c.execute(_read(_META_SQL))
-    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1083
+    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1162
 
 
 # ---------------------------------------------------------------- T10（CI の見張り）
@@ -729,6 +731,282 @@ def test_t10_ai_job_assignment_columns_are_classified_on_bootstrapped_db(cluster
 
         new_tables = {"ai_job_choices", "ai_job_assignments", "ai_job_assignment_history", "llm_usage_events"}
         gaps = [g for g in _classification_gaps(conn) if g[1] in new_tables]
+        assert gaps == [], f"分類の漏れ（表名・列名）: {[(g[1], g[2]) for g in gaps]}"
+    finally:
+        conn.close()
+        cur = cluster.control.cursor()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+# ADR-1061 便2-2b: 契約と請求書の public の9表の23列に column_class の行があることを名前で確かめる。
+_VIEWER_ACCOUNTS_SQL = "20261016_150000_add_viewer_accounts.sql"
+_VIEWER_CONTRACT_SQL = "20261112_150000_create_viewer_contract_public_tables.sql"
+_VIEWER_CONTRACT_TABLES = {
+    "prefectures", "sa_products", "sa_plans", "sa_plan_features", "sa_contracts", "tax_rates",
+    "viewer_invoices", "viewer_invoice_number_seq", "viewer_invoice_lines",
+}  # fmt: skip
+_VIEWER_INVOICE_MASKED = {
+    "bill_to_snapshot", "drive_error", "drive_file_id", "drive_web_link",
+    "invoice_number", "issuer_snapshot", "mail_error", "mail_to",
+}  # fmt: skip
+_VIEWER_CONTRACT_CLASSIFIED = (
+    {("prefectures", c) for c in ("code", "name_en", "name_ja")}
+    | {("sa_contracts", "status"), ("sa_plan_features", "feature_key")}
+    | {("sa_plans", c) for c in ("billing_interval", "billing_type", "code", "name")}
+    | {("sa_products", c) for c in ("code", "name")}
+    | {("viewer_invoice_lines", c) for c in ("description", "line_type")}
+    | {("viewer_invoices", c) for c in _VIEWER_INVOICE_MASKED | {"status", "mail_sent_at"}}
+)
+
+
+def test_t10_viewer_contract_columns_are_classified_on_bootstrapped_db(cluster):
+    """本番の migration 順に近い DB に便2-2a の migration を流し、23列に column_class の行があり、9表に分類の漏れが無い。
+
+    流す順: bootstrap → 閲覧者の名簿 → 便2-2a（2回・冪等）→ ai_cloud の分類。
+    請求書の表の8列は mask、status と mail_sent_at は pass で作られる。専用の DB を作り、終わったら消す。"""
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    assert len(_VIEWER_CONTRACT_CLASSIFIED) == 23
+    assert len(_VIEWER_CONTRACT_TABLES) == 9
+    name, conn = _new_db(cluster.control, "ai_cloud_t10_vcontract")
+    try:
+        c = conn.cursor()
+        c.execute(_read(_AI_READER_SQL))
+        c.execute(_read(_ROLE_SQL))
+        c.execute(_read(_META_SQL))
+        url = _psycopg_url(ADMIN_PG_URL, name).replace("postgresql://", "postgresql+asyncpg://", 1)
+        from tests.rls_bootstrap import bootstrap_tenant_schema
+
+        async def build():
+            eng = create_async_engine(url)
+            try:
+                await bootstrap_tenant_schema(eng, 1)
+            finally:
+                await eng.dispose()
+
+        asyncio.run(build())
+        c.execute(_read(_VIEWER_ACCOUNTS_SQL))
+        c.execute(_read(_VIEWER_CONTRACT_SQL))
+        c.execute(_read(_VIEWER_CONTRACT_SQL))  # 冪等
+        c.execute(_read(_CREATE_SQL))
+        rows = _rows(
+            conn, "SELECT table_name, column_name FROM ai_cloud_meta.column_class WHERE schema_pattern = 'public'"
+        )
+        have = {(r[0], r[1]) for r in rows}
+        missing = _VIEWER_CONTRACT_CLASSIFIED - have
+        assert missing == set(), f"column_class に行が無い: {sorted(missing)}"
+
+        gaps = [g for g in _classification_gaps(conn) if g[1] in _VIEWER_CONTRACT_TABLES]
+        assert gaps == [], f"分類の漏れ（表名・列名）: {[(g[1], g[2]) for g in gaps]}"
+
+        modes = dict(
+            _rows(conn, "SELECT column_name, mode FROM ai_cloud_meta.build_columns WHERE source = 'public.viewer_invoices'")
+        )
+        for col in sorted(_VIEWER_INVOICE_MASKED):
+            assert modes[col] == "mask", col
+        assert modes["status"] == "pass"
+        assert modes["mail_sent_at"] == "pass"
+    finally:
+        conn.close()
+        cur = cluster.control.cursor()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+# ADR-1061 便2-2c1: 発行元の会社情報と振込先のテナントの4表・請求書の発行元区分・Drive の海外用フォルダに column_class の行があることを名前で確かめる。
+_ISSUER_TABLES = {
+    "tenant_issuer_profiles", "tenant_invoice_payment_methods",
+    "tenant_invoice_payment_bank", "tenant_invoice_payment_wise",
+}  # fmt: skip
+_ISSUER_CLASSIFIED = (
+    {("tenant_issuer_profiles", c) for c in (
+        "address1", "address2", "city", "company_name", "country_code", "email", "phone",
+        "postal_code", "prefecture_code", "registration_number", "state_region", "website", "region",
+    )}
+    | {("tenant_invoice_payment_methods", c) for c in ("display_name", "method_type", "region")}
+    | {("tenant_invoice_payment_bank", c) for c in (
+        "account_holder", "bank_account_type", "bank_address", "bank_branch", "bank_name", "swift_code", "method_type",
+    )}
+    | {("tenant_invoice_payment_wise", c) for c in (
+        "account_holder", "bank_address", "bank_name", "note", "swift_bic", "wise_email", "method_type", "wise_currency",
+    )}
+    | {("invoices", "issuer_region")}
+)  # fmt: skip
+
+
+def test_t10_issuer_columns_are_classified_on_bootstrapped_db(cluster):
+    """新しい会社の作り方（tenant.py）で作ったテナントに、便2-2c1 の 32 列の column_class の行があり、4表と請求書の発行元区分に分類の漏れが無い。
+
+    口座番号（bank_account_number）と IBAN（iban）は名前の決まりで読めない列なので分類の行を持たない。
+    public の Drive 設定の海外用フォルダ（overseas_folder_id）の行もあることを確かめる。専用の DB を作り、終わったら消す。"""
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    assert len(_ISSUER_CLASSIFIED) == 32
+    name, conn = _new_db(cluster.control, "ai_cloud_t10_issuer")
+    try:
+        c = conn.cursor()
+        c.execute(_read(_AI_READER_SQL))
+        c.execute(_read(_ROLE_SQL))
+        c.execute(_read(_META_SQL))
+        url = _psycopg_url(ADMIN_PG_URL, name).replace("postgresql://", "postgresql+asyncpg://", 1)
+        from tests.rls_bootstrap import bootstrap_tenant_schema
+
+        async def build():
+            eng = create_async_engine(url)
+            try:
+                await bootstrap_tenant_schema(eng, 1)
+            finally:
+                await eng.dispose()
+
+        asyncio.run(build())
+        c.execute(_read(_CREATE_SQL))
+        rows = _rows(
+            conn, "SELECT table_name, column_name FROM ai_cloud_meta.column_class WHERE schema_pattern = 'tenant_*'"
+        )
+        have = {(r[0], r[1]) for r in rows}
+        missing = _ISSUER_CLASSIFIED - have
+        assert missing == set(), f"column_class に行が無い: {sorted(missing)}"
+        drive = _rows(
+            conn,
+            "SELECT 1 FROM ai_cloud_meta.column_class WHERE schema_pattern = 'public'"
+            " AND table_name = 'tenant_google_drive_config' AND column_name = 'overseas_folder_id'",
+        )
+        assert len(drive) == 1
+
+        gaps = [
+            g for g in _classification_gaps(conn)
+            if g[1] in _ISSUER_TABLES or (g[1] == "invoices" and g[2] == "issuer_region")
+        ]  # fmt: skip
+        assert gaps == [], f"分類の漏れ（表名・列名）: {[(g[1], g[2]) for g in gaps]}"
+    finally:
+        conn.close()
+        cur = cluster.control.cursor()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+_SECRETARY_RULES_SQL = "20261113_100000_create_secretary_rules.sql"
+_SECRETARY_RULES_TABLES = {"secretary_rules", "secretary_rule_checks"}
+_SECRETARY_RULES_CLASSIFIED = {
+    ("secretary_rule_checks", "model"),
+    ("secretary_rule_checks", "sdk"),
+    ("secretary_rule_checks", "status"),
+    ("secretary_rules", "rule_text"),
+    ("secretary_rules", "source_reply"),
+    ("secretary_rules", "source_text"),
+    ("secretary_rules", "source_kind"),
+    ("secretary_rules", "status"),
+}
+
+
+def test_t10_secretary_rules_columns_are_classified_on_bootstrapped_db(cluster):
+    """ADR-1077 便1: 秘書の決まり帳の2表の8列に column_class の行があり、分類の漏れが無い。
+
+    流す順: bootstrap → pipeline の public 表 → llm_usage_events → 便1（2回・冪等）→ ai_cloud の分類。
+    専用の DB を作り、終わったら消す。"""
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    assert len(_SECRETARY_RULES_CLASSIFIED) == 8
+    name, conn = _new_db(cluster.control, "ai_cloud_t10_secretary")
+    try:
+        c = conn.cursor()
+        c.execute(_read(_AI_READER_SQL))
+        c.execute(_read(_ROLE_SQL))
+        c.execute(_read(_META_SQL))
+        url = _psycopg_url(ADMIN_PG_URL, name).replace("postgresql://", "postgresql+asyncpg://", 1)
+        from tests.rls_bootstrap import bootstrap_tenant_schema
+
+        async def build():
+            eng = create_async_engine(url)
+            try:
+                await bootstrap_tenant_schema(eng, 1)
+            finally:
+                await eng.dispose()
+
+        asyncio.run(build())
+        c.execute(_read(_PIPELINE_PUBLIC_SQL))
+        c.execute(_read(_LLM_USAGE_SQL))
+        c.execute(_read(_SECRETARY_RULES_SQL))
+        c.execute(_read(_SECRETARY_RULES_SQL))  # 冪等
+        c.execute(_read(_CREATE_SQL))
+        rows = _rows(
+            conn, "SELECT table_name, column_name FROM ai_cloud_meta.column_class WHERE schema_pattern = 'public'"
+        )
+        have = {(r[0], r[1]) for r in rows}
+        missing = _SECRETARY_RULES_CLASSIFIED - have
+        assert missing == set(), f"column_class に行が無い: {sorted(missing)}"
+
+        gaps = [g for g in _classification_gaps(conn) if g[1] in _SECRETARY_RULES_TABLES]
+        assert gaps == [], f"分類の漏れ（表名・列名）: {[(g[1], g[2]) for g in gaps]}"
+    finally:
+        conn.close()
+        cur = cluster.control.cursor()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+# invoice-create-portfolio 便A: 関税の決まりの2表・請求書の新しい列と tenant.py に足した列・明細の hs_code に分類の漏れが無いことを確かめる。
+_DUTY_TABLES = {"tenant_duty_rules", "tenant_duty_rule_components"}
+_DUTY_CLASSIFIED = {
+    ("invoices", "shipping_snapshot"),
+    ("invoices", "shipping_carrier"),
+    ("invoices", "shipping_service"),
+    ("tenant_duty_rule_components", "amount_currency"),
+    ("tenant_duty_rule_components", "base"),
+    ("tenant_duty_rule_components", "label"),
+    ("tenant_duty_rules", "carrier"),
+    ("tenant_duty_rules", "destination_country_code"),
+    ("tenant_duty_rules", "label"),
+    ("tenant_duty_rules", "note"),
+    ("tenant_duty_rules", "source_url"),
+}
+_DUTY_CHECKED_COLUMNS = {
+    ("invoices", c) for c in (
+        "ship_to_snapshot", "bill_to_snapshot", "issue_mode", "duty_amount", "duty_policy_snapshot",
+        "fx_rate_snapshot", "paypal_order_id", "paypal_approval_url", "payment_fee",
+        "paypal_invoicer_view_url", "paypal_copy_pdf", "paypal_copy_pdf_at",
+        "payment_method_id", "tax_rate_percent",
+        "shipping_carrier", "shipping_service", "shipping_snapshot",
+    )
+} | {("quote_items", "hs_code"), ("invoice_items", "hs_code")}  # fmt: skip
+
+
+def test_t10_duty_and_invoice_columns_are_classified_on_bootstrapped_db(cluster):
+    """invoice-create-portfolio 便A: 新しい会社の作り方（tenant.py）で作ったテナントに 11 列の column_class の行があり、
+    関税の2表と、請求書・明細に足した列に分類の漏れが無い。
+
+    数・日付・真偽の型の列は型で通る。
+    専用の DB を作り、終わったら消す。"""
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    assert len(_DUTY_CLASSIFIED) == 11
+    assert len(_DUTY_CHECKED_COLUMNS) == 19
+    name, conn = _new_db(cluster.control, "ai_cloud_t10_duty")
+    try:
+        c = conn.cursor()
+        c.execute(_read(_AI_READER_SQL))
+        c.execute(_read(_ROLE_SQL))
+        c.execute(_read(_META_SQL))
+        url = _psycopg_url(ADMIN_PG_URL, name).replace("postgresql://", "postgresql+asyncpg://", 1)
+        from tests.rls_bootstrap import bootstrap_tenant_schema
+
+        async def build():
+            eng = create_async_engine(url)
+            try:
+                await bootstrap_tenant_schema(eng, 1)
+            finally:
+                await eng.dispose()
+
+        asyncio.run(build())
+        c.execute(_read(_CREATE_SQL))
+        rows = _rows(
+            conn, "SELECT table_name, column_name FROM ai_cloud_meta.column_class WHERE schema_pattern = 'tenant_*'"
+        )
+        have = {(r[0], r[1]) for r in rows}
+        missing = _DUTY_CLASSIFIED - have
+        assert missing == set(), f"column_class に行が無い: {sorted(missing)}"
+
+        gaps = [
+            g for g in _classification_gaps(conn)
+            if g[1] in _DUTY_TABLES or (g[1], g[2]) in _DUTY_CHECKED_COLUMNS
+        ]  # fmt: skip
         assert gaps == [], f"分類の漏れ（表名・列名）: {[(g[1], g[2]) for g in gaps]}"
     finally:
         conn.close()

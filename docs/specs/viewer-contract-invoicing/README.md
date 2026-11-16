@@ -6,7 +6,7 @@
 - 親: [在庫の閲覧専用ページ](../inventory-management/inventory-viewer/README.md)（索引 [docs/specs/README.md](../README.md)）
 - あるべき姿（PO の言葉のみ・正本）: [ideal-state.md](./ideal-state.md)
 - KGI と運用: [kgi.md](./kgi.md)
-- ステータス: 設計案作成済み・PO 未承認・実装未着手。
+- ステータス: PO 設計承認済み（2026-11-12）・便1 実装済み（PR #5250）・便2 以降は未着手。
 
 ## 子文書
 

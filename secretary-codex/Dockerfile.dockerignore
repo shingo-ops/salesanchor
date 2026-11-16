@@ -1,7 +1,8 @@
 # ADR-1058 段3: secretary-codex の build の入力の許す一覧（根を context にするため、.env などを入れない）。
-# 全部外し、COPY する4つだけを戻す。BuildKit が secretary-codex/Dockerfile の隣のこのファイルを読む。
+# 全部外し、COPY する5つだけを戻す。BuildKit が secretary-codex/Dockerfile の隣のこのファイルを読む。
 *
 !secretary-agent/prompt.txt
 !secretary-agent/schema.json
 !secretary-agent/probe.mjs
+!secretary-agent/compose.mjs
 !secretary-codex/server.mjs

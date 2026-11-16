@@ -29,8 +29,9 @@ import json
 import logging
 import os
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from app.auth.dependencies import reset_tenant_context
 from app.cache import get_redis
@@ -440,6 +441,55 @@ async def delete_event(db, tenant_id: int, event_id: str) -> None:
         raise RuntimeError(f"イベント削除に失敗: {e}") from e
 
 
+async def get_instance(
+    db, tenant_id: int, recurring_event_id: str, original_start: datetime, is_all_day: bool
+) -> dict:
+    """繰り返しの予定の 1 回分を、決まりでの元の始まり（originalStartTime）で引いて返す（ADR-1075 §12.7 this）。
+
+    timeMin（回の終わりの下限・含む）と timeMax（回の始まりの上限・含まない）で窓を作り（終日は前後 1 日ずつ広く）、
+    返った回のうち originalStartTime が一致するものを返す。見つからなければ RuntimeError。
+    """
+    service = await _get_service(db, tenant_id)
+    calendar_id = await get_calendar_id(db, tenant_id)
+    jst = ZoneInfo("Asia/Tokyo")
+    if original_start.tzinfo is None:
+        original_start = original_start.replace(tzinfo=jst)
+    start_jst = original_start.astimezone(jst)
+    if is_all_day:
+        # 終日の範囲は Google のカレンダーの時間帯で解かれるので、前後 1 日ずつ広く引いて originalStartTime で選ぶ
+        day0 = datetime.combine(start_jst.date(), datetime.min.time(), tzinfo=jst)
+        window_start = day0 - timedelta(days=1)
+        window_end = day0 + timedelta(days=2)
+    else:
+        window_start = start_jst
+        window_end = start_jst + timedelta(seconds=1)
+
+    try:
+        result = await asyncio.to_thread(
+            service.events()
+            .instances(
+                calendarId=calendar_id,
+                eventId=recurring_event_id,
+                timeMin=window_start.isoformat(),
+                timeMax=window_end.isoformat(),
+                maxResults=10,
+            )
+            .execute
+        )
+    except Exception as e:
+        raise RuntimeError(f"繰り返しの回の取得に失敗: {e}") from e
+
+    for item in result.get("items", []):
+        original = item.get("originalStartTime") or {}
+        if is_all_day:
+            if original.get("date") == start_jst.date().isoformat():
+                return item
+        elif original.get("dateTime"):
+            if datetime.fromisoformat(original["dateTime"]) == start_jst:
+                return item
+    raise RuntimeError("繰り返しの回が見つかりません")
+
+
 __all__ = [
     "issue_state",
     "consume_state",
@@ -450,4 +500,5 @@ __all__ = [
     "create_event",
     "update_event",
     "delete_event",
+    "get_instance",
 ]

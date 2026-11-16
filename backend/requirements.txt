@@ -12,6 +12,8 @@ phonenumbers==8.13.52
 pycountry==24.6.1
 # 予定の画面の日本の祝日（schedule-gcal-clone design §3.4 案 C）
 holidays==0.108
+# 予定の繰り返しの決まり（RRULE）を回に広げる（ADR-1075 便15A）。今も間接に入っている版を明示する
+python-dateutil==2.9.0.post0
 python-jose[cryptography]==3.5.0
 httpx==0.28.1
 redis[hiredis]>=5.0.0

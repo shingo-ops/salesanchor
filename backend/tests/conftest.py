@@ -320,6 +320,8 @@ async def test_engine():
             statement = statement.replace("public.permissions", "permissions")
         if "public.countries" in statement:
             statement = statement.replace("public.countries", "countries")
+        if "public.prefectures" in statement:
+            statement = statement.replace("public.prefectures", "prefectures")
         if "public.type_master" in statement:
             statement = statement.replace("public.type_master", "type_master")
         if "public.data_access_events" in statement:
@@ -870,6 +872,15 @@ async def setup_test_db(test_engine):
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
+        # ADR-1061 便2-2c2a: 都道府県の表（値は試験が正本の seed ファイルから入れる）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS prefectures (
+                code CHAR(2) PRIMARY KEY,
+                name_ja TEXT NOT NULL,
+                name_en TEXT NOT NULL,
+                sort_order INTEGER NOT NULL
+            )
+        """))
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS type_master (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1200,7 +1211,8 @@ async def setup_test_db(test_engine):
                 payment_fee NUMERIC(15, 2),
                 paypal_invoicer_view_url TEXT,
                 paypal_copy_pdf BLOB,
-                paypal_copy_pdf_at TIMESTAMP
+                paypal_copy_pdf_at TIMESTAMP,
+                issuer_region VARCHAR(20)
             )
         """))
         await conn.execute(text("""
@@ -1349,6 +1361,31 @@ async def setup_test_db(test_engine):
                 default_language CHAR(2) NOT NULL DEFAULT 'ja',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        # ADR-1061 便2-2c2a: 発行元の会社情報（本番は会社ごとのスキーマ。試験では CHECK・外部キーを省く）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS tenant_issuer_profiles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id INTEGER NOT NULL DEFAULT 999,
+                region VARCHAR(20) NOT NULL,
+                company_name VARCHAR(255) NOT NULL,
+                email VARCHAR(255),
+                website VARCHAR(255),
+                country_code CHAR(2) NOT NULL,
+                postal_code VARCHAR(10),
+                prefecture_code CHAR(2),
+                state_region VARCHAR(100),
+                city VARCHAR(100) NOT NULL,
+                address1 VARCHAR(255) NOT NULL,
+                address2 TEXT,
+                phone VARCHAR(16),
+                is_invoice_registered BOOLEAN NOT NULL DEFAULT 0,
+                registration_number VARCHAR(14),
+                updated_by_user_id INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (tenant_id, region)
             )
         """))
         # === Phase 4 テーブル ===
@@ -1855,6 +1892,8 @@ async def db_session(test_engine, setup_test_db):
         await conn.execute(text("DELETE FROM suppliers"))
         # Sprint 8: tenant_profile
         await conn.execute(text("DELETE FROM tenant_profile"))
+        # ADR-1061 便2-2c2a: 発行元の会社情報
+        await conn.execute(text("DELETE FROM tenant_issuer_profiles"))
         # Sprint D2: tenant_discord_config
         await conn.execute(text("DELETE FROM discord_server_apply_runs"))
         await conn.execute(text("DELETE FROM discord_server_snapshots"))

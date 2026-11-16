@@ -10,6 +10,8 @@ import { SelectControl } from "../../components/Select";
 import type { BasicFormState, Company } from "./company-detail.types";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
+import { useCustomerStatuses } from "../../hooks/useCustomerStatuses";
+import { CUSTOMER_STATUS_CODES } from "../../lib/customerStatuses";
 
 interface Props {
   basicForm: BasicFormState;
@@ -32,6 +34,7 @@ export function CompanyBasicTab({
   setDedupConfirmOpen, setMergeModalOpen,
 }: Props) {
   const { t } = useTranslation();
+  const customerStatuses = useCustomerStatuses();
 
   return (
     <form onSubmit={handleBasicSubmit} className="form-grid">
@@ -86,11 +89,11 @@ export function CompanyBasicTab({
       <div className="form-row"><label>{t("common.status")}</label>
         <SelectControl fullWidth disabled={!canEdit} value={basicForm.status}
           onChange={(e) => { setBasicForm({ ...basicForm, status: e.target.value }); setBasicDirty(true); }}>
-          <option value="active">{t("customers.status_active")}</option>
-          <option value="inactive">{t("customers.status_inactive")}</option>
-          <option value="archived">{t("customers.status_archived")}</option>
-          <option value="pending_dedup_review">{t("customers.status_pending_dedup")}</option>
+          {customerStatuses.options("edit", basicForm.status).map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
         </SelectControl>
+        {customerStatuses.isError && <div className="comp-field__hint comp-field__hint--error" role="alert">{t("common.fetchError")}</div>}
       </div>
       <div className="form-row"><label>{t("common.notes")}</label>
         <TextareaControl disabled={!canEdit} value={basicForm.notes}
@@ -122,7 +125,7 @@ export function CompanyBasicTab({
       </div>
 
       {/* PR #145 Q2: pending_dedup_review 解消セクション */}
-      {canEdit && company.status === "pending_dedup_review" && (
+      {canEdit && company.status === CUSTOMER_STATUS_CODES.pendingDedupReview && (
         <div className="dedup-resolve-section">
           <h3>{t("companies.dedupResolveTitle")}</h3>
           <p>{t("companies.dedupResolveDesc")}</p>
@@ -134,7 +137,7 @@ export function CompanyBasicTab({
               disabled={dedupSubmitting || basicDirty}
               title={basicDirty ? t("companies.dedupUnsavedHint") : ""}
             >
-              {t("companies.dedupConfirmAsDistinct")}
+              {t("companies.dedupConfirmAsDistinct", { active: customerStatuses.nameOf(CUSTOMER_STATUS_CODES.active) })}
             </Button>
             <Button variant="danger" size="md"
               type="button"

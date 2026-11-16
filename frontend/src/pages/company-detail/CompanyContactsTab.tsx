@@ -19,11 +19,14 @@ import { Select } from "../../components/Select";
 import ContactChannelForm, { type ContactChannelEntry } from "../../components/ContactChannelForm";
 import MergeContactModal from "../../components/MergeContactModal";
 import { Checkbox } from "../../components/Checkbox";
+import { useCustomerStatuses } from "../../hooks/useCustomerStatuses";
 
 interface Props {
   company: Company;
   contacts: Contact[];
   canEdit: boolean;
+  /** 担当者をまとめてよいか（customers.delete・サーバーの merge と同じ決まり） */
+  canMerge: boolean;
   contactModalOpen: boolean;
   contactForm: ContactFormState;
   setContactForm: (f: ContactFormState) => void;
@@ -38,7 +41,7 @@ interface Props {
 }
 
 export function CompanyContactsTab({
-  company, contacts, canEdit,
+  company, contacts, canEdit, canMerge,
   contactModalOpen, contactForm, setContactForm, contactSubmitting,
   setContactDeleteTarget,
   openContactNew, openContactEdit,
@@ -46,6 +49,7 @@ export function CompanyContactsTab({
   onContactsRefresh,
 }: Props) {
   const { t } = useTranslation();
+  const customerStatuses = useCustomerStatuses();
 
   // チャンネル追加フォームの状態
   const [channelFormOpen, setChannelFormOpen] = useState(false);
@@ -121,7 +125,7 @@ export function CompanyContactsTab({
                 <td>{c.is_primary_contact ? <STATUS_ICONS.check size={ICON.sm} aria-hidden="true" /> : ""}</td>
                 <td>{c.primary_email || "-"}</td>
                 <td>{c.primary_phone || "-"}</td>
-                <td><span className={`status-badge status-${c.status}`}>{t(getStatusPresentation("contact", c.status).labelKey ?? c.status)}</span></td>
+                <td><span className={`badge badge-${getStatusPresentation("contact", c.status).badgeVariant}`}>{customerStatuses.nameOf(c.status)}</span></td>
                 <td>
                   <Button size="sm" variant="secondary" onClick={() => openChannelForm(c)}>
                     {t("contactChannel.addTitle")}
@@ -131,10 +135,11 @@ export function CompanyContactsTab({
                       <Button size="sm" variant="secondary" onClick={() => openContactEdit(c)}>
                         {t("common.edit")}
                       </Button>
-                      <Button size="sm" variant="secondary" onClick={() => openMergeModal(c)}>
-                        {/* eslint-disable-next-line local/no-japanese-literal */}
-                        {t("contacts.mergeAsDuplicate").replace("（担当者単位は未実装）", "")}
-                      </Button>
+                      {canMerge && (
+                        <Button size="sm" variant="secondary" onClick={() => openMergeModal(c)}>
+                          {t("contacts.mergeAsDuplicate")}
+                        </Button>
+                      )}
                       <Button size="sm" variant="danger" onClick={() => setContactDeleteTarget(c)}>
                         {t("common.delete")}
                       </Button>
@@ -196,11 +201,8 @@ export function CompanyContactsTab({
               label={t("common.status")}
               value={contactForm.status}
               onChange={(e) => setContactForm({ ...contactForm, status: e.target.value })}
-              options={[
-                { value: "active", label: t("customers.status_active") },
-                { value: "inactive", label: t("customers.status_inactive") },
-                { value: "archived", label: t("customers.status_archived") },
-              ]}
+              options={customerStatuses.options(contactForm.id === null ? "create" : "edit", contactForm.status)}
+              error={customerStatuses.isError ? t("common.fetchError") : undefined}
             />
             <div className="form-row">
               <Checkbox
@@ -233,7 +235,7 @@ export function CompanyContactsTab({
             onContactsRefresh?.();
           }}
           onCancel={() => setChannelFormOpen(false)}
-          onRequestMerge={handleRequestMerge}
+          onRequestMerge={canMerge ? handleRequestMerge : undefined}
         />
       )}
 

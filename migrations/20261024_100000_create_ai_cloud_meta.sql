@@ -73,7 +73,7 @@ DECLARE
   vname text;
   prefix text;
   rows_json jsonb;
-  deny constant text := '^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential';
+  deny constant text := '^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential|account_number|^iban$';
 BEGIN
   TRUNCATE ai_cloud_meta.build_columns;
 

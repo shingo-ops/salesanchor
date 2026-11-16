@@ -162,17 +162,18 @@ export const STATUS_PRESENTATION_MAP: Record<StatusDomain, Record<string, Status
     running:   { bucket: "info",    badgeVariant: "negotiating", labelKey: "erp.jobStatus_running" },
     pending:   { bucket: "neutral", badgeVariant: "neutral",     labelKey: "erp.jobStatus_pending" },
   },
+  // contact・company は名前（labelKey）を持たない。名前は DB public.customer_statuses が正本（useCustomerStatuses().nameOf）。
   contact: {
-    active:               { bucket: "success", badgeVariant: "won",     labelKey: "contacts.statusCode.active" },
-    inactive:             { bucket: "neutral",  badgeVariant: "neutral", labelKey: "contacts.statusCode.inactive" },
-    archived:             { bucket: "neutral",  badgeVariant: "neutral", labelKey: "contacts.statusCode.archived" },
-    pending_dedup_review: { bucket: "warning",  badgeVariant: "pending", labelKey: "contacts.statusCode.pending_dedup_review" },
+    active:               { bucket: "success", badgeVariant: "won" },
+    inactive:             { bucket: "neutral",  badgeVariant: "neutral" },
+    archived:             { bucket: "neutral",  badgeVariant: "neutral" },
+    pending_dedup_review: { bucket: "warning",  badgeVariant: "pending" },
   },
   company: {
-    active:               { bucket: "success", badgeVariant: "won",     labelKey: "customers.status_active" },
-    inactive:             { bucket: "neutral",  badgeVariant: "neutral", labelKey: "customers.status_inactive" },
-    archived:             { bucket: "neutral",  badgeVariant: "neutral", labelKey: "customers.status_archived" },
-    pending_dedup_review: { bucket: "warning",  badgeVariant: "pending", labelKey: "customers.status_pending_dedup" },
+    active:               { bucket: "success", badgeVariant: "won" },
+    inactive:             { bucket: "neutral",  badgeVariant: "neutral" },
+    archived:             { bucket: "neutral",  badgeVariant: "neutral" },
+    pending_dedup_review: { bucket: "warning",  badgeVariant: "pending" },
   },
 };
 

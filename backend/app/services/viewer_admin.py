@@ -251,8 +251,8 @@ async def change_status(
         if last is None or last[0] is None:
             raise ViewerAdminError("conflict")
         to_status = last[0]
-    else:  # extend
-        if from_status != "trial":
+    else:  # extend（お試しと契約手続き中。ADR-1061 §3-3）
+        if from_status not in ("trial", "contracting"):
             raise ViewerAdminError("conflict")
         if until_expires is not None:
             to_expires = until_expires
@@ -378,7 +378,7 @@ async def reissue_signup_code(db: AsyncSession, viewer_id: int) -> tuple[str, da
     ).first()
     if row is None:
         raise ViewerAdminError("not_found")
-    if row[0] not in ("pending", "trial", "active"):
+    if row[0] not in ("pending", "trial", "contracting", "active"):
         raise ViewerAdminError("conflict")
     if row[1] is not None:
         raise ViewerAdminError("already_linked")

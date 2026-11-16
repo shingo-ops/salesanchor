@@ -11,7 +11,7 @@
 import { useState, FormEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { api } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import { useApiQuery } from "../../lib/query/apiQuery";
 import { PageLayout } from "../../components/PageLayout";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
@@ -94,6 +94,8 @@ export default function InvoiceCreatePage() {
   const quotesLoading = quotesQ.isPending;
 
   const [error, setError] = useState("");
+  // ADR-1061 便2-2c2a: 請求先の国が無くて作れなかったとき、取引先の画面へ移るボタンを出す会社の番号
+  const [billToCompanyId, setBillToCompanyId] = useState<number | null>(null);
   const shownError = error || (mode === "quote" && quotesQ.error ? (quotesQ.error instanceof Error ? quotesQ.error.message : t("common.fetchError")) : "");
   const [saving, setSaving] = useState(false);
 
@@ -133,6 +135,7 @@ export default function InvoiceCreatePage() {
   // #8: 承認済み見積を編集可能な明細としてフォームへ読み込む。
   const loadQuoteForEdit = async (quoteId: number) => {
     setError("");
+    setBillToCompanyId(null);
     setSaving(true);
     try {
       const q = await api.get<QuoteDetail>(`/quotes/${quoteId}`);
@@ -173,6 +176,7 @@ export default function InvoiceCreatePage() {
   const submitInvoice = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
+    setBillToCompanyId(null);
     setSelectorError("");
     if (contactId === null) {
       setSelectorError(t("companyContactSelector.contactRequired"));
@@ -205,6 +209,7 @@ export default function InvoiceCreatePage() {
       navigate(`/invoices/${inv.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.saveError"));
+      if (e instanceof ApiError && e.responseDetail === "bill_to_country") setBillToCompanyId(companyId);
     } finally {
       setSaving(false);
     }
@@ -224,6 +229,13 @@ export default function InvoiceCreatePage() {
     >
 
       {shownError && <div className="error-message">{shownError}</div>}
+      {billToCompanyId !== null && error !== "" && (
+        <div style={{ marginBottom: "var(--space-3)" }}>
+          <Button type="button" variant="secondary" size="sm" onClick={() => navigate(`/crm/companies/${billToCompanyId}`)}>
+            {t("invoices.openCompanyForBillTo")}
+          </Button>
+        </div>
+      )}
 
       <div style={{ display: "flex", gap: "var(--space-2)", margin: "var(--space-3) 0" }}>
         <Button variant={mode === "inventory" ? "primary" : "secondary"} size="md"

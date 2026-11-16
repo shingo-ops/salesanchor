@@ -47,6 +47,7 @@ from app.services import paypal_payments
 from app.services.audit import record_audit_log
 from app.services.fx_rate import get_fx_rate
 from app.services.invoice_renderer import render_invoice_pdf, render_quote_pdf
+from app.services.issuer import decide_issuer_region, get_issuer
 from app.services.payment_dates import PAID_AT_SQL, paid_at_from_date, paypal_paid_at
 
 router = APIRouter()
@@ -56,11 +57,6 @@ logger = logging.getLogger(__name__)
 class PayInvoiceRequest(BaseModel):
     """入金登録 POST ボディ（paid_date は省略可・日付のみ）。"""
     paid_date: date | None = None
-
-
-async def _get_tenant_schema(tenant_id: int) -> str:
-    """tenant_id からスキーマ名 (tenant_NNN) を生成する。"""
-    return f"tenant_{tenant_id:03d}"
 
 
 async def _fetch_address_snapshot(
@@ -106,27 +102,6 @@ async def _fetch_address_snapshot(
     }
 
 
-async def _fetch_tenant_profile(db: AsyncSession, tenant_schema: str) -> dict:
-    """tenant_profile からテナント情報を取得する。"""
-    result = await db.execute(
-        text(f"""
-            SELECT company_name, company_name_en, address, phone, email, website
-            FROM {tenant_schema}.tenant_profile
-            ORDER BY id LIMIT 1
-        """),
-    )
-    row = result.mappings().first()
-    if not row:
-        return {}
-    return {
-        "name": row["company_name"] or row["company_name_en"] or "",
-        "address": row["address"] or "",
-        "phone": row["phone"] or "",
-        "email": row["email"] or "",
-        "website": row["website"] or "",
-    }
-
-
 _INVOICE_COLUMNS = """
     id, invoice_number, quote_id, company_id, contact_id, currency,
     subtotal, shipping_fee, tax_amount, total_amount,
@@ -138,7 +113,8 @@ _INVOICE_COLUMNS = """
     ship_to_snapshot, bill_to_snapshot, issue_mode,
     duty_amount, duty_policy_snapshot, fx_rate_snapshot,
     paypal_order_id, paypal_approval_url, payment_fee,
-    paypal_invoicer_view_url, paypal_copy_pdf_at
+    paypal_invoicer_view_url, paypal_copy_pdf_at,
+    issuer_region
 """
 
 _UPDATABLE_COLUMNS = {"payment_method", "due_date", "exchange_rate_jpy", "exchange_rate_usd", "notes"}
@@ -267,6 +243,10 @@ async def create_invoice_from_quote(
     company_id = q.get("company_id")
     ship_to_snap = await _fetch_address_snapshot(db, company_id, "delivery")
     bill_to_snap = await _fetch_address_snapshot(db, company_id, "billing")
+    # ADR-1061 便2-2c2a: 発行元の地域は請求先の国で決めて保存する（国が無いと作らない）
+    issuer_region = decide_issuer_region(bill_to_snap)
+    if issuer_region is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="bill_to_country")
 
     # 為替レート取得（JPY 以外の場合）
     currency = q["currency"]
@@ -279,12 +259,12 @@ async def create_invoice_from_quote(
                 tenant_id, invoice_number, quote_id, company_id, contact_id, currency,
                 subtotal, shipping_fee, tax_amount, total_amount,
                 payment_method, status, branch_number, erp_key, notes, created_by,
-                ship_to_snapshot, bill_to_snapshot, fx_rate_snapshot
+                ship_to_snapshot, bill_to_snapshot, fx_rate_snapshot, issuer_region
             ) VALUES (
                 :tid, :inv_num, :qid, :company_id, :contact_id, :currency,
                 :subtotal, :shipping, :tax, :total,
                 NULL, 'draft', 1, :erp_key, :notes, :created_by,
-                :ship_to, :bill_to, :fx_rate
+                :ship_to, :bill_to, :fx_rate, :issuer_region
             ) RETURNING id
         """),
         {
@@ -297,6 +277,7 @@ async def create_invoice_from_quote(
             "ship_to": json.dumps(ship_to_snap) if ship_to_snap else None,
             "bill_to": json.dumps(bill_to_snap) if bill_to_snap else None,
             "fx_rate": json.dumps(fx_snap) if fx_snap else None,
+            "issuer_region": issuer_region,
         },
     )
     invoice_id = inv_result.scalar_one()
@@ -366,6 +347,10 @@ async def create_invoice(
     # スナップショット取得
     ship_to_snap = await _fetch_address_snapshot(db, data.company_id, "delivery")
     bill_to_snap = await _fetch_address_snapshot(db, data.company_id, "billing")
+    # ADR-1061 便2-2c2a: 発行元の地域は請求先の国で決めて保存する（国が無いと作らない）
+    issuer_region = decide_issuer_region(bill_to_snap)
+    if issuer_region is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="bill_to_country")
 
     # 為替レート取得（JPY 以外の場合）
     fx_snap = get_fx_rate(data.currency) if data.currency and data.currency.upper() != "JPY" else None
@@ -383,14 +368,14 @@ async def create_invoice(
                 exchange_rate_jpy, exchange_rate_usd, amount_jpy, amount_usd,
                 payment_method, status, branch_number, erp_key,
                 due_date, notes, created_by,
-                ship_to_snapshot, bill_to_snapshot, fx_rate_snapshot
+                ship_to_snapshot, bill_to_snapshot, fx_rate_snapshot, issuer_region
             ) VALUES (
                 :tid, :inv_num, :company_id, :contact_id, :currency,
                 :subtotal, :shipping, :tax, :total,
                 :rate_jpy, :rate_usd, :amt_jpy, :amt_usd,
                 :payment, 'draft', 1, :erp_key,
                 :due_date, :notes, :created_by,
-                :ship_to, :bill_to, :fx_rate
+                :ship_to, :bill_to, :fx_rate, :issuer_region
             ) RETURNING id
         """),
         {
@@ -404,6 +389,7 @@ async def create_invoice(
             "ship_to": json.dumps(ship_to_snap) if ship_to_snap else None,
             "bill_to": json.dumps(bill_to_snap) if bill_to_snap else None,
             "fx_rate": json.dumps(fx_snap) if fx_snap else None,
+            "issuer_region": issuer_region,
         },
     )
     invoice_id = inv_result.scalar_one()
@@ -825,8 +811,7 @@ async def download_invoice_pdf(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="請求書が見つかりません")
 
     items = await _get_invoice_items(db, invoice_id)
-    tenant_schema = await _get_tenant_schema(tenant_id)
-    tenant_profile = await _fetch_tenant_profile(db, tenant_schema)
+    tenant_profile = await get_issuer(db, tenant_id, row["issuer_region"] or "overseas")
 
     invoice_data = {
         "invoice_code": row["invoice_number"] or f"IN-{invoice_id:04d}-01",
@@ -871,8 +856,7 @@ async def _render_paypal_copy_pdf(db: AsyncSession, tenant_id: int, row, invoice
                                   pp_invoice_number: str, original_url: str | None) -> bytes:
     """請求書データ＋テナント情報から写しPDF（PayPal 請求書の写し注記＋原本リンク＋QR）を生成。"""
     items = await _get_invoice_items(db, invoice_id)
-    tenant_schema = await _get_tenant_schema(tenant_id)
-    tenant_profile = await _fetch_tenant_profile(db, tenant_schema)
+    tenant_profile = await get_issuer(db, tenant_id, row["issuer_region"] or "overseas")
     invoice_data = {
         "invoice_code": row["invoice_number"] or f"IN-{invoice_id:04d}-01",
         "issued_at": row["issued_at"].isoformat() if row["issued_at"] else None,
@@ -1003,8 +987,8 @@ async def download_quote_pdf(
     ship_to_snap = await _fetch_address_snapshot(db, company_id, "delivery")
     bill_to_snap = await _fetch_address_snapshot(db, company_id, "billing")
 
-    tenant_schema = await _get_tenant_schema(tenant_id)
-    tenant_profile = await _fetch_tenant_profile(db, tenant_schema)
+    # ADR-1061 便2-2c2a: 見積は地域を持たないので海外用の発行元を使う
+    tenant_profile = await get_issuer(db, tenant_id, "overseas")
 
     quote_data = {
         "quote_code": row["quote_code"] or f"QT-{quote_id:04d}",

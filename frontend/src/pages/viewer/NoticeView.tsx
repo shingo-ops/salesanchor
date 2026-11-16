@@ -18,6 +18,11 @@ function noticeText(t: TFunction, kind: ViewerNoticeKind): { title: string; desc
       return { title: t("viewer.notice.suspended.title"), description: t("viewer.notice.suspended.description") };
     case "expired":
       return { title: t("viewer.notice.expired.title"), description: t("viewer.notice.expired.description") };
+    case "contractExpired":
+      return {
+        title: t("viewer.notice.contractExpired.title"),
+        description: t("viewer.notice.contractExpired.description"),
+      };
     default:
       return { title: t("viewer.notice.error.title"), description: t("viewer.notice.error.description") };
   }

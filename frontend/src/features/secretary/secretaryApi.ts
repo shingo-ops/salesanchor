@@ -34,14 +34,52 @@ export interface InvoiceDraftData {
   currency: string;
 }
 
+/** ADR-1078: 予定のカルテで聞く欄（聞く順は backend が決める） */
+export type KarteAsk = "title" | "start" | "end" | "add_meet";
+
 export interface EventDraftData {
-  title: string;
-  start: string;
-  end: string;
+  title: string | null;
+  start: string | null;
+  end: string | null;
   is_all_day: boolean;
   location: string | null;
   description: string | null;
   calendar_type: "personal";
+  is_meeting: boolean;
+  add_meet: boolean | null;
+  meet_available: boolean;
+  ask: KarteAsk | null;
+  ask_count: number;
+}
+
+/** ADR-1078: 会話の間だけ持つ予定のカルテ（保存しない。閉じたら消す） */
+export interface EventKarte {
+  title: string | null;
+  start: string | null;
+  end: string | null;
+  is_all_day: boolean;
+  location: string | null;
+  description: string | null;
+  is_meeting: boolean;
+  add_meet: boolean | null;
+  asked: KarteAsk | null;
+  asked_count: number;
+}
+
+/** 返ってきた下書きから次のカルテを作る（同じ名前の欄・asked ← ask・asked_count ← ask_count） */
+export function karteFromDraft(draft: EventDraftData): EventKarte {
+  return {
+    title: draft.title,
+    start: draft.start,
+    end: draft.end,
+    is_all_day: draft.is_all_day,
+    location: draft.location,
+    description: draft.description,
+    is_meeting: draft.is_meeting,
+    add_meet: draft.add_meet,
+    asked: draft.ask,
+    asked_count: draft.ask_count,
+  };
 }
 
 export type AssistantReply =
@@ -49,11 +87,12 @@ export type AssistantReply =
   | { kind: "event"; draft: EventDraftData; candidates: Candidates }
   | { kind: "unknown"; draft: { reply: string }; candidates: Candidates };
 
-export function sendSecretaryMessage(text: string): Promise<AssistantReply> {
-  return api.postWithTimeout<AssistantReply>("/assistant/messages", { text }, SECRETARY_TIMEOUT_MS);
+/** 本文には karte の鍵を必ず載せる（カルテが無ければ null）。backend は鍵の有無で新しい画面か古い画面かを分ける */
+export function sendSecretaryMessage(text: string, karte: EventKarte | null = null): Promise<AssistantReply> {
+  return api.postWithTimeout<AssistantReply>("/assistant/messages", { text, karte }, SECRETARY_TIMEOUT_MS);
 }
 
-export type SecretaryErrorKind = "notReady" | "busy" | "timeout" | "unreadable" | "generic" | "forbidden" | "authFailed" | "agentFailed";
+export type SecretaryErrorKind = "notReady" | "busy" | "timeout" | "unreadable" | "generic" | "forbidden" | "authFailed" | "agentFailed" | "rulesTooLong";
 
 const KNOWN_CODES: Record<string, SecretaryErrorKind> = {
   not_ready: "notReady",
@@ -62,6 +101,7 @@ const KNOWN_CODES: Record<string, SecretaryErrorKind> = {
   unreadable: "unreadable",
   auth_failed: "authFailed",
   agent_failed: "agentFailed",
+  rules_too_long: "rulesTooLong",
 };
 
 /** 失敗を言葉の種類に分ける。403 は forbidden（呼ぶ側が印を消す） */

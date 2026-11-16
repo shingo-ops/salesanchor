@@ -201,7 +201,7 @@ def purge_auth_events():
 def purge_viewer_accounts():
     """閲覧専用アカウントの毎日の掃除（ADR-1019 Q7。期間は ADR-1061 で3年）。public の表なのでテナント文脈は使わない。
 
-    1. 見られる期限（trial_expires_at）から 3 年たった trial
+    1. 見られる期限（trial_expires_at）から 3 年たった trial と contracting（契約手続き中）
     2. 最後の停止記録と見られる期限の遅い方から 3 年たった suspended（停止記録の無い行は消さない）
     3. 7 日たった pending  4. 90 日より古いログイン記録
     本契約（active）は消さない。
@@ -214,7 +214,7 @@ def purge_viewer_accounts():
         trial_expired = session.execute(
             text(
                 "DELETE FROM public.viewer_accounts "
-                "WHERE status = 'trial' AND trial_expires_at < NOW() - make_interval(years => :y)"
+                "WHERE status IN ('trial', 'contracting') AND trial_expires_at < NOW() - make_interval(years => :y)"
             ),
             {"y": VIEWER_RETENTION_YEARS},
         ).rowcount

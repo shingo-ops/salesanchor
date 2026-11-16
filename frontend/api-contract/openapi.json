@@ -1404,6 +1404,16 @@
       },
       "AssistantMessageIn": {
         "properties": {
+          "karte": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KarteIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "text": {
             "maxLength": 1000,
             "minLength": 1,
@@ -8218,6 +8228,20 @@
             ],
             "title": "Location"
           },
+          "recurrence": {
+            "default": "none",
+            "enum": [
+              "none",
+              "daily",
+              "weekly",
+              "monthly_nth",
+              "monthly_last",
+              "yearly",
+              "weekdays"
+            ],
+            "title": "Recurrence",
+            "type": "string"
+          },
           "start_datetime": {
             "title": "Start Datetime",
             "type": "string"
@@ -10113,6 +10137,372 @@
         "title": "DuplicatesResponse",
         "type": "object"
       },
+      "DutyComponentIn": {
+        "additionalProperties": false,
+        "description": "関税の中身の1行（例: 関税・DDP 手数料・MPF）。",
+        "properties": {
+          "amount_currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Currency"
+          },
+          "base": {
+            "enum": [
+              "subtotal",
+              "subtotal_shipping",
+              "subtotal_shipping_prior"
+            ],
+            "title": "Base",
+            "type": "string"
+          },
+          "label": {
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "max_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Amount"
+          },
+          "min_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Amount"
+          },
+          "rate_pct": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Rate Pct"
+          }
+        },
+        "required": [
+          "label",
+          "base",
+          "rate_pct"
+        ],
+        "title": "DutyComponentIn",
+        "type": "object"
+      },
+      "DutyComponentRead": {
+        "properties": {
+          "amount_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Currency"
+          },
+          "base": {
+            "title": "Base",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "max_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Amount"
+          },
+          "min_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Amount"
+          },
+          "rate_pct": {
+            "title": "Rate Pct",
+            "type": "string"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "sort_order",
+          "label",
+          "base",
+          "rate_pct"
+        ],
+        "title": "DutyComponentRead",
+        "type": "object"
+      },
+      "DutyRuleIn": {
+        "additionalProperties": false,
+        "description": "関税の額の決まり1件（足す・直すで同じ形。中身の行は丸ごと置き換える）。",
+        "properties": {
+          "carrier": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carrier"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/DutyComponentIn"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Components",
+            "type": "array"
+          },
+          "destination_country_code": {
+            "pattern": "^[A-Z]{2}$",
+            "title": "Destination Country Code",
+            "type": "string"
+          },
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "is_active": {
+            "default": true,
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "label": {
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "source_url": {
+            "pattern": "^https?://\\S+$",
+            "title": "Source Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "destination_country_code",
+          "label",
+          "effective_from",
+          "source_url",
+          "components"
+        ],
+        "title": "DutyRuleIn",
+        "type": "object"
+      },
+      "DutyRuleOptions": {
+        "description": "画面の選択肢（正本はそれぞれ tenant_settings・為替の表・DutyBase）。",
+        "properties": {
+          "bases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Bases",
+            "type": "array"
+          },
+          "currencies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Currencies",
+            "type": "array"
+          },
+          "duty_incoterms": {
+            "title": "Duty Incoterms",
+            "type": "string"
+          }
+        },
+        "required": [
+          "duty_incoterms",
+          "currencies",
+          "bases"
+        ],
+        "title": "DutyRuleOptions",
+        "type": "object"
+      },
+      "DutyRuleRead": {
+        "properties": {
+          "carrier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Carrier"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/DutyComponentRead"
+            },
+            "title": "Components",
+            "type": "array"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "destination_country_code": {
+            "title": "Destination Country Code",
+            "type": "string"
+          },
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "id",
+          "destination_country_code",
+          "label",
+          "effective_from",
+          "source_url",
+          "is_active",
+          "components"
+        ],
+        "title": "DutyRuleRead",
+        "type": "object"
+      },
       "EngineInfo": {
         "properties": {
           "current_engine_version": {
@@ -10331,6 +10721,39 @@
       },
       "EventDraft": {
         "properties": {
+          "add_meet": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Add Meet"
+          },
+          "ask": {
+            "anyOf": [
+              {
+                "enum": [
+                  "title",
+                  "start",
+                  "end",
+                  "add_meet"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ask"
+          },
+          "ask_count": {
+            "default": 0,
+            "title": "Ask Count",
+            "type": "integer"
+          },
           "calendar_type": {
             "const": "personal",
             "default": "personal",
@@ -10349,12 +10772,24 @@
             "title": "Description"
           },
           "end": {
-            "title": "End",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
           },
           "is_all_day": {
             "default": false,
             "title": "Is All Day",
+            "type": "boolean"
+          },
+          "is_meeting": {
+            "default": false,
+            "title": "Is Meeting",
             "type": "boolean"
           },
           "location": {
@@ -10368,13 +10803,32 @@
             ],
             "title": "Location"
           },
+          "meet_available": {
+            "default": false,
+            "title": "Meet Available",
+            "type": "boolean"
+          },
           "start": {
-            "title": "Start",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
           },
           "title": {
-            "title": "Title",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           }
         },
         "required": [
@@ -14003,6 +14457,17 @@
             ],
             "title": "Issued At"
           },
+          "issuer_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer Region"
+          },
           "items": {
             "default": [],
             "items": {
@@ -14711,6 +15176,17 @@
             ],
             "title": "Issued At"
           },
+          "issuer_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer Region"
+          },
           "notes": {
             "anyOf": [
               {
@@ -15014,6 +15490,119 @@
           }
         },
         "title": "InvoiceUpdate",
+        "type": "object"
+      },
+      "KarteIn": {
+        "additionalProperties": false,
+        "description": "ADR-1078: 画面が会話の間だけ持つ予定のカルテ（保存しない）。字数・型・回数の上限をここで守る。",
+        "properties": {
+          "add_meet": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Add Meet"
+          },
+          "asked": {
+            "anyOf": [
+              {
+                "enum": [
+                  "title",
+                  "start",
+                  "end",
+                  "add_meet"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asked"
+          },
+          "asked_count": {
+            "default": 0,
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Asked Count",
+            "type": "integer"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "is_all_day": {
+            "default": false,
+            "title": "Is All Day",
+            "type": "boolean"
+          },
+          "is_meeting": {
+            "default": false,
+            "title": "Is Meeting",
+            "type": "boolean"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "KarteIn",
         "type": "object"
       },
       "KnowledgeRuleCreate": {
@@ -31485,6 +32074,167 @@
         "title": "RoleVisibilityPermission",
         "type": "object"
       },
+      "RuleFeedbackIn": {
+        "additionalProperties": false,
+        "description": "「違う」の 1 往復（POST /assistant/rules/feedback。候補として入る。rule_text は空でよい）。",
+        "properties": {
+          "rule_text": {
+            "default": "",
+            "title": "Rule Text",
+            "type": "string"
+          },
+          "source_kind": {
+            "enum": [
+              "invoice",
+              "event",
+              "unknown",
+              "rule_proposal",
+              "rule_list"
+            ],
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "source_reply": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Reply"
+          },
+          "source_text": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Source Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_text",
+          "source_kind"
+        ],
+        "title": "RuleFeedbackIn",
+        "type": "object"
+      },
+      "RuleListOut": {
+        "properties": {
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleOut"
+            },
+            "title": "Rules",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rules"
+        ],
+        "title": "RuleListOut",
+        "type": "object"
+      },
+      "RuleOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "rule_text": {
+            "title": "Rule Text",
+            "type": "string"
+          },
+          "source_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Kind"
+          },
+          "source_reply": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Reply"
+          },
+          "source_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Text"
+          },
+          "status": {
+            "enum": [
+              "candidate",
+              "approved",
+              "rejected",
+              "removed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "rule_text",
+          "source_text",
+          "source_kind",
+          "source_reply",
+          "created_at",
+          "decided_at"
+        ],
+        "title": "RuleOut",
+        "type": "object"
+      },
+      "RuleTextIn": {
+        "additionalProperties": false,
+        "description": "承認する決まりの文（POST /assistant/rules・POST /assistant/rules/{rule_id}/approve）。",
+        "properties": {
+          "rule_text": {
+            "title": "Rule Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule_text"
+        ],
+        "title": "RuleTextIn",
+        "type": "object"
+      },
       "SalesFormOptionResponse": {
         "description": "GET /leads/sales-form-options レスポンス用: テナント別選択肢マスタ",
         "properties": {
@@ -35760,6 +36510,90 @@
         "title": "SystemFields",
         "type": "object"
       },
+      "TaxRateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "rate_percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Rate Percent"
+          }
+        },
+        "required": [
+          "rate_percent",
+          "effective_from"
+        ],
+        "title": "TaxRateIn",
+        "type": "object"
+      },
+      "TaxRateListOut": {
+        "properties": {
+          "rates": {
+            "items": {
+              "$ref": "#/components/schemas/TaxRateOut"
+            },
+            "title": "Rates",
+            "type": "array"
+          },
+          "today": {
+            "description": "サーバーの今日（日本時間）。画面はこれより後の行だけに削除を出す",
+            "format": "date",
+            "title": "Today",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rates",
+          "today"
+        ],
+        "title": "TaxRateListOut",
+        "type": "object"
+      },
+      "TaxRateOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "effective_from": {
+            "description": "この日から使う（日本時間の日付）",
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "rate_percent": {
+            "description": "消費税率（%）。例 10.00",
+            "title": "Rate Percent",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "rate_percent",
+          "effective_from",
+          "created_at"
+        ],
+        "title": "TaxRateOut",
+        "type": "object"
+      },
       "TcgNoteMasterCreate": {
         "properties": {
           "category": {
@@ -38559,6 +39393,53 @@
             ],
             "title": "Location"
           },
+          "occurrence_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurrence Start"
+          },
+          "recurrence": {
+            "anyOf": [
+              {
+                "enum": [
+                  "none",
+                  "daily",
+                  "weekly",
+                  "monthly_nth",
+                  "monthly_last",
+                  "yearly",
+                  "weekdays"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recurrence"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "enum": [
+                  "this",
+                  "following",
+                  "all"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          },
           "start_datetime": {
             "anyOf": [
               {
@@ -38977,7 +39858,7 @@
             "type": "string"
           },
           "status": {
-            "description": "pending／verified／trial／active／suspended",
+            "description": "pending／verified／trial／contracting／active／suspended",
             "title": "Status",
             "type": "string"
           },
@@ -38991,7 +39872,7 @@
                 "type": "null"
               }
             ],
-            "description": "お試しの期限",
+            "description": "お試しと契約手続き中の、見られる期限",
             "title": "Trial Expires At"
           }
         },
@@ -39634,7 +40515,7 @@
             "title": "Room Notice Text"
           },
           "status": {
-            "description": "pending／verified／trial／active／suspended",
+            "description": "pending／verified／trial／contracting／active／suspended",
             "title": "Status",
             "type": "string"
           },
@@ -39648,7 +40529,7 @@
                 "type": "null"
               }
             ],
-            "description": "お試しの期限",
+            "description": "お試しと契約手続き中の、見られる期限",
             "title": "Trial Expires At"
           }
         },
@@ -40905,6 +41786,201 @@
         "summary": "Take Own Server Snapshot",
         "tags": [
           "discord"
+        ]
+      }
+    },
+    "/api/v1/admin/duty-rules": {
+      "get": {
+        "operationId": "list_rules_api_v1_admin_duty_rules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DutyRuleRead"
+                  },
+                  "title": "Response List Rules Api V1 Admin Duty Rules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "関税の額の決まりの一覧",
+        "tags": [
+          "duty-rules"
+        ]
+      },
+      "post": {
+        "operationId": "create_rule_api_v1_admin_duty_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DutyRuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DutyRuleRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "関税の額の決まりを足す",
+        "tags": [
+          "duty-rules"
+        ]
+      }
+    },
+    "/api/v1/admin/duty-rules/options": {
+      "get": {
+        "operationId": "get_options_api_v1_admin_duty_rules_options_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DutyRuleOptions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "関税の額の画面の選択肢（関税の条件・通貨・基準）",
+        "tags": [
+          "duty-rules"
+        ]
+      }
+    },
+    "/api/v1/admin/duty-rules/{rule_id}": {
+      "delete": {
+        "operationId": "delete_rule_api_v1_admin_duty_rules__rule_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "title": "Rule Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "関税の額の決まりを消す",
+        "tags": [
+          "duty-rules"
+        ]
+      },
+      "put": {
+        "operationId": "update_rule_api_v1_admin_duty_rules__rule_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "title": "Rule Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DutyRuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DutyRuleRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "関税の額の決まりを直す",
+        "tags": [
+          "duty-rules"
         ]
       }
     },
@@ -42237,6 +43313,298 @@
           }
         ],
         "summary": "Post Assistant Message",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/rules": {
+      "get": {
+        "operationId": "get_assistant_rules_api_v1_assistant_rules_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": true,
+            "schema": {
+              "enum": [
+                "candidate",
+                "approved"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Assistant Rules",
+        "tags": [
+          "assistant"
+        ]
+      },
+      "post": {
+        "operationId": "post_assistant_rule_api_v1_assistant_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleTextIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Assistant Rule",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/rules/feedback": {
+      "post": {
+        "operationId": "post_assistant_rule_feedback_api_v1_assistant_rules_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleFeedbackIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Assistant Rule Feedback",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/rules/{rule_id}/approve": {
+      "post": {
+        "operationId": "approve_assistant_rule_api_v1_assistant_rules__rule_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "title": "Rule Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleTextIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Approve Assistant Rule",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/rules/{rule_id}/reject": {
+      "post": {
+        "operationId": "reject_assistant_rule_api_v1_assistant_rules__rule_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "title": "Rule Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reject Assistant Rule",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/rules/{rule_id}/remove": {
+      "post": {
+        "operationId": "remove_assistant_rule_api_v1_assistant_rules__rule_id__remove_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rule_id",
+            "required": true,
+            "schema": {
+              "title": "Rule Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove Assistant Rule",
         "tags": [
           "assistant"
         ]
@@ -44563,6 +45931,43 @@
             "schema": {
               "title": "Event Id",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "this",
+                    "following",
+                    "all"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "occurrence_start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Occurrence Start"
             }
           }
         ],
@@ -46926,6 +48331,37 @@
         "summary": "国マスタ一覧",
         "tags": [
           "countries"
+        ]
+      }
+    },
+    "/api/v1/customer-statuses": {
+      "get": {
+        "operationId": "list_customer_statuses_api_v1_customer_statuses_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "object"
+                  },
+                  "title": "Response List Customer Statuses Api V1 Customer Statuses Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "会社・連絡先の状態の一覧（名前・並び・作るときに出すか）",
+        "tags": [
+          "customer-statuses",
+          "customer-statuses"
         ]
       }
     },
@@ -67538,6 +68974,119 @@
         ],
         "summary": "仕入元の原文メッセージ一覧取得",
         "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/tax-rates": {
+      "get": {
+        "operationId": "list_tax_rates_api_v1_super_admin_tax_rates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxRateListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Tax Rates",
+        "tags": [
+          "super-admin",
+          "super-admin"
+        ]
+      },
+      "post": {
+        "operationId": "create_tax_rate_api_v1_super_admin_tax_rates_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaxRateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxRateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Tax Rate",
+        "tags": [
+          "super-admin",
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/tax-rates/{rate_id}": {
+      "delete": {
+        "operationId": "delete_tax_rate_api_v1_super_admin_tax_rates__rate_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rate_id",
+            "required": true,
+            "schema": {
+              "title": "Rate Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Tax Rate",
+        "tags": [
+          "super-admin",
           "super-admin"
         ]
       }

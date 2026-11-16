@@ -49,7 +49,12 @@ function readBillingTokenFromHash(): string | null {
 }
 
 /** 読み直しで出たら、表を閉じて案内へ切り替える失敗（待っても直らないもの） */
-const STOP_DETAILS = new Set(["viewer_suspended", "viewer_trial_expired", "password_change_required"]);
+const STOP_DETAILS = new Set([
+  "viewer_suspended",
+  "viewer_trial_expired",
+  "viewer_contract_expired",
+  "password_change_required",
+]);
 
 /** 在庫取得の失敗 → 次の画面 */
 function screenForError(err: unknown): Screen {
@@ -58,6 +63,7 @@ function screenForError(err: unknown): Screen {
     if (err.status === 503 || err.detail === "pending") return { name: "notice", kind: "preparing" };
     if (err.detail === "viewer_suspended") return { name: "notice", kind: "suspended" };
     if (err.detail === "viewer_trial_expired") return { name: "notice", kind: "expired" };
+    if (err.detail === "viewer_contract_expired") return { name: "notice", kind: "contractExpired" };
     if (err.detail === "password_change_required") return { name: "passwordChange", forced: true };
   }
   return { name: "notice", kind: "error" };

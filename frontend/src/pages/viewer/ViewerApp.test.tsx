@@ -102,4 +102,12 @@ describe("ViewerApp auto refresh", () => {
     expect(screen.getByTestId("viewer-notice-suspended")).toBeTruthy();
     expect(clearToken).not.toHaveBeenCalled();
   });
+
+  it("T9b: a 403 viewer_contract_expired on refresh shows the contract expired notice without clearing the token", async () => {
+    await mountWithFirstData();
+    fetchMock.mockRejectedValueOnce(new ViewerApiError(403, "viewer_contract_expired"));
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(screen.getByTestId("viewer-notice-contractExpired")).toBeTruthy();
+    expect(clearToken).not.toHaveBeenCalled();
+  });
 });

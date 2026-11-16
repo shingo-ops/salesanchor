@@ -43,6 +43,7 @@ from app.routers import (
     conv_logs,  # 連絡手段の名簿 API
     countries,  # Foundation F1: 国台帳 (public.countries)
     customer_priority,  # ADR-107 (SA-14): 分析エージェント(A) 顧客優先度付け
+    customer_statuses,  # 会社・連絡先の状態の表 API
     dashboard,
     discord_announcement,  # ADR-091 KPI4: アナウンス投稿 API
     discord_auto_setup,  # ADR-091 拡張: Bot招待後サーバー初期構築ウィザード
@@ -55,6 +56,7 @@ from app.routers import (
     discord_role_resync,  # ADR-091 KPI7: ロール手動再同期 API
     discord_ticket_config,  # ADR-091 KPI3: チケット機能設定 admin API
     duplicates,
+    duty_rules,  # invoice-create-portfolio 便B: 関税の額の決まり
     erp,
     fx_rate_admin,  # 為替レート SSOT API (GET /fx-rates/{currency} / POST /super-admin/fx-rate/refresh)
     goals,  # ダッシュボード強化: 目標管理
@@ -123,6 +125,7 @@ from app.routers import (
     super_admin_quantity_units,  # 数量単位マスタ中央 admin
     super_admin_status_master,  # ステータスマスタ中央 admin
     super_admin_suppliers,
+    super_admin_tax_rates,  # ADR-1061 便2-2a: 消費税率
     super_admin_tcg,
     super_admin_tenants,
     super_admin_unit_ignore_phrases,  # 単位にしない言い回し中央 admin
@@ -363,6 +366,7 @@ app.include_router(
     countries.router, prefix="/api/v1", tags=["countries"],
     dependencies=[Depends(get_current_tenant)],
 )
+app.include_router(customer_statuses.router, prefix="/api/v1", tags=["customer-statuses"])
 # SA-05: 担当者チャンネルリンク生成 API（link_templates SSOT 経由）
 app.include_router(
     contact_channel_links.router, prefix="/api/v1", tags=["contacts"],
@@ -497,6 +501,10 @@ app.include_router(
     dependencies=[Depends(get_current_tenant)],
 )
 app.include_router(
+    duty_rules.router, prefix="/api/v1", tags=["duty-rules"],
+    dependencies=[Depends(get_current_tenant)],
+)
+app.include_router(
     analytics.router, prefix="/api/v1", tags=["analytics"],
     dependencies=[Depends(get_current_tenant)],
 )
@@ -579,6 +587,10 @@ app.include_router(
 )
 app.include_router(
     super_admin_tcg.router, prefix="/api/v1", tags=["super-admin"],
+)
+# ADR-1061 便2-2a: 消費税率（public.tax_rates）
+app.include_router(
+    super_admin_tax_rates.router, prefix="/api/v1", tags=["super-admin"],
 )
 # 各種マスタ (public.product_attribute_masters) 中央 admin
 app.include_router(

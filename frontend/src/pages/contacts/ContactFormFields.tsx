@@ -8,6 +8,7 @@
 import { useTranslation } from "react-i18next";
 import { Select } from "../../components/Select";
 import { TextFieldControl } from "../../components/TextField";
+import { useCustomerStatuses } from "../../hooks/useCustomerStatuses";
 
 export interface ContactFormState {
   company_id: string;
@@ -36,12 +37,8 @@ export function ContactFormFields({ form, onChange, companies }: Props) {
     value: String(c.id),
     label: `${c.name}（${c.company_code}）`,
   }));
-  const statusOptions = [
-    { value: "active", label: t("customers.status_active") },
-    { value: "inactive", label: t("customers.status_inactive") },
-    { value: "archived", label: t("customers.status_archived") },
-    { value: "pending_dedup_review", label: t("contacts.statusPendingDedupOption") },
-  ];
+  const customerStatuses = useCustomerStatuses();
+  const statusOptions = customerStatuses.options("edit", form.status);
   return (
     <>
       <Select
@@ -86,6 +83,7 @@ export function ContactFormFields({ form, onChange, companies }: Props) {
         value={form.status}
         onChange={(e) => onChange("status", e.target.value)}
         options={statusOptions}
+        error={customerStatuses.isError ? t("common.fetchError") : undefined}
       />
     </>
   );

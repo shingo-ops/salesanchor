@@ -11,7 +11,7 @@ mode: handoff
 - 現状の記録: [docs/handoff/viewer-contract-stage/recon.md](./recon.md)
 - 決めごとの控え: [decisions-draft.md](./decisions-draft.md)
 - 関係 ADR: [ADR-1061](../../adr/ADR-1061-viewer-contract-stage-and-invoicing.md)（草案）、閲覧者の名簿の90日の決まり（docs/handoff/gas-viewer-fresh-fast/review-fable.md:172 の Q7 に答えた docs/handoff/gas-viewer-fresh-fast/design.md:523〜:524。backend/app/tasks/maintenance.py:202 が参照）を改訂。ADR-1019 には Q7 も90日も無い（2026-11-06 grep で0件）、ADR-101（B2B 請求書。別の表にする）、ADR-144・ADR-067（金型とトークン）、ADR-027（i18n）、ADR-135・ADR-136（危険な変更の GO）
-- 状態: **設計案作成済み・PO の答え（ideal-state 41〜53）と商材とプランの画面（§3-4d）を反映。2026-11-11 に税率と商材とプランの画面の置き場を「全体設定」へ直した・この版の審査待ち（審査の記録は [review.md](./review.md)）・§7-2 の項目は全部 PO の答えで閉じた・PO の設計承認は未・実装未着手**
+- 状態: **設計案作成済み・PO の答え（ideal-state 41〜53）と商材とプランの画面（§3-4d）を反映・最新の版はマージ前の審査役 Opus が APPROVE（d683ac870 対象。低の指摘は cad8b72e0 で直した。審査の記録は [review.md](./review.md)）・§7-2 の項目は全部 PO の答えで閉じた・PO の設計承認済み（2026-11-12、ideal-state 54）・便1 は実装済み（PR #5250、2026-11-07 マージ、公開ポリシー v1.8 が本番の LP に出ている）・便2 以降は実装未着手**
 
 ## 1. 目的（PO の言葉から）
 
@@ -51,7 +51,7 @@ mode: handoff
 
 - 見られる期限は、今の trial_expires_at の1列を使う。別の列を作らない（1つの情報は1か所）。列の説明を「お試しと契約手続き中の、見られる期限」に直す。
 - 期限切れのログインは、新しい理由 viewer_contract_expired で止める。文言は「閲覧期限が過ぎています。担当者にご連絡ください。」（ja・en）。
-- 配信（backend/app/services/tcg_distribution_svc.py:725）は変えない。active 以外は not_contracted で配らない形（同 :725）なので、contracting は自動で配信なしになる（A34）。
+- 配信（backend/app/services/tcg_distribution_svc.py:737）は変えない。active 以外は not_contracted で配らない形（同 :737）なので、contracting は自動で配信なしになる（A34）。
 - 面談案内（viewer_interview_notice.py:57）は変えない。
 
 状態を読む次の場所へ contracting を足す。漏れると新しい状態の人が止まる。
@@ -265,6 +265,7 @@ mode: handoff
 - 一覧の行の種類は後から変えられない（変えると外部キーが切れて誤りになる）。種類を変えるときは消して作り直す。画面も同じ動きにする（種類を変えると、他の種類の入力値は保存しない）。API は PUT で今と違う method_type が来たら 422（payment_method.type_immutable）を返し、何も書かない。
 - 「一覧の行に詳細が必ずある」ことは、書く口を1つにして守る。足す・直すは1つの取引の中で一覧と詳細の両方を書き、どちらかが失敗したら全部戻す。読む口は一覧と詳細をつないで読み、詳細の無い一覧の行は選択肢に出さず、発行も止める（409 payment_method）。DB の遅らせる見張り（CONSTRAINT TRIGGER の DEFERRABLE）は使わない。理由: リポジトリの migrations と backend/app に先例が0件（2026-11-10 git grep）。
 - 消せる。一覧の行を消すと詳細も消える（CASCADE）。発行済みの請求書は写しを持つので変わらない。使わなくするだけなら is_active を false にする。
+  - （ADR-1079 で改める）消すと隠れるが行は残る（deleted_at を入れる）。直すと新しい版を足す。一覧と詳細の行は DB の見張りが消すことと中身を直すことを断る。種類や地域を変えるのは「消す＋足す」。見張りが断ったとき（P0001）は 500 にせず 409 か 422 の理由コードに置き換える。正: docs/handoff/invoice-create-portfolio/design.md §3-8
 - 請求書から振込先の行へ外部キーは張らない。理由: 請求書は public の1つの表で、振込先は会社ごとに別のスキーマの表にある。外部キーは参照先の表を1つに決める必要があり、会社の数だけある表を1本の外部キーで指せない。会社ごとの表から public を指す向きの外部キーは先例がある（tenant.py:518・:605）が、今回は逆向き。発行時の写し（issuer_snapshot）に振込先の全項目と行の id を残す。
 - 変更の履歴: 会社情報と振込先の3表（一覧・銀行・Wise）を足す・直す・消すたびに、会社ごとの audit_logs（tenant.py:484〜:494）へ record_audit_log（backend/app/services/audit.py:277）で1行残す。一覧と詳細は1つの記録にまとめる。old_data と new_data には全項目を入れ、bank_account_number と iban だけは下4桁にする（全桁を履歴に広げないため。表示の伏せ方は PCI DSS の「見せるのは下4桁まで」を手本にする。evidence-payment-methods.md）。画面に履歴の一覧は今回作らない。
 - 編集できる人: tenant.profile.edit を持つ人（会社情報と同じ）。オーナーだけに絞らない（PO 2026-11-10「1」。ideal-state 41）。
@@ -502,7 +503,7 @@ commit の後、裏で順に行う:
   - 請求書の記録は7年残すと書く。
   - :247 の Google の用途にドライブを足す。
   - 改訂の日付と履歴を足す。
-- 公開と効き始めの順番（PO 2026-11-07「2」）: ポリシーには「大事な変更は14日前までに知らせる」（lp/src/pages/privacy.astro §12.1）とある。LP は main へのマージで本番に出る（.github/workflows/deploy.yml の Build LP）。消す処理の変更も同じマージで本番に入るが、今の決まり（90日）で最初に消える日は 2026-12-19（recon §4 の本番件数。2026-11-07 の数え直しで停止の人は0件）。それより前は今の決まりでも消える行が無いので、新しい決まりが実際に違いを生むのは 2026-12-19 から。ポリシーの改訂日から 2026-12-19 までが14日以上あれば約束を守れる。改訂日はマージの日にする。ポリシーの文面そのものも §12.1 に合うよう、効力発生日は「改訂日から14日以上あと、かつ 2026-12-19 以前」にする（審査 2026-11-07 の指摘(1)で直した。前の版は効力発生日 12-01 とマージ期限 12-05 が食い違っていた）。便1 のカードは効力発生日 2026-12-01 で書き、2026-11-17 までにマージする。間に合わないときは、マージの前に効力発生日を「マージの日＋14日」に直す。それが 2026-12-19 より後になる（マージが 2026-12-05 より後になる）なら止めて PO に戻す。
+- 公開と効き始めの順番（PO 2026-11-07「2」）: ポリシーには「大事な変更は14日前までに知らせる」（lp/src/pages/privacy.astro §12.1）とある。LP は main へのマージで本番に出る（.github/workflows/deploy.yml の Build LP）。消す処理の変更も同じマージで本番に入るが、今の決まり（90日）で最初に消える日は 2026-12-19（recon §4 の本番件数。2026-11-07 の数え直しで停止の人は0件）。それより前は今の決まりでも消える行が無いので、新しい決まりが実際に違いを生むのは 2026-12-19 から。ポリシーの改訂日から 2026-12-19 までが14日以上あれば約束を守れる。改訂日はマージの日にする。ポリシーの文面そのものも §12.1 に合うよう、効力発生日は「改訂日から14日以上あと、かつ 2026-12-19 以前」にする（審査 2026-11-07 の指摘(1)で直した。前の版は効力発生日 12-01 とマージ期限 12-05 が食い違っていた）。便1 のカードは効力発生日 2026-12-01 で書き、2026-11-17 までにマージする。（済み：PR #5250、2026-11-07T16:13:29Z マージ）間に合わないときは、マージの前に効力発生日を「マージの日＋14日」に直す。それが 2026-12-19 より後になる（マージが 2026-12-05 より後になる）なら止めて PO に戻す。
 - 知らせ方（§12.1 の4つ: 画面の通知・登録アドレスへのメール・サイト掲載・14日の期間）: §12.1 の対象は "Users"（取引先会社の担当者）と "End Users" と定義されている（privacy.astro の冒頭）。閲覧者はどちらの定義にも書かれていない。閲覧者にはメールを送らず、サイトに載せるだけにする（PO 2026-11-07「2」）。
 - 停止の人で停止の記録が無い行は消さない（今と同じ）。
 - お試しから契約手続き中への状態（contracting）は便2で作る。便1の消す条件は trial と suspended だけを直し、contracting は便2の指示書で足す。
@@ -511,12 +512,13 @@ commit の後、裏で順に行う:
 
 | 便 | 中身 | 利用者に見える変化 | 期限 |
 |---|---|---|---|
-| 1 | 3年残す・公開ポリシー | ポリシーの文 | **2026-11-17 までにマージ（遅れたら効力発生日を直す。最終 2026-12-05）** |
+| 1 | 3年残す・公開ポリシー | ポリシーの文 | 済み（PR #5250、2026-11-07T16:13:29Z マージ。効力発生日 2026-12-01・改訂日 2026-11-08・v1.8） |
 | 2 | 状態・表・税率画面・会社情報のページの住所と登録と振込先・今の書類の読み先の切り替え・フォーム3日 | 会社情報のページと税率の画面 | |
 | 3 | 請求書（作成・PDF・メール・ドライブ・再発行・入金確認） | まだ押せない（手続き中の人がいない） | |
 | 4 | ボタンの切り替え・三点・直接移す道の削除 | 全部 | PO の入力とテストの後 |
 | 2b | 商材とプランの登録画面（§3-4d） | 最高管理者の「商材とプラン」の画面 | 便2 の後・便3 の前 |
 
+- 便2 は 2-1（契約手続き中の状態の土台：状態を足す移行・状態を読む全部の場所・フォーム3日と期限の自動延長・送った記録）と、2-2 以降（表・税率の画面・会社情報のページ）に分けて作る（1便1目的。移行を戻すときの範囲を小さくするため。指示書 card-2-1.md の D1）。
 - 便2 の移行は危険な変更に当たる。ADR-136 の手順で GO を記録する。
 - 便2 の本番反映の後、便3 の前に行うこと（ADR-1007 決定1 の道。移行では値を入れない）:
   （１）都道府県47行を「1回だけのデータの変更」で入れる（PO の合意 → DRY-RUN → COMMIT）。
@@ -641,9 +643,9 @@ commit の後、裏で順に行う:
 | A30 | 都道府県の選択肢が DB の47行から出て、画面のコードに都道府県名が無い | backend pytest（試験の seed で47行・API が47行を返す・frontend/src を読んで「北海道」が0件）。CI に専用の手順名は作らず、backend の試験の中で確かめる |
 | A31 | DB の動き: 運営の印なしで新しい public の9表へ書くと、INSERT は RLS の誤りで止まり、UPDATE と DELETE は0行になる。運営の印ありなら書ける。処理の動き: 行を直す処理（契約・請求書・税率の削除・採番）は、変えた行数が1でないと誤りで止まる | backend pytest（実 PostgreSQL・salesanchor_app。DB の動きは9表それぞれ。処理の動きは UPDATE・DELETE を持つ処理ごと。都道府県・明細・機能の表には UPDATE の処理が無いので処理の動きの対象外） |
 | A32 | 住所・登録・振込先を足す・直す・消すと audit_logs に1行ずつ残り、口座番号と IBAN は下4桁だけ | backend pytest |
-| A44 | 振込先の1対1: bank の一覧の行に Wise の詳細を付けると DB の誤りで止まる。1つの一覧の行に詳細を2行付けられない。一覧の種類を直すと誤りで止まる（API は 422 payment_method.type_immutable）。詳細の method_type か tenant_id を NULL にすると NOT NULL で止まる。詳細の tenant_id が一覧と違うと外部キーで止まる。一覧を消すと詳細も消える。詳細の書き込みが失敗すると一覧の行も残らない。詳細の無い一覧の行は選択肢に出ず、発行は 409 payment_method で止まる | backend pytest（実 PostgreSQL・salesanchor_app） |
+| A44 | 振込先の1対1: bank の一覧の行に Wise の詳細を付けると DB の誤りで止まる。1つの一覧の行に詳細を2行付けられない。一覧の種類を直すと誤りで止まる（API は 422 payment_method.type_immutable）。詳細の method_type か tenant_id を NULL にすると NOT NULL で止まる。詳細の tenant_id が一覧と違うと外部キーで止まる。一覧を消すと詳細も消える（ADR-1079 で「一覧も詳細も DB が消すことを断る」に改める。invoice-create-portfolio/design.md K25）。詳細の書き込みが失敗すると一覧の行も残らない。詳細の無い一覧の行は選択肢に出ず、発行は 409 payment_method で止まる | backend pytest（実 PostgreSQL・salesanchor_app） |
 | A33 | 番号の採番を同時に2つ走らせても番号が重ならない | backend pytest（実 PostgreSQL・2接続） |
-| A34 | 閲覧者に結び付いた配信先（viewer_account_id あり）で、契約手続き中（contracting）の閲覧者には配信されず、理由が not_contracted になる。入金確認で active になると配信される。配信の処理（tcg_distribution_svc.py:725 の `va.status <> 'active'`）は変えない | backend pytest（contracting の人の配信先の行の reason） |
+| A34 | 閲覧者に結び付いた配信先（viewer_account_id あり）で、契約手続き中（contracting）の閲覧者には配信されず、理由が not_contracted になる。入金確認で active になると配信される。配信の処理（tcg_distribution_svc.py:737 の `va.status <> 'active'`）は変えない | backend pytest（contracting の人の配信先の行の reason） |
 | A35 | 日本語のフォントが登録できないとき、発行が止まり請求書の行が作られない | backend pytest（フォントの読み込みを失敗させる） |
 | A36 | メールの送信に失敗したとき（SMTP 未設定を含む）、発行は成立し、行に「送信失敗」と「もう一度送る」が出る。再送の成功で mail_sent_at が入る | backend pytest＋ Evaluator |
 | A37 | 公開ポリシーの閲覧者の保存期間が3年、請求書の記録が7年、Google の用途にドライブ、利用目的に再登録の防止が載り、改訂日が入る | 本番の LP を PO が目視＋ lp のビルド |
@@ -677,7 +679,7 @@ commit の後、裏で順に行う:
 | ②エージェント | 実装役は design.md・カードを読む。.claude/agents・docs/ai-agents・AGENTS.md に viewer_accounts の語は0件 | 実装カードに §9 の全件 grep と止まる条件を書く。周知の追加は不要 |
 | ③機械 | 名簿の掃除 purge_viewer_accounts（backend/app/celery_app.py の定時登録、backend/tests/test_viewer_purge.py）。会社の表の作成 _TENANT_TABLES_SQL（backend/tests/test_rls_tenant_meta_config.py・test_roles_system_key_ddl.py）。移行の点検（.github/workflows/migration-guard.yml・migration-test.yml・schema-check.yml） | 掃除の試験を3年の条件に直す（A13）。会社の表の差の試験を足す（A22）。移行は migration-test で全会社へ流す |
 | ④データ | public に新しい9表。全会社のスキーマに4表と、invoices に issuer_region の1列（quotes には足さない）。tenant_profile の company_name・company_name_en・email・website・address・phone は書けなくなり読むだけ（差出人の読み出しのうち切り替えるのは invoices.py だけ。po_renderer.py・label_validation.py は今のまま古い列を読む。試験 backend/tests の7ファイル・51か所 grep 2026-11-06）。tenant_google_drive_config に1列（読む処理: integrations.py・google_drive_oauth.py・carrier_credentials.py。試験 test_google_config_rls.py） | 既存の列は変えない。invoices.issuer_region は NULL 可で、作り済みの請求書は空のまま（PDF では overseas として読む）。新しく作る請求書から値が入る。tenant_004 本番の行は増えるだけ |
-| ⑤本番 | 便1（掃除の条件）と便2（移行）は本番の DB を変える | 便1 は 2026-11-17 までにマージ（最終 2026-12-05）。便2 は ADR-136 の GO。直前のバックアップを確かめる |
+| ⑤本番 | 便1（掃除の条件）と便2（移行）は本番の DB を変える | 便1 は済み（PR #5250、2026-11-07T16:13:29Z マージ）。便2 は ADR-136 の GO。直前のバックアップを確かめる |
 | ⑥外部 | 閲覧者（メール・ログインの期限）、Google ドライブ、Wise、公開ポリシー（lp/src/pages/privacy.astro） | 実在のお客さんには送らない（§9）。ドライブは今あるフォルダへ保存する形に決まった（2026-11-06 PO のテスト保存。§3-8）。Wise は円の入金をテストの支払いで確かめる |
 
 ## 維持の仕組み

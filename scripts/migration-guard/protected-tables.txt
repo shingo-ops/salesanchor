@@ -9,6 +9,7 @@
 #       ADR-1007 決定1（全マスタ表が対象）に合わせ、product_lines / product_formats / product_kinds /
 #       supplier_aliases を足した（27 表）。
 #       ae81ba18a（2026-10-16、ADR-1020 便1）で product_blank_confirmations を足した（28 表）。
+#       ADR-1076 便3 で customer_statuses を足した（30 表）。
 products
 tcg_products
 product_search_keywords
@@ -38,3 +39,4 @@ product_kinds
 supplier_aliases
 product_blank_confirmations
 product_packagings
+customer_statuses

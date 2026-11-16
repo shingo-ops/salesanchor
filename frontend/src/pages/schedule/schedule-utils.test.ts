@@ -7,10 +7,16 @@ import {
   eventNumericId,
   fitCreatePopover,
   fitPopover,
+  fitRecurrenceToDate,
   formatDraftDateLine,
   formatSearchResultLine,
+  normalizeEvent,
   normalizeShift,
   rangeToDraftDates,
+  recurrenceChoicesFor,
+  recurrenceLabel,
+  recurrenceOptionsFor,
+  scopeChoices,
   shiftDraftStart,
   toCalendarEnd,
   toHolidayEvents,
@@ -378,5 +384,76 @@ describe("fitCreatePopover（便12）", () => {
 
   it("anchor なしは fitPopover(null) と同じ真ん中", () => {
     expect(fitCreatePopover(null, size, viewport, 16, 8)).toEqual(fitPopover(null, size, viewport, 16));
+  });
+});
+
+describe("recurrence（便15B）", () => {
+  const t = i18n.getFixedT("ja") as never;
+
+  it("recurrenceChoicesFor は開始日で第 N・最終を出し分ける（G70）", () => {
+    const nov12 = recurrenceChoicesFor(new Date(2026, 10, 12));
+    expect(nov12).toContain("monthly_nth");
+    expect(nov12).not.toContain("monthly_last");
+    const nov26 = recurrenceChoicesFor(new Date(2026, 10, 26));
+    expect(nov26).toContain("monthly_nth");
+    expect(nov26).toContain("monthly_last");
+    const nov30 = recurrenceChoicesFor(new Date(2026, 10, 30));
+    expect(nov30).not.toContain("monthly_nth");
+    expect(nov30).toContain("monthly_last");
+  });
+
+  it("recurrenceLabel は選び方の文字を作る（G72）", () => {
+    expect(recurrenceLabel("weekly", new Date(2026, 10, 12), t, "ja")).toBe("毎週 木曜日");
+    expect(recurrenceLabel("monthly_nth", new Date(2026, 10, 12), t, "ja")).toBe("毎月 第 2 木曜日");
+    expect(recurrenceLabel("monthly_last", new Date(2026, 10, 30), t, "ja")).toBe("毎月 最終月曜日");
+    expect(recurrenceLabel("yearly", new Date(2026, 10, 12), t, "ja")).toBe("毎年 11月12日");
+    expect(recurrenceLabel("weekly", new Date("x"), t, "ja")).toBe("");
+  });
+
+  it("recurrenceOptionsFor は今の値を残し custom を含まない", () => {
+    const nov30 = new Date(2026, 10, 30);
+    expect(recurrenceOptionsFor(nov30, "monthly_nth")).toContain("monthly_nth");
+    expect(recurrenceOptionsFor(nov30, null)).not.toContain("monthly_nth");
+    expect(recurrenceOptionsFor(nov30, "monthly_nth")).not.toContain("custom");
+    expect(recurrenceOptionsFor(nov30, null)).not.toContain("custom");
+  });
+
+  it("fitRecurrenceToDate は使えなくなった値をもう一方へ入れ替える", () => {
+    expect(fitRecurrenceToDate("monthly_nth", new Date(2026, 10, 30))).toBe("monthly_last");
+    expect(fitRecurrenceToDate("monthly_last", new Date(2026, 10, 12))).toBe("monthly_nth");
+    expect(fitRecurrenceToDate("weekly", new Date(2026, 10, 12))).toBe("weekly");
+  });
+
+  it("scopeChoices は種類・1 回目か・選び方を変えたかで並びを決める", () => {
+    expect(scopeChoices("save", true, false)).toEqual(["this", "all"]);
+    expect(scopeChoices("save", false, false)).toEqual(["this", "following", "all"]);
+    expect(scopeChoices("save", false, true)).toEqual(["following", "all"]);
+    expect(scopeChoices("save", true, true)).toEqual(["all"]);
+    expect(scopeChoices("delete", false, false)).toEqual(["this", "following", "all"]);
+    expect(scopeChoices("move", true, false)).toEqual(["this", "all"]);
+    expect(scopeChoices("move", false, false)).toEqual(["this", "following"]);
+  });
+
+  it("normalizeEvent は回ごとに違う id を作り、eventNumericId は元の行の数を返す", () => {
+    const base = {
+      id: 1, user_id: 1, calendar_type: "shared", title: "定例", description: null, location: null,
+      start_datetime: "2026-11-12T10:00:00+09:00", end_datetime: "2026-11-12T11:00:00+09:00",
+      is_all_day: false, google_event_id: null, source: "app", sync_status: null,
+      created_by_user_id: 1, created_at: null, updated_at: null, created_by_name: null,
+    };
+    const occ = normalizeEvent({
+      ...base,
+      recurrence: "weekly",
+      recurring_event_id: 1,
+      occurrence_start: "2026-11-12T10:00:00+09:00",
+      is_first_occurrence: true,
+    });
+    expect(occ.id).toBe(`event-1-${new Date("2026-11-12T10:00:00+09:00").getTime()}`);
+    expect(eventNumericId(occ.id)).toBe(1);
+    expect(eventNumericId("event-1")).toBe(1);
+    expect(occ.occurrenceStart?.getTime()).toBe(new Date("2026-11-12T10:00:00+09:00").getTime());
+    expect(occ.isFirstOccurrence).toBe(true);
+    expect(occ.recurrence).toBe("weekly");
+    expect(normalizeEvent(base).id).toBe("event-1");
   });
 });

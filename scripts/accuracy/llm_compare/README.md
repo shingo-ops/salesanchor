@@ -18,7 +18,7 @@
 | test_llm_compare.py | 単体試験 | 手元 |
 
 ## 写しの記録
-- fhd_snapshot.py: 元 ~/CC報告ファイル-keep/accuracy-gold-20261020/box-error189/T5T6/heading-fix/test/validate/fhd_snapshot.py をそのまま複製。sha256 = `cd63545e1f5fa8a23420385d57285a60805dfa80fe01e11cef0f5916bfbe6987`
+- fhd_snapshot.py: 元 ~/CC報告ファイル-keep/accuracy-gold-20261020/box-error189/T5T6/heading-fix/test/validate/fhd_snapshot.py を複製し、2026-11-12 にシングルセット系をまとめ売りの読み取りから外した（ADR-1027 追記。87-89 行。便1 の本番反映の後に使う）。sha256 = `5e962bb1afce347ae860f10c1d7f1a7a541de42dca28911a57c9ab3fc1bfdedd`
 - v102_response_schema.json: `python3 -B scripts/accuracy/llm_compare/export_schema.py` で backend/app/services/gemini_raw_copy_v101.py の V102_RESPONSE_SCHEMA から書き出し。sha256 = `8b89e31ed71860de5878223550d6c4648dd273815441db64333c5daeb3ca9c46`
   - 型の表記の変換: なし。定義が最初から JSON Schema の小文字表記（"type": "object" など）で、そのまま書き出した。`--check` で定義との一致を確かめられる。
 

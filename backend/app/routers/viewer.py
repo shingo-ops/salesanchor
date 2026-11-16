@@ -62,7 +62,7 @@ INVALID_CREDENTIALS = "viewer_invalid_credentials"
 INVALID_CURRENT_PASSWORD = "viewer_invalid_current_password"
 RESET_INVALID_OR_EXPIRED = "viewer_reset_invalid_or_expired"
 # 再発行メールを送ってよい状態（pending・verified・suspended には送らない）
-_RESET_MAIL_STATUSES = ("trial", "active")
+_RESET_MAIL_STATUSES = ("trial", "contracting", "active")
 
 
 class ViewerLoginRequest(BaseModel):
@@ -187,19 +187,20 @@ async def viewer_login(
     else:
         password_ok = await asyncio.to_thread(verify_password, row.password_argon2_hash, data.password)
 
-    if row is not None and password_ok and row.status in ("suspended", "trial", "active"):
+    if row is not None and password_ok and row.status in ("suspended", "trial", "contracting", "active"):
         if row.status == "suspended":
             await _record_event(db, row.id, "login_failed", ip, user_agent)
             await db.commit()
             raise HTTPException(status_code=403, detail="viewer_suspended")
-        if row.status == "trial":
+        if row.status in ("trial", "contracting"):
             expires = row.trial_expires_at
             if expires is not None and expires.tzinfo is None:
                 expires = expires.replace(tzinfo=timezone.utc)
             if expires is None or expires <= datetime.now(timezone.utc):
                 await _record_event(db, row.id, "login_failed", ip, user_agent)
                 await db.commit()
-                raise HTTPException(status_code=403, detail="viewer_trial_expired")
+                detail = "viewer_trial_expired" if row.status == "trial" else "viewer_contract_expired"
+                raise HTTPException(status_code=403, detail=detail)
         token, exp = create_viewer_access_token(row.id)
         await _record_event(db, row.id, "login_succeeded", ip, user_agent)
         await db.commit()

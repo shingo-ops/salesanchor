@@ -221,8 +221,8 @@ CREATE TABLE IF NOT EXISTS {schema}.companies (
     fedex_account VARCHAR(100),
     shipping_note TEXT,
     status VARCHAR(20) NOT NULL DEFAULT 'active'
-        CHECK (status IN ('active','inactive','archived','pending_dedup_review')),
-    sales_rep_id INTEGER,                              -- FK は public.users(id) へ付与（ADR-1008）
+        REFERENCES public.customer_statuses(code),
+    sales_rep_id INTEGER,                             -- FK は public.users(id) へ付与（ADR-1008）
     notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -248,11 +248,10 @@ CREATE TABLE IF NOT EXISTS {schema}.contacts (
     is_primary_contact BOOLEAN NOT NULL DEFAULT FALSE,
     primary_email VARCHAR(255),
     primary_phone VARCHAR(50),
-    -- PR #163 (PR #145 残課題 Q2): pending_dedup_review 解消フローのため
-    -- companies.status と CHECK 制約を揃える（migration 037 で既存テナントには
-    -- backport 済）。新テナント作成時は最初からこの 4 値を許容する。
+    -- 状態の記号は public.customer_statuses の4行が正本（ADR-1076・便2）。
+    -- companies.status と同じく外部キーで結ぶ（値の一覧をここに書かない）。
     status VARCHAR(20) NOT NULL DEFAULT 'active'
-        CHECK (status IN ('active','inactive','archived','pending_dedup_review')),
+        REFERENCES public.customer_statuses(code),
     notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -855,6 +854,7 @@ CREATE TABLE IF NOT EXISTS {schema}.quote_items (
     unit_price NUMERIC(15, 2) NOT NULL,
     weight NUMERIC(10, 3),
     subtotal NUMERIC(15, 2) NOT NULL,
+    hs_code VARCHAR(20),
     sort_order INTEGER DEFAULT 0
 );
 
@@ -886,6 +886,26 @@ CREATE TABLE IF NOT EXISTS {schema}.invoices (
     paid_at TIMESTAMPTZ,
     voided_at TIMESTAMPTZ,
     void_reason VARCHAR(500),
+    issuer_region VARCHAR(20) CONSTRAINT chk_invoices_issuer_region CHECK (issuer_region IN ('domestic', 'overseas')),
+    -- 移行で全テナントに入っている列（20260604_160000・20260611_020000・20260612_131520）を新しいテナントにも作る
+    ship_to_snapshot JSONB,
+    bill_to_snapshot JSONB,
+    issue_mode VARCHAR(20),
+    duty_amount NUMERIC(15, 2),
+    duty_policy_snapshot JSONB,
+    fx_rate_snapshot JSONB,
+    paypal_order_id TEXT,
+    paypal_approval_url TEXT,
+    payment_fee NUMERIC(15, 2),
+    paypal_invoicer_view_url TEXT,
+    paypal_copy_pdf BYTEA,
+    paypal_copy_pdf_at TIMESTAMPTZ,
+    -- invoice-create-portfolio 便A: 案内した支払い先・使った税率・選んだ送料（移行 20261113_120000 と同じ形）
+    payment_method_id INTEGER,
+    tax_rate_percent NUMERIC(5, 2),
+    shipping_carrier VARCHAR(50),
+    shipping_service VARCHAR(100),
+    shipping_snapshot JSONB,
     notes TEXT,
     created_by INTEGER,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -908,6 +928,7 @@ CREATE TABLE IF NOT EXISTS {schema}.invoice_items (
     unit_price NUMERIC(15, 2) NOT NULL,
     weight NUMERIC(10, 3),
     subtotal NUMERIC(15, 2) NOT NULL,
+    hs_code VARCHAR(20),
     sort_order INTEGER DEFAULT 0
 );
 
@@ -1209,6 +1230,256 @@ CREATE TABLE IF NOT EXISTS {schema}.own_inventory (
     updated_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_reserved_le_physical CHECK (reserved_qty <= physical_qty)
 );
+
+-- ADR-1061 2-2c1: 発行元の会社情報（国内用・海外用の 2 行まで）
+CREATE TABLE IF NOT EXISTS {schema}.tenant_issuer_profiles (
+    id SERIAL PRIMARY KEY,
+    tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
+    region VARCHAR(20) NOT NULL,
+    company_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    website VARCHAR(255),
+    country_code CHAR(2) NOT NULL REFERENCES public.countries(code),
+    postal_code VARCHAR(10),
+    prefecture_code CHAR(2) REFERENCES public.prefectures(code),
+    state_region TEXT,
+    city TEXT NOT NULL,
+    address1 TEXT NOT NULL,
+    address2 TEXT,
+    phone VARCHAR(16),
+    is_invoice_registered BOOLEAN NOT NULL DEFAULT FALSE,
+    registration_number VARCHAR(14),
+    updated_by_user_id INTEGER,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_tenant_issuer_profiles_tenant_region UNIQUE (tenant_id, region),
+    CONSTRAINT chk_tenant_issuer_profiles_region CHECK (region IN ('domestic', 'overseas')),
+    CONSTRAINT chk_tenant_issuer_profiles_company_name CHECK (btrim(company_name) <> ''),
+    CONSTRAINT chk_tenant_issuer_profiles_city CHECK (btrim(city) <> ''),
+    CONSTRAINT chk_tenant_issuer_profiles_address1 CHECK (btrim(address1) <> ''),
+    CONSTRAINT chk_tenant_issuer_profiles_jp_address CHECK (country_code <> 'JP' OR (postal_code IS NOT NULL AND postal_code ~ '^[0-9]{{7}}$' AND prefecture_code IS NOT NULL AND state_region IS NULL)),
+    CONSTRAINT chk_tenant_issuer_profiles_foreign_address CHECK (country_code = 'JP' OR (prefecture_code IS NULL AND (postal_code IS NULL OR postal_code ~ '^[0-9A-Za-z -]{{1,10}}$'))),
+    CONSTRAINT chk_tenant_issuer_profiles_phone CHECK (phone IS NULL OR (country_code = 'JP' AND phone ~ '^[0-9]{{10,11}}$') OR (country_code <> 'JP' AND phone ~ '^\\+[0-9]{{6,15}}$')),
+    CONSTRAINT chk_tenant_issuer_profiles_registration CHECK ((is_invoice_registered AND registration_number IS NOT NULL AND registration_number ~ '^T[0-9]{{13}}$') OR (NOT is_invoice_registered AND registration_number IS NULL))
+);
+
+-- ADR-1061 2-2c1: 請求書に載せる振込先の一覧（銀行・Wise）
+CREATE TABLE IF NOT EXISTS {schema}.tenant_invoice_payment_methods (
+    id SERIAL PRIMARY KEY,
+    tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
+    region VARCHAR(20) NOT NULL,
+    method_type VARCHAR(10) NOT NULL,
+    display_name TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    updated_by_user_id INTEGER,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    superseded_by_id INTEGER,
+    deleted_at TIMESTAMPTZ,
+    CONSTRAINT uq_tenant_invoice_payment_methods_id_type UNIQUE (id, tenant_id, method_type),
+    CONSTRAINT chk_tenant_invoice_payment_methods_region CHECK (region IN ('domestic', 'overseas')),
+    CONSTRAINT chk_tenant_invoice_payment_methods_method_type CHECK (method_type IN ('bank', 'wise')),
+    CONSTRAINT chk_tenant_invoice_payment_methods_display_name CHECK (btrim(display_name) <> ''),
+    CONSTRAINT chk_tenant_invoice_payment_methods_superseded_not_self CHECK (superseded_by_id <> id),
+    CONSTRAINT fk_tenant_invoice_payment_methods_superseded_by FOREIGN KEY (superseded_by_id) REFERENCES {schema}.tenant_invoice_payment_methods (id)
+);
+
+-- invoice-create-portfolio 便V: 次の版を指せるのは前の版1つだけ（ADR-1079）
+CREATE UNIQUE INDEX IF NOT EXISTS uq_tenant_invoice_payment_methods_superseded_by ON {schema}.tenant_invoice_payment_methods (superseded_by_id) WHERE superseded_by_id IS NOT NULL;
+
+-- ADR-1061 2-2c1: 銀行振込先の詳細（振込先の一覧 1 行に 1 行）
+CREATE TABLE IF NOT EXISTS {schema}.tenant_invoice_payment_bank (
+    payment_method_id INTEGER PRIMARY KEY,
+    method_type VARCHAR(10) NOT NULL DEFAULT 'bank',
+    tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
+    account_holder TEXT NOT NULL,
+    bank_name TEXT NOT NULL,
+    bank_branch TEXT NOT NULL,
+    bank_account_type TEXT NOT NULL,
+    bank_account_number TEXT NOT NULL,
+    swift_code TEXT,
+    bank_address TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_tenant_invoice_payment_bank_method_type CHECK (method_type = 'bank'),
+    CONSTRAINT chk_tenant_invoice_payment_bank_required CHECK (btrim(account_holder) <> '' AND btrim(bank_name) <> '' AND btrim(bank_branch) <> '' AND btrim(bank_account_type) <> '' AND btrim(bank_account_number) <> ''),
+    CONSTRAINT fk_tenant_invoice_payment_bank_method FOREIGN KEY (payment_method_id, tenant_id, method_type) REFERENCES {schema}.tenant_invoice_payment_methods (id, tenant_id, method_type) ON DELETE CASCADE
+);
+
+-- ADR-1061 2-2c1: Wise 振込先の詳細（振込先の一覧 1 行に 1 行）
+CREATE TABLE IF NOT EXISTS {schema}.tenant_invoice_payment_wise (
+    payment_method_id INTEGER PRIMARY KEY,
+    method_type VARCHAR(10) NOT NULL DEFAULT 'wise',
+    tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
+    account_holder TEXT NOT NULL,
+    wise_currency CHAR(3) NOT NULL,
+    wise_email VARCHAR(255) NOT NULL,
+    iban TEXT,
+    swift_bic TEXT,
+    bank_name TEXT,
+    bank_address TEXT,
+    note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_tenant_invoice_payment_wise_method_type CHECK (method_type = 'wise'),
+    CONSTRAINT chk_tenant_invoice_payment_wise_currency CHECK (wise_currency ~ '^[A-Z]{{3}}$'),
+    CONSTRAINT chk_tenant_invoice_payment_wise_required CHECK (btrim(account_holder) <> '' AND btrim(wise_email) <> ''),
+    CONSTRAINT fk_tenant_invoice_payment_wise_method FOREIGN KEY (payment_method_id, tenant_id, method_type) REFERENCES {schema}.tenant_invoice_payment_methods (id, tenant_id, method_type) ON DELETE CASCADE
+);
+
+-- invoice-create-portfolio 便V: 振込先は版で持つ。詳細は書き足すだけ・振込先の行は消さない・表を空にしない（ADR-1079）
+CREATE OR REPLACE FUNCTION {schema}.trg_payment_detail_immutable()
+RETURNS TRIGGER AS $pv_detail$
+DECLARE
+    v_id INTEGER;
+    v_superseded INTEGER;
+    v_deleted TIMESTAMPTZ;
+BEGIN
+    IF TG_OP <> 'INSERT' THEN
+        RAISE EXCEPTION 'payment detail rows are immutable (versioned). Add a new version instead.';
+    END IF;
+    IF NEW.payment_method_id IS NOT NULL THEN
+        EXECUTE 'SELECT id, superseded_by_id, deleted_at FROM ' || quote_ident(TG_TABLE_SCHEMA)
+            || '.tenant_invoice_payment_methods WHERE id = ' || NEW.payment_method_id || ' FOR SHARE'
+            INTO v_id, v_superseded, v_deleted;
+        IF v_id IS NULL OR v_superseded IS NOT NULL OR v_deleted IS NOT NULL THEN
+            RAISE EXCEPTION 'payment detail can be added only to the current version of a payment method';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$pv_detail$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION {schema}.trg_payment_method_version_guard()
+RETURNS TRIGGER AS $pv_method$
+DECLARE
+    v_id INTEGER;
+    v_region VARCHAR(20);
+    v_type VARCHAR(10);
+    v_superseded INTEGER;
+    v_deleted TIMESTAMPTZ;
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'payment methods cannot be deleted. Set deleted_at instead.';
+    END IF;
+    IF TG_OP = 'INSERT' THEN
+        IF NEW.superseded_by_id IS NOT NULL OR NEW.deleted_at IS NOT NULL THEN
+            RAISE EXCEPTION 'a new payment method must start as the current version';
+        END IF;
+        RETURN NEW;
+    END IF;
+    IF NEW.id IS DISTINCT FROM OLD.id
+        OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+        OR NEW.region IS DISTINCT FROM OLD.region
+        OR NEW.method_type IS DISTINCT FROM OLD.method_type
+        OR NEW.display_name IS DISTINCT FROM OLD.display_name
+        OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+        RAISE EXCEPTION 'payment method versions are immutable. Add a new version instead.';
+    END IF;
+    IF OLD.superseded_by_id IS NOT NULL AND NEW.superseded_by_id IS DISTINCT FROM OLD.superseded_by_id THEN
+        RAISE EXCEPTION 'superseded_by_id can be set only once';
+    END IF;
+    IF OLD.deleted_at IS NOT NULL AND NEW.deleted_at IS DISTINCT FROM OLD.deleted_at THEN
+        RAISE EXCEPTION 'deleted_at can be set only once';
+    END IF;
+    IF OLD.deleted_at IS NULL AND NEW.deleted_at IS NOT NULL
+        AND (OLD.superseded_by_id IS NOT NULL OR NEW.superseded_by_id IS NOT NULL) THEN
+        RAISE EXCEPTION 'only the current version can be deleted';
+    END IF;
+    IF OLD.superseded_by_id IS NULL AND NEW.superseded_by_id IS NOT NULL THEN
+        IF OLD.deleted_at IS NOT NULL OR NEW.deleted_at IS NOT NULL THEN
+            RAISE EXCEPTION 'a deleted payment method cannot be superseded';
+        END IF;
+        IF NEW.superseded_by_id <= OLD.id THEN
+            RAISE EXCEPTION 'the next version must be newer than the current version';
+        END IF;
+        EXECUTE 'SELECT id, region, method_type, superseded_by_id, deleted_at FROM ' || quote_ident(TG_TABLE_SCHEMA)
+            || '.tenant_invoice_payment_methods WHERE id = ' || NEW.superseded_by_id || ' FOR SHARE'
+            INTO v_id, v_region, v_type, v_superseded, v_deleted;
+        IF v_id IS NULL OR v_region IS DISTINCT FROM OLD.region OR v_type IS DISTINCT FROM OLD.method_type
+            OR v_superseded IS NOT NULL OR v_deleted IS NOT NULL THEN
+            RAISE EXCEPTION 'the next version must be a current version of the same region and type';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$pv_method$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION {schema}.trg_payment_version_no_wipe()
+RETURNS TRIGGER AS $pv_wipe$
+BEGIN
+    RAISE EXCEPTION 'payment version tables cannot be truncated';
+    RETURN NULL;
+END;
+$pv_wipe$ LANGUAGE plpgsql;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_tenant_invoice_payment_methods_version_guard' AND tgrelid = '{schema}.tenant_invoice_payment_methods'::regclass) THEN
+        CREATE TRIGGER trg_tenant_invoice_payment_methods_version_guard BEFORE INSERT OR UPDATE OR DELETE ON {schema}.tenant_invoice_payment_methods FOR EACH ROW EXECUTE FUNCTION {schema}.trg_payment_method_version_guard();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_tenant_invoice_payment_bank_immutable' AND tgrelid = '{schema}.tenant_invoice_payment_bank'::regclass) THEN
+        CREATE TRIGGER trg_tenant_invoice_payment_bank_immutable BEFORE INSERT OR UPDATE OR DELETE ON {schema}.tenant_invoice_payment_bank FOR EACH ROW EXECUTE FUNCTION {schema}.trg_payment_detail_immutable();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_tenant_invoice_payment_wise_immutable' AND tgrelid = '{schema}.tenant_invoice_payment_wise'::regclass) THEN
+        CREATE TRIGGER trg_tenant_invoice_payment_wise_immutable BEFORE INSERT OR UPDATE OR DELETE ON {schema}.tenant_invoice_payment_wise FOR EACH ROW EXECUTE FUNCTION {schema}.trg_payment_detail_immutable();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_tenant_invoice_payment_methods_no_wipe' AND tgrelid = '{schema}.tenant_invoice_payment_methods'::regclass) THEN
+        CREATE TRIGGER trg_tenant_invoice_payment_methods_no_wipe BEFORE TRUNCATE ON {schema}.tenant_invoice_payment_methods FOR EACH STATEMENT EXECUTE FUNCTION {schema}.trg_payment_version_no_wipe();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_tenant_invoice_payment_bank_no_wipe' AND tgrelid = '{schema}.tenant_invoice_payment_bank'::regclass) THEN
+        CREATE TRIGGER trg_tenant_invoice_payment_bank_no_wipe BEFORE TRUNCATE ON {schema}.tenant_invoice_payment_bank FOR EACH STATEMENT EXECUTE FUNCTION {schema}.trg_payment_version_no_wipe();
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_tenant_invoice_payment_wise_no_wipe' AND tgrelid = '{schema}.tenant_invoice_payment_wise'::regclass) THEN
+        CREATE TRIGGER trg_tenant_invoice_payment_wise_no_wipe BEFORE TRUNCATE ON {schema}.tenant_invoice_payment_wise FOR EACH STATEMENT EXECUTE FUNCTION {schema}.trg_payment_version_no_wipe();
+    END IF;
+END $$;
+
+-- invoice-create-portfolio 便A: 関税の決まり（行き先の国・送料の会社ごと。DDP のときに使う）
+CREATE TABLE IF NOT EXISTS {schema}.tenant_duty_rules (
+    id SERIAL PRIMARY KEY,
+    tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
+    destination_country_code CHAR(2) NOT NULL,
+    carrier VARCHAR(50),
+    label TEXT NOT NULL,
+    effective_from DATE NOT NULL,
+    effective_to DATE,
+    source_url TEXT NOT NULL,
+    note TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_tenant_duty_rules_country CHECK (destination_country_code ~ '^[A-Z]{{2}}$'),
+    CONSTRAINT chk_tenant_duty_rules_carrier CHECK (carrier IS NULL OR (carrier = lower(btrim(carrier)) AND carrier <> '')),
+    CONSTRAINT chk_tenant_duty_rules_label CHECK (btrim(label) <> ''),
+    CONSTRAINT chk_tenant_duty_rules_source_url CHECK (btrim(source_url) <> ''),
+    CONSTRAINT chk_tenant_duty_rules_period CHECK (effective_to IS NULL OR effective_to >= effective_from)
+);
+CREATE INDEX IF NOT EXISTS idx_tenant_duty_rules_country_carrier ON {schema}.tenant_duty_rules (destination_country_code, carrier);
+
+-- invoice-create-portfolio 便A: 関税の決まりの中身（関税・消費税・手数料など。率と下限・上限）
+CREATE TABLE IF NOT EXISTS {schema}.tenant_duty_rule_components (
+    id SERIAL PRIMARY KEY,
+    rule_id INTEGER NOT NULL REFERENCES {schema}.tenant_duty_rules(id) ON DELETE CASCADE,
+    tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    label TEXT NOT NULL,
+    base VARCHAR(30) NOT NULL,
+    rate_pct NUMERIC(8, 4) NOT NULL,
+    min_amount NUMERIC(14, 2),
+    max_amount NUMERIC(14, 2),
+    amount_currency CHAR(3),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_tenant_duty_rule_components_label CHECK (btrim(label) <> ''),
+    CONSTRAINT chk_tenant_duty_rule_components_base CHECK (base IN ('subtotal', 'subtotal_shipping', 'subtotal_shipping_prior')),
+    CONSTRAINT chk_tenant_duty_rule_components_rate CHECK (rate_pct >= 0),
+    CONSTRAINT chk_tenant_duty_rule_components_amounts CHECK ((min_amount IS NULL OR min_amount >= 0) AND (max_amount IS NULL OR max_amount >= 0) AND (min_amount IS NULL OR max_amount IS NULL OR min_amount <= max_amount)),
+    CONSTRAINT chk_tenant_duty_rule_components_currency CHECK (amount_currency IS NULL OR amount_currency ~ '^[A-Z]{{3}}$'),
+    CONSTRAINT chk_tenant_duty_rule_components_currency_required CHECK ((min_amount IS NULL AND max_amount IS NULL) OR amount_currency IS NOT NULL)
+);
+CREATE INDEX IF NOT EXISTS idx_tenant_duty_rule_components_rule_id ON {schema}.tenant_duty_rule_components (rule_id);
 """
 
 # RLS有効化のALTER TABLE群（;で安全に分割可能）
@@ -1262,6 +1533,14 @@ ALTER TABLE {schema}.own_inventory ENABLE ROW LEVEL SECURITY;
 -- Phase 1-B-2 Step 5d / PR γ: _customer_migration_map は migration 036 で DROP 済。
 -- D-2: A在庫（ADR SA-04/05）
 ALTER TABLE {schema}.own_inventory ENABLE ROW LEVEL SECURITY;
+-- ADR-1061 2-2c1: 発行元の会社情報と振込先
+ALTER TABLE {schema}.tenant_issuer_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.tenant_invoice_payment_methods ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.tenant_invoice_payment_bank ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.tenant_invoice_payment_wise ENABLE ROW LEVEL SECURITY;
+-- invoice-create-portfolio 便A: 関税の決まりの表2つ
+ALTER TABLE {schema}.tenant_duty_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE {schema}.tenant_duty_rule_components ENABLE ROW LEVEL SECURITY;
 """
 
 # テナント分離ポリシー（DO $$ ... END $$ ブロックは1ステートメントとして実行する。
@@ -1486,6 +1765,32 @@ BEGIN
     -- D-2: A在庫（ADR SA-04/05）— ポリシー名は既存テナント（migration 20260604_140000）と統一
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'own_inventory_tenant_isolation' AND schemaname = '{schema_raw}') THEN
         CREATE POLICY own_inventory_tenant_isolation ON {schema}.own_inventory
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    -- ADR-1061 2-2c1: 発行元の会社情報と振込先 — ポリシー名は migration 20261112_160000 と同じ
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_issuer_profiles_tenant_isolation' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_issuer_profiles_tenant_isolation ON {schema}.tenant_issuer_profiles
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_invoice_payment_methods_tenant_isolation' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_invoice_payment_methods_tenant_isolation ON {schema}.tenant_invoice_payment_methods
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_invoice_payment_bank_tenant_isolation' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_invoice_payment_bank_tenant_isolation ON {schema}.tenant_invoice_payment_bank
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_invoice_payment_wise_tenant_isolation' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_invoice_payment_wise_tenant_isolation ON {schema}.tenant_invoice_payment_wise
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    -- invoice-create-portfolio 便A: 関税の決まりの表2つ — ポリシー名は migration 20261113_120000 と同じ
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_duty_rules_tenant_isolation' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_duty_rules_tenant_isolation ON {schema}.tenant_duty_rules
+            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_duty_rule_components_tenant_isolation' AND schemaname = '{schema_raw}') THEN
+        CREATE POLICY tenant_duty_rule_components_tenant_isolation ON {schema}.tenant_duty_rule_components
             USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
     END IF;
 END $$

@@ -45,6 +45,11 @@ from app.services.audit import (
     snapshot_subtable_rows,
     snapshot_subtable_scalars,
 )
+from app.services.customer_statuses import (
+    STATUS_ACTIVE,
+    STATUS_ARCHIVED,
+    STATUS_PENDING_DEDUP_REVIEW,
+)
 
 # 副テーブル diff のスナップショット対象列。id / *_at は audit.diff_rows 内で除外される
 # が、明示的に欲しい列だけ取得することでログサイズを抑制し、新列追加時の意図しない
@@ -762,10 +767,10 @@ async def merge_companies(
         )
 
     # 2) safety: master が archived ならマージ不可
-    if master_row["status"] == "archived":
+    if master_row["status"] == STATUS_ARCHIVED:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="master 会社が archived 状態のため、マージ先として使用できません。先に master を active に戻してください。",
+            detail="merge_target_archived",
         )
 
     # 3) 副テーブルのスナップショット（master の old / merge の最終状態の両方）。
@@ -977,10 +982,10 @@ async def merge_companies(
 
     # 10) master の status が pending_dedup_review なら active に昇格
     promoted = False
-    if master_row["status"] == "pending_dedup_review":
+    if master_row["status"] == STATUS_PENDING_DEDUP_REVIEW:
         await db.execute(
-            text("UPDATE companies SET status = 'active', updated_at = NOW() WHERE id = :id"),
-            {"id": master_id},
+            text("UPDATE companies SET status = :active, updated_at = NOW() WHERE id = :id"),
+            {"id": master_id, "active": STATUS_ACTIVE},
         )
         promoted = True
 
@@ -1016,7 +1021,7 @@ async def merge_companies(
         },
     }
     if promoted:
-        master_audit_payload["status"] = "active"
+        master_audit_payload["status"] = STATUS_ACTIVE
     # PR #164 round1 Minor 4: branch_name 切り詰めが発生したら _merge に痕跡を残す。
     if branch_name_truncations:
         master_audit_payload["_merge"]["branch_name_truncations"] = branch_name_truncations

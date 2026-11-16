@@ -85,6 +85,7 @@ def convert_job(response_text, v102_items, raw_text, masters, unit_ids):
     blocks = [S._source_block(raw_text, r) for _i, r in pairs]
     bulk = S.PRODUCT_KUBUN_BULK
     vals = [S._apply_bundle(v, b, unit_words, set_words, unit_ids, bulk_shapes=it.get("product_category") == bulk)
+            if S._reads_bundle(it) else v
             for v, (it, _r), b in zip(vals, pairs, blocks)]
     vals = [S._apply_bulk_price(v, it, b if it.get("product_category") == bulk else "", unit_ids)
             for v, (it, _r), b in zip(vals, pairs, blocks)]

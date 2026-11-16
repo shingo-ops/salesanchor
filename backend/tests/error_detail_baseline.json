@@ -12,7 +12,7 @@
   "app/routers/buyback_prices.py": 2,
   "app/routers/calendar.py": 13,
   "app/routers/close_reasons.py": 1,
-  "app/routers/companies.py": 8,
+  "app/routers/companies.py": 7,
   "app/routers/conditions.py": 2,
   "app/routers/contacts.py": 5,
   "app/routers/conv_logs.py": 4,

@@ -8,6 +8,7 @@ import ProfileSection from '../pages/account-settings/ProfileSection';
 import CompanyDetailPage from '../pages/company-detail/CompanyDetailPage';
 import en from '../locales/en.json';
 import { queryClient } from '../lib/query/apiQuery';
+import { CUSTOMER_STATUS_TEST_ROWS } from '../test-utils/customerStatusRows.test.fixture';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), patch: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() }));
 const authState = vi.hoisted(() => ({ user: { uid: 'u1' }, loading: false }));
@@ -20,7 +21,7 @@ const company = { id: 41, tenant_id: 1, company_code: 'CO-41', lead_id: 2, sales
 function deferred() { let resolve!: (v: unknown) => void; let reject!: (e: Error) => void; const promise = new Promise((r, j) => { resolve = r; reject = j; }); return { promise, resolve, reject }; }
 function provider(node: React.ReactNode) { return <I18nextProvider i18n={instance}>{node}</I18nextProvider>; }
 function renderCompany(permissions = ['customers.view', 'customers.update']) {
-  mock.get.mockImplementation(async (url: string) => { if (url === '/me/permissions') return { permissions }; if (url === '/companies/41') return company; if (url === '/companies/41/contacts') return []; throw new Error(`Unexpected GET ${url}`); });
+  mock.get.mockImplementation(async (url: string) => { if (url === '/me/permissions') return { permissions }; if (url === '/companies/41') return company; if (url === '/companies/41/contacts') return []; if (url === '/customer-statuses') return CUSTOMER_STATUS_TEST_ROWS; throw new Error(`Unexpected GET ${url}`); });
   render(provider(<MemoryRouter initialEntries={['/companies/41']}><Routes><Route path="/companies/:id" element={<CompanyDetailPage />} /></Routes></MemoryRouter>));
 }
 

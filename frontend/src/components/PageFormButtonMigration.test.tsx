@@ -6,6 +6,7 @@ import CompaniesPage from '../pages/companies/CompaniesPage';
 import ContactsPage from '../pages/contacts/ContactsPage';
 import SuppliersPage from '../pages/suppliers/SuppliersPage';
 import { queryClient } from '../lib/query/apiQuery';
+import { CUSTOMER_STATUS_TEST_ROWS } from '../test-utils/customerStatusRows.test.fixture';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() }));
 vi.mock('../lib/api', () => ({ api: mock }));
@@ -85,6 +86,7 @@ beforeEach(() => {
     if (url === '/companies?per_page=100') return [company];
     if (url === '/contacts?per_page=100') return [contact];
     if (url === '/suppliers?page=1&per_page=100') return [supplier];
+    if (url === '/customer-statuses') return CUSTOMER_STATUS_TEST_ROWS;
     throw new Error('Unexpected GET ' + url);
   });
   mock.post.mockImplementation(() => { throw new Error('Unexpected POST'); });

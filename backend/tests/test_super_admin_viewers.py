@@ -186,6 +186,8 @@ def _prepare(conn, async_url, *, seed_templates=True, skip_templates=()):
     cur.execute((MIGRATIONS / "20261016_150000_add_viewer_accounts.sql").read_text())
     cur.execute((MIGRATIONS / "20261017_100000_add_viewer_discord_config.sql").read_text())
     cur.execute((MIGRATIONS / "20261020_120000_create_viewer_message_templates.sql").read_text())
+    # ADR-1061 便2-1: 状態 contracting と履歴の操作4つ
+    cur.execute((MIGRATIONS / "20261112_130000_add_viewer_contracting_status.sql").read_text())
     if seed_templates:  # 送る側は DB の本文を読む。既定で 9件入れておく（行なしの試験は seed_templates=False か DELETE）
         for key, body in DEFAULT_BODIES.items():
             if key in skip_templates:
@@ -352,6 +354,21 @@ def test_conflicts_are_409(pg):  # noqa: F811
     assert resp.status_code == 409
     for vid in by_status.values():
         assert _changes(cur, vid) == []
+
+
+@needs_ci_pg
+def test_extend_is_allowed_for_contracting(pg):  # noqa: F811
+    conn, _, async_url = pg
+    cur = _prepare(conn, async_url)
+    vid = _account(cur, "contracting-extend@x.com", "contracting", expires_in_days=2)
+    # 本契約にする（activate）は、手続き中からはまだできない（D6）
+    assert _error_code(async_url, vid, "activate") == "conflict"
+    _change(async_url, vid, "extend", days=7)
+    assert _state(cur, vid)[0] == "contracting"
+    rows = _changes(cur, vid)
+    assert [(r[0], r[1], r[2], r[5], r[6], r[7]) for r in rows] == [
+        ("extend", "contracting", "contracting", 7, "po", ACTOR_ID)
+    ]
 
 
 @needs_ci_pg

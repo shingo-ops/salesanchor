@@ -1338,3 +1338,201 @@ describe("SchedulePage time lines (G34-G35)", () => {
     expect(text).not.toMatch(/\d{2}:\d{2} - \d{2}:\d{2}/);
   });
 });
+
+describe("SchedulePage recurring events (G69-G79)", () => {
+  const occurrence = (over: Record<string, unknown> = {}) =>
+    apiEvent({
+      recurrence_rule: "FREQ=WEEKLY;BYDAY=TH",
+      recurrence: "weekly",
+      recurring_event_id: 1,
+      occurrence_start: todayAt(10),
+      is_first_occurrence: false,
+      ...over,
+    });
+  const scopeDialog = (kind: "editTitle" | "deleteTitle" = "editTitle") =>
+    screen.findByRole("dialog", { name: i18n.t(`schedule.recurrence.${kind}`) });
+  const openEditor = async () => {
+    fireEvent.click(await screen.findByText("Own Event"));
+    fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
+    return editorDialog();
+  };
+  const clickSave = (dialog: HTMLElement) =>
+    fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
+  const repeatSelect = (dialog: HTMLElement) =>
+    within(dialog).getByRole("combobox", { name: i18n.t("schedule.recurrence.label") }) as HTMLSelectElement;
+  const radioNames = (dialog: HTMLElement) => within(dialog).getAllByRole("radio").map((r) => r.closest("label")?.textContent);
+
+  it("shows the repeat line under the time in the detail popover", async () => {
+    answers.events = [occurrence()];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    const weekday = new Intl.DateTimeFormat("ja", { weekday: "long" }).format(new Date(todayAt(10)));
+    expect(await screen.findByText(i18n.t("schedule.recurrence.weekly", { weekday }))).toBeTruthy();
+  });
+
+  it("asks this/following/all on save and sends nothing on cancel", async () => {
+    answers.events = [occurrence()];
+    view();
+    clickSave(await openEditor());
+    const scope = await scopeDialog();
+    expect(within(scope).getAllByRole("radio")).toHaveLength(3);
+    expect((within(scope).getByRole("radio", { name: i18n.t("schedule.recurrence.scopeThis") }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(within(scope).getByRole("button", { name: i18n.t("common.cancel") }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: i18n.t("schedule.recurrence.editTitle") })).toBeNull());
+    expect(api.patch).not.toHaveBeenCalled();
+  });
+
+  it("sends scope this with the occurrence start on OK", async () => {
+    answers.events = [occurrence()];
+    view();
+    clickSave(await openEditor());
+    const scope = await scopeDialog();
+    fireEvent.click(within(scope).getByRole("button", { name: i18n.t("common.ok") }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+    const [path, body] = vi.mocked(api.patch).mock.calls[0] as [string, Record<string, unknown>];
+    expect(path).toBe("/calendar/events/1");
+    expect(body.scope).toBe("this");
+    expect(body.occurrence_start).toBe(new Date(todayAt(10)).toISOString());
+    expect("recurrence" in body).toBe(false);
+  });
+
+  it("hides following on the first occurrence", async () => {
+    answers.events = [occurrence({ is_first_occurrence: true })];
+    view();
+    clickSave(await openEditor());
+    const scope = await scopeDialog();
+    expect(radioNames(scope)).toEqual([i18n.t("schedule.recurrence.scopeThis"), i18n.t("schedule.recurrence.scopeAll")]);
+  });
+
+  it("drops this when the repeat changes and skips the dialog on the first occurrence", async () => {
+    answers.events = [occurrence()];
+    view();
+    let dialog = await openEditor();
+    fireEvent.change(repeatSelect(dialog), { target: { value: "daily" } });
+    clickSave(dialog);
+    const scope = await scopeDialog();
+    expect(radioNames(scope)).toEqual([
+      i18n.t("schedule.recurrence.scopeFollowing"),
+      i18n.t("schedule.recurrence.scopeAll"),
+    ]);
+    expect(api.patch).not.toHaveBeenCalled();
+
+    cleanup();
+    vi.clearAllMocks();
+    queryClient.clear();
+    answers.events = [occurrence({ is_first_occurrence: true })];
+    view();
+    dialog = await openEditor();
+    fireEvent.change(repeatSelect(dialog), { target: { value: "daily" } });
+    clickSave(dialog);
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("dialog", { name: i18n.t("schedule.recurrence.editTitle") })).toBeNull();
+    const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
+    expect(body.scope).toBe("all");
+    expect(body.recurrence).toBe("daily");
+  });
+
+  it("deletes with scope and occurrence start in the query", async () => {
+    answers.events = [occurrence()];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.deleteEvent") }))[0]);
+    const scope = await scopeDialog("deleteTitle");
+    fireEvent.click(within(scope).getByRole("button", { name: i18n.t("common.ok") }));
+    await waitFor(() => expect(api.delete).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(api.delete).mock.calls[0][0]).toBe(
+      `/calendar/events/1?${new URLSearchParams({ scope: "this", occurrence_start: new Date(todayAt(10)).toISOString() })}`,
+    );
+  });
+
+  it("asks two choices on move and reverts on cancel", async () => {
+    answers.events = [occurrence()];
+    view();
+    await screen.findByText("Own Event");
+    await waitFor(() => expect(calendarProps.current).not.toBeNull());
+    const revert = vi.fn();
+    const start = new Date(2026, 10, 12, 14, 0);
+    const end = new Date(2026, 10, 12, 15, 0);
+    await act(async () => {
+      await calendarProps.current?.onEventMove(`event-1-${new Date(todayAt(10)).getTime()}`, start, end, false, revert);
+    });
+    const scope = await scopeDialog();
+    expect(radioNames(scope)).toEqual([
+      i18n.t("schedule.recurrence.scopeThis"),
+      i18n.t("schedule.recurrence.scopeFollowing"),
+    ]);
+    fireEvent.click(within(scope).getByRole("button", { name: i18n.t("common.cancel") }));
+    expect(revert).toHaveBeenCalledTimes(1);
+    expect(api.patch).not.toHaveBeenCalled();
+  });
+
+  it("closes only the scope dialog on Escape", async () => {
+    answers.events = [occurrence()];
+    view();
+    clickSave(await openEditor());
+    await scopeDialog();
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: i18n.t("schedule.recurrence.editTitle") })).toBeNull());
+    expect(await editorDialog()).toBeTruthy();
+  });
+
+  it("has no repeat select for a Google event or a Meet event", async () => {
+    answers.events = [apiEvent({ source: "google", google_event_id: "g1" })];
+    view();
+    let dialog = await openEditor();
+    await within(dialog).findByLabelText(i18n.t("schedule.eventTitle"));
+    expect(within(dialog).queryByRole("combobox", { name: i18n.t("schedule.recurrence.label") })).toBeNull();
+
+    cleanup();
+    vi.clearAllMocks();
+    queryClient.clear();
+    answers.events = [apiEvent({ meet_url: "https://meet.google.com/abc-defg-hij" })];
+    view();
+    dialog = await openEditor();
+    await within(dialog).findByLabelText(i18n.t("schedule.eventTitle"));
+    expect(within(dialog).queryByRole("combobox", { name: i18n.t("schedule.recurrence.label") })).toBeNull();
+  });
+
+  it("shows the repeat select right of all-day with does-not-repeat first", async () => {
+    answers.events = [apiEvent({})];
+    view();
+    const dialog = await openEditor();
+    const select = repeatSelect(dialog);
+    expect(select.value).toBe("none");
+    expect(select.options[0].value).toBe("none");
+    expect(select.closest(".schedule-editor-all-day-row")).not.toBeNull();
+  });
+
+  it("hides the Meet row when a repeat is chosen and sends no add_meet", async () => {
+    answers.isTenantAdmin = true;
+    answers.connected = true;
+    answers.meetAvailable = true;
+    answers.events = [apiEvent({ google_event_id: "g1" })];
+    view();
+    const dialog = await openEditor();
+    fireEvent.click(await within(dialog).findByRole("button", { name: i18n.t("schedule.addMeet") }));
+    fireEvent.change(repeatSelect(dialog), { target: { value: "weekly" } });
+    expect(within(dialog).queryByRole("button", { name: i18n.t("schedule.addMeet") })).toBeNull();
+    expect(within(dialog).queryByRole("button", { name: i18n.t("schedule.removeMeet") })).toBeNull();
+    clickSave(dialog);
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+    const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
+    expect("add_meet" in body).toBe(false);
+    expect(body.recurrence).toBe("weekly");
+  });
+
+  it("shows no dialog for a single event", async () => {
+    answers.events = [apiEvent({})];
+    view();
+    clickSave(await openEditor());
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+    expect("scope" in (vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>)).toBe(false);
+    expect(screen.queryByRole("dialog", { name: i18n.t("schedule.recurrence.editTitle") })).toBeNull();
+
+    fireEvent.click(await screen.findByText("Own Event"));
+    fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.deleteEvent") }))[0]);
+    await waitFor(() => expect(api.delete).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(api.delete).mock.calls[0]).toEqual(["/calendar/events/1"]);
+    expect(screen.queryByRole("dialog", { name: i18n.t("schedule.recurrence.deleteTitle") })).toBeNull();
+  });
+});

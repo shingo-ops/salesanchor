@@ -181,7 +181,10 @@ def test_register_webhook_subscribes_invoicing_paid_and_disputes():
 async def _company_contact(client, *, email=None):
     from tests.helpers_txn import create_lead
     lead_id = await create_lead(client, "Invoicingテスト会社")
-    co = await client.post("/api/v1/companies", json={"name": "Invoicingテスト会社", "lead_id": lead_id})
+    co = await client.post("/api/v1/companies", json={
+        "name": "Invoicingテスト会社", "lead_id": lead_id,
+        "addresses": [{"address_type": "billing", "country_code": "US", "is_default": True}],
+    })
     assert co.status_code == 201, co.text
     company_id = co.json()["id"]
     payload = {"company_id": company_id, "display_name": "担当"}

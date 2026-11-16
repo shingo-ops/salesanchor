@@ -89,8 +89,8 @@ def test_free_sheets_unchanged_and_reason_priority(pg):  # noqa: F811
     got = _run(url, lambda db: svc.get_target(db, str(mine["id"])))
     assert got["deliverable"] is True and got["reason"] is None
 
-    # お試し・pending・verified → not_contracted。本契約にすると配信される
-    for status in ("trial", "pending", "verified"):
+    # お試し・契約手続き中・pending・verified → not_contracted。本契約にすると配信される（A34）
+    for status in ("trial", "contracting", "pending", "verified"):
         _set_status(cur, vid, status)
         got = _run(url, lambda db: svc.get_target(db, str(mine["id"])))
         assert got["deliverable"] is False and got["reason"] == "not_contracted", status

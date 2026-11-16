@@ -76,7 +76,7 @@ export function ScheduleFullEditor({
       lead={
         <>
           {error && <div className="schedule-error" role="alert">{error}</div>}
-          <DraftDateFields {...common} mode={mode} />
+          <DraftDateFields {...common} mode={mode} item={item} />
         </>
       }
     >

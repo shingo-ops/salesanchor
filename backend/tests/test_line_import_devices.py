@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -12,6 +12,7 @@ from app.routers import line_import_devices as routes
 from app.services import line_import_devices as svc
 
 TOKEN = 'sali1_' + 'a' * 43
+_PAST = datetime(2000, 1, 1, tzinfo=timezone.utc)  # 固定の過去日。読み込みのときに時計を読まないため
 
 
 def row(**changes):
@@ -22,11 +23,16 @@ def row(**changes):
     return value
 
 
-@pytest.mark.parametrize('field,value', [('owner_user_id', None), ('revoked_at', svc.now()),
-    ('expires_at', svc.now()-timedelta(seconds=1)), ('scope', 'other'), ('tcg_schema','tenant_999'),
+@pytest.mark.parametrize('field,value', [('owner_user_id', None), ('revoked_at', _PAST),
+    ('expires_at', _PAST),('scope', 'other'), ('tcg_schema','tenant_999'),
     ('user_active',False), ('is_super_admin',False), ('tenant_active',False)])
 def test_invalid_grants_denied(field, value):
     assert not svc.valid(row(**{field:value}))
+
+
+def test_just_expired_grant_denied():
+    # 1秒前に切れた鍵も拒否する（時刻は試験本体で読む）。
+    assert not svc.valid(row(expires_at=svc.now() - timedelta(seconds=1)))
 
 
 def test_key_and_code_validation():

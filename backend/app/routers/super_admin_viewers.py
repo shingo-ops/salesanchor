@@ -68,8 +68,8 @@ class ViewerAdminItem(BaseModel):
     email: str = Field(..., description="メールアドレス（小文字）")
     line_name: str = Field(..., description="LINE の表示名")
     inventory_issue: str | None = Field(None, description="在庫関連の課題（任意）")
-    status: str = Field(..., description="pending／verified／trial／active／suspended")
-    trial_expires_at: datetime | None = Field(None, description="お試しの期限")
+    status: str = Field(..., description="pending／verified／trial／contracting／active／suspended")
+    trial_expires_at: datetime | None = Field(None, description="お試しと契約手続き中の、見られる期限")
     created_at: datetime = Field(..., description="登録した時刻")
     discord_user_id: str | None = Field(None, description="Discord の利用者 ID")
     discord_channel_id: str | None = Field(None, description="Discord のチケット部屋 ID")
@@ -425,15 +425,20 @@ async def reissue_signup_code_endpoint(viewer_id: int, db: AsyncSession = Depend
     dependencies=[Depends(require_super_admin)],
 )
 async def send_billing_form_endpoint(
-    viewer_id: int, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)
+    viewer_id: int,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(require_super_admin),
+    db: AsyncSession = Depends(get_db),
 ):
     # ① 文面を先に読む。無ければ 503・何も変えない
     body = await viewer_message_templates.load_body(db, "billing_form_request")
     if body is None:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=_TEMPLATE_NOT_FOUND)
-    # ② 古い鍵を消して新しい鍵を1本作る（本契約の人だけ）
+    # ② 古い鍵を消して新しい鍵を1本作る（契約手続き中と本契約の人だけ。手続き中は期限を延ばす）
     try:
-        raw, expires_at = await viewer_billing_form.issue_billing_form_token(db, viewer_id)
+        raw, expires_at = await viewer_billing_form.issue_billing_form_token(
+            db, viewer_id, actor_user_id=int(current_user.id)
+        )
         item = await viewer_admin._get_item(db, viewer_id)
     except ViewerAdminError as exc:
         await db.rollback()

@@ -7,7 +7,12 @@ from pathlib import Path
 from sqlalchemy import text
 
 from app.services.tenant import create_tenant_schema
-from tests.seed_data import aggregation_rules_seed_sql, country_seed_sql, type_master_seed_sql
+from tests.seed_data import (
+    aggregation_rules_seed_sql,
+    country_seed_sql,
+    customer_statuses_seed_sql,
+    type_master_seed_sql,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _MIGRATIONS_DIR = _REPO_ROOT / "migrations"
@@ -33,7 +38,15 @@ _PG_BOOTSTRAP_MIGRATIONS = [
     "20261015_130000_add_permissions_rls.sql",
 ]
 # public.tenants を参照するため、tenants を用意した後に流す
-_PG_AFTER_TENANTS_MIGRATIONS = ("20261106_190000_create_public_channel_masters.sql",)
+_PG_AFTER_TENANTS_MIGRATIONS = (
+    "20261106_190000_create_public_channel_masters.sql",
+    "20261112_120000_create_public_customer_statuses.sql",
+    # ADR-1061 便2-2c1: 発行元の会社情報が public.countries と public.prefectures を外部キーで指す。
+    # prefectures を作る 20261112_150000 は public.viewer_accounts（20261016_150000）を指すので、この順で流す
+    "20260621_010000_create_countries_master.sql",
+    "20261016_150000_add_viewer_accounts.sql",
+    "20261112_150000_create_viewer_contract_public_tables.sql",
+)
 _TENANT_BOOTSTRAP_MIGRATIONS = [
     "20260611_100000_create_channel_masters.sql",
     "20260614_100000_create_sales_form_tables.sql",
@@ -171,8 +184,12 @@ _TENANT_LOOP_MIGRATIONS = {
     "20260621_020000_add_schedule_calendar_category_and_owner_settings.sql": 1,
     "20261103_200000_add_google_calendar_import_sync.sql": 1,
     "20261104_161223_add_calendar_events_meet_url.sql": 1,
+    "20261112_170000_add_calendar_events_recurrence.sql": 1,
     "20261005_150000_add_roles_system_key.sql": 1,
     "20261106_150000_add_discord_role_link_tables.sql": 1,
+    "20261112_160000_create_tenant_issuer_and_payment_tables.sql": 1,
+    "20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql": 1,
+    "20261115_100000_add_payment_method_versioning.sql": 1,
 }
 
 
@@ -360,6 +377,10 @@ async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:
                     # この transaction の中で流すので BEGIN/COMMIT は除く
                     sql = (_MIGRATIONS_DIR / filename).read_text("utf-8").replace("BEGIN;", "").replace("COMMIT;", "")
                     await raw_after_tenants.driver_connection.execute(sql)
+                # 状態の4行（便2 で tenant.py の status が外部キーで指す・ADR-1076）。書けるのは運営だけ
+                await conn.execute(text("SELECT set_config('app.is_operator', 'true', true)"))
+                await conn.exec_driver_sql(customer_statuses_seed_sql())
+                await conn.execute(text("SELECT set_config('app.is_operator', '', true)"))
                 await conn.execute(
                     text("""
                         INSERT INTO public.tenants (

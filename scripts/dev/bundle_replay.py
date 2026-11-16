@@ -11,6 +11,7 @@
   OUT_DIR       rows.tsv と summary.txt を書く
 
 kubun_type がバルク系の行は detect_bundle を bulk_shapes=True で読む（design.md §12）。summary.txt はバルク系とそれ以外に分け、追加の形で変わった行を数える。
+kubun_type がシングルセット系の行は当てない（本番と同じ。ADR-1027 追記 2026-11-11）。区分名は _BULK_KUBUN と同じ理由で写す。
 通信・DB 書き込みはしない。データ（本番の本文）はリポジトリに置かない。判定の作りは v102_bundle_svc に 1 か所だけ（ここでは持たない）。
 """
 from __future__ import annotations
@@ -34,6 +35,7 @@ from app.services.v102_bundle_svc import (  # noqa: E402
 )
 
 _BULK_KUBUN = "バルク系"  # = gemini_raw_copy_v102_product_first.PRODUCT_KUBUN_BULK（:49）。台本は純関数だけを import するので写し、一致は test_v102_bundle.py で固定
+_SINGLE_SET_KUBUN = "シングルセット系"  # = gemini_raw_copy_v102_product_first.PRODUCT_KUBUN_SINGLE_SET。一致は test_single_set_category.py で固定
 _BODY_SEPARATOR = " / "
 _SET_PRICE_BASIS = re.compile(r"V102:bulk:set:(\d+)")
 _VERDICT = {KIND_DECIDED: "decided", KIND_UNVERIFIED: "unverified", None: "none"}
@@ -85,6 +87,20 @@ def _signature(res: object) -> tuple:
     return (None, None, None) if res is None else (res.kind, res.n, res.unit)  # type: ignore[attr-defined]
 
 
+def replay_row(r: dict[str, str], unit_words: dict[str, str], set_words: frozenset[str]) -> tuple:
+    """1 行を今の規則と新しい規則で読む → (before, res, is_bulk)。シングルセット系は当てない（本番と同じ。ADR-1027 追記 2026-11-11）。"""
+    kubun = r.get("kubun_type") or ""
+    is_bulk = kubun == _BULK_KUBUN
+    if kubun == _SINGLE_SET_KUBUN:
+        return None, None, is_bulk
+    block = r["body"].replace(_BODY_SEPARATOR, "\n")
+    price = (r["price_normalized"] or "").strip() or None
+    quantity = read_quantity(r) or None
+    before = detect_bundle(block, unit_words, set_words, price, quantity, bulk_shapes=False)  # 今の規則
+    res = detect_bundle(block, unit_words, set_words, price, quantity, bulk_shapes=is_bulk)  # 新しい規則
+    return before, res, is_bulk
+
+
 def main(argv: list[str]) -> int:
     if len(argv) != 5:
         print(__doc__)
@@ -96,12 +112,7 @@ def main(argv: list[str]) -> int:
     out.mkdir(parents=True, exist_ok=True)
     results = []
     for r in rows:
-        block = r["body"].replace(_BODY_SEPARATOR, "\n")
-        price = (r["price_normalized"] or "").strip() or None
-        quantity = read_quantity(r) or None
-        is_bulk = (r.get("kubun_type") or "") == _BULK_KUBUN
-        before = detect_bundle(block, unit_words, set_words, price, quantity, bulk_shapes=False)  # 今の規則
-        res = detect_bundle(block, unit_words, set_words, price, quantity, bulk_shapes=is_bulk)  # 新しい規則
+        before, res, is_bulk = replay_row(r, unit_words, set_words)
         changed = _signature(before) != _signature(res)
         results.append((r, res, hashlib.md5(r["body"].encode("utf-8")).hexdigest()[:8], is_bulk, changed))
     with open(out / "rows.tsv", "w", encoding="utf-8") as f:

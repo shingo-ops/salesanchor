@@ -186,9 +186,9 @@ function ComponentsSection() {
             <span className="badge badge-negotiating">negotiating</span>
             <span className="badge badge-won">won</span>
             <span className="badge badge-lost">lost</span>
-            <span className="status-badge status-active">active</span>
-            <span className="status-badge status-inactive">inactive</span>
-            <span className="status-badge status-pending_dedup_review">pending_dedup</span>
+            <span className="badge badge-won">active</span>
+            <span className="badge badge-neutral">inactive</span>
+            <span className="badge badge-pending">pending_dedup</span>
           </div>
         </div>
 

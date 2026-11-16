@@ -429,7 +429,10 @@ class TestProductsDeleteWithFK:
 
         from tests.helpers_txn import create_lead
         lead_id = await create_lead(client, "請求FK会社")
-        co = await client.post("/api/v1/companies", json={"name": "請求FK会社", "lead_id": lead_id})
+        co = await client.post("/api/v1/companies", json={
+            "name": "請求FK会社", "lead_id": lead_id,
+            "addresses": [{"address_type": "billing", "country_code": "US", "is_default": True}],
+        })
         company_id = co.json()["id"]
         ct = await client.post("/api/v1/contacts", json={
             "company_id": company_id, "display_name": "請求FK担当",

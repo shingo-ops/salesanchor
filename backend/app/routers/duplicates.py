@@ -36,6 +36,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import get_current_tenant, get_current_user, require_permission
 from app.database import get_db
 from app.models import User
+from app.services.customer_statuses import STATUS_ARCHIVED
 
 router = APIRouter()
 
@@ -90,9 +91,10 @@ async def find_company_duplicates(
             FROM companies c
             LEFT JOIN company_addresses ba ON ba.company_id = c.id AND ba.address_type = 'billing'
             LEFT JOIN company_addresses da ON da.company_id = c.id AND da.address_type = 'delivery'
-            WHERE c.status != 'archived'
+            WHERE c.status != :archived
             ORDER BY c.id
-        """)
+        """),
+        {"archived": STATUS_ARCHIVED},
     )
     companies = [dict(row) for row in result.mappings().all()]
     duplicates: list[DuplicateMatch] = []

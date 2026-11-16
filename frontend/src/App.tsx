@@ -90,10 +90,13 @@ import DiscordAnnouncePage from "./pages/admin/DiscordAnnouncePage";
 import AdminHubPage from "./pages/admin/AdminHubPage";
 // SA-02 Stage 3: チャネルマスタ管理
 import ChannelMastersPage from "./pages/admin/ChannelMastersPage";
+// invoice-create-portfolio 便B: 関税の額の決まり
+import DutyRulesPage from "./pages/admin/DutyRulesPage";
 import ManagementCenterPage from "./pages/management-center/ManagementCenterPage";
 import SettingsHubPage from "./pages/super-admin/settings/SettingsHubPage";
 import SettingsMasterPage from "./pages/super-admin/settings/SettingsMasterPage";
 import FxRatePage from "./pages/super-admin/FxRatePage";
+import TaxRatesPage from "./pages/super-admin/TaxRatesPage";
 import LoginRequestsPage from "./pages/super-admin/LoginRequestsPage";
 import TenantLoginRequestsPage from "./pages/management-center/TenantLoginRequestsPage";
 import ViewerAccountsPage from "./pages/super-admin/ViewerAccountsPage";
@@ -324,15 +327,8 @@ function App() {
                       <Route index element={<Navigate to="fx-rate" replace />} />
                       {/* 為替レート SSOT */}
                       <Route path="fx-rate" element={<FxRatePage />} />
-                      <Route
-                        path="tax-rates"
-                        element={
-                          <ComingSoonPage
-                            title={t("nav.superAdminTaxRates")}
-                            description={t("superAdmin.settings.comingSoon")}
-                          />
-                        }
-                      />
+                      {/* 消費税率（ADR-1061 便2-2a） */}
+                      <Route path="tax-rates" element={<TaxRatesPage />} />
                       <Route
                         path="sa-products"
                         element={
@@ -434,6 +430,7 @@ function App() {
                       <Route path="discord-config"      element={<DiscordConfigPage />} />
                       <Route path="discord-announce"    element={<DiscordAnnouncePage />} />
                       <Route path="channel-masters"     element={<ChannelMastersPage />} />
+                      <Route path="duty-rules"          element={<DutyRulesPage />} />
                       <Route path="channels"            element={<ChannelsPage />} />
                       <Route path="bots"                element={<BotsPage />} />
                       <Route path="login-requests"      element={<TenantLoginRequestsPage />} />

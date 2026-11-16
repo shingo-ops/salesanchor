@@ -2,6 +2,8 @@
  * 会社詳細ページの型定義・定数・ヘルパー関数。
  */
 
+import { CUSTOMER_STATUS_CODES } from "../../lib/customerStatuses";
+
 export const PHONE_RE = /^(\+?\d{10,15}|0\d{9,10})$/;
 
 export interface CompanyAddress {
@@ -122,7 +124,7 @@ export const emptyContact = (): ContactFormState => ({
   job_title: "", department: "",
   is_primary_contact: false,
   primary_email: "", primary_phone: "",
-  status: "active",
+  status: CUSTOMER_STATUS_CODES.active,
 });
 
 export const contactFromApi = (c: Contact): ContactFormState => ({
@@ -135,7 +137,7 @@ export const contactFromApi = (c: Contact): ContactFormState => ({
   is_primary_contact: c.is_primary_contact,
   primary_email: c.primary_email || "",
   primary_phone: c.primary_phone || "",
-  status: c.status || "active",
+  status: c.status || CUSTOMER_STATUS_CODES.active,
 });
 
 export type AddressFormState = {
@@ -219,6 +221,6 @@ export const basicFromApi = (c: Company): BasicFormState => ({
   payment_recipient_name: c.payment_recipient_name || "",
   fedex_account: c.fedex_account || "",
   shipping_note: c.shipping_note || "",
-  status: c.status || "active",
+  status: c.status || CUSTOMER_STATUS_CODES.active,
   notes: c.notes || "",
 });

@@ -50,6 +50,7 @@ _MIGRATIONS = (
     ("20260621_020000_add_schedule_calendar_category_and_owner_settings.sql", True),
     ("20261103_200000_add_google_calendar_import_sync.sql", True),
     ("20261104_161223_add_calendar_events_meet_url.sql", True),
+    ("20261112_170000_add_calendar_events_recurrence.sql", True),
 )
 
 
@@ -248,5 +249,161 @@ async def test_create_event_by_non_connected_user_is_not_sent():
         status, gid, _meet = await _fetch_row(admin_engine, result["id"])
         assert status == "pending"
         assert gid is None
+    finally:
+        await _teardown(admin_engine, app_engine)
+
+
+# ---- 便15A: 予定の繰り返し（ADR-1075）。移行・3 択の消し方・例外の行の UNIQUE ----
+
+_RECURRENCE_CHECKS = {
+    "calendar_events_recurrence_role_check",
+    "calendar_events_exception_pair_check",
+    "calendar_events_cancelled_exception_check",
+    "calendar_events_recurrence_rule_format_check",
+}
+
+
+def _weekly_payload() -> dict:
+    return _payload(
+        start_datetime="2026-12-03T10:00:00+09:00",
+        end_datetime="2026-12-03T11:00:00+09:00",
+        recurrence="weekly",
+    )
+
+
+async def _create_weekly_master(factory):
+    """つないでいない人が作る（Google へ送らない）毎週の元の行を作って、読んだ行を返す。"""
+    from app.auth.dependencies import set_tenant_context
+    from app.services import calendar_service
+
+    async with factory() as db:
+        await set_tenant_context(db, _TENANT)
+        created = await calendar_service.create_event(db, _TENANT, _OTHER, _weekly_payload())
+        master = await calendar_service.read_event(db, created["id"])
+    return master
+
+
+async def _exception_rows(admin_engine, master_id: int):
+    from sqlalchemy import text
+
+    async with admin_engine.connect() as conn:
+        return (
+            await conn.execute(
+                text(
+                    f"SELECT is_cancelled, sync_status FROM {_SCHEMA}.calendar_events"
+                    f" WHERE recurring_event_id = :id"
+                ),
+                {"id": master_id},
+            )
+        ).all()
+
+
+async def test_recurrence_migration_adds_columns_checks_and_index():
+    from sqlalchemy import text
+
+    admin_engine, app_engine, _factory = await _setup()
+    try:
+        async with admin_engine.connect() as conn:
+            cols = {
+                r[0]
+                for r in (
+                    await conn.execute(
+                        text(
+                            "SELECT column_name FROM information_schema.columns"
+                            " WHERE table_schema = :s AND table_name = 'calendar_events'"
+                        ),
+                        {"s": _SCHEMA},
+                    )
+                ).all()
+            }
+            checks = {
+                r[0]
+                for r in (
+                    await conn.execute(
+                        text(
+                            "SELECT conname FROM pg_constraint"
+                            " WHERE conrelid = to_regclass(:t) AND contype = 'c'"
+                        ),
+                        {"t": f"{_SCHEMA}.calendar_events"},
+                    )
+                ).all()
+            }
+            indexes = {
+                r[0]
+                for r in (
+                    await conn.execute(
+                        text(
+                            "SELECT indexname FROM pg_indexes"
+                            " WHERE schemaname = :s AND tablename = 'calendar_events'"
+                        ),
+                        {"s": _SCHEMA},
+                    )
+                ).all()
+            }
+        assert {"recurrence_rule", "recurring_event_id", "original_start_datetime", "is_cancelled"} <= cols
+        assert _RECURRENCE_CHECKS <= checks
+        assert "calendar_events_exception_unique_idx" in indexes
+    finally:
+        await _teardown(admin_engine, app_engine)
+
+
+async def test_delete_this_marks_exception_cancelled_and_all_cascades():
+    from datetime import datetime as _dt
+    from zoneinfo import ZoneInfo
+
+    from app.auth.dependencies import set_tenant_context
+    from app.services import calendar_service
+
+    admin_engine, app_engine, factory = await _setup()
+    try:
+        master = await _create_weekly_master(factory)
+        occ = _dt(2026, 12, 10, 10, 0, tzinfo=ZoneInfo("Asia/Tokyo"))
+        async with factory() as db:
+            await set_tenant_context(db, _TENANT)
+            await calendar_service.delete_recurring_event(db, _TENANT, master, "this", occ)
+        rows = await _exception_rows(admin_engine, master["id"])
+        assert [(r[0], r[1]) for r in rows] == [(True, "pending")]
+
+        async with factory() as db:
+            await set_tenant_context(db, _TENANT)
+            await calendar_service.delete_recurring_event(db, _TENANT, master, "all", occ)
+        assert await _exception_rows(admin_engine, master["id"]) == []
+        async with admin_engine.connect() as conn:
+            from sqlalchemy import text
+
+            left = (
+                await conn.execute(
+                    text(f"SELECT count(*) FROM {_SCHEMA}.calendar_events WHERE id = :id"),
+                    {"id": master["id"]},
+                )
+            ).scalar_one()
+        assert left == 0
+    finally:
+        await _teardown(admin_engine, app_engine)
+
+
+async def test_same_occurrence_exception_twice_is_rejected_by_unique_index():
+    from sqlalchemy import text
+    from sqlalchemy.exc import IntegrityError
+
+    admin_engine, app_engine, factory = await _setup()
+    try:
+        master = await _create_weekly_master(factory)
+        insert = text(
+            f"INSERT INTO {_SCHEMA}.calendar_events"
+            " (title, start_datetime, end_datetime, sync_status, recurring_event_id, original_start_datetime)"
+            " VALUES ('例外', :s, :e, 'pending', :mid, :orig)"
+        )
+        params = {
+            "s": datetime(2026, 12, 10, 1, 0, tzinfo=timezone.utc),
+            "e": datetime(2026, 12, 10, 2, 0, tzinfo=timezone.utc),
+            "mid": master["id"],
+            "orig": datetime(2026, 12, 10, 1, 0, tzinfo=timezone.utc),
+        }
+        async with admin_engine.begin() as conn:
+            await conn.execute(insert, params)
+        with pytest.raises(IntegrityError):
+            async with admin_engine.begin() as conn:
+                await conn.execute(insert, params)
     finally:
         await _teardown(admin_engine, app_engine)

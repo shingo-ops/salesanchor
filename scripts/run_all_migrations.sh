@@ -1255,3 +1255,25 @@ run_sql migrations/20261108_100000_rebuild_company_stats_on_meta_messages.sql
 run_sql migrations/20261109_200000_drop_staff_firebase_uid.sql
 # ADR-1058 段3: 秘書の選択肢に ChatGPT（codex）の3つを足す（足すだけ・冪等・今の担当は変えない）
 run_sql migrations/20261111_120000_add_codex_secretary_choices.sql
+# 会社と連絡先の状態 便1: 状態の表 public.customer_statuses を作る（作るだけ・冪等）
+run_sql migrations/20261112_120000_create_public_customer_statuses.sql
+# ADR-1061 便2-1: 閲覧者の状態に contracting と履歴の操作4つを足す（CHECK の付け替え・足すだけ・冪等）
+run_sql migrations/20261112_130000_add_viewer_contracting_status.sql
+# 会社と連絡先の状態 便2: status 列を public.customer_statuses に外部キーで結び、旧 CHECK を外す（済みの領域は飛ばす・冪等）
+run_sql migrations/20261112_140000_customer_status_fk.sql
+# ADR-1061 便2-2a: 契約と請求書の public の9表を作る（形だけ・行なし・FORCE RLS・冪等）
+run_sql migrations/20261112_150000_create_viewer_contract_public_tables.sql
+# ADR-1061 便2-2c1: 発行元の会社情報と振込先の4表・請求書の発行元区分・Drive の海外用フォルダを作る（形だけ・行なし・冪等）
+run_sql migrations/20261112_160000_create_tenant_issuer_and_payment_tables.sql
+# ADR-1075 便15A: 予定の繰り返し（calendar_events に欄 4 つ・CHECK 4 つ・部分 UNIQUE）
+run_sql migrations/20261112_170000_add_calendar_events_recurrence.sql
+# ADR-1077 便1: 秘書の決まり帳の表 2 つ（public.secretary_rules・public.secretary_rule_checks・FORCE RLS）と使いみち secretary_regression を足す（作るだけ・行なし・冪等）
+run_sql migrations/20261113_100000_create_secretary_rules.sql
+# ADR-1077 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261113_100001_create_secretary_rules_down.sql
+# invoice-create-portfolio 便A: 関税の額の表2つ・請求書の5列を作る（形だけ・行なし・冪等）
+run_sql migrations/20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql
+# ADR-1012 段階4 便2a: 報告の種類の列と種類ごとの一意・出来事の kind case_report と actor case_agent を足す（古い一意は残す・冪等）
+run_sql migrations/20261113_200000_add_ops_case_report_kind.sql
+# ADR-1012 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261113_200001_add_ops_case_report_kind_down.sql
+# invoice-create-portfolio 便V: 振込先を版で持つ（列2つ・見張りの関数3つ・見張り6つ。全テナント・冪等・ADR-1079）
+run_sql migrations/20261115_100000_add_payment_method_versioning.sql

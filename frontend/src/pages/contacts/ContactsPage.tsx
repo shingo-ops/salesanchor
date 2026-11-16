@@ -14,6 +14,8 @@ import { useMemo, useState, FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getStatusPresentation } from "../../utils/statusPresentation";
+import { useCustomerStatuses } from "../../hooks/useCustomerStatuses";
+import { CUSTOMER_STATUS_CODES } from "../../lib/customerStatuses";
 import { api } from "../../lib/api";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { Modal } from "../../components/Modal";
@@ -83,12 +85,12 @@ type CreateFormState = {
 const emptyCreateForm: CreateFormState = {
   contact_code: "", company_id: "", surname: "", given_name: "",
   display_name: "", job_title: "", department: "", is_primary_contact: false,
-  primary_email: "", primary_phone: "", status: "active", notes: "",
+  primary_email: "", primary_phone: "", status: CUSTOMER_STATUS_CODES.active, notes: "",
 };
 
 const emptyEditForm: ContactFormState = {
   company_id: "", surname: "", given_name: "",
-  primary_email: "", primary_phone: "", status: "active",
+  primary_email: "", primary_phone: "", status: CUSTOMER_STATUS_CODES.active,
 };
 
 const toForm = (c: Contact): ContactFormState => ({
@@ -108,6 +110,7 @@ const contactDisplayName = (c: Contact): string => {
 
 export default function ContactsPage() {
   const { t } = useTranslation();
+  const customerStatuses = useCustomerStatuses();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -168,7 +171,7 @@ export default function ContactsPage() {
       is_primary_contact: createForm.is_primary_contact,
       primary_email: toNull(createForm.primary_email),
       primary_phone: toNull(createForm.primary_phone),
-      status: createForm.status || "active",
+      status: createForm.status || CUSTOMER_STATUS_CODES.active,
       notes: toNull(createForm.notes),
     };
     if (createForm.contact_code.trim()) payload.contact_code = createForm.contact_code.trim();
@@ -222,7 +225,7 @@ export default function ContactsPage() {
     setError("");
     setDedupSubmitting(true);
     try {
-      await api.patch(`/contacts/${dedupConfirmTarget.id}`, { status: "active" });
+      await api.patch(`/contacts/${dedupConfirmTarget.id}`, { status: CUSTOMER_STATUS_CODES.active });
       setDedupConfirmTarget(null);
       await loadContacts();
     } catch (e) {
@@ -233,7 +236,7 @@ export default function ContactsPage() {
     }
   };
 
-  const pendingDedupCount = contacts.filter((c) => c.status === "pending_dedup_review").length;
+  const pendingDedupCount = contacts.filter((c) => c.status === CUSTOMER_STATUS_CODES.pendingDedupReview).length;
   const headerAction = (
     <div className="page-header-actions">
       {pendingDedupCount > 0 && (
@@ -335,10 +338,11 @@ export default function ContactsPage() {
             </div>
             <div className="form-row"><label>{t("common.status")}</label>
               <SelectControl fullWidth value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
-                <option value="active">{t("customers.status_active")}</option>
-                <option value="inactive">{t("customers.status_inactive")}</option>
-                <option value="archived">{t("customers.status_archived")}</option>
+                {customerStatuses.options("create").map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
               </SelectControl>
+              {customerStatuses.isError && <div className="comp-field__hint comp-field__hint--error" role="alert">{t("common.fetchError")}</div>}
             </div>
             <div className="form-row"><label>{t("common.notes")}</label>
               <TextareaControl value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
@@ -383,7 +387,7 @@ export default function ContactsPage() {
           { key: "primary_email", header: t("common.email"), renderCell: (c) => c.primary_email || "-" },
           { key: "primary_phone", header: t("common.phone"), renderCell: (c) => c.primary_phone || "-" },
           { key: "is_primary_contact", header: t("contacts.isPrimary"), renderCell: (c) => c.is_primary_contact ? <STATUS_ICONS.check size={ICON.sm} aria-hidden="true" /> : "" },
-          { key: "status", header: t("common.status"), renderCell: (c) => <span className={`status-badge status-${c.status}`}>{t(getStatusPresentation("contact", c.status).labelKey ?? c.status)}</span> },
+          { key: "status", header: t("common.status"), renderCell: (c) => <span className={`badge badge-${getStatusPresentation("contact", c.status).badgeVariant}`}>{customerStatuses.nameOf(c.status)}</span> },
           { key: "channels", header: t("nav.channels"), renderCell: (c) =>
             c.contact_channels.length > 0 ? <ContactChannelLinks contactId={c.id} /> : null
           },
@@ -392,7 +396,7 @@ export default function ContactsPage() {
               {hasPermission("customers.update") && (
                 <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); handleRowClick(c); }}>{t("common.edit")}</Button>
               )}
-              {hasPermission("customers.update") && c.status === "pending_dedup_review" && (
+              {hasPermission("customers.update") && c.status === CUSTOMER_STATUS_CODES.pendingDedupReview && (
                 <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setDedupConfirmTarget(c); }}>
                   {t("contacts.confirmAsDistinct")}
                 </Button>
@@ -408,7 +412,7 @@ export default function ContactsPage() {
             columns={columns}
             data={contacts}
             rowKey={(c) => String(c.id)}
-            rowClassName={(c) => c.status === "pending_dedup_review" ? "row-pending-dedup" : ""}
+            rowClassName={(c) => c.status === CUSTOMER_STATUS_CODES.pendingDedupReview ? "row-pending-dedup" : ""}
             onRowClick={hasPermission("customers.update") ? handleRowClick : undefined}
             emptyState={t("contacts.noContacts")}
           />

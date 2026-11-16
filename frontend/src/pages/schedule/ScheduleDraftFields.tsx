@@ -18,7 +18,18 @@ import { Toggle } from "../../components/Toggle";
 import { SCHEDULE_POPOVER_ICONS } from "../../constants/icons";
 import { CALENDARS, type CalendarId } from "../../features/schedule/calendars.config";
 import type { ScheduleDraft, PopoverMode } from "./SchedulePageImpl";
-import { formatDraftDateLine, shiftDraftStart, type ScheduleItem } from "./schedule-utils";
+import {
+  combineDateTime,
+  fitRecurrenceToDate,
+  formatDraftDateLine,
+  isRecurringItem,
+  occurrenceStartOf,
+  recurrenceLabel,
+  recurrenceOptionsFor,
+  shiftDraftStart,
+  type ScheduleItem,
+  type ScheduleRecurrence,
+} from "./schedule-utils";
 
 /**
  * 作る小窓の 1 行（1 列目: 絵・2 列目: 中身）。直す小窓（creating が偽）は包まず中身だけ出す。
@@ -98,7 +109,8 @@ export function DraftDateFields({
   onDraftChange,
   creating = false,
   expanded = false,
-}: FieldProps & { creating?: boolean; expanded?: boolean }) {
+  item = null,
+}: FieldProps & { creating?: boolean; expanded?: boolean; item?: ScheduleItem | null }) {
   const { t, i18n } = useTranslation();
   const ClockIcon = SCHEDULE_POPOVER_ICONS.clock;
   // 作るときは日時を 1 行で閉じて出し、押すと開く（design §3.9・G3 ②）。全画面の編集は初めから開く
@@ -112,10 +124,22 @@ export function DraftDateFields({
       startTime: next ? "00:00" : draft.startTime,
       endTime: next ? "23:59" : draft.endTime,
     });
+  // 繰り返し（design §12.6・§12.6.1 G4・G5）。Google から取り込んだ予定・Meet のある予定・custom の予定には出さない
+  const series = item ? isRecurringItem(item) : false;
+  const startDay = combineDateTime(draft.startDate, "00:00");
+  const labelDay = Number.isNaN(startDay.getTime()) ? (item ? occurrenceStartOf(item) : new Date()) : startDay;
+  const keepRecurrence = series && item?.recurrence ? item.recurrence : null;
+  const recurrenceOptions = recurrenceOptionsFor(labelDay, keepRecurrence);
+  const showRecurrence = item?.source !== "google" && !item?.meetUrl && draft.recurrence !== "custom";
+  const changeRecurrence = (value: ScheduleRecurrence) =>
+    onDraftChange({ ...draft, recurrence: value, addMeet: value === "none" ? draft.addMeet : false });
+  const fitRecurrence = (next: ScheduleDraft): ScheduleDraft =>
+    series ? next : { ...next, recurrence: fitRecurrenceToDate(next.recurrence, combineDateTime(next.startDate, "00:00")) };
+
   const changeStartDate = (value: string) =>
-    onDraftChange(shiftsStart ? shiftDraftStart(draft, value, draft.startTime) : { ...draft, startDate: value });
+    onDraftChange(fitRecurrence(shiftsStart ? shiftDraftStart(draft, value, draft.startTime) : { ...draft, startDate: value }));
   const changeStartTime = (value: string) =>
-    onDraftChange(shiftsStart ? shiftDraftStart(draft, draft.startDate, value) : { ...draft, startTime: value });
+    onDraftChange(fitRecurrence(shiftsStart ? shiftDraftStart(draft, draft.startDate, value) : { ...draft, startTime: value }));
 
   if (appearance === "page") {
     return (
@@ -155,12 +179,31 @@ export function DraftDateFields({
             onChange={(event) => onDraftChange({ ...draft, endDate: event.target.value })}
           />
         </div>
-        <div>
+        <div className="schedule-editor-all-day-row">
           <Checkbox
             label={t("schedule.allDay")}
             checked={draft.allDay}
             onChange={(event) => changeAllDay(event.target.checked)}
           />
+          {showRecurrence && (
+            <SelectControl
+              variant="editor-filled"
+              aria-label={t("schedule.recurrence.label")}
+              value={draft.recurrence}
+              onChange={(event) => changeRecurrence(event.target.value as ScheduleRecurrence)}
+            >
+              {recurrenceOptions.map((value) => (
+                <option key={value} value={value}>
+                  {recurrenceLabel(
+                    value,
+                    value === keepRecurrence && item ? occurrenceStartOf(item) : labelDay,
+                    t,
+                    i18n.language,
+                  )}
+                </option>
+              ))}
+            </SelectControl>
+          )}
         </div>
       </>
     );
@@ -296,7 +339,7 @@ export function DraftMeetField({
     </ButtonLink>
   ) : null;
   const addRow =
-    meetAvailable && !item?.meetUrl ? (
+    meetAvailable && !item?.meetUrl && draft.recurrence === "none" ? (
       <MeetRow creating={!page} addMeet={draft.addMeet} onChange={(next) => onDraftChange({ ...draft, addMeet: next })} />
     ) : null;
 
