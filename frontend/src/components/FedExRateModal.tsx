@@ -51,10 +51,17 @@ interface Props {
   onClose: () => void;
   /** 宛先国コード（省略時はモーダル内で入力）*/
   destinationCountryCode?: string;
+  /**
+   * 発送元国コード。渡したときは請求書の材料から決まった値として、発送元・宛先・郵便番号・重量を
+   * 読むだけにする（invoice-create-portfolio 便D。省略時は今まで通りモーダル内で入力）
+   */
+  originCountryCode?: string;
+  /** 宛先郵便番号（省略時はモーダル内で入力）*/
+  destinationPostalCode?: string;
   /** 重量（kg）*/
   weightKg: number;
-  /** 選択した料金を受け取るコールバック */
-  onSelectRate: (fee: number, currency: string, serviceType: string | null) => void;
+  /** 選択した料金を受け取るコールバック（4 つ目は送料の会社） */
+  onSelectRate: (fee: number, currency: string, serviceType: string | null, carrier?: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -105,14 +112,18 @@ export function FedExRateModal({
   open,
   onClose,
   destinationCountryCode: destinationCountryCodeProp,
+  originCountryCode: originCountryCodeProp,
+  destinationPostalCode: destinationPostalCodeProp,
   weightKg,
   onSelectRate,
 }: Props) {
   const { t } = useTranslation();
-  const [originCountryCode, setOriginCountryCode] = useState("JP");
+  // 発送元を渡されたときは、材料から決まった値を読むだけにする（打ち直させない）
+  const locked = originCountryCodeProp !== undefined;
+  const [originCountryCode, setOriginCountryCode] = useState(originCountryCodeProp ?? "JP");
   const [destCC, setDestCC] = useState(destinationCountryCodeProp ?? "");
   const [internalWeightKg, setInternalWeightKg] = useState(weightKg);
-  const [destinationPostalCode, setDestinationPostalCode] = useState("");
+  const [destinationPostalCode, setDestinationPostalCode] = useState(destinationPostalCodeProp ?? "");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<ShippingCalcResponse | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -175,6 +186,7 @@ export function FedExRateModal({
             maxLength={3}
             placeholder={t("fedexRateModal.originPlaceholder")}
             onChange={(e) => setOriginCountryCode(e.target.value.toUpperCase())}
+            readOnly={locked}
             style={{ width: "var(--input-width-country-code)" }}
           />
           <TextField
@@ -185,6 +197,7 @@ export function FedExRateModal({
             maxLength={3}
             placeholder={t("fedexRateModal.destinationPlaceholder")}
             onChange={(e) => setDestCC(e.target.value.toUpperCase())}
+            readOnly={locked}
             style={{ width: "var(--input-width-country-code)" }}
           />
           <TextField
@@ -195,6 +208,7 @@ export function FedExRateModal({
             step="0.001"
             value={internalWeightKg}
             onChange={(e) => setInternalWeightKg(Number(e.target.value))}
+            readOnly={locked}
             style={{ width: "var(--input-width-shipping-weight)" }}
           />
         </div>
@@ -217,6 +231,7 @@ export function FedExRateModal({
         maxLength={20}
         placeholder={t("fedexRateModal.postalCodePlaceholder")}
         onChange={(e) => setDestinationPostalCode(e.target.value)}
+        readOnly={locked}
         style={{ width: "var(--field-w-sm)" }}
       />
 
@@ -303,6 +318,7 @@ export function FedExRateModal({
               <thead>
                 <tr style={{ borderBottom: "2px solid var(--border)" }}>
                   <th style={{ textAlign: "left", padding: "8px 4px" }}>{t("fedexRateModal.colSource")}</th>
+                  <th style={{ textAlign: "left", padding: "8px 4px" }}>{t("fedexRateModal.colCarrier")}</th>
                   <th style={{ textAlign: "left", padding: "8px 4px" }}>{t("fedexRateModal.colService")}</th>
                   <th style={{ textAlign: "right", padding: "8px 4px" }}>{t("fedexRateModal.colTransitDays")}</th>
                   <th style={{ textAlign: "right", padding: "8px 4px" }}>{t("fedexRateModal.colFee")}</th>
@@ -319,6 +335,7 @@ export function FedExRateModal({
                     <td style={{ padding: "8px 4px" }}>
                       <SourceBadge source={r.source} />
                     </td>
+                    <td style={{ padding: "8px 4px" }}>{r.carrier}</td>
                     <td style={{ padding: "8px 4px" }}>
                       {r.service_name ?? r.service_type ?? r.zone}
                     </td>
@@ -337,7 +354,7 @@ export function FedExRateModal({
                       <Button
                         variant="outline"
                         onClick={() => {
-                          onSelectRate(r.fee, r.currency, r.service_type);
+                          onSelectRate(r.fee, r.currency, r.service_type, r.carrier);
                           handleClose();
                         }}
                       >

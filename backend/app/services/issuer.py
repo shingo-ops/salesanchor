@@ -41,6 +41,19 @@ def format_issuer_address(row: Mapping[str, Any], prefecture_name: str | None, c
     return ", ".join(p for p in [address1, address2, city, tail, country_name or ""] if p)
 
 
+async def get_issuer_country_code(db: AsyncSession, tenant_id: int, region: str | None) -> str | None:
+    """発送元の国＝その地域の発行元の行の country_code（design.md §3-2 の送料）。行が無ければ None。暗黙に "JP" を使わない（ADR-125 D5）。"""
+    if region not in ISSUER_REGIONS:
+        return None
+    profiles = tenant_table_ref(db, tenant_id, "tenant_issuer_profiles")
+    result = await db.execute(
+        text(f"SELECT country_code FROM {profiles} WHERE region = :region ORDER BY id LIMIT 1"),
+        {"region": region},
+    )
+    row = result.first()
+    return (row[0] or None) if row else None
+
+
 async def get_issuer(db: AsyncSession, tenant_id: int, region: str) -> dict:
     """発行元の情報を返す。キー: name, address, phone, email, website, registration_number, legacy。"""
     if region not in ISSUER_REGIONS:

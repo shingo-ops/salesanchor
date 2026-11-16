@@ -23,6 +23,13 @@ const detail = { id: 7, quote_code: 'Q-7', company_id: 4, contact_id: 5, currenc
 const approvedQuote = { id: 7, quote_code: 'Q-7', company_id: 4, currency: 'USD', subtotal: 10, shipping_fee: null, tax_amount: null, total_amount: 10, status: 'approved', validity_date: null, notes: null, created_at: '', items: [] };
 const company = { id: 4, company_code: 'C-4', name: 'Company' };
 const contact = { id: 5, company_id: 4, surname: 'Buyer', given_name: 'One', surname_en: null, given_name_en: null, email: 'buyer@example.com', is_primary_contact: true };
+// invoice-create-portfolio 便D: 作成画面は請求書の材料の issuer_region が無いときに案内を出す（作る前に分かる）
+const draftCtx = (issuerRegion: string | null) => ({
+  company_id: 4, ship_to: null, bill_to: null, contact_name: null, contact_email: null,
+  issuer_region: issuerRegion, origin_country_code: issuerRegion, destination_country_code: null, destination_postal_code: null,
+  currencies: ['USD'], fx_rates: [], default_currency: 'USD', currency: null, payment_methods: [], tax_rate_percent: null, incoterms: 'DAP',
+});
+let issuer: string | null = null;
 
 beforeEach(async () => {
   vi.resetAllMocks(); instance = createInstance();
@@ -34,9 +41,14 @@ beforeEach(async () => {
     if (url === '/quotes/7') return detail;
     if (url === '/companies?per_page=100') return [company];
     if (url === '/contacts?company_id=4&per_page=100') return [contact];
+    if (url === '/invoices/draft-context?company_id=4&contact_id=5') return draftCtx(issuer);
     throw new Error(`Unexpected GET ${url}`);
   });
-  mock.post.mockImplementation(() => { throw new Error('Unexpected post'); });
+  issuer = null;
+  mock.post.mockImplementation(async (url: string) => {
+    if (url === '/invoices/preview') return { currency: 'USD', subtotal: '10', shipping_fee: null, tax_amount: '0', tax_rate_percent: null, duty_amount: '0', duty_label: null, duty_components: [], total_amount: null, uncomputed: ['shipping_required'], incoterms: 'DAP' };
+    throw new Error(`Unexpected post ${url}`);
+  });
   mock.patch.mockResolvedValue({});
   mock.delete.mockImplementation(() => { throw new Error('Unexpected delete'); });
 });
@@ -50,21 +62,21 @@ async function loadQuoteIntoCreatePage() {
 }
 
 describe('bill-to country guidance (ADR-1061 bin2-2c2a)', () => {
-  it('create page: shows the reason and a button that opens the customer page', async () => {
+  it('create page: without a bill-to country it shows the reason and a button that opens the customer page', async () => {
+    issuer = null;
     await loadQuoteIntoCreatePage();
-    mock.post.mockRejectedValue(new ApiError(tr('apiError.billToCountry'), 422, 'bill_to_country'));
-    fireEvent.click(screen.getByRole('button', { name: tr('invoices.createBtn') }));
     expect(await screen.findByText(tr('apiError.billToCountry'))).toBeTruthy();
+    expect((screen.getByRole('button', { name: tr('invoices.createBtn') }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: tr('invoices.openCompanyForBillTo') }));
     expect(screen.getByTestId('location').textContent).toBe('/crm/companies/4');
   });
 
-  it('create page: another error does not show the button', async () => {
+  it('create page: with a bill-to country the button is not shown', async () => {
+    issuer = 'JP';
     await loadQuoteIntoCreatePage();
-    mock.post.mockRejectedValue(new ApiError('Other failure', 400, 'something_else'));
-    fireEvent.click(screen.getByRole('button', { name: tr('invoices.createBtn') }));
-    expect(await screen.findByText('Other failure')).toBeTruthy();
+    expect(await screen.findByTestId('invoice-ship-to-address')).toBeTruthy();
     expect(screen.queryByRole('button', { name: tr('invoices.openCompanyForBillTo') })).toBeNull();
+    expect(mock.post).not.toHaveBeenCalledWith('/invoices', expect.anything());
   });
 
   it('quote detail: converting shows the reason and a button that opens the customer page', async () => {

@@ -13,7 +13,9 @@
   - _calc_currency_amounts の単体テスト（JPY/USD/EUR）
 """
 
-from decimal import Decimal
+import pytest
+
+pytestmark = pytest.mark.usefixtures("stub_invoice_totals")
 
 
 # ---------------------------------------------------------------------------
@@ -43,6 +45,7 @@ async def _create_invoice(client, company_id, contact_id, **kwargs):
     payload = {
         "company_id": company_id,
         "contact_id": contact_id,
+        "shipping": {"mode": "none"},
         "items": [
             {"product_name": "テスト商品", "quantity": 2, "unit_price": "5000.00"},
         ],
@@ -142,13 +145,9 @@ class TestInvoicesCRUD:
         created = await _create_invoice(client, company_id, contact_id)
         invoice_id = created["id"]
 
-        res = await client.patch(f"/api/v1/invoices/{invoice_id}", json={
-            "payment_method": "銀行振込",
-            "notes": "支払い期限注意",
-        })
+        res = await client.patch(f"/api/v1/invoices/{invoice_id}", json={"notes": "更新メモ"})
         assert res.status_code == 200
-        assert res.json()["payment_method"] == "銀行振込"
-        assert res.json()["notes"] == "支払い期限注意"
+        assert res.json()["notes"] == "更新メモ"
 
     async def test_update_invoice_non_draft_returns_400(self, client):
         """issued 状態の請求書は更新不可（400）"""
@@ -226,8 +225,8 @@ class TestInvoicesFromQuote:
         res = await client.post("/api/v1/invoices/from-quote/99999")
         assert res.status_code == 404
 
-    async def test_converted_invoice_inherits_amounts(self, client):
-        """変換後の請求書が見積もりの金額を引き継ぐ"""
+    async def test_converted_invoice_recomputes_amounts(self, client):
+        """変換後の請求書は見積もりの小計・送料から計算し直す（税は届け先の国で決まる）"""
         company_id, contact_id = await _create_company_contact(client, "金額継承テスト会社")
         # shipping_fee=500 の見積もりを作成して承認
         q_res = await client.post("/api/v1/quotes", json={
@@ -244,9 +243,11 @@ class TestInvoicesFromQuote:
         res = await client.post(f"/api/v1/invoices/from-quote/{quote_id}")
         assert res.status_code == 201
         data = res.json()
-        # subtotal=2000, shipping=500, tax=100 → total=2600
+        # subtotal=2000, shipping=500、会社の請求先は US なので tax=0 → total=2500（見積の tax_amount は写さない）
         assert float(data["subtotal"]) == 2000.0
-        assert float(data["total_amount"]) == 2600.0
+        assert float(data["shipping_fee"]) == 500.0
+        assert float(data["tax_amount"]) == 0.0
+        assert float(data["total_amount"]) == 2500.0
 
 
 # ---------------------------------------------------------------------------
@@ -254,64 +255,15 @@ class TestInvoicesFromQuote:
 # ---------------------------------------------------------------------------
 
 class TestInvoicesCalculation:
-    """_calc_currency_amounts の単体テスト"""
-
-    def test_calc_jpy_currency(self):
-        """JPY通貨: amount_jpy=total, amount_usd=total/rate_usd"""
-        from app.routers.invoices import _calc_currency_amounts
-        total = Decimal("10000")
-        rate_jpy = None
-        rate_usd = Decimal("150.0000")
-
-        amount_jpy, amount_usd = _calc_currency_amounts(total, "JPY", rate_jpy, rate_usd)
-        assert amount_jpy == total
-        # 10000 / 150 ≈ 66.67
-        assert amount_usd == round(total / rate_usd, 2)
-
-    def test_calc_jpy_without_usd_rate(self):
-        """JPY通貨で rate_usd なし: amount_usd=None"""
-        from app.routers.invoices import _calc_currency_amounts
-        total = Decimal("5000")
-        amount_jpy, amount_usd = _calc_currency_amounts(total, "JPY", None, None)
-        assert amount_jpy == total
-        assert amount_usd is None
-
-    def test_calc_usd_currency(self):
-        """USD通貨: amount_usd=total, amount_jpy=total*rate_jpy"""
-        from app.routers.invoices import _calc_currency_amounts
-        total = Decimal("100")
-        rate_jpy = Decimal("150.0000")
-
-        amount_jpy, amount_usd = _calc_currency_amounts(total, "USD", rate_jpy, None)
-        assert amount_usd == total
-        assert amount_jpy == round(total * rate_jpy, 2)
-
-    def test_calc_usd_without_jpy_rate(self):
-        """USD通貨で rate_jpy なし: amount_jpy=None"""
-        from app.routers.invoices import _calc_currency_amounts
-        total = Decimal("200")
-        amount_jpy, amount_usd = _calc_currency_amounts(total, "USD", None, None)
-        assert amount_usd == total
-        assert amount_jpy is None
-
-    def test_calc_eur_currency(self):
-        """EUR通貨: rate_jpy と rate_usd の両方で換算"""
-        from app.routers.invoices import _calc_currency_amounts
-        total = Decimal("100")
-        rate_jpy = Decimal("160.0000")
-        rate_usd = Decimal("1.1000")
-
-        amount_jpy, amount_usd = _calc_currency_amounts(total, "EUR", rate_jpy, rate_usd)
-        assert amount_jpy == round(total * rate_jpy, 2)
-        assert amount_usd == round(total * rate_usd, 2)
+    """請求書の額の計算（計算の本体の試験は test_invoice_totals.py）"""
 
     async def test_create_invoice_calculates_subtotal(self, client):
-        """明細の合計が subtotal/total に反映される"""
+        """明細の合計が subtotal/total に反映される（US 宛で税 0・送料 0）"""
         company_id, contact_id = await _create_company_contact(client, "計算確認会社")
         res = await client.post("/api/v1/invoices", json={
             "company_id": company_id,
             "contact_id": contact_id,
-            "tax_amount": "1000.00",
+            "shipping": {"mode": "none"},
             "items": [
                 {"product_name": "商品A", "quantity": 3, "unit_price": "2000.00"},
                 {"product_name": "商品B", "quantity": 1, "unit_price": "500.00"},
@@ -321,8 +273,8 @@ class TestInvoicesCalculation:
         data = res.json()
         # subtotal = 3*2000 + 1*500 = 6500
         assert float(data["subtotal"]) == 6500.0
-        # total = 6500 + 1000 = 7500
-        assert float(data["total_amount"]) == 7500.0
+        # total = 6500（US 宛で税 0・送料 0）
+        assert float(data["total_amount"]) == 6500.0
 
 
 # ---------------------------------------------------------------------------
@@ -631,6 +583,7 @@ class TestFxRateService:
     def test_get_fx_rate_network_failure_returns_none(self, monkeypatch):
         """ネットワーク障害時は None を返す（non-fatal）"""
         import httpx
+
         from app.services.fx_rate import get_fx_rate
 
         def mock_get(*args, **kwargs):
@@ -643,6 +596,7 @@ class TestFxRateService:
     def test_get_fx_rate_missing_currency_returns_none(self, monkeypatch):
         """レスポンスに通貨が含まれない場合は None を返す"""
         from unittest.mock import MagicMock
+
         from app.services.fx_rate import get_fx_rate
 
         mock_resp = MagicMock()
@@ -656,6 +610,7 @@ class TestFxRateService:
     def test_get_fx_rate_success(self, monkeypatch):
         """正常取得時は rate/currency/fetched_at を返す"""
         from unittest.mock import MagicMock
+
         from app.services.fx_rate import get_fx_rate
 
         mock_resp = MagicMock()
@@ -784,6 +739,11 @@ class TestInvoiceResponseSchema:
             "created_by": None,
             "created_at": datetime(2026, 1, 1, 0, 0, 0),
             "updated_at": datetime(2026, 1, 1, 0, 0, 0),
+            "payment_method_id": None,
+            "tax_rate_percent": None,
+            "shipping_carrier": None,
+            "shipping_service": None,
+            "shipping_snapshot": None,
         }
         row.update(overrides)
         return row

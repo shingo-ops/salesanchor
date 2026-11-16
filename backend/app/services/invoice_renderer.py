@@ -155,6 +155,9 @@ class InvoiceRenderData:
     # ADR-101改訂(2): PayPal 請求書の写し注記（{"pp_invoice_number", "original_url"}）。
     # 指定時はフッターに「写し」帯＋原本リンク＋QR を描画する。
     paypal_copy: Optional[dict] = None
+    # invoice-create-portfolio 便C: 使った税率（Tax 行に添える）と支払方法の区切り（design.md §3-7）
+    tax_rate_percent: Optional[float] = None
+    payment: Optional[dict] = None
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -220,6 +223,33 @@ def _draw_address_block(
 # ─────────────────────────────────────────────────────────────────────
 # 純粋関数: PDF レンダリング
 # ─────────────────────────────────────────────────────────────────────
+
+def _payment_lines(payment: dict) -> list[str]:
+    """支払方法の区切りの行（銀行・Wise・PayPal）。値の無い行は描かない。"""
+    kind = payment.get("method_type")
+    if kind == "paypal":
+        return ["PayPal"]
+    if kind == "bank":
+        pairs = [
+            ("Bank", payment.get("bank_name")),
+            ("Branch", payment.get("bank_branch")),
+            ("Account type", payment.get("account_type")),
+            ("Account number", payment.get("account_number")),
+            ("Account holder", payment.get("account_holder")),
+            ("SWIFT", payment.get("swift_code")),
+        ]
+    elif kind == "wise":
+        pairs = [
+            ("Account holder", payment.get("account_holder")),
+            ("Wise email", payment.get("wise_email")),
+            ("Bank", payment.get("bank_name")),
+            ("SWIFT/BIC", payment.get("swift_bic")),
+            ("IBAN", payment.get("iban")),
+        ]
+    else:
+        return []
+    return [f"{k}: {v}" for k, v in pairs if v]
+
 
 def _render_doc_pdf(data: InvoiceRenderData) -> bytes:
     """
@@ -350,7 +380,8 @@ def _render_doc_pdf(data: InvoiceRenderData) -> bytes:
         y -= 5 * mm
 
     if data.tax_amount:
-        c.drawRightString(165 * mm, y, "Tax:")
+        tax_label = "Tax:" if data.tax_rate_percent is None else f"Tax ({data.tax_rate_percent:g}%):"
+        c.drawRightString(165 * mm, y, tax_label)
         c.drawRightString(190 * mm, y, _fmt_money(data.tax_amount, data.currency))
         y -= 5 * mm
 
@@ -366,6 +397,19 @@ def _render_doc_pdf(data: InvoiceRenderData) -> bytes:
     c.drawRightString(165 * mm, y, "TOTAL:")
     c.drawRightString(190 * mm, y, _fmt_money(data.total, data.currency))
     y -= 8 * mm
+
+    # ── 6b. 支払方法（invoice-create-portfolio 便C。design.md §3-7）──────────
+    if data.payment:
+        lines = _payment_lines(data.payment)
+        if lines:
+            c.setFont(font, 9)
+            c.drawString(20 * mm, y, "Payment:")
+            y -= 4 * mm
+            c.setFont(font, 8)
+            for line in lines:
+                c.drawString(22 * mm, y, line[:90])
+                y -= 4 * mm
+            y -= 2 * mm
 
     # ── 7. 為替レート脚注（外貨時のみ）────────────────────────────────
     if data.fx_rate is not None and data.currency != "JPY":
@@ -519,6 +563,8 @@ def render_invoice_pdf(invoice_data: dict, tenant_profile: dict,
         tenant_website=tenant_profile.get("website"),
         tenant_registration_number=tenant_profile.get("registration_number"),
         paypal_copy=paypal_copy,
+        tax_rate_percent=invoice_data.get("tax_rate_percent"),
+        payment=invoice_data.get("payment"),
     )
 
     return _render_doc_pdf(data)

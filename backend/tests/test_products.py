@@ -11,7 +11,10 @@
   - image_url バリデーション（http/https のみ）
 """
 
+import pytest
 from sqlalchemy import text
+
+pytestmark = pytest.mark.usefixtures("stub_invoice_totals")
 
 # ---------------------------------------------------------------------------
 # CRUD
@@ -442,6 +445,7 @@ class TestProductsDeleteWithFK:
         await client.post("/api/v1/invoices", json={
             "company_id": company_id,
             "contact_id": contact_id,
+            "shipping": {"mode": "none"},
             "items": [
                 {
                     "product_id": product_id,
