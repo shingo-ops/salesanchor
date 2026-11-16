@@ -41,16 +41,20 @@ mode: handoff
 3. `./scripts/dev/executor-preflight.sh` を流し、出力を記録する。
 4. **台本 `scripts/check_template_needs_migration.py` を新しく作る**。引数は `--base <sha> --head <sha>`。動き:
    - (1) base と head の `backend/app/services/tenant.py` を `git show <sha>:backend/app/services/tenant.py` で読み、Python の `ast` で解く（import して動かさない）。
-   - (2) 「ひな形の文字列」を取り出す: モジュールの直下で、名前が `^_[A-Z0-9_]*_SQL$` に合う代入の右辺の文字列（`ast.Constant` の str と、f 文字列 `ast.JoinedStr` の中の str の部分）と、関数 `create_tenant_schema` の中の全部の文字列。定数の名前（関数の中は `create_tenant_schema` と出てくる順の番号）と文字列の組の一覧にする。説明文（コメント）は ast に残らないので比べに入らない。
+   - (2) 「ひな形の文字列」を取り出す: モジュールの直下で、名前が `^_[A-Z0-9_]*_SQL$` に合う代入の右辺の文字列（`ast.Constant` の str と、f 文字列 `ast.JoinedStr` の中の str の部分）と、関数 `create_tenant_schema` の中の全部の文字列。定数の名前（関数の中は `create_tenant_schema` と出てくる順の番号）と文字列の組の一覧にする。
+     - 比べに入れない物: Python の説明（`#`）は ast に残らないので自然に外れる。関数 `create_tenant_schema` の docstring（関数の本体の先頭の文字列だけの文。今は :2862-2877 付近）、`logger.*(...)` の呼び出しの引数の文字列、`raise` の文の中の文字列は外す。
+     - 比べる前にそろえる物: 文字列の中の SQL の説明（`--` から行の終わりまで。今の `_*_SQL` の中に約150行ある）を消し、続く空白（空白・タブ・改行）を1つの空白にまとめ、前後の空白を落とす。SQL の文字列の値の中に `--` が入る書き方は今の tenant.py に無い前提で、もし拾ったら `NEEDS_DECISION:` で止める（拾った定数の名前と行を書く）。
+     - 比べに残す物: 上以外の文字列は全部残す。`create_tenant_schema` の中で tenant_settings などに入れる初期の値の文字列も残す（新しい会社だけ値が変わり、今ある会社は変わらないため。今ある会社を変えない理由があるときは許可一覧の道を使う）。
    - (3) base と head の一覧が同じなら「ひな形の変更なし」で成功。
    - (4) 違うときは、変わった定数の名前を全部出す。そのうえで、PR が `migrations/` に新しいファイルを足していて（`git diff --name-only --diff-filter=A <base> <head> -- migrations/`）、そのファイルのどれか1本以上が head の `scripts/run_all_migrations.sh` の `^run_(sql|py)[[:space:]]` の行に登録されていれば成功。
    - (5) そうでなければ、`scripts/migration-guard/template-only-allowlist.tsv`（新しく作る。列はタブ区切りで `pr`・`reason`。頭に `#` で説明と規則を書く）にこの PR の番号の行があれば成功。PR の番号は引数 `--pr <番号>` で受ける。
    - (6) どれにも当たらなければ失敗。失敗の文は「ひな形（tenant.py）の <定数の名前の一覧> が変わったのに、migrations/ に登録済みの新しい手順がありません。今ある会社にも同じ物を足す手順を同じ PR に足してください。足す必要が無い（説明の直しだけ・登録済みの移行が作る形に合わせるだけ）ときは、scripts/migration-guard/template-only-allowlist.tsv に PR 番号と理由を足してください」とする。
    - 許可一覧の規則（頭の説明に書く）: 行は PR 1本ごと。理由は「どの移行が既に同じ物を作っているか」をファイル名で書く。合流した後も行は残す（記録として）。
-   - 合否の線: 下の手順6の6つの試験が全部通る。
+   - 合否の線: 下の手順6の7つの試験が全部通る。
 5. **CI に足す**: `.github/workflows/migration-guard.yml` の既存の job `check` に、新しい step を1つ足す（新しい job にしない。必須チェックの名前を変えないため。`paths:` は付けない）。`python3 scripts/check_template_needs_migration.py --base "${{ github.event.pull_request.base.sha }}" --head "${{ github.event.pull_request.head.sha }}" --pr "${{ github.event.pull_request.number }}"`。step の上に1行で理由（設計 §5-6・K5-2c）を書く。既存の step は変えない。
-6. **試験 `backend/tests/test_check_template_needs_migration.py`** を足す。使い捨ての git の作業場所（`tmp_path` に `git init`）で base と head の commit を作って台本を呼ぶ。6つ:
-   - (a) ひな形の文字列が同じ（説明文だけ変えた）→ 成功
+6. **試験 `backend/tests/test_check_template_needs_migration.py`** を足す。使い捨ての git の作業場所（`tmp_path` に `git init`）で base と head の commit を作って台本を呼ぶ。7つ:
+   - (a) ひな形の文字列が同じ（Python の `#` の説明だけ変えた）→ 成功
+   - (a2) `_TENANT_TABLES_SQL` の中の SQL の `--` の説明だけと、`create_tenant_schema` の docstring と logger の文だけを変えた → 成功
    - (b) `_TENANT_TABLES_SQL` に列を1つ足し、migrations/ を足さない → 失敗、文に `_TENANT_TABLES_SQL` が出る
    - (c) (b) に、登録の行に足した新しい migrations/ のファイル1本を加える → 成功
    - (d) (b) に、登録していない新しい migrations/ のファイルを加える → 失敗
