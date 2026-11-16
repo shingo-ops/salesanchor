@@ -36,9 +36,15 @@ TENANT_ID = 3
 SCHEMA = f"tenant_{TENANT_ID:03d}"
 PLACEHOLDER = "{S}"
 
-# 形の差の許す一覧。中身は 0 件で始める（設計 §5-6・カード 5-2 手順 8）。
-# 1 件でも入れたくなったら止まって PO に聞く。キーは (種類, 名前)、値は理由。
-ALLOWED_DIFFS: dict[tuple[str, str], str] = {}
+# 形の差の許す一覧。表単位（表の名前 1 つ）で書く。物ごとの名前は羅列しない。キーは表の名前、値は理由。
+# 表に属する物（表・列・索引・制約・トリガ・方針・連番・権限）の差だけを許す。
+# 入れてよいのは channel_masters の 1 表だけ（カード 5-2 第3版の決め1）。ほかを入れたくなったら止まって PO に聞く。
+ALLOWED_TABLES: dict[str, str] = {
+    "channel_masters": (
+        "K6（docs/handoff/channel-master-shared/design.md）。登録の migrations/20260611_100000_create_channel_masters.sql が"
+        "全会社に作るが、PR-C（ADR-1069）で消す予定。PR-C の合流後にこの行を外す"
+    ),
+}
 
 # 前提が無くて落ちる移行（会社の形には関わらない）。キーは登録のファイル名、値は理由。
 EXCLUDED_REGISTRY: dict[str, str] = {
@@ -176,21 +182,57 @@ def take_shape(conn, schema: str = SCHEMA) -> dict[str, dict[str, str]]:
     return shape
 
 
-def diff_shapes(before: dict, after: dict, allowed: dict | None = None) -> list[tuple[str, str, str, str, str]]:
-    """前と後の差の全件。1 件は (種類, 名前, 分け, 前の中身, 後の中身)。許す一覧の物は除く。"""
-    allowed = ALLOWED_DIFFS if allowed is None else allowed
+def table_of(kind: str, name: str, content: str, columns: dict[str, set[str]]) -> str | None:
+    """形の 1 件が属する表の名前（表に属さない物は None）。"""
+    if kind == "表":
+        return name
+    if kind in ("列", "制約", "トリガ", "方針"):
+        return name.split(".", 1)[0]
+    if kind == "索引":
+        return content.split("|", 1)[0]
+    if kind == "権限":
+        rel = name.split(":", 1)[1]
+        if name.startswith(("r:", "p:")):
+            return rel
+        name = rel  # 連番は下の判定へ
+        kind = "連番"
+    if kind == "連番":
+        for table, cols in columns.items():
+            if any(name == f"{table}_{c}_seq" for c in cols):
+                return table
+    return None
+
+
+def diff_shapes(before: dict, after: dict, allowed: dict | None = None, used: set | None = None
+                ) -> list[tuple[str, str, str, str, str]]:
+    """前と後の差の全件。1 件は (種類, 名前, 分け, 前の中身, 後の中身)。許す一覧（表単位）の物は除く。
+
+    used に渡した集合へ、実際に差を許した表の名前を入れる（使われなかった行を知らせるため）。
+    """
+    allowed = ALLOWED_TABLES if allowed is None else allowed
+    columns: dict[str, set[str]] = {}
+    for shp in (before, after):
+        for key in shp.get("列", {}):
+            t, c = key.split(".", 1)
+            columns.setdefault(t, set()).add(c)
     out = []
     for kind in sorted(set(before) | set(after)):
         b, a = before.get(kind, {}), after.get(kind, {})
         for name in sorted(set(b) | set(a)):
-            if (kind, name) in allowed:
-                continue
             if name not in b:
-                out.append((kind, name, "流した後だけ", "", a[name]))
+                entry = (kind, name, "流した後だけ", "", a[name])
             elif name not in a:
-                out.append((kind, name, "流す前だけ", b[name], ""))
+                entry = (kind, name, "流す前だけ", b[name], "")
             elif b[name] != a[name]:
-                out.append((kind, name, "中身が違う", b[name], a[name]))
+                entry = (kind, name, "中身が違う", b[name], a[name])
+            else:
+                continue
+            table = table_of(kind, name, a.get(name, b.get(name, "")), columns)
+            if table is not None and table in allowed:
+                if used is not None:
+                    used.add(table)
+                continue
+            out.append(entry)
     return out
 
 
@@ -243,6 +285,19 @@ def create_database(name: str) -> None:
         if cur.fetchone() is not None:
             raise RuntimeError(f"DB {name} はすでにある。使い捨ての名前を使うこと")
         cur.execute(f"CREATE DATABASE {name}")
+    finally:
+        conn.close()
+
+
+def ensure_app_role() -> None:
+    """本番にある利用者 salesanchor_app を、会社を作る前に用意する（無いと会社の表への権限が付かず、前と後で権限が違って見える）。"""
+    conn = psycopg2.connect(**_env_conn("postgres"))
+    conn.autocommit = True
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM pg_roles WHERE rolname = 'salesanchor_app'")
+        if cur.fetchone() is None:
+            cur.execute("CREATE ROLE salesanchor_app LOGIN")
     finally:
         conn.close()
 
@@ -384,6 +439,7 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     out = Path(args.out_dir) if args.out_dir else None
 
+    ensure_app_role()
     create_database(args.db)
     schema = asyncio.run(prepare_public_and_tenant(args.db))
     assert schema == SCHEMA, schema
@@ -397,7 +453,8 @@ def main(argv=None) -> int:
         conn.close()
 
     bad = unexpected_failures(results)
-    diffs = diff_shapes(before, after)
+    used_allowed: set[str] = set()
+    diffs = diff_shapes(before, after, used=used_allowed)
     if out:
         write_shape(before, out / "before")
         write_shape(after, out / "after")
@@ -411,6 +468,8 @@ def main(argv=None) -> int:
     for r in results:
         if r[3] != 0 and r[2] in EXCLUDED_REGISTRY:
             print(f"外す一覧で許した失敗: {r[2]}（{EXCLUDED_REGISTRY[r[2]]}）")
+    for table in sorted(set(ALLOWED_TABLES) - used_allowed):
+        print(f"知らせ: 許す一覧の行 {table} は使われなかった（差が出なかった）。外し忘れでないか確かめる: {ALLOWED_TABLES[table]}")
     rc = 0
     if bad:
         rc = 1

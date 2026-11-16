@@ -1613,20 +1613,6 @@ CREATE TABLE IF NOT EXISTS {schema}.calendar_owner_settings (
 );
 CREATE INDEX IF NOT EXISTS idx_calendar_owner_settings_staff_id ON {schema}.calendar_owner_settings USING btree (staff_id);
 
--- 登録の移行: migrations/20260611_100000_create_channel_masters.sql
-CREATE TABLE IF NOT EXISTS {schema}.channel_masters (
-    id SERIAL,
-    tenant_id integer NOT NULL,
-    platform character varying(30) NOT NULL,
-    display_name character varying(100) NOT NULL,
-    connection_type character varying(10) NOT NULL,
-    is_active boolean DEFAULT true NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT channel_masters_pkey PRIMARY KEY (id),
-    CONSTRAINT channel_masters_platform_key UNIQUE (platform),
-    CONSTRAINT channel_masters_connection_type_check CHECK (connection_type IN ('auto', 'manual'))
-);
-
 -- 登録の移行: migrations/20260604_090000_create_conversation_logs.sql
 CREATE TABLE IF NOT EXISTS {schema}.conversation_logs (
     id SERIAL,
@@ -2365,7 +2351,6 @@ ALTER TABLE {schema}.tenant_invoice_payment_wise ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.tenant_duty_rules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.tenant_duty_rule_components ENABLE ROW LEVEL SECURITY;-- 段5 5-2: 登録の移行が作る表の RLS
 ALTER TABLE {schema}.archives ENABLE ROW LEVEL SECURITY;
-ALTER TABLE {schema}.channel_masters ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.conversation_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.customer_scores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.discord_channel_webhooks ENABLE ROW LEVEL SECURITY;
@@ -2636,10 +2621,6 @@ BEGIN
     -- 段5 5-2: 登録の移行が作る表の方針
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_archives' AND schemaname = '{schema_raw}') THEN
         CREATE POLICY tenant_isolation_archives ON {schema}.archives
-            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'channel_masters_tenant_isolation' AND schemaname = '{schema_raw}') THEN
-        CREATE POLICY channel_masters_tenant_isolation ON {schema}.channel_masters
             USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'conversation_logs_tenant_isolation' AND schemaname = '{schema_raw}') THEN
