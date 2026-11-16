@@ -90,6 +90,7 @@ jobs:
               - 'secretary-agent/prompt.txt'
               - 'secretary-agent/schema.json'
               - 'secretary-agent/probe.mjs'
+              - 'secretary-agent/compose.mjs'
       - name: Check previous deploy completed (design.md §26-1 2.)
         id: g
         env:
@@ -349,7 +350,7 @@ jobs:
 
   build-secretary-codex:
     # ADR-1058 段3 の ChatGPT の秘書。付け足しの機能なので、落ちても run を赤にしない（design.md §26-8）。
-    # build はリポジトリの根を context にする。BuildKit が secretary-codex/Dockerfile.dockerignore（許す一覧の 4 つ）を読む。
+    # build はリポジトリの根を context にする。BuildKit が secretary-codex/Dockerfile.dockerignore（許す一覧の 5 つ）を読む。
     needs: changes
     if: needs.changes.outputs.secretary_codex == 'true'
     runs-on: ubuntu-latest
