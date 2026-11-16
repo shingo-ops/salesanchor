@@ -38,6 +38,7 @@ _MIGRATIONS_DIR = Path(__file__).resolve().parents[3] / "migrations"
 _INCIDENTS_SQL = "20261016_100000_create_ops_incident_tables.sql"
 _CASE_SQL = "20261031_210000_create_ops_case.sql"
 _KIND_SQL = "20261113_200000_add_ops_case_report_kind.sql"
+_DROP_SQL = "20261115_110000_drop_ops_case_report_single_unique.sql"
 
 _ROLES = ("ai_unmask", "ai_unmask_owner", "ai_reader_cloud", "ai_reader", "salesanchor_app", "aic_owner")
 
@@ -208,4 +209,30 @@ def test_old_single_column_unique_still_exists(migrated):
         "SELECT count(*) FROM pg_constraint WHERE conrelid = 'ops_case.reports'::regclass"
         " AND conname = 'reports_incident_id_kind_key' AND contype = 'u'"
     )
+    assert c.fetchone()[0] == 1
+
+
+def test_stage_2b_drop_runs_twice_and_leaves_only_new_unique(migrated):
+    """2b の移行は取引の中で流して ROLLBACK する（2a の試験が古い一意の存在を確かめるため、確定させない）。"""
+    c = migrated.cursor()
+    old_unique_sql = (
+        "SELECT count(*) FROM pg_constraint con"
+        " WHERE con.conrelid = 'ops_case.reports'::regclass AND con.contype = 'u'"
+        " AND con.conkey = ARRAY[(SELECT a.attnum FROM pg_attribute a"
+        "   WHERE a.attrelid = 'ops_case.reports'::regclass AND a.attname = 'incident_id')]::int2[]"
+    )
+    c.execute("BEGIN")
+    try:
+        c.execute(_read(_DROP_SQL))
+        c.execute(_read(_DROP_SQL))
+        c.execute(old_unique_sql)
+        assert c.fetchone()[0] == 0
+        c.execute(
+            "SELECT count(*) FROM pg_constraint WHERE conrelid = 'ops_case.reports'::regclass"
+            " AND conname = 'reports_incident_id_kind_key' AND contype = 'u'"
+        )
+        assert c.fetchone()[0] == 1
+    finally:
+        c.execute("ROLLBACK")
+    c.execute(old_unique_sql)
     assert c.fetchone()[0] == 1
