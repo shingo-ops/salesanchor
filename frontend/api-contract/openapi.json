@@ -54431,7 +54431,7 @@
     },
     "/api/v1/ops/case/{incident_id}/report": {
       "post": {
-        "description": "報告（1 件 1 通。2 回目は 409。本文は 32KB まで）。",
+        "description": "報告（1 件に種類ごと 1 通。同じ種類の 2 通目は 409。届いたら出来事の表に報告の id だけを 1 行。本文は 32KB まで）。",
         "operationId": "post_report_api_v1_ops_case__incident_id__report_post",
         "parameters": [
           {
