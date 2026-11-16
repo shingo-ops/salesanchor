@@ -297,7 +297,7 @@ P1〜P13 がそろうまで、5-1〜5-3 の実装カードは出さない。
 分け方の表は `docs/handoff/migration-runner-redesign/recon-5-2a/classification.md`（147 件・未分類 0。足す 27・外す 22・003 の癖として写さない 82・差ではない 13・ひな形のまま 3）。外部キーの指し先の置き場所（会社の中か共用か）は、5-2a の書き出しでは「会社の中は `X.` 付き・それ以外は置き場所なし」で比べに入っており、本番 003 を置き場所つきで読んで1本ずつ比べた違いは分け済みの 3 本だけ（同 §3）。置き場所なしが共用を指すことは書き出したときの検索の順に頼るため、5-2 の実装カードでは置き場所を必ず付けて書き出して比べる。
 第1版の 1B'（CI の会社から書き出す）は取り下げた。理由は上の前提の事実のとおり、今の CI の会社が本番の形にならないため。
 どちらの案でも、データ（役割・権限・会社の設定）はひな形に含めない。今の入れ方（tenant.py の seed_system_roles など）を残す。
-ひな形を直接使う5か所（setup の3本、backend/tests/rls_bootstrap.py、backend/tests/test_roles_system_key_ddl.py :29）も同じ PR で新しいひな形に揃え、古い直書きは消す（残すなら理由を書く）。
+ひな形を直接使う所も同じ PR で新しいひな形に揃え、古い直書きは消す（残すなら理由を書く）。2026-11-16 に origin/main（a7537ec54）で数え直した今の一覧: ひな形の文字列を自分で組み立てて流すのは `scripts/setup_review_tenant.py:149`・`:160` と `scripts/setup_tenant.py:171` の2本（`create_tenant_schema` を呼ぶ形に変える）。`create_tenant_schema` を呼ぶだけの所は `backend/app/routers/admin.py:74`・`backend/tests/rls_bootstrap.py:411`・`backend/tests/test_channel_type_control.py:73`・`backend/tests/test_system_roles.py:182`（変えない）。ひな形の文字列を読んで中身を確かめる試験は `test_roles_system_key_ddl.py:35`・`test_tenant_issuer_tables_pg.py:63`・`test_tenant_payment_versioning_pg.py:73`・`:97`・`test_tenant_duty_rules_pg.py:75`・`:133`・`test_discord_role_link_ddl.py:41`（読むだけ）。第3版の「5か所」にあった `scripts/setup_test_users.py` は今は無い。実装カードは `docs/handoff/migration-runner-redesign/card-5-2.md`。
 
 ### 5-7. 実行済みの記録（5-3）
 
@@ -351,7 +351,7 @@ P1〜P13 がそろうまで、5-1〜5-3 の実装カードは出さない。
 | K5-1 | 39本が全部「無効にした」か「固めてよい（理由つき）」に分かれている。無効にした本数だけ、値の操作を持つ本数が減る | P11 の表と、stage5-recon4 と同じ数え方の前後の本数 |
 | K5-1b | 値を書く移行に依存する試験（P12）が、無効にした後も通る | CI |
 | K5-2 | ひな形で作った会社に登録全件（run_py を含む）を流しても、形の差が0 | §5-6 の CI の検査 |
-| K5-2b | ひな形を直接使う5か所が新しいひな形を使い、古い直書きが0 | grep の件数 |
+| K5-2b | ひな形を直接使う所（§5-6 末尾の今の一覧）が新しいひな形を使い、古い直書きが0 | grep の件数 |
 | K5-2c | ひな形だけを変えて migrations/ に手順を足さない PR が CI で止まる | 赤の実演 |
 | K5-3 | 今ある5社の形が 5-2・5-3 の前後で変わらない | stage5-prod と同じ問い合わせを前後で取り、差0 |
 | K5-4 | 起点の本番反映の後、記録の件数が「記録の対象」の数（登録の行数から、ai_ro を外す手順と毎回の一覧を引いた数）と一致。作り直しのファイルは今も登録の行に数えない（`scripts/run_all_migrations.sh` :225） | 本番の記録の件数と登録の行数 |
