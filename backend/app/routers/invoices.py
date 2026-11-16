@@ -36,18 +36,22 @@ from app.cache import invalidate_dashboard_cache
 from app.database import get_db
 from app.models import User
 from app.schemas.invoice import (
+    DraftContextResponse,
     InvoiceCreate,
     InvoiceDetailResponse,
     InvoiceItemResponse,
+    InvoicePreviewRequest,
+    InvoicePreviewResponse,
     InvoiceResponse,
     InvoiceUpdate,
     VoidRequest,
 )
-from app.services import paypal_payments
+from app.services import invoice_payment_methods, invoice_totals, paypal_payments
 from app.services.audit import record_audit_log
-from app.services.fx_rate import get_fx_rate
+from app.services.fx_currencies import list_invoice_currencies
+from app.services.invoice_payment_methods import PaymentMethodInvalid
 from app.services.invoice_renderer import render_invoice_pdf, render_quote_pdf
-from app.services.issuer import decide_issuer_region, get_issuer
+from app.services.issuer import decide_issuer_region, get_issuer, get_issuer_country_code
 from app.services.payment_dates import PAID_AT_SQL, paid_at_from_date, paypal_paid_at
 
 router = APIRouter()
@@ -114,10 +118,11 @@ _INVOICE_COLUMNS = """
     duty_amount, duty_policy_snapshot, fx_rate_snapshot,
     paypal_order_id, paypal_approval_url, payment_fee,
     paypal_invoicer_view_url, paypal_copy_pdf_at,
-    issuer_region
+    issuer_region,
+    payment_method_id, tax_rate_percent, shipping_carrier, shipping_service, shipping_snapshot
 """
 
-_UPDATABLE_COLUMNS = {"payment_method", "due_date", "exchange_rate_jpy", "exchange_rate_usd", "notes"}
+_UPDATABLE_COLUMNS = {"due_date", "notes"}
 
 
 async def _get_invoice_items(db: AsyncSession, invoice_id: int) -> list[dict]:
@@ -132,25 +137,86 @@ async def _get_invoice_items(db: AsyncSession, invoice_id: int) -> list[dict]:
     return [dict(row) for row in result.mappings().all()]
 
 
-def _calc_currency_amounts(total: Decimal, currency: str,
-                           rate_jpy: Decimal | None, rate_usd: Decimal | None) -> tuple[Decimal | None, Decimal | None]:
-    """通貨換算額を算出。"""
-    amount_jpy = None
-    amount_usd = None
-    if currency == "JPY":
-        amount_jpy = total
-        if rate_usd and rate_usd > 0:
-            amount_usd = round(total / rate_usd, 2)
-    elif currency == "USD":
-        amount_usd = total
-        if rate_jpy:
-            amount_jpy = round(total * rate_jpy, 2)
-    elif currency == "EUR":
-        if rate_jpy:
-            amount_jpy = round(total * rate_jpy, 2)
-        if rate_usd:
-            amount_usd = round(total * rate_usd, 2)
-    return amount_jpy, amount_usd
+_INSERT_INVOICE_SQL = """
+    INSERT INTO invoices (
+        tenant_id, invoice_number, quote_id, company_id, contact_id, currency,
+        subtotal, shipping_fee, tax_amount, total_amount,
+        exchange_rate_jpy, exchange_rate_usd, amount_jpy, amount_usd,
+        payment_method, payment_method_id, status, branch_number, erp_key,
+        due_date, notes, created_by,
+        ship_to_snapshot, bill_to_snapshot, fx_rate_snapshot, issuer_region,
+        duty_amount, duty_policy_snapshot, tax_rate_percent,
+        shipping_carrier, shipping_service, shipping_snapshot
+    ) VALUES (
+        :tid, :inv_num, :qid, :company_id, :contact_id, :currency,
+        :subtotal, :shipping, :tax, :total,
+        :rate_jpy, :rate_usd, :amt_jpy, :amt_usd,
+        :payment, :payment_method_id, 'draft', 1, :erp_key,
+        :due_date, :notes, :created_by,
+        :ship_to, :bill_to, :fx_rate, :issuer_region,
+        :duty_amount, :duty_policy_snapshot, :tax_rate_percent,
+        :shipping_carrier, :shipping_service, :shipping_snapshot
+    ) RETURNING id
+"""
+
+_RECOMPUTE_SET_SQL = """
+    subtotal = :subtotal, shipping_fee = :shipping, tax_amount = :tax, total_amount = :total,
+    exchange_rate_jpy = :rate_jpy, exchange_rate_usd = :rate_usd, amount_jpy = :amt_jpy, amount_usd = :amt_usd,
+    fx_rate_snapshot = :fx_rate, duty_amount = :duty_amount, duty_policy_snapshot = :duty_policy_snapshot,
+    tax_rate_percent = :tax_rate_percent, shipping_snapshot = :shipping_snapshot
+"""
+
+
+def _load_snapshot(value):
+    """写しの列は PG では dict、SQLite の試験では JSON の文字。"""
+    if isinstance(value, str):
+        return json.loads(value)
+    return value
+
+
+def _raise_if_blocked(result: invoice_totals.TotalsResult) -> None:
+    blocked = invoice_totals.first_block(result)
+    if blocked is not None:
+        raise HTTPException(status_code=blocked[0], detail=blocked[1])
+
+
+def _shipping_choice(body) -> invoice_totals.ShippingChoice | None:
+    if body is None:
+        return None
+    if body.mode == "none":
+        return invoice_totals.ShippingChoice(mode="none")
+    return invoice_totals.ShippingChoice(
+        mode="calculate", carrier=body.carrier, service_type=body.service_type,
+        fee=body.fee, currency=body.currency.upper(),
+    )
+
+
+def _shipping_from_stored(row) -> invoice_totals.ShippingChoice:
+    """発行の時に保存した送料の写しから選び方を戻す（D10）。"""
+    snap = _load_snapshot(row["shipping_snapshot"])
+    if snap and snap.get("source") in ("calculate", "quote"):
+        return invoice_totals.ShippingChoice(
+            mode=snap["source"], carrier=snap.get("carrier"), service_type=snap.get("service_type"),
+            fee=Decimal(snap["original_fee"]), currency=snap.get("original_currency") or row["currency"],
+        )
+    if snap and snap.get("source") == "none":
+        return invoice_totals.ShippingChoice(mode="none")
+    fee = Decimal(row["shipping_fee"] or 0)
+    if fee > 0:
+        return invoice_totals.ShippingChoice(
+            mode="quote", carrier=row["shipping_carrier"], fee=fee, currency=row["currency"],
+        )
+    return invoice_totals.ShippingChoice(mode="none")
+
+
+async def _compute(db, tenant_id, *, currency, items, shipping, ship_to, bill_to, base_date=None):
+    destination = invoice_totals.destination_country(ship_to, bill_to)
+    inputs = await invoice_totals.load_totals_inputs(
+        db, tenant_id, destination=destination, base_date=base_date or invoice_totals.today_jst(),
+    )
+    return invoice_totals.compute_totals(
+        currency=currency, items=items, shipping=shipping, destination=destination, inputs=inputs,
+    )
 
 
 @router.get(
@@ -190,6 +256,132 @@ async def list_invoices(
 
 
 @router.get(
+    "/invoices/draft-context",
+    response_model=DraftContextResponse,
+    dependencies=[Depends(require_permission("invoices.create"))],
+)
+async def get_invoice_draft_context(
+    company_id: int | None = Query(default=None, ge=1),
+    contact_id: int | None = Query(default=None, ge=1),
+    invoice_id: int | None = Query(default=None, ge=1),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),  # noqa: ARG001
+):
+    """作成画面と下書きの詳細画面の材料（書かない。design.md §3-4 の表の1行目）。"""
+    stored = None
+    if invoice_id is not None:
+        res = await db.execute(
+            text("SELECT company_id, contact_id, currency, issuer_region FROM invoices WHERE id = :id"),
+            {"id": invoice_id},
+        )
+        stored = res.mappings().first()
+        if stored is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:invoice")
+        if company_id is not None and company_id != stored["company_id"]:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="invoice_company_mismatch")
+        company_id = stored["company_id"]
+        if contact_id is None:
+            contact_id = stored["contact_id"]
+    if company_id is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="draft_context_target")
+
+    co = await db.execute(text("SELECT id FROM companies WHERE id = :id"), {"id": company_id})
+    if co.first() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:company")
+
+    contact_name = None
+    contact_email = None
+    if contact_id is not None:
+        ct = await db.execute(
+            text("SELECT company_id, display_name, surname, given_name, primary_email FROM contacts WHERE id = :id"),
+            {"id": contact_id},
+        )
+        ct_row = ct.mappings().first()
+        if ct_row is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:contact")
+        if ct_row["company_id"] != company_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="contact_company_mismatch")
+        contact_name = ct_row["display_name"] or " ".join(
+            p for p in (ct_row["surname"], ct_row["given_name"]) if p
+        ) or None
+        contact_email = ct_row["primary_email"]
+
+    ship_to = await _fetch_address_snapshot(db, company_id, "delivery")
+    bill_to = await _fetch_address_snapshot(db, company_id, "billing")
+    if stored is not None:
+        region = stored["issuer_region"] or "overseas"
+    else:
+        region = decide_issuer_region(bill_to)
+
+    fx = await invoice_totals.load_latest_fx(db)
+    currencies = await list_invoice_currencies(db)
+    tax_row = await invoice_totals.load_tax_row(db, invoice_totals.today_jst())
+    policy = await db.execute(
+        text("SELECT default_currency FROM public.tenant_settings WHERE tenant_id = :tid"),
+        {"tid": int(tenant_id)},
+    )
+    policy_row = policy.first()
+    return DraftContextResponse(
+        company_id=company_id,
+        ship_to=ship_to,
+        bill_to=bill_to,
+        contact_name=contact_name,
+        contact_email=contact_email,
+        issuer_region=region,
+        origin_country_code=await get_issuer_country_code(db, tenant_id, region),
+        destination_country_code=invoice_totals.destination_country(ship_to, bill_to),
+        destination_postal_code=invoice_totals.destination_postal_code(ship_to, bill_to),
+        currencies=currencies,
+        fx_rates=[
+            {"currency": cur, "rate": float(row.rate_jpy), "fetched_at": invoice_totals._iso_utc(row.fetched_at)}
+            for cur, row in sorted(fx.items())
+        ],
+        default_currency=(policy_row[0] if policy_row else None),
+        currency=(stored["currency"] if stored is not None else None),
+        payment_methods=await invoice_payment_methods.list_payment_choices(db, tenant_id, region),
+        tax_rate_percent=(tax_row.rate_percent if tax_row else None),
+        incoterms=await invoice_totals.load_incoterms(db, tenant_id),
+    )
+
+
+@router.post(
+    "/invoices/preview",
+    response_model=InvoicePreviewResponse,
+    dependencies=[Depends(require_permission("invoices.create"))],
+)
+async def preview_invoice(
+    data: InvoicePreviewRequest,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),  # noqa: ARG001
+):
+    """試算（書かない）。未計算でも 200 で理由を返す（D5）。"""
+    co = await db.execute(text("SELECT id FROM companies WHERE id = :id"), {"id": data.company_id})
+    if co.first() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:company")
+    ship_to = await _fetch_address_snapshot(db, data.company_id, "delivery")
+    bill_to = await _fetch_address_snapshot(db, data.company_id, "billing")
+    destination = invoice_totals.destination_country(ship_to, bill_to)
+    inputs = await invoice_totals.load_totals_inputs(
+        db, tenant_id, destination=destination, base_date=invoice_totals.today_jst(),
+    )
+    result = invoice_totals.compute_totals(
+        currency=data.currency,
+        items=[invoice_totals.TotalsItem(quantity=i.quantity, unit_price=i.unit_price) for i in data.items],
+        shipping=_shipping_choice(data.shipping),
+        destination=destination,
+        inputs=inputs,
+    )
+    return InvoicePreviewResponse(
+        currency=result.currency, subtotal=result.subtotal, shipping_fee=result.shipping_fee,
+        tax_amount=result.tax_amount, tax_rate_percent=result.tax_rate_percent,
+        duty_amount=result.duty_amount, duty_label=result.duty_label, duty_components=result.duty_components,
+        total_amount=result.total_amount, uncomputed=result.uncomputed, incoterms=inputs.incoterms,
+    )
+
+
+@router.get(
     "/invoices/{invoice_id}",
     response_model=InvoiceDetailResponse,
     dependencies=[Depends(require_permission("invoices.view"))],
@@ -205,7 +397,12 @@ async def get_invoice(
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:invoice")
     items = await _get_invoice_items(db, invoice_id)
-    return InvoiceDetailResponse(**dict(row), items=[InvoiceItemResponse(**i) for i in items])
+    label = await invoice_payment_methods.load_payment_label(db, tenant_id, row["payment_method_id"])
+    return InvoiceDetailResponse(
+        **dict(row), items=[InvoiceItemResponse(**i) for i in items],
+        payment_method_display_name=(label or {}).get("display_name"),
+        payment_method_type=(label or {}).get("method_type"),
+    )
 
 
 @router.post(
@@ -248,36 +445,35 @@ async def create_invoice_from_quote(
     if issuer_region is None:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="bill_to_country")
 
-    # 為替レート取得（JPY 以外の場合）
-    currency = q["currency"]
-    fx_snap = get_fx_rate(currency) if currency and currency.upper() != "JPY" else None
+    currency = (q["currency"] or "JPY").upper()
+    quote_items_rows = (await db.execute(
+        text("SELECT quantity, unit_price FROM quote_items WHERE quote_id = :qid ORDER BY sort_order"),
+        {"qid": quote_id},
+    )).mappings().all()
+    q_fee = Decimal(q["shipping_fee"] or 0)
+    shipping = (
+        invoice_totals.ShippingChoice(mode="quote", carrier=q.get("shipping_carrier"), fee=q_fee, currency=currency)
+        if q_fee > 0 else invoice_totals.ShippingChoice(mode="none")
+    )
+    totals = await _compute(
+        db, tenant_id, currency=currency,
+        items=[invoice_totals.TotalsItem(quantity=r["quantity"], unit_price=Decimal(r["unit_price"])) for r in quote_items_rows],
+        shipping=shipping, ship_to=ship_to_snap, bill_to=bill_to_snap,
+    )
+    _raise_if_blocked(totals)
 
-    # 請求書ヘッダー作成（Step 5d: quote から company_id/contact_id を継承）
     inv_result = await db.execute(
-        text("""
-            INSERT INTO invoices (
-                tenant_id, invoice_number, quote_id, company_id, contact_id, currency,
-                subtotal, shipping_fee, tax_amount, total_amount,
-                payment_method, status, branch_number, erp_key, notes, created_by,
-                ship_to_snapshot, bill_to_snapshot, fx_rate_snapshot, issuer_region
-            ) VALUES (
-                :tid, :inv_num, :qid, :company_id, :contact_id, :currency,
-                :subtotal, :shipping, :tax, :total,
-                NULL, 'draft', 1, :erp_key, :notes, :created_by,
-                :ship_to, :bill_to, :fx_rate, :issuer_region
-            ) RETURNING id
-        """),
+        text(_INSERT_INVOICE_SQL),
         {
             "tid": tenant_id, "inv_num": invoice_number, "qid": quote_id,
             "company_id": company_id, "contact_id": q.get("contact_id"),
             "currency": currency,
-            "subtotal": q["subtotal"], "shipping": q["shipping_fee"],
-            "tax": q["tax_amount"], "total": q["total_amount"],
-            "erp_key": erp_key, "notes": q["notes"], "created_by": current_user.id,
+            "payment": None, "payment_method_id": None,
+            "erp_key": erp_key, "due_date": None, "notes": q["notes"], "created_by": current_user.id,
             "ship_to": json.dumps(ship_to_snap) if ship_to_snap else None,
             "bill_to": json.dumps(bill_to_snap) if bill_to_snap else None,
-            "fx_rate": json.dumps(fx_snap) if fx_snap else None,
             "issuer_region": issuer_region,
+            **invoice_totals.to_db_params(totals),
         },
     )
     invoice_id = inv_result.scalar_one()
@@ -338,12 +534,6 @@ async def create_invoice(
             detail="指定された担当者は指定会社に所属していません",
         )
 
-    subtotal = sum(item.quantity * item.unit_price for item in data.items)
-    shipping = data.shipping_fee or Decimal(0)
-    tax = data.tax_amount or Decimal(0)
-    total = subtotal + shipping + tax
-    amount_jpy, amount_usd = _calc_currency_amounts(total, data.currency, data.exchange_rate_jpy, data.exchange_rate_usd)
-
     # スナップショット取得
     ship_to_snap = await _fetch_address_snapshot(db, data.company_id, "delivery")
     bill_to_snap = await _fetch_address_snapshot(db, data.company_id, "billing")
@@ -352,8 +542,24 @@ async def create_invoice(
     if issuer_region is None:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="bill_to_country")
 
-    # 為替レート取得（JPY 以外の場合）
-    fx_snap = get_fx_rate(data.currency) if data.currency and data.currency.upper() != "JPY" else None
+    currency = data.currency.upper()
+    totals = await _compute(
+        db, tenant_id, currency=currency,
+        items=[invoice_totals.TotalsItem(quantity=i.quantity, unit_price=i.unit_price) for i in data.items],
+        shipping=_shipping_choice(data.shipping), ship_to=ship_to_snap, bill_to=bill_to_snap,
+    )
+    _raise_if_blocked(totals)
+
+    payment_text = None
+    payment_method_id = None
+    if data.payment_method_ref is not None:
+        try:
+            payment_text, payment_method_id = await invoice_payment_methods.resolve_payment_ref(
+                db, tenant_id, method_type=data.payment_method_ref.method_type,
+                method_id=data.payment_method_ref.id, region=issuer_region, currency=currency,
+            )
+        except PaymentMethodInvalid:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="payment_method")
 
     max_result = await db.execute(text("SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM invoices"))
     next_id = max_result.scalar()
@@ -361,35 +567,17 @@ async def create_invoice(
     erp_key = str(uuid.uuid4())[:8].upper()
 
     inv_result = await db.execute(
-        text("""
-            INSERT INTO invoices (
-                tenant_id, invoice_number, company_id, contact_id, currency,
-                subtotal, shipping_fee, tax_amount, total_amount,
-                exchange_rate_jpy, exchange_rate_usd, amount_jpy, amount_usd,
-                payment_method, status, branch_number, erp_key,
-                due_date, notes, created_by,
-                ship_to_snapshot, bill_to_snapshot, fx_rate_snapshot, issuer_region
-            ) VALUES (
-                :tid, :inv_num, :company_id, :contact_id, :currency,
-                :subtotal, :shipping, :tax, :total,
-                :rate_jpy, :rate_usd, :amt_jpy, :amt_usd,
-                :payment, 'draft', 1, :erp_key,
-                :due_date, :notes, :created_by,
-                :ship_to, :bill_to, :fx_rate, :issuer_region
-            ) RETURNING id
-        """),
+        text(_INSERT_INVOICE_SQL),
         {
-            "tid": tenant_id, "inv_num": invoice_number,
+            "tid": tenant_id, "inv_num": invoice_number, "qid": None,
             "company_id": data.company_id, "contact_id": data.contact_id,
-            "currency": data.currency, "subtotal": subtotal, "shipping": shipping,
-            "tax": tax, "total": total, "rate_jpy": data.exchange_rate_jpy,
-            "rate_usd": data.exchange_rate_usd, "amt_jpy": amount_jpy, "amt_usd": amount_usd,
-            "payment": data.payment_method, "erp_key": erp_key,
-            "due_date": data.due_date, "notes": data.notes, "created_by": current_user.id,
+            "currency": currency,
+            "payment": payment_text, "payment_method_id": payment_method_id,
+            "erp_key": erp_key, "due_date": data.due_date, "notes": data.notes, "created_by": current_user.id,
             "ship_to": json.dumps(ship_to_snap) if ship_to_snap else None,
             "bill_to": json.dumps(bill_to_snap) if bill_to_snap else None,
-            "fx_rate": json.dumps(fx_snap) if fx_snap else None,
             "issuer_region": issuer_region,
+            **invoice_totals.to_db_params(totals),
         },
     )
     invoice_id = inv_result.scalar_one()
@@ -416,7 +604,7 @@ async def create_invoice(
             "company_id": data.company_id,
             "contact_id": data.contact_id,
             "invoice_number": invoice_number,
-            "total": str(total),
+            "total": str(totals.total_amount),
         },
     )
     await db.commit()
@@ -449,8 +637,21 @@ async def update_invoice(
     if old_row["status"] != "draft":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="draft状態の請求書のみ編集できます")
 
-    update_data = data.model_dump(exclude_unset=True)
-    update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE_COLUMNS}
+    sent = data.model_dump(exclude_unset=True)
+    update_data = {k: v for k, v in sent.items() if k in _UPDATABLE_COLUMNS}
+    if "payment_method_ref" in sent:
+        ref = data.payment_method_ref
+        if ref is None:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="payment_method")
+        try:
+            payment_text, payment_method_id = await invoice_payment_methods.resolve_payment_ref(
+                db, tenant_id, method_type=ref.method_type, method_id=ref.id,
+                region=old_row["issuer_region"] or "overseas", currency=old_row["currency"],
+            )
+        except PaymentMethodInvalid:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="payment_method")
+        update_data["payment_method"] = payment_text
+        update_data["payment_method_id"] = payment_method_id
     if not update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="no_fields_to_update")
 
@@ -483,13 +684,43 @@ async def issue_invoice(
     current_user: User = Depends(get_current_user),
 ):
     """請求書を発行する（draft → issued）"""
-    result = await db.execute(
-        text(f"UPDATE invoices SET status = 'issued', issued_at = NOW(), updated_at = NOW() WHERE id = :id AND status = 'draft' RETURNING {_INVOICE_COLUMNS}"),
+    cur = await db.execute(
+        text(f"SELECT {_INVOICE_COLUMNS} FROM invoices WHERE id = :id FOR UPDATE"),
         {"id": invoice_id},
+    )
+    old = cur.mappings().first()
+    if not old or old["status"] != "draft":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="draft状態の請求書のみ発行できます")
+
+    if old["payment_method_id"] is not None:
+        ok = await invoice_payment_methods.is_current_choice(
+            db, tenant_id, payment_method_id=old["payment_method_id"],
+            region=old["issuer_region"] or "overseas", currency=old["currency"],
+        )
+        if not ok:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="payment_method")
+
+    items = await _get_invoice_items(db, invoice_id)
+    totals = await _compute(
+        db, tenant_id, currency=old["currency"],
+        items=[invoice_totals.TotalsItem(quantity=i["quantity"], unit_price=Decimal(i["unit_price"])) for i in items],
+        shipping=_shipping_from_stored(old),
+        ship_to=_load_snapshot(old["ship_to_snapshot"]), bill_to=_load_snapshot(old["bill_to_snapshot"]),
+    )
+    _raise_if_blocked(totals)
+    params = invoice_totals.to_db_params(totals)
+    params.pop("shipping_carrier")
+    params.pop("shipping_service")
+    result = await db.execute(
+        text(
+            f"UPDATE invoices SET {_RECOMPUTE_SET_SQL}, status = 'issued', issued_at = NOW(), updated_at = NOW() "
+            f"WHERE id = :id AND status = 'draft' RETURNING {_INVOICE_COLUMNS}"
+        ),
+        {**params, "id": invoice_id},
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="draft状態の請求書のみ発行できます")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invoice_not_draft")
 
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
                            action="issue", table_name="invoices", record_id=invoice_id,
@@ -791,6 +1022,15 @@ async def confirm_paypal_payment(
 # C-8: PDF ダウンロード（請求書 / 見積書）
 # ──────────────────────────────────────────────────────────────────────
 
+async def _pdf_payment(db: AsyncSession, tenant_id: int, row) -> dict | None:
+    """PDF の支払方法の区切り（design.md §3-7）。版は古くても消されていてもその版を読む。"""
+    if row["payment_method_id"] is not None:
+        return await invoice_payment_methods.load_payment_version(db, tenant_id, row["payment_method_id"])
+    if row["payment_method"] == "paypal":
+        return {"method_type": "paypal"}
+    return None
+
+
 @router.get(
     "/invoices/{invoice_id}/pdf",
     dependencies=[Depends(require_permission("invoices.view"))],
@@ -836,6 +1076,8 @@ async def download_invoice_pdf(
         "duty_amount": float(row["duty_amount"]) if row["duty_amount"] is not None else None,
         "fx_rate_snapshot": row["fx_rate_snapshot"],
         "notes": row["notes"],
+        "tax_rate_percent": float(row["tax_rate_percent"]) if row["tax_rate_percent"] is not None else None,
+        "payment": await _pdf_payment(db, tenant_id, row),
     }
 
     pdf_bytes = await run_in_threadpool(render_invoice_pdf, invoice_data, tenant_profile)
@@ -1029,11 +1271,12 @@ async def download_quote_pdf(
 )
 async def fetch_fx_rate(
     currency: str,
+    db: AsyncSession = Depends(get_db),
     tenant_id: int = Depends(get_current_tenant),  # noqa: ARG001
     current_user: User = Depends(get_current_user),  # noqa: ARG001
 ):
     """
-    指定通貨の為替レートをライブ取得する（C-7）。
+    指定通貨の為替レートを為替の表（public.app_fx_rate_history）の最新行から返す（invoice-create-portfolio 便C・K24）。
 
     JPY 指定時は {"currency":"JPY","rate":1.0,"fetched_at":null} を返す。
     取得失敗時は 503 を返す。
@@ -1041,7 +1284,12 @@ async def fetch_fx_rate(
     if currency.upper() == "JPY":
         return {"currency": "JPY", "rate": 1.0, "fetched_at": None}
 
-    result = get_fx_rate(currency)
+    fx = await invoice_totals.load_latest_fx(db)
+    row = fx.get(currency.upper())
+    result = (
+        None if row is None
+        else {"currency": row.currency, "rate": float(row.rate_jpy), "fetched_at": invoice_totals._iso_utc(row.fetched_at)}
+    )
     if result is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

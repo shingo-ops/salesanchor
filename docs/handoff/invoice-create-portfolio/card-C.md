@@ -1722,6 +1722,13 @@ backend/tests/test_invoices_create_flow.py（SQLite。`pytestmark = pytest.mark.
 - F16 為替は表だけ（K13）: `monkeypatch.setattr("app.services.fx_rate.get_fx_rate", 呼ぶと例外を投げる関数)` のもとで、作成・見積から作成・発行が通る。PATCH に `exchange_rate_jpy`・`payment_method`（文字）を送ると 422、`payment_method_ref: null` を送ると 422 `payment_method`、発行済みの請求書に `{"notes": "x"}` を送ると 400「draft状態の請求書のみ編集できます」（K18・K23）。
 
 backend/tests/test_invoice_totals_pg.py（実 PostgreSQL。CI だけで動く。テナント 953。前例 backend/tests/test_duty_rules_pg.py の skip の決まり・テナントの作り方・後始末をそのまま使う。1 つの試験関数 `test_invoice_totals_pg_end_to_end` の中で順に確かめる）
+- G0 表の準備（共有の準備 `bootstrap_tenant_schema` は public.tax_rates・振込先の表・関税の表は作るが、次の 4 つの public の表は作らない）: `bootstrap_tenant_schema(admin_engine, 953)` の直後、G1 より前に、`async with public_bootstrap_lock(admin_engine):` と `async with admin_engine.begin() as conn:` の中で `_apply_migration_on_conn(conn, name)`（schema_name なし・backend/tests/rls_bootstrap.py から import）を次の順で流す。どれも本番と同じ migration で、何度流しても同じ結果になる（前例 backend/tests/test_permission_resolution_pg.py:107-108・backend/tests/test_llm_usage_outcome_filter_pg.py:45）。
+  1. `070_add_spreadsheet_phase.sql`（public.tenant_settings）
+  2. `20260604_050000_add_tenant_policy_columns.sql`（duty_incoterms・default_currency の列）
+  3. `20260610_071110_add_paypal_config.sql`（public.tenant_paypal_config）
+  4. `20260628_170000_add_app_fx_rates.sql`（public.app_fx_rates。5 の前提）
+  5. `20261003_100000_create_app_fx_rate_history.sql`（public.app_fx_rate_history）
+  G0 は後始末の `try` の外（前）に置く。表が無いまま後始末が動いて本当の失敗が隠れるのを防ぐ。
 - G1 読み方: public.tax_rates に試験の行（基準日 2100-01-01 の 9.00%。試験の後で消す）を入れ、`load_tax_row(db, date(2100, 1, 2))` が 9.00 を返し、`date(2099, 12, 31)` では前の行（無ければ None）になる。public.app_fx_rate_history に `ZZT`（試験だけの通貨）の 2 行（古い 100・新しい 120）を入れ、`load_latest_fx` の `ZZT` が 120。試験の後で ZZT の行と 2100 の行を消す。
 - G2 関税の行の読み方: テナント 953 に DDP の行（US・carrier NULL・2026-01-01〜2026-12-31・中身 2 つ）と止めた行（is_active false）を入れ、`load_duty_rules(db, 953, "US", date(2026, 12, 31))` が 1 行（止めた行は出ない・終わりの日を含む）・中身が sort_order 順。`date(2027, 1, 1)` で 0 行。
 - G3 新しいテナント（K22）: 953 のスキーマを backend/app/services/tenant.py の作り方（前例の PG 試験と同じ関数）で作り、`_INSERT_INVOICE_SQL` を `invoice_totals.to_db_params` の値で流して 1 行が入り、`SELECT {_INVOICE_COLUMNS} FROM tenant_953.invoices` が読め、`InvoiceDetailResponse` に入れられる。
@@ -1729,7 +1736,9 @@ backend/tests/test_invoice_totals_pg.py（実 PostgreSQL。CI だけで動く。
 - G5 版（K25 の便 C 側）: X を直す手順（design.md §3-8 の直す手順: 新しい行 Y と詳細を足し `UPDATE ... SET superseded_by_id = Y WHERE id = X AND superseded_by_id IS NULL AND deleted_at IS NULL`）の後、候補は Y だけ・X で `resolve_payment_ref` は PaymentMethodInvalid・`is_current_choice(X)` は False・`load_payment_version(X)` は X の口座番号を返す。
 - G6 draft-context の形（K24 の後半・K23）: 試験用の FastAPI の client を使わず、道の関数 `get_invoice_draft_context` を直接 await で呼ぶ（引数に db・tenant_id 953・current_user は None）。fx_rates の ZZT の fetched_at が "+00:00" で終わる。invoice_id を渡すと保存した issuer_region（domestic）で候補を返し、会社の請求先の国を US に変えた後も同じ候補。
 - G7 GET /fx-rate（K24）: `fetch_fx_rate("ZZT", db=db, ...)` を直接呼んで rate 120.0・fetched_at が "+00:00" で終わる。`"ZZQ"`（行なし）で HTTPException 503。`"JPY"` は rate 1.0・fetched_at None。`app.services.fx_rate.get_fx_rate` を呼ぶと例外を投げる関数に差し替えた上で行う。
-- G8 後始末: 入れた public の行（tax_rates 2100・app_fx_rate_history ZZT・必要なら tenant_settings 953）とテナント 953 のスキーマを消す（前例の後始末の書き方を写す。命令の文は前例と同じものを使う）。
+- G8 後始末: 入れた public の行（tax_rates 2100・app_fx_rate_history ZZT・必要なら tenant_settings 953）とテナント 953 のスキーマを消す（前例の後始末の書き方を写す。命令の文は前例と同じものを使う）。tenant_settings の 953 の行は、準備の順によって有る時も無い時もあるので、無くても失敗しない書き方（行を消す命令は 0 行でも通る）にする。
+- この試験ファイルは Write か Edit の道具で書く。Bash（python の heredoc・sed を含む）で書かない。後始末の命令の文が Bash の見張りに止められるため。
+- 実 PostgreSQL を手元で立てない（initdb・pg_ctl・createdb を使わない）。この試験は CI だけで動く。手順6 で skipped と出れば足りる。
 
 backend/tests/test_invoice_pdf_payment.py（DB なし。4 本。前例 test_invoices.py:676-750 の PDF の試験の書き方を写す）
 - 文字の取り方: `reportlab.pdfgen.canvas.Canvas.drawString` と `drawRightString` を、引数の文字を list に足してから元の関数を呼ぶ関数に monkeypatch で包み、`render_invoice_pdf` を呼んだ後の list を見る。
@@ -1740,43 +1749,48 @@ backend/tests/test_invoice_pdf_payment.py（DB なし。4 本。前例 test_invo
 
 ## 3. 手順
 
-手順1 枝を取る
-    cd ~ && git clone https://github.com/shingo-ops/salesanchor.git sa 2>&1 | tail -1
-    cd ~/sa && git checkout release/invoice-create-portfolio-bin-cd
-    cd ~/sa && git log --oneline -1 | tail -1
-    cd ~/sa && git merge-base --is-ancestor origin/main HEAD; echo "is-ancestor exit=$?"
-  期待: 4行目 `is-ancestor exit=0`。1 なら `BLOCKED: 手順1 is-ancestor`（取り込みは Opus が行う）。
+手順1 作業場所を公式の台本で作る（リポジトリの pre-commit は `~/worktrees/` 配下でない場所からの commit を「worktree 外での作業は禁止」で止める。クラウドでも同じ。docs/handoff/cloud-parity/recon.md:23。2026-11-16 06:25 JST の 1 回目はホームの sa に clone したため手順10 の commit で止まった）。`<main>` はクラウドが最初に置いたリポジトリの場所（例 `/home/user/salesanchor`）。ホームに clone した sa は使わない。1 つずつ流し、出力を報告に書く。
+    cd <main> && git fetch origin release/invoice-create-portfolio-bin-cd main
+    cd <main> && git branch --list release/invoice-create-portfolio-bin-cd
+    cd <main> && bash scripts/new-worktree.sh release/invoice-create-portfolio-bin-cd
+    cd <main> && git worktree list
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git merge --no-edit origin/release/invoice-create-portfolio-bin-cd
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git merge-base --is-ancestor origin/release/invoice-create-portfolio-bin-cd HEAD; echo "rel exit=$?"
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git merge-base --is-ancestor origin/main HEAD; echo "is-ancestor exit=$?"
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git log -1 --oneline | tail -1
+  期待（上から順に）: 2行目の出力が空（空でなければ消さずに `BLOCKED: 手順1 枝が既にある`。git checkout -B は使わない）。3行目は --claude を付けず、出力をパイプに通さない。4行目に `$HOME/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd` が出る（出なければ `BLOCKED: 手順1 作業場所`）。5行目は ff でなく合わせの commit になってよい（衝突したら git merge --abort をして `BLOCKED: 手順1 衝突`）。6行目 `rel exit=0`。7行目 `is-ancestor exit=0`。
+  以後の手順2〜10 と card-D.md の手順はすべてこの作業場所（W）の中で行う。台本が <main> 側に作る .claude-pipeline/active-work.d/ の未追跡ファイルは commit しない（作業場所の status には出ない）。作業場所の status に `.claude-pipeline/active-work.d/` の `??` が出たときは、それを §1 の範囲外として数えず、add もしない。
 
 手順2 実装前点検 P1〜P8 と変更前の文を流し、結果をそのまま報告に貼る
-    cd ~/sa && git rev-parse HEAD | tail -1
-    cd ~/sa && ls docs/handoff/invoice-create-portfolio/card-C.md docs/handoff/invoice-create-portfolio/card-D.md | wc -l
-    cd ~/sa && ls backend/app/services/invoice_totals.py backend/app/services/invoice_payment_methods.py backend/tests/test_invoice_totals.py backend/tests/test_invoices_create_flow.py backend/tests/test_invoice_totals_pg.py backend/tests/test_invoice_pdf_payment.py 2>&1 | grep -c "No such file or directory"
-    cd ~/sa && grep -c "payment_method_id INTEGER" backend/app/services/tenant.py
-    cd ~/sa && grep -c "shipping_snapshot JSONB" backend/app/services/tenant.py
-    cd ~/sa && grep -c "tax_rate_percent NUMERIC(5, 2)" backend/app/services/tenant.py
-    cd ~/sa && grep -c "superseded_by_id" backend/app/services/tenant.py
-    cd ~/sa && grep -c "draft-context\|invoices/preview\|invoice_totals" backend/app/routers/invoices.py backend/app/realtime/topics.py | tail -2
-    cd ~/sa && git grep -c -w 953 -- backend migrations scripts | wc -l
-    cd ~/sa && grep -c "get_fx_rate(" backend/app/routers/invoices.py
-    cd ~/sa && grep -c -x -F 'from app.services.fx_rate import get_fx_rate' backend/app/routers/invoices.py
-    cd ~/sa && grep -c -x -F '_UPDATABLE_COLUMNS = {"payment_method", "due_date", "exchange_rate_jpy", "exchange_rate_usd", "notes"}' backend/app/routers/invoices.py
-    cd ~/sa && grep -c -x -F '    issuer_region' backend/app/routers/invoices.py
-    cd ~/sa && grep -c -x -F '    subtotal = sum(item.quantity * item.unit_price for item in data.items)' backend/app/routers/invoices.py
-    cd ~/sa && grep -c -x -F '    update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE_COLUMNS}' backend/app/routers/invoices.py
-    cd ~/sa && grep -c -x -F '    result = get_fx_rate(currency)' backend/app/routers/invoices.py
-    cd ~/sa && grep -c -x -F '        "notes": row["notes"],' backend/app/routers/invoices.py
-    cd ~/sa && grep -c -x -F 'async def get_issuer(db: AsyncSession, tenant_id: int, region: str) -> dict:' backend/app/services/issuer.py
-    cd ~/sa && grep -c -x -F 'from pydantic import BaseModel, Field, field_validator' backend/app/schemas/invoice.py
-    cd ~/sa && grep -c -x -F 'class InvoiceUpdate(BaseModel):' backend/app/schemas/invoice.py
-    cd ~/sa && grep -c -x -F '    issuer_region: str | None = None' backend/app/schemas/invoice.py
-    cd ~/sa && grep -c -x -F '        c.drawRightString(165 * mm, y, "Tax:")' backend/app/services/invoice_renderer.py
-    cd ~/sa && grep -c -x -F '    # ── 7. 為替レート脚注（外貨時のみ）────────────────────────────────' backend/app/services/invoice_renderer.py
-    cd ~/sa && grep -c -x -F '        paypal_copy=paypal_copy,' backend/app/services/invoice_renderer.py
-    cd ~/sa && grep -c -x -F '    ("POST", "/api/v1/invoices"): _PENDING,' backend/app/realtime/topics.py
-    cd ~/sa && grep -c -x -F '                issuer_region VARCHAR(20)' backend/tests/conftest.py
-    cd ~/sa && grep -c -x "import pytest" backend/tests/conftest.py
-    cd ~/sa && grep -c '"dutyRuleOverlap"' frontend/src/locales/ja.json frontend/src/locales/en.json | tail -2
-    cd ~/sa && grep -c "tax_amount\|shipping_fee" backend/tests/test_invoices.py backend/tests/test_issuer.py backend/tests/test_paypal_invoicing.py backend/tests/test_company_stats.py backend/tests/test_products.py | tail -5
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git rev-parse HEAD | tail -1
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && ls docs/handoff/invoice-create-portfolio/card-C.md docs/handoff/invoice-create-portfolio/card-D.md | wc -l
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && ls backend/app/services/invoice_totals.py backend/app/services/invoice_payment_methods.py backend/tests/test_invoice_totals.py backend/tests/test_invoices_create_flow.py backend/tests/test_invoice_totals_pg.py backend/tests/test_invoice_pdf_payment.py 2>&1 | grep -c "No such file or directory"
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c "payment_method_id INTEGER" backend/app/services/tenant.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c "shipping_snapshot JSONB" backend/app/services/tenant.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c "tax_rate_percent NUMERIC(5, 2)" backend/app/services/tenant.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c "superseded_by_id" backend/app/services/tenant.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c "draft-context\|invoices/preview\|invoice_totals" backend/app/routers/invoices.py backend/app/realtime/topics.py | tail -2
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git grep -c -w 953 -- backend migrations scripts | wc -l
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c "get_fx_rate(" backend/app/routers/invoices.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F 'from app.services.fx_rate import get_fx_rate' backend/app/routers/invoices.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '_UPDATABLE_COLUMNS = {"payment_method", "due_date", "exchange_rate_jpy", "exchange_rate_usd", "notes"}' backend/app/routers/invoices.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '    issuer_region' backend/app/routers/invoices.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '    subtotal = sum(item.quantity * item.unit_price for item in data.items)' backend/app/routers/invoices.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '    update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE_COLUMNS}' backend/app/routers/invoices.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '    result = get_fx_rate(currency)' backend/app/routers/invoices.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '        "notes": row["notes"],' backend/app/routers/invoices.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F 'async def get_issuer(db: AsyncSession, tenant_id: int, region: str) -> dict:' backend/app/services/issuer.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F 'from pydantic import BaseModel, Field, field_validator' backend/app/schemas/invoice.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F 'class InvoiceUpdate(BaseModel):' backend/app/schemas/invoice.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '    issuer_region: str | None = None' backend/app/schemas/invoice.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '        c.drawRightString(165 * mm, y, "Tax:")' backend/app/services/invoice_renderer.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '    # ── 7. 為替レート脚注（外貨時のみ）────────────────────────────────' backend/app/services/invoice_renderer.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '        paypal_copy=paypal_copy,' backend/app/services/invoice_renderer.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '    ("POST", "/api/v1/invoices"): _PENDING,' backend/app/realtime/topics.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x -F '                issuer_region VARCHAR(20)' backend/tests/conftest.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c -x "import pytest" backend/tests/conftest.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c '"dutyRuleOverlap"' frontend/src/locales/ja.json frontend/src/locales/en.json | tail -2
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c "tax_amount\|shipping_fee" backend/tests/test_invoices.py backend/tests/test_issuer.py backend/tests/test_paypal_invoicing.py backend/tests/test_company_stats.py backend/tests/test_products.py | tail -5
   期待（番号は上の命令の順番。1 本の命令が 2 行以上を出すものがあるので、出力の行の数ではなく命令の番号で見る）: 1番は 40 桁。2番 2。3番 6。4〜7番はどれも 1 以上。8番は2ファイルとも `:0`（2 行）。9番 0。10番 3。11番〜26番はどれも 1（ただし 17番 `        "notes": row["notes"],` が 2 以上なら、PDF の道 `download_invoice_pdf` の中のものを使い、数を報告に書いて続ける）。27番（`import pytest` の行そのもの。`import pytest_asyncio` は数えない）1。28番（dutyRuleOverlap・2 行）は数をそのまま書く（どちらも 0 なら §2-8 の (3)(4) で 6 つ足す。1 なら 5 つ）。29番（tax_amount・shipping_fee・5 行）は数をそのまま書く。
 
 手順3 §2 の変更をする（2-1 から順に。新規の 6 ファイルは Write ツール、それ以外は Edit ツールで行う。2-12 の openapi.json は手順7 で作る）
@@ -1785,52 +1799,52 @@ backend/tests/test_invoice_pdf_payment.py（DB なし。4 本。前例 test_invo
     cd ~ && python3.12 --version 2>&1 | tail -1
     cd ~ && python3.12 -m venv ~/venv312 2>&1 | tail -3
     cd ~ && ~/venv312/bin/python --version 2>&1 | tail -1
-    cd ~/sa/backend && ~/venv312/bin/pip install -q -r requirements.txt 2>&1 | tail -3
-    cd ~/sa/backend && ~/venv312/bin/pip install -q -r requirements-dev.txt 2>&1 | tail -3
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/backend && ~/venv312/bin/pip install -q -r requirements.txt 2>&1 | tail -3
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/backend && ~/venv312/bin/pip install -q -r requirements-dev.txt 2>&1 | tail -3
     cd ~ && ~/venv312/bin/ruff --version | tail -1
   手順4 の python3.12 が無いときだけ、1行目と2行目の代わりに次を流す（それも失敗したら `BLOCKED: python3.12 なし`）。
     cd ~ && uv venv --python 3.12 ~/venv312 2>&1 | tail -3
     cd ~ && ~/venv312/bin/python -m ensurepip 2>&1 | tail -1
 
 手順5 backend の形
-    cd ~/sa && ~/venv312/bin/ruff check backend/app/services/invoice_totals.py backend/app/services/invoice_payment_methods.py backend/app/services/issuer.py backend/app/services/invoice_renderer.py backend/app/schemas/invoice.py backend/app/routers/invoices.py backend/app/realtime/topics.py 2>&1 | tail -10
-    cd ~/sa && ~/venv312/bin/ruff check backend/tests/test_invoice_totals.py backend/tests/test_invoices_create_flow.py backend/tests/test_invoice_totals_pg.py backend/tests/test_invoice_pdf_payment.py backend/tests/conftest.py backend/tests/test_invoices.py backend/tests/test_issuer.py backend/tests/test_paypal_invoicing.py backend/tests/test_company_stats.py backend/tests/test_products.py backend/tests/test_api_error_reason_sync.py 2>&1 | tail -10
-    cd ~/sa && grep -c "get_fx_rate" backend/app/routers/invoices.py
-    cd ~/sa && grep -c "_calc_currency_amounts" backend/app/routers/invoices.py
-    cd ~/sa && grep -c "/api/v1/invoices/preview" backend/app/realtime/topics.py
-    cd ~/sa && grep -n '"/invoices/draft-context"\|"/invoices/{invoice_id}",' backend/app/routers/invoices.py | head -3
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && ~/venv312/bin/ruff check backend/app/services/invoice_totals.py backend/app/services/invoice_payment_methods.py backend/app/services/issuer.py backend/app/services/invoice_renderer.py backend/app/schemas/invoice.py backend/app/routers/invoices.py backend/app/realtime/topics.py 2>&1 | tail -10
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && ~/venv312/bin/ruff check backend/tests/test_invoice_totals.py backend/tests/test_invoices_create_flow.py backend/tests/test_invoice_totals_pg.py backend/tests/test_invoice_pdf_payment.py backend/tests/conftest.py backend/tests/test_invoices.py backend/tests/test_issuer.py backend/tests/test_paypal_invoicing.py backend/tests/test_company_stats.py backend/tests/test_products.py backend/tests/test_api_error_reason_sync.py 2>&1 | tail -10
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c "get_fx_rate" backend/app/routers/invoices.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c "_calc_currency_amounts" backend/app/routers/invoices.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c "/api/v1/invoices/preview" backend/app/realtime/topics.py
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -n '"/invoices/draft-context"\|"/invoices/{invoice_id}",' backend/app/routers/invoices.py | head -3
   期待: ruff は2本とも `All checks passed!`／3行目 0／4行目 0／5行目 1／6行目は draft-context の行番号が `"/invoices/{invoice_id}",` の行番号より小さい。
 
 手順6 backend の試験（実 PostgreSQL の試験は CI だけで動く。ここでは skip と出てよい。failed と error は 0 であること）
-    cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/test_invoice_totals.py tests/test_invoice_pdf_payment.py tests/test_invoice_totals_pg.py 2>&1 | tail -15
-    cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/test_invoices_create_flow.py tests/test_invoices.py 2>&1 | tail -15
-    cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/test_issuer.py tests/test_paypal_invoicing.py tests/test_company_stats.py tests/test_products.py tests/test_api_error_reason_sync.py tests/test_realtime_topics.py 2>&1 | tail -15
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/test_invoice_totals.py tests/test_invoice_pdf_payment.py tests/test_invoice_totals_pg.py 2>&1 | tail -15
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/test_invoices_create_flow.py tests/test_invoices.py 2>&1 | tail -15
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/test_issuer.py tests/test_paypal_invoicing.py tests/test_company_stats.py tests/test_products.py tests/test_api_error_reason_sync.py tests/test_realtime_topics.py 2>&1 | tail -15
   期待: 1本目は `25 passed`（計算 21・PDF 4）と `1 skipped`（PG の1本）。2本目・3本目は failed 0・error 0（本数はそのまま書く）。
 
 手順7 API の形を書き出す
-    cd ~/sa/backend && ENVIRONMENT=test ~/venv312/bin/python -m tools.export_openapi ../frontend/api-contract/openapi.json 2>&1 | tail -5
-    cd ~/sa && grep -c '"/api/v1/invoices/draft-context"\|"/api/v1/invoices/preview"' frontend/api-contract/openapi.json
-    cd ~/sa && git diff --numstat frontend/api-contract/openapi.json | tail -1
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/backend && ENVIRONMENT=test ~/venv312/bin/python -m tools.export_openapi ../frontend/api-contract/openapi.json 2>&1 | tail -5
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && grep -c '"/api/v1/invoices/draft-context"\|"/api/v1/invoices/preview"' frontend/api-contract/openapi.json
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git diff --numstat frontend/api-contract/openapi.json | tail -1
   期待: 1行目は何も出ない（exit 0）。2行目 2。3行目は足した行が 0 より大きい（数は Opus が見る）。
 
 手順8 画面の言葉の点検（tsc はこのコミットでは流さない。便 D の後に流す）
-    cd ~/sa/frontend && npm ci 2>&1 | tail -3
-    cd ~/sa/frontend && npm run check:all 2>&1 | tail -30
-    cd ~/sa/frontend && npx vitest run --config vitest.unit.config.ts --project unit src/lib/apiErrorReason.test.ts 2>&1 | tail -20
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && npm ci 2>&1 | tail -3
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && npm run check:all 2>&1 | tail -30
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd/frontend && npx vitest run --config vitest.unit.config.ts --project unit src/lib/apiErrorReason.test.ts 2>&1 | tail -20
   期待: check:all は最後まで通り、失敗の行が無い（終了 0）。vitest は 1 ファイル passed で failed 0。
 
 手順9 変えたファイルの名前と数
-    cd ~/sa && git status --short | tail -40
-    cd ~/sa && git diff --stat | tail -25
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git status --short | tail -40
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git diff --stat | tail -25
   期待: §1 のファイルだけ（新規の 6 ファイルは `??` で各1行。既存は 17 ファイル）。
 
 手順10 記録と送り出し（便 C のコミット。push は便 D の後に Opus の指示で行うので、ここでは push しない）
-    cd ~/sa && git add backend/app/services/invoice_totals.py backend/app/services/invoice_payment_methods.py backend/app/services/issuer.py backend/app/services/invoice_renderer.py backend/app/schemas/invoice.py backend/app/routers/invoices.py backend/app/realtime/topics.py && git status --short | tail -40
-    cd ~/sa && git add backend/tests/test_invoice_totals.py backend/tests/test_invoices_create_flow.py backend/tests/test_invoice_totals_pg.py backend/tests/test_invoice_pdf_payment.py backend/tests/conftest.py backend/tests/test_invoices.py && git status --short | tail -40
-    cd ~/sa && git add backend/tests/test_issuer.py backend/tests/test_paypal_invoicing.py backend/tests/test_company_stats.py backend/tests/test_products.py backend/tests/test_api_error_reason_sync.py && git status --short | tail -40
-    cd ~/sa && git add frontend/src/lib/apiErrorReason.ts frontend/src/lib/apiErrorReason.test.ts frontend/src/locales/ja.json frontend/src/locales/en.json frontend/api-contract/openapi.json && git status --short | tail -40
-    cd ~/sa && git config user.name "shingo-cc" && git config user.email "shingo-cc@users.noreply.github.com" && git commit -q -m "feat(invoices): compute invoice totals on the server and print payment destination on PDF (invoice-create-portfolio bin C)" && git log --oneline -1 | tail -1
-    cd ~/sa && git branch --show-current | tail -1
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git add backend/app/services/invoice_totals.py backend/app/services/invoice_payment_methods.py backend/app/services/issuer.py backend/app/services/invoice_renderer.py backend/app/schemas/invoice.py backend/app/routers/invoices.py backend/app/realtime/topics.py && git status --short | tail -40
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git add backend/tests/test_invoice_totals.py backend/tests/test_invoices_create_flow.py backend/tests/test_invoice_totals_pg.py backend/tests/test_invoice_pdf_payment.py backend/tests/conftest.py backend/tests/test_invoices.py && git status --short | tail -40
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git add backend/tests/test_issuer.py backend/tests/test_paypal_invoicing.py backend/tests/test_company_stats.py backend/tests/test_products.py backend/tests/test_api_error_reason_sync.py && git status --short | tail -40
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git add frontend/src/lib/apiErrorReason.ts frontend/src/lib/apiErrorReason.test.ts frontend/src/locales/ja.json frontend/src/locales/en.json frontend/api-contract/openapi.json && git status --short | tail -40
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git config user.name "shingo-cc" && git config user.email "shingo-cc@users.noreply.github.com" && git commit -q -m "feat(invoices): compute invoice totals on the server and print payment destination on PDF (invoice-create-portfolio bin C)" && git log --oneline -1 | tail -1
+    cd ~/worktrees/salesanchor/release-invoice-create-portfolio-bin-cd && git branch --show-current | tail -1
   最後の `git add` の後の status に §1 に無いファイルが出たら、commit せずに `BLOCKED: 範囲外のファイル` で停止する。`git branch --show-current` が `release/invoice-create-portfolio-bin-cd` でなければ `BLOCKED: 枝の名前` で停止する。続けて card-D.md の手順へ進む（同じ実行の中で。card-D.md の手順1 は枝を取り直さない）。
 
 ## 4. 想定される分かれ道

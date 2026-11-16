@@ -32,6 +32,7 @@ vi.mock("react-i18next", () => ({
         "fedexRateModal.colTransitDays": "Transit",
         "fedexRateModal.colFee": "Fee",
         "fedexRateModal.colCurrency": "Currency",
+        "fedexRateModal.colCarrier": "Carrier",
         "fedexRateModal.errorNotConnected": "FedEx not connected",
         "fedexRateModal.goToIntegrationSettings": "Open FedEx settings ->",
         "fedexRateModal.errorAccountNumber": "Account number missing",
@@ -116,7 +117,7 @@ describe("FedExRateModal", () => {
     await waitFor(() => screen.getByText("Use this rate"));
     fireEvent.click(screen.getByText("Use this rate"));
 
-    expect(onSelectRate).toHaveBeenCalledWith(5000, "JPY", "FEDEX_IP");
+    expect(onSelectRate).toHaveBeenCalledWith(5000, "JPY", "FEDEX_IP", "FedEx");
   });
 
   it("weightKg prop is used as initial weight value", () => {
@@ -148,6 +149,7 @@ describe("FedExRateModal", () => {
       results: [],
       cheapest: null,
       // Unicode escape to avoid i18n lint rule on the Japanese marker
+      // eslint-disable-next-line local/no-japanese-literal -- サーバーが返す未連携の目印（FedExRateModal.tsx の includes("未連携")）をそのまま試す（ADR-027・precedent: src/pages/viewer/InventoryView.test.tsx:380）
       live_error: "FedEx\u672a\u9023\u643a\u3067\u3059", // "FedEx未連携です"
       rate_precision: null,
     });

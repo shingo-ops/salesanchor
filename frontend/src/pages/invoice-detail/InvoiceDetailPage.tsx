@@ -19,6 +19,7 @@ import { Button } from "../../components/Button";
 import { ButtonLink } from "../../components/ButtonLink";
 import { TextFieldControl } from "../../components/TextField";
 import { LoadingBlock, Spinner } from "../../components/loading";
+import { InvoicePaymentPicker } from "./InvoicePaymentPicker";
 
 interface InvoiceItem {
   id: number;
@@ -68,6 +69,8 @@ interface InvoiceDetail {
   amount_jpy: number | null;
   amount_usd: number | null;
   payment_method: string | null;
+  payment_method_display_name?: string | null;
+  payment_method_type?: string | null;
   status: string;
   branch_number: number | null;
   erp_key: string | null;
@@ -293,7 +296,7 @@ export default function InvoiceDetailPage() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-4)" }}>
           <div><strong>{t("common.status")}:</strong> <span className={`badge badge-${getStatusPresentation("invoice", invoice.status).badgeVariant}`}>{t(`invoices.status_${invoice.status}`)}</span></div>
           <div><strong>{t("common.currency")}:</strong> {invoice.currency}</div>
-          <div><strong>{t("invoices.paymentMethod")}:</strong> {invoice.payment_method || "-"}</div>
+          <div><strong>{t("invoices.paymentMethod")}:</strong> {invoice.payment_method_display_name || invoice.payment_method || "-"}</div>
           <div><strong>{t("invoices.issuedAt")}:</strong> {invoice.issued_at ? new Date(invoice.issued_at).toLocaleDateString() : "-"}</div>
           <div><strong>{t("invoices.dueDate")}:</strong> {invoice.due_date || "-"}</div>
           <div><strong>{t("invoices.paidAt")}:</strong> {invoice.paid_at ? new Date(invoice.paid_at).toLocaleDateString() : "-"}</div>
@@ -302,6 +305,11 @@ export default function InvoiceDetailPage() {
           <div><strong>{t("invoices.erpKeyLabel")}</strong> <span className="mono">{invoice.erp_key || "-"}</span></div>
           {invoice.void_reason && <div style={{ gridColumn: "1 / -1" }}><strong>{t("invoices.voidReasonLabel")}:</strong> {invoice.void_reason}</div>}
           {invoice.notes && <div style={{ gridColumn: "1 / -1" }}><strong>{t("common.notes")}:</strong> {invoice.notes}</div>}
+          {invoice.status === "draft" && hasPermission("invoices.create") && hasPermission("invoices.update") && (
+            <div style={{ gridColumn: "1 / -1" }} data-testid="invoice-detail-payment-picker">
+              <InvoicePaymentPicker invoiceId={String(invoice.id)} currency={invoice.currency} onSaved={load} />
+            </div>
+          )}
         </div>
       </div>
 

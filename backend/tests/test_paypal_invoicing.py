@@ -7,7 +7,11 @@ router 層（issue_paypal_link）は client + DB（SQLite）で email 必須・�
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from app.services import paypal_payments as svc
+
+pytestmark = pytest.mark.usefixtures("stub_invoice_totals")
 
 
 def _resp(status_code, json_body=None):
@@ -197,7 +201,7 @@ async def _company_contact(client, *, email=None):
 
 async def _issued_invoice(client, company_id, contact_id):
     inv = await client.post("/api/v1/invoices", json={
-        "company_id": company_id, "contact_id": contact_id,
+        "company_id": company_id, "contact_id": contact_id, "shipping": {"mode": "none"},
         "items": [{"product_name": "商品", "quantity": 1, "unit_price": "1000.00"}],
     })
     assert inv.status_code == 201, inv.text

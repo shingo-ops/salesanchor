@@ -1,23 +1,26 @@
 /**
  * 請求書作成ページ。2 つの導線:
  *   1. 在庫表から: 在庫表でチェックした商品が location.state で渡る（往復対応）。
- *      会社/担当を選び明細を調整して POST /invoices（直接作成）。
- *   2. 既存見積から: 承認済み見積を選ぶと、その明細を編集可能なフォームへ読み込み、
- *      数量・金額を修正して POST /invoices（直接作成）できる（ADR-093 2026-06-03）。
+ *   2. 既存見積から: 承認済み見積を選ぶと、その明細を編集可能なフォームへ読み込む（ADR-093 2026-06-03）。
  *
- * 明細エディタは QuoteCreatePage と同一仕様（行内検索/AND-OR を廃し、自由記入＋
- * 「検索して追加」「在庫表から(往復)」の追加方法）。共通ロジックは ../quote-create/quoteDraft。
+ * invoice-create-portfolio 便D（design.md §3-2）: 人は金額を打たずに選ぶだけ。
+ *   - 届け先・請求先・担当者は会社の画面の登録を読んで見せるだけ（GET /invoices/draft-context）。
+ *   - 通貨・支払方法の候補は同じ材料から出す（画面に通貨や支払方法を直書きしない）。
+ *   - 送料は「送料を請求しない」か FedEx の見積の 1 つを選ぶ。送料・税の打ち込み欄は置かない。
+ *   - 合計・税・関税はサーバーの試算（POST /invoices/preview）の答えを見せる。画面で足し算しない。
+ *   - 試算に「未計算」が 1 つでも残る間は作成ボタンを押せない。
+ *
+ * 明細エディタは QuoteCreatePage と同一仕様。共通ロジックは ../quote-create/quoteDraft。
  */
 import { useState, FormEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { api, ApiError } from "../../lib/api";
+import { api } from "../../lib/api";
 import { useApiQuery } from "../../lib/query/apiQuery";
 import { PageLayout } from "../../components/PageLayout";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import InventorySearchBar, { InventorySearchCandidate } from "../../components/InventorySearchBar";
 import { Button } from "../../components/Button";
-import { SelectControl } from "../../components/Select";
 import {
   type LineItem,
   type QuoteHandoffState,
@@ -27,6 +30,24 @@ import {
 } from "../quote-create/quoteDraft";
 import { TextFieldControl } from "../../components/TextField";
 import { LoadingBlock } from "../../components/loading";
+import {
+  currencyChoices,
+  draftContextPath,
+  effectivePaymentKey,
+  formatMoney,
+  isCreatableItem,
+  isValidQuantity,
+  isValidUnitPrice,
+  paymentChoicesFor,
+  paymentRefFromKey,
+  resolveCurrency,
+  type DraftContext,
+  type InvoicePreviewRequest,
+  type ShippingChoice,
+} from "../../lib/invoiceDraftContext";
+import { useInvoicePreview } from "./useInvoicePreview";
+import { InvoiceShipToSection } from "./InvoiceShipToSection";
+import { InvoicePaymentTotalsSection } from "./InvoicePaymentTotalsSection";
 
 interface QuoteSummary {
   id: number;
@@ -57,13 +78,9 @@ interface QuoteDetail {
   }>;
 }
 
-function fmtAmount(n: number | null, ccy: string): string {
-  if (n == null) return "-";
-  try {
-    return n.toLocaleString("ja-JP", { style: "currency", currency: ccy });
-  } catch {
-    return `${ccy} ${Math.round(n).toLocaleString()}`;
-  }
+/** 材料の答えが請求書の材料の形（object）のときだけ使う。配列などは「まだ無い」と同じに扱う */
+function asDraftContext(data: unknown): DraftContext | null {
+  return data !== null && typeof data === "object" && !Array.isArray(data) ? (data as DraftContext) : null;
 }
 
 export default function InvoiceCreatePage() {
@@ -80,9 +97,13 @@ export default function InvoiceCreatePage() {
   const [companyId, setCompanyId] = useState<number | null>(draft?.companyId ?? null);
   const [contactId, setContactId] = useState<number | null>(draft?.contactId ?? null);
   const [selectorError, setSelectorError] = useState("");
-  const [currency, setCurrency] = useState(draft?.currency ?? "USD");
-  const [shippingFee, setShippingFee] = useState(draft?.shippingFee ?? "");
-  const [taxAmount, setTaxAmount] = useState(draft?.taxAmount ?? "");
+  // 人か見積が選んだ通貨。使う通貨は材料の候補にあるときだけ（resolveCurrency）。
+  const [currencyChoice, setCurrencyChoice] = useState<string>(draft?.currency ?? "");
+  const [paymentChoice, setPaymentChoice] = useState("");
+  const [shipping, setShipping] = useState<ShippingChoice | null>(null);
+  // FedEx の見積を選んだときの総重量。明細の重さが変わったら選び直しを求める。
+  const [shippingWeight, setShippingWeight] = useState<number | null>(null);
+  const [quoteOpen, setQuoteOpen] = useState(false);
   const [notes, setNotes] = useState(draft?.notes ?? "");
   const [items, setItems] = useState<LineItem[]>(() => buildInitialItems(handoff));
   // #8: どの見積から読み込んだか（編集中の見積コード表示用）。
@@ -93,9 +114,15 @@ export default function InvoiceCreatePage() {
   const quotes = quotesQ.data ?? [];
   const quotesLoading = quotesQ.isPending;
 
+  // --- 請求書の材料（会社を選んだときだけ取りに行く） ---
+  const ctxQ = useApiQuery<DraftContext>(
+    companyId !== null ? draftContextPath(companyId, contactId) : "/invoices/draft-context",
+    { enabled: mode === "inventory" && companyId !== null },
+  );
+  const ctx = companyId !== null ? asDraftContext(ctxQ.data) : null;
+  const ctxError = companyId !== null && ctxQ.error ? (ctxQ.error instanceof Error ? ctxQ.error.message : t("common.fetchError")) : "";
+
   const [error, setError] = useState("");
-  // ADR-1061 便2-2c2a: 請求先の国が無くて作れなかったとき、取引先の画面へ移るボタンを出す会社の番号
-  const [billToCompanyId, setBillToCompanyId] = useState<number | null>(null);
   const shownError = error || (mode === "quote" && quotesQ.error ? (quotesQ.error instanceof Error ? quotesQ.error.message : t("common.fetchError")) : "");
   const [saving, setSaving] = useState(false);
 
@@ -111,7 +138,6 @@ export default function InvoiceCreatePage() {
     });
   };
   // 「検索して追加」: 選択商品を新しい明細行として追加（上書きではない）。
-  // 海外顧客向け: 英語タイトル/状態/形態を引き込み、形態(unit)に応じてマスタ重量を weight にセットする。
   const appendFromSearch = (c: InventorySearchCandidate) => {
     const isOutOfStock = c.stock_quantity !== null && c.stock_quantity <= 0;
     setItems((prev) => [
@@ -132,16 +158,24 @@ export default function InvoiceCreatePage() {
       },
     ]);
   };
+  // 会社・担当者が変わったら、前の会社に合わせて選んだ送料と支払方法を外す（K3）。
+  const changeCompanyContact = (nextCompanyId: number | null, nextContactId: number | null) => {
+    if (nextCompanyId !== companyId || nextContactId !== contactId) {
+      setShipping(null);
+      setShippingWeight(null);
+      setPaymentChoice("");
+    }
+    setCompanyId(nextCompanyId);
+    setContactId(nextContactId);
+  };
   // #8: 承認済み見積を編集可能な明細としてフォームへ読み込む。
   const loadQuoteForEdit = async (quoteId: number) => {
     setError("");
-    setBillToCompanyId(null);
     setSaving(true);
     try {
       const q = await api.get<QuoteDetail>(`/quotes/${quoteId}`);
-      setCompanyId(q.company_id);
-      setContactId(q.contact_id ?? null);
-      setCurrency(q.currency);
+      changeCompanyContact(q.company_id, q.contact_id ?? null);
+      setCurrencyChoice(q.currency);
       setItems(
         q.items.length > 0
           ? q.items.map((it) => ({
@@ -165,35 +199,74 @@ export default function InvoiceCreatePage() {
       setSaving(false);
     }
   };
+  // 入れたものを全部消して最初の状態に戻す。
+  const clearAll = () => {
+    changeCompanyContact(null, null);
+    setSelectorError("");
+    setCurrencyChoice("");
+    setNotes("");
+    setItems([{ ...blankItem }]);
+    setSourceQuoteCode(null);
+    setQuoteOpen(false);
+    setError("");
+  };
 
-  const subtotal = items.reduce((s, it) => s + it.quantity * it.unit_price, 0);
-  // 総重量 = Σ(数量 × 行重量)。重量未設定の行は 0 扱い。
+  // 総重量 = Σ(数量 × 行重量)。重量未設定の行は 0 扱い（送料の見積に渡す重さ）。
   const totalWeight = items.reduce((s, it) => s + it.quantity * (it.weight ?? 0), 0);
-  const shipping = shippingFee ? Number(shippingFee) : 0;
-  const tax = taxAmount ? Number(taxAmount) : 0;
-  const total = subtotal + shipping + tax;
+  const currency = resolveCurrency(ctx, currencyChoice);
+  const paymentChoices = paymentChoicesFor(ctx, currency);
+  const paymentValue = effectivePaymentKey(paymentChoices, paymentChoice);
+  const shippingStale = shipping !== null && shipping.mode === "calculate" && shippingWeight !== totalWeight;
+  const effectiveShipping = shippingStale ? null : shipping;
+  const itemsValid = items.length > 0 && items.every((i) => isValidQuantity(i.quantity) && isValidUnitPrice(i.unit_price));
+
+  const previewRequest: InvoicePreviewRequest | null =
+    mode === "inventory" && ctx !== null && companyId !== null && currency !== "" && itemsValid
+      ? {
+          company_id: companyId,
+          currency,
+          items: items.map((i) => ({ quantity: i.quantity, unit_price: i.unit_price })),
+          shipping: effectiveShipping,
+        }
+      : null;
+  const { preview, error: previewError, fresh } = useInvoicePreview(previewRequest);
+
+  const canCreate =
+    companyId !== null &&
+    contactId !== null &&
+    ctx !== null &&
+    ctx.issuer_region !== null &&
+    currency !== "" &&
+    items.length > 0 &&
+    items.every(isCreatableItem) &&
+    effectiveShipping !== null &&
+    (paymentChoices.length === 0 || paymentValue !== "") &&
+    fresh &&
+    preview !== null &&
+    preview.uncomputed.length === 0 &&
+    !saving;
 
   const submitInvoice = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
-    setBillToCompanyId(null);
     setSelectorError("");
     if (contactId === null) {
       setSelectorError(t("companyContactSelector.contactRequired"));
       return;
     }
-    if (items.some((i) => !i.product_name || i.unit_price <= 0 || i.quantity <= 0)) {
+    if (!items.every(isCreatableItem)) {
       setError(t("quotes.itemsRequired"));
       return;
     }
+    if (!canCreate || effectiveShipping === null) return;
     setSaving(true);
     try {
       const inv = await api.post<{ id: number }>("/invoices", {
         company_id: companyId,
         contact_id: contactId,
         currency,
-        shipping_fee: shipping || null,
-        tax_amount: tax || null,
+        shipping: effectiveShipping,
+        payment_method_ref: paymentRefFromKey(paymentChoices, paymentValue),
         notes: notes || null,
         items: items.map((i) => ({
           product_id: i.product_id,
@@ -209,7 +282,6 @@ export default function InvoiceCreatePage() {
       navigate(`/invoices/${inv.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.saveError"));
-      if (e instanceof ApiError && e.responseDetail === "bill_to_country") setBillToCompanyId(companyId);
     } finally {
       setSaving(false);
     }
@@ -228,14 +300,7 @@ export default function InvoiceCreatePage() {
       }
     >
 
-      {shownError && <div className="error-message">{shownError}</div>}
-      {billToCompanyId !== null && error !== "" && (
-        <div style={{ marginBottom: "var(--space-3)" }}>
-          <Button type="button" variant="secondary" size="sm" onClick={() => navigate(`/crm/companies/${billToCompanyId}`)}>
-            {t("invoices.openCompanyForBillTo")}
-          </Button>
-        </div>
-      )}
+      {shownError && <div className="error-message" data-testid="invoice-error">{shownError}</div>}
 
       <div style={{ display: "flex", gap: "var(--space-2)", margin: "var(--space-3) 0" }}>
         <Button variant={mode === "inventory" ? "primary" : "secondary"} size="md"
@@ -274,7 +339,7 @@ export default function InvoiceCreatePage() {
                 {quotes.map((q) => (
                   <tr key={q.id} data-testid={`invoice-quote-${q.id}`}>
                     <td>{q.quote_code}</td>
-                    <td>{fmtAmount(q.total_amount, q.currency)}</td>
+                    <td>{formatMoney(q.total_amount, q.currency) ?? "-"}</td>
                     <td>
                       <Button
                         variant="primary" size="sm"
@@ -301,27 +366,56 @@ export default function InvoiceCreatePage() {
               {t("invoices.editingFromQuote", { code: sourceQuoteCode })}
             </div>
           )}
+
+          <h3 style={{ marginBottom: "var(--space-3)" }}>{t("invoiceForm.sectionShipTo")}</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
             <CompanyContactSelector
               value={{ companyId, contactId }}
-              onChange={({ companyId: c, contactId: ct }) => { setCompanyId(c); setContactId(ct); }}
+              onChange={({ companyId: c, contactId: ct }) => changeCompanyContact(c, ct)}
               required
               error={selectorError}
             />
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
-            <div className="form-group">
-              <label>{t("common.currency")}</label>
-              <SelectControl fullWidth value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                <option value="JPY">JPY</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-              </SelectControl>
+          {companyId !== null && (
+            <div style={{ marginBottom: "var(--space-6)" }}>
+              <InvoiceShipToSection companyId={companyId} ctx={ctx} loading={ctxQ.isPending} errorText={ctxError} />
             </div>
-            <div className="form-group">
-              <label>{t("common.notes")}</label>
-              <TextFieldControl value={notes} onChange={(e) => setNotes(e.target.value)} />
-            </div>
+          )}
+
+          <h3 style={{ marginBottom: "var(--space-3)" }}>{t("invoiceForm.sectionPaymentTotals")}</h3>
+          <div style={{ marginBottom: "var(--space-6)" }}>
+            <InvoicePaymentTotalsSection
+              ctx={ctx}
+              currencyOptions={currencyChoices(ctx)}
+              currency={currency}
+              onCurrencyChange={(next) => { setCurrencyChoice(next); setPaymentChoice(""); }}
+              paymentChoices={paymentChoices}
+              paymentValue={paymentValue}
+              onPaymentChange={setPaymentChoice}
+              notes={notes}
+              onNotesChange={setNotes}
+              shipping={shipping}
+              shippingStale={shippingStale}
+              onShippingNone={() => { setShipping({ mode: "none" }); setShippingWeight(null); }}
+              onShippingClear={() => { setShipping(null); setShippingWeight(null); }}
+              quoteOpen={quoteOpen}
+              onQuoteOpen={() => setQuoteOpen(true)}
+              onQuoteClose={() => setQuoteOpen(false)}
+              onRateSelected={(fee, rateCurrency, serviceType, carrier) => {
+                if (carrier === "") return;
+                setShipping({
+                  mode: "calculate",
+                  carrier,
+                  service_type: serviceType,
+                  fee: Math.round(Number(fee) * 100) / 100,
+                  currency: rateCurrency,
+                });
+                setShippingWeight(totalWeight);
+              }}
+              totalWeight={totalWeight}
+              preview={preview}
+              previewError={previewError}
+            />
           </div>
 
           <h3 style={{ marginBottom: "var(--space-3)" }}>{t("quotes.items")}</h3>
@@ -387,10 +481,10 @@ export default function InvoiceCreatePage() {
                       />
                     </td>
                     <td>
-                      <TextFieldControl size="sm" type="number" min="1" value={item.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))} style={{ width: "var(--input-width-qty)" }} data-testid={`invoice-item-row-${i}-qty`} />
+                      <TextFieldControl size="sm" type="number" min="1" step="1" value={item.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))} style={{ width: "var(--input-width-qty)" }} data-testid={`invoice-item-row-${i}-qty`} />
                     </td>
                     <td>
-                      <TextFieldControl size="sm" type="number" min="0" step="0.01" value={item.unit_price} onChange={(e) => updateItem(i, "unit_price", Number(e.target.value))} style={{ width: "var(--input-width-price)" }} />
+                      <TextFieldControl size="sm" type="number" min="0" step="0.01" value={item.unit_price} onChange={(e) => updateItem(i, "unit_price", Number(e.target.value))} style={{ width: "var(--input-width-price)" }} data-testid={`invoice-item-row-${i}-price`} />
                     </td>
                     <td>
                       <TextFieldControl size="sm" type="number" min="0" step="0.001" value={item.weight || ""} onChange={(e) => updateItem(i, "weight", e.target.value ? Number(e.target.value) : null)} style={{ width: "var(--input-width-weight)" }} data-testid={`invoice-item-row-${i}-weight`} />
@@ -419,28 +513,11 @@ export default function InvoiceCreatePage() {
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
-            <div className="form-group">
-              <label>{t("quotes.shippingFee")}</label>
-              <TextFieldControl type="number" min="0" step="1" value={shippingFee} onChange={(e) => setShippingFee(e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label>{t("quotes.tax")}</label>
-              <TextFieldControl type="number" min="0" step="1" value={taxAmount} onChange={(e) => setTaxAmount(e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label>{t("quotes.total")}</label>
-              <div style={{ padding: "var(--space-2) var(--space-3)", fontWeight: "var(--font-weight-bold)", fontSize: "var(--font-lg)" }}>{total.toLocaleString()} {currency}</div>
-            </div>
-            <div className="form-group">
-              <label>{t("quotes.totalWeight")}</label>
-              <div style={{ padding: "var(--space-2) var(--space-3)", fontWeight: "var(--font-weight-semi)" }} data-testid="invoice-total-weight">{totalWeight.toLocaleString()} kg</div>
-            </div>
-          </div>
-
+          <h3 style={{ marginBottom: "var(--space-3)" }}>{t("invoiceForm.sectionActions")}</h3>
           <div className="form-actions">
             <Button type="button" variant="secondary" size="md" onClick={() => navigate("/invoices")}>{t("common.cancel")}</Button>
-            <Button loading={saving} variant="primary" size="md" type="submit" disabled={saving}>{t("invoices.createBtn")}</Button>
+            <Button type="button" variant="secondary" size="md" onClick={clearAll} data-testid="invoice-clear">{t("invoiceForm.clear")}</Button>
+            <Button loading={saving} variant="primary" size="md" type="submit" disabled={!canCreate} data-testid="invoice-create-submit">{t("invoices.createBtn")}</Button>
           </div>
         </form>
       )}
