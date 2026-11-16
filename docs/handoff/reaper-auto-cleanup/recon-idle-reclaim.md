@@ -37,11 +37,11 @@
 - 最後に触ってから 14 日以上（index ファイルの更新日で概算）: PR なし 22 件・PR 開 7 件。
 - PR なし 14 日以上のうち `~/worktrees/` の下にあるもの: 20 件。外にあるもの: `~/salesanchor/src`（detached・37 日）、`~/salesanchor/.claude/worktrees/design-inbox-brushup`（20 日）。
 - 道具の写し `~/.salesanchor-tools` は detached（ADR-114 R12・`docs/handoff/disk-janitor/design.md:151`）。消してはいけない。
-- 生の一覧: `/private/tmp/claude-501/-Users-tanizawashingo-salesanchor/b257ea2d-0ae6-47a4-bff2-130803656178/scratchpad/wt/list2.txt`・`prs2.json`（セッション終了で消える。数は本節に転記済み）。
+- 生の一覧: `/private/tmp/claude-501/-Users-tanizawashingo-salesanchor/b257ea2d-0ae6-47a4-bff2-130803656178/scratchpad/wt/list2.txt`・prs2.json（セッション終了で消える。数は本節に転記済み）。
 
 ## 5. 使える既存の部品
 
-- 未保存の判定: `scripts/reaper-worktree.sh:235-327`（`git-safe.sh` の上書き付き status・入れ子リポジトリ保護・origin から届かないコミットの数 :275）。
+- 未保存の判定: `scripts/reaper-worktree.sh:235-327`（git-safe（scripts/dev の git 包み）の上書き付き status・入れ子リポジトリ保護・origin から届かないコミットの数 :275）。
 - 使用中の保護: `lsof` の cwd 一覧（:194-195・:227-233）。
 - 消す前に控える仕組み: R9 の PR 本文の下書きを `<git-common-dir>/reaper-drafts/` へ控え、失敗したら消さない（:516-533）。
 - 数の見張りと Discord への知らせ: `scripts/mac-jobs-watch.sh`（30 分ごと・設定は `mjw_config` :21-57 に 1 か所）。空き容量が少ないときの知らせ（`MJW_DISK_LOW_GIB`・`MJW_DISK_OK_GIB` :45-46、判定 :428）と同じ形で足せる。送り先は ADR-1009 の番人と同じファイル（:29）。

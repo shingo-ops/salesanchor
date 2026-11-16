@@ -95,7 +95,7 @@ PR が開いている部屋（2026-11-17 時点 13 件）は今までどおり�
 3. `git apply --binary tracked.patch`
 4. `tar -xf untracked.tar`・`tar -xf ignored.tar`（部屋の中で）
 
-この手順を `scripts/reaper-restore.sh <写しの置き場>` 1 本にまとめる（読むのは写しだけ・本店以外は触らない）。
+この手順を scripts/reaper-restore.sh（新設） <写しの置き場> 1 本にまとめる（読むのは写しだけ・本店以外は触らない）。
 
 ## 4. 触らない範囲
 
@@ -131,7 +131,7 @@ PR が開いている部屋（2026-11-17 時点 13 件）は今までどおり�
 ## 7. ADR-114 R13（実装の PR で ADR に足す文案）
 
 §5 安全条件に足す:
-「置き忘れの部屋（2026-11-17 R13）：`$HOME/worktrees/` の下にあり、PR が開いておらず、使用中でも鍵付きでもなく、最後に触ってから `REAPER_IDLE_DAYS`（既定 14）日以上の部屋は、記録していない変更・新しいファイル・無視ファイル（作り直せる置き場を除く）・origin から届かないコミットを `<git-common-dir>/reaper-archive/` に写し、照合が合ったときだけ部屋を消す。ブランチと台帳は変えない。detached の部屋も同じ。戻しは `scripts/reaper-restore.sh`。」
+「置き忘れの部屋（2026-11-17 R13）：`$HOME/worktrees/` の下にあり、PR が開いておらず、使用中でも鍵付きでもなく、最後に触ってから `REAPER_IDLE_DAYS`（既定 14）日以上の部屋は、記録していない変更・新しいファイル・無視ファイル（作り直せる置き場を除く）・origin から届かないコミットを `<git-common-dir>/reaper-archive/` に写し、照合が合ったときだけ部屋を消す。ブランチと台帳は変えない。detached の部屋も同じ。戻しは scripts/reaper-restore.sh（新設）。」
 
 改訂履歴に 1 行足す。
 
@@ -141,7 +141,7 @@ PR が開いている部屋（2026-11-17 時点 13 件）は今までどおり�
 |---|---|
 | 置き忘れの部屋（14 日・PR なし）が写しを取って消え、ブランチは残る | `scripts/tests/test-reaper-safety.sh` に試験を足す: 一時リポジトリで 15 日前の時刻にした部屋を作り、`--execute` 後に部屋なし・ブランチあり・写し 6 種の照合 |
 | PR が開いている・使用中・鍵付き・13 日の部屋は消えない | 同じ試験で 4 件が残る |
-| 写しから元に戻せる | 試験: `reaper-restore.sh` 後の `git status --porcelain` と各ファイルの sha256 が消す前と同じ |
+| 写しから元に戻せる | 試験: reaper-restore.sh（新設）後の `git status --porcelain` と各ファイルの sha256 が消す前と同じ |
 | 照合が合わないと消さない | 試験: patch の書き出しを失敗させて部屋が残る |
 | detached の部屋も同じに扱われ、`~/.salesanchor-tools` は残る | 試験: detached・届かないコミット 1 件の部屋が bundle 付きで消える／`$HOME/worktrees` の外の部屋は残る |
 | ログに「作業場所の数」と「片付け N 件 / 写し N 件」が出る | 試験で行を grep |
@@ -157,7 +157,7 @@ PR が開いている部屋（2026-11-17 時点 13 件）は今までどおり�
 
 本店で動く台本（`scripts/`）を変えるため、合流前に PO の実装承認と GO（ADR-136）を取る。
 
-## 10. 外部事例
+## 10. 外部・過去事例の参照と我々への応用
 
 なし。理由: 調べる対象は自分の Mac の作業場所の片付け方で、外の事例の数字が判断を変えない。使う git の決まり（`locked` 行・`git worktree lock`・`git bundle`）は Context7 `/git/htmldocs` の git-worktree の説明で確かめた（recon §5）。
 
