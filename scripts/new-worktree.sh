@@ -68,7 +68,7 @@ if [ -f "${REAPER_SCRIPT}" ]; then
 fi
 
 # 並行 worktree 数の上限チェック（メインリポジトリ除く）
-WORKTREE_COUNT=$(git worktree list | tail -n +2 | wc -l | tr -d ' ')
+WORKTREE_COUNT=$(git worktree list | tail -n +2 | grep -v '/cbs-copy\.' | wc -l | tr -d ' ')
 # ADR-114 §6: 上限はセーフティネット化（自動回収で減り続けるため、異常検知の閾値として設定）
 WORKTREE_LIMIT="${WORKTREE_LIMIT:-100}"
 if [ "${WORKTREE_COUNT}" -ge "${WORKTREE_LIMIT}" ]; then
