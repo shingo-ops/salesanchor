@@ -64,6 +64,8 @@ def test_table_rows_are_read():
         "fx_rate",
         "tax_rate",
         "payment_method",
+        "contact_company_mismatch",
+        "invoice_not_draft",
     ]
 
 

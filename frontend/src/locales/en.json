@@ -6357,6 +6357,8 @@
     "shippingRequired": "Shipping has not been decided, so the invoice cannot be created. Choose a shipping rate or select \"Do not charge shipping\".",
     "fxRate": "No exchange rate is available for this currency, so amounts cannot be calculated. Choose JPY or USD, or try again after the rate is loaded.",
     "taxRate": "No consumption tax rate is registered for today, so invoices to Japan cannot be created. Ask a super admin to register the rate on the tax rate screen.",
-    "paymentMethod": "The selected payment method is no longer available, so the invoice cannot be saved. Choose a payment method again."
+    "paymentMethod": "The selected payment method is no longer available, so the invoice cannot be saved. Choose a payment method again.",
+    "contactCompanyMismatch": "The selected contact does not belong to this company, so the invoice details cannot be loaded. Choose the contact again.",
+    "invoiceNotDraft": "This invoice is no longer a draft, so it cannot be issued. Reload the page."
   }
 }

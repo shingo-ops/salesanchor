@@ -33,6 +33,8 @@ export const API_ERROR_REASON_KEYS: Readonly<Record<string, string>> = {
   fx_rate: "apiError.fxRate",
   tax_rate: "apiError.taxRate",
   payment_method: "apiError.paymentMethod",
+  contact_company_mismatch: "apiError.contactCompanyMismatch",
+  invoice_not_draft: "apiError.invoiceNotDraft",
 };
 
 /** detail が表のコードなら文言キー、そうでなければ null */

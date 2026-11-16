@@ -301,7 +301,7 @@ async def get_invoice_draft_context(
         if ct_row is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:contact")
         if ct_row["company_id"] != company_id:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="指定された担当者は指定会社に所属していません")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="contact_company_mismatch")
         contact_name = ct_row["display_name"] or " ".join(
             p for p in (ct_row["surname"], ct_row["given_name"]) if p
         ) or None
@@ -720,7 +720,7 @@ async def issue_invoice(
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="draft状態の請求書のみ発行できます")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invoice_not_draft")
 
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
                            action="issue", table_name="invoices", record_id=invoice_id,
