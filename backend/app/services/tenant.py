@@ -551,11 +551,11 @@ CREATE TABLE IF NOT EXISTS {schema}.team_members (
 
 CREATE OR REPLACE FUNCTION {schema}.trg_set_updated_at()
 RETURNS TRIGGER AS $fn$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$fn$ LANGUAGE plpgsql;
+            BEGIN
+                NEW.updated_at = NOW();
+                RETURN NEW;
+            END;
+            $fn$ LANGUAGE plpgsql;
 
 DO $$
 BEGIN

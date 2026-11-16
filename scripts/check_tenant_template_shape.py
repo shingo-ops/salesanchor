@@ -144,7 +144,7 @@ _SHAPE_SQL = {
     """,
     "関数": """
         SELECT p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')',
-               md5(btrim(regexp_replace(p.prosrc, '[[:space:]]+', ' ', 'g'))) || '|secdef=' || p.prosecdef::text || '|vol=' || p.provolatile::text
+               md5(p.prosrc) || '|secdef=' || p.prosecdef::text || '|vol=' || p.provolatile::text
         FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
         WHERE n.nspname = %(s)s
     """,

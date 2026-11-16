@@ -85,3 +85,10 @@ OK: 形の差 0
 - Draft の PR は作っていない（指示: gh・PR 作成はしない。preflight の gh 認証も FAIL）。手元で `shingo-cc` 名義で作る。本文は `.github/pull_request_template.md` から。
 - CI の新しい job の結果の URL は無い（push だけ。PR が無いので workflow は未実行）。
 - `migrations/`・`deploy.yml`・本番 `scripts/` は変えていない。本番には接続していない。
+
+## 審査の差し戻し1件の直し（関数の比べ方・第3版の決め4）
+
+- `scripts/check_tenant_template_shape.py` の関数の比べ方から、空白をまとめる置き換え（`regexp_replace`）を外した。比べるのは関数の本文そのもの（`md5(p.prosrc)`）。
+- 代わりに `backend/app/services/tenant.py` の `trg_set_updated_at()` の本文を、登録の順で最後に流れる `CREATE OR REPLACE`（`migrations/20260902_100000_create_lead_attachments.sql`・登録の 742 行目）の本文と一字一句同じにした（`BEGIN` から `$fn$` の前の行までの字下げを含む）。
+- 手元（使い捨て PostgreSQL 16・localhost:55432・Python 3.12 の venv）: `check_tenant_template_shape.py` は `OK: 形の差 0`（登録 405 本・外す 3 本は前と同じ）。`tests/test_check_tenant_template_shape.py` は `10 passed`（`--no-cov`）。
+- preflight は FAIL のまま続けた（GitHub API に到達不可・gh の認証切り替え失敗。この実行では gh を使わない）。
