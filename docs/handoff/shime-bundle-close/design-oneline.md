@@ -4,7 +4,7 @@
 親の設計: `docs/handoff/shime-bundle-close/design.md`（縦に並べて〆る形。便1 本番済・便2 本番の表に行を追加済・便3 試験前）
 関連 ADR: ADR-1073（規則12h・箱の仲間）、ADR-158（商品単位の差分更新）、ADR-1003（委任 GO）、ADR-135（main にマージ＝本番投入可）。〆の相手を複数の商品に広げる決まりは前例の設計 `docs/handoff/v102-shime-multi-targets/design.md`（規則8〜11）が正。
 
-状態: 設計案作成済み（草案。2026-11-16、Opus。行番号は 2026-11-17 の origin/main 2adefae2e で確かめ直した）。PO の方針の決定 2026-11-16「1」（1行に品名を並べて〆る形を、まとめ〆の直しに加えてから便3の試験をする）。設計審査は未。実装は未着手。
+状態: 設計案作成済み（草案。2026-11-16、Opus。行番号は 2026-11-17 の origin/main 2adefae2e で確かめ直した）。PO の方針の決定 2026-11-16「1」（1行に品名を並べて〆る形を、まとめ〆の直しに加えてから便3の試験をする）。設計審査 1回目 REVISE（2026-11-17、指摘6件。`docs/handoff/shime-bundle-close/review-oneline.md`）→ 直し済み・2回目は未。実装は未着手。
 
 ## 1. 目的と成功条件
 - 目的: 「品名A、品名B〆」のように1行に品名を区切って並べた〆で、並んだ商品をすべて Sold out にする。今は2品とも閉じないか、片方だけ閉じる（recon §2: 直近30日の3投稿すべて）。
@@ -33,45 +33,53 @@
 ### 3-1. 規則14（1行の並び〆）
 1. 判定の関数を `backend/app/services/gemini_raw_copy_v102_soldout_ref.py` に足す（純粋な関数。DB を読まない）。名前の例 `split_list_shime(text, sold_out_words, match) -> tuple[int, ...] | None`。`match` は区切り1つを照合して商品 ID か None を返す関数（呼ぶ側が `match_text_g2` で作る）。
    - 次の全部に当たるときだけ、区切りの順の商品 ID の組を返す。1つでも外れれば None（全部か無しか。片方だけ閉じることはしない）。
-     1. 〆の言葉（`ctx.sold_out_words`。「〆」「完売」等）を全部取り除いた残りを、区切りの字 `、` `,` `，` `/` `／` で分けると、空でない区切りが2つ以上。「・」「&」「＆」は区切りにしない（商品名の中に出るため。recon §2）。
+     1. 〆の言葉（`ctx.sold_out_words`。「〆」「完売」等）を全部取り除いた残りを、区切りの字 `、` `,` `，` `/` `／` で分けると、空でない区切りが2つ以上5つ以下。「・」「&」「＆」は区切りにしない（商品名の中に出るため。recon §2）。
      2. どの区切りにも数字だけの語が無い（値段と数を並べた行を除く）。
      3. 区切りごとの照合が全部 matched で、商品が全部違う。
-2. 呼び出しを `backend/app/services/gemini_raw_copy_v101.py` `_extract_v102`（:1494-、呼び出しは :1543-1556）に足す。順は `_apply_context_work` の後、`_apply_followup` の前（直前の投稿で決める段が片方の商品に決めてしまうのを防ぐ。recon §1・§4）。名前の例 `_apply_list_shime`。
+2. 呼び出しを `backend/app/services/gemini_raw_copy_v101.py` `_extract_v102`（:1494-、後処理の呼び出しは :1543-1556）に足す。名前の例 `_apply_list_shime(extracted, build, lines, ctx.product_first, soldout_posts, ctx.sold_out_words, fixed_products, box_rule, post_text)`。
+   - 置く所: `if ctx.product_first is not None:` の中の先頭、`_apply_context_work` より前。`soldout_posts` が空なら呼ばない（相手を作れないため。今の `if soldout_posts:` と同じ条件）。前に置く理由: `_apply_context_work`（:1277-1300）と `_apply_followup` は ambiguous の件を片方の商品に決めてしまう（11/16 は `_apply_followup` が片方に決めた）。区切りが全部別の商品に決まるのは作品の手がかりより強い根拠なので、先に決める。
    - 対象の件: 次の全部に当たる件だけ。
      1. 完売の件（`status_effect` が除外・`status` が Sold out）で、price と quantity がどちらも無い。
      2. `lines` の行がちょうど1行。
      3. `match_status` が ambiguous で、規則14の商品の組が全部その件の候補（`match_candidates`）にある。
      4. 人が決めた商品が無い（`fixed_products` に無い）。
-   - 決めた件は、先頭の商品で作り直す（`build(i, 先頭の商品)`）。`match_status` は新しい定数（例 `matched_list_shime`）、根拠の欄（例 `product_list_shime`）に区切りの文字と商品 ID を残す。
-   - 完売の相手（`soldout_targets`）: 商品ごとに「その商品だけを書いた〆の件」（`build(i, 商品)` の結果）を作り、今の規則12（`decide_soldout_inherit`。12d・12e・12g・12h、box_rule と post_text も今と同じ物を渡す）で相手を求める。規則12が何も返さない商品は、その件の (商品, 状態) を相手にする。全部の商品の相手を区切りの順に並べ、重なりは最初だけ残す。先頭は先頭の商品の相手にする（書く行の状態が先頭の相手で上書きされるため。`backend/app/services/line_analysis_v102_svc.py:944-967`）。`soldout_target_basis` は新しい定数（例 `soldout_list_shime`）。
-   - 規則14で決めた件は、そのあとの段（`_apply_followup`・`_apply_soldout_ref`・`_apply_soldout_inherit`）で上書きしない（`soldout_targets` を持つので規則12の対象外になる。`backend/app/services/gemini_raw_copy_v102_soldout_ref.py` `_is_inherit_candidate` の `not item.get("soldout_targets")`）。`_apply_followup`・`_apply_soldout_ref` は ambiguous / unmatched の件だけを見るので、作り直した件には触らない。
-3. 新しい `match_status` と `soldout_target_basis` が、保存（`backend/app/services/line_analysis_v102_svc.py`）・要確認の理由・画面の根拠の表示で、今の matched_followup / soldout_inherit と同じ扱いになることを実装の最初に確かめる（定数を使う所を `grep` で全部挙げ、カードに file:line で書く）。新しい値で扱いが変わる所があれば実装を止めて Opus に戻す。
-4. 触らないもの: 指示書（DB の行・定数）、`parse_v101_response` と親の設計の5条件、規則1〜13、`backend/app/tools/v102_replay_diff.py`、DB の形、migrations/、deploy.yml、scripts/。
+   - 完売の相手（`soldout_targets`）は、商品ごとに次の順で求める。
+     1. 規則12: `extracted` の i 番目だけを `build(i, 商品)` に差し替えた並びを `decide_soldout_inherit(並び, soldout_posts, fixed_products, box_rule=box_rule, post_text=post_text)` に渡し、`decisions.get(i)` を取る（12d・12e・12g・12h は今のまま）。
+     2. 1が無いとき: `soldout_posts`（新しい順）の在庫の行のうち、その商品で、状態が `build(i, 商品)` の〆の状態（`_shime_condition`）と同じ行がある最も新しい投稿の行から、`_soldout_target` で1つ作る（12d に当たる件や、語で状態が決まった件（`condition_decided_by_word`）はここに来る）。
+     3. 1も2も無い商品は、閉じる在庫が無いので相手に入れない。
+   - 件の作り直し: 相手のある商品のうち区切りの順で最初の物を「先頭の商品」とし、`build(i, 先頭の商品)` で作り直す。相手のある商品が1つも無ければ、規則14は何もしない（件は今のまま）。相手は先頭の商品の物を先に、残りを区切りの順に並べ、(商品, 状態) の重なりは最初だけ残す（書く行の状態が先頭の相手で上書きされるため。`backend/app/services/line_analysis_v102_svc.py:944-967`。相手は必ず condition_id・ref_message_id・ref_line を持つ（`analysis_soldout_extra_targets` の NOT NULL の列））。
+   - 作り直した件に付ける物: `match_status` は新しい定数 `matched_list_shime`、根拠の欄 `product_list_shime` に区切りの字と区切りの順の商品 ID、`soldout_target_basis` は新しい定数 `SOLDOUT_LIST_SHIME`。
+   - 後の段で上書きされないこと（審査で実物を確かめ済み）: `_apply_context_work`・`_apply_followup`（`backend/app/services/gemini_raw_copy_v102_followup.py:125`）・`_apply_soldout_ref`（`gemini_raw_copy_v102_soldout_ref.py:159`）は ambiguous / unmatched の件だけを見る。規則12は `soldout_targets` を持つ件を外す（`_is_inherit_candidate` :374）。
+3. 保存で商品が決まった扱いにする: `backend/app/services/line_analysis_v102_svc.py:732-734` の `_RESOLVED_MATCH_STATUSES` に `matched_list_shime` を足す（足さないと :765 で product_id が None・pid_resolved が False で保存され、先頭の商品も閉じない）。pid_basis は :786 で `V102:matched_list_shime` になる。2026-11-17 に origin/main で `matched_followup`・`matched_soldout_ref` を使う所を grep し、`backend/app` の4ファイル（`gemini_raw_copy_v101.py`・`gemini_raw_copy_v102_followup.py`・`gemini_raw_copy_v102_soldout_ref.py`・`gemini_raw_copy_v102_product_first.py`）と保存の1か所だけで、`frontend/src`・`scripts` には無いことを確かめた。実装の最初に同じ grep を流し、ほかに出たら止めて Opus に戻す。
+4. 触らないもの: 指示書（DB の行・定数）、`parse_v101_response` と親の設計の5条件、規則1〜13、`backend/app/tools/v102_replay_diff.py`、DB の形、migrations/、deploy.yml、scripts/。`line_analysis_v102_svc.py` は3の1行だけ。
 
 ### 3-2. 試験（新しく足す。既存の試験は書き換えない）
 - T1: 「品名A、品名B〆」（A・B は試験用の名簿で別の商品）→ 規則14の組は (A, B)。
-- T2: 区切りが「,」「，」「/」「／」でも T1 と同じ。「・」「&」では None。
+- T2: 区切りが「,」「，」「/」「／」でも T1 と同じ。「・」「&」では None。区切りが6つなら None。
 - T3: 片方の区切りが商品に決まらない（「パック、品名B〆」）→ None。
 - T4: 2つの区切りが同じ商品（「品名A 未開封、品名A バラ〆」）→ None。
 - T5: 試験用に作った「値段,数×個数 〆」の形（数字だけの区切り）→ None。
-- T6: `_extract_v102` に T1 の件（ambiguous・候補 A,B・完売・price/quantity なし・1行）と、A・B それぞれに In Stock の行がある過去の投稿を渡す → 件は A で作り直され、`soldout_targets` に A と B の相手が入る。
-- T7: T6 で、件に価格がある・2行ある・人が決めた商品がある、のどれかなら規則14は動かない（今と同じ結果）。
-- T8: T6 で、直前の投稿（`followup_ref`）が A だけを含んでも、件は規則14で決まり B も相手に入る（11/16 の形）。
-- T9: T6 の件を `line_analysis_v102_svc` の保存まで通す → A の行は Sold out、B は `analysis_soldout_extra_targets` に1行。
+- T6: `_extract_v102` に T1 の件（ambiguous・候補 A,B・完売・price/quantity なし・1行）と、A・B それぞれに In Stock の行がある過去の投稿を渡す → 件は A で作り直され `match_status` は `matched_list_shime`、`soldout_targets` は A の相手が先頭で B の相手が続く。どの相手も condition_id・ref_message_id・ref_line を持つ。
+- T7: T6 で、件に価格がある・2行ある・人が決めた商品がある・`soldout_posts` が空、のどれかなら規則14は動かない（今と同じ結果）。
+- T8: T6 で、直前の投稿（`followup_ref`）が A だけを含む場合と、前後の件の作品が A だけを指す場合（`_apply_context_work` が A に決める形）の両方で、件は規則14で決まり B も相手に入る（11/16 の形）。
+- T9: T6 の件を `line_analysis_v102_svc` の保存まで通す → A の行は product_id が A・pid_resolved が True・pid_basis が `V102:matched_list_shime`・Sold out、B は `analysis_soldout_extra_targets` に1行。
+- T10: A に在庫の行が無く B だけにある → 件は B で作り直され、相手は B だけ。A にも B にも無い → 件は今のまま。
+- T11: A の過去の在庫が〆と同じ状態（規則12d で何も返らない形）→ 3-1 の2の2で A の相手が1つ作られる。
 
 ## 4. 影響範囲
-- 結果が変わるのは、§3-1 の対象の件の4条件と規則14の3条件が全部当たる件だけ。直近30日では正の3投稿だけのはず（K3 で確かめる）。
+- 結果が変わるのは、§3-1 の対象の件の4条件と規則14の3条件が全部当たり、相手のある商品が1つ以上ある件だけ。直近30日では正の3投稿だけのはず（K3 で確かめる）。
 - 呼び出し元: `_extract_v102` は v102 の解析・作り直し・`prompt_ab`・`v102_replay_diff` から呼ばれる。どれも同じ後処理を通るので、試験の道具でも同じ結果になる。v101 の経路（`extract_v101_items`）は通らないので変わらない。
 - 便3の試験（K2・K3、293回）は、規則14が先に本番に入っていても、ほかの投稿の結果は変わらない（K3 で確かめる）ので、試験の形・費用はそのまま。
 
 ## 5. リスクと対処
 - 区切りで分けた語が偶然別の商品に当たり、並びでない〆で余計な商品を閉じる（消しすぎ）→ 全部か無しか・候補の中に限る・数字だけの語を除く、の3つで狭くする。K3 で直近30日の全部の対象の件を流して確かめ、K4 の「消しすぎ」で見張る。1件でも出たら戻す（PR を revert する）。
+- 区切りが型番だけで1商品に決まった場合も、今の照合（`match_text_g2`）の結果をそのまま使う（行全体の照合と同じ決まり）。K3 で型番だけの区切りで変わった投稿があれば目で見て PO に報告する。
 - 区切りの照合が型番だけで決まらず、本物の並び〆でも動かない（11/04 の投稿のように型番だけを並べた形）→ 閉じ漏れは今と同じで、悪くはならない。K2 で数え、動かなければ PO に報告する（名簿に検索ワードを足すかは別に決める）。
 - 新しい `match_status` の値が、どこかで「知らない値」として要確認や表示の崩れになる → §3-1 の3で実装の最初に全部挙げる。
 - 戻し方: 規則14は新しい関数と1か所の呼び出しだけなので、PR を revert すれば元に戻る。保存済みの `analysis_soldout_extra_targets` の行は、次の作り直しで今の規則の結果に置き換わる（DELETE してから INSERT する。`backend/app/services/line_analysis_v102_svc.py` `_DELETE_EXTRA_TARGETS_SQL`）。
 
 ## 6. 進め方と GO
-1. 設計審査（クラウドの architect opus）→ 実装カード → PO の実装の承認（便1と同じく委任の範囲かを確かめる）→ クラウドの Sonnet が実装。実装の最初に recon §4 の未確認2点を `v102_replay_diff` で確かめ、結果をカードの報告に書く（予想と違えば止めて Opus に戻す）。
+1. 設計審査（クラウドの architect opus）→ 実装カード → PO の実装の承認（便1と同じく委任の範囲かを確かめる）→ クラウドの Sonnet が実装。recon §4 の未確認2点は、規則14を `_apply_context_work`・`_apply_followup` より前に置いたので結果を左右しない。K2 で、正の3投稿の件の product と soldout_targets（`v102_replay_diff` の列 :37-39 にある）を見て判定する。
 2. CI 緑 → reviewer(opus) を新しく起動して APPROVE → K2・K3 を本番の別のコンテナで流す（Opus が読む。社外秘の作業記録に保存）→ ADR-1003 の3条件で GO（委任に基づく Opus 発行）→ マージ・反映。
 3. 反映の後に便3の試験（親の設計 §3-4）。PO の決定「1」のとおり、規則14が先。
 4. K4 は毎朝の〆の点検で14日見る。
@@ -86,5 +94,5 @@
 - 過去事例（このリポジトリ）: 複数の商品を閉じる受け皿（`soldout_targets` と `analysis_soldout_extra_targets`）は規則11（`docs/handoff/v102-shime-multi-targets/design.md`）で作られ本番で動いている。規則14はこの受け皿に相手を並べるだけで、DB の形を変えない。保存済みの件のやり直しで前後を比べる測り方は、規則12h（ADR-1073、`docs/handoff/shime-box-all-states/`）と同じ。
 
 ## 9. 未解決
-- recon §4 の未確認2点（実装の最初に確かめる。予想と違えば設計を直す）。
+- recon §4 の未確認2点は K2 の結果で見る（規則14を先に置いたので、段ごとの状態は判定に要らない）。
 - K3 の対象の投稿の数（流す前に読み取り鍵で数えて記録する）。
