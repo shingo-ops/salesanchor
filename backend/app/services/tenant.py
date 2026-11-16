@@ -294,7 +294,6 @@ CREATE TABLE IF NOT EXISTS {schema}.company_sales_channels (
     company_id INTEGER NOT NULL REFERENCES {schema}.companies(id) ON DELETE CASCADE,
     channel VARCHAR(30) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    demo_red_5_2c TEXT,
     PRIMARY KEY (company_id, channel)
 );
 
