@@ -2,7 +2,7 @@
 
 この文書は何か：PR を作らずに終わった作業の部屋と審査の写しが溜まり、上限 100 に達する件の直し方と、その副作用を書いたもの。
 親（設計仕様書）: [docs/specs/reaper-auto-cleanup/README.md](../../specs/reaper-auto-cleanup/README.md)
-recon: [recon-idle-reclaim.md](recon-idle-reclaim.md)
+recon: [docs/handoff/reaper-auto-cleanup/recon-idle-reclaim.md](recon-idle-reclaim.md)
 上位方針: ADR-114（本設計で R13 を足す。§7）
 
 ## 1. 目的
