@@ -26,9 +26,8 @@ logger = logging.getLogger(__name__)
 # Python の説明（古い）
 _TENANT_TABLES_SQL = """
 -- SQL の説明（古い）
-CREATE TABLE IF NOT EXISTS {schema}.items (
-    id SERIAL PRIMARY KEY
-);
+ALTER TABLE {schema}.items
+    ADD COLUMN IF NOT EXISTS id INTEGER;
 """
 
 _RLS_ENABLE_SQL = """
@@ -101,7 +100,7 @@ def run_check(repo: Path, base: str, head: str, pr: str = "9999") -> subprocess.
 
 def add_column(repo: Path) -> None:
     src = (repo / TENANT_PATH).read_text(encoding="utf-8")
-    write(repo, TENANT_PATH, src.replace("id SERIAL PRIMARY KEY", "id SERIAL PRIMARY KEY,\n    note TEXT"))
+    write(repo, TENANT_PATH, src.replace("ADD COLUMN IF NOT EXISTS id INTEGER;", "ADD COLUMN IF NOT EXISTS id INTEGER,\n    ADD COLUMN IF NOT EXISTS note TEXT;"))
 
 
 def test_a_python_comment_only_passes(repo: Path) -> None:
