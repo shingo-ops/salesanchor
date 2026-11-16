@@ -221,6 +221,17 @@
 - PO の決定（2026-11-14「1」）: 報告が届いた出来事は案 A（kind `case_report`・actor `case_agent`）で残す。表の決まり 2 つを 2a で広げる。
 - 状態: 段取り表は PO 承認済み。実装は未着手（次は §4 の本番の数を読み、2a をクラウドの Sonnet に頼む）。
 
+### 実装の 2 つ目の便の結果（2026-11-17 記録。段取り表 §7 の確かめ）
+
+| 段 | 結果 | 根拠 |
+|---|---|---|
+| 2a | ○ 種類の列と新しい一意が本番に入り、古い一意も残った | PR #5502（PO「GO #5502」）を 2026-11-15 01:04 JST に合流（9dfaa4a2c）。§7（2026-11-15 10:32 JST・読み取りのみ）: kind 列 NOT NULL・既定 investigation・rows 0・reports_kind_check と reports_incident_id_kind_key あり・incident_only_unique 1・出来事の表の 2 つの決まりに case_report・case_agent。報告の口の nginx は前後とも report_lines 0・5xx 0 |
+| 2b | ○ 古い一意（incident_id だけ）が消え、新しい一意だけが残った | PR #5522 を 2026-11-16 14:58 JST に合流（baf555c6d）。GO は PO「GO #5522 書類だけの取り込みは再許可なしでよい」（11/16 14:17 JST・11905e309）。GO の後に main から入ったのは docs/ の 23 本だけで、例外を使った（PR の確認済みコメントに条件を記録）。本番反映 run 43813711040 の 1 回目は移行 [169/405] で別の取引（salesanchor_celery_distribute・34 秒）にロック待ち 40/40 で失敗、失敗分の再実行で 405/405・ロック待ち 0・配備後点検 success（15:37 JST）。§7（2026-11-17 04:11 JST・読み取りのみ・PO が実行）: rows 0・incident_only_unique 0・kind_unique 1・events_case_report 0 |
+
+- 未確認: 本物の件で、報告 1 通に出来事の表の case_report が 1 行・detail のキーが report_id だけになること（本番で試しの報告は送らない。件が来たら数える）。
+- 別件（この便の変更ではない）: 移行の最後の ai_unmask_owner の権限付け直しが、2b の本番反映の 2 回とも statement timeout で失敗した（権限は前のまま）。前の本番反映でも同じだったかは未確認。
+- CI の別件: 2b の CI は、PR が触らない試験で 3 回落ちた（共通の役割 aic_owner の取り合い・deadlock・試験用 uuid に「abc」が偶然含まれた件）。直し方は別のテーマで扱う。
+
 ### 試しから設計に足すこと
 
 - 案 A（U2）は使える。ただし読むのは 1 ファイルずつ（raw.githubusercontent.com）。まとめて取る形（codeload）は 403 なので使わない。
