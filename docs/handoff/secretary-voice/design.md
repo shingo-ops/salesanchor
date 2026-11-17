@@ -19,7 +19,12 @@
 
 1. 利用者が「声で返事」を入れる（このとき画面が音の部品 `AudioContext` を起こす。押した操作の中で起こすので Chrome に止められない・research.md T1）。
 2. 秘書の返事（文）が画面に出る。今まで通り。
-3. 画面が返事の文を、文の区切り（。！？と改行）で分ける。区切った 1 つが 300 字を超えるときは、さらに 300 字ごとに切る（AI が自由に書く「わからない」の返事は長さの決まりが無いため・recon.md §2）。最初の 1 文から順に `POST /api/v1/assistant/speech` に文を送る。
+3. 読み上げる文は返事の種類ごとに決める（`frontend/src/features/secretary/SecretaryChat.tsx:128`〜`frontend/src/features/secretary/SecretaryChat.tsx:170` の 5 種類）:
+   - 文の返事（`text`）: 吹き出しの文の全部。
+   - 聞き返し（`ask`）: 最後の問いの 1 行（`t("secretary.ask.<欄>")`）だけ。「ここまでの予定」と埋まった欄の一覧は読まない。
+   - 作った知らせ（`created`）: 知らせの文だけ。リンクの文字は読まない。
+   - 請求書と予定の下書き（`invoice`・`event`）: 読まない。中身は直して押す入力欄の集まりで、文ではないため。
+   画面はこの文を、文の区切り（。！？と改行）で分ける。区切った 1 つが 300 字を超えるときは、さらに 300 字ごとに切る（AI が自由に書く「わからない」の返事は長さの決まりが無いため・recon.md §2）。最初の 1 文から順に `POST /api/v1/assistant/speech` に文を送る。
 4. backend は、本人の声を DB から読み（画面は声を送らない）、今月の字数が上限の手前かを台帳で確かめ、Google に文を送って MP3 を受け取り、台帳に字数を 1 行書いて、MP3 を返す。
 5. 画面は受け取った音を `decodeAudioData` で音に直し、順に鳴らす。1 文目を鳴らしている間に 2 文目を取りに行く。
 6. 切り替えを切る・窓を閉じる・次の頼みを送ると、鳴っている音を止め、残りを捨てる。
@@ -99,7 +104,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
   - 列 `billed_characters INTEGER NULL` を足す（Google が料金に数える字数。空白・改行を含む送った文の全字数。読み上げ以外の行は NULL）。
   - `purpose` に `secretary_tts` を足す（作り直しの形は `migrations/20261113_100000_create_secretary_rules.sql:106`〜`migrations/20261113_100000_create_secretary_rules.sql:120` と同じ）。
   - `sdk` に `google-tts-rest` を足す（作り直しの形は `migrations/20261103_120000_create_ai_job_assignments.sql:169`〜`migrations/20261103_120000_create_ai_job_assignments.sql:175` と同じ）。
-- Python 側の値の一覧も同じ便で足す。`backend/app/services/llm_budget.py:159`〜`backend/app/services/llm_budget.py:171` の `USAGE_PURPOSES` に `secretary_tts`、`USAGE_SDKS` に `google-tts-rest`。一覧に無い値は `backend/app/services/llm_budget.py:250`〜`backend/app/services/llm_budget.py:253` で例外になり、`record_usage_isolated` はその例外をログに出して飲み込む（`backend/app/services/llm_budget.py:419`〜`backend/app/services/llm_budget.py:420`）。足し忘れると行が 1 行も書かれず、月の上限が常に 0 字と数えて効かなくなる。
+- Python 側の値の一覧も同じ便で足す。`backend/app/services/llm_budget.py:159`〜`backend/app/services/llm_budget.py:172` の `USAGE_PURPOSES` に `secretary_tts`、`USAGE_SDKS` に `google-tts-rest`。一覧に無い値は `backend/app/services/llm_budget.py:250`〜`backend/app/services/llm_budget.py:254` で例外になり、`record_usage_isolated` はその例外をログに出して飲み込む（`backend/app/services/llm_budget.py:419`〜`backend/app/services/llm_budget.py:420`）。足し忘れると行が 1 行も書かれず、月の上限が常に 0 字と数えて効かなくなる。
 - 今すでに DB と Python の一覧はずれている（観測: DB の `purpose` は `secretary_regression` を含む 8 つ・Python の `USAGE_PURPOSES` は 7 つ）。この便で `secretary_regression` も Python に足し、「DB の値の決まりの一覧と Python の一覧が同じ」ことを確かめる試験を足す（V12）。今後のずれも CI で落ちる。
 - 書き方: `record_usage_isolated` に `billed_characters` を渡せるようにし、書く SQL（`_INSERT_USAGE_EVENT_OUTCOME_SQL`）にも列を足す。`model` は `ja-JP-Chirp3-HD-<声>`、トークンの列は NULL。`cost_usd` は NULL になる（単価表に無いモデルと、トークンが全部空のときは NULL を返す作り・`backend/app/services/llm_budget.py:227`〜`backend/app/services/llm_budget.py:231`）。料金は字数で見る（§4-6）。
 - 1 行に書くのは字数・声・成否だけ。文そのものは書かない（会話を保存しない約束・ADR-1056）。
@@ -171,7 +176,10 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 - 短い返事（20 字以下）10 回・長い返事（30 字以上）10 回。それぞれ 9 回以上が 1.5 秒・3 秒以内で合格。
 - 長い返事の線は 30 字（PO 2026-11-17「1」）。決まった返事の最長は 44 字で、60 字以上は 0 個だったため（`frontend/src/locales/ja.json` の `secretary.*` 52 個を数えた）。
 - 測る返事（決まった返事なので毎回同じ文で測れる）:
-  - 長い: `secretary.ask.end`（36 字・終わりを言わずに予定を頼む）を 5 回・`secretary.ask.add_meet`（31 字・Meet を言わずに予定を頼む）を 5 回。
+  - 長い: `secretary.ask.end`（36 字）を 5 回・`secretary.ask.add_meet`（31 字）を 5 回。
+    - end が出る条件: 題と始まりの日時があり、終日でなく、終わりを言わない予定の頼み（終日なら終わりは始まりで埋まり、聞かれない）。
+    - add_meet が出る条件: 題・始まり・終わりがそろった打ち合わせの頼みで、Meet に触れない。測るのは Google の予定をつないだ本人（PO）。測る前に、同期の向きが「両方向」か「アプリから Google だけ」であることを読み取りで確かめる。
+    - どちらかの条件がそろわないときは、10 回とも end で測る。
   - 短い: 20 字以下の決まった返事が出る頼み。どの頼みを使うかは便3 の前にこの節へ書き足し、審査役に見せる。
 
 ## 9. 受け入れの条件と確かめ方

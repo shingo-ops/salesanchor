@@ -43,7 +43,7 @@
 - 使いみちの制約（purpose）の最新の形: `migrations/20261113_100000_create_secretary_rules.sql:120`（8 つ。`secretary_intent`・`secretary_regression` を含む）
 - 制約の足し方の手本（定義に値が無いときだけ作り直す）: `migrations/20261113_100000_create_secretary_rules.sql:106`〜`migrations/20261113_100000_create_secretary_rules.sql:120`
 - 書き込みの入口: `backend/app/services/llm_budget.py:359`（`record_usage_event`）と `backend/app/services/llm_budget.py:385`（`record_usage_isolated`・自分の失敗はログに出して飲み込む・`backend/app/services/llm_budget.py:419`〜`backend/app/services/llm_budget.py:420`）
-- Python 側の値の一覧: `backend/app/services/llm_budget.py:159`〜`backend/app/services/llm_budget.py:171`（`USAGE_PURPOSES` 7 つ・`USAGE_SDKS` 4 つ）。一覧に無い値は例外（`backend/app/services/llm_budget.py:250`〜`backend/app/services/llm_budget.py:253`）。DB の `purpose` 8 つのうち `secretary_regression` が Python に無い（ずれは既にある）
+- Python 側の値の一覧: `backend/app/services/llm_budget.py:159`〜`backend/app/services/llm_budget.py:172`（`USAGE_PURPOSES` 7 つ・`USAGE_SDKS` 4 つ）。一覧に無い値は例外（`backend/app/services/llm_budget.py:250`〜`backend/app/services/llm_budget.py:254`）。DB の `purpose` 8 つのうち `secretary_regression` が Python に無い（ずれは既にある）
 - 料金の計算: 単価表に無いモデル・トークンが全部空なら NULL（`backend/app/services/llm_budget.py:227`〜`backend/app/services/llm_budget.py:231`）
 - 決まった返事の長さ: `frontend/src/locales/ja.json` の `secretary.*` 52 個で最長 44 字。60 字以上は 0 個
 - 使用量の画面: `frontend/src/pages/super-admin/components/LlmUsageSection.tsx`（API `GET /tcg/analysis-dashboard/llm-usage`・`backend/app/routers/tcg_analysis_dashboard.py:746`）
