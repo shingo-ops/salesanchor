@@ -583,4 +583,48 @@ describe("SecretaryChat voice reply", () => {
     const reopened = await openChat();
     await waitFor(() => expect(reopened.checked).toBe(false));
   });
+
+  it("V3-f: turning the toggle off while waiting neither asks for speech nor shows the failure line", async () => {
+    let resolveReply!: (v: unknown) => void;
+    mock.postWithTimeout.mockReturnValue(
+      new Promise((r) => {
+        resolveReply = r;
+      }),
+    );
+    renderChat();
+    const toggle = await openChat();
+    fireEvent.click(toggle);
+    const box = await screen.findByLabelText(/Tell me what you need/);
+    fireEvent.change(box, { target: { value: "hi" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() => expect(mock.postWithTimeout).toHaveBeenCalled());
+    fireEvent.click(toggle);
+    resolveReply({ kind: "unknown", draft: { reply: "late reply" }, candidates: none });
+    await screen.findByText("late reply");
+    expect(mock.speech).not.toHaveBeenCalled();
+    expect(screen.queryByText(i18n.t("secretary.voiceFailed"))).toBeNull();
+  });
+
+  it("V3-g: a reply sent before closing is not read aloud after reopening with the toggle on", async () => {
+    let resolveReply!: (v: unknown) => void;
+    mock.postWithTimeout.mockReturnValue(
+      new Promise((r) => {
+        resolveReply = r;
+      }),
+    );
+    renderChat();
+    const toggle = await openChat();
+    fireEvent.click(toggle);
+    const box = await screen.findByLabelText(/Tell me what you need/);
+    fireEvent.change(box, { target: { value: "hi" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() => expect(mock.postWithTimeout).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: /close/i }));
+    const reopened = await openChat();
+    fireEvent.click(reopened);
+    resolveReply({ kind: "unknown", draft: { reply: "old reply" }, candidates: none });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mock.speech).not.toHaveBeenCalled();
+  });
 });
