@@ -17,7 +17,7 @@
 - D4 ThreeColumn は TwoColumn（frontend/src/components/TwoColumn.tsx・.css）と同じ作り（gap は '2'|'3'|'4'|'6'・align は start|center|stretch）。3列は等幅。幅 1279px 以下（= `--breakpoint-tablet-max`、tokens.css:121）で縦1列。CSS 変数は @media の条件に使えないので数を書き、横に注記する（frontend/scripts/check-breakpoint-sync.js の冒頭の説明と同じ）。
 - D5 TotalsBox は dl（行ごとに div の中に dt と dd）。背景は `--accent-bg-subtle`（明るい・暗いの両方が frontend/src/index.css:85・292 にある）、枠は `--border`・`--radius-lg`。合計の行は上に線、値は `--font-2xl`・`--font-weight-bold`（ほかの行の値は `--font-md`）。合計の字が一番大きい（K8）。
 - D6 tokens.css は変えない（使う変数はすべて今ある）。色の直値・生の px（1px の線を除く。frontend/scripts/check-css-hardcoded-values.js は 0〜3px を除外）を書かない。
-- D7 各金型の話は3つ: Default（明るい）・Dark（html に force-dark を付ける。frontend/src/components/Button.stories.tsx の StateSamples と同じやり方）・Narrow（`viewport: { defaultViewport: 'mobile1' }`。ChatBubble.stories.tsx:54 と同じ）。
+- D7 各金型の話は3つ: Default（明るい）・Dark（html に force-dark を付ける。frontend/src/components/Button.stories.tsx の StateSamples と同じやり方）・Narrow（`globals: { viewport: { value: 'mobile1', isRotated: false } }`。frontend の Storybook は 10.4.6（frontend/package-lock.json）で、初めの画面幅は globals で決める。ChatBubble.stories.tsx:54 の `parameters.viewport.defaultViewport` は非推奨の古い書き方で、Storybook の移行説明（MIGRATION.md「New parameters format for addon viewport」・Context7 で 2026-11-17 に確かめた）が globals への置き換えを求めているので手本にしない）。
 - D8 試験は1ファイル frontend/src/components/SectionParts.test.tsx（vitest・Testing Library。翻訳は BillToCountryGuidance.test.tsx と同じく createInstance に en.json を入れる）。
 - D9 docs/CC_UI_GOVERNANCE.md の「## 参照」の前に「## 金型の目録」の節を作り、4行を足す（§3-7「目録に1行ずつ足す」。今のファイルに目録の節は無い）。
 - D10 この便では画面（pages/invoice-create）を変えない。金型を使うのは便 R5。
@@ -166,7 +166,8 @@ export const Dark: Story = {
 };
 
 export const Narrow: Story = {
-  parameters: { viewport: { defaultViewport: 'mobile1' }, layout: 'padded' },
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  parameters: { layout: 'padded' },
 };
 ```
 
@@ -297,7 +298,8 @@ export const DarkEmpty: Story = {
 };
 
 export const Narrow: Story = {
-  parameters: { viewport: { defaultViewport: 'mobile1' }, layout: 'padded' },
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  parameters: { layout: 'padded' },
 };
 ```
 
@@ -411,7 +413,8 @@ export const Dark: Story = {
 };
 
 export const Narrow: Story = {
-  parameters: { viewport: { defaultViewport: 'mobile1' }, layout: 'padded' },
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  parameters: { layout: 'padded' },
 };
 ```
 
@@ -559,7 +562,8 @@ export const Dark: Story = {
 };
 
 export const Narrow: Story = {
-  parameters: { viewport: { defaultViewport: 'mobile1' }, layout: 'padded' },
+  globals: { viewport: { value: 'mobile1', isRotated: false } },
+  parameters: { layout: 'padded' },
 };
 ```
 
@@ -579,7 +583,6 @@ import { ThreeColumn } from './ThreeColumn';
 import { TotalsBox } from './TotalsBox';
 
 let instance = createInstance();
-const tr = (key: string) => String(instance.t(key));
 function wrap(node: ReactNode) { return <I18nextProvider i18n={instance}>{node}</I18nextProvider>; }
 
 beforeEach(async () => {
@@ -620,7 +623,7 @@ describe('ReadOnlyField', () => {
     (_name, value) => {
       const { container } = render(wrap(<ReadOnlyField label="Email" value={value} />));
       const box = container.querySelector('.comp-readonly-field__value') as HTMLElement;
-      expect(box.textContent).toBe(tr('common.unregistered'));
+      expect(box.textContent).toBe('Not registered');
       expect(box.className).toContain('comp-readonly-field__value--empty');
     },
   );
@@ -755,15 +758,15 @@ describe('TotalsBox', () => {
 
 手順5 形と試験（どれも作業場所の frontend で流す）
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components/frontend && npx vitest run --config vitest.unit.config.ts --project unit src/components/SectionParts.test.tsx src/components/Stack.test.tsx 2>&1 | tail -12
-    cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components/frontend && npx tsc -p tsconfig.json 2>&1 | tail -10; echo "tsc exit=$?"
-    cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components/frontend && npx eslint src/components/SectionCard.tsx src/components/SectionCard.stories.tsx src/components/ReadOnlyField.tsx src/components/ReadOnlyField.stories.tsx src/components/ThreeColumn.tsx src/components/ThreeColumn.stories.tsx src/components/TotalsBox.tsx src/components/TotalsBox.stories.tsx src/components/SectionParts.test.tsx 2>&1 | tail -15; echo "eslint exit=$?"
+    cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components/frontend && set -o pipefail && npx tsc -p tsconfig.json 2>&1 | tail -10; echo "tsc exit=$?"
+    cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components/frontend && set -o pipefail && npx eslint src/components/SectionCard.tsx src/components/SectionCard.stories.tsx src/components/ReadOnlyField.tsx src/components/ReadOnlyField.stories.tsx src/components/ThreeColumn.tsx src/components/ThreeColumn.stories.tsx src/components/TotalsBox.tsx src/components/TotalsBox.stories.tsx src/components/SectionParts.test.tsx 2>&1 | tail -15; echo "eslint exit=$?"
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components/frontend && npm run check:stories 2>&1 | tail -3
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components/frontend && npm run check:css-values 2>&1 | tail -5
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components/frontend && npm run check:css-colors 2>&1 | tail -5
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components/frontend && npm run check:breakpoint-sync 2>&1 | tail -3
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components/frontend && npm run check:i18n-missing-keys 2>&1 | tail -5
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components/frontend && npm run check:stylelint 2>&1 | tail -10
-  期待: 1行目は failed 0（SectionParts.test.tsx の 11 本と Stack.test.tsx が passed。本数はそのまま書く）。2行目 `tsc exit=0` で型の誤り0件（tail は何も出ない）。3行目 `eslint exit=0`。4〜9行目はどれも誤りなしで終わる（✅ や 0 件の表示。終了の失敗・❌ が出ない）。
+  期待: 1行目は failed 0（SectionParts.test.tsx の 12 本（SectionCard 2・ReadOnlyField 6・ThreeColumn 2・TotalsBox 2）と Stack.test.tsx が passed。本数はそのまま書く）。2〜3行目は `set -o pipefail` で、tail ではなく tsc・eslint 自身の終了コードが出る。2行目 `tsc exit=0` で型の誤り0件（tail は何も出ない）。3行目 `eslint exit=0`。4〜9行目はどれも誤りなしで終わる（✅ や 0 件の表示。終了の失敗・❌ が出ない）。
 
 手順6 変えたファイル
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components && git status --short | tail -25
@@ -774,7 +777,7 @@ describe('TotalsBox', () => {
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components && git config user.name "shingo-cc" && git config user.email "shingo-cc@users.noreply.github.com" && git commit -q -m "feat(ui): add SectionCard, ReadOnlyField, ThreeColumn and TotalsBox components for the invoice create page (invoice-portfolio R4)" && git log --oneline -1 | tail -1
 
 手順8 UI の決まりの検査（commit の後。origin/main と比べる）と送り出し
-    cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components && BASE_SHA=origin/main HEAD_SHA=HEAD node scripts/check-ui-governance.js 2>&1 | tail -15; echo "ui-gov exit=$?"
+    cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components && set -o pipefail && BASE_SHA=origin/main HEAD_SHA=HEAD node scripts/check-ui-governance.js 2>&1 | tail -15; echo "ui-gov exit=$?"
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components && git push -u origin release/invoice-portfolio-r4-components 2>&1 | tail -5
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components && git rev-parse HEAD
   期待: 1行目 `ui-gov exit=0`（新規 ui-allow 0件）。外れたら push せず `BLOCKED: UI の決まりの検査`。push は --no-verify・force を付けない。push が止められたら言い換えず `BLOCKED: push`。
