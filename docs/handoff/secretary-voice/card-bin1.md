@@ -53,7 +53,7 @@ mode: handoff
 | `backend/app/routers/assistant.py` | 口 3 つ（§3-5） |
 | `frontend/api-contract/openapi.json` | §5 手順6 の命令で作り直す（手で書かない） |
 | `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` | `secretary.voice.name.Aoede` など声ごとの 4 キー（§3-6） |
-| `backend/tests/test_llm_usage_isolated.py` | `test_value_sets` の期待の集合に 3 つ足す |
+| `backend/tests/test_llm_usage_isolated.py` | `test_value_sets` の期待の集合に 3 つ足す・字数が値の辞書に入る試験を 1 つ足す（§3-7） |
 | `backend/tests/test_super_admin_ai_jobs.py` | `test_usage_sdks_belong_to_exactly_one_provider` の組の名前の期待に `google_tts` を足す（1 行だけ） |
 | `backend/tests/test_secretary_voice.py`（新規） | V6・V7・V8 と口の単体の試験（§3-7） |
 | `backend/tests/test_secretary_voice_pg.py`（新規） | V10・V11・V12（§3-7） |
@@ -79,7 +79,7 @@ mode: handoff
 
 - `USAGE_PURPOSES` に `secretary_regression` と `secretary_tts`、`USAGE_SDKS` に `google-tts-rest` を足す（design.md §4-5）。
 - `USAGE_SDKS_BY_PROVIDER`（同じファイル 176 行目付近）に 4 つ目の組 `"google_tts": frozenset({"google-tts-rest"})` を足す。Gemini の組には入れない。`backend/tests/test_super_admin_ai_jobs.py` の 281 行目付近 `assert set(USAGE_SDKS_BY_PROVIDER) == {"gemini", "codex", "claude"}` の右辺に `"google_tts"` を足す（その試験のほかの行は変えない）。
-- `record_usage_isolated` に引数 `billed_characters: int | None = None` を足し、`_INSERT_USAGE_EVENT_OUTCOME_SQL` の列と値に `billed_characters` を足す。ほかの呼び出し元は変えない（既定の None のまま）。`_INSERT_USAGE_EVENT_SQL` と `record_usage_event`・`record_usage_event_sync` は変えない。
+- `record_usage_isolated` に引数 `billed_characters: int | None = None` を足し、`_INSERT_USAGE_EVENT_OUTCOME_SQL` の列と値に `billed_characters` を足す。ほかの呼び出し元は変えない（既定の None のまま）。SQL に渡す値の辞書 `cols` にも必ず入れる（例 `cols["billed_characters"] = billed_characters`）。入れ忘れると書き込みが毎回失敗し、失敗は飲み込まれるので台帳に 1 行も残らず、月の上限が効かなくなる。`_INSERT_USAGE_EVENT_SQL` と `record_usage_event`・`record_usage_event_sync` は変えない。
 
 ### 3-4. 読み上げ（新規 `backend/app/services/secretary_tts.py`）
 
@@ -129,7 +129,8 @@ design.md §4-4 の 1〜5 のとおり。加えて次を守る:
   - 準備: `pg` fixture の users は最小の定義で守り（RLS）が無い。`backend/tests/test_users_rls.py` 47〜61 行目と同じく、`_MIGRATIONS` の 2 本（`20261013_160000_add_self_hosted_auth_tables.sql`・`20261016_180000_add_users_write_rls.sql`）と `_GRANT_DDL` を管理者の接続で流してから、移行 1（§3-1）を流す。
   - V11: アプリの役割（salesanchor_app）の非同期の取引（`backend/tests/test_secretary_rules_service_pg.py` の `_engine` と同じ形）で `save_voice(db, user_id=999, tenant_id=999, voice="Aoede")` を流すと、管理者の接続で読んだ値が `Aoede` になる。`tenant_id=998`（別の会社）を渡すと `VoiceNotSaved` になり、値は変わらない（守りが効いている）。
   - V12: `pg_get_constraintdef` で読んだ `llm_usage_events_purpose_check`・`llm_usage_events_sdk_check` の値の集合が、`USAGE_PURPOSES`・`USAGE_SDKS` とそれぞれ同じ（足りない・余る、どちらも落ちる）。
-- `backend/tests/test_llm_usage_isolated.py` の `test_value_sets`: 期待の集合に `secretary_regression`・`secretary_tts`・`google-tts-rest` を足す。ほかは変えない。
+- `backend/tests/test_llm_usage_isolated.py` の `test_value_sets`: 期待の集合に `secretary_regression`・`secretary_tts`・`google-tts-rest` を足す。ほかの既存の試験は変えない。
+- 同じファイルに試験を 1 つ足す: `test_isolated_writes_one_row_and_commits` と同じ形で、`billed_characters=20` を渡したとき `execute` の値の辞書に `billed_characters == 20` が入ること。省いたときは `None` が入ること。
 
 ## 4. 守ること
 
