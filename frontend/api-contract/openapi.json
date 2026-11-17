@@ -10378,6 +10378,143 @@
         "title": "DraftContextResponse",
         "type": "object"
       },
+      "DraftInventoryCategory": {
+        "properties": {
+          "code": {
+            "description": "中分類の符号（type_master.code）。",
+            "title": "Code",
+            "type": "string"
+          },
+          "name_ja": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "中分類の日本語名（type_master.name_ja）。",
+            "title": "Name Ja"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "DraftInventoryCategory",
+        "type": "object"
+      },
+      "DraftInventoryItem": {
+        "properties": {
+          "box_weight_kg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "BOX の重さ（荷姿の表）。",
+            "title": "Box Weight Kg"
+          },
+          "case_weight_kg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ケースの重さ（荷姿の表）。",
+            "title": "Case Weight Kg"
+          },
+          "cells": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ConditionCell"
+            },
+            "description": "状態別の集計。在庫表と同じ。",
+            "title": "Cells",
+            "type": "object"
+          },
+          "mark": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "型番 (products.mark)。",
+            "title": "Mark"
+          },
+          "name": {
+            "description": "商品名 (products.name)。",
+            "title": "Name",
+            "type": "string"
+          },
+          "name_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name En"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "integer"
+          },
+          "work_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Code"
+          }
+        },
+        "required": [
+          "product_id",
+          "name"
+        ],
+        "title": "DraftInventoryItem",
+        "type": "object"
+      },
+      "DraftInventoryResponse": {
+        "properties": {
+          "categories": {
+            "description": "在庫のある中分類（sort_order 順）。category で絞らない。",
+            "items": {
+              "$ref": "#/components/schemas/DraftInventoryCategory"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "items": {
+            "description": "商品ごとの在庫（商品の番号の順）。category で絞る。",
+            "items": {
+              "$ref": "#/components/schemas/DraftInventoryItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "categories",
+          "items"
+        ],
+        "title": "DraftInventoryResponse",
+        "type": "object"
+      },
       "DraftItem": {
         "properties": {
           "product_name": {
@@ -51900,6 +52037,63 @@
           }
         ],
         "summary": "Get Invoice Draft Context",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/api/v1/invoices/draft-inventory": {
+      "get": {
+        "description": "請求書・見積の商品行の在庫（invoice-create-portfolio R2・design-v2 §3-4）。読むだけ。",
+        "operationId": "get_invoice_draft_inventory_api_v1_invoices_draft_inventory_get",
+        "parameters": [
+          {
+            "description": "中分類の符号（type_master.code）。無ければ全部。",
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "中分類の符号（type_master.code）。無ければ全部。",
+              "title": "Category"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftInventoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Invoice Draft Inventory",
         "tags": [
           "invoices"
         ]

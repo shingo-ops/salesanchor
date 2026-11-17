@@ -35,6 +35,7 @@ from app.auth.dependencies import (
 from app.cache import invalidate_dashboard_cache
 from app.database import get_db
 from app.models import User
+from app.schemas.inventory_aggregated import DraftInventoryResponse
 from app.schemas.invoice import (
     DraftContextResponse,
     InvoiceCreate,
@@ -49,6 +50,7 @@ from app.schemas.invoice import (
 from app.services import invoice_payment_methods, invoice_totals, paypal_payments
 from app.services.audit import record_audit_log
 from app.services.fx_currencies import list_invoice_currencies
+from app.services.inventory_aggregated_service import get_draft_inventory
 from app.services.invoice_payment_methods import PaymentMethodInvalid
 from app.services.invoice_renderer import render_invoice_pdf, render_quote_pdf
 from app.services.issuer import decide_issuer_region, get_issuer, get_issuer_country_code
@@ -374,6 +376,20 @@ async def get_invoice_draft_context(
         tax_rate_percent=(tax_row.rate_percent if tax_row else None),
         incoterms=await invoice_totals.load_incoterms(db, tenant_id),
     )
+
+
+@router.get(
+    "/invoices/draft-inventory",
+    response_model=DraftInventoryResponse,
+    dependencies=[Depends(require_permission("invoices.create", "quotes.create"))],
+)
+async def get_invoice_draft_inventory(
+    category: str | None = Query(None, description="中分類の符号（type_master.code）。無ければ全部。"),
+    db: AsyncSession = Depends(get_db),
+) -> DraftInventoryResponse:
+    """請求書・見積の商品行の在庫（invoice-create-portfolio R2・design-v2 §3-4）。読むだけ。"""
+    categories, items = await get_draft_inventory(db, category)
+    return DraftInventoryResponse(categories=categories, items=items)
 
 
 @router.post(
