@@ -1,6 +1,6 @@
 # design-v2: 請求書作成画面を見本の「見た目と操作」に合わせる（8部品すべて見本どおり）
 
-状態: 設計案 第2版（Opus 作成 2026-11-17）。PO 承認済みの決定は §1-2 のとおり。設計審査 1回目（クラウドの Opus・2026-11-17 17:31 JST）は REVISE（直すべき4件）。第2版でその4件と覚え書き5件を直した（§12）。
+状態: 設計案 第2版（Opus 作成 2026-11-17）。PO 承認済みの決定は §1-2 のとおり。設計審査 1回目（クラウドの Opus・2026-11-17 17:31 JST）は REVISE（直すべき4件）。第2版でその4件と覚え書き5件を直した。2回目（2026-11-17 17:37 JST）は REVISE（直すべき1件）。第3版でその1件と覚え書き2件を直した（§12）。
 基準: origin/main `cbd85f01d`（調査は `337ebbd1b` で行い、下で引く請求書・在庫・送料・部品のファイルは `git diff --stat 337ebbd1b cbd85f01d` で差が0件であることを確かめた）。
 根拠: docs/handoff/invoice-create-portfolio/recon.md（前の調べ）と docs/handoff/invoice-create-portfolio/recon-gap.md（Q 番号で指す。基準 `094cae3b0`）、本書 §2 の追加調査（本番は読むだけの道 ADR-1024 で読んだ）。
 前の設計: docs/handoff/invoice-create-portfolio/design.md（第9版。便 A・V・B・C/D は本番済み。PR #5542 まで）。本書はその上に重ねる。design.md の決まり（額はサーバー計算・SSOT・振込先の版）は変えない。
@@ -40,7 +40,7 @@ p6 の追加の答えにより、値段の欄だけは見本と違い「手で�
 ### 2-2. 状態と重さ（本番を読むだけで数えた。2026-11-17 14:28 JST）
 - 在庫あり（status='in_stock'）は88件・48商品。形（unit）は box 56件・case 6件・空 26件。状態（raw_condition）は shrink・sealed・no_shrink。**単品（バラ）の在庫は0件**。生出力 /tmp/CC報告ファイル/invq/unit.tsv・unit_cond.tsv。
 - 在庫表（GET /inventory/aggregated）は、商品×状態の1マスに「最良の1件の値段と数」を出す。集計が拾う状態は "Case"・"Sealed box"・"Damaged sealed box"・"No shrink box" の4つだけ（backend/app/services/inventory_aggregation.py の aggregate_inventory_offers の track1_conditions）。
-- 在庫の1行の状態の名前は、軸（unit・seal・damage・grade）から決まる（backend/app/services/inventory_axes.py の resolve_condition_resolution → backend/app/services/condition_vocab.py の axes_to_aggkey）。box＋shrink→"Sealed box"、box＋no_shrink→"No shrink box"、case＋sealed→"Case"、box＋damage→"Damaged sealed box"。それ以外（box＋sealed、case＋shrink、unit が空）は名前が付かず、元の状態の語（"sealed"・"shrink"）に戻る。この語は4つに入らないので、集計で落ちる。
+- 在庫の1行の状態の名前は、軸（unit・seal・damage・grade）から決まる（backend/app/services/inventory_axes.py の resolve_condition_resolution → backend/app/services/condition_vocab.py の axes_to_aggkey）。box＋shrink→"Sealed box"、box＋no_shrink→"No shrink box"、case＋sealed→"Case"、box＋damage→"Damaged sealed box"。それ以外（box＋sealed、case＋shrink、unit が空）は名前が付かず、元の状態の語（"sealed"・"shrink"）に戻る。この語は4つに入らないので、集計で落ちる。grade に値がある行も名前が付かず落ちる（condition_vocab.py の axes_to_aggkey で grade があれば None）。軸（seal・search_cond・grade・damage）がすべて空の行は、axes_to_aggkey を通らず元の状態の語のまま判定される（inventory_axes.py の resolve_condition_resolution）。
 - 本番の在庫88件に当てはめると（2026-11-17 17:33 JST、生出力 /tmp/CC報告ファイル/rev1/axes.tsv・shown.tsv）: 在庫表に出るのは **44件・27商品** だけ。落ちるのは box＋sealed 17件、unit 空 26件、case＋shrink 1件。在庫のある48商品のうち **21商品は今の在庫表にも出ない**。今の在庫に出る状態は "Sealed box"・"No shrink box"・"Case" の3つ（"Damaged sealed box" は0件）。
 - → 見本の「状態」は、在庫表の状態の列と同じものとして扱う。選択肢はその商品に在庫がある状態だけ。在庫表に出ない21商品は、請求書でも選べない（在庫表と同じ正本を使うため。§8・§11）。
 - 重さの正本は荷姿の表 public.product_packagings（ADR-1028。backend/app/services/product_packagings.py:14-19 の対応表）。在庫のある48商品のうち、BOX の重さあり48・CASE の重さあり47（本番 2026-11-17 17:20 JST）。
@@ -123,8 +123,8 @@ p6 の追加の答えにより、値段の欄だけは見本と違い「手で�
 
 ### 3-5. 送料の一覧と自動見積もり（p4）
 - `POST /invoices/draft-shipping-quotes`。権限 `invoices.create`。入力は company_id と総重量。届け先の国・郵便番号と発送元の国は、サーバーが draft-context と同じ関数で決める（画面からは受けない）。
-- 返す形: 今の /shipping/calculate と同じ `ShippingCalcResponse`（backend/app/schemas/shipping.py:107-134）。中身は、静的な表の全社（calculate_shipping_fee を carrier なしで呼ぶ。backend/app/routers/shipping.py:264-299）と、FedEx が連携済みなら FedEx のライブ見積もり（同じファイルの _try_fedex_live）を足したもの。FedEx が未連携・失敗なら live_error を返し、静的な行で黙って置き換えない（ADR-125 D5）。
-- FedEx の二重を防ぐ: calculate_shipping_fee は carrier なしだと FedEx・DHL・UPS の全社を返す（backend/app/routers/shipping.py:264-299）。FedEx のライブ見積もりが1行以上取れたときは、静的な表の FedEx の行を一覧から除く。ライブが取れないときは静的な FedEx の行を残し、live_error も返す。
+- 返す形: 今の /shipping/calculate と同じ `ShippingCalcResponse`（backend/app/schemas/shipping.py:107-134）。中身は、静的な表の FedEx 以外の便（calculate_shipping_fee を carrier なしで呼び、carrier が fedex の行を除く。backend/app/routers/shipping.py:264-299）と、FedEx が連携済みなら FedEx のライブ見積もり（同じファイルの _try_fedex_live）を足したもの。
+- FedEx の行はライブだけ。静的な表の FedEx の行は、ライブが取れても取れなくても常に出さない。今の決まり（ADR-125 D4・D5 と PO の C1 判断。backend/app/routers/shipping.py:430-437 が「static に落とさず」、backend/tests/test_fedex_rates.py:470-500 が試験で固定）と同じ。FedEx が未連携・失敗なら、FedEx の行は0件で live_error だけ返す（未連携の文は今の calc_shipping と同じ）。これで FedEx の行が二重になることも無い。
 - 各行に出所の印（「ライブ」／「静的」）を必ず出す（ADR-125 D6。行の `source` が fedex_live か static か）。
 - 画面は、届け先の会社・総重量が変わったときだけ、最後の変更から 800ms 待って呼ぶ。同じ材料ならもう呼ばない。行の一覧から1つ選ぶか「送料を請求しない」を選ぶ。選んだ便は今の ShippingInput（invoice.py:55-72）でそのまま送る。総重量が0のときは呼ばない。
 - FedEx の呼び出しの上限: 公式の案内では1プロジェクト10秒に1,400回（developer.fedex.com/api/en-pw/guides/ratelimits.html。2026-11-17 に読んだ）。1枚の請求書を作る間の呼び出しは、総重量を変えた回数（数回）に限られる。1日の上限（Rate API）と1回ごとの費用は **未確認**。そのため K7 で呼び出しの回数を数える。
@@ -160,7 +160,7 @@ p6 の追加の答えにより、値段の欄だけは見本と違い「手で�
 |---|---|---|---|
 | R1 | 発送先12欄のサーバー側（draft-context と写しに6項目・PDF の宛名） | backend/app/schemas/invoice.py・routers/invoices.py・services/invoice_renderer.py・試験 | 無し（移行なし） |
 | R2 | 請求書用の在庫の道（§3-4） | services/inventory_aggregated_service.py・routers/invoices.py（または新ファイル）・schemas・試験 | 無し |
-| R3 | 請求書用の送料一覧の道（§3-5） | routers/invoices.py・routers/shipping.py（関数を呼べる形にするだけ）・試験 | 無し |
+| R3 | 請求書用の送料一覧の道（§3-5。静的な表から FedEx を常に除く） | routers/invoices.py・routers/shipping.py（関数を呼べる形にするだけ）・試験 | 無し |
 | R4 | 金型4つ（§3-7） | frontend/src/components/*・tokens.css・docs/CC_UI_GOVERNANCE.md | 無し |
 | R5 | 請求書の作成画面の作り直し（§3-1〜§3-3・§3-5 の画面・p8） | frontend/src/pages/invoice-create/*・LineItemsTable・locales | 無し |
 | R6 | 発行と重ねた見た目（§3-6） | frontend/src/pages/invoice-create/* | 無し |
@@ -183,7 +183,7 @@ p6 の追加の答えにより、値段の欄だけは見本と違い「手で�
 | K3 | 顧客を選ぶと、会社の住所の受取人・メール・TAX Number・住所3・都市・州・ZIP が12欄に入る | サーバー試験: draft-context が6項目を返す。画面の試験: 返った値が各欄に出る |
 | K4 | 発行した請求書の PDF に、受取人・住所1〜3・都市/州/ZIP・TAX Number・メールが出る。古い請求書の PDF は今と同じ | サーバー試験: 新しい写しで描いた PDF の文字に各値がある。古い写し（6項目なし）で描いた PDF の文字が変更前と同じ |
 | K5 | 「支払いと合計」が3列（左: 通貨・支払方法・発送メモ／中: 総重量・送料一覧／右: 合計枠）。狭い画面では縦1列 | 画面の試験で ThreeColumn の3つの子の中身を確かめる。Storybook の狭い画面の話 |
-| K6 | 総重量が入ると、操作なしで便ごとの送料が全部並ぶ。FedEx のライブが取れたときは FedEx の静的な行が無い。各行に「ライブ」か「静的」の印がある。FedEx 未連携なら、その旨が出て静的な FedEx の行が残る | サーバー試験: ライブありで FedEx の static 行が0件・DHL と UPS の static 行あり。未連携なら live_error と FedEx の static 行あり。画面の試験: 重さが変わったあと 800ms で1回だけ呼び、一覧と印が出る |
+| K6 | 総重量が入ると、操作なしで便ごとの送料が全部並ぶ。FedEx の行はライブだけで、静的な FedEx の行はどの場合も無い。各行に「ライブ」か「静的」の印がある。FedEx 未連携・失敗なら、その旨が出て FedEx の行は0件 | サーバー試験: ライブありで FedEx の static 行が0件・FedEx の fedex_live 行あり・DHL と UPS の static 行あり。未連携・失敗なら live_error あり・FedEx の行（static も fedex_live も）0件・DHL と UPS の static 行あり。画面の試験: 重さが変わったあと 800ms で1回だけ呼び、一覧と印が出る |
 | K7 | 同じ材料では送料の道を2回呼ばない。重さを3回変えたら呼び出しは最大3回 | 画面の試験で呼び出しの回数を数える。本番は反映後に1週間、送料の道のログの数を数えて、作った請求書1枚あたりの回数を出す（目安10回以下） |
 | K8 | 合計枠が色つき（トークンの色）で、小計・送料・税または関税・合計を出す。合計の字が一番大きい | TotalsBox の試験と Storybook。色の直値0件（CI の UI の検査） |
 | K9 | 商品一覧の初期は12行。「＋行を追加」で20行まで増え、21行目は増えず案内が出る。1行のときは×で消せない | 画面の試験 |
@@ -213,6 +213,7 @@ p6 の追加の答えにより、値段の欄だけは見本と違い「手で�
 |---|---|
 | 在庫のない商品は請求書に入れられなくなる（今は検索で何でも入る）。見積の画面も同じ（R7） | 見本どおりの決定。在庫表に無い商品の請求は、在庫を登録してから。反映後の1週間、「商品が見つからない」という声を PO に確かめる |
 | 在庫はあるのに今の在庫表に出ない21商品（box＋sealed・unit 空・case＋shrink。§2-2）は、請求書でも選べない | 請求書の道だけで拾うと、在庫表と請求書で正本が2つになる（禁止）。在庫表の集計の直しは別のテーマとして PO に判断をもらう（§11）。R5 の本番反映の前に、この件の PO の答えを受け取る |
+| 請求書・見積を作る権限だけの役割（在庫表の権限 products.view・inventory.visibility.* が無い役割）にも、選んだ商品の在庫の値段と数が見えるようになる | 単価の初期値を在庫表の値段にする PO の決定（§1-2）に必要。返すのは選んだ商品の状態ごとの値段と数だけで、仕入元の名前は返さない。どの役割が該当するかは R2 のカードで役割の表を読んで数え、0でなければ PO に伝えてから R2 を出す |
 | FedEx の自動見積もりで呼び出しが増える | §3-5 の待ちと同じ材料なら呼ばない作り。K7 で数える。1日の上限は未確認のまま見張る |
 | 見積の画面の行も変わる | R7 を別の便にし、見積の保存の試験を緑にしてから出す |
 | 古い請求書の PDF の見た目 | 写しに新しい項目が無いときは今の1行の住所を出す（K4） |
@@ -239,3 +240,4 @@ p6 の追加の答えにより、値段の欄だけは見本と違い「手で�
 | 回 | 日時 | 判定 | 指摘と直したところ |
 |---|---|---|---|
 | 1 | 2026-11-17 17:31 JST（クラウドの Opus・読むだけ） | REVISE | 直すべき4件: (1) 見積の権限で在庫の道が 403 → §2-5・§3-4・K23 (2) FedEx の行が二重・出所の印が無い → §3-5・K6 (3) 出ない在庫の説明が無い → §2-2・§8・§11（審査は「unit 空 26件が出ない」とした。Opus が本番に当てはめ直し、出ないのは44件・21商品と数え直した） (4) クリア・状態の未選択・重さ未登録・発送メモの受入れ条件が無い → K19〜K22。覚え書き: PDF は blob で読む（§3-6）・道の登録順（§3-4）・国名の引用先（§3-2）・ボタン名（§11）・見積でも在庫外は入らない（§8） |
+| 2 | 2026-11-17 17:37 JST（クラウドの Opus・読むだけ） | REVISE | 直すべき1件: FedEx 未連携のとき静的な FedEx の行を残すと書いたのは、今の決まり（ADR-125 D5・PO C1 判断・test_fedex_rates.py）と逆 → §3-5・K6・R3 で「FedEx はライブだけ」に直した。覚え書き: grade あり・軸が全部空の行の扱い → §2-2 に追記。在庫の値段と数が見える役割が広がる → §8 に追記。1回目の4件・覚え書き5件は直ったと確認された |
