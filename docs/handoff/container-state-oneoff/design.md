@@ -35,7 +35,7 @@
 | K1 試験: oneoff=True の箱だけ除かれ、False・目印なし・Config なしは数える | `python3 scripts/tests/test_container_state.py`（CI の deploy-script-test・monitoring-check）が緑 |
 | K2 本物の docker: oneoff=True の不健康な箱が celery-worker の数を 1 にしない | `gh workflow run sandbox-test.yml --ref release/container-state-skip-oneoff -f test=container-state` が緑（--ref を省くと main の古い試験が流れて確かめにならない） |
 | K3 本番: 反映後、作業箱（`docker compose run --rm --no-deps -T celery-worker sleep 300`）を動かしても `salesanchor_container_unhealthy{service="celery-worker"}` が 0 のまま | 反映後に作業箱を 1 回流す。①流している間に `docker inspect` でその箱が `oneoff=True` かつ Health.Status が `unhealthy` に達したことを見る（達しなければ×＝確かめになっていない。unhealthy まで約 150 秒・眠りは 300 秒）②その間とその後 2 分の数を Prometheus で読み、1 分刻みで全部 0 |
-| K3 の実行者: Opus が prod1 へ ssh で流す（読み取りと sleep だけの使い捨て箱で、データは変えない）。PO 2026-11-18 の指示で必要な鍵の使用は許可済み。無制限鍵を使うときは permit-danger.sh で 1 回限りの許可を出してから使う | 実行の記録（コマンド・時刻・結果）を PR に書く |
+| K3 の実行者: Opus が prod1 へ ssh で流す（読み取りと sleep だけの使い捨て箱で、データは変えない）。PO が 2026-11-18 の本セッションのチャットで「SSH への無制限鍵へのアクセス等、必要な権限は必要な場合は使用して良い」と指示済み（原文はセッション記録）。順番: まず制限付き鍵で流す。ForceCommand で通らなければ、permit-danger.sh で 1 回限りの許可を出して無制限鍵で流す | 実行の記録（コマンド・時刻・結果）を PR に書く |
 | K4 本番: 本物の 5 部品の数が反映の前後で変わらない（running=1・unhealthy=0） | 反映後 5 分の Prometheus の読み取り |
 | K5 7 日後: celery-worker の不健康の区間が、作業箱の有無にかかわらず 0 | 2026-11-25 に Prometheus へ `max_over_time(max(salesanchor_container_unhealthy{service="celery-worker"})[7d:1m])` を問い合わせ、値が 0 |
 
@@ -64,9 +64,10 @@ PR を revert して main に合流 → deploy で戻る。cron・textfile の�
    - loop の直後（今の `docker inspect -f ... bine-worker bine-beat` の行の前）に `[ "$(docker inspect -f '{{.State.Health.Status}}' bine-oneoff)" = unhealthy ] || { echo "NG: bine-oneoff not unhealthy"; exit 1; }` を足す（作業箱が unhealthy に達してから書いたことを保証する。直す前のコードならここを通った後の expect で落ちる）
    - cleanup の `docker inspect` と `docker rm -f` の並びに bine-oneoff を足す
    - expect は今の `salesanchor_container_unhealthy{service="celery-worker"} 0` と `running … 1` のままで、作業箱が除かれたことの確かめになる
-4. K2 を流すときは必ず `--ref release/container-state-skip-oneoff` を付ける
+4. （設計者向け・実装役は流さない）K2 を流すときは必ず `--ref release/container-state-skip-oneoff` を付ける
 5. 確かめ: `python3 scripts/tests/test_container_state.py -v` と `python3 monitoring/scripts/tests/test_check_app_healthchecks.py` を流し、生出力を貼る
 
 ## 11. 審査の記録
 - 1 回目（クラウド・Opus・2026-11-18）: 途中で見張りに止まり判定なし。所見の中 2・軽 2 のうち、中2（sandbox の待つ loop が失敗にしない・K3 が作業箱の unhealthy 到達を見ない）と軽1（K5 の数え方の置き場所）を直した。軽（目印の大文字小文字）は安全側（誤検知が戻る方向）なので変えない。未確認だった deploy.yml:319-320 は Opus が手元で照合済み（`git fetch origin main` と取り込み直しの 2 行）
 - 2 回目（クラウド・Opus・2026-11-18）: REVISE。中1（K2 に --ref が無く main の試験が流れる）・軽3（見張りの行番号・K3 の実行者と許可・「あれば」）を直した。K3 の眠りを 240→300 秒に延ばした
+- 3 回目（クラウド・Opus・2026-11-18）: APPROVE。軽3（§10-4 は設計者向けと明記・K3 の許可の出どころ・鍵の順番）を書き足した
