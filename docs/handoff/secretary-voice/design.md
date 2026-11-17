@@ -168,9 +168,11 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 
 - 評価する係（evaluator）が本番で Playwright を使う。製品のコードに測るための仕掛けは入れない。
 - 測る仕掛けは、Playwright がページを開く前に差し込む台本（init script）だけ: (1) 返事の吹き出しが出た時刻を `MutationObserver` で記録 (2) `AudioBufferSourceNode.prototype.start` を包んで最初に鳴らし始めた時刻を記録。差を秒で出す。
-- 短い返事（20 字以下）10 回・長い返事 10 回。それぞれ 9 回以上が 1.5 秒・3 秒以内で合格。
-- 【PO の判断待ち】決まった返事でいちばん長いのは 44 字（`secretary.invoice.shippingNoneHelp`）で、60 字以上の決まった返事は 0 個（`frontend/src/locales/ja.json` の `secretary.*` 52 個を数えた）。60 字以上は AI が自由に書く「わからない」の返事だけで、長さを狙って出せない。K4 の「長い返事」の線を決め直すまで、K4 は測れる形になっていない。
-- 測る頼みの文は便3 の前にこの節に書き足す（短い: 「わからない」で返る短い頼み・長い: 決め直した線の決まった返事が出る頼み）。
+- 短い返事（20 字以下）10 回・長い返事（30 字以上）10 回。それぞれ 9 回以上が 1.5 秒・3 秒以内で合格。
+- 長い返事の線は 30 字（PO 2026-11-17「1」）。決まった返事の最長は 44 字で、60 字以上は 0 個だったため（`frontend/src/locales/ja.json` の `secretary.*` 52 個を数えた）。
+- 測る返事（決まった返事なので毎回同じ文で測れる）:
+  - 長い: `secretary.ask.end`（36 字・終わりを言わずに予定を頼む）を 5 回・`secretary.ask.add_meet`（31 字・Meet を言わずに予定を頼む）を 5 回。
+  - 短い: 20 字以下の決まった返事が出る頼み。どの頼みを使うかは便3 の前にこの節へ書き足し、審査役に見せる。
 
 ## 9. 受け入れの条件と確かめ方
 
