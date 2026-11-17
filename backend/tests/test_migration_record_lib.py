@@ -108,6 +108,20 @@ def test_targets_excludes_outside_and_fails_on_duplicate(tmp_path):
     assert "duplicate" in p.stderr
 
 
+def test_targets_duplicate_stops_set_e_command_substitution(tmp_path):
+    body = tmp_path / "body.sh"
+    body.write_text("run_sql migrations/x.sql\nrun_sql migrations/x.sql\n", encoding="utf-8")
+    p = _bash(f'x="$(mr_targets {body})"\necho NEXT_LINE_REACHED')
+    assert p.returncode != 0
+    assert "NEXT_LINE_REACHED" not in p.stdout
+
+
+def test_body_reads_targets_without_process_substitution():
+    text = BODY.read_text(encoding="utf-8")
+    assert "< <(mr_targets" not in text
+    assert "no targets; nothing was run" in text
+
+
 def test_targets_of_real_body_is_405_minus_2():
     outside = "migrations/20261024_100200_drop_ai_cloud_views.sql migrations/20261017_125900_drop_ai_ro_views.sql"
     p = _bash(f"mr_targets {BODY} {outside}")

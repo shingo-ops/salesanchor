@@ -119,10 +119,13 @@ mr_plan() {
   local t_read0 t_read1 t_sum0 t_sum1 kind file extra sum n_targets=0 n_rec=0 a=0 b=0 f
   local -a a_list=() b_list=()
   local -A is_target=()
+  local MR_TARGET_LINES
   t_read0=${EPOCHREALTIME}
   mr_read_records
   t_read1=${EPOCHREALTIME}
   t_sum0=${EPOCHREALTIME}
+  # < <(...) だと mr_targets の失敗（二重登録）を set -e が拾わない。local と別の行で受けて、失敗したらここで止める
+  MR_TARGET_LINES="$(mr_targets "$0" "${MIGRATION_OUTSIDE_RECORD[@]}")"
   while IFS=$'\t' read -r kind file extra; do
     [ -n "${file}" ] || continue
     sum="$(mr_checksum "${kind}" "${file}" ${extra})"
@@ -136,7 +139,11 @@ mr_plan() {
       b=$((b + 1))
       b_list+=("${file} old=${MR_RECORDED[${file}]} new=${sum}")
     fi
-  done < <(mr_targets "$0" "${MIGRATION_OUTSIDE_RECORD[@]}")
+  done <<< "${MR_TARGET_LINES}"
+  if [ "${n_targets}" -eq 0 ]; then
+    echo ">>> [record] no targets; nothing was run"
+    exit 1
+  fi
   t_sum1=${EPOCHREALTIME}
   for f in "${!MR_RECORDED[@]}"; do
     n_rec=$((n_rec + 1))
