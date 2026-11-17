@@ -395,20 +395,14 @@ BEGIN
     END IF;
 
     -- 1. 付けるべき表: build_columns の source のうち、拒否に当たらないもの
-    --    判定は source ごとに 1 回だけ呼ぶ。d と s を MATERIALIZED にして、判定が build_columns の各行へ押し込まれるのも、結合で読み直されるのも止める
-    --    （押し込まれると列の数だけ呼ばれ、本番で 14.7 秒かかった。docs/handoff/cloud-case-ai/grant-speed-design.md）
-    WITH d AS MATERIALIZED (
-        SELECT DISTINCT b.source FROM ai_cloud_meta.build_columns b
-    ), s AS MATERIALIZED (
-        SELECT d.source FROM d WHERE NOT ops_case.is_denied_source(d.source)
-    )
     SELECT coalesce(array_agg(DISTINCT c.oid), '{}'::oid[])
       INTO v_want
-      FROM s
+      FROM (SELECT DISTINCT b.source FROM ai_cloud_meta.build_columns b) s
       JOIN pg_catalog.pg_namespace n ON true
       JOIN pg_catalog.pg_class c ON c.relnamespace = n.oid
      WHERE n.nspname || '.' || c.relname = s.source
-       AND c.relkind IN ('r', 'p');
+       AND c.relkind IN ('r', 'p')
+       AND NOT ops_case.is_denied_source(s.source);
 
     -- 2・3. 今付いている表（PUBLIC への付与は数えない）のうち、付けるべきでない表だけ REVOKE
     FOR t IN
