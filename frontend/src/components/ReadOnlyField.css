@@ -1,0 +1,33 @@
+/**
+ * ReadOnlyField — 読むだけの欄（ラベル＋灰色の値）
+ * ADR-067: 色・余白・角丸・字の大きさはすべて CSS 変数参照のみ
+ */
+
+.comp-readonly-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.comp-readonly-field__label {
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+}
+
+.comp-readonly-field__value {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-sm);
+  line-height: var(--line-height-base);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comp-readonly-field__value--empty {
+  color: var(--text-muted);
+}

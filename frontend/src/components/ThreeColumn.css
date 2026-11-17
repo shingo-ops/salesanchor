@@ -1,0 +1,24 @@
+/**
+ * ThreeColumn — 3列の並べ方（狭い画面では縦1列）
+ * ADR-067: 間隔はすべて CSS 変数参照のみ
+ */
+
+.comp-three-column {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.comp-three-column--gap-2 { gap: var(--space-2); }
+.comp-three-column--gap-3 { gap: var(--space-3); }
+.comp-three-column--gap-4 { gap: var(--space-4); }
+.comp-three-column--gap-6 { gap: var(--space-6); }
+
+.comp-three-column--align-start   { align-items: start; }
+.comp-three-column--align-center  { align-items: center; }
+.comp-three-column--align-stretch { align-items: stretch; }
+
+@media (max-width: 1279px) { /* = --breakpoint-tablet-max */
+  .comp-three-column {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
