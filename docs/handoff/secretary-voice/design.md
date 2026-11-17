@@ -1,6 +1,6 @@
 # 設計 — 秘書の返事を、選んだ声で読み上げる
 
-状態: 設計案（PO の実装承認前）。基準: `origin/main` 9906651eb。
+状態: 設計審査合格（審査役 3 回目）・PO 実装承認済み（2026-11-17 チャットで「1」。選択肢「1回目の作業を始めてよい」＝便1）。便2・便3 の承認と本番の鍵の GO は兼ねない。基準: `origin/main` 9906651eb（便1 のカードは 337ebbd1b で照合）。
 目標: [kgi.md](kgi.md)（K1〜K5・PO 承認 2026-11-17）。現状: `docs/handoff/secretary-voice/recon.md`。事例: [research.md](research.md)。
 決まりの記録: `docs/adr/ADR-1080-secretary-voice-tts.md`（Proposed）。関係: ADR-1056（秘書）・ADR-1004（使用量台帳）・ADR-1077・ADR-027・ADR-067・ADR-144・ADR-1071。
 
@@ -95,7 +95,9 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 3. `google-auth` のサービスアカウントの鍵で札を取り、`httpx` で `POST https://texttospeech.googleapis.com/v1/text:synthesize` に `{input:{text}, voice:{languageCode:"ja-JP", name: google_voice_name(voice)}, audioConfig:{audioEncoding:"MP3"}}` を送る。待つのは 10 秒まで。
 4. 成功したら台帳に 1 行書く（§4-5）。返ってきた音（base64）を戻して返す。
 5. Google の失敗・時間切れは 502（`tts_upstream_failed`）。台帳には `outcome` を失敗で 1 行書く（字数は 0 として数える・料金は成功分だけ）。
-- 部品: `google-auth` を `backend/requirements.txt` に足す（読み上げ専用の大きな部品は入れない）。使い方は便1 で Context7 か公式資料で確かめる。
+- 部品: 新しい部品は足さない。`google-auth` は今の部品（`backend/requirements.txt` の `google-auth-oauthlib`・`google-auth-httplib2`）に付いて入っており、同じ使い方がすでにある（鍵の読み方 `backend/app/services/tcg_distribution_svc.py:85`〜`backend/app/services/tcg_distribution_svc.py:93`・札の取り直し `backend/app/services/google_calendar.py:267`）。札の取り方は Context7（google-auth-library-python）で確かめた: `service_account.Credentials.from_service_account_file(鍵, scopes=["https://www.googleapis.com/auth/cloud-platform"])` → `credentials.refresh(google.auth.transport.requests.Request())` → `credentials.token` を `Authorization: Bearer` に使う。範囲 `cloud-platform` は Google の読み上げの公式の書き方の例と同じ。
+- 待ちでアプリを止めない: `refresh` は同期の通信なので `asyncio.to_thread` の中で呼ぶ。札はプロセスの中で 1 つ持ち回し、`credentials.valid` が偽のときだけ取り直す（同時の取り直しは `asyncio.Lock` で 1 つにする）。Google への頼みは `httpx.AsyncClient`（秘書の容器を呼ぶ `_call_agent` と同じ形・`backend/app/routers/assistant.py:210`）。
+- 台帳の失敗の種類は今の 9 つ（`backend/app/services/llm_budget.py` の `USAGE_ERROR_CODES`）に当てる: 時間切れ → `timeout`、Google の 429 → `rate_limited`、401・403 → `auth_failed`、ほかの HTTP の失敗と届かない → `http_error`、音を読めない → `unreadable`、札を取れない → `auth_failed`。新しい種類は足さない。
 
 ### 4-5. 使用量の台帳（`public.llm_usage_events`・ADR-1004 を改める）
 
@@ -229,7 +231,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 
 | 便 | 中身 | 合流の条件 |
 |---|---|---|
-| 便1 | 移行（§4-2・§4-5）・backend の 3 つの口・声の一覧・字数の記録・Python の使いみちの一覧への `secretary_regression` の追加・試験 V6〜V8・V10〜V12・`google-auth` | CI 緑・審査役の合格。移行を含むので GO 記録（委任の範囲で Opus が発行） |
+| 便1 | 移行（§4-2・§4-5）・backend の 3 つの口・声の一覧・字数の記録・Python の使いみちの一覧への `secretary_regression` の追加・試験 V6〜V8・V10〜V12・声の表示名の翻訳キー（V6 のため） | CI 緑・審査役の合格。移行を含むので GO 記録（委任の範囲で Opus が発行） |
 | 便2 | 設定の欄・チャットの切り替えと再生・`postBlob`・使用量の画面の欄・ja/en・試験 V3 | CI 緑・審査役の合格・評価する係の画面の確かめ |
 | 便3 | 鍵の置き場（compose）と本番の鍵 | **PO 本人の GO**（鍵の変更）。その後 K1〜K5 を本番で測る |
 
@@ -239,7 +241,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 |---|---|---|
 | 人 | super admin が設定で声を選び、チャットで切り替えを入れると声が出る。入れなければ何も変わらない | K1〜K3 |
 | エージェント | 秘書の AI（容器）には何も渡さない・何も変えない | §4-10 |
-| 機械 | backend に口 3 つ・部品 `google-auth`。CI に試験が足される | V6〜V8・V10〜V12 |
+| 機械 | backend に口 3 つ（新しい部品は足さない）。CI に試験が足される | V6〜V8・V10〜V12 |
 | データ | `public.users` に列 1 つ・台帳に列 1 つと値 2 つ。文そのものは保存しない | §4-2・§4-5 |
 | 本番 | 移行 2 本（列を足すだけ・「無いときだけ」）。鍵の置き場 | 便1 の GO 記録・便3 の PO GO |
 | 外部 | Google Cloud Text-to-Speech に返事の文を送る（月 90 万字まで） | §6・§11 の月 1 回の照合 |
@@ -248,4 +250,4 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 
 - 本番サーバーから Google までの時間（便3 の K4 測定で確かめる）。
 - 鍵に要る Google 側の権限の名前（便3 の前）。
-- `google-auth` の札の取り方（便1 の実装の前に公式資料で）。
+- ~~`google-auth` の札の取り方~~ → 2026-11-17 Context7 で確かめた（§4-4）。
