@@ -6228,6 +6228,14 @@
     "link": {
       "invoice": "Open invoice",
       "event": "Open event"
+    },
+    "voice": {
+      "name": {
+        "Aoede": "Aoede",
+        "Charon": "Charon",
+        "Erinome": "Erinome",
+        "Zubenelgenubi": "Zubenelgenubi"
+      }
     }
   },
   "notices": {

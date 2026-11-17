@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,10 +43,14 @@ from app.schemas.assistant import (
     IntentEvent,
     InvoiceDraft,
     KarteIn,
+    SpeechIn,
     UnknownDraft,
+    VoiceIn,
+    VoiceOut,
     parse_iso,
 )
 from app.schemas.secretary_rules import RuleFeedbackIn, RuleListOut, RuleOut, RuleStatus, RuleTextIn
+from app.services import secretary_tts
 from app.services.ai_assignment import get_ai_assignment
 from app.services.calendar_service import can_add_meet
 from app.services.llm_budget import USAGE_SDKS_BY_PROVIDER, UsageCounts, record_usage_isolated
@@ -65,6 +69,13 @@ from app.services.secretary_rules import (
     list_rules,
     reject_candidate,
     remove_rule,
+)
+from app.services.secretary_voice import (
+    DEFAULT_SECRETARY_VOICE,
+    SECRETARY_VOICES,
+    VoiceNotSaved,
+    read_voice,
+    save_voice,
 )
 
 logger = logging.getLogger(__name__)
@@ -556,3 +567,68 @@ async def remove_assistant_rule(
     await db.commit()
     await reset_tenant_context(db, tenant_id)
     return _rule_out(rule)
+
+
+# ---------------------------------------------------------------------------
+# ADR-1080 便1: 秘書の声（保存）と読み上げの口。守りは秘書の口と同じ _SECRETARY_DEPENDENCIES。
+# ---------------------------------------------------------------------------
+
+
+def _voice_out(selected: str) -> VoiceOut:
+    return VoiceOut(voices=list(SECRETARY_VOICES), default=DEFAULT_SECRETARY_VOICE, selected=selected)
+
+
+@router.get("/assistant/voice", response_model=VoiceOut, dependencies=_SECRETARY_DEPENDENCIES)
+async def get_assistant_voice(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> VoiceOut:
+    return _voice_out(await read_voice(db, current_user.id))
+
+
+@router.put("/assistant/voice", response_model=VoiceOut, dependencies=_SECRETARY_DEPENDENCIES)
+async def put_assistant_voice(
+    body: VoiceIn,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> VoiceOut:
+    if body.voice not in SECRETARY_VOICES:
+        raise _fail(422, "voice_invalid")
+    user_id = current_user.id
+    tenant_id = current_user.tenant_id
+    try:
+        await save_voice(db, user_id=user_id, tenant_id=tenant_id, voice=body.voice)
+    except VoiceNotSaved:
+        logger.error("assistant_voice_save user_id=%s tenant_id=%s kind=not_saved", user_id, tenant_id)
+        raise _fail(500, "voice_not_saved") from None
+    # commit の後に db を使わない。返す値は書いた値から作る
+    return _voice_out(body.voice)
+
+
+@router.post(
+    "/assistant/speech",
+    dependencies=_SECRETARY_DEPENDENCIES,
+    response_class=Response,
+    responses={200: {"content": {"audio/mpeg": {"schema": {"type": "string", "format": "binary"}}}}},
+)
+async def post_assistant_speech(
+    body: SpeechIn,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    user_id = current_user.id
+    tenant_id = current_user.tenant_id
+    voice = await read_voice(db, user_id)
+    try:
+        try:
+            month_total = await secretary_tts.read_month_total(db)
+        finally:
+            # Google を待つ前に読み取りの取引を閉じる。以後この db は使わない
+            await db.rollback()
+        secretary_tts.check_monthly_cap(month_total, len(body.text))
+        audio = await secretary_tts.synthesize(
+            text_in=body.text, voice=voice, user_id=user_id, tenant_id=tenant_id
+        )
+    except secretary_tts.TtsError as exc:
+        raise _fail(exc.status_code, exc.code) from None
+    return Response(content=audio, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})

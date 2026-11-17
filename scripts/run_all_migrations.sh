@@ -1464,6 +1464,10 @@ run_sql migrations/20261115_100000_add_payment_method_versioning.sql
 # ADR-1012 段階4 便2b: 報告の古い一意（incident_id だけ）を消す（種類ごとに 1 通・冪等）
 run_sql migrations/20261115_110000_drop_ops_case_report_single_unique.sql
 # ADR-1012 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261115_110001_drop_ops_case_report_single_unique_down.sql
+# ADR-1080 便1: 秘書の声の列（public.users.secretary_voice・冪等）
+run_sql migrations/20261117_100000_add_users_secretary_voice.sql
+# ADR-1080 便1: 台帳に読み上げの字数の列と使いみち secretary_tts・sdk google-tts-rest を足す（冪等）
+run_sql migrations/20261117_100100_add_llm_usage_tts_characters.sql
 
 # 実行済みの記録の集計（段5 5-3）。新しい手順は、この集計の行より上（上の run_ の並びの末尾）に足す。
 mr_report_summary
