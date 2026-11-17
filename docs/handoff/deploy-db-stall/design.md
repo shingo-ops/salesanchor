@@ -803,7 +803,7 @@ env -u BASH_ENV bash "$TMP"
 
 (1) 本節をクラウドの Architect（新しく起動・読むだけ）で審査 (2) APPROVE の後、同じ枝でクラウドの Sonnet が 18-14-3 を実装し、試験と赤の実演 (3) reviewer（opus・手元で新しく起動）→ PR 本文に GO 記録（POの委任に基づくClaude Opus発行。deploy.yml・scripts を含む）→ マージ → 本番反映 (4) 移行の段が動く本番反映で K18-10 と K18-4 の残りを見る。
 
-## 19. 段7 設計 — 試しと本番反映が重なっても移行が止まらないようにする（第3.5版、2026-11-14）
+## 19. 段7 設計 — 試しと本番反映が重なっても移行が止まらないようにする（第3.8版、2026-11-18）
 状態: 第1版・第2版はクラウドの Architect（opus）審査で REVISE、第3版で APPROVE（19-14）。第3.1版で第3版の推奨5件を入れた。第3.1版はマージ前審査で REVISE、第3.2版で直した（19-14）。(c) の1回目の実装（077a2e388）の確かめで、GitHub の呼び出し回数の上限に当たる作りだと分かり、第3.3版で呼び出しを減らす決まり（19-4 の 2b.）を足した（19-14）。
 PO の依頼（2026-11-13）: 「試作や本番反映が被っても止まらないようには出来る？」。説明の後の PO の選択は「1」（3つの直し方をまとめて設計し、作って試すのは1つずつにして効果を数えながら進める）。
 3つの直し方: (c) 本番反映が止まった回数を毎週機械が数えて知らせる／(a) 済んだ移行は流さない／(b) 試しの道具に長く表を押さえさせない。
@@ -929,7 +929,7 @@ PO の依頼（2026-11-13）: 「試作や本番反映が被っても止まら�
 - 本節で足す測り方: 5-3 の本番反映の後、(c) の数えで「失敗」が0の週が続くか。§5 の K5-6（新しい手順が0本の回で流す本数が0）とあわせて読む。
 - 注意: 毎回流す一覧（§5-7）の手順は (a) の後も流れる。その手順が表を押さえるかは 5-0 で確かめる。押さえるなら、(a) の後も新しい移行の無い回で待ちが出うる。
 
-### 19-6. (b) 試しの道具に名前と上限を付ける（概要。(a) の本番測定の後に詳細を書く）
+### 19-6. (b) 試しの道具に名前と上限を付ける（概要。詳細は 19-20、第3.8版）
 - b1 アプリの接続の名前（段4a、§17）を先に実装する。§17-2 の名前の表に役割 `tool`（試しの道具）を1行足す。名前は §17 の1つの関数で作る `salesanchor_tool_<道>` で、別の作り方を足さない。
   - 前提（§17・§3 の順番）: 4a を本番に出すのは、段2の K2-5〜K2-7 がそろった後。b1 はその前提を変えない。そろっていなければ b1 も待つ。
   - 試しの道具は本番のアプリの入れ物に、`docker exec -e SA_PROCESS_ROLE=tool ...` で流す。§17-2 のとおり役割は名前の関数が呼ばれたときに読むので、道具の process が import した `_engine`（`backend/app/tasks/tcg_extraction.py` :94・:97）は、その process の中で `salesanchor_tool_<道>` を名乗る。同じ入れ物の中のアプリ（backend）の接続は SA_PROCESS_ROLE が無いので今の名前のまま。これで、同じ入れ物・同じ `_engine` の作り方でも、握り手が試しかアプリかを名前で分けられる。
@@ -1173,3 +1173,147 @@ plan の台本の決まり:
 - 危険のパスか: 触るのは `.github/workflows/weekly-deploy-lock-count.yml`・scripts/ops の新しい台本・試験だけ。migrations・deploy.yml・本番のサーバーで流す scripts・workflow-lint.yml には触らない。本番のサーバーと DB に触らない（読みだけの GITHUB_TOKEN と Discord の webhook だけ）。
 - 継続: 守り手は D4・D9（必須の pytest）。K19-15 の確かめは、反映の後の最初の月曜（と火曜）に Opus が1回行い、本節に結果を書き足す。
 - 外部の事例: 使わない。GitHub 自身の説明書（19-19-1）が、遅れと抜けがありうることの直接の根拠で、この直しは「遅れても抜けても週が変わらない・拾い直す」ことを試験と本番の記録で確かめる。
+
+### 19-20. 第3.8版（2026-11-18、Opus）— (b) の詳細設計（試しの道具に名前と上限を付ける）
+
+状態: 設計審査済み（第3.8版 APPROVE）。実装未着手。PO の実装承認と実装カードはまだ。
+審査の記録（2回目）: 第3.8版 APPROVE（2026-11-17 16:14Z、クラウドの Architect、opus、新規起動、commit 972b79ea3 を origin/main dba18c50d と照合）。前回の指摘7つは正しく直った、との判定。軽い指摘5つ（q10 の行ずれ2つ・入口の名前付けの条件・replay 試験の setenv は不要・GitHub の取り込み2本が -e なし・docs の手順書の選び方の基準）は、Opus が実物で確かめて本版で直した。
+審査の記録: 第3.7版 REVISE（2026-11-17 16:02Z、クラウドの Architect、opus、新規起動、commit f5abedb1a を origin/main dba18c50d と照合）。19-20-1 の事実（26＋別名1・名前あり5・名前なし22・20か所の行・`_get_sync_engine` 12・compose up の行・blue-green の行・test.yml の条件・b3 の5本）は合う、との判定。指摘は 重1（b2 で `backend/tests/test_v102_replay_diff.py` が赤になる）・中2（`create_async_engine` を作る scripts の抜け／-e なしの道具が backend を名乗る）・軽4（ai-reader.yml の抜け・`_begin` の2か所・compose の行・C4-1 の数え方）。Opus が7つとも実物で照合して正しいことを確かめた（`docs/handoff/deploy-db-stall/recon-b/q10.md`）。直しは 19-20-1・-2・-3・-4・-5・-8・-9。PO 2026-11-18「1」（(b) を今のうちに読むだけで調べて詳細設計まで書く。作るのは (a) の測り（2026-11-21 10:00 予約済み）と 5-4 が済んでから）。19-6 の概要を、本節の詳細で置き換える（19-6 の文は経緯として残す）。調べの生の記録は `docs/handoff/deploy-db-stall/recon-b/q01.md`〜`docs/handoff/deploy-db-stall/recon-b/q10.md` と `docs/handoff/deploy-db-stall/recon-b/k2-opus-prod.md`（origin/main dba18c50d で読んだ。以下の行番号も同じ）。
+
+#### 19-20-1. 事実（§17・19-6 からのずれ）
+| 項目 | §17・19-6 の記載 | 今の実物（根拠） |
+|---|---|---|
+| アプリの中で DB 接続を作る呼び出し | 24＋別名1 | 26＋別名1＝27か所。名前あり5・名前なし22（q01） |
+| 名前のある5か所 | database.py :15・:70 ほか | `backend/app/database.py` :16（salesanchor_backend）・:94（salesanchor_admin_ops）、`backend/app/tasks/tcg_extraction.py` :790（salesanchor_celery_distribute）、`backend/app/tasks/tcg_extraction_recovery.py` :170（salesanchor_celery_extraction_recovery）、`backend/app/tasks/viewer_inventory_cache.py` :117（salesanchor_celery_viewer_cache）（`git grep -n application_name -- backend/app`） |
+| 新しく増えた名前なし | — | `backend/app/ops/unmask_http.py` :61 の psycopg2.connect（DB ユーザーは ai_unmask。`docker-compose.ai-unmask-http.yml`） |
+| 別名で呼ぶ psycopg2 | readonly_query :282・:289 | `backend/app/ops/readonly_query.py` :285・:292（q01） |
+| `_get_sync_engine` | 11ファイル | 12ファイル（q02） |
+| backend の入れ物を作るサービス | build が ./backend（:63・:215・:310・:354） | `docker-compose.yml` に build の行は無い。`image: ${BACKEND_IMAGE:-astro-webapp-backend}` の4サービス（サービス名の行／image の行）: backend :67／:68・celery-worker :227／:228・celery-beat :332／:333・discord-gateway :376／:377。environment は全部 `- KEY=value` の並び（q03）。`docker-compose.override.yml` は同じ4つに `build: ./backend` を足す（:4・:11・:13・:15。手元で組み立てるとき用） |
+| 同じ image の別の compose | 記載なし | 4つ。`docker-compose.ai-reader-http.yml` :15・`docker-compose.ai-reader-cloud-http.yml` :16（`app.ops.read_window_http`、`app.ops.readonly_query` だけを import、DB ユーザー ai_reader）、`docker-compose.ai-reader.yml` :13（`app.ops.readonly_query`、ai_reader。`run --rm` で1回ずつ流す）、`docker-compose.ai-unmask-http.yml` :16（`app.ops.unmask_http`、DB ユーザー ai_unmask）（q10） |
+| compose up の行 | deploy.yml :466 | `.github/workflows/deploy.yml` :551・:853・:1054（q03） |
+| blue-green の環境変数 | :81-84・:98-99 | `scripts/blue-green-cutover.sh` :80-84（.env のキーを名前で渡す）・:97-98（q03） |
+| `_engine` を使う行 | tcg_extraction.py :94・:97 | :94 で作り、:98 の `Session(_engine)` で使う（q02） |
+| アプリの外で DB を使う .py | 7本 | q07 の16本（下の 19-20-5 の表）。q07 の grep は `create_async_engine(` に当たらなかったので、自分で engine を作る scripts/ の .py が別に51本ある（app を import する11本〔q07 と重なる1本を含む〕・しない40本。q10）。本番反映の移行の道（`scripts/run_all_migrations.sh` :240-259 の run_py）で流れるものは `scripts/migration_py_entry.py` :33-46 が名前を付ける。名前を付けるのは MIGRATION_LOCK_TIMEOUT が空でないときだけ（:30）で、run_py は :258 で毎回渡す |
+| test.yml の範囲 | filters :45〜:54・push :20〜:29 | push の paths と detect-changes の filters の `backend` に docs/ は無い。pytest-run と lint-backend は `needs.detect-changes.outputs.backend == 'true'` のときだけ流れる（q08）。docs だけの PR では必須の pytest が流れない |
+- 試しの道具の流し方の前例: `scripts/accuracy/llm_compare/fhd_snapshot.py` :5-6 と `scripts/ops/discord-guild-membership-check.sh` :10 は `docker exec -i -w /app <入れ物> python -`。`docker exec -e` は、その exec で起動する process にだけ環境変数を足す・上書きする（Docker 公式 container exec の --env の節。Context7 /websites/docker_reference で 2026-11-18 に確かめた）。同じ入れ物のアプリ本体の process には効かない。
+- 段2の K2-5〜K2-7 は 2026-11-18 にそろった（`docs/handoff/deploy-db-stall/recon-b/k2-opus-prod.md`）。§17 の「4a を本番に出す前提」は満たされた。
+
+#### 19-20-2. 目的と成功の条件
+- 目的: 次に本番反映の移行が待ちで止まったとき、握っていた接続が「試しの道具か、アプリのどの入れ物か」を名前で言えるようにし、試しの道具が取引を開いたまま待つことを流し始めと CI で止める。
+- 言える範囲（第3.8版で明記）: set_idle_tx_limit を呼ぶ道具は、-e を付け忘れると流し始めに止まるので、必ず `salesanchor_tool_` を名乗る。呼ばない道具（例外の3本と discord の確かめ）は、手順の -e で名乗る。付け忘れると salesanchor_backend を名乗り、名前なしにはならない（19-20-9）。
+- 成功の条件は 19-20-7 の表（K19-7 の前に、K4-1〜K4-6 と K19-17〜K19-22 を○×で見る）。
+- 対象外: b4（移行の間だけ道具を待たせる仕組み）。(a)・b1〜b3 の後も (c) で失敗が出たときに設計する（19-6 のまま）。
+
+#### 19-20-3. b1 ＝ 段4a（§17）に役割 tool を足して実装する
+§17-2〜17-9 をそのまま使い、次の点だけを直す・足す。
+- 役割の表: backend（既定）・worker・beat・gateway・tool・unknown（表に無い値）。tool は compose に書かない（docker exec -e でだけ付ける）。
+- C4-3 の対象（§17-3 の直し）: 「build が ./backend」ではなく「`docker-compose.yml` で image が `${BACKEND_IMAGE:-astro-webapp-backend}` のサービス」。backend 以外の3つは SA_PROCESS_ROLE が worker・beat・gateway のどれか（tool・unknown は赤）、backend には SA_PROCESS_ROLE が無い。image の行の文が変わって対象が0になったら赤（何も見ずに緑にならない）。
+- 同じ image の別の compose 4つ（19-20-1）は C4-3 の対象外にし、理由を試験に書く: アプリの名前の関数を使わず、DB ユーザーが ai_reader・ai_unmask で、K4-5 が数える salesanchor_app・jarvis の接続ではない。C4-3 は `docker-compose.yml` だけを読む（override.yml は手元の組み立て用で本番では使わない）。
+- C4-1 の許可リスト（§17-3 の直し）: `backend/app/ops/readonly_query.py`（ai_reader）と `backend/app/ops/unmask_http.py` :61（ai_unmask）の2ファイル。readonly_query は :285 の `connect = psycopg2.connect`（代入）と :292 の `conn = connect(url)`（呼び出し）を別々に1つずつ数える（C4-1 の型が `psycopg2.connect` と `connect(` のどちらにも当たる場合。当たらない型なら数えない）。数の下限は「名前を付ける20か所＋名前ありの5か所＋許可リストの当たり」で、実装の PR で `git grep` の当たりを貼り、その数を本節に書き足す（下回れば赤）。
+- 名前を付ける20か所の道の名（名前は `salesanchor_<役割>_<道>`。全部63文字以内）:
+
+| 場所 | 作り方 | 道 | 渡し方 |
+|---|---|---|---|
+| `backend/app/services/email_sender.py` :38 | create_engine | email | connect_args |
+| `backend/app/services/gemini_extraction_svc.py` :105 | create_engine | gemini_prompt | connect_args |
+| 同 :154 | create_engine | gemini_raw_copy_prompt | connect_args |
+| `backend/app/services/tcg_product_master_svc.py` :832 | create_engine | product_reanalyze | connect_args |
+| `backend/app/tasks/avatar.py` :90 | create_engine | avatar | connect_args |
+| `backend/app/tasks/dashboard.py` :40 | create_engine | dashboard | connect_args |
+| `backend/app/tasks/data_deletion.py` :59 | create_engine（管理用 URL） | data_deletion | connect_args |
+| `backend/app/tasks/fx_rate_updater.py` :39 | create_engine | fx_rate | connect_args |
+| `backend/app/tasks/gemini_route_watch.py` :37 | create_engine | gemini_route_watch | connect_args |
+| `backend/app/tasks/maintenance.py` :47 | create_engine | maintenance | connect_args |
+| `backend/app/tasks/refresh_meta_tokens.py` :99 | create_engine | refresh_meta_tokens | connect_args |
+| `backend/app/tasks/reports.py` :178 | create_engine | reports | connect_args |
+| `backend/app/tasks/rule_test.py` :29 | create_engine（TCG_DB_URL か DATABASE_URL） | rule_test | connect_args |
+| `backend/app/tasks/tcg_extraction.py` :94 | create_engine（試しの道具も import する `_engine`） | extraction_sync | connect_args |
+| `backend/app/tasks/tcg_extraction_recovery.py` :51 | create_engine | extraction_recovery_sync | connect_args |
+| `backend/app/tasks/tcg_import_discard.py` :27 | create_engine | import_discard | connect_args |
+| `backend/app/tasks/verify_meta_subscriptions.py` :84 | create_engine | verify_meta_subscriptions | connect_args |
+| `backend/app/tasks/priority_scoring_check.py` :83 | psycopg2.connect | priority_scoring_check | application_name= |
+| `backend/app/tasks/buyback_scraper.py` :29 | create_async_engine | buyback | connect_args の server_settings |
+| `backend/app/discord_gateway/reaction_writer.py` :35 | asyncpg.create_pool | reaction | server_settings |
+- 一番長い名前は `salesanchor_unknown_verify_meta_subscriptions`（45文字）。今の5つの名前は変えない（§17-2）。
+- 試しの道具は `docker exec -e SA_PROCESS_ROLE=tool ...` で流す。道具が `from app.tasks.tcg_extraction import _get_sync_session` で使う `_engine`（:94）は、道具の process の中で `salesanchor_tool_extraction_sync` を名乗る。同じ入れ物のアプリ本体は今の名前のまま（19-20-1 の Docker の決まり）。
+- 本番の .env に SA_PROCESS_ROLE が誤って入っていた場合: blue-green が backend に渡し、backend が salesanchor_backend 以外を名乗るので、本番反映の smoke [7a]（salesanchor_backend の接続を数える）が0本で赤になり、気づける。
+- 実装のときの手順の直し（b1 の PR で `-e SA_PROCESS_ROLE=tool` を足す。どの文を直したかは PR に一覧で書く）:
+  - 必ず直す3つ（q10）: `scripts/ops/discord-guild-membership-check.sh` :10・`scripts/ops/discord-unregistered-guild-names.sh` :11 の `docker exec -i -w /app` の後ろ、`scripts/accuracy/llm_compare/fhd_snapshot.py` :5-6 の使い方の文。前の2つは set_idle_tx_limit を呼ばない道具なので、b2 では止まらず salesanchor_backend を名乗るため。
+  - 試しの道具の手順書（`docs/` の下で `docker exec ... python` を書いた文）。選び方: `git grep -n -E 'docker (compose )?exec[^|]*python' -- docs` の当たりを全部 PR に貼り、`app/tools/` か `scripts/` の道具を流す文には全部 -e を足す。set_idle_tx_limit を呼ばない道具を流す文は必ず直す。呼ぶ道具の付け忘れは b2 が流し始めに止める。
+
+#### 19-20-4. b2 ＝ 試しの道具が自分の名前を確かめる
+| 場所 | 前 | 後 |
+|---|---|---|
+| `backend/app/tools/_tx_guard.py` `set_idle_tx_limit`（:43〜:52） | SET → commit → SHOW → rollback | SET → commit → SHOW → `SELECT current_setting('application_name')` → rollback。そのあと名前が `salesanchor_tool_` で始まらなければ RuntimeError（文は「試しの道具は docker exec -e SA_PROCESS_ROLE=tool で流してください。今の名前: <名前>」）。止めるのは rollback の後（取引を開いたまま止まらない） |
+| 同 `_on_connect_set_idle_limit`（:24〜:34） | 変えない | 変えない（名前は確かめない。毎回の接続で止めると道具の途中で落ちるため、流し始めの1回だけで見る） |
+| `backend/tests/test_tx_guard.py` :24 | 呼ぶ順 execute・commit・execute・rollback | execute・commit・execute・execute・rollback。名前が salesanchor_tool_ で始まるときは値を返し、始まらないときは rollback の後に RuntimeError、の2つの試験 |
+| `backend/tests/test_tx_guard_pool.py` :29〜（:60・:61 で呼ぶ） | 名前なしの engine を自分で作る | 役割を tool にして、名前の正本の関数の connect_args で engine を作る。役割が無いときに止まる1件を足す |
+| `backend/tests/test_v102_replay_diff.py` :14〜:47（seq）・:61〜:65 | 本物の set_idle_tx_limit を偽物の session で通す（差し替えていない）。:65 は呼ぶ順の先頭4つが execute・commit・execute・rollback | 偽物の execute は、名前を読む文（`current_setting('application_name')`）のときだけ `scalar()` が `salesanchor_tool_x` を返す結果を返す。:65 を先頭5つ execute・commit・execute・execute・rollback に直す。:50・:68 の試験は直さず通ることを CI で確かめる（q10） |
+| `backend/tests/test_prompt_ab.py` :50・`backend/tests/test_prompt_ab_recompute.py` :74 | set_idle_tx_limit を差し替え | 変えない（差し替え済みで本体の影響を受けない。CI で流して確かめる） |
+- b2 の PR では、`git grep -n -E 'set_idle_tx_limit|_tx_guard' -- backend/tests` の当たりを全部 PR に貼り、上の表に無い試験が本物の set_idle_tx_limit を通していないことを確かめる（第3.7版の抜けの再発を防ぐ）。
+- 呼ぶ道具（変えない）: `backend/app/tools/prompt_ab.py` :485・`backend/app/tools/prompt_ab_recompute.py` :99・:116・`backend/app/tools/v102_replay_diff.py` :120・:143。名前を SET で付け直す道は作らない（19-6 のまま）。
+- 前提: b1 が本番に出て、名前の関数が入っていること（b2 は名前の関数が無いと作れない）。
+
+#### 19-20-5. b3 ＝ 守りの試験をアプリの外の道具にも広げる
+- 対象の決まり: `scripts/` と `docs/` の下の .py のうち、(i) `from app.` か `import app.` があり、かつ (ii) アプリの接続の型を使うもの。(ii) の型は今の `_DB_PATTERNS`（`backend/tests/test_tools_tx_guard_required.py` :15-25）より狭くし、`_get_sync_session`・`SessionLocal(`・`AsyncSessionLocal`・`from app.database import` の4つにする（`.connect(` と `create_engine(` は psycopg2 や自分の使い捨ての DB の台本まで拾うので入れない）。backend/scripts と backend/tcg_migration/scripts は §17-7 のとおり範囲外。
+- 決まりに当たる5本と扱い（q07 と 2026-11-18 の読み直し）:
+
+| ファイル | 今の作り | 扱い |
+|---|---|---|
+| `scripts/accuracy/llm_compare/fhd_snapshot.py` | `_get_sync_session`（:36）。1つの REPEATABLE READ の読みだけの取引（:150）で全部の投稿を読みながら判定し直す（:173〜） | 直す: `_begin`（:149）の中の最初の行で `set_idle_tx_limit(session)` を呼ぶ（呼ぶ所は :177 の check と :240 の convert の2か所あり、`_begin` の中に置けば両方に効く）。投稿1件の計算が30秒を超えると接続が切られて道具が落ちる（表を握ったまま待つより、落ちるほうを選ぶ） |
+| `scripts/accuracy/condition_words/replay_words.py` | `_get_sync_session`（:82・:95）。READ ONLY を置いて `v102_replay_diff.replay` を呼び、その中で set_idle_tx_limit が呼ばれる（`backend/app/tools/v102_replay_diff.py` :120・:143） | 直す: :98 の commit の後に `set_idle_tx_limit(session)` を1行足す（ファイルの中に呼び出しがあることを試験で見られるようにする。2回呼んでも同じ値を置くだけ） |
+| `docs/handoff/single-set-category/data/bin3/rejudge_single_set.py` | `_get_sync_session`（:20・:202）。書き込みあり。仕入元ごとに1つの取引で試走と本番を同じに流す（冒頭の説明 :8〜:12）。流す前に lock_timeout=1s を確かめる（:204〜:207） | 例外（理由付き）: 済んだ1回きりの作業の記録。1つの取引で流すのが作業の決まりで、30秒の上限は書き込みの途中で切りうる |
+| `docs/handoff/single-set-category/data/bin3/ref/rejudge_pika30.py` | `_get_sync_session`（:19・:147）。同じ形 | 例外（同じ理由。参考の写し） |
+| `scripts/ops/discord_guild_membership_check.py` | `from app.database import AsyncSessionLocal, engine`（:253）。非同期の短い読み（:199） | 例外（理由付き）: set_idle_tx_limit は同期の Session 用。1回の短い読みで、計算や外の呼び出しを取引の中で待たない |
+- 決まりに当たらない11本（q07）: backend/scripts 1本・backend/tcg_migration/scripts 5本（範囲外）、`docs/handoff/s1-rls-stage5/m9_scan.py`（DB につながない）・`docs/handoff/s1-rls-stage5/pool_reset_measure.py`（psycopg2・使い捨ての DB）、`scripts/check_priority_scoring_state.py`（psycopg2 :313。app は知らせの部品だけ :40）・`scripts/check_public_tenant_rls.py`（psycopg2 :79）・`scripts/check_tenant_template_shape.py`（psycopg2 と自分の非同期 engine・使い捨ての DB）。
+- 自分で engine を作る scripts/ の .py（51本、q10）は b3 の対象外にする。理由: (1) アプリの接続の型を使わず、set_idle_tx_limit（同期の Session 用）の守りの形に合わない。(2) 本番反映の移行の道で流れるものは `scripts/migration_py_entry.py` が `salesanchor_migration` の名前と lock_timeout を付ける。(3) 残りはテナントの初期設定・1回きりの移行・種まきで、手で流すとき以外は動かない。手で本番に流したときは名前なしで開く。これは K19-7 の数えで「名前なしの握り手」が出たときに照らす一覧として q10 に残す（19-20-9）。
+- 試験の変更: `backend/tests/test_tools_tx_guard_required.py` に、上の決まりで `scripts/` と `docs/` を読む関数と試験を足す。例外の表は今の EXCEPTIONS と別に、リポジトリの根からのパスで書く。見つけた対象が5本より少なければ赤（決まりが壊れて何も見ないのを防ぐ）。例外のファイルが無くなったり決まりに当たらなくなったら赤（今の find_stale_exceptions :63 と同じ考え）。
+- `.github/workflows/test.yml`: push の paths（:20 付近）と detect-changes の filters の `backend`（:47 付近）に `'docs/**/*.py'` を1行ずつ足す。docs に道具を足す PR でも必須の pytest が流れる。
+
+#### 19-20-6. 試験と赤の実演
+- b1: §17-3 の C4-1〜C4-4 と赤の実演 (1)〜(5)（直しは 19-20-3）。足す赤の実演 (6) C4-3 で celery-worker の SA_PROCESS_ROLE を tool にすると赤。
+- b2: 赤の実演 (7) 名前を確かめる1手を消すと、役割が無いときに止まる試験が赤。(8) 止める処理を rollback の前に動かすと、呼ぶ順の試験が赤。
+- b3: 赤の実演 (9) fhd_snapshot.py の写しから set_idle_tx_limit を消すと赤。(10) 新しい docs の道具（`_get_sync_session` を使い set_idle_tx_limit を呼ばない）を足すと赤。(11) test.yml の filters から docs/**/*.py を消すと、それを読む試験が赤（filters と push の paths の両方に docs/**/*.py があることを試験で読む）。
+- 赤の実演は各 PR で1回ずつ流し、結果を PR に貼る。
+
+#### 19-20-7. 受け入れ基準
+| 基準 | 検証方法 |
+|---|---|
+| K4-1〜K4-6 | §17-4 のまま（C4-1・C4-3 は 19-20-3 の直しで） |
+| K19-17 役割 tool の名前 | C4-4 に、SA_PROCESS_ROLE=tool のときに同期の接続が `salesanchor_tool_extraction_sync` を名乗る1件を足して PASS |
+| K19-18 道具が名前を確かめる | 19-20-4 の試験が PASS（tool で通る・無いと止まる・呼ぶ順） |
+| K19-19 外の道具の守り | 19-20-5 の試験が PASS（対象5本・例外3本・下限5本） |
+| K19-20 docs だけの PR でも pytest が流れる | b3 の PR に docs の .py を含め、その PR の check で pytest-run が skipped でなく success |
+| K19-21 試験が壊れた実装を捕まえる | 赤の実演 (1)〜(11) |
+| K19-22 本番で道具が名乗る | b2 の本番反映の後、最初に本番で試しの道具を流す1回で、道具の記録に `[tx_guard]` の行が出て止まらず、同じ時刻の reader 鍵の道の pg_stat_activity に `salesanchor_tool_` で始まる接続が見える（Opus が記録） |
+| K19-7 (b) の効果 | 19-7 のまま（b1〜b3 の本番反映の後の4週） |
+
+#### 19-20-8. 選ばなかった案
+- 道具の中で `SET application_name` を流して名前を付け直す: 名前の作り方が2つになる。最初の接続が名前なしで開く（19-6 のまま）。
+- 役割を道具のファイルで自動で決める（`__main__` の名前など）: 道具が `app` の engine を import した時点では分からず、§17 の「呼ばれたときに環境変数から読む」1つの作り方から外れる。
+- fhd_snapshot.py を例外にする: 1つの取引で全部を読む作りは、11/13 に移行を止めた形と同じ。落ちるほうが安全なので直す。
+- rejudge の2本を直す: 済んだ作業の記録で、もう流さない。直すと記録と実際に流したものが食い違う。
+- 自分で engine を作る scripts/ の51本にも名前を付けさせる: 1回きり・初期設定の台本が大半で、今の本番反映で流すものは入口が名前を付けている。直す量に見合う効果が無い。本番で手で流すことが増えたら、入口と同じ差し替えを使う形で別に設計する。
+- 別の compose 4つにも SA_PROCESS_ROLE を書かせる: その入れ物の接続は名前の関数を使わない（DB ユーザーも別）。書いても名前は変わらず、見張る意味が無い。
+
+#### 19-20-9. 弊害・トレードオフ
+- b1 は §17-6 のまま（worker・beat・gateway の main の名前が変わる、smoke [7b] を広げる）。
+- b2 の後、`-e SA_PROCESS_ROLE=tool` を付けずに試しの道具を流すと、流し始めに止まる（取引は閉じてから）。手順書を直すまでの間に1回止まりうる。
+- fhd_snapshot.py は、投稿1件の計算が30秒を超えると落ちる。今の計算の長さはまだ確かめていない。落ちたら投稿を分けて流し直す。
+- docs/**/*.py を変える PR で必須の pytest が流れるので、その PR の確かめが約十数分長くなる。docs の .py の変更は少ない（q08）。
+- 例外の3本は守りの外に残る。新しく流す道具を docs に足したら、例外にせず決まりに合わせる（試験が赤で知らせる）。
+- set_idle_tx_limit を呼ばない道具（例外の3本・discord の確かめ）は、-e を付け忘れると salesanchor_backend を名乗る。名前なしにはならないが、アプリ本体と見分けられない。見分ける手がかりは pg_stat_activity の client の場所と始めた時刻（アプリ本体は入れ物の起動の時刻）。手順に -e を書いた3つの文（19-20-3）で減らす。
+- GitHub の取り込み2本（`.github/workflows/line-import-device.yml` :69・`.github/workflows/line-import-operations.yml` :54）も -e なしで app を流す。これは試しの道具ではなく本番の取り込みなので b1 の対象外とし、salesanchor_backend を名乗る（名前なしにはならない）。
+- 自分で engine を作る scripts/ の .py（q10 の表で「手で流す」もの）を本番で手で流すと、名前なしで開く。K19-7 の数えで名前なしの握り手が出たら、q10 の一覧と流した記録に照らす。
+
+#### 19-20-10. 戻し方・計画・継続
+- 戻し方: 便ごとの PR を戻す（revert）。b1 は §17-9 のまま（DB は変えない）。b2・b3 はコードと試験と test.yml だけ。
+- 計画（変更は一度に1つ）:
+  1. 本節の Architect 審査（クラウド・opus）→ 設計の PR → reviewer（opus）→ マージ。
+  2. 着手の条件: (a) の測り（2026-11-21 10:00）と 5-4 が済み、PO の実装の承認と実装カードがそろうこと。
+  3. 便b1: Sonnet（クラウド）が §17＋19-20-3 を実装 → CI と赤の実演 → reviewer → 危険のパス（`docker-compose.yml`・本番で流す `scripts/smoke_test_post_deploy.sh`）を含むので、PO 本人の「GO #<PR番号>」を受けてマージ → K4-5・K4-6。
+  4. 便b2: 19-20-4 → CI → reviewer → マージ → K19-22。
+  5. 便b3: 19-20-5 → CI → reviewer → マージ → K19-20。
+  6. b1〜b3 の後の4週で K19-7。
+- 継続: 守り手は backend の必須の pytest（C4-1〜C4-4・test_tx_guard・test_tx_guard_pool・test_tools_tx_guard_required）と、本番反映の smoke [7a]・[7b]。名前の正本は §17-9 のとおり2か所（アプリの表と `scripts/lib/db-app-names.sh`）で、C4-2 が重なりを止める。
+- 外部の事例: 使わない。根拠は PostgreSQL・Docker の公式の決まり（§17-1・19-20-1）と、この本番の 11/13 の失敗の記録（19-1）で、効果は K19-7 で本番の数えで確かめる。
