@@ -19,7 +19,7 @@
 
 1. 利用者が「声で返事」を入れる（このとき画面が音の部品 `AudioContext` を起こす。押した操作の中で起こすので Chrome に止められない・research.md T1）。
 2. 秘書の返事（文）が画面に出る。今まで通り。
-3. 読み上げる文は返事の種類ごとに決める（`frontend/src/features/secretary/SecretaryChat.tsx:128`〜`frontend/src/features/secretary/SecretaryChat.tsx:170` の 5 種類）:
+3. 読み上げる文は返事の種類ごとに決める（`frontend/src/features/secretary/SecretaryChat.tsx:129`〜`frontend/src/features/secretary/SecretaryChat.tsx:171` の 5 種類）:
    - 文の返事（`text`）: 吹き出しの文の全部。
    - 聞き返し（`ask`）: 最後の問いの 1 行（`t("secretary.ask.<欄>")`）だけ。「ここまでの予定」と埋まった欄の一覧は読まない。
    - 作った知らせ（`created`）: 知らせの文だけ。リンクの文字は読まない。
@@ -229,7 +229,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 
 | 便 | 中身 | 合流の条件 |
 |---|---|---|
-| 便1 | 移行（§4-2・§4-5）・backend の 3 つの口・声の一覧・字数の記録・試験 V6〜V8・V10・`google-auth` | CI 緑・審査役の合格。移行を含むので GO 記録（委任の範囲で Opus が発行） |
+| 便1 | 移行（§4-2・§4-5）・backend の 3 つの口・声の一覧・字数の記録・Python の使いみちの一覧への `secretary_regression` の追加・試験 V6〜V8・V10〜V12・`google-auth` | CI 緑・審査役の合格。移行を含むので GO 記録（委任の範囲で Opus が発行） |
 | 便2 | 設定の欄・チャットの切り替えと再生・`postBlob`・使用量の画面の欄・ja/en・試験 V3 | CI 緑・審査役の合格・評価する係の画面の確かめ |
 | 便3 | 鍵の置き場（compose）と本番の鍵 | **PO 本人の GO**（鍵の変更）。その後 K1〜K5 を本番で測る |
 
@@ -239,7 +239,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 |---|---|---|
 | 人 | super admin が設定で声を選び、チャットで切り替えを入れると声が出る。入れなければ何も変わらない | K1〜K3 |
 | エージェント | 秘書の AI（容器）には何も渡さない・何も変えない | §4-10 |
-| 機械 | backend に口 3 つ・部品 `google-auth`。CI に試験が足される | V6〜V8・V10 |
+| 機械 | backend に口 3 つ・部品 `google-auth`。CI に試験が足される | V6〜V8・V10〜V12 |
 | データ | `public.users` に列 1 つ・台帳に列 1 つと値 2 つ。文そのものは保存しない | §4-2・§4-5 |
 | 本番 | 移行 2 本（列を足すだけ・「無いときだけ」）。鍵の置き場 | 便1 の GO 記録・便3 の PO GO |
 | 外部 | Google Cloud Text-to-Speech に返事の文を送る（月 90 万字まで） | §6・§11 の月 1 回の照合 |
