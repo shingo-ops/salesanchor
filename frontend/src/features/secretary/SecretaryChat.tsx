@@ -58,6 +58,9 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
   const [voiceNote, setVoiceNote] = useState<{ id: number; kind: "failed" | "cap" } | null>(null);
   const voice = useSecretaryVoice();
   const nextId = useRef(1);
+  // 返事が届いた時点の値で決める（送った時点の値を使わない）
+  const voiceOnRef = useRef(false);
+  const session = useRef(0);
 
   const close = () => {
     // 閉じたら会話とカルテを消す
@@ -66,6 +69,8 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
     setText("");
     setKarte(null);
     voice.disable();
+    voiceOnRef.current = false;
+    session.current += 1;
     setVoiceOn(false);
     setVoiceNote(null);
   };
@@ -77,6 +82,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
       voice.disable();
       setVoiceNote(null);
     }
+    voiceOnRef.current = next;
     setVoiceOn(next);
   };
 
@@ -102,13 +108,14 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
     ]);
     setText("");
     setSending(true);
+    const sentIn = session.current;
     try {
       const reply = await sendSecretaryMessage(trimmed, karte);
       if (reply.kind === "event" && reply.draft.ask) {
         // まだ聞く欄がある: 埋まった欄と質問を出し、カルテを持ち続ける
         setKarte(karteFromDraft(reply.draft));
         replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "ask", reply });
-        if (voiceOn && reply.draft.ask) void speakFor(pendingId, t(`secretary.ask.${reply.draft.ask}`));
+        if (voiceOnRef.current && sentIn === session.current && reply.draft.ask) void speakFor(pendingId, t(`secretary.ask.${reply.draft.ask}`));
       } else {
         // 最後の確かめの欄・請求書・聞き返しではカルテを捨てる（失敗したときは捨てない）
         setKarte(null);
@@ -118,7 +125,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
           replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "event", reply });
         } else {
           replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "text", text: reply.draft.reply });
-          if (voiceOn) void speakFor(pendingId, reply.draft.reply);
+          if (voiceOnRef.current && sentIn === session.current) void speakFor(pendingId, reply.draft.reply);
         }
       }
     } catch (err) {
@@ -141,7 +148,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
 
   const markCreated = (id: number, target: "invoice" | "event", to: string) => {
     replaceMessage(id, { id, side: "assistant", kind: "created", target, to });
-    if (voiceOn) void speakFor(id, t(target === "invoice" ? "secretary.created.invoice" : "secretary.created.event"));
+    if (voiceOnRef.current) void speakFor(id, t(target === "invoice" ? "secretary.created.invoice" : "secretary.created.event"));
   };
   const markCancelled = (id: number) =>
     replaceMessage(id, { id, side: "assistant", kind: "text", text: t("secretary.cancelled") });
