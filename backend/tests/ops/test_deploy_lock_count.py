@@ -15,6 +15,7 @@ import os
 import re
 import shutil
 import subprocess
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
@@ -380,13 +381,26 @@ def _on(wf: dict) -> dict:
 def test_d4_workflow_shape():
     wf = _load_workflow()
     on = _on(wf)
-    assert on["schedule"][0]["cron"] == "0 1 * * 1"
+    assert [s["cron"] for s in on["schedule"]] == ["0 1 * * 1", "17 3 * * 2"]
+    conc = wf["concurrency"]
+    assert conc["group"] == "weekly-deploy-lock-count"
+    assert conc["cancel-in-progress"] is False
     inputs = on["workflow_dispatch"]["inputs"]
     assert set(inputs) == {"since", "until"}
     assert wf["permissions"] == {"actions": "read", "contents": "read"}
     steps = wf["jobs"]["count"]["steps"]
     step = next(s for s in steps if "run" in s)
     run = step["run"]
+    assert step["env"]["EVENT_NAME"] == "${{ github.event_name }}"
+    # 定時の実行の道: plan の台本を数えの台本より前に流し、数え済みなら数えずに終わる
+    assert "weekly-deploy-lock-plan.sh" in run
+    assert run.index("weekly-deploy-lock-plan.sh") < run.index("count-deploy-lock-failures.sh")
+    assert '"schedule"' in run
+    assert '"${PLAN_DECISION}" = "skip"' in run and "exit 0" in run
+    # 遅れの印: 月曜のうちに来なかったときの知らせ（対象0でも送る）
+    assert '"${LATE}" = "1"' in run
+    assert "月曜のうちに定時の実行が来なかった" in run
+    assert "本番反映の止まり 0 件" in run
     assert "scripts/ops/count-deploy-lock-failures.sh" in run
     assert "--days 7" in run
     assert "--notify-file" in run
@@ -577,6 +591,74 @@ def test_d8_allow_escape_flag_only_on_log_calls(tmp_path):
     assert len(log_lines) >= 1, lines
     assert all("--allow-escape-sequences" in ln for ln in log_lines), log_lines
     assert other_lines and all("--allow-escape-sequences" not in ln for ln in other_lines), other_lines
+
+
+# ---------------------------------------------------------------- D9（第3.6版: 定時の実行の週の決め方と拾い直し）
+PLAN = ROOT / "scripts" / "ops" / "weekly-deploy-lock-plan.sh"
+JST = timezone(timedelta(hours=9))
+
+
+def _jst(y: int, mo: int, d: int, h: int, mi: int) -> int:
+    return int(datetime(y, mo, d, h, mi, tzinfo=JST).timestamp())
+
+
+def _plan(now: int, runs: list[dict] | None, tmp_path: Path, run_id: str = "9999") -> dict[str, str]:
+    args = ["bash", str(PLAN), "--now", str(now), "--run-id", run_id]
+    if runs is None:
+        args += ["--runs-file", str(tmp_path / "no-such-runs.json")]
+    else:
+        f = tmp_path / "runs.json"
+        f.write_text(json.dumps({"total_count": len(runs), "workflow_runs": runs}))
+        args += ["--runs-file", str(f)]
+    r = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stdout + r.stderr
+    keys = [ln.split("=", 1)[0] for ln in r.stdout.splitlines()]
+    assert keys == ["since", "until", "decision", "late", "reason", "api_calls"], r.stdout
+    return dict(ln.split("=", 1) for ln in r.stdout.splitlines())
+
+
+# 火曜 2026-11-17 12:17 JST（until=2026-11-16、境目 2026-11-15T15:00:00Z）
+NOW_TUE = _jst(2026, 11, 17, 12, 17)
+
+
+def test_d9_week_is_previous_monday(tmp_path):
+    for now in (
+        _jst(2026, 11, 16, 0, 0),
+        _jst(2026, 11, 16, 23, 59),
+        NOW_TUE,
+        _jst(2026, 11, 22, 23, 59),
+    ):
+        out = _plan(now, [], tmp_path)
+        assert (out["since"], out["until"]) == ("2026-11-09", "2026-11-16"), (now, out)
+    out = _plan(_jst(2026, 11, 15, 23, 59), [], tmp_path)
+    assert (out["since"], out["until"]) == ("2026-11-02", "2026-11-09"), out
+
+
+def test_d9_skip_when_other_success_run_exists(tmp_path):
+    # created_at は until（2026-11-16 00:00 JST = 2026-11-15T15:00:00Z）以後
+    other = {"id": 1111, "created_at": "2026-11-16T07:30:01Z", "status": "completed", "conclusion": "success"}
+    mine = {"id": 9999, "created_at": "2026-11-17T03:30:01Z", "status": "in_progress", "conclusion": None}
+    before = {"id": 1000, "created_at": "2026-11-09T07:30:01Z", "status": "completed", "conclusion": "success"}
+    # (i) 自分以外の success の run が1件 → skip
+    assert _plan(NOW_TUE, [other], tmp_path)["decision"] == "skip"
+    # (ii) 自分の run だけ → count
+    assert _plan(NOW_TUE, [mine], tmp_path)["decision"] == "count"
+    # (iii) 0件 → count
+    assert _plan(NOW_TUE, [], tmp_path)["decision"] == "count"
+    # (v) until より前に作られた run だけ → count（前の週の run を見て飛ばさない）
+    assert _plan(NOW_TUE, [before], tmp_path)["decision"] == "count"
+
+
+def test_d9_lookup_failure_counts(tmp_path):
+    out = _plan(NOW_TUE, None, tmp_path)
+    assert out["decision"] == "count"
+    assert out["reason"] != ""
+
+
+def test_d9_late_flag(tmp_path):
+    assert _plan(_jst(2026, 11, 16, 10, 0), [], tmp_path)["late"] == "0"
+    assert _plan(NOW_TUE, [], tmp_path)["late"] == "1"
+    assert _plan(_jst(2026, 11, 22, 23, 59), [], tmp_path)["late"] == "1"
 
 
 # ---------------------------------------------------------------- D5
