@@ -28,7 +28,7 @@
 ## 0-2. 実装前点検（手順2 で流す。外れたら実装せず停止して BLOCKED: で報告）
 
 - P1 `def _fetch_address_snapshot(` が invoices.py に 1。
-- P2 `ship_to_snap = await _fetch_address_snapshot(db, company_id, "delivery")` が invoices.py に 1（見積の PDF の道）。
+- P2 `ship_to_snap = await _fetch_address_snapshot(db, company_id, "delivery")` が invoices.py に 2（:441 見積から請求書を作る道と :1229 見積の PDF の道。2-3 で変えるのは後ろの1か所だけで、`company_id = row["company_id"]` が直前に続く方）。
 - P3 `class DraftContextAddress(BaseModel):` が backend/app/schemas/invoice.py に 1。
 - P4 `def _addr_lines(addr: AddressSnapshot) -> list[str]:` が invoice_renderer.py に 1。
 - P5 `def _to_addr(snap: dict | None) -> Optional[AddressSnapshot]:` が invoice_renderer.py に 2。
@@ -382,7 +382,7 @@ def test_k4_quote_pdf_is_unchanged(drawn):
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r1-shipto && grep -c "address_line_3" migrations/030_create_company_contact_subtables.sql
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r1-shipto && grep -c 'assert "ZZT" in ctx.currencies and ctx.currencies\[0\] == "JPY"' backend/tests/test_invoice_totals_pg.py
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r1-shipto && ls backend/tests/test_invoice_pdf_address.py 2>&1 | tail -1
-  期待（命令の順）: 1、1、1、1、2、1 以上、1、`No such file`。
+  期待（命令の順）: 1、2、1、1、2、1 以上、1、`No such file`。
 
 手順3 §2 の変更をする（2-1 から順に。2-7 は Write ツール、それ以外は Edit ツール）
 
