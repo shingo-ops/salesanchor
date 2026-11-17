@@ -2,9 +2,9 @@
 
 状態: 設計案 第1版（Opus 作成 2026-11-17）。PO 承認済みの決定は §1-2 のとおり。設計審査は未実施。
 基準: origin/main `cbd85f01d`（調査は `337ebbd1b` で行い、下で引く請求書・在庫・送料・部品のファイルは `git diff --stat 337ebbd1b cbd85f01d` で差が0件であることを確かめた）。
-根拠: docs/handoff/invoice-create-portfolio/recon-gap.md（Q 番号で指す。基準 `094cae3b0`）、本書 §2 の追加調査（本番は読むだけの道 ADR-1024 で読んだ）。
+根拠: docs/handoff/invoice-create-portfolio/recon.md（前の調べ）と docs/handoff/invoice-create-portfolio/recon-gap.md（Q 番号で指す。基準 `094cae3b0`）、本書 §2 の追加調査（本番は読むだけの道 ADR-1024 で読んだ）。
 前の設計: docs/handoff/invoice-create-portfolio/design.md（第9版。便 A・V・B・C/D は本番済み。PR #5542 まで）。本書はその上に重ねる。design.md の決まり（額はサーバー計算・SSOT・振込先の版）は変えない。
-対象 ADR: ADR-144（UI の金型）、ADR-067（デザイントークン）、ADR-027（i18n）、ADR-125 D5（FedEx 未連携を隠さない）、ADR-1028（荷姿の表＝重さの正本）、ADR-1061/1079（振込先）、ADR-072（commit 後の reset）、ADR-1016（即時反映の表。§3-9）、ADR-135/136（危険な PR）。
+対象 ADR: ADR-144（UI の金型）、ADR-067（デザイントークン）、ADR-027（i18n）、ADR-125 D5（FedEx 未連携を隠さない）、ADR-1028（荷姿の表＝重さの正本）、ADR-1061・ADR-1079（振込先）、ADR-072（commit 後の reset）、ADR-1016（即時反映の表。§3-9）、ADR-135・ADR-136（危険な PR）。
 
 ## 1. 目的と PO の決定
 
@@ -204,11 +204,12 @@ p6 の追加の答えにより、値段の欄だけは見本と違い「手で�
 | 古い請求書の PDF の見た目 | 写しに新しい項目が無いときは今の1行の住所を出す（K4） |
 | 同じ名前の商品が在庫表で1行にまとまる今の弱点 | 請求書の道では商品の番号で分ける。在庫表の画面は今のまま（別のテーマ） |
 
-## 9. 外部の事例
+## 9. 外部・過去事例の参照と我々への応用
 - 見本そのもの（PO のポートフォリオ。2026-11-17 に js を読んだ）が目指す形。数値の効果を示す外部事例は使わない。理由: 今回の目的は「PO の見本と同じ見た目と操作」で、効果の測り方は §6 の○×で足りる。
 - FedEx の呼び出しの上限は公式の案内（§3-5）だけを使った。
 
 ## 10. 維持の仕組み
+守り手: scripts/check-ui-governance.js（色の直値・生の部品を CI で止める）と、K1〜K18 の試験（CI で毎回走る）
 - 金型4つは目録（docs/CC_UI_GOVERNANCE.md）と Storybook に載せる。CI の UI の検査（scripts/check-ui-governance.js）が直値と生の部品を止める。
 - 受入れ条件 K1〜K18 は試験として残し、CI で毎回走る。
 - 本番の反映ごとに、PO の目視の手引き（見本と並べて見る点 8つ）を渡す。
