@@ -135,7 +135,7 @@
 
 ## 5. 再開設計（第7版、2026-10-30）— 10/29 の本番停止の段5として段階1・段階2を再開する
 
-**状態**: 設計案作成済み。第1版〜第6版は Fable（新規起動）の評価で REVISE、第7版で APPROVE（設計審査済み、§5-11）。2026-11-17 時点: 5-1・5-2・5-2c は本番反映済み。5-3 は PO 本人の GO（「GO #5564」2026-11-17 14:25 JST）で本番反映済みで、起点の回になった（§5-13）。残りは K5-6・K5-7・K5-9 の本番での数え（次の本番反映から）と 5-4。
+**状態**: 設計案作成済み。第1版〜第6版は Fable（新規起動）の評価で REVISE、第7版で APPROVE（設計審査済み、§5-11）。2026-11-17 時点: 5-1・5-2・5-2c は本番反映済み。5-3 は PO 本人の GO（「GO #5564」2026-11-17 14:25 JST）で本番反映済みで、起点の回になった（§5-13）。残りは K5-6・K5-7・K5-9・K5-12 の本番での数え（次の本番反映から）と 5-4。
 **入口**: `docs/handoff/deploy-db-stall/design.md` §3 の段5の行。段5「流し直しのたびに排他ロックを取る書き方をやめる」は、本節の段階1・段階2で行う（056 だけを書き換える案は同 §8 で不採用）。
 **調べの記録（生出力、社外秘を含まない）**: /tmp/CC報告ファイル/deploy-db-stall/ の stage5-recon（steps.tsv・recon2.md、origin/main 87f06529f 時点）、stage5-recon3、stage5-recon4（recon4.md・adr1007.txt、origin/main fd5d433cd 時点）、stage5-prod（prod.md、2026-10-30 14:13〜14:16 JST、本番は reader 鍵の道で構造と件数だけ読んだ）、stage5-fable（review.md・review2.md・review3.md と生出力）。本節の行番号は origin/main 162cb7544 で確かめた（登録数 363 は 87f06529f・162cb7544 の両方で同じ）。
 
@@ -382,8 +382,8 @@ P1〜P13 がそろうまで、5-1〜5-3 の実装カードは出さない。
 ### 5-10. PO に確認すること（1件ずつ）
 
 1. ひな形の持ち方（1A か 1B か）: **決定済み（PO 2026-11-15「1」= 1A）**。§5-6。
-2. 値を書く移行の分け方: **8本を無効にすることだけ決定済み（PO 2026-11-15「1」）。44本を固めることは未決（下の 3 で決める）**。表は `docs/handoff/migration-runner-redesign/p11-classification.md`。44本を固める判断は 5-3 の起点の回で取り消せなくなる。その回の PO 本人の GO（下の 3）で改めて添える。
-3. 5-3 の本体を本番に出す日（PO 本人の GO。この回が起点になる）。作り始めること（カード・審査・実装・Draft の PR まで）は PO 2026-11-17「1」で承認済み。本番に出す日と 44本を固めることは、作って審査に通した後に改めて PO 本人に聞く。
+2. 値を書く移行の分け方: **8本を無効にすることは決定済み（PO 2026-11-15「1」）。44本を固めることも決定済み（PO 本人「GO #5564」2026-11-17 14:25 JST。§5-13）**。表は `docs/handoff/migration-runner-redesign/p11-classification.md`。44本を固める判断は 5-3 の起点の回で取り消せなくなる。その回の PO 本人の GO（下の 3）で改めて添える。
+3. 5-3 の本体を本番に出す日（PO 本人の GO。この回が起点になる）。作り始めること（カード・審査・実装・Draft の PR まで）は PO 2026-11-17「1」で承認済み。本番に出す日と 44本を固めることは、PO 本人「GO #5564」（2026-11-17 14:25 JST）で決定済み（§5-13）。
 P11 の中身の読み取り（カード `docs/handoff/migration-runner-redesign/card-5-1a.md`、結果 `docs/handoff/migration-runner-redesign/recon-5-1a/p11-detail.md`）は済み。残りは §5-6 の P1 の差の分け方の表と、3 の PO 本人の GO。
 
 ### 5-11. 審査
@@ -457,9 +457,9 @@ P11 の中身の読み取り（カード `docs/handoff/migration-runner-redesign
   - (a)=0、(b)=0、(c) to-run=403
   - `timing read-records=0.13s checksum=1.71s`
   - 終わりは `[405/405]` の後に `skipped-recorded=0 ran-and-recorded=403`
-- (c) の残りが、この回で0になった。§5-7 の定義により、この本番反映が起点になる。タグ `migration-baseline-20261117` を `1db99b882` に打ち、origin に push した。
+- (c) の残りが、この回で0になった。§5-7 の定義により、この本番反映が起点になる。タグ `migration-baseline-20261117` を `1db99b882` に打ち、origin に push した（打ったのは設計担当の Claude Opus。POの委任 ADR-1003 に基づく）。
 - K5-4 は合格。
-  - 本番の `ops.migration_runs` を読み取りの文だけで数えた（2026-11-17 15:2x JST、manual-only 鍵で `docker exec ... psql -At -c "SELECT count(*), count(DISTINCT file), ..."`）。生出力は /tmp/CC報告ファイル/5564-k54.txt。
+  - 本番の `ops.migration_runs` を読み取りの文だけで数えた（2026-11-17 15:18〜15:19 JST、manual-only 鍵で `docker exec ... psql -At -c "SELECT count(*), count(DISTINCT file), min(ran_at), max(ran_at), string_agg(DISTINCT result, ','), string_agg(DISTINCT git_commit, ',') FROM ops.migration_runs"`）。生出力は /tmp/CC報告ファイル/5564-k54.txt。
   - 結果は件数 403・ファイルの種類 403・result はすべて ok・git_commit は `1db99b882` の1種類。
   - 登録の行は origin/main の `^run_(sql|py)[[:space:]]` で 405。記録の外の2本を引くと 403 で、一致した。
   - 表 `ops.migration_runs` は ai_ro のビューが無い。そのため、reader 鍵の道では読めない（`/tmp/CC報告ファイル/5564-k54-views.txt` で ops__ のビューは0本）。
@@ -470,4 +470,4 @@ P11 の中身の読み取り（カード `docs/handoff/migration-runner-redesign
   - K5-9（0本の回の移行の段 45 秒以下を3回とも）
   - K5-12（読み取りの止まり0）
   - そのあとで 5-4 に進む（§5-3 の「前の段を本番で測ってから次へ」）。
-- Draft #4020・#4021 は、§5-7 の末尾のとおり、作り直しの PR（#5551・#5564）が出たので理由を書いて閉じる。
+- Draft #4020・#4021 は、§5-7 の末尾のとおり、作り直しの PR（#5551・#5564）が入ったので、理由をコメントに書いて閉じた（2026-11-17 06:25Z）。
