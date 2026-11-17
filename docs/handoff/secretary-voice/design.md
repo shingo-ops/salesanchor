@@ -19,7 +19,7 @@
 
 1. 利用者が「声で返事」を入れる（このとき画面が音の部品 `AudioContext` を起こす。押した操作の中で起こすので Chrome に止められない・research.md T1）。
 2. 秘書の返事（文）が画面に出る。今まで通り。
-3. 画面が返事の文を、文の区切り（。！？と改行）で分ける。最初の 1 文から順に `POST /api/v1/assistant/speech` に文を送る。
+3. 画面が返事の文を、文の区切り（。！？と改行）で分ける。区切った 1 つが 300 字を超えるときは、さらに 300 字ごとに切る（AI が自由に書く「わからない」の返事は長さの決まりが無いため・recon.md §2）。最初の 1 文から順に `POST /api/v1/assistant/speech` に文を送る。
 4. backend は、本人の声を DB から読み（画面は声を送らない）、今月の字数が上限の手前かを台帳で確かめ、Google に文を送って MP3 を受け取り、台帳に字数を 1 行書いて、MP3 を返す。
 5. 画面は受け取った音を `decodeAudioData` で音に直し、順に鳴らす。1 文目を鳴らしている間に 2 文目を取りに行く。
 6. 切り替えを切る・窓を閉じる・次の頼みを送ると、鳴っている音を止め、残りを捨てる。
@@ -69,15 +69,23 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 | 口 | 入力 | 出力 | 中身 |
 |---|---|---|---|
 | `GET /assistant/voice` | なし | `{voices: [...4], default: "Charon", selected: "Charon"}` | `selected` は `resolve_voice(users.secretary_voice)` |
-| `PUT /assistant/voice` | `{voice: "Aoede"}`（`Literal` で 4 つに限る） | 同上 | 本人の `users.secretary_voice` だけを書く |
+| `PUT /assistant/voice` | `{voice: str}`（`SECRETARY_VOICES` に無い値は 422。型の中に 4 つを写さない） | 同上 | 本人の `users.secretary_voice` だけを書く。書き方は §4-3-1 |
 | `POST /assistant/speech` | `{text: str}`（1〜300 字・空白だけは 422） | `audio/mpeg` の中身・`Cache-Control: no-store` | §4-4 |
 
 - 文は必ず POST の中身で送る（URL に載せない）。
+
+#### 4-3-1. `public.users` への書き方（行ごとの守り）
+
+- `public.users` の書き換えは、行ごとの守り（RLS）で「今の会社の文脈が行の会社と同じ」か「運営者の印」が要る（`migrations/20261016_180000_add_users_write_rls.sql:20`〜`migrations/20261016_180000_add_users_write_rls.sql:28`）。文脈を付けずに書くと、0 行に当たって黙って何も変わらない（K2 が壊れる）。
+- よって言語の書き方（`backend/app/routers/staff.py:225`〜`backend/app/routers/staff.py:231`）と同じく、`set_tenant_context(db, current_user.tenant_id)` → `UPDATE public.users SET secretary_voice = :v WHERE id = :uid` → `clear_tenant_context(db)` → commit の順にする。
+- 書いた行の数が 1 でなければ 500 を返し、ログに種類を出す（黙って成功にしない）。
+- 試験: RLS が効いた PostgreSQL で PUT し、行の値が変わること（V11）。
 - 声は画面から受け取らない。backend が本人の値を読む。PC とスマホで同じ声になる（K2）。
 
 ### 4-4. 読み上げの口の中身（新規 backend/app/services/secretary_tts.py）
 
-1. 今月（日本時間の月初から）の `purpose='secretary_tts'` の `billed_characters` の合計を数える。合計＋今回の字数 ＞ `MONTHLY_CHAR_CAP` なら 429（`tts_monthly_cap_reached`）を返し、Google には送らない。
+1. 今月（日本時間の月初から）の `purpose='secretary_tts'` の `billed_characters` の合計を数える。合計＋今回の字数 ＞ `MONTHLY_CHAR_CAP` なら 429（`tts_monthly_cap_reached`）を返し、Google には送らない。合計を読めなかったとき（DB の失敗）は 503 を返し、Google には送らない（数えられないときは止める側に倒す）。
+   - 同時の頼みが同じ合計を読んで一緒に通ることは受け入れる。1 人の画面で同時に出るのは 2 文（鳴らし中＋次の 1 文）で、窓を複数開いても超える分は「同時の数 × 300 字」。止める上限 90 万字と無料枠 100 万字の間の 10 万字に収まる（§6）。
 2. 鍵ファイル `GOOGLE_TTS_SA_KEY_FILE` が未設定・読めないなら 503（`tts_not_configured`）。起動は止めない（今の Google の鍵 `TCG_SHEETS_SA_KEY_FILE` と同じ扱い・recon.md §6）。
 3. `google-auth` のサービスアカウントの鍵で札を取り、`httpx` で `POST https://texttospeech.googleapis.com/v1/text:synthesize` に `{input:{text}, voice:{languageCode:"ja-JP", name: google_voice_name(voice)}, audioConfig:{audioEncoding:"MP3"}}` を送る。待つのは 10 秒まで。
 4. 成功したら台帳に 1 行書く（§4-5）。返ってきた音（base64）を戻して返す。
@@ -86,12 +94,14 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 
 ### 4-5. 使用量の台帳（`public.llm_usage_events`・ADR-1004 を改める）
 
-- 前: 1 行 = Gemini の応答 1 回。字数の列は無い。`sdk` は 4 つ（`migrations/20261103_120000_create_ai_job_assignments.sql:175`）、`purpose` は 8 つ（`migrations/20261113_100000_create_secretary_rules.sql:154`）。
+- 前: 1 行 = Gemini の応答 1 回。字数の列は無い。`sdk` は 4 つ（`migrations/20261103_120000_create_ai_job_assignments.sql:175`）、`purpose` は 8 つ（`migrations/20261113_100000_create_secretary_rules.sql:120`）。
 - 後（移行 1 本・どれも「無いときだけ」）:
   - 列 `billed_characters INTEGER NULL` を足す（Google が料金に数える字数。空白・改行を含む送った文の全字数。読み上げ以外の行は NULL）。
-  - `purpose` に `secretary_tts` を足す（作り直しの形は `migrations/20261113_100000_create_secretary_rules.sql:141`〜`migrations/20261113_100000_create_secretary_rules.sql:156` と同じ）。
+  - `purpose` に `secretary_tts` を足す（作り直しの形は `migrations/20261113_100000_create_secretary_rules.sql:106`〜`migrations/20261113_100000_create_secretary_rules.sql:120` と同じ）。
   - `sdk` に `google-tts-rest` を足す（作り直しの形は `migrations/20261103_120000_create_ai_job_assignments.sql:169`〜`migrations/20261103_120000_create_ai_job_assignments.sql:175` と同じ）。
-- 書き方: `record_usage_isolated`（`backend/app/services/llm_budget.py`）に `billed_characters` を渡せるようにする。`model` は `ja-JP-Chirp3-HD-<声>`、`cost_usd` は無料枠の中なので 0、トークンの列は NULL。
+- Python 側の値の一覧も同じ便で足す。`backend/app/services/llm_budget.py:159`〜`backend/app/services/llm_budget.py:171` の `USAGE_PURPOSES` に `secretary_tts`、`USAGE_SDKS` に `google-tts-rest`。一覧に無い値は `backend/app/services/llm_budget.py:250`〜`backend/app/services/llm_budget.py:253` で例外になり、`record_usage_isolated` はその例外をログに出して飲み込む（`backend/app/services/llm_budget.py:419`〜`backend/app/services/llm_budget.py:420`）。足し忘れると行が 1 行も書かれず、月の上限が常に 0 字と数えて効かなくなる。
+- 今すでに DB と Python の一覧はずれている（観測: DB の `purpose` は `secretary_regression` を含む 8 つ・Python の `USAGE_PURPOSES` は 7 つ）。この便で `secretary_regression` も Python に足し、「DB の値の決まりの一覧と Python の一覧が同じ」ことを確かめる試験を足す（V12）。今後のずれも CI で落ちる。
+- 書き方: `record_usage_isolated` に `billed_characters` を渡せるようにし、書く SQL（`_INSERT_USAGE_EVENT_OUTCOME_SQL`）にも列を足す。`model` は `ja-JP-Chirp3-HD-<声>`、トークンの列は NULL。`cost_usd` は NULL になる（単価表に無いモデルと、トークンが全部空のときは NULL を返す作り・`backend/app/services/llm_budget.py:227`〜`backend/app/services/llm_budget.py:231`）。料金は字数で見る（§4-6）。
 - 1 行に書くのは字数・声・成否だけ。文そのものは書かない（会話を保存しない約束・ADR-1056）。
 
 ### 4-6. 使用量の画面（`frontend/src/pages/super-admin/components/LlmUsageSection.tsx`）
@@ -139,7 +149,8 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 
 | 危ない点 | 手当て | 見張り |
 |---|---|---|
-| 費用が膨らむ | 月 90 万字で止める（429）。上限の判定は backend だけ | 上限の試験（§9 の V7） |
+| 費用が膨らむ | 月 90 万字で止める（429）。上限の判定は backend だけ。合計を読めなければ止める（503）。同時の頼みで超える分（同時の数 × 300 字）は 10 万字の余白で受ける | 上限の試験（§9 の V7）・値の一覧の一致の試験（V12） |
+| 台帳に書けず上限が数えられない | Python と DB の値の一覧を同じ便で足し、一致を試験する（§4-5） | V12 |
 | 無料枠は請求先の口座ごとで、見本づくりの 4,634 字のように台帳に載らない使い方もある | 毎月 1 回、Google の請求画面の字数と台帳の字数を照らす（手作業・§10） | 月 1 回の照合の記録 |
 | 長い返事で待たせる | 1 文ずつ頼み、1 文目から鳴らす | K4 の本番測定 |
 | Google が止まる | 文の返事はそのまま出る。声だけ 1 行の失敗表示 | 失敗の行の数（台帳の `outcome`） |
@@ -157,29 +168,33 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 
 - 評価する係（evaluator）が本番で Playwright を使う。製品のコードに測るための仕掛けは入れない。
 - 測る仕掛けは、Playwright がページを開く前に差し込む台本（init script）だけ: (1) 返事の吹き出しが出た時刻を `MutationObserver` で記録 (2) `AudioBufferSourceNode.prototype.start` を包んで最初に鳴らし始めた時刻を記録。差を秒で出す。
-- 短い返事（20 字以下）10 回・長い返事（60 字以上）10 回。それぞれ 9 回以上が 1.5 秒・3 秒以内で合格。
+- 短い返事（20 字以下）10 回・長い返事 10 回。それぞれ 9 回以上が 1.5 秒・3 秒以内で合格。
+- 【PO の判断待ち】決まった返事でいちばん長いのは 44 字（`secretary.invoice.shippingNoneHelp`）で、60 字以上の決まった返事は 0 個（`frontend/src/locales/ja.json` の `secretary.*` 52 個を数えた）。60 字以上は AI が自由に書く「わからない」の返事だけで、長さを狙って出せない。K4 の「長い返事」の線を決め直すまで、K4 は測れる形になっていない。
+- 測る頼みの文は便3 の前にこの節に書き足す（短い: 「わからない」で返る短い頼み・長い: 決め直した線の決まった返事が出る頼み）。
 
 ## 9. 受け入れの条件と確かめ方
 
 | 基準 | 検証方法 |
 |---|---|
-| V1（K1）設定の「秘書の声」に選択肢が 4 つ・未選択の人はカロン | 本番の画面で選択肢を数える。`GET /assistant/voice` の `selected` を見る。backend の試験で NULL→Charon・一覧に無い値→Charon |
+| V1（K1）設定の「秘書の声」に選択肢が 4 つ・未選択の人はカロン | 本番の画面で選択肢を数える。`GET /assistant/voice` の `selected` を見る。backend の試験で NULL→Charon・一覧に無い値→Charon。未選択に戻す口は作らないので、本番の確かめは V2 より先に行う。使うのは PO のアカウント（便3 の時点で `secretary_voice` が NULL であることを読み取りで確かめてから） |
 | V2（K2）PC で選んだ声がスマホでも同じ | 本番で PC で選び、スマホで欄と読み上げの台帳の `model` を見る |
 | V3（K3）「声で返事」は最初は切れ・切れている間の読み上げ 0 回 | 画面の試験（最初の状態が切れ・切れの間 `postBlob` が 0 回）。本番で窓を開き直して見る |
 | V4（K4）声が出始めるまで 短い 1.5 秒以内 9/10・長い 3 秒以内 9/10 | §8 の本番測定 |
-| V5（K5）今月の字数が画面に出る・字数の一致 10/10 | 使用量の画面を見る。10 回読み上げ、送った文の字数と台帳の `billed_characters` を照らす |
+| V5（K5）今月の字数が画面に出る・字数の一致 10/10 | 使用量の画面を見る。10 回読み上げ、送った文の字数と台帳の `billed_characters` を照らす。毎日の数: 台帳の行は時刻つきなので、日ごとの合計を読み取りで出して画面の今月の合計と合うかを見る。注: この照らしはアプリが書いた数どうしの一致で、Google の請求の数との一致は §11 の月 1 回の照合でしか確かめられない |
 | V6 声の一覧の翻訳キーが ja・en に揃う | 試験: `SECRETARY_VOICES` の全部に `secretary.voice.name.<声>` が両方の言語にあること（足し忘れで CI が落ちる） |
 | V7 月の上限で止まる | 試験: 今月の合計が 899,990 字のとき 20 字の頼みは 429・Google を呼ばない |
 | V8 守りが秘書と同じ | 試験: 4 つの守りのどれかが欠けた人は 3 つの口すべてで拒まれる |
 | V9 画面の安全設定の違反 0 件 | 本番で読み上げ中にブラウザのコンソールを見る（CSP の違反の行 0 件） |
 | V10 移行を 2 回流しても同じ | 移行の試験（CI の migration-test）で 2 回流して差分 0 |
+| V11 声の保存が行ごとの守りの下で効く | 試験: RLS が効いた PostgreSQL で `PUT /assistant/voice` の後に行の値が変わる・書いた行が 1 でなければ 500 |
+| V12 台帳の値の一覧が DB と Python で同じ | 試験: `llm_usage_events` の `purpose`・`sdk` の値の決まりの一覧と `USAGE_PURPOSES`・`USAGE_SDKS` が同じ（ずれたら CI が落ちる） |
 
 ## 10. 外部・過去事例の参照と我々への応用
 
 詳しくは [research.md](research.md)（5W2H・数値・出典つき）。要点:
 
 - 成功の要因: 自然な声（S4: 同じ Chirp 3: HD を新聞社が 4 声で採用）・使う人が選べる（S2: 再生を押した人は 5%）・待たせない（T3: 1 秒未満が滑らか）。→ 4 声を PO が選んだ・押した人だけ・1 文ずつ。
-- 失敗の要因: 費用の膨張（F1: Amazon の機器部門で 250 億ドル超の損失）・声の権利（F2: OpenAI の声の取り下げ）・使いみちが無い（F3: 39%）。→ 月の上限・既製の声だけ・目的を PO の言葉に結び、読み上げだけに絞る。
+- 失敗の要因: 声の権利（F2: OpenAI の声の取り下げ）・使いみちが無い（F3: 39%）。→ 既製の声だけ・目的を PO の言葉に結び、読み上げだけに絞る。F1（Amazon の機器部門で 250 億ドル超の損失）は機器の安売りという商売の形の失敗で、API の使いすぎとは別物。月の上限の根拠にはしない（上限の根拠は無料枠と料金表・research.md T4）。
 - 限界: 数値の多くは売る側の発表。日本の業務アプリでの数値つきの事例は見つからなかった。成否は K1〜K5 を本番で測って決める。
 
 ## 11. 維持の仕組み
@@ -191,7 +206,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 | 設計書の形（目標・基準表・事例・この節） | 機械: PR の確かめ「process-artifacts-gate」 | `.github/workflows/process-artifacts-gate.yml`・`scripts/check-process-artifacts.js` |
 | ADR の一覧が最新 | 機械: 「ADR index is up to date」 | `.github/workflows/adr-index-check.yml` |
 | 文書がたどれる | 機械: doc-index-reachability | `.github/workflows/doc-index-reachability.yml` |
-| 使いみちと SDK の値が決まった一覧の中 | 機械: DB の値の決まり（CHECK） | §4-5 の移行 |
+| 使いみちと SDK の値が決まった一覧の中 | 機械: DB の値の決まり（CHECK）と V12 の一致の試験 | §4-5 の移行・`backend/tests/` |
 | 声の一覧の翻訳の足し忘れ | 機械: V6 の試験（便1・便2 で足す） | `backend/tests/` |
 | 月の上限 | 機械: V7 の試験と backend の判定 | backend/app/services/secretary_tts.py |
 | 「声で返事」は最初は切れ | 機械: V3 の画面の試験 | `frontend/src/features/secretary/` |

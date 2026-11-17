@@ -30,6 +30,7 @@
 - 表: `migrations/019_create_staff_tables.sql:91`（`{schema}.staff_ui_preferences`・会社ごとの表・1 人 1 行・主キー `staff_id`）。列は `dark_mode` ほか 7 つと `updated_at`（`migrations/019_create_staff_tables.sql:93`〜`migrations/019_create_staff_tables.sql:100`）
 - 行ごとの守り（RLS）: `migrations/022_staff_bots_rls_policies.sql:28`
 - 形: `backend/app/schemas/staff.py:35`（`class StaffUIPreferences`）。項目は 6 つ（`show_buddy_menu` は表にあるが形には無い）
+- `public.users` の書き換えの守り: `migrations/20261016_180000_add_users_write_rls.sql:20`〜`migrations/20261016_180000_add_users_write_rls.sql:28`（会社の文脈か運営者の印が要る）。言語の書き方は文脈を付けて外す: `backend/app/routers/staff.py:225`〜`backend/app/routers/staff.py:231`
 - 読み: `backend/app/routers/staff.py:124`（`_fetch_ui_prefs`）。書き: `backend/app/routers/staff.py:574`・`backend/app/routers/staff.py:609`
 - 設定画面: `frontend/src/pages/account-settings/PreferencesSection.tsx`（`Toggle` と `SelectControl size="sm"` の金型を使用・文字は `t()`）
 - 会社ごとの表に列を足す移行の手本: `migrations/20261015_090000_add_leads_assignment_opened_at.sql`（全テナントを回し、列が無いときだけ足す。毎回の配備で全移行が流れ直すため）
@@ -39,9 +40,12 @@
 ## 4. 使用量の台帳
 
 - 表: `public.llm_usage_events`（ADR-1004）。字数の列は無く、トークンの列だけ
-- 使いみちの制約（purpose）の最新の形: `migrations/20261113_100000_create_secretary_rules.sql:154`（8 つ。`secretary_intent`・`secretary_regression` を含む）
-- 制約の足し方の手本（定義に値が無いときだけ作り直す）: `migrations/20261113_100000_create_secretary_rules.sql:141`〜`migrations/20261113_100000_create_secretary_rules.sql:156`
-- 書き込みの入口は 1 つ: `backend/app/services/llm_budget.py:359`（`record_usage_event`）
+- 使いみちの制約（purpose）の最新の形: `migrations/20261113_100000_create_secretary_rules.sql:120`（8 つ。`secretary_intent`・`secretary_regression` を含む）
+- 制約の足し方の手本（定義に値が無いときだけ作り直す）: `migrations/20261113_100000_create_secretary_rules.sql:106`〜`migrations/20261113_100000_create_secretary_rules.sql:120`
+- 書き込みの入口: `backend/app/services/llm_budget.py:359`（`record_usage_event`）と `backend/app/services/llm_budget.py:385`（`record_usage_isolated`・自分の失敗はログに出して飲み込む・`backend/app/services/llm_budget.py:419`〜`backend/app/services/llm_budget.py:420`）
+- Python 側の値の一覧: `backend/app/services/llm_budget.py:159`〜`backend/app/services/llm_budget.py:171`（`USAGE_PURPOSES` 7 つ・`USAGE_SDKS` 4 つ）。一覧に無い値は例外（`backend/app/services/llm_budget.py:250`〜`backend/app/services/llm_budget.py:253`）。DB の `purpose` 8 つのうち `secretary_regression` が Python に無い（ずれは既にある）
+- 料金の計算: 単価表に無いモデル・トークンが全部空なら NULL（`backend/app/services/llm_budget.py:227`〜`backend/app/services/llm_budget.py:231`）
+- 決まった返事の長さ: `frontend/src/locales/ja.json` の `secretary.*` 52 個で最長 44 字。60 字以上は 0 個
 - 使用量の画面: `frontend/src/pages/super-admin/components/LlmUsageSection.tsx`（API `GET /tcg/analysis-dashboard/llm-usage`・`backend/app/routers/tcg_analysis_dashboard.py:746`）
 
 ## 5. 画面の安全設定（CSP）と通信
