@@ -6228,6 +6228,14 @@
     "link": {
       "invoice": "請求書を開く",
       "event": "予定を開く"
+    },
+    "voice": {
+      "name": {
+        "Aoede": "アオイデ",
+        "Charon": "カロン",
+        "Erinome": "エリノメ",
+        "Zubenelgenubi": "ズベンエルゲヌビ"
+      }
     }
   },
   "notices": {
