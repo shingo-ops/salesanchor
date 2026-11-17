@@ -10544,6 +10544,33 @@
         "title": "DraftItem",
         "type": "object"
       },
+      "DraftShippingQuotesRequest": {
+        "properties": {
+          "company_id": {
+            "minimum": 1.0,
+            "title": "Company Id",
+            "type": "integer"
+          },
+          "weight_kg": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Weight Kg"
+          }
+        },
+        "required": [
+          "company_id",
+          "weight_kg"
+        ],
+        "title": "DraftShippingQuotesRequest",
+        "type": "object"
+      },
       "DriveStatus": {
         "properties": {
           "account_email": {
@@ -52301,6 +52328,53 @@
           }
         ],
         "summary": "Get Invoice Draft Inventory",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/api/v1/invoices/draft-shipping-quotes": {
+      "post": {
+        "description": "請求書の送料の一覧（invoice-create-portfolio R3・design-v2 §3-5）。書かない。\n\n届け先と発送元は draft-context と同じ関数で決める。FedEx の行はライブだけ（ADR-125 D4・D5）。",
+        "operationId": "get_invoice_draft_shipping_quotes_api_v1_invoices_draft_shipping_quotes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftShippingQuotesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShippingCalcResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Invoice Draft Shipping Quotes",
         "tags": [
           "invoices"
         ]
