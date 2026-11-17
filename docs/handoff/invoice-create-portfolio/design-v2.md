@@ -1,0 +1,219 @@
+# design-v2: 請求書作成画面を見本の「見た目と操作」に合わせる（8部品すべて見本どおり）
+
+状態: 設計案 第1版（Opus 作成 2026-11-17）。PO 承認済みの決定は §1-2 のとおり。設計審査は未実施。
+基準: origin/main `cbd85f01d`（調査は `337ebbd1b` で行い、下で引く請求書・在庫・送料・部品のファイルは `git diff --stat 337ebbd1b cbd85f01d` で差が0件であることを確かめた）。
+根拠: docs/handoff/invoice-create-portfolio/recon-gap.md（Q 番号で指す。基準 `094cae3b0`）、本書 §2 の追加調査（本番は読むだけの道 ADR-1024 で読んだ）。
+前の設計: docs/handoff/invoice-create-portfolio/design.md（第9版。便 A・V・B・C/D は本番済み。PR #5542 まで）。本書はその上に重ねる。design.md の決まり（額はサーバー計算・SSOT・振込先の版）は変えない。
+対象 ADR: ADR-144（UI の金型）、ADR-067（デザイントークン）、ADR-027（i18n）、ADR-125 D5（FedEx 未連携を隠さない）、ADR-1028（荷姿の表＝重さの正本）、ADR-1061/1079（振込先）、ADR-072（commit 後の reset）、ADR-1016（即時反映の表。§3-9）、ADR-135/136（危険な PR）。
+
+## 1. 目的と PO の決定
+
+### 1-1. 目的
+- PO の言葉: 「ポートフォリオと全然違うんだけど差分を把握できている？」（2026-11-16）。前の設計の受入れ条件は「見出しの順」しか確かめておらず、見た目と操作が見本と違った（~/kb/04-records/intent/log.md 13件目）。
+- 奥の目的: 海外のお客さんへの請求書を、見本と同じ「選ぶだけ」の操作で、迷わず出せる画面にする。
+- 本書の受入れ条件は、見た目（カード・2列・3列・色つき合計枠）と操作（選ぶと埋まる・上限で止まる・重ねて出る）を1件ずつ○×で確かめる（§6）。
+
+### 1-2. PO の決定（承認済み。創作ではなく比べるページ claude.ai/artifact/URBKT332sfF6ceEH5NDNWS の記録と質問の答え）
+| 番号 | 部品 | PO の選択 | 日時 |
+|---|---|---|---|
+| p1 | 区切りごとに1枚のカード | 見本どおり | 2026-11-17 03:40Z〜03:41Z（比べるページの記録） |
+| p2 | 発送先12欄・2列 | 見本どおり。追加の答え「書き換えない」＝会社の住所から入り、請求書の画面では読むだけ（灰色）。直すのは会社の画面 | 同上・質問の答え |
+| p3 | 支払い・送料・合計の3列 | 見本どおり | 同上 |
+| p4 | 送料を便ごとに全部並べ、自動で見積もる | 見本どおり | 同上 |
+| p5 | 色つきの合計枠 | 見本どおり | 同上 |
+| p6 | 商品行（#・カテゴリ・カテゴリで絞る商品検索・状態・在庫上限の数量・重さと値段の自動・初期12行）。見積の画面も同じ行にする | 見本どおり。追加の答え「在庫表の値段を初期値・手で変更可」 | 同上・2026-11-17 質問の答え |
+| p7 | 「請求書を発行」で請求書の見た目を重ねて出し、印刷・PDF | 見本どおり | 同上 |
+| p8 | 「在庫表から／見積から」の切り替えを無くす | 見本どおり | 同上 |
+
+p6 の追加の答えにより、値段の欄だけは見本と違い「手で直せる」。理由は、在庫表の値段が仕入元の値段に上乗せの無い値段だから（§2-3）。
+
+## 2. 追加の調査（recon-gap に無いもの）
+
+### 2-1. 見本の作り（https://shingo-portfolio.github.io/invoice-tool/ の js/app.js・js/data.js を取得して読んだ。写しは /tmp/CC報告ファイル/invtool/）
+- 初期12行・最大20行（app.js:4 `MAX_ROWS = 20, INIT_ROWS = 12`）。行が1行だけのときは消せない（:216）。
+- 行の値段と在庫は「商品×状態」ごと（data.js の `variants: { '単品': { price, stock }, 'ケース': {...} }`）。重さは状態で単品/ケースの重さを選ぶ（app.js:95）。
+- 数量が在庫を超えると在庫数に戻し「在庫超過（最大: N）」と出す（app.js:169-172）。状態を選ぶと数量が空なら1を入れる（:193）。
+- 発送先は12欄（app.js:224 `custName, recipient, phone, email, taxNo, country, addr1, addr2, addr3, city, state, zip`）。
+- 発送メモは請求書ごとの自由記入で、請求書の見た目に出る（index.html:56・app.js:313・:326）。クリアで空になる（:233）。
+- 送料は便ごとに全部計算して並べる（app.js:106-109）。
+
+### 2-2. 状態と重さ（本番を読むだけで数えた。2026-11-17 14:28 JST）
+- 在庫あり（status='in_stock'）は88件・48商品。形（unit）は box 56件・case 6件・空 26件。状態（raw_condition）は shrink・sealed・no_shrink。**単品（バラ）の在庫は0件**。生出力 /tmp/CC報告ファイル/invq/unit.tsv・unit_cond.tsv。
+- 在庫表（GET /inventory/aggregated）は、商品×状態の1マスに「最良の1件の値段と数」を出す。状態の名前は "Case"・"Sealed box"・"No shrink box"・"Damaged sealed box"・"Unsearched pack" など（backend/app/schemas/inventory_aggregated.py:8 ／ backend/app/services/inventory_aggregation.py:185-200）。
+- → 見本の「状態」は、在庫表の状態の列と同じものとして扱う。選択肢はその商品に在庫がある状態だけ。
+- 重さの正本は荷姿の表 public.product_packagings（ADR-1028。backend/app/services/product_packagings.py:14-19 の対応表）。在庫のある48商品のうち、BOX の重さあり48・CASE の重さあり47（本番 2026-11-17 17:20 JST）。
+
+### 2-3. 値段と在庫数の出どころ
+- 商品マスタの値段は 1472 商品のうち 469 だけ、在庫数が入っている商品は1つだけ（本番 2026-11-17）。今の画面はこの1つの値段と在庫数を使っている（recon-gap Q3 / backend/app/services/inventory_search.py:338-339）。
+- 状態ごとの値段と在庫数があるのは在庫表だけ。値段は仕入元の値段の最良の1件で、上乗せは無い（backend/app/services/inventory_aggregation.py:263-304。上乗せの計算は無い）。
+- PO の答え（2026-11-17）: 在庫表の値段を最初に入れ、手で直せる。
+
+### 2-4. 在庫表の今の形の弱点
+- 行の鍵が商品名（series = products.name）で、商品の番号を返さない（backend/app/services/inventory_aggregated_service.py:71・:92-95 ／ backend/app/schemas/inventory_aggregated.py の AggregatedRow）。同じ名前の商品が2つあると1行にまとまる。請求書の明細には商品の番号が要る。
+
+### 2-5. 権限
+- 請求書の材料の道は `invoices.create`（backend/app/routers/invoices.py:259-262）。在庫表は `products.view` か `inventory.visibility.*`（backend/app/routers/inventory_aggregated.py:33-40）。送料は `shipping.calculate`（backend/app/routers/shipping.py:388）。
+- 請求書を作る役割が後の2つを持つかは **未確認**（本番の権限の表を読む問い合わせは、読む道の見張りが文中の語を書き込みと判定して止めた。言い換えはしていない）。
+- → 本書では、請求書の画面が使う在庫と送料の道を、`invoices.create` で守る請求書側の道として作る（§3-4・§3-5）。中身は既存の関数を呼ぶだけにして、計算を2か所に分けない。
+
+### 2-6. 見積から請求書を作る道
+- 見積の詳細画面に「請求書にする」ボタンが既にある（frontend/src/pages/quote-detail/QuoteDetailPage.tsx:88 が POST /invoices/from-quote/{id} を呼ぶ）。p8 で作成画面の切り替えを無くしても、承認済みの見積から請求書を作る道は残る。
+
+### 2-7. 発送メモ
+- 請求書ごとの備考 invoices.notes が既にあり、PDF に出る（backend/app/schemas/invoice.py:84 ／ backend/app/services/invoice_renderer.py:430-435）。見本の発送メモも請求書ごとの自由記入なので、invoices.notes を使う。会社の shipping_note（会社に1つの決まり事）は使わない。
+
+## 3. 変更前と変更後
+
+### 3-1. 画面の並び（見本と同じ）
+| 順 | カード（p1） | 中身 |
+|---|---|---|
+| 1 | 発送先 | 顧客の検索（CompanyContactSelector）→ 12欄を2列で読むだけ（p2・§3-2）。「会社の画面で直す」ボタン |
+| 2 | 支払いと合計（3列。p3） | 左: 通貨・支払方法・発送メモ／中: 総重量と便ごとの送料の一覧（p4・§3-5）／右: 色つきの合計枠（p5） |
+| 3 | 商品一覧 | 行の表（p6・§3-3）。下に「＋行を追加」（20行まで） |
+| 4 | 操作 | 「クリア」「請求書を発行」（p7・§3-6） |
+
+- 「在庫表から／見積から」の切り替え（InvoiceCreatePage.tsx:94・:305-320）を消す（p8）。見積からの読み込みの状態と処理も消す。見積から作るのは見積の詳細画面の道（§2-6）。
+- 在庫表の画面から選んだ商品を持ってくる道（QuoteHandoffState。InvoiceCreatePage.tsx:24-30）は残す。持ってきた商品は先頭の行から入れる。
+
+### 3-2. 発送先12欄（p2）
+| 欄 | 出どころ（会社の住所 company_addresses の届け先の既定。無ければ請求先の既定。今の _fetch_address_snapshot と同じ選び方 invoices.py:66-106） |
+|---|---|
+| 顧客名 | 会社名（billing_display_name を優先。今と同じ） |
+| 受取人 | 住所の name。空なら選んだ担当者の名前 |
+| 電話 | telephone |
+| メール | 住所の email。空なら担当者の primary_email |
+| TAX Number | tax_id |
+| 国名 | country_code を国名にした文字（CountryCombobox の一覧と同じ表から。frontend/src/components/CountryCombobox.tsx:24） |
+| 住所1・2・3 | address_line_1・2・3 を別々に |
+| 都市・州・ZIP | city・state・zip |
+
+- 画面では12欄とも読むだけ（灰色）。値が空の欄は「未登録」と出す。
+- サーバー: GET /invoices/draft-context の ship_to・bill_to に `recipient_name`・`email`・`tax_id`・`address_line_1`・`address_line_2`・`address_line_3` を足す（backend/app/schemas/invoice.py:117-126 の DraftContextAddress）。今の `address`（1と2をつないだ文字）は残す（他の読み手のため）。
+- 写し（ship_to_snap・bill_to_snap）にも同じ6項目を足す（invoices.py:66-106）。古い請求書の写しには無いので、読む側は「無ければ空」とする。
+- PDF（invoice_renderer.py:513-522・:170-187）は、受取人・住所1〜3・「都市, 州, ZIP」の1行・国・TAX Number・電話・メールを出す。写しに新しい項目が無い古い請求書は、今と同じ `address` の1行を出す（作り直しても古い PDF の見た目が変わらない）。
+
+### 3-3. 商品行（p6）
+| 列 | 動き | 出どころ |
+|---|---|---|
+| # | 行番号（1から） | 画面 |
+| カテゴリ | 選ぶ（Select）。選び直すと、その行の商品・状態・数量を空にする | 中分類の表 public.type_master（code・name_ja）。§3-4 の道が返す |
+| 商品 | 候補つき検索（AsyncCombobox）。候補はそのカテゴリで在庫のある商品だけ。商品名・英語名・型番で絞る | §3-4 の道 |
+| 状態 | 選ぶ（Select）。選択肢はその商品に在庫がある状態だけ。選ぶと数量が空なら1を入れる | §3-4 の道の cells |
+| 数量 | 数を打つ。在庫数を超えたら在庫数に戻し「在庫は N まで」と出す | cells の quantity |
+| 重さ | 読むだけ。状態が "Case" ならケースの重さ、それ以外は BOX の重さ | 荷姿の表（ADR-1028）。§3-4 の道が返す |
+| 単価 | 最初は在庫表の値段が入る。手で直せる（PO の答え） | cells の price |
+| 小計 | 数量×単価（画面の表示だけ。合計はサーバー試算のまま） | 画面 |
+| × | 行を消す。行が1行だけのときは消せない | 画面 |
+
+- 初期は空の12行。最大20行。
+- 明細を保存するときの値: product_id・product_name（商品名）・name_en・condition（状態の名前）・unit（"Case"→case、名前に box を含む→box、pack を含む→pack、それ以外は空）・quantity・unit_price・weight（1個の重さ）。今の InvoiceItemInput の形のまま（backend/app/schemas/invoice.py:28-37）。
+- 空の行（商品が選ばれていない行）は送らない。商品を選んだのに状態が無い行があれば発行を止め、その欄に印を付ける（見本 app.js:283-287 と同じ）。
+- 重さが登録されていない商品（今は CASE で1商品）は、重さの欄に「未登録」と出し、発行を止める。会社の画面ではなく商品の画面で登録してもらう案内を出す。
+- 在庫の上限は画面だけで守る。サーバーは在庫数で止めない（在庫は仕入元の申し出で変わるため。作る時点の在庫で弾くと、画面で選べたのに作れない事故になる）。
+
+### 3-4. 請求書用の在庫の道（新）
+- `GET /invoices/draft-inventory?category=<code>`。権限 `invoices.create`。読むだけ。
+- 返す形: `categories: [{code, name_ja}]`（在庫のある中分類だけ・sort_order 順）と `items: [{product_id, name, name_en, mark, work_code, box_weight_kg, case_weight_kg, cells: {状態: {price, quantity}}}]`。
+- 中身は在庫表と同じ関数で作る（backend/app/services/inventory_aggregated_service.py の get_aggregated_inventory の流れ）。集計の鍵を商品の番号にした版の関数を同じファイルに足し、今の在庫表の道（GET /inventory/aggregated）の応答は1文字も変えない（試験で固定）。重さは legacy_field_sql（product_packagings.py:41-57）で読む。
+- 秘密の列（仕入元名・採用理由）は返さない（今の在庫表と同じ境界）。
+
+### 3-5. 送料の一覧と自動見積もり（p4）
+- `POST /invoices/draft-shipping-quotes`。権限 `invoices.create`。入力は company_id と総重量。届け先の国・郵便番号と発送元の国は、サーバーが draft-context と同じ関数で決める（画面からは受けない）。
+- 返す形: 今の /shipping/calculate と同じ `ShippingCalcResponse`（backend/app/schemas/shipping.py:107-134）。中身は、静的な表の全社（calculate_shipping_fee を carrier なしで呼ぶ。backend/app/routers/shipping.py:264-299）と、FedEx が連携済みなら FedEx のライブ見積もり（同じファイルの _try_fedex_live）を足したもの。FedEx が未連携・失敗なら live_error を返し、静的な行で黙って置き換えない（ADR-125 D5）。
+- 画面は、届け先の会社・総重量が変わったときだけ、最後の変更から 800ms 待って呼ぶ。同じ材料ならもう呼ばない。行の一覧から1つ選ぶか「送料を請求しない」を選ぶ。選んだ便は今の ShippingInput（invoice.py:55-72）でそのまま送る。総重量が0のときは呼ばない。
+- FedEx の呼び出しの上限: 公式の案内では1プロジェクト10秒に1,400回（developer.fedex.com/api/en-pw/guides/ratelimits.html。2026-11-17 に読んだ）。1枚の請求書を作る間の呼び出しは、総重量を変えた回数（数回）に限られる。1日の上限（Rate API）と1回ごとの費用は **未確認**。そのため K7 で呼び出しの回数を数える。
+
+### 3-6. 発行と重ねて出す見た目（p7）
+- 「請求書を発行」を押すと、今の作る道（POST /invoices。下書きで保存）を1回呼ぶ。成功したら、その請求書の PDF（GET /invoices/{id}/pdf。invoices.py:1034-1091）を画面の上に重ねて出す。
+- 重ねた枠のボタン: 「印刷」（PDF の印刷）・「PDF を保存」・「詳細へ」（今の詳細画面）・「閉じる」（新しい空の請求書に戻る）。
+- 保存せずに PDF だけ作る新しい道は作らない（書かない道の権限と記録の決まりを新しく決めずに済む。recon-gap Q4 の未確認を避ける）。
+- 「クリア」は確認を出してから、12行・発送先・送料・メモを空に戻す。
+
+### 3-7. 新しく登録する金型（ADR-144。PO が p1・p3・p5 で見本どおりを選んだことで新設を承認済み）
+| 金型 | 中身 | 置き場所 |
+|---|---|---|
+| SectionCard | 見出しつきのカード。Card（variant container）の中に見出し（--font-lg）と右上の操作の置き場 | frontend/src/components/SectionCard.tsx・.css・.stories.tsx |
+| ReadOnlyField | 読むだけの欄（ラベル＋灰色の値。空なら「未登録」） | frontend/src/components/ReadOnlyField.* |
+| ThreeColumn | 3列の並び（狭い画面では縦1列）。TwoColumn と同じ作り | frontend/src/components/ThreeColumn.* |
+| TotalsBox | 色つきの合計枠（小計・送料・税または関税・合計。合計は大きい字） | frontend/src/components/TotalsBox.* |
+- 色・余白・角丸・字の大きさはすべて tokens.css の変数。足す変数があれば tokens.css に足す（ADR-067）。色の直値・生の select・生の input は使わない。
+- 各金型に Storybook の話（明るい・暗い・狭い画面）を付ける。docs/CC_UI_GOVERNANCE.md の目録に1行ずつ足す。
+
+### 3-8. 見積の画面（p6 の「見積の画面も同じ行」）
+- 商品行の表を共通の部品 `LineItemsTable`（frontend/src/pages/quote-create/ か components/ に置く。置き場は実装カードで決める）にし、請求書と見積の両方で使う。
+- 見積の画面で変わるのは商品行の表だけ。見積の送料（FedExRateModal）・保存の道は変えない。
+- LineItem（frontend/src/pages/quote-create/quoteDraft.ts:8-29）には、画面だけで使う `category_code` と `stock_limit` を足す（どちらも任意。保存には送らない）。
+
+### 3-9. 即時反映の表（ADR-1016）
+- 新しい道2つは読むだけ（書かない）。即時反映の表に載せる対象ではない。実装カードで、その表の検査（CI）が通ることを確かめる。
+
+## 4. 便の分け方（1便1PR。順に作る）
+| 便 | 中身 | 主なファイル | 危険なパス |
+|---|---|---|---|
+| R1 | 発送先12欄のサーバー側（draft-context と写しに6項目・PDF の宛名） | backend/app/schemas/invoice.py・routers/invoices.py・services/invoice_renderer.py・試験 | 無し（移行なし） |
+| R2 | 請求書用の在庫の道（§3-4） | services/inventory_aggregated_service.py・routers/invoices.py（または新ファイル）・schemas・試験 | 無し |
+| R3 | 請求書用の送料一覧の道（§3-5） | routers/invoices.py・routers/shipping.py（関数を呼べる形にするだけ）・試験 | 無し |
+| R4 | 金型4つ（§3-7） | frontend/src/components/*・tokens.css・docs/CC_UI_GOVERNANCE.md | 無し |
+| R5 | 請求書の作成画面の作り直し（§3-1〜§3-3・§3-5 の画面・p8） | frontend/src/pages/invoice-create/*・LineItemsTable・locales | 無し |
+| R6 | 発行と重ねた見た目（§3-6） | frontend/src/pages/invoice-create/* | 無し |
+| R7 | 見積の画面を同じ商品行に（§3-8） | frontend/src/pages/quote-create/* | 無し |
+- どの便も migrations/・deploy.yml・本番の scripts/ に触らない。触ることになったら止めて PO に戻す（ADR-135/136）。
+- R1〜R3 は互いに独立。R5 は R1・R2・R3・R4 の後。R6 は R5 の後。R7 は R5 の後。
+
+## 5. 触らない範囲
+- 額の計算（invoice_totals）・税・関税・振込先の版・作る道の検査（design.md 第9版のまま）。
+- 今の在庫表の道 GET /inventory/aggregated と在庫表の画面の応答と見た目。
+- /shipping/calculate の応答と権限。見積の画面の送料の部品。
+- 会社の画面（住所を直す場所）。
+- 決済手数料（便 E。別の設計）。
+
+## 6. 受入れ条件（見た目と操作を1件ずつ）
+| 番号 | 基準 | 検証方法 |
+|---|---|---|
+| K1 | 画面に4枚のカードが「発送先→支払いと合計→商品一覧→操作」の順に出て、各カードに見出しがある | 画面の試験（vitest・Testing Library）で SectionCard 4つと見出しの順を確かめる。本番は PO の目視 |
+| K2 | 発送先の12欄が2列で出て、12欄とも入力できない（読むだけ） | 画面の試験: 12個の ReadOnlyField があり、input・textarea が0個。2列の並びの class を確かめる |
+| K3 | 顧客を選ぶと、会社の住所の受取人・メール・TAX Number・住所3・都市・州・ZIP が12欄に入る | サーバー試験: draft-context が6項目を返す。画面の試験: 返った値が各欄に出る |
+| K4 | 発行した請求書の PDF に、受取人・住所1〜3・都市/州/ZIP・TAX Number・メールが出る。古い請求書の PDF は今と同じ | サーバー試験: 新しい写しで描いた PDF の文字に各値がある。古い写し（6項目なし）で描いた PDF の文字が変更前と同じ |
+| K5 | 「支払いと合計」が3列（左: 通貨・支払方法・発送メモ／中: 総重量・送料一覧／右: 合計枠）。狭い画面では縦1列 | 画面の試験で ThreeColumn の3つの子の中身を確かめる。Storybook の狭い画面の話 |
+| K6 | 総重量が入ると、操作なしで便ごとの送料が全部並ぶ（静的の全社＋FedEx 連携済みなら FedEx の各便）。FedEx 未連携なら、その旨が出る | サーバー試験: 静的3社の行と FedEx の行が返る。未連携なら live_error。画面の試験: 重さが変わったあと 800ms で1回だけ呼び、一覧が出る |
+| K7 | 同じ材料では送料の道を2回呼ばない。重さを3回変えたら呼び出しは最大3回 | 画面の試験で呼び出しの回数を数える。本番は反映後に1週間、送料の道のログの数を数えて、作った請求書1枚あたりの回数を出す（目安10回以下） |
+| K8 | 合計枠が色つき（トークンの色）で、小計・送料・税または関税・合計を出す。合計の字が一番大きい | TotalsBox の試験と Storybook。色の直値0件（CI の UI の検査） |
+| K9 | 商品一覧の初期は12行。「＋行を追加」で20行まで増え、21行目は増えず案内が出る。1行のときは×で消せない | 画面の試験 |
+| K10 | カテゴリを選ぶと、商品の候補がそのカテゴリの在庫のある商品だけになる | サーバー試験: category で絞った items。画面の試験: 候補の数が絞った数と同じ |
+| K11 | 商品を選ぶと、状態の選択肢がその商品に在庫のある状態だけになる。状態を選ぶと、重さ・単価・在庫上限が入る | 画面の試験 |
+| K12 | 数量に在庫より大きい数を打つと、在庫数に戻り「在庫は N まで」と出る | 画面の試験 |
+| K13 | 重さの欄は打てない。単価の欄は打てる（初期値は在庫表の値段） | 画面の試験: 重さに input が無い・単価の input の初期値 |
+| K14 | 「在庫表から／見積から」の切り替えが画面に無い。見積の詳細画面の「請求書にする」は今のまま動く | 画面の試験（切り替えのボタン0個）。QuoteDetailPage の既存の試験が緑 |
+| K15 | 「請求書を発行」で作成が1回だけ行われ、その請求書の PDF が画面の上に重なって出る。「印刷」「PDF を保存」「詳細へ」「閉じる」がある | 画面の試験: POST /invoices が1回、そのあと PDF の道が呼ばれ、重ねた枠と4つのボタンが出る |
+| K16 | 見積の作成画面の商品行が、請求書と同じ列（#・カテゴリ・商品・状態・数量・重さ・単価・小計・×）になり、見積の保存は今のまま動く | 見積の画面の試験。quoteDraft.test.ts が緑 |
+| K17 | 今の在庫表の道 GET /inventory/aggregated の応答が変わらない | サーバー試験で変更前と同じ応答を固定 |
+| K18 | 画面の文字はすべて t()。ja.json と en.json に同じキー。色の直値・生の select/input が0件 | CI（i18n・UI の検査） |
+
+## 7. 代わりの案と選んだ理由
+- 在庫の道を請求書側に作る（選んだ）／画面から GET /inventory/aggregated と /shipping/calculate を直接呼ぶ（選ばない）: 請求書を作る役割が在庫と送料の権限を持つか未確認（§2-5）。権限の食い違いで画面が動かない事故を避ける。中身は同じ関数なので計算は1か所のまま。
+- 作ってから PDF を重ねる（選んだ）／保存せずに PDF を作る新しい道（選ばない）: 書かない道の記録の決まりを新しく作らずに済む。見本でも「発行」は発行の操作。
+- 値段は在庫表の値段を初期値にして直せる（PO の答え）。
+- 在庫の上限は画面だけ（選んだ）／サーバーでも止める（選ばない）: §3-3 の理由。
+
+## 8. 弊害と対処
+| 弊害 | 対処 |
+|---|---|
+| 在庫のない商品は請求書に入れられなくなる（今は検索で何でも入る） | 見本どおりの決定。在庫表に無い商品の請求は、在庫を登録してから。反映後の1週間、「商品が見つからない」という声を PO に確かめる |
+| FedEx の自動見積もりで呼び出しが増える | §3-5 の待ちと同じ材料なら呼ばない作り。K7 で数える。1日の上限は未確認のまま見張る |
+| 見積の画面の行も変わる | R7 を別の便にし、見積の保存の試験を緑にしてから出す |
+| 古い請求書の PDF の見た目 | 写しに新しい項目が無いときは今の1行の住所を出す（K4） |
+| 同じ名前の商品が在庫表で1行にまとまる今の弱点 | 請求書の道では商品の番号で分ける。在庫表の画面は今のまま（別のテーマ） |
+
+## 9. 外部の事例
+- 見本そのもの（PO のポートフォリオ。2026-11-17 に js を読んだ）が目指す形。数値の効果を示す外部事例は使わない。理由: 今回の目的は「PO の見本と同じ見た目と操作」で、効果の測り方は §6 の○×で足りる。
+- FedEx の呼び出しの上限は公式の案内（§3-5）だけを使った。
+
+## 10. 維持の仕組み
+- 金型4つは目録（docs/CC_UI_GOVERNANCE.md）と Storybook に載せる。CI の UI の検査（scripts/check-ui-governance.js）が直値と生の部品を止める。
+- 受入れ条件 K1〜K18 は試験として残し、CI で毎回走る。
+- 本番の反映ごとに、PO の目視の手引き（見本と並べて見る点 8つ）を渡す。
+
+## 11. 未確認（設計合格の前に決めること・実装で確かめること）
+- 請求書を作る役割の在庫・送料の権限（§2-5）。本書は請求書側の道を作るので、この答えに左右されない。
+- FedEx の Rate API の1日の上限と費用（§3-5）。K7 で数える。
+- 状態の名前の全種類（"Unsearched pack" などが本番の在庫に出るか）。R2 の試験は inventory_aggregation.py:185-200 の対応表の全部で確かめる。
