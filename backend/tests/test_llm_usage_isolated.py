@@ -30,8 +30,10 @@ def test_value_sets():
         "translation_inbound_escalation",
         "translation_outbound",
         "secretary_intent",
+        "secretary_regression",
+        "secretary_tts",
     }
-    assert USAGE_SDKS == {"google-genai", "google-generativeai", "codex-cli", "claude-code"}
+    assert USAGE_SDKS == {"google-genai", "google-generativeai", "codex-cli", "claude-code", "google-tts-rest"}
     assert USAGE_ERROR_CODES == {
         "auth_failed",
         "timeout",
@@ -127,6 +129,20 @@ async def test_isolated_writes_one_row_and_commits(monkeypatch):
     assert params["error_code"] == "auth_failed"
     assert params["purpose"] == "secretary_intent"
     assert params["cost_usd"] is None
+
+
+@pytest.mark.asyncio
+async def test_isolated_passes_billed_characters(monkeypatch):
+    session = _fake_session()
+    monkeypatch.setattr("app.database.AsyncSessionLocal", _fake_session_factory(session))
+    await _call(purpose="secretary_tts", sdk="google-tts-rest", outcome="ok", error_code=None, billed_characters=20)
+    assert session.execute.await_args.args[1]["billed_characters"] == 20
+    assert session.commit.await_count == 1
+
+    session2 = _fake_session()
+    monkeypatch.setattr("app.database.AsyncSessionLocal", _fake_session_factory(session2))
+    await _call()
+    assert session2.execute.await_args.args[1]["billed_characters"] is None
 
 
 @pytest.mark.asyncio

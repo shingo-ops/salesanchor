@@ -84,7 +84,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 - `public.users` の書き換えは、行ごとの守り（RLS）で「今の会社の文脈が行の会社と同じ」か「運営者の印」が要る（`migrations/20261016_180000_add_users_write_rls.sql:20`〜`migrations/20261016_180000_add_users_write_rls.sql:28`）。文脈を付けずに書くと、0 行に当たって黙って何も変わらない（K2 が壊れる）。
 - よって言語の書き方（`backend/app/routers/staff.py:225`〜`backend/app/routers/staff.py:231`）と同じく、`set_tenant_context(db, current_user.tenant_id)` → `UPDATE public.users SET secretary_voice = :v WHERE id = :uid` → `clear_tenant_context(db)` → commit の順にする。
 - 書いた行の数が 1 でなければ 500 を返し、ログに種類を出す（黙って成功にしない）。
-- 読みと書きは `secretary_voice.py` の 2 つの関数 `read_voice(db, user_id)`・`save_voice(db, *, user_id, tenant_id, voice)` に置き、口はそれを呼ぶだけにする（PostgreSQL の試験で口と同じ関数を流すため）。
+- 読みと書きは `backend/app/services/secretary_voice.py` の 2 つの関数 `read_voice(db, user_id)`・`save_voice(db, *, user_id, tenant_id, voice)` に置き、口はそれを呼ぶだけにする（PostgreSQL の試験で口と同じ関数を流すため）。
 - 試験: RLS が効いた PostgreSQL（users の書込の守りの移行を流した DB）で、アプリの役割の取引から `save_voice` を流し、行の値が変わること。別の会社の番号を渡すと 0 行で失敗になること（V11）。
 - 声は画面から受け取らない。backend が本人の値を読む。PC とスマホで同じ声になる（K2）。
 

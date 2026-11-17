@@ -120,6 +120,9 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/assistant/rules/{rule_id}/approve"): _PENDING,
     ("POST", "/api/v1/assistant/rules/{rule_id}/reject"): _PENDING,
     ("POST", "/api/v1/assistant/rules/{rule_id}/remove"): _PENDING,
+    # ADR-1080 便1: 声の好みは本人だけの設定。声の設定画面（便2）を作るときに決める
+    ("PUT", "/api/v1/assistant/voice"): _PENDING,
+    ("POST", "/api/v1/assistant/speech"): "ADR-1080: 音声を返すだけ。書くのは使用量の台帳だけで、画面の表は変わらない",
     ("POST", "/api/v1/auth/login"): _PENDING,
     ("POST", "/api/v1/auth/logout"): _PENDING,
     ("POST", "/api/v1/auth/login-requests/poll"): "人宛ての合図は口の中で直接送る（ADR-1055）。書き込みの口の自動合図にしない",
