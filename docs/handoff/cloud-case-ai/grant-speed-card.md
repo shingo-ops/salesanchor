@@ -4,7 +4,7 @@
 
 - 設計: `docs/handoff/cloud-case-ai/grant-speed-design.md`（§1 K1〜K5・§3 変更前後・§4 対象外）
 - 対象ADR: ADR-1052
-- 状態: 設計案作成済み・設計審査済み（2 回目 APPROVE。設計 §11-2）。実装は未着手（PO の実装承認が要る）
+- 状態: 設計案作成済み・設計審査済み（2 回目 APPROVE。設計 §11-2）。PO 実装承認済み（2026-11-17 PO「1」。段 A から順に、クラウドの Sonnet へ委任）
 - 危険便: はい（`migrations/`。ADR-135・ADR-136。GO #番号が要る）
 - 実装担当: クラウドの Sonnet（RemoteTrigger の一回実行）。push して止まる。PR は Opus が作る
 - ブランチ: `release/unmask-grant-speed`（origin/main 7faae9090 起点。設計の書類はこのブランチに入っている）
