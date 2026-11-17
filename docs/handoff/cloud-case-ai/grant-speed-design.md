@@ -111,7 +111,7 @@
 |---|---|---|
 | 1 | 段 B の commit 0996ed2ec | `git revert` で打ち消す（消さずに、打ち消しの commit を足す）。`migrations/20261031_210000_create_ops_case.sql` は main と同じ中身に戻る |
 | 2 | 新しい手順 `migrations/20261117_130000_grant_unmask_owner_once_per_source.sql`（110 行） | 頭の説明 3 行 ＋ 段 B の版（0996ed2ec）の `migrations/20261031_210000_create_ops_case.sql:379-485`（`CREATE OR REPLACE FUNCTION ops_case.grant_unmask_owner()` から `$fn$;` まで）。つまり元の関数と 1 字も変えず、「-- 1. 付けるべき表」の 1 文だけが 3-2 の形。sha256 `9ae9d6ae1ad4b5cb32652a56b3dd966a3cabac9ef6b28b32c0f39377d1f04168` |
-| 3 | 戻しの手順 `migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql`（104 行。手動だけ・本番反映では流さない） | 頭の説明 2 行 ＋ `BEGIN;` ＋ origin/main の `migrations/20261031_210000_create_ops_case.sql:379-479`（元の関数） ＋ `COMMIT;`。sha256 `a89d4d981d216d5e23a45647331416a00e743dd6a5322f9137f0ff27bb4da37e`。前例どおり（`migrations/20261115_110001_drop_ops_case_report_single_unique_down.sql`。戻しの手順は main に 12 本） |
+| 3 | 戻しの手順 `migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql`（105 行。手動だけ・本番反映では流さない） | 頭の説明 2 行 ＋ `BEGIN;` ＋ origin/main の `migrations/20261031_210000_create_ops_case.sql:379-479`（元の関数） ＋ `COMMIT;`。sha256 `a89d4d981d216d5e23a45647331416a00e743dd6a5322f9137f0ff27bb4da37e`。前例どおり（`migrations/20261115_110001_drop_ops_case_report_single_unique_down.sql`。戻しの手順は main に 12 本） |
 | 4 | `scripts/run_all_migrations.sh` | 最後の登録（`run_sql migrations/20261115_110000_...` と戻しの注記の行）の後ろ、`# 実行済みの記録の集計（段5 5-3）` の前の空行より上に、説明 1 行・`run_sql` 1 行・戻しの注記 1 行を足す（`:1468` の「新しい手順は、この集計の行より上に足す」のとおり） |
 | 5 | `.github/workflows/migration-test.yml` | 前例（`:1424-1432`）と同じ形で「前提の移行を先に実行」の段を 1 つ足す。新しい手順のファイル名を含むときだけ、`20261016_100000_create_ops_incident_tables.sql` と `20261031_210000_create_ops_case.sql` を先に流す。新しい手順は `ops_case` の schema の中に関数を作るので、先に schema と元の関数が要る |
 | 6 | `backend/tests/ops/test_ops_case_db.py` | (a) 定数 `_SPEED_SQL` を足す。(b) 準備（fixture `pg`、:185 の `_CASE_SQL` を流す行の後）で新しい手順を流す。(c) `test_migration_is_idempotent`（:627-631）で `_CASE_SQL` を 2 回流した後に、新しい手順も 2 回流す |
@@ -150,7 +150,7 @@
 ## 7. リスクと対処
 
 - 計画がまた変わって押し込まれる: MATERIALIZED は押し込みを止めると公式に書かれている。K4 の試験が呼ぶ回数を CI で毎回数えるので、戻れば赤になる。
-- 付ける表の一覧が変わる: 条件は同じ文のまま。K2 で本番の実物で照合する。外れたら、次の本番反映の前に PR を戻す。
+- 付ける表の一覧が変わる: 条件は同じ文のまま。K2 で本番の実物で照合する。外れたら、下の「戻し方」で関数を元に戻す（PR を戻すだけでは戻らない）。
 - 試験の `SET LOCAL track_functions` が CI の DB の権限で拒まれる: 実装担当は迂回せず止まって報告する（段取り表 §5）。
 - 戻し方（3 版目で直した）: PR を戻しても、本番では新しい手順が記録済みなので、関数は元に戻らない。戻すときは、戻しの手順（3-3 の 3）と同じ中身の新しい手順ファイルを足す PR を出し、本番反映する（流し終えた手順は書き換えない決まりのため）。データは変えない。
 - 本線と枝のずれ: 枝は 7faae9090 起点で、main には記録の仕組みが後から入った。段取り表で main を枝に取り込んでから登録の行を足す（rebase は使わない）。取り込みでぶつかったら止まる。
@@ -245,3 +245,14 @@
 - 2 回目の審査も、設計の「本番反映のたびに全部流れる」を実物（その時の main の `scripts/run_all_migrations.sh` と `scripts/check_migration_freeze.py`）と照らさなかった。審査の起点 7faae9090 の後に main で記録の仕組みが入ったため、起点だけを読むと見落とす。
 - 3 版目の審査では、次を必ず見る: (1) 起点ではなく今の origin/main で、記録と書き換えの見張りの決まりに合うか／(2) 新しい 2 本が段取り表の手順で指紋どおりに作れるか（Opus が手元で作り直して `9ae9d6ae…4168`・`a89d4d98…a37e` と一致を確認済み）／(3) 試験の準備と冪等の試験の順が本番と同じか／(4) CI の前提の段の形が前例（`.github/workflows/migration-test.yml` の「変更 SQL の前提の移行を先に実行」）と同じか。
 - Opus が手元で写しに当てた結果（段取り表 手順B7〜B9 の文字そのまま）: 足す行は `scripts/run_all_migrations.sh` 3・`.github/workflows/migration-test.yml` 10・`backend/tests/ops/test_ops_case_db.py` 5、試験のファイルは Python として読める、`migration-test.yml` は YAML として読める。
+
+### 11-4. 3 回目（2026-11-17 15:35 JST・クラウドの Opus・commit 1c47e3fdc・読むだけ・写しで手順B1〜B12 を実際に流した）
+
+判定: REVISE。(1) 今の main の記録と書き換えの見張りに合う ○（写しで `scripts/check_migration_freeze.py` が合格）／(2) 指紋 2 本は一致・中身は 3-2 の関数と元の関数、ただし戻しの手順の行数 ×／(3) 足す行 3・10・5 と置く場所 ○／(4) PR 全体で `create_ops_case.sql` の差分 0 ○／(5) 試験の順が本番と同じ・K4 は新しい関数を測る ○／(6) 持ち主・権限 ○、戻し方の一部 ×。壊す文の見分けは 2 本とも false。
+
+| 指摘 | 中身 | 直したところ |
+|---|---|---|
+| 1（事実・重） | 戻しの手順は 説明 2 行＋`BEGIN;`＋101 行＋`COMMIT;` で 105 行。文書の期待値 104 は数え違い（Opus の手元の写しも 105 行・指紋は一致） | 段取り表 手順B5-6・手順B10-2 と設計 3-3 の表の 3 つを 105 にした |
+| 2（事実・中） | 7「外れたら、次の本番反映の前に PR を戻す」は、main に入った後は書き換えの見張りに止められ、本番の記録済みの手順も戻らない | 「下の戻し方（同じ中身の新しい手順を足す）で戻す」に揃えた |
+| 3（事実・軽） | 台帳 `.claude-pipeline/active-work.d/release-unmask-grant-speed.md` が枝に入り PR の差分に出る | 直さない。`.gitignore:67-71` が台帳を共有の正本として追跡すると決めており、origin/main に 506 本ある（Opus が確認）。commit しない決まりは見つからない |
+| 未確認 | 本番の jarvis が関数を置き換えられるか | 元の関数を作ったのも本番反映の jarvis（同じ手順の中で `CREATE OR REPLACE` 済み）。本番反映の CI で確かめる |

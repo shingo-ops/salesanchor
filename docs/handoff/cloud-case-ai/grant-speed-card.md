@@ -174,7 +174,7 @@ def test_grant_unmask_owner_calls_judge_once_per_source(pg):
 手順B5-6 指紋と行数を確かめる
   cd <repo> && sha256sum migrations/20261117_130000_grant_unmask_owner_once_per_source.sql migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql
   cd <repo> && wc -l migrations/20261117_130000_grant_unmask_owner_once_per_source.sql migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql
-期待する出力: 指紋は順に `9ae9d6ae1ad4b5cb32652a56b3dd966a3cabac9ef6b28b32c0f39377d1f04168`・`a89d4d981d216d5e23a45647331416a00e743dd6a5322f9137f0ff27bb4da37e`。行数は 110・104。1 つでも違えば直さずに停止
+期待する出力: 指紋は順に `9ae9d6ae1ad4b5cb32652a56b3dd966a3cabac9ef6b28b32c0f39377d1f04168`・`a89d4d981d216d5e23a45647331416a00e743dd6a5322f9137f0ff27bb4da37e`。行数は 110・105。1 つでも違えば直さずに停止
 
 手順B6 main の最後の登録を確かめる
   cd <repo> && grep -n '^run_' scripts/run_all_migrations.sh | tail -3
@@ -230,7 +230,7 @@ _SPEED_SQL = "20261117_130000_grant_unmask_owner_once_per_source.sql"
 10	0	.github/workflows/migration-test.yml
 5	0	backend/tests/ops/test_ops_case_db.py
 110	0	migrations/20261117_130000_grant_unmask_owner_once_per_source.sql
-104	0	migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql
+105	0	migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql
 3	0	scripts/run_all_migrations.sh
 ```
 1 行でも違えば停止
