@@ -1468,6 +1468,9 @@ run_sql migrations/20261115_110000_drop_ops_case_report_single_unique.sql
 run_sql migrations/20261117_100000_add_users_secretary_voice.sql
 # ADR-1080 便1: 台帳に読み上げの字数の列と使いみち secretary_tts・sdk google-tts-rest を足す（冪等）
 run_sql migrations/20261117_100100_add_llm_usage_tts_characters.sql
+# ADR-1052 段2 の手直し: 権限の付け直しで判定を元の表の名前ごとに 1 回だけ呼ぶ（関数の置き換えだけ・冪等）
+run_sql migrations/20261117_130000_grant_unmask_owner_once_per_source.sql
+# ADR-1052 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql
 
 # 実行済みの記録の集計（段5 5-3）。新しい手順は、この集計の行より上（上の run_ の並びの末尾）に足す。
 mr_report_summary

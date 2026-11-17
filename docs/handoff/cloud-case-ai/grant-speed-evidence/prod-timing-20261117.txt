@@ -1,0 +1,129 @@
+== run_at_utc 2026-11-16T20:02:45Z
+Timing is on.
+on
+Time: 0.303 ms
+pg_class_all|5327
+Time: 2.606 ms
+pg_class_rp|666
+Time: 2.337 ms
+namespaces|33
+Time: 0.353 ms
+tenant_schemas|5
+Time: 0.574 ms
+build_columns_rows|6749
+Time: 5.236 ms
+distinct_sources|571
+Time: 8.129 ms
+deny_tables_rows|16
+Time: 1.462 ms
+track_functions|none
+Time: 0.214 ms
+Time: 9.811 ms
+one_is_denied|f
+Time: 8.230 ms
+Aggregate  (cost=2227.80..2227.81 rows=1 width=32) (actual rows=1 loops=1)
+  Buffers: shared hit=2254989
+  ->  Sort  (cost=2224.47..2226.13 rows=666 width=4) (actual rows=506 loops=1)
+        Sort Key: c.oid
+        Sort Method: quicksort  Memory: 25kB
+        Buffers: shared hit=2254989
+        ->  Hash Join  (cost=1878.58..2193.23 rows=666 width=4) (actual rows=506 loops=1)
+              Hash Cond: ((((n.nspname)::text || '.'::text) || (c.relname)::text) = (b.source)::text)
+              Buffers: shared hit=2254986
+              ->  Hash Join  (cost=1.74..314.30 rows=666 width=132) (actual rows=666 loops=1)
+                    Hash Cond: (c.relnamespace = n.oid)
+                    Buffers: shared hit=245
+                    ->  Seq Scan on pg_class c  (cost=0.00..310.59 rows=666 width=72) (actual rows=666 loops=1)
+                          Filter: (relkind = ANY ('{r,p}'::"char"[]))
+                          Rows Removed by Filter: 4661
+                          Buffers: shared hit=244
+                    ->  Hash  (cost=1.33..1.33 rows=33 width=68) (actual rows=33 loops=1)
+                          Buckets: 1024  Batches: 1  Memory Usage: 12kB
+                          Buffers: shared hit=1
+                          ->  Seq Scan on pg_namespace n  (cost=0.00..1.33 rows=33 width=68) (actual rows=33 loops=1)
+                                Buffers: shared hit=1
+              ->  Hash  (cost=1869.70..1869.70 rows=571 width=26) (actual rows=506 loops=1)
+                    Buckets: 1024  Batches: 1  Memory Usage: 38kB
+                    Buffers: shared hit=2254741
+                    ->  HashAggregate  (cost=1863.99..1869.70 rows=571 width=26) (actual rows=506 loops=1)
+                          Group Key: b.source
+                          Batches: 1  Memory Usage: 105kB
+                          Buffers: shared hit=2254741
+                          ->  Seq Scan on build_columns b  (cost=0.00..1852.74 rows=4499 width=26) (actual rows=5857 loops=1)
+                                Filter: (NOT ops_case.is_denied_source(source))
+                                Rows Removed by Filter: 892
+                                Buffers: shared hit=2254741
+Planning:
+  Buffers: shared hit=18
+Planning Time: 0.314 ms
+Execution Time: 14705.789 ms
+Time: 14707.494 ms (00:14.707)
+Aggregate  (cost=513.27..513.28 rows=1 width=8) (actual rows=1 loops=1)
+  Buffers: shared hit=343
+  ->  Hash Join  (cost=196.95..511.61 rows=666 width=0) (actual rows=571 loops=1)
+        Hash Cond: ((((n.nspname)::text || '.'::text) || (c.relname)::text) = (b.source)::text)
+        Buffers: shared hit=343
+        ->  Hash Join  (cost=1.74..314.30 rows=666 width=128) (actual rows=666 loops=1)
+              Hash Cond: (c.relnamespace = n.oid)
+              Buffers: shared hit=245
+              ->  Seq Scan on pg_class c  (cost=0.00..310.59 rows=666 width=68) (actual rows=666 loops=1)
+                    Filter: (relkind = ANY ('{r,p}'::"char"[]))
+                    Rows Removed by Filter: 4661
+                    Buffers: shared hit=244
+              ->  Hash  (cost=1.33..1.33 rows=33 width=68) (actual rows=33 loops=1)
+                    Buckets: 1024  Batches: 1  Memory Usage: 12kB
+                    Buffers: shared hit=1
+                    ->  Seq Scan on pg_namespace n  (cost=0.00..1.33 rows=33 width=68) (actual rows=33 loops=1)
+                          Buffers: shared hit=1
+        ->  Hash  (cost=188.07..188.07 rows=571 width=26) (actual rows=571 loops=1)
+              Buckets: 1024  Batches: 1  Memory Usage: 42kB
+              Buffers: shared hit=98
+              ->  HashAggregate  (cost=182.36..188.07 rows=571 width=26) (actual rows=571 loops=1)
+                    Group Key: b.source
+                    Batches: 1  Memory Usage: 105kB
+                    Buffers: shared hit=98
+                    ->  Seq Scan on build_columns b  (cost=0.00..165.49 rows=6749 width=26) (actual rows=6749 loops=1)
+                          Buffers: shared hit=98
+Planning:
+  Buffers: shared hit=6
+Planning Time: 0.665 ms
+Execution Time: 4.205 ms
+Time: 5.773 ms
+Aggregate  (cost=322.04..322.05 rows=1 width=8) (actual rows=1 loops=1)
+  Buffers: shared hit=246
+  InitPlan 1 (returns $0)
+    ->  Seq Scan on pg_authid  (cost=0.00..1.26 rows=1 width=4) (actual rows=1 loops=1)
+          Filter: (rolname = 'ai_unmask_owner'::name)
+          Rows Removed by Filter: 20
+          Buffers: shared hit=1
+  ->  Nested Loop  (cost=1.58..320.48 rows=121 width=0) (actual rows=506 loops=1)
+        Buffers: shared hit=246
+        ->  Hash Join  (cost=1.57..314.13 rows=121 width=57) (actual rows=589 loops=1)
+              Hash Cond: (c.relnamespace = n.oid)
+              Buffers: shared hit=245
+              ->  Seq Scan on pg_class c  (cost=0.00..310.59 rows=666 width=61) (actual rows=666 loops=1)
+                    Filter: (relkind = ANY ('{r,p}'::"char"[]))
+                    Rows Removed by Filter: 4661
+                    Buffers: shared hit=244
+              ->  Hash  (cost=1.50..1.50 rows=6 width=4) (actual rows=6 loops=1)
+                    Buckets: 1024  Batches: 1  Memory Usage: 9kB
+                    Buffers: shared hit=1
+                    ->  Seq Scan on pg_namespace n  (cost=0.00..1.50 rows=6 width=4) (actual rows=6 loops=1)
+                          Filter: ((nspname = 'public'::name) OR (nspname ~~ 'tenant\_%'::text))
+                          Rows Removed by Filter: 27
+                          Buffers: shared hit=1
+        ->  Memoize  (cost=0.01..0.16 rows=1 width=0) (actual rows=1 loops=589)
+              Cache Key: c.relacl
+              Cache Mode: binary
+              Hits: 583  Misses: 6  Evictions: 0  Overflows: 0  Memory Usage: 1kB
+              Buffers: shared hit=1
+              ->  Function Scan on aclexplode a  (cost=0.00..0.15 rows=1 width=0) (actual rows=1 loops=6)
+                    Filter: ((grantee = $0) AND (privilege_type = 'SELECT'::text))
+                    Rows Removed by Filter: 12
+                    Buffers: shared hit=1
+Planning:
+  Buffers: shared hit=219
+Planning Time: 1.156 ms
+Execution Time: 1.817 ms
+Time: 5.810 ms
+db_exit=0
