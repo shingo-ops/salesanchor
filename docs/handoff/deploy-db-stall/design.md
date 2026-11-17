@@ -1176,7 +1176,8 @@ plan の台本の決まり:
 
 ### 19-20. 第3.8版（2026-11-18、Opus）— (b) の詳細設計（試しの道具に名前と上限を付ける）
 
-状態: 第3.7版は審査で REVISE。第3.8版で指摘1〜7を反映済み（再審査前）。実装未着手。
+状態: 設計審査済み（第3.8版 APPROVE）。実装未着手。PO の実装承認と実装カードはまだ。
+審査の記録（2回目）: 第3.8版 APPROVE（2026-11-17 16:14Z、クラウドの Architect、opus、新規起動、commit 972b79ea3 を origin/main dba18c50d と照合）。前回の指摘7つは正しく直った、との判定。軽い指摘5つ（q10 の行ずれ2つ・入口の名前付けの条件・replay 試験の setenv は不要・GitHub の取り込み2本が -e なし・docs の手順書の選び方の基準）は、Opus が実物で確かめて本版で直した。
 審査の記録: 第3.7版 REVISE（2026-11-17 16:02Z、クラウドの Architect、opus、新規起動、commit f5abedb1a を origin/main dba18c50d と照合）。19-20-1 の事実（26＋別名1・名前あり5・名前なし22・20か所の行・`_get_sync_engine` 12・compose up の行・blue-green の行・test.yml の条件・b3 の5本）は合う、との判定。指摘は 重1（b2 で `test_v102_replay_diff.py` が赤になる）・中2（`create_async_engine` を作る scripts の抜け／-e なしの道具が backend を名乗る）・軽4（ai-reader.yml の抜け・`_begin` の2か所・compose の行・C4-1 の数え方）。Opus が7つとも実物で照合して正しいことを確かめた（`recon-b/q10.md`）。直しは 19-20-1・-2・-3・-4・-5・-8・-9。PO 2026-11-18「1」（(b) を今のうちに読むだけで調べて詳細設計まで書く。作るのは (a) の測り（2026-11-21 10:00 予約済み）と 5-4 が済んでから）。19-6 の概要を、本節の詳細で置き換える（19-6 の文は経緯として残す）。調べの生の記録は `docs/handoff/deploy-db-stall/recon-b/q01.md`〜`q10.md` と `k2-opus-prod.md`（origin/main dba18c50d で読んだ。以下の行番号も同じ）。
 
 #### 19-20-1. 事実（§17・19-6 からのずれ）
@@ -1192,7 +1193,7 @@ plan の台本の決まり:
 | compose up の行 | deploy.yml :466 | `.github/workflows/deploy.yml` :551・:853・:1054（q03） |
 | blue-green の環境変数 | :81-84・:98-99 | `scripts/blue-green-cutover.sh` :80-84（.env のキーを名前で渡す）・:97-98（q03） |
 | `_engine` を使う行 | tcg_extraction.py :94・:97 | :94 で作り、:98 の `Session(_engine)` で使う（q02） |
-| アプリの外で DB を使う .py | 7本 | q07 の16本（下の 19-20-5 の表）。q07 の grep は `create_async_engine(` に当たらなかったので、自分で engine を作る scripts/ の .py が別に51本ある（app を import する11本〔q07 と重なる1本を含む〕・しない40本。q10）。本番反映の移行の道（`run_all_migrations.sh` :240-259 の run_py）で流れるものは `migration_py_entry.py` :33-46 が名前を付ける |
+| アプリの外で DB を使う .py | 7本 | q07 の16本（下の 19-20-5 の表）。q07 の grep は `create_async_engine(` に当たらなかったので、自分で engine を作る scripts/ の .py が別に51本ある（app を import する11本〔q07 と重なる1本を含む〕・しない40本。q10）。本番反映の移行の道（`run_all_migrations.sh` :240-259 の run_py）で流れるものは `migration_py_entry.py` :33-46 が名前を付ける。名前を付けるのは MIGRATION_LOCK_TIMEOUT が空でないときだけ（:30）で、run_py は :258 で毎回渡す |
 | test.yml の範囲 | filters :45〜:54・push :20〜:29 | push の paths と detect-changes の filters の `backend` に docs/ は無い。pytest-run と lint-backend は `needs.detect-changes.outputs.backend == 'true'` のときだけ流れる（q08）。docs だけの PR では必須の pytest が流れない |
 - 試しの道具の流し方の前例: `scripts/accuracy/llm_compare/fhd_snapshot.py` :5-6 と `scripts/ops/discord-guild-membership-check.sh` :10 は `docker exec -i -w /app <入れ物> python -`。`docker exec -e` は、その exec で起動する process にだけ環境変数を足す・上書きする（Docker 公式 container exec の --env の節。Context7 /websites/docker_reference で 2026-11-18 に確かめた）。同じ入れ物のアプリ本体の process には効かない。
 - 段2の K2-5〜K2-7 は 2026-11-18 にそろった（`recon-b/k2-opus-prod.md`）。§17 の「4a を本番に出す前提」は満たされた。
@@ -1238,7 +1239,7 @@ plan の台本の決まり:
 - 本番の .env に SA_PROCESS_ROLE が誤って入っていた場合: blue-green が backend に渡し、backend が salesanchor_backend 以外を名乗るので、本番反映の smoke [7a]（salesanchor_backend の接続を数える）が0本で赤になり、気づける。
 - 実装のときの手順の直し（b1 の PR で `-e SA_PROCESS_ROLE=tool` を足す。どの文を直したかは PR に一覧で書く）:
   - 必ず直す3つ（q10）: `scripts/ops/discord-guild-membership-check.sh` :10・`scripts/ops/discord-unregistered-guild-names.sh` :11 の `docker exec -i -w /app` の後ろ、`scripts/accuracy/llm_compare/fhd_snapshot.py` :5-6 の使い方の文。前の2つは set_idle_tx_limit を呼ばない道具なので、b2 では止まらず salesanchor_backend を名乗るため。
-  - 試しの道具の手順書（`docs/` の下で `docker exec ... python` を書いた文）のうち、今も流すもの。付け忘れは、set_idle_tx_limit を呼ぶ道具なら b2 が流し始めに止める。
+  - 試しの道具の手順書（`docs/` の下で `docker exec ... python` を書いた文）。選び方: `git grep -n -E 'docker (compose )?exec[^|]*python' -- docs` の当たりを全部 PR に貼り、`app/tools/` か `scripts/` の道具を流す文には全部 -e を足す。set_idle_tx_limit を呼ばない道具を流す文は必ず直す。呼ぶ道具の付け忘れは b2 が流し始めに止める。
 
 #### 19-20-4. b2 ＝ 試しの道具が自分の名前を確かめる
 | 場所 | 前 | 後 |
@@ -1247,7 +1248,7 @@ plan の台本の決まり:
 | 同 `_on_connect_set_idle_limit`（:24〜:34） | 変えない | 変えない（名前は確かめない。毎回の接続で止めると道具の途中で落ちるため、流し始めの1回だけで見る） |
 | `backend/tests/test_tx_guard.py` :24 | 呼ぶ順 execute・commit・execute・rollback | execute・commit・execute・execute・rollback。名前が salesanchor_tool_ で始まるときは値を返し、始まらないときは rollback の後に RuntimeError、の2つの試験 |
 | `backend/tests/test_tx_guard_pool.py` :29〜（:60・:61 で呼ぶ） | 名前なしの engine を自分で作る | 役割を tool にして、名前の正本の関数の connect_args で engine を作る。役割が無いときに止まる1件を足す |
-| `backend/tests/test_v102_replay_diff.py` :14〜:47（seq）・:61〜:65 | 本物の set_idle_tx_limit を偽物の session で通す（差し替えていない）。:65 は呼ぶ順の先頭4つが execute・commit・execute・rollback | seq の中で役割を tool にする（monkeypatch.setenv）。偽物の execute は、名前を読む文（`current_setting('application_name')`）のときだけ `scalar()` が `salesanchor_tool_x` を返す結果を返す。:65 を先頭5つ execute・commit・execute・execute・rollback に直す。:50・:68 の試験は直さず通ることを CI で確かめる（q10） |
+| `backend/tests/test_v102_replay_diff.py` :14〜:47（seq）・:61〜:65 | 本物の set_idle_tx_limit を偽物の session で通す（差し替えていない）。:65 は呼ぶ順の先頭4つが execute・commit・execute・rollback | 偽物の execute は、名前を読む文（`current_setting('application_name')`）のときだけ `scalar()` が `salesanchor_tool_x` を返す結果を返す。:65 を先頭5つ execute・commit・execute・execute・rollback に直す。:50・:68 の試験は直さず通ることを CI で確かめる（q10） |
 | `backend/tests/test_prompt_ab.py` :50・`backend/tests/test_prompt_ab_recompute.py` :74 | set_idle_tx_limit を差し替え | 変えない（差し替え済みで本体の影響を受けない。CI で流して確かめる） |
 - b2 の PR では、`git grep -n -E 'set_idle_tx_limit|_tx_guard' -- backend/tests` の当たりを全部 PR に貼り、上の表に無い試験が本物の set_idle_tx_limit を通していないことを確かめる（第3.7版の抜けの再発を防ぐ）。
 - 呼ぶ道具（変えない）: `backend/app/tools/prompt_ab.py` :485・`prompt_ab_recompute.py` :99・:116・`v102_replay_diff.py` :120・:143。名前を SET で付け直す道は作らない（19-6 のまま）。
@@ -1302,6 +1303,7 @@ plan の台本の決まり:
 - docs/**/*.py を変える PR で必須の pytest が流れるので、その PR の確かめが約十数分長くなる。docs の .py の変更は少ない（q08）。
 - 例外の3本は守りの外に残る。新しく流す道具を docs に足したら、例外にせず決まりに合わせる（試験が赤で知らせる）。
 - set_idle_tx_limit を呼ばない道具（例外の3本・discord の確かめ）は、-e を付け忘れると salesanchor_backend を名乗る。名前なしにはならないが、アプリ本体と見分けられない。見分ける手がかりは pg_stat_activity の client の場所と始めた時刻（アプリ本体は入れ物の起動の時刻）。手順に -e を書いた3つの文（19-20-3）で減らす。
+- GitHub の取り込み2本（`.github/workflows/line-import-device.yml` :69・`line-import-operations.yml` :54）も -e なしで app を流す。これは試しの道具ではなく本番の取り込みなので b1 の対象外とし、salesanchor_backend を名乗る（名前なしにはならない）。
 - 自分で engine を作る scripts/ の .py（q10 の表で「手で流す」もの）を本番で手で流すと、名前なしで開く。K19-7 の数えで名前なしの握り手が出たら、q10 の一覧と流した記録に照らす。
 
 #### 19-20-10. 戻し方・計画・継続
