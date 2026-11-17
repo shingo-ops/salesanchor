@@ -138,6 +138,9 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 
 - `backend` の環境に `GOOGLE_TTS_SA_KEY_FILE=${GOOGLE_TTS_SA_KEY_FILE:-}` と、同じ場所を読み取り専用でつなぐ行を足す（形は `docker-compose.yml:127`・`docker-compose.yml:162` と同じ）。
 - 鍵そのものを本番に置くのは鍵の変更にあたる。便3 の直前に PO 本人へもう一度確かめる（kgi.md §3）。Google 側で鍵に付ける権限の名前は未確認（recon.md §8）。便3 の前に公式資料で確かめ、確かめられなければ止めて PO に聞く。
+- **追補（2026-11-18 Opus・便3a）**: 上の「形は `:127`・`:162` と同じ」をやめる。その形を写すと、鍵が 2 つとも未設定の環境で backend に `/dev/null:/dev/null:ro` が 2 本並び、つなぐ先が重なる（重なったときの Docker の動きは未確認）。代わりに、つなぐ先を固定の `/run/google-tts-sa.json` にし、環境の値は `GOOGLE_TTS_SA_KEY_FILE=${GOOGLE_TTS_SA_KEY_FILE:+/run/google-tts-sa.json}`、つなぐ行は `${GOOGLE_TTS_SA_KEY_FILE:-/dev/null}:/run/google-tts-sa.json:ro` とする。`${VAR:+replacement}` は値があるときだけ replacement、無ければ空（Docker 公式 `reference/compose-file/interpolation.md`・2026-11-18 Context7 で確認）。値が空なら `secretary_tts.py` の `_credentials()` が 503 `tts_not_configured` を返す（今と同じ）。
+- **追補（2026-11-18 Opus・権限の名前）**: Google 公式の権限の一覧（`https://docs.cloud.google.com/iam/docs/roles-permissions`）に Text-to-Speech 専用の役のページは無い（`speech` は Speech-to-Text）。公式の始め方（`text-to-speech/docs/get-started`）にも役を付ける手順は無い。決め方: 鍵を置いた直後に本番から 1 回読み上げを頼み、200 なら足りている・403 なら権限が足りないと判断する（便3b の最初の確かめ）。
+- 便の分け方: **便3a** = compose の 2 行（鍵が無くても今と同じ動き・委任 GO）。**便3b** = PO が鍵を作り、VPS に置き `.env` に場所を書く（PO 本人の GO）。
 
 ### 4-10. 触らない範囲
 
