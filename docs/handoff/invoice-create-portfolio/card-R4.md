@@ -2,6 +2,7 @@
 
 作成: Opus（Planner）2026-11-17。設計: docs/handoff/invoice-create-portfolio/design-v2.md 第6版 §3-7・§4 R4・K1・K2・K5・K8（設計審査 5回目 APPROVE）。
 実装承認: PO は 2026-11-17 に p1〜p8 を「見本どおり」と決め（p1・p3・p5 の見本どおりで金型の新設を承認）、PR マージ・デプロイまでの完走を委ねた（ccopusgo の委任の範囲）。
+直し（2026-11-17）: 1回目の実行は手順5 の tsc で止まった（`src/api/generated/schema` が無い。生成物で記録の対象外）。手順4 に CI と同じ型の生成 `npm run generate:api-types` を足した。ほかは変えていない。
 枝: release/invoice-portfolio-r4-components（origin/main から）。移行（migrations/）なし・deploy.yml なし・scripts/ なし・backend なし。
 # rules-ack: d5738ef7
 
@@ -755,6 +756,9 @@ describe('TotalsBox', () => {
 
 手順4 道具を入れる
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components/frontend && npm ci --no-audit --no-fund 2>&1 | tail -3
+    cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components/frontend && set -o pipefail && npm run generate:api-types 2>&1 | tail -3; echo "gen exit=$?"
+    cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components/frontend && ls src/api/generated/schema.d.ts
+  期待: 2行目 `gen exit=0`。3行目に `src/api/generated/schema.d.ts` が出る。この生成物は .gitignore（`frontend/src/api/generated/`）で記録の対象外なので、手順6 の一覧には出ない。CI（.github/workflows/frontend-check.yml の「Generate API types」）も tsc の前に同じ生成をしている。外れたら `BLOCKED: 手順4 型の生成`。
 
 手順5 形と試験（どれも作業場所の frontend で流す）
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r4-components/frontend && npx vitest run --config vitest.unit.config.ts --project unit src/components/SectionParts.test.tsx src/components/Stack.test.tsx 2>&1 | tail -12
@@ -788,6 +792,7 @@ describe('TotalsBox', () => {
   - P1〜P7 のどれかが外れた → `BLOCKED: P番号`。
   - §2 の Edit の変更前の文が見つからない・2 か所以上当たる → `BLOCKED: ファイル名 変更前の文`。
   - 手順4 の npm ci が失敗した → 最後の 3 行を貼って `BLOCKED: npm ci`。
+  - 手順4 の型の生成が `gen exit=0` でない、または schema.d.ts が無い → 最後の 3 行を貼って `BLOCKED: 手順4 型の生成`。
   - 手順5 で試験・型・eslint・検査のどれかが落ちた → 試験や検査を直さず、最後の出力を貼って `BLOCKED: 手順5 何行目`。カードからの書き写し間違い（字・字下げ）が出力から分かるときだけ直してよい。直したら何をどう直したかを書く。
   - 手順8 の UI の決まりの検査が 0 以外 → `BLOCKED: UI の決まりの検査`。
 - 記録して続ける: eslint が警告（warning）だけを出した（誤り 0）→ 警告の原文を書いて続ける。
