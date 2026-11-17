@@ -4,7 +4,8 @@
 
 - 設計: `docs/handoff/cloud-case-ai/grant-speed-design.md`（§1 K1〜K5・§3 変更前後・§4 対象外）
 - 対象ADR: ADR-1052
-- 状態: 設計案作成済み・設計審査済み（2 回目 APPROVE。設計 §11-2）。PO 実装承認済み（2026-11-17 PO「1」。段 A から順に、クラウドの Sonnet へ委任）
+- 状態: 3 版目（段 B を「新しい手順ファイルを足す形」に書き直した。設計 §3-3・§10-3 段 B）。審査待ち。段 A は実装・CI 済み。新しい段 B は、審査の後に PO が実装を承認するまで流さない
+- 前の版: 2 版目は設計審査 APPROVE・PO 実装承認（2026-11-17 PO「1」）。2 版目の段 B（commit 0996ed2ec）は流し終えた手順の書き換えで CI に止められたので、新しい段 B で打ち消す
 - 危険便: はい（`migrations/`。ADR-135・ADR-136。GO #番号が要る）
 - 実装担当: クラウドの Sonnet（RemoteTrigger の一回実行）。push して止まる。PR は Opus が作る
 - ブランチ: `release/unmask-grant-speed`（origin/main 7faae9090 起点。設計の書類はこのブランチに入っている）
@@ -16,7 +17,8 @@
 | guards/00-common.md | 全コマンドを cd から始める・1 手順 1 コマンド・報告に無い出力を成功と扱わない（commit・push は git log で実在を確かめる） | ○（§3-0 で作業場所を作り、以後は `cd <repo> &&` で始める） |
 | guards/04-worktree.md | new-worktree.sh の出力をパイプに通さず、実在は `ls -1d` と `git worktree list` で確かめる | ○（§3-0） |
 | guards/03-file.md | 編集は Write/Edit。プレースホルダを残さない | ○（§4 の試験と設計 §3-2 の文字をそのまま使う） |
-| guards/07-migration.md | 新しいファイルなら run_sql の登録が要る。migrations は CODEOWNERS の承認が要る（GO と承認は別） | ○（新しいファイルは足さない。既存ファイルの 1 文だけ直すので登録は不要。承認と GO は Opus が PR で扱う） |
+| guards/07-migration.md | 新しいファイルなら run_sql の登録が要る。migrations は CODEOWNERS の承認が要る（GO と承認は別） | ○（3 版目: 新しい手順を 1 本足し、`scripts/run_all_migrations.sh` に登録する（§5 手順B7）。戻しの手順は前例どおり注記の行だけで登録しない。名前は `YYYYMMDD_HHMMSS_説明.sql`。足す前に main の最後の登録を確かめる（§5 手順B6）。承認と GO は Opus が PR で扱う） |
+| guards/07-migration.md（流し終えた手順） | 記録済みの手順は書き換えない（`scripts/check_migration_freeze.py`）。直すときは新しい手順を足す | ○（`migrations/20261031_210000_create_ops_case.sql` は打ち消して main と同じに戻す。§5 手順B2・B3） |
 | guards/10-executor.md | 実装担当はカードの範囲だけを行い、迷ったら止まる | ○（§2 の分かれ道で止まる） |
 
 ## 受領確認
@@ -36,9 +38,9 @@
 
 入れる:
 - 段 A: `backend/tests/ops/test_ops_case_db.py` に試験 1 つ（§4）
-- 段 B: `migrations/20261031_210000_create_ops_case.sql` の :397-405 を設計 §3-2 の文字に置き換える
+- 段 B（3 版目。設計 §3-3 の表の 1〜6）: commit 0996ed2ec の打ち消し、main の取り込み、新しい手順と戻しの手順の 2 本、`scripts/run_all_migrations.sh` の登録 3 行、`.github/workflows/migration-test.yml` の前提の段 1 つ、`backend/tests/ops/test_ops_case_db.py` の 3 か所
 
-触らない: 判定の関数 `ops_case.is_denied_source` の中身、:407 以後の REVOKE・GRANT・USAGE、`scripts/`、`.github/`、`backend/app/`、他の試験、`docs/`（Opus が書く）
+触らない: `migrations/20261031_210000_create_ops_case.sql`（打ち消しのほかは触らない）、判定の関数 `ops_case.is_denied_source` の中身、`scripts/` の登録 3 行以外、`.github/` の前提の段 1 つ以外、`backend/app/`、他の試験、`docs/`（Opus が書く）
 
 ## 2. 想定される分かれ道
 
@@ -46,6 +48,10 @@
 - 段 A の CI で `SET LOCAL track_functions` が権限のエラー（42501）: 迂回せず止まる。
 - 段 B の CI で既存の試験（`test_migration_is_idempotent`・`test_grant_unmask_owner_first_run_is_fast_and_second_is_zero`・`test_grant_unmask_owner_revokes_when_table_is_added_to_deny_tables`）が赤: 直し方が振る舞いを変えた。直さずに止まる。
 - 段 B で `WITH ... SELECT ... INTO` が構文エラー: 直さずに止まる（Opus が設計を直す）。
+- 段 B の打ち消し（手順B2）や main の取り込み（手順B4）でぶつかった（conflict）: 自分で解かず、`git revert --abort` または `git merge --abort` で戻して止まる。
+- main に `20261117_130000` より後の名前の手順が既に登録されていた（手順B6）: 名前を自分で変えずに止まる。
+- 新しい 2 本の sha256 が §5 の値と違った（手順B5）: 直さずに止まる。
+- `.github/workflows/` の書き換えが見張りに拒まれた: 言い換えて回り込まず、止まる。
 
 ## 3-0. 作業場所（段 A・段 B とも最初に流す）
 
@@ -124,37 +130,127 @@ def test_grant_unmask_owner_calls_judge_once_per_source(pg):
 - `pg_stat_xact_user_functions` は、今の取引の中の呼び出しの数をその場で見せる（PostgreSQL 公式ページ monitoring-stats「pg_stat_user_functions」）。`track_functions` を `pl` にすると plpgsql の関数を数える（公式ページ runtime-config-statistics「track_functions」）。
 - 最後に ROLLBACK するので、試験の DB の権限は試験の前のまま。
 
-## 5. 段 B の手順（直す本体。段 A の CI で新しい試験が赤だと Opus が確かめてから。先に §3-0。手順0-5 の log の先頭が段 A の commit であること）
+## 5. 段 B の手順（3 版目: 新しい手順ファイルを足す。PO が新しい段 B の実装を承認してから。先に §3-0）
 
-手順4 `migrations/20261031_210000_create_ops_case.sql` の「-- 1. 付けるべき表」の行から `AND NOT ops_case.is_denied_source(s.source);` の行までを、設計 §3-2 の文字（判定を WITH の中に入れた版）に Edit で置き換える（字下げも §3-2 のとおり。他の行は変えない）
+`<repo>` の手順は 1 手順 1 コマンド。`F` は `migrations/20261031_210000_create_ops_case.sql`、`N` は `migrations/20261117_130000_grant_unmask_owner_once_per_source.sql`、`D` は `migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql`（コマンドには略さず書く）。
 
-手順5 差分が 1 か所だけか確かめる
-  cd <repo> && git diff migrations/20261031_210000_create_ops_case.sql | head -40
-期待する出力: 1 か所。消える行は `FROM (SELECT DISTINCT b.source FROM ai_cloud_meta.build_columns b) s`・`AND c.relkind IN ('r', 'p')`（末尾にセミコロンなし）・`AND NOT ops_case.is_denied_source(s.source);` の 3 行。足す行は注記 2 行・`WITH d AS MATERIALIZED (`・`SELECT DISTINCT b.source FROM ai_cloud_meta.build_columns b`・`), s AS MATERIALIZED (`・`SELECT d.source FROM d WHERE NOT ops_case.is_denied_source(d.source)`・`)`・`FROM s`・`AND c.relkind IN ('r', 'p');` の 9 行
+手順B1 枝の先頭が 2 版目の段 B であることを確かめる
+  cd <repo> && git log --oneline -1
+期待する出力: 先頭が `0996ed2ec`。違えば停止（`BLOCKED:`）
 
-手順5-2 足す行と消す行の数を確かめる
-  cd <repo> && git diff --numstat migrations/20261031_210000_create_ops_case.sql
-期待する出力: `9	3	migrations/20261031_210000_create_ops_case.sql`。違えば停止（`BLOCKED:`）
+手順B2 2 版目の段 B を打ち消す（消さずに、打ち消しの commit を足す）
+  cd <repo> && git revert --no-edit 0996ed2ec36630b01ff4d916bee39287077ee3ec
+期待する出力: commit が 1 つでき、ぶつかりなし
 
-手順6 移行のファイルを入れる
-  cd <repo> && git add migrations/20261031_210000_create_ops_case.sql
+手順B3 F が枝の起点と同じ中身に戻ったことを確かめる
+  cd <repo> && git diff --stat 7faae9090bf8b90077cf383ad0cd65a44d4afaba HEAD -- migrations/20261031_210000_create_ops_case.sql
+期待する出力: 空。空でなければ停止
 
-手順7 commit する
-  cd <repo> && git commit -m "perf(ops-case): call is_denied_source once per source in grant_unmask_owner (ADR-1052)"
+手順B4 main を取り込む（rebase は使わない）
+  cd <repo> && git merge --no-edit origin/main
+期待する出力: ぶつかりなしで merge の commit ができる。ぶつかったら `git merge --abort` で戻して停止
 
-手順8 commit の実在と差分を確かめる
-  cd <repo> && git log --stat -1 | head -20
-期待する出力: 変わったファイルは `migrations/20261031_210000_create_ops_case.sql` だけ
+手順B4-2 取り込んだ後、変える前の 3 つのファイルが main と同じことを確かめる
+  cd <repo> && git diff --stat origin/main HEAD -- migrations/20261031_210000_create_ops_case.sql scripts/run_all_migrations.sh .github/workflows/migration-test.yml
+期待する出力: 空。空でなければ停止
 
-手順9 push する
+手順B5 新しい 2 本を作る（中身を手で書かない。頭の説明を printf で書き、関数は git show で写す）
+
+手順B5-1 新しい手順の頭の説明 3 行
+  cd <repo> && printf '%s\n' '-- ADR-1052 段2 の手直し: 権限の付け直し（ops_case.grant_unmask_owner）で、判定 ops_case.is_denied_source を元の表の名前ごとに 1 回だけ呼ぶ。' '-- 付ける権限・外す権限は変えない。変えるのは「-- 1. 付けるべき表」の 1 文だけで、他は 20261031_210000_create_ops_case.sql の同じ関数と 1 字も変えない。' '-- 設計: docs/handoff/cloud-case-ai/grant-speed-design.md。CREATE OR REPLACE なので持ち主と実行権限はそのまま。冪等。' > migrations/20261117_130000_grant_unmask_owner_once_per_source.sql
+
+手順B5-2 新しい手順の本体（2 版目の段 B の関数。:379 の `CREATE OR REPLACE FUNCTION ops_case.grant_unmask_owner()` から :485 の `$fn$;` まで）
+  cd <repo> && git show 0996ed2ec36630b01ff4d916bee39287077ee3ec:migrations/20261031_210000_create_ops_case.sql | sed -n '379,485p' >> migrations/20261117_130000_grant_unmask_owner_once_per_source.sql
+
+手順B5-3 戻しの手順の頭の説明 2 行と `BEGIN;`
+  cd <repo> && printf '%s\n' '-- ADR-1052 段2 の手直しの戻し（手動実行のみ・本番デプロイでは実行しない）。関数を 20261031_210000_create_ops_case.sql の元の形へ戻す。' '-- 戻すと本番反映の最後の付け直しがまた約 16 秒以上かかる（設計 docs/handoff/cloud-case-ai/grant-speed-design.md §2）。' 'BEGIN;' > migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql
+
+手順B5-4 戻しの手順の本体（main の元の関数。:379 から :479 の `$fn$;` まで）
+  cd <repo> && git show origin/main:migrations/20261031_210000_create_ops_case.sql | sed -n '379,479p' >> migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql
+
+手順B5-5 戻しの手順の終わり
+  cd <repo> && printf '%s\n' 'COMMIT;' >> migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql
+
+手順B5-6 指紋と行数を確かめる
+  cd <repo> && sha256sum migrations/20261117_130000_grant_unmask_owner_once_per_source.sql migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql
+  cd <repo> && wc -l migrations/20261117_130000_grant_unmask_owner_once_per_source.sql migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql
+期待する出力: 指紋は順に `9ae9d6ae1ad4b5cb32652a56b3dd966a3cabac9ef6b28b32c0f39377d1f04168`・`a89d4d981d216d5e23a45647331416a00e743dd6a5322f9137f0ff27bb4da37e`。行数は 110・104。1 つでも違えば直さずに停止
+
+手順B6 main の最後の登録を確かめる
+  cd <repo> && grep -n '^run_' scripts/run_all_migrations.sh | tail -3
+期待する出力: 最後の行のファイル名の日時が `20261117_130000` より前（今は `20261115_110000_drop_ops_case_report_single_unique.sql`）。後の名前があれば停止
+
+手順B7 `scripts/run_all_migrations.sh` に登録する（Edit）。`# 実行済みの記録の集計（段5 5-3）。` で始まる行の、1 つ前の空行のさらに前（上の `run_` の並びの末尾）に、次の 3 行を足す。他の行は変えない
+```
+# ADR-1052 段2 の手直し: 権限の付け直しで判定を元の表の名前ごとに 1 回だけ呼ぶ（関数の置き換えだけ・冪等）
+run_sql migrations/20261117_130000_grant_unmask_owner_once_per_source.sql
+# ADR-1052 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql
+```
+
+手順B8 `.github/workflows/migration-test.yml` に前提の段を足す（Edit）。`      - name: 変更 SQL を 1回目実行（実行可否・構文チェック）` の行の前に、次の 9 行と空行 1 行を足す（字下げは前の段 `変更 SQL の前提の移行を先に実行（相談係の報告の種類）` と同じ。他の行は変えない）
+```
+      - name: 変更 SQL の前提の移行を先に実行（権限の付け直しの関数）
+        if: steps.detect.outputs.has_sql_changes == 'true' && contains(steps.detect.outputs.changed_sql, 'migrations/20261117_130000_grant_unmask_owner_once_per_source.sql')
+        run: |
+          # 20261117_130000 と戻しの 20261117_130001 は ops_case.grant_unmask_owner（20261031_210000）を置き換えるので、本番と同じ順で先に作る
+          for sqlfile in migrations/20261016_100000_create_ops_incident_tables.sql migrations/20261031_210000_create_ops_case.sql; do
+            echo "▶ $sqlfile を前提として実行中..."
+            psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
+            echo "✅ $sqlfile 成功"
+          done
+```
+
+手順B9 `backend/tests/ops/test_ops_case_db.py` を 3 か所直す（Edit。他の行は変えない）
+- (a) `_CASE_SQL = "20261031_210000_create_ops_case.sql"` の次の行に足す:
+```
+_SPEED_SQL = "20261117_130000_grant_unmask_owner_once_per_source.sql"
+```
+- (b) 準備 `pg` の中、`        print(f"[ops_case migration 1 回目の所要] {conn_elapsed:.3f} 秒")` の次の行（`        yield conn` の前）に足す:
+```
+        # 本番と同じ順: 元の関数の後に、判定を名前ごとに 1 回にした置き換えを流す（設計 §3-3）
+        c.execute(_read(_SPEED_SQL))
+```
+- (c) `def test_migration_is_idempotent(pg):` の中、`pg.cursor().execute(_read(_CASE_SQL))` の 2 行目の次に足す（字下げ 4）:
+```
+    pg.cursor().execute(_read(_SPEED_SQL))
+    pg.cursor().execute(_read(_SPEED_SQL))
+```
+
+手順B9-2 試験のファイルが Python として読めるか確かめる
+  cd <repo> && python3 -m py_compile backend/tests/ops/test_ops_case_db.py
+期待する出力: 何も出ない
+
+手順B10 5 つのファイルを入れる（git add -A は使わない）
+  cd <repo> && git add migrations/20261117_130000_grant_unmask_owner_once_per_source.sql migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql scripts/run_all_migrations.sh .github/workflows/migration-test.yml backend/tests/ops/test_ops_case_db.py
+
+手順B10-2 入れた差分の数を確かめる
+  cd <repo> && git diff --cached --numstat
+期待する出力（この 5 行だけ）:
+```
+10	0	.github/workflows/migration-test.yml
+5	0	backend/tests/ops/test_ops_case_db.py
+110	0	migrations/20261117_130000_grant_unmask_owner_once_per_source.sql
+104	0	migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql
+3	0	scripts/run_all_migrations.sh
+```
+1 行でも違えば停止
+
+手順B11 commit する
+  cd <repo> && git commit -m "perf(ops-case): add migration to call is_denied_source once per source (ADR-1052)"
+
+手順B12 PR 全体で F の差分が 0 になったことを確かめる
+  cd <repo> && git diff --stat origin/main...HEAD -- migrations/20261031_210000_create_ops_case.sql
+期待する出力: 空
+
+手順B13 push する
   cd <repo> && git push origin release/unmask-grant-speed
 期待する出力: push の成功
 
-手順10 push の実在を確かめる
-  cd <repo> && git log --oneline -2 origin/release/unmask-grant-speed
-期待する出力: 先頭が手順8 の sha、その次が段 A の sha
+手順B14 push の実在を確かめる
+  cd <repo> && git log --oneline -4 origin/release/unmask-grant-speed
+期待する出力: 上から 手順B11 の commit／手順B4 の merge／手順B2 の打ち消し／`0996ed2ec`
 
-報告: `DONE: 段B` と手順5 の差分の全文と手順10 の出力。ここで止まる
+報告: `DONE: 段B` と、手順B5-6・B6・B10-2・B12・B14 の出力の全文。ここで止まる（PR 本文・CI は Opus が扱う）
 
 ## 5-1. 停止したときの報告
 

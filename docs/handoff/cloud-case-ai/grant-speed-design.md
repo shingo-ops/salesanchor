@@ -3,7 +3,8 @@
 > この文書は何か: 本番反映の最後に流れる「AI の値を返す口の持ち主（ai_unmask_owner）の権限の付け直し」が、30 秒の打ち切りに近づき、2 回の本番反映で時間切れになった件の、現在地（実測）と直し方です。付ける権限・外す権限は変えず、計算の順番だけを直します。
 
 - 対象ADR: ADR-1052（`docs/adr/ADR-1052-cloud-case-ai.md`）。部品の設計は `docs/handoff/cloud-case-ai/design.md` §4-3
-- 状態: 設計案作成済み・設計審査済み（2 回目 APPROVE。11-2）。K2・K3 は本番で照合済み・合格（10-2）。PO 実装承認済み（2026-11-17 PO「1」）。実装は段 A から。PO は直し方の方向（計算の順番だけを直す）を選択済み（PO「1」2026-11-17。問いは「案のとおり、計算の順番だけを直す【おすすめ】」）。実装は未着手（実装の承認は審査のあとに PO へ聞く）
+- 状態: 3 版目の設計案作成済み・審査待ち（3-3 のファイルの直し方を「新しい手順ファイルを足す形」に変えた。理由は 10-3 段 B）。段 A は実装・CI 済み。段 B（その場で直す形）は push 済みだが、流し終えた手順を書き換えたため CI の見張りで止まった。PO は設計の直しを選択済み（2026-11-17 PO「1」。問いは「設計を新しい手順ファイルを足す形に直し、審査に通してから、改めて作り始めの許可をもらう【おすすめ】」）。新しい段 B の実装は、審査のあとに PO へ改めて承認を聞く。計算の中身（3-2）と K1〜K5 は変えない
+- 前の版の状態: 2 版目は設計審査 APPROVE（11-2）・K2・K3 は本番で照合済み・合格（10-2）・PO 実装承認（2026-11-17 PO「1」）
 - 危険便: はい（`migrations/` を変える。ADR-135・ADR-136。GO #番号が要る）
 - 段取り表: `docs/handoff/cloud-case-ai/grant-speed-card.md`
 
@@ -100,21 +101,41 @@
 - PL/pgSQL の `INTO` は文のほぼどこに置いてもよく、WITH から始まる SELECT も同じ（PostgreSQL 公式ページ plpgsql-statements「Executing a Command with a Single-Row Result」）。
 - 見込み（推測。K1・K3 で実測して確かめる）: 判定が 571 回以下になり、2.18 ms × 571 ＝ 約 1.2 秒。付け直し全体は 約 16〜17 秒 − 14.7 秒 ＋ 1.2 秒 ＝ 約 3〜4 秒。PO への前の説明「約 1〜2 秒」は計算 (B) だけの見込みで、手順全体では約 3〜4 秒になる。
 
-### 3-3. ファイルの直し方
+### 3-3. ファイルの直し方（3 版目。2 版目の「その場で直す」は取りやめ）
 
-- 移行のファイル `migrations/20261031_210000_create_ops_case.sql` をその場で直す。理由: このファイルは本番反映のたびに全部流れ（`CREATE OR REPLACE FUNCTION`）、これまでもその場で直してきた（`git log` で fd75ee6cb・108da716a）。新しいファイルを足すと、同じ関数の定義が 2 か所に分かれる。
-- 試験を 1 つ足す（段取り表 §4）。
+2 版目は「`migrations/20261031_210000_create_ops_case.sql` は本番反映のたびに全部流れる」を前提にしていた。この前提は今は成り立たない（10-3 段 B）。手順は 1 度流れると記録され、次からは飛ばされる（`scripts/run_all_migrations.sh:282-287` の `run_sql` が `mr_should_skip` で `skip (recorded)`）。流し終えた手順の書き換えは CI が止める（`scripts/check_migration_freeze.py:125-138`。例外の一覧 `scripts/migration-guard/rewrite-allowlist.tsv` は「本番で記録される前に失敗した手順」だけの道で、今回は当たらない）。その場で直しても本番では流れないので、関数は変わらない。
+
+そのため、同じ関数を `CREATE OR REPLACE` する新しい手順ファイルを足す。
+
+| # | 変えるもの | 中身 |
+|---|---|---|
+| 1 | 段 B の commit 0996ed2ec | `git revert` で打ち消す（消さずに、打ち消しの commit を足す）。`migrations/20261031_210000_create_ops_case.sql` は main と同じ中身に戻る |
+| 2 | 新しい手順 `migrations/20261117_130000_grant_unmask_owner_once_per_source.sql`（110 行） | 頭の説明 3 行 ＋ 段 B の版（0996ed2ec）の `migrations/20261031_210000_create_ops_case.sql:379-485`（`CREATE OR REPLACE FUNCTION ops_case.grant_unmask_owner()` から `$fn$;` まで）。つまり元の関数と 1 字も変えず、「-- 1. 付けるべき表」の 1 文だけが 3-2 の形。sha256 `9ae9d6ae1ad4b5cb32652a56b3dd966a3cabac9ef6b28b32c0f39377d1f04168` |
+| 3 | 戻しの手順 `migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql`（104 行。手動だけ・本番反映では流さない） | 頭の説明 2 行 ＋ `BEGIN;` ＋ origin/main の `migrations/20261031_210000_create_ops_case.sql:379-479`（元の関数） ＋ `COMMIT;`。sha256 `a89d4d981d216d5e23a45647331416a00e743dd6a5322f9137f0ff27bb4da37e`。前例どおり（`migrations/20261115_110001_drop_ops_case_report_single_unique_down.sql`。戻しの手順は main に 12 本） |
+| 4 | `scripts/run_all_migrations.sh` | 最後の登録（`run_sql migrations/20261115_110000_...` と戻しの注記の行）の後ろ、`# 実行済みの記録の集計（段5 5-3）` の前の空行より上に、説明 1 行・`run_sql` 1 行・戻しの注記 1 行を足す（`:1468` の「新しい手順は、この集計の行より上に足す」のとおり） |
+| 5 | `.github/workflows/migration-test.yml` | 前例（`:1424-1432`）と同じ形で「前提の移行を先に実行」の段を 1 つ足す。新しい手順のファイル名を含むときだけ、`20261016_100000_create_ops_incident_tables.sql` と `20261031_210000_create_ops_case.sql` を先に流す。新しい手順は `ops_case` の schema の中に関数を作るので、先に schema と元の関数が要る |
+| 6 | `backend/tests/ops/test_ops_case_db.py` | (a) 定数 `_SPEED_SQL` を足す。(b) 準備（fixture `pg`、:185 の `_CASE_SQL` を流す行の後）で新しい手順を流す。(c) `test_migration_is_idempotent`（:627-631）で `_CASE_SQL` を 2 回流した後に、新しい手順も 2 回流す |
+
+- 持ち主と権限: `CREATE OR REPLACE FUNCTION` で置き換えても、関数の持ち主と実行権限は変わらない。置き換えるには持ち主である必要がある（PostgreSQL 公式ページ sql-createfunction。Context7 で確認）。関数は jarvis が作った（`scripts/run_all_migrations.sh:25` の `PSQL="psql -U jarvis ..."`。`migrations/20261031_210000_create_ops_case.sql` の `OWNER TO` は `unmask_fetch` の 1 か所 :482 だけで、`grant_unmask_owner` の持ち主は変えていない）。新しい手順も同じ jarvis で流れる。`REVOKE ALL ON FUNCTION ops_case.grant_unmask_owner() FROM PUBLIC`（元のファイル :486）は置き換えでも残るので、新しい手順には書かない。
+- 新しい手順は関数を置き換えるだけで、`SELECT ops_case.grant_unmask_owner();` は書かない。付け直しは本番反映の最後（`scripts/run_all_migrations.sh` の終わりの処理、`>>> [final] grant ai_unmask_owner done in Ns`）で 1 回流れ、その時には新しい関数になっている。
+- 6(c) の理由: 試験の DB は 1 つのファイルの試験で共有される（`pg` は `scope="module"`、:152-153）。`test_migration_is_idempotent` が元のファイルを流し直すと、関数が元の形に戻る。その後の K4 の試験（`test_grant_unmask_owner_calls_judge_once_per_source`）が元の形を測ってしまう。本番と同じ順（元のファイル → 新しい手順）に揃えるため、新しい手順も流し直す。
+- 壊す文の見分け: `scripts/check-process-artifacts.js` の `sqlTextHasDestructiveStatement` に 2 と 3 の下書きを掛けた結果は、どちらも `false`（PO 本人の GO が要る形には当たらない）。
+- 削除欄: PR 全体の差分（`base...head`）では `migrations/20261031_210000_create_ops_case.sql` の差分は 0（打ち消したため）。消える行のあるファイルは無い見込み。PR 本文の「削除するファイル」は CI の結果で確かめて書く。
+- 試験を 1 つ足す（段 A で済み。段取り表 §4）。
 
 ## 4. 対象と対象外
 
-- 対象: `migrations/20261031_210000_create_ops_case.sql` の :397-405 の 1 文（説明の注記を含む）、`backend/tests/ops/test_ops_case_db.py` に試験 1 つ。
-- 対象外: `ops_case.is_denied_source` の中身（3 か所が呼ぶ正本。§6 の案 D）、REVOKE・GRANT・USAGE の繰り返し（§2-2 の (D) は 1.8 ms）、`scripts/run_all_migrations.sh` の打ち切り 30 秒、`.github/workflows/`、backend のコード。
+- 対象: 3-3 の表の 1〜6。
+- 対象外: `migrations/20261031_210000_create_ops_case.sql`（打ち消して main と同じに戻す）、`ops_case.is_denied_source` の中身（3 か所が呼ぶ正本。§6 の案 D）、REVOKE・GRANT・USAGE の繰り返し（§2-2 の (D) は 1.8 ms）、`scripts/run_all_migrations.sh` の打ち切り 30 秒と登録 3 行以外、`.github/workflows/` の `migration-test.yml` の 1 段以外、backend のコード、`backend/tests/test_ops_case_router.py`・`backend/tests/ops/test_ops_case_report_kind_migration.py`（`grant_unmask_owner` を呼ばない。`git grep grant_unmask_owner origin/main -- backend` は `test_ops_case_db.py` だけ）。
 
 ## 5. 影響範囲
 
 - 関数 `ops_case.grant_unmask_owner()` を呼ぶのは本番反映の最後の 1 か所だけ（`scripts/run_all_migrations.sh:267`）と試験（`backend/tests/ops/test_ops_case_db.py:489,501,506,631,686,694,702,709`）。`git grep grant_unmask_owner origin/main -- backend/app` は 0 件。
 - 付ける・外す権限は変わらない（K2・K5）。AI が読める表は増えも減りもしない。
-- 移行の CI（`.github/workflows/migration-test.yml`）は、変えた SQL ファイルを 2 回流して冪等を確かめる。この関数は `CREATE OR REPLACE` なので 2 回流せる。
+- 移行の CI（`.github/workflows/migration-test.yml`）は、変えた SQL ファイル（`git diff --name-only --diff-filter=d` で拾う `migrations/` の .sql。:1262-1264）を名前の順に 2 回流して冪等を確かめる。新しい手順と戻しの手順の両方が拾われ、「新しい手順 → 戻し → 新しい手順 → 戻し」の順に流れる。どちらも `CREATE OR REPLACE` なので何度でも流せる。
+- 全件の試し流し（`migration-full-dryrun`）は `scripts/run_all_migrations.sh` の登録の順に全部流すので、新しい手順は元のファイルの後に流れる。
+- 本番: 新しい手順は最初の本番反映で 1 度だけ流れて記録され、その本番反映の最後の付け直しから新しい関数が使われる。
+- この節と §1・§2 の `scripts/run_all_migrations.sh` の行番号は 7faae9090 のもの。その後 main で記録の仕組み（48a0f1cd6・9109f1c7b）が入り、行番号はずれている。段取り表では行番号でなく文字で場所を指す。
 
 ## 6. 代わりの案と選ばない理由
 
@@ -131,7 +152,9 @@
 - 計画がまた変わって押し込まれる: MATERIALIZED は押し込みを止めると公式に書かれている。K4 の試験が呼ぶ回数を CI で毎回数えるので、戻れば赤になる。
 - 付ける表の一覧が変わる: 条件は同じ文のまま。K2 で本番の実物で照合する。外れたら、次の本番反映の前に PR を戻す。
 - 試験の `SET LOCAL track_functions` が CI の DB の権限で拒まれる: 実装担当は迂回せず止まって報告する（段取り表 §5）。
-- 戻し方: PR を戻す PR を出して本番反映する。移行は毎回全部流れるので、戻した版の関数がそのまま入る。データは変えない。
+- 戻し方（3 版目で直した）: PR を戻しても、本番では新しい手順が記録済みなので、関数は元に戻らない。戻すときは、戻しの手順（3-3 の 3）と同じ中身の新しい手順ファイルを足す PR を出し、本番反映する（流し終えた手順は書き換えない決まりのため）。データは変えない。
+- 本線と枝のずれ: 枝は 7faae9090 起点で、main には記録の仕組みが後から入った。段取り表で main を枝に取り込んでから登録の行を足す（rebase は使わない）。取り込みでぶつかったら止まる。
+- 本線で新しい手順が先に足される: 登録の順と名前の日時の順がずれる。実装担当は足す前に main の最後の登録を確かめ、`20261117_130000` より後の名前が既にあれば止まる。
 
 ## 8. 外部・過去事例の参照と我々への応用
 
@@ -141,6 +164,7 @@
 
 - K4 の試験が、判定を呼ぶ回数を CI で毎回数える（同じ種類の遅れが戻ったら PR の段階で赤）。
 - 既存の試験 `backend/tests/ops/test_ops_case_db.py:689`（1 回目が 5 秒未満）はそのまま残す。
+- 試験の準備は本番と同じ順（元のファイル → 新しい手順）で流す（3-3 の 6）。この関数をまた直すときは、さらに新しい手順を足し、準備と `test_migration_is_idempotent` にも足す。
 - 守り手: Opus（K4 の試験は CI が毎回、本番の所要は本番反映の記録で見る）
 - 本番の所要は、本番反映の記録の `done in Ns` に毎回出る（`scripts/run_all_migrations.sh:270`）。2026-12-01 ごろに、直した版のあとの本番反映の N を数え直す（担当: Opus）。
 
@@ -184,6 +208,15 @@
 - ほかに赤が 1 件: `tests/test_assistant_karte_pg.py::test_read_meet_available_failed_sql_keeps_transaction_usable`（`DeadlockDetectedError`）。この PR が触らない試験。段 B の CI でも再び出るかを見る。
 - 全体: `2 failed, 9758 passed, 79 skipped`（pytest-run-internal・run 44025434410）。
 
+### 段 B（その場で直す形・取りやめ）の CI（2026-11-17・HEAD 0996ed2ec）
+
+- 試験: `9760 passed, 79 skipped, 1 xfailed`（pytest-run-internal・run 44027601766、失敗 0）。K4 の新しい試験と K5 の既存 3 試験は通った。中身の直し方（3-2）は試験の上では正しい。段 A の赤だった `test_assistant_karte_pg.py` も今回は通った。
+- 止まった見張り 2 つ:
+  - 流し終えた手順の書き換えの見張り（`scripts/check_migration_freeze.py`）: `migrations/20261031_210000_create_ops_case.sql` を書き換えたので赤。
+  - 作業の書類の見張り（process-artifacts gate）: 消える行のあるファイルが PR 本文の「削除するファイル」に無いので赤。
+- 原因: 2 版目の設計が「このファイルは本番反映のたびに全部流れる」とした（3-3 の旧版）。main では 2026-11-17 00:53 UTC（この枝の起点 7faae9090 の後）に「流し終えた手順は記録して飛ばす」仕組み（48a0f1cd6）と書き換えの見張りが入っており、設計はそれを入れ忘れた。付け直しは今も本番反映の最後に流れる（origin/main 47b153345 の `scripts/run_all_migrations.sh:451-454`）。その場で直しても本番では流れないため、見張りが止めなくても関数は変わらなかった。
+- 直し: 3-3 を 3 版目（新しい手順ファイルを足す形）に変えた。PO は設計の直しを選んだ（2026-11-17 PO「1」）。
+
 ## 11. 設計審査の記録
 
 ### 11-1. 1 回目（2026-11-17 05:53 JST・クラウドの Opus・commit 3833b06c4・読むだけ）
@@ -206,3 +239,9 @@
 | 1（事実・軽） | 段取り表 §6 の結果の書き先「設計の §11（新設）」が、審査の記録の §11 とぶつかる | 書き先を「設計の §10-3（本番反映の後）」に変えた |
 | 2（事実・軽） | 試験を入れる位置（card の §0）が空行 2 行の決まりと合わない。段 A で試験を足すと K5 の `:697` がずれる | 位置を「:694 の後ろ、空行 2 行、試験、空行 2 行、:697 の関数」と書いた。K5 と段取り表 §2 は試験の名前で指す |
 | 3（未確認） | 公式文書の節番号が 16 の版と違う見込み（審査役は公式ページに届かず確かめられず） | 節番号を外し、ページ名と節の題だけを書いた |
+
+### 11-3. 2 回目の審査で見落とした点（段 B の CI で分かった）
+
+- 2 回目の審査も、設計の「本番反映のたびに全部流れる」を実物（その時の main の `scripts/run_all_migrations.sh` と `scripts/check_migration_freeze.py`）と照らさなかった。審査の起点 7faae9090 の後に main で記録の仕組みが入ったため、起点だけを読むと見落とす。
+- 3 版目の審査では、次を必ず見る: (1) 起点ではなく今の origin/main で、記録と書き換えの見張りの決まりに合うか／(2) 新しい 2 本が段取り表の手順で指紋どおりに作れるか（Opus が手元で作り直して `9ae9d6ae…4168`・`a89d4d98…a37e` と一致を確認済み）／(3) 試験の準備と冪等の試験の順が本番と同じか／(4) CI の前提の段の形が前例（`.github/workflows/migration-test.yml` の「変更 SQL の前提の移行を先に実行」）と同じか。
+- Opus が手元で写しに当てた結果（段取り表 手順B7〜B9 の文字そのまま）: 足す行は `scripts/run_all_migrations.sh` 3・`.github/workflows/migration-test.yml` 10・`backend/tests/ops/test_ops_case_db.py` 5、試験のファイルは Python として読める、`migration-test.yml` は YAML として読める。
