@@ -34,13 +34,13 @@
 |---|---|
 | K1 試験: oneoff=True の箱だけ除かれ、False・目印なし・Config なしは数える | `python3 scripts/tests/test_container_state.py`（CI の deploy-script-test・monitoring-check）が緑 |
 | K2 本物の docker: oneoff=True の不健康な箱が celery-worker の数を 1 にしない | `gh workflow run sandbox-test.yml -f test=container-state` が緑 |
-| K3 本番: 反映後、作業箱（`docker compose run --rm --no-deps -T celery-worker sleep 240`）を動かしても `salesanchor_container_unhealthy{service="celery-worker"}` が 0 のまま | 反映後に作業箱を 1 回流し、その間とその後 2 分の数を Prometheus で読む（1 分刻みで全部 0） |
+| K3 本番: 反映後、作業箱（`docker compose run --rm --no-deps -T celery-worker sleep 240`）を動かしても `salesanchor_container_unhealthy{service="celery-worker"}` が 0 のまま | 反映後に作業箱を 1 回流す。①流している間に `docker inspect` でその箱が `oneoff=True` かつ Health.Status が `unhealthy` に達したことを見る（達しなければ×＝確かめになっていない）②その間とその後 2 分の数を Prometheus で読み、1 分刻みで全部 0 |
 | K4 本番: 本物の 5 部品の数が反映の前後で変わらない（running=1・unhealthy=0） | 反映後 5 分の Prometheus の読み取り |
-| K5 7 日後: celery-worker の不健康の区間が、作業箱の有無にかかわらず 0 | 2026-11-25 に v6ep.sh と同じ読み方で 7 日分を数える |
+| K5 7 日後: celery-worker の不健康の区間が、作業箱の有無にかかわらず 0 | 2026-11-25 に Prometheus へ `max_over_time(max(salesanchor_container_unhealthy{service="celery-worker"})[7d:1m])` を問い合わせ、値が 0 |
 
 ## 7. 維持する仕組み
 - 試験（K1・K2）が CI と試験場に残るので、数え方を戻すと試験が赤になる
-- K5 の数え直しを ADR-1012 段階4 の V6 判定に使う（stage4-requirements.md の順番 1→2）
+- K5 の数え直し（§6 の PromQL）を ADR-1012 段階4 の V6 判定に使う（stage4-requirements.md の順番 1→2）
 
 ## 8. 外部事例
 - Docker Compose 自身が、普段の箱を数えるときに one-off の箱を外している（pkg/compose/containers.go getDefaultFilters の oneOffExclude）。同じ目印で外すのは作り手と同じ扱い。数値の事例は不要（不具合直しで、効果は K3・K5 の実測で確かめる）
@@ -59,7 +59,11 @@ PR を revert して main に合流 → deploy で戻る。cron・textfile の�
    - main: ps が "a b\n"、inspect が [oneoff=True で Running・unhealthy, oneoff=False で Running・healthy] を返す差し替えで main()==0、`salesanchor_container_unhealthy{service="celery-worker"} 0` と `salesanchor_container_running{service="celery-worker"} 1` がある
    - main: inspect が [oneoff=True で Running・unhealthy] だけ → `salesanchor_container_running{service="celery-worker"} 0` と `salesanchor_container_unhealthy{service="celery-worker"} 0`
 3. `tests/sandbox/container-state.sh`
-   - 手順 3 で `docker run -d --name bine-oneoff --label com.docker.compose.service=celery-worker --label com.docker.compose.oneoff=True --health-cmd false --health-interval 2s --health-retries 1 alpine:3.24 sleep 600` を足す。待つ loop の条件に `bine-oneoff` が unhealthy を足す
+   - 手順 3 で `docker run -d --name bine-oneoff --label com.docker.compose.service=celery-worker --label com.docker.compose.oneoff=True --health-cmd false --health-interval 2s --health-retries 1 alpine:3.24 sleep 600` を足す。待つ loop の中で `o=$(docker inspect -f '{{.State.Health.Status}}' bine-oneoff)` を読み、抜ける条件を `[ "$w" = healthy ] && [ "$b" = unhealthy ] && [ "$o" = unhealthy ]` にする
+   - loop の直後（今の `docker inspect -f ... bine-worker bine-beat` の行の前）に `[ "$(docker inspect -f '{{.State.Health.Status}}' bine-oneoff)" = unhealthy ] || { echo "NG: bine-oneoff not unhealthy"; exit 1; }` を足す（作業箱が unhealthy に達してから書いたことを保証する。直す前のコードならここを通った後の expect で落ちる）
    - cleanup の `docker inspect` と `docker rm -f` の並びに bine-oneoff を足す
    - expect は今の `salesanchor_container_unhealthy{service="celery-worker"} 0` と `running … 1` のままで、作業箱が除かれたことの確かめになる
 4. 確かめ: `python3 scripts/tests/test_container_state.py -v` と `python3 monitoring/scripts/tests/test_check_app_healthchecks.py`（あれば）を流し、生出力を貼る
+
+## 11. 審査の記録
+- 1 回目（クラウド・Opus・2026-11-18）: 途中で見張りに止まり判定なし。所見の中 2・軽 2 のうち、中2（sandbox の待つ loop が失敗にしない・K3 が作業箱の unhealthy 到達を見ない）と軽1（K5 の数え方の置き場所）を直した。軽（目印の大文字小文字）は安全側（誤検知が戻る方向）なので変えない。未確認だった deploy.yml:319-320 は Opus が手元で照合済み（`git fetch origin main` と取り込み直しの 2 行）
