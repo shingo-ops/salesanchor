@@ -222,3 +222,23 @@ PR について（Opus が作る。実装役は作らない）:
 - 最後の行に `DONE`、止まったら `BLOCKED: 理由`、判断が要るなら `NEEDS_DECISION: 内容` と書く。
 
 END OF CARD
+
+## 8. 追補（2026-11-17・CI の pytest で見つかった抜け）
+
+【事実】PR #5568 の HEAD 8adf83e44 で、`backend/tests/test_realtime_topics.py:34` の `test_every_write_route_is_in_exactly_one_table` が落ちた（9808 passed / 1 failed）。理由は「どちらの表にも無い書き込みルート: ('POST', '/api/v1/assistant/speech'), ('PUT', '/api/v1/assistant/voice')」。書き込みの口は、画面へ合図を出す表 `WRITE_ROUTE_TOPICS` か、出さない表 `NO_SIGNAL_ROUTES`（`backend/app/realtime/topics.py`）のどちらか 1 つに必ず載せる決まり（ADR-1016）を、カード §2 に入れ忘れた。設計の漏れ（Opus）。
+
+直し（§2 の表に 1 行足す）:
+
+| ファイル | 何をする |
+|---|---|
+| `backend/app/realtime/topics.py` | `NO_SIGNAL_ROUTES` の `("POST", "/api/v1/assistant/rules/{rule_id}/remove"): _PENDING,` の行の直後に、下の 3 行だけを足す。ほかの行は変えない |
+
+```python
+    # ADR-1080 便1: 声の好みは本人だけの設定。声の設定画面（便2）を作るときに決める
+    ("PUT", "/api/v1/assistant/voice"): _PENDING,
+    ("POST", "/api/v1/assistant/speech"): "ADR-1080: 音声を返すだけ。書くのは使用量の台帳だけで、画面の表は変わらない",
+```
+
+合図を出さない理由: 読み上げは音声を返すだけで、画面に出る表を変えない（台帳は使用量の画面が読むが、その画面は便2 で作る）。声の好みは本人の設定画面だけが使い、ほかの人の画面に出ない。`WRITE_ROUTE_TOPICS` には載せない。
+
+確かめ: `cd backend && python -m pytest tests/test_realtime_topics.py -q` が全部通ること。

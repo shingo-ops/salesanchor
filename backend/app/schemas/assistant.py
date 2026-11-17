@@ -180,3 +180,26 @@ class AssistantMessageOut(BaseModel):
     kind: Literal["invoice", "event", "unknown"]
     draft: InvoiceDraft | EventDraft | UnknownDraft
     candidates: Candidates = Field(default_factory=Candidates)
+
+
+class VoiceOut(BaseModel):
+    """ADR-1080: 秘書の声の一覧・既定・本人の選び（design.md §4-3）。"""
+
+    voices: list[str]
+    default: str
+    selected: str
+
+
+class VoiceIn(BaseModel):
+    voice: str  # 一覧に無い値は router で 422（型の中に声の一覧を写さない）
+
+
+class SpeechIn(BaseModel):
+    text: str = Field(min_length=1, max_length=300)
+
+    @field_validator("text")
+    @classmethod
+    def _not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("text must not be blank")
+        return v

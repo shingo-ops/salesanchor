@@ -34467,6 +34467,21 @@
         "title": "SoldOutResultsResponse",
         "type": "object"
       },
+      "SpeechIn": {
+        "properties": {
+          "text": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "SpeechIn",
+        "type": "object"
+      },
       "StaffCreate": {
         "properties": {
           "additional_emails": {
@@ -41452,6 +41467,46 @@
         "title": "ViewerTemplateUpdate",
         "type": "object"
       },
+      "VoiceIn": {
+        "properties": {
+          "voice": {
+            "title": "Voice",
+            "type": "string"
+          }
+        },
+        "required": [
+          "voice"
+        ],
+        "title": "VoiceIn",
+        "type": "object"
+      },
+      "VoiceOut": {
+        "description": "ADR-1080: 秘書の声の一覧・既定・本人の選び（design.md §4-3）。",
+        "properties": {
+          "default": {
+            "title": "Default",
+            "type": "string"
+          },
+          "selected": {
+            "title": "Selected",
+            "type": "string"
+          },
+          "voices": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Voices",
+            "type": "array"
+          }
+        },
+        "required": [
+          "voices",
+          "default",
+          "selected"
+        ],
+        "title": "VoiceOut",
+        "type": "object"
+      },
       "VoidRequest": {
         "properties": {
           "reason": {
@@ -44372,6 +44427,123 @@
           }
         ],
         "summary": "Remove Assistant Rule",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/speech": {
+      "post": {
+        "operationId": "post_assistant_speech_api_v1_assistant_speech_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpeechIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Assistant Speech",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/voice": {
+      "get": {
+        "operationId": "get_assistant_voice_api_v1_assistant_voice_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Assistant Voice",
+        "tags": [
+          "assistant"
+        ]
+      },
+      "put": {
+        "operationId": "put_assistant_voice_api_v1_assistant_voice_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Assistant Voice",
         "tags": [
           "assistant"
         ]
