@@ -75,11 +75,12 @@ develop マージ時に、対象ブランチの行を自動で DONE に書き換
 - **依存（recon で判明）**：(b) の「offline でも復帰時に追いつく（self-heal）」は、ランナーが自動起動して初めて成立する。現状ランナーは手動起動（`runner-start`）で、launchd 自動起動は ADR-029 の TODO のまま未実装。→ **launchd 自動起動の実装を本ADRの依存前提とし、Generator スコープに含める**（plist 実装）。
 
 ### 5. 安全条件（非交渉）
-- **IN_PROGRESS の部屋は絶対に消さない。**
-- **未保存の作業がある部屋は絶対に消さない**（現状162中16件該当）。これらは消さず、通知して人の判断に回す。
+- **IN_PROGRESS の部屋は絶対に消さない。**（R13 の置き忘れの部屋を除く）
+- **未保存の作業がある部屋は絶対に消さない**（現状162中16件該当）。これらは消さず、通知して人の判断に回す。（R13 の置き忘れの部屋を除く）
   - 例外（2026-10-11 R9）：未追跡の `*pr-body*.md`（PR 本文の下書き）だけが残る部屋は、main へのマージ済み PR の本文に下書きの全行があるときだけ未保存扱いしない。実削除前に `.git/reaper-drafts/` へ下書きを控え、控えに失敗した部屋は消さない。本文を取れない・下書きが空・本文に無い行がある・他の未保存がある場合は従来どおり保護。HEAD までのコミットの到達判定（R8）は従来どおり行う。
 - **使用中（そのフォルダか配下を作業場所にしているプロセスがある）の部屋は消さない**（`scripts/reaper-worktree.sh:161`、#4055）。マージ直後の即時回収で作業中のセッションの部屋を消さないため。（2026-10-10 改訂）
 - 実削除の前に dry-run（消す予定一覧の表示）を経由。
+- **置き忘れの部屋（2026-11-17 R13）**：`$HOME/worktrees/` の下にあり、PR が開いておらず、使用中でも鍵付きでもなく、最後に触ってから `REAPER_IDLE_DAYS`（既定 14）日以上の部屋は、記録していない変更・新しいファイル・無視ファイル（作り直せる置き場を除く）・origin から届かないコミットを `<git-common-dir>/reaper-archive/` に写し、照合が合ったときだけ部屋を消す。ブランチと台帳は変えない。detached の部屋も同じ。戻しは scripts/reaper-restore.sh（新設）。
 - **PR の行き先ブランチ（2026-10-13 R10）**：`REAPER_BASE_BRANCH`（既定 `main`）で、PR のマージ済み・閉じ判定の行き先ブランチを変えられる（`scripts/reaper-worktree.sh` の gh 判定3か所）。既定のままなら salesanchor の動きは変わらない。develop 運用の他リポジトリは `scripts/disk-janitor.sh` が、リポジトリごとに `REAPER_REPO_NAME`・`REAPER_BASE_BRANCH`・`REAPER_ACTIVE_WORK_FILE=/dev/null`・`ACTIVE_WORK_DIR=/nonexistent-disk-janitor` を付けて別のシェルで呼ぶ（対象は同スクリプト冒頭の設定。安全条件は本節のまま）。
 - **本体ブランチの保護（2026-10-13 R10）**：worktree のブランチ名が `main`・`develop`・`REAPER_BASE_BRANCH` のいずれかと同じ部屋は、DONE やマージ済みに見えても候補にしない（行き先ブランチそのものの部屋を、他リポジトリで誤って消さないため）。
 - **作業場所に向けた git の守り（2026-10-25 R11）**：作業場所に向けた git は `scripts/git-safe.sh` の上書き（`core.fsmonitor=false`・`core.hooksPath=/dev/null`）を付け、`status` は入れ子のリポジトリに入らない（`--ignore-submodules=all`）。入れ子のリポジトリ（`git ls-files --stage` に mode 160000）がある部屋は未保存扱いで消さない（ADR-1039）。`scripts/git-safe.sh` を読めないときは何も消さずに終了コード 1 で終わる。
@@ -116,7 +117,7 @@ develop マージ時に、対象ブランチの行を自動で DONE に書き換
 
 ## 「完全自動」でも意図的に人を残す2点（矛盾ではなく安全・統治）
 
-1. **未保存の作業がある部屋** … 自動削除しない。失うと取り返せないため、通知して人が判断（安全）。
+1. **未保存の作業がある部屋** … 自動削除しない（R13 の置き忘れの部屋を除く）。失うと取り返せないため、通知して人が判断（安全）。
 2. **main へのマージ** … 危険パスを含む PR は PO の GO を要する既存ゲートを維持（統治。ADR-135／ADR-136）。（2026-10-10 改訂：develop 経由は廃止）
 
 これ以外（作成・登録・完了判定・DONE化・フォルダ削除・上限管理）はすべて自動。
@@ -140,8 +141,8 @@ develop マージ時に、対象ブランチの行を自動で DONE に書き換
 - `merged` かつ base=main → 回収対象（2026-10-10 改訂）
 - `closed`（未マージ）→ 取り戻せる（全コミットが origin にある）場合のみ回収（2026-10-10 PO 承認。`scripts/reaper-worktree.sh` の closed 判定）
 - PR が一度も無いブランチ → 台帳が DONE かつ取り戻せる場合のみ回収。それ以外は消さない（2026-10-10 改訂）
-- IN_PROGRESS かつ未マージ → 絶対に消さない
-- 未コミット・未push あり（未push＝origin のどの ref からも到達できないコミット） → 絶対に消さない
+- IN_PROGRESS かつ未マージ → 絶対に消さない（R13 の置き忘れの部屋を除く）
+- 未コミット・未push あり（未push＝origin のどの ref からも到達できないコミット） → 絶対に消さない（R13 の置き忘れの部屋を除く）
 
 ## 順序制約・依存（実装時の必須事項）
 1. `shingo-mac` ラベル付与は Shingo-Mac-Temp オンライン化と**同時**（先付与は全停止）。
@@ -163,3 +164,4 @@ develop マージ時に、対象ブランチの行を自動で DONE に書き換
 | 2026-10-13 | R10：`REAPER_BASE_BRANCH`（既定 main）で PR の行き先を変えられる。ブランチ名が main・develop・REAPER_BASE_BRANCH の部屋は候補にしない。`scripts/disk-janitor.sh` が他リポジトリの回収に reaper を使う | docs/handoff/disk-janitor/design.md／本 PR |
 | 2026-10-25 | R11：作業場所に向けた git は `scripts/git-safe.sh` の上書きを付け、`status` は入れ子のリポジトリに入らない。入れ子のリポジトリがある部屋は消さない（ADR-1039） | docs/handoff/discord-pdca/bin2b0-sa-git-guard-card.md／本 PR |
 | 2026-10-26 | R12：作業場所・本店に向けた git の前に git の繋がりを確かめる（`git_safe_link_ok`・`git_safe_main_ok`）。ログイン時・03:00 の自動回収は最新の道具の写しから動かす（ADR-1039） | docs/handoff/discord-pdca/bin2b2-sa-link-card.md／本 PR |
+| 2026-11-17 | R13：置き忘れの部屋（`$HOME/worktrees/` の下・PR なし・使用中でも鍵付きでもない・14 日触っていない）は、写しを取り照合が合ったときだけ部屋を消す（ブランチと台帳は変えない）。1 回の上限 30（new-worktree.sh からは 10）。毎回「作業場所の数」を出す。戻しは scripts/reaper-restore.sh | docs/handoff/reaper-auto-cleanup/design-idle-reclaim.md／本 PR |

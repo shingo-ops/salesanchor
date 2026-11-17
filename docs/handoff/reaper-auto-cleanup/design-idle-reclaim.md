@@ -4,7 +4,7 @@
 親（設計仕様書）: [docs/specs/reaper-auto-cleanup/README.md](../../specs/reaper-auto-cleanup/README.md)
 recon: [docs/handoff/reaper-auto-cleanup/recon-idle-reclaim.md](recon-idle-reclaim.md)
 上位方針: ADR-114（本設計で R13 を足す。§7）
-状態: 設計審査 APPROVE（2026-11-17 5 回目）・PO 実装承認（2026-11-17「1」）・便1 実装カード [card-idle-reclaim-bin1.md](card-idle-reclaim-bin1.md)・実装未着手
+状態: 設計審査 APPROVE（2026-11-17 5 回目）・PO 実装承認（2026-11-17「1」）・便1 実装カード [card-idle-reclaim-bin1.md](card-idle-reclaim-bin1.md)・便1 実装済み・未合流
 
 ## 1. 目的
 

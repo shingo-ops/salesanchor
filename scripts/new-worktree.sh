@@ -64,7 +64,7 @@ WORKTREE_DIR="${HOME}/worktrees/${REPO_NAME}/${BRANCH_SAFE}"
 # ── マージ済みworktreeを先に回収してから上限チェック（ADR-114）────────────────
 REAPER_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/reaper-worktree.sh"
 if [ -f "${REAPER_SCRIPT}" ]; then
-  bash "${REAPER_SCRIPT}" --execute 2>/dev/null || true
+  REAPER_IDLE_MAX_PER_RUN=10 bash "${REAPER_SCRIPT}" --execute 2>/dev/null || true
 fi
 
 # 並行 worktree 数の上限チェック（メインリポジトリ除く）
