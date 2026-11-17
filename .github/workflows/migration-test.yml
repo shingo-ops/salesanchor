@@ -47,6 +47,7 @@ jobs:
               - 'scripts/migration_py_entry.py'
               - 'scripts/check-migration-registration-exists.sh'
               - 'scripts/run_all_migrations.sh'
+              - 'scripts/lib/migration_record.sh'
               - 'scripts/migration-guard/**'
               - 'scripts/migration-dryrun-report.py'
               - 'scripts/check_public_tenant_rls.py'
@@ -2282,12 +2283,225 @@ jobs:
         working-directory: backend
         run: python3 -m pytest tests/test_check_tenant_template_shape.py -q --no-cov
 
+  # 段5 5-3（K5-4・K5-5・K5-6・K5-8・K5-9・K5-11 の CI の分。設計 §5-4b の方法(1)）:
+  # 本体 scripts/run_all_migrations.sh を、名前つきの postgres:16 と backend のコンテナの上でそのまま流す。
+  # 本番の Dockerfile との違い: 土台と WORKDIR /app と PYTHONPATH なし（本番も無し）は同じ。違いは root で動くこと・
+  # fonts-ipafont-gothic を入れないこと（移行は PDF を作らない）・backend/ を docker cp で置くこと。
+  # DB の前準備は 5-2 の prepare_public_and_tenant（job tenant-template-shape と同じ物）に、
+  # 本番に有る public.auth_events（migrations/001_create_auth_events.sql）を足した物。
+  #   足した前提: public.auth_events。理由: 072・20261101_130000 の2本が使い捨ての DB で落ちるため（check_tenant_template_shape.py の
+  #   EXCLUDED_REGISTRY）。本番では 001 が作っている。20260605_030000 は DB 名が jarvis_db なら通る。
+  migration-runner-record:
+    name: 実行済みの記録の本体を流す（回1〜回6・実DB）
+    needs: detect-changes
+    if: needs.detect-changes.outputs.migrations == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      REPO_DIR: ${{ github.workspace }}
+      MIGRATION_POSTGRES_CONTAINER: mr-postgres
+      MIGRATION_BACKEND_CONTAINER: mr-backend
+      DATABASE_URL: postgresql://jarvis:testpass@mr-postgres:5432/jarvis_db
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/requirements.txt
+
+      - name: Install dependencies（前準備を流す手元側）
+        working-directory: backend
+        run: uv pip install --system -r requirements.txt -r requirements-dev.txt
+
+      - name: コンテナを2つ立てる（postgres:16 と backend を /app に置いた Python 3.12）
+        run: |
+          set -euo pipefail
+          docker network create mr-net
+          docker run -d --name mr-postgres --network mr-net -p 5432:5432 \
+            -e POSTGRES_USER=jarvis -e POSTGRES_PASSWORD=testpass -e POSTGRES_DB=jarvis_db postgres:16
+          for i in $(seq 1 30); do
+            docker exec mr-postgres pg_isready -U jarvis -d jarvis_db && break
+            sleep 2
+          done
+          docker exec mr-postgres pg_isready -U jarvis -d jarvis_db
+          docker run -d --name mr-backend --network mr-net -w /app python:3.12-slim sleep infinity
+          docker exec mr-backend sh -c 'apt-get update -qq && apt-get install -y -qq gcc postgresql-client >/dev/null'
+          docker cp backend/requirements.txt mr-backend:/app/requirements.txt
+          docker exec mr-backend pip install -q --no-cache-dir -r requirements.txt
+          docker cp backend/. mr-backend:/app/
+          docker exec mr-backend python --version
+
+      - name: DB の前準備（public と会社1つ＋ auth_events）
+        env:
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: jarvis
+          PGPASSWORD: testpass
+          PYTHONPATH: ${{ github.workspace }}/backend
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import asyncio, sys
+          sys.path.insert(0, "scripts")
+          import check_tenant_template_shape as chk
+          chk.ensure_app_role()
+          schema = asyncio.run(chk.prepare_public_and_tenant("jarvis_db"))
+          assert schema == chk.SCHEMA, schema
+          print("prepared", schema)
+          PY
+          docker exec -i mr-postgres psql -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 < migrations/001_create_auth_events.sql
+
+      - name: 回1〜回6（本体を6回流す）
+        env:
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: jarvis
+          PGPASSWORD: testpass
+          PYTHONPATH: ${{ github.workspace }}/backend
+        run: |
+          set -euo pipefail
+          LOGS="$RUNNER_TEMP/mr-logs"
+          mkdir -p "$LOGS"
+          BODY=scripts/run_all_migrations.sh
+          TOTAL_REG=$(grep -cE '^run_(sql|py)[[:space:]]' "$BODY")
+          OUT_N=$(grep -E '^MIGRATION_OUTSIDE_RECORD=' "$BODY" | grep -oE 'migrations/[^ )]+\.sql' | wc -l)
+          EXPECTED=$((TOTAL_REG - OUT_N))
+          echo "登録 ${TOTAL_REG} 本・記録の外 ${OUT_N} 本・記録の対象（期待） ${EXPECTED} 本"
+          VICTIM=migrations/013_add_meta_webhook_idempotency.sql
+          grep -qxF "run_sql $VICTIM" "$BODY"
+
+          q() { docker exec -i mr-postgres psql -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -At "$@"; }
+          val() { grep -oE "$2=[0-9]+" "$1" | head -1 | cut -d= -f2; }
+          rows() { q -c "SELECT count(*) FROM ops.migration_runs"; }
+          run_main() {
+            local name="$1"; shift
+            local t0=$SECONDS
+            set +e
+            env "$@" bash "$BODY" >"$LOGS/$name.log" 2>&1
+            RC=$?
+            set -e
+            ELAPSED=$((SECONDS - t0))
+            echo "=== $name: rc=$RC elapsed=${ELAPSED}s ==="
+            grep -E '^>>> \[record\]' "$LOGS/$name.log" || true
+            grep -E '^>>> \[final\]' "$LOGS/$name.log" || true
+          }
+          final_ok() {
+            local log="$LOGS/$1.log"
+            [ "$(grep -c '^>>> \[final\] psql <' "$log")" -eq 2 ] \
+              && [ "$(grep -c '^>>> \[final\] grant ai_unmask_owner done' "$log")" -eq 1 ] \
+              && [ "$(grep -c '^⚠️' "$log")" -eq 0 ]
+          }
+          fail() { echo "FAIL: $*"; exit 1; }
+
+          # 回1: 記録0件（起点の回の形）
+          run_main round1 NOOP=1
+          [ "$RC" -eq 0 ] || { tail -40 "$LOGS/round1.log"; fail "回1の終わりの番号が0でない: $RC"; }
+          [ "$(val "$LOGS/round1.log" to-run)" -eq "$EXPECTED" ] || fail "回1の (c) to-run が ${EXPECTED} でない"
+          [ "$(val "$LOGS/round1.log" ran-and-recorded)" -eq "$EXPECTED" ] || fail "回1の ran-and-recorded が ${EXPECTED} でない"
+          [ "$(rows)" -eq "$EXPECTED" ] || fail "回1の記録の行数が ${EXPECTED} でない: $(rows)"
+          final_ok round1 || fail "回1の作り直しが流れていない（final の行・⚠️ の行）"
+          echo "表の権限（relacl・nspacl）:"
+          q -c "SELECT 'relacl=' || coalesce(relacl::text, '(null)') FROM pg_class WHERE oid = 'ops.migration_runs'::regclass"
+          q -c "SELECT 'nspacl=' || coalesce(nspacl::text, '(null)') FROM pg_namespace WHERE nspname = 'ops'"
+          [ "$(q -c "SELECT count(*) FROM pg_class WHERE oid = 'ops.migration_runs'::regclass AND coalesce(relacl::text, '') LIKE '%salesanchor_app%'")" -eq 0 ] \
+            || fail "ops.migration_runs に salesanchor_app の権限がある"
+          [ "$(q -c "SELECT count(*) FROM pg_namespace WHERE nspname = 'ops' AND coalesce(nspacl::text, '') LIKE '%salesanchor_app%'")" -eq 0 ] \
+            || fail "ops スキーマに salesanchor_app の権限がある"
+
+          # 回2: 新しい手順0本
+          run_main round2 NOOP=1
+          [ "$RC" -eq 0 ] || { tail -40 "$LOGS/round2.log"; fail "回2の終わりの番号が0でない: $RC"; }
+          [ "$(val "$LOGS/round2.log" to-run)" -eq 0 ] || fail "回2の (c) to-run が0でない"
+          [ "$(val "$LOGS/round2.log" ran-and-recorded)" -eq 0 ] || fail "回2の ran-and-recorded が0でない"
+          [ "$(val "$LOGS/round2.log" skipped-recorded)" -eq "$EXPECTED" ] || fail "回2の skipped-recorded が ${EXPECTED} でない"
+          grep -qE '^>>> \[[0-9]+/[0-9]+\] psql < migrations/20261024_100200_drop_ai_cloud_views.sql' "$LOGS/round2.log" && fail "回2: ビューを外す ai_cloud の手順が流れた" || true
+          grep -qE '^>>> \[[0-9]+/[0-9]+\] psql < migrations/20261017_125900_drop_ai_ro_views.sql' "$LOGS/round2.log" && fail "回2: ビューを外す ai_ro の手順が流れた" || true
+          [ "$(grep -c '^>>> \[[0-9]*/[0-9]*\] skip (recorded): migrations/2026\(1024_100200_drop_ai_cloud\|1017_125900_drop_ai_ro\)_views.sql' "$LOGS/round2.log")" -eq 2 ] || fail "回2: ビューを外す2本が skip になっていない"
+          final_ok round2 || fail "回2の作り直しが流れていない（final の行・⚠️ の行）"
+          echo "回2の段の秒数（本体の全体）: ${ELAPSED}s（本番の目標は45秒。ここは参考）"
+          grep -F '[record] timing' "$LOGS/round2.log"
+
+          # 回3（K5-8）: 会社を1つ足し、新しい手順0本でもう一度
+          python3 - <<'PY'
+          import asyncio, sys
+          from sqlalchemy import text
+          from sqlalchemy.ext.asyncio import create_async_engine
+          from app.services.tenant import create_tenant_schema
+
+          async def main():
+              engine = create_async_engine("postgresql+asyncpg://jarvis:testpass@localhost:5432/jarvis_db")
+              async with engine.begin() as conn:
+                  await conn.execute(text(
+                      "INSERT INTO public.tenants (id, tenant_code, tenant_name, company_name, is_active) "
+                      "VALUES (4, 'tenant_004', 'tenant_004', 'tenant_004', TRUE)"))
+                  print("created", await create_tenant_schema(conn, 4, admin_db=conn))
+              await engine.dispose()
+
+          asyncio.run(main())
+          PY
+          run_main round3 NOOP=1
+          [ "$RC" -eq 0 ] || { tail -40 "$LOGS/round3.log"; fail "回3の終わりの番号が0でない: $RC"; }
+          [ "$(val "$LOGS/round3.log" to-run)" -eq 0 ] || fail "回3の (c) to-run が0でない"
+          final_ok round3 || fail "回3の作り直しが流れていない（final の行・⚠️ の行）"
+          TABLES=$(q -c "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'tenant_004' AND c.relkind IN ('r','p')")
+          VIEWS=$(q -c "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'ai_ro' AND c.relkind = 'v' AND left(c.relname, 12) = 'tenant_004__'")
+          echo "tenant_004: 表 ${TABLES} 本・ai_ro のビュー ${VIEWS} 本"
+          [ "$TABLES" -gt 0 ] && [ "$TABLES" -eq "$VIEWS" ] || fail "回3: 新しい会社の ai_ro のビューの本数が表の本数と違う"
+
+          # 回4（K5-5 の (b)）: 記録済みの SQL 1 本に空行を足す → 止まる
+          cp "$VICTIM" "$RUNNER_TEMP/victim.sql.bak"
+          printf '\n' >> "$VICTIM"
+          ROWS_BEFORE=$(rows)
+          run_main round4 NOOP=1
+          [ "$RC" -ne 0 ] || fail "回4: 不一致なのに終わりの番号が0"
+          grep -qF '>>> [record] (b) checksum-mismatch=1' "$LOGS/round4.log" || fail "回4: (b)=1 が出ていない"
+          grep -qF "(b) $VICTIM" "$LOGS/round4.log" || fail "回4: 不一致のファイル名が出ていない"
+          [ "$(rows)" -eq "$ROWS_BEFORE" ] || fail "回4: 記録の行数が変わった"
+          [ "$(grep -c '\] psql < ' "$LOGS/round4.log")" -eq 0 ] || fail "回4: 何かが流れた"
+          cp "$RUNNER_TEMP/victim.sql.bak" "$VICTIM"
+          echo "回4: 止まることを確かめた（合格）"
+
+          # 回5（K5-5 の (a)）: 記録にあるのに今の対象に無いファイル → 止まる
+          q -c "INSERT INTO ops.migration_runs (file, checksum, seconds, result, git_commit) VALUES ('migrations/not_registered_ci_probe.sql', 'x', 0, 'ok', 'ci')"
+          run_main round5 NOOP=1
+          [ "$RC" -ne 0 ] || fail "回5: (a) なのに終わりの番号が0"
+          grep -qF '>>> [record] (a) recorded-but-not-target=1' "$LOGS/round5.log" || fail "回5: (a)=1 が出ていない"
+          grep -qF '(a) migrations/not_registered_ci_probe.sql' "$LOGS/round5.log" || fail "回5: (a) のファイル名が出ていない"
+          q -c "DELETE FROM ops.migration_runs WHERE file = 'migrations/not_registered_ci_probe.sql'"
+          echo "回5: 止まることを確かめた（合格）"
+
+          # 回6（K5-11）: 全件モード＋不一致1本
+          printf '\n' >> "$VICTIM"
+          run_main round6 MIGRATION_MODE=full MIGRATION_FULL_MODE_REASON=ci
+          [ "$RC" -eq 0 ] || { tail -40 "$LOGS/round6.log"; fail "回6の終わりの番号が0でない: $RC"; }
+          grep -qF "(b) $VICTIM old=" "$LOGS/round6.log" || fail "回6: 不一致のファイル名と新旧のチェックサムが出ていない"
+          grep -qF '>>> [record] full-mode overwritten=1' "$LOGS/round6.log" || fail "回6: overwritten=1 が出ていない"
+          [ "$(q -c "SELECT count(*) FROM ops.migration_runs WHERE result = 'ok-full'")" -eq "$EXPECTED" ] || fail "回6: ok-full の行数が ${EXPECTED} でない"
+          cp "$RUNNER_TEMP/victim.sql.bak" "$VICTIM"
+          final_ok round6 || fail "回6の作り直しが流れていない"
+          echo "回1〜回6 すべて合格"
+
+      - name: 回のログを保存
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-runner-record-logs
+          path: ${{ runner.temp }}/mr-logs
+          if-no-files-found: ignore
+
   # ルールセット必須 Check の名前と一致させる。always() で常に実行し、
   # - migration 変更あり: migration-test-run / migration-full-dryrun の結果を報告
   # - migration 変更なし: 両ジョブが skipped → 成功として報告
   migration-test:
     name: マイグレーションSQL 実行テスト（実DB）
-    needs: [detect-changes, migration-registration-exists, migration-registration-exists-regression, migration-test-run, migration-full-dryrun, tenant-template-shape]
+    needs: [detect-changes, migration-registration-exists, migration-registration-exists-regression, migration-test-run, migration-full-dryrun, tenant-template-shape, migration-runner-record]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -2300,6 +2514,8 @@ jobs:
           e="${{ needs.migration-registration-exists.result }}"
           g="${{ needs.migration-registration-exists-regression.result }}"
           t="${{ needs.tenant-template-shape.result }}"
+          m="${{ needs.migration-runner-record.result }}"
+          echo "migration-runner-record: $m"
           echo "detect-changes: $det (migrations=$out)"
           echo "migration-test-run: $r"
           echo "migration-full-dryrun: $d"
@@ -2316,19 +2532,19 @@ jobs:
           fi
           case "$out" in
             true)
-              if [[ "$e" == "success" && "$r" == "success" && "$d" == "success" && "$t" == "success" ]]; then
+              if [[ "$e" == "success" && "$r" == "success" && "$d" == "success" && "$t" == "success" && "$m" == "success" ]]; then
                 echo "OK: migrations changed and all migration tests passed"
                 exit 0
               fi
-              echo "FAIL: migrations changed but tests did not succeed: migration-registration-exists=$e, migration-test-run=$r, migration-full-dryrun=$d, tenant-template-shape=$t"
+              echo "FAIL: migrations changed but tests did not succeed: migration-registration-exists=$e, migration-test-run=$r, migration-full-dryrun=$d, tenant-template-shape=$t, migration-runner-record=$m"
               exit 1
               ;;
             false)
-              if [[ "$e" == "skipped" && "$r" == "skipped" && "$d" == "skipped" && "$t" == "skipped" ]]; then
+              if [[ "$e" == "skipped" && "$r" == "skipped" && "$d" == "skipped" && "$t" == "skipped" && "$m" == "skipped" ]]; then
                 echo "OK: migrations not changed and migration tests were skipped"
                 exit 0
               fi
-              echo "FAIL: migrations not changed but tests were not skipped: migration-registration-exists=$e, migration-test-run=$r, migration-full-dryrun=$d, tenant-template-shape=$t"
+              echo "FAIL: migrations not changed but tests were not skipped: migration-registration-exists=$e, migration-test-run=$r, migration-full-dryrun=$d, tenant-template-shape=$t, migration-runner-record=$m"
               exit 1
               ;;
             *)
