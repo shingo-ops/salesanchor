@@ -23,7 +23,7 @@
 
 ## 数の使われ先（全走査）
 `git grep -n "salesanchor_container_running\|salesanchor_container_unhealthy\|container_healthcheck_missing" origin/main -- ':!docs'`
-- monitoring/prometheus/alert_rules.yml:339 ContainerUnhealthy・:363 ContainerHealthcheckMissing
+- monitoring/prometheus/alert_rules.yml:338-339 ContainerUnhealthy・:362-363 ContainerHealthcheckMissing
 - monitoring/prometheus/tests/alert_rules_test.yml（数を直接与える試験・状態書き係は通らない）
 - scripts/tests/test_container_state.py・tests/sandbox/container-state.sh（状態書き係の試験）
 - salesanchor_container_running を使う見張りは無い
