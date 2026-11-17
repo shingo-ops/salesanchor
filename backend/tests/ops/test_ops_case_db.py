@@ -48,6 +48,7 @@ _META_SQL = "20261024_100000_create_ai_cloud_meta.sql"
 _ROLE_SQL = "20261024_100100_create_ai_reader_cloud_role.sql"
 _CREATE_SQL = "20261024_100300_create_ai_cloud_views.sql"
 _CASE_SQL = "20261031_210000_create_ops_case.sql"
+_SPEED_SQL = "20261117_130000_grant_unmask_owner_once_per_source.sql"
 
 _ROLES = (
     "ai_unmask",
@@ -185,6 +186,8 @@ def pg(cluster):
         c.execute(_read(_CASE_SQL))
         conn_elapsed = time.monotonic() - t0
         print(f"[ops_case migration 1 回目の所要] {conn_elapsed:.3f} 秒")
+        # 本番と同じ順: 元の関数の後に、判定を名前ごとに 1 回にした置き換えを流す（設計 §3-3）
+        c.execute(_read(_SPEED_SQL))
         yield conn
     finally:
         conn.close()
@@ -627,6 +630,8 @@ def test_migration_stops_when_same_name_role_has_other_attributes(pg, role, alte
 def test_migration_is_idempotent(pg):
     pg.cursor().execute(_read(_CASE_SQL))
     pg.cursor().execute(_read(_CASE_SQL))
+    pg.cursor().execute(_read(_SPEED_SQL))
+    pg.cursor().execute(_read(_SPEED_SQL))
     assert _one(pg, "SELECT count(*) FROM ops_case.deny_tables") == 16
     assert _one(pg, "SELECT ops_case.grant_unmask_owner()") == 0
 
