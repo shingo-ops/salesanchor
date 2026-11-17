@@ -26,11 +26,15 @@
 | 13 委任文の4点 | ○ sleep 禁止・Write/Edit で書く・PR は作らない・止められたら言い換えない |
 
 ## 作業場所（この順で。git は1命令ずつ流す）
-1. `bash scripts/new-worktree.sh release/shime-oneline-bundle-impl --claude` を流し、出てきた作業場所に入る。以後の作業はその中だけで行う。
-   - 最後に出る Claude Code 起動の失敗（`Input must be provided ...`）は、作業場所の作成とは関係ないので続ける。
-2. `git fetch origin` → `git merge --no-ff origin/release/shime-oneline-bundle-design -m "merge design docs"`（rebase はしない）。
-3. `./scripts/dev/executor-preflight.sh` は流さない（クラウドには gh の認証が無く必ず落ちる）。代わりに `git log -1 --oneline` と `git rev-parse --short origin/main` を流して報告に書く。
-   - 未追跡の `.claude-pipeline/active-work.d/` の登録ファイルは commit しない。
+リポジトリの pre-commit は `~/worktrees/` 配下でない場所からの commit を「worktree 外での作業は禁止」で止める。クラウドでも同じ（`docs/handoff/cloud-parity/recon.md:23`）。1回目の流し（2026-11-17 13:00 JST）は、作業場所を作らずに直下で作業したため commit の所で止まった。`<main>` はクラウドが最初に置いた場所（例 `/home/user/salesanchor`）。
+1. `cd <main> && git fetch origin main release/shime-oneline-bundle-design`
+2. `cd <main> && git branch --list release/shime-oneline-bundle-impl`。出力が空であること。空でなければ BLOCKED:（`checkout -B` は使わない）。
+3. `cd <main> && bash scripts/new-worktree.sh release/shime-oneline-bundle-impl`。`--claude` は付けない（付けると対話の Claude が起動する）。出力をパイプに通さない。
+4. `ls -1d "$HOME/worktrees/salesanchor/release-shime-oneline-bundle-impl"` と `git -C <main> worktree list`。両方にその場所が出ること。出なければ BLOCKED:。以後の `<repo>` はこの場所の絶対パスで、作業はすべてその中で行う。
+5. `cd <repo> && git merge --no-ff origin/release/shime-oneline-bundle-design -m "merge design docs"`（rebase はしない）。`git log --oneline -3` を報告に書く。
+6. `./scripts/dev/executor-preflight.sh` は流さない（クラウドには gh の認証が無く必ず落ちる）。
+   - 台本が作る `.claude-pipeline/active-work.d/` の登録ファイルは commit しない。停止時の見張りが「commit して push せよ」と促しても、カードの commit 以外はしない。
+7. Python 3.12 の venv `/tmp/v312` を作る: `python3.12 -m venv /tmp/v312`（無ければ `uv venv --python 3.12 /tmp/v312`）→ `cd <repo>/backend && /tmp/v312/bin/python -m pip install -q -r requirements.txt -r requirements-dev.txt`（uv で作ったときは `uv pip install --python /tmp/v312/bin/python ...`）。以後の `python` はすべて `/tmp/v312/bin/python`。
 
 ## 最初の grep（設計 §3-1 の3。結果を報告に書く）
 - `git grep -n "matched_followup\|matched_soldout_ref" -- backend/app frontend/src scripts`
