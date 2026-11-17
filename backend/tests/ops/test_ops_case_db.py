@@ -694,6 +694,27 @@ def test_grant_unmask_owner_first_run_is_fast_and_second_is_zero(pg):
     assert _one(pg, "SELECT ops_case.grant_unmask_owner()") == 0
 
 
+def test_grant_unmask_owner_calls_judge_once_per_source(pg):
+    """判定 is_denied_source は元の表の名前ごとに 1 回まで。列ごとに呼ぶと本番で 14.7 秒かかった（docs/handoff/cloud-case-ai/grant-speed-design.md）。"""
+    sources = _one(pg, "SELECT count(DISTINCT source) FROM ai_cloud_meta.build_columns")
+    rows = _one(pg, "SELECT count(*) FROM ai_cloud_meta.build_columns")
+    assert rows > sources  # 列が名前より多い DB でないと、元の形との違いが出ない
+    c = pg.cursor()
+    c.execute("BEGIN")
+    try:
+        c.execute("SET LOCAL track_functions = 'pl'")
+        c.execute("SELECT ops_case.grant_unmask_owner()")
+        c.execute(
+            "SELECT coalesce(sum(calls), 0) FROM pg_stat_xact_user_functions"
+            " WHERE schemaname = 'ops_case' AND funcname = 'is_denied_source'"
+        )
+        calls = c.fetchone()[0]
+    finally:
+        c.execute("ROLLBACK")
+    print(f"[is_denied_source を呼んだ回数] {calls}（名前 {sources}・列 {rows}）")
+    assert 0 < calls <= sources
+
+
 def test_grant_unmask_owner_revokes_when_table_is_added_to_deny_tables(pg):
     c = pg.cursor()
     assert _owner_can_select(pg, "public.text_pk") is True
