@@ -45,15 +45,16 @@ mode: handoff
 |---|---|
 | `migrations/20261117_100000_add_users_secretary_voice.sql`（新規。時刻は §5 手順3 で直近を見て決め直してよい） | `public.users.secretary_voice` を足す（§3-1） |
 | `migrations/20261117_100100_add_llm_usage_tts_characters.sql`（新規。同上） | 台帳に列 1 つと値 2 つ（§3-2） |
-| `scripts/run_all_migrations.sh` | 末尾の `run_sql` の並びの最後に 2 行（説明の注記の行を各 1 行つける） |
-| `backend/app/services/secretary_voice.py`（新規） | 声の一覧の正本（design.md §4-1 のコードそのまま） |
+| `scripts/run_all_migrations.sh` | ファイルの最後の行の後ろに 2 行（説明の注記の行を各 1 行つける） |
+| `backend/app/services/secretary_voice.py`（新規） | 声の一覧の正本（design.md §4-1 のコードそのまま）と、読み書きの 2 つの関数（§3-5） |
 | `backend/app/services/secretary_tts.py`（新規） | 月の字数・札・Google への頼み・台帳（§3-4） |
-| `backend/app/services/llm_budget.py` | 値の一覧に 3 つ・`record_usage_isolated` に `billed_characters`（§3-3） |
+| `backend/app/services/llm_budget.py` | 値の一覧に 3 つ・組分けに 1 組・`record_usage_isolated` に `billed_characters`（§3-3） |
 | `backend/app/schemas/assistant.py` | 口の入力と出力の型（§3-5） |
 | `backend/app/routers/assistant.py` | 口 3 つ（§3-5） |
 | `frontend/api-contract/openapi.json` | §5 手順6 の命令で作り直す（手で書かない） |
 | `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` | `secretary.voice.name.Aoede` など声ごとの 4 キー（§3-6） |
 | `backend/tests/test_llm_usage_isolated.py` | `test_value_sets` の期待の集合に 3 つ足す |
+| `backend/tests/test_super_admin_ai_jobs.py` | `test_usage_sdks_belong_to_exactly_one_provider` の組の名前の期待に `google_tts` を足す（1 行だけ） |
 | `backend/tests/test_secretary_voice.py`（新規） | V6・V7・V8 と口の単体の試験（§3-7） |
 | `backend/tests/test_secretary_voice_pg.py`（新規） | V10・V11・V12（§3-7） |
 
@@ -77,13 +78,14 @@ mode: handoff
 ### 3-3. 台帳の Python 側（`backend/app/services/llm_budget.py`）
 
 - `USAGE_PURPOSES` に `secretary_regression` と `secretary_tts`、`USAGE_SDKS` に `google-tts-rest` を足す（design.md §4-5）。
+- `USAGE_SDKS_BY_PROVIDER`（同じファイル 176 行目付近）に 4 つ目の組 `"google_tts": frozenset({"google-tts-rest"})` を足す。Gemini の組には入れない。`backend/tests/test_super_admin_ai_jobs.py` の 281 行目付近 `assert set(USAGE_SDKS_BY_PROVIDER) == {"gemini", "codex", "claude"}` の右辺に `"google_tts"` を足す（その試験のほかの行は変えない）。
 - `record_usage_isolated` に引数 `billed_characters: int | None = None` を足し、`_INSERT_USAGE_EVENT_OUTCOME_SQL` の列と値に `billed_characters` を足す。ほかの呼び出し元は変えない（既定の None のまま）。`_INSERT_USAGE_EVENT_SQL` と `record_usage_event`・`record_usage_event_sync` は変えない。
 
 ### 3-4. 読み上げ（新規 `backend/app/services/secretary_tts.py`）
 
 design.md §4-4 の 1〜5 のとおり。加えて次を守る:
 
-- 月の字数: `SELECT COALESCE(SUM(billed_characters), 0) FROM public.llm_usage_events WHERE purpose = 'secretary_tts' AND occurred_at >= :start`。`:start` は日本時間の今月 1 日 0 時（`Asia/Tokyo`）。読めなかったら 503 `tts_usage_unreadable`（Google を呼ばない）。合計＋今回の字数 ＞ `MONTHLY_CHAR_CAP` なら 429 `tts_monthly_cap_reached`（Google を呼ばない）。
+- 月の字数: `SELECT COALESCE(SUM(billed_characters), 0) FROM public.llm_usage_events WHERE purpose = 'secretary_tts' AND occurred_at >= :start`。`:start` は日本時間の今月 1 日 0 時（`Asia/Tokyo`）。読めなかったら 503 `tts_usage_unreadable`（Google を呼ばない）。合計は口から渡された db で読み、読み終えたら口が取引を閉じる（§3-5）。サービスの中では、Google を待つ間に db を持たない。合計＋今回の字数 ＞ `MONTHLY_CHAR_CAP` なら 429 `tts_monthly_cap_reached`（Google を呼ばない）。
 - 鍵: 環境変数 `GOOGLE_TTS_SA_KEY_FILE`。未設定・読めない・鍵として読めないときは 503 `tts_not_configured`（Google を呼ばない・台帳に書かない）。読み方は `backend/app/services/tcg_distribution_svc.py` の 85〜93 行目と同じ `Credentials.from_service_account_file(鍵, scopes=["https://www.googleapis.com/auth/cloud-platform"])`。
 - 札: `credentials.refresh(google.auth.transport.requests.Request())` は同期の通信なので `await asyncio.to_thread(...)` の中で呼ぶ。札はモジュールに 1 つ持ち回し、`credentials.valid` が偽のときだけ取り直す。取り直しは `asyncio.Lock` で 1 つにする。札を取れなかったら 502 `tts_upstream_failed`・台帳は `auth_failed`。
 - Google への頼み: `httpx.AsyncClient(timeout=10.0)` で `POST https://texttospeech.googleapis.com/v1/text:synthesize`、頭に `Authorization: Bearer` と取った札、中身は design.md §4-4 の 3。返りの `audioContent`（base64）を戻して bytes で返す。
@@ -95,9 +97,12 @@ design.md §4-4 の 1〜5 のとおり。加えて次を守る:
 
 - 3 つとも `dependencies=_SECRETARY_DEPENDENCIES`（同じファイル 87 行目付近）。本人は `get_current_user`、DB は `get_db`。
 - 型: `VoiceOut {voices: list[str], default: str, selected: str}`・`VoiceIn {voice: str}`・`SpeechIn {text: str (min_length=1, max_length=300)}`。`VoiceIn` の値の確かめは router で `SECRETARY_VOICES` に無ければ 422（型の中に 4 つを写さない）。`SpeechIn` は空白だけを 422（Pydantic の validator で `text.strip()` が空なら拒む）。
-- `GET /assistant/voice`: `SELECT secretary_voice FROM public.users WHERE id = :uid`（users の読みは全行可・`migrations/20261016_180000_add_users_write_rls.sql` 10 行目）→ `resolve_voice` → `VoiceOut`。
-- `PUT /assistant/voice`: design.md §4-3-1 の順（`set_tenant_context(db, current_user.tenant_id)` → `UPDATE public.users SET secretary_voice = :v WHERE id = :uid` → `clear_tenant_context(db)` → `await db.commit()`）。UPDATE の `rowcount` が 1 でなければ、commit せず巻き戻して 500 `voice_not_saved`、ログに種類を出す。commit の後に db を使わない（`scripts/lint_tenant_schema.py` の Rule C。返す値は書いた値から作る）。
-- `POST /assistant/speech`: 声は DB から読む（画面から受け取らない）→ `secretary_tts` を呼ぶ → `Response(content=音, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})`。OpenAPI に `audio/mpeg` の 200 を `responses=` で書く。文は POST の中身だけで受け取る。
+- 読み書きは `secretary_voice.py` に 2 つの関数として置き、口はそれを呼ぶだけにする（PostgreSQL の試験で口と同じ関数を流すため）:
+  - `async def read_voice(db, user_id) -> str`: `SELECT secretary_voice FROM public.users WHERE id = :uid`（users の読みは全行可・`migrations/20261016_180000_add_users_write_rls.sql` 10 行目）→ `resolve_voice` の値を返す。
+  - `async def save_voice(db, *, user_id, tenant_id, voice) -> None`: 下の PUT の順で書く。行の数が 1 でなければ巻き戻して専用の例外（例 `VoiceNotSaved`）を上げる。
+- `GET /assistant/voice`: `read_voice` → `VoiceOut`。
+- `PUT /assistant/voice`: `save_voice` を呼ぶ。中の順は design.md §4-3-1（`set_tenant_context(db, current_user.tenant_id)` → `UPDATE public.users SET secretary_voice = :v WHERE id = :uid` → `clear_tenant_context(db)` → `await db.commit()`）。UPDATE の `rowcount` が 1 でなければ、commit せず巻き戻して例外 → 口が 500 `voice_not_saved`、ログに種類を出す。commit の後に db を使わない（`scripts/lint_tenant_schema.py` の Rule C。返す値は書いた値から作る）。
+- `POST /assistant/speech`: 声は `read_voice` で DB から読む（画面から受け取らない）→ 月の合計を読む → **Google を呼ぶ前に `await db.rollback()` で読み取りの取引を閉じ、その後この db を使わない**（`backend/app/routers/assistant.py` 6〜7 行目の「DB の取引を開いたまま AI を待たない」・移行は `lock_timeout=1s`）→ 鍵・札・Google → `Response(content=音, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})`。OpenAPI に `audio/mpeg` の 200 を `responses=` で書く。文は POST の中身だけで受け取る。
 
 ### 3-6. 翻訳キー（V6 のため。画面はまだ使わない）
 
@@ -114,11 +119,15 @@ design.md §4-4 の 1〜5 のとおり。加えて次を守る:
   - 鍵なし（環境変数を消す）で 503 `tts_not_configured`、Google を呼ばない、台帳に書かない。
   - 成功（Google を偽物に差し替え）で 200・`audio/mpeg`・`Cache-Control: no-store`・台帳に `billed_characters=len(文)` の 1 行。Google が 500 を返す・時間切れのとき 502 `tts_upstream_failed` と台帳の `error_code`（`http_error`・`timeout`）。
   - 入力: 301 字・空・空白だけは 422。`PUT` に一覧に無い声は 422。
-  - V8: `backend/tests/test_assistant_router.py` の 82〜110 行目付近の 3 つの形（機能なし・super admin でない・権限なし）を、新しい 3 つの口すべてで 403 になることとして書く。
+  - V8: `backend/tests/test_assistant_router.py` の 82〜113 行目付近の 3 つの形（機能なし・super admin でない・権限なし）に、4 つ目として `customers.view` を持たない人の形を足し、新しい 3 つの口すべてで 403 になることとして書く。
+  - 声の保存の失敗: `save_voice` が `VoiceNotSaved` を上げたとき PUT が 500 `voice_not_saved` を返す（V11 の口の側）。
+  - 読み上げの口で、Google を呼ぶ偽物が呼ばれた時点で、口に渡した db の `rollback` がすでに呼ばれていること（取引を開いたまま待たない）。
+  - 単体試験の DB（SQLite）には `users.secretary_voice` の列が無い（ORM から作るため）。GET・PUT・読み上げの単体試験では `read_voice`・`save_voice`・月の合計を読む関数を偽物に差し替える。`models.py` は触らない。
   - 待ちで止めない: `backend/tests/test_event_loop_nonblocking.py` の形で、札の取り直しを 0.3 秒の同期の待ちに差し替えても、読み上げの関数の実行中にループが 10 回以上回ること。
 - `backend/tests/test_secretary_voice_pg.py`（CI の使い捨て PostgreSQL・`needs_ci_pg`。形は `backend/tests/test_secretary_rules_tables_pg.py` の 1〜72 行目と同じ）:
   - V10: 移行 2 本を 2 回ずつ流し、列と 2 つの値の決まりの定義が 1 回目と同じ。
-  - V11: アプリの役割（salesanchor_app）でつなぎ、会社の文脈を付けて `UPDATE public.users SET secretary_voice` が 1 行に当たり値が変わる。文脈なしでは 0 行（守りが効いている）。
+  - 準備: `pg` fixture の users は最小の定義で守り（RLS）が無い。`backend/tests/test_users_rls.py` 47〜61 行目と同じく、`_MIGRATIONS` の 2 本（`20261013_160000_add_self_hosted_auth_tables.sql`・`20261016_180000_add_users_write_rls.sql`）と `_GRANT_DDL` を管理者の接続で流してから、移行 1（§3-1）を流す。
+  - V11: アプリの役割（salesanchor_app）の非同期の取引（`backend/tests/test_secretary_rules_service_pg.py` の `_engine` と同じ形）で `save_voice(db, user_id=999, tenant_id=999, voice="Aoede")` を流すと、管理者の接続で読んだ値が `Aoede` になる。`tenant_id=998`（別の会社）を渡すと `VoiceNotSaved` になり、値は変わらない（守りが効いている）。
   - V12: `pg_get_constraintdef` で読んだ `llm_usage_events_purpose_check`・`llm_usage_events_sdk_check` の値の集合が、`USAGE_PURPOSES`・`USAGE_SDKS` とそれぞれ同じ（足りない・余る、どちらも落ちる）。
 - `backend/tests/test_llm_usage_isolated.py` の `test_value_sets`: 期待の集合に `secretary_regression`・`secretary_tts`・`google-tts-rest` を足す。ほかは変えない。
 
@@ -143,28 +152,33 @@ design.md §4-4 の 1〜5 のとおり。加えて次を守る:
     cd 作業場所 && git rev-parse origin/main
     期待する出力: 作業場所のパスと、2つの番号が同じこと。報告に書く。違えば NEEDS_DECISION: で止まる。
 
+手順1.5 Python 3.12 の場所 `/tmp/v312` を作る（以後の `python` はすべて `/tmp/v312/bin/python`）
+    cd 作業場所 && python3.12 -m venv /tmp/v312
+    無ければ `uv venv --python 3.12 /tmp/v312`。続けて部品を入れる（uv で作ったときは `uv pip install --python /tmp/v312/bin/python` に読み替える）。
+    cd 作業場所/backend && /tmp/v312/bin/python -m pip install -q -r requirements.txt -r requirements-dev.txt
+
 手順2 対象ファイルが設計の基準から変わっていないか確かめる
-    cd 作業場所 && git diff --stat 337ebbd1b origin/main -- backend/app/routers/assistant.py backend/app/schemas/assistant.py backend/app/services/llm_budget.py backend/tests/test_llm_usage_isolated.py frontend/src/locales/ja.json frontend/src/locales/en.json scripts/run_all_migrations.sh
+    cd 作業場所 && git diff --stat 337ebbd1b origin/main -- backend/tests/test_super_admin_ai_jobs.py backend/tests/test_users_rls.py backend/app/routers/assistant.py backend/app/schemas/assistant.py backend/app/services/llm_budget.py backend/tests/test_llm_usage_isolated.py frontend/src/locales/ja.json frontend/src/locales/en.json scripts/run_all_migrations.sh
     期待する出力: 空。差分があれば記録して続行し、報告に書く。
 
-手順3 §3-1・§3-2 の移行 2 本を作り、`scripts/run_all_migrations.sh` の並びの最後の `run_sql` の次の行に登録する（説明の注記の行を各 1 行。形は今の最後の数行と同じ）。ファイル名の時刻は、次の命令の出力の最後の名前より後にする。
+手順3 §3-1・§3-2 の移行 2 本を作り、`scripts/run_all_migrations.sh` のファイルの最後の行の後ろに登録する（今の最後の行は、最後の `run_sql` に付いたロールバックの注記の行。その間に挟まない。説明の注記の行を各 1 行。形は今の最後の数行と同じ）。ファイル名の時刻は、次の命令の出力の最後の名前より後にする。
     cd 作業場所 && git ls-tree --name-only origin/main migrations/ | tail -5
 
 手順4 §3-3〜§3-5 の backend を作り、§3-6 の翻訳キーを足し、§3-7 の試験を書く。
 
 手順5 書いたものを確かめる
-    cd 作業場所 && python3 scripts/lint_tenant_schema.py
+    cd 作業場所 && /tmp/v312/bin/python scripts/lint_tenant_schema.py
     期待する出力: 違反 0。違反があれば直して流し直す。
 
 手順6 API の形を作り直す（手で書かない）
-    cd 作業場所/backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json
+    cd 作業場所/backend && ENVIRONMENT=test /tmp/v312/bin/python -m tools.export_openapi ../frontend/api-contract/openapi.json
 
 手順7 試験を流す
-    cd 作業場所/backend && python -m pytest tests/test_secretary_voice.py tests/test_secretary_voice_pg.py tests/test_llm_usage_isolated.py tests/test_assistant_router.py tests/test_assistant_rules_router.py tests/test_event_loop_nonblocking.py -q
+    cd 作業場所/backend && /tmp/v312/bin/python -m pytest tests/test_secretary_voice.py tests/test_secretary_voice_pg.py tests/test_llm_usage_isolated.py tests/test_super_admin_ai_jobs.py tests/test_assistant_router.py tests/test_assistant_rules_router.py tests/test_event_loop_nonblocking.py -q
     期待する出力: 全部 passed。PostgreSQL が無くて skipped になったら、その数と理由を報告に書いて続行する（CI で確かめる）。
 
 手順8 commit
-    cd 作業場所 && git add -A
+    cd 作業場所 && git add migrations scripts/run_all_migrations.sh backend frontend/api-contract/openapi.json frontend/src/locales/ja.json frontend/src/locales/en.json
     commit 文は Write でファイルに書き（1行目 `feat: secretary voice preference and speech endpoint (bin1)`、末尾に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`）、`git commit -F` で流す。active-work.d は commit しない。
     cd 作業場所 && git log -1 --stat
     期待する出力: commit の番号と、§2 の表のファイルだけ。
@@ -186,7 +200,7 @@ design.md §4-4 の 1〜5 のとおり。加えて次を守る:
 | V7 月の上限で止まる（899,990 字＋20 字 → 429・Google 0 回）・合計を読めなければ 503 | `test_secretary_voice.py`（CI） |
 | V8 4 つの守りのどれかが欠けた人は 3 つの口すべてで 403 | `test_secretary_voice.py`（CI） |
 | V10 移行を 2 回流しても同じ | `test_secretary_voice_pg.py`（CI の PostgreSQL）＋ CI の移行の確かめ |
-| V11 声の保存が行ごとの守りの下で効く・書いた行が 1 でなければ 500 | `test_secretary_voice_pg.py`＋`test_secretary_voice.py`（CI） |
+| V11 声の保存が行ごとの守りの下で効く・書いた行が 1 でなければ 500 | `test_secretary_voice_pg.py`（口と同じ `save_voice` を守りのある DB で）＋`test_secretary_voice.py`（500）（CI） |
 | V12 台帳の値の一覧が DB と Python で同じ | `test_secretary_voice_pg.py`（CI の PostgreSQL） |
 | 今の動きが変わらない（秘書の返事・決まり帳・使用量の台帳） | 既存の試験が全部緑（CI） |
 | 本番で鍵が無い間、読み上げの口は 503 `tts_not_configured` | 出荷後に Opus が本番の読み取りで 1 回確かめる（文は送らない形で） |

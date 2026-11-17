@@ -84,13 +84,15 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 - `public.users` の書き換えは、行ごとの守り（RLS）で「今の会社の文脈が行の会社と同じ」か「運営者の印」が要る（`migrations/20261016_180000_add_users_write_rls.sql:20`〜`migrations/20261016_180000_add_users_write_rls.sql:28`）。文脈を付けずに書くと、0 行に当たって黙って何も変わらない（K2 が壊れる）。
 - よって言語の書き方（`backend/app/routers/staff.py:225`〜`backend/app/routers/staff.py:231`）と同じく、`set_tenant_context(db, current_user.tenant_id)` → `UPDATE public.users SET secretary_voice = :v WHERE id = :uid` → `clear_tenant_context(db)` → commit の順にする。
 - 書いた行の数が 1 でなければ 500 を返し、ログに種類を出す（黙って成功にしない）。
-- 試験: RLS が効いた PostgreSQL で PUT し、行の値が変わること（V11）。
+- 読みと書きは `secretary_voice.py` の 2 つの関数 `read_voice(db, user_id)`・`save_voice(db, *, user_id, tenant_id, voice)` に置き、口はそれを呼ぶだけにする（PostgreSQL の試験で口と同じ関数を流すため）。
+- 試験: RLS が効いた PostgreSQL（users の書込の守りの移行を流した DB）で、アプリの役割の取引から `save_voice` を流し、行の値が変わること。別の会社の番号を渡すと 0 行で失敗になること（V11）。
 - 声は画面から受け取らない。backend が本人の値を読む。PC とスマホで同じ声になる（K2）。
 
 ### 4-4. 読み上げの口の中身（新規 backend/app/services/secretary_tts.py）
 
 1. 今月（日本時間の月初から）の `purpose='secretary_tts'` の `billed_characters` の合計を数える。合計＋今回の字数 ＞ `MONTHLY_CHAR_CAP` なら 429（`tts_monthly_cap_reached`）を返し、Google には送らない。合計を読めなかったとき（DB の失敗）は 503 を返し、Google には送らない（数えられないときは止める側に倒す）。
    - 同時の頼みが同じ合計を読んで一緒に通ることは受け入れる。1 人の画面で同時に出るのは 2 文（鳴らし中＋次の 1 文）で、窓を複数開いても超える分は「同時の数 × 300 字」。止める上限 90 万字と無料枠 100 万字の間の 10 万字に収まる（§6）。
+   - 合計と声を読んだら、Google を呼ぶ前に読み取りの取引を閉じる（`await db.rollback()`）。閉じたあとはその db を使わない。同じファイルの決まり「DB の取引を開いたまま AI を待たない」（`backend/app/routers/assistant.py:6`〜`backend/app/routers/assistant.py:7`）に従う。台帳は自分の取引で書く `record_usage_isolated` を使う。
 2. 鍵ファイル `GOOGLE_TTS_SA_KEY_FILE` が未設定・読めないなら 503（`tts_not_configured`）。起動は止めない（今の Google の鍵 `TCG_SHEETS_SA_KEY_FILE` と同じ扱い・recon.md §6）。
 3. `google-auth` のサービスアカウントの鍵で札を取り、`httpx` で `POST https://texttospeech.googleapis.com/v1/text:synthesize` に `{input:{text}, voice:{languageCode:"ja-JP", name: google_voice_name(voice)}, audioConfig:{audioEncoding:"MP3"}}` を送る。待つのは 10 秒まで。
 4. 成功したら台帳に 1 行書く（§4-5）。返ってきた音（base64）を戻して返す。
@@ -106,7 +108,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
   - 列 `billed_characters INTEGER NULL` を足す（Google が料金に数える字数。空白・改行を含む送った文の全字数。読み上げ以外の行は NULL）。
   - `purpose` に `secretary_tts` を足す（作り直しの形は `migrations/20261113_100000_create_secretary_rules.sql:106`〜`migrations/20261113_100000_create_secretary_rules.sql:120` と同じ）。
   - `sdk` に `google-tts-rest` を足す（作り直しの形は `migrations/20261103_120000_create_ai_job_assignments.sql:169`〜`migrations/20261103_120000_create_ai_job_assignments.sql:175` と同じ）。
-- Python 側の値の一覧も同じ便で足す。`backend/app/services/llm_budget.py:159`〜`backend/app/services/llm_budget.py:172` の `USAGE_PURPOSES` に `secretary_tts`、`USAGE_SDKS` に `google-tts-rest`。一覧に無い値は `backend/app/services/llm_budget.py:250`〜`backend/app/services/llm_budget.py:254` で例外になり、`record_usage_isolated` はその例外をログに出して飲み込む（`backend/app/services/llm_budget.py:419`〜`backend/app/services/llm_budget.py:420`）。足し忘れると行が 1 行も書かれず、月の上限が常に 0 字と数えて効かなくなる。
+- Python 側の値の一覧も同じ便で足す。`backend/app/services/llm_budget.py:159`〜`backend/app/services/llm_budget.py:172` の `USAGE_PURPOSES` に `secretary_tts`、`USAGE_SDKS` に `google-tts-rest`。あわせて `USAGE_SDKS_BY_PROVIDER`（`backend/app/services/llm_budget.py:176`）に 4 つ目の組 `"google_tts": frozenset({"google-tts-rest"})` を足し、`backend/tests/test_super_admin_ai_jobs.py:281` の組の名前の期待に `google_tts` を足す（どの sdk もちょうど 1 つの組に属する決まり・同じファイル 275〜281 行目）。Gemini の組には入れない（読み上げは Gemini ではない）。この組を引くのは担当表の画面と秘書の口だけで、担当の提供元に `google_tts` は無いので画面の数は変わらない。一覧に無い値は `backend/app/services/llm_budget.py:250`〜`backend/app/services/llm_budget.py:254` で例外になり、`record_usage_isolated` はその例外をログに出して飲み込む（`backend/app/services/llm_budget.py:419`〜`backend/app/services/llm_budget.py:420`）。足し忘れると行が 1 行も書かれず、月の上限が常に 0 字と数えて効かなくなる。
 - 今すでに DB と Python の一覧はずれている（観測: DB の `purpose` は `secretary_regression` を含む 8 つ・Python の `USAGE_PURPOSES` は 7 つ）。この便で `secretary_regression` も Python に足し、「DB の値の決まりの一覧と Python の一覧が同じ」ことを確かめる試験を足す（V12）。今後のずれも CI で落ちる。
 - 書き方: `record_usage_isolated` に `billed_characters` を渡せるようにし、書く SQL（`_INSERT_USAGE_EVENT_OUTCOME_SQL`）にも列を足す。`model` は `ja-JP-Chirp3-HD-<声>`、トークンの列は NULL。`cost_usd` は NULL になる（単価表に無いモデルと、トークンが全部空のときは NULL を返す作り・`backend/app/services/llm_budget.py:227`〜`backend/app/services/llm_budget.py:231`）。料金は字数で見る（§4-6）。
 - 1 行に書くのは字数・声・成否だけ。文そのものは書かない（会話を保存しない約束・ADR-1056）。
@@ -198,7 +200,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 | V8 守りが秘書と同じ | 試験: 4 つの守りのどれかが欠けた人は 3 つの口すべてで拒まれる |
 | V9 画面の安全設定の違反 0 件 | 本番で読み上げ中にブラウザのコンソールを見る（CSP の違反の行 0 件） |
 | V10 移行を 2 回流しても同じ | 移行の試験（CI の migration-test）で 2 回流して差分 0 |
-| V11 声の保存が行ごとの守りの下で効く | 試験: RLS が効いた PostgreSQL で `PUT /assistant/voice` の後に行の値が変わる・書いた行が 1 でなければ 500 |
+| V11 声の保存が行ごとの守りの下で効く | 試験: RLS が効いた PostgreSQL で、口と同じ `save_voice` を流すと行の値が変わる・別の会社の番号では 0 行で失敗・口は書いた行が 1 でなければ 500 |
 | V12 台帳の値の一覧が DB と Python で同じ | 試験: `llm_usage_events` の `purpose`・`sdk` の値の決まりの一覧と `USAGE_PURPOSES`・`USAGE_SDKS` が同じ（ずれたら CI が落ちる） |
 
 ## 10. 外部・過去事例の参照と我々への応用
