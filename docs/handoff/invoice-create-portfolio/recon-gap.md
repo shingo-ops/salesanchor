@@ -117,7 +117,7 @@
 
 ## Q5 デザインシステム（frontend/src/components と金型の目録）
 
-目録の正本: docs/CC_UI_GOVERNANCE.md（必須チェック :7-17・禁止の一覧 :21-30）。Storybook は frontend/.storybook/（main.ts・preview.tsx）。各部品は `Xxx.tsx` + `Xxx.css` + `Xxx.stories.tsx`。トークンは frontend/src/tokens.css。
+目録の正本: docs/CC_UI_GOVERNANCE.md（必須チェック :7-17・禁止の一覧 :21-30）。Storybook は frontend/.storybook/（main.ts・preview.tsx）。各部品は「部品名.tsx・部品名.css・部品名.stories.tsx」の3つ組。トークンは frontend/src/tokens.css。
 
 | 使いたい用途 | 使える部品（あれば） | 根拠 | 評価 |
 |---|---|---|---|
