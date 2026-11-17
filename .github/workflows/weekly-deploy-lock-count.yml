@@ -6,6 +6,7 @@ name: weekly deploy lock count
 on:
   schedule:
     - cron: '0 1 * * 1'  # 毎週月曜 01:00 UTC = 10:00 JST
+    - cron: '17 3 * * 2'  # 火曜 12:17 JST。月曜の回が来なかったときの拾い直し
   workflow_dispatch:
     inputs:
       since:
@@ -21,6 +22,10 @@ permissions:
   actions: read
   contents: read
 
+concurrency:
+  group: weekly-deploy-lock-count
+  cancel-in-progress: false
+
 jobs:
   count:
     runs-on: ubuntu-latest
@@ -35,8 +40,23 @@ jobs:
           DISCORD_WEBHOOK_OWNER_PING: ${{ secrets.DISCORD_WEBHOOK_SCHEDULED_REPORT }}
           INPUT_SINCE: ${{ github.event.inputs.since }}
           INPUT_UNTIL: ${{ github.event.inputs.until }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [ -n "${INPUT_SINCE}" ] && [ -n "${INPUT_UNTIL}" ]; then
+          LATE=0
+          if [ "${EVENT_NAME}" = "schedule" ]; then
+            # 定時の実行は遅れも抜けもある。週は plan の台本が決め、数え済みの週は数えない
+            bash scripts/ops/weekly-deploy-lock-plan.sh > "${RUNNER_TEMP}/plan.txt"
+            cat "${RUNNER_TEMP}/plan.txt"
+            PLAN_SINCE="$(sed -n 's/^since=//p' "${RUNNER_TEMP}/plan.txt")"
+            PLAN_UNTIL="$(sed -n 's/^until=//p' "${RUNNER_TEMP}/plan.txt")"
+            PLAN_DECISION="$(sed -n 's/^decision=//p' "${RUNNER_TEMP}/plan.txt")"
+            LATE="$(sed -n 's/^late=//p' "${RUNNER_TEMP}/plan.txt")"
+            if [ "${PLAN_DECISION}" = "skip" ]; then
+              echo "この週（${PLAN_SINCE}〜${PLAN_UNTIL}）は数え済みのため数えません"
+              exit 0
+            fi
+            RANGE_ARGS=(--since "${PLAN_SINCE}" --until "${PLAN_UNTIL}")
+          elif [ -n "${INPUT_SINCE}" ] && [ -n "${INPUT_UNTIL}" ]; then
             RANGE_ARGS=(--since "${INPUT_SINCE}" --until "${INPUT_UNTIL}")
           elif [ -z "${INPUT_SINCE}" ] && [ -z "${INPUT_UNTIL}" ]; then
             RANGE_ARGS=(--days 7)
@@ -53,7 +73,18 @@ jobs:
           COUNT_RC=$?
           set -e
 
-          if [ -f "${NOTIFY_FILE}" ]; then
+          if [ "${LATE}" = "1" ]; then
+            LATE_LINE="月曜のうちに定時の実行が来なかったため、$(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M') JST に数えました（${PLAN_SINCE}〜${PLAN_UNTIL}）"
+            if [ -f "${NOTIFY_FILE}" ]; then
+              MSG="${LATE_LINE}"$'\n'"$(cat "${NOTIFY_FILE}")"
+            else
+              MSG="${LATE_LINE}"$'\n'"本番反映の止まり 0 件"
+            fi
+            if ! bash scripts/notify/discord-owner-ping.sh "${MSG}"; then
+              echo "Discord への送信に失敗しました" >&2
+              exit 1
+            fi
+          elif [ -f "${NOTIFY_FILE}" ]; then
             if ! bash scripts/notify/discord-owner-ping.sh "$(cat "${NOTIFY_FILE}")"; then
               echo "Discord への送信に失敗しました" >&2
               exit 1
