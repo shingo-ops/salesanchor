@@ -383,6 +383,39 @@ async def _try_fedex_live(
     return results, None, precision
 
 
+# ADR-125 D5 + PO C1判断: FedEx 未連携のときの文（calc_shipping と請求書の送料一覧で同じ文を使う）
+FEDEX_NOT_CONNECTED_MESSAGE = "FedEx が未連携です。キャリア連携設定でアカウントを接続してください"
+
+
+async def fedex_live_quotes(
+    db: AsyncSession,
+    tenant_id: int,
+    *,
+    destination_country_code: str,
+    origin_country_code: str,
+    weight_kg: Decimal,
+    origin_postal_code: Optional[str] = None,
+    destination_postal_code: Optional[str] = None,
+) -> tuple[list[ShippingCalcResult], Optional[str], Optional[str]]:
+    """FedEx のライブ見積もり（ADR-125 D5）。(results, live_error, rate_precision) を返す。
+
+    未連携なら静的な表に落とさず、行0件と未連携の文を返す。
+    calc_shipping と請求書の送料一覧（invoice-create-portfolio R3・design-v2 §3-5）の両方から呼ぶ。
+    """
+    creds = await carrier_credentials.get_credentials(db, tenant_id, "fedex")
+    if not creds:
+        return [], FEDEX_NOT_CONNECTED_MESSAGE, None
+    return await _try_fedex_live(
+        creds=creds,
+        tenant_id=tenant_id,
+        destination_country_code=destination_country_code,
+        origin_country_code=origin_country_code,
+        weight_kg=weight_kg,
+        origin_postal_code=origin_postal_code,
+        destination_postal_code=destination_postal_code,
+    )
+
+
 @router.post(
     "/shipping/calculate",
     response_model=ShippingCalcResponse,
@@ -412,29 +445,22 @@ async def calc_shipping(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="carrier='fedex' 指定時は origin_country_code が必須です",
             )
-        creds = await carrier_credentials.get_credentials(db, tenant_id, "fedex")
-        if creds:
-            live_results, live_error, rate_precision = await _try_fedex_live(
-                creds=creds,
-                tenant_id=tenant_id,
-                destination_country_code=data.country_code,
-                origin_country_code=data.origin_country_code,
-                weight_kg=data.weight_kg,
-                origin_postal_code=data.origin_postal_code,
-                destination_postal_code=data.destination_postal_code,
-            )
-            return ShippingCalcResponse(
-                results=live_results,
-                cheapest=live_results[0] if live_results else None,
-                live_error=live_error,
-                rate_precision=rate_precision,
-            )
-        # FedEx 未連携 → static に落とさず未連携状態を明示返却（ADR-125 D5 + PO C1判断）
+        # FedEx 未連携 → static に落とさず未連携状態を明示返却（ADR-125 D5 + PO C1判断。fedex_live_quotes の中）
         # 静的早見表は他キャリア（DHL/ヤマト等）専用として維持する（ADR-125 D4）
+        live_results, live_error, rate_precision = await fedex_live_quotes(
+            db,
+            tenant_id,
+            destination_country_code=data.country_code,
+            origin_country_code=data.origin_country_code,
+            weight_kg=data.weight_kg,
+            origin_postal_code=data.origin_postal_code,
+            destination_postal_code=data.destination_postal_code,
+        )
         return ShippingCalcResponse(
-            results=[],
-            cheapest=None,
-            live_error="FedEx が未連携です。キャリア連携設定でアカウントを接続してください",
+            results=live_results,
+            cheapest=live_results[0] if live_results else None,
+            live_error=live_error,
+            rate_precision=rate_precision,
         )
 
     results = await calculate_shipping_fee(db, data.country_code, data.weight_kg, data.carrier)
