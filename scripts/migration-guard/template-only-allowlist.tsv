@@ -1,0 +1,8 @@
+# ひな形（backend/app/services/tenant.py）だけを変える PR の許可一覧。唯一の正本。
+# scripts/check_template_needs_migration.py が、ひな形の文字列が変わった PR に
+# 「登録済みの新しい migrations/ の手順」が無いとき、この一覧の PR 番号を見る。
+# 設計: docs/handoff/migration-runner-redesign/design.md §5-6・K5-2c
+# 列（タブ区切り）: pr / reason。# で始まる行はコメント。
+# 規則: (1) 行は PR 1本ごと。pr は PR の番号だけ（例: 5600）。
+#       (2) reason は「どの移行が既に同じ物を作っているか」を migrations/ のファイル名で書く。
+#       (3) PR が合流した後も行は残す（記録として）。
