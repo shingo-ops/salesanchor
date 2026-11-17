@@ -1,0 +1,25 @@
+/**
+ * SectionCard — 見出しつきのカード
+ * ADR-067: 色・余白・字の大きさはすべて CSS 変数参照のみ
+ */
+
+.comp-section-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.comp-section-card__title {
+  margin: 0;
+  font-size: var(--role-section-title-size);
+  font-weight: var(--role-section-title-weight);
+  color: var(--role-section-title-color);
+}
+
+.comp-section-card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}

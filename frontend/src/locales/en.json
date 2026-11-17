@@ -134,6 +134,7 @@
       "selectRow": "select row {{key}}"
     },
     "showPassword": "Show password",
+    "unregistered": "Not registered",
     "hidePassword": "Hide password",
     "loading": "Loading...",
     "select": "Select",
