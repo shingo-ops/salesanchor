@@ -134,9 +134,9 @@ def test_grant_unmask_owner_calls_judge_once_per_source(pg):
 
 `<repo>` の手順は 1 手順 1 コマンド。`F` は `migrations/20261031_210000_create_ops_case.sql`、`N` は `migrations/20261117_130000_grant_unmask_owner_once_per_source.sql`、`D` は `migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql`（コマンドには略さず書く）。
 
-手順B1 枝の先頭が 2 版目の段 B であることを確かめる
-  cd <repo> && git log --oneline -1
-期待する出力: 先頭が `0996ed2ec`。違えば停止（`BLOCKED:`）
+手順B1 2 版目の段 B（0996ed2ec）が枝に入っていることを確かめる（その上に Opus の書類の commit が載っている）
+  cd <repo> && git merge-base --is-ancestor 0996ed2ec36630b01ff4d916bee39287077ee3ec HEAD && echo ancestor-ok
+期待する出力: `ancestor-ok`。出なければ停止（`BLOCKED:`）
 
 手順B2 2 版目の段 B を打ち消す（消さずに、打ち消しの commit を足す）
   cd <repo> && git revert --no-edit 0996ed2ec36630b01ff4d916bee39287077ee3ec
@@ -247,8 +247,8 @@ _SPEED_SQL = "20261117_130000_grant_unmask_owner_once_per_source.sql"
 期待する出力: push の成功
 
 手順B14 push の実在を確かめる
-  cd <repo> && git log --oneline -4 origin/release/unmask-grant-speed
-期待する出力: 上から 手順B11 の commit／手順B4 の merge／手順B2 の打ち消し／`0996ed2ec`
+  cd <repo> && git log --oneline -3 origin/release/unmask-grant-speed
+期待する出力: 上から 手順B11 の commit／手順B4 の merge の commit／手順B2 の打ち消し
 
 報告: `DONE: 段B` と、手順B5-6・B6・B10-2・B12・B14 の出力の全文。ここで止まる（PR 本文・CI は Opus が扱う）
 
