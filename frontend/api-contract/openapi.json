@@ -9958,6 +9958,39 @@
             ],
             "title": "Address"
           },
+          "address_line_1": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Line 1"
+          },
+          "address_line_2": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Line 2"
+          },
+          "address_line_3": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Line 3"
+          },
           "billing_display_name": {
             "anyOf": [
               {
@@ -10002,6 +10035,28 @@
             ],
             "title": "Country"
           },
+          "country_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
           "label": {
             "anyOf": [
               {
@@ -10035,6 +10090,17 @@
             ],
             "title": "Postal Code"
           },
+          "recipient_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Name"
+          },
           "state": {
             "anyOf": [
               {
@@ -10045,6 +10111,17 @@
               }
             ],
             "title": "State"
+          },
+          "tax_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Id"
           }
         },
         "title": "DraftContextAddress",
@@ -10301,6 +10378,143 @@
         "title": "DraftContextResponse",
         "type": "object"
       },
+      "DraftInventoryCategory": {
+        "properties": {
+          "code": {
+            "description": "中分類の符号（type_master.code）。",
+            "title": "Code",
+            "type": "string"
+          },
+          "name_ja": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "中分類の日本語名（type_master.name_ja）。",
+            "title": "Name Ja"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "DraftInventoryCategory",
+        "type": "object"
+      },
+      "DraftInventoryItem": {
+        "properties": {
+          "box_weight_kg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "BOX の重さ（荷姿の表）。",
+            "title": "Box Weight Kg"
+          },
+          "case_weight_kg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ケースの重さ（荷姿の表）。",
+            "title": "Case Weight Kg"
+          },
+          "cells": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ConditionCell"
+            },
+            "description": "状態別の集計。在庫表と同じ。",
+            "title": "Cells",
+            "type": "object"
+          },
+          "mark": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "型番 (products.mark)。",
+            "title": "Mark"
+          },
+          "name": {
+            "description": "商品名 (products.name)。",
+            "title": "Name",
+            "type": "string"
+          },
+          "name_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name En"
+          },
+          "product_id": {
+            "title": "Product Id",
+            "type": "integer"
+          },
+          "work_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Code"
+          }
+        },
+        "required": [
+          "product_id",
+          "name"
+        ],
+        "title": "DraftInventoryItem",
+        "type": "object"
+      },
+      "DraftInventoryResponse": {
+        "properties": {
+          "categories": {
+            "description": "在庫のある中分類（sort_order 順）。category で絞らない。",
+            "items": {
+              "$ref": "#/components/schemas/DraftInventoryCategory"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "items": {
+            "description": "商品ごとの在庫（商品の番号の順）。category で絞る。",
+            "items": {
+              "$ref": "#/components/schemas/DraftInventoryItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "categories",
+          "items"
+        ],
+        "title": "DraftInventoryResponse",
+        "type": "object"
+      },
       "DraftItem": {
         "properties": {
           "product_name": {
@@ -10328,6 +10542,33 @@
           "quantity"
         ],
         "title": "DraftItem",
+        "type": "object"
+      },
+      "DraftShippingQuotesRequest": {
+        "properties": {
+          "company_id": {
+            "minimum": 1.0,
+            "title": "Company Id",
+            "type": "integer"
+          },
+          "weight_kg": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Weight Kg"
+          }
+        },
+        "required": [
+          "company_id",
+          "weight_kg"
+        ],
+        "title": "DraftShippingQuotesRequest",
         "type": "object"
       },
       "DriveStatus": {
@@ -19065,6 +19306,9 @@
             "title": "Monthly By Purpose",
             "type": "array"
           },
+          "secretary_tts_month": {
+            "$ref": "#/components/schemas/SecretaryTtsMonth"
+          },
           "total": {
             "$ref": "#/components/schemas/LlmUsageTotal"
           }
@@ -19079,7 +19323,8 @@
           "daily_requests",
           "daily_errors",
           "daily_by_model",
-          "fx"
+          "fx",
+          "secretary_tts_month"
         ],
         "title": "LlmUsageResponse",
         "type": "object"
@@ -33289,6 +33534,37 @@
         "title": "SearchResponse",
         "type": "object"
       },
+      "SecretaryTtsMonth": {
+        "description": "秘書の読み上げの今月（日本時間の 1 日から）の字数。読めなければ characters は None。",
+        "properties": {
+          "cap": {
+            "title": "Cap",
+            "type": "integer"
+          },
+          "characters": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Characters"
+          },
+          "free_limit": {
+            "title": "Free Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "characters",
+          "free_limit",
+          "cap"
+        ],
+        "title": "SecretaryTtsMonth",
+        "type": "object"
+      },
       "SelfLoginRequest": {
         "properties": {
           "email": {
@@ -34388,6 +34664,21 @@
           "as_of"
         ],
         "title": "SoldOutResultsResponse",
+        "type": "object"
+      },
+      "SpeechIn": {
+        "properties": {
+          "text": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "SpeechIn",
         "type": "object"
       },
       "StaffCreate": {
@@ -41375,6 +41666,46 @@
         "title": "ViewerTemplateUpdate",
         "type": "object"
       },
+      "VoiceIn": {
+        "properties": {
+          "voice": {
+            "title": "Voice",
+            "type": "string"
+          }
+        },
+        "required": [
+          "voice"
+        ],
+        "title": "VoiceIn",
+        "type": "object"
+      },
+      "VoiceOut": {
+        "description": "ADR-1080: 秘書の声の一覧・既定・本人の選び（design.md §4-3）。",
+        "properties": {
+          "default": {
+            "title": "Default",
+            "type": "string"
+          },
+          "selected": {
+            "title": "Selected",
+            "type": "string"
+          },
+          "voices": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Voices",
+            "type": "array"
+          }
+        },
+        "required": [
+          "voices",
+          "default",
+          "selected"
+        ],
+        "title": "VoiceOut",
+        "type": "object"
+      },
       "VoidRequest": {
         "properties": {
           "reason": {
@@ -44295,6 +44626,123 @@
           }
         ],
         "summary": "Remove Assistant Rule",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/speech": {
+      "post": {
+        "operationId": "post_assistant_speech_api_v1_assistant_speech_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpeechIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Assistant Speech",
+        "tags": [
+          "assistant"
+        ]
+      }
+    },
+    "/api/v1/assistant/voice": {
+      "get": {
+        "operationId": "get_assistant_voice_api_v1_assistant_voice_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Assistant Voice",
+        "tags": [
+          "assistant"
+        ]
+      },
+      "put": {
+        "operationId": "put_assistant_voice_api_v1_assistant_voice_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Assistant Voice",
         "tags": [
           "assistant"
         ]
@@ -51823,6 +52271,110 @@
           }
         ],
         "summary": "Get Invoice Draft Context",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/api/v1/invoices/draft-inventory": {
+      "get": {
+        "description": "請求書・見積の商品行の在庫（invoice-create-portfolio R2・design-v2 §3-4）。読むだけ。",
+        "operationId": "get_invoice_draft_inventory_api_v1_invoices_draft_inventory_get",
+        "parameters": [
+          {
+            "description": "中分類の符号（type_master.code）。無ければ全部。",
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "中分類の符号（type_master.code）。無ければ全部。",
+              "title": "Category"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftInventoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Invoice Draft Inventory",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/api/v1/invoices/draft-shipping-quotes": {
+      "post": {
+        "description": "請求書の送料の一覧（invoice-create-portfolio R3・design-v2 §3-5）。書かない。\n\n届け先と発送元は draft-context と同じ関数で決める。FedEx の行はライブだけ（ADR-125 D4・D5）。",
+        "operationId": "get_invoice_draft_shipping_quotes_api_v1_invoices_draft_shipping_quotes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftShippingQuotesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShippingCalcResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Invoice Draft Shipping Quotes",
         "tags": [
           "invoices"
         ]

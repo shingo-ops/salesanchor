@@ -165,11 +165,15 @@ USAGE_PURPOSES: frozenset[str] = frozenset(
         "translation_inbound_escalation",
         "translation_outbound",
         "secretary_intent",
+        "secretary_regression",
+        "secretary_tts",
     }
 )
 
 # sdk: どの SDK の usage_metadata から読んだか（design.md §3-1 CHECK 制約と同一の集合）
-USAGE_SDKS: frozenset[str] = frozenset({"google-genai", "google-generativeai", "codex-cli", "claude-code"})
+USAGE_SDKS: frozenset[str] = frozenset(
+    {"google-genai", "google-generativeai", "codex-cli", "claude-code", "google-tts-rest"}
+)
 
 # ADR-1058 段2: 担当表の provider → 使用の記録の sdk の集合（design.md §6 の①）。
 # 画面のログインの○×と回数はこの対応で `sdk = ANY(:sdks)` を引く。対応はここ1か所だけ。
@@ -177,6 +181,7 @@ USAGE_SDKS_BY_PROVIDER: dict[str, frozenset[str]] = {
     "gemini": frozenset({"google-genai", "google-generativeai"}),
     "codex": frozenset({"codex-cli"}),
     "claude": frozenset({"claude-code"}),
+    "google_tts": frozenset({"google-tts-rest"}),
 }
 
 
@@ -309,13 +314,13 @@ _INSERT_USAGE_EVENT_OUTCOME_SQL = """
          prompt_tokens, cached_content_tokens, candidates_tokens, thoughts_tokens,
          tool_use_prompt_tokens, total_tokens, cost_usd,
          extraction_attempt_id, extraction_shadow_run_id, discord_inbound_message_id, source_ref,
-         outcome, error_code)
+         outcome, error_code, billed_characters)
     VALUES
         (:id, :purpose, :tenant_id, :model, :sdk,
          :prompt_tokens, :cached_content_tokens, :candidates_tokens, :thoughts_tokens,
          :tool_use_prompt_tokens, :total_tokens, :cost_usd,
          :extraction_attempt_id, :extraction_shadow_run_id, :discord_inbound_message_id, :source_ref,
-         :outcome, :error_code)
+         :outcome, :error_code, :billed_characters)
 """
 
 
@@ -392,6 +397,7 @@ async def record_usage_isolated(
     error_code: str | None,
     tenant_id: int | None = None,
     source_ref: str | None = None,
+    billed_characters: int | None = None,
 ) -> None:
     """自分専用の取引で1行書いてすぐ commit する（呼び出し元の取引が巻き戻っても行が残る。design.md §4-2-3）。
 
@@ -410,6 +416,7 @@ async def record_usage_isolated(
             source_ref=source_ref,
         )
         cols.update(_outcome_columns(outcome, error_code))
+        cols["billed_characters"] = billed_characters
         # app.database は読み込むとエンジンを作るので、使う時だけ読む。
         from app.database import AsyncSessionLocal
 

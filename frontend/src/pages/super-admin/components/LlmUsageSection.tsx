@@ -142,6 +142,8 @@ interface LlmUsageResponse {
   daily_errors: LlmUsageDailyErrorItem[];
   daily_by_model: LlmUsageDailyByModelItem[];
   fx: LlmUsageFx | null;
+  // 古い backend（この欄が無い版）が返したときは欄を出さない（古い版と新しい版が混ざる間・design.md §7）
+  secretary_tts_month?: { characters: number | null; free_limit: number; cap: number };
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -633,6 +635,36 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
           </div>
         </div>
       </Card>
+
+      {/* 秘書の読み上げ（今月）: 日本時間の今月 1 日からの字数。読めなかったときは 0 でなく「記録なし」 */}
+      {data.secretary_tts_month && (
+      <Card variant="container" density="compact" className="llm-usage-summary" data-testid="llm-usage-tts-month">
+        <div className="llm-usage-summary__hero">
+          <span className="llm-usage-summary__hero-label">
+            {t("analysisRules.dashboard.usage.tts.label")}
+          </span>
+          <span className="llm-usage-summary__hero-value">
+            {data.secretary_tts_month.characters == null
+              ? formatNumber(null, t)
+              : t("analysisRules.dashboard.usage.tts.value", {
+                  used: data.secretary_tts_month.characters.toLocaleString(),
+                  limit: data.secretary_tts_month.free_limit.toLocaleString(),
+                  percent: ((data.secretary_tts_month.characters / data.secretary_tts_month.free_limit) * 100).toFixed(1),
+                })}
+          </span>
+        </div>
+        <div className="llm-usage-summary__stats">
+          <div className="llm-usage-summary__stat">
+            <span className="llm-usage-summary__stat-label">
+              {t("analysisRules.dashboard.usage.tts.capLabel")}
+            </span>
+            <span className="llm-usage-summary__stat-value">
+              {t("analysisRules.dashboard.usage.tts.chars", { count: data.secretary_tts_month.cap.toLocaleString() })}
+            </span>
+          </div>
+        </div>
+      </Card>
+      )}
 
       {/* ADR-148 2026-10-03 追記（PR-B）: 円換算の出典を明示。cost_jpy は各使用時点の
           app_fx_rate_history レートで換算済み（現在レートの一律適用ではない）。 */}

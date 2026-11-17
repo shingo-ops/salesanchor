@@ -120,6 +120,9 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/assistant/rules/{rule_id}/approve"): _PENDING,
     ("POST", "/api/v1/assistant/rules/{rule_id}/reject"): _PENDING,
     ("POST", "/api/v1/assistant/rules/{rule_id}/remove"): _PENDING,
+    # ADR-1080 便1: 声の好みは本人だけの設定。声の設定画面（便2）を作るときに決める
+    ("PUT", "/api/v1/assistant/voice"): _PENDING,
+    ("POST", "/api/v1/assistant/speech"): "ADR-1080: 音声を返すだけ。書くのは使用量の台帳だけで、画面の表は変わらない",
     ("POST", "/api/v1/auth/login"): _PENDING,
     ("POST", "/api/v1/auth/logout"): _PENDING,
     ("POST", "/api/v1/auth/login-requests/poll"): "人宛ての合図は口の中で直接送る（ADR-1055）。書き込みの口の自動合図にしない",
@@ -236,6 +239,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/integrations/paypal/webhook"): _PENDING,
     ("POST", "/api/v1/invoices"): _PENDING,
     ("POST", "/api/v1/invoices/preview"): _PENDING,
+    ("POST", "/api/v1/invoices/draft-shipping-quotes"): "読むだけ。請求書の作成画面が送料の一覧を読む道で、DB に書かず、他の画面へ合図を出す相手もいない（design-v2 §3-9）",
     ("POST", "/api/v1/invoices/from-quote/{quote_id}"): _PENDING,
     ("PATCH", "/api/v1/invoices/{invoice_id}"): _PENDING,
     ("POST", "/api/v1/invoices/{invoice_id}/issue"): _PENDING,

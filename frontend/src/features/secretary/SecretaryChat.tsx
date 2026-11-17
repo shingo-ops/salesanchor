@@ -7,7 +7,7 @@
  * エラー表示（failed）は AI 側の吹き出しにだけ使う。利用者側の吹き出しには付けない。
  */
 
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
@@ -15,10 +15,10 @@ import { ChatBubble } from "../../components/ChatBubble";
 import { Drawer } from "../../components/Drawer";
 import { FloatingActionButton } from "../../components/FloatingActionButton";
 import { Textarea } from "../../components/Textarea";
+import { Toggle } from "../../components/Toggle";
 import { LeadChatIcon } from "../../constants/icons";
-import { useFeatures } from "../../hooks/useFeatures";
-import { usePermissions } from "../../hooks/usePermissions";
-import { useSuperAdmin } from "../../hooks/useSuperAdmin";
+import { useSecretaryAccess } from "./useSecretaryAccess";
+import { useSecretaryVoice } from "./useSecretaryVoice";
 import { SecretaryDraftEvent } from "./SecretaryDraftEvent";
 import { SecretaryKarteAsk } from "./SecretaryKarteAsk";
 import { SecretaryDraftInvoice } from "./SecretaryDraftInvoice";
@@ -53,7 +53,14 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
   const [sending, setSending] = useState(false);
   // ADR-1078: 予定のカルテ（会話の間だけ持つ。保存しない。閉じたら消す）
   const [karte, setKarte] = useState<EventKarte | null>(null);
+  // 声で返事（保存しない。窓を閉じたら切れに戻る）
+  const [voiceOn, setVoiceOn] = useState(false);
+  const [voiceNote, setVoiceNote] = useState<{ id: number; kind: "failed" | "cap" } | null>(null);
+  const voice = useSecretaryVoice();
   const nextId = useRef(1);
+  // 返事が届いた時点の値で決める（送った時点の値を使わない）
+  const voiceOnRef = useRef(false);
+  const session = useRef(0);
 
   const close = () => {
     // 閉じたら会話とカルテを消す
@@ -61,6 +68,27 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
     setMessages([]);
     setText("");
     setKarte(null);
+    voice.disable();
+    voiceOnRef.current = false;
+    session.current += 1;
+    setVoiceOn(false);
+    setVoiceNote(null);
+  };
+
+  const onVoiceChange = (next: boolean) => {
+    if (next) {
+      voice.enable();
+    } else {
+      voice.disable();
+      setVoiceNote(null);
+    }
+    voiceOnRef.current = next;
+    setVoiceOn(next);
+  };
+
+  const speakFor = async (id: number, spoken: string) => {
+    const r = await voice.speak(spoken);
+    if (r !== "ok") setVoiceNote({ id, kind: r });
   };
 
   const replaceMessage = (id: number, next: ChatMessage) =>
@@ -69,6 +97,8 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
   const send = async () => {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
+    voice.stop();
+    setVoiceNote(null);
     const userId = nextId.current++;
     const pendingId = nextId.current++;
     setMessages((prev) => [
@@ -78,12 +108,14 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
     ]);
     setText("");
     setSending(true);
+    const sentIn = session.current;
     try {
       const reply = await sendSecretaryMessage(trimmed, karte);
       if (reply.kind === "event" && reply.draft.ask) {
         // まだ聞く欄がある: 埋まった欄と質問を出し、カルテを持ち続ける
         setKarte(karteFromDraft(reply.draft));
         replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "ask", reply });
+        if (voiceOnRef.current && sentIn === session.current && reply.draft.ask) void speakFor(pendingId, t(`secretary.ask.${reply.draft.ask}`));
       } else {
         // 最後の確かめの欄・請求書・聞き返しではカルテを捨てる（失敗したときは捨てない）
         setKarte(null);
@@ -93,6 +125,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
           replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "event", reply });
         } else {
           replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "text", text: reply.draft.reply });
+          if (voiceOnRef.current && sentIn === session.current) void speakFor(pendingId, reply.draft.reply);
         }
       }
     } catch (err) {
@@ -113,12 +146,25 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
     }
   };
 
-  const markCreated = (id: number, target: "invoice" | "event", to: string) =>
+  const markCreated = (id: number, target: "invoice" | "event", to: string) => {
     replaceMessage(id, { id, side: "assistant", kind: "created", target, to });
+    if (voiceOnRef.current) void speakFor(id, t(target === "invoice" ? "secretary.created.invoice" : "secretary.created.event"));
+  };
   const markCancelled = (id: number) =>
     replaceMessage(id, { id, side: "assistant", kind: "text", text: t("secretary.cancelled") });
 
-  const renderMessage = (m: ChatMessage) => {
+  const renderMessage = (m: ChatMessage) => (
+    <Fragment key={m.id}>
+      {renderBubble(m)}
+      {voiceNote?.id === m.id && (
+        <p className="secretary-draft__error" role="status">
+          {t(voiceNote.kind === "cap" ? "secretary.voiceCapReached" : "secretary.voiceFailed")}
+        </p>
+      )}
+    </Fragment>
+  );
+
+  const renderBubble = (m: ChatMessage) => {
     if (m.side === "user") {
       return (
         <ChatBubble key={m.id} layout="panel" direction="outbound">
@@ -186,6 +232,10 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
         title={t("secretary.title")}
         footer={
           <div className="secretary-chat__composer">
+            <div className="secretary-chat__voice-row">
+              <label htmlFor="secretary-voice-toggle">{t("secretary.voiceToggle")}</label>
+              <Toggle id="secretary-voice-toggle" checked={voiceOn} onCheckedChange={onVoiceChange} />
+            </div>
             <Textarea
               fullWidth
               value={text}
@@ -208,19 +258,10 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
 }
 
 export function SecretaryChat({ isMobile }: { isMobile: boolean }) {
-  const features = useFeatures();
-  const superAdmin = useSuperAdmin();
-  const permissions = usePermissions();
+  const { allowed } = useSecretaryAccess();
   const [forbidden, setForbidden] = useState(false);
 
-  const ready = !features.loading && !superAdmin.loading && !permissions.loading;
-  const visible =
-    ready &&
-    !forbidden &&
-    features.isEnabled("secretary_chat") &&
-    superAdmin.isSuperAdmin &&
-    permissions.hasPermission("customers.view") &&
-    permissions.hasPermission("invoices.create");
+  const visible = allowed && !forbidden;
 
   if (!visible) return null;
   return <SecretaryChatInner isMobile={isMobile} onForbidden={() => setForbidden(true)} />;

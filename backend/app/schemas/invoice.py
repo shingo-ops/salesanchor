@@ -124,6 +124,14 @@ class DraftContextAddress(BaseModel):
     state: str | None = None
     country: str | None = None
     phone: str | None = None
+    # invoice-create-portfolio R1（design-v2 §3-2）
+    recipient_name: str | None = None
+    email: str | None = None
+    tax_id: str | None = None
+    address_line_1: str | None = None
+    address_line_2: str | None = None
+    address_line_3: str | None = None
+    country_name: str | None = None
 
 
 class DraftContextFx(BaseModel):
@@ -270,3 +278,9 @@ class InvoiceDetailResponse(InvoiceResponse):
     # 便C: payment_method_id の版の表示（口座番号は返さない。design.md §3-4）
     payment_method_display_name: str | None = None
     payment_method_type: str | None = None
+
+
+# invoice-create-portfolio R3（design-v2 §3-5）: 請求書の送料の一覧の入力。届け先・発送元はサーバーが決める。
+class DraftShippingQuotesRequest(BaseModel):
+    company_id: int = Field(ge=1)
+    weight_kg: Decimal = Field(gt=0, max_digits=10, decimal_places=3)

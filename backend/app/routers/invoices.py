@@ -35,8 +35,11 @@ from app.auth.dependencies import (
 from app.cache import invalidate_dashboard_cache
 from app.database import get_db
 from app.models import User
+from app.routers.shipping import calculate_shipping_fee, fedex_live_quotes
+from app.schemas.inventory_aggregated import DraftInventoryResponse
 from app.schemas.invoice import (
     DraftContextResponse,
+    DraftShippingQuotesRequest,
     InvoiceCreate,
     InvoiceDetailResponse,
     InvoiceItemResponse,
@@ -46,9 +49,11 @@ from app.schemas.invoice import (
     InvoiceUpdate,
     VoidRequest,
 )
+from app.schemas.shipping import ShippingCalcResponse
 from app.services import invoice_payment_methods, invoice_totals, paypal_payments
 from app.services.audit import record_audit_log
 from app.services.fx_currencies import list_invoice_currencies
+from app.services.inventory_aggregated_service import get_draft_inventory
 from app.services.invoice_payment_methods import PaymentMethodInvalid
 from app.services.invoice_renderer import render_invoice_pdf, render_quote_pdf
 from app.services.issuer import decide_issuer_region, get_issuer, get_issuer_country_code
@@ -77,7 +82,8 @@ async def _fetch_address_snapshot(
     result = await db.execute(
         text("""
             SELECT a.branch_name, a.zip, a.address_line_1, a.address_line_2,
-                   a.city, a.state, a.country_code, a.telephone,
+                   a.address_line_3, a.city, a.state, a.country_code, a.telephone,
+                   a.name AS recipient_name, a.email, a.tax_id,
                    c.name AS company_name, c.billing_display_name
             FROM company_addresses a
             JOIN companies c ON c.id = a.company_id
@@ -103,7 +109,34 @@ async def _fetch_address_snapshot(
         "state": row["state"],
         "country": row["country_code"],
         "phone": row["telephone"],
+        # invoice-create-portfolio R1（design-v2 §3-2）: 発送先12欄と請求書の PDF の宛名の材料
+        "recipient_name": row["recipient_name"],
+        "email": row["email"],
+        "tax_id": row["tax_id"],
+        "address_line_1": row["address_line_1"],
+        "address_line_2": row["address_line_2"],
+        "address_line_3": row["address_line_3"],
     }
+
+
+# 見積の PDF は宛名を変えない（design-v2 §3-2）。写しに足した6項目を描く前に除く。
+_QUOTE_PDF_HIDDEN_KEYS = (
+    "recipient_name", "email", "tax_id", "address_line_1", "address_line_2", "address_line_3",
+)
+
+
+def _quote_pdf_address(snap: dict | None) -> dict | None:
+    if snap is None:
+        return None
+    return {k: v for k, v in snap.items() if k not in _QUOTE_PDF_HIDDEN_KEYS}
+
+
+async def _country_name(db: AsyncSession, code: str | None) -> str | None:
+    """国の表 public.countries の name（GET /countries と同じ表）。無ければ None。"""
+    if not code:
+        return None
+    res = await db.execute(text("SELECT name FROM public.countries WHERE code = :cc"), {"cc": code.upper()})
+    return res.scalar_one_or_none()
 
 
 _INVOICE_COLUMNS = """
@@ -309,6 +342,9 @@ async def get_invoice_draft_context(
 
     ship_to = await _fetch_address_snapshot(db, company_id, "delivery")
     bill_to = await _fetch_address_snapshot(db, company_id, "billing")
+    for addr in (ship_to, bill_to):
+        if addr is not None:
+            addr["country_name"] = await _country_name(db, addr.get("country"))
     if stored is not None:
         region = stored["issuer_region"] or "overseas"
     else:
@@ -345,6 +381,20 @@ async def get_invoice_draft_context(
     )
 
 
+@router.get(
+    "/invoices/draft-inventory",
+    response_model=DraftInventoryResponse,
+    dependencies=[Depends(require_permission("invoices.create", "quotes.create"))],
+)
+async def get_invoice_draft_inventory(
+    category: str | None = Query(None, description="中分類の符号（type_master.code）。無ければ全部。"),
+    db: AsyncSession = Depends(get_db),
+) -> DraftInventoryResponse:
+    """請求書・見積の商品行の在庫（invoice-create-portfolio R2・design-v2 §3-4）。読むだけ。"""
+    categories, items = await get_draft_inventory(db, category)
+    return DraftInventoryResponse(categories=categories, items=items)
+
+
 @router.post(
     "/invoices/preview",
     response_model=InvoicePreviewResponse,
@@ -378,6 +428,55 @@ async def preview_invoice(
         tax_amount=result.tax_amount, tax_rate_percent=result.tax_rate_percent,
         duty_amount=result.duty_amount, duty_label=result.duty_label, duty_components=result.duty_components,
         total_amount=result.total_amount, uncomputed=result.uncomputed, incoterms=inputs.incoterms,
+    )
+
+
+@router.post(
+    "/invoices/draft-shipping-quotes",
+    response_model=ShippingCalcResponse,
+    dependencies=[Depends(require_permission("invoices.create"))],
+)
+async def get_invoice_draft_shipping_quotes(
+    data: DraftShippingQuotesRequest,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),  # noqa: ARG001
+) -> ShippingCalcResponse:
+    """請求書の送料の一覧（invoice-create-portfolio R3・design-v2 §3-5）。書かない。
+
+    届け先と発送元は draft-context と同じ関数で決める。FedEx の行はライブだけ（ADR-125 D4・D5）。
+    """
+    co = await db.execute(text("SELECT id FROM companies WHERE id = :id"), {"id": data.company_id})
+    if co.first() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:company")
+    ship_to = await _fetch_address_snapshot(db, data.company_id, "delivery")
+    bill_to = await _fetch_address_snapshot(db, data.company_id, "billing")
+    destination = invoice_totals.destination_country(ship_to, bill_to)
+    if destination is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="draft_shipping_destination")
+    static_rows = [
+        r for r in await calculate_shipping_fee(db, destination, data.weight_kg) if r.carrier.lower() != "fedex"
+    ]
+    origin = await get_issuer_country_code(db, tenant_id, decide_issuer_region(bill_to))
+    if origin is None:
+        return ShippingCalcResponse(
+            results=static_rows,
+            cheapest=None,
+            live_error="発送元の国が未登録です。発行元の設定で国を登録してください",
+        )
+    live_rows, live_error, rate_precision = await fedex_live_quotes(
+        db,
+        tenant_id,
+        destination_country_code=destination,
+        origin_country_code=origin,
+        weight_kg=data.weight_kg,
+        destination_postal_code=invoice_totals.destination_postal_code(ship_to, bill_to),
+    )
+    return ShippingCalcResponse(
+        results=[*live_rows, *static_rows],
+        cheapest=None,
+        live_error=live_error,
+        rate_precision=rate_precision,
     )
 
 
@@ -1226,8 +1325,8 @@ async def download_quote_pdf(
     items = [dict(r) for r in items_result.mappings().all()]
 
     company_id = row["company_id"]
-    ship_to_snap = await _fetch_address_snapshot(db, company_id, "delivery")
-    bill_to_snap = await _fetch_address_snapshot(db, company_id, "billing")
+    ship_to_snap = _quote_pdf_address(await _fetch_address_snapshot(db, company_id, "delivery"))
+    bill_to_snap = _quote_pdf_address(await _fetch_address_snapshot(db, company_id, "billing"))
 
     # ADR-1061 便2-2c2a: 見積は地域を持たないので海外用の発行元を使う
     tenant_profile = await get_issuer(db, tenant_id, "overseas")
