@@ -566,3 +566,11 @@ jobs:
             --base "${{ github.event.pull_request.base.sha }}" \
             --head "${{ github.event.pull_request.head.sha }}" \
             --pr "${{ github.event.pull_request.number }}"
+
+      # 流し終えた手順の書き換え・削除を止める（設計 §5-7・K5-10）。宛先の枝の最新（TIP）は台本の中で取り直し、
+      # MB は TIP と head の merge-base から出す。出来事に入った古い値から MB を出さない。
+      - name: 流し終えた手順の書き換え・削除を止める（記録の対象の凍結）
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python3 scripts/check_migration_freeze.py --head "$HEAD_SHA" --base-ref "$BASE_REF"

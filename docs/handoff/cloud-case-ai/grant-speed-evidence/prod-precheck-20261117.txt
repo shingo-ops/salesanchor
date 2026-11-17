@@ -1,0 +1,52 @@
+== run_at_utc 2026-11-16T20:36:25Z
+Timing is on.
+on
+Time: 0.479 ms
+same|t|506|506
+Time: 15951.765 ms (00:15.952)
+Aggregate  (cost=813.31..813.32 rows=1 width=32) (actual rows=1 loops=1)
+  Buffers: shared hit=191825
+  CTE s
+    ->  HashAggregate  (cost=182.36..188.07 rows=571 width=26) (actual rows=571 loops=1)
+          Group Key: b.source
+          Batches: 1  Memory Usage: 105kB
+          Buffers: shared hit=98
+          ->  Seq Scan on build_columns b  (cost=0.00..165.49 rows=6749 width=26) (actual rows=6749 loops=1)
+                Buffers: shared hit=98
+  ->  Sort  (cost=618.89..622.06 rows=1269 width=4) (actual rows=506 loops=1)
+        Sort Key: c.oid
+        Sort Method: quicksort  Memory: 25kB
+        Buffers: shared hit=191825
+        ->  Merge Join  (cost=516.04..553.48 rows=1269 width=4) (actual rows=506 loops=1)
+              Merge Cond: ((s.source)::text = ((((n.nspname)::text || '.'::text) || (c.relname)::text)))
+              Buffers: shared hit=191825
+              ->  Sort  (cost=170.50..171.46 rows=381 width=32) (actual rows=506 loops=1)
+                    Sort Key: s.source COLLATE "C"
+                    Sort Method: quicksort  Memory: 44kB
+                    Buffers: shared hit=191580
+                    ->  CTE Scan on s  (cost=0.00..154.17 rows=381 width=32) (actual rows=506 loops=1)
+                          Filter: (NOT ops_case.is_denied_source(source))
+                          Rows Removed by Filter: 65
+                          Buffers: shared hit=191580
+              ->  Sort  (cost=345.53..347.20 rows=666 width=132) (actual rows=666 loops=1)
+                    Sort Key: ((((n.nspname)::text || '.'::text) || (c.relname)::text)) COLLATE "C"
+                    Sort Method: quicksort  Memory: 146kB
+                    Buffers: shared hit=245
+                    ->  Hash Join  (cost=1.74..314.30 rows=666 width=132) (actual rows=666 loops=1)
+                          Hash Cond: (c.relnamespace = n.oid)
+                          Buffers: shared hit=245
+                          ->  Seq Scan on pg_class c  (cost=0.00..310.59 rows=666 width=72) (actual rows=666 loops=1)
+                                Filter: (relkind = ANY ('{r,p}'::"char"[]))
+                                Rows Removed by Filter: 4661
+                                Buffers: shared hit=244
+                          ->  Hash  (cost=1.33..1.33 rows=33 width=68) (actual rows=33 loops=1)
+                                Buckets: 1024  Batches: 1  Memory Usage: 12kB
+                                Buffers: shared hit=1
+                                ->  Seq Scan on pg_namespace n  (cost=0.00..1.33 rows=33 width=68) (actual rows=33 loops=1)
+                                      Buffers: shared hit=1
+Planning:
+  Buffers: shared hit=6
+Planning Time: 0.454 ms
+Execution Time: 2172.222 ms
+Time: 2173.727 ms (00:02.174)
+db_exit=0

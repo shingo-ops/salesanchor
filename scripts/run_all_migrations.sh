@@ -20,13 +20,16 @@
 set -e
 
 REPO_DIR="${REPO_DIR:-/home/ubuntu/salesanchor}"
-BACKEND="astro-webapp-backend-1"
-POSTGRES="astro-webapp-postgres-1"
+BACKEND="${MIGRATION_BACKEND_CONTAINER:-astro-webapp-backend-1}"
+POSTGRES="${MIGRATION_POSTGRES_CONTAINER:-astro-webapp-postgres-1}"
 PSQL="psql -U jarvis -d jarvis_db -v ON_ERROR_STOP=1"
 
 # 接続の名前の正本（deploy-db-stall §16-3）。cd の前に、このスクリプトの位置から読む。
 # shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/lib/db-app-names.sh"
+# 実行済みの記録の部品（段5 5-3。チェックサム・P13 の取り出し・記録の対象の一覧）。同じ理由で cd の前に読む。
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/lib/migration_record.sh"
 
 cd "${REPO_DIR}"
 
@@ -39,6 +42,22 @@ if [ -f ".env" ]; then
   set +a
 fi
 
+# ── 実行済みの記録（段5 5-3・ADR-1005 段階2。設計 docs/handoff/migration-runner-redesign/design.md §5-4b・§5-7）──
+# 記録の外（毎回流す・記録しない）はビューを外す2本だけ（§5-4b）。この配列を CI の検査（scripts/check_migration_freeze.py）も読む。
+# 足したくなったら、設計を改めてからにする（CI が止める）。
+MIGRATION_OUTSIDE_RECORD=(migrations/20261024_100200_drop_ai_cloud_views.sql migrations/20261017_125900_drop_ai_ro_views.sql)
+# record（ふだん）: 記録済みでチェックサムが同じ手順は流さない。full（戻し道）: 記録を見ずに全件流し、記録を上書きする。
+# full は人が手で、PO 本人の GO の後に起動する物。本番反映の自動の流れはこの変数を渡さないので、いつも record。
+MIGRATION_MODE="${MIGRATION_MODE:-record}"
+case "${MIGRATION_MODE}" in
+  record|full) ;;
+  *) echo ">>> [record] invalid MIGRATION_MODE: ${MIGRATION_MODE} (record or full)" >&2; exit 1 ;;
+esac
+if [ "${MIGRATION_MODE}" = "full" ] && [ -z "${MIGRATION_FULL_MODE_REASON:-}" ]; then
+  echo ">>> [record] MIGRATION_MODE=full needs MIGRATION_FULL_MODE_REASON" >&2
+  exit 1
+fi
+
 # ── 前処理: scripts / migrations をコンテナにコピー ──────────────────────────
 echo ">>> [0] Syncing scripts/ and migrations/ into backend container..."
 docker cp scripts "${BACKEND}:/app/"
@@ -49,6 +68,153 @@ STEP=0
 
 
 TOTAL=$(grep -cE '^run_(sql|py)[[:space:]]' "$0" 2>/dev/null || echo 0)
+
+# ── 実行済みの記録の関数（段5 5-3）。関数名は run_ で始めない（TOTAL は ^run_(sql|py) の行を数えるため）──
+declare -A MR_SUM=()        # 記録の対象: ファイル → 今のチェックサム
+declare -A MR_KIND=()       # 記録の対象: ファイル → sql か py
+declare -A MR_RECORDED=()   # 記録の中身: ファイル → 記録のチェックサム
+MR_TO_RUN=0
+MR_SKIPPED=0
+MR_RAN=0
+MR_OVERWRITTEN=0
+MR_GIT_COMMIT="unknown"
+
+# 秒（小数2桁）。引数は EPOCHREALTIME の2つの値。
+mr_secs() {
+  local a=${1/[.,]/} b=${2/[.,]/} h
+  h=$(( (b - a) / 10000 ))
+  printf '%d.%02d' $((h / 100)) $((h % 100))
+}
+
+# 記録の表を無ければ作る（記録の外で毎回。migrations/ には置かない。設計 §5-7）。アプリの利用者には権限を付けない。
+mr_ensure_table() {
+  docker exec -i "${POSTGRES}" ${PSQL} -q <<'MR_TABLE_SQL'
+CREATE SCHEMA IF NOT EXISTS ops;
+CREATE TABLE IF NOT EXISTS ops.migration_runs (
+  file        text PRIMARY KEY,
+  checksum    text NOT NULL,
+  ran_at      timestamptz NOT NULL DEFAULT now(),
+  seconds     numeric(10,2) NOT NULL,
+  result      text NOT NULL,
+  git_commit  text NOT NULL
+);
+REVOKE ALL ON SCHEMA ops FROM PUBLIC;
+REVOKE ALL ON ALL TABLES IN SCHEMA ops FROM PUBLIC;
+MR_TABLE_SQL
+}
+
+# 記録を1回で読む（ファイル名とチェックサム）
+mr_read_records() {
+  local f s out
+  # 読めなかったら（set -e で）止める。空の記録と取り違えて全件を流さないため
+  out="$(docker exec -i "${POSTGRES}" ${PSQL} -At -F $'\t' -c "SELECT file, checksum FROM ops.migration_runs ORDER BY file")"
+  while IFS=$'\t' read -r f s; do
+    [ -n "${f}" ] || continue
+    MR_RECORDED["${f}"]="${s}"
+  done <<< "${out}"
+}
+
+# 記録の対象を数えて (a)(b)(c) を出す。record で (a)(b) が0でなければ、何も流さずに止まる（ビューも外していない）
+mr_plan() {
+  local t_read0 t_read1 t_sum0 t_sum1 kind file extra sum n_targets=0 n_rec=0 a=0 b=0 f
+  local -a a_list=() b_list=()
+  local -A is_target=()
+  local MR_TARGET_LINES
+  t_read0=${EPOCHREALTIME}
+  mr_read_records
+  t_read1=${EPOCHREALTIME}
+  t_sum0=${EPOCHREALTIME}
+  # < <(...) だと mr_targets の失敗（二重登録）を set -e が拾わない。local と別の行で受けて、失敗したらここで止める
+  MR_TARGET_LINES="$(mr_targets "$0" "${MIGRATION_OUTSIDE_RECORD[@]}")"
+  while IFS=$'\t' read -r kind file extra; do
+    [ -n "${file}" ] || continue
+    sum="$(mr_checksum "${kind}" "${file}" ${extra})"
+    MR_SUM["${file}"]="${sum}"
+    MR_KIND["${file}"]="${kind}"
+    is_target["${file}"]=1
+    n_targets=$((n_targets + 1))
+    if [ -z "${MR_RECORDED[${file}]+x}" ]; then
+      MR_TO_RUN=$((MR_TO_RUN + 1))
+    elif [ "${MR_RECORDED[${file}]}" != "${sum}" ]; then
+      b=$((b + 1))
+      b_list+=("${file} old=${MR_RECORDED[${file}]} new=${sum}")
+    fi
+  done <<< "${MR_TARGET_LINES}"
+  if [ "${n_targets}" -eq 0 ]; then
+    echo ">>> [record] no targets; nothing was run"
+    exit 1
+  fi
+  t_sum1=${EPOCHREALTIME}
+  for f in "${!MR_RECORDED[@]}"; do
+    n_rec=$((n_rec + 1))
+    if [ -z "${is_target[${f}]+x}" ]; then
+      a=$((a + 1))
+      a_list+=("${f}")
+    fi
+  done
+  echo ">>> [record] targets=${n_targets} recorded=${n_rec} outside=${#MIGRATION_OUTSIDE_RECORD[@]} mode=${MIGRATION_MODE}"
+  echo ">>> [record] (a) recorded-but-not-target=${a}"
+  echo ">>> [record] (b) checksum-mismatch=${b}"
+  echo ">>> [record] (c) to-run=${MR_TO_RUN}"
+  echo ">>> [record] timing read-records=$(mr_secs "${t_read0}" "${t_read1}")s checksum=$(mr_secs "${t_sum0}" "${t_sum1}")s"
+  for f in "${a_list[@]}"; do echo ">>> [record] (a) ${f}"; done
+  for f in "${b_list[@]}"; do echo ">>> [record] (b) ${f}"; done
+  if [ "${MIGRATION_MODE}" = "record" ] && [ $((a + b)) -ne 0 ]; then
+    echo ">>> [record] (a) or (b) is not 0; nothing was run"
+    exit 1
+  fi
+  if [ "${MIGRATION_MODE}" = "full" ]; then
+    echo ">>> [record] full mode: running all ${n_targets} targets (reason: ${MIGRATION_FULL_MODE_REASON})"
+  fi
+}
+
+# 流さずに飛ばすか。ビューを外す2本（記録の外）は、record で (c) が0のときだけ飛ばす。full では必ず流す。
+mr_should_skip() {
+  local file="$1" o
+  [ "${MIGRATION_MODE}" = "record" ] || return 1
+  for o in "${MIGRATION_OUTSIDE_RECORD[@]}"; do
+    if [ "${file}" = "${o}" ]; then
+      [ "${MR_TO_RUN}" -eq 0 ]
+      return
+    fi
+  done
+  [ -n "${MR_SUM[${file}]:-}" ] && [ "${MR_RECORDED[${file}]:-}" = "${MR_SUM[${file}]}" ] || return 1
+  MR_SKIPPED=$((MR_SKIPPED + 1))
+  return 0
+}
+
+# 成功したファイルを記録する（記録の外は記録しない）。書けなければ止まる（次の本番反映でもう一度流れる）。
+mr_record_success() {
+  local file="$1" t0="$2" secs result="ok"
+  [ -n "${MR_SUM[${file}]:-}" ] || return 0
+  secs="$(mr_secs "${t0}" "${EPOCHREALTIME}")"
+  if [ "${MIGRATION_MODE}" = "full" ]; then
+    result="ok-full"
+    if [ -n "${MR_RECORDED[${file}]+x}" ] && [ "${MR_RECORDED[${file}]}" != "${MR_SUM[${file}]}" ]; then
+      MR_OVERWRITTEN=$((MR_OVERWRITTEN + 1))
+    fi
+  fi
+  if ! docker exec -i "${POSTGRES}" ${PSQL} -q -v file="${file}" -v sum="${MR_SUM[${file}]}" -v secs="${secs}" -v result="${result}" -v commit="${MR_GIT_COMMIT}" <<'MR_WRITE_SQL'
+INSERT INTO ops.migration_runs (file, checksum, seconds, result, git_commit)
+VALUES (:'file', :'sum', :'secs'::numeric, :'result', :'commit')
+ON CONFLICT (file) DO UPDATE
+  SET checksum = EXCLUDED.checksum, ran_at = now(), seconds = EXCLUDED.seconds,
+      result = EXCLUDED.result, git_commit = EXCLUDED.git_commit;
+MR_WRITE_SQL
+  then
+    echo ">>> [record] write-failed: ${file}"
+    exit 1
+  fi
+  MR_RECORDED["${file}"]="${MR_SUM[${file}]}"
+  MR_RAN=$((MR_RAN + 1))
+}
+
+mr_report_summary() {
+  echo ">>> [record] skipped-recorded=${MR_SKIPPED} ran-and-recorded=${MR_RAN}"
+  if [ "${MIGRATION_MODE}" = "full" ]; then
+    echo ">>> [record] full-mode overwritten=${MR_OVERWRITTEN}"
+  fi
+}
 
 # 稼働中のアプリとロックを取り合ったら、同じファイルを流し直す（全 migration は冪等で、
 # CI のドライラン2周目で再実行が通ることを確かめている）。ほかのエラーは今までどおり即停止。
@@ -75,6 +241,11 @@ run_py() {
   local script="$1"
   shift
   STEP=$((STEP + 1))
+  if mr_should_skip "${script}"; then
+    echo ">>> [${STEP}/${TOTAL}] skip (recorded): ${script}"
+    return 0
+  fi
+  local mr_t0=${EPOCHREALTIME}
   echo ">>> [${STEP}/${TOTAL}] python ${script} $*"
   local attempt=1 rc errlog
   errlog="$(mktemp)"
@@ -89,6 +260,7 @@ run_py() {
     cat "${errlog}" >&2
     if [ "${rc}" -eq 0 ]; then
       rm -f "${errlog}"
+      mr_record_success "${script}" "${mr_t0}"
       return 0
     fi
     if grep -qE "${SQL_RETRY_PATTERN}" "${errlog}"; then
@@ -110,6 +282,11 @@ run_py() {
 run_sql() {
   local file="$1"
   STEP=$((STEP + 1))
+  if mr_should_skip "${file}"; then
+    echo ">>> [${STEP}/${TOTAL}] skip (recorded): ${file}"
+    return 0
+  fi
+  local mr_t0=${EPOCHREALTIME}
   echo ">>> [${STEP}/${TOTAL}] psql < ${file}"
   local attempt=1 rc errlog
   errlog="$(mktemp)"
@@ -119,6 +296,7 @@ run_sql() {
     cat "${errlog}" >&2
     if [ "${rc}" -eq 0 ]; then
       rm -f "${errlog}"
+      mr_record_success "${file}" "${mr_t0}"
       return 0
     fi
     if grep -qE "${SQL_RETRY_PATTERN}" "${errlog}"; then
@@ -213,6 +391,12 @@ preflight_registered_files() {
 }
 
 preflight_registered_files
+
+# 実行済みの記録（段5 5-3）: 表を無ければ作り、記録と今のファイルを突き合わせる。
+# record で (a)・(b) が0でなければ、ここで何も流さずに止まる（trap を付ける前・ビューを外す前なので作り直しは走らない）。
+MR_GIT_COMMIT="$(git -C "${REPO_DIR}" rev-parse HEAD 2>/dev/null || echo unknown)"
+mr_ensure_table
+mr_plan
 
 # ADR-1052 段1: ai_cloud（相談係用の伏せたビュー）も同じ理由で先頭で外す。ai_ro を外す前に置く
 # （ここで失敗しても ai_ro は外れていないので、今の読む窓口は止まらない）。この行はずっと残す（戻すときも消さない）。
@@ -1280,3 +1464,13 @@ run_sql migrations/20261115_100000_add_payment_method_versioning.sql
 # ADR-1012 段階4 便2b: 報告の古い一意（incident_id だけ）を消す（種類ごとに 1 通・冪等）
 run_sql migrations/20261115_110000_drop_ops_case_report_single_unique.sql
 # ADR-1012 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261115_110001_drop_ops_case_report_single_unique_down.sql
+# ADR-1080 便1: 秘書の声の列（public.users.secretary_voice・冪等）
+run_sql migrations/20261117_100000_add_users_secretary_voice.sql
+# ADR-1080 便1: 台帳に読み上げの字数の列と使いみち secretary_tts・sdk google-tts-rest を足す（冪等）
+run_sql migrations/20261117_100100_add_llm_usage_tts_characters.sql
+# ADR-1052 段2 の手直し: 権限の付け直しで判定を元の表の名前ごとに 1 回だけ呼ぶ（関数の置き換えだけ・冪等）
+run_sql migrations/20261117_130000_grant_unmask_owner_once_per_source.sql
+# ADR-1052 ロールバック用（手動実行のみ・本番デプロイでは実行しない）: migrations/20261117_130001_grant_unmask_owner_once_per_source_down.sql
+
+# 実行済みの記録の集計（段5 5-3）。新しい手順は、この集計の行より上（上の run_ の並びの末尾）に足す。
+mr_report_summary

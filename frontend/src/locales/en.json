@@ -134,6 +134,7 @@
       "selectRow": "select row {{key}}"
     },
     "showPassword": "Show password",
+    "unregistered": "Not registered",
     "hidePassword": "Hide password",
     "loading": "Loading...",
     "select": "Select",
@@ -3545,6 +3546,9 @@
     "sectionPreferences": "Preferences",
     "darkModeLabel": "Dark mode",
     "languageLabel": "Language",
+    "secretaryVoiceLabel": "Secretary voice",
+    "secretaryVoiceLoadFailed": "Could not load the secretary voice. Please reopen this page",
+    "secretaryVoiceSaveFailed": "Could not save the secretary voice. Please choose again",
     "avatarLabel": "Icon",
     "avatarChoose": "Choose image",
     "avatarChange": "Change image",
@@ -5358,6 +5362,12 @@
       "usage": {
         "note": "Usage per Gemini call (ledger: llm_usage_events). Thinking tokens are recorded only when Google returns them. Failed calls with no response are not included.",
         "notReported": "Not reported",
+        "tts": {
+          "label": "Secretary read-aloud (this month)",
+          "value": "{{used}} / {{limit}} chars ({{percent}}%)",
+          "capLabel": "Stop limit",
+          "chars": "{{count}} chars"
+        },
         "costRowTitle": "Cost",
         "byPurposeTitle": "By Purpose",
         "dailyTitle": "Daily",
@@ -6170,6 +6180,9 @@
     "create": "Create",
     "cancel": "Cancel",
     "thinking": "Thinking…",
+    "voiceToggle": "Read replies aloud",
+    "voiceFailed": "Could not play the voice. You can still read the text. Send again to retry",
+    "voiceCapReached": "This month's read-aloud limit has been reached. You can still read the text. It resets on the 1st",
     "cancelled": "Cancelled.",
     "priceRequired": "Some rows have no unit price. Please enter one",
     "priceDecimals": "Unit price can have up to 2 decimal places.",
@@ -6228,6 +6241,14 @@
     "link": {
       "invoice": "Open invoice",
       "event": "Open event"
+    },
+    "voice": {
+      "name": {
+        "Aoede": "Aoede",
+        "Charon": "Charon",
+        "Erinome": "Erinome",
+        "Zubenelgenubi": "Zubenelgenubi"
+      }
     }
   },
   "notices": {

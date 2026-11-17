@@ -8,6 +8,7 @@ const mock = vi.hoisted(() => ({
   postWithTimeout: vi.fn(),
   post: vi.fn(),
   get: vi.fn(),
+  speech: vi.fn(),
   features: new Set<string>(),
   superAdmin: false,
   permissions: new Set<string>(),
@@ -25,6 +26,10 @@ vi.mock("../../lib/api", () => ({
       this.responseDetail = responseDetail;
     }
   },
+}));
+vi.mock("./secretaryApi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./secretaryApi")>()),
+  fetchSecretarySpeech: mock.speech,
 }));
 vi.mock("../../hooks/useFeatures", () => ({
   useFeatures: () => ({ loading: false, isEnabled: (k: string) => mock.features.has(k) }),
@@ -489,5 +494,137 @@ describe("SecretaryChat event draft", () => {
     await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1));
     expect(screen.queryByLabelText(i18n.t("schedule.addMeet"))).toBeNull();
     expect(mock.post.mock.calls[0][1]).not.toHaveProperty("add_meet");
+  });
+});
+
+// 便2: 声で返事（V3）。AudioContext は偽物。読み上げの頼み（fetchSecretarySpeech）の回数を数える
+describe("SecretaryChat voice reply", () => {
+  const TOGGLE = "Read replies aloud";
+  let decoded: { connect: ReturnType<typeof vi.fn>; start: ReturnType<typeof vi.fn> } | null = null;
+
+  beforeEach(() => {
+    decoded = null;
+    mock.speech.mockResolvedValue(new Blob(["x"]));
+    class FakeAudioContext {
+      destination = {};
+      resume = vi.fn().mockResolvedValue(undefined);
+      close = vi.fn().mockResolvedValue(undefined);
+      decodeAudioData = vi.fn().mockResolvedValue({});
+      createBufferSource() {
+        const source = {
+          buffer: null as unknown,
+          onended: null as null | (() => void),
+          connect: vi.fn(),
+          stop: vi.fn(),
+          start: vi.fn(() => {
+            queueMicrotask(() => source.onended?.());
+          }),
+        };
+        decoded = source;
+        return source;
+      }
+    }
+    Object.defineProperty(window, "AudioContext", { value: FakeAudioContext, configurable: true, writable: true });
+  });
+
+  async function openChat() {
+    fireEvent.click(screen.getByRole("button", { name: FAB }));
+    return (await screen.findByRole("switch", { name: TOGGLE })) as HTMLInputElement;
+  }
+
+  it("V3-a: the toggle is off right after opening", async () => {
+    renderChat();
+    const toggle = await openChat();
+    expect(toggle.checked).toBe(false);
+  });
+
+  it("V3-b: never asks for speech while the toggle is off", async () => {
+    mock.postWithTimeout.mockResolvedValue({ kind: "unknown", draft: { reply: "ok. next." }, candidates: none });
+    renderChat();
+    await sendMessage();
+    await screen.findByText("ok. next.");
+    expect(mock.speech).not.toHaveBeenCalled();
+  });
+
+  it("V3-c: asks for speech with the first sentence once the toggle is on", async () => {
+    const reply = "Hello! Tomorrow?";
+    mock.postWithTimeout.mockResolvedValue({ kind: "unknown", draft: { reply }, candidates: none });
+    renderChat();
+    const toggle = await openChat();
+    fireEvent.click(toggle);
+    const box = await screen.findByLabelText(/Tell me what you need/);
+    fireEvent.change(box, { target: { value: "hi" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText(reply);
+    await waitFor(() => expect(mock.speech).toHaveBeenCalled());
+    expect(mock.speech.mock.calls[0][0]).toBe("Hello!");
+    await waitFor(() => expect(decoded?.start).toHaveBeenCalled());
+  });
+
+  it("V3-d: shows the failure line and keeps the text reply when speech fails", async () => {
+    mock.speech.mockRejectedValue(new ApiError("x", 503, { code: "tts_not_configured" }));
+    mock.postWithTimeout.mockResolvedValue({ kind: "unknown", draft: { reply: "plain reply" }, candidates: none });
+    renderChat();
+    const toggle = await openChat();
+    fireEvent.click(toggle);
+    const box = await screen.findByLabelText(/Tell me what you need/);
+    fireEvent.change(box, { target: { value: "hi" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByText("plain reply")).toBeTruthy();
+    expect(await screen.findByText(i18n.t("secretary.voiceFailed"))).toBeTruthy();
+  });
+
+  it("V3-e: the toggle goes back to off after closing and reopening", async () => {
+    renderChat();
+    const toggle = await openChat();
+    fireEvent.click(toggle);
+    expect(toggle.checked).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: /close/i }));
+    const reopened = await openChat();
+    await waitFor(() => expect(reopened.checked).toBe(false));
+  });
+
+  it("V3-f: turning the toggle off while waiting neither asks for speech nor shows the failure line", async () => {
+    let resolveReply!: (v: unknown) => void;
+    mock.postWithTimeout.mockReturnValue(
+      new Promise((r) => {
+        resolveReply = r;
+      }),
+    );
+    renderChat();
+    const toggle = await openChat();
+    fireEvent.click(toggle);
+    const box = await screen.findByLabelText(/Tell me what you need/);
+    fireEvent.change(box, { target: { value: "hi" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() => expect(mock.postWithTimeout).toHaveBeenCalled());
+    fireEvent.click(toggle);
+    resolveReply({ kind: "unknown", draft: { reply: "late reply" }, candidates: none });
+    await screen.findByText("late reply");
+    expect(mock.speech).not.toHaveBeenCalled();
+    expect(screen.queryByText(i18n.t("secretary.voiceFailed"))).toBeNull();
+  });
+
+  it("V3-g: a reply sent before closing is not read aloud after reopening with the toggle on", async () => {
+    let resolveReply!: (v: unknown) => void;
+    mock.postWithTimeout.mockReturnValue(
+      new Promise((r) => {
+        resolveReply = r;
+      }),
+    );
+    renderChat();
+    const toggle = await openChat();
+    fireEvent.click(toggle);
+    const box = await screen.findByLabelText(/Tell me what you need/);
+    fireEvent.change(box, { target: { value: "hi" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() => expect(mock.postWithTimeout).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: /close/i }));
+    const reopened = await openChat();
+    fireEvent.click(reopened);
+    resolveReply({ kind: "unknown", draft: { reply: "old reply" }, candidates: none });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mock.speech).not.toHaveBeenCalled();
   });
 });

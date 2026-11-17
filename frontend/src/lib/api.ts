@@ -263,6 +263,31 @@ async function requestForm<T>(path: string, body: FormData): Promise<T> {
   return res.json();
 }
 
+/**
+ * JSON を POST して Blob を受け取る（秘書の読み上げ・MP3）。繰り返さない（429・503 を重ねて頼まない）。
+ * 待ち時間は呼ぶ側が決める。
+ */
+async function requestBlobPost(path: string, data: unknown, timeoutMs: number): Promise<Blob> {
+  const headers = await getAuthHeaders();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetchWithReauth(
+      `${API_BASE}${path}`,
+      { method: "POST", headers, body: JSON.stringify(data), signal: controller.signal },
+      path,
+    );
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      const detail = (errBody as { detail?: unknown }).detail;
+      throw new ApiError(errorMessageFromDetail(detail, res.status), res.status, detail);
+    }
+    return await res.blob();
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, data: unknown) =>
@@ -279,4 +304,5 @@ export const api = {
   // spec.md v1.1 F2 (Sprint 2)
   getBlob: (path: string) => requestBlob(path),
   postForm: <T>(path: string, body: FormData) => requestForm<T>(path, body),
+  postBlob: (path: string, data: unknown, timeoutMs: number) => requestBlobPost(path, data, timeoutMs),
 };
