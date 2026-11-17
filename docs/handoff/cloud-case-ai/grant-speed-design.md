@@ -133,7 +133,7 @@
 - 試験の `SET LOCAL track_functions` が CI の DB の権限で拒まれる: 実装担当は迂回せず止まって報告する（段取り表 §5）。
 - 戻し方: PR を戻す PR を出して本番反映する。移行は毎回全部流れるので、戻した版の関数がそのまま入る。データは変えない。
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 
 不要。理由: 原因は本番の実行計画で直接見えており（2-2）、直し方は PostgreSQL 公式に書かれた機能そのもの。効果は自分の本番で K1・K3 として実測する。
 
@@ -141,6 +141,7 @@
 
 - K4 の試験が、判定を呼ぶ回数を CI で毎回数える（同じ種類の遅れが戻ったら PR の段階で赤）。
 - 既存の試験 `backend/tests/ops/test_ops_case_db.py:689`（1 回目が 5 秒未満）はそのまま残す。
+- 守り手: Opus（K4 の試験は CI が毎回、本番の所要は本番反映の記録で見る）
 - 本番の所要は、本番反映の記録の `done in Ns` に毎回出る（`scripts/run_all_migrations.sh:270`）。2026-12-01 ごろに、直した版のあとの本番反映の N を数え直す（担当: Opus）。
 
 ## 10. 未確認
@@ -183,7 +184,7 @@
 
 | 指摘 | 中身 | 直したところ |
 |---|---|---|
-| 1（事実） | 段取り表の作業場所が `git switch`・`git pull` で、決まりの `new-worktree.sh` を使っていない | 段取り表 §3-0 を新設。クラウドで実績のある形（`docs/handoff/error-message-plain-language/card-bin2.md:383-388`）: fetch → 枝が無いことを確かめる → `new-worktree.sh` → 実在の確認 → `git switch -C` と HEAD の一致。`executor-preflight.sh` は、クラウドでは GitHub の API が使えないため流さない（前例 `docs/handoff/auth-new-device-approval/stageC-geoip-mount-impl-report.md:5`） |
+| 1（事実） | 段取り表の作業場所が `git switch`・`git pull` で、決まりの `scripts/new-worktree.sh` を使っていない | 段取り表 §3-0 を新設。クラウドで実績のある形（`docs/handoff/error-message-plain-language/card-bin2.md:383-388`）: fetch → 枝が無いことを確かめる → `scripts/new-worktree.sh` → 実在の確認 → `git switch -C` と HEAD の一致。`scripts/dev/executor-preflight.sh` は、クラウドでは GitHub の API が使えないため流さない（前例 `docs/handoff/auth-new-device-approval/stageC-geoip-mount-impl-report.md:5`） |
 | 2（推測） | 判定が `CTE Scan on s` の Filter に付く形では、s が結合の内側に回ると呼ぶ回数が掛け算になりうる | 3-2 を、判定を MATERIALIZED の中に入れた形へ変えた。本番で K2・K3 を照合し直す |
 | 3（事実） | 試験を足す位置の空行の数が決まっていない | 段取り表 段A 手順3 に「前後とも空行 2 行」と書いた |
 | 4（事実） | K1 の基準（設計）と確かめ方（段取り表 §6）で「戻り値 0」の有無がずれていた | 段取り表 §6 から「戻り値 0」を外し、設計の K1 に揃えた（失敗の警告 0 行で判定する） |
