@@ -10,7 +10,7 @@
 
 ## 1. 目的と成功条件（KGI・KPI）
 
-目的: 本番反映のたびに、AI の値を返す口の権限が「今の AI の窓に合った表」へ確実に付け直されるようにする。時間切れで付け直しが抜けると、新しく足した表に権限が付かず、拒否に変わった表から権限が外れない（`scripts/run_all_migrations.sh:268` の警告「値を返す口は前の権限のまま」）。
+目的: 本番反映のたびに、AI の値を返す口の権限が「今の AI の窓に合った表」へ確実に付け直されるようにする。時間切れで付け直しが抜けると、新しく足した表に権限が付かず、拒否に変わった表から権限が外れない（`scripts/run_all_migrations.sh:452` の警告「値を返す口は前の権限のまま」）。
 
 | 記号 | 基準 | 検証方法 |
 |---|---|---|
@@ -27,7 +27,7 @@
 - 2026-11-10〜11-16 の本番反映 54 回の記録を全部読んだ。成功 52 回・時間切れ 2 回（run 43248537710 と 43813711040。後者は再実行も時間切れで、試行としては 3 回）。
 - 成功の回の所要は 11/10〜11 で約 14 秒、11/12〜13 で 15〜16 秒、11/14 で 17〜18 秒、11/15〜16 で 16〜17 秒。11/12 に 28.5 秒の回が 1 回ある（run 43142604068）。
 - 成功の回の戻り値（付け直した表の数）はすべて 0。
-- 打ち切りは 30 秒（`scripts/run_all_migrations.sh:235` `AI_CLOUD_CREATE_TIMEOUT` の既定、`:267` で `statement_timeout` に渡す）。
+- 打ち切りは 30 秒（`scripts/run_all_migrations.sh:419` `AI_CLOUD_CREATE_TIMEOUT` の既定、`:451` で `statement_timeout` に渡す）。
 - 付け直しのコードは 2026-11-16 の baf555c6d 以後変わっていない（`git log` で確認）。
 
 ### 2-2. 本番での内訳（`docs/handoff/cloud-case-ai/grant-speed-evidence/prod-timing-20261117.txt`。2026-11-16 20:02 UTC、読み取りだけの接続 `transaction_read_only=on`）
@@ -130,7 +130,7 @@
 
 ## 5. 影響範囲
 
-- 関数 `ops_case.grant_unmask_owner()` を呼ぶのは本番反映の最後の 1 か所だけ（`scripts/run_all_migrations.sh:267`）と試験（`backend/tests/ops/test_ops_case_db.py:489,501,506,631,686,694,702,709`）。`git grep grant_unmask_owner origin/main -- backend/app` は 0 件。
+- 関数 `ops_case.grant_unmask_owner()` を呼ぶのは本番反映の最後の 1 か所だけ（`scripts/run_all_migrations.sh:451`）と試験（`backend/tests/ops/test_ops_case_db.py:489,501,506,631,686,694,702,709`）。`git grep grant_unmask_owner origin/main -- backend/app` は 0 件。
 - 付ける・外す権限は変わらない（K2・K5）。AI が読める表は増えも減りもしない。
 - 移行の CI（`.github/workflows/migration-test.yml`）は、変えた SQL ファイル（`git diff --name-only --diff-filter=d` で拾う `migrations/` の .sql。:1262-1264）を名前の順に 2 回流して冪等を確かめる。新しい手順と戻しの手順の両方が拾われ、「新しい手順 → 戻し → 新しい手順 → 戻し」の順に流れる。どちらも `CREATE OR REPLACE` なので何度でも流せる。
 - 全件の試し流し（`migration-full-dryrun`）は `scripts/run_all_migrations.sh` の登録の順に全部流すので、新しい手順は元のファイルの後に流れる。
@@ -223,6 +223,21 @@
 - 指紋と行数（B5-6）: `9ae9d6ae1ad4b5cb32652a56b3dd966a3cabac9ef6b28b32c0f39377d1f04168`（110 行）・`a89d4d981d216d5e23a45647331416a00e743dd6a5322f9137f0ff27bb4da37e`（105 行）。設計 3-3 と一致。
 - 足した行（B10-2）: `.github/workflows/migration-test.yml` 10・`backend/tests/ops/test_ops_case_db.py` 5・新しい手順 110・戻しの手順 105・`scripts/run_all_migrations.sh` 3。段取り表と一致（Opus が origin の段取り表と照合）。
 - 枝の上から: 8cb35af8d（新しい手順）／b2ac2f51a（main の取り込み）／f809c949e（0996ed2ec の打ち消し）。PR 全体で `migrations/20261031_210000_create_ops_case.sql` の差分は 0。
+
+### 合流と本番反映（2026-11-17 18:58 JST 合流・PR #5566・merge commit 1b1604ee7・本番反映 run 44060541002）
+
+- 合流前: main 97a46c73b を取り込んだ HEAD da58ba7e6 で CI pass 52・skipping 6・fail 0。reviewer（Opus）APPROVE（a2104f6ba と da58ba7e6 の 2 回。取り込みで増えたのは別テーマの文書 3 件だけ）。GO は PO の委任に基づく Claude Opus 発行（PR 本文 `### GO記録`）。
+- 本番反映 run 44060541002: run の結果 success（実行したジョブ build / changes・build / build-backend・deploy は success、build の残り 5 件 secretary-codex・gemini-egress・frontend・secretary-agent・gha-exporter は変更なしで skipped）。`Pre-deploy DB backup` success（`salesanchor_db_20261117_190116.sql.gz` 733M）・`Run database migrations` success・`Post-deploy smoke tests (SA-19)` success・`Verify deployment` success。
+- 新しい手順: `>>> [406/406] psql < migrations/20261117_130000_grant_unmask_owner_once_per_source.sql`（10:05:03Z）。
+
+| KPI | 基準 | 実測 | 判定 |
+|---|---|---|---|
+| K1 | 付け直し ≤ 6 秒・失敗の警告 0 行 | `>>> [final] grant ai_unmask_owner done in 1s`（10:05:07Z）・`⚠️ ai_unmask_owner` 0 行 | ○ |
+| K2 | 新旧の一覧が同じ | 本番反映前の照合 §10-2 で `same\|t\|506\|506`（関数の本体は §3-2 のとおりで、照合した文と同じ） | ○ |
+| K3 | 直した計算 ≤ 3000 ms | 本番反映前の照合 §10-2 で 1282.785 ms | ○ |
+
+- 比べる値: 直す前の付け直しは 14.5〜18.2 秒・30.1 秒と 30.2 秒の時間切れ 2 回（`grant-speed-evidence/deploy-grant-seconds.txt`）。手順が流れた前の回（run 43837930072）は 17 秒。
+- 本番反映の記録の `drop cascades to view` 200 行は、前の回（run 43837930072）と行の中身まで同じ（diff 0）。毎回の表示の作り直しで、この変更によるものではない。
 
 ## 11. 設計審査の記録
 
