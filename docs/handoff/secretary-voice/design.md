@@ -143,6 +143,7 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS secretary_voice VARCHAR(40);
 - 便の分け方: **便3a** = compose の 2 行（鍵が無くても今と同じ動き・委任 GO）。**便3b** = PO が鍵を作り、VPS に置き `.env` に場所を書く（PO 本人の GO）。
 - **追補（2026-11-18 Opus・便3a-2）**: 便3a の反映後、本番の backend の箱に `GOOGLE_TTS_SA_KEY_FILE` も `/run/google-tts-sa.json` のつなぎも無いことを読み取りで確かめた。本番の backend は compose ではなく `scripts/blue-green-cutover.sh` の `docker run`（`.env` のキーを名前だけで渡し、つなぎは 1 本ずつ手書き）で作られるため（`.github/workflows/deploy.yml` の Step 3b）。設計の入れ忘れ（compose だけを見た）。そこで **便3a-2** として、入れ替え手順に compose と同じ形のつなぎを足す（`.env` に場所があり、ファイルが在るときだけ。無ければつながず警告して入れ替えは続ける。`GOOGLE_TTS_SA_KEY_FILE` は名前で渡す一覧から外す）。あわせて、compose の鍵ファイルを固定の場所につなぐ行と `${X:+...}` で値を置き換える環境の行を入れ替え手順に入れ忘れると落ちる試験を足す（今の `backend/tests/test_bg_cutover_volume_parity.py` は名前つきの置き場だけを見ていた。2026-11-04 の geoip と同じ種類の 2 回目）。作業カード: [card-bin3a2.md](./card-bin3a2.md)。PO 実装承認: 2026-11-18「1」。
 - 代わりの案と選ばなかった理由（便3a-2）: (a) `.env` に箱の中の場所 `/run/google-tts-sa.json` を書き、つなぎだけ足す → `.env` の 1 つの値が compose では VPS 上の場所・入れ替え手順では箱の中の場所と意味が分かれ、`docker compose` で backend を起こす戻しの道（deploy.yml の Finalize）で壊れる。(b) 入れ替え手順をやめて compose で起こす → 無停止の入れ替え（docs/handoff/zero-downtime-deploy/design.md）を捨てることになり、範囲が大きすぎる。(c) ファイルが無いとき入れ替えを止める → 読み上げ 1 つのために反映全体が止まる。警告だけにし、便3b の最初の確かめ（本番から 1 回読み上げて 200）で見つける。
+- 便3b への申し送り（2026-11-18 Opus が本番で読み取りだけで確かめた）: 本番の backend の箱は `uid=100(appuser)` で動く。今ある鍵ファイル `tcg-sheets-sa.json` は `644 ubuntu:ubuntu`。読み上げの鍵ファイルも箱の利用者が読める権限（同じ 644 か、それに相当する持ち主の設定）で置かないと、`_credentials()` が読めず 503 になる。置き方は便3b で PO に示す。
 
 ### 4-10. 触らない範囲
 

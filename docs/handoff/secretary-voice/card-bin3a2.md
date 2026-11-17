@@ -29,6 +29,8 @@ mode: handoff
 | 12 | 停止は不可逆・本番影響のものだけ。数の食い違いは記録して続行 | ○（§4） |
 | 13 | 委任文の定型4点（sleep 禁止・Write/Edit で書く・validate-pr-body.sh・フックに止められたら言い換えない） | ○（§4・§6） |
 
+読んだ節（docs/handoff/design-partner-card-ops/guards/）: 00-common.md、04-worktree.md、05-pr.md、10-executor.md、11-lint.md。
+
 基準: origin/main 27a932373（2026-11-18 01:55・#5585 合流後）。行番号はこの時点の目印で、ずれていたら前後の文で探す。
 
 ## 1. 目的（便3a-2 で起きること）
@@ -56,6 +58,7 @@ mode: handoff
 | `backend/tests/test_bg_cutover_tts_key.py` | §3-3（新規） |
 | `docs/handoff/secretary-voice/card-bin3a2.md` | このカード（手順1 の早送りで入る。中身は変えない） |
 | `docs/handoff/secretary-voice/design.md` | §4-9 の追補（手順1 の早送りで入る。中身は変えない） |
+| `docs/handoff/secretary-voice/review-opus.md` | 便3a-2 の設計の確かめの記録（手順1 の早送りで入る。中身は変えない） |
 
 ## 3. 作るものの決まり
 
@@ -69,7 +72,7 @@ while IFS= read -r _k; do
   # ADR-1080 便3a-2: 読み上げの鍵の場所は下の TTS_ARGS で箱の中の場所に置き換えるので、名前では渡さない
   [ "$_k" = "GOOGLE_TTS_SA_KEY_FILE" ] && continue
   ENV_ARGS+=(--env "$_k")
-done < <(grep -oE '^[A-Za-z_][A-Za-z0-9_]*=' "${REPO_DIR}/.env" | tr -d '=')
+done 「 <(grep -oE '^[A-Za-z_][A-Za-z0-9_]*=' "${REPO_DIR}/.env" | tr -d '=')
 ```
 
 - その直後（`docker run -d \` の前）に次を足す:
@@ -96,7 +99,7 @@ fi
 
 ### 3-2. `backend/tests/test_bg_cutover_volume_parity.py` に足す試験 2 つ
 
-1. `test_cutover_has_every_backend_fixed_file_mount`: compose の backend の `volumes` のうち、文字列で、つなぎ元が `$` で始まり、つなぎ先（2 つ目）が `/` で始まるもの（今は `${GOOGLE_TTS_SA_KEY_FILE:-/dev/null}:/run/google-tts-sa.json:ro` の 1 つ）を拾う。拾えた数が 1 以上であることを確かめ、それぞれについて、入れ替え手順に `--volume "<何か>:<つなぎ先>[:ro]"` の形がちょうど 1 つあることを確かめる（正規表現 `--volume\s+"[^"]*:` ＋ つなぎ先 ＋ `:ro`（読み取り専用のとき）＋ `"`）。無ければ名前つきで落とす。
+1. `test_cutover_has_every_backend_fixed_file_mount`: compose の backend の `volumes` のうち、文字列で、つなぎ元が `$` で始まり、つなぎ先（2 つ目）が `/` で始まるもの（今は `${GOOGLE_TTS_SA_KEY_FILE:-/dev/null}:/run/google-tts-sa.json:ro` の 1 つ）を拾う。拾えた数が 1 以上であることを確かめ、それぞれについて、入れ替え手順に `--volume "<何か」:「つなぎ先」[:ro]"` の形がちょうど 1 つあることを確かめる（正規表現 `--volume\s+"[^"]*:` ＋ つなぎ先 ＋ `:ro`（読み取り専用のとき）＋ `"`）。無ければ名前つきで落とす。
 2. `test_cutover_sets_every_replaced_backend_env`: compose の backend の `environment` のうち、値が `${名前:+置き換え}` の形のもの（今は `GOOGLE_TTS_SA_KEY_FILE=${GOOGLE_TTS_SA_KEY_FILE:+/run/google-tts-sa.json}` の 1 つ）を拾う。拾えた数が 1 以上であることを確かめ、それぞれについて、入れ替え手順に `--env 名前=置き換え` がちょうど 1 つあり、かつ `[ "$_k" = "名前" ] && continue` がちょうど 1 つあることを確かめる。無ければ名前つきで落とす。
 
 - 冒頭の説明文（docstring）の最後に 1 行足す: 「鍵ファイルを固定の場所につなぐ行と、値を置き換える環境の行も同じく見る（ADR-1080 便3a: 読み上げの鍵の入れ忘れ）。」
@@ -106,12 +109,12 @@ fi
 偽の `docker` を `PATH` の先頭に置き、本物の `scripts/blue-green-cutover.sh` を `bash` で流して、`docker run -d` に渡った引数を確かめる。本物の docker・VPS・ネットワークには触れない。
 
 - 準備（pytest の `tmp_path` の中）: `REPO_DIR` に使うフォルダを作り、その中に `.env` を書く。偽の `docker` は、受けた引数を 1 呼び出し 1 行で `calls.log` に足し、`ps` は何も出さず終了 0、それ以外（`image inspect`・`run`・`exec`・`network`・`inspect`・`stop`・`rm`・`rename`・`update`）は終了 0。
-- 流し方: `subprocess.run(["bash", <リポジトリの scripts/blue-green-cutover.sh>], env={"PATH": "<偽のbin>:" + 元の PATH, "REPO_DIR": <tmp の場所>, "BG_HEALTH_TIMEOUT": "3"}, timeout=60)`。終了 0 を確かめる（health の待ちで 3 秒かかる）。
+- 流し方: `subprocess.run(["bash", 「リポジトリの scripts/blue-green-cutover.sh」], env={"PATH": "「偽のbin」:" + 元の PATH, "REPO_DIR": 「tmp の場所」, "BG_HEALTH_TIMEOUT": "3"}, timeout=60)`。終了 0 を確かめる（health の待ちで 3 秒かかる）。
 - `calls.log` の `run -d` で始まる行を 1 行取り出して見る。3 つの場合:
-  1. 鍵ファイルが在る（`.env` に `GOOGLE_TTS_SA_KEY_FILE=<tmp に作った空の json の場所>` と `OTHER_KEY=x`）: `--volume <その場所>:/run/google-tts-sa.json:ro` と `--env GOOGLE_TTS_SA_KEY_FILE=/run/google-tts-sa.json` がある。`--env GOOGLE_TTS_SA_KEY_FILE`（`=` が続かない形）は無い。`--env OTHER_KEY` はある。
+  1. 鍵ファイルが在る（`.env` に `GOOGLE_TTS_SA_KEY_FILE=「tmp に作った空の json の場所」` と `OTHER_KEY=x`）: `--volume 「その場所」:/run/google-tts-sa.json:ro` と `--env GOOGLE_TTS_SA_KEY_FILE=/run/google-tts-sa.json` がある。`--env GOOGLE_TTS_SA_KEY_FILE`（`=` が続かない形）は無い。`--env OTHER_KEY` はある。
   2. `.env` に場所はあるがファイルが無い: `/run/google-tts-sa.json` を含まない。`GOOGLE_TTS_SA_KEY_FILE` を含まない。標準出力に「ファイルが無いのでつながない」がある。
   3. `.env` に `GOOGLE_TTS_SA_KEY_FILE` が無い（`OTHER_KEY=x` だけ）: `/run/google-tts-sa.json` を含まない。`GOOGLE_TTS_SA_KEY_FILE` を含まない。
-- 調べる語は空白で区切った引数の並びで比べる（`calls.log` は `"$*"` の 1 行なので、`split()` した並びの中に `--volume` の次が `<場所>:/run/google-tts-sa.json:ro` であることを見る）。
+- 調べる語は空白で区切った引数の並びで比べる（`calls.log` は `"$*"` の 1 行なので、`split()` した並びの中に `--volume` の次が `「場所」:/run/google-tts-sa.json:ro` であることを見る）。
 
 ## 4. 守ること
 
@@ -134,7 +137,7 @@ fi
     cd 作業場所 && git rev-parse origin/main
     期待する出力: 作業場所のパスと、2つの番号が同じこと。違えば NEEDS_DECISION: で止まる。
     cd 作業場所 && git merge --ff-only origin/release/secretary-voice-bin3a2
-    期待する出力: このカードと design.md の追補を足す commit 1 つが早送りで入る。早送りにならなければ NEEDS_DECISION: で止まる。
+    期待する出力: このカード・design.md の追補・設計の確かめの記録を足す commit 2 つが早送りで入る。早送りにならなければ NEEDS_DECISION: で止まる。
 
 手順2 §3-1・§3-2・§3-3 を作る。
 
@@ -146,7 +149,7 @@ fi
 手順4 試験
     cd 作業場所/backend && python -m pytest tests/test_bg_cutover_volume_parity.py tests/test_bg_cutover_tts_key.py -q
     期待する出力: 全部合格（今ある 2 つ＋足した 2 つ＋新規 3 つ）。手元で pytest が動かない（依存が入らない）ときは、その出力を書いて手順5 へ進む（CI で確かめる）。
-    さらに、§3-1 を戻した状態で落ちることを確かめる:
+手順4 の続き（§3-1 を戻した状態で落ちることを確かめる）
     cd 作業場所 && git stash push scripts/blue-green-cutover.sh
     cd 作業場所/backend && python -m pytest tests/test_bg_cutover_volume_parity.py tests/test_bg_cutover_tts_key.py -q
     期待する出力: §3-2 の足した 2 つと、§3-3 の場合1・場合2 が落ちる（場合3 は戻しても合格のまま）。
@@ -161,7 +164,7 @@ fi
 
 手順6 差分の点検
     cd 作業場所 && git diff origin/main --numstat
-    期待する出力: §2 の表の 5 ファイルだけ。表に無いファイルがあれば名前を書いて止まる。
+    期待する出力: §2 の表の 6 ファイルだけ。表に無いファイルがあれば名前を書いて止まる。
 
 手順7 push（PR は作らない）
     cd 作業場所 && git push -u origin HEAD
@@ -176,9 +179,9 @@ fi
 | ファイルが無い・場所が無いとき、どちらも入らず、入れ替えは終了 0 | §3-3 の場合2・3（CI） |
 | compose にある鍵ファイルのつなぎ・置き換えの環境を入れ替え手順に入れ忘れると CI が落ちる | §3-2（CI）・手順4 の戻した状態で落ちること |
 | 鍵が無い今、本番の backend は今と同じ（`GOOGLE_TTS_SA_KEY_FILE` の名前の数 0・つなぎ 3 つ）・反映が成功し健康 | 反映後に Opus が本番の箱を読み取りで確かめる。deploy の結果・`/api/health` |
-| 触るのは §2 の 5 ファイルだけ | Opus が `git diff --stat` で照合 |
+| 触るのは §2 の 6 ファイルだけ | Opus が `git diff --stat` で照合 |
 
-PR は Opus が手元で `scripts/gh-pr-create-safe.sh` を使い ready（Draft にしない）で作る。本文は `.github/PULL_REQUEST_TEMPLATE.md` を起点にし、`scripts/dev/validate-pr-body.sh` で exit 0 を確かめる。欄の良い例: `触るファイル: scripts/blue-green-cutover.sh, backend/tests/test_bg_cutover_volume_parity.py, backend/tests/test_bg_cutover_tts_key.py, docs/handoff/secretary-voice/card-bin3a2.md, docs/handoff/secretary-voice/design.md`（1行・カンマ区切り）。禁止形: 箇条書き／ファイル名の後ろの注記／テンプレの仮の値を残す。`区分: B`・`対象ADR: ADR-1080`・GO 記録の節あり。
+PR は Opus が手元で `scripts/gh-pr-create-safe.sh` を使い ready（Draft にしない）で作る。本文は `.github/PULL_REQUEST_TEMPLATE.md` を起点にし、`scripts/dev/validate-pr-body.sh` で exit 0 を確かめる。欄の良い例: `触るファイル: scripts/blue-green-cutover.sh, backend/tests/test_bg_cutover_volume_parity.py, backend/tests/test_bg_cutover_tts_key.py, docs/handoff/secretary-voice/card-bin3a2.md, docs/handoff/secretary-voice/design.md, docs/handoff/secretary-voice/review-opus.md`（1行・カンマ区切り）。禁止形: 箇条書き／ファイル名の後ろの注記／テンプレの仮の値を残す。`区分: B`・`対象ADR: ADR-1080`・GO 記録の節あり。
 
 ## 7. 報告
 
