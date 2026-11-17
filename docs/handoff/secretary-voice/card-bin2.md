@@ -261,4 +261,12 @@ PR は Opus が手元で `scripts/gh-pr-create-safe.sh` を使い ready（Draft 
 - 止まったときは「止まった手順の番号／最後に実行したコマンド／止まった理由」と生出力を書いて終える。
 - 最後の行に `DONE`、止まったら `BLOCKED: 理由`、判断が要るなら `NEEDS_DECISION: 内容` と書く。
 
+## 8. 追補（2026-11-17 Opus・実装役の NEEDS_DECISION への答え）
+
+- 起きたこと: §3-5 で `get_llm_usage` が `secretary_tts.read_month_total(db)` を呼ぶと、同じ `db` に SQL が 1 本増える。既存の 2 試験 `test_llm_usage_reads_only_ledger_and_propagates_null`（本数 10）と `test_llm_usage_ledger_queries_count_only_ok_rows`（本数 7・全部に `outcome = 'ok'`）が落ちる。カードを書くとき、この 2 試験が本数を数えていることを入れ忘れた（Opus の設計漏れ）。
+- 決め: 既存 2 試験の期待値（10・7・`outcome = 'ok'`）は変えない。字数の数え方の正本は `read_month_total` 1 つのまま（上限の判定と画面の数を同じにするため・design.md §4-6）。
+- 直し方: 既存 2 試験の中だけで `routes.secretary_tts.read_month_total` を `AsyncMock(return_value=0)` に差し替える（`unittest.mock.patch.object` を `with` で使う）。2 試験の他の行は変えない。理由: この 2 試験は使用量の台帳の集計を調べる試験で、読み上げの字数は §3-5 で足した新しい試験が調べる。
+- 触るファイルは §2 の表の `backend/tests/test_tcg_analysis_dashboard_llm_usage.py` のまま（表は増えない）。
+- 実装役は、作業場所で `git fetch origin release/secretary-voice-bin2-card` と `git merge --ff-only origin/release/secretary-voice-bin2-card` を流してこの追補を取り込んでから commit する。
+
 END OF CARD
