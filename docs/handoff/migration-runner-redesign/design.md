@@ -149,7 +149,7 @@
 | 移行の段が動く条件 | `migrations` の条件（migrations/・scripts/・backend/・docker-compose.yml・deploy.yml の変更）。控えの段は `db_migrations` の条件（migrations/・run_all_migrations.sh・migrate_*.py・migration_py_entry.py の変更）だけ | `.github/workflows/deploy.yml` :37-61・:199・:596 |
 | 控えのムラ | 2つの条件が違うので、`scripts/` の試験だけを変えた回（#4853、head ddbe41261、変更は docs/handoff 1件と scripts/tests 31件）は控えを取らずに363手順を流した | 同上、`git show --name-only ddbe41261` |
 | ADR-1005 段階0 | 済み（#3998） | recon4 |
-| ADR-1005 段階1・2 | 未着手。Draft #4020（段階2）・#4021（段階1、1A）は 10/07 から止まり、base 85122fb40 で `scripts/run_all_migrations.sh` が衝突 | recon4 |
+| ADR-1005 段階1・2 | 調べた時点（recon4）は未着手。Draft #4020（段階2）・#4021（段階1、1A）は 10/07 から止まり、base 85122fb40 で `scripts/run_all_migrations.sh` が衝突。2026-11-17 追記: 段階1は #5551、段階2は #5564 で本番反映済み。Draft 2本は閉じた（§5-13） | recon4 |
 | ADR-1007 決定2（値を書く移行の無効化） | 登録337本の SQL のうち、コメントを除いて値の操作が残るのは39本（表で絞らない数え方）。許可一覧は15行。毎回の検査は通っている | stage5-recon4 の writers_active_reg.txt、`scripts/migration-guard/value-write-allowlist.tsv`、`scripts/check-migration-value-writes.py` |
 | ADR-1007 決定3・4・5 | 済み（#4012・#4097・#4019・#4476） | recon4 |
 | ADR-1007 決定6（1回だけ流す） | 未着手。「2〜5を終えてから。そうしないと値を書く移行を無効にする書き換えができなくなる」 | `docs/adr/ADR-1007-migration-structure-only-run-once.md` :58・:100 |
@@ -278,7 +278,7 @@ P1〜P13 がそろうまで、5-1〜5-3 の実装カードは出さない。
 - 分けた結果は PO に見せる前に表にする。固める判断は記録の後には取り消せないと明記する。
 - 依存する試験（P12）が、無効にした後も通ることを確かめる。
 - 分けた表（今の数52本。2026-11-15）: `docs/handoff/migration-runner-redesign/p11-classification.md`。無効にする8本・固めてよい44本。無効にする8本は PO 2026-11-15「1」で決定。実装カードは `docs/handoff/migration-runner-redesign/card-5-1.md`。上の例の `migrations/20260902_110000_tcg_classification_masters.sql` は、試験が値を使い、書く表がアプリから名指しされないか同じ反映の中で消えるため、固めてよいに直した（理由は同ファイル §2）。
-- 上の「無効にする」「固めてよい」の決まりは、同ファイル §1 で3つの条件と判断の時点（流れる時点の形で見る）に細かくした（この決まりで分けた8本は PO 2026-11-15「1」で決定。44本を固める判断は 5-3 の起点の回の PO 本人の GO まで保留）。値の文を NOTICE にするとき、その値を前提にした件数の確かめも一緒に外す（同ファイル §3、#17）。
+- 上の「無効にする」「固めてよい」の決まりは、同ファイル §1 で3つの条件と判断の時点（流れる時点の形で見る）に細かくした（この決まりで分けた8本は PO 2026-11-15「1」で決定。44本を固める判断は 5-3 の起点の回の PO 本人の GO まで保留とし、2026-11-17「GO #5564」で決まった。§5-13）。値の文を NOTICE にするとき、その値を前提にした件数の確かめも一緒に外す（同ファイル §3、#17）。
 
 ### 5-6. 会社のひな形を1つにする（5-2）
 
@@ -382,9 +382,9 @@ P1〜P13 がそろうまで、5-1〜5-3 の実装カードは出さない。
 ### 5-10. PO に確認すること（1件ずつ）
 
 1. ひな形の持ち方（1A か 1B か）: **決定済み（PO 2026-11-15「1」= 1A）**。§5-6。
-2. 値を書く移行の分け方: **8本を無効にすることは決定済み（PO 2026-11-15「1」）。44本を固めることも決定済み（PO 本人「GO #5564」2026-11-17 14:25 JST。§5-13）**。表は `docs/handoff/migration-runner-redesign/p11-classification.md`。44本を固める判断は 5-3 の起点の回で取り消せなくなる。その回の PO 本人の GO（下の 3）で改めて添える。
+2. 値を書く移行の分け方: **8本を無効にすることは決定済み（PO 2026-11-15「1」）。44本を固めることも決定済み（PO 本人「GO #5564」2026-11-17 14:25 JST。§5-13）**。表は `docs/handoff/migration-runner-redesign/p11-classification.md`。44本を固める判断は 5-3 の起点の回で取り消せなくなり、その回の PO 本人の GO（下の 3）で決まった。
 3. 5-3 の本体を本番に出す日（PO 本人の GO。この回が起点になる）。作り始めること（カード・審査・実装・Draft の PR まで）は PO 2026-11-17「1」で承認済み。本番に出す日と 44本を固めることは、PO 本人「GO #5564」（2026-11-17 14:25 JST）で決定済み（§5-13）。
-P11 の中身の読み取り（カード `docs/handoff/migration-runner-redesign/card-5-1a.md`、結果 `docs/handoff/migration-runner-redesign/recon-5-1a/p11-detail.md`）は済み。残りは §5-6 の P1 の差の分け方の表と、3 の PO 本人の GO。
+P11 の中身の読み取り（カード `docs/handoff/migration-runner-redesign/card-5-1a.md`、結果 `docs/handoff/migration-runner-redesign/recon-5-1a/p11-detail.md`）は済み。§5-6 の P1 の差の分け方の表は `docs/handoff/migration-runner-redesign/recon-5-2a/classification.md` で済み。3 の PO 本人の GO は 2026-11-17 に受けた（§5-13）。§5-10 で PO に聞くことは残っていない。
 
 ### 5-11. 審査
 
