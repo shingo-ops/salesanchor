@@ -11,7 +11,7 @@
 
 ## 0. Opus の決めごと（根拠つき）
 
-- D1 道は `POST /invoices/draft-shipping-quotes`。権限は `require_permission("invoices.create")`（design-v2 §3-5）。読むだけで書かない。見積の作成画面（frontend/src/pages/quote-create）は送料を使わない（`git grep "shipping/calculate" origin/main -- frontend/src` は FedExRateModal.tsx:137 の1件だけ）ので、見積の権限は足さない。登録は preview の直後・`GET /invoices/{invoice_id}` の前に置く。
+- D1 道は `POST /invoices/draft-shipping-quotes`。権限は `require_permission("invoices.create")`（design-v2 §3-5）。読むだけで書かない。見積の作成画面（frontend/src/pages/quote-create）は送料を使わない（`git grep "shipping/calculate" origin/main -- frontend/src` で、試験のファイルを除く画面のコードは FedExRateModal.tsx:137 の1件だけ）ので、見積の権限は足さない。登録は preview の直後・`GET /invoices/{invoice_id}` の前に置く。
 - D2 入力は company_id と総重量（weight_kg）だけ。届け先の国・郵便番号と発送元の国は、サーバーが draft-context と同じ関数で決める: `_fetch_address_snapshot`（delivery・billing）→ `invoice_totals.destination_country`・`invoice_totals.destination_postal_code`（backend/app/services/invoice_totals.py:174-187）→ `decide_issuer_region(bill_to)` → `get_issuer_country_code`（backend/app/services/issuer.py:20-27・44-54）。draft-context の新規の作成と同じ順（backend/app/routers/invoices.py:338-345・362-364）。
 - D3 FedEx の分岐を1つの関数 `fedex_live_quotes` にまとめる（backend/app/routers/shipping.py の `_try_fedex_live` の直後）。中身は今の calc_shipping の 415-437 行（連携の鍵を読む→あればライブ→無ければ未連携の文）と同じ。calc_shipping と新しい道の両方から呼ぶ。未連携の文は定数 `FEDEX_NOT_CONNECTED_MESSAGE` にして1か所に置く（文字は今と1字も変えない）。今の `/shipping/calculate` の 422（発送元の国が無いとき）と応答の形は変えない。backend/tests/test_fedex_rates.py は変えずに緑のまま。
 - D4 静的な表の行は `calculate_shipping_fee(db, 届け先, 重さ)`（carrier なし）から、便の名前が fedex の行を除く。便の名前は送料の表の登録画面から自由に入る（shipping.py:108-117）ので、大文字小文字を区別せず `r.carrier.lower() != "fedex"` で除く。FedEx の行はライブだけ（ADR-125 D4・D5・PO の C1 判断・design-v2 §3-5・K6）。
@@ -22,7 +22,7 @@
 
 本番の事実（2026-11-17 20:55 JST に本番の読む道 ADR-1024 で数えた。生の出力は /tmp/CC報告ファイル/r3/carrier_creds.txt・zones_carriers.txt）:
 - FedEx の連携は会社 004 と 006 にある（006 は DHL も）。001・003・005 は無い。
-- 送料の静的な表（shipping_zones・shipping_rates）は全5社とも0行。今の本番では静的な行は出ず、FedEx の行だけが出る（004・006）か、未連携の文だけが出る（001・003・005）。
+- 送料の静的な表の地域（shipping_zones）は全5社とも0行（shipping_rates は 001・004・006 を数えて0行）。静的な計算は2つの表を結んで読むので、地域が0行なら静的な行は出ない。今の本番では静的な行は出ず、FedEx の行だけが出る（004・006）か、未連携の文だけが出る（001・003・005）。
 
 ## 0-1. 読んだ節（docs/handoff/design-partner-card-ops/guards/）
 
