@@ -227,7 +227,7 @@
 ### 合流と本番反映（2026-11-17 18:58 JST 合流・PR #5566・merge commit 1b1604ee7・本番反映 run 44060541002）
 
 - 合流前: main 97a46c73b を取り込んだ HEAD da58ba7e6 で CI pass 52・skipping 6・fail 0。reviewer（Opus）APPROVE（a2104f6ba と da58ba7e6 の 2 回。取り込みで増えたのは別テーマの文書 3 件だけ）。GO は PO の委任に基づく Claude Opus 発行（PR 本文 `### GO記録`）。
-- 本番反映 run 44060541002: 全ジョブ success。`Pre-deploy DB backup` success（`salesanchor_db_20261117_190116.sql.gz` 733M）・`Run database migrations` success・`Post-deploy smoke tests (SA-19)` success・`Verify deployment` success。
+- 本番反映 run 44060541002: run の結果 success（実行したジョブ build / changes・build / build-backend・deploy は success、build の残り 5 件 secretary-codex・gemini-egress・frontend・secretary-agent・gha-exporter は変更なしで skipped）。`Pre-deploy DB backup` success（`salesanchor_db_20261117_190116.sql.gz` 733M）・`Run database migrations` success・`Post-deploy smoke tests (SA-19)` success・`Verify deployment` success。
 - 新しい手順: `>>> [406/406] psql < migrations/20261117_130000_grant_unmask_owner_once_per_source.sql`（10:05:03Z）。
 
 | KPI | 基準 | 実測 | 判定 |
