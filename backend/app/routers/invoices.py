@@ -77,7 +77,8 @@ async def _fetch_address_snapshot(
     result = await db.execute(
         text("""
             SELECT a.branch_name, a.zip, a.address_line_1, a.address_line_2,
-                   a.city, a.state, a.country_code, a.telephone,
+                   a.address_line_3, a.city, a.state, a.country_code, a.telephone,
+                   a.name AS recipient_name, a.email, a.tax_id,
                    c.name AS company_name, c.billing_display_name
             FROM company_addresses a
             JOIN companies c ON c.id = a.company_id
@@ -103,7 +104,34 @@ async def _fetch_address_snapshot(
         "state": row["state"],
         "country": row["country_code"],
         "phone": row["telephone"],
+        # invoice-create-portfolio R1（design-v2 §3-2）: 発送先12欄と請求書の PDF の宛名の材料
+        "recipient_name": row["recipient_name"],
+        "email": row["email"],
+        "tax_id": row["tax_id"],
+        "address_line_1": row["address_line_1"],
+        "address_line_2": row["address_line_2"],
+        "address_line_3": row["address_line_3"],
     }
+
+
+# 見積の PDF は宛名を変えない（design-v2 §3-2）。写しに足した6項目を描く前に除く。
+_QUOTE_PDF_HIDDEN_KEYS = (
+    "recipient_name", "email", "tax_id", "address_line_1", "address_line_2", "address_line_3",
+)
+
+
+def _quote_pdf_address(snap: dict | None) -> dict | None:
+    if snap is None:
+        return None
+    return {k: v for k, v in snap.items() if k not in _QUOTE_PDF_HIDDEN_KEYS}
+
+
+async def _country_name(db: AsyncSession, code: str | None) -> str | None:
+    """国の表 public.countries の name（GET /countries と同じ表）。無ければ None。"""
+    if not code:
+        return None
+    res = await db.execute(text("SELECT name FROM public.countries WHERE code = :cc"), {"cc": code.upper()})
+    return res.scalar_one_or_none()
 
 
 _INVOICE_COLUMNS = """
@@ -309,6 +337,9 @@ async def get_invoice_draft_context(
 
     ship_to = await _fetch_address_snapshot(db, company_id, "delivery")
     bill_to = await _fetch_address_snapshot(db, company_id, "billing")
+    for addr in (ship_to, bill_to):
+        if addr is not None:
+            addr["country_name"] = await _country_name(db, addr.get("country"))
     if stored is not None:
         region = stored["issuer_region"] or "overseas"
     else:
@@ -1226,8 +1257,8 @@ async def download_quote_pdf(
     items = [dict(r) for r in items_result.mappings().all()]
 
     company_id = row["company_id"]
-    ship_to_snap = await _fetch_address_snapshot(db, company_id, "delivery")
-    bill_to_snap = await _fetch_address_snapshot(db, company_id, "billing")
+    ship_to_snap = _quote_pdf_address(await _fetch_address_snapshot(db, company_id, "delivery"))
+    bill_to_snap = _quote_pdf_address(await _fetch_address_snapshot(db, company_id, "billing"))
 
     # ADR-1061 便2-2c2a: 見積は地域を持たないので海外用の発行元を使う
     tenant_profile = await get_issuer(db, tenant_id, "overseas")

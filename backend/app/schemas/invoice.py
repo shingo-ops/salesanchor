@@ -124,6 +124,14 @@ class DraftContextAddress(BaseModel):
     state: str | None = None
     country: str | None = None
     phone: str | None = None
+    # invoice-create-portfolio R1（design-v2 §3-2）
+    recipient_name: str | None = None
+    email: str | None = None
+    tax_id: str | None = None
+    address_line_1: str | None = None
+    address_line_2: str | None = None
+    address_line_3: str | None = None
+    country_name: str | None = None
 
 
 class DraftContextFx(BaseModel):
