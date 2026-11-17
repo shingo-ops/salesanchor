@@ -376,13 +376,14 @@ def _make_app_client(pg_engine):
     - get_current_tenant / get_current_user: モック
     - load_user_permissions: モジュールレベルでパッチ（Depends 経由でなく直呼びのため）
     """
+    from httpx import ASGITransport, AsyncClient
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.orm import sessionmaker
+
     from app.auth.dependencies import get_current_tenant, get_current_user
     from app.database import get_db
     from app.main import app
     from app.models import User
-    from httpx import ASGITransport, AsyncClient
-    from sqlalchemy.ext.asyncio import AsyncSession
-    from sqlalchemy.orm import sessionmaker
 
     async_session = sessionmaker(pg_engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -488,3 +489,209 @@ async def test_aggregated_boundary_no_internal_fields(
             assert f'"{key}"' not in raw_json, (
                 f'境界違反: "{key}" が JSON 応答に含まれています'
             )
+
+
+# ---------------------------------------------------------------------------
+# invoice-create-portfolio R2: GET /invoices/draft-inventory（design-v2 §3-4・K10・K17・K23）
+# ---------------------------------------------------------------------------
+
+
+def test_draft_pivot_by_product_keeps_same_name_apart():
+    from app.services.inventory_aggregated_service import _pivot_by_product
+    from app.services.inventory_aggregation import AggregationResult
+
+    def _result(pid: int, price: int) -> AggregationResult:
+        return AggregationResult(
+            row_id=None,
+            product_id=pid,
+            supplier_id=1,
+            supplier_name="Supplier X",
+            series=str(pid),
+            condition="Sealed box",
+            quantity=3,
+            unit_price=price,
+            status="In Stock",
+            reason_category="lowest_price",
+            reason="r",
+        )
+
+    cells = _pivot_by_product([_result(1, 100), _result(2, 200)])
+    assert cells == {
+        1: {"Sealed box": {"price": 100, "quantity": 3}},
+        2: {"Sealed box": {"price": 200, "quantity": 3}},
+    }
+
+
+@pytest_asyncio.fixture
+async def seed_draft_four(seed_aggregated_dataset):
+    """4つの状態と BOX・ケースの重さを持つ試験用の商品を1つ足す（pokemon_booster_box）。終わりに消す。"""
+    from sqlalchemy import text
+
+    from tests.rls_bootstrap import ensure_product_packagings
+
+    data = seed_aggregated_dataset
+    eng = data["engine"]
+    tag = data["tag"]
+    await ensure_product_packagings(eng)
+    async with eng.begin() as conn:
+        pid = (
+            await conn.execute(
+                text(
+                    "INSERT INTO public.products (name, name_en, mark, work_id, is_archived) "
+                    "VALUES (:n, :ne, :m, (SELECT id FROM public.type_master WHERE code = 'pokemon_booster_box'), false) "
+                    "RETURNING id"
+                ),
+                {"n": f"ポケカD_{tag}", "ne": f"PokeD_{tag}", "m": f"MK-{tag}"},
+            )
+        ).scalar_one()
+        await conn.execute(
+            text(
+                "INSERT INTO public.inventory"
+                " (supplier_id, product_id, condition, raw_condition, quantity, unit_price, status)"
+                " VALUES (:s, :p, 'Case', 'Case', 1, 60000, 'in_stock'),"
+                "        (:s, :p, 'Sealed box', 'Sealed box', 7, 5000, 'in_stock'),"
+                "        (:s, :p, 'Damaged sealed box', 'Damaged sealed box', 2, 4000, 'in_stock'),"
+                "        (:s, :p, 'No shrink box', 'No shrink box', 3, 4500, 'in_stock')"
+            ),
+            {"s": data["sup_id"], "p": pid},
+        )
+        await conn.execute(
+            text(
+                "INSERT INTO public.product_packagings (product_id, unit_id, weight_kg, weight_source) "
+                "SELECT :p, id, CASE code WHEN 'BOX' THEN 0.5 ELSE 6.0 END, 'legacy' "
+                "FROM public.quantity_units WHERE code IN ('BOX', 'CASE')"
+            ),
+            {"p": pid},
+        )
+
+    yield {**data, "poke4_id": pid, "poke4_name": f"ポケカD_{tag}"}
+
+    async with eng.begin() as conn:
+        await conn.execute(text("DELETE FROM public.product_packagings WHERE product_id = :p"), {"p": pid})
+        await conn.execute(text("DELETE FROM public.inventory WHERE product_id = :p"), {"p": pid})
+        await conn.execute(text("DELETE FROM public.products WHERE id = :p"), {"p": pid})
+
+
+def _make_invoice_client(pg_engine, perms: set[str]):
+    """請求書の道の試験用クライアント。require_permission が読む権限を perms に差し替える。"""
+    from httpx import ASGITransport, AsyncClient
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.orm import sessionmaker
+
+    from app.auth.dependencies import get_current_tenant, get_current_user
+    from app.database import get_db
+    from app.main import app
+    from app.models import User
+
+    async_session = sessionmaker(pg_engine, class_=AsyncSession, expire_on_commit=False)
+
+    async def override_get_db():
+        async with async_session() as session:
+            yield session
+
+    mock_user = User(id=1, tenant_id=1, email="ci-test@test.com")
+
+    async def mock_load_perms(*args, **kwargs):
+        return frozenset(perms)
+
+    @asynccontextmanager
+    async def _ctx():
+        app.dependency_overrides = {}
+        app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[get_current_tenant] = lambda: 1
+        app.dependency_overrides[get_current_user] = lambda: mock_user
+        with patch("app.auth.dependencies.load_user_permissions", mock_load_perms):
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                yield client
+        app.dependency_overrides = {}
+
+    return _ctx()
+
+
+@pytest.mark.asyncio
+@pytestmark_pg
+async def test_draft_inventory_four_conditions_weights_and_category(seed_draft_four):
+    """§3-4・K10: 4つの状態・重さ・英語名・型番を返す。category で items だけ絞る。仕入元名と理由は出さない。"""
+    from sqlalchemy import text
+
+    data = seed_draft_four
+    tag = data["tag"]
+    async with _make_invoice_client(data["engine"], {"invoices.create"}) as client:
+        resp = await client.get("/api/v1/invoices/draft-inventory?category=pokemon_booster_box")
+        assert resp.status_code == 200, resp.text
+        for key in ("supplier_name", "reason", "reason_category"):
+            assert f'"{key}"' not in resp.text, key
+        body = resp.json()
+        all_resp = await client.get("/api/v1/invoices/draft-inventory")
+        assert all_resp.status_code == 200, all_resp.text
+        all_body = all_resp.json()
+
+    items = body["items"]
+    ids = {it["product_id"] for it in items}
+    assert {data["poke1_id"], data["poke2_id"], data["poke4_id"]} <= ids
+    assert data["yugi_id"] not in ids
+    assert all(it["work_code"] == "pokemon_booster_box" for it in items)
+    assert [it["product_id"] for it in items] == sorted(ids)
+
+    d = next(it for it in items if it["product_id"] == data["poke4_id"])
+    assert d["name"] == data["poke4_name"]
+    assert (d["name_en"], d["mark"]) == (f"PokeD_{tag}", f"MK-{tag}")
+    assert (d["box_weight_kg"], d["case_weight_kg"]) == (0.5, 6.0)
+    assert d["cells"] == {
+        "Case": {"price": 60000, "quantity": 1},
+        "Sealed box": {"price": 5000, "quantity": 7},
+        "Damaged sealed box": {"price": 4000, "quantity": 2},
+        "No shrink box": {"price": 4500, "quantity": 3},
+    }
+
+    # category を付けても categories は絞らない。名前と並びは type_master から引いた値と同じ
+    assert body["categories"] == all_body["categories"]
+    codes = [c["code"] for c in body["categories"]]
+    assert {"pokemon_booster_box", "yugioh"} <= set(codes)
+    async with data["engine"].connect() as conn:
+        rows = (
+            await conn.execute(
+                text(
+                    "SELECT code, name_ja FROM public.type_master "
+                    "WHERE code = ANY(:c) ORDER BY sort_order ASC, code ASC"
+                ),
+                {"c": codes},
+            )
+        ).all()
+    assert [{"code": r[0], "name_ja": r[1]} for r in rows] == body["categories"]
+    assert data["yugi_id"] in {it["product_id"] for it in all_body["items"]}
+
+
+@pytest.mark.asyncio
+@pytestmark_pg
+async def test_draft_inventory_quote_only_user_gets_200(seed_draft_four):
+    """K23: 見積を作る権限だけでも 200。どちらの権限も無ければ 403。"""
+    eng = seed_draft_four["engine"]
+    async with _make_invoice_client(eng, {"quotes.create"}) as client:
+        resp = await client.get("/api/v1/invoices/draft-inventory")
+        assert resp.status_code == 200, resp.text
+    async with _make_invoice_client(eng, {"products.view"}) as client:
+        resp = await client.get("/api/v1/invoices/draft-inventory")
+        assert resp.status_code == 403, resp.text
+
+
+@pytest.mark.asyncio
+@pytestmark_pg
+async def test_stock_table_unchanged_and_same_cells_as_draft(seed_draft_four):
+    """K17: 在庫表の道の形はそのまま（tabs・rows、行は series・work_code・cells）。値段と数は新しい道と同じ。"""
+    data = seed_draft_four
+    async with _make_app_client(data["engine"]) as client:
+        resp = await client.get("/api/v1/inventory/aggregated")
+        assert resp.status_code == 200, resp.text
+        agg = resp.json()
+    async with _make_invoice_client(data["engine"], {"invoices.create"}) as client:
+        resp = await client.get("/api/v1/invoices/draft-inventory")
+        assert resp.status_code == 200, resp.text
+        draft = resp.json()
+
+    assert set(agg) == {"tabs", "rows"}
+    assert all(set(r) == {"series", "work_code", "cells"} for r in agg["rows"])
+    by_id = {it["product_id"]: it for it in draft["items"]}
+    for key in ("poke1", "poke2", "yugi", "poke4"):
+        row = next(r for r in agg["rows"] if r["series"] == data[f"{key}_name"])
+        assert row["cells"] == by_id[data[f"{key}_id"]]["cells"], key
