@@ -20,7 +20,7 @@
 
 ## 2. 手順
 
-1. `git fetch origin release/worktree-idle-reclaim-design && git checkout release/worktree-idle-reclaim-design`（クラウドなので new-worktree.sh は使わない）。`./scripts/dev/executor-preflight.sh` を流し、結果を生で残す（クラウドで通らない項目があれば、その行を生で出して続ける）。
+1. 配られた写しの最上位で `git fetch origin main release/worktree-idle-reclaim-design` → `bash scripts/new-worktree.sh release/worktree-idle-reclaim-design`（origin/main から作られる）→ 出力に出た場所へ cd し、以後すべてその中で作業する → その中で `git merge --no-edit origin/release/worktree-idle-reclaim-design`（ぶつかったら BLOCKED:）。clone のままの commit は見張り（worktree 外での作業の禁止）に止められる（2026-11-17 1 回目で実測）。`./scripts/dev/executor-preflight.sh` を流し、結果を生で残す（クラウドで通らない項目があれば、その行を生で出して続ける）。
 2. 変更前に `bash scripts/tests/test-reaper-safety.sh` を流し、今の合否を生で残す（基準）。
 3. 設計 §3-5 の trap と `_LINK_OK` から書く（`trap _reaper_on_exit EXIT; trap 'exit 130' INT; trap 'exit 143' TERM`。`_LINK_OK` は判定を別の変数で行い、合ったときだけ最後に 1 を置く）。台本の最初に `export GIT_OPTIONAL_LOCKS=0`。
 4. 設計 §3-2 の時刻の関数（`stat -f %m` と `stat -c %Y` の両方）→ §3-1 の候補の積み方（`IDLE_CANDIDATES`。detached は §3-4）→ §3-3 の写しと照合（作りかけは `.inprogress-` で始まる名前）→ 消す処理（既存の削除のループ :535-554 は使わない）→ §3-5 の数の行と reclaim.log の順に書く。
