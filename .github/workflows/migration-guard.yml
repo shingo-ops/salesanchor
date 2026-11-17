@@ -558,3 +558,11 @@ jobs:
       - name: migration 二重登録検出
         if: steps.detect_churn_paths.outputs.relevant == 'true'
         run: bash scripts/check-migration-duplicate-registration.sh
+
+      # ひな形（tenant.py）だけを変えて migrations/ に手順を足さない PR を止める（設計 §5-6・K5-2c）
+      - name: ひな形の変更には migrations/ の登録済み手順が必要
+        run: |
+          python3 scripts/check_template_needs_migration.py \
+            --base "${{ github.event.pull_request.base.sha }}" \
+            --head "${{ github.event.pull_request.head.sha }}" \
+            --pr "${{ github.event.pull_request.number }}"
