@@ -591,4 +591,12 @@ async def test_stock_table_unchanged_and_same_cells_as_draft(seed_draft_four):
 
 §1 以外のファイル。在庫表の今の関数（`_ProductMeta`・`_load_products_with_stock`・`_build_aggregation_offers`・`_pivot`・`get_aggregated_inventory`）と今の型（`ConditionCell`・`AggregatedRow`・`InventoryAggregatedResponse`）。backend/app/routers/inventory_aggregated.py。backend/app/services/inventory_aggregation.py・inventory_search.py。今の試験の中身と期待値（末尾に足すだけ）。migrations/・deploy.yml・scripts/。
 
+## 8. 設計 §8 の役割の数え（Opus が実施・カードの実行役の作業ではない）
+
+- 実施: 2026-11-17 20:40 JST、本番の読む道（ADR-1024 の reader 鍵・ai_ro のビュー・会社ごとに1文）。
+- 読んだもの: 全5社（tenant_001・003・004・005・006）の roles・role_permissions・user_roles と public.permissions。権限の名前が invoices.* ・quotes.* ・products.view ・inventory.visibility.* のものだけ。会社ごとの行数は 37・34・43・43・43（上限200に届かず切れていない）。
+- 判定: 「invoices.create か quotes.create を持ち、products.view も inventory.visibility.* も持たない役割」を数えた。
+- 結果: **0 件**。作る権限を持つ役割（オーナー・システム管理者・営業）は、すべて在庫を見る権限も持っている。在庫の値段と数が見える人は、この道で増えない。
+- そのため設計 §8 の「0でなければ PO に伝えてから R2 を出す」の条件には当たらない。
+
 END OF CARD
