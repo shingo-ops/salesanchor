@@ -72,7 +72,7 @@ while IFS= read -r _k; do
   # ADR-1080 便3a-2: 読み上げの鍵の場所は下の TTS_ARGS で箱の中の場所に置き換えるので、名前では渡さない
   [ "$_k" = "GOOGLE_TTS_SA_KEY_FILE" ] && continue
   ENV_ARGS+=(--env "$_k")
-done 「 <(grep -oE '^[A-Za-z_][A-Za-z0-9_]*=' "${REPO_DIR}/.env" | tr -d '=')
+done < <(grep -oE '^[A-Za-z_][A-Za-z0-9_]*=' "${REPO_DIR}/.env" | tr -d '=')
 ```
 
 - その直後（`docker run -d \` の前）に次を足す:
@@ -146,12 +146,14 @@ fi
     cd 作業場所 && grep -n "GOOGLE_TTS\|google-tts\|TTS_ARGS" scripts/blue-green-cutover.sh
     期待する出力: 1 つ目は何も出ず終了 0。2 つ目は §3-1 の行だけ。
 
-手順4 試験
-    cd 作業場所/backend && python -m pytest tests/test_bg_cutover_volume_parity.py tests/test_bg_cutover_tts_key.py -q
+手順4 試験（pip は直に使わない。py312-guard の案内どおり 3.12 の venv を作り、その中の python を使う）
+    cd 作業場所 && (python3.12 -m venv /tmp/venv312 || uv venv --python 3.12 /tmp/venv312) && /tmp/venv312/bin/python -m pip install -q pytest pyyaml
+    期待する出力: エラーなし。venv が作れない・入らないときは、その出力を書いて手順5 へ進む（CI で確かめる）。
+    cd 作業場所/backend && /tmp/venv312/bin/python -m pytest tests/test_bg_cutover_volume_parity.py tests/test_bg_cutover_tts_key.py -q -p no:cacheprovider
     期待する出力: 全部合格（今ある 2 つ＋足した 2 つ＋新規 3 つ）。手元で pytest が動かない（依存が入らない）ときは、その出力を書いて手順5 へ進む（CI で確かめる）。
 手順4 の続き（§3-1 を戻した状態で落ちることを確かめる）
     cd 作業場所 && git stash push scripts/blue-green-cutover.sh
-    cd 作業場所/backend && python -m pytest tests/test_bg_cutover_volume_parity.py tests/test_bg_cutover_tts_key.py -q
+    cd 作業場所/backend && /tmp/venv312/bin/python -m pytest tests/test_bg_cutover_volume_parity.py tests/test_bg_cutover_tts_key.py -q -p no:cacheprovider
     期待する出力: §3-2 の足した 2 つと、§3-3 の場合1・場合2 が落ちる（場合3 は戻しても合格のまま）。
     cd 作業場所 && git stash pop
     cd 作業場所 && git diff --stat
