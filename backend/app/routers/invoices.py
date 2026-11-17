@@ -35,9 +35,11 @@ from app.auth.dependencies import (
 from app.cache import invalidate_dashboard_cache
 from app.database import get_db
 from app.models import User
+from app.routers.shipping import calculate_shipping_fee, fedex_live_quotes
 from app.schemas.inventory_aggregated import DraftInventoryResponse
 from app.schemas.invoice import (
     DraftContextResponse,
+    DraftShippingQuotesRequest,
     InvoiceCreate,
     InvoiceDetailResponse,
     InvoiceItemResponse,
@@ -47,6 +49,7 @@ from app.schemas.invoice import (
     InvoiceUpdate,
     VoidRequest,
 )
+from app.schemas.shipping import ShippingCalcResponse
 from app.services import invoice_payment_methods, invoice_totals, paypal_payments
 from app.services.audit import record_audit_log
 from app.services.fx_currencies import list_invoice_currencies
@@ -425,6 +428,55 @@ async def preview_invoice(
         tax_amount=result.tax_amount, tax_rate_percent=result.tax_rate_percent,
         duty_amount=result.duty_amount, duty_label=result.duty_label, duty_components=result.duty_components,
         total_amount=result.total_amount, uncomputed=result.uncomputed, incoterms=inputs.incoterms,
+    )
+
+
+@router.post(
+    "/invoices/draft-shipping-quotes",
+    response_model=ShippingCalcResponse,
+    dependencies=[Depends(require_permission("invoices.create"))],
+)
+async def get_invoice_draft_shipping_quotes(
+    data: DraftShippingQuotesRequest,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),  # noqa: ARG001
+) -> ShippingCalcResponse:
+    """請求書の送料の一覧（invoice-create-portfolio R3・design-v2 §3-5）。書かない。
+
+    届け先と発送元は draft-context と同じ関数で決める。FedEx の行はライブだけ（ADR-125 D4・D5）。
+    """
+    co = await db.execute(text("SELECT id FROM companies WHERE id = :id"), {"id": data.company_id})
+    if co.first() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:company")
+    ship_to = await _fetch_address_snapshot(db, data.company_id, "delivery")
+    bill_to = await _fetch_address_snapshot(db, data.company_id, "billing")
+    destination = invoice_totals.destination_country(ship_to, bill_to)
+    if destination is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="draft_shipping_destination")
+    static_rows = [
+        r for r in await calculate_shipping_fee(db, destination, data.weight_kg) if r.carrier.lower() != "fedex"
+    ]
+    origin = await get_issuer_country_code(db, tenant_id, decide_issuer_region(bill_to))
+    if origin is None:
+        return ShippingCalcResponse(
+            results=static_rows,
+            cheapest=None,
+            live_error="発送元の国が未登録です。発行元の設定で国を登録してください",
+        )
+    live_rows, live_error, rate_precision = await fedex_live_quotes(
+        db,
+        tenant_id,
+        destination_country_code=destination,
+        origin_country_code=origin,
+        weight_kg=data.weight_kg,
+        destination_postal_code=invoice_totals.destination_postal_code(ship_to, bill_to),
+    )
+    return ShippingCalcResponse(
+        results=[*live_rows, *static_rows],
+        cheapest=None,
+        live_error=live_error,
+        rate_precision=rate_precision,
     )
 
 
