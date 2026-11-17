@@ -19279,6 +19279,9 @@
             "title": "Monthly By Purpose",
             "type": "array"
           },
+          "secretary_tts_month": {
+            "$ref": "#/components/schemas/SecretaryTtsMonth"
+          },
           "total": {
             "$ref": "#/components/schemas/LlmUsageTotal"
           }
@@ -19293,7 +19296,8 @@
           "daily_requests",
           "daily_errors",
           "daily_by_model",
-          "fx"
+          "fx",
+          "secretary_tts_month"
         ],
         "title": "LlmUsageResponse",
         "type": "object"
@@ -33501,6 +33505,37 @@
           "candidates"
         ],
         "title": "SearchResponse",
+        "type": "object"
+      },
+      "SecretaryTtsMonth": {
+        "description": "秘書の読み上げの今月（日本時間の 1 日から）の字数。読めなければ characters は None。",
+        "properties": {
+          "cap": {
+            "title": "Cap",
+            "type": "integer"
+          },
+          "characters": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Characters"
+          },
+          "free_limit": {
+            "title": "Free Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "characters",
+          "free_limit",
+          "cap"
+        ],
+        "title": "SecretaryTtsMonth",
         "type": "object"
       },
       "SelfLoginRequest": {
