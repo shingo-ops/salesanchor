@@ -92,6 +92,35 @@ export function sendSecretaryMessage(text: string, karte: EventKarte | null = nu
   return api.postWithTimeout<AssistantReply>("/assistant/messages", { text, karte }, SECRETARY_TIMEOUT_MS);
 }
 
+/** 読み上げの口（POST /assistant/speech）の待ち時間と 1 回の最大字数（backend の SpeechIn max_length と同じ） */
+export const SPEECH_TIMEOUT_MS = 15_000;
+export const SPEECH_MAX_CHARS = 300;
+
+export interface VoiceSettings {
+  voices: string[];
+  default: string;
+  selected: string;
+}
+
+export function getSecretaryVoice(): Promise<VoiceSettings> {
+  return api.get<VoiceSettings>("/assistant/voice");
+}
+
+export function saveSecretaryVoice(voice: string): Promise<VoiceSettings> {
+  return api.put<VoiceSettings>("/assistant/voice", { voice });
+}
+
+export function fetchSecretarySpeech(text: string): Promise<Blob> {
+  return api.postBlob("/assistant/speech", { text }, SPEECH_TIMEOUT_MS);
+}
+
+/** 今月の読み上げの上限に達した失敗か */
+export function isSpeechCapError(err: unknown): boolean {
+  if (!(err instanceof ApiError)) return false;
+  const detail = err.responseDetail;
+  return !!detail && typeof detail === "object" && (detail as { code?: unknown }).code === "tts_monthly_cap_reached";
+}
+
 export type SecretaryErrorKind = "notReady" | "busy" | "timeout" | "unreadable" | "generic" | "forbidden" | "authFailed" | "agentFailed" | "rulesTooLong";
 
 const KNOWN_CODES: Record<string, SecretaryErrorKind> = {

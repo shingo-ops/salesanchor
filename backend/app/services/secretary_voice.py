@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 SECRETARY_VOICES: tuple[str, ...] = ("Aoede", "Charon", "Erinome", "Zubenelgenubi")
 DEFAULT_SECRETARY_VOICE = "Charon"
 TTS_LANGUAGE_CODE = "ja-JP"
-MONTHLY_CHAR_CAP = 900_000  # 無料枠 100 万字の 9 割で止める
+FREE_MONTHLY_CHARS = 1_000_000  # Google の無料枠（毎月 100 万字・design.md §1）
+MONTHLY_CHAR_CAP = 900_000  #無料枠 100 万字の 9 割で止める
 MAX_CHARS_PER_REQUEST = 300
 
 

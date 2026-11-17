@@ -19,6 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
+from app.services import secretary_tts
+from app.services.secretary_voice import FREE_MONTHLY_CHARS, MONTHLY_CHAR_CAP
 from app.services.tcg_analysis_dashboard_svc import (
     get_distribution_summary,
     get_extraction_product_ranking,
@@ -670,6 +672,14 @@ class LlmUsageFx(BaseModel):
     fallback_calls: int
 
 
+class SecretaryTtsMonth(BaseModel):
+    """秘書の読み上げの今月（日本時間の 1 日から）の字数。読めなければ characters は None。"""
+
+    characters: int | None
+    free_limit: int
+    cap: int
+
+
 class LlmUsageResponse(BaseModel):
     total: LlmUsageTotal
     by_purpose: list[LlmUsageByPurposeItem]
@@ -681,6 +691,7 @@ class LlmUsageResponse(BaseModel):
     daily_errors: list[LlmUsageDailyErrorItem]
     daily_by_model: list[LlmUsageDailyByModelItem]
     fx: LlmUsageFx | None
+    secretary_tts_month: SecretaryTtsMonth
 
 
 # ADR-1058 段1a-2: 成功の行（outcome='ok'）だけを数える。失敗の行は新しい「AI の担当」画面だけが読む。
@@ -923,6 +934,12 @@ async def get_llm_usage(
             fallback_calls=int(total_row["fallback_calls"]) if total_row and total_row["fallback_calls"] is not None else 0,
         )
 
+    # 字数の数え方の正本は read_month_total 1 つ（上限の判定と画面の数を同じにする）。読めなければ None。
+    try:
+        tts_characters: int | None = await secretary_tts.read_month_total(db)
+    except secretary_tts.TtsError:
+        tts_characters = None
+
     return LlmUsageResponse(
         total=LlmUsageTotal(
             calls=int(total_row["calls"]) if total_row else 0,
@@ -1030,6 +1047,11 @@ async def get_llm_usage(
             for r in daily_by_model_rows
         ],
         fx=fx_block,
+        secretary_tts_month=SecretaryTtsMonth(
+            characters=tts_characters,
+            free_limit=FREE_MONTHLY_CHARS,
+            cap=MONTHLY_CHAR_CAP,
+        ),
     )
 
 
