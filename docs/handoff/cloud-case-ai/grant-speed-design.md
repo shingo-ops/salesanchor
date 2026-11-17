@@ -176,6 +176,14 @@
 - K2 の照合文の所要 16,158 ms は、比べる側の元の計算（判定を 6,749 行に当てる）を含むため。直した計算だけの所要は K3 の 1,282 ms。
 - 見込み（推測）: 付け直し全体は 約 16〜17 秒 − 14.7 秒 ＋ 1.3 秒 ＝ 約 3 秒。K1（6 秒以下）は本番反映の記録で確かめる。
 
+## 10-3. 実装と本番反映の記録
+
+### 段 A（試験だけ）の CI（2026-11-17・PR #5566・HEAD f53e20fb7）
+
+- 新しい試験 `test_grant_unmask_owner_calls_judge_once_per_source` は、見込みどおり赤。記録の文: `[is_denied_source を呼んだ回数] 52（名前 9・列 52）`、`assert Decimal('52') <= 9`。呼んだ回数が列の数と同じで、2-2 の原因（列ごとに判定）と一致する。42501（権限で拒まれる）は出ていない。
+- ほかに赤が 1 件: `tests/test_assistant_karte_pg.py::test_read_meet_available_failed_sql_keeps_transaction_usable`（`DeadlockDetectedError`）。この PR が触らない試験。段 B の CI でも再び出るかを見る。
+- 全体: `2 failed, 9758 passed, 79 skipped`（pytest-run-internal・run 44025434410）。
+
 ## 11. 設計審査の記録
 
 ### 11-1. 1 回目（2026-11-17 05:53 JST・クラウドの Opus・commit 3833b06c4・読むだけ）
