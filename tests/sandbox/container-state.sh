@@ -9,9 +9,9 @@ PROM=prom/prometheus:v3.11.3
 cleanup() {
   rc=$?
   if [ "$rc" -ne 0 ]; then
-    docker inspect -f '{{.Name}} {{.State.Running}} {{json .State.Health}}' bine-worker bine-beat bine-beat-old 2>&1 | head -c 3000 || true
+    docker inspect -f '{{.Name}} {{.State.Running}} {{json .State.Health}}' bine-worker bine-beat bine-beat-old bine-oneoff 2>&1 | head -c 3000 || true
   fi
-  docker rm -f bine-worker bine-beat bine-beat-old >/dev/null 2>&1 || true
+  docker rm -f bine-worker bine-beat bine-beat-old bine-oneoff >/dev/null 2>&1 || true
   exit "$rc"
 }
 trap cleanup EXIT
@@ -29,12 +29,15 @@ echo "== 3. 本物の docker で状態を書く（健康・不健康・止まっ
 docker run -d --name bine-worker --label com.docker.compose.service=celery-worker --health-cmd true --health-interval 2s alpine:3.24 sleep 600 >/dev/null
 docker run -d --name bine-beat --label com.docker.compose.service=celery-beat --health-cmd false --health-interval 2s --health-retries 1 alpine:3.24 sleep 600 >/dev/null
 docker run --name bine-beat-old --label com.docker.compose.service=celery-beat alpine:3.24 true
+docker run -d --name bine-oneoff --label com.docker.compose.service=celery-worker --label com.docker.compose.oneoff=True --health-cmd false --health-interval 2s --health-retries 1 alpine:3.24 sleep 600 >/dev/null
 for i in $(seq 1 15); do
   w=$(docker inspect -f '{{.State.Health.Status}}' bine-worker)
   b=$(docker inspect -f '{{.State.Health.Status}}' bine-beat)
-  if [ "$w" = healthy ] && [ "$b" = unhealthy ]; then break; fi
+  o=$(docker inspect -f '{{.State.Health.Status}}' bine-oneoff)
+  if [ "$w" = healthy ] && [ "$b" = unhealthy ] && [ "$o" = unhealthy ]; then break; fi
   sleep 2
 done
+[ "$(docker inspect -f '{{.State.Health.Status}}' bine-oneoff)" = unhealthy ] || { echo "NG: bine-oneoff not unhealthy"; exit 1; }
 docker inspect -f '{{.Name}} {{.State.Running}} {{.State.Health.Status}}' bine-worker bine-beat
 docker inspect -f '{{.Name}} {{.State.Running}}' bine-beat-old
 TF="$OUT/textfile"
