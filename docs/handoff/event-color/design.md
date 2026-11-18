@@ -1,6 +1,6 @@
 # 設計 — 予定ごとの色（Google と同じ 24 色＋デフォルト）
 
-状態: 設計案（審査 1 回目 REVISE を受けて直した版・2 回目の審査待ち）。目標 K1〜K7 は PO 承認済み（2026-11-19 チャットで「1」）。実装の承認と本番の GO は兼ねない。基準: `origin/main` fba2172b8。
+状態: 設計案（審査 2 回目 APPROVE（軽 3 件を直した版））。目標 K1〜K7 は PO 承認済み（2026-11-19 チャットで「1」）。実装の承認と本番の GO は兼ねない。基準: `origin/main` fba2172b8。
 現状: [recon.md](recon.md)。決まりの記録: `docs/adr/ADR-1081-event-color-labels.md`（Proposed）。
 関係: ADR-1057・ADR-1059（Google との行き来）・ADR-1065・ADR-1074（予定の画面の金型と `--gcal-*`）・ADR-1075（繰り返し）・ADR-067・ADR-144・ADR-027。
 
@@ -151,6 +151,7 @@ def key_for_hex(hex_value: str | None) -> str | None:
   - 作成 `:436`: `payload.get("color_key") is not None`。
   - 更新 `update_event`（`:480`）: UPDATE の前に `SELECT color_key FROM calendar_events WHERE id = :id` で今の値を読み、`"color_key" in payload and payload["color_key"] != 今の値` を `send_color` にして `:539` に渡す。
   - 繰り返しで直す道 `:1062`・`:1138`: `"color_key" in plan["changed_fields"]`（`:1025` の `fields`）。
+    - ただし「この予定だけ」で、すでにある例外の行を `_find_exception` で見つけて直すとき（`:1030`〜`:1062`）は、`changed_fields` ではなく、直す前のその例外の行の `color_key` と `payload["color_key"]` を比べて決める（`"color_key" in payload and payload["color_key"] != 例外の行の color_key`）。元の行と比べると、例外の行の色を元の行と同じ色に戻したときに Google へ送られないため。
   - 繰り返しで作る道 `:1121`・`:1177`・`:1200`（`_recreate_in_google` は消して `create_event` で作る・`:978`）: 渡す行の `color_key is not None`。
 - Google からの取り込み `upsert_from_google`（`:1342`）:
   - 引数 `label_colors: Optional[dict[str, str]] = None` を足す。
@@ -234,7 +235,7 @@ def key_for_hex(hex_value: str | None) -> str | None:
 |---------|-------|
 | `eventLabelVersion=1` で `eventLabelId` を送らないと、Google の色が外れる | 版の指定は、本文に色の印があるときだけ付ける。印は「直す道では色が変わったとき」「作る道では色があるとき」だけ入れる（§4-5） |
 | 配備の前に取り込んだ Google の予定は、Google に色があってもアプリでは NULL（取り込みは差分だけ読む・`backend/app/services/google_webhook.py:300`〜`:314`） | 色に触らない保存では Google に色を送らないので、Google の色は残る。アプリの箱は Google で次にその予定が直されるまで持ち主の色。全件の読み直しは v1 ではしない |
-| 上の予定を繰り返しの「これ以降」で分けると、新しい予定は Google で作り直すので Google の色が付かない | アプリが知らない色は運べない。v1 の限り。色を選び直せば付く |
+| 上の予定を、Google で消して作り直す道（繰り返しの「これ以降」で分ける・D2・D3・単発を繰り返しにする道 A）で直すと、新しい予定に Google の色が付かない（今のコードでも同じ動きで、悪化ではない） | アプリが知らない色は運べない。v1 の限り。色を選び直せば付く |
 | 名札の表が読めない（Google の不調） | 版の指定を付けない（Google の色に触らない）。取り込みでは色の欄に触らない |
 | カレンダーにその色の名札が無い | Google には色なしで送る。アプリには色が残る。ログに出して数える |
 | `colorId` だけの古い予定 | 色なしで取り込む。ログに数を出す |
