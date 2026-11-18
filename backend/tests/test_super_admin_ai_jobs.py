@@ -278,7 +278,7 @@ def test_usage_sdks_belong_to_exactly_one_provider():
         owners = [p for p, sdks in USAGE_SDKS_BY_PROVIDER.items() if sdk in sdks]
         assert len(owners) == 1, (sdk, owners)
     assert set().union(*USAGE_SDKS_BY_PROVIDER.values()) == set(USAGE_SDKS)
-    assert set(USAGE_SDKS_BY_PROVIDER) == {"gemini", "codex", "claude"}
+    assert set(USAGE_SDKS_BY_PROVIDER) == {"gemini", "codex", "claude", "google_tts"}
 
 
 # --- 履歴 -------------------------------------------------------------------------------

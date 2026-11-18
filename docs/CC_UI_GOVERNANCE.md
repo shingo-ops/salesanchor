@@ -56,6 +56,17 @@ CC（Claude Code）が UI 部品を新設・修正するたびに参照するこ
 
 ---
 
+## 金型の目録（請求書の作成画面の作り直しで足したもの・design-v2 §3-7）
+
+| 金型 | 使う場面 | 置き場所 |
+|------|----------|----------|
+| `SectionCard` | 見出しつきのカード（右上に操作を置ける） | `frontend/src/components/SectionCard.tsx` |
+| `ReadOnlyField` | 読むだけの欄（ラベルと灰色の値。空なら「未登録」） | `frontend/src/components/ReadOnlyField.tsx` |
+| `ThreeColumn` | 3列の並び（幅 1279px 以下で縦1列） | `frontend/src/components/ThreeColumn.tsx` |
+| `TotalsBox` | 色つきの合計枠（行の並びと一番大きい字の合計） | `frontend/src/components/TotalsBox.tsx` |
+
+---
+
 ## 参照
 
 - ADR 本文: `docs/adr/ADR-144-ui-component-governance.md`

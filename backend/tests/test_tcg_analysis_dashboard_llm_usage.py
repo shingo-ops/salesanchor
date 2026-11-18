@@ -18,7 +18,7 @@ days の範囲チェックだけは FastAPI の Query バリデーションを�
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -161,7 +161,8 @@ async def test_llm_usage_reads_only_ledger_and_propagates_null():
         ]
     )
 
-    result = await get_llm_usage(days=30, db=db, _admin=None)
+    with patch.object(routes.secretary_tts, "read_month_total", new=AsyncMock(return_value=0)):
+        result = await get_llm_usage(days=30, db=db, _admin=None)
 
     assert result.total.calls == 3
     assert result.total.prompt_tokens == 900
@@ -265,7 +266,8 @@ async def test_llm_usage_ledger_queries_count_only_ok_rows():
     }
     db = _mock_db_with_sequenced_results([_FX_META_ROW_NO_HISTORY, empty_total, [], [], [], [], [], [], [], []])
 
-    await get_llm_usage(days=7, db=db, _admin=None)
+    with patch.object(routes.secretary_tts, "read_month_total", new=AsyncMock(return_value=0)):
+        await get_llm_usage(days=7, db=db, _admin=None)
 
     ledger_sql = [sql for sql in db._executed_sql if "llm_usage_events" in sql]
     # 実物: total・by_purpose・by_model・daily・daily_by_purpose・monthly_by_purpose・daily_by_model の7つ
@@ -470,6 +472,51 @@ async def test_daily_by_model_output_tokens_null_when_all_null_in_group():
 
     assert result.daily_by_model[0].prompt_tokens is None
     assert result.daily_by_model[0].output_tokens is None
+
+
+_EMPTY_TOTAL_ROW = {
+    "calls": 0,
+    "prompt_tokens": None,
+    "cached_content_tokens": None,
+    "candidates_tokens": None,
+    "thoughts_tokens": None,
+    "tool_use_prompt_tokens": None,
+    "total_tokens": None,
+    "cost_usd": None,
+    "cost_jpy": None,
+    "fallback_calls": 0,
+    "computed_total_tokens": None,
+    "total_mismatch_calls": 0,
+}
+
+
+@pytest.mark.asyncio
+async def test_llm_usage_includes_secretary_tts_month():
+    # 今月の読み上げの字数は read_month_total（正本）から取り、無料枠と止める上限を添える
+    db = _mock_db_with_sequenced_results(
+        [_FX_META_ROW_NO_HISTORY, _EMPTY_TOTAL_ROW, [], [], [], [], [], [], [], []]
+    )
+    with patch.object(routes.secretary_tts, "read_month_total", new=AsyncMock(return_value=12345)):
+        result = await get_llm_usage(days=7, db=db, _admin=None)
+
+    assert result.secretary_tts_month.characters == 12345
+    assert result.secretary_tts_month.free_limit == 1_000_000
+    assert result.secretary_tts_month.cap == 900_000
+
+
+@pytest.mark.asyncio
+async def test_llm_usage_secretary_tts_month_null_when_unreadable():
+    # 読めなかったときは 0 に丸めず None（200 のまま返る）
+    db = _mock_db_with_sequenced_results(
+        [_FX_META_ROW_NO_HISTORY, _EMPTY_TOTAL_ROW, [], [], [], [], [], [], [], []]
+    )
+    unreadable = AsyncMock(side_effect=routes.secretary_tts.TtsError(503, "tts_usage_unreadable"))
+    with patch.object(routes.secretary_tts, "read_month_total", new=unreadable):
+        result = await get_llm_usage(days=7, db=db, _admin=None)
+
+    assert result.secretary_tts_month.characters is None
+    assert result.secretary_tts_month.free_limit == 1_000_000
+    assert result.secretary_tts_month.cap == 900_000
 
 
 @pytest.mark.asyncio

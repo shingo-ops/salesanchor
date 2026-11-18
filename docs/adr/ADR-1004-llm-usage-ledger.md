@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 |------|------|
-| ステータス | Accepted by PO direction 2026-09-30 |
+| ステータス | Accepted by PO direction 2026-09-30。Decision 1（1 行 = Gemini の応答 1 回）を [ADR-1080](ADR-1080-secretary-voice-tts.md)（Proposed）で改める案: Amended by ADR-1080 |
 | 作成日 | 2026-09-30 |
 | 起案 | Claude Opus（設計） + しんごさん（PO 方針承認） |
 | 関連 | ADR-110（翻訳）、ADR-135/ADR-136（危険PRとGO）、ADR-072（テナント文脈） |

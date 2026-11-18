@@ -116,6 +116,10 @@ class AddressSnapshot:
     company_name: Optional[str] = None
     contact_name: Optional[str] = None
     address: Optional[str] = None
+    # invoice-create-portfolio R1: 写しに address_line_1 のキーがある請求書だけが渡す（None なら今の1行の住所）
+    recipient_name: Optional[str] = None
+    address_lines: Optional[list[str]] = None
+    city_line: Optional[str] = None
     country: Optional[str] = None
     tax_id: Optional[str] = None
     phone: Optional[str] = None
@@ -175,9 +179,15 @@ def _addr_lines(addr: AddressSnapshot) -> list[str]:
     lines: list[str] = []
     if addr.company_name:
         lines.append(addr.company_name)
-    if addr.contact_name:
+    if addr.recipient_name:
+        lines.append(addr.recipient_name)
+    if addr.contact_name and addr.contact_name != addr.recipient_name:
         lines.append(addr.contact_name)
-    if addr.address:
+    if addr.address_lines is not None:
+        lines.extend(line for line in addr.address_lines if line)
+        if addr.city_line:
+            lines.append(addr.city_line)
+    elif addr.address:
         lines.append(addr.address)
     if addr.country:
         lines.append(addr.country)
@@ -513,6 +523,8 @@ def render_invoice_pdf(invoice_data: dict, tenant_profile: dict,
     def _to_addr(snap: dict | None) -> Optional[AddressSnapshot]:
         if not snap:
             return None
+        split = "address_line_1" in snap
+        city_line = ", ".join(p for p in (snap.get("city"), snap.get("state"), snap.get("postal_code")) if p)
         return AddressSnapshot(
             company_name=snap.get("billing_display_name") or snap.get("company_name"),
             contact_name=snap.get("contact_name"),
@@ -521,6 +533,10 @@ def render_invoice_pdf(invoice_data: dict, tenant_profile: dict,
             tax_id=snap.get("tax_id"),
             phone=snap.get("phone"),
             email=snap.get("email"),
+            recipient_name=snap.get("recipient_name") if split else None,
+            address_lines=[snap.get("address_line_1"), snap.get("address_line_2"), snap.get("address_line_3")]
+            if split else None,
+            city_line=(city_line or None) if split else None,
         )
 
     def _to_fx(snap: dict | None) -> Optional[FxRateSnapshot]:

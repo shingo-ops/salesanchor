@@ -236,6 +236,28 @@ async def _check_routes(db: AsyncSession, company_id: int, invoice_id: int, y: i
     assert len(zzt) == 1 and zzt[0].rate == 120.0 and (zzt[0].fetched_at or "").endswith("+00:00")
     assert "ZZT" in ctx.currencies and ctx.currencies[0] == "JPY"
 
+    # invoice-portfolio R1 K3: 住所の6項目と国名を返す（請求先の行だけがある会社なので届け先は None）
+    await db.execute(
+        text(
+            "UPDATE company_addresses SET name = 'Recv 953', email = 'a953@example.com', tax_id = 'TX953', "
+            "address_line_1 = 'L1', address_line_2 = 'L2', address_line_3 = 'L3', "
+            "city = 'C953', state = 'S953', zip = 'Z953' "
+            "WHERE company_id = :c AND address_type = 'billing'"
+        ),
+        {"c": company_id},
+    )
+    jp_name = (await db.execute(text("SELECT name FROM public.countries WHERE code = 'JP'"))).scalar_one_or_none()
+    k3 = await get_invoice_draft_context(
+        company_id=company_id, contact_id=None, invoice_id=None, db=db, tenant_id=_TENANT_ID, current_user=None,
+    )
+    assert k3.ship_to is None and k3.bill_to is not None
+    b = k3.bill_to
+    assert (b.recipient_name, b.email, b.tax_id) == ("Recv 953", "a953@example.com", "TX953")
+    assert (b.address_line_1, b.address_line_2, b.address_line_3) == ("L1", "L2", "L3")
+    assert (b.address, b.city, b.state, b.postal_code) == ("L1 L2", "C953", "S953", "Z953")
+    assert b.country == "JP" and b.country_name == jp_name
+    assert k3.issuer_region == "domestic"
+
     stored = await get_invoice_draft_context(
         company_id=None, contact_id=None, invoice_id=invoice_id, db=db, tenant_id=_TENANT_ID, current_user=None,
     )

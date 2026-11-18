@@ -1,0 +1,53 @@
+/**
+ * TotalsBox — 色つきの合計枠（合計は一番大きい字）
+ * ADR-067: 色・余白・角丸・字の大きさはすべて CSS 変数参照のみ
+ *
+ * セレクタ順序（specificity 昇順）: 単一クラス → 合計の行の中のラベル(0,2,0)
+ */
+
+.comp-totals-box {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--accent-bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.comp-totals-box__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.comp-totals-box__row--total {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-2);
+}
+
+.comp-totals-box__label {
+  margin: 0;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.comp-totals-box__value {
+  margin: 0;
+  font-size: var(--font-md);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.comp-totals-box__value--total {
+  font-size: var(--font-2xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.comp-totals-box__row--total .comp-totals-box__label {
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}

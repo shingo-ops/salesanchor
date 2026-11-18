@@ -156,10 +156,13 @@ services:
       - WEBPUSH_VAPID_PRIVATE_KEY=${WEBPUSH_VAPID_PRIVATE_KEY:-}
       - WEBPUSH_VAPID_PUBLIC_KEY=${WEBPUSH_VAPID_PUBLIC_KEY:-}
       - WEBPUSH_VAPID_SUBJECT=${WEBPUSH_VAPID_SUBJECT:-}
+      # ADR-1080 便3: 読み上げ（Google Text-to-Speech）の鍵。.env に GOOGLE_TTS_SA_KEY_FILE（VPS 上の鍵ファイルの場所）があるときだけ値が入り、無ければ空（読み上げは 503）
+      - GOOGLE_TTS_SA_KEY_FILE=${GOOGLE_TTS_SA_KEY_FILE:+/run/google-tts-sa.json}
     volumes:
       # 場所の元データは celery-worker が書き、backend は読むだけ（ADR-1055 D9）
       - geoip:/geoip:ro
       - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
+      - ${GOOGLE_TTS_SA_KEY_FILE:-/dev/null}:/run/google-tts-sa.json:ro
       - attachments_data:/data/attachments
     depends_on:
       postgres:

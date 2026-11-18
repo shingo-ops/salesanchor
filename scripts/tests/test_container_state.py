@@ -105,5 +105,64 @@ class HealthcheckMissingTest(unittest.TestCase):
             self.assertIn('salesanchor_container_unhealthy{service="celery-beat"} 0', lines)
 
 
+class OneoffTest(unittest.TestCase):
+    ONEOFF = "com.docker.compose.oneoff"
+
+    def test_is_oneoff_true(self):
+        self.assertTrue(cs.is_oneoff({"Config": {"Labels": {self.ONEOFF: "True"}}}))
+
+    def test_is_oneoff_false_label(self):
+        self.assertFalse(cs.is_oneoff({"Config": {"Labels": {self.ONEOFF: "False"}}}))
+
+    def test_is_oneoff_no_labels(self):
+        self.assertFalse(cs.is_oneoff({"Config": {}}))
+
+    def test_is_oneoff_no_config(self):
+        self.assertFalse(cs.is_oneoff({}))
+
+    def test_is_oneoff_labels_none(self):
+        self.assertFalse(cs.is_oneoff({"Config": {"Labels": None}}))
+
+    def _run_main(self, inspect_data):
+        def fake(args):
+            if args[0] == "ps":
+                return "a b\n"
+            return json.dumps(inspect_data)
+
+        with tempfile.TemporaryDirectory() as d:
+            with mock.patch.object(cs, "TEXTFILE_DIR", d), mock.patch.object(cs, "run_docker", side_effect=fake):
+                self.assertEqual(cs.main(), 0)
+            with open(os.path.join(d, "container_state.prom")) as f:
+                return f.read().splitlines()
+
+    def test_main_skips_oneoff_keeps_real(self):
+        lines = self._run_main(
+            [
+                {
+                    "Config": {"Labels": {self.ONEOFF: "True"}},
+                    "State": {"Running": True, "Health": {"Status": "unhealthy"}},
+                },
+                {
+                    "Config": {"Labels": {self.ONEOFF: "False"}},
+                    "State": {"Running": True, "Health": {"Status": "healthy"}},
+                },
+            ]
+        )
+        self.assertIn('salesanchor_container_unhealthy{service="celery-worker"} 0', lines)
+        self.assertIn('salesanchor_container_running{service="celery-worker"} 1', lines)
+
+    def test_main_only_oneoff_is_not_counted(self):
+        lines = self._run_main(
+            [
+                {
+                    "Config": {"Labels": {self.ONEOFF: "True"}},
+                    "State": {"Running": True, "Health": {"Status": "unhealthy"}},
+                },
+            ]
+        )
+        self.assertIn('salesanchor_container_running{service="celery-worker"} 0', lines)
+        self.assertIn('salesanchor_container_unhealthy{service="celery-worker"} 0', lines)
+
+
 if __name__ == "__main__":
     unittest.main()

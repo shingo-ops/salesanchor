@@ -135,7 +135,7 @@
 
 ## 5. 再開設計（第7版、2026-10-30）— 10/29 の本番停止の段5として段階1・段階2を再開する
 
-**状態**: 設計案作成済み。第1版〜第6版は Fable（新規起動）の評価で REVISE、第7版で APPROVE（設計審査済み、§5-11）。PO 承認・実装・本番反映はまだ。
+**状態**: 設計案作成済み。第1版〜第6版は Fable（新規起動）の評価で REVISE、第7版で APPROVE（設計審査済み、§5-11）。2026-11-17 時点: 5-1・5-2・5-2c は本番反映済み。5-3 は PO 本人の GO（「GO #5564」2026-11-17 14:25 JST）で本番反映済みで、起点の回になった（§5-13）。残りは K5-6・K5-7・K5-9・K5-12 の本番での数え（次の本番反映から）と 5-4。
 **入口**: `docs/handoff/deploy-db-stall/design.md` §3 の段5の行。段5「流し直しのたびに排他ロックを取る書き方をやめる」は、本節の段階1・段階2で行う（056 だけを書き換える案は同 §8 で不採用）。
 **調べの記録（生出力、社外秘を含まない）**: /tmp/CC報告ファイル/deploy-db-stall/ の stage5-recon（steps.tsv・recon2.md、origin/main 87f06529f 時点）、stage5-recon3、stage5-recon4（recon4.md・adr1007.txt、origin/main fd5d433cd 時点）、stage5-prod（prod.md、2026-10-30 14:13〜14:16 JST、本番は reader 鍵の道で構造と件数だけ読んだ）、stage5-fable（review.md・review2.md・review3.md と生出力）。本節の行番号は origin/main 162cb7544 で確かめた（登録数 363 は 87f06529f・162cb7544 の両方で同じ）。
 
@@ -149,7 +149,7 @@
 | 移行の段が動く条件 | `migrations` の条件（migrations/・scripts/・backend/・docker-compose.yml・deploy.yml の変更）。控えの段は `db_migrations` の条件（migrations/・run_all_migrations.sh・migrate_*.py・migration_py_entry.py の変更）だけ | `.github/workflows/deploy.yml` :37-61・:199・:596 |
 | 控えのムラ | 2つの条件が違うので、`scripts/` の試験だけを変えた回（#4853、head ddbe41261、変更は docs/handoff 1件と scripts/tests 31件）は控えを取らずに363手順を流した | 同上、`git show --name-only ddbe41261` |
 | ADR-1005 段階0 | 済み（#3998） | recon4 |
-| ADR-1005 段階1・2 | 未着手。Draft #4020（段階2）・#4021（段階1、1A）は 10/07 から止まり、base 85122fb40 で `scripts/run_all_migrations.sh` が衝突 | recon4 |
+| ADR-1005 段階1・2 | 調べた時点（recon4）は未着手。Draft #4020（段階2）・#4021（段階1、1A）は 10/07 から止まり、base 85122fb40 で `scripts/run_all_migrations.sh` が衝突。2026-11-17 追記: 段階1は #5551、段階2は #5564 で本番反映済み。Draft 2本は閉じた（§5-13） | recon4 |
 | ADR-1007 決定2（値を書く移行の無効化） | 登録337本の SQL のうち、コメントを除いて値の操作が残るのは39本（表で絞らない数え方）。許可一覧は15行。毎回の検査は通っている | stage5-recon4 の writers_active_reg.txt、`scripts/migration-guard/value-write-allowlist.tsv`、`scripts/check-migration-value-writes.py` |
 | ADR-1007 決定3・4・5 | 済み（#4012・#4097・#4019・#4476） | recon4 |
 | ADR-1007 決定6（1回だけ流す） | 未着手。「2〜5を終えてから。そうしないと値を書く移行を無効にする書き換えができなくなる」 | `docs/adr/ADR-1007-migration-structure-only-run-once.md` :58・:100 |
@@ -278,7 +278,7 @@ P1〜P13 がそろうまで、5-1〜5-3 の実装カードは出さない。
 - 分けた結果は PO に見せる前に表にする。固める判断は記録の後には取り消せないと明記する。
 - 依存する試験（P12）が、無効にした後も通ることを確かめる。
 - 分けた表（今の数52本。2026-11-15）: `docs/handoff/migration-runner-redesign/p11-classification.md`。無効にする8本・固めてよい44本。無効にする8本は PO 2026-11-15「1」で決定。実装カードは `docs/handoff/migration-runner-redesign/card-5-1.md`。上の例の `migrations/20260902_110000_tcg_classification_masters.sql` は、試験が値を使い、書く表がアプリから名指しされないか同じ反映の中で消えるため、固めてよいに直した（理由は同ファイル §2）。
-- 上の「無効にする」「固めてよい」の決まりは、同ファイル §1 で3つの条件と判断の時点（流れる時点の形で見る）に細かくした（この決まりで分けた8本は PO 2026-11-15「1」で決定。44本を固める判断は 5-3 の起点の回の PO 本人の GO まで保留）。値の文を NOTICE にするとき、その値を前提にした件数の確かめも一緒に外す（同ファイル §3、#17）。
+- 上の「無効にする」「固めてよい」の決まりは、同ファイル §1 で3つの条件と判断の時点（流れる時点の形で見る）に細かくした（この決まりで分けた8本は PO 2026-11-15「1」で決定。44本を固める判断は 5-3 の起点の回の PO 本人の GO まで保留とし、2026-11-17「GO #5564」で決まった。§5-13）。値の文を NOTICE にするとき、その値を前提にした件数の確かめも一緒に外す（同ファイル §3、#17）。
 
 ### 5-6. 会社のひな形を1つにする（5-2）
 
@@ -382,9 +382,9 @@ P1〜P13 がそろうまで、5-1〜5-3 の実装カードは出さない。
 ### 5-10. PO に確認すること（1件ずつ）
 
 1. ひな形の持ち方（1A か 1B か）: **決定済み（PO 2026-11-15「1」= 1A）**。§5-6。
-2. 値を書く移行の分け方: **8本を無効にすることだけ決定済み（PO 2026-11-15「1」）。44本を固めることは未決（下の 3 で決める）**。表は `docs/handoff/migration-runner-redesign/p11-classification.md`。44本を固める判断は 5-3 の起点の回で取り消せなくなる。その回の PO 本人の GO（下の 3）で改めて添える。
-3. 5-3 の本体を本番に出す日（PO 本人の GO。この回が起点になる）。作り始めること（カード・審査・実装・Draft の PR まで）は PO 2026-11-17「1」で承認済み。本番に出す日と 44本を固めることは、作って審査に通した後に改めて PO 本人に聞く。
-P11 の中身の読み取り（カード `docs/handoff/migration-runner-redesign/card-5-1a.md`、結果 `docs/handoff/migration-runner-redesign/recon-5-1a/p11-detail.md`）は済み。残りは §5-6 の P1 の差の分け方の表と、3 の PO 本人の GO。
+2. 値を書く移行の分け方: **8本を無効にすることは決定済み（PO 2026-11-15「1」）。44本を固めることも決定済み（PO 本人「GO #5564」2026-11-17 14:25 JST。§5-13）**。表は `docs/handoff/migration-runner-redesign/p11-classification.md`。44本を固める判断は 5-3 の起点の回で取り消せなくなり、その回の PO 本人の GO（下の 3）で決まった。
+3. 5-3 の本体を本番に出す日（PO 本人の GO。この回が起点になる）。作り始めること（カード・審査・実装・Draft の PR まで）は PO 2026-11-17「1」で承認済み。本番に出す日と 44本を固めることは、PO 本人「GO #5564」（2026-11-17 14:25 JST）で決定済み（§5-13）。
+P11 の中身の読み取り（カード `docs/handoff/migration-runner-redesign/card-5-1a.md`、結果 `docs/handoff/migration-runner-redesign/recon-5-1a/p11-detail.md`）は済み。§5-6 の P1 の差の分け方の表は `docs/handoff/migration-runner-redesign/recon-5-2a/classification.md` で済み。3 の PO 本人の GO は 2026-11-17 に受けた（§5-13）。§5-10 で PO に聞くことは残っていない。
 
 ### 5-11. 審査
 
@@ -446,3 +446,28 @@ P11 の中身の読み取り（カード `docs/handoff/migration-runner-redesign
 - 成功の数（S1・S2）は体験談と売り手の集計で、我々の効果の証明にはならない。我々の効果は我々の本番で測る（K5-9。基準 86 秒、今は 123〜129 秒）。
 - 失敗の事例（F1〜F4）に共通する原因は「古い物・毎回の物が黙って動く」「反映の前後で何が変わったか突き合わせない」「取り消せない操作を確かめずに流す」。この設計はそれぞれに、止める（8本）・突き合わせる（K5-5）・5社の形を比べる（K5-3）・CI で全件モードを流す（K5-11）・無効にした後の試験（K5-1b）・取り消せない固めは PO の承認の後（§5-10 の 3）で受けている。
 - 【未確認】S3 の15秒、F2 の約154銘柄と会社発表の約4億4000万ドルは二次の出典。S1 の「214本」「約10分→約45秒」は検索の抜粋で読んだ数で、審査役は頁の中で確かめられなかった。
+
+### 5-13. 本番の記録（5-3 の起点の回、2026-11-17）
+
+- GO: PO 本人「GO #5564」（2026-11-17 14:25 JST）。PR #5564 の本文の GO記録 に転記した。マージは 05:33:50Z、merge commit は `1db99b882e4ab82afbfd41484df1deb7b2e12f66`。
+- 本番反映: deploy run 44024988823 が success（05:42:46Z）。生のログは /tmp/CC報告ファイル/5564-deploy.log。
+- 控え: 「Pre-deploy DB backup」で `salesanchor_db_20261117_143540.sql.gz`（729M）を取った（05:38:14Z）。
+- 移行の段のログ（05:39:24Z〜05:41:59Z）:
+  - `targets=403 recorded=0 outside=2 mode=record`
+  - (a)=0、(b)=0、(c) to-run=403
+  - `timing read-records=0.13s checksum=1.71s`
+  - 終わりは `[405/405]` の後に `skipped-recorded=0 ran-and-recorded=403`
+- (c) の残りが、この回で0になった。§5-7 の定義により、この本番反映が起点になる。タグ `migration-baseline-20261117` を `1db99b882` に打ち、origin に push した（打ったのは設計担当の Claude Opus。POの委任 ADR-1003 に基づく）。
+- K5-4 は合格。
+  - 本番の `ops.migration_runs` を読み取りの文だけで数えた（2026-11-17 15:18〜15:19 JST、manual-only 鍵で `docker exec ... psql -At -c "SELECT count(*), count(DISTINCT file), min(ran_at), max(ran_at), string_agg(DISTINCT result, ','), string_agg(DISTINCT git_commit, ',') FROM ops.migration_runs"`）。生出力は /tmp/CC報告ファイル/5564-k54.txt。
+  - 結果は件数 403・ファイルの種類 403・result はすべて ok・git_commit は `1db99b882` の1種類。
+  - 登録の行は origin/main の `^run_(sql|py)[[:space:]]` で 405。記録の外の2本を引くと 403 で、一致した。
+  - 表 `ops.migration_runs` は ai_ro のビューが無い。そのため、reader 鍵の道では読めない（`/tmp/CC報告ファイル/5564-k54-views.txt` で ops__ のビューは0本）。
+- 値を書く移行の 44 本は、この回で固まった（§5-10 の 2・3、PO 本人の GO と同時）。
+- 残り（次の本番反映から数える）:
+  - K5-6（0本の回の (c)=0 を3回）
+  - K5-7（N本の回を3回）
+  - K5-9（0本の回の移行の段 45 秒以下を3回とも）
+  - K5-12（読み取りの止まり0）
+  - そのあとで 5-4 に進む（§5-3 の「前の段を本番で測ってから次へ」）。
+- Draft #4020・#4021 は、§5-7 の末尾のとおり、作り直しの PR（#5551・#5564）が入ったので、理由をコメントに書いて閉じた（2026-11-17 06:25Z）。
