@@ -37,7 +37,7 @@ recon（実機確認）で、ルールが二重・三重に食い違っている
 | なのに片付け道具は行を「削除」している | `cleanup-worktree.sh:65`（行を削除） |
 | ゾンビ通知も「削除しろ」と案内 | `zombie-report.yml`（"active-work.md から削除"） |
 | 完了判定が実データで機能しない | 162部屋中、リモート消滅は12だけ（マージ後にブランチ未削除のため） |
-| 上限が実態に追従せず、逃げ道が「上限を上げる」 | `new-worktree.sh:45-52`（既定5・環境変数で上書き）／実数162 |
+| 上限が実態に追従せず、逃げ道が「上限を上げる」 | `scripts/new-worktree.sh:45-52`（既定5・環境変数で上書き）／実数162 |
 | 完了判定の流用元がない | `check-stale-worktrees.sh:23-97`（経過時間で判定。マージ判定は持たない） |
 | マシン集中が未解消 | `claude-pipeline.yml:L62` は `[self-hosted, macOS]` のまま（`shingo-mac` 未付与）。Shingo-Mac-Temp は offline → 実行は Hikky-dev-Mac に集中 |
 
@@ -55,7 +55,7 @@ feature PR が main にマージされた瞬間を「完了」とする。squash
 
 ### 3. ノートの行を自動DONE（GitHub側・即時）— 専用ワークフローを新設
 develop マージ時に、対象ブランチの行を自動で DONE に書き換える。**行は消さず残す**。
-- **重要（recon で判明・前提を訂正）**：当初「登録と同じ経路を再利用」と書いたが、その経路は存在しなかった。`new-worktree.sh:105-142` は active-work.md を Python で書くだけで git commit/push を持たず、マージ起点で active-work.md を更新する仕組みも現存しない。→ **新規ワークフローを作る。**
+- **重要（recon で判明・前提を訂正）**：当初「登録と同じ経路を再利用」と書いたが、その経路は存在しなかった。`scripts/new-worktree.sh:105-142` は active-work.md を Python で書くだけで git commit/push を持たず、マージ起点で active-work.md を更新する仕組みも現存しない。→ **新規ワークフローを作る。**
 - 設計要素：
   - 発火トリガー：`pull_request: types:[closed]` かつ `merged==true` かつ `base==develop`
   - 動作：該当ブランチの行を DONE に更新 → commit → develop に push
@@ -69,9 +69,9 @@ develop マージ時に、対象ブランチの行を自動で DONE に書き換
 - かつ **未保存の作業がない**（未コミット・未pushがゼロ）（2026-10-10 R8：未push の判定は「HEAD までの全コミットが origin のどれかの ref から到達できるか」で行う。走査前に `git fetch --prune`、失敗時は削除しない）
 
 起動タイミング：
-- (a) 新規作成時に先に1回（`new-worktree.sh` の上限判定の前。これはその Mac 上でローカル完結）
-- (b) 各 Mac で定期実行：`schedule:` + `runs-on:[self-hosted, macOS, <各Macのラベル>]` のワークフロー（既存に同方式の実績あり）。多重起動は排他ロックで防ぐ（`scripts/reaper-worktree.sh:37-50`、`/tmp/reaper-worktree.lock.d`）。GitHub Actions は最大300秒待つ（`reaper-schedule.yml:50`）、`new-worktree.sh` からは待たずに skip（`new-worktree.sh:67`）。（2026-10-10 改訂）
-- (c) main へのマージ直後に即時実行：`reaper-schedule.yml:17-19` の `pull_request: closed`（base=main・merged のみ、`:27`）。GITHUB_TOKEN によるマージでは起動しないため (b) の定期実行は残す。Actions 上ではスクリプトは checkout 側、作業ディレクトリは本体リポジトリにする（`:47`、#4053）。gh のマージ判定には `GH_TOKEN` が必要（#4071、未設定だと判定が常に0件になり回収されなかった）。（2026-10-10 改訂）
+- (a) 新規作成時に先に1回（`scripts/new-worktree.sh` の上限判定の前。これはその Mac 上でローカル完結）
+- (b) 各 Mac で定期実行：`schedule:` + `runs-on:[self-hosted, macOS, <各Macのラベル>]` のワークフロー（既存に同方式の実績あり）。多重起動は排他ロックで防ぐ（`scripts/reaper-worktree.sh:37-50`、`/tmp/reaper-worktree.lock.d`）。GitHub Actions は最大300秒待つ（`.github/workflows/reaper-schedule.yml:50`）、`scripts/new-worktree.sh` からは待たずに skip（`scripts/new-worktree.sh:67`）。（2026-10-10 改訂）
+- (c) main へのマージ直後に即時実行：`.github/workflows/reaper-schedule.yml:17-19` の `pull_request: closed`（base=main・merged のみ、`:27`）。GITHUB_TOKEN によるマージでは起動しないため (b) の定期実行は残す。Actions 上ではスクリプトは checkout 側、作業ディレクトリは本体リポジトリにする（`:47`、#4053）。gh のマージ判定には `GH_TOKEN` が必要（#4071、未設定だと判定が常に0件になり回収されなかった）。（2026-10-10 改訂）
 - **依存（recon で判明）**：(b) の「offline でも復帰時に追いつく（self-heal）」は、ランナーが自動起動して初めて成立する。現状ランナーは手動起動（`runner-start`）で、launchd 自動起動は ADR-029 の TODO のまま未実装。→ **launchd 自動起動の実装を本ADRの依存前提とし、Generator スコープに含める**（plist 実装）。
 
 ### 5. 安全条件（非交渉）
@@ -126,7 +126,7 @@ develop マージ時に、対象ブランチの行を自動で DONE に書き換
 
 ## recon 済みエビデンス（確定事実）
 
-`active-work.md:12` / `cleanup-worktree.sh:65` / `new-worktree.sh:45-52` / `check-stale-worktrees.sh:23-97` / `claude-pipeline.yml:L62` / ランナー一覧（Hikky-dev-Mac=online, Shingo-Mac-Temp=offline）/ 実数162・REMOTE_GONE 12・未保存16・IN_PROGRESS 48。
+`active-work.md:12` / `cleanup-worktree.sh:65` / `scripts/new-worktree.sh:45-52` / `check-stale-worktrees.sh:23-97` / `claude-pipeline.yml:L62` / ランナー一覧（Hikky-dev-Mac=online, Shingo-Mac-Temp=offline）/ 実数162・REMOTE_GONE 12・未保存16・IN_PROGRESS 48。
 
 ## architect recon 結果（2026-06-06・反映済み）
 
