@@ -81,7 +81,25 @@ echo "Step 2: Starting green backend (backnet only, no traffic yet)..."
 # --env-file は引用符を外さないため使わない（docs/handoff/bg-cutover-env-by-name/design.md）。
 [ -f "${REPO_DIR}/.env" ] || { echo ".env not found" >&2; exit 1; }
 ENV_ARGS=()
-while IFS= read -r _k; do ENV_ARGS+=(--env "$_k"); done < <(grep -oE '^[A-Za-z_][A-Za-z0-9_]*=' "${REPO_DIR}/.env" | tr -d '=')
+while IFS= read -r _k; do
+  # ADR-1080 便3a-2: 読み上げの鍵の場所は下の TTS_ARGS で箱の中の場所に置き換えるので、名前では渡さない
+  [ "$_k" = "GOOGLE_TTS_SA_KEY_FILE" ] && continue
+  ENV_ARGS+=(--env "$_k")
+done < <(grep -oE '^[A-Za-z_][A-Za-z0-9_]*=' "${REPO_DIR}/.env" | tr -d '=')
+# ADR-1080 便3a-2: 読み上げ（Google Text-to-Speech）の鍵。docker-compose.yml の backend と同じ形
+# （環境 GOOGLE_TTS_SA_KEY_FILE=/run/google-tts-sa.json・鍵ファイルを /run/google-tts-sa.json に読み取り専用でつなぐ）。
+# .env に場所があり、そのファイルが在るときだけつなぐ。無ければつながない（読み上げは 503 のまま・入れ替えは続ける）。
+TTS_ARGS=()
+if [ -n "${GOOGLE_TTS_SA_KEY_FILE:-}" ]; then
+  if [ -f "${GOOGLE_TTS_SA_KEY_FILE}" ]; then
+    TTS_ARGS=(--volume "${GOOGLE_TTS_SA_KEY_FILE}:/run/google-tts-sa.json:ro" --env GOOGLE_TTS_SA_KEY_FILE=/run/google-tts-sa.json)
+    echo "  読み上げの鍵: つなぐ"
+  else
+    echo "  ⚠️ 読み上げの鍵: .env の場所にファイルが無いのでつながない（読み上げは 503 のまま）"
+  fi
+else
+  echo "  読み上げの鍵: .env に場所が無いのでつながない"
+fi
 docker run -d \
   --name "${GREEN_BACKEND}" \
   --restart unless-stopped \
@@ -95,6 +113,7 @@ docker run -d \
   --volume "${COMPOSE_PROJECT}_attachments_data:/data/attachments" \
   --volume "${COMPOSE_PROJECT}_geoip:/geoip:ro" \
   "${ENV_ARGS[@]}" \
+  "${TTS_ARGS[@]}" \
   --env TCG_SCHEMA="${TCG_SCHEMA:-tenant_004}" \
   --log-driver json-file \
   --log-opt max-size=20m \
