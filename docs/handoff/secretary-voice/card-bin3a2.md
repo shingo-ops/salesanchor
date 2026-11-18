@@ -136,8 +136,8 @@ fi
     cd 作業場所 && git log -1 --format=%H
     cd 作業場所 && git rev-parse origin/main
     期待する出力: 作業場所のパスと、2つの番号が同じこと。違えば NEEDS_DECISION: で止まる。
-    cd 作業場所 && git merge --ff-only origin/release/secretary-voice-bin3a2
-    期待する出力: このカード・design.md の追補・設計の確かめの記録を足す commit 2 つが早送りで入る。早送りにならなければ NEEDS_DECISION: で止まる。
+    cd 作業場所 && git merge --no-edit origin/release/secretary-voice-bin3a2
+    期待する出力: このカード・design.md の追補・設計の確かめの記録が入る（main が進んでいれば早送りでなく取り込みの commit が 1 つできるが、それで良い）。衝突が出たら NEEDS_DECISION: で止まる。
 
 手順2 §3-1・§3-2・§3-3 を作る。
 
