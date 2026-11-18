@@ -328,14 +328,24 @@ async def sync_tenant_from_google(db: AsyncSession, tenant_id: int) -> dict:
         upserted = 0
         deleted = 0
         seen: list[str] = []
+        # 予定の色（ADR-1081）: 名札の表は 1 回の取り込みに 1 回だけ読む。読めなければ None（色の欄に触らない）
+        label_colors = await cal_svc.get_event_label_colors(db, tenant_id, "primary")
+        # 名札の表を読む中でトークン更新の commit が入ることがあるので文脈を張り直す
+        await set_tenant_context(db, tenant_id)
+        legacy_colorid = 0
         for item in items:
-            outcome = await upsert_from_google(db, tenant_id, item, owner_user_id)
+            if item.get("colorId") and not item.get("eventLabelId"):
+                legacy_colorid += 1
+            outcome = await upsert_from_google(
+                db, tenant_id, item, owner_user_id, label_colors=label_colors
+            )
             if outcome == "upserted":
                 upserted += 1
             elif outcome == "deleted":
                 deleted += 1
             if full and item.get("status") != "cancelled" and item.get("id"):
                 seen.append(item["id"])
+        logger.info("event_color_legacy_colorid count=%d", legacy_colorid)
 
         if full:
             res = await db.execute(

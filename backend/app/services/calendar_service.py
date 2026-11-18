@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import reset_tenant_context
 from app.services import calendar_recurrence as rec
+from app.services.event_colors import key_for_hex
 
 logger = logging.getLogger(__name__)
 
@@ -148,7 +149,7 @@ EVENT_COLUMNS = (
     "created_by_user_id", "calendar_type", "user_id", "google_event_id", "meet_url",
     "id", "source", "recurrence_rule", "recurring_event_id", "original_start_datetime",
     "start_datetime", "end_datetime", "is_all_day", "is_cancelled",
-    "title", "description", "location", "category",
+    "title", "description", "location", "category", "color_key",
 )
 EVENT_COLUMNS_SQL = ", ".join(EVENT_COLUMNS)
 
@@ -166,8 +167,11 @@ async def read_event(db: AsyncSession, event_id: int) -> Optional[dict]:
     return event_from_row(record) if record else None
 
 
-def _google_body_for(ev: dict) -> dict:
-    """表の 1 行（直した後の値）から Google の本文を作る。元の行なら recurrence を付ける（§12.7）。"""
+def _google_body_for(ev: dict, send_color: bool = False) -> dict:
+    """表の 1 行（直した後の値）から Google の本文を作る。元の行なら recurrence を付ける（§12.7）。
+
+    send_color が真のときだけ本文に色の印 _sa_color_key を入れる（ADR-1081）。
+    """
     payload = {
         "title": ev.get("title") or "",
         "description": ev.get("description"),
@@ -175,8 +179,9 @@ def _google_body_for(ev: dict) -> dict:
         "start_datetime": ev["start_datetime"].isoformat(),
         "end_datetime": ev["end_datetime"].isoformat(),
         "is_all_day": bool(ev.get("is_all_day")),
+        "color_key": ev.get("color_key"),
     }
-    body = _to_google_event_body(payload)
+    body = _to_google_event_body(payload, send_color=send_color)
     if ev.get("recurrence_rule"):
         body["recurrence"] = rec.google_recurrence(ev["recurrence_rule"])
     return body
@@ -254,7 +259,8 @@ async def list_events(
             f" TRIM(COALESCE(owner.surname_jp,'') || ' ' || COALESCE(owner.given_name_jp,'')) AS owner_name,"
             f" TRIM(COALESCE(created.surname_jp,'') || ' ' || COALESCE(created.given_name_jp,'')) AS created_by_name,"
             f" ce.meet_url,"
-            f" ce.recurrence_rule, ce.recurring_event_id, ce.original_start_datetime"
+            f" ce.recurrence_rule, ce.recurring_event_id, ce.original_start_datetime,"
+            f" ce.color_key"
             f" FROM calendar_events ce"
             f" LEFT JOIN public.users owner_user ON owner_user.id = ce.user_id"
             f" LEFT JOIN staff owner ON owner.user_id = owner_user.id"
@@ -294,6 +300,7 @@ async def list_events(
             "recurring_event_id": r[20],
             "occurrence_start": r[21].isoformat() if r[20] is not None and r[21] else None,
             "is_first_occurrence": bool(r[19]) and r[20] is None,
+            "color_key": r[22],
         }
 
     masters = [r for r in rows if r[19]]
@@ -401,15 +408,16 @@ async def create_event(
             "INSERT INTO calendar_events"
             " (user_id, calendar_type, category, title, description, location,"
             "  start_datetime, end_datetime, is_all_day, source, sync_status,"
-            "  created_by_user_id, recurrence_rule)"
+            "  created_by_user_id, recurrence_rule, color_key)"
             " VALUES"
             " (:uid, :ctype, :category, :title, :desc, :loc,"
             "  :start, :end, :all_day, 'app', 'pending',"
-            "  :cuid, :rrule)"
+            "  :cuid, :rrule, :color_key)"
             " RETURNING id"
         ),
         {
             "rrule": recurrence_rule,
+            "color_key": payload.get("color_key"),
             "uid": user_id,
             "ctype": payload.get("calendar_type", "shared"),
             "category": payload.get("category", "meeting"),
@@ -433,7 +441,9 @@ async def create_event(
         try:
             from app.services import google_calendar as cal_svc
 
-            google_body = _to_google_event_body(payload)
+            google_body = _to_google_event_body(
+                payload, send_color=payload.get("color_key") is not None
+            )
             if recurrence_rule:
                 google_body["recurrence"] = rec.google_recurrence(recurrence_rule)
             if payload.get("add_meet"):
@@ -498,7 +508,18 @@ async def update_event(
         "is_all_day": "is_all_day",
         "calendar_type": "calendar_type",
         "user_id": "user_id",
+        "color_key": "color_key",
     }
+    # 色が変わったときだけ Google に色を送る（Google の色を勝手に外さない・ADR-1081）。UPDATE の前の値を読む
+    send_color = False
+    if "color_key" in payload:
+        prev_row = await db.execute(
+            text("SELECT color_key FROM calendar_events WHERE id = :id"),
+            {"id": event_id},
+        )
+        prev_record = prev_row.first()
+        prev_color = prev_record[0] if prev_record else None
+        send_color = payload["color_key"] != prev_color
     for k, col in field_map.items():
         if k in payload:
             set_clauses.append(f"{col} = :{k}")
@@ -536,7 +557,7 @@ async def update_event(
         try:
             from app.services import google_calendar as cal_svc
 
-            google_body = _to_google_event_body(payload)
+            google_body = _to_google_event_body(payload, send_color=send_color)
             if add_meet and not meet_url:
                 google_body["conferenceData"] = _meet_create_request()
                 google_event = await cal_svc.update_event(
@@ -658,7 +679,7 @@ async def delete_event(
 # 繰り返しの判定（ADR-1075 §12.5。誤りの識別の文字か None を返す。表は読むだけ）
 # ---------------------------------------------------------------------------
 
-_TEXT_FIELDS = ("title", "description", "location", "calendar_type", "user_id")
+_TEXT_FIELDS = ("title", "description", "location", "calendar_type", "user_id", "color_key")
 
 
 def parse_occurrence(value: Optional[str]) -> Optional[datetime]:
@@ -932,12 +953,12 @@ async def _insert_row(db: AsyncSession, values: dict) -> int:
             " (user_id, calendar_type, category, title, description, location,"
             "  start_datetime, end_datetime, is_all_day, source, sync_status,"
             "  created_by_user_id, recurrence_rule, recurring_event_id,"
-            "  original_start_datetime, is_cancelled)"
+            "  original_start_datetime, is_cancelled, color_key)"
             " VALUES"
             " (:user_id, :calendar_type, :category, :title, :description, :location,"
             "  :start_datetime, :end_datetime, :is_all_day, 'app', 'pending',"
             "  :created_by_user_id, :recurrence_rule, :recurring_event_id,"
-            "  :original_start_datetime, :is_cancelled)"
+            "  :original_start_datetime, :is_cancelled, :color_key)"
             " RETURNING id"
         ),
         values,
@@ -961,6 +982,7 @@ def _row_values(master: dict, **over) -> dict:
         "recurring_event_id": None,
         "original_start_datetime": None,
         "is_cancelled": False,
+        "color_key": master.get("color_key"),
     }
     values.update(over)
     return values
@@ -1027,7 +1049,12 @@ async def update_recurring_event(
     # ----- この予定（B / B'）
     if scope == "this":
         row = event if is_exc else await _find_exception(db, master["id"], occ)
-        row_fields: dict = {k: payload[k] for k in ("title", "description", "location") if k in payload}
+        # 色は直す前のその回の色（例外の行があればその色・無ければ元の行の色）と比べ、変わったときだけ Google に送る
+        prev_color = (row if row is not None else master).get("color_key")
+        send_color = "color_key" in payload and payload["color_key"] != prev_color
+        row_fields: dict = {
+            k: payload[k] for k in ("title", "description", "location", "color_key") if k in payload
+        }
         if "start_datetime" in payload:
             row_fields["start_datetime"] = plan["new_start"]
         if "end_datetime" in payload:
@@ -1059,7 +1086,7 @@ async def update_recurring_event(
                         db, tenant_id, master["google_event_id"], occ, bool(master["is_all_day"])
                     )
                     gid = instance["id"]
-                await gcal.update_event(db, tenant_id, gid, _google_body_for(row))
+                await gcal.update_event(db, tenant_id, gid, _google_body_for(row, send_color=send_color))
             except Exception as e:
                 logger.warning("Google の例外の回の送りに失敗 (event_id=%s): %s", row["id"], e)
                 await _mark_failed(db, tenant_id, row["id"])
@@ -1096,6 +1123,7 @@ async def update_recurring_event(
             title=fields.get("title", source["title"]),
             description=fields.get("description", source["description"]),
             location=fields.get("location", source["location"]),
+            color_key=fields.get("color_key", source.get("color_key")),
             start_datetime=plan["new_start"],
             end_datetime=plan["new_end"],
             is_all_day=plan["new_all_day"],
@@ -1118,7 +1146,11 @@ async def update_recurring_event(
                 return {"id": new_id, "meet_url": None}
             await _mark_synced(db, tenant_id, master["id"])
             try:
-                created = await gcal.create_event(db, tenant_id, _google_body_for(new_row))
+                created = await gcal.create_event(
+                    db,
+                    tenant_id,
+                    _google_body_for(new_row, send_color=new_row.get("color_key") is not None),
+                )
             except Exception as e:
                 logger.warning("Google の新しい予定の作成に失敗 (event_id=%s): %s", new_id, e)
                 await _mark_failed(db, tenant_id, new_id)
@@ -1135,7 +1167,7 @@ async def update_recurring_event(
         after = _merged(master, **fields)
         await _commit(db, tenant_id)
         if fields and await _send_ok(db, tenant_id, master):
-            body = _google_body_for(after)
+            body = _google_body_for(after, send_color="color_key" in fields)
             body.pop("recurrence", None)
             try:
                 await gcal.update_event(db, tenant_id, master["google_event_id"], body)
@@ -1174,7 +1206,11 @@ async def update_recurring_event(
     if await _send_ok(db, tenant_id, master):
         await _cancel_google_instances(db, tenant_id, gone_ids)
         await _recreate_in_google(
-            db, tenant_id, master["id"], master["google_event_id"], _google_body_for(after)
+            db,
+            tenant_id,
+            master["id"],
+            master["google_event_id"],
+            _google_body_for(after, send_color=after.get("color_key") is not None),
         )
     return {"id": master["id"], "meet_url": None}
 
@@ -1185,7 +1221,7 @@ async def _update_single_to_recurring(
     """A: 単発の行に繰り返しを付ける。Google に id があれば消して作り直す。"""
     new_start = _as_jst(payload["start_datetime"]) if "start_datetime" in payload else rec.to_jst(event["start_datetime"])
     fields: dict = {}
-    for k in ("title", "description", "location", "calendar_type", "user_id", "is_all_day"):
+    for k in ("title", "description", "location", "calendar_type", "user_id", "is_all_day", "color_key"):
         if k in payload:
             fields[k] = payload[k]
     for k in ("start_datetime", "end_datetime"):
@@ -1197,7 +1233,11 @@ async def _update_single_to_recurring(
     await _commit(db, tenant_id)
     if await _send_ok(db, tenant_id, event):
         await _recreate_in_google(
-            db, tenant_id, event["id"], event["google_event_id"], _google_body_for(after)
+            db,
+            tenant_id,
+            event["id"],
+            event["google_event_id"],
+            _google_body_for(after, send_color=after.get("color_key") is not None),
         )
     return {"id": event["id"], "meet_url": None}
 
@@ -1344,10 +1384,14 @@ async def upsert_from_google(
     tenant_id: int,
     google_event: dict,
     owner_user_id: int,
+    label_colors: Optional[dict[str, str]] = None,
 ) -> str:
     """Google のイベントを DB に upsert する。戻り値は "upserted" | "deleted" | "skipped"。
 
     commit は呼び元が 1 回だけ行う。
+
+    色（ADR-1081）: label_colors（名札の id → 色の値の表）があるときだけ eventLabelId から color_key を決めて
+    書く（合わない・無い名札は NULL）。表が None のときは INSERT・UPDATE のどちらでも color_key に触らない。
 
     無限ループ防止:
       - sync_origin_id が "app:tenant_id:*" で始まるイベントはアプリ起源なのでスキップ。
@@ -1396,18 +1440,42 @@ async def upsert_from_google(
 
     origin_id = f"google:{tenant_id}:{google_event_id}"
 
+    params: dict = {
+        "owner": owner_user_id,
+        "title": title,
+        "desc": description,
+        "loc": location,
+        "start": start_dt,
+        "end": end_dt,
+        "all_day": is_all_day,
+        "gid": google_event_id,
+        "gcal_id": "primary",
+        "origin": origin_id,
+        "meet_url": google_event.get("hangoutLink"),
+    }
+    # 名札の表があるときだけ色を書く。表が None なら INSERT・UPDATE とも color_key に触らない
+    color_col = ""
+    color_val = ""
+    color_set = ""
+    if label_colors is not None:
+        label_id = google_event.get("eventLabelId")
+        params["color_key"] = key_for_hex(label_colors.get(label_id)) if label_id else None
+        color_col = ", color_key"
+        color_val = ", :color_key"
+        color_set = "   color_key        = EXCLUDED.color_key,"
+
     await db.execute(
         text(
             "INSERT INTO calendar_events"
             " (user_id, created_by_user_id, calendar_type, title, description, location,"
             "  start_datetime, end_datetime, is_all_day,"
             "  google_event_id, google_calendar_id, source, sync_status,"
-            "  sync_origin_id, last_synced_at, meet_url)"
+            f"  sync_origin_id, last_synced_at, meet_url{color_col})"
             " VALUES"
             " (:owner, :owner, 'personal', :title, :desc, :loc,"
             "  :start, :end, :all_day,"
             "  :gid, :gcal_id, 'google', 'synced',"
-            "  :origin, NOW(), :meet_url)"
+            f"  :origin, NOW(), :meet_url{color_val})"
             " ON CONFLICT (google_event_id) WHERE google_event_id IS NOT NULL DO UPDATE SET"
             "   title            = EXCLUDED.title,"
             "   description      = EXCLUDED.description,"
@@ -1416,24 +1484,13 @@ async def upsert_from_google(
             "   end_datetime     = EXCLUDED.end_datetime,"
             "   is_all_day       = EXCLUDED.is_all_day,"
             "   meet_url         = EXCLUDED.meet_url,"
+            f"{color_set}"
             "   sync_status      = 'synced',"
             "   last_synced_at   = NOW(),"
             "   updated_at       = NOW()"
             " WHERE calendar_events.source = 'google'"
         ),
-        {
-            "owner": owner_user_id,
-            "title": title,
-            "desc": description,
-            "loc": location,
-            "start": start_dt,
-            "end": end_dt,
-            "all_day": is_all_day,
-            "gid": google_event_id,
-            "gcal_id": "primary",
-            "origin": origin_id,
-            "meet_url": google_event.get("hangoutLink"),
-        },
+        params,
     )
     return "upserted"
 
@@ -1443,8 +1500,12 @@ async def upsert_from_google(
 # ---------------------------------------------------------------------------
 
 
-def _to_google_event_body(payload: dict) -> dict:
-    """アプリのイベント payload を Google Calendar API 用ボディに変換する。"""
+def _to_google_event_body(payload: dict, send_color: bool = False) -> dict:
+    """アプリのイベント payload を Google Calendar API 用ボディに変換する。
+
+    send_color が真のときだけ本文に内部の印 _sa_color_key（鍵か None）を入れる（ADR-1081）。
+    印は google_calendar の create_event・update_event が取り除き、名札の id に変える。
+    """
     body: dict = {
         "summary": payload.get("title", ""),
     }
@@ -1482,5 +1543,7 @@ def _to_google_event_body(payload: dict) -> dict:
         body["description"] = payload["description"]
     if payload.get("location"):
         body["location"] = payload["location"]
+    if send_color:
+        body["_sa_color_key"] = payload.get("color_key")
 
     return body

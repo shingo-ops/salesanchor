@@ -561,6 +561,7 @@ tenant_*	buddy_feedbacks	reason	mask		text
 tenant_*	buddy_pairs	notes	mask		text
 tenant_*	calendar_events	calendar_type	allow	値の決まり calendar_events_calendar_type_check で値が限られる	character varying
 tenant_*	calendar_events	category	mask		character varying
+tenant_*	calendar_events	color_key	allow	値の決まり calendar_events_color_key_check で値が限られる	text
 tenant_*	calendar_events	description	mask		text
 tenant_*	calendar_events	google_calendar_id	mask		character varying
 tenant_*	calendar_events	google_event_id	mask		character varying

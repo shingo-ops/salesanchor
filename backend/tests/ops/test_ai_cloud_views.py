@@ -483,7 +483,7 @@ def test_role_migration_is_idempotent(pg):
     # meta の migration も冪等（分類表の中身は消えない）
     n0 = _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0]
     c.execute(_read(_META_SQL))
-    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1163
+    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1164
 
 
 # ---------------------------------------------------------------- T10（CI の見張り）
@@ -1008,6 +1008,49 @@ def test_t10_duty_and_invoice_columns_are_classified_on_bootstrapped_db(cluster)
             if g[1] in _DUTY_TABLES or (g[1], g[2]) in _DUTY_CHECKED_COLUMNS
         ]  # fmt: skip
         assert gaps == [], f"分類の漏れ（表名・列名）: {[(g[1], g[2]) for g in gaps]}"
+    finally:
+        conn.close()
+        cur = cluster.control.cursor()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+def test_t10_calendar_color_key_is_classified_on_bootstrapped_db(cluster):
+    """ADR-1081 便1: 各社の calendar_events.color_key が allow（理由つき）で分類されている。
+    本番の migration 順に近い DB（bootstrap）で、color_key の列が実在し、分類の漏れも無い。
+    専用の DB を作り、終わったら消す。"""
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    name, conn = _new_db(cluster.control, "ai_cloud_t10_color")
+    try:
+        c = conn.cursor()
+        c.execute(_read(_AI_READER_SQL))
+        c.execute(_read(_ROLE_SQL))
+        c.execute(_read(_META_SQL))
+        url = _psycopg_url(ADMIN_PG_URL, name).replace("postgresql://", "postgresql+asyncpg://", 1)
+        from tests.rls_bootstrap import bootstrap_tenant_schema
+
+        async def build():
+            eng = create_async_engine(url)
+            try:
+                await bootstrap_tenant_schema(eng, 1)
+            finally:
+                await eng.dispose()
+
+        asyncio.run(build())
+        c.execute(_read(_CREATE_SQL))
+        rows = _rows(
+            conn,
+            "SELECT class, reason FROM ai_cloud_meta.column_class"
+            " WHERE schema_pattern = 'tenant_*' AND table_name = 'calendar_events' AND column_name = 'color_key'",
+        )
+        assert len(rows) == 1, "calendar_events.color_key の分類の行が無い"
+        assert rows[0][0] == "allow" and rows[0][1].strip()
+        have = _rows(
+            conn,
+            "SELECT 1 FROM information_schema.columns"
+            " WHERE table_schema LIKE 'tenant\\_%' AND table_name = 'calendar_events' AND column_name = 'color_key'",
+        )
+        assert have, "bootstrap した DB の calendar_events に color_key が無い"
     finally:
         conn.close()
         cur = cluster.control.cursor()

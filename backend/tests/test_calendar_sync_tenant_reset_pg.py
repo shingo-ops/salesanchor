@@ -51,6 +51,7 @@ _MIGRATIONS = (
     ("20261103_200000_add_google_calendar_import_sync.sql", True),
     ("20261104_161223_add_calendar_events_meet_url.sql", True),
     ("20261112_170000_add_calendar_events_recurrence.sql", True),
+    ("20261119_120000_add_calendar_events_color_key.sql", True),
 )
 
 
@@ -343,6 +344,101 @@ async def test_recurrence_migration_adds_columns_checks_and_index():
         assert {"recurrence_rule", "recurring_event_id", "original_start_datetime", "is_cancelled"} <= cols
         assert _RECURRENCE_CHECKS <= checks
         assert "calendar_events_exception_unique_idx" in indexes
+    finally:
+        await _teardown(admin_engine, app_engine)
+
+
+# ---- ADR-1081 便1: 予定ごとの色。移行は冪等・欄と値の決まりができる・24 の鍵以外は DB が拒む ----
+
+_COLOR_MIGRATION = "20261119_120000_add_calendar_events_color_key.sql"
+
+
+async def _color_key_state(conn):
+    from sqlalchemy import text
+
+    cols = (
+        await conn.execute(
+            text(
+                "SELECT data_type, is_nullable FROM information_schema.columns"
+                " WHERE table_schema = :s AND table_name = 'calendar_events' AND column_name = 'color_key'"
+            ),
+            {"s": _SCHEMA},
+        )
+    ).all()
+    checks = (
+        await conn.execute(
+            text(
+                "SELECT conname, convalidated FROM pg_constraint"
+                " WHERE conrelid = to_regclass(:t) AND conname = 'calendar_events_color_key_check'"
+            ),
+            {"t": f"{_SCHEMA}.calendar_events"},
+        )
+    ).all()
+    return [tuple(r) for r in cols], [tuple(r) for r in checks]
+
+
+async def test_color_key_migration_is_idempotent_and_adds_column_and_check():
+    admin_engine, app_engine, _factory = await _setup()
+    try:
+        async with admin_engine.connect() as conn:
+            first = await _color_key_state(conn)
+        assert first == ([("text", "YES")], [("calendar_events_color_key_check", True)])
+        # もう 1 回流しても同じ（冪等）
+        async with admin_engine.begin() as conn:
+            await _apply_migration_on_conn(conn, _COLOR_MIGRATION, schema_name=_SCHEMA)
+        async with admin_engine.connect() as conn:
+            assert await _color_key_state(conn) == first
+    finally:
+        await _teardown(admin_engine, app_engine)
+
+
+async def test_color_key_check_accepts_24_keys_and_null_and_rejects_others():
+    from sqlalchemy import text
+    from sqlalchemy.exc import IntegrityError
+
+    from app.services.event_colors import EVENT_COLOR_KEYS
+
+    admin_engine, app_engine, _factory = await _setup()
+    insert = text(
+        f"INSERT INTO {_SCHEMA}.calendar_events (title, start_datetime, end_datetime, color_key)"
+        " VALUES ('色', NOW(), NOW() + INTERVAL '1 hour', :c)"
+    )
+    try:
+        async with admin_engine.begin() as conn:
+            for key in (*EVENT_COLOR_KEYS, None):
+                await conn.execute(insert, {"c": key})
+        for bad in ("red", ""):
+            with pytest.raises(IntegrityError):
+                async with admin_engine.begin() as conn:
+                    await conn.execute(insert, {"c": bad})
+    finally:
+        await _teardown(admin_engine, app_engine)
+
+
+async def test_color_key_roundtrip_through_service_with_empty_string_normalized_by_router():
+    """作成で色を保存し、更新でデフォルトに戻す（受け口が "" を None にしてから渡す）。値の決まりに当たらない。"""
+    from sqlalchemy import text
+
+    from app.auth.dependencies import set_tenant_context
+    from app.services import calendar_service
+
+    admin_engine, app_engine, factory = await _setup()
+    try:
+        async with factory() as db:
+            await set_tenant_context(db, _TENANT)
+            created = await calendar_service.create_event(db, _TENANT, _OTHER, _payload(color_key="tomato"))
+            listed = await calendar_service.list_events(
+                db, _TENANT, start="2026-11-30T00:00:00+09:00", end="2026-12-31T00:00:00+09:00", calendar_type="shared"
+            )
+            assert [e["color_key"] for e in listed if e["id"] == created["id"]] == ["tomato"]
+            await calendar_service.update_event(db, _TENANT, created["id"], _OTHER, {"color_key": None})
+        async with admin_engine.connect() as conn:
+            value = (
+                await conn.execute(
+                    text(f"SELECT color_key FROM {_SCHEMA}.calendar_events WHERE id = :id"), {"id": created["id"]}
+                )
+            ).scalar_one()
+        assert value is None
     finally:
         await _teardown(admin_engine, app_engine)
 
