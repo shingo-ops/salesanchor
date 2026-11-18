@@ -28,6 +28,16 @@
 | 12 | 停止は本番影響のあるものに限る | ○（§6） |
 | 13 | 委任文の定型4点 | ○（§12） |
 
+## 0-2. 読んだ節（docs/handoff/design-partner-card-ops/guards/）
+
+| 節 | 照合した点 | 結果 |
+|---|---|---|
+| guards/00-common.md | 全コマンドを作業場所の cd から始める・出力に上限・報告に無い出力を成功と扱わない・プレースホルダを残さない | ○（§5・§10・§12） |
+| guards/03-file.md | 編集は Write/Edit。プレースホルダを残さない | ○（§12） |
+| guards/04-worktree.md | new-worktree.sh の出力をパイプに通さず、実在は `ls -1d` と `git worktree list` で確かめる。追加の push は `git push -u origin HEAD` | ○（§10） |
+| guards/05-pr.md | PR は `scripts/gh-pr-create-safe.sh` で作る。触るファイル・削除するファイルは同一行カンマ区切り。PR 番号は `.pr-number` と `gh pr list --head` で取る | ○（§10） |
+| guards/08-vps.md | 本番（prod1・prod2）には触らない | ○（§8 は Opus） |
+
 ## 受領確認
 
 作業を始める前に、報告の冒頭へ「本報告はカード 段階3 便F の実行結果である」と書くこと。
@@ -399,7 +409,7 @@ async def test_new_filters_reject_bad_values(env):
 ## 10. PR
 
 - 作業場所: `cd /Users/tanizawashingo/salesanchor && bash scripts/new-worktree.sh release/ai-ops-incidents-filter-bin-f --claude`（origin/main 起点）。クラウドで clone した場合も、commit の前に必ずこの手順で作業場所を作る（メモリ cloud_card_new_worktree）。出力はパイプに通さない。作成後に `git worktree list` で実在を確かめる。以後の作業はすべてその作業場所に `cd` してから行う
-- commit の後に `git log -1 --oneline`、push の後に `git log origin/release/ai-ops-incidents-filter-bin-f -1 --oneline` で実在を確かめる。`--no-verify` は使わない
+- push は `git push -u origin HEAD` を使う。commit の後に `git log -1 --oneline`、push の後に `git log origin/release/ai-ops-incidents-filter-bin-f -1 --oneline` で実在を確かめる。`--no-verify` は使わない
 - PR は `scripts/gh-pr-create-safe.sh` に、先に Write ツールで作った本文ファイルを絶対パスで渡して作る（`$変数` を使わない）
 - 作成前に `gh auth status` で `shingo-cc` 名義であることを確かめる
 - PR は ready で作る（`--draft` を付けない）。base は main。担当はマージしない
@@ -436,3 +446,5 @@ async def test_new_filters_reject_bad_values(env):
 | 受け入れ基準の検証可能性 | ○ | §7 の各行が CI の試験名か本番の状態コード・件数で ○× になる |
 | 実装範囲の明確さ | ○ | §3 の 3 ファイル・§4 に変更前後の全文 |
 | 未解決の前提 | なし | 道の重なり 0 件（F10）。危険パスなし |
+
+END OF CARD
