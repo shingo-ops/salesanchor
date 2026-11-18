@@ -2,4 +2,4 @@ branch: release/secretary-voice-k2
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
-| release/secretary-voice-k2 | ADR-1080 秘書の声 K2（PC とスマホで同じ声）の本番測定結果（docs のみ） | 2026-11-19 01:50 | IN_PROGRESS | - | - | PO のスマホで測定・合格 |
+| release/secretary-voice-k2 | ADR-1080 秘書の声 K2（PC とスマホで同じ声）の本番測定結果（docs のみ） | 2026-11-19 01:50 | PR_OPEN | #5596 | - | PO のスマホで測定・合格 |
