@@ -1,6 +1,6 @@
 # 設計 — 予定ごとの色（Google と同じ 24 色＋デフォルト）
 
-状態: 設計案（審査前）。目標 K1〜K7 は PO 承認済み（2026-11-19 チャットで「1」）。実装の承認と本番の GO は兼ねない。基準: `origin/main` fba2172b8。
+状態: 設計案（審査 1 回目 REVISE を受けて直した版・2 回目の審査待ち）。目標 K1〜K7 は PO 承認済み（2026-11-19 チャットで「1」）。実装の承認と本番の GO は兼ねない。基準: `origin/main` fba2172b8。
 現状: [recon.md](recon.md)。決まりの記録: `docs/adr/ADR-1081-event-color-labels.md`（Proposed）。
 関係: ADR-1057・ADR-1059（Google との行き来）・ADR-1065・ADR-1074（予定の画面の金型と `--gcal-*`）・ADR-1075（繰り返し）・ADR-067・ADR-144・ADR-027。
 
@@ -104,13 +104,18 @@ def key_for_hex(hex_value: str | None) -> str | None:
 
 - `calendar_events` の行（`:371`〜`:375`）に 1 行足す:
   `('tenant_*','calendar_events',ARRAY['color_key'],'allow','値の決まり calendar_events_color_key_check で値が限られる'),`
-- 先頭の件数の注記（`:3` の「1163 行」）を実際の行数に直す。
+- 先頭の件数の注記（`:3` の「1163 行」）を 1164 行に直す。
+- 件数の試験 `backend/tests/ops/test_ai_cloud_views.py:486` の `== 1163` を `== 1164` に直す。
+- 分類表の写し `docs/handoff/cloud-case-ai/stage1-column-class.tsv` の `calendar_events` の行（`:562`〜`:572`）に、同じ並びで `color_key` の行（allow・text）を 1 行足す。
 - `backend/tests/ops/test_ai_cloud_views.py` に `test_t10_calendar_color_key_is_classified_on_bootstrapped_db` を足す（`:587` の型）。
+- 3 か所を同時に直す手本は f0df9074a（meet_url の行を足したとき。SQL・件数の試験・tsv の 3 つ）。
 
 ### 4-4. Google の道具（`backend/app/services/google_calendar.py`）
 
-1. 新しい関数 `async def get_event_label_colors(db, tenant_id) -> Optional[dict[str, str]]`:
-   - `service.calendars().get(calendarId=<get_calendar_id の値>)` を 1 回呼ぶ。
+1. 新しい関数 `async def get_event_label_colors(db, tenant_id, calendar_id: str) -> Optional[dict[str, str]]`:
+   - `service.calendars().get(calendarId=calendar_id)` を 1 回呼ぶ。どのカレンダーを読むかは呼び元が渡す。
+   - 書き込み（`create_event`・`update_event`）は、今その中で使っているカレンダー（会社の設定の `calendar_id`・無ければ `primary`）を渡す。
+   - 取り込み（`backend/app/services/google_webhook.py:300` は `calendarId="primary"` 固定で読む）は `"primary"` を渡す。読む予定と同じカレンダーの名札の表を使うため。
    - `labelProperties.eventLabels` を「名札の id → 色の値（小文字）」の表にして返す。
    - 名札が無ければ空の表。呼べなかったら `None`（ログに 1 行・例外は外へ出さない）。
 2. `create_event`・`update_event` の本文に内部の印 `_sa_color_key` があるとき:
@@ -127,30 +132,46 @@ def key_for_hex(hex_value: str | None) -> str | None:
 
 `location` の通り道（recon.md §3）に `color_key` を同じように通す。
 
+- 前提: 受け口が `""` を `None` に直してから渡す（§4-6）。この層に `""` は来ない。`color_key` の鍵がある＝色を決めた（`None` はデフォルト）、鍵が無い＝色に触らない。
 - `EVENT_COLUMNS`（`:151`）に `"color_key"`。
-- 一覧の SELECT と返し（`:279` 付近）に `"color_key": r[<番号>]`。
-- 作成の INSERT（`:418`）・更新の欄の表（`:495`）に `color_key`。受け口の `""` は NULL にして書く。
-- `_TEXT_FIELDS`（`:661`）・`:1030`・`:1188` の並びに `"color_key"`。`_row_values`（`:955`）・`:1098` にも足す。これで K5 の 3 択が色でも動く。
+- 一覧の SELECT（`:251`〜）の最後に `ce.color_key` を足し、返し（`:279` 付近）に `"color_key": r[<その位置>]`（審査の数えでは `r[22]`。実装時に数え直す）。
+- 作成の INSERT（`:402`〜`:418`）に `color_key`（`payload.get("color_key")`）。
+- 更新の欄の表 `field_map`（`:490`〜`:499`）に `"color_key": "color_key"`。
+- `_TEXT_FIELDS`（`:661`）・`:1030`・`:1188` の並びに `"color_key"`。`_row_values`（`:948`〜）・`:1098` にも足す。
+- `_insert_row`（`:925`〜`:944`）の INSERT の欄と値の並びに `color_key` / `:color_key` を足す。これが無いと「この予定だけ」で作る例外の回と「これ以降」で作る新しい予定（`:1092`）に色が入らない。
+- これで K5 の 3 択が色でも動く。`_plan`（`:720`〜`:722`）は `None` 同士を同じと見るので、色を変えていない保存で色が「直した欄」に入らない。
+- Google に色を送る決まり（Google の色を勝手に外さないため・§6）:
+  - 予定を直す道（`patch`）: 今回の保存で色が変わったときだけ送る。
+  - 予定を作る道（`insert`・消して作り直す道）: 色が NULL でないときだけ送る。
+  - 送らないときは本文に印を入れない＝版の指定が付かない＝Google の名札はそのまま。
 - Google の本文:
-  - `_to_google_event_body`（`:1446`）: 中身に `color_key` の鍵があるときだけ、本文に `_sa_color_key` を入れる（値が `""` か NULL なら None）。
-  - `_google_body_for`（`:169`）: 表の 1 行から作るので、いつも `color_key` を渡す。
+  - `_to_google_event_body(payload, send_color: bool = False)`（`:1446`）: `send_color` が真のときだけ本文に `_sa_color_key`（鍵か None）を入れる。
+  - `_google_body_for(ev, send_color: bool = False)`（`:169`）: 表の 1 行の `color_key` を使い、`send_color` をそのまま渡す。
+- 呼び元ごとの `send_color`:
+  - 作成 `:436`: `payload.get("color_key") is not None`。
+  - 更新 `update_event`（`:480`）: UPDATE の前に `SELECT color_key FROM calendar_events WHERE id = :id` で今の値を読み、`"color_key" in payload and payload["color_key"] != 今の値` を `send_color` にして `:539` に渡す。
+  - 繰り返しで直す道 `:1062`・`:1138`: `"color_key" in plan["changed_fields"]`（`:1025` の `fields`）。
+  - 繰り返しで作る道 `:1121`・`:1177`・`:1200`（`_recreate_in_google` は消して `create_event` で作る・`:978`）: 渡す行の `color_key is not None`。
 - Google からの取り込み `upsert_from_google`（`:1342`）:
   - 引数 `label_colors: Optional[dict[str, str]] = None` を足す。
   - 表があるとき: `eventLabelId` → 色の値 → `key_for_hex` で鍵を出し、INSERT と `DO UPDATE SET` に `color_key` を足す。合わない値は NULL。
   - 表が `None` のとき: `color_key` に触らない（今ある色を消さない）。
   - `colorId` だけの予定は NULL のまま。数をログ `event_color_legacy_colorid count=<数>` で 1 回出す。
-- 取り込みの呼び元 `backend/app/services/google_webhook.py:332` の手前で、`get_event_label_colors` を 1 回呼び、表を渡す。
+- 取り込みの呼び元 `backend/app/services/google_webhook.py:332` の手前（`events().list` の前後どちらでもよい・1 回の取り込みに 1 回）で、`get_event_label_colors(db, tenant_id, "primary")` を呼び、表を渡す。
 
 ### 4-6. 受け口（`backend/app/routers/calendar.py`）
 
 - `CreateEventBody`（`:114`）・`UpdateEventBody`（`:126`）に `color_key: Optional[str] = None`。
 - 受けてよい値は 24 の鍵と `""`（デフォルトに戻す）。それ以外は 422。値の一覧は `EVENT_COLOR_KEYS` から取る（書き写さない）。
 - `""` を使うのは、`model_dump(exclude_none=True)`（`:440`・`:465`）で `None` が落ちるため。
+- `:440`・`:465` の `model_dump` の直後で、`payload.get("color_key") == ""` なら `payload["color_key"] = None` に直してから次へ渡す（鍵は残す）。
+  これで作成・更新・繰り返しの 3 択のどの道にも `""` が届かず、DB の値の決まりに当たらない。
 
 ### 4-7. 色のトークン（`frontend/src/index.css`・`frontend/src/tokens.css`）
 
 - `index.css` の明るい画面（`:206` の後）と暗い画面（`:410` 以降の `--gcal-*` の後）に `--gcal-event-<鍵>: <値>;` を 24 個ずつ。v1 は暗い画面も同じ値。
-- `tokens.css` に意味のトークン `--event-color-<鍵>: var(--gcal-event-<鍵>);` を 24 個。部品と画面はこちらを使う。
+- `tokens.css` の `:root` に意味のトークン `--event-color-<鍵>: var(--gcal-event-<鍵>);` を 24 個。部品と画面はこちらを使う。
+  `.gcal-colors` の範囲の中には置かない。色の一覧の `Popover` が範囲の外に出ても色が出るようにするため。
   `--gcal-` を書いてよいのは `index.css`・`tokens.css` だけ（`frontend/src/components/gcalColorsUsage.test.ts:26`）なので、この形にする。
 - 裏側の試験 backend/tests/test_event_colors_tokens.py（新規）:
   - `frontend/src/index.css` の明るい画面の `--gcal-event-<鍵>` 24 個が `EVENT_COLORS` と鍵・値とも一致すること。
@@ -176,7 +197,7 @@ def key_for_hex(hex_value: str | None) -> str | None:
   - `frontend/src/pages/schedule/SchedulePageImpl.tsx:99`・`:156`・`:974`・`:1210`
   - `frontend/src/pages/schedule/schedule-utils.ts:21`・`:66`・`:372`
 - 保存の中身（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1019`）にいつも `color_key: draft.colorKey ?? ""` を入れる。
-  画面からの保存では Google に色の名札をいつも送るので、Google の色が勝手に外れない（§6）。
+  裏側は「色が変わったときだけ Google に送る」（§4-5）ので、色に触らない保存で Google の色は外れない（§6）。
 - `frontend/src/pages/schedule/ScheduleDraftFields.tsx` に `DraftColorField` を足す。`ColorSwatchPicker` を使う。
   - 置き場所は `DraftCategoryField` の直後。小さな窓（`frontend/src/pages/schedule/ScheduleDraftFields.tsx:508`）と全体の編集の画面（`frontend/src/pages/schedule/ScheduleFullEditor.tsx:88`）の両方。
 - 予定の箱の色（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1272`）:
@@ -211,7 +232,9 @@ def key_for_hex(hex_value: str | None) -> str | None:
 
 | 危ない点 | 手当て |
 |---------|-------|
-| `eventLabelVersion=1` で `eventLabelId` を送らないと、Google の色が外れる | 版の指定は、本文に色の印があるときだけ付ける。画面からの保存と 3 択はいつも色を持つ |
+| `eventLabelVersion=1` で `eventLabelId` を送らないと、Google の色が外れる | 版の指定は、本文に色の印があるときだけ付ける。印は「直す道では色が変わったとき」「作る道では色があるとき」だけ入れる（§4-5） |
+| 配備の前に取り込んだ Google の予定は、Google に色があってもアプリでは NULL（取り込みは差分だけ読む・`backend/app/services/google_webhook.py:300`〜`:314`） | 色に触らない保存では Google に色を送らないので、Google の色は残る。アプリの箱は Google で次にその予定が直されるまで持ち主の色。全件の読み直しは v1 ではしない |
+| 上の予定を繰り返しの「これ以降」で分けると、新しい予定は Google で作り直すので Google の色が付かない | アプリが知らない色は運べない。v1 の限り。色を選び直せば付く |
 | 名札の表が読めない（Google の不調） | 版の指定を付けない（Google の色に触らない）。取り込みでは色の欄に触らない |
 | カレンダーにその色の名札が無い | Google には色なしで送る。アプリには色が残る。ログに出して数える |
 | `colorId` だけの古い予定 | 色なしで取り込む。ログに数を出す |
@@ -227,8 +250,8 @@ def key_for_hex(hex_value: str | None) -> str | None:
 
 ## 8. 進め方（2 便）
 
-- 便1（裏側）: §4-1〜§4-6 と §4-7 の裏側の試験の雛形。移行を含むので危険な PR。PO 本人の「GO #番号」が要る。
-- 便2（画面）: §4-7〜§4-9。便1 の本番反映の後。
+- 便1（裏側）: §4-1〜§4-6。`migrations/` を含むので危険な PR（CLAUDE.md の「危険PRのGO手順」・ADR-136）。PO 本人の「GO #番号」が要る。
+- 便2（画面）: §4-7〜§4-9。§4-7 のトークンと裏側の値の一致の試験も便2 に入れる（`index.css` と eventColors.ts は便2 で足すため、便1 に入れると落ちる）。便1 の本番反映の後。
 - 1 つの PR にまとめない（変更は一度に 1 つ）。
 
 ## 9. 受け入れの条件と確かめ方
@@ -241,7 +264,10 @@ def key_for_hex(hex_value: str | None) -> str | None:
 | 作成・更新で Google に `eventLabelId` と `eventLabelVersion=1` を送る | `backend/tests/test_calendar_service.py` に足す試験（Google の道具は偽物） |
 | 名札の表が `None` のとき版の指定を付けない | 同上 |
 | 取り込みで `eventLabelId` から鍵を書く・表が `None` なら触らない | 同上 |
-| 3 択それぞれで色が正しい行に入る | `backend/tests/test_calendar_service.py` の繰り返しの試験に色の場合を足す |
+| 3 択それぞれで色が正しい行に入る（例外の回・これ以降の新しい予定を含む） | `backend/tests/test_calendar_service.py` の繰り返しの試験に色の場合を足す |
+| 受け口の `""` は NULL で書かれ、3 択でも値の決まりに当たらない | 同上（`""` を送る 3 択の試験） |
+| 色に触らない保存では Google に版の指定を付けない（作成・更新・3 択） | 同上（偽物の Google に届いた引数を見る） |
+| 分類表の件数 1164 と tsv の行 | `backend/tests/ops/test_ai_cloud_views.py` の件数の試験 |
 | トークンと裏側の値が一致 | test_event_colors_tokens.py |
 | AI 用の写しの分類表に行がある | `test_t10_calendar_color_key_is_classified_on_bootstrapped_db` |
 | 色の部品が 25 個の丸を出し、キーボードで選べる | ColorSwatchPicker.test.tsx |

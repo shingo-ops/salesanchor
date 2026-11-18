@@ -33,7 +33,7 @@
 ## 3. 裏側（backend）
 
 - Google の鍵の許可範囲はカレンダー全体（`backend/app/services/google_calendar.py:42` `_SCOPES = ["https://www.googleapis.com/auth/calendar"]`）。
-- Google の道具は `build("calendar","v3", ...)` で作る（`backend/app/services/google_calendar.py:304`）。
+- Google の道具は `build("calendar","v3", ...)` で作る（`backend/app/services/google_calendar.py:331`）。
 - 書き込み:
   - `create_event` は `events().insert`（`backend/app/services/google_calendar.py:391`〜`backend/app/services/google_calendar.py:406`）。
   - `update_event` は `events().patch`（`backend/app/services/google_calendar.py:411`〜`backend/app/services/google_calendar.py:426`）。
