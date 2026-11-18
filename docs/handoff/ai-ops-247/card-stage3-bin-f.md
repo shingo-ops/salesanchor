@@ -440,7 +440,8 @@ async def test_new_filters_reject_bad_values(env):
 - §4-1・§4-2・§4-3 をカードのとおりに作成
 - §5-1 試験: 未実行（クラウドの作業場所で PostgreSQL は起動しておらず、pytest などの依存も未導入。試験は CI の pytest に任せる）
 - §5-2 書式: py_compile rc=0
-- §5-3 差分: 下記のとおり（commit 後に確認）
+- §5-3 差分: `git diff origin/main --stat` は 3 ファイル（ops.py 51・test_ops_router.py 147・このカード 8）、204 insertions・2 deletions。`grep "^-[^-]"` の削除行は `{"status": status, "since": since, "limit": limit},` と `（未記入）` の 2 行だけ（commit 9afce0de6）
+- Opus 追記（2026-11-19）: 差分を §4-1〜4-3 と 1 行ずつ照合し一致。上の §5-3 の行は担当の報告から Opus が書き写した（担当は「下記のとおり」と書いたまま中身を書いていなかった）
 
 ## 14. 設計審査（Opus 自己審査・2026-11-19）
 
