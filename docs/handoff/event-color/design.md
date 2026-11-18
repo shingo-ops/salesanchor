@@ -35,7 +35,7 @@ K4 の範囲（§5-4）: Google で作った予定が対象。アプリで作っ
 
 ## 4. 変更の中身（ファイルごとの前と後）
 
-### 4-1. 色の一覧の正本（新規 `backend/app/services/event_colors.py`）
+### 4-1. 色の一覧の正本（新規 backend/app/services/event_colors.py）
 
 - 前: 無い。
 - 後: 24 色の鍵と Google の色の値は、このファイル 1 か所だけに書く。鍵は Google の英語の名を小文字にしたもの。
@@ -92,7 +92,7 @@ def key_for_hex(hex_value: str | None) -> str | None:
 
 - 前: 色の欄は無い。
 - 後: `color_key text NULL`。NULL はデフォルト（持ち主の色）。値の決まり `calendar_events_color_key_check CHECK (color_key IN (<24 の鍵>))`。
-- 新しい移行 `migrations/<実装時の日時>_add_calendar_events_color_key.sql`。手本は `migrations/20261112_170000_add_calendar_events_recurrence.sql`:
+- 新しい移行 migrations/<実装時の日時>_add_calendar_events_color_key.sql。手本は `migrations/20261112_170000_add_calendar_events_recurrence.sql`:
   - `^tenant_\d+$` の部屋を DO で回し、`calendar_events` がある部屋だけ `ADD COLUMN IF NOT EXISTS color_key text`。
   - 値の決まりは `pg_constraint` に無いときだけ `NOT VALID` で足し、続けて `VALIDATE CONSTRAINT`（今は全行 NULL なので速い）。
   - 何度流しても同じ結果（冪等）。消す・書き換える操作は無い。
@@ -152,14 +152,14 @@ def key_for_hex(hex_value: str | None) -> str | None:
 - `index.css` の明るい画面（`:206` の後）と暗い画面（`:410` 以降の `--gcal-*` の後）に `--gcal-event-<鍵>: <値>;` を 24 個ずつ。v1 は暗い画面も同じ値。
 - `tokens.css` に意味のトークン `--event-color-<鍵>: var(--gcal-event-<鍵>);` を 24 個。部品と画面はこちらを使う。
   `--gcal-` を書いてよいのは `index.css`・`tokens.css` だけ（`frontend/src/components/gcalColorsUsage.test.ts:26`）なので、この形にする。
-- 裏側の試験 `backend/tests/test_event_colors_tokens.py`（新規）:
+- 裏側の試験 backend/tests/test_event_colors_tokens.py（新規）:
   - `frontend/src/index.css` の明るい画面の `--gcal-event-<鍵>` 24 個が `EVENT_COLORS` と鍵・値とも一致すること。
-  - `frontend/src/pages/schedule/eventColors.ts` の鍵の並びが `EVENT_COLOR_KEYS` と一致すること。
+  - frontend/src/pages/schedule/eventColors.ts の鍵の並びが `EVENT_COLOR_KEYS` と一致すること。
   - 画面のファイルを裏側の試験で読む手本は `backend/tests/seed_data.py:22`。
 
-### 4-8. 色を選ぶ部品（新しい金型 `frontend/src/components/ColorSwatchPicker.tsx`）
+### 4-8. 色を選ぶ部品（新しい金型 frontend/src/components/ColorSwatchPicker.tsx）
 
-- ADR-144 の金型。`.tsx`・`.css`・`.stories.tsx`・`.test.tsx` の 4 つ。
+- ADR-144 の金型。.tsx・.css・.stories.tsx・.test.tsx の 4 つ。
 - 中身:
   - 押すと `Popover` で色の丸の一覧を出す。
   - 丸の地は渡されたトークン（`var(--event-color-<鍵>)`）。
@@ -167,22 +167,22 @@ def key_for_hex(hex_value: str | None) -> str | None:
   - 部品は予定のことを知らない。選択肢の一覧（値・名の文・色のトークン）と今の値と `onChange` を受けるだけ。
   - 「デフォルト」の丸は、渡された色（持ち主の色）で描く。
 - CSS の色・余白・角の丸みはトークンだけを使う（ADR-067）。
-- 予定の色の一覧（新規 `frontend/src/pages/schedule/eventColors.ts`）: 24 の鍵の並びと、名の文の鍵 `schedule.eventColors.<鍵>`、トークン名を返す関数。色の値は書かない。
-- 画面の文字: `ja.json`・`en.json` に `schedule.eventColor`（欄の名）・`schedule.eventColors.default` と 24 色の名を足す（表は §4-1）。
+- 予定の色の一覧（新規 frontend/src/pages/schedule/eventColors.ts）: 24 の鍵の並びと、名の文の鍵 `schedule.eventColors.<鍵>`、トークン名を返す関数。色の値は書かない。
+- 画面の文字: `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` に `schedule.eventColor`（欄の名）・`schedule.eventColors.default` と 24 色の名を足す（表は §4-1）。
 
 ### 4-9. 予定の画面（`frontend/src/pages/schedule/`）
 
 - 下書きに `colorKey: EventColorKey | null` を足す:
-  - `SchedulePageImpl.tsx:99`・`:156`・`:974`・`:1210`
-  - `schedule-utils.ts:21`・`:66`・`:372`
-- 保存の中身（`SchedulePageImpl.tsx:1019`）にいつも `color_key: draft.colorKey ?? ""` を入れる。
+  - `frontend/src/pages/schedule/SchedulePageImpl.tsx:99`・`:156`・`:974`・`:1210`
+  - `frontend/src/pages/schedule/schedule-utils.ts:21`・`:66`・`:372`
+- 保存の中身（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1019`）にいつも `color_key: draft.colorKey ?? ""` を入れる。
   画面からの保存では Google に色の名札をいつも送るので、Google の色が勝手に外れない（§6）。
-- `ScheduleDraftFields.tsx` に `DraftColorField` を足す。`ColorSwatchPicker` を使う。
-  - 置き場所は `DraftCategoryField` の直後。小さな窓（`ScheduleDraftFields.tsx:508`）と全体の編集の画面（`ScheduleFullEditor.tsx:88`）の両方。
-- 予定の箱の色（`SchedulePageImpl.tsx:1272`）:
+- `frontend/src/pages/schedule/ScheduleDraftFields.tsx` に `DraftColorField` を足す。`ColorSwatchPicker` を使う。
+  - 置き場所は `DraftCategoryField` の直後。小さな窓（`frontend/src/pages/schedule/ScheduleDraftFields.tsx:508`）と全体の編集の画面（`frontend/src/pages/schedule/ScheduleFullEditor.tsx:88`）の両方。
+- 予定の箱の色（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1272`）:
   - 前: `color: getOwnerMeta(...).color`
   - 後: `color: item.colorKey ? eventColorVar(item.colorKey) : getOwnerMeta(...).color`
-  - `eventColorVar` は `var(--event-color-<鍵>)` を返す。`CalendarView.tsx:338` がそのまま CSS の値として付ける。
+  - `eventColorVar` は `var(--event-color-<鍵>)` を返す。`frontend/src/components/CalendarView.tsx:338` がそのまま CSS の値として付ける。
   - 色なしは今と同じ（K6）。
 
 ### 4-10. 触らない範囲
@@ -235,17 +235,17 @@ def key_for_hex(hex_value: str | None) -> str | None:
 
 | 基準 | 検証方法 |
 |------|---------|
-| 移行が冪等で、全社の `calendar_events` に `color_key` と値の決まりができる | `test_calendar_sync_tenant_reset_pg.py` に足す試験。2 回流して同じ |
+| 移行が冪等で、全社の `calendar_events` に `color_key` と値の決まりができる | `backend/tests/test_calendar_sync_tenant_reset_pg.py` に足す試験。2 回流して同じ |
 | 24 の鍵以外は DB が拒む | 同じ試験で `'red'` を入れて値の決まりの違反になる |
-| 受け口が 24 の鍵と `""` だけを受ける | `test_calendar_owner_api.py` に足す試験（422） |
-| 作成・更新で Google に `eventLabelId` と `eventLabelVersion=1` を送る | `test_calendar_service.py` に足す試験（Google の道具は偽物） |
+| 受け口が 24 の鍵と `""` だけを受ける | `backend/tests/test_calendar_owner_api.py` に足す試験（422） |
+| 作成・更新で Google に `eventLabelId` と `eventLabelVersion=1` を送る | `backend/tests/test_calendar_service.py` に足す試験（Google の道具は偽物） |
 | 名札の表が `None` のとき版の指定を付けない | 同上 |
 | 取り込みで `eventLabelId` から鍵を書く・表が `None` なら触らない | 同上 |
-| 3 択それぞれで色が正しい行に入る | `test_calendar_service.py` の繰り返しの試験に色の場合を足す |
-| トークンと裏側の値が一致 | `test_event_colors_tokens.py` |
+| 3 択それぞれで色が正しい行に入る | `backend/tests/test_calendar_service.py` の繰り返しの試験に色の場合を足す |
+| トークンと裏側の値が一致 | test_event_colors_tokens.py |
 | AI 用の写しの分類表に行がある | `test_t10_calendar_color_key_is_classified_on_bootstrapped_db` |
-| 色の部品が 25 個の丸を出し、キーボードで選べる | `ColorSwatchPicker.test.tsx` |
-| 色なしの箱は持ち主の色・色ありはトークン | `SchedulePageImpl.test.tsx` に足す試験 |
+| 色の部品が 25 個の丸を出し、キーボードで選べる | ColorSwatchPicker.test.tsx |
+| 色なしの箱は持ち主の色・色ありはトークン | `frontend/src/pages/schedule/SchedulePageImpl.test.tsx` に足す試験 |
 | K1〜K4 | 本番で PO が目で見る（§2） |
 
 ## 10. 外部・過去事例の参照と我々への応用
@@ -256,8 +256,10 @@ def key_for_hex(hex_value: str | None) -> str | None:
 
 ## 11. 維持の仕組み
 
-- 24 色の正本は `backend/app/services/event_colors.py` 1 か所。画面のトークンと鍵の並びは、裏側の試験が毎回照らす。
-- `--gcal-` の置き場は `gcalColorsUsage.test.ts` が見張る。
+守り手: 裏側の試験（トークンと値の一致・分類表）と `frontend/src/components/gcalColorsUsage.test.ts` を CI の必須チェックで毎回流す。持ち主は設計者（Opus）。
+
+- 24 色の正本は backend/app/services/event_colors.py 1 か所。画面のトークンと鍵の並びは、裏側の試験が毎回照らす。
+- `--gcal-` の置き場は `frontend/src/components/gcalColorsUsage.test.ts` が見張る。
 - AI 用の写しの分類の漏れは `test_t10_*` が見張る。
 - 名札が無くて送れなかった件数は、ログの `event_label_missing` で数える。
 
