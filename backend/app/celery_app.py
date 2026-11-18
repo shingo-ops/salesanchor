@@ -47,6 +47,7 @@ celery_app = Celery(
         "app.tasks.viewer_share_flag_monitor",  # ADR-1019 段6: 閲覧者の使い回しの疑いを運用 Discord へ
         "app.tasks.google_calendar_sync",  # ADR-1059 便2: Google の予定の取り込み
         "app.tasks.discord_own_staff_sync",  # discord-server-management 第2段 2b: 自社サーバーのスタッフのロールの点検
+        "app.tasks.tenant_isolation_daily_check",  # ADR-1063 便6: 会社の分け方（RLS）の毎日点検
     ],
 )
 
@@ -249,6 +250,11 @@ celery_app.conf.beat_schedule = {
     "discord-own-staff-sync": {
         "task": "app.tasks.discord_own_staff_sync.sync_all_own_servers",
         "schedule": 300.0,  # 5分
+    },
+    # ADR-1063 便6（K9）: 会社の分け方（RLS）が崩れていないかを毎日 09:05 JST に管理者用 Discord へ（緑でも送る）
+    "tenant-isolation-daily-check": {
+        "task": "app.tasks.tenant_isolation_daily_check.run_tenant_isolation_daily_check",
+        "schedule": crontab(hour=9, minute=5),
     },
 }
 
