@@ -19,6 +19,7 @@ SERVICES = ("celery-worker", "celery-beat", "discord-gateway", "gemini-egress", 
 TEXTFILE_DIR = os.environ.get("CONTAINER_STATE_TEXTFILE_DIR", "/home/ubuntu/node_exporter_textfile")
 OUTPUT_NAME = "container_state.prom"
 DOCKER_TIMEOUT_SECONDS = 20
+ONEOFF_LABEL = "com.docker.compose.oneoff"
 
 
 def docker_bin() -> str:
@@ -36,13 +37,20 @@ def run_docker(args: list[str]) -> str:
     return result.stdout
 
 
+def is_oneoff(container: dict) -> bool:
+    """docker compose run で作った使い捨ての箱なら True（目印が無い箱は False＝数える）。"""
+    labels = (container.get("Config") or {}).get("Labels") or {}
+    return labels.get(ONEOFF_LABEL) == "True"
+
+
 def read_states(service: str) -> list[dict]:
-    """そのサービスのコンテナの State を返す（compose のラベルで探す。止まったものも含む）。"""
+    """そのサービスのコンテナの State を返す（compose のラベルで探す。止まったものも含む）。
+    docker compose run の使い捨ての箱（oneoff=True）は除く。"""
     ids = run_docker(["ps", "-a", "-q", "--filter", f"label=com.docker.compose.service={service}"]).split()
     if not ids:
         return []
     data = json.loads(run_docker(["inspect", *ids]))
-    return [c.get("State") or {} for c in data]
+    return [c.get("State") or {} for c in data if not is_oneoff(c)]
 
 
 def summarize(states: list[dict]) -> tuple[int, int]:
