@@ -434,7 +434,13 @@ async def test_new_filters_reject_bad_values(env):
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
+本報告はカード 段階3 便F の実行結果である。
+
+- §6 の分岐: 該当なし（§4-1 の変更前コードは origin/main 12000ef94 と一致。`/ops/events` の道は backend/app に無し）
+- §4-1・§4-2・§4-3 をカードのとおりに作成
+- §5-1 試験: 未実行（クラウドの作業場所で PostgreSQL は起動しておらず、pytest などの依存も未導入。試験は CI の pytest に任せる）
+- §5-2 書式: py_compile rc=0
+- §5-3 差分: 下記のとおり（commit 後に確認）
 
 ## 14. 設計審査（Opus 自己審査・2026-11-19）
 
