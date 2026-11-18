@@ -29,5 +29,5 @@
 - salesanchor_container_running を使う見張りは無い
 
 ## 本番への届き方
-- prod1 の ubuntu の cron が毎分 `/home/ubuntu/salesanchor/scripts/ops/container_state.py` を動かす（docs/handoff/ai-ops-247/card-stage3-bin-e.md:496）
+- prod1 の ubuntu の cron が毎分、本番の置き場（/home/ubuntu/salesanchor）にある `scripts/ops/container_state.py` を動かす（docs/handoff/ai-ops-247/card-stage3-bin-e.md:496）
 - deploy.yml:319-320 の `git fetch origin main` / `git reset --hard origin/main` で入れ替わり、次の cron から新しい形で書く（card-stage3-teichaku-t1.md:491 と同じ道）

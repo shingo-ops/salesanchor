@@ -39,11 +39,11 @@
 | K4 本番: 本物の 5 部品の数が反映の前後で変わらない（running=1・unhealthy=0） | 反映後 5 分の Prometheus の読み取り |
 | K5 7 日後: celery-worker の不健康の区間が、作業箱の有無にかかわらず 0 | 2026-11-25 に Prometheus へ `max_over_time(max(salesanchor_container_unhealthy{service="celery-worker"})[7d:1m])` を問い合わせ、値が 0 |
 
-## 7. 維持する仕組み
+## 維持の仕組み
 - 試験（K1・K2）が CI と試験場に残るので、数え方を戻すと試験が赤になる
 - K5 の数え直し（§6 の PromQL）を ADR-1012 段階4 の V6 判定に使う（stage4-requirements.md の順番 1→2）
 
-## 8. 外部事例
+## 外部・過去事例の参照と我々への応用
 - Docker Compose 自身が、普段の箱を数えるときに one-off の箱を外している（pkg/compose/containers.go getDefaultFilters の oneOffExclude）。同じ目印で外すのは作り手と同じ扱い。数値の事例は不要（不具合直しで、効果は K3・K5 の実測で確かめる）
 
 ## 9. 戻し方
