@@ -2,7 +2,7 @@
 
 > この文書は何か：AI保守運用24時間化 段階3 便F の作業指示書です。障害記録を読む窓口（保守 API）に、絞り込みを 2 つ足します。①札が auto で、まだ誰も処置していない障害だけを一覧にする。②直近の処置の出来事を、種類と時刻で読む。どちらも読むだけで、書き込み・表・列は増やしません。便G（その場で直す係）がこの 2 つを使います。
 
-- 設計: docs/handoff/ai-ops-247/stage3-design.md §2 便F（:89-97）・§6（:123）
+- 設計: docs/handoff/ai-ops-247/stage3-design.md §2 便F（:89-97）・§6（:147・便F の行 :155）
 - 親設計: docs/handoff/ai-ops-247/design.md §5 段階3
 - ロードマップ: docs/handoff/ai-ops-247/stage4-requirements.md「引き直した順番」2 行目（便F の実装カード → 実装 → 本番）
 - 対象ADR: ADR-1012（本テーマ）、ADR-135（main マージ＝本番投入可）、ADR-1018・ADR-131（運用者の旗）
@@ -63,13 +63,13 @@
 |---|---|---|
 | F1 | 一覧の口の引数は `status`・`since`・`limit`（1〜100・既定 50）だけ。並びは `first_notified_at` の新しい順 | `backend/app/routers/ops.py:292-315` |
 | F2 | 読む口の鍵は `require_ops_reader`。保守の鍵（OPS_API_TOKEN）か super admin のログインで通る。受け口の鍵（OPS_INGEST_TOKEN）は 401。鍵が空の間は 401 | `backend/app/routers/ops.py:115-130` |
-| F3 | 読み書きは「運用者の旗を立てる → 処理 → 旗を戻す」の形（`set_operator_context` → `_clear_operator`） | `backend/app/routers/ops.py:6,302-314` |
+| F3 | 読み書きは「運用者の旗を立てる → 処理 → 旗を戻す」の形（`set_operator_context` → `_clear_operator`） | `backend/app/routers/ops.py:6,301-314` |
 | F4 | 見張りの札は labels の `tier` に入り、障害記録の `labels`（jsonb）にそのまま入る。labels が 4000 バイトを超えたときだけ alertname と severity に縮め、tier は落ちる | `backend/app/routers/ops.py:209-217`（`_shrink_labels`） |
 | F5 | 今の見張りの札は page 10 本・ticket 28 本・auto 0 本 | `monitoring/prometheus/alert_rules.yml` の `tier:` の数（`grep` の集計） |
 | F6 | 札の値の正本は見張りの検査（page・auto・ticket のどれか） | `monitoring/scripts/check_alert_rules.py`（便E カード §2-1 F5） |
 | F7 | 注記の口（B4）が出来事に書く detail の形は `{"fields": [...], "note": ..., "user_id": ..., ("round": ...)}` に固定。呼ぶ側が `service` などの任意の鍵を detail に入れる道は無い | `backend/app/routers/ops.py:430,438`（`annotate_incident` の `detail`） |
 | F8 | 出来事の表 `ops_incident_events` の列は id・incident_id・occurred_at・kind・actor・detail。索引は (incident_id, occurred_at) だけ | `migrations/20261016_100000_create_ops_incident_tables.sql:48-63` |
-| F9 | 出来事の kind の値の正本は表の制約 `ops_incident_events_kind_check`（今は notified・resolved・annotated・first_aid・ai・halt・case_report） | `migrations/20261113_200000_add_ops_case_report_kind.sql:89-96` |
+| F9 | 出来事の kind の値の正本は表の制約 `ops_incident_events_kind_check`（今は notified・resolved・annotated・first_aid・ai・halt・case_report） | `migrations/20261113_200000_add_ops_case_report_kind.sql:37-43` |
 | F10 | `/ops/events` という道はアプリにまだ無い。nginx で個別に扱っている ops の道は alertmanager・read-window・case・unmask だけで、ほかは `/api/` の扱い | `git grep "/ops/events" origin/main -- backend/app`（0 件）・`nginx/nginx.conf:622,642,725,745,765,785` |
 | F11 | 試験は実 PostgreSQL を使う。共有の DB なので、試験は自分の fingerprint の行だけを見て判定している | `backend/tests/test_ops_router.py:37-62,292-316` |
 
@@ -280,6 +280,7 @@ async def test_list_incidents_auto_pending_filter(env):
     resp = await env.client.get(
         f"{_BASE}/incidents?tier=auto&limit=100", headers=env.api_headers()
     )
+    assert resp.status_code == 200
     got = sorted(i["fingerprint"] for i in resp.json()["items"] if i["fingerprint"] in mine)
     assert got == sorted([auto_fp, resolved_fp])
 
@@ -322,6 +323,7 @@ async def test_list_events_kind_service_since_filter(env):
         params={"kind": "notified", "service": "celery-beat", "since": before.isoformat(), "limit": 100},
         headers=env.api_headers(),
     )
+    assert resp.status_code == 200
     got = [e["incident_id"] for e in resp.json()["items"] if e["incident_id"] in mine_str]
     assert got == [str(beat_row["id"])]
 
@@ -331,6 +333,7 @@ async def test_list_events_kind_service_since_filter(env):
         params={"kind": "first_aid", "since": future.isoformat(), "limit": 100},
         headers=env.api_headers(),
     )
+    assert resp.status_code == 200
     assert [e for e in resp.json()["items"] if e["incident_id"] in mine_str] == []
 
 
