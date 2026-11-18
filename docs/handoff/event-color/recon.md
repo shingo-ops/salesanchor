@@ -38,7 +38,7 @@
   - `create_event` は `events().insert`（`backend/app/services/google_calendar.py:391`〜`backend/app/services/google_calendar.py:406`）。
   - `update_event` は `events().patch`（`backend/app/services/google_calendar.py:411`〜`backend/app/services/google_calendar.py:426`）。
   - どちらも Meet のときだけ `conferenceDataVersion=1` を足す（`:403`・`:423`）。手本になる。
-- つなぐカレンダーは会社の設定の `calendar_id`、無ければ `primary`（`backend/app/services/google_calendar.py:335`）。
+- つなぐカレンダーは会社の設定の `calendar_id`、無ければ `primary`（`backend/app/services/google_calendar.py:335` の `get_calendar_id`）。
 - 予定の欄の流れの手本は `location`。通る場所:
   - `backend/app/services/calendar_service.py:151`（`EVENT_COLUMNS`）
   - `:174`（`_google_body_for`）

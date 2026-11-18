@@ -5,7 +5,7 @@
 - 設計: docs/handoff/event-color/design.md §4-1〜§4-6（審査 2 回目 APPROVE・軽 3 件を直した版）
 - 現状の調べ: docs/handoff/event-color/recon.md
 - 対象ADR: ADR-1081（本テーマ・Proposed）、ADR-136（危険 PR の GO 手順）、ADR-135（main マージ＝本番投入可）、ADR-1037（移行のロック待ち）、ADR-1075（繰り返し）、ADR-1059（Google からの取り込み）
-- 状態: 設計審査済み（クラウドの Architect・2 回目 APPROVE）。PO の実装承認は 2026-11-19 の常時の指示「PRマージ、デプロイまで完走」で受けている。本番の GO は PO 本人の「GO #番号」が別に要る
+- 状態: 設計審査済み（クラウドの Architect・2 回目 APPROVE）。実装に進むのは 2026-11-19 の PO の常時の指示「PRマージ、デプロイまで完走」による（ADR-1081 のステータス欄と同じ）。本番の GO は PO 本人の「GO #番号」が別に要る
 - 危険便: はい（`migrations/` を含む）。担当は PR を作るまで。マージしない
 - 担当: 実装 Sonnet（クラウド）／審査・GO 手順・マージ・反映確認 Opus
 
@@ -59,7 +59,7 @@
 | F3 | 更新は、繰り返しでない予定なら `cal_svc.update_event`、繰り返しなら 3 択の道へ行く | `backend/app/routers/calendar.py:532`〜`:545` |
 | F4 | Google の本文は `_to_google_event_body`（`:1446`）で作り、`_google_body_for`（`:169`）は表の 1 行から作る | `backend/app/services/calendar_service.py` |
 | F5 | `_google_body_for` の呼び元は `:1062`・`:1121`・`:1138`・`:1177`・`:1200`。`_to_google_event_body` の直の呼び元は作成 `:436`・更新 `:539` | 同上（Architect 2 回目の `git grep` で 7 か所と確認） |
-| F6 | 「この予定だけ」の道は `:1027`〜`:1065`。例外の行があれば `row = event` か `_find_exception(...)`、無ければ元の行から `_row_values` で作る | 同上 |
+| F6 | 「この予定だけ」の道は `:1027`〜`:1068`。例外の行があれば `row = event` か `_find_exception(...)`、無ければ元の行から `_row_values` で作る | 同上 |
 | F7 | Google の書き込みは `events().insert`（`backend/app/services/google_calendar.py:391`〜`:406`）と `events().patch`（`:411`〜`:426`）。Meet のときだけ `conferenceDataVersion=1` を足す（`:403`・`:423`） | 同上 |
 | F8 | 取り込みは `upsert_from_google`（`backend/app/services/calendar_service.py:1342`）。呼び元は `backend/app/services/google_webhook.py:332` だけ。その前の `events().list` は `calendarId="primary"` 固定（`:300`〜`:314`） | 同上 |
 | F9 | 移行の並びの末尾は `scripts/run_all_migrations.sh:1472`。新しい手順は `mr_report_summary` の行より上の末尾に足す決まり（`:1475` の注記） | 同上 |
@@ -148,7 +148,7 @@ $cal_color_key$;
 - 作成の INSERT（`:402`〜`:418`）に `color_key` と `payload.get("color_key")`。
 - `field_map`（`:490`〜`:499`）に `"color_key": "color_key"`。
 - `_TEXT_FIELDS`（`:661`）・`:1030` の `("title", "description", "location")`・`:1188` の並びに `"color_key"`。`_row_values`（`:948`〜）・`:1098` にも足す。
-- `_insert_row`（`:925`〜`:944`）の INSERT の欄と値に `color_key` / `:color_key`。
+- `_insert_row`（`:926`〜`:945`）の INSERT の欄と値に `color_key` / `:color_key`。
 - `_to_google_event_body(payload, send_color: bool = False)`（`:1446`）: 末尾で `if send_color: body["_sa_color_key"] = payload.get("color_key")`。
 - `_google_body_for(ev, send_color: bool = False)`（`:169`）: `_to_google_event_body` に渡す payload に `color_key` を入れ、`send_color` をそのまま渡す。
 
@@ -179,11 +179,11 @@ $cal_color_key$;
 
 そして `:1062` を `_google_body_for(row, send_color=send_color)` にする。
 
-取り込み `upsert_from_google`（`:1342`）: 設計 §4-5 のとおり、引数 `label_colors: Optional[dict[str, str]] = None`。表があるときだけ `eventLabelId` → 色の値 → `key_for_hex` で鍵を出し、INSERT と `DO UPDATE SET` に `color_key` を入れる。表が `None` なら INSERT・UPDATE の両方で `color_key` に触らない（SQL を 2 通り持つか、`COALESCE` を使わず「触らない」を守る形にする。どちらでもよいが、表が `None` の更新で既存の色が NULL に変わらないことを試験で示す）。`colorId` だけの予定の数を `logger.info("event_color_legacy_colorid count=%d", n)` で 1 回の取り込みに 1 行。
+取り込み `upsert_from_google`（`:1342`）: 設計 §4-5 のとおり、引数 `label_colors: Optional[dict[str, str]] = None`。表があるときだけ `eventLabelId` → 色の値 → `key_for_hex` で鍵を出し、INSERT と `DO UPDATE SET` に `color_key` を入れる。表が `None` なら INSERT・UPDATE の両方で `color_key` に触らない（SQL を 2 通り持つか、`COALESCE` を使わず「触らない」を守る形にする。どちらでもよいが、表が `None` の更新で既存の色が NULL に変わらないことを試験で示す）。`colorId` だけの予定の数は、ここでは数えない（1 件ずつ呼ばれるため。§4-6 で数える）。
 
 ### 4-6. 取り込みの呼び元（`backend/app/services/google_webhook.py`）
 
-`:332` の `upsert_from_google` を呼ぶ前（1 回の取り込みに 1 回）に `label_colors = await get_event_label_colors(db, tenant_id, "primary")` を呼び、`upsert_from_google(..., label_colors=label_colors)` で渡す。
+`:330` の `for item in items:` の繰り返しの前（1 回の取り込みに 1 回）に `label_colors = await get_event_label_colors(db, tenant_id, "primary")` を呼び、`:332` を `upsert_from_google(..., label_colors=label_colors)` にする。同じ繰り返しの中で `item.get("colorId") and not item.get("eventLabelId")` の件数を数え、繰り返しの後に `logger.info("event_color_legacy_colorid count=%d", n)` を 1 行出す（0 件でも出す）。
 
 ### 4-7. 受け口（`backend/app/routers/calendar.py`）
 

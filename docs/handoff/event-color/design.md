@@ -157,7 +157,7 @@ def key_for_hex(hex_value: str | None) -> str | None:
   - 引数 `label_colors: Optional[dict[str, str]] = None` を足す。
   - 表があるとき: `eventLabelId` → 色の値 → `key_for_hex` で鍵を出し、INSERT と `DO UPDATE SET` に `color_key` を足す。合わない値は NULL。
   - 表が `None` のとき: `color_key` に触らない（今ある色を消さない）。
-  - `colorId` だけの予定は NULL のまま。数をログ `event_color_legacy_colorid count=<数>` で 1 回出す。
+  - `colorId` だけの予定は NULL のまま。数は `backend/app/services/google_webhook.py` の取り込みの繰り返し（`:330`〜`:332`）で数え、繰り返しの後にログ `event_color_legacy_colorid count=<数>` で 1 回出す（`upsert_from_google` は 1 件ずつ呼ばれるので、その中では数えない）。
 - 取り込みの呼び元 `backend/app/services/google_webhook.py:332` の手前（`events().list` の前後どちらでもよい・1 回の取り込みに 1 回）で、`get_event_label_colors(db, tenant_id, "primary")` を呼び、表を渡す。
 
 ### 4-6. 受け口（`backend/app/routers/calendar.py`）

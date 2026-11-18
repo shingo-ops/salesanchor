@@ -256,7 +256,7 @@
 | [ADR-1078](./ADR-1078-secretary-event-karte.md) | ADR-1078: 秘書の「予定のカルテ」— 予定の頼みは予定と決め、空いている必須の欄だけを決まった順で 1 つずつ聞く | Proposed | Amends ADR-1056 | — |
 | [ADR-1079](./ADR-1079-payment-method-versions.md) | ADR-1079: 請求書の振込先を「版」で持ち、直しても消しても前の内容を残す | Accepted | Amends ADR-1061 | — |
 | [ADR-1080](./ADR-1080-secretary-voice-tts.md) | ADR-1080: 秘書の返事を、一人ずつ選んだ声（Google Chirp 3: HD の 4 声・既定カロン）で読み上げる | Proposed | Amends ADR-1004 | — |
-| [ADR-1081](./ADR-1081-event-color-labels.md) | ADR-1081: 予定ごとの色は Google カレンダーの予定のラベル 24 色＋デフォルトにし、色の値で Google と照らす | Accepted | — | — |
+| [ADR-1081](./ADR-1081-event-color-labels.md) | ADR-1081: 予定ごとの色は Google カレンダーの予定のラベル 24 色＋デフォルトにし、色の値で Google と照らす | Proposed | — | — |
 
 ## ステータス凡例
 
