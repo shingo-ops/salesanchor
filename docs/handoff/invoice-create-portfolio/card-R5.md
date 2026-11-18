@@ -5,6 +5,7 @@
 枝: release/invoice-portfolio-r5-page（origin/main から）。移行（migrations/）なし・deploy.yml なし・scripts/ なし・backend なし。
 基準: origin/main d7973da781653c3e75704f6f2268010a27267922（置き換える9ファイルの指紋は P1 で照合する）。
 # rules-ack: d5738ef7
+改訂: 2026-11-19 第2版。1回目の実行（K10 だけ失敗・87本中86本成功）を受け、K10 の試験が数える範囲を商品の候補一覧（role=listbox。AsyncCombobox が body へ描く1つだけの一覧）に絞った。ほかの行は第1版のまま。
 
 ## 受領確認（最初の報告の 1 行目に書く）
 
@@ -1452,7 +1453,7 @@ describe('InvoiceCreatePage (invoice-create-portfolio R5)', () => {
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'box' } });
     await screen.findByRole('option', { name: 'No Weight Box (PK-1)' });
-    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['No Weight Box (PK-1)']);
+    expect(within(screen.getByRole('listbox')).getAllByRole('option').map((o) => o.textContent)).toEqual(['No Weight Box (PK-1)']);
   });
 
   it('K11/K13: choosing a product offers only in-stock states; the state fills weight, price and stock limit', async () => {
