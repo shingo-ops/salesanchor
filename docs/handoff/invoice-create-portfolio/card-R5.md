@@ -6,6 +6,7 @@
 基準: origin/main d7973da781653c3e75704f6f2268010a27267922（置き換える9ファイルの指紋は P1 で照合する）。
 # rules-ack: d5738ef7
 改訂: 2026-11-19 第2版。1回目の実行（K10 だけ失敗・87本中86本成功）を受け、K10 の試験が数える範囲を商品の候補一覧（role=listbox。AsyncCombobox が body へ描く1つだけの一覧）に絞った。ほかの行は第1版のまま。
+改訂: 2026-11-19 第3版。2回目の実行（試験87本すべて成功）で、記録の前の自動点検（eslint --max-warnings=0）が試験2本の日本語の文字25件の警告で止めた。2-3 と 2-7 の先頭に、既存の試験と同じ形の除外の1行（理由と前例つき）を足した。手順5 の eslint を同じ条件にし、自動点検の残り1つ（check-css-var-fallbacks）も手順5 で流す。§4 の「警告なら続ける」を消した。
 
 ## 受領確認（最初の報告の 1 行目に書く）
 
@@ -587,6 +588,7 @@ export function toInvoiceItem(row: LineItem) {
 ### 2-3. frontend/src/pages/quote-create/lineItems.test.ts（新規）
 
 ```ts
+/* eslint-disable local/no-japanese-literal -- テスト: 試験の名前と試験の商品名を日本語で書く（ADR-027・precedent: DataTable.test.tsx） */
 import { describe, expect, it } from "vitest";
 import {
   INIT_ROWS,
@@ -1221,6 +1223,7 @@ export default function InvoiceCreatePage() {
 ### 2-7. frontend/src/pages/invoice-create/InvoiceCreatePage.test.tsx（丸ごと置き換え）
 
 ```tsx
+/* eslint-disable local/no-japanese-literal -- テスト: 在庫の道が返すカテゴリの日本語名を試験データに書く（ADR-027・precedent: DataTable.test.tsx） */
 // invoice-create-portfolio R5: 請求書作成ページを見本の見た目と操作に作り直した（design-v2 §3-1〜§3-6・§6 K1〜K3・K5〜K14・K19〜K21）
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createInstance } from 'i18next';
@@ -2730,7 +2733,7 @@ describe("revisit shows the copy first (Q1)", () => {
 手順5 形と試験（どれも作業場所の frontend で流す）
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r5-page/frontend && npx vitest run --config vitest.unit.config.ts --project unit src/pages/quote-create/lineItems.test.ts src/pages/invoice-create/InvoiceCreatePage.test.tsx src/components/AllLegacyButtonDynamicMigration.test.tsx src/components/BillToCountryGuidance.test.tsx src/components/CommerceNavigationButtonMigration.test.tsx src/components/CommerceSubmitButtonMigration.test.tsx src/lib/query/batch3cPages.test.tsx src/pages/quote-create/quoteDraft.test.ts 2>&1 | tail -15
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r5-page/frontend && set -o pipefail && npx tsc -p tsconfig.json 2>&1 | tail -15; echo "tsc exit=$?"
-    cd ~/worktrees/salesanchor/release-invoice-portfolio-r5-page/frontend && set -o pipefail && npx eslint src/pages/quote-create/LineItemsTable.tsx src/pages/quote-create/lineItems.ts src/pages/quote-create/lineItems.test.ts src/pages/quote-create/useDraftInventory.ts src/pages/quote-create/useDraftShippingQuotes.ts src/pages/invoice-create/InvoiceCreatePage.tsx src/pages/invoice-create/InvoiceCreatePage.test.tsx src/pages/invoice-create/InvoicePaymentTotalsSection.tsx src/pages/invoice-create/InvoiceShipToSection.tsx src/components/AllLegacyButtonDynamicMigration.test.tsx src/components/BillToCountryGuidance.test.tsx src/components/CommerceNavigationButtonMigration.test.tsx src/components/CommerceSubmitButtonMigration.test.tsx src/lib/query/batch3cPages.test.tsx src/pages/quote-create/quoteDraft.ts src/lib/invoiceDraftContext.ts 2>&1 | tail -15; echo "eslint exit=$?"
+    cd ~/worktrees/salesanchor/release-invoice-portfolio-r5-page/frontend && set -o pipefail && npx eslint --max-warnings=0 src/pages/quote-create/LineItemsTable.tsx src/pages/quote-create/lineItems.ts src/pages/quote-create/lineItems.test.ts src/pages/quote-create/useDraftInventory.ts src/pages/quote-create/useDraftShippingQuotes.ts src/pages/invoice-create/InvoiceCreatePage.tsx src/pages/invoice-create/InvoiceCreatePage.test.tsx src/pages/invoice-create/InvoicePaymentTotalsSection.tsx src/pages/invoice-create/InvoiceShipToSection.tsx src/components/AllLegacyButtonDynamicMigration.test.tsx src/components/BillToCountryGuidance.test.tsx src/components/CommerceNavigationButtonMigration.test.tsx src/components/CommerceSubmitButtonMigration.test.tsx src/lib/query/batch3cPages.test.tsx src/pages/quote-create/quoteDraft.ts src/lib/invoiceDraftContext.ts 2>&1 | tail -15; echo "eslint exit=$?"
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r5-page/frontend && npm run check:i18n-missing-keys 2>&1 | tail -5
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r5-page/frontend && npm run check:error-text-next-action 2>&1 | tail -5
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r5-page/frontend && npm run check:page-size 2>&1 | tail -5
@@ -2739,7 +2742,8 @@ describe("revisit shows the copy first (Q1)", () => {
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r5-page/frontend && npm run check:loading-clear 2>&1 | tail -5
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r5-page/frontend && npm run check:status-direct-writes 2>&1 | tail -5
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r5-page/frontend && npm run check:jsx-emoji 2>&1 | tail -5
-  期待: 1行目は failed 0（8ファイルの試験がすべて passed。本数はそのまま書く）。2行目 `tsc exit=0`（型の誤り 0）。3行目 `eslint exit=0`。4行目以降はどれも誤りなしで終わる（✅ や 0 件の表示。❌・終了の失敗が出ない）。
+    cd ~/worktrees/salesanchor/release-invoice-portfolio-r5-page/frontend && node scripts/check-css-var-fallbacks.js 2>&1 | tail -5; echo "css-var exit=$?"
+  期待: 1行目は failed 0（8ファイルの試験がすべて passed。本数はそのまま書く）。2行目 `tsc exit=0`（型の誤り 0）。3行目 `eslint exit=0` で、誤りも警告も 0（記録の前の自動点検が `eslint --max-warnings=0` で警告 1 件でも止めるため、ここで同じ条件で確かめる）。最後の行は `css-var exit=0`。4行目以降はどれも誤りなしで終わる（✅ や 0 件の表示。❌・終了の失敗が出ない）。
 
 手順6 変えたファイル
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r5-page && git status --short | tail -25
@@ -2763,7 +2767,8 @@ describe("revisit shows the copy first (Q1)", () => {
   - 手順4 の npm ci・型の生成が失敗した → 最後の 3 行を貼って `BLOCKED: 手順4`。
   - 手順5 で試験・型・eslint・検査のどれかが落ちた → 試験や検査やコードを直さず、落ちた試験の名前と最後の出力（30 行まで）を貼って `BLOCKED: 手順5 何行目`。カードからの書き写し間違い（字・字下げ）が出力から分かるときだけ直してよい。直したら何をどう直したかを書く。
   - 手順8 の UI の決まりの検査が 0 以外 → `BLOCKED: UI の決まりの検査`。
-- 記録して続ける: eslint が警告（warning）だけを出した（誤り 0）→ 警告の原文を書いて続ける。
+  - 手順7 の commit が記録の前の自動点検に止められた → 止めた理由の原文を貼って `BLOCKED: 手順7`（--no-verify を付けない・試験を書き換えない）。
+- 警告も止める理由になる: eslint の警告（warning）が 1 件でも出たら手順5 の失敗として扱う（記録の前の自動点検が警告 0 を求めるため）。
 
 ## 5. 報告の形
 
