@@ -89,6 +89,8 @@
 - 変更: `backend/app/routers/ops.py`（§4-1 の置き換えと、§4-2 の追記）
 - 変更: `backend/tests/test_ops_router.py`（末尾に追記のみ・§4-3）
 - 変更: `docs/handoff/ai-ops-247/card-stage3-bin-f.md`（このカード。§13 報告欄の追記のみ）
+- 変更: `frontend/api-contract/openapi.json`（手で書かない。`cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json` の出力をそのまま入れる）
+  - 2026-11-19 Opus 追記: 初版のカードはこの 1 行を入れ忘れた。PR #5601 の CI「API contract is up to date」が、口の形と一覧表のずれで赤になって分かった（Actions run 44367406696）。増える中身は `/ops/incidents` の `tier`・`first_aid` と `/ops/events` の定義だけのはず。
 
 ## 4. 作り方
 
