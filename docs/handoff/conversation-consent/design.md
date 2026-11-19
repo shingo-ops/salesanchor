@@ -1431,15 +1431,15 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 6. 版: agent-console の 0.55.2 → 0.55.3。前の直し（bda286a）と同じく package.json・package-lock.json・extension/manifest.json の版と、docs/CHANGELOG.md の 1 行を足す。README は変えない（件の起動の形も、PO の画面も変わらないため）。
 
 つなぎ直しの道（審査1 必須2）:
-- `.claude.json` の書き直しは、新しく claude を起動するときだけ走る（server/sessions.ts:789-790 の注記、`openTerminal` の :852-853 で動いている物につなぐときは `beforeNew` を呼ばない）。これは今の決まりで、変えない（つなぎ直しは動いている claude をそのまま使うので、起動の時の確認はもう出ない）。
+- `.claude.json` の書き直しは、新しく claude を起動するときだけ走る（server/sessions.ts:789-790 の注記。`openTerminal` は、tmux に件が生きていれば :854-856 で、つながらなければ :857-861 で、`beforeNew` を呼ばずにつなぎ直して戻る。`beforeNew` を呼ぶのは新しく起動する :866 だけ）。これは今の決まりで、変えない（つなぎ直しは動いている claude をそのまま使うので、起動の時の確認はもう出ない）。
 - サーバーが起き直って、claude を新しく起動し直す道（restore で tmux が無くなっていた件）は `beforeNew` を通るので、R の鍵も入る（K73）。
-- 直しの前に 2.1.327 で開いて、信頼の確認の画面で止まったままの件があれば、直しの後につなぎ直しても止まったまま。この件は自動では直さない。反映の前に Opus が件の一覧と probe の画面の形（件の画面の中身は読まない。一覧の状態だけ）を見て、確認で止まっている件があれば、PO に「閉じて開き直す」を頼む（件を閉じるのは PO の操作）。止まっている件には case-say の指示が入らない（server/hub.ts:564-569 の判定 4b で 2.1.327 は使える版でないため断られる）ので、Discord の指示が確認の画面に打ち込まれることはない。
+- 直しの前に 2.1.327 で開いて、信頼の確認の画面で止まったままの件があれば、直しの後につなぎ直しても止まったまま。この件は自動では直さない。反映の前に Opus が件の一覧と probe の画面の形（件の画面の中身は読まない。一覧の状態だけ）を見て、確認で止まっている件があれば、PO に「閉じて開き直す」を頼む（件を閉じるのは PO の操作）。止まっている件には case-say の指示が入らない（server/hub.ts:564-573 の判定 4b で、2.1.327 は版の記録で使える版でなく、agent-console.config.json:9 の `caseSayClaudeVersions` にも無いため断られる）ので、Discord の指示が確認の画面に打ち込まれることはない。
 
-触らない物: `PROBE_` で始まる定数、E1〜E4・P0〜P5・R1 の条件、24 時間・3 回の規則、版の記録・鍵・MAC、hooks・見張り、`buildCaseSettings`（§14-14-9 の「options なしで PO の件の設定を変えない」）、room.sb の許し・拒否、ccdiscord.zsh の起動の引数、`casePaths`（R の作り方）、case.json の形、`CASE_DENY_WRITE`・`CASE_ALLOW_WRITE`・`CASE_DENY_READ_SANDBOX`（server/case-sandbox.ts:74-92・:111-121）、`writeCaseKeybindings`、つなぎ直しの判定（`openTerminal` の probe・`beforeNew` を呼ぶ条件）、server/case-say-probe.ts と server/case-say-probe-wiring.ts、server/hub.ts の判定 4・4b。
+触らない物: `PROBE_` で始まる定数、E1〜E4・P0〜P5・R1 の条件、24 時間・3 回の規則、版の記録・鍵・MAC、hooks・見張り、`buildCaseSettings`（§14-14-9 の「options なしで PO の件の設定を変えない」）、room.sb の許し・拒否、ccdiscord.zsh の起動の引数、`casePaths`（R の作り方）、case.json の形、`CASE_DENY_WRITE`・`CASE_DENY_READ`・`CASE_ALLOW_WRITE`・`CASE_DENY_READ_SANDBOX`（server/case-sandbox.ts:74-93・:95-108・:111-121）、`checkCaseSandbox`（server/sessions.ts:567-594）、agent-console.config.json:9 の `caseSayClaudeVersions`（2.1.327 を足して判定 4b を通す近道は取らない）、`writeCaseKeybindings`、つなぎ直しの判定（`openTerminal` の probe・`beforeNew` を呼ぶ条件）、server/case-say-probe.ts と server/case-say-probe-wiring.ts、server/hub.ts の判定 4・4b。
 
 信頼を広げることの危険の見積もり（この直しは「許可」に触るので §14-14-17 の「×の後の進め方」5 により NEEDS_DECISION: で PO が「1」と決めた）:
 - 信頼すると、その場所の `.claude/`（設定・skills・commands・agents）と git の設定が読まれる（画面の文 `Its skills, commands, and agents load and can run commands, and so can the git settings of its repository`）。
-- R の `.claude` は件から書けない（server/case-sandbox.ts:81 の `CASE_DENY_WRITE` に `path.join(p.R, ".claude")`）。R の下の入れ子の `.claude`・`.git` も書けない（同 :344・:348）。R はサーバーが件ごとに新しく作る（同 :53-69 の `casePaths` の R・server/sessions.ts:532-534）。
+- R の `.claude` は件から書けない（server/case-sandbox.ts:81 の `CASE_DENY_WRITE` に `path.join(p.R, ".claude")`）。R の下の入れ子の `.claude`・`.git` も書けない（同 :344・:348）。R はサーバーが件ごとに新しく作る（道を決めるのは同 :53-69 の `casePaths` の R、作るのは同 :551 の mkdir、呼び出しは server/sessions.ts:532-534 の `writeCaseFiles`）。
 - R の親の git（審査1 必須1）: 画面の文は、信頼が「its repository」の git の設定にも及ぶと書いている。R の親 `/private/tmp/CC報告ファイル` は、件でないセッション（Opus 本体など）からは書ける共有の場所（件の部屋からは読めない: server/case-sandbox.ts:113）。ここに誰かが `.git` を置くと、R がその git の置き場の中になり、守っていない git の設定（W の `.git/config`・hooks の書き込み拒否 :75-78 は W だけ）が信頼の範囲に入る。直す物 2(b) で、件を新しく起動するたびに R から `/` までに `.git` が無いことを確かめ、あれば件を開かない。件が R の中に自分で `.git` を作った場合も、次の起動の時にこの確かめで止まる。2026-11-19 の Mac の実物では、R の親 5 か所（`/private/tmp/CC報告ファイル/discord-case`・`/private/tmp/CC報告ファイル`・`/private/tmp`・`/private`・`/`）のどれにも `.git` は無い（`ls -ld` で「No such file or directory」）。
 - よって、件が R に自分で設定を置いて信頼の後に読ませる道は、今の部屋の拒否と 2(b) の確かめで閉じている。W は既に同じ扱いで信頼済みなので、新しい種類の危険は増えない。
 - 前の版（2.1.325 まで）は R の確認を出さずに使っていたので、R を足すのは前の版の状態に戻す形。
@@ -1455,7 +1455,7 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 | K67 前のファイルにあった別の鍵（例 `/x`）は残らない・`KEEP_CLAUDE_JSON_KEYS` の扱いは今と同じ | vitest（既存の :663 の試験を R つきに直して通る） |
 | K68 件を新しく開くとき、`.claude.json` の R の鍵が `--add-dir` に渡す `AC_CASE_REPORT`（realpath を取る前の文字列）と同じ | vitest（tests/unit/sessions.case.test.ts:172-175 の件を開く試験に、`.claude.json` の `projects` の鍵と、起動の環境の `AC_CASE_REPORT` の文字列が一致する期待を足す） |
 | K69 既存の試験が通る | agent-console の CI が緑 |
-| K70 本物で ok | ○: 直しの版を本番に反映した時刻（Opus が本書に書く）より後に、最初に終わった probe（版は問わない。24 時間明けの前に claude の版が変わったら、その新しい版の probe）の監査 `caseClaudeVersionProbe` の行が `outcome: "ok"` で、版の記録のその版が `usable: true`・`lastResult: "ok"`。×: その行が `denied` か `aborted`。Opus 本体が node で許された欄だけを読み、本書に書き足す（§14-14-17 の C の確かめ直し） |
+| K70 本物で ok | 数える物: 直しの版を本番に反映した時刻（Opus が本書に書く。以下「反映」）より後に始まった probe の監査 `caseClaudeVersionProbe` の行（版は問わない。24 時間明けの前に claude の版が変わったら、その新しい版の行）。○: 反映から 7 日（168 時間）以内に、最初に `outcome: "ok"` の行があり、版の記録のその版が `usable: true`・`lastResult: "ok"`。×: ok の行より前に `outcome: "denied"` の行がある。`outcome: "aborted"` の行（`abortReason` は server/case-say-probe.ts:536・543 で決まり、この直しと関係ない理由でも出る）は○にも×にも数えず、次の行を待つ。7 日の間に ok も denied も無ければ未判定とし、`BLOCKED:` で読んだ行（aborted なら `abortReason`）を添えて PO に返す。Opus 本体が node で許された欄だけを読み、本書に書き足す（§14-14-17 の C の確かめ直し） |
 | K71 同じ理由の×が 2 回目から 0 回（K64） | ○: 直しの版の反映の時刻から 30 日の間、監査（server/case-say-probe.ts:584-599 が書く `caseClaudeVersionProbe` の行）に、`failedCheck: "P0"` かつ `paneSamples` のどれかに `Adding a new directory` を含む行が 0 件。×: 1 件以上。30 日目の見回りで Opus 本体が数える |
 | K72 R か R の親に `.git` があれば件を開かない | vitest（tests/unit/case-sandbox.test.ts。R の 1 つ上に `.git` のディレクトリを作る形と、R の中に `.git` のファイルを作る形の 2 つで、`rewriteCaseClaudeJson` が `CaseSandboxUnavailableError` を投げ、`.claude.json` が前の中身のまま） |
 | K73 起動し直す道でも R の鍵が入り、つなぎ直しでは書き直さない | vitest（tests/unit/sessions.case.test.ts:426 からの試験に、起動し直した後の `projects` に R の鍵がある期待と、つなぎ直しでは前の中身のままの期待を足す） |
@@ -1464,6 +1464,7 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 残る危険:
 - U24 claude の次の版が、信頼の鍵の形（`projects` の `hasTrustDialogAccepted`）を変えると、同じ P0 に戻る。そのときは毎日の見回りの D で見つかる（誤って○にはならない側）。
 - U25 2.1.325 で R を足した形は未確認。前の版では R の確認が出ないので、R の鍵は使われないだけと見込むが、K69 と、次に 2.1.325 を使う件で確かめる。
+- U27 2(b) の確かめは claude を新しく起動するときだけ走る。起動した後に、件でないセッションから `/private/tmp/CC報告ファイル`（件の部屋からは読めない: server/case-sandbox.ts:113）や R の親に `.git` が置かれても、その件が動いている間は見ない。次に件を起動し直すときに止まる。置けるのは Mac の利用者（PO・Opus 本体・自分の Mac のセッション）だけで、件の claude は R の親に書けない（:121 の `CASE_ALLOW_WRITE` は W・R・T だけ）。
 - U26 クラウドの観測は各 1 回。Mac の本物（K70）で確かめるまで、直しの効き目は確定としない。
 
 外部事例: 該当事例なし。理由: 自作の仕組みの中で、件の claude を起動する前の設定の書き方の直しで、確かめは試験と実際の記録で行う（§14-14-10 と同じ）。Claude Code の公式の更新履歴（Context7 で確認）には「信頼は置き場所の根で決まり、入れ子の置き場所は別に信頼が要る」とあり、R を別に信頼済みにする形はこれに合う。
@@ -1473,3 +1474,4 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 | 回 | 日時（UTC） | 結果 | 要点 |
 |---|---|---|---|
 | 1 | 2026-11-19 00:57 | REVISE | 照合 11 行中 合致 10・一部合致 1（R を作るのは server/case-sandbox.ts:551）・不一致 0。必須 3: R の親の `.git`、つなぎ直しの道、K70・K71 の○×。推奨 4: R を省けない引数と呼び出し 8 か所、realpath の確かめ、クラウドの起動の形の違い、触らない物と版。すべて本節に入れた。初回の審査（00:50）は結果の全文が記録に出ず、同じ依頼を出し直した |
+| 2 | 2026-11-19 01:09 | REVISE | 1回目の必須と推奨はすべて入っていると確認。照合 24 件中 合致 21・一部合致 2・不一致 1。必須 2: つなぎ直しの根拠の行（:852-853 → :854-861・:866）、K70 の期限と aborted の扱い。推奨 4: R を作る行 :551、触らない物に `caseSayClaudeVersions`・`checkCaseSandbox`・`CASE_DENY_READ`、起動の後に置かれた `.git`（U27）、行の範囲（hub.ts:564-573・case-sandbox.ts:74-93）。すべて本節に入れた。2 回目の初めの依頼は読む場所（リポジトリ）の指定を入れ忘れて空振りし、01:07 に出し直した |
