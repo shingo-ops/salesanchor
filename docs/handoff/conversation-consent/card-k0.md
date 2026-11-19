@@ -69,7 +69,7 @@ K0_SKIP_REASONS = ("agent_id", "transcript_path", "transcript_unparsable")  # co
 (b) :281 の T0-a の直後に T0-b を足す。T0-a の h・hu1・hu2 と記録をそのまま使う:
 
 ```python
-# T0-b: H を読む前に止めた probe を外す（design §15、K65）
+# T0-b: H を読む前に止めた probe を外す（design §15、K72）
 probes_b = list(probes)
 for rs in ("agent_id", "agent_id", "transcript_path", "transcript_unparsable"):
     probes_b.append({"type": "consent_probe", "session": "s1", "h_uuid": None, "reason": rs, "now": (T0 + td(150)).isoformat()})

@@ -1456,22 +1456,22 @@ K0: 直前の人の入力が typed の「1」だった呼び出し %d 件のう�
 
 | # | 基準 | 検証方法 |
 |---|---|---|
-| K65 | k0_delays が reason=agent_id・transcript_path・transcript_unparsable の probe を数えず外した件数に入れ、no_human_input と reason 無しは数える。既存の T0-a（対象5・遅れ2）は変わらない | consent-unit-tests.py T0-b: T0-a の記録に、直前が「1」になる位置で agent_id 2件・transcript_path 1件・transcript_unparsable 1件・no_human_input 1件（h_uuid null）の probe を足す → total=6・delays=3・skipped=4・delays_no_h=1。T0-a も PASS のまま。全件一致で○ |
-| K66 | マージ後、手元の写しで `consent-audit.py --audit` を打つと、K0 の行に「除外」と「うち見張りが入力を見つけられなかった」が出る | Opus が実行し、出力を ~/CC報告ファイル-keep/consent-weekly/ に保存。行が §15-3(b) の形なら○ |
-| K67 | 直した数で K0 の○×が出る（対象 20 件以上） | K66 の出力。○なら ADR-1033 の昇格判断を PO に上げる。×なら遅れの probe を tool_use_id で特定して PO に報告し、案 F の設計に進むかを聞く |
+| K72 | k0_delays が reason=agent_id・transcript_path・transcript_unparsable の probe を数えず外した件数に入れ、no_human_input と reason 無しは数える。既存の T0-a（対象5・遅れ2）は変わらない | consent-unit-tests.py T0-b: T0-a の記録に、直前が「1」になる位置で agent_id 2件・transcript_path 1件・transcript_unparsable 1件・no_human_input 1件（h_uuid null）の probe を足す → total=6・delays=3・skipped=4・delays_no_h=1。T0-a も PASS のまま。全件一致で○ |
+| K73 | マージ後、手元の写しで `consent-audit.py --audit` を打つと、K0 の行に「除外」と「うち見張りが入力を見つけられなかった」が出る | Opus が実行し、出力を ~/CC報告ファイル-keep/consent-weekly/ に保存。行が §15-3(b) の形なら○ |
+| K74 | 直した数で K0 の○×が出る（対象 20 件以上） | K73 の出力。○なら ADR-1033 の昇格判断を PO に上げる。×なら遅れの probe を tool_use_id で特定して PO に報告し、案 F の設計に進むかを聞く |
 
 ### 15-8 実装の分け方（Sonnet へ・1便）
 
 - 便K0: §15-3(a)(b) と T0-b。触るのは consent-audit.py・consent-unit-tests.py だけ。PR 1本。フックのパスを含まないので po-apply-consent.sh は不要。
 - 試験: `python3 scripts/dev/consent-unit-tests.py` の全件 PASS。
-- マージ後に Opus: 手元の写しの更新、K66・K67 の実行と保存、PO への報告。
+- マージ後に Opus: 手元の写しの更新、K73・K74 の実行と保存、PO への報告。
 
 ### 15-9 設計審査（Opus の自己審査。独立した第二者の審査ではない）
 
 判定: APPROVE（HIGH 0・MEDIUM 0・LOW 2）。
 - 整合: 止め方（§4-5・K1〜K7）を変えない。§2 の K0 の定義「フックが動く時点で、PO の直前の入力が会話記録に書かれている」は、フックが記録を読む呼び出しにだけ意味がある。H を読む前に止める呼び出しを外すのは定義の範囲内で、定義を変えない。§13 の改訂（異常の数え方）と同じく点検の数え方だけの直し。
 - 根拠: 行番号は origin/main fd72a7b01 の worktree で確認。probe の内訳は保存した集計。
-- 検証可能性: K65 は試験で○×、K66・K67 は保存ファイルで○×。
+- 検証可能性: K72 は試験で○×、K73・K74 は保存ファイルで○×。
 - LOW-1: 45 件のうち数え違いと本物の遅れの内訳は、直した道具で初めて出る（会話記録を Bash で読むことは見張りが止めるため）。直した後の数が設計の前提（多くが数え違い）と違っても、§2 の決まりで ×→案 F に進むので、判断は止まらない。
 - LOW-2: 期間が全期間のため、過去の本物の遅れは消えない。§15-3(c) のとおり変えない。必要になれば反映日以降に絞る改訂を別に出す。
 - 未解決の前提: なし。PO の判断が要るのは実装の承認だけ。
