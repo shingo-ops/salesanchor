@@ -15,11 +15,8 @@ vi.mock('../lib/api', async (importOriginal) => ({ ...(await importOriginal<type
 let instance = createInstance();
 const tr = (key: string) => String(instance.t(key));
 function Location() { const value = useLocation(); return <output data-testid="location">{value.pathname}</output>; }
-function wrap(node: React.ReactNode, entries = ['/start']) { return <I18nextProvider i18n={instance}><MemoryRouter initialEntries={entries}>{node}<Location /></MemoryRouter></I18nextProvider>; }
 function routed(node: React.ReactNode, path: string, entries: string[]) { return <I18nextProvider i18n={instance}><MemoryRouter initialEntries={entries}><Routes><Route path={path} element={node} /><Route path="*" element={<Location />} /></Routes></MemoryRouter></I18nextProvider>; }
 
-const summary = { id: 7, quote_code: 'Q-7', company_id: 4, currency: 'USD', total_amount: 10, status: 'approved', created_at: '' };
-const detail = { id: 7, quote_code: 'Q-7', company_id: 4, contact_id: 5, currency: 'USD', items: [{ product_id: 2, product_name: 'Card', quantity: 1, unit_price: 10, weight: null }] };
 const approvedQuote = { id: 7, quote_code: 'Q-7', company_id: 4, currency: 'USD', subtotal: 10, shipping_fee: null, tax_amount: null, total_amount: 10, status: 'approved', validity_date: null, notes: null, created_at: '', items: [] };
 const company = { id: 4, company_code: 'C-4', name: 'Company' };
 const contact = { id: 5, company_id: 4, surname: 'Buyer', given_name: 'One', surname_en: null, given_name_en: null, email: 'buyer@example.com', is_primary_contact: true };
@@ -37,9 +34,8 @@ beforeEach(async () => {
   vi.stubGlobal('fetch', vi.fn(() => { throw new Error('Unexpected network'); }));
   mock.get.mockImplementation(async (url: string) => {
     if (url === '/me/permissions') return { permissions: ['invoices.create'] };
-    if (url === '/quotes?status=approved') return [summary];
-    if (url === '/quotes/7') return detail;
     if (url === '/companies?per_page=100') return [company];
+    if (url === '/invoices/draft-inventory') return { categories: [], items: [] };
     if (url === '/contacts?company_id=4&per_page=100') return [contact];
     if (url === '/invoices/draft-context?company_id=4&contact_id=5') return draftCtx(issuer);
     throw new Error(`Unexpected GET ${url}`);
@@ -54,26 +50,28 @@ beforeEach(async () => {
 });
 afterEach(() => { cleanup(); queryClient.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-async function loadQuoteIntoCreatePage() {
-  render(wrap(<InvoiceCreatePage />));
-  fireEvent.click(await screen.findByTestId('invoice-edit-from-quote-7'));
-  expect(await screen.findByDisplayValue('Card')).toBeTruthy();
+// invoice-create-portfolio 便R5: 見積から読み込む切り替えは無くなった（p8）。会社と担当者を持って作成画面を開く
+async function openCreatePageForCompany() {
+  const state = { draft: { companyId: 4, contactId: 5, currency: 'USD' } };
+  render(<I18nextProvider i18n={instance}><MemoryRouter initialEntries={[{ pathname: '/invoices/new', state }]}><InvoiceCreatePage /><Location /></MemoryRouter></I18nextProvider>);
   expect(await screen.findByRole('option', { name: /Buyer/ })).toBeTruthy();
 }
 
 describe('bill-to country guidance (ADR-1061 bin2-2c2a)', () => {
   it('create page: without a bill-to country it shows the reason and a button that opens the customer page', async () => {
     issuer = null;
-    await loadQuoteIntoCreatePage();
+    await openCreatePageForCompany();
     expect(await screen.findByText(tr('apiError.billToCountry'))).toBeTruthy();
-    expect((screen.getByRole('button', { name: tr('invoices.createBtn') }) as HTMLButtonElement).disabled).toBe(true);
+    // 作成を押しても請求書は作られない
+    fireEvent.click(screen.getByRole('button', { name: tr('invoices.createBtn') }));
+    expect(mock.post).not.toHaveBeenCalledWith('/invoices', expect.anything());
     fireEvent.click(screen.getByRole('button', { name: tr('invoices.openCompanyForBillTo') }));
     expect(screen.getByTestId('location').textContent).toBe('/crm/companies/4');
   });
 
   it('create page: with a bill-to country the button is not shown', async () => {
     issuer = 'JP';
-    await loadQuoteIntoCreatePage();
+    await openCreatePageForCompany();
     expect(await screen.findByTestId('invoice-ship-to-address')).toBeTruthy();
     expect(screen.queryByRole('button', { name: tr('invoices.openCompanyForBillTo') })).toBeNull();
     expect(mock.post).not.toHaveBeenCalledWith('/invoices', expect.anything());
