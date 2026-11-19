@@ -137,9 +137,19 @@
 - 後: 新ファイル .github/workflows/guard-files-gate.yml。
   - 起動は `pull_request_target`（types: opened, synchronize, reopened, edited, labeled）。基のブランチ（main）の定義だけが動く。
   - PR のコードを checkout しない・実行しない。`gh api repos/{repo}/pulls/{n}/files --paginate` で変わったファイル名だけを読む。名前を変えたファイルは新しい名前が `filename`、元の名前が `previous_filename` に入るため、守る一覧との照合は両方で行う（名前を変えて一覧から外す抜け道を止める）。権限は `contents: read`・`pull-requests: read`。
-  - 守るファイルの一覧はこの workflow の中に直接書く（PR 側から変えられない場所に置くため）: `.github/workflows/test.yml`・`.github/workflows/lint-tenant-schema.yml`・`.github/workflows/migration-test.yml`・`.github/workflows/workflow-lint.yml`・`.github/workflows/process-artifacts-gate.yml`・.github/workflows/guard-files-gate.yml 自身・`scripts/lint_tenant_schema.py`・`scripts/check-process-artifacts.js`・`scripts/migration-dryrun-report.py`・`scripts/migration-guard/dryrun-exclusions.tsv`・scripts/check_public_tenant_rls.py・backend/app/ops/tenant_rls_allowlist.py・backend/app/tasks/tenant_isolation_daily_check.py・K2 の試験 backend/tests/test_tenant_login_requests.py・K8 の試験 backend/tests/test_check_public_tenant_rls.py。
-  - 一覧のファイルが変わっていたら、PR に shingo-ops が書いた「GO #番号 <SHA>」のコメントがあるときだけ通す。番号はその PR と一致し、SHA（7文字以上）は今の PR の head の SHA（`github.event.pull_request.head.sha`）の先頭と一致すること。GO の後に push すると head が変わるので、新しい GO が要る（古い GO で後から足した変更を通さない）。無ければ落ちる。コメントの書き手は API の `user.login` で確かめる（本文の文字だけで信じない）。
-  - コメントを書いても pull_request_target は動き直さない。GO のコメントの後は、落ちた実行を `gh run rerun` でやり直す（やり直しは同じ PR の検査として結果が付く）。issue_comment で起動する形は、結果が PR の最新の写しに付かないため使わない。この点は設計審査で GitHub の文書と照らして確かめる。
+  - 判定と守るファイルの一覧は新ファイル scripts/guard-files-gate.js に書き、workflow は基のブランチの commit（`ref: ${{ github.sha }}`）だけを checkout して動かす（PR 側から変えられない場所に置くため。既存の guard-authoring-gate.yml の evaluate と同じ形）。pull_request_target の job の結果は PR の head の検査として付く（2026-11-20 実測: PR #5610 の head 6dab4234 に「evaluate guard authoring from main」success）。一覧は2つの組に分ける（PO 2026-11-20「1」。理由は下の「2つの組に分けた理由」）。
+    - 組A（PO 本人の GO だけで通る・17件）: `.github/workflows/lint-tenant-schema.yml`・`.github/workflows/workflow-lint.yml`・`.github/workflows/process-artifacts-gate.yml`・.github/workflows/guard-files-gate.yml・.github/workflows/guard-files-gate-unit.yml・scripts/guard-files-gate.js・scripts/tests/test-guard-files-gate.js（この見張り自身の4件。試験は別の workflow に分ける。同じ workflow に pull_request を足すと、gate の job が skipped として同じ名前で付き、必須チェックの抜け道になるため）・`scripts/lint_tenant_schema.py`・`scripts/migration-dryrun-report.py`・`scripts/migration-guard/dryrun-exclusions.tsv`・scripts/check_public_tenant_rls.py・backend/app/ops/tenant_rls_allowlist.py・backend/app/ops/tenant_rls_checks.py・backend/app/tasks/tenant_isolation_daily_check.py・K2 の試験 backend/tests/test_tenant_login_requests.py・K8 の試験 backend/tests/test_check_public_tenant_rls.py・K9 の試験 backend/tests/test_tenant_isolation_daily_check.py。
+    - 組B（PO 本人か、POの委任に基づく Opus の GO で通る・3件）: `.github/workflows/test.yml`・`.github/workflows/migration-test.yml`・`scripts/check-process-artifacts.js`。
+    - 設計の後に増えた2件（tenant_rls_checks.py・test_tenant_isolation_daily_check.py）は便6（#5593）で生まれた。tenant_rls_checks.py は CI の点検と本番の毎日点検の両方が読む SQL の唯一の正本（`backend/app/ops/tenant_rls_checks.py:3-5`・`scripts/check_public_tenant_rls.py:21`・`backend/app/tasks/tenant_isolation_daily_check.py:23`）。ここを書き換えると両方の見張りが同時に目隠しされるので組A に入れる。2件とも 2026-10-20〜11-19 の変更は #5593 の1回だけで、その PR は組A の tenant_isolation_daily_check.py も変えているため、PO の GO の回数は増えない（数え方は下）。
+    - 入れないもの: `scripts/check_tenant_template_shape.py` とその試験（新しい会社の型の点検。ADR-1063 の見張りではない）。
+  - 判定（守るファイルが変わっているとき）:
+    1. 変わった守るファイルに組A が1件でもあれば、GO を書けるのは `shingo-ops` だけ。組B だけなら `shingo-ops` か `shingo-cc`（POの委任に基づく Opus の名義）。書き手は API の `user.login` で確かめる（本文の文字だけで信じない）。
+    2. GO のコメントは1行目が `GO #<この PR の番号> <SHA 7〜40文字>` で始まる（後ろに文を続けてよい）。SHA は、この PR の commit の一覧（`gh api repos/{repo}/pulls/{n}/commits --paginate`。GitHub の上限 250件）の中でちょうど1件の先頭と一致すること。
+    3. GO の SHA の時点と今の head（`github.event.pull_request.head.sha`）の時点で、変わった守るファイルの中身が全部同じであること（`gh api repos/{repo}/contents/{path}?ref=<sha>` の blob の `sha` を比べる。無いファイルは「無い」同士で一致）。GO の後に守るファイルを1行でも変えると中身が違うので落ちる（古い GO で後から足した変更を通さない）。守らないファイルだけの push や、main を取り込む `gh pr update-branch` では、守るファイルの中身が同じなら GO は生きたまま。
+    4. 条件を満たす GO が1件でもあれば通す。無ければ落ち、どの組の誰の GO が要るかを出す。
+    - head 一致から中身一致へ変えた理由: main の ruleset は「main に追いついていること」を求める（strict）。main が忙しく、合流の前に何度も update-branch が要る。head 一致のままだと、そのたびに PO 本人の GO のやり直しが要る。守りたいのは守るファイルの中身なので、中身の一致で縛る。
+  - コメントを書いても pull_request_target は動き直さない。GO のコメントの後は、落ちた実行を `gh run rerun` でやり直す。やり直しは元の起動と同じ `GITHUB_SHA` と同じ出来事の中身で動く（GitHub 公式「Re-running workflows and jobs」: "The workflow will also use the same GITHUB_SHA ... of the original event"、Context7 /github/docs で 2026-11-20 確認）。そのため結果は元の head に付く。やり直しの時点で PR の今の head が出来事の head と違えば「新しい push の実行を待つ」と出して落ちる。issue_comment で起動する形は、結果が PR の最新の写しに付かないため使わない。
+  - 2つの組に分けた理由（2026-10-20〜11-19 の main への合流で数えた。生の数え: recon の「便7 の数え」）: 15件を全部 PO 本人の GO にすると 43回（週10回ほど）。多いのは migration-test.yml 26回（migration ごとに前提の移行を1手足す形）と check-process-artifacts.js 11回。組A だけなら 8回。組B を Opus の GO で通すと、うっかりの書き換えは止まる。ただし機械は Opus の GO とほかの AI が shingo-cc で書いた GO を区別できないので、わざとの書き換えは組B では止まらない。PO はこれを承知で「1」を選んだ。
   - 必須チェックに登録: ruleset 15777895 の必須一覧に「guard-files gate」を足す。Ruleset の変更は CLAUDE.md の危険操作 → PO に `bash scripts/permit-danger.sh` を頼み、Opus が `gh api` で足す。足す前後の ruleset を生で保存する。
   - この workflow 自身を足す PR は、まだ main に無いので自分を守れない → この PR は PO の「GO #番号」で合流する（危険 PR として扱う）。
 - 戻し方: ruleset の必須一覧から外す（permit-danger）→ workflow を消す PR。
@@ -164,7 +174,7 @@
 | K7 他社在籍が分からない | `pytest backend/tests/test_staff_create_users.py`: 他社・自社の重複とも同じ文言で「他の会社」を含まない |
 | K8 鍵の無い新しい表を止める | `pytest backend/tests/test_check_public_tenant_rls.py`（落ちる見本・通る見本）と、migration-test の新しい手が緑 |
 | K9 本番を毎日点検 | 管理者用 Discord に毎日1通。7日続けて緑。数え方: PO が管理者用 Discord の7日分の投稿を画面で見て ○×（Opus が Discord を読めるかは未確認のため、PO の目視を正とする） |
-| K10 見張りを外す PR を止める | 見本の PR（守るファイルを1行変える下書き PR）で guard-files gate が赤、PO の「GO #番号 <SHA>」コメント後のやり直しで緑。その後に1行足して push すると、古い GO では赤に戻る。守るファイルの名前を変えるだけの見本でも赤。ruleset の必須一覧に名前がある（gh api の生出力） |
+| K10 見張りを外す PR を止める | 見本の下書き PR を2本使う。見本A（組A の allowlist に1行のコメント）: GO 無しで赤／shingo-cc の GO では赤のまま／PO の「GO #番号 <SHA>」の後のやり直しで緑／その後に守るファイルへ1行足して push すると古い GO では赤／守らないファイルだけの push では緑のまま。見本B（組B の migration-test.yml に1行のコメント）: GO 無しで赤／shingo-cc の GO の後のやり直しで緑。守るファイルの名前を変えるだけの見本でも赤。守るファイルを触らない PR では緑。ruleset の必須一覧に名前がある（gh api の生出力）。見本の PR は確かめた後に閉じる（合流しない） |
 | K11 文書から見張りに辿れる | tenant-rls README の表の見張りの名前が、ruleset・workflow の名前と一致（Opus が突き合わせ） |
 | 運営の許可が壊れていない | 既存の運営の許可の試験がそのまま緑 |
 | i18n・UI の決まり | 必須チェック UI governance gate・Lint & Dark Mode が緑。ja/en の鍵が同じ |
@@ -188,7 +198,7 @@
 - 社員の場所（だいたいの地域）がオーナーに見える → 対策: 社員がボタンを押したときだけ（PO 決定2）。
 - 頼むボタンの悪用（他人の待ち Cookie）→ 対策: Cookie はその機械だけが持つ。1依頼で1回しか知らせない。
 - pull_request_target の危険（PR のコードが権限つきで動く）→ 対策: checkout しない・実行しない・権限は読み取りだけ。設計審査と reviewer で workflow の全文を見る。
-- 必須チェックが増え、守るファイルを触る PR は PO の GO が要る → 受け入れる（PO の言葉「機械的な仕組み」どおり。対象は見張りのファイルだけ）。
+- 必須チェックが増え、守るファイルを触る PR は GO が要る → 組A は PO 本人（先月の数で 8回）、組B は Opus の GO で通す（PO 2026-11-20「1」）。組B は AI のわざとの書き換えを止められない → 受け入れる（PO 承知の上の選択）。組B の変更は reviewer の審査と Opus の GO 記録に残る。
 - 毎日の Discord が1通増える → 受け入れる（黙っていると止まっているのか分からないため）。
 - 許可一覧の表が理由なしで増える → 対策: 一覧の各行に理由の文が必須（空なら CI のスクリプトが落ちる）。一覧のファイルは K10 で守る。
 

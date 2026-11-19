@@ -103,3 +103,29 @@
 - 依頼の表に tenant_id は無い。会社の絞り込みは `public.users u ON u.id = r.user_id` で `u.tenant_id = get_current_tenant の会社` とする（運営の一覧と同じ JOIN）。
 - 運営の許可（backend/app/routers/super_admin_login_requests.py:107）と同じ UPDATE をオーナー用に書き写すと二重管理になる → 共通の関数に1か所化する。
 - メールは全社で1つ（public.users）のため、スタッフ登録で「失敗か成功か」から他社在籍を推測される余地は消せない。文言の区別を無くすところまでが本件の範囲。
+
+---
+
+## 便7 の数え（2026-11-20・origin/main e4c074d30 時点）
+
+数え方: `git log origin/main --since=2026-10-20 --first-parent --format=%h -- <ファイル>` の行数（main への合流の数）。
+
+| 組 | ファイル | 合流の数 |
+|---|---|---|
+| B | .github/workflows/migration-test.yml | 26 |
+| B | scripts/check-process-artifacts.js | 11 |
+| B | .github/workflows/test.yml | 6 |
+| A | scripts/check_public_tenant_rls.py・backend/app/ops/tenant_rls_allowlist.py・.github/workflows/process-artifacts-gate.yml・.github/workflows/lint-tenant-schema.yml | 各2 |
+| A | scripts/lint_tenant_schema.py・backend/tests/test_tenant_login_requests.py・backend/tests/test_check_public_tenant_rls.py・backend/app/tasks/tenant_isolation_daily_check.py | 各1 |
+| A | scripts/migration-guard/dryrun-exclusions.tsv・scripts/migration-dryrun-report.py・.github/workflows/workflow-lint.yml | 各0 |
+| A（設計後に追加） | backend/app/ops/tenant_rls_checks.py・backend/tests/test_tenant_isolation_daily_check.py | 各1（どちらも #5593。同じ PR が tenant_isolation_daily_check.py も変更） |
+
+重ならない PR の数: 設計の15件すべて 43／組A だけ 8／組A＋check-process-artifacts.js 19。
+
+migration-test.yml の 26回の多くは「変更 SQL の前提の移行を先に実行」の手を約10行足す形（例: #5566 は `git diff 1b1604ee7^1 1b1604ee7 -- .github/workflows/migration-test.yml` で手を1つ・10行足しただけ）。
+
+GitHub の動き（Context7 /github/docs、2026-11-20）:
+- pull_request_target の `GITHUB_SHA` は基のブランチの最後の commit（events-that-trigger-workflows）。
+- やり直しは元の出来事と同じ `GITHUB_SHA`・`GITHUB_REF` で動く（re-run-workflows-and-jobs）。
+- PR の commit の一覧は 250件が上限（repository-limits）。
+- main の ruleset 15777895 は strict（main に追いついていることが必要）。PO 本人の GO を head に結び付けると update-branch のたびにやり直しになるため、守るファイルの中身に結び付ける（design.md 便7）。
