@@ -16,7 +16,7 @@
 2. 色は各社の `calendar_events.color_key`（NULL＝デフォルト＝持ち主の色）に鍵で持つ。値の決まりで 24 個に限る。
 3. Google へは `eventLabelId` と `eventLabelVersion=1` で送る。名札の id は持たず、カレンダーの名札の色の値と照らして、そのたびに探す。合う名札が無ければ色なしで送り、名札は作らない。
 4. Google の色は、Google で作った予定についてだけ取り込む（アプリで作った予定は取り込まない今の決まりのまま）。古い `colorId` は読まない。
-5. 画面の色は `--gcal-event-<鍵>`（`index.css`）と `--event-color-<鍵>`（`tokens.css`）のトークンだけで描く。色を選ぶ部品は新しい金型 `ColorSwatchPicker`。
+5. 画面の色は `tokens.css` の `--event-color-<鍵>`（値は Google の色をそのまま書く）のトークンだけで描く。`index.css` には置かない（色の直書きの数の見張りを広げないため・design.md §4-7）。色を選ぶ部品は新しい金型 `ColorSwatchPicker`。
 
 ## Why（なぜ）
 
@@ -33,4 +33,4 @@
 
 - 各社の `calendar_events` に欄 1 つ（移行 1 本・危険な PR）。AI 用の写しの分類表に 1 行。
 - Google の呼び出しが、書き込み 1 件と取り込み 1 回につき `calendars.get` 1 回増える。
-- `--gcal-*` のトークン（ADR-1074 の持ち物）に 24 個を足す。
+- `tokens.css` に `--event-color-*` を 24 個足す。`--gcal-*`（ADR-1074 の持ち物）と色の数の見張りの例外は変えない。

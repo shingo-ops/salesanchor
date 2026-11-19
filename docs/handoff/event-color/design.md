@@ -168,15 +168,22 @@ def key_for_hex(hex_value: str | None) -> str | None:
 - `:440`・`:465` の `model_dump` の直後で、`payload.get("color_key") == ""` なら `payload["color_key"] = None` に直してから次へ渡す（鍵は残す）。
   これで作成・更新・繰り返しの 3 択のどの道にも `""` が届かず、DB の値の決まりに当たらない。
 
-### 4-7. 色のトークン（`frontend/src/index.css`・`frontend/src/tokens.css`）
+### 4-7. 色のトークン（`frontend/src/tokens.css`）
 
-- `index.css` の明るい画面（`:206` の `--gcal-now` の後）と暗い画面（`:422` の `--gcal-now` の後）に `--gcal-event-<鍵>: <値>;` を 24 個ずつ。v1 は暗い画面も同じ値。
-- `tokens.css` の `:root` に意味のトークン `--event-color-<鍵>: var(--gcal-event-<鍵>);` を 24 個。部品と画面はこちらを使う。
+- `tokens.css` の `:root` に `--event-color-<鍵>: <値>;` を 24 個（値は Google の色・`EVENT_COLORS` と同じ）。部品と画面はこれだけを使う。
+  v1 は暗い画面も同じ値なので、暗い画面の区画には足さない。
   `.gcal-colors` の範囲の中には置かない。予定の画面の外（部品の見本 stories など）でも色が出るようにするため。
-  `--gcal-` を書いてよいのは `index.css`・`tokens.css` だけ（`frontend/src/components/gcalColorsUsage.test.ts:26`）なので、この形にする。
+- `index.css` には足さない（`--gcal-event-*` は作らない）。
+  - 2026-11-20 の直し（初版は `index.css` に `--gcal-event-*` を 48 行置き、`tokens.css` から `var()` で引く 2 段だった）。
+  - 理由: 色の直書きの数の見張り `scripts/check-design-token-ratchet.sh` は `frontend/src/tokens.css` を数えず、`frontend/src/index.css` は数える（`:62`〜`:64`）。
+    `index.css` の例外は Google の画面の色 13 個だけで、足すには PO の承認が要る（`:15`〜`:19`）。初版の形では 171→219 で赤になった（PR の確かめ guard-hex-increase）。
+  - `tokens.css` は色の直書きの検査 `frontend/scripts/check-css-hardcoded-colors.js:20` でも定義ファイルとして除かれている。既に `--color-success: #15803d;` などの前例がある（`frontend/src/tokens.css:640`）。
+  - 値を置く場所は 1 か所のまま（画面側は `tokens.css` だけ・裏側の正本は backend/app/services/event_colors.py・両者の一致は下の試験が照らす）。
 - 裏側の試験 backend/tests/test_event_colors_tokens.py（新規）:
-  - `frontend/src/index.css` の明るい画面の `--gcal-event-<鍵>` 24 個が `EVENT_COLORS` と鍵・値とも一致すること。
+  - `frontend/src/tokens.css` の `--event-color-<鍵>` 24 個が `EVENT_COLORS` と鍵・値とも一致すること（鍵の `_` はトークンでは `-`）。
+  - `frontend/src/index.css` に `--gcal-event-` も `--event-color-` も無いこと（置き場所が 2 つに割れるのを防ぐ）。
   - frontend/src/pages/schedule/eventColors.ts の鍵の並びが `EVENT_COLOR_KEYS` と一致すること。
+  - 画面の文字（ja・en）に 24 色＋デフォルトの名があること。
   - 画面のファイルを裏側の試験で読む手本は `backend/tests/seed_data.py:22`。
 
 ### 4-8. 色を選ぶ部品（新しい金型 frontend/src/components/ColorSwatchPicker.tsx）
