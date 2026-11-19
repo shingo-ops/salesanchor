@@ -1461,7 +1461,7 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 | K76 起動し直す道でも R の鍵が入り、つなぎ直しでは書き直さない | vitest（tests/unit/sessions.case.test.ts:426 からの試験に、起動し直した後の `projects` に R の鍵がある期待と、つなぎ直しでは前の中身のままの期待を足す） |
 | K77 R が realpath と違う・無いときは件を開かない | vitest（tests/unit/case-sandbox.test.ts。R にリンクを渡す形と、無い道を渡す形で投げ、.claude.json が前の中身のまま） |
 
-番号の付け替え（2026-11-20）: 本流の §15 が先に K72〜K74 を使ったため、この節の 3 つを K75〜K77 に付け替えた。agent-console v0.55.3 の試験の名前に残る K72a・K72b・K73・K74a・K74b は、それぞれ K75・K76・K77 を指す。
+番号の付け替え（2026-11-20）: 本流の §15 が先に K72〜K74 を使ったため、この節の 3 つを K75〜K77 に付け替えた。agent-console v0.55.3（commit d417835）の tests/unit/case-sandbox.test.ts の試験の名前に残る K72a・K72b は K75、K74a・K74b は K77 を指す。K76 は名前を付けず、tests/unit/sessions.case.test.ts の既存の試験に足した期待で確かめている。
 
 残る危険:
 - U24 claude の次の版が、信頼の鍵の形（`projects` の `hasTrustDialogAccepted`）を変えると、同じ P0 に戻る。そのときは毎日の見回りの D で見つかる（誤って○にはならない側）。
