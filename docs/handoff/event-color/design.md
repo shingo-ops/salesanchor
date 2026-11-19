@@ -216,14 +216,14 @@ def key_for_hex(hex_value: str | None) -> str | None:
   - `eventColorVar` は `var(--event-color-<鍵>)` を返す。`frontend/src/components/CalendarView.tsx:338` がそのまま CSS の値として付ける。
   - 色なしは今と同じ（K6）。
 - 便2 の前の調べで足した点（origin/main 5db804b78）:
-  - 予定の色を決める場所を 1 つにする。`SchedulePageImpl.tsx` に `eventDisplayColor(colorKey, ownerColor)` を置き（中身は上の「後」の式）、
-    箱（`:1272`）・日ごとの一覧の丸（`:653`）・予定の一覧の丸（`:721`）の 3 か所はこれを通す。箱だけ色が変わり一覧の丸が持ち主の色のまま、を防ぐ。
+  - 予定の色を決める場所を 1 つにする。`frontend/src/pages/schedule/eventColors.ts` に `eventDisplayColor(colorKey, ownerColor)` を置き（中身は上の「後」の式・置き場所は実装カード card-bin2.md と同じ）、
+    `frontend/src/pages/schedule/SchedulePageImpl.tsx` の箱（`:1272`）・日ごとの一覧の丸（`:653`）・予定の一覧の丸（`:721`）の 3 か所はこれを通す。箱だけ色が変わり一覧の丸が持ち主の色のまま、を防ぐ。
   - 作っている途中の仮の箱（`:1260`〜`:1262`）も `draft.colorKey` を通す。依存の並び（`:1277`〜`:1281`）に `draft.colorKey` を足す。
   - 「デフォルト」の丸に渡す持ち主の色: 直すときは `getOwnerMeta(ownerByUserId, item.ownerUserId, currentOwnerUserId).color`、作るときは `currentOwnerUserId` の色（どちらも `getOwnerMeta` から取り、色を書き写さない）。
   - 動かす・長さを変える保存（`patchMoved`・`:1284`〜）は `color_key` を送らない（送らなければ「変えない」・§4-6）。
   - 繰り返しの予定で色だけ変えたときは 3 択をすべて出す。`scopeChoices`（`frontend/src/pages/schedule/schedule-utils.ts:532`〜`:536`）の「繰り返しの形が変わった」の印に色を入れない。
   - 欄の印の絵は `SCHEDULE_POPOVER_ICONS`（`frontend/src/constants/icons.tsx:372`）に `color`（heroicons の `SwatchIcon`・2.2.0 に在る）を 1 つ足す。
-  - 窓が開いている間の Esc は今のまま窓ごと閉じる（`SchedulePageImpl.tsx:1336`〜`:1342`）。色の一覧だけを閉じる Esc は作らない。
+  - 窓が開いている間の Esc は今のまま窓ごと閉じる（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1336`〜`:1342`）。色の一覧だけを閉じる Esc は作らない。
 
 ### 4-10. 触らない範囲
 
