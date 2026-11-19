@@ -15,9 +15,11 @@ import { ChatBubble } from "../../components/ChatBubble";
 import { Drawer } from "../../components/Drawer";
 import { FloatingActionButton } from "../../components/FloatingActionButton";
 import { Textarea } from "../../components/Textarea";
+import { IconToggleButton } from "../../components/IconToggleButton";
 import { Toggle } from "../../components/Toggle";
-import { LeadChatIcon } from "../../constants/icons";
+import { LeadChatIcon, SECRETARY_ICONS } from "../../constants/icons";
 import { useSecretaryAccess } from "./useSecretaryAccess";
+import { useSecretaryListen } from "./useSecretaryListen";
 import { useSecretaryVoice } from "./useSecretaryVoice";
 import { SecretaryDraftEvent } from "./SecretaryDraftEvent";
 import { SecretaryKarteAsk } from "./SecretaryKarteAsk";
@@ -57,6 +59,8 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
   const [voiceOn, setVoiceOn] = useState(false);
   const [voiceNote, setVoiceNote] = useState<{ id: number; kind: "failed" | "cap" } | null>(null);
   const voice = useSecretaryVoice();
+  // 声の聞き取り（確定した文を欄に足す。勝手に送らない）
+  const listen = useSecretaryListen((heard) => setText((prev) => (prev + heard).slice(0, SECRETARY_MAX_TEXT)));
   const nextId = useRef(1);
   // 返事が届いた時点の値で決める（送った時点の値を使わない）
   const voiceOnRef = useRef(false);
@@ -64,6 +68,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
 
   const close = () => {
     // 閉じたら会話とカルテを消す
+    listen.abort();
     setOpen(false);
     setMessages([]);
     setText("");
@@ -98,6 +103,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
     voice.stop();
+    listen.abort();
     setVoiceNote(null);
     const userId = nextId.current++;
     const pendingId = nextId.current++;
@@ -236,15 +242,35 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
               <label htmlFor="secretary-voice-toggle">{t("secretary.voiceToggle")}</label>
               <Toggle id="secretary-voice-toggle" checked={voiceOn} onCheckedChange={onVoiceChange} />
             </div>
-            <Textarea
-              fullWidth
-              value={text}
-              maxLength={SECRETARY_MAX_TEXT}
-              placeholder={t("secretary.placeholder")}
-              aria-label={t("secretary.placeholder")}
-              disabled={sending}
-              onChange={(e) => setText(e.target.value)}
-            />
+            <div className="secretary-chat__input-row">
+              <Textarea
+                fullWidth
+                value={text}
+                maxLength={SECRETARY_MAX_TEXT}
+                placeholder={t("secretary.placeholder")}
+                aria-label={t("secretary.placeholder")}
+                disabled={sending}
+                onChange={(e) => setText(e.target.value)}
+              />
+              {isMobile && (
+                <IconToggleButton
+                  pressed={listen.listening}
+                  iconOff={SECRETARY_ICONS.listen}
+                  iconOn={SECRETARY_ICONS.listen}
+                  size="md"
+                  disabled={sending}
+                  onClick={() => (listen.listening ? listen.stop() : listen.start())}
+                  aria-label={t(listen.listening ? "secretary.listen.stop" : "secretary.listen.start")}
+                />
+              )}
+            </div>
+            {(listen.listening || listen.error) && (
+              <p className="secretary-chat__listen-status" role="status">
+                {listen.listening
+                  ? `${t("secretary.listen.listening")} ${listen.interim}`.trim()
+                  : t(`secretary.listen.error.${listen.error}`)}
+              </p>
+            )}
             <Button onClick={send} disabled={sending || text.trim() === ""} loading={sending}>
               {t("secretary.send")}
             </Button>
