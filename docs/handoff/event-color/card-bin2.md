@@ -82,7 +82,7 @@
 - 新規: `frontend/src/components/ColorSwatchPicker.tsx`・`frontend/src/components/ColorSwatchPicker.css`・`frontend/src/components/ColorSwatchPicker.stories.tsx`・`frontend/src/components/ColorSwatchPicker.test.tsx`・`frontend/src/pages/schedule/eventColors.ts`・`frontend/src/pages/schedule/eventColors.test.ts`・`backend/tests/test_event_colors_tokens.py`
 - 変更: `frontend/src/index.css`・`frontend/src/tokens.css`・`frontend/src/constants/icons.tsx`・`frontend/src/locales/ja.json`・`frontend/src/locales/en.json`・`frontend/src/pages/schedule/schedule-utils.ts`・`frontend/src/pages/schedule/SchedulePageImpl.tsx`・`frontend/src/pages/schedule/ScheduleDraftFields.tsx`・`frontend/src/pages/schedule/ScheduleFullEditor.tsx`・`docs/CC_UI_GOVERNANCE.md`
 - 試験の変更: `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`
-- このカード: `docs/handoff/event-color/card-bin2.md`（§13 の報告欄だけ追記してよい）
+- 設計とこのカード: `docs/handoff/event-color/design.md`・`docs/handoff/event-color/card-bin2.md`。作業場所を作った直後に `git checkout origin/release/event-color-bin2 -- docs/handoff/event-color/design.md docs/handoff/event-color/card-bin2.md` で取り込み、同じ PR に入れる（中身は変えない。§13 の報告欄だけ追記してよい）
 
 型を直したために別の試験ファイルが型の誤りで落ちるときは、その試験ファイルに `colorKey` を足すだけ直してよい（報告に名前を書く）。
 
