@@ -180,12 +180,12 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 
 （２）`frontend/src/constants/icons.tsx`
 - :32-53 の solid の import に `MicrophoneIcon` を足す（`@heroicons/react` 2.2.0 に有る: `node_modules/@heroicons/react/24/solid/MicrophoneIcon.js`）
-- 最後に `export const SECRETARY_ICONS = { listen: hi(MicrophoneIcon) } satisfies Record<string, Icon>;` を足す（包み方は :95-99 と同じ `hi()`）
+- 末尾の `LeadChatIcon` の前に `export const SECRETARY_ICONS = { listen: hi(MicrophoneIcon) } satisfies Record<string, Icon>;` を足す（包み方は :95-99 と同じ `hi()`）
 
 （３）`frontend/src/features/secretary/useSecretaryListen.ts`（新規）
 - 声 → 文字だけを受け持つ。秘書への送り・会話の扱いは持たない（§補足）
 - `getSpeechRecognition()`: `window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null`（MDN「Using the Web Speech API」の書き方）。型は同じファイルに最小の interface を書く
-- `classifyListenError(code: string): ListenError`（1 か所の対応表）
+- `classifyListenError(code: string): ListenError | null`（1 か所の対応表。`null` は「何も出さない」）
   - `not-allowed` → `notAllowed` ／ `service-not-allowed` → `serviceNotAllowed` ／ `no-speech` → `noSpeech` ／ `audio-capture` → `audioCapture` ／ `network` → `network` ／ `language-not-supported` → `language` ／ `aborted` → `null`（自分で止めたとき・何も出さない）／ それ以外 → `other`
   - 値の一覧の出典: MDN `SpeechRecognitionErrorEvent.error`（Context7 `/mdn/content`）
 - `useSecretaryListen(onText: (text: string) => void)` が返すもの: `supported`・`listening`・`interim`・`error`（`ListenError | "unsupported" | null`）・`start()`・`stop()`・`abort()`
@@ -198,9 +198,11 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
     5. `rec.start()` を呼び、続けて `listening=true` にする（`start` の受け口を待たない。押した直後から「聞いています」を出し、印を押された形にする）
     6. `rec.start()` が投げたら `recRef.current=null`・`listening=false`・`error="other"`
   - `result`: 途中の文は `interim` に入れる。確定した文（`isFinal`）は前後の空白を落として、空でなければ `onText` を 1 回呼ぶ
-  - `error`: `classifyListenError` の結果を `error` に入れる
+  - 受け口（`result`・`error`・`end`）はどれも、まず `recRef.current` が自分（その受け口を付けた部品）かを見る。違えば何もしない（止めた古い部品の知らせで今の状態を変えない）
+  - `error`: `classifyListenError` の結果が `null` でなければ `error` に入れる
   - `end`: `listening=false`・`interim=""`・`recRef.current=null`（`error` は消さない。知らせは次に押すまで残す）
-  - `stop()`: 確定を待って止める。`abort()`: すぐ止める（窓を閉じる・送る・画面から消えるとき）
+  - `stop()`: `recRef.current?.stop()` だけ呼ぶ。確定の文を受け取るため、片付けは `end` に任せる
+  - `abort()`: `recRef.current?.abort()` を呼び、`end` を待たずにその場で `recRef.current=null`・`listening=false`・`interim=""` にする（窓を閉じる・送る・画面から消えるとき。止めた部品の後の知らせは上の「自分か」の確かめで捨てる）
   - 画面から消えるとき（useEffect の後始末）に `abort()`
 
 （４）`frontend/src/features/secretary/SecretaryChat.tsx`
@@ -224,7 +226,7 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 - en: 同じ意味の英語
 
 （７）試験
-- `frontend/src/features/secretary/useSecretaryListen.test.ts`（新規）: 対応表（8 つ）・部品が無いと `unsupported`・`start` で `lang` などの設定・途中の文・確定で `onText` 1 回・空の確定で呼ばない・画面から消えると `abort`・続けて 2 回 `start()` しても部品は 1 つ・前の失敗の後に `start()` すると `error` が `null` に戻る・`start()` の直後に `listening` が `true`
+- `frontend/src/features/secretary/useSecretaryListen.test.ts`（新規）: 対応表（8 つ）・部品が無いと `unsupported`・`start` で `lang` などの設定・途中の文・確定で `onText` 1 回・空の確定で呼ばない・画面から消えると `abort`・続けて 2 回 `start()` しても部品は 1 つ・前の失敗の後に `start()` すると `error` が `null` に戻る・`start()` の直後に `listening` が `true`・`rec.start()` が投げると `error` が `other` になり、次の `start()` で部品が作られる・`error` の後に `end` が来ても `error` が残る・`abort()` の直後に次の `start()` で新しい部品が作られ、古い部品の `end` が来ても `listening` は `true` のまま
 - `frontend/src/features/secretary/SecretaryChat.test.tsx` に足す: `isMobile=false` で印が無い・`isMobile=true` で印が有る・押すと「聞いています」・確定の文が欄に入り送られない（送る口が呼ばれない）・部品が無いと「使えません」・窓を閉じると `abort`
 - 試験の中に日本語の文字を直接書かない（`useSecretaryVoice.test.ts:4-6` と同じ書き方）
 
@@ -242,7 +244,8 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 | T3 マイクが閉じる | 止まった後、iPhone の画面の上のマイクの印（橙の点）が消える（○×） |
 | T4 比べ | 同じことを Safari で開いた画面でも 1 回。欄に文が入れば○、入らなければ×と出た知らせ（ホーム画面のアプリと違うかを見るための記録。合否には使わない） |
 
-- 進み方は T2 の回数だけで決める（1 回でも出た知らせはすべて記録する）
+- T3 が×（止めた後もマイクの印が消えない）なら、T2 の回数に関わらず止めて PO に知らせる（K5 に反するため）
+- それ以外の進み方は T2 の回数だけで決める（1 回でも出た知らせはすべて記録する）
   - 5 回中 4〜5 回: A のまま次の便（PC のスペース長押し・音声モード・K6）の設計へ進む
   - 5 回中 0〜3 回: どの知らせが出たかに関わらず止める。出た知らせと T4 の結果を PO に見せ、「Safari で使う」「B（有料）に変える」「もう一度 5 回試す」のどれにするかを聞く
 
@@ -259,3 +262,4 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 
 - 1 回目（クラウドの Opus・2026-11-19 13:08 UTC）: REVISE。必須 3 件（二重 start・知らせが消えない・T2/T4 の判定が一つに決まらない）。file:line は 15 件すべて一致。→ §14-2（３）・（７）と §14-4 を直した
 - 1 回目で「未確認」とされた `MicrophoneIcon`: 手元の `frontend/node_modules/@heroicons/react/24/solid/MicrophoneIcon.js` が有る（2.2.0）
+- 2 回目（クラウドの Opus・2026-11-19 13:13 UTC）: REVISE。1 回目の必須 3 件は直った。新しい必須 1 件（カードの作業場所の作り方がクラウドの決まり `scripts/agent-hooks/cloud/rules.md:15` と違う）→ カードを `git switch -C` に直した。推奨 1〜5（abort 後の片付け・試験 3 件・戻りの型・T3 が×なら止める・印の置き場所）も直した。推奨 6（preflight）はカードに書いた

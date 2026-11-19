@@ -7,8 +7,10 @@ PO の承認: 2026-11-19「1」（無料のやり方で試しの画面から）�
 ## 作業場所の作り方（クラウド）
 
 1. `bash scripts/new-worktree.sh release/secretary-voice-input`（origin/main から同じ名前のブランチを作る）
-2. `git -C ~/worktrees/salesanchor/release-secretary-voice-input merge --ff-only origin/release/secretary-voice-input`（設計のコミットを取り込む。ff できなければ BLOCKED:）
-3. 以後の作業はすべてこの worktree の中で行う。clone のまま commit しない。
+2. その worktree の中で `git switch -C release/secretary-voice-input origin/release/secretary-voice-input`（push 済みの設計のコミットに合わせる。`scripts/agent-hooks/cloud/rules.md:15` の手順）
+3. `git rev-parse HEAD` と `git rev-parse origin/release/secretary-voice-input` が同じことを確かめる。違えば BLOCKED:
+4. `./scripts/dev/executor-preflight.sh` を流す。× なら原文を書いて BLOCKED:
+5. 以後の作業はすべてこの worktree の中で行う。clone のまま commit しない。main は取り込まない。reset・rebase・force・merge・pull は使わない。
 
 ## 触るファイル（これ以外は触らない）
 
