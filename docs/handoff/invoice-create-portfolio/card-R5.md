@@ -7,6 +7,7 @@
 # rules-ack: d5738ef7
 改訂: 2026-11-19 第2版。1回目の実行（K10 だけ失敗・87本中86本成功）を受け、K10 の試験が数える範囲を商品の候補一覧（role=listbox。AsyncCombobox が body へ描く1つだけの一覧）に絞った。ほかの行は第1版のまま。
 改訂: 2026-11-19 第3版。2回目の実行（試験87本すべて成功）で、記録の前の自動点検（eslint --max-warnings=0）が試験2本の日本語の文字25件の警告で止めた。2-3 と 2-7 の先頭に、既存の試験と同じ形の除外の1行（理由と前例つき）を足した。手順5 の eslint を同じ条件にし、自動点検の残り1つ（check-css-var-fallbacks）も手順5 で流す。§4 の「警告なら続ける」を消した。
+改訂: 2026-11-19 第4版。3回目の実行（手順1〜7 成功）で、手順8 の UI の決まりの検査（check-ui-governance.js の loadingText）が 2-8 の送料の読み込み中の文字だけの表示（生の p）を +1 と数えて止めた。2-8 のこの表示を金型 LoadingBlock（frontend/src/components/loading/LoadingBlock.tsx。2-9 と同じ import）に替え、言葉は label 属性で渡す（検査は属性の中の t() を数えない。check-ui-governance.js 395〜410行）。testid は外側の div に残す。手順5 の css-var の行に set -o pipefail を足した。
 
 ## 受領確認（最初の報告の 1 行目に書く）
 
@@ -1593,6 +1594,7 @@ import { useTranslation } from "react-i18next";
 import { Badge } from "../../components/Badge";
 import { Button } from "../../components/Button";
 import { Callout } from "../../components/Callout";
+import { LoadingBlock } from "../../components/loading";
 import { Radio } from "../../components/Radio";
 import { Select } from "../../components/Select";
 import { Stack } from "../../components/Stack";
@@ -1754,7 +1756,11 @@ export function InvoicePaymentTotalsSection(props: InvoicePaymentTotalsSectionPr
       {canQuote && shippingQuotes.key === "" && (
         <p data-testid="invoice-shipping-needs-weight">{t("invoiceForm.shippingNeedsWeight")}</p>
       )}
-      {shippingQuotes.loading && <p role="status" data-testid="invoice-shipping-loading">{t("invoiceForm.shippingLoading")}</p>}
+      {shippingQuotes.loading && (
+        <div data-testid="invoice-shipping-loading">
+          <LoadingBlock inline label={t("invoiceForm.shippingLoading")} />
+        </div>
+      )}
       {shippingQuotes.error !== "" && (
         <Callout variant="warning" title={t("invoiceForm.shippingQuoteError")}>
           <span data-testid="invoice-shipping-error">{shippingQuotes.error}</span>
@@ -2742,7 +2748,7 @@ describe("revisit shows the copy first (Q1)", () => {
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r5-page/frontend && npm run check:loading-clear 2>&1 | tail -5
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r5-page/frontend && npm run check:status-direct-writes 2>&1 | tail -5
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r5-page/frontend && npm run check:jsx-emoji 2>&1 | tail -5
-    cd ~/worktrees/salesanchor/release-invoice-portfolio-r5-page/frontend && node scripts/check-css-var-fallbacks.js 2>&1 | tail -5; echo "css-var exit=$?"
+    cd ~/worktrees/salesanchor/release-invoice-portfolio-r5-page/frontend && set -o pipefail && node scripts/check-css-var-fallbacks.js 2>&1 | tail -5; echo "css-var exit=$?"
   期待: 1行目は failed 0（8ファイルの試験がすべて passed。本数はそのまま書く）。2行目 `tsc exit=0`（型の誤り 0）。3行目 `eslint exit=0` で、誤りも警告も 0（記録の前の自動点検が `eslint --max-warnings=0` で警告 1 件でも止めるため、ここで同じ条件で確かめる）。最後の行は `css-var exit=0`。4行目以降はどれも誤りなしで終わる（✅ や 0 件の表示。❌・終了の失敗が出ない）。
 
 手順6 変えたファイル
