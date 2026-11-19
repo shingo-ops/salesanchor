@@ -190,6 +190,7 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
   - 値の一覧の出典: MDN `SpeechRecognitionErrorEvent.error`（Context7 `/mdn/content`）
 - `useSecretaryListen(onText: (text: string) => void)` が返すもの: `supported`・`listening`・`interim`・`error`（`ListenError | "unsupported" | null`）・`start()`・`stop()`・`abort()`
   - 持っている部品は `useRef` に 1 つだけ置く（`recRef`）。`listening` は state で持つ
+  - `onText` も `useRef` に入れ、描くたびに最新に入れ替える（受け口はいつも最新の `onText` を呼ぶ）
   - `start()`: 押したその場で呼ぶ。次の順に行う
     1. `recRef.current` が有れば何もせず終わる（二重に起こさない。二度押しでも部品は 1 つ）
     2. `error=null`・`interim=""` に戻す（前の知らせを消す）
@@ -226,7 +227,7 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 - en: 同じ意味の英語
 
 （７）試験
-- `frontend/src/features/secretary/useSecretaryListen.test.ts`（新規）: 対応表（8 つ）・部品が無いと `unsupported`・`start` で `lang` などの設定・途中の文・確定で `onText` 1 回・空の確定で呼ばない・画面から消えると `abort`・続けて 2 回 `start()` しても部品は 1 つ・前の失敗の後に `start()` すると `error` が `null` に戻る・`start()` の直後に `listening` が `true`・`rec.start()` が投げると `error` が `other` になり、次の `start()` で部品が作られる・`error` の後に `end` が来ても `error` が残る・`abort()` の直後に次の `start()` で新しい部品が作られ、古い部品の `end` が来ても `listening` は `true` のまま
+- `frontend/src/features/secretary/useSecretaryListen.test.ts`（新規）: 対応表（8 つ）・部品が無いと `unsupported`・`start` で `lang` などの設定・途中の文・確定で `onText` 1 回・空の確定で呼ばない・画面から消えると `abort`・続けて 2 回 `start()` しても部品は 1 つ・前の失敗の後に `start()` すると `error` が `null` に戻る・`start()` の直後に `listening` が `true`・`rec.start()` が投げると `error` が `other` になり、次の `start()` で部品が作られる・`error` の後に `end` が来ても `error` が残る・`abort()` の直後に次の `start()` で新しい部品が作られ、古い部品の `end` が来ても `listening` は `true` のまま・`abort()` の後に古い部品から `result`・`error` が来ても `onText` は呼ばれず `error` も変わらない・`stop()` の後の `end` で `listening` が `false` になる
 - `frontend/src/features/secretary/SecretaryChat.test.tsx` に足す: `isMobile=false` で印が無い・`isMobile=true` で印が有る・押すと「聞いています」・確定の文が欄に入り送られない（送る口が呼ばれない）・部品が無いと「使えません」・窓を閉じると `abort`
 - 試験の中に日本語の文字を直接書かない（`useSecretaryVoice.test.ts:4-6` と同じ書き方）
 
@@ -263,3 +264,4 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 - 1 回目（クラウドの Opus・2026-11-19 13:08 UTC）: REVISE。必須 3 件（二重 start・知らせが消えない・T2/T4 の判定が一つに決まらない）。file:line は 15 件すべて一致。→ §14-2（３）・（７）と §14-4 を直した
 - 1 回目で「未確認」とされた `MicrophoneIcon`: 手元の `frontend/node_modules/@heroicons/react/24/solid/MicrophoneIcon.js` が有る（2.2.0）
 - 2 回目（クラウドの Opus・2026-11-19 13:13 UTC）: REVISE。1 回目の必須 3 件は直った。新しい必須 1 件（カードの作業場所の作り方がクラウドの決まり `scripts/agent-hooks/cloud/rules.md:15` と違う）→ カードを `git switch -C` に直した。推奨 1〜5（abort 後の片付け・試験 3 件・戻りの型・T3 が×なら止める・印の置き場所）も直した。推奨 6（preflight）はカードに書いた
+- 3 回目（クラウドの Opus・2026-11-19 13:17 UTC）: **APPROVE**。新しい必須なし。新しい推奨 3 件（試験 2 件・カードの作業場所の場所の明記・`onText` を ref に持つ）も直した
