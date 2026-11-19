@@ -74,7 +74,7 @@
 | F18 | 色の欄を置く並び: 作る窓は `ScheduleDraftFields`（`frontend/src/pages/schedule/ScheduleDraftFields.tsx:483`〜`:515`）、編集の画面は `frontend/src/pages/schedule/ScheduleFullEditor.tsx:87`〜`:89` の種類の行の後 | 同上 |
 | F19 | 窓の絵は `SCHEDULE_POPOVER_ICONS`（`frontend/src/constants/icons.tsx:372`〜`:382`）。outline の絵は `:16`〜`:92` で読み、`hi(...)` で包む（例 `:139`） | 同上 |
 | F20 | `@heroicons/react` 2.2.0 に `SwatchIcon`（24/outline）がある | `frontend/node_modules/@heroicons/react/24/outline/SwatchIcon.js` |
-| F21 | 画面の文字の `schedule` の塊は ja・en とも `:3275` から。`"category"` は ja の `:3386` | `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` |
+| F21 | 画面の文字の `schedule` の塊は ja・en とも `:3336` から。`"category"` は ja の `:3447`（origin/main e4c074d30） | `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` |
 | F22 | 新しいトークンを足す PR は、本文に「### デザイントークン変更時」の 4 つの印と理由が要る | `frontend/scripts/check-new-tokens.js`・`.github/PULL_REQUEST_TEMPLATE.md` |
 
 ## 3. 触るファイル（これ以外は触らない）
@@ -241,7 +241,7 @@ export interface ColorSwatchPickerProps {
 
 ### 4-5. 画面の文字（`frontend/src/locales/ja.json`・`en.json`）
 
-`schedule` の塊の `"category"`（ja `:3386`・en は同じ塊の `"category"`）の次に:
+`schedule` の塊の `"category"`（ja `:3447`・en は同じ塊の `"category"`）の次に:
 - `"eventColor"`: ja `予定の色` ／ en `Event color`
 - `"eventColors"`: `{ "default": ..., "radicchio": ..., … 24 個 }`。名は設計 §4-1 の表の ja・en の列のまま。`default` は ja `デフォルト` ／ en `Default`。
 
