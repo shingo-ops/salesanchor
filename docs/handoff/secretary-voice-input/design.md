@@ -1,7 +1,7 @@
 # 秘書に声で話しかける — 設計（design）
 
 状態: **聞き取りのやり方は A（ブラウザの聞き取り・無料）に決定（PO 2026-11-19「1」）。まず試しの便（§14）で iPhone のホーム画面のアプリで聞き取れるかを確かめる。§5 の B 用の backend・migration・月の上限（§7）は作らない**
-目標: [kgi.md](kgi.md)（K1〜K6・PO 承認 2026-11-19「1」）／ 現在地: [recon.md](recon.md) ／ 調べ: [research.md](research.md)
+目標: [kgi.md](kgi.md)（K1〜K6・PO 承認 2026-11-19「1」）／ 現在地: [docs/handoff/secretary-voice-input/recon.md](recon.md) ／ 調べ: [research.md](research.md)
 関係 ADR: ADR-1056・ADR-1078・ADR-1080・ADR-027・ADR-067・ADR-144・ADR-136。新しい ADR: ADR-1082（聞き取り。ADR-1081 は別の件で使用済み）
 
 ## 1. 目的
