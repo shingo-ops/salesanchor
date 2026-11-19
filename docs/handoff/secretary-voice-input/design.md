@@ -54,18 +54,18 @@
 | 作る量 | 小 | 中（口・DB の列・使用量の表示） |
 
 - おすすめは B。理由: PC とスマホで同じ仕組みになる。読み上げと同じ契約に音を閉じ込められる。使用量を見られる（KGI の条件）
-- B の前に、本番から 1 回試して事実をそろえる（`stt-probe.sh`: 今の鍵で使えるか・K2 の文がそのまま取れるか・速さ）
+- B の前に、本番から 1 回試して事実をそろえる（stt-probe.sh: 今の鍵で使えるか・K2 の文がそのまま取れるか・速さ）
 - 以下 §5 以降は B で書く。A になった場合は §5-1・§5-2・§7 が無くなり、§5-4 の録音がブラウザの聞き取りに置き換わる
 
 ## 5. 変更するファイル（B の場合）
 
 ### 5-1 backend
 
-- `migrations/20261119_xxxxxx_add_llm_usage_stt_seconds.sql`（新規・冪等）
+- migrations/20261119_xxxxxx_add_llm_usage_stt_seconds.sql（新規・冪等）
   - `ALTER TABLE public.llm_usage_events ADD COLUMN IF NOT EXISTS billed_seconds INTEGER;`
   - 使いみちの CHECK に `secretary_stt`、sdk の CHECK に `google-stt-rest`、provider の CHECK に `google_stt` を足す（読み上げの migration `migrations/20261117_100100_add_llm_usage_tts_characters.sql` と同じ形）
 - `backend/app/services/llm_budget.py:159-185` 一覧に同じ 3 つを足す（DB の CHECK と試験で一致を見る仕組みはそのまま）。:400-419 `billed_seconds` を書けるようにする
-- `backend/app/services/secretary_stt.py`（新規）`secretary_tts.py` と同じ形
+- backend/app/services/secretary_stt.py（新規）`backend/app/services/secretary_tts.py` と同じ形
   - 鍵は読み上げと同じ `GOOGLE_TTS_SA_KEY_FILE`（新しい鍵は置かない）。札を作る関数は `secretary_tts._bearer_token` を共通に使う（同じ式を 2 か所に書かない）
   - 宛先・モデル・場所は probe で 200 になった組み合わせ 1 つを定数で持つ
   - `read_month_seconds(db)`・`check_monthly_cap()`・`transcribe(audio, mime, user_id, tenant_id)`
@@ -88,13 +88,13 @@
 - `frontend/src/features/secretary/secretaryApi.ts` に `transcribeSecretaryAudio(blob)` を足す
 - `frontend/src/features/secretary/useSecretaryListen.ts`（新規）マイクを開く・録音・区切り・閉じる。§5-4
 - `frontend/src/features/secretary/SecretaryDraftEvent.tsx:58-68` の中身の組み立てを `buildEventPayload()` に出し、下書きの「作る」と音声モードの「はい」の両方がこれを使う
-- `frontend/src/features/secretary/secretaryVoiceAnswer.ts`（新規）`judgeYesNo()`。はい・いいえの言葉の一覧はここ 1 か所
-- `frontend/src/features/secretary/SecretaryVoiceMode.tsx`（新規）音声モードの中身（状態の文字・✕）。色・寸法は var() だけ
+- frontend/src/features/secretary/secretaryVoiceAnswer.ts（新規）`judgeYesNo()`。はい・いいえの言葉の一覧はここ 1 か所
+- frontend/src/features/secretary/SecretaryVoiceMode.tsx（新規）音声モードの中身（状態の文字・✕）。色・寸法は var() だけ
 - `frontend/src/features/secretary/SecretaryChat.tsx`
   - `send()`（:97-147）を「文を受け取って送る」形に分け、ボタン・音声モードの両方から呼ぶ
   - `Textarea`（:239-247）に `onKeyDown`・`onKeyUp` でスペース長押し（§3-1）
   - スマホ（`isMobile`）のときだけ欄の右にマイクの `IconToggleButton`
-- `frontend/src/locales/ja.json`・`en.json` に同じ鍵（聞いています・考えています・話しています・マイクが使えない・入れますか？ など）
+- `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` に同じ鍵（聞いています・考えています・話しています・マイクが使えない・入れますか？ など）
 - `frontend/src/pages/super-admin/components/LlmUsageSection.tsx:640-662` の下に聞き取りの今月の分数
 
 ### 5-4 録音と区切り（`useSecretaryListen`）
@@ -105,11 +105,11 @@
 
 ## 6. 1 か所にすること（SSOT）
 
-- 使いみち・sdk・provider の一覧: `llm_budget.py` と DB の CHECK（今の仕組み）
-- Google の鍵と札: `secretary_tts.py` の 1 か所（聞き取りもそれを使う）
+- 使いみち・sdk・provider の一覧: `backend/app/services/llm_budget.py` と DB の CHECK（今の仕組み）
+- Google の鍵と札: `backend/app/services/secretary_tts.py` の 1 か所（聞き取りもそれを使う）
 - 予定の中身の組み立て: `buildEventPayload()` の 1 か所
-- はい・いいえの言葉: `secretaryVoiceAnswer.ts` の 1 か所
-- 画面の文字: `ja.json`・`en.json`
+- はい・いいえの言葉: secretaryVoiceAnswer.ts の 1 か所
+- 画面の文字: `frontend/src/locales/ja.json`・`frontend/src/locales/en.json`
 
 ## 7. 月の上限（B の場合・PO の判断待ち）
 
@@ -147,19 +147,21 @@
 - 口: 便1 の PR を戻す。足した列と CHECK の値は残しても害が無い（読み上げのときと同じ扱い）
 - マイク許可: `nginx/nginx.conf:100` を `microphone=()` に戻す
 
-## 12. 外部事例
+## 12. 外部・過去事例の参照と我々への応用
 
 research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本としてだけ使う）
 
 ## 13. 維持の仕組み
 
+- 守り手: 秘書の窓の試験（`frontend/src/features/secretary/useSecretaryListen.test.ts`・`frontend/src/features/secretary/SecretaryChat.test.tsx`）を CI の必須の確かめが毎回流す。マイクの許可は `nginx/nginx.conf` の app の枠 1 か所だけ（ADR-1082 What 2）
+- A を選んだので、聞き取りは使用量の台帳に書かない（費用 0 円）。下の 2 行は B を選んだときのもの
 - 一覧と CHECK の一致は既存の試験が見張る
 - 聞き取りの月の分数は使用量の画面で毎月見える
 
 ## 補足: 次のテーマ（会話の相棒）への備え（2026-11-19）
 
 - PO 決定（11/19「1」）: 声の機能を先に仕上げ、秘書を会話の相棒にする作り直しは次のテーマにする
-- 聞き取りの部品（`useSecretaryListen.ts`・§5-4）は「声 → 文字」だけを返し、秘書の指示・会話の扱いを持たない
+- 聞き取りの部品（`frontend/src/features/secretary/useSecretaryListen.ts`・§5-4）は「声 → 文字」だけを返し、秘書の指示・会話の扱いを持たない
 - 秘書へ送る処理は今の `send()` を「文を受け取って送る」形にした 1 か所だけ（§5 の :94）。次のテーマで会話の扱いを変えても、聞き取りの部品は変えずに済む
 
 ## 14. 試しの便（便T・A を選んだ後の最初の便）
@@ -222,18 +224,18 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 - `.secretary-chat__input-row { display: flex; align-items: flex-end; gap: var(--space-2); }`（`Textarea` は `fullWidth` のまま）
 - `.secretary-chat__listen-status { margin: 0; font-size: var(--font-sm); color: var(--text-secondary); }`（同じファイルの `.secretary-draft__hint` と同じトークン）
 
-（６）`frontend/src/locales/ja.json`・`en.json` の `secretary` の下に `listen` を足す（同じ鍵）
+（６）`frontend/src/locales/ja.json`・`frontend/src/locales/en.json` の `secretary` の下に `listen` を足す（同じ鍵）
 - ja: `start` 話して入力する ／ `stop` 聞くのをやめる ／ `listening` 聞いています… ／ `error.unsupported` この画面では声の聞き取りが使えません ／ `error.notAllowed` マイクが許可されていません。端末の設定でマイクを許可してください ／ `error.serviceNotAllowed` この端末では声の聞き取りが許されていません ／ `error.noSpeech` 声が聞こえませんでした。もう一度押して話してください ／ `error.audioCapture` マイクが使えませんでした ／ `error.network` 聞き取りの通信に失敗しました。もう一度お試しください ／ `error.language` 日本語の聞き取りに対応していません ／ `error.other` 聞き取れませんでした。もう一度お試しください
 - en: 同じ意味の英語
 
 （７）試験
 - `frontend/src/features/secretary/useSecretaryListen.test.ts`（新規）: 対応表（8 つ）・部品が無いと `unsupported`・`start` で `lang` などの設定・途中の文・確定で `onText` 1 回・空の確定で呼ばない・画面から消えると `abort`・続けて 2 回 `start()` しても部品は 1 つ・前の失敗の後に `start()` すると `error` が `null` に戻る・`start()` の直後に `listening` が `true`・`rec.start()` が投げると `error` が `other` になり、次の `start()` で部品が作られる・`error` の後に `end` が来ても `error` が残る・`abort()` の直後に次の `start()` で新しい部品が作られ、古い部品の `end` が来ても `listening` は `true` のまま・`abort()` の後に古い部品から `result`・`error` が来ても `onText` は呼ばれず `error` も変わらない・`stop()` の後の `end` で `listening` が `false` になる
 - `frontend/src/features/secretary/SecretaryChat.test.tsx` に足す: `isMobile=false` で印が無い・`isMobile=true` で印が有る・押すと「聞いています」・確定の文が欄に入り送られない（送る口が呼ばれない）・部品が無いと「使えません」・窓を閉じると `abort`
-- 試験の中に日本語の文字を直接書かない（`useSecretaryVoice.test.ts:4-6` と同じ書き方）
+- 試験の中に日本語の文字を直接書かない（`frontend/src/features/secretary/useSecretaryVoice.test.ts:4-6` と同じ書き方）
 
 ### 14-3 触らないもの
 
-- backend・migrations・deploy.yml・`nginx/nginx.conf:323`・読み上げ（`useSecretaryVoice.ts`）・下書きの部品
+- backend・migrations・deploy.yml・`nginx/nginx.conf:323`・読み上げ（`frontend/src/features/secretary/useSecretaryVoice.ts`）・下書きの部品
 - PC のスペース長押し・音声モード・「入れますか？」（K1〜K6 の本体は次の便）
 
 ### 14-4 試しの合格（PO がスマホで見る）
@@ -265,4 +267,4 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 - 1 回目で「未確認」とされた `MicrophoneIcon`: 手元の `frontend/node_modules/@heroicons/react/24/solid/MicrophoneIcon.js` が有る（2.2.0）
 - 2 回目（クラウドの Opus・2026-11-19 13:13 UTC）: REVISE。1 回目の必須 3 件は直った。新しい必須 1 件（カードの作業場所の作り方がクラウドの決まり `scripts/agent-hooks/cloud/rules.md:15` と違う）→ カードを `git switch -C` に直した。推奨 1〜5（abort 後の片付け・試験 3 件・戻りの型・T3 が×なら止める・印の置き場所）も直した。推奨 6（preflight）はカードに書いた
 - 3 回目（クラウドの Opus・2026-11-19 13:17 UTC）: **APPROVE**。新しい必須なし。新しい推奨 3 件（試験 2 件・カードの作業場所の場所の明記・`onText` を ref に持つ）も直した
-- 実装 1 回目（クラウドの Sonnet・2026-11-19 13:20 UTC）: カード手順 4 の `executor-preflight.sh` がクラウドで落ちて BLOCKED（gh 認証と api.github.com への道が無い）。ファイルは変えていない。カード手順 4 を「`origin/main` があるかだけ見る」に直した
+- 実装 1 回目（クラウドの Sonnet・2026-11-19 13:20 UTC）: カード手順 4 の `scripts/dev/executor-preflight.sh` がクラウドで落ちて BLOCKED（gh 認証と api.github.com への道が無い）。ファイルは変えていない。カード手順 4 を「`origin/main` があるかだけ見る」に直した

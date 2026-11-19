@@ -6,7 +6,7 @@
 ## 1. 既存の ADR
 
 - 検索: `git grep -i -E "秘書|secretary|音声|voice" docs/adr/FEATURE-INDEX.md` → 該当なし（FEATURE-INDEX に秘書の行は無い）
-- `ls docs/adr | grep 1080` → `ADR-1080-secretary-voice-tts.md`（秘書の声・読み上げ）。聞き取りは対象外と明記
+- `ls docs/adr | grep 1080` → `docs/adr/ADR-1080-secretary-voice-tts.md`（秘書の声・読み上げ）。聞き取りは対象外と明記
   - `docs/handoff/secretary-voice/design.md:16` 「対象外: 声で話しかける（聞き取り）」
   - `docs/handoff/secretary-voice/kgi.md:26` 同じ
 - 関係する ADR: ADR-1056（秘書チャット）・ADR-1078（予定のカルテ）・ADR-1080（読み上げ）・ADR-027（i18n）・ADR-067（デザイントークン）・ADR-144（UI 金型）・ADR-136（危険 PR の GO）
@@ -62,7 +62,7 @@
 
 ## 6. 予定の「はい／いいえ」
 
-- 今は、予定を作るのは下書きの「作る」ボタンだけ（`SecretaryDraftEvent.tsx:53-74`）
+- 今は、予定を作るのは下書きの「作る」ボタンだけ（`frontend/src/features/secretary/SecretaryDraftEvent.tsx:53-74`）
 - 「はい／いいえ」を言葉から読み取る仕組みはアプリに無い（`git grep -n -E "YES_WORDS|affirm|はい" backend/app/services backend/app/routers` → 関係する 0 件）。Meet を付けるかの答えは AI がカルテの中で読む（`backend/app/schemas/assistant.py:15` `AskField` に `add_meet`）
 
 ## 7. アプリの入れ方
