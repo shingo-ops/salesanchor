@@ -1337,6 +1337,7 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 | `lastProbeAt` | 版 | `lastResult` | 節 | 直しの版 |
 |---|---|---|---|---|
 | 2026-11-07T17:34:31Z | 2.1.319 | P3 | §14-14-16 | v0.55.2 |
+| 2026-11-18T18:34:19.098Z | 2.1.327 | P0 | §14-14-18 |  |
 
 確かめ直し（C）:
 1. 再起動の直前に `runningVersionProbe` をもう一度読み、あれば 1 に戻って「確かめ中」で終える。
@@ -1383,3 +1384,75 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 | 1 | 2026-11-08 00:37 | REVISE | 必須 4: 見分け表の漏れ（aborted 等・3 回後の aborted・反映前）→ 順に当てる表と「調べた×の一覧」に直した。「確かめ直せば必ず lastProbeAt が変わる」は誤り → 変わらない理由を監査で分けて BLOCKED: に直した。直しの範囲の「待ち方」→ 定数を変える直しを NEEDS_DECISION: に直した。K61・K63・K64 の判定 → 該当なしの扱いと○×を書いた。推奨 2（再起動の直前の読み直し・指紋で見分ける）も入れた。照合 12 行合致・1 行（ac-common.sh:30 は名前の行）を書き分けた |
 | 2 | 2026-11-08 00:55 | REVISE | 1 回目の必須のうち 2 件は直った。N1: 一覧にあり直しの版が空欄で 24 時間たった状態が C に落ち、同じ×を数え直す → F を「空欄か新しい」に広げた。N2: 止める定数の列挙に穴 → `PROBE_` で始まる定数すべてに直した。推奨 2（n2 は理由に使わない・確かめ中が 2 日続いたら BLOCKED:）と claude が見つからない場合も入れた |
 | 3 | 2026-11-08 01:08 | APPROVE | 2 回目の N1・N2・推奨 2 件は直った。表 1〜7 は実物の全状態にちょうど 1 行で当たる。推奨: 5 の続けてよい範囲の「送る文」が `PROBE_FOLLOW_UP_SENTENCE`（server/case-say-probe.ts:16）で止める側と重なる → 安全側（止める）に寄せて書き直した |
+
+#### 14-14-18 第12版の直し3: claude 2.1.327 で probe が P0 で×になった件（2026-11-19・PO「1」）
+
+経緯（事実）: 2026-11-19 03:30 JST の §14-14-17 の毎日の見回りで、表の 4 行目 D（新しい×）に当たった。版の記録（Opus 本体が node で、許された欄だけを読んだ。MAC の欄・鍵は読んでいない）は `claudeVersion: "2.1.327"`・sha256 先頭 `76d48205c926`・`size: 354515104`・`usable: false`・`lastResult: "P0"`・`failCount: 1`・`lastProbeAt: 2026-11-18T18:34:19.098Z`・`runningVersionProbe` なし。監査の最後の `caseClaudeVersionProbe` の行は `outcome: "denied"`・`failedCheck: "P0"`・`counts: {}`・`startedAt: 2026-11-18T18:32:10.392Z`。生の行は `/tmp/CC報告ファイル/case-probe-watch/2026-11-19/probe-row.json` に残した。PO は NEEDS_DECISION: に「1」（報告の置き場所を、あらかじめ信頼済みにする設計を書く）と答えた。
+
+`paneSamples` の写し（原文のまま、抜粋）:
+
+```
+ Adding a new directory:
+ /private/tmp/CC報告ファイル/discord-case/3dc7f867-e40b-4daf-bb7f-de5d9a13f123
+ This session hasn't worked here before. Is this a directory you created or one you trust?
+ ...
+ ❯ No, exit
+   Yes, add it
+```
+
+意味: 2.1.327 は、起動の引数 `--add-dir` で足した報告の置き場所 R を「信頼するか」と聞く画面で止まる。件の claude は入力を待ったまま、P0 の「60 秒以内に、選ぶ画面なしで待ち受けになる」が成り立たない。
+
+原因（実物の照合。agent-console origin/main 6aaba26）:
+- 件の起動は R を `--add-dir` で渡す（ops/shell/ccdiscord.zsh:72 の `--add-dir "$AC_CASE_REPORT"`）。`AC_CASE_REPORT` は case.json の `report`（server/sessions.ts:628）。
+- 起動の前に case-home の `.claude.json` を書き直すが、信頼済みにするのは作業場所 W だけ（server/case-sandbox.ts:423 `next.projects = { [realOr(W)]: { hasTrustDialogAccepted: true } }`。呼び出しは server/sessions.ts:790 の `rewriteCaseClaudeJson(room.CH, realOr(cwd))`）。
+- R は git の置き場ではない別の場所なので、W の信頼では覆われない。
+
+クラウドでの切り分け（本物の claude を、件と同じ `--restricted --tools Read,Write --add-dir R --permission-mode dontAsk` で起動。R は `/tmp/CC報告ファイル/discord-case/<新しい uuid>`・git にしない。W は `git init`。キーは何も送らない。2026-11-19 00:42 UTC。要点は `/tmp/CC報告ファイル/case-probe-watch/2026-11-19/cloud-repro-summary.txt`）:
+
+| 版 | `.claude.json` の `projects` | 「Adding a new directory」の画面 | 起動後の画面 |
+|---|---|---|---|
+| 2.1.327 | W だけ（今の形） | 有 | 信頼の確認で止まる |
+| 2.1.327 | W と R | 無 | 入力欄 `❯`・`don't ask on` |
+| 2.1.325 | W だけ（今の形） | 無 | 入力欄 `❯`・`don't ask on` |
+| 2.1.325 | W と R | 未確認（返事の表示が途中で切れて読めていない） | 未確認 |
+
+判定: 2.1.327 で新しく出た確認で、`projects` に R を足せば出なくなる（1 回ずつの観測）。2.1.325 で今の形に確認が出ないので、R を足すのは前の版の動きに戻す直しになる。
+
+直す物（agent-console だけ。ほかは触らない）:
+1. server/case-sandbox.ts の `rewriteCaseClaudeJson(CH, W)` を `rewriteCaseClaudeJson(CH, W, R)` にする。`projects` は `{ [realOr(W)]: {…}, [realOr(R)]: {…} }` の 2 つ（値はどちらも `{ hasTrustDialogAccepted: true }`）。R と W の realpath が同じなら 1 つ。ほかの鍵（`KEEP_CLAUDE_JSON_KEYS`・`hasCompletedOnboarding`）は変えない。
+2. server/sessions.ts:790 の呼び出しで、R に `caseEnv.AC_CASE_REPORT`（`--add-dir` に渡すのと同じ文字列）の realpath を渡す。`caseEnv` に `AC_CASE_REPORT` が無い（件でない）ときは今のまま呼ばない（`room === null` のとき `beforeNew` は undefined のまま）。
+3. probe の件も PO の件も同じ道を通る（probe は server/case-say-probe-wiring.ts:67 の `openCase` で同じ件の開き方を使う）。probe だけに分ける形にはしない。理由: PO の件も 2.1.327 では同じ画面で止まる（入力を待つ）ので、分けると PO の件だけ壊れたままになる。
+
+触らない物: `PROBE_` で始まる定数、E1〜E4・P0〜P5・R1 の条件、24 時間・3 回の規則、版の記録・鍵・MAC、hooks・見張り、`buildCaseSettings`（§14-14-9 の「options なしで PO の件の設定を変えない」）、room.sb の許し・拒否、ccdiscord.zsh の起動の引数。
+
+信頼を広げることの危険の見積もり（この直しは「許可」に触るので §14-14-17 の「×の後の進め方」5 により NEEDS_DECISION: で PO が「1」と決めた）:
+- 信頼すると、その場所の `.claude/`（設定・skills・commands・agents）と git の設定が読まれる（画面の文 `Its skills, commands, and agents load and can run commands, and so can the git settings of its repository`）。
+- R の `.claude` は件から書けない（server/case-sandbox.ts:81 の `CASE_DENY_WRITE` に `path.join(p.R, ".claude")`）。R の下の入れ子の `.claude`・`.git` も書けない（同 :344・:348）。R はサーバーが件ごとに新しく作る（同 :53-69 の `casePaths` の R・server/sessions.ts:532-534）。
+- よって、件が R に自分で設定を置いて信頼の後に読ませる道は、今の部屋の拒否で閉じている。W は既に同じ扱いで信頼済みなので、新しい種類の危険は増えない。
+- 前の版（2.1.325 まで）は R の確認を出さずに使っていたので、R を足すのは前の版の状態に戻す形。
+
+時間・回数への影響: 直した版を入れた後、24 時間の待ち（最後の×の 2026-11-18T18:34:19Z から。明けは 2026-11-19T18:34:19Z、日本時間 11/20 03:34）が明けた後の、最初の件を開くとき（t1）かサーバーの起動（t2）で probe が走る。11/20 03:30 の見回りは明けの 4 分前なので待ち時間中（B）になり、確かめ直しは 11/21 03:30 の見回り（C）になる見込み（U21 と同じ遅れ）。2.1.327 の `failCount` は今 1。
+
+成功条件（この直しの分）:
+
+| 基準 | 検証方法 |
+|---|---|
+| K65 `rewriteCaseClaudeJson(CH, W, R)` の後の `projects` の鍵が W と R の realpath の 2 つちょうど・値はどちらも `{ hasTrustDialogAccepted: true }` | vitest（tests/unit/case-sandbox.test.ts の `rewriteCaseClaudeJson` の組に足す） |
+| K66 W と R の realpath が同じなら鍵は 1 つ | vitest |
+| K67 前のファイルにあった別の鍵（例 `/x`）は残らない・`KEEP_CLAUDE_JSON_KEYS` の扱いは今と同じ | vitest（既存の :663 の試験を R つきに直して通る） |
+| K68 件を新しく開くとき、`.claude.json` の R の鍵が `--add-dir` に渡す `AC_CASE_REPORT` の realpath と同じ文字列 | vitest（sessions の件を開く試験で、`beforeNew` の後の `.claude.json` と `caseEnv.AC_CASE_REPORT` を比べる） |
+| K69 既存の試験が通る | agent-console の CI が緑 |
+| K70 本物で ok（2.1.327） | 24 時間明け後の最初の probe で記録に `usable: true`・`lastResult: "ok"`・監査 `caseClaudeVersionProbe` ok を Opus 本体が読んで本書に書き足す（§14-14-17 の C の確かめ直し） |
+| K71 同じ理由の×が 2 回目から 0 回（K64） | 30 日、一覧に 2.1.327 以降の版で `P0` かつ `paneSamples` に `Adding a new directory` がある行が増えない |
+
+残る危険:
+- U24 claude の次の版が、信頼の鍵の形（`projects` の `hasTrustDialogAccepted`）を変えると、同じ P0 に戻る。そのときは毎日の見回りの D で見つかる（誤って○にはならない側）。
+- U25 2.1.325 で R を足した形は未確認。前の版では R の確認が出ないので、R の鍵は使われないだけと見込むが、K69 と、次に 2.1.325 を使う件で確かめる。
+- U26 クラウドの観測は各 1 回。Mac の本物（K70）で確かめるまで、直しの効き目は確定としない。
+
+外部事例: 該当事例なし。理由: 自作の仕組みの中で、件の claude を起動する前の設定の書き方の直しで、確かめは試験と実際の記録で行う（§14-14-10 と同じ）。Claude Code の公式の更新履歴（Context7 で確認）には「信頼は置き場所の根で決まり、入れ子の置き場所は別に信頼が要る」とあり、R を別に信頼済みにする形はこれに合う。
+
+審査の記録（§14-14-18）:
+
+| 回 | 日時（UTC） | 結果 | 要点 |
+|---|---|---|---|
