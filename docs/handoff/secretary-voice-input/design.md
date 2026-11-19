@@ -265,3 +265,4 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 - 1 回目で「未確認」とされた `MicrophoneIcon`: 手元の `frontend/node_modules/@heroicons/react/24/solid/MicrophoneIcon.js` が有る（2.2.0）
 - 2 回目（クラウドの Opus・2026-11-19 13:13 UTC）: REVISE。1 回目の必須 3 件は直った。新しい必須 1 件（カードの作業場所の作り方がクラウドの決まり `scripts/agent-hooks/cloud/rules.md:15` と違う）→ カードを `git switch -C` に直した。推奨 1〜5（abort 後の片付け・試験 3 件・戻りの型・T3 が×なら止める・印の置き場所）も直した。推奨 6（preflight）はカードに書いた
 - 3 回目（クラウドの Opus・2026-11-19 13:17 UTC）: **APPROVE**。新しい必須なし。新しい推奨 3 件（試験 2 件・カードの作業場所の場所の明記・`onText` を ref に持つ）も直した
+- 実装 1 回目（クラウドの Sonnet・2026-11-19 13:20 UTC）: カード手順 4 の `executor-preflight.sh` がクラウドで落ちて BLOCKED（gh 認証と api.github.com への道が無い）。ファイルは変えていない。カード手順 4 を「`origin/main` があるかだけ見る」に直した

@@ -9,7 +9,7 @@ PO の承認: 2026-11-19「1」（無料のやり方で試しの画面から）�
 1. `bash scripts/new-worktree.sh release/secretary-voice-input`（origin/main から同じ名前のブランチを作る）
 2. `git -C ~/worktrees/salesanchor/release-secretary-voice-input switch -C release/secretary-voice-input origin/release/secretary-voice-input`（push 済みの設計のコミットに合わせる。`scripts/agent-hooks/cloud/rules.md:15` の手順）
 3. `git -C ~/worktrees/salesanchor/release-secretary-voice-input rev-parse HEAD` と `git rev-parse origin/release/secretary-voice-input` が同じことを確かめる。違えば BLOCKED:
-4. `./scripts/dev/executor-preflight.sh` を流す。× なら原文を書いて BLOCKED:
+4. `git -C ~/worktrees/salesanchor/release-secretary-voice-input rev-parse origin/main` が通ることを確かめる。通らなければ BLOCKED:（`executor-preflight.sh` はクラウドに gh の認証と api.github.com への道が無く [1/3][2/3] で必ず落ちる・2026-11-19 13:20 UTC 実測。その2つは PR を作るための確かめで、実装役は PR を作らないため、残りの「origin/main があるか」だけをここで見る）
 5. 以後の作業はすべてこの worktree の中で行う。clone のまま commit しない。main は取り込まない。reset・rebase・force・merge・pull は使わない。
 
 ## 触るファイル（これ以外は触らない）
