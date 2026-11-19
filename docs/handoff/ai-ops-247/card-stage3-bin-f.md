@@ -89,6 +89,8 @@
 - 変更: `backend/app/routers/ops.py`（§4-1 の置き換えと、§4-2 の追記）
 - 変更: `backend/tests/test_ops_router.py`（末尾に追記のみ・§4-3）
 - 変更: `docs/handoff/ai-ops-247/card-stage3-bin-f.md`（このカード。§13 報告欄の追記のみ）
+- 変更: `frontend/api-contract/openapi.json`（手で書かない。`cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json` の出力をそのまま入れる）
+  - 2026-11-19 Opus 追記: 初版のカードはこの 1 行を入れ忘れた。PR #5601 の CI「API contract is up to date」が、口の形と一覧表のずれで赤になって分かった（Actions run 44367406696）。増える中身は `/ops/incidents` の `tier`・`first_aid` と `/ops/events` の定義だけのはず。
 
 ## 4. 作り方
 
@@ -434,7 +436,14 @@ async def test_new_filters_reject_bad_values(env):
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
+本報告はカード 段階3 便F の実行結果である。
+
+- §6 の分岐: 該当なし（§4-1 の変更前コードは origin/main 12000ef94 と一致。`/ops/events` の道は backend/app に無し）
+- §4-1・§4-2・§4-3 をカードのとおりに作成
+- §5-1 試験: 未実行（クラウドの作業場所で PostgreSQL は起動しておらず、pytest などの依存も未導入。試験は CI の pytest に任せる）
+- §5-2 書式: py_compile rc=0
+- §5-3 差分: `git diff origin/main --stat` は 3 ファイル（ops.py 51・test_ops_router.py 147・このカード 8）、204 insertions・2 deletions。`grep "^-[^-]"` の削除行は `{"status": status, "since": since, "limit": limit},` と `（未記入）` の 2 行だけ（commit 9afce0de6）
+- Opus 追記（2026-11-19）: 差分を §4-1〜4-3 と 1 行ずつ照合し一致。上の §5-3 の行は担当の報告から Opus が書き写した（担当は「下記のとおり」と書いたまま中身を書いていなかった）
 
 ## 14. 設計審査（Opus 自己審査・2026-11-19）
 
