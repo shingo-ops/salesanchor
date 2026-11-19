@@ -1404,12 +1404,12 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 
 原因（実物の照合。agent-console origin/main 6aaba26）:
 - 件の起動は R を `--add-dir` で渡す（ops/shell/ccdiscord.zsh:72 の `--add-dir "$AC_CASE_REPORT"`）。`AC_CASE_REPORT` は case.json の `report`（server/sessions.ts:628）。
-- 起動の前に case-home の `.claude.json` を書き直すが、信頼済みにするのは作業場所 W だけ（server/case-sandbox.ts:423 `next.projects = { [realOr(W)]: { hasTrustDialogAccepted: true } }`。呼び出しは server/sessions.ts:790 の `rewriteCaseClaudeJson(room.CH, realOr(cwd))`）。
+- 起動の前に case-home の .claude.json を書き直すが、信頼済みにするのは作業場所 W だけ（server/case-sandbox.ts:423 `next.projects = { [realOr(W)]: { hasTrustDialogAccepted: true } }`。呼び出しは server/sessions.ts:790 の `rewriteCaseClaudeJson(room.CH, realOr(cwd))`）。
 - R は git の置き場ではない別の場所なので、W の信頼では覆われない。
 
 クラウドでの切り分け（本物の claude を、件と同じ `--restricted --tools Read,Write --add-dir R --permission-mode dontAsk` で起動。R は `/tmp/CC報告ファイル/discord-case/<新しい uuid>`・git にしない。W は `git init`。キーは何も送らない。2026-11-19 00:42 UTC。要点は `/tmp/CC報告ファイル/case-probe-watch/2026-11-19/cloud-repro-summary.txt`）:
 
-| 版 | `.claude.json` の `projects` | 「Adding a new directory」の画面 | 起動後の画面 |
+| 版 | .claude.json の `projects` | 「Adding a new directory」の画面 | 起動後の画面 |
 |---|---|---|---|
 | 2.1.327 | W だけ（今の形） | 有 | 信頼の確認で止まる |
 | 2.1.327 | W と R | 無 | 入力欄 `❯`・`don't ask on` |
@@ -1431,7 +1431,7 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 6. 版: agent-console の 0.55.2 → 0.55.3。前の直し（bda286a）と同じく package.json・package-lock.json・extension/manifest.json の版と、docs/CHANGELOG.md の 1 行を足す。README は変えない（件の起動の形も、PO の画面も変わらないため）。
 
 つなぎ直しの道（審査1 必須2）:
-- `.claude.json` の書き直しは、新しく claude を起動するときだけ走る（server/sessions.ts:789-790 の注記。`openTerminal` は、tmux に件が生きていれば :854-856 で、つながらなければ :857-861 で、`beforeNew` を呼ばずにつなぎ直して戻る。`beforeNew` を呼ぶのは新しく起動する :866 だけ）。これは今の決まりで、変えない（つなぎ直しは動いている claude をそのまま使うので、起動の時の確認はもう出ない）。
+- .claude.json の書き直しは、新しく claude を起動するときだけ走る（server/sessions.ts:789-790 の注記。`openTerminal` は、tmux に件が生きていれば :854-856 で、つながらなければ :857-861 で、`beforeNew` を呼ばずにつなぎ直して戻る。`beforeNew` を呼ぶのは新しく起動する :866 だけ）。これは今の決まりで、変えない（つなぎ直しは動いている claude をそのまま使うので、起動の時の確認はもう出ない）。
 - サーバーが起き直って、claude を新しく起動し直す道（restore で tmux が無くなっていた件）は `beforeNew` を通るので、R の鍵も入る（K73）。
 - 直しの前に 2.1.327 で開いて、信頼の確認の画面で止まったままの件があれば、直しの後につなぎ直しても止まったまま。この件は自動では直さない。反映の前に Opus が件の一覧と probe の画面の形（件の画面の中身は読まない。一覧の状態だけ）を見て、確認で止まっている件があれば、PO に「閉じて開き直す」を頼む（件を閉じるのは PO の操作）。止まっている件には case-say の指示が入らない（server/hub.ts:564-573 の判定 4b で、2.1.327 は版の記録で使える版でなく、agent-console.config.json:9 の `caseSayClaudeVersions` にも無いため断られる）ので、Discord の指示が確認の画面に打ち込まれることはない。
 
@@ -1453,13 +1453,13 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 | K65 `rewriteCaseClaudeJson(CH, W, R)` の後の `projects` の鍵が W と R の realpath の 2 つちょうど・値はどちらも `{ hasTrustDialogAccepted: true }` | vitest（tests/unit/case-sandbox.test.ts の `rewriteCaseClaudeJson` の組に足す） |
 | K66 W と R の realpath が同じなら鍵は 1 つ | vitest |
 | K67 前のファイルにあった別の鍵（例 `/x`）は残らない・`KEEP_CLAUDE_JSON_KEYS` の扱いは今と同じ | vitest（既存の :663 の試験を R つきに直して通る） |
-| K68 件を新しく開くとき、`.claude.json` の R の鍵が `--add-dir` に渡す `AC_CASE_REPORT`（realpath を取る前の文字列）と同じ | vitest（tests/unit/sessions.case.test.ts:172-175 の件を開く試験に、`.claude.json` の `projects` の鍵と、起動の環境の `AC_CASE_REPORT` の文字列が一致する期待を足す） |
+| K68 件を新しく開くとき、.claude.json の R の鍵が `--add-dir` に渡す `AC_CASE_REPORT`（realpath を取る前の文字列）と同じ | vitest（tests/unit/sessions.case.test.ts:172-175 の件を開く試験に、.claude.json の `projects` の鍵と、起動の環境の `AC_CASE_REPORT` の文字列が一致する期待を足す） |
 | K69 既存の試験が通る | agent-console の CI が緑 |
 | K70 本物で ok | 数える物: 直しの版を本番に反映した時刻（Opus が本書に書く。以下「反映」）より後に始まった probe の監査 `caseClaudeVersionProbe` の行（版は問わない。24 時間明けの前に claude の版が変わったら、その新しい版の行）。○: 反映から 7 日（168 時間）以内に、最初に `outcome: "ok"` の行があり、版の記録のその版が `usable: true`・`lastResult: "ok"`。×: 反映から 7 日以内に、ok の行より前に `outcome: "denied"` の行がある（7 日を過ぎた後の行は数えない）。`outcome: "aborted"` の行（`abortReason` は server/case-say-probe.ts:536・543 で決まり、この直しと関係ない理由でも出る）は○にも×にも数えず、次の行を待つ。7 日の間に ok も denied も無ければ未判定とし、`BLOCKED:` で読んだ行（aborted なら `abortReason`）を添えて PO に返す。Opus 本体が node で許された欄だけを読み、本書に書き足す（§14-14-17 の C の確かめ直し） |
 | K71 同じ理由の×が 2 回目から 0 回（K64） | ○: 直しの版の反映の時刻から 30 日の間、監査（server/case-say-probe.ts:584-599 が書く `caseClaudeVersionProbe` の行）に、`failedCheck: "P0"` かつ `paneSamples` のどれかに `Adding a new directory` を含む行が 0 件。×: 1 件以上。30 日目の見回りで Opus 本体が数える |
-| K72 R か R の親に `.git` があれば件を開かない | vitest（tests/unit/case-sandbox.test.ts。R の 1 つ上に `.git` のディレクトリを作る形と、R の中に `.git` のファイルを作る形の 2 つで、`rewriteCaseClaudeJson` が `CaseSandboxUnavailableError` を投げ、`.claude.json` が前の中身のまま） |
+| K72 R か R の親に `.git` があれば件を開かない | vitest（tests/unit/case-sandbox.test.ts。R の 1 つ上に `.git` のディレクトリを作る形と、R の中に `.git` のファイルを作る形の 2 つで、`rewriteCaseClaudeJson` が `CaseSandboxUnavailableError` を投げ、.claude.json が前の中身のまま） |
 | K73 起動し直す道でも R の鍵が入り、つなぎ直しでは書き直さない | vitest（tests/unit/sessions.case.test.ts:426 からの試験に、起動し直した後の `projects` に R の鍵がある期待と、つなぎ直しでは前の中身のままの期待を足す） |
-| K74 R が realpath と違う・無いときは件を開かない | vitest（tests/unit/case-sandbox.test.ts。R にリンクを渡す形と、無い道を渡す形で投げ、`.claude.json` が前の中身のまま） |
+| K74 R が realpath と違う・無いときは件を開かない | vitest（tests/unit/case-sandbox.test.ts。R にリンクを渡す形と、無い道を渡す形で投げ、.claude.json が前の中身のまま） |
 
 残る危険:
 - U24 claude の次の版が、信頼の鍵の形（`projects` の `hasTrustDialogAccepted`）を変えると、同じ P0 に戻る。そのときは毎日の見回りの D で見つかる（誤って○にはならない側）。
