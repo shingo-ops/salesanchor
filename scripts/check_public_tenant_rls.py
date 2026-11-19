@@ -18,17 +18,7 @@ import sys
 import psycopg2
 
 from app.ops.tenant_rls_allowlist import PUBLIC_TABLES_WITHOUT_RLS
-
-FIND_SQL = """
-SELECT c.relname
-FROM pg_class c
-JOIN pg_namespace n ON n.oid = c.relnamespace
-JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped
-WHERE n.nspname = 'public'
-  AND c.relkind IN ('r', 'p')
-  AND NOT c.relrowsecurity
-ORDER BY c.relname
-"""
+from app.ops.tenant_rls_checks import PUBLIC_TABLES_WITHOUT_RLS_SQL as FIND_SQL
 
 
 def find_tables_without_rls(conn) -> list[str]:

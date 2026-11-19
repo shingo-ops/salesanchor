@@ -91,7 +91,7 @@
 | # | 口 | 鍵 | 動き |
 |---|---|---|---|
 | B7 | `GET /api/v1/ops/incidents` に `tier`・`first_aid`（`pending`）の絞り込みを足す | 保守の鍵 または super admin | `labels->>'tier' = 'auto'` かつ `status = 'firing'` かつ `first_aid_started_at IS NULL` の行。既存の引数はそのまま |
-| B8 | `GET /api/v1/ops/events?kind=first_aid&since=...`（最大 100 件） | 同上 | 直近の処置の出来事（回数の上限の数えに使う。detail の `service` で数える） |
+| B8 | `GET /api/v1/ops/events?kind=first_aid&since=...`（最大 100 件） | 同上 | 直近の処置の出来事（回数の上限の数えに使う。service は障害の labels から読み、`service` で絞れる。注記の detail は形が固定で service を持たないため。card-stage3-bin-f.md §2-2 D3・2026-11-19 Opus 技術判断） |
 
 - 書き込み側は既存の B4（注記と first_aid_* 列の更新）を使う。新しい表・列・migration は作らない（処置の前後の状態は events.detail の 8KB に収まる）
 - 便F の測り方：pytest（tier と pending の絞り込み・処置後は一覧から消える・events の kind と since の絞り込み・鍵なし 401・受け口の鍵では 401）

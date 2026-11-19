@@ -8,6 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| 在庫はあるのに在庫表に出ない21商品（box＋sealed・unit 空・case＋shrink）を在庫表の集計で拾う | PO待ち | 未着手。PO 2026-11-18「1」で請求書の画面の組み込み（R5）を先に進め、この件は別テーマで後で直すと決定。それまで請求書で選べるのは在庫表に出る27商品だけ | 請求書の便R7まで終わった後、KGI を PO と決めて recon から始める（在庫表と請求書は同じ集計を使うので両方に出るようになる） | docs/handoff/invoice-create-portfolio/design-v2.md §2-2・§8・§11 | 2026-11-18 |
 | LINE 解析の引き継ぎの読み取り（_INHERIT_PRICE_SQL）を速くする | PO待ち | 未着手。売り切れの参照の 2 つと同じ遅い形が backend/app/services/line_analysis_v102_svc.py:1364 に残る。recon §4 で 1 回最大 2.3 秒 | PO が着手を決めたら、本番での呼ばれる回数を reader の道で数えてから設計する | docs/handoff/soldout-ref-read-speed/design.md §9・§11-3 / EV-20261110-SOLDOUT-REF | 2026-11-10 |
 | 速さと試験の守りの穴を塞ぐ（本番の遅い問い合わせの見張り・必須 pytest の集約が変更判定の失敗を見ない） | PO待ち | 未着手。本番は log_min_duration_statement=-1・pg_stat_statements 無し。.github/workflows/test.yml:262-280 の集約は detect-changes を見ない | PO が着手を決めたら、それぞれ別の設計（DB 設定は ADR 級・CI 変更）を作る | docs/handoff/soldout-ref-read-speed/design.md §11-3 / EV-20261110-SOLDOUT-REF | 2026-11-10 |
 | 見積書をお客さん（取引先・担当者）の登録なしで作れるようにする | PO待ち | 未着手。今は取引先と担当者が必須（origin/main backend/app/schemas/quote.py:41〜:42・backend/app/routers/quotes.py:184）。PO 2026-11-07 で閲覧者の契約と請求書の設計から外し、別の設計で進めると決定 | 閲覧者の契約と請求書の設計が終わった後、KGI を PO と決めて recon から始める | docs/handoff/viewer-contract-stage/design.md §3-4・§7-1 / docs/specs/viewer-contract-invoicing/ideal-state.md 27・28 | 2026-11-07 |

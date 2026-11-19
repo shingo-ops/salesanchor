@@ -29,6 +29,7 @@ import sys
 TAIL_BYTES = 4 * 1024 * 1024
 DAYS = 7
 K0_TARGET = 20
+K0_SKIP_REASONS = ("agent_id", "transcript_path", "transcript_unparsable")  # consent_check.py が H を読む前に返す理由（design §15-3）。見張りの理由名を変えるときはここも直す
 
 
 def real_home():
@@ -348,12 +349,13 @@ def k0_delays(home, events):
     tool_use_id があれば、記録の中のその行より前で最も近い人の入力を本当の直前とする。
     無ければ、probe の now より前の timestamp を持つ最後の人の入力を本当の直前とする。
     本当の直前の uuid が probe の h_uuid と違えば遅れ1件。
+    reason が K0_SKIP_REASONS の probe は数えず skipped に入れる。h_uuid が null の遅れは delays_no_h にも入れる。
     """
     probes = [e for e in events if e.get("type") == "consent_probe"]
     by_session = {}
     for p in probes:
         by_session.setdefault(p.get("session"), []).append(p)
-    total = delays = 0
+    total = delays = skipped = delays_no_h = 0
     for sid, plist in by_session.items():
         tp = find_transcript(home, sid) if isinstance(sid, str) else None
         if not tp:
@@ -382,6 +384,9 @@ def k0_delays(home, events):
                         tid = m.group(0).decode("utf-8")
                         prev_for_tool.setdefault(tid, last)
         for p in plist:
+            if p.get("reason") in K0_SKIP_REASONS:
+                skipped += 1
+                continue
             true_prev = None
             tid = p.get("tool_use_id")
             if tid and tid in prev_for_tool:
@@ -396,7 +401,9 @@ def k0_delays(home, events):
                 total += 1
                 if true_prev[0] != p.get("h_uuid"):
                     delays += 1
-    return total, delays
+                    if p.get("h_uuid") is None:
+                        delays_no_h += 1
+    return total, delays, skipped, delays_no_h
 
 
 # ── --permissions ───────────────────────────────────────────────────
@@ -1897,7 +1904,7 @@ def run_audit(home, now, with_permissions, out, commit=False, gh_view=None, git_
     guard_suspect = len(guard_suspects)
     permit = count_types(events, since, lambda t: t.endswith("_permit_consumed"))
     n_keys, unmatched = match_ledger_keys(home, since)
-    total, delays = k0_delays(home, events)
+    total, delays, k0_skipped, k0_delays_no_h = k0_delays(home, events)
     out("== 同意と権限の点検（過去%d日） ==" % DAYS)
     out("1. consent_consumed: %d 件 / 台帳の鍵 %d 件 / 記録に同意票と typed の「1」が見つからない: %d 件（0件が正常）"
         % (sum(consumed.values()), n_keys, unmatched))
@@ -1908,8 +1915,8 @@ def run_audit(home, now, with_permissions, out, commit=False, gh_view=None, git_
             % (e.get("ts", "?"), e.get("hook", "?"), e.get("condition", "?"),
                e.get("cmd_sha", "不明"), e.get("cmd_len", "不明")))
     out("3. 許可券の消費: %s" % (", ".join("%s=%d" % kv for kv in sorted(permit.items())) or "0 件"))
-    out("K0: 直前の人の入力が typed の「1」だった呼び出し %d 件のうち、遅れ %d 件（目標: %d 件たまった時点で遅れ0）"
-        % (total, delays, K0_TARGET))
+    out("K0: 直前の人の入力が typed の「1」だった呼び出し %d 件のうち、遅れ %d 件（うち見張りが入力を見つけられなかった %d 件）（目標: %d 件たまった時点で遅れ0）／H を読む前に止めた呼び出しで除外 %d 件"
+        % (total, delays, k0_delays_no_h, K0_TARGET, k0_skipped))
     if total >= K0_TARGET:
         out("K0 判定: %s" % ("○" if delays == 0 else "×（案 F に切り替える設計に戻す）"))
     else:

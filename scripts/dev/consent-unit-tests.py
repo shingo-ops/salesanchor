@@ -277,8 +277,16 @@ probes = [
     {"type": "consent_probe", "session": "s1", "h_uuid": hu1["uuid"], "now": (T0 + td(150)).isoformat()},                          # 遅れ
     {"type": "consent_probe", "session": "s1", "h_uuid": hu1["uuid"], "now": (T0 + td(50)).isoformat()},                           # 直前が hu1 で一致
 ]
-total, delays = audit.k0_delays(h, probes)
+total, delays, _, _ = audit.k0_delays(h, probes)
 rep("T0-a", "K0: 対象%d件のうち遅れ%d件（期待 5 と 2）" % (total, delays), total == 5 and delays == 2)
+
+# T0-b: H を読む前に止めた probe を外す（design §15、K72）
+probes_b = list(probes)
+for rs in ("agent_id", "agent_id", "transcript_path", "transcript_unparsable"):
+    probes_b.append({"type": "consent_probe", "session": "s1", "h_uuid": None, "reason": rs, "now": (T0 + td(150)).isoformat()})
+probes_b.append({"type": "consent_probe", "session": "s1", "h_uuid": None, "reason": "no_human_input", "now": (T0 + td(150)).isoformat()})
+r_b = audit.k0_delays(h, probes_b)
+rep("T0-b", "K0: 外す4件・数える遅れ1件（期待 total=6 delays=3 skipped=4 delays_no_h=1、実際 %s）" % (r_b,), r_b == (6, 3, 4, 1))
 
 # T0-w: 試験の区間の除外（design §9）
 hw = newhome()
