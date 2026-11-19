@@ -189,10 +189,17 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
   - `not-allowed` → `notAllowed` ／ `service-not-allowed` → `serviceNotAllowed` ／ `no-speech` → `noSpeech` ／ `audio-capture` → `audioCapture` ／ `network` → `network` ／ `language-not-supported` → `language` ／ `aborted` → `null`（自分で止めたとき・何も出さない）／ それ以外 → `other`
   - 値の一覧の出典: MDN `SpeechRecognitionErrorEvent.error`（Context7 `/mdn/content`）
 - `useSecretaryListen(onText: (text: string) => void)` が返すもの: `supported`・`listening`・`interim`・`error`（`ListenError | "unsupported" | null`）・`start()`・`stop()`・`abort()`
-  - `start()`: 押したその場で呼ぶ。部品が無ければ `error="unsupported"` にして終わる。有れば作って `lang="ja-JP"`・`interimResults=true`・`continuous=false`・`maxAlternatives=1` → `start()`。`start()` が投げた例外は `other`
+  - 持っている部品は `useRef` に 1 つだけ置く（`recRef`）。`listening` は state で持つ
+  - `start()`: 押したその場で呼ぶ。次の順に行う
+    1. `recRef.current` が有れば何もせず終わる（二重に起こさない。二度押しでも部品は 1 つ）
+    2. `error=null`・`interim=""` に戻す（前の知らせを消す）
+    3. 部品が無ければ `error="unsupported"` にして終わる
+    4. 作って `recRef.current` に入れ、`lang="ja-JP"`・`interimResults=true`・`continuous=false`・`maxAlternatives=1` を付け、`result`・`error`・`end` の受け口を付ける
+    5. `rec.start()` を呼び、続けて `listening=true` にする（`start` の受け口を待たない。押した直後から「聞いています」を出し、印を押された形にする）
+    6. `rec.start()` が投げたら `recRef.current=null`・`listening=false`・`error="other"`
   - `result`: 途中の文は `interim` に入れる。確定した文（`isFinal`）は前後の空白を落として、空でなければ `onText` を 1 回呼ぶ
   - `error`: `classifyListenError` の結果を `error` に入れる
-  - `end`: `listening=false`・`interim=""`・持っている部品を捨てる
+  - `end`: `listening=false`・`interim=""`・`recRef.current=null`（`error` は消さない。知らせは次に押すまで残す）
   - `stop()`: 確定を待って止める。`abort()`: すぐ止める（窓を閉じる・送る・画面から消えるとき）
   - 画面から消えるとき（useEffect の後始末）に `abort()`
 
@@ -217,7 +224,7 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 - en: 同じ意味の英語
 
 （７）試験
-- `frontend/src/features/secretary/useSecretaryListen.test.ts`（新規）: 対応表（8 つ）・部品が無いと `unsupported`・`start` で `lang` などの設定・途中の文・確定で `onText` 1 回・空の確定で呼ばない・画面から消えると `abort`
+- `frontend/src/features/secretary/useSecretaryListen.test.ts`（新規）: 対応表（8 つ）・部品が無いと `unsupported`・`start` で `lang` などの設定・途中の文・確定で `onText` 1 回・空の確定で呼ばない・画面から消えると `abort`・続けて 2 回 `start()` しても部品は 1 つ・前の失敗の後に `start()` すると `error` が `null` に戻る・`start()` の直後に `listening` が `true`
 - `frontend/src/features/secretary/SecretaryChat.test.tsx` に足す: `isMobile=false` で印が無い・`isMobile=true` で印が有る・押すと「聞いています」・確定の文が欄に入り送られない（送る口が呼ばれない）・部品が無いと「使えません」・窓を閉じると `abort`
 - 試験の中に日本語の文字を直接書かない（`useSecretaryVoice.test.ts:4-6` と同じ書き方）
 
@@ -233,10 +240,11 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 | T1 印が出る | ホーム画面のアプリで秘書の窓を開き、入力欄の右にマイクの印が有る（○×） |
 | T2 聞き取れる | 印を押し「明日10時から打ち合わせの予定を入れて」と言う。欄に文が入り、送られない。5 回のうち何回できたか・出た文・出た知らせ |
 | T3 マイクが閉じる | 止まった後、iPhone の画面の上のマイクの印（橙の点）が消える（○×） |
-| T4 比べ | 同じことを Safari で開いた画面でも 1 回（ホーム画面のアプリと違うかを見る） |
+| T4 比べ | 同じことを Safari で開いた画面でも 1 回。欄に文が入れば○、入らなければ×と出た知らせ（ホーム画面のアプリと違うかを見るための記録。合否には使わない） |
 
-- T2 が 5 回中 4 回以上: A のまま次の便（PC のスペース長押し・音声モード・K6）の設計へ進む
-- T2 で「使えません」「許されていません」が出る: 止めて PO に、Safari で使う／B（有料）に変える、を聞く
+- 進み方は T2 の回数だけで決める（1 回でも出た知らせはすべて記録する）
+  - 5 回中 4〜5 回: A のまま次の便（PC のスペース長押し・音声モード・K6）の設計へ進む
+  - 5 回中 0〜3 回: どの知らせが出たかに関わらず止める。出た知らせと T4 の結果を PO に見せ、「Safari で使う」「B（有料）に変える」「もう一度 5 回試す」のどれにするかを聞く
 
 ### 14-5 戻し方
 
@@ -246,3 +254,8 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 
 - MDN: 一部のブラウザでは音がウェブのサービスに送られて聞き取られる（research §1-A）
 - iPhone で音がどこに送られるかは **まだ確かめていない**（PO への 11/19 の説明で「Google」と書いたのは、iPhone については根拠が無かった）
+
+### 14-7 審査の記録
+
+- 1 回目（クラウドの Opus・2026-11-19 13:08 UTC）: REVISE。必須 3 件（二重 start・知らせが消えない・T2/T4 の判定が一つに決まらない）。file:line は 15 件すべて一致。→ §14-2（３）・（７）と §14-4 を直した
+- 1 回目で「未確認」とされた `MicrophoneIcon`: 手元の `frontend/node_modules/@heroicons/react/24/solid/MicrophoneIcon.js` が有る（2.2.0）
