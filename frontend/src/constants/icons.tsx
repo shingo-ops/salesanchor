@@ -89,6 +89,7 @@ import {
   ClockIcon as ClockOutlineIcon,
   MapPinIcon as MapPinOutlineIcon,
   Bars3BottomLeftIcon as Bars3BottomLeftOutlineIcon,
+  SwatchIcon as SwatchOutlineIcon,
 } from "@heroicons/react/24/outline";
 
 
@@ -158,6 +159,7 @@ const TrashOutline        = hi(TrashOutlineIcon);
 const ClockOutline        = hi(ClockOutlineIcon);
 const MapPinOutline       = hi(MapPinOutlineIcon);
 const Bars3BottomLeftOutline = hi(Bars3BottomLeftOutlineIcon);
+const SwatchOutline       = hi(SwatchOutlineIcon);
 const CommandLine         = hi(CommandLineIcon);
 const BanknotesOutline    = hi(BanknotesOutlineIcon);
 const EyeOutline          = hi(EyeOutlineIcon);
@@ -379,6 +381,7 @@ export const SCHEDULE_POPOVER_ICONS = {
   category:    CalendarBlank,          // CalendarIcon outline — 種類の行（便12）
   meet:        VideoCameraOutline,     // VideoCameraIcon outline — Google Meet の行（便12）
   share:       UsersOutline,           // UsersIcon outline — 社員にも見せるの行（便12）
+  color:       SwatchOutline,          // SwatchIcon outline — 予定の色の行（ADR-1081）
 } satisfies Record<string, Icon>;
 
 export const PASSWORD_FIELD_ICONS = {
