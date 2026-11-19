@@ -783,3 +783,150 @@ async def test_discord_endpoints_record_while_halted(env):
             assert resp.json()["closed"] is True
         finally:
             await _clear_control(env)
+
+
+# ---------------------------------------------------------------------------
+# 便F（ADR-1012 段階3）: auto で未処置の一覧・直近の出来事
+# ---------------------------------------------------------------------------
+
+
+async def _ingest_one(env: _Env, fp: str, **labels):
+    resp = await env.client.post(
+        f"{_BASE}/alertmanager",
+        json=_payload(_alert(fp, **labels)),
+        headers=env.ingest_headers(),
+    )
+    assert resp.status_code == 200
+    return (await _incidents(env, fp))[0]
+
+
+async def test_list_incidents_auto_pending_filter(env):
+    auto_fp = env.new_fingerprint()
+    page_fp = env.new_fingerprint()
+    resolved_fp = env.new_fingerprint()
+    auto_row = await _ingest_one(env, auto_fp, tier="auto", service="celery-worker")
+    await _ingest_one(env, page_fp, tier="page", service="celery-worker")
+    starts = datetime(2026, 10, 16, 0, 0, 0, tzinfo=timezone.utc)
+    await _ingest_one(env, resolved_fp, tier="auto", service="celery-beat")
+    resp = await env.client.post(
+        f"{_BASE}/alertmanager",
+        json=_payload(
+            _alert(
+                resolved_fp,
+                status="resolved",
+                starts_at=starts,
+                ends_at=starts + timedelta(minutes=5),
+                tier="auto",
+                service="celery-beat",
+            )
+        ),
+        headers=env.ingest_headers(),
+    )
+    assert resp.status_code == 200
+
+    mine = {auto_fp, page_fp, resolved_fp}
+    resp = await env.client.get(
+        f"{_BASE}/incidents?tier=auto&first_aid=pending&limit=100",
+        headers=env.api_headers(),
+    )
+    assert resp.status_code == 200
+    got = [i["fingerprint"] for i in resp.json()["items"] if i["fingerprint"] in mine]
+    assert got == [auto_fp]
+
+    resp = await env.client.post(
+        f"{_BASE}/incidents/{auto_row['id']}/events",
+        json={
+            "kind": "first_aid",
+            "fields": {"first_aid_started_at": datetime.now(timezone.utc).isoformat()},
+        },
+        headers=env.api_headers(),
+    )
+    assert resp.status_code == 200
+
+    resp = await env.client.get(
+        f"{_BASE}/incidents?tier=auto&first_aid=pending&limit=100",
+        headers=env.api_headers(),
+    )
+    assert resp.status_code == 200
+    got = [i["fingerprint"] for i in resp.json()["items"] if i["fingerprint"] in mine]
+    assert got == []
+
+    resp = await env.client.get(
+        f"{_BASE}/incidents?tier=auto&limit=100", headers=env.api_headers()
+    )
+    assert resp.status_code == 200
+    got = sorted(i["fingerprint"] for i in resp.json()["items"] if i["fingerprint"] in mine)
+    assert got == sorted([auto_fp, resolved_fp])
+
+
+async def test_list_events_kind_service_since_filter(env):
+    before = datetime.now(timezone.utc) - timedelta(seconds=5)
+    worker_fp = env.new_fingerprint()
+    beat_fp = env.new_fingerprint()
+    worker_row = await _ingest_one(env, worker_fp, tier="auto", service="celery-worker")
+    beat_row = await _ingest_one(env, beat_fp, tier="auto", service="celery-beat")
+    for row in (worker_row, beat_row):
+        resp = await env.client.post(
+            f"{_BASE}/incidents/{row['id']}/events",
+            json={
+                "kind": "first_aid",
+                "fields": {"first_aid_started_at": datetime.now(timezone.utc).isoformat()},
+            },
+            headers=env.api_headers(),
+        )
+        assert resp.status_code == 200
+    mine = {worker_row["id"], beat_row["id"]}
+    mine_str = {str(x) for x in mine}
+
+    resp = await env.client.get(
+        f"{_BASE}/events",
+        params={"kind": "first_aid", "service": "celery-worker", "since": before.isoformat(), "limit": 100},
+        headers=env.api_headers(),
+    )
+    assert resp.status_code == 200
+    got = [e for e in resp.json()["items"] if e["incident_id"] in mine_str]
+    assert len(got) == 1
+    assert got[0]["incident_id"] == str(worker_row["id"])
+    assert got[0]["kind"] == "first_aid"
+    assert got[0]["service"] == "celery-worker"
+    assert got[0]["alertname"] == "TestAlert"
+    assert "first_aid_started_at" in _as_dict(got[0]["detail"])["fields"]
+
+    resp = await env.client.get(
+        f"{_BASE}/events",
+        params={"kind": "notified", "service": "celery-beat", "since": before.isoformat(), "limit": 100},
+        headers=env.api_headers(),
+    )
+    assert resp.status_code == 200
+    got = [e["incident_id"] for e in resp.json()["items"] if e["incident_id"] in mine_str]
+    assert got == [str(beat_row["id"])]
+
+    future = datetime.now(timezone.utc) + timedelta(hours=1)
+    resp = await env.client.get(
+        f"{_BASE}/events",
+        params={"kind": "first_aid", "since": future.isoformat(), "limit": 100},
+        headers=env.api_headers(),
+    )
+    assert resp.status_code == 200
+    assert [e for e in resp.json()["items"] if e["incident_id"] in mine_str] == []
+
+
+async def test_list_events_rejects_missing_or_ingest_token(env):
+    resp = await env.client.get(f"{_BASE}/events")
+    assert resp.status_code == 401
+    resp = await env.client.get(
+        f"{_BASE}/events", headers={"Authorization": f"Bearer {env.ingest_token}"}
+    )
+    assert resp.status_code == 401
+
+
+async def test_new_filters_reject_bad_values(env):
+    for path in (
+        f"{_BASE}/incidents?tier=AUTO",
+        f"{_BASE}/incidents?first_aid=done",
+        f"{_BASE}/events?kind=first-aid;",
+        f"{_BASE}/events?service=Celery%20Worker",
+        f"{_BASE}/events?limit=101",
+    ):
+        resp = await env.client.get(path, headers=env.api_headers())
+        assert resp.status_code == 422, path

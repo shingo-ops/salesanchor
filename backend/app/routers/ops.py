@@ -294,8 +294,12 @@ async def list_incidents(
     status: Literal["firing", "resolved"] | None = None,
     since: datetime | None = None,
     limit: int = Query(50, ge=1, le=100),
+    tier: str | None = Query(None, pattern=r"^[a-z]{1,16}$"),
+    first_aid: Literal["pending"] | None = None,
     db: AsyncSession = Depends(get_db),
 ):
+    # tier の値の正本は monitoring/scripts/check_alert_rules.py。ここでは形だけを確かめる（便F D1）
+    # first_aid=pending は「鳴っていて、まだ処置を始めていない」（設計 stage3-design.md §2 便F B7）
     if since is not None and since.tzinfo is None:
         since = since.replace(tzinfo=timezone.utc)
     await set_operator_context(db)
@@ -305,9 +309,18 @@ async def list_incidents(
                 "SELECT * FROM public.ops_incidents "
                 "WHERE (CAST(:status AS text) IS NULL OR status = CAST(:status AS text)) "
                 "AND (CAST(:since AS timestamptz) IS NULL OR first_notified_at >= CAST(:since AS timestamptz)) "
+                "AND (CAST(:tier AS text) IS NULL OR labels->>'tier' = CAST(:tier AS text)) "
+                "AND (CAST(:first_aid AS text) IS NULL "
+                "     OR (status = 'firing' AND first_aid_started_at IS NULL)) "
                 "ORDER BY first_notified_at DESC LIMIT :limit"
             ),
-            {"status": status, "since": since, "limit": limit},
+            {
+                "status": status,
+                "since": since,
+                "limit": limit,
+                "tier": tier,
+                "first_aid": first_aid,
+            },
         )
         items = [dict(r) for r in result.mappings().all()]
     finally:
@@ -341,6 +354,42 @@ async def get_incident(incident_id: UUID, db: AsyncSession = Depends(get_db)):
     finally:
         await _clear_operator(db)
     return {"incident": incident, "events": event_list}
+
+
+@router.get("/ops/events", dependencies=[Depends(require_ops_reader)])
+async def list_events(
+    kind: str | None = Query(None, pattern=r"^[a-z_]{1,32}$"),
+    service: str | None = Query(None, pattern=r"^[a-z0-9_-]{1,64}$"),
+    since: datetime | None = None,
+    limit: int = Query(50, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    """B8 直近の出来事（ADR-1012 段階3 便F）。
+
+    kind の値の正本は表の制約 ops_incident_events_kind_check。ここでは形だけを確かめる。
+    service は出来事ではなく障害の labels から読む（注記の detail は形が決まっていて service を持たない。便F D3）。
+    """
+    if since is not None and since.tzinfo is None:
+        since = since.replace(tzinfo=timezone.utc)
+    await set_operator_context(db)
+    try:
+        result = await db.execute(
+            text(
+                "SELECT e.id, e.incident_id, e.occurred_at, e.kind, e.actor, e.detail, "
+                "       i.alertname, i.labels->>'service' AS service "
+                "FROM public.ops_incident_events e "
+                "JOIN public.ops_incidents i ON i.id = e.incident_id "
+                "WHERE (CAST(:kind AS text) IS NULL OR e.kind = CAST(:kind AS text)) "
+                "AND (CAST(:service AS text) IS NULL OR i.labels->>'service' = CAST(:service AS text)) "
+                "AND (CAST(:since AS timestamptz) IS NULL OR e.occurred_at >= CAST(:since AS timestamptz)) "
+                "ORDER BY e.occurred_at DESC LIMIT :limit"
+            ),
+            {"kind": kind, "service": service, "since": since, "limit": limit},
+        )
+        items = [dict(r) for r in result.mappings().all()]
+    finally:
+        await _clear_operator(db)
+    return {"items": items}
 
 
 # ---------------------------------------------------------------------------
