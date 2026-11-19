@@ -122,6 +122,7 @@ class TestCalendarEventOwnership:
             "description": None,
             "location": None,
             "category": "meeting",
+            "color_key": None,
         }
         result.first.return_value = tuple(values[n] for n in cal_svc.EVENT_COLUMNS)
         db = AsyncMock()

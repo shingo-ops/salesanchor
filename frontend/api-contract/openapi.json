@@ -8197,6 +8197,17 @@
             "title": "Calendar Type",
             "type": "string"
           },
+          "color_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Key"
+          },
           "description": {
             "anyOf": [
               {
@@ -40329,6 +40340,17 @@
               }
             ],
             "title": "Calendar Type"
+          },
+          "color_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Key"
           },
           "description": {
             "anyOf": [
