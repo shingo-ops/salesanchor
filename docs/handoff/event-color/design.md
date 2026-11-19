@@ -1,7 +1,7 @@
 # 設計 — 予定ごとの色（Google と同じ 24 色＋デフォルト）
 
 状態: 設計案（審査 2 回目 APPROVE（軽 3 件を直した版））。目標 K1〜K7 は PO 承認済み（2026-11-19 チャットで「1」）。実装の承認と本番の GO は兼ねない。基準: `origin/main` fba2172b8。便2 の前に §4-7〜§4-9 を origin/main 5db804b78 の実物で確かめ直し、§4-8（色の一覧を `Popover` で出さない）と §4-9 の足した点を直した（2026-11-20）。
-現状: [recon.md](recon.md)。決まりの記録: `docs/adr/ADR-1081-event-color-labels.md`（Proposed）。
+現状: [recon.md](recon.md)（`docs/handoff/event-color/recon.md`）。決まりの記録: `docs/adr/ADR-1081-event-color-labels.md`（Proposed）。
 関係: ADR-1057・ADR-1059（Google との行き来）・ADR-1065・ADR-1074（予定の画面の金型と `--gcal-*`）・ADR-1075（繰り返し）・ADR-067・ADR-144・ADR-027。
 
 ## 1. 目的と PO の決定
