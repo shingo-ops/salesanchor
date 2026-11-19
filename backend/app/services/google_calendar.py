@@ -388,19 +388,75 @@ async def get_event(db, tenant_id: int, event_id: str) -> dict:
         raise RuntimeError(f"イベント取得に失敗: {e}") from e
 
 
+async def get_event_label_colors(
+    db, tenant_id: int, calendar_id: str
+) -> Optional[dict[str, str]]:
+    """カレンダーの予定の名札（eventLabels）の表「名札の id → 色の値（小文字）」を返す（ADR-1081）。
+
+    名札が無ければ空の表。呼べなかったら None（ログ 1 行・例外は外へ出さない）。
+    """
+    try:
+        service = await _get_service(db, tenant_id)
+        cal = await asyncio.to_thread(service.calendars().get(calendarId=calendar_id).execute)
+    except Exception as e:
+        logger.warning("event_label_colors_unavailable calendar=%s err=%s", calendar_id, e)
+        return None
+    labels = ((cal or {}).get("labelProperties") or {}).get("eventLabels") or []
+    table: dict[str, str] = {}
+    for label in labels:
+        label_id = label.get("id")
+        color = label.get("color")
+        if label_id and isinstance(color, str):
+            table[label_id] = color.strip().lower()
+    return table
+
+
+async def _apply_event_label(
+    db, tenant_id: int, calendar_id: str, event_body: dict, kwargs: dict
+) -> dict:
+    """本文の内部の印 _sa_color_key を取り除き、色があれば eventLabelId と eventLabelVersion=1 を足す。
+
+    印が無い本文はそのまま返す（版の指定を付けない）。名札の表が読めないときは何も付けない
+    （Google の今の色を消さない）。名札が合わないときは eventLabelId を空にして送る（名札は作らない）。
+    """
+    if "_sa_color_key" not in event_body:
+        return event_body
+    from app.services.event_colors import EVENT_COLORS
+
+    body = dict(event_body)
+    color_key = body.pop("_sa_color_key")
+    table = await get_event_label_colors(db, tenant_id, calendar_id)
+    if table is None:
+        return body
+    if color_key is None:
+        body["eventLabelId"] = ""
+    else:
+        want = EVENT_COLORS.get(color_key)
+        label_id = next((i for i, c in table.items() if want and c == want), None)
+        if label_id is None:
+            logger.info("event_label_missing color_key=%s", color_key)
+            body["eventLabelId"] = ""
+        else:
+            body["eventLabelId"] = label_id
+    kwargs["eventLabelVersion"] = 1
+    return body
+
+
 async def create_event(
     db, tenant_id: int, event_body: dict, conference: bool = False
 ) -> dict:
     """イベントを作成して Google Calendar API レスポンスを返す。
 
     conference が真のときだけ conferenceDataVersion=1 を付ける（Meet 作成に必要）。
+    本文に _sa_color_key があるときだけ eventLabelVersion=1 と eventLabelId を付ける（ADR-1081）。
     """
     service = await _get_service(db, tenant_id)
     calendar_id = await get_calendar_id(db, tenant_id)
 
-    kwargs: dict = {"calendarId": calendar_id, "body": event_body}
+    kwargs: dict = {"calendarId": calendar_id}
     if conference:
         kwargs["conferenceDataVersion"] = 1
+    kwargs["body"] = await _apply_event_label(db, tenant_id, calendar_id, event_body, kwargs)
 
     try:
         return await asyncio.to_thread(service.events().insert(**kwargs).execute)
@@ -414,13 +470,15 @@ async def update_event(
     """イベントを更新して Google Calendar API レスポンスを返す。
 
     conference が真のときだけ conferenceDataVersion=1 を付ける（Meet 作成に必要）。
+    本文に _sa_color_key があるときだけ eventLabelVersion=1 と eventLabelId を付ける（ADR-1081）。
     """
     service = await _get_service(db, tenant_id)
     calendar_id = await get_calendar_id(db, tenant_id)
 
-    kwargs: dict = {"calendarId": calendar_id, "eventId": event_id, "body": event_body}
+    kwargs: dict = {"calendarId": calendar_id, "eventId": event_id}
     if conference:
         kwargs["conferenceDataVersion"] = 1
+    kwargs["body"] = await _apply_event_label(db, tenant_id, calendar_id, event_body, kwargs)
 
     try:
         return await asyncio.to_thread(service.events().patch(**kwargs).execute)

@@ -20,6 +20,8 @@ PO: しんご
 - kgi.md（KGI K1〜K10）
 - recon（現在地・7観点）: ../../handoff/reaper-auto-cleanup/recon.md
 - design（技術How・弊害・維持の仕組み）: ../../handoff/reaper-auto-cleanup/design.md
+- recon（置き忘れの部屋が溜まる件・2026-11-17）: ../../handoff/reaper-auto-cleanup/recon-idle-reclaim.md
+- design（置き忘れの部屋を写しを取って片付ける・K11〜K14）: ../../handoff/reaper-auto-cleanup/design-idle-reclaim.md
 
 ## 上位方針
 

@@ -1,17 +1,24 @@
 /**
- * 請求書作成ページの「通貨・支払方法・送料・合計」の区切り（invoice-create-portfolio 便D・design.md §3-2）。
+ * 請求書作成ページの「支払いと合計」の中身（invoice-create-portfolio design-v2 §3-1・§3-5・K5〜K8）。
  *
- * 人は選ぶだけ。通貨・支払方法の候補はサーバーの材料（draft-context）だけから出す（直書きしない）。
- * 送料は「送料を請求しない」か、FedEx の見積を出して 1 つ選ぶ（打ち込み欄は置かない・K4）。
- * 合計・税・関税はサーバーの試算（preview）の答えをそのまま見せる。答えが無い所は「未計算」と理由を出す（K5）。
+ * 3 列（ThreeColumn。狭い画面では縦 1 列）:
+ *   左: 通貨・支払方法・発送メモ（候補はサーバーの材料 draft-context だけ。直書きしない）
+ *   中: 総重量と便ごとの送料の一覧（POST /invoices/draft-shipping-quotes の答え）。1 つ選ぶか「送料を請求しない」。
+ *       各行に出所の印（ライブ／静的。ADR-125 D6）。
+ *   右: 合計枠（TotalsBox）。額はサーバーの試算（preview）の答えをそのまま見せる。答えが無い所は「未計算」と理由。
  */
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Badge } from "../../components/Badge";
 import { Button } from "../../components/Button";
 import { Callout } from "../../components/Callout";
+import { LoadingBlock } from "../../components/loading";
+import { Radio } from "../../components/Radio";
 import { Select } from "../../components/Select";
-import { TextFieldControl } from "../../components/TextField";
-import { FedExRateModal } from "../../components/FedExRateModal";
+import { Stack } from "../../components/Stack";
+import { TextField } from "../../components/TextField";
+import { ThreeColumn } from "../../components/ThreeColumn";
+import { TotalsBox } from "../../components/TotalsBox";
 import {
   PAYMENT_METHOD_LABEL_KEYS,
   formatMoney,
@@ -21,8 +28,15 @@ import {
   type DraftContext,
   type DraftContextPayment,
   type InvoicePreview,
-  type ShippingChoice,
 } from "../../lib/invoiceDraftContext";
+import { rateFee, type DraftShippingQuotesState, type DraftShippingRate } from "../quote-create/useDraftShippingQuotes";
+
+/** 送料の選択の値。「送料を請求しない」は SHIPPING_NONE、便は shippingRateKey */
+export const SHIPPING_NONE = "none";
+
+export function shippingRateKey(rate: DraftShippingRate): string {
+  return `${rate.source}|${rate.carrier}|${rate.service_type ?? ""}`;
+}
 
 export interface InvoicePaymentTotalsSectionProps {
   ctx: DraftContext | null;
@@ -34,17 +48,14 @@ export interface InvoicePaymentTotalsSectionProps {
   onPaymentChange: (next: string) => void;
   notes: string;
   onNotesChange: (next: string) => void;
-  shipping: ShippingChoice | null;
-  shippingStale: boolean;
-  onShippingNone: () => void;
-  onShippingClear: () => void;
-  quoteOpen: boolean;
-  onQuoteOpen: () => void;
-  onQuoteClose: () => void;
-  onRateSelected: (fee: number, rateCurrency: string, serviceType: string | null, carrier: string) => void;
   totalWeight: number;
+  shippingQuotes: DraftShippingQuotesState;
+  /** 選んだ送料の値（"" は未選択） */
+  shippingPick: string;
+  onShippingPick: (next: string) => void;
   preview: InvoicePreview | null;
   previewError: string;
+  disabled?: boolean;
 }
 
 export function InvoicePaymentTotalsSection(props: InvoicePaymentTotalsSectionProps) {
@@ -52,134 +63,149 @@ export function InvoicePaymentTotalsSection(props: InvoicePaymentTotalsSectionPr
   const navigate = useNavigate();
   const {
     ctx, currencyOptions, currency, onCurrencyChange, paymentChoices, paymentValue, onPaymentChange,
-    notes, onNotesChange, shipping, shippingStale, onShippingNone, onShippingClear,
-    quoteOpen, onQuoteOpen, onQuoteClose, onRateSelected, totalWeight, preview, previewError,
+    notes, onNotesChange, totalWeight, shippingQuotes, shippingPick, onShippingPick, preview, previewError,
+    disabled = false,
   } = props;
 
   const fx = currency !== "" ? fxRateFor(ctx, currency) : null;
   const paymentLabel = (p: DraftContextPayment) =>
     p.display_name !== null && p.display_name !== "" ? p.display_name : t(PAYMENT_METHOD_LABEL_KEYS[p.method_type]);
-  const canQuote = ctx !== null && ctx.origin_country_code !== null && ctx.destination_country_code !== null;
-  const shippingSelectValue = shipping === null ? "" : shipping.mode;
   const money = (v: string | null | undefined) => formatMoney(v, currency) ?? t("invoiceForm.notComputed");
+  const rates = shippingQuotes.quotes?.results ?? [];
+  const liveError = shippingQuotes.quotes?.live_error ?? null;
+  const canQuote = ctx !== null && ctx.origin_country_code !== null && ctx.destination_country_code !== null;
 
-  return (
-    <div data-testid="invoice-payment-totals">
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
-        <div>
-          <Select
-            label={t("invoiceForm.currency")}
-            required
-            fullWidth
-            value={currency}
-            onChange={(e) => onCurrencyChange(e.target.value)}
-            placeholder={t("invoiceForm.currencyPlaceholder")}
-            options={currencyOptions.map((c) => ({ value: c, label: c }))}
-            data-testid="invoice-currency-select"
-          />
-          {currencyOptions.length === 0 && ctx !== null && (
-            <p data-testid="invoice-no-currency">{t("invoiceForm.noCurrency")}</p>
-          )}
-          {fx !== null && (
-            <p style={{ color: "var(--text-secondary)" }} data-testid="invoice-fx-line">
-              {t("invoiceForm.fxRateLine", { currency: fx.currency, rate: fx.rate, at: fx.fetched_at ?? "-" })}
-            </p>
-          )}
-        </div>
-        <div>
-          {paymentChoices.length > 0 ? (
-            <Select
-              label={t("invoiceForm.payment")}
-              required
-              fullWidth
-              value={paymentValue}
-              onChange={(e) => onPaymentChange(e.target.value)}
-              placeholder={t("invoiceForm.paymentPlaceholder")}
-              options={paymentChoices.map((p) => ({ value: paymentKey(p), label: paymentLabel(p) }))}
-              data-testid="invoice-payment-select"
-            />
-          ) : ctx !== null && ctx.issuer_region !== null ? (
-            <Callout variant="info" title={t("invoiceForm.noPaymentMethods")}>
-              <Button type="button" variant="secondary" size="sm" onClick={() => navigate("/management-center/tenant-profile")} data-testid="invoice-open-tenant-profile">
-                {t("invoiceForm.openTenantProfile")}
-              </Button>
-            </Callout>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="form-group" style={{ marginBottom: "var(--space-4)" }}>
-        <label>{t("common.notes")}</label>
-        <TextFieldControl value={notes} onChange={(e) => onNotesChange(e.target.value)} data-testid="invoice-notes" />
-      </div>
-
-      <div style={{ marginBottom: "var(--space-4)" }}>
+  const left = (
+    <Stack direction="column" gap="3">
+      <div data-testid="invoice-currency">
         <Select
-          label={t("invoiceForm.shipping")}
+          label={t("invoiceForm.currency")}
           required
-          value={shippingSelectValue}
-          onChange={(e) => {
-            if (e.target.value === "none") onShippingNone();
-            else onShippingClear();
-          }}
-          placeholder={t("invoiceForm.shippingPlaceholder")}
-          options={[
-            { value: "none", label: t("invoiceForm.shippingNone") },
-            ...(shipping !== null && shipping.mode === "calculate"
-              ? [{ value: "calculate", label: t("invoiceForm.shippingChosen", { carrier: shipping.carrier, service: shipping.service_type ?? "-", fee: formatMoney(shipping.fee, shipping.currency) ?? String(shipping.fee) }) }]
-              : []),
-          ]}
-          data-testid="invoice-shipping-select"
+          fullWidth
+          value={currency}
+          disabled={disabled}
+          onChange={(e) => onCurrencyChange(e.target.value)}
+          placeholder={t("invoiceForm.currencyPlaceholder")}
+          options={currencyOptions.map((c) => ({ value: c, label: c }))}
+          helperText={
+            fx !== null
+              ? t("invoiceForm.fxRateLine", { currency: fx.currency, rate: fx.rate, at: fx.fetched_at ?? "-" })
+              : currencyOptions.length === 0 && ctx !== null
+                ? t("invoiceForm.noCurrency")
+                : undefined
+          }
+          data-testid="invoice-currency-select"
         />
-        <div style={{ marginTop: "var(--space-2)" }}>
-          <Button type="button" variant="secondary" size="sm" onClick={onQuoteOpen} disabled={!canQuote} data-testid="invoice-shipping-quote">
-            {t("invoiceForm.shippingQuote")}
-          </Button>
-        </div>
-        {!canQuote && ctx !== null && (
-          <p style={{ color: "var(--text-secondary)" }} data-testid="invoice-shipping-needs-countries">{t("invoiceForm.shippingNeedsCountries")}</p>
-        )}
-        {shippingStale && (
-          <p className="warning-message" data-testid="invoice-shipping-stale">{t("invoiceForm.shippingStale")}</p>
-        )}
-        {quoteOpen && ctx !== null && ctx.origin_country_code !== null && ctx.destination_country_code !== null && (
-          <FedExRateModal
-            open={quoteOpen}
-            onClose={onQuoteClose}
-            originCountryCode={ctx.origin_country_code}
-            destinationCountryCode={ctx.destination_country_code}
-            destinationPostalCode={ctx.destination_postal_code ?? undefined}
-            weightKg={totalWeight}
-            onSelectRate={(fee, rateCurrency, serviceType, carrier) => onRateSelected(fee, rateCurrency, serviceType, carrier ?? "")}
-          />
-        )}
       </div>
+      {paymentChoices.length > 0 ? (
+        <Select
+          label={t("invoiceForm.payment")}
+          required
+          fullWidth
+          value={paymentValue}
+          disabled={disabled}
+          onChange={(e) => onPaymentChange(e.target.value)}
+          placeholder={t("invoiceForm.paymentPlaceholder")}
+          options={paymentChoices.map((p) => ({ value: paymentKey(p), label: paymentLabel(p) }))}
+          data-testid="invoice-payment-select"
+        />
+      ) : ctx !== null && ctx.issuer_region !== null ? (
+        <Callout variant="info" title={t("invoiceForm.noPaymentMethods")}>
+          <Button type="button" variant="secondary" size="sm" onClick={() => navigate("/management-center/tenant-profile")} data-testid="invoice-open-tenant-profile">
+            {t("invoiceForm.openTenantProfile")}
+          </Button>
+        </Callout>
+      ) : null}
+      <TextField
+        label={t("invoiceForm.shippingMemo")}
+        fullWidth
+        value={notes}
+        disabled={disabled}
+        onChange={(e) => onNotesChange(e.target.value)}
+        data-testid="invoice-notes"
+      />
+    </Stack>
+  );
 
-      <dl style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "var(--space-2) var(--space-4)", marginBottom: "var(--space-4)" }}>
-        <dt>{t("invoiceForm.totalWeight")}</dt>
-        <dd data-testid="invoice-total-weight">{totalWeight.toLocaleString()} kg</dd>
-        <dt>{t("invoiceForm.subtotal")}</dt>
-        <dd data-testid="invoice-total-subtotal">{preview ? money(preview.subtotal) : t("invoiceForm.notComputed")}</dd>
-        <dt>{t("invoiceForm.shippingFee")}</dt>
-        <dd data-testid="invoice-total-shipping">{preview ? money(preview.shipping_fee) : t("invoiceForm.notComputed")}</dd>
-        <dt>{t("invoiceForm.tax", { rate: preview?.tax_rate_percent ?? "-" })}</dt>
-        <dd data-testid="invoice-total-tax">{preview ? money(preview.tax_amount) : t("invoiceForm.notComputed")}</dd>
-        <dt>{preview?.duty_label ?? t("invoiceForm.duty")}</dt>
-        <dd data-testid="invoice-total-duty">
-          {preview ? money(preview.duty_amount) : t("invoiceForm.notComputed")}
-          {preview && preview.duty_components.length > 0 && (
-            <ul data-testid="invoice-duty-components">
-              {preview.duty_components.map((c, i) => (
-                <li key={i}>{c.label}: {money(c.amount)}</li>
-              ))}
-            </ul>
-          )}
-        </dd>
-        <dt>{t("invoiceForm.total")}</dt>
-        <dd data-testid="invoice-total-amount" style={{ fontWeight: "var(--font-weight-bold)", fontSize: "var(--font-lg)" }}>
-          {preview ? money(preview.total_amount) : t("invoiceForm.notComputed")}
-        </dd>
-      </dl>
+  const middle = (
+    <Stack direction="column" gap="2">
+      <p data-testid="invoice-total-weight">{t("invoiceForm.totalWeightLine", { value: totalWeight })}</p>
+      <div role="radiogroup" aria-label={t("invoiceForm.shipping")} data-testid="invoice-shipping-list">
+        <Stack direction="column" gap="2">
+          <Radio
+            name="invoice-shipping"
+            value={SHIPPING_NONE}
+            label={t("invoiceForm.shippingNone")}
+            checked={shippingPick === SHIPPING_NONE}
+            disabled={disabled}
+            onChange={() => onShippingPick(SHIPPING_NONE)}
+            data-testid="invoice-shipping-none"
+          />
+          {rates.map((r) => {
+            const key = shippingRateKey(r);
+            const fee = rateFee(r);
+            return (
+              <Stack key={key} direction="row" gap="2">
+                <Radio
+                  name="invoice-shipping"
+                  value={key}
+                  label={t("invoiceForm.shippingRateLine", {
+                    carrier: r.carrier,
+                    service: r.service_name ?? r.service_type ?? "-",
+                    fee: fee === null ? "-" : formatMoney(fee, r.currency) ?? String(fee),
+                  })}
+                  description={r.transit_days !== null ? t("invoiceForm.transitDays", { count: r.transit_days }) : undefined}
+                  checked={shippingPick === key}
+                  disabled={disabled || fee === null}
+                  onChange={() => onShippingPick(key)}
+                  data-testid={`invoice-shipping-rate-${key}`}
+                />
+                <Badge variant={r.source === "fedex_live" ? "success" : "neutral"} size="sm">
+                  {t(r.source === "fedex_live" ? "invoiceForm.sourceLive" : "invoiceForm.sourceStatic")}
+                </Badge>
+              </Stack>
+            );
+          })}
+        </Stack>
+      </div>
+      {!canQuote && ctx !== null && (
+        <p data-testid="invoice-shipping-needs-countries">{t("invoiceForm.shippingNeedsCountries")}</p>
+      )}
+      {canQuote && shippingQuotes.key === "" && (
+        <p data-testid="invoice-shipping-needs-weight">{t("invoiceForm.shippingNeedsWeight")}</p>
+      )}
+      {shippingQuotes.loading && (
+        <div data-testid="invoice-shipping-loading">
+          <LoadingBlock inline label={t("invoiceForm.shippingLoading")} />
+        </div>
+      )}
+      {shippingQuotes.error !== "" && (
+        <Callout variant="warning" title={t("invoiceForm.shippingQuoteError")}>
+          <span data-testid="invoice-shipping-error">{shippingQuotes.error}</span>
+        </Callout>
+      )}
+      {liveError !== null && (
+        <Callout variant="info" title={t("invoiceForm.fedexLiveUnavailable")}>
+          <span data-testid="invoice-shipping-live-error">{liveError}</span>
+        </Callout>
+      )}
+    </Stack>
+  );
+
+  const taxLabel = preview?.duty_label ?? t("invoiceForm.tax", { rate: preview?.tax_rate_percent ?? "-" });
+  const taxValue = preview === null ? t("invoiceForm.notComputed") : preview.duty_label !== null ? money(preview.duty_amount) : money(preview.tax_amount);
+  const right = (
+    <Stack direction="column" gap="2">
+      <div data-testid="invoice-totals">
+        <TotalsBox
+          rows={[
+            { key: "subtotal", label: t("invoiceForm.subtotal"), value: <span data-testid="invoice-total-subtotal">{preview ? money(preview.subtotal) : t("invoiceForm.notComputed")}</span> },
+            { key: "shipping", label: t("invoiceForm.shippingFee"), value: <span data-testid="invoice-total-shipping">{preview ? money(preview.shipping_fee) : t("invoiceForm.notComputed")}</span> },
+            { key: "tax", label: taxLabel, value: <span data-testid="invoice-total-tax">{taxValue}</span> },
+          ]}
+          total={{ label: t("invoiceForm.total"), value: <span data-testid="invoice-total-amount">{preview ? money(preview.total_amount) : t("invoiceForm.notComputed")}</span> }}
+        />
+      </div>
       {preview && preview.uncomputed.length > 0 && (
         <Callout variant="warning" title={t("invoiceForm.uncomputedTitle")}>
           <ul data-testid="invoice-uncomputed">
@@ -190,8 +216,20 @@ export function InvoicePaymentTotalsSection(props: InvoicePaymentTotalsSectionPr
         </Callout>
       )}
       {previewError !== "" && (
-        <p className="error-message" data-testid="invoice-preview-error">{previewError}</p>
+        <Callout variant="warning" title={t("invoiceForm.previewErrorTitle")}>
+          <span data-testid="invoice-preview-error">{previewError}</span>
+        </Callout>
       )}
+    </Stack>
+  );
+
+  return (
+    <div data-testid="invoice-payment-totals">
+      <ThreeColumn gap="4">
+        <div data-testid="invoice-col-payment">{left}</div>
+        <div data-testid="invoice-col-shipping">{middle}</div>
+        <div data-testid="invoice-col-totals">{right}</div>
+      </ThreeColumn>
     </div>
   );
 }

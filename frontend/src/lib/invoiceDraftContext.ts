@@ -19,6 +19,14 @@ export interface DraftAddress {
   state: string | null;
   country: string | null;
   phone: string | null;
+  // サーバーの DraftContextAddress（backend/app/schemas/invoice.py）が返す発送先の残りの欄
+  recipient_name?: string | null;
+  email?: string | null;
+  tax_id?: string | null;
+  address_line_1?: string | null;
+  address_line_2?: string | null;
+  address_line_3?: string | null;
+  country_name?: string | null;
 }
 
 export interface DraftContextPayment {

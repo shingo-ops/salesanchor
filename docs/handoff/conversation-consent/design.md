@@ -1432,7 +1432,7 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 
 つなぎ直しの道（審査1 必須2）:
 - .claude.json の書き直しは、新しく claude を起動するときだけ走る（server/sessions.ts:789-790 の注記。`openTerminal` は、tmux に件が生きていれば :854-856 で、つながらなければ :857-861 で、`beforeNew` を呼ばずにつなぎ直して戻る。`beforeNew` を呼ぶのは新しく起動する :866 だけ）。これは今の決まりで、変えない（つなぎ直しは動いている claude をそのまま使うので、起動の時の確認はもう出ない）。
-- サーバーが起き直って、claude を新しく起動し直す道（restore で tmux が無くなっていた件）は `beforeNew` を通るので、R の鍵も入る（K73）。
+- サーバーが起き直って、claude を新しく起動し直す道（restore で tmux が無くなっていた件）は `beforeNew` を通るので、R の鍵も入る（K76）。
 - 直しの前に 2.1.327 で開いて、信頼の確認の画面で止まったままの件があれば、直しの後につなぎ直しても止まったまま。この件は自動では直さない。反映の前に Opus が件の一覧と probe の画面の形（件の画面の中身は読まない。一覧の状態だけ）を見て、確認で止まっている件があれば、PO に「閉じて開き直す」を頼む（件を閉じるのは PO の操作）。止まっている件には case-say の指示が入らない（server/hub.ts:564-573 の判定 4b で、2.1.327 は版の記録で使える版でなく、agent-console.config.json:9 の `caseSayClaudeVersions` にも無いため断られる）ので、Discord の指示が確認の画面に打ち込まれることはない。
 
 触らない物: `PROBE_` で始まる定数、E1〜E4・P0〜P5・R1 の条件、24 時間・3 回の規則、版の記録・鍵・MAC、hooks・見張り、`buildCaseSettings`（§14-14-9 の「options なしで PO の件の設定を変えない」）、room.sb の許し・拒否、ccdiscord.zsh の起動の引数、`casePaths`（R の作り方）、case.json の形、`CASE_DENY_WRITE`・`CASE_DENY_READ`・`CASE_ALLOW_WRITE`・`CASE_DENY_READ_SANDBOX`（server/case-sandbox.ts:74-93・:95-108・:111-121）、`checkCaseSandbox`（server/sessions.ts:552-637）、agent-console.config.json:9 の `caseSayClaudeVersions`（2.1.327 を足して判定 4b を通す近道は取らない）、`writeCaseKeybindings`、つなぎ直しの判定（`openTerminal` の probe・`beforeNew` を呼ぶ条件）、server/case-say-probe.ts と server/case-say-probe-wiring.ts、server/hub.ts の判定 4・4b。
@@ -1457,9 +1457,11 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 | K69 既存の試験が通る | agent-console の CI が緑 |
 | K70 本物で ok | 数える物: 直しの版を本番に反映した時刻（Opus が本書に書く。以下「反映」）より後に始まった probe の監査 `caseClaudeVersionProbe` の行（版は問わない。24 時間明けの前に claude の版が変わったら、その新しい版の行）。○: 反映から 7 日（168 時間）以内に、最初に `outcome: "ok"` の行があり、版の記録のその版が `usable: true`・`lastResult: "ok"`。×: 反映から 7 日以内に、ok の行より前に `outcome: "denied"` の行がある（7 日を過ぎた後の行は数えない）。`outcome: "aborted"` の行（`abortReason` は server/case-say-probe.ts:536・543 で決まり、この直しと関係ない理由でも出る）は○にも×にも数えず、次の行を待つ。7 日の間に ok も denied も無ければ未判定とし、`BLOCKED:` で読んだ行（aborted なら `abortReason`）を添えて PO に返す。Opus 本体が node で許された欄だけを読み、本書に書き足す（§14-14-17 の C の確かめ直し） |
 | K71 同じ理由の×が 2 回目から 0 回（K64） | ○: 直しの版の反映の時刻から 30 日の間、監査（server/case-say-probe.ts:584-599 が書く `caseClaudeVersionProbe` の行）に、`failedCheck: "P0"` かつ `paneSamples` のどれかに `Adding a new directory` を含む行が 0 件。×: 1 件以上。30 日目の見回りで Opus 本体が数える |
-| K72 R か R の親に `.git` があれば件を開かない | vitest（tests/unit/case-sandbox.test.ts。R の 1 つ上に `.git` のディレクトリを作る形と、R の中に `.git` のファイルを作る形の 2 つで、`rewriteCaseClaudeJson` が `CaseSandboxUnavailableError` を投げ、.claude.json が前の中身のまま） |
-| K73 起動し直す道でも R の鍵が入り、つなぎ直しでは書き直さない | vitest（tests/unit/sessions.case.test.ts:426 からの試験に、起動し直した後の `projects` に R の鍵がある期待と、つなぎ直しでは前の中身のままの期待を足す） |
-| K74 R が realpath と違う・無いときは件を開かない | vitest（tests/unit/case-sandbox.test.ts。R にリンクを渡す形と、無い道を渡す形で投げ、.claude.json が前の中身のまま） |
+| K75 R か R の親に `.git` があれば件を開かない | vitest（tests/unit/case-sandbox.test.ts。R の 1 つ上に `.git` のディレクトリを作る形と、R の中に `.git` のファイルを作る形の 2 つで、`rewriteCaseClaudeJson` が `CaseSandboxUnavailableError` を投げ、.claude.json が前の中身のまま） |
+| K76 起動し直す道でも R の鍵が入り、つなぎ直しでは書き直さない | vitest（tests/unit/sessions.case.test.ts:426 からの試験に、起動し直した後の `projects` に R の鍵がある期待と、つなぎ直しでは前の中身のままの期待を足す） |
+| K77 R が realpath と違う・無いときは件を開かない | vitest（tests/unit/case-sandbox.test.ts。R にリンクを渡す形と、無い道を渡す形で投げ、.claude.json が前の中身のまま） |
+
+番号の付け替え（2026-11-20）: 本流の §15 が先に K72〜K74 を使ったため、この節の 3 つを K75〜K77 に付け替えた。agent-console v0.55.3 の試験の名前に残る K72a・K72b・K73・K74a・K74b は、それぞれ K75・K76・K77 を指す。
 
 残る危険:
 - U24 claude の次の版が、信頼の鍵の形（`projects` の `hasTrustDialogAccepted`）を変えると、同じ P0 に戻る。そのときは毎日の見回りの D で見つかる（誤って○にはならない側）。
@@ -1484,3 +1486,97 @@ PO の実装の承認: 2026-11-20 JST、PO は「1」（実装の手順書を書
 - 反映の確かめ: 自己診断（別ポート 4320）と本番の `/healthz`（ポート 4319）が `version 0.55.3`・`commit d417835989998de04e1442a38fd5626251307e5e` を返した。反映の直前に開いていた件は 0 件（開いているセッション 11 件はすべて設計の担当）で、PO に閉じて開き直しを頼む件は無かった。
 - K70 の期限: 2026-11-27 02:03 JST（反映から 168 時間）。K71 の数える日: 2026-12-20 JST（反映から 30 日）。
 - 戻し方: `bash scripts/ac-update.sh v0.55.2`。
+
+## 15. 改訂3: K0「同意の遅れ」の数え方から、見張りが PO の入力を読む前に止めた呼び出しを外す（2026-11-19）
+
+状態: 設計案（Opus 作成・自己審査済み、§15-9）。PO が「点検の数え方を直す設計を書く」を選択（2026-11-19 週次点検の調べの報告への返事「1」）。実装は PO の実装承認の後。見張り（consent_check.py・フック）は変えない。
+
+### 15-1 目的（PO の選択）
+
+- K0 の「遅れ」を、本当に「見張りが PO の最新の入力を読めなかった」呼び出しだけにする。
+- 直した数で、§6 の案 F（UserPromptSubmit で別の台帳に記録）が要るかを決める。
+
+利用者に見える変化:
+- 前: 10/26 から毎週「K0 判定: ×（案 F に切り替える設計に戻す）」が出る（20261102: 175件中154件 … 20261119: 77件中45件）。中身の多くが数え違いの疑いで、案 F の要否が決められない。
+- 後: 週次点検の K0 の行が、数える件数・外した件数・遅れの件数（見張りが入力を読んだうえでの遅れ）を分けて出す。○なら ADR-1033 を Accepted に上げる判断材料になり、×なら案 F の設計に進む根拠になる。
+
+### 15-2 現状（観測事実）
+
+- 数え方（scripts/dev/consent-audit.py:345-399、origin/main fd72a7b01）: すべての consent_probe について「本当の直前の人の入力」を記録から探し（tool_use_id が本体の記録にあればその行の位置、無ければ probe の now より前の最後の人の入力）、それが typed の「1」なら対象1件、probe の h_uuid と違えば遅れ1件。probe の reason も h_uuid が null かも見ていない（同:385-398）。
+- 見張り（docs/handoff/conversation-consent/hooks/consent_check.py:264-276、手元 ~/.claude/scripts/consent_check.py と同一）は、サブエージェントからの呼び出し（reason=agent_id）と transcript_path が使えない呼び出し（reason=transcript_path）、記録が読めない呼び出し（transcript_unparsable）で、H を読む前に止める。このとき probe の h_uuid は null（同:285-286 より前で返るため）。
+- 手元の agent-events.jsonl の consent_probe 全 863 件（2026-11-19 集計）: agent_id 451・transcript_path 208・h_not_typed_one 76・ticket_format 64・no_human_input 63・command_mismatch 1。agent_id・transcript_path・no_human_input の 722 件は h_uuid が null。result=True は 0 件。
+- サブエージェントの probe の session は本体の会話の id で、その tool_use は本体の記録に無い。そのため時刻の道に回り、本体の会話の直前の入力が「1」なら h_uuid null と比べて必ず遅れになる（probe のある 62 会話のうち 49 会話にサブエージェントの probe がある）。
+- 生データと集計: ~/CC報告ファイル-keep/consent-weekly/20261119-k0-delay-analysis.md。
+
+### 15-3 変更後の仕組み
+
+(a) k0_delays は、probe の reason が次の3つのものを数えない（外した件数として別に数える）。
+
+| reason | 理由 |
+|---|---|
+| `agent_id` | サブエージェントは仕様で止める（K5・R4）。H を読まない |
+| `transcript_path` | 記録の場所が使えず H を読まない |
+| `transcript_unparsable` | 記録が読めず H を読まない |
+
+- reason が無い probe（旧形式）は今までどおり数える。
+- `no_human_input`（末尾 4MB を読んだが人の入力が無かった）は数える。本当の直前が「1」なら、読めなかった本物の遅れだから。
+- 遅れの内訳として、h_uuid が null の遅れ（no_human_input 等）と、h_uuid がある遅れを分けて返す。
+
+(b) 返り値を `(total, delays, skipped, delays_no_h)` にする。週次点検の行（同:1911-1916）を次の形にする。判定（○×・保留・K0_TARGET=20）の決まりは変えない。
+
+```
+K0: 直前の人の入力が typed の「1」だった呼び出し %d 件のうち、遅れ %d 件（うち見張りが入力を見つけられなかった %d 件）（目標: %d 件たまった時点で遅れ0）／H を読む前に止めた呼び出しで除外 %d 件
+```
+
+(c) 数える期間（今は全期間）は変えない。§2 の K0 の「20件たまった時点で」は累計の決まりで、7日に絞ると対象が足りなくなるため。
+
+### 15-4 対象と対象外
+
+- 対象: scripts/dev/consent-audit.py（k0_delays と run_audit の K0 の行）、scripts/dev/consent-unit-tests.py（T0 に例を足す）、本書。
+- 手元への反映: 週次点検は ~/.salesanchor-tools/scripts/dev/consent-audit.py を使う。マージ後、その写しを origin/main に合わせる道（既存の写しの更新手順）で入れる。手順の確認は実装カードで行う。
+- 対象外: consent_check.py・フック・settings.json（止め方は変えない）、§2 の K0 の判定の決まり、既にある agent-events.jsonl の行、案 F そのもの。
+
+### 15-5 代替案
+
+| 案 | 採否 | 理由 |
+|---|---|---|
+| A reason で H を読む前の止めを外す（本案） | 採用 | 見張りが自分で書いた理由を使うので、外す範囲が見張りの動きと一致する |
+| B h_uuid が null の probe をすべて外す | 不採用 | no_human_input（読めなかった本物の遅れ）まで消える |
+| C 数え方は直さず案 F に切り替える | 不採用 | 遅れが本当にあるかが分からないまま台帳を1つ増やす（§6 で予備とした理由と同じ） |
+| D サブエージェントの記録（subagents の下）まで探して直前を決める | 不採用 | サブエージェントは H を読まずに止めるので、直前が何でも K0 の意味（見張りが読めたか）に関係しない |
+
+### 15-6 リスクと対処
+
+| # | リスク | 対処 |
+|---|---|---|
+| R11 | 見張りが将来 reason の名前を変えると、外すべき呼び出しがまた数えられる | 外す reason を定数1か所に置き、試験 T0-b で3つの名前を固定する。名前を変える改訂は本節の定数も直す |
+| R12 | 直した後、本物の遅れ（h_uuid ありで違う）が1件以上出る | §2 の決まりどおり ×。案 F の設計に進む（本節は案 F を不要と決めるものではない） |
+| R13 | 外した件数が多く、K0 の対象が 20 件に届かない | 判定は「保留」と出る（今の作り）。対象は今の 77 件より減るが、どれだけ減るかは直した道具で初めて分かる。届かなければ保留のまま報告し、届くまで毎週数える |
+
+戻し方: この PR の revert。手元の写しは前の版に戻す。点検の行の形が戻るだけで、見張りには影響しない。
+
+### 15-7 成功条件
+
+| # | 基準 | 検証方法 |
+|---|---|---|
+| K72 | k0_delays が reason=agent_id・transcript_path・transcript_unparsable の probe を数えず外した件数に入れ、no_human_input と reason 無しは数える。既存の T0-a（対象5・遅れ2）は変わらない | consent-unit-tests.py T0-b: T0-a の記録に、直前が「1」になる位置で agent_id 2件・transcript_path 1件・transcript_unparsable 1件・no_human_input 1件（h_uuid null）の probe を足す → total=6・delays=3・skipped=4・delays_no_h=1。T0-a も PASS のまま。全件一致で○ |
+| K73 | マージ後、手元の写しで `consent-audit.py --audit` を打つと、K0 の行に「除外」と「うち見張りが入力を見つけられなかった」が出る | Opus が実行し、出力を ~/CC報告ファイル-keep/consent-weekly/ に保存。行が §15-3(b) の形なら○ |
+| K74 | 直した数で K0 の○×が出る（対象 20 件以上） | K73 の出力。○なら ADR-1033 の昇格判断を PO に上げる。×なら遅れの probe を tool_use_id で特定して PO に報告し、案 F の設計に進むかを聞く |
+
+### 15-8 実装の分け方（Sonnet へ・1便）
+
+- 便K0: §15-3(a)(b) と T0-b。触るのは consent-audit.py・consent-unit-tests.py だけ。PR 1本。フックのパスを含まないので po-apply-consent.sh は不要。
+- 試験: `python3 scripts/dev/consent-unit-tests.py` の全件 PASS。
+- マージ後に Opus: 手元の写しの更新、K73・K74 の実行と保存、PO への報告。
+
+### 15-9 設計審査（Opus の自己審査。独立した第二者の審査ではない）
+
+判定: APPROVE（HIGH 0・MEDIUM 0・LOW 2）。
+- 整合: 止め方（§4-5・K1〜K7）を変えない。§2 の K0 の定義「フックが動く時点で、PO の直前の入力が会話記録に書かれている」は、フックが記録を読む呼び出しにだけ意味がある。H を読む前に止める呼び出しを外すのは定義の範囲内で、定義を変えない。§13 の改訂（異常の数え方）と同じく点検の数え方だけの直し。
+- 根拠: 行番号は origin/main fd72a7b01 の worktree で確認。probe の内訳は保存した集計。
+- 検証可能性: K72 は試験で○×、K73・K74 は保存ファイルで○×。
+- LOW-1: 45 件のうち数え違いと本物の遅れの内訳は、直した道具で初めて出る（会話記録を Bash で読むことは見張りが止めるため）。直した後の数が設計の前提（多くが数え違い）と違っても、§2 の決まりで ×→案 F に進むので、判断は止まらない。
+- LOW-2: 期間が全期間のため、過去の本物の遅れは消えない。§15-3(c) のとおり変えない。必要になれば反映日以降に絞る改訂を別に出す。
+- 未解決の前提: なし。PO の判断が要るのは実装の承認だけ。
+
+外部事例: 該当事例なし。理由: 自作の点検道具の数え方の直しで、正しさは実際の記録と単体試験で確かめる。

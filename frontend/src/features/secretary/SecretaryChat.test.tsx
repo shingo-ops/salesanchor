@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
@@ -626,5 +626,104 @@ describe("SecretaryChat voice reply", () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(mock.speech).not.toHaveBeenCalled();
+  });
+});
+
+// 便T: 声の聞き取りの印。SpeechRecognition は偽物に差し替え、試験の後で元に戻す
+describe("SecretaryChat listen mark", () => {
+  const LISTEN = "Speak to type";
+  const JP_TEXT = String.fromCharCode(0x3053, 0x3093, 0x306b, 0x3061, 0x306f);
+  type Win = { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown };
+  const win = window as unknown as Win;
+  let saved: unknown;
+  let savedWebkit: unknown;
+  let instances: FakeRec[] = [];
+
+  class FakeRec {
+    lang = "";
+    interimResults = false;
+    continuous = false;
+    maxAlternatives = 1;
+    onresult: ((ev: unknown) => void) | null = null;
+    onerror: ((ev: unknown) => void) | null = null;
+    onend: (() => void) | null = null;
+    start = vi.fn();
+    stop = vi.fn();
+    abort = vi.fn();
+    constructor() {
+      instances.push(this);
+    }
+  }
+
+  const renderMobile = () =>
+    render(
+      <MemoryRouter>
+        <SecretaryChat isMobile={true} />
+      </MemoryRouter>,
+    );
+
+  beforeEach(() => {
+    saved = win.SpeechRecognition;
+    savedWebkit = win.webkitSpeechRecognition;
+    instances = [];
+    win.SpeechRecognition = FakeRec;
+    delete win.webkitSpeechRecognition;
+  });
+  afterEach(() => {
+    if (saved === undefined) delete win.SpeechRecognition;
+    else win.SpeechRecognition = saved;
+    if (savedWebkit === undefined) delete win.webkitSpeechRecognition;
+    else win.webkitSpeechRecognition = savedWebkit;
+  });
+
+  const openMobile = async () => {
+    renderMobile();
+    fireEvent.click(screen.getByRole("button", { name: FAB }));
+    await screen.findByLabelText(/Tell me what you need/);
+  };
+
+  it("has no listen mark when isMobile is false", async () => {
+    renderChat();
+    fireEvent.click(screen.getByRole("button", { name: FAB }));
+    await screen.findByLabelText(/Tell me what you need/);
+    expect(screen.queryByRole("button", { name: LISTEN })).toBeNull();
+  });
+
+  it("has a listen mark when isMobile is true", async () => {
+    await openMobile();
+    expect(screen.getByRole("button", { name: LISTEN })).toBeTruthy();
+  });
+
+  it("shows the listening text after pressing the mark", async () => {
+    await openMobile();
+    fireEvent.click(screen.getByRole("button", { name: LISTEN }));
+    expect(await screen.findByText(i18n.t("secretary.listen.listening"))).toBeTruthy();
+    expect(instances[0].start).toHaveBeenCalledTimes(1);
+  });
+
+  it("puts a final sentence into the box and does not send it", async () => {
+    await openMobile();
+    fireEvent.click(screen.getByRole("button", { name: LISTEN }));
+    const result = Object.assign([{ transcript: JP_TEXT }], { isFinal: true });
+    act(() => {
+      instances[0].onresult?.({ resultIndex: 0, results: [result] });
+    });
+    const box = screen.getByLabelText(/Tell me what you need/) as HTMLTextAreaElement;
+    await waitFor(() => expect(box.value).toBe(JP_TEXT));
+    expect(mock.postWithTimeout).not.toHaveBeenCalled();
+  });
+
+  it("says it is unavailable when there is no recognition class", async () => {
+    delete win.SpeechRecognition;
+    await openMobile();
+    fireEvent.click(screen.getByRole("button", { name: LISTEN }));
+    expect(await screen.findByText(i18n.t("secretary.listen.error.unsupported"))).toBeTruthy();
+  });
+
+  it("aborts the recognition when the window is closed", async () => {
+    await openMobile();
+    fireEvent.click(screen.getByRole("button", { name: LISTEN }));
+    fireEvent.click(screen.getByRole("button", { name: /close/i }));
+    expect(instances[0].abort).toHaveBeenCalled();
   });
 });
