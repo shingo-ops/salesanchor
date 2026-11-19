@@ -6242,6 +6242,21 @@
     "cancel": "Cancel",
     "thinking": "Thinking…",
     "voiceToggle": "Read replies aloud",
+    "listen": {
+      "start": "Speak to type",
+      "stop": "Stop listening",
+      "listening": "Listening…",
+      "error": {
+        "unsupported": "Voice input is not available on this screen",
+        "notAllowed": "Microphone access is not allowed. Allow the microphone in your device settings",
+        "serviceNotAllowed": "Voice input is not allowed on this device",
+        "noSpeech": "No speech was heard. Press again and speak",
+        "audioCapture": "The microphone could not be used",
+        "network": "Voice input failed because of a network problem. Please try again",
+        "language": "Japanese voice input is not supported",
+        "other": "Could not catch that. Please try again"
+      }
+    },
     "voiceFailed": "Could not play the voice. You can still read the text. Send again to retry",
     "voiceCapReached": "This month's read-aloud limit has been reached. You can still read the text. It resets on the 1st",
     "cancelled": "Cancelled.",

@@ -179,7 +179,7 @@ async def test_update_sync_mode_none():
 
 
 def _event_row(created_by, calendar_type, owner, google_event_id=None, meet_url=None, **over):
-    """cal_svc.EVENT_COLUMNS（18 欄）の並びの組。5 つの引数のほかは初期値（上書きは名前で）。"""
+    """cal_svc.EVENT_COLUMNS（19 欄）の並びの組。5 つの引数のほかは初期値（上書きは名前で）。"""
     from app.services import calendar_service as cal_svc
 
     when = datetime(2026, 11, 12, 10, 0, tzinfo=timezone.utc)
@@ -202,6 +202,7 @@ def _event_row(created_by, calendar_type, owner, google_event_id=None, meet_url=
         "description": None,
         "location": None,
         "category": "meeting",
+        "color_key": None,
     }
     values.update(over)
     return tuple(values[name] for name in cal_svc.EVENT_COLUMNS)
@@ -488,3 +489,78 @@ async def test_delete_recurring_event_with_scope_routes_to_recurring_service():
         await delete_event(9, tenant_id=1, user=_mock_user(101), db=db, scope="all", occurrence_start=_OCC)
     dele.assert_not_called()
     assert dele_rec.await_count == 1 and dele_rec.await_args.args[3] == "all"
+
+
+# ---- ADR-1081 便1: 予定ごとの色（color_key） ----
+
+
+def test_color_key_accepts_24_keys_and_empty_string_only():
+    from pydantic import ValidationError
+
+    from app.services.event_colors import EVENT_COLOR_KEYS
+
+    assert len(EVENT_COLOR_KEYS) == 24
+    for key in EVENT_COLOR_KEYS:
+        assert _create_body(color_key=key).color_key == key
+        assert UpdateEventBody(color_key=key).color_key == key
+    assert _create_body(color_key="").color_key == ""
+    assert UpdateEventBody(color_key="").color_key == ""
+    assert _create_body().color_key is None
+    for bad in ("red", "Tomato", " tomato", "#d50000"):
+        with pytest.raises(ValidationError):
+            _create_body(color_key=bad)
+        with pytest.raises(ValidationError):
+            UpdateEventBody(color_key=bad)
+
+
+def test_color_key_red_is_422_through_the_router():
+    """FastAPI の受け口を通すと、'red' は 422（試験の道具は偽の接続を差す）。"""
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from app.auth.dependencies import get_current_tenant, get_current_user
+    from app.database import get_db
+    from app.routers.calendar import router
+
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[get_current_tenant] = lambda: 1
+    app.dependency_overrides[get_current_user] = lambda: _mock_user(101)
+    app.dependency_overrides[get_db] = lambda: AsyncMock()
+    client = TestClient(app)
+    created = {
+        "title": "打合せ",
+        "start_datetime": "2026-06-01T10:00:00+09:00",
+        "end_datetime": "2026-06-01T11:00:00+09:00",
+    }
+    assert client.post("/calendar/events", json={**created, "color_key": "red"}).status_code == 422
+    assert client.patch("/calendar/events/9", json={"color_key": "red"}).status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_create_empty_color_key_reaches_service_as_none_with_key_kept():
+    db = AsyncMock()
+    with patch("app.routers.calendar.cal_svc.create_event", new=AsyncMock(return_value={"id": 5, "meet_url": None})) as created:
+        await create_event(_create_body(color_key=""), tenant_id=1, user=_mock_user(101), db=db)
+    payload = created.call_args.kwargs["payload"]
+    assert "color_key" in payload and payload["color_key"] is None
+
+
+@pytest.mark.asyncio
+async def test_create_without_color_key_has_no_color_key_in_payload():
+    db = AsyncMock()
+    with patch("app.routers.calendar.cal_svc.create_event", new=AsyncMock(return_value={"id": 5, "meet_url": None})) as created:
+        await create_event(_create_body(), tenant_id=1, user=_mock_user(101), db=db)
+    assert "color_key" not in created.call_args.kwargs["payload"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("sent,expected", [("", None), ("tomato", "tomato")])
+async def test_update_color_key_goes_to_service(sent, expected):
+    db = _event_db(created_by=101, calendar_type="shared", owner=101)
+    with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
+        "app.routers.calendar.is_tenant_admin", return_value=False
+    ), patch("app.routers.calendar.cal_svc.update_event", new=AsyncMock(return_value={"id": 9})) as upd:
+        await update_event(9, UpdateEventBody(color_key=sent), tenant_id=1, user=_mock_user(101), db=db)
+    payload = upd.call_args.kwargs["payload"]
+    assert "color_key" in payload and payload["color_key"] == expected

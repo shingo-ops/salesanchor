@@ -50,6 +50,7 @@ import {
   PaperClipIcon,
   PlusIcon,
   HeartIcon,
+  MicrophoneIcon,
 } from "@heroicons/react/24/solid";
 
 // ── outline: サイドバーナビゲーション専用 ────────────────────────────────
@@ -407,6 +408,9 @@ export const ADMIN_HUB_ICONS = {
 
 // Drawer フルページ展開ボタン用
 export { ArrowTopRight };
+
+// 秘書の窓の印（声の聞き取り）
+export const SECRETARY_ICONS = { listen: hi(MicrophoneIcon) } satisfies Record<string, Icon>;
 
 // Layout.tsx の /lead-chat ナビアイテム用（outline バリアント — サイドバー統一仕様）
 export function LeadChatIcon({ size = 20, className }: { size?: number; className?: string }) {

@@ -21,7 +21,7 @@ from datetime import date
 from typing import Annotated, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,6 +38,7 @@ from app.database import get_db
 from app.models import User
 from app.services import calendar_service as cal_svc
 from app.services import holiday_service
+from app.services.event_colors import EVENT_COLOR_KEYS
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,13 @@ RecurrenceValue = Literal["none", "daily", "weekly", "monthly_nth", "monthly_las
 RecurrenceScope = Literal["this", "following", "all"]
 
 
+def _check_color_key(value: Optional[str]) -> Optional[str]:
+    """予定の色: 24 の鍵と "" だけを受ける（"" はデフォルトに戻す印）。それ以外は 422。"""
+    if value is None or value == "" or value in EVENT_COLOR_KEYS:
+        return value
+    raise ValueError("color_key は予定の色の鍵か空の文字を指定してください")
+
+
 class CreateEventBody(BaseModel):
     title: str
     start_datetime: str
@@ -121,6 +129,12 @@ class CreateEventBody(BaseModel):
     is_all_day: bool = False
     add_meet: bool = False
     recurrence: RecurrenceValue = "none"
+    color_key: Optional[str] = None
+
+    @field_validator("color_key")
+    @classmethod
+    def _color_key_valid(cls, v: Optional[str]) -> Optional[str]:
+        return _check_color_key(v)
 
 
 class UpdateEventBody(BaseModel):
@@ -135,6 +149,12 @@ class UpdateEventBody(BaseModel):
     recurrence: Optional[RecurrenceValue] = None
     scope: Optional[RecurrenceScope] = None
     occurrence_start: Optional[str] = None
+    color_key: Optional[str] = None
+
+    @field_validator("color_key")
+    @classmethod
+    def _color_key_valid(cls, v: Optional[str]) -> Optional[str]:
+        return _check_color_key(v)
 
 
 class SyncModeBody(BaseModel):
@@ -432,12 +452,16 @@ async def create_event(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=MEET_NOT_ALLOWED_DETAIL,
         )
+    create_payload = body.model_dump(exclude_none=True)
+    # "" はデフォルトに戻す印（None は exclude_none で落ちるため）。層の下へは None で渡す（鍵は残す）
+    if create_payload.get("color_key") == "":
+        create_payload["color_key"] = None
     try:
         result = await cal_svc.create_event(
             db,
             tenant_id=tenant_id,
             user_id=user.id,
-            payload=body.model_dump(exclude_none=True),
+            payload=create_payload,
         )
     except Exception as e:
         logger.error("イベント作成エラー: %s", e)
@@ -463,6 +487,9 @@ async def update_event(
 ):
     """アプリ内のイベントを更新し、Google Calendar に同期する。"""
     payload = body.model_dump(exclude_none=True)
+    # "" はデフォルトに戻す印。下の層へは None で渡す（鍵は残す）
+    if payload.get("color_key") == "":
+        payload["color_key"] = None
     scope = payload.pop("scope", None)
     occurrence_start = payload.pop("occurrence_start", None)
     if not payload:
