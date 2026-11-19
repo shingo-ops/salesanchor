@@ -8,7 +8,7 @@ from pathlib import Path
 from app.services.event_colors import EVENT_COLOR_KEYS, EVENT_COLORS
 
 FRONTEND = Path(__file__).resolve().parents[2] / "frontend"
-_TOKEN_RE = re.compile(r"--gcal-event-([a-z0-9-]+):\s*(#[0-9a-fA-F]+);")
+_TOKEN_RE = re.compile(r"--event-color-([a-z0-9-]+):\s*(#[0-9a-fA-F]+);")
 
 
 def _block(text: str, start_marker: str) -> str:
@@ -22,29 +22,17 @@ def _event_tokens(block: str) -> dict[str, str]:
     return {name.replace("-", "_"): value.lower() for name, value in _TOKEN_RE.findall(block)}
 
 
-def _index_css() -> str:
-    return (FRONTEND / "src" / "index.css").read_text("utf-8")
-
-
-def test_light_tokens_match_backend_values():
-    tokens = _event_tokens(_block(_index_css(), ":root {"))
+def test_tokens_css_values_match_backend():
+    text = (FRONTEND / "src" / "tokens.css").read_text("utf-8")
+    tokens = _event_tokens(_block(text, ":root {"))
     assert len(tokens) == 24
     assert tokens == EVENT_COLORS
 
 
-def test_dark_tokens_have_same_keys():
-    tokens = _event_tokens(_block(_index_css(), ":root.force-dark {"))
-    assert len(tokens) == 24
-    assert set(tokens) == set(EVENT_COLORS)
-
-
-def test_semantic_tokens_in_tokens_css():
-    text = (FRONTEND / "src" / "tokens.css").read_text("utf-8")
-    found = re.findall(r"--event-color-([a-z0-9-]+):\s*var\(--gcal-event-([a-z0-9-]+)\);", text)
-    assert len(found) == 24
-    for name, target in found:
-        assert name == target
-    assert {name.replace("-", "_") for name, _ in found} == set(EVENT_COLOR_KEYS)
+def test_index_css_has_no_event_colors():
+    text = (FRONTEND / "src" / "index.css").read_text("utf-8")
+    assert "--gcal-event-" not in text
+    assert "--event-color-" not in text
 
 
 def test_frontend_key_list_matches_backend_order():

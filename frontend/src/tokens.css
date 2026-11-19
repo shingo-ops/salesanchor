@@ -643,31 +643,31 @@
   --color-warning-bg:     #fffbeb;
   --color-warning-border: #fcd34d;
 
-  /* ── 予定ごとの色（ADR-1081）。部品と画面はこちらを使う ── */
-  --event-color-radicchio:       var(--gcal-event-radicchio);
-  --event-color-cherry-blossom:  var(--gcal-event-cherry-blossom);
-  --event-color-flamingo:        var(--gcal-event-flamingo);
-  --event-color-tomato:          var(--gcal-event-tomato);
-  --event-color-tangerine:       var(--gcal-event-tangerine);
-  --event-color-pumpkin:         var(--gcal-event-pumpkin);
-  --event-color-mango:           var(--gcal-event-mango);
-  --event-color-banana:          var(--gcal-event-banana);
-  --event-color-citron:          var(--gcal-event-citron);
-  --event-color-avocado:         var(--gcal-event-avocado);
-  --event-color-pistachio:       var(--gcal-event-pistachio);
-  --event-color-basil:           var(--gcal-event-basil);
-  --event-color-sage:            var(--gcal-event-sage);
-  --event-color-eucalyptus:      var(--gcal-event-eucalyptus);
-  --event-color-peacock:         var(--gcal-event-peacock);
-  --event-color-cobalt:          var(--gcal-event-cobalt);
-  --event-color-lavender:        var(--gcal-event-lavender);
-  --event-color-blueberry:       var(--gcal-event-blueberry);
-  --event-color-wisteria:        var(--gcal-event-wisteria);
-  --event-color-amethyst:        var(--gcal-event-amethyst);
-  --event-color-grape:           var(--gcal-event-grape);
-  --event-color-cocoa:           var(--gcal-event-cocoa);
-  --event-color-graphite:        var(--gcal-event-graphite);
-  --event-color-birch:           var(--gcal-event-birch);
+  /* ── 予定ごとの色（ADR-1081）。Google の予定のラベル 24 色。値の正本は backend/app/services/event_colors.py（試験で照らす）。部品と画面はこちらを使う ── */
+  --event-color-radicchio:       #ad1457;
+  --event-color-cherry-blossom:  #d81b60;
+  --event-color-flamingo:        #e67c73;
+  --event-color-tomato:          #d50000;
+  --event-color-tangerine:       #f4511e;
+  --event-color-pumpkin:         #ef6c00;
+  --event-color-mango:           #f09300;
+  --event-color-banana:          #f6bf26;
+  --event-color-citron:          #e4c441;
+  --event-color-avocado:         #c0ca33;
+  --event-color-pistachio:       #7cb342;
+  --event-color-basil:           #0b8043;
+  --event-color-sage:            #33b679;
+  --event-color-eucalyptus:      #009688;
+  --event-color-peacock:         #039be5;
+  --event-color-cobalt:          #4285f4;
+  --event-color-lavender:        #7986cb;
+  --event-color-blueberry:       #3f51b5;
+  --event-color-wisteria:        #b39ddb;
+  --event-color-amethyst:        #9e69af;
+  --event-color-grape:           #8e24aa;
+  --event-color-cocoa:           #795548;
+  --event-color-graphite:        #616161;
+  --event-color-birch:           #a79b8e;
 }
 
 /* ============================================================
