@@ -48,7 +48,8 @@ FAIL=0
 
 # ── テスト用一時ディレクトリ ────────────────────────────────────────────────
 # macOS では /tmp が /private/tmp への入口なので、実際の場所の名前にそろえる（git worktree list の表示と HOME を合わせる）
-TMPDIR_TEST=$(cd "$(mktemp -d /tmp/reaper-test.XXXXXX)" && pwd -P)
+_REAPER_TEST_TMP=$(mktemp -d /tmp/reaper-test.XXXXXX)
+TMPDIR_TEST=$(cd "${_REAPER_TEST_TMP}" && pwd -P)
 trap 'rm -rf "${TMPDIR_TEST}"' EXIT
 
 FAKE_WORKTREES="${TMPDIR_TEST}/worktrees"
