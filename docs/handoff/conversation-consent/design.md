@@ -1416,19 +1416,32 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 | 2.1.325 | W だけ（今の形） | 無 | 入力欄 `❯`・`don't ask on` |
 | 2.1.325 | W と R | 未確認（返事の表示が途中で切れて読めていない） | 未確認 |
 
+クラウドの起動の形と実物の違い（審査1 推奨3）: 実物（ops/shell/ccdiscord.zsh:72）は `--tools "Bash,Read,Edit,Write,Glob,Grep,Agent,TodoWrite"`・`--settings`・`--strict-mcp-config`・`--disallowedTools`・`--model opus` も付け、囲い（sandbox-exec）の中で動く。クラウドでは `--tools Read,Write` だけで、これらと囲いは無い。確認の画面は `--add-dir` と `projects` の組で出るかが決まると見て切り分けたが、実物の形での確かめは K70 で行う。
+
 判定: 2.1.327 で新しく出た確認で、`projects` に R を足せば出なくなる（1 回ずつの観測）。2.1.325 で今の形に確認が出ないので、R を足すのは前の版の動きに戻す直しになる。
 
 直す物（agent-console だけ。ほかは触らない）:
-1. server/case-sandbox.ts の `rewriteCaseClaudeJson(CH, W)` を `rewriteCaseClaudeJson(CH, W, R)` にする。`projects` は `{ [realOr(W)]: {…}, [realOr(R)]: {…} }` の 2 つ（値はどちらも `{ hasTrustDialogAccepted: true }`）。R と W の realpath が同じなら 1 つ。ほかの鍵（`KEEP_CLAUDE_JSON_KEYS`・`hasCompletedOnboarding`）は変えない。
-2. server/sessions.ts:790 の呼び出しで、R に `caseEnv.AC_CASE_REPORT`（`--add-dir` に渡すのと同じ文字列）の realpath を渡す。`caseEnv` に `AC_CASE_REPORT` が無い（件でない）ときは今のまま呼ばない（`room === null` のとき `beforeNew` は undefined のまま）。
-3. probe の件も PO の件も同じ道を通る（probe は server/case-say-probe-wiring.ts:67 の `openCase` で同じ件の開き方を使う）。probe だけに分ける形にはしない。理由: PO の件も 2.1.327 では同じ画面で止まる（入力を待つ）ので、分けると PO の件だけ壊れたままになる。
+1. server/case-sandbox.ts の `rewriteCaseClaudeJson(CH, W)` を `rewriteCaseClaudeJson(CH, W, R)` にする。R は省けない引数（`R?: string` にしない）。`projects` は `{ [realOr(W)]: {…}, [R]: {…} }` の 2 つ（値はどちらも `{ hasTrustDialogAccepted: true }`）。R と `realOr(W)` が同じ文字列なら 1 つ。ほかの鍵（`KEEP_CLAUDE_JSON_KEYS`・`hasCompletedOnboarding`）は変えない。
+2. 同じ関数で、ファイルを書く前に次の 2 つを確かめ、1 つでも当たれば何も書かずに `CaseSandboxUnavailableError` を投げる（件は開かない。今の「書けなければ投げる」:425-427 と同じ扱い）:
+   - (a) `realpathSync(R)` が R と同じ文字列であること（違えば `sandbox unavailable: case report dir is not a real path`。server/sessions.ts:509 の `removeCaseRequest` と同じ考え）。R が無い（realpath が失敗）ときも投げる。
+   - (b) R と、R から `/` までのすべての親に、`.git` という名前の物（ファイル・ディレクトリ・リンクのどれでも。`lstatSync` で有無だけ見る）が無いこと（あれば `sandbox unavailable: case report dir is inside a git repository`）。理由は下の「危険の見積もり」の 2 つ目。
+3. server/sessions.ts:790 の呼び出しで、R に `caseEnv.AC_CASE_REPORT`（`--add-dir` に渡すのと同じ文字列。server/sessions.ts:628 の `info.report`）を、realpath を取らずにそのまま渡す（揃っているかは 2(a) が確かめる）。`AC_CASE_REPORT` が無い・文字列でないときは `CaseSandboxUnavailableError`。件でない（`room === null`）ときは今のまま `beforeNew` は undefined。
+4. probe の件も PO の件も同じ道を通る（probe は server/case-say-probe-wiring.ts:67 の `openCase` で同じ件の開き方を使う）。probe だけに分ける形にはしない。理由: PO の件も 2.1.327 では同じ画面で止まる（入力を待つ）ので、分けると PO の件だけ壊れたままになる。
+5. 試験の直し: tests/unit/case-sandbox.test.ts の `rewriteCaseClaudeJson(` の呼び出し 8 か所（:664・:675・:682・:685・:688・:694・:703・:708）に R を足す。tests/unit/sessions.case.test.ts の件を開く試験（:172-175）と、つなぎ直し・起動し直しの試験（:426 から）に R の鍵の期待を足す。
+6. 版: agent-console の 0.55.2 → 0.55.3。前の直し（bda286a）と同じく package.json・package-lock.json・extension/manifest.json の版と、docs/CHANGELOG.md の 1 行を足す。README は変えない（件の起動の形も、PO の画面も変わらないため）。
 
-触らない物: `PROBE_` で始まる定数、E1〜E4・P0〜P5・R1 の条件、24 時間・3 回の規則、版の記録・鍵・MAC、hooks・見張り、`buildCaseSettings`（§14-14-9 の「options なしで PO の件の設定を変えない」）、room.sb の許し・拒否、ccdiscord.zsh の起動の引数。
+つなぎ直しの道（審査1 必須2）:
+- `.claude.json` の書き直しは、新しく claude を起動するときだけ走る（server/sessions.ts:789-790 の注記、`openTerminal` の :852-853 で動いている物につなぐときは `beforeNew` を呼ばない）。これは今の決まりで、変えない（つなぎ直しは動いている claude をそのまま使うので、起動の時の確認はもう出ない）。
+- サーバーが起き直って、claude を新しく起動し直す道（restore で tmux が無くなっていた件）は `beforeNew` を通るので、R の鍵も入る（K73）。
+- 直しの前に 2.1.327 で開いて、信頼の確認の画面で止まったままの件があれば、直しの後につなぎ直しても止まったまま。この件は自動では直さない。反映の前に Opus が件の一覧と probe の画面の形（件の画面の中身は読まない。一覧の状態だけ）を見て、確認で止まっている件があれば、PO に「閉じて開き直す」を頼む（件を閉じるのは PO の操作）。止まっている件には case-say の指示が入らない（server/hub.ts:564-569 の判定 4b で 2.1.327 は使える版でないため断られる）ので、Discord の指示が確認の画面に打ち込まれることはない。
+
+触らない物: `PROBE_` で始まる定数、E1〜E4・P0〜P5・R1 の条件、24 時間・3 回の規則、版の記録・鍵・MAC、hooks・見張り、`buildCaseSettings`（§14-14-9 の「options なしで PO の件の設定を変えない」）、room.sb の許し・拒否、ccdiscord.zsh の起動の引数、`casePaths`（R の作り方）、case.json の形、`CASE_DENY_WRITE`・`CASE_ALLOW_WRITE`・`CASE_DENY_READ_SANDBOX`（server/case-sandbox.ts:74-92・:111-121）、`writeCaseKeybindings`、つなぎ直しの判定（`openTerminal` の probe・`beforeNew` を呼ぶ条件）、server/case-say-probe.ts と server/case-say-probe-wiring.ts、server/hub.ts の判定 4・4b。
 
 信頼を広げることの危険の見積もり（この直しは「許可」に触るので §14-14-17 の「×の後の進め方」5 により NEEDS_DECISION: で PO が「1」と決めた）:
 - 信頼すると、その場所の `.claude/`（設定・skills・commands・agents）と git の設定が読まれる（画面の文 `Its skills, commands, and agents load and can run commands, and so can the git settings of its repository`）。
 - R の `.claude` は件から書けない（server/case-sandbox.ts:81 の `CASE_DENY_WRITE` に `path.join(p.R, ".claude")`）。R の下の入れ子の `.claude`・`.git` も書けない（同 :344・:348）。R はサーバーが件ごとに新しく作る（同 :53-69 の `casePaths` の R・server/sessions.ts:532-534）。
-- よって、件が R に自分で設定を置いて信頼の後に読ませる道は、今の部屋の拒否で閉じている。W は既に同じ扱いで信頼済みなので、新しい種類の危険は増えない。
+- R の親の git（審査1 必須1）: 画面の文は、信頼が「its repository」の git の設定にも及ぶと書いている。R の親 `/private/tmp/CC報告ファイル` は、件でないセッション（Opus 本体など）からは書ける共有の場所（件の部屋からは読めない: server/case-sandbox.ts:113）。ここに誰かが `.git` を置くと、R がその git の置き場の中になり、守っていない git の設定（W の `.git/config`・hooks の書き込み拒否 :75-78 は W だけ）が信頼の範囲に入る。直す物 2(b) で、件を新しく起動するたびに R から `/` までに `.git` が無いことを確かめ、あれば件を開かない。件が R の中に自分で `.git` を作った場合も、次の起動の時にこの確かめで止まる。2026-11-19 の Mac の実物では、R の親 5 か所（`/private/tmp/CC報告ファイル/discord-case`・`/private/tmp/CC報告ファイル`・`/private/tmp`・`/private`・`/`）のどれにも `.git` は無い（`ls -ld` で「No such file or directory」）。
+- よって、件が R に自分で設定を置いて信頼の後に読ませる道は、今の部屋の拒否と 2(b) の確かめで閉じている。W は既に同じ扱いで信頼済みなので、新しい種類の危険は増えない。
 - 前の版（2.1.325 まで）は R の確認を出さずに使っていたので、R を足すのは前の版の状態に戻す形。
 
 時間・回数への影響: 直した版を入れた後、24 時間の待ち（最後の×の 2026-11-18T18:34:19Z から。明けは 2026-11-19T18:34:19Z、日本時間 11/20 03:34）が明けた後の、最初の件を開くとき（t1）かサーバーの起動（t2）で probe が走る。11/20 03:30 の見回りは明けの 4 分前なので待ち時間中（B）になり、確かめ直しは 11/21 03:30 の見回り（C）になる見込み（U21 と同じ遅れ）。2.1.327 の `failCount` は今 1。
@@ -1440,10 +1453,13 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 | K65 `rewriteCaseClaudeJson(CH, W, R)` の後の `projects` の鍵が W と R の realpath の 2 つちょうど・値はどちらも `{ hasTrustDialogAccepted: true }` | vitest（tests/unit/case-sandbox.test.ts の `rewriteCaseClaudeJson` の組に足す） |
 | K66 W と R の realpath が同じなら鍵は 1 つ | vitest |
 | K67 前のファイルにあった別の鍵（例 `/x`）は残らない・`KEEP_CLAUDE_JSON_KEYS` の扱いは今と同じ | vitest（既存の :663 の試験を R つきに直して通る） |
-| K68 件を新しく開くとき、`.claude.json` の R の鍵が `--add-dir` に渡す `AC_CASE_REPORT` の realpath と同じ文字列 | vitest（sessions の件を開く試験で、`beforeNew` の後の `.claude.json` と `caseEnv.AC_CASE_REPORT` を比べる） |
+| K68 件を新しく開くとき、`.claude.json` の R の鍵が `--add-dir` に渡す `AC_CASE_REPORT`（realpath を取る前の文字列）と同じ | vitest（tests/unit/sessions.case.test.ts:172-175 の件を開く試験に、`.claude.json` の `projects` の鍵と、起動の環境の `AC_CASE_REPORT` の文字列が一致する期待を足す） |
 | K69 既存の試験が通る | agent-console の CI が緑 |
-| K70 本物で ok（2.1.327） | 24 時間明け後の最初の probe で記録に `usable: true`・`lastResult: "ok"`・監査 `caseClaudeVersionProbe` ok を Opus 本体が読んで本書に書き足す（§14-14-17 の C の確かめ直し） |
-| K71 同じ理由の×が 2 回目から 0 回（K64） | 30 日、一覧に 2.1.327 以降の版で `P0` かつ `paneSamples` に `Adding a new directory` がある行が増えない |
+| K70 本物で ok | ○: 直しの版を本番に反映した時刻（Opus が本書に書く）より後に、最初に終わった probe（版は問わない。24 時間明けの前に claude の版が変わったら、その新しい版の probe）の監査 `caseClaudeVersionProbe` の行が `outcome: "ok"` で、版の記録のその版が `usable: true`・`lastResult: "ok"`。×: その行が `denied` か `aborted`。Opus 本体が node で許された欄だけを読み、本書に書き足す（§14-14-17 の C の確かめ直し） |
+| K71 同じ理由の×が 2 回目から 0 回（K64） | ○: 直しの版の反映の時刻から 30 日の間、監査（server/case-say-probe.ts:584-599 が書く `caseClaudeVersionProbe` の行）に、`failedCheck: "P0"` かつ `paneSamples` のどれかに `Adding a new directory` を含む行が 0 件。×: 1 件以上。30 日目の見回りで Opus 本体が数える |
+| K72 R か R の親に `.git` があれば件を開かない | vitest（tests/unit/case-sandbox.test.ts。R の 1 つ上に `.git` のディレクトリを作る形と、R の中に `.git` のファイルを作る形の 2 つで、`rewriteCaseClaudeJson` が `CaseSandboxUnavailableError` を投げ、`.claude.json` が前の中身のまま） |
+| K73 起動し直す道でも R の鍵が入り、つなぎ直しでは書き直さない | vitest（tests/unit/sessions.case.test.ts:426 からの試験に、起動し直した後の `projects` に R の鍵がある期待と、つなぎ直しでは前の中身のままの期待を足す） |
+| K74 R が realpath と違う・無いときは件を開かない | vitest（tests/unit/case-sandbox.test.ts。R にリンクを渡す形と、無い道を渡す形で投げ、`.claude.json` が前の中身のまま） |
 
 残る危険:
 - U24 claude の次の版が、信頼の鍵の形（`projects` の `hasTrustDialogAccepted`）を変えると、同じ P0 に戻る。そのときは毎日の見回りの D で見つかる（誤って○にはならない側）。
@@ -1456,3 +1472,4 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 
 | 回 | 日時（UTC） | 結果 | 要点 |
 |---|---|---|---|
+| 1 | 2026-11-19 00:57 | REVISE | 照合 11 行中 合致 10・一部合致 1（R を作るのは server/case-sandbox.ts:551）・不一致 0。必須 3: R の親の `.git`、つなぎ直しの道、K70・K71 の○×。推奨 4: R を省けない引数と呼び出し 8 か所、realpath の確かめ、クラウドの起動の形の違い、触らない物と版。すべて本節に入れた。初回の審査（00:50）は結果の全文が記録に出ず、同じ依頼を出し直した |
