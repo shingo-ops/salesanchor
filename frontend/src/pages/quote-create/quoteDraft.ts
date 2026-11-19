@@ -26,6 +26,11 @@ export interface LineItem {
   inventory_id?: number | null;
   /** 在庫 0 商品を選択した行のフラグ。 */
   zero_stock_warning?: boolean;
+  /** 画面だけの項目（invoice-create-portfolio design-v2 §3-8）。保存には送らない */
+  category_code?: string | null;
+  stock_limit?: number | null;
+  price_yen?: number | null;
+  price_edited?: boolean;
 }
 
 /**

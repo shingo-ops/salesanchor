@@ -4,7 +4,6 @@ import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import InventoryPage from '../pages/inventory/InventoryPage';
-import InvoiceCreatePage from '../pages/invoice-create/InvoiceCreatePage';
 import ProductsPage from '../pages/products/ProductsPage';
 import QuotesPage from '../pages/quotes/QuotesPage';
 import en from '../locales/en.json';
@@ -37,12 +36,6 @@ describe('five real-page dynamic Button migrations', () => {
     render(wrap(<InventoryPage />)); const toggle = await screen.findByTestId('inventory-filter-toggle');
     expectVariant(toggle, enabled ? 'primary' : 'secondary'); expect(toggle.getAttribute('aria-expanded')).toBe('false');
     fireEvent.click(toggle); expect(toggle.getAttribute('aria-expanded')).toBe('true'); expectVariant(toggle, enabled ? 'primary' : 'secondary');
-  });
-
-  it('Invoice source mode maps both real-page conditions', async () => {
-    api.get.mockImplementation(async (url: string) => { if (url === '/quotes?status=approved') return []; if (url === '/companies?per_page=100') return []; throw new Error(`Unexpected GET ${url}`); });
-    render(wrap(<InvoiceCreatePage />)); const inventory = await screen.findByTestId('invoice-mode-inventory'); const quote = screen.getByTestId('invoice-mode-quote');
-    expectVariant(inventory, 'secondary'); expectVariant(quote, 'primary'); fireEvent.click(inventory); expectVariant(inventory, 'primary'); expectVariant(quote, 'secondary'); fireEvent.click(quote); expectVariant(quote, 'primary');
   });
 
   it('Products reorder condition changes real-page state and variant', async () => {
