@@ -1327,6 +1327,61 @@ rules:
     anchor: "- `needs_decision`: PO が決める"
     kind: exempt
     reason: "報告の needs_decision に PO が決めることだけを書き、無ければ書かない決まり。報告は件の記録に入り PR に残らない"
+  - id: OI412
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 中身の決まり（要件 R3）"
+    kind: review
+    reason: "保守の担当の指示書は種類ごとに 3 つの中身を持ち、指示書の無い種類では AI を起こさない決まり（要件 R3・R4）。起こすかどうかはサーバーの起こす部品（段階4 便5）が決めるので、その実装 PR で人が見る"
+  - id: OI413
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 本番のサーバーの中（`docker`・`ssh`）"
+    kind: exempt
+    reason: "保守の調べ係がサーバーの中を見ず、見る必要があることを報告の risk に書く決まり。調べ係の環境には道が無い（ネットワーク None・secret は決めたホストだけ）。実行時の振る舞いで PR に残らない"
+  - id: OI414
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "してよいこと:"
+    kind: exempt
+    reason: "保守の担当がしてよいことの一覧の見出し（OI409 と同じく見出しの行で受ける）。守りは読む窓と鍵の権限の側にもある。実行時の振る舞いで PR に残らない"
+  - id: OI415
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 件ごとに「対応が要ったか」"
+    kind: exempt
+    reason: "報告の summary の 1 行目に対応の要否を書き、根拠を evidence に書く決まり（要件 R8）。報告は ops_case.reports に入る。実行時の振る舞いで PR に残らない"
+  - id: OI416
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "してはいけないこと（どの種類でも）:"
+    kind: exempt
+    reason: "保守の担当の禁止（本番の変更・応急処置・許可の前の実装と PR）の見出し（OI409 と同じく見出しの行で受ける）。守りは読み取りだけの鍵と、クラウドからは合流できない設定の側にもある。実行時の振る舞いで PR に残らない"
+  - id: OI417
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 直すには本番の変更が要る。"
+    kind: exempt
+    reason: "本番の変更が要るときは needs_decision に書いて止まる決まり。報告の中身。実行時の振る舞いで PR に残らない"
+  - id: OI418
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 不要と書いてよい条件: 無し（v1）。celery-worker"
+    kind: exempt
+    reason: "ContainerUnhealthy では「対応: 不要」と書かない決まり。報告の中身。実行時の振る舞いで PR に残らない"
+  - id: OI419
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に同じ機械"
+    kind: exempt
+    reason: "HighMemoryUsage で「対応: 不要」と書いてよい条件の決まり。報告の中身。実行時の振る舞いで PR に残らない"
+  - id: OI420
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 不要と書いてよい条件: 無し（v1）。利用者の入口"
+    kind: exempt
+    reason: "KumaMonitorDown では「対応: 不要」と書かない決まり。報告の中身。実行時の振る舞いで PR に残らない"
+  - id: OI421
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 不要と書いてよい条件: 無し（v1）。札が page"
+    kind: exempt
+    reason: "ServiceDown では「対応: 不要」と書かない決まり。報告の中身。実行時の振る舞いで PR に残らない"
+  - id: OI422
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に再び"
+    kind: exempt
+    reason: "BackendHighLatency で「対応: 不要」と書いてよい条件の決まり。報告の中身。実行時の振る舞いで PR に残らない"
 
 not_rules:
   - source: frontend/AGENTS.md
@@ -1850,3 +1905,18 @@ not_rules:
   - source: docs/ai-agents/ops-incident-agent.md
     anchor: "- `risk`: 直すときの危険"
     reason: "報告の項目 risk に書く中身の説明（確かめていないこと）で、決まりではない"
+  - source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 読めないこと（`risk` に書く）: 健康診断"
+    reason: "ContainerUnhealthy で v1 の読み方では読めないものの説明で、決まりではない"
+  - source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 読めないこと（`risk` に書く）: 箱ごとのメモリ"
+    reason: "HighMemoryUsage で読めないもの（cAdvisor が止めてある）の説明で、決まりではない"
+  - source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 読めないこと（`risk` に書く）: 外から実際に"
+    reason: "KumaMonitorDown で読めないもの（調べ係は外へ出られない）の説明で、決まりではない"
+  - source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 読めないこと（`risk` に書く）: `docker compose ps`"
+    reason: "ServiceDown で読めないものの説明で、決まりではない"
+  - source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 読めないこと（`risk` に書く）: DB の中の混み具合"
+    reason: "BackendHighLatency で読めないものの説明で、決まりではない"
