@@ -1968,7 +1968,7 @@ def run_audit(home, now, with_permissions, out, commit=False, gh_view=None, git_
     k_events = events if until is None else filter_probes_until(events, until)  # --until は K0・K79 の数えだけに効く（design §16-7 K76）
     total, delays, k0_skipped, k0_delays_no_h, k0_expired = k0_delays(home, k_events)
     k79_target, k79_missed = k79_counts(home, k_events)
-    out("==同意と権限の点検（過去%d日） ==" % DAYS)
+    out("== 同意と権限の点検（過去%d日） ==" % DAYS)
     out("1. consent_consumed: %d 件 / 台帳の鍵 %d 件 / 記録に同意票と typed の「1」が見つからない: %d 件（0件が正常）"
         % (sum(consumed.values()), n_keys, unmatched))
     out("2. consent_guard_blocked: 疑い %d 件（0件が正常）／読み取りの空振り %d 件（参考）（試験の区間 %d 個・区間内で除いた件数 %d）"
