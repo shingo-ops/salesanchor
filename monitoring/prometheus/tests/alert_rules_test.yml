@@ -1,7 +1,7 @@
 # Prometheus ルールの単体試験（promtool test rules）
 # 書式: https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
 # 実行: promtool test rules monitoring/prometheus/tests/alert_rules_test.yml
-# 全 40 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
+# 全 41 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
 
 rule_files:
   - ../alert_rules.yml
@@ -1258,4 +1258,66 @@ tests:
     alert_rule_test:
       - eval_time: 16m
         alertname: FirstAidStale
+        exp_alerts: []
+
+  - name: DeployMigrationFailedFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_deploy_migration_last_success_timestamp_seconds{instance="app-vps",job="node-exporter"}'
+        values: '1000x10'
+      - series: 'salesanchor_deploy_migration_last_failure_timestamp_seconds{instance="app-vps",job="node-exporter"}'
+        values: '2000x10'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: DeployMigrationFailed
+        exp_alerts:
+          - exp_labels:
+              instance: app-vps
+              job: node-exporter
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "本番への反映で DB の入れ替え（migration）が失敗しました"
+              description: "直近の deploy で migration の手順が失敗または取り消しで終わりました。DB が途中の形のままの可能性があります。次の deploy で migration が成功するまで鳴り続けます。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#deploymigrationfailed"
+
+  - name: DeployMigrationFailedOnlyFailure
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_deploy_migration_last_failure_timestamp_seconds{instance="app-vps",job="node-exporter"}'
+        values: '2000x10'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: DeployMigrationFailed
+        exp_alerts:
+          - exp_labels:
+              instance: app-vps
+              job: node-exporter
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "本番への反映で DB の入れ替え（migration）が失敗しました"
+              description: "直近の deploy で migration の手順が失敗または取り消しで終わりました。DB が途中の形のままの可能性があります。次の deploy で migration が成功するまで鳴り続けます。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#deploymigrationfailed"
+
+  - name: DeployMigrationRecovered
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_deploy_migration_last_success_timestamp_seconds{instance="app-vps",job="node-exporter"}'
+        values: '3000x10'
+      - series: 'salesanchor_deploy_migration_last_failure_timestamp_seconds{instance="app-vps",job="node-exporter"}'
+        values: '2000x10'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: DeployMigrationFailed
+        exp_alerts: []
+
+  - name: DeployMigrationOnlySuccess
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_deploy_migration_last_success_timestamp_seconds{instance="app-vps",job="node-exporter"}'
+        values: '3000x10'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: DeployMigrationFailed
         exp_alerts: []

@@ -908,6 +908,22 @@ jobs:
             cd /home/ubuntu/salesanchor
             if [ -f scripts/deploy-db-orphan-cleanup.sh ]; then bash scripts/deploy-db-orphan-cleanup.sh; else echo ">>> [cleanup] skipped: script not present (old checkout)"; fi
 
+      # ADR-1012 段階3 便H: migration の手順の結果（成功・失敗・取り消し）の時刻を prod1 の textfile に書く。
+      # 見張り DeployMigrationFailed が「失敗の時刻が成功の時刻より新しい」間鳴る。migration を飛ばした回（skipped）は書かない。
+      # 書けなくても deploy の成否は変えない（continue-on-error）。outcome は条件で 3 つに限られる。
+      - name: Record migration result (ADR-1012 段階3 便H)
+        if: ${{ always() && (steps.migrate.outcome == 'success' || steps.migrate.outcome == 'failure' || steps.migrate.outcome == 'cancelled') }}
+        continue-on-error: true
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 2m
+          script: |
+            cd /home/ubuntu/salesanchor
+            if [ -f scripts/ops/deploy_migration_mark.py ]; then /usr/bin/python3 scripts/ops/deploy_migration_mark.py ${{ steps.migrate.outcome }}; else echo ">>> [mark] skipped: script not present (old checkout)"; fi
+
       # SA-19: Post-deploy smoke tests (SA-18 Phase2)
       - name: Post-deploy smoke tests (SA-19)
         if: ${{ success() && steps.gate.outputs.migrations == 'true' }}
