@@ -642,6 +642,32 @@
   --color-success-border: #86efac;
   --color-warning-bg:     #fffbeb;
   --color-warning-border: #fcd34d;
+
+  /* ── 予定ごとの色（ADR-1081）。Google の予定のラベル 24 色。値の正本は backend/app/services/event_colors.py（試験で照らす）。部品と画面はこちらを使う ── */
+  --event-color-radicchio:       #ad1457;
+  --event-color-cherry-blossom:  #d81b60;
+  --event-color-flamingo:        #e67c73;
+  --event-color-tomato:          #d50000;
+  --event-color-tangerine:       #f4511e;
+  --event-color-pumpkin:         #ef6c00;
+  --event-color-mango:           #f09300;
+  --event-color-banana:          #f6bf26;
+  --event-color-citron:          #e4c441;
+  --event-color-avocado:         #c0ca33;
+  --event-color-pistachio:       #7cb342;
+  --event-color-basil:           #0b8043;
+  --event-color-sage:            #33b679;
+  --event-color-eucalyptus:      #009688;
+  --event-color-peacock:         #039be5;
+  --event-color-cobalt:          #4285f4;
+  --event-color-lavender:        #7986cb;
+  --event-color-blueberry:       #3f51b5;
+  --event-color-wisteria:        #b39ddb;
+  --event-color-amethyst:        #9e69af;
+  --event-color-grape:           #8e24aa;
+  --event-color-cocoa:           #795548;
+  --event-color-graphite:        #616161;
+  --event-color-birch:           #a79b8e;
 }
 
 /* ============================================================

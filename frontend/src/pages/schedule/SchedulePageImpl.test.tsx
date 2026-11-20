@@ -1536,3 +1536,134 @@ describe("SchedulePage recurring events (G69-G79)", () => {
     expect(screen.queryByRole("dialog", { name: i18n.t("schedule.recurrence.deleteTitle") })).toBeNull();
   });
 });
+
+describe("SchedulePage event colors (ADR-1081)", () => {
+  const eventsOf = () => calendarProps.current?.events as Array<Record<string, any>>;
+  const boxOf = (id: string) => eventsOf().find((ev) => ev.id === id);
+  const pendingOf = () => boxOf("pending");
+  const colorLabel = (key: string) => i18n.t(`schedule.eventColors.${key}`);
+  const openPicker = (scope: HTMLElement | Document = document) => {
+    const root = scope instanceof Document ? within(document.body) : within(scope);
+    fireEvent.click(root.getByRole("button", { name: new RegExp(i18n.t("schedule.eventColor")) }));
+  };
+  const openCreate = async () => {
+    view();
+    await screen.findByRole("button", { name: i18n.t("schedule.create") });
+    await waitFor(() => expect(calendarProps.current).not.toBeNull());
+    act(() => {
+      calendarProps.current?.onSelectRange(new Date(2026, 10, 10, 10, 0), new Date(2026, 10, 10, 11, 0), false, null);
+    });
+    await screen.findByLabelText(i18n.t("schedule.eventTitle"));
+  };
+  const openEditor = async () => {
+    fireEvent.click(await screen.findByText("Own Event"));
+    fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
+    return editorDialog();
+  };
+
+  it("C1: a box without a color keeps the owner color", async () => {
+    answers.events = [apiEvent({})];
+    view();
+    await screen.findByText("Own Event");
+    const color = boxOf("event-1")?.color;
+    expect(color).toBeTruthy();
+    expect(String(color)).not.toContain("--event-color-");
+  });
+
+  it("C2: a box with color_key uses the event color token", async () => {
+    answers.events = [apiEvent({ color_key: "tomato" })];
+    view();
+    await screen.findByText("Own Event");
+    expect(boxOf("event-1")?.color).toBe("var(--event-color-tomato)");
+  });
+
+  it("C3: the list view dot uses the event color token", async () => {
+    answers.events = [apiEvent({ color_key: "tomato" })];
+    view();
+    await screen.findByText("Own Event");
+    fireEvent.keyDown(document.body, { key: "a" });
+    await waitFor(() => expect(document.querySelector(".schedule-list__items")).not.toBeNull());
+    const dot = document.querySelector(".schedule-list__items .schedule-month__dot") as HTMLElement | null;
+    expect(dot).not.toBeNull();
+    expect(dot?.style.background).toBe("var(--event-color-tomato)");
+  });
+
+  it("C4: choosing a swatch in the create popover sends that color_key", async () => {
+    await openCreate();
+    fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "Colored" } });
+    openPicker();
+    expect(screen.getAllByRole("radio", { name: /./ }).filter((r) => (r as HTMLInputElement).name === "schedule-event-color-popover")).toHaveLength(25);
+    fireEvent.click(screen.getByRole("radio", { name: colorLabel("tomato") }));
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const body = vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>;
+    expect(body.color_key).toBe("tomato");
+  });
+
+  it("C5: saving without touching the color sends an empty color_key", async () => {
+    await openCreate();
+    fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "Plain" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const body = vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>;
+    expect(body.color_key).toBe("");
+  });
+
+  it("C6: the edit page checks the radio of the event's color", async () => {
+    answers.events = [apiEvent({ color_key: "tomato" })];
+    view();
+    const dialog = await openEditor();
+    openPicker(dialog);
+    expect((within(dialog).getByRole("radio", { name: colorLabel("tomato") }) as HTMLInputElement).checked).toBe(true);
+    expect((within(dialog).getByRole("radio", { name: colorLabel("default") }) as HTMLInputElement).checked).toBe(false);
+  });
+
+  it("C7: choosing a color in the create popover colors the pending box", async () => {
+    await openCreate();
+    openPicker();
+    fireEvent.click(screen.getByRole("radio", { name: colorLabel("basil") }));
+    await waitFor(() => expect(pendingOf()?.color).toBe("var(--event-color-basil)"));
+  });
+
+  it("C8: changing only the color of a repeating event still asks the three choices", async () => {
+    answers.events = [
+      apiEvent({
+        recurrence_rule: "FREQ=WEEKLY;BYDAY=TH",
+        recurrence: "weekly",
+        recurring_event_id: 1,
+        occurrence_start: todayAt(10),
+        is_first_occurrence: false,
+      }),
+    ];
+    view();
+    const dialog = await openEditor();
+    openPicker(dialog);
+    fireEvent.click(within(dialog).getByRole("radio", { name: colorLabel("cobalt") }));
+    fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
+    const scope = await screen.findByRole("dialog", { name: i18n.t("schedule.recurrence.editTitle") });
+    expect(within(scope).getAllByRole("radio")).toHaveLength(3);
+  });
+
+  it("C9: moving a box sends no color_key", async () => {
+    answers.events = [apiEvent({ color_key: "tomato" })];
+    view();
+    await screen.findByText("Own Event");
+    const revert = vi.fn();
+    await act(async () => {
+      await calendarProps.current?.onEventMove("event-1", new Date(2026, 10, 12, 14, 0), new Date(2026, 10, 12, 15, 0), false, revert);
+    });
+    expect(api.patch).toHaveBeenCalledTimes(1);
+    const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
+    expect("color_key" in body).toBe(false);
+  });
+
+  it("C10: pressing a swatch does not close the create popover", async () => {
+    await openCreate();
+    openPicker();
+    const radio = screen.getByRole("radio", { name: colorLabel("grape") });
+    fireEvent.pointerDown(radio);
+    fireEvent.click(radio);
+    expect(document.querySelector(".schedule-popover")).not.toBeNull();
+    expect(pendingOf()).toBeDefined();
+  });
+});
