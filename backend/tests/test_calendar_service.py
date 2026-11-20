@@ -2330,7 +2330,7 @@ def _google_tool(svc):
         yield
 
 
-_LABELS = [{"id": "L-red", "color": "#D50000"}, {"id": "L-sage", "color": "#33B679"}]
+_LABELS = [{"id": "L-red", "backgroundColor": "#D50000"}, {"id": "L-sage", "backgroundColor": "#33B679"}]
 
 
 class TestGoogleToolEventLabel:
@@ -2387,7 +2387,7 @@ class TestGoogleToolEventLabel:
 
         from app.services import google_calendar as gc
 
-        svc, log = _fake_google_service([{"id": "L-red", "color": "#d50000"}])
+        svc, log = _fake_google_service([{"id": "L-red", "backgroundColor": "#d50000"}])
         with _google_tool(svc), caplog.at_level(logging.INFO, logger="app.services.google_calendar"):
             await gc.create_event(object(), 1, {"summary": "s", _MARK: "cobalt"})
         kw = log["insert"][0]
@@ -2429,3 +2429,23 @@ class TestGoogleToolEventLabel:
         svc, _ = _fake_google_service(_LABELS, cal_fail=True)
         with _google_tool(svc):
             assert await gc.get_event_label_colors(object(), 1, "primary") is None
+
+    @pytest.mark.asyncio
+    async def test_label_without_background_color_is_ignored(self):
+        from app.services import google_calendar as gc
+
+        svc, _ = _fake_google_service([{"id": "L-x", "color": "#d50000"}])
+        with _google_tool(svc):
+            assert await gc.get_event_label_colors(object(), 1, "primary") == {}
+
+    def test_vendored_discovery_event_label_uses_background_color(self):
+        import json
+        import pathlib
+
+        import googleapiclient
+
+        path = pathlib.Path(googleapiclient.__file__).parent / "discovery_cache" / "documents" / "calendar.v3.json"
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        props = doc["schemas"]["EventLabel"]["properties"]
+        assert "backgroundColor" in props
+        assert "color" not in props

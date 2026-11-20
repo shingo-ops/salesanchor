@@ -405,7 +405,7 @@ async def get_event_label_colors(
     table: dict[str, str] = {}
     for label in labels:
         label_id = label.get("id")
-        color = label.get("color")
+        color = label.get("backgroundColor")
         if label_id and isinstance(color, str):
             table[label_id] = color.strip().lower()
     return table
