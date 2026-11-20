@@ -1583,7 +1583,7 @@ K0: 直前の人の入力が typed の「1」だった呼び出し %d 件のう�
 
 ## 16. 改訂4: K0 の数え方から期限切れを外し、見張りの読む範囲を必要なだけ後ろへ広げる（2026-11-20）
 
-状態: 設計案 第6.1版（審査役 6回目 APPROVE）。Opus 作成・自己審査済み（§16-11）。審査役（reviewer・Opus、手元）の審査は1〜5回目が REVISE、6回目が APPROVE（HIGH 0・MEDIUM 0・LOW 5）だった。1回目（HIGH 3・MEDIUM 4・LOW 7）は第2版で、2回目（HIGH 2・MEDIUM 3・LOW 6）は第3版で、3回目（HIGH 0・MEDIUM 3・LOW 6）は第4版で、4回目（HIGH 0・MEDIUM 1・LOW 7）は第5版で、5回目（HIGH 0・MEDIUM 1・LOW 5）は第6版で、全件を反映した。6回目の LOW 5件は第6.1版で文面に反映した（§16-12）。PO の実装承認は未。見張り（consent_check.py・フック）はこの PR では変えない。
+状態: 設計案 第6.1版（審査役 6回目 APPROVE）。Opus 作成・自己審査済み（§16-11）。審査役（reviewer・Opus、手元）の審査は1〜5回目が REVISE、6回目が APPROVE（HIGH 0・MEDIUM 0・LOW 5）だった。1回目（HIGH 3・MEDIUM 4・LOW 7）は第2版で、2回目（HIGH 2・MEDIUM 3・LOW 6）は第3版で、3回目（HIGH 0・MEDIUM 3・LOW 6）は第4版で、4回目（HIGH 0・MEDIUM 1・LOW 7）は第5版で、5回目（HIGH 0・MEDIUM 1・LOW 5）は第6版で、全件を反映した。6回目の LOW 5件は第6.1版で文面に反映した（§16-12）。PO の実装承認: 2026-11-20（この設計の報告への返事「1」。便C → 便A → 便B の順、マージと反映まで）。見張り（consent_check.py・フック）はこの PR では変えない。便C の実装カードは docs/handoff/conversation-consent/card-c.md。
 
 経緯:
 - 改訂3（§15）を反映した週次点検で、K0 は「34 件のうち遅れ 5 件」で × だった。
