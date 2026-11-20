@@ -23,7 +23,7 @@ ADR 案: ADR-1033（番号は起票時に再確認）。
 | K2 | 同じ同意票の同じ操作は、順に2回でも並行に2本でも、通るのは1回だけ | T2（順次と並行の2本） |
 | K3 | PO の「1」から30分を過ぎると止まる | T3（部品の関数に時刻を引数で渡す単体試験） |
 | K4 | コマンドが1文字でも違うと止まる | T4 |
-| K5 | 次の場合は止まる: 貼り付け／サブエージェントの報告（peer）／task-notification／`!` の出力／channel（Discord）／promptSource が typed 以外（queued を含む）／サブエージェントからの呼び出し（agent_id キーあり）／同意票が tool_use の中にだけある／同意票が H の前の最後の AI の text ブロックに無い／同意票の後、最初の人の入力が「1」でない／同意票と H の間に queued の入力か compact の行がある／末尾 4MB に H か同意票が無い | T5（偽の記録を作った単体試験。偽の行は実物の会話記録の行からキーの組を写して作る（user 行は最上位 origin、queued は attachment.origin）。4MB の境目が行の途中にある例、最後の行が改行で終わっていない例、「1」の後に画像つきの入力がある例を含む、S5） |
+| K5 | 次の場合は止まる: 貼り付け／サブエージェントの報告（peer）／task-notification／`!` の出力／channel（Discord）／promptSource が typed 以外（queued を含む）／サブエージェントからの呼び出し（agent_id キーあり）／同意票が tool_use の中にだけある／同意票が H の前の最後の AI の text ブロックに無い／同意票の後、最初の人の入力が「1」でない／同意票と H の間に queued の入力か compact の行がある／末尾から必要なだけ（最大 64MB）読んでも H か同意票が無い | T5（偽の記録を作った単体試験。偽の行は実物の会話記録の行からキーの組を写して作る（user 行は最上位 origin、queued は attachment.origin）。4MB の境目が行の途中にある例、最後の行が改行で終わっていない例、「1」の後に画像つきの入力がある例を含む、S5。読み足しの例は §16-7 K77） |
 | K6 | 除外（§4-4）に当たるコマンド、`$` かバッククォートを含む操作は、同意があっても止まる | T6 |
 | K7 | AI が会話記録・同意の台帳を Bash/Write/Edit/MultiEdit/NotebookEdit で触ろうとする、または端末への入力注入（tmux・agent-console の /chat/queue・osascript）を行おうとすると止まり、`consent_guard_blocked` が1行書かれる | T7 |
 | K8 | rm -rf の対象が「/tmp/CC報告ファイル/ の下」「/private/tmp/CC報告ファイル/ の下」「/private/tmp/claude-501/ の下」「作業場所の下（相対パスを含む）」なら止まらない。根そのもの・`..`・`.git`・`$X`・`*`・`?`・`[`・`{..,x}`・`~`・`\`・`!`・コマンド内に cd/pushd/popd/`(`/`bash -c`/`sh -c`/eval があるときの相対パスは、根の下でも止まる | T8（`/private/tmp/claude-501/$X`、`/private/tmp/claude-501/*`、`/tmp/CC報告ファイル/{..,x}`、`cd ~ && rm -rf x`、`(cd /; rm -rf x)` を止める例を含む） |
@@ -72,13 +72,13 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 判定（すべて満たしたときだけ True。この順に見て、外れた時点で不可）:
 1. hook_input に `agent_id` キーが無い（値が空でも、キーがあれば不可）。
 2. transcript_path が、本物のホーム（環境変数 HOME ではなく pwd モジュールで引く。danger_sanitize.py:26 と同じ）の `.claude/projects/` の下の `.jsonl` である。Codex から来た入力はこの形にならないので必ず不可。
-3. 記録の末尾 4MB を読む。読み始めが 0 でなければ、最初の改行までを捨てる。改行で終わっていない最後の1行は捨てる。それ以外に JSON でない行があれば不可。
+3. 記録の末尾から必要なだけ（最大 64MB）読む（読み足し方は §16-3(b)）。読み始めが 0 でなければ、最初の改行までを捨てる（段の間で切れた行はつないで戻す）。改行で終わっていない最後の1行は捨てる。JSON でない行は印として位置を残し、6 の text ブロックから末尾までに印があれば不可（それより前の印は判定に使わない）。
 4. 末尾から順に見て、**最後の人の入力 H** を探す。人の入力とは次のどれか（P1・P2、会話記録の実物の形）:
    - `type=="user"`・`origin.kind=="human"`（content の型は問わない。画像つきの入力は content が配列になる）
    - `type=="attachment"`・`attachment.type=="queued_command"`・`attachment.origin.kind=="human"`（attachment 行の最上位に origin は無い）
 5. H が `type=="user"` かつ `promptSource=="typed"` かつ content が文字列であり、その前後の空白を除くと "1" と完全一致する（queued の「1」・配列の content は不可。貼り付け印は "1" と一致しないので自然に除かれる）。
-6. H より前で最も近い、`type=="assistant"`・`isSidechain` が false の行を1行だけ見る（message.id でまとめない。会話記録の assistant 行は1行に1種類のブロックだけ）。その行のブロックが text でなければ不可。text なら、その中に、同意票の見出しの行がちょうど1つと、前後の空白を除いて `1. 上の同意票の操作を実行する` で**始まる**行がちょうど1つある（後ろに【おすすめ】などが付いてもよい、P4）。操作の行は見出しの行より後ろにあるものだけを数え、操作の前後の空白を除いて比べる（Q4）。その text ブロックから H までの間に、ほかの人の入力（4 の定義。queued を含む）も、compact の行（`isCompactSummary` か `type=="system"`・`subtype=="compact_boundary"`）も無い。末尾 4MB の中に H かその text ブロックが無ければ不可。
-7. H の timestamp から `now` までが30分以内。
+6. H より前で最も近い、`type=="assistant"`・`isSidechain` が false の行を1行だけ見る（message.id でまとめない。会話記録の assistant 行は1行に1種類のブロックだけ）。その行のブロックが text でなければ不可。text なら、その中に、同意票の見出しの行がちょうど1つと、前後の空白を除いて `1. 上の同意票の操作を実行する` で**始まる**行がちょうど1つある（後ろに【おすすめ】などが付いてもよい、P4）。操作の行は見出しの行より後ろにあるものだけを数え、操作の前後の空白を除いて比べる（Q4）。その text ブロックから H までの間に、ほかの人の入力（4 の定義。queued を含む）も、compact の行（`isCompactSummary` か `type=="system"`・`subtype=="compact_boundary"`）も無い。末尾から必要なだけ（最大 64MB）読んでも H かその text ブロックが無ければ不可。
+7. H の timestamp から `now` までが30分以内。H が 30 分より古ければ、6 の text ブロックを探す前に expired を返す（§16-3(b) 判定の順 3）。
 8. command の前後の空白を除いたものが、同意票のどれかの操作と完全一致し、その操作に `$`・バッククォートが無い。
 9. 除外（§4-4）に当たらない。除外はコマンド全体に当てる。
    - 補足（Reviewer L5 で追認）: 見出しより後ろの操作の行が0件、または同じ操作番号が2回以上あれば不可（どちらも止める側）。

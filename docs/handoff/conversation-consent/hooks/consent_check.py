@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """consent_check.py - 会話での同意（同意票＋PO の「1」）を許可券の代わりにする判定部品。
 
-設計: docs/handoff/conversation-consent/design.md §4-1〜4-4（ADR-1033）。
+設計: docs/handoff/conversation-consent/design.md §4-1〜4-4・§16-3(b)（ADR-1033）。
 
 呼び方: python3 ~/.claude/scripts/consent_check.py < <フックの入力 JSON>
   通すときだけ標準出力に allow を出して終了コード 0。それ以外は何も出さず終了コード 2。
@@ -18,6 +18,7 @@ import re
 import sys
 
 TAIL_BYTES = 4 * 1024 * 1024
+MAX_TAIL_BYTES = 64 * 1024 * 1024  # 読む範囲の上限（design §16-3(b)・R14）。上げる・外すときは審査をやり直す
 WINDOW = datetime.timedelta(minutes=30)
 HEADING = "[同意票]"
 OPTION_PREFIX = "1. 上の同意票の操作を実行する"
@@ -137,30 +138,81 @@ def _parse_ts(s):
     return dt.astimezone(datetime.timezone.utc)
 
 
-def _read_tail_records(path):
-    """末尾 4MB を行ごとの JSON にする。不可なら None。"""
-    with open(path, "rb") as f:
-        size = os.fstat(f.fileno()).st_size
-        start = max(0, size - TAIL_BYTES)
-        f.seek(start)
-        data = f.read()
-    if start > 0:
-        i = data.find(b"\n")
-        if i < 0:
-            return []
-        data = data[i + 1:]
-    if data and not data.endswith(b"\n"):
-        j = data.rfind(b"\n")
-        data = data[: j + 1] if j >= 0 else b""
-    recs = []
-    for raw in data.split(b"\n"):
-        if not raw.strip():
-            continue
-        try:
-            recs.append(json.loads(raw.decode("utf-8")))
-        except Exception:
-            return None
-    return recs
+class _Unparsable:
+    """JSON でない行の印。捨てずに並びの元の位置に残す（design §16-3(b)）。"""
+    __slots__ = ()
+
+
+UNPARSABLE = _Unparsable()
+
+
+class _TailReader:
+    """記録を末尾から段々に読み足す（4・8・16・32・64MiB。design §16-3(b)）。
+
+    - 大きさは最初に1回だけ測る（fstat）。判定の途中で記録が伸びても、伸びた分は読まない。
+    - 読み始めが 0 でない段では、最初の改行までを carry に取っておき、次の段で足した部分とつないで1行に戻す。
+    - 改行で終わらない最後の行は捨てる。
+    - どの行も JSON にするのは1回だけ。JSON でない行は UNPARSABLE を置く。
+    """
+
+    def __init__(self, f):
+        self.f = f
+        self.size = os.fstat(f.fileno()).st_size
+        self.start = self.size   # 読んだ範囲の先頭のバイト位置
+        self.carry = b""         # 前の段で捨てた、途中から始まる最初の行
+        self.tail_cut = False    # 改行で終わらない最後の行を捨て終えたか
+        self.recs = []           # 読んだ行（古い順）
+        self.step = 0            # 最後に読んだ段の大きさ（0 は未読）
+        self.read_bytes = 0      # 末尾から読んだ大きさ
+        self.more()
+
+    def exhausted(self):
+        return self.start == 0 or self.step >= MAX_TAIL_BYTES
+
+    def more(self):
+        """次の段を読む。読めたら True、もう読めなければ False。"""
+        if self.step and self.exhausted():
+            return False
+        self.step = TAIL_BYTES if not self.step else self.step * 2
+        new_start = max(0, self.size - self.step)
+        self.f.seek(new_start)
+        data = self.f.read(self.start - new_start) + self.carry
+        self.start = new_start
+        self.read_bytes = self.size - new_start
+        self.carry = b""
+        if not self.tail_cut:
+            j = data.rfind(b"\n")
+            if j < 0:
+                return True  # まだ最後の行の途中。次の段で続きを捨てる
+            data = data[: j + 1]
+            self.tail_cut = True
+        if self.start > 0:
+            i = data.find(b"\n")
+            if i < 0:
+                self.carry = data
+                return True
+            self.carry = data[:i]
+            data = data[i + 1:]
+        new = []
+        for raw in data.split(b"\n"):
+            if not raw.strip():
+                continue
+            try:
+                new.append(json.loads(raw.decode("utf-8")))
+            except Exception:
+                new.append(UNPARSABLE)
+        self.recs = new + self.recs
+        return True
+
+
+def _oldest_ts_expired(recs, now):
+    """範囲の中で timestamp の読める一番前の行が、now − 30 分より前なら True（design §16-3(b) 判定の順 1）。"""
+    for r in recs:
+        if isinstance(r, dict):
+            ts = _parse_ts(r.get("timestamp"))
+            if ts is not None:
+                return now - ts > WINDOW
+    return False
 
 
 def _is_human(r):
@@ -273,34 +325,48 @@ def _check_inner(hook_input, command, now, home, info):
     real_tp = os.path.realpath(tp)
     if not real_tp.startswith(root + os.sep) or not real_tp.endswith(".jsonl") or not os.path.isfile(real_tp):
         return False, "transcript_path"
-    # 3. 末尾 4MB
-    recs = _read_tail_records(real_tp)
-    if recs is None:
+    # 3〜6. 末尾から必要なだけ（最大 MAX_TAIL_BYTES）読む（design §16-3(b)）
+    with open(real_tp, "rb") as f:
+        rd = _TailReader(f)
+        while True:
+            info["read_bytes"] = rd.read_bytes
+            recs = rd.recs
+            # 4. 最後の人の入力 H（JSON でない行の印は _is_human が False なので飛ばす）
+            h_idx = None
+            for i in range(len(recs) - 1, -1, -1):
+                if _is_human(recs[i]):
+                    h_idx = i
+                    break
+            if h_idx is None:
+                if rd.exhausted() or _oldest_ts_expired(recs, now):
+                    return False, "no_human_input"
+                rd.more()
+                continue
+            H = recs[h_idx]
+            info["h_uuid"] = H.get("uuid")
+            info["h_timestamp"] = H.get("timestamp")
+            info["h_typed_one"] = _is_typed_one(H)
+            # 5. H が typed の「1」
+            if not info["h_typed_one"]:
+                return False, "h_not_typed_one"
+            # 6. H の直前の AI の行
+            a_idx = None
+            for i in range(h_idx - 1, -1, -1):
+                r = recs[i]
+                if isinstance(r, dict) and r.get("type") == "assistant" and not r.get("isSidechain"):
+                    a_idx = i
+                    break
+            if a_idx is not None:
+                break
+            if rd.exhausted():
+                return False, "no_assistant_text"
+            h_ts = _parse_ts(H.get("timestamp"))
+            if h_ts is not None and now - h_ts > WINDOW:
+                return False, "expired"
+            rd.more()
+    # JSON でない行が a_idx から末尾までにあれば不可（a_idx より前は判定に使わない。R19）
+    if any(r is UNPARSABLE for r in recs[a_idx:]):
         return False, "transcript_unparsable"
-    # 4. 最後の人の入力 H
-    h_idx = None
-    for i in range(len(recs) - 1, -1, -1):
-        if _is_human(recs[i]):
-            h_idx = i
-            break
-    if h_idx is None:
-        return False, "no_human_input"
-    H = recs[h_idx]
-    info["h_uuid"] = H.get("uuid")
-    info["h_timestamp"] = H.get("timestamp")
-    info["h_typed_one"] = _is_typed_one(H)
-    # 5. H が typed の「1」
-    if not info["h_typed_one"]:
-        return False, "h_not_typed_one"
-    # 6. H の直前の AI の行が、同意票つきの text ブロック
-    a_idx = None
-    for i in range(h_idx - 1, -1, -1):
-        r = recs[i]
-        if isinstance(r, dict) and r.get("type") == "assistant" and not r.get("isSidechain"):
-            a_idx = i
-            break
-    if a_idx is None:
-        return False, "no_assistant_text"
     msg = recs[a_idx].get("message")
     content = msg.get("content") if isinstance(msg, dict) else None
     if not isinstance(content, list) or not content:
@@ -351,7 +417,7 @@ def check(hook_input, command, now, home=None):
     """(通すか, 理由)。例外は必ず False。probe は結果に関係なく finally で1行書く（K0）。"""
     home = home or real_home()
     events = os.path.join(home, ".claude", "logs", "agent-events.jsonl")
-    info = {"h_uuid": None, "h_timestamp": None, "h_typed_one": None}
+    info = {"h_uuid": None, "h_timestamp": None, "h_typed_one": None, "read_bytes": None}
     ok, reason = False, "exception"
     try:
         if not isinstance(hook_input, dict) or not isinstance(command, str):
@@ -376,6 +442,8 @@ def check(hook_input, command, now, home=None):
             }
             if hi.get("tool_use_id"):
                 probe["tool_use_id"] = hi.get("tool_use_id")
+            if info.get("read_bytes") is not None:
+                probe["read_bytes"] = info["read_bytes"]
             _append_event(events, probe)
             if ok:
                 _append_event(events, {
