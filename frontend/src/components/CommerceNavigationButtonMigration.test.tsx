@@ -34,6 +34,8 @@ beforeEach(async () => {
     if (url.startsWith('/products?')) return [];
     if (url === '/quotes') return [];
     if (url === '/companies?per_page=100') return [];
+    // invoice-create-portfolio 便R5: 請求書の作成画面は在庫の道を 1 回読む
+    if (url === '/invoices/draft-inventory') return { categories: [], items: [] };
     throw new Error(`Unexpected GET ${url}`);
   });
   mock.post.mockImplementation(() => { throw new Error('Unexpected post'); });
@@ -73,26 +75,6 @@ describe('commerce navigation Button migration contracts', () => {
     await waitFor(() => expect(mock.get.mock.calls.filter(c => c[0] === page1Url)).toHaveLength(page1Reads + 1));
   });
 
-  it('loads an approved quote exactly, blocks a duplicate while pending, and exposes rejection', async () => {
-    const summary = { id: 7, quote_code: 'Q-7', company_id: 4, currency: 'USD', total_amount: 10, status: 'approved', created_at: '' };
-    const detail = { id: 7, quote_code: 'Q-7', company_id: 4, contact_id: 5, currency: 'USD', items: [{ product_id: 2, product_name: 'Card', quantity: 1, unit_price: 10, weight: null }] };
-    const pending = deferred();
-    mock.get.mockImplementation(async (url: string) => {
-      if (url === '/quotes?status=approved') return [summary];
-      if (url === '/quotes/7') return pending.promise;
-      if (url === '/companies?per_page=100') return [];
-      throw new Error(`Unexpected GET ${url}`);
-    });
-    render(wrap(<InvoiceCreatePage />));
-    const load = await screen.findByTestId('invoice-edit-from-quote-7') as HTMLButtonElement;
-    fireEvent.click(load); fireEvent.click(load); expect(mock.get.mock.calls.filter(c => c[0] === '/quotes/7')).toHaveLength(1); expect(load.disabled).toBe(true);
-    await act(async () => pending.resolve(detail));
-    expect(await screen.findByText(/Q-7/)).toBeTruthy();
-    cleanup(); queryClient.clear(); const beforeRetry = mock.get.mock.calls.filter(c => c[0] === '/quotes/7').length; let attempts = 0; mock.get.mockImplementation(async (url: string) => { if (url === '/quotes?status=approved') return [summary]; if (url === '/quotes/7') { attempts += 1; if (attempts === 1) throw new Error('Quote load failed'); return detail; } if (url === '/companies?per_page=100') return []; throw new Error(`Unexpected GET ${url}`); });
-    render(wrap(<InvoiceCreatePage />)); let retry = await screen.findByTestId('invoice-edit-from-quote-7'); fireEvent.click(retry); expect(await screen.findByText('Quote load failed')).toBeTruthy();
-    retry = screen.getByTestId('invoice-edit-from-quote-7'); fireEvent.click(retry); expect(await screen.findByDisplayValue('Card')).toBeTruthy(); expect((await screen.findByTestId('invoice-source-quote')).textContent).toContain('Q-7'); expect(mock.get.mock.calls.filter(c => c[0] === '/quotes/7')).toHaveLength(beforeRetry + 2);
-  });
-
   it('closes invoice void UI with zero writes', async () => {
     const invoice = { id: 3, invoice_number: 'INV-3', quote_id: null, company_id: 1, currency: 'USD', subtotal: 1, shipping_fee: 0, tax_amount: 0, total_amount: 1, exchange_rate_jpy: null, exchange_rate_usd: null, amount_jpy: null, amount_usd: null, payment_method: null, status: 'draft', branch_number: null, erp_key: null, issued_at: null, due_date: null, paid_at: null, voided_at: null, void_reason: null, notes: null, created_at: '', items: [], ship_to_snapshot: null, bill_to_snapshot: null, duty_amount: null, fx_rate_snapshot: null, paypal_order_id: null, paypal_approval_url: null, payment_fee: null, paypal_invoicer_view_url: null, paypal_copy_pdf_at: null };
     mock.get.mockImplementation(async (url: string) => { if (url === '/me/permissions') return { permissions }; if (url === '/invoices/3') return invoice; if (url === '/invoices/3/paypal-disputes') return []; throw new Error(`Unexpected GET ${url}`); });
@@ -116,9 +98,8 @@ describe('commerce navigation Button migration contracts', () => {
   });
 
   it('cancels invoice creation to the exact invoices route', async () => {
-    mock.get.mockImplementation(async (url: string) => { if (url === '/quotes?status=approved') return []; if (url === '/companies?per_page=100') return []; throw new Error(`Unexpected GET ${url}`); });
+    // invoice-create-portfolio 便R5: 「在庫表から／見積から」の切り替えは無くなった（p8）。キャンセルは最初から出ている
     render(routed(<InvoiceCreatePage />, '/invoices/new', ['/invoices/new']));
-    fireEvent.click(screen.getByTestId('invoice-mode-inventory'));
     fireEvent.click(await screen.findByRole('button', { name: tr('common.cancel') }));
     expect((await screen.findByTestId('location')).textContent).toBe('/invoices');
   });

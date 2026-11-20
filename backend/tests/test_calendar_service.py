@@ -225,7 +225,7 @@ class TestListEvents:
     async def test_returns_events(self):
         from app.services.calendar_service import list_events
         now = datetime(2026, 6, 1, 10, 0, 0, tzinfo=timezone.utc)
-        row = (1, 2, "shared", "meeting", "テスト会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木 花子", "田中 太郎", None, None, None, None)
+        row = (1, 2, "shared", "meeting", "テスト会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木 花子", "田中 太郎", None, None, None, None, None)
         db = _make_db(fetchall_return=[row])
         result = await list_events(db, tenant_id=1, start="2026-06-01", end="2026-06-30")
         assert len(result) == 1
@@ -1342,7 +1342,7 @@ class TestListEventsMeetUrl:
         from app.services.calendar_service import list_events
 
         now = datetime(2026, 6, 1, 10, 0, 0, tzinfo=timezone.utc)
-        row = (1, 2, "shared", "meeting", "会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木", "田中", MEET, None, None, None)
+        row = (1, 2, "shared", "meeting", "会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木", "田中", MEET, None, None, None, None)
         db = _make_db(fetchall_return=[row])
         result = await list_events(db, tenant_id=1, start="2026-06-01", end="2026-06-30")
         assert result[0]["meet_url"] == MEET
@@ -1409,7 +1409,7 @@ def _ev(**over) -> dict:
         "recurring_event_id": None, "original_start_datetime": None,
         "start_datetime": _jt(2026, 11, 12), "end_datetime": _jt(2026, 11, 12, 11),
         "is_all_day": False, "is_cancelled": False, "title": "定例", "description": None,
-        "location": None, "category": "meeting",
+        "location": None, "category": "meeting", "color_key": None,
     }
     d.update(over)
     return d
@@ -1480,7 +1480,7 @@ class TestListRecurrence:
         now = _jt(2026, 11, 12)
         base = [1, 5, "shared", "meeting", "定例", None, None, now, now + timedelta(hours=1), False,
                 "gm", "app", "synced", 5, now, now, "鈴木", "田中", None,
-                "FREQ=WEEKLY;BYDAY=TH", None, None]
+                "FREQ=WEEKLY;BYDAY=TH", None, None, None]
         for k, v in over.items():
             base[k] = v
         return tuple(base)
@@ -1993,3 +1993,439 @@ class TestCheckRecurrenceRequest:
         assert check_create_recurrence({**base, "recurrence": "weekly", "add_meet": True}) == "recurrence_meet_not_allowed"
         assert check_create_recurrence({"start_datetime": "2026-10-29T10:00:00+09:00", "recurrence": "monthly_nth"}) == "recurrence_not_available"
         assert check_create_recurrence({**base, "recurrence": "weekly"}) is None
+
+
+# ===========================================================================
+# ADR-1081 便1: 予定ごとの色（color_key）
+# ===========================================================================
+
+_MARK = "_sa_color_key"
+
+
+class TestColorBodyMark:
+    def test_mark_only_when_send_color(self):
+        from app.services.calendar_service import _to_google_event_body
+
+        payload = {"title": "t", "start_datetime": "2026-06-01T10:00:00+09:00",
+                   "end_datetime": "2026-06-01T11:00:00+09:00", "color_key": "tomato"}
+        assert _MARK not in _to_google_event_body(payload)
+        assert _to_google_event_body(payload, send_color=True)[_MARK] == "tomato"
+        none_payload = {**payload, "color_key": None}
+        assert _to_google_event_body(none_payload, send_color=True)[_MARK] is None
+        no_key = {k: v for k, v in payload.items() if k != "color_key"}
+        assert _to_google_event_body(no_key, send_color=True)[_MARK] is None
+
+
+class TestColorCreateAndUpdate:
+    @staticmethod
+    def _payload(**extra):
+        return {"title": "色", "start_datetime": "2026-06-01T10:00:00+09:00",
+                "end_datetime": "2026-06-01T11:00:00+09:00", **extra}
+
+    @pytest.mark.asyncio
+    async def test_create_with_color_sends_mark_and_saves_key(self):
+        from app.services.calendar_service import create_event
+
+        db = TestCreateEventWithMeet._db()
+        gcreate = AsyncMock(return_value={"id": "g1"})
+        with patch("app.services.google_calendar.create_event", gcreate):
+            await create_event(db, tenant_id=1, user_id=3, payload=self._payload(color_key="tomato"))
+        assert gcreate.call_args.args[2][_MARK] == "tomato"
+        assert db.execute.call_args_list[0].args[1]["color_key"] == "tomato"
+
+    @pytest.mark.asyncio
+    async def test_create_without_color_sends_no_mark(self):
+        from app.services.calendar_service import create_event
+
+        for payload in (self._payload(), self._payload(color_key=None)):
+            db = TestCreateEventWithMeet._db()
+            gcreate = AsyncMock(return_value={"id": "g1"})
+            with patch("app.services.google_calendar.create_event", gcreate):
+                await create_event(db, tenant_id=1, user_id=3, payload=payload)
+            assert _MARK not in gcreate.call_args.args[2]
+            assert db.execute.call_args_list[0].args[1]["color_key"] is None
+
+    @staticmethod
+    async def _update(payload, prev="tomato"):
+        from app.services.calendar_service import update_event
+
+        db = _FakeDB([
+            ("SELECT color_key FROM calendar_events", [(prev,)]),
+            ("SELECT google_event_id, meet_url", [("g1", None)]),
+        ])
+        gupdate = AsyncMock(return_value={"id": "g1"})
+        with patch("app.services.google_calendar.update_event", gupdate), patch(
+            "app.services.calendar_service.reset_tenant_context", new=AsyncMock()
+        ):
+            await update_event(db, tenant_id=1, event_id=9, user_id=3, payload=payload)
+        return db, gupdate
+
+    @pytest.mark.asyncio
+    async def test_update_changed_color_sends_mark(self):
+        db, gupdate = await self._update({"color_key": "sage"})
+        assert gupdate.call_args.args[3][_MARK] == "sage"
+        sets = [p for _i, s, p in db.find("UPDATE calendar_events SET")]
+        assert sets[0]["color_key"] == "sage"
+        # UPDATE の前に今の色を読む
+        assert db.find("SELECT color_key FROM calendar_events")[0][0] < db.find("UPDATE calendar_events SET")[0][0]
+
+    @pytest.mark.asyncio
+    async def test_update_same_color_sends_no_mark(self):
+        _db, gupdate = await self._update({"color_key": "tomato", "title": "題"})
+        assert _MARK not in gupdate.call_args.args[3]
+
+    @pytest.mark.asyncio
+    async def test_update_back_to_default_sends_none_mark(self):
+        # 受け口が "" を None に直して渡す。鍵はあるので、デフォルトに戻す印として送る
+        _db, gupdate = await self._update({"color_key": None})
+        body = gupdate.call_args.args[3]
+        assert _MARK in body and body[_MARK] is None
+
+    @pytest.mark.asyncio
+    async def test_update_default_to_default_sends_no_mark(self):
+        _db, gupdate = await self._update({"color_key": None}, prev=None)
+        assert _MARK not in gupdate.call_args.args[3]
+
+    @pytest.mark.asyncio
+    async def test_update_without_color_does_not_read_color_or_send_mark(self):
+        db, gupdate = await self._update({"title": "題だけ"})
+        assert _MARK not in gupdate.call_args.args[3]
+        assert db.find("SELECT color_key FROM calendar_events") == []
+
+
+def _mark_of(g, name, index=0):
+    """g.log のうち name の index 番目の呼びの本文（最後の引数）。"""
+    entries = [e for e in g.log if e[0] == name]
+    return entries[index][-1]
+
+
+class TestColorRecurring:
+    async def _run(self, db, event, payload, scope, g=None, occ=None):
+        from app.services.calendar_service import update_recurring_event
+
+        g = g or _G()
+        with _google(g):
+            await update_recurring_event(db, 1, 5, event, payload, scope, occ or _jt(2026, 11, 26))
+        return g
+
+    # ----- この予定だけ
+    @pytest.mark.asyncio
+    async def test_this_new_exception_gets_color_and_sends_mark(self):
+        db = _master_db()
+        g = await self._run(db, _ev(), {"color_key": "sage"}, "this")
+        assert db.find("INSERT INTO calendar_events")[0][2]["color_key"] == "sage"
+        assert _mark_of(g, "update_event")[_MARK] == "sage"
+
+    @pytest.mark.asyncio
+    async def test_this_without_color_inherits_color_and_sends_no_mark(self):
+        db = _master_db(master=_ev(color_key="tomato"))
+        g = await self._run(db, _ev(color_key="tomato"), {"title": "題だけ"}, "this")
+        assert db.find("INSERT INTO calendar_events")[0][2]["color_key"] == "tomato"
+        assert _MARK not in _mark_of(g, "update_event")
+
+    @pytest.mark.asyncio
+    async def test_this_same_color_as_master_sends_no_mark(self):
+        db = _master_db(master=_ev(color_key="tomato"))
+        g = await self._run(db, _ev(color_key="tomato"), {"color_key": "tomato"}, "this")
+        assert _MARK not in _mark_of(g, "update_event")
+
+    @pytest.mark.asyncio
+    async def test_this_empty_color_becomes_none_row_and_none_mark(self):
+        # 受け口が "" を None に直す。値の決まり（24 の鍵だけ）に当たる "" は行に入らない
+        db = _master_db(master=_ev(color_key="tomato"))
+        g = await self._run(db, _ev(color_key="tomato"), {"color_key": None}, "this")
+        assert db.find("INSERT INTO calendar_events")[0][2]["color_key"] is None
+        body = _mark_of(g, "update_event")
+        assert _MARK in body and body[_MARK] is None
+
+    @pytest.mark.asyncio
+    async def test_this_existing_exception_back_to_master_color_sends(self):
+        master = _ev(color_key="tomato")
+        db = _master_db(master=master, exc_row=_exc(color_key="sage"))
+        g = await self._run(db, master, {"color_key": "tomato"}, "this")
+        upd = db.find("UPDATE calendar_events SET")[0]
+        assert upd[2]["id"] == 9 and upd[2]["f_color_key"] == "tomato"
+        assert _mark_of(g, "update_event")[_MARK] == "tomato"
+
+    @pytest.mark.asyncio
+    async def test_this_existing_exception_same_color_sends_no_mark(self):
+        master = _ev(color_key="tomato")
+        db = _master_db(master=master, exc_row=_exc(color_key="sage"))
+        g = await self._run(db, master, {"color_key": "sage", "title": "題"}, "this")
+        assert _MARK not in _mark_of(g, "update_event")
+
+    # ----- これ以降
+    @pytest.mark.asyncio
+    async def test_following_new_row_gets_color_and_create_sends_mark(self):
+        db = _master_db()
+        g = await self._run(db, _ev(), {"color_key": "sage"}, "following")
+        assert db.find("INSERT INTO calendar_events")[0][2]["color_key"] == "sage"
+        assert _mark_of(g, "create_event")[_MARK] == "sage"
+
+    @pytest.mark.asyncio
+    async def test_following_unchanged_color_is_carried_and_sent_on_create(self):
+        db = _master_db(master=_ev(color_key="tomato"))
+        g = await self._run(db, _ev(color_key="tomato"), {"title": "題だけ"}, "following")
+        assert db.find("INSERT INTO calendar_events")[0][2]["color_key"] == "tomato"
+        assert _mark_of(g, "create_event")[_MARK] == "tomato"
+
+    @pytest.mark.asyncio
+    async def test_following_without_any_color_sends_no_mark(self):
+        db = _master_db()
+        g = await self._run(db, _ev(), {"title": "題だけ"}, "following")
+        assert db.find("INSERT INTO calendar_events")[0][2]["color_key"] is None
+        assert _MARK not in _mark_of(g, "create_event")
+
+    # ----- すべて
+    @pytest.mark.asyncio
+    async def test_all_changed_color_patches_with_mark(self):
+        db = _master_db(master=_ev(color_key="tomato"))
+        g = await self._run(db, _ev(color_key="tomato"), {"color_key": "sage"}, "all")
+        ups = db.find("UPDATE calendar_events SET")
+        assert any(p.get("id") == 1 and p["f_color_key"] == "sage" for _i, _s, p in ups)
+        assert any("recurring_event_id = :id" in s and p["f_color_key"] == "sage" for _i, s, p in ups)
+        assert _mark_of(g, "update_event")[_MARK] == "sage"
+
+    @pytest.mark.asyncio
+    async def test_all_title_only_patches_without_mark(self):
+        db = _master_db(master=_ev(color_key="tomato"))
+        g = await self._run(db, _ev(color_key="tomato"), {"title": "題だけ"}, "all")
+        assert _MARK not in _mark_of(g, "update_event")
+
+    @pytest.mark.asyncio
+    async def test_all_time_change_recreates_with_existing_color(self):
+        db = _master_db(master=_ev(color_key="tomato"))
+        payload = {"start_datetime": _jt(2026, 11, 26, 11).isoformat(), "end_datetime": _jt(2026, 11, 26, 12).isoformat()}
+        g = await self._run(db, _ev(color_key="tomato"), payload, "all")
+        assert g.names() == ["delete_event", "create_event"]
+        assert _mark_of(g, "create_event")[_MARK] == "tomato"
+
+    @pytest.mark.asyncio
+    async def test_all_time_change_without_color_recreates_without_mark(self):
+        db = _master_db()
+        payload = {"start_datetime": _jt(2026, 11, 26, 11).isoformat(), "end_datetime": _jt(2026, 11, 26, 12).isoformat()}
+        g = await self._run(db, _ev(), payload, "all")
+        assert _MARK not in _mark_of(g, "create_event")
+
+    # ----- 単発を繰り返しにする
+    @pytest.mark.asyncio
+    async def test_single_to_recurring_recreate_carries_color(self):
+        single = _ev(recurrence_rule=None, google_event_id="gs", id=3, color_key="sage")
+        g = await self._run(_FakeDB([], sync_mode="bidirectional"), single, {"recurrence": "weekly"}, None)
+        assert _mark_of(g, "create_event")[_MARK] == "sage"
+
+    @pytest.mark.asyncio
+    async def test_single_to_recurring_without_color_sends_no_mark(self):
+        single = _ev(recurrence_rule=None, google_event_id="gs", id=3)
+        g = await self._run(_FakeDB([], sync_mode="bidirectional"), single, {"recurrence": "weekly"}, None)
+        assert _MARK not in _mark_of(g, "create_event")
+
+
+class TestUpsertColor:
+    @staticmethod
+    async def _upsert(event_extra, label_colors, **kw):
+        from app.services.calendar_service import upsert_from_google
+
+        db = AsyncMock()
+        origin_result = MagicMock()
+        origin_result.first = MagicMock(return_value=None)
+        db.execute = AsyncMock(side_effect=[origin_result, MagicMock()])
+        event = {
+            "id": "evc",
+            "start": {"dateTime": "2026-06-01T10:00:00+09:00"},
+            "end": {"dateTime": "2026-06-01T11:00:00+09:00"},
+            **event_extra,
+        }
+        await upsert_from_google(db, tenant_id=1, google_event=event, owner_user_id=9, label_colors=label_colors, **kw)
+        return db.execute.call_args_list[1].args
+
+    @pytest.mark.asyncio
+    async def test_event_label_id_is_written_as_key(self):
+        stmt, params = await self._upsert({"eventLabelId": "L1"}, {"L1": "#d50000"})
+        assert params["color_key"] == "tomato"
+        assert "EXCLUDED.color_key" in stmt.text
+        assert "color_key" in stmt.text.split("DO UPDATE SET")[0]
+
+    @pytest.mark.asyncio
+    async def test_unknown_label_or_no_label_is_null(self):
+        _s, params = await self._upsert({"eventLabelId": "L9"}, {"L1": "#d50000"})
+        assert params["color_key"] is None
+        _s, params = await self._upsert({}, {"L1": "#d50000"})
+        assert params["color_key"] is None
+
+    @pytest.mark.asyncio
+    async def test_color_id_only_event_is_null(self):
+        stmt, params = await self._upsert({"colorId": "11"}, {"L1": "#d50000"})
+        assert params["color_key"] is None
+        assert "EXCLUDED.color_key" in stmt.text
+
+    @pytest.mark.asyncio
+    async def test_label_table_none_does_not_touch_color(self):
+        # 表が読めなかったとき: INSERT にも DO UPDATE にも color_key を入れない（今ある色を NULL にしない）
+        stmt, params = await self._upsert({"eventLabelId": "L1"}, None)
+        assert "color_key" not in stmt.text
+        assert "color_key" not in params
+
+    @pytest.mark.asyncio
+    async def test_default_argument_does_not_touch_color(self):
+        from app.services.calendar_service import upsert_from_google
+
+        db = AsyncMock()
+        origin_result = MagicMock()
+        origin_result.first = MagicMock(return_value=None)
+        db.execute = AsyncMock(side_effect=[origin_result, MagicMock()])
+        await upsert_from_google(
+            db, 1,
+            {"id": "evd", "start": {"dateTime": "2026-06-01T10:00:00+09:00"},
+             "end": {"dateTime": "2026-06-01T11:00:00+09:00"}},
+            9,
+        )
+        stmt, params = db.execute.call_args_list[1].args
+        assert "color_key" not in stmt.text and "color_key" not in params
+
+
+def _fake_google_service(labels, cal_fail=False):
+    """Google の道具の部品の偽物。calendars().get と events().insert / patch に届いた引数を log に残す。"""
+    from types import SimpleNamespace
+
+    log: dict = {"cal_get": [], "insert": [], "patch": []}
+
+    class _E:
+        def __init__(self, fn):
+            self._fn = fn
+
+        def execute(self):
+            return self._fn()
+
+    def cal_get(**kw):
+        log["cal_get"].append(kw)
+
+        def run():
+            if cal_fail:
+                raise RuntimeError("down")
+            return {} if labels is None else {"labelProperties": {"eventLabels": labels}}
+
+        return _E(run)
+
+    def insert(**kw):
+        log["insert"].append(kw)
+        return _E(lambda: {"id": "gnew"})
+
+    def patch_(**kw):
+        log["patch"].append(kw)
+        return _E(lambda: {"id": "gpatched"})
+
+    svc = SimpleNamespace(
+        calendars=lambda: SimpleNamespace(get=cal_get),
+        events=lambda: SimpleNamespace(insert=insert, patch=patch_),
+    )
+    return svc, log
+
+
+@contextlib.contextmanager
+def _google_tool(svc):
+    with patch("app.services.google_calendar._get_service", new=AsyncMock(return_value=svc)), patch(
+        "app.services.google_calendar.get_calendar_id", new=AsyncMock(return_value="cal-x")
+    ):
+        yield
+
+
+_LABELS = [{"id": "L-red", "color": "#D50000"}, {"id": "L-sage", "color": "#33B679"}]
+
+
+class TestGoogleToolEventLabel:
+    @pytest.mark.asyncio
+    async def test_create_with_color_sends_label_id_and_version(self):
+        from app.services import google_calendar as gc
+
+        svc, log = _fake_google_service(_LABELS)
+        body = {"summary": "s", _MARK: "tomato"}
+        with _google_tool(svc):
+            await gc.create_event(object(), 1, body)
+        kw = log["insert"][0]
+        assert kw["eventLabelVersion"] == 1
+        assert kw["body"]["eventLabelId"] == "L-red" and _MARK not in kw["body"]
+        assert log["cal_get"] == [{"calendarId": "cal-x"}]
+        assert _MARK in body  # 呼び元の本文は書き換えない
+
+    @pytest.mark.asyncio
+    async def test_create_without_mark_has_no_version_and_no_calendar_read(self):
+        from app.services import google_calendar as gc
+
+        svc, log = _fake_google_service(_LABELS)
+        with _google_tool(svc):
+            await gc.create_event(object(), 1, {"summary": "s"})
+        kw = log["insert"][0]
+        assert "eventLabelVersion" not in kw and "eventLabelId" not in kw["body"]
+        assert log["cal_get"] == []
+
+    @pytest.mark.asyncio
+    async def test_none_color_clears_label_with_version(self):
+        from app.services import google_calendar as gc
+
+        svc, log = _fake_google_service(_LABELS)
+        with _google_tool(svc):
+            await gc.update_event(object(), 1, "g1", {"summary": "s", _MARK: None})
+        kw = log["patch"][0]
+        assert kw["eventLabelVersion"] == 1 and kw["body"]["eventLabelId"] == ""
+        assert kw["eventId"] == "g1"
+
+    @pytest.mark.asyncio
+    async def test_update_with_color_sends_label_id_and_version(self):
+        from app.services import google_calendar as gc
+
+        svc, log = _fake_google_service(_LABELS)
+        with _google_tool(svc):
+            await gc.update_event(object(), 1, "g1", {"summary": "s", _MARK: "sage"})
+        kw = log["patch"][0]
+        assert kw["eventLabelVersion"] == 1 and kw["body"]["eventLabelId"] == "L-sage"
+        assert _MARK not in kw["body"]
+
+    @pytest.mark.asyncio
+    async def test_missing_label_sends_empty_id_and_logs(self, caplog):
+        import logging
+
+        from app.services import google_calendar as gc
+
+        svc, log = _fake_google_service([{"id": "L-red", "color": "#d50000"}])
+        with _google_tool(svc), caplog.at_level(logging.INFO, logger="app.services.google_calendar"):
+            await gc.create_event(object(), 1, {"summary": "s", _MARK: "cobalt"})
+        kw = log["insert"][0]
+        assert kw["eventLabelVersion"] == 1 and kw["body"]["eventLabelId"] == ""
+        assert "event_label_missing color_key=cobalt" in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_label_table_none_adds_no_version_and_no_label_id(self):
+        from app.services import google_calendar as gc
+
+        svc, log = _fake_google_service(_LABELS, cal_fail=True)
+        with _google_tool(svc):
+            await gc.create_event(object(), 1, {"summary": "s", _MARK: "tomato"})
+            await gc.update_event(object(), 1, "g1", {"summary": "s", _MARK: None})
+        for kw in (log["insert"][0], log["patch"][0]):
+            assert "eventLabelVersion" not in kw
+            assert "eventLabelId" not in kw["body"] and _MARK not in kw["body"]
+
+    @pytest.mark.asyncio
+    async def test_meet_and_color_both_versions(self):
+        from app.services import google_calendar as gc
+
+        svc, log = _fake_google_service(_LABELS)
+        with _google_tool(svc):
+            await gc.create_event(object(), 1, {"summary": "s", _MARK: "tomato"}, conference=True)
+        kw = log["insert"][0]
+        assert kw["conferenceDataVersion"] == 1 and kw["eventLabelVersion"] == 1
+
+    @pytest.mark.asyncio
+    async def test_get_event_label_colors_table_empty_and_none(self):
+        from app.services import google_calendar as gc
+
+        svc, _ = _fake_google_service(_LABELS)
+        with _google_tool(svc):
+            assert await gc.get_event_label_colors(object(), 1, "primary") == {"L-red": "#d50000", "L-sage": "#33b679"}
+        svc, _ = _fake_google_service(None)
+        with _google_tool(svc):
+            assert await gc.get_event_label_colors(object(), 1, "primary") == {}
+        svc, _ = _fake_google_service(_LABELS, cal_fail=True)
+        with _google_tool(svc):
+            assert await gc.get_event_label_colors(object(), 1, "primary") is None

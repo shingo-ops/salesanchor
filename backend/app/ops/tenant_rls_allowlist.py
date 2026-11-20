@@ -5,7 +5,7 @@
 
 PUBLIC_TABLES_WITHOUT_RLS: public の表のうち、tenant_id 列を持つのに RLS を付けない表。
   表名 → 理由（空にしない。空なら CI の点検が落ちる）。
-BYPASSRLS_ROLES: BYPASSRLS を持ってよい役。役名 → 理由（便6 で初回の観測を PO に報告してから固定する）。
+BYPASSRLS_ROLES: BYPASSRLS を持ってよい役。役名 → 理由（2026-11-19 に初回の観測で固定）。
 
 この一覧の行を足すときは、なぜ RLS が要らないかを理由に書く。推測で足さない。
 """
@@ -51,4 +51,14 @@ PUBLIC_TABLES_WITHOUT_RLS: dict[str, str] = {
     "products_category_classification_backup": "移行で作った商品区分の控え。アプリは読み書きしない。",
 }
 
-BYPASSRLS_ROLES: dict[str, str] = {}
+# 2026-11-19 09:05 JST の本番の毎日点検（ADR-1063 便6）の初回で見えた 2 件。PO 2026-11-19「1」で固定。
+BYPASSRLS_ROLES: dict[str, str] = {
+    "jarvis": (
+        "移行（migration）を流す役。superuser（ADR-1018 Context）。"
+        "アプリと Celery は salesanchor_app で接続しており、この役では接続しない。"
+    ),
+    "ai_unmask_owner": (
+        "値を返す DB 関数 ops_case.unmask_fetch の持ち主。NOLOGIN。"
+        "関数の中で許可した行が RLS で 0 件にならないよう BYPASSRLS を付ける（ADR-1024 の BYPASSRLS の例外・ADR-1052）。"
+    ),
+}

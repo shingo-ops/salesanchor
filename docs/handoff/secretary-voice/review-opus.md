@@ -64,3 +64,12 @@
 - M1 V8 に `customers.view` 無しの形を足した。M2 登録の場所を「ファイルの最後の行の後ろ」に直した。M3 単体試験では読み書きの関数を偽物に差し替えると書いた。
 - M4（AI 相談係の見え方の表に新しい列の分類の行を置かない件）は採らない。伏せる側に倒れる（design.md §4-2）ため安全は保たれ、分類の行を足すと別の表の移行が便1 に混ざる。便2 以降で揃えるかは別に判断する。
 - 再審査（同日・REQUEST_CHANGES 1 件）: `record_usage_isolated` の値の辞書 `cols` に字数を入れる指示が無く、入れ忘れると書き込みが毎回失敗して飲み込まれ、月の上限が効かなくなる → カード §3-3 に `cols` へ入れる指示、§3-7 に値の辞書を確かめる試験を足した。
+
+## 便3a-2 の設計の確かめ（2026-11-18 Opus・同じ AI による自己審査・APPROVE）
+
+- 根拠: 本番の backend の箱は `scripts/blue-green-cutover.sh` の `docker run` で作られる（deploy.yml の Step 3b）。便3a の反映後の箱に `GOOGLE_TTS_SA_KEY_FILE` の名前は 0・つなぎは tcg-sheets・attachments・geoip の 3 つ（manual-only 鍵で読み取りだけ）。戻しの道（deploy.yml の Finalize の自動の戻し）は `docker compose up -d --no-build --remove-orphans` で backend を起こすので、compose の行（便3a）はそちらで効く。
+- 照合: `.env` は名前だけで渡す作り（`scripts/blue-green-cutover.sh:84`）→ 名前で渡すと VPS 上の場所が箱に入るので一覧から外す（カード §3-1）。`docker run --volume` は無いファイルを指すと空のフォルダを作る → 先に `-f`。`set -e` と ERR の見張りの下でも `[ ] && continue` は止まらない（&& の途中の失敗は errexit・ERR の対象外）。
+- 名前の付け替え: compose の環境で別の名前を使うのは `grpc_proxy=${GEMINI_GRPC_PROXY-}` もあるが、本番の `.env` に `grpc_proxy=` が 1 行あり箱にも入っている（読み取りで確かめた）。今回の試験は `${X:+...}` の置き換えだけを対象にし、こちらは触らない。
+- 試験: 名前つきの置き場だけを見ていた今の試験に、固定の場所へのつなぎと置き換えの環境を足す（カード §3-2）。偽の docker で台本を本当に流し、3 つの場合を確かめる（カード §3-3）。手順4 で、台本を戻すと落ちることを確かめる。
+- 便3b への申し送り: 箱は `uid=100(appuser)`。鍵ファイルは読める権限で置く（design.md §4-9 の追補）。
+- 判定: APPROVE。未解決の前提なし（Google 側の権限の名前は便3b の最初の確かめで決める・design.md §4-9 のとおり）。

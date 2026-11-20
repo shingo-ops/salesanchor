@@ -1337,6 +1337,7 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 | `lastProbeAt` | 版 | `lastResult` | 節 | 直しの版 |
 |---|---|---|---|---|
 | 2026-11-07T17:34:31Z | 2.1.319 | P3 | §14-14-16 | v0.55.2 |
+| 2026-11-18T18:34:19.098Z | 2.1.327 | P0 | §14-14-18 | v0.55.3 |
 
 確かめ直し（C）:
 1. 再起動の直前に `runningVersionProbe` をもう一度読み、あれば 1 に戻って「確かめ中」で終える。
@@ -1383,3 +1384,199 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 | 1 | 2026-11-08 00:37 | REVISE | 必須 4: 見分け表の漏れ（aborted 等・3 回後の aborted・反映前）→ 順に当てる表と「調べた×の一覧」に直した。「確かめ直せば必ず lastProbeAt が変わる」は誤り → 変わらない理由を監査で分けて BLOCKED: に直した。直しの範囲の「待ち方」→ 定数を変える直しを NEEDS_DECISION: に直した。K61・K63・K64 の判定 → 該当なしの扱いと○×を書いた。推奨 2（再起動の直前の読み直し・指紋で見分ける）も入れた。照合 12 行合致・1 行（ac-common.sh:30 は名前の行）を書き分けた |
 | 2 | 2026-11-08 00:55 | REVISE | 1 回目の必須のうち 2 件は直った。N1: 一覧にあり直しの版が空欄で 24 時間たった状態が C に落ち、同じ×を数え直す → F を「空欄か新しい」に広げた。N2: 止める定数の列挙に穴 → `PROBE_` で始まる定数すべてに直した。推奨 2（n2 は理由に使わない・確かめ中が 2 日続いたら BLOCKED:）と claude が見つからない場合も入れた |
 | 3 | 2026-11-08 01:08 | APPROVE | 2 回目の N1・N2・推奨 2 件は直った。表 1〜7 は実物の全状態にちょうど 1 行で当たる。推奨: 5 の続けてよい範囲の「送る文」が `PROBE_FOLLOW_UP_SENTENCE`（server/case-say-probe.ts:16）で止める側と重なる → 安全側（止める）に寄せて書き直した |
+
+#### 14-14-18 第12版の直し3: claude 2.1.327 で probe が P0 で×になった件（2026-11-19・PO「1」）
+
+経緯（事実）: 2026-11-19 03:30 JST の §14-14-17 の毎日の見回りで、表の 4 行目 D（新しい×）に当たった。版の記録（Opus 本体が node で、許された欄だけを読んだ。MAC の欄・鍵は読んでいない）は `claudeVersion: "2.1.327"`・sha256 先頭 `76d48205c926`・`size: 354515104`・`usable: false`・`lastResult: "P0"`・`failCount: 1`・`lastProbeAt: 2026-11-18T18:34:19.098Z`・`runningVersionProbe` なし。監査の最後の `caseClaudeVersionProbe` の行は `outcome: "denied"`・`failedCheck: "P0"`・`counts: {}`・`startedAt: 2026-11-18T18:32:10.392Z`。生の行は `/tmp/CC報告ファイル/case-probe-watch/2026-11-19/probe-row.json` に残した。PO は NEEDS_DECISION: に「1」（報告の置き場所を、あらかじめ信頼済みにする設計を書く）と答えた。
+
+`paneSamples` の写し（原文のまま、抜粋）:
+
+```
+ Adding a new directory:
+ /private/tmp/CC報告ファイル/discord-case/3dc7f867-e40b-4daf-bb7f-de5d9a13f123
+ This session hasn't worked here before. Is this a directory you created or one you trust?
+ ...
+ ❯ No, exit
+   Yes, add it
+```
+
+意味: 2.1.327 は、起動の引数 `--add-dir` で足した報告の置き場所 R を「信頼するか」と聞く画面で止まる。件の claude は入力を待ったまま、P0 の「60 秒以内に、選ぶ画面なしで待ち受けになる」が成り立たない。
+
+原因（実物の照合。agent-console origin/main 6aaba26）:
+- 件の起動は R を `--add-dir` で渡す（ops/shell/ccdiscord.zsh:72 の `--add-dir "$AC_CASE_REPORT"`）。`AC_CASE_REPORT` は case.json の `report`（server/sessions.ts:628）。
+- 起動の前に case-home の .claude.json を書き直すが、信頼済みにするのは作業場所 W だけ（server/case-sandbox.ts:423 `next.projects = { [realOr(W)]: { hasTrustDialogAccepted: true } }`。呼び出しは server/sessions.ts:790 の `rewriteCaseClaudeJson(room.CH, realOr(cwd))`）。
+- R は git の置き場ではない別の場所なので、W の信頼では覆われない。
+
+クラウドでの切り分け（本物の claude を、件と同じ `--restricted --tools Read,Write --add-dir R --permission-mode dontAsk` で起動。R は `/tmp/CC報告ファイル/discord-case/<新しい uuid>`・git にしない。W は `git init`。キーは何も送らない。2026-11-19 00:42 UTC。要点は `/tmp/CC報告ファイル/case-probe-watch/2026-11-19/cloud-repro-summary.txt`）:
+
+| 版 | .claude.json の `projects` | 「Adding a new directory」の画面 | 起動後の画面 |
+|---|---|---|---|
+| 2.1.327 | W だけ（今の形） | 有 | 信頼の確認で止まる |
+| 2.1.327 | W と R | 無 | 入力欄 `❯`・`don't ask on` |
+| 2.1.325 | W だけ（今の形） | 無 | 入力欄 `❯`・`don't ask on` |
+| 2.1.325 | W と R | 未確認（返事の表示が途中で切れて読めていない） | 未確認 |
+
+クラウドの起動の形と実物の違い（審査1 推奨3）: 実物（ops/shell/ccdiscord.zsh:72）は `--tools "Bash,Read,Edit,Write,Glob,Grep,Agent,TodoWrite"`・`--settings`・`--strict-mcp-config`・`--disallowedTools`・`--model opus` も付け、囲い（sandbox-exec）の中で動く。クラウドでは `--tools Read,Write` だけで、これらと囲いは無い。確認の画面は `--add-dir` と `projects` の組で出るかが決まると見て切り分けたが、実物の形での確かめは K70 で行う。
+
+判定: 2.1.327 で新しく出た確認で、`projects` に R を足せば出なくなる（1 回ずつの観測）。2.1.325 で今の形に確認が出ないので、R を足すのは前の版の動きに戻す直しになる。
+
+直す物（agent-console だけ。ほかは触らない）:
+1. server/case-sandbox.ts の `rewriteCaseClaudeJson(CH, W)` を `rewriteCaseClaudeJson(CH, W, R)` にする。R は省けない引数（`R?: string` にしない）。`projects` は `{ [realOr(W)]: {…}, [R]: {…} }` の 2 つ（値はどちらも `{ hasTrustDialogAccepted: true }`）。R と `realOr(W)` が同じ文字列なら 1 つ。ほかの鍵（`KEEP_CLAUDE_JSON_KEYS`・`hasCompletedOnboarding`）は変えない。
+2. 同じ関数で、ファイルを書く前に次の 2 つを確かめ、1 つでも当たれば何も書かずに `CaseSandboxUnavailableError` を投げる（件は開かない。今の「書けなければ投げる」:425-427 と同じ扱い）:
+   - (a) `realpathSync(R)` が R と同じ文字列であること（違えば `sandbox unavailable: case report dir is not a real path`。server/sessions.ts:509 の `removeCaseRequest` と同じ考え）。R が無い（realpath が失敗）ときも投げる。
+   - (b) R と、R から `/` までのすべての親に、`.git` という名前の物（ファイル・ディレクトリ・リンクのどれでも。`lstatSync` で有無だけ見る）が無いこと（あれば `sandbox unavailable: case report dir is inside a git repository`）。理由は下の「危険の見積もり」の 2 つ目。
+3. server/sessions.ts:790 の呼び出しで、R に `caseEnv.AC_CASE_REPORT`（`--add-dir` に渡すのと同じ文字列。server/sessions.ts:628 の `info.report`）を、realpath を取らずにそのまま渡す（揃っているかは 2(a) が確かめる）。`AC_CASE_REPORT` が無い・文字列でないときは `CaseSandboxUnavailableError`。件でない（`room === null`）ときは今のまま `beforeNew` は undefined。
+4. probe の件も PO の件も同じ道を通る（probe は server/case-say-probe-wiring.ts:67 の `openCase` で同じ件の開き方を使う）。probe だけに分ける形にはしない。理由: PO の件も 2.1.327 では同じ画面で止まる（入力を待つ）ので、分けると PO の件だけ壊れたままになる。
+5. 試験の直し: tests/unit/case-sandbox.test.ts の `rewriteCaseClaudeJson(` の呼び出し 8 か所（:664・:675・:682・:685・:688・:694・:703・:708）に R を足す。tests/unit/sessions.case.test.ts の件を開く試験（:172-175）と、つなぎ直し・起動し直しの試験（:426 から）に R の鍵の期待を足す。
+6. 版: agent-console の 0.55.2 → 0.55.3。前の直し（bda286a）と同じく package.json・package-lock.json・extension/manifest.json の版と、docs/CHANGELOG.md の 1 行を足す。README は変えない（件の起動の形も、PO の画面も変わらないため）。
+
+つなぎ直しの道（審査1 必須2）:
+- .claude.json の書き直しは、新しく claude を起動するときだけ走る（server/sessions.ts:789-790 の注記。`openTerminal` は、tmux に件が生きていれば :854-856 で、つながらなければ :857-861 で、`beforeNew` を呼ばずにつなぎ直して戻る。`beforeNew` を呼ぶのは新しく起動する :866 だけ）。これは今の決まりで、変えない（つなぎ直しは動いている claude をそのまま使うので、起動の時の確認はもう出ない）。
+- サーバーが起き直って、claude を新しく起動し直す道（restore で tmux が無くなっていた件）は `beforeNew` を通るので、R の鍵も入る（K76）。
+- 直しの前に 2.1.327 で開いて、信頼の確認の画面で止まったままの件があれば、直しの後につなぎ直しても止まったまま。この件は自動では直さない。反映の前に Opus が件の一覧と probe の画面の形（件の画面の中身は読まない。一覧の状態だけ）を見て、確認で止まっている件があれば、PO に「閉じて開き直す」を頼む（件を閉じるのは PO の操作）。止まっている件には case-say の指示が入らない（server/hub.ts:564-573 の判定 4b で、2.1.327 は版の記録で使える版でなく、agent-console.config.json:9 の `caseSayClaudeVersions` にも無いため断られる）ので、Discord の指示が確認の画面に打ち込まれることはない。
+
+触らない物: `PROBE_` で始まる定数、E1〜E4・P0〜P5・R1 の条件、24 時間・3 回の規則、版の記録・鍵・MAC、hooks・見張り、`buildCaseSettings`（§14-14-9 の「options なしで PO の件の設定を変えない」）、room.sb の許し・拒否、ccdiscord.zsh の起動の引数、`casePaths`（R の作り方）、case.json の形、`CASE_DENY_WRITE`・`CASE_DENY_READ`・`CASE_ALLOW_WRITE`・`CASE_DENY_READ_SANDBOX`（server/case-sandbox.ts:74-93・:95-108・:111-121）、`checkCaseSandbox`（server/sessions.ts:552-637）、agent-console.config.json:9 の `caseSayClaudeVersions`（2.1.327 を足して判定 4b を通す近道は取らない）、`writeCaseKeybindings`、つなぎ直しの判定（`openTerminal` の probe・`beforeNew` を呼ぶ条件）、server/case-say-probe.ts と server/case-say-probe-wiring.ts、server/hub.ts の判定 4・4b。
+
+信頼を広げることの危険の見積もり（この直しは「許可」に触るので §14-14-17 の「×の後の進め方」5 により NEEDS_DECISION: で PO が「1」と決めた）:
+- 信頼すると、その場所の `.claude/`（設定・skills・commands・agents）と git の設定が読まれる（画面の文 `Its skills, commands, and agents load and can run commands, and so can the git settings of its repository`）。
+- R の `.claude` は件から書けない（server/case-sandbox.ts:81 の `CASE_DENY_WRITE` に `path.join(p.R, ".claude")`）。R の下の入れ子の `.claude`・`.git` も書けない（同 :344・:348）。R はサーバーが件ごとに新しく作る（道を決めるのは同 :53-69 の `casePaths` の R、作るのは同 :551 の mkdir、呼び出しは server/sessions.ts:532-534 の `writeCaseFiles`）。
+- R の親の git（審査1 必須1）: 画面の文は、信頼が「its repository」の git の設定にも及ぶと書いている。R の親 `/private/tmp/CC報告ファイル` は、件でないセッション（Opus 本体など）からは書ける共有の場所（件の部屋からは読めない: server/case-sandbox.ts:113）。ここに誰かが `.git` を置くと、R がその git の置き場の中になり、守っていない git の設定（W の `.git/config`・hooks の書き込み拒否 :75-78 は W だけ）が信頼の範囲に入る。直す物 2(b) で、件を新しく起動するたびに R から `/` までに `.git` が無いことを確かめ、あれば件を開かない。件が R の中に自分で `.git` を作った場合も、次の起動の時にこの確かめで止まる。2026-11-19 の Mac の実物では、R の親 5 か所（`/private/tmp/CC報告ファイル/discord-case`・`/private/tmp/CC報告ファイル`・`/private/tmp`・`/private`・`/`）のどれにも `.git` は無い（`ls -ld` で「No such file or directory」）。
+- よって、件が R に自分で設定を置いて信頼の後に読ませる道は、今の部屋の拒否と 2(b) の確かめで閉じている。W は既に同じ扱いで信頼済みなので、新しい種類の危険は増えない。
+- 前の版（2.1.325 まで）は R の確認を出さずに使っていたので、R を足すのは前の版の状態に戻す形。
+
+時間・回数への影響: 直した版を入れた後、24 時間の待ち（最後の×の 2026-11-18T18:34:19Z から。明けは 2026-11-19T18:34:19Z、日本時間 11/20 03:34）が明けた後の、最初の件を開くとき（t1）かサーバーの起動（t2）で probe が走る。11/20 03:30 の見回りは明けの 4 分前なので待ち時間中（B）になり、確かめ直しは 11/21 03:30 の見回り（C）になる見込み（U21 と同じ遅れ）。2.1.327 の `failCount` は今 1。
+
+成功条件（この直しの分）:
+
+| 基準 | 検証方法 |
+|---|---|
+| K65 `rewriteCaseClaudeJson(CH, W, R)` の後の `projects` の鍵が W と R の realpath の 2 つちょうど・値はどちらも `{ hasTrustDialogAccepted: true }` | vitest（tests/unit/case-sandbox.test.ts の `rewriteCaseClaudeJson` の組に足す） |
+| K66 W と R の realpath が同じなら鍵は 1 つ | vitest |
+| K67 前のファイルにあった別の鍵（例 `/x`）は残らない・`KEEP_CLAUDE_JSON_KEYS` の扱いは今と同じ | vitest（既存の :663 の試験を R つきに直して通る） |
+| K68 件を新しく開くとき、.claude.json の R の鍵が `--add-dir` に渡す `AC_CASE_REPORT`（realpath を取る前の文字列）と同じ | vitest（tests/unit/sessions.case.test.ts:172-175 の件を開く試験に、.claude.json の `projects` の鍵と、起動の環境の `AC_CASE_REPORT` の文字列が一致する期待を足す） |
+| K69 既存の試験が通る | agent-console の CI が緑 |
+| K70 本物で ok | 数える物: 直しの版を本番に反映した時刻（Opus が本書に書く。以下「反映」）より後に始まった probe の監査 `caseClaudeVersionProbe` の行（版は問わない。24 時間明けの前に claude の版が変わったら、その新しい版の行）。○: 反映から 7 日（168 時間）以内に、最初に `outcome: "ok"` の行があり、版の記録のその版が `usable: true`・`lastResult: "ok"`。×: 反映から 7 日以内に、ok の行より前に `outcome: "denied"` の行がある（7 日を過ぎた後の行は数えない）。`outcome: "aborted"` の行（`abortReason` は server/case-say-probe.ts:536・543 で決まり、この直しと関係ない理由でも出る）は○にも×にも数えず、次の行を待つ。7 日の間に ok も denied も無ければ未判定とし、`BLOCKED:` で読んだ行（aborted なら `abortReason`）を添えて PO に返す。Opus 本体が node で許された欄だけを読み、本書に書き足す（§14-14-17 の C の確かめ直し） |
+| K71 同じ理由の×が 2 回目から 0 回（K64） | ○: 直しの版の反映の時刻から 30 日の間、監査（server/case-say-probe.ts:584-599 が書く `caseClaudeVersionProbe` の行）に、`failedCheck: "P0"` かつ `paneSamples` のどれかに `Adding a new directory` を含む行が 0 件。×: 1 件以上。30 日目の見回りで Opus 本体が数える |
+| K75 R か R の親に `.git` があれば件を開かない | vitest（tests/unit/case-sandbox.test.ts。R の 1 つ上に `.git` のディレクトリを作る形と、R の中に `.git` のファイルを作る形の 2 つで、`rewriteCaseClaudeJson` が `CaseSandboxUnavailableError` を投げ、.claude.json が前の中身のまま） |
+| K76 起動し直す道でも R の鍵が入り、つなぎ直しでは書き直さない | vitest（tests/unit/sessions.case.test.ts:426 からの試験に、起動し直した後の `projects` に R の鍵がある期待と、つなぎ直しでは前の中身のままの期待を足す） |
+| K77 R が realpath と違う・無いときは件を開かない | vitest（tests/unit/case-sandbox.test.ts。R にリンクを渡す形と、無い道を渡す形で投げ、.claude.json が前の中身のまま） |
+
+番号の付け替え（2026-11-20）: 本流の §15 が先に K72〜K74 を使ったため、この節の 3 つを K75〜K77 に付け替えた。agent-console v0.55.3（commit d417835）の tests/unit/case-sandbox.test.ts の試験の名前に残る K72a・K72b は K75、K74a・K74b は K77 を指す。K76 は名前を付けず、tests/unit/sessions.case.test.ts の既存の試験に足した期待で確かめている。
+
+残る危険:
+- U24 claude の次の版が、信頼の鍵の形（`projects` の `hasTrustDialogAccepted`）を変えると、同じ P0 に戻る。そのときは毎日の見回りの D で見つかる（誤って○にはならない側）。
+- U25 2.1.325 で R を足した形は未確認。前の版では R の確認が出ないので、R の鍵は使われないだけと見込むが、K69 と、次に 2.1.325 を使う件で確かめる。
+- U27 2(b) の確かめは claude を新しく起動するときだけ走る。起動した後に、件でないセッションから `/private/tmp/CC報告ファイル`（件の部屋からは読めない: server/case-sandbox.ts:113）や R の親に `.git` が置かれても、その件が動いている間は見ない。次に件を起動し直すときに止まる。置けるのは Mac の利用者（PO・Opus 本体・自分の Mac のセッション）だけで、件の claude は R の親に書けない（:121 の `CASE_ALLOW_WRITE` は W・R・T だけ）。
+- U26 クラウドの観測は各 1 回。Mac の本物（K70）で確かめるまで、直しの効き目は確定としない。
+
+外部事例: 該当事例なし。理由: 自作の仕組みの中で、件の claude を起動する前の設定の書き方の直しで、確かめは試験と実際の記録で行う（§14-14-10 と同じ）。Claude Code の公式の更新履歴（Context7 で確認）には「信頼は置き場所の根で決まり、入れ子の置き場所は別に信頼が要る」とあり、R を別に信頼済みにする形はこれに合う。
+
+審査の記録（§14-14-18）:
+
+| 回 | 日時（UTC） | 結果 | 要点 |
+|---|---|---|---|
+| 1 | 2026-11-19 00:57 | REVISE | 照合 11 行中 合致 10・一部合致 1（R を作るのは server/case-sandbox.ts:551）・不一致 0。必須 3: R の親の `.git`、つなぎ直しの道、K70・K71 の○×。推奨 4: R を省けない引数と呼び出し 8 か所、realpath の確かめ、クラウドの起動の形の違い、触らない物と版。すべて本節に入れた。初回の審査（00:50）は結果の全文が記録に出ず、同じ依頼を出し直した |
+| 2 | 2026-11-19 01:09 | REVISE | 1回目の必須と推奨はすべて入っていると確認。照合 24 件中 合致 21・一部合致 2・不一致 1。必須 2: つなぎ直しの根拠の行（:852-853 → :854-861・:866）、K70 の期限と aborted の扱い。推奨 4: R を作る行 :551、触らない物に `caseSayClaudeVersions`・`checkCaseSandbox`・`CASE_DENY_READ`、起動の後に置かれた `.git`（U27）、行の範囲（hub.ts:564-573・case-sandbox.ts:74-93）。すべて本節に入れた。2 回目の初めの依頼は読む場所（リポジトリ）の指定を入れ忘れて空振りし、01:07 に出し直した |
+| 3 | 2026-11-19 01:14 | APPROVE | 2回目の必須2件・推奨4件はすべて入っていると確認。照合 38 件中 合致 37・不一致 1。必須なし。推奨 2: `checkCaseSandbox` の範囲（:567-594 → :552-637）、K70 の×にも 7 日の期限。どちらも本節に入れた |
+
+PO の実装の承認: 2026-11-20 JST、PO は「1」（実装の手順書を書いてクラウドの担当に作らせ、審査と自動の確かめが通ったら Opus が合流して本番に入れ、毎日の見回りで結果を確かめる）と答えた。対象は上の「直す物」1〜6。本番への反映は GO 委任（docs/handoff/go-record-transcription/opus-delegation.md）に基づき Opus が行い、反映の時刻を本節に書く（K70 の起点）。
+
+本番への反映（K70・K71 の起点）: 2026-11-20 02:03 JST（`scripts/ac-update.sh v0.55.3` の記録の最初の行が 02:02:06「v0.55.3 を取得します」、最後の時刻つきの行が 02:03:31 で、その直後の行が「更新しました: v0.55.2 -> v0.55.3」。生の出力は /tmp/CC報告ファイル/case-probe-watch/2026-11-20/ac-update.txt）。POの委任に基づくClaude Opus発行。
+- 合流: agent-console PR #110（HEAD a0089b2810f39d5068097b9d484df8f20dd0f849 → 合流の commit d417835989998de04e1442a38fd5626251307e5e）。手順書 card-cs3a-fix5 の審査 APPROVE・合流前の審査役（opus）APPROVE 必須 0 件・CI check (macos-latest)・check (ubuntu-latest) とも pass。タグ v0.55.3 は合流の commit に付けた。
+- 反映の確かめ: 自己診断（別ポート 4320）と本番の `/healthz`（ポート 4319）が `version 0.55.3`・`commit d417835989998de04e1442a38fd5626251307e5e` を返した。反映の直前に開いていた件は 0 件（開いているセッション 11 件はすべて設計の担当）で、PO に閉じて開き直しを頼む件は無かった。
+- K70 の期限: 2026-11-27 02:03 JST（反映から 168 時間）。K71 の数える日: 2026-12-20 JST（反映から 30 日）。
+- 戻し方: `bash scripts/ac-update.sh v0.55.2`。
+
+## 15. 改訂3: K0「同意の遅れ」の数え方から、見張りが PO の入力を読む前に止めた呼び出しを外す（2026-11-19）
+
+状態: 設計案（Opus 作成・自己審査済み、§15-9）。PO が「点検の数え方を直す設計を書く」を選択（2026-11-19 週次点検の調べの報告への返事「1」）。実装は PO の実装承認の後。見張り（consent_check.py・フック）は変えない。
+
+### 15-1 目的（PO の選択）
+
+- K0 の「遅れ」を、本当に「見張りが PO の最新の入力を読めなかった」呼び出しだけにする。
+- 直した数で、§6 の案 F（UserPromptSubmit で別の台帳に記録）が要るかを決める。
+
+利用者に見える変化:
+- 前: 10/26 から毎週「K0 判定: ×（案 F に切り替える設計に戻す）」が出る（20261102: 175件中154件 … 20261119: 77件中45件）。中身の多くが数え違いの疑いで、案 F の要否が決められない。
+- 後: 週次点検の K0 の行が、数える件数・外した件数・遅れの件数（見張りが入力を読んだうえでの遅れ）を分けて出す。○なら ADR-1033 を Accepted に上げる判断材料になり、×なら案 F の設計に進む根拠になる。
+
+### 15-2 現状（観測事実）
+
+- 数え方（scripts/dev/consent-audit.py:345-399、origin/main fd72a7b01）: すべての consent_probe について「本当の直前の人の入力」を記録から探し（tool_use_id が本体の記録にあればその行の位置、無ければ probe の now より前の最後の人の入力）、それが typed の「1」なら対象1件、probe の h_uuid と違えば遅れ1件。probe の reason も h_uuid が null かも見ていない（同:385-398）。
+- 見張り（docs/handoff/conversation-consent/hooks/consent_check.py:264-276、手元 ~/.claude/scripts/consent_check.py と同一）は、サブエージェントからの呼び出し（reason=agent_id）と transcript_path が使えない呼び出し（reason=transcript_path）、記録が読めない呼び出し（transcript_unparsable）で、H を読む前に止める。このとき probe の h_uuid は null（同:285-286 より前で返るため）。
+- 手元の agent-events.jsonl の consent_probe 全 863 件（2026-11-19 集計）: agent_id 451・transcript_path 208・h_not_typed_one 76・ticket_format 64・no_human_input 63・command_mismatch 1。agent_id・transcript_path・no_human_input の 722 件は h_uuid が null。result=True は 0 件。
+- サブエージェントの probe の session は本体の会話の id で、その tool_use は本体の記録に無い。そのため時刻の道に回り、本体の会話の直前の入力が「1」なら h_uuid null と比べて必ず遅れになる（probe のある 62 会話のうち 49 会話にサブエージェントの probe がある）。
+- 生データと集計: ~/CC報告ファイル-keep/consent-weekly/20261119-k0-delay-analysis.md。
+
+### 15-3 変更後の仕組み
+
+(a) k0_delays は、probe の reason が次の3つのものを数えない（外した件数として別に数える）。
+
+| reason | 理由 |
+|---|---|
+| `agent_id` | サブエージェントは仕様で止める（K5・R4）。H を読まない |
+| `transcript_path` | 記録の場所が使えず H を読まない |
+| `transcript_unparsable` | 記録が読めず H を読まない |
+
+- reason が無い probe（旧形式）は今までどおり数える。
+- `no_human_input`（末尾 4MB を読んだが人の入力が無かった）は数える。本当の直前が「1」なら、読めなかった本物の遅れだから。
+- 遅れの内訳として、h_uuid が null の遅れ（no_human_input 等）と、h_uuid がある遅れを分けて返す。
+
+(b) 返り値を `(total, delays, skipped, delays_no_h)` にする。週次点検の行（同:1911-1916）を次の形にする。判定（○×・保留・K0_TARGET=20）の決まりは変えない。
+
+```
+K0: 直前の人の入力が typed の「1」だった呼び出し %d 件のうち、遅れ %d 件（うち見張りが入力を見つけられなかった %d 件）（目標: %d 件たまった時点で遅れ0）／H を読む前に止めた呼び出しで除外 %d 件
+```
+
+(c) 数える期間（今は全期間）は変えない。§2 の K0 の「20件たまった時点で」は累計の決まりで、7日に絞ると対象が足りなくなるため。
+
+### 15-4 対象と対象外
+
+- 対象: scripts/dev/consent-audit.py（k0_delays と run_audit の K0 の行）、scripts/dev/consent-unit-tests.py（T0 に例を足す）、本書。
+- 手元への反映: 週次点検は ~/.salesanchor-tools/scripts/dev/consent-audit.py を使う。マージ後、その写しを origin/main に合わせる道（既存の写しの更新手順）で入れる。手順の確認は実装カードで行う。
+- 対象外: consent_check.py・フック・settings.json（止め方は変えない）、§2 の K0 の判定の決まり、既にある agent-events.jsonl の行、案 F そのもの。
+
+### 15-5 代替案
+
+| 案 | 採否 | 理由 |
+|---|---|---|
+| A reason で H を読む前の止めを外す（本案） | 採用 | 見張りが自分で書いた理由を使うので、外す範囲が見張りの動きと一致する |
+| B h_uuid が null の probe をすべて外す | 不採用 | no_human_input（読めなかった本物の遅れ）まで消える |
+| C 数え方は直さず案 F に切り替える | 不採用 | 遅れが本当にあるかが分からないまま台帳を1つ増やす（§6 で予備とした理由と同じ） |
+| D サブエージェントの記録（subagents の下）まで探して直前を決める | 不採用 | サブエージェントは H を読まずに止めるので、直前が何でも K0 の意味（見張りが読めたか）に関係しない |
+
+### 15-6 リスクと対処
+
+| # | リスク | 対処 |
+|---|---|---|
+| R11 | 見張りが将来 reason の名前を変えると、外すべき呼び出しがまた数えられる | 外す reason を定数1か所に置き、試験 T0-b で3つの名前を固定する。名前を変える改訂は本節の定数も直す |
+| R12 | 直した後、本物の遅れ（h_uuid ありで違う）が1件以上出る | §2 の決まりどおり ×。案 F の設計に進む（本節は案 F を不要と決めるものではない） |
+| R13 | 外した件数が多く、K0 の対象が 20 件に届かない | 判定は「保留」と出る（今の作り）。対象は今の 77 件より減るが、どれだけ減るかは直した道具で初めて分かる。届かなければ保留のまま報告し、届くまで毎週数える |
+
+戻し方: この PR の revert。手元の写しは前の版に戻す。点検の行の形が戻るだけで、見張りには影響しない。
+
+### 15-7 成功条件
+
+| # | 基準 | 検証方法 |
+|---|---|---|
+| K72 | k0_delays が reason=agent_id・transcript_path・transcript_unparsable の probe を数えず外した件数に入れ、no_human_input と reason 無しは数える。既存の T0-a（対象5・遅れ2）は変わらない | consent-unit-tests.py T0-b: T0-a の記録に、直前が「1」になる位置で agent_id 2件・transcript_path 1件・transcript_unparsable 1件・no_human_input 1件（h_uuid null）の probe を足す → total=6・delays=3・skipped=4・delays_no_h=1。T0-a も PASS のまま。全件一致で○ |
+| K73 | マージ後、手元の写しで `consent-audit.py --audit` を打つと、K0 の行に「除外」と「うち見張りが入力を見つけられなかった」が出る | Opus が実行し、出力を ~/CC報告ファイル-keep/consent-weekly/ に保存。行が §15-3(b) の形なら○ |
+| K74 | 直した数で K0 の○×が出る（対象 20 件以上） | K73 の出力。○なら ADR-1033 の昇格判断を PO に上げる。×なら遅れの probe を tool_use_id で特定して PO に報告し、案 F の設計に進むかを聞く |
+
+### 15-8 実装の分け方（Sonnet へ・1便）
+
+- 便K0: §15-3(a)(b) と T0-b。触るのは consent-audit.py・consent-unit-tests.py だけ。PR 1本。フックのパスを含まないので po-apply-consent.sh は不要。
+- 試験: `python3 scripts/dev/consent-unit-tests.py` の全件 PASS。
+- マージ後に Opus: 手元の写しの更新、K73・K74 の実行と保存、PO への報告。
+
+### 15-9 設計審査（Opus の自己審査。独立した第二者の審査ではない）
+
+判定: APPROVE（HIGH 0・MEDIUM 0・LOW 2）。
+- 整合: 止め方（§4-5・K1〜K7）を変えない。§2 の K0 の定義「フックが動く時点で、PO の直前の入力が会話記録に書かれている」は、フックが記録を読む呼び出しにだけ意味がある。H を読む前に止める呼び出しを外すのは定義の範囲内で、定義を変えない。§13 の改訂（異常の数え方）と同じく点検の数え方だけの直し。
+- 根拠: 行番号は origin/main fd72a7b01 の worktree で確認。probe の内訳は保存した集計。
+- 検証可能性: K72 は試験で○×、K73・K74 は保存ファイルで○×。
+- LOW-1: 45 件のうち数え違いと本物の遅れの内訳は、直した道具で初めて出る（会話記録を Bash で読むことは見張りが止めるため）。直した後の数が設計の前提（多くが数え違い）と違っても、§2 の決まりで ×→案 F に進むので、判断は止まらない。
+- LOW-2: 期間が全期間のため、過去の本物の遅れは消えない。§15-3(c) のとおり変えない。必要になれば反映日以降に絞る改訂を別に出す。
+- 未解決の前提: なし。PO の判断が要るのは実装の承認だけ。
+
+外部事例: 該当事例なし。理由: 自作の点検道具の数え方の直しで、正しさは実際の記録と単体試験で確かめる。

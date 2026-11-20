@@ -45,7 +45,8 @@ const team = { id: 7, name: "Fixture Team", leader_id: null, description: null }
 const supplier = { id: 63, name: "Fixture supplier", contact_name: null, email: null, phone: null, address: null, notes: null };
 const ownRow = { id: 1, tenant_id: 1, product_id: 77, physical_qty: 2, reserved_qty: 0, available_qty: 2, unit_price: null, condition: "Fixture Cond", status: "in_stock", note_ja: null, note_en: null, antique_ledger_id: null, created_at: "", updated_at: "" };
 const invoice = { id: 7, invoice_number: "INV-7", company_id: 4, currency: "USD", total_amount: 10, amount_jpy: null, status: "draft", issued_at: null, due_date: null, paid_at: null, created_at: "" };
-const quote = { id: 7, quote_code: "Q-7", company_id: 4, currency: "USD", total_amount: 10, status: "approved", created_at: "" };
+// invoice-create-portfolio 便R5: 請求書の作成画面は在庫の道を読み、カテゴリの名前を選ぶ欄に出す（useDraftInventory.ts の型）
+const draftInventory = { categories: [{ code: "FX", name_ja: "Fixture Category" }], items: [] };
 const followUps = { items: [{ customer_id: 5, name: "Fixture Customer", segment: "order_stopped", days: 3, last_order_at: null, last_contact_at: null, assignee: "Fixture Assignee" }] };
 const revenue = { revenue: { target: 2000000, actual: 1234567, pace: "on_track" }, split: { new: 1, repeat: 1 }, new_customers: { target: 1, actual: 1 }, active_existing_customers: 1, gross_margin: { amount: 1, uncosted_orders: 0 } };
 const reasons = { reasons: [{ label: "Fixture Reason", primary_count: 1, secondary_count: 0 }], memos: [] };
@@ -55,7 +56,7 @@ const fixtures: Record<string, unknown> = {
   "/suppliers/63": supplier,
   "/own-inventory?page=1&per_page=20": [ownRow],
   "/invoices": [invoice],
-  "/quotes?status=approved": [quote],
+  "/invoices/draft-inventory": draftInventory,
   "/analytics/follow-ups?": followUps,
 };
 // 売上と理由は月で path が変わるので頭で見分ける。画面の中の部品が別に取る物（会社の選び欄など）は空の一覧で返す
@@ -76,7 +77,7 @@ const cases: Case[] = [
   { name: "supplier edit", Page: SupplierEditPage, route: "/suppliers/:id/edit", at: "/suppliers/63/edit", path: "/suppliers/63", text: "Fixture supplier", value: true, spinner: false },
   { name: "own inventory", Page: OwnInventoryPage, route: "/own-inventory", at: "/own-inventory", path: "/own-inventory?page=1&per_page=20", text: "Fixture Cond", value: false, spinner: true },
   { name: "follow ups", Page: FollowUpsPage, route: "/dashboard/follow-ups", at: "/dashboard/follow-ups", path: "/analytics/follow-ups?", text: "Fixture Customer", value: false, spinner: true },
-  { name: "invoice create", Page: InvoiceCreatePage, route: "/invoices/new", at: "/invoices/new", path: "/quotes?status=approved", text: "Q-7", value: false, spinner: false },
+  { name: "invoice create", Page: InvoiceCreatePage, route: "/invoices/new", at: "/invoices/new", path: "/invoices/draft-inventory", text: "Fixture Category", value: false, spinner: false },
   { name: "invoices", Page: InvoicesPage, route: "/invoices", at: "/invoices", path: "/invoices", text: "INV-7", value: false, spinner: true },
   { name: "team edit", Page: TeamEditPage, route: "/teams/:id/edit", at: "/teams/7/edit", path: "/teams/7", text: "Fixture Team", value: true, spinner: false },
   { name: "revenue", Page: FunnelRevenuePage, route: "/dashboard/revenue", at: "/dashboard/revenue", path: /^\/analytics\/revenue-summary\?month=\d{4}-\d{2}$/, text: "¥1,234,567", value: false, spinner: true },

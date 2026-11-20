@@ -50,8 +50,9 @@ beforeEach(async () => {
   await instance.init({ lng: 'en', resources: { en: { translation: en } }, interpolation: { escapeValue: false } });
   vi.stubGlobal('fetch', vi.fn(() => { throw new Error('Unexpected network'); }));
   mock.get.mockImplementation(async (url: string) => {
-    if (url === '/quotes?status=approved') return [];
     if (url === '/companies?per_page=100') return [company];
+    // invoice-create-portfolio 便R5: 請求書の作成画面は在庫の道を 1 回読む
+    if (url === '/invoices/draft-inventory') return { categories: [], items: [] };
     if (url === '/contacts?company_id=4&per_page=100') return [contact];
     if (url === '/products/tcg-types') return [{ code: 'pokemon', name_ja: 'Pokemon' }];
     if (url === '/products/attribute-options') return productOptions;
@@ -65,17 +66,17 @@ afterEach(() => { cleanup(); queryClient.clear(); vi.restoreAllMocks(); vi.unstu
 
 describe('commerce submit Button migration contracts', () => {
   it.each([
-    ['invoice', <InvoiceCreatePage />, 'invoice-add-blank', 'invoice-item-row-'],
-    ['quote', <QuoteCreatePage />, 'quote-add-blank', 'quote-item-row-'],
-  ] as const)('%s addItem appends one blank row per click with zero writes', async (_name, page, buttonId, rowPrefix) => {
+    // invoice-create-portfolio 便R5: 請求書の行は選ぶ欄（カテゴリ・商品・状態）と数の欄 2 つ（数量・単価）。空の行は数の欄も空
+    ['invoice', <InvoiceCreatePage />, 'invoice-add-row', 'invoice-item-row-', [], ['', '']],
+    ['quote', <QuoteCreatePage />, 'quote-add-blank', 'quote-item-row-', ['', '', '', ''], ['1', '0', '']],
+  ] as const)('%s addItem appends one blank row per click with zero writes', async (_name, page, buttonId, rowPrefix, textValues, numberValues) => {
     render(wrap(page));
-    if (buttonId === 'invoice-add-blank') fireEvent.click(await screen.findByTestId('invoice-mode-inventory'));
     const button = await screen.findByTestId(buttonId) as HTMLButtonElement;
     const count = () => document.querySelectorAll(`tr[data-testid^="${rowPrefix}"]`).length;
     const before = count();
     fireEvent.click(button); expect(count()).toBe(before + 1);
-    const row = screen.getByTestId(`${rowPrefix}${before}`); const inputs = within(row).getAllByRole('textbox'); const numbers = within(row).getAllByRole('spinbutton');
-    expect(inputs.map(input => (input as HTMLInputElement).value)).toEqual(['', '', '', '']); expect(numbers.map(input => (input as HTMLInputElement).value)).toEqual(['1', '0', '']);
+    const row = screen.getByTestId(`${rowPrefix}${before}`); const inputs = within(row).queryAllByRole('textbox'); const numbers = within(row).getAllByRole('spinbutton');
+    expect(inputs.map(input => (input as HTMLInputElement).value)).toEqual([...textValues]); expect(numbers.map(input => (input as HTMLInputElement).value)).toEqual([...numberValues]);
     fireEvent.click(button); expect(count()).toBe(before + 2);
     expect(button.disabled).toBe(false); expect(button.getAttribute('aria-busy')).toBeNull();
     expect(mock.post).not.toHaveBeenCalled(); expect(mock.patch).not.toHaveBeenCalled(); expect(mock.delete).not.toHaveBeenCalled();

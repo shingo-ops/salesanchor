@@ -52,6 +52,7 @@ jobs:
               - 'scripts/migration-dryrun-report.py'
               - 'scripts/check_public_tenant_rls.py'
               - 'backend/app/ops/tenant_rls_allowlist.py'
+              - 'backend/app/ops/tenant_rls_checks.py'
               - 'backend/app/services/tenant.py'
               - 'scripts/check_tenant_template_shape.py'
               - 'backend/tests/test_check_tenant_template_shape.py'
