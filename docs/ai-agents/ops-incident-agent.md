@@ -111,4 +111,99 @@
 
 ## 3. 24 時間保守の担当（ADR-1012 の B）
 
-- 段階4 の設計で足す（ADR-1012 の「追記（2026-10-22）」）。それまでこの節は空のまま。
+### 3-0. この節の扱い
+
+- 読む担当: サーバーに起こされたクラウドのまとめ役（Opus）。まとめ役は、件の種類の節（§3-2 以降）と §3-1 を、調べ係（クラウドの Sonnet）への依頼に写して渡す。役割と流れの正本は `docs/handoff/ai-ops-247/stage4-requirements.md` の「役割と流れ」。
+- 中身の決まり（要件 R3）: 種類ごとに「調べる範囲」「してよいこと」「止まって PO に聞く条件」を置く。この節に無い種類では AI を起こさない（要件 R4）。
+- 今ある種類（v1・5 種）: 2026-10-16〜2026-11-08 の本番の記録で回数の多い順（ログイン失敗の 2 種を除く。要件 C4）。数は `docs/handoff/ai-ops-247/stage4-recon.md` §3。
+  - §3-2 ContainerUnhealthy（25 件）・§3-3 HighMemoryUsage（20 件）・§3-4 KumaMonitorDown（9 件）・§3-5 ServiceDown（8 件）・§3-6 BackendHighLatency（6 件）
+- 見張りの条件の正本は `monitoring/prometheus/alert_rules.yml`、人向けの手順は `docs/runbooks/alerts.md`。この節は条件を書き写さない。行番号だけを指す。
+- 使う前に揃える前提（まだ揃っていない。揃うまで、この節で AI を起こさない）:
+  - P-1 サーバーが AI を起こす仕組み（段階4 の実装）。
+  - P-2 調べ係の環境 ops-investigate-3 にグラフの鍵を足す。今の環境の鍵は、相談係の入口（case-api.salesanchor.jp）とダミー 2 つだけ（`docs/handoff/ai-ops-247/card-stage4-bin1.md:57-59`）。鍵はクラウド専用の読み取りの鍵（Viewer）を新しく作る（`docs/handoff/ai-ops-247/stage4-requirements.md` の U4 の行）。
+  - P-3 グラフの数を読む道を、クラウドの調べ係の環境から 1 回試す。道の形は Grafana の公式資料（`GET /api/datasources/proxy/uid/:uid/*`。Context7 で 2026-11-20 確認）による。手元の読み取りの鍵では、2026-11-19T16:40Z に下の §3-1 の道で `count(up)` が 200・9 を返した。§3-2〜§3-6 で使う数の名前も、同じ時刻に全部あった。データ元の識別名を `prometheus` にした道は 404（`docs/runbooks/claude-monitor-access.md:87` の例はこの形で、今は通らない）。
+- 種類を足すとき・直すときは、この正本を直す PR を出す。直した PR の審査と PO の承認が済むまで、新しい中身で AI を起こさない。
+
+### 3-1. どの種類にも共通の決まり
+
+読んでよいもの:
+- 障害の記録: 相談係の読む窓（§1-5 と同じ口・同じ書き方）で `ai_cloud.public__ops_incidents` と `ai_cloud.public__ops_incident_events` を読む。時刻・状態（status）・出来事の種類（kind）は見える。通知の名前（alertname）と強さ（severity）は今は伏せてある（`migrations/20261024_100300_create_ai_cloud_views.sql:164-169`）。名前は、サーバーが起こすときの文で渡す（`docs/handoff/ai-ops-247/stage4-design.md` §2 の流れ（２））。
+- グラフの数: Prometheus の数だけ。道は `https://app.salesanchor.jp/grafana/api/datasources/proxy/uid/PBFA97CFB590B2093/api/v1/query` と `.../api/v1/query_range`（データ元の識別名の正本は `monitoring/grafana/provisioning/datasources/datasources.yml:9`）。鳴っている通知の札（どの箱・どの見張り・どの機械か）は `ALERTS{alertname="<名前>",alertstate="firing"}` で読む。
+- コード: `raw.githubusercontent.com` から 1 ファイルずつ（`docs/handoff/ai-ops-247/stage4-design.md` §4・§13 P2）。
+
+読まないもの:
+- ログ（Loki）。伏せていないので個人情報が入りうる。使うかは別の宿題 U6（`docs/handoff/ai-ops-247/stage4-design.md` §2 弊害）。
+- 本番のサーバーの中（`docker`・`ssh`）。調べ係には道が無い。サーバーの中を見ないと分からないことは、報告の `risk` に「サーバーの中で確かめる必要がある」と、何を見るかを書く。
+
+してよいこと:
+- 上の「読んでよいもの」を読むこと。
+- 報告を 1 通書くこと（§1-5 の報告の口・§1-7 と同じ形）。件番号と札（`X-Case-Ticket`）は、サーバーが起こすときの文で渡す（`docs/handoff/ai-ops-247/stage4-design.md` §2 の流れ（２））。直し方の案は `proposal` に書く。
+- グラフの数を根拠にするときは、`evidence` の `source` を `"graph"` にし、`what` に式と時刻の範囲（UTC）を書く。報告の口は `evidence` の形を問わない（`backend/app/routers/ops_case.py:197`）。
+- 件ごとに「対応が要ったか」を報告の `summary` の 1 行目に「対応: 要 / 不要」と書き、その根拠を `evidence` に書く（要件 R8）。不要と書いてよいのは、各種類の節の「不要と書いてよい条件」に当たるときだけ。
+
+してはいけないこと（どの種類でも）:
+- 本番を変えること。箱の再起動、ファイルや記録の削除、設定や secrets の変更、見張りの一時停止（`amtool silence`）を含む（要件 R7）。
+- 応急処置。応急処置はサーバーの係の仕事（段階3 便G）。AI は、その結果を出来事の表（kind `first_aid`）で読むだけ。
+- PO の許可の前の実装・PR（要件の流れ F5）。
+
+止まって PO に聞く条件（どの種類でも）:
+- 直すには本番の変更が要る。報告の `needs_decision` に「何を・なぜ変えるか」を書いて止まる。
+- 読んだ数が、この節の書き方と合わない（数の名前が無い・道が 401・403・404 を返す）。推測で別の数を読まない。読めなかったことを `risk` に書いて止まる。
+- 同じ種類の件が、件の始まりから 24 時間の内に 3 件以上ある。
+
+### 3-2. ContainerUnhealthy
+
+- 見張りの条件: `monitoring/prometheus/alert_rules.yml:338-347`。人向けの手順: `docs/runbooks/alerts.md` の「ContainerUnhealthy」。
+- 調べる範囲:
+  - どの箱か: `ALERTS{alertname="ContainerUnhealthy",alertstate="firing"}` の `service`。
+  - いつから・いつまで不健康だったか: `salesanchor_container_unhealthy{service="<箱>"}` を件の始まりの 1 時間前から今まで、1 分刻みで（query_range）。
+  - 箱が動いているか: `salesanchor_container_running{service="<箱>"}`。
+  - 応急処置の結果: 出来事の表の kind `first_aid` の行（時刻だけ。中身の detail は伏せてある）。
+- 読めないこと（`risk` に書く）: 健康診断の最後の記録（`docker inspect`）と箱のログ。gemini-egress のときの prod2 の中継（tinyproxy）の状態。
+- 不要と書いてよい条件: 無し（v1）。celery-worker・celery-beat・discord-gateway が止まると、解析・定期の作業・Discord の受信が止まる。gemini-egress は、Gemini が直接つながっていれば利用者への影響は無い。ただし、直接つながっているかは v1 の読み方では分からない（`docs/runbooks/alerts.md` の同じ節の「影響」）。
+- 止まって PO に聞く条件: §3-1 のほか、同じ箱が 24 時間の内に 2 回以上不健康になった。
+
+### 3-3. HighMemoryUsage
+
+- 見張りの条件: `monitoring/prometheus/alert_rules.yml:20-29`。人向けの手順: `docs/runbooks/alerts.md` の「HighMemoryUsage」。
+- 調べる範囲:
+  - どの機械か: `ALERTS{alertname="HighMemoryUsage",alertstate="firing"}` の `instance`。
+  - 使用率の動き: `(1 - node_memory_MemAvailable_bytes{instance="<機械>"} / node_memory_MemTotal_bytes{instance="<機械>"}) * 100` を件の始まりの 6 時間前から今まで。
+  - docker の土台のメモリ（app-vps のときだけ）: `salesanchor_dockerd_rss_bytes{instance="app-vps"}`。1GiB を超えていれば、そのことを `cause` の候補に書く（人向けの手順の DockerdMemoryHigh の扱いと同じ）。
+- 読めないこと（`risk` に書く）: 箱ごとのメモリ。箱ごとの数を取る仕組み（cAdvisor）は止めてある（`monitoring/prometheus/prometheus.yml:74-77`）。どの箱が使っているかは、サーバーの中で `docker stats --no-stream` を見る必要がある。
+- 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に同じ機械で再び鳴っていない。
+- 止まって PO に聞く条件: §3-1 のほか、使用率が 95% を超えている。
+
+### 3-4. KumaMonitorDown
+
+- 見張りの条件: `monitoring/prometheus/alert_rules.yml:168-177`。人向けの手順: `docs/runbooks/alerts.md` の「KumaMonitorDown」。
+- 調べる範囲:
+  - どの見張りか: `ALERTS{alertname="KumaMonitorDown",alertstate="firing"}` の `monitor_name`。
+  - ほかの見張りも落ちているか: `monitor_status`（全部）。
+  - バックエンドが答えているか: `up{job="backend"}`。
+  - バックエンドの失敗が増えたか: `sum(rate(http_requests_total{job="backend",status=~"5.."}[5m]))` を件の始まりの 1 時間前から今まで。
+- 読めないこと（`risk` に書く）: 外から実際にページを開いた結果。調べ係の環境は外へ出られない（ネットワーク None）。
+- 不要と書いてよい条件: 無し（v1）。利用者の入口が落ちていた可能性があるため。
+- 止まって PO に聞く条件: §3-1 のほか、2 つ以上の見張りが同時に落ちている。
+
+### 3-5. ServiceDown
+
+- 見張りの条件: `monitoring/prometheus/alert_rules.yml:58-67`。人向けの手順: `docs/runbooks/alerts.md` の「ServiceDown」。
+- 調べる範囲:
+  - どの対象か: `ALERTS{alertname="ServiceDown",alertstate="firing"}` の `job` と `instance`。
+  - ほかの対象も落ちているか: `up`（全部）。`instance` は機械の名前（app-vps・mgmt-vps）のことも、対象の名前（`uptime-kuma:3001` など）のこともある（2026-11-19T16:40Z に `count(up) by (instance)` で 8 種）。2 つ以上が 0 なら、見張りの土台か通り道の問題の候補。1 つだけ 0 なら、その対象の問題の候補。
+  - いつから・いつまで落ちていたか: `up{job="<対象>"}` を件の始まりの 1 時間前から今まで。
+- 読めないこと（`risk` に書く）: `docker compose ps` と箱のログ。
+- 不要と書いてよい条件: 無し（v1）。札が page で、利用者に影響が出ている見込みの通知のため（`docs/runbooks/alerts.md` の「札（tier）の意味」）。
+- 止まって PO に聞く条件: §3-1 のほか、`job` が `backend` のとき。
+
+### 3-6. BackendHighLatency
+
+- 見張りの条件: `monitoring/prometheus/alert_rules.yml:83-92`。人向けの手順: `docs/runbooks/alerts.md` の「BackendHighLatency」。
+- 調べる範囲:
+  - 遅いリクエストの割合の動き: 見張りの条件の式（行番号は上）を、件の始まりの 1 時間前から今まで。
+  - どの道（handler）が遅いか: 人向けの手順の同じ節にある `topk(5, ...)` の式。
+  - 同時に処理している数: `http_requests_in_flight{job="backend"}`（BackendWorkerSaturated と同じ数）。
+- 読めないこと（`risk` に書く）: DB の中の混み具合。v1 の読み方には入っていない。
+- 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に再び鳴っていない。
+- 止まって PO に聞く条件: §3-1 のほか、遅い道が保守の口（`/api/v1/ops/` の下）だけのとき（AI 自身の読み取りが原因の候補になるため）。
