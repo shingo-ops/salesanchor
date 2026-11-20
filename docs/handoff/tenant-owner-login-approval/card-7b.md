@@ -15,7 +15,8 @@
 - 中9（手元の GitHub の MCP の道具）: Opus が 2026-11-20 に `claude mcp list` を流し、GitHub の道具が無いことを確かめた。限界に書く。
 - 中10（`--body "$(cat f.md)"` が抜ける）: 3-3 で、書き込みの形の命令に `$(` か `` ` `` があれば止める。C20。
 - 軽（MultiEdit がクラウドに届かない・MCP の文書送り・GO を探す読むだけの命令・Edit の一部書き換え・普通でないファイル・`-t` の探し方・クラウドの内部エラーの試験・試験の禁止語）: 2・3・4・6 にそれぞれ書いた。L47・L48・C21・C22・C24・C25。
-審査: 4回目 REVISE（クラウドの設計審査役、2026-11-20 01:59 UTC、commit 2f8d92845）。3回目の指摘はすべて解けていると判定。新しい指摘は中2・軽3・未確認1。このカードの分: 中1 は、名前を付けない `GH_TOKEN=$(gh auth token) gh run view N --log` の形（docs/ai-agents/evidence-registry.md:386,389）も止まることを6の弊害に書き、L50 で止まることを確かめる。通す形は増やさない（止める側に倒す。手元の gh は鍵を付けなくても今の名前で読めるので `gh run view N --log` と書けば足りる）。軽3 は dispatch.sh の行番号を実物（58行・case は14行・PreToolUse は19行・見張りの並びは27行）に合わせた。軽4 は決まり W の読みを決まり R の例外と書いた。5回目の審査の結果をこの下に書き足す。未審査の間は実装に渡さない。
+審査: 4回目 REVISE（クラウドの設計審査役、2026-11-20 01:59 UTC、commit 2f8d92845）。3回目の指摘はすべて解けていると判定。新しい指摘は中2・軽3・未確認1。このカードの分: 中1 は、名前を付けない `GH_TOKEN=$(gh auth token) gh run view N --log` の形（docs/ai-agents/evidence-registry.md:386,389）も止まることを6の弊害に書き、L50 で止まることを確かめる。通す形は増やさない（止める側に倒す。手元の gh は鍵を付けなくても今の名前で読めるので `gh run view N --log` と書けば足りる）。軽3 は dispatch.sh の行番号を実物（58行・case は14行・PreToolUse は19行・見張りの並びは27行）に合わせた。軽4 は決まり W の読みを決まり R の例外と書いた。
+審査: 5回目 APPROVE（クラウドの設計審査役、2026-11-20 02:06 UTC、commit 45711d6b9）。重0・中0・軽2。軽1 は L50 を「止めるもの（exit 2）」の並びへ移した。軽2 は design.md 便7 の台本の写しの保存を tee の形と書いた。軽2件は合格の後に直した（commit はこの下の版）。実装に渡してよい。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。手元の settings.json への導入は Opus が共通の台本で行い、このカードの範囲外。PR は作らない（Opus が作る）。
 基準: 枝 release/tenant-owner-bin7b-go-identity-guard（Opus が origin/main から作って渡す）。
 
@@ -156,7 +157,6 @@ test_guard.py（手元）では、各件を subprocess で guard.py に JSON を
 - L31 `GH_TOKEN="$(gh auth token --user shingo-ops)" gh api -X GET repos/x/y/pulls --paginate -q '.[].number'`。
 - L32 `GH_TOKEN="$(gh auth token --user shingo-ops)" gh api --method=GET repos/x/y/rulesets/1 --jq .rules`。
 - L45 L6 で、`--body-file b.md`（相対の道）。入力の `cwd` の一時のフォルダに b.md（GO の文字なし）を置く。
-- L50 `GH_TOKEN=$(gh auth token) gh run view 1 --log`（名前を付けない gh auth token の読むだけの形。審査4回目の中1）→ 止める側（2）に入れる。
 - L49 札と語: test_guard.py が `importlib.util.spec_from_file_location` で `os.path.join(HERE, '..', '..', 'dev', 'consent-audit.py')` を読み、`_ga_manifest(札の全文, 'go-identity-guard')` が None でなく、`_ga_words_ok(guard.py の全文)` が True（手本の F9 と同じ）。
 止めるもの（exit 2）:
 - L10 `gh auth switch --user shingo-ops`。
@@ -195,6 +195,7 @@ test_guard.py（手元）では、各件を subprocess で guard.py に JSON を
 - L46 L45 で、b.md の中身に `GO #12 abc1234` があるもの。
 - L47 L6 で、`--body-file /dev/stdin`（普通のファイルでない）。
 - L48 Edit で、中身が `name: guard-files check` の一時の .github/workflows/z.yml の old_string `check` を new_string `gate` にする。
+- L50 `GH_TOKEN=$(gh auth token) gh run view 1 --log`（名前を付けない gh auth token の読むだけの形。審査4回目の中1）→ 止める側（2）に入れる。
 
 test_go_comment_guard.py（クラウド）では、各件を subprocess で go_comment_guard.py に流す。入力 JSON には `hook_event_name: "PreToolUse"` と `cwd`（一時のフォルダ）を入れる。dispatch.sh 経由の件は `CLAUDE_CODE_REMOTE=true` を付けて流す。dispatch.sh は hook_event_name が PreToolUse でないと見張りを呼ばない（`scripts/agent-hooks/cloud/dispatch.sh:14-33`。case は14行、PreToolUse の分岐は19行、見張りの並びは27行。審査3回目の中6・4回目の軽3）。
 - C1 mcp__github__add_issue_comment の body が `GO #12 abc1234` → 2。
