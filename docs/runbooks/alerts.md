@@ -1,12 +1,12 @@
 # 見張りのルール別 手順書
 
-この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 38 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
+この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 40 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
 
 ### 札（tier）の意味
 
 - `page`：利用者に今影響が出ている、または出る直前。すぐ見る。
 - `ticket`：急がないが、放置すると悪化する。翌営業日までに見る。
-- `auto`：段階3 で自動の応急処置が付いたもの。今は該当なし。
+- `auto`：段階3 で自動の応急処置が付いたもの。prod1 の応急処置係（`scripts/ops/first_aid.py`）が処置の一覧（`scripts/ops/first_aid_actions.json`）に載ったものだけ処置し、結果を障害記録に書く。直らないときは FirstAidEscalated（page）で人を呼ぶ。今は ContainerUnhealthy の 4 サービスだけ。
 
 ### 共通の見方と止め方
 
@@ -265,11 +265,11 @@
 
 ## ContainerUnhealthy
 
-- 札：page（処置の付く段階3 便G で auto に変える）
+- 札：auto（応急処置係が再起動する。段階3 便G）
 - 何が起きているか：prod1 の celery-worker・celery-beat・discord-gateway・gemini-egress のどれかの健康診断（docker-compose.yml の healthcheck）が unhealthy で、その状態が 1 分続いた。健康診断は、コンテナの中の「生きている印」が 2〜2 分半更新されないと失敗する（gemini-egress は中継の先の tinyproxy が答えないと失敗する）。値は prod1 の `scripts/ops/container_state.py` が毎分 textfile に書く。
 - 影響：worker・beat は LINE 解析・翻訳・定期の集計が止まる。discord-gateway は Discord の受信が止まる。gemini-egress は緊急用の中継なので、Gemini が直接接続のままなら利用者への影響は無い。
 - 最初に見るもの：prod1 で `docker inspect -f '{{json .State.Health}}'`（該当のコンテナ）の最後の記録 → Loki の該当コンテナのログの直近。
-- 直し方：該当のコンテナを `docker compose restart`。gemini-egress は prod2 の tinyproxy の状態も見る。繰り返すときは原因を切り分けて Opus に報告する。
+- 直し方：応急処置係が毎分、鳴っている件を読み、起動から 5 分を過ぎた不健康なコンテナを `docker compose restart` して最長 3 分、健康に戻るのを待つ。結果は障害記録の first_aid_result（recovered／not_recovered／escalated）に残る。直らない・1 時間に 3 回を超えたときは FirstAidEscalated が鳴るので、その節を見る。人が直すときは gemini-egress は prod2 の tinyproxy の状態も見る。
 - 止め方：`amtool silence add alertname=ContainerUnhealthy --duration=PERIOD --comment=REASON`
 
 ## ContainerStateStale
@@ -388,3 +388,20 @@
 - 最初に見るもの：prod1 の `crontab -l` に dockerd_state の行があるか → `/tmp/dockerd-state.log` の最後の行（失敗のときだけ書かれる）→ `/home/ubuntu/node_exporter_textfile/dockerd_state.prom` の時刻。
 - 直し方：ログの原因（pid ファイルが読めない・dockerd が動いていない・書けない）を切り分けて Opus に報告する。
 - 止め方：`amtool silence add alertname=DockerdStateStale --duration=PERIOD --comment=REASON`
+
+## FirstAidEscalated
+
+- 札：page
+- 何が起きているか：prod1 の応急処置係（`scripts/ops/first_aid.py`）が、該当のサービスを直せなかった。次のどれか：再起動しても 3 分以内に健康に戻らない（not_recovered）・直近 1 時間に 3 回再起動していて 4 回目をしなかった（escalated:limit）・処置を始めてから 10 分たっても終わりの記録が無い（escalated:stale）。人を呼んだ時刻から 30 分鳴って自然に止む。
+- 影響：ContainerUnhealthy の節と同じ。再起動で直らないので、止まったままの可能性が高い。
+- 最初に見るもの：障害記録のその件の出来事（kind first_aid の note に、処置の前後の健康と所要秒が入っている）→ prod1 で `docker inspect -f '{{json .State.Health}}'`（該当のコンテナ）→ Loki の該当コンテナのログの直近。
+- 直し方：原因を切り分けて Opus に報告する。同じサービスで繰り返すなら、健康診断の閾値か、コンテナの中の処理そのものを見直す。
+- 止め方：`amtool silence add alertname=FirstAidEscalated --duration=PERIOD --comment=REASON`
+
+## FirstAidStale
+
+- 札：page
+- 何が起きているか：prod1 の応急処置係が 5 分以上、最後まで動いていない、または値が無い状態が 2 分続いた。この間、コンテナが不健康になっても自動で再起動されない（ContainerUnhealthy は鳴る）。止める札（halt_all）で止めている間は印を書くので鳴らない。
+- 最初に見るもの：prod1 の `crontab -l` に first_aid の行があるか → `/tmp/first-aid.log` の最後の行（失敗のときだけ書かれる。保守 API に届かない・鍵が読めない・docker が読めない など）→ `/home/ubuntu/node_exporter_textfile/first_aid_run.prom` の時刻。
+- 直し方：ログの原因を切り分けて Opus に報告する。応急処置を急いで止めたいときは、保守 API の止める札を立てる。
+- 止め方：`amtool silence add alertname=FirstAidStale --duration=PERIOD --comment=REASON`
