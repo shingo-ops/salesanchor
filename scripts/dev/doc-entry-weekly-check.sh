@@ -347,6 +347,21 @@ else
   echo "LINE_COPY=skipped"
 fi
 
+# ---- BUG_CLAIMS_7D（要件の書類を読まずに「不具合」と言いかけて止めた回。.claude/hooks/requirement-bug-claim.py の記録） ----
+BC_LOG="${REQUIREMENT_LIBRARY_LOG:-$HOME_DIR/.claude/requirement-library/bug-claims.log}"
+BUG_CLAIMS_7D=0
+if [ -f "$BC_LOG" ]; then
+  while IFS= read -r bc_line; do
+    bc_date="${bc_line%%[[:space:]]*}"
+    case "$bc_date" in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;; *) continue ;; esac
+    bc_d="$(days_between "$TODAY" "$bc_date" 2>/dev/null)" || continue
+    case "$bc_d" in ''|*[!0-9-]*) continue ;; esac
+    if [ "$bc_d" -ge 0 ] && [ "$bc_d" -le 6 ]; then BUG_CLAIMS_7D=$((BUG_CLAIMS_7D+1)); fi
+  done < "$BC_LOG"
+fi
+echo "BUG_CLAIMS_7D=$BUG_CLAIMS_7D"
+[ "$BUG_CLAIMS_7D" -ge 1 ] && add_ng "BUG_CLAIMS_7D=$BUG_CLAIMS_7D"
+
 if [ -z "$NG" ]; then
   echo "RESULT=OK"; exit 0
 else

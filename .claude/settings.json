@@ -93,6 +93,9 @@
     "Stop": [
       { "hooks": [
           { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh\"", "timeout": 10 }
+      ] },
+      { "hooks": [
+          { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/requirement-bug-claim.py\"", "timeout": 10 }
       ] }
     ]
   }
