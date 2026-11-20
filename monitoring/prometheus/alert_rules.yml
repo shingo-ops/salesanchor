@@ -516,3 +516,18 @@ groups:
           summary: "応急処置係が 5 分以上動いていません"
           description: "prod1 の scripts/ops/first_aid.py が 5 分以上、最後まで動いていません。この間、コンテナが不健康になっても自動で再起動されません。"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#firstaidstale"
+
+  - name: deploy_migration_alerts
+    rules:
+      # deploy の migration が失敗・取り消しで終わった（ADR-1012 段階3 便H）。deploy.yml の「Record migration result」が prod1 の textfile に書く。
+      # 失敗の時刻が成功の時刻より新しい間、または成功の値がまだ無く失敗の値だけある間鳴る。次の deploy で migration が成功すると自然に止む
+      - alert: DeployMigrationFailed
+        expr: salesanchor_deploy_migration_last_failure_timestamp_seconds{instance="app-vps"} > salesanchor_deploy_migration_last_success_timestamp_seconds{instance="app-vps"} or (salesanchor_deploy_migration_last_failure_timestamp_seconds{instance="app-vps"} unless salesanchor_deploy_migration_last_success_timestamp_seconds{instance="app-vps"})
+        for: 0m
+        labels:
+          severity: critical
+          tier: page
+        annotations:
+          summary: "本番への反映で DB の入れ替え（migration）が失敗しました"
+          description: "直近の deploy で migration の手順が失敗または取り消しで終わりました。DB が途中の形のままの可能性があります。次の deploy で migration が成功するまで鳴り続けます。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#deploymigrationfailed"

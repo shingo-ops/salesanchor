@@ -1,6 +1,6 @@
 # 見張りのルール別 手順書
 
-この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 40 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
+この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 41 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
 
 ### 札（tier）の意味
 
@@ -405,3 +405,11 @@
 - 最初に見るもの：prod1 の `crontab -l` に first_aid の行があるか → `/tmp/first-aid.log` の最後の行（失敗のときだけ書かれる。保守 API に届かない・鍵が読めない・docker が読めない など）→ `/home/ubuntu/node_exporter_textfile/first_aid_run.prom` の時刻。
 - 直し方：ログの原因を切り分けて Opus に報告する。応急処置を急いで止めたいときは、保守 API の止める札を立てる。
 - 止め方：`amtool silence add alertname=FirstAidStale --duration=PERIOD --comment=REASON`
+
+## DeployMigrationFailed
+
+- 札：page
+- 何が起きているか：本番への反映（deploy.yml）で DB の入れ替え（migration）の手順が失敗または取り消しで終わった。deploy.yml の「Record migration result」が prod1 の `/home/ubuntu/node_exporter_textfile/deploy_migration_failure.prom` に失敗の時刻を書き、それが成功の時刻（`deploy_migration_success.prom`）より新しい。DB が途中の形のままの可能性がある。
+- 最初に見るもの：GitHub の Actions の「Deploy to VPS」の直近の回 → 「Run database migrations」の手順の記録の最後の数十行（どの移行で止まったか・時間切れか）→ 「Clean up DB orphans after failure」が動いたか。
+- 直し方：原因を切り分けて Opus に報告する。migration を直して次の deploy で成功すると、成功の時刻が書かれて自然に止む。migration の手順を飛ばした deploy（migration の判定が false の回）では何も書かれないので、止むのは migration が走って成功した回だけ。
+- 止め方：`amtool silence add alertname=DeployMigrationFailed --duration=PERIOD --comment=REASON`
