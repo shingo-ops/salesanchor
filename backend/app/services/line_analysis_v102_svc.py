@@ -63,6 +63,7 @@ from app.services.gemini_raw_copy_v102_product_first import (
     with_cond_terms,
 )
 from app.services.gemini_raw_copy_v102_soldout_ref import (
+    MATCH_STATUS_MATCHED_LIST_SHIME,
     MATCH_STATUS_MATCHED_SOLDOUT_REF,
     SoldItem,
     SoldoutRefPost,
@@ -731,6 +732,7 @@ def _condition_columns(
 
 _RESOLVED_MATCH_STATUSES = (
     MATCH_STATUS_MATCHED, MATCH_STATUS_MATCHED_CONTEXT, MATCH_STATUS_MATCHED_FOLLOWUP, MATCH_STATUS_MATCHED_SOLDOUT_REF,
+    MATCH_STATUS_MATCHED_LIST_SHIME,
 )
 
 
