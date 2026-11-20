@@ -1,0 +1,49 @@
+調査は終わったので、計画を書きます。ファイルは変更していません。
+
+## 原因
+
+再解析のあと、古い投稿の行が現行（`is_current`）に戻らないのは、ADR-1032 の「復活止め」が原因です。
+
+- `_merge_supplier_products`（`backend/app/services/tcg_analyzer_svc.py:1981`）は、組（商品×状態）の最新投稿の行でも、次の 2 つを両方満たすと FALSE にします（同:2122-2139）。
+  - 同じ仕入元のより新しい投稿に、同じ商品の行がある。
+  - 付け直しの前から現行だった行ではない。
+- 「前から現行だった」は組（product_id, condition_id）で控えます（`_load_current_pairs`、`line_analysis_v102_svc.py:1272`）。
+- 再解析で商品や状態が変わると、付け替え後の組は控えに無く、現行から外れます。ADR-1032 の 2026-10-23 追記が、この動きを認めています。
+- `backend/tests/test_adr1032_revival_guard.py` の R3a（古い投稿の再解析は、新しい投稿に同じ商品があれば現行にしない）も、同じ規則を守る試験です。
+
+## 先に決めること
+
+今回の依頼は、ADR-1032 を PO が決めた方針（2026-10-19「n」）と一部ぶつかります。食い違いは ADR が優先なので、コードより先に PO の確認と ADR の追記が要ります。
+
+どの場面で「消える」のかは、まだ確認できていません。次のどちらかで進め方が変わります。
+
+- **A（絞った直し・推奨）**: 付け替えで外れる場面だけ直します。再解析の前に現行だった行は、組ではなく件（`extraction_item_id`）で控え、付け替え後も現行のままにします。「隠れていた行を戻さない」という 1032 の本旨は保てます。
+- **B（復活止めをやめる）**: 組ごとに最新の投稿の行が現行、という規則だけにします。ただし、本番で確認済みの 2 件のような行や、判定できない 626 件の行が、再解析のたびに配信へ戻るおそれがあります。
+
+## 手順
+
+1. PO に A と B のどちらかを聞きます。再現した本番の例（投稿・商品・状態）があれば、一緒にもらいます。
+2. ADR-1032 に追記するか、新しい ADR を起案します（`docs/ai-agents/adr-template.md`、直したら `node scripts/generate-adr-index.js`）。
+3. 作業前に `bash scripts/new-worktree.sh release/<topic> --claude` で作業場所を作ります。
+4. 先に試験を書きます（`backend/tests/test_adr1032_revival_guard.py` に追加）。
+   - 古い投稿の行が付け替えで消える場面を再現し、現行に戻ることを確かめます。
+   - 既存の R1 / R3c / R5 / D1b / 冪等の試験は、そのまま通すようにします。A なら R3a の期待値は変えません。B なら R3a の期待値を ADR に合わせて直します。
+5. 実装は A の場合、次のとおりです。
+   - `_load_current_pairs` を件単位の控えに変えます。
+   - 呼び出し元 3 か所に新しい控えを渡します。
+     - `run_v102_analysis`（`line_analysis_v102_svc.py:1640`）
+     - `reextract_v6_with_v102.py:369`
+     - `reextract_v6_with_v102.py:764`（revival_guard=False のままにします）
+   - `_merge_supplier_products` の `was_current` を、件単位で判定する形にします。
+6. 本番へ出す前に、試し実行（ROLLBACK）で FALSE→TRUE になる行を数えて PO に見せます。ADR-1032 の運用手順と同じです。migration は不要の見込みですが、データ修正の SQL が要るなら PO の GO を待ちます。
+7. PR は shingo-cc 名義で作ります。コード変更なので、クラウドでは push までです。本文には「### 標準ワークフロー確認」の節を入れます。
+
+## 確かめ方
+
+- `pytest backend/tests/test_adr1032_revival_guard.py` を流します。
+- 次の関連の試験も流します。
+  - `test_same_post_rows_pg.py`
+  - `test_reextract_v6_with_v102_pg.py`
+  - `test_v102_soldout_extra_targets_pg.py`
+- `make check` を流します。
+- 本番に近い形で、同じ仕入元の古い投稿を再解析します。FALSE→TRUE になる行が想定どおりの件数だけで、ほかの組は変化 0 であることを確かめます。

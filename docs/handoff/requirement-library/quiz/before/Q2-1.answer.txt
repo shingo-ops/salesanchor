@@ -1,0 +1,79 @@
+# 会社の「休眠」状態の追加計画（計画のみ・ファイルは変更していません）
+
+## 最初に前提のずれ
+**「companies に状態の列を足す」は不要です。** 調べた結果は次のとおりです。
+
+- `companies.status` 列はすでにあります（`migrations/028_create_companies.sql:78`）。
+- 値は `active` / `inactive` / `archived` / `pending_dedup_review` の4つです。
+- ADR-1076 により、この値の正本は共用表 `public.customer_statuses` です。`companies.status` はその `code` への外部キーで結ばれています（`migrations/20261112_140000_customer_status_fk.sql`）。
+- 画面はすでに一覧の札・作成・編集で状態を出しています（`CompaniesPage.tsx:411,513`）。
+- 札の名前は DB から読んでいます（`useCustomerStatuses`）。
+
+そのため、やることは**列の追加ではなく、状態を1種類増やすこと**です。会社の状態の SSOT を守る方針（ADR-1076）にも合います。
+
+## 方針
+新しい状態の記号 `dormant`（日本語名「休眠」、英語名 Dormant）を追加します。
+
+- DB には新しい列も migration も足しません。
+- `customer_statuses` に1行入れます。コード側の列挙・定数・画面の色の割り当てに `dormant` を足します。
+- 外部キーがあるので、行を入れる前にコードから `dormant` を保存しようとすると DB が止めます。**行の投入を先にします。**
+
+## 手順
+
+### 0. 着手前
+1. `bash scripts/new-worktree.sh release/company-dormant-status --claude` で作業場所を作ります。
+2. `./scripts/dev/executor-preflight.sh || exit 1` を実行します。
+3. 開発記録の区分は「既存の延長」（§1.8）にします。新しい仕様書は作らず、ADR-1076 と `docs/handoff/status-ssot-contact-company/` に追記します。
+4. ADR-1076 の What を「4つの記号」から「5つ（dormant 追加）」へ直します。直したら `node scripts/generate-adr-index.js` を実行します。
+5. 設計に「維持の仕組み」欄を置きます。守り手は `backend/tests/test_customer_statuses_pg.py`（列挙と表の一致を毎回確認する試験）にします。
+
+### 1. DB（PO の手作業・ADR-1007）
+- 前例の `docs/handoff/status-ssot-contact-company/insert-customer-statuses.sql` と `run-insert.sh` の型で、`dormant` の1行を足す文を用意します。
+  - `sort_order` は `inactive` と `archived` の間か、`inactive` の直後を想定しています。値は UNIQUE なので既存4行の値を見て決めます。
+  - `selectable_on_create` は、作成画面に出すか編集だけにするかで決まります（質問1）。
+- 流すのは PO です。クラウドからは流しません。
+
+### 2. バックエンド
+- `app/schemas/company.py:33` の `CompanyStatus` に `dormant` を追加します。
+- `app/services/customer_statuses.py` に `STATUS_DORMANT` を追加します。記号を直書きしてよいのはこのファイルだけです。
+- `app/schemas/contact.py` の連絡先側の列挙も、同じ表を共有するため追従が要るはずです。`test_customer_statuses_pg.py` が両方の一致を確かめているので、読んで決めます（未確認）。
+- `list_companies`（`companies.py:301`）に任意の `status` クエリを足し、「休眠だけ」「休眠を除く」を絞れるようにします。現状は絞り込み手段がありません。
+- 状態の分岐を調べます。`merge_companies` は archived が統合先だと 409 にしています（`companies.py:770`）。`dormant` を統合先にしてよいかを決めます。
+- `status = 'active'` で数えている集計（ダッシュボード・分析・レポート）が休眠をどう扱うかも調べます。ここは**未確認**なので、実装前に `grep` で洗い出します。
+
+### 3. 画面
+- `frontend/src/lib/customerStatuses.ts` の `CUSTOMER_STATUS_CODES` に `dormant` を追加します。
+- `frontend/src/utils/statusPresentation.ts:172` の `company` に `dormant` を足します（ADR-120）。色は「注意」寄りの `warning` か、落ち着いた `neutral` で、PO に決めてもらいます。
+- 札の名前は DB から出るので、ja/en の翻訳キーは足しません。
+- 会社一覧（`CompaniesPage.tsx`）に状態の絞り込みを足します。ラベルは `t()` で ja.json・en.json の両方に追加します。選択部品は金型（`SelectControl` など）を使い、生 select は使いません（ADR-144）。
+- 会社の詳細（`CompanyBasicTab.tsx`）で状態を表示・編集できるか確認し、足りなければ足します。
+- 日本語のハードコードと色の直値は禁止です（ADR-027・ADR-067）。
+
+### 4. テスト
+- バックエンド：`test_customer_statuses_pg.py`（列挙と表の一致）に `dormant` を反映し、会社の作成・更新・絞り込みに `dormant` の試験を足します。
+- フロント：`customerStatusRows.test.fixture.ts` と `CompaniesPage` 周りの試験を更新します。
+- E2E：UI を変えるので、`frontend/tests-e2e/` の該当 spec を同じ PR で更新します。
+
+## 確認方法
+1. `make check`（バックエンド）と、`cd frontend && npm run lint && npm run check:all`、vitest、`npx playwright test --project=chromium` を流します。
+2. 使い捨ての PostgreSQL に `customer_statuses` の行を入れ、会社を `dormant` に更新して絞り込みで出ることを確かめます。
+3. 行を入れる前に `dormant` を保存すると外部キーで落ちることも確かめます。
+4. 本番での人の動作確認は tenant_001 で行います。tenant_004 には触りません。結果を `docs/ai-agents/evidence-registry.md` に記録します。
+
+## 進め方の制約
+- クラウドでは本番 DB への書き込みはしません。行の投入は PO が手元で行います。
+- コード変更の枝は push までです。PR は手元で `shingo-cc` 名義で作ります。
+- PR 本文に「### 標準ワークフロー確認」を入れます。
+- `services/`・`routers/`・`frontend/src/` を触るので、本番に出す前に GO 記録が要ります。migration は無いので、migration 由来の PO 本人の GO は不要です。
+
+## 戻し方
+- コードは PR を戻します。
+- 行は消さず、`is_active = FALSE` にして新規に選べなくします（ADR-1076 の方針）。
+
+## 質問（実装前に PO へ確認したいこと）
+1. **「休眠」と既存の `inactive`（無効）の違い**は何ですか。今の `inactive` の画面上の名前（「無効」）は、実際の表の行を見ていないので未確認です。別の概念なら新しい記号を足します。同じ意味なら、名前の付け替えだけで済みます。
+2. **休眠にするのは手動だけですか。** 例えば「最終入金から N か月で自動」にするなら、定期バッチと閾値が別途必要で、計画が大きく変わります。今回は手動のみを前提にしています。
+3. **休眠の会社を、新規の見積・注文・商談の選択肢や統合の相手から外しますか。** 外す場合は影響範囲が広がるため、別の便に分けるのが安全です。
+4. **作成画面にも出しますか、編集だけにしますか。**
+
+回答が来るまでは、上記の前提（手動のみ、一覧と詳細の表示・編集・絞り込みだけ、他機能の挙動は変えない）で進める想定です。

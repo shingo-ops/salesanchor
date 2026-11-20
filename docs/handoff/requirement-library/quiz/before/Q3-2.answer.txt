@@ -1,0 +1,44 @@
+## 計画：期限切れの札も接続元の回数止めに数える
+
+ファイルの変更・commit・push はしていません。調べたのは読み取りだけです。
+
+### 先に確認したいこと
+
+いまのコードは、頼まれた内容と逆になっています。
+
+- `backend/app/auth/dependencies.py:63` の `_authenticate_self_token` は、`ExpiredSignatureError` を回数止めに数えず、401 だけ返します。
+- これは ADR-1083（Proposed）の決定で、PO が 2026-11-20 に「1」と選んだ内容です。コミットは 640a42fe です。
+- ADR-1083 の理由は次のとおりです。Android が約46時間前の札でアプリを開くと、画面の11回の頼みが全部数えられ、接続元が止まって直後のログインが 429 になりました。期限切れで数えると、この巻き添えが戻ります。
+- AGENTS.md では ADR とコードが食い違うときは ADR が優先です。そのため、コードだけ先に変えることはせず、ADR の方針転換から始めます。
+
+PO の GO が取れるまで、手順1より先には進みません。
+
+### 手順
+
+1. **PO に方針転換を確認する。** ADR-1083 を撤回してよいか聞き、巻き添えが戻るリスクを伝えます。選択肢は次の2つで、私のおすすめは A です。
+   - A: 期限切れを数える。ご依頼どおりで、巻き添えのリスクは受け入れる。
+   - B: 数えるが、同じ札は1回しか数えない。リスクを減らせます。ただし、これは「数える」ことにはなりますが、ご依頼より弱い案です。
+2. **作業場所を作る。** `bash scripts/new-worktree.sh release/<topic> --claude` を使い、`./scripts/dev/executor-preflight.sh || exit 1` を流します。事前に `docs/ai-agents/executor-checklist.md` と `docs/ai-agents/adr-template.md` を読みます。
+3. **ADR を先に直す。**
+   - ADR-1083 を「取り下げ（新 ADR に置き換え）」にします。
+   - 新しい ADR を起案します。内容は「期限切れの札も `record_auth_failure` に数える。回数 10 回・期間 15 分は変えない」です。
+   - `node scripts/generate-adr-index.js` を流します。
+   - `docs/handoff/auth-expired-token-lockout/` に、方針転換した旨を追記します。
+4. **コードを直す。**
+   - 変更するのは `backend/app/auth/dependencies.py` だけです。
+   - `except ExpiredSignatureError:` の枝と import（9行目）を消し、期限切れも既存の `except (JWTError, ...)` 経由で `_reject_self_token` に流します。
+   - 返事は今までどおり 401 で、文言も同じです。
+   - 回数止めの本体（`cache.py`）、ログインの口（`routers/auth.py`）、画面は変えません。
+5. **試験を直す。** 対象は `backend/tests/test_self_auth.py`（472行目付近）です。
+   - `test_expired_self_token_is_not_counted_as_failure` は、呼ばれた回数を 0 から 1 に変え、名前も直します。
+   - `test_expired_token_with_wrong_signature_is_counted` と `test_locked_ip_still_gets_429_for_expired_token` はそのまま残します。
+   - 期限切れの札を同じ接続元から10回送ると、11回目が 429 になる試験を足します。
+6. **確かめる。**
+   - `pytest backend/tests/test_self_auth.py` と `make check` を流します。
+   - PR 本文に「### 標準ワークフロー確認」を入れます。PR は shingo-cc 名義で作ります。
+   - コード変更を含むので、クラウドでは push までです。PR は手元で作ります。
+
+### 未確認・注意
+
+- `_resolve_current_user` の②（Redis キャッシュヒット）は、回数止めを見ずに通します。期限切れの札がこの経路でどう扱われるかは、まだ確認していません。実装前に確認します。
+- 画面が開いた瞬間に古い札で11回頼む動きは、この変更では直りません。数える側に戻すと、その11回がそのまま回数止めを使い切ります。画面側の直しは別の話として残ります。

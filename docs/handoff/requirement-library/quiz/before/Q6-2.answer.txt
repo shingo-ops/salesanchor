@@ -1,0 +1,63 @@
+## 計画：migration のロック待ちを 30 秒にする
+
+調べるだけで、ファイルの変更・commit・push はしていません。
+
+### 先に PO へ確認が要る点
+
+この件は ADR-1037（`docs/adr/ADR-1037-migration-lock-timeout.md`）で、ロック待ちを意図的に **1 秒** と決めています。AGENTS.md は ADR と実装が食い違うときは ADR を優先するとしているので、そのまま 30 秒にはできません。
+
+- ADR-1037 の理由は、migration がロック待ちをしている間は、後から来た在庫表の読み取りも全部止まるからです。
+  - 試験用 DB の再現では、読み取りが 8.9 秒待たされました。
+  - 本番では 10/19 の入れ替え中に、在庫表の平均が最大 13.5 秒になりました。
+- PO が承認した成功条件は「作り替えが他を待たせるのは最大 1 秒まで」です。30 秒にするとこの条件を破ります。
+- 再試行の予算とも合いません。今の設定は 40 回まで、3 秒おきです。30 秒待ちだと最悪 40 × 33 秒 = 約 1320 秒になり、移行ステップの打ち切り 10 分（600 秒）を超えます。ADR が想定する最悪値の約 300 秒にも収まりません。
+
+このため、まず PO に次のどちらかを選んでもらいます。私のお勧めは「A の方針で進める」です。
+
+- **A. ADR-1037 を改訂して 30 秒にする。**
+  - 読み取りが最大 30 秒止まるのを許す条件変更になるので、PO 本人の承認が要ります。
+  - 再試行の回数も同時に見直します。例：回数の予算を 8 回前後に減らし、最悪でも約 300 秒に収めます。
+- **B. 1 秒のまま、失敗の根本原因を潰す。**
+  - ADR の結果欄には、10/21 に 082 番の migration が止まった件が「鍵を離さなかった接続は未確認」と残っています。
+  - 失敗が再発するなら、鍵の持ち主を特定して直す方が、読み取りを止めずに済みます。
+
+### A で進める場合の実装手順
+
+1. **作業場所を作る。**
+   - `bash scripts/new-worktree.sh release/migration-lock-timeout-30s --claude` を実行します。
+   - 先に `./scripts/dev/executor-preflight.sh` を流します。
+   - `docs/ai-agents/executor-checklist.md` を読み、`docs/handoff/migration-lock-timeout/design.md` も確認します。
+2. **値を変える。**
+   - 値の正本は `scripts/run_all_migrations.sh:223` の `SQL_LOCK_TIMEOUT` の 1 行です。
+   - これを `1s` から `30s` に変え、直上のコメント（1 秒で諦める理由）も合わせて直します。
+   - run_sql は `PGOPTIONS` で、run_py は `MIGRATION_LOCK_TIMEOUT` 経由で、どちらもこの 1 行を見ます。他の箇所は書き換えません。
+   - 同じファイルの `SQL_RETRY_BUDGET`（40）と `SQL_RETRY_MAX_ATTEMPTS`（40）も、上の予算に合わせて見直します。
+3. **対象外のものは触らない。**
+   - `log_lock_holders` と読み取り計測の `lock_timeout` は固定値なので、変えません。
+   - `SET LOCAL lock_timeout = '5s'` を持つ 8 ファイルは、自分で上書きするので影響しません。
+4. **ADR を直す。**
+   - ADR-1037 の What 1・2・3 と Why を新しい値に直し、改訂の経緯（PO の承認日と理由）を追記します。
+   - 続けて `node scripts/generate-adr-index.js` を実行します。
+5. **見張りと試験を直す。**
+   - `.github/workflows/migration-test.yml` の P1 は、「1 秒で諦め、他の読み取りの最大待ちは 1500ms 以内、migration は 3 秒未満で失敗」と決め打ちしています。新しい値に合わせます。
+   - このファイルの S2 と P3 も確認します。
+   - `tests/sandbox/migration-run-sql-retry.sh`（R1〜R4）と `migration-read-probe.sh`（R5）も同様に確認します。
+   - `.github/workflows/workflow-lint.yml` は不可逆操作の一覧に入っているので、触りません。
+
+### 検証
+
+- `bash tests/sandbox/migration-run-sql-retry.sh` を流し、使い捨て DB で次を確かめます。
+  - 鍵を持つ接続を 35 秒保持したとき、30 秒で諦めて流し直すこと。
+  - 流し直しの合計が予算を超えたら止まること。
+- 入れ替え後に、次を確かめます。
+  - Actions ログの "lock conflict; retry" と "retry limit reached" の回数。
+  - `read probe: ... slow=` の値。
+  - 移行ステップが 10 分以内に終わること。
+
+### 進め方の制約
+
+- `scripts/` を含む PR なので、PO の「GO #PR番号」が出るまで main にマージしません。
+- クラウドでは、枝を push するところまでです。コード変更を含むので、PR は手元で `shingo-cc` 名義で作ります。
+- PR 本文には「### 標準ワークフロー確認」の節を入れます。
+
+A と B のどちらで進めるか教えてください。A なら、再試行の予算（8 回前後）も一緒に決めたいです。

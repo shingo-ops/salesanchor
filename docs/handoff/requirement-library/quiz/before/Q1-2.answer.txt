@@ -1,0 +1,51 @@
+## 原因の見立て
+
+コードを読んだ範囲では、**フロントが送る内容とバックエンドの必須項目が食い違っています**。実際の画面での再現はまだしていないので、確度は高いものの「推定」です。
+
+- バックエンドの `POST /companies`（`backend/app/routers/companies.py:377`）は、`CompanyCreate.lead_id` を必須にしています（`backend/app/schemas/company*.py:116`、`Field(ge=1)`）。コメントには「便1a: lead 必須（背骨）」とあります。
+- `lead_id` が無いと、まず 422 になります。存在しない lead を指すと `not_found:lead` の 404 になります。
+- 一方、顧客情報画面の新規登録モーダル（`frontend/src/pages/companies/CompaniesPage.tsx:226〜`）の `payload` に `lead_id` がありません。`name`、`addresses`、`sales_channels` などだけを送っています。`lead_id` は `Company` 型（67行目）にあるだけです。
+- 画面側の変更が「会社は lead から作る」という便1a の仕様に追従していないのが、エラーの原因と考えます。
+
+## 方針
+
+ADR を優先する決まりなので、バックエンドを緩めず（lead 必須のまま）、画面側を ADR に合わせます。`docs/adr/FEATURE-INDEX.md` と `docs/adr/README.md` から便1a（会社と lead の関係）の ADR を読み、「顧客情報画面からの直接登録」が想定されているかを先に確認します。
+
+## 手順
+
+1. **事前確認（読むだけ）**
+   - `docs/INDEX.md` で、`ai-agents/executor-checklist.md` と `specs/branch-operations/README.md` を読む。`./scripts/dev/executor-preflight.sh` を流す。
+   - 便1a の ADR で、会社の作り方（lead 必須の理由、`deal_id` 経由の紐づけ）を確認する。
+   - 実際のエラー本文を確認する。ブラウザの Network で `POST /companies` のレスポンスを見るか、`backend/tests` の既存テストを流す。`CompanyCreate` の他の必須項目やバリデーション（電話番号、`status` の enum、`monthly_forecast` など）も一緒に洗い出す。
+   - ほかの呼び出し元（`grep "/companies"`、deal やフォーム入力からの作成）が `lead_id` をどう渡しているかを見る。
+
+2. **画面の直し方（推奨案）**
+   - 新規登録モーダルに「出自リード」の選択欄を足し、`payload.lead_id` に入れる。
+   - 欄は `components/` の既存の金型（検索付きの選択部品）を使う。生 select は禁止（ADR-144）。
+   - 選択肢は既存の leads 一覧 API から取る。未選択なら送信前に画面側で止め、`t()` 経由のメッセージを出す。
+   - 文言は `ja.json` と `en.json` の両方に同じキーで足す。日本語のハードコードは禁止。
+   - バックエンドが 422 や 404 を返したときに、原因が分かる文言を出す。いまは `e.message` をそのまま出しているだけ。
+   - 代案: lead 詳細や商談画面から会社を作る導線に一本化し、顧客情報画面の「新規登録」を無効にして案内を出す。これは PO の判断が要るので、事前確認の結果次第で PO に聞く。
+
+3. **テスト**
+   - フロント: `CompaniesPage` の新規登録で `lead_id` が payload に入ること、未選択だと送信されないことを Vitest で確認する。
+   - E2E: `frontend/tests-e2e/` の該当 spec を同じ PR で更新する（UI 文字列と構造を変えるため）。
+   - バックエンド: 変更しない想定。ただし `lead_id` ありで 201、なしで 422 になる既存テストが無ければ足す。
+
+4. **検査と提出**
+   - `cd frontend && npm run lint` と `npm run check:all` を流す。バックエンドを触った場合だけ `make check` を流す。
+   - `bash scripts/new-worktree.sh release/fix-company-create-lead-id --claude` で作業場所を作る。
+   - pre-push の検査が通ってから push する。`--no-verify` は使わない。
+   - PR は手元で `shingo-cc` 名義で作る。本文には「### 標準ワークフロー確認」の節を入れる。クラウドから PR は作らない。
+   - migration や本番 DB の書き込みは不要な見込み。
+
+## 検証
+
+- 実装後、ローカルまたは rehearsal 環境で「新規登録 → lead を選ぶ → 保存 → 一覧に出る」を確認する。lead を選ばないときの画面の挙動も確認する。
+- 本番での確認は PO の判断に任せる。
+
+## 未確認事項
+
+- 実際のエラー本文が 422 かどうか。
+- 直近のどの変更で `lead_id` 必須になったか（`git log` で追う）。
+- lead_id 以外にも食い違いがあるかどうか。手順1の事前確認で洗い出す。

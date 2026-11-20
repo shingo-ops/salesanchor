@@ -1,0 +1,55 @@
+# 計画: Discord 連携の失敗文の見直し
+
+（調査だけで、ファイルは変更していません。）
+
+## 結論
+
+「例外のメッセージをそのまま画面に出す」は、このままでは実施しない方がよいと考えます。根拠は次の3つです。
+
+- **ADR-1071 に反します。** 3項で、画面に出してはいけないものとして「理由コードの生の値・仕組みの名前（Redis・token・state・HTTP の番号など）・例外の中身」を挙げています。5項は、対応表に無い理由は一般文に落とし、生の値は出さないと定めています。関連に `docs/specs/db-error-detail`（例外の中身を応答に出さない）も挙がっています。AGENTS.md の決まりでは、ADR と食い違うときは ADR が優先で、コードを ADR に寄せます。
+- **戻り口は例外を持ちません。** `discord_oauth.py` の callback は、失敗を `?discord_status=error&reason=...` という URL にリダイレクトして返します。画面（`ChannelsPage.tsx:137`、`DiscordOwnServerPanel.tsx`）が読むのはその `reason` だけです。例外オブジェクトは画面に届きません。
+- **画面に出すと危険です。** この URL は公開エンドポイントからのリダイレクトで、誰でも `reason=` に好きな文字列を付けられます。その値を画面にそのまま出すと、偽の文言で利用者を誘導されるおそれがあります。例外の中身（Discord API の応答や内部の識別子）を画面に流すのも、情報の漏れになります。
+
+「原因が分かりやすいように」というねらいは正当です。そこで、ADR の枠の中で原因を見えやすくする案を勧めます。
+
+## 勧める案（ADR の枠内で原因を分かりやすくする）
+
+**1. 理由コードを細かく分ける（backend）**
+- `backend/app/routers/discord_oauth.py` の `code_exchange_failed` は、いまは3か所（136・146 行付近）で同じコードになっています。通信の失敗、Discord が code を拒否した場合、応答が壊れていた場合に分けます。
+- `_ExchangeError` は `reason` を持つ作りなので、そのまま使えます。
+
+**2. 細かくしたコードを文にする（frontend）**
+- `features/discord-connect/discordConnectError.ts` の `DISCORD_CONNECT_ERROR_REASONS`・`DISCORD_CONNECT_ERROR_KEYS`・`getDiscordConnectErrorKey` に、新しいコードと文言キーを足します。
+- `ja.json` と `en.json` の `discordConnect.error.*` に、原因に合った平易な文を足します。例は「Discord が接続を断りました。Bot の招待をやり直してください」です。
+- ADR-1071 の3項に反しないよう、英語の識別子・HTTP の番号・例外の中身は文に入れません。
+
+**3. 画面に出さない原因はログに残す（backend）**
+- 例外の中身は、いまのように `logger` に出します。調査用に、tenant と purpose が付いた1行を追加します。
+- 利用者がサポートに連絡するための「問い合わせ番号」を画面に出す案もあります。ただし、これは ADR 1071 の運用に触れる新規の要件です。PO に確認してから決めます。
+
+**4. 試験を同期する**
+- `discordConnectError.test.ts` は、サーバーのコードと画面の表を突き合わせます。コードを足したら、表側も更新します。
+- i18n の試験は ja・en 両方にキーがあることを確かめます。
+- backend 側の突き合わせは `backend/tests/test_api_error_reason_sync.py` と同様に、コード一覧の一致を検証します。
+- E2E で `discordConnect.error.*` を使うものがあれば、同じ PR で更新します（frontend/AGENTS.md）。
+
+## 事前に確認が必要な点（PO へ）
+
+- **依頼どおり生のメッセージを出したい場合:** ADR-1071 の改訂が先に必要です。ADR の起案は PO の担当なので、私は ADR を変えずに実装を進めることはしません。
+- **問い合わせ番号を画面に出すか:** 上の3の扱いを決める必要があります。
+- 戻り口の `reason` を細かくするのは、既存のブックマークや古い画面との互換に影響しないと見ています。ただし、これは未確認で、実装時に確かめます。
+
+## 進め方（承認後）
+
+- AGENTS.md に従い、`bash scripts/new-worktree.sh release/discord-connect-error-detail --claude` で作業場所を作ります。
+- 実行役の事前確認は `./scripts/dev/executor-preflight.sh` で行います。
+- 変更は backend 1ファイルと frontend 3ファイル程度（`discordConnectError.ts`・`ja.json`・`en.json`・試験）です。
+- コード変更を含むので、PR は手元で `shingo-cc` 名義で作ります。クラウドでは push までです。
+
+## 検証
+
+- `cd backend && make check`（ruff・bandit・mypy・pytest）
+- `cd frontend && npm run lint` と `npx vitest run src/features/discord-connect`
+- `npx playwright test --project=chromium` で関連の E2E
+- 画面では、`?discord_status=error&reason=<新コード>` で、期待した平易な文が出ることを確認します。
+- 偽の `reason=<任意の文字列>` を付けたときは、これまでどおり「連携できませんでした。もう一度…」の一般文が出ることも確認します。

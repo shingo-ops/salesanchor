@@ -1,0 +1,55 @@
+# 計画：Gemini が断られたら切り替えずに失敗で終わらせる
+
+ファイル変更・commit・push はしていません。計画書だけ `/root/.claude/plans/gemini-commit-push-zesty-charm.md` に書きました。
+
+## 現状
+- ADR-1062 で、直接接続で「location is not supported」（400）と断られたり、つながらなかったりすると、prod2 の中継へ自動で切り替える仕組みを入れています。逆向きの切り替えもあります。
+- 実装は `backend/app/services/gemini_route.py` にあります。道の記憶（10分）、切り替えの回数を Redis に数える処理、`generate_content_routed`（同期・非同期）がここです。
+- 呼び出し側は `gemini_extraction_svc.py`（2か所）、`gemini_raw_copy_v8.py`、`message_translator.py` です。
+- `gemini_route_watch.py` は、30分成功が無いときの知らせと、切り替えの知らせを出しています。
+
+## 方針
+- **残すもの**
+  - `build_client` と、環境変数で道を1本に決める `preferred_route`（GEMINI_PROXY_URL があれば中継、なければ直接）。
+  - 失敗理由の記録 `failure_reason`。
+  - 「30分成功が無い」見張りの止まり・戻りの知らせ。これは切り替えとは別の仕組みで、2026-11-05 に73回失敗しても誰も気づかなかった再発を防ぐためのものです。
+- **消すもの**
+  - `generate_content_routed` と `agenerate_content_routed`。
+  - 断り・届かないの判定（`should_switch` など）。
+  - `other_route`、道の記憶（`_sticky`、`remember`）。
+  - 切り替えの数え上げ（`_count_switch`、`SWITCH_COUNT_*`）。
+  - 見張りの切り替え通知。
+- 両方の道が駄目なときの手作業は、既存の `docs/runbooks/gemini-egress-emergency.md` に戻します。
+
+## 手順
+0. `bash scripts/new-worktree.sh release/gemini-drop-auto-failover --claude` で作業場所を作り、`backend/AGENTS.md` と `executor-checklist.md` を読みます。
+1. **ADR を先に直します**（ADR 優先のため）。新しい ADR で、ADR-1062 の「断られたら切り替える」部分（What の 2〜4 と 7）を置き換えます。見張りと reason 記録は継続と明記します。その後 `node scripts/generate-adr-index.js` を流します。ADR 起案は PO の役目なので、案を出して確認を取ります。
+2. `gemini_route.py` から上の「消すもの」を削除します。Redis 取得処理は見張りだけが使うので移すか残します。
+3. 呼び出し側を直接呼びに戻し、失敗はそのまま上へ出します。
+   - 抽出の2か所は `client.models.generate_content`。
+   - v8 も同じ。
+   - 翻訳は `build_client(preferred_route()).aio...`。
+   - 失敗時の reason 記録はそのままです。
+4. `gemini_route_watch.py` は止まり・戻りだけにします。
+5. 文書を直します。
+   - runbook の 2026-11-05 追記を「自動切り替えは廃止。断られたら失敗で止まり、30分で Discord に知らせが来る。そのとき手作業」に更新します。
+   - `docs/handoff/gemini-auto-failover/` の冒頭に廃止の注記を入れます。
+   - `docker-compose.yml` は変更しません。
+6. 試験を直します。
+   - `test_gemini_route.py` の切り替え試験は、「断りがそのまま例外で出る・2回目の呼び出しをしない・reason が残る」試験に置き換えます。
+   - `test_gemini_route_watch.py` の切り替え通知の試験は削除します。
+
+## PO に確認したい点
+- 本番 `.env` は今「最初の道が中継」です。切り替えが無くなるので、prod2 が止まると解析も止まります（見張りが30分で知らせます）。この単一障害点を受け入れてよいですか。
+- ADR-1062 は「Proposed」のままで、採用条件 K1〜K5 も未達です。新 ADR で置き換える扱いでよいですか。
+
+## 検証
+- 次の試験を流します。
+  - `test_gemini_route.py`
+  - `test_gemini_route_watch.py`
+  - `test_tcg_gemini_extraction.py`
+  - `test_gemini_error_redact.py`
+  - `test_llm_budget.py`
+- `grep` で `generate_content_routed`・`should_switch`・`SWITCH_COUNT`・`remember(` が `backend` から 0 件になることを確認します。
+- 400 の断りを模した例外で、抽出が API_ERROR になり、reason が残り、再送されないことを試験で確認します。
+- 変更は backend のみで、migrations と deploy.yml は含みません。クラウドでは push まで行い、PR は手元で `shingo-cc` 名義で作ります。本文には「### 標準ワークフロー確認」を入れます。

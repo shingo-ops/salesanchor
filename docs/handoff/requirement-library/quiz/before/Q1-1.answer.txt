@@ -1,0 +1,70 @@
+# 修正計画: 顧客情報管理の「新規登録」でエラーになる
+
+ファイルの変更・commit・push はしていません。コードを読んだだけです。実機では再現していません。
+
+## 原因（読んだ範囲で確実なことと、未確認のこと）
+
+**確実なこと（コードの突合）**
+- 「顧客情報管理」画面は `frontend/src/pages/companies/CompaniesPage.tsx` です。「新規登録」ボタンは 376 行目、送信処理は `handleCreateSubmit`（227〜322 行目）です。
+- 送信する本文（`payload`、281〜298 行目）に **`lead_id` がありません**。`api.post("/companies", payload)` は 309 行目です。
+- 一方、サーバー側の `backend/app/schemas/company.py:116` では `lead_id: int = Field(ge=1)` が**必須**です。`backend/app/routers/companies.py:391` の `create_company` も、リードの存在を確認してから登録します。
+- この必須化は、便1a「背骨の必須化」の設計で入りました（`docs/handoff/txn-flow-asis-recon/design.md` の 42〜43 行目）。画面側がその変更に追従していないと考えられます。
+- 画面の型 `Company` には `lead_id` があります（67 行目）。しかし作成フォームにはリードを選ぶ欄がありません。
+
+**未確認のこと**
+- 実際に出ているエラーの画面表示と HTTP ステータスです。コード上は 422（`lead_id` が欠けている）と推測します。
+- 権限不足（`customers.create`）や、会社コードの重複（409）が原因ではない、という確認もまだです。
+
+## 修正方針（PO への確認が必要）
+
+便1a の設計は「会社は必ずリードの子」です。ADR を優先する決まりなので、`lead_id` の必須化は外さず、画面側を設計に寄せます。リードの決め方に 2 案あります。
+
+- **案A（推奨）: フォームに「元のリード」を選ぶ欄を足す。**
+  - 既存の金型（検索付きの選択部品）を使い、選んだ `lead_id` を `payload` に入れます。
+  - 未選択なら送信前に画面で止めて、メッセージを出します。
+  - 商談から作る流れ用に、`deal_id`（任意）も渡せるようにします。
+- **案B: 画面で会社名からリードを自動で1件作る。**
+  - 画面が `POST /leads` を先に呼び、続けて `/companies` を呼びます。
+  - 途中で失敗すると孤立リードが残ります。
+  - 設計の「名寄せはしない」方針に反するため、非推奨です。
+
+どちらにするかは未確定です。「不明を残したまま実行しない」の決まりに従い、着手前に PO（しんごさん）へ確認します。
+
+## 作業手順
+
+1. **作業場所の作成。** `bash scripts/new-worktree.sh release/fix-company-create-lead-id --claude` を使います。クラウドの決まりに従い、枝名は `release/*` にします。着手前に `./scripts/dev/executor-preflight.sh` も流します。
+2. **実エラーの確認。** テストで `lead_id` なしの `POST /companies` を呼び、422 になることを確かめます。確かめるのは使い捨ての PostgreSQL（localhost）だけです。本番や tenant_004 には触りません。
+3. **仕様書の確認。** `docs/specs/README.md` を引き、区分は「既存の延長・修正」と判定する見込みです。新規の仕様書は作らず、既存テーマの履歴に追記します。
+4. **画面修正（案A）。**
+   - `CompaniesPage.tsx` と `CompanyFormFields.tsx` に、リード選択欄と必須チェックを足します。
+   - 文言は `ja.json` と `en.json` の両方に同じキーで追加します（`companies.leadLabel` など）。日本語の直書きは禁止です。
+   - 部品は `components/` の金型を使います（生 select は禁止）。
+   - フォームに `lead_id` を持たせ、`payload.lead_id` に入れます。
+5. **エラー表示の改善。** 422 や 404（`not_found:lead`）のとき、`setError` に出る文言を分かりやすくします。
+6. **テスト追加。**
+   - 画面側: `PageFormButtonMigration.test.tsx` に倣い、リード選択ありで `/companies` に `lead_id` が送られることを確かめます。リード未選択なら送信されないことも確かめます。
+   - サーバー側: `backend/tests/test_txn_backbone_constraints.py` に、`lead_id` なしで 422 になる負のテストが既にあるか確認します。無ければ足します。
+7. **検査。** 次を流し、すべて緑にします。
+   - `cd frontend && npm run lint`
+   - `npm run check:all`
+   - 関連の vitest
+   - `pytest backend/tests/test_companies.py`
+8. **push と PR。**
+   - pre-push の検査が緑になってから、release 枝へ push します。`--no-verify` は使いません。
+   - コード変更なので、クラウドでは push までです。PR は手元で `shingo-cc` 名義で作ります。
+   - PR 本文に「### 標準ワークフロー確認」の節を入れます。
+   - 画面（`frontend/src/`）の変更なので、本番に出す前に GO 記録が必要です。migration は不要です。
+
+## 確認方法（完了の定義に沿う）
+
+- 自動検査では、上のテストと lint が緑になることを見ます。
+- 人の目での確認は tenant_001（QA）で行い、tenant_004 には触りません。次の 3 点を見ます。
+  1. 「新規登録」でリードを選んで登録すると、一覧に会社が出る。
+  2. リード未選択なら、画面が登録前に止めてメッセージを出す。
+  3. 登録した会社の詳細画面で、元のリードが正しく紐づいている。
+- 確認結果は `docs/ai-agents/evidence-registry.md` に記録します。
+
+## 要確認事項
+
+1. 案A（リード選択欄を足す）と案B（自動でリードを作る）のどちらにするか。案A を推奨します。
+2. 実際に出ているエラー文言と、起きている環境（本番か、どのテナントか）。見当が合っているかの確認に使います。

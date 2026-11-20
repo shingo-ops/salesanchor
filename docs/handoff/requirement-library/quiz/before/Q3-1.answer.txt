@@ -1,0 +1,34 @@
+# 計画: 期限切れの札も接続元の回数止めに数える
+
+ファイルの変更・commit・push はしていません。計画書は `/root/.claude/plans/commit-push-groovy-dahl.md` に書きました。
+
+## 先に知っておくこと
+- 今のコードは期限切れの札を数えません。`backend/app/auth/dependencies.py:63-66` の `except ExpiredSignatureError:` が数えずに 401 を返します。これは ADR-1083（コミット 640a42fe、PR #5642）で入れたものです。
+- 今回の依頼はこの決定の逆です。ADR と実装が食い違うときは ADR が優先なので、コードより先に ADR を直す必要があります。ADR の起案は PO（しんごさん）の担当です。
+- ADR-1083 の背景は、期限切れの札で 11 回 401 になり、正規の Android が止まった事故（2026-11-20）です。数える方に戻すと、同じ事故が再び起きる可能性があります。
+
+## 実装の前に PO へ確認すること
+1. 「ログインで」が指す場所はどちらか。
+   - ① 普通の API の自社アクセストークンの期限切れ（`dependencies.py`）。
+   - ② ログイン系の口（`password-reset/confirm`、passkey、`login-requests/recovery`）。②では期限切れ・無効な札をすでに数えている口が多いです。この点は未確認で、②の場合は対象の口を絞ってから計画し直します。
+2. ADR-1083 を Superseded にして新しい ADR で逆転するか。ADR-1083 はまだ Proposed なので、直接改訂する道もあります。
+3. 事故の再発対策（画面で札の取り直しを先にする等）を同時に行うか。
+
+## 手順（①の場合）
+1. `bash scripts/new-worktree.sh release/<topic> --claude` で作業場所を作り、`./scripts/dev/executor-preflight.sh` を流す。
+2. ADR を直す。決定、理由、再発リスクを書き、`node scripts/generate-adr-index.js` を実行する。`docs/handoff/auth-expired-token-lockout/design.md` にも追記する。
+3. コードを直す。`dependencies.py` の `except ExpiredSignatureError:` 節を消します。すると後ろの `except (JWTError, …)` が拾って `_reject_self_token` で数えます。使わなくなった `ExpiredSignatureError` の import（`dependencies.py:9`）も消し、コメントに新しい ADR 番号を残します。
+4. 試験（`backend/tests/test_self_auth.py` の 455 行目あたり）を直す。
+   - `test_expired_self_token_is_not_counted_as_failure` を「1 回数える」に反転して改名する（`record.await_count == 1`、401、文言は今まで通り）。
+   - 署名違い、期限内の署名違い、すでに止まっているときの 429 の 3 本は残す。
+5. 変えないもの: `cache.py` の 10 回・15 分、ログインの口、画面。
+6. 確かめ:
+   - `cd backend && pytest tests/test_self_auth.py tests/test_security_hardening.py -q`
+   - `make lint`
+7. push まで行う。PR は手元で `shingo-cc` 名義で作り、本文に「### 標準ワークフロー確認」の節を入れる。
+
+## 検証
+- 試験で、期限切れの札 11 回で `record_auth_failure` が 11 回呼ばれ、その後は 429 になることを確認する。
+- 本番に出した後は、reader 鍵で 429 の件数を見る。ADR-1083 の設計メモ §8 の SQL を流用できます。
+
+先に確認 1〜3 の答えをもらえれば、計画を確定します。

@@ -1,0 +1,65 @@
+# 計画: migration のロック待ちを 30 秒に延ばす
+
+ファイルの変更・commit・push はしていません。調べただけです。
+
+## 先に決めること（ADR と食い違う）
+
+現行値の 1 秒は ADR-1037 で PO が承認した成功条件です。条件は「入れ替え中に他の読み取りを待たせるのは最大 1 秒まで」と「待たせ合いによる入れ替え失敗を 0 回にする」です。
+
+- 30 秒に延ばすと、migration が鍵待ちしている間は、後から来た在庫表などの読み取りが最大 30 秒止まります。ADR-1037 の Why にある事故（読み取りが 8.9 秒待たされた再現、本番で在庫表の平均が 13.5 秒になった件）が再び起きる向きの変更です。
+- AGENTS.md は ADR と実装が食い違うとき ADR を優先します。このため、先に ADR-1037 を改訂し、PO の承認を得てから実装します。
+- 現状の仕組みでは、ロック待ちで落ちても 3 秒あけて最大 40 回まで自動で流し直します。実質の粘り強さはすでにあります。
+
+### PO への確認事項
+1. 「読み取りを最大 1 秒しか待たせない」という成功条件を緩めてよいか。
+2. 実際に落ちた失敗のログを見せてもらえるか。次のどちらかで、対策が変わります。
+   - (a) 再試行 40 回を使い切って落ちている。
+   - (b) `SET LOCAL lock_timeout = '5s'` を持つ 8 ファイルや Python の移行など、1 秒設定の外で落ちている。
+
+   (a) なら、延ばす前に鍵を離さない接続の特定が先です。ADR-1037 の結果欄に「鍵を離さなかった接続が何だったかは未確認」とあります。`log_lock_holders` の出力が手がかりになります。
+
+## 実装手順（承認後）
+
+作業場所は AGENTS.md の手順で作ります。`bash scripts/new-worktree.sh release/migration-lock-timeout-30s --claude` を使い、作成前に `./scripts/dev/executor-preflight.sh` を流します。
+
+1. **ADR-1037 の改訂**（`docs/adr/ADR-1037-migration-lock-timeout.md`）
+   - What 1 の「1s」を「30s」に変えます。
+   - PO の承認と変更理由、成功条件の変更を追記します。
+   - 変更後に `node scripts/generate-adr-index.js` で README を更新します。
+2. **値の変更**（`scripts/run_all_migrations.sh:223`）
+   - `SQL_LOCK_TIMEOUT` の既定値を `1s` から `30s` にします。
+   - この 1 行で、run_sql（`PGOPTIONS`、295 行目）と run_py（`MIGRATION_LOCK_TIMEOUT` から `scripts/migration_py_entry.py` へ、258 行目）の両方に反映されます。
+   - ロック保持者の一覧は、1 秒を超えた接続を列挙する現行のままで足ります。
+3. **再試行の見直し**
+   - 30 秒待ちで 40 回が毎回上限まで使われると、最悪 20 分を超えます。デプロイの migration 段は `command_timeout: 10m`（`.github/workflows/deploy.yml:881`）なので、先に打ち切られます。
+   - 再試行の回数（`SQL_RETRY_BUDGET`、既定 40）と間隔を、10 分に収まるよう下げます。たとえば合計 8 回程度にします。
+   - 10 分は ADR-1037 の既存の枠です。`deploy.yml` の timeout を延ばす案は取りません。
+   - `.github/workflows/deploy.yml` は変えない前提です。変えるなら PO の GO が要ります。
+4. **試験・見張りの追従**
+   - `tests/sandbox/migration-run-sql-retry.sh` は既定値を `${SQL_LOCK_TIMEOUT}` として読みます。期待値が 1 秒に決め打ちでないか確認します。
+   - `.github/workflows/migration-test.yml` の P1〜P3 は、環境変数を入れた値で確かめています。既定値を決め打ちしている箇所があれば直します。
+5. **PR 運用**
+   - `scripts/` と migration に関わる変更なので、PO の「GO #PR番号」を得るまで main にマージしません（ADR-135・ADR-136）。
+   - PR 作成前に `gh auth status` で `shingo-cc` 名義を確認します。クラウドでは push までにして、PR は手元で作ります。
+   - PR 本文に「### 標準ワークフロー確認」の節を入れます。
+
+## 検証
+
+- `bash tests/sandbox/migration-run-sql-retry.sh` を流し、既定値が 30 秒になっていることと、再試行が 10 分に収まることを確認します。
+- `tests/sandbox/migration-read-probe.sh` を流します。
+- CI の migration-test と、`pre-push` の検査が通ることを確認します。
+- 本番では、反映後の最初の数回のデプロイで、次の 3 点をログから数えて ADR の結果欄に追記します。
+  - 失敗回数
+  - `lock conflict; retry` の回数
+  - `read probe` の `slow=`（読み取りが 2 秒を超えた件数）
+
+  `slow` が増えたら、成功条件を満たしていないので再相談します。
+
+## 代替案（PO が緩めたくない場合）
+
+30 秒には延ばさず、失敗の根本原因を先に潰す案です。
+
+- `deploy-db-precheck.sh` が、開きっぱなしの取引を待ってから migration に入ります。この待ちを強化します。
+- 鍵を持ちっぱなしの握り手（取引を閉じない接続）を特定して直します。
+
+これなら読み取りへの影響を 1 秒に保ったまま、失敗を減らせる可能性があります。

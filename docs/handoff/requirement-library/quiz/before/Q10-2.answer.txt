@@ -1,0 +1,69 @@
+# 計画: Discord 連携の失敗の文を、例外のメッセージそのままにする件
+
+**結論: 依頼どおりには実装しないことを勧めます。** ADR-1071 と真正面から食い違うためです。AGENTS.md の「ADR と実装の優先順位」では、食い違いは ADR を優先します。代わりに、「原因が分かりやすい」という目的を ADR の枠内で満たす案を出します。
+
+## 調べて分かったこと
+
+- **ADR-1071（Accepted、PO が承認済み）** は、画面に出す失敗の文について次を決めています。
+  - 例外の中身を画面に出してはいけません。
+  - サーバーは安定した理由コードだけを返します。
+  - 画面が理由コードから文言キーを選びます。
+  - 例外のメッセージをそのまま出す案は、この決まりに反します。
+- **Discord 連携の現状**
+  - `backend/app/routers/discord_oauth.py` は、例外ごとに理由コードを返します。例は `code_exchange_failed`、`missing_guild_in_token`、`guild_mismatch` です。
+  - `frontend/src/features/discord-connect/discordConnectError.ts` が、その理由コードを `discordConnect.error.*` の文言に対応づけています。
+  - ログには `type(e).__name__` とステータスだけを残しています。例外の中身は意図的に外しています。
+- **出してはいけないものが混ざる恐れ**
+  - 例外の文字列には、URL、トークン断片、Discord の応答本文が入ることがあります。
+  - 非エンジニアには読めません。
+  - 英語画面で日本語が混ざったり、その逆になったりします（ADR-027 違反）。
+- **別の違反の恐れ**
+  - `discord_auto_setup.py:166` には、すでに `detail=f"Discord API 接続エラー: {exc}"` という直書きがあります。
+  - これは `backend/tests/error_detail_baseline.json` の基準値に数えられています。
+  - 増やすと CI（`test_error_detail_guard.py`）が落ちます。
+
+## 提案する方針
+
+目的は「原因が分かること」です。例外の生の文字列を出さずに、次の3点で実現します。
+
+1. **理由コードを細かくする**
+   - 「Discord との確認失敗」が一括りになっている所を分けます。例は、通信の時間切れ、Discord が拒否（401/403/429）、Bot 権限不足です。
+   - 各コードに、「何が起きたか＋次にすること」の文を `ja.json` と `en.json` の同じキーで足します。
+   - `discordConnectError.ts` の対応表と、その試験 `discordConnectError.test.ts` も更新します。
+2. **開発者向けの詳しい原因はログ側に出す**
+   - 例外の型名、ステータス、先頭 200 文字などを、秘密の値を除いたうえでログに残します。
+   - 画面には出しません。
+3. **管理者にだけ、画面で原因を詳しく見せたい場合**
+   - 手段は、既存の部品（Callout や Toast）に出す「サポート用の参照番号」です。
+   - 参照番号とログを突き合わせます。
+   - 例外の文字列そのものは出しません。
+
+## 変更の対象（実装する場合）
+
+- `backend/app/routers/discord_oauth.py`: 理由コードの追加
+- `frontend/src/features/discord-connect/discordConnectError.ts` と `.test.ts`: 対応表と試験
+- `frontend/src/locales/ja.json` と `en.json`: 文言（同じキー）
+- `.github/workflows/e2e.yml`: 理由コードを出すサーバーのファイルを、detect-changes の frontend の一覧に追加
+
+## 作業の進め方
+
+- 手順は AGENTS.md に従います。
+  - `bash scripts/new-worktree.sh release/<topic>` で作業場所を作ります。
+  - `./scripts/dev/executor-preflight.sh` を実行します。
+  - docs/STANDARD-WORKFLOW.md の3フェーズ（KGI→現在地→設計）で進めます。
+- クラウドでは push までにします。PR は手元で `shingo-cc` 名義で作ります。
+
+## 確かめ方
+
+- `cd frontend && npm run check:all` と `make check`（lint + pytest）を流します。
+- ADR-1071 の見張りが通ることを確認します。
+  - `test_error_detail_guard.py`
+  - `check-error-text-next-action.js`
+- 理由コードの突き合わせ試験が、新しいコードで通ることを確認します。
+
+## 確認したいこと（PO へ）
+
+- どうしても例外の中身を画面に出したい場合は、ADR-1071 の変更が要ります。PO が起案する ADR になります。
+- そうでなければ上の方針で進めます。
+
+調べた範囲は `discord_oauth.py`、`discord_channel_invite.py`、`discord_auto_setup.py`、ADR-1071、`ja.json` の該当部分です。それ以外の Discord 関連の画面は未確認です。

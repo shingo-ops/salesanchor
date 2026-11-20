@@ -1,0 +1,69 @@
+# backend Python 3.13 化の計画（実行前・変更なし）
+
+## 先に決めること: ADR-1022 とのずれ
+
+AGENTS.md では ADR が実装より優先です。ADR-1022（Proposed）は次のとおり決めています。
+- 当面は 3.12 のまま開発を続ける。
+- 2027 年 10 月までに、本番・CI・手元を一度に **3.14** へ上げる。
+- 手元だけ、本番だけを先に上げることはしない。
+- 設計の開始は 2027 年 7 月を目安にする。
+
+3.13 は ADR にない版です。3.13 に上げるなら、実装の前に ADR-1022 を改訂するか、新しい ADR を起案する必要があります。PO の判断です。
+
+選べる道は 3 つあります。
+- **A. 3.13 を経由せず、予定どおり 3.14 を 2027 年に実施する。** ADR と整合します。
+- **B. 3.13 に前倒しする。** 3.12 から 3.13 への差は小さいので、3.14 のとき楽になります。ただし版上げを 2 回やることになります。
+- **C. 3.14 へ前倒しする。** 3.14 で動かない部品があるかは未確認です。
+
+おすすめは A です。B にする理由が特にあるなら、「3.13 を中継とする」と ADR-1022 に書いてから進めます。以下は B（3.13）を前提にした計画です。
+
+## 手順
+
+### 0. 前提の整理（設計・PO 承認）
+1. `docs/ai-agents/adr-template.md` に沿って ADR を改訂または起案します。`node scripts/generate-adr-index.js` で目次を更新します。
+2. `docs/STANDARD-WORKFLOW.md` の 3 フェーズ（KGI→現在地→設計）を回し、recon と design を書きます。py312-guard の前例（`docs/handoff/py312-guard/`）に倣います。
+3. 作業場所は `bash scripts/new-worktree.sh release/python-313 --claude` で作ります。
+
+### 1. 依存の互換調査（recon）
+`backend/requirements.txt` を、3.13 用の wheel があるか、版の上限が合うかで確認します。次の部品は特に疑わしいです。
+- 古い版の固定: `psycopg2-binary==2.9.10`、`bcrypt==4.2.1`、`pydantic==2.10.6`、`sqlalchemy==2.0.38`、`uvicorn==0.34.0`、`asyncpg`
+- C 拡張や末尾の部品: `lxml`、`Pillow`、`maxminddb`、`argon2-cffi`、`cryptography`、`pyOpenSSL`、`webauthn`、`pywebpush`、`hiredis`
+- 古い系統: `discord.py==2.4.0`、`google-generativeai<0.9`、`python-jose`
+- 標準ライブラリの削除（3.13 で消えたもの）: `cgi`、`crypt`、`telnetlib`、`imghdr`、`pipes` など。`grep` で使用箇所を探します。
+
+使い捨ての 3.13 venv（`python3.13 -m venv`）で `pip install -r requirements-dev.txt` を試し、失敗した部品を一覧にします。未確認の項目は「未確認」と記します。
+
+### 2. 変更の範囲（設計後に実装）
+
+| 場所 | 内容 |
+|---|---|
+| `backend/Dockerfile:1` | `python:3.13-slim` に変更 |
+| `backend/pyproject.toml:4,31` | `target-version = "py313"`、`python_version = "3.13"` |
+| `.github/workflows/*.yml` | `python-version: '3.12'` を 3.13 へ。`test.yml`、`migration-test.yml`（約 5 か所と `python:3.12-slim` のコンテナ）ほか約 20 ファイル。**`workflow-lint.yml` は PO 確認が必要** |
+| `monitoring/*/Dockerfile`、`scripts/rehearsal_phase2.sh`、`scripts/test_rollback_simulation.sh` | backend と一緒に上げるか、別扱いにするかを設計で決める |
+| py312-guard | `~/.claude/scripts/python-version-guard.py`、`scripts/agent-hooks/cloud/test.sh` の B4/B4b、`docs/specs/rule-enforcement/rules.yml`。ADR-1022 の決め 4 により、許可の変更はこの仕事の中でだけ行う |
+| docs | `docs/ai-agents/dev-commands.md`、`scripts/dev/check-before-submit.sh:458` の文言、`AGENTS.md` と `backend/pyproject.toml` のコメント |
+| `requirements*.txt` | 非互換の部品のみ版を上げる。上げる範囲は最小にする |
+
+### 3. 検証
+- `cd backend && make lint-ci`（ruff・bandit・mypy。`mypy` は版の変更で新しい指摘が出る可能性があります）
+- `docker compose up -d postgres redis` の後に `make check`（pytest、カバレッジ 60% 以上）
+- `backend/tests/test_event_loop_nonblocking.py`（ADR-081 C 項の守り手）を確認する
+- `./scripts/dev/check-before-submit.sh`、`docker build backend/`、起動と `/health` の確認
+- 3.13 の警告（`DeprecationWarning`）を洗い出す
+
+### 4. 本番への出し方
+- 手元・CI・本番を一度に上げます（ADR-1022 の方針）。
+- 作業の順は、まず Draft PR で CI を全部緑にし、その後 PO の GO を得て、最後に main へ merge します。
+- `deploy.yml` に触れる場合や `scripts/` を含む場合は、「GO #PR番号」が必要です。
+- 戻し方は、Dockerfile のタグを 3.12 に戻す PR を出すことです。DB の変更は伴いません。
+- 本番の確認は読み取りだけにします。VPS での直接作業はしません。
+
+### 5. リスク
+- 古い固定の部品が 3.13 に未対応で、版上げが必要になることがあります。その場合、アプリ側の挙動が変わるおそれがあります。
+- `migration-test.yml` の `python:3.12-slim` コンテナと本番の版がずれると、検査の意味がなくなります。
+- Mac の手元は guard が 3.12 以外の venv を止めます。変更の順を間違えると、手元だけ作業不能になります。
+- 3.13 の効果は小さい（速度・機能とも）です。ADR の予定が 3.14 なので、版上げの二重作業になることが最大の無駄です。
+
+## 実行しないこと（今回）
+ファイル変更・commit・push は行っていません。ADR の改訂方針と「A/B/C のどれか」の PO 判断が出てから、手順 0 に進みます。

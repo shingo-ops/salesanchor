@@ -1,0 +1,74 @@
+# backend の Python を 3.12 から 3.13 に上げる計画
+
+ファイル変更・commit・push はしていません。調査は読み取り専用です。計画はここに書くだけで、プランファイルも作っていません。
+
+## 調査で分かったこと（Explore エージェントの報告）
+
+- **ADR との食い違い**
+  - `docs/adr/ADR-1022-python-upgrade-deadline.md`（Proposed）は、3.13 ではなく **3.14 へ 2027 年 10 月までに上げる**と決めています。
+  - AGENTS.md では ADR が優先です。3.13 に上げるなら、先に ADR を更新するか新しい ADR を起案する必要があります。ADR の起案は PO（しんごさん）の担当です。
+- **3.12 の固定箇所**
+  - `backend/Dockerfile:1`
+  - `backend/pyproject.toml:4` と `:31`
+  - CI workflow 約 20 本
+  - `.python-version` と CI の matrix は無し
+- **手元の 3.12 固定**
+  - `scripts/agent-hooks/cloud/python_version_guard.py` と関連テストが、3.12 以外の venv 作成を止めます。
+- **3.13 で削除された標準ライブラリ**
+  - アプリのコードに import はありませんでした。
+  - 依存の `discord.py==2.4.0` が `audioop` を使います。3.13 の環境で実際に入れて確認が必要です（未確認）。
+- **未確認**
+  - C 拡張を含む依存の 3.13 向けホイールの有無は、調査結果に含まれていません。
+  - 本番の VPS 側の Python 依存（イメージ以外）も未確認です。
+
+## 計画
+
+### 0. 着手前の合意（PO 確認）
+1. ADR-1022 との関係を決めます。選択肢は次の 2 つで、推奨は **a** です。
+   - a. 新しい ADR で「3.13 を中間版にする」と決め、ADR-1022 の期限と関係を整理する。
+   - b. 3.13 を飛ばして 3.14 を直接目指す。
+2. 手順書を読みます。`docs/STANDARD-WORKFLOW.md`、`ai-agents/executor-checklist.md`、`ai-agents/dev-commands.md`、`backend/AGENTS.md`。
+3. 作業場所を作ります。`bash scripts/new-worktree.sh release/python-3-13`。クラウド実行の決まりにより、枝名は `release/*` にします。
+
+### 1. 互換性の調査（コード変更なし）
+1. 使い捨ての 3.13 venv を作ります。
+   - 現行の `python_version_guard.py` が 3.12 以外の venv 作成を止めるため、ガードの扱いを先に決めます。
+2. `requirements*` を 3.13 に入れて、ビルド失敗や古い固定がないか確認します。
+   - 特に `discord.py` と、C 拡張を含む依存（psycopg、pydantic-core、cryptography など）が対象です。
+   - 必要なら依存のバージョンを上げます。
+3. `python -W error::DeprecationWarning` 付きで pytest を流し、3.13 の非推奨・挙動変更を洗い出します。
+4. 使い捨ての PostgreSQL（localhost）を立て、pytest の中だけで DB 周りを確認します。本番には接続しません。
+
+### 2. 変更内容（実装）
+1. `backend/Dockerfile:1` のベースイメージを 3.13 系にします。
+2. `backend/pyproject.toml:4`（requires-python）と `:31`（ツール設定）を更新します。
+3. CI workflow 約 20 本の `python-version` を `3.13` に揃えます。
+   - `.github/workflows/workflow-lint.yml` は不可逆操作の一覧にあるため、変更に PO の確認が要ります。
+   - 変更が必要かどうかは、まず該当の有無を確認します。
+4. `scripts/agent-hooks/cloud/python_version_guard.py` と関連テストを 3.13 前提に直します。
+5. 手元の手順書（`docs/ai-agents/dev-commands.md` など）の 3.12 記述を直します。
+6. 依存の上げ下げが出た場合は、lock と `requirements` を更新します。
+
+### 3. 検証
+- 手元: 3.13 の venv で backend の全テストと lint・型検査を流します。
+- Docker: 3.13 の `backend/Dockerfile` からイメージをビルドし、起動してヘルスチェックします。
+- CI: 全 workflow が 3.13 で通ることを確認します。
+- `executor-preflight.sh` と pre-push の検査を通します。`--no-verify` は使いません。
+
+### 4. リリースと戻し手順
+1. PR は手元で `shingo-cc` 名義で作ります。
+   - 本文に「### 標準ワークフロー確認」の節を入れます。
+   - `deploy.yml` を触る場合は、PO の「GO #PR番号」まで main にマージしません。
+2. 本番反映はイメージの再ビルドです。先にリハーサル環境で通します。
+   - VPS には直接触らず、既存の運用手順（`docs/ops/runner-commands.md` など）に従います。
+3. 戻し手順は、ベースイメージを 3.12 のタグに戻して再デプロイすることです。DB のマイグレーションは伴わない想定です。
+4. 反映後は監視の通知（`runbooks/alerts.md`）を一定期間確認します。
+
+### リスク
+- `discord.py==2.4.0` は `audioop` の削除で動かない可能性があります。上げるか、`audioop-lts` を併用します。
+- C 拡張の依存に 3.13 用のホイールがなく、ビルドが失敗する可能性があります。
+- 手元のガードと CI の Python が食い違うと、検査が止まります。変更は同じ PR にまとめます。
+
+## 決めてほしいこと
+- ADR-1022 の扱い（a か b か）
+- 3.13 に上げる時期と、リハーサル環境で先に確認する範囲
