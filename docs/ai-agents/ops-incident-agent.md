@@ -117,7 +117,7 @@
 - 中身の決まり（要件 R3）: 種類ごとに「調べる範囲」「してよいこと」「止まって PO に聞く条件」を置く。この節に無い種類では AI を起こさない（要件 R4）。
 - 今ある種類（v1・5 種）: 2026-10-16〜2026-11-08 の本番の記録で回数の多い順（ログイン失敗の 2 種を除く。要件 C4）。数は `docs/handoff/ai-ops-247/stage4-recon.md` §3。
   - §3-2 ContainerUnhealthy（25 件）・§3-3 HighMemoryUsage（20 件）・§3-4 KumaMonitorDown（9 件）・§3-5 ServiceDown（8 件）・§3-6 BackendHighLatency（6 件）
-  - 草案（PO の承認の前。承認まで、この 7 種で AI を起こさない）: §3-7 ViewerInventoryStale（5 件）・§3-8 RecoveryCheckFailed（5 件）・§3-9 CeleryHeartbeatStale（4 件）・§3-10 ContainerStateStale（4 件）・§3-11 BackendWorkerSaturated（4 件）・§3-12 CeleryQueueBacklog（3 件）・§3-13 BackupTimestampAbsent（1 件）。§3-7〜§3-13 で使う数の名前は、2026-11-20T15:50Z ごろに本番の Prometheus（prod2 の中から読むだけ）で全部あった。
+  - 草案（PO の承認の前。承認まで、この 7 種で AI を起こさない）: §3-7 ViewerInventoryStale（5 件）・§3-8 RecoveryCheckFailed（5 件）・§3-9 CeleryHeartbeatStale（4 件）・§3-10 ContainerStateStale（4 件）・§3-11 BackendWorkerSaturated（4 件）・§3-12 CeleryQueueBacklog（3 件）・§3-13 BackupTimestampAbsent（1 件）。§3-7〜§3-13 で新しく使う数の名前と札の値は、2026-11-20T15:50Z ごろに本番の Prometheus（prod2 の中から読むだけ）で全部あった。`ALERTS` と、§3-6 と同じ式の数（`http_request_duration_seconds_bucket`）は、このときは数えていない（§3-2〜§3-6 で前から使っている名前）。
   - ログイン失敗の 2 種（BruteForceAttempt・SustainedAuthFailure）は、鳴る条件の見直し（順番 8）が本番に出た後に書く（要件 C4）。
 - 見張りの条件の正本は `monitoring/prometheus/alert_rules.yml`、人向けの手順は `docs/runbooks/alerts.md`。この節は条件を書き写さない。行番号だけを指す。
 - 使う前に揃える前提（まだ揃っていない。揃うまで、この節で AI を起こさない）:
