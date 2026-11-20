@@ -44,6 +44,12 @@ const MONTH_VIEW = 'dayGridMonth';
 const PLUGINS = [timeGridPlugin, dayGridPlugin, interactionPlugin];
 const SLOT_LABEL_FORMAT = { hour: '2-digit', minute: '2-digit', hour12: false } as const;
 
+/** 箱の要素に予定の色を置く。色が無ければ外す（色の値は呼ぶ側が渡したトークンのまま） */
+function applyEventColor(el: HTMLElement, color: string | undefined): void {
+  if (color) el.style.setProperty('--comp-calendar-owner-color', color);
+  else el.style.removeProperty('--comp-calendar-owner-color');
+}
+
 export function CalendarView({
   mode,
   date,
@@ -80,6 +86,8 @@ export function CalendarView({
   const draggingRef = useRef(false);
   const trackRef = useRef({ trackEventId, onEventRect });
   trackRef.current = { trackEventId, onEventRect };
+  // 予定の id → いま DOM にある箱の要素。色が変わったときに塗り直すため（eventDidMount は再び呼ばれない・design §4-11）
+  const mountedElsRef = useRef(new Map<string, Set<HTMLElement>>());
 
   const emitTrackedRect = useCallback(() => {
     const { trackEventId: id, onEventRect: emit } = trackRef.current;
@@ -142,6 +150,15 @@ export function CalendarView({
       })),
     [events],
   );
+
+  // 色を変えて保存したとき、使い回された箱の色を新しい色に置き直す（design §4-11・K8）
+  useEffect(() => {
+    for (const ev of events) {
+      const els = mountedElsRef.current.get(ev.id);
+      if (!els) continue;
+      for (const el of els) applyEventColor(el, ev.color);
+    }
+  }, [events]);
 
   const views = useMemo(
     () => ({ [DAYS_VIEW]: { type: 'timeGrid', duration: { days: dayCount } } }),
@@ -335,10 +352,13 @@ export function CalendarView({
         }
         eventDidMount={(arg) => {
           const color = (arg.event.extendedProps.source as CalendarViewEvent).color;
-          if (color) arg.el.style.setProperty('--comp-calendar-owner-color', color);
+          applyEventColor(arg.el, color);
           // ドラッグ中の写しは追わない。追うと再描画で FullCalendar の設定が入れ替わり、
           // 離したときに eventDrop が出なくなる（card-bin12-fix1.md）
           if (arg.isMirror) return;
+          const set = mountedElsRef.current.get(arg.event.id) ?? new Set<HTMLElement>();
+          set.add(arg.el);
+          mountedElsRef.current.set(arg.event.id, set);
           if (trackRef.current.trackEventId && arg.event.id === trackRef.current.trackEventId) {
             trackedElRef.current = arg.el;
             setTrackedEl(arg.el);
@@ -347,6 +367,11 @@ export function CalendarView({
         }}
         eventWillUnmount={(arg) => {
           if (arg.isMirror) return; // 写しは追っていない（eventDidMount と同じ趣旨）
+          const set = mountedElsRef.current.get(arg.event.id);
+          if (set) {
+            set.delete(arg.el);
+            if (set.size === 0) mountedElsRef.current.delete(arg.event.id);
+          }
           // 別の日へ動かすと、新しい要素の mount の後に古い要素の unmount が来ることがある。同じ要素のときだけ忘れる
           if (trackedElRef.current === arg.el) {
             trackedElRef.current = null;
