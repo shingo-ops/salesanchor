@@ -27,6 +27,7 @@ import { CheckboxControl } from "../../components/CheckboxControl";
 import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from "../../constants/icons";
 import { CALENDAR_MAP, type CalendarId } from "../../features/schedule/calendars.config";
 import { api } from "../../lib/api";
+import { eventColorVar, eventDisplayColor, type EventColorKey } from "./eventColors";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import "../schedule.css";
@@ -100,6 +101,8 @@ export interface ScheduleDraft {
   /** Google Meet の行を押した印（保存時に add_meet として送る） */
   addMeet: boolean;
   recurrence: ScheduleRecurrence;
+  /** 予定の色（ADR-1081）。null はデフォルト（持ち主の色） */
+  colorKey: EventColorKey | null;
 }
 
 /** 繰り返しの予定を直す・消す・動かすときの 3 択の小窓（design §12.6.1） */
@@ -156,6 +159,7 @@ function createDraft(item?: ScheduleItem | null): ScheduleDraft {
     location: item?.location ?? "",
     addMeet: false,
     recurrence: item?.recurrence ?? "none",
+    colorKey: item?.colorKey ?? null,
   };
 }
 
@@ -256,10 +260,13 @@ function SchedulePopover({
   canEdit,
   canChangeVisibility,
   meetAvailable,
+  ownerColor,
   onMoreOptions,
   placement,
   calendarAreaRef,
 }: {
+  /** デフォルトの色の丸に使う持ち主の色（ADR-1081） */
+  ownerColor: string;
   /** 作る小窓を仮の箱の横に置くか（"box"）、押した点の横に置くか（"point"）（design §3.17 作り方 4） */
   placement: "box" | "point";
   /** 予定の画面の時間割の箱。作る小窓は、ここと小窓の外を押したら閉じる（作り方 3） */
@@ -425,6 +432,7 @@ function SchedulePopover({
               onDraftChange={onDraftChange}
               canChangeVisibility={canChangeVisibility}
               meetAvailable={meetAvailable}
+              ownerColor={ownerColor}
             />
           </div>
         )}
@@ -650,7 +658,7 @@ function ScheduleDayListPopover({
                 className="schedule-day-list__row"
                 onClick={(event) => onSelectEvent(item, event.currentTarget.getBoundingClientRect())}
               >
-                <span className="schedule-month__dot" style={{ background: ownerMeta.color }} aria-hidden="true" />
+                <span className="schedule-month__dot" style={{ background: eventDisplayColor(item.colorKey, ownerMeta.color) }} aria-hidden="true" />
                 <span className="schedule-month__time">
                   {item.allDay ? t("schedule.allDay") : formatTimeInput(item.start)}
                 </span>
@@ -718,7 +726,7 @@ function ScheduleListView({
                     className="schedule-list__row"
                     onClick={(event) => onSelectEvent(item, event.currentTarget.getBoundingClientRect())}
                   >
-                    <span className="schedule-month__dot" style={{ background: ownerMeta.color }} aria-hidden="true" />
+                    <span className="schedule-month__dot" style={{ background: eventDisplayColor(item.colorKey, ownerMeta.color) }} aria-hidden="true" />
                     <span className="schedule-list__time">
                       {item.allDay ? t("schedule.allDay") : formatEventTimeRange(item.start, item.end, t, false)}
                     </span>
@@ -974,6 +982,7 @@ export default function SchedulePage() {
       location: "",
       addMeet: false,
       recurrence: "none",
+      colorKey: null,
     });
     setPopover({
       mode: "create",
@@ -1017,6 +1026,7 @@ export default function SchedulePage() {
         category: draft.category,
         description: draft.description || undefined,
         location: draft.location || undefined,
+        color_key: draft.colorKey ?? "",
       };
       if (canChangeVisibility) {
         body.calendar_type = draft.visibleToStaff ? "shared" : "personal";
@@ -1210,6 +1220,7 @@ export default function SchedulePage() {
       location: "",
       addMeet: false,
       recurrence: "none",
+      colorKey: null,
     });
     setPendingVisible(true);
     setPopover({ mode: "create", anchor, item: null });
@@ -1257,9 +1268,11 @@ export default function SchedulePage() {
           start: pendingBox.start,
           end: pendingBox.end,
           allDay: pendingBox.allDay,
-          color: currentOwnerUserId != null
-            ? getOwnerMeta(ownerByUserId, currentOwnerUserId, currentOwnerUserId).color
-            : undefined,
+          color: draft.colorKey
+            ? eventColorVar(draft.colorKey)
+            : (currentOwnerUserId != null
+              ? getOwnerMeta(ownerByUserId, currentOwnerUserId, currentOwnerUserId).color
+              : undefined),
           editable: true,
         }]
       : []),
@@ -1269,14 +1282,14 @@ export default function SchedulePage() {
       start: item.start,
       end: item.end,
       allDay: item.allDay,
-      color: getOwnerMeta(ownerByUserId, item.ownerUserId, currentOwnerUserId).color,
+      color: eventDisplayColor(item.colorKey, getOwnerMeta(ownerByUserId, item.ownerUserId, currentOwnerUserId).color),
       editable: canMoveItem(item),
     })),
     ...toHolidayEvents(holidaysQ.data?.holidays),
   // eslint-disable-next-line react-hooks/exhaustive-deps -- pendingBox は start・end の時刻と allDay で追う（design §3.17）。canMoveItem は canEditItem（currentOwnerUserId・canManageOwners）から決まる
   ], [
     pendingStartMs, pendingEndMs, pendingAllDay,
-    draft.title, visibleEvents, holidaysQ.data, ownerByUserId, currentOwnerUserId, t,
+    draft.title, draft.colorKey, visibleEvents, holidaysQ.data, ownerByUserId, currentOwnerUserId, t,
     canManageOwners,
   ]);
 
@@ -1378,6 +1391,9 @@ export default function SchedulePage() {
     : [];
 
   const BannerCloseIcon = SCHEDULE_POPOVER_ICONS.close;
+
+  // デフォルトの色の丸に使う持ち主の色（作るときは item が無いので currentOwnerUserId の色）
+  const draftOwnerColor = getOwnerMeta(ownerByUserId, popover?.item?.ownerUserId ?? null, currentOwnerUserId).color;
 
   return (
     <div className="schedule-page gcal-colors">
@@ -1681,6 +1697,7 @@ export default function SchedulePage() {
           placement={pendingVisible ? "box" : "point"}
           calendarAreaRef={calendarAreaRef}
           meetAvailable={popoverMeetAvailable}
+          ownerColor={draftOwnerColor}
           onMoreOptions={() => { setError(null); setFullEditOpen(true); }}
         />
       )}
@@ -1696,6 +1713,7 @@ export default function SchedulePage() {
         error={error}
         canChangeVisibility={canChangeVisibility}
         meetAvailable={popoverMeetAvailable}
+        ownerColor={draftOwnerColor}
       />
     </div>
   );

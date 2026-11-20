@@ -40,10 +40,13 @@ from app.services.gemini_raw_copy_v102_product_first import (
     ProductFirstMasters,
     ShimeBoxAllStatesRule,
     _resolve_condition,
+    match_text_g2,
     resolve_product_first,
 )
 from app.services.gemini_raw_copy_v102_soldout_ref import (
     CONDITION_BASIS_SOLDOUT_INHERIT,
+    CONDITION_BASIS_SOLDOUT_LIST_SHIME,
+    MATCH_STATUS_MATCHED_LIST_SHIME,
     MATCH_STATUS_MATCHED_SOLDOUT_REF,
     SoldoutRefDecision,
     SoldoutRefPost,
@@ -51,7 +54,10 @@ from app.services.gemini_raw_copy_v102_soldout_ref import (
     condition_decided_by_word,
     decide_soldout_inherit,
     decide_soldout_ref,
+    is_kind_default_basis,
+    list_shime_targets,
     soldout_targets,
+    split_list_shime,
 )
 from app.services.tcg_analyzer_svc import resolve_condition_v2, resolve_status_v2, resolve_unit_v2
 from app.services.tcg_empty_box_rules import EMPTY_CANONICAL, EMPTY_CODE
@@ -1324,6 +1330,105 @@ def _apply_followup(
     return result
 
 
+_LIST_SHIME_SEPARATOR_CHARS_RE = re.compile(r"[、,，/／]")
+
+
+def _is_plain_soldout_row(row: dict) -> bool:
+    """規則14の条件1：完売（除外・Sold out）で、価格も数量も無い件。"""
+    return (
+        row.get("status_effect") == "excluded" and row.get("status") == "Sold out"
+        and row.get("price_normalized") is None and row.get("quantity_normalized") is None
+    )
+
+
+def _list_shime_blocked_by_stock(
+    extracted: list[dict], i: int, group: tuple[int, ...], lines: list[str], masters: ProductFirstMasters,
+    followup_ref: tuple[str, str] | None, unit_alias_to_info: dict,
+) -> bool:
+    """規則14の条件6：同じ投稿の在庫の件（完売でない件）が、並んだ商品のどれかを指す（今の候補・後の段の followup の決定）なら True。"""
+    stock = {j for j, other in enumerate(extracted) if j != i and not _is_plain_soldout_row(other)}
+    for j in stock:
+        other = extracted[j]
+        if other.get("product_id") in group or set(other.get("match_candidates") or []) & set(group):
+            return True
+    if followup_ref is None:
+        return False
+    _message_id, ref_text = followup_ref
+    decisions = decide_followup(
+        extracted, lines, build_reference_lines(ref_text, masters),
+        units=unit_words(unit_alias_to_info), plural_words=masters.followup_plural_words,
+    )
+    return any(j in stock and decision.product_id in group for j, decision in decisions.items())
+
+
+def _apply_list_shime(
+    extracted: list[dict], build: Callable[[int, int | None], dict], lines: list[str],
+    masters: ProductFirstMasters, soldout_posts: tuple[SoldoutRefPost, ...], sold_out_words: list[str],
+    fixed_products: dict[int, int] | None, box_rule: ShimeBoxAllStatesRule | None, post_text: str,
+    followup_ref: tuple[str, str] | None, unit_alias_to_info: dict,
+) -> list[dict]:
+    """試作版 v102 の規則14：1行に品名を区切って並べた〆（「品名A、品名B〆」）で、並んだ商品を全部完売の相手にする。
+
+    設計: docs/handoff/shime-bundle-close/design-oneline.md §3-1。全部か無しか。条件1〜6をこの順に見て、外れた件は今のまま。
+    """
+    def match(part: str) -> int | None:
+        found = match_text_g2(part, masters)
+        return found.product_id if found.status == "matched" else None
+
+    result = list(extracted)
+    for i, row in enumerate(extracted):
+        if not _is_plain_soldout_row(row) or len(row["lines"]) != 1:
+            continue  # 条件1・2
+        if row.get("match_status") != "ambiguous":
+            continue  # 条件3
+        text_of_row = lines[row["lines"][0] - 1]
+        group = split_list_shime(text_of_row, sold_out_words, match)
+        if group is None or not set(group) <= set(row.get("match_candidates") or []):
+            continue  # 条件3
+        if i in (fixed_products or {}):
+            continue  # 条件4
+        built = {p: build(i, p) for p in group}
+        if any(
+            condition_decided_by_word(b["condition_basis"]) and not is_kind_default_basis(b["condition_basis"])
+            for b in built.values()
+        ):
+            continue  # 条件5
+        if _list_shime_blocked_by_stock(extracted, i, group, lines, masters, followup_ref, unit_alias_to_info):
+            continue  # 条件6
+        targets_of = {}
+        for p in group:
+            with_p = [*extracted[:i], built[p], *extracted[i + 1:]]
+            targets_of[p] = list_shime_targets(
+                p, with_p, i, soldout_posts, fixed_products, box_rule=box_rule, post_text=post_text,
+            )
+        heads = [p for p in group if targets_of[p]]
+        if not heads:
+            continue
+        head = heads[0]
+        ordered = [*targets_of[head], *(t for p in group if p != head for t in targets_of[p])]
+        seen: set[tuple[int, int]] = set()
+        unique = []
+        for t in ordered:
+            if (t.product_id, t.condition_id) not in seen:
+                seen.add((t.product_id, t.condition_id))
+                unique.append(t)
+        separators = list(dict.fromkeys(_LIST_SHIME_SEPARATOR_CHARS_RE.findall(text_of_row)))
+        result[i] = {
+            **built[head],
+            "match_status": MATCH_STATUS_MATCHED_LIST_SHIME,
+            "product_list_shime": {"separators": separators, "products": list(group)},
+            "soldout_targets": [
+                {
+                    "product_id": t.product_id, "condition_id": t.condition_id, "ref_message_id": t.ref_message_id,
+                    "ref_line": t.ref_line, "unit_id": t.unit_id, "unit_canonical": t.unit_canonical,
+                }
+                for t in unique
+            ],
+            "soldout_target_basis": CONDITION_BASIS_SOLDOUT_LIST_SHIME,
+        }
+    return result
+
+
 def _apply_soldout_ref(
     extracted: list[dict], build: Callable[[int, int | None], dict], lines: list[str],
     masters: ProductFirstMasters, soldout_posts: tuple[SoldoutRefPost, ...], unit_alias_to_info: dict,
@@ -1540,6 +1645,11 @@ def _extract_v102(
     extracted = [build(i) for i in range(len(items))]
     no_number = [it["price_line"] for it in items if _has_no_digit(it["quantity"])]
     if ctx.product_first is not None:
+        if soldout_posts:
+            extracted = _apply_list_shime(
+                extracted, build, lines, ctx.product_first, soldout_posts, ctx.sold_out_words, fixed_products,
+                ctx.product_first.shime_box_all_states, "\n".join(lines), followup_ref, ctx.unit_alias_to_info,
+            )
         extracted = _apply_context_work(extracted, build, ctx.product_first.product_entries)
         if followup_ref is not None:
             extracted = _apply_followup(

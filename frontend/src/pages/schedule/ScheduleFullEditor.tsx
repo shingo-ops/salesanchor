@@ -11,6 +11,7 @@ import { TextFieldControl } from "../../components/TextField";
 import { SCHEDULE_POPOVER_ICONS } from "../../constants/icons";
 import {
   DraftCategoryField,
+  DraftColorField,
   DraftDateFields,
   DraftDescriptionField,
   DraftLocationField,
@@ -31,6 +32,7 @@ export function ScheduleFullEditor({
   error,
   canChangeVisibility,
   meetAvailable,
+  ownerColor,
 }: {
   open: boolean;
   mode: "create" | "edit";
@@ -44,11 +46,14 @@ export function ScheduleFullEditor({
   error: string | null;
   canChangeVisibility: boolean;
   meetAvailable: boolean;
+  /** デフォルトの色の丸に使う持ち主の色（ADR-1081） */
+  ownerColor: string;
 }) {
   const { t } = useTranslation();
   const titleRef = useRef<HTMLInputElement | null>(null);
   const LocationIcon = SCHEDULE_POPOVER_ICONS.location;
   const CategoryIcon = SCHEDULE_POPOVER_ICONS.category;
+  const ColorIcon = SCHEDULE_POPOVER_ICONS.color;
   const ShareIcon = SCHEDULE_POPOVER_ICONS.share;
   const DescriptionIcon = SCHEDULE_POPOVER_ICONS.description;
   const common = { appearance: "page" as const, draft, onDraftChange };
@@ -86,6 +91,9 @@ export function ScheduleFullEditor({
       </EditorPageRow>
       <EditorPageRow icon={<CategoryIcon size={20} aria-hidden="true" />}>
         <DraftCategoryField {...common} mode={mode} />
+      </EditorPageRow>
+      <EditorPageRow icon={<ColorIcon size={20} aria-hidden="true" />}>
+        <DraftColorField {...common} mode={mode} ownerColor={ownerColor} />
       </EditorPageRow>
       {canChangeVisibility && (
         <EditorPageRow icon={<ShareIcon size={20} aria-hidden="true" />}>

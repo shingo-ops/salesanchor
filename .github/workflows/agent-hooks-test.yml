@@ -77,3 +77,29 @@ jobs:
           fetch-depth: 0
       - name: Run install-form-guard tests
         run: python3 scripts/agent-hooks/install-form-guard/test_guard.py
+
+  go-identity-guard:
+    name: go-identity-guard test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Run go-identity-guard tests
+        run: python3 scripts/agent-hooks/go-identity-guard/test_guard.py
+
+  go-comment-guard:
+    name: go-comment-guard test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Run go-comment-guard tests
+        run: python3 scripts/agent-hooks/cloud/test_go_comment_guard.py

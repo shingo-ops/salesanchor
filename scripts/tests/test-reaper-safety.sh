@@ -34,6 +34,7 @@
 #   [G7] 本店の .git がシンボリックリンクなら終了コード 1・何も消さない
 #   [G8] 本店の .git/commondir が偽の置き場なら、rev-parse 段で印が動かず終了コード 1・何も消さない（対照あり）
 #   [G9] 本番の走査を worktree の中（本店の最上位でない cwd）で動かすと終了コード 1・何も消さない
+#   [I-*] R13 置き忘れの部屋: 写しを取って消す・残す条件・照合・戻し・上限・作りかけ・TERM・数の行（設計 design-idle-reclaim.md §8）
 #
 # 実行方法: bash scripts/tests/test-reaper-safety.sh
 # 終了コード: 0=全PASS / 1=FAIL あり
@@ -46,7 +47,9 @@ PASS=0
 FAIL=0
 
 # ── テスト用一時ディレクトリ ────────────────────────────────────────────────
-TMPDIR_TEST=$(mktemp -d /tmp/reaper-test.XXXXXX)
+# macOS では /tmp が /private/tmp への入口なので、実際の場所の名前にそろえる（git worktree list の表示と HOME を合わせる）
+_REAPER_TEST_TMP=$(mktemp -d /tmp/reaper-test.XXXXXX)
+TMPDIR_TEST=$(cd "${_REAPER_TEST_TMP}" && pwd -P)
 trap 'rm -rf "${TMPDIR_TEST}"' EXIT
 
 FAKE_WORKTREES="${TMPDIR_TEST}/worktrees"
@@ -75,6 +78,22 @@ if [[ "$*" == *"--state merged"* && "$*" == *"body"* ]]; then
   done
   exit 0
 fi
+# R13 の「PR が開いているか」（--state open）: MOCK_GH_OPEN_BRANCH（カンマ区切り）のブランチは 1、ほかは 0。
+#   MOCK_GH_OPEN_FAIL=1 なら非0で終了。MOCK_GH_TERM_PIDFILE があれば、そこに書かれた pid へ TERM を送ってから答える（TERM の試験用）
+if [[ "$*" == *"--state open"* ]]; then
+  [ -n "${MOCK_GH_TERM_PIDFILE:-}" ] && kill -TERM "$(cat "${MOCK_GH_TERM_PIDFILE}")" 2>/dev/null
+  [ "${MOCK_GH_OPEN_FAIL:-0}" = "1" ] && exit 1
+  if [ -n "${MOCK_GH_OPEN_BRANCH:-}" ]; then
+    IFS=',' read -ra _OPEN <<< "${MOCK_GH_OPEN_BRANCH}"
+    for _b in "${_OPEN[@]}"; do
+      for arg in "$@"; do
+        if [ "${arg}" = "${_b}" ]; then echo "1"; exit 0; fi
+      done
+    done
+  fi
+  echo "0"
+  exit 0
+fi
 if [[ "$*" == *"--state merged"* ]]; then
   if [ -n "${MOCK_GH_MERGED_BRANCH:-}" ]; then
     IFS=',' read -ra _MERGED <<< "${MOCK_GH_MERGED_BRANCH}"
@@ -94,6 +113,27 @@ fi
 exit 0
 GHEOF
 chmod +x "${MOCK_BIN}/gh"
+
+# git の差し替え（R13 の試験用）: MOCK_GIT_FAIL_MATCH が引数に含まれるときだけ失敗させ、それ以外は本物の git をそのまま動かす
+REAL_GIT="$(command -v git)"
+export REAL_GIT
+cat > "${MOCK_BIN}/git" << 'GITEOF'
+#!/bin/bash
+if [ -n "${MOCK_GIT_FAIL_MATCH:-}" ] && [[ " $* " == *"${MOCK_GIT_FAIL_MATCH}"* ]]; then
+  exit 1
+fi
+exec "${REAL_GIT}" "$@"
+GITEOF
+chmod +x "${MOCK_BIN}/git"
+# du の差し替え: 呼ばれたら MOCK_DU_LOG に記録して本物へ（dry-run が du を流さないことの確かめ用）
+REAL_DU="$(command -v du)"
+export REAL_DU
+cat > "${MOCK_BIN}/du" << 'DUEOF'
+#!/bin/bash
+[ -n "${MOCK_DU_LOG:-}" ] && echo "$*" >> "${MOCK_DU_LOG}"
+exec "${REAL_DU}" "$@"
+DUEOF
+chmod +x "${MOCK_BIN}/du"
 
 export PATH="${MOCK_BIN}:${PATH}"
 
@@ -1034,6 +1074,319 @@ else
   FAIL=$(( FAIL + 1 ))
 fi
 rm -f "${LK_MARK}"
+
+# ── R13: 置き忘れの部屋の片付け（写し・照合・戻し）──────────────────────────────
+# 本番の走査（REAPER_WORKTREES_DIR を空）で、HOME を試験用に差し替えて $HOME/worktrees/ の下に部屋を作る。
+# gh は上の偽物（--state open は MOCK_GH_OPEN_BRANCH / MOCK_GH_OPEN_FAIL）。本物の GitHub には問い合わせない。
+IDLE_HOME="${TMPDIR_TEST}/idle-home"
+mkdir -p "${IDLE_HOME}/worktrees"
+IDLE_LOCK="${TMPDIR_TEST}/idle.lock.d"
+OLD_TS=$(( $(date +%s) - 40 * 86400 ))
+SHA_CMD="sha256sum"; command -v sha256sum >/dev/null 2>&1 || SHA_CMD="shasum -a 256"
+
+t_ok() { # <名前> <コマンド...> : 成功したら PASS
+  local name="$1"; shift
+  if "$@" >/dev/null 2>&1; then
+    echo "✅ PASS [${name}]"; PASS=$(( PASS + 1 ))
+  else
+    echo "❌ FAIL [${name}]"; FAIL=$(( FAIL + 1 ))
+  fi
+}
+t_no() { # <名前> <コマンド...> : 失敗したら PASS
+  local name="$1"; shift
+  if "$@" >/dev/null 2>&1; then
+    echo "❌ FAIL [${name}]"; FAIL=$(( FAIL + 1 ))
+  else
+    echo "✅ PASS [${name}]"; PASS=$(( PASS + 1 ))
+  fi
+}
+icommit() { GIT_AUTHOR_DATE="${OLD_TS} +0000" GIT_COMMITTER_DATE="${OLD_TS} +0000" git "$@"; }
+age_stamp() { python3 -c 'import time,sys;print(time.strftime("%Y%m%d%H%M",time.localtime(time.time()-86400*int(sys.argv[1]))))' "$1"; }
+py_mtime() { python3 -c 'import os,sys;print(os.stat(sys.argv[1]).st_mtime_ns)' "$1"; }
+age_room() { # <部屋> <日数> : 作業ファイル・index・HEAD の更新時刻を N 日前にする
+  local st gd
+  st=$(age_stamp "$2")
+  gd=$(git -C "$1" rev-parse --absolute-git-dir)
+  find "$1" -mindepth 1 -not -path "$1/.git" -exec touch -h -t "${st}" {} + 2>/dev/null || true
+  touch -t "${st}" "${gd}/index" "${gd}/HEAD"
+}
+make_idle_main() { # <タグ> : IDLE_MAIN に本店を作る（ブランチ main は 40 日前のコミット）
+  local m="${TMPDIR_TEST}/idle-$1-main" r="${TMPDIR_TEST}/idle-$1-remote.git"
+  git init --bare "${r}" -q 2>/dev/null
+  git init "${m}" -q -b main 2>/dev/null
+  git -C "${m}" config user.email "test@test.com"
+  git -C "${m}" config user.name "test"
+  git -C "${m}" remote add origin "${r}"
+  local f
+  for f in a b c d; do printf '1\n' > "${m}/${f}.txt"; done
+  printf '*.log\nnode_modules/\n' > "${m}/.gitignore"
+  printf '\000\001' > "${m}/bin.dat"
+  git -C "${m}" add -A
+  icommit -C "${m}" commit -m base -q 2>/dev/null
+  git -C "${m}" push origin HEAD:refs/heads/main -q 2>/dev/null
+  git -C "${m}" fetch origin -q 2>/dev/null
+  IDLE_MAIN="${m}"
+}
+make_idle_room() { # <本店> <部屋の名前> <ブランチ> : 部屋のパスを出す
+  local dir="${IDLE_HOME}/worktrees/$(basename "$1")/$2"
+  mkdir -p "$(dirname "${dir}")"
+  git -C "$1" worktree add -q -b "$3" "${dir}" main >/dev/null 2>&1
+  echo "${dir}"
+}
+room_state() { # <部屋> : status と全ファイル（.git・node_modules を除く）の sha256
+  ( cd "$1" && GIT_OPTIONAL_LOCKS=0 git status --porcelain --untracked-files=all
+    find . \( -path ./.git -o -path ./node_modules \) -prune -o -type f -print0 | LC_ALL=C sort -z | xargs -0 ${SHA_CMD} )
+}
+run_idle() { # <cwd> <モード: --execute か空> [環境変数=値 ...]。IDLE_OUT・IDLE_RC に入る
+  local cwd="$1" mode="$2"; shift 2
+  IDLE_RC=0
+  IDLE_OUT=$(cd "${cwd}" && env -u REAPER_WORKTREES_DIR \
+    HOME="${IDLE_HOME}" \
+    REAPER_ACTIVE_WORK_FILE="${FAKE_ACTIVE_WORK}" \
+    REAPER_REPO_NAME="test/test" \
+    REAPER_SKIP_FETCH=1 \
+    REAPER_LOCK_DIR="${IDLE_LOCK}" \
+    "$@" \
+    bash "${REAPER}" ${mode} 2>&1) || IDLE_RC=$?
+}
+in_out() { printf '%s\n' "${IDLE_OUT}" | grep -q -- "$1"; }
+archive_dirs() { find "$1/.git/reaper-archive" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' '; }
+
+# ── I-1: 主な道（置き忘れは写して消える／PR 開・使用中・鍵付き・13 日・HOME の外は残る／detached／戻し）──
+make_idle_main s1
+M1="${IDLE_MAIN}"
+OLD_DIR=$(make_idle_room "${M1}" old feature/idle/old)
+printf 'e\n' > "${OLD_DIR}/e.txt"
+git -C "${OLD_DIR}" add e.txt
+icommit -C "${OLD_DIR}" commit -m unpushed -q 2>/dev/null
+printf '2\n' >> "${OLD_DIR}/a.txt"; git -C "${OLD_DIR}" add a.txt                 # ステージ済み
+printf '2\n' >> "${OLD_DIR}/b.txt"                                                # 未ステージ
+rm -f "${OLD_DIR}/c.txt"                                                          # 消したファイル
+printf '2\n' >> "${OLD_DIR}/d.txt"; git -C "${OLD_DIR}" add d.txt; printf '3\n' >> "${OLD_DIR}/d.txt"   # 同じファイルに両方
+printf '\000\002\003' > "${OLD_DIR}/bin.dat"                                      # バイナリの未ステージ
+printf 'n\n' > "${OLD_DIR}/new.txt"; mkdir -p "${OLD_DIR}/sub"; printf 'n2\n' > "${OLD_DIR}/sub/new2.txt"   # 新しいファイル
+printf 'log\n' > "${OLD_DIR}/x.log"; mkdir -p "${OLD_DIR}/node_modules"; printf 'js\n' > "${OLD_DIR}/node_modules/m.js"  # 無視ファイル
+IPR_DIR=$(make_idle_room "${M1}" ipr feature/idle/ipr)
+echo "| feature/idle/ipr | テスト | 2026-06-06 | IN_PROGRESS | | | |" >> "${FAKE_ACTIVE_WORK}"
+D13_DIR=$(make_idle_room "${M1}" d13 feature/idle/d13)
+PR_DIR=$(make_idle_room "${M1}" pr feature/idle/pr)
+INUSE_DIR=$(make_idle_room "${M1}" inuse feature/idle/inuse)
+LOCK_DIR=$(make_idle_room "${M1}" locked feature/idle/locked)
+git -C "${M1}" worktree lock --reason "試験" "${LOCK_DIR}" 2>/dev/null
+DET_DIR="${IDLE_HOME}/worktrees/$(basename "${M1}")/det"
+git -C "${M1}" worktree add -q --detach "${DET_DIR}" main >/dev/null 2>&1
+printf 'd\n' > "${DET_DIR}/det.txt"; git -C "${DET_DIR}" add det.txt
+icommit -C "${DET_DIR}" commit -m detcommit -q 2>/dev/null                        # origin から届かないコミット
+printf 'u\n' > "${DET_DIR}/und.txt"
+OUT_DIR="${TMPDIR_TEST}/idle-outside/room"                                        # $HOME/worktrees の外（~/.salesanchor-tools 相当）
+mkdir -p "$(dirname "${OUT_DIR}")"
+git -C "${M1}" worktree add -q -b feature/idle/outside "${OUT_DIR}" main >/dev/null 2>&1
+for d in "${OLD_DIR}" "${IPR_DIR}" "${PR_DIR}" "${INUSE_DIR}" "${LOCK_DIR}" "${DET_DIR}" "${OUT_DIR}"; do age_room "${d}" 15; done
+age_room "${D13_DIR}" 13
+( cd "${INUSE_DIR}" && exec tail -f /dev/null ) >/dev/null 2>&1 &
+HOLD_PID=$!
+for _i in $(seq 1 300); do lsof -a -d cwd -Fn 2>/dev/null | grep -q "^n${INUSE_DIR}\$" && break; done
+
+STATE_OLD_BEFORE=$(room_state "${OLD_DIR}")
+STATE_DET_BEFORE=$(room_state "${DET_DIR}")
+STATE_IPR_BEFORE=$(room_state "${IPR_DIR}")
+DET_HEAD_BEFORE=$(git -C "${DET_DIR}" rev-parse HEAD)
+OLD_IDX="$(git -C "${OLD_DIR}" rev-parse --absolute-git-dir)/index"
+IDX_BEFORE=$(py_mtime "${OLD_IDX}")
+export MOCK_DU_LOG="${TMPDIR_TEST}/idle-du.log"
+: > "${MOCK_DU_LOG}"
+
+# dry-run を 2 回: 候補の名前と件数だけ。写し・du・削除はしない。index の時刻は変わらない
+run_idle "${M1}" "" MOCK_GH_OPEN_BRANCH="feature/idle/pr"
+run_idle "${M1}" "" MOCK_GH_OPEN_BRANCH="feature/idle/pr"
+echo ""
+echo "=== テスト I-1 dry-run 出力 ==="
+echo "${IDLE_OUT}"
+t_ok "I-dry 終了コード 0" test "${IDLE_RC}" -eq 0
+t_ok "I-dry 候補は 3 件（old・ipr・detached）" in_out "置き忘れの候補.*: 3 件"
+t_ok "I-dry old が候補" in_out "feature/idle/old"
+t_ok "I-dry IN_PROGRESS の部屋も候補（台帳の状態は使わない）" in_out "feature/idle/ipr"
+t_ok "I-dry detached が候補" in_out "(detached)（${DET_DIR}）"
+CAND_PART=$(printf '%s\n' "${IDLE_OUT}" | sed -n '/置き忘れの候補/,/^$/p')
+for n in feature/idle/d13 feature/idle/pr feature/idle/inuse feature/idle/locked feature/idle/outside; do
+  t_no "I-dry ${n} は候補欄に入らない" bash -c 'printf "%s\n" "$1" | grep -q -- "$2"' _ "${CAND_PART}" "${n}"
+done
+t_ok "I-dry 作業場所の数の行が出る" in_out "^作業場所の数: [0-9]*（上限 100 ・知らせる線 70）"
+t_ok "I-dry 部屋は全部残る" test -d "${OLD_DIR}" -a -d "${DET_DIR}" -a -d "${IPR_DIR}"
+t_no "I-dry 写しの置き場を作らない" test -e "${M1}/.git/reaper-archive"
+t_ok "I-dry du を流さない" test ! -s "${MOCK_DU_LOG}"
+t_ok "I-時刻 回収を 2 回流しても index の時刻が変わらない" test "$(py_mtime "${OLD_IDX}")" = "${IDX_BEFORE}"
+
+# 本番の走査を worktree の中から動かす（繋がりが合わない）→ 数の行は出ない（R12）
+run_idle "${D13_DIR}" "" MOCK_GH_OPEN_BRANCH="feature/idle/pr"
+t_ok "I-数の行 繋がりが合わない道では終了コード 1" test "${IDLE_RC}" -eq 1
+t_no "I-数の行 繋がりが合わない道では数の行を出さない" in_out "^作業場所の数:"
+
+# 実削除
+run_idle "${M1}" "--execute" MOCK_GH_OPEN_BRANCH="feature/idle/pr"
+echo ""
+echo "=== テスト I-1 実削除 出力 ==="
+echo "${IDLE_OUT}"
+ARCH1="${M1}/.git/reaper-archive"
+t_ok "I-exec 終了コード 0" test "${IDLE_RC}" -eq 0
+t_ok "I-exec 片付け 3 件 / 写し 3 件" in_out "^片付け 3 件 / 写し 3 件"
+t_ok "I-exec 作業場所の数の行が 1 回だけ出る" test "$(printf '%s\n' "${IDLE_OUT}" | grep -c '^作業場所の数:')" -eq 1
+t_no "I-exec 置き忘れ（old）の部屋が消えた" test -e "${OLD_DIR}"
+t_no "I-exec 置き忘れ（ipr）の部屋が消えた" test -e "${IPR_DIR}"
+t_no "I-exec 置き忘れ（detached）の部屋が消えた" test -e "${DET_DIR}"
+t_ok "I-exec ブランチは残る" git -C "${M1}" rev-parse -q --verify refs/heads/feature/idle/old
+t_ok "I-exec 台帳は書き換えない（IN_PROGRESS のまま）" grep -q "feature/idle/ipr | テスト | 2026-06-06 | IN_PROGRESS" "${FAKE_ACTIVE_WORK}"
+for n in d13 pr inuse locked; do
+  t_ok "I-exec ${n} は残る" test -d "${IDLE_HOME}/worktrees/$(basename "${M1}")/${n}"
+done
+t_ok "I-exec HOME の外の部屋は残る" test -d "${OUT_DIR}"
+t_ok "I-exec 写しは 3 つ" test "$(archive_dirs "${M1}")" -eq 3
+OLD_ARCH=$(find "${ARCH1}" -mindepth 1 -maxdepth 1 -type d -name '*-old' | head -1)
+DET_ARCH=$(find "${ARCH1}" -mindepth 1 -maxdepth 1 -type d -name '*-det' | head -1)
+IPR_ARCH=$(find "${ARCH1}" -mindepth 1 -maxdepth 1 -type d -name '*-ipr' | head -1)
+for f in head.txt status.txt staged.patch unstaged.patch untracked.tar ignored.tar ignored.list unpushed.bundle; do
+  t_ok "I-写し old に ${f}" test -e "${OLD_ARCH}/${f}"
+done
+t_ok "I-写し detached に bundle" test -s "${DET_ARCH}/unpushed.bundle"
+t_ok "I-写し 無視ファイルは写す（x.log）" grep -q '^x.log$' "${OLD_ARCH}/ignored.list"
+t_no "I-写し 作り直せる置き場は写さない（node_modules）" grep -q 'node_modules' "${OLD_ARCH}/ignored.list"
+t_ok "I-写し 作りかけの名前が残っていない" test -z "$(find "${ARCH1}" -mindepth 1 -maxdepth 1 -name '.inprogress-*')"
+t_ok "I-log reclaim.log に 写し完成 が 3 行" test "$(grep -c '写し完成:' "${ARCH1}/reclaim.log")" -eq 3
+t_ok "I-log reclaim.log に 置き忘れを片付け が 3 行" test "$(grep -c '置き忘れを片付け:' "${ARCH1}/reclaim.log")" -eq 3
+t_ok "I-exec du は実削除で流れる" test -s "${MOCK_DU_LOG}"
+
+# 戻し: status と各ファイルの sha256 が消す前と同じ（消したファイル・ステージ済み・未ステージ・同じファイルに両方）
+t_ok "I-戻し old（restore の終了コード 0）" bash "${SCRIPT_DIR}/../reaper-restore.sh" "${OLD_ARCH}"
+t_ok "I-戻し old: status と sha256 が消す前と同じ" test "$(room_state "${OLD_DIR}")" = "${STATE_OLD_BEFORE}"
+t_ok "I-戻し old: ブランチに戻る" test "$(git -C "${OLD_DIR}" branch --show-current)" = "feature/idle/old"
+t_ok "I-戻し ipr" bash "${SCRIPT_DIR}/../reaper-restore.sh" "${IPR_ARCH}"
+t_ok "I-戻し ipr: status と sha256 が同じ" test "$(room_state "${IPR_DIR}")" = "${STATE_IPR_BEFORE}"
+# detached: 届かないコミットを本店から消してから戻す（bundle だけが頼り）
+git -C "${M1}" reflog expire --expire=now --all 2>/dev/null
+git -C "${M1}" gc --prune=now -q 2>/dev/null
+t_no "I-戻し 前提: gc 後は detached のコミットが本店に無い" git -C "${M1}" cat-file -e "${DET_HEAD_BEFORE}"
+t_ok "I-戻し detached（bundle から）" bash "${SCRIPT_DIR}/../reaper-restore.sh" "${DET_ARCH}"
+t_ok "I-戻し detached: HEAD が同じ" test "$(git -C "${DET_DIR}" rev-parse HEAD)" = "${DET_HEAD_BEFORE}"
+t_ok "I-戻し detached: status と sha256 が同じ" test "$(room_state "${DET_DIR}")" = "${STATE_DET_BEFORE}"
+# 元のパスに何かあれば止まる
+RST_RC=0; bash "${SCRIPT_DIR}/../reaper-restore.sh" "${OLD_ARCH}" >/dev/null 2>&1 || RST_RC=$?
+t_ok "I-戻し 元のパスに部屋があれば止まる（終了コード 1）" test "${RST_RC}" -eq 1
+t_ok "I-戻し 止まっても部屋は変わらない" test "$(room_state "${OLD_DIR}")" = "${STATE_OLD_BEFORE}"
+kill "${HOLD_PID}" 2>/dev/null || true
+wait "${HOLD_PID}" 2>/dev/null || true
+
+# ── I-2: 照合が合わないと消さない・作りかけも写しも溜まらない ──
+make_idle_main s2
+M2="${IDLE_MAIN}"
+V_DIR=$(make_idle_room "${M2}" v feature/idle/v)
+printf '2\n' >> "${V_DIR}/b.txt"
+age_room "${V_DIR}" 15
+V_IDX="$(git -C "${V_DIR}" rev-parse --absolute-git-dir)/index"
+V_IDX_BEFORE=$(py_mtime "${V_IDX}")
+for _r in 1 2; do
+  run_idle "${M2}" "--execute" MOCK_GIT_FAIL_MATCH="diff --cached"
+done
+echo ""
+echo "=== テスト I-2 照合失敗 出力（2 回目）==="
+echo "${IDLE_OUT}"
+t_ok "I-照合 patch の書き出しに失敗しても部屋は残る" test -d "${V_DIR}"
+t_ok "I-照合 作りかけも写しも増えない（2 回流した後）" test "$(archive_dirs "${M2}")" -eq 0
+t_ok "I-照合 片付け 0 件 / 写し 0 件" in_out "^片付け 0 件 / 写し 0 件"
+t_ok "I-照合 失敗した回の後も index の時刻が変わらない（翌日も候補に残る）" test "$(py_mtime "${V_IDX}")" = "${V_IDX_BEFORE}"
+t_no "I-照合 写し完成を書かない" grep -q '写し完成' "${M2}/.git/reaper-archive/reclaim.log"
+
+# ── I-3: TERM で止まる（続きが動かず・ロックが消え・数の行が 1 回だけ）──
+make_idle_main s3
+M3="${IDLE_MAIN}"
+T_DIR=$(make_idle_room "${M3}" t feature/idle/t)
+age_room "${T_DIR}" 15
+T_PF="${TMPDIR_TEST}/idle-term.pid"
+T_LOCK="${TMPDIR_TEST}/idle-term.lock.d"
+T_RC=0
+T_OUT=$(cd "${M3}" && env -u REAPER_WORKTREES_DIR HOME="${IDLE_HOME}" REAPER_ACTIVE_WORK_FILE="${FAKE_ACTIVE_WORK}" \
+  REAPER_REPO_NAME="test/test" REAPER_SKIP_FETCH=1 REAPER_LOCK_DIR="${T_LOCK}" MOCK_GH_TERM_PIDFILE="${T_PF}" \
+  PF="${T_PF}" RP="${REAPER}" bash -c 'echo $$ > "$PF"; exec bash "$RP" --execute' 2>&1) || T_RC=$?
+echo ""
+echo "=== テスト I-3 TERM 出力 ==="
+echo "${T_OUT}"
+t_ok "I-TERM 終了コード 143" test "${T_RC}" -eq 143
+t_ok "I-TERM ロックが消える" test ! -e "${T_LOCK}"
+t_ok "I-TERM 数の行が 1 回だけ出る" test "$(printf '%s\n' "${T_OUT}" | grep -c '^作業場所の数:')" -eq 1
+t_ok "I-TERM 続きが動かない（部屋は残り、写しも片付けの行も無い）" bash -c 'test -d "$1" && test ! -e "$2/.git/reaper-archive" && ! printf "%s\n" "$3" | grep -q "^片付け"' _ "${T_DIR}" "${M3}" "${T_OUT}"
+
+# ── I-4: 失う道・誤って消す道を止める（各 1 件、部屋が残る）→ 最後に対照（条件を戻せば消える）──
+make_idle_main s4
+M4="${IDLE_MAIN}"
+OK1_DIR=$(make_idle_room "${M4}" ok1 feature/idle/ok1)
+head -c 2097152 /dev/zero > "${OK1_DIR}/big.bin"
+NEST_DIR=$(make_idle_room "${M4}" nest feature/idle/nest)
+mkdir -p "${NEST_DIR}/inner"
+git init "${NEST_DIR}/inner" -q 2>/dev/null
+git -C "${NEST_DIR}/inner" config user.email "test@test.com"
+git -C "${NEST_DIR}/inner" config user.name "test"
+printf 'x\n' > "${NEST_DIR}/inner/x.txt"
+git -C "${NEST_DIR}/inner" add x.txt
+git -C "${NEST_DIR}/inner" commit -m inner -q 2>/dev/null
+git -C "${NEST_DIR}" add inner 2>/dev/null
+age_room "${OK1_DIR}" 15
+age_room "${NEST_DIR}" 15
+mkdir -p "${M4}/.git/reaper-archive/20260101-000000-ok1"
+run_idle "${M4}" "--execute" MOCK_GH_OPEN_FAIL=1
+t_ok "I-gh が失敗したら残す" test -d "${OK1_DIR}"
+run_idle "${M4}" "--execute" REAPER_SKIP_FETCH=0 REAPER_FETCH_REMOTE=no-such-remote
+t_ok "I-fetch が失敗したら残す" test -d "${OK1_DIR}"
+run_idle "${M4}" "--execute" REAPER_ARCHIVE_MAX_MB=1
+t_ok "I-写しが上限を超えるなら残す" test -d "${OK1_DIR}"
+t_ok "I-上限超えの出力に理由が出る" in_out "上限 1MB を超える"
+run_idle "${M4}" "--execute" REAPER_ARCHIVE_STAMP=20260101-000000
+t_ok "I-置き場が既にあれば残す" test -d "${OK1_DIR}"
+run_idle "${M4}" "--execute" REAPER_ARCHIVE_MAX_MB=99999999999
+t_ok "I-空き容量が足りなければ残す" test -d "${OK1_DIR}"
+t_ok "I-入れ子のリポジトリがある部屋は残す" test -d "${NEST_DIR}"
+t_ok "I-残す道の後も作りかけが無い" test -z "$(find "${M4}/.git/reaper-archive" -mindepth 1 -maxdepth 1 -name '.inprogress-*')"
+run_idle "${M4}" "--execute"
+t_no "I-対照: 条件が普通なら ok1 は消える" test -e "${OK1_DIR}"
+t_ok "I-対照: 入れ子の部屋は残る" test -d "${NEST_DIR}"
+
+# ── I-5: 上限（古い順・残した部屋は飛ばす・成功だけ数える）と作りかけだけを消す ──
+make_idle_main s5
+M5="${IDLE_MAIN}"
+NO_DIR=$(make_idle_room "${M5}" nestold feature/idle/nestold)
+mkdir -p "${NO_DIR}/inner"
+git init "${NO_DIR}/inner" -q 2>/dev/null
+git -C "${NO_DIR}/inner" config user.email "test@test.com"
+git -C "${NO_DIR}/inner" config user.name "test"
+printf 'x\n' > "${NO_DIR}/inner/x.txt"
+git -C "${NO_DIR}/inner" add x.txt
+git -C "${NO_DIR}/inner" commit -m inner -q 2>/dev/null
+git -C "${NO_DIR}" add inner 2>/dev/null
+RA_DIR=$(make_idle_room "${M5}" ra feature/idle/ra)
+RB_DIR=$(make_idle_room "${M5}" rb feature/idle/rb)
+RC_DIR=$(make_idle_room "${M5}" rc feature/idle/rc)
+RD_DIR=$(make_idle_room "${M5}" rd feature/idle/rd)
+age_room "${NO_DIR}" 30; age_room "${RA_DIR}" 20; age_room "${RB_DIR}" 18; age_room "${RC_DIR}" 16; age_room "${RD_DIR}" 15
+mkdir -p "${M5}/.git/reaper-archive/.inprogress-x" "${M5}/.git/reaper-archive/20260101-000000-foo.tmp"
+printf 'junk\n' > "${M5}/.git/reaper-archive/.inprogress-x/f"
+run_idle "${M5}" "--execute" REAPER_IDLE_MAX_PER_RUN=2
+echo ""
+echo "=== テスト I-5 上限 出力 ==="
+echo "${IDLE_OUT}"
+t_ok "I-上限 古い順に 2 件だけ消える（ra・rb）" bash -c '! test -e "$1" && ! test -e "$2"' _ "${RA_DIR}" "${RB_DIR}"
+t_ok "I-上限 3 件目以降は残る（rc・rd）" test -d "${RC_DIR}" -a -d "${RD_DIR}"
+t_ok "I-上限 残した部屋（入れ子）は飛ばされ数えない" test -d "${NO_DIR}"
+t_ok "I-上限 片付け 2 件 / 写し 2 件" in_out "^片付け 2 件 / 写し 2 件"
+t_no "I-作りかけ .inprogress- は消える" test -e "${M5}/.git/reaper-archive/.inprogress-x"
+t_ok "I-作りかけ 名前が .tmp で終わる完成の置き場は消えない" test -d "${M5}/.git/reaper-archive/20260101-000000-foo.tmp"
+
+# ── I-6: 部屋が 0 件で終わる回・dry-run でも数の行が出る。new-worktree.sh の呼び出しは上限 10 ──
+make_idle_main s6
+run_idle "${IDLE_MAIN}" ""
+t_ok "I-数の行 部屋 0 件の dry-run" in_out "^作業場所の数: 0（上限 100 ・知らせる線 70）"
+run_idle "${IDLE_MAIN}" "--execute"
+t_ok "I-数の行 部屋 0 件の実削除（削除対象なしの早い終わり）" in_out "^作業場所の数: 0（上限 100 ・知らせる線 70）"
+t_ok "I-数の行 削除対象なしの終わりも通る" in_out "削除対象なし"
+t_ok "I-new-worktree.sh の回収は上限 10 で呼ぶ" grep -q 'REAPER_IDLE_MAX_PER_RUN=10 bash "${REAPER_SCRIPT}" --execute' "${SCRIPT_DIR}/../new-worktree.sh"
+t_ok "I-trap は終わりの処理 1 つに INT・TERM は exit" bash -c 'grep -q "^trap _reaper_on_exit EXIT" "$1" && grep -q "^trap .exit 130. INT" "$1" && grep -q "^trap .exit 143. TERM" "$1"' _ "${REAPER}"
 
 # ── 結果 ────────────────────────────────────────────────────────────────────
 echo ""
