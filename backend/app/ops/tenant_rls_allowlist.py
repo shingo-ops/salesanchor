@@ -62,3 +62,4 @@ BYPASSRLS_ROLES: dict[str, str] = {
         "関数の中で許可した行が RLS で 0 件にならないよう BYPASSRLS を付ける（ADR-1024 の BYPASSRLS の例外・ADR-1052）。"
     ),
 }
+# bin7 acceptance sample A (do not merge)
