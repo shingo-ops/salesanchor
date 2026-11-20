@@ -8,6 +8,7 @@ import { useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { ColorSwatchPicker, type ColorSwatchOption } from "../../components/ColorSwatchPicker";
 import { ButtonLink } from "../../components/ButtonLink";
 import { Checkbox } from "../../components/Checkbox";
 import { EditorPageRow } from "../../components/EditorPage";
@@ -17,6 +18,7 @@ import { TextFieldControl } from "../../components/TextField";
 import { Toggle } from "../../components/Toggle";
 import { SCHEDULE_POPOVER_ICONS } from "../../constants/icons";
 import { CALENDARS, type CalendarId } from "../../features/schedule/calendars.config";
+import { EVENT_COLOR_KEYS, eventColorLabelKey, eventColorVar, isEventColorKey } from "./eventColors";
 import type { ScheduleDraft, PopoverMode } from "./SchedulePageImpl";
 import {
   combineDateTime,
@@ -322,6 +324,30 @@ export function DraftCategoryField({ appearance, mode, draft, onDraftChange }: F
   );
 }
 
+export function DraftColorField({ appearance, draft, onDraftChange, ownerColor }: FieldProps & { ownerColor: string }) {
+  const { t } = useTranslation();
+  const ColorIcon = SCHEDULE_POPOVER_ICONS.color;
+  const options: ColorSwatchOption[] = [
+    { value: null, label: t(eventColorLabelKey(null)), color: ownerColor },
+    ...EVENT_COLOR_KEYS.map((key) => ({ value: key, label: t(eventColorLabelKey(key)), color: eventColorVar(key) })),
+  ];
+  const picker = (
+    <ColorSwatchPicker
+      label={t("schedule.eventColor")}
+      name={`schedule-event-color-${appearance}`}
+      options={options}
+      value={draft.colorKey}
+      onChange={(value) => onDraftChange({ ...draft, colorKey: isEventColorKey(value) ? value : null })}
+    />
+  );
+  if (appearance === "page") return picker;
+  return (
+    <CreateRow creating icon={<ColorIcon size={20} aria-hidden="true" />}>
+      {picker}
+    </CreateRow>
+  );
+}
+
 export function DraftMeetField({
   appearance,
   draft,
@@ -489,6 +515,7 @@ export function ScheduleDraftFields({
   onDraftChange,
   canChangeVisibility,
   meetAvailable,
+  ownerColor,
 }: {
   mode: PopoverMode;
   /** 作る形（1 列目に絵を置く行で並べる） */
@@ -500,12 +527,15 @@ export function ScheduleDraftFields({
   onDraftChange: (next: ScheduleDraft) => void;
   canChangeVisibility: boolean;
   meetAvailable: boolean;
+  /** デフォルトの色の丸に使う持ち主の色（ADR-1081） */
+  ownerColor: string;
 }) {
   const common = { appearance: "popover" as const, draft, onDraftChange };
   return (
     <>
       <DraftDateFields {...common} mode={mode} creating={creating} expanded={expanded} />
       <DraftCategoryField {...common} mode={mode} />
+      <DraftColorField {...common} mode={mode} ownerColor={ownerColor} />
       <DraftMeetField {...common} item={item} meetAvailable={meetAvailable} />
       <DraftShareField {...common} canChangeVisibility={canChangeVisibility} />
       <DraftLocationField {...common} creating={creating} expanded={expanded} />
