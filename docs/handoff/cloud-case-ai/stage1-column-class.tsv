@@ -717,6 +717,7 @@ tenant_*	invoices	ship_to_snapshot	mask		jsonb
 tenant_*	invoices	shipping_carrier	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
 tenant_*	invoices	shipping_service	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
 tenant_*	invoices	shipping_snapshot	mask		jsonb
+tenant_*	invoices	payment_fee_snapshot	mask		jsonb
 tenant_*	invoices	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
 tenant_*	invoices	void_reason	mask		character varying
 tenant_*	item_corrections	corrected_by	mask		text

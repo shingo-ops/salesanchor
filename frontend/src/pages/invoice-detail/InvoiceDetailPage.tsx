@@ -68,6 +68,7 @@ interface InvoiceDetail {
   exchange_rate_usd: number | null;
   amount_jpy: number | null;
   amount_usd: number | null;
+  payment_fee_charged: number | null;
   payment_method: string | null;
   payment_method_display_name?: string | null;
   payment_method_type?: string | null;
@@ -213,7 +214,7 @@ export default function InvoiceDetailPage() {
                   <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => doAction("pay", paymentDate ? { paid_date: paymentDate } : {})}>{t("invoices.payAction")}</Button>
                 </>
               )}
-              {(invoice.status === "issued" || invoice.status === "overdue") && hasPermission("invoices.update") && !invoice.paypal_approval_url && (
+              {(invoice.status === "issued" || invoice.status === "overdue") && hasPermission("invoices.update") && invoice.payment_method === "paypal" && !invoice.paypal_approval_url && (
                 <Button variant="secondary" size="sm" layoutClassName="field-h-md" onClick={() => doAction("paypal-link")}>{t("invoices.paypal.issueLink")}</Button>
               )}
               {(invoice.status === "issued" || invoice.status === "overdue") && hasPermission("invoices.update") && invoice.paypal_approval_url && (
@@ -356,6 +357,7 @@ export default function InvoiceDetailPage() {
           <tr><td colSpan={6} style={{ textAlign: "right" }}>{t("quotes.totalWeight")}</td><td>{invoiceTotalWeight.toLocaleString()} kg</td></tr>
           <tr><td colSpan={6} style={{ textAlign: "right" }}>{t("quotes.shippingFee")}</td><td>{fmt(invoice.shipping_fee)}</td></tr>
           <tr><td colSpan={6} style={{ textAlign: "right" }}>{t("quotes.tax")}</td><td>{fmt(invoice.tax_amount)}</td></tr>
+          {invoice.payment_fee_charged != null && invoice.payment_fee_charged > 0 && <tr><td colSpan={6} style={{ textAlign: "right" }}>{t("invoices.paymentFeeCharged")}</td><td>{fmt(invoice.payment_fee_charged)}</td></tr>}
           <tr><td colSpan={6} style={{ textAlign: "right", fontWeight: "var(--font-weight-bold)", fontSize: "var(--font-lg)" }}>{t("quotes.total")}</td><td style={{ fontWeight: "var(--font-weight-bold)", fontSize: "var(--font-lg)" }}>{fmt(invoice.total_amount)} {invoice.currency}</td></tr>
           {invoice.amount_jpy != null && <tr><td colSpan={6} style={{ textAlign: "right", color: "var(--text-muted)" }}>{t("invoices.jpyEquiv")}</td><td style={{ color: "var(--text-muted)" }}>¥{invoice.amount_jpy.toLocaleString()}</td></tr>}
           {invoice.amount_usd != null && <tr><td colSpan={6} style={{ textAlign: "right", color: "var(--text-muted)" }}>{t("invoices.usdConvert")}</td><td style={{ color: "var(--text-muted)" }}>${invoice.amount_usd.toLocaleString()}</td></tr>}
