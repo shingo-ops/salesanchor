@@ -1,0 +1,28 @@
+name: Guard files gate unit tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/guard-files-gate.yml'
+      - '.github/workflows/guard-files-gate-unit.yml'
+      - 'scripts/guard-files-gate.js'
+      - 'scripts/tests/test-guard-files-gate.js'
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: guard-files-gate unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: node --test scripts/tests/test-guard-files-gate.js
