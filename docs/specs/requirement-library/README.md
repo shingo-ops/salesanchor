@@ -15,9 +15,9 @@
 
 ## 境界
 
-- 対象: 機能 → ADR 索引（docs/adr/FEATURE-INDEX.md）の中身と形、目録の抜けを数える CI、作業の場面で目録の行を差し出すリポジトリの見張り（.claude/settings.json と .claude/hooks/）、練習問題での測定。
+- 対象: 機能 → ADR 索引（docs/adr/FEATURE-INDEX.md）の中身と形、目録の抜けを数える CI、作業の場面で目録の行を差し出すリポジトリの見張り（.claude/settings.json と .claude/hooks/）、練習問題での測定。触るファイルは design.md §2（scripts/ci/ の検査・doc-index-reachability.yml・agent-hooks-test.yml・doc-entry-weekly-check.sh を含む）。
 - 対象外: 製品のコード・DB・画面。ADR・設計仕様書の本文の書き換え（指す先を足すだけ）。作業の決まり（doc-agenda-nav の範囲）。
 
 ## 状態
 
-- 2026-11-21: あるべき姿（PO の言葉）・KGI R1〜R4 PO 承認済み（原文は kgi.md）。recon・design 作成中。実装未着手。
+- 2026-11-21: あるべき姿（PO の言葉）・KGI R1〜R4 PO 承認済み（原文は kgi.md）。recon 済み・design 審査 APPROVE（design §9）・実装カード3枚発行済み。

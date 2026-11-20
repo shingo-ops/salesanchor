@@ -2,6 +2,7 @@
 
 > この文書は何か: R1〜R4 を合格させる作り方・測り方・守り続ける仕組み。実装カードの元。
 > 親: [../../specs/requirement-library/README.md](../../specs/requirement-library/README.md)／現在地: [recon.md](./recon.md)／KGI: [kgi.md](../../specs/requirement-library/kgi.md)／練習問題: [quiz.md](./quiz.md)
+> 実装カード: [便1](./card-bin1.md)・[便2](./card-bin2.md)・[便3](./card-bin3.md)（合流の順: 便1 と便3 → 便2）
 
 ## 1. 目的と利用者に見える変化
 
@@ -11,7 +12,7 @@
 
 ## 2. 対象と対象外
 
-- 対象: `docs/adr/FEATURE-INDEX.md`（表に「コードの場所」列と除外表を足す）、新しい CI 検査、`.claude/hooks/` の見張り 2 本と `.claude/settings.json` の登録、練習問題の測定。
+- 対象: `docs/adr/FEATURE-INDEX.md`（表に「コードの場所」列と除外表を足す）、新しい CI 検査（scripts/ci/ の下の3本と `.github/workflows/doc-index-reachability.yml` の段）、`.claude/hooks/` の見張り 2 本と `.claude/settings.json` の登録、見張りの試験（`.github/workflows/agent-hooks-test.yml`）、週次の数え（`scripts/dev/doc-entry-weekly-check.sh`）、練習問題の測定。
 - 対象外: 製品コード・DB・画面・ADR 本文・workflow-lint.yml。
 
 ## 3. 作り方（便ごと。各便のあと練習問題で測る）
@@ -38,7 +39,7 @@
   2. それ以外 → ADR の題名と本文の最初の節を読み、既存の行の機能キーワードに当たれば (a) その行の「正準 ADR」欄に足す。当たらなければ (b) 新しい行を作る。手順・運用だけの決まりは「横断・運用・プロセス」節に入れ、コードの場所は `-`。
   3. 設計仕様書のフォルダも同じ。対応する ADR の行の「設計書」欄に載せる。どの行にも当たらず状態が「完了・廃止」なら除外の節へ理由つきで載せる。
 - 11/13 の件は (a): 「会社」の行に ADR-097 と `docs/specs/db-ssot/deal-removal/design.md` を足す。
-- 練習問題の 10 題の正解の ADR は、必ず「コードの場所」が `-` 以外で 1 つ以上のファイルに当たる行に載せる（便2の見張りが働くため）。glob は実装役が実物で決め、カードの完了報告に 10 行分を貼る。
+- 練習問題の 10 題の正解の ADR は、必ず「コードの場所」が `-` 以外で 1 つ以上のファイルに当たる行に載せる（便2の見張りが働くため）。glob は実装役が実物で決め、カードの完了報告に 11 行分（正解の ADR は 11 個。Q9 は ADR-1056 と ADR-1078 の2つ）を貼る。
 - 新しい検査 scripts/ci/check_feature_index.py（r1_count.py より厳しい数え方）:
   - 数える ADR: `docs/adr/` 直下で、名前が正規表現 `^ADR-((?:SA-)?\d+)(?=[-_.])` に当たり .md で終わるファイル。番号は先頭の 0 を除いた数字（`SA-` つきはそのまま `SA-17` のように）で、同じ番号の複数ファイルは1つと数える。r1_count.py も同じ形に直し、2026-11-21 に流した値は 番号 226・索引が指す 65・指さない 161。
   - ADR は「正準 ADR」欄か除外の節の1列目にある番号だけを「載っている」と数える（補足欄の文の中の番号は数えない）。
@@ -53,11 +54,11 @@
 
 - .claude/hooks/requirement-context.py（PostToolUse、対象 `Read|Edit|Write|MultiEdit`）: tool_input の file_path を索引の「コードの場所」と照らし、当たった行の「正準 ADR と設計書のパス」を `hookSpecificOutput.additionalContext` で返す。
 - パスの照らし方: file_path は絶対パスで来る（作業場所 `~/worktrees/...` でも、クラウドの `/home/user/salesanchor` でも）。file_path のある場所で `git rev-parse --show-toplevel` を流して、その直下からの相対パスにしてから、scripts/ci/feature_index_lib.py の照らしの関数で glob と照らす（`fnmatch` は使わない）。索引もその同じ直下の `docs/adr/FEATURE-INDEX.md` を読む（本店の古い写しを読まない）。リポジトリの外のファイルは何もしない。
-- 同じ行は1つの会話で1回だけ。印は `${TMPDIR:-/tmp}/requirement-context/<session_id>` に行番号を1行ずつ書く。当たらなければ何も返さない。
+- 同じ行は1つの会話で1回だけ。印は `${TMPDIR:-/tmp}/requirement-context/<session_id>` に機能キーワードを1行ずつ書く。当たらなければ何も返さない。
 - どんな失敗（索引が読めない・入力が壊れている・git が無い）でも終了コード 0 で何も返さず、作業を止めない。
 - 登録: `.claude/settings.json` に `"PostToolUse"` 節を新しく足し、`matcher` は `Read|Edit|Write|MultiEdit`、`command` は `python3 "$CLAUDE_PROJECT_DIR/.claude/hooks/requirement-context.py"`、`timeout` 5 秒。既存の節は変えない。
 - 試験 .claude/hooks/test_requirement_context.py: 当たる・当たらない・2回目は黙る・壊れた入力・リポジトリ外 の 5 つ。
-- 試験を流す場所: `.github/workflows/agent-hooks-test.yml` に job を1つ足し、`on.pull_request.paths` に `.claude/hooks/requirement-*`・`.claude/hooks/test_requirement_*`・scripts/ci/feature_index_lib.py・`docs/adr/FEATURE-INDEX.md` を足す。この workflow の変更は CLAUDE.md の不可逆操作の一覧（workflow-lint.yml だけ）に当たらない。
+- 試験を流す場所: `.github/workflows/agent-hooks-test.yml`。job `requirement-hooks` と paths の `.claude/hooks/requirement-*`・`.claude/hooks/test_requirement_*` は便3 が作る（便3 を先に合流する）。便2 はその job に step を1つ足し、paths に `scripts/ci/feature_index_lib.py`・`docs/adr/FEATURE-INDEX.md` を足す。この workflow の変更は CLAUDE.md の不可逆操作の一覧（workflow-lint.yml だけ）に当たらない。
 - 文の形:「この場所には決まりがあります: ADR-097（会社はリードの子）。計画の前に docs/specs/db-ssot/deal-removal/design.md を読んでください。」
 
 ### 便3 読まずに「不具合」を止める（R4）
@@ -115,3 +116,4 @@
 - 3回目（2026-11-21 08:24、同、対象 e50bf991）: **REVISE**。直した点: `-I` で部品を読み込む書き方を決めた／便3の見張りの登録の場所と形を決めた／CI は今の step の後ろに別の step を足すと決め、流れる時を実物どおりに直した／ADR の状態の値の取り方を表・`:` の形・見出しの3つに書き分け、審査が数えた Superseded 4 本を照合の値にした。
 - 4回目（2026-11-21 08:27、同、対象 8ea9ac23）: **APPROVE**（注記4つ）。注記への対応: 数える ADR のファイル名の形を決め、r1_count.py もそれに直して R1 の今の値を 161 に改めた／除外の理由欄に ADR 以外の置き換え先を書く決まりを足した／索引に載っている Superseded 2本の扱いを決めた／先頭の語の両端の `*` を取ると決めた。Opus が実物で確かめたとき、ADR-138 は同じ番号のファイルが2つ（Superseded と Accepted）あったので、状態をファイルごとに見る決まりを足した（審査の注記に無かった点）。
 - 5回目（2026-11-21 08:31、同、対象 fb70aa45）: **APPROVE**（注記3つ）。実物で r1_count.py が 226・65・161 を出すこと、Superseded が 4 本であること、同じ番号のファイルが2つ以上ある番号が 15 個（状態が違うのは 10 個、除外になるのは ADR-138 だけ）であることを確かめた。注記への対応: ADR-138 は password_hash の行から外し、ファネルのファイルは中身に合う行に載せると書き直した／同じ番号が除外の節と正準欄の両方に出てよい場合を決めた／表の項目名の `*` を取り、`| 項目 | 内容 |` の表でも状態を読むと決めた。
+- 6回目（2026-11-21、マージ前の審査役 Opus、PR #5646・対象 de1d143a2）: **APPROVE**（枝が main より古いことだけがマージを止める点。指摘8つ）。直した点: 便2 の印に書く中身を機能キーワードに揃えた／試験の job は便3 が作り便2 が step を足すと書き、合流の順（便1 と便3 → 便2）を書いた／便1 の貼る行を 11 行に直した／R4 補助の数え方を quiz/count.py に合わせて kgi に書いた／状態の欄を直した／§2 と README の境界に触るファイルを足した／カード3枚へのリンクを足した／recon の行番号のずれ・見張りの一覧の漏れ・古い数え方の説明を直した。あわせて便3 の見張りは、公式の hooks 説明（Stop の入力 `last_assistant_message`。transcript は書き終わる前に読まれることがあるため、こちらが勧められている）に従い、判定する文に `last_assistant_message` を優先し、無いときだけ transcript の最後の文を使うと決めた（card-bin3 §3-1・§3-3 も同じに直した）。

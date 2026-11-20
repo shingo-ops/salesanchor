@@ -54,9 +54,9 @@ mode: handoff
 
 ### 3-1. 見張り `requirement-bug-claim.py`
 
-- 入力（標準入力の JSON）: `session_id`・`transcript_path`・`stop_hook_active`。仕様は Claude Code の公式の hooks の説明（Stop）を Context7 か公式ページで確かめてから書く。確かめた出典を報告に書く。
+- 入力（標準入力の JSON）: `session_id`・`transcript_path`・`stop_hook_active`・`last_assistant_message`。仕様は Claude Code の公式の hooks の説明（Stop）を Context7 か公式ページで確かめてから書く。確かめた出典を報告に書く。
 - `stop_hook_active` が真なら何もせず終了コード 0。
-- transcript（JSONL）を読み、最後の assistant の返事の文に「不具合」か「バグ」があるかを見る。
+- 判定する文は、入力の `last_assistant_message` が空でない文字列ならそれ、無ければ transcript（JSONL）の最後の assistant の返事の文。その文に「不具合」か「バグ」があるかを見る（追記 2026-11-21: 公式の hooks 説明に合わせた。design §9 6回目）。
 - 同じ transcript の tool_use のうち、Read の `file_path`、または Bash・Grep・Glob の入力の文字列に `docs/adr/` か `docs/specs/` を含むものが1つでもあれば「読んだ」とする。
 - 「不具合・バグ」があり「読んだ」が無いときだけ、標準出力に `{"decision": "block", "reason": "要件の書類を読んでから判定してください。docs/adr/FEATURE-INDEX.md でこの場所の ADR と設計書を引き、読んでから、決まりどおりの動きか不具合かを書き直してください。"}` を出す。
 - 同時に `~/.claude/requirement-library/bug-claims.log` に1行（日本時間の `YYYY-MM-DD HH:MM`・タブ・session_id・タブ・返事の最初の 40 字。改行とタブは空白に置き換える）を書き足す。フォルダが無ければ作る。記録の場所は環境変数 `REQUIREMENT_LIBRARY_LOG` があればそれを使う（試験用）。
@@ -78,7 +78,7 @@ mode: handoff
 ### 3-3. 試験 `test_requirement_bug_claim.py`（unittest・`python3 -I` で流れる）
 
 - 一時フォルダに transcript の見本を作り、見張りを `subprocess` で流す。記録先は `REQUIREMENT_LIBRARY_LOG` で一時フォルダに向ける。
-- 4 つ: 読まずに「不具合」→ `decision: block` が出て記録が1行増える／`docs/adr/ADR-097-x.md` を Read してから「不具合」→ 何も出ない／`stop_hook_active: true` → 何も出ない／壊れた入力（JSON でない）→ 終了コード 0 で何も出ない。
+- 5 つ: `last_assistant_message` に「不具合」で transcript の返事は空 → `decision: block`／読まずに「不具合」→ `decision: block` が出て記録が1行増える／`docs/adr/ADR-097-x.md` を Read してから「不具合」→ 何も出ない／`stop_hook_active: true` → 何も出ない／壊れた入力（JSON でない）→ 終了コード 0 で何も出ない。
 - transcript の見本の形は、公式の説明と、手元の実物の形（Claude Code が書く JSONL の `type: assistant` の `message.content` の `tool_use`・`text`）に合わせる。どの形を使ったかを試験の冒頭のコメントに書く。
 
 ### 3-4. 試験の workflow `agent-hooks-test.yml`

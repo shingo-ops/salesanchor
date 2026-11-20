@@ -13,7 +13,7 @@
 
 | 事実 | 根拠 |
 |---|---|
-| 機能→ADR 索引は手で選んだ主要 ADR だけを載せる方針 | `docs/adr/FEATURE-INDEX.md:6`「主要ドメインの正準 ADR だけを人手でキュレート」 |
+| 機能→ADR 索引は手で選んだ主要 ADR だけを載せる方針 | `docs/adr/FEATURE-INDEX.md:7`「主要ドメインの正準 ADR だけを人手でキュレート」 |
 | 索引は 68 行・表の行 34 | `wc -l`・`docs/handoff/requirement-library/r1_count.py` の出力 `fi_rows 34` |
 | ADR ファイル（名前が `ADR-<数>` か `ADR-SA-<数>` の後に `-`・`_`・`.` が続く .md）の番号 226 個のうち、索引が指すのは 65・**指さないのは 161** | `python3 -I docs/handoff/requirement-library/r1_count.py .` → `adr_ids 226 referenced 65 missing 161`（4回目の審査の注記で数え方を広げた。前の形 `ADR-<数>-` だけでは 210・59・151） |
 | 設計仕様書のフォルダ 56 のうち、`docs/specs/README.md` に無いのは `master-ssot-migration`（既存の抜け）と本テーマ（本 PR で足す） | 同出力 `missing_in_specs_readme 2` |
@@ -22,7 +22,7 @@
 | その決まりの本文 | `docs/specs/db-ssot/deal-removal/design.md:8`（§1 PO の言葉 2026-07-18）・`:62`（§4.6）・`:65`「leadは全ての親」 |
 | コードも同じ決まりで動く | `backend/app/routers/companies.py:383` `create_company`・`:391`「# 便1a: lead 必須（背骨）」 |
 
-- kgi.md 初版の「158（223 番号中）」は数え方を固定する前の手計算。本 recon からは r1_count.py（ファイル名 `ADR-<数>-` の番号の重複を除く）で数え、**今の値は 161** とする。
+- kgi.md 初版の「158（223 番号中）」は数え方を固定する前の手計算。本 recon からは r1_count.py（ファイル名の番号を `ADR-((?:SA-)?\d+)(?=[-_.])` で取り、重複を除く）で数え、**今の値は 161** とする。
 
 ## 3. 練習問題（R2・R3・R4 補助）の現在地
 
@@ -34,7 +34,7 @@
 | 事実 | 根拠 |
 |---|---|
 | 着手前に索引と `git grep` で ADR を引く義務は文書にある（人と AI の注意に頼る） | `docs/STANDARD-WORKFLOW.md:25`・`:82` |
-| リポジトリの見張りは SessionStart・SubagentStop・PreToolUse・UserPromptSubmit・Stop だけで、**PostToolUse（ファイルを開いた直後）の見張りは無い** | `.claude/settings.json:35`・`:64`・`:74`・`:88`・`:93` |
+| リポジトリの見張りは SessionStart・SubagentStop・TeammateIdle・PreToolUse・UserPromptSubmit・Stop だけで、**PostToolUse（ファイルを開いた直後）の見張りは無い** | `.claude/settings.json:35`・`:64`・`:69`・`:74`・`:88`・`:93` |
 | 目次のたどり着き検査は CI で毎回流れる。索引の網羅は数えていない | `.github/workflows/doc-index-reachability.yml:31`→`scripts/ci/check_doc_index.py`（259 行。`UNREACHED` は `:148`） |
 | `claude -p` ではリポジトリの見張り（hooks）は動き、`permissions.allow` だけが使われない | 公式 https://code.claude.com/docs/en/permissions 「What runs before you trust a folder」・https://code.claude.com/docs/en/hooks 「Workspace trust」（Context7 2026-11-21） |
 | PostToolUse の見張りは `hookSpecificOutput.additionalContext` で AI に文を渡せる。入力に session_id・tool_name・tool_input が来る | Context7 `/websites/code_claude` hooks（2026-11-21） |
