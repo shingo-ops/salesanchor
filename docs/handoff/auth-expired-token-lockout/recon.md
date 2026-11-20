@@ -37,7 +37,7 @@
 - backend/app/cache.py:311-325 — `check_auth_rate_limit`。数が 10 以上なら止める。
 - backend/app/cache.py:328-339 — `record_auth_failure`。1 回目に 900 秒の期限を付け、あとは数を足すだけ。
 - backend/app/auth/dependencies.py:47-52 — `_reject_self_token` は必ず `record_auth_failure` を呼んでから 401 を返す。
-- backend/app/auth/dependencies.py:58-64 — 札の読み解き（`self_tokens.decode_access_token`）で出た `JWTError` は、種類を分けずに `_reject_self_token` に渡す。期限切れ（`ExpiredSignatureError`）もここで数えられる。
+- backend/app/auth/dependencies.py:59-64 — 札の読み解き（`self_tokens.decode_access_token`）で出た `JWTError` は、種類を分けずに `_reject_self_token` に渡す。期限切れ（`ExpiredSignatureError`）もここで数えられる。
 - backend/app/auth/dependencies.py:220-224 — 一時記憶に無い札は、読み解きの前に回数止めを見て、10 以上なら 429。
 - backend/app/routers/auth.py:395-397 — ログインも同じ回数止めを見て 429 `too_many_attempts`。
 - 数えないもの: ログアウト済みの札（dependencies.py:187-191）・失効した組の札（同 :197-201）・Authorization の無い頼み・/auth/refresh の 401（routers/auth.py:514-531 は `record_auth_failure` を呼ばない）。

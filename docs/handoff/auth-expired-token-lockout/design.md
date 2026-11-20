@@ -18,6 +18,9 @@
 | K4 | 今ある試験がすべて通る | CI の必須チェックが全部緑 |
 | K5 | 本番に入った後、期限切れの札の 401 が 10 回以上続いた接続元が 429 にならない | 本番の記録を reader 鍵で読む（§8 の問い合わせ）。対象が出るまで最長 14 日見る |
 | K6 | PO の Android で、2 日ほど開かなかった後に開いても止まらない | PO の目視（止まった／止まらない） |
+| K7 | 回数止めが既に効いている接続元には、期限切れの札でも今までどおり 429 | CI の試験 `test_locked_ip_still_gets_429_for_expired_token` |
+
+- K5 の判定: 14 日のうちに対象（10 回以上 401 の接続元）が 1 つ以上出て、どれも 429 が 0 件なら ○。1 つでも 429 があれば ×。14 日で対象が 0 なら K5 は「対象なし」とし、K6 で判定する。
 
 ## 3. 対象と対象外
 
@@ -41,7 +44,7 @@ from jose import JWTError
 from jose import ExpiredSignatureError, JWTError
 ```
 
-backend/app/auth/dependencies.py:58-64（`_authenticate_self_token` の頭）
+backend/app/auth/dependencies.py:59-64（`_authenticate_self_token` の頭。:58 は秘密が無いときの raise で、触らない）
 
 変更前:
 ```python
@@ -76,6 +79,7 @@ backend/app/auth/dependencies.py:58-64（`_authenticate_self_token` の頭）
 - 試験 1 `test_expired_self_token_is_not_counted_as_failure`: 自社の鍵で署名した期限切れの札 → 401・detail 一致・`record_auth_failure` の呼ばれた回数 0（K1・K3）。
 - 試験 2 `test_expired_token_with_wrong_signature_is_counted`: kid は SECRET のもの、署名は OTHER_SECRET の期限切れの札 → 401・呼ばれた回数 1（K2）。
 - 試験 3 `test_valid_self_token_bad_signature_still_counted`: 期限内で署名の違う札 → 呼ばれた回数 1（今の守りが落ちていない確かめ）。
+- 試験 4 `test_locked_ip_still_gets_429_for_expired_token`: 回数止めが既に効いている（`check_auth_rate_limit` が True）とき、自社の鍵の期限切れの札でも 429（K7。dependencies.py:220-224 の止めが読み解きより前に残ることの確かめ）。`check_auth_rate_limit` を True にする置き換えは試験の中で行い、既存の `_current_user` は変えない。
 
 ## 6. 1 か所にすること（SSOT）
 
@@ -97,7 +101,7 @@ backend/app/auth/dependencies.py:58-64（`_authenticate_self_token` の頭）
 reader 鍵で次を流す（1 文）。対象の接続元が出たら、その後 15 分に 429 が 0 件であることを見る。
 
 ```sql
-SELECT left(md5(client_ip),8) AS ip, min(created_at) AS first_at, count(*) AS n401 FROM ai_ro.public__auth_events WHERE event_type='auth_failure' AND status_code=401 AND path NOT LIKE '/api/v1/auth/%' AND created_at > '<本番反映の時刻>' GROUP BY client_ip, date_trunc('hour',created_at) HAVING count(*) >= 10 ORDER BY 2;
+SELECT left(md5(client_ip),8) AS ip, min(created_at) AS first_at, count(*) AS n401 FROM ai_ro.public__auth_events WHERE event_type='auth_failure' AND status_code=401 AND path NOT IN ('/api/v1/auth/refresh','/api/v1/auth/login') AND created_at > '<本番反映の時刻>' GROUP BY client_ip, date_trunc('hour',created_at) HAVING count(*) >= 10 ORDER BY 2;
 ```
 
 - 記録には札が期限切れかどうかの列が無い。そのため K5 は「10 回以上 401 になった後に 429 が出ていない」で見る。期限切れだったかは §recon 3 と同じく、更新札の組の作成時刻で確かめる。
@@ -121,14 +125,14 @@ SELECT left(md5(client_ip),8) AS ip, min(created_at) AS first_at, count(*) AS n4
 
 ## 12. 維持の仕組み
 
-- 守り手: CI の試験 2 本（K1・K2）。部品の版上げや書き換えで順番が崩れると落ちる。
+- 守り手: CI の試験 3 本（K1・K2・K7）。部品の版上げや書き換えで順番が崩れると落ちる。
 - 決定は ADR-1083 に残す。回数止めを触る次の人は FEATURE-INDEX から辿らず grep で見つける（`record_auth_failure` の近くにコメントで ADR 番号を書く）。
 
 ## 13. 実装カード（クラウドの Sonnet へ渡す）
 
 - 作業場所: `bash scripts/new-worktree.sh release/auth-expired-token-not-bruteforce --claude` で作られた場所（このブランチ）。
-- 変えるファイル: §4 の 2 か所と §5 の試験だけ。他のファイルを変えたら止めて報告。
-- 確かめ: `cd backend && pytest tests/test_self_auth.py -q` の生出力を残す。試験 1〜3 が通り、既存も全部通ること。
+- 変えるファイル: §4 の 2 か所と §5 の試験 4 本だけ。他のファイルを変えたら止めて報告。
+- 確かめ: `cd backend && pytest tests/test_self_auth.py -q` の生出力を残す。試験 1〜4 が通り、既存も全部通ること。
 - 想定の分岐:
   - 試験 2 が「呼ばれた回数 0」で落ちる → 部品の順番が想定と違う。実装を止めて報告（設計の前提が崩れる）。
   - `_current_user` の置き換えで回数が取れない → `patch(..., new=AsyncMock())` を `as` で受ける形にする。既存の試験の形は変えない。
@@ -136,4 +140,9 @@ SELECT left(md5(client_ip),8) AS ip, min(created_at) AS first_at, count(*) AS n4
 
 ## 14. 審査の記録
 
-（審査役の結果をここに書く）
+- 2026-11-21 00:34〜00:36 JST、クラウドの審査役（architect・Opus 5.5・新規起動・読むだけ）が枝 `eb1de05f` を審査。結果 **APPROVE**（必須の指摘 0・推奨 4）。同一系統の AI による審査で、独立の第二者審査ではない。
+- 照合: recon・design・ADR の引用行は実物とすべて一致。違い 1 件（§4 の :58-64 → :59-64）。
+- python-jose 3.5.0: 取り寄せた中身で jwt.py:159 署名 → :174 `_validate_claims` → :496-497 期限の順を確認。`ExpiredSignatureError` を出すのは jwt.py:331 の 1 か所だけ。python3.12 の venv で実際に札を作り、自社の鍵の期限切れ → `ExpiredSignatureError`、別の鍵の期限切れ → `JWTError`（署名が合わない）を確認。
+- 漏れ: SSE は `get_current_user` を通るので一緒に直る。ログアウトと閲覧者の道はもともと数えない。
+- 推奨 4 件はすべて取り込んだ: ①§4 の行番号 ②§8 の SQL の除外を /auth/refresh と /auth/login だけにした（/auth/devices などの数える道を落とさないため）③K5 で対象が出ないときの判定を §2 に書いた ④回数止めが効いているときの 429 の試験（試験 4・K7）を足した。
+- 未確認（審査役）: pytest の実行（実装の後に CI と実装役で流す）・本番の秘密の値。

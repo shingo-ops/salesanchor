@@ -29,4 +29,4 @@
 
 ## 確かめ
 
-design.md §2 の K1〜K6。
+design.md §2 の K1〜K7。
