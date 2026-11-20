@@ -15,14 +15,14 @@
 |---|---|
 | 機能→ADR 索引は手で選んだ主要 ADR だけを載せる方針 | `docs/adr/FEATURE-INDEX.md:6`「主要ドメインの正準 ADR だけを人手でキュレート」 |
 | 索引は 68 行・表の行 34 | `wc -l`・`docs/handoff/requirement-library/r1_count.py` の出力 `fi_rows 34` |
-| ADR ファイル（名前が `ADR-<数>` か `ADR-SA-<数>` の後に `-`・`_`・`.` が続く `.md`）の番号 226 個のうち、索引が指すのは 65・**指さないのは 161** | `python3 -I docs/handoff/requirement-library/r1_count.py .` → `adr_ids 226 referenced 65 missing 161`（4回目の審査の注記で数え方を広げた。前の形 `ADR-<数>-` だけでは 210・59・151） |
+| ADR ファイル（名前が `ADR-<数>` か `ADR-SA-<数>` の後に `-`・`_`・`.` が続く .md）の番号 226 個のうち、索引が指すのは 65・**指さないのは 161** | `python3 -I docs/handoff/requirement-library/r1_count.py .` → `adr_ids 226 referenced 65 missing 161`（4回目の審査の注記で数え方を広げた。前の形 `ADR-<数>-` だけでは 210・59・151） |
 | 設計仕様書のフォルダ 56 のうち、`docs/specs/README.md` に無いのは `master-ssot-migration`（既存の抜け）と本テーマ（本 PR で足す） | 同出力 `missing_in_specs_readme 2` |
 | 索引から設計仕様書を指す行は 2 フォルダだけ | 同出力 `spec_dirs_referenced_from_feature_index 2` |
 | 11/13 の取り違えの元: 「会社」の行は ADR-060・ADR-058 だけで、会社はリードの子と決めた ADR-097・deal-removal の設計書を指さない | `docs/adr/FEATURE-INDEX.md:28` |
 | その決まりの本文 | `docs/specs/db-ssot/deal-removal/design.md:8`（§1 PO の言葉 2026-07-18）・`:62`（§4.6）・`:65`「leadは全ての親」 |
 | コードも同じ決まりで動く | `backend/app/routers/companies.py:383` `create_company`・`:391`「# 便1a: lead 必須（背骨）」 |
 
-- kgi.md 初版の「158（223 番号中）」は数え方を固定する前の手計算。本 recon からは `r1_count.py`（ファイル名 `ADR-<数>-` の番号の重複を除く）で数え、**今の値は 161** とする。
+- kgi.md 初版の「158（223 番号中）」は数え方を固定する前の手計算。本 recon からは r1_count.py（ファイル名 `ADR-<数>-` の番号の重複を除く）で数え、**今の値は 161** とする。
 
 ## 3. 練習問題（R2・R3・R4 補助）の現在地
 
