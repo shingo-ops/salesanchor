@@ -11,7 +11,7 @@
 
 ## 2. 受け入れの基準（KGI / KPI）
 
-| # | 基準（○×） | 検証方法 |
+| # | 基準 | 検証方法 |
 |---|---|---|
 | K1 | アプリで作った予定（1 回だけの予定）の題名を Google で変える → 本番の DB のその行の題名が Google と同じになる | 本番反映後、PO が Google で直す。読み取り専用の鍵で行の `title`・`last_synced_at` を読む。15 分以内に変われば ○ |
 | K2 | 同じく時間・場所・色（名札のある色）を Google で変える → DB の `start_datetime`/`end_datetime`・`location`・`color_key` が Google と同じになる | K1 と同じ読み方 |
