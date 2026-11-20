@@ -37,7 +37,8 @@
 - ログイン失敗を数える係: `backend/app/cache.py:307-337`（`AUTH_FAIL_MAX = 10`・15 分。同じ IP で 10 回失敗すると 429 で締め出す）
 - この係を呼ぶ「ログイン前」の道（`backend/app/routers/auth.py`・`backend/app/routers/viewer.py` を AST で列挙）:
   `POST /api/v1/auth/login`・`/auth/passkey/login/verify`・`/auth/password-reset/confirm`・`/auth/login-requests/recovery`・`/viewer/login`・`/viewer/password-reset/confirm`
-  （失敗は 401、締め出しは 429。`backend/app/routers/auth.py:395-422`・`backend/app/routers/auth.py:1096-1111`）
+  （締め出しはどの道も 429。失敗の番号は道で違う: `/auth/login`・`/auth/passkey/login/verify`・`/viewer/login` は 401（`backend/app/routers/auth.py:395-422`・`backend/app/routers/auth.py:1096-1111`）。`/auth/password-reset/confirm`・`/auth/login-requests/recovery`・`/viewer/password-reset/confirm` は 400（`backend/app/routers/auth.py:677`・`backend/app/routers/auth.py:1619`・`backend/app/routers/viewer.py:384`）。この 3 つの道は 1 回ずつの失敗は数えず、同じ IP が 10 回で締め出された後の 429 だけを数える）
+- 対象外の道: ログイン後の道（`/auth/password/change`・`/viewer/password`）、`/viewer/billing-form/open`・`/viewer/billing-form/submit`、スタッフ招待の公開の道（失敗は 400）。これらは締め出しの 429 も数えない
 - 1 件の失敗はログに 2 行出る: 入口（nginx。`"POST ... HTTP/2.0" 401 32 ...`）とバックエンド（uvicorn。`"POST ... HTTP/1.1" 401 Unauthorized`）。上の 48 行は 24 件の失敗。
 - 24 件はすべて同じ 1 つの Windows の Chrome から、ログイン画面で入力したもの（入口の行の利用者の情報）。反映（deploy）の直後に多い。誰の操作かは**未確認**（攻撃の形ではない: 5 分に 1 件以下）。
 - Prometheus の `http_requests_total` は使えない: 14 日でログインの 401 が 167 件と出るが、バックエンドが反映のたびに立ち直り（24 時間で 23 回）、立ち直り後の最初の 1 件を数え落とす。Loki は全行を持つ（prom-login-14d.txt）。
@@ -91,6 +92,7 @@ sum(count_over_time({job="containerlogs"} |~ "\"POST /api/v1/(auth/login|auth/pa
 |---|---|
 | uvicorn のログの形が変わると黙って数えなくなる | 受入 A4 で反映後に 1 回わざと失敗させて数に出ることを確かめる。uvicorn の版を上げる PR では手順書の式を確かめる（手順書に書く） |
 | ログイン後の画面での 401・403 の急増（権限の不具合）は鳴らなくなる | それはログイン失敗ではない。5xx などは別の見張り（BackendHighErrorRate）が見る。必要なら別テーマにする |
+| 再設定の確認・合言葉での復旧の 3 つの道の総当たりは、1 回ずつの失敗（400）を数えない | 締め出しの 429 が 5 分に 10 件を超えたときだけ鳴る（アプリが 10 回で止めるので、数える前に攻撃は止まる）。400 を数えに足すかは PO 承認（401・429）の範囲を超えるので、足すなら別の判断にする |
 | しきい値が低すぎて正しい利用で鳴る | 14 日の最大の 3〜5 倍。反映後 7 日の鳴った回数を数える（A5） |
 
 ## 4 受入条件
@@ -102,7 +104,7 @@ sum(count_over_time({job="containerlogs"} |~ "\"POST /api/v1/(auth/login|auth/pa
 | A3 | prod2 に新しいルールが入り Loki が読んでいる | prod2 の Loki ruler の API でルールの式が新しいもの・状態 inactive |
 | A4 | 本当の失敗を数える | 反映後に 1 回だけ存在しない宛先でログインを失敗させ、5 分以内に新しい式の数が 1 以上になる（締め出しの 10 回には遠い） |
 | A5 | 誤って鳴らない | 反映後 7 日で 2 本の見張りの鳴った回数 0（本当の攻撃が無い限り）。前は 1 日約 23 件の記録 |
-| A6 | 攻撃なら鳴る | 過去 14 日の数え直しで新しい式が数える行がある（2-4 表）。A4 で数が増えることを確かめる。10 回の失敗をわざと起こす試しは本番の締め出しと page を起こすので行わない |
+| A6 | 攻撃なら鳴る（ログインの 3 つの道は 401、残り 3 つの道は締め出しの 429 で） | 過去 14 日の数え直しで新しい式が数える行がある（2-4 表）。A4 で数が増えることを確かめる。10 回の失敗をわざと起こす試しは本番の締め出しと page を起こすので行わない |
 
 ## 5 反映の順番と戻し方
 
