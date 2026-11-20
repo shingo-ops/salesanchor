@@ -213,6 +213,7 @@ PO 指示（2026-11-09「3,時間や順番も要件定義する」）で足し�
 
 - 遅れの理由（事実）: 11/10〜11/17 は、段階4 の設計の試しと実装の便1・便2、相談係の権限の付け直しの直しを先に進めた。土台（便F〜H）と指示書には手を付けていない。
 - 追記（2026-11-20 Opus）: 下の順番 3 の指示書 5 種（ContainerUnhealthy・HighMemoryUsage・KumaMonitorDown・ServiceDown・BackendHighLatency）を `docs/ai-agents/ops-incident-agent.md` §3 に書いた。状態は PO 承認済み（2026-11-20 PO「1」＝この 5 種の指示書を承認）。使う前に揃える前提 P-1〜P-3（同 §3-0）が揃うまで、この指示書で AI を起こさない。K2 はこの承認で 5 種と数える（main への合流で正式）。
+- 追記（2026-11-21 Opus）: 順番 7 の指示書のうち、ログイン失敗の 2 種を除く 7 種（ViewerInventoryStale・RecoveryCheckFailed・CeleryHeartbeatStale・ContainerStateStale・BackendWorkerSaturated・CeleryQueueBacklog・BackupTimestampAbsent）を `docs/ai-agents/ops-incident-agent.md` §3-7〜§3-13 に書いた。状態は草案（PO の「指示書の承認」の前）。ログイン失敗の 2 種は順番 8 の本番反映の後に書く（C4）。
 
 - 追記（2026-11-20 Opus）: 順番 5 の設計を `docs/handoff/ai-ops-247/login-alert-design.md` に書いた。状態は PO 承認済み（2026-11-20 PO「1」＝この設計で承認する）。本番への反映は順番 8（C6 の後・別の GO）。
 

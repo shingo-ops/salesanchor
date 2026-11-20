@@ -117,6 +117,8 @@
 - 中身の決まり（要件 R3）: 種類ごとに「調べる範囲」「してよいこと」「止まって PO に聞く条件」を置く。この節に無い種類では AI を起こさない（要件 R4）。
 - 今ある種類（v1・5 種）: 2026-10-16〜2026-11-08 の本番の記録で回数の多い順（ログイン失敗の 2 種を除く。要件 C4）。数は `docs/handoff/ai-ops-247/stage4-recon.md` §3。
   - §3-2 ContainerUnhealthy（25 件）・§3-3 HighMemoryUsage（20 件）・§3-4 KumaMonitorDown（9 件）・§3-5 ServiceDown（8 件）・§3-6 BackendHighLatency（6 件）
+  - 草案（PO の承認の前。承認まで、この 7 種で AI を起こさない）: §3-7 ViewerInventoryStale（5 件）・§3-8 RecoveryCheckFailed（5 件）・§3-9 CeleryHeartbeatStale（4 件）・§3-10 ContainerStateStale（4 件）・§3-11 BackendWorkerSaturated（4 件）・§3-12 CeleryQueueBacklog（3 件）・§3-13 BackupTimestampAbsent（1 件）。§3-7〜§3-13 で使う数の名前は、2026-11-20T15:50Z ごろに本番の Prometheus（prod2 の中から読むだけ）で全部あった。
+  - ログイン失敗の 2 種（BruteForceAttempt・SustainedAuthFailure）は、鳴る条件の見直し（順番 8）が本番に出た後に書く（要件 C4）。
 - 見張りの条件の正本は `monitoring/prometheus/alert_rules.yml`、人向けの手順は `docs/runbooks/alerts.md`。この節は条件を書き写さない。行番号だけを指す。
 - 使う前に揃える前提（まだ揃っていない。揃うまで、この節で AI を起こさない）:
   - P-1 サーバーが AI を起こす仕組み（段階4 の実装）。
@@ -207,3 +209,83 @@
 - 読めないこと（`risk` に書く）: DB の中の混み具合。v1 の読み方には入っていない。
 - 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に再び鳴っていない。
 - 止まって PO に聞く条件: §3-1 のほか、遅い道が保守の口（`/api/v1/ops/` の下）だけのとき（AI 自身の読み取りが原因の候補になるため）。
+
+### 3-7. ViewerInventoryStale
+
+- 見張りの条件: `monitoring/prometheus/alert_rules.yml:245-254`。人向けの手順: `docs/runbooks/alerts.md` の「ViewerInventoryStale」。
+- 調べる範囲:
+  - 作り置きの最後の更新からの秒数: `time() - viewer_inventory_updated_timestamp_seconds{job="backend"}` を件の始まりの 1 時間前から今まで。
+  - 保留（配信を止めている最中）でないこと: `time() - viewer_inventory_last_hold_timestamp_seconds{job="backend"}`。120 秒以下なら、この種類ではなく ViewerInventoryStaleOnHold の状態。
+  - 裏方の処理が動いているか: `time() - celery_heartbeat_last_success_timestamp_seconds{job="backend"}`。600 秒を超えていれば、原因の候補は worker の停止（§3-9 と同じ数）。
+  - 作り置き以外のタスクの失敗: `celery_task_failures{job="backend"}` の `task` ごとの増え方。
+- 読めないこと（`risk` に書く）: worker のログ（`viewer-cache` の行・例外）と Redis の `viewer:inventory:fail_count`。数の元は Redis（db0）なので、キーが無いときは 0 になり、この見張りは鳴る（人向けの手順の同じ節）。
+- 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に再び鳴っていない。
+- 止まって PO に聞く条件: §3-1 のほか、最後の更新から 12 時間を超えている（作り置きは 24 時間で消え、それまでに直らないと閲覧の API が 503 になるため。人向けの手順の同じ節の「閲覧者への影響」）。
+
+### 3-8. RecoveryCheckFailed
+
+- 見張りの条件: `monitoring/prometheus/alert_rules.yml:406-414`。人向けの手順: `docs/runbooks/alerts.md` の「RecoveryCheckFailed」。
+- 調べる範囲:
+  - どの項目が NG か: `salesanchor_recovery_check_failed{job="recovery-check"} == 1` の `item` と `item_ja`。項目は 10 個（2026-11-20T15:50Z ごろに本番で 10 本を確かめた）。
+  - 点検が動いているか: `salesanchor_recovery_check_last_poll_timestamp_seconds{job="recovery-check"}`。
+  - 同じ時間に鳴っている通知: `ALERTS{alertstate="firing"}`（全部）。項目ごとの原因は、その通知の種類の節（§3-2 以降）の調べる範囲で読む。
+- 読めないこと（`risk` に書く）: 点検の箱のログ（prod2 の recovery-check）。
+- 不要と書いてよい条件: 無し（v1）。札が page で、本番の API が止まって戻った後に直らない項目があるため。
+- 止まって PO に聞く条件: §3-1 のほか、NG の項目が 2 つ以上ある。または NG の項目に、この節に無い種類しか対応する通知が無い。
+
+### 3-9. CeleryHeartbeatStale
+
+- 見張りの条件: `monitoring/prometheus/alert_rules.yml:207-216`。人向けの手順: `docs/runbooks/alerts.md` の「CeleryHeartbeatStale」。
+- 調べる範囲:
+  - 最後の heartbeat からの秒数: `time() - celery_heartbeat_last_success_timestamp_seconds{job="backend"}` を件の始まりの 1 時間前から今まで。
+  - beat と worker の箱が動いているか: `salesanchor_container_running{service="celery-beat"}` と `salesanchor_container_running{service="celery-worker"}`。不健康か: `salesanchor_container_unhealthy{service="celery-beat"}` と同じく `celery-worker`。
+  - 待ち行列: `celery_queue_length{job="backend"}`（詰まりの候補を見分けるため）。
+  - 応急処置の結果: 出来事の表の kind `first_aid` の行（時刻だけ）。
+- 読めないこと（`risk` に書く）: worker が今処理中のタスク（`celery inspect active`）と worker のログ。数の元は Redis なので、Redis が読めないときは前の値のまま・キーが消えると鳴る（人向けの手順の同じ節）。
+- 不要と書いてよい条件: 無し（v1）。札が page で、LINE 解析・翻訳・定期の集計が止まっている可能性があるため。
+- 止まって PO に聞く条件: §3-1 のほか、件の始まりから 30 分たっても heartbeat が戻っていない。
+
+### 3-10. ContainerStateStale
+
+- 見張りの条件: `monitoring/prometheus/alert_rules.yml:350-359`。人向けの手順: `docs/runbooks/alerts.md` の「ContainerStateStale」。
+- 調べる範囲:
+  - 状態書き係の最後の実行からの秒数: `time() - salesanchor_container_state_last_run_timestamp_seconds{instance="app-vps"}` を件の始まりの 1 時間前から今まで。値が無いことも鳴る条件に入っている。
+  - 書き出しのファイルの時刻: `node_textfile_mtime_seconds{instance="app-vps",file="/textfile/container_state.prom"}`。
+  - 書き出しの読み取りの失敗: `node_textfile_scrape_error{instance="app-vps"}`。
+  - 機械そのものが答えているか: `up{instance="app-vps"}`。
+- 読めないこと（`risk` に書く）: prod1 の `crontab -l`・`/tmp/container-state.log`。この間は ContainerUnhealthy が鳴らないことも書く。
+- 不要と書いてよい条件: 無し（v1）。札が page で、この間はコンテナの不健康を知らせられないため。
+- 止まって PO に聞く条件: §3-1 のほか、件の始まりから 30 分たっても書き出しが戻っていない。
+
+### 3-11. BackendWorkerSaturated
+
+- 見張りの条件: `monitoring/prometheus/alert_rules.yml:95-104`。人向けの手順: `docs/runbooks/alerts.md` の「BackendWorkerSaturated」。
+- 調べる範囲:
+  - 同時に処理している数の動き: `http_requests_in_flight{job="backend"}` を件の始まりの 1 時間前から今まで。
+  - どの道（handler）が遅いか: `docs/runbooks/alerts.md` の「BackendHighLatency」の節にある `topk(5, ...)` の式。
+  - 同じ時間の BackendHighLatency: `ALERTS{alertname="BackendHighLatency"}`。
+- 読めないこと（`risk` に書く）: 今処理中のリクエストの中身。v1 の読み方には入っていない。
+- 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に再び鳴っていない。
+- 止まって PO に聞く条件: §3-1 のほか、遅い道が保守の口（`/api/v1/ops/` の下）だけのとき（§3-6 と同じ理由）。
+
+### 3-12. CeleryQueueBacklog
+
+- 見張りの条件: `monitoring/prometheus/alert_rules.yml:231-240`。人向けの手順: `docs/runbooks/alerts.md` の「CeleryQueueBacklog」。
+- 調べる範囲:
+  - 待ち行列の長さの動き: `celery_queue_length{job="backend"}` を件の始まりの 6 時間前から今まで。
+  - worker が動いているか: `time() - celery_heartbeat_last_success_timestamp_seconds{job="backend"}`。
+  - タスクの失敗: `celery_task_failures{job="backend"}` の `task` ごとの増え方。
+- 読めないこと（`risk` に書く）: worker が今処理中のタスク（長いタスクが並んでいないか）。数の元は Redis なので、Redis がメモリ一杯で記録を消すことがある（人向けの手順の同じ節）。
+- 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に再び鳴っていない。
+- 止まって PO に聞く条件: §3-1 のほか、待ち行列が件の始まりから増え続けている。worker の再起動は処理中のタスクを止めるので、AI は提案に留める（人向けの手順の同じ節）。
+
+### 3-13. BackupTimestampAbsent
+
+- 見張りの条件: `monitoring/prometheus/alert_rules.yml:296-305`。人向けの手順: `docs/runbooks/alerts.md` の「BackupTimestampAbsent」。
+- 調べる範囲:
+  - どちらの時刻が無いか: `backup_local_last_success_timestamp{instance="app-vps"}` と `backup_s3_last_success_timestamp{instance="app-vps"}`。
+  - 書き出しのファイルの時刻: `node_textfile_mtime_seconds{instance="app-vps",file=~"/textfile/backup_(local|s3).prom"}`。
+  - 書き出しの読み取りの失敗: `node_textfile_scrape_error{instance="app-vps"}`。
+- 読めないこと（`risk` に書く）: prod1 の `/home/ubuntu/node_exporter_textfile/` の中身と `backup.log` の `TEXTFILE ... FAIL` の行。バックアップそのものが取れているかは、この読み方では分からない。
+- 不要と書いてよい条件: 無し（v1）。バックアップが取れているかを確かめられていない状態のため。
+- 止まって PO に聞く条件: §3-1 のほか、どちらの時刻も無い。
