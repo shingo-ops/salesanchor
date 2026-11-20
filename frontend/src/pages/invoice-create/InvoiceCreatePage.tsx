@@ -7,6 +7,7 @@
  *     合計・税・関税はサーバーの試算（POST /invoices/preview）の答えを見せる。画面で足し算しない。
  *   - 商品一覧: LineItemsTable（値段・在庫数・重さは GET /invoices/draft-inventory の値だけ）。
  *   - 操作: 「クリア」（確認してから空に戻す）と作成。作成は今の道（POST /invoices。下書きで保存）。
+ * 作成のあとは詳細画面へ移らず、小さな枠（InvoiceCreatedModal。design-v2 §3-6・R6）で「PDF を保存」「詳細へ」「閉じる」を出す。
  * 「在庫表から／見積から」の切り替えは無い（p8）。見積から作るのは見積の詳細画面の道。
  * 在庫表の画面から選んだ商品（QuoteHandoffState）は先頭の行から入る。
  */
@@ -41,6 +42,7 @@ import { useDraftInventory } from "../quote-create/useDraftInventory";
 import { rateFee, useDraftShippingQuotes } from "../quote-create/useDraftShippingQuotes";
 import { InvoicePaymentTotalsSection, SHIPPING_NONE, shippingRateKey } from "./InvoicePaymentTotalsSection";
 import { InvoiceShipToSection } from "./InvoiceShipToSection";
+import { InvoiceCreatedModal, type CreatedInvoice } from "./InvoiceCreatedModal";
 import { useInvoicePreview } from "./useInvoicePreview";
 
 /** 材料の答えが請求書の材料の形（object）のときだけ使う。配列などは「まだ無い」と同じに扱う */
@@ -69,6 +71,8 @@ export default function InvoiceCreatePage() {
   const [clearOpen, setClearOpen] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  // 作った請求書（作成のあとの枠を出す間だけ。§3-6・K15）
+  const [created, setCreated] = useState<CreatedInvoice | null>(null);
 
   const inventory = useDraftInventory();
 
@@ -172,7 +176,7 @@ export default function InvoiceCreatePage() {
     }
     setSaving(true);
     try {
-      const inv = await api.post<{ id: number }>("/invoices", {
+      const inv = await api.post<CreatedInvoice>("/invoices", {
         company_id: companyId,
         contact_id: contactId,
         currency,
@@ -181,7 +185,7 @@ export default function InvoiceCreatePage() {
         notes: notes || null,
         items: filled.map(toInvoiceItem),
       });
-      navigate(`/invoices/${inv.id}`);
+      setCreated({ id: inv.id, invoice_number: inv.invoice_number });
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.saveError"));
     } finally {
@@ -279,6 +283,17 @@ export default function InvoiceCreatePage() {
         onConfirm={clearAll}
         onCancel={() => setClearOpen(false)}
       />
+
+      {created !== null && (
+        <InvoiceCreatedModal
+          invoice={created}
+          onClose={() => {
+            setCreated(null);
+            clearAll();
+          }}
+          onOpenDetail={() => navigate(`/invoices/${created.id}`)}
+        />
+      )}
     </PageLayout>
   );
 }
