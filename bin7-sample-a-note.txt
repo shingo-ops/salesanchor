@@ -1,0 +1,1 @@
+# bin7 acceptance sample A step 5: non-protected file only (do not merge)
