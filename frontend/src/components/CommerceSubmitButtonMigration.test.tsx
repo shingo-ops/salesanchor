@@ -13,8 +13,9 @@ const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), de
 vi.mock('../lib/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../lib/api')>()), api: mock }));
 let instance = createInstance();
 function Location() { const location = useLocation(); return <output data-testid="location">{location.pathname}</output>; }
-function wrap(node: React.ReactNode, entries = ['/start']) { return <I18nextProvider i18n={instance}><MemoryRouter initialEntries={entries}>{node}</MemoryRouter></I18nextProvider>; }
-function routed(node: React.ReactNode, path: string, entries: string[]) { return <I18nextProvider i18n={instance}><MemoryRouter initialEntries={entries}><Routes><Route path={path} element={node} /><Route path="*" element={<Location />} /></Routes></MemoryRouter></I18nextProvider>; }
+type Entries = React.ComponentProps<typeof MemoryRouter>['initialEntries'];
+function wrap(node: React.ReactNode, entries: Entries = ['/start']) { return <I18nextProvider i18n={instance}><MemoryRouter initialEntries={entries}>{node}</MemoryRouter></I18nextProvider>; }
+function routed(node: React.ReactNode, path: string, entries: Entries) { return <I18nextProvider i18n={instance}><MemoryRouter initialEntries={entries}><Routes><Route path={path} element={node} /><Route path="*" element={<Location />} /></Routes></MemoryRouter></I18nextProvider>; }
 function deferred() { let resolve!: (value: unknown) => void; let reject!: (error: Error) => void; const promise = new Promise((res, rej) => { resolve = res; reject = rej; }); return { promise, resolve, reject }; }
 
 const company = { id: 4, company_code: 'C-4', name: 'Company' };
@@ -44,6 +45,27 @@ function fillVisibleProductForm() {
   const controls = Array.from(form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea'));
   expect(controls).toHaveLength(23); controls.forEach((control, index) => fireEvent.change(control, { target: { value: visibleProductValues[index] } }));
 }
+// invoice-create-portfolio 便R7: 見積の作成画面は請求書と同じ商品行（在庫の道・為替の道を読む。design-v2 §3-8-1・K16）
+const inventory = {
+  categories: [{ code: 'OP', name_ja: 'One Piece' }],
+  items: [
+    { product_id: 7, name: 'Booster Box A', name_en: 'Booster Box A EN', mark: 'OP-01', work_code: 'OP', box_weight_kg: 0.5, case_weight_kg: 6,
+      cells: { Case: { price: 170000, quantity: 1 }, 'Sealed box': { price: 15000, quantity: 3 } } },
+  ],
+};
+const fxUsd = { currency: 'USD', rate_jpy: 150, fetched_at: '2026-11-19T21:00:00+00:00', updated_at: '2026-11-19T21:00:00+00:00' };
+const quoteHandoff = { selectedProducts: [{ product_id: 7, product_name: 'Booster Box A', unit_price: null }] };
+const stockRow = { product_id: 7, product_name: 'Booster Box A', name_en: 'Booster Box A EN', condition: 'Sealed box', unit: 'box', quantity: 1, unit_price: 100, weight: 0.5 };
+const optionValues = (testId: string) => Array.from((screen.getByTestId(testId) as HTMLSelectElement).options).map((o) => o.value);
+const priceValue = () => (screen.getByTestId('invoice-item-price-0') as HTMLInputElement).value;
+/** 在庫表の画面から商品 7 を持ってきた形で見積の画面を開き、取引先と担当者を選ぶ。state が空でなければ状態も選ぶ */
+async function openQuoteWithProduct(state: string) {
+  render(routed(<QuoteCreatePage />, '/quotes/new', [{ pathname: '/quotes/new', state: quoteHandoff }]));
+  await waitFor(() => expect(optionValues('invoice-item-state-0')).toContain('Sealed box'), { timeout: 4000 });
+  const selects = screen.getAllByRole('combobox'); fireEvent.change(selects[0], { target: { value: '4' } });
+  await screen.findByRole('option', { name: /Buyer/ }); fireEvent.change(selects[1], { target: { value: '5' } });
+  if (state !== '') fireEvent.change(screen.getByTestId('invoice-item-state-0'), { target: { value: state } });
+}
 
 beforeEach(async () => {
   vi.resetAllMocks(); instance = createInstance();
@@ -51,8 +73,9 @@ beforeEach(async () => {
   vi.stubGlobal('fetch', vi.fn(() => { throw new Error('Unexpected network'); }));
   mock.get.mockImplementation(async (url: string) => {
     if (url === '/companies?per_page=100') return [company];
-    // invoice-create-portfolio 便R5: 請求書の作成画面は在庫の道を 1 回読む
-    if (url === '/invoices/draft-inventory') return { categories: [], items: [] };
+    // invoice-create-portfolio 便R5・R7: 請求書と見積の作成画面は在庫の道を 1 回読む。見積は為替の道も読む（USD）
+    if (url === '/invoices/draft-inventory') return inventory;
+    if (url === '/fx-rates/USD') return fxUsd;
     if (url === '/contacts?company_id=4&per_page=100') return [contact];
     if (url === '/products/tcg-types') return [{ code: 'pokemon', name_ja: 'Pokemon' }];
     if (url === '/products/attribute-options') return productOptions;
@@ -68,10 +91,13 @@ describe('commerce submit Button migration contracts', () => {
   it.each([
     // invoice-create-portfolio 便R5: 請求書の行は選ぶ欄（カテゴリ・商品・状態）と数の欄 2 つ（数量・単価）。空の行は数の欄も空
     ['invoice', <InvoiceCreatePage />, 'invoice-add-row', 'invoice-item-row-', [], ['', '']],
-    ['quote', <QuoteCreatePage />, 'quote-add-blank', 'quote-item-row-', ['', '', '', ''], ['1', '0', '']],
+    // invoice-create-portfolio 便R7: 見積も同じ商品行の表（K16 (a)）
+    ['quote', <QuoteCreatePage />, 'invoice-add-row', 'invoice-item-row-', [], ['', '']],
   ] as const)('%s addItem appends one blank row per click with zero writes', async (_name, page, buttonId, rowPrefix, textValues, numberValues) => {
     render(wrap(page));
     const button = await screen.findByTestId(buttonId) as HTMLButtonElement;
+    // 見積の画面は表を form の中に置くので、押しても保存が走らない種類のボタン（design-v2 §3-8-1）
+    expect(button.getAttribute('type')).toBe('button');
     const count = () => document.querySelectorAll(`tr[data-testid^="${rowPrefix}"]`).length;
     const before = count();
     fireEvent.click(button); expect(count()).toBe(before + 1);
@@ -93,39 +119,45 @@ describe('commerce submit Button migration contracts', () => {
     await screen.findByRole('option', { name: /Buyer/ }); fireEvent.change(selects[1], { target: { value: '5' } });
     fireEvent.submit(submit.closest('form')!);
     expect(await screen.findByText(String(instance.t('quotes.itemsRequired')))).toBeTruthy();
+    // K16 (g): 自由記入の欄と検索で足す欄は画面に無い
+    expect(document.querySelectorAll('[data-testid^="quote-add-search"], [data-testid^="quote-item-row-"]').length).toBe(0);
     expect(mock.post).not.toHaveBeenCalled();
   });
 
   it.each([
-    ['empty name', 'name', ''], ['zero price', 'price', '0'], ['zero quantity', 'quantity', '0'],
-  ] as const)('Quote item handler rejects %s with zero POST', async (_label, field, value) => {
-    render(wrap(<QuoteCreatePage />)); const selects = await screen.findAllByRole('combobox'); fireEvent.change(selects[0], { target: { value: '4' } }); await screen.findByRole('option', { name: /Buyer/ }); fireEvent.change(selects[1], { target: { value: '5' } });
-    const row = screen.getByTestId('quote-item-row-0'); const name = within(row).getByTestId('quote-item-row-0-name'); const numbers = within(row).getAllByRole('spinbutton'); fireEvent.change(name, { target: { value: field === 'name' ? value : 'Card' } }); fireEvent.change(numbers[0], { target: { value: field === 'quantity' ? value : '1' } }); fireEvent.change(numbers[1], { target: { value: field === 'price' ? value : '10' } });
-    if (field === 'quantity') { fireEvent.click(screen.getByRole('button', { name: String(instance.t('quotes.saveDraft')) })); expect(mock.post).not.toHaveBeenCalled(); }
-    fireEvent.submit(screen.getByRole('button', { name: String(instance.t('quotes.saveDraft')) }).closest('form')!); expect(await screen.findByText(String(instance.t('quotes.itemsRequired')))).toBeTruthy(); expect(mock.post).not.toHaveBeenCalled();
+    ['no state', 'state'], ['zero price', 'price'], ['zero quantity', 'quantity'],
+  ] as const)('Quote item guard rejects a stock row with %s with zero POST (K16 (c))', async (_label, field) => {
+    await openQuoteWithProduct(field === 'state' ? '' : 'Sealed box');
+    if (field !== 'state') await waitFor(() => expect(priceValue()).toBe('100'));
+    if (field === 'price') fireEvent.change(screen.getByTestId('invoice-item-price-0'), { target: { value: '0' } });
+    if (field === 'quantity') fireEvent.change(screen.getByTestId('invoice-item-quantity-0'), { target: { value: '0' } });
+    fireEvent.click(screen.getByRole('button', { name: String(instance.t('quotes.saveDraft')) }));
+    expect(await screen.findByText(String(instance.t('quotes.itemsRequired')))).toBeTruthy(); expect(mock.post).not.toHaveBeenCalled();
   });
 
-  it('Quote submit preserves the exact payload, pending lock, failure state, retry, and success route', async () => {
+  it('Quote submit sends the stock row in the same 8-field shape, locks pending, keeps the row on failure, retries, and routes (K16 (b)(d)(e))', async () => {
     const first = deferred(); mock.post.mockReturnValueOnce(first.promise).mockResolvedValueOnce({});
-    render(routed(<QuoteCreatePage />, '/quotes/new', ['/quotes/new']));
-    const selects = await screen.findAllByRole('combobox'); fireEvent.change(selects[0], { target: { value: '4' } });
-    await screen.findByRole('option', { name: /Buyer/ }); fireEvent.change(selects[1], { target: { value: '5' } }); fireEvent.change(selects[2], { target: { value: 'EUR' } });
-    const row = screen.getByTestId('quote-item-row-0'); fireEvent.change(within(row).getByTestId('quote-item-row-0-name'), { target: { value: 'Card' } });
-    const numbers = within(row).getAllByRole('spinbutton'); fireEvent.change(numbers[1], { target: { value: '12.5' } }); fireEvent.change(numbers[2], { target: { value: '0.25' } });
+    await openQuoteWithProduct('Sealed box');
+    // USD: 在庫表の円の値段 15000 ÷ 為替 150 = 100。Sealed box の重さは箱の重さ 0.5
+    await waitFor(() => expect(priceValue()).toBe('100'));
+    expect(screen.getByTestId('invoice-item-weight-0').textContent).toBe(String(instance.t('lineItems.weightKg', { value: 0.5 })));
     fireEvent.change(screen.getByTestId('shipping-fee-input'), { target: { value: '3' } });
     fireEvent.change(screen.getByText(String(instance.t('quotes.tax'))).parentElement!.querySelector('input')!, { target: { value: '7' } }); fireEvent.change(screen.getByText(String(instance.t('common.notes'))).parentElement!.querySelector('input')!, { target: { value: 'memo' } });
     const submit = screen.getByRole('button', { name: String(instance.t('quotes.saveDraft')) }) as HTMLButtonElement;
     fireEvent.click(submit);
-    const expected = { company_id: 4, contact_id: 5, currency: 'EUR', shipping_fee: 3, tax_amount: 7, notes: 'memo', items: [{ product_id: null, product_name: 'Card', name_en: null, condition: null, unit: null, quantity: 1, unit_price: 12.5, weight: 0.25 }] };
+    // 空の行（11行）は送らない（K16 (d)）
+    const expected = { company_id: 4, contact_id: 5, currency: 'USD', shipping_fee: 3, tax_amount: 7, notes: 'memo', items: [stockRow] };
     expect(mock.post).toHaveBeenCalledExactlyOnceWith('/quotes', expected); expect(submit.disabled).toBe(true); fireEvent.click(submit); expect(mock.post).toHaveBeenCalledTimes(1);
     await act(async () => first.reject(new Error('Quote save failed'))); expect(await screen.findByText('Quote save failed')).toBeTruthy();
-    expect((screen.getByTestId('quote-item-row-0-name') as HTMLInputElement).value).toBe('Card'); expect(submit.disabled).toBe(false);
+    expect((screen.getByTestId('invoice-item-state-0') as HTMLSelectElement).value).toBe('Sealed box'); expect(submit.disabled).toBe(false);
     fireEvent.click(submit); await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(2)); expect(mock.post.mock.calls[1]).toEqual(['/quotes', expected]);
     expect((await screen.findByTestId('location')).textContent).toBe('/quotes');
   });
 
-  it('Quote submit maps empty fee, tax, and notes to null', async () => {
-    mock.post.mockResolvedValue({}); render(routed(<QuoteCreatePage />, '/quotes/new', ['/quotes/new'])); const selects = await screen.findAllByRole('combobox'); fireEvent.change(selects[0], { target: { value: '4' } }); await screen.findByRole('option', { name: /Buyer/ }); fireEvent.change(selects[1], { target: { value: '5' } }); const row = screen.getByTestId('quote-item-row-0'); fireEvent.change(within(row).getByTestId('quote-item-row-0-name'), { target: { value: 'Card' } }); fireEvent.change(within(row).getAllByRole('spinbutton')[1], { target: { value: '10' } }); fireEvent.click(screen.getByRole('button', { name: String(instance.t('quotes.saveDraft')) })); await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1)); expect(mock.post).toHaveBeenCalledExactlyOnceWith('/quotes', { company_id: 4, contact_id: 5, currency: 'USD', shipping_fee: null, tax_amount: null, notes: null, items: [{ product_id: null, product_name: 'Card', name_en: null, condition: null, unit: null, quantity: 1, unit_price: 10, weight: null }] }); expect((await screen.findByTestId('location')).textContent).toBe('/quotes');
+  it('Quote submit maps empty fee, tax, and notes to null (K16 (f))', async () => {
+    mock.post.mockResolvedValue({}); await openQuoteWithProduct('Sealed box'); await waitFor(() => expect(priceValue()).toBe('100'));
+    fireEvent.click(screen.getByRole('button', { name: String(instance.t('quotes.saveDraft')) })); await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1));
+    expect(mock.post).toHaveBeenCalledExactlyOnceWith('/quotes', { company_id: 4, contact_id: 5, currency: 'USD', shipping_fee: null, tax_amount: null, notes: null, items: [stockRow] }); expect((await screen.findByTestId('location')).textContent).toBe('/quotes');
   });
 
   it('Product create sends all 33 payload keys, blocks duplicate pending writes, preserves failure state, and retries', async () => {

@@ -36,6 +36,8 @@ beforeEach(async () => {
     if (url === '/companies?per_page=100') return [];
     // invoice-create-portfolio 便R5: 請求書の作成画面は在庫の道を 1 回読む
     if (url === '/invoices/draft-inventory') return { categories: [], items: [] };
+    // invoice-create-portfolio 便R7: 見積の作成画面は為替の道を読む（既定の通貨 USD）
+    if (url === '/fx-rates/USD') return { currency: 'USD', rate_jpy: 150, fetched_at: '2026-11-19T21:00:00+00:00', updated_at: '2026-11-19T21:00:00+00:00' };
     throw new Error(`Unexpected GET ${url}`);
   });
   mock.post.mockImplementation(() => { throw new Error('Unexpected post'); });
