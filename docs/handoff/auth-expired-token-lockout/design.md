@@ -25,7 +25,7 @@
 ## 3. 対象と対象外
 
 - 対象: backend/app/auth/dependencies.py の `_authenticate_self_token` の札の読み解きの例外の扱いだけ。
-- 対象: backend/tests/test_self_auth.py への試験 3 本の追加。
+- 対象: backend/tests/test_self_auth.py への試験 4 本の追加。
 - 対象外: 回数止めの数（10 回・15 分）・`check_auth_rate_limit`・`record_auth_failure` の本体（backend/app/cache.py）。
 - 対象外: ログインの口（backend/app/routers/auth.py）・口座の止め（ADR-1013 の 10 回）。
 - 対象外: 画面（frontend）。開いた瞬間に古い札で 11 回頼む動きは、この直しで害が無くなる。画面の直しは別の話として残す（§10）。
