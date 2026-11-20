@@ -24,7 +24,7 @@ case "$EVENT" in
       exit 2
     fi
     [ "$RC" -eq 2 ] && exit 2
-    for G in python_version_guard.py subagent_bash_wait_guard.py; do
+    for G in python_version_guard.py subagent_bash_wait_guard.py go_comment_guard.py; do
       printf '%s' "$INPUT" | python3 "$DIR/$G"
       RC=$?
       [ "$RC" -eq 0 ] && continue
