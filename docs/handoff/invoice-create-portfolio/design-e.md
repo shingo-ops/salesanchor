@@ -169,7 +169,7 @@
 - 下書きで支払方法を変えると、税・為替・送料の換算もその日の値で作り直される（§3-5 PATCH）。
 - 手数料の値は表の値をそのまま使う。値が PayPal の今の値と合っているかは PO が画面で確かめる（K12 の前に PO に頼む）。
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 
 - PayPal の手数料の公式ページ（表の source_url。https://www.paypal.com/jp/business/paypal-business-fees）が値の出どころ。今回は表の値を正本として使い、外部の値を設計に書き写さない（数を作らない）。
 - 他社の事例は使わない。理由: 今回の論点は「自社の表の値をどの道で合計に足すか」で、外部の数値の当てはめが無い。
@@ -180,6 +180,7 @@
 - 値は public.payment_fee_settings が正本。コードに率を書かない（試験の入力にだけ書く）。
 - 請求書ごとの写し（payment_fee_snapshot）で、あとから「何で計算したか」を確かめられる。
 - 画面の行は既存の金型 TotalsBox だけを使う。i18n は CI の ja/en 一致チェック。
+- 守り手: 試験 test_invoice_totals.py・test_invoice_totals_pg.py（CI の必須チェック）と、手数料の値を PO が確かめる設定の画面（payment_fee_settings）。
 
 ## 10. 便の分け方
 
