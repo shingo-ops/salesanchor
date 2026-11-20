@@ -4,12 +4,18 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
 import { queryClient } from "../../lib/query/apiQuery";
+import { TOPICS } from "../../lib/realtime/topics";
 import SchedulePage from "./SchedulePageImpl";
 import { formatTimeRange } from "../../components/calendarView.utils";
 import { formatDateInput, formatDayLabel, formatDraftDateLine, formatTimeInput, getWeekDays } from "./schedule-utils";
 
 /** 編集の画面（金型 EditorPage の dialog・名前は予定の編集） */
 const editorDialog = () => screen.findByRole("dialog", { name: i18n.t("schedule.fullEditLabel") });
+
+const realtimeRefresh = vi.hoisted(() => vi.fn());
+vi.mock("../../hooks/useRealtimeRefresh", () => ({
+  useRealtimeRefresh: realtimeRefresh,
+}));
 
 vi.mock("../../contexts/AuthContext", () => ({
   useAuth: () => ({ user: { uid: "user-a" } }),
@@ -106,6 +112,18 @@ afterEach(() => {
 });
 
 const view = () => render(<MemoryRouter><SchedulePage /></MemoryRouter>);
+
+describe("SchedulePage realtime refresh", () => {
+  it("rereads the events cache when calendar.events arrives", async () => {
+    view();
+    await waitFor(() => expect(realtimeRefresh).toHaveBeenCalled());
+    const [topics, reload] = realtimeRefresh.mock.calls[0] as [string[], () => void];
+    expect(topics).toEqual([TOPICS.calendarEvents]);
+    const spy = vi.spyOn(queryClient, "invalidateQueries");
+    reload();
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["api", "user-a", "calendar", "events"] });
+  });
+});
 
 describe("SchedulePage Google calendar connect button", () => {
   it("shows an enabled button to a tenant admin and starts the connect flow on click", async () => {

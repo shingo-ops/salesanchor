@@ -30,6 +30,8 @@ import { api } from "../../lib/api";
 import { eventColorVar, eventDisplayColor, type EventColorKey } from "./eventColors";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
+import { useRealtimeRefresh } from "../../hooks/useRealtimeRefresh";
+import { TOPICS } from "../../lib/realtime/topics";
 import "../schedule.css";
 import { ScheduleDraftFields, meetJoinUrl } from "./ScheduleDraftFields";
 import { ScheduleFullEditor } from "./ScheduleFullEditor";
@@ -906,6 +908,10 @@ export default function SchedulePage() {
     [searchQ.data],
   );
   const invalidate = useInvalidateApi();
+  // Google からの取り込みで予定が変わったら読み直す（ADR-1016 改訂 2026-11-20）。保存の後と同じ頭で読み直す
+  useRealtimeRefresh([TOPICS.calendarEvents], () => {
+    void invalidate(["calendar", "events"]);
+  });
   const built = useMemo(
     () => (live ? buildSchedule(ownersQ.data, eventsQ.data, shiftsQ.data, t) : { owners: [], events: [], failed: false }),
     [live, ownersQ.data, eventsQ.data, shiftsQ.data, t],
