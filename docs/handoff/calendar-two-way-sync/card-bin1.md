@@ -150,14 +150,14 @@ SET に `calendar_type`・`user_id`・`created_by_user_id`・`source`・`sync_or
         body["location"] = payload["location"]
 ```
 
-変更後（鍵が payload にあれば、空でも送る。空は "" で送り Google 側も消す。鍵が無ければ今と同じく送らない）:
+変更後（値が None でなければ、空 "" でも送る。None や鍵なしは今と同じく送らない。三審の指摘 C3: `_google_body_for`（`:174`）は NULL の行を None で渡すので、None まで "" にすると繰り返しの予定を直すたびに Google の説明を消してしまう）:
 
 ```python
-    # 鍵があれば空でも送る（アプリで消したら Google でも消す・ADR-1059 改訂 2026-11-20）
-    if "description" in payload:
-        body["description"] = payload["description"] or ""
-    if "location" in payload:
-        body["location"] = payload["location"] or ""
+    # 空 "" でも送る（アプリで消したら Google でも消す・ADR-1059 改訂 2026-11-20）。None は送らない
+    if payload.get("description") is not None:
+        body["description"] = payload["description"]
+    if payload.get("location") is not None:
+        body["location"] = payload["location"]
 ```
 
 ほかの行は変えない。
@@ -217,11 +217,14 @@ TENANT_TASK_TOPICS: dict[str, str] = {
   1. SELECT の WHERE に `sync_status = 'synced'`・`recurrence_rule IS NULL`・`recurring_event_id IS NULL` があり、行が無ければ UPDATE は流れず `"skipped"`（K6）。UPDATE の `rowcount=0` でも `"skipped"`。
   2. アプリ起源で `status="cancelled"` なら SELECT も UPDATE も DELETE も流れず `"skipped"`（K9）。
   3. 中身が全部同じなら UPDATE は流れず `"skipped"`（K8）。この試験の「同じ」は: 題名同じ・DB の説明が `""` で Google に鍵なし・DB の場所が `"a\r\nb"` で Google が `"a\nb"`・時間同じ。
-  4. 終日の比べ方（K8・指摘 B4）: DB が開始 2026-11-21 00:00 JST・終了 2026-11-21 23:59 JST の行と、DB が開始 2026-11-21 00:00 JST・終了 2026-11-22 00:00 JST の行の 2 つで、それぞれ `_to_google_event_body` が作る日付と同じ Google の値（`start.date`・`end.date`）を返したとき、どちらも UPDATE は流れない。Google が 1 日のばした値なら、`start_datetime`・`end_datetime`・`is_all_day` が UPDATE に入り、値は `_google_times` の形（終了日 23:59 JST）。
+  4. 終日の比べ方（K8・指摘 B4・三審 C2）。Google の値は下の固定の文字で書く（`_to_google_event_body` で作らない。同じ式どうしで比べると試験の意味が無い）:
+     - 行 A: DB 開始 `datetime(2026,11,20,15,0,tzinfo=timezone.utc)`・終了 `datetime(2026,11,21,14,59,tzinfo=timezone.utc)`・終日。Google `start={"date":"2026-11-21"}`・`end={"date":"2026-11-22"}` → UPDATE は流れない。
+     - 行 B: DB 開始 同じ・終了 `datetime(2026,11,21,15,0,tzinfo=timezone.utc)`・終日。Google `start={"date":"2026-11-21"}`・`end={"date":"2026-11-23"}` → UPDATE は流れない。
+     - 行 A で Google `end={"date":"2026-11-23"}` → UPDATE が流れ、`end_datetime` は 2026-11-22 23:59 日本時間、`start_datetime` は 2026-11-21 00:00 日本時間、`is_all_day` は True。
   5. 色（K2・指摘 B3）: `label_colors` に名札があり当たる鍵が DB と違えば `color_key` が入る。`label_colors=None`・`eventLabelId` 無し・表に無い名札、の 3 つでは `color_key` が UPDATE に入らない（DB に色があっても消さない）。
   6. 取り込みが Google へ書かない（K5）: `app.services.google_calendar` の `create_event`・`update_event`・`delete_event` を、呼ばれたら落ちる偽物に差し替えて、アプリ起源と Google 起源の両方の `upsert_from_google` を呼んでも落ちない。
   7. 時刻ありの予定で、DB と Google が同じ時刻を別の時差の書き方（`+09:00` と `Z`）で持つとき UPDATE は流れない。
-  8. `TestToGoogleEventBody` に足す: `description=""`・`location=None` を鍵ありで渡すと `body["description"] == ""`・`body["location"] == ""`。既存の `test_without_description_and_location`（鍵なし→送らない）はそのまま通ること。
+  8. `TestToGoogleEventBody` に足す: `description=""`・`location=None` を渡すと `body["description"] == ""` で、`"location" not in body`。既存の `test_without_description_and_location`（鍵なし→送らない）はそのまま通ること。
   9. 既存の `test_instance_of_app_origin_is_skipped`（`:1939` 付近）は、判定の順が変わり最初の `_is_app_origin` の呼び出しが親の `"gm"` になる。`AsyncMock(side_effect=[False, True])` を `AsyncMock(side_effect=[True])` に、`origin.await_args_list[1].args[1] == "gm"` を `origin.await_args_list[0].args[1] == "gm"` に変える（確かめる中身＝「アプリで作った繰り返しの回は "skipped"」は変えない）。
 - `sync_tenant_from_google` の試験（同じファイルの既存の形に合わせる）:
   - 先に、既存の `_sync_patches`（`:852` 付近）の patch の並びに `patch("app.realtime.publisher.publish_change", new=AsyncMock())` を足す（既存の試験が本物の Redis へ送りに行かないように・指摘 B1）。下の 10・11 はこの偽物で数える。
