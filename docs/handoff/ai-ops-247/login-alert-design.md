@@ -38,7 +38,7 @@
 - この係を呼ぶ「ログイン前」の道（`backend/app/routers/auth.py`・`backend/app/routers/viewer.py` を AST で列挙）:
   `POST /api/v1/auth/login`・`/auth/passkey/login/verify`・`/auth/password-reset/confirm`・`/auth/login-requests/recovery`・`/viewer/login`・`/viewer/password-reset/confirm`
   （締め出しはどの道も 429。失敗の番号は道で違う: `/auth/login`・`/auth/passkey/login/verify`・`/viewer/login` は 401（`backend/app/routers/auth.py:395-422`・`backend/app/routers/auth.py:1096-1111`）。`/auth/password-reset/confirm`・`/auth/login-requests/recovery`・`/viewer/password-reset/confirm` は 400（`backend/app/routers/auth.py:677`・`backend/app/routers/auth.py:1619`・`backend/app/routers/viewer.py:384`）。この 3 つの道は 1 回ずつの失敗は数えず、同じ IP が 10 回で締め出された後の 429 だけを数える）
-- 対象外の道: ログイン後の道（`/auth/password/change`・`/viewer/password`）、`/viewer/billing-form/open`・`/viewer/billing-form/submit`、スタッフ招待の公開の道（失敗は 400）。これらは締め出しの 429 も数えない
+- 対象外の道: ログイン後の道（`/auth/password/change`・`/viewer/password`）、`/viewer/billing-form/open`・`/viewer/billing-form/submit`、スタッフ招待の公開の道（失敗は 404。`backend/app/routers/staff_join.py:77-78`）。これらは締め出しの 429 も数えない
 - 1 件の失敗はログに 2 行出る: 入口（nginx。`"POST ... HTTP/2.0" 401 32 ...`）とバックエンド（uvicorn。`"POST ... HTTP/1.1" 401 Unauthorized`）。上の 48 行は 24 件の失敗。
 - 24 件はすべて同じ 1 つの Windows の Chrome から、ログイン画面で入力したもの（入口の行の利用者の情報）。反映（deploy）の直後に多い。誰の操作かは**未確認**（攻撃の形ではない: 5 分に 1 件以下）。
 - Prometheus の `http_requests_total` は使えない: 14 日でログインの 401 が 167 件と出るが、バックエンドが反映のたびに立ち直り（24 時間で 23 回）、立ち直り後の最初の 1 件を数え落とす。Loki は全行を持つ（prom-login-14d.txt）。
