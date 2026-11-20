@@ -1,7 +1,7 @@
 # 設計 — 予定ごとの色（Google と同じ 24 色＋デフォルト）
 
-状態: 設計案（審査 2 回目 APPROVE（軽 3 件を直した版））。目標 K1〜K7 は PO 承認済み（2026-11-19 チャットで「1」）。実装の承認と本番の GO は兼ねない。基準: `origin/main` fba2172b8。
-現状: [recon.md](recon.md)。決まりの記録: `docs/adr/ADR-1081-event-color-labels.md`（Proposed）。
+状態: 設計案（審査 2 回目 APPROVE（軽 3 件を直した版））。目標 K1〜K7 は PO 承認済み（2026-11-19 チャットで「1」）。実装の承認と本番の GO は兼ねない。基準: `origin/main` fba2172b8。便2 の前に §4-7〜§4-9 を origin/main 5db804b78 の実物で確かめ直し、§4-8（色の一覧を `Popover` で出さない）と §4-9 の足した点を直した（2026-11-20）。
+現状: [recon.md](recon.md)（`docs/handoff/event-color/recon.md`）。決まりの記録: `docs/adr/ADR-1081-event-color-labels.md`（Proposed）。
 関係: ADR-1057・ADR-1059（Google との行き来）・ADR-1065・ADR-1074（予定の画面の金型と `--gcal-*`）・ADR-1075（繰り返し）・ADR-067・ADR-144・ADR-027。
 
 ## 1. 目的と PO の決定
@@ -168,27 +168,43 @@ def key_for_hex(hex_value: str | None) -> str | None:
 - `:440`・`:465` の `model_dump` の直後で、`payload.get("color_key") == ""` なら `payload["color_key"] = None` に直してから次へ渡す（鍵は残す）。
   これで作成・更新・繰り返しの 3 択のどの道にも `""` が届かず、DB の値の決まりに当たらない。
 
-### 4-7. 色のトークン（`frontend/src/index.css`・`frontend/src/tokens.css`）
+### 4-7. 色のトークン（`frontend/src/tokens.css`）
 
-- `index.css` の明るい画面（`:206` の後）と暗い画面（`:410` 以降の `--gcal-*` の後）に `--gcal-event-<鍵>: <値>;` を 24 個ずつ。v1 は暗い画面も同じ値。
-- `tokens.css` の `:root` に意味のトークン `--event-color-<鍵>: var(--gcal-event-<鍵>);` を 24 個。部品と画面はこちらを使う。
-  `.gcal-colors` の範囲の中には置かない。色の一覧の `Popover` が範囲の外に出ても色が出るようにするため。
-  `--gcal-` を書いてよいのは `index.css`・`tokens.css` だけ（`frontend/src/components/gcalColorsUsage.test.ts:26`）なので、この形にする。
+- `tokens.css` の `:root` に `--event-color-<鍵>: <値>;` を 24 個（値は Google の色・`EVENT_COLORS` と同じ）。部品と画面はこれだけを使う。
+  v1 は暗い画面も同じ値なので、暗い画面の区画には足さない。
+  `.gcal-colors` の範囲の中には置かない。予定の画面の外（部品の見本 stories など）でも色が出るようにするため。
+- `index.css` には足さない（`--gcal-event-*` は作らない）。
+  - 2026-11-20 の直し（初版は `index.css` に `--gcal-event-*` を 48 行置き、`tokens.css` から `var()` で引く 2 段だった）。
+  - 理由: 色の直書きの数の見張り `scripts/check-design-token-ratchet.sh` は `frontend/src/tokens.css` を数えず、`frontend/src/index.css` は数える（`:62`〜`:64`）。
+    `index.css` の例外は Google の画面の色 13 個だけで、足すには PO の承認が要る（`:15`〜`:19`）。初版の形では 171→219 で赤になった（PR の確かめ guard-hex-increase）。
+  - `tokens.css` は色の直書きの検査 `frontend/scripts/check-css-hardcoded-colors.js:20` でも定義ファイルとして除かれている。既に `--color-success: #15803d;` などの前例がある（`frontend/src/tokens.css:640`）。
+  - 値を置く場所は 1 か所のまま（画面側は `tokens.css` だけ・裏側の正本は backend/app/services/event_colors.py・両者の一致は下の試験が照らす）。
 - 裏側の試験 backend/tests/test_event_colors_tokens.py（新規）:
-  - `frontend/src/index.css` の明るい画面の `--gcal-event-<鍵>` 24 個が `EVENT_COLORS` と鍵・値とも一致すること。
+  - `frontend/src/tokens.css` の `--event-color-<鍵>` 24 個が `EVENT_COLORS` と鍵・値とも一致すること（鍵の `_` はトークンでは `-`）。
+  - `frontend/src/index.css` に `--gcal-event-` も `--event-color-` も無いこと（置き場所が 2 つに割れるのを防ぐ）。
   - frontend/src/pages/schedule/eventColors.ts の鍵の並びが `EVENT_COLOR_KEYS` と一致すること。
+  - 画面の文字（ja・en）に 24 色＋デフォルトの名があること。
   - 画面のファイルを裏側の試験で読む手本は `backend/tests/seed_data.py:22`。
 
 ### 4-8. 色を選ぶ部品（新しい金型 frontend/src/components/ColorSwatchPicker.tsx）
 
 - ADR-144 の金型。.tsx・.css・.stories.tsx・.test.tsx の 4 つ。
-- 中身:
-  - 押すと `Popover` で色の丸の一覧を出す。
-  - 丸の地は渡されたトークン（`var(--event-color-<鍵>)`）。
-  - 選んだ丸に印。キーボードで選べる（`role="radiogroup"`・`role="radio"`・`aria-checked`）。
-  - 部品は予定のことを知らない。選択肢の一覧（値・名の文・色のトークン）と今の値と `onChange` を受けるだけ。
+- 中身（便2 の前の調べで直した版。直した理由は下の「`Popover` を使わない理由」）:
+  - 欄には「今の色の丸＋色の名」のボタン（金型 `Button` の `ghost`）を出す。押すと、その下に色の丸の一覧を開く・もう一度押すと閉じる。
+  - 一覧は `Popover` を使わず、部品の中にそのまま出す（体の外へ移さない）。
+  - 一覧は `role="radiogroup"`。丸 1 つは `<label>` で、中に金型 `RadioControl`（見えなくして丸全体に広げる）を入れる。
+    `docs/CC_UI_GOVERNANCE.md` の「色見本など単独の欄は `RadioControl`」に合わせる。手本は `frontend/src/pages/roles/RolesPage.tsx:497`〜`:528` と `frontend/src/pages-layout.css:271`〜`:315`。
+  - 本物のラジオなので、矢印キーで選べる・選んだ丸は `checked`・読み上げは丸ごとの色の名（`aria-label`）。
+  - 丸の地は `style={{ background: <色のトークンの文字> }}`。文字は `var(--event-color-<鍵>)` か持ち主の色。色の値は部品に書かない。
+  - 部品は予定のことを知らない。選択肢の一覧（値・名の文・色）と今の値と `onChange` を受けるだけ。
   - 「デフォルト」の丸は、渡された色（持ち主の色）で描く。
+  - 部品の見た目は部品の CSS（`comp-color-swatch-picker*`）に持つ。`pages-layout.css` の `.color-swatch` は使い回さない（ページの CSS に頼る金型にしない）。
 - CSS の色・余白・角の丸みはトークンだけを使う（ADR-067）。
+- `Popover` を使わない理由（origin/main 5db804b78 の実物で確かめた事実）:
+  - `Popover` は一覧を体の直下へ移し、重なりの順 `var(--z-dropdown)`（`frontend/src/components/Popover.css:201`）で出す。
+    予定を作る窓と全体の編集の画面は `var(--z-modal)`（`frontend/src/pages/schedule.css:344`・`frontend/src/components/EditorPage.css:10`）で、こちらが上。一覧が窓の下に隠れる。
+  - 予定を作る窓は、窓の外を押すと閉じる（`frontend/src/pages/schedule/SchedulePageImpl.tsx:297`〜`:309`）。体の直下へ移した一覧を押すと「窓の外」と見なされ、色を選ぶ前に窓が閉じる。
+  - 全体の編集の画面は中にだけ移る動き（`frontend/src/components/EditorPage.tsx:81` の `useFocusTrap`）を持つので、外に移した一覧へはキーボードで行けない。
 - 予定の色の一覧（新規 frontend/src/pages/schedule/eventColors.ts）: 24 の鍵の並びと、名の文の鍵 `schedule.eventColors.<鍵>`、トークン名を返す関数。色の値は書かない。
 - 画面の文字: `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` に `schedule.eventColor`（欄の名）・`schedule.eventColors.default` と 24 色の名を足す（表は §4-1）。
 
@@ -206,6 +222,15 @@ def key_for_hex(hex_value: str | None) -> str | None:
   - 後: `color: item.colorKey ? eventColorVar(item.colorKey) : getOwnerMeta(...).color`
   - `eventColorVar` は `var(--event-color-<鍵>)` を返す。`frontend/src/components/CalendarView.tsx:338` がそのまま CSS の値として付ける。
   - 色なしは今と同じ（K6）。
+- 便2 の前の調べで足した点（origin/main 5db804b78）:
+  - 予定の色を決める場所を 1 つにする。`frontend/src/pages/schedule/eventColors.ts` に `eventDisplayColor(colorKey, ownerColor)` を置き（中身は上の「後」の式・置き場所は実装カード card-bin2.md と同じ）、
+    `frontend/src/pages/schedule/SchedulePageImpl.tsx` の箱（`:1272`）・日ごとの一覧の丸（`:653`）・予定の一覧の丸（`:721`）の 3 か所はこれを通す。箱だけ色が変わり一覧の丸が持ち主の色のまま、を防ぐ。
+  - 作っている途中の仮の箱（`:1260`〜`:1262`）も `draft.colorKey` を通す。依存の並び（`:1277`〜`:1281`）に `draft.colorKey` を足す。
+  - 「デフォルト」の丸に渡す持ち主の色: 直すときは `getOwnerMeta(ownerByUserId, item.ownerUserId, currentOwnerUserId).color`、作るときは `currentOwnerUserId` の色（どちらも `getOwnerMeta` から取り、色を書き写さない）。
+  - 動かす・長さを変える保存（`patchMoved`・`:1284`〜）は `color_key` を送らない（送らなければ「変えない」・§4-6）。
+  - 繰り返しの予定で色だけ変えたときは 3 択をすべて出す。`scopeChoices`（`frontend/src/pages/schedule/schedule-utils.ts:532`〜`:536`）の「繰り返しの形が変わった」の印に色を入れない。
+  - 欄の印の絵は `SCHEDULE_POPOVER_ICONS`（`frontend/src/constants/icons.tsx:372`）に `color`（heroicons の `SwatchIcon`・2.2.0 に在る）を 1 つ足す。
+  - 窓が開いている間の Esc は今のまま窓ごと閉じる（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1336`〜`:1342`）。色の一覧だけを閉じる Esc は作らない。
 
 ### 4-10. 触らない範囲
 
@@ -272,6 +297,8 @@ def key_for_hex(hex_value: str | None) -> str | None:
 | トークンと裏側の値が一致 | test_event_colors_tokens.py |
 | AI 用の写しの分類表に行がある | `test_t10_calendar_color_key_is_classified_on_bootstrapped_db` |
 | 色の部品が 25 個の丸を出し、キーボードで選べる | ColorSwatchPicker.test.tsx |
+| 箱・日ごとの一覧の丸・予定の一覧の丸・作っている途中の仮の箱が同じ色の決め方を通る | `frontend/src/pages/schedule/SchedulePageImpl.test.tsx` に足す試験 |
+| 動かす保存は `color_key` を送らない・繰り返しで色だけ変えると 3 択がすべて出る | 同上 |
 | 色なしの箱は持ち主の色・色ありはトークン | `frontend/src/pages/schedule/SchedulePageImpl.test.tsx` に足す試験 |
 | K1〜K4 | 本番で PO が目で見る（§2） |
 

@@ -169,6 +169,7 @@
 - V3: （段階2 から）Alertmanager の webhook の失敗の見張り。10/23 に失敗の数を見て決める
 - V4（解決 2026-10-17：global の 15 秒。card-stage3-bin-e.md §2-1 F7）: prod1 の Prometheus の scrape の間隔（node-exporter app-vps）。5 分の予算（§6）に効くので便E のカードで `monitoring/prometheus/prometheus.yml` を読んで確かめる
 - V6（定着便 T3 で追加・担当 Opus）: 便D の 24 時間の誤判定確認。2026-10-18 02:40Z 以降に prod2 の Prometheus へ `max_over_time(salesanchor_container_unhealthy{service=~"celery-worker|celery-beat|discord-gateway|gemini-egress"}[24h])` を問い合わせ、4 サービスとも 0 なら○。**便G のカードは V6 が○になるまで出さない**（§5 の「誤判定 0 を確かめてから便G」を条件として固定）。0 でなければ該当サービスの健康診断の閾値を見直す
+  - 解決（2026-11-20・Opus）：2026-11-20T02:47:33Z の直近 24 時間、4 サービスとも 0 で○（健康診断の見直し後。K3・K4 合格は 11/18）。根拠は card-stage3-bin-g.md §2-1 F15
 - V7（定着便 T2）: prod2 の runner の利用者 ubuntu が `/opt/salesanchor-monitoring` に書けるか・Prometheus のコンテナに docker exec できるか。T2 のカードを出す前に確かめる
 - V5: 処置の一覧に CeleryHeartbeatStale（beat か worker か区別できない・F6）を足すか。便G の後、ContainerUnhealthy の実績を見て決める
 

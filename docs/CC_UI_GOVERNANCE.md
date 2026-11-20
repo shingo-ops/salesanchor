@@ -64,6 +64,7 @@ CC（Claude Code）が UI 部品を新設・修正するたびに参照するこ
 | `ReadOnlyField` | 読むだけの欄（ラベルと灰色の値。空なら「未登録」） | `frontend/src/components/ReadOnlyField.tsx` |
 | `ThreeColumn` | 3列の並び（幅 1279px 以下で縦1列） | `frontend/src/components/ThreeColumn.tsx` |
 | `TotalsBox` | 色つきの合計枠（行の並びと一番大きい字の合計） | `frontend/src/components/TotalsBox.tsx` |
+| `ColorSwatchPicker` | 色見本から 1 つ選ぶ欄（押すと下に丸の一覧が開く。中は RadioControl） | `frontend/src/components/ColorSwatchPicker.tsx` |
 
 ---
 

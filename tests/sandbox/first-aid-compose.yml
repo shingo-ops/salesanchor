@@ -1,0 +1,27 @@
+# ADR-1012 段階3 便G の試験場用（tests/sandbox/first-aid.sh が使う）。本番の 4 サービスと同じ名前で、健康診断を外から切り替えられる。
+# /tmp/bad を作ると不健康、再起動で消える。flag/stuck-<service> を作ると再起動しても不健康のまま。
+x-svc: &svc
+  image: alpine:3.24
+  command: ["sh", "-c", "rm -f /tmp/bad; exec sleep 3600"]
+  stop_grace_period: 3s
+  volumes:
+    - ./flag:/flag:ro
+  healthcheck:
+    test: ["CMD-SHELL", "test ! -f /tmp/bad && test ! -f /flag/stuck-$${SVC}"]
+    interval: 2s
+    timeout: 2s
+    retries: 1
+
+services:
+  celery-worker:
+    <<: *svc
+    environment: ["SVC=celery-worker"]
+  celery-beat:
+    <<: *svc
+    environment: ["SVC=celery-beat"]
+  discord-gateway:
+    <<: *svc
+    environment: ["SVC=discord-gateway"]
+  gemini-egress:
+    <<: *svc
+    environment: ["SVC=gemini-egress"]

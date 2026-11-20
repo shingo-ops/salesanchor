@@ -1,4 +1,5 @@
 import { formatMeridiem, formatTimeRange as formatEventTimeRange, type CalendarViewEvent } from "../../components/calendarView.utils";
+import { isEventColorKey, type EventColorKey } from "./eventColors";
 
 export type ScheduleView = "day" | "threeDay" | "week" | "month" | "list";
 export type DemoState = "normal" | "loading" | "empty";
@@ -37,6 +38,7 @@ export interface ApiCalendarEvent {
   recurring_event_id?: number | null;
   occurrence_start?: string | null;
   is_first_occurrence?: boolean;
+  color_key?: string | null;
 }
 
 export interface ApiShift {
@@ -76,6 +78,8 @@ export interface ScheduleItem {
   occurrenceStart?: Date | null;
   /** 1 回目の回か（サーバーが決める・§12.6.1 G1） */
   isFirstOccurrence?: boolean;
+  /** 予定の色（ADR-1081）。null は持ち主の色 */
+  colorKey?: EventColorKey | null;
 }
 
 function parseLocalDate(date: string): Date {
@@ -378,6 +382,7 @@ export function normalizeEvent(event: ApiCalendarEvent): ScheduleItem {
     recurringEventId: event.recurring_event_id ?? null,
     occurrenceStart,
     isFirstOccurrence: event.is_first_occurrence === true,
+    colorKey: isEventColorKey(event.color_key) ? event.color_key : null,
   };
 }
 

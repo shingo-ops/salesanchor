@@ -1,0 +1,5 @@
+{"name": "go-identity-guard",
+ "files": ["guard.py"],
+ "hooks": [{"event": "PreToolUse", "matcher": "Bash", "interpreter": "python3", "file": "guard.py"},
+           {"event": "PreToolUse", "matcher": "Write|Edit|MultiEdit", "interpreter": "python3", "file": "guard.py"}],
+ "tests": ["test_guard.py"]}
