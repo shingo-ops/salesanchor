@@ -77,7 +77,9 @@
 - load_totals_inputs にキーワード引数 `issuer_region: str | None = None`・`currency: str | None = None`・`payment_method_type: str | None = None` を足し、payment_method_type == "paypal" のときだけ表を読む。既定値があるので今の呼び出しは変えなくても動く。
 - conftest.py の stub_invoice_totals（:2356-2390）の `_fake` は `**_kw` を受けるようにし、state に `"payment_fee_rows": None` を足して TotalsInputs に渡す（試験は `.set(payment_fee_rows=...)` で行を与える）。
 - PaymentFeeRows の中身: receiving（1行。無ければ None）・fx（1行か None。JPY のときは読まない）・required_fx（bool。通貨が JPY 以外か）。compute は「receiving が None」「required_fx なのに fx が None」「どちらかの threshold が NULL でない」で REASON_PAYMENT_FEE。
-- TotalsResult に `payment_fee: Decimal`（paypal 以外は 0）と `payment_fee_snapshot: dict | None`（paypal のときだけ: method_type・fee_types・setting_ids・rate_pct 合計・fixed_amount_jpy・fixed_converted・base_amount・base_date）を足す。
+- payment_method_type == "paypal" なのに inputs.payment_fee_rows が None のとき（stub の既定値・読み忘れ）も REASON_PAYMENT_FEE にする（黙って0にしない）。
+- 呼び出し側の引数: invoices.py の `_compute`（:245-252）にキーワード引数 `payment_method_type: str | None = None`・`issuer_region: str | None = None` を足し、load_totals_inputs へ `issuer_region`・`currency`・`payment_method_type` を、compute_totals へ `payment_method_type` を渡す。preview は `_compute` を通らず直接呼ぶ（:416-425）ので、そこにも同じ3つ（load）と1つ（compute）を足す。
+- TotalsResult に `payment_fee: Decimal`（paypal 以外は 0。REASON_PAYMENT_FEE で止まったときも 0。そのとき total_amount は None）と `payment_fee_snapshot: dict | None`（paypal のときだけ: method_type・fee_types・setting_ids・rate_pct 合計・fixed_amount_jpy・fixed_converted・base_amount・base_date）を足す。
 - to_db_params に `payment_fee_charged`・`payment_fee_snapshot` を足す。
 
 ### 3-4 保存（DB の正本）
@@ -101,7 +103,7 @@
   1. 今の resolve_payment_ref の確かめ（region は今どおり `old_row["issuer_region"] or "overseas"`）。
   2. 明細を読み（_get_invoice_items）、issue と同じ引数（_shipping_from_stored(old_row)・保存された ship_to/bill_to の写し・保存された currency）に payment_method_type=ref.method_type・issuer_region を足して _compute。
   3. `_raise_if_blocked(totals)`。止まるときは UPDATE の前なので何も書かない（支払方法も変わらない）。409 と理由の文字（例 "payment_fee"・"fx_rate"）を返す。
-  4. issue と同じく to_db_params から shipping_carrier・shipping_service を外し、`UPDATE invoices SET payment_method=…, payment_method_id=…, {_RECOMPUTE_SET_SQL}, updated_at=NOW() WHERE id=:id AND status='draft'` を1文で書く。
+  4. issue と同じく to_db_params から shipping_carrier・shipping_service を外し、`UPDATE invoices SET payment_method=…, payment_method_id=…, {_RECOMPUTE_SET_SQL}, updated_at=NOW() WHERE id=:id AND status='draft'` を1文で書く。同じ依頼で due_date・notes も来たときは、今の set_clauses（:757）と同じくその列もこの1文に入れる（2回に分けない）。
   - due_date・notes だけの PATCH は今どおり作り直さない。
   - 作り直すので、税・為替・送料の換算も今日の値になる（発行のときも同じく作り直すので、発行時の額は今と変わらない）。
 - POST /invoices/{id}/issue: 保存されている payment_method（'bank'/'wise'/'paypal' の文字。resolve_payment_ref が返す method_type をそのまま保存している :656-661）と issuer_region を compute に渡す。今も発行時に合計を作り直しているので、手数料も同じ時点の値で作り直される。
@@ -109,15 +111,17 @@
 - POST /invoices/{id}/paypal-link（発行済みに PayPal の請求を出す道 :943-1042）: 今は支払方法が銀行・Wise・なしの請求書でも出せ、手数料の無い total_amount を PayPal へ送る（:986）。ADR-101 :173 の決まりに反するので、出せる条件を絞る:
   - `inv_row["payment_method"] != "paypal"` なら PayPal へ送る前に 409 "payment_method" で止める（何も書かない）。
   - :1002 の `COALESCE(payment_method, 'paypal')` は、条件を絞った後は常に 'paypal' なので式はそのまま残す（変えない）。
-  - 詳細画面 InvoiceDetailPage.tsx:216 のリンクのボタンは `invoice.payment_method === "paypal"` のときだけ出す（条件を1つ足す）。
-  - 既存の試験 test_paypal_invoicing.py の `_issued_invoice`（:201-210）は支払方法なしで作っているので、`payment_method_ref: {method_type: "paypal", id: null}` で作り、tenant_paypal_config の行と手数料の行を用意する形に直す。支払方法なしの請求書で 409 になる試験を1つ足す。
+  - 詳細画面 frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:216 のリンクのボタンは `invoice.payment_method === "paypal"` のときだけ出す（条件を1つ足す）。
+  - 既存の試験 test_paypal_invoicing.py の `_issued_invoice`（:202-211）は支払方法なしで作っているので、PayPal の請求書として作る形に直す。支払方法なしの請求書で 409 になる試験を1つ足す。
+  - 試験での支払方法の作り方（SQLite）: SQLite の試験の表には振込先の表 tenant_invoice_payment_methods が無い（backend/tests/conftest.py には :1238 の tenant_paypal_config だけ）。resolve_payment_ref → list_payment_choices（backend/app/services/invoice_payment_methods.py:28-62）はこの表を読むので、そのままでは落ちる。そこで conftest.py に fixture `fake_payment_ref` を足す: `monkeypatch.setattr(invoice_payment_methods, "resolve_payment_ref", _fake)`。`_fake(db, tenant_id, *, method_type, method_id, region, currency)` は `(method_type, method_id)` を返す。invoices.py は `invoice_payment_methods.resolve_payment_ref`（:656・:746）とモジュール経由で呼ぶので、この差し替えが効く。手数料の行は stub_invoice_totals の `.set(payment_fee_rows=...)` で与える（表は読まない）。
+  - test_paypal_invoicing.py は fixture `fake_payment_ref` を使い、`_issued_invoice` に `payment_method_ref: {"method_type": "paypal", "id": None}` を足し、作る前に stub へ手数料の行を set する。K6・K7 の道の試験も同じ fixture で SQLite で動かす。
 
 ### 3-6 画面
 
-- 作成画面 InvoiceCreatePage.tsx:113-121 の試算の依頼に `payment_method_type`（選んだ支払方法の種類。paymentRefFromKey と同じ出どころ）を足す。支払方法を変えると試算が取り直される（依頼の中身が変わるので useInvoicePreview の key が変わる）。
-- 合計枠 InvoicePaymentTotalsSection.tsx:200-207 の TotalsBox の rows に、`preview.payment_fee > 0` のときだけ1行足す: key "paymentFee"・ラベル t("invoiceForm.paymentFee")・data-testid "invoice-total-payment-fee"。TotalsBox は既存の金型。新しい部品・色・直書きは作らない。
+- 作成画面 frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:113-121 の試算の依頼に `payment_method_type`（選んだ支払方法の種類。paymentRefFromKey と同じ出どころ）を足す。支払方法を変えると試算が取り直される（依頼の中身が変わるので useInvoicePreview の key が変わる）。
+- 合計枠 frontend/src/pages/invoice-create/InvoicePaymentTotalsSection.tsx:200-207 の TotalsBox の rows に、`preview.payment_fee > 0` のときだけ1行足す: key "paymentFee"・ラベル t("invoiceForm.paymentFee")・data-testid "invoice-total-payment-fee"。TotalsBox は既存の金型。新しい部品・色・直書きは作らない。
 - 理由の表示: frontend/src/lib/apiErrorReason.ts の API_ERROR_REASON_KEYS（:30-35 に既存の理由）に `payment_fee: "apiError.paymentFee"` を足す。uncomputedReasonKey（invoiceDraftContext.ts:191）はこの表を読むので、そこは変えない。ja/en に apiError.paymentFee の文を足す。既存の `payment_fee_setting`（:72・設定の画面の「見つかりません」）とは別のキー。
-- 詳細画面 InvoiceDetailPage.tsx:357-358 の tfoot に、payment_fee_charged > 0 のときだけ1行（t("invoices.paymentFeeCharged")）。既存の行と同じ書き方（この表は既存の形のまま。新しい直書きの色は足さない）。
+- 詳細画面 frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:357-358 の tfoot に、payment_fee_charged > 0 のときだけ1行（t("invoices.paymentFeeCharged")）。既存の行と同じ書き方（この表は既存の形のまま。新しい直書きの色は足さない）。
 - PDF invoice_renderer.py:387-401 の送料・税・関税の行と同じ形で、payment_fee_charged > 0 のときだけ "Payment fee" の行（既存の行の英語の書き方に合わせる）。invoice_data は2か所あるので両方に payment_fee_charged を渡す: 請求書の PDF（invoices.py:1155-1180）と PayPal の写しの PDF（_render_paypal_copy_pdf の :1201-1224）。invoice_renderer.py のデータ型（duty_amount の :149 の次）と組み立て（:572 の次）にも `payment_fee_charged: float | None = None` を足す。見積の組み立て（:645）は None のまま。
 - i18n: ja「支払い手数料」/ en「Payment fee」・理由 ja「支払い手数料の設定が見つかりません」/ en「No payment fee setting was found」。ja.json と en.json に同じキー（ADR-027）。
 
@@ -138,10 +142,10 @@
 | K1 | JPY・国内・PayPal・B=100,000 で手数料 3,640・合計 103,640 | test_invoice_totals.py の純粋な関数の試験 |
 | K2 | USD・海外・PayPal・B=1,000.00・1USD=150円で手数料 81.26・合計 1,081.26 | 同上 |
 | K3 | bank・wise・支払方法なしで手数料0・合計は今と同じ | 同上（今の試験の期待値が1つも変わらない） |
-| K4 | テナント独自の行があれば共用の行より優先・期間外の行は使わない・同じ側に2行あれば effective_from が新しい行 | test_invoice_totals_pg.py（PG に payment_fee_settings の行を入れて load_totals_inputs を呼ぶ） |
+| K4 | テナント独自の行があれば共用の行より優先・期間外の行は使わない・同じ側に2行あれば effective_from が新しい行 | test_invoice_totals_pg.py（PG に payment_fee_settings の行を入れて load_totals_inputs を呼ぶ。`_PUBLIC_MIGRATIONS`（:42-48）に 20261002_160000_create_payment_fee_settings.sql を足す。テナント独自の行の tenant_id は public.tenants に要る（外部キー）ので、試験の中で tenants に無ければ入れて最後に戻す） |
 | K5 | 受取の行が無い・threshold がある・為替の行が要るのに無い → uncomputed に "payment_fee"（REASON_ORDER の最後）、create・PATCH は 409 "payment_fee" で何も書かない | 純粋な関数の試験＋道の試験 |
-| K6 | create・PATCH・issue で payment_fee_charged と total_amount が保存され、詳細の応答に出る | test_invoice_totals_pg.py か invoices の道の試験（PG） |
-| K7 | 下書きで支払方法を bank→PayPal に変えると合計が手数料の分だけ上がる・PayPal→bank で手数料0に戻る | 道の試験 |
+| K6 | create・PATCH・issue で payment_fee_charged と total_amount が保存され、詳細の応答に出る | invoices の道の試験（SQLite・fixture fake_payment_ref と stub の手数料の行） |
+| K7 | 下書きで支払方法を bank→PayPal に変えると合計が手数料の分だけ上がる・PayPal→bank で手数料0に戻る・止まるときは支払方法も合計も変わらない | 道の試験（SQLite・fixture fake_payment_ref） |
 | K7c | 請求書の PDF と PayPal の写しの PDF の両方に、手数料 > 0 のとき "Payment fee" の行が出る（PDF の文字を読む試験） | invoice_renderer の試験＋test_paypal_invoicing.py |
 | K7b | 支払方法が PayPal でない発行済みの請求書に PayPal リンクを出すと 409 "payment_method"・PayPal へ送らない。PayPal の請求書は今どおり出せ、送る額は手数料込みの total_amount | test_paypal_invoicing.py |
 | K8 | 作成画面: PayPal を選ぶと合計枠に「支払い手数料」行が出て合計が上がる・銀行では行が出ない | 画面の単体試験（vitest） |
