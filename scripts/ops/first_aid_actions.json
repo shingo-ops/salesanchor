@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "actions": [
+    {"alertname": "ContainerUnhealthy", "service": "celery-worker", "action": "compose_restart"},
+    {"alertname": "ContainerUnhealthy", "service": "celery-beat", "action": "compose_restart"},
+    {"alertname": "ContainerUnhealthy", "service": "discord-gateway", "action": "compose_restart"},
+    {"alertname": "ContainerUnhealthy", "service": "gemini-egress", "action": "compose_restart"}
+  ]
+}

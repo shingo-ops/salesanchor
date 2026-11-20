@@ -1156,6 +1156,13 @@ echo "ALL OK"
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
+本報告はカード 段階3 便G の実行結果である。
+
+- 場所: release/ai-ops-first-aid-bin-g（origin/main d4bea69c1 起点）
+- §5-1: python3 3.11.18。`python3 scripts/tests/test_first_aid.py` は 19 件 OK
+- §5-3: 差分は §3 の 11 ファイル＋このカード。削除行は alert_rules.yml 2・alert_rules_test.yml 2・alerts.md 4・monitoring-check.yml 1・このカード 1 の 10 行
+- §5-4: `bash -n` rc=0・`py_compile` rc=0・first_aid_actions.json の actions は 4
+- §5-2・§5-5 は指示によりしていない（試験場・PR は Opus）
+- 判断した点: §4-3 の試験 19 件は表の条件どおりに新規に書いた（完成形の本文が無いため）。python3 が 3.12 ではなく 3.11.18 の環境で確かめた。§4 の完成形に誤りと思える箇所は見つからなかった
 
 END OF CARD

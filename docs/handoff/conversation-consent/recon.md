@@ -167,3 +167,7 @@
 1. `ls`/`cat` を含む1本のコマンドの中に `~/.claude/permits` の文字列を入れたところ、permits-guard が exit 2 で止めた（"BLOCKED [permits-guard]"）。言い換えて同じ操作は再試行していない。permits の中身は一切読んでいない。券の形式は scripts/permit-danger.sh と permit_bridge.py のコードから読んだ。
 2. `~/.claude/scripts/review-gate` を grep 対象に含めたところ、review-gate の gate.py が「review-gate の記録・台本には触れません」で止めた。同ディレクトリは読んでいない。以降は対象から外して他のファイルだけを調べた。
 3. 指示された「Application Support/agent-console」配下は読んでいない（node フックの中身は【未確認】）。
+
+## 改訂4（design §16）の現在地
+
+- 改訂4 の観測事実（K0 の時間差・30 分で書かれる量・読む範囲・試験の置き場）は docs/handoff/conversation-consent/design.md §16-2 に置いた（2026-11-20）。
