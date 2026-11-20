@@ -15,7 +15,7 @@
 1. 許可券（`permit-danger.sh`）の代わりに、**同意票**でも危険な操作を通せるようにする。
    - AI が、返事の最後の text ブロックに `[同意票]` と `操作N: <コマンド全文1行>` を書き、`1. 上の同意票の操作を実行する` で始まる選択肢の行を置く。
    - PO が typed（打ち込み）で「1」だけを答えると、その完全一致のコマンドが1回だけ通る。「1」から30分で失効する。
-   - 判定は新しい部品 `consent_check.py` が、会話記録の末尾 4MB を読んで行う（10 段の判定）。貼り付け・サブエージェントの報告・task-notification・`!` の出力・channel・queued の「1」は同意にならない。
+   - 判定は新しい部品 `consent_check.py` が、会話記録の末尾から必要なだけ（最大 64MB）読んで行う（10 段の判定）。貼り付け・サブエージェントの報告・task-notification・`!` の出力・channel・queued の「1」は同意にならない。
    - 同じ同意票の同じ操作は1回だけ。使用済みの台帳（`consent-used.jsonl`）に flock で排他して記録する。
 2. 同意で通さない操作（除外）を置く。main/develop への push、force push、`git reset --hard`、`DROP DATABASE`、`clasp push`、見張り役そのものの設定、Branch Protection・Ruleset、`workflow-lint.yml`、本店の破壊系 git など（設計 §4-4）。
 3. 同意の偽造を防ぐ見張りを足す。会話記録・台帳の Bash／Write／Edit／MultiEdit／NotebookEdit での操作、tmux・osascript・`/chat/queue` による端末への入力注入を止め、`consent_guard_blocked` を記録する（設計 §4-5）。

@@ -1,4 +1,4 @@
-import sys, os, json, importlib.util, datetime, threading
+import sys, os, json, importlib.util, datetime, threading, time
 
 hookdir, tmp, wtroot = sys.argv[1:4]
 
@@ -233,14 +233,14 @@ rep("T5-u", "止まる: JSON でない行がある (%s)" % why, not ok)
 rep("T5-v", "止まる: 最後の行（typed の 1）が改行で終わっていない (%s)" % why, not ok)
 (ok, why), _ = run(std([CMD]) + [common("system", T0 + td(11), subtype="turn_duration")], CMD, last_newline=False)
 rep("T5-v2", "通る: 改行で終わっていない最後の行が無関係な行なら捨てて判定する (%s)" % why, ok)
-# 4MB の境目
+# 4MB の境目（便B の後は、30 分以内なら 4MB の外も読み足して見つける）
 filler = lambda ts: common("attachment", ts, attachment={"type": "date"}, rendered="y" * 100000, renderedRole="user")
 many = [filler(T0 - td(120)) for _ in range(45)]
 (ok, why), _ = run(many + std([CMD]), CMD)
 rep("T5-w", "通る: 末尾 4MB の外に大きな前置きがあり、境目が行の途中でも (%s)" % why, ok)
 recs = [human("x", T0 - td(60)), atext(ticket([CMD]), T0)] + [filler(T0 + td(1)) for _ in range(45)] + [human("1", T0 + td(10))]
 (ok, why), _ = run(recs, CMD)
-rep("T5-x", "止まる: 同意票が末尾 4MB の外 (%s)" % why, not ok)
+rep("T5-x", "通る: 同意票が末尾 4MB の外でも、30 分以内なら読み足して見つける (%s)" % why, ok)
 
 # T6: 除外と $・バッククォート（同意があっても止まる）
 for tid, c in (
@@ -443,5 +443,163 @@ rep("K15-7", "書き込みの形: tee -a・sed -i・python の open 'a'・cd の
 rep("K15-8", "書き込みの形: 読むだけ（grep・cat | head・python の open 読み・/dev/null への出力）は read",
     (not wf("grep x " + P)) and (not wf("cat " + P + " | head")) and (not wf("python3 -c \"print(open('" + P + "').read())\""))
     and (not wf("cat " + P + " 2>/dev/null")) and (not wf("python3 -c \"print(Path('" + P + "').open('r').read())\"")) and (not wf("cd ~/.claude/projects/-p && cat s.jsonl 2>&1")))
+
+# K77・K78: 末尾から必要なだけ（最大 64MB）読む（design §16-3(b)・§16-7）
+MiB = 1024 * 1024
+
+
+def line_bytes(r):
+    return (json.dumps(r, ensure_ascii=False) + "\n").encode("utf-8")
+
+
+def big(ts, n):
+    # 今の詰め物（:237）と同じ attachment の行。rendered の長さ n
+    return common("attachment", ts, attachment={"type": "date"}, rendered="y" * n, renderedRole="user")
+
+
+def fill_exact(ts, total, line=100000):
+    """行の合計がちょうど total バイトになる詰め物の並び（1行は rendered が line 前後）。"""
+    out = []
+    while total > 0:
+        r = big(ts, 0)
+        o = len(line_bytes(r))
+        rest = total - o
+        assert rest >= 0, "fill_exact: 残り %d バイトが1行に足りない" % total
+        if rest <= 2 * line:
+            r["rendered"] = "y" * rest
+            out.append(r)
+            break
+        r["rendered"] = "y" * line
+        out.append(r)
+        total -= len(line_bytes(r))
+    return out
+
+
+def mid_char(rec, ch):
+    """rec の行の中で、ch の 1001 文字目の2バイト目の位置（行の先頭から）。"""
+    b = line_bytes(rec)
+    e = ch.encode("utf-8")
+    return b.find(e) + len(e) * 1000 + 1
+
+
+def cut_mid_char(path, boundary):
+    """末尾から boundary バイトの境目が、日本語の文字の途中（UTF-8 の続きのバイト）か。"""
+    with open(path, "rb") as f:
+        data = f.read()
+    return 0x80 <= data[len(data) - boundary] < 0xC0
+
+
+def last_probe(h):
+    ev = [json.loads(x) for x in open(os.path.join(h, ".claude/logs/agent-events.jsonl"))]
+    return [e for e in ev if e["type"] == "consent_probe"][-1]
+
+
+NOW70 = T0 + td(70)  # run() の既定の now
+
+# (1) 同意票と「1」の後に 10MB の詰め物（30 分以内）→ 通る
+(ok, why), h = run(std([CMD]) + fill_exact(T0 + td(20), 10 * MiB), CMD)
+rep("K77-1", "通る: 「1」の後に 10MB の詰め物 (%s, read_bytes=%s)" % (why, last_probe(h).get("read_bytes")), ok)
+
+# (2)・K78 同意票 → 70MiB の詰め物（1行 約 5KB、30 分以内）→ typed の「1」→ no_assistant_text、read_bytes=64MiB
+h = newhome()
+recs = [human("x", T0 - td(60)), atext(ticket([CMD]), T0)] + fill_exact(T0 + td(5), 70 * MiB, line=5000) + [human("1", T0 + td(10))]
+p = write_tr(h, recs)
+hi = {"session_id": "s1", "transcript_path": p, "tool_input": {"command": CMD}}
+t = time.perf_counter()
+(ok, why) = cc.check(hi, CMD, NOW70, home=h)
+dt = time.perf_counter() - t
+print("TIME K78 %.3f" % dt, flush=True)
+rb = last_probe(h).get("read_bytes")
+rep("K77-2", "止まる: 同意票が 64MiB の外 → no_assistant_text・read_bytes=64MiB (%s, %s)" % (why, rb), (not ok) and why == "no_assistant_text" and rb == 64 * MiB)
+os.remove(p)
+
+# (3) 人の入力が無く、詰め物 10MB がすべて 31 分より前 → no_human_input、read_bytes=4MiB ちょうど
+(ok, why), h = run(fill_exact(NOW70 - td(31 * 60), 10 * MiB), CMD)
+rb = last_probe(h).get("read_bytes")
+rep("K77-3", "止まる: 人の入力が無く古い詰め物だけ → no_human_input・read_bytes=4MiB (%s, %s)" % (why, rb), (not ok) and why == "no_human_input" and rb == 4 * MiB)
+
+# (4a) 段の境目（末尾 4MiB）が同意票の行の、日本語の文字の途中 → 通る
+h = newhome()
+tk = atext("あ" * 3000 + "\n" + ticket([CMD]), T0)
+H1 = human("1", T0 + td(10))
+after = 4 * MiB - (len(line_bytes(tk)) - mid_char(tk, "あ")) - len(line_bytes(H1))
+p = write_tr(h, [human("x", T0 - td(60)), tk] + fill_exact(T0 + td(5), after) + [H1])
+setup = cut_mid_char(p, 4 * MiB)
+(ok, why), _ = run(None, CMD, home=h, tp=p)
+rep("K77-4a", "通る: 境目が同意票の行の日本語の途中（境目の確かめ=%s） (%s)" % (setup, why), setup and ok)
+
+# (4b) 段の境目が H の行の、日本語の文字の途中 → 通る
+h = newhome()
+H2 = human("1", T0 + td(10))
+H2["slug"] = "あ" * 3000
+tail = fill_exact(T0 + td(20), 4 * MiB - (len(line_bytes(H2)) - mid_char(H2, "あ")))
+p = write_tr(h, [human("x", T0 - td(60)), atext(ticket([CMD]), T0), H2] + tail)
+setup = cut_mid_char(p, 4 * MiB)
+(ok, why), _ = run(None, CMD, home=h, tp=p)
+rep("K77-4b", "通る: 境目が H の行の日本語の途中（境目の確かめ=%s） (%s)" % (setup, why), setup and ok)
+
+# (4c) 古い詰め物 4MiB 以上 → 同意票 → queued の人の入力（境目をまたぐ）→ 約 4MiB の詰め物 → 「1」
+#      → input_between_ticket_and_one、read_bytes=8MiB（つなぎ戻しを誤ってこの行が消えると通ってしまう向き）
+h = newhome()
+Q = queued_human("待って" * 2000, T0 + td(5))
+H3 = human("1", T0 + td(10))
+after = 4 * MiB - (len(line_bytes(Q)) - mid_char(Q, "待")) - len(line_bytes(H3))
+recs = fill_exact(NOW70 - td(31 * 60), 4 * MiB + 500000) + [atext(ticket([CMD]), T0), Q] + fill_exact(T0 + td(6), after) + [H3]
+p = write_tr(h, recs)
+setup = cut_mid_char(p, 4 * MiB) and os.path.getsize(p) > 8 * MiB
+(ok, why), _ = run(None, CMD, home=h, tp=p)
+rb = last_probe(h).get("read_bytes")
+rep("K77-4c", "止まる: 境目をまたぐ queued の入力を戻して見つける → input_between_ticket_and_one・read_bytes=8MiB（境目の確かめ=%s） (%s, %s)" % (setup, why, rb),
+    setup and (not ok) and why == "input_between_ticket_and_one" and rb == 8 * MiB)
+
+
+def write_lines(h, lines):
+    p = os.path.join(h, ".claude", "projects", "-p", "s1.jsonl")
+    with open(p, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    return p
+
+
+def js(r):
+    return json.dumps(r, ensure_ascii=False)
+
+
+# (6) a_idx より前に JSON でない行 → 通る
+h = newhome()
+p = write_lines(h, ["not json at all", js(human("x", T0 - td(60))), js(atext(ticket([CMD]), T0)), js(human("1", T0 + td(10)))])
+(ok, why), _ = run(None, CMD, home=h, tp=p)
+rep("K77-6", "通る: 同意票より前の JSON でない行は判定に使わない (%s)" % why, ok)
+
+# (7a) a_idx と H の間に JSON でない行 → transcript_unparsable
+h = newhome()
+p = write_lines(h, [js(human("x", T0 - td(60))), js(atext(ticket([CMD]), T0)), "not json at all", js(human("1", T0 + td(10)))])
+(ok, why), _ = run(None, CMD, home=h, tp=p)
+rep("K77-7a", "止まる: 同意票と H の間の JSON でない行 → transcript_unparsable (%s)" % why, (not ok) and why == "transcript_unparsable")
+
+# (7b) H の後に JSON でない行 → transcript_unparsable
+h = newhome()
+p = write_lines(h, [js(r) for r in std([CMD])] + ["not json at all"])
+(ok, why), _ = run(None, CMD, home=h, tp=p)
+rep("K77-7b", "止まる: H の後の JSON でない行 → transcript_unparsable (%s)" % why, (not ok) and why == "transcript_unparsable")
+
+# (9) H が 31 分前の typed の「1」で、同意票が 4MB の外 → expired、read_bytes=4MiB
+recs = [human("x", T0 - td(60)), atext(ticket([CMD]), T0)] + fill_exact(T0 + td(1), 5 * MiB) + [human("1", T0 + td(10))]
+(ok, why), h = run(recs, CMD, now_off=10 + 31 * 60)
+rb = last_probe(h).get("read_bytes")
+rep("K77-9", "止まる: 31 分前の「1」で同意票が 4MB の外 → expired・read_bytes=4MiB (%s, %s)" % (why, rb), (not ok) and why == "expired" and rb == 4 * MiB)
+
+# (10) H が「1」でない入力で、その前の AI の行が 4MB の外 → h_not_typed_one、read_bytes=4MiB
+recs = [human("x", T0 - td(60)), atext(ticket([CMD]), T0)] + fill_exact(T0 + td(1), 5 * MiB) + [human("あ", T0 + td(10))]
+(ok, why), h = run(recs, CMD)
+rb = last_probe(h).get("read_bytes")
+rep("K77-10", "止まる: H が「1」でない → h_not_typed_one・read_bytes=4MiB (%s, %s)" % (why, rb), (not ok) and why == "h_not_typed_one" and rb == 4 * MiB)
+
+# (p) probe の read_bytes: 読んだ呼び出しには付き、読む前に止めた呼び出し（agent_id）には付かない
+(ok, why), h = run(std([CMD]), CMD)
+pr_read = last_probe(h)
+(ok2, why2), h2 = run(std([CMD]), CMD, hook_extra={"agent_id": "a1"})
+pr_agent = last_probe(h2)
+rep("K77-p", "probe: 読んだときは read_bytes あり（%s）・agent_id で止めたときは無し（%s）" % (pr_read.get("read_bytes"), "read_bytes" in pr_agent),
+    ok and isinstance(pr_read.get("read_bytes"), int) and pr_read["read_bytes"] > 0 and "read_bytes" not in pr_agent)
 
 print("DONE", flush=True)
