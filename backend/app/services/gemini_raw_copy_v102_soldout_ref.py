@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -20,6 +20,11 @@ from app.services.extraction_judgement_svc import _strict_code_pattern, fold_for
 from app.services.gemini_raw_copy_v102_context_work import MATCH_STATUS_MATCHED, MATCH_STATUS_MATCHED_CONTEXT
 from app.services.gemini_raw_copy_v102_followup import MATCH_STATUS_MATCHED_FOLLOWUP, _is_clue, extract_tokens
 from app.services.gemini_raw_copy_v102_product_first import (
+    BASIS_BOOKLET_DEFAULT,
+    BASIS_BULK_DEFAULT,
+    BASIS_PROMO_PACK_DEFAULT,
+    BASIS_SINGLE_DEFAULT,
+    BASIS_SUPPLY_DEFAULT,
     FLAG_SINGLE_CANONICAL,
     NONE_VALUE,
     ProductFirstMasters,
@@ -29,6 +34,12 @@ from app.services.gemini_raw_copy_v102_product_first import (
 )
 
 MATCH_STATUS_MATCHED_SOLDOUT_REF = "matched_soldout_ref"
+MATCH_STATUS_MATCHED_LIST_SHIME = "matched_list_shime"
+CONDITION_BASIS_SOLDOUT_LIST_SHIME = "SOLDOUT_LIST_SHIME"  # 規則14：1行の並び〆
+_LIST_SHIME_SEPARATORS = re.compile(r"[、,，/／]")  # 「・」「&」「＆」は商品名の中に出るので入れない
+_KIND_DEFAULT_BASES = frozenset(
+    (BASIS_SINGLE_DEFAULT, BASIS_BULK_DEFAULT, BASIS_PROMO_PACK_DEFAULT, BASIS_BOOKLET_DEFAULT, BASIS_SUPPLY_DEFAULT)
+)
 SOLD_OUT_STATUS = "Sold out"  # 〆の件の status（analysis_results.status）
 CONDITION_BASIS_SOLDOUT_INHERIT = "SOLDOUT_INHERIT"  # 規則12：商品名を書いた〆が前の在庫の状態を引き継いだ印
 _DIRECT_MATCH_STATUSES = (MATCH_STATUS_MATCHED, MATCH_STATUS_MATCHED_CONTEXT, MATCH_STATUS_MATCHED_FOLLOWUP)
@@ -52,6 +63,11 @@ def condition_decided_by_word(basis: str | None) -> bool:
     if rest.startswith(_WORD_BASIS_PREFIXES):
         return True
     return bool(_WORD_RULE_RE.match(rest)) and not rest.startswith(_NON_WORD_BASIS_PREFIXES)
+
+
+def is_kind_default_basis(basis: str | None) -> bool:
+    """規則14：状態が商品の分類の既定（R7〜R10・R6）で決まったか（行の語ではない。flag_note の接頭辞を除いて見る）。"""
+    return _FLAG_NOTE_RE.sub("", basis or "") in _KIND_DEFAULT_BASES
 
 
 @dataclass(frozen=True)
@@ -474,3 +490,47 @@ def decide_soldout_inherit(
         post, stock = stranded[canonical]
         decided[i] = (_soldout_target(product_id, canonical, post, stock),)
     return decided
+
+
+def split_list_shime(
+    text: str, sold_out_words: Sequence[str], match: Callable[[str], int | None],
+) -> tuple[int, ...] | None:
+    """規則14：1行に品名を区切って並べた〆の、区切りの順の商品 ID の組（全部か無しか）。外れれば None。
+
+    〆の言葉を除いた残りを `、` `,` `，` `/` `／` で分けて、空でない区切りが2つ以上5つ以下・どの区切りにも数字だけの語が無い・
+    区切りごとの照合（match：区切り → 商品 ID か None）が全部当たり商品が全部違うときだけ返す。
+    """
+    parts = [p.strip() for p in _LIST_SHIME_SEPARATORS.split(_strip_words(text, sold_out_words))]
+    parts = [p for p in parts if p]
+    if len(parts) < 2 or len(parts) >= 6:
+        return None
+    if any(re.fullmatch(r"\d+", word) for p in parts for word in unicodedata.normalize("NFKC", p).split()):
+        return None
+    product_ids: list[int] = []
+    for part in parts:
+        product_id = match(part)
+        if product_id is None or product_id in product_ids:
+            return None
+        product_ids.append(product_id)
+    return tuple(product_ids)
+
+
+def list_shime_targets(
+    product_id: int, extracted_with_i: Sequence[Mapping[str, Any]], i: int, posts: Sequence[SoldoutRefPost],
+    fixed_products: Mapping[int, int] | None, *, box_rule: ShimeBoxAllStatesRule | None, post_text: str,
+) -> tuple[SoldoutTarget, ...]:
+    """規則14：並んだ商品1つ分の完売の相手。規則12の結果、無ければ〆の状態の取り残しの在庫から1つ作る（12d に当たる件はここ）。無ければ空。"""
+    decided = decide_soldout_inherit(
+        extracted_with_i, posts, fixed_products, box_rule=box_rule, post_text=post_text,
+    ).get(i)
+    if decided:
+        return decided
+    shime = _shime_condition(extracted_with_i[i])
+    same_post = frozenset(
+        _shime_condition(other) for j, other in enumerate(extracted_with_i) if j != i and other.get("product_id") == product_id
+    )
+    found = _stranded_stock(product_id, posts, same_post).get(shime)
+    if found is None:
+        return ()
+    post, stock = found
+    return (_soldout_target(product_id, shime, post, stock),)
