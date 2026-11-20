@@ -277,8 +277,8 @@ probes = [
     {"type": "consent_probe", "session": "s1", "h_uuid": hu1["uuid"], "now": (T0 + td(150)).isoformat()},                          # 遅れ
     {"type": "consent_probe", "session": "s1", "h_uuid": hu1["uuid"], "now": (T0 + td(50)).isoformat()},                           # 直前が hu1 で一致
 ]
-total, delays, _, _ = audit.k0_delays(h, probes)
-rep("T0-a", "K0: 対象%d件のうち遅れ%d件（期待 5 と 2）" % (total, delays), total == 5 and delays == 2)
+r_a = audit.k0_delays(h, probes)
+rep("T0-a", "K0: 対象5件のうち遅れ2件（期待 (5, 2, 0, 0, 0)、実際 %s）" % (r_a,), r_a == (5, 2, 0, 0, 0))
 
 # T0-b: H を読む前に止めた probe を外す（design §15、K72）
 probes_b = list(probes)
@@ -286,7 +286,84 @@ for rs in ("agent_id", "agent_id", "transcript_path", "transcript_unparsable"):
     probes_b.append({"type": "consent_probe", "session": "s1", "h_uuid": None, "reason": rs, "now": (T0 + td(150)).isoformat()})
 probes_b.append({"type": "consent_probe", "session": "s1", "h_uuid": None, "reason": "no_human_input", "now": (T0 + td(150)).isoformat()})
 r_b = audit.k0_delays(h, probes_b)
-rep("T0-b", "K0: 外す4件・数える遅れ1件（期待 total=6 delays=3 skipped=4 delays_no_h=1、実際 %s）" % (r_b,), r_b == (6, 3, 4, 1))
+rep("T0-b", "K0: 外す4件・数える遅れ1件（期待 total=6 delays=3 skipped=4 delays_no_h=1 expired=0、実際 %s）" % (r_b,), r_b == (6, 3, 4, 1, 0))
+
+# T0-c: 30 分を過ぎた「1」を外す（design §16-3(a)、K75）
+def tool_with_id(ts, tid):
+    t = atool({"command": tid}, ts)
+    t["message"]["content"][0]["id"] = tid
+    return t
+
+def no_ts(rec):
+    del rec["timestamp"]
+    return rec
+
+M = 60
+# 呼び出し1: tool_use_id の道
+hc = newhome()
+hc1 = human("1", T0, "typed")
+hc_nots = no_ts(human("1", T0 + td(201 * M), "typed"))
+write_tr(hc, [hc1,
+              tool_with_id(T0 + td(29 * M), "toolu_c29"), tool_with_id(T0 + td(30 * M), "toolu_c30"),
+              tool_with_id(T0 + td(31 * M), "toolu_c31"), tool_with_id(T0 + td(200 * M), "toolu_c200"),
+              tool_with_id(T0 + td(10 * M), "toolu_cnonow"),
+              hc_nots, tool_with_id(T0 + td(202 * M), "toolu_cnots")])
+probes_c1 = [
+    {"type": "consent_probe", "session": "s1", "h_uuid": hc1["uuid"], "now": (T0 + td(29 * M)).isoformat(), "tool_use_id": "toolu_c29"},
+    {"type": "consent_probe", "session": "s1", "h_uuid": hc1["uuid"], "now": (T0 + td(30 * M)).isoformat(), "tool_use_id": "toolu_c30"},
+    {"type": "consent_probe", "session": "s1", "h_uuid": hc1["uuid"], "now": (T0 + td(31 * M)).isoformat(), "tool_use_id": "toolu_c31"},
+    {"type": "consent_probe", "session": "s1", "h_uuid": hc1["uuid"], "now": (T0 + td(200 * M)).isoformat(), "tool_use_id": "toolu_c200"},
+    {"type": "consent_probe", "session": "s1", "h_uuid": hc1["uuid"], "tool_use_id": "toolu_cnonow"},
+    {"type": "consent_probe", "session": "s1", "h_uuid": hc_nots["uuid"], "now": (T0 + td(202 * M)).isoformat(), "tool_use_id": "toolu_cnots"},
+]
+r_c1 = audit.k0_delays(hc, probes_c1)
+# 呼び出し2: 時刻の道（tool_use_id を持たない probe）
+hc2h = newhome()
+hc2 = human("1", T0, "typed")
+write_tr(hc2h, [hc2])
+probes_c2 = [{"type": "consent_probe", "session": "s1", "h_uuid": hc2["uuid"], "now": (T0 + td(m * M)).isoformat()} for m in (29, 30, 31, 200)]
+r_c2 = audit.k0_delays(hc2h, probes_c2)
+same_window = cc.WINDOW.total_seconds() == audit.K0_WINDOW_SEC
+rep("T0-c", "K0: 30分を過ぎた「1」を外す（期待 呼び出し1 (4, 0, 0, 0, 2)・呼び出し2 (2, 0, 0, 0, 2)・WINDOW と K0_WINDOW_SEC が同じ、実際 %s %s %s）" % (r_c1, r_c2, same_window),
+    r_c1 == (4, 0, 0, 0, 2) and r_c2 == (2, 0, 0, 0, 2) and same_window)
+
+# T0-u: --audit --until の絞り（design §16-7 K76）
+r_u = audit.k0_delays(h, audit.filter_probes_until(probes, T0 + td(100)))
+rep("T0-u", "K0: T0+100秒までの probe だけを数える（期待 (1, 0, 0, 0, 0)、実際 %s）" % (r_u,), r_u == (1, 0, 0, 0, 0))
+
+# T0-u2: --until に時差が無い・読めないときは STOP で終了コード 2
+rc_u1 = audit.main(["--audit", "--until", "2026-11-20T15:00:00"])
+rc_u2 = audit.main(["--audit", "--until", "2026-13-40T99:00:00+09:00"])
+rep("T0-u2", "K76: --until の時差なし・読めない値で止まる（期待 2 と 2、実際 %s と %s）" % (rc_u1, rc_u2), rc_u1 == 2 and rc_u2 == 2)
+
+# T0-d: K79 の数え（design §16-7 K79）
+hd = newhome()
+hd1 = human("1", T0, "typed")
+hd_ok = human("ok", T0 + td(32 * M), "typed")
+hd_nots = no_ts(human("1", T0 + td(34 * M), "typed"))
+write_tr(hd, [hd1] + [tool_with_id(T0 + td(29 * M), "toolu_d" + k) for k in "abcde"]
+         + [tool_with_id(T0 + td(31 * M), "toolu_df"), hd_ok, tool_with_id(T0 + td(33 * M), "toolu_dg"),
+            hd_nots, tool_with_id(T0 + td(35 * M), "toolu_dh")])
+def pd(k, minute, reason, read_bytes=True, h_uuid=None):
+    p = {"type": "consent_probe", "session": "s1", "h_uuid": h_uuid, "now": (T0 + td(minute * M)).isoformat(), "tool_use_id": "toolu_d" + k}
+    if reason is not None:
+        p["reason"] = reason
+    if read_bytes:
+        p["read_bytes"] = 4 * 1024 * 1024
+    return p
+probes_d = [
+    pd("a", 29, "no_human_input", read_bytes=False),   # (a) read_bytes なし → 対象外
+    pd("b", 29, "no_human_input"),                     # (b) 対象・missed
+    pd("c", 29, "no_assistant_text"),                  # (c) 対象・missed
+    pd("d", 29, None, h_uuid=hd1["uuid"]),             # (d) result=true → 対象・missed でない
+    pd("e", 29, "ticket_format", h_uuid=hd1["uuid"]),  # (e) 対象・missed でない
+    pd("f", 31, "no_human_input"),                     # (f) 31 分 → 対象外
+    pd("g", 33, "no_human_input"),                     # (g) 本当の直前が「1」でない → 対象外
+    pd("h", 35, "no_human_input"),                     # (h) 「1」に timestamp が無い → 対象外
+]
+probes_d[3]["result"] = True
+r_d = audit.k79_counts(hd, probes_d)
+rep("T0-d", "K79: 対象と見つけられなかった件数（期待 (4, 2)、実際 %s）" % (r_d,), r_d == (4, 2))
 
 # T0-w: 試験の区間の除外（design §9）
 hw = newhome()

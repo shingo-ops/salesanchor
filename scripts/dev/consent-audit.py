@@ -30,6 +30,8 @@ TAIL_BYTES = 4 * 1024 * 1024
 DAYS = 7
 K0_TARGET = 20
 K0_SKIP_REASONS = ("agent_id", "transcript_path", "transcript_unparsable")  # consent_check.py が H を読む前に返す理由（design §15-3）。見張りの理由名を変えるときはここも直す
+K0_WINDOW_SEC = 30 * 60  # consent_check.py の WINDOW（30 分）と同じ秒数（design §16-3(a)）。見張りの WINDOW を変えるときはここも直す
+TZ_RE = re.compile(r"(?:Z|[+-]\d{2}:?\d{2})$")  # 時差の付いた時刻か（--prod-logins と --audit --until で共有。design §16-7 K76）
 
 
 def real_home():
@@ -343,19 +345,18 @@ def match_ledger_keys(home, since):
     return len(keys), unmatched
 
 
-def k0_delays(home, events):
-    """K0（design §2）: 後から見て直前の人の入力が typed の「1」だった呼び出しの数と、そのうち遅れの数。
+def _k0_true_prevs(home, events):
+    """K0・K79 で共通: probe ごとに本当の直前の人の入力 (uuid, typed_one, timestamp) を選ぶ（design §2・§16-3(a)）。
 
-    tool_use_id があれば、記録の中のその行より前で最も近い人の入力を本当の直前とする。
+    tool_use_id があれば、記録の中のその行より前で最も近い人の入力を本当の直前とする（timestamp は読めなければ None）。
     無ければ、probe の now より前の timestamp を持つ最後の人の入力を本当の直前とする。
-    本当の直前の uuid が probe の h_uuid と違えば遅れ1件。
-    reason が K0_SKIP_REASONS の probe は数えず skipped に入れる。h_uuid が null の遅れは delays_no_h にも入れる。
+    返り値は [(probe, 本当の直前 または None)]。記録の見つからない session の probe は含めない。
     """
     probes = [e for e in events if e.get("type") == "consent_probe"]
     by_session = {}
     for p in probes:
         by_session.setdefault(p.get("session"), []).append(p)
-    total = delays = skipped = delays_no_h = 0
+    result = []
     for sid, plist in by_session.items():
         tp = find_transcript(home, sid) if isinstance(sid, str) else None
         if not tp:
@@ -363,7 +364,7 @@ def k0_delays(home, events):
         ids = {p["tool_use_id"] for p in plist if p.get("tool_use_id")}
         id_re = re.compile("|".join(re.escape(i) for i in ids).encode("utf-8")) if ids else None
         humans = []          # (timestamp, uuid, typed_one)
-        prev_for_tool = {}   # tool_use_id -> (uuid, typed_one)
+        prev_for_tool = {}   # tool_use_id -> (uuid, typed_one, timestamp または None)
         last = None
         with open(tp, "rb") as f:
             for raw in f:
@@ -374,7 +375,7 @@ def k0_delays(home, events):
                         r = None
                     if r is not None and is_human(r):
                         ts = parse_ts(r.get("timestamp"))
-                        last = (r.get("uuid"), is_typed_one(r))
+                        last = (r.get("uuid"), is_typed_one(r), ts)
                         if ts:
                             humans.append((ts, r.get("uuid"), is_typed_one(r)))
                         continue
@@ -384,9 +385,6 @@ def k0_delays(home, events):
                         tid = m.group(0).decode("utf-8")
                         prev_for_tool.setdefault(tid, last)
         for p in plist:
-            if p.get("reason") in K0_SKIP_REASONS:
-                skipped += 1
-                continue
             true_prev = None
             tid = p.get("tool_use_id")
             if tid and tid in prev_for_tool:
@@ -396,14 +394,78 @@ def k0_delays(home, events):
                 cands = [h for h in humans if now and h[0] < now]
                 if cands:
                     c = max(cands, key=lambda h: h[0])
-                    true_prev = (c[1], c[2])
-            if true_prev and true_prev[1]:
-                total += 1
-                if true_prev[0] != p.get("h_uuid"):
-                    delays += 1
-                    if p.get("h_uuid") is None:
-                        delays_no_h += 1
-    return total, delays, skipped, delays_no_h
+                    true_prev = (c[1], c[2], c[0])
+            result.append((p, true_prev))
+    return result
+
+
+def _k0_age_sec(true_prev, p):
+    """本当の直前の入力の timestamp から probe の now までの秒数。どちらかが読めなければ None。"""
+    now = parse_ts(p.get("now"))
+    if now is None or true_prev[2] is None:
+        return None
+    return (now - true_prev[2]).total_seconds()
+
+
+def k0_delays(home, events):
+    """K0（design §2・§16-3(a)）: 後から見て直前の人の入力が typed の「1」だった呼び出しの数と、そのうち遅れの数。
+
+    本当の直前の選び方は _k0_true_prevs。本当の直前の uuid が probe の h_uuid と違えば遅れ1件。
+    reason が K0_SKIP_REASONS の probe は数えず skipped に入れる。h_uuid が null の遅れは delays_no_h にも入れる。
+    「1」の timestamp から probe の now までが K0_WINDOW_SEC を超えるものは数えず expired に入れる（ちょうどは数える）。
+    どちらかの時刻が読めないものは今どおり数える。
+    """
+    total = delays = skipped = delays_no_h = expired = 0
+    for p, true_prev in _k0_true_prevs(home, events):
+        if p.get("reason") in K0_SKIP_REASONS:
+            skipped += 1
+            continue
+        if true_prev and true_prev[1]:
+            age = _k0_age_sec(true_prev, p)
+            if age is not None and age > K0_WINDOW_SEC:
+                expired += 1
+                continue
+            total += 1
+            if true_prev[0] != p.get("h_uuid"):
+                delays += 1
+                if p.get("h_uuid") is None:
+                    delays_no_h += 1
+    return total, delays, skipped, delays_no_h, expired
+
+
+def k79_counts(home, events):
+    """K79（design §16-7）: 読む範囲を広げた後（probe に read_bytes がある）の呼び出しのうち、
+    本当の直前が 30 分以内の typed の「1」だったもの（target）と、そのうち見張りが見つけられなかったもの（missed）。
+
+    「1」の timestamp か probe の now が読めないものは target に入れない（30 分以内と言えないため）。
+    missed は reason が no_human_input か no_assistant_text のもの。
+    """
+    target = missed = 0
+    for p, true_prev in _k0_true_prevs(home, events):
+        if "read_bytes" not in p:
+            continue
+        if not (true_prev and true_prev[1]):
+            continue
+        age = _k0_age_sec(true_prev, p)
+        if age is None or age > K0_WINDOW_SEC:
+            continue
+        target += 1
+        if p.get("reason") in ("no_human_input", "no_assistant_text"):
+            missed += 1
+    return target, missed
+
+
+def filter_probes_until(events, until):
+    """--audit --until（design §16-7 K76）: consent_probe は now ≦ until のものだけ残す。
+    now の読めない probe は until 以前と言えないので外す。consent_probe 以外の行はそのまま残す。"""
+    kept = []
+    for e in events:
+        if e.get("type") == "consent_probe":
+            now = parse_ts(e.get("now"))
+            if now is None or now > until:
+                continue
+        kept.append(e)
+    return kept
 
 
 # ── --permissions ───────────────────────────────────────────────────
@@ -1866,7 +1928,6 @@ def run_prod_logins_cli(args, home, now):
         print("STOP: %s" % why)
         return 2
 
-    tz_re = re.compile(r"(?:Z|[+-]\d{2}:?\d{2})$")
     specs = []
     for a in (args.auth or []):
         if "=" not in a or not a.split("=", 1)[0] or not a.split("=", 1)[1]:
@@ -1880,7 +1941,7 @@ def run_prod_logins_cli(args, home, now):
                       ("--delegation-start", args.delegation_start)):
         if not raw:
             return stop("%s が無い" % name)
-        if not tz_re.search(raw) or "T" not in raw:
+        if not TZ_RE.search(raw) or "T" not in raw:
             return stop("%s に時差が無い（例 2026-10-26T14:00+09:00）" % name)
         dt = parse_ts(raw)
         if dt is None:
@@ -1895,7 +1956,7 @@ def run_prod_logins_cli(args, home, now):
                            args.mac_ip, print)
 
 
-def run_audit(home, now, with_permissions, out, commit=False, gh_view=None, git_run=None):
+def run_audit(home, now, with_permissions, out, commit=False, gh_view=None, git_run=None, until=None):
     since = now - datetime.timedelta(days=DAYS)
     events = load_events(home)
     consumed = count_types(events, since, lambda t: t == "consent_consumed")
@@ -1904,8 +1965,10 @@ def run_audit(home, now, with_permissions, out, commit=False, gh_view=None, git_
     guard_suspect = len(guard_suspects)
     permit = count_types(events, since, lambda t: t.endswith("_permit_consumed"))
     n_keys, unmatched = match_ledger_keys(home, since)
-    total, delays, k0_skipped, k0_delays_no_h = k0_delays(home, events)
-    out("== 同意と権限の点検（過去%d日） ==" % DAYS)
+    k_events = events if until is None else filter_probes_until(events, until)  # --until は K0・K79 の数えだけに効く（design §16-7 K76）
+    total, delays, k0_skipped, k0_delays_no_h, k0_expired = k0_delays(home, k_events)
+    k79_target, k79_missed = k79_counts(home, k_events)
+    out("==同意と権限の点検（過去%d日） ==" % DAYS)
     out("1. consent_consumed: %d 件 / 台帳の鍵 %d 件 / 記録に同意票と typed の「1」が見つからない: %d 件（0件が正常）"
         % (sum(consumed.values()), n_keys, unmatched))
     out("2. consent_guard_blocked: 疑い %d 件（0件が正常）／読み取りの空振り %d 件（参考）（試験の区間 %d 個・区間内で除いた件数 %d）"
@@ -1915,12 +1978,14 @@ def run_audit(home, now, with_permissions, out, commit=False, gh_view=None, git_
             % (e.get("ts", "?"), e.get("hook", "?"), e.get("condition", "?"),
                e.get("cmd_sha", "不明"), e.get("cmd_len", "不明")))
     out("3. 許可券の消費: %s" % (", ".join("%s=%d" % kv for kv in sorted(permit.items())) or "0 件"))
-    out("K0: 直前の人の入力が typed の「1」だった呼び出し %d 件のうち、遅れ %d 件（うち見張りが入力を見つけられなかった %d 件）（目標: %d 件たまった時点で遅れ0）／H を読む前に止めた呼び出しで除外 %d 件"
-        % (total, delays, k0_delays_no_h, K0_TARGET, k0_skipped))
+    out("K0: 直前の人の入力が typed の「1」だった呼び出し %d 件のうち、遅れ %d 件（うち見張りが入力を見つけられなかった %d 件）（目標: %d 件たまった時点で遅れ0）／H を読む前に止めた呼び出しで除外 %d 件／30分を過ぎて外した %d 件"
+        % (total, delays, k0_delays_no_h, K0_TARGET, k0_skipped, k0_expired))
     if total >= K0_TARGET:
         out("K0 判定: %s" % ("○" if delays == 0 else "×（案 F に切り替える設計に戻す）"))
     else:
         out("K0 判定: 対象が %d 件に届くまで保留" % K0_TARGET)
+    out("K79: 読む範囲を広げた後の呼び出しで、30分以内の『1』があったのに見張りが見つけられなかった %d 件（対象 %d 件）"
+        % (k79_missed, k79_target))
     changes, n_reasons = 0, 0
     if with_permissions:
         changes, n_reasons = run_permissions(home, out, now, commit, gh_view, git_run)
@@ -1954,7 +2019,16 @@ def main(argv=None):
         print(json.dumps(probe(home, args.probe, now), ensure_ascii=False))
         return 0
     if args.audit:
-        run_audit(home, now, args.permissions, print, args.commit_snapshot)
+        until = None
+        if args.until:
+            if not TZ_RE.search(args.until) or "T" not in args.until:
+                print("STOP: --until に時差が無い（例 2026-11-20T15:00+09:00）")
+                return 2
+            until = parse_ts(args.until)
+            if until is None:
+                print("STOP: --until が読めない")
+                return 2
+        run_audit(home, now, args.permissions, print, args.commit_snapshot, until=until)
         return 0
     if args.permissions:
         run_permissions(home, print, now, args.commit_snapshot)
