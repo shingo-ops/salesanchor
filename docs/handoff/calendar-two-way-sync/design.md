@@ -6,7 +6,7 @@
 
 ## 1. 目的と利用者に見える変化
 
-- 前: アプリで作った予定を Google で直しても、アプリには入らない（recon §2 `calendar_service.py:1408`）。Google で作った予定を Google で直したときも、予定の画面は開き直すまで古い（recon §2 合図なし・§4 画面が受けていない）。
+- 前: アプリで作った予定を Google で直しても、アプリには入らない（recon §2 `backend/app/services/calendar_service.py:1408`）。Google で作った予定を Google で直したときも、予定の画面は開き直すまで古い（recon §2 合図なし・§4 画面が受けていない）。
 - 後: アプリで作った予定を Google で直すと、題名・説明・時間・終日・場所・色がアプリに入る。予定の画面を開いたままなら、取り込みの後に開き直さずに変わる。アプリで直した予定が Google へ行く道は今のまま。
 
 ## 2. 受け入れの基準（KGI / KPI）
@@ -58,8 +58,8 @@
 
 ### 3-5. 触らない範囲
 
-- アプリ → Google の送り方（`update_event`・`create_event`・`delete_event`・`google_calendar.py`）。ただし 1 か所だけ直す: `_to_google_event_body`（`calendar_service.py:1558-1561`）は説明・場所が空だと送らないので、アプリで消しても Google に古い値が残る。取り込みを入れるとその古い値がアプリに戻ってしまう（設計審査の指摘 A）。値が None でなければ空 `""` でも送るようにする（card §1(3)）。
-- Google 起源の取り込みの SQL（`:1491` 以下）。消す処理（`:1420`）。全部読み直しの消す処理（`google_webhook.py`）。
+- アプリ → Google の送り方（`update_event`・`create_event`・`delete_event`・`backend/app/services/google_calendar.py`）。ただし 1 か所だけ直す: `_to_google_event_body`（`backend/app/services/calendar_service.py:1558-1561`）は説明・場所が空だと送らないので、アプリで消しても Google に古い値が残る。取り込みを入れるとその古い値がアプリに戻ってしまう（設計審査の指摘 A）。値が None でなければ空 `""` でも送るようにする（card §1(3)）。
+- Google 起源の取り込みの SQL（`:1491` 以下）。消す処理（`:1420`）。全部読み直しの消す処理（`backend/app/services/google_webhook.py`）。
 - 予定の書き込みの口の合図（`NO_SIGNAL_ROUTES` の `_PENDING` のまま）。DB の形（migration なし）。画面の見た目（新しい部品・色・文字なし）。
 
 ## 4. なぜこの形か（代替案）
@@ -79,10 +79,10 @@
 - 合図で読み直しが増える: 取り込み 1 回で最大 1 回。画面側は 1.5 秒まとめる（ADR-1016）。
 - アプリで説明・場所を消したとき: 上の直しで Google も消える。Google は空の説明・場所を返さないので、取り込みは空と NULL を同じに扱い、書き戻さない（K8）。改行の違い（`\r\n` と `\n`）も同じに扱う。
 - 予定の画面は、保存でも動かしたときでも、時間を必ず時刻つき（`toISOString()`）で送る（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1023-1024`・`:1313-1314`）。終日の「日付だけ」の送り方は画面からは使われない（三審の指摘 C1 を実物で確かめた）。
-- 今の画面は説明・場所を空にすると送らない（`SchedulePageImpl.tsx:1027-1028` の `|| undefined`、口は `routers/calendar.py:489` の `exclude_none`）。だから今はアプリで説明・場所を消せず、DB にも Google にも前の値が残る。値どうしは同じなので、取り込みで戻ることも無い。消せるようにするのは別の件（§6）。
-- 終日の予定: アプリが日付だけで持つ行と時刻つきで持つ行で、Google へ送る終わりの日の作り方が違う（`calendar_service.py:1527-1533`）。だから DB の値どうしではなく「送る日付の形」で比べる。同じなら書かない（K8）。Google で日付を変えたときだけ `_google_times` の形（終了日 23:59・日本時間）で書く。
+- 今の画面は説明・場所を空にすると送らない（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1027-1028` の `|| undefined`、口は `backend/app/routers/calendar.py:489` の `exclude_none`）。だから今はアプリで説明・場所を消せず、DB にも Google にも前の値が残る。値どうしは同じなので、取り込みで戻ることも無い。消せるようにするのは別の件（§6）。
+- 終日の予定: アプリが日付だけで持つ行と時刻つきで持つ行で、Google へ送る終わりの日の作り方が違う（`backend/app/services/calendar_service.py:1527-1533`）。だから DB の値どうしではなく「送る日付の形」で比べる。同じなら書かない（K8）。Google で日付を変えたときだけ `_google_times` の形（終了日 23:59・日本時間）で書く。
 - 色: アプリは色を変えたときだけ Google へ送る（ADR-1081）。名札の無いアプリの予定で色を消さないよう、名札が当たるときだけ入れる。Google で色を「なし」に戻した場合はアプリに入らない（受け入れる・§6）。
-- アプリで直したのに Google へ送らなかった行（同期方式が送らない設定のとき・`calendar_service.py:537` で `pending` にし `:556` で送らない）: `pending` のまま残るので、取り込みはその行を上書きしない（アプリで直した中身を守る）。送る設定に戻して次にアプリで直せば `synced` に戻る。本番の今の `pending` は 0 件（recon §5）（再審査の指摘 B5）。
+- アプリで直したのに Google へ送らなかった行（同期方式が送らない設定のとき・`backend/app/services/calendar_service.py:537` で `pending` にし `:556` で送らない）: `pending` のまま残るので、取り込みはその行を上書きしない（アプリで直した中身を守る）。送る設定に戻して次にアプリで直せば `synced` に戻る。本番の今の `pending` は 0 件（recon §5）（再審査の指摘 B5）。
 
 ## 6. 決めていないこと（PO の判断が要る・今回は今の動きのまま）
 
@@ -92,12 +92,13 @@
 - アプリの画面で説明・場所を空にして消せるようにするか（今は消せない・§5）。
 - アプリで直したことを、同じ会社のほかの人の画面にもすぐ出すか（予定の書き込みの口の合図）。
 
-## 7. 外部事例
+## 7. 外部・過去事例の参照と我々への応用
 
 - Google 公式の同期の手順（syncToken・知らせは届く保証なし）は ADR-1059 が根拠として採用済み。今回はその上の「同じ予定を 2 か所で直す」決め方だけで、数値で比べられる外部事例は見つけていない。成功の証明には使わず、K1〜K4 の本番の観測で判定する。
 
 ## 8. 維持の仕組み
 
+- 守り手: backend/tests/test_calendar_service.py
 - K5〜K11 の試験（`backend/tests/test_calendar_service.py`）と合図の名前の照合（`backend/tests/test_realtime_topics.py`）が CI の必須チェックで毎回走る。
 - 取り込みの件数は今の記録（「Google 取り込み完了 (tenant=…, upserted=…)」）で本番でも見える。
 
