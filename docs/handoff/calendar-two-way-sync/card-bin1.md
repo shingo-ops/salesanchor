@@ -66,8 +66,9 @@ async def _update_app_origin_from_google(
     params: dict = {
         "gid": google_event["id"],
         "title": google_event.get("summary", ""),
-        "desc": google_event.get("description"),
-        "loc": google_event.get("location"),
+        # Google は空の説明・場所を返さない。空はアプリでも NULL と同じに扱う
+        "desc": google_event.get("description") or None,
+        "loc": google_event.get("location") or None,
         "start": start_dt,
         "end": end_dt,
         "all_day": is_all_day,
@@ -82,8 +83,8 @@ async def _update_app_origin_from_google(
     ]
     diffs = [
         "title IS DISTINCT FROM :title",
-        "description IS DISTINCT FROM :desc",
-        "location IS DISTINCT FROM :loc",
+        "NULLIF(description, '') IS DISTINCT FROM :desc",
+        "NULLIF(location, '') IS DISTINCT FROM :loc",
         "start_datetime IS DISTINCT FROM :start",
         "end_datetime IS DISTINCT FROM :end",
         "is_all_day IS DISTINCT FROM :all_day",
@@ -112,6 +113,27 @@ async def _update_app_origin_from_google(
 ```
 
 SET に `calendar_type`・`user_id`・`created_by_user_id`・`source`・`sync_origin_id`・`sync_status`・`meet_url`・`google_event_id` を入れない。
+
+(3) `_to_google_event_body` の説明・場所の送り方を直す（審査の指摘 A: アプリで空にしても Google の古い値が残り、取り込みで戻ってしまう）。変更前:
+
+```python
+    if payload.get("description"):
+        body["description"] = payload["description"]
+    if payload.get("location"):
+        body["location"] = payload["location"]
+```
+
+変更後（鍵が payload にあれば、空でも送る。空は "" で送り Google 側も消す。鍵が無ければ今と同じく送らない）:
+
+```python
+    # 鍵があれば空でも送る（アプリで消したら Google でも消す・ADR-1059 改訂 2026-11-20）
+    if "description" in payload:
+        body["description"] = payload["description"] or ""
+    if "location" in payload:
+        body["location"] = payload["location"] or ""
+```
+
+ほかの行は変えない。
 
 ## 2. backend/app/services/google_webhook.py
 
@@ -170,6 +192,8 @@ TENANT_TASK_TOPICS: dict[str, str] = {
   3. `label_colors=None` のとき SQL に `color_key` が入らない。`label_colors` があるとき `eventLabelId` から `color_key` を入れる（K2）。
   4. 終日（`start.date="2026-11-21"`・`end.date="2026-11-22"`）のとき、`start` が 2026-11-21 00:00 JST・`end` が 2026-11-21 23:59 JST・`all_day=True` で渡る。
   5. 取り込みが Google へ書かない（K5）: `app.services.google_calendar` の `create_event`・`update_event`・`delete_event` を、呼ばれたら落ちる偽物に差し替えて、アプリ起源と Google 起源の両方の `upsert_from_google` を呼んでも落ちない。
+  9. 説明・場所が Google に無く（鍵なし）、DB が空文字のときは書かない（K8）: SQL の差の条件が `NULLIF(description, '')`・`NULLIF(location, '')` で、params の `desc`・`loc` が None であること。
+  10. `TestToGoogleEventBody` に足す: `description=""`・`location=None` を鍵ありで渡すと `body["description"] == ""`・`body["location"] == ""`。既存の `test_without_description_and_location`（鍵なし→送らない）はそのまま通ること。
   6. 既存の `test_instance_of_app_origin_is_skipped` は、判定の順が変わったので `_is_app_origin` の side_effect の並びが合わなくなる。繰り返しの回の判定が先になったことに合わせて並びだけ直す（確かめる中身＝「アプリで作った繰り返しの回は "skipped"」は変えない）。
 - `sync_tenant_from_google` の試験（同じファイルの既存の形に合わせる）:
   7. `upsert_from_google` が 1 件 `"upserted"` を返すとき `publish_change` が `("calendar.events", "tenant", <tenant_id>)` で 1 回呼ばれる（K11）。
