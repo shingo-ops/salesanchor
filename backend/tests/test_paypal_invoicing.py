@@ -10,8 +10,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.services import paypal_payments as svc
+from tests.conftest import paypal_fee_rows
 
-pytestmark = pytest.mark.usefixtures("stub_invoice_totals")
+pytestmark = pytest.mark.usefixtures("stub_invoice_totals", "fake_payment_ref")
 
 
 def _resp(status_code, json_body=None):
@@ -199,10 +200,13 @@ async def _company_contact(client, *, email=None):
     return company_id, ct.json()["id"]
 
 
-async def _issued_invoice(client, company_id, contact_id):
+async def _issued_invoice(client, company_id, contact_id, stub, method_type="paypal"):
+    """便E: 既定は PayPal の請求書（手数料の行を stub に入れる）。bank などは method_type で変える。"""
+    stub.set(payment_fee_rows=paypal_fee_rows())
     inv = await client.post("/api/v1/invoices", json={
         "company_id": company_id, "contact_id": contact_id, "shipping": {"mode": "none"},
         "items": [{"product_name": "商品", "quantity": 1, "unit_price": "1000.00"}],
+        "payment_method_ref": {"method_type": method_type, "id": None if method_type == "paypal" else 3},
     })
     assert inv.status_code == 201, inv.text
     invoice_id = inv.json()["id"]
@@ -211,29 +215,36 @@ async def _issued_invoice(client, company_id, contact_id):
     return invoice_id
 
 
-async def test_issue_paypal_link_requires_email(client):
+async def test_issue_paypal_link_requires_email(client, stub_invoice_totals):
     """email 未登録 contact の請求書は PayPal 請求書を発行できない（400）。"""
     company_id, contact_id = await _company_contact(client, email=None)
-    invoice_id = await _issued_invoice(client, company_id, contact_id)
+    invoice_id = await _issued_invoice(client, company_id, contact_id, stub_invoice_totals)
     resp = await client.post(f"/api/v1/invoices/{invoice_id}/paypal-link")
     assert resp.status_code == 400
     assert "メールアドレス" in resp.json()["detail"]
 
 
-async def test_issue_paypal_link_success(client, monkeypatch):
+async def test_issue_paypal_link_success(client, monkeypatch, stub_invoice_totals):
     """email 有り＋creds 有りで Invoicing を発行し paypal_order_id/approval_url を保存。"""
     company_id, contact_id = await _company_contact(client, email="buyer@example.com")
-    invoice_id = await _issued_invoice(client, company_id, contact_id)
+    invoice_id = await _issued_invoice(client, company_id, contact_id, stub_invoice_totals)
+    detail = (await client.get(f"/api/v1/invoices/{invoice_id}")).json()
 
     async def _creds(db, tid):
         return {"client_id": "x", "client_secret": "y", "environment": "sandbox"}
 
+    sent: dict = {}
+
+    def _send(*a, **k):
+        sent.update(k)
+        return {
+            "ok": True, "paypal_invoice_id": "INV2-ZZZZ", "recipient_view_url": "https://pay/zzz",
+            "invoicer_view_url": "https://merchant/zzz",
+            "status_code": 200, "message": "OK",
+        }
+
     monkeypatch.setattr(svc, "get_credentials", _creds)
-    monkeypatch.setattr(svc, "create_and_send_invoice", lambda *a, **k: {
-        "ok": True, "paypal_invoice_id": "INV2-ZZZZ", "recipient_view_url": "https://pay/zzz",
-        "invoicer_view_url": "https://merchant/zzz",
-        "status_code": 200, "message": "OK",
-    })
+    monkeypatch.setattr(svc, "create_and_send_invoice", _send)
     # 写しPDF 生成は別テストで検証済み。ここでは保存→取得経路を検証するため bytes を返すよう mock。
     import app.routers.invoices as inv_mod
 
@@ -245,6 +256,10 @@ async def test_issue_paypal_link_success(client, monkeypatch):
     body = resp.json()
     assert body["paypal_order_id"] == "INV2-ZZZZ"
     assert body["paypal_approval_url"] == "https://pay/zzz"
+    # 便E: PayPal へ送る額は手数料込みの合計（1000 × 4.1% ＋ 40 = 81 を足した 1081）
+    assert detail["payment_fee_charged"] is not None and float(detail["payment_fee_charged"]) == 81.0
+    assert float(detail["total_amount"]) == 1081.0
+    assert float(sent["amount"]) == float(detail["total_amount"])
     # ADR-101改訂(2) Inc1: 発行者ビューURLが保存される
     assert body["paypal_invoicer_view_url"] == "https://merchant/zzz"
     # 写しPDF が自動保存され、専用 endpoint で取得できる（reportlab 生成）
@@ -254,18 +269,56 @@ async def test_issue_paypal_link_success(client, monkeypatch):
     assert pdf.content[:4] == b"%PDF"
 
 
-async def test_paypal_copy_pdf_404_when_not_issued(client):
+async def test_issue_paypal_link_409_when_not_paypal(client, monkeypatch, stub_invoice_totals):
+    """便E K7b: 支払方法が PayPal でない請求書は PayPal リンクを出せない（409 payment_method）。"""
+    company_id, contact_id = await _company_contact(client, email="buyer@example.com")
+    invoice_id = await _issued_invoice(client, company_id, contact_id, stub_invoice_totals, method_type="bank")
+    called: list = []
+
+    async def _creds(db, tid):
+        return {"client_id": "x", "client_secret": "y", "environment": "sandbox"}
+
+    monkeypatch.setattr(svc, "get_credentials", _creds)
+    monkeypatch.setattr(svc, "create_and_send_invoice", lambda *a, **k: called.append(1) or {"ok": True})
+    resp = await client.post(f"/api/v1/invoices/{invoice_id}/paypal-link")
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["detail"] == "payment_method"
+    assert called == []
+
+
+def _pdf_text(pdf: bytes) -> bytes:
+    """reportlab の PDF の内容は ASCII85 で包まれているので、戻してから文字を探す。"""
+    import base64
+    import re
+    import zlib
+
+    out = b""
+    for m in re.finditer(rb"stream\r?\n(.*?)endstream", pdf, re.S):
+        raw = m.group(1).strip()
+        try:
+            data = base64.a85decode(raw[:-2] if raw.endswith(b"~>") else raw)
+        except ValueError:
+            data = raw
+        try:
+            data = zlib.decompress(data)
+        except zlib.error:
+            pass
+        out += data
+    return out
+
+
+async def test_paypal_copy_pdf_404_when_not_issued(client, stub_invoice_totals):
     """PayPal 未発行の請求書は写しPDFが無いので 404。"""
     company_id, contact_id = await _company_contact(client, email="buyer@example.com")
-    invoice_id = await _issued_invoice(client, company_id, contact_id)
+    invoice_id = await _issued_invoice(client, company_id, contact_id, stub_invoice_totals)
     resp = await client.get(f"/api/v1/invoices/{invoice_id}/paypal-copy-pdf")
     assert resp.status_code == 404
 
 
-async def test_issue_paypal_link_copy_pdf_failure_non_fatal(client, monkeypatch):
+async def test_issue_paypal_link_copy_pdf_failure_non_fatal(client, monkeypatch, stub_invoice_totals):
     """写しPDF 生成が失敗してもリンク発行は成功する（致命にしない）。"""
     company_id, contact_id = await _company_contact(client, email="buyer@example.com")
-    invoice_id = await _issued_invoice(client, company_id, contact_id)
+    invoice_id = await _issued_invoice(client, company_id, contact_id, stub_invoice_totals)
 
     async def _creds(db, tid):
         return {"client_id": "x", "client_secret": "y", "environment": "sandbox"}
@@ -302,6 +355,23 @@ def test_render_invoice_pdf_with_paypal_copy():
                                           "original_url": "https://pay/x"})
     assert isinstance(out, (bytes, bytearray))
     assert out[:4] == b"%PDF"
+
+
+def test_render_invoice_pdf_shows_payment_fee_charged():
+    """便E K7c: payment_fee_charged が入った invoice_data（写しPDF も同じ経路）は「Payment fee」を描く。"""
+    from app.services.invoice_renderer import render_invoice_pdf
+
+    base = {
+        "invoice_code": "IN-0001-01", "issued_at": None,
+        "items": [{"product_name": "X", "quantity": 1, "unit_price": 1000, "subtotal": 1000}],
+        "subtotal": 1000, "shipping_fee": 0, "tax_amount": 0, "total_amount": 1041,
+        "currency": "JPY",
+    }
+    with_fee = render_invoice_pdf({**base, "payment_fee_charged": 41.0}, {"name": "T"},
+                                  paypal_copy={"pp_invoice_number": "INV2-1", "original_url": "https://pay/x"})
+    without = render_invoice_pdf(base, {"name": "T"})
+    assert b"Payment fee" in _pdf_text(with_fee)
+    assert b"Payment fee" not in _pdf_text(without)
 
 
 # ── Inc4 Step B: dispute webhook 受信→紐づけ表示 ──────────────────
@@ -342,10 +412,10 @@ def _dispute_event(invoice_number, dispute_id="PP-D-1", status="OPEN"):
     }
 
 
-async def test_dispute_webhook_creates_and_links(client, db_session, monkeypatch):
+async def test_dispute_webhook_creates_and_links(client, db_session, monkeypatch, stub_invoice_totals):
     """署名OK → paypal_disputes に upsert＋invoice_number で請求書に紐づけ→ endpoint で取得。"""
     company_id, contact_id = await _company_contact(client, email="b@example.com")
-    invoice_id = await _issued_invoice(client, company_id, contact_id)
+    invoice_id = await _issued_invoice(client, company_id, contact_id, stub_invoice_totals)
     inv = (await client.get(f"/api/v1/invoices/{invoice_id}")).json()
     invoice_number = inv["invoice_number"]
 
@@ -365,10 +435,10 @@ async def test_dispute_webhook_creates_and_links(client, db_session, monkeypatch
     assert got[0]["currency"] == "USD"
 
 
-async def test_dispute_webhook_idempotent_update(client, db_session, monkeypatch):
+async def test_dispute_webhook_idempotent_update(client, db_session, monkeypatch, stub_invoice_totals):
     """同一 dispute_id の UPDATED は status を更新（冪等・二重作成しない）。"""
     company_id, contact_id = await _company_contact(client, email="b@example.com")
-    invoice_id = await _issued_invoice(client, company_id, contact_id)
+    invoice_id = await _issued_invoice(client, company_id, contact_id, stub_invoice_totals)
     invoice_number = (await client.get(f"/api/v1/invoices/{invoice_id}")).json()["invoice_number"]
     await _seed_paypal_config(db_session)
     _mock_paypal_creds(monkeypatch)

@@ -31,6 +31,9 @@ ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _MIGRATION = "20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql"
+# 便E: お客様への合計に足した支払い手数料の2列（design-e §3-4）
+_FEE_MIGRATION = "20261121_100000_add_invoice_payment_fee_charged.sql"
+_FEE_COLUMNS = {"payment_fee_charged": "numeric", "payment_fee_snapshot": "jsonb"}
 # 試験・移行のどこにも無い 962 を使う（2026-11-13 に origin/main で git grep して試験・移行に 0 件）
 _TENANT_ID = 962
 _SCHEMA = f"tenant_{_TENANT_ID:03d}"
@@ -101,6 +104,23 @@ def test_tenant_ddl_has_duty_tables_and_invoice_columns():
     for table in _TABLES:
         assert f"ALTER TABLE {{schema}}.{table} ENABLE ROW LEVEL SECURITY;" in tenant_service._RLS_ENABLE_SQL
         assert f"CREATE POLICY {table}_tenant_isolation ON {{schema}}.{table}" in tenant_service._RLS_POLICY_SQL
+
+
+def test_tenant_ddl_and_fee_migration_have_payment_fee_columns():
+    """便E K9: 新テナント用 DDL と移行が同じ2列を持ち、移行は登録済みで値を書かない。"""
+    invoices = _block(tenant_service._TENANT_TABLES_SQL, "{schema}.invoices (")
+    assert "    payment_fee_charged NUMERIC(15, 2)," in invoices
+    assert "    payment_fee_snapshot JSONB," in invoices
+    assert "    payment_fee NUMERIC(15, 2)," in invoices  # 入金時の実額の列は残る
+    body = (_REPO_ROOT / "migrations" / _FEE_MIGRATION).read_text(encoding="utf-8")
+    assert "ALTER TABLE %I.invoices ADD COLUMN IF NOT EXISTS payment_fee_charged NUMERIC(15, 2)" in body
+    assert "ALTER TABLE %I.invoices ADD COLUMN IF NOT EXISTS payment_fee_snapshot JSONB" in body
+    code = "\n".join(line for line in body.splitlines() if not line.strip().startswith("--")).upper()
+    for word in ("INSERT INTO", "UPDATE %I", "UPDATE PUBLIC.", "DELETE FROM"):
+        assert word not in code
+    runner = (_REPO_ROOT / "scripts" / "run_all_migrations.sh").read_text(encoding="utf-8")
+    lines = [line for line in runner.splitlines() if line.startswith("run_sql ")]
+    assert lines.count(f"run_sql migrations/{_FEE_MIGRATION}") == 1
 
 
 def test_migration_file_exists_and_is_registered():
@@ -322,6 +342,47 @@ async def test_new_tenant_shape_equals_migration_and_rules_hold():
                         await trans.rollback()
                 finally:
                     await conn.close()
+            finally:
+                async with public_bootstrap_lock(admin_engine):
+                    async with admin_engine.begin() as conn:
+                        await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA} CASCADE"))
+    finally:
+        await admin_engine.dispose()
+
+
+@pytest.mark.skipif(
+    not ADMIN_PG_URL,
+    reason="実 PostgreSQL 環境が必要 (RLS_ADMIN_DATABASE_URL / TEST_PG_URL 未設定)。",
+)
+@pytest.mark.asyncio
+async def test_fee_columns_exist_and_migration_is_idempotent():
+    """便E K9: 新しい会社の請求書に2列が在り、列を外してから移行を2回流しても同じ形に戻る。"""
+    admin_engine = create_async_engine(ADMIN_PG_URL, echo=False)
+
+    async def _fee_shape(conn):
+        rows = await conn.execute(
+            text(
+                "SELECT column_name, data_type FROM information_schema.columns"
+                " WHERE table_schema = :s AND table_name = 'invoices' AND column_name = ANY(:c)"
+                " ORDER BY column_name"
+            ),
+            {"s": _SCHEMA, "c": list(_FEE_COLUMNS)},
+        )
+        return {name: dtype for name, dtype in rows.all()}
+
+    try:
+        async with tenant_schema_lock(admin_engine, _TENANT_ID):
+            try:
+                assert await bootstrap_tenant_schema(admin_engine, _TENANT_ID) == _SCHEMA
+                async with admin_engine.connect() as conn:
+                    assert await _fee_shape(conn) == _FEE_COLUMNS
+                async with admin_engine.begin() as conn:
+                    for column in _FEE_COLUMNS:
+                        await conn.execute(text(f"ALTER TABLE {_SCHEMA}.invoices DROP COLUMN {column}"))
+                    await _apply_migration_on_conn(conn, _FEE_MIGRATION, schema_name=_SCHEMA)  # 1 回目
+                    await _apply_migration_on_conn(conn, _FEE_MIGRATION, schema_name=_SCHEMA)  # 2 回目（冪等）
+                async with admin_engine.connect() as conn:
+                    assert await _fee_shape(conn) == _FEE_COLUMNS
             finally:
                 async with public_bootstrap_lock(admin_engine):
                     async with admin_engine.begin() as conn:

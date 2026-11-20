@@ -45,6 +45,7 @@ _PUBLIC_MIGRATIONS = (
     "20260610_071110_add_paypal_config.sql",
     "20260628_170000_add_app_fx_rates.sql",
     "20261003_100000_create_app_fx_rate_history.sql",
+    "20261002_160000_create_payment_fee_settings.sql",
 )
 
 
@@ -328,6 +329,74 @@ async def test_invoice_totals_pg_end_to_end(monkeypatch):
                         y = await _check_payment_methods(db)
                         wise_ids = [c["id"] for c in await pay.list_payment_choices(db, _TENANT_ID, "overseas")]
                         await _check_routes(db, company_id, invoice_id, y, wise_ids)
+                    finally:
+                        await db.rollback()
+            finally:
+                await _cleanup(admin_engine)
+    finally:
+        await admin_engine.dispose()
+
+
+async def _insert_fee(
+    db: AsyncSession, tenant_id: int | None, fee_type: str, rate: str, effective_from: date,
+    effective_to: date | None = None,
+) -> None:
+    await db.execute(
+        text(
+            "INSERT INTO public.payment_fee_settings "
+            "(tenant_id, service, fee_type, rate_pct, fixed_amount, currency, effective_from, effective_to) "
+            "VALUES (:t, 'paypal', :ft, :r, 40, 'JPY', :f, :e)"
+        ),
+        {"t": tenant_id, "ft": fee_type, "r": Decimal(rate), "f": effective_from, "e": effective_to},
+    )
+
+
+@pytest.mark.skipif(
+    not ADMIN_PG_URL,
+    reason="実 PostgreSQL 環境が必要 (RLS_ADMIN_DATABASE_URL / TEST_PG_URL 未設定)。",
+)
+@pytest.mark.asyncio
+async def test_load_payment_fee_rows_prefers_tenant_and_latest():
+    """K4: 自社の行が共用の行より先・期間外と将来の行は使わない・円なら為替の行は読まない（design-e §3-1）。"""
+    admin_engine = create_async_engine(ADMIN_PG_URL, echo=False)
+    try:
+        await bootstrap_public_countries(admin_engine)
+        async with tenant_schema_lock(admin_engine, _TENANT_ID):
+            assert await bootstrap_tenant_schema(admin_engine, _TENANT_ID) == _SCHEMA
+            async with public_bootstrap_lock(admin_engine):
+                async with admin_engine.begin() as conn:
+                    for name in _PUBLIC_MIGRATIONS:
+                        await _apply_migration_on_conn(conn, name)
+            try:
+                async with AsyncSession(admin_engine, expire_on_commit=False) as db:
+                    try:
+                        base = date(2026, 11, 15)
+                        await _insert_fee(db, None, "receiving_international", "4.1", date(2025, 1, 1))
+                        await _insert_fee(db, None, "receiving_international", "5.0", date(2026, 12, 1))
+                        await _insert_fee(db, None, "receiving_international", "3.9", date(2024, 1, 1), date(2024, 12, 31))
+                        await _insert_fee(db, _TENANT_ID, "receiving_international", "3.0", date(2026, 1, 1))
+                        await _insert_fee(db, None, "fx_receiving", "4.0", date(2025, 1, 1))
+
+                        rows = await it.load_payment_fee_rows(
+                            db, _TENANT_ID, issuer_region="overseas", currency="USD", base_date=base,
+                        )
+                        assert rows.receiving is not None and rows.receiving.rate_pct == Decimal("3.0")
+                        assert rows.fx is not None and rows.fx.rate_pct == Decimal("4.0")
+                        assert rows.required_fx is True
+
+                        # 自社の行を外すと共用の最新（基準日以前）が選ばれる
+                        await db.execute(
+                            text("DELETE FROM public.payment_fee_settings WHERE tenant_id = :t"), {"t": _TENANT_ID},
+                        )
+                        rows = await it.load_payment_fee_rows(
+                            db, _TENANT_ID, issuer_region="overseas", currency="USD", base_date=base,
+                        )
+                        assert rows.receiving is not None and rows.receiving.rate_pct == Decimal("4.1")
+
+                        rows = await it.load_payment_fee_rows(
+                            db, _TENANT_ID, issuer_region="overseas", currency="JPY", base_date=base,
+                        )
+                        assert rows.fx is None and rows.required_fx is False
                     finally:
                         await db.rollback()
             finally:

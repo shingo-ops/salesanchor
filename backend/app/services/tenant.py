@@ -909,6 +909,9 @@ CREATE TABLE IF NOT EXISTS {schema}.invoices (
     shipping_carrier VARCHAR(50),
     shipping_service VARCHAR(100),
     shipping_snapshot JSONB,
+    -- invoice-create-portfolio 便E: お客様への合計に足した支払い手数料と計算の写し（移行 20261121_100000 と同じ形）
+    payment_fee_charged NUMERIC(15, 2),
+    payment_fee_snapshot JSONB,
     notes TEXT,
     created_by INTEGER,
     created_at TIMESTAMPTZ DEFAULT NOW(),
