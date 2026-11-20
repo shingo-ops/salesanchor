@@ -212,7 +212,7 @@ PO 指示（2026-11-09「3,時間や順番も要件定義する」）で足し�
 | 相談係（ADR-1052） | — | 段0 は済み。段1・段2 は合流済み。段3 の試し T0b と段5の前の T0c は済み。段2 の権限の付け直しの時間切れは 11/17 に直した（17 秒 → 1 秒）。段4（agent-console 側の受付の伏せ・待ち一覧・判断役・点検役）の進み具合は、11/17 の時点でまだ確かめていない | `docs/handoff/cloud-case-ai/design.md` §9・`docs/handoff/cloud-case-ai/grant-speed-design.md` §10-3 |
 
 - 遅れの理由（事実）: 11/10〜11/17 は、段階4 の設計の試しと実装の便1・便2、相談係の権限の付け直しの直しを先に進めた。土台（便F〜H）と指示書には手を付けていない。
-- 追記（2026-11-20 Opus）: 下の順番 3 の指示書 5 種（ContainerUnhealthy・HighMemoryUsage・KumaMonitorDown・ServiceDown・BackendHighLatency）を `docs/ai-agents/ops-incident-agent.md` §3 に書いた。状態は草案（PO の「指示書の承認」の前）。使う前に揃える前提 P-1〜P-3（同 §3-0）が揃うまで、この指示書で AI を起こさない。K2 は承認の後に 5 種と数える。
+- 追記（2026-11-20 Opus）: 下の順番 3 の指示書 5 種（ContainerUnhealthy・HighMemoryUsage・KumaMonitorDown・ServiceDown・BackendHighLatency）を `docs/ai-agents/ops-incident-agent.md` §3 に書いた。状態は PO 承認済み（2026-11-20 PO「1」＝この 5 種の指示書を承認）。使う前に揃える前提 P-1〜P-3（同 §3-0）が揃うまで、この指示書で AI を起こさない。K2 はこの承認で 5 種と数える（main への合流で正式）。
 
 #### 引き直した順番と目安の日付（C1〜C7 の条件が日付より優先）
 

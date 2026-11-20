@@ -128,7 +128,7 @@
 
 読んでよいもの:
 - 障害の記録: 相談係の読む窓（§1-5 と同じ口・同じ書き方）で `ai_cloud.public__ops_incidents` と `ai_cloud.public__ops_incident_events` を読む。時刻・状態（status）・出来事の種類（kind）は見える。通知の名前（alertname）と強さ（severity）は今は伏せてある（`migrations/20261024_100300_create_ai_cloud_views.sql:164-169`）。名前は、サーバーが起こすときの文で渡す（`docs/handoff/ai-ops-247/stage4-design.md` §2 の流れ（２））。
-- グラフの数: Prometheus の数だけ。道は `https://app.salesanchor.jp/grafana/api/datasources/proxy/uid/PBFA97CFB590B2093/api/v1/query` と `.../api/v1/query_range`（データ元の識別名の正本は `monitoring/grafana/provisioning/datasources/datasources.yml:10`）。鳴っている通知の札（どの箱・どの見張り・どの機械か）は `ALERTS{alertname="<名前>",alertstate="firing"}` で読む。
+- グラフの数: Prometheus の数だけ。道は `https://app.salesanchor.jp/grafana/api/datasources/proxy/uid/PBFA97CFB590B2093/api/v1/query` と `.../api/v1/query_range`（データ元の識別名の正本は `monitoring/grafana/provisioning/datasources/datasources.yml:9`）。鳴っている通知の札（どの箱・どの見張り・どの機械か）は `ALERTS{alertname="<名前>",alertstate="firing"}` で読む。
 - コード: `raw.githubusercontent.com` から 1 ファイルずつ（`docs/handoff/ai-ops-247/stage4-design.md` §4・§13 P2）。
 
 読まないもの:
