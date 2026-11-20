@@ -334,13 +334,13 @@ groups:
   - name: container_state_alerts
     rules:
       # 健康診断（docker-compose.yml の healthcheck・便D）が unhealthy（ADR-1012 段階3 便E）
-      # prod1 の scripts/ops/container_state.py が毎分 textfile に書く。札は処置の付く便G で auto に変える
+      # prod1 の scripts/ops/container_state.py が毎分 textfile に書く。札 auto：応急処置係（scripts/ops/first_aid.py・便G）が再起動する
       - alert: ContainerUnhealthy
         expr: salesanchor_container_unhealthy{service=~"celery-worker|celery-beat|discord-gateway|gemini-egress"} == 1
         for: 1m
         labels:
           severity: critical
-          tier: page
+          tier: auto
         annotations:
           summary: "コンテナ {{ $labels.service }} が不健康です"
           description: "prod1 の {{ $labels.service }} の健康診断が unhealthy です。固まっている可能性があります。"
@@ -489,3 +489,30 @@ groups:
           summary: "dockerd のメモリを書く係が 10 分以上動いていません"
           description: "prod1 の scripts/ops/dockerd_state.py が 10 分以上 textfile を書いていません。dockerd が膨らんでも DockerdMemoryHigh が鳴りません。"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#dockerdstatestale"
+
+  - name: first_aid_alerts
+    rules:
+      # 応急処置で直らない・1 時間に 3 回を超えた・処置が途中で止まった（ADR-1012 段階3 便G）
+      # prod1 の scripts/ops/first_aid.py が人を呼んだ時刻を service ごとに textfile に書く。30 分鳴って自然に止む
+      - alert: FirstAidEscalated
+        expr: (time() - salesanchor_first_aid_escalated_timestamp_seconds{instance="app-vps"}) < 1800
+        for: 0m
+        labels:
+          severity: critical
+          tier: page
+        annotations:
+          summary: "応急処置で {{ $labels.service }} が直りませんでした"
+          description: "prod1 の応急処置係が {{ $labels.service }} を直せませんでした（再起動しても健康に戻らない・直近 1 時間に 3 回再起動した・処置が途中で止まった のどれか）。人が原因を見てください。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#firstaidescalated"
+
+      # 応急処置係が 5 分動いていない（cron の停止・保守 API に届かない・鍵が読めない）。止める札で止めている間は印を書くので鳴らない
+      - alert: FirstAidStale
+        expr: changes(salesanchor_first_aid_last_run_timestamp_seconds{instance="app-vps"}[5m]) == 0 or absent(salesanchor_first_aid_last_run_timestamp_seconds{instance="app-vps"})
+        for: 2m
+        labels:
+          severity: critical
+          tier: page
+        annotations:
+          summary: "応急処置係が 5 分以上動いていません"
+          description: "prod1 の scripts/ops/first_aid.py が 5 分以上、最後まで動いていません。この間、コンテナが不健康になっても自動で再起動されません。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#firstaidstale"
