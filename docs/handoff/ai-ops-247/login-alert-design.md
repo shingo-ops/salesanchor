@@ -35,9 +35,9 @@
 ### 2-3 本当のログイン失敗
 
 - ログイン失敗を数える係: `backend/app/cache.py:307-337`（`AUTH_FAIL_MAX = 10`・15 分。同じ IP で 10 回失敗すると 429 で締め出す）
-- この係を呼ぶ「ログイン前」の道（`backend/app/routers/auth.py`・`viewer.py` を AST で列挙）:
+- この係を呼ぶ「ログイン前」の道（`backend/app/routers/auth.py`・`backend/app/routers/viewer.py` を AST で列挙）:
   `POST /api/v1/auth/login`・`/auth/passkey/login/verify`・`/auth/password-reset/confirm`・`/auth/login-requests/recovery`・`/viewer/login`・`/viewer/password-reset/confirm`
-  （失敗は 401、締め出しは 429。`auth.py:395-422`・`auth.py:1096-1111`）
+  （失敗は 401、締め出しは 429。`backend/app/routers/auth.py:395-422`・`backend/app/routers/auth.py:1096-1111`）
 - 1 件の失敗はログに 2 行出る: 入口（nginx。`"POST ... HTTP/2.0" 401 32 ...`）とバックエンド（uvicorn。`"POST ... HTTP/1.1" 401 Unauthorized`）。上の 48 行は 24 件の失敗。
 - 24 件はすべて同じ 1 つの Windows の Chrome から、ログイン画面で入力したもの（入口の行の利用者の情報）。反映（deploy）の直後に多い。誰の操作かは**未確認**（攻撃の形ではない: 5 分に 1 件以下）。
 - Prometheus の `http_requests_total` は使えない: 14 日でログインの 401 が 167 件と出るが、バックエンドが反映のたびに立ち直り（24 時間で 23 回）、立ち直り後の最初の 1 件を数え落とす。Loki は全行を持つ（prom-login-14d.txt）。
@@ -70,7 +70,7 @@ sum(count_over_time({job="containerlogs"} |~ "\"POST /api/v1/(auth/login|auth/pa
 
 - しきい値は `monitoring/tokens.yml` の `brute_force_per_5m: 10`・`auth_failure_per_1h: 20` に直し、ルールの注釈と合わせる（正本は tokens.yml 1 か所）。
 - 決め方:
-  - 5 分 10 件 = アプリが 1 つの IP を締め出す回数（`cache.py:307`）。14 日の最大 2 件の 5 倍。
+  - 5 分 10 件 = アプリが 1 つの IP を締め出す回数（`backend/app/cache.py:307`）。14 日の最大 2 件の 5 倍。
   - 1 時間 20 件 = 14 日の最大 6 件の 3 倍以上。5 分に 10 件未満でゆっくり続く失敗はこちらで拾う。
 - 説明文（summary・description）を「ログインの失敗（401）と締め出し（429）」に直す。手順書 `docs/runbooks/alerts.md` の 2 節の「何が起きているか」「最初に見るもの」を新しい式に直す。
 - 触らないもの: 他の Loki の見張り 4 本・Prometheus の見張り・アプリのコード・Alertmanager の送り先・札。
@@ -115,9 +115,10 @@ sum(count_over_time({job="containerlogs"} |~ "\"POST /api/v1/(auth/login|auth/pa
 - 守り手: CI の `monitoring-check`（式の文法・札・手順書リンク）／tokens.yml がしきい値の正本／手順書の 2 節
 - 数え直し: 反映後 7 日に K5 を数え、stage4-requirements の K5 に書く。
 
-## 7 外部事例
+## 7 外部・過去事例の参照と我々への応用
 
-- 事例は使わない。しきい値の根拠は本番 14 日の実測（2-4）とアプリの締め出し回数（cache.py:307）で、他社の数字より直接の根拠になるため。
+- 外部事例: 使わない。しきい値の根拠は本番 14 日の実測（2-4）とアプリの締め出し回数（`backend/app/cache.py:307`）で、他社の数字より直接の根拠になるため。
+- 過去事例（社内）: 10/16〜11/08 の記録で、この 2 本の通知が 658 件中 562 件（`docs/handoff/ai-ops-247/stage4-recon.md` §3）。広すぎる正規表現が原因。応用: 数える行を道と応答の形で 1 つに決め、反映前に過去 14 日を数え直してから入れる。
 
 ## 8 設計の自己審査（Opus。同じ AI による審査で第三者の審査ではない）
 
