@@ -235,7 +235,7 @@ def key_for_hex(hex_value: str | None) -> str | None:
 ### 4-10. 触らない範囲
 
 - `calendar_owner_settings` と持ち主の色の設定画面。
-- `CalendarView.css` の箱の描き方（`:146`〜`:150`）。
+- `frontend/src/components/CalendarView.css` の箱の描き方（`:146`〜`:150`）。
 - Google の名札の作成・変更（`calendars.patch`）。
 - `get_events`（`backend/app/services/google_calendar.py:349`）の呼び方。
 - スマホ幅の予定の画面。
@@ -249,7 +249,7 @@ PO の本番確認（2026-11-20）: アプリで色を変えても、再読み�
 - 予定の画面は新しい色を部品に渡している（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1285` と依存の並び `:1291`〜`:1294`）。
 - 部品は色を `eventDidMount` の中だけで置く（`frontend/src/components/CalendarView.tsx:336`〜`:338`）。FullCalendar の説明（Context7 `/llmstxt/fullcalendar_io_llms_txt`・event-render-hooks）: 「eventDidMount は要素が DOM に入った直後に呼ばれ、予定のデータが変わっても再び呼ばれない」。だから要素が使い回されると色が古いまま残る。
 - `CalendarView` を使う画面は予定の画面だけ（`frontend/src/pages/schedule/SchedulePageImpl.tsx`。ほかは stories と utils）。
-- 箱の色の付け方（クラス `comp-calendar__event--owner-color` と CSS 変数 `--comp-calendar-owner-color`・`frontend/src/components/CalendarView.css:146`〜`:150`）は変えない。予定の画面では色はいつも値がある（`getOwnerMeta` は持ち主が無くても `DEFAULT_OWNER_COLOR`・`SchedulePageImpl.tsx:246`）ので、クラスは前後で変わらず、変わるのは変数の値だけ。
+- 箱の色の付け方（クラス `comp-calendar__event--owner-color` と CSS 変数 `--comp-calendar-owner-color`・`frontend/src/components/CalendarView.css:146`〜`:150`）は変えない。予定の画面では色はいつも値がある（`getOwnerMeta` は持ち主が無くても `DEFAULT_OWNER_COLOR`・`frontend/src/pages/schedule/SchedulePageImpl.tsx:246`）ので、クラスは前後で変わらず、変わるのは変数の値だけ。
 
 直し方（`frontend/src/components/CalendarView.tsx` だけ）:
 - 予定の id → 要素の表を部品の中に持つ（`useRef(new Map<string, Set<HTMLElement>>())`）。`eventDidMount` で入れ、`eventWillUnmount` で出す。ドラッグ中の写し（isMirror）は入れない。
@@ -257,7 +257,7 @@ PO の本番確認（2026-11-20）: アプリで色を変えても、再読み�
 - 色の値は呼ぶ側が渡したトークン（`var(--event-color-<鍵>)` か持ち主の色）のまま。新しい色の値・トークンは作らない（ADR-067・ADR-144）。データの置き場も増やさない（表は画面の要素の覚え書きで、データの写しではない）。
 
 選ばなかった案:
-1. FullCalendar の `backgroundColor`/`borderColor` を渡す → 選ばない。今の試験（`CalendarView.test.tsx:508` の「backgroundColor を持たない」）と CSS 変数の作り（`CalendarView.css:146`）を崩す。
+1. FullCalendar の `backgroundColor`/`borderColor` を渡す → 選ばない。今の試験（`frontend/src/components/CalendarView.test.tsx:508` の「backgroundColor を持たない」）と CSS 変数の作り（`frontend/src/components/CalendarView.css:146`）を崩す。
 2. 色が変わったら部品を作り直す（key を変える）→ 選ばない。巻き上げの位置や開いている窓の位置合わせ（trackEventId）が飛ぶ。
 3. 保存のあと画面ごと読み直す → 選ばない。PO が困っている動きそのもの。
 
@@ -273,7 +273,7 @@ PO の本番確認（2026-11-20）: アプリで色を変えても、再読み�
 - 写しの箱は表に入れないので、ドラッグの動き（card-bin12-fix1.md の約束）を変えない。
 - 触るのは部品 1 つとその試験だけ。データの道・色の値・CSS は変えない。
 
-未確認: 部品の試験は FullCalendar を偽物に差し替える（`CalendarView.test.tsx:23`〜`:31`・jsdom で描けない）。FullCalendar が要素を使い回すことの本物での確かめは、本番で PO が目で見る K8 だけ。
+未確認: 部品の試験は FullCalendar を偽物に差し替える（`frontend/src/components/CalendarView.test.tsx:23`〜`:31`・jsdom で描けない）。FullCalendar が要素を使い回すことの本物での確かめは、本番で PO が目で見る K8 だけ。
 
 ## 5. 代わりの案と選んだ理由
 
