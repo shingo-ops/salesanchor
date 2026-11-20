@@ -219,7 +219,7 @@
   - 裏方の処理が動いているか: `time() - celery_heartbeat_last_success_timestamp_seconds{job="backend"}`。600 秒を超えていれば、原因の候補は worker の停止（§3-9 と同じ数）。
   - 作り置き以外のタスクの失敗: `celery_task_failures{job="backend"}` の `task` ごとの増え方。
 - 読めないこと（`risk` に書く）: worker のログ（`viewer-cache` の行・例外）と Redis の `viewer:inventory:fail_count`。数の元は Redis（db0）なので、キーが無いときは 0 になり、この見張りは鳴る（人向けの手順の同じ節）。
-- 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に再び鳴っていない。
+- 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に同じ種類（ViewerInventoryStale）が再び鳴っていない。
 - 止まって PO に聞く条件: §3-1 のほか、最後の更新から 12 時間を超えている（作り置きは 24 時間で消え、それまでに直らないと閲覧の API が 503 になるため。人向けの手順の同じ節の「閲覧者への影響」）。
 
 ### 3-8. RecoveryCheckFailed
@@ -265,7 +265,7 @@
   - どの道（handler）が遅いか: `docs/runbooks/alerts.md` の「BackendHighLatency」の節にある `topk(5, ...)` の式。
   - 同じ時間の BackendHighLatency: `ALERTS{alertname="BackendHighLatency"}`。
 - 読めないこと（`risk` に書く）: 今処理中のリクエストの中身。v1 の読み方には入っていない。
-- 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に再び鳴っていない。
+- 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に同じ種類（BackendWorkerSaturated）が再び鳴っていない。
 - 止まって PO に聞く条件: §3-1 のほか、遅い道が保守の口（`/api/v1/ops/` の下）だけのとき（§3-6 と同じ理由）。
 
 ### 3-12. CeleryQueueBacklog
@@ -276,7 +276,7 @@
   - worker が動いているか: `time() - celery_heartbeat_last_success_timestamp_seconds{job="backend"}`。
   - タスクの失敗: `celery_task_failures{job="backend"}` の `task` ごとの増え方。
 - 読めないこと（`risk` に書く）: worker が今処理中のタスク（長いタスクが並んでいないか）。数の元は Redis なので、Redis がメモリ一杯で記録を消すことがある（人向けの手順の同じ節）。
-- 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に再び鳴っていない。
+- 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に同じ種類（CeleryQueueBacklog）が再び鳴っていない。
 - 止まって PO に聞く条件: §3-1 のほか、待ち行列が件の始まりから増え続けている。worker の再起動は処理中のタスクを止めるので、AI は提案に留める（人向けの手順の同じ節）。
 
 ### 3-13. BackupTimestampAbsent
