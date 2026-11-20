@@ -1,7 +1,7 @@
 # 設計 便E — PayPal の支払い手数料を請求書の合計に足す
 
 基準: origin/main `77971367b7aba4eb789bc1a913b80fc5d50a8b89`（2026-11-20 23:xx JST に fetch）。調べの元は同じフォルダの recon-e.md。
-状態: 設計案（Opus 作成）。PO 決定 2026-11-20 は下の §0。
+状態: 設計審査済み（4回目 APPROVE・推奨4件反映）。PO 決定 2026-11-20 は下の §0。
 
 ## 0. PO の決定（原文）
 
@@ -27,7 +27,7 @@
 - migrations/ 新しい1本（全テナントの invoices に2列・nullable・ADD COLUMN IF NOT EXISTS）＋ scripts/run_all_migrations.sh に1行
 - AI 用の読み取りの分類（§3-4）: migrations/20261024_100300_create_ai_cloud_views.sql の分類表に1行・その件数を数える試験・docs/handoff/cloud-case-ai/stage1-column-class.tsv と scripts/migration-guard/reference-allowlist.tsv のハッシュ（前例: コミット 1206acb5）
 - 試験の登録: backend/tests/rls_bootstrap.py の一覧（:192 付近）と backend/tests/test_tenant_loop_migration_guard.py の `_REVIEWED` に新しい移行を足す（前例: 同じ 1206acb5）
-- frontend: invoice-create（試算の依頼に支払方法を足す・合計枠に1行）、invoice-detail（1行・PayPal リンクの出し方 §3-5）、lib/invoiceDraftContext.ts の型、lib/apiErrorReason.ts、ja.json/en.json
+- frontend: invoice-create（試算の依頼に支払方法を足す・合計枠に1行）、invoice-detail（1行・PayPal リンクの出し方 §3-5・同じファイルの型 `interface InvoiceDetail`（frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:56）に `payment_fee_charged: number | null` を足す）、lib/invoiceDraftContext.ts の型、lib/apiErrorReason.ts、ja.json/en.json
 - 試験: test_invoice_totals.py（純粋な計算）・test_invoice_totals_pg.py・invoices の道の試験・test_paypal_invoicing.py（§3-5 の PayPal リンクの条件）・conftest.py（SQLite の invoices 表に2列・stub_invoice_totals の差し替えに引数と手数料の行）・画面の単体試験
 
 対象外（触らない）:
@@ -88,7 +88,7 @@
   - payment_fee_charged NUMERIC(15,2): お客様への合計に足した支払い手数料（請求書の通貨）
   - payment_fee_snapshot JSONB: その計算に使った行と値の写し（あとで設定が変わっても、この請求書が何で計算されたか分かる）
 - 既存の payment_fee（入金時の実際の額）とは別の列にする。理由: 1つの列に「請求した額」と「実際に引かれた額」を混ぜると、入金時に上書きされて請求額が消える（integrations.py:799）。
-- 移行の形は 20260611_020000 と 20261113_120000（便A）にならう: pg_namespace の tenant_% を回し ADD COLUMN IF NOT EXISTS と COMMENT。破壊操作なし。tenant.py の雛形（:875-918）にも同じ2列を足す。
+- 移行の形は 20260611_020000 と 20261113_120000（便A）にならう: pg_namespace の tenant_% を回し ADD COLUMN IF NOT EXISTS と COMMENT。破壊操作なし。tenant.py の雛形（:865-918）にも同じ2列を足す。置き場所は `notes TEXT`（:912）の前で、便A のコメント（:131 付近の「invoice-create-portfolio 便A: …」）と同じ形のコメントを1行付ける。
 - クラウドの読み取りの見え方（AI 用の分類表）: 変える。JSONB は型だけでは通らない（migrations/20261024_100000_create_ai_cloud_meta.sql:122-129）ので、分類表に行が無いと backend/tests/ops/test_ai_cloud_views.py:518-520 が「分類なし」と数え、T10（:528-567）が落ちる。便A の shipping_snapshot と同じ形にする:
   - migrations/20261024_100300_create_ai_cloud_views.sql の invoices の行（:454 付近）に `('tenant_*','invoices',ARRAY['payment_fee_snapshot'],'mask','')` を足す（中身は伏せる）。payment_fee_charged は数の列なので行は要らない。
   - test_ai_cloud_views.py:486 の件数を 1164 → 1165 にする。
@@ -115,6 +115,7 @@
   - 既存の試験 test_paypal_invoicing.py の `_issued_invoice`（:202-211）は支払方法なしで作っているので、PayPal の請求書として作る形に直す。支払方法なしの請求書で 409 になる試験を1つ足す。
   - 試験での支払方法の作り方（SQLite）: SQLite の試験の表には振込先の表 tenant_invoice_payment_methods が無い（backend/tests/conftest.py には :1238 の tenant_paypal_config だけ）。resolve_payment_ref → list_payment_choices（backend/app/services/invoice_payment_methods.py:28-62）はこの表を読むので、そのままでは落ちる。そこで conftest.py に fixture `fake_payment_ref` を足す: `monkeypatch.setattr(invoice_payment_methods, "resolve_payment_ref", _fake)`。`_fake(db, tenant_id, *, method_type, method_id, region, currency)` は `(method_type, method_id)` を返す。invoices.py は `invoice_payment_methods.resolve_payment_ref`（:656・:746）とモジュール経由で呼ぶので、この差し替えが効く。手数料の行は stub_invoice_totals の `.set(payment_fee_rows=...)` で与える（表は読まない）。
   - test_paypal_invoicing.py は fixture `fake_payment_ref` を使い、`_issued_invoice` に `payment_method_ref: {"method_type": "paypal", "id": None}` を足し、作る前に stub へ手数料の行を set する。K6・K7 の道の試験も同じ fixture で SQLite で動かす。
+  - 道の試験では銀行（bank）も `{"method_type": "bank", "id": None}` で作る。method_id が空でないと、詳細の `load_payment_label`（invoices.py:499）と発行の `is_current_choice`（invoices.py:793-795）が SQLite に無い表を読んで落ちるため。id を入れる試験が要るときは、同じ fixture でこの2つも差し替える。
 
 ### 3-6 画面
 
@@ -149,7 +150,7 @@
 | K7c | 請求書の PDF と PayPal の写しの PDF の両方に、手数料 > 0 のとき "Payment fee" の行が出る（PDF の文字を読む試験） | invoice_renderer の試験＋test_paypal_invoicing.py |
 | K7b | 支払方法が PayPal でない発行済みの請求書に PayPal リンクを出すと 409 "payment_method"・PayPal へ送らない。PayPal の請求書は今どおり出せ、送る額は手数料込みの total_amount | test_paypal_invoicing.py |
 | K8 | 作成画面: PayPal を選ぶと合計枠に「支払い手数料」行が出て合計が上がる・銀行では行が出ない | 画面の単体試験（vitest） |
-| K9 | 移行が全テナントで2列を足し、2回流しても失敗しない・雛形にも同じ2列・AI 用の分類の漏れ0件（T10）・件数 1165 | CI の migration の試験・migration-guard・test_ai_cloud_views.py・test_tenant_loop_migration_guard.py |
+| K9 | 移行が全テナントで2列を足し、2回流しても失敗しない・雛形にも同じ2列・AI 用の分類の漏れ0件（T10）・件数 1165 | CI の migration の試験・migration-guard・test_ai_cloud_views.py・test_tenant_loop_migration_guard.py。雛形は便A の test_tenant_ddl_has_duty_tables_and_invoice_columns（backend/tests/test_tenant_duty_rules_pg.py:74）と同じ型で確かめる。新しい試験ファイルに移行の名前を書くなら `_REVIEWED` にそのファイルの "scoped" の行を足し（前例 1206acb5）、rls_bootstrap.py の一覧（:192 の並び）に数1で入れる |
 | K10 | 本番: 移行の後、全テナントの invoices に2列がある | reader 鍵で information_schema.columns を数える（5テナント×2列＝10行） |
 | K11 | 本番の画面の束に新しい testid "invoice-total-payment-fee" がある | 本番の bundle を取って文字を数える（1以上） |
 | K12 | PO が本番の作成画面で PayPal を選び、行と額を見て○ | PO 目視（推測で○にしない） |
