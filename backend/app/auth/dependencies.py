@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError
+from jose import ExpiredSignatureError, JWTError
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
@@ -60,6 +60,10 @@ async def _authenticate_self_token(token: str, client_ip: str, db: AsyncSession)
         claims = self_tokens.decode_access_token(token)
         user_id = int(claims["sub"])
         issued_at = datetime.fromtimestamp(claims["iat"], timezone.utc)
+    except ExpiredSignatureError:
+        # 署名は自社の鍵で合っていて、期限だけが切れた札（python-jose は署名の確認の後に期限を見る）。
+        # 総当たりではないので回数止めに数えない（ADR-1083）。返事は他の失敗と同じ 401。
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=_INVALID_TOKEN_DETAIL)
     except (JWTError, ValueError, KeyError, TypeError, OverflowError, OSError):
         raise await _reject_self_token(client_ip)
 
