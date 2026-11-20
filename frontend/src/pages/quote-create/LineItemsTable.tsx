@@ -232,6 +232,7 @@ export function LineItemsTable({ rows, onChange, inventory, currency, rate, show
       align: "center",
       renderCell: (v) => (
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           aria-label={t("lineItems.removeRow", { n: v.index + 1 })}
@@ -261,6 +262,7 @@ export function LineItemsTable({ rows, onChange, inventory, currency, rate, show
       />
       <Stack direction="row" gap="3">
         <Button
+          type="button"
           variant="secondary"
           size="sm"
           data-testid="invoice-add-row"

@@ -10,25 +10,24 @@
  *     [在庫表から(往復)] / [検索して追加・新規追加(自由記入可)] のモード切替に。
  *     在庫表往復ではドラフト全体（顧客・通貨・明細・送料等）を保持する。
  *     在庫表起点で開いた場合、キャンセルは在庫表へ戻る。
+ *   2026-11-20: invoice-create-portfolio 便R7 — 商品行を請求書と同じ LineItemsTable に替えた
+ *     （在庫の道・為替の道 GET /fx-rates/{通貨}。自由記入の行と検索で足す欄は廃止。design-v2 §3-8-1・K16）。
  */
 
-import { useState, FormEvent } from "react";
+import { useEffect, useState, FormEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery } from "../../lib/query/apiQuery";
 import { PageLayout } from "../../components/PageLayout";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
-import InventorySearchBar, { InventorySearchCandidate } from "../../components/InventorySearchBar";
 import { FedExRateModal } from "../../components/FedExRateModal";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
-import {
-  type LineItem,
-  type QuoteHandoffState,
-  blankItem,
-  buildInitialItems,
-  weightForUnit,
-} from "./quoteDraft";
+import type { LineItem, QuoteHandoffState } from "./quoteDraft";
+import { LineItemsTable } from "./LineItemsTable";
+import { allRowsReady, filledRows, handoffRows, reconvertPrices, rowSubtotal, toInvoiceItem, totalWeight } from "./lineItems";
+import { useDraftInventory } from "./useDraftInventory";
 import { TextFieldControl } from "../../components/TextField";
 
 export default function QuoteCreatePage() {
@@ -45,57 +44,27 @@ export default function QuoteCreatePage() {
   const [shippingFee, setShippingFee] = useState(draft?.shippingFee ?? "");
   const [taxAmount, setTaxAmount] = useState(draft?.taxAmount ?? "");
   const [notes, setNotes] = useState(draft?.notes ?? "");
-  const [items, setItems] = useState<LineItem[]>(() => buildInitialItems(handoff));
+  // 商品行は請求書と同じ形（在庫表の画面から持ってきた商品が先頭の行・12行まで空の行。design-v2 §3-8-1）
+  const [rows, setRows] = useState<LineItem[]>(() => handoffRows(handoff));
+  const [showErrors, setShowErrors] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [showFedExModal, setShowFedExModal] = useState(false);
 
-  // 自由記入の空行を追加（マスタに無い商品も入力できる）。
-  const addItem = () => {
-    setItems((prev) => [...prev, { ...blankItem }]);
-  };
+  // 在庫は請求書と同じ道（GET /invoices/draft-inventory。K23）
+  const inventory = useDraftInventory();
+  // 為替は今ある道 GET /fx-rates/{通貨}（請求書の draft-context と同じ表の最新の1行）。円は読まない。読めない・404 は為替なし（単価 0。design-v2 §8）
+  const fxQ = useApiQuery<{ currency: string; rate_jpy: number }>(`/fx-rates/${currency}`, { enabled: currency !== "JPY" });
+  const rate = currency !== "JPY" && fxQ.data !== undefined && fxQ.data.rate_jpy > 0 ? fxQ.data.rate_jpy : null;
 
-  const removeItem = (index: number) => {
-    setItems((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
-  };
+  // 通貨（または為替）が変わったら、単価を手で直していない行だけ入れ直す（PO 2026-11-18「1」）
+  useEffect(() => {
+    setRows((prev) => reconvertPrices(prev, currency, rate));
+  }, [currency, rate]);
 
-  const updateItem = (index: number, field: keyof LineItem, value: unknown) => {
-    setItems((prev) => {
-      const next = [...prev];
-      (next[index] as unknown as Record<string, unknown>)[field] = value;
-      return next;
-    });
-  };
-
-  // 「検索して追加」: InventorySearchBar の選択商品を新しい明細行として追加する（上書きではなく追加）。
-  // 海外顧客向け: 英語タイトル/状態/形態を引き込み、形態(unit)に応じてマスタ重量を weight にセットする。
-  const appendFromSearch = (c: InventorySearchCandidate) => {
-    const isOutOfStock = c.stock_quantity !== null && c.stock_quantity <= 0;
-    setItems((prev) => [
-      ...prev,
-      {
-        product_id: c.product_id,
-        product_name: c.name,
-        name_en: c.name_en ?? null,
-        condition: null,
-        unit: null,
-        quantity: isOutOfStock ? 0 : 1,
-        unit_price: c.unit_price ?? 0,
-        box_weight_kg: c.box_weight_kg ?? null,
-        case_weight_kg: c.case_weight_kg ?? null,
-        weight: null,
-        inventory_id: null,
-        zero_stock_warning: isOutOfStock,
-      },
-    ]);
-  };
-
-  const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
-  // 総重量 = Σ(数量 × 行重量)。重量未設定の行は 0 扱い。
-  const totalWeight = items.reduce(
-    (sum, item) => sum + item.quantity * (item.weight ?? 0),
-    0,
-  );
+  const subtotal = filledRows(rows).reduce((sum, row) => sum + rowSubtotal(row), 0);
+  // 総重量 = 商品の入った行の 重さ×数量 の和（lineItems.ts totalWeight）
+  const totalWeightKg = totalWeight(rows);
   const shipping = shippingFee ? Number(shippingFee) : 0;
   const tax = taxAmount ? Number(taxAmount) : 0;
   const total = subtotal + shipping + tax;
@@ -105,7 +74,8 @@ export default function QuoteCreatePage() {
     setError("");
     setSelectorError("");
     if (contactId === null) { setSelectorError(t("companyContactSelector.contactRequired")); return; }
-    if (items.some((i) => !i.product_name || i.unit_price <= 0 || i.quantity <= 0)) {
+    if (!allRowsReady(rows)) {
+      setShowErrors(true);
       setError(t("quotes.itemsRequired"));
       return;
     }
@@ -118,16 +88,7 @@ export default function QuoteCreatePage() {
         shipping_fee: shipping || null,
         tax_amount: tax || null,
         notes: notes || null,
-        items: items.map((i) => ({
-          product_id: i.product_id,
-          product_name: i.product_name,
-          name_en: i.name_en ?? null,
-          condition: i.condition ?? null,
-          unit: i.unit ?? null,
-          quantity: i.quantity,
-          unit_price: i.unit_price,
-          weight: i.weight,
-        })),
+        items: filledRows(rows).map(toInvoiceItem),
       });
       navigate("/quotes");
     } catch (e) {
@@ -168,98 +129,16 @@ export default function QuoteCreatePage() {
         </div>
 
         <h3 style={{ marginBottom: "var(--space-3)" }}>{t("quotes.items")}</h3>
-        {/* 明細表示ゾーン: 行内検索/AND-OR は廃止。商品名は自由記入可（マスタに無い商品も入力できる）。 */}
-        <div style={{ overflowX: "auto", marginBottom: "var(--space-4)" }}>
-          <table className="data-table" style={{ minWidth: 'var(--table-min-width-base)' }}>
-            <thead>
-              <tr>
-                <th>{t("quotes.titleColumn")}</th>
-                <th>{t("quotes.condition")}</th>
-                <th>{t("quotes.unit")}</th>
-                <th>{t("quotes.quantity")}</th>
-                <th>{t("quotes.unitPrice")}</th>
-                <th>{t("quotes.weight")}</th>
-                <th>{t("quotes.subtotal")}</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, i) => (
-                <tr key={i} data-testid={`quote-item-row-${i}`}>
-                  <td style={{ minWidth: 'var(--table-col-product-name-min-w)' }}>
-                    {/* 英語タイトル(name_en)をメイン(太字)、日本語(product_name)を参考表示。
-                        いずれも自由記入可（マスタに無い商品も入力できる）。 */}
-                    <TextFieldControl size="sm"
-                      value={item.name_en ?? ""}
-                      onChange={(e) => updateItem(i, "name_en", e.target.value || null)}
-                      placeholder={t("quotes.titleColumn")}
-                      style={{ width: "100%", minWidth: 'var(--input-width-product-name)', fontWeight: "var(--font-weight-semi)" }}
-                      data-testid={`quote-item-row-${i}-name-en`}
-                    />
-                    <TextFieldControl size="sm"
-                      value={item.product_name}
-                      onChange={(e) => updateItem(i, "product_name", e.target.value)}
-                      placeholder={t("quotes.productNamePlaceholder")}
-                      style={{ width: "100%", minWidth: 'var(--input-width-product-name)', marginTop: "var(--space-1)", fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}
-                      data-testid={`quote-item-row-${i}-name`}
-                    />
-                    {item.zero_stock_warning && (
-                      <div
-                        data-testid={`quote-item-row-${i}-zero-stock-warning`}
-                        className="warning-message"
-                        style={{ marginTop: "var(--space-1)", color: "var(--color-warning)", fontSize: "var(--font-sm)" }}
-                      >
-                        {t("inventory.search.zeroStockWarning", { name: item.product_name })}
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    <TextFieldControl size="sm" value={item.condition ?? ""} onChange={(e) => updateItem(i, "condition", e.target.value || null)} placeholder={t("quotes.condition")} style={{ width: 'var(--input-width-weight)' }} data-testid={`quote-item-row-${i}-condition`} />
-                  </td>
-                  <td>
-                    {/* 形態(unit)変更時はマスタ重量を引き込み直す。 */}
-                    <TextFieldControl size="sm"
-                      value={item.unit ?? ""}
-                      onChange={(e) => {
-                        const nextUnit = e.target.value || null;
-                        updateItem(i, "unit", nextUnit);
-                        updateItem(i, "weight", weightForUnit(nextUnit, item.box_weight_kg, item.case_weight_kg, item.weight));
-                      }}
-                      placeholder={t("quotes.unit")}
-                      style={{ width: 'var(--input-width-weight)' }}
-                      data-testid={`quote-item-row-${i}-unit`}
-                    />
-                  </td>
-                  <td>
-                    <TextFieldControl size="sm" type="number" min="1" value={item.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))} style={{ width: 'var(--input-width-qty)' }} data-testid={`quote-item-row-${i}-qty`} />
-                  </td>
-                  <td>
-                    <TextFieldControl size="sm" type="number" min="0" step="0.01" value={item.unit_price} onChange={(e) => updateItem(i, "unit_price", Number(e.target.value))} style={{ width: 'var(--input-width-price)' }} />
-                  </td>
-                  <td>
-                    <TextFieldControl size="sm" type="number" min="0" step="0.001" value={item.weight || ""} onChange={(e) => updateItem(i, "weight", e.target.value ? Number(e.target.value) : null)} style={{ width: 'var(--input-width-weight)' }} data-testid={`quote-item-row-${i}-weight`} />
-                  </td>
-                  <td style={{ fontWeight: "var(--font-weight-semi)", whiteSpace: "nowrap" }}>{(item.quantity * item.unit_price).toLocaleString()}</td>
-                  <td>
-                    {items.length > 1 && (
-                      <Button variant="danger" size="sm" type="button" onClick={() => removeItem(i)}>{t("quotes.removeItem")}</Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div style={{ marginBottom: "var(--space-3)" }}>
-          <Button type="button" variant="secondary" size="md" onClick={addItem} data-testid="quote-add-blank">{t("quotes.addItem")}</Button>
-        </div>
-
-        <div style={{ width: "min(100%, 40rem)", marginBottom: "var(--space-6)" }}>
-          <InventorySearchBar
-            onSelect={appendFromSearch}
-            testIdPrefix="quote-add-search"
-            placeholder={t("inventory.view.searchPlaceholder")}
+        {/* 商品行は請求書と同じ表（#・カテゴリ・商品・状態・数量・重さ・単価・小計・×。design-v2 §3-8-1・K16）。値段・在庫・重さは在庫の道の値だけ。 */}
+        <div style={{ marginBottom: "var(--space-6)" }}>
+          <LineItemsTable
+            rows={rows}
+            onChange={setRows}
+            inventory={inventory}
+            currency={currency}
+            rate={rate}
+            showErrors={showErrors}
+            disabled={saving}
           />
         </div>
 
@@ -277,7 +156,7 @@ export default function QuoteCreatePage() {
             <div style={{ padding: "var(--space-2) var(--space-3)", fontWeight: "var(--font-weight-bold)", fontSize: "var(--font-lg)" }}>{total.toLocaleString()} {currency}</div>
           </div>
           <div className="form-group"><label>{t("quotes.totalWeight")}</label>
-            <div style={{ padding: "var(--space-2) var(--space-3)", fontWeight: "var(--font-weight-semi)" }} data-testid="quote-total-weight">{totalWeight.toLocaleString()} kg</div>
+            <div style={{ padding: "var(--space-2) var(--space-3)", fontWeight: "var(--font-weight-semi)" }} data-testid="quote-total-weight">{totalWeightKg.toLocaleString()} kg</div>
           </div>
         </div>
 
@@ -289,7 +168,7 @@ export default function QuoteCreatePage() {
       <FedExRateModal
         open={showFedExModal}
         onClose={() => setShowFedExModal(false)}
-        weightKg={totalWeight}
+        weightKg={totalWeightKg}
         onSelectRate={(fee) => setShippingFee(String(Math.round(fee)))}
       />
     </PageLayout>
