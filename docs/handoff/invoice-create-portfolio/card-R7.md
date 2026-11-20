@@ -3,7 +3,7 @@
 作成: Opus（Planner）2026-11-20。設計: docs/handoff/invoice-create-portfolio/design-v2.md 第10版 §3-8・§3-8-1・§4 R7・K16・§8（第10版の足し分はこのカードと一緒に審査する）。
 実装承認: PO は 2026-11-17 に p1〜p8 を「見本どおり」と決め（p6「見積の画面も同じ行」）、PR マージ・デプロイまでの完走を委ねた（ccopusgo の委任の範囲）。R7 で新しい PO の決定は無い。
 枝: release/invoice-portfolio-r7-quote（origin/main から）。移行（migrations/）なし・deploy.yml なし・scripts/ なし・backend なし。
-基準: origin/main 4209886d9c472928be1543069ce645cafdfc5baa（触る5ファイルの指紋は P1 で照合する）。
+基準: origin/main 4209886d9c472928be1543069ce645cafdfc5baa（触る4ファイルの指紋は P1 で照合する。2026-11-20 時点の origin/main 7d553268 でもこの4ファイルと quote-create/ は同じ中身）。
 
 ## 受領確認（最初の報告の 1 行目に書く）
 
@@ -17,7 +17,7 @@
 - D4 消すもの: 自由記入の表・addItem・removeItem・updateItem・appendFromSearch・在庫0の注意・InventorySearchBar の読み込み・quoteDraft の blankItem・buildInitialItems・weightForUnit の読み込み。quoteDraft.ts・InventorySearchBar.tsx（部品そのもの）・使われなくなる文言キーは変えない（片付けは別の作業）。
 - D5 `LineItemsTable` の「×」と「行を追加」の Button に `type="button"` を足す。見積の画面は表を `<form>`（QuoteCreatePage.tsx:145）の中に置き、Button.tsx は type を決めないため、そのままだと押すと保存が走る。請求書の画面は `<form>` を持たないので動きは変わらない。
 - D6 取引先・担当者・通貨（JPY・USD・EUR、既定 USD）・メモ・送料（FedEx）・税・合計・総重量・「キャンセル」「下書き保存」は変えない。総重量は `totalWeight(rows)`、小計の和は商品の入った行の `rowSubtotal` の和。FedEx の枠に渡す重さも同じ値。
-- D7 frontend/tests-e2e/quote-create-inventory-search.spec.ts（消える検索欄と自由記入の行を見る画面の試験）は `git rm` で消す。CI では流れていない（.github/workflows/e2e.yml:294 `if: false`）。
+- D7 frontend/tests-e2e/quote-create-inventory-search.spec.ts（消える検索欄と自由記入の行を見る画面の試験）は R7 では触らない。CI では流れていない（.github/workflows/e2e.yml:294 `if: false`）。消すのは後の片付けの作業（指示書の検査 scripts/card-lint.sh L11 が手順の中の消す命令を止めるため、消すだけの作業として別に扱う）。
 - D8 試験: CommerceSubmitButtonMigration.test.tsx の見積の4本を在庫の行の形に書き直す（K16 (a)〜(g)）。CommerceNavigationButtonMigration.test.tsx は為替の道の受け答えを足すだけ。
 
 ## 0-1. 読んだ節（docs/handoff/design-partner-card-ops/guards/）
@@ -31,12 +31,11 @@
 
 ## 0-2. 実装前点検（手順2 で流す。外れたら実装せず停止して BLOCKED: で報告）
 
-- P1 触る5ファイルの指紋（git hash-object）が次と同じ（この順）:
+- P1 触る4ファイルの指紋（git hash-object）が次と同じ（この順）:
   - `4a946983dcc36a87711ff2c92b0228ff3e5d37b4` frontend/src/pages/quote-create/QuoteCreatePage.tsx
   - `14e85fd8a09281fce3e66b4d65950ec84efa8bc4` frontend/src/pages/quote-create/LineItemsTable.tsx
   - `8b6ce444b6d84055b71ad864279ac62527ad7a82` frontend/src/components/CommerceSubmitButtonMigration.test.tsx
   - `f1ada1c3a86ba040d129f91cc3164f20ab2c6f85` frontend/src/components/CommerceNavigationButtonMigration.test.tsx
-  - `4711c50f95467d3d8a676df9a777c06fe02a1a9e` frontend/tests-e2e/quote-create-inventory-search.spec.ts
 - P2 変えないファイルの指紋が次と同じ（この順）:
   - `d87b90275d22531a144d2dc369cfa1851f338cf8` frontend/src/pages/quote-create/quoteDraft.ts
   - `216a16a564504aa8575f6ae2516d6289325e08cd` frontend/src/pages/quote-create/lineItems.ts
@@ -49,7 +48,6 @@
 - frontend/src/pages/quote-create/LineItemsTable.tsx（Edit）
 - frontend/src/components/CommerceSubmitButtonMigration.test.tsx（Edit）
 - frontend/src/components/CommerceNavigationButtonMigration.test.tsx（Edit）
-- frontend/tests-e2e/quote-create-inventory-search.spec.ts（`git rm` で消す）
 
 ## 2. 変更
 
@@ -583,10 +581,6 @@ async function openQuoteWithProduct(state: string) {
     if (url === '/fx-rates/USD') return { currency: 'USD', rate_jpy: 150, fetched_at: '2026-11-19T21:00:00+00:00', updated_at: '2026-11-19T21:00:00+00:00' };
 ```
 
-### 2-5. frontend/tests-e2e/quote-create-inventory-search.spec.ts（消す）
-
-手順3 の最後に `git rm -q frontend/tests-e2e/quote-create-inventory-search.spec.ts` を流す。
-
 ## 3. 手順（1つずつ流し、出力を報告に書く）
 
 手順1 作業場所
@@ -599,14 +593,14 @@ async function openQuoteWithProduct(state: string) {
   期待: 2行目の出力が空（空でなければ `BLOCKED: 手順1 枝が既にある`）。4行目に `worktrees/salesanchor/release-invoice-portfolio-r7-quote` が出る。5行目 `main exit=0`。
 
 手順2 実装前点検 P1〜P4
-    cd ~/worktrees/salesanchor/release-invoice-portfolio-r7-quote && git hash-object frontend/src/pages/quote-create/QuoteCreatePage.tsx frontend/src/pages/quote-create/LineItemsTable.tsx frontend/src/components/CommerceSubmitButtonMigration.test.tsx frontend/src/components/CommerceNavigationButtonMigration.test.tsx frontend/tests-e2e/quote-create-inventory-search.spec.ts
+    cd ~/worktrees/salesanchor/release-invoice-portfolio-r7-quote && git hash-object frontend/src/pages/quote-create/QuoteCreatePage.tsx frontend/src/pages/quote-create/LineItemsTable.tsx frontend/src/components/CommerceSubmitButtonMigration.test.tsx frontend/src/components/CommerceNavigationButtonMigration.test.tsx
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r7-quote && git hash-object frontend/src/pages/quote-create/quoteDraft.ts frontend/src/pages/quote-create/lineItems.ts
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r7-quote && grep -c 'type="button"' frontend/src/pages/quote-create/LineItemsTable.tsx
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r7-quote && grep -c "fx-rates" frontend/src/components/CommerceSubmitButtonMigration.test.tsx frontend/src/components/CommerceNavigationButtonMigration.test.tsx
-  期待（命令の順）: P1 の5つの指紋がその順に出る。P2 の2つの指紋がその順に出る。`0`。2行とも末尾が `:0`。
+  期待（命令の順）: P1 の4つの指紋がその順に出る。P2 の2つの指紋がその順に出る。`0`。2行とも末尾が `:0`。
 
-手順3 §2 の変更をする（2-1〜2-4 は Edit ツール。§2 のコードの囲み（```）の中身だけを書く。2-5 は次のコマンド）
-    cd ~/worktrees/salesanchor/release-invoice-portfolio-r7-quote && git rm -q frontend/tests-e2e/quote-create-inventory-search.spec.ts && git status --short | tail -15
+手順3 §2 の変更を Edit ツールでする（§2 のコードの囲み（```）の中身だけを書く）。終わったら次を流す
+    cd ~/worktrees/salesanchor/release-invoice-portfolio-r7-quote && git status --short | tail -15
 
 手順4 道具を入れる
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r7-quote/frontend && npm ci --no-audit --no-fund 2>&1 | tail -3
@@ -632,7 +626,7 @@ async function openQuoteWithProduct(state: string) {
 
 手順6 変えたファイル
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r7-quote && git status --short | tail -15
-  期待: §1 の 5 ファイルだけ（` M` が Edit の 4、`D ` が消した 1）。.claude-pipeline/active-work.d/ の未追跡は除く。ほかが出たら `BLOCKED: 範囲外のファイル`。
+  期待: §1 の 4 ファイルだけ（4 行とも ` M`）。.claude-pipeline/active-work.d/ の未追跡は除く。ほかが出たら `BLOCKED: 範囲外のファイル`。
 
 手順7 記録
     cd ~/worktrees/salesanchor/release-invoice-portfolio-r7-quote && git add frontend/src/pages/quote-create/QuoteCreatePage.tsx frontend/src/pages/quote-create/LineItemsTable.tsx frontend/src/components/CommerceSubmitButtonMigration.test.tsx frontend/src/components/CommerceNavigationButtonMigration.test.tsx && git status --short | tail -15
@@ -673,6 +667,6 @@ async function openQuoteWithProduct(state: string) {
 
 ## 7. 触らない範囲
 
-§1 以外のファイル。frontend/src/pages/quote-create/quoteDraft.ts・quoteDraft.test.ts・lineItems.ts・lineItems.test.ts・useDraftInventory.ts・useDraftShippingQuotes.ts、frontend/src/components/InventorySearchBar.tsx とその Storybook、frontend/src/components/ の金型の中身（Button.tsx を含む）、ja.json・en.json（使われなくなる文言キー4つも消さない）、docs/audit/ の点検表（消す画面の試験の名前が残るが、記録なので変えない）、frontend/src/pages/invoice-create/、backend/、migrations/・deploy.yml・scripts/。
+§1 以外のファイル。frontend/src/pages/quote-create/quoteDraft.ts・quoteDraft.test.ts・lineItems.ts・lineItems.test.ts・useDraftInventory.ts・useDraftShippingQuotes.ts、frontend/src/components/InventorySearchBar.tsx とその Storybook、frontend/src/components/ の金型の中身（Button.tsx を含む）、ja.json・en.json（使われなくなる文言キー4つも消さない）、frontend/tests-e2e/quote-create-inventory-search.spec.ts（止まっている画面の試験。消すのは後の片付け）、docs/audit/ の点検表（消す画面の試験の名前が残るが、記録なので変えない）、frontend/src/pages/invoice-create/、backend/、migrations/・deploy.yml・scripts/。
 
 END OF CARD
