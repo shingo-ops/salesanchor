@@ -15,6 +15,9 @@ on:
       - 'scripts/tests/test_container_state.py'
       - 'scripts/ops/dockerd_state.py'
       - 'scripts/tests/test_dockerd_state.py'
+      - 'scripts/ops/first_aid.py'
+      - 'scripts/ops/first_aid_actions.json'
+      - 'scripts/tests/test_first_aid.py'
       - '.github/workflows/deploy-script-test.yml'
   push:
     branches-ignore:
@@ -28,6 +31,9 @@ on:
       - 'scripts/tests/test_container_state.py'
       - 'scripts/ops/dockerd_state.py'
       - 'scripts/tests/test_dockerd_state.py'
+      - 'scripts/ops/first_aid.py'
+      - 'scripts/ops/first_aid_actions.json'
+      - 'scripts/tests/test_first_aid.py'
       - '.github/workflows/deploy-script-test.yml'
 
 jobs:
@@ -52,6 +58,9 @@ jobs:
 
       - name: Run dockerd_state tests
         run: python3 scripts/tests/test_dockerd_state.py
+
+      - name: Run first_aid tests
+        run: python3 scripts/tests/test_first_aid.py
 
       - name: Install PyYAML (pull/prune image tests)
         run: pip install pyyaml --quiet
