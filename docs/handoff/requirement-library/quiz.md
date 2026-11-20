@@ -6,7 +6,7 @@
 ## 1. 流し方（K12 と同じ。[k12-tasks.md](../doc-agenda-nav/k12-tasks.md)）
 
 - 題: [quiz/prompts.tsv](./quiz/prompts.tsv) の 10 題。各題の後ろに「計画だけを日本語で答えてください。ファイルの変更・commit・push はしないでください。」を付ける。
-- 起動: `quiz/runall.sh <出力先> <測る版の detached な写し>`。モデル sonnet・plan モード・1題 1 ドルまで・1題 600 秒まで・各題 2 回＝20 回。
+- 起動: `quiz/runall.sh <出力先> <測る版の detached な写し>`。モデル sonnet・plan モード・1題 2 ドルまで・1題 600 秒まで・各題 2 回＝20 回（2回分は別の写しで並べて流す。手順は [quiz/cloud-run.md](./quiz/cloud-run.md)）。
 - 場所: クラウドの使い捨て環境（手元の Mac では流さない。PO 2026-10-26・10-30 の決まり）。クラウドで `claude` 2.1.330 が動くことは 2026-11-21 08:00 に確かめた（実行記録 cse_01HHUUpSNznAhPBQRNm4C975）。
 - `-p` ではリポジトリの `.claude/settings.json` の見張りは動き、`permissions.allow` だけが使われない（公式 https://code.claude.com/docs/en/permissions 「What runs before you trust a folder」、2026-11-21 Context7 で確認）。前と後の測定は同じ条件になる。
 - 数え方: `python3 quiz/count.py <出力先>` → `result.tsv` と各回の答え `Qn-k.answer.txt`。
