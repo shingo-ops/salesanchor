@@ -55,12 +55,6 @@ const SEARCH_WIDTH_RATIO = 0.95;
  * の3点で固定する。決め打ちの数字が無いので、トークンを変えた将来の便でも誤検知しない。
  */
 
-/** 文字列中の「(n)」から n を取り出す。無ければ0（design.md 4-5・K4） */
-function extractCount(text: string | null): number {
-  const m = (text ?? "").match(/\((\d+)\)/);
-  return m ? Number(m[1]) : 0;
-}
-
 /** `.inventory-toolbar`（スマホ専用の操作台）の content box 幅（padding を引いた内側の幅。design.md ③ P3） */
 async function inventoryToolbarContentWidth(page: Page): Promise<number> {
   return page.evaluate(() => {
@@ -86,6 +80,11 @@ async function expectNoPageOverflow(page: Page): Promise<void> {
 /** 「詳細フィルタ」を押してパネルを開く（design.md 4-6・パネル本体は inventory-filter-panel） */
 async function openFilterPanel(page: Page): Promise<Locator> {
   await page.getByTestId("inventory-filter-toggle").click();
+  // 便3（inventory-filter-subscreen）以降、スマホの詳細フィルタは開く前から常にマウントされ、
+  // 閉状態は transform だけ（frontend/src/components/Drawer.css:38-45。visibility/display/opacity
+  // による非表示は無い）ため toBeVisible() だけでは「開いた」ことの証明にならない（独立審査 r2・H-2）。
+  // 本便のパネルだけが持つ mobileInset の外枠に限定して --open を確かめる
+  await expect(page.locator(".comp-drawer-panel--mobile-inset.comp-drawer-panel--open")).toHaveCount(1);
   const panel = page.getByTestId("inventory-filter-panel");
   await expect(panel).toBeVisible();
   return panel;
@@ -167,18 +166,17 @@ for (const width of MOBILE_WIDTHS) {
       expect(box!.height).toBeGreaterThanOrEqual(MIN_FRESH_CHECK_HEIGHT);
     });
 
-    test("D8: 「詳細フィルタ」の文字に数が入る（既定1以上）。24時間以内を切ると数が減る", async ({ page }) => {
+    test("D8: 「詳細フィルタ」の文字は常に完全一致し、数字(n)を含まない（PO 決定1。design.md 4-9 (2) で作り替え）", async ({ page }) => {
       await gotoInventory(page, { width, height });
 
       const toggle = page.getByTestId("inventory-filter-toggle");
-      const before = extractCount(await toggle.textContent());
-      expect(before).toBeGreaterThanOrEqual(1);
+      await expect(toggle).toHaveText("詳細フィルタ");
 
+      // 絞り込みを操作しても文字は変わらない（以前はここで数字が減った）
       const panel = await openFilterPanel(page);
       await panel.getByTestId("inventory-fresh-check").click();
-
-      const after = extractCount(await toggle.textContent());
-      expect(after).toBeLessThan(before);
+      await expect(toggle).toHaveText("詳細フィルタ");
+      expect(await toggle.textContent()).not.toMatch(/\(\d+\)/);
     });
 
     test("D9: スマホでは .content-toolbar が無く .inventory-toolbar が1枚だけある（閲覧ページと同じ作り）", async ({ page }) => {
