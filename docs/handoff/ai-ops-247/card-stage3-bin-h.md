@@ -406,6 +406,13 @@ if __name__ == "__main__":
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
+本報告はカード 段階3 便H の実行結果である
+
+- §5-1：Python 3.12.3。`Ran 10 tests` と `OK`
+- §5-2：`OK: Prometheus 41 rules, Loki 6 rules, runbook 47 sections`（便G が main に入済みで今の数は 40・46 だったため、今の数＋1）
+- §5-3：差分は §3 のファイルだけ。削除行は alert_rules_test.yml 1 行・alerts.md 1 行・このカード 1 行（3 行）
+- §5-4：py_compile rc=0・yaml ok
+- PR：作らない（依頼どおり）
+- 判断を要した点（事実のみ）：origin/main の本数は 38 でなく 40 本・手順書は 46 節だった。uv の venv に pip が無く、`uv pip install --python /tmp/v312/bin/python pyyaml` で PyYAML を入れた。作業場所は /root/worktrees/salesanchor/release-ai-ops-deploy-migration-alert-bin-h（基点 ab92808c1）
 
 END OF CARD

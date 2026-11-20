@@ -15,6 +15,8 @@ on:
       - 'scripts/tests/test_container_state.py'
       - 'scripts/ops/dockerd_state.py'
       - 'scripts/tests/test_dockerd_state.py'
+      - 'scripts/ops/deploy_migration_mark.py'
+      - 'scripts/tests/test_deploy_migration_mark.py'
       - 'scripts/ops/first_aid.py'
       - 'scripts/ops/first_aid_actions.json'
       - 'scripts/tests/test_first_aid.py'
@@ -31,6 +33,8 @@ on:
       - 'scripts/tests/test_container_state.py'
       - 'scripts/ops/dockerd_state.py'
       - 'scripts/tests/test_dockerd_state.py'
+      - 'scripts/ops/deploy_migration_mark.py'
+      - 'scripts/tests/test_deploy_migration_mark.py'
       - 'scripts/ops/first_aid.py'
       - 'scripts/ops/first_aid_actions.json'
       - 'scripts/tests/test_first_aid.py'
@@ -58,6 +62,9 @@ jobs:
 
       - name: Run dockerd_state tests
         run: python3 scripts/tests/test_dockerd_state.py
+
+      - name: Run deploy_migration_mark tests
+        run: python3 scripts/tests/test_deploy_migration_mark.py
 
       - name: Run first_aid tests
         run: python3 scripts/tests/test_first_aid.py
