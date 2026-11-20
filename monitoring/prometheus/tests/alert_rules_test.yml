@@ -1,7 +1,7 @@
 # Prometheus ルールの単体試験（promtool test rules）
 # 書式: https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
 # 実行: promtool test rules monitoring/prometheus/tests/alert_rules_test.yml
-# 全 38 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
+# 全 40 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
 
 rule_files:
   - ../alert_rules.yml
@@ -697,7 +697,7 @@ tests:
               instance: app-vps
               job: node-exporter
               severity: critical
-              tier: page
+              tier: auto
             exp_annotations:
               summary: "コンテナ celery-beat が不健康です"
               description: "prod1 の celery-beat の健康診断が unhealthy です。固まっている可能性があります。"
@@ -1181,4 +1181,81 @@ tests:
     alert_rule_test:
       - eval_time: 16m
         alertname: DockerdStateStale
+        exp_alerts: []
+
+  - name: FirstAidEscalatedFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_first_aid_escalated_timestamp_seconds{service="celery-beat",instance="app-vps",job="node-exporter"}'
+        values: '240x10'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: FirstAidEscalated
+        exp_alerts:
+          - exp_labels:
+              service: celery-beat
+              instance: app-vps
+              job: node-exporter
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "応急処置で celery-beat が直りませんでした"
+              description: "prod1 の応急処置係が celery-beat を直せませんでした（再起動しても健康に戻らない・直近 1 時間に 3 回再起動した・処置が途中で止まった のどれか）。人が原因を見てください。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#firstaidescalated"
+
+  - name: FirstAidEscalatedQuiet
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_first_aid_escalated_timestamp_seconds{service="celery-beat",instance="app-vps",job="node-exporter"}'
+        values: '0x40'
+    alert_rule_test:
+      - eval_time: 40m
+        alertname: FirstAidEscalated
+        exp_alerts: []
+
+  - name: FirstAidStaleFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_first_aid_last_run_timestamp_seconds{instance="app-vps",job="node-exporter"}'
+        values: '60x20'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: FirstAidStale
+        exp_alerts:
+          - exp_labels:
+              instance: app-vps
+              job: node-exporter
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "応急処置係が 5 分以上動いていません"
+              description: "prod1 の scripts/ops/first_aid.py が 5 分以上、最後まで動いていません。この間、コンテナが不健康になっても自動で再起動されません。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#firstaidstale"
+
+  - name: FirstAidStaleAbsent
+    interval: 1m
+    input_series:
+      - series: 'up{job="node-exporter",instance="app-vps"}'
+        values: '1x20'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: FirstAidStale
+        exp_alerts:
+          - exp_labels:
+              instance: app-vps
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "応急処置係が 5 分以上動いていません"
+              description: "prod1 の scripts/ops/first_aid.py が 5 分以上、最後まで動いていません。この間、コンテナが不健康になっても自動で再起動されません。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#firstaidstale"
+
+  - name: FirstAidFresh
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_first_aid_last_run_timestamp_seconds{instance="app-vps",job="node-exporter"}'
+        values: '0+60x20'
+    alert_rule_test:
+      - eval_time: 16m
+        alertname: FirstAidStale
         exp_alerts: []
