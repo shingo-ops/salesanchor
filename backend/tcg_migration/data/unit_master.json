@@ -1,0 +1,10 @@
+[
+  {"unitId":"UN0001","canonical":"Case","kubun":"箱系大","aliases":["カートン","ケース","CASE","ｶートン","carton","Carton","CARTON","case","Ct","ct","CT","ｹース","Case"]},
+  {"unitId":"UN0002","canonical":"Box","kubun":"箱系","aliases":["Box","BOX","box","箱","ﾎﾞｯｸｽ","ボックス"]},
+  {"unitId":"UN0003","canonical":"Pack","kubun":"パック系","aliases":["Pack","PACK","pack","パック","ﾊﾟｯｸ"]},
+  {"unitId":"UN0004","canonical":"Piece","kubun":"単品系","aliases":["Pcs","pcs","PCS","piece","Piece","PIECE","枚"]},
+  {"unitId":"UN0005","canonical":"Set","kubun":"複合","aliases":["Set","set","SET","セット","ｾｯﾄ"]},
+  {"unitId":"UN0006","canonical":"本","kubun":"除外","aliases":["本"]},
+  {"unitId":"UN0007","canonical":"点","kubun":"数量専用","aliases":["点"]},
+  {"unitId":"UN0008","canonical":"個","kubun":"条件つき","aliases":["個"]}
+]
