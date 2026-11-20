@@ -2,7 +2,7 @@
 
 > この文書は何か：AI保守運用24時間化 段階3 便H の作業指示書です。今は本番への反映（deploy）の途中で DB の入れ替え（migration）が失敗しても、GitHub の画面が赤くなるだけで、見張り（アラート）は鳴りません。この便では、migration の手順が終わるたびに、その結果（成功・失敗）の時刻を prod1 の textfile に書き、「失敗の時刻が成功の時刻より新しい」間は見張り DeployMigrationFailed（札 page）が鳴るようにします。次の deploy で migration が成功すると自然に止みます。
 
-- 設計: docs/handoff/ai-ops-247/stage3-design.md §2 便H・§6（:161）・§8（:181）
+- 設計: docs/handoff/ai-ops-247/stage3-design.md §2 便H・§6（:161）・§8（:182）
 - 親設計: docs/handoff/ai-ops-247/design.md §5 段階3
 - 対象ADR: ADR-1012（本テーマ）
 - 状態: 便の分け方は PO 承認 y（2026-10-16）。§2-2 の決定は Opus の技術判断（設計の目的・範囲を変えない）。実装の開始には PO の実装承認が要る
