@@ -1,6 +1,6 @@
 name: Agent Hooks Test
 
-# scripts/agent-hooks/ の受入試験（review-gate: ADR-1029・商品登録の見張り: doc-agenda-nav design §32 D2・mac-test-guard・install-guard・install-form-guard: ADR-1072）。
+# scripts/agent-hooks/ の受入試験（review-gate: ADR-1029・商品登録の見張り: doc-agenda-nav design §32 D2・mac-test-guard・install-guard・install-form-guard: ADR-1072・同意の見張り: ADR-1033 conversation-consent design §16-3(c)）。
 # 偽の gh・一時ディレクトリだけを使う。本物の ~/.claude には触れない。
 # ※ 必須チェック（Branch Protection）には登録しない。
 
@@ -11,6 +11,9 @@ on:
       - '.github/workflows/agent-hooks-test.yml'
       - '.claude/agents/reviewer.md'
       - 'docs/specs/product-master/registration-rules.md'
+      - 'scripts/dev/consent-audit.py'
+      - 'scripts/dev/consent-unit-tests.py'
+      - 'docs/handoff/conversation-consent/hooks/**'
 
 jobs:
   review-gate:
@@ -103,3 +106,53 @@ jobs:
           fetch-depth: 0
       - name: Run go-comment-guard tests
         run: python3 scripts/agent-hooks/cloud/test_go_comment_guard.py
+
+  consent-unit-tests:
+    name: consent hook unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Run consent hook unit tests and judge by output lines
+        run: |
+          # 試験の台本は FAIL でも終了コード 0 を返す（design §16-2(h)）。出力の行で判定する。
+          judge_consent_out() {
+            if grep -q '^FAIL' "$1"; then return 1; fi
+            if ! grep -q '^PASS' "$1"; then return 1; fi
+            if ! grep -qx 'DONE' "$1"; then return 1; fi
+            return 0
+          }
+          # 手順1: 判定の関数そのものを作り物の出力4通りで確かめる（条件を1つだけ破る形）
+          judge_selftest() {
+            exp="$1"; shift
+            printf '%s\n' "$@" > "$RUNNER_TEMP/judge-selftest.txt"
+            if judge_consent_out "$RUNNER_TEMP/judge-selftest.txt"; then rc=0; else rc=$?; fi
+            echo "SELFTEST expect=$exp got=$rc input=[$*]"
+            if [ "$rc" != "$exp" ]; then
+              echo "judge_consent_out self-test failed"
+              exit 1
+            fi
+          }
+          judge_selftest 1 'PASS a' 'FAIL b' 'DONE'
+          judge_selftest 1 'DONE'
+          judge_selftest 1 'PASS a'
+          judge_selftest 0 'PASS a' 'DONE'
+          # 手順2: 本物の試験を流す
+          if python3 -I -B scripts/dev/consent-unit-tests.py docs/handoff/conversation-consent/hooks "$RUNNER_TEMP/consent" "$GITHUB_WORKSPACE" > "$RUNNER_TEMP/consent.out"; then prc=0; else prc=$?; fi
+          # 手順3: 出力をそのまま表示する
+          cat "$RUNNER_TEMP/consent.out"
+          if [ "$prc" != "0" ]; then
+            echo "consent-unit-tests.py exited with $prc"
+            exit 1
+          fi
+          # 手順4: 本物の出力を判定する
+          if judge_consent_out "$RUNNER_TEMP/consent.out"; then
+            echo "consent unit tests: all PASS"
+          else
+            echo "consent unit tests: FAIL line found, or PASS/DONE missing"
+            exit 1
+          fi
