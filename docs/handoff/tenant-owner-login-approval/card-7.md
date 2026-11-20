@@ -3,7 +3,8 @@
 状態: カード第3版（Opus、2026-11-20）。PO の実装承認は3回。2026-11-06「1. このまま作り始める」は設計 docs/handoff/tenant-owner-login-approval/design.md 全体。2026-11-19「1」は6〜8段目の再開。2026-11-20「1」は7段目を許可の段階まで進めること。守る一覧を2つの組に分ける形は PO 2026-11-20「1」。守りの強さを「間違いを止める関所」にする形も PO 2026-11-20「1」。
 審査: 1回目 REVISE（クラウドの設計審査役、2026-11-19 16:45 UTC）。指摘は重1〜重3・中4〜中6・軽7〜軽9。重1 は PO の「1」で決め、限界を design.md 便7「守りの強さ」に書いた。重2 は判定8・integration_id・便7b で直した。重3 は判定5、中4 は判定6、中5 は一覧と「入れないもの」で直した。中6 は当てはまらない（ruleset に merge_queue の規則が無い）。軽7 は 40文字の SHA、軽8 は design.md の types、軽9 は T29〜T32 で直した。
 審査: 2回目 REVISE（クラウドの設計審査役、2026-11-20 01:22 UTC、commit 343eee1c3）。重は無し。中1 は受入の見本C を「合流できない（mergeStateStatus が BLOCKED）」の生出力で確かめる形にした。中2 は組B に .claude/settings.json を足した。中3 は組B に今は無い4件（backend の pytest.ini など）を足し、conftest の限界の文を直した（design.md）。中4 は ruleset の台本の中身5点を design.md 便7 に書いた。軽5 は判定の番号をこのカードの1〜9 に揃えた。軽6 は判定4 の除外を完全な道にし、3-1b に注意を足した。軽7 は限界の文に足した（design.md 便7b）。軽8 は T33〜T36 を足した。
-審査: 3回目 REVISE（クラウドの設計審査役、2026-11-20、commit c69f7d61a）。重は無し。中1 は受入の見本C を、Approve を付けて、ほかの必須チェックが緑で「guard-files gate」が赤と緑の2件並ぶことを確かめてから `BLOCKED` を見る3段にした。中2 は ruleset の台本の1 に、Opus の保存した「前」との diff で止まる手順を足した（design.md）。中3 は台本のファイルを流す道を限界に足した（design.md 便7b）。軽4 は V5 を9件にした。軽5 は design.md の組A・組B の件数の見出しを直した。軽6 は YAML のエスケープの道を限界に足した。4回目の審査の結果をこの下に書き足す。未審査の間は実装に渡さない。
+審査: 3回目 REVISE（クラウドの設計審査役、2026-11-20、commit c69f7d61a）。重は無し。中1 は受入の見本C を、Approve を付けて、ほかの必須チェックが緑で「guard-files gate」が赤と緑の2件並ぶことを確かめてから `BLOCKED` を見る3段にした。中2 は ruleset の台本の1 に、Opus の保存した「前」との diff で止まる手順を足した（design.md）。中3 は台本のファイルを流す道を限界に足した（design.md 便7b）。軽4 は V5 を9件にした。軽5 は design.md の組A・組B の件数の見出しを直した。軽6 は YAML のエスケープの道を限界に足した。
+審査: 4回目 REVISE（クラウドの設計審査役、2026-11-20 01:59 UTC、commit 2f8d92845）。3回目の指摘はすべて解けていると判定。新しい指摘は中2・軽3・未確認1。このカードの分: 中2 は「1. 触るファイル」から登録を外した（登録は Opus がこの枝に commit 済み。クラウドの決まり rules.md:12 は登録を commit しない）。V5 の9件の内訳もそれに合わせた。未確認6 は見本C の (1) の前に、ruleset の pull_request の規則の生の値を保存する段を足した。軽5 は design.md 便7 の台本の中身の1 を直した。5回目の審査の結果をこの下に書き足す。未審査の間は実装に渡さない。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。GitHub の設定（ruleset）・secret・本番には触らない。PR は作らない（Opus が作る）。
 基準: 枝 release/tenant-owner-bin7-guard-files-gate。便7b の合流の後に、Opus が origin/main を取り込んだ head を渡す。便7b の5件が在ることは P6 で確かめる。
 
@@ -34,7 +35,8 @@ RECEIVED tenant-owner-bin7-guard-files-gate HEAD=（git rev-parse HEAD の 40 �
 2. .github/workflows/guard-files-gate-unit.yml（新規）
 3. scripts/guard-files-gate.js（新規）
 4. scripts/tests/test-guard-files-gate.js（新規）
-5. .claude-pipeline/active-work.d/release-tenant-owner-bin7-guard-files-gate.md（登録。中身の「担当機能エリア」を書く）
+
+登録（.claude-pipeline/active-work.d/release-tenant-owner-bin7-guard-files-gate.md）は Opus がこの枝に commit 済み。実行役は触らない（クラウドの決まり scripts/agent-hooks/cloud/rules.md:12。審査4回目の中2）。
 
 ## 2. 守る一覧（scripts/guard-files-gate.js の中に、この順で定数として書く）
 組A（GO を書けるのは shingo-ops だけ・22件）:
@@ -242,8 +244,8 @@ runtime の試験:
   - `grep -n "head.sha\|head.ref\|github.head_ref" .github/workflows/guard-files-gate.yml .github/workflows/guard-files-gate-unit.yml` が 0 件。
   - `grep -rn "name: guard-files gate$" .github/workflows/` がちょうど1件。
 - V5 `git diff origin/main --name-only` が次の9件だけ（審査3回目の軽4）。
-  - 「1. 触るファイル」の5件
-  - この枝に Opus が先に入れた design.md・recon.md・card-7.md・card-7b.md
+  - 「1. 触るファイル」の4件
+  - この枝に Opus が先に入れた design.md・recon.md・card-7.md・card-7b.md と登録（.claude-pipeline/active-work.d/release-tenant-owner-bin7-guard-files-gate.md）の5件
 
 ## 想定分岐
 - P のどれかが外れる → 止めて BLOCKED: と生出力を返す。
@@ -270,7 +272,7 @@ runtime の試験:
 | 見本A に守るファイルを1行足すと赤に戻る。守らないファイルだけなら緑のまま | 同上 |
 | 見本A の GO を1字書き直してやり直すと赤 | 同上 |
 | 見本B（migration-test.yml を1行変える）が Opus の GO で緑 | 同上 |
-| 見本C（workflow に同じ名前の job が緑を付ける）が、PO の GO があっても合流できない | 見本C の PR 番号 N で、次の順に生出力を保存する（審査3回目の中1。Approve の不足やほかの検査の待ちでも `BLOCKED` になるため、それを先に消す）。(1) 作った名前と別の名前で Approve を付ける。(2) `gh pr view N --json statusCheckRollup` で、「guard-files gate」が2件（赤1件と緑1件）並び、ほかの必須チェックが全部緑であることを確かめる。(3) `gh pr view N --json mergeStateStatus` が `BLOCKED`。見本C は下書きにしない。PO が `!` で作り、確かめたらすぐ閉じる。(2) が揃わないか、(3) が `BLOCKED` でなければ止めて PO に上げる |
+| 見本C（workflow に同じ名前の job が緑を付ける）が、PO の GO があっても合流できない | 見本C の PR 番号 N で、次の順に生出力を保存する（審査3回目の中1。Approve の不足やほかの検査の待ちでも `BLOCKED` になるため、それを先に消す）。(0) ruleset 15777895 の `rules` のうち `type` が `pull_request` の規則の生の値を保存する（Approve が何人要るか、誰の Approve が数えられるかを残すため。審査4回目の未確認6）。(1) 作った名前と別の名前で Approve を付ける。(2) `gh pr view N --json statusCheckRollup` で、「guard-files gate」が2件（赤1件と緑1件）並び、ほかの必須チェックが全部緑であることを確かめる。(3) `gh pr view N --json mergeStateStatus` が `BLOCKED`。見本C は下書きにしない。PO が `!` で作り、確かめたらすぐ閉じる。(2) が揃わないか、(3) が `BLOCKED` でなければ止めて PO に上げる |
 | 必須一覧に「guard-files gate」があり、integration_id が 15368 | gh api の ruleset の生出力（登録の前後を保存） |
 
 END OF CARD

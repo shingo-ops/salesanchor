@@ -15,7 +15,7 @@
 - 中9（手元の GitHub の MCP の道具）: Opus が 2026-11-20 に `claude mcp list` を流し、GitHub の道具が無いことを確かめた。限界に書く。
 - 中10（`--body "$(cat f.md)"` が抜ける）: 3-3 で、書き込みの形の命令に `$(` か `` ` `` があれば止める。C20。
 - 軽（MultiEdit がクラウドに届かない・MCP の文書送り・GO を探す読むだけの命令・Edit の一部書き換え・普通でないファイル・`-t` の探し方・クラウドの内部エラーの試験・試験の禁止語）: 2・3・4・6 にそれぞれ書いた。L47・L48・C21・C22・C24・C25。
-4回目の審査の結果をこの下に書き足す。未審査の間は実装に渡さない。
+審査: 4回目 REVISE（クラウドの設計審査役、2026-11-20 01:59 UTC、commit 2f8d92845）。3回目の指摘はすべて解けていると判定。新しい指摘は中2・軽3・未確認1。このカードの分: 中1 は、名前を付けない `GH_TOKEN=$(gh auth token) gh run view N --log` の形（docs/ai-agents/evidence-registry.md:386,389）も止まることを6の弊害に書き、L50 で止まることを確かめる。通す形は増やさない（止める側に倒す。手元の gh は鍵を付けなくても今の名前で読めるので `gh run view N --log` と書けば足りる）。軽3 は dispatch.sh の行番号を実物（58行・case は14行・PreToolUse は19行・見張りの並びは27行）に合わせた。軽4 は決まり W の読みを決まり R の例外と書いた。5回目の審査の結果をこの下に書き足す。未審査の間は実装に渡さない。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。手元の settings.json への導入は Opus が共通の台本で行い、このカードの範囲外。PR は作らない（Opus が作る）。
 基準: 枝 release/tenant-owner-bin7b-go-identity-guard（Opus が origin/main から作って渡す）。
 
@@ -52,6 +52,7 @@ RECEIVED tenant-owner-bin7b-go-identity-guard HEAD=（git rev-parse HEAD の 40 
 - `norm(s)`: `'` と `"` を消す。空白の連続（改行を含む）を1つの空白にまとめる。小文字にする。
 - 「同じ名前の検査」の決まり（W）: 道具が Write か Edit で、file_path に `/.github/workflows/` か `.github/workflows/`（先頭）を含み、ファイル名が `guard-files-gate.yml` でない。そして書く文（Write は content、Edit は new_string。MultiEdit があれば各 edits の new_string）を norm したものが `guard-files gate` を含む → 止める。
   - Edit は、file_path の今の中身を読み、old_string を new_string に置き換えた後の全文（replace_all が true なら全部）を norm して比べる。名前の一部だけを書き換えて「guard-files gate」にする形も止めるため（審査3回目の軽）。MultiEdit は edits を順に当てた後の全文で比べる。ファイルが読めないときは new_string だけで比べる。
+  - この読みは、下の決まり R の例外とする（審査4回目の軽4）。決まり R は「読めなければ止める」だが、W の読みは止めずに new_string だけで比べる。新しく作るファイルの Edit や、まだ無いファイルでも、名前の書き込みだけを止めるため。道の解決（相対なら cwd・cwd が無ければ道のまま）と、普通のファイルだけを読む点は R と同じ。普通でないファイルは読まずに new_string だけで比べる。
   - Bash でのファイル書き込みには当てない。理由は2つ。1つは、`grep "guard-files gate" .github/workflows/` のような読むだけの命令を誤って止めるため。もう1つは、合流の前に便7 の gate の判定4（同じ名前の検査を足す PR を落とす）が同じものを止めるため。
 - 「GO の文字」の決まり（G）: 正規表現 `\bGO\s*#\s*\d`（大文字小文字を区別する）。
 - 「ファイルを読む」の決まり（R）: 道が相対なら、入力 JSON の `cwd` を基に解決する。`cwd` が無ければ止める（審査3回目の中8）。`os.stat` で普通のファイル（`stat.S_ISREG`）のときだけ読む。`/dev/stdin`・名前付きパイプ・機器のファイル・フォルダは読まずに止める（待ち続けて時間切れになるため。審査3回目の軽）。読めないときも止める。
@@ -155,6 +156,7 @@ test_guard.py（手元）では、各件を subprocess で guard.py に JSON を
 - L31 `GH_TOKEN="$(gh auth token --user shingo-ops)" gh api -X GET repos/x/y/pulls --paginate -q '.[].number'`。
 - L32 `GH_TOKEN="$(gh auth token --user shingo-ops)" gh api --method=GET repos/x/y/rulesets/1 --jq .rules`。
 - L45 L6 で、`--body-file b.md`（相対の道）。入力の `cwd` の一時のフォルダに b.md（GO の文字なし）を置く。
+- L50 `GH_TOKEN=$(gh auth token) gh run view 1 --log`（名前を付けない gh auth token の読むだけの形。審査4回目の中1）→ 止める側（2）に入れる。
 - L49 札と語: test_guard.py が `importlib.util.spec_from_file_location` で `os.path.join(HERE, '..', '..', 'dev', 'consent-audit.py')` を読み、`_ga_manifest(札の全文, 'go-identity-guard')` が None でなく、`_ga_words_ok(guard.py の全文)` が True（手本の F9 と同じ）。
 止めるもの（exit 2）:
 - L10 `gh auth switch --user shingo-ops`。
@@ -194,7 +196,7 @@ test_guard.py（手元）では、各件を subprocess で guard.py に JSON を
 - L47 L6 で、`--body-file /dev/stdin`（普通のファイルでない）。
 - L48 Edit で、中身が `name: guard-files check` の一時の .github/workflows/z.yml の old_string `check` を new_string `gate` にする。
 
-test_go_comment_guard.py（クラウド）では、各件を subprocess で go_comment_guard.py に流す。入力 JSON には `hook_event_name: "PreToolUse"` と `cwd`（一時のフォルダ）を入れる。dispatch.sh 経由の件は `CLAUDE_CODE_REMOTE=true` を付けて流す。dispatch.sh は hook_event_name が PreToolUse でないと見張りを呼ばない（`scripts/agent-hooks/cloud/dispatch.sh:56-67`。審査3回目の中6）。
+test_go_comment_guard.py（クラウド）では、各件を subprocess で go_comment_guard.py に流す。入力 JSON には `hook_event_name: "PreToolUse"` と `cwd`（一時のフォルダ）を入れる。dispatch.sh 経由の件は `CLAUDE_CODE_REMOTE=true` を付けて流す。dispatch.sh は hook_event_name が PreToolUse でないと見張りを呼ばない（`scripts/agent-hooks/cloud/dispatch.sh:14-33`。case は14行、PreToolUse の分岐は19行、見張りの並びは27行。審査3回目の中6・4回目の軽3）。
 - C1 mcp__github__add_issue_comment の body が `GO #12 abc1234` → 2。
 - C2 mcp__github__pull_request_review_write の body の2行目が `> GO #12 abc1234` → 2。
 - C3 道具の名前が未知の mcp__github__new_tool で、入れ子の dict の中に `GO #3 abcdef1` → 2。
@@ -244,6 +246,7 @@ test_go_comment_guard.py（クラウド）では、各件を subprocess で go_c
 - クラウドで、GO の例を含む文書（このカードなど）を `mcp__github__` の道具（push_files・create_or_update_file など）で送ると止まる。文書は git の push で送る（クラウドの決まり rules.md の手順のまま）。
 - クラウドで、gh の読むだけの命令に `GO #12` のような文字を書くと止まる（`gh pr view 12 --json body | grep "GO #12"` など）。探すときは `GO #[0-9]` の形で書く（C24）。
 - クラウドで、書き込みの形の gh の命令に `$(` を使うと止まる。本文はファイルに書いて `--body-file` で渡す。
+- 手元で、名前を付けない `GH_TOKEN=$(gh auth token) gh run view N --log` の形（docs/ai-agents/evidence-registry.md:386,389 に残る書き方）も止まる（L50）。手元の gh は鍵を付けなくても今の名前で読めるので、`gh run view N --log` と書く。gh auth token を含む命令は、決まった2つの形のほかは通さない（審査4回目の中1。止める側に倒す）。
 - 止めきれないもの（design.md 便7b の限界に足す）:
   - クラウドの MultiEdit は見張りに届かない（`.claude/settings.json:81` の matcher が `Write|Edit`）。
   - 手元に GitHub の MCP の道具を後から入れると、この見張りの外になる。入れるときは、この見張りの札に matcher を足す PR を先に出す。
