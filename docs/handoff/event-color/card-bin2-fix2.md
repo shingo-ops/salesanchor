@@ -68,9 +68,12 @@
 
 ## 4. 確かめ（生の出力をファイルに残し、最後に結果の行を書く）
 
-- `cd frontend && npx vitest run src/components/CalendarView.test.tsx` が全部通る（新しい 3 本を含む）。
+直し 2026-11-20（Opus）: 1 回目の依頼で、型の元のファイルが無く tsc が落ち、ブラウザの組が起動できなかった。どちらも CI の流し方と違う確かめを書いたのが原因。CI と同じ流し方に直した。
+
+- 先に `cd frontend && npm run generate:api-types`（CI の `.github/workflows/frontend-check.yml:29`〜`:30` と同じ。型の元のファイルを作る）。
+- `cd frontend && npx vitest run --config vitest.unit.config.ts --project unit src/components/CalendarView.test.tsx` が全部通る（新しい 3 本を含む）。
 - 新しい 3 本のうち 1 本目と 2 本目は、`useEffect` を外すと落ちることを一度確かめ、その出力も残す（確かめた後は戻す）。
-- `cd frontend && npx vitest run src/pages/schedule` が通る。
+- `cd frontend && npx vitest run --config vitest.unit.config.ts --project unit src/pages/schedule` が通る（CI の画面の試験 `npm run test:coverage` と同じ組。ブラウザの組は CI の画面の試験に入らないので流さない）。
 - `cd frontend && npx tsc --noEmit -p .` と `npx eslint src/components/CalendarView.tsx src/components/CalendarView.test.tsx` が通る。
 - `git diff origin/main --stat` が上の 2 ファイル＋このカード・design.md だけ。
 
