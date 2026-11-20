@@ -145,13 +145,16 @@
     - 審査1回目（中5）を受けて足したもの（2026-11-20）:
       - 組A に5件: 便7b の AI 側の見張り（scripts/agent-hooks/go-identity-guard/guard.py・guard-manifest.json・test_guard.py、scripts/agent-hooks/cloud/go_comment_guard.py・test_go_comment_guard.py）。どれも便7b で新しく作るので、先月の変更は0回。
       - 組B に3件: `backend/pyproject.toml`（pytest の addopts で試験を外せる。先月0回）・`scripts/agent-hooks/cloud/dispatch.sh`（クラウドの見張り全部の入口。先月2回）・`.github/workflows/agent-hooks-test.yml`（見張りの試験を回す。先月3回）。
-      - 組A は 22件、組B は 6件。
+      - 審査2回目（中2・中3）を受けて足したもの（2026-11-20）:
+        - 組B に `.claude/settings.json`。クラウドの見張りの入口（dispatch.sh）を道具に結び付ける場所で、dispatch.sh を組B に入れた理由がそのまま当てはまる。先月3回。
+        - 組B に、今は無い4件: `backend/pytest.ini`・`backend/.pytest.ini`・`backend/pytest.toml`・`backend/.pytest.toml`。作られると backend/pyproject.toml の pytest の設定より先に読まれ、設定は混ぜられない（pytest 公式「Finding the rootdir」: "the first match wins"。Context7 /websites/pytest_en_stable で 2026-11-20 確認）。`.github/workflows/test.yml:259` は backend で引数なしの `pytest -q --tb=short` を流すので、backend の直下が対象になる。tox.ini と setup.cfg は pyproject.toml より後に探されるので入れない。今の pytest は 8.3.5（`backend/requirements-dev.txt:9`）で、pytest.toml を読むかは確かめていない。無くても困らないので守る側に入れる。
+      - 組A は 22件、組B は 11件（在る7件と、今は無い4件）。
     - 入れないもの（理由つき）:
       - `scripts/check_tenant_template_shape.py` とその試験。新しい会社の型の点検で、ADR-1063 の見張りではない。
-      - `backend/tests/conftest.py`（先月28回）と `backend/tests/rls_bootstrap.py`（先月13回）。中で RLS の役（salesanchor_app）を決めていない（役は `.github/workflows/test.yml:198-240` で作って繋ぐ。組B で守る）。守ると月に約41回 GO が増える。試験を外すうっかりは pytest のログに skipped と出る。限界として「守る仕組み」の表に書く。
+      - `backend/tests/conftest.py`（先月28回）と `backend/tests/rls_bootstrap.py`（先月13回）。中で RLS の役（salesanchor_app）を決めていない（役は `.github/workflows/test.yml:198-240` で作って繋ぐ。組B で守る）。守ると月に約41回 GO が増える。conftest の `collect_ignore` や `pytest_collection_modifyitems` で外した試験は skipped と出ず、ログに残らない（審査2回目の中3）。`backend/tests/` の下に pytest.ini などを足して設定を差し替える道も、見張りの外に残る。これはファイルを指して流す実行（`.github/workflows/migration-test.yml:2295`）で効く。どちらも限界として「守る仕組み」の表に書く。
       - `.github/workflows/migration-guard.yml`・`scripts/migration-guard/rewrite-allowlist.tsv`。migration を凍らせる見張りで、ADR-1063 の見張りではない。
       - `.github/CODEOWNERS`。ruleset 15777895 の `require_code_owner_review` が false なので、合流の判定に効かない（2026-11-20 に ruleset の生の値で確認）。
-  - 判定（守るファイルが変わっているとき）:
+  - 判定（守るファイルが変わっているとき）。実装の順と番号は card-7.md「decide(input) の決まり」の1〜9 を正とする。下の8 は card の判定4 にあたる（審査2回目の軽5）:
     1. 変わった守るファイルに組A が1件でもあれば、GO を書けるのは `shingo-ops` だけ。組B だけなら `shingo-ops` か `shingo-cc`（POの委任に基づく Opus の名義）。書き手は API の `user.login` で確かめる（本文の文字だけで信じない）。
     2. GO のコメントは1行目が `GO #<この PR の番号> <SHA 7〜40文字>` で始まる（後ろに文を続けてよい）。SHA は、この PR の commit の一覧（`gh api repos/{repo}/pulls/{n}/commits --paginate`。GitHub の上限 250件）の中でちょうど1件の先頭と一致すること。一致した commit の 40文字の SHA を、下の 3 の中身の照合に使う（審査1回目の軽7。contents API に短い SHA を渡さない）。
     3. GO の SHA の時点と今の head（`github.event.pull_request.head.sha`）の時点で、変わった守るファイルの中身が全部同じであること（`gh api repos/{repo}/contents/{path}?ref=<sha>` の blob の `sha` を比べる。無いファイルは「無い」同士で一致）。GO の後に守るファイルを1行でも変えると中身が違うので落ちる（古い GO で後から足した変更を通さない）。守らないファイルだけの push や、main を取り込む `gh pr update-branch` では、守るファイルの中身が同じなら GO は生きたまま。
@@ -159,7 +162,7 @@
     5. 書き直された GO は使わない。REST のコメントの `updated_at` が `created_at` と違えば候補から外す。理由は審査1回目の重3。書き込みの権限がある人は他人のコメントを書き換えられ、そのとき `user.login` は元の書き手のまま残る。GitHub 公式の文書で `updated_at` は「書き直した時刻。書き直していなければ作った時刻」とされている（Context7 /github/docs で 2026-11-20 に確認）。絵文字の反応で `updated_at` が変わるかは、まだ確かめていない。変わる場合は正しい GO も外れるが、通してしまう側には倒れない。そのときは GO を新しく書き直す。
     6. 読んだファイルの数が PR の `changed_files` と違えば落とす（審査1回目の中4）。GitHub の files の一覧は 3000件で切れるため。
     7. commit の数が 250件以上なら落とす。commit の一覧の上限が 250件のため。
-    8. 守る一覧の外でも、`.github/workflows/` の下で足したり変えたりしたファイルは中身を読む。読むのは head の中身を contents API で読むだけで、動かさない。文に「guard-files gate」（大文字と小文字、空白の数は問わない）を含み、guard-files-gate.yml 以外のものがあれば、GO があっても落とす。理由は審査1回目の重2。同じ名前の検査が2つ付くと、どちらが効くかを GitHub は決めていない（公式の文書: "Using the same job name in multiple workflows can cause ambiguous status check results"）。偽物が緑を付けると本物の赤が隠れるおそれがある。この判定だけでは隠れを防ぎきれないので、AI 側の見張り（便7b）でも止める。
+    8.（card-7.md の判定4）守る一覧の外でも、`.github/workflows/` の下で足したり変えたりしたファイルは中身を読む。読むのは head の中身を contents API で読むだけで、動かさない。文に「guard-files gate」（大文字と小文字、空白の数は問わない）を含み、guard-files-gate.yml 以外のものがあれば、GO があっても落とす。理由は審査1回目の重2。同じ名前の検査が2つ付くと、どちらが効くかを GitHub は決めていない（公式の文書: "Using the same job name in multiple workflows can cause ambiguous status check results"）。偽物が緑を付けると本物の赤が隠れるおそれがある。この判定だけでは隠れを防ぎきれないので、AI 側の見張り（便7b）でも止める。除外は完全な道 `.github/workflows/guard-files-gate.yml` との一致だけで判定する（審査2回目の軽6）。この判定で付く赤も同じ名前の検査になる。偽物の緑と本物の赤が並んだときに合流が止まるかは、GitHub の公式文書に書かれていない（未確認・審査2回目の中1）。そこで見本C で、PR が合流できない（`mergeStateStatus` が `BLOCKED`）ことを生出力で確かめる。止まらなければ PO に上げ、判定4 の作り方を考え直す。
     - head 一致から中身一致へ変えた理由: main の ruleset は「main に追いついていること」を求める（strict）。main が忙しく、合流の前に何度も update-branch が要る。head 一致のままだと、そのたびに PO 本人の GO のやり直しが要る。守りたいのは守るファイルの中身なので、中身の一致で縛る。
   - コメントを書いても pull_request_target は動き直さない。GO のコメントの後は、落ちた実行を `gh run rerun` でやり直す。やり直しは元の起動と同じ `GITHUB_SHA` と同じ出来事の中身で動く（GitHub 公式「Re-running workflows and jobs」: "The workflow will also use the same GITHUB_SHA ... of the original event"、Context7 /github/docs で 2026-11-20 確認）。そのため結果は元の head に付く。やり直しの時点で PR の今の head が出来事の head と違えば「新しい push の実行を待つ」と出して落ちる。issue_comment で起動する形は、結果が PR の最新の写しに付かないため使わない。
   - 2つの組に分けた理由（2026-10-20〜11-19 の main への合流で数えた。生の数え: recon の「便7 の数え」）: 15件を全部 PO 本人の GO にすると 43回（週10回ほど）。多いのは migration-test.yml 26回（migration ごとに前提の移行を1手足す形）と check-process-artifacts.js 11回。組A だけなら 8回。組B を Opus の GO で通すと、うっかりの書き換えは止まる。ただし機械は Opus の GO とほかの AI が shingo-cc で書いた GO を区別できないので、わざとの書き換えは組B では止まらない。PO はこれを承知で「1」を選んだ。
@@ -169,29 +172,36 @@
     - PO は3つの案から「1」を選んだ。この関所はうっかりの書き換えを止めるためのもので、AI がわざと PO の名前を使う道は残る。この限界を承知のうえでの選択である。AI 側では便7b の見張りで、その道を使う操作を止める。
     - 選ばなかった案の2は「AI から shingo-ops の鍵を外す」。今の委任の流れ（shingo-ops 名義の Approve。memory の opus_approve_delegation）が壊れるため、採らなかった。
   - 必須チェックに登録: ruleset 15777895 の必須一覧に「guard-files gate」を足す。`integration_id` は 15368（github-actions。2026-11-20 に PR #5610 の head の検査の `app.id` で確認）にする。ほかのアプリや個人が同じ名前の状態を付けても数えない（審査1回目の重2。公式の文書: 「Any person or integration with write permissions ... can set the state of any status check」）。Ruleset の変更は CLAUDE.md の危険操作。PO の名前の鍵で書き込む操作なので、便7b の手元の見張りが AI の実行を止める（止める側に倒した結果で、見張りに例外は作らない）。そのため、Opus は足す前の ruleset を生で保存してから、足した後の JSON と1本の台本を scratchpad に用意する。PO がその台本を `!` で流す（台本は `gh api -X PUT` の1行と、前後の生の保存だけ。PO が `!` で流す書き込みは台本のファイルにする決まり）。流した後に、Opus が必須一覧と integration_id を読むだけの `gh api` で確かめる。
+  - 台本の中身（審査2回目の中4）:
+    1. 前の保存: `gh api repos/shingo-ops/salesanchor/rulesets/15777895` を shingo-ops の鍵（`GH_TOKEN="$(gh auth token --user shingo-ops)"`）で読み、生で保存する。`bypass_actors` は、その ruleset に書く権限がある人にだけ返る（GitHub 公式 REST「Get a repository ruleset」。Context7 /websites/github_en_rest で 2026-11-20 確認）。PO の鍵なので返る。返りに `bypass_actors` の欄が無ければ、台本は書き込まずに止まる。欄が無いまま PUT したときに bypass_actors が消えるかは確かめていないので、止める側に倒す。
+    2. PUT で送る欄は、公式「Update a repository ruleset」の本文の6つ（name・target・enforcement・bypass_actors・conditions・rules）だけ。id・source_type・source・node_id・_links・created_at・updated_at・current_user_can_bypass は外す。rules の `required_status_checks` の並びに `{"context": "guard-files gate", "integration_id": 15368}` を1件足すだけで、ほかは前の値のまま。Opus は前の6欄と後の6欄の差がその1件だけであることを `diff` の生出力で確かめてから、台本を PO に渡す。
+    3. 鍵: PO が `!` で流すので、PO の手元の gh の shingo-ops の鍵（1 と同じ書き方）。
+    4. 後の保存: 1 と同じ GET を流して生で保存する。Opus が2つの保存を `diff` し、差が必須一覧の1件だけであることを確かめる。
+    5. 登録の時点で開いている main 向けの PR には、この検査がまだ付いていない。必須の検査が「待ち」のままになり、合流できない。この検査は新しい push か PR の変更（edited・labeled）で動く。Opus は登録の直後に `gh pr list --base main --state open` で一覧を取る。検査が付いていない PR には、shingo-cc の名前でラベル `guard-files-recheck` を付けてから外す（labeled で動く）。ラベルは台本を渡す前に、Opus が1度だけ作る。
   - この workflow 自身を足す PR は、まだ main に無いので自分を守れない → この PR は PO の「GO #番号」で合流する（危険 PR として扱う）。
 - 戻し方: ruleset の必須一覧から外す（Opus が台本を用意し、PO が `!` で流す）→ workflow を消す PR。
 
 ### 便7b: AI が PO の名前で GO を書く操作を止める（便7 の前に合流）
 
-- なぜ要るか: 便7 の関所は書き手を `user.login` で確かめる。けれども AI も shingo-ops の名前で書ける（便7「守りの強さ」）。便7 の関所は、同じ名前の偽物の検査が付く道も防ぎきれない（便7 の判定8）。そこで AI の操作そのものを、操作の前に止める。
+- なぜ要るか: 便7 の関所は書き手を `user.login` で確かめる。けれども AI も shingo-ops の名前で書ける（便7「守りの強さ」）。便7 の関所は、同じ名前の偽物の検査が付く道も防ぎきれない（便7 の card の判定4）。そこで AI の操作そのものを、操作の前に止める。
 - 置き場所は2つ。どちらも今ある仕組みの形に合わせる。
   - 手元（Mac の Opus）の見張り: 新しいフォルダ scripts/agent-hooks/go-identity-guard/（guard.py・guard-manifest.json・test_guard.py）。入れ方は今ある共通の台本 install-guard.sh を使う（docs/handoff/guard-add-by-ai/design.md §6）。形は scripts/agent-hooks/install-form-guard/ と同じ。
     - Bash の `gh auth switch` は全部止める。これを使うと、その後の命令が黙って shingo-ops で動くため。鍵を直接出す道（`gh auth status --show-token`・キーチェーンの `find-generic-password`・`~/.config/gh/hosts.yml`）も止める。`-u shingo-ops` の短い書き方も `--user` と同じに扱う。
     - Bash の命令に `--user shingo-ops` があるとき、通すのは2つの形だけ。
-      - (a) 1つの命令だけの `GH_TOKEN="$(gh auth token --user shingo-ops)" gh pr review <番号> --approve` に `--body` か `--body-file` を付けた形。今の委任の Approve の形で、本文に「GO #」の行が無いもの。`--body-file` のときはファイルを読んで確かめる。
-      - (b) 読むだけの `gh api`。`-X`/`--method` が GET 以外のもの、`-f`・`-F`・`--field`・`--raw-field`・`--input` の付いたものは通さない。
+      - (a) 1つの命令だけの `GH_TOKEN="$(gh auth token --user shingo-ops)" gh pr review <番号> --approve` に、単引用符の `--body '…'` か `--body-file <道>` を付けた形。今の委任の Approve の形で、本文に「GO #」の文字が無いもの。`--body-file` のときはファイルを読んで確かめる。二重引用符の本文は通さない。中の `$(` と `` ` `` をシェルが実行するため（審査2回目の中1）。
+      - (b) 読むだけの `gh api`。引数は、決まった少しの印（`--jq`・`-q`・`--paginate`・`--slurp`・`-i`・`--include`・`--silent`・GET だけの `-X`/`--method`）と道の1つだけを許す。それ以外の印が1つでもあれば止める。`-fbody=`・`-XPOST`・`--method=POST` のような詰めた書き方も止まる（審査2回目の中2）。引用符の外の `|` の後ろは別の命令として扱い、PO の鍵は渡らない。
       - これ以外は止める。
-    - Write・Edit で `.github/workflows/` の下の guard-files-gate.yml 以外のファイルに「guard-files gate」の文字を書く操作は止める（便7 の判定8 と同じ）。
+    - Write・Edit で `.github/workflows/` の下の guard-files-gate.yml 以外のファイルに「guard-files gate」の文字を書く操作は止める（便7 の card の判定4 と同じ）。
     - 内部エラーのときは止める。install-form-guard は止めない形（fail-open）だが、この見張りは PO の名前を守るものなので、止める側に倒す。
   - クラウド（Sonnet）の見張り: 新しいファイル scripts/agent-hooks/cloud/go_comment_guard.py。scripts/agent-hooks/cloud/dispatch.sh の PreToolUse の並び（`for G in python_version_guard.py subagent_bash_wait_guard.py`）に1語足す。
     - `mcp__github__` で始まる道具のうち、入力の文字の値（入れ子も）のどこかに `GO #<数字>`（`\bGO\s*#\s*\d`）があれば止める。行の頭に限らない。クラウドが GO を書くことは無いので、道具の名前で絞らない。そのため、名前が変わっても抜けない。
     - Bash の命令に `gh` か `api.github.com` があり、`GO #<数字>` もあれば止める。
+    - 同じ命令が本文をファイルで渡すとき（`--body-file`・`-F`/`--field` の `=@`・`--input`・curl の `-d @`/`--data @`/`--data-binary @`/`-T`）は、そのファイルを読んで同じく確かめる。読めないとき、または標準入力（`-`）のときは止める。本文をファイルで渡すのは普段の手順なので、うっかりでも抜けないようにする（審査2回目の中3）。
     - Write・Edit の `.github/workflows/` の書き込みは、手元と同じ「guard-files gate」の決まりで止める。Bash には当てない。`grep "guard-files gate" .github/workflows/` のような読むだけの命令を誤って止めないため。Bash で書いたものは、合流の前に便7 の判定4 が落とす。
     - 試験のファイル（scripts/tests/test-guard-files-gate.js）に「GO #12 abc1234」のような文を Write で書くのは止めない。Write の対象は、上の workflow の決まりだけにする。
   - 試験: `.github/workflows/agent-hooks-test.yml` に job を2つ足す（今の install-form-guard test の形と同じ）。作業の指示: card-7b.md。
 - 止めきれないもの（限界）:
-  - AI が命令を偽装する。たとえば鍵の値を別の変数に移してから `curl` で書く。見張りは文字の形で判定するので、わざと形を変えれば抜けられる。これは PO が「1」で承知した限界と同じ。
+  - AI が命令を偽装する。たとえば鍵の値を別の変数に移してから `curl` で書く。見張りは文字の形で判定するので、わざと形を変えれば抜けられる。これは PO が「1」で承知した限界と同じ。workflow の名前を `${{ format('guard-files {0}', 'gate') }}` のような式で組み立てると、便7 の判定4 も便7b も文字では見つけられない（審査2回目の軽7）。これも同じ限界に入る。
   - これを補う後からの点検: PO の名前のコメントのうち「GO #」で始まるものを数え、PO の覚えと合うかを確かめる。今回は作らず、便8 の決まりの文書に「月に1回、Opus が一覧を PO に出す」と書く。
 - 戻し方: 手元は settings.json の控えから戻す（install-guard.sh は外す処理を持たないので、PO が `!` で戻す。design.md §8 と同じ）。クラウドは dispatch.sh から1語外す PR を出す。
 - 受入: 試験（agent-hooks-test.yml の2つの job が緑）。手元は install-guard.sh で入れた後に、shingo-ops で GO を書こうとする命令を試しに流す。止まることを Opus が生出力で確かめる。止まる命令なので、何も書かれない。

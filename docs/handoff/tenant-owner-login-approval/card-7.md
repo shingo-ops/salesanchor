@@ -1,7 +1,8 @@
 # card: 便7 見張りを外す PR を止める（guard-files gate・K10）
 
-状態: カード第2版（Opus、2026-11-20）。PO の実装承認は3回。2026-11-06「1. このまま作り始める」は設計 docs/handoff/tenant-owner-login-approval/design.md 全体。2026-11-19「1」は6〜8段目の再開。2026-11-20「1」は7段目を許可の段階まで進めること。守る一覧を2つの組に分ける形は PO 2026-11-20「1」。守りの強さを「間違いを止める関所」にする形も PO 2026-11-20「1」。
-審査: 1回目 REVISE（クラウドの設計審査役、2026-11-19 16:45 UTC）。指摘は重1〜重3・中4〜中6・軽7〜軽9。重1 は PO の「1」で決め、限界を design.md 便7「守りの強さ」に書いた。重2 は判定8・integration_id・便7b で直した。重3 は判定5、中4 は判定6、中5 は一覧と「入れないもの」で直した。中6 は当てはまらない（ruleset に merge_queue の規則が無い）。軽7 は 40文字の SHA、軽8 は design.md の types、軽9 は T29〜T32 で直した。2回目の審査の結果をこの下に書き足す。未審査の間は実装に渡さない。
+状態: カード第3版（Opus、2026-11-20）。PO の実装承認は3回。2026-11-06「1. このまま作り始める」は設計 docs/handoff/tenant-owner-login-approval/design.md 全体。2026-11-19「1」は6〜8段目の再開。2026-11-20「1」は7段目を許可の段階まで進めること。守る一覧を2つの組に分ける形は PO 2026-11-20「1」。守りの強さを「間違いを止める関所」にする形も PO 2026-11-20「1」。
+審査: 1回目 REVISE（クラウドの設計審査役、2026-11-19 16:45 UTC）。指摘は重1〜重3・中4〜中6・軽7〜軽9。重1 は PO の「1」で決め、限界を design.md 便7「守りの強さ」に書いた。重2 は判定8・integration_id・便7b で直した。重3 は判定5、中4 は判定6、中5 は一覧と「入れないもの」で直した。中6 は当てはまらない（ruleset に merge_queue の規則が無い）。軽7 は 40文字の SHA、軽8 は design.md の types、軽9 は T29〜T32 で直した。
+審査: 2回目 REVISE（クラウドの設計審査役、2026-11-20 01:22 UTC、commit 343eee1c3）。重は無し。中1 は受入の見本C を「合流できない（mergeStateStatus が BLOCKED）」の生出力で確かめる形にした。中2 は組B に .claude/settings.json を足した。中3 は組B に今は無い4件（backend の pytest.ini など）を足し、conftest の限界の文を直した（design.md）。中4 は ruleset の台本の中身5点を design.md 便7 に書いた。軽5 は判定の番号をこのカードの1〜9 に揃えた。軽6 は判定4 の除外を完全な道にし、3-1b に注意を足した。軽7 は限界の文に足した（design.md 便7b）。軽8 は T33〜T36 を足した。3回目の審査の結果をこの下に書き足す。未審査の間は実装に渡さない。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。GitHub の設定（ruleset）・secret・本番には触らない。PR は作らない（Opus が作る）。
 基準: 枝 release/tenant-owner-bin7-guard-files-gate。便7b の合流の後に、Opus が origin/main を取り込んだ head を渡す。便7b の5件が在ることは P6 で確かめる。
 
@@ -20,7 +21,7 @@ RECEIVED tenant-owner-bin7-guard-files-gate HEAD=（git rev-parse HEAD の 40 �
 ## 0. 実装前点検（外れたら実装せず BLOCKED: で止まる）
 - P1 枝を origin から取り、このカード（docs/handoff/tenant-owner-login-approval/card-7.md）が在ること。
 - P2 次の 4 つがどれも「No such file」であること: `ls .github/workflows/guard-files-gate.yml .github/workflows/guard-files-gate-unit.yml scripts/guard-files-gate.js scripts/tests/test-guard-files-gate.js`。
-- P3 下の「2. 守る一覧」の28件から新規の4件を除いた24件が、`test -f` で全部在ること。
+- P3 下の「2. 守る一覧」のうち、組A の22件から新規の4件を除いた18件と、組B の在る7件（下の「今は無い4件」を除く）の25件が、`test -f` で全部在ること。組B の今は無い4件は `test -e` でどれも無いこと。
 - P4 次の 2 つの数がどちらも 1 以上であること。
   - `grep -c "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09" .github/workflows/guard-authoring-gate.yml`
   - `grep -c "actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444" .github/workflows/guard-authoring-gate.yml`
@@ -60,7 +61,7 @@ scripts/agent-hooks/go-identity-guard/test_guard.py
 scripts/agent-hooks/cloud/go_comment_guard.py
 scripts/agent-hooks/cloud/test_go_comment_guard.py
 ```
-組B（GO を書けるのは shingo-ops か shingo-cc・6件）:
+組B（GO を書けるのは shingo-ops か shingo-cc・11件）:
 ```
 .github/workflows/test.yml
 .github/workflows/migration-test.yml
@@ -68,7 +69,13 @@ scripts/check-process-artifacts.js
 backend/pyproject.toml
 scripts/agent-hooks/cloud/dispatch.sh
 .github/workflows/agent-hooks-test.yml
+.claude/settings.json
+backend/pytest.ini
+backend/.pytest.ini
+backend/pytest.toml
+backend/.pytest.toml
 ```
+組B の最後の4件は今は無い（今は無い4件）。作られる PR を止めるために守る。理由は design.md 便7（審査2回目の中3）。
 照合は完全一致（前方一致・正規表現にしない）。一覧の上に1行の注を書く。注は、設計の節と PO 2026-11-20「1」を指す。
 
 ## 3. 作るもの
@@ -94,6 +101,7 @@ scripts/agent-hooks/cloud/dispatch.sh
 - `name: Guard files gate unit tests`。
 - 起動は `pull_request`（branches: [main]、paths: 組A の見張り自身の4件）、`permissions: contents: read`。
 - job 名は `guard-files-gate unit tests`。「guard-files gate」と1字も重ならないよう、ハイフンを入れる。
+- このファイルの中（注釈も含む）に「guard-files gate」（ハイフン1つと空白1つの形）の文字を書かない。判定4 で、この workflow を変える PR が GO があっても落ちるため（審査2回目の軽6）。
 - 手順は3つ。
   1. checkout（同じ固定 SHA、persist-credentials false）
   2. setup-node（同じ固定 SHA、'24'）
@@ -133,7 +141,7 @@ scripts/agent-hooks/cloud/dispatch.sh
    - `GET /repos/{repo}/contents/{path}?ref={40文字の sha}` で `sha`（blob）を取る。404 は「無い」とする。
    - path は `/` で分けて、各部分を encodeURIComponent する。
 6. workflow の中身。files のうち、filename が `.github/workflows/` で始まり、`.yml` か `.yaml` で終わり、status が `removed` でないものが対象。
-   - guard-files-gate.yml はこの対象から外す。
+   - filename が `.github/workflows/guard-files-gate.yml` と完全に一致するものだけを、この対象から外す（ファイル名の一部の一致では外さない）。
    - `GET /repos/{repo}/contents/{path}?ref={head の 40文字の sha}` の `content`（base64）を文字に戻す。
    - `content` が無い・空・`encoding` が base64 でないときは例外にする（大きすぎるファイルなど）。
 
@@ -141,7 +149,7 @@ scripts/agent-hooks/cloud/dispatch.sh
 1. `state !== "open"` か `base.ref !== "main"` → 通す（理由: 対象外）。
 2. 今の `head.sha !== eventHead` → 落とす（理由: 新しい push の実行を待つ）。
 3. files の件数が `changed_files` と違う → 落とす（理由: 変わったファイルを全部読めなかった）。commits の件数が 250 以上か、PR の `commits` の数と違う → 落とす（理由: commit の一覧を全部読めなかった）。
-4. 同じ名前の検査を足すのを止める。
+4. 同じ名前の検査を足すのを止める（守るファイルが無い PR にも当てる。5 より前に判定する）。
    - 6 で読んだ workflow の文から次の3つを除き、小文字にする。
      - 引用符（`'` と `"`）
      - 空白の連続は1つにまとめる
@@ -199,6 +207,10 @@ decide の試験（入力は手で作る）:
 - T27 commits が 250件 → 落とす。
 - T28 新しい workflow `.github/workflows/x.yml` の文が `name: "Guard-Files   Gate"` を含む → shingo-ops の正しい GO があっても落とす。guard-files-gate.yml 自身の文は対象外で落とさない。
 - T29 組B だけ・shingo-ops の GO → 通す。
+- T33 守るファイルが無く、`.github/workflows/x.yml` だけを足し、その文に `name: guard-files gate` がある → 落とす（判定5 の「0 件なら通す」より前に落ちる）。
+- T34 files と changed_files は合うが、commits の件数が PR の `commits` の数と違う → 落とす。
+- T35 `.github/workflows/x.yaml`（拡張子 .yaml）の文が同じ名前を含む → 落とす。
+- T36 `.github/workflows/x-guard-files-gate.yml` の文が同じ名前を含む → 落とす（除外は完全な道の一致だけ）。
 collect の試験（io.request を偽物にする）:
 - T19 files のページ送りで、101 件目に組A があるときに拾う。
 - T20 contents の 404 を「無い」として扱う。
@@ -212,8 +224,8 @@ runtime の試験:
   - GITHUB_API_URL が別。
   - eventHead が40桁でない。
 一覧の試験:
-- T22 GROUP_A と GROUP_B に重複が無い。件数が 22 と 6。
-- T23 28件すべてがリポジトリの中に実在する（`fs.existsSync`、リポジトリの根から見た場所で）。
+- T22 GROUP_A と GROUP_B に重複が無い。件数が 22 と 11。
+- T23 33件のうち、組B の今は無い4件を除く29件がリポジトリの中に実在する（`fs.existsSync`、リポジトリの根から見た場所で）。今は無い4件は試験の中に書き、実在しないことを確かめる。
 - T24 guard-files-gate.yml の文について、次を確かめる。
   - `name: guard-files gate` がちょうど1つある。
   - `ref: ${{ github.sha }}` がある。
@@ -223,7 +235,7 @@ runtime の試験:
 
 ## 4. 確かめ方（実行役が流し、生出力を返す）
 - V1 `node --test scripts/tests/test-guard-files-gate.js` が全部 pass（数を書く）。
-- V2 `node -e "const g=require('./scripts/guard-files-gate.js'); console.log(g.GROUP_A.length, g.GROUP_B.length)"` が `22 6`。
+- V2 `node -e "const g=require('./scripts/guard-files-gate.js'); console.log(g.GROUP_A.length, g.GROUP_B.length)"` が `22 11`。
 - V3 `python3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/guard-files-gate.yml'))"` が成功。actionlint があれば `actionlint .github/workflows/guard-files-gate.yml` も流す（無ければ「無し」と書く）。
 - V4 次の2つを確かめる。
   - `grep -n "head.sha\|head.ref\|github.head_ref" .github/workflows/guard-files-gate.yml .github/workflows/guard-files-gate-unit.yml` が 0 件。
@@ -235,14 +247,14 @@ runtime の試験:
 ## 想定分岐
 - P のどれかが外れる → 止めて BLOCKED: と生出力を返す。
 - 偽物の io で試験が書けない形が出た → 止めて NEEDS_DECISION: を返す。判定の決まりを推測で変えない。
-- 一覧のファイルが無い（T23 が落ちる）→ 止めて BLOCKED:。一覧から消さない。
+- 一覧のファイルが無い、または今は無い4件のどれかが在る（T23 が落ちる）→ 止めて BLOCKED:。一覧から消さない。
 - node のバージョンが古く fetch が無い → BLOCKED:。
 - クラウドの見張り（便7b の go_comment_guard）が Write や Bash を止めた → 言い換えずに止めて BLOCKED: と止めた文を返す。
 
 ## 5. 弊害と戻し方
 - 守るファイルを触る PR は GO が要る。
   - 組A は PO 本人だけ。先月の数で 8回。
-  - 組B は Opus の GO で、先月の数で約40回（35回に dispatch.sh と agent-hooks-test.yml の5回を足した上限）。
+  - 組B は Opus の GO で、先月の数で約43回（35回に dispatch.sh と agent-hooks-test.yml の5回と .claude/settings.json の3回を足した上限）。
 - GO のコメントの後は、Opus が落ちた実行を `gh run rerun` の番号指定と `--failed` でやり直す。
 - GO を書き直すと使えない。直すときは新しいコメントで書く。
 - 見張りが誤って落としたときは、Opus が落ちた理由と head の SHA を PO に報告する。必須を外すのは、PO が `!` で台本を流すときだけ。
@@ -257,7 +269,7 @@ runtime の試験:
 | 見本A に守るファイルを1行足すと赤に戻る。守らないファイルだけなら緑のまま | 同上 |
 | 見本A の GO を1字書き直してやり直すと赤 | 同上 |
 | 見本B（migration-test.yml を1行変える）が Opus の GO で緑 | 同上 |
-| 見本C（workflow に同じ名前の job）が PO の GO があっても赤 | 同上（見本C は PO が `!` で作る） |
+| 見本C（workflow に同じ名前の job が緑を付ける）が、PO の GO があっても合流できない | 見本C の PR 番号で `gh pr view N --json mergeStateStatus` の生出力が `BLOCKED`（見本C は下書きにしない。PO が `!` で作り、確かめたらすぐ閉じる）。`BLOCKED` でなければ止めて PO に上げる |
 | 必須一覧に「guard-files gate」があり、integration_id が 15368 | gh api の ruleset の生出力（登録の前後を保存） |
 
 END OF CARD
