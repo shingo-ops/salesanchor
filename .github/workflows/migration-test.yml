@@ -2563,3 +2563,4 @@ jobs:
               exit 1
               ;;
           esac
+# bin7 acceptance sample B (do not merge)
