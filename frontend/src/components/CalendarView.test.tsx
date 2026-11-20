@@ -518,6 +518,49 @@ describe('T10 new props passed to FullCalendar', () => {
     p.eventDidMount({ event: { extendedProps: { source: colored[1] } }, el: plain });
     expect(plain.style.getPropertyValue('--comp-calendar-owner-color')).toBe('');
   });
+
+  const V = '--comp-calendar-owner-color';
+  const mountArg = (id: string, source: CalendarViewEvent, el: HTMLElement, isMirror = false) => ({
+    event: { id, extendedProps: { source } },
+    el,
+    isMirror,
+  });
+
+  it('repaints a mounted event when its color changes', () => {
+    const before = [timed('r1', '2026-11-02T10:00:00', '2026-11-02T11:00:00', { color: 'rgb(1, 2, 3)' })];
+    const after = [timed('r1', '2026-11-02T10:00:00', '2026-11-02T11:00:00', { color: 'rgb(4, 5, 6)' })];
+    const { rerender } = render(<CalendarView mode="days" date="2026-11-02" events={before} ariaLabel="cal" />);
+    const el = document.createElement('div');
+    fcProps().eventDidMount(mountArg('r1', before[0], el));
+    expect(el.style.getPropertyValue(V)).toBe('rgb(1, 2, 3)');
+    rerender(<CalendarView mode="days" date="2026-11-02" events={after} ariaLabel="cal" />);
+    expect(el.style.getPropertyValue(V)).toBe('rgb(4, 5, 6)');
+  });
+
+  it('clears the color variable when the color is removed', () => {
+    const before = [timed('r2', '2026-11-02T10:00:00', '2026-11-02T11:00:00', { color: 'rgb(1, 2, 3)' })];
+    const after = [timed('r2', '2026-11-02T10:00:00', '2026-11-02T11:00:00')];
+    const { rerender } = render(<CalendarView mode="days" date="2026-11-02" events={before} ariaLabel="cal" />);
+    const el = document.createElement('div');
+    fcProps().eventDidMount(mountArg('r2', before[0], el));
+    expect(el.style.getPropertyValue(V)).toBe('rgb(1, 2, 3)');
+    rerender(<CalendarView mode="days" date="2026-11-02" events={after} ariaLabel="cal" />);
+    expect(el.style.getPropertyValue(V)).toBe('');
+  });
+
+  it('does not repaint unmounted or mirror elements', () => {
+    const before = [timed('r3', '2026-11-02T10:00:00', '2026-11-02T11:00:00', { color: 'rgb(1, 2, 3)' })];
+    const after = [timed('r3', '2026-11-02T10:00:00', '2026-11-02T11:00:00', { color: 'rgb(4, 5, 6)' })];
+    const { rerender } = render(<CalendarView mode="days" date="2026-11-02" events={before} ariaLabel="cal" />);
+    const a = document.createElement('div');
+    const b = document.createElement('div');
+    fcProps().eventDidMount(mountArg('r3', before[0], a));
+    fcProps().eventWillUnmount(mountArg('r3', before[0], a));
+    fcProps().eventDidMount(mountArg('r3', before[0], b, true));
+    rerender(<CalendarView mode="days" date="2026-11-02" events={after} ariaLabel="cal" />);
+    expect(a.style.getPropertyValue(V)).toBe('rgb(1, 2, 3)');
+    expect(b.style.getPropertyValue(V)).toBe('rgb(1, 2, 3)');
+  });
 });
 
 describe('T11 appearance schedule', () => {
