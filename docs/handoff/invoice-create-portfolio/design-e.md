@@ -25,7 +25,7 @@
 - backend/app/services/invoice_renderer.py（PDF の行）
 - backend/app/services/tenant.py（新しいテナントの請求書の表に2列）
 - migrations/ 新しい1本（全テナントの invoices に2列・nullable・ADD COLUMN IF NOT EXISTS）＋ scripts/run_all_migrations.sh に1行
-- AI 用の読み取りの分類（§3-4）: migrations/20261024_100300_create_ai_cloud_views.sql の分類表に1行・その件数を数える試験・scripts/migration-guard 配下の stage1-column-class.tsv と reference-allowlist.tsv のハッシュ（前例: コミット 1206acb5）
+- AI 用の読み取りの分類（§3-4）: migrations/20261024_100300_create_ai_cloud_views.sql の分類表に1行・その件数を数える試験・docs/handoff/cloud-case-ai/stage1-column-class.tsv と scripts/migration-guard/reference-allowlist.tsv のハッシュ（前例: コミット 1206acb5）
 - 試験の登録: backend/tests/rls_bootstrap.py の一覧（:192 付近）と backend/tests/test_tenant_loop_migration_guard.py の `_REVIEWED` に新しい移行を足す（前例: 同じ 1206acb5）
 - frontend: invoice-create（試算の依頼に支払方法を足す・合計枠に1行）、invoice-detail（1行・PayPal リンクの出し方 §3-5）、lib/invoiceDraftContext.ts の型、lib/apiErrorReason.ts、ja.json/en.json
 - 試験: test_invoice_totals.py（純粋な計算）・test_invoice_totals_pg.py・invoices の道の試験・test_paypal_invoicing.py（§3-5 の PayPal リンクの条件）・conftest.py（SQLite の invoices 表に2列・stub_invoice_totals の差し替えに引数と手数料の行）・画面の単体試験
@@ -71,8 +71,12 @@
 ### 3-3 compute_totals の形
 
 - 純粋な関数のまま（DB を読まない）。引数に `payment_method_type: str | None = None` を足す。
-- 手数料を計算する場所: 今の「合計」の塊（:313-318）と「請求書の通貨の為替」の塊（:320-331。為替が無いと total_amount を None にする）の後、amount_jpy・amount_usd を出す塊（:332-339）の前。total_amount が None のときは手数料も計算しない（理由はすでに入っている）。手数料を足した total_amount から amount_jpy・amount_usd を出すので、円・ドル換算も手数料込みになる。
-- TotalsInputs に `payment_fee_rows: PaymentFeeRows | None`（受取の行・為替の行・それぞれ id/rate_pct/fixed_amount/threshold/fee_type）を足す。load_totals_inputs が `issuer_region`・`currency`・`payment_method_type` を受けて、paypal のときだけ読む。
+- 手数料を計算する場所: 今の「合計」の塊（:313-318）と「請求書の通貨の為替」の塊（:320-331。為替が無いと total_amount を None にする）の後、amount_jpy・amount_usd を出す塊（:332-341）の前。total_amount が None のときは手数料も計算しない（理由はすでに入っている）。手数料を足した total_amount から amount_jpy・amount_usd を出すので、円・ドル換算も手数料込みになる。
+- TotalsInputs に `payment_fee_rows: PaymentFeeRows | None = None`（受取の行・為替の行・それぞれ id/rate_pct/fixed_amount/threshold/fee_type）を足す。既定値 None を付けるのは、TotalsInputs を作っている既存の4か所（invoice_totals.py・conftest.py の stub_invoice_totals・test_invoice_totals.py・test_invoice_totals_pg.py）を壊さないため。
+- 行の選び方（§3-1。テナント独自を優先・期間内・新しい effective_from）は load_totals_inputs の SQL が受け持ち、選んだ1行ずつを PaymentFeeRows に入れる。compute_totals は選ばれた行を使うだけ。
+- load_totals_inputs にキーワード引数 `issuer_region: str | None = None`・`currency: str | None = None`・`payment_method_type: str | None = None` を足し、payment_method_type == "paypal" のときだけ表を読む。既定値があるので今の呼び出しは変えなくても動く。
+- conftest.py の stub_invoice_totals（:2356-2390）の `_fake` は `**_kw` を受けるようにし、state に `"payment_fee_rows": None` を足して TotalsInputs に渡す（試験は `.set(payment_fee_rows=...)` で行を与える）。
+- PaymentFeeRows の中身: receiving（1行。無ければ None）・fx（1行か None。JPY のときは読まない）・required_fx（bool。通貨が JPY 以外か）。compute は「receiving が None」「required_fx なのに fx が None」「どちらかの threshold が NULL でない」で REASON_PAYMENT_FEE。
 - TotalsResult に `payment_fee: Decimal`（paypal 以外は 0）と `payment_fee_snapshot: dict | None`（paypal のときだけ: method_type・fee_types・setting_ids・rate_pct 合計・fixed_amount_jpy・fixed_converted・base_amount・base_date）を足す。
 - to_db_params に `payment_fee_charged`・`payment_fee_snapshot` を足す。
 
@@ -86,12 +90,12 @@
 - クラウドの読み取りの見え方（AI 用の分類表）: 変える。JSONB は型だけでは通らない（migrations/20261024_100000_create_ai_cloud_meta.sql:122-129）ので、分類表に行が無いと backend/tests/ops/test_ai_cloud_views.py:518-520 が「分類なし」と数え、T10（:528-567）が落ちる。便A の shipping_snapshot と同じ形にする:
   - migrations/20261024_100300_create_ai_cloud_views.sql の invoices の行（:454 付近）に `('tenant_*','invoices',ARRAY['payment_fee_snapshot'],'mask','')` を足す（中身は伏せる）。payment_fee_charged は数の列なので行は要らない。
   - test_ai_cloud_views.py:486 の件数を 1164 → 1165 にする。
-  - scripts/migration-guard の stage1-column-class.tsv に同じ1行・reference-allowlist.tsv の 20261024_100300 のハッシュを作り直す（手順は 1206acb5 と同じ）。
+  - docs/handoff/cloud-case-ai/stage1-column-class.tsv に `tenant_*\tinvoices\tpayment_fee_snapshot\tmask\t\tjsonb` の1行（invoices の行の並び・shipping_snapshot の次）を足す。scripts/migration-guard/reference-allowlist.tsv の 20261024_100300 の sha256 を作り直し、根拠の欄の最後に「 / invoice-create-portfolio card-E（分類1行追加）」を足す（手順は 1206acb5 と同じ）。
 - _INVOICE_COLUMNS（invoices.py:142）・_INSERT_INVOICE_SQL（:173）・_RECOMPUTE_SET_SQL（:195-200）に2列を足す。InvoiceResponse/InvoiceDetailResponse に payment_fee_charged を足す（snapshot は返さない）。
 
 ### 3-5 4つの道
 
-- POST /invoices/preview: 依頼に `payment_method_type: Literal['bank','wise','paypal'] | None = None` を足す（id は要らない。額は種類だけで決まる）。作成画面は選んだ支払方法の種類を送る。応答に `payment_fee: Decimal` を足す。地域は今ある decide_issuer_region(bill_to) で決める（preview は今 bill_to を読んでいる :411）。
+- POST /invoices/preview: 依頼に `payment_method_type: Literal['bank','wise','paypal'] | None = None` を足す（id は要らない。額は種類だけで決まる）。作成画面は選んだ支払方法の種類を送る。応答に `payment_fee: Decimal` を足す。地域は今ある decide_issuer_region(bill_to) で決める（preview は今 bill_to を読んでいる :414）。
 - POST /invoices: resolve_payment_ref で確かめた method_type を compute に渡す。今は支払方法の確かめが計算の後（計算 :645-650・確かめ :652-662）なので、確かめを計算の前へ移す（順番だけ。中身は同じ）。
 - PATCH /invoices/{id}（下書きだけ）: payment_method_ref が来たら、その種類で合計を作り直し、_RECOMPUTE_SET_SQL と同じ列を書く（今は支払方法だけ書いて合計を直さない :740-760。直さないと詳細画面の合計が古いまま）。手順:
   1. 今の resolve_payment_ref の確かめ（region は今どおり `old_row["issuer_region"] or "overseas"`）。
@@ -114,7 +118,7 @@
 - 合計枠 InvoicePaymentTotalsSection.tsx:200-207 の TotalsBox の rows に、`preview.payment_fee > 0` のときだけ1行足す: key "paymentFee"・ラベル t("invoiceForm.paymentFee")・data-testid "invoice-total-payment-fee"。TotalsBox は既存の金型。新しい部品・色・直書きは作らない。
 - 理由の表示: frontend/src/lib/apiErrorReason.ts の API_ERROR_REASON_KEYS（:30-35 に既存の理由）に `payment_fee: "apiError.paymentFee"` を足す。uncomputedReasonKey（invoiceDraftContext.ts:191）はこの表を読むので、そこは変えない。ja/en に apiError.paymentFee の文を足す。既存の `payment_fee_setting`（:72・設定の画面の「見つかりません」）とは別のキー。
 - 詳細画面 InvoiceDetailPage.tsx:357-358 の tfoot に、payment_fee_charged > 0 のときだけ1行（t("invoices.paymentFeeCharged")）。既存の行と同じ書き方（この表は既存の形のまま。新しい直書きの色は足さない）。
-- PDF invoice_renderer.py:387-401 の送料・税・関税の行と同じ形で、payment_fee_charged > 0 のときだけ "Payment fee" の行（既存の行の英語の書き方に合わせる）。invoices.py:1162-1180 の invoice_data に payment_fee_charged を渡す。PayPal の写しの PDF も同じ render を通る。
+- PDF invoice_renderer.py:387-401 の送料・税・関税の行と同じ形で、payment_fee_charged > 0 のときだけ "Payment fee" の行（既存の行の英語の書き方に合わせる）。invoice_data は2か所あるので両方に payment_fee_charged を渡す: 請求書の PDF（invoices.py:1155-1180）と PayPal の写しの PDF（_render_paypal_copy_pdf の :1201-1224）。invoice_renderer.py のデータ型（duty_amount の :149 の次）と組み立て（:572 の次）にも `payment_fee_charged: float | None = None` を足す。見積の組み立て（:645）は None のまま。
 - i18n: ja「支払い手数料」/ en「Payment fee」・理由 ja「支払い手数料の設定が見つかりません」/ en「No payment fee setting was found」。ja.json と en.json に同じキー（ADR-027）。
 
 ## 4. 代替案と選んだ理由
@@ -134,10 +138,11 @@
 | K1 | JPY・国内・PayPal・B=100,000 で手数料 3,640・合計 103,640 | test_invoice_totals.py の純粋な関数の試験 |
 | K2 | USD・海外・PayPal・B=1,000.00・1USD=150円で手数料 81.26・合計 1,081.26 | 同上 |
 | K3 | bank・wise・支払方法なしで手数料0・合計は今と同じ | 同上（今の試験の期待値が1つも変わらない） |
-| K4 | テナント独自の行があれば共用の行より優先・期間外の行は使わない | 同上（行を入力で与える） |
+| K4 | テナント独自の行があれば共用の行より優先・期間外の行は使わない・同じ側に2行あれば effective_from が新しい行 | test_invoice_totals_pg.py（PG に payment_fee_settings の行を入れて load_totals_inputs を呼ぶ） |
 | K5 | 受取の行が無い・threshold がある・為替の行が要るのに無い → uncomputed に "payment_fee"（REASON_ORDER の最後）、create・PATCH は 409 "payment_fee" で何も書かない | 純粋な関数の試験＋道の試験 |
 | K6 | create・PATCH・issue で payment_fee_charged と total_amount が保存され、詳細の応答に出る | test_invoice_totals_pg.py か invoices の道の試験（PG） |
 | K7 | 下書きで支払方法を bank→PayPal に変えると合計が手数料の分だけ上がる・PayPal→bank で手数料0に戻る | 道の試験 |
+| K7c | 請求書の PDF と PayPal の写しの PDF の両方に、手数料 > 0 のとき "Payment fee" の行が出る（PDF の文字を読む試験） | invoice_renderer の試験＋test_paypal_invoicing.py |
 | K7b | 支払方法が PayPal でない発行済みの請求書に PayPal リンクを出すと 409 "payment_method"・PayPal へ送らない。PayPal の請求書は今どおり出せ、送る額は手数料込みの total_amount | test_paypal_invoicing.py |
 | K8 | 作成画面: PayPal を選ぶと合計枠に「支払い手数料」行が出て合計が上がる・銀行では行が出ない | 画面の単体試験（vitest） |
 | K9 | 移行が全テナントで2列を足し、2回流しても失敗しない・雛形にも同じ2列・AI 用の分類の漏れ0件（T10）・件数 1165 | CI の migration の試験・migration-guard・test_ai_cloud_views.py・test_tenant_loop_migration_guard.py |

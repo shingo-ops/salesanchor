@@ -40,13 +40,13 @@
 ## R4 請求書の道（backend/app/routers/invoices.py）
 
 - :142 _INVOICE_COLUMNS・:173 _INSERT_INVOICE_SQL・:195-200 _RECOMPUTE_SET_SQL（発行時に作り直す列）。
-- :403-431 preview: 支払方法を受けない。bill_to を読み、destination を決めて計算。
+- :403-431 preview: 支払方法を受けない。bill_to を読み（:414）、destination を決めて計算。
 - :513-606 from-quote: payment None・payment_method_id None。
 - :615-716 create: 計算（:645-650）の後に支払方法を確かめる（:652-662）。payment_text は resolve_payment_ref が返す method_type（'bank'/'wise'/'paypal'）。
 - :724-771 update（下書き）: 支払方法を書き換えるが合計は作り直さない。
 - :779-830 issue: 支払方法の版の確かめ（:791-797）→ 合計を作り直して _RECOMPUTE_SET_SQL で書く。
 - :943-1042 issue_paypal_link: PayPal へ total_amount を送る（:986）。payment_method を COALESCE(payment_method,'paypal') にする（:1002）。
-- :1124-1131 _pdf_payment・:1137-1190 PDF（invoice_data は :1162-1180）。invoice_data に subtotal・shipping_fee・tax_amount・total_amount・duty_amount を渡す。
+- :1124-1131 _pdf_payment・:1137-1190 PDF（invoice_data は :1155-1180）。PayPal の写しの PDF は _render_paypal_copy_pdf（:1196-）が別の invoice_data（:1201-1224）を作る。invoice_data に subtotal・shipping_fee・tax_amount・total_amount・duty_amount を渡す。
 - 既存の payment_fee 列は入金時に実際の手数料を書く: invoices.py:1095・integrations.py:799・:948。列は migrations/20260611_020000_add_invoice_paypal_columns.sql:28。
 
 ## R5 地域
