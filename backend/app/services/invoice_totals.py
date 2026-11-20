@@ -391,7 +391,7 @@ def compute_totals(
                 }
 
     usd_row = inputs.fx.get("USD")
-    exchange_rate_usd =usd_row.rate_jpy if (currency != "USD" and usd_row is not None) else None
+    exchange_rate_usd = usd_row.rate_jpy if (currency != "USD" and usd_row is not None) else None
     amount_jpy: Decimal | None = None
     amount_usd: Decimal | None = None
     if total_amount is not None:
