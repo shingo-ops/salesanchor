@@ -74,7 +74,8 @@
 | F9 | prod1 の python3 は `/usr/bin/python3`（cron の行で使っている。設計 §7 V2 は○） | `docs/handoff/ai-ops-247/card-stage3-bin-e.md:496`・`docs/handoff/ai-ops-247/stage3-design.md:168` |
 | F10 | 見張りは Prometheus 38 本。本数は手順書の 3 行目と単体試験の 4 行目に書いてあり、検査の出力は `OK: Prometheus 38 rules, Loki 6 rules, runbook 44 sections`。最後のグループは `dockerd_state_alerts` | `docs/runbooks/alerts.md:3`・`monitoring/prometheus/tests/alert_rules_test.yml:4`・`monitoring/prometheus/alert_rules.yml:466` |
 | F11 | deploy-script-test.yml は deploy.yml の変更で走り、係の試験を `python3 scripts/tests/test_container_state.py` などの形で 1 本ずつ順に流している | `.github/workflows/deploy-script-test.yml:9-31,47-54` |
-| F12 | 便G（応急処置係）のカードも同じ見張り・試験・手順書のファイルに書き足す。どちらが先に main に入っても、もう片方は §6 の分岐で合わせる | docs/handoff/ai-ops-247/card-stage3-bin-g.md §3 |
+| F12 | 便G（応急処置係）のカードも同じ見張り・試験・手順書のファイルに書き足す。どちらが先に main に入っても、もう片方は §6 の分岐で合わせる | 開いている便G のカードの PR（release/ai-ops-stage3-bin-g-card の docs/handoff/ai-ops-247/card-stage3-bin-g.md §3。origin/main 334c7ec45 にはまだ無い） |
+| F13 | 2 つの値は同じ node-exporter（job node-exporter・instance app-vps）から取るので、付く印（ラベル）は同じ。片側 1 本ずつの比較に `on(...)` を付けると、結果の印が `on` に書いた印だけに削られる（Prometheus v3.11.3 の promql/engine.go:3138-3140。CI の promtool は prom/prometheus:v3.11.3） | `monitoring/prometheus/prometheus.yml:25,32`・`.github/workflows/monitoring-check.yml:77`・審査役の報告（2026-11-20） |
 
 ### 2-2. 決めたこと（Opus）
 
@@ -86,6 +87,7 @@
 - E6 見張りの式：失敗の値が成功の値より新しい、または成功の値が無く失敗の値だけがある。for 0m・札 page・severity critical。値が無いことでは鳴らさない（deploy は不定期なので「長く書かれていない」は異常ではない）
 - E7 outcome の値は E3 の条件で 3 つに限られるので、`${{ steps.migrate.outcome }}` を script にそのまま書いてよい（外から入る文字は無い）
 - E8 古い checkout（係のファイルが無い）のときは、片付けの手順と同じ形で「skipped」と出して終える
+- E9 見張りの式には `on(instance)` を付けない（F13）。付けると、成功と失敗の両方がある回は印が instance だけになり、失敗だけの回は instance と job が残る。印が回によって違うと、Alertmanager のまとめ方（alertname・job・instance）で別の見張りとして扱われてしまう
 
 ## 3. 触るファイル（これ以外は触らない）
 
@@ -243,7 +245,7 @@ if __name__ == "__main__":
       # deploy の migration が失敗・取り消しで終わった（ADR-1012 段階3 便H）。deploy.yml の「Record migration result」が prod1 の textfile に書く。
       # 失敗の時刻が成功の時刻より新しい間、または成功の値がまだ無く失敗の値だけある間鳴る。次の deploy で migration が成功すると自然に止む
       - alert: DeployMigrationFailed
-        expr: salesanchor_deploy_migration_last_failure_timestamp_seconds{instance="app-vps"} > on(instance) salesanchor_deploy_migration_last_success_timestamp_seconds{instance="app-vps"} or (salesanchor_deploy_migration_last_failure_timestamp_seconds{instance="app-vps"} unless on(instance) salesanchor_deploy_migration_last_success_timestamp_seconds{instance="app-vps"})
+        expr: salesanchor_deploy_migration_last_failure_timestamp_seconds{instance="app-vps"} > salesanchor_deploy_migration_last_success_timestamp_seconds{instance="app-vps"} or (salesanchor_deploy_migration_last_failure_timestamp_seconds{instance="app-vps"} unless salesanchor_deploy_migration_last_success_timestamp_seconds{instance="app-vps"})
         for: 0m
         labels:
           severity: critical
