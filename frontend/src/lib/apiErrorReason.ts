@@ -35,6 +35,7 @@ export const API_ERROR_REASON_KEYS: Readonly<Record<string, string>> = {
   payment_method: "apiError.paymentMethod",
   contact_company_mismatch: "apiError.contactCompanyMismatch",
   invoice_not_draft: "apiError.invoiceNotDraft",
+  payment_fee: "apiError.paymentFee",
 };
 
 /** detail が表のコードなら文言キー、そうでなければ null */

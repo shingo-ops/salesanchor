@@ -117,6 +117,7 @@ export default function InvoiceCreatePage() {
           currency,
           items: filled.map((r) => ({ quantity: r.quantity, unit_price: r.unit_price })),
           shipping,
+          payment_method_type: paymentRefFromKey(paymentChoices, paymentValue)?.method_type ?? null,
         }
       : null;
   const { preview, error: previewError, fresh } = useInvoicePreview(previewRequest);

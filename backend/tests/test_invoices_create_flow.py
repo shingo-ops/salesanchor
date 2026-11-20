@@ -326,3 +326,105 @@ async def test_f16_exchange_rate_comes_only_from_the_table(client, stub_invoice_
     assert locked.status_code == 400
     assert "draft状態の請求書のみ編集できます" in locked.text
     assert invoice_totals.REASON_FX == "fx_rate"
+
+
+# ── 便E: PayPal の支払い手数料（design-e.md §3・K5〜K7）──────────────────
+
+from tests.conftest import paypal_fee_rows  # noqa: E402
+
+PAYPAL = {"method_type": "paypal", "id": None}
+BANK = {"method_type": "bank", "id": 3}
+NO_SHIP = {"mode": "none"}
+
+
+async def _count_invoices(client, company_id: int) -> int:
+    res = await client.get(f"/api/v1/invoices?company_id={company_id}&per_page=100")
+    assert res.status_code == 200, res.text
+    return len(res.json())
+
+
+async def test_e_preview_paypal_adds_fee(client, stub_invoice_totals, fake_payment_ref):
+    stub_invoice_totals.set(payment_fee_rows=paypal_fee_rows())
+    company_id, _contact_id = await _create_company_contact(client, "E1会社")
+    base = {"company_id": company_id, "currency": "JPY", "items": PREVIEW_ITEMS, "shipping": NO_SHIP}
+    bank = (await client.post("/api/v1/invoices/preview", json={**base, "payment_method_type": "bank"})).json()
+    paypal = (await client.post("/api/v1/invoices/preview", json={**base, "payment_method_type": "paypal"})).json()
+    assert D(bank["payment_fee"]) == 0
+    assert D(paypal["payment_fee"]) > 0
+    assert D(paypal["total_amount"]) == D(bank["total_amount"]) + D(paypal["payment_fee"])
+    assert paypal["uncomputed"] == []
+
+
+async def test_e_preview_paypal_without_rows_is_uncomputed(client, stub_invoice_totals, fake_payment_ref):
+    company_id, _contact_id = await _create_company_contact(client, "E2会社")
+    res = await client.post("/api/v1/invoices/preview", json={
+        "company_id": company_id, "currency": "JPY", "items": PREVIEW_ITEMS, "shipping": NO_SHIP,
+        "payment_method_type": "paypal",
+    })
+    assert res.status_code == 200, res.text
+    assert res.json()["uncomputed"][-1] == "payment_fee"
+    assert res.json()["total_amount"] is None
+
+
+async def test_e_create_paypal_stores_fee_and_blocks_without_rows(client, stub_invoice_totals, fake_payment_ref):
+    company_id, contact_id = await _create_company_contact(client, "E3会社")
+    before = await _count_invoices(client, company_id)
+    blocked = await client.post("/api/v1/invoices", json=_body(
+        company_id, contact_id, shipping=NO_SHIP, payment_method_ref=PAYPAL))
+    assert blocked.status_code == 409, blocked.text
+    assert blocked.json()["detail"] == "payment_fee"
+    assert await _count_invoices(client, company_id) == before
+
+    stub_invoice_totals.set(payment_fee_rows=paypal_fee_rows())
+    ok = await client.post("/api/v1/invoices", json=_body(
+        company_id, contact_id, shipping=NO_SHIP, payment_method_ref=PAYPAL))
+    assert ok.status_code == 201, ok.text
+    data = ok.json()
+    assert D(data["payment_fee_charged"]) > 0
+    assert D(data["total_amount"]) == D(data["subtotal"]) + D(data["payment_fee_charged"])
+    assert await _count_invoices(client, company_id) == before + 1
+
+
+async def test_e_patch_payment_method_recomputes_total(client, stub_invoice_totals, fake_payment_ref):
+    stub_invoice_totals.set(payment_fee_rows=paypal_fee_rows())
+    company_id, contact_id = await _create_company_contact(client, "E4会社")
+    created = await client.post("/api/v1/invoices", json=_body(
+        company_id, contact_id, shipping=NO_SHIP, payment_method_ref=BANK))
+    assert created.status_code == 201, created.text
+    invoice_id = created.json()["id"]
+    base_total = D(created.json()["total_amount"])
+    assert created.json()["payment_fee_charged"] is None
+
+    to_paypal = await client.patch(f"/api/v1/invoices/{invoice_id}", json={"payment_method_ref": PAYPAL})
+    assert to_paypal.status_code == 200, to_paypal.text
+    fee = D(to_paypal.json()["payment_fee_charged"])
+    assert fee > 0
+    assert D(to_paypal.json()["total_amount"]) == base_total + fee
+
+    back = await client.patch(f"/api/v1/invoices/{invoice_id}", json={"payment_method_ref": BANK})
+    assert back.status_code == 200, back.text
+    assert back.json()["payment_fee_charged"] is None
+    assert D(back.json()["total_amount"]) == base_total
+
+    stub_invoice_totals.set(payment_fee_rows=None)
+    stopped = await client.patch(f"/api/v1/invoices/{invoice_id}", json={"payment_method_ref": PAYPAL})
+    assert stopped.status_code == 409, stopped.text
+    assert stopped.json()["detail"] == "payment_fee"
+    # 詳細の道は振込先の版を読みに行くので、一覧（同じ列）で「前のまま」を確かめる
+    listed = (await client.get(f"/api/v1/invoices?company_id={company_id}&per_page=100")).json()
+    after = next(i for i in listed if i["id"] == invoice_id)
+    assert after["payment_method"] == "bank"
+    assert after["payment_fee_charged"] is None
+    assert D(after["total_amount"]) == base_total
+
+
+async def test_e_issue_keeps_payment_fee(client, stub_invoice_totals, fake_payment_ref):
+    stub_invoice_totals.set(payment_fee_rows=paypal_fee_rows())
+    company_id, contact_id = await _create_company_contact(client, "E5会社")
+    created = await client.post("/api/v1/invoices", json=_body(
+        company_id, contact_id, shipping=NO_SHIP, payment_method_ref=PAYPAL))
+    assert created.status_code == 201, created.text
+    issued = await client.post(f"/api/v1/invoices/{created.json()['id']}/issue")
+    assert issued.status_code == 200, issued.text
+    assert D(issued.json()["payment_fee_charged"]) == D(created.json()["payment_fee_charged"])
+    assert D(issued.json()["total_amount"]) == D(created.json()["total_amount"])

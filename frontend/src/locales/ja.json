@@ -1820,6 +1820,7 @@
     "duty": "関税",
     "total": "合計",
     "notComputed": "未計算",
+    "paymentFee": "支払い手数料",
     "uncomputedTitle": "まだ計算できない項目があるため、作成できません。下の理由を見て、選び直してください",
     "clear": "入力を全部消す",
     "clearConfirmTitle": "入力を全部消しますか",
@@ -1945,6 +1946,7 @@
     "exchangeRateJpy": "為替 JPY",
     "exchangeRateUsd": "為替 USD",
     "usdConvert": "USD換算",
+    "paymentFeeCharged": "支払い手数料",
     "status_issued": "発行済",
     "status_voided": "無効化済",
     "snapshot": {
@@ -6491,6 +6493,7 @@
     "taxRate": "今日使える消費税の率が登録されていないため、日本宛の請求書を作れません。最高管理者に税率の画面で率を登録してもらってください。",
     "paymentMethod": "選んだ支払方法は今は使えないため、請求書を保存できません。支払方法を選び直してください。",
     "contactCompanyMismatch": "選んだ担当者はこの会社の人ではないため、請求書の材料を出せません。担当者を選び直してください。",
-    "invoiceNotDraft": "この請求書は下書きではなくなったため、発行できません。画面を読み直してください。"
+    "invoiceNotDraft": "この請求書は下書きではなくなったため、発行できません。画面を読み直してください。",
+    "paymentFee": "支払い手数料の設定が見つからないため、合計を計算できません。設定の画面で PayPal の手数料を確かめてください。"
   }
 }

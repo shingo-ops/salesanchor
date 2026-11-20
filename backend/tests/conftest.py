@@ -1217,7 +1217,9 @@ async def setup_test_db(test_engine):
                 tax_rate_percent NUMERIC(5, 2),
                 shipping_carrier VARCHAR(50),
                 shipping_service VARCHAR(100),
-                shipping_snapshot TEXT
+                shipping_snapshot TEXT,
+                payment_fee_charged NUMERIC(15, 2),
+                payment_fee_snapshot TEXT
             )
         """))
         await conn.execute(text("""
@@ -2368,14 +2370,16 @@ def stub_invoice_totals(monkeypatch):
         "tax": it.TaxRow(rate_percent=Decimal("10.00"), effective_from=date(2019, 10, 1)),
         "duty_rules": (),
         "fx": {"USD": it.FxRow(currency="USD", rate_jpy=Decimal("150.0000"), fetched_at=datetime(2026, 11, 15, 1, 0, tzinfo=timezone.utc))},
+        "payment_fee_rows": None,
         "calls": [],
     }
 
-    async def _fake(db, tenant_id, *, destination, base_date):
-        state["calls"].append({"destination": destination, "base_date": base_date})
+    async def _fake(db, tenant_id, *, destination, base_date, **kw):
+        state["calls"].append({"destination": destination, "base_date": base_date, **kw})
         return it.TotalsInputs(
             base_date=base_date, incoterms=state["incoterms"], tax=state["tax"],
             duty_rules=state["duty_rules"], fx=state["fx"],
+            payment_fee_rows=state["payment_fee_rows"] if kw.get("payment_method_type") == "paypal" else None,
         )
 
     class _Handle:
@@ -2389,3 +2393,34 @@ def stub_invoice_totals(monkeypatch):
 
     monkeypatch.setattr(it, "load_totals_inputs", _fake)
     return _Handle()
+
+
+@pytest.fixture
+def fake_payment_ref(monkeypatch):
+    """SQLite の試験用: 振込先の表を読まずに支払方法の確かめを通す（design-e §3-5）。"""
+    from app.services import invoice_payment_methods as ipm
+
+    async def _fake(db, tenant_id, *, method_type, method_id, region, currency):
+        return method_type, method_id
+
+    async def _current(db, tenant_id, *, payment_method_id, region, currency):
+        return True
+
+    monkeypatch.setattr(ipm, "resolve_payment_ref", _fake)
+    # 発行の前の確かめも振込先の表を読むので、銀行の id つきの請求書を発行する試験のために通す
+    monkeypatch.setattr(ipm, "is_current_choice", _current)
+
+
+def paypal_fee_rows(*, international: bool = True, with_fx: bool = False):
+    from decimal import Decimal
+
+    from app.services import invoice_totals as it
+
+    receiving = it.PaymentFeeRow(
+        id=2 if international else 1,
+        fee_type="receiving_international" if international else "receiving_domestic",
+        rate_pct=Decimal("4.1000") if international else Decimal("3.6000"),
+        fixed_amount=Decimal("40.00"), threshold=None,
+    )
+    fx = it.PaymentFeeRow(id=3, fee_type="fx_receiving", rate_pct=Decimal("4.0000"), fixed_amount=Decimal("0"), threshold=None) if with_fx else None
+    return it.PaymentFeeRows(receiving=receiving, fx=fx, required_fx=with_fx)

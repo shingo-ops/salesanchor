@@ -452,6 +452,78 @@ async def test_get_current_user_rejects_alg_none(db_session, password_hash):
     assert exc.value.status_code == 401
 
 
+# 期限切れの札は回数止めに数えない（ADR-1083）
+
+async def _current_user_counting(db, token, *, rate_limited=False):
+    """get_current_user を呼び、(例外, record_auth_failure の偽物) を返す。"""
+    from app.auth.dependencies import get_current_user
+
+    cred = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+    with patch("app.auth.dependencies.is_token_blacklisted", new=AsyncMock(return_value=False)), \
+         patch("app.auth.dependencies.get_cached_jwt", new=AsyncMock(return_value=None)), \
+         patch("app.auth.dependencies.check_auth_rate_limit", new=AsyncMock(return_value=rate_limited)), \
+         patch("app.auth.dependencies.record_auth_failure", new=AsyncMock()) as record, \
+         patch("app.auth.dependencies.cache_jwt_result", new=AsyncMock()):
+        with pytest.raises(HTTPException) as exc:
+            await get_current_user(_request(), cred, db)
+    return exc.value, record
+
+
+def _expired_token(secret=SECRET, *, kid_secret=None):
+    now = int(datetime.now(timezone.utc).timestamp())
+    claims = {
+        "iss": "salesanchor", "sub": str(USER_ID), "email": EMAIL, "jti": "j1",
+        "iat": now - 7200, "exp": now - 3600,
+    }
+    headers = {"kid": self_tokens._kid(kid_secret or secret)}
+    return jwt.encode(claims, secret, algorithm="HS256", headers=headers)
+
+
+async def test_expired_self_token_is_not_counted_as_failure(db_session, password_hash):
+    from app.auth.dependencies import _INVALID_TOKEN_DETAIL
+
+    await _insert_user(db_session, hash_value=password_hash)
+
+    exc, record = await _current_user_counting(db_session, _expired_token())
+
+    assert exc.status_code == 401
+    assert exc.detail == _INVALID_TOKEN_DETAIL
+    assert record.await_count == 0
+
+
+async def test_expired_token_with_wrong_signature_is_counted(db_session, password_hash):
+    await _insert_user(db_session, hash_value=password_hash)
+
+    exc, record = await _current_user_counting(
+        db_session, _expired_token(OTHER_SECRET, kid_secret=SECRET)
+    )
+
+    assert exc.status_code == 401
+    assert record.await_count == 1
+
+
+async def test_valid_self_token_bad_signature_still_counted(db_session, password_hash):
+    await _insert_user(db_session, hash_value=password_hash)
+
+    exc, record = await _current_user_counting(
+        db_session, _token(OTHER_SECRET, kid_secret=SECRET)
+    )
+
+    assert exc.status_code == 401
+    assert record.await_count == 1
+
+
+async def test_locked_ip_still_gets_429_for_expired_token(db_session, password_hash):
+    await _insert_user(db_session, hash_value=password_hash)
+
+    exc, record = await _current_user_counting(
+        db_session, _expired_token(), rate_limited=True
+    )
+
+    assert exc.status_code == 429
+    assert record.await_count == 0
+
+
 # ── 10. 設定検査 ─────────────────────────────────────────────
 
 def test_validate_settings_accepts_valid_self_config():

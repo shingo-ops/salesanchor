@@ -202,6 +202,9 @@ export function InvoicePaymentTotalsSection(props: InvoicePaymentTotalsSectionPr
             { key: "subtotal", label: t("invoiceForm.subtotal"), value: <span data-testid="invoice-total-subtotal">{preview ? money(preview.subtotal) : t("invoiceForm.notComputed")}</span> },
             { key: "shipping", label: t("invoiceForm.shippingFee"), value: <span data-testid="invoice-total-shipping">{preview ? money(preview.shipping_fee) : t("invoiceForm.notComputed")}</span> },
             { key: "tax", label: taxLabel, value: <span data-testid="invoice-total-tax">{taxValue}</span> },
+            ...(preview !== null && Number(preview.payment_fee) > 0
+              ? [{ key: "paymentFee", label: t("invoiceForm.paymentFee"), value: <span data-testid="invoice-total-payment-fee">{money(preview.payment_fee)}</span> }]
+              : []),
           ]}
           total={{ label: t("invoiceForm.total"), value: <span data-testid="invoice-total-amount">{preview ? money(preview.total_amount) : t("invoiceForm.notComputed")}</span> }}
         />
