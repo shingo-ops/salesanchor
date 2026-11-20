@@ -45,8 +45,8 @@
 ## 5. 札の部品の確かめる順番（公式の中身）
 
 - backend/requirements.txt:17 `python-jose[cryptography]==3.5.0`。
-- PyPI の python_jose-3.5.0 の `jose/jwt.py`:159 で `jws.verify`（署名の確認）を先にし、:174 の `_validate_claims` の中（:496-497）で期限を見る。署名が合わないと `JWTError` になり、期限の確認まで進まない。
-- `jose/exceptions.py`:25 `class ExpiredSignatureError(JWTError)`。
+- PyPI の python_jose-3.5.0 の jwt.py（パッケージの中）の 159 行 で `jws.verify`（署名の確認）を先にし、:174 の `_validate_claims` の中（:496-497）で期限を見る。署名が合わないと `JWTError` になり、期限の確認まで進まない。
+- 同パッケージの exceptions.py の 25 行 `class ExpiredSignatureError(JWTError)`。
 - 自社の `decode_access_token`（backend/app/auth/self_tokens.py:111-120）は、kid が今の秘密か一つ前の秘密に合わないと、読み解く前に `JWTError("unknown kid")` を出す。
 - よって `ExpiredSignatureError` が出る札は「自社の秘密で署名された本物で、期限だけが切れた札」に限られる。
 - Context7（/websites/deepwiki_mpdavis_python-jose）も同じ例外の階層を示す。
