@@ -129,3 +129,27 @@ GitHub の動き（Context7 /github/docs、2026-11-20）:
 - やり直しは元の出来事と同じ `GITHUB_SHA`・`GITHUB_REF` で動く（re-run-workflows-and-jobs）。
 - PR の commit の一覧は 250件が上限（repository-limits）。
 - main の ruleset 15777895 は strict（main に追いついていることが必要）。PO 本人の GO を head に結び付けると update-branch のたびにやり直しになるため、守るファイルの中身に結び付ける（design.md 便7）。
+
+## 便7 の数え 追加（2026-11-20・審査1回目の中5 と PO の「1」を受けて）
+
+同じ数え方（2026-10-20〜11-20 の main への合流の数）。
+
+| 扱い | ファイル | 合流の数 |
+|---|---|---|
+| 守らない（理由は design.md 便7） | backend/tests/conftest.py | 28 |
+| 守らない | backend/tests/rls_bootstrap.py | 13 |
+| 守らない | .github/workflows/migration-guard.yml | 15 |
+| 守らない | scripts/migration-guard/rewrite-allowlist.tsv | 1 |
+| 守らない | .github/CODEOWNERS | 1 |
+| 組B | backend/pyproject.toml | 0 |
+| 組B | scripts/agent-hooks/cloud/dispatch.sh | 2 |
+| 組B | .github/workflows/agent-hooks-test.yml | 3 |
+| 組A | 便7b の新しい5件 | 0（新規） |
+
+- conftest.py と rls_bootstrap.py には、RLS の役を切り替える箇所が無い。`git grep -n -i "salesanchor_app\|NOBYPASSRLS\|SET ROLE" origin/main -- backend/tests/conftest.py backend/tests/rls_bootstrap.py` が0件。役を作って繋ぐのは `.github/workflows/test.yml:198-240`。
+- ruleset 15777895 の pull_request の規則は `require_code_owner_review: false`（gh api の生の値）。
+- GitHub Actions のアプリの id は 15368。`gh api repos/shingo-ops/salesanchor/commits/6dab4234/check-runs` の結果では、「guard」「process-artifacts gate」「evaluate guard authoring from main」などの検査の `app.id` が 15368、`app.slug` が github-actions だった。
+- 手元の gh の鍵: shingo-cc（使用中）・highlifejpn-debug・shingo-ops・Shingo-portfolio（`gh auth status`）。クラウドの GitHub の道具の get_me は shingo-ops（審査1回目）。
+- クラウドの見張りの入口は `scripts/agent-hooks/cloud/dispatch.sh`。PreToolUse では guard_pre_tool.py の後に、`for G in python_version_guard.py subagent_bash_wait_guard.py` で順に流す。`.claude/settings.json` の PreToolUse の matcher には Bash・Write|Edit・`mcp__github__.*` がある（クラウドでだけ動く）。
+- 手元の見張りの入れ方は2つの手本に合わせる。札の形は `scripts/agent-hooks/install-form-guard/guard-manifest.json`（name・files・hooks・tests）。入れる台本は共通の台本（docs/handoff/guard-add-by-ai/design.md §6）。試験は `.github/workflows/agent-hooks-test.yml:69-79` の install-form-guard test の形。
+- GitHub MCP の書く道具（Context7 /github/github-mcp-server、2026-11-20）: add_issue_comment（本文か反応）・add_reply_to_pull_request_comment・add_comment_to_pending_review・pull_request_review_write など。名前は版で変わるので、クラウドの見張りは道具の名前ではなく入力の文字で判定する。
