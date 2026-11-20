@@ -135,12 +135,12 @@ p6 の2つ目の追加の答え（2026-11-18 PO「1」）: 在庫表の値段は
 - FedEx の呼び出しの上限: 公式の案内では1プロジェクト10秒に1,400回（developer.fedex.com/api/en-pw/guides/ratelimits.html。2026-11-17 に読んだ）。1枚の請求書を作る間の呼び出しは、総重量を変えた回数（数回）に限られる。1日の上限（Rate API）と1回ごとの費用は **未確認**。そのため K7 で呼び出しの回数を数える。
 
 ### 3-6. 作成のあとに出す小さな枠（p7。第9版で書き直し）
-- 「請求書を作成」（今のボタン名 `invoices.createBtn`。PO 2026-11-20 回答「1」）を押すと、今の作る道（POST /invoices。下書きで保存。backend/app/routers/invoices.py:609）を1回呼ぶ。今は成功すると詳細画面へ移る（origin/main `d4bea69c1` の InvoiceCreatePage.tsx:184 `navigate(`/invoices/${inv.id}`)`）。R6 ではこの移動をやめ、作成の画面の上に小さな枠（金型 `components/Modal.tsx`）を出す。
+- 「請求書を作成」（今のボタン名 `invoices.createBtn`。PO 2026-11-20 回答「1」）を押すと、今の作る道（POST /invoices。下書きで保存。backend/app/routers/invoices.py:609）を1回呼ぶ。今は成功すると詳細画面へ移る（origin/main `d4bea69c1` の InvoiceCreatePage.tsx:184 `navigate(`/invoices/${inv.id}`)`）。R6 ではこの移動をやめ、作成の画面の上に小さな枠（金型 `frontend/src/components/Modal.tsx`）を出す。
 - PDF の中身を枠に埋め込まない。根拠（Opus が 2026-11-20 に確かめた）: 本番の守りの設定 nginx/nginx.conf:96 は `default-src 'self'` で `frame-src`・`object-src` を書いておらず、blob の PDF を iframe・object・embed に入れると手元の試しで止められた。守りの設定は変えない（PO 2026-11-20 回答「1」）。印刷のボタンも作らない（PDF を開けないため）。
 - 枠の中身: 題「請求書を作成しました」・請求書番号（金型 `ReadOnlyField`。POST の返事の `invoice_number`。作るときに必ず `IN-{id:04d}-01` が入る invoices.py:665）・知らせ（金型 `Callout` info。「下書きで保存しました。送付・確定は詳細画面で行います」）。
 - 枠のボタン（金型 `Button`、下段 `footer`）: 「閉じる」（`common.close`。今の「クリア」と同じ `clearAll()` で新しい空の請求書に戻り、枠を閉じる）・「詳細へ」（今の詳細画面 `/invoices/{id}` へ移る）・「PDF を保存」（主ボタン。GET /invoices/{id}/pdf を `api.getBlob` で読み、`<a download>` で保存する）。
 - PDF を保存する決め方: 道（origin/main `d4bea69c1` の backend/app/routers/invoices.py:1133・権限 `invoices.view`）は `Content-Disposition: attachment; filename="{invoice_number または IN-{id:04d}-01}.pdf"` で返す（同 :1156・:1183・:1188）。`api.getBlob`（frontend/src/lib/api.ts:203 の requestBlob・:305 の getBlob）は応答の見出しを返さないので、ファイル名は POST の返事の `invoice_number` に `.pdf` を付ける（道が付ける名前 `{invoice_number}.pdf` と同じ。番号の正本はサーバー）。返事の型は `invoice_number: str | None`（backend/app/schemas/invoice.py:210）だが作るときに必ず入る。もし空なら「PDF を保存」を出さない（番号の形 `IN-…` を画面で作り直さない＝正本を2つにしない）。同じ出所の blob の URL を `a[download]` で保存するのは守りの設定に関わらない（MDN: CSP の移動の決まりは form-action・frame-ancestors だけ。Context7 で確かめた）。
-- 保存の小さな関数 `frontend/src/lib/saveBlob.ts` を新しく作る（blob の URL を作る→a を付けて押す→外す→URL を捨てる）。今は同じ書き方が18ファイルに散らばっているが、R6 ではそれらを書き換えない（別の作業にする）。
+- 保存の小さな関数 frontend/src/lib/saveBlob.ts（新規）を新しく作る（blob の URL を作る→a を付けて押す→外す→URL を捨てる）。今は同じ書き方が18ファイルに散らばっているが、R6 ではそれらを書き換えない（別の作業にする）。
 - PDF の道の権限は `invoices.view`。作る権限だけで見る権限の無い役割では「PDF を保存」を出さず、「PDF の保存には請求書を見る権限が要ります。必要なら会社の管理者に連絡してください」の知らせ（金型 `Callout` info）を出す。権限は今の `usePermissions()` で読む（新しい取り方を作らない）。
 - PDF の読み込みに失敗したら、枠の中に知らせ（金型 `Callout` warning。「PDF を保存できませんでした。少し待ってもう一度お試しください」（詳細画面の PDF のボタンは下の別件のとおり今は動かないので案内しない））を出し、枠は閉じない。
 - 枠は背景を押しても閉じない（`dismissOnOverlay={false}`。作ったことを見落とさないため）。Esc と右上の×は金型どおり「閉じる」と同じ動き。
