@@ -13,7 +13,7 @@
 
 | 事実 | 根拠 |
 |---|---|
-| 機能→ADR 索引は手で選んだ主要 ADR だけを載せる方針 | `/Users/tanizawashingo/worktrees/salesanchor/release-requirement-library-design/docs/adr/FEATURE-INDEX.md:6`「主要ドメインの正準 ADR だけを人手でキュレート」 |
+| 機能→ADR 索引は手で選んだ主要 ADR だけを載せる方針 | `docs/adr/FEATURE-INDEX.md:6`「主要ドメインの正準 ADR だけを人手でキュレート」 |
 | 索引は 68 行・表の行 34 | `wc -l`・`docs/handoff/requirement-library/r1_count.py` の出力 `fi_rows 34` |
 | ADR ファイル（`ADR-<数>-*.md`）の番号 210 個のうち、索引が指すのは 59・**指さないのは 151** | `python3 -I docs/handoff/requirement-library/r1_count.py .` → `adr_ids 210 referenced 59 missing 151` |
 | 設計仕様書のフォルダ 56 のうち、`docs/specs/README.md` に無いのは `master-ssot-migration`（既存の抜け）と本テーマ（本 PR で足す） | 同出力 `missing_in_specs_readme 2` |

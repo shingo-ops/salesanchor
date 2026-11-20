@@ -18,27 +18,47 @@
 
 ### 便1 目録を漏れなくする（R1）
 
-- 索引の各表に列「コードの場所」（`backend/app/routers/companies.py` のような glob。複数は `、`）を足す。
-- 151 個の ADR を、(a) 既存の行に足す、(b) 新しい行を作る、(c) 末尾の新節「索引に載せない ADR」に「番号｜理由（置き換え済み・手順だけ・取り消し等）」で載せる、のどれかにする。11/13 の件は (a) で「会社」の行に ADR-097 と `docs/specs/db-ssot/deal-removal/design.md` を足す。
-- 新しい検査 `scripts/ci/check_feature_index.py`: r1_count.py と同じ数え方で、索引にも除外表にも無い ADR 番号と、`docs/specs/README.md` に無い設計仕様書のフォルダを出し、1 件でもあれば失敗。`doc-index-reachability.yml` の run に1行足す（新しい必須チェックは作らない）。
-- 試験: 抜けを1件わざと作った見本で失敗し、今の版で成功する。
+- 言葉の決め: R1 の「設計仕様書」は `docs/specs/` 直下のフォルダ（今 56 個）。入れ子（例 `db-ssot/deal-removal`）は親の README から辿れることを既存の `check_doc_index.py` が見ているので、R1 では親フォルダ単位で数える。
+- 索引の表の列を「機能キーワード｜正準 ADR｜設計書｜コードの場所｜補足」の 5 列にする（今は 3 列）。
+  - 設計書: `docs/specs/<フォルダ>/…` へのリンク（入れ子の設計書を直接指してよい）。無ければ `-`。
+  - コードの場所: リポジトリ直下からの glob（例 `backend/app/routers/companies.py`）。複数は `、` で区切る。コードを持たない決まり（手順・運用だけ）は `-`。
+- 151 個の ADR と、索引から指されていない設計仕様書のフォルダを、次の順で振り分ける。
+  1. ADR の状態の行（`Status`・`状態` など。書き方はばらばら）に Superseded・Deprecated・Rejected・廃止・置き換え・取り消し のどれかがある → 末尾の新節「索引に載せない ADR・設計仕様書」に「番号かフォルダ｜理由（どれに置き換わったか）」で載せる。
+  2. それ以外 → ADR の題名と本文の最初の節を読み、既存の行の機能キーワードに当たれば (a) その行の「正準 ADR」欄に足す。当たらなければ (b) 新しい行を作る。手順・運用だけの決まりは「横断・運用・プロセス」節に入れ、コードの場所は `-`。
+  3. 設計仕様書のフォルダも同じ。対応する ADR の行の「設計書」欄に載せる。どの行にも当たらず状態が「完了・廃止」なら除外の節へ理由つきで載せる。
+- 11/13 の件は (a): 「会社」の行に ADR-097 と `docs/specs/db-ssot/deal-removal/design.md` を足す。
+- 練習問題の 10 題の正解の ADR は、必ず「コードの場所」が `-` 以外で 1 つ以上のファイルに当たる行に載せる（便2の見張りが働くため）。glob は実装役が実物で決め、カードの完了報告に 10 行分を貼る。
+- 新しい検査 `scripts/ci/check_feature_index.py`（r1_count.py より厳しい数え方）:
+  - ADR は「正準 ADR」欄か除外の節の1列目にある番号だけを「載っている」と数える（補足欄の文の中の番号は数えない）。
+  - 設計仕様書のフォルダは「設計書」欄か除外の節の1列目に `docs/specs/<フォルダ>/` で始まるリンクがあれば「載っている」と数える。
+  - 「コードの場所」が `-` でない行で、glob がどのファイルにも当たらなければ失敗。
+  - 1 件でも抜けか当たらない glob があれば終了コード 1 と一覧を出す。`doc-index-reachability.yml` の run に1行足す（新しい必須チェックは作らない）。
+- 試験 `scripts/ci/test_check_feature_index.py`: ADR の抜け・補足欄だけに書かれた番号・設計仕様書の抜け・当たらない glob の 4 つの見本で失敗し、正しい見本で成功する。
+- 数が多いので、実装は「検査と試験」と「振り分け」を同じ PR の別 commit にする。振り分けの結果（何をどこへ）を一覧にして PR 本文に貼る。
 
 ### 便2 開いた瞬間に決まりを見せる（R2・R3）
 
 - `.claude/hooks/requirement-context.py`（PostToolUse、対象 `Read|Edit|Write|MultiEdit`）: tool_input の file_path を索引の「コードの場所」と照らし、当たった行の「正準 ADR と設計書のパス」を `hookSpecificOutput.additionalContext` で返す。
-- 同じ行は1つの会話で1回だけ（`$CLAUDE_PROJECT_DIR` 外の一時置き場に session_id ごとの印）。当たらなければ何も返さず、失敗しても作業を止めない（終了コード 0）。
+- パスの照らし方: file_path は絶対パスで来る（作業場所 `~/worktrees/...` でも、クラウドの `/home/user/salesanchor` でも）。file_path のある場所で `git rev-parse --show-toplevel` を流して、その直下からの相対パスにしてから `fnmatch` で glob と照らす。索引もその同じ直下の `docs/adr/FEATURE-INDEX.md` を読む（本店の古い写しを読まない）。リポジトリの外のファイルは何もしない。
+- 同じ行は1つの会話で1回だけ。印は `${TMPDIR:-/tmp}/requirement-context/<session_id>` に行番号を1行ずつ書く。当たらなければ何も返さない。
+- どんな失敗（索引が読めない・入力が壊れている・git が無い）でも終了コード 0 で何も返さず、作業を止めない。
+- 登録: `.claude/settings.json` に `"PostToolUse"` 節を新しく足し、`matcher` は `Read|Edit|Write|MultiEdit`、`command` は `python3 "$CLAUDE_PROJECT_DIR/.claude/hooks/requirement-context.py"`、`timeout` 5 秒。既存の節は変えない。
+- 試験 `.claude/hooks/test_requirement_context.py`: 当たる・当たらない・2回目は黙る・壊れた入力・リポジトリ外 の 5 つ。
 - 文の形:「この場所には決まりがあります: ADR-097（会社はリードの子）。計画の前に docs/specs/db-ssot/deal-removal/design.md を読んでください。」
 
 ### 便3 読まずに「不具合」を止める（R4）
 
 - `.claude/hooks/requirement-bug-claim.py`（Stop）: transcript_path を読み、最後の返事に「不具合・バグ」があり、その会話で `docs/adr/` か `docs/specs/` を1度も読んでいなければ、1回だけ `decision: block` で「要件の書類を読んでから判定してください」と返す（`stop_hook_active` が真なら止めない）。
-- 止めた回を1行ずつ記録（日時・会話の番号・最初の 40 字）。R4 は週1回この記録の行数を数える。記録の置き場と週次の数え方は便3のカードで決める（agent-console の週次点検に1行足す案）。
+- 「読んだ」の判定: transcript の tool_use のうち、Read の file_path か Bash・Grep・Glob の入力に `docs/adr/` か `docs/specs/` を含むものが1つでもあれば読んだとする（count.py の数え方と同じ考え）。
+- 止めた回を `~/.claude/requirement-library/bug-claims.log` に1行ずつ書く（日本時間の日時・session_id・返事の最初の 40 字）。クラウドの使い捨て環境の分は消えるので、R4 の本測定は Mac の会話だけを数えると決める（クラウド分は練習問題の補助で見る）。
+- 週1回の数え: `scripts/dev/count-bug-claims.sh`（過去 7 日の行数を出す）を作り、毎週月曜の Mac の点検（`~/kb/scripts/patrol.sh` とは別。agent-console の週次の定期作業）に1行足す。数えた値は kgi.md の R4 の「今」欄に書く。
+- どんな失敗でも終了コード 0 で止めない。試験は 読まずに不具合→止める・読んでから不具合→止めない・stop_hook_active→止めない・壊れた入力 の 4 つ。
 
 ## 4. 合格の判定
 
 |基準|検証方法|
 |---|---|
-| R1 索引にも除外表にも無い ADR・設計仕様書 0 | CI `check_feature_index.py` が成功（PR の検査結果）と `r1_count.py` の missing 0 |
+| R1 索引（正準 ADR 欄・設計書欄）にも除外の節にも無い ADR・設計仕様書のフォルダ 0 | CI `check_feature_index.py` が成功（PR の検査結果に出る抜けの数 0） |
 | R2 20 回中 18 回以上で正解の書類を開く | 便2のあと quiz を流し `count.py` の `R2` 値 |
 | R3 決まりに触れずに反する計画 0 | 同じ 20 回の答えを quiz.md §2 の表で Opus が判定（`r3-judgement.md`） |
 | R4 読まずに「不具合」0 | 便3の見張りの記録を週1回数える（本測定）。補助に count.py の `R4aux` |
@@ -70,4 +90,5 @@
 
 ## 9. 審査
 
-- 状態: 草案。クラウドの設計審査（architect）待ち。結果は本節に APPROVE／REVISE／REJECT・根拠・未解決で書き足す。
+- 1回目（2026-11-21 08:12、クラウドの審査役 Sonnet、対象 9799b8e2）: **REVISE**。直した点: R1 の設計仕様書の数え方を KGI に合わせた（設計書欄を新設）／検査は正準 ADR 欄と除外の節だけを数える／振り分けの順番と `-` の使い方を書いた／便2 のパスの照らし方・印の置き場・登録の形を書いた／便3 の「読んだ」の判定・記録の置き場・週次の数え方を書いた／recon の絶対パスを相対に直した。
+- 2回目: 審査待ち。
