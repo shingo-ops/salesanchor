@@ -378,7 +378,7 @@ if __name__ == "__main__":
 - 弊害：deploy の手順が 1 つ増え、migration が走った回だけ ssh 1 回分（数秒）長くなる。打ち切りは 2 分で、失敗しても deploy の成否は変わらない
 - 弊害：migration が失敗した後、migration を飛ばす deploy（判定が false の回）が続く間は鳴り続ける。前の deploy が失敗していれば次の deploy は判定で全部走る（`.github/workflows/deploy.yml:84-90`）ので、ふつうは次の deploy で止む。止まらないときは手順書の止め方で黙らせる
 - 弊害：見張りが鳴っている間、Discord と障害記録に札 page で届く（Alertmanager は札で行き先を分けていない）
-- 戻し方：この PR の revert を main にマージ → 次の deploy で手順・係・見張りが外れる。prod1 の `deploy_migration_success.prom`・`deploy_migration_failure.prom` は残っても、見張りが無ければ鳴らない（設計 §8 :181）。消すときは PO の `!` で消す
+- 戻し方：この PR の revert を main にマージ → 次の deploy で手順・係・見張りが外れる。prod1 の `deploy_migration_success.prom`・`deploy_migration_failure.prom` は残っても、見張りが無ければ鳴らない（設計 §8 :182）。消すときは PO の `!` で消す
 
 ## 10. PR
 
