@@ -1,6 +1,6 @@
 # design-v2: 請求書作成画面を見本の「見た目と操作」に合わせる（8部品すべて見本どおり）
 
-状態: 設計案 第9版（Opus 作成 2026-11-17・第7版 2026-11-18・第8版 2026-11-19・第9版 2026-11-20）。第9版は PO の答え2件（2026-11-20「1」: ボタン名は今のまま・作成のあとは PDF を埋め込まず小さな枠）で §3-6・R6・K15・§11 を書き直した。第8版は R5 のカードを書くときに見つけた「キャンセル」の扱い（§3-6）を書いた。第7版は PO の答え2件（2026-11-18「1」: 単価の為替の直し方 §1-2・在庫表に出ない21商品は別テーマ §8・§11）を書き、§3-8 の LineItem に `price_yen`・`price_edited` を足した（R5 のカードで為替の入れ直しに使う）。PO 承認済みの決定は §1-2 のとおり。設計審査 1回目（クラウドの Opus・2026-11-17 17:31 JST）は REVISE（直すべき4件）。第2版でその4件と覚え書き5件を直した。2回目（2026-11-17 17:37 JST）は REVISE（直すべき1件）。第3版でその1件と覚え書き2件を直した。3回目（2026-11-17 17:41 JST）は REVISE（直すべき1件）。第4版でその1件と覚え書き2件を直した。4回目（2026-11-17 17:45 JST）は APPROVE（覚え書き2件）。第5版で覚え書き1件と、Opus が R1 のカードを書くときに見つけた抜け1件（見積の PDF）を直した（§12）。5回目（2026-11-17 17:49 JST）は APPROVE（覚え書き2件）。第6版でその2件と、審査役が未確認とした詳細画面の表示を確かめて書いた。
+状態: 設計案 第10版（Opus 作成 2026-11-17・第7版 2026-11-18・第8版 2026-11-19・第9版 2026-11-20・第10版 2026-11-20）。第10版は R7 のカードを書くために §3-8 を見積の画面の作りの細部（為替の読み先・消す部品・保存の形・試験）まで書き、§8・K16 を足した（新しい PO の決定は無い）。第9版は PO の答え2件（2026-11-20「1」: ボタン名は今のまま・作成のあとは PDF を埋め込まず小さな枠）で §3-6・R6・K15・§11 を書き直した。第8版は R5 のカードを書くときに見つけた「キャンセル」の扱い（§3-6）を書いた。第7版は PO の答え2件（2026-11-18「1」: 単価の為替の直し方 §1-2・在庫表に出ない21商品は別テーマ §8・§11）を書き、§3-8 の LineItem に `price_yen`・`price_edited` を足した（R5 のカードで為替の入れ直しに使う）。PO 承認済みの決定は §1-2 のとおり。設計審査 1回目（クラウドの Opus・2026-11-17 17:31 JST）は REVISE（直すべき4件）。第2版でその4件と覚え書き5件を直した。2回目（2026-11-17 17:37 JST）は REVISE（直すべき1件）。第3版でその1件と覚え書き2件を直した。3回目（2026-11-17 17:41 JST）は REVISE（直すべき1件）。第4版でその1件と覚え書き2件を直した。4回目（2026-11-17 17:45 JST）は APPROVE（覚え書き2件）。第5版で覚え書き1件と、Opus が R1 のカードを書くときに見つけた抜け1件（見積の PDF）を直した（§12）。5回目（2026-11-17 17:49 JST）は APPROVE（覚え書き2件）。第6版でその2件と、審査役が未確認とした詳細画面の表示を確かめて書いた。
 基準: origin/main `cbd85f01d`（調査は `337ebbd1b` で行い、下で引く請求書・在庫・送料・部品のファイルは `git diff --stat 337ebbd1b cbd85f01d` で差が0件であることを確かめた）。
 根拠: docs/handoff/invoice-create-portfolio/recon.md（前の調べ）と docs/handoff/invoice-create-portfolio/recon-gap.md（Q 番号で指す。基準 `094cae3b0`）、本書 §2 の追加調査（本番は読むだけの道 ADR-1024 で読んだ）。
 前の設計: docs/handoff/invoice-create-portfolio/design.md（第9版。便 A・V・B・C/D は本番済み。PR #5542 まで）。本書はその上に重ねる。design.md の決まり（額はサーバー計算・SSOT・振込先の版）は変えない。
@@ -164,6 +164,19 @@ p6 の2つ目の追加の答え（2026-11-18 PO「1」）: 在庫表の値段は
 - 見積の画面で変わるのは商品行の表だけ。見積の送料（FedExRateModal）・保存の道は変えない。
 - LineItem（frontend/src/pages/quote-create/quoteDraft.ts:8-29）には、画面だけで使う `category_code`・`stock_limit`・`price_yen`（在庫表の円の値段）・`price_edited`（単価を手で直したか。通貨を選び直したとき、直していない行だけ入れ直す）を足す（どれも任意。保存には送らない）。
 
+#### 3-8-1. R7 の作り（第10版。基準 origin/main `4209886d9`）
+- 今の見積の画面（frontend/src/pages/quote-create/QuoteCreatePage.tsx・297行）は、自由記入の行の表（:170-252）・「行を追加」（:254-256 `quote-add-blank`）・検索で足す欄 InventorySearchBar（:258-264）・在庫0の注意（:206-214）を持つ。これを請求書と同じ `LineItemsTable`（frontend/src/pages/quote-create/LineItemsTable.tsx。請求書は frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:249-257 で使う）に替える。
+- 行の初めは請求書と同じ `handoffRows(handoff)`（frontend/src/pages/quote-create/lineItems.ts:42-51。在庫表の画面から持ってきた商品が先頭の行に入り、12行まで空の行）。今の `buildInitialItems`（quoteDraft.ts:116-128）は画面から外す。quoteDraft.ts は変えない（K16 で quoteDraft.test.ts を緑のまま残すため。`buildInitialItems`・`blankItem`・`weightForUnit` は試験と lineItems.ts からだけ使われる形になる。片付けは別の作業）。
+- 在庫は請求書と同じ `useDraftInventory()`（GET /invoices/draft-inventory。権限は invoices.create か quotes.create・backend/app/routers/invoices.py:384-388。K23）。
+- 為替: 見積には請求書の draft-context が無い。今ある GET /api/v1/fx-rates/{currency}（backend/app/routers/fx_rate_admin.py:61-95。ログインだけで読める。public.app_fx_rate_history の最新の1行を返し、無ければ 404）を `useApiQuery`（frontend/src/lib/query/apiQuery.ts:52-72）で読む。請求書の draft-context の為替（backend/app/services/invoice_totals.py:369-377 `load_latest_fx`）も同じ表を読むので、正本は1つのまま。円のときは読まない（`enabled: currency !== "JPY"`）。答えの `rate_jpy` が 0 より大きいときだけ使い、読めない・404 のときは為替なし（単価 0。§8）。通貨を選び直したら請求書と同じ `reconvertPrices`（lineItems.ts:166-172）で手で直していない行だけ入れ直す。
+- 通貨の選び肢（JPY・USD・EUR、既定 USD。:158-164）・取引先と担当者・メモ・送料（FedEx の見積もり）・税・合計・総重量・「キャンセル」「下書き保存」は変えない。総重量は `totalWeight(rows)`（lineItems.ts:196-199）、小計の和は商品の入った行の `rowSubtotal`（lineItems.ts:202-204）の和にする。FedEx の枠に渡す重さも `totalWeight(rows)`。
+- 保存の前の点検: 担当者が無ければ今と同じ文。`allRowsReady(rows)`（lineItems.ts:190-193）が偽なら、行に印を出し（`showErrors`）、今と同じ「quotes.itemsRequired」の文を出して送らない。
+- 送る形: POST /quotes の `items` は `filledRows(rows).map(toInvoiceItem)`（lineItems.ts:185-187・207-218）。中身の8項目（product_id・product_name・name_en・condition・unit・quantity・unit_price・weight）は今の見積の形（backend/app/schemas/quote.py:27-36 QuoteItemInput）と同じ。サーバーは変えない。
+- 消すもの: 自由記入の表・addItem・removeItem・updateItem・appendFromSearch・InventorySearchBar の読み込み・在庫0の注意。InventorySearchBar の部品そのもの（frontend/src/components/InventorySearchBar.tsx と Storybook）は残す（使う画面が無くなるが、部品の片付けは別の作業）。使われなくなる文言キー4つ（quotes.productNamePlaceholder・quotes.addItem・quotes.removeItem・inventory.search.zeroStockWarning。ほかで使う所は0件と Opus が 2026-11-20 に数えた）は R7 では消さない（文言の片付けは別の作業。CI の文言の検査は「足りないキー」だけを見る）。
+- `LineItemsTable` の「×」（行を消す。LineItemsTable.tsx:234-243）と「行を追加」（:263-271）の Button に `type="button"` を足す。見積の画面は表を `<form>`（QuoteCreatePage.tsx:145）の中に置き、Button（frontend/src/components/Button.tsx）は type を決めないため、そのままだと押すと見積の保存が走る。請求書の画面は `<form>` を持たないので動きは変わらない。表の中のほかのボタン（AsyncCombobox・Select・DataTable）は既に `type="button"`（Opus が 2026-11-20 に読んだ）。
+- 在庫表の画面からの引き継ぎで `draft`（往復のときの見積の下書き）を送る所は今は無い（送るのは ProductsPage.tsx:142 の `selectedProducts` だけ。Opus が 2026-11-20 に数えた）。取引先・通貨・メモなどを `draft` から読む今の書き方（QuoteCreatePage.tsx:39-47）は残し、行は `handoffRows` だけで作る。
+- 試験: frontend/src/components/CommerceSubmitButtonMigration.test.tsx の見積の4本（「行を追加」・名前0/単価0/数量0・送る形・空の送料）を在庫の行の形に書き直す。frontend/src/components/CommerceNavigationButtonMigration.test.tsx は為替の道の受け答えを足すだけ。frontend/tests-e2e/quote-create-inventory-search.spec.ts（消える検索欄と自由記入の行を見る画面の試験）は R7 では触らず、後の片付けで消す。CI では流れていない: 全部の画面の試験を流す仕事は .github/workflows/e2e.yml:294 `if: false` で止まっていて、動いているのは :226 `npm run test:e2e:vl`（visual-language の試験だけ）。止めた仕事を再開する前に消す必要がある（再開すると必ず落ちる）。R7 で消さないのは、指示書の検査 scripts/card-lint.sh L11 が手順の中の消す命令を止めるため（2026-11-20 Opus 判断）。
+
 ### 3-9. 即時反映の表（ADR-1016）
 - 新しい道2つは読むだけ（書かない）。即時反映の表に載せる対象ではない。実装カードで、その表の検査（CI）が通ることを確かめる。
 
@@ -205,7 +218,7 @@ p6 の2つ目の追加の答え（2026-11-18 PO「1」）: 在庫表の値段は
 | K13 | 重さの欄は打てない。単価の欄は打てる（初期値は在庫表の値段） | 画面の試験: 重さに input が無い・単価の input の初期値 |
 | K14 | 「在庫表から／見積から」の切り替えが画面に無い。見積の詳細画面の「請求書にする」は今のまま動く | 画面の試験（切り替えのボタン0個）。QuoteDetailPage の既存の試験が緑 |
 | K15 | 「請求書を作成」で作成が1回だけ行われ、詳細画面へは移らず、小さな枠に請求書番号と「PDF を保存」「詳細へ」「閉じる」が出る。「PDF を保存」で PDF の道が1回呼ばれ `{請求書番号}.pdf` で保存される。「詳細へ」で詳細画面へ移る。「閉じる」で空の請求書に戻る。見る権限が無い役割では「PDF を保存」が出ない。PDF の失敗では知らせが出て枠は残る | 画面の試験: POST /invoices が1回・場所が変わらない・枠と3つのボタン／getBlob が `/invoices/11/pdf` で1回・a の download が `IN-0011-01.pdf`／場所が `/invoices/11`／12行が空・枠が消える／invoices.view 無しでボタン0個／getBlob 失敗で warning が出る |
-| K16 | 見積の作成画面の商品行が、請求書と同じ列（#・カテゴリ・商品・状態・数量・重さ・単価・小計・×）になり、見積の保存は今のまま動く | 見積の画面の試験。quoteDraft.test.ts が緑 |
+| K16 | 見積の作成画面の商品行が、請求書と同じ列（#・カテゴリ・商品・状態・数量・重さ・単価・小計・×）になり、見積の保存は今のまま動く（R7 の内訳: (a) 開くと空の行が12行・「行を追加」で13行 (b) 在庫表の画面から持ってきた商品で状態を選ぶと、USD は在庫表の円の値段 ÷ 為替（小数2けた切り捨て）・重さが入る (c) 状態の無い行・単価0の行があると送らず「quotes.itemsRequired」の文 (d) 送る items は8項目で、空の行は送らない (e) 失敗のあと押し直すと同じ形で送り、成功で見積の一覧へ (f) 送料・税・メモが空なら null (g) 自由記入の欄と検索で足す欄が画面に無い） | CommerceSubmitButtonMigration.test.tsx の見積の試験（(a)〜(f)）・(g) は同じ試験で `quote-add-search` と `quote-item-row-` が0件。quoteDraft.test.ts が緑。本番は配った画面の束に見積の画面の新しい印が入ったことを Opus が数える |
 | K17 | 今の在庫表の道 GET /inventory/aggregated の応答が変わらない | サーバー試験で変更前と同じ応答を固定 |
 | K18 | 画面の文字はすべて t()。ja.json と en.json に同じキー。色の直値・生の select/input が0件 | CI（i18n・UI の検査） |
 | K19 | 「クリア」を押すと確認が出る。はいで、12行・発送先・送料の選択・発送メモが空に戻る。いいえなら何も変わらない | 画面の試験 |
@@ -228,6 +241,9 @@ p6 の2つ目の追加の答え（2026-11-18 PO「1」）: 在庫表の値段は
 | 請求書・見積を作る権限だけの役割（在庫表の権限 products.view・inventory.visibility.* が無い役割）にも、在庫の値段と数が見えるようになる。見える範囲は、選んだ中分類の在庫のある全商品の、状態ごとの値段・数と、重さ・作業コード（§3-4 の items と同じ） | 単価の初期値を在庫表の値段にする PO の決定（§1-2）に必要。仕入元の名前と採用の理由は返さない（§3-4）。どの役割が該当するかは R2 のカードで役割の表を読んで数え、0でなければ PO に伝えてから R2 を出す |
 | FedEx の自動見積もりで呼び出しが増える | §3-5 の待ちと同じ材料なら呼ばない作り。K7 で数える。1日の上限は未確認のまま見張る |
 | 見積の画面の行も変わる | R7 を別の便にし、見積の保存の試験を緑にしてから出す |
+| 見積で EUR を選ぶと、単価が 0 で入り、手で打つまで保存できない | 本番の為替の表（public.app_fx_rate_history）にある通貨は USD だけ（96行・最新 2026-11-19 21:00 UTC。Opus が 2026-11-20 に読む道で数えた）。EUR は 404 で為替なし → 単価 0 の印が出る。単価の欄は手で直せる（請求書と同じ）。本番の見積は USD の1件だけで、EUR の見積は0件（同じ日に数えた）。通貨の選び肢は変えない（R7 は商品行だけを替える） |
+| 見積で、重さが登録されていない商品の行は保存できなくなる（今はサーバーが重さ無しの行を受けている。backend/app/schemas/quote.py:36） | 請求書の K21 と同じ動き（frontend/src/pages/quote-create/lineItems.ts:181 の weightMissing）。重さの欄に「未登録」と出るので、在庫表で重さを登録してから作る。2026-11-20 の設計審査の覚え書き3を受けて足した |
+| 見積の画面に、在庫表に無い商品を自由に書けなくなる | 上の1行目と同じ（見本どおりの決定）。今の本番の見積は1件だけ |
 | 古い請求書の PDF の見た目 | 写しに新しい項目が無いときは今の1行の住所を出す（K4） |
 | 同じ名前の商品が在庫表で1行にまとまる今の弱点 | 請求書の道では商品の番号で分ける。在庫表の画面は今のまま（別のテーマ） |
 
