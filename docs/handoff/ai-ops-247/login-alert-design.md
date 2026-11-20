@@ -1,6 +1,6 @@
 # ログイン失敗の見張りの鳴る条件の見直し（設計）
 
-- 状態: 草案（Opus 作成 2026-11-20・設計の自己審査済み・PO 承認前）。本番への反映は別の GO で行う。
+- 状態: PO 承認済み（2026-11-20 PO「1」= 選択肢「この設計で承認する」への回答）。Opus 作成・設計の自己審査済み。本番への反映は別の GO で行う（実装未着手）。
 - 親: `docs/handoff/ai-ops-247/stage4-requirements.md`（D4・C4・C6・K5・G4、ロードマップの順 5 と順 8）
 - 対象 ADR: ADR-1012（24 時間保守運用・アラート札 page・auto・ticket）
 - 対象の見張り: BruteForceAttempt（札 page）・SustainedAuthFailure（札 ticket）
