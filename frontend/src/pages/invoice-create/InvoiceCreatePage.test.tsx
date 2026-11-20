@@ -1,5 +1,6 @@
 /* eslint-disable local/no-japanese-literal -- テスト: 在庫の道が返すカテゴリの日本語名を試験データに書く（ADR-027・precedent: DataTable.test.tsx） */
 // invoice-create-portfolio R5: 請求書作成ページを見本の見た目と操作に作り直した（design-v2 §3-1〜§3-6・§6 K1〜K3・K5〜K14・K19〜K21）
+// invoice-create-portfolio R6: 作成のあとの小さな枠（design-v2 §3-6・K15）
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
@@ -9,7 +10,9 @@ import InvoiceCreatePage from './InvoiceCreatePage';
 import en from '../../locales/en.json';
 import { queryClient } from '../../lib/query/apiQuery';
 
-const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() }));
+const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn(), getBlob: vi.fn() }));
+const saveBlobMock = vi.hoisted(() => vi.fn());
+vi.mock('../../lib/saveBlob', () => ({ saveBlob: saveBlobMock }));
 vi.mock('../../lib/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../../lib/api')>()), api: mock }));
 let instance = createInstance();
 const tr = (key: string, opts?: Record<string, unknown>) => String(instance.t(key, opts));
@@ -50,6 +53,7 @@ const inventory = {
 const liveRate = { carrier: 'FedEx', zone: 'A', fee: 33.333, currency: 'USD', source: 'fedex_live', service_type: 'FEDEX_IP', service_name: 'International Priority', transit_days: 3 };
 const staticRate = { carrier: 'DHL', zone: '3', fee: 40, currency: 'USD', source: 'static', service_type: null, service_name: null, transit_days: null };
 let shippingAnswer: Record<string, unknown>;
+let permissions: string[];
 
 type PreviewBody = { currency: string; items: Array<{ quantity: number; unit_price: number }>; shipping: { mode: string; fee?: number } | null };
 function previewFor(body: PreviewBody) {
@@ -85,6 +89,16 @@ const posts = (path: string) => mock.post.mock.calls.filter(([url]) => url === p
 const previewCalls = () => posts('/invoices/preview') as unknown as PreviewBody[];
 const rows = () => screen.getAllByTestId(/^invoice-item-row-\d+$/);
 const submit = () => screen.getByTestId('invoice-create-submit') as HTMLButtonElement;
+/** 送料「無し」と支払方法を選んで作成し、作成のあとの枠を返す（K15） */
+async function createAndOpenDialog() {
+  await openWithProduct();
+  await waitFor(() => expect(optionValues('invoice-payment-select')).toContain('bank:3'));
+  fireEvent.change(screen.getByTestId('invoice-payment-select'), { target: { value: 'bank:3' } });
+  fireEvent.click(screen.getByTestId('invoice-shipping-none'));
+  await waitFor(() => expect(screen.getByTestId('invoice-total-amount').textContent).not.toBe(tr('invoiceForm.notComputed')), SLOW);
+  fireEvent.click(submit());
+  return screen.findByRole('dialog');
+}
 
 beforeEach(async () => {
   vi.resetAllMocks(); instance = createInstance();
@@ -92,8 +106,9 @@ beforeEach(async () => {
   vi.stubGlobal('fetch', vi.fn(() => { throw new Error('Unexpected network'); }));
   ctx = baseCtx();
   shippingAnswer = { results: [liveRate, staticRate], live_error: null };
+  permissions = ['invoices.create'];
   mock.get.mockImplementation(async (url: string) => {
-    if (url === '/me/permissions') return { permissions: ['invoices.create'] };
+    if (url === '/me/permissions') return { permissions };
     if (url === '/companies?per_page=100') return [company];
     if (url === '/contacts?company_id=4&per_page=100') return [contact];
     if (url === CTX_PATH) return ctx;
@@ -103,11 +118,15 @@ beforeEach(async () => {
   mock.post.mockImplementation(async (url: string, body: unknown) => {
     if (url === '/invoices/preview') return previewFor(body as PreviewBody);
     if (url === '/invoices/draft-shipping-quotes') return shippingAnswer;
-    if (url === '/invoices') return { id: 11 };
+    if (url === '/invoices') return { id: 11, invoice_number: 'IN-0011-01' };
     throw new Error(`Unexpected POST ${url}`);
   });
   mock.patch.mockImplementation(() => { throw new Error('Unexpected patch'); });
   mock.delete.mockImplementation(() => { throw new Error('Unexpected delete'); });
+  mock.getBlob.mockImplementation(async (url: string) => {
+    if (url === '/invoices/11/pdf') return new Blob(['%PDF'], { type: 'application/pdf' });
+    throw new Error(`Unexpected getBlob ${url}`);
+  });
 });
 afterEach(() => { cleanup(); queryClient.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
@@ -304,7 +323,7 @@ describe('InvoiceCreatePage (invoice-create-portfolio R5)', () => {
     expect(posts('/invoices')).toEqual([]);
   });
 
-  it('create: "no shipping" + payment sends the exact body once and opens the detail page', async () => {
+  it('K15: create sends the exact body once, stays on the page and shows the created dialog', async () => {
     await openWithProduct();
     await waitFor(() => expect(optionValues('invoice-payment-select')).toContain('bank:3'));
     fireEvent.change(screen.getByTestId('invoice-payment-select'), { target: { value: 'bank:3' } });
@@ -312,11 +331,57 @@ describe('InvoiceCreatePage (invoice-create-portfolio R5)', () => {
     await waitFor(() => expect(previewCalls().some((b) => b.shipping?.mode === 'none' && b.items.length === 1)).toBe(true), SLOW);
     await waitFor(() => expect(screen.getByTestId('invoice-total-amount').textContent).not.toBe(tr('invoiceForm.notComputed')), SLOW);
     fireEvent.click(submit());
-    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/invoices/11'));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByTestId('invoice-created-number').textContent).toContain('IN-0011-01');
+    expect(screen.getByTestId('location').textContent).toBe('/invoices/new');
     expect(posts('/invoices')).toEqual([{
       company_id: 4, contact_id: 5, currency: 'USD', shipping: { mode: 'none' }, payment_method_ref: { method_type: 'bank', id: 3 }, notes: null,
       items: [{ product_id: 7, product_name: 'Booster Box A', name_en: 'Booster Box A EN', condition: 'Sealed box', unit: 'box', quantity: 1, unit_price: 100, weight: 0.5 }],
     }]);
+  });
+
+  it('K15: "Save PDF" reads the PDF once and saves it as the invoice number', async () => {
+    permissions = ['invoices.create', 'invoices.view'];
+    const dialog = await createAndOpenDialog();
+    fireEvent.click(await within(dialog).findByTestId('invoice-created-save-pdf'));
+    await waitFor(() => expect(saveBlobMock).toHaveBeenCalledTimes(1));
+    expect(mock.getBlob.mock.calls).toEqual([['/invoices/11/pdf']]);
+    expect(saveBlobMock.mock.calls[0][0]).toBeInstanceOf(Blob);
+    expect(saveBlobMock.mock.calls[0][1]).toBe('IN-0011-01.pdf');
+    expect(posts('/invoices').length).toBe(1);
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
+  it('K15: a PDF failure shows a notice and keeps the dialog open', async () => {
+    permissions = ['invoices.create', 'invoices.view'];
+    mock.getBlob.mockImplementation(async () => { throw new Error('PDF failed'); });
+    const dialog = await createAndOpenDialog();
+    fireEvent.click(await within(dialog).findByTestId('invoice-created-save-pdf'));
+    expect((await screen.findByTestId('invoice-created-pdf-error')).textContent).toContain(tr('invoiceForm.createdPdfError'));
+    expect(saveBlobMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
+  it('K15: "Open details" moves to the detail page', async () => {
+    const dialog = await createAndOpenDialog();
+    fireEvent.click(within(dialog).getByTestId('invoice-created-detail'));
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/invoices/11'));
+  });
+
+  it('K15: "Close" empties the form and closes the dialog', async () => {
+    const dialog = await createAndOpenDialog();
+    fireEvent.click(within(dialog).getByTestId('invoice-created-close'));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(rows().length).toBe(12);
+    expect((screen.getByTestId('invoice-item-state-0') as HTMLSelectElement).value).toBe('');
+    expect(screen.getByTestId('location').textContent).toBe('/invoices/new');
+  });
+
+  it('K15: without invoices.view the save button is not shown and the reason is', async () => {
+    const dialog = await createAndOpenDialog();
+    expect((await within(dialog).findByTestId('invoice-created-pdf-no-permission')).textContent).toContain(tr('invoiceForm.createdPdfNoPermission'));
+    expect(within(dialog).queryByTestId('invoice-created-save-pdf')).toBeNull();
+    expect(mock.getBlob).not.toHaveBeenCalled();
   });
 
   it('create is refused with a reason while shipping is not chosen', async () => {
