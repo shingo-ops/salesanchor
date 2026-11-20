@@ -87,7 +87,7 @@
 - E1 呼ぶ先：設計 §2 便G は `api.salesanchor.jp` と書いたが、`https://app.salesanchor.jp/api/v1` を prod1 自身（127.0.0.1:443）に向けて呼ぶ。理由：deploy が同じ形で既に呼んでいる（F9）・証明書と `/api/` の道が実物で確かめられる（F8）。証明書の確かめは省かない（`-k` 相当にしない）。目的（ホスト名を保ち、行き先を prod1 に固定する）は変えない
 - E2 再起動の待ち時間：`docker compose restart` に `-t` を付けず、compose の `stop_grace_period` を正とする（F11）。係の側の打ち切りは 150 秒
 - E3 回数の上限の数え方：出来事の note が `restart:start` で始まるものだけを数える（再起動を始めた回数）。上限で止めたとき（`escalated:limit`）や終わりの記録（`restart:done`）は数えない
-- E4 処置しない場合：今そのコンテナが不健康でない（もう直った）・起動から 5 分以内（deploy の作り直しと取り合わない）のときは注記も書かずに次の回へ回す。見張りが止めば障害は resolved になり一覧から消える
+- E4 処置しない場合：今そのコンテナが不健康でない（もう直った）・起動から 5 分以内（deploy の作り直しと取り合わない）のときは注記も書かずに次の回へ回す。見張りが止めば障害は resolved になり一覧から消える。ただし回数の上限（E3）の判定は E4 より先に行う（上限に達していれば、もう健康でも `escalated:limit` を書く。§4-1 の handle・試験 #8・§4-8 の 4 はこの順を前提にしている）
 - E5 生きている印：係は最後まで動いたとき、各障害の処置の後、健康になるのを待つ間の 5 秒ごとに `salesanchor_first_aid_last_run_timestamp_seconds` を書く。FirstAidStale は DockerdStateStale と同じ「5 分間値が変わらない、または値が無い」形（時計のずれで誤って鳴らない）・for 2m
 - E6 FirstAidEscalated は「人を呼んだ時刻から 30 分」鳴る形（`time() - 時刻 < 1800`）。`changes()` にすると最初の 1 回目（系列が初めて現れたとき）に鳴らないため
 - E7 止める札（halt_all）が立っているときは処置 0 件で、印には `salesanchor_first_aid_halted 1` を書く（止めている間に FirstAidStale が鳴らないように）。止める札は障害 1 件ごとにも読み直す
@@ -1085,7 +1085,7 @@ echo "ALL OK"
 - §10 の push の後に、作業場所で `gh workflow run sandbox-test.yml --ref release/ai-ops-first-aid-bin-g -f test=first-aid` を実行し、10 秒後に `gh run list --workflow sandbox-test.yml --branch release/ai-ops-first-aid-bin-g -L 1 --json databaseId,url,status` の出力を貼る
 - 結果は待たない（Opus が見る）。報告に run の URL を書く
 - 中身（§4-8）：試験 19 件・見張りの検査と単体試験・20 回の再起動（19 回以上 recovered・各 5 分以内）・回数の上限・止める札・API の 500・直らないとき・途中で止まった処置・ファイルの形と鍵が出ていないこと。最後に `ALL OK` が出れば合格
-5-3. 差分：`git diff origin/main --stat` が §3 のファイルだけ。加えて `git diff origin/main | grep "^-[^-]"` の出力が次の 10 行だけ：alert_rules.yml 2 行（ContainerUnhealthy のコメントの旧行・`tier: page`）／alert_rules_test.yml 2 行（4 行目の旧行・ContainerUnhealthyFiring の `tier: page`）／alerts.md 4 行（3 行目・9 行目・ContainerUnhealthy の節の札と直し方の旧行）／monitoring-check.yml 1 行（30 行目の旧行）／このカード 1 行（§13 の「（未記入）」）。数が違うときは、その行の原文を貼る
+5-3. 差分：`git diff origin/main --stat` が §3 のファイルだけ。加えて `git diff origin/main | grep -E '^-' | grep -v '^--- '` の出力が次の 10 行だけ（`- ` で始まる箇条の旧行も数えるため、`^-[^-]` は使わない）：alert_rules.yml 2 行（ContainerUnhealthy のコメントの旧行・`tier: page`）／alert_rules_test.yml 2 行（4 行目の旧行・ContainerUnhealthyFiring の `tier: page`）／alerts.md 4 行（3 行目・9 行目・ContainerUnhealthy の節の札と直し方の旧行）／monitoring-check.yml 1 行（30 行目の旧行）／このカード 1 行（§13 の「（未記入）」）。数が違うときは、その行の原文を貼る
 5-4. 書式の手元確認：`bash -n tests/sandbox/first-aid.sh; echo rc=$?` が `rc=0`、`python3 -m py_compile scripts/ops/first_aid.py scripts/tests/test_first_aid.py tests/sandbox/first_aid_stub.py; echo rc=$?` が `rc=0`、`python3 -c "import json; print(len(json.load(open('scripts/ops/first_aid_actions.json'))['actions']))"` が `4`
 5-5. PR の CI の結果は担当が待たない。PR を作ったら URL を報告して終える（CI と試験場の結果は Opus が見る）
 
