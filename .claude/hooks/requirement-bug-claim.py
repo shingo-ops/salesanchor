@@ -97,6 +97,9 @@ def main():
         if not tp:
             return 0
         text, read = analyze(tp)
+        lam = data.get("last_assistant_message")
+        if isinstance(lam, str) and lam.strip():
+            text = lam
         if not CLAIM_RE.search(text) or read:
             return 0
         try:
