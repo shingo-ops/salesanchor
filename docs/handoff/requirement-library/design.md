@@ -101,6 +101,9 @@
 
 ## 8. 維持の仕組み
 
+守り手: .github/workflows/doc-index-reachability.yml（便1 で足す「Check feature index」の段。索引の漏れがあれば CI が落ちる）
+
+- 関係する決まり: ADR-1040（文書を入口から辿れる形にする）・ADR-121（設計仕様書と索引の義務）・ADR-097（会社はリードの子）。現在地は docs/handoff/requirement-library/recon.md。
 - 新しい ADR を足すと、索引に行か除外表が無ければ CI が落ちる（便1）。
 - 見張りの記録は週1回数える（便3）。数え忘れは agent-console の週次点検で見る。
 - 練習問題（quiz）は残し、索引や見張りを変えたら流し直す。
