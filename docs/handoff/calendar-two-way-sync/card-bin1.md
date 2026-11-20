@@ -37,9 +37,32 @@
 それより下（消された予定の処理・INSERT ON CONFLICT）は 1 文字も変えない。docstring の「無限ループ防止」の 2 行は次に置き換える:
 「アプリ起源（sync_origin_id が "app:tenant_id:" で始まる）の予定は _update_app_origin_from_google で中身の列だけを UPDATE する。取り込みは DB にだけ書き Google へは書かないので、行ったり来たりは起きない。」
 
-(2) `upsert_from_google` のすぐ上に新しい関数を足す:
+(2) `upsert_from_google` のすぐ上に新しい関数を足す（再審査の指摘 B3・B4 を受け、1 本の UPDATE ではなく「行を読む → Python で比べる → 違う列だけ UPDATE」にした）:
 
 ```python
+def _norm_text(value: Optional[str]) -> str:
+    """説明・場所の比べ方: 空と NULL は同じ。改行は \n にそろえる（Google の正規化で毎回差が出ないように）。"""
+    return (value or "").replace("\r\n", "\n")
+
+
+def _same_times(row_start, row_end, row_all_day: bool, g_start: dict, g_end: dict) -> bool:
+    """アプリの行の時間と Google の時間が同じか。終日はアプリが Google へ送る日付の形で比べる。"""
+    google_all_day = "date" in g_start
+    if bool(row_all_day) != google_all_day:
+        return False
+    if google_all_day:
+        sent = _to_google_event_body(
+            {
+                "start_datetime": row_start.isoformat(),
+                "end_datetime": row_end.isoformat(),
+                "is_all_day": True,
+            }
+        )
+        return sent["start"] == {"date": g_start["date"]} and sent["end"] == {"date": g_end["date"]}
+    g_s, g_e, _ = _google_times(g_start, g_end)
+    return row_start == g_s and row_end == g_e
+
+
 async def _update_app_origin_from_google(
     db: AsyncSession,
     tenant_id: int,
@@ -49,68 +72,72 @@ async def _update_app_origin_from_google(
     """アプリで作った予定を Google で直したとき、中身の列だけを入れる（ADR-1059 改訂 2026-11-20）。
 
     - Google で消されても消さない（"skipped"）。
-    - アプリから送り終えた行（sync_status='synced'）で、中身が違うときだけ書く。
+    - アプリから送り終えた行（sync_status='synced'）で、中身が違う列だけを書く。
     - 見せ方・持ち主・起源・Meet の URL には触らない。Google へは書かない。
-    戻り値は "upserted"（1 行以上書いた）か "skipped"。commit は呼び元が行う。
+    - 色は Google の名札がアプリの色に当たるときだけ入れる（名札が無い・表に無いときは触らない）。
+    戻り値は "upserted"（1 行書いた）か "skipped"。commit は呼び元が行う。
     """
     if google_event.get("status") == "cancelled":
         return "skipped"
-    start_raw = google_event.get("start") or {}
-    end_raw = google_event.get("end") or {}
-    if not (start_raw.get("dateTime") or start_raw.get("date")) or not (
-        end_raw.get("dateTime") or end_raw.get("date")
+    g_start = google_event.get("start") or {}
+    g_end = google_event.get("end") or {}
+    if not (g_start.get("dateTime") or g_start.get("date")) or not (
+        g_end.get("dateTime") or g_end.get("date")
     ):
         return "skipped"
-    start_dt, end_dt, is_all_day = _google_times(start_raw, end_raw)
 
-    params: dict = {
-        "gid": google_event["id"],
-        "title": google_event.get("summary", ""),
-        # Google は空の説明・場所を返さない。空はアプリでも NULL と同じに扱う
-        "desc": google_event.get("description") or None,
-        "loc": google_event.get("location") or None,
-        "start": start_dt,
-        "end": end_dt,
-        "all_day": is_all_day,
-    }
-    sets = [
-        "title = :title",
-        "description = :desc",
-        "location = :loc",
-        "start_datetime = :start",
-        "end_datetime = :end",
-        "is_all_day = :all_day",
-    ]
-    diffs = [
-        "title IS DISTINCT FROM :title",
-        "NULLIF(description, '') IS DISTINCT FROM :desc",
-        "NULLIF(location, '') IS DISTINCT FROM :loc",
-        "start_datetime IS DISTINCT FROM :start",
-        "end_datetime IS DISTINCT FROM :end",
-        "is_all_day IS DISTINCT FROM :all_day",
-    ]
-    if label_colors is not None:
-        label_id = google_event.get("eventLabelId")
-        params["color_key"] = key_for_hex(label_colors.get(label_id)) if label_id else None
-        sets.append("color_key = :color_key")
-        diffs.append("color_key IS DISTINCT FROM :color_key")
-
-    res = await db.execute(
+    found = await db.execute(
         text(
-            "UPDATE calendar_events SET "
-            + ", ".join(sets)
-            + ", last_synced_at = NOW()"
+            "SELECT id, title, description, location, start_datetime, end_datetime,"
+            " is_all_day, color_key FROM calendar_events"
             " WHERE google_event_id = :gid"
             " AND sync_origin_id LIKE 'app:" + str(int(tenant_id)) + ":%'"
             " AND sync_status = 'synced'"
             " AND recurrence_rule IS NULL"
             " AND recurring_event_id IS NULL"
-            " AND (" + " OR ".join(diffs) + ")"
         ),
-        params,
+        {"gid": google_event["id"]},
+    )
+    row = found.first()
+    if row is None:
+        return "skipped"
+    row_id, r_title, r_desc, r_loc, r_start, r_end, r_all_day, r_color = row
+
+    changes: dict = {}
+    g_title = google_event.get("summary") or ""
+    if g_title != (r_title or ""):
+        changes["title"] = g_title
+    g_desc = google_event.get("description")
+    if _norm_text(g_desc) != _norm_text(r_desc):
+        changes["description"] = g_desc or None
+    g_loc = google_event.get("location")
+    if _norm_text(g_loc) != _norm_text(r_loc):
+        changes["location"] = g_loc or None
+    if not _same_times(r_start, r_end, r_all_day, g_start, g_end):
+        s_dt, e_dt, all_day = _google_times(g_start, g_end)
+        changes["start_datetime"] = s_dt
+        changes["end_datetime"] = e_dt
+        changes["is_all_day"] = all_day
+    if label_colors is not None:
+        label_id = google_event.get("eventLabelId")
+        g_color = key_for_hex(label_colors.get(label_id)) if label_id else None
+        if g_color is not None and g_color != r_color:
+            changes["color_key"] = g_color
+
+    if not changes:
+        return "skipped"
+    sets = ", ".join(f"{col} = :{col}" for col in changes)
+    res = await db.execute(
+        text(
+            f"UPDATE calendar_events SET {sets}, last_synced_at = NOW()"
+            " WHERE id = :id AND sync_status = 'synced'"
+        ),
+        {**changes, "id": row_id},
     )
     return "upserted" if (res.rowcount or 0) > 0 else "skipped"
 ```
+
+列の名前は `changes` の鍵（上の 7 つの固定の文字）だけから作る。外から来た文字を SQL に入れない。UPDATE の `sync_status = 'synced'` は、読んでから書くまでにアプリで直された行（`pending` になる）を上書きしないための再確認。
 
 SET に `calendar_type`・`user_id`・`created_by_user_id`・`source`・`sync_origin_id`・`sync_status`・`meet_url`・`google_event_id` を入れない。
 
@@ -185,19 +212,21 @@ TENANT_TASK_TOPICS: dict[str, str] = {
 
 ### backend/tests/test_calendar_service.py
 
-- 既存の `test_skips_app_origin` は、今の「飛ばす」を確かめている。中身を次に変える（名前も `test_app_origin_updates_content_only` に変える）: `_is_app_origin` が真の予定で、UPDATE が 1 回だけ流れ、その SQL に `sync_status = 'synced'`・`IS DISTINCT FROM`・`recurrence_rule IS NULL` が入り、SET の部分に `calendar_type`・`user_id`・`source`・`sync_origin_id`・`meet_url` が入らないこと、`rowcount=1` なら `"upserted"` を返すこと（K7）。
+- 既存の `test_skips_app_origin` は、今の「飛ばす」を確かめている。中身を次に変える（名前も `test_app_origin_updates_content_only` に変える）: `_is_app_origin` が真、SELECT が 1 行（題名だけ違う）を返す予定で、2 本目の SQL が `UPDATE` で、SET に `title` だけが入り `calendar_type`・`user_id`・`source`・`sync_origin_id`・`meet_url` が入らず、WHERE に `sync_status = 'synced'` があること。`rowcount=1` なら `"upserted"`（K7）。
 - 足す試験（同じクラスか近くに。DB は今の試験と同じモックの形で）:
-  1. `rowcount=0` なら `"skipped"`（K6・K8：送る途中の行・中身が同じ行は UPDATE の WHERE で外れる）。
-  2. アプリ起源で `status="cancelled"` なら UPDATE も DELETE も流れず `"skipped"`（K9）。
-  3. `label_colors=None` のとき SQL に `color_key` が入らない。`label_colors` があるとき `eventLabelId` から `color_key` を入れる（K2）。
-  4. 終日（`start.date="2026-11-21"`・`end.date="2026-11-22"`）のとき、`start` が 2026-11-21 00:00 JST・`end` が 2026-11-21 23:59 JST・`all_day=True` で渡る。
-  5. 取り込みが Google へ書かない（K5）: `app.services.google_calendar` の `create_event`・`update_event`・`delete_event` を、呼ばれたら落ちる偽物に差し替えて、アプリ起源と Google 起源の両方の `upsert_from_google` を呼んでも落ちない。
-  9. 説明・場所が Google に無く（鍵なし）、DB が空文字のときは書かない（K8）: SQL の差の条件が `NULLIF(description, '')`・`NULLIF(location, '')` で、params の `desc`・`loc` が None であること。
-  10. `TestToGoogleEventBody` に足す: `description=""`・`location=None` を鍵ありで渡すと `body["description"] == ""`・`body["location"] == ""`。既存の `test_without_description_and_location`（鍵なし→送らない）はそのまま通ること。
-  6. 既存の `test_instance_of_app_origin_is_skipped` は、判定の順が変わったので `_is_app_origin` の side_effect の並びが合わなくなる。繰り返しの回の判定が先になったことに合わせて並びだけ直す（確かめる中身＝「アプリで作った繰り返しの回は "skipped"」は変えない）。
+  1. SELECT の WHERE に `sync_status = 'synced'`・`recurrence_rule IS NULL`・`recurring_event_id IS NULL` があり、行が無ければ UPDATE は流れず `"skipped"`（K6）。UPDATE の `rowcount=0` でも `"skipped"`。
+  2. アプリ起源で `status="cancelled"` なら SELECT も UPDATE も DELETE も流れず `"skipped"`（K9）。
+  3. 中身が全部同じなら UPDATE は流れず `"skipped"`（K8）。この試験の「同じ」は: 題名同じ・DB の説明が `""` で Google に鍵なし・DB の場所が `"a\r\nb"` で Google が `"a\nb"`・時間同じ。
+  4. 終日の比べ方（K8・指摘 B4）: DB が開始 2026-11-21 00:00 JST・終了 2026-11-21 23:59 JST の行と、DB が開始 2026-11-21 00:00 JST・終了 2026-11-22 00:00 JST の行の 2 つで、それぞれ `_to_google_event_body` が作る日付と同じ Google の値（`start.date`・`end.date`）を返したとき、どちらも UPDATE は流れない。Google が 1 日のばした値なら、`start_datetime`・`end_datetime`・`is_all_day` が UPDATE に入り、値は `_google_times` の形（終了日 23:59 JST）。
+  5. 色（K2・指摘 B3）: `label_colors` に名札があり当たる鍵が DB と違えば `color_key` が入る。`label_colors=None`・`eventLabelId` 無し・表に無い名札、の 3 つでは `color_key` が UPDATE に入らない（DB に色があっても消さない）。
+  6. 取り込みが Google へ書かない（K5）: `app.services.google_calendar` の `create_event`・`update_event`・`delete_event` を、呼ばれたら落ちる偽物に差し替えて、アプリ起源と Google 起源の両方の `upsert_from_google` を呼んでも落ちない。
+  7. 時刻ありの予定で、DB と Google が同じ時刻を別の時差の書き方（`+09:00` と `Z`）で持つとき UPDATE は流れない。
+  8. `TestToGoogleEventBody` に足す: `description=""`・`location=None` を鍵ありで渡すと `body["description"] == ""`・`body["location"] == ""`。既存の `test_without_description_and_location`（鍵なし→送らない）はそのまま通ること。
+  9. 既存の `test_instance_of_app_origin_is_skipped`（`:1939` 付近）は、判定の順が変わり最初の `_is_app_origin` の呼び出しが親の `"gm"` になる。`AsyncMock(side_effect=[False, True])` を `AsyncMock(side_effect=[True])` に、`origin.await_args_list[1].args[1] == "gm"` を `origin.await_args_list[0].args[1] == "gm"` に変える（確かめる中身＝「アプリで作った繰り返しの回は "skipped"」は変えない）。
 - `sync_tenant_from_google` の試験（同じファイルの既存の形に合わせる）:
-  7. `upsert_from_google` が 1 件 `"upserted"` を返すとき `publish_change` が `("calendar.events", "tenant", <tenant_id>)` で 1 回呼ばれる（K11）。
-  8. 全部 `"skipped"` のとき `publish_change` は呼ばれない（K11）。
+  - 先に、既存の `_sync_patches`（`:852` 付近）の patch の並びに `patch("app.realtime.publisher.publish_change", new=AsyncMock())` を足す（既存の試験が本物の Redis へ送りに行かないように・指摘 B1）。下の 10・11 はこの偽物で数える。
+  10. `upsert_from_google` が 1 件 `"upserted"` を返すとき `publish_change` が `("calendar.events", "tenant", <tenant_id>)` で 1 回呼ばれる（K11）。
+  11. 全部 `"skipped"` のとき `publish_change` は呼ばれない（K11）。
 
 ### backend/tests/test_realtime_topics.py
 
@@ -213,7 +242,7 @@ TENANT_TASK_TOPICS: dict[str, str] = {
 - `cd backend && python -m pytest tests/test_calendar_service.py tests/test_realtime_topics.py -q`
 - `cd frontend && npx vitest run src/pages/schedule src/hooks/useRealtimeRefresh.test.tsx`
 - `cd frontend && npx tsc --noEmit -p .` と `npx eslint src/pages/schedule/SchedulePageImpl.tsx src/lib/realtime/topics.ts`
-- 効き目の確かめ: `_update_app_origin_from_google` の WHERE から `AND sync_status = 'synced'` を一時的に外すと試験が落ちること（確かめたら元に戻す）。
+- 効き目の確かめ: `_update_app_origin_from_google` の SELECT の WHERE から `AND sync_status = 'synced'` を一時的に外すと試験 1 が落ちること。`_same_times` を常に False にすると試験 3・4 が落ちること（確かめたら元に戻す）。
 
 ## 8. 触らないもの
 

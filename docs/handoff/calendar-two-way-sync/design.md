@@ -14,7 +14,7 @@
 | # | 基準（○×） | 検証方法 |
 |---|---|---|
 | K1 | アプリで作った予定（1 回だけの予定）の題名を Google で変える → 本番の DB のその行の題名が Google と同じになる | 本番反映後、PO が Google で直す。読み取り専用の鍵で行の `title`・`last_synced_at` を読む。15 分以内に変われば ○ |
-| K2 | 同じく時間・場所・色を Google で変える → DB の `start_datetime`/`end_datetime`・`location`・`color_key` が Google と同じになる | K1 と同じ読み方 |
+| K2 | 同じく時間・場所・色（名札のある色）を Google で変える → DB の `start_datetime`/`end_datetime`・`location`・`color_key` が Google と同じになる | K1 と同じ読み方 |
 | K3 | 予定の画面を開いたまま Google で直す → 開き直さずに画面の箱が変わる | PO が本番で目視 |
 | K4 | アプリで直した予定が Google に行く（今の動きが壊れていない） | PO が本番で目視（アプリで題名を変え、Google で見る） |
 | K5 | 取り込みは Google へ 1 回も書かない（行ったり来たりの繰り返しが起きない） | 試験: 取り込み中に Google の書き込み関数が呼ばれたら落ちる |
@@ -35,11 +35,12 @@
 - `_update_app_origin_from_google` の動き:
   1. `status == "cancelled"` なら `"skipped"`（消さない。今と同じ）。
   2. 始まり・終わりが無ければ `"skipped"`（今の Google 起源と同じ判定）。時刻は今と同じ `_google_times` で読む。
-  3. 1 本の UPDATE だけを流す:
-     - SET: `title`・`description`・`location`・`start_datetime`・`end_datetime`・`is_all_day`・（`label_colors` が None でないときだけ）`color_key`・`last_synced_at = NOW()`。
-     - WHERE: `google_event_id = :gid` かつ `sync_origin_id LIKE 'app:{tenant_id}:%'` かつ `sync_status = 'synced'` かつ `recurrence_rule IS NULL` かつ `recurring_event_id IS NULL`、さらに SET する列のどれかが `IS DISTINCT FROM` で違う。
-  4. 書いた行数が 1 以上なら `"upserted"`、0 なら `"skipped"`。
-- 題名が無いときは `""`、色は `eventLabelId` → `key_for_hex`（Google 起源と同じ読み方）。
+  3. その行を 1 件読む（`google_event_id = :gid` かつ `sync_origin_id LIKE 'app:{tenant_id}:%'` かつ `sync_status = 'synced'` かつ繰り返しの元でも回でもない）。無ければ `"skipped"`。
+  4. Python で列ごとに比べ、違う列だけを集める（再審査の指摘 B3・B4）:
+     - 題名・説明・場所: 題名が無いときは `""`。説明と場所は空と NULL を同じとし、改行は `\n` にそろえて比べる。
+     - 時間: 終日は「アプリが Google へ送る日付の形」（`_to_google_event_body`）で比べる。違うときだけ `_google_times` の形で `start_datetime`・`end_datetime`・`is_all_day` を書く。時刻ありは時差をそろえて比べる。
+     - 色: `eventLabelId` → `key_for_hex`（Google 起源と同じ読み方）で、名札がアプリの色に当たるときだけ比べる。名札が無い・表に無い・表が読めないときは触らない（アプリは色を変えたときだけ送るので、名札の無いアプリの予定がある）。
+  5. 違う列が無ければ `"skipped"`。あれば `UPDATE ... SET <違う列>, last_synced_at = NOW() WHERE id = :id AND sync_status = 'synced'` を流し、書いた行数が 1 以上なら `"upserted"`。列の名前は固定の 7 つだけから作る。詳しい形は card §1(2)。
 
 ### 3-2. 合図（`backend/app/services/google_webhook.py` `sync_tenant_from_google`）
 
@@ -76,13 +77,16 @@
 - アプリで直した直後に Google の古い値が戻る: 送る途中は `pending` なので書かない（K6）。送り終えた後の取り込みは Google の最新の値（= アプリが送った値）を読むので、中身が同じで書かない（K8）。
 - Google への送信が失敗した行（`failed`）: Google の直しは入らない。次にアプリで直して送れたら戻る。本番の今の `failed` は 0 件（recon §5）。
 - 合図で読み直しが増える: 取り込み 1 回で最大 1 回。画面側は 1.5 秒まとめる（ADR-1016）。
-- アプリで説明・場所を消したとき: 上の直しで Google も消える。Google は空の説明・場所を返さないので、取り込みは空と NULL を同じに扱い（`NULLIF`）、書き戻さない（K8）。
-- 終日の予定: Google の日付は `_google_times`（`calendar_service.py:1352`）で「開始日 00:00〜終了日 23:59・日本時間」に直す。アプリが別の形（秒あり等）で持っていたら、最初の取り込みで 1 回だけこの形に書き直り、その後は同じ値なので書かない（K8）。日付そのものは変わらない（試験で確かめる）。
+- アプリで説明・場所を消したとき: 上の直しで Google も消える。Google は空の説明・場所を返さないので、取り込みは空と NULL を同じに扱い、書き戻さない（K8）。改行の違い（`\r\n` と `\n`）も同じに扱う。
+- 終日の予定: アプリが日付だけで持つ行と時刻つきで持つ行で、Google へ送る終わりの日の作り方が違う（`calendar_service.py:1527-1533`）。だから DB の値どうしではなく「送る日付の形」で比べる。同じなら書かない（K8）。Google で日付を変えたときだけ `_google_times` の形（終了日 23:59・日本時間）で書く。
+- 色: アプリは色を変えたときだけ Google へ送る（ADR-1081）。名札の無いアプリの予定で色を消さないよう、名札が当たるときだけ入れる。Google で色を「なし」に戻した場合はアプリに入らない（受け入れる・§6）。
+- アプリで直したのに Google へ送らなかった行（同期方式が送らない設定のとき・`calendar_service.py:537` で `pending` にし `:556` で送らない）: `pending` のまま残るので、取り込みはその行を上書きしない（アプリで直した中身を守る）。送る設定に戻して次にアプリで直せば `synced` に戻る。本番の今の `pending` は 0 件（recon §5）（再審査の指摘 B5）。
 
 ## 6. 決めていないこと（PO の判断が要る・今回は今の動きのまま）
 
 - Google でアプリの予定を消したとき、アプリからも消すか（今は消さない）。
 - アプリで作った繰り返しの予定を Google で直したとき（今は取り込まない）。
+- Google でアプリの予定の色を「なし」に戻したとき、アプリの色も消すか（今回は消さない）。
 - アプリで直したことを、同じ会社のほかの人の画面にもすぐ出すか（予定の書き込みの口の合図）。
 
 ## 7. 外部事例
