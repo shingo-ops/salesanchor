@@ -1583,7 +1583,7 @@ K0: 直前の人の入力が typed の「1」だった呼び出し %d 件のう�
 
 ## 16. 改訂4: K0 の数え方から期限切れを外し、見張りの読む範囲を必要なだけ後ろへ広げる（2026-11-20）
 
-状態: 設計案 第2版。Opus 作成・自己審査済み（§16-11）。審査役（reviewer・Opus、手元）の1回目は REVISE（HIGH 3・MEDIUM 4・LOW 7）で、第2版で全件を反映した（§16-12）。PO の実装承認は未。見張り（consent_check.py・フック）はこの PR では変えない。
+状態: 設計案 第3版。Opus 作成・自己審査済み（§16-11）。審査役（reviewer・Opus、手元）の審査は2回とも REVISE だった。1回目（HIGH 3・MEDIUM 4・LOW 7）は第2版で、2回目（HIGH 2・MEDIUM 3・LOW 6）は第3版で、全件を反映した（§16-12）。PO の実装承認は未。見張り（consent_check.py・フック）はこの PR では変えない。
 
 経緯:
 - 改訂3（§15）を反映した週次点検で、K0 は「34 件のうち遅れ 5 件」で × だった。
@@ -1614,8 +1614,8 @@ K0: 直前の人の入力が typed の「1」だった呼び出し %d 件のう�
 - 34 件のうち、「1」から 30 分以内は 20 件、30 分を超えたのは 14 件。
 - 遅れ 5 件は 14 件の中にある（222.2・308.8・37.4・39.9・104.3 分）。
 - 残る 9 件は、見張りが H を見つけたうえで ticket_format で止めたもの（36.4〜122.0 分）。
-- 見張りは H を見つけても、30 分を超えれば止める（docs/handoff/conversation-consent/hooks/consent_check.py:21 `WINDOW`、:324-325 `expired`）。よって 14 件とも、読む範囲を広げても通らない。
-- 30 分以内の 20 件は、K0_TARGET=20（consent-audit.py:31、判定は :1919-1922 の `total >= K0_TARGET`）にちょうど届く。1 件でも減ると「保留」になる。
+- 見張りは H を見つけても、30 分を超えれば止める（docs/handoff/conversation-consent/hooks/consent_check.py:21 `WINDOW`、docs/handoff/conversation-consent/hooks/consent_check.py:324-325 `expired`）。よって 14 件とも、読む範囲を広げても通らない。
+- 30 分以内の 20 件は、K0_TARGET=20（scripts/dev/consent-audit.py:31、判定は scripts/dev/consent-audit.py:1919-1922 の `total >= K0_TARGET`）にちょうど届く。1 件でも減ると「保留」になる。
 
 (b) 有効な「1」の距離（同 (A)）:
 - 30 分以内の 20 件で、「1」から呼び出しの行までの最大距離は 2.97MB。20 件とも末尾 4MB の中。
@@ -1629,18 +1629,20 @@ K0: 直前の人の入力が typed の「1」だった呼び出し %d 件のう�
 (d) 読む費用（同 (C)）: 915.3MB の記録の末尾 16MB を読み、全 3,606 行を JSON にするのに 0.471 秒。Mac での実測 1 回。
 
 (e) 見張りの読む範囲:
-- 見張りは末尾 4MB だけを読む（consent_check.py:20 `TAIL_BYTES`、:140-163 `_read_tail_records`）。
-- 読み始めが 0 でなければ、最初の改行までを捨てる。改行で終わらない最後の行も捨てる。JSON でない行が範囲のどこかに1つでもあれば止める（:147-162）。
-- 範囲内に人の入力が無ければ `no_human_input`（:286-287）。
-- H はあるが、その前の AI の行が範囲内に無ければ `no_assistant_text`（:302-303）。
+- 見張りは末尾 4MB だけを読む（docs/handoff/conversation-consent/hooks/consent_check.py:20 `TAIL_BYTES`、docs/handoff/conversation-consent/hooks/consent_check.py:140-163 `_read_tail_records`）。
+- 読み始めが 0 でなければ、最初の改行までを捨てる。改行で終わらない最後の行も捨てる。JSON でない行が範囲のどこかに1つでもあれば止める（docs/handoff/conversation-consent/hooks/consent_check.py:147-162）。
+- 範囲内に人の入力が無ければ `no_human_input`（docs/handoff/conversation-consent/hooks/consent_check.py:286-287）。
+- H はあるが、その前の AI の行が範囲内に無ければ `no_assistant_text`（docs/handoff/conversation-consent/hooks/consent_check.py:302-303）。H を見つけた時点で h_uuid は入る（docs/handoff/conversation-consent/hooks/consent_check.py:289）。
 - 同じ「末尾 4MB」は、文書にも試験にも書かれている。
-  - 文書: ADR-1033:18、本設計 §2 K5（design.md:26）、§4-2 の 3（design.md:75）。
+  - 文書: docs/adr/ADR-1033-conversation-consent-ticket.md:18、本設計 §2 K5（docs/handoff/conversation-consent/design.md:26）、§4-2 の 3（同 :75）。
   - 試験: T5-x（scripts/dev/consent-unit-tests.py:241-243、「同意票が末尾 4MB の外なら止まる」）。
 
 (f) 数え方:
-- k0_delays（consent-audit.py:346-406）は、本当の直前の人の入力が typed の「1」なら対象 1 件とする。時刻の差は見ない。
-- prev_for_tool と last は (uuid, typed_one) だけを持ち、timestamp を持たない（:366, :377）。
-- humans だけが timestamp を持つ（:379）。
+- k0_delays（scripts/dev/consent-audit.py:346-406）は、本当の直前の人の入力が typed の「1」なら対象 1 件とする。時刻の差は見ない。
+- prev_for_tool と last は (uuid, typed_one) だけを持ち、timestamp を持たない（scripts/dev/consent-audit.py:366、scripts/dev/consent-audit.py:377）。
+- humans だけが timestamp を持つ。timestamp の無い入力は humans に入らない（scripts/dev/consent-audit.py:378-379）。
+- K0 の「遅れ」は、本当の直前の uuid と probe の h_uuid が違うときだけ数える（scripts/dev/consent-audit.py:396-397）。H を正しく見つけて no_assistant_text で止めた probe は、遅れにならない。
+- 試験 T0-a・T0-b は返り値を4つの組で受ける（scripts/dev/consent-unit-tests.py:280、scripts/dev/consent-unit-tests.py:289）。
 
 (g) 案 F の前提（Claude Code 公式 hooks リファレンス、Context7 /websites/code_claude、2026-11-20 確認）:
 - UserPromptSubmit は人が打った入力だけでなく、次のときにも動く: 予定実行の発火、バックグラウンドのサブエージェントの報告、別の会話からの送信。
@@ -1649,10 +1651,16 @@ K0: 直前の人の入力が typed の「1」だった呼び出し %d 件のう�
 
 (h) 試験の置き場:
 - consent-unit-tests.py は scripts/dev/test-agent-hooks.sh:459 と scripts/dev/permission-delegation-tests.py:1062 から呼ばれる。PO の po-apply のときだけ走る。
+- consent-unit-tests.py は FAIL を表示するだけで、終了コードは常に 0（scripts/dev/consent-unit-tests.py:118-119 の rep、sys.exit は 0 件）。呼び出し元は出力の FAIL 行を数えて判定している（scripts/dev/test-agent-hooks.sh:452-459、scripts/dev/permission-delegation-tests.py:1064-1070）。
 - GitHub の確かめ（.github/workflows/agent-hooks-test.yml:9-13）の対象は scripts/agent-hooks/** など。scripts/dev/consent-*.py と docs/handoff/conversation-consent/hooks/** は対象外で、PR のたびには走らない。
 - この確かめは必須チェックではない（同:5）。
 
-(i) 既存 ADR:
+(i) 見張りの時間の上限:
+- 見張りは ~/.claude/scripts/agent-danger-hook.sh から呼ばれる。~/.claude/settings.json の PreToolUse（Bash）の登録に timeout の指定は無い。
+- 公式の既定は command フックで 10 分（Context7 /websites/code_claude の hooks-guide「Limitations」、2026-11-20 確認）。
+- 公式資料では、PreToolUse の command フックが時間切れになると、呼び出しは止まらず通常の許可の流れに進む（同 hooks「Timeouts」）。onFailure: "block" を付けた場合だけ止まる。
+
+(j) 既存 ADR:
 - docs/adr/ を git grep で "consent_check"・"TAIL_BYTES"・"K0"・"4MB" と照らした。該当は ADR-1033 だけ。
 - docs/adr/FEATURE-INDEX.md に同意の項目は無い。
 
@@ -1663,15 +1671,21 @@ K0: 直前の人の入力が typed の「1」だった呼び出し %d 件のう�
 - 本当の直前が typed の「1」でも、その timestamp から probe の now までが 30 分を超えるものは対象に数えない。「30分を過ぎて外した」件数として別に数える。
   - 遅れかどうかに関係なく外す。上の 14 件すべてが外れる。
   - 30 分ちょうどは数える。見張りの `now - h_ts > WINDOW` と同じ境目。
-  - 「1」の timestamp が読めないときは、今どおり数える（外さない）。
+  - 「1」の timestamp、または probe の now が読めないときは、今どおり数える（外さない）。
 - 30 分の値は consent-audit.py に `K0_WINDOW_SEC = 30 * 60` として置き、「見張りの WINDOW を変えるときはここも直す」と書く。K0_SKIP_REASONS と同じ書き方（:32）。
 - 返り値に expired を足し、`(total, delays, skipped, delays_no_h, expired)` にする。
 - 週次点検の K0 の行の末尾に「／30分を過ぎて外した %d 件」を足す。
 - 判定の決まり（○×・保留・K0_TARGET=20）は変えない。
+- 試験 T0-a・T0-b の受け取りを5つの組にする（scripts/dev/consent-unit-tests.py:280 を `total, delays, _, _, _ =` に、:289 の期待を `(6, 3, 4, 1, 0)` に）。数は変えない（試験の時刻は T0〜T0+150 秒で、30 分を超えない）。
+- K79 用の数えを、K0 とは別の行として足す。
+  - 対象: probe に `read_bytes` がある（便B の後の）ものだけ。
+  - 数えるもの: 本当の直前が 30 分以内の typed の「1」で、reason が `no_human_input` か `no_assistant_text` の件数。
+  - 形: 「K79: 読む範囲を広げた後の呼び出しで、30分以内の『1』があったのに見張りが見つけられなかった %d 件（対象 %d 件）」。便B の前は対象 0 件と出る。
 
 (b) 見張りの読む範囲（consent_check.py の _read_tail_records と _check_inner の 3〜6）
 
 読み方:
+- 記録の大きさは、最初に1回だけ測る（fstat）。以後の段もその大きさを基準に読む。判定の途中で記録が伸びても、伸びた分は読まない。
 - 末尾 4MB から読み始める。
 - 足りなければ、読み始めを 8MB・16MB・32MB・64MB 前へずらして、足した部分だけを読む。
 - 前の段で捨てた「途中から始まる最初の行」は、足した部分とつないで1行に戻す。どの行も JSON にするのは1回だけ。最大で 64MB を1回。
@@ -1685,12 +1699,14 @@ K0: 直前の人の入力が typed の「1」だった呼び出し %d 件のう�
 2. H が見つかったら、info に h_uuid・h_timestamp を入れる。続いて判定 5（typed の「1」か）をその場で行う。「1」でなければ、読み足さずに `h_not_typed_one`。
 3. 判定 6 のために、H の前の AI の行（a_idx）を探す。範囲に無ければ読み足す。
    - H の timestamp が now − 30 分より前なら、読み足さずに `expired` で止める。今は a_idx が無いと `no_assistant_text` が先に返るので、ここだけ理由の順が変わる。止めることに変わりはない。
+   - H の timestamp が読めないときは、読み足しを続ける。最後は今どおり判定 7 の `h_timestamp` で止める。
 4. 64MB まで読んでも見つからない場合、またはファイル全体を読んでも見つからない場合は、今と同じ理由で止める。
    - H が無ければ `no_human_input`。
    - a_idx が無ければ `no_assistant_text`。
 
 JSON でない行:
-- a_idx から末尾までに1行でもあれば、今どおり `transcript_unparsable` で止める。
+- JSON でない行は捨てずに、「読めない行」という印として並びの元の位置に残す。H・a_idx の探索は印を飛ばして進む。
+- 印が a_idx から末尾までに1つでもあれば（a_idx と H の間、H の後のどちらでも）、今どおり `transcript_unparsable` で止める。
 - a_idx より前の行は、判定に使わない。JSON でなくても止めない。
 - 後者は今より止める条件を1つ減らすことになる（§16-6 R19）。
 
@@ -1698,7 +1714,7 @@ probe:
 - `read_bytes`（最後に読んだ大きさ）を足す。
 
 文書と試験の改め（便B で一緒に直す）:
-- ADR-1033:18 の「末尾 4MB を読んで」を、「末尾から必要なだけ（最大 64MB）読んで」にする。
+- ADR-1033:18 の「末尾 4MB を読んで」を、「末尾から必要なだけ（最大 64MB）読んで」にする。書き換えた後に `node scripts/generate-adr-index.js` を流し、docs/adr/README.md に差分が出ればそれも入れる。
 - 本設計の §2 K5 と §4-2 の 3・6 の「4MB」を同じ形に直す。
 - T5-x の期待を「通る」に変える。
 
@@ -1708,8 +1724,12 @@ probe:
 
 (c) GitHub の確かめ（.github/workflows/agent-hooks-test.yml）
 - paths に3つを足す: `scripts/dev/consent-audit.py`、`scripts/dev/consent-unit-tests.py`、`docs/handoff/conversation-consent/hooks/**`。
-- 手順を1つ足す: `python3 -I -B scripts/dev/consent-unit-tests.py docs/handoff/conversation-consent/hooks "$RUNNER_TEMP/consent" "$GITHUB_WORKSPACE"`。
-  - 引数は hookdir・作業用の一時フォルダ・リポジトリの根の3つ（consent-unit-tests.py:3）。
+- 手順を1つ足す。中身は次の4つ:
+  1. 判定の部分そのものの確かめ: `FAIL x` と `DONE` だけの作り物の出力に判定を当て、exit 1 になることを先に確かめる。ならなければ手順を赤にする。
+  2. `python3 -I -B scripts/dev/consent-unit-tests.py docs/handoff/conversation-consent/hooks "$RUNNER_TEMP/consent" "$GITHUB_WORKSPACE" > "$RUNNER_TEMP/consent.out"` を流す。引数は hookdir・作業用の一時フォルダ・リポジトリの根の3つ（scripts/dev/consent-unit-tests.py:3）。
+  3. 出力をそのまま表示する。
+  4. 判定: `^FAIL` の行が 0 行、`^PASS` の行が 1 行以上、`DONE` の行がある。この3つが揃わなければ exit 1。
+- 試験の台本は終了コードで失敗を返さない（§16-2(h)）。そのため、判定は出力の行で行う（呼び出し元2つと同じやり方）。
 - Linux の実行環境で動くかは未確認。便C の PR の確かめで初めて分かる（K80）。
 
 ### 16-4 対象と対象外
@@ -1749,12 +1769,12 @@ probe:
 
 | # | リスク | 対処 |
 |---|---|---|
-| R14 | 作業量の多い会話で、危険操作の判定が遅くなる（最大 64MB） | 費用がかかるのは、同意票が要る危険操作の呼び出しのときだけ。上限 64MB。各行の JSON 化は1回だけ。【推測】(d) からの比例で約 1.9 秒（Mac）。K78 で測り、3 秒を超えたら上限を下げる改訂を出す |
+| R14 | 作業量の多い会話で、危険操作の判定が遅くなる（最大 64MB） | 費用がかかるのは、同意票が要る危険操作の呼び出しのときだけ。上限 64MB。各行の JSON 化は1回だけ。【推測】(d) からの比例で約 1.9 秒（Mac）。K78 で、実物に近い1行 約 5KB の詰め物で測る。3 秒を超えたら上限を下げる改訂を出す。フックの時間の上限は既定の 10 分で、3 秒とは大きく離れている（§16-2(i)） |
 | R15 | 30 分より古いかの判定に記録の timestamp を使う。AI が記録を書き換えると判定を変えられる | R1（受け入れ済みのリスク）と同じ水準。§4-5 の見張りはそのまま |
 | R16 | 期限切れを外すことで、本当の遅れ（記録の書き込みが 30 分以上遅れた）を見落とす | 30 分を超えた「1」は、見張りが見つけても通さない（WINDOW）。PO の体験に差は無い。外した件数は毎週の行に出る |
 | R17 | 便C の GitHub の確かめが Linux で動かない | 便C の PR で確かめる。動かなければ便C だけ直す。便A・便B の判定は手元の po-apply の試験（今の道）でも行う |
-| R18 | 読み足しの境目で、行が途中から始まる | 前の段の切れた行をつないで戻す。最初の段は今と同じく捨てる。外部事例 E3 の教訓。境目が行の途中・日本語の文字の途中の例を試験に入れる（K77） |
-| R19 | a_idx より前の JSON でない行で、止めなくなる（今より緩む） | 判定に使う H・a_idx・その間の行（:313-315 の確かめ）は全部 a_idx より後ろにある。a_idx より後ろの JSON でない行は今どおり止める。【推測（理由つき）】同意が無いのに通る道は増えない。H は記録の最後の人の入力で、a_idx はその直前の AI の行なので、どちらも読む範囲を広げても変わらない。K77 (6)(7) で確かめる |
+| R18 | 読み足しの境目で、行が途中から始まる。判定の途中で記録が伸びる | 前の段の切れた行をつないで戻す。最初の段は今と同じく捨てる。大きさは最初に1回だけ測る。外部事例 E3 の教訓。境目をまたぐ行を同意票の行そのもの・H の行にした試験を入れる（K77 (4)） |
+| R19 | a_idx より前の JSON でない行で、止めなくなる（今より緩む） | 判定に使う H・a_idx・その間の行（docs/handoff/conversation-consent/hooks/consent_check.py:313-315 の確かめ）は全部 a_idx より後ろにある。JSON でない行は印として位置を残し、a_idx より後ろにあれば今どおり止める。【推測（理由つき）】同意が無いのに通る道は増えない。H は記録の最後の人の入力で、a_idx はその直前の AI の行なので、どちらも読む範囲を広げても変わらない。K77 (6)(7a)(7b) で確かめる |
 | R20 | K0 の対象 20 件が K0_TARGET=20 にちょうど乗る。新しい probe の分け方で件数が動くと「保留」になる | K76 は件数も合わせて判定する。保留になったら、たまるまで待つ（§2 の決まりどおり） |
 
 戻し方:
@@ -1765,12 +1785,12 @@ probe:
 
 | # | 基準 | 検証方法 |
 |---|---|---|
-| K75 | k0_delays が、本当の直前の「1」から 30 分を超えた probe を対象に数えず、expired に入れる。30 分ちょうどは数える。timestamp の無い「1」は数える。T0-a・T0-b は変わらない | consent-unit-tests.py T0-c。tool_use_id の道（prev_for_tool）と時刻の道（humans）のそれぞれで、「1」から 29・30・31・200 分の probe を作る → total に入るのは 29・30 分、expired=2。加えて timestamp の無い「1」→ total に入る。全件一致で○ |
+| K75 | k0_delays が、本当の直前の「1」から 30 分を超えた probe を対象に数えず、expired に入れる。30 分ちょうどは数える。timestamp の無い「1」と now の無い probe は数える。T0-a・T0-b は受け取りを5つの組にし、数は変わらない | consent-unit-tests.py T0-c。tool_use_id の道（prev_for_tool）と時刻の道（humans）のそれぞれで、「1」から 29・30・31・200 分の probe を作る → total に入るのは 29・30 分、expired=2。timestamp の無い「1」は tool_use_id の道で作る（時刻の道には入らないため）→ total に入る。now の無い probe → total に入る。consent_check の WINDOW と consent-audit の K0_WINDOW_SEC が同じ秒数か。T0-a=(5,2,…,0)、T0-b=(6,3,4,1,0)。全件一致で○ |
 | K76 | 反映後、手元の写しの `--audit` の K0 が、今の記録で「20 件のうち遅れ 0 件／30分を過ぎて外した 14 件」で ○ | Opus が実行し、~/CC報告ファイル-keep/consent-weekly/ に保存する。件数が違えば止めて PO に報告する（新しい probe が増えた分は、内訳を示して説明する） |
-| K77 | 見張りが 4MB の外の有効な「1」を見つけて通し、期限切れ・64MB 超え・後ろの壊れた行では止める | consent-unit-tests.py に次を足す。(1) 同意票と「1」の後に 10MB の詰め物（30 分以内の時刻）→ 通る (2) 同意票の後に 70MB の詰め物（30 分以内の時刻）→ no_assistant_text、read_bytes=64MB (3) 人の入力が無く、詰め物の時刻が 31 分より前の 6MB → no_human_input、read_bytes ≤ 8MB (4) 読み足しの境目が行の途中・日本語の文字の途中 → (1) と同じ判定 (5) T5-x（同意票が 4MB の外）→ 通るに改め (6) a_idx より前に JSON でない行 → 通る (7) a_idx より後ろに JSON でない行 → transcript_unparsable (8) T5-x 以外の今の T1〜T9 が全件 PASS |
-| K78 | 64MB 読んで止めるまでの時間が 3 秒以内 | K77 (2) の経過時間を試験の出力に出す。便B の PR の GitHub の確かめで 3 秒以内なら○ |
-| K79 | 反映後、「本当の直前が 30 分以内の typed の『1』なのに no_human_input／no_assistant_text」の probe が 0 件 | `--audit` の K0 の遅れ。反映後の対象が 5 件以上たまった時点で判定する。7 日で 5 件に届かなければ 14 日まで延ばす。それでも届かなければ保留として報告する |
-| K80 | consent-audit.py・consent-unit-tests.py・hooks/ を変える PR で、GitHub の確かめが consent-unit-tests.py を走らせ、緑になる | 便C の PR の確かめの結果と、便A・便B の PR で同じ手順が走った記録 |
+| K77 | 見張りが 4MB の外の有効な「1」を見つけて通し、期限切れ・64MB 超え・後ろの壊れた行では止める。早めに止める決まりが効いている | consent-unit-tests.py に次を足す。(1) 同意票と「1」の後に 10MB の詰め物（30 分以内の時刻）→ 通る (2) 同意票の後に 70MB の詰め物（30 分以内の時刻）→ no_assistant_text、read_bytes=64MiB (3) 人の入力が無く、詰め物 10MB がすべて 31 分より前の時刻 → no_human_input、read_bytes=4MiB ちょうど (4) 段の境目をまたぐ行が同意票の行そのもの、別の例で H の行。どちらも日本語の文字の途中で切れる → 通る (5) T5-x（同意票が 4MB の外）→ 通るに改め (6) a_idx より前に JSON でない行 → 通る (7a) a_idx と H の間に JSON でない行 → transcript_unparsable (7b) H の後に JSON でない行 → transcript_unparsable (8) T5-x 以外の今の T1〜T9 が全件 PASS (9) H が 31 分前の typed の「1」で、同意票が 4MB の外 → expired、read_bytes=4MiB (10) H が「1」でない入力で、その前の AI の行が 4MB の外 → h_not_typed_one、read_bytes=4MiB |
+| K78 | 64MB 読んで止めるまでの時間が 3 秒以内 | K77 (2) の詰め物を1行 約 5KB（実物の平均、§16-2(d) の 16MB／3,606 行）にし、経過時間を試験の出力に出す。便B の PR の GitHub の確かめで 3 秒以内なら○ |
+| K79 | 反映後、「本当の直前が 30 分以内の typed の『1』なのに no_human_input／no_assistant_text」の probe が 0 件 | `--audit` の「K79:」の行（§16-3(a) で足す数え。read_bytes のある probe だけが対象）。数え自体は T0-d で確かめる（read_bytes の有無・30 分の内外・2つの reason の組み合わせ）。反映後の対象が 5 件以上たまった時点で判定する。7 日で 5 件に届かなければ 14 日まで延ばす。それでも届かなければ保留として報告する |
+| K80 | consent-audit.py・consent-unit-tests.py・hooks/ を変える PR で、GitHub の確かめが consent-unit-tests.py を走らせる。全件 PASS なら緑、FAIL が1件でもあれば赤 | 便C の PR で: 作り物の出力（FAIL 1 行）への判定が exit 1 になったこと、本物の試験が緑になったこと。便A・便B の PR で同じ手順が走った記録 |
 
 ### 16-8 実装の分け方（クラウドの Sonnet へ・1 回に 1 つ）
 
@@ -1778,11 +1798,11 @@ probe:
   - 内容は §16-3(c)。触るのは agent-hooks-test.yml だけ。
   - 今の consent-unit-tests.py が GitHub で全件 PASS することを確かめる（K80 の前半）。
 - 便A:
-  - 内容は §16-3(a) と T0-c。触るのは consent-audit.py・consent-unit-tests.py だけ。
+  - 内容は §16-3(a)（K79 用の数えを含む）と T0-c・T0-d、T0-a・T0-b の受け取りの直し（scripts/dev/consent-unit-tests.py:280、:289）。触るのは consent-audit.py・consent-unit-tests.py だけ。
   - マージ後に Opus が手元の写しを更新し、K76 を測る。
 - 便B:
   - 内容は §16-3(b) と K77・K78 の試験。
-  - 触るのは hooks/consent_check.py・consent-unit-tests.py・ADR-1033:18・本設計 §2 K5 と §4-2 の 3・6 だけ。
+  - 触るのは hooks/consent_check.py・consent-unit-tests.py・ADR-1033:18・本設計 §2 K5 と §4-2 の 3・6 だけ。ADR を変えた後に `node scripts/generate-adr-index.js` を流す。
   - マージ後に、PO が `! bash docs/handoff/conversation-consent/po-apply-consent.sh --update` を1回打つ。K79 を数える。
 - 各便の前に、その便の実装カード（触るファイル・行・変更前後・触らない範囲）を Opus が書く。
 - 実装は PO の実装承認の後。
@@ -1792,7 +1812,7 @@ probe:
 | 守り手 | パス | 対象 | 止める力 |
 |---|---|---|---|
 | 週次点検（既存） | agent-console の定期実行「同意と権限の週次点検」（月曜 09:30） | `--audit --permissions` の K0 の行（30分を過ぎて外した件数を含む） | 知らせるだけ。11/16 の回は Mac が眠っていて止まった（既知、別件） |
-| GitHub の確かめ（便C で新設） | .github/workflows/agent-hooks-test.yml | consent-audit.py・consent-unit-tests.py・hooks/ を変える PR で試験を走らせる | 赤が出る。必須チェックではないので、マージそのものは止めない（同:5）。審査役が赤を見て止める |
+| GitHub の確かめ（便C で新設） | .github/workflows/agent-hooks-test.yml | consent-audit.py・consent-unit-tests.py・hooks/ を変える PR で試験を走らせ、出力の FAIL 行で判定する | FAIL があれば赤が出る（判定の部分も作り物の出力で毎回確かめる）。必須チェックではないので、マージそのものは止めない（同:5）。審査役が赤を見て止める |
 | 反映時の試験（既存） | docs/handoff/conversation-consent/po-apply-consent.sh → scripts/dev/test-agent-hooks.sh:459 | 見張りの T1〜T9 と K77 の試験 | 不合格なら反映を戻す（§7 R5） |
 | 値のずれ止め（便A で新設） | consent-unit-tests.py T0-c | consent_check の WINDOW を読み込み、consent-audit.py の K0_WINDOW_SEC と同じかを確かめる | ずれたら試験が落ちる |
 
@@ -1822,11 +1842,11 @@ E4 の出典:
 
 ### 16-11 設計審査（Opus の自己審査。独立した第二者の審査ではない）
 
-判定: APPROVE（第2版。HIGH 0・MEDIUM 0・LOW 2）。
+判定: APPROVE（第3版。HIGH 0・MEDIUM 0・LOW 2）。
 
 開発ルールとの整合:
 - docs/STANDARD-WORKFLOW.md の項目を満たす: 3 段（目的・現在地・設計）、受入条件と検証方法の表、維持の仕組み（守り手・パス・対象）、外部事例欄、ADR 検索。
-- 現在地の事実は、§13〜§15 と同じく本節 §16-2 に置いた。別の recon.md は作らない。
+- 現在地の事実は、§13〜§15 と同じく本節 §16-2 に置いた。docs/handoff/conversation-consent/recon.md の末尾に、§16-2 を指す1行を足した。
 
 止め方の変化（第1版の「増える方向のみ」は誤り。審査役 M1 で直した）:
 - 止める条件が増えるもの: 30 分より古い行で読み足しを止める、64MB 超え。
@@ -1837,7 +1857,7 @@ E4 の出典:
 
 根拠:
 - (a)〜(d) は保存した実測ファイル。
-- (e)(f)(h)(i) は行番号。
+- (e)(f)(h)(j) は行番号。(i) は設定ファイルの実物と公式資料。
 - (g) は公式資料。
 - E4 は原文。
 
@@ -1847,7 +1867,9 @@ LOW:
 
 未解決の前提: なし。PO の判断が要るのは、実装の承認だけ。
 
-### 16-12 審査役の指摘の反映表（reviewer・Opus、1回目 REVISE）
+### 16-12 審査役の指摘の反映表（reviewer・Opus）
+
+1回目（第1版への審査）:
 
 | 指摘 | 重さ | 反映 |
 |---|---|---|
@@ -1865,3 +1887,19 @@ LOW:
 | L5 hookdir の引数が無い | LOW | §16-3(c) に3つの引数を書いた |
 | L6 T0-c の範囲が足りない | LOW | 2 つの道と timestamp の無い「1」を K75 に入れた |
 | L7 recon.md・FEATURE-INDEX | LOW | §16-2(i) に FEATURE-INDEX の結果を足した。現在地の置き場は §16-11 に書いた |
+
+2回目（第2版への審査）:
+
+| 指摘 | 重さ | 反映 |
+|---|---|---|
+| H-1 試験の台本は FAIL でも終了コード 0。GitHub の手順が赤にならない | HIGH | §16-2(h) に事実を足した。§16-3(c) を「出力の FAIL 行で判定する」形にし、判定の部分を作り物の出力で確かめる手順を足した。K80・§16-9 を直した |
+| H-2 K0 の遅れでは no_assistant_text を数えられず、反映後だけを数える手段も無い | HIGH | §16-2(f) に事実を足した。§16-3(a) に K79 用の数え（read_bytes のある probe だけ）を足し、便A に入れた。K79 の検証方法を直し、T0-d を足した |
+| M-1 返り値を5つにすると T0-a・T0-b が壊れる | MEDIUM | §16-3(a)・K75・便A に、scripts/dev/consent-unit-tests.py:280・:289 の直し方を書いた |
+| M-2 K77 (3) が早止めを見分けられない。判定 2・3 の早止めの試験が無い | MEDIUM | K77 (3) を 10MB・read_bytes=4MiB ちょうどに直した。(9)(10) を足した |
+| M-3 JSON でない行の位置を残すことが書かれていない | MEDIUM | §16-3(b) に「印として元の位置に残す」と書いた。K77 (7) を (7a)(7b) に分け、(4) で境目をまたぐ行を同意票・H の行に指定した |
+| L-1 K75 の作り方（timestamp の無い「1」、値のずれ止め、now の無い probe） | LOW | K75 に3つとも足した |
+| L-2 読み足しの途中で記録が伸びる | LOW | §16-3(b) に「大きさは最初に1回だけ測る」と書いた。R18 に足した |
+| L-3 H の timestamp が読めないとき | LOW | §16-3(b) 判定の順 3 に1行足した |
+| L-4 K78 の詰め物が実物と違う。フックの時間の上限 | LOW | K78 を1行 約 5KB に直した。§16-2(i) に時間の上限（指定なし・既定 10 分・時間切れは止めない）を公式資料で書いた。R14 に足した |
+| L-5 短い行番号・recon.md | LOW | §16-2 の引用をフルパスにした。recon.md に参照を1行足した |
+| L-6 ADR を変えた後の索引の作り直し | LOW | §16-3(b)・便B に generate-adr-index.js を足した |
