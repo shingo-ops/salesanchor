@@ -152,7 +152,8 @@ _INVOICE_COLUMNS = """
     paypal_order_id, paypal_approval_url, payment_fee,
     paypal_invoicer_view_url, paypal_copy_pdf_at,
     issuer_region,
-    payment_method_id, tax_rate_percent, shipping_carrier, shipping_service, shipping_snapshot
+    payment_method_id, tax_rate_percent, shipping_carrier, shipping_service, shipping_snapshot,
+    payment_fee_charged, payment_fee_snapshot
 """
 
 _UPDATABLE_COLUMNS = {"due_date", "notes"}
@@ -179,7 +180,8 @@ _INSERT_INVOICE_SQL = """
         due_date, notes, created_by,
         ship_to_snapshot, bill_to_snapshot, fx_rate_snapshot, issuer_region,
         duty_amount, duty_policy_snapshot, tax_rate_percent,
-        shipping_carrier, shipping_service, shipping_snapshot
+        shipping_carrier, shipping_service, shipping_snapshot,
+        payment_fee_charged, payment_fee_snapshot
     ) VALUES (
         :tid, :inv_num, :qid, :company_id, :contact_id, :currency,
         :subtotal, :shipping, :tax, :total,
@@ -188,7 +190,8 @@ _INSERT_INVOICE_SQL = """
         :due_date, :notes, :created_by,
         :ship_to, :bill_to, :fx_rate, :issuer_region,
         :duty_amount, :duty_policy_snapshot, :tax_rate_percent,
-        :shipping_carrier, :shipping_service, :shipping_snapshot
+        :shipping_carrier, :shipping_service, :shipping_snapshot,
+        :payment_fee_charged, :payment_fee_snapshot
     ) RETURNING id
 """
 
@@ -196,7 +199,8 @@ _RECOMPUTE_SET_SQL = """
     subtotal = :subtotal, shipping_fee = :shipping, tax_amount = :tax, total_amount = :total,
     exchange_rate_jpy = :rate_jpy, exchange_rate_usd = :rate_usd, amount_jpy = :amt_jpy, amount_usd = :amt_usd,
     fx_rate_snapshot = :fx_rate, duty_amount = :duty_amount, duty_policy_snapshot = :duty_policy_snapshot,
-    tax_rate_percent = :tax_rate_percent, shipping_snapshot = :shipping_snapshot
+    tax_rate_percent = :tax_rate_percent, shipping_snapshot = :shipping_snapshot,
+    payment_fee_charged = :payment_fee_charged, payment_fee_snapshot = :payment_fee_snapshot
 """
 
 
@@ -242,13 +246,16 @@ def _shipping_from_stored(row) -> invoice_totals.ShippingChoice:
     return invoice_totals.ShippingChoice(mode="none")
 
 
-async def _compute(db, tenant_id, *, currency, items, shipping, ship_to, bill_to, base_date=None):
+async def _compute(db, tenant_id, *, currency, items, shipping, ship_to, bill_to, base_date=None,
+                   payment_method_type=None, issuer_region=None):
     destination = invoice_totals.destination_country(ship_to, bill_to)
     inputs = await invoice_totals.load_totals_inputs(
         db, tenant_id, destination=destination, base_date=base_date or invoice_totals.today_jst(),
+        issuer_region=issuer_region, currency=currency, payment_method_type=payment_method_type,
     )
     return invoice_totals.compute_totals(
         currency=currency, items=items, shipping=shipping, destination=destination, inputs=inputs,
+        payment_method_type=payment_method_type,
     )
 
 
@@ -413,8 +420,10 @@ async def preview_invoice(
     ship_to = await _fetch_address_snapshot(db, data.company_id, "delivery")
     bill_to = await _fetch_address_snapshot(db, data.company_id, "billing")
     destination = invoice_totals.destination_country(ship_to, bill_to)
+    issuer_region = decide_issuer_region(bill_to)
     inputs = await invoice_totals.load_totals_inputs(
         db, tenant_id, destination=destination, base_date=invoice_totals.today_jst(),
+        issuer_region=issuer_region, currency=data.currency.upper(), payment_method_type=data.payment_method_type,
     )
     result = invoice_totals.compute_totals(
         currency=data.currency,
@@ -422,12 +431,19 @@ async def preview_invoice(
         shipping=_shipping_choice(data.shipping),
         destination=destination,
         inputs=inputs,
+        payment_method_type=data.payment_method_type,
     )
+    if data.payment_method_type == "paypal" and issuer_region is None:
+        if invoice_totals.REASON_PAYMENT_FEE not in result.uncomputed:
+            result.uncomputed.append(invoice_totals.REASON_PAYMENT_FEE)
+        result.total_amount = None
+        result.payment_fee = Decimal("0")
     return InvoicePreviewResponse(
         currency=result.currency, subtotal=result.subtotal, shipping_fee=result.shipping_fee,
         tax_amount=result.tax_amount, tax_rate_percent=result.tax_rate_percent,
         duty_amount=result.duty_amount, duty_label=result.duty_label, duty_components=result.duty_components,
-        total_amount=result.total_amount, uncomputed=result.uncomputed, incoterms=inputs.incoterms,
+        total_amount=result.total_amount, payment_fee=result.payment_fee,
+        uncomputed=result.uncomputed, incoterms=inputs.incoterms,
     )
 
 
@@ -642,13 +658,6 @@ async def create_invoice(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="bill_to_country")
 
     currency = data.currency.upper()
-    totals = await _compute(
-        db, tenant_id, currency=currency,
-        items=[invoice_totals.TotalsItem(quantity=i.quantity, unit_price=i.unit_price) for i in data.items],
-        shipping=_shipping_choice(data.shipping), ship_to=ship_to_snap, bill_to=bill_to_snap,
-    )
-    _raise_if_blocked(totals)
-
     payment_text = None
     payment_method_id = None
     if data.payment_method_ref is not None:
@@ -659,6 +668,15 @@ async def create_invoice(
             )
         except PaymentMethodInvalid:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="payment_method")
+
+    totals = await _compute(
+        db, tenant_id, currency=currency,
+        items=[invoice_totals.TotalsItem(quantity=i.quantity, unit_price=i.unit_price) for i in data.items],
+        shipping=_shipping_choice(data.shipping), ship_to=ship_to_snap, bill_to=bill_to_snap,
+        payment_method_type=data.payment_method_ref.method_type if data.payment_method_ref is not None else None,
+        issuer_region=issuer_region,
+    )
+    _raise_if_blocked(totals)
 
     max_result = await db.execute(text("SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM invoices"))
     next_id = max_result.scalar()
@@ -754,18 +772,41 @@ async def update_invoice(
     if not update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="no_fields_to_update")
 
+    recompute: dict = {}
+    if "payment_method_ref" in sent:
+        items = await _get_invoice_items(db, invoice_id)
+        totals = await _compute(
+            db, tenant_id, currency=old_row["currency"],
+            items=[invoice_totals.TotalsItem(quantity=i["quantity"], unit_price=Decimal(i["unit_price"])) for i in items],
+            shipping=_shipping_from_stored(old_row),
+            ship_to=_load_snapshot(old_row["ship_to_snapshot"]), bill_to=_load_snapshot(old_row["bill_to_snapshot"]),
+            payment_method_type=ref.method_type, issuer_region=old_row["issuer_region"] or "overseas",
+        )
+        _raise_if_blocked(totals)
+        recompute = invoice_totals.to_db_params(totals)
+        recompute.pop("shipping_carrier")
+        recompute.pop("shipping_service")
+
     set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
-    update_data["id"] = invoice_id
+    if recompute:
+        set_clauses = f"{set_clauses}, {_RECOMPUTE_SET_SQL}"
+    params = {**update_data, **recompute, "id": invoice_id}
 
     result = await db.execute(
-        text(f"UPDATE invoices SET {set_clauses}, updated_at = NOW() WHERE id = :id RETURNING {_INVOICE_COLUMNS}"),
-        update_data,
+        text(f"UPDATE invoices SET {set_clauses}, updated_at = NOW() WHERE id = :id AND status = 'draft' RETURNING {_INVOICE_COLUMNS}"),
+        params,
     )
     row = result.mappings().first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invoice_not_draft")
 
+    audit_new = dict(update_data)
+    if recompute:
+        audit_new["total_amount"] = str(totals.total_amount)
+        audit_new["payment_fee_charged"] = str(totals.payment_fee)
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
                            action="update", table_name="invoices", record_id=invoice_id,
-                           old_data=dict(old_row), new_data=update_data)
+                           old_data=dict(old_row), new_data=audit_new)
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     return InvoiceResponse(**dict(row))
@@ -805,6 +846,7 @@ async def issue_invoice(
         items=[invoice_totals.TotalsItem(quantity=i["quantity"], unit_price=Decimal(i["unit_price"])) for i in items],
         shipping=_shipping_from_stored(old),
         ship_to=_load_snapshot(old["ship_to_snapshot"]), bill_to=_load_snapshot(old["bill_to_snapshot"]),
+        payment_method_type=old["payment_method"], issuer_region=old["issuer_region"] or "overseas",
     )
     _raise_if_blocked(totals)
     params = invoice_totals.to_db_params(totals)
@@ -962,6 +1004,9 @@ async def issue_paypal_link(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="発行済み（issued/overdue）の請求書のみリンク発行できます")
     if inv_row["total_amount"] is None or Decimal(inv_row["total_amount"]) <= 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="請求金額が未確定です")
+    # 便E: PayPal の手数料を足した請求書だけ PayPal で請求する（ADR-101 :173・design-e §3-5）
+    if inv_row["payment_method"] != "paypal":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="payment_method")
 
     # Invoicing 方式は送付先 email 必須（PayPal が顧客にメール送付するため）
     if inv_row["contact_id"] is None:
@@ -1173,6 +1218,7 @@ async def download_invoice_pdf(
         "total_amount": float(row["total_amount"] or 0),
         "currency": row["currency"],
         "duty_amount": float(row["duty_amount"]) if row["duty_amount"] is not None else None,
+        "payment_fee_charged": float(row["payment_fee_charged"]) if row["payment_fee_charged"] is not None else None,
         "fx_rate_snapshot": row["fx_rate_snapshot"],
         "notes": row["notes"],
         "tax_rate_percent": float(row["tax_rate_percent"]) if row["tax_rate_percent"] is not None else None,
@@ -1219,6 +1265,7 @@ async def _render_paypal_copy_pdf(db: AsyncSession, tenant_id: int, row, invoice
         "total_amount": float(row["total_amount"] or 0),
         "currency": row["currency"],
         "duty_amount": float(row["duty_amount"]) if row["duty_amount"] is not None else None,
+        "payment_fee_charged": float(row["payment_fee_charged"]) if row["payment_fee_charged"] is not None else None,
         "fx_rate_snapshot": row["fx_rate_snapshot"],
         "notes": row["notes"],
     }

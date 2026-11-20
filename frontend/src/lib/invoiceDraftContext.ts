@@ -77,6 +77,7 @@ export interface InvoicePreview {
   duty_label: string | null;
   duty_components: DutyComponent[];
   total_amount: string | null;
+  payment_fee: string;
   uncomputed: string[];
   incoterms: string;
 }
@@ -95,6 +96,7 @@ export interface InvoicePreviewRequest {
   currency: string;
   items: Array<{ quantity: number; unit_price: number }>;
   shipping: ShippingChoice | null;
+  payment_method_type: PaymentMethodType | null;
 }
 
 /** 材料の道の path。invoice_id のときは保存した地域と通貨で候補を返す（design.md §3-4） */

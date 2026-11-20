@@ -55,14 +55,16 @@ const staticRate = { carrier: 'DHL', zone: '3', fee: 40, currency: 'USD', source
 let shippingAnswer: Record<string, unknown>;
 let permissions: string[];
 
-type PreviewBody = { currency: string; items: Array<{ quantity: number; unit_price: number }>; shipping: { mode: string; fee?: number } | null };
+type PreviewBody = { currency: string; items: Array<{ quantity: number; unit_price: number }>; shipping: { mode: string; fee?: number } | null; payment_method_type?: string | null };
 function previewFor(body: PreviewBody) {
   const subtotal = body.items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
   if (body.shipping === null) {
-    return { currency: body.currency, subtotal: String(subtotal), shipping_fee: null, tax_amount: '0', tax_rate_percent: null, duty_amount: '0', duty_label: null, duty_components: [], total_amount: null, uncomputed: ['shipping_required'], incoterms: 'DAP' };
+    return { currency: body.currency, subtotal: String(subtotal), shipping_fee: null, tax_amount: '0', tax_rate_percent: null, duty_amount: '0', duty_label: null, duty_components: [], total_amount: null, payment_fee: '0', uncomputed: ['shipping_required'], incoterms: 'DAP' };
   }
   const fee = body.shipping.mode === 'calculate' ? body.shipping.fee ?? 0 : 0;
-  return { currency: body.currency, subtotal: String(subtotal), shipping_fee: String(fee), tax_amount: '0', tax_rate_percent: null, duty_amount: '0', duty_label: null, duty_components: [], total_amount: String(subtotal + fee), uncomputed: [], incoterms: 'DAP' };
+  // 便E: PayPal を選んだときだけ支払い手数料（作り物は 3640 固定）を足す
+  const paymentFee = body.payment_method_type === 'paypal' ? 3640 : 0;
+  return { currency: body.currency, subtotal: String(subtotal), shipping_fee: String(fee), tax_amount: '0', tax_rate_percent: null, duty_amount: '0', duty_label: null, duty_components: [], total_amount: String(subtotal + fee + paymentFee), payment_fee: String(paymentFee), uncomputed: [], incoterms: 'DAP' };
 }
 
 function view(state: Record<string, unknown> | null = { draft: { companyId: 4, contactId: 5, currency: 'USD', notes: '' } }) {
@@ -226,6 +228,22 @@ describe('InvoiceCreatePage (invoice-create-portfolio R5)', () => {
     fireEvent.click(pick);
     await waitFor(() => expect(previewCalls().some((b) => b.shipping?.mode === 'calculate' && b.shipping.fee === 33.33)).toBe(true), SLOW);
     await waitFor(() => expect(screen.getByTestId('invoice-total-amount').textContent).not.toBe(tr('invoiceForm.notComputed')), SLOW);
+  });
+
+  it('K8 (payment fee): choosing PayPal sends payment_method_type and shows the fee row; a bank shows none', async () => {
+    ctx = { ...baseCtx(), payment_methods: [{ id: 3, method_type: 'bank', display_name: 'Main bank', wise_currency: null }, { id: null, method_type: 'paypal', display_name: null, wise_currency: null }] };
+    await openWithProduct();
+    await waitFor(() => expect(optionValues('invoice-payment-select')).toContain('paypal:'));
+    fireEvent.click(screen.getByTestId('invoice-shipping-none'));
+    fireEvent.change(screen.getByTestId('invoice-payment-select'), { target: { value: 'bank:3' } });
+    await waitFor(() => expect(previewCalls().some((b) => b.shipping?.mode === 'none' && b.payment_method_type === 'bank')).toBe(true), SLOW);
+    await waitFor(() => expect(screen.getByTestId('invoice-total-amount').textContent).not.toBe(tr('invoiceForm.notComputed')), SLOW);
+    expect(screen.queryByTestId('invoice-total-payment-fee')).toBeNull();
+
+    fireEvent.change(screen.getByTestId('invoice-payment-select'), { target: { value: 'paypal:' } });
+    await waitFor(() => expect(previewCalls().some((b) => b.payment_method_type === 'paypal')).toBe(true), SLOW);
+    const feeRow = await screen.findByTestId('invoice-total-payment-fee', {}, SLOW);
+    expect(feeRow.textContent).toContain('3,640');
   });
 
   it('K9: 12 rows at first, up to 20, the 21st is refused with a notice; one row cannot be removed', async () => {

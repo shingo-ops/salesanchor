@@ -147,6 +147,7 @@ class InvoiceRenderData:
     total: float
     currency: str
     duty_amount: Optional[float] = None
+    payment_fee_charged: Optional[float] = None
     fx_rate: Optional[FxRateSnapshot] = None
     notes: Optional[str] = None
     tenant_name: Optional[str] = None
@@ -401,6 +402,12 @@ def _render_doc_pdf(data: InvoiceRenderData) -> bytes:
         c.drawRightString(190 * mm, y, _fmt_money(data.duty_amount, data.currency))
         y -= 5 * mm
 
+    # 支払い手数料（便E。0 か None なら出さない）
+    if data.payment_fee_charged:
+        c.drawRightString(165 * mm, y, "Payment fee:")
+        c.drawRightString(190 * mm, y, _fmt_money(data.payment_fee_charged, data.currency))
+        y -= 5 * mm
+
     # 合計（太字）
     y -= 1 * mm
     c.setFont(font, 12)
@@ -570,6 +577,7 @@ def render_invoice_pdf(invoice_data: dict, tenant_profile: dict,
         total=float(invoice_data.get("total") or invoice_data.get("total_amount") or 0),
         currency=invoice_data.get("currency", "JPY"),
         duty_amount=invoice_data.get("duty_amount"),
+        payment_fee_charged=invoice_data.get("payment_fee_charged"),
         fx_rate=_to_fx(invoice_data.get("fx_rate_snapshot")),
         notes=invoice_data.get("notes"),
         tenant_name=tenant_profile.get("name"),

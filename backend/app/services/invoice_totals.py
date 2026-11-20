@@ -25,7 +25,8 @@ REASON_SHIPPING = "shipping_required"
 REASON_FX = "fx_rate"
 REASON_TAX = "tax_rate"
 REASON_DUTY_CARRIER = "duty_needs_carrier"
-REASON_ORDER = (REASON_SHIPPING, REASON_FX, REASON_TAX, REASON_DUTY_CARRIER)
+REASON_PAYMENT_FEE = "payment_fee"
+REASON_ORDER = (REASON_SHIPPING, REASON_FX, REASON_TAX, REASON_DUTY_CARRIER, REASON_PAYMENT_FEE)
 
 SHIPPING_MODES = ("calculate", "quote", "none")
 DUTY_BASES = ("subtotal", "subtotal_shipping", "subtotal_shipping_prior")
@@ -108,12 +109,29 @@ class DutyRule:
 
 
 @dataclass(frozen=True)
+class PaymentFeeRow:
+    id: int
+    fee_type: str
+    rate_pct: Decimal
+    fixed_amount: Decimal
+    threshold: Decimal | None
+
+
+@dataclass(frozen=True)
+class PaymentFeeRows:
+    receiving: PaymentFeeRow | None
+    fx: PaymentFeeRow | None
+    required_fx: bool
+
+
+@dataclass(frozen=True)
 class TotalsInputs:
     base_date: date
     incoterms: str
     tax: TaxRow | None
     duty_rules: tuple[DutyRule, ...]
     fx: dict[str, FxRow]
+    payment_fee_rows: PaymentFeeRows | None = None
 
 
 @dataclass
@@ -137,6 +155,8 @@ class TotalsResult:
     exchange_rate_usd: Decimal | None
     amount_jpy: Decimal | None
     amount_usd: Decimal | None
+    payment_fee: Decimal = Decimal("0")
+    payment_fee_snapshot: dict | None = None
     _reasons: set[str] = field(default_factory=set, repr=False)
 
 
@@ -194,6 +214,7 @@ def compute_totals(
     shipping: ShippingChoice | None,
     destination: str | None,
     inputs: TotalsInputs,
+    payment_method_type: str | None = None,
 ) -> TotalsResult:
     currency = currency.upper()
     reasons: set[str] = set()
@@ -329,6 +350,46 @@ def compute_totals(
             exchange_rate_jpy = row.rate_jpy
             fx_rate_snapshot = {"currency": currency, "rate": float(row.rate_jpy), "fetched_at": _iso_utc(row.fetched_at)}
 
+    # ── 支払い手数料（便E。PayPal だけ。design-e.md §3-2）──────
+    payment_fee = Decimal("0")
+    payment_fee_snapshot: dict | None = None
+    if payment_method_type == "paypal":
+        pf = inputs.payment_fee_rows
+        bad = (
+            pf is None
+            or pf.receiving is None
+            or (pf.required_fx and pf.fx is None)
+            or pf.receiving.threshold is not None
+            or (pf.fx is not None and pf.fx.threshold is not None)
+        )
+        if bad:
+            reasons.add(REASON_PAYMENT_FEE)
+            total_amount = None
+        elif total_amount is not None:
+            rows = [pf.receiving] + ([pf.fx] if pf.fx is not None else [])
+            rate = sum((r.rate_pct for r in rows), Decimal("0"))
+            fixed_jpy = sum((r.fixed_amount for r in rows), Decimal("0"))
+            used_fee_fx: list[dict] = []
+            try:
+                fixed = _convert(fixed_jpy, "JPY", currency, inputs.fx, used_fee_fx) if fixed_jpy else Decimal("0")
+            except _FxMissing:
+                reasons.add(REASON_FX)
+                total_amount = None
+            else:
+                base = total_amount
+                payment_fee = floor_minor(base * rate / Decimal("100") + fixed, currency)
+                total_amount = base + payment_fee
+                payment_fee_snapshot = {
+                    "method_type": "paypal",
+                    "fee_types": [r.fee_type for r in rows],
+                    "setting_ids": [r.id for r in rows],
+                    "rate_pct": str(rate),
+                    "fixed_amount_jpy": str(fixed_jpy),
+                    "fixed_converted": str(fixed),
+                    "base_amount": str(base),
+                    "base_date": inputs.base_date.isoformat(),
+                }
+
     usd_row = inputs.fx.get("USD")
     exchange_rate_usd = usd_row.rate_jpy if (currency != "USD" and usd_row is not None) else None
     amount_jpy: Decimal | None = None
@@ -360,6 +421,8 @@ def compute_totals(
         exchange_rate_usd=exchange_rate_usd,
         amount_jpy=amount_jpy,
         amount_usd=amount_usd,
+        payment_fee=payment_fee,
+        payment_fee_snapshot=payment_fee_snapshot,
     )
 
 
@@ -440,8 +503,46 @@ async def load_duty_rules(db: AsyncSession, tenant_id: int, country: str, base_d
     return tuple(rules)
 
 
+async def load_payment_fee_rows(
+    db: AsyncSession, tenant_id: int, *, issuer_region: str | None, currency: str, base_date: date,
+) -> PaymentFeeRows:
+    """PayPal の手数料の行（design-e.md §3-1）。テナント独自の行が先・期間内・新しい effective_from。"""
+    receiving_type = "receiving_domestic" if issuer_region == "domestic" else "receiving_international"
+    required_fx = currency.upper() != "JPY"
+
+    async def _one(fee_type: str) -> PaymentFeeRow | None:
+        result = await db.execute(
+            text("""
+                SELECT id, fee_type, rate_pct, fixed_amount, threshold
+                FROM public.payment_fee_settings
+                WHERE service = 'paypal' AND fee_type = :ft AND currency = 'JPY'
+                  AND (tenant_id = :tid OR tenant_id IS NULL)
+                  AND effective_from <= :d
+                  AND COALESCE(effective_to, DATE '9999-12-31') >= :d
+                ORDER BY (tenant_id IS NULL), effective_from DESC, id DESC
+                LIMIT 1
+            """),
+            {"ft": fee_type, "tid": int(tenant_id), "d": base_date},
+        )
+        r = result.mappings().first()
+        if r is None:
+            return None
+        return PaymentFeeRow(
+            id=r["id"], fee_type=r["fee_type"], rate_pct=Decimal(r["rate_pct"]),
+            fixed_amount=Decimal(r["fixed_amount"]),
+            threshold=Decimal(r["threshold"]) if r["threshold"] is not None else None,
+        )
+
+    return PaymentFeeRows(
+        receiving=await _one(receiving_type),
+        fx=await _one("fx_receiving") if required_fx else None,
+        required_fx=required_fx,
+    )
+
+
 async def load_totals_inputs(
     db: AsyncSession, tenant_id: int, *, destination: str | None, base_date: date,
+    issuer_region: str | None = None, currency: str | None = None, payment_method_type: str | None = None,
 ) -> TotalsInputs:
     incoterms = await load_incoterms(db, tenant_id)
     duty_rules: tuple[DutyRule, ...] = ()
@@ -453,6 +554,10 @@ async def load_totals_inputs(
         tax=await load_tax_row(db, base_date),
         duty_rules=duty_rules,
         fx=await load_latest_fx(db),
+        payment_fee_rows=(
+            await load_payment_fee_rows(db, tenant_id, issuer_region=issuer_region, currency=currency or "JPY", base_date=base_date)
+            if payment_method_type == "paypal" else None
+        ),
     )
 
 
@@ -484,4 +589,6 @@ def to_db_params(result: TotalsResult) -> dict[str, Any]:
         "shipping_snapshot": json.dumps(result.shipping_snapshot) if result.shipping_snapshot is not None else None,
         "duty_policy_snapshot": json.dumps(result.duty_policy_snapshot),
         "fx_rate": json.dumps(result.fx_rate_snapshot) if result.fx_rate_snapshot is not None else None,
+        "payment_fee_charged": result.payment_fee if result.payment_fee_snapshot is not None else None,
+        "payment_fee_snapshot": json.dumps(result.payment_fee_snapshot) if result.payment_fee_snapshot is not None else None,
     }
