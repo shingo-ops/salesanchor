@@ -186,7 +186,7 @@
 - なぜ要るか: 便7 の関所は書き手を `user.login` で確かめる。けれども AI も shingo-ops の名前で書ける（便7「守りの強さ」）。便7 の関所は、同じ名前の偽物の検査が付く道も防ぎきれない（便7 の card の判定4）。そこで AI の操作そのものを、操作の前に止める。
 - 置き場所は2つ。どちらも今ある仕組みの形に合わせる。
   - 手元（Mac の Opus）の見張り: 新しいフォルダ scripts/agent-hooks/go-identity-guard/（guard.py・guard-manifest.json・test_guard.py）。入れ方は今ある共通の台本 install-guard.sh を使う（docs/handoff/guard-add-by-ai/design.md §6）。形は scripts/agent-hooks/install-form-guard/ と同じ。
-    - Bash の `gh auth switch` は全部止める。これを使うと、その後の命令が黙って shingo-ops で動くため。鍵を直接出す道（`gh auth status --show-token`・キーチェーンの `find-generic-password`・`~/.config/gh/hosts.yml`）も止める。`-u shingo-ops` の短い書き方も、`-ushingo-ops` の詰めた書き方も `--user` と同じに扱う。`gh auth token` を含む命令は、名前の有無にかかわらず下の2つの形だけを通す（審査3回目の中5）。
+    - Bash の `gh auth switch` は全部止める。これを使うと、その後の命令が黙って shingo-ops で動くため。鍵を直接出す道（`gh auth status --show-token`・キーチェーンの `find-generic-password`・gh の設定フォルダの hosts.yml）も止める。`-u shingo-ops` の短い書き方も、`-ushingo-ops` の詰めた書き方も `--user` と同じに扱う。`gh auth token` を含む命令は、名前の有無にかかわらず下の2つの形だけを通す（審査3回目の中5）。
     - Bash の命令に `--user shingo-ops` があるとき、通すのは2つの形だけ。
       - (a) 1つの命令だけの `GH_TOKEN="$(gh auth token --user shingo-ops)" gh pr review <番号> --approve` に、単引用符の `--body '…'` か `--body-file <道>` を付けた形。今の委任の Approve の形で、本文に「GO #」の文字が無いもの。`--body-file` のときはファイルを読んで確かめる。二重引用符の本文は通さない。中の `$(` と `` ` `` をシェルが実行するため（審査2回目の中1）。
       - (b) 読むだけの `gh api`。引数は、決まった少しの印（`--jq`・`-q`・`--paginate`・`--slurp`・`-i`・`--include`・`--silent`・GET だけの `-X`/`--method`）と道の1つだけを許す。それ以外の印が1つでもあれば止める。`-fbody=`・`-XPOST`・`--method=POST` のような詰めた書き方も止まる（審査2回目の中2）。引用符の外の `|` の後ろは別の命令として扱い、PO の鍵は渡らない。引用符の中の `|` では分けない（審査3回目の中4）。
