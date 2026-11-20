@@ -1374,7 +1374,7 @@ rules:
     reason: "KumaMonitorDown では「対応: 不要」と書かない決まり。報告の中身。実行時の振る舞いで PR に残らない"
   - id: OI421
     source: docs/ai-agents/ops-incident-agent.md
-    anchor: "- 不要と書いてよい条件: 無し（v1）。札が page"
+    anchor: "- 不要と書いてよい条件: 無し（v1）。札が page で、利用者に影響"
     kind: exempt
     reason: "ServiceDown では「対応: 不要」と書かない決まり。報告の中身。実行時の振る舞いで PR に残らない"
   - id: OI422
@@ -1382,6 +1382,46 @@ rules:
     anchor: "- 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に再び"
     kind: exempt
     reason: "BackendHighLatency で「対応: 不要」と書いてよい条件の決まり。報告の中身。実行時の振る舞いで PR に残らない"
+  - id: OI423
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に同じ種類（ViewerInventoryStale）"
+    kind: exempt
+    reason: "ViewerInventoryStale で「対応: 不要」と書いてよい条件の決まり。報告の中身。実行時の振る舞いで PR に残らない"
+  - id: OI424
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に同じ種類（BackendWorkerSaturated）"
+    kind: exempt
+    reason: "BackendWorkerSaturated で「対応: 不要」と書いてよい条件の決まり。報告の中身。実行時の振る舞いで PR に残らない"
+  - id: OI425
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 不要と書いてよい条件: 件が閉じていて（status が resolved）、件の始まりから 24 時間の内に同じ種類（CeleryQueueBacklog）"
+    kind: exempt
+    reason: "CeleryQueueBacklog で「対応: 不要」と書いてよい条件の決まり。報告の中身。実行時の振る舞いで PR に残らない"
+  - id: OI426
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 不要と書いてよい条件: 無し（v1）。バックアップが取れているか"
+    kind: exempt
+    reason: "BackupTimestampAbsent では「対応: 不要」と書かない決まり。報告の中身。実行時の振る舞いで PR に残らない"
+  - id: OI427
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 止まって PO に聞く条件: §3-1 のほか、待ち行列が件の始まりから増え続けている"
+    kind: exempt
+    reason: "CeleryQueueBacklog で止まって PO に聞く条件と、worker の再起動を提案に留める決まり。本番の変更は §3-1 で禁じてあり、報告の中身。実行時の振る舞いで PR に残らない"
+  - id: OI428
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 不要と書いてよい条件: 無し（v1）。札が page で、本番の API が止まって戻った後"
+    kind: exempt
+    reason: "RecoveryCheckFailed では「対応: 不要」と書かない決まり。報告の中身。実行時の振る舞いで PR に残らない"
+  - id: OI429
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 不要と書いてよい条件: 無し（v1）。札が page で、LINE 解析・翻訳"
+    kind: exempt
+    reason: "CeleryHeartbeatStale では「対応: 不要」と書かない決まり。報告の中身。実行時の振る舞いで PR に残らない"
+  - id: OI430
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 不要と書いてよい条件: 無し（v1）。札が page で、この間はコンテナの不健康"
+    kind: exempt
+    reason: "ContainerStateStale では「対応: 不要」と書かない決まり。報告の中身。実行時の振る舞いで PR に残らない"
 
 not_rules:
   - source: frontend/AGENTS.md
@@ -1920,3 +1960,27 @@ not_rules:
   - source: docs/ai-agents/ops-incident-agent.md
     anchor: "- 読めないこと（`risk` に書く）: DB の中の混み具合"
     reason: "BackendHighLatency で読めないものの説明で、決まりではない"
+  - source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 保留（配信を止めている最中）でないこと:"
+    reason: "ViewerInventoryStale で読む数（保留の時刻）とその見分け方の説明で、決まりではない"
+  - source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 読めないこと（`risk` に書く）: worker のログ（`viewer-cache`"
+    reason: "ViewerInventoryStale で読めないもの（worker のログ・Redis の数）の説明で、決まりではない"
+  - source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 読めないこと（`risk` に書く）: 点検の箱のログ"
+    reason: "RecoveryCheckFailed で読めないもの（prod2 の点検の箱のログ）の説明で、決まりではない"
+  - source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 読めないこと（`risk` に書く）: worker が今処理中のタスク（`celery inspect active`）"
+    reason: "CeleryHeartbeatStale で読めないもの（処理中のタスク・worker のログ）の説明で、決まりではない"
+  - source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 読めないこと（`risk` に書く）: prod1 の `crontab -l`"
+    reason: "ContainerStateStale で読めないもの（prod1 の cron と記録）の説明で、決まりではない"
+  - source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 読めないこと（`risk` に書く）: 今処理中のリクエストの中身"
+    reason: "BackendWorkerSaturated で読めないものの説明で、決まりではない"
+  - source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 読めないこと（`risk` に書く）: worker が今処理中のタスク（長いタスク"
+    reason: "CeleryQueueBacklog で読めないもの（処理中のタスク）の説明で、決まりではない"
+  - source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 読めないこと（`risk` に書く）: prod1 の `/home/ubuntu/node_exporter_textfile/`"
+    reason: "BackupTimestampAbsent で読めないもの（prod1 のファイルと記録）の説明で、決まりではない"
