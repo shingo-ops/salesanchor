@@ -25,9 +25,9 @@ mode: handoff
 | 13 | sleep させない・Write で書く・止められたら言い換えない | ○ |
 
 ## 読んだ節と照合（Opus、2026-11-21）
-- docs/handoff/design-partner-card-ops/guards/00-common.md: 1手順1命令（手順4・手順6・手順8は命令を別々に流す）・出力に上限（手順7は tail -40、手順8は head -60）・プレースホルダを残さない・報告に無い出力を成功と扱わない（手順9で git log、手順11で番号を2通りで取る）・sleep で待たない。○
+- docs/handoff/design-partner-card-ops/guards/00-common.md: 1手順1命令（手順4・手順6・手順8は命令を別々に流す）・出力に上限（手順7は tail -40、手順8は head -60）・プレースホルダを残さない・報告に無い出力を成功と扱わない（手順9で git log、手順10で push 後の先頭を2通りで取る）・sleep で待たない。○
 - docs/handoff/design-partner-card-ops/guards/03-file.md: 触るファイルを手順5で全部挙げた。変える行は「変更前後」に全文で書いた。○
-- docs/handoff/design-partner-card-ops/guards/04-worktree.md・docs/handoff/design-partner-card-ops/guards/05-pr.md: 作業フォルダは new-worktree.sh で origin/main から。push は `-u origin HEAD`。PR は gh-pr-create-safe.sh・Draft・`触るファイル:` は1行カンマ区切り。○
+- docs/handoff/design-partner-card-ops/guards/04-worktree.md・docs/handoff/design-partner-card-ops/guards/05-pr.md: 作業フォルダは new-worktree.sh で origin/main から。push は `-u origin HEAD`。実装役は push までで、PR は作らない（PR は手元で Opus が作る。`scripts/agent-hooks/cloud/rules.md:10`）。○
 - docs/handoff/design-partner-card-ops/guards/07-migration.md: `migrations/` は触らない。本体の登録の行（run_sql・run_py）も触らない。○
 - docs/handoff/design-partner-card-ops/guards/10-executor.md: 散文で組み立てを頼まない（変える行は全部「変更前後」に書いた）。○
 
@@ -104,7 +104,7 @@ mode: handoff
 ## 手順
 1. 受領確認: 報告の先頭に「本報告はカード 5-4 の実行結果である」と書く。
 2. 作業フォルダ: `git fetch origin` → `bash scripts/new-worktree.sh release/migration-backup-guard-5-4`（`--claude` は付けない。付けると別の Claude が起動する）→ 作ったフォルダへ移り、`git rev-parse HEAD`・`git rev-parse origin/main` を記録する。reset・rebase・force・pull は使わない。以後の命令は、すべてそのフォルダへの `cd` で始める。
-3. `./scripts/dev/executor-preflight.sh` を流し、出力を記録する。合否の線: 終わりの番号が 0、または [1/3]（`api.github.com` に届くか）・[2/3]（gh の名義）だけが FAIL で、[3/3]（git の名義）・[4/4]（`origin/main` が在る）が OK。クラウドは GitHub の窓口に届かないことがあり、この2つの FAIL では止まらない。HEAD が `origin/main` と同じ。
+3. `./scripts/dev/executor-preflight.sh` を流し、出力を記録する。合否の線: 終わりの番号が 0、または [1/3]（`api.github.com` に届くか）・[2/3]（gh の名義）だけが FAIL で、[3/3]（git の名義）・[4/4]（`origin/main` が在る）が OK（このときの終わりの番号は 1）。クラウドは GitHub の窓口に届かないことがあり、この2つの FAIL では止まらない。HEAD が `origin/main` と同じ。
 4. 変える前の数を取る（基準値）: `grep -c '' scripts/run_all_migrations.sh`・`grep -nE 'run_main round' .github/workflows/migration-test.yml`・`grep -n "db_migrations == 'true'" .github/workflows/deploy.yml` の3つ（1手順1命令で別々に流す）。合否の線: `run_main round` の行が round1〜round6 の6行。`db_migrations == 'true'` の行の中に控えの段の `if:` がある。違えば `NEEDS_DECISION:`（実物が設計の時と変わった）。
 5. 上の「変更前後」1〜5 を Write/Edit で入れる。触るのはこの4つのファイルだけ: `scripts/run_all_migrations.sh`・`.github/workflows/deploy.yml`・`.github/workflows/migration-test.yml`・`scripts/tests/test-deploy-orphan-cleanup.sh`。
 6. 書いた物の形を確かめる: `bash -n scripts/run_all_migrations.sh`・`git diff --stat`・`git diff .github/workflows/deploy.yml`・`git diff scripts/run_all_migrations.sh`。合否の線: `bash -n` が 0。差分のファイルは手順5の4つだけ。`deploy.yml` の差分は `+` 2行・`-` 1行（:890 の行の置き換えと説明1行）。控えの段の行（`db_migrations == 'true'`）は差分に無い（K5-16）。本体の差分の `-` の行は 0。
