@@ -69,6 +69,16 @@
 - 既読の口 `POST /api/v1/notices/{notice_id}/read` は合図を出さない（画面が返り値の未読数で更新する）。NO_SIGNAL_ROUTES に理由付きで並べる。
 - 設計: docs/handoff/in-app-notice-bell/design.md §7-2。
 
+## 改訂 2026-11-20（予定の取り込み）
+
+Google カレンダーからの取り込み（ADR-1059）が予定を書き換えたら、予定の画面を開き直さずに変えるため、会社の分かる裏の処理用の表 `TENANT_TASK_TOPICS` を topics.py に足し、話題 `calendar.events`（範囲 `tenant`、宛先 `rt:t:{tenant_id}`）を置く。本文の決定と既存の改訂は書き換えない。
+
+- `TASK_TOPICS` は今までどおり会社の分からない裏の処理用（shared か global だけ）。会社の分かる裏の処理は `TENANT_TASK_TOPICS` に置き、範囲は tenant だけ（試験で固定）。
+- 送り口は backend/app/services/google_webhook.py の `sync_tenant_from_google` の 1 か所だけ。commit と会社の文脈の戻しの後、書いた件数が 1 以上のときだけ 1 回出す。失敗は握る（取り込みは止めない）。
+- 画面は合図を受けたら予定の一覧を読み直す（保存の後と同じ読み直し）。
+- 予定の書き込みの口（`/api/v1/calendar/events` の 3 つ）は NO_SIGNAL_ROUTES のまま。
+- 設計: docs/handoff/calendar-two-way-sync/design.md §3-2〜§3-4。
+
 ## Why（なぜ）
 
 - PO の願いは「読み込み速度を落とさず、変更があったら即時反映」を全ページの標準にすることである。

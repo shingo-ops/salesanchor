@@ -370,6 +370,12 @@ async def sync_tenant_from_google(db: AsyncSession, tenant_id: int) -> dict:
 
         await db.commit()
         await reset_tenant_context(db, tenant_id)
+        # 予定の画面へ合図（ADR-1016 改訂 2026-11-20）。書いた件数が 0 なら出さない。失敗は握られる
+        if upserted + deleted > 0:
+            from app.realtime.publisher import publish_change
+            from app.realtime.topics import SCOPE_TENANT, TOPIC_CALENDAR_EVENTS
+
+            await publish_change(TOPIC_CALENDAR_EVENTS, SCOPE_TENANT, tenant_id)
         logger.info(
             "Google 取り込み完了 (tenant=%s, upserted=%d, deleted=%d, full=%s)",
             tenant_id, upserted, deleted, full,
