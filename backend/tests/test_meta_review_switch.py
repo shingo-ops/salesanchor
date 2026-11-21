@@ -503,16 +503,10 @@ async def test_meta_review_switch_audited(enforce, machine, db_session, password
 
 # ── K11: ログイン履歴 ────────────────────────────────────────
 
-async def test_meta_review_history_lists_attempts(enforce, machine, db_session, password_hash, marked_tenant):
+async def test_meta_review_history_lists_attempts(enforce, machine, db_session, password_hash, marked_tenant, sqlite_auth_events):
     await _user(db_session, password_hash)
     await _user(db_session, password_hash, user_id=OTHER_USER_ID, email=OTHER_EMAIL, tenant_id=OTHER_TENANT)
     token = await _super_admin_token(db_session, password_hash)
-    await db_session.execute(
-        text(
-            "CREATE TABLE auth_events (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TIMESTAMP, "
-            "user_id INTEGER, path TEXT, status_code INTEGER, reason TEXT, user_agent TEXT)"
-        )
-    )
     login, poll = f"{AUTH}/login", f"{AUTH}/login-requests/poll"
     mac = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0"
     rows = [
