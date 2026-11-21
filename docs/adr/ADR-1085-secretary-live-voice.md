@@ -2,43 +2,54 @@
 
 | 項目 | 内容 |
 |------|------|
-| ステータス | Proposed（草案・2026-11-22。PO 未承認。目標の表の再確認、有料の声の AI と月の上限、ADR-1056 の改めの 3 点を PO が決めるまで実装しない） |
-| 備考 | PO 2026-11-21「カメラと画面の共有は今回は不要。1. 表のとおりで決める【おすすめ】」。Amends ADR-1056（AI 会社へ送るのは書いた文だけ）・ADR-1080（声で返事）・ADR-1082（聞き取りは 1 回区切り・スマホだけ）の案 |
+| ステータス | Proposed（草案・2026-11-22。PO 未承認。目標の表の再確認、有料の声の AI と月の上限、ADR-1056 の改めを PO が決めるまで実装しない） |
+| 備考 | PO 2026-11-21「カメラと画面の共有は今回は不要。1. 表のとおりで決める【おすすめ】」。Amends ADR-1056・ADR-1058・ADR-1080・ADR-1082 の案。設計審査 1 回目 REVISE → 直した 2 版（`docs/handoff/secretary-live/review-architect.md`） |
 | 起案日 | 2026-11-22 |
 | 方針の決定者 | Shingo（PO） |
-| 関連 | [ADR-1056](ADR-1056-secretary-chat.md)、[ADR-1058](ADR-1058-ai-job-assignments.md)、[ADR-1080](ADR-1080-secretary-voice-tts.md)、[ADR-1082](ADR-1082-secretary-voice-input.md)、ADR-1004（使用量台帳）、ADR-027、ADR-067・ADR-144。設計: `docs/handoff/secretary-live/design.md`・調査: `recon.md`・事例: `research.md`・目標: `kgi.md` |
+| 関連 | [ADR-1056](ADR-1056-secretary-chat.md)、[ADR-1058](ADR-1058-ai-job-assignments.md)、[ADR-1080](ADR-1080-secretary-voice-tts.md)、[ADR-1082](ADR-1082-secretary-voice-input.md)、ADR-1004（使用量台帳）、ADR-027、ADR-067・ADR-144、ADR-135・ADR-136・ADR-1003。設計: `docs/handoff/secretary-live/design.md`・調査: `recon.md`・事例: `research.md`・目標: `kgi.md` |
 
 ---
 
 ## What（何を決めるか・案）
 
-1. LIVE の声の AI は Gemini Live（2.5 Flash Native Audio）。声の聞き取り・話す・割り込み・両方の書き起こしだけを受け持つ。
-2. Gemini Live に渡す道具は「秘書に頼む（文）」の 1 つだけ。画面がその文を今の `POST /api/v1/assistant/messages` に本人のログインで送る。名前探し・カルテ・下書きは今の秘書の道のまま。Gemini Live に書き込みの道は無い。
-3. 作るのは「作る」を押したとき、または LIVE 中に下書きが出ている間に**こちらの声の書き起こし**が決まった言葉に一致したときだけ。AI の判断で作らない。
-4. Gemini の鍵は画面に出さない。backend の新しい口 `POST /api/v1/assistant/live/session` が 1 回だけ使える短い札を出す。
-5. 本番の画面の CSP の `connect-src` に Gemini Live の接続先 1 つだけを足す。
-6. LIVE の使用量を台帳 `public.llm_usage_events` に書く（使いみち `secretary_live`・`sdk` `google-genai-live`）。月の上限は backend が見て、超えたら札を出さない。
-7. マイクの印は PC にも出し、押している間は聞き続ける。0 円の Web Speech のまま（iPhone のホーム画面のアプリで動かなければ Gemini Live の書き起こしに切り替える）。
+1. LIVE の声の AI は Gemini Live（2.5 Flash Native Audio）。声の聞き取り・話す・割り込み・両方の書き起こしだけを受け持つ。モデル名は backend の 1 か所（`secretary_live.py`）に書く。
+2. Gemini Live に渡す道具は「秘書に頼む（文）」の 1 つだけ。画面がその文を今の `POST /api/v1/assistant/messages` に本人のログインで送る。名前探し・カルテ・下書きは今の秘書の道のまま。道具の結果として返すのは秘書の返事の文だけ。Gemini Live に書き込みの道は無い。
+3. 作るのは画面だけが決める。請求書は「作る」ボタンだけ（声では作らない）。予定は「作る」ボタンか、「作りますか？」の声の後の次の発話 1 つが「はい」「作って」に完全一致したときだけ。AI の判断で作らない。
+4. Gemini の鍵は画面に出さない。backend の新しい口 `POST /api/v1/assistant/live/session` が 1 回だけ使える 10 分の札を出し、モデル・指示文・道具を札に固定する。口には回数の上限を付ける。
+5. 本番の画面の CSP の `connect-src` に Gemini Live の接続先 1 つだけを足す。音の処理のファイルは同じ場所から出し、`script-src` は緩めない。
+6. LIVE の使用量を台帳 `public.llm_usage_events` に書く（使いみち `secretary_live`・`sdk` `google-genai-live`・1 回＝1 行・失敗も `outcome`・`error_code` で 1 行）。札を出す時に 1 回の最大の費用を仮の行で書き、終了時に画面が送る使用量で書き直す。月の上限は backend の定数 1 か所で、超えるなら札を出さない。
+7. マイクの印は PC にも出し、押している間は聞き続ける（途中で切れたら画面が聞き直す）。0 円の Web Speech のまま。
 8. 「声で返事」のチェックは最後の便で消す。
 
-### ADR-1056 のうち改める点（案）
-- 「AI 会社へ送るのは利用者が書いた文だけ」→ LIVE ではこちらの声と秘書の返事の文が Google（有料枠・学習に使わない）に送られる。
+### 改める点（案）
+
+- **ADR-1056**:
+  - 「AI 会社へ送るのは利用者が書いた文だけ」→ LIVE ではこちらの声と、秘書の返事の文（相手の会社名・金額を含むことがある）が Google（有料枠・学習に使わない枠であることを PO が確かめる）に送られる。
+  - 「秘書の AI は道具を持たない」→ Gemini Live だけは道具「秘書に頼む（文）」を 1 つ持つ。その引数は利用者の文ではなく Gemini の言い換えなので、画面に「秘書に頼んだ内容」として出す。
+  - 道具の結果を Gemini に戻す。結果の文に命令が紛れても、道具は 1 つで作る道は無い（試験で守る）。
+  - 聞き返し（カルテ）の状態は、画面が今と同じく持ち、同じ形で送る。
+- **ADR-1058**: LIVE は AI の担当表に入れない（声の流れで、画面で選んで切り替えられないため）。読み上げ（`secretary_tts`）と同じ例外。OpenAI への切り替えは作り直しの別の便で、選択肢の値はそのときの migration で足す。
+- **ADR-1080**: 月の上限の型（backend の定数 1 か所・1 回＝1 行・毎月 Google の請求と照らす）を LIVE にも使う。「声で返事」は消す。読み上げの口は 30 日使われないことを確かめて別の便で消す。
+- **ADR-1082**: 「1 回区切り・スマホだけ」→「押している間は聞き続ける・PC にも出す」。
+- **ADR-1004**: 使用量を backend が直接見られない道（画面が申告）を初めて認める。届かなければ最大のまま残す。
 
 ## Why（なぜ）
 
 - 2 秒以内の返事と割り込みは、今の秘書（返事まで 5〜8 秒・読み上げ中はマイクを閉じる）では作りの上で満たせない（design.md §4）。
-- Gemini は 1 分の下限が OpenAI の約 4 分の 1 で、有料の契約が既にある（design.md §4）。
+- Gemini は 1 分の下限が OpenAI の約 4 分の 1（design.md §4）。
 - 秘書の仕事を今の道に任せれば、データの置き場・決まり帳・権限の確かめが今のまま効き、写しが増えない（design.md §5）。
-- 聞き間違いで作る事故を防ぐため、作る判断を AI に渡さない（research.md F1）。
+- 聞き間違いで作る事故を防ぐため、作る判断を AI に渡さない。請求書は人のチェックが要るので声で作らない（research.md F1・design.md §5-1）。
+- 使用量は公式の文書でつないだ側（画面）にだけ届くため、仮の行で多めに数えておく（design.md §6-1）。
 
 ## 代わりの案
 
-- OpenAI Realtime（速さの第三者値は少し上・費用は約 4 倍・新しい契約）。便 T で 2 秒を満たさなければ切り替える。
+- OpenAI Realtime（速さの第三者値は少し上・費用は約 4 倍・新しい契約・つなぎ方の作り直し）。便 T0 で 2 秒を満たさなければ切り替えるかを PO に聞く。
 - 無料の組み合わせ（割り込み・2 秒を満たせない）。
-- backend を声の中継にする（作る量と止まる箇所が増える）。
+- backend を声の中継にする（使用量は確かになるが、作る量と止まる箇所が増える）。
 
 ## 影響
 
-- migration 1 本（台帳の値）。PO の「GO #番号」まで main に入れない（ADR-135・ADR-136）。
+- migration 1 本（台帳の値・便 T1）。GO まで main に入れない（ADR-135・ADR-136。値を足すだけなので ADR-1003 の委任の GO で足りる）。
 - nginx の CSP 1 行。配備で 2〜3 秒画面が止まる。
 - 毎月 1 回、Google の請求と台帳の LIVE の合計を照らす。
+- 金型を守る機械の検査は `features/` を見ないため、LIVE の画面は人の審査で守る。
