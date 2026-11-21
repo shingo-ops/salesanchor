@@ -49,6 +49,9 @@ MIGRATION_OUTSIDE_RECORD=(migrations/20261024_100200_drop_ai_cloud_views.sql mig
 # record（ふだん）: 記録済みでチェックサムが同じ手順は流さない。full（戻し道）: 記録を見ずに全件流し、記録を上書きする。
 # full は人が手で、PO 本人の GO の後に起動する物。本番反映の自動の流れはこの変数を渡さないので、いつも record。
 MIGRATION_MODE="${MIGRATION_MODE:-record}"
+# 控えの段の結果（段5 5-4・設計 §5-8）。本番反映は steps.backup.outcome（success・skipped・failure・cancelled）を渡す。
+# record で (c) が1本以上なのに success でなければ、何も流さずに止まる。人が record を手で流すときは、
+# 先に bash scripts/backup.sh deploy で控えを取り、MIGRATION_PREDEPLOY_BACKUP=success を付ける。
 case "${MIGRATION_MODE}" in
   record|full) ;;
   *) echo ">>> [record] invalid MIGRATION_MODE: ${MIGRATION_MODE} (record or full)" >&2; exit 1 ;;
@@ -156,11 +159,16 @@ mr_plan() {
   echo ">>> [record] (a) recorded-but-not-target=${a}"
   echo ">>> [record] (b) checksum-mismatch=${b}"
   echo ">>> [record] (c) to-run=${MR_TO_RUN}"
+  echo ">>> [record] predeploy-backup=${MIGRATION_PREDEPLOY_BACKUP:-unset}"
   echo ">>> [record] timing read-records=$(mr_secs "${t_read0}" "${t_read1}")s checksum=$(mr_secs "${t_sum0}" "${t_sum1}")s"
   for f in "${a_list[@]}"; do echo ">>> [record] (a) ${f}"; done
   for f in "${b_list[@]}"; do echo ">>> [record] (b) ${f}"; done
   if [ "${MIGRATION_MODE}" = "record" ] && [ $((a + b)) -ne 0 ]; then
     echo ">>> [record] (a) or (b) is not 0; nothing was run"
+    exit 1
+  fi
+  if [ "${MIGRATION_MODE}" = "record" ] && [ "${MR_TO_RUN}" -ne 0 ] && [ "${MIGRATION_PREDEPLOY_BACKUP:-}" != "success" ]; then
+    echo ">>> [record] (c) is not 0 but pre-deploy backup is not success (MIGRATION_PREDEPLOY_BACKUP=${MIGRATION_PREDEPLOY_BACKUP:-unset}); nothing was run"
     exit 1
   fi
   if [ "${MIGRATION_MODE}" = "full" ]; then
