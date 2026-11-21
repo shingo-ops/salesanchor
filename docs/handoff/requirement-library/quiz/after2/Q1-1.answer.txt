@@ -1,0 +1,44 @@
+# 修正計画: 顧客情報「新規登録」で会社を作るとエラーになる
+
+## 原因（コードを読んだ結果。実機での再現は未確認）
+- 画面の送信内容に `lead_id`（出自リード）が入っていません（`frontend/src/pages/companies/CompaniesPage.tsx:284-304`）。
+- バックエンドでは `lead_id` が必須です。
+  - `backend/app/schemas/company.py:116` で `CompanyCreate.lead_id` は必須項目（`Field(ge=1)`）です。
+  - `backend/app/routers/companies.py:391-394` でもリードの存在を確認していて、無ければ 404 になります。
+- そのため、画面からの `POST /companies` は 422 で失敗する可能性が高いです。
+- DB 側も `migrations/20260703_010000_txn_backbone_ben1a.sql` で `companies.lead_id` を NOT NULL にしています。
+- 便1a でバックエンドだけが「会社はリードから生まれる」に変わり、画面が追従していないと推測しています。
+
+## 方針（PO の判断が必要）
+最初に ADR-089・126・127、`docs/specs/customer-management/`、`docs/specs/db-ssot/deal-removal/design.md` を読み、ADR を優先して次のどちらにするか決めます。
+- **案A（推奨の候補）**: 会社は必ずリードから生まれる、という設計に画面を合わせます。
+  - 新規登録モーダルに「出自リード」の選択欄を足し、`lead_id` を送ります。
+  - 既存のリード選択の部品を流用します。
+  - リード無しの直接登録は塞ぐか、リード側の導線に寄せます。
+- **案B**: `lead_id` が無いときは、バックエンドが会社名から自動でリードを作ります。ADR と食い違うなら採用しません。
+
+## 手順
+1. `bash scripts/new-worktree.sh release/fix-company-create-lead-id --claude` で作業場所を作り、`./scripts/dev/executor-preflight.sh` を実行します。
+2. 先にテストを書きます。
+   - backend の pytest で、`lead_id` が無い POST が 422 になることを固定します。
+   - vitest で、画面の送信内容に `lead_id` が入ることを確認します。
+3. 案Aの場合は `CompaniesPage.tsx`・`CompanyFormFields.tsx` に出自リード欄を追加します。
+   - 部品は `components/` の既存のものを使い、生 select は使いません（ADR-144）。
+   - 文言は `ja.json` と `en.json` の両方に `t()` キーで追加します（ADR-027）。
+4. 422 のときに「出自リードが必須」と分かる文言を出します。今は汎用の保存エラーになっていると思われます。
+5. `frontend/tests-e2e/` の該当 spec を同じ PR で更新します。
+6. migrations や `deploy.yml` は触りません（スキーマ変更なし）。
+
+## 確認方法
+- `cd backend && make check`
+- `cd frontend && npm run lint && npx vitest run src/pages/companies && npm run check:all`
+- Playwright で、新規登録して一覧に出ることを確認します。
+- 実装の前に、実機で本当に 422 になるかをブラウザの Network か API ログで確認します。違っていたら計画を直します。
+
+## 運用上の注意
+- コード変更を含むので、クラウドでは push までにします。PR は手元で `shingo-cc` 名義で作ります。PR 本文には「### 標準ワークフロー確認」の節を入れます。
+- マージと本番 DB への書込はしません。
+
+計画は `/root/.claude/plans/commit-push-floofy-quilt.md` にも書きました。リポジトリ内のファイルは変更していません。commit と push もしていません。
+
+案A と案B のどちらにするか、PO の判断をください。

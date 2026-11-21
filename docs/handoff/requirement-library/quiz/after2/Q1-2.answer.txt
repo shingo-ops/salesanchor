@@ -1,0 +1,51 @@
+## 修正計画（調査のみ。ファイル変更・commit・push はしていません）
+
+### 原因（読んだコードからの推定。実機での再現は未確認）
+
+顧客情報画面（`frontend/src/pages/companies/CompaniesPage.tsx`）の「新規登録」は `POST /companies` を呼びます。送る内容に `lead_id` が入っていません（309 行付近の `payload`）。
+
+サーバー側は `lead_id` を必須にしています。
+- `backend/app/schemas/company.py:116` の `CompanyCreate.lead_id` は `Field(ge=1)` で必須です（「便1a：出自リード必須」）。
+- `backend/app/routers/companies.py` の `create_company` は、`leads` に該当行が無いと `404 not_found:lead` を返します。
+
+画面から作ると 422 が返り、エラー表示になるはずです。「リード必須」にした変更に、画面側が追従していないと見ています。
+
+### 方針
+
+画面側を直します。リードの背骨設計（ADR-060 系、`docs/specs/db-ssot/deal-removal/design.md`）は優先なので、サーバー側の必須は外しません。
+
+### 手順
+
+1. **着手前に決まりを確認する**
+   - `docs/INDEX.md` の「画面を触るとき」「顧客管理」の行にある文書を読みます。対象は `frontend/AGENTS.md`、`backend/AGENTS.md`、`CC_UI_GOVERNANCE.md`、`docs/specs/customer-management/README.md`、ADR-027（i18n）、ADR-060・058・097・089・126・127 です。
+   - 特に「会社を新規登録するとき、リードをどう決めるか」の定めを探します。
+   - `bash scripts/new-worktree.sh release/fix-company-create --claude` で作業場所を作り、`./scripts/dev/executor-preflight.sh` を実行します。
+2. **再現を固める**
+   - 先に落ちるテストを書きます。
+   - サーバー側は `backend/tests` に、`lead_id` なしの `POST /companies` が 422 になる確認を足します。
+   - 画面側は `PageFormButtonMigration.test.tsx` の company ケースを流用し、送信内容に `lead_id` が入ることを確認します。
+   - 使い捨てのローカル PostgreSQL だけを使い、本番には触れません。
+3. **「どのリードに紐づけるか」を確定する（ここだけ PO への確認が要る見込み）**
+   - 案A（推奨）: 登録フォームに「出自リード」の選択欄を足します。既存のリード検索の部品があれば再利用します。ja.json と en.json の両方にキーを足します。
+   - 案B: 受信箱やリード詳細から開いたときは、そのリードの ID を引き継ぎます。顧客情報画面からの単独登録は案Aで選ばせます。
+   - 案C: サーバー側で、未指定ならリードを自動作成します。ADR の背骨（正順ライフサイクル）と食い違うおそれがあるので採用しません。
+4. **画面を直す**
+   - `CompaniesPage.tsx` に、フォーム状態の `lead_id`、必須チェック、`payload.lead_id` の設定を足します。
+   - `catch` では `e.message` をそのまま出しています。422 と 404 は、日本語で原因が分かる文言（例:「リードを選んでください」）に直します。
+5. **同種の問題がないか見る**
+   - 同じ設計変更の影響で、`contacts.py` や `deals` の登録にも同様の抜けがないか確認します。
+   - 他の経路から `POST /companies` を呼んでいる箇所も確認します。
+
+### 検証
+
+- 追加したテストと、既存の `PageFormButtonMigration.test.tsx` を流して通ることを確認します。
+- フロントは `npm run typecheck`、`lint`、`test` を実行します。サーバーは `pytest -k companies` を実行します。
+- ローカルで画面を起動し、「新規登録」から会社が作れること、リード未選択のときに分かりやすいエラーが出ることを目視で確認します。
+- commit の前に `docs/ai-agents/executor-checklist.md` の確認項目を通し、pre-push の検査が通ってから push します。
+
+### 注意
+
+- 変更はコード（frontend）の変更になるので、PR は手元で `shingo-cc` 名義で作ります。クラウドからは push までです。
+- `migrations/` は触らない見込みなので、PO の「GO #PR番号」の対象外になる想定です。
+- 実際のエラー内容（HTTP ステータスと本文）は、まだ見ていません。最初に画面のネットワークログか API ログで、422 / 404 / 500 のどれかを確認してください。別のステータスだった場合は、原因の見立てを立て直します。
+- 実際のリードの選び方（案A か案B）は、PO の判断を仰ぎたい点です。

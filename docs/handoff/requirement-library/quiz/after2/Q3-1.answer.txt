@@ -1,0 +1,64 @@
+# 計画：期限切れの札を接続元の回数止めに数える
+
+ファイルの変更・commit・push はしていません。
+
+## 状況（確認済み）
+
+- 回数止めの本体は `backend/app/cache.py` にあります。`record_auth_failure(ip)` で接続元ごとに失敗を数え、10 回で 15 分止めます。`check_auth_rate_limit` が止まっているかを見て 429 を返します。
+- 札の期限切れは、`backend/app/auth/dependencies.py:63-66` の `_authenticate_self_token` で `ExpiredSignatureError` を受けています。ここは今、**あえて数えず**、`record_auth_failure` を呼ばずに 401 を返します。
+- これは **ADR-1083**（Proposed、2026-11-20 PO 決定）の決め事です。
+  - 理由：Android が約 46 時間前の札で画面の頼みを 11 回送り、11 回とも数えられて、直後のログインが 429 になりました。
+  - ADR-1083 は期限切れの札を数えないと決めており、これを守る試験が `backend/tests/test_self_auth.py:455-520` にあります。
+- 今回の依頼は、ADR-1083 の決定を元に戻す内容です。
+- AGENTS.md の決まりでは、ADR とコードが食い違うときは ADR が優先で、コードを ADR に寄せます。そのため、コードだけ先に変えることはできません。
+
+## 先に PO に確認すること
+
+1. **ADR-1083 をどうするか**（PO が決めます）
+   - 案 A（推奨）：新しい ADR を起案し、ADR-1083 の「期限切れは数えない」を取り下げる（Superseded）。
+   - 案 B：ADR-1083 を直接書き換える。ただし ADR-1083 はまだ Proposed なので、PO の決定の記録を後から書き換える形になります。
+2. **「ログインで札の期限切れになった回」の範囲**
+   - 範囲 1：`_authenticate_self_token` の期限切れだけ。これが ADR-1083 の対象で、今数えていない唯一の場所です。
+   - 範囲 2：パスキーの `challenge_expired`（`routers/auth.py:1022`）や、パスワード再設定の期限切れ（`:675-677`）も含める。
+   - 確認できた範囲では、再設定の期限切れ（`:676`）とパスキー登録の `challenge_expired` 以外は、すでに失敗を数えています。
+   - 範囲 1 だけで足りるのかが未確認です。
+3. **11 回で止まる問題の再発をどうするか**
+   - 数え直すと、ADR-1083 が直した「古い札で画面が 11 回頼む → 接続元が止まる → ログインが 429」が再発します。
+   - 画面の直しは ADR-1083 では別の話にされており、未着手のはずです（未確認）。
+   - 選択肢：
+     - 画面の直しとセットで出す。
+     - 1 回の画面表示では 1 回しか数えない形にする（例：札ごとに 1 回）。
+     - 再発を承知で数える。
+   - 推奨は 1 つ目か 2 つ目です。このままだと、PO が以前困った症状が戻ります。
+
+## 実装の手順（PO が案 A・範囲 1・再発対策を決めた後）
+
+1. 作業場所を作る：`bash scripts/new-worktree.sh release/count-expired-token-failures --claude`。実行前に `./scripts/dev/executor-preflight.sh` を流します。
+2. **ADR を先に直す**
+   - 新 ADR（番号は `docs/adr/README.md` で空きを確認）を起案します。
+   - ADR-1083 の状態を更新し、`node scripts/generate-adr-index.js` で目次を作り直します。
+   - `docs/handoff/auth-expired-token-lockout/design.md` に追補を書きます。
+3. **コード変更**（`backend/app/auth/dependencies.py` のみ）
+   - `ExpiredSignatureError` 専用の分岐（`:63-66`）をやめます。
+   - 期限切れも `raise await _reject_self_token(client_ip)` を通し、他の失敗と同じ 1 回の数え方にします。
+   - 返事は 401・同じ文言のままです。
+   - 再発対策の案によっては、札ごとの重複排除（Redis のキー）を `cache.py` に足します。
+4. **試験の更新**（`backend/tests/test_self_auth.py`）
+   - `test_expired_self_token_is_not_counted_as_failure` を、数えられる（`record_auth_failure` が 1 回）に反転します。
+   - ほかの 2 本（署名違いは数える・すでに止まっていれば 429）は維持します。
+   - 範囲 2 を含める場合は、そのエンドポイントの試験も足します。
+5. **変更しないもの**：回数（10 回・15 分）、ログインの口、口座の止め、画面（再発対策で画面の直しを選んだ場合を除く）、migration。
+
+## 確かめ
+
+- ローカルで `make check`（lint と pytest）を流し、`test_self_auth.py` と、回数止めに関わる `test_new_device_approval.py`・`test_password_reset.py` が通ることを確認します。
+- 期限切れの札を同じ接続元から 10 回送ると 11 回目が 429 になることを、試験で確認します（反転した試験）。
+- 本番では、期限切れの 401 が続いた接続元が 429 になるかを、reader 鍵で記録を読んで確認します。ADR-1083 の K5 と同じやり方です。
+
+## 運用上の注意
+
+- コード変更を含むため、push までをクラウドで行い、PR は手元で `shingo-cc` 名義で作ります。
+- PR 本文に「### 標準ワークフロー確認」の節を入れます。
+- `migrations/` や `deploy.yml` には触れないので、PO の「GO #PR番号」は不要です。
+
+先に上の 1〜3 の判断をいただけますか。特に 3 は、数え直すと PO が以前困った症状が戻るためです。

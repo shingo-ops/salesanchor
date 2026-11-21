@@ -1,0 +1,54 @@
+ファイルは変更していません。計画だけです。
+
+## 計画: migration のロック待ちを 30 秒にする
+
+### 背景（調べて分かったこと）
+- 値の正本は `scripts/run_all_migrations.sh:223` の `SQL_LOCK_TIMEOUT="${SQL_LOCK_TIMEOUT:-1s}"` の 1 行だけです（ADR-1037）。
+- この値は run_sql（psql）に `PGOPTIONS` で渡されます。run_py（Python の移行）には `MIGRATION_LOCK_TIMEOUT` で渡されます。つまり 1 行を変えれば両方に効きます。
+- ロックで落ちたときは 3 秒あけて流し直します（`SQL_RETRY_SLEEP_SEC=3`）。流し直しは 1 回の実行全体で合計 40 回までです（`SQL_RETRY_BUDGET=40`）。
+- 実際の失敗例は ADR-1037 の「結果」にあります。`082_...sql` が約 38 秒、10 回続けてロックを取れず、上限で止まりました。
+
+### 先に PO（しんごさん）へ確認すること
+1. **ADR-1037 の成功条件とぶつかります。** 成功条件は「作り替えがほかを待たせるのは最大 1 秒」でした。ロック待ちを 30 秒にすると、待っている間は後から来た在庫表の読み取りも止まります。ADR の根拠になった再現では、制限なしのとき読み取りが 8912ms 待たされました。ADR と実装が食い違うときは ADR が優先なので、ADR-1037 を直す案を PO が起案する必要があります。実装を先に変えることはしません。
+2. **30 秒に本当にするかの再確認。** 失敗の原因が「1 秒で諦め、流し直しの回数を使い切る」ことなら、次の案のほうが読み取りを止めずに済みます。私の推奨はこちらです。
+   - 案 A（推奨）: 1 秒のまま、1 ファイルあたりの流し直しの待ちを延ばす、または回数を増やす。
+   - 案 B: 依頼どおり 30 秒にする。読み取りが最大 30 秒止まるのを PO が許容する場合だけです。
+   
+   以下は案 B（依頼どおり）の手順です。
+
+### 変更内容（案 B・PO が承認した後）
+1. `AGENTS.md` の手順どおり `bash scripts/new-worktree.sh release/migration-lock-timeout-30s --claude` で作業場所を作ります。実行前に `./scripts/dev/executor-preflight.sh` を流します。
+2. `scripts/run_all_migrations.sh:223` の既定値を `1s` から `30s` にします。コメント（:219-222）も更新します。
+3. **流し直しの合計を再設計します。ここが一番大事です。**
+   - 最悪の場合、30 秒 × 40 回 = 1200 秒かかります。
+   - 本番反映の移行の段は `deploy.yml:881` の `command_timeout: 10m`（600 秒）で打ち切られます。ADR の「最悪約 300 秒」の計算も崩れます。
+   - そのため `SQL_RETRY_BUDGET` と `SQL_RETRY_MAX_ATTEMPTS` を 600 秒に収まる値へ下げます。たとえば合計 10 回程度です。
+   - `deploy.yml` の変更が必要になる場合は、PO の確認を取ります。
+4. 影響しないもの:
+   - `SET LOCAL lock_timeout = '5s'` を持つ 8 ファイルは、ファイル内の指定が優先されるので変わりません。
+   - `log_lock_holders` の `lock_timeout=1s` は、ロック持ち主の一覧を出す調べ用の接続の設定なので変えません。
+5. 試験の更新:
+   - `tests/sandbox/migration-run-sql-retry.sh` の T7 は既定値が 40/40 であることを確かめています。新しい既定値に合わせます。
+   - `migration-test.yml` の P1〜P3 と、`tests/sandbox/migration-read-probe.sh` は `1s` を明示して流すので影響しません。ただし P1 の「3 秒未満・読み取り最大 1500ms」は 1 秒前提の見張りです。30 秒を既定にした意味とずれないか確認します。
+   - `scripts/check_tenant_template_shape.py:384` は試験用に `1s` を固定しているので、そのままにします。
+6. 文書の更新:
+   - ADR-1037 の What 1・2・3 と Why の数字、成功条件の書き換え。ADR は PO が起案します。直したら `node scripts/generate-adr-index.js` を流します。
+   - `docs/handoff/migration-lock-timeout/design.md` のうち、既定値を書いている箇所。
+
+### 進め方の決まり
+- `scripts/` を含む PR なので、PO の「GO #PR番号」が出るまで main にマージしません。
+- PR 作成前に `gh auth status` で `shingo-cc` 名義を確認します。PR 本文に「### 標準ワークフロー確認」の節を入れます。
+- クラウドでは push までです。PR は手元で作ります。
+
+### 検証
+- `bash -n scripts/run_all_migrations.sh` で構文を確認します。
+- `bash tests/sandbox/migration-run-sql-retry.sh` と `bash tests/sandbox/migration-read-probe.sh` を流します。
+- PR の CI で `migration-test.yml` の S1〜S3・P1〜P3 が通ることを確認します。
+- 反映後の入れ替えログで次を見ます。
+  - `lock conflict; retry` と `retry limit reached` の回数
+  - `read probe: ... max=` が許容できる範囲か（30 秒待ちが実際に読み取りを止めていないか）
+  - 移行の段が 10 分以内に終わっているか
+
+未確認の点:
+- 実際にロックを握っている相手は、ADR に「未確認」と書かれたままです。30 秒待てば解消するのか、握り続ける別の原因があるのかは、まだ分かっていません。
+- 最近の失敗ログは見ていません（`scripts/ops/count-deploy-lock-failures.sh` で数えられます）。案 A か B かを決める前に、これで失敗の内訳を確認することをお勧めします。

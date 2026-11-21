@@ -1,0 +1,83 @@
+# Discord 連携の失敗表示に例外メッセージを出す計画
+
+## 先に確認したいこと
+
+ご依頼どおりに実装すると、既存の ADR と食い違います。AGENTS.md の決まりでは ADR が優先で、コードを ADR に寄せるのが原則です。
+
+- **ADR-1071「平易な日本語のエラー文」** の「画面に出してはいけないもの」に、例外の中身・理由コードの生の値・Redis や token などの仕組みの名前が入っています。`discordConnectError.ts` も「生の値は出さない」と書いてあります。
+- **`docs/specs/db-error-detail`** は、例外の中身を応答に出さない決まりです。
+- **ADR-027** は、画面の文を `t()` 経由にして ja/en を揃える決まりです。例外の生メッセージは英語で、i18n を通りません。
+- 現状は失敗の詳細を `logger.warning` に残しているだけで、画面には出していません（`discord_oauth.py:134-158`）。Discord が返したエラー本文や httpx の例外文には、内部 URL や応答の断片が入り得ます。
+
+そのため、そのまま画面に出す案は勧めません。依頼の目的は「原因が分かりやすい」ことなので、次の方針を推奨します。
+
+## 推奨方針: 例外を細かい理由コードに分けて、文は ADR-1071 の型で出す
+
+### 現状の分かりにくさ
+
+`code_exchange_failed` が次の 3 つの失敗をひとまとめにしています。
+
+- 通信失敗
+- Discord による拒否（HTTP ステータスは 400/401 など）
+- 応答が壊れている
+
+画面はどれも「Discordとの確認がうまくいかず…」の 1 文になります。
+
+### 変更案
+
+1. **backend: `backend/app/routers/discord_oauth.py`**
+   - `_ExchangeError` の `reason` を細分化します。
+     - `code_exchange_timeout`: 通信失敗・時間切れ
+     - `code_exchange_rejected`: Discord が 400/401 などで拒否
+     - `code_exchange_failed`: それ以外（既存）
+   - 例外の文字列は URL に入れず、これまでどおりログにだけ残します。
+   - 開始 API 側（`detail.reason`）は変更しません。
+2. **frontend: `frontend/src/features/discord-connect/discordConnectError.ts`**
+   - `DISCORD_CONNECT_ERROR_REASONS` に新しいコードを追加します。
+   - `getDiscordConnectErrorKey` に対応を追加します。
+     - timeout は「Discord が混み合っています。時間をおいて」の文にします。
+     - rejected は「Discord が連携を許可しませんでした。Bot の追加画面で『許可』を押したか確認」の文にします。
+3. **文言: `frontend/src/locales/ja.json` と `en.json`**
+   - `discordConnect.error.*` に新しいキーを足します（`discordConnect` ブロックは ja.json:6386 付近）。
+   - `DISCORD_CONNECT_ERROR_KEYS` にも追加します。
+4. **画面側（`ChannelsPage.tsx:137`、`DiscordOwnServerPanel.tsx:122,140`）**
+   - 表を通す作りなので変更は不要の見込みです。
+
+### 試験
+
+- `backend/tests` の `discord_oauth` の試験に、新しい reason ごとの戻り先 URL を足します。通信失敗は httpx のエラーをモックし、拒否は 400 を返すモックにします。
+- `discordConnectError.test.ts` の対応表の試験は、サーバーのコードと照らす作りです。新コードを足せば突き合わせが通ります。
+- `DiscordOwnServerPanel.test.tsx` に 1 ケース足します。
+- `frontend/tests-e2e/` に該当 spec があれば同じ PR で更新します（frontend/AGENTS.md）。
+
+### 検証
+
+```
+cd backend && make check
+cd frontend && npm run lint && npx vitest run src/features/discord-connect src/pages/admin/DiscordOwnServerPanel.test.tsx
+cd frontend && npm run check:all
+```
+
+### 作業の手順（決まり）
+
+- `bash scripts/new-worktree.sh release/discord-connect-error-detail --claude` で作業場所を作ります。
+- 作業前に `./scripts/dev/executor-preflight.sh` を流します。
+- 変更はコードだけで、migration は無いので GO の待ちはありません。
+- クラウドでは push までです。PR は手元で `shingo-cc` 名義で作ります。PR 本文には「### 標準ワークフロー確認」の節を入れます。
+
+## 例外メッセージの生出しにこだわる場合
+
+PO（しんごさん）が ADR-1071 と db-error-detail の例外を認める必要があります。ADR の改訂を先に起案します。
+
+- 出す先は管理者向けの画面に限ります。
+- 英語の生文のままになるので、ADR-027 にも例外が要ります。
+- 出す文字は短く切り、秘密の値を含まないよう整えます。
+
+この場合も、実装の前に ADR の起案が必要です。
+
+## 確認したい点
+
+1. 推奨の「理由コードの細分化」で進めてよいか。それとも ADR の改訂を起案するか。
+2. 「Discord 連携の失敗」は Bot 追加の連携（`discord_oauth`）だけを指すか。`DiscordConfigPage` の自動セットアップの失敗（`error` を表示済みで、これも `Missing Access` の生文を出しています）も含めるか。
+
+後者を含める場合は、その画面の `s.error` / `error_hint` の出し方も別項目で計画します。ファイルの変更・commit・push は一切していません。

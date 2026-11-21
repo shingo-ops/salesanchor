@@ -1,0 +1,36 @@
+# 計画: 再解析で古い投稿の行を現行に戻す
+
+ファイルの変更・commit・push はしていません。計画ファイル `/root/.claude/plans/commit-push-delegated-meerkat.md` だけ書きました。
+
+## 原因（確認済み）
+- 古い投稿の行が現行にならないのは、ADR-1032「復活止め」の仕様です。`_merge_supplier_products`（`backend/app/services/tcg_analyzer_svc.py:1981`）が `revival_guard=True` のとき、行を FALSE にします。条件は次の 2 つが両方そろうことです。
+  - 再解析の前は現行でなかった。
+  - 同じ仕入元のより新しい投稿に同じ商品の行がある（`:2122-2140`）。
+- ガードが有効なのは次の 2 経路です。
+  - v102 の再解析（`line_analysis_v102_svc.py:1640`）。
+  - 再抽出ツール（`tools/reextract_v6_with_v102.py:369`）。
+- 件の削除と取り消しは、すでに `revival_guard=False` です。
+
+## 注意点（先に PO 判断が必要）
+- この動きは ADR-1032 の PO 決定（2026-10-19「n」）です。AGENTS.md では ADR が実装より優先なので、コードだけ直すと ADR と食い違います。
+- ADR-1032 が止めたのは、古い値段が配信に戻ることです。確認済みは 2 件で、本番にあった未確認の 626 件は復活かどうか判定できていません。
+- 範囲が未確認です。
+  - 古い投稿の再解析で行が消える場面だけを直すのか。
+  - 新しい投稿の再解析で古い行が隠れたままになる場面も直すのか。
+  - 前者なら、ガードを全部外すのではなく条件を絞る別設計になります。
+
+## 手順
+1. **ADR の起案**: PO に ADR-1032 の What 1 と 2026-10-23 の追記を変える確認を取ります。改訂 ADR か、ADR-1032 を Superseded にした新 ADR を起案し、`node scripts/generate-adr-index.js` で目次を更新します。
+2. **作業場所の準備**: `bash scripts/new-worktree.sh release/<topic> --claude` で作業場所を作ります。作業前に `./scripts/dev/executor-preflight.sh` を流します。
+3. **コード（推奨は最小の案）**: 再解析と再抽出の `_merge_supplier_products` 呼び出しで `revival_guard=False` にします。これで「(商品, 状態) の組ごとに最新投稿の行が現行」という ADR-158 の規則に戻ります。SQL 本体は変えず、docstring の ADR-1032 記述だけ更新します。
+4. **試験**: `backend/tests/test_adr1032_revival_guard.py` を直します。
+   - 復活止めを前提にした場面（R1・R3a・R3c・R5）は、期待値を「現行に戻る」へ変えます。
+   - S1・S8・R6・D1b・冪等の試験は維持します。
+5. **本番の既存データ（別判断）**: 今隠れている行を戻すかは別に決めます。やるなら、先に ROLLBACK 付きの試し実行で TRUE になる行数を数えます。そのうえで PO の承認を得てから、監査行つきで実行します。
+
+## 確認方法
+- CI の PostgreSQL 試験（`GITHUB_ACTIONS` 専用）で、直した復活止め試験が通ること。手元は `make check` を使います。
+- 古い投稿を再解析して、その組の行が TRUE になり、新しい投稿の同じ組の行が FALSE になること。
+- PR は、コード変更なので手元で `shingo-cc` 名義で作ります。本文に「### 標準ワークフロー確認」の節を入れます。
+
+次に決めてほしいのは、上の「範囲」の確認です。

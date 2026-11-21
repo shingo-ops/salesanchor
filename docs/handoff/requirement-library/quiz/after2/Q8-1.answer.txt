@@ -1,0 +1,106 @@
+# Gemini が断られたら切り替えずに失敗で終わらせる計画
+
+調べただけで、ファイルの変更・commit・push はしていません。
+
+## 背景
+
+- いまは、Gemini が「この国からは使えません」（HTTP 400・`location is not supported`）と断ったとき、または道に届かないときに、もう一方の道（直接 ⇄ prod2 の中継）で 1 回だけやり直します。実装は `backend/app/services/gemini_route.py` にあります（ADR-1062）。
+- 切り替えに付いてくる部品が多く、仕組みが重くなっています。
+  - 10 分間「成功した道」を覚える記憶
+  - Redis への切り替え回数の記録
+  - 向きごとに 1 日 1 通の Discord 通知
+  - 同期・非同期の 2 つの包み関数
+- 目的は、これらをやめて「最初の道で失敗したらそのまま失敗」にすることです。
+
+## 設計の要点
+
+- 道は環境変数だけで決めます。`GEMINI_PROXY_URL` があれば中継、無ければ直接です。
+- 失敗は `RecordError("API_ERROR")` として、今までどおり記録に残ります。
+- 解析が 30 分成功しないときの Discord 通知（`gemini_route_watch` の止まり・戻りの知らせ）は残します。切り替えをやめると「黙って失敗し続ける」ことが一番怖くなるので、この通知が代わりの安全装置になります。
+- 失敗の理由の記録（`failure_reason`、validation_result の `reason`）も残します。
+
+## 手順
+
+### 1. ADR を先に直す（PO の起案が必要）
+
+- AGENTS.md の決まりは「ADR と実装が食い違ったら ADR を優先」です。ADR-1062 の What の 2〜5・7 は切り替えそのものなので、コードを先に変えられません。
+- 新しい ADR で、ADR-1062 のうち次の部分を置き換えます。
+  - 「2〜5（切り替え・覚える・訳す機能の共通化の道の選び方）」
+  - 「7（切り替えの通知）」
+- 6（30 分見張り）と 8（reason の記録）は残します。
+- ADR-1062 の備考に「一部を ADR-NNNN が置き換え」と書き、`node scripts/generate-adr-index.js` を実行します。
+- ADR-1062 は「Proposed（K1〜K5 が本番で ○ になったら採用）」のままです。K1・K2・K5 は切り替えを前提にした完了条件なので、新 ADR で取り下げます。
+
+### 2. `gemini_route.py` を小さくする
+
+**消すもの**
+- `_sticky`・`remember`・`reset_state`・`other_route`
+- `is_location_refusal`・`is_route_unreachable`・`_unreachable_types`・`should_switch`
+- `_count_switch` と `SWITCH_COUNT_*`・`STICKY_SECONDS`
+- `generate_content_routed`・`agenerate_content_routed`
+- `DEFAULT_RELAY_URL` と `aiohttp` の import
+  - 中継は `GEMINI_PROXY_URL` がある時だけ使うので、既定の中継先は不要になります。
+
+**残すもの**
+- `build_client`
+- `first_route` → 名前は `route()` などに変え、環境変数だけで決める
+- `failure_reason`
+- `_exception_chain`
+
+### 3. 呼び出し側を直接呼びに戻す
+
+- `gemini_extraction_svc.py`（2 か所）と `gemini_raw_copy_v8.py` は、`client.models.generate_content(...)` を直接呼びます。
+- `message_translator.py` は `gemini_route.build_client(gemini_route.route()).aio.models.generate_content(...)` にします。
+- 失敗時の記録・送り直し（ADR-1050 の 429/5xx）・`failure_reason` の使い方は変えません。
+
+### 4. 見張り `gemini_route_watch.py` から切り替え通知を外す
+
+- 次の部分を削除します。
+  - `_DIRECTIONS`
+  - `SWITCH_NOTIFIED_*`
+  - `build_switch_message`
+  - `run_watch` 内の切り替え通知ループ
+- 止まり・戻りの知らせは変えません。
+- `_get_redis` は見張りがまだ使うので、見張り側へ移すか、`gemini_route.py` に残します。
+
+### 5. 試験を直す
+
+- `backend/tests/test_gemini_route.py`
+  - 削除: T1・T2・T3・T6・T6b・T7・T8・T13・T13b（切り替え関連）。
+  - 残す・直す: T5（reason の取り出しと鍵の伏せ字）、T4（他の失敗は切り替えない）→ 「断りもそのまま上がる」に変更、T10（直呼び禁止の検査）は意味が変わるので削除または逆の検査に変更。
+  - 追加: 場所の断りでも別の道を試さず例外が上がること、`route()` が環境変数だけで決まること。
+- `backend/tests/test_gemini_route_watch.py`: 切り替え通知の試験を削除します。
+- `backend/tests/test_tcg_gemini_extraction.py` の T11（切り替え後の 2 つ目のクライアントを前提にしている）を、1 つのクライアントで reason が記録される形に直します。
+- `backend/tests/test_message_translator.py`: `agenerate_content_routed` を差し替えている部分を、新しい呼び方に合わせます。
+
+### 6. 文書を直す
+
+- `docs/runbooks/gemini-egress-emergency.md` の 5 行目「道は自動で切り替わる」を、「自動切り替えは廃止。断られたら人が中継 ON（.env の 2 行）にする」に戻します。
+- 手作業の手順（3・4）は、また正面の手順になります。
+- `docs/handoff/gemini-auto-failover/` に「新 ADR で置き換え」の注記を付けます。
+- コードの docstring の ADR 表記を合わせます。
+
+## PO に決めてもらうこと・注意
+
+1. **本番の最初の道が何か**
+   - 11/05 の記録では本番 `.env` は中継（`GEMINI_PROXY_URL` あり）です。現在もそうかは未確認です（VPS は見ていません）。
+   - 切り替えをやめると、その道が駄目になった時に自動復旧しません。Discord の知らせを見て人が `.env` を直す運用になり、本番の変更は PO の GO が要ります。
+   - 直接が場所の断りになる時期があるため、中継を既定にしておく運用を推奨します（`.env` は消さない）。
+2. **「30 分成功なし」の通知は残す前提で良いか**
+   - 残す前提で計画しています。
+3. **`gemini-egress` コンテナ・docker-compose・deploy.yml は触らない**
+   - 中継そのものは緊急手段として残します。
+
+## 検証
+
+- 実装は `bash scripts/new-worktree.sh release/<topic>` で作業場所を作ってから行います。
+- `make lint` と、上の 4 つの試験ファイルを対象にした pytest を流します。
+- `grep -rn "should_switch\|generate_content_routed\|_count_switch\|DEFAULT_RELAY_URL" backend` が 0 件になることを確認します。
+- コード変更 PR は `shingo-cc` 名義です。本文には「### 標準ワークフロー確認」の節を入れます。
+- `deploy.yml` と `migrations/` は触らないので、GO 待ちの対象外の見込みです。
+- 実機の確認は、反映後に本番の抽出が成功し、失敗が出れば reason 付きで記録されることを見ます。
+
+## 補足
+
+- 作業開始時に `executor-preflight.sh`、`docs/ai-agents/executor-checklist.md` の確認、`gh auth status` での名義確認が必要です。
+- hook が読むよう促した監視・デプロイ・まとめ売りなどの文書は、今回の変更範囲（Gemini の道の選び方）と関係が薄いため、計画の段階では読んでいません。

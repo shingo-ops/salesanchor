@@ -1,0 +1,90 @@
+# 会社に「休眠」状態を足す計画
+
+## 先に分かったこと
+
+1. **`companies` には状態の列がもうあります。** `status` 列（`migrations/028_create_companies.sql`）で、値は `active / inactive / archived / pending_dedup_review` の4つです。列を足す必要はなく、5つ目の値として `dormant` を足す計画になります。
+2. **状態の値は DB の表 `public.customer_statuses` が正本です（ADR-1076）。**
+   - 会社と連絡先の `status` 列は、この表の `code` を外部キーで指しています（`migrations/20261112_140000_customer_status_fk.sql`）。旧 CHECK 制約はこの外部キーに置き換え済みです。
+   - 名前（日本語・英語）と並び順もこの表にあり、画面は `GET /customer-statuses` で読みます。そのため i18n の `ja.json` / `en.json` に状態名は足しません。
+   - 行の投入は運営の手作業です（ADR-1007）。migration で `INSERT` は書かない決まりです。
+3. **`customer_statuses` は連絡先（contacts）と共用です。** 行を足すと連絡先の編集画面にも「休眠」が出ます。連絡先の API 側は `dormant` を受け付けず、エラーになるかもしれません（未確認）。
+4. 食い違ったら ADR が優先なので、ADR-1076 に沿って進めます。
+
+## PO に確認したいこと（実装前に決める）
+
+- **「休眠」は `inactive`（無効）と何が違うか。** 例として「一定期間取引がない会社を、後で掘り起こす対象として残す」といった意味でしょうか。
+- **動きを変えるか。** 休眠にした会社を、一覧の既定表示・請求書や見積の会社プルダウン・ダッシュボードのフォローアップから外すか、それとも札を付けるだけか。
+- **自動で休眠にするか。** 「N か月取引なしで自動的に休眠」にするなら、別機能（定期ジョブ）になります。
+- **連絡先にも休眠を使うか。** 共用の表なので、使わない場合は連絡先側の選択肢に出さない方法が必要です。
+
+以降は、「札と選択肢だけ足す。動きは変えない。連絡先は対象外」と仮定した最小案です。
+
+## 進め方（標準ワークフロー）
+
+- 領域は「既存の延長・修正」に当たります（`docs/specs/customer-management/`）。新しい仕様書は作らず、既存テーマに追記します。
+- recon と design は `docs/handoff/` に置き、PR 本文に「### 標準ワークフロー確認」を入れます。
+- 作業場所は `bash scripts/new-worktree.sh release/company-dormant-status --claude` で作ります。
+- 実装前に `./scripts/dev/executor-preflight.sh` を実行します。
+- PR は手元で `shingo-cc` 名義で作ります。クラウドでは push までです。
+
+## 実装の中身
+
+### A. DB
+- **`customer_statuses` に `dormant` の行を足す。** 日本語名「休眠」、英語名 "Dormant"、`sort_order` は未使用の値（UNIQUE）にします。
+  - 行は PO の手作業で入れます（ADR-1007）。migration には書かず、手順だけ handoff に書きます。
+  - 外部キーがあるので、**この行の投入が先、コードの配備が後**です。順序を逆にすると、休眠への更新が外部キー違反になります。
+- **`companies` への列追加は不要。** 新しい migration も、`deploy.yml` の変更も不要の見込みです（要確認）。そうなれば、危険な変更（migrations・`deploy.yml`）の GO は要りません。
+- **`backend/app/services/tenant.py` は変更不要。** 新規テナント作成の表定義は、すでに外部キー方式です。
+
+### B. バックエンド
+- **記号の定数を足す。**
+  - `backend/app/services/customer_statuses.py` に `STATUS_DORMANT = "dormant"` を足します。
+  - `backend/app/schemas/company.py` の `CompanyStatus` に `dormant` を足します。
+- **連絡先は、PO の回答次第で扱いを決める。** `backend/app/schemas/contact.py` の列挙にも足すか、連絡先は対象外にして選択肢を出さないか、のどちらかです。
+- **一覧 API。**
+  - `list_companies`（`backend/app/routers/companies.py:296`）は現在 `status` で絞れません。
+  - 「休眠を除く／休眠だけ」の絞り込みが要るなら、任意の `status` クエリを足します。
+- **統合（merge）の挙動。**
+  - merge は `archived` の相手を弾き、`pending_dedup_review` を `active` に昇格させる処理を持っています（`companies.py:770`, `:985`）。
+  - `dormant` を master にした場合の扱いは、まず現状どおりで問題ないか確認します。
+
+### C. フロントエンド
+- **記号の定数。** `frontend/src/lib/customerStatuses.ts` の `CUSTOMER_STATUS_CODES` に `dormant` を足します。記号を書いてよいのはこのファイルだけです。
+- **札の色。** `frontend/src/utils/statusPresentation.ts` の `company` に `dormant: { bucket: "neutral", badgeVariant: "neutral" }` を足します。`inactive` と見分けたいなら別の色を検討します（ADR-120・ADR-067、色は直値禁止）。
+- **選択肢は自動で出る。**
+  - 一覧の札（`CompaniesPage.tsx:411`）と、作成・編集の選択肢（`CompaniesPage.tsx:513`、`CompanyBasicTab.tsx:89`）は `useCustomerStatuses()` が表を読んで出します。
+  - そのため、行を足せば選択肢に出ます。コードで直す箇所は最小です。
+  - 作成時に選ばせたくなければ、`selectable_on_create = FALSE` にします。
+- **一覧の絞り込み UI。** 要るなら `CompaniesPage.tsx` に追加します。
+  - 部品は `components/` の金型（SelectControl 等）を使います。生の select は禁止です。
+  - ページ見出しは `PageLayout` 経由です。
+  - 日本語の直書きは禁止で、文言は `t()` 経由にして `ja.json` と `en.json` の両方に足します。
+- **E2E。** `frontend/tests-e2e/` の該当 spec（`ui-companies-edit-modal-i18n.spec.ts` など）を同じ PR で更新します。
+
+## テスト・確認方法
+
+- **`backend/tests/test_customer_statuses_pg.py`（実 PostgreSQL）。** 「サーバーの列挙が表の code と一致する」ことを毎回確かめています。ここに `dormant` を含め、緑を確認します。
+- **追加の試験。**
+  - 会社を `dormant` に更新できること。
+  - 表に無い値は拒否されること。
+  - `GET /customer-statuses` が 5 行返ること。
+  - 一覧の絞り込みを足した場合は、その動作。
+- **フロントのテスト。** `getStatusPresentation("company", "dormant")` が neutral に落ちず定義どおり返ること。一覧の札と編集の選択肢に出ること。
+- **コマンド。** `make check`、`cd frontend && npm run lint && npm run check:all`、`npx playwright test`。
+- **人の動作確認。** 本番の tenant_001 で、会社を休眠にして一覧と詳細に札が出ることを確認します。tenant_004（実データ）には触れません。確認内容は `docs/ai-agents/evidence-registry.md` に記録します。
+- **確認していないこと。** 実際の SQL 実行や画面の動作は、この計画では確かめていません。
+
+## 戻し方
+
+- フロントとバックエンドの PR を戻します。
+- 表の `dormant` 行は、消さずに `is_active = FALSE` にします。すでに休眠の会社がいる場合、外部キーで行の削除が止まるためです（ADR-1076）。
+
+## 順番まとめ
+
+1. PO に、上の4点を確認する。
+2. recon と design を `docs/handoff/` に書き、既存テーマ（customer-management）に追記する。
+3. PO が `dormant` の行を入れる。
+4. コードの PR（B・C・試験）を作り、CI を緑にする。
+5. 配備して、tenant_001 で人が確認する。
+
+ご指示どおり、ファイルの変更・commit・push は一切していません。

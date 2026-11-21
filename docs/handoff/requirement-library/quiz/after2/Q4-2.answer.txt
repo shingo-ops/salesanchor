@@ -1,0 +1,62 @@
+## 計画: 「40パックセット ¥24,000」を1パック600円で保存する
+
+### 結論（先に決めること）
+この変更は今の決まり ADR-1027 と逆向きです。ADR-1027 は「まとめ売りは値段を割らず、まとめ1つの値段のまま保存する。数量はまとめの数」と決めています（`docs/adr/ADR-1027-bundle-sale-reading.md` の1行目と What 3。ADR-1021 便2 の「1枚単価にそろえる」を置き換えた経緯もあります）。
+
+AGENTS.md の「ADR と実装が食い違うときは ADR を優先する」に従い、先に ADR-1027 を改訂して PO の承認を取ります。コードだけ先に変えることはしません。
+
+### PO に決めてもらう点
+1. **ADR-1027 を改訂してよいか。** 改訂は追記の節で行い、`node scripts/generate-adr-index.js` を実行します。
+2. **実装案 A か B か。** 私は B を勧めます。
+   - **案A（保存時に割る）**: 24,000÷40=600 を保存します。`bundle_size` は持たないか、記録用に残します。
+     - 割り切れない行（例: ¥25,000÷40）の丸め方を決める必要があります。
+     - 元の「まとめ1つの値段」が失われ、戻せません。
+   - **案B（`bundle_size` を残し、単価を別に持つ）**: 元の値段・`bundle_size` はそのままにします。単価 600 は保存側で導出して持つか、読み出し側（在庫表の表示・配信）で出します。
+     - 元の値段が残るので、後から戻せます。
+     - ADR-1027 の「割らない」とも両立でき、改訂が小さく済みます。
+
+   「保存される」という依頼文どおりにするなら、B でも単価を保存側で持つ形（導出して保存）にします。
+
+### 実装手順（案Bの場合）
+1. **事前準備**
+   - `docs/INDEX.md` から `docs/ai-agents/executor-checklist.md` と `docs/specs/branch-operations/README.md` を読みます。
+   - `bash scripts/new-worktree.sh release/<topic> --claude` で作業場所を作り、`./scripts/dev/executor-preflight.sh` を実行します。
+   - 手順は `docs/runbooks/bundle-sale-new-wording.md` と `docs/handoff/bundle-sale/design.md` の流れに沿います。
+2. **設計の追記**
+   - `docs/handoff/bundle-sale/design.md` に、単価の算出規則・丸め・対象区分・受入基準を足します。
+   - ADR-1027 に追記します。
+   - 設計審査（Opus reviewer）と PO の承認を取ります。
+3. **コード**
+   - 判定は `backend/app/services/v102_bundle_svc.py` の `detect_bundle` に集約します。単位の語はコードに直書きしません。
+   - 保存は `backend/app/services/line_analysis_v102_svc.py` の `_write_results` の `_apply_bundle` で行い、`bundle_size` が決まった行だけ単価を出します。
+   - 割り算は整数の円で行い、割り切れない行は「単価を出さずに要確認にする」のを既定にします（丸めて誤った単価を保存しない）。
+   - シングルセット系の区分は対象外のままにします（ADR-1031 追補）。
+   - 価格を読む他の処理も確認します。`v102_unit_price_check_svc.py` と `tcg_distribution_svc.py`（在庫表の配信行）は、まとめ売りを相場確認や価格の引き継ぎから外している箇所です。単価を持たせたときに二重に割らないようにします。
+4. **DB**
+   - 単価の列を足す場合は `migrations/` に NULL 許可で追加し、SQL は Write ツールか `<<'EOF'` で書きます。
+   - 検証は pytest の中の使い捨て PostgreSQL（localhost）だけで行い、本番には触れません。
+   - `migrations/` を含む PR は「GO #PR番号」が出るまで main にマージしません。
+5. **既存行の直し**
+   - 保存済みの `bundle_size` 行（ADR-1027 時点で 157 行）には、`reanalyze_v102_job` で解析をやり直す方法があります。このジョブは Gemini を呼びません。
+   - 本番での実行は PO の GO の後に手元で行い、クラウドからは行いません。
+
+### テスト
+- `backend/tests/test_v102_bundle.py` に次の作り文を足します。仕入元の原文は書き写しません。
+  - 「40パックセット ¥24,000」で単価600になること。
+  - 割り切れない場合の扱い。
+  - 値段なしの場合の扱い。
+  - シングルセット系の区分では当たらないこと。
+- `backend/tests/test_v102_bulk_price.py` に、`_write_results` を通して単価が保存される確認を足します。
+- `test_inventory_distribution_rows.py` と `test_v102_unit_price_check.py` に、二重に割らない確認を足します。
+- PR 本文には、`scripts/dev/bundle_replay.py` で全行に当て直した数（変わる行数・対象外区分の変化が 0）を書きます。本番データが要るため、これは手元で行います。
+
+### リスク
+- 「値段を割らない」を前提にした下流（相場の確かめ・配信の表示）が、単価と二重に作用するおそれがあります。
+- 割り切れない行や、数量・単位がまとめと食い違う行で、誤った単価を保存するおそれがあります。
+- ロールバックは、コード PR を revert し、`reanalyze_v102_job` でやり直します。追加した列は NULL 許可なので残して構いません。
+
+### この計画の根拠の範囲
+- ADR-1027 の内容と、`detect_bundle` や `_apply_bundle` の場所は、私が直接確認しました。
+- 調査役の報告には行番号つきの詳細がなく、`_write_results` 内の現在の保存列、在庫表の配信側が単価をどこで計算しているか、既存 157 行の扱いは未確認です。実装前に、これらを読んで確かめます。
+
+ファイル変更・commit・push は行っていません。

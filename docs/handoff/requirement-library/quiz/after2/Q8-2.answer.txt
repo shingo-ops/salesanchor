@@ -1,0 +1,86 @@
+# Gemini 解析の「別の道への切り替え」をやめる計画
+
+ファイルの変更・commit・push はしていません。計画だけです。
+
+## 1. 現状（読んで確認したこと）
+
+- 切り替えの本体は `backend/app/services/gemini_route.py` です（ADR-1062）。
+  - 「場所の断り」（400 `location is not supported`）や「道に届かない」で、直接と prod2 中継のもう一方の道へ1回だけやり直します。
+  - 成功した道は10分覚えます（`_sticky`・`remember`）。
+  - 切り替え回数は Redis に数えます（`_count_switch`）。
+- 呼び出し元は3系統です。
+  - `gemini_extraction_svc.py` の403行と494行（`generate_content_routed`）。
+  - `gemini_raw_copy_v8.py` の221行。
+  - `message_translator.py` の353行（`agenerate_content_routed`）。
+- 切り替えと関係なく残すものは次の3つです。
+  - `failure_reason`。`line_analysis_v102_svc.py` と `gemini_extraction_svc.py` が使います。
+  - `build_client`。
+  - 30分成功が無いときの Discord 見張り（`tasks/gemini_route_watch.py`）。
+- 本番 `.env` は `GEMINI_PROXY_URL` が中継の値なので、今の最初の道は中継です。
+
+## 2. 方針
+
+断られたら、道を替えずに例外をそのまま上に出します。失敗の記録（`validation_result`）に、理由の文（`reason`）を残して終わらせます。
+
+## 3. 作業手順
+
+1. **PO への確認を先に取ります。**
+   - ADR-1062 は 2026-11-05 の10時間停止の再発防止として PO が承認したものです。ステータスは Proposed のままで、K1〜K5 は未完了です。
+   - それを外すので、AGENTS.md の「設計判断は ADR 優先」に従い、新しい ADR を PO が起案します。ADR-1062 の「置き換えるもの」に当たります。
+   - 作業場所は `bash scripts/new-worktree.sh release/gemini-no-failover --claude` で作ります。作業前に `./scripts/dev/executor-preflight.sh` を流します。
+   - ADR を直したら `node scripts/generate-adr-index.js` を実行します。
+   - 設計書は `docs/handoff/gemini-route-no-failover/design.md` に置きます。
+
+2. **`gemini_route.py` を単純にします。**
+   - 削除するもの: `generate_content_routed`、`agenerate_content_routed`、`should_switch`、`is_location_refusal`、`is_route_unreachable`、`_exception_chain` の切り替え用の使い道（`failure_reason` が使うので鎖の取り出しは残します）、`other_route`、`remember`、`reset_state`、`_sticky`、`STICKY_SECONDS`、`_count_switch`、`SWITCH_COUNT_*`、`aiohttp` の取り込み。
+   - 残すもの: `build_client`、`failure_reason`、`_get_redis`（見張りが使います）。
+   - 道は環境変数1つだけで決めます。`GEMINI_PROXY_URL` があれば中継、空なら直接です。`first_route()` はこの環境変数だけを見る形にします。
+
+3. **呼び出し元を直接呼びに変えます。**
+   - `client.models.generate_content(...)` と `client.aio.models.generate_content(...)` を直接呼びます。
+   - `message_translator.py` は `build_client(route)` して `client.aio...` を呼びます。
+   - 送り直し（ADR-1050 の 429/5xx など）と `_classify_error` は同じ道での再試行なので、変更しません。
+
+4. **見張りから切り替えの知らせだけを外します。**
+   - `gemini_route_watch.py` の「道の切り替え通知」部分（`SWITCH_NOTIFIED_PREFIX` など）を削ります。
+   - 「30分成功が無ければ Discord」と「戻ったら通知」は残します。切り替えが無くなる分、これが唯一の検知になります。
+   - `celery_app.py` の beat 登録は変えません。
+
+5. **試験を直します。**
+   - `tests/test_gemini_route.py`：切り替えを確かめる t1（同期）と t3（非同期）は、「場所の断りが例外のまま出て、2つ目の Client が作られない」を確かめる形に直します。`build_client` と `failure_reason` の試験は残します。
+   - `tests/test_tcg_gemini_extraction.py:725` の `test_location_refusal_records_reason`：`second` の Client を使う部分を外します。1回で失敗し `reason` が記録されることだけを確かめます。
+   - `tests/test_gemini_route_watch.py`：切り替え通知の試験を削ります。
+   - 切り替えを前提にした他の試験が無いか、grep で確かめます。
+
+6. **文書と設定を合わせます。**
+   - `docs/runbooks/gemini-egress-emergency.md` の 2026-11-05 追記を直します。「自動で切り替わる」を「自動では替わらない。30分の知らせが来たら人が `.env` を替える」に戻します。
+   - `docker-compose.yml` の `GEMINI_PROXY_URL` のコメントを直します。
+   - ADR-1062 に「置き換えられた」と注記します。
+
+## 4. 確認方法
+
+- `cd backend && pytest tests/test_gemini_route.py tests/test_gemini_route_watch.py tests/test_tcg_gemini_extraction.py` を流します。
+- `make lint`（ruff・bandit・mypy）を流します。
+- `grep -rn "generate_content_routed\|should_switch\|remember(" backend` が0件になることを確かめます。
+- 失敗の記録に `reason` が残ることを試験で確かめます。
+- 本番での確認は手元で PO の GO の後にします。クラウドからは触りません。
+
+## 5. 進め方の注意
+
+- この変更は `migrations/`・`deploy.yml`・本番 `scripts/` を含まないので、GO は不要です。PR は手元で `shingo-cc` 名義で作ります。クラウドでは push までです。
+- PR 本文に「### 標準ワークフロー確認」の節を入れます。
+
+## 6. リスク（PO に先に伝えます）
+
+- 場所の断りが再発すると、解析は自動では戻らず、失敗のまま続きます。
+  - 検知は30分の見張りだけです。投稿の少ない時間帯では最大で約55分かかります（ADR-1062 の受け入れ済みリスクと同じ）。
+  - 復旧は runbook の手作業です。
+- 中継か直接か、どちらを「唯一の道」にするかが運用判断になります。
+  - 今の本番は中継なので、現状維持なら `.env` の変更は不要です。
+  - 中継（prod2）が止まると解析も止まる点は、ADR-1062 が避けようとしていたリスクです。
+
+## 7. PO への確認事項
+
+1. ADR-1062 の自動切り替えをやめてよいか。やめるなら、新しい ADR を起案するのは PO か。
+2. 唯一の道は中継（今の本番）のままでよいか。
+3. 「解析」に翻訳機能（`message_translator.py`）も含めるか。この計画では、道の選び方が1か所のため含めています。

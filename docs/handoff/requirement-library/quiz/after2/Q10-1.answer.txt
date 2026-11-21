@@ -1,0 +1,28 @@
+計画は立てました。例外メッセージをそのまま画面に出す方法は、ADR-1071 と食い違うので、別の方法を提案します。ファイルの変更、commit、push はしていません。計画メモだけ `/root/.claude/plans/discord-commit-push-validated-boole.md` に書きました。
+
+## 食い違い
+- ADR-1071（Accepted）は、画面に出してはいけないものとして「例外の中身」「理由コードの生の値」「仕組みの名前（Redis・token など）」を挙げています。
+- 文はサーバーで作りません。サーバーが理由コードを返し、画面が対応表と i18n（ADR-027）で選ぶ決まりです。
+- AGENTS.md には、ADR と実装が食い違うときは ADR を優先するとあります。
+- サーバー側にも見張りがあります。`backend/tests/test_error_detail_guard.py` が、サーバーの失敗の応答に文を直書きした数を数え、増えると CI が落ちます。
+
+## 提案: 理由コードを細かくする
+原因を分かりやすくする目的は、例外文を素通しにしなくても満たせます。
+
+1. `backend/app/routers/discord_oauth.py` では、通信の失敗と Discord の拒否が、どちらも `code_exchange_failed` という 1 つのコードにまとまっています。これを原因別のコードに分けます。たとえば `code_exchange_network`（通信失敗・時間切れ）と `code_exchange_rejected`（Discord が拒否）です。
+2. 例外の中身は、今までどおりログにだけ残します。
+3. `frontend/src/features/discord-connect/discordConnectError.ts` に新しいコードを足し、新しい文言キーに対応づけます。
+4. `ja.json` と `en.json` に同じキーを足します。文は「何が起きたか＋次にすること」の型で書きます。
+5. 保存の失敗など、ほかにも原因が混ざっている経路がないか確認し、あれば同じ形で分けます。
+
+## 実装時の手順
+- 作業場所は `bash scripts/new-worktree.sh release/<topic> --claude` で作ります。先に `./scripts/dev/executor-preflight.sh` を流します。
+- コード変更を含むので、push までクラウドで行い、PR は手元で `shingo-cc` 名義で作ります。PR 本文には「### 標準ワークフロー確認」の節を入れます。
+
+## 確かめ方
+- フロントは `npx vitest run src/features/discord-connect` と `npm run lint`。
+- サーバーは `pytest -k "discord_oauth or error_detail_guard or api_error_reason_sync"` と `make lint`。
+- 通信失敗と Discord 拒否をモックして、戻り先 URL の reason が新コードになり、画面が対応する文を出すことを確かめます。
+
+## しんごさんに確認したいこと
+どうしても例外メッセージをそのまま出したい場合は、先に ADR-1071 の改訂（PO 起案）が必要です。推奨は上の「理由コードを細かくする」方法です。

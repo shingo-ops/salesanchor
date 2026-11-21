@@ -1,0 +1,49 @@
+**計画（ファイル変更・commit・push はしていません。読み取りだけで調べました）**
+
+## 先に分かったこと（事実）
+- `companies` には状態の列 `status` がすでにあります（`migrations/028_create_companies.sql:78`）。値は `active / inactive / archived / pending_dedup_review` の4つです。
+- 一覧のバッジ、作成・編集の選択肢、詳細画面もすでにこの列を使っています（`CompaniesPage.tsx:411,513`）。
+- ADR-1076 で、会社と連絡先の状態の正本は共用の表 `public.customer_statuses` と決まっています。`status` 列はこの表への外部キーです（`migrations/20261112_140000_customer_status_fk.sql`）。画面の選択肢と名前もこの表から読みます（`useCustomerStatuses`）。
+- したがって「列を足す」のは二重になり、ADR・追加専用の方針とも合いません。**列は足さず、状態の値 `dormant` を1つ足す**のが正しい形です。
+
+## 未確認（着手前に PO へ確認）
+1. 「休眠」と既存の `inactive`（無効）の違い。たとえば「一定期間やり取りがない会社」なのか、手動で切り替えるだけなのか。
+2. 休眠にするのは手動だけか、最終取引日からの自動判定も要るか。自動なら別設計（バッチ・ADR）になります。
+3. 同じ表を連絡先（contacts）も使っています。休眠を連絡先でも選べてよいか。
+4. 本番で ADR-1076 の便2（外部キー化）と4行の投入が済んでいるか（ADR は Proposed のまま）。
+5. 表の `sort_order` は UNIQUE です。休眠をどの並び順に置くか。
+
+## 手順
+1. **着手前**
+   - `new-worktree.sh release/company-dormant-status --claude` で作業場所を作り、`executor-preflight.sh` を流します。
+   - 区分は「既存の延長」です。`docs/specs/customer-management/` の履歴に追記し、新規フルセットは作りません。
+2. **DB（正本）**
+   - `customer_statuses` に `dormant / 休眠 / Dormant` の1行を足します。
+   - 行の投入は運営の手作業です（ADR-1007）。既存の `docs/handoff/status-ssot-contact-company/insert-customer-statuses.sql` と `run-insert.sh` の型を踏襲します。
+   - 外部キー化済みなら、列の追加も CHECK の変更も不要で、migration は要らない見込みです。
+   - 本番への投入は、クラウドでは行わず、手元で PO の GO の後にします。
+3. **サーバー**
+   - `backend/app/services/customer_statuses.py` に `STATUS_DORMANT` を追加し、記号の直書きはしません。
+   - `schemas/company.py` の `CompanyStatus` に `dormant` を足します。連絡先と共用するなら `schemas/contact.py` も足します。
+   - 「会社の status が active のものだけ数える」類の集計を grep で洗い出し、休眠を含めるか決めます（ADR-136 の会社統計など）。
+   - `frontend/api-contract/openapi.json` を再生成します。
+4. **画面**
+   - `frontend/src/lib/customerStatuses.ts` に定数を足します。
+   - `frontend/src/utils/statusPresentation.ts` の `company`（連絡先も使うなら `contact` も）に `dormant` を足します。色は `inactive` と見分けがつくよう `info` か `warning` が候補で、PO に確認します（ADR-120）。
+   - 一覧・作成・編集の選択肢と名前は表から読むので、自動で出ます。状態の絞り込みがあれば `CompaniesPage.tsx` で対応を確認します。
+   - 名前は DB 由来のため、`ja.json`/`en.json` への追加は不要の見込みです（ADR-027 の DB 値扱い）。
+   - 新しい部品は作らず、既存の金型（`SelectControl`・バッジ）だけを使います。
+5. **テスト**
+   - `backend/tests/test_customer_statuses_pg.py`（列挙と表の一致）を更新します。
+   - `statusPresentation.test.ts:141`、`useCustomerStatuses.test.ts`、`customerStatusRows.test.fixture.ts` に `dormant` を足します。
+6. **検証**
+   - `make check`、`cd frontend && npm run lint && npm run check:all` を流します。
+   - 実機の PostgreSQL（使い捨て）で、表の行とサーバー列挙の一致を確認します。
+   - 画面で「休眠」を保存し、一覧のバッジと絞り込みを確認します。
+
+## 出し方
+- 枝 `release/company-dormant-status` を push までクラウドで行います。
+- PR は手元から `shingo-cc` 名義で作り、本文に「### 標準ワークフロー確認」の節を入れます。
+- 本番の行投入は、PR 承認とは別に PO の GO の後に実施します。
+
+最初に上の未確認1〜3（休眠の意味・自動化・連絡先との共用）をご確認ください。答え次第で、手順2・3・4 の範囲が変わります。

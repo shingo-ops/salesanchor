@@ -1,0 +1,118 @@
+# backend の Python を 3.13 に上げる計画
+
+## 結論：このままでは着手できません。先に PO の判断が要ります
+
+ADR-1022（Proposed。期限は PO 決定済み）が、3.13 を経由せず次の方針を決めています。
+
+- 2027 年 10 月末までに、本番・CI・手元を一度に **3.14** へ上げる。手元だけ、本番だけを先に上げることはしない。
+- それまでは 3.12 のまま開発する。
+- 設計の開始は 2027 年 7 月が目安。
+
+AGENTS.md の決まりでは、ADR と実装が食い違うときは ADR が優先です。そのため、3.13 への引き上げは ADR-1022 と衝突します。
+
+### PO に確認すること
+
+1. **ADR-1022 を改訂して 3.13 に変えるか**（3.13 の終了は 2029 年 10 月で、3.12 の 2028 年 10 月より 1 年長い）。
+2. **3.13 を 3.14 までの中継ぎにするのか。** その場合は 2 回上げることになり、ADR の「一度に上げる」と矛盾します。
+3. **ADR-1022 のとおり 3.14 へ直接上げるのか。** 開始時期（2027 年 7 月目安）を前倒しするのかも決めてもらいます。
+
+以下は、PO が 3.13 に決めた場合の計画です。ADR の改訂は PO の起案事項なので、私は書きません。
+
+## 現状（調査済み）
+
+**Python の版指定は次の箇所にあります。**
+
+- `backend/Dockerfile:1`：`FROM python:3.12-slim`
+- `backend/pyproject.toml`：`target-version = "py312"`（ruff）と `python_version = "3.12"`（mypy）
+- `.github/workflows/` の約 25 ファイル：`python-version: '3.12'`
+  - `test.yml` と `migration-test.yml`（複数箇所）が主なもの
+  - `migration-test.yml:2345` は `docker run python:3.12-slim`
+- `monitoring/*/Dockerfile`（2 本）、`scripts/rehearsal_phase2.sh:205`、`scripts/test_rollback_simulation.sh:135`、`tests/pmg_cutover_probe.py:159`（alpine）
+- 手元の見張り：`scripts/agent-hooks/cloud/python_version_guard.py` と `test.sh` の B4 系。これは 3.12 以外を止める作りです。
+- 文書：`docs/ai-agents/dev-commands.md`、`scripts/lead_regression/README.md`、`docs/handoff/py312-guard/*`
+
+**requirements.txt（60 行）に 3.13 で問題になりそうな部品があります。ただし 3.13 対応の可否は未確認です。**
+
+- `psycopg2-binary==2.9.10`
+- `asyncpg==0.31.0`
+- `pydantic==2.10.6`
+- `bcrypt==4.2.1`
+- `sqlalchemy==2.0.38`
+- `uvicorn==0.34.0`
+- `lxml`
+- `google-generativeai<0.9`（古い系統）
+
+dev 側は `mypy==1.13.0`、`ruff==0.9.10`、`bandit==1.8.3` です。
+
+## 手順
+
+### 0. 準備
+
+1. PO の判断を受けて ADR-1022 を改訂する。
+2. `bash scripts/new-worktree.sh release/python-3-13 --claude` で作業場所を作る。
+3. `./scripts/dev/executor-preflight.sh` を実行する。
+4. `docs/STANDARD-WORKFLOW.md` の 3 フェーズ（KGI → 現在地 → 設計）に従う。
+5. `docs/handoff/` 配下に recon と design を書き、PO の承認を得る。
+
+### 1. recon（変更なしの調査）
+
+- 使い捨ての 3.13 venv で `pip install -r requirements.txt -r requirements-dev.txt` を試す。
+- 3.13 用の wheel があるか、ビルドが失敗しないかを部品ごとに表にする。
+- 使い捨て PostgreSQL（localhost）で `make check`（pytest・カバレッジ 60% 以上）を流し、3.12 との差分を取る。
+- 3.13 の非互換候補をコードから探す。
+  - 削除された標準ライブラリ：`cgi`、`telnetlib`、`imghdr` など（PEP 594）
+  - `asyncio`、`typing` の挙動変更
+  - 非推奨警告が pytest の設定でエラーになっていないか
+
+### 2. 部品の更新（互換が必要なものだけ）
+
+- 部品ごとに最小限の上げ幅にする。
+- `pydantic`、`sqlalchemy`、`google-generativeai` は挙動が変わりやすいので、1 件ずつ別 commit にする。
+- 上げる版はコミットを分けて、戻せるようにする。
+
+### 3. 版の切り替え（1 PR で一度に）
+
+- `Dockerfile`、`pyproject.toml`（`py313`、`3.13`）、CI の全 workflow、monitoring の Dockerfile、スクリプト類を 3.13 に揃える。
+- `.github/workflows/workflow-lint.yml` を変える場合は、PO の許可が必要です（不可逆操作の一覧にあります）。
+- 見張り `python_version_guard.py` の許可を 3.13 に変え、`test.sh` の B4 系の期待値も直す。リポジトリ外にある手元側の `~/.claude/scripts/python-version-guard.py` は、PO が別途直す。
+- 文書の「3.12」表記を更新する（`dev-commands.md`、`lead_regression/README.md`、ADR）。
+
+### 4. 検証
+
+- `make lint-ci`（ruff・bandit・mypy）
+- `make check`（pytest 全件・カバレッジ 60% 以上）
+- CI 全体の緑、特に `test.yml` と `migration-test.yml`
+- `docker build` が通り、API が起動して `/docs` と主要エンドポイントが応答すること
+- Celery ワーカーと Discord・Meta 連携の起動確認（未確認項目として残さず、実機で確認する）
+
+### 5. 本番への出し方
+
+- Python の版上げは本番コンテナの再作成を伴うので、PO の GO を得てからにする。
+- `migrations/`・`deploy.yml` を触る場合は PO の「GO #PR番号」が必要。今回はおそらく触りません。
+- 先に rehearsal 環境（`docs/handoff/rehearsal-env/`）で試す。
+- 戻し方：旧イメージ（3.12）のタグを残し、`Dockerfile` の差し戻し PR で戻す。DB は触らないので、データの巻き戻しは不要。
+
+### 6. PR 運用
+
+- コード変更なので、PR は `shingo-cc` 名義で作る。
+- PR 本文に「### 標準ワークフロー確認」の節を入れる。
+- クラウドでは push までで、PR は手元で作る。
+
+## リスク
+
+| リスク | 対処 |
+|---|---|
+| 3.13 に対応していない部品がある | recon で表にし、上げるか代替するかを PO と決める |
+| ADR-1022（一度に 3.14）との矛盾 | 最初に PO の判断を得る |
+| `google-generativeai<0.9` が古く、3.13 で動かない可能性 | `google-genai` への移行を別テーマに切り出す |
+| CI の workflow が約 25 本あり、更新漏れが起きる | `grep` で `3.12` を全件洗い、PR 前に残りが 0 件であることを確認する |
+| 手元の見張りがリポジトリ外にあり、同期が漏れる | 手順に入れ、PO に依頼する |
+
+## 未確認
+
+- 各部品が 3.13 で動くか（recon で確認します）
+- 本番の Python を使う箇所が上記以外にないか（`docs/runbooks/` 内の記述は今回調べていません）
+
+---
+
+調査は読み取りだけで、ファイルの変更・commit・push はしていません。

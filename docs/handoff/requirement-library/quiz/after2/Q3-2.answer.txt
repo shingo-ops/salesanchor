@@ -1,0 +1,67 @@
+# 計画: 期限切れの札も接続元の回数止めに数える
+
+## 先に確認したいこと（この依頼は ADR-1083 と逆向きです）
+
+- 今のコードは、期限切れの札を回数止めに**数えない**作りです。`backend/app/auth/dependencies.py` の `_authenticate_self_token` で、`ExpiredSignatureError` のときは `record_auth_failure` を呼ばずに 401 だけ返します。
+- これは **ADR-1083**（Proposed、PO が 2026-11-20 に「1」で決定）の決定どおりです。
+  - 理由は、2026-11-20 に Android が 46 時間前の古い札で画面の 11 回の頼みを送り、11 回とも数えられて接続元が止まったことです。直後のログインが 429 になりました。
+  - 期限切れは署名の確認のあとにしか出ないため、自社が出した本物の札です。総当たりの印ではないと判断しています。
+- AGENTS.md は「ADR と食い違ったら ADR を優先し、コードを ADR に寄せる（逆はしない）」と定めています。
+- 依頼どおりにコードだけ変えると、ADR-1083 と ADR-1083 の試験（`backend/tests/test_self_auth.py:455` 付近）に反します。
+- そのため、**ADR を直す手順を先にやる**計画にします。
+
+## 未確認のこと
+
+「ログインで札の期限切れのエラーになった回」が、次のどれを指すかは未確認です。
+
+- (a) アプリを開いたときの古いアクセストークンによる 401（今の `dependencies.py` の分岐）
+- (b) `/auth/refresh` で更新用の札が期限切れだったとき（`routers/auth.py` の `self_refresh`。今も数えていません）
+- (c) パスキーの challenge の期限切れ（`passkey/login/verify` はすでに `fail()` で数えています）
+- (d) パスワード再設定の鍵の期限切れ（`password-reset/confirm` はすでに数えています）
+
+(c)(d) はすでに数えています。差が出るのは (a) と、場合によって (b) です。この計画は (a) を中心に書いています。違えば教えてください。
+
+## 手順
+
+1. **PO に方針を確認する**
+   - ADR-1083 の「数えない」を「数える」に変えてよいかを聞きます。
+   - 同時に、元の事故（古い札の 11 回で接続元が止まり、ログインが 429 になる）をどう防ぐかを決めます。
+   - 案は 2 つです。
+     - 案 A（推奨）: 数えるが、同じ接続元の期限切れは 1 回の画面表示につき 1 回までにする。または期限切れ専用の別の数え方にして、本体の 10 回とは分ける。
+     - 案 B: 全部そのまま数える。元の事故が再発します。画面側が 401 のあとに無限に頼み直さないことも確かめる必要があります。
+2. **ADR を直す**
+   - 新しい ADR を起案するか、ADR-1083 を書き換えます（`docs/ai-agents/adr-template.md` に従う）。
+   - 直したら `node scripts/generate-adr-index.js` で目次を作り直します。
+   - 設計書 `docs/handoff/auth-expired-token-lockout/design.md` も更新します。
+3. **作業場所を作る**
+   - `bash scripts/new-worktree.sh release/<topic> --claude` で作ります。
+   - 着手前に `./scripts/dev/executor-preflight.sh` を実行します。
+4. **コードを直す**
+   - `dependencies.py` の `except ExpiredSignatureError` の分岐を、案に合わせて直します。案 A なら `record_auth_failure` を呼ぶか、別の数え方を足します。
+   - 回数止めの本体は `backend/app/cache.py` にあります。10 回・15 分は変えません。
+   - (b) も対象なら、`self_refresh` の `rotated is None` の分岐に `record_auth_failure(ip)` を足します。
+5. **試験を直す**
+   - `backend/tests/test_self_auth.py:455` 付近の「数えない」試験を、新しい決定に合わせて反転または書き換えます。
+   - 次の試験を足します。
+     - 期限切れの札が N 回続いたときの数え方
+     - 続けて正しいログインをしたとき 429 にならないこと（元の事故の再現防止）
+     - 署名不正の札が今までどおり 1 回ずつ数えられること
+6. **検査する**
+   - `make check`（ruff・bandit・mypy・pytest）を通します。
+   - 認証の変更なので、Evaluator と Governance の確認も通します。
+7. **出す**
+   - pre-push の検査を通してから push します。
+   - PR は手元で `shingo-cc` 名義で作り、本文に「### 標準ワークフロー確認」の節を入れます。
+   - マージと本番反映は PO の GO を待ちます。
+
+## 確かめ方
+
+- 単体: 上の試験を `pytest backend/tests/test_self_auth.py` で流します。
+- 実際の動き: Redis を立てて、古い札で 11 回叩いたあとにログインして 429 になるかを見ます。`backend/tests/test_real_redis_lockout.py` の作りが使えます。
+- 本番: ADR-1083 の K5・K6 に当たる確かめを、新しい決定に合わせて作り直します。
+
+## 質問
+
+手順 1 の方針（案 A か案 B か、(a)〜(d) のどれを対象にするか）を決めてもらえれば、そのまま ADR の起案から進められます。
+
+ファイルの変更・commit・push は何もしていません。
