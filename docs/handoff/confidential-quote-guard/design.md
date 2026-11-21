@@ -55,7 +55,7 @@
   5d. 受け入れるリスク: 「」が複数行にまたがる形と半角 `｢｣` は照らさない（便2 で範囲を広げるときに扱う）。
   6. 送り先・送り方・中身をすり替える操作: `git remote set-url`／`git remote add`、`git config` や `git -c` で `remote.*.url`・`remote.*.pushurl`・`remote.*.push`・`remote.*.mirror`・`remote.*.tagOpt`・`push.followTags`・`push.pushOption`・`url.*.insteadOf`・`core.hooksPath` を書く形（`--get`・`--get-all`・`--get-regexp`・`--list` の読むだけは通す）、`git replace`（`git update-ref refs/replace/…` も）、`.git/hooks/` への書き込み（3 と同じ印）。
 - 通す形（allow-list）: 命令文から作業場所や本文の出どころを推し量らない。決まった形に完全に一致するときだけ照らし、それ以外はすべて止める（照らせないものは通さない）。
-  1. push は `git -C <絶対パス> push [-u|--set-upstream] origin <ref>` だけ。`<ref>` は `HEAD` か、英数字と `/._-` だけのブランチ名（先頭 `-`・`..` は不可）。後ろに付けてよいのは `2>&1` と `> <絶対パス>`／`>> <絶対パス>` だけ。`;`・`&&`・`||`・`|`・`&`・改行・`$`・バッククォート・heredoc・`cd`・`( )`・`<` は、引用符の外に 1 つでもあれば止める。`--force`・`-f`・`--force-with-lease`・`--no-verify`・`--mirror`・`--all`・`--tags`・`--delete`・`:ref` なども決まりの外なので止める。止めた理由の文は「git push は `git -C <worktree の絶対パス> push -u origin <ブランチ>` の形で、ほかの命令とつなげずに単独で流してください」。
+  1. push は `git -C <絶対パス> push [-u|--set-upstream] origin <ref>` だけ。`<ref>` は `HEAD` か、英数字と `/._-` だけのブランチ名（先頭 `-`・`..` は不可）。後ろに付けてよいのは `2>&1` と `> <絶対パス>`／`>> <絶対パス>` だけ。`;`・`&&`・`||`・`|`・`&`・改行・`$`・バッククォート・heredoc・`cd`・`( )`・`<` は、引用符の外に 1 つでもあれば止める。`--force`・`-f`・`--force-with-lease`・`--no-verify`・`--mirror`・`--all`・`--tags`・`--delete`・`:ref` なども決まりの外なので止める（例外: §11 の枝を消す 1 つの形だけは通す。2026-11-22）。止めた理由の文は「git push は `git -C <worktree の絶対パス> push -u origin <ブランチ>` の形で、ほかの命令とつなげずに単独で流してください」。
   2. gh の本文は、(a) `--body-file`／`-F` の後ろが絶対パス、(b) 一重引用符で囲んだ `--body`／`-b` の値、の 2 つだけ。(a) はそのファイルを読んで照らし、(b) はその文字列を照らす。題名（`--title`／`-t`／`--title=…`）も本文と同じく照らす。印は gh の操作ごとの表で持つ（同じ字でも操作で意味が違うため）:
      - `pr create`・`pr edit`・`pr comment`・`pr review`・`issue create`・`issue edit`・`issue comment`: 本文 `--body`／`-b`、本文ファイル `--body-file`／`-F`、題名 `--title`／`-t`。
      - `pr merge`: 本文は同じ、題名は `--subject`／`-t`。
@@ -181,3 +181,68 @@
   - 原文の写しの日付（2 日より古ければ知らせる。毎日の取り直しが止まっている印）。
   - 原文の写しの件数が前回より減っていないか（減っていれば知らせる。取り直しの時点で半分未満なら置き換えずに止まる）。
 - 決まりの正本: 便1 の ADR。
+
+## 11. 追記: 合流しない見本の枝を消す形だけを通す（2026-11-22）
+
+PO 2026-11-22「3」（消せるように見張りを直す。審査あり）。調べは recon §6。
+
+### 11-1. 目的と KGI
+
+- 目的: 合流しない見本の枝を、AI が自分で片付けられるようにする。社外秘の原文を止める働きは変えない。
+- KGI（○×）:
+  - K1: `release/k10-rename-sample`・`release/k10-rename-sample2` の 2 本が、決まった形の命令 1 本ずつで GitHub から消える。`gh api repos/shingo-ops/salesanchor/branches/<枝>` が 2 本とも 404 を返す。
+  - K2: main・develop・HEAD・release/ で始まらない枝を消す形、決まった形以外の消し方（`-d`・`:ref`・2 本まとめて・`-u` つき・`--force` つき・前後に命令をつなぐ）は、今までどおりすべて exit 2。
+  - K3: 今ある試験は、増やした試験を除いて結果が変わらない（直す前と同じ PASS 数・FAIL 0）。
+
+### 11-2. 変える内容
+
+通す形は 1 つだけ: `git -C <絶対パス> push origin --delete release/<名前>`（7 語ちょうど）。`<名前>` は英数字と `/._-`。先頭は英数字。`..` は不可。
+
+- 変える前（`scripts/agent-hooks/confidential-quote-guard/guard.py:970-976`）: `check_push` は、`git -C <絶対パス> push [-u|--set-upstream] origin <ref>` でなければ PUSH_MSG で止める。
+- 変えた後:
+  - 文を 1 つ足す。`DEL_MSG = "枝を消すときは \`git -C <worktree の絶対パス> push origin --delete release/<ブランチ>\` の形で、ほかの命令とつなげずに単独で流してください。main・develop は消せません"`。
+  - 形を 1 つ足す。`DEL_REF_RE = re.compile(r"release/[A-Za-z0-9][A-Za-z0-9/._-]*")`。
+  - `check_push` の頭で、消す印（字句に `--delete` か `-d` がある、または 5 語目より後ろに `:` で始まる字句がある）を見る。
+    - 印があるとき: `len(v) == 7`・`v[0:2] == ["git", "-C"]`・`v[2]` が `/` で始まる・`v[3] == "push"`・`v[4] == "origin"`・`v[5] == "--delete"`・`DEL_REF_RE.fullmatch(v[6])`・`".." not in v[6]` がすべて成り立たなければ DEL_MSG で止める。
+    - 印が無いとき: 今の判定のまま（変えない）。
+  - そのあとの場所の確かめ（パスがある・git の repo・別名や push 先の差し替えの設定が無い・`refs/replace` が無い）は、消すときも今のまま流す。
+  - 消すときは、場所の確かめのあと `return []` で終える。`matched` に足さない（送る中身が無いので、表を読まずに通す）。
+- 触らない範囲: `detect`・`danger`・`strict_words`・`check_gh`・送る push の判定・表・install.sh・rollback.sh・fetch_corpus.py。
+
+### 11-3. 受入条件
+
+`tests/test_guard.py` に「== 16 枝を消す形 (2026-11-22)」の区切りを足し、1 行 1 試験で流す。
+
+| 基準 | 検証方法 |
+|---|---|
+| 決まった形の消し方は通る | `git -C <W> push origin --delete release/x` が exit 0 |
+| 長命の枝は消せない | `--delete main`・`--delete develop`・`--delete HEAD` が exit 2 |
+| release/ 以外は消せない | `--delete feature/x`・`--delete x` が exit 2 |
+| 決まった形以外の消し方は止まる | `push origin -d release/x`・`push origin :release/x`・`push origin --delete release/a release/b`・`push -u origin --delete release/x`・`push --force origin --delete release/x`・`push origin --delete release/a..b` が exit 2 |
+| つなぎ・場所の条件は今のまま | `… --delete release/x && echo ok`・`git -C rel push origin --delete release/x`・存在しないパス・`remote.origin.pushurl` を設定した repo で exit 2 |
+| 止める理由の文 | `--delete main` の stderr に「main・develop は消せません」がある |
+| 今の試験 | 直す前の main での `PASS n / FAIL 0` の n が、直した後は n + 足した数で FAIL 0。今ある `push --delete origin x`・`push origin :x` の 2 つも exit 2 のまま |
+| 実物（K1） | PO が `!` で install.sh を流した後、Opus が 2 本を決まった形で消し、`gh api …/branches/<枝>` が 404 |
+
+### 11-4. 代替案と選択理由
+
+- `gh api -X DELETE` で消す: この見張りは通るが、止められた命令の言い換えになるため採らない。
+- PO が毎回自分で消す: AI が片付けられず、見本を作るたびに PO の手間が増える。
+- 消す形をすべて通す: main・develop を消す道が開くため採らない。release/ で始まる 1 本だけに絞る。
+
+### 11-5. 弊害とその対処
+
+- 開いた PR の枝を消すと、その PR は閉じる。対処: 消すのは合流しない見本の枝だけ。消す前に `gh pr list --head <枝> --state open` が空であることを Opus が確かめる。消した枝は GitHub の PR の画面から戻せる。
+- 写しの古さ: 消す形は表を読まないので、表が古くても止まらない。送る中身が無いので、漏れる道は無い。
+
+### 11-6. 計画・戻し方・測り方
+
+- 計画: ①Opus がこの節を書く ②クラウドの Sonnet が guard.py と test_guard.py を直し、クラウドで試験を流す（直す前の PASS 数も取る）③審査役（opus）が審査 ④合流 ⑤PO が `!` で install.sh を流す（ADR-1011:39）⑥Opus が 2 本を消して K1 を確かめる。
+- 戻し方: この節の PR を戻す commit を合流し、PO が `!` で install.sh を流し直す。
+- 測り方: K2・K3 は試験の PASS／FAIL。K1 は `gh api` の 404。
+
+### 11-7. 審査（同一 AI の自己審査）
+
+- 結論: APPROVE（設計として）。
+- 根拠: 通す形は 7 語ちょうどの 1 つで、枝の名前は release/ で始まるものだけ。main・develop は名前の形で外れる。場所と設定の確かめは送る push と同じものを流すので、別名や push 先の差し替えで別の操作に化けない。消す push は commit を送らない（recon §6）ので、見張りの目的（社外秘の原文を送らない）は変わらない。
+- 未解決: なし。
