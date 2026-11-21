@@ -1,0 +1,13 @@
+# bin7 acceptance sample C (do not merge)
+name: bin7 sample C fake gate
+on:
+  pull_request:
+    branches: [main]
+permissions: {}
+jobs:
+  fake:
+    name: guard-files gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: echo "bin7 acceptance sample C (do not merge)"
