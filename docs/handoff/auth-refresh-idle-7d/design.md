@@ -107,7 +107,7 @@ async def test_refresh_allowed_within_idle_7_days(http, db_session, password_has
 | last_used_at 列を見る | 取り替えで新しい券ができるので、今の券の last_used_at は常に空。created_at で同じ意味になる |
 | 期限を設定表に持つ | 30 日・15 分と同じくコードの定数にそろえる。変えるときは ADR と試験を一緒に変える |
 
-## 7. 外部事例
+## 7. 外部・過去事例の参照と我々への応用
 
 | 誰が | 何を | 数値 | 適用限界 |
 |---|---|---|---|
@@ -149,6 +149,7 @@ SELECT f.user_id, f.family_created_at, p.created_at AS prev_created_at, p.revoke
 
 ## 11. 維持の仕組み
 
+- 守り手: .github/workflows/test.yml の必須チェック「pytest (SQLite + PostgreSQL RLS)」（K1・K2 の試験が定数から日数を作る）
 - 7 日はコードの定数 `REFRESH_IDLE_TTL`。変えると K1・K2 の試験が落ちるので、CI の必須チェックで毎回確かめる（試験は定数から日数を作るので、定数を変える PR には ADR の変更も要る）。
 - 30 日・取り替え・使い回しの決まりは既存の試験（test_self_auth.py:217・:230・:257・:270）で引き続き確かめる。
 
