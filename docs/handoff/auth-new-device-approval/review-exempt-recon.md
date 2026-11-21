@@ -1,4 +1,4 @@
-# 審査用アカウントの「期限つき確認なし」 — 現在地（recon）
+# Meta 審査用の会社のログイン確認なしスイッチ — 現在地（recon）
 
 この文書は、Meta の審査員が審査用アカウントでログインできるかを、今のコードと本番の記録で確かめた結果です。
 
@@ -78,3 +78,20 @@
 
 - Meta の申請の「審査員への説明」に、review@ のパスワードが今の値で書かれているか（PO の申請画面で確かめる）。
 - 本番でメール送信が今も成功しているか。ADR-1055 のステータス欄に「PO が知らせメールを本番で目で確かめた（2026-11-05）」とあるが、今日の時点では確かめていない（受入基準 K6 で確かめる）。
+
+## K. 会社の表の書き込みの決まり（2026-11-22 追加・PO の条件「会社006だけ」の書き直し用）
+
+- `public.tenants` は読み取りは全行可、書き込みは運営の文脈（`app.is_operator = 'true'`）のときだけ（`migrations/20261016_170000_add_tenants_write_rls.sql:9-23`）。会社の人が書くアプリの道は無い（同 :4）。
+- 運営の文脈を付ける関数は `set_operator_context`／`reset_operator_context`（`backend/app/auth/dependencies.py:458-489`）。
+- 会社の文脈を付けると `app.is_operator` は空に戻る（`backend/app/auth/dependencies.py:328`）。`_record_auth_audit`（`backend/app/routers/auth.py:282-293`）は会社の文脈を付けて外す。
+- `public.users` も読み取りは全行可（`migrations/20261016_180000_add_users_write_rls.sql:9-10`）。
+- 会社の行の型は `backend/app/models.py:8-17`（id・tenant_name・tenant_code・is_active・settings）。Meta 審査用の印の列は **無い**。
+- 画面の金型: 切替スイッチ `frontend/src/components/Toggle.tsx`（checked・onCheckedChange・disabled・aria-label。className は受けない）、色の札 `frontend/src/components/Badge.tsx`（variant: neutral・info・success・warning・danger・purple）。
+- 利用者管理の小さなメニュー: `frontend/src/pages/super-admin/users/UserManagementSubMenu.tsx:38-46`（2つ目の組は「ログインの許可待ち」1つだけ）・`:49-50`（その鍵では何もしない）・`:64`（既定の選択）。道は `frontend/src/App.tsx:345`。
+
+## L. ログインの記録の中身（2026-11-22 追加）
+
+- 記録の書き手は1か所: `backend/app/middleware/audit.py:215-266`。`/api/v1/auth/` の口が対象（同 :37）。
+- 列: `event_type`・`path`・`method`・`status_code`・`client_ip`・`user_agent`・`created_at`（`migrations/001_create_auth_events.sql:6-16`）と `user_id`・`reason`・`is_new_device`（`migrations/20261101_130000_add_new_device_approval.sql:118-120`）。
+- 打ったメールアドレスは記録に無い。会社に無いメールで試した回は `user_id` が NULL（`backend/app/routers/auth.py:413`）。
+- 本番の id=10 の行は0件（reader 鍵・2026-11-21。生の出力 `/tmp/CC報告ファイル/meta-review-login/prod_id10_events.txt`）。

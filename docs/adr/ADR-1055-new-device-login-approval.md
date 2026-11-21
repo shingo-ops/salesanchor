@@ -7,7 +7,7 @@
 | 起案日 | 2026-11-01 |
 | 方針の決定者 | Shingo（PO）。細部は PO の委任に基づき Opus が大手のやり方に沿って決めた（設計書 §3） |
 | 関連 | ADR-1013（自社ログインとパスキー）、ADR-1048（管理者の2段階。いつもの機械と番号の承認を本 ADR が全員向けに広げて引き取る。6桁の部分は ADR-1048 に残る）、ADR-1016（即時反映 SSE に人単位の宛先を足す・改訂 2026-11-01）、ADR-1008（人の正本は public.users）、ADR-027（i18n）、ADR-067・ADR-144（デザイントークンと UI ガバナンス）、ADR-136（危険 PR の GO） |
-| 改訂 | 2026-11-05 提案中: 許可できる人に「同じ会社のオーナーの役の人」を足す（社員が「会社の管理者に頼む」を押した依頼だけ）。ADR-1063 が採用されたら有効<br>2026-11-21 提案中: What 11（期限つきの確認なし）を足す。設計 `docs/handoff/auth-new-device-approval/review-exempt-design.md`。PO の KGI 承認と実装の後に有効 |
+| 改訂 | 2026-11-05 提案中: 許可できる人に「同じ会社のオーナーの役の人」を足す（社員が「会社の管理者に頼む」を押した依頼だけ）。ADR-1063 が採用されたら有効<br>2026-11-22 提案中: What 11（Meta 審査用の会社だけのスイッチ）を足す。設計 `docs/handoff/auth-new-device-approval/review-exempt-design.md`。PO の KGI 承認と実装の後に有効 |
 | 設計 | `docs/handoff/auth-new-device-approval/design.md`、現状 `docs/handoff/auth-new-device-approval/recon.md`、合格の基準 `docs/handoff/auth-new-device-approval/kgi.md` |
 
 ---
@@ -24,7 +24,7 @@
 8. 場所の目安は DB-IP IP to City Lite（CC BY 4.0）を読み、出す画面とメールに出どころを表示する。読めなければ「不明」とし、認証は止めない。
 9. 入れ方は `AUTH_DEVICE_APPROVAL`（off / enforce・既定 off）。off はログインの止め方が今と同じ（機械の登録もしない。6 の失効の確かめだけは off でも効く）。点検専用の人には管理用の命令で印を発行し、点検はその印でログインする。
 10. 新しい表（`user_trusted_devices`・`auth_login_requests`・`user_recovery_codes`・`user_push_subscriptions`）には RLS を付けない。ADR-1018 Decision 6 が認証トークンの表に付けないと決めたのと同じ理由で、ログイン前・会社が決まる前に hash の一致で1行を引くため。生の値は保存せず hash だけを置き、本人の行は `user_id` で絞る。
-11. （**改訂 2026-11-21 提案中**）super admin は、選んだ1人に1〜14日の期限を付けて、知らない機械からの確認を外せる。期限は人の正本 `public.users.device_approval_exempt_until` の1列だけに置き、今より後のときだけ効く（期限が来れば何もしなくても戻る）。super admin の人（is_super_admin=true）と止まっている人には外せない。外して入った組では、パスキーと予備の合言葉を作らせず、会社のオーナーとしてほかの人の機械を許可させない（期限の後に入口が残らないため）。外して入った回は機械を登録せず、記録に `review_exempt` を残し、本人に知らせメールを送る。外す・戻す操作は会社別の監査記録に残す。用途は外の審査（Meta App Review）の審査員の入口。
+11. （**改訂 2026-11-22 提案中**）Meta 審査用の会社（会社006「Sales Anchor App Review」）だけに、知らない機械からの確認を外すスイッチを置く。**目的: Meta の審査員は登録していない機械からログインするので、確認で止められてログインできないことを防ぐために付けた機能。** ふだんは守りの穴になるため、**ほかの会社に広げることは禁止**（PO 2026-11-22）。印とスイッチは会社の正本 `public.tenants` の2列（`meta_review_tenant`・`meta_review_login_until`）だけに置き、データベースの決まりで「印の無い会社は ON にできない」「印は1社だけ」にする。ON にできるのは super admin（と、PO に頼まれた Claude Opus が同じ画面から）だけで、ON は最長14日で自動で OFF に戻る。会社006の中の super admin の人には効かない。ON で入った回は機械を登録せず、記録に `meta_review` を残し、本人に知らせメールを送る。ON で入った組ではパスキーと予備の合言葉を作らせず、ほかの人の機械を許可させない（OFF の後に入口を残さない）。切り替えは会社別の監査記録に残す。画面は利用者管理の「ログインの許可待ち」の下の「Meta審査用」で、スイッチとログイン履歴を出す。設計 `docs/handoff/auth-new-device-approval/review-exempt-design.md`。
 
 ## Why（なぜ）
 
@@ -33,6 +33,7 @@
 - 依頼を DB に置くのは、管理者の許可と、その記録を残すため（Redis の5分では足りない）。
 - 記録の置き場を増やさないため、既存の auth_events に列を足す。今は誰のログインか・失敗の理由が残っていない（recon:E）。
 - 今は全部のログアウトが2か所に直書きされ、アクセストークン（最長900秒）は人単位で止められない（recon:C）。
+- （What 11）Meta の申請は、審査員がアプリに入れるログイン情報を求める。審査員は登録していない機械から入るため、確認で止まると審査が進まない（`docs/handoff/auth-new-device-approval/review-exempt-recon.md` の E・J）。本番の設定を全員 off にすると全員の守りが外れるので、会社006だけ・審査の間だけ・最長14日にする。会社の番号をプログラムに書かず、データベースの決まりで1社に閉じるのは、ほかの会社に広がる道を機械で塞ぐため。
 
 ## 影響
 
@@ -42,6 +43,6 @@
 
 ## 戻し方
 
-What 11 は、管理画面で期限を消すか、期限が来れば元に戻る。列は残す。
+What 11 は、画面のスイッチを OFF にするか、14日たてば元に戻る。印を外すときは `UPDATE public.tenants SET meta_review_login_until = NULL, meta_review_tenant = false WHERE meta_review_tenant`。列は残す。
 
 `AUTH_DEVICE_APPROVAL` を off に戻す。off はログインの止め方が今と同じ。もう一度 enforce にするときは締切を新しくする。表と列は残す。web push は本体に VAPID の鍵を渡さなければ送らない（2026-11-03 から渡していない。deploy.yml の書き戻し3行を外した）。
