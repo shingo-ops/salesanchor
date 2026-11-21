@@ -957,6 +957,32 @@ def main():
                   ("source <( ) の push", "source <(echo '" + P("leak15") + "')")):
         stop("R12 止まる: " + nm, c)
 
+    print("== 16 枝を消す形 (2026-11-22)")
+    DL = "git -C %s push origin --delete " % WORK
+    check("D1 決まった形の消し方は通る", DL + "release/x", 0, cwd=T)
+    for nm in ("main", "develop", "HEAD"):
+        check("D2 長命の枝は消せない: " + nm, DL + nm, 2, cwd=T)
+    for nm in ("feature/x", "x"):
+        check("D3 release/ 以外は消せない: " + nm, DL + nm, 2, cwd=T)
+    for nm, c in (("push origin -d release/x", "git -C %s push origin -d release/x" % WORK),
+                  ("push origin :release/x", "git -C %s push origin :release/x" % WORK),
+                  ("--delete release/a release/b", DL + "release/a release/b"),
+                  ("push -u origin --delete release/x", "git -C %s push -u origin --delete release/x" % WORK),
+                  ("push --force origin --delete release/x", "git -C %s push --force origin --delete release/x" % WORK),
+                  ("--delete release/a..b", DL + "release/a..b")):
+        check("D4 決まった形以外は止まる: " + nm, c, 2, cwd=T)
+    check("D5 つなぎ (&& echo ok) は止まる", DL + "release/x && echo ok", 2, cwd=T)
+    check("D5 相対パスは止まる", "git -C rel push origin --delete release/x", 2, cwd=T)
+    check("D5 存在しないパスは止まる", "git -C %s push origin --delete release/x" % os.path.join(T, "nonexistent"), 2, cwd=T)
+    sh("git", "config", "remote.origin.pushurl", "/nonexistent/x.git", cwd=WORK)
+    check("D5 pushurl を設定した repo は止まる", DL + "release/x", 2, cwd=T)
+    sh("git", "config", "--unset", "remote.origin.pushurl", cwd=WORK)
+    rc, err = run(DL + "main", T)
+    results.append(rc == 2 and "main・develop は消せません" in err)
+    print("%s %-62s exit=%d" % ("PASS" if results[-1] else "FAIL", "D6 --delete main の理由に「main・develop は消せません」", rc))
+    check("D7 今ある push --delete origin x は止まる", "git -C %s push --delete origin x" % WORK, 2, cwd=T)
+    check("D7 今ある push origin :x は止まる", "git -C %s push origin :x" % WORK, 2, cwd=T)
+
     print("== 8 止めた記録")
     open(EV, "w").close()
     check("T50 記録を取るため 1 回止める", "gh pr comment 1 -b '「%s」'" % q, 2)
