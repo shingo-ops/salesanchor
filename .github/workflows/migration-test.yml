@@ -2412,7 +2412,7 @@ jobs:
           fail() { echo "FAIL: $*"; exit 1; }
 
           # 回1: 記録0件（起点の回の形）
-          run_main round1 NOOP=1
+          run_main round1 NOOP=1 MIGRATION_PREDEPLOY_BACKUP=success
           [ "$RC" -eq 0 ] || { tail -40 "$LOGS/round1.log"; fail "回1の終わりの番号が0でない: $RC"; }
           [ "$(val "$LOGS/round1.log" to-run)" -eq "$EXPECTED" ] || fail "回1の (c) to-run が ${EXPECTED} でない"
           [ "$(val "$LOGS/round1.log" ran-and-recorded)" -eq "$EXPECTED" ] || fail "回1の ran-and-recorded が ${EXPECTED} でない"
@@ -2487,6 +2487,30 @@ jobs:
           grep -qF '(a) migrations/not_registered_ci_probe.sql' "$LOGS/round5.log" || fail "回5: (a) のファイル名が出ていない"
           q -c "DELETE FROM ops.migration_runs WHERE file = 'migrations/not_registered_ci_probe.sql'"
           echo "回5: 止まることを確かめた（合格）"
+
+          # 回5b（K5-13・K5-14）: (c)=1 で控えなしなら止まる。控えありなら流れる
+          q -c "DELETE FROM ops.migration_runs WHERE file = '$VICTIM'"
+          ROWS_BEFORE=$(rows)
+          run_main round5b_unset NOOP=1
+          [ "$RC" -ne 0 ] || fail "回5b(unset): 控えなしなのに終わりの番号が0"
+          [ "$(val "$LOGS/round5b_unset.log" to-run)" -eq 1 ] || fail "回5b(unset): (c) to-run が1でない"
+          grep -qF '>>> [record] predeploy-backup=unset' "$LOGS/round5b_unset.log" || fail "回5b(unset): predeploy-backup=unset が出ていない"
+          grep -qF '>>> [record] (c) is not 0 but pre-deploy backup is not success (MIGRATION_PREDEPLOY_BACKUP=unset); nothing was run' "$LOGS/round5b_unset.log" || fail "回5b(unset): 止めの行が出ていない"
+          [ "$(grep -c '\] psql < ' "$LOGS/round5b_unset.log")" -eq 0 ] || fail "回5b(unset): 何かが流れた"
+          [ "$(rows)" -eq "$ROWS_BEFORE" ] || fail "回5b(unset): 記録の行数が変わった"
+          run_main round5b_skipped NOOP=1 MIGRATION_PREDEPLOY_BACKUP=skipped
+          [ "$RC" -ne 0 ] || fail "回5b(skipped): 控えなしなのに終わりの番号が0"
+          [ "$(val "$LOGS/round5b_skipped.log" to-run)" -eq 1 ] || fail "回5b(skipped): (c) to-run が1でない"
+          grep -qF '>>> [record] predeploy-backup=skipped' "$LOGS/round5b_skipped.log" || fail "回5b(skipped): predeploy-backup=skipped が出ていない"
+          grep -qF '>>> [record] (c) is not 0 but pre-deploy backup is not success (MIGRATION_PREDEPLOY_BACKUP=skipped); nothing was run' "$LOGS/round5b_skipped.log" || fail "回5b(skipped): 止めの行が出ていない"
+          [ "$(grep -c '\] psql < ' "$LOGS/round5b_skipped.log")" -eq 0 ] || fail "回5b(skipped): 何かが流れた"
+          [ "$(rows)" -eq "$ROWS_BEFORE" ] || fail "回5b(skipped): 記録の行数が変わった"
+          run_main round5b_success NOOP=1 MIGRATION_PREDEPLOY_BACKUP=success
+          [ "$RC" -eq 0 ] || { tail -40 "$LOGS/round5b_success.log"; fail "回5b(success)の終わりの番号が0でない: $RC"; }
+          [ "$(val "$LOGS/round5b_success.log" ran-and-recorded)" -eq 1 ] || fail "回5b(success): ran-and-recorded が1でない"
+          [ "$(rows)" -eq "$EXPECTED" ] || fail "回5b(success): 記録の行数が ${EXPECTED} でない"
+          final_ok round5b_success || fail "回5b(success): 作り直しが流れていない"
+          echo "回5b: 控えなしで止まり、控えありで流れることを確かめた（合格）"
 
           # 回6（K5-11）: 全件モード＋不一致1本
           printf '\n' >> "$VICTIM"
