@@ -24,8 +24,8 @@
 ## 3. 便2 の見張りが働いたか（生の記録 raw.tgz から数えた）
 
 - 便2 の文「この場所には決まりがあります」が AI に渡った回は 20 回中 2 回（Q7-1・Q7-2）。
-- Q1 の 2 回は、会社のコード（`frontend/src/pages/companies/CompaniesPage.tsx`・`backend/app/schemas/company.py`、Q1-1 は `backend/app/routers/companies.py` も）を `Read` ではなく `Bash` の `sed -n`・`grep` で読んでいた。`Read` で開いたのは `frontend/AGENTS.md`・`backend/AGENTS.md`（と Q1-1 の `docs/STANDARD-WORKFLOW.md`）だけで、どれも索引の「コードの場所」に当たらない。見張りは `Read|Edit|Write|MultiEdit` だけを見るので、Q1 では一度も動かなかった。
-- つまり、変更後も Q1 が取り違えたのは、AI がコードを `Bash` で読む道を設計で見張りの対象に入れ忘れたのが原因。見張りが動いた上で答えが変わらなかったのではない。
+- Q1 の 2 回は、会社のコード（`frontend/src/pages/companies/CompaniesPage.tsx`・`backend/app/schemas/company.py`・`backend/app/routers/companies.py`。2回とも）を `Read` ではなく `Bash` の `sed -n`・`grep` で読んでいた。`Read` で開いたのは `frontend/AGENTS.md`・`backend/AGENTS.md`（と Q1-1 の `docs/STANDARD-WORKFLOW.md`）だけで、どれも索引の「コードの場所」に当たらない。見張りは `Read|Edit|Write|MultiEdit` だけを見る。Q1 でも `Read`（と Q1-2 の計画ファイルの `Write`）で見張りは呼ばれたが、どれも「コードの場所」に当たらず、Q1 では一度も文を出さなかった。
+- つまり、変更後も Q1 が取り違えたのは、AI がコードを `Bash` で読む道を設計で見張りの対象に入れ忘れたのが原因。見張りが文を出した上で答えが変わらなかったのではない。
 
 ## 4. 限り
 
