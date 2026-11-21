@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-11-20 / ADR 総数: 240 件
+最終更新: 2026-11-21 / ADR 総数: 241 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -259,6 +259,7 @@
 | [ADR-1081](./ADR-1081-event-color-labels.md) | ADR-1081: 予定ごとの色は Google カレンダーの予定のラベル 24 色＋デフォルトにし、色の値で Google と照らす | Proposed | — | — |
 | [ADR-1082](./ADR-1082-secretary-voice-input.md) | ADR-1082: 秘書に声で話しかける（ブラウザの聞き取り・本番の画面でマイクを自分にだけ許す） | Proposed | Amends ADR-1080 | — |
 | [ADR-1083](./ADR-1083-expired-token-not-counted-as-bruteforce.md) | ADR-1083: 期限が切れただけの札は、接続元の回数止めに数えない | Proposed | — | — |
+| [ADR-1084](./ADR-1084-refresh-idle-7-days.md) | ADR-1084: 7 日使わなければログインし直し | Proposed | — | — |
 
 ## ステータス凡例
 
