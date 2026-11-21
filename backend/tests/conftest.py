@@ -334,6 +334,8 @@ async def test_engine():
             statement = statement.replace("public.discord_server_apply_runs", "discord_server_apply_runs")
         if "public.registration_tokens" in statement:
             statement = statement.replace("public.registration_tokens", "registration_tokens")
+        if "public.auth_events" in statement:
+            statement = statement.replace("public.auth_events", "auth_events")
         if "public.tenants" in statement:
             statement = statement.replace("public.tenants", "tenants")
         if "public.tenant_deletion_audit" in statement:
