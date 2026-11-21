@@ -1,0 +1,155 @@
+origin/main:.github/workflows/backup-script-test.yml:16:      - 'scripts/run_all_migrations.sh'
+origin/main:.github/workflows/backup-script-test.yml:31:      - 'scripts/run_all_migrations.sh'
+origin/main:.github/workflows/deploy.yml:65:            #   - scripts/run_all_migrations.sh : マイグレーションの唯一の実行経路（SSoT）
+origin/main:.github/workflows/deploy.yml:66:            #   - scripts/migrate_*.py     : run_all_migrations.sh から run_py で呼ばれる
+origin/main:.github/workflows/deploy.yml:71:              - 'scripts/run_all_migrations.sh'
+origin/main:.github/workflows/deploy.yml:276:      # 2026-06-02 改善: part 1 / part 2 を scripts/run_all_migrations.sh に統合
+origin/main:.github/workflows/deploy.yml:277:      #   - 新マイグレーション追加時は deploy.yml ではなく run_all_migrations.sh に追記する
+origin/main:.github/workflows/deploy.yml:281:      #     2. Run database migrations  ← scripts/run_all_migrations.sh を呼ぶだけ
+origin/main:.github/workflows/deploy.yml:890:            bash scripts/run_all_migrations.sh
+origin/main:.github/workflows/migration-guard.yml:123:      - name: deploy.yml または run_all_migrations.sh に登録を確認
+origin/main:.github/workflows/migration-guard.yml:134:            # scripts/run_all_migrations.sh（新スタイル: run_sql migrations/$fname）のどちらかに登録済みか確認
+origin/main:.github/workflows/migration-guard.yml:136:               grep -q "migrations/$fname" scripts/run_all_migrations.sh; then
+origin/main:.github/workflows/migration-guard.yml:139:              echo "❌ $fname → deploy.yml / run_all_migrations.sh のいずれにも未登録"
+origin/main:.github/workflows/migration-guard.yml:157:          echo "【対応手順】scripts/run_all_migrations.sh の末尾に以下を追記してください:"
+origin/main:.github/workflows/migration-guard.yml:286:      #       複数 PR から同時に develop/main に流れ込むと、run_all_migrations.sh の
+origin/main:.github/workflows/migration-guard.yml:434:      # 登録された全 migration（scripts/run_all_migrations.sh の run_sql）を走査し、保護対象の表への
+origin/main:.github/workflows/migration-guard.yml:524:      # 背景: scripts/run_all_migrations.sh は全件を毎デプロイ再実行する前提の
+origin/main:.github/workflows/migration-test.yml:49:              - 'scripts/run_all_migrations.sh'
+origin/main:.github/workflows/migration-test.yml:61:  # run_all_migrations.sh の登録先ファイルが実在するかを全件点検する。
+origin/main:.github/workflows/migration-test.yml:1094:          targets=$(grep -E '^run_py[[:space:]]' scripts/run_all_migrations.sh | awk '{print $2}' | sort -u)
+origin/main:.github/workflows/migration-test.yml:1117:          body=$(awk '/^run_py\(\) \{/{p=1} p{print} p&&/^}/{exit}' scripts/run_all_migrations.sh)
+origin/main:.github/workflows/migration-test.yml:1128:          range=$(awk '/^SQL_LOCK_TIMEOUT=/{p=1} p{print} p&&/^run_sql\(\) \{/{r=1} r&&/^}/{exit}' scripts/run_all_migrations.sh | grep -vE '^[[:space:]]*#' || true)
+origin/main:.github/workflows/migration-test.yml:1348:          # 20261024_100300 は 100000（ai_cloud_meta）と 100100（ai_reader_cloud）が先に流れている前提（run_all_migrations.sh と同じ順）
+origin/main:.github/workflows/migration-test.yml:1477:  # migration 変更がある PR でのみ起動。run_all_migrations.sh の run_sql 記載順を SSoT とする。
+origin/main:.github/workflows/migration-test.yml:1571:          -- public.auth_events（migration 001 が作成・run_all_migrations.sh に含まれないため手動定義）
+origin/main:.github/workflows/migration-test.yml:1600:          -- roles: migration 003 が作成（run_all_migrations.sh 外）・migration 075/025 が参照
+origin/main:.github/workflows/migration-test.yml:1642:              customer_name   VARCHAR(255),  -- migration 003 が作成（run_all_migrations.sh 外）・migration 103 が参照
+origin/main:.github/workflows/migration-test.yml:1651:          -- meta_messages: migration 012 が作成（run_all_migrations.sh 外）
+origin/main:.github/workflows/migration-test.yml:2035:      # ── 廃止列前提検出: run_all_migrations.sh に登録された Python スクリプトを静的解析 ──
+origin/main:.github/workflows/migration-test.yml:2073:          done < <(grep '^run_py' scripts/run_all_migrations.sh | awk '{print $2}')
+origin/main:.github/workflows/migration-test.yml:2129:        # 対象: run_all_migrations.sh の run_sql 行すべて（numbered 0XX + タイムスタンプ形式）
+origin/main:.github/workflows/migration-test.yml:2138:          TOTAL=$(grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' \
+origin/main:.github/workflows/migration-test.yml:2143:          grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' \
+origin/main:.github/workflows/migration-test.yml:2173:          TOTAL=$(grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' \
+origin/main:.github/workflows/migration-test.yml:2177:          grep '^run_sql' scripts/run_all_migrations.sh | awk '{print $2}' \
+origin/main:.github/workflows/migration-test.yml:2298:  # 本体 scripts/run_all_migrations.sh を、名前つきの postgres:16 と backend のコンテナの上でそのまま流す。
+origin/main:.github/workflows/migration-test.yml:2383:          BODY=scripts/run_all_migrations.sh
+origin/main:backend/app/services/tenant.py:1481:-- 段5 5-2: 登録の移行（scripts/run_all_migrations.sh）が会社に作る物を、ひな形にも持たせる。
+origin/main:backend/tests/ops/test_deploy_lock_count.py:28:RUN_MIGRATIONS = ROOT / "scripts" / "run_all_migrations.sh"
+origin/main:backend/tests/ops/test_deploy_lock_count.py:44:    """scripts/run_all_migrations.sh の SELECT の列の順（pid・usename・application_name・state・待ち・取引秒・命令・握る表）。"""
+origin/main:backend/tests/ops/test_deploy_lock_count.py:289:    """作り物の行の列の順が、run_all_migrations.sh の SELECT の列の順（pid・usename・application_name・…）と同じ。"""
+origin/main:backend/tests/test_check_migration_freeze.py:76:        "scripts/run_all_migrations.sh",
+origin/main:backend/tests/test_check_migration_freeze.py:125:        repo.write("scripts/run_all_migrations.sh", body)
+origin/main:backend/tests/test_check_migration_freeze.py:135:            "scripts/run_all_migrations.sh",
+origin/main:backend/tests/test_check_migration_freeze.py:145:            "scripts/run_all_migrations.sh",
+origin/main:backend/tests/test_check_migration_freeze.py:181:    r.write("scripts/run_all_migrations.sh", _body([f"run_sql {DROP_CLOUD}", f"run_sql {DROP_RO}", "run_sql migrations/a.sql"], array=None))
+origin/main:backend/tests/test_check_migration_freeze.py:194:        "scripts/run_all_migrations.sh",
+origin/main:backend/tests/test_check_migration_freeze.py:210:        "scripts/run_all_migrations.sh",
+origin/main:backend/tests/test_check_template_needs_migration.py:18:RUN_ALL_PATH = "scripts/run_all_migrations.sh"
+origin/main:backend/tests/test_check_tenant_template_shape.py:81:    text = (REPO_ROOT / "scripts/run_all_migrations.sh").read_text(encoding="utf-8").splitlines()
+origin/main:backend/tests/test_discord_role_link_ddl.py:68:    runner = (_REPO_ROOT / "scripts" / "run_all_migrations.sh").read_text(encoding="utf-8")
+origin/main:backend/tests/test_leads_assignment_opened_at_pg.py:152:    _apply_migration(connection)  # 2回目: 毎デプロイで再実行される想定（run_all_migrations.sh）
+origin/main:backend/tests/test_line_conditions_value_group_rerun_pg.py:3:run_all_migrations.sh は毎回全 migration を流す。19（promo_pack/single）と 20（booklet）・20_110000（supply）を
+origin/main:backend/tests/test_migration_record_lib.py:17:BODY = REPO_ROOT / "scripts/run_all_migrations.sh"
+origin/main:backend/tests/test_notification_channels_blueprint_key_ddl.py:3:- 移行ファイルが在り、run_all_migrations.sh に 1 行だけ登録され、必要な文があり、値を入れない。
+origin/main:backend/tests/test_notification_channels_blueprint_key_ddl.py:22:    runner = (_REPO_ROOT / "scripts" / "run_all_migrations.sh").read_text(encoding="utf-8")
+origin/main:backend/tests/test_read_probe_tables.py:4:scripts/run_all_migrations.sh の READ_PROBE_TABLES と突き合わせる（design.md §14-5）。
+origin/main:backend/tests/test_read_probe_tables.py:14:SCRIPT = ROOT / "scripts" / "run_all_migrations.sh"
+origin/main:backend/tests/test_roles_system_key_ddl.py:52:    runner = (_REPO_ROOT / "scripts" / "run_all_migrations.sh").read_text(encoding="utf-8")
+origin/main:backend/tests/test_supply_category.py:130:    sh = (ROOT / "scripts/run_all_migrations.sh").read_text()
+origin/main:backend/tests/test_tcg_work_matching_integration.py:1363:    runner = (MIGRATIONS.parent / "scripts/run_all_migrations.sh").read_text()
+origin/main:backend/tests/test_tcg_work_matching_integration.py:1678:    lines = (MIGRATIONS.parent / "scripts/run_all_migrations.sh").read_text().splitlines()
+origin/main:backend/tests/test_tenant_duty_rules_pg.py:121:    runner = (_REPO_ROOT / "scripts" / "run_all_migrations.sh").read_text(encoding="utf-8")
+origin/main:backend/tests/test_tenant_duty_rules_pg.py:136:    runner = (_REPO_ROOT / "scripts" / "run_all_migrations.sh").read_text(encoding="utf-8")
+origin/main:backend/tests/test_tenant_issuer_tables_pg.py:103:    runner = (_REPO_ROOT / "scripts" / "run_all_migrations.sh").read_text(encoding="utf-8")
+origin/main:backend/tests/test_tenant_payment_versioning_pg.py:112:    runner = (_REPO_ROOT / "scripts" / "run_all_migrations.sh").read_text(encoding="utf-8")
+origin/main:backend/tests/test_value_migrations_neutralized_5_1.py:5:- 8 本とも run_all_migrations.sh に登録されたまま（消していない）。
+origin/main:backend/tests/test_value_migrations_neutralized_5_1.py:18:RUNNER = REPO_ROOT / "scripts" / "run_all_migrations.sh"
+origin/main:backend/tests/test_value_migrations_neutralized_5_1.py:70:        f"{filename}: run_all_migrations.sh の登録が外れている"
+origin/main:scripts/check-migration-column-churn.js:5: * scripts/run_all_migrations.sh の登録順に沿って migrations/*.sql
+origin/main:scripts/check-migration-column-churn.js:23: *   MIGRATIONS_SCRIPT_OVERRIDE=<path>   run_all_migrations.sh の代わりに読むファイル
+origin/main:scripts/check-migration-column-churn.js:39:  path.join(REPO_ROOT, 'scripts/run_all_migrations.sh');
+origin/main:scripts/check-migration-column-churn.js:46:// 1. run_all_migrations.sh から登録順リストを抽出
+origin/main:scripts/check-migration-duplicate-registration.sh:2:# check-migration-duplicate-registration.sh — run_all_migrations.sh の二重登録検出
+origin/main:scripts/check-migration-duplicate-registration.sh:14:MIGRATIONS_SCRIPT="scripts/run_all_migrations.sh"
+origin/main:scripts/check-migration-duplicate-registration.sh:45:  echo "以下のパスが scripts/run_all_migrations.sh に複数回登録されています:"
+origin/main:scripts/check-migration-registration-exists.sh:2:# check-migration-registration-exists.sh — run_all_migrations.sh の登録先ファイル実在点検
+origin/main:scripts/check-migration-registration-exists.sh:5:#   - run_all_migrations.sh に列挙された run_py / run_sql の参照先が実在するかを全件確認する
+origin/main:scripts/check-migration-registration-exists.sh:18:MIGRATIONS_SCRIPT="scripts/run_all_migrations.sh"
+origin/main:scripts/check-migration-value-writes.py:13:      scripts/run_all_migrations.sh に登録された全ファイルを走査し、値の書き込みを持つファイルが
+origin/main:scripts/check-migration-value-writes.py:15:      reference-allowlist.tsv の各行も、ファイルが在り・run_all_migrations.sh に書かれ・sha256 が一致することを確かめる。
+origin/main:scripts/check-migration-value-writes.py:31:RUNNER = ROOT / "scripts" / "run_all_migrations.sh"
+origin/main:scripts/check-migration-value-writes.py:243:    """チェック 8 の例外の一覧の各行: ファイルが在り・run_all_migrations.sh にパスが書かれ・sha256 が一致すること。"""
+origin/main:scripts/check-migration-value-writes.py:253:            problems.append(f"例外の一覧の行が、scripts/run_all_migrations.sh に書かれていないファイルを指している: {path}")
+origin/main:scripts/check_migration_freeze.py:39:BODY = "scripts/run_all_migrations.sh"
+origin/main:scripts/check_template_needs_migration.py:13:     scripts/run_all_migrations.sh に登録されているか、許可一覧に PR 番号があれば成功。
+origin/main:scripts/check_template_needs_migration.py:29:RUN_ALL = "scripts/run_all_migrations.sh"
+origin/main:scripts/check_tenant_template_shape.py:8:  4. scripts/run_all_migrations.sh の登録の順に run_sql / run_py を全件流す。
+origin/main:scripts/check_tenant_template_shape.py:60:    """scripts/run_all_migrations.sh の登録（行番号・種類・ファイル・残りの引数）。数え方は本体と同じ。"""
+origin/main:scripts/check_tenant_template_shape.py:61:    path = path or (REPO_ROOT / "scripts/run_all_migrations.sh")
+origin/main:scripts/deploy-db-orphan-cleanup.sh:11:#   1 サーバー側の run_all_migrations.sh / backup.sh deploy のプロセスに TERM を送る（引数が完全一致するものだけ）
+origin/main:scripts/deploy-db-precheck.sh:34:# コンテナ名・接続先は本番の値を固定で書く（scripts/run_all_migrations.sh と同じ値。作業場所のファイルを読まない）
+origin/main:scripts/lib/db-app-names.sh:3:# source して使う。backup.sh・run_all_migrations.sh・deploy-db-orphan-cleanup.sh が読む。
+origin/main:scripts/lib/migration_record.sh:3:# scripts/run_all_migrations.sh から source する。本番のサーバーで Python に頼らないよう、
+origin/main:scripts/migration-column-churn-allowlist.json:5:    "reason": "ADD (migrations/20260604_060000_add_lost_reason_code.sql) runs inside a per-tenant loop guarded by 'deals テーブルが存在しないスキーマはスキップ' (IF NOT EXISTS ... information_schema.tables ... table_name = 'deals' THEN ... CONTINUE). deals table itself was permanently dropped for all tenants by migrations/20260729_043520_drop_deals.sql, and no later migration recreates a deals table. On every full migration re-run after the first rollout, run_all_migrations.sh reaches this ADD step before it reaches the later DROP table step, but the deals-existence guard already short-circuits it (deals no longer exists from the previous run). The ADD->DROP churn happened once at the 2026-07-29 production rollout and cannot recur.",
+origin/main:scripts/migration-dryrun-report.py:22:RUNNER = ROOT / "scripts" / "run_all_migrations.sh"
+origin/main:scripts/migration-guard/dryrun-exclusions.tsv:5:# 規則: 一覧のファイルは scripts/run_all_migrations.sh に登録されていること。直す（baseline に表を足す等）か、
+origin/main:scripts/migration-guard/reference-allowlist.tsv:5:#       (3) repo モードは、各行のファイルが在り・scripts/run_all_migrations.sh にパスが書かれ・sha256 が一致することを確かめる。違えば失敗（古い行を残さない）。
+origin/main:scripts/migration_py_entry.py:3:scripts/run_all_migrations.sh の run_py は、本物の移行を直接ではなくこの入口経由で動かす。
+origin/main:scripts/run_all_migrations.sh:2:# run_all_migrations.sh — 全DBマイグレーションを1本で実行する統合ランナー
+origin/main:scripts/run_all_migrations.sh:10:#   bash scripts/run_all_migrations.sh
+origin/main:scripts/run_all_migrations.sh:575:# HELD: 旧キー削除は新コードデプロイ後に手動GOで適用。run_all_migrations.sh では自動実行しない。
+origin/main:scripts/run_all_migrations.sh:577:# HELD: inventory.condition の削除は backfill とコード切替完了後に手動GOで適用。run_all_migrations.sh では自動実行しない。
+origin/main:scripts/tests/test-deploy-orphan-cleanup.sh:9:#   C8 本物の run_all_migrations.sh の TERM の trap（偽 docker） docker 不要（bash 5 要）
+origin/main:scripts/tests/test-deploy-orphan-cleanup.sh:177:echo "=== C8: 本物の run_all_migrations.sh の TERM の trap（偽 docker） ==="
+origin/main:scripts/tests/test-deploy-orphan-cleanup.sh:211:      FAKE_HELD="${D8}/held" FAKE_SLEEPPID="${D8}/sleeppid" bash scripts/run_all_migrations.sh ) >"${D8}/out.txt" 2>&1 &
+origin/main:scripts/tests/test-deploy-orphan-cleanup.sh:267:      bash scripts/run_all_migrations.sh ) >"${D10}/out.txt" 2>&1 || R10=$?
+origin/main:scripts/tests/test-deploy-orphan-cleanup.sh:455:cat > "${D}/scripts/run_all_migrations.sh" <<'EOF'
+origin/main:scripts/tests/test-deploy-orphan-cleanup.sh:463:( cd "${D}" && exec env C3_MARK="${D}/exit-mark" "${SESSION[@]}" bash scripts/run_all_migrations.sh ) >"${D}/out.txt" 2>&1 &
+origin/main:scripts/tests/test-deploy-orphan-cleanup.sh:483:# ssh-action の段と同じ形: 台本全体を引数に持つ bash（中に run_all_migrations.sh の文字列がある。cwd に scripts は無いので中身は動かない）
+origin/main:scripts/tests/test-deploy-orphan-cleanup.sh:484:( cd "${D}/empty" && exec bash -c "sleep 120; bash scripts/run_all_migrations.sh; true" ) >/dev/null 2>&1 &
+origin/main:scripts/tests/test-deploy-orphan-cleanup.sh:511:cat > "${D}/scripts/run_all_migrations.sh" <<'EOF'
+origin/main:scripts/tests/test-deploy-orphan-cleanup.sh:516:( cd "${D}" && exec "${SESSION[@]}" bash scripts/run_all_migrations.sh ) >/dev/null 2>&1 &
+origin/main:scripts/tests/test-migration-column-churn.js:7: * scripts/run_all_migrations.sh 相当 + migrations/*.sql + allowlist を作り、
+origin/main:scripts/tests/test-migration-column-churn.js:41: * fixture: { 'scripts/run_all_migrations.sh': '...', 'migrations/foo.sql': '...', ... }
+origin/main:scripts/tests/test-migration-column-churn.js:61:    migrationsScript: join(dir, 'scripts/run_all_migrations.sh'),
+origin/main:scripts/tests/test-migration-column-churn.js:88:    'scripts/run_all_migrations.sh': [
+origin/main:scripts/tests/test-migration-column-churn.js:109:      'scripts/run_all_migrations.sh': [
+origin/main:scripts/tests/test-migration-column-churn.js:131:      'scripts/run_all_migrations.sh': ['run_sql migrations/001_only_add.sql'].join('\n'),
+origin/main:scripts/tests/test-migration-column-churn.js:148:    'scripts/run_all_migrations.sh': [
+origin/main:scripts/tests/test-migration-column-churn.js:172:    'scripts/run_all_migrations.sh': [
+origin/main:scripts/tests/test-migration-column-churn.js:194:    'scripts/run_all_migrations.sh': [
+origin/main:scripts/tests/test-migration-column-churn.js:232:    'scripts/run_all_migrations.sh': [
+origin/main:scripts/tests/test-migration-column-churn.js:260:    'scripts/run_all_migrations.sh': ['run_sql migrations/001_drop_then_add.sql'].join('\n'),
+origin/main:scripts/tests/test-migration-column-churn.js:279:    'scripts/run_all_migrations.sh': [
+origin/main:scripts/tests/test-migration-column-churn.js:302:    'scripts/run_all_migrations.sh': [
+origin/main:scripts/tests/test-migration-column-churn.js:324:    'scripts/run_all_migrations.sh': [
+origin/main:scripts/tests/test-migration-column-churn.js:348:    'scripts/run_all_migrations.sh': [
+origin/main:scripts/tests/test-migration-column-churn.js:376:    'scripts/run_all_migrations.sh': [
+origin/main:scripts/tests/test-migration-duplicate-registration.js:20:const MIGRATIONS_SCRIPT = join(repoRoot, 'scripts/run_all_migrations.sh');
+origin/main:scripts/tests/test-migration-duplicate-registration.js:47:  const target = join(dir, 'run_all_migrations.sh');
+origin/main:scripts/tests/test-migration-duplicate-registration.js:61:test('正常系: 実リポジトリの run_all_migrations.sh に重複登録がない', () => {
+origin/main:scripts/tests/test-migration-registration-exists.js:20:const MIGRATIONS_SCRIPT = join(repoRoot, 'scripts/run_all_migrations.sh');
+origin/main:scripts/tests/test-migration-registration-exists.js:55:  const target = join(dir, 'run_all_migrations.sh');
+origin/main:scripts/tests/test-process-artifacts.js:543:  ['○ scripts/run_all_migrations.sh の中の表削除', 'scripts/run_all_migrations.sh', 'psql -c "DROP TABLE old_t"\n', true],
+origin/main:scripts/tests/test-process-artifacts.js:614:  ['○ 1: sh の長い指定の後ろの表削除', 'scripts/run_all_migrations.sh', 'psql --set ON_ERROR_STOP=1 -c "DROP TABLE x"\n', true],
+origin/main:scripts/tests/test-process-artifacts.js:615:  ['○ 1: sh の長い指定の後ろの TRUNCATE', 'scripts/run_all_migrations.sh', 'psql -v ON_ERROR_STOP=1 --command "TRUNCATE x"\n', true],
+origin/main:scripts/tests/test-process-artifacts.js:721:  ['○ 4: シェルのヒアドキュメントの中の WHERE なし DELETE', 'scripts/run_all_migrations.sh', 'psql <<SQL\nDELETE FROM t;\nSQL\n', true],
+origin/main:scripts/tests/test-process-artifacts.js:722:  ['○ 4: シェルのヒアドキュメント（引用符つきの語）の中の TRUNCATE', 'scripts/run_all_migrations.sh', "psql <<'EOF'\nTRUNCATE t;\nEOF\n", true],
+origin/main:scripts/tests/test-process-artifacts.js:723:  ['○ 4: シェルのヒアドキュメントの中の WHERE true の DELETE', 'scripts/run_all_migrations.sh', 'psql <<SQL\nDELETE FROM t WHERE true;\nSQL\n', true],
+origin/main:scripts/tests/test-process-artifacts.js:727:  ['× 4: シェルのヒアドキュメントの中の WHERE のある DELETE', 'scripts/run_all_migrations.sh', 'psql <<SQL\nDELETE FROM t WHERE id = 1;\nSQL\n', false],
+origin/main:scripts/tests/test-process-artifacts.js:728:  ['× 4: シェルのヒアドキュメントの中の SELECT だけ', 'scripts/run_all_migrations.sh', 'psql <<SQL\nSELECT 1;\nSQL\n', false],
+origin/main:scripts/tests/test-process-artifacts.js:729:  ['× 4: シェルのヒアドキュメントではない echo', 'scripts/run_all_migrations.sh', "echo 'DELETE log check'\n", false],
+origin/main:scripts/tests/test-process-artifacts.js:811:  ['○ 5: ヒアドキュメントの終わりの語がバックスラッシュ始まり', 'scripts/run_all_migrations.sh', 'psql <<\\EOF\nDELETE FROM t;\nEOF\n', true],
+origin/main:scripts/tests/test-process-artifacts.js:812:  ['○ 5: ヒアドキュメントの最初の行が psql 命令', 'scripts/run_all_migrations.sh', 'psql <<EOF\n\\set x 1\nDELETE FROM t\nEOF\n', true],
+origin/main:scripts/tests/test-process-artifacts.js:813:  ['× 5: ヒアドキュメントの中の psql 命令の後ろの WHERE のある DELETE', 'scripts/run_all_migrations.sh', 'psql <<EOF\n\\set x 1\nDELETE FROM t WHERE id = 1;\nEOF\n', false],
+origin/main:scripts/tests/test_migration_value_writes.py:47:        (self.dir / "scripts" / "run_all_migrations.sh").write_text("#!/bin/bash\n", encoding="utf-8")
+origin/main:scripts/tests/test_migration_value_writes.py:61:        runner = self.dir / "scripts" / "run_all_migrations.sh"
+origin/main:scripts/tests/test_migration_value_writes.py:289:            (self.repo.dir / "scripts" / "run_all_migrations.sh").write_text(
+origin/main:tests/sandbox/ai-ro-restore-on-failure.sh:2:# 試験: scripts/run_all_migrations.sh の _ai_ro_create_on_exit（失敗しても ai_ro を作り直す）T1〜T8（ADR-1024 改訂）。
+origin/main:tests/sandbox/ai-ro-restore-on-failure.sh:8:SCRIPT=scripts/run_all_migrations.sh
+origin/main:tests/sandbox/migration-read-probe.sh:2:# 試験: scripts/run_all_migrations.sh の read_probe_start / read_probe_stop（移行中の読み取り計測）T1〜T9（ADR-1037 便1.2）と、
+origin/main:tests/sandbox/migration-read-probe.sh:10:SCRIPT=scripts/run_all_migrations.sh
+origin/main:tests/sandbox/migration-run-sql-retry.sh:2:# 試験: scripts/run_all_migrations.sh の run_sql（ロック待ち1秒・流し直し）の挙動 T1〜T6（ADR-1037）。
+origin/main:tests/sandbox/migration-run-sql-retry.sh:8:SCRIPT=scripts/run_all_migrations.sh
