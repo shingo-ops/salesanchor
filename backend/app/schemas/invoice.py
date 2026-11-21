@@ -98,6 +98,7 @@ class InvoicePreviewRequest(BaseModel):
     currency: str = Field(min_length=3, max_length=3)
     items: list[InvoicePreviewItem] = Field(default_factory=list)
     shipping: ShippingInput | None = None
+    payment_method_type: Literal["bank", "wise", "paypal"] | None = None
 
 
 class InvoicePreviewResponse(BaseModel):
@@ -110,6 +111,7 @@ class InvoicePreviewResponse(BaseModel):
     duty_label: str | None
     duty_components: list[dict]
     total_amount: Decimal | None
+    payment_fee: Decimal = Decimal("0")
     uncomputed: list[str]
     incoterms: str
 
@@ -245,6 +247,8 @@ class InvoiceResponse(BaseModel):
     paypal_order_id: str | None = None
     paypal_approval_url: str | None = None
     payment_fee: Decimal | None = None
+    # 便E: お客様への合計に足した支払い手数料（入金時の実額は payment_fee）
+    payment_fee_charged: Decimal | None = None
     # ADR-101改訂(2) Inc1: 発行者ビュー URL（原本ワンクリック）。写しPDF blob は Response に含めない
     paypal_invoicer_view_url: str | None = None
     paypal_copy_pdf_at: datetime | None = None

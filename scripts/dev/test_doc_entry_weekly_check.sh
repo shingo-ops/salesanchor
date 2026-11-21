@@ -276,5 +276,17 @@ check "T-LC2 LINE_COPY=DIFF" has LINE_COPY=DIFF
 check "T-LC2 RESULT=NG に LINE_COPY=DIFF" has_re '^RESULT=NG.*LINE_COPY=DIFF'
 check "T-LC2 rc=1" rc_is 1
 
+# 要件の書類を読まずに「不具合」と言いかけた記録の数え（BUG_CLAIMS_7D）。記録は REQUIREMENT_LIBRARY_LOG で一時の場所に向ける
+setup; export REQUIREMENT_LIBRARY_LOG="$T/no-such-bug-claims.log"; run
+check "T-BC1 記録なし → BUG_CLAIMS_7D=0" has BUG_CLAIMS_7D=0
+check "T-BC1 RESULT=OK" has RESULT=OK
+
+setup; export REQUIREMENT_LIBRARY_LOG="$T/bug-claims.log"
+printf '%s\n' "2027-01-31 09:00	s1	a" "2027-01-25 10:00	s2	b" "2027-01-24 10:00	s3	c" > "$REQUIREMENT_LIBRARY_LOG"; run
+check "T-BC2 BUG_CLAIMS_7D=2" has BUG_CLAIMS_7D=2
+check "T-BC2 RESULT=NG に BUG_CLAIMS_7D=2" has_re '^RESULT=NG.*BUG_CLAIMS_7D=2'
+check "T-BC2 rc=1" rc_is 1
+unset REQUIREMENT_LIBRARY_LOG
+
 echo "PASS $PASS / FAIL $FAIL"
 [ "$FAIL" -eq 0 ]

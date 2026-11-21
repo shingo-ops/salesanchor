@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import json
 import os
 from datetime import date, datetime, timezone
 from decimal import Decimal
@@ -18,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from app.routers.invoices import (
     _INSERT_INVOICE_SQL,
     _INVOICE_COLUMNS,
+    download_invoice_pdf,
     fetch_fx_rate,
     get_invoice_draft_context,
 )
@@ -31,6 +33,7 @@ from tests.rls_bootstrap import (
     public_bootstrap_lock,
     tenant_schema_lock,
 )
+from tests.test_paypal_invoicing import _pdf_text
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 
@@ -45,6 +48,7 @@ _PUBLIC_MIGRATIONS = (
     "20260610_071110_add_paypal_config.sql",
     "20260628_170000_add_app_fx_rates.sql",
     "20261003_100000_create_app_fx_rate_history.sql",
+    "20261002_160000_create_payment_fee_settings.sql",
 )
 
 
@@ -328,6 +332,141 @@ async def test_invoice_totals_pg_end_to_end(monkeypatch):
                         y = await _check_payment_methods(db)
                         wise_ids = [c["id"] for c in await pay.list_payment_choices(db, _TENANT_ID, "overseas")]
                         await _check_routes(db, company_id, invoice_id, y, wise_ids)
+                    finally:
+                        await db.rollback()
+            finally:
+                await _cleanup(admin_engine)
+    finally:
+        await admin_engine.dispose()
+
+
+async def _insert_fee(
+    db: AsyncSession, tenant_id: int | None, fee_type: str, rate: str, effective_from: date,
+    effective_to: date | None = None,
+) -> None:
+    await db.execute(
+        text(
+            "INSERT INTO public.payment_fee_settings "
+            "(tenant_id, service, fee_type, rate_pct, fixed_amount, currency, effective_from, effective_to) "
+            "VALUES (:t, 'paypal', :ft, :r, 40, 'JPY', :f, :e)"
+        ),
+        {"t": tenant_id, "ft": fee_type, "r": Decimal(rate), "f": effective_from, "e": effective_to},
+    )
+
+
+@pytest.mark.skipif(
+    not ADMIN_PG_URL,
+    reason="実 PostgreSQL 環境が必要 (RLS_ADMIN_DATABASE_URL / TEST_PG_URL 未設定)。",
+)
+@pytest.mark.asyncio
+async def test_load_payment_fee_rows_prefers_tenant_and_latest():
+    """K4: 自社の行が共用の行より先・期間外と将来の行は使わない・円なら為替の行は読まない（design-e §3-1）。"""
+    admin_engine = create_async_engine(ADMIN_PG_URL, echo=False)
+    try:
+        await bootstrap_public_countries(admin_engine)
+        async with tenant_schema_lock(admin_engine, _TENANT_ID):
+            assert await bootstrap_tenant_schema(admin_engine, _TENANT_ID) == _SCHEMA
+            async with public_bootstrap_lock(admin_engine):
+                async with admin_engine.begin() as conn:
+                    for name in _PUBLIC_MIGRATIONS:
+                        await _apply_migration_on_conn(conn, name)
+            try:
+                async with AsyncSession(admin_engine, expire_on_commit=False) as db:
+                    try:
+                        base = date(2026, 11, 15)
+                        await _insert_fee(db, None, "receiving_international", "4.1", date(2025, 1, 1))
+                        await _insert_fee(db, None, "receiving_international", "5.0", date(2026, 12, 1))
+                        await _insert_fee(db, None, "receiving_international", "3.9", date(2024, 1, 1), date(2024, 12, 31))
+                        await _insert_fee(db, _TENANT_ID, "receiving_international", "3.0", date(2026, 1, 1))
+                        await _insert_fee(db, None, "fx_receiving", "4.0", date(2025, 1, 1))
+
+                        rows = await it.load_payment_fee_rows(
+                            db, _TENANT_ID, issuer_region="overseas", currency="USD", base_date=base,
+                        )
+                        assert rows.receiving is not None and rows.receiving.rate_pct == Decimal("3.0")
+                        assert rows.fx is not None and rows.fx.rate_pct == Decimal("4.0")
+                        assert rows.required_fx is True
+
+                        # 自社の行を外すと共用の最新（基準日以前）が選ばれる
+                        await db.execute(
+                            text("DELETE FROM public.payment_fee_settings WHERE tenant_id = :t"), {"t": _TENANT_ID},
+                        )
+                        rows = await it.load_payment_fee_rows(
+                            db, _TENANT_ID, issuer_region="overseas", currency="USD", base_date=base,
+                        )
+                        assert rows.receiving is not None and rows.receiving.rate_pct == Decimal("4.1")
+
+                        rows = await it.load_payment_fee_rows(
+                            db, _TENANT_ID, issuer_region="overseas", currency="JPY", base_date=base,
+                        )
+                        assert rows.fx is None and rows.required_fx is False
+                    finally:
+                        await db.rollback()
+            finally:
+                await _cleanup(admin_engine)
+    finally:
+        await admin_engine.dispose()
+
+
+@pytest.mark.skipif(
+    not ADMIN_PG_URL,
+    reason="実 PostgreSQL 環境が必要 (RLS_ADMIN_DATABASE_URL / TEST_PG_URL 未設定)。",
+)
+@pytest.mark.asyncio
+async def test_invoice_pdf_route_shows_payment_fee_only_for_paypal_pg():
+    """便E K7c: 請求書の PDF の道でも手数料の行は PayPal だけ（本物の PostgreSQL で道の関数を直接呼ぶ）"""
+    admin_engine = create_async_engine(ADMIN_PG_URL, echo=False)
+    try:
+        await bootstrap_public_countries(admin_engine)
+        async with tenant_schema_lock(admin_engine, _TENANT_ID):
+            assert await bootstrap_tenant_schema(admin_engine, _TENANT_ID) == _SCHEMA
+            async with public_bootstrap_lock(admin_engine):
+                async with admin_engine.begin() as conn:
+                    for name in _PUBLIC_MIGRATIONS:
+                        await _apply_migration_on_conn(conn, name)
+            try:
+                async with AsyncSession(admin_engine, expire_on_commit=False) as db:
+                    try:
+                        company_id, _c, bank_id = await _check_new_tenant(db)
+                        inputs = it.TotalsInputs(
+                            base_date=date(2026, 11, 15), incoterms="DAP", tax=None, duty_rules=(),
+                            fx={"USD": it.FxRow(currency="USD", rate_jpy=Decimal("150.0000"), fetched_at=datetime(2026, 11, 15, 1, 0, tzinfo=timezone.utc))},
+                        )
+                        totals = it.compute_totals(
+                            currency="USD",
+                            items=[it.TotalsItem(quantity=2, unit_price=Decimal("10.00"))],
+                            shipping=it.ShippingChoice(mode="none"),
+                            destination="US",
+                            inputs=inputs,
+                        )
+                        params = {
+                            "tid": _TENANT_ID, "inv_num": "IN-953-02", "qid": None,
+                            "company_id": company_id, "contact_id": _c, "currency": "USD",
+                            "payment": "paypal", "payment_method_id": None, "erp_key": "E953B",
+                            "due_date": None, "notes": None, "created_by": None,
+                            "ship_to": None, "bill_to": None, "issuer_region": "domestic",
+                            **it.to_db_params(totals),
+                        }
+                        params["payment_fee_charged"] = Decimal("131.00")
+                        params["payment_fee_snapshot"] = json.dumps({"method_type": "paypal"})
+                        paypal_id = await _scalar(
+                            db,
+                            _INSERT_INVOICE_SQL.replace("INSERT INTO invoices", f"INSERT INTO {_SCHEMA}.invoices"),
+                            params,
+                        )
+                        await db.execute(
+                            text(f"UPDATE {_SCHEMA}.invoices SET issued_at = NOW() WHERE id IN (:a, :b)"),
+                            {"a": bank_id, "b": paypal_id},
+                        )
+                        await db.execute(text(f"SET search_path TO {_SCHEMA}, public"))
+
+                        bank_resp = await download_invoice_pdf(invoice_id=bank_id, db=db, tenant_id=_TENANT_ID, current_user=None)
+                        assert bank_resp.media_type == "application/pdf"
+                        assert b"Payment fee" not in _pdf_text(bank_resp.body)
+
+                        paypal_resp = await download_invoice_pdf(invoice_id=paypal_id, db=db, tenant_id=_TENANT_ID, current_user=None)
+                        assert paypal_resp.media_type == "application/pdf"
+                        assert b"Payment fee" in _pdf_text(paypal_resp.body)
                     finally:
                         await db.rollback()
             finally:

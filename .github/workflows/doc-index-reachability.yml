@@ -35,3 +35,9 @@ jobs:
           set -e
           echo "doc-index: $(grep '^SUMMARY' /tmp/doc-index.txt)" >> "$GITHUB_STEP_SUMMARY"
           exit "$rc"
+
+      - name: Check feature index
+        shell: bash
+        run: |
+          python3 -I scripts/ci/check_feature_index.py --root .
+          python3 -I scripts/ci/test_check_feature_index.py

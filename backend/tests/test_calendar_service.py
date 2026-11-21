@@ -27,7 +27,7 @@ DB・Google API は全てモックする。SQLAlchemy AsyncSession を AsyncMock
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -169,6 +169,19 @@ class TestToGoogleEventBody:
         }
         body = _to_google_event_body(payload)
         assert "description" not in body
+        assert "location" not in body
+
+    def test_empty_description_is_sent_and_none_location_is_not(self):
+        from app.services.calendar_service import _to_google_event_body
+        payload = {
+            "title": "テスト",
+            "start_datetime": "2026-06-01T10:00:00+09:00",
+            "end_datetime": "2026-06-01T11:00:00+09:00",
+            "description": "",
+            "location": None,
+        }
+        body = _to_google_event_body(payload)
+        assert body["description"] == ""
         assert "location" not in body
 
     def test_empty_title_defaults(self):
@@ -574,6 +587,139 @@ class TestDeleteEvent:
         db.commit.assert_called()
 
 
+_T1 = datetime(2026, 11, 20, 1, 0, tzinfo=timezone.utc)
+_T2 = datetime(2026, 11, 20, 2, 0, tzinfo=timezone.utc)
+
+
+def _app_origin_db(row, rowcount=1):
+    """アプリ起源の予定用 db モック。実行された (sql, params) を db.calls に積む。"""
+    db = AsyncMock()
+    db.commit = AsyncMock()
+    calls = []
+
+    async def _exec(stmt, params=None):
+        sql = str(getattr(stmt, "text", stmt))
+        calls.append((sql, params))
+        r = MagicMock()
+        r.rowcount = rowcount
+        if sql.lstrip().startswith("SELECT id, title"):
+            r.first = MagicMock(return_value=row)
+        elif sql.lstrip().startswith("SELECT 1"):
+            r.first = MagicMock(return_value=(1,))
+        return r
+
+    db.execute = _exec
+    db.calls = calls
+    return db
+
+
+def _g_event(**kw):
+    ev = {
+        "id": "ev_app", "status": "confirmed", "summary": "題",
+        "start": {"dateTime": "2026-11-20T10:00:00+09:00"},
+        "end": {"dateTime": "2026-11-20T11:00:00+09:00"},
+    }
+    ev.update(kw)
+    return ev
+
+
+def _updates(db):
+    return [(s, p) for s, p in db.calls if s.lstrip().startswith("UPDATE")]
+
+
+class TestUpdateAppOriginFromGoogle:
+    async def _go(self, db, event, labels=None):
+        from app.services.calendar_service import upsert_from_google
+
+        return await upsert_from_google(db, 1, event, 9, label_colors=labels)
+
+    @pytest.mark.asyncio
+    async def test_select_guards_and_no_row_or_zero_rowcount(self):
+        db = _app_origin_db(None)
+        assert await self._go(db, _g_event()) == "skipped"
+        select = [s for s, _ in db.calls if s.lstrip().startswith("SELECT id, title")][0]
+        assert "sync_status = 'synced'" in select
+        assert "recurrence_rule IS NULL" in select
+        assert "recurring_event_id IS NULL" in select
+        assert _updates(db) == []
+        db2 = _app_origin_db((5, "旧", None, None, _T1, _T2, False, None), rowcount=0)
+        assert await self._go(db2, _g_event()) == "skipped"
+        assert len(_updates(db2)) == 1
+
+    @pytest.mark.asyncio
+    async def test_cancelled_touches_nothing(self):
+        db = _app_origin_db((5, "題", None, None, _T1, _T2, False, None))
+        assert await self._go(db, _g_event(status="cancelled")) == "skipped"
+        sqls = [s for s, _ in db.calls]
+        assert not any(s.lstrip().startswith(("SELECT id, title", "UPDATE", "DELETE")) for s in sqls)
+
+    @pytest.mark.asyncio
+    async def test_same_content_writes_nothing(self):
+        row = (5, "題", "", "a\r\nb", _T1, _T2, False, None)
+        db = _app_origin_db(row)
+        assert await self._go(db, _g_event(location="a\nb")) == "skipped"
+        assert _updates(db) == []
+
+    @pytest.mark.asyncio
+    async def test_all_day_comparison(self):
+        jst = timezone(timedelta(hours=9))
+        a_start = datetime(2026, 11, 20, 15, 0, tzinfo=timezone.utc)
+        a_end = datetime(2026, 11, 21, 14, 59, tzinfo=timezone.utc)
+        b_end = datetime(2026, 11, 21, 15, 0, tzinfo=timezone.utc)
+        ga = {"start": {"date": "2026-11-21"}, "end": {"date": "2026-11-22"}}
+        db = _app_origin_db((5, "題", None, None, a_start, a_end, True, None))
+        assert await self._go(db, _g_event(**ga)) == "skipped"
+        assert _updates(db) == []
+        gb = {"start": {"date": "2026-11-21"}, "end": {"date": "2026-11-23"}}
+        db = _app_origin_db((5, "題", None, None, a_start, b_end, True, None))
+        assert await self._go(db, _g_event(**gb)) == "skipped"
+        assert _updates(db) == []
+        db = _app_origin_db((5, "題", None, None, a_start, a_end, True, None))
+        assert await self._go(db, _g_event(**gb)) == "upserted"
+        (_sql, params), = _updates(db)
+        assert params["end_datetime"] == datetime(2026, 11, 22, 23, 59, tzinfo=jst)
+        assert params["start_datetime"] == datetime(2026, 11, 21, 0, 0, tzinfo=jst)
+        assert params["is_all_day"] is True
+
+    @pytest.mark.asyncio
+    async def test_color_only_when_label_matches(self):
+        row = (5, "題", None, None, _T1, _T2, False, "red")
+        with patch("app.services.calendar_service.key_for_hex", side_effect=lambda h: {"#0000ff": "blue"}.get(h)):
+            db = _app_origin_db(row)
+            assert await self._go(db, _g_event(eventLabelId="L1"), {"L1": "#0000ff"}) == "upserted"
+            assert _updates(db)[0][1]["color_key"] == "blue"
+            for ev, labels in (
+                (_g_event(eventLabelId="L1"), None),
+                (_g_event(), {"L1": "#0000ff"}),
+                (_g_event(eventLabelId="L9"), {"L1": "#0000ff"}),
+            ):
+                db = _app_origin_db(row)
+                assert await self._go(db, ev, labels) == "skipped"
+                assert _updates(db) == []
+
+    @pytest.mark.asyncio
+    async def test_never_writes_to_google(self):
+        from app.services import google_calendar
+
+        boom = AsyncMock(side_effect=AssertionError("Google へ書いた"))
+        with patch.object(google_calendar, "create_event", boom), patch.object(
+            google_calendar, "update_event", boom
+        ), patch.object(google_calendar, "delete_event", boom):
+            db = _app_origin_db((5, "旧", None, None, _T1, _T2, False, None))
+            assert await self._go(db, _g_event()) == "upserted"
+            assert await self._go(_make_db(first_return=None), _g_event(id="g1")) == "upserted"
+        boom.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_same_instant_in_other_offset_writes_nothing(self):
+        jst = timezone(timedelta(hours=9))
+        row = (5, "題", None, None, datetime(2026, 11, 20, 10, 0, tzinfo=jst), datetime(2026, 11, 20, 11, 0, tzinfo=jst), False, None)
+        db = _app_origin_db(row)
+        ev = _g_event(start={"dateTime": "2026-11-20T01:00:00Z"}, end={"dateTime": "2026-11-20T02:00:00Z"})
+        assert await self._go(db, ev) == "skipped"
+        assert _updates(db) == []
+
+
 class TestUpsertFromGoogle:
     @pytest.mark.asyncio
     async def test_skips_when_no_event_id(self):
@@ -603,22 +749,29 @@ class TestUpsertFromGoogle:
         db.commit.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_skips_app_origin(self):
+    async def test_app_origin_updates_content_only(self):
         from app.services.calendar_service import upsert_from_google
 
-        db = AsyncMock()
-        db.commit = AsyncMock()
-        origin_result = MagicMock()
-        origin_result.first = MagicMock(return_value=(1,))  # app origin found
-        db.execute = AsyncMock(return_value=origin_result)
-
+        row = (5, "旧題名", None, None, _T1, _T2, False, None)
+        db = _app_origin_db(row)
         out = await upsert_from_google(
             db, tenant_id=1,
-            google_event={"id": "ev_app", "status": "confirmed"}, owner_user_id=9,
+            google_event={
+                "id": "ev_app", "status": "confirmed", "summary": "新題名",
+                "start": {"dateTime": "2026-11-20T10:00:00+09:00"},
+                "end": {"dateTime": "2026-11-20T11:00:00+09:00"},
+            },
+            owner_user_id=9,
         )
-        assert out == "skipped"
-        # execute は _is_app_origin の1回のみ（upsert は呼ばれない）
-        assert db.execute.call_count == 1
+        assert out == "upserted"
+        sql, params = db.calls[2]
+        assert sql.lstrip().startswith("UPDATE")
+        set_part = sql.split("SET", 1)[1].split("WHERE", 1)[0]
+        assert "title = :title" in set_part
+        for col in ("calendar_type", "user_id", "source", "sync_origin_id", "meet_url"):
+            assert col not in set_part
+        assert "sync_status = 'synced'" in sql.split("WHERE", 1)[1]
+        assert params["title"] == "新題名"
         db.commit.assert_not_called()
 
     @pytest.mark.asyncio
@@ -849,9 +1002,11 @@ def _make_list_service(responses):
     return service, kw_log
 
 
-def _sync_patches(service, upsert=None):
+def _sync_patches(service, upsert=None, publish=None):
     upsert = upsert or AsyncMock(return_value="upserted")
+    publish = publish or AsyncMock()
     return upsert, [
+        patch("app.realtime.publisher.publish_change", new=publish),
         patch("app.services.google_webhook.set_tenant_context", AsyncMock()),
         patch("app.services.google_webhook.reset_tenant_context", AsyncMock()),
         patch("app.services.google_calendar._get_service", AsyncMock(return_value=service)),
@@ -860,16 +1015,32 @@ def _sync_patches(service, upsert=None):
 
 
 class TestSyncTenantFromGoogle:
-    async def _run(self, db, service, upsert=None):
+    async def _run(self, db, service, upsert=None, publish=None):
         from contextlib import ExitStack
         from app.services.google_webhook import sync_tenant_from_google
 
-        up, patches = _sync_patches(service, upsert)
+        up, patches = _sync_patches(service, upsert, publish)
         with ExitStack() as stack:
             for p in patches:
                 stack.enter_context(p)
             result = await sync_tenant_from_google(db, 1)
         return result, up
+
+    @pytest.mark.asyncio
+    async def test_publishes_calendar_events_when_something_written(self):
+        db = _make_sync_db(sync_token="T")
+        service, _ = _make_list_service([{"items": [{"id": "a"}], "nextSyncToken": "N"}])
+        pub = AsyncMock()
+        await self._run(db, service, publish=pub)
+        pub.assert_awaited_once_with("calendar.events", "tenant", 1)
+
+    @pytest.mark.asyncio
+    async def test_does_not_publish_when_all_skipped(self):
+        db = _make_sync_db(sync_token="T")
+        service, _ = _make_list_service([{"items": [{"id": "a"}], "nextSyncToken": "N"}])
+        pub = AsyncMock()
+        await self._run(db, service, upsert=AsyncMock(return_value="skipped"), publish=pub)
+        pub.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_sync_token_sends_only_sync_token(self):
@@ -1936,9 +2107,9 @@ class TestUpsertRecurringInstance:
         db = _make_db()
         event = {"id": "gm_20261126T010000Z", "recurringEventId": "gm",
                  "start": {"dateTime": "2026-11-26T10:00:00+09:00"}, "end": {"dateTime": "2026-11-26T11:00:00+09:00"}}
-        with patch("app.services.calendar_service._is_app_origin", new=AsyncMock(side_effect=[False, True])) as origin:
+        with patch("app.services.calendar_service._is_app_origin", new=AsyncMock(side_effect=[True])) as origin:
             assert await upsert_from_google(db, 1, event, 5) == "skipped"
-        assert origin.await_args_list[1].args[1] == "gm"
+        assert origin.await_args_list[0].args[1] == "gm"
         db.execute.assert_not_called()
 
 

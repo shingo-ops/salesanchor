@@ -14,6 +14,10 @@ on:
       - 'scripts/dev/consent-audit.py'
       - 'scripts/dev/consent-unit-tests.py'
       - 'docs/handoff/conversation-consent/hooks/**'
+      - '.claude/hooks/requirement-*'
+      - '.claude/hooks/test_requirement_*'
+      - 'scripts/ci/feature_index_lib.py'
+      - 'docs/adr/FEATURE-INDEX.md'
 
 jobs:
   review-gate:
@@ -156,3 +160,19 @@ jobs:
             echo "consent unit tests: FAIL line found, or PASS/DONE missing"
             exit 1
           fi
+
+  requirement-hooks:
+    name: requirement hooks test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run requirement-bug-claim tests
+        run: python3 -I .claude/hooks/test_requirement_bug_claim.py
+      - name: Run requirement-context tests
+        run: python3 -I .claude/hooks/test_requirement_context.py

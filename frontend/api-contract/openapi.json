@@ -15068,6 +15068,17 @@
             ],
             "title": "Payment Fee"
           },
+          "payment_fee_charged": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Fee Charged"
+          },
           "payment_method": {
             "anyOf": [
               {
@@ -15663,6 +15674,22 @@
             "title": "Items",
             "type": "array"
           },
+          "payment_method_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "bank",
+                  "wise",
+                  "paypal"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method Type"
+          },
           "shipping": {
             "anyOf": [
               {
@@ -15718,6 +15745,11 @@
           },
           "incoterms": {
             "title": "Incoterms",
+            "type": "string"
+          },
+          "payment_fee": {
+            "default": "0",
+            "title": "Payment Fee",
             "type": "string"
           },
           "shipping_fee": {
@@ -16034,6 +16066,17 @@
               }
             ],
             "title": "Payment Fee"
+          },
+          "payment_fee_charged": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Fee Charged"
           },
           "payment_method": {
             "anyOf": [

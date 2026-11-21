@@ -66,6 +66,7 @@ def test_table_rows_are_read():
         "payment_method",
         "contact_company_mismatch",
         "invoice_not_draft",
+        "payment_fee",
     ]
 
 

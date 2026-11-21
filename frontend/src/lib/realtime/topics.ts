@@ -4,4 +4,5 @@ export const TOPICS = {
   tcgInventory: "tcg.inventory",
   authLoginRequest: "auth.login_request",
   notices: "notices",
+  calendarEvents: "calendar.events",
 } as const;

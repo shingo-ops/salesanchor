@@ -1474,5 +1474,8 @@ run_sql migrations/20261117_130000_grant_unmask_owner_once_per_source.sql
 # ADR-1081 便1: 予定ごとの色（calendar_events に color_key・CHECK 1 つ・冪等）
 run_sql migrations/20261119_120000_add_calendar_events_color_key.sql
 
+# invoice-create-portfolio 便E: 請求書に支払い手数料の額と写しの列を足す（全テナント・冪等・値は書かない）
+run_sql migrations/20261121_100000_add_invoice_payment_fee_charged.sql
+
 # 実行済みの記録の集計（段5 5-3）。新しい手順は、この集計の行より上（上の run_ の並びの末尾）に足す。
 mr_report_summary

@@ -85,6 +85,11 @@
           { "type": "command", "command": "[ \"$CLAUDE_CODE_REMOTE\" = \"true\" ] || exit 0; exec bash \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh\"", "timeout": 10, "onFailure": "block" }
       ] }
     ],
+    "PostToolUse": [
+      { "matcher": "Read|Edit|Write|MultiEdit|Bash", "hooks": [
+          { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/requirement-context.py\"", "timeout": 5 }
+      ] }
+    ],
     "UserPromptSubmit": [
       { "hooks": [
           { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh\"", "timeout": 10 }
@@ -93,6 +98,9 @@
     "Stop": [
       { "hooks": [
           { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh\"", "timeout": 10 }
+      ] },
+      { "hooks": [
+          { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/requirement-bug-claim.py\"", "timeout": 10 }
       ] }
     ]
   }

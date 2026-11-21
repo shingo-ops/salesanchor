@@ -271,3 +271,88 @@ def test_t21_today_jst_uses_japan_time(monkeypatch):
 
     monkeypatch.setattr(invoice_totals, "datetime", _Fixed)
     assert today_jst() == date(2026, 11, 15)
+
+
+# ── 便E: PayPal の支払い手数料（design-e.md §3-2・K1〜K3・K5）──────────────────
+
+from tests.conftest import paypal_fee_rows  # noqa: E402
+
+
+def test_e1_paypal_domestic_jpy():
+    r = compute_totals(
+        currency="JPY", items=_items((1, "100000")), shipping=NONE, destination="US",
+        inputs=inputs(payment_fee_rows=paypal_fee_rows(international=False)), payment_method_type="paypal",
+    )
+    assert r.payment_fee == Decimal("3640")
+    assert r.total_amount == Decimal("103640")
+    assert r.payment_fee_snapshot["rate_pct"] == "3.6000"
+
+
+def test_e2_paypal_international_usd_with_fx():
+    r = compute_totals(
+        currency="USD", items=_items((1, "1000.00")), shipping=NONE, destination="US",
+        inputs=inputs(payment_fee_rows=paypal_fee_rows(with_fx=True)), payment_method_type="paypal",
+    )
+    assert r.payment_fee == Decimal("81.26")
+    assert r.total_amount == Decimal("1081.26")
+
+
+def test_e3_bank_wise_none_have_no_fee():
+    for method in ("bank", "wise", None):
+        r = compute_totals(
+            currency="JPY", items=_items((1, "100000")), shipping=NONE, destination="US",
+            inputs=inputs(payment_fee_rows=paypal_fee_rows(international=False)), payment_method_type=method,
+        )
+        assert r.payment_fee == Decimal("0")
+        assert r.payment_fee_snapshot is None
+        assert r.total_amount == Decimal("100000")
+
+
+def test_e4_paypal_blocks_without_rows():
+    good = paypal_fee_rows(with_fx=True)
+    with_threshold = invoice_totals.PaymentFeeRows(
+        receiving=invoice_totals.PaymentFeeRow(
+            id=9, fee_type="receiving_international", rate_pct=Decimal("4.1"), fixed_amount=Decimal("40"),
+            threshold=Decimal("1000"),
+        ),
+        fx=good.fx, required_fx=True,
+    )
+    cases = [
+        ("JPY", None),
+        ("JPY", invoice_totals.PaymentFeeRows(receiving=None, fx=None, required_fx=False)),
+        ("USD", with_threshold),
+        ("USD", invoice_totals.PaymentFeeRows(receiving=good.receiving, fx=None, required_fx=True)),
+    ]
+    for cur, rows in cases:
+        r = compute_totals(
+            currency=cur, items=_items((1, "1000")), shipping=NONE, destination="US",
+            inputs=inputs(payment_fee_rows=rows), payment_method_type="paypal",
+        )
+        assert r.uncomputed[-1] == "payment_fee"
+        assert r.total_amount is None
+        assert first_block(r) == (409, "payment_fee")
+
+
+def test_e5_reason_order_ends_with_payment_fee():
+    assert invoice_totals.REASON_ORDER[-1] == "payment_fee"
+
+
+def test_e6_to_db_params_payment_fee_columns():
+    import json
+
+    from app.services.invoice_totals import to_db_params
+
+    paypal = compute_totals(
+        currency="JPY", items=_items((1, "100000")), shipping=NONE, destination="US",
+        inputs=inputs(payment_fee_rows=paypal_fee_rows(international=False)), payment_method_type="paypal",
+    )
+    p = to_db_params(paypal)
+    assert p["payment_fee_charged"] == Decimal("3640")
+    assert json.loads(p["payment_fee_snapshot"])["method_type"] == "paypal"
+    bank = compute_totals(
+        currency="JPY", items=_items((1, "100000")), shipping=NONE, destination="US",
+        inputs=inputs(), payment_method_type="bank",
+    )
+    b = to_db_params(bank)
+    assert b["payment_fee_charged"] is None
+    assert b["payment_fee_snapshot"] is None

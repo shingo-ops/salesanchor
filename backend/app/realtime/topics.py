@@ -18,6 +18,7 @@ TOPIC_TCG_REVIEW = "tcg.review"
 TOPIC_TCG_INVENTORY = "tcg.inventory"
 TOPIC_AUTH_LOGIN_REQUEST = "auth.login_request"
 TOPIC_NOTICES = "notices"
+TOPIC_CALENDAR_EVENTS = "calendar.events"
 
 # 人宛ての話題 → 範囲。人宛ての合図は口の中で publish_user_change により直接送る（書き込みの口の自動合図にはしない）
 USER_TOPICS: dict[str, str] = {
@@ -36,6 +37,12 @@ WRITE_ROUTE_TOPICS: dict[tuple[str, str], tuple[str, str]] = {
 # tcg.inventory は書き込み API からも INVENTORY_SIGNAL_ROUTES 経由で同じ範囲で出る
 TASK_TOPICS: dict[str, str] = {
     TOPIC_TCG_INVENTORY: SCOPE_SHARED,
+}
+
+# 会社の分かる裏の処理が出す topic → 範囲（ADR-1016 改訂 2026-11-20）。範囲は tenant だけ（試験で固定）。
+# calendar.events の送り口は services/google_webhook.py の sync_tenant_from_google の 1 か所
+TENANT_TASK_TOPICS: dict[str, str] = {
+    TOPIC_CALENDAR_EVENTS: SCOPE_TENANT,
 }
 
 # 在庫表が読む共通の表（public）に書く経路。2xx のとき middleware が tcg.inventory を shared で出す
