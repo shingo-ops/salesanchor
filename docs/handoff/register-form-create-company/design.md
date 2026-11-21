@@ -16,7 +16,7 @@
 
 ## 3. やり方（カード: `docs/handoff/register-form-create-company/card.md`）
 
-1. トークンを確かめた後、同じリードの会社作りが 2 本同時に走らないように、PostgreSQL のときだけ `SELECT id FROM leads WHERE id = :lead_id FOR UPDATE` でリードの行を押さえる（`is_postgresql(db)` が偽の試験用 SQLite では押さえない）。リードが無ければ今の `company_not_found` と同じ 404。
+1. トークンを確かめた後、同じリードの会社作りが 2 本同時に走らないように、PostgreSQL のときだけ `SELECT company_name, customer_name FROM leads WHERE id = :lead_id FOR UPDATE` でリードの行を押さえる（`is_postgresql(db)` が偽の試験用 SQLite では押さえない）。リードが無ければ今の `company_not_found` と同じ 404。
 2. 今の `SELECT id, billing_display_name FROM companies WHERE lead_id = :lead_id` で会社を探す（`ORDER BY id LIMIT 1` を足して、昔の重複があっても 1 件に決める）。
 3. 無ければ作る:
    - `name` = リードの `company_name`（前後の空白を除いて空でなければ）→ だめならリードの `customer_name` → だめなら送られた `billing_display_name`。3 つとも空なら 422 `company_name_required`（画面は請求先名が空だと送らないので、ふつうは起きない）。本番の 51 件中 50 件が `companies.name = leads.company_name = leads.customer_name`（recon §3）なので、この順は今のデータの作られ方と同じ。
