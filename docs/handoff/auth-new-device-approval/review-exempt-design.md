@@ -33,12 +33,12 @@ PO 2026-11-22 の条件（原文の要点をそのまま並べる）:
 | K3 | ほかの会社の人は、スイッチが ON でも今までどおり 202 で止まる | 試験 `test_meta_review_other_tenant_still_202`・既存 `backend/tests/test_new_device_approval.py` が全部緑 |
 | K4 | 印の無い会社は、データベースの決まりで ON にできない。印を付けられる会社は1社だけ | 試験 `test_meta_review_check_rejects_unmarked_tenant`・`test_meta_review_marker_unique`（PostgreSQL） |
 | K5 | スイッチを動かせるのは super admin だけ。ほかの人は 403。会社006の中の super admin の人には効かない | 試験 `test_meta_review_switch_forbidden_for_non_super_admin`・`test_meta_review_not_for_super_admin_user` |
-| K6 | ON にしてから14日たつと、何もしなくても OFF に戻る（画面も OFF を出す）。画面に「〇月〇日 〇時〇分に、14日たったので自動で OFF になりました」と自動で OFF になった日時が出る。手で OFF にしたときはこの行は出ない | 試験 `test_meta_review_auto_off_after_14_days`（GET が過ぎた `until` をそのまま返す）・`MetaReviewPage.test.tsx`（過ぎた `until` で行が出る・`until: null` で出ない） |
+| K6 | ON にしてから14日たつと、何もしなくても OFF に戻る（画面も OFF を出す）。画面に「〇月〇日 〇時〇分に、14日たったので自動で OFF になりました」と自動で OFF になった日時が出る。手で OFF にしたときはこの行は出ない | 試験 `test_meta_review_auto_off_after_14_days`（GET が過ぎた `until` をそのまま返す）・MetaReviewPage.test.tsx（過ぎた `until` で行が出る・`until: null` で出ない） |
 | K7 | OFF にした後、ログイン中の画面も15分以内に入り直しを求められる | 試験 `test_meta_review_refresh_after_off_401` |
 | K8 | ON の間に入った組では、パスキーと予備の合言葉を作れず、ほかの人の機械も許可できない | 試験 `test_meta_review_session_cannot_enroll_passkey`・`test_meta_review_session_cannot_create_recovery_codes`・`test_meta_review_session_prompt_not_auto`（can_auto と show_prompt の両方が偽）・`test_meta_review_session_cannot_approve_tenant_request`・OFF の後も同じトークンで断る `test_meta_review_session_cannot_enroll_after_off`・会社006に新しく作った人が OFF の後に初めて入っても機械を登録せず 202 になる `test_meta_review_member_no_first_login_device` |
-| K9 | 利用者管理のメニューで「ログインの許可待ち」の下に「Meta審査用」が出て、押すと Meta審査用の画面が開く | フロントの試験 `UserManagementSubMenu.test.tsx`（足す）・`MetaReviewPage.test.tsx`（新規） |
-| K10 | 画面で今の ON／OFF が切替スイッチと色の札で分かり、スイッチで切り替えられる（確かめの小窓を出してから） | フロントの試験 `MetaReviewPage.test.tsx`。本番: PO が目で見る |
-| K11 | 画面のログイン履歴に、日時（日本時間）・メールアドレス・結果（成功／失敗／許可待ち）・理由・機械が新しい順に出る。成功は緑、失敗は赤の札。許可や予備の合言葉で後から入れた回も「成功」で出る | 試験 `test_meta_review_history_lists_attempts`・`MetaReviewPage.test.tsx`。本番: 入った後に1行増えるのを見る |
+| K9 | 利用者管理のメニューで「ログインの許可待ち」の下に「Meta審査用」が出て、押すと Meta審査用の画面が開く | フロントの試験 UserManagementSubMenu.test.tsx（足す）・MetaReviewPage.test.tsx（新規） |
+| K10 | 画面で今の ON／OFF が切替スイッチと色の札で分かり、スイッチで切り替えられる（確かめの小窓を出してから） | フロントの試験 MetaReviewPage.test.tsx。本番: PO が目で見る |
+| K11 | 画面のログイン履歴に、日時（日本時間）・メールアドレス・結果（成功／失敗／許可待ち）・理由・機械が新しい順に出る。成功は緑、失敗は赤の札。許可や予備の合言葉で後から入れた回も「成功」で出る | 試験 `test_meta_review_history_lists_attempts`・MetaReviewPage.test.tsx。本番: 入った後に1行増えるのを見る |
 | K12 | 画面でスイッチを動かすたびに、どのアカウントがいつ ON／OFF にしたかが会社006の監査記録に残る（14日の自動 OFF は時刻の比べだけで、記録は残らない） | 試験 `test_meta_review_switch_audited` |
 | K13 | 部品は金型だけ・直書き0件・文字は全部 t() | `ui-governance` と i18n の必須チェックが緑 |
 
@@ -105,7 +105,7 @@ async def is_meta_review_member(db: AsyncSession, user_id: int) -> bool:
 
 - `_now` は `backend/app/auth/devices.py:78`、`_as_utc` は `backend/app/auth/self_tokens.py:148`。
 - `public.users`・`public.tenants` の読み取りは、どちらも会社の文脈なしで全行読める（`migrations/20261016_180000_add_users_write_rls.sql:9-10`・`migrations/20261016_170000_add_tenants_write_rls.sql:9-10`）。
-- 条件（印の会社・super admin でない）の組み合わせは、このファイルの2つの問い合わせにだけ書く。印だけで会社を引く SQL（`WHERE meta_review_tenant`）は、管理の口 `backend/app/routers/super_admin_meta_review.py` の GET・PUT・履歴の3つ（3-7・3-9）。ログイン・更新・4つの口は全部このファイルの関数を呼ぶ。下の `devices.is_meta_review_on` などの書き方は `meta_review.is_meta_review_on` と読み替える。
+- 条件（印の会社・super admin でない）の組み合わせは、このファイルの2つの問い合わせにだけ書く。印だけで会社を引く SQL（`WHERE meta_review_tenant`）は、管理の口 backend/app/routers/super_admin_meta_review.py（新規）の GET・PUT・履歴の3つ（3-7・3-9）。ログイン・更新・4つの口は全部このファイルの関数を呼ぶ。下の `devices.is_meta_review_on` などの書き方は `meta_review.is_meta_review_on` と読み替える。
 
 ### 3-3. パスワードのログイン
 
@@ -282,7 +282,7 @@ COMMIT;
 - 先に読み取りで1行（id 6）だけ当たることを確かめる → DRY-RUN（ROLLBACK）→ 1行なら本実行 → 読み取りで確かめる。
 - 戻し: `UPDATE public.tenants SET meta_review_login_until = NULL, meta_review_tenant = false WHERE meta_review_tenant`。
 - 会社を名前と code の2つで当てる。番号を書かない。
-- 流し方は前例の台本と同じ形にする（`docs/handoff/status-ssot-contact-company/run-insert.sh`・`docs/handoff/conversation-unification/phone-off/run.sh`）。新規 `docs/handoff/auth-new-device-approval/meta-review-mark/run.sh` に `precheck|dryrun|commit|verify|rollback` の5つの段を置き、各段の SQL を同じ場所の `.sql` に分ける。manual-only の鍵を使うので、PO が `!` で流すか、PO が `bash scripts/permit-danger.sh` で許した回に Opus が流す。台本は便1 の PR に入れず、印の段の PR（docs だけ）で出す。
+- 流し方は前例の台本と同じ形にする（`docs/handoff/status-ssot-contact-company/run-insert.sh`・`docs/handoff/conversation-unification/phone-off/run.sh`）。新規 docs/handoff/auth-new-device-approval/meta-review-mark/run.sh に `precheck|dryrun|commit|verify|rollback` の5つの段を置き、各段の SQL を同じ場所の .sql ファイルに分ける。manual-only の鍵を使うので、PO が `!` で流すか、PO が `bash scripts/permit-danger.sh` で許した回に Opus が流す。台本は便1 の PR に入れず、印の段の PR（docs だけ）で出す。
 
 ### 3-11. 移行（危ない変更）
 
