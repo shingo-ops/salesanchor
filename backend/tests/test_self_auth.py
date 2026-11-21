@@ -267,6 +267,28 @@ async def test_refresh_rejected_after_absolute_30_days(http, db_session, passwor
     assert (await _refresh(http, cookie)).status_code == 401
 
 
+async def test_refresh_rejected_after_idle_7_days(http, db_session, password_hash):
+    await _insert_user(db_session, hash_value=password_hash)
+    cookie = await _login_cookie(http)
+    old = datetime.now(timezone.utc) - self_tokens.REFRESH_IDLE_TTL - timedelta(minutes=1)
+    await db_session.execute(text("UPDATE auth_refresh_tokens SET created_at = :t"), {"t": old})
+    await db_session.commit()
+
+    assert (await _refresh(http, cookie)).status_code == 401
+    live = await _row(db_session, "SELECT count(*) AS n FROM auth_refresh_tokens WHERE revoked_at IS NULL")
+    assert live.n == 1  # 使い回し扱いにしない
+
+
+async def test_refresh_allowed_within_idle_7_days(http, db_session, password_hash):
+    await _insert_user(db_session, hash_value=password_hash)
+    cookie = await _login_cookie(http)
+    recent = datetime.now(timezone.utc) - self_tokens.REFRESH_IDLE_TTL + timedelta(hours=1)
+    await db_session.execute(text("UPDATE auth_refresh_tokens SET created_at = :t"), {"t": recent})
+    await db_session.commit()
+
+    assert (await _refresh(http, cookie)).status_code == 200
+
+
 async def test_refresh_expiry_is_not_extended_by_rotation(http, db_session, password_hash):
     await _insert_user(db_session, hash_value=password_hash)
     first = await _login_cookie(http)

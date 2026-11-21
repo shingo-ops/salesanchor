@@ -504,6 +504,12 @@ P11 の中身の読み取り（カード `docs/handoff/migration-runner-redesign
     - 4（軽）カード手順7の保存先を先に作る → カードに `mkdir -p` を足した。
     - 未確認として残った点: GitHub 上の本番反映の回数（83回）は審査役は数え直していない。counts.md の中の数が合うことだけを確かめた。
   - PR #5654 の合流前の審査（reviewer・opus・a82e16483）: **APPROVE**。軽い指摘3つを次の commit で反映した: (1) 回5b の success で `$VICTIM` の手順が2回目に流れても成功するかを、カード手順8で読ませる。(2) 5-8-1 の行番号を `:241-244` に直した。(3) §5-3 の 5-4 の行の「合流の前に結果を PO に見せる」を、PO の言葉ではなく Opus の約束と書き直した。
+  - 実装と結果（2026-11-22、Opus が記録を読んで書いた）: 実装の PR #5658 を 2026-11-21 14:26 UTC に合流（merge commit 0618c2898・委任 GO・ADR-1003）。
+    - K5-13・K5-14: ○。PR #5658 の CI「Migration SQL Test」の回1〜回6（回5b の unset と skipped で止まり、success で流れる）が合格。
+    - K5-16: ○。PR #5658 の差分に `db_migrations == 'true'` の行が無い（reviewer・opus が確認）。
+    - K5-15: ○。合流後の最初の本番反映3回のうち、控えを飛ばして移行の段が動いた回は 44916012149 の1回で、`>>> [record] predeploy-backup=skipped`・`(c) to-run=0` が出て移行の段は success。ほかの2回: 44913956183 は控えあり（`predeploy-backup=success`・(c)=0・success）。44916329775 は控えと移行の段がどちらも飛ばされた（移行の段が動かないので行は出ない）。その後の 44918592220・44923721016 も控えを飛ばし、`predeploy-backup=skipped`・(c)=0 で移行の段は success（合流前の審査役が数え、Opus が gh run view で確かめた）。
+    - 本番でまだ起きていない形: (c) が1本以上で控えを飛ばした回（止まる側）。CI の回5b でだけ確かめている。
+    - カードの直し: 実装の便で、カード手順3 の合否の線がクラウドで GitHub に届かないときの `scripts/dev/executor-preflight.sh:24-30` の FAIL と合わず、手順11（PR を作る）が `scripts/agent-hooks/cloud/rules.md:10`（クラウドは PR を作らない）と食い違い、Opus の指示で置き換えた。カードをこの形に直した（カードの「変更の記録」）。
 
 ### 5-12. 外部の導入事例（5W2H・数値つき、2026-11-15 追記）
 
