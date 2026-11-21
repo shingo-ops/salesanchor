@@ -44,6 +44,7 @@
 - 有効な人は1人だけ: users.id=10（review@salesanchor.jp・role admin・is_super_admin False・last_login 2026-10-30 14:27:36Z）。
 - ほかの4人（id 80・81・82・86）は is_active False。
 - tenant 6 の人の `user_trusted_devices` は0件。`auth_login_requests` も0件。
+- id=10 のパスキー（`webauthn_credentials`）は0件、予備の合言葉（`user_recovery_codes`）は0件（2026-11-21 23:11 JST）。今は期限の後に残る入口は無い。生の出力: `/tmp/CC報告ファイル/meta-review-login/prod_id10_entry.txt`。
 - 事実の組み合わせ: id=10 は last_login が入っているので D5 に当たらない。機械も0件なので C の 1 にも当たらない。**どの機械からでも 202 で止まる。** 生の出力: `/tmp/CC報告ファイル/meta-review-login/prod_tenant6.txt`（社外に出さない）。
 
 ## F. 記録と知らせの既存の道

@@ -5,7 +5,7 @@
 - 親（あるべき姿）: [docs/specs/auth-login/README.md](../../specs/auth-login/README.md)
 - 現在地: [review-exempt-recon.md](review-exempt-recon.md)（以下 recon:記号）
 - 決定: [ADR-1055](../../adr/ADR-1055-new-device-login-approval.md) の改訂（What 11 を足す。2026-11-21 提案中）
-- 状態: 設計案作成済み（Opus 2026-11-21）・審査1回目 REVISE（指摘1〜8を反映）・KGI は PO 承認待ち・実装未着手
+- 状態: 設計案作成済み（Opus 2026-11-21）・審査1回目 REVISE（指摘1〜8を反映）・審査2回目 REVISE（3件と軽い3件を反映）・KGI は PO 承認待ち・実装未着手
 
 ## 1. 目的（PO の言葉）
 
@@ -24,8 +24,8 @@ PO 2026-11-21: 「meta用に用意した006だけはオンオフでログイン�
 | K5 | 期限は1〜14日だけ。0日・15日は 422 | 試験 `test_exempt_days_range` |
 | K6 | 外して入るたびに、記録に「review_exempt」が1行残り、本人に知らせメールが届く | 試験 `test_exempt_login_audited`。本番: auth_events を reader で1行確かめ、review@ の受信箱の Discord 知らせを見る |
 | K7 | 期限が過ぎたら、ログイン中の画面も15分以内に入り直しを求められる | 試験 `test_exempt_refresh_after_expiry_401` |
-| K9 | 確認なしで入った組では、パスキーと予備の合言葉を作れない（403）。期限の後はパスキー・合言葉でも入れる物が無い | 試験 `test_exempt_session_cannot_enroll_passkey`・`test_exempt_session_cannot_create_recovery_codes`・`test_exempt_session_prompt_not_auto` |
 | K8 | 管理画面に、外している人・期限・外した人が出る。部品は金型だけ・直書き0件・文字は全部 t() | フロントの試験 `LoginExemptionSection.test.tsx`（新規）＋ `ui-governance` と i18n の必須チェックが緑 |
+| K9 | 確認なしで入った組では、パスキーと予備の合言葉を作れない（403）。期限の後はパスキー・合言葉でも入れる物が無い | 試験 `test_exempt_session_cannot_enroll_passkey`・`test_exempt_session_cannot_create_recovery_codes`・`test_exempt_session_prompt_not_auto`（can_auto と show_prompt の両方が偽）・`test_exempt_session_cannot_approve_tenant_request` |
 
 ## 3. 作り方（What／How）
 
@@ -55,7 +55,7 @@ def is_exempt(exempt_until: datetime | str | None) -> bool:
 ### 3-3. パスワードのログイン（recon:C の3の前に1段足す）
 
 `backend/app/routers/auth.py:404-405` の SELECT に `device_approval_exempt_until` を足す。
-`backend/app/routers/auth.py:452` の `else:` の前に足す:
+`backend/app/routers/auth.py:438` の `elif`（D5）の前に足す:
 
 ```python
         elif devices.is_exempt(user_row.device_approval_exempt_until):
@@ -72,6 +72,7 @@ def is_exempt(exempt_until: datetime | str | None) -> bool:
 ```
 
 - `trusted_device_id` は None のまま。トークンの組に機械は付かない。
+- 置く位置は D5（`backend/app/routers/auth.py:438`）より前にする。一度もログインしていない人に期限を付けた場合も、最初の機械が180日残る登録（first_login）を作らないため。つまり並びは「いつもの機械 → 期限つきの確認なし → D5 → 許可依頼」。
 
 ### 3-4. トークンの更新（recon:D の2か所目）
 
@@ -101,16 +102,22 @@ def is_exempt(exempt_until: datetime | str | None) -> bool:
 
 外した人が期限の間にパスキーか予備の合言葉を作ると、期限の後もそれで入れてしまう。パスキーのログイン（`backend/app/routers/auth.py:1188-1200`）と予備の合言葉（`backend/app/routers/auth.py:1553-1640`）は、知らない機械でも機械を登録して通すため。パスワードで入った直後は、画面がパスキーを自動で作ろうとする（`frontend/src/pages/login/LoginPage.tsx:151-153`）。
 
-そこで、次の3つの口で「確認なしで入った組」を断る。条件は `devices.is_enforced()` かつ今の組に機械が無い（`resolve_current_session(...).trusted_device_id is None`、`backend/app/auth/dependencies.py:707-724`）かつ `devices.is_exempt(その人の期限)`。
+そこで、次の4つの口で「確認なしで入った組」を断る。条件は `devices.is_enforced()` かつ今の組に機械が無い（`resolve_current_session(...).trusted_device_id is None`、`backend/app/auth/dependencies.py:707-724`）かつ `devices.is_exempt(その人の期限)`。
 
 | 口 | 変更前 | 変更後 |
 |---|---|---|
-| `GET /passkey/prompt`（`backend/app/routers/auth.py:939`） | 自動作成の合図を返す | 自動作成の合図を出さない（自動作成しない） |
+| `GET /passkey/prompt`（`backend/app/routers/auth.py:939`） | `can_auto`・`show_prompt` を返す（`backend/app/routers/auth.py:954-957`） | `PasskeyPromptStatus(can_auto=False, show_prompt=False)` を返す（自動作成も案内も出さない） |
 | `POST /passkey/register/options`・`/passkey/register/verify`（`backend/app/routers/auth.py:978`・`:1007`） | 登録できる | 403 `exempt_session_no_enroll` |
 | `POST /recovery-codes`（`backend/app/routers/auth.py:1884`） | 作れる | 403 `exempt_session_no_enroll` |
+| `POST /tenant/login-requests/{id}/approve`（`backend/app/routers/tenant_login_requests.py:66-75`） | 会社のオーナーなら許可できる | 403 `exempt_session_no_enroll`（機械の確かめを経ていない組から、ほかの人の機械を許可させない） |
 
-- 判定は devices.py に1つの関数（`async def is_exempt_session(db, request, user) -> bool`）にまとめ、3つの口から呼ぶ。条件を写して持たない。
-- 期限を外していない人と、いつもの機械で入った組は、今までと同じ（条件の3つ目と2つ目で外れる）。
+- 判定は devices.py に1つの関数 `async def is_exempt_session(db, request, user) -> bool` にまとめ、4つの口から呼ぶ。条件を写して持たない。中の順は次のとおり（期限を外していない人には、今までの動きを1つも変えないため）:
+  1. `is_enforced()` が偽なら False
+  2. `SELECT device_approval_exempt_until FROM public.users WHERE id = :id` を引き、`is_exempt` が偽なら False（ORM の User には列が無いので SQL で引く）
+  3. 期限が未来のときだけ `resolve_current_session(request, db, user)` を呼ぶ。sid の無いトークンの 403・組の失効の 401 は、そのまま外へ出す（外している人だけに起きる）
+  4. `trusted_device_id is None` なら True、あれば False
+- devices.py から dependencies.py を読み込んでも、読み込みは回らない（`backend/app/auth/dependencies.py:14` は devices を読み込まない）。
+- 期限を外していない人と、いつもの機械で入った組は、今までと同じ（手順2と4で外れる）。
 - 画面は 403 を受けたら何もしない（自動作成の失敗は今も黙って飛ばす作り。便2で文言を出すかは決めない＝出さない）。
 
 ### 3-6. 触らない場所
@@ -132,7 +139,7 @@ def is_exempt(exempt_until: datetime | str | None) -> bool:
 - `public.users` は会社ごとの守り（RLS）が強制で、UPDATE は会社の文脈が行の会社と同じときだけ通る（`migrations/20261016_180000_add_users_write_rls.sql:6-7,19-28`）。そのため書き込みは次の順にする:
   1. 対象の人を email で引く（id・tenant_id・is_active・is_super_admin）
   2. `set_tenant_context(db, 対象の tenant_id)`（`backend/app/auth/dependencies.py:306`）
-  3. `UPDATE public.users SET device_approval_exempt_until = ... WHERE id = :id RETURNING id`。0行なら 500 にせず止めて記録する
+  3. `UPDATE public.users SET device_approval_exempt_until = ... WHERE id = :id RETURNING id`。0行なら 409 `exemption_not_applied` を返し、commit しない（守りに弾かれた印。黙って成功にしない）
   4. `clear_tenant_context(db)`（`backend/app/auth/dependencies.py:390`）
   5. `_record_auth_audit(...)`（中で文脈を付け外しする）
   6. `db.commit()`
@@ -152,6 +159,7 @@ def is_exempt(exempt_until: datetime | str | None) -> bool:
 - 新規ファイル migrations/20261122_100000_add_users_device_approval_exempt_until.sql（`ADD COLUMN IF NOT EXISTS`・COMMENT 付き・追加だけ）。
 - `scripts/run_all_migrations.sh` に1行足す。置き場は `scripts/run_all_migrations.sh:1478` の下・集計の行 `mr_report_summary`（`:1481`）の上（`:1480` の注記どおり）。
 - 試験用の表にも列を足す: `backend/tests/conftest.py:1482-1502` の users 表に `device_approval_exempt_until TIMESTAMP` を1行。足さないとログインの試験が全部落ちる。
+- PostgreSQL の試験の土台にも移行を足す: `backend/tests/test_users_rls.py:47-57` の一覧に `_EXEMPT_MIGRATION = "20261122_100000_add_users_device_approval_exempt_until.sql"` を足し、`_MUST_CHANGE_MIGRATION` と同じ所で当てる。足さないと、本物の PostgreSQL で self_login を呼ぶ試験（`backend/tests/test_users_rls.py:401,421,433`）が列が無くて落ちる。新しい `test_exempt_set_updates_row_under_rls` もこのファイルに置き、同じ土台を使う。
 - `backend/app/models.py` の User には足さない（今のパスワード系の列も持たないため）。deploy.yml の追記も要らない（`.github/workflows/deploy.yml:276-277` は run_all_migrations.sh への追記を正としている）。
 - 列を足すだけで、既存の行は NULL＝今と同じ動き。ADR-136 の GO が要る。
 
@@ -192,7 +200,7 @@ def is_exempt(exempt_until: datetime | str | None) -> bool:
 
 ## 8. 実装カードに渡す試験の一覧
 
-新規ファイル backend/tests/test_review_exempt.py に、K1〜K7・K9 の試験名どおりの関数を作る。K4 の RLS の試験は PostgreSQL の印（既存の PG 試験と同じ付け方）を付ける。既存の `backend/tests/test_new_device_approval.py` の準備（enforce の setenv・人の作り方）をそのまま使う。
+新規ファイル backend/tests/test_review_exempt.py に、K1〜K7・K9 の試験名どおりの関数を作る。K4 の RLS の試験は `backend/tests/test_users_rls.py` に置く（3-9）。既存の `backend/tests/test_new_device_approval.py` の準備（enforce の setenv・人の作り方）をそのまま使う。
 
 ## 維持の仕組み
 
