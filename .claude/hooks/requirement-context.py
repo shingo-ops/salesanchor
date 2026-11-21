@@ -6,13 +6,41 @@
 出力 hookSpecificOutput.hookEventName / additionalContext）。
 どんな失敗でも終了コード 0 で何も出さない。
 """
+import glob
 import json
 import os
 import posixpath
 import re
+import shlex
 import subprocess
 import sys
+import time
 from pathlib import Path
+
+
+def pick_files(command: str, cwd) -> list:
+    """Bash のコマンドから、実在するファイルの絶対パスを最大 50 個拾う（フォルダは使わない）。"""
+    try:
+        lx = shlex.shlex(command, posix=True, punctuation_chars=True)
+        lx.whitespace_split = True
+        words = list(lx)
+    except ValueError:
+        words = command.split()
+    out = []
+    for w in words[:200]:
+        if not w or w.startswith("-"):
+            continue
+        if not os.path.isabs(w):
+            if not (isinstance(cwd, str) and os.path.isabs(cwd)):
+                continue
+            w = os.path.join(cwd, w)
+        cands = glob.glob(w)[:50] if any(c in w for c in "*?[") else [w]
+        for c in cands:
+            if os.path.isfile(c) and c not in out:
+                out.append(c)
+        if len(out) >= 50:
+            break
+    return out[:50]
 
 
 def main() -> None:
@@ -20,30 +48,67 @@ def main() -> None:
     import feature_index_lib as fil
 
     data = json.loads(sys.stdin.read())
-    file_path = (data.get("tool_input") or {}).get("file_path")
+    tool_input = data.get("tool_input") or {}
+    file_path = tool_input.get("file_path")
     session_id = str(data.get("session_id") or "")
-    if not file_path or not session_id:
+    if not session_id:
         return
-    fp = Path(file_path)
-    if not fp.is_absolute():
+    is_bash = False
+    if isinstance(file_path, str) and file_path:
+        fp0 = Path(file_path)
+        if not fp0.is_absolute():
+            return
+        files = [fp0]
+    elif data.get("tool_name") == "Bash" and isinstance(tool_input.get("command"), str):
+        is_bash = True
+        files = [Path(x) for x in pick_files(tool_input["command"], data.get("cwd"))]
+    else:
         return
-    parent = fp.parent
-    while not parent.is_dir() and parent != parent.parent:
-        parent = parent.parent
-    r = subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"],
-        cwd=str(parent), capture_output=True, text=True, timeout=3,
-    )
-    if r.returncode != 0 or not r.stdout.strip():
+    if not files:
         return
-    top = Path(r.stdout.strip()).resolve()
-    try:
-        rel = fp.resolve().relative_to(top).as_posix()
-    except ValueError:
-        return
-
-    index = top / "docs" / "adr" / "FEATURE-INDEX.md"
-    rows, _ = fil.read_index(index.read_text(encoding="utf-8"))
+    start = time.monotonic()
+    tops = {}
+    indexes = {}
+    hit_rows = []
+    hit_kw = set()
+    for fp in files:
+        if is_bash and time.monotonic() - start > 3:
+            break
+        parent = fp.parent
+        while not parent.is_dir() and parent != parent.parent:
+            parent = parent.parent
+        if parent not in tops:
+            try:
+                r = subprocess.run(
+                    ["git", "rev-parse", "--show-toplevel"],
+                    cwd=str(parent), capture_output=True, text=True,
+                    timeout=1 if is_bash else 3,
+                )
+                tops[parent] = Path(r.stdout.strip()).resolve() if r.returncode == 0 and r.stdout.strip() else None
+            except Exception:
+                tops[parent] = None
+        top = tops[parent]
+        if top is None:
+            continue
+        try:
+            rel = fp.resolve().relative_to(top).as_posix()
+        except ValueError:
+            continue
+        if top not in indexes:
+            try:
+                idx = top / "docs" / "adr" / "FEATURE-INDEX.md"
+                indexes[top] = fil.read_index(idx.read_text(encoding="utf-8"))[0]
+            except Exception:
+                indexes[top] = []
+        for row in indexes[top]:
+            code = row["code"].strip()
+            if code == "-" or not code or row["keyword"] in hit_kw:
+                continue
+            globs = [g.strip() for g in code.split("、") if g.strip()]
+            if any(fil.match_glob(g, rel) for g in globs):
+                hit_kw.add(row["keyword"])
+                hit_rows.append(row)
+    rows = hit_rows
 
     safe = re.sub(r"[^A-Za-z0-9_-]", "_", session_id)
     mark_dir = Path(os.environ.get("TMPDIR") or "/tmp") / "requirement-context"
@@ -53,12 +118,6 @@ def main() -> None:
     sentences = []
     shown = []
     for row in rows:
-        code = row["code"].strip()
-        if code == "-" or not code:
-            continue
-        globs = [g.strip() for g in code.split("、") if g.strip()]
-        if not any(fil.match_glob(g, rel) for g in globs):
-            continue
         kw = row["keyword"]
         if kw in seen:
             continue
