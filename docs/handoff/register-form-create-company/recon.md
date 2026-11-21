@@ -18,7 +18,7 @@
 - 会社の表（`backend/app/services/tenant.py:200-230`）: 必ず入れる欄は `company_code`（VARCHAR(20)・テナント内で重複不可）・`lead_id`・`name`。`status` は既定 `'active'`。`lead_id` に重複を止める決まりは無い（233 行は索引だけ）。
 - 会社の番号の付け方の前例: `backend/app/routers/companies.py:397` 仮に `CO-PEND-<8桁>` で入れ、455-459 行で `CO-{id:05d}` に直す。
 - フォームの画面 `frontend/src/pages/register/RegisterPage.tsx:147-150` は請求先名（billing_display_name）が空だと送らない。送る本文は 211-221 行。
-- フォームを開く時の読み取り `registration_tokens.py:189-197` は会社が無ければ会社名を空で返す（画面は 289 行で会社名の行を出さないだけ）。
+- フォームを開く時の読み取り `backend/app/routers/registration_tokens.py:189-197` は会社が無ければ会社名を空で返す（画面は 289 行で会社名の行を出さないだけ）。
 - この送信の試験は backend に無い（`git grep -l -E "register_customer|company_not_found" -- backend/tests` が 0 件。`backend/tests/test_viewer_isolation.py` は道の一覧だけ）。
 
 ## 3. 本番の数（読むだけ・2026-11-22 06:58 JST ごろ）
