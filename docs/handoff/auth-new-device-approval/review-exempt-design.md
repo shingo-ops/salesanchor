@@ -5,7 +5,7 @@
 - 親（あるべき姿）: [docs/specs/auth-login/README.md](../../specs/auth-login/README.md)
 - 現在地: [review-exempt-recon.md](review-exempt-recon.md)（以下 recon:記号）
 - 決定: [ADR-1055](../../adr/ADR-1055-new-device-login-approval.md) の改訂（What 11。2026-11-22 書き直し・提案中）
-- 状態: 設計案作成済み（Opus 2026-11-22・PO の条件 2026-11-22 で書き直し）・1回目・2回目の審査 REVISE を反映済み・3回目の審査待ち・実装未着手
+- 状態: 設計案作成済み（Opus 2026-11-22・PO の条件 2026-11-22 で書き直し）・設計審査済み（3回目 APPROVE・軽い指摘3件を反映）・PO の承認待ち・実装未着手
 - 前の版（人ごとに1〜14日の期限を付ける形）は 3回目の審査で合格したが、PO の条件（会社006だけ・画面のスイッチ・ログイン履歴）で作り直した。前の版の審査の記録: [review-exempt-review-opus.md](review-exempt-review-opus.md)
 
 ## 1. 目的と PO の条件（PO の言葉）
@@ -126,7 +126,7 @@ async def is_meta_review_member(db: AsyncSession, user_id: int) -> bool:
 ```
 
 - `trusted_device_id` は None のまま。トークンの組に機械は付かない。
-- D5（`backend/app/routers/auth.py:438`）の条件に `and not await meta_review.is_meta_review_member(db, user_row.id)` を足す。会社006の人は ON／OFF に関わらず「最初の機械」の登録を受けない。足さないと、ON の間に会社006へ新しい人を作って（または止まっている人を戻して）おき、OFF の後にその人で初めて入ると180日のいつもの機械が登録され、入口が残る（`backend/app/routers/staff.py:501-503`・`backend/app/routers/staff_join.py:69`）。今の会社006の有効な人は1人で、last_login も入っている（recon:E）ので、困る人はいない。
+- D5（`backend/app/routers/auth.py:438`）の条件に `and not await meta_review.is_meta_review_member(db, user_row.id)` を足す。会社006の人は ON／OFF に関わらず「最初の機械」の登録を受けない。足さないと、ON の間に会社006へ新しい人を作って（または止まっている人を戻して）おき、OFF の後にその人で初めて入ると180日のいつもの機械が登録され、入口が残る（`backend/app/routers/staff.py:501-503`・`backend/app/routers/staff_join.py:83`（`:69` は守りの関数の定義。人を作る口の行は実装カードで確かめる））。今の会社006の有効な人は1人で、last_login も入っている（recon:E）ので、困る人はいない。
 - 並びは「いつもの機械 → Meta 審査用のスイッチ → D5（会社006の人は除く） → 許可依頼」。D5 より前に置くのは、一度もログインしていない人でも、最初の機械が180日残る登録（first_login）を作らないため。
 - 印の会社でない人は `meta_review_until` が None を返すので、今と1つも変わらない。ただし、その人にも SELECT が1回増える（`backend/app/routers/auth.py:404-405` の SELECT に足さないのは、条件を1か所にまとめるため）。
 
@@ -261,7 +261,7 @@ LIMIT :limit
 
 - 「どのログイン情報で」は、メールアドレスと機械（`describe_user_agent`、`backend/app/auth/devices.py:135`）で出す。パスワードは記録にも画面にも出さない。
 - poll の道は数秒ごとに呼ばれ、待ちの間も記録は1行ずつ増えるが、理由は空のまま（`backend/app/routers/auth.py:1423-1424` は `_audit` を呼ばない）。画面は許可されて入った回の理由だけで拾うので、待ちの行は出ない。
-- **限界（PO の条件9との違い・PO 確認待ち）**: 会社006に無いメールアドレスで試した回（打ち間違い）と、同じ場所から短い間に打ちすぎて止められた回は、記録に人が付かない（`backend/app/routers/auth.py:413`・`:396` `user_id=None`）。口座が止められた回は人が付く（`backend/app/routers/auth.py:414` `reason="locked"`）ので「失敗」として出る。この画面には出ない。打ったメールアドレスを記録に足すことはしない（打ち間違えた他人のアドレスを残さないため）。この限界でよいかは、PO の KGI 承認のときに確かめる。
+- **限界（PO の条件9との違い・PO 確認待ち）**: 会社006に無いメールアドレスで試した回（打ち間違い）と、同じ場所から短い間に打ちすぎて止められた回は、記録に人が付かない（`backend/app/routers/auth.py:413`・`:396` `user_id=None`）。この2つはこの画面には出ない。口座が止められた回は人が付く（`backend/app/routers/auth.py:414` `reason="locked"`）ので「失敗」として出る。打ったメールアドレスを記録に足すことはしない（打ち間違えた他人のアドレスを残さないため）。この限界でよいかは、PO の KGI 承認のときに確かめる。
 - 本番の今の件数: id=10 の行は0件（recon:L）。最初は空の表で始まる。
 
 ### 3-10. 印を付ける（本番のデータの変更・1回だけ）
@@ -277,6 +277,7 @@ RETURNING id, tenant_code, tenant_name;   -- 1行（id 6）でなければ ROLLB
 COMMIT;
 ```
 
+- 先に読み取りで、会社006の super admin でない人の、失効していない・機械の無い・締切（2026-11-02T22:00Z）より前に作られた更新の組が0件であることを確かめる（`backend/app/routers/auth.py:555-561` の bootstrap で機械が登録される道を残さないため）。1件以上なら止めて PO に聞く。
 - 先に読み取りで1行（id 6）だけ当たることを確かめる → DRY-RUN（ROLLBACK）→ 1行なら本実行 → 読み取りで確かめる。
 - 戻し: `UPDATE public.tenants SET meta_review_login_until = NULL, meta_review_tenant = false WHERE meta_review_tenant`。
 - 会社を名前と code の2つで当てる。番号を書かない。
