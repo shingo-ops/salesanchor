@@ -3,13 +3,15 @@ mode: handoff
 ---
 # 実装カード：控えのムラをなくす（段5 5-4）— 控えなしで新しい手順を流しそうになったら止める（Sonnet・クラウド）
 
-状態: **第1版（2026-11-21、Opus）。設計 `docs/handoff/migration-runner-redesign/design.md` §5-8（第9版）の実装。向きは PO 2026-11-21「1」。実装の開始は、設計とこのカードが審査に通り、PO の実装承認を受けた後。このカードは Draft の PR までで止まる。合流は委任 GO（設計 §5-3 の表の 5-4 の行）で、合流の前に結果を PO に見せる。**
+状態: **第1版（2026-11-21、Opus）。設計 `docs/handoff/migration-runner-redesign/design.md` §5-8（第9版）の実装。向きは PO 2026-11-21「1」。実装の開始は、設計とこのカードが審査に通り、PO の実装承認を受けた後。このカードは push までで止まる（コード変更を含む枝なので、PR は手元で Opus が shingo-cc 名義で作る。`scripts/agent-hooks/cloud/rules.md:10`）。合流は委任 GO（設計 §5-3 の表の 5-4 の行）で、合流の前に結果を PO に見せる（PO の言葉ではなく Opus の約束）。**
+
+変更の記録: 2026-11-22（Opus）実装の便の後に直した。(1) 手順11 の PR 作りを外し、手順10 の push までにした（`scripts/agent-hooks/cloud/rules.md:10` を入れ忘れたのが原因。あわせて `scripts/gh-pr-create-safe.sh` は `--draft` を受け付けない）。(2) 手順3 の合否の線を、クラウドで GitHub の窓口に届かないときの形に直した（`scripts/dev/executor-preflight.sh:24-30` が `api.github.com` に届かないと FAIL を出し 1 で終わる）。(3) 冒頭の「合流の前に結果を PO に見せる」を Opus の約束と書いた（設計 §5-11 の PR #5654 の審査の指摘3 と同じ直し）。実装は PR #5658 で合流済み、結果は設計 §5-11 第9版の行の下。
 
 ## 発行前の照合（design-partner.md 5.5）
 | # | 項目 | 結果 |
 |---|---|---|
 | 1 | 記号をバッククォートで囲む | ○ |
-| 2 | PR は Draft で作らせる。実装役はマージしない。この PR は `.github/workflows/deploy.yml` と本番の台本 `scripts/run_all_migrations.sh` を変えるので ADR-135・ADR-136 の危険 PR に当たる | ○ |
+| 2 | 実装役は push までで止まり、PR を作らない・マージしない（PR は手元で Opus が作る。`scripts/agent-hooks/cloud/rules.md:10`）。この PR は `.github/workflows/deploy.yml` と本番の台本 `scripts/run_all_migrations.sh` を変えるので ADR-135・ADR-136 の危険 PR に当たる | ○ |
 | 3 | 報告の宛先と生出力の全文 | ○（下の「報告」） |
 | 4 | 1便1目的（控えなしの (c)>0 を止める見張りと、その試験。本番には何も流さない） | ○ |
 | 5 | ブランチの起点を明示（`origin/main` から新しく `release/migration-backup-guard-5-4`） | ○ |
@@ -102,15 +104,14 @@ mode: handoff
 ## 手順
 1. 受領確認: 報告の先頭に「本報告はカード 5-4 の実行結果である」と書く。
 2. 作業フォルダ: `git fetch origin` → `bash scripts/new-worktree.sh release/migration-backup-guard-5-4`（`--claude` は付けない。付けると別の Claude が起動する）→ 作ったフォルダへ移り、`git rev-parse HEAD`・`git rev-parse origin/main` を記録する。reset・rebase・force・pull は使わない。以後の命令は、すべてそのフォルダへの `cd` で始める。
-3. `./scripts/dev/executor-preflight.sh` を流し、出力を記録する。合否の線: 0 で終わる。HEAD が `origin/main` と同じ。
+3. `./scripts/dev/executor-preflight.sh` を流し、出力を記録する。合否の線: 終わりの番号が 0、または [1/3]（`api.github.com` に届くか）・[2/3]（gh の名義）だけが FAIL で、[3/3]（git の名義）・[4/4]（`origin/main` が在る）が OK。クラウドは GitHub の窓口に届かないことがあり、この2つの FAIL では止まらない。HEAD が `origin/main` と同じ。
 4. 変える前の数を取る（基準値）: `grep -c '' scripts/run_all_migrations.sh`・`grep -nE 'run_main round' .github/workflows/migration-test.yml`・`grep -n "db_migrations == 'true'" .github/workflows/deploy.yml` の3つ（1手順1命令で別々に流す）。合否の線: `run_main round` の行が round1〜round6 の6行。`db_migrations == 'true'` の行の中に控えの段の `if:` がある。違えば `NEEDS_DECISION:`（実物が設計の時と変わった）。
 5. 上の「変更前後」1〜5 を Write/Edit で入れる。触るのはこの4つのファイルだけ: `scripts/run_all_migrations.sh`・`.github/workflows/deploy.yml`・`.github/workflows/migration-test.yml`・`scripts/tests/test-deploy-orphan-cleanup.sh`。
 6. 書いた物の形を確かめる: `bash -n scripts/run_all_migrations.sh`・`git diff --stat`・`git diff .github/workflows/deploy.yml`・`git diff scripts/run_all_migrations.sh`。合否の線: `bash -n` が 0。差分のファイルは手順5の4つだけ。`deploy.yml` の差分は `+` 2行・`-` 1行（:890 の行の置き換えと説明1行）。控えの段の行（`db_migrations == 'true'`）は差分に無い（K5-16）。本体の差分の `-` の行は 0。
 7. 手元で回せる試験だけ回す（重い試験は CI に任せる）: 先に `mkdir -p /tmp/CC報告ファイル` を流す。その後 `bash scripts/tests/test-deploy-orphan-cleanup.sh > /tmp/CC報告ファイル/k54-orphan.txt 2>&1` の後、終わりの番号と `tail -40 /tmp/CC報告ファイル/k54-orphan.txt` を記録する。合否の線: 終わりの番号 0。C8・C10 が合格（bash 5 が無くて飛ばされた場合は、飛ばされたと書いて報告する。線を緩めない）。
 8. `[record]` の行の数や並びを決め打ちしている試験を探す: `git grep -n 'record\]' -- backend/tests scripts/tests tests .github/workflows | head -60`。合否の線: 見つかった試験それぞれについて、`predeploy-backup` の1行が増えても通るかを読んで確かめ、ファイル名・行・結論を報告に書く。通らない物があれば `NEEDS_DECISION:`（直し方を勝手に決めない）。 あわせて、回5b の success の回で `$VICTIM` の手順が2回目に流れても成功するかを、その手順のファイルを読んで確かめ、結論を報告に書く（回6 は全件を流し直すので同じ前提だが、ここでも確かめる）。成功しない形なら `NEEDS_DECISION:`。
 9. commit を1つ作る。文は `feat(migration): stop record run with new steps when pre-deploy backup was not taken (stage5 5-4)`。作った後に `git log -1 --stat` で実在を確かめる。
-10. `git push -u origin HEAD` を単独で流す。
-11. Draft の PR を `bash scripts/gh-pr-create-safe.sh --draft --base main` で作る（`--title` と、本文を書いたファイルを `--body-file` で渡す）。本文は PR のひな形から作り、`### 標準ワークフロー確認` の中に、設計 §5-8・このカードの場所・K5-13〜K5-16 を書き、`触るファイル:` に手順5の4つを1行・カンマ区切りで書く。作った後に `.pr-number` と `gh pr list --head release/migration-backup-guard-5-4 --json number` の両方で番号を取り、一致を確かめる。合否の線: PR が Draft で作られた。CI の結果は待たない（PR の URL を報告する）。
+10. `git push -u origin HEAD` を単独で流し、その後 `git rev-parse HEAD` と `git rev-parse origin/release/migration-backup-guard-5-4` を記録する。合否の線: 2つが同じ。ここで止まる。PR は作らない（手元で Opus が作る）。
 
 ## 止まる条件
 - 設計とカード、または実物とカードが食い違う → `NEEDS_DECISION:`。
@@ -120,7 +121,7 @@ mode: handoff
 ## 報告
 最後の行に `DONE` / `BLOCKED: 理由` / `NEEDS_DECISION: 問い` のどれか1つ。その前に次を全文で書く（要約しない）。
 1. 手順2・手順3・手順4・手順6・手順7・手順8 の出力の全文（長い物はファイルの場所と、そのファイルの全行の数）。
-2. commit の 40 字、PR の番号と URL。
+2. commit の 40 字と、手順10 の2つの出力。
 3. 停止したときは、止まった命令・出力・自分の判断の3点。
 
 END OF CARD
