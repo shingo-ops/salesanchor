@@ -218,7 +218,7 @@ async def register_customer(
     data: RegisterRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """顧客がフォームから住所・連絡先を登録する。会社が無ければ作る（ADR-097 §3）。
+    """顧客がフォームから住所・連絡先を登録する。
 
     テナント ID・リード ID はトークンから確定（ボディから受け付けない）。
     トークン改ざん・期限切れ・使用済みの場合は 403。
