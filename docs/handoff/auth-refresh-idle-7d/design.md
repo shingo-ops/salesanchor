@@ -150,7 +150,7 @@ SELECT f.user_id, f.family_created_at, p.created_at AS prev_created_at, p.revoke
 ## 11. 維持の仕組み
 
 - 守り手: .github/workflows/test.yml の必須チェック「pytest (SQLite + PostgreSQL RLS)」（K1・K2 の試験が定数から日数を作る）
-- 7 日はコードの定数 `REFRESH_IDLE_TTL`。変えると K1・K2 の試験が落ちるので、CI の必須チェックで毎回確かめる（試験は定数から日数を作るので、定数を変える PR には ADR の変更も要る）。
+- 7 日はコードの定数 `REFRESH_IDLE_TTL` の 1 か所だけ。試験は定数から日数を作るので、定数を変えても試験は落ちない（試験が守るのは「切れ目の前後で 401 と 200 が分かれること」と「使い回し扱いにしないこと」）。日数を変えるときは ADR-1084 を同じ PR で直し、合流前の審査役がその一致を見る。
 - 30 日・取り替え・使い回しの決まりは既存の試験（test_self_auth.py:217・:230・:257・:270）で引き続き確かめる。
 
 ## 12. 審査
