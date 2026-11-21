@@ -106,6 +106,29 @@ class Test(unittest.TestCase):
         p = self.run_hook(self.bash_payload("sed -n 1p 'backend/app/x.py"))
         self.assertEqual(p.returncode, 0)
 
+    def _write_index(self, note):
+        with open(os.path.join(self.repo, "docs/adr/FEATURE-INDEX.md"), "w", encoding="utf-8") as f:
+            f.write(INDEX.replace("| 補足 |", "| " + note + " |"))
+
+    def test_note_in_sentence(self):
+        p = self.run_hook(self.payload(os.path.join(self.repo, "backend/app/x.py")))
+        ctx = json.loads(p.stdout)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("決まりの要旨: 補足。", ctx)
+        self.assertNotIn("見本機能", ctx)
+
+    def test_note_dash_omitted(self):
+        self._write_index("-")
+        p = self.run_hook(self.payload(os.path.join(self.repo, "backend/app/x.py")))
+        ctx = json.loads(p.stdout)["hookSpecificOutput"]["additionalContext"]
+        self.assertNotIn("決まりの要旨", ctx)
+
+    def test_note_truncated_400(self):
+        self._write_index("あ" * 401)
+        p = self.run_hook(self.payload(os.path.join(self.repo, "backend/app/x.py")))
+        ctx = json.loads(p.stdout)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("あ" * 400 + "…", ctx)
+        self.assertNotIn("あ" * 401, ctx)
+
 
 if __name__ == "__main__":
     unittest.main()
