@@ -61,7 +61,7 @@ jobs:
         run: |
           set -euo pipefail
           gh api "repos/${REPO}/commits/${HEAD_SHA}/check-runs?per_page=100" > /tmp/runs.json
-          failed=$(jq -r '.check_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "action_required") | "• [\(.name)](\(.html_url))"' /tmp/runs.json | head -n 10)
+          failed=$(jq -r '[.check_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "action_required") | "• [\(.name)](\(.html_url))"] | .[:10] | .[]' /tmp/runs.json)
           if [ -z "$failed" ]; then
             failed="• [${WF_NAME}](${WF_URL})"
           fi
