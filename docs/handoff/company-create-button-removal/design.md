@@ -1,6 +1,7 @@
 # design: 顧客情報の「新規登録」ボタンを消す
 
 - 根拠: `docs/adr/ADR-097-sa-customer-registration-form.md` §6（2026-11-21 PO 決定「1」）・recon: `docs/handoff/company-create-button-removal/recon.md`
+- 画面の決まり: `docs/adr/ADR-027-ui-internationalization.md`（文字は `t()` 経由・ja/en 同一キー。消すキーは両方同時に消す）、ADR-144（金型の部品を使う。今回は消すだけで新しい部品は足さない）。
 - 関連: 要件ライブラリ（`docs/handoff/requirement-library/design.md` 便2c）。ボタンを消すのは 3 回目の 20 回測定のあとに本番へ入れる（測定の条件を変えないため）。
 
 ## 1. 目的と利用者に見える変化

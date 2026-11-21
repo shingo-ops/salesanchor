@@ -52,4 +52,4 @@
 
 ## 6. 本番の今の値（基準値）
 
-- 2026-11-21 21:52 JST、`https://app.salesanchor.jp/` の `assets/main-BMUWQrJj.js` に `newCompany` が 4 回出る（`grep -o newCompany | wc -l` = 4。英・日の文字、ボタン、Modal の題）。
+- 2026-11-21 21:52 JST、`https://app.salesanchor.jp/` の画面コード（main-BMUWQrJj という名前の JS）に `newCompany` が 4 回出る（`grep -o newCompany | wc -l` = 4。英・日の文字、ボタン、Modal の題）。
