@@ -33,7 +33,7 @@ PO 2026-11-22 の条件（原文の要点をそのまま並べる）:
 | K3 | ほかの会社の人は、スイッチが ON でも今までどおり 202 で止まる | 試験 `test_meta_review_other_tenant_still_202`・既存 `backend/tests/test_new_device_approval.py` が全部緑 |
 | K4 | 印の無い会社は、データベースの決まりで ON にできない。印を付けられる会社は1社だけ | 試験 `test_meta_review_check_rejects_unmarked_tenant`・`test_meta_review_marker_unique`（PostgreSQL） |
 | K5 | スイッチを動かせるのは super admin だけ。ほかの人は 403。会社006の中の super admin の人には効かない | 試験 `test_meta_review_switch_forbidden_for_non_super_admin`・`test_meta_review_not_for_super_admin_user` |
-| K6 | ON にしてから14日たつと、何もしなくても OFF に戻る（画面も OFF を出す） | 試験 `test_meta_review_auto_off_after_14_days` |
+| K6 | ON にしてから14日たつと、何もしなくても OFF に戻る（画面も OFF を出す）。画面に「〇月〇日 〇時〇分に、14日たったので自動で OFF になりました」と自動で OFF になった日時が出る。手で OFF にしたときはこの行は出ない | 試験 `test_meta_review_auto_off_after_14_days`（GET が過ぎた `until` をそのまま返す）・`MetaReviewPage.test.tsx`（過ぎた `until` で行が出る・`until: null` で出ない） |
 | K7 | OFF にした後、ログイン中の画面も15分以内に入り直しを求められる | 試験 `test_meta_review_refresh_after_off_401` |
 | K8 | ON の間に入った組では、パスキーと予備の合言葉を作れず、ほかの人の機械も許可できない | 試験 `test_meta_review_session_cannot_enroll_passkey`・`test_meta_review_session_cannot_create_recovery_codes`・`test_meta_review_session_prompt_not_auto`（can_auto と show_prompt の両方が偽）・`test_meta_review_session_cannot_approve_tenant_request`・OFF の後も同じトークンで断る `test_meta_review_session_cannot_enroll_after_off`・会社006に新しく作った人が OFF の後に初めて入っても機械を登録せず 202 になる `test_meta_review_member_no_first_login_device` |
 | K9 | 利用者管理のメニューで「ログインの許可待ち」の下に「Meta審査用」が出て、押すと Meta審査用の画面が開く | フロントの試験 `UserManagementSubMenu.test.tsx`（足す）・`MetaReviewPage.test.tsx`（新規） |
@@ -185,7 +185,7 @@ async def is_meta_review_member(db: AsyncSession, user_id: int) -> bool:
 
 | 口 | 中身 | 断る場合 |
 |---|---|---|
-| `GET /super-admin/meta-review` | `{tenant_name, is_on, until}`。印の会社が無ければ `tenant_name: null, is_on: false` | super admin でない 403 |
+| `GET /super-admin/meta-review` | `{tenant_name, is_on, until}`。`until` は過ぎていても NULL に直さず、保存された値をそのまま返す（手で OFF にしたときだけ NULL）。印の会社が無ければ `tenant_name: null, is_on: false` | super admin でない 403 |
 | `PUT /super-admin/meta-review` 本文 `{on: bool}` | ON: `until = 今 + 14日`。OFF: `until = NULL` | super admin でない 403／印の会社が無い 409 `meta_review_tenant_missing` |
 | `GET /super-admin/meta-review/logins?limit=100` | ログイン履歴（3-9） | super admin でない 403 |
 
@@ -221,6 +221,7 @@ async def is_meta_review_member(db: AsyncSession, user_id: int) -> bool:
    - `Toggle`（`frontend/src/components/Toggle.tsx`）。`aria-label` は t()
    - 今の状態の札 `Badge`（`frontend/src/components/Badge.tsx`）: ON は `variant="success"` で「ON（審査員はログインできます）」、OFF は `variant="neutral"` で「OFF（ふだんの確認に戻っています）」
    - ON のときは「自動で OFF になる日時: 〇月〇日 〇時〇分（日本時間）」
+   - OFF で `until` が過ぎた値のときは「〇月〇日 〇時〇分に、14日たったので自動で OFF になりました」（日本時間・t()）。`until` が NULL（手で OFF）のときは出さない。値は `public.tenants.meta_review_login_until` の1か所だけを読み、新しい置き場は作らない（PO 2026-11-22「1」）
    - スイッチを押すと `ConfirmModal` で確かめてから PUT する
    - 用途の説明1行（t()）: 「Meta の審査員が登録していない機械から入れるようにする、審査の間だけのスイッチです。ほかの会社では使えません。」
 2. ログイン履歴の枠（`SectionCard`＋`DataTable`）
@@ -324,7 +325,7 @@ COMMIT;
 | OFF の直後もアクセストークンが最長15分残る | 15分で切れる（K7） |
 | 会社006に super admin がいた場合 | その人には効かない（3-2 の条件） |
 | 全員のログインで SELECT が1回増える | 主キーでの1行の読み取り。印の会社でなければ値は None |
-| 14日の自動 OFF は監査記録に残らない | 画面に「自動で OFF になる日時」を出す。自動 OFF の後に残った組は 3-5 の判定と次の更新の 401 で閉じる |
+| 14日の自動 OFF は監査記録に残らない | 画面に「自動で OFF になる日時」と、自動で OFF になった後は「〇月〇日 〇時〇分に自動で OFF になりました」を出す（次に ON にすると上書きされるので、残るのは最後の1回だけ）。自動 OFF の後に残った組は 3-5 の判定と次の更新の 401 で閉じる |
 | 印を別の会社へ付け替えることは DB では止められない | 印を書く道をアプリに作らない・PO 合意の本番データ変更だけ・画面に会社の名前を出す（3-1） |
 
 ## 7. 外部・過去事例の参照と我々への応用
@@ -343,4 +344,4 @@ COMMIT;
 - 守り手: .github/workflows/migration-test.yml（移行の SQL を毎回流す）
 - 守り手: データベースの CHECK と部分一意の索引（印の無い会社は ON にできない・印は1社だけ）
 - 対象: ほかの会社に広がらないこと（K3・K4）、OFF で必ず戻ること（K2・K6・K7）、OFF の後に入口を残さないこと（K8）、super admin だけが動かせること（K5）
-- まだ無いもの: 審査が終わった後に ON が残っていないかを知らせる定期の見張り（14日で自動で OFF になるので、害は最長14日）
+- 作らないと決めたもの: 審査が終わった後に ON が残っていないかを知らせる定期の見張り。14日で自動で OFF になるので害は最長14日で、自動で OFF になった日時は画面で分かる（PO 2026-11-22「1」）
