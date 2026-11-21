@@ -4,30 +4,32 @@
 groups:
   - name: auth_anomaly
     rules:
-      # 認証失敗が5分間に20回以上（ブルートフォース攻撃の可能性）
+      # ログインの入口6つの失敗(401)と締め出し(429)が5分間に10件超（攻撃の可能性）
+      # 数えるのはバックエンド(uvicorn)の行だけ。入口(nginx)の行は "401 <数字>" の形なので当たらない
+      # 10件 = アプリが1つのIPを締め出す回数（backend/app/cache.py の AUTH_FAIL_MAX）。設計: docs/handoff/ai-ops-247/login-alert-design.md
       - alert: BruteForceAttempt
         expr: |
-          sum(count_over_time({job="containerlogs"} |~ "401|403|auth.*fail|login.*fail|Unauthorized" [5m])) > 20
+          sum(count_over_time({job="containerlogs"} |~ "\"POST /api/v1/(auth/login|auth/passkey/login/verify|auth/password-reset/confirm|auth/login-requests/recovery|viewer/login|viewer/password-reset/confirm) HTTP/[0-9.]+\" (401 Unauthorized|429 Too Many Requests)" [5m])) > 10
         for: 1m
         labels:
           severity: critical
           tier: page
         annotations:
-          summary: "ブルートフォース攻撃の可能性を検知"
-          description: "直近5分間に認証失敗が20回以上発生しています。即時確認してください。"
+          summary: "ログインの失敗が急に増えています（攻撃の可能性）"
+          description: "直近5分間にログインの失敗(401)と締め出し(429)が10件を超えました。即時確認してください。"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#bruteforceattempt"
 
-      # 認証失敗が1時間に50回以上（低頻度の攻撃）
+      # 同じ数え方で1時間に20件超（5分に10件未満でゆっくり続く失敗）
       - alert: SustainedAuthFailure
         expr: |
-          sum(count_over_time({job="containerlogs"} |~ "401|403|auth.*fail|Unauthorized" [1h])) > 50
+          sum(count_over_time({job="containerlogs"} |~ "\"POST /api/v1/(auth/login|auth/passkey/login/verify|auth/password-reset/confirm|auth/login-requests/recovery|viewer/login|viewer/password-reset/confirm) HTTP/[0-9.]+\" (401 Unauthorized|429 Too Many Requests)" [1h])) > 20
         for: 5m
         labels:
           severity: warning
           tier: ticket
         annotations:
-          summary: "認証失敗が継続的に発生しています"
-          description: "直近1時間に認証失敗が50回以上です。"
+          summary: "ログインの失敗が続いています"
+          description: "直近1時間にログインの失敗(401)と締め出し(429)が20件を超えました。"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#sustainedauthfailure"
 
   - name: error_anomaly

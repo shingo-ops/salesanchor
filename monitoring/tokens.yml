@@ -105,8 +105,8 @@ thresholds:
   ops_mail_poll_stale_sec:   10800  # OpsMailPollStale: time() - salesanchor_ops_mail_last_poll_success_timestamp_seconds > 10800（3 時間）
 
   # ログ異常検知（loki/rules/jarvis/alerts.yml）
-  brute_force_per_5m:     20    # BruteForceAttempt: > 20
-  auth_failure_per_1h:    50    # SustainedAuthFailure: > 50
+  brute_force_per_5m:     10    # BruteForceAttempt: > 10（ログインの入口6つの 401・429 だけを数える）
+  auth_failure_per_1h:    20    # SustainedAuthFailure: > 20（同じ数え方の1時間）
   backend_error_per_5m:   30    # BackendErrorSpike: > 30
   db_error_per_5m:         5    # DatabaseError: > 5
 
