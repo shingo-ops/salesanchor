@@ -5,7 +5,7 @@
 - 親（あるべき姿）: [docs/specs/auth-login/README.md](../../specs/auth-login/README.md)
 - 現在地: [review-exempt-recon.md](review-exempt-recon.md)（以下 recon:記号）
 - 決定: [ADR-1055](../../adr/ADR-1055-new-device-login-approval.md) の改訂（What 11。2026-11-22 書き直し・提案中）
-- 状態: 設計案作成済み（Opus 2026-11-22・PO の条件 2026-11-22 で書き直し）・1回目の審査 REVISE を反映済み・2回目の審査待ち・実装未着手
+- 状態: 設計案作成済み（Opus 2026-11-22・PO の条件 2026-11-22 で書き直し）・1回目・2回目の審査 REVISE を反映済み・3回目の審査待ち・実装未着手
 - 前の版（人ごとに1〜14日の期限を付ける形）は 3回目の審査で合格したが、PO の条件（会社006だけ・画面のスイッチ・ログイン履歴）で作り直した。前の版の審査の記録: [review-exempt-review-opus.md](review-exempt-review-opus.md)
 
 ## 1. 目的と PO の条件（PO の言葉）
@@ -35,7 +35,7 @@ PO 2026-11-22 の条件（原文の要点をそのまま並べる）:
 | K5 | スイッチを動かせるのは super admin だけ。ほかの人は 403。会社006の中の super admin の人には効かない | 試験 `test_meta_review_switch_forbidden_for_non_super_admin`・`test_meta_review_not_for_super_admin_user` |
 | K6 | ON にしてから14日たつと、何もしなくても OFF に戻る（画面も OFF を出す） | 試験 `test_meta_review_auto_off_after_14_days` |
 | K7 | OFF にした後、ログイン中の画面も15分以内に入り直しを求められる | 試験 `test_meta_review_refresh_after_off_401` |
-| K8 | ON の間に入った組では、パスキーと予備の合言葉を作れず、ほかの人の機械も許可できない | 試験 `test_meta_review_session_cannot_enroll_passkey`・`test_meta_review_session_cannot_create_recovery_codes`・`test_meta_review_session_prompt_not_auto`（can_auto と show_prompt の両方が偽）・`test_meta_review_session_cannot_approve_tenant_request`・OFF の後も同じトークンで断る `test_meta_review_session_cannot_enroll_after_off` |
+| K8 | ON の間に入った組では、パスキーと予備の合言葉を作れず、ほかの人の機械も許可できない | 試験 `test_meta_review_session_cannot_enroll_passkey`・`test_meta_review_session_cannot_create_recovery_codes`・`test_meta_review_session_prompt_not_auto`（can_auto と show_prompt の両方が偽）・`test_meta_review_session_cannot_approve_tenant_request`・OFF の後も同じトークンで断る `test_meta_review_session_cannot_enroll_after_off`・会社006に新しく作った人が OFF の後に初めて入っても機械を登録せず 202 になる `test_meta_review_member_no_first_login_device` |
 | K9 | 利用者管理のメニューで「ログインの許可待ち」の下に「Meta審査用」が出て、押すと Meta審査用の画面が開く | フロントの試験 `UserManagementSubMenu.test.tsx`（足す）・`MetaReviewPage.test.tsx`（新規） |
 | K10 | 画面で今の ON／OFF が切替スイッチと色の札で分かり、スイッチで切り替えられる（確かめの小窓を出してから） | フロントの試験 `MetaReviewPage.test.tsx`。本番: PO が目で見る |
 | K11 | 画面のログイン履歴に、日時（日本時間）・メールアドレス・結果（成功／失敗／許可待ち）・理由・機械が新しい順に出る。成功は緑、失敗は赤の札。許可や予備の合言葉で後から入れた回も「成功」で出る | 試験 `test_meta_review_history_lists_attempts`・`MetaReviewPage.test.tsx`。本番: 入った後に1行増えるのを見る |
@@ -66,7 +66,7 @@ ON／OFF の値はこの1列だけに置く。画面・設定ファイル・人�
 
 ### 3-2. 判定の関数（1か所）
 
-新規ファイル backend/app/auth/meta_review.py に、この機能の判定を全部まとめる（`devices` と `dependencies` の両方を読み込む。`devices` も `dependencies` もこのファイルを読み込まないので、読み込みは循環しない。`backend/app/auth/devices.py:23`・`backend/app/auth/dependencies.py:14-30`）:
+新規ファイル backend/app/auth/meta_review.py に、この機能の判定を全部まとめる（`devices`・`dependencies`・`self_tokens` を読み込む。`self_tokens` は `app.auth` の中を何も読まない（`backend/app/auth/self_tokens.py:8-19`）。`devices` も `dependencies` もこのファイルを読み込まないので、読み込みは循環しない。`backend/app/auth/devices.py:23`・`backend/app/auth/dependencies.py:14-30`）:
 
 ```python
 META_REVIEW_MAX_DAYS = 14
@@ -126,7 +126,8 @@ async def is_meta_review_member(db: AsyncSession, user_id: int) -> bool:
 ```
 
 - `trusted_device_id` は None のまま。トークンの組に機械は付かない。
-- 並びは「いつもの機械 → Meta 審査用のスイッチ → D5 → 許可依頼」。D5 より前に置くのは、一度もログインしていない人でも、最初の機械が180日残る登録（first_login）を作らないため。
+- D5（`backend/app/routers/auth.py:438`）の条件に `and not await meta_review.is_meta_review_member(db, user_row.id)` を足す。会社006の人は ON／OFF に関わらず「最初の機械」の登録を受けない。足さないと、ON の間に会社006へ新しい人を作って（または止まっている人を戻して）おき、OFF の後にその人で初めて入ると180日のいつもの機械が登録され、入口が残る（`backend/app/routers/staff.py:501-503`・`backend/app/routers/staff_join.py:69`）。今の会社006の有効な人は1人で、last_login も入っている（recon:E）ので、困る人はいない。
+- 並びは「いつもの機械 → Meta 審査用のスイッチ → D5（会社006の人は除く） → 許可依頼」。D5 より前に置くのは、一度もログインしていない人でも、最初の機械が180日残る登録（first_login）を作らないため。
 - 印の会社でない人は `meta_review_until` が None を返すので、今と1つも変わらない。ただし、その人にも SELECT が1回増える（`backend/app/routers/auth.py:404-405` の SELECT に足さないのは、条件を1か所にまとめるため）。
 
 ### 3-4. トークンの更新
@@ -167,6 +168,7 @@ async def is_meta_review_member(db: AsyncSession, user_id: int) -> bool:
   3. 真のときだけ `resolve_current_session(request, db, user)`（`backend/app/auth/dependencies.py:694-725`）を呼ぶ。sid の無いトークンの 403・組の失効の 401 はそのまま外へ出す（印の会社の人だけに起きる）
   4. `trusted_device_id is None` なら True、あれば False
 - この形だと、会社006の人は ON／OFF に関わらず、機械の無い組ではパスキーと予備の合言葉を作れない。会社006の有効な人は審査用の1人だけ（recon:E）で、いつもの機械も0件なので、困る人はいない。
+- 4つの口の外の入口（D5 の最初の機械）は 3-3 で塞ぐ。
 - 手で OFF にしたときは、印の会社の人の機械の無い組をすぐ失効させる（3-7 の手順2.5）。14日の自動 OFF のときは、次の更新（最長900秒・`backend/app/auth/self_tokens.py:24`）で 401 になる。その間に作れる物は上の判定で断るので、残る入口は無い。
 - 4つの口は、どれも `request`・`current_user`・`db` を持っている（前の版の3回目の審査で確かめ済み）。
 - 画面の自動作成の道は 403 でも何もしない（今も黙って飛ばす作り）。設定画面から手で作ろうとして 403 になったときは、ADR-1071 の出し方で `auth.error.metaReviewSessionNoEnroll` を出す。文面: 「Meta審査用の入り方では、パスキーと予備の合言葉は作れません。いつもの機械で入り直してから作ってください。」
@@ -259,7 +261,7 @@ LIMIT :limit
 
 - 「どのログイン情報で」は、メールアドレスと機械（`describe_user_agent`、`backend/app/auth/devices.py:135`）で出す。パスワードは記録にも画面にも出さない。
 - poll の道は数秒ごとに呼ばれ、待ちの間も記録は1行ずつ増えるが、理由は空のまま（`backend/app/routers/auth.py:1423-1424` は `_audit` を呼ばない）。画面は許可されて入った回の理由だけで拾うので、待ちの行は出ない。
-- **限界（PO の条件9との違い・PO 確認待ち）**: 会社006に無いメールアドレスで試した回（打ち間違い）と、打ちすぎで止められた回は、記録に人が付かない（`backend/app/routers/auth.py:413`・`:396` `user_id=None`）。この画面には出ない。打ったメールアドレスを記録に足すことはしない（打ち間違えた他人のアドレスを残さないため）。この限界でよいかは、PO の KGI 承認のときに確かめる。
+- **限界（PO の条件9との違い・PO 確認待ち）**: 会社006に無いメールアドレスで試した回（打ち間違い）と、同じ場所から短い間に打ちすぎて止められた回は、記録に人が付かない（`backend/app/routers/auth.py:413`・`:396` `user_id=None`）。口座が止められた回は人が付く（`backend/app/routers/auth.py:414` `reason="locked"`）ので「失敗」として出る。この画面には出ない。打ったメールアドレスを記録に足すことはしない（打ち間違えた他人のアドレスを残さないため）。この限界でよいかは、PO の KGI 承認のときに確かめる。
 - 本番の今の件数: id=10 の行は0件（recon:L）。最初は空の表で始まる。
 
 ### 3-10. 印を付ける（本番のデータの変更・1回だけ）
@@ -287,6 +289,7 @@ COMMIT;
 - `scripts/run_all_migrations.sh` に1行足す。置き場は集計の行 `mr_report_summary` の直前（その上の注記「新しい手順は、この集計の行より上に足す」に従う。origin/main `214e88d20` では `:1489`）。
 - 試験用の表にも列を足す: `backend/tests/conftest.py` の tenants 表に2列。
 - PostgreSQL の試験の土台にも移行を足す: `backend/tests/test_users_rls.py:47-57` の一覧に `_META_REVIEW_MIGRATION` を足し、`_MUST_CHANGE_MIGRATION`（`:115`）と同じ所で当てる。K4 の試験と `test_meta_review_switch_updates_under_rls` が、この土台で列を使うため。
+- この土台は tenants の RLS を当てていない（`backend/tests/test_users_rls.py:112-127`・`backend/tests/rls_bootstrap.py:234-246`）。そこで `test_meta_review_switch_updates_under_rls` の中でだけ `migrations/20261016_170000_add_tenants_write_rls.sql` を当てる（試験の後に `DISABLE ROW LEVEL SECURITY` と方針の削除で元に戻す）。確かめること: (1) 運営の文脈なしの UPDATE は0行（拒否）、(2) 運営の文脈ありは1行、(3) UPDATE → 会社の文脈を付けて外す → commit の順で値が残る。この試験は PUT の口を呼ばず、UPDATE と失効の SQL と文脈の付け外しだけを流す（audit_logs の表は要らない）。監査記録は SQLite の試験 `test_meta_review_switch_audited` で確かめる。
 - `backend/app/models.py` の Tenant には足さない（SQL で読むため）。deploy.yml の追記も要らない（`.github/workflows/deploy.yml:276-277`）。
 - 列を足すだけで、既存の行は false と NULL＝今と同じ動き。ADR-136 の GO が要る。
 
