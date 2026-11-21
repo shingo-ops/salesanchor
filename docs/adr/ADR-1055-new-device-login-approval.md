@@ -7,7 +7,7 @@
 | 起案日 | 2026-11-01 |
 | 方針の決定者 | Shingo（PO）。細部は PO の委任に基づき Opus が大手のやり方に沿って決めた（設計書 §3） |
 | 関連 | ADR-1013（自社ログインとパスキー）、ADR-1048（管理者の2段階。いつもの機械と番号の承認を本 ADR が全員向けに広げて引き取る。6桁の部分は ADR-1048 に残る）、ADR-1016（即時反映 SSE に人単位の宛先を足す・改訂 2026-11-01）、ADR-1008（人の正本は public.users）、ADR-027（i18n）、ADR-067・ADR-144（デザイントークンと UI ガバナンス）、ADR-136（危険 PR の GO） |
-| 改訂 | 2026-11-05 提案中: 許可できる人に「同じ会社のオーナーの役の人」を足す（社員が「会社の管理者に頼む」を押した依頼だけ）。ADR-1063 が採用されたら有効 |
+| 改訂 | 2026-11-05 提案中: 許可できる人に「同じ会社のオーナーの役の人」を足す（社員が「会社の管理者に頼む」を押した依頼だけ）。ADR-1063 が採用されたら有効<br>2026-11-21 提案中: What 11（期限つきの確認なし）を足す。設計 `docs/handoff/auth-new-device-approval/review-exempt-design.md`。PO の KGI 承認と実装の後に有効 |
 | 設計 | `docs/handoff/auth-new-device-approval/design.md`、現状 `docs/handoff/auth-new-device-approval/recon.md`、合格の基準 `docs/handoff/auth-new-device-approval/kgi.md` |
 
 ---
@@ -24,6 +24,7 @@
 8. 場所の目安は DB-IP IP to City Lite（CC BY 4.0）を読み、出す画面とメールに出どころを表示する。読めなければ「不明」とし、認証は止めない。
 9. 入れ方は `AUTH_DEVICE_APPROVAL`（off / enforce・既定 off）。off はログインの止め方が今と同じ（機械の登録もしない。6 の失効の確かめだけは off でも効く）。点検専用の人には管理用の命令で印を発行し、点検はその印でログインする。
 10. 新しい表（`user_trusted_devices`・`auth_login_requests`・`user_recovery_codes`・`user_push_subscriptions`）には RLS を付けない。ADR-1018 Decision 6 が認証トークンの表に付けないと決めたのと同じ理由で、ログイン前・会社が決まる前に hash の一致で1行を引くため。生の値は保存せず hash だけを置き、本人の行は `user_id` で絞る。
+11. （**改訂 2026-11-21 提案中**）super admin は、選んだ1人に1〜14日の期限を付けて、知らない機械からの確認を外せる。期限は人の正本 `public.users.device_approval_exempt_until` の1列だけに置き、今より後のときだけ効く（期限が来れば何もしなくても戻る）。super admin 自身と止まっている人には外せない。外して入った回は機械を登録せず、記録に `review_exempt` を残し、本人に知らせメールを送る。外す・戻す操作は会社別の監査記録に残す。用途は外の審査（Meta App Review）の審査員の入口。
 
 ## Why（なぜ）
 
@@ -40,5 +41,7 @@
 - 依存 `maxminddb` と `pywebpush` を足す。場所データを毎月取りに行く。web push の鍵（VAPID）を秘密に置く。
 
 ## 戻し方
+
+What 11 は、管理画面で期限を消すか、期限が来れば元に戻る。列は残す。
 
 `AUTH_DEVICE_APPROVAL` を off に戻す。off はログインの止め方が今と同じ。もう一度 enforce にするときは締切を新しくする。表と列は残す。web push は本体に VAPID の鍵を渡さなければ送らない（2026-11-03 から渡していない。deploy.yml の書き戻し3行を外した）。

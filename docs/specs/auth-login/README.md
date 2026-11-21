@@ -26,6 +26,8 @@
 - [../../handoff/admin-2fa/design.md](../../handoff/admin-2fa/design.md)（同・設計）
 - [../../handoff/admin-2fa/review-opus.md](../../handoff/admin-2fa/review-opus.md)（同・審査）
 - [../../handoff/admin-2fa/deactivate-7-9/README.md](../../handoff/admin-2fa/deactivate-7-9/README.md)（同・管理者2人を止めた記録）
+- [../../handoff/auth-new-device-approval/review-exempt-recon.md](../../handoff/auth-new-device-approval/review-exempt-recon.md)（審査用アカウントの期限つき確認なし・現状）
+- [../../handoff/auth-new-device-approval/review-exempt-design.md](../../handoff/auth-new-device-approval/review-exempt-design.md)（同・設計）
 
 ## ステータス
 - 2026-10-13 新規作成。あるべき姿は PO の発言（2026-10-13）から転記。KGI と設計は PO 承認済み（2026-10-13 チャット「y」）。
