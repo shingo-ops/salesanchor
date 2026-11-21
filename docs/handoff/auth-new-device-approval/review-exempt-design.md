@@ -17,7 +17,7 @@ PO 2026-11-21: 「meta用に用意した006だけはオンオフでログイン�
 
 | # | 基準（○×で判定） | 検証方法 |
 |---|---|---|
-| K1 | 期限の間、確認を外した人は、初めての機械からパスワードだけで入れ、受信箱の画面が開く | 本番: 私物でない新しいブラウザ（シークレット窓）で review@ に入る。試験 `test_review_exempt.py::test_exempt_login_gets_tokens` |
+| K1 | 期限の間、確認を外した人は、初めての機械からパスワードだけで入れ、受信箱の画面が開く | 本番: 私物でない新しいブラウザ（シークレット窓）で review@ に入る。試験 test_review_exempt.py の test_exempt_login_gets_tokens |
 | K2 | 期限が過ぎたら、同じ操作で「許可を待っています」に戻る | 試験 `test_exempt_expired_returns_202`。本番: 期限を消した後に同じ手順で 202 を見る |
 | K3 | 確認を外していない人は、今までどおり 202 で止まる | 試験 `test_not_exempt_still_202`・既存 `backend/tests/test_new_device_approval.py` が全部緑 |
 | K4 | 外せるのは super admin だけ。他の人は 403。super admin 自身・止まっている人には外せない（422） | 試験 `test_exempt_set_forbidden_for_non_super_admin`・`test_exempt_set_rejects_super_admin_target` |
@@ -112,7 +112,7 @@ def is_exempt(exempt_until: datetime | None) -> bool:
 
 ### 3-7. 画面
 
-`frontend/src/pages/super-admin/LoginRequestsPage.tsx:46` の `AdminLoginRequestList` の下に、新しい部品 `features/auth/LoginExemptionSection.tsx` を置く。
+`frontend/src/pages/super-admin/LoginRequestsPage.tsx:46` の `AdminLoginRequestList` の下に、新しい部品（新規ファイル frontend/src/features/auth/LoginExemptionSection.tsx）を置く。
 
 - 使う金型だけ: `SectionCard`・`TextField`（メールアドレス）・`Select`（1・3・7・14日）・`Button`・`DataTable`・`ConfirmModal`（外すとき・戻すとき）。
 - 文字は全部 `t()`。キーは `superAdmin.loginExemption.*` を ja.json と en.json に同じ数で足す。色・大きさの直書きはしない（ADR-067・ADR-144）。
@@ -120,7 +120,7 @@ def is_exempt(exempt_until: datetime | None) -> bool:
 
 ### 3-8. 移行（危ない変更）
 
-- `migrations/20261122_100000_add_users_device_approval_exempt_until.sql`（`ADD COLUMN IF NOT EXISTS`・COMMENT 付き・追加だけ）。
+- 新規ファイル migrations/20261122_100000_add_users_device_approval_exempt_until.sql（`ADD COLUMN IF NOT EXISTS`・COMMENT 付き・追加だけ）。
 - `scripts/run_all_migrations.sh` の末尾の並びに1行足す（前例 `scripts/run_all_migrations.sh:1468`）。
 - 列を足すだけで、既存の行は NULL＝今と同じ動き。ADR-136 の GO が要る。
 
@@ -159,11 +159,11 @@ def is_exempt(exempt_until: datetime | None) -> bool:
 
 ## 8. 実装カードに渡す試験の一覧
 
-`backend/tests/test_review_exempt.py`（新規）に、K1〜K7 の試験名どおりの関数を作る。既存の `backend/tests/test_new_device_approval.py` の準備（enforce の setenv・人の作り方）をそのまま使う。
+新規ファイル backend/tests/test_review_exempt.py に、K1〜K7 の試験名どおりの関数を作る。既存の `backend/tests/test_new_device_approval.py` の準備（enforce の setenv・人の作り方）をそのまま使う。
 
 ## 維持の仕組み
 
-- 守り手: .github/workflows/test.yml（`pytest-run-internal` が `backend/tests/test_review_exempt.py` と `backend/tests/test_new_device_approval.py` を毎回流す）
+- 守り手: .github/workflows/test.yml（`pytest-run-internal` が新規の backend/tests/test_review_exempt.py と `backend/tests/test_new_device_approval.py` を毎回流す）
 - 守り手: .github/workflows/migration-test.yml（移行の SQL を毎回流す）
 - 対象: 期限が過ぎたら必ず戻ること（K2・K7）、外していない人が止まること（K3）、super admin だけが外せること（K4）、14日の上限（K5）
 - 期限の消し忘れは、人の手でなく時刻の比べで閉じる（3-2）。オンオフの印を別に持たないので、印の消し忘れは起きない

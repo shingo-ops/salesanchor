@@ -60,7 +60,7 @@
 ## H. 画面の金型（ADR-144）
 
 - 置き場の候補: super admin の「ログインの許可待ち」画面 `frontend/src/pages/super-admin/LoginRequestsPage.tsx:40-52`（`PageLayout` と `UserManagementSubMenu` を使用）。
-- 使える金型（`frontend/src/components/`）: `SectionCard.tsx`・`TextField.tsx`・`Select.tsx`・`Button.tsx`・`DataTable.tsx`・`ConfirmModal.tsx`。
+- 使える金型（`frontend/src/components/`）: `frontend/src/components/SectionCard.tsx`・`frontend/src/components/TextField.tsx`・`frontend/src/components/Select.tsx`・`frontend/src/components/Button.tsx`・`frontend/src/components/DataTable.tsx`・`frontend/src/components/ConfirmModal.tsx`。
 - 日付を選ぶ金型は見つからない。日数を `Select` で選ぶ形にすれば新しい金型は要らない。
 
 ## I. 試験と必須チェック
