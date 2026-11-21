@@ -8,7 +8,9 @@ from app.realtime.topics import (
     NO_SIGNAL_ROUTES,
     SCOPE_GLOBAL,
     SCOPE_SHARED,
+    SCOPE_TENANT,
     TASK_TOPICS,
+    TENANT_TASK_TOPICS,
     TOPIC_TCG_INVENTORY,
     WRITE_ROUTE_TOPICS,
 )
@@ -129,7 +131,7 @@ def test_super_admin_write_routes_in_signal_table_are_global():
 def test_frontend_topic_names_match_backend():
     from app.realtime.topics import USER_TOPICS
 
-    backend = {t for t, _s in WRITE_ROUTE_TOPICS.values()} | set(TASK_TOPICS) | set(USER_TOPICS)
+    backend = {t for t, _s in WRITE_ROUTE_TOPICS.values()} | set(TASK_TOPICS) | set(USER_TOPICS) | set(TENANT_TASK_TOPICS)
     ts = Path(__file__).resolve().parents[2] / "frontend/src/lib/realtime/topics.ts"
     frontend = set(re.findall(r':\s*"([a-z0-9_.]+)"', ts.read_text(encoding="utf-8")))
     assert frontend == backend
@@ -139,6 +141,11 @@ def test_task_topics_are_shared_or_global():
     # 会社 ID の無い裏の処理から tenant 範囲の合図は出せない
     for topic, scope in TASK_TOPICS.items():
         assert scope in (SCOPE_SHARED, SCOPE_GLOBAL), f"{topic}: {scope}"
+
+
+def test_tenant_task_topics_are_tenant_only():
+    for topic, scope in TENANT_TASK_TOPICS.items():
+        assert scope == SCOPE_TENANT, f"{topic}: {scope}"
 
 
 def test_write_routes_have_no_shared_scope():
