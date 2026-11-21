@@ -2,7 +2,7 @@
 
 - 状態: PO が案 B を選択（2026-11-22「2」）。§10 の実装カードで直す
 - 依頼: PO 2026-11-22「1」（動かない理由を調べて、直し方を設計する）、PO 2026-11-22「2」（1 回の送り込みに失敗があれば 1 通にまとめる）
-- 事実: [recon.md](recon.md)（F1〜F14・U1〜U3）
+- 事実: `docs/handoff/discord-ci-notify-fix/recon.md`（F1〜F14・U1〜U3）
 - 関係: `docs/handoff/discord-dev-notices/design.md` §8-2（届け先「🛠開発の知らせ」）、`docs/adr/ADR-1051-prod-ui-black-box-check.md`（`workflow_run` の前例）
 
 ## 1. 目的
@@ -105,6 +105,7 @@ on:
 
 ## 維持の仕組み
 
+- 守り手: `.github/workflows/discord-ci-notify.yml`（版ごとの印で 2 通目を止める・fork を外す条件）
 - 直したあと: K1〜K6 を数える担当はこの設計の担当（Opus）
 - 長く続ける仕組み: 日曜の外部の状態の点検で、送り口が変わっていないかを見る（PR #5676 のまま）
 - 説明書: `.github/workflows/README.md` の discord-ci-notify.yml の節を、この形に書き直す
