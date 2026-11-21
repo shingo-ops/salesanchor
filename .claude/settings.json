@@ -86,7 +86,7 @@
       ] }
     ],
     "PostToolUse": [
-      { "matcher": "Read|Edit|Write|MultiEdit", "hooks": [
+      { "matcher": "Read|Edit|Write|MultiEdit|Bash", "hooks": [
           { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/requirement-context.py\"", "timeout": 5 }
       ] }
     ],

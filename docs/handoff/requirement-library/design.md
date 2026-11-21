@@ -2,7 +2,7 @@
 
 > この文書は何か: R1〜R4 を合格させる作り方・測り方・守り続ける仕組み。実装カードの元。
 > 親: [../../specs/requirement-library/README.md](../../specs/requirement-library/README.md)／現在地: [recon.md](./recon.md)／KGI: [kgi.md](../../specs/requirement-library/kgi.md)／練習問題: [quiz.md](./quiz.md)
-> 実装カード: [便1](./card-bin1.md)・[便2](./card-bin2.md)・[便3](./card-bin3.md)（合流の順: 便1 と便3 → 便2）
+> 実装カード: [便1](./card-bin1.md)・[便2](./card-bin2.md)・[便3](./card-bin3.md)（合流の順: 便1 と便3 → 便2）・[便2b](./card-bin2b.md)（変更後の測定で R2・R3 が届かなかった後に足した便）
 
 ## 1. 目的と利用者に見える変化
 
@@ -61,6 +61,25 @@
 - 試験を流す場所: `.github/workflows/agent-hooks-test.yml`。job `requirement-hooks` と paths の `.claude/hooks/requirement-*`・`.claude/hooks/test_requirement_*` は便3 が作る（便3 を先に合流する）。便2 はその job に step を1つ足し、paths に `scripts/ci/feature_index_lib.py`・`docs/adr/FEATURE-INDEX.md` を足す。この workflow の変更は CLAUDE.md の不可逆操作の一覧（workflow-lint.yml だけ）に当たらない。
 - 文の形:「この場所には決まりがあります: ADR-097（会社はリードの子）。計画の前に docs/specs/db-ssot/deal-removal/design.md を読んでください。」
 
+### 便2b コマンドで読んだときも決まりを見せる（R2・R3）
+
+- 足した理由（観測）: 変更後の練習問題（[quiz/r3-judgement-after.md](./quiz/r3-judgement-after.md) §3）で、20 回の道具の呼び出し 187 件のうち `Bash` が 159 件・`Read` が 18 件だった（生の記録 raw.tgz を数えた）。Q1 の 2 回は `backend/app/routers/companies.py` などを `sed -n`・`grep` で読み、便2 の見張り（対象 `Read|Edit|Write|MultiEdit`）は一度も文を出さなかった。設計で `Bash` で読む道を入れ忘れたのが原因。
+- 変えること（便2 の見張りを広げる。新しい見張りは作らない）:
+  - `.claude/settings.json` の `"PostToolUse"` の `matcher` を `Read|Edit|Write|MultiEdit|Bash` にする（この1行だけ）。
+  - `.claude/hooks/requirement-context.py`: `tool_input.file_path` があれば今と同じ。無くて `tool_name` が `Bash` なら、`tool_input.command` から読んだファイルを拾い、1つずつ今と同じ照らし方（`git rev-parse --show-toplevel`・`feature_index_lib.match_glob`・印）にかける。文の形・印・1会話1回は便2 と同じ。
+- コマンドからファイルを拾う決まり:
+  - `shlex.shlex(command, posix=True, punctuation_chars=True)`（`whitespace_split=True`）で語に分ける。引用符が閉じていないなどで分けられなければ、空白で分ける。語は先頭から 200 個まで。
+  - `-` で始まる語は飛ばす。`*`・`?`・`[` を含む語は `glob.glob` で広げる（1語 50 件まで）。
+  - 語は入力の `cwd`（公式の hooks の説明の共通の入力。2026-11-21 Context7 `/websites/code_claude` で確かめた）からの相対として解く。絶対パスはそのまま。`cwd` が無ければ相対の語は使わない。
+  - 実在するファイル（`os.path.isfile`）だけを使う。フォルダは使わない（`grep -r frontend/src` のように広すぎて、関係の薄い決まりまで一度に出るため）。ファイルは 1 回の呼び出しで 50 個まで。
+  - 照らす前に同じファイルを1つにまとめる。`git rev-parse` は同じフォルダで1回だけ流し、1回の待ちは 1 秒まで。見張りの登録の timeout が 5 秒なので、照らし始めてから 3 秒を過ぎたら残りのファイルは照らさず、それまでに当たった分だけを出す。
+- 机上の確かめ（Opus、2026-11-21）: 上の決まりを変更後の生の記録 20 回の `Bash` に当てると、Q1-1 は2回目のコマンドで `backend/app/routers/companies.py` に当たり ADR-097 の行が出る。文の数は1会話で 0〜10（最大は Q9-2）。
+- 試験: 便2 の 5 つはそのまま残し、次の 5 つを足す。相対パスの `sed -n` で当たる／`*` の語で当たる／フォルダだけでは出ない／実在しないファイルの語では出ない／引用符の閉じない壊れたコマンドでも終了コード 0。
+- 測り方: 合流の後、変更前・変更後と同じ練習問題 20 回を流し（`quiz/after2/`）、R2・R3 を数え直す。R2 18 以上・R3 0 で合格。
+- 拾えない書き方（限り）: `cd backend && sed -n 1p app/x.py` のように同じ命令文の中で `cd` した後の相対の語（入力の `cwd` は `cd` の前のため）、`git -C <場所>`・`git show origin/main:<パス>`、`~`・`$VAR` を含む語。机上の確かめの数はこの限りを入れた数で、`cd` 付きの読み方が増えれば R2 の見込みに響く。
+- 対象外: `Grep`・`Glob` の道具（練習問題の 20 回で 0 件だった）。索引・`scripts/ci/feature_index_lib.py`・便3 の見張り。
+- 戻し方: `matcher` を元の4つに戻す revert で、便2 のときの動きに戻る。
+
 ### 便3 読まずに「不具合」を止める（R4）
 
 - .claude/hooks/requirement-bug-claim.py（Stop）: transcript_path を読み、最後の返事に「不具合・バグ」があり、その会話で `docs/adr/` か `docs/specs/` を1度も読んでいなければ、1回だけ `decision: block` で「要件の書類を読んでから判定してください」と返す（`stop_hook_active` が真なら止めない）。
@@ -117,3 +136,4 @@
 - 4回目（2026-11-21 08:27、同、対象 8ea9ac23）: **APPROVE**（注記4つ）。注記への対応: 数える ADR のファイル名の形を決め、r1_count.py もそれに直して R1 の今の値を 161 に改めた／除外の理由欄に ADR 以外の置き換え先を書く決まりを足した／索引に載っている Superseded 2本の扱いを決めた／先頭の語の両端の `*` を取ると決めた。Opus が実物で確かめたとき、ADR-138 は同じ番号のファイルが2つ（Superseded と Accepted）あったので、状態をファイルごとに見る決まりを足した（審査の注記に無かった点）。
 - 5回目（2026-11-21 08:31、同、対象 fb70aa45）: **APPROVE**（注記3つ）。実物で r1_count.py が 226・65・161 を出すこと、Superseded が 4 本であること、同じ番号のファイルが2つ以上ある番号が 15 個（状態が違うのは 10 個、除外になるのは ADR-138 だけ）であることを確かめた。注記への対応: ADR-138 は password_hash の行から外し、ファネルのファイルは中身に合う行に載せると書き直した／同じ番号が除外の節と正準欄の両方に出てよい場合を決めた／表の項目名の `*` を取り、`| 項目 | 内容 |` の表でも状態を読むと決めた。
 - 6回目（2026-11-21、マージ前の審査役 Opus、PR #5646・対象 de1d143a2）: **APPROVE**（枝が main より古いことだけがマージを止める点。指摘8つ）。直した点: 便2 の印に書く中身を機能キーワードに揃えた／試験の job は便3 が作り便2 が step を足すと書き、合流の順（便1 と便3 → 便2）を書いた／便1 の貼る行を 11 行に直した／R4 補助の数え方を quiz/count.py に合わせて kgi に書いた／状態の欄を直した／§2 と README の境界に触るファイルを足した／カード3枚へのリンクを足した／recon の行番号のずれ・見張りの一覧の漏れ・古い数え方の説明を直した。あわせて便3 の見張りは、公式の hooks 説明（Stop の入力 `last_assistant_message`。transcript は書き終わる前に読まれることがあるため、こちらが勧められている）に従い、判定する文に `last_assistant_message` を優先し、無いときだけ transcript の最後の文を使うと決めた（card-bin3 §3-1・§3-3 も同じに直した）。
+- 便2b の追加（2026-11-21、Opus）: 変更後の測定で R2 17/20・R3 2/20 となり、原因が `Bash` で読む道の入れ忘れだったため §3 に便2b を足した。PO の方向の承認: 2026-11-21 チャット「1」（「写すときも声をかけるように直し、もう一度20回解かせて確かめる」への回答）。クラウドの設計審査（2026-11-21）は REVISE（直す点3つ: 着手の前提・手順7 の合格の○×・確認用 session_id の付け替え。注記: 拾えない書き方の明記・試験の言い方の揃え・時間の上限）で、6 点とも design・カードに入れた。
