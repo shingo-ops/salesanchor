@@ -365,57 +365,58 @@ async def bootstrap_public_products(admin_engine) -> None:
 
 async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:
     """本番 migration 順で tenant schema を冪等に作成する。"""
-    async with admin_engine.begin() as conn:
-        await conn.execute(
+    async with admin_engine.connect() as lock_conn:
+        await lock_conn.execute(
             text("SELECT pg_advisory_lock(:namespace, 0)"),
             {"namespace": _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE},
         )
         try:
             async with public_bootstrap_lock(admin_engine):
-                await _bootstrap_public_shared(conn)
-                await _ensure_public_users(conn)
-                raw_after_tenants = await conn.get_raw_connection()
-                for filename in _PG_AFTER_TENANTS_MIGRATIONS:
-                    # この transaction の中で流すので BEGIN/COMMIT は除く
-                    sql = (_MIGRATIONS_DIR / filename).read_text("utf-8").replace("BEGIN;", "").replace("COMMIT;", "")
-                    await raw_after_tenants.driver_connection.execute(sql)
-                # 状態の4行（便2 で tenant.py の status が外部キーで指す・ADR-1076）。書けるのは運営だけ
-                await conn.execute(text("SELECT set_config('app.is_operator', 'true', true)"))
-                await conn.exec_driver_sql(customer_statuses_seed_sql())
-                await conn.execute(text("SELECT set_config('app.is_operator', '', true)"))
-                await conn.execute(
-                    text("""
-                        INSERT INTO public.tenants (
-                            id, tenant_code, tenant_name, company_name, is_active
-                        )
-                        VALUES (
-                            :tenant_id,
-                            :tenant_code,
-                            :tenant_name,
-                            :company_name,
-                            TRUE
-                        )
-                        ON CONFLICT (id) DO UPDATE SET
-                            tenant_code = EXCLUDED.tenant_code,
-                            tenant_name = EXCLUDED.tenant_name,
-                            company_name = EXCLUDED.company_name,
-                            is_active = EXCLUDED.is_active
-                    """),
-                    {
-                        "tenant_id": int(tenant_id),
-                        "tenant_code": f"tenant_{int(tenant_id):03d}",
-                        "tenant_name": f"tenant_{int(tenant_id):03d}",
-                        "company_name": f"tenant_{int(tenant_id):03d}",
-                    },
-                )
-                schema_name = f"tenant_{int(tenant_id):03d}"
-                await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
-                schema_name = await create_tenant_schema(conn, tenant_id, admin_db=conn)
-                for filename in _TENANT_BOOTSTRAP_MIGRATIONS:
-                    await _apply_migration_on_conn(conn, filename, schema_name=schema_name)
+                async with admin_engine.begin() as conn:
+                    await _bootstrap_public_shared(conn)
+                    await _ensure_public_users(conn)
+                    raw_after_tenants = await conn.get_raw_connection()
+                    for filename in _PG_AFTER_TENANTS_MIGRATIONS:
+                        # この transaction の中で流すので BEGIN/COMMIT は除く
+                        sql = (_MIGRATIONS_DIR / filename).read_text("utf-8").replace("BEGIN;", "").replace("COMMIT;", "")
+                        await raw_after_tenants.driver_connection.execute(sql)
+                    # 状態の4行（便2 で tenant.py の status が外部キーで指す・ADR-1076）。書けるのは運営だけ
+                    await conn.execute(text("SELECT set_config('app.is_operator', 'true', true)"))
+                    await conn.exec_driver_sql(customer_statuses_seed_sql())
+                    await conn.execute(text("SELECT set_config('app.is_operator', '', true)"))
+                    await conn.execute(
+                        text("""
+                            INSERT INTO public.tenants (
+                                id, tenant_code, tenant_name, company_name, is_active
+                            )
+                            VALUES (
+                                :tenant_id,
+                                :tenant_code,
+                                :tenant_name,
+                                :company_name,
+                                TRUE
+                            )
+                            ON CONFLICT (id) DO UPDATE SET
+                                tenant_code = EXCLUDED.tenant_code,
+                                tenant_name = EXCLUDED.tenant_name,
+                                company_name = EXCLUDED.company_name,
+                                is_active = EXCLUDED.is_active
+                        """),
+                        {
+                            "tenant_id": int(tenant_id),
+                            "tenant_code": f"tenant_{int(tenant_id):03d}",
+                            "tenant_name": f"tenant_{int(tenant_id):03d}",
+                            "company_name": f"tenant_{int(tenant_id):03d}",
+                        },
+                    )
+                    schema_name = f"tenant_{int(tenant_id):03d}"
+                    await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
+                    schema_name = await create_tenant_schema(conn, tenant_id, admin_db=conn)
+                    for filename in _TENANT_BOOTSTRAP_MIGRATIONS:
+                        await _apply_migration_on_conn(conn, filename, schema_name=schema_name)
         finally:
             with suppress(Exception):
-                await conn.execute(
+                await lock_conn.execute(
                     text("SELECT pg_advisory_unlock(:namespace, 0)"),
                     {"namespace": _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE},
                 )

@@ -307,17 +307,18 @@ async def test_new_tenant_shape_equals_migration_and_rules_hold():
                 assert all(row[1] for row in before["rls"])
                 assert len(before["policies"]) == 4
                 # 表と列を消してから、全テナントを回す正本をこの試験のテナントだけに絞って 2 回流す
-                async with admin_engine.begin() as conn:
-                    for table in reversed(_TABLES):
-                        await conn.execute(text(f"DROP TABLE {_SCHEMA}.{table}"))
-                    await conn.execute(text(f"ALTER TABLE {_SCHEMA}.invoices DROP COLUMN issuer_region"))
-                    # 表と一緒に見張りは消えた。残った見張りの関数も外す（便V）
-                    for name in _VERSIONING_FUNCTIONS:
-                        await conn.execute(text(f"DROP FUNCTION {_SCHEMA}.{name}()"))
-                    await _apply_migration_on_conn(conn, _MIGRATION, schema_name=_SCHEMA)  # 1 回目
-                    await _apply_migration_on_conn(conn, _MIGRATION, schema_name=_SCHEMA)  # 2 回目（冪等）
-                    await _apply_migration_on_conn(conn, _VERSIONING_MIGRATION, schema_name=_SCHEMA)  # 便V 1 回目
-                    await _apply_migration_on_conn(conn, _VERSIONING_MIGRATION, schema_name=_SCHEMA)  # 便V 2 回目（冪等）
+                async with public_bootstrap_lock(admin_engine):
+                    async with admin_engine.begin() as conn:
+                        for table in reversed(_TABLES):
+                            await conn.execute(text(f"DROP TABLE {_SCHEMA}.{table}"))
+                        await conn.execute(text(f"ALTER TABLE {_SCHEMA}.invoices DROP COLUMN issuer_region"))
+                        # 表と一緒に見張りは消えた。残った見張りの関数も外す（便V）
+                        for name in _VERSIONING_FUNCTIONS:
+                            await conn.execute(text(f"DROP FUNCTION {_SCHEMA}.{name}()"))
+                        await _apply_migration_on_conn(conn, _MIGRATION, schema_name=_SCHEMA)  # 1 回目
+                        await _apply_migration_on_conn(conn, _MIGRATION, schema_name=_SCHEMA)  # 2 回目（冪等）
+                        await _apply_migration_on_conn(conn, _VERSIONING_MIGRATION, schema_name=_SCHEMA)  # 便V 1 回目
+                        await _apply_migration_on_conn(conn, _VERSIONING_MIGRATION, schema_name=_SCHEMA)  # 便V 2 回目（冪等）
                 async with admin_engine.connect() as conn:
                     after = await _shape(conn)
                 assert before == after
