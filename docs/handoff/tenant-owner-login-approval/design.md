@@ -282,6 +282,17 @@
 
 ---
 
+## 受け入れの結果（2026-11-21 時点）
+
+- K10（便7）: 見本3本で確かめ、どれも閉じた（合流しない）。生出力は Opus の scratchpad の r7/（acceptance_status.md）。
+  - 見本A（#5640・組A の `backend/app/ops/tenant_rls_allowlist.py` に1行）: GO 無しで赤／shingo-cc の GO で赤のまま／PO 本人の `GO #5640 d2fa08a` の後の流し直しで緑（2026-11-20T22:53:49Z）／守るファイルに1行足すと赤（22:56:30Z・「GO の後に守るファイルが変わった」）／その1行を戻すと緑（23:02:25Z）／守らないファイルだけ足すと緑のまま（23:05:17Z）／GO を1字書き直すと赤（2026-11-21T05:16:33Z・「書き直した GO は使えない」）。
+  - 見本B（#5641・組B の migration-test.yml に1行）: GO 無しで赤／shingo-cc の GO の後の流し直しで緑（2026-11-20T15:57:29Z）。
+  - 見本C（#5656・新しい workflow に `guard-files gate` の名前の job・いつも緑）: 偽物は緑（2026-11-21T07:15:34Z）。本物は赤（07:15:40Z）。PO 本人の GO と Approve の後の流し直しでも赤のまま（07:30:05Z・「同じ名前の検査は足せない」）。`mergeStateStatus` は `BLOCKED`。審査2回目の中1（偽物の緑と本物の赤が並んだときに合流が止まるか）は、止まると実測で確かめた。
+  - ruleset 15777895 の必須一覧に `guard-files gate`・integration_id 15368 がある（gh api の読み取り）。
+- K9（便6）: 11/19 は黄。11/20・11/21 は緑で、Discord の返事は 204。7日続けての緑を数えている途中。11/21 は点検の後の反映で本番のコンテナが作り直され、docker compose logs に記録が無かった。Grafana の Loki（job="containerlogs"）から読んだ。
+- K11（便8）: `docs/specs/tenant-rls/README.md`「守り続ける仕組み」の表を足した。表の見張りの名前は、ruleset の必須一覧と workflow の job 名から写した。
+- 便7b の見張りの誤止め（手元の go-identity-guard）: 2026-11-20 の記録（`~/.claude/logs/agent-events.jsonl` の hook が go-identity-guard の行）は5件。理由はどれも「PO name form mismatch」。2件は止まることを確かめるための試し（`GO #999999`）。残りの3件は PO の鍵を使わない命令だった。設計書を直す `sed`、card-7b.md を読むだけの `git show … | grep`、scratchpad の台本の `python` である。どの語で止まったかは未確認（記録には命令の頭の120字しか残らない）。止まる側に倒した作りなので、害は手間だけ。次に見張りを直すときに、上の「止めきれないもの」の細かい抜けと一緒に見直す。
+
 ## 継続（維持する仕組み）
 
 - 完了後の監視: K9 の毎日 Discord（緑も送る）。K8 は migration を含む PR のたびに必須チェックで。K10 は見張りのファイルを触る PR のたびに必須チェックで。
