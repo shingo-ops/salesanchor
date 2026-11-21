@@ -33,26 +33,27 @@ Secret 登録後、次回以降の PR 作成・レビュー・マージで自動
 
 ## discord-ci-notify.yml
 
-PR の全 check (CI) 完了時に Discord に結果を通知する。`check_suite` イベントを使うため
-PR ごとに 1〜2 通知に集約される (個別 workflow ごとに飛ばさない)。
+PR の点検が失敗したとき、1 回の送り込み（head の版）につき 1 通だけ Discord に知らせる。成功のときは知らせない。設計: `docs/handoff/discord-ci-notify-fix/design.md`。
 
-### 通知対象イベント
+### きっかけ
 
-| 結果 | 通知タイトル | 色 |
-|---|---|---|
-| 全 check pass (success) | 🟢 PR #N — All checks passed | 緑 |
-| 1 件以上 fail (failure / timed_out / action_required。正本 discord-ci-notify.yml:53) | 🔴 PR #N — Some checks failed (失敗 check 一覧付き) | 赤 |
-| キャンセル / skip | 通知しない (rerun 中のノイズ防止) | — |
+- `workflow_run`（ほかの仕組みが 1 つ終わるたび）。`check_suite` は GitHub Actions の点検では起動しないため使わない。
+- きっかけが `pull_request` で、同じリポジトリの PR の点検が failure / timed_out / action_required のときだけ動く。
+
+### 2 通目を出さない仕組み
+
+送ったら、その版に `discord-ci-notify` の印（commit status、success）を付ける。印がある版には送らない。PR の点検の欄に「discord-ci-notify」が 1 行増えるのはこのため。
 
 ### 通知内容
 
-- PR 番号 / タイトル / 作成者 / ブランチ (head → base)
-- PR URL + checks タブ URL
-- failure 時は失敗した check の名前と URL を最大 10 件 (embed の各 fields)
+- 🔴 PR #N — Some checks failed
+- PR タイトル / 作成者 / ブランチ (head → base) / PR URL
+- 失敗した check の名前と URL を最大 10 件
+- まだ動いている check の数（0 のときは出さない）
 
 ### 必要な Secrets
 
-`DISCORD_WEBHOOK_CI`（discord-ci-notify.yml:100）。
+`DISCORD_WEBHOOK_CI`（Discord「🛠開発の知らせ」の送り口「自動の点検」）。
 
 ---
 
