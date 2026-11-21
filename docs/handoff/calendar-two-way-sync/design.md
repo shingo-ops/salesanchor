@@ -152,7 +152,7 @@
 
 ### 10-8. 設計審査（同じ AI による自己審査・2026-11-22）
 - 判定: APPROVE。
-- 実物との照合: card-bin2.md §0 の 3 か所（`calendar_service.py:31`・`:1416`・`:1460-1464`、試験 `:685-698`）を origin/main 2560f963f で一字一句確かめた。書き込みの文は `changes` の列だけを `col = :col` で並べる（`:1468`）ので、`color_key = None` は `color_key = NULL` になる。
+- 実物との照合: card-bin2.md §0 の 3 か所（`backend/app/services/calendar_service.py:31`・`:1416`・`:1460-1464`、試験 `backend/tests/test_calendar_service.py:685-698`）を origin/main 2560f963f で一字一句確かめた。書き込みの文は `changes` の列だけを `col = :col` で並べる（`:1468`）ので、`color_key = None` は `color_key = NULL` になる。
 - 既存の試験との整合: `test_color_only_when_label_matches` の「名札なし・{"L1":"#0000ff"}・行の色 "red"」は、"red" が 24 色に無く `EVENT_COLORS.get` が None になるので今までどおり触らない。
 - 決めごととの整合: ADR-1081 What 4（アプリで作った予定の色は取り込まない）は ADR-1059 改訂 2026-11-20 で既に置き換わっている。今回はその上の「無い」の読み方だけ。
 - 未解決: なし。

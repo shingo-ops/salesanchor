@@ -63,7 +63,7 @@ from app.services.event_colors import EVENT_COLORS, key_for_hex
             changes["color_key"] = None
 ```
 
-`EVENT_COLORS` を `calendar_service.py` の中で別名で持たない。色の表は `event_colors.py` の 1 か所だけ。
+`EVENT_COLORS` を `backend/app/services/calendar_service.py` の中で別名で持たない。色の表は `backend/app/services/event_colors.py` の 1 か所だけ。
 
 ## 2. `backend/tests/test_calendar_service.py`
 
