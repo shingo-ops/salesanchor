@@ -284,16 +284,16 @@
 
 ## 受け入れの結果（2026-11-22 時点）
 
-- K10（便7）: 見本3本で確かめ、どれも閉じた（合流しない）。生出力は Opus の scratchpad の r7/（acceptance_status.md）。
+- K10（便7）: 見本3本で確かめ、どれも閉じた（合流しない）。11/22 に4本目（名前を変えるだけの見本）を足した。生出力は Opus の scratchpad の r7/（acceptance_status.md）。
   - 見本A（#5640・組A の `backend/app/ops/tenant_rls_allowlist.py` に1行）: GO 無しで赤／shingo-cc の GO で赤のまま／PO 本人の `GO #5640 d2fa08a` の後の流し直しで緑（2026-11-20T22:53:49Z）／守るファイルに1行足すと赤（22:56:30Z・「GO の後に守るファイルが変わった」）／その1行を戻すと緑（23:02:25Z）／守らないファイルだけ足すと緑のまま（23:05:17Z）／GO を1字書き直すと赤（2026-11-21T05:16:33Z・「書き直した GO は使えない」）。
   - 見本B（#5641・組B の migration-test.yml に1行）: GO 無しで赤／shingo-cc の GO の後の流し直しで緑（2026-11-20T15:57:29Z）。
   - 見本C（#5656・新しい workflow に `guard-files gate` の名前の job・いつも緑）: 偽物は緑（2026-11-21T07:15:34Z）。本物は赤（07:15:40Z）。PO 本人の GO と Approve の後の流し直しでも赤のまま（07:30:05Z・「同じ名前の検査は足せない」）。`mergeStateStatus` は `BLOCKED`。審査2回目の中1（偽物の緑と本物の赤が並んだときに合流が止まるか）は、止まると実測で確かめた。
   - ruleset 15777895 の必須一覧に `guard-files gate`・integration_id 15368 がある（gh api の読み取り）。
-  - 名前を変えるだけの見本（#5678・2026-11-22 追記）: 組A の試験ファイル backend/tests/test_check_public_tenant_rls.py の名前だけを変えた（0行の変更）。GO 無しで赤（実行 44951058337・2026-11-21T21:21:04Z・「守るファイルが変わっている: backend/tests/test_check_public_tenant_rls.py。要る書き手: PO 本人（shingo-ops）」）。変更前の名前で守る一覧に当たった。閉じた（合流しない）。組A の allowlist の名前を変える見本は、手元の PR 本文の点検（設計書が引くファイルが無くなる）で PR を作れないため、試験ファイルに替えた。この赤は PR の先頭の commit の check-runs に出る（59件中・件数を100にした読み方で見える。件数を指定しない最初の30件には入らない）。gh pr checks にも出る。生出力は Opus の scratchpad の r7b/（gate_run_log.txt・pr_checks.txt）。
+  - 名前を変えるだけの見本（#5678・2026-11-22 追記）: 組A の試験ファイル backend/tests/test_check_public_tenant_rls.py の名前だけを変えた（0行の変更）。GO 無しで赤（実行 44951058337・2026-11-21T21:21:04Z・「守るファイルが変わっている: backend/tests/test_check_public_tenant_rls.py。要る書き手: PO 本人（shingo-ops）」）。変更前の名前で守る一覧に当たった。閉じた（合流しない）。組A の allowlist の名前を変える見本は、手元の PR 本文の点検（pr-body-guard）で PR の作成が止まった（2026-11-21T21:05〜21:07Z の記録）。止まった細かい理由の生出力は残していない。このため試験ファイルに替えた。この赤は PR の先頭の commit の check-runs に出る（59件中・件数を100にした読み方で見える。件数を指定しない最初の30件には入らない）。gh pr checks にも出る。生出力は Opus の scratchpad の r7b/（gate_run_log.txt・pr_checks.txt）。
 - K10 の補い（便7b）（2026-11-22 追記）:
-  - 手元: shingo-ops で GO を書く命令は止まる（exit 2）。決まった Approve の形と読むだけの gh api は通る（exit 0）。生出力は r7/acc_result.txt。`gh auth switch --user shingo-ops` を見張りに読ませると止まる（exit 2・r7b/local_switch.txt）。guard-files-gate.yml 以外の workflow に `guard-files gate` の名前を書く Write は止まる（2026-11-21T20:56:41Z の記録・理由「workflow name」）。
+  - 手元: shingo-ops で GO を書く命令は止まる（exit 2）。決まった Approve の形と読むだけの gh api は通る（exit 0）。生出力は r7/acc_result.txt。`gh auth switch --user shingo-ops` を見張りに読ませると止まる（exit 2・r7b/local_switch.txt）。guard-files-gate.yml 以外の workflow に `guard-files gate` の名前を書く書き込みは止まる（2026-11-21T20:56:41Z の記録・理由「workflow name」）。
   - クラウド（実行 cse_01HHUUpSpDL68GaGj9FWoCSa・2026-11-21T21:03〜21:04Z）: 写しの記録は remote=true。見張りの試験 25/25 合格。`--body` に GO を書く・GO を書いたファイルを `--body-file` で渡す・`$(…)` で本文を渡す、の3つは止まった。workflow に `guard-files gate` の名前を書く Write も止まり、ファイルはできていない。比べ用の `gh --version` と /tmp への Write は通った。止めた文は scripts/agent-hooks/cloud/go_comment_guard.py の MSG・MSG_DOLLAR・MSG_W と同じ。写しは r7b/cloud_run.md。
-  - 自動の確かめ（agent-hooks-test.yml）: 実行 44920342235（2026-11-21T15:39Z・見張りの最新の変更を含む commit）で `go-identity-guard test` と `go-comment-guard test` の2つが緑。
+  - 自動の確かめ（agent-hooks-test.yml）: 実行 44920342235（2026-11-21T15:39Z・別の PR の実行・見張りと試験の中身は main と同じ）で `go-identity-guard test` と `go-comment-guard test` の2つが緑。
 - K9（便6）: 11/19 は黄。11/20・11/21 は緑で、Discord の返事は 204。7日続けての緑を数えている途中。11/21 は点検の後の反映で本番のコンテナが作り直され、docker compose logs に記録が無かった。Grafana の Loki（job="containerlogs"）から読んだ。
 - K11（便8）: `docs/specs/tenant-rls/README.md`「守り続ける仕組み」の表を足した。表の見張りの名前は、ruleset の必須一覧と workflow の job 名から写した。
 - 便7b の見張りの誤止め（手元の go-identity-guard）: 2026-11-20 の記録（`~/.claude/logs/agent-events.jsonl` の hook が go-identity-guard の行）は5件。理由はどれも「PO name form mismatch」。2件は止まることを確かめるための試し（`GO #999999`）。残りの3件は PO の鍵を使わない命令だった。設計書を直す `sed`、card-7b.md を読むだけの `git show … | grep`、scratchpad の台本の `python` である。どの語で止まったかは未確認（記録には命令の頭の120字しか残らない）。止まる側に倒した作りなので、害は手間だけ。次に見張りを直すときに、上の「止めきれないもの」の細かい抜けと一緒に見直す。
