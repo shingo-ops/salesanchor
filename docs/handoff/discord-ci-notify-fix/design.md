@@ -287,7 +287,7 @@ PR の点検が失敗したとき、1 回の送り込み（head の版）につ�
 ### 触るファイル
 
 1. `.github/workflows/discord-ci-notify.yml`: 64 行目だけを §10 の新しい行に置き換える
-2. `docs/handoff/discord-ci-notify-fix/design.md`・`recon.md`: この節と F15〜F17（Opus が書く）
+2. `docs/handoff/discord-ci-notify-fix/design.md`・`docs/handoff/discord-ci-notify-fix/recon.md`: この節と F15〜F17（Opus が書く）
 3. `.claude-pipeline/active-work.d/release-discord-ci-notify-n1.md`: 台帳
 
 ### 触らないもの
