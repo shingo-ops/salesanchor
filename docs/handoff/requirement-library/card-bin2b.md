@@ -8,7 +8,7 @@ mode: handoff
 - 状態: カード作成済み（2026-11-21 Opus）。PO の方向の承認: 2026-11-21 チャット「1」（「写すときも声をかけるように直し、もう一度20回解かせて確かめる」への回答）。マージの判断は Opus（GO 委任）。
 - 担当: クラウドの Sonnet（実装）。Opus は審査・PR 作成・マージ判断。
 - 区分: B（見張りの台本・その試験・`.claude/settings.json` の1行だけ）。
-- 枝: `release/requirement-library-bin2b`。着手の前提: 便2（`.claude/hooks/requirement-context.py`・`"PostToolUse"` 節）が origin/main にあること。無ければ止める。
+- 枝: `release/requirement-library-bin2b`。着手の前提: 便2（`.claude/hooks/requirement-context.py`・`"PostToolUse"` 節）と、このカード・design.md の便2b の節が origin/main にあること。無ければ止める。
 
 ## 0. カード発行前チェック（docs/ai-agents/design-partner.md §5.5）
 
@@ -52,7 +52,8 @@ mode: handoff
   - `tool_input.file_path` が文字列であれば `[file_path]`（今と同じ。絶対パスでなければ何もしない）。
   - そうでなく `tool_name == "Bash"` で `tool_input.command` が文字列なら、§3-2 の決まりでファイルを拾う。
   - どちらでもなければ何も出さない。
-- 一覧の各ファイルに、今の照らし方（親フォルダで `git rev-parse --show-toplevel`・直下からの相対・`docs/adr/FEATURE-INDEX.md` を `feature_index_lib.read_index`・`feature_index_lib.match_glob`）をかける。`git rev-parse` の結果は同じ親フォルダごとに1回だけ流して使い回す。索引は同じ直下ごとに1回だけ読む。
+- 一覧の各ファイルに、今の照らし方（親フォルダで `git rev-parse --show-toplevel`・直下からの相対・`docs/adr/FEATURE-INDEX.md` を `feature_index_lib.read_index`・`feature_index_lib.match_glob`）をかける。`git rev-parse` の結果は同じ親フォルダごとに1回だけ流して使い回し、`Bash` のときの1回の `timeout` は 1 秒にする（`file_path` のときは今の 3 秒のまま）。索引は同じ直下ごとに1回だけ読む。
+- `Bash` のときは、照らし始めに `time.monotonic()` を取り、3 秒を過ぎたら残りのファイルは照らさず、それまでに当たった分だけ出す（登録の timeout が 5 秒のため）。
 - 印・文の形・`hookSpecificOutput` の出し方・失敗で終了コード 0 は今と同じ。1回の呼び出しで当たった行は、全部のファイルを通して機能キーワードで1つにまとめる。
 - Python 3.12 の標準ライブラリだけ。
 
@@ -63,6 +64,8 @@ mode: handoff
 3. 語が絶対パスでなければ、入力の `cwd`（文字列で絶対パスのときだけ）とつなぐ。`cwd` が使えなければ、その語は飛ばす。
 4. `*`・`?`・`[` のどれかを含む語は `glob.glob(つないだパス)` で広げ、先頭の 50 件まで使う。含まない語はそのまま使う。
 5. `os.path.isfile` が真のものだけ残す（フォルダは使わない）。同じパスは1つにまとめ、50 個まで。
+
+拾えない書き方（作らなくてよい）: 同じ命令文の中の `cd` の後の相対の語・`git -C`・`git show origin/main:<パス>`・`~`・`$VAR`。
 
 ### 3-3. 登録 `.claude/settings.json`
 
@@ -76,7 +79,7 @@ mode: handoff
 1. `sed -n 1,5p backend/app/x.py` → `additionalContext` に ADR 番号が入る。
 2. `cat backend/app/*.py` → 同じく入る。
 3. `grep -rn foo backend/app` → 何も出ない（フォルダだけ）。
-4. `grep -n "backend/app/nothing.py" backend/app/missing.py`（どちらのファイルも見本に作らない）→ 何も出ない（実在しないファイルは使わない）。
+4. `grep -n "backend/app/nothing.py" backend/app/missing.py`（どちらのファイルも見本に作らない）→ 何も出ない（実在しないファイルの語は使わない）。
 5. `sed -n 1p 'backend/app/x.py`（引用符が閉じていない）→ 終了コード 0（出るかどうかは問わない）。
 
 ## 4. 委任の決まり
@@ -89,14 +92,15 @@ mode: handoff
 ## 5. 手順（1 手順 1 コマンド。各コマンドは作業場所のフルパスへの cd で始める）
 
 1. `cd /home/user/salesanchor && git fetch origin main` のあと `bash scripts/new-worktree.sh release/requirement-library-bin2b --claude`（最後の Claude 起動の失敗は無視してよい）。以降は表示された作業場所で行う。
-2. 前提の確認: `git ls-tree --name-only origin/main .claude/hooks/requirement-context.py` に1行出ること。`grep -c 'Read|Edit|Write|MultiEdit"' .claude/settings.json` が 1 であること。違えば止める。
+2. 前提の確認: `git ls-tree --name-only origin/main .claude/hooks/requirement-context.py docs/handoff/requirement-library/card-bin2b.md` に2行出ること。`git show origin/main:docs/handoff/requirement-library/design.md | grep -c '### 便2b'` が 1 であること。`grep -c 'Read|Edit|Write|MultiEdit"' .claude/settings.json` が 1 であること。違えば止める。
 3. `git show origin/main:docs/handoff/requirement-library/design.md` の §3 便2b と、今の `.claude/hooks/requirement-context.py`・`.claude/hooks/test_requirement_context.py` を読む。公式の hooks の説明で `cwd` と Bash の `tool_input.command` を確かめる。
 4. §3-1・§3-2・§3-4 を作り、`python3 -I .claude/hooks/test_requirement_context.py 2>&1 | tail -20` が成功すること（10 件）。
 5. 本物の索引での確かめ（どちらも `<作業場所>` は手順1 で表示された実際のパスに置き換える）:
    - `printf '%s' '{"session_id":"card-check-b1","cwd":"<作業場所>","tool_name":"Bash","tool_input":{"command":"sed -n 370,470p backend/app/routers/companies.py"}}' | python3 -I .claude/hooks/requirement-context.py` の出力に `ADR-097` と `deal-removal` が入ること。
+   - 流し直すときは、印が残って2回目から何も出なくなるため、`card-check-b1`・`card-check-b2` の末尾の番号を毎回変える（例 `card-check-b1-2`）。
    - `printf '%s' '{"session_id":"card-check-b2","cwd":"<作業場所>","tool_name":"Bash","tool_input":{"command":"git status"}}' | python3 -I .claude/hooks/requirement-context.py` が何も出さないこと。
 6. §3-3 を替え、JSON の読み込み確認を流して commit する（1 commit でよい）。
-7. `git diff --stat origin/main...HEAD | tail -6`・`git diff --diff-filter=D --name-only origin/main...HEAD | head -5`（0 件）・`git diff origin/main...HEAD -- .claude/settings.json`（`-` 1行・`+` 1行で、違いは `|Bash` だけ）を報告に貼る。
+7. `git diff --name-only origin/main...HEAD` が `.claude/hooks/requirement-context.py`・`.claude/hooks/test_requirement_context.py`・`.claude/settings.json` の3行ちょうどであること（違えば止める）。あわせて `git diff --stat origin/main...HEAD | tail -6`・`git diff --diff-filter=D --name-only origin/main...HEAD | head -5`（0 件）・`git diff origin/main...HEAD -- .claude/settings.json`（`-` 1行・`+` 1行で、違いは `|Bash` だけ）を報告に貼る。
 8. `git -C <作業場所> push -u origin release/requirement-library-bin2b` を単独で流す。
 
 ## 6. PR（Opus が作る）
