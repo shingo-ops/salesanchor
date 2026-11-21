@@ -14,6 +14,14 @@
 - 鳴り止まないときの止め方：prod2 の Alertmanager のコンテナの中で `amtool silence add alertname=RULE --duration=PERIOD --comment=REASON` を実行する（RULE はルール名、PERIOD は期間、REASON は理由に置き換える）。期間と理由は記録に残す。
 - 直し方が書けないものは「原因を切り分けて Opus に報告する」とだけ書いてある。推測で手順を作らない。
 
+### 知らせの届く場所（Discord）
+
+- Sales Anchor サーバーの「アラート」分類は 3 つに分ける（設計: `docs/handoff/discord-channel-consolidation/design.md`）。
+- 「🚨急ぎ」: すぐ見る異常。この文書の見張りの発火と解消（Alertmanager）・Uptime Kuma・さくらのメール・画面点検の不合格・反映の止まりと戻し。送り口は「サーバー監視」「さくらのお知らせ」「API接続障害」（GitHub の `DISCORD_WEBHOOK_OWNER_PING`）。
+- 「📋定期の報告」: あとで読めばよい報告。アプリの毎日・毎週の点検・GitHub の週次と月次の報告（`DISCORD_WEBHOOK_SCHEDULED_REPORT`）・Mac の見張り・kb 見回り。送り口は「運用アラート」（本番の `ADMIN_NOTIFICATION_DISCORD_WEBHOOK`）と「approval-test」（Mac）。
+- 「不具合受付」: お客様と PO の不具合の報告。agent-console が読む。「不具合報告」は ADR-1025 の誤り報告用に取っておく。
+- 新しい知らせを足すときは、上のどちらに当たるかを決めて、その送り口を使う。新しいチャンネルは作らない。
+
 ## HighCpuUsage
 
 - 札：ticket
