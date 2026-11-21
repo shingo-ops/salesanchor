@@ -1422,6 +1422,11 @@ rules:
     anchor: "- 不要と書いてよい条件: 無し（v1）。札が page で、この間はコンテナの不健康"
     kind: exempt
     reason: "ContainerStateStale では「対応: 不要」と書かない決まり。報告の中身。実行時の振る舞いで PR に残らない"
+  - id: X413
+    source: docs/ai-agents/executor-checklist.md
+    anchor: "- 会社の分け方（RLS）を守る見張りの workflow・スクリプトを触る便は、先に"
+    kind: exempt
+    reason: "表を先に読む、は作業の順番で PR に残らない。守るファイルの GO が要ることは必須チェック guard-files gate が機械で止める（ADR-1063 便7）"
 
 not_rules:
   - source: frontend/AGENTS.md
