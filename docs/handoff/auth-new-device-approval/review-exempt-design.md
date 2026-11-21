@@ -5,7 +5,7 @@
 - 親（あるべき姿）: [docs/specs/auth-login/README.md](../../specs/auth-login/README.md)
 - 現在地: [review-exempt-recon.md](review-exempt-recon.md)（以下 recon:記号）
 - 決定: [ADR-1055](../../adr/ADR-1055-new-device-login-approval.md) の改訂（What 11 を足す。2026-11-21 提案中）
-- 状態: 設計案作成済み（Opus 2026-11-21）・審査1回目 REVISE（指摘1〜8を反映）・審査2回目 REVISE（3件と軽い3件を反映）・KGI は PO 承認待ち・実装未着手
+- 状態: 設計案作成済み（Opus 2026-11-21）・設計審査済み（3回目 APPROVE。記録 [review-exempt-review-opus.md](review-exempt-review-opus.md)）・KGI は PO 承認待ち・実装未着手
 
 ## 1. 目的（PO の言葉）
 
@@ -109,7 +109,7 @@ def is_exempt(exempt_until: datetime | str | None) -> bool:
 | `GET /passkey/prompt`（`backend/app/routers/auth.py:939`） | `can_auto`・`show_prompt` を返す（`backend/app/routers/auth.py:954-957`） | `PasskeyPromptStatus(can_auto=False, show_prompt=False)` を返す（自動作成も案内も出さない） |
 | `POST /passkey/register/options`・`/passkey/register/verify`（`backend/app/routers/auth.py:978`・`:1007`） | 登録できる | 403 `exempt_session_no_enroll` |
 | `POST /recovery-codes`（`backend/app/routers/auth.py:1884`） | 作れる | 403 `exempt_session_no_enroll` |
-| `POST /tenant/login-requests/{id}/approve`（`backend/app/routers/tenant_login_requests.py:66-75`） | 会社のオーナーなら許可できる | 403 `exempt_session_no_enroll`（機械の確かめを経ていない組から、ほかの人の機械を許可させない） |
+| `POST /tenant/login-requests/{id}/approve`（`backend/app/routers/tenant_login_requests.py:68-76`） | 会社のオーナーなら許可できる | 403 `exempt_session_no_enroll`（機械の確かめを経ていない組から、ほかの人の機械を許可させない） |
 
 - 判定は devices.py に1つの関数 `async def is_exempt_session(db, request, user) -> bool` にまとめ、4つの口から呼ぶ。条件を写して持たない。中の順は次のとおり（期限を外していない人には、今までの動きを1つも変えないため）:
   1. `is_enforced()` が偽なら False
@@ -118,7 +118,7 @@ def is_exempt(exempt_until: datetime | str | None) -> bool:
   4. `trusted_device_id is None` なら True、あれば False
 - devices.py から dependencies.py を読み込んでも、読み込みは回らない（`backend/app/auth/dependencies.py:14` は devices を読み込まない）。
 - 期限を外していない人と、いつもの機械で入った組は、今までと同じ（手順2と4で外れる）。
-- 画面は 403 を受けたら何もしない（自動作成の失敗は今も黙って飛ばす作り。便2で文言を出すかは決めない＝出さない）。
+- 画面は、自動作成の道では 403 を受けても何もしない（今も失敗は黙って飛ばす作り）。設定画面から手でパスキーや合言葉を作ろうとして 403 になったときは、既存の失敗の出し方（ADR-1071「起きたこと＋次にすること」）で `auth.error.exemptSessionNoEnroll` を出す。文面: 「この入り方ではパスキーと予備の合言葉は作れません。いつもの機械で入り直してから作ってください。」（ja/en を同じキーで足す。便1 に含める）
 
 ### 3-6. 触らない場所
 
@@ -144,6 +144,7 @@ def is_exempt(exempt_until: datetime | str | None) -> bool:
   5. `_record_auth_audit(...)`（中で文脈を付け外しする）
   6. `db.commit()`
 - SQLite の試験では文脈が効かないので、PostgreSQL（RLS）の試験を1本足す（`test_exempt_set_updates_row_under_rls`）。
+- 操作の記録の会社は、対象の人の会社（対象の tenant_id）にする。その会社の監査記録に「誰がいつ外したか」が残る。
 - 操作の記録は既存の `_record_auth_audit`（会社別の audit_logs。`backend/app/routers/auth.py:282`）に `event: login_exemption_set|cleared`・`days`・`until` を残す。誰が操作したかは `user_id=current_user.id`。
 
 ### 3-8. 画面
