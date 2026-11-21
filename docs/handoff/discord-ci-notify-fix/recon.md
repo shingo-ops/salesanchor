@@ -29,8 +29,8 @@
 | F13 | このリポジトリには `workflow_run` と、ジョブの `if` で結果を見る前例がある | `.github/workflows/prod-ui-check.yml:11-14`・`:33` |
 | F14 | 知らせの文面は、PR の題名を環境変数と `jq --arg` で渡している（題名が命令として動く心配がない形） | `.github/workflows/discord-ci-notify.yml:102`・`:125-133` |
 | F15 | 合流後の今の形（`.github/workflows/discord-ci-notify.yml:64`、`jq ... \| head -n 10`）は、失敗した点検が 300 件のとき終了コード 141（途中で切られた）で止まり、知らせが出ない。200 件までは止まらない。点検の一覧は 100 件までしか読まない（`:63` の `per_page=100`）。100 件の文字の量は 12580 バイト。jq の中で 10 件に切る形は 0〜5000 件すべて終了コード 0・10 行 | 手元（macOS）での試し 2026-11-22。`/tmp/CC報告ファイル/discord-channels/ci-notify/` には残さず、試しの台本は本文 §11 に書いた |
-| F16 | 合流（2026-11-22 07:53）後、知らせの仕組みは 133 回起動。131 回は外れて（skipped）終わり、2 回が動いた。外れた 10 件は、ジョブの開始と終わりの時刻の差が 0 秒（記録の順で 1 秒以内） | 手元の Mac の /tmp/CC報告ファイル/discord-channels/ci-notify/ の k4-sample.txt と runs-after-deploy.json |
-| F17 | 動いた 2 回は PR #5683 の別々の版。版 b2d70be: 点検の失敗 07:57:23 → Discord の投稿 07:57:35（12 秒）。版 cc011c8: 失敗 08:01:07 → 投稿 08:02:57（1 分 50 秒）。cc011c8 は 08:12:51 にもう一度失敗したが 2 通目は無く、版の印は 1 件だけ | 手元の Mac の /tmp/CC報告ファイル/discord-channels/ci-notify/ の k1-discord.jsonl（Bot で読んだ投稿の時刻）と run-44959366699.log・run-44959669845.log |
+| F16 | 合流（2026-11-22 07:53:56）から 08:05:52 までに、知らせの仕組みは 135 回起動。133 回は外れて（skipped）終わり、2 回が動いた。外れた 10 件の見本では、ジョブの記録の 2 つの時刻の差は 0 秒が 6 件・1 秒が 3 件・8 秒が 1 件 | 手元の Mac の /tmp/CC報告ファイル/discord-channels/ci-notify/ の runs-since-merge.tsv（2026-11-22 に一覧を読み直して数えた）と k4-sample.txt |
+| F17 | 動いた 2 回は PR #5683 の別々の版。版 b2d70be: 点検の失敗 07:57:23 → Discord の投稿 07:57:35（12 秒）。版 cc011c8: 失敗 08:01:07 → 投稿 08:02:57（1 分 50 秒）。cc011c8 は 08:12:51 にもう一度失敗したが 2 通目は無く、版の印は 1 件だけ | 手元の Mac の /tmp/CC報告ファイル/discord-channels/ci-notify/ の k1-discord.jsonl（Bot で読んだ投稿の時刻）・cc011c8-failed.json（08:12:51 の失敗）・run-44959366699.log・run-44959669845.log |
 
 ## 3. 原因（事実の組み合わせ）
 
