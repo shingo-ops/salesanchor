@@ -16,6 +16,8 @@ on:
       - 'docs/handoff/conversation-consent/hooks/**'
       - '.claude/hooks/requirement-*'
       - '.claude/hooks/test_requirement_*'
+      - 'scripts/ci/feature_index_lib.py'
+      - 'docs/adr/FEATURE-INDEX.md'
 
 jobs:
   review-gate:
@@ -172,3 +174,5 @@ jobs:
           python-version: '3.12'
       - name: Run requirement-bug-claim tests
         run: python3 -I .claude/hooks/test_requirement_bug_claim.py
+      - name: Run requirement-context tests
+        run: python3 -I .claude/hooks/test_requirement_context.py
