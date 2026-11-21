@@ -31,9 +31,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import (
     get_current_tenant,
     get_current_user,
+    is_postgresql,
     reset_tenant_context,
     set_tenant_context,
 )
+from app.cache import invalidate_dashboard_cache
 from app.database import get_db
 from app.models import User
 from app.schemas.registration_token import (
@@ -46,6 +48,7 @@ from app.schemas.registration_token import (
     TokenVerifyResponse,
 )
 from app.services.audit import record_audit_log
+from app.services.customer_statuses import STATUS_ACTIVE
 from app.services.registration_token import (
     create_registration_token,
     mark_token_used,
@@ -215,7 +218,7 @@ async def register_customer(
     data: RegisterRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    """顧客がフォームから住所・連絡先を登録する。
+    """顧客がフォームから住所・連絡先を登録する。会社が無ければ作る（ADR-097 §3）。
 
     テナント ID・リード ID はトークンから確定（ボディから受け付けない）。
     トークン改ざん・期限切れ・使用済みの場合は 403。
@@ -234,21 +237,55 @@ async def register_customer(
     # テナントスキーマ・RLS コンテキストを設定
     await set_tenant_context(db, tenant_id)
 
-    # リードに紐づく会社 ID・請求先名を取得
+    # 同じリードの会社作りを 2 本同時に走らせない（PostgreSQL のみ。試験の SQLite は FOR UPDATE 不可）
+    lead_sql = "SELECT company_name, customer_name FROM leads WHERE id = :lead_id"
+    if is_postgresql(db):
+        lead_sql += " FOR UPDATE"
+    lead_row = (await db.execute(text(lead_sql), {"lead_id": lead_id})).first()
+    if not lead_row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="company_not_found")
+
     # companies.lead_id が SSOT（leads に company_id 列はない）
     # billing_display_name は担当者名フォールバック用（ADR-126 §0）
     result = await db.execute(
-        text("SELECT id, billing_display_name FROM companies WHERE lead_id = :lead_id"),
+        text("SELECT id, billing_display_name FROM companies WHERE lead_id = :lead_id ORDER BY id LIMIT 1"),
         {"lead_id": lead_id},
     )
     row = result.first()
-    if not row or not row[0]:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="company_not_found",
+    company_created = False
+    billing_display_name_fallback: str = ""
+    if row and row[0]:
+        company_id = row[0]
+        billing_display_name_fallback = row[1] or ""
+    else:
+        # ADR-097 §3: 既存リード情報＋顧客入力で会社を自動生成する。CRM 属性は担当者が後付け（§4）
+        name = next(
+            (v.strip() for v in (lead_row[0], lead_row[1], data.billing_display_name) if v and v.strip()),
+            "",
         )
-    company_id = row[0]
-    billing_display_name_fallback: str = row[1] or ""
+        if not name:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="company_name_required")
+        created = await db.execute(
+            text("""
+                INSERT INTO companies (tenant_id, company_code, lead_id, name, status)
+                VALUES (:tenant_id, :company_code, :lead_id, :name, :status)
+                RETURNING id
+            """),
+            {
+                "tenant_id": tenant_id,
+                "company_code": f"CO-PEND-{uuid.uuid4().hex[:8]}",
+                "lead_id": lead_id,
+                "name": name,
+                "status": STATUS_ACTIVE,
+            },
+        )
+        company_id = created.scalar_one()
+        await db.execute(
+            text("UPDATE companies SET company_code = :code WHERE id = :id"),
+            {"code": f"CO-{company_id:05d}", "id": company_id},
+        )
+        company_created = True
+        billing_display_name_fallback = data.billing_display_name or ""
 
     # ADR-126: billing_display_name / payment_recipient_name を companies に保存
     if data.billing_display_name or data.payment_recipient_name:
@@ -350,6 +387,8 @@ async def register_customer(
 
     await db.commit()
     await reset_tenant_context(db, tenant_id)
+    if company_created:
+        await invalidate_dashboard_cache(tenant_id)
 
     return RegisterResponse(
         success=True,
