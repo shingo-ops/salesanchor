@@ -1,0 +1,76 @@
+# migration のロック待ちを 30 秒に延ばす計画
+
+ファイルの変更・commit・push はしていません。読み取りだけで調べました。
+
+## 現状
+
+- ロック待ちの値の正本は `scripts/run_all_migrations.sh:223` の `SQL_LOCK_TIMEOUT`（既定 `1s`）です。
+  - `run_sql` は `PGOPTIONS="-c lock_timeout=..."` で、この値を接続ごとに渡します（295 行）。
+  - `run_py` は `MIGRATION_LOCK_TIMEOUT` 経由で、`scripts/migration_py_entry.py` が同じ値を渡します（258 行）。
+- ロック競合で落ちたファイルは、3 秒あけて流し直します。再試行は 1 回の実行全体で合計 40 回までです。
+- `deploy.yml:873` の移行ステップは `command_timeout: 10m` で打ち切られます。
+- `docs/adr/ADR-1037-migration-lock-timeout.md` が、ロック待ち 1 秒を PO 承認の成功条件として決めています。
+  - 理由は、migration がロックを待っている間は、後から来た在庫表の読み取りも全部止まるからです。
+  - 成功条件は、入れ替え中の読み取り待ちが 2 秒以内です。
+  - 30 秒に延ばすと、この条件を直接破ります。
+
+## 先に決めること（PO の判断）
+
+AGENTS.md は、ADR と実装が食い違うときは ADR を優先すると定めています。そのため、コードだけを先に変えることはできません。
+
+次の 3 案のうち、どれにするかを PO に確認します。
+
+- **案A（推奨）: 1 秒のまま、落ちる原因を直す。**
+  - 失敗時に出る `lock holders` のログで、ロックを離さない接続を特定します。
+  - 長い取引を持つ側を直すか、その時間帯を避けます。
+  - 延ばしても待たされる読み取りが増えるだけで、根本は直りません。
+- **案B: 30 秒に延ばす。** 下の手順で進めます。入れ替え中に在庫表が最大 30 秒止まりうることを、PO が承知する必要があります。
+- **案C: 再試行の余裕だけ増やす。** 1 秒のまま、再試行の回数や間隔を調整します。成功条件は守れます。
+
+## 案B の実施手順
+
+1. **ADR を先に直す。**
+   - ADR-1037 を直すか、新しい ADR を起案します（`docs/ai-agents/adr-template.md`）。
+   - 成功条件「読み取り待ち 2 秒以内」を、延ばした値に合わせて PO が見直します。
+   - ADR を直したら `node scripts/generate-adr-index.js` を流します。
+2. **作業場所を作る。**
+   - `bash scripts/new-worktree.sh release/migration-lock-timeout-30s --claude`
+   - 作業前に `./scripts/dev/executor-preflight.sh` を流します。
+3. **値を変える（正本の 1 行だけ）。**
+   - `SQL_LOCK_TIMEOUT="${SQL_LOCK_TIMEOUT:-30s}"`
+   - `deploy.yml` や `.env` には書きません。ADR-1037 の「正本は 1 箇所」の決まりに従います。
+4. **10 分の打ち切りとの整合を取る。**
+   - 最悪の場合は 30 秒 × 40 回 = 1200 秒で、`command_timeout: 10m` を超えます。
+   - `SQL_RETRY_BUDGET` を 40 から 10 前後へ下げるか、全体の時間予算を足します。
+   - 通常の所要最大は 138 秒なので、約 300 秒に収まる値にします。
+5. **値が決め打ちの箇所を直す。**
+   - `run_all_migrations.sh:234` の `log_lock_holders` の「xact > 1s」と、`lock_timeout=1s` の文言があります。
+   - 計測側は `READ_PROBE_*` です。2 秒超を遅いと数える設定が、新しい成功条件と合うか確かめます。
+   - `.github/workflows/migration-test.yml` の S1〜S3・P1〜P3 は `1s` を前提にしている箇所があります。
+   - `tests/sandbox/migration-run-sql-retry.sh` の R1〜R5 も、期待値を 30 秒に合わせて直します。
+   - `.github/workflows/workflow-lint.yml` は触りません（PO 確認が要る操作）。
+6. **個別に 5 秒を持つファイルは対象外のままにする。**
+   - `SET LOCAL lock_timeout = '5s'` の 8 ファイルは、ADR-1037 で対象外です。
+   - そのうち 2 本は DROP を含み、変えるには PO 本人の GO が要ります。
+7. **PR を作る。**
+   - 変更が `scripts/` と `deploy` 系を含むので、PO の「GO #PR番号」まで main にマージしません。
+   - PR 本文に「### 標準ワークフロー確認」の節を入れます。
+   - この環境は cloud なので、push までにして、PR は手元で `shingo-cc` 名義で作ります。
+
+## 確認方法
+
+- `bash tests/sandbox/migration-run-sql-retry.sh`（使い捨て DB で、ロックを待つ長さと流し直しを確かめる）
+- `bash tests/sandbox/migration-read-probe.sh`
+- migration-test.yml の S 系・P 系が通ること
+- 反映後の確認は、入れ替え 3 回分のログで行います。
+  - 失敗回数
+  - `lock conflict; retry` の回数
+  - `read probe: ... slow=` の件数
+  - ADR-1037 の「結果」節へ追記します。
+
+## 懸念
+
+- 30 秒待つ間、他の読み取りがキューに積まれます。ADR-1037 が防ごうとした「在庫表が 8〜13 秒止まる」状態が戻りえます。
+- 失敗の原因が「ロックを離さない別接続」なら、30 秒でも解決しない場合があります。まず案A で原因を見るのが安全です。
+
+どの案で進めるか、PO（しんごさん）に確認してください。

@@ -1,0 +1,71 @@
+# backend を Python 3.13 に上げる計画
+
+ファイルの変更・commit・push はしていません。調査は読み取りだけです。下の事実は調査エージェントの報告に基づきます。私は個別のファイルを開いて再確認していないので、着手時に確認してください。
+
+## 0. 先に決めること（PO 判断）
+- **ADR-1022（Proposed）との食い違い。** ADR-1022 は 3.12 を維持し、2027 年 10 月末までに全体を 3.14 へ一括で上げる方針です。3.13 への移行はこの方針から外れます。
+- AGENTS.md の決まりでは、ADR と実装が食い違ったら ADR を優先します。そのため、最初に次のどちらかを PO に確認します。
+  - A: 3.13 を経由する。ADR-1022 を改訂する（PO が起案する）。
+  - B: 3.13 を飛ばして、ADR-1022 の予定どおり 3.14 を待つ。
+- `scripts/agent-hooks/cloud/python_version_guard.py` は 3.12 以外を止めます。A を選ぶ場合は、このガードも直す必要があります。
+
+## 1. 事前調査（変更なし・ブランチ作成前）
+- **`discord.py==2.4.0` が `audioop` に依存している。** `audioop` は 3.13 で標準ライブラリから削除されました。
+  - 新しい discord.py（`audioop-lts` 同梱の版）へ上げるか、音声機能を使っていなければ影響範囲を確認します。
+  - ここが最大のリスクです。
+- 次の依存について、3.13 用の wheel（ビルド済み配布物）がある版を確認します。
+  - asyncpg
+  - psycopg2-binary
+  - pydantic 2.10.6（pydantic-core）
+  - bcrypt
+  - cryptography
+  - Pillow
+  - lxml
+  - argon2-cffi
+  - maxminddb
+  - uvicorn[standard]（uvloop、httptools）
+- 標準ライブラリの削除モジュールの import は、調査ではバックエンドに見つかっていません。3.13 で削除された他のモジュール（`cgi`、`crypt`、`imghdr`、`telnetlib` など）が、依存パッケージ側に残っていないかも確認します。
+
+## 2. 作業場所
+- `bash scripts/new-worktree.sh release/python-3-13 --claude` で、`origin/main` 起点の作業場所を作ります。
+- 作業前に `./scripts/dev/executor-preflight.sh || exit 1` を実行します。
+- 着手前に `docs/ai-agents/executor-checklist.md` と `backend/AGENTS.md` を読みます。
+
+## 3. 変更内容（1 本の PR にまとめる）
+1. **依存の更新。** wheel がない依存を、3.13 対応版へ上げます。`discord.py` と pydantic が主な対象です。更新は最小限にして、メジャーアップは避けます。
+2. **`backend/Dockerfile:1`** のベースイメージを `python:3.13-slim` 系にします。`monitoring` 系の Dockerfile も合わせます。
+3. **GitHub Actions。** 約 20 本の workflow の `python-version: '3.12'` を `'3.13'` にします。
+   - `.github/workflows/workflow-lint.yml` は変更が不可逆操作に当たるため、PO の許可（`permit-danger.sh` または会話での同意）が必要です。他の workflow を直すときも、この扱いを確認します。
+4. **ツール設定。** `backend/pyproject.toml` の ruff `target-version = "py313"` と mypy `python_version = "3.13"` に変えます。新しい ruff の指摘が出たら、挙動を変えずに直します。
+5. **ガードとドキュメント。**
+   - `python_version_guard.py` の許可版を更新します。
+   - `docs/ai-agents/dev-commands.md`、`AGENTS.md` 系の記述、VPS・runner のセットアップ手順書の「3.12」を更新します。
+   - ADR-1022 を改訂します。起案は PO です。直したら `node scripts/generate-adr-index.js` を流します。
+6. **`.python-version` や `runtime.txt`** があれば更新します。
+
+## 4. 検証
+- 3.13 で新しい venv を作り、依存を入れ直します。`pip check` で依存の矛盾がないことを確認します。
+- 手順は `docs/ai-agents/dev-commands.md` に従い、次を流します。
+  - ruff
+  - mypy
+  - pytest 全件（使い捨てのローカル PostgreSQL 16 に対して）
+- 3.13 のイメージで `docker build` し、コンテナを起動して FastAPI の `/health` 相当が通ることを確認します。
+- Discord ボットの起動と、主要な外部連携（Meta、Firebase、Gemini）の import が通ることを確認します。
+- CI の全ジョブが緑になること、pre-push の検査が通ることを確認します。
+
+## 5. リリースと戻し方
+- この PR は `deploy.yml` や本番 `scripts/` を含む場合、PO の「GO #PR番号」が出るまでマージしません。
+- コード変更を含むので、PR は手元で `shingo-cc` 名義で作ります。PR 本文には「### 標準ワークフロー確認」の節を入れます。
+- 本番への反映は、まず Docker イメージだけを 3.13 にして、ステージングや rehearsal 環境で動かして確認してから行います。
+- 戻し方は、Dockerfile のタグを 3.12 に戻して再デプロイすることです。依存を更新した場合は、旧版の lock も残しておきます。
+- 本番の VPS 作業は、制限付き鍵の範囲で行い、変更を伴う操作は PO の GO を得てから行います。
+
+## 6. 見積もりの目安と未確認事項
+- 作業の大半は、依存の対応状況の確認と `discord.py` の扱いです。ここが片付けば、残りは機械的な置換です。
+- **未確認:**
+  - 各依存の 3.13 対応版が、いまの固定版で足りるか。
+  - `discord.py` の音声機能を実際に使っているか。
+  - `.python-version` や `runtime.txt` の有無。
+  - monitoring 系 Dockerfile の正確な一覧。
+
+まず上の 0（A か B か）を決めてください。それから 1 の事前調査に進みます。

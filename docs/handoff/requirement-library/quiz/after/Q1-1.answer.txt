@@ -1,0 +1,50 @@
+調査は終わったので、計画をまとめます（ファイルの変更・commit・push はしていません）。
+
+# 「新規登録」で会社を作るとエラーになる件の修正計画
+
+## 原因（コードで確認できたこと）
+- 画面側 `frontend/src/pages/companies/CompaniesPage.tsx:300-309` は、`POST /companies` に `lead_id` を付けずに送っています。
+- API 側は `backend/app/schemas/company.py` の `CompanyCreate.lead_id` を必須（`ge=1`）にしています。`backend/app/routers/companies.py:391` にも「便1a: lead 必須（背骨）」とあり、会社は元になるリードから作る決まりです。
+- そのため、画面からの新規登録は検証で 422 になると見ています。`backend/tests/test_company_stats.py:58` は `lead_id` を付けて会社を作っているので、API 単体の経路は動いているはずです。
+- 未確認: 実際のエラー文言と HTTP ステータスは本番や実機で見ていません。着手時に画面から再現して確定させます。
+
+## 方針の分かれ目（PO に確認したい点）
+画面の「新規登録」をどう直すかは、次の 2 案があります。
+- **A（推奨）: 画面でリードを選ばせて `lead_id` を送る。** API の「会社は必ずリード起点」という決まり（便1a・背骨）に画面を合わせます。ADR 優先の原則にも沿います。
+- **B: API 側で `lead_id` を任意に戻す。** 会社とリードの関係が崩れ、背骨の決まりと矛盾するため推奨しません。
+
+以降は A で進める前提です。
+
+## 修正内容（A 案）
+1. **リード選択欄を追加する**
+   - `CompanyFormFields.tsx` に必須のリード選択欄を足します。
+   - `components/` の既存の選択部品（金型）を使います。生の `select` は禁止です（`frontend/AGENTS.md`、ADR-144）。
+   - リード一覧の取得は、既存の `leads` ルーターと、画面側の既存リード選択部品（例: `CompanyContactSelector.tsx` 系）を流用できるか先に調べます。
+2. **`handleCreateSubmit` の payload に `lead_id` を足す**
+   - 未選択のときは送信前に止めて、欄の下にエラーを出します。
+3. **API のエラーを分かりやすく返す**
+   - 現状は `e.message` をそのまま表示しています。422 のときは「リードを選んでください」を出します。
+   - 404 の `not_found:lead` と 409 の `conflict_constraint` も、文言を `t()` 経由で出します。
+4. **文言**
+   - `ja.json` と `en.json` に同じキーを追加します。日本語の直書きは禁止です（ADR-027）。
+5. **今回は触らないもの**
+   - `backend/` の仕様、DB の migration、`deploy.yml` には手を入れません。そのため PO の GO の対象外です。
+   - ただし `frontend/src/` はユーザーに影響する変更なので、本番に出す前の GO 記録は必要です。
+
+## テスト
+- **画面の単体テスト:** 新規登録の送信で `lead_id` が payload に入ること、未選択だと送信されないことを確かめます。
+- **E2E:** `frontend/tests-e2e/` に新規登録のテストを足すか、既存の `ui-companies-edit-modal-i18n.spec.ts` を更新します（UI を変えるなら同じ PR で更新する決まりです）。
+- **API 側:** `lead_id` なしで 422、あるリードで 201 になるテストが無ければ `backend/tests/` に追加します。
+
+## 進め方と決まり事
+- 先に `docs/specs/README.md` で顧客・会社の既存仕様を確認します。軽微な修正か既存テーマの延長として記録します。
+- ADR-089（取引先は `companies` に統一）と、`adr/FEATURE-INDEX.md` で「会社作成」まわりの ADR を再確認します。
+- 作業場所は `bash scripts/new-worktree.sh release/<topic> --claude` で作ります（例: `release/company-create-lead-id`）。
+- 着手前に `./scripts/dev/executor-preflight.sh` を流します。
+- クラウドでは push までにします。PR は手元で `shingo-cc` 名義で作ります。PR 本文には「### 標準ワークフロー確認」の節を入れます。
+- 検査は `cd frontend && npm run lint` と、必要なら `npm run check:all` を使います。
+- 動作確認は本番の tenant_001（QA）で行います。tenant_004（実データ）には触れません。結果は `docs/ai-agents/evidence-registry.md` に記録します。
+
+## 先に確認したいこと
+- 画面は「リードを選んで会社を作る」で良いか（A 案）。それとも、リード詳細から会社を作る導線にするか。
+- 実際に出ているエラーの文言と、画面のどこで出ているか。再現できれば原因の確度が上がります。

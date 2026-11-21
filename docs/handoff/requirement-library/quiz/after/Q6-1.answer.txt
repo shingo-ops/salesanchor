@@ -1,0 +1,61 @@
+# migration のロック待ちを 30 秒に延ばす計画
+
+調べただけで、ファイルの変更・commit・push はしていません。
+
+## 現状（確認できたこと）
+- ロック待ちの値は `scripts/run_all_migrations.sh:223` の `SQL_LOCK_TIMEOUT="${SQL_LOCK_TIMEOUT:-1s}"` 1 か所です。
+  - SQL の migration は、`run_sql`（295 行目）が `PGOPTIONS="-c lock_timeout=${SQL_LOCK_TIMEOUT}"` で渡します。
+  - Python の migration は、`run_py`（258 行目）が `MIGRATION_LOCK_TIMEOUT` として `scripts/migration_py_entry.py` に渡します。
+  - したがって既定値を 1 つ変えれば、SQL と Python の両方に効きます。
+- この 1 秒は ADR-1037 で PO が承認した成功条件です。内容は「入れ替え中に、migration がほかの読み取りを待たせるのは最大 1 秒まで」です。ロック待ちが長いと、後から来た在庫表の読み取りも全部止まります。
+- 失敗した migration は、3 秒あけて最大 40 回、合計 40 回の予算で流し直されます（`SQL_RETRY_*`）。移行ステップの打ち切りは 10 分です。
+
+## 先に決めること（PO 確認が要る）
+30 秒への変更は、ADR-1037 の承認済み条件と食い違います。AGENTS.md の方針では、食い違いは ADR を優先します。次の 2 点を PO に確認してから実装します。
+1. ADR-1037 を改訂して 30 秒にしてよいか。アプリの読み取りが最大 30 秒止まりうることを PO が了承するか。
+2. 本当に 30 秒が要るか。失敗の原因が、短い衝突（1 秒の取引）なのか長い保持（長い取引）なのかで答えが変わります。
+   - 短い衝突なら、5〜10 秒と流し直しで足ります。
+   - 長い保持なら、待つより `scripts/deploy-db-precheck.sh`（idle in transaction の握り手を待つ前段）の強化のほうが効きます。
+
+## 実装手順（PO の了承後）
+作業場所は `bash scripts/new-worktree.sh release/migration-lock-timeout-30s --claude` で作ります。作業前に `./scripts/dev/executor-preflight.sh` を流します。
+
+1. **`ADR-1037-migration-lock-timeout.md` に追記する。**
+   - 日付つきの追記として、1s → 30s の理由と PO の承認、成功条件の読み替えを書きます。
+   - その後 `node scripts/generate-adr-index.js` を流します。
+2. **`scripts/run_all_migrations.sh` の既定値を `30s` にする。**
+   - コメントの「1秒で諦める」も直します。
+   - 環境変数 `SQL_LOCK_TIMEOUT` で上書きできる形は残します。
+3. **再試行の予算を見直す。**
+   - 今のままだと、最悪 30 秒 × 40 回 = 1200 秒になり、10 分の打ち切りを超えます。
+   - `SQL_RETRY_BUDGET` と `SQL_RETRY_MAX_ATTEMPTS` を下げます（例: 合計 10 回前後）。
+   - 最悪所要時間が 10 分に収まる計算を、コメントと ADR に書きます。
+4. **`.github/workflows/migration-test.yml` の試験を直す。**
+   - P1 は「1 秒で諦める・読み取りの最大待ち 1500ms 以内・3 秒未満で失敗」と固定しています。
+   - これは `MIGRATION_LOCK_TIMEOUT=1s` を明示して流しているので、値の検証としては残せます。
+   - 既定値が 30s であることを確かめる検査を 1 つ足します。
+   - S2 と S3 は構文の検査なので、そのまま通る見込みです。
+5. **個別に上書きしている migration は触らない。**
+   - `migrations/20260910_200000_...`、`20260914_010000_...`、`20260920_010000_...` は `SET LOCAL lock_timeout='5s'` を持ちます。
+   - これらは `PGOPTIONS` より優先されるため、30 秒にはなりません。
+   - 既に本番適用済みのファイルを変えるのは危険なので、今回は対象外にして PR 本文に明記します。
+6. **変えないもの。**
+   - `log_lock_holders` と read probe の 1s は別目的の短い待ちです。
+   - `deploy.yml` も変えません。
+
+## 検証
+- `bash -n scripts/run_all_migrations.sh` で構文を確かめます。
+- `migration-test.yml` の S1〜S3 と P1〜P3 が CI で通ることを確かめます。
+- 試験用 PostgreSQL で、別接続が 10 秒ロックを持つ間に migration が 30 秒の範囲で待って成功することを確かめます。
+- 次回の本番入れ替え後に、アプリの読み取りの最大待ちと migration の所要時間を見ます。ADR-1037 の K7 と同じ測り方です。
+
+## 進め方の注意
+- `scripts/` を含む PR なので、「GO #PR番号」が出るまで main にマージしません。
+- PR は `shingo-cc` 名義で作ります。
+- PR 本文には「### 標準ワークフロー確認」の節を入れます。
+
+## リスク
+- 30 秒待つ間、その表への読み取りが全部止まります。これが ADR-1037 の懸念そのものです。
+- deadlock は待ち時間を延ばしても解消しません。再試行の対象のままです。
+
+まず 1 点だけ教えてください。失敗した入れ替えのログに出る握り手は、短い取引ですか、長い取引ですか。分かれば、30 秒が妥当か、もっと短くできるかを絞れます。

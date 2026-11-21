@@ -1,0 +1,95 @@
+# 計画: Gemini が断られたら切り替えず、そのまま失敗にする
+
+※ 調べただけで、ファイルの変更・commit・push はしていません。
+
+## 背景（調べて分かったこと）
+- 今は ADR-1062 の仕組みで、Gemini が「場所の断り」(400 `location is not supported`) か「届かない」を返すと、直接の道と prod2 の中継の道を自動で切り替えます。切り替えは1回の呼び出しの中でやり直す形です。
+- 切り替えの本体は `backend/app/services/gemini_route.py`（229行）です。その中身は次のとおりです。
+  - 道の記憶（`_sticky`、600秒）
+  - 失敗の判定（`should_switch`）
+  - 切り替え回数の Redis 記録
+  - `generate_content_routed` と `agenerate_content_routed`
+- 呼び出し元は次の4か所です。
+  - `gemini_extraction_svc.py:250,403,494`
+  - `gemini_raw_copy_v8.py:221`
+  - `message_translator.py:353`
+  - `line_analysis_v102_svc.py:525`（`failure_reason` だけ使用）
+- 見張りは `tasks/gemini_route_watch.py` です。5分ごとに動き、「30分成功なし」と「切り替えの知らせ」を Discord に送ります。
+- 中継の設定は `docker-compose.yml:102-105,275-278` と `tools/reextract_v6_with_v102.py:102` にあります。
+
+## 方針
+- 切り替え機能は全部やめます。
+- 道は `GEMINI_PROXY_URL` の有無だけで固定します（空なら直接、値があればその中継）。
+- 断られたら、今までどおり例外を上げて、その解析の試みを失敗で終わらせます。
+- 「30分成功なし」の知らせは残します。理由は、失敗で終わるぶん止まりに気づく手段が必要だからです。
+- 「切り替えの知らせ」は切り替えが無くなるので削除します。
+- 中継の仕組み（gemini-egress コンテナ、prod2）は手動で使う緊急手段として残します。撤去は別の話にします。
+
+## 手順
+
+### 0. 事前（AGENTS.md の決まり）
+- ADR と実装が食い違うと ADR が優先されます。ADR-1062 は Proposed のままです。そのため、先に**新しい ADR を PO が起案**します。内容は「自動切り替えをやめ、断られたら失敗で終える」で、ADR-1062 を置き換えます。
+- 新しい ADR を起案したら `node scripts/generate-adr-index.js` で目次を更新します。
+- 作業場所は `bash scripts/new-worktree.sh release/gemini-no-failover --claude` で作ります。
+- 作業前に `./scripts/dev/executor-preflight.sh` を実行します。
+- `deploy.yml`・`migrations/`・本番 `scripts/` は触らないので、GO 待ちは発生しない見込みです。
+
+### 1. `gemini_route.py` を小さくする
+- 残すもの:
+  - `build_client(route)`
+  - `relay_url` と `preferred_route`
+  - `failure_reason`（鍵のマスク付き。`line_analysis_v102_svc.py` が使用）
+- 消すもの:
+  - 切り替えと記憶: `_sticky`、`first_route`、`other_route`、`remember`、`reset_state`
+  - 判定: `should_switch`、`is_location_refusal`、`is_route_unreachable`、`_unreachable_types`、`_exception_chain`（`failure_reason` が使っていれば残す）
+  - Redis まわり: `_get_redis`、`_count_switch`、`SWITCH_COUNT_*`
+  - `generate_content_routed`、`agenerate_content_routed`
+  - `aiohttp` の import
+- 名前を `gemini_route` のまま残すか、`gemini_client` に改名するかを決めます。改名すると変更が広がるので、**名前は据え置き**を推奨します。
+
+### 2. 呼び出し元を直接呼びに戻す
+- `gemini_extraction_svc.py:403,494` と `gemini_raw_copy_v8.py:221` は、`client.models.generate_content(...)` を直接呼ぶ形にします。
+- `_get_genai_client()` は `build_client(preferred_route())` を返します。
+- `message_translator.py:353` は `client.aio.models.generate_content(...)` に戻します。
+- 例外は今までどおり `RuntimeError("... 呼び出し失敗")` に包んで上げます。再試行の分岐は足しません。
+
+### 3. 見張りから「切り替えの知らせ」を外す
+- `gemini_route_watch.py` から次を消します。
+  - `SWITCH_NOTIFIED_*`
+  - `_DIRECTIONS`
+  - 切り替えの通知処理
+  - `gemini_route._get_redis` への依存（止まりの重複防止に使う分は、見張り側に持たせます）
+- 「30分成功なし」と「戻り」の通知は残します。
+- 通知文の「切り替えの知らせの後も戻らないとき」などの言い回しを直します。
+- `celery_app.py` の登録は据え置きです。
+
+### 4. 周辺の整合
+- `tools/reextract_v6_with_v102.py:102` は `build_client` 相当の同じ作りなので、中継の分岐の持ち方を揃えます。
+- `docker-compose.yml:102,275` のコメントを「自動切り替えは無し。固定」に直します。変数は残します。
+- `docs/runbooks/gemini-egress-emergency.md` の 2026-11-05 追記を「自動切り替えは廃止。手作業の手順が主に戻る」に直します。
+- `docs/handoff/gemini-auto-failover/` に廃止の旨を追記します。ADR-1062 は新 ADR で Superseded にします。
+- `docs/INDEX.md` の行は、必要なら文言だけ直します。
+
+### 5. 試験
+- `backend/tests/test_gemini_route.py` は、切り替え系の試験を削除して小さくします。残すのは次の4つです。
+  - `build_client` の道の選択（`GEMINI_PROXY_URL` の有無）
+  - `GEMINI_API_KEY` 未設定時のエラー
+  - `failure_reason` のマスク
+  - 「断られたら**切り替えずに例外が上がる**」ことの新しい試験
+- `test_message_translator.py` は、`gemini_route.agenerate_content_routed` を差し替えている箇所（`:92-94`）を、`client.aio.models.generate_content` の差し替えに直します。
+- `gemini_route_watch` の試験は、切り替えの知らせ部分を削除します。
+- `test_reextract_v6_with_v102_pg.py` は変更なしの見込みです。
+
+## 検証
+1. venv を用意し（`docs/ai-agents/dev-commands.md`）、次を流します。
+   - `pytest backend/tests/test_gemini_route.py backend/tests/test_message_translator.py backend/tests/test_gemini_*`
+   - 見張りの試験
+2. `grep -rn "generate_content_routed\|should_switch\|remember(" backend` が 0 件であることを確認します。
+3. 手元で Gemini を、400 `location is not supported` を返すモックに差し替えて抽出を1件流します。道を変えずに1回で `API_ERROR` として失敗し、再呼び出しが起きないことを確認します。
+4. `executor-checklist.md` の commit 前・PR 前の点検を通します。PR 本文には「### 標準ワークフロー確認」を入れます。
+5. コード変更を含むので、クラウドでは push までです。PR は手元で `shingo-cc` 名義で作ります。
+
+## リスクと確認したい点
+- **運用への影響**: 断られると解析が止まるので、復旧は手作業（runbook）に戻ります。今の本番は最初の道が中継なので、中継が落ちると止まります。止まりは30分の知らせで気づけます。
+- **PO への確認**: 見張りの「30分成功なし」を残す方針でよいかを確認します。ADR を新規に起案するか、ADR-1062 を改訂するかも確認します。
+- **範囲**: 中継コンテナ（gemini-egress）と prod2 の撤去は含めていません。やる場合は別の PR にします。

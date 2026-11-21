@@ -1,0 +1,76 @@
+# 「休眠」状態の追加計画（計画のみ・ファイル変更なし）
+
+## 先に決めたいこと
+
+**「状態の列を足す」より、既にある状態の正本に値を足す形を勧めます。**
+
+- companies には既に `status` 列があります。
+- その値の正本は `public.customer_statuses` で、ADR-1076 が決めています（Proposed）。
+- 今ある値は `active` / `inactive` / `archived` / `pending_dedup_review` の4つです。
+- ADR-1076 は「状態の値を各所に直書きしない」「食い違ったら ADR を優先する」としています。
+- そのため、別の列を足すと状態の持ち場所が二重になり、ADR と衝突します。
+
+**PO への確認点（未決）は2つです。**
+1. 「休眠」は `dormant` のような新しい値にしますか。それとも既存の `inactive` の言い換えですか。`inactive` との意味の違いが未確認です。
+2. 「休眠」は人が手で付けますか。それとも「最終接触から◯日」で自動判定しますか。
+   - 手で付ける場合は下の計画のとおりです。
+   - 自動判定の場合は、状態ではなく派生の値になり、別設計が要ります。
+
+以下は「新しい値 `dormant` を手で付ける」前提です。
+
+## 手順
+
+1. **作業場所を作る。**
+   - `./scripts/dev/executor-preflight.sh` を実行します。
+   - `bash scripts/new-worktree.sh release/company-dormant-status --claude` で作業場所を作ります。
+2. **設計を確認する。**
+   - ADR-1076 の本文と `docs/handoff/status-ssot-contact-company/design.md` を読みます。
+   - `docs/CC_UI_GOVERNANCE.md` と `frontend/AGENTS.md`・`backend/AGENTS.md` を読みます。
+   - ADR-1076 の改訂が要るか、または新しい ADR が要るかを判断します（起案は PO）。
+3. **DB の変更をする。**
+   - `customer_statuses` に `dormant` の行を足します。
+     - 列は `name_ja`=休眠、`name_en`=Dormant、`sort_order`、`selectable_on_create` です。
+     - `sort_order` は UNIQUE なので、空き番号を選びます。
+   - 行を入れるのは運営の手作業です（ADR-1007）。migration に INSERT を書かず、別のデータ変更として PO が流します。
+   - companies の status の制約は、便2 の外部キーが既にあれば、それが新しい値を受けます。未確認なので実装時に確かめます。
+   - migration を書く場合は、最新（`20261121_100000_...` の次の時刻）の命名に合わせ、冪等にします。
+4. **backend を直す。**
+   - `backend/app/routers/companies.py` と `backend/app/services/customer_statuses.py` を見て、サーバー側の記号の列挙に `dormant` を足します。
+   - 一覧のフィルタと更新の検証が `dormant` を受けるか確かめます。
+   - 重複確認（`duplicates.py`）など、状態で分岐する箇所を洗い出します。
+5. **frontend を直す。**
+   - `frontend/src/lib/customerStatuses.ts` の `CUSTOMER_STATUS_CODES` に `dormant` を足します。記号を書いてよいのはこのファイルだけです。
+   - 札の色は `frontend/src/utils/statusPresentation.ts`（ADR-120）に足します。
+   - 名前は API（`GET /customer-statuses`）から読みます。直書きしません。
+   - 会社の一覧に札とフィルタを出し、会社の編集画面の選択肢に出ます。
+   - 日英の文言（ADR-027）は DB の `name_ja` / `name_en` が正本です。
+6. **テストを足す。**
+   - `backend/tests/test_customer_statuses_pg.py` に、サーバーの列挙が表の行と一致することの確認を足します。
+   - 会社を `dormant` に更新して取得するテストと、画面の札・選択肢のテストを足します。
+
+## 検証
+
+- 使い捨てのローカル PostgreSQL に migration を流します（本番には繋ぎません）。
+- 次の順で確かめます。
+  1. `pytest` で backend のテスト
+  2. frontend のテストと型検査
+  3. 画面で、会社の一覧に札が出て、休眠で絞れること
+  4. 休眠への更新と、その後の再取得
+- `docs/ai-agents/executor-checklist.md` の commit 前・PR 前の確認を通します。
+
+## 注意
+
+- `migrations/` を含む PR は PO の「GO #PR番号」まで main にマージできません（ADR-135・136）。
+- クラウドからは push までです。PR は手元で `shingo-cc` 名義で作り、本文に「### 標準ワークフロー確認」を入れます。
+- 本番への行の追加と適用は、PO の GO の後に手元で行います。
+
+## この計画の限界
+
+- 調査を任せた Explore エージェントの報告は要点だけで、詳細は返ってきませんでした。
+- ADR-1076、`customer_statuses` の migration、`customerStatuses.ts` は私が直接読んで確認しました。
+- 次の点は未確認です。
+  - companies の画面の具体的なファイル名
+  - 便2・便3 が実装済みか
+  - 「休眠」に関する既存 ADR（エージェントは grep で該当なしと報告）
+
+上の確認点1・2の答えをいただければ、計画を確定します。

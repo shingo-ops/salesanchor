@@ -1,0 +1,30 @@
+# 計画: 期限切れの札も接続元の回数止めに数える
+
+ファイルの変更・commit・push はしていません。計画メモだけ `/root/.claude/plans/commit-push-fizzy-badger.md` に書きました。
+
+## 現状
+- `backend/app/auth/dependencies.py` の `_authenticate_self_token` は、期限切れ（`ExpiredSignatureError`）の札だけ `record_auth_failure` を呼ばず、401 を返しています。
+- 回数止めの本体は `backend/app/cache.py` で、10回・15分です。
+
+## 先に決める必要があること
+- ADR-1083 が「期限切れは数えない」と決めています。ステータスは Proposed で、本番での確かめ（K5・K6）待ちです。
+- AGENTS.md には「ADR と実装が食い違ったら ADR を優先し、コードを ADR に寄せる」とあります。逆はしません。そのため、コードより先に ADR を直す必要があります。
+
+## 手順
+1. **作業場所**: `bash scripts/new-worktree.sh release/count-expired-token-lockout` で作り、`./scripts/dev/executor-preflight.sh` を実行します。
+2. **ADR**: ADR-1083 を改めるか、新しい ADR で置き換えます。`docs/ai-agents/adr-template.md` に従い、直したら `node scripts/generate-adr-index.js` を実行します。PO の承認を得てからコードに進みます。
+3. **コード**: `dependencies.py` の `except ExpiredSignatureError:` の枝を消します。または `raise await _reject_self_token(client_ip)` に変えます。不要になった import も消します。返事は今までと同じ 401・同じ文言のままです。
+4. **試験**（`backend/tests/test_self_auth.py`）:
+   - `test_expired_self_token_is_not_counted_as_failure` を「1回数える」に反転し、名前も変えます。
+   - 署名違いの期限切れを数える試験と、すでに止まっている接続元が 429 になる試験は、そのまま残します。
+5. **文書**: `docs/handoff/auth-expired-token-lockout/design.md` の K1・K5・K6 を更新し、FEATURE-INDEX を再生成します。
+
+## リスクとPOに決めてほしいこと
+- **事故の再発**: ADR-1083 を作ったきっかけは、古い札でアプリを開くと画面が約11回頼みを出し、全部 401 で数えられて直後のログインが 429 になった事故です。単に数えるようにすると、この事故がそのまま戻ります。
+- **画面側の直し**: 古い札のまま連打せず、先に札を取り直す直しを一緒にやるかを決めてください。やらないと再発します。
+- **数え方**: 期限切れの札を全部数えるか、同じ札（jti）は1回だけ数えるかを決めてください。私は jti 単位を勧めます。同じ札の連打で 10 回に達しないためです。
+
+## 確かめ方
+- `cd backend && pytest tests/test_self_auth.py tests/test_real_redis_lockout.py` を実行します。
+- 期限切れの札を同じ接続元から 11 回送り、429 になるかどうかを試験で確かめます。
+- push は `release/*` の枝までです。PR は手元で `shingo-cc` 名義で作り、本文に「### 標準ワークフロー確認」の節を入れます。

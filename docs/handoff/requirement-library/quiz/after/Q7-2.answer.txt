@@ -1,0 +1,59 @@
+ADR-1032 の復活止めが原因に見えるところまで調べました。ここから先は計画だけを答えます。
+
+# 計画: 再解析で古い投稿の行が現行から消える問題
+
+## 現在地（確認できたこと）
+- 現行の付け直しは `backend/app/services/tcg_analyzer_svc.py` の `_merge_supplier_products`（1981〜2170行）です。再解析の呼び出し元は `line_analysis_v102_svc.py:1640` と `tools/reextract_v6_with_v102.py:369` です。
+- 2069〜2075行の `was_current` は、再解析した job 自身の行を「前の (商品, 状態) の組」で判定します。そのため、再解析で商品や状態が変わった行は「前から現行」と見なされません。
+- 2122〜2139行の復活止め（ADR-1032）が、同じ仕入元のより新しい投稿に同じ商品の行があると、その行を FALSE にします。
+- 現行だった古い行が再解析で FALSE になり、配信から消えるのはこのためだと考えます。
+- 同じ ADR の 2026-10-23 追記に、これと同じ現象が実例として載っています。商品を付け替えた再判定で 2 行が TRUE→FALSE になっています。
+- 未確認なのは、いまユーザーが見ている消えた行が、実際にこの経路かどうかです。本番の行は見ていません。
+
+## 先に PO 確認が必要な点
+- ADR-1032 は PO の決定（2026-10-19「n」、2026-10-22「1」）です。AGENTS.md の「ADR 優先」により、コードだけ先に直せません。
+- 先に新しい ADR（または ADR-1032 の改訂）を起案し、PO の承認を得ます。承認後に `node scripts/generate-adr-index.js` を流します。
+
+## 方針（推奨は案A）
+- **案A（推奨）**: 「再解析の前に現行だった行は、再解析のあとも現行のまま戻す」。判定を組ではなく行単位（`extraction_item_id`）にします。
+  - ADR-1032 が止めたかった「隠れていた古い行が復活する」は残ります。
+  - 失われる配信（現行だった行が消える）だけを直せます。
+- **案B**: 復活止めを全部やめる（`revival_guard` の既定を False にする）。
+  - 古い投稿の行はすべて戻ります。
+  - ただし、ADR-1032 が止めた本番の 2 件のような「古い値段の配信」が戻ります。
+- PO には、消えて困っているのが「現行だった行」か「隠れていた行」かを確認します。前者なら案A、後者なら案Bです。
+
+## 案Aの作業
+1. 作業場所を `bash scripts/new-worktree.sh release/<topic> --claude` で作ります。作業前に `./scripts/dev/executor-preflight.sh` を流します。
+2. `line_analysis_v102_svc.py`（`_load_current_pairs` 周辺の 1577行と 1546行の `prior_current`）を直します。
+   - 書き込み前に、その job の行ごとに「`extraction_item_id` → 現行だったか」を控えます。
+3. `_merge_supplier_products` を直します。
+   - `candidates` の `was_current` を、組の一致ではなく行の控えで決めます。
+   - 控えの受け渡し口は、`prior_current_pairs` の隣に行単位の引数を足します。
+   - 同じ引数を `reextract_v6_with_v102.py:369` にも渡します。
+   - 削除・取り消し（`revival_guard=False`）の経路は変えません。
+4. 既知の限界に対処します。
+   - Celery の抽出やり直し経路（`tasks/tcg_extraction.py:470-476`）は、行を消してから解析するため控えが空になります。
+   - 行を消す前（`line_analysis_v102_svc.py:519`）に控えを取るか、この経路は対象外と ADR に明記します。
+5. 試験を直します。
+   - `backend/tests/test_adr1032_revival_guard.py` の R1・R3a・R3c・R5 のうち、現行だった行は TRUE のまま、隠れていた行は FALSE のままになる期待値へ更新します。
+   - 商品を付け替えるケースを足します。
+   - `test_line_analysis_v102_pg.py` と `test_reextract_v6_with_v102_pg.py` にも同じ確認を足します。
+   - Celery 経路の既存試験は、決めた方針に合わせます。
+6. 設計メモを `docs/handoff/` に追加し、ADR-1032 に追記します。
+
+## 検証
+- `make check`（ruff / bandit / mypy / pytest）を通します。
+- 使い捨ての PostgreSQL 上の pytest で、再解析の前後の `is_current` を比べます。
+- 本番は DB 読み取り専用の鍵（`docs/handoff/ai-readonly-db-path/usage.md`）で確認します。
+  - 試し実行で TRUE→FALSE になる行が 0 になること。
+  - 隠れていた行が FALSE のままであること。
+- ADR-1032 の K2〜K4 と同じく、反映前後で現行数の差が想定の組だけであることを見ます。
+
+## 進め方の制約
+- migration は不要です。そのため `deploy.yml` の登録や「GO #PR番号」は要らない見込みです。
+- クラウドでは枝を push するところまでにします。PR は手元で `shingo-cc` 名義で作ります。
+- 本番の既存データの修復（すでに消えた行を TRUE に戻す SQL）は、別便にします。監査行つきで、PO の GO のあと手元で行います。
+- 戻す対象は、試し実行（ROLLBACK）で人が確認した行だけにします。
+
+ファイルの変更・commit・push は一切していません。

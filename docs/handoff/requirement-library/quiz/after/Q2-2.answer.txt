@@ -1,0 +1,74 @@
+# 会社に「休眠」状態を足す計画
+
+調べるだけで、ファイルの変更・commit・push はしていません。
+
+## 先に伝えたいこと
+
+**companies 表には状態の列 `status` がすでにあります。** 列を足す必要はありません。今は `active`、`inactive`（無効）、`archived`、`pending_dedup_review` の4値が入っています。これらの値は ADR-1076 に従い、共用の表 `public.customer_statuses` で管理する方針です。この表に1行足すのが筋です。
+
+そのため計画は「列追加」ではなく「状態を1つ足す」形にしています。`companies` を `ALTER` する migration は要りません。
+
+## 確認したいこと（実装前に PO へ）
+
+1. **「休眠」と既存の `inactive`（無効）の違い。** 休眠は「今は動いていないが、また動く可能性がある」で、無効は「使わない」という理解で合っていますか。同じ意味なら新しい値は作らず、`inactive` の名前を変えるだけで済みます。
+2. **休眠にする基準。** 手で切り替えるだけか、「最終取引から N か月で自動」にするかです。この計画は手動切替だけを前提にしています。自動化は別の依頼にします。
+3. **作る画面の選択肢に出すか。** 休眠で新規登録することはまずないので、`selectable_on_create = FALSE`（直す画面だけに出す）を推奨します。
+
+## 作業の順序
+
+作業は `bash scripts/new-worktree.sh release/company-dormant-status --claude` で作った場所で行います。ADR は番号を新しく取らず、ADR-1076 の追記か補足 ADR にします。起案は PO です。
+
+### 0. 事前確認（未確認の事項）
+
+- `docs/handoff/status-ssot-contact-company/design.md` では便2（外部キー）・便3（API と画面）が「未着手」と書かれています。一方で `migrations/20261112_140000_customer_status_fk.sql` と `frontend/src/lib/customerStatuses.ts` は存在します。**本番がどこまで進んでいるかは未確認**で、実装前に便2・便3 の現況を確かめます。
+- `docs/STANDARD-WORKFLOW.md` のとおり、KGI、仕様書の確認、`recon.md`、設計の順に進みます。仕様書は `docs/specs/` と `docs/adr/FEATURE-INDEX.md` から該当を探します。
+
+### 1. DB（`migrations/` を含むため、PR は PO の GO #PR番号まで main にマージしません）
+
+- `public.customer_statuses` に `dormant` を足します。名前は日本語「休眠」、英語「Dormant」です。並び順（`sort_order`）は `inactive` の前後で、既存と重ならない値にします。
+- 行を入れるのは ADR-1007 決定1 に従い、migration ではなく1回限りのデータ変更として PO が流します。前例は `docs/handoff/status-ssot-contact-company/insert-customer-statuses.sql` と `run-insert.sh` です。
+- 外部キー（便2）が有効なら、行を入れる前に `dormant` を保存しようとすると DB が拒否します。**順序は「行の投入 → アプリのデプロイ」です。**
+- 旧 CHECK 制約が残っている環境があれば、`dormant` を許す形への変更が必要です。ただし「制約の変更」は backend/AGENTS.md で要PO確認の分類なので、現況を調べたうえで PO に確認します。
+- migration を足す場合は、ファイル名を `YYYYMMDD_HHMMSS_*.sql` の形式にします。さらに `deploy.yml` への登録と、`pg_namespace` を走査する形式が必須です。
+
+### 2. サーバー（`backend/`）
+
+- `backend/app/schemas/company.py` の `CompanyStatus` に `dormant = "dormant"` を足します。`Field()` の `description` も更新します。
+- `backend/app/routers/companies.py` と `customer_statuses.py` で、状態の一覧と絞り込みが表を読んでいるかを確認します。値の直書きがあれば直します。
+- 試験は、サーバー側の列挙と表の行の一致を見る既存の試験に `dormant` を加えます。`backend/tests/seed_data.py` と `rls_bootstrap.py` の行も足します。
+
+### 3. 画面（`frontend/`）
+
+- `frontend/src/lib/customerStatuses.ts` の `CUSTOMER_STATUS_CODES` に `dormant` を足します。
+- `frontend/src/utils/statusPresentation.ts` の `company` に、`dormant` の色の種類を足します（ADR-120）。推奨は灰色の `neutral` です。`inactive` との見分けが要るなら `warning` を検討します。
+- 画面の名前は表の `name_ja` と `name_en` から出ます。そのため `ja.json` と `en.json` への追加は、`CompaniesPage.tsx` に固定の文を足す場合だけです。足すときは両方に同じキーを入れます。
+- 一覧は `CompaniesPage.tsx` に札がすでにあるので、新しい部品は作りません。状態の絞り込みが無ければ、`<Select>` の金型で足します（生 `select` は禁止。`docs/CC_UI_GOVERNANCE.md`）。
+- 詳細画面は `CompanyBasicTab.tsx` と `useCompanyDetail.ts`、`CompanyFormFields.tsx` で、状態の選択肢に休眠が出ることを確認します。
+- `CustomerHubPage.tsx`、`DashboardPage.tsx`、`ContactsPage.tsx`、`MergeCompanyModal.tsx` は、「active 以外は〜」のような状態の分岐を grep で洗います。休眠が意図しない扱いにならないようにします。
+- 色の指定は CSS 変数だけ、アイコンは `constants/icons.tsx` 経由にします。
+
+### 4. 検証
+
+- `make check`（ruff / bandit / mypy / pytest）と `cd frontend && npm run check:all` を流します。
+- PostgreSQL の実機で、`information_schema` と `customer_statuses` の行を確かめます。SQL を流すのは pytest の中の使い捨て DB だけで、本番には触りません。
+- 画面は「休眠への切替 → 一覧の札 → 絞り込み → 日英の名前」を確かめます。
+- 検査をまとめた PR 本文には「### 標準ワークフロー確認」の節を入れます。
+
+### 5. 出し方
+
+- `release/company-dormant-status` を push します。PR は手元で `shingo-cc` 名義で作ります。クラウドでは作りません。
+- マージ後は PO が1行を投入し、デプロイします。
+
+## リスクと戻し方
+
+- 行を入れる前にアプリが先に出ると、休眠の保存が失敗します。順序を PR 本文に明記します。
+- 戻し方は、まずその行の `is_active` を FALSE にします（行は消しません）。休眠のまま残った会社の行があれば、先に `inactive` へ戻します。画面とサーバーの変更は PR を戻します。
+
+## 維持の仕組み（設計に必須の欄）
+
+- 守り手は、サーバー側の列挙と表の行の一致を見る試験と、`scripts/check-ui-governance.js` です。
+- 壊れると困るのは、休眠という記号がコードと DB でずれることと、画面に値が直書きされることです。
+
+## 規模の目安
+
+小さい変更です。DB は1行の投入だけで、コードの変更は5〜8ファイル程度です。実装前に決めるのは、上の「確認したいこと」の1と、便2・便3 の現況確認です。

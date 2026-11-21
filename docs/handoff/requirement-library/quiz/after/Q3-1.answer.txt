@@ -1,0 +1,46 @@
+## 計画: 期限切れの札も接続元の回数止めに数える
+
+調べただけで、ファイルの変更・commit・push はしていません。
+
+### 先に PO の判断が要ること（ブロッカー）
+この依頼は、PO が 2026-11-20 に「1」で決めた ADR-1083 の逆です。`AGENTS.md` は、ADR と実装が食い違うときは ADR を優先し、コードを ADR に寄せると決めています。コードだけ先に変えることはできません。
+
+ADR-1083 は、期限切れの札は署名が正しい本物なので総当たりの印ではない、として数えないと決めました。きっかけは Android の障害です。46 時間前の札で画面が 11 回 401 になり、11 回とも数えられて接続元が止まり、直後のログインが 429 になりました。
+
+数えるように戻すと、この障害がまた起きます。PO には次のどちらかを選んでもらいます。
+
+- **A**: ADR-1083 を取り下げ、新しい ADR で置き換える。
+- **B**: ADR-1083 は残し、「ログインの操作に結びつく期限切れだけ数える」と範囲を狭める。
+
+私は B を勧めます。画面が自動で飛ばす複数の頼みは数えず、障害を再発させないためです。
+
+### 前提（未確認）
+今の実装でログインの口がどう数えるかを見ました。
+
+| 場面 | 今の扱い |
+|---|---|
+| `/auth/login`（照合失敗・不明な利用者・停止中） | 数えている |
+| パスキーの challenge が期限切れ（`take_challenge` が空） | 数えている（`fail()` 経由） |
+| パスワード再設定の鍵が期限切れ（`password_reset_confirm`） | 数えている |
+| アクセストークンが期限切れ（`auth/dependencies.py` の `_authenticate_self_token`） | **数えていない**（ADR-1083） |
+
+数えていないのは最後の 1 行だけなので、依頼はこれを指すと解釈しました。別の口を指しているなら教えてください。
+
+### 実装手順（PO の GO の後）
+1. **作業場所を作る**: `bash scripts/new-worktree.sh release/<topic> --claude`。先に `./scripts/dev/executor-preflight.sh` を流します。
+2. **ADR**: 先に `docs/adr/` へ置き換え ADR を起案し、ADR-1083 の備考を更新します。その後 `node scripts/generate-adr-index.js` を流します。ADR の起案は PO の判断事項です。
+3. **コード**: `backend/app/auth/dependencies.py` の `ExpiredSignatureError` の節を直します。
+   - A 案: 節ごと消し、他の失敗と同じ `raise await _reject_self_token(client_ip)` に合流させる。
+   - B 案: `request.url.path` などで対象の道に限り数え、それ以外は今のまま数えない。この場合 `_authenticate_self_token` に `request` か対象かどうかの印を渡す必要があります。
+4. **試験**: `backend/tests/test_self_auth.py` を直します。
+   - `test_expired_self_token_is_not_counted_as_failure`（482 行付近）は期待が逆になります。`record.await_count == 1` に変えます。
+   - 署名不一致を数える試験、接続元が止まっているとき 429 になる試験は維持します。
+5. **触らないもの**: `cache.py` の回数止めの本体（10 回・15 分）と、口座単位の止め。
+
+### 確かめ
+- 手元で `docs/ai-agents/dev-commands.md` の手順に従い、`pytest backend/tests/test_self_auth.py` と `test_security_hardening.py` を流す。
+- 本番では、ADR-1083 の K5・K6（期限切れの札で 11 回頼んでも止まらない確認）の期待を新しい方針に書き換えて確かめる。
+- 障害の再発が心配なので、画面側が期限切れで頼みを連発しないかも別途確認する。
+
+### 進め方
+ADR の置き換えは PO の決定が要るので、A と B のどちらにするかの返事をもらってから実装に入ります。コードの変更を含む枝は push までで、PR は手元で `shingo-cc` 名義で作ります。

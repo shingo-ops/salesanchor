@@ -1,0 +1,74 @@
+計画を書きます。ファイルの変更・commit・push はしていません。
+
+## 先に決めたいこと：依頼が ADR-1071 と食い違います
+
+「例外のメッセージをそのまま画面に出す」は、Accepted 済みの ADR-1071（2026-11-08、PO 承認）と正面から食い違います。
+
+- ADR-1071 の「画面に出してはいけないもの」に、例外の中身・理由コードの生の値・Redis や token などの仕組みの名前が入っています。
+- 文はサーバーで作らず、サーバーは安定した理由コードだけを返します。画面が対応表で文言を選びます。
+- `AGENTS.md` では、ADR と実装が食い違ったら ADR を優先します。逆はしません。
+- 例外の中身を応答に出さない決まり（`docs/specs/db-error-detail`）もあります。
+
+実害もあります。
+
+- `discord_oauth.py` の code 交換の例外には、通信先の URL や認証まわりの文字列が混ざり得ます。そのまま出すとトークンやシークレットが漏れる恐れがあります。
+- `discord_auto_setup.py:166` は、すでに `f"Discord API 接続エラー: {exc}"` と例外を直接出しています。これは ADR-1071 の違反です。基準値ファイルに載っているはずです（未確認）。
+
+そこで「原因が分かりやすい」という目的を、ADR の枠内で満たす案を推奨します。
+
+## 推奨案：理由コードを細かくして、対応表で具体的な文にする
+
+現状は、失敗の種類が 12 個の理由コードに分かれています。`code_exchange_failed` は「通信の失敗」「Discord が 200 以外を返した」「応答に guild が無い」を全部まとめています。原因が分かりにくい本当の理由はここです。
+
+1. **サーバー側 `backend/app/routers/discord_oauth.py`**
+   - `_exchange_code_for_guild_id` の失敗を細かく分けます。例は次のとおりです。
+     - 通信の失敗または時間切れ（`code_exchange_timeout`）
+     - Discord が code を拒否した（`code_rejected`。`invalid_grant` など）
+     - Bot の設定ミス（`discord_not_configured`）
+   - 例外の型名や HTTP の番号は、いまの `logger.warning` のようにログにだけ残します。応答や URL には出しません。
+   - `_ExchangeError` が持つのは安定した理由コードだけにします。
+2. **画面側 `frontend/src/features/discord-connect/discordConnectError.ts`**
+   - `DISCORD_CONNECT_ERROR_REASONS` に新しいコードを足します。
+   - `getDiscordConnectErrorKey` に対応を足します。
+   - `DISCORD_CONNECT_ERROR_KEYS` に新しい文言キーを足します。
+3. **文言 `ja.json` / `en.json`**
+   - `discordConnect.error.*` に、原因と次にすることが分かる文を足します。ja と en は同じキーにします。
+   - 例：「Discord との通信が時間切れになりました。しばらくしてからもう一度お試しください。」
+   - ADR-027 により、ハードコード日本語は禁止です。
+4. **`discord_auto_setup.py:166` など、例外を直接出している箇所**
+   - 同じ方式（理由コード＋対応表）に寄せるのが望ましいです。
+   - ただし便が別です。今回に含めるかは PO に確認します。
+5. **CI の突き合わせ**
+   - `backend/tests/error_detail_baseline.json` は、増やさず、直した分は下げます。
+   - `.github/workflows/e2e.yml` の detect-changes の一覧にも、必要なら足します。
+   - 注意：`.github/workflows/workflow-lint.yml` の変更は PO 確認の対象です。e2e.yml が同じ扱いになるかは未確認です。
+
+## 本当に例外の文をそのまま出したい場合
+
+- PO が ADR-1071 を改める必要があります。ADR の起案は PO の役目です。
+- その場合でも、少なくとも次の条件が要ります。
+  - 管理者権限のある人だけに出す
+  - トークン、URL、シークレットを伏せる処理を通す
+  - 英語や日本語が混ざることを許容する
+- ただし ADR-1071 の維持の仕組みである CI の見張り（W1・W2）が落ちるので、基準値の扱いも決め直しになります。
+
+## 進め方（実装する場合）
+
+1. `docs/INDEX.md` の手順どおり、`executor-checklist.md` を読み、`bash scripts/new-worktree.sh release/discord-connect-error-reasons --claude` で作業場所を作ります（このセッションはクラウドなので、`--claude` を付けるかは未確認）。
+2. `frontend/AGENTS.md` を読みます。
+3. 上の 1 から 3 を実装します。
+4. コード変更を含むので、push までです。PR は手元で `shingo-cc` 名義で作ります。PR 本文には「### 標準ワークフロー確認」の節を入れます。
+
+## 確かめ方
+
+- `discordConnectError.test.ts` に、新しいコードごとの対応を足します。
+- サーバーの理由コードの一覧と、画面の表の突き合わせ試験を通します。
+- i18n の試験で ja・en のキーが揃っていることを確かめます。
+- `backend/tests/test_error_detail_guard.py` と、`npm run check:all` の `check-error-text-next-action` を通します。
+- 本番の Discord での実機確認は、PO の判断が要ります。
+
+## PO への確認事項
+
+1. 推奨案（理由コードを細かくして具体的な文にする）で進めてよいですか。
+2. それとも ADR-1071 を改めて、例外の中身を出しますか。その場合は ADR の起案が先です。
+3. `discord_auto_setup.py` など、例外を直接出している他の箇所も今回に含めますか。

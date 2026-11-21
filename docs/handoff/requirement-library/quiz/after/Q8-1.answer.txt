@@ -1,0 +1,59 @@
+# Gemini が断られたとき、別の道へ切り替えず失敗で終わらせる計画
+
+## 先に確認したい点
+調べた結果、安全フィルタなどで解析が断られたときの切り替えは、コードにありません。`finish_reason`、`prompt_feedback`、`safety_settings` を扱う処理も、別モデルや別プロバイダへの逃げ道も、正規表現などによる代わりの解析もありません。断られた場合は今も、そのまま失敗として記録されます。
+
+実際に「断られたら別の道へ切り替える」仕組みになっているのは、次の2つです。
+
+- **経路の切り替え**: `backend/app/services/gemini_route.py:185-229`。400「location is not supported」や、経路に届かないときに、直結とリレーを切り替えます（ADR-1062）。
+- **再試行**:
+  - `backend/app/services/line_analysis_v102_svc.py:466-531` が、429/5xx のときに 2 秒・8 秒の間隔で再試行します。
+  - `backend/app/tasks/tcg_extraction_recovery.py:277-360` が、回復タスクで最大3回・24時間まで再投入します（ADR-1050）。
+
+この計画は、断られた＝地域拒否（400）と読み、**経路の自動切り替えをやめる**ことを主眼にしています。「安全フィルタの拒否」や「再試行」まで含める意図なら、範囲が変わるので教えてください。
+
+なお、以上は調査担当の報告にもとづくもので、私自身は該当ファイルを直接開いて確認していません。実装前に行番号を読み直します。
+
+## 方針
+- 断られたら 1 回で失敗として確定し、経路・モデル・方式を切り替えません。
+- 失敗の記録の形は今のまま使います（`extraction_attempts.phase='failed'`、`error_code='API_ERROR'`、`extraction_jobs.status='error'`）。
+- 再試行は、断りとは別の問題（一時的な 429/5xx）なので、今回は触りません。
+
+## 手順
+1. **ADR を先に直す（PO 判断）**
+   - AGENTS.md の決まりで、ADR と実装が食い違うときは ADR が優先です。
+   - ADR-1062（経路の自動切り替え）の方針変更を PO が起案します。
+   - 経路切り替えをやめる代わりに、「直結が地域拒否を受けたら失敗で止まる」ことを ADR に明記します。
+   - `node scripts/generate-adr-index.js` で目次を更新します。
+2. **作業場所を作る**
+   - `bash scripts/new-worktree.sh release/gemini-no-fallback --claude` で作ります。
+   - 開始前に `./scripts/dev/executor-preflight.sh` を流します。
+   - 手順は `docs/INDEX.md` の該当行（`docs/ai-agents/executor-checklist.md`、`docs/specs/branch-operations/README.md`）で確認します。
+3. **コードを単純にする**（`backend/AGENTS.md` を先に読みます）
+   - `gemini_route.py` の、400 や不達で経路を切り替える部分を消します。
+   - 呼び出し側は、断られたら例外をそのまま上げ、`API_ERROR` として記録します。
+   - 切り替え専用の設定や環境変数があれば削除し、`gemini_route_watch.py` のうち切り替えの Discord 通知も整理します。
+   - 滞留（stall）の通知は、失敗の検知として残すかどうかを決めます。
+4. **回復タスクの確認**
+   - `tcg_extraction_recovery.py` が、断られた失敗を再投入してしまわないか確認します。
+   - 再投入するなら、地域拒否の失敗は対象外にするか、再投入を止めます。
+5. **画面と文書**
+   - `ExtractionErrorLogPanel.tsx` が、切り替えに依存した文言を出していないか確認します（`frontend/AGENTS.md`、`CC_UI_GOVERNANCE.md`）。
+   - `docs/runbooks/gemini-egress-emergency.md` は、手動でのリレー ON/OFF の手順だけを残し、自動切り替えの記述を消します。
+6. **テスト**
+   - 切り替えを確かめていたテストを、「断られたら 1 回で失敗が確定し、切り替えが起きない」に書き換えます。
+
+## 確認の方法
+- `pytest` で、地域拒否の応答（400）を模した場合に次を確かめます。
+  - 経路が切り替わらない。
+  - `extraction_attempts.phase='failed'`、`error_code='API_ERROR'`、`extraction_jobs.status='error'` になる。
+  - 回復タスクが再投入しない（方針どおりなら）。
+- `grep` で、削除した関数名・設定名の参照が残っていないか確認します。
+- 既存の失敗系のテストと、pre-push の検査（`--no-verify` は使いません）が通ることを確認します。
+
+## 注意点と危険
+- **本番への影響**: 経路の自動切り替えがあることで、今は地域拒否を逃れている可能性があります。やめると、直結が拒否される環境では解析が全部止まります。経路を手動で固定する運用（リレー ON）に切り替えたうえで出すのが前提です。ここは PO の判断が要ります。
+- **コード変更を含む PR**: `shingo-cc` 名義で、手元で作ります。クラウドでは push までです。PR 本文には「### 標準ワークフロー確認」の節を入れます。
+- **`migrations/` や `deploy.yml` を触る場合**: PO の「GO #PR番号」が出るまでマージしません。設定の削除だけなら、触らない見込みです。
+
+ファイルの変更・commit・push は、依頼どおり行っていません。

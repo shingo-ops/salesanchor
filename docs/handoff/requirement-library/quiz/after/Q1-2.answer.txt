@@ -1,0 +1,49 @@
+# 顧客画面「新規登録」エラーの修正計画
+
+## 原因（コードを読んだ範囲の事実）
+- 画面側の `frontend/src/pages/companies/CompaniesPage.tsx` の `handleCreateSubmit` は `POST /companies` を呼びます。送信内容に **`lead_id` が入っていません**。
+- サーバー側の `backend/app/schemas/company.py:116` では `lead_id` が必須です（`Field(ge=1)`）。存在しないリードを指定した場合は、`backend/app/routers/companies.py` で 404 `not_found:lead` を返します。
+- そのため、「新規登録」で `lead_id` なしの POST が **422** になっている可能性が最も高いです。
+- 未確認: 実際のエラー文言と、いつからか（git 履歴）は確認していません。実装前にまず再現して、422 だと確定させます。
+
+## 方針
+- ADR と実装が食い違う場合は ADR を優先します。まず `docs/adr/FEATURE-INDEX.md` と `docs/handoff/txn-flow-ben2/design.md` で「会社は必ずリード起点」の決定を確認します。
+- それが維持されるなら、サーバーは変えず、**画面をリード必須の流れに合わせます**。
+
+## 手順
+1. **準備**
+   - `./scripts/dev/executor-preflight.sh` を実行します。
+   - `bash scripts/new-worktree.sh release/fix-company-create-lead --claude` で作業場所を作ります。
+   - `docs/ai-agents/executor-checklist.md` を確認します。
+2. **再現テスト**
+   - `backend/tests/test_companies.py` に、`lead_id` なしの POST が 422 になるテストがあるか確認します。
+   - なければ、先に失敗する形で追加します。
+3. **PO 確認が必要な点: `lead_id` の入手方法**
+   - **案A（推奨）**: フォームにリード選択欄を足して必須にします。既存の選択部品を流用します。
+   - **案B**: 登録時に会社名からリードを先に作り、その ID を渡します。
+   - **案C**: サーバー側で未指定時にリードを自動作成します。ADR の方針と衝突しうるため、ADR 確認後でなければ採りません。
+4. **実装（案A の場合）**
+   - `CompaniesPage.tsx` のフォーム状態 `emptyForm` に `lead_id` を追加し、payload に載せます。
+   - 未選択なら送信前に検証メッセージを出します。
+   - 文言は `ja.json` と `en.json` の `customers.*` に同じキーで追加します（日本語のハードコード禁止、ADR-027）。
+   - 選択部品は `components/` の金型を使います（生 select 禁止、ADR-144）。先に `docs/CC_UI_GOVERNANCE.md` を読みます。
+   - 422 の詳細が画面に出るか確認し、出ないなら `catch` 内で分かりやすい文言にします。
+5. **テスト更新**
+   - `CompaniesPage` の単体テストを更新します。
+   - `frontend/tests-e2e/` の該当 spec も同じ PR で更新します（UI 変更時の決まり）。
+6. migration は不要です（スキーマ変更なし）。`deploy.yml` も触りません。
+
+## 検証
+- backend: `cd backend && make check`（`test_companies.py` を含む）
+- frontend: `npm run lint`、`npm run check:all`、`npx vitest run src/pages/companies`
+- E2E: `npx playwright test --project=chromium`
+- 手動: 開発環境で「新規登録」→ リード選択 → 登録 → 一覧に出ることを確認します。リード未選択ならメッセージが出ることも確認します。
+
+## 進め方の制約
+- コード変更を含むため、クラウドでは push まで行い、PR は手元で `shingo-cc` 名義で作ります。
+- PR 本文には「### 標準ワークフロー確認」の節を入れます。
+- 本番 DB は触りません。
+
+計画は `/root/.claude/plans/commit-push-frolicking-pine.md` にも保存しました。指示どおり、プロジェクトのファイル変更・commit・push はしていません。
+
+**確認したい点:** 手順3の `lead_id` の入手方法（案A/B/C）は、PO の判断をお願いします。
