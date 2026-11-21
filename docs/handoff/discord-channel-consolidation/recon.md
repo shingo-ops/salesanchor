@@ -37,7 +37,7 @@ Bot（Sales Anchor）で `/guilds/{id}/channels`・`/guilds/{id}/webhooks` を�
 
 ## 5. チャンネルを読む仕組み
 - agent-console の不具合の受け口: `~/Library/Application Support/agent-console/discord-intake.config.json` は 不具合受付 1562450200499593226 だけを読む。
-- 前の受付の設定 `~/.claude/channels/discord-ops/access.json` はサーバー監視アラートの id を持つが、受付は動いていない（tmux に sa-ops-intake が無い）。
+- 前の受付の設定 （Mac のホームの .claude/channels/discord-ops/access.json・リポジトリの外） はサーバー監視アラートの id を持つが、受付は動いていない（tmux に sa-ops-intake が無い）。
 - id を変えなければ読む側は直さなくてよい。
 
 ## 6. Bot の権限（bot-perm.txt）
