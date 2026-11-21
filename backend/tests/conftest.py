@@ -1772,7 +1772,9 @@ async def setup_test_db(test_engine):
                 tenant_code  TEXT NOT NULL UNIQUE,
                 tenant_name  TEXT NOT NULL DEFAULT '',
                 company_name TEXT NOT NULL DEFAULT '',
-                is_active    INTEGER NOT NULL DEFAULT 1
+                is_active    INTEGER NOT NULL DEFAULT 1,
+                meta_review_tenant INTEGER NOT NULL DEFAULT 0,
+                meta_review_login_until TIMESTAMP
             )
         """))
         # テナント削除 中央監査ログ（public. は rewrite で除去済み）
