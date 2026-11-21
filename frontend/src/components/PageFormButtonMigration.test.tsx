@@ -23,7 +23,7 @@ const configs = {
 };
 type Kind = keyof typeof configs;
 type Mode = 'create' | 'edit';
-const cases = (Object.keys(configs) as Kind[]).flatMap(kind => (['create', 'edit'] as const).map(mode => ({ kind, mode })));
+const cases = (Object.keys(configs) as Kind[]).flatMap(kind => (['create', 'edit'] as const).map(mode => ({ kind, mode }))).filter(c => !(c.kind === 'company' && c.mode === 'create'));
 
 function field(dialog: HTMLElement, label: string) {
   const node = within(dialog).getByText(label, { selector: 'label', exact: true });
@@ -72,11 +72,7 @@ function expectedPayload(kind: Kind, mode: Mode) {
     return mode === 'edit' ? common : { ...common, display_name: null, job_title: null, department: null, is_primary_contact: false, notes: null };
   }
   const common = { name: 'Edited fixture', status: 'active', industry: null, priority_focus: null, notes: null };
-  return mode === 'edit' ? common : {
-    ...common, name_en: null, website: null, per_order_amount: null, monthly_frequency: null,
-    monthly_forecast: null, billing_display_name: null, payment_recipient_name: null,
-    fedex_account: null, shipping_note: null, sales_channels: [], addresses: [],
-  };
+  return common;
 }
 
 beforeEach(() => {
@@ -155,7 +151,7 @@ describe('page form Button migration: real pages and real forms', () => {
     expect(mock.delete).not.toHaveBeenCalled();
   });
 
-  it.each(['company', 'contact'] as const)('%s create locks submit/cancel and recovers after rejection', async kind => {
+  it.each(['contact'] as const)('%s create locks submit/cancel and recovers after rejection', async kind => {
     const pending = deferred();
     mock.post.mockReturnValue(pending.promise);
     const dialog = await openForm(kind, 'create'), save = submitButton(dialog, 'create'), cancel = cancelButton(dialog);
@@ -182,28 +178,6 @@ describe('page form Button migration: real pages and real forms', () => {
     expect(mock.post.mock.calls[1]).toEqual([configs[kind].path, expectedPayload(kind, 'create')]);
   });
 
-  it('company create validates telephone and preserves billing address payload', async () => {
-    const dialog = await openForm('company', 'create');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'companies.billing' }));
-    const phone = field(dialog, 'common.phone');
-    fireEvent.change(phone, { target: { value: 'invalid' } });
-    fireEvent.click(submitButton(dialog, 'create'));
-    expect(mock.post).not.toHaveBeenCalled();
-    expect(within(dialog).getByText('companies.phoneError')).toBeTruthy();
-    expect(phone.value).toBe('invalid');
-    fireEvent.change(phone, { target: { value: '03-1234-5678' } });
-    mock.post.mockResolvedValue({});
-    fireEvent.click(submitButton(dialog, 'create'));
-    await waitFor(() => expect(mock.post).toHaveBeenCalledExactlyOnceWith('/companies', {
-      ...expectedPayload('company', 'create'),
-      addresses: [{
-        address_type: 'billing', branch_name: null, name: null, email: null,
-        telephone: '03-1234-5678', tax_id: null, address_line_1: null, address_line_2: null,
-        city: null, state: null, zip: null, country_code: null, is_default: true,
-      }],
-    }));
-  });
-
   it('contact create retains required-company native and submit-handler guards', async () => {
     const dialog = await openForm('contact', 'create');
     const companySelect = field(dialog, 'contacts.companyLabel') as HTMLSelectElement;
@@ -219,5 +193,12 @@ describe('page form Button migration: real pages and real forms', () => {
     expect(mock.post).not.toHaveBeenCalled();
     expect(field(dialog, 'contacts.surname').value).toBe('Edited fixture');
     expect(save.disabled).toBe(false);
+  });
+
+  it('company page has no create button even with every permission', async () => {
+    render(<MemoryRouter><CompaniesPage /></MemoryRouter>);
+    await screen.findByText('Fixture company', { exact: true });
+    expect(screen.queryByRole('button', { name: /companies\.newCompany/ })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'companies.newCompany' })).toBeNull();
   });
 });

@@ -14,9 +14,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
-import { Modal } from "../../components/Modal";
 import { Button } from "../../components/Button";
-import { SelectControl } from "../../components/Select";
 import { Drawer } from "../../components/Drawer";
 import ConfirmModal from "../../components/ConfirmModal";
 import { PageLayout } from "../../components/PageLayout";
@@ -27,20 +25,11 @@ import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { CompanyFormFields, type CompanyFormState } from "./CompanyFormFields";
 import { ButtonLink } from "../../components/ButtonLink";
-import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 import { LoadingBlock, Spinner } from "../../components/loading";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { useCustomerStatuses } from "../../hooks/useCustomerStatuses";
 import { CUSTOMER_STATUS_CODES } from "../../lib/customerStatuses";
-
-const PHONE_RE = /^(\+?\d{10,15}|0\d{9,10})$/;
-const validatePhoneClient = (raw: string): string | null => {
-  if (!raw) return null;
-  const cleaned = raw.replace(/[\s\-()]/g, "");
-  // eslint-disable-next-line local/no-japanese-literal -- TODO: i18n対応（ADR-027 既知負債）
-  return PHONE_RE.test(cleaned) ? null : "電話番号の形式が正しくありません（例: 03-1234-5678）";
-};
 
 interface CompanyAddress {
   id: number;
@@ -90,73 +79,6 @@ interface Company {
   updated_at: string;
 }
 
-type AddressFormState = {
-  address_type: "billing" | "delivery";
-  branch_name: string;
-  name: string;
-  email: string;
-  telephone: string;
-  tax_id: string;
-  address_line_1: string;
-  address_line_2: string;
-  city: string;
-  state: string;
-  zip: string;
-  country_code: string;
-};
-
-const emptyBilling: AddressFormState = {
-  address_type: "billing",
-  branch_name: "", name: "", email: "", telephone: "", tax_id: "",
-  address_line_1: "", address_line_2: "",
-  city: "", state: "", zip: "", country_code: "",
-};
-const emptyDelivery: AddressFormState = { ...emptyBilling, address_type: "delivery" };
-
-type FormState = {
-  company_code: string;
-  name: string;
-  name_en: string;
-  industry: string;
-  website: string;
-  trust_level: string;
-  priority_focus: string;
-  per_order_amount: string;
-  monthly_frequency: string;
-  monthly_forecast: string;
-  billing_display_name: string;
-  payment_recipient_name: string;
-  fedex_account: string;
-  shipping_note: string;
-  status: string;
-  notes: string;
-  billing: AddressFormState;
-  delivery: AddressFormState;
-  sales_channels: string;
-};
-
-const emptyForm: FormState = {
-  company_code: "",
-  name: "",
-  name_en: "",
-  industry: "",
-  website: "",
-  trust_level: "",
-  priority_focus: "",
-  per_order_amount: "",
-  monthly_frequency: "",
-  monthly_forecast: "",
-  billing_display_name: "",
-  payment_recipient_name: "",
-  fedex_account: "",
-  shipping_note: "",
-  status: CUSTOMER_STATUS_CODES.active,
-  notes: "",
-  billing: { ...emptyBilling },
-  delivery: { ...emptyDelivery },
-  sales_channels: "",
-};
-
 const emptyEditForm: CompanyFormState = {
   name: "", status: CUSTOMER_STATUS_CODES.active, industry: "", priority_focus: "", notes: "",
 };
@@ -168,8 +90,6 @@ const toForm = (c: Company): CompanyFormState => ({
   priority_focus: c.priority_focus || "",
   notes: c.notes || "",
 });
-
-type Tab = "basic" | "billing" | "delivery";
 
 const companyDisplayName = (c: Company): string => {
   return c.billing_display_name || c.name || c.company_code || "-";
@@ -194,18 +114,11 @@ export default function CompaniesPage() {
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  // 新規作成モーダル
-  const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState<FormState>(emptyForm);
-  const [activeTab, setActiveTab] = useState<Tab>("basic");
-  const [phoneError, setPhoneError] = useState<string | null>(null);
-  const [addressesDirty, setAddressesDirty] = useState(false);
   // 編集ドロワー
   const { drawerOpen, editId, editForm, setEditForm, handleRowClick, closeDrawer } =
     useRecordDrawer<Company, CompanyFormState>({ toForm, emptyForm: emptyEditForm });
 
   const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Company | null>(null);
 
   // per_page=100 で全件を一画面に表示（highlife-jpn: 49 社、将来の増加余地あり）
@@ -222,102 +135,6 @@ export default function CompaniesPage() {
   const loadCompanies = () => { void invalidate(COMPANIES_HEAD); };
 
   const toNull = (v: string) => (v ? v : null);
-
-  /* ── 新規作成（Modal） ── */
-  const handleCreateSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError("");
-    const phoneErr = validatePhoneClient(createForm.billing.telephone);
-    if (phoneErr) {
-      setPhoneError(phoneErr);
-      setActiveTab("billing");
-      return;
-    }
-    setPhoneError(null);
-
-    const addressHasAnyValue = (a: AddressFormState) =>
-      a.branch_name || a.name || a.email || a.telephone || a.tax_id ||
-      a.address_line_1 || a.address_line_2 ||
-      a.city || a.state || a.zip || a.country_code;
-
-    const addresses: Record<string, unknown>[] = [];
-    if (addressHasAnyValue(createForm.billing)) {
-      addresses.push({
-        address_type: "billing",
-        branch_name: toNull(createForm.billing.branch_name),
-        name: toNull(createForm.billing.name),
-        email: toNull(createForm.billing.email),
-        telephone: toNull(createForm.billing.telephone),
-        tax_id: toNull(createForm.billing.tax_id),
-        address_line_1: toNull(createForm.billing.address_line_1),
-        address_line_2: toNull(createForm.billing.address_line_2),
-        city: toNull(createForm.billing.city),
-        state: toNull(createForm.billing.state),
-        zip: toNull(createForm.billing.zip),
-        country_code: toNull(createForm.billing.country_code),
-        is_default: true,
-      });
-    }
-    if (addressHasAnyValue(createForm.delivery)) {
-      addresses.push({
-        address_type: "delivery",
-        branch_name: toNull(createForm.delivery.branch_name),
-        name: toNull(createForm.delivery.name),
-        email: toNull(createForm.delivery.email),
-        telephone: toNull(createForm.delivery.telephone),
-        tax_id: toNull(createForm.delivery.tax_id),
-        address_line_1: toNull(createForm.delivery.address_line_1),
-        address_line_2: toNull(createForm.delivery.address_line_2),
-        city: toNull(createForm.delivery.city),
-        state: toNull(createForm.delivery.state),
-        zip: toNull(createForm.delivery.zip),
-        country_code: toNull(createForm.delivery.country_code),
-        is_default: true,
-      });
-    }
-
-    const salesChannels = createForm.sales_channels
-      .split(/[,、，]/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    const payload: Record<string, unknown> = {
-      name: createForm.name.trim(),
-      name_en: toNull(createForm.name_en),
-      industry: toNull(createForm.industry),
-      website: toNull(createForm.website),
-      priority_focus: toNull(createForm.priority_focus),
-      per_order_amount: createForm.per_order_amount || null,
-      monthly_frequency: createForm.monthly_frequency ? parseInt(createForm.monthly_frequency, 10) : null,
-      monthly_forecast: createForm.monthly_forecast || null,
-      billing_display_name: toNull(createForm.billing_display_name),
-      payment_recipient_name: toNull(createForm.payment_recipient_name),
-      fedex_account: toNull(createForm.fedex_account),
-      shipping_note: toNull(createForm.shipping_note),
-      status: createForm.status || CUSTOMER_STATUS_CODES.active,
-      notes: toNull(createForm.notes),
-      sales_channels: salesChannels,
-      addresses,
-    };
-    if (createForm.company_code.trim()) {
-      payload.company_code = createForm.company_code.trim();
-    }
-
-    if (submitting) return;
-    setSubmitting(true);
-    try {
-      await api.post("/companies", payload);
-      setShowCreate(false);
-      setCreateForm(emptyForm);
-      setActiveTab("basic");
-      setAddressesDirty(false);
-      loadCompanies();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.saveError"));
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   /* ── ドロワー内編集保存（6 要点フィールド） ── */
   const handleEditSubmit = async (e: FormEvent) => {
@@ -362,21 +179,6 @@ export default function CompaniesPage() {
       )}
     </div>
   );
-  const pageContentActions = hasPermission("customers.create") ? (
-    <Button variant="primary" size="sm" layoutClassName="field-h-md"
-
-      onClick={() => {
-        setCreateForm(emptyForm);
-        setActiveTab("basic");
-        setPhoneError(null);
-        setAddressesDirty(false);
-        setShowCreate(true);
-      }}
-    >
-      + {t("companies.newCompany")}
-    </Button>
-  ) : undefined;
-
   return (
     <PageLayout
       navKey="nav.companies"
@@ -396,7 +198,6 @@ export default function CompaniesPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         }
-        right={pageContentActions}
       />
 
       {companiesQuery.isPending ? (
@@ -434,136 +235,6 @@ export default function CompaniesPage() {
           />
         );
       })()}
-
-      {/* 新規作成 Modal（全項目・既存 UX 保持） */}
-      <Modal
-        open={showCreate}
-        onClose={() => setShowCreate(false)}
-        title={t("companies.newCompany")}
-        size="lg"
-      >
-        <div className="modal-content-wide">
-          <div className="tabs">
-            <button className={`tab ${activeTab === "basic" ? "active" : ""}`} onClick={() => setActiveTab("basic")}>{t("companies.basicInfo")}</button>
-            <button className={`tab ${activeTab === "billing" ? "active" : ""}`} onClick={() => setActiveTab("billing")}>{t("companies.billing")}</button>
-            <button className={`tab ${activeTab === "delivery" ? "active" : ""}`} onClick={() => setActiveTab("delivery")}>{t("companies.delivery")}</button>
-          </div>
-
-            <form onSubmit={handleCreateSubmit} className="form-grid">
-              {activeTab === "basic" && (
-                <>
-                  <div className="form-row">
-                    <label>{t("companies.companyCodeLabel")}</label>
-                    <TextFieldControl value={createForm.company_code} onChange={(e) => setCreateForm({ ...createForm, company_code: e.target.value })} />
-                  </div>
-                  <div className="form-row">
-                    <label>{t("companies.nameLabel")}</label>
-                    <TextFieldControl required value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} />
-                  </div>
-                  <div className="form-row">
-                    <label>{t("companies.nameEn")}</label>
-                    <TextFieldControl value={createForm.name_en} onChange={(e) => setCreateForm({ ...createForm, name_en: e.target.value })} />
-                  </div>
-                  <div className="form-row">
-                    <label>{t("companies.industry")}</label>
-                    <TextFieldControl value={createForm.industry} onChange={(e) => setCreateForm({ ...createForm, industry: e.target.value })} />
-                  </div>
-                  <div className="form-row">
-                    <label>{t("companies.website")}</label>
-                    <TextFieldControl value={createForm.website} onChange={(e) => setCreateForm({ ...createForm, website: e.target.value })} />
-                  </div>
-                  <div className="form-row">
-                    <label>{t("companies.priorityFocus")}</label>
-                    <TextFieldControl value={createForm.priority_focus} onChange={(e) => setCreateForm({ ...createForm, priority_focus: e.target.value })} />
-                  </div>
-                  <div className="form-row">
-                    <label>{t("companies.perOrderAmount")}</label>
-                    <TextFieldControl value={createForm.per_order_amount} onChange={(e) => setCreateForm({ ...createForm, per_order_amount: e.target.value })} />
-                  </div>
-                  <div className="form-row">
-                    <label>{t("companies.monthlyFrequency")}</label>
-                    <TextFieldControl type="number" min="0" value={createForm.monthly_frequency} onChange={(e) => setCreateForm({ ...createForm, monthly_frequency: e.target.value })} />
-                  </div>
-                  <div className="form-row">
-                    <label>{t("companies.monthlyForecast")}</label>
-                    <TextFieldControl value={createForm.monthly_forecast} onChange={(e) => setCreateForm({ ...createForm, monthly_forecast: e.target.value })} />
-                  </div>
-                  <div className="form-row">
-                    <label>{t("companies.billingDisplayName")}</label>
-                    <TextFieldControl value={createForm.billing_display_name} onChange={(e) => setCreateForm({ ...createForm, billing_display_name: e.target.value })} />
-                  </div>
-                  <div className="form-row">
-                    <label>{t("companies.paymentRecipientName")}</label>
-                    <TextFieldControl value={createForm.payment_recipient_name} onChange={(e) => setCreateForm({ ...createForm, payment_recipient_name: e.target.value })} />
-                  </div>
-                  <div className="form-row">
-                    <label>{t("companies.fedexAccount")}</label>
-                    <TextFieldControl value={createForm.fedex_account} onChange={(e) => setCreateForm({ ...createForm, fedex_account: e.target.value })} />
-                  </div>
-                  <div className="form-row">
-                    <label>{t("companies.shippingNote")}</label>
-                    <TextareaControl value={createForm.shipping_note} onChange={(e) => setCreateForm({ ...createForm, shipping_note: e.target.value })} />
-                  </div>
-                  <div className="form-row">
-                    <label>{t("companies.salesChannelsLabel")}</label>
-                    <TextFieldControl value={createForm.sales_channels} onChange={(e) => setCreateForm({ ...createForm, sales_channels: e.target.value })} />
-                  </div>
-                  <div className="form-row">
-                    <label>{t("common.status")}</label>
-                    <SelectControl fullWidth value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
-                      {customerStatuses.options("create").map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </SelectControl>
-                    {customerStatuses.isError && <div className="comp-field__hint comp-field__hint--error" role="alert">{t("common.fetchError")}</div>}
-                  </div>
-                  <div className="form-row">
-                    <label>{t("common.notes")}</label>
-                    <TextareaControl value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
-                  </div>
-                </>
-              )}
-
-              {(activeTab === "billing" || activeTab === "delivery") && (() => {
-                const key = activeTab;
-                const addr = createForm[key];
-                const setAddr = (patch: Partial<AddressFormState>) => {
-                  setAddressesDirty(true);
-                  setCreateForm({ ...createForm, [key]: { ...addr, ...patch } });
-                };
-                return (
-                  <>
-                    <div className="form-row">
-                      <label>{t("companies.branchNameLabel")}</label>
-                      <TextFieldControl value={addr.branch_name} onChange={(e) => setAddr({ branch_name: e.target.value })} />
-                    </div>
-                    <div className="form-row"><label>{t("companies.contactName")}</label><TextFieldControl value={addr.name} onChange={(e) => setAddr({ name: e.target.value })} /></div>
-                    <div className="form-row"><label>{t("common.email")}</label><TextFieldControl type="email" value={addr.email} onChange={(e) => setAddr({ email: e.target.value })} /></div>
-                    <div className="form-row">
-                      <label>{t("common.phone")}</label>
-                      <TextFieldControl value={addr.telephone} onChange={(e) => setAddr({ telephone: e.target.value })} />
-                      {key === "billing" && phoneError && <span className="field-error">{t("companies.phoneError")}</span>}
-                    </div>
-                    <div className="form-row"><label>{t("companies.taxId")}</label><TextFieldControl value={addr.tax_id} onChange={(e) => setAddr({ tax_id: e.target.value })} /></div>
-                    <div className="form-row"><label>{t("shipping.address1")}</label><TextFieldControl value={addr.address_line_1} onChange={(e) => setAddr({ address_line_1: e.target.value })} /></div>
-                    <div className="form-row"><label>{t("shipping.address2")}</label><TextFieldControl value={addr.address_line_2} onChange={(e) => setAddr({ address_line_2: e.target.value })} /></div>
-                    <div className="form-row"><label>{t("shipping.city")}</label><TextFieldControl value={addr.city} onChange={(e) => setAddr({ city: e.target.value })} /></div>
-                    <div className="form-row"><label>{t("shipping.stateCode")}</label><TextFieldControl value={addr.state} onChange={(e) => setAddr({ state: e.target.value })} /></div>
-                    <div className="form-row"><label>{t("shipping.zipCode")}</label><TextFieldControl value={addr.zip} onChange={(e) => setAddr({ zip: e.target.value })} /></div>
-                    <div className="form-row"><label>{t("companies.countryCodeWithHint")}</label><TextFieldControl value={addr.country_code} onChange={(e) => setAddr({ country_code: e.target.value })} maxLength={2} /></div>
-                  </>
-                );
-              })()}
-
-              <div className="form-actions">
-                <Button variant="secondary" size="md" type="button" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</Button>
-                <Button loading={submitting} variant="primary" size="md" type="submit" disabled={submitting}>
-                  {t("common.register")}
-                </Button>
-              </div>
-            </form>
-        </div>
-      </Modal>
 
       {/* 編集 Drawer（行クリックで開く・6 要点フィールド） */}
       <Drawer
