@@ -1,0 +1,77 @@
+# 会社の「休眠」状態を足す計画（計画のみ・ファイル変更なし）
+
+調べただけで、ファイルの変更・commit・push はしていません。プランモード用のプランファイルも、「ファイルを変えない」というご指示を優先して作っていません。
+
+## 1. 先に分かったこと：列は足さず「状態の表に1行足す」形になる
+
+`companies` 表にはすでに `status` 列があります。ADR-1076 で、`public.customer_statuses` が正本になり、`companies.status` はその `code` を指す外部キーになっています（`migrations/20261112_140000_customer_status_fk.sql`）。この表は会社と連絡先で共用です。
+
+現在の値は `active` / `inactive` / `archived` / `pending_dedup_review` の4つで、名前・並び順・選択肢の出し分けは表の列にあります。
+
+そのため、列を足すと正本が2つになり、ADR-1076 と食い違います。「ADR を優先する」という決まりにも反するので、**新しい状態 `dormant`（休眠）を表の1行として足す**ことを推奨します。
+
+## 2. 決めたい点（PO に確認）
+
+- **`inactive`（無効）との違い**：この違いが分かる文を、ADR か design に1〜2行で書いておく必要があります。`inactive` は今は「無効」としか定義されていません。これが決まらないと、使い分けがぶれて分析も混乱します。案は次のとおりです。
+  - 休眠 = 取引が止まっているが、復活の見込みはある
+  - 無効 = 取引関係を終了した
+- **連絡先にも出るか**：表が共用なので、行を足すと連絡先の画面の選択肢にも出てしまいます。会社だけに出すか、連絡先にも出すかを決めます。会社だけに出す場合は、連絡先側の選択肢で `dormant` を除く工夫か、別設計が必要です。
+- **自動で休眠にするか**：今回は手で選ぶだけにして、「最終取引から◯か月で自動休眠」は別の依頼に分けるのを推奨します。
+- **正本の文書の扱い**：ADR-1076 は Proposed のままです。値の追加を ADR の追記で済ませるか、新しい ADR にするかを PO に確認します。
+- **作業の区分**：新規テーマではなく「既存の延長」にあたります。`docs/specs/customer-management/` と `docs/handoff/status-ssot-contact-company/` に追記します。
+
+## 3. 変更の内容
+
+### データ（本番に流す1行）
+- `docs/handoff/status-ssot-contact-company/insert-customer-statuses.sql` に1行足します。
+  ```
+  ('dormant', '休眠', 'Dormant', 25, TRUE, TRUE)
+  ```
+- `sort_order` は UNIQUE なので、既存の 20（無効）と 30（アーカイブ）の間に入る 25 が空いていることを確認します。
+- この表は migration では値を入れません。運営の手作業で入れます（ADR-1007）。今回の変更に `ALTER`（DROP を含む変更）や `migrations/` の新規ファイルは要りません。外部キー先の表に行が増えるだけです。
+- 本番への投入は `run-insert.sh` の道を使い、PO の GO を取ります。クラウドからは流しません。
+
+### サーバー側（`backend/`）
+- `backend/app/schemas/company.py:31-35` の `CompanyStatus` 列挙に `dormant = "dormant"` を足します。ここが無いと、作成・更新の API が 422 で断ります。
+- `backend/app/services/customer_statuses.py:17-21` に `STATUS_DORMANT` 定数を足します。記号の直書きを避ける決まりです。
+- `backend/app/schemas/contact.py:28` は、連絡先にも出す場合だけ足します。
+- `backend/tests/test_customer_statuses_pg.py` は、列挙と表の行の一致を毎回確かめる試験です。試験用の入れ込み SQL も同じファイルを読むので、列挙と投入 SQL が揃っていれば通ります。
+- 休眠の会社の扱いを確認します。会社の統合は `archived` の統合先だけを止めていて（`companies.py:770`）、休眠は止めません。分析・ダッシュボード（`routers/dashboard.py`・`analytics.py`・`reports.py`）が「active だけを数える」書き方かどうかも確認します。この確認は、実装の前の調査で行います（未確認）。
+
+### 画面側（`frontend/`）
+- `frontend/src/lib/customerStatuses.ts:2-7` に `dormant: "dormant"` を足します。
+- `frontend/src/utils/statusPresentation.ts:172-177` の `company`（連絡先にも出すなら `contact`）に、見た目の対応を1行足します。例は `dormant: { bucket: "warning", badgeVariant: "on_hold" }` です。`on_hold` は deals で使われている既存の札の種類で、新しい色は作らないようにします。
+- 札の名前は DB の `name_ja`/`name_en` から出る（`useCustomerStatuses().nameOf`）ため、`ja.json`・`en.json` への追記は要りません。
+- 会社の一覧（`CompaniesPage.tsx:411`）の札と、編集フォーム（`CompanyFormFields.tsx:30`）の選択肢は、表を読んで自動で出ます。コードの変更は上の3ファイルで済みます。
+- 一覧の状態での絞り込みが要るかは未確認です。必要なら `Select` の金型を使います（生 select は禁止）。
+- `frontend/tests-e2e/` の該当 spec と、`design-preview/sections/StatusSection.tsx` の見本表示も、同じ PR で更新します。
+
+## 4. 手順（AGENTS.md に従う）
+
+1. `docs/specs/customer-management/` と ADR-1076 を再確認し、既存の延長として追記する場所を決めます。ADR は `git grep -i dormant docs/adr/` で検索します（今回の調査では「休眠」は既存コードにも ADR にも出ませんでした）。
+2. `bash scripts/new-worktree.sh release/company-dormant-status --claude` で作業場所を作ります。
+3. recon・design を `docs/handoff/company-dormant-status/` に作ります。design 末尾の「維持の仕組み」欄は空欄不可です。守り手は `backend/tests/test_customer_statuses_pg.py` が候補です。
+4. 実装は `backend/` と `frontend/` を同じ PR にします。本番に出る変更なので、GO 記録が必要です。
+5. `cd frontend && npm run lint` と `make check` を通してから push します。PR は手元で `shingo-cc` 名義で作ります（クラウドは push まで）。PR 本文には「### 標準ワークフロー確認」の節を入れます。
+6. マージ後、PO の GO のもとで投入 SQL を本番に流します。
+
+## 5. 確認方法
+
+- `test_customer_statuses_pg.py` と、会社の API の試験（`test_companies_*`）に「`dormant` で作成・更新できる」ケースを足します。
+- PostgreSQL 実機で、行を投入した状態で `dormant` の会社を保存できることと、行が無い状態では外部キーで断られることの両方を確かめます。
+- 画面は、`tenant_001`（QA）で次を確かめます。`tenant_004`（実データ）には触れません。
+  - 会社の編集で「休眠」を選んで保存できる。
+  - 一覧の札に「休眠」と出る。
+  - 英語表示では Dormant と出る。
+- 動作確認の記録は `docs/ai-agents/evidence-registry.md` に残します。
+
+## 6. 戻し方
+
+- 画面と API の PR を戻します。
+- 表の行は消さず、`is_active` を FALSE にします。行を消すと外部キーに止められるためです。すでに休眠にした会社が残っていても、DB 上は壊れません。
+
+## 7. 実装前に答えてほしいこと
+
+1. 休眠と無効の違いはどう決めますか？
+2. 連絡先にも「休眠」を出しますか？ 会社だけですか？
+3. 自動で休眠にする仕組みも今回含めますか？ 手で選ぶだけにしますか？

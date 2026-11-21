@@ -1,0 +1,65 @@
+# 計画: 再解析した古い投稿の行を現行に戻す
+
+ファイルの変更・commit・push はしていません。コードと ADR を読んだ結果をもとにした計画です。
+
+## 先に PO 確認が要る点
+
+- 今の動きは ADR-1032（復活止め）で決まっています。PO が 2026-10-19 に「n」と判断した内容です。
+- 実装は `backend/app/services/tcg_analyzer_svc.py:2119-2139` の `ranked` にあります。
+- AGENTS.md では ADR を優先し、コードを ADR に寄せます。そのため、コードだけ先に直すことはしません。
+- 先に ADR-1032 へ追記か改訂を起案し、PO の承認を得てから実装に入ります。
+- PO にはこう聞きます。「再解析した投稿自身の行は、組の最新ならいつでも現行にしてよいか。ほかの投稿の行を戻さないという復活止めは、そのまま残す」
+
+## 原因（確認済み）
+
+- `ranked` の `should_be_current` は、最新の投稿の行でも次の場合に FALSE にします。
+  - 同じ仕入元に、より新しい投稿の同じ商品の行がある。
+  - かつ、その行は付け直しの前から現行ではなかった（`was_current` が偽）。
+- 再解析で行の商品や状態が変わると、付け替え後の組は「前から現行」にならず、新しい投稿に同じ商品があるだけで落とされます。
+- 例は次の 2 つです。
+  - `backend/tests/test_adr1032_revival_guard.py` の R3a。同じ商品でも別の状態なら、その組の最新はこの行自身なのに FALSE になる。
+  - ADR-1032 の 2026-10-23 追記。再判定で 2 行が TRUE→FALSE になった。
+- 一方で、止めたいのは「ほかの投稿の行が戻る」ことです。R1・R3c・R5 がこれに当たります。
+
+## 方針（最小の変更）
+
+- 復活止め（(i)(ii)）は、再解析している投稿以外の行にだけ掛けます。
+- 再解析している投稿自身の行は、組の最新なら現行にします。
+
+具体的な変更:
+
+1. `ranked` の条件を次の形にします。
+   - 変更前: `(c.job_id = t.job_id) AND (NOT guard OR c.was_current OR NOT EXISTS(新しい投稿に同じ商品))`
+   - 変更後: `(c.job_id = t.job_id) AND (NOT guard OR c.job_id = :job_id OR c.was_current OR NOT EXISTS(...))`
+   - これで自分の投稿の行は復活止めの対象外になります。
+2. ほかの投稿の行は今のまま FALSE のままです。R1・R3c・R5 は変わりません。
+3. 削除・取り消しの `revival_guard=False` と、`prior_current_pairs` の渡し方は触りません。
+4. 同じ `:job_id` が `candidates` の仮の行（〆の相手）にも付いています。ここでも自分の投稿の行だけが対象になることを確認します。
+
+## 変更するファイル
+
+- `backend/app/services/tcg_analyzer_svc.py`: `ranked` の条件と docstring（1998-2002 行）。
+- `backend/tests/test_adr1032_revival_guard.py`:
+  - R3a の期待を `x_single` TRUE に変えます。
+  - R1・R3b・R3c・R5・R6・S1・S8・D1b は変えません。
+  - 「自分の投稿の行が現行になる」ことを確かめる試験を、商品の付け替え（2026-10-23 型）で 1 件足します。
+- `docs/adr/ADR-1032-current-row-revival-guard.md`: 追記（PO 承認の日付と、What の (ii) を「自分の投稿の行を含む」に直す）。変更したら `node scripts/generate-adr-index.js` を流します。
+- `docs/handoff/revival-guard/design.md`: 場面の表を更新します。
+
+## 守ること
+
+- 作業場所は `bash scripts/new-worktree.sh release/<topic> --claude` で作ります。
+- PR の前に `./scripts/dev/executor-preflight.sh` を流します。
+- このコードを含む PR は `migrations/` を含まないので GO の対象外です。ただし配信が動くため、PR 本文に「標準ワークフロー確認」の節を入れます。
+- コード変更の PR は、手元で `shingo-cc` 名義で作ります。クラウドでは push までです。
+
+## 確かめ方
+
+1. `pytest backend/tests/test_adr1032_revival_guard.py`。この試験は CI の使い捨て PostgreSQL 専用で、`GITHUB_ACTIONS=true` でないとスキップされます。クラウドでは立てた localhost の PostgreSQL に接続して流します。
+2. 次の場面の期待が変わらないことを見ます: R1・R2・R3b・R3c・R5・R6・S1・S8・D1b・冪等。
+3. 本番反映の前後で、行の状態の要約を比べます。変わるのは、再解析した投稿自身の行だけです。
+4. 本番の再解析では、K2/K4 型の確認を行います。試し実行で FALSE→TRUE になる行を数え、PO が受け入れるか聞いてから本実行します。
+
+## 未確認
+
+「古い投稿の行」が、再解析した投稿自身の行（R3a・10/23 の型）なのか、別の投稿の行（R1 型）なのかは、依頼文だけでは決まりません。この計画は前者と読んでいます。後者まで戻す場合は、ADR-1032 の中心である「隠れた行は再解析では戻さない」を覆します。その場合は別の ADR 起案が必要です。

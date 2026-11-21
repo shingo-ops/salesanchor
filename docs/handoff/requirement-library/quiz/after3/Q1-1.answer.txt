@@ -1,0 +1,51 @@
+## 修正計画：顧客情報の「新規登録」エラー
+
+### 原因（コードで確認済み）
+- 画面側 `frontend/src/pages/companies/CompaniesPage.tsx:309` は `api.post("/companies", payload)` を送ります。`payload` には `lead_id` がありません（このファイルで `lead_id` が出るのは型定義と一覧表示だけです）。
+- API 側の `backend/app/schemas/companies.py:116` は `lead_id: int = Field(ge=1)` を必須にしています。`backend/app/routers/companies.py:383` の `create_company` も、リードが無いと 404 を返します。
+- つまり、ボタンから会社を作ると必ず検証エラーになります。実機でエラーを再現して確かめたわけではなく、コードの読み取りによる判断です（**未確認**）。
+
+### 方針：直さずに、ボタンを撤去する
+`docs/adr/ADR-097-sa-customer-registration-form.md` §6 に、PO 決定（2026-11-21）として次が書かれています。
+- 「新規登録」ボタン（リードなしで会社を手で作る道）は直さずに撤去する。
+- `lead_id` を任意にする変更や、リードを自動で作る変更もしない。
+- 撤去は別の便で行う。
+
+そのため、バックエンドを緩めてエラーを消す案は取りません。
+
+### 作業手順
+1. **作業場所を作る**: `bash scripts/new-worktree.sh release/remove-company-create-button --claude`
+2. **事前確認**: `./scripts/dev/executor-preflight.sh || exit 1` を実行します。`docs/STANDARD-WORKFLOW.md` と `docs/CC_UI_GOVERNANCE.md` も読みます。
+3. **フロントの撤去**（`frontend/AGENTS.md` に従う）
+   - `CompaniesPage.tsx` から次を削除します。
+     - `pageContentActions` の「+ 新規登録」ボタン
+     - 新規作成の Modal（`showCreate`）
+     - `createForm` の状態と送信処理（226〜320行付近）
+   - これらで使っていた import や状態のうち、使われなくなったものも消します。
+   - `CompanyFormFields.tsx` は、編集側でも使われているか確認します。使われていなければ整理し、使われていれば残します。
+   - `ja.json` と `en.json` の `companies.newCompany` など、使われなくなったキーは両方から同時に削除します（ADR-027）。
+   - `frontend/tests-e2e/` と `*.test.tsx` に、新規登録ボタンを前提にしたものがあれば同じ PR で更新します。
+4. **バックエンドは原則そのまま**
+   - `POST /companies` は、受信箱のフォーム経路（ADR-097・ADR-127）が使っているかを grep で確認します。使っていれば残します。
+   - `customers.create` 権限の扱いも、同じ確認の結果で決めます。
+   - どちらかを変える必要が出たら、§3 に従って止まり、設計担当に判断を仰ぎます。
+5. **空状態の文言**: 会社が 0 件のときの案内文が、新規登録ボタンを前提にしていないか確認します。必要なら「受信箱から送る登録フォームで登録される」という趣旨の文に直します。
+
+### 検証
+- `cd frontend && npm run lint && npm run check:all` と、該当する vitest を実行します。
+- `npx playwright test --project=chromium` を実行します。
+- 画面で、顧客情報にボタンが出ないことと、一覧・詳細・編集が壊れていないことを確認します。
+- 権限の違うユーザーでも確認します。
+- `bash scripts/dev/check-before-submit.sh` を実行します（Bash の timeout は 600000）。
+- コード変更なので、PR 前に `/security-review` を流します。
+
+### 提出
+- クラウドでは push までにします。PR は手元で `shingo-cc` 名義で作ります。
+- PR 本文には「### 標準ワークフロー確認」の節を入れ、触るファイルは平打ちで書きます。
+- migration と `deploy.yml` は触らないので、PO の「GO #PR番号」は不要です。
+
+### 要確認（着手前に PO か設計担当へ）
+- ボタンの撤去だけを今回の便にしてよいか。ADR には「撤去は別の便で行う」と書かれています。
+- 受信箱フォーム経由の登録でも同じエラーが出ていないか。これが出ていれば、別の不具合として切り分けます。
+
+ファイルの変更・commit・push は行っていません。

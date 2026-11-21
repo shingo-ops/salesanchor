@@ -1,0 +1,46 @@
+## 計画: 顧客情報の「新規登録」エラー
+
+### 原因（確認済み）
+- `frontend/src/pages/companies/CompaniesPage.tsx:309` が `POST /companies` を `lead_id` なしで送っています。
+- 一方、`backend/app/schemas/company.py:116` では `lead_id: int = Field(ge=1)` が必須です。`backend/app/routers/companies.py:377` の `create_company` も、リードの存在を確認する作りです。
+- つまり、リードなしで会社を手作りする画面と、リード必須の API が食い違っています。エラーの種類（422 か 404）は実際には動かしていないので未確認です。
+
+### 方針: 直さずボタンを撤去する
+`docs/adr/ADR-097-sa-customer-registration-form.md` の §6（2026-11-21、PO 決定）に次の趣旨が書かれています。
+- 会社はリードの子とし、作る道は「受信箱から送る登録フォームでお客様が登録する道」だけにする。
+- 手で作る「新規登録」ボタンは直さずに撤去する。撤去は別の便で行う。
+- `lead_id` を任意にする変更や、リードを自動で作る変更もしない。
+
+ADR と実装が食い違うときは ADR を優先するので、エラーを直す案（`lead_id` を任意にするなど）は採りません。
+
+### 作業手順（承認後）
+1. **作業場所**: `bash scripts/new-worktree.sh release/remove-company-manual-create --claude` で作ります。先に `./scripts/dev/executor-preflight.sh` を実行します。
+2. **画面の撤去**（`CompaniesPage.tsx`）
+   - `pageContentActions`（365 行付近の「+ 新規登録」ボタン）を削除します。
+   - 作成モーダル（440 行付近）、`createForm`、`showCreate`、作成の送信処理（`api.post("/companies")`）を削除します。
+   - 使わなくなった `phoneError`、`addressesDirty`、`emptyForm` などを整理します。ただし編集モーダルが共用していないか確認してから消します。
+3. **i18n**: `companies.newCompany` など、使われなくなったキーを `ja.json` と `en.json` の両方から消します。他で使われていないか grep で確かめます（ADR-027）。
+4. **バックエンドの扱い**
+   - `POST /companies` のルート自体は、登録フォームの道（ADR-097・ADR-126）が使う可能性があります。そのため、今回は触りません。
+   - 呼び出し元を調べ、手作り用だけなら閉じるかどうかを PO に確認します。これは別の便にします。
+5. **テストの更新**
+   - `frontend/tests-e2e/ui-companies-edit-modal-i18n.spec.ts` など、新規登録ボタンやモーダルに依存する spec を同じ PR で直します（`frontend/AGENTS.md` の E2E 更新ルール）。
+   - `PageFormButtonMigration.test.tsx` などの単体テストのうち、会社作成を扱うものも確認します。
+6. **ドキュメント**: `docs/specs/customer-management/README.md` に画面から作れなくなったことを一言追記します。
+
+### 確認方法
+- `cd frontend && npm run lint && npm run check:all` と、該当の vitest・playwright（`--project=chromium`）を実行します。
+- 顧客情報の画面で「新規登録」ボタンが出ず、一覧と編集は従来どおり動くことを確かめます。
+- `grep -rn "newCompany"` が 0 件になることを確かめます。
+
+### 注意点
+- コード変更を含む PR なので、PR は手元で `shingo-cc` 名義で作ります。クラウドでは push までです。
+- PR 本文には「### 標準ワークフロー確認」の節を入れます。
+- 本件は `migrations/` もデプロイ設定も触らないので、PO の「GO」の対象外の見込みです。
+- ADR-097 の「別の便で行う」が今回の作業を指すのかは、念のため PO に確認します。
+
+### 未確認事項
+- ボタンを消す前に、リードなしで会社を作る運用が他にないかを確認します。
+- 「受信箱から登録フォームを送る道」が今も正常に動くかを確認します。
+
+ご指示どおり、ファイルの変更・commit・push は一切していません。

@@ -1,0 +1,73 @@
+# backend の Python を 3.13 へ上げる計画
+
+## 先に確認が必要な点: ADR-1022 との食い違い
+
+AGENTS.md は「ADR と実装の食い違いは ADR を優先する」と定めています。ADR-1022（Proposed、期限は PO 決定済み）には次の内容があります。
+
+- 3.12 のまま開発を続け、2027 年 10 月末までに本番・CI・手元を一度に 3.14 へ上げる。
+- 手元だけ、本番だけを先に上げることはしない。
+- 設計は 2027 年 7 月を目安に始める。
+- 3.14 で動かない部品があるかは未確認。
+
+今日は 2026-11-21 なので、ADR の予定より約 8 か月早い依頼になります。「3.13 に上げる」は、ADR の「3.12 から 3.14 へ直接」とは別の道です。そこで、実装に入る前に PO（しんごさん）へ次のどちらにするか確認します。
+
+- **A**: 3.14 を直接目指す。この場合、本計画のうち版の数字を 3.14 に読み替えるだけです。
+- **B**: 3.13 を中間の版にする。この場合は ADR-1022 の改訂（起案は PO）が先です。
+
+以下は B を前提にした計画です。A の場合も段取りは同じです。
+
+## 現状（調べて確認できたこと）
+
+- **本番の版**: `backend/Dockerfile:1` が `python:3.12-slim`。
+- **型検査・lint の設定**: `backend/pyproject.toml:4` が `target-version = "py312"`、`:31` が `python_version = "3.12"`。
+- **GitHub Actions**: `.github/workflows/` の約 20 ファイルが `python-version: '3.12'`。`test.yml`、`migration-test.yml`（4 か所）、`schema-check.yml`、`security-scan.yml` などです。`migration-test.yml:2345` は `docker run python:3.12-slim`、`pmg-cutover-probe.yml:30` は `python3.12` を直接呼びます。
+- **backend 以外の Dockerfile**: `monitoring/github-collector/Dockerfile` と `monitoring/recovery-check/Dockerfile` が 3.12。
+- **スクリプト**: `scripts/rehearsal_phase2.sh:205` と `scripts/test_rollback_simulation.sh:135` に `FROM python:3.12-slim`。
+- **手元の見張り**: `scripts/agent-hooks/cloud/python_version_guard.py`（テストは `cloud/test.sh` の B4・B4b）、`scripts/agent-hooks/mac-test-guard/test_guard.py`、`docs/specs/rule-enforcement/rules.yml:919`（python-version-guard）。これらは 3.12 以外の venv 作成を止める作りです。
+- **文書**: `docs/ai-agents/dev-commands.md`、`scripts/lead_regression/README.md` などに「python3.12」の記述があります。
+- **依存**: `backend/requirements.txt` は固定版が多くあります。3.13 の対応状況は未確認です。
+  - 重点確認の対象: `asyncpg==0.31.0`、`psycopg2-binary==2.9.10`、`pydantic==2.10.6`、`lxml>=5.0.0`、`Pillow==12.3.0`、`bcrypt`、`argon2-cffi`、`maxminddb`、`hiredis` と `celery`、`discord.py==2.4.0`、`google-generativeai<0.9`（旧 SDK）、`reportlab`。
+  - 3.13 の主な変更は、`audioop` などの標準ライブラリ削除、GIL まわり、`locals()` の挙動変更です。コードがこれらに触れているかも未確認です。
+
+## 計画
+
+### 段 0: 方針の確定（PO）
+1. 上の A/B を PO に確認する。B なら ADR-1022 を改訂するか、新しい ADR を起案する。`node scripts/generate-adr-index.js` で索引を更新する。
+2. 作業は `bash scripts/new-worktree.sh release/python-3-13`（クラウドでは `--claude` 付き）で作る。変更は `shingo-cc` 名義で PR にする。
+
+### 段 1: 調査（recon、変更なし）
+3. 使い捨ての 3.13 venv に `requirements.txt` と `requirements-dev.txt` を入れ、全依存が wheel で入るかを確認する。入らない部品の一覧を作る。
+4. `ruff`、`mypy`、`bandit`、`pip-audit` が 3.13 で動くか確認する。
+5. 3.13 の `python -W error::DeprecationWarning` で pytest を流し、廃止予定の警告を洗い出す。標準ライブラリ削除の影響を grep で確認する。
+6. 結果を recon 文書にまとめる。ブロッカー（3.13 非対応の部品）があれば、この時点で止めて PO に報告する。
+
+### 段 2: 依存の整理（3.12 のままできる準備 PR）
+7. 3.13 で動かない固定版があれば、3.12・3.13 の両方で動く版へ先に上げる。PR を分け、各 PR で pytest を通す。
+
+### 段 3: 版上げ本体（1 つの PR）
+8. `backend/Dockerfile` を `python:3.13-slim` に変える。
+9. `pyproject.toml` の `target-version = "py313"` と `python_version = "3.13"` を変える。ruff・mypy の新しい指摘はこの PR で直す。
+10. 全 workflow の `python-version`、`docker run python:3.12-slim`、`python3.12` を一括で置き換える。`monitoring/*` の Dockerfile と `scripts/rehearsal_phase2.sh`、`scripts/test_rollback_simulation.sh` も同じ PR に含める。
+11. 見張りを 3.13 に合わせる。`python_version_guard.py`、`cloud/test.sh` B4・B4b、`mac-test-guard/test_guard.py`、`rules.yml` の該当行を変える。ADR-1022 の「版上げの仕事の中でだけ許可を変える」に沿い、設計文書 `docs/handoff/py312-guard/design.md` §6 R2 に従う。手元の端末（`~/.claude/scripts/python-version-guard.py`）の更新は PO の作業になる。
+12. 文書の「3.12」を直す。対象は `dev-commands.md`、`lead_regression/README.md`、AGENTS.md の「Python 3.12」の記述です。AGENTS.md と CLAUDE.md を変えるので、`docs/ai-agents/entry-rule-add.md` の手順を先に読む。
+13. `migrations/`・`deploy.yml` は触らない。`workflow-lint.yml` の変更が必要になったら、不可逆操作の扱いに従って PO 確認が先になる。
+
+### 段 4: 先に出す前の確認
+14. PR の CI を全部通す。`test.yml`、`migration-test.yml`、`schema-check.yml`、`api-contract-check.yml`（OpenAPI の差分が出ないこと）、`security-scan.yml` です。
+15. 使い捨ての環境で、新しい Docker イメージを起動して `/health` と主要な API を確認する。Celery・Discord Gateway worker・Meta の webhook も起動確認する。
+16. 本番へ出す前に PO の GO をもらう。本番には 3.12 のイメージを残し、戻せるようにしておく。出した後は監視（`runbooks/alerts.md`）を一定期間見る。
+
+### 戻し方
+- Dockerfile と CI の版を 3.12 に戻す PR を 1 本出す。依存の準備 PR（段 2）は 3.12 でも動く版なので戻す必要はありません。
+
+## 検証方法
+- 手元: 3.13 の venv で `cd backend && make lint-ci`、さらに `docker compose up -d postgres redis` のあと `make check`（カバレッジ 60% 以上）。
+- CI: 上記の workflow が全部成功すること。
+- 動作: 新イメージで起動して `/health` と主要 API を確認する。ログに DeprecationWarning が新しく出ていないこと。
+
+## リスクと未確認
+- 3.13 に対応していない依存があるかは未確認（段 1 で判明）。
+- ADR-1022 の「手元・CI・本番を一度に」を守れるかは未確認。手元の見張りは PO 端末にもあるため、切り替えの同期が必要です。
+- 3.13 を中間に挟むと、2027 年に 3.14 への版上げをもう一度行うことになり、作業が 2 回になります。
+
+この計画は、ファイルの変更・commit・push をせず、調査だけで作りました。

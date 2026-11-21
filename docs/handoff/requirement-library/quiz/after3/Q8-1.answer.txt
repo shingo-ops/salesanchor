@@ -1,0 +1,91 @@
+# 計画：Gemini が断ったときは、別の道に切り替えず失敗で終わらせる
+
+ファイルの変更・commit・push はしていません。計画だけです。
+
+## 現状（確認できたこと）
+
+- 「別の道」への切り替えは `backend/app/services/gemini_route.py:126-229` の 1 か所にまとまっています。
+  - 道は「直接」と「prod2 中継」の 2 本です。
+  - `should_switch()` が、HTTP 400 の "location is not supported" と接続系の例外（`ConnectError`・`ConnectTimeout`・`ProxyError`・`ClientConnectorError`）のときだけ、もう一方の道で 1 回やり直します。
+  - 切り替えに成功すると、`remember()` で道を覚え、`_count_switch()` が Redis に回数を残します。
+- 呼び出し元は次のとおりです。
+  - `line_analysis_v102_svc.py`
+  - `gemini_extraction_svc.py`
+  - `gemini_raw_copy_v8.py`
+  - `message_translator.py`
+  - `celery_app.py`
+  - `tasks/gemini_route_watch.py`（30 分成功が無ければ知らせる監視）
+- 429・403・空応答・SAFETY の拒否は、もともと切り替え対象外です。`backend/app` に `finish_reason`・`SAFETY`・`block_reason` の該当はありません。
+- 別モデル、Claude、OCR、ルールベースへの縮退も見つかりませんでした。
+- 429/5xx は `line_analysis_v102_svc.py:466-535` で 2 秒後と 8 秒後に送り直します（ADR-1050）。これは「別の道」ではなく再試行なので残します。
+- 失敗したジョブは `tcg_extraction_recovery.py:277` が自動で再投入します。
+- 関連 ADR は ADR-1062（Gemini への道は断られたら自動で切り替える。状態は Proposed）です。
+
+## 先に決めること
+
+1. **場所による拒否は、切り替えを外すとそのまま失敗になります。**
+   - 切り替えは、VPS の場所が Gemini に断られる問題への対策として入っています。これは調査結果からの推測で、設計書は未読です。
+   - 外すと、直接の道が場所で断られる環境では解析が失敗し続けます。
+   - 「どちらの道を使うか」を固定する方法が別に必要です。固定する方法がそもそも要るのかも含め、PO に確認します。
+2. **ADR との食い違いに注意が必要です。**
+   - 食い違いは ADR を優先する決まりです。ADR-1062 は Proposed ですが、方針を逆にするなら ADR の改訂（または Superseded）が先です。
+   - ADR の起案は PO の担当です。実装より前に、PO の判断をもらいます。
+3. 「そのまま失敗で終わる」の範囲を確認します。
+   - 場所による拒否と接続不能の両方を対象にするか。
+   - 429/5xx の再試行（ADR-1050）と `tcg_extraction_recovery` の再投入は残すか。
+
+   私の推奨は、どちらも残すことです。これらは道の切り替えではないからです。
+
+## 実装手順（PO の了承後）
+
+1. `AGENTS.md` に従い、`bash scripts/new-worktree.sh release/gemini-no-route-failover --claude` で作業場所を作り、`./scripts/dev/executor-preflight.sh` を流します。
+2. 読むもの:
+   - `docs/handoff/gemini-auto-failover/design.md`・`recon.md`・`card-1.md`・`card-2.md`
+   - `docs/adr/ADR-1062-gemini-auto-route-failover.md`
+   - `docs/runbooks/gemini-egress-emergency.md`
+   - `backend/AGENTS.md`
+3. `gemini_route.py` を単純にします。
+   - `generate_content_routed` / `agenerate_content_routed` は、1 本の道で呼ぶだけにします。拒否や例外はそのまま送出します。
+   - 次の関数は削除します。
+     - `should_switch`
+     - `is_location_refusal`
+     - `is_route_unreachable`
+     - `_unreachable_types`
+     - `_count_switch`
+     - `other_route`
+     - `remember`
+   - `failure_reason`（鍵の伏せ字処理を含む）は、ログや失敗理由に使われているなら残します。使い道は呼び出し元を見て確認します。
+   - 道の選び方（`first_route`・`build_client`）は、決めた固定方法に合わせて小さくします。
+4. `tasks/gemini_route_watch.py` と `celery_app.py` の定期実行を整理します。
+   - 切り替え回数の Redis キーに依存する部分は外します。
+   - 「30 分成功が無ければ知らせる」監視は、切り替えとは別の機能です。残すかどうかは、ADR の方針とあわせて決めます。
+5. 呼び出し元 4 ファイルを確認します。
+   - 失敗が既存の失敗経路（ジョブの失敗状態・ユーザーへの表示）に正しく流れることを確かめます。
+   - 切り替え専用の分岐があれば削除します。
+6. ADR を整えます。
+   - ADR-1062 を改訂するか Superseded にします（PO 起案）。
+   - 手順書 `gemini-egress-emergency.md` を現状に合わせます。
+   - 変えたら `node scripts/generate-adr-index.js` を流します。
+7. migration は不要です。DB の列も変えません。
+
+## テスト・確認
+
+- `backend/tests/test_gemini_route.py`
+  - 切り替えを確かめるテストを削除します。
+  - 「場所による拒否・接続不能のとき、1 回呼んで例外がそのまま出る」テストに置き換えます。
+- `test_gemini_route_watch.py` は、監視の扱いに合わせて直します。
+- `test_message_translator.py` と `test_tcg_gemini_extraction.py` で、失敗が既存の失敗経路に流れることを確かめます。
+- 429/5xx の再試行と再投入が変わっていないことも、テストで確かめます。
+- `make check`（ruff・bandit・mypy・pytest）を通します。
+- `grep -rn "gemini_route\|other_route\|_count_switch" backend` で、参照の取り残しが無いことを確かめます。
+
+## PR・リリースの注意
+
+- コード変更を含むので、クラウドでは push までにします。PR は手元で `shingo-cc` 名義で作り、本文に「### 標準ワークフロー確認」の節を入れます。
+- 本番 VPS・secrets・Branch Protection には触れません。環境変数で道を固定する場合は、本番への設定変更が要ります。それは PO の作業として分けます。
+
+## 未確認のこと
+
+- 設計書 4 ファイル、ADR-1062 の全文、手順書は読んでいません。
+- 呼び出し元 4 ファイルの失敗処理は、細かくは見ていません。
+- 本番がいま実際にどちらの道を使っているかは不明です。

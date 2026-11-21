@@ -1,0 +1,61 @@
+# 計画: Gemini に断られたら、道を切り替えずそのまま失敗にする
+
+## 前提と、先に決めたいこと
+
+調べた結果、いまのコードには次の2種類の切り替えしかありません。**安全フィルタ（SAFETY / PROHIBITED_CONTENT）を見て別モデルや別プロンプトへ切り替える処理は存在しません。** モデルは固定です。
+
+- **道の切り替え**（直接 ⇔ prod2 中継）: `backend/app/services/gemini_route.py:196-229`（ADR-1062）
+  - 切り替わる条件は2つだけです。
+    - 400 かつ "location is not supported"。
+    - 接続できない（`ConnectError`、`ConnectTimeout`、`ProxyError` など）。
+- **一時的な失敗の送り直し**（429/5xx）:
+  - `backend/app/services/line_analysis_v102_svc.py:467-531`
+  - `backend/app/tasks/tcg_extraction_recovery.py:269-350`
+  - ADR-1050
+
+「断られたとき」は、一番近いのが**道の切り替え（ADR-1062）**です。この計画はそれを外す前提で書きます。送り直しは「断り」ではなく一時的な失敗への対応なので、残します。外す対象が違う場合は教えてください。計画を組み直します。
+
+## 方針
+
+道を1本にします。Gemini が断る、または届かないときは、切り替えも別経路の試行もせず、その場で失敗として呼び出し側に返します。
+
+## 手順
+
+1. **事前確認**
+   - `docs/INDEX.md` の手順書（`executor-checklist.md`、`branch-operations`、`runbooks/gemini-egress-emergency.md`）を読みます。
+   - `bash scripts/new-worktree.sh release/gemini-no-route-fallback --claude` で作業場所を作ります。
+   - `./scripts/dev/executor-preflight.sh` を実行します。
+2. **ADR を先に直す**（ADR と実装がずれたときは ADR が優先のため）
+   - ADR-1062 を「廃止（置き換え）」とする新しい ADR の起案を PO（しんごさん）に依頼します。ADR の起案は PO の担当です。
+   - 変更後、`node scripts/generate-adr-index.js` で目次を更新します。
+3. **`gemini_route.py` を単純にする**
+   - 切り替えの分岐（「location is not supported」判定と接続エラー判定）を消します。
+   - 1本の道だけで呼び、失敗はそのまま例外または失敗結果で返す形にします。
+   - 呼び出し側が受け取る失敗の形は変えません。失敗理由は区別できるようにログと状態に残します。
+4. **呼び出し側の確認**
+   - `line_analysis_v102_svc.py` と `tcg_extraction_recovery.py` が、道の切り替え結果に依存していないか確認します。
+   - 失敗時に解析の状態が「失敗」になり、UI に出ることを確認します。送り直し（429/5xx）はそのまま残します。
+5. **不要になるものを片付ける**
+   - prod2 中継だけで使う設定、環境変数、フラグ、テスト、文書を洗い出して削除します。
+   - `runbooks/gemini-egress-emergency.md` は「中継へ切り替える手順」が不要になるか、PO と相談して更新します。
+6. **テストを直す**
+   - 切り替えを前提にしたテストを削除します。
+   - 「400 location not supported」と「接続エラー」のときに、切り替えずに失敗で終わるテストを追加します。
+   - 429/5xx の送り直しのテストが落ちていないことを確認します。
+
+## 注意点
+
+- 地域制限（400 location）で断られる状況が本番で実際に起きている場合、道の切り替えを外すと解析が止まります。実施前に、本番での発生頻度（ログ）を確認します。DB は reader 鍵の道でのみ読みます。
+- コード変更の PR は `shingo-cc` 名義で作ります。`migrations/` やデプロイ設定に触れる場合は PO の「GO #PR番号」まで main にマージしません。
+- 不可逆操作（本番 secrets の変更など）は計画に含めません。
+
+## 確認方法
+
+- `docs/ai-agents/dev-commands.md` の手順で、対象のテスト（`gemini_route`、`line_analysis_v102`、`tcg_extraction_recovery`）を実行します。
+- `grep` で、中継用の設定名や関数名が残っていないことを確認します。
+- 「断られる」状況をテストで再現し、切り替えが起きずに失敗状態になることを確認します。
+- pre-push の検査を通します。
+
+## 注記
+
+上の行番号と範囲は、調査担当の報告に基づきます。着手時に自分でファイルを開いて再確認します。

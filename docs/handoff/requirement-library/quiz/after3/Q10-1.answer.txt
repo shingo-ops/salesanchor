@@ -1,0 +1,72 @@
+# Discord 連携の失敗表示を「例外のメッセージそのまま」にする計画
+
+ファイルは変更していません。計画だけです。
+
+## 現状（調べた結果）
+
+- 連携の戻り口は `backend/app/routers/discord_oauth.py` の callback です。失敗すると `?discord_status=error&reason=<固定コード>` へリダイレクトします。
+- 例外の中身は意図的にログにしか出していません。
+  - 通信失敗は `type(e).__name__` だけをログに出します。
+  - Discord の拒否は `status` と `error` の先頭 40 文字だけをログに出します。
+  - 画面へ渡すのは `_ExchangeError.reason` などの固定コード 13 個だけです。
+- 画面側は `frontend/src/features/discord-connect/discordConnectError.ts` が、コードを i18n キー `discordConnect.error.*` に対応させています。表に無いコードは `unknown` の文にして、生の値は出さない設計です（ADR-1071）。使うのは `ChannelsPage.tsx` と `DiscordOwnServerPanel.tsx` です。
+- 開始 API（`/discord/oauth/start`）の失敗は `detail.reason` で返り、同じ表を通ります。
+- 別系統の `discord_auto_setup.py:166` は、すでに `f"Discord API 接続エラー: {exc}"` と例外をそのまま返しています。
+
+## 懸念：そのまま出すのは危険
+
+1. **URL に例外文を載せられない**
+   - callback は Discord からのリダイレクトなので、メッセージは URL の query に入れるしかありません。
+   - すると閲覧履歴、アクセスログ、Referer に残ります。長さの制限も受けます。
+2. **例外文に内部情報が混ざり得る**
+   - httpx の例外には接続先 URL が入ります。
+   - DB の例外には SQL、テーブル名、テナントの値が入ります。
+   - code や state の断片が混ざる可能性もあります。
+3. **既存の設計方針と食い違う**
+   - 「生の値は出さない」を明記した設計（ADR-1071）に反します。
+   - AGENTS.md の「ADR と実装が食い違ったら ADR を優先」に従うと、実装を ADR へ寄せるのが正しい向きです。変更するなら ADR の改訂が先に要ります。
+
+## 推奨案：生の例外ではなく「原因が分かる詳細」を安全に出す
+
+目的は「原因が分かること」です。そのために、例外を丸ごと出す代わりに、サーバーが無害な詳細を作って渡します。
+
+1. **ADR を先に直す（PO 判断）**
+   - ADR-1071 を確認し、「画面に出してよい詳細」の範囲を決めます。
+   - この方針で良いか、本当に生の例外でないとだめか、しんごさんに確認します。
+2. **サーバー側（`discord_oauth.py`）**
+   - `_ExchangeError` に `detail` を足します。中身は Discord の `error` 文字列（既に 40 文字に切ってあるもの）と HTTP status、例外の型名だけです。
+   - callback の `reason` は今のまま維持します。そこへ `&detail=<URL エンコード済み・短縮>` を追加します。
+   - 例外の `str(e)` は使いません。
+   - 秘密や URL を含み得る値は通さない許可リスト方式にします。
+3. **画面側（`discordConnectError.ts` と 2 つの画面）**
+   - `getDiscordConnectErrorDetail(params)` を追加します。
+   - 既存の文言の下に「詳細: …」として表示します。i18n キー `discordConnect.error.detailLabel` を ja.json と en.json の両方に追加します。ハードコード日本語は禁止です。
+   - 表示時は React の既定エスケープに任せ、長さを切ります。
+   - UI 部品は `components/` の金型を使います（CC_UI_GOVERNANCE）。
+4. **開始 API の失敗**
+   - `detail` オブジェクトに `message` を足します。
+   - `getDiscordConnectErrorReason` の隣に、同じ形の取り出し関数を足します。
+
+もし PO が「生の例外そのまま」を希望する場合は、`discord_auto_setup.py` と同じ方式にします。ただし対象は、画面に直接返す API の経路だけです。URL リダイレクトの経路は不可とし、その場合は API 経路へ寄せる設計変更が要ります。
+
+## テスト
+
+- `backend/tests/test_discord_oauth.py` に追加します。
+  - 失敗時のリダイレクト URL に `detail` が付くこと。
+  - 例外文に含まれる秘密風の文字列（トークン、URL）が漏れないこと。
+  - 長い文字列が切られること。
+- `discordConnectError.test.ts` に追加します。`detail` の取り出し、欠落時の挙動、i18n の ja / en 同一キーの確認です。
+- コードの突き合わせの試験（`DISCORD_CONNECT_ERROR_REASONS`）は壊さないようにします。
+
+## 進め方（AGENTS.md に沿って）
+
+1. 作業前に `docs/ai-agents/executor-checklist.md` と `docs/STANDARD-WORKFLOW.md` を確認します。
+2. `bash scripts/new-worktree.sh release/discord-connect-error-detail --claude` で作業場所を作ります。
+3. ADR の改訂を先に行い、その後に backend → frontend の順に実装します。
+4. `./scripts/dev/executor-preflight.sh` を通してから push します。
+5. コード変更を含む PR は、手元で `shingo-cc` 名義で作ります。PR 本文には「### 標準ワークフロー確認」の節を入れます。
+
+## 確認したいこと（PO へ）
+
+1. 「例外そのまま」は、上の安全な詳細（型名・status・Discord のエラー名）で十分でしょうか。
+2. 生の `str(exc)` が必要な場合、画面を見るのは管理者権限（`channels.manage`）の人だけに限定してよいでしょうか。

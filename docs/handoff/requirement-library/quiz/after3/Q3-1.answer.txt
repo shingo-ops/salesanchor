@@ -1,0 +1,62 @@
+# 計画: 期限切れの札も、接続元の回数止めに数える
+
+## 先に決めてほしいこと
+
+この依頼は、すでにある ADR-1083 と**逆向き**です。AGENTS.md では、ADR と食い違うときは ADR を優先します。このため、そのまま実装には入りません。
+
+- **今の動き**: 期限切れの札は数えません。`backend/app/auth/dependencies.py` の `_authenticate_self_token` にある `except ExpiredSignatureError` が、`record_auth_failure` を呼ばずに 401 を返します。
+- **ADR-1083 のねらい**: 2026-11-20 に PO の Android が、約 46 時間前の札で画面の頼みを 11 回送りました。11 回とも数えられて接続元が止まり、直後のログインが 429 になりました。これを直すための決まりです。ステータスは Proposed で、本番での確認 K5・K6 がまだです（調査担当の報告では未確認）。
+- **懸念**: 数えるようにすると、同じ事故が再発します。期限切れの札で画面が連続して頼みを送ると、数が 10 に達してログインまで 429 になります。
+
+実装の前に PO へ次の 3 つから選んでもらいます。私のおすすめは**案 B** です。
+
+- **案 A**: 全部数える。ADR-1083 を廃止して新しい ADR を立てます。巻き添えの再発は受け入れることになります。
+- **案 B**: 数えるが、巻き添えを防ぐ工夫を付ける（おすすめ）。
+  - 期限切れの失敗は、同じ札（札の hash）につき 1 回だけ数えます。
+  - 例: Redis に `auth_expired_seen:<hash>` を `SET NX`（TTL は回数止めの 15 分）で置き、置けたときだけ `record_auth_failure` を呼びます。
+  - 画面が同じ札で 11 回頼んでも数は 1 です。
+  - 札を次々に変えて試す総当たりは、今より厳しく数えられます。
+- **案 C**: 何もしない。
+
+「数える」ことの狙いが、総当たりの検知を厚くすることなのか、別の観測なのかは、こちらでは未確認です。狙いが分かれば案を絞れます。
+
+## 作業手順（案 A か B が決まった後）
+
+1. **作業場所**
+   - `bash scripts/new-worktree.sh release/count-expired-token-lockout --claude`
+   - `./scripts/dev/executor-preflight.sh` を実行します。
+   - 事前に `backend/AGENTS.md`・`docs/ai-agents/executor-checklist.md`・`docs/STANDARD-WORKFLOW.md` を読みます。
+   - フック経由で、`docs/adr/` の ADR-1008・ADR-1068・ADR-1019・ADR-1061 の確認も求められています。今回は未読です。着手前に読みます。
+2. **ADR**
+   - PO が決めた内容の新しい ADR を起案します（`docs/ai-agents/adr-template.md` に従う）。
+   - ADR-1083 の備考に「置き換え」と記します。
+   - `node scripts/generate-adr-index.js` で `docs/adr/README.md` を更新します。
+3. **コード**: 変更は `backend/app/auth/dependencies.py` の `_authenticate_self_token` だけです。
+   - 案 A: `except ExpiredSignatureError` の分岐を削り、他の失敗と同じ `_reject_self_token` に流します。
+   - 案 B: その分岐の中で、札の hash による 1 回限りの判定を足してから `record_auth_failure` を呼ぶ小さな関数を、`backend/app/cache.py` に作ります。
+   - `check_auth_rate_limit` は札の検証前に走るので、止まっている接続元は今までどおり 429 です。
+   - 上限の 10 回・15 分、返事の 401 と文言は変えません。
+4. **テスト**: `backend/tests/test_self_auth.py` の既存 3 本を直します。
+   - `test_expired_self_token_is_not_counted_as_failure` は、案 A なら「数える」に反転します。案 B なら「同じ札は 1 回だけ数える」に変えます。
+   - `test_expired_token_with_wrong_signature_is_counted` と `test_locked_ip_still_gets_429_for_expired_token` はそのまま通ることを確認します。
+   - 案 B では「同じ札を 11 回送っても 429 にならない」「別の札を 10 回送ると 429 になる」を足します。
+   - `test_real_redis_lockout.py` で、実際の Redis でも確かめます。
+5. **ドキュメント**: `docs/handoff/auth-expired-token-lockout/design.md` の K1〜K7 を見直します。
+
+## 影響範囲の確認
+
+- **ほかの呼び出し元**: `routers/auth.py`・`viewer.py`・`staff_join.py` も同じ `record_auth_failure` を使っています。ただし、期限切れの札を扱う経路は `_authenticate_self_token` だけと見ています。ここは実装時に grep で再確認します。
+- **画面（`frontend/`）**: 期限切れ時の再ログイン導線が頼みを連打していないか確認します。連打があると案 A では今回の事故が再発します。
+- **本番**: ADR-1083 の K5・K6 が未確認です。この変更と順序を合わせます。
+
+## 確かめ方
+
+- `backend` で `pytest tests/test_self_auth.py tests/test_real_redis_lockout.py`（手順は `docs/ai-agents/dev-commands.md`）
+- 続けて認証まわりの試験一式を流します。
+- push の前に pre-push の検査を通します。
+- `migrations/` と `deploy.yml` は触らないので、「GO #PR番号」の対象外です。
+- コード変更の PR は、`gh auth status` で `shingo-cc` 名義を確認してから作ります。
+
+## 次の確認
+
+案 A・B・C のどれにするか教えてください。決まれば、上の手順で進めます。

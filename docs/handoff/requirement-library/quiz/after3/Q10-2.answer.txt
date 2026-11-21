@@ -1,0 +1,58 @@
+# 計画: Discord 連携失敗時の画面文（例外メッセージをそのまま出す案）
+
+## 結論
+依頼どおり「例外のメッセージをそのまま画面に出す」実装は、**進めない方がよい**と考えます。採用済みの ADR-1071 に反するためです。ADR は実装より優先されます（AGENTS.md）。原因の分かりやすさという目的は、別の方法で満たせます。以下の計画はその方法です。計画のどこかを変える場合は、PO（しんごさん）の判断が要ります。
+
+## 根拠（確認できた事実）
+- ADR-1071 は、画面に出してはいけないものに「例外の中身」を挙げています。文はサーバーで作らず、サーバーは理由コードを返し、画面が対応表から文を選ぶ方式です。
+- 現状、Discord の OAuth と Bot 招待はこの方式です（`backend/app/routers/discord_oauth.py`、`frontend/src/features/discord-connect/discordConnectError.ts`）。
+- 違反しているのは `backend/app/routers/discord_auto_setup.py` です。`error=str(exc)` が少なくとも 533・589・646・684 行目にあり、794 行目に `error_msg = str(exc)` があります。
+- 調査では、`discord_rest.py` の例外文に Discord 応答の本文（300 字まで）と httpx の例外文が入ることも分かりました。この点は私は直接確認していません。例外文を出すと、URL や内部情報が漏れる恐れがあります。秘密が実際に混ざるかは未確認です。
+
+## 目的の言い換え
+「原因が分かりやすい」を、例外文ではなく次の 2 つで満たします。
+1. 理由コードを細かく分け、画面は「何が起きたか＋次にすること」を出す。
+2. 例外の詳細はサーバーのログと、運営向けの調査用情報にだけ残す。
+
+## 実装の段取り（実装役向け）
+作業前に次を行います。
+- `docs/ai-agents/executor-checklist.md` を読む。
+- `bash scripts/new-worktree.sh release/discord-error-reason-codes --claude` で作業場所を作る。
+
+1. **洗い出し（読み取り）**
+   - 未読の `discord_own_server.py` と `discord_ticket_config.py` を読む。
+   - `DiscordAnnouncePage.tsx` の `catch` が `err.message` を出すかを確認する。
+   - `discord_auto_setup.py` の失敗の種類を数える。
+   - `docs/handoff/error-message-plain-language/inventory.md` と突き合わせる。
+2. **サーバー（`backend/`）**
+   - `discord_auto_setup.py` の `error=str(exc)` を、安定した理由コードに置き換える。例は `discord_missing_permission`、`discord_rate_limited`、`discord_timeout`、`discord_unknown` です。
+   - 例外の詳細は `logger.exception` などでログにだけ出す。トークンや URL は伏せる。
+   - `discord_rest.py` の例外から理由コードへの変換を 1 か所にまとめる。
+   - HTTPException の文の直書きは増やさない。`backend/tests/error_detail_baseline.json` を超えると CI が落ちる。
+3. **画面（`frontend/`）**
+   - `discordConnectError.ts` の対応表に新しい理由コードを足し、「理由コード → 文言キー＋次にすること」で表示する。
+   - `ja.json` と `en.json` に同じキーで文言を足す（ADR-027）。
+   - 表示は既存の部品（Toast・Callout など）だけを使う。
+   - 対応表に無いコードは、定型の文に落とす。
+   - 着手前に `frontend/AGENTS.md`、`backend/AGENTS.md`、`CC_UI_GOVERNANCE.md` を読む。
+4. **見張り**
+   - 直した分だけ基準値を下げる。
+   - 新しい理由コードを出すサーバーのファイルを `.github/workflows/e2e.yml` の detect-changes の frontend の一覧に足す。
+5. **運営向けの原因確認（任意・PO 判断）**
+   - 原因をもっと見せたい場合は、一般の画面ではなく、管理者向けの調査画面や、ログと結びつく問い合わせ番号に出す案を検討する。
+
+## 確認方法
+- `backend/tests/test_error_detail_guard.py` と、理由コードの突き合わせ試験が通る。
+- `npm run check:all`（`check-error-text-next-action` を含む）が通る。
+- 単体試験で、権限不足・時間切れ・レート制限などの例外を起こし、画面に例外文や英語の識別子が出ないことを確かめる。
+- ログには詳細が残り、秘密の値が出ないことを確かめる。
+- PR は `shingo-cc` 名義で作る。本文に「### 標準ワークフロー確認」の節を入れる。
+
+## 決めてほしいこと
+- ADR-1071 を維持して、上の理由コード方式で進めてよいか。
+- 例外文を出すこと自体が目的なら、ADR を直す案が要ります。その場合は PO が ADR を起案します。
+
+## 補足
+- 私は文書を読んだだけで、ファイルの変更・commit・push はしていません。
+- plan mode の指示にある計画ファイルも、「ファイルは変更しない」という依頼に従って作っていません。
+- 計画の承認を取る終了用の道具が、この環境には見当たりません。そのため承認はこの返信で受けます。
