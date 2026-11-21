@@ -372,7 +372,7 @@ P1〜P13 がそろうまで、5-1〜5-3 の実装カードは出さない。
 | 成功 | 飛ばした | 0 | — |
 
 - 控えの段の所要は 158〜166秒（5回）。
-- run_py の26本はすべて `scripts/migrate_*.py`（`docs/handoff/migration-runner-redesign/recon-5-4/counts.md` の末尾）。控えの条件 `db_migrations`（`.github/workflows/deploy.yml:69-73`）に入る。
+- run_py の26本はすべて scripts/migrate_*.py の形（`docs/handoff/migration-runner-redesign/recon-5-4/counts.md` の末尾）。控えの条件 `db_migrations`（`.github/workflows/deploy.yml:69-73`）に入る。
 
 #### 5-8-2. 残っている穴（ムラの今の意味）
 
@@ -411,7 +411,7 @@ P1〜P13 がそろうまで、5-1〜5-3 の実装カードは出さない。
 - CI の job `migration-runner-record`（`.github/workflows/migration-test.yml:2305-` の回1〜回6）。(c) が1本以上になるのは回1（:2415）だけ。回1に `MIGRATION_PREDEPLOY_BACKUP=success` を渡す。回6（:2493）は全件モードなので変えない。回2〜回5は (c)=0 か、(a)・(b) で先に止まる。
 - `scripts/tests/test-deploy-orphan-cleanup.sh` の C8（:211）と C10（:267）。偽の docker の上で本体を流し、手順が流れることを前提にしている。C10 の②（:269、ai_cloud を外す行がある）は見張りで止まると失敗する。両方に `MIGRATION_PREDEPLOY_BACKUP=success` を渡す。C3（:463）・:484・:516 は中身を差し替えた偽の本体を流すので変えない。
 
-`deploy.yml` の控えの段の条件、`migrations/`、本番の流す行（`run_sql`・`run_py` の中の `docker exec` の行、trap の中の行）は変えない。
+`.github/workflows/deploy.yml` の控えの段の条件、`migrations/`、本番の流す行（`run_sql`・`run_py` の中の `docker exec` の行、trap の中の行）は変えない。
 
 #### 5-8-5. 受け入れ基準
 
