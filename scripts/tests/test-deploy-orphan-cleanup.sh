@@ -207,7 +207,7 @@ exit 0
 EOF
   chmod +x "${FB8}/docker"
   : > "${D8}/log"
-  ( cd "${ROOT}" && exec env PATH="${FB8}:${PATH}" REPO_DIR="${ROOT}" FAKE_LOG="${D8}/log" FAKE_CNT="${D8}/cnt" \
+  ( cd "${ROOT}" && exec env PATH="${FB8}:${PATH}" REPO_DIR="${ROOT}" MIGRATION_PREDEPLOY_BACKUP=success FAKE_LOG="${D8}/log" FAKE_CNT="${D8}/cnt" \
       FAKE_HELD="${D8}/held" FAKE_SLEEPPID="${D8}/sleeppid" bash scripts/run_all_migrations.sh ) >"${D8}/out.txt" 2>&1 &
   P8=$!
   BG_PIDS+=("${P8}")
@@ -263,7 +263,7 @@ EOF
   chmod +x "${FB10}/docker"
   : > "${D10}/log"
   R10=0
-  ( cd "${ROOT}" && env PATH="${FB10}:${PATH}" REPO_DIR="${ROOT}" FAKE_LOG="${D10}/log" FAKE_CNT="${D10}/cnt" \
+  ( cd "${ROOT}" && env PATH="${FB10}:${PATH}" REPO_DIR="${ROOT}" MIGRATION_PREDEPLOY_BACKUP=success FAKE_LOG="${D10}/log" FAKE_CNT="${D10}/cnt" \
       bash scripts/run_all_migrations.sh ) >"${D10}/out.txt" 2>&1 || R10=$?
   ok_if "C10 ① スクリプトの終了コードが 0 以外（実際 ${R10}）" test "${R10}" -ne 0
   ok_if "C10 ② 標準出力に ai_cloud の外しの行がある" grep -qE '^>>> \[[0-9]+/[0-9]+\] psql < migrations/[0-9_]+_drop_ai_cloud_views\.sql$' "${D10}/out.txt"

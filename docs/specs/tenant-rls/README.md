@@ -27,6 +27,25 @@ Sales Anchor は複数の会社（テナント）が同じデータベースを�
 - 段階④（会社の列を持つ public の 8 表）: 設計済み・PO の KGI 承認済み（2026-11-06「1」）。ADR-1067（Proposed）。型A（自社だけ読み書き）3 表・型C（読取は全行可、書込は自社か運営）5 表を 5 便で出す。設計 [../../handoff/s1-rls-stage4/design.md](../../handoff/s1-rls-stage4/design.md)
 - KGI の判定（2026-10-16 17:30 JST）: KGI-1 ○・KGI-3 ○。KGI-2 は観測できた範囲で失敗 0 だが、本番のログイン成功と画面の目視が未観測のため保留（[kgi.md](kgi.md)）。ADR-1018 は Accepted
 
+## 守り続ける仕組み
+
+会社の分け方が崩れないように見張る仕組みの一覧（ADR-1063 便8・K11）。名前は ruleset 15777895 の必須一覧と workflow の job 名をそのまま書く。設計: [../../handoff/tenant-owner-login-approval/design.md](../../handoff/tenant-owner-login-approval/design.md)。
+
+| 守るもの | 見張り | どこで・いつ | 落ちたとき |
+|---|---|---|---|
+| 他社の行が見えない・書けない（K2） | 必須チェック `pytest (SQLite + PostgreSQL RLS)`（`.github/workflows/test.yml`）。実 PostgreSQL・`salesanchor_app` 役で流す（例: `backend/tests/test_tenant_login_requests.py`） | GitHub・PR ごと | PR が合流できない |
+| 会社の列を持つ新しい public の表に RLS が無い（K8） | 必須チェック `マイグレーションSQL 実行テスト（実DB）`（`.github/workflows/migration-test.yml`）の中で `scripts/check_public_tenant_rls.py` を流す | GitHub・PR ごと | PR が合流できない |
+| 本番で分け方が崩れていない（K9） | Celery の定期 `tenant-isolation-daily-check`（`backend/app/celery_app.py`）が `run_tenant_isolation_daily_check` を流す。判定の本体は `backend/app/ops/tenant_rls_checks.py` | 本番・毎日 09:05 JST。結果は緑でも管理者用 Discord に送る | 黄か赤が Discord に届く。Opus が読み、PO に理由と選択肢を出す |
+| 見張りの workflow・スクリプト・除外一覧を勝手に変えない（K10） | 必須チェック `guard-files gate`（`.github/workflows/guard-files-gate.yml`・integration_id 15368）。守るファイルは2組で、組A は PO 本人（shingo-ops）の GO、組B は shingo-ops か shingo-cc の GO が要る。GO は1行目が `GO #番号 <SHA>`。書き直した GO と、GO の後に守るファイルを変えた PR は通さない。同じ名前の検査を足した PR も落とす | GitHub・PR ごと（ラベルを付けると流し直す。決まりのラベルは `guard-files-recheck` で、付けた後に外す） | PR が合流できない |
+| AI が PO の名前で GO を書かない・同じ名前の検査を足さない（K10 の補い） | 手元: `scripts/agent-hooks/go-identity-guard/`（試験 `go-identity-guard test`）。クラウド: `scripts/agent-hooks/cloud/go_comment_guard.py`（`dispatch.sh` の PreToolUse・試験 `go-comment-guard test`）。試験は `.github/workflows/agent-hooks-test.yml` | AI の操作の前 | その操作が止まる。止められたら言い換えず PO に頼む |
+| 会社の文脈を張らずに search_path を切り替えない | `Backend Tests` の `lint-backend-internal` の段「生の SET search_path 検出」（`.github/workflows/test.yml`）。必須の `pytest (SQLite + PostgreSQL RLS)` がこの job を待つ | GitHub・PR ごと | PR が合流できない |
+| 各社スキーマの決まり（ADR-072） | 必須チェック `ADR-072 tenant schema lint (strict mode)`（`.github/workflows/lint-tenant-schema.yml`） | GitHub・PR ごと | PR が合流できない |
+
+守りきれないもの:
+
+- AI がわざと命令の形を変えて PO の名前を使う道（設計の便7「守りの強さ」と便7b「止めきれないもの」）。補いとして、月に1回 Opus が PO の名前の「GO #」のコメントの一覧を PO に出し、PO の覚えと合うかを確かめる。
+- `backend/tests/conftest.py` と `backend/tests/rls_bootstrap.py` は guard-files gate の守る一覧の外にある。月の合流が約41回あり、GO の手間が見合わないため。RLS の役を作る `.github/workflows/test.yml` は組B で守る。
+
 ## 子文書
 
 - 段階① recon: [../../handoff/s1-rls-permissions/recon.md](../../handoff/s1-rls-permissions/recon.md)
