@@ -5,7 +5,7 @@
 
 ## 1. 決まり（ADR）
 
-- `/Users/tanizawashingo/salesanchor/docs/adr/ADR-097-sa-customer-registration-form.md:41` 「既存リード情報＋顧客入力B/D ＝ 同期した顧客マスタを自動生成」。
+- `docs/adr/ADR-097-sa-customer-registration-form.md:41` 「既存リード情報＋顧客入力B/D ＝ 同期した顧客マスタを自動生成」。
 - 同 §6（61-66 行）: 会社はリードの子。会社を作る道は受信箱から送る登録フォームでお客様が登録する道だけ。画面の「新規登録」は撤去（#5667 で本番済み）。
 
 ## 2. 今の作り（事実）
