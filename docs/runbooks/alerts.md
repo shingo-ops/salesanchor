@@ -14,6 +14,14 @@
 - 鳴り止まないときの止め方：prod2 の Alertmanager のコンテナの中で `amtool silence add alertname=RULE --duration=PERIOD --comment=REASON` を実行する（RULE はルール名、PERIOD は期間、REASON は理由に置き換える）。期間と理由は記録に残す。
 - 直し方が書けないものは「原因を切り分けて Opus に報告する」とだけ書いてある。推測で手順を作らない。
 
+### 知らせの届く場所（Discord）
+
+- Sales Anchor サーバーの「アラート」分類は 3 つに分ける（設計: `docs/handoff/discord-channel-consolidation/design.md`）。
+- 「🚨急ぎ」: すぐ見る異常。この文書の見張りの発火と解消（Alertmanager）・Uptime Kuma・さくらのメール・画面点検の不合格・反映の止まりと戻し。送り口は「サーバー監視」「さくらのお知らせ」「API接続障害」（GitHub の `DISCORD_WEBHOOK_OWNER_PING`）。
+- 「📋定期の報告」: あとで読めばよい報告。アプリの毎日・毎週の点検・GitHub の週次と月次の報告（`DISCORD_WEBHOOK_SCHEDULED_REPORT`）・Mac の見張り・kb 見回り。送り口は「運用アラート」（本番の `ADMIN_NOTIFICATION_DISCORD_WEBHOOK`）と「approval-test」（Mac）。
+- 「不具合受付」: お客様と PO の不具合の報告。agent-console が読む。「不具合報告」は ADR-1025 の誤り報告用に取っておく。
+- 新しい知らせを足すときは、上のどちらに当たるかを決めて、その送り口を使う。新しいチャンネルは作らない。
+
 ## HighCpuUsage
 
 - 札：ticket
@@ -130,16 +138,16 @@
 ## BruteForceAttempt
 
 - 札：page
-- 何が起きているか：認証失敗らしきログ（401・403 など）が 5 分間に 20 件を超えた状態が 1 分続いた。攻撃の可能性。
-- 最初に見るもの：Loki で `{job="containerlogs"} |~ "401|403|auth.*fail|login.*fail|Unauthorized"`、どの経路・どのテナントか。
-- 直し方：正常な利用の失敗か攻撃かを切り分け、攻撃の疑いなら security-reviewer と Opus に報告する。
+- 何が起きているか：ログインの入口 6 つ（`/api/v1/auth/login`・`/auth/passkey/login/verify`・`/auth/password-reset/confirm`・`/auth/login-requests/recovery`・`/viewer/login`・`/viewer/password-reset/confirm`）で、ログインの失敗（401）と締め出し（429）が 5 分間に 10 件を超えた状態が 1 分続いた。10 件はアプリが 1 つの IP を締め出す回数（`backend/app/cache.py` の `AUTH_FAIL_MAX`）。攻撃の可能性。パスワードの再設定と復旧の入口は失敗が 400 なので、締め出し（429）だけを数える。
+- 最初に見るもの：Loki で `{job="containerlogs"} |~ "\"POST /api/v1/(auth/login|auth/passkey/login/verify|auth/password-reset/confirm|auth/login-requests/recovery|viewer/login|viewer/password-reset/confirm) HTTP/[0-9.]+\" (401 Unauthorized|429 Too Many Requests)"`。同じ時刻の入口（nginx）の行で、どの IP・どの端末からかを見る。
+- 直し方：正常な利用の失敗か攻撃かを切り分け、攻撃の疑いなら security-reviewer と Opus に報告する。uvicorn の版を上げた後は、わざと 1 回失敗させて上の式で数に出ることを確かめる（ログの形が変わると黙って数えなくなる）。
 - 止め方：`amtool silence add alertname=BruteForceAttempt --duration=PERIOD --comment=REASON`
 
 ## SustainedAuthFailure
 
 - 札：ticket
-- 何が起きているか：認証失敗らしきログが 1 時間に 50 件を超えた状態が 5 分続いた。低頻度の継続的な失敗。
-- 最初に見るもの：Loki で `{job="containerlogs"} |~ "401|403|auth.*fail|Unauthorized"` を時間帯別に見る。
+- 何が起きているか：BruteForceAttempt と同じ数え方（ログインの入口 6 つの 401・429）で、1 時間に 20 件を超えた状態が 5 分続いた。5 分に 10 件未満でゆっくり続く失敗。
+- 最初に見るもの：BruteForceAttempt の節の式を、窓を `[1h]` にして時間帯別に見る。
 - 直し方：特定の利用者の設定ミスか攻撃かを切り分けて Opus に報告する。
 - 止め方：`amtool silence add alertname=SustainedAuthFailure --duration=PERIOD --comment=REASON`
 

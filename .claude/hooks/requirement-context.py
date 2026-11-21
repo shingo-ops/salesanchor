@@ -133,7 +133,15 @@ def main() -> None:
             tail = "計画の前に " + "・".join(spec_paths) + " を読んでください。"
         else:
             tail = "計画の前に、その ADR を docs/adr/ で読んでください。"
-        sentences.append(f"この場所には決まりがあります: {label}（{kw}）。{tail}")
+        note = row["note"].strip()
+        if not note or note == "-":
+            sentences.append(f"この場所には決まりがあります: {label}。{tail}")
+        else:
+            if note.endswith("。"):
+                note = note[:-1]
+            if len(note) > 400:
+                note = note[:400] + "…"
+            sentences.append(f"この場所には決まりがあります: {label}。決まりの要旨: {note}。{tail}")
         shown.append(kw)
     if not sentences:
         return

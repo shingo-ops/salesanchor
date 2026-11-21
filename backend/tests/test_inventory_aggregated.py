@@ -354,7 +354,7 @@ async def seed_aggregated_dataset():
     }
 
     # Cleanup
-    async with eng.begin() as conn:
+    async with public_bootstrap_lock(eng), eng.begin() as conn:
         for pid in [poke1_id, poke2_id, yugi_id]:
             await conn.execute(
                 text("DELETE FROM public.inventory WHERE product_id = :p"), {"p": pid}
