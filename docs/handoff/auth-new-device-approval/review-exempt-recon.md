@@ -55,14 +55,14 @@
 
 ## G. データの置き場（SSOT）
 
-- 人の正本は `public.users`（ADR-1008）。人ごとの設定を列で足した前例: `migrations/20261117_100000_add_users_secretary_voice.sql:2`（`scripts/run_all_migrations.sh:1468` で流す）。
+- 人の正本は `public.users`（ADR-1008）。人ごとの設定を列で足した前例: `migrations/20261117_100000_add_users_secretary_voice.sql:2`（`scripts/run_all_migrations.sh:1476` で流す）。
 - 機械の登録の経路は DB の決まりで7種類に固定（`migrations/20261101_130000_add_new_device_approval.sql:21-22`）。ここに種類を足すと決まりの作り直しが要る。
 
 ## H. 画面の金型（ADR-144）
 
 - 置き場の候補: super admin の「ログインの許可待ち」画面 `frontend/src/pages/super-admin/LoginRequestsPage.tsx:40-52`（`PageLayout` と `UserManagementSubMenu` を使用）。
 - 使える金型（`frontend/src/components/`）: `frontend/src/components/SectionCard.tsx`・`frontend/src/components/TextField.tsx`・`frontend/src/components/Select.tsx`・`frontend/src/components/Button.tsx`・`frontend/src/components/DataTable.tsx`・`frontend/src/components/ConfirmModal.tsx`。
-- 日付を選ぶ金型は見つからない。日数を `Select` で選ぶ形にすれば新しい金型は要らない。
+- 日付を選ぶ金型は見つからない。日数を `Select` で選ぶ形にすれば新しい金型は要らない。（注: 前の版の案。2026-11-22「1」の形では日数を選ばず、ON は最長14日で自動 OFF のため使わない）
 
 ## I. 試験と必須チェック
 
@@ -81,17 +81,17 @@
 
 ## K. 会社の表の書き込みの決まり（2026-11-22 追加・PO の条件「会社006だけ」の書き直し用）
 
-- `public.tenants` は読み取りは全行可、書き込みは運営の文脈（`app.is_operator = 'true'`）のときだけ（`migrations/20261016_170000_add_tenants_write_rls.sql:9-23`）。会社の人が書くアプリの道は無い（同 :4）。
+- `public.tenants` は読み取りは全行可、書き込みは運営の文脈（`app.is_operator = 'true'`）のときだけ（`migrations/20261016_170000_add_tenants_write_rls.sql:9-23`）。会社の人が書くアプリの道は無い（`migrations/20261016_170000_add_tenants_write_rls.sql:4`）。
 - 運営の文脈を付ける関数は `set_operator_context`／`reset_operator_context`（`backend/app/auth/dependencies.py:458-489`）。
 - 会社の文脈を付けると `app.is_operator` は空に戻る（`backend/app/auth/dependencies.py:328`）。`_record_auth_audit`（`backend/app/routers/auth.py:282-293`）は会社の文脈を付けて外す。
 - `public.users` も読み取りは全行可（`migrations/20261016_180000_add_users_write_rls.sql:9-10`）。
 - 会社の行の型は `backend/app/models.py:8-17`（id・tenant_name・tenant_code・is_active・settings）。Meta 審査用の印の列は **無い**。
 - 画面の金型: 切替スイッチ `frontend/src/components/Toggle.tsx`（checked・onCheckedChange・disabled・aria-label。className は受けない）、色の札 `frontend/src/components/Badge.tsx`（variant: neutral・info・success・warning・danger・purple）。
-- 利用者管理の小さなメニュー: `frontend/src/pages/super-admin/users/UserManagementSubMenu.tsx:38-46`（2つ目の組は「ログインの許可待ち」1つだけ）・`:49-50`（その鍵では何もしない）・`:64`（既定の選択）。道は `frontend/src/App.tsx:345`。
+- 利用者管理の小さなメニュー: `frontend/src/pages/super-admin/users/UserManagementSubMenu.tsx:38-46`（2つ目の組は「ログインの許可待ち」1つだけ）・`:49-50`（その鍵では何もしない）・`frontend/src/pages/super-admin/users/UserManagementSubMenu.tsx:63`（既定の選択）。道は `frontend/src/App.tsx:345`。
 
 ## L. ログインの記録の中身（2026-11-22 追加）
 
-- 記録の書き手は1か所: `backend/app/middleware/audit.py:215-266`。`/api/v1/auth/` の口が対象（同 :37）。
+- 記録の書き手は1か所: `backend/app/middleware/audit.py:215-266`。`/api/v1/auth/` の口が対象（`backend/app/middleware/audit.py:37`）。
 - 列: `event_type`・`path`・`method`・`status_code`・`client_ip`・`user_agent`・`created_at`（`migrations/001_create_auth_events.sql:6-16`）と `user_id`・`reason`・`is_new_device`（`migrations/20261101_130000_add_new_device_approval.sql:118-120`）。
 - 打ったメールアドレスは記録に無い。会社に無いメールで試した回は `user_id` が NULL（`backend/app/routers/auth.py:413`）。
 - 本番の id=10 の行は0件（reader 鍵・2026-11-21。生の出力 `/tmp/CC報告ファイル/meta-review-login/prod_id10_events.txt`）。

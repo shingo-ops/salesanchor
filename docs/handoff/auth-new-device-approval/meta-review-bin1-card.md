@@ -53,7 +53,7 @@
 設計 3-2 のコードをそのまま書く（`META_REVIEW_MAX_DAYS = 14`・`is_meta_review_on`・`meta_review_until`・`is_meta_review_member`）。加えて設計 3-5 の `is_meta_review_session(db, request, user) -> bool` を同じファイルに書く（中の順は設計 3-5 の 1〜4 のとおり）。
 
 - 読み込むのは `app.auth.devices`・`app.auth.self_tokens`・`app.auth.dependencies`（`resolve_current_session`）だけ。`devices` と `dependencies` からこのファイルを読み込まない（循環を作らない）
-- 「印の会社・super admin でない」の条件は、このファイルの2つの SQL にだけ書く。ほかのファイルに `meta_review_tenant` の条件を書かない（§5 の管理の口の UPDATE の `WHERE meta_review_tenant` だけは例外。設計 3-7）
+- 「印の会社・super admin でない」の条件は、このファイルの2つの SQL にだけ書く。ほかのファイルに `meta_review_tenant` の条件を書かない（例外: §5 の管理の口が印だけで会社を引く SQL。GET・PUT・履歴の3つの `WHERE meta_review_tenant`。設計 3-7・3-9）
 - ファイルの頭の説明に「ADR-1055 What 11。Meta の審査員が登録していない機械から入るための会社006だけの例外。ほかの会社に広げない」と書く
 
 ## 3. ログインと更新（`backend/app/routers/auth.py`）
@@ -123,7 +123,7 @@ COMMENT ON COLUMN public.tenants.meta_review_login_until IS
 
 - `scripts/run_all_migrations.sh` の `:1486`（`20261121_100000` の行）の後、`:1488` の注記の前に、説明の1行（`# ADR-1055 What 11: Meta 審査用の会社だけのスイッチの列`）と `run_sql migrations/20261122_100000_add_tenants_meta_review_switch.sql` を足す
 - INSERT・UPDATE・DELETE を書かない（ADR-155・`scripts/check-migration-value-writes.py`）
-- 相談係用の伏せたビューの分類表（`ai_cloud_meta.column_class`）には行を足さない（2列は `bool`・`timestamptz` で、`backend/tests/ops/test_ai_cloud_views.py:111-114` のそのまま出す型。名前も `:105-108` の見張りに当たらないことを Opus が確かめた）。もし CI の T10 がこの2列で落ちたら、行を足さずに NEEDS_DECISION:
+- 相談係用の伏せたビューの分類表（`ai_cloud_meta.column_class`）には行を足さない（2列は `bool`・`timestamptz` で、`backend/tests/ops/test_ai_cloud_views.py:52` `_PASS_TYPES` のそのまま出す型。名前も `backend/tests/ops/test_ai_cloud_views.py:46` `_NAME_RE` の見張りに当たらないことを Opus が確かめた）。もし CI の T10 がこの2列で落ちたら、行を足さずに NEEDS_DECISION:
 - `backend/app/models.py` の Tenant には足さない。deploy.yml も変えない
 
 ## 7. 試験
@@ -174,7 +174,7 @@ COMMENT ON COLUMN public.tenants.meta_review_login_until IS
 
 ## 9. 検索で確かめる（push の前に返事に件数を書く）
 
-- `git grep -n "meta_review_tenant" -- backend/app/` → `backend/app/auth/meta_review.py` の2件と `backend/app/routers/super_admin_meta_review.py` の UPDATE・履歴の SQL の分だけ
+- `git grep -n "meta_review_tenant" -- backend/app/` → `backend/app/auth/meta_review.py` の2件と `backend/app/routers/super_admin_meta_review.py` の GET・PUT・履歴の3つの SQL（と説明文・409 の文字列）の分だけ
 - `git grep -n "meta_review_session_no_enroll" -- backend/app/` → 5件（4つの口の5か所）
 - `git grep -n -E "tenant_id ?== ?6|tenant_006|'6'" -- backend/app/auth/meta_review.py backend/app/routers/super_admin_meta_review.py migrations/20261122_100000_add_tenants_meta_review_switch.sql` → 0件
 

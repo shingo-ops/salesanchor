@@ -1,4 +1,4 @@
-# 審査用アカウントの「期限つき確認なし」 — 設計の審査記録
+# Meta 審査用の会社だけのスイッチ — 設計の審査記録
 
 - 対象: [review-exempt-design.md](review-exempt-design.md)・[review-exempt-recon.md](review-exempt-recon.md)・ADR-1055 What 11
 - 審査役: reviewer（Claude Opus・同じ AI による審査で、独立した第二者の審査ではない）
@@ -24,3 +24,9 @@
 | 新3回目 | 392ef2300 | APPROVE | 低3件: 限界の文の並び／締切前の古い組の確かめ／staff_join の行番号 | 3件とも直した（文の並び替え・3-10 に0件の確かめを追加・行番号の注記）|
 | PO 判断 | d61830e83 の後 | — | 自動 OFF の記録と見回り | PO 2026-11-22「1」: 自動で OFF になった日時を画面に出す（今の値1か所を読む）。見回りの仕組みは作らない。K6・3-7・3-8・§6・維持の仕組みに反映 |
 | PO 承認 | 5f9457401 の後 | — | 作り始めるか | PO 2026-11-22「1」（「この形で決めて、作り始める」を選び、推測禁止・SSOT・金型・レビューの条件を添えた）。作る前に確かめた3点（監査の会社違いの記録・CI の jarvis が superuser・AI 用の列分類の見張り）を設計の 3-7・3-10・3-11 に書き足した |
+
+## マージ前審査（PR #5670・head f0e75f90e・2026-11-22）
+
+- 審査役（reviewer・opus）の判定: REVISE。設計の中身・PO 条件の網羅・便1 の実装との一致に問題は無し。書類の直しだけ。
+- 直したもの: ADR-1055 改訂欄の有効条件（PO 承認済みと書く）・What 11 に「見回りは作らない」「打ち間違いの回は履歴に出さない」を足す・行番号4か所（`backend/tests/ops/test_ai_cloud_views.py:46/:52`・`scripts/run_all_migrations.sh:1476`・`backend/app/routers/auth.py:415`・`frontend/src/pages/super-admin/users/UserManagementSubMenu.tsx:63`）・短縮した参照2か所をフルパスへ・古い名前3か所・`WHERE meta_review_tenant` を書く場所の言い方（GET・PUT・履歴の3つ）をそろえる・PR 本文を今の版へ。
+- 行番号は Opus が origin/main で `git show` して確かめた（生出力 `/tmp/CC報告ファイル/meta-review-bin1/fix-check.txt`）。

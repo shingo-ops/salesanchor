@@ -105,7 +105,7 @@ async def is_meta_review_member(db: AsyncSession, user_id: int) -> bool:
 
 - `_now` は `backend/app/auth/devices.py:78`、`_as_utc` は `backend/app/auth/self_tokens.py:148`。
 - `public.users`・`public.tenants` の読み取りは、どちらも会社の文脈なしで全行読める（`migrations/20261016_180000_add_users_write_rls.sql:9-10`・`migrations/20261016_170000_add_tenants_write_rls.sql:9-10`）。
-- 条件（印の会社・super admin でない）は、このファイルの2つの問い合わせにだけ書く。ログイン・更新・4つの口は全部このファイルの関数を呼ぶ。下の `devices.is_meta_review_on` などの書き方は `meta_review.is_meta_review_on` と読み替える。
+- 条件（印の会社・super admin でない）の組み合わせは、このファイルの2つの問い合わせにだけ書く。印だけで会社を引く SQL（`WHERE meta_review_tenant`）は、管理の口 `backend/app/routers/super_admin_meta_review.py` の GET・PUT・履歴の3つ（3-7・3-9）。ログイン・更新・4つの口は全部このファイルの関数を呼ぶ。下の `devices.is_meta_review_on` などの書き方は `meta_review.is_meta_review_on` と読み替える。
 
 ### 3-3. パスワードのログイン
 
@@ -262,7 +262,7 @@ LIMIT :limit
 
 - 「どのログイン情報で」は、メールアドレスと機械（`describe_user_agent`、`backend/app/auth/devices.py:135`）で出す。パスワードは記録にも画面にも出さない。
 - poll の道は数秒ごとに呼ばれ、待ちの間も記録は1行ずつ増えるが、理由は空のまま（`backend/app/routers/auth.py:1423-1424` は `_audit` を呼ばない）。画面は許可されて入った回の理由だけで拾うので、待ちの行は出ない。
-- **限界（PO の条件9との違い・PO 承認済み）**: 会社006に無いメールアドレスで試した回（打ち間違い）と、同じ場所から短い間に打ちすぎて止められた回は、記録に人が付かない（`backend/app/routers/auth.py:413`・`:396` `user_id=None`）。この2つはこの画面には出ない。口座が止められた回は人が付く（`backend/app/routers/auth.py:414` `reason="locked"`）ので「失敗」として出る。打ったメールアドレスを記録に足すことはしない（打ち間違えた他人のアドレスを残さないため）。この限界は PO 2026-11-22「1」で承認済み。
+- **限界（PO の条件9との違い・PO 承認済み）**: 会社006に無いメールアドレスで試した回（打ち間違い）と、同じ場所から短い間に打ちすぎて止められた回は、記録に人が付かない（`backend/app/routers/auth.py:413`・`:396` `user_id=None`）。この2つはこの画面には出ない。口座が止められた回は人が付く（`backend/app/routers/auth.py:415` `reason="locked"`）ので「失敗」として出る。打ったメールアドレスを記録に足すことはしない（打ち間違えた他人のアドレスを残さないため）。この限界は PO 2026-11-22「1」で承認済み。
 - 本番の今の件数: id=10 の行は0件（recon:L）。最初は空の表で始まる。
 
 ### 3-10. 印を付ける（本番のデータの変更・1回だけ）
@@ -293,7 +293,7 @@ COMMIT;
 - 試験用の表にも列を足す: `backend/tests/conftest.py` の tenants 表に2列。
 - PostgreSQL の試験の土台にも移行を足す: `backend/tests/test_users_rls.py:47-57` の一覧に `_META_REVIEW_MIGRATION` を足し、`_MUST_CHANGE_MIGRATION`（`:115`）と同じ所で当てる。K4 の試験と `test_meta_review_switch_updates_under_rls` が、この土台で列を使うため。
 - この土台は tenants の RLS を当てていない（`backend/tests/test_users_rls.py:112-127`・`backend/tests/rls_bootstrap.py:234-246`）。そこで `test_meta_review_switch_updates_under_rls` の中でだけ `migrations/20261016_170000_add_tenants_write_rls.sql` を当てる（試験の後に `DISABLE ROW LEVEL SECURITY` と方針の削除で元に戻す）。確かめること: (1) 運営の文脈なしの UPDATE は0行（拒否）、(2) 運営の文脈ありは1行、(3) UPDATE → 会社の文脈を付けて外す → commit の順で値が残る。この試験は PUT の口を呼ばず、UPDATE と失効の SQL と文脈の付け外しだけを流す（audit_logs の表は要らない）。RLS を当てるのと元に戻すのは管理者の接続（`admin_engine`・jarvis）で、確かめる UPDATE はアプリの接続（`app_engine`・salesanchor_app、`_ctx_conn`）で流す。jarvis は CI の PostgreSQL の `POSTGRES_USER`（`.github/workflows/test.yml:131`）で、この値で作られる人は superuser（Docker の postgres の公式の説明「create the specified user with superuser power」）なので RLS を通り抜ける。jarvis で (1) を確かめると0行にならない。前例は同じファイルの `test_no_context_cannot_write`（`backend/tests/test_users_rls.py:221-253`）。監査記録は SQLite の試験 `test_meta_review_switch_audited` で確かめる。
-- 相談係用の伏せたビューの見張り（`backend/tests/ops/test_ai_cloud_views.py:492-527` `_classification_gaps`）には行を足さなくてよい。2列の型は `bool` と `timestamptz` で、そのまま出す型（同 `:111-114` `_PASS_TYPES`）に入る。列の名前も名前の見張り（同 `:105-108` `_NAME_RE`）に当たらない（Opus が同じ正規表現で2つの名前を流して False を確かめた）。
+- 相談係用の伏せたビューの見張り（`backend/tests/ops/test_ai_cloud_views.py:492-527` `_classification_gaps`）には行を足さなくてよい。2列の型は `bool` と `timestamptz` で、そのまま出す型（`backend/tests/ops/test_ai_cloud_views.py:52` `_PASS_TYPES`）に入る。列の名前も名前の見張り（`backend/tests/ops/test_ai_cloud_views.py:46` `_NAME_RE`）に当たらない（Opus が同じ正規表現で2つの名前を流して False を確かめた）。
 - `backend/app/models.py` の Tenant には足さない（SQL で読むため）。deploy.yml の追記も要らない（`.github/workflows/deploy.yml:276-277`）。
 - 列を足すだけで、既存の行は false と NULL＝今と同じ動き。ADR-136 の GO が要る。
 
