@@ -475,7 +475,7 @@ P11 の中身の読み取り（カード `docs/handoff/migration-runner-redesign
 #### 5-13-1. 起点の後の数え（K5-6・K5-7・K5-9・K5-12、2026-11-21 数え）
 
 - 数えた範囲: 起点の回（deploy run 44024988823）の後、2026-11-21 00:45Z までの deploy.yml の回 83 回。移行の段が流れたのは 28 回、残り 55 回は段が skipped（数えない）。
-- 数え方: 各回の `gh run view <id> --json jobs` で段の結論と始まり・終わり、`gh run view <id> --log` で `[record]` と `[final]` の行と控えの行を読んだ。N は前の回の headSha との `git diff` で、`scripts/run_all_migrations.sh` に足された `^run_(sql|py)` の行数。
+- 数え方: 各回の `gh run view <id> --json jobs` で段の結論と始まり・終わり、`gh run view <id> --log` で `[record]` と `[final]` の行と控えの行を読んだ。N は前の回の headSha との `git diff` で、`scripts/run_all_migrations.sh` に足された `^run_(sql|py)[[:space:]]` の行数。「前の回」は段が skipped の回も含めた直前の deploy の回。
 - 生の記録: /tmp/CC報告ファイル/k56-<id>.log（28 回分）、まとめ /tmp/CC報告ファイル/k56/table.txt、N の数え /tmp/CC報告ファイル/k56/n.txt。
 - 28 回すべてで (a)=0・(b)=0・mode=record。read probe は全回 slow=0・error=0。
 
@@ -499,7 +499,7 @@ N=0 の回（K5-6・K5-9）: 24 回。(c)=0・ran-and-recorded=0 が 24 回す�
 |---|---|---|---|
 | K5-6 | 0本の回で (c)=0（3回） | 24/24 | ○ |
 | K5-7 | N本の回で (c)=N かつ控えが段より先（3回） | 4/4 | ○ |
-| K5-9 | 0本の回の段 45 秒以下（3回とも） | 24/24（最大 44 秒） | ○ |
+| K5-9 | 0本の回の段 45 秒以下（3回とも）／N本の回は 45 秒＋その N 本の秒数以下（3回とも） | 0本の回 24/24（最大 44 秒）／N本の回 4/4（12〜13 秒） | ○ |
 | K5-12 | 読み取りの止まり 0 | 28 回すべて slow=0・error=0 | ○ |
 
 - 段の秒数は、起点の前の 123〜129 秒（§5-9 K5-9 の基準）から 10〜13 秒になった。
@@ -508,7 +508,9 @@ N=0 の回（K5-6・K5-9）: 24 回。(c)=0・ran-and-recorded=0 が 24 回す�
 別に見つけたこと（5-3 の基準の外）:
 
 - 11-20 17:57 の回（段 18:02:02〜18:02:46Z）で、`[final]` の ai_cloud のビューを作る文が 30 秒で打ち切られた（`ERROR:  canceling statement due to statement timeout`、続けて `⚠️ ai_cloud views の作成に失敗（ai_cloud は外れたまま＝相談係は読めない）`）。段は success で終わった。44 秒のうち約 30 秒がこの打ち切りの待ち。
-- 次の回（11-20 19:20、段 19:29:12Z）で `ai_cloud views created: 571, failed: 0` となり戻った。ai_cloud が無かったのは 18:02:42Z〜19:29:13Z の約 87 分。
-- 打ち切りの原因（何が待たせたか）は、まだ確かめていない。外れたままにして段を止めない動きは `docs/handoff/cloud-case-ai/stage1-card.md` の設計どおり。
+- この回は N=0 で、ビューを外す手順 `migrations/20261024_100200_drop_ai_cloud_views.sql` は skip だった（ログの `[1/409] skip (recorded)`）。作る SQL は BEGIN〜COMMIT の1つの取引で、DROP SCHEMA もその中にある。ログには BEGIN の後に COMMIT が無い。警告文の「外れたまま」は `scripts/run_all_migrations.sh` :441 の決まった文言で、外す手順が流れたかどうかに関係なく出る。
+- 【未確認】打ち切りの間とその後に ai_cloud のビューが本番に残っていたかは、本番を読んでいないので確かめていない。
+- 次に移行の段が流れた回（11-20 19:20、段 19:29:12Z）は、外す手順を流したうえで `ai_cloud views created: 571, failed: 0` だった。
+- 打ち切りの原因（何が待たせたか）は、まだ確かめていない。作るのに失敗しても段を止めない動きは `docs/handoff/cloud-case-ai/stage1-card.md` :102 の設計どおり。
 
 次の一手: K5-6・K5-7・K5-9・K5-12 がそろったので、§5-3 の「前の段を本番で測ってから次へ」により、§5-8 の 5-4（控えの条件をそろえる）の設計と実装カードに進める。
