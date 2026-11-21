@@ -379,7 +379,7 @@ P1〜P13 がそろうまで、5-1〜5-3 の実装カードは出さない。
 元のムラ（§5-1 の #4853）は、毎回363手順を流していた頃の話。5-3 の後は、控えなしで移行の段が動いた23回とも、新しく流した手順は0本だった。流れたのは毎回の作り直し（ai_ro・ai_cloud のビューと権限）だけで、表の中身は変えない。
 
 それでも、次の形で「控えなしで新しい手順が流れる」道が1つ残る。
-- 控えから DB を戻す（記録の表も控えの時点に戻る）。
+- 控えから DB を空の DB へ戻す（記録の表も控えの時点に戻る）。`scripts/restore.sh:50-52` は DROP も `--clean` も付けずに流し込むので、記録の表が控えの時点に戻るのは空の DB へ戻したときに限る。
 - その後の本番反映が `migrations/` などに触らない（`db_migrations` が false）。
 - 移行の段では、戻した後に足された手順が記録に無いので (c) が1本以上になり、控えなしで流れる。
 
@@ -396,6 +396,7 @@ P1〜P13 がそろうまで、5-1〜5-3 の実装カードは出さない。
   - `MIGRATION_PREDEPLOY_BACKUP` が `success` でない（空・未設定を含む）。
 - 止まる位置は (a)・(b) の止めと同じ。trap より前・ビューを外す前なので、ビューは外れず作り直しも走らない。
 - 止まった後の流れは今の仕組みのまま。移行の段が失敗になる → 見張り DeployMigrationFailed が鳴る（`.github/workflows/deploy.yml:912-925`）→ 次の本番反映では、gate が全部を true にして控えを取り、その後で (c) の手順が流れる（5-8-1 の 11-17 の回と同じ動き）。
+- 止まった回を GitHub の画面で「再実行」しても戻らない。gate は push 直前の commit（`github.event.before`）と前回成功した回を比べる（`.github/workflows/deploy.yml:84-85`）ので、同じ回の再実行は条件が同じで、控えはまた飛ばされ、また止まる。戻すのは、新しい push か、人が先に `bash scripts/backup.sh deploy` で控えを取ってから手で流すかのどちらか。
 - 全件モード（`full`）は対象の外。人が PO 本人の GO の後に手で起動する物で（`scripts/run_all_migrations.sh:50`）、控えはその手順の中で取る。
 - 人が本番で `record` を手で流し、(c) が1本以上のときは、先に `bash scripts/backup.sh deploy` で控えを取り、`MIGRATION_PREDEPLOY_BACKUP=success` を付けて流す。この手順は本体の先頭の説明に書く。
 
@@ -406,7 +407,7 @@ P1〜P13 がそろうまで、5-1〜5-3 の実装カードは出さない。
 
 #### 5-8-4. 影響範囲（呼び出し元を全部読んだ。2026-11-21、origin/main `8ae82d896`）
 
-`scripts/run_all_migrations.sh` を呼ぶ・読む所は155行あった（`docs/handoff/migration-runner-redesign/recon-5-4/callers.txt`）。そのうち、本体を `mr_plan` まで丸ごと流す所は次の3つだけ。ほかは本文を読むだけ、または関数を切り出して試す（`tests/sandbox/ai-ro-restore-on-failure.sh:39`・`tests/sandbox/migration-run-sql-retry.sh:40`・`tests/sandbox/migration-read-probe.sh:44` は `mr_plan` を含まない範囲を切り出す）。
+`scripts/run_all_migrations.sh` を呼ぶ・読む所は155行あった（`docs/handoff/migration-runner-redesign/recon-5-4/callers.txt`）。数えた範囲に `migrations/`・`scripts/dev/check-before-submit.sh`・`scripts/sop-health-collector.js`・`scripts/check-process-artifacts.js` は入れていない。どれもファイルの名前を照らすだけで、本体は流さない（クラウドの審査役が 2026-11-21 に照合）。そのうち、本体を `mr_plan` まで丸ごと流す所は次の3つだけ。ほかは本文を読むだけ、または関数を切り出して試す（`tests/sandbox/ai-ro-restore-on-failure.sh:39`・`tests/sandbox/migration-run-sql-retry.sh:40`・`tests/sandbox/migration-read-probe.sh:44` は `mr_plan` を含まない範囲を切り出す）。
 - 本番: `.github/workflows/deploy.yml:890`。変数を渡すように変える。
 - CI の job `migration-runner-record`（`.github/workflows/migration-test.yml:2305-` の回1〜回6）。(c) が1本以上になるのは回1（:2415）だけ。回1に `MIGRATION_PREDEPLOY_BACKUP=success` を渡す。回6（:2493）は全件モードなので変えない。回2〜回5は (c)=0 か、(a)・(b) で先に止まる。
 - `scripts/tests/test-deploy-orphan-cleanup.sh` の C8（:211）と C10（:267）。偽の docker の上で本体を流し、手順が流れることを前提にしている。C10 の②（:269、ai_cloud を外す行がある）は見張りで止まると失敗する。両方に `MIGRATION_PREDEPLOY_BACKUP=success` を渡す。C3（:463）・:484・:516 は中身を差し替えた偽の本体を流すので変えない。
@@ -496,6 +497,12 @@ P11 の中身の読み取り（カード `docs/handoff/migration-runner-redesign
     - 4（軽）TIP の記録の対象を出すとき、記録の外の一覧をどこから取るかが無かった → それぞれ自分の本体の一覧を使うと書いた。
   - 7回目（cse_01HHUUpPZoatgk9R6AN7Egj3・1cb197e47）: **APPROVE**。6回目の指摘1〜4は全部直っている。軽い注意2つは次の commit d78cb07bd で反映した: (1) MB を取り直した TIP と head の分かれ目から出す（§5-7・カード手順6）。(2) 例外の一覧の頭に、比べる起点の文（MB と TIP の意味）も書き写す（カード手順6）。審査役の推測として、CI の中の `git fetch origin` は checkout の既定の資格情報で動く見込み（CI では未確かめ。実装の PR の CI で確かめる）。
 - 第9版（2026-11-21、Opus）: §5-8 を書き直した（PO 2026-11-21「1」の向き）。K5-13〜K5-16 を足した。実装カード `docs/handoff/migration-runner-redesign/card-5-4.md` とあわせて、クラウドの審査役（新規起動）の審査に出す。結果はこの行の下に書く。
+  - 1回目（cse_01HHUUpRDS3DuQqXz4ibxA3E・ff4c65962）: **APPROVE**。確かめる6項目（事実の行・見張りの位置・控えの値の渡し方・CI の回5b・呼び出し元・受入の測り方）はすべて ○。実装時の注意4つは、Opus が実物と照らして正しいと確かめ、次の commit で反映した。
+    - 1（事実）止まった回の「再実行」では戻らない（`.github/workflows/deploy.yml:84-85`）→ 5-8-3 に1行足した。
+    - 2（事実。審査役は推測として出した）`scripts/restore.sh:50-52` は `--clean` なしで流し込む → 5-8-2 に「空の DB へ戻したとき」と条件を書いた。
+    - 3（事実）callers.txt の数えた範囲の外にある4か所（名前を照らすだけ）→ 5-8-4 に書いた。
+    - 4（軽）カード手順7の保存先を先に作る → カードに `mkdir -p` を足した。
+    - 未確認として残った点: GitHub 上の本番反映の回数（83回）は審査役は数え直していない。counts.md の中の数が合うことだけを確かめた。
 
 ### 5-12. 外部の導入事例（5W2H・数値つき、2026-11-15 追記）
 
