@@ -12,7 +12,7 @@
 ## 2. 触るもの／触らないもの
 
 - 触る: `frontend/src/pages/companies/CompaniesPage.tsx`、`frontend/src/components/PageFormButtonMigration.test.tsx`、`frontend/src/locales/ja.json`、`frontend/src/locales/en.json`。
-- 触らない: それ以外の全部（特に `CompanyFormFields.tsx`・`ContactsPage.tsx`・`backend/`）。
+- 触らない: それ以外の全部（特に `frontend/src/pages/companies/CompanyFormFields.tsx`・`frontend/src/pages/contacts/ContactsPage.tsx`・`backend/`）。
 
 ## 3. 手順
 

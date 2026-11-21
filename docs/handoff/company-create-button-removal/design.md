@@ -11,7 +11,7 @@
 ## 2. 対象と対象外
 
 - 対象: `frontend/src/pages/companies/CompaniesPage.tsx`、`frontend/src/components/PageFormButtonMigration.test.tsx`、`frontend/src/locales/ja.json`・`frontend/src/locales/en.json`（使われなくなった `companies.*` キーだけ、両方同時に）。
-- 対象外: 裏側の `POST /companies`、連絡先・仕入先の画面、編集 Drawer・`CompanyFormFields.tsx`、DB、本番設定。
+- 対象外: 裏側の `POST /companies`、連絡先・仕入先の画面、編集 Drawer・`frontend/src/pages/companies/CompanyFormFields.tsx`、DB、本番設定。
 
 ## 3. やり方（カード: `docs/handoff/company-create-button-removal/card.md`）
 
@@ -36,13 +36,13 @@
 | 基準 | 検証方法 |
 |---|---|
 | K1 会社の画面に新規登録ボタンが無い（全権限ありでも） | 足した vitest が通る（CI の frontend 試験が緑） |
-| K2 編集・取消・失敗時の保持の試験が会社・連絡先・仕入先で今までどおり通る | CI の frontend 試験が緑・`PageFormButtonMigration.test.tsx` の会社の edit の組が残っていることを差分で確認 |
+| K2 編集・取消・失敗時の保持の試験が会社・連絡先・仕入先で今までどおり通る | CI の frontend 試験が緑・`frontend/src/components/PageFormButtonMigration.test.tsx` の会社の edit の組が残っていることを差分で確認 |
 | K3 型検査・ESLint・i18n の欠けの確かめが緑 | `gh pr checks` で全部 pass |
 | K4 本番に入った | 合流コミットの deploy が success（`gh run list --workflow deploy.yml`） |
 | K5 本番の画面コードから消えた | `https://app.salesanchor.jp/` の main の JS で `grep -o newCompany \| wc -l` が 4 → 0 |
 | K6 一覧は今までどおり開く | 本番の朝の画面点検（`tests/prod-check/prod-ui.spec.ts` の会社一覧）が次の回も合格 |
 
-## 6. 外部事例
+## 6. 外部・過去事例の参照と我々への応用
 
 不要。理由: 社内の決定（ADR-097 §6）どおりに画面の入口を1つ消すだけで、方式の選び方に外部の比較が要らない。
 
@@ -50,6 +50,7 @@
 
 - ADR-097 §6 と FEATURE-INDEX の会社の行の補足に「手で作る道は撤去」と書いてあり、会社のコードを読むと見張り（`.claude/hooks/requirement-context.py`）がその要旨を AI に見せる。ボタンを戻す計画はそこで止まる。
 - 足した vitest が、ボタンが戻ると CI を赤にする。
+- 守り手: frontend/src/components/PageFormButtonMigration.test.tsx
 
 ## 8. 審査
 

@@ -31,7 +31,7 @@
 
 - `companies.newCompany` を使うのは `frontend/src/pages/companies/CompaniesPage.tsx` と `frontend/src/components/PageFormButtonMigration.test.tsx` だけ（`git grep -l 'companies\.newCompany' origin/main -- frontend/src`）。
 - `frontend/src/locales/ja.json:1196` `"newCompany": "新規登録"`・`frontend/src/locales/en.json:1196` `"newCompany": "New Client Profile"`。
-- `companyCodeLabel`（1243）・`branchNameLabel`（1246）・`countryCodeWithHint`（1247）は `CompaniesPage.tsx` だけが使う。新規作成 Modal の中だけかは、実装役が消した後に grep で確かめる。
+- `companyCodeLabel`（1243）・`branchNameLabel`（1246）・`countryCodeWithHint`（1247）は `frontend/src/pages/companies/CompaniesPage.tsx` だけが使う。新規作成 Modal の中だけかは、実装役が消した後に grep で確かめる。
 - 動的に組み立てるキー（`` t(`companies.${...}`) ``）は 0 件（`git grep -n 't(\`companies\.' origin/main -- frontend/src`）。
 
 ## 4. 試験
@@ -43,7 +43,7 @@
   - `frontend/src/components/PageFormButtonMigration.test.tsx:74-79` `expectedPayload` の会社の create 分。
 - `frontend/src/lib/query/stage2Pages.test.tsx:14,44,183-190` は一覧と検索だけ。新規登録には触らない。
 - `frontend/tests-e2e/horizontal-overflow.spec.ts:41`・`tests/prod-check/prod-ui.spec.ts:60-106` は一覧と詳細だけ。新規登録ボタンは使わない。
-- `frontend/tsconfig*.json` は `noUnusedLocals: false`。使わなくなった名前は型検査では止まらない → 実装役が grep で数えて消す。
+- `frontend/tsconfig.json`・`frontend/tsconfig.node.json` は `noUnusedLocals: false`。使わなくなった名前は型検査では止まらない → 実装役が grep で数えて消す。
 
 ## 5. 裏側（触らない）
 
