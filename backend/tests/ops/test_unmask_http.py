@@ -30,7 +30,7 @@ class _Diag:
 class PgError(Exception):
     """psycopg2.Error の代わり（pgcode と diag だけ持つ）。"""
 
-    def __init__(self, pgcode, message="", text="エラーの文: SELECT secret FROM t WHERE k='abc'"):
+    def __init__(self, pgcode, message="", text="エラーの文: SELECT secret FROM t WHERE k='leak-qz'"):
         super().__init__(text)
         self.pgcode = pgcode
         self.diag = _Diag(message)
@@ -214,8 +214,8 @@ def test_other_db_failures_are_503_without_value(env, state):
     holder["conn"] = lambda: FakeConn(fetch_error=PgError(state or None, "x"))
     r = _post(client)
     assert r.status_code == 503 and r.json() == {"error": "unavailable"}
-    assert "abc" not in r.text and "SELECT" not in r.text
-    assert "abc" not in audit.sent[0] and "SELECT" not in audit.sent[0]
+    assert "leak-qz" not in r.text and "SELECT" not in r.text
+    assert "leak-qz" not in audit.sent[0] and "SELECT" not in audit.sent[0]
     if state:
         assert f"sqlstate={state}" in audit.sent[0]
 
