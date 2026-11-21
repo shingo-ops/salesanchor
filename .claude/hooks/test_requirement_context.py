@@ -80,6 +80,32 @@ class Test(unittest.TestCase):
             p = self.run_hook(self.payload(f))
             self.assertEqual((p.returncode, p.stdout), (0, ""))
 
+    def bash_payload(self, command, sid="b1"):
+        return json.dumps({"session_id": sid, "cwd": self.repo, "tool_name": "Bash",
+                           "tool_input": {"command": command}})
+
+    def test_bash_sed_relative(self):
+        p = self.run_hook(self.bash_payload("sed -n 1,5p backend/app/x.py"))
+        self.assertEqual(p.returncode, 0)
+        self.assertIn("ADR-097", json.loads(p.stdout)["hookSpecificOutput"]["additionalContext"])
+
+    def test_bash_glob(self):
+        p = self.run_hook(self.bash_payload("cat backend/app/*.py"))
+        self.assertEqual(p.returncode, 0)
+        self.assertIn("ADR-097", json.loads(p.stdout)["hookSpecificOutput"]["additionalContext"])
+
+    def test_bash_directory_only(self):
+        p = self.run_hook(self.bash_payload("grep -rn foo backend/app"))
+        self.assertEqual((p.returncode, p.stdout), (0, ""))
+
+    def test_bash_nonexistent_file(self):
+        p = self.run_hook(self.bash_payload('grep -n "backend/app/nothing.py" backend/app/missing.py'))
+        self.assertEqual((p.returncode, p.stdout), (0, ""))
+
+    def test_bash_unclosed_quote(self):
+        p = self.run_hook(self.bash_payload("sed -n 1p 'backend/app/x.py"))
+        self.assertEqual(p.returncode, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
