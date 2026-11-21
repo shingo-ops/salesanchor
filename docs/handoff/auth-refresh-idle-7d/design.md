@@ -17,7 +17,7 @@
 | K3 | 7 日切れの券を出しても、その組の他の券は失効しない（使い回し扱いにしない） | K1 の試験で `revoked_at IS NULL` の行が残ることを確かめる |
 | K4 | 30 日の絶対期限・取り替え・使い回し検知の既存試験がそのまま通る | backend/tests/test_self_auth.py 全件（CI） |
 | K5 | 本番反映後、7 日以上前に作られた券での更新成功が 0 件 | reader 鍵で §8 の 1 文を、反映の 1 時間後と 7 日後に流す |
-| K6 | 本番反映後 7 日間、ふだん使う口座（1・3）がログインし直しを求められた回数が、7 日以上空けた後の 1 回以外 0 | 同 §8 の 2 文目で組の作成時刻を見る |
+| K6 | 本番反映後 7 日間、ふだん使う口座（1・3）の新しいログインのうち「その直前の券がまだ生きていて 7 日未満」のものが 0 件（＝7 日の決まりで切られていないのにログインし直させられた件が無い） | §8 の 2 文目で、新しいログインごとに直前の券からの間隔と、その券が失効済みか（ログアウト等）を出す。0 件でない行は、別の機械からのログインか本人に確かめる |
 
 ## 3. 対象と対象外
 
@@ -28,7 +28,7 @@
 
 backend/app/auth/self_tokens.py
 
-変更前（:23-24）:
+変更前（:24-25）:
 ```python
 ACCESS_TOKEN_TTL_SECONDS = 900
 REFRESH_ABSOLUTE_TTL = timedelta(days=30)
@@ -129,9 +129,9 @@ SELECT count(*) AS n FROM ai_ro.public__auth_refresh_tokens t WHERE t.revoked_at
 （7 日以上前の券で取り替えに成功した数。K5 は 0）
 
 ```sql
-SELECT user_id, family_created_at FROM ai_ro.public__auth_refresh_tokens WHERE user_id IN (1,3) AND family_created_at > '<本番反映の時刻>' GROUP BY user_id, family_created_at ORDER BY 2;
+SELECT f.user_id, f.family_created_at, p.created_at AS prev_created_at, p.revoked_at AS prev_revoked_at, f.family_created_at - p.created_at AS gap FROM (SELECT DISTINCT user_id, family_created_at FROM ai_ro.public__auth_refresh_tokens WHERE user_id IN (1,3) AND family_created_at > '<本番反映の時刻>') f LEFT JOIN LATERAL (SELECT q.created_at, q.revoked_at FROM ai_ro.public__auth_refresh_tokens q WHERE q.user_id = f.user_id AND q.created_at < f.family_created_at ORDER BY q.created_at DESC LIMIT 1) p ON true ORDER BY 2;
 ```
-（K6: ふだん使う口座の新しいログインの時刻）
+（K6: 新しいログインごとに、直前の券の作成時刻・失効時刻・間隔。`prev_revoked_at` が空か新しいログインより後で、`gap` が 7 日未満の行が 0 件なら合格）
 
 基準値: 2026-11-21 16:12 JST に生きている券 752 本・うち 7 日以上使われていない 422 本（recon §3）。
 
@@ -154,4 +154,8 @@ SELECT user_id, family_created_at FROM ai_ro.public__auth_refresh_tokens WHERE u
 
 ## 12. 審査
 
-（クラウドの審査の結果をここに書く）
+- 2026-11-21 16:20 JST クラウドの審査役（Opus・同一AIの別セッション。独立した第二者ではない）: VERDICT: REVISE。§4 のコードと試験 2 本はそのままでよい。必須の直しは文書 2 点。
+  - (1) 定数の行番号が 1 つずれていた（実物は self_tokens.py:24-25。:23 は ISSUER）→ recon §2・§4 を直した。
+  - (2) K6 の SQL がログイン時刻を並べるだけで、7 日切れかどうか分けられない → 直前の券からの間隔と失効の有無を出す形に直した（§2・§8）。
+  - 問題なしと確かめられた点: 既存の取り替え・30 日・パスワード変更・使い回し検知が壊れない／7 日切れの券は使い回し扱いにならない（:219・:224）／試験の補助関数と import がそろっている（:3-18・conftest.py:1506-1519）／更新札を受け入れる道は rotate_refresh_token だけ（auth.py:201 はログアウト・:523 が更新の口）。
+- 直しは機械的（行番号と測り方の文）で、コードの設計を変えていないので、Planner が直した形で APPROVE とする。

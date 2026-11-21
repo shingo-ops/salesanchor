@@ -10,8 +10,8 @@
 
 ## 2. 今の仕組み（事実）
 
-- 入館証（アクセストークン）15 分: /Users/tanizawashingo/salesanchor/backend/app/auth/self_tokens.py:23 `ACCESS_TOKEN_TTL_SECONDS = 900`
-- 引換券（更新トークン）は組の作成から 30 日で必ず切れる: backend/app/auth/self_tokens.py:24 `REFRESH_ABSOLUTE_TTL = timedelta(days=30)`、:167-168 `expires_at = family_start + REFRESH_ABSOLUTE_TTL`
+- 入館証（アクセストークン）15 分: /Users/tanizawashingo/salesanchor/backend/app/auth/self_tokens.py:24 `ACCESS_TOKEN_TTL_SECONDS = 900`
+- 引換券（更新トークン）は組の作成から 30 日で必ず切れる: backend/app/auth/self_tokens.py:25 `REFRESH_ABSOLUTE_TTL = timedelta(days=30)`、:167-168 `expires_at = family_start + REFRESH_ABSOLUTE_TTL`
 - 取り替え: backend/app/auth/self_tokens.py:208-215 の UPDATE 1 文で、今の券を失効させて取り出す。条件は `token_hash = :h AND revoked_at IS NULL AND expires_at > :now`。成功すると :248-255 で同じ組の新しい券を出す（新しい券の created_at は今）。
 - 使い回しの検知: backend/app/auth/self_tokens.py:217-232。取り出せず、券が失効済みなら組ごと失効させる。失効していない券（期限切れなど）なら組は触らず None。
 - 使っていない日数で切る仕組みは無い（self_tokens.py に idle・inactivity の語 0 件）。
