@@ -23,6 +23,8 @@ DEFAULT_RP_ID = "app.salesanchor.jp"
 ISSUER = "salesanchor"
 ACCESS_TOKEN_TTL_SECONDS = 900
 REFRESH_ABSOLUTE_TTL = timedelta(days=30)
+# 最後の取り替えから、これだけ使われなければ更新を断る（ADR-1084）
+REFRESH_IDLE_TTL = timedelta(days=7)
 REFRESH_COOKIE_NAME = "sa_refresh"
 REFRESH_COOKIE_PATH = "/api/v1/auth"
 MIN_SECRET_LENGTH = 32
@@ -209,9 +211,10 @@ async def rotate_refresh_token(db: AsyncSession, raw: str, user_agent: str | Non
         text(
             "UPDATE public.auth_refresh_tokens SET revoked_at = :now, last_used_at = :now "
             "WHERE token_hash = :h AND revoked_at IS NULL AND expires_at > :now "
+            "AND created_at > :idle_cutoff "
             "RETURNING user_id, family_id, family_created_at, created_at, trusted_device_id"
         ),
-        {"now": now, "h": token_hash},
+        {"now": now, "h": token_hash, "idle_cutoff": now - REFRESH_IDLE_TTL},
     )
     row = result.first()
     if row is None:
