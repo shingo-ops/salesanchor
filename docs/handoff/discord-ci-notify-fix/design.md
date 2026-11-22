@@ -1,8 +1,8 @@
 # design: PR の自動の点検の知らせを動くようにする
 
-- 状態: PO が案 B を選択（2026-11-22「2」）。§10 の実装カードで直す
+- 状態: 案 B は PR #5679 で合流・本番反映済み（2026-11-22 07:56）。§11 の手直し（PO 2026-11-22「1を実施した後に2の残りを進める」）で §10 の 1 行を直した
 - 依頼: PO 2026-11-22「1」（動かない理由を調べて、直し方を設計する）、PO 2026-11-22「2」（1 回の送り込みに失敗があれば 1 通にまとめる）
-- 事実: `docs/handoff/discord-ci-notify-fix/recon.md`（F1〜F14・U1〜U3）
+- 事実: `docs/handoff/discord-ci-notify-fix/recon.md`（F1〜F17・U1〜U3）
 - 関係: `docs/handoff/discord-dev-notices/design.md` §8-2（届け先「🛠開発の知らせ」）、`docs/adr/ADR-1051-prod-ui-black-box-check.md`（`workflow_run` の前例）
 
 ## 1. 目的
@@ -187,7 +187,7 @@ jobs:
         run: |
           set -euo pipefail
           gh api "repos/${REPO}/commits/${HEAD_SHA}/check-runs?per_page=100" > /tmp/runs.json
-          failed=$(jq -r '.check_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "action_required") | "• [\(.name)](\(.html_url))"' /tmp/runs.json | head -n 10)
+          failed=$(jq -r '[.check_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "action_required") | "• [\(.name)](\(.html_url))"] | .[:10] | .[]' /tmp/runs.json)
           if [ -z "$failed" ]; then
             failed="• [${WF_NAME}](${WF_URL})"
           fi
@@ -269,3 +269,48 @@ PR の点検が失敗したとき、1 回の送り込み（head の版）につ�
 - `actionlint .github/workflows/discord-ci-notify.yml` が 0 件（無ければ `python3 -c "import yaml,sys; yaml.safe_load(open(sys.argv[1]))"` で読めること）
 - `git diff --name-only origin/main...HEAD` が、この PR の 5 ファイル（recon.md・design.md・台帳・上の 2 つ）だけ
 - secret の値・送り口の URL が差分に無い
+
+## 11. 手直し N1（失敗した点検の一覧の切り方）
+
+### なぜ
+
+- 合流前の審査の指摘 N1: `jq ... | head -n 10` は、`set -o pipefail` の下で、jq の出力が多いと止まり、知らせが出ないことがある。
+- 試しの結果（recon.md F15）: 300 件で止まる。200 件までは止まらない。今は一覧を 100 件までしか読まない（`.github/workflows/discord-ci-notify.yml:63`）ので、今の数では起きない。
+- 直す理由: 読む件数を後で増やしたときや、点検の名前が長くなったときに、黙って知らせが消えるのを先に防ぐ。直しても、0〜5000 件のどれでも結果は同じ 10 行（F15）。
+
+### 変更前後
+
+- 変更前（`.github/workflows/discord-ci-notify.yml:64`）: `failed=$(jq -r '.check_runs[] | select(...) | "• [...](...)"' /tmp/runs.json | head -n 10)`
+- 変更後: `failed=$(jq -r '[.check_runs[] | select(...) | "• [...](...)"] | .[:10] | .[]' /tmp/runs.json)`（jq の中で 10 件に切る。`head` を使わない）
+- 全文は §10「1. の全文」の該当行（直し済み）と 1 字ずつ同じにする。
+
+### 触るファイル
+
+1. `.github/workflows/discord-ci-notify.yml`: 64 行目だけを §10 の新しい行に置き換える
+2. `docs/handoff/discord-ci-notify-fix/design.md`・`docs/handoff/discord-ci-notify-fix/recon.md`: この節と F15〜F17（Opus が書く）
+3. `.claude-pipeline/active-work.d/release-discord-ci-notify-n1.md`: 台帳
+
+### 触らないもの
+
+- 64 行目以外の仕組みのファイル、`.github/workflows/README.md`（「最大 10 件」の説明は変わらない）、secret、Discord の送り口、`.github/workflows/workflow-lint.yml`
+
+### 受入の条件
+
+| 基準 | 検証方法 |
+|------|------|
+| N1-1: 仕組みのファイルの差分が 64 行目の 1 行だけ | `git diff origin/main...HEAD -- .github/workflows/discord-ci-notify.yml` が 1 行消して 1 行足す |
+| N1-2: 新しい行が §10 の行と同じ | §10 の yml 全文を取り出して、仕組みのファイルと `diff` して差が 0 |
+| N1-3: 文の誤りが無い | `actionlint .github/workflows/discord-ci-notify.yml` が 0 件 |
+| N1-4: 失敗が多くても止まらない | F15 の試しの台本で、新しい行が 0・1・10・100・300・5000 件すべて終了コード 0、10 件以上なら 10 行 |
+| N1-5: 本番で今までどおり届く | 合流後の最初の失敗した版で、Discord「🛠開発の知らせ」に 1 通（Bot で読む） |
+
+### 試しの台本（F15）
+
+失敗した点検が n 件ある一覧を `jq -n` で作り、`set -euo pipefail` の下で前の行と新しい行を流して、終了コードと行の数を比べる。
+
+### 自己審査（同じ AI による審査）
+
+- 判定: APPROVE（1 行の置き換え。結果の形は変わらない）
+- 弊害: 無し。jq の配列の切り出し `.[:10]` は 10 件より少なくても誤りにならない（F15 の 0 件・1 件で確認）
+- 戻し方: この PR を戻す（revert）だけ。ほかに残るものは無い
+
