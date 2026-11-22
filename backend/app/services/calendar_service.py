@@ -28,7 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import reset_tenant_context
 from app.services import calendar_recurrence as rec
-from app.services.event_colors import key_for_hex
+from app.services.event_colors import EVENT_COLORS, key_for_hex
 
 logger = logging.getLogger(__name__)
 
@@ -1413,7 +1413,8 @@ async def _update_app_origin_from_google(
     - Google で消されても消さない（"skipped"）。
     - アプリから送り終えた行（sync_status='synced'）で、中身が違う列だけを書く。
     - 見せ方・持ち主・起源・Meet の URL には触らない。Google へは書かない。
-    - 色は Google の名札がアプリの色に当たるときだけ入れる（名札が無い・表に無いときは触らない）。
+    - 色は Google の名札がアプリの色に当たるときだけ入れる（名札が表に無いときは触らない）。
+    - Google に名札も colorId も無く、アプリの色が名札の表にある色なら、色を外す（ADR-1059 改訂 2026-11-22）。
     戻り値は "upserted"（1 行書いた）か "skipped"。commit は呼び元が行う。
     """
     if google_event.get("status") == "cancelled":
@@ -1462,6 +1463,14 @@ async def _update_app_origin_from_google(
         g_color = key_for_hex(label_colors.get(label_id)) if label_id else None
         if g_color is not None and g_color != r_color:
             changes["color_key"] = g_color
+        elif (
+            not label_id
+            and not google_event.get("colorId")
+            and r_color is not None
+            and EVENT_COLORS.get(r_color) in label_colors.values()
+        ):
+            # Google で色を「なし」に戻した。Google でも表せた色のときだけ外す（ADR-1059 改訂 2026-11-22）
+            changes["color_key"] = None
 
     if not changes:
         return "skipped"

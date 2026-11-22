@@ -88,7 +88,7 @@
 
 - Google でアプリの予定を消したとき、アプリからも消すか（今は消さない）。
 - アプリで作った繰り返しの予定を Google で直したとき（今は取り込まない）。
-- Google でアプリの予定の色を「なし」に戻したとき、アプリの色も消すか（今回は消さない）。
+- ~~Google でアプリの予定の色を「なし」に戻したとき、アプリの色も消すか~~ → PO 2026-11-22「1」で「消す」に決定（§10）。
 - アプリの画面で説明・場所を空にして消せるようにするか（今は消せない・§5）。
 - アプリで直したことを、同じ会社のほかの人の画面にもすぐ出すか（予定の書き込みの口の合図）。
 
@@ -105,3 +105,54 @@
 ## 9. 戻し方
 
 - 実装 PR を revert する。DB の形は変えないので、戻しても残る物は無い。
+
+## 10. 便2: Google で色を「なし」に戻したらアプリの色も外す（PO 2026-11-22「1」）
+
+### 10-1. 目的と変化
+- 前: アプリで作った予定を Google で色「なし」に戻しても、アプリは前の色のまま（§5 の色の行・本番で観測した動き）。
+- 後: 同じ操作で、アプリの色も外れて持ち主の色に戻る。画面は便1の合図で開き直さずに変わる。
+
+### 10-2. 現在地（origin/main 2560f963f で読んだ実物）
+- 取り込みの色の比べ方: `backend/app/services/calendar_service.py:1460-1464`。名札が当たるときだけ `color_key` を入れ、名札が無いときは触らない。
+- アプリから送る色: `backend/app/services/google_calendar.py:414-442` `_apply_event_label`。色ありは名札の id、色なしは `eventLabelId=""`。名札の表に色が無いときも `eventLabelId=""` で送り、記録 `event_label_missing` を出す（`:437`）。
+- 名札の表: `backend/app/services/google_calendar.py:405-411`。色の値は小文字にそろえて持つ。アプリの 24 色の値も小文字（`backend/app/services/event_colors.py:8-17`）。
+- Google 起源の予定は、名札が無ければ既に NULL にする（`backend/app/services/calendar_service.py:1558-1563`）。今回はアプリ起源をそれにそろえる。
+- 画面: 色が無ければ持ち主の色で塗る（`frontend/src/pages/schedule/eventColors.ts:29-30`）。色の変化は塗り直す（ADR-1081 K8・本番合格済み）。画面の直しは要らない。
+- 本番の記録（2026-11-22 に Grafana Loki で直近 7 日を数えた。残っていた記録は 2026-11-19 02:43〜11-21 21:56 UTC）: 取り込み 481 回すべてで「名札なし・古い色の番号あり」の予定は 0 件（`event_color_legacy_colorid count=0` が 481 回）。`event_label_missing` は 0 件。
+
+### 10-3. 変更（card-bin2.md が正）
+- `_update_app_origin_from_google` の色の比べ方に 1 つ足す。外すのは次の全部がそろうとき:
+  1. `label_colors` が None でない（名札の表が読めた）
+  2. Google の予定に `eventLabelId` が無い（空も無いと同じ）
+  3. Google の予定に `colorId` も無い
+  4. アプリの行の `color_key` が NULL でない
+  5. その色の値が名札の表の値にある（`EVENT_COLORS.get(r_color) in label_colors.values()`）
+- 名札が表に無い id のとき・表が読めないとき・アプリの色が表に無いときは、今のまま触らない。
+- 触らない範囲: Google へ送る処理・Google 起源の取り込み・画面・DB の形（migration なし）・合図。
+
+### 10-4. なぜこの形か
+- 案A（名札が無ければ必ず外す）は採らない。アプリの色が Google の名札の表に無いと、アプリは `eventLabelId=""` で送る。すると Google から戻った自分の書き込みで、選んだ色がすぐ消える。
+- 条件 5 で「Google でも表せた色なのに、Google に色が無い」ときだけ外す。これは Google 側で外した、と読める。
+- 条件 3 で古い色の番号だけの予定を外さない（本番 7 日で 0 件だが、消さない側に倒す）。
+
+### 10-5. 受け入れの基準
+| 基準 | 検証方法 |
+|---|---|
+| K12 アプリで色を付けた予定を Google で色「なし」にすると、アプリの色が外れて持ち主の色になる（画面を開き直さない） | PO が本番で目で見る |
+| K13 同じ操作で DB の `color_key` が NULL になり、取り込みの記録に upserted=1 が出る | 本番の記録（Loki の `sync_google_calendar_tenant … upserted`）で時刻を合わせて読む |
+| K14 条件 1〜5 のどれかが欠けるときは `color_key` に触らない（6 通り） | `backend/tests/test_calendar_service.py` の新しい試験（CI） |
+| K15 今までの色の試験（`test_color_only_when_label_matches` ほか）がそのまま通る | CI |
+
+### 10-6. リスクと対処
+- アプリで色を付けた直後、名札の表が読めずに名札を送れなかった行（`_apply_event_label` の `table is None`）は、次の取り込みで表が読めると外れることがある。表が読めない回は本番 7 日で記録 0 件（記録の文 `event_label_colors_unavailable`・`backend/app/services/google_calendar.py:402`・Loki で 2026-11-22 に数えた）。起きても色を付け直せば戻る。
+- 戻し方: 実装 PR を revert する。DB の形は変えない。
+
+### 10-7. 外部事例
+- Google 公式の名札（eventLabelId）の扱いは ADR-1081 で確かめ済み。今回は同じ欄の「無い」の読み方だけで、数で比べられる外部事例は要らない。判定は K12〜K15 で行う。
+
+### 10-8. 設計審査（同じ AI による自己審査・2026-11-22）
+- 判定: APPROVE。
+- 実物との照合: card-bin2.md §0 の 3 か所（`backend/app/services/calendar_service.py:31`・`:1416`・`:1460-1464`、試験 `backend/tests/test_calendar_service.py:685-698`）を origin/main 2560f963f で一字一句確かめた。書き込みの文は `changes` の列だけを `col = :col` で並べる（`:1468`）ので、`color_key = None` は `color_key = NULL` になる。
+- 既存の試験との整合: `test_color_only_when_label_matches` の「名札なし・{"L1":"#0000ff"}・行の色 "red"」は、"red" が 24 色に無く `EVENT_COLORS.get` が None になるので今までどおり触らない。
+- 決めごととの整合: ADR-1081 What 4（アプリで作った予定の色は取り込まない）は ADR-1059 改訂 2026-11-20 で既に置き換わっている。今回はその上の「無い」の読み方だけ。
+- 未解決: なし。

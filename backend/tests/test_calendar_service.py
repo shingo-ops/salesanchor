@@ -698,6 +698,35 @@ class TestUpdateAppOriginFromGoogle:
                 assert _updates(db) == []
 
     @pytest.mark.asyncio
+    async def test_color_cleared_when_google_has_no_label(self):
+        labels = {"L1": "#d50000"}  # tomato
+        row = (5, "題", None, None, _T1, _T2, False, "tomato")
+        db = _app_origin_db(row)
+        assert await self._go(db, _g_event(), labels) == "upserted"
+        (sql, params), = _updates(db)
+        assert "color_key = :color_key" in sql.split("SET", 1)[1].split("WHERE", 1)[0]
+        assert params["color_key"] is None
+        db = _app_origin_db(row)
+        assert await self._go(db, _g_event(eventLabelId=""), labels) == "upserted"
+        assert _updates(db)[0][1]["color_key"] is None
+
+    @pytest.mark.asyncio
+    async def test_color_kept_unless_all_clear_conditions(self):
+        tomato = (5, "題", None, None, _T1, _T2, False, "tomato")
+        no_color = (5, "題", None, None, _T1, _T2, False, None)
+        for row, ev, labels in (
+            (tomato, _g_event(), None),                               # 名札の表が読めない
+            (tomato, _g_event(colorId="11"), {"L1": "#d50000"}),      # 古い色の番号がある
+            (tomato, _g_event(), {"L1": "#0000ff"}),                  # アプリの色が名札の表に無い
+            (tomato, _g_event(), {}),                                 # 名札の表が空
+            (tomato, _g_event(eventLabelId="L9"), {"L1": "#d50000"}), # 表に無い名札
+            (no_color, _g_event(), {"L1": "#d50000"}),                # アプリに色が無い
+        ):
+            db = _app_origin_db(row)
+            assert await self._go(db, ev, labels) == "skipped"
+            assert _updates(db) == []
+
+    @pytest.mark.asyncio
     async def test_never_writes_to_google(self):
         from app.services import google_calendar
 
