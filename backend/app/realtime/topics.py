@@ -142,6 +142,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/auth/push-subscriptions"): "通知の購読は本人の画面の応答で差し替える（ADR-1055 段W）",
     ("DELETE", "/api/v1/auth/push-subscriptions/{subscription_id}"): "通知の購読は本人の画面の応答で差し替える（ADR-1055 段W）",
     ("POST", "/api/v1/super-admin/login-requests/{request_id}/approve"): "人宛ての合図は口の中で直接送る（ADR-1055）。書き込みの口の自動合図にしない",
+    ("PUT", "/api/v1/super-admin/meta-review"): "Meta審査用スイッチ（ADR-1055 What 11）: super admin の画面は応答で差し替える。画面更新の通知対象外",
     ("POST", "/api/v1/tenant/login-requests/{request_id}/approve"): "人宛ての合図は口の中で直接送る（ADR-1063）。書き込みの口の自動合図にしない",
     ("POST", "/api/v1/tcg/analysis-results/client-timing"): "データを変えない。計時ログを1行残すだけ",
     ("POST", "/api/v1/viewer/login"): "閲覧ページ ADR-1019: 閲覧者のログインは画面更新の通知対象外",
