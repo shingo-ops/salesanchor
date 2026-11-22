@@ -1,0 +1,7 @@
+-- 会社006（審査用）に Meta 審査用の印を付ける（ADR-1055 What 11）。設計 docs/handoff/auth-new-device-approval/review-exempt-design.md 3-10。
+-- 会社は code と名前の2つで当てる。番号は書かない。
+-- precheck（読み取りだけ）。会社が1行・印は0社・機械の無い古い更新の組（super admin でない人）が0件でなければ、最後の行が 0 で割って止まる。止まったら PO に聞く。
+SELECT id, tenant_code, tenant_name, meta_review_tenant, meta_review_login_until FROM public.tenants WHERE tenant_code = 'tenant-review' AND tenant_name = 'Sales Anchor App Review';
+SELECT count(*) AS already_marked FROM public.tenants WHERE meta_review_tenant;
+SELECT count(*) AS bootstrap_families FROM public.auth_refresh_tokens r JOIN public.users u ON u.id = r.user_id JOIN public.tenants t ON t.id = u.tenant_id WHERE t.tenant_code = 'tenant-review' AND t.tenant_name = 'Sales Anchor App Review' AND NOT u.is_super_admin AND r.revoked_at IS NULL AND r.expires_at > now() AND r.trusted_device_id IS NULL AND r.family_created_at < '2026-11-02T22:00:00Z';
+SELECT 1 / (CASE WHEN (SELECT count(*) FROM public.tenants WHERE tenant_code = 'tenant-review' AND tenant_name = 'Sales Anchor App Review')=1 AND (SELECT count(*) FROM public.tenants WHERE meta_review_tenant)=0 AND (SELECT count(*) FROM public.auth_refresh_tokens r JOIN public.users u ON u.id = r.user_id JOIN public.tenants t ON t.id = u.tenant_id WHERE t.tenant_code = 'tenant-review' AND t.tenant_name = 'Sales Anchor App Review' AND NOT u.is_super_admin AND r.revoked_at IS NULL AND r.expires_at > now() AND r.trusted_device_id IS NULL AND r.family_created_at < '2026-11-02T22:00:00Z')=0 THEN 1 ELSE 0 END) AS precheck_ok;
