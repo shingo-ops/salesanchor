@@ -1043,6 +1043,13 @@ export default function SchedulePage() {
         body.add_meet = true;
       }
       const editing = popover?.mode === "edit" && popover.item ? popover.item : null;
+      // 直すとき、元にあった説明・場所を空にしたら "" を送って消す（Google でも消える・ADR-1059 改訂 2026-11-23）
+      if (editing && !draft.description && editing.description) {
+        body.description = "";
+      }
+      if (editing && !draft.location && editing.location) {
+        body.location = "";
+      }
       // 繰り返しは今の値と違うときだけ送る（作るときは「繰り返さない」以外のとき・§12.6.1 G4）
       const recurrenceChanged = draft.recurrence !== "custom" && draft.recurrence !== (editing?.recurrence ?? "none");
       if (recurrenceChanged) {
