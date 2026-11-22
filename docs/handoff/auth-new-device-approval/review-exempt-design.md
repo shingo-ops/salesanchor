@@ -3,7 +3,7 @@
 この文書は、Meta の審査員が審査用の会社（会社006）のアカウントで、登録していない機械からでもログインできるようにする作り方です。super admin が画面のスイッチで ON と OFF を切り替えます。ほかの会社には、データベースの決まりで使えないようにします。
 
 - 親（あるべき姿）: [docs/specs/auth-login/README.md](../../specs/auth-login/README.md)
-- 現在地: [review-exempt-recon.md](review-exempt-recon.md)（以下 recon:記号）
+- 現在地: [docs/handoff/auth-new-device-approval/review-exempt-recon.md](review-exempt-recon.md)（以下 recon:記号）
 - 決定: [ADR-1055](../../adr/ADR-1055-new-device-login-approval.md) の改訂（What 11。2026-11-22 書き直し・提案中）
 - 状態: 設計案作成済み（Opus 2026-11-22・PO の条件 2026-11-22 で書き直し）・設計審査済み（3回目 APPROVE・軽い指摘3件を反映）・PO 承認済み（2026-11-22「1」＝「この形で決めて、作り始める」。14日の自動 OFF・打ち間違いのアドレスは出さない、の形で承認）・実装未着手
 - 前の版（人ごとに1〜14日の期限を付ける形）は 3回目の審査で合格したが、PO の条件（会社006だけ・画面のスイッチ・ログイン履歴）で作り直した。前の版の審査の記録: [review-exempt-review-opus.md](review-exempt-review-opus.md)
@@ -24,9 +24,9 @@ PO 2026-11-22 の条件（原文の要点をそのまま並べる）:
 
 奥の目的: Meta の審査を通す。審査員が止まらずに入れるようにする。ほかの会社と人の守りは弱めない。
 
-## 2. KGI（合格の基準）
+## 2. KGI（合格の基準・○×で判定）
 
-| # | 基準（○×で判定） | 検証方法 |
+| # | 基準 | 検証方法 |
 |---|---|---|
 | K1 | スイッチが ON の間、会社006の人は初めての機械からパスワードだけで入れ、受信箱の画面が開く | 本番: シークレット窓で review@ に入る。試験 `test_meta_review_on_login_gets_tokens` |
 | K2 | スイッチを OFF にしたら、同じ操作で「許可を待っています」（202）に戻る | 試験 `test_meta_review_off_returns_202`。本番: OFF の後に同じ手順で 202 を見る |
