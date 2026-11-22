@@ -169,7 +169,7 @@
 - 書き込み: `backend/app/services/calendar_service.py:502-531` は送られた列だけを `UPDATE` する。`""` もそのまま入る。繰り返しの予定の直し（`:1056`・`:1124-1125`・`:1224`）も `"description" in payload` で読むので `""` が入る。
 - Google へ: `backend/app/services/calendar_service.py:1649-1653` が「空 `""` でも送る。None は送らない」（ADR-1059 改訂 2026-11-20）。繰り返しの予定は表の行から本文を作る（`:170-187`）ので、行の `""` が送られる。Google の `events.patch` は送った欄だけを書き換える。
 - Google から戻る取り込み: `_norm_text`（`:1382-1384`）が空と NULL を同じに扱う。`""` を送った後に Google が欄を返さなくても、書き戻しは起きない。
-- 画面の表示: 説明・場所は中身があるときだけ出す（`SchedulePageImpl.tsx:390-391`）。`""` と NULL は同じ見え方。
+- 画面の表示: 説明・場所は中身があるときだけ出す（`frontend/src/pages/schedule/SchedulePageImpl.tsx:390-391`）。`""` と NULL は同じ見え方。
 - 動かす・長さを変える操作（`:1320-1321`）は説明・場所を変えないので、今の送り方のままでよい。
 
 ### 11-3. 変更（card-bin3.md が正）
@@ -201,6 +201,6 @@
 ### 11-8. 設計審査（同じ AI による自己審査・2026-11-23）
 - 判定: APPROVE。
 - 実物との照合: 11-2 の行を origin/main 3763e55c7 で読んで確かめた。`exclude_none` が `""` を落とさないこと、裏側の 3 つの直しの道（単発・この回・これ以降）がどれも `""` を DB に入れ Google に送ることを、コードで追った。
-- 既存の試験との整合: 直す画面の試験（`SchedulePageImpl.test.tsx:192-203` ほか）は `apiEvent` の説明・場所が null なので、新しい分岐に入らず今までどおり。
+- 既存の試験との整合: 直す画面の試験（`frontend/src/pages/schedule/SchedulePageImpl.test.tsx:192-203` ほか）は `apiEvent` の説明・場所が null なので、新しい分岐に入らず今までどおり。
 - 決めごととの整合: ADR-1059 改訂 2026-11-20 の「空 `""` でも送る」をそのまま使う。DB の「空と NULL は同じ」（§3）も変えない。
 - 未解決: なし。
