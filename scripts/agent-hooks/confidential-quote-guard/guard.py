@@ -203,6 +203,8 @@ def find_hits(entries, corpus, excl):
 # 方針: 命令文から作業場所や本文の出どころを推し量らない。
 # git push と gh の本文の操作は「決まった形」だけを通し、それ以外はすべて止める。
 
+DEL_MSG = "枝を消すときは `git -C <worktree の絶対パス> push origin --delete release/<ブランチ>` の形で、ほかの命令とつなげずに単独で流してください。main・develop は消せません"
+DEL_REF_RE = re.compile(r"release/[A-Za-z0-9][A-Za-z0-9/._-]*")
 PUSH_MSG = "git push は `git -C <worktree の絶対パス> push -u origin <ブランチ>` の形で、ほかの命令とつなげずに単独で流してください"
 GH_MSG = "本文は Write で作ったファイルを `--body-file <絶対パス>` で渡してください (または一重引用符の `--body '...'`)。ほかの命令とつなげずに単独で流してください"
 SAFE_CHARS = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_@%+=:,./-")
@@ -967,14 +969,7 @@ def tag_lines(top, ref, commits):
     return out
 
 
-def check_push(words, repos, matched):
-    v = [w[0] for w in words]
-    ok = (len(v) in (6, 7) and v[0] == "git" and v[1] == "-C" and v[2].startswith("/") and v[3] == "push"
-          and (len(v) == 6 or v[4] in ("-u", "--set-upstream")) and v[-2] == "origin"
-          and REF_RE.fullmatch(v[-1]) is not None and ".." not in v[-1])
-    if not ok:
-        raise Block(PUSH_MSG)
-    path, ref = v[2], v[-1]
+def check_place(path):
     if not os.path.isdir(path):
         raise Block("push の場所が存在しません")
     tl = git(path, "rev-parse", "--show-toplevel")
@@ -997,6 +992,25 @@ def check_push(words, repos, matched):
     rp = git(top, "for-each-ref", "--count=1", "--format=%(refname)", "refs/replace")
     if rp.returncode != 0 or rp.stdout.strip():
         raise Block("この repo には git replace の置き換え (refs/replace) があります")
+    return top
+
+
+def check_push(words, repos, matched):
+    v = [w[0] for w in words]
+    if "--delete" in v or "-d" in v or any(x.startswith(":") for x in v[5:]):  # 消す印
+        if not (len(v) == 7 and v[0:2] == ["git", "-C"] and v[2].startswith("/") and v[3] == "push"
+                and v[4] == "origin" and v[5] == "--delete" and DEL_REF_RE.fullmatch(v[6]) is not None
+                and ".." not in v[6]):
+            raise Block(DEL_MSG)
+        check_place(v[2])
+        return []  # 送る中身が無いので、表は読まずに通す
+    ok = (len(v) in (6, 7) and v[0] == "git" and v[1] == "-C" and v[2].startswith("/") and v[3] == "push"
+          and (len(v) == 6 or v[4] in ("-u", "--set-upstream")) and v[-2] == "origin"
+          and REF_RE.fullmatch(v[-1]) is not None and ".." not in v[-1])
+    if not ok:
+        raise Block(PUSH_MSG)
+    ref = v[-1]
+    top = check_place(v[2])
     listed = [x for x in repo_slugs(top) if x in repos]
     if not listed:
         return []  # 表に無い repo の push は照らさずに通す
