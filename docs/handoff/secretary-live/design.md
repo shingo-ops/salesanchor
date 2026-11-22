@@ -81,6 +81,7 @@
 | Gemini の無料枠 | 【公】無料枠は料金 0 だが「製品の改善に使う: はい」。有料枠は「いいえ」（ai.google.dev/gemini-api/docs/pricing）| 無料枠だと会話が Google の学習に使われる → 有料枠が要る |
 | Gemini の使いすぎの止め | 【公】請求先の段階ごとに月の上限（段階 1 は $250）。届くと翌月 1 日まで全部の API が止まる（ai.google.dev/gemini-api/docs/billing）| 我々の上限とは別に Google 側の上限がある（§6-6）|
 | ChatGPT の月額契約 | 【公】2026-10-28 から、ChatGPT の Pro と Business の契約には毎月の API の無料分が付く（Pro $100〜$500・Business 1 席 $20〜$100・会社で月 $500 まで）。Realtime API と GPT-Live に使える。Plus は対象外（developers.openai.com/api/docs/guides/chatgpt-api-credits）| **Pro か Business なら、無料分の中で声の会話を使える。PO の契約の種類は確かめていない（§12-H）** |
+| ChatGPT の無料分の細かい決まり | 【公】Pro は $100・$200・$500 の段ごとに同じ額。Business は Standard 1 席 $20・Premium 1 席 $100 を会社でまとめ、月 $500 まで。使わなかった分は翌月に残らない。受け取るのは契約の持ち主で、API の組織の持ち主と同じメールが要る。無料分が尽きて買った分も無いと、`429`・`credit_balance_exhausted` で失敗する（developers.openai.com/api/docs/guides/chatgpt-api-credits）。席の値段は Standard 月 $25（年払い $20）・Premium 月 $125（年払い $100）・最低 2 席（【三】検索の要約。openai.com/business/chatgpt-pricing を便 T0 の前に開いて確かめる）| 無料分は金額で付き、トークンの数では付かない |
 | OpenAI の声の値段 | 【公】`gpt-realtime-2.1-mini` 音声 入力 $10・出力 $20（100 万トークンあたり）。GPT-Live は話している間 $0.05/分・待っている間 $0.02/分で、秒で数え、裏の AI と道具は別に数える（developers.openai.com/api/docs/pricing）| 1 分あたりのトークン数は【未】のため、円は便 T0 で測る |
 
 **選んだもの: ①**（§12-H の答えで ② に変える場合がある）。理由:
@@ -180,6 +181,7 @@
 | ブラウザ（マイクの印 A の聞き取り）| ブラウザが聞き取りを止めることがある【未】| Web Speech の失敗の印 | ブラウザの聞き取りが止まった・押し直す |
 | 送れる文の長さ | 1,000 字（`secretaryApi.ts:10`）| 画面が数える | 1,000 字を超えた・今◯字 |
 
+- ② を選んだら、OpenAI の `credit_balance_exhausted`（無料分の使い切り・公式に印がある）を「OpenAI の今月の無料分を使い切った」の文にする。
 - ChatGPT は、§12-H で ② を選ばない限り使わないので、ChatGPT の上限の文は作らない。② を選んだら、同じ表に「OpenAI の無料分を使い切った」を足す。
 - 見分けられない止まり方は推測で分類しない。「原因が分からない止まり方」の文を出し、Google からの印をそのまま台帳の `error_code` に残す（§6-3）。便 T0 で出た印を数え、見分けられたものから表に足す。
 - 印→文の対応の正本は画面の 1 か所（翻訳キー・ADR-027）。backend の失敗の印の正本は `secretary_live.py` の 1 か所。文は、今の読み上げの上限の知らせ（`SecretaryChat.tsx:165-169` の `secretary-draft__error` と `role="status"`・`secretary.voiceCapReached`）と同じ出し方にする。`components/` に警告の金型は見つからなかった（`Alert`・`Banner` の名前の部品は無い。2026-11-22 origin/main）。新しい部品は作らない。
