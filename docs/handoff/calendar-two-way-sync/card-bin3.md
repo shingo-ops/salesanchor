@@ -83,8 +83,9 @@ describe("SchedulePage clearing description and location (design §11)", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
     await waitFor(() => expect(api.patch).toHaveBeenCalled());
     const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
-    expect("description" in body).toBe(false);
-    expect("location" in body).toBe(false);
+    const sent = JSON.parse(JSON.stringify(body)) as Record<string, unknown>;
+    expect(sent).not.toHaveProperty("description");
+    expect(sent).not.toHaveProperty("location");
   });
 
   it("K19: does not send them when creating", async () => {
@@ -94,8 +95,9 @@ describe("SchedulePage clearing description and location (design §11)", () => {
     fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
     await waitFor(() => expect(api.post).toHaveBeenCalled());
     const body = vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>;
-    expect("description" in body).toBe(false);
-    expect("location" in body).toBe(false);
+    const sent = JSON.parse(JSON.stringify(body)) as Record<string, unknown>;
+    expect(sent).not.toHaveProperty("description");
+    expect(sent).not.toHaveProperty("location");
   });
 });
 ```
@@ -105,6 +107,9 @@ describe("SchedulePage clearing description and location (design §11)", () => {
 - `answers`・`apiEvent`・`view`・`editorDialog` が describe の外から使えないとき: 同じファイルの使い方を写す。それでも書けなければ止める。
 - 試験の名前の取り方（`getByLabelText` が 2 つ当たる等）で落ちるとき: `within(dialog)` の中で取る。見つからなければ止める（画面の部品は変えない）。
 - 「作るとき」の試験で保存ボタンが見つからないとき: 同じファイルの「shows the toggle on create, default on, and sends personal when switched off」の書き方に合わせる。
+
+- K19 の判定について（2026-11-23 改訂）: 本体の作る式（1033-1034 行の `|| undefined`）は空のとき undefined の値のキーを残す。送るときは `frontend/src/lib/api.ts:294,301` の `JSON.stringify` でそのキーが落ちる。そのため試験は「実際に送る文に入らない」ことを `JSON.parse(JSON.stringify(body))` で確かめる（1回目は `"description" in body` で書き、本体が undefined のキーを残すため落ちた）。本体の式は変えない。
+- `npx tsc --noEmit -p .` が `api/generated/schema` が無いという誤りと、その影響の `SoldOutResultsPanel.tsx` の型の誤りだけを出すとき: この型ファイルは CI が tsc の前に作る（`.github/workflows/frontend-check.yml:29`）。今回の 2 ファイルに誤りが無ければ続けてよい。2 ファイルに誤りが出たら止める。
 
 ## 4. 確かめ（手元の Mac では試験を回さない。クラウドで回す）
 
