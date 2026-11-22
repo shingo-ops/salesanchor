@@ -1,6 +1,6 @@
 /**
  * 利用者管理の小さなメニュー。閲覧者の画面とログインの許可待ちの画面が共有する。
- * 1つ目の組: 閲覧者（すべて＋状態ごと）。2つ目の組（題なし）: ログインの許可待ち。
+ * 1つ目の組: 閲覧者（すべて＋状態ごと）。2つ目の組（題なし）: ログインの許可待ち・Meta 審査用。
  */
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -10,8 +10,8 @@ export const USER_MENU_STATUSES = ["pending", "trial", "contracting", "active"] 
 export type UserMenuStatus = "all" | (typeof USER_MENU_STATUSES)[number];
 
 interface Props {
-  /** 閲覧者の画面で今選んでいる状態。ログインの画面では未指定。 */
-  activeKey?: UserMenuStatus;
+  /** 今選んでいる項目。閲覧者の画面は状態、Meta 審査用の画面は "meta-review"。ログインの許可待ちの画面では未指定。 */
+  activeKey?: UserMenuStatus | "meta-review";
   /** 状態ごとの数。未指定なら数を出さない。 */
   counts?: Partial<Record<UserMenuStatus, number>>;
   /** 閲覧者の画面での切り替え。未指定（ログインの画面）なら /super-admin/users/viewers へ移る。 */
@@ -41,12 +41,17 @@ export function UserManagementSubMenu({ activeKey, counts, onChange, statusLabel
           label: t("nav.superAdminLoginRequests"),
           to: "/super-admin/users/login-requests",
         },
+        {
+          key: "meta-review",
+          label: t("nav.superAdminMetaReview"),
+          to: "/super-admin/users/meta-review",
+        },
       ],
     },
   ];
 
   const handleChange = (key: string) => {
-    if (key === "login-requests") return;
+    if (key === "login-requests" || key === "meta-review") return;
     const status = key as UserMenuStatus;
     if (onChange) {
       onChange(status);

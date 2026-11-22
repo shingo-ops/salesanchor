@@ -58,3 +58,23 @@ it("the All status goes to the viewers screen without a query", () => {
   fireEvent.click(screen.getByRole("button", { name: "All" }));
   expect(screen.getByTestId("where").textContent).toBe("/super-admin/users/viewers");
 });
+
+it("the Meta review link points to the Meta review screen", () => {
+  render(
+    <MemoryRouter initialEntries={["/super-admin/users/login-requests"]}>
+      <UserManagementSubMenu statusLabel={label} />
+    </MemoryRouter>,
+  );
+  const link = screen.getByRole("link", { name: i18n.t("nav.superAdminMetaReview") });
+  expect(link.getAttribute("href")).toBe("/super-admin/users/meta-review");
+});
+
+it("activeKey meta-review marks the Meta review item active", () => {
+  render(
+    <MemoryRouter initialEntries={["/super-admin/users/meta-review"]}>
+      <UserManagementSubMenu activeKey="meta-review" statusLabel={label} />
+    </MemoryRouter>,
+  );
+  expect(screen.getByRole("link", { name: i18n.t("nav.superAdminMetaReview") }).className).toContain("comp-subnav__item--active");
+  expect(screen.getByRole("link", { name: i18n.t("nav.superAdminLoginRequests") }).className).not.toContain("comp-subnav__item--active");
+});
