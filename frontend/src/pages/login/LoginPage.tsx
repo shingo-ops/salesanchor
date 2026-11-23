@@ -350,6 +350,7 @@ export default function LoginPage() {
     setPasskeyMissing(false);
     if (!immediateOk) return handlePasskeySignIn();
     busyRef.current = true;
+    // loading-clear-exempt: パスキーの確認を待つ間のボタンの印。画面の中身は消さない（handlePasskeySignIn と同じ扱い）
     setLoading(true);
     let capTimer: ReturnType<typeof setTimeout> | undefined;
     try {
