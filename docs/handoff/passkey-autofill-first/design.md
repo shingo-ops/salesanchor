@@ -118,6 +118,10 @@
 
 ja.json と en.json の login の中、`signInWithPasskey` の次に足す。ほかのキーは変えない。
 
+### §4-5 審査2の軽い指摘の取り込み
+
+審査2（review-architect-2.md・APPROVE）の N1〜N7・L2 は card-bin1.md §3-2・§3-3 に細部として書いた（!authLoading・restarts の数え方とタイマーの張り直し・入口の isStale・待ちの上限 1.5 秒・StrictMode の試験・busy 中は片付けで取り消さない）。食い違う時はカードの細部に従う。
+
 ## §5 代替案と選んだ理由
 
 | 案 | 採否 | 理由 |

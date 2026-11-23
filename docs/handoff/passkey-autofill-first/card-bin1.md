@@ -66,7 +66,14 @@ mode: handoff
 - 自動の候補の待ち受けの失敗は、AbortError と NotAllowedError とブラウザ側の誤りは何も出さない。verify の失敗（`SelfAuthError`）だけ `authErrorMessage(err, t, "passkey")` を出す。
 - 始め直し: (a) 240 秒のタイマーで、見えていて `busyRef.current` が false なら始め直す。(b) `visibilitychange` で見えた時に、始めてから 240 秒以上なら始め直す。(a)(b) 合わせて最大15回。始め直しは `genRef.current++` → `cancelPasskeyCeremony()` → 新しく始める。
 - 片付けで `genRef.current++` → `cancelPasskeyCeremony()`、タイマーと `visibilitychange` を外す。
-- `handlePasskeyButton` と `handlePasskeySignIn` は、始めに `busyRef.current = true`、finally で false。immediate の前に `genRef.current++; cancelPasskeyCeremony(); await waitRef.current;`。
+- `handlePasskeyButton` と `handlePasskeySignIn` は、始めに `busyRef.current = true`、finally で false。immediate の前に `genRef.current++; cancelPasskeyCeremony(); await Promise.race([waitRef.current, new Promise((r) => setTimeout(r, 1500))]);`（待ちは最大 1.5 秒・審査2 N3）。
+- 審査2 で決めた細部（design.md より細かい。こちらに従う）:
+  - 条件に `!authLoading` も足す（LoginPage.tsx:66 の `loading: authLoading`）。N7
+  - `restarts` と `startedAt` は useEffect の中の `let`（実行ごとに 0 から）。最初の1回に加えて始め直しは最大 15 回＝`startPasskeyAutofill` の呼び出しは1回の実行で計 16 回まで。N1
+  - 始め直すたび（(a)(b) どちらでも）に `startedAt = Date.now()` とし、`clearTimeout` してから 240 秒の `setTimeout` を1本だけ張り直す。隠れていて鳴った時は何もせず張り直さない（(b) が引き継ぐ）。N1
+  - `startPasskeyAutofill` は入口でも `isStale()` を見て、true なら通信せず AbortError を投げる（確認は計3か所）。N2
+  - 片付けの `cancelPasskeyCeremony()` は `busyRef.current` が true の間は呼ばない。N5
+  - `immediateGetSupported()` は依存が空の useEffect で1回だけ調べる。L2
 
 ### 3-3. 試験（足す）
 
@@ -84,7 +91,8 @@ LoginPage.test.tsx（既存の vi.mock に新しい関数を足す）:
 - T9（fake timers）待ち受け中に 240 秒進める → `cancelPasskeyCeremony` の後に `startPasskeyAutofill` が2回目に呼ばれる。始め直しを15回した後は進めても増えない。
 - T10（fake timers）`document.visibilityState` が hidden の間は 240 秒進めても増えない。visible に戻して `visibilitychange` を出すと、240 秒を超えていれば1回増える。
 - T11（fake timers）immediate の Promise が未解決の間に 240 秒進めても `startPasskeyAutofill` が増えない。NotAllowedError で終わった後に1回増える。
-- T12 `startPasskeyAutofill` に渡された `isStale` が、片付け（unmount）の後は true を返す。描画し直した後の新しい呼び出しの分は false。
+- T12 `startPasskeyAutofill` に渡された `isStale` が、片付け（unmount）の後は true を返す。描画し直した後の新しい呼び出しの分は false。もう1本、`<React.StrictMode>` で包んで描画し、1回目の呼び出しの `isStale()` が true・最後の呼び出しの分が false（審査2 N4）。
+- 試験の書き方（審査2 N6）: fake timers の下では `waitFor`・`findBy*` を使わず、`await act(async () => { await vi.advanceTimersByTimeAsync(ms); })` で進める。`document.visibilityState` の差し替えは frontend/src/features/tcg-import-workflow/useImportStageDetails.test.tsx の `vi.spyOn(document, "visibilityState", "get")` と `document.dispatchEvent(new Event("visibilitychange"))` の形に倣う。unmount が要る試験は `renderLogin()` が render の戻り値を返すように直してよい。
 - 既存の LoginPage の試験はすべてそのまま合格（直してよいのは mock に関数を足すことだけ）。
 
 ## 4. 守ること
@@ -142,7 +150,7 @@ LoginPage.test.tsx（既存の vi.mock に新しい関数を足す）:
     期待する出力: §2 の表のファイルだけ。deletions がある行は名前を報告に書く。`git add -A` は使わない（登録ファイルを巻き込む）。
 
 手順8 記録して送る
-    commit の文を Write でクラウドの一時ファイル（例: /tmp/commit-msg.txt）に書く。1行目「feat(login): offer passkeys in email autofill and Chrome immediate mode」、空行、最後の行「Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>」。
+    commit の文を Write で作業場所の外の一時の場所（以下 /tmp/commit-msg.txt と書く）に書く。1行目「feat(login): offer passkeys in email autofill and Chrome immediate mode」、空行、最後の行「Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>」。
     cd 作業場所 && git commit -F /tmp/commit-msg.txt
     cd 作業場所 && git log -2 --oneline
     cd 作業場所 && git push -u origin HEAD
