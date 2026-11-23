@@ -682,11 +682,11 @@ describe("SecretaryChat listen mark", () => {
     await screen.findByLabelText(/Tell me what you need/);
   };
 
-  it("has no listen mark when isMobile is false", async () => {
+  it("has a listen mark when isMobile is false", async () => {
     renderChat();
     fireEvent.click(screen.getByRole("button", { name: FAB }));
     await screen.findByLabelText(/Tell me what you need/);
-    expect(screen.queryByRole("button", { name: LISTEN })).toBeNull();
+    expect(screen.getByRole("button", { name: LISTEN })).toBeTruthy();
   });
 
   it("has a listen mark when isMobile is true", async () => {
@@ -711,6 +711,55 @@ describe("SecretaryChat listen mark", () => {
     const box = screen.getByLabelText(/Tell me what you need/) as HTMLTextAreaElement;
     await waitFor(() => expect(box.value).toBe(JP_TEXT));
     expect(mock.postWithTimeout).not.toHaveBeenCalled();
+  });
+
+  const finalResult = (transcript: string) => Object.assign([{ transcript }], { isFinal: true });
+  const interimResult = (transcript: string) => Object.assign([{ transcript }], { isFinal: false });
+
+  it("shows interim text in the box, makes it read-only and blocks sending while listening", async () => {
+    await openMobile();
+    fireEvent.click(screen.getByRole("button", { name: LISTEN }));
+    act(() => {
+      instances[0].onresult?.({ resultIndex: 0, results: [interimResult(JP_TEXT)] });
+    });
+    const box = screen.getByLabelText(/Tell me what you need/) as HTMLTextAreaElement;
+    await waitFor(() => expect(box.value).toBe(JP_TEXT));
+    expect(box.readOnly).toBe(true);
+    const sendBtn = screen.getByRole("button", { name: i18n.t("secretary.send") }) as HTMLButtonElement;
+    expect(sendBtn.disabled).toBe(true);
+  });
+
+  it("stops at the max length, shows the too-long text and stops listening", async () => {
+    await openMobile();
+    fireEvent.click(screen.getByRole("button", { name: LISTEN }));
+    act(() => {
+      instances[0].onresult?.({ resultIndex: 0, results: [finalResult("a".repeat(1001))] });
+    });
+    const box = screen.getByLabelText(/Tell me what you need/) as HTMLTextAreaElement;
+    await waitFor(() => expect(box.value.length).toBe(1000));
+    expect(instances[0].stop).toHaveBeenCalled();
+    // 実機では stop の後に onend が来る（偽物は来ないので試験で出す）
+    act(() => {
+      instances[0].onend?.();
+    });
+    expect(await screen.findByText(i18n.t("secretary.listen.tooLong", { max: 1000 }))).toBeTruthy();
+  });
+
+  it("clears the too-long text when the box is edited by hand", async () => {
+    await openMobile();
+    fireEvent.click(screen.getByRole("button", { name: LISTEN }));
+    act(() => {
+      instances[0].onresult?.({ resultIndex: 0, results: [finalResult("a".repeat(1000))] });
+    });
+    const tooLongText = i18n.t("secretary.listen.tooLong", { max: 1000 });
+    act(() => {
+      instances[0].onend?.();
+    });
+    expect(await screen.findByText(tooLongText)).toBeTruthy();
+    const box = screen.getByLabelText(/Tell me what you need/) as HTMLTextAreaElement;
+    await waitFor(() => expect(box.readOnly).toBe(false));
+    fireEvent.change(box, { target: { value: "abc" } });
+    await waitFor(() => expect(screen.queryByText(tooLongText)).toBeNull());
   });
 
   it("says it is unavailable when there is no recognition class", async () => {
