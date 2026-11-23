@@ -9,7 +9,7 @@
     "tier1": ["screenshot","scroll","scroll_to","zoom","wait","hover"],
     "tier2": ["left_click","right_click","double_click","triple_click","type","key","left_click_drag"]
   },
-  "page_affecting": ["navigate","computer:left_click","computer:right_click","computer:double_click","computer:triple_click","computer:type","computer:key","computer:left_click_drag","form_input","javascript_tool","file_upload","upload_image","browser_batch"],
+  "page_affecting": ["navigate","computer:left_click","computer:right_click","computer:double_click","computer:triple_click","computer:type","computer:key","computer:left_click_drag","form_input","javascript_tool","file_upload","upload_image","browser_batch","switch_browser","select_browser"],
   "local_exception": [
     {"scheme":"http","host":"localhost","port":5173},
     {"scheme":"http","host":"127.0.0.1","port":5173},

@@ -135,6 +135,7 @@ def _decide(hi, now, consent_home):
         rec["agent_id"] = hi.get("agent_id")
     if t in ("switch_browser", "select_browser"):
         rec["room_changed"] = True
+        tab_id = None  # tabId はブラウザごとの番号。入力に付いていてもセッションの全タブを不明にする
 
     def done(code, msg, tier, decision, reason):
         rec.update({"tier": tier, "decision": decision, "reason": reason})
