@@ -211,3 +211,17 @@ agent-hooks-test.yml の paths に `'docs/handoff/browser-operation-delegation/*
    - 確かめ済みの手元のタブ 7 → `browser_batch {"actions":[{"name":"navigate","input":{"url":"https://example.com/","tabId":7}}], "tabId":99}`（exit 0）→ 同意票なしの `click(7)` が exit 2・reason `tab_unverified`。
    - batch の中の項目の形は、既存の T の batch の試験と同じ書き方に合わせる（中身の名前の欄が `name` でなければ既存の書き方に従う）。batch そのものが exit 0 にならないときは推測で直さず NEEDS_DECISION: で止める。
 3. 終わりの条件は §10 と同じ。chrome-guard-tests は fail=0、consent-unit-tests は FAIL 無し、§14-2 の足した試験が PASS 行に出ること。commit は1つ、push は `git push origin release/chrome-op-guard` を単独で。
+
+## 15. 5回目の審査の中の指摘の直し（2026-11-23 審査役 APPROVE on acf31b4c1 の中1件。§3〜§14 より優先）
+
+触るファイル: hooks/chrome_op_guard.py・hooks/chrome_op_record.py・scripts/dev/chrome-guard-tests.py の3つだけ。設計・ADR・tiers.json・ほかのファイルは触らない。
+
+1. **タブ番号は1以上の整数だけを番号として使う**。【事実】`navigate {"url":"https://example.com/","tabId":0}`（または `-1`）の後、確かめ済みの手元のタブ 7 の `click(7)` が exit 0・reason `local_exception` で通る（審査役の探り probe2 の A の3・4行目）。【未確認】拡張が tabId 0 を「無し」と読んで最初のタブを動かすかは確かめていない。分からないので止める側に倒す。直し方:
+   - chrome_op_guard.py の `tab_id_of` で、`isinstance(v, int) and not isinstance(v, bool) and v > 0` のときだけ v を返し、それ以外は None を返す（None のときは今どおりセッションの全タブを不明にする・tabId の無い区分2の決まりに従う）。
+   - chrome_op_record.py:61 の availableTabs の項目の条件にも `and it.get("tabId") > 0` を足す（0 以下の番号のタブは確かめ済みにしない）。
+2. **試験（T15 に足す。既存の試験は残す）**:
+   - 確かめ済みの手元のタブ 7 → `navigate {"url":"https://example.com/","tabId":0}` → 同意票なしの `click(7)` が exit 2・reason `tab_unverified`。
+   - 同じことを `tabId: -1` でも確かめる。
+   - `ctx_reply(h, [tab(0, LOCAL)])` の後、`click(0)`（同意票なし）が exit 2（確かめ済みにならない）。
+3. 終わりの条件は §10 と同じ。chrome-guard-tests は fail=0、consent-unit-tests は FAIL 無し、§15-2 の足した試験が PASS 行に出ること。commit は1つ、push は `git push origin release/chrome-op-guard` を単独で。
+4. **直さないもの（審査役の「低い・参考」）**: 返事の届く順番の時間差で確かめ済みが付け直される道（Claude Code が Chrome の道具を順番に流すなら起きない・設計 §5 の残る弱さ）。頭の大小が違う道具名（登録の matcher に当たらず、道具名は Claude Code が付ける）。サブエージェントの手元のタブの押す操作（設計どおり）。
