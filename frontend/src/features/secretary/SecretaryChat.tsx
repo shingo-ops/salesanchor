@@ -60,7 +60,24 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
   const [voiceNote, setVoiceNote] = useState<{ id: number; kind: "failed" | "cap" } | null>(null);
   const voice = useSecretaryVoice();
   // 声の聞き取り（確定した文を欄に足す。勝手に送らない）
-  const listen = useSecretaryListen((heard) => setText((prev) => (prev + heard).slice(0, SECRETARY_MAX_TEXT)));
+  const [tooLong, setTooLong] = useState(false);
+  const textRef = useRef("");
+  textRef.current = text;
+  const listenStopRef = useRef<() => void>(() => {});
+  const listen = useSecretaryListen((heard) => {
+    const next = textRef.current + heard;
+    if (next.length >= SECRETARY_MAX_TEXT) {
+      const capped = next.slice(0, SECRETARY_MAX_TEXT);
+      textRef.current = capped;
+      setText(capped);
+      setTooLong(true);
+      listenStopRef.current();
+      return;
+    }
+    textRef.current = next;
+    setText(next);
+  });
+  listenStopRef.current = listen.stop;
   const nextId = useRef(1);
   // 返事が届いた時点の値で決める（送った時点の値を使わない）
   const voiceOnRef = useRef(false);
@@ -72,6 +89,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
     setOpen(false);
     setMessages([]);
     setText("");
+    setTooLong(false);
     setKarte(null);
     voice.disable();
     voiceOnRef.current = false;
@@ -113,6 +131,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
       { id: pendingId, side: "assistant", kind: "text", text: t("secretary.thinking"), status: "sending" },
     ]);
     setText("");
+    setTooLong(false);
     setSending(true);
     const sentIn = session.current;
     try {
@@ -245,33 +264,44 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
             <div className="secretary-chat__input-row">
               <Textarea
                 fullWidth
-                value={text}
+                value={listen.listening ? text + listen.interim : text}
                 maxLength={SECRETARY_MAX_TEXT}
                 placeholder={t("secretary.placeholder")}
                 aria-label={t("secretary.placeholder")}
                 disabled={sending}
-                onChange={(e) => setText(e.target.value)}
+                readOnly={listen.listening}
+                onChange={(e) => {
+                  setTooLong(false);
+                  setText(e.target.value);
+                }}
               />
-              {isMobile && (
-                <IconToggleButton
+              <IconToggleButton
                   pressed={listen.listening}
                   iconOff={SECRETARY_ICONS.listen}
                   iconOn={SECRETARY_ICONS.listen}
                   size="md"
                   disabled={sending}
-                  onClick={() => (listen.listening ? listen.stop() : listen.start())}
+                  onClick={() => {
+                    if (listen.listening) {
+                      listen.stop();
+                    } else {
+                      setTooLong(false);
+                      listen.start();
+                    }
+                  }}
                   aria-label={t(listen.listening ? "secretary.listen.stop" : "secretary.listen.start")}
                 />
-              )}
             </div>
-            {(listen.listening || listen.error) && (
+            {(listen.listening || listen.error || tooLong) && (
               <p className="secretary-chat__listen-status" role="status">
                 {listen.listening
-                  ? `${t("secretary.listen.listening")} ${listen.interim}`.trim()
-                  : t(`secretary.listen.error.${listen.error}`)}
+                  ? t("secretary.listen.listening")
+                  : tooLong
+                    ? t("secretary.listen.tooLong", { max: SECRETARY_MAX_TEXT })
+                    : t(`secretary.listen.error.${listen.error}`)}
               </p>
             )}
-            <Button onClick={send} disabled={sending || text.trim() === ""} loading={sending}>
+            <Button onClick={send} disabled={sending || listen.listening || text.trim() === ""} loading={sending}>
               {t("secretary.send")}
             </Button>
           </div>
