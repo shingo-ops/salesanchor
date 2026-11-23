@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 |------|------|
 | ステータス | Proposed（草案・2026-11-22。PO 未承認。LIVE（便 T0 以降）は、有料の声の AI（Google の有料枠の確認）・ADR-1056 の改め・月の上限・LIVE 専用の鍵を PO が決めるまで実装しない。マイク（便 A・What 7）はこれらに関わらない） |
-| 備考 | PO 2026-11-21「カメラと画面の共有は今回は不要。1. 表のとおりで決める【おすすめ】」。Amends ADR-1056・ADR-1058・ADR-1080・ADR-1082 の案。設計審査 1 回目・2 回目 REVISE → 直した 3 版（`docs/handoff/secretary-live/review-architect.md`・`review-architect-2.md`）。PO 2026-11-23「1」（請求書はボタンだけ）・2026-11-24「1」（L5 と L7） |
+| 備考 | PO 2026-11-21「カメラと画面の共有は今回は不要。1. 表のとおりで決める【おすすめ】」。Amends ADR-1056・ADR-1058・ADR-1080・ADR-1082 の案。設計審査 1〜3 回目 REVISE → 直した 4 版（`docs/handoff/secretary-live/review-architect.md`・`review-architect-2.md`）。PO 2026-11-23「1」（請求書はボタンだけ）・2026-11-24「1」（L5 と L7） |
 | 起案日 | 2026-11-22 |
 | 方針の決定者 | Shingo（PO） |
 | 関連 | [ADR-1056](ADR-1056-secretary-chat.md)、[ADR-1058](ADR-1058-ai-job-assignments.md)、[ADR-1080](ADR-1080-secretary-voice-tts.md)、[ADR-1082](ADR-1082-secretary-voice-input.md)、ADR-1004（使用量台帳）、ADR-027、ADR-067・ADR-144、ADR-135・ADR-136・ADR-1003。設計: `docs/handoff/secretary-live/design.md`・調査: `recon.md`・事例: `research.md`・目標: `kgi.md` |
@@ -14,7 +14,7 @@
 
 1. LIVE の声の AI は Gemini Live（2.5 Flash Native Audio）。声の聞き取り・話す・割り込み・両方の書き起こしだけを受け持つ。モデル名は backend の 1 か所（`secretary_live.py`）に書く。
 2. Gemini Live に渡す道具は「秘書に頼む（文）」の 1 つだけ。画面がその文を今の `POST /api/v1/assistant/messages` に本人のログインで送る。名前探し・カルテ・下書きは今の秘書の道のまま。道具の結果として返すのは秘書の返事の文だけ。Gemini Live に書き込みの道は無い。
-3. 作るのは画面だけが決める。**請求書は画面の「作る」ボタンだけで作る**（PO 2026-11-23「1」）。予定は、画面の作る条件が揃ってから、「作る」ボタンか、画面が下書きから作った読み上げの文と「作りますか？」の後の次の発話 1 つが「はい」「作って」に完全一致したときだけ作る。声で画面の条件を飛ばさない。AI の判断で作らない。
+3. 作るのは画面だけが決める。**請求書は画面の「作る」ボタンだけで作る**（PO 2026-11-23「1」）。予定は、画面の作る条件が揃ってから、「作る」ボタンか、画面が下書きから作った読み上げの文と「作りますか？」の後の次の発話 1 つが「はい」「作って」に完全一致したときだけ作る。「はい」は最後に読み上げた下書き 1 つに結び、読み上げの後に下書きが変わったら作らない（読み上げの文を今の下書きから作り直して同じときだけ作る）。声で画面の条件を飛ばさない。AI の判断で作らない。
 4. Gemini の鍵は画面に出さない。backend の新しい口 `POST /api/v1/assistant/live/session` が 1 回だけ使える 10 分の札を出し、モデル・指示文・道具を札に固定する。口には 1 人 1 時間 20 回の上限を付け、Redis が読めなければ出さない。鍵は LIVE 専用の環境変数から backend だけが読み、空なら出さない。
 5. 本番の画面の CSP の `connect-src` に Gemini Live の接続先 1 つだけを足す。音の処理のファイルは同じ場所から出し、`script-src` は緩めない。
 6. LIVE の使用量を台帳 `public.llm_usage_events` に書く（使いみち `secretary_live`・`sdk` `google-genai-live`・1 回＝1 行・Google を呼んだ失敗も `outcome`・`error_code` で 1 行）。札を出せた時に仮の行（`outcome = 'pending'`）を書き、画面が送る「始めた」と終了時の使用量で 1 回だけ書き直す。月の上限は backend の定数 1 か所で、advisory lock の中で合計を数え、超えるか読めないなら札を出さない。
