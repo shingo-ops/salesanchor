@@ -32,7 +32,7 @@
 | 全要素の箱の数え方 | `frontend/src/index.css:444-448` | `box-sizing: border-box`（線の太さも幅に含む） |
 | 帯の境目 | `frontend/src/constants/breakpoints.ts`・`frontend/src/tokens.css:122` | PC は 1280px 以上 |
 
-- 箱の入れ子（`frontend/src/pages/inbox/InboxPage.tsx:161-273`）: `.inbox-wrapper`（横並び）の中に `.inbox-main-area`（`:163`・縦並び・`flex: 1`。CSS `InboxPage.css:15-21`）とカルテ（`:245` `InboxKartePanel`）。`.inbox-main-area` の中に上のタブ列（`:168`）と `.inbox-columns`（`:190`）。`.inbox-columns` の中に一覧（`InboxConversationList.tsx:60`）と会話欄。
+- 箱の入れ子（`frontend/src/pages/inbox/InboxPage.tsx:161-273`）: `.inbox-wrapper`（横並び）の中に `.inbox-main-area`（`:163`・縦並び・`flex: 1`。CSS `InboxPage.css:15-21`）とカルテ（`:245` `InboxKartePanel`）。`.inbox-main-area` の中に上のタブ列（`:168`）と `.inbox-columns`（`:190`）。`.inbox-columns` の中に一覧（`frontend/src/pages/inbox/InboxConversationList.tsx:60`）と会話欄。
   - よって `%` の基準は、カルテ＝`.inbox-wrapper` の中身の幅、一覧＝`.inbox-columns` の幅（＝`.inbox-main-area` の幅）。どちらにも左右の余白・線は無い（`InboxPage.css:4-12`・`:15-21`・`:75-79`）。
 - カルテは設定で隠せる: `frontend/src/pages/inbox/InboxKartePanel.tsx:130-133` `style={{ display: inboxSettings.showRightPanel ? undefined : "none" }}`。
 - `--width-inbox-panel` と `--karte-panel-width` を使う場所は `InboxPage.css:83`・`:636`・`:922` の3か所だけ（`git grep` で frontend/src 全体を走査。.tsx からの参照なし）。
