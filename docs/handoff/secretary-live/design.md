@@ -234,7 +234,8 @@
 
 | 何を守るか | 仕組み | 今あるか |
 |---|---|---|
-| 画面の文字の翻訳漏れ | CI の i18n の検査 | ある |
+| 画面の文字の翻訳漏れ（ja と en の鍵の食い違い）| CI の `npm run check:all` の中の `check:i18n-missing-keys`（`.github/workflows/e2e.yml:87`・`frontend/package.json:28,48`）| ある（必須チェック「Lint & Dark Mode Check (ADR-067)」）|
+| 画面の日本語の直書き | `local/no-japanese-literal` は `frontend/eslint.config.js:31` で warn。CI の `eslint src`（`frontend/package.json:15`）は warn で落ちない。落ちるのは手元の commit の lint-staged（`--max-warnings=0`・`frontend/package.json:58`）だけ。クラウドの担当は node_modules が無いと lint-staged を飛ばす（2026-11-23 の commit の出力）| **機械では止まらない**。便 T0 の画面の試験に「`features/secretary/` の新しいファイルに日本語の直書きが 0 件」を足す |
 | 金型外の見た目 | `features/` は機械が見ない（§9）→ マージ前の審査役の点検 | **人の審査だけ**（機械は日本語の直書きと loading の書き方だけ）|
 | 台帳の値の取り違え | DB の CHECK・`test_secretary_voice_pg.py:104` の一致の試験・`test_super_admin_ai_jobs.py:29` | ある（値の追加で更新）|
 | 月の上限を超えない | backend の試験: 合計＋次の最大が上限を超えると札を出さない・仮の行が使用量の報告で書き直され、報告が無ければ最大のまま | **新しく作る** |
