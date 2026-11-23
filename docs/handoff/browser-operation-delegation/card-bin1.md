@@ -170,3 +170,17 @@ agent-hooks-test.yml の paths に `'docs/handoff/browser-operation-delegation/*
    - T17 に足す: 手元の確かめ済みのタブで `key` `text:"Enter"` は通る（区分1）／`text:"cmd+l"`・`text:"ctrl+l"`・`text:"Meta"`・`modifiers:"cmd"` 付きの `key` は同意なしで止まる。
    - 新しい T21: 状態ファイルのロック（`<偽HOME>/.claude/logs/chrome-tab-state.lock` の dir を今の時刻で作っておく）がある間、区分1の navigate（`https://example.com/`）が reason `state_write_failed` で止まる。ロックを外すと通る。
 7. 終わりの条件は §10 と同じ（chrome-guard-tests fail=0・consent-unit-tests FAIL 無し・生の出力の最後の30行）。commit は1つ、push は `git push origin release/chrome-op-guard` を単独で。
+
+## 12. 2回目の差し戻しの直し（2026-11-23 審査役 REQUEST_CHANGES on 4979210d4 の3点。§3〜§11 より優先）
+
+触るファイル: chrome_common.py・chrome_op_guard.py・tiers.json・po-apply-chrome-guard.sh・po-rollback-chrome-guard.sh・chrome-guard-tests.py の6つだけ。設計・ADR・ほかのファイルは触らない。
+
+1. **`scheme:` の後ろの斜線の数で住所を取り違えない（§11-3 に足す）**。【事実】`https:/pay.google.com/` を今の parse_url に渡すと host が `https`、path が `/pay.google.com/` になり、区分3を素通りする（Opus が 4979210d4 の chrome_common.py で再現）。WHATWG URL の決まりでは http・https は「scheme:」の後ろの `/` と `\` の数によらず `scheme://` として読む。直し方: parse_url で、制御文字を外し `\` を `/` にした後・`_SCHEME_RE` の判定の前に、`^(https?):/*`（大小区別なし）に当たれば、その部分を `<小文字の scheme>://` に置き換える。http・https 以外の scheme の扱いは今のまま変えない（`localhost:5173/` のような「ホスト:ポート」を scheme と読まないため、置き換えは http・https に限る）。
+2. **手元の例外の `key` は許す一覧だけにする（§11-4 の置き換え）**。【事実】F6・F5・BrowserBack・`ctrl-l`・Meta_L が §11-4 の決まりでは区分1に下がる（審査役が実測）。F6 は Chrome でアドレス欄に移るキー。直し方: tiers.json に `"local_plain_keys"` の並びを足し、値は `["Enter","Return","KP_Enter","Tab","Escape","Esc","Delete","Up","Down","Left","Right","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Home","End","Page_Up","Page_Down","PageUp","PageDown","space"]`。手元の例外で区分1に下げてよい `key` は、`text` を空白で分けた各語が（大小区別なしで）この並びのどれかと一致し、`modifiers` が無いか空のときだけ。それ以外はすべて区分2のまま。並びは見張りの中に書き写さず tiers.json から読む（区分の正本は tiers.json の1か所）。`_KEY_MODS` は消す。tiers.json を読む側に鍵の決まった一覧の点検があって新しい鍵で落ちるなら、推測で直さず NEEDS_DECISION: で止める。
+3. **台本の変数のすぐ後ろに全角の字を置かない（§7・§11-5 に足す）**。【事実】macOS の bash 3.2 は UTF-8 の設定で `$rc（` の「（」の頭のバイトを変数名の一部として読み、`unbound variable` で台本ごと落ちる（審査役が実測。T16 不合格のとき戻さずに終わる）。直す行: po-apply-chrome-guard.sh の 88・90・92 行の `$rc` を `${rc}`、135 行の `$f` を `${f}`、po-rollback-chrome-guard.sh の 82 行の `$f` を `${f}`。ほかにも「`$` ＋名前のすぐ後ろが ASCII 以外の字」の所があれば同じく `${…}` にする。
+4. **試験（§6 に足す。既存の試験は残す）**:
+   - T1 に足す（すべて止まる）: `https:/pay.google.com/`・`http:/pay.google.com/`・`https:/github.com/settings/tokens`・`HTTPS:/pay.google.com/`・`https:pay.google.com`・`https:///pay.google.com/`。通る: `localhost:5173/`（今どおり手元の住所として読める）・`https:/example.com/`。
+   - T17 に足す: 手元の確かめ済みのタブで `key` の `text` が `Tab`・`Escape`・`Down Down Enter` は通る（区分1）。`F6`・`F5`・`BrowserBack`・`ctrl-l`・`Meta_L` は同意なしで止まる（reason `no_consent`）。§11-6 の Enter・cmd+l・ctrl+l・Meta・modifiers=cmd の試験は残す。
+   - 新しい T22（二度と同じ形を入れない見張り）: po-apply-chrome-guard.sh と po-rollback-chrome-guard.sh の全行を読み、正規表現 `\$[A-Za-z_][A-Za-z0-9_]*[^\x00-\x7f]` に当たる行が0件であること。台本の場所は chrome-guard-tests.py の引数の hooks の dir の1つ上の dir から求める。
+5. **直さないもの（審査役の「低い・参考」。理由つきで残す）**: `back ` などの空白・大文字つきの navigate（区分1の移動として通る。行き先は履歴の範囲で、同意なしに外へ何かを送る道ではない）。`www.github.com/settings/tokens` のような転送で区分3に着く道（設計 §5 が残る弱さとして受け入れ済み）。状態ファイルが `[]` の形のときに記録の行が残らない件（止める側に倒れており、通す道ではない）。
+6. 終わりの条件は §10 と同じ。chrome-guard-tests は fail=0、consent-unit-tests は FAIL 無し、§12-4 の足した試験が全部 PASS 行に出ること。commit は1つ、push は `git push origin release/chrome-op-guard` を単独で。
