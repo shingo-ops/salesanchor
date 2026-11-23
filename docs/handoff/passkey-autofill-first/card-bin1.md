@@ -42,7 +42,7 @@ mode: handoff
 | `frontend/src/pages/login/LoginPage.tsx` | design.md §4-2・§4-3 |
 | `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` | design.md §4-4 のキー2つ |
 | `frontend/src/lib/auth/passkey.test.ts` | 試験 T1〜T3 |
-| `frontend/src/pages/login/LoginPage.test.tsx` | 試験 T4〜T8 |
+| `frontend/src/pages/login/LoginPage.test.tsx` | 試験 T4〜T12 |
 | `docs/handoff/passkey-autofill-first/` と `docs/specs/auth-login/` | 手順2 の取り込みで入るだけ。中身は変えない |
 
 触らないもの: backend・migrations・scripts・`.github/`・`AuthContext.tsx`・部品の版（`package.json` と lock）・金型（`frontend/src/components/`）・CSS。新しい部品・新しい CSS・色の直値を作らない。案内は `Callout`（variant="info"）と `TextLink` だけで作る。
@@ -53,22 +53,27 @@ mode: handoff
 
 - design.md §4-1 の通り。`finishPasskeyLogin` を1つ作り、`selfPasskeyLogin`・`startPasskeyAutofill`・`immediatePasskeyLogin` の3つから使う（verify と adoptAccessToken を3か所に書かない）。
 - `uiMode` の型は passkey.ts の中だけで足す（`CredentialRequestOptions` を広げる型を1つ書く）。グローバルの型ファイルを作らない。
-- `immediatePasskeyLogin` は `allowCredentials` と `password` を渡さない。
+- `immediatePasskeyLogin` は `allowCredentials` と `password` を渡さない。`o.extensions` があれば渡す。
+- `startPasskeyAutofill(isStale: () => boolean)`。`isStale()` を options の後（`startAuthentication` の前）と `startAuthentication` の後（verify の前）の2か所で見て、true なら name が AbortError の誤りを投げる（design.md §4-1-3）。
 
 ### 3-2. LoginPage.tsx
 
 - design.md §4-2 の1〜5 と §4-3 の通り。
-- `immediateGetSupported()` は画面を開いたときに1回だけ調べて state に持つ。ボタンを押した後に await しない。
+- `immediateGetSupported()` は画面を開いたときに1回だけ調べて state `immediateOk`（初期値 `false`）に持つ。ボタンを押した後に await しない。
+- 待ち受けの useEffect の条件は `mode === "signIn" && !approval && !user && !enrolling && !promptOpen && !loading`。
+- 世代の番号 `genRef` と `isStale = () => genRef.current !== gen` を作り `startPasskeyAutofill(isStale)` に渡す。成功の navigate と誤りの表示は `!isStale()` のときだけ。
+- 待ち受けの Promise は reject しない形で `waitRef` に持ち、始めるたびに差し替える。
 - 自動の候補の待ち受けの失敗は、AbortError と NotAllowedError とブラウザ側の誤りは何も出さない。verify の失敗（`SelfAuthError`）だけ `authErrorMessage(err, t, "passkey")` を出す。
-- 240 秒ごとの始め直しは最大15回。画面が隠れている間（`document.visibilityState !== "visible"`）は始め直さない。
-- 片付けで `cancelPasskeyCeremony()` を呼び、その後 setState しない。
+- 始め直し: (a) 240 秒のタイマーで、見えていて `busyRef.current` が false なら始め直す。(b) `visibilitychange` で見えた時に、始めてから 240 秒以上なら始め直す。(a)(b) 合わせて最大15回。始め直しは `genRef.current++` → `cancelPasskeyCeremony()` → 新しく始める。
+- 片付けで `genRef.current++` → `cancelPasskeyCeremony()`、タイマーと `visibilitychange` を外す。
+- `handlePasskeyButton` と `handlePasskeySignIn` は、始めに `busyRef.current = true`、finally で false。immediate の前に `genRef.current++; cancelPasskeyCeremony(); await waitRef.current;`。
 
 ### 3-3. 試験（足す）
 
 passkey.test.ts（`@simplewebauthn/browser` の vi.mock に `WebAuthnAbortService`・`base64URLStringToBuffer`・`bufferToBase64URLString`・`browserSupportsWebAuthnAutofill` を足す）:
 - T1 `immediateGetSupported`: getClientCapabilities が無い→false／immediateGet true のときだけ true／投げたら false。
 - T2 `immediatePasskeyLogin`: options → `navigator.credentials.get` に `uiMode: "immediate"` があり `allowCredentials` と `password` が無い → verify に challenge_id が渡る。get が NotAllowedError を投げたら verify を呼ばず、name が NotAllowedError のまま投げる。
-- T3 `startPasskeyAutofill`: `startAuthentication` が `useBrowserAutofill: true` で呼ばれ、その後 verify。既存の `selfPasskeyLogin` の試験はそのまま合格。
+- T3 `startPasskeyAutofill`: `startAuthentication` が `useBrowserAutofill: true` で呼ばれ、その後 verify。`isStale` が options の後で true なら `startAuthentication` を呼ばず AbortError。`startAuthentication` の後で true なら verify を呼ばず AbortError。既存の `selfPasskeyLogin` の試験はそのまま合格。
 
 LoginPage.test.tsx（既存の vi.mock に新しい関数を足す）:
 - T4 immediate 対応＋`immediatePasskeyLogin` が NotAllowedError → `login.passkeyNotOnDevice` と `login.passkeyUseOtherDevice` が出る。リンクを押すと今の道（`selfPasskeyLogin`）が1回呼ばれる。
@@ -76,6 +81,10 @@ LoginPage.test.tsx（既存の vi.mock に新しい関数を足す）:
 - T6 immediate 成功 → 元のページへ進む。今の道は呼ばれない。
 - T7 ログインのメール欄の autocomplete が `email webauthn`。再設定のメール欄は `email` のまま。
 - T8 自動の候補対応 → 画面を開くと `startPasskeyAutofill` が1回呼ばれる。AbortError で終わっても誤りの文は出ない。画面を閉じると `cancelPasskeyCeremony` が呼ばれる。
+- T9（fake timers）待ち受け中に 240 秒進める → `cancelPasskeyCeremony` の後に `startPasskeyAutofill` が2回目に呼ばれる。始め直しを15回した後は進めても増えない。
+- T10（fake timers）`document.visibilityState` が hidden の間は 240 秒進めても増えない。visible に戻して `visibilitychange` を出すと、240 秒を超えていれば1回増える。
+- T11（fake timers）immediate の Promise が未解決の間に 240 秒進めても `startPasskeyAutofill` が増えない。NotAllowedError で終わった後に1回増える。
+- T12 `startPasskeyAutofill` に渡された `isStale` が、片付け（unmount）の後は true を返す。描画し直した後の新しい呼び出しの分は false。
 - 既存の LoginPage の試験はすべてそのまま合格（直してよいのは mock に関数を足すことだけ）。
 
 ## 4. 守ること
@@ -91,6 +100,10 @@ LoginPage.test.tsx（既存の vi.mock に新しい関数を足す）:
 
 クラウドで行う。手順1 で `new-worktree.sh` が作った作業場所のパス（以下「作業場所」）を報告に書く。`cd 取り出した場所` はクラウドがこのリポジトリを取り出した最上位の場所に、`cd 作業場所` はそのパスに読み替える。1手順1命令。
 
+手順0 作業前の点検
+    cd 取り出した場所 && ./scripts/dev/executor-preflight.sh || exit 1
+    期待する出力: 0 で終わる。× なら停止して BLOCKED:（生出力の全文）。
+
 手順1 枝を作る（起点は origin/main）
     cd 取り出した場所 && git fetch origin
     cd 取り出した場所 && bash scripts/new-worktree.sh release/passkey-autofill-impl
@@ -99,9 +112,9 @@ LoginPage.test.tsx（既存の vi.mock に新しい関数を足す）:
     期待する出力: 作業場所のパスと、2つの番号が同じこと。報告に書く。
 
 手順2 設計の書類を取り込む（Opus が push した枝）
-    cd 作業場所 && git merge --no-ff --no-edit origin/release/passkey-autofill-first
-    cd 作業場所 && git diff --stat origin/main HEAD
-    期待する出力: docs だけ（docs/handoff/passkey-autofill-first と docs/specs/auth-login）。ほかのファイルが出たら停止して NEEDS_DECISION:。
+    cd 作業場所 && git checkout origin/release/passkey-autofill-first -- docs/handoff/passkey-autofill-first docs/specs/auth-login
+    cd 作業場所 && git diff --cached --stat origin/main
+    期待する出力: docs だけ（docs/handoff/passkey-autofill-first と docs/specs/auth-login）。ほかのファイルが出たら停止して NEEDS_DECISION:。merge は使わない（クラウドの決まり）。
 
 手順3 対象ファイルが設計の基準から変わっていないか確かめる
     cd 作業場所 && git diff --stat bef5a7a8b origin/main -- frontend/src/lib/auth/passkey.ts frontend/src/pages/login/LoginPage.tsx frontend/src/lib/auth/passkey.test.ts frontend/src/pages/login/LoginPage.test.tsx
@@ -114,6 +127,9 @@ LoginPage.test.tsx（既存の vi.mock に新しい関数を足す）:
     cd 作業場所/frontend && npx vitest run src/lib/auth src/pages/login
     cd 作業場所/frontend && npx tsc --noEmit -p tsconfig.json
     cd 作業場所/frontend && npm run lint
+    cd 作業場所/frontend && npm run check:i18n-missing-keys
+    cd 作業場所/frontend && npm run check:error-text-next-action
+    cd 作業場所/frontend && npm run check:jsx-emoji
     期待する出力: すべて合格。落ちたら直してからもう一度流す。3回直しても落ちたら停止して BLOCKED:（生出力の全文を付ける）。
 
 手順6 文言の両方そろいを確かめる
@@ -121,12 +137,13 @@ LoginPage.test.tsx（既存の vi.mock に新しい関数を足す）:
     期待する出力: 両方とも 2。
 
 手順7 差分のファイル一覧を確かめる
-    cd 作業場所 && git add -A
+    cd 作業場所 && git add frontend/src/lib/auth/passkey.ts frontend/src/lib/auth/passkey.test.ts frontend/src/pages/login/LoginPage.tsx frontend/src/pages/login/LoginPage.test.tsx frontend/src/locales/ja.json frontend/src/locales/en.json docs/handoff/passkey-autofill-first docs/specs/auth-login
     cd 作業場所 && git diff --cached --stat origin/main
-    期待する出力: §2 の表のファイルだけ。deletions がある行は名前を報告に書く。
+    期待する出力: §2 の表のファイルだけ。deletions がある行は名前を報告に書く。`git add -A` は使わない（登録ファイルを巻き込む）。
 
 手順8 記録して送る
-    cd 作業場所 && git commit -m "feat(login): offer passkeys in email autofill and Chrome immediate mode"
+    commit の文を Write でクラウドの一時ファイル（例: /tmp/commit-msg.txt）に書く。1行目「feat(login): offer passkeys in email autofill and Chrome immediate mode」、空行、最後の行「Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>」。
+    cd 作業場所 && git commit -F /tmp/commit-msg.txt
     cd 作業場所 && git log -2 --oneline
     cd 作業場所 && git push -u origin HEAD
     cd 作業場所 && git ls-remote origin refs/heads/release/passkey-autofill-impl

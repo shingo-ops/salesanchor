@@ -46,7 +46,7 @@
    `selfPasskeyLogin()` は options → `startAuthentication({ optionsJSON })` → `finishPasskeyLogin` に書き換える（動きは同じ）。
 3. 足す関数:
    - `passkeyAutofillSupported(): Promise<boolean>` = `passkeySupported() && await browserSupportsWebAuthnAutofill()`（例外は false）。
-   - `startPasskeyAutofill(): Promise<void>` = options → `startAuthentication({ optionsJSON: res.options, useBrowserAutofill: true })` → `finishPasskeyLogin`。
+   - `startPasskeyAutofill(isStale: () => boolean): Promise<void>` = options → `startAuthentication({ optionsJSON: res.options, useBrowserAutofill: true })` → `finishPasskeyLogin`。`isStale()` を (a) options の応答の後・`startAuthentication` の前、(b) `startAuthentication` の応答の後・verify の前、の2か所で見て、true なら `Object.assign(new Error("stale"), { name: "AbortError" })` を投げる（verify も `adoptAccessToken` も呼ばない）。理由: 部品の取り消しの札は `startAuthentication` を呼んだ時に初めて作られるので、options の通信中の片付けは部品では止められない（審査1 R1）。
    - `cancelPasskeyCeremony(): void` = `WebAuthnAbortService.cancelCeremony()`。
    - `immediateGetSupported(): Promise<boolean>` = `conditionalCreateSupported()` と同じ型で `caps.immediateGet === true`。
    - `immediatePasskeyLogin(): Promise<void>`:
@@ -67,41 +67,47 @@
        authenticatorAttachment: cred.authenticatorAttachment === "platform" || cred.authenticatorAttachment === "cross-platform" ? cred.authenticatorAttachment : undefined,
      });
      ```
+     `o.extensions` があれば `publicKey.extensions` に渡す（今のサーバーは入れないが、将来のずれを防ぐ・審査1 L4）。
      `allowCredentials` と `password: true` は渡さない（recon §5: 空でない allow は失敗・パスワードの候補は出さない）。navigator の誤りはそのまま投げる（name が NotAllowedError のまま届く）。
      `as CredentialRequestOptions` は TypeScript の DOM 型に `uiMode` がまだ無いため。型の拡張は passkey.ts の中だけに書く。
 
 ### §4-2 LoginPage.tsx
 
 1. A: :401 の `autoComplete="email"` を `"email webauthn"` に（:458 は変えない）。
-2. B: 待ち受けの useEffect を足す。条件 `mode === "signIn" && !approval && !user`。
+2. B: 待ち受けの useEffect を足す。条件 `mode === "signIn" && !approval && !user && !enrolling && !promptOpen && !loading`（`enrolling` はパスワード送信の間 true・LoginPage.tsx:200。ログイン直後の自動登録 passkey.ts:87 を片付けの取り消しで止めないため。審査1 R2）。
    - `passkeyAutofillSupported()` が false なら何もしない。
-   - `startPasskeyAutofill()` を呼び、成功したら `navigate(from, { replace: true })`。
-   - 失敗の扱い: name が AbortError か NotAllowedError → 何も出さない（止めた・閉じた）。それ以外で **verify まで進んだ失敗**（SelfAuthError）→ `authErrorMessage(err, t, "passkey")` を error に出す。それ以外のブラウザ側の誤り → 何も出さない。
-   - 札は 5 分で消える（recon §3）。画面が見えている間は 240 秒ごとに止めて始め直す（最大 15 回＝1 時間。それ以上は始め直さない）。
-   - 片付け（画面を離れる・mode が変わる・ログインした）で `cancelPasskeyCeremony()` を呼び、以後 setState しない（cancelled の旗）。
-   - 待ち受けの Promise を ref に持つ（§4-3 で使う）。
+   - 世代の番号: `genRef = useRef(0)`。始めるたびに `const gen = ++genRef.current;`、`isStale = () => genRef.current !== gen` を作り、`startPasskeyAutofill(isStale)` を呼ぶ。成功し、かつ `!isStale()` なら `navigate(from, { replace: true })`。
+   - 失敗の扱い: name が AbortError か NotAllowedError → 何も出さない（止めた・閉じた・古い）。それ以外で **verify まで進んだ失敗**（SelfAuthError）かつ `!isStale()` → `authErrorMessage(err, t, "passkey")` を error に出す。それ以外のブラウザ側の誤り → 何も出さない。
+   - 待ち受けの Promise: **絶対に reject しない**（内側で catch して解決する）Promise を `waitRef` に持ち、始めるたびに新しいものに差し替える（§4-3 で `await waitRef.current` に使う）。
+   - 始め直し（札は 5 分で消える・recon §3）: `startedAt`（始めた時刻）と `restarts`（始め直した回数）を ref に持つ。
+     - (a) 240 秒のタイマーが来た時、`document.visibilityState === "visible"` かつ `!busyRef.current` なら始め直す。隠れている間・busy の間のタイマーは何もしない。
+     - (b) `visibilitychange` で見えるようになった時、`Date.now() - startedAt >= 240_000` かつ `!busyRef.current` なら始め直す（ブラウザは隠れたタブのタイマーを遅らせるため。審査1 R3）。
+     - 始め直しは「`genRef.current++` → `cancelPasskeyCeremony()` → 新しく始める」の順。`restarts` は (a)(b) 合わせて数え、15 回に達したら以後始め直さない（1 時間）。
+   - 片付け（画面を離れる・条件が外れる）: `genRef.current++` してから `cancelPasskeyCeremony()`。タイマーと `visibilitychange` の登録を外す。
 3. C/D: ボタンの onClick を `handlePasskeyButton` に替える。
    ```
    setError(""); setPasskeyMissing(false);
-   if (!(await immediateGetSupported())) return handlePasskeySignIn();   // D: 今まで通り
-   setLoading(true);
+   if (!immediateOk) return handlePasskeySignIn();   // D: 今まで通り（immediateOk は state・初期値 false）
+   busyRef.current = true; setLoading(true);
    try {
-     cancelPasskeyCeremony(); await 待ち受けの Promise の終わり（成功・失敗どちらでも）;   // §4-3
+     genRef.current++; cancelPasskeyCeremony(); await waitRef.current;   // §4-3（waitRef は reject しない）
      await immediatePasskeyLogin(); navigate(from, { replace: true });
    } catch (err) {
      if (err is NotAllowedError) setPasskeyMissing(true);
      else setError(authErrorMessage(err, t, "passkey"));
-   } finally { setLoading(false); }
+   } finally { busyRef.current = false; setLoading(false); }
    ```
-   注意: 押した直後に `await immediateGetSupported()` を挟むと押す操作の有効時間を食うため、`immediateGetSupported()` は画面を開いたときに1回だけ調べて state に持つ。ボタンの中では state を読むだけにする。
+   注意: 押した直後に `await immediateGetSupported()` を挟むと押す操作の有効時間を食うため、`immediateGetSupported()` は画面を開いたときに1回だけ調べて state `immediateOk`（初期値 `false`＝今の道）に持つ。ボタンの中では state を読むだけにする（審査1 L5）。
+   `handlePasskeySignIn` も同じく、始めに `busyRef.current = true`、finally で false にする。
 4. `passkeyMissing` が true の間、ボタンの下に `Callout variant="info" title={t("login.passkeyNotOnDevice")}` を出し、中に `TextLink` で `t("login.passkeyUseOtherDevice")` → `handlePasskeySignIn()`（今の道・QR）。メール欄・パスワードはそのまま使える。
-5. immediate の失敗の後と、`handlePasskeySignIn` の終わり（成功以外）の後は、待ち受けを始め直す（B の useEffect を回し直す鍵の数字を1つ増やす）。
+5. immediate の失敗の後と、`handlePasskeySignIn` の終わり（成功以外）の後は、待ち受けを始め直す。やり方: `loading` が false に戻ると B の useEffect の条件が再び true になり、1 回だけ始め直る（`!loading` を条件に入れたため。別の鍵の数字は作らない）。busy の間（`loading` が true）は useEffect の片付けが走り、待ち受けもタイマーも止まっている。
 
 ### §4-3 ぶつかりを避ける
 
 - 待ち受け中に、部品の `startAuthentication`（D の道・リンクの道）を呼ぶと、部品が前の呼び出しを自動で止める（recon §4）。止められた待ち受けは AbortError で終わり、§4-2-2 で黙って捨てる。
-- immediate は部品を通らないので、先に `cancelPasskeyCeremony()` を呼び、待ち受けの Promise が終わるのを待ってから navigator を呼ぶ（recon §6 の未確認を避ける）。
-- パスワードでのログイン成功の後は、片付けで待ち受けを止める。自動登録（passkey.ts:79-112）は部品を通るので、それも前の呼び出しを止める。
+- immediate は部品を通らないので、先に `genRef.current++` と `cancelPasskeyCeremony()` を呼び、`await waitRef.current`（reject しない Promise）で待ち受けが終わるのを待ってから navigator を呼ぶ（recon §6 の未確認を避ける）。
+- `busyRef`（押してから終わるまで true）を置く。タイマー・`visibilitychange` は `busyRef.current` が true の間は何もしない。さらに `!loading` を useEffect の条件に入れるので、busy の間は待ち受け自体が片付けられている。終わって `loading` が false に戻った時に1回だけ始め直る（審査1 R2）。immediate の画面や QR の画面が出ている間に、待ち受けが始まり直してその画面を閉じることは無い。
+- パスワードの送信中（`enrolling` が true）は条件が外れて待ち受けを止める。ログイン後の自動登録（passkey.ts:81-99）は待ち受けが止まった後に始まるので、片付けの取り消しで自動登録を止めることは無い。
 
 ### §4-4 文言（ADR-027）
 
@@ -130,6 +136,8 @@ ja.json と en.json の login の中、`signInWithPasskey` の次に足す。ほ
 | 画面を開くたびに auth_events が 1 行増える | 既存の表・既存の種類。新しい表・列は作らない（P6）。増える数は auth_events のパス別件数で見る |
 | 回数止めの IP（10 回失敗）では options が 429 | 待ち受けは黙って始めない。ログイン自体も止まっている状態で、今と同じ |
 | 押す操作の有効時間が options の通信で切れる | NotAllowedError → 案内とリンク（壊れない）。P2 で PO の Chrome で確かめる |
+| 隠れたタブで札が 5 分で切れる（ブラウザは隠れたタブのタイマーを遅らせる） | 見えるようになった時に 240 秒を過ぎていれば始め直す（§4-2-2 (b)）。それでも切れた札で選ばれた場合は verify が 401 になり、`authError.passkeyExpired`（authErrorMessage.ts:36 の `challenge_expired` 判定）か `passkeyFailed` が出る。その 1 回は IP の失敗回数に数えられる（backend/app/routers/auth.py:1135・10 回で止まる）（審査1 R3） |
+| 開発時の二重描画（main.tsx:16 の StrictMode）で古い待ち受けが残る | 世代の番号と `isStale` で、古い呼び出しは options の後と候補の後で止まり、verify もログインもしない（§4-1-3・§4-2-2・審査1 R1） |
 
 戻し方: この PR を戻す（revert）だけ。サーバー・DB は変わらないので、データの戻しは要らない。
 
@@ -137,19 +145,19 @@ ja.json と en.json の login の中、`signInWithPasskey` の次に足す。ほ
 
 | 基準 | 検証方法 |
 |---|---|
-| P1 3 台で欄に候補が出て、顔・指紋でログインできる | 反映後、PO の目視（Mac Chrome・iPhone Safari・Android Chrome）＋ reader で auth_events の /api/v1/auth/passkey/login/verify 成功（PO の user_id・user_agent 3 種） |
-| P2 Chrome 149 以降で持っていれば、ボタンで選ぶ画面なしに顔・指紋 | PO の Mac Chrome で目視 |
-| P3 持っていなければ「この機械にはパスキーがありません」と QR の道 | Mac Chrome のシークレット窓で目視（常に NotAllowedError）＋ 試験 T4 |
+| P1 3 台で欄に候補が出て、顔・指紋でログインできる | 前提: 反映前に PO が iPhone と Android でもパスワードでログインし、自動登録（passkey.ts:81-99 の `autoRegisterOnce`）か案内でパスキーを作る。reader で `webauthn_credentials` の PO の件数が 3 以上（同期で見える場合は 1 でもよいと PO が判断）。前提が欠けた時の×は「判定不能」と書き、設計の誤りと区別する（審査1 R6）。その上で反映後、PO の目視（Mac Chrome・iPhone Safari・Android Chrome）＋ reader で auth_events の /api/v1/auth/passkey/login/verify 成功（PO の user_id・user_agent 3 種） |
+| P2 Chrome 149 以降で持っていれば、ボタンで選ぶ画面なしに顔・指紋 | 目視の前に Chrome のバージョン（chrome://version が 149 以上）と、開発者ツールのコンソールで `await PublicKeyCredential.getClientCapabilities()` の `immediateGet` を記録する。true の時に PO の Mac Chrome で目視 |
+| P3 持っていなければ「この機械にはパスキーがありません」と QR の道 | 同じくシークレット窓で `immediateGet` を記録する。true なら Mac Chrome のシークレット窓で目視（常に NotAllowedError）＋ 試験 T4。true でなければ「P3 は判定不能（設計の誤りではない）」とし、パスキーの無い別の Chrome 149 以上の機械で判定する |
 | P4 Safari・iPhone・Chrome 148 以前は今まで通り | 試験 T5（immediateGet false → 今の道）＋ iPhone で目視 |
 | P5 パスワードのログインは変わらない | 試験（既存の LoginPage 試験すべて合格）＋ 反映後 14 日、自動点検の係（user 87）のログイン成功が毎日ある（reader） |
 | P6 表・列を足さない | `git diff origin/main --name-only` に migrations・backend が無い |
-| P7 文言は ja/en・金型・トークンだけ | CI の i18n と UI ガバナンスの検査が緑・`git diff` に色の直値が無い |
-| 試験 | passkey.test.ts に T1〜T3、LoginPage.test.tsx に T4〜T8（カード §3-4）が足され、frontend の試験がすべて合格 |
+| P7 文言は ja/en・金型・トークンだけ | `cd frontend && npm run check:i18n-missing-keys` が 0 で終わる（CI の必須チェックかは未確認）・ui-governance-gate が緑・`git diff origin/main -- frontend/src \| grep -nE '#[0-9a-fA-F]{3,8}\b\|rgb\(\|hsl\('` が空 |
+| 試験 | passkey.test.ts に T1〜T3、LoginPage.test.tsx に T4〜T12（カード §3-3）が足され、frontend の試験がすべて合格 |
 
 ## §8 維持の仕組み
 
-- 守り手: frontend/src/pages/login/LoginPage.test.tsx（T4〜T8）と frontend/src/lib/auth/passkey.test.ts（T1〜T3）。CI の frontend の試験で毎回走る。
-- 試験（T1〜T8）が CI の frontend の試験に入り、今後の変更で壊れたら赤になる。
+- 守り手: frontend/src/pages/login/LoginPage.test.tsx（T4〜T12）と frontend/src/lib/auth/passkey.test.ts（T1〜T3）。CI の frontend の試験で毎回走る。
+- 試験（T1〜T12。始め直し・隠れている間・15 回の上限・busy 中・古い呼び出しを含む）が CI の frontend の試験に入り、今後の変更で壊れたら赤になる。
 - KPI（PO のログインのうちパスキーの割合・目標 80%）は反映から 30 日後に reader で数える（Opus が予約する）。
 - 仕様の正本は docs/specs/auth-login（README の子リンクに本フォルダを追加済み）。
 
