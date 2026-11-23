@@ -200,3 +200,14 @@ agent-hooks-test.yml の paths に `'docs/handoff/browser-operation-delegation/*
    - 切り替えの後に `ctx_reply(h, [tab(7, LOCAL)])` で確かめ直すと、手元のタブ 7 の `key` `Enter` が通る（reason `local_exception`）。
 3. 終わりの条件は §10 と同じ。chrome-guard-tests は fail=0、consent-unit-tests は FAIL 無し、§13-2 の足した試験が全部 PASS 行に出ること。commit は1つ、push は `git push origin release/chrome-op-guard` を単独で。
 4. **直さないもの（審査役の「低い・参考」。理由つきで残す）**: 戻しの後に settings.json に空の `"PostToolUse": []` が残る件（動きに影響なし）。T16-c が同意の判定より手前の tab_unverified で止まる件（止める側に倒れる）。`chrome://` への移動（区分3の一覧は PO 承認済みの範囲の外。便2で検討）。点区切りのカード番号（設計どおり）。`_CTRL_RE =re.compile` の空白（見た目だけ）。
+
+## 14. 4回目の審査の差し戻しの直し（2026-11-23 審査役 REQUEST_CHANGES on 332655f10 の中1件。§3〜§13 より優先）
+
+触るファイル: hooks/chrome_op_guard.py・scripts/dev/chrome-guard-tests.py の2つだけ。設計・ADR・tiers.json・ほかのファイルは触らない。
+
+1. **browser_batch の後は、いつもセッションの全タブを「不明」にする**。【事実】`browser_batch {"actions":[{"name":"select_browser",...}], "tabId":99}` や `{"actions":[{"name":"navigate","input":{"url":"https://example.com/","tabId":7}}], "tabId":99}` の後に、確かめ済みの手元のタブ 7 を同意票なしで `click(7)` すると exit 0・reason `local_exception` で通る（審査役の探り P5・P5b、225dbb134 でも同じ）。原因は chrome_op_guard.py:130 の `tab_id = tab_id_of(ti)` が batch 自身の上の段の `tabId`（道具の定義に無い欄）を読み、:238 の `mark_unknown` がそのタブ1つしか不明にしないこと。batch の中身は切り替え・移動・別のタブへの操作を含みうるので、上の段の番号は信じない。直し方: `_decide` の `if t in ("switch_browser", "select_browser"):` の段のすぐ後に、`if t == "browser_batch":` で `tab_id = None` を足す（注釈は「batch の中身は別のタブや切り替えを含みうるので、上の段の tabId は使わずセッションの全タブを不明にする」）。ほかの判定（中身の区分・区分2が混じれば止める等）は変えない。
+2. **試験（T15 に足す。既存の試験は残す）**:
+   - 確かめ済みの手元のタブ 7 → `browser_batch {"actions":[{"name":"select_browser","input":{"deviceId":"d"}}], "tabId":99}`（exit 0）→ 同意票なしの `click(7)` が exit 2・reason `tab_unverified`。
+   - 確かめ済みの手元のタブ 7 → `browser_batch {"actions":[{"name":"navigate","input":{"url":"https://example.com/","tabId":7}}], "tabId":99}`（exit 0）→ 同意票なしの `click(7)` が exit 2・reason `tab_unverified`。
+   - batch の中の項目の形は、既存の T の batch の試験と同じ書き方に合わせる（中身の名前の欄が `name` でなければ既存の書き方に従う）。batch そのものが exit 0 にならないときは推測で直さず NEEDS_DECISION: で止める。
+3. 終わりの条件は §10 と同じ。chrome-guard-tests は fail=0、consent-unit-tests は FAIL 無し、§14-2 の足した試験が PASS 行に出ること。commit は1つ、push は `git push origin release/chrome-op-guard` を単独で。
