@@ -98,3 +98,12 @@
 | 1 | 17 フォルダのどれに投稿の原文があるか | 解消（PO 決定「1」2026-10-25）。フォルダ調べはやめ、本番の投稿原文（ai_ro.public__source_messages の raw_text。2026-10-25 に数えた結果は 3,812 行・約 279 万字、うち is_active が真は 228 行）を毎日 1 回、鍵付きフォルダへ 1 ファイルに取り直して見比べる相手にする（design §3）。120 ファイルの 2 経路は外す |
 | 2 | 閉じた PR の中身を GitHub から消せるか | PO の判断で対象外（そのまま残す） |
 | 3 | main の書類にある書き写しに見える約 140 種類をどうするか | PO に判断を求める（§4-1 の 2） |
+
+## 6. 枝を消す命令が止まる事実（2026-11-22 の調べ）
+
+- 起きたこと: ADR-1063 の受入の見本として作った枝 2 本（`release/k10-rename-sample`・`release/k10-rename-sample2`。どちらも合流していない）を、`git -C <絶対パス> push origin --delete <枝>` で消そうとして、この見張りに止められた。
+- 止めた理由の文（見張りにその命令だけを読ませて再現。Opus の scratchpad の r7b/del_guard_probe.txt）: 4 つの形のうち、`push origin --delete <枝2本>`・`push origin --delete <枝1本>`・`push origin :<枝>` の 3 つは PUSH_MSG で exit 2。`gh api -X DELETE …/git/refs/heads/<枝>` はこの見張りでは exit 0（止められた命令の言い換えになるため使わない）。
+- 止める作り: `scripts/agent-hooks/confidential-quote-guard/guard.py:970-976` の `check_push`（呼び出し元は同じファイルの 1130 行の 1 か所）は、`git -C <絶対パス> push [-u|--set-upstream] origin <ref>`（6〜7 語）以外をすべて PUSH_MSG で止める。design.md §3 の 1（58 行）は `--delete`・`:ref` を「決まりの外」と書いている。
+- 試験: `scripts/agent-hooks/confidential-quote-guard/tests/test_guard.py:248-249` は `push --delete origin x` と `push origin :x` が exit 2 になることを確かめている。
+- 見張りの目的との関係: 枝を消す push は commit も本文も送らない。社外秘の原文が外へ出る道ではない。
+- 長命の枝: CLAUDE.md「長命ブランチ消失防止」は main・develop を消すことを禁じ、feature の枝（release/*）を消すことは禁じていない。

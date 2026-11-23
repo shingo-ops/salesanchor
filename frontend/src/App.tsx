@@ -98,6 +98,7 @@ import SettingsMasterPage from "./pages/super-admin/settings/SettingsMasterPage"
 import FxRatePage from "./pages/super-admin/FxRatePage";
 import TaxRatesPage from "./pages/super-admin/TaxRatesPage";
 import LoginRequestsPage from "./pages/super-admin/LoginRequestsPage";
+import MetaReviewPage from "./pages/super-admin/MetaReviewPage";
 import TenantLoginRequestsPage from "./pages/management-center/TenantLoginRequestsPage";
 import ViewerAccountsPage from "./pages/super-admin/ViewerAccountsPage";
 import ViewerTemplatesPage from "./pages/super-admin/ViewerTemplatesPage";
@@ -344,6 +345,11 @@ function App() {
                     <Route
                       path="/super-admin/users/login-requests"
                       element={<LoginRequestsPage />}
+                    />
+                    {/* ADR-1055 What 11: Meta 審査用のスイッチ (is_super_admin 限定、Page 内で 403 の表示) */}
+                    <Route
+                      path="/super-admin/users/meta-review"
+                      element={<MetaReviewPage />}
                     />
                     {/* CC_TASK_DISTUI-01: 配信先管理 (is_super_admin 限定) */}
                     <Route

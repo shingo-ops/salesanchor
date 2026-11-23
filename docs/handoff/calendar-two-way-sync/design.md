@@ -88,7 +88,7 @@
 
 - Google でアプリの予定を消したとき、アプリからも消すか（今は消さない）。
 - アプリで作った繰り返しの予定を Google で直したとき（今は取り込まない）。
-- Google でアプリの予定の色を「なし」に戻したとき、アプリの色も消すか（今回は消さない）。
+- ~~Google でアプリの予定の色を「なし」に戻したとき、アプリの色も消すか~~ → PO 2026-11-22「1」で「消す」に決定（§10）。
 - アプリの画面で説明・場所を空にして消せるようにするか（今は消せない・§5）。
 - アプリで直したことを、同じ会社のほかの人の画面にもすぐ出すか（予定の書き込みの口の合図）。
 
@@ -105,3 +105,102 @@
 ## 9. 戻し方
 
 - 実装 PR を revert する。DB の形は変えないので、戻しても残る物は無い。
+
+## 10. 便2: Google で色を「なし」に戻したらアプリの色も外す（PO 2026-11-22「1」）
+
+### 10-1. 目的と変化
+- 前: アプリで作った予定を Google で色「なし」に戻しても、アプリは前の色のまま（§5 の色の行・本番で観測した動き）。
+- 後: 同じ操作で、アプリの色も外れて持ち主の色に戻る。画面は便1の合図で開き直さずに変わる。
+
+### 10-2. 現在地（origin/main 2560f963f で読んだ実物）
+- 取り込みの色の比べ方: `backend/app/services/calendar_service.py:1460-1464`。名札が当たるときだけ `color_key` を入れ、名札が無いときは触らない。
+- アプリから送る色: `backend/app/services/google_calendar.py:414-442` `_apply_event_label`。色ありは名札の id、色なしは `eventLabelId=""`。名札の表に色が無いときも `eventLabelId=""` で送り、記録 `event_label_missing` を出す（`:437`）。
+- 名札の表: `backend/app/services/google_calendar.py:405-411`。色の値は小文字にそろえて持つ。アプリの 24 色の値も小文字（`backend/app/services/event_colors.py:8-17`）。
+- Google 起源の予定は、名札が無ければ既に NULL にする（`backend/app/services/calendar_service.py:1558-1563`）。今回はアプリ起源をそれにそろえる。
+- 画面: 色が無ければ持ち主の色で塗る（`frontend/src/pages/schedule/eventColors.ts:29-30`）。色の変化は塗り直す（ADR-1081 K8・本番合格済み）。画面の直しは要らない。
+- 本番の記録（2026-11-22 に Grafana Loki で直近 7 日を数えた。残っていた記録は 2026-11-19 02:43〜11-21 21:56 UTC）: 取り込み 481 回すべてで「名札なし・古い色の番号あり」の予定は 0 件（`event_color_legacy_colorid count=0` が 481 回）。`event_label_missing` は 0 件。
+
+### 10-3. 変更（card-bin2.md が正）
+- `_update_app_origin_from_google` の色の比べ方に 1 つ足す。外すのは次の全部がそろうとき:
+  1. `label_colors` が None でない（名札の表が読めた）
+  2. Google の予定に `eventLabelId` が無い（空も無いと同じ）
+  3. Google の予定に `colorId` も無い
+  4. アプリの行の `color_key` が NULL でない
+  5. その色の値が名札の表の値にある（`EVENT_COLORS.get(r_color) in label_colors.values()`）
+- 名札が表に無い id のとき・表が読めないとき・アプリの色が表に無いときは、今のまま触らない。
+- 触らない範囲: Google へ送る処理・Google 起源の取り込み・画面・DB の形（migration なし）・合図。
+
+### 10-4. なぜこの形か
+- 案A（名札が無ければ必ず外す）は採らない。アプリの色が Google の名札の表に無いと、アプリは `eventLabelId=""` で送る。すると Google から戻った自分の書き込みで、選んだ色がすぐ消える。
+- 条件 5 で「Google でも表せた色なのに、Google に色が無い」ときだけ外す。これは Google 側で外した、と読める。
+- 条件 3 で古い色の番号だけの予定を外さない（本番 7 日で 0 件だが、消さない側に倒す）。
+
+### 10-5. 受け入れの基準
+| 基準 | 検証方法 |
+|---|---|
+| K12 アプリで色を付けた予定を Google で色「なし」にすると、アプリの色が外れて持ち主の色になる（画面を開き直さない） | PO が本番で目で見る |
+| K13 同じ操作で DB の `color_key` が NULL になり、取り込みの記録に upserted=1 が出る | 本番の記録（Loki の `sync_google_calendar_tenant … upserted`）で時刻を合わせて読む |
+| K14 条件 1〜5 のどれかが欠けるときは `color_key` に触らない（6 通り） | `backend/tests/test_calendar_service.py` の新しい試験（CI） |
+| K15 今までの色の試験（`test_color_only_when_label_matches` ほか）がそのまま通る | CI |
+
+### 10-6. リスクと対処
+- アプリで色を付けた直後、名札の表が読めずに名札を送れなかった行（`_apply_event_label` の `table is None`）は、次の取り込みで表が読めると外れることがある。表が読めない回は本番 7 日で記録 0 件（記録の文 `event_label_colors_unavailable`・`backend/app/services/google_calendar.py:402`・Loki で 2026-11-22 に数えた）。起きても色を付け直せば戻る。
+- 戻し方: 実装 PR を revert する。DB の形は変えない。
+
+### 10-7. 外部事例
+- Google 公式の名札（eventLabelId）の扱いは ADR-1081 で確かめ済み。今回は同じ欄の「無い」の読み方だけで、数で比べられる外部事例は要らない。判定は K12〜K15 で行う。
+
+### 10-8. 設計審査（同じ AI による自己審査・2026-11-22）
+- 判定: APPROVE。
+- 実物との照合: card-bin2.md §0 の 3 か所（`backend/app/services/calendar_service.py:31`・`:1416`・`:1460-1464`、試験 `backend/tests/test_calendar_service.py:685-698`）を origin/main 2560f963f で一字一句確かめた。書き込みの文は `changes` の列だけを `col = :col` で並べる（`:1468`）ので、`color_key = None` は `color_key = NULL` になる。
+- 既存の試験との整合: `test_color_only_when_label_matches` の「名札なし・{"L1":"#0000ff"}・行の色 "red"」は、"red" が 24 色に無く `EVENT_COLORS.get` が None になるので今までどおり触らない。
+- 決めごととの整合: ADR-1081 What 4（アプリで作った予定の色は取り込まない）は ADR-1059 改訂 2026-11-20 で既に置き換わっている。今回はその上の「無い」の読み方だけ。
+- 未解決: なし。
+
+## 11. 便3: アプリで説明・場所を空にしたら Google でも消す（PO 2026-11-23「1」）
+
+### 11-1. 目的と変化
+- 前: 予定を直す画面で説明や場所を全部消して保存しても、前の文が残る。アプリにも Google にも残る（§5 の 82 行目に書いた「今は消せない」）。
+- 後: 同じ操作で、アプリの説明・場所が空になる。Google の予定の説明・場所も空になる。
+
+### 11-2. 現在地（origin/main 3763e55c7 で読んだ実物）
+- 画面の保存: `frontend/src/pages/schedule/SchedulePageImpl.tsx:1033-1034` が `description: draft.description || undefined`・`location: draft.location || undefined`。空の文字は undefined になり、送る中身から落ちる。直す画面の値は元の予定から `?? ""` で作る（`:160-161`）。
+- 口: `backend/app/routers/calendar.py:489` の `body.model_dump(exclude_none=True)` は None だけを落とす。空の文字 `""` は残る。
+- 書き込み: `backend/app/services/calendar_service.py:502-531` は送られた列だけを `UPDATE` する。`""` もそのまま入る。繰り返しの予定の直し（`:1056`・`:1124-1125`・`:1224`）も `"description" in payload` で読むので `""` が入る。
+- Google へ: `backend/app/services/calendar_service.py:1649-1653` が「空 `""` でも送る。None は送らない」（ADR-1059 改訂 2026-11-20）。繰り返しの予定は表の行から本文を作る（`:170-187`）ので、行の `""` が送られる。Google の `events.patch` は送った欄だけを書き換える。
+- Google から戻る取り込み: `_norm_text`（`:1382-1384`）が空と NULL を同じに扱う。`""` を送った後に Google が欄を返さなくても、書き戻しは起きない。
+- 画面の表示: 説明・場所は中身があるときだけ出す（`frontend/src/pages/schedule/SchedulePageImpl.tsx:390-391`）。`""` と NULL は同じ見え方。
+- 動かす・長さを変える操作（`:1320-1321`）は説明・場所を変えないので、今の送り方のままでよい。
+
+### 11-3. 変更（card-bin3.md が正）
+- 画面の保存だけを直す。直すとき（`editing` があるとき）に、元の予定に説明（場所）があり、画面で空にしたなら、`description: ""`（`location: ""`）を送る。
+- 作るときは今のまま（空なら送らない）。元から空の予定は今のまま送らない（NULL を `""` に書き換えない）。
+- 触らない範囲: 裏側のコード全部・DB の形（migration なし）・Google へ送る処理・取り込み・動かす操作。
+
+### 11-4. なぜこの形か
+- 裏側は既に `""` を受けて DB と Google を空にできる（11-2）。止めているのは画面の `|| undefined` だけ。直す所を 1 か所にする。
+- 案B（裏側で `""` を NULL に直して入れる）は採らない。`_to_google_event_body` は None を送らないので、Google に古い文が残る。送り方の決め（ADR-1059 改訂 2026-11-20）も変えることになり、範囲が広がる。
+- DB に `""` と NULL の 2 通りが入る。どちらも「空」と決めてある（§3 の 40 行目・`_norm_text`・画面の表示）。`""` を入れるのは「中身があった予定を空にした」ときだけで、元から空の予定は NULL のまま。
+
+### 11-5. 受け入れの基準
+| 基準 | 検証方法 |
+|---|---|
+| K16 アプリで予定の説明と場所を消して保存すると、アプリの予定の説明・場所が空になる | PO が本番で目で見る |
+| K17 同じ予定の Google 側の説明・場所も空になる | PO が本番の Google カレンダーで目で見る |
+| K18 直すとき、元にあった説明・場所を空にしたら `""` を送る | `frontend/src/pages/schedule/SchedulePageImpl.test.tsx` の新しい試験（CI） |
+| K19 元から空の予定を直すときと、作るときは、説明・場所を送らない | 同じ試験ファイルの新しい試験（CI） |
+| K20 今までの予定の画面の試験がそのまま通る | CI |
+
+### 11-6. リスクと対処
+- 空にした直後、Google の知らせで取り込みが走っても、空と NULL を同じに扱うので書き戻さない（`_norm_text`）。
+- 戻し方: 実装 PR を revert する。DB の形は変えない。消した文は戻らない（PO が自分で消したもの）。
+
+### 11-7. 外部事例
+- Google の `events.patch` が「送った欄だけ書き換える」ことは ADR-1059 改訂 2026-11-20 の時点で確かめ済み。今回は画面から `""` を送るかどうかだけで、数で比べられる外部事例は要らない。判定は K16〜K20 で行う。
+
+### 11-8. 設計審査（同じ AI による自己審査・2026-11-23）
+- 判定: APPROVE。
+- 実物との照合: 11-2 の行を origin/main 3763e55c7 で読んで確かめた。`exclude_none` が `""` を落とさないこと、裏側の 3 つの直しの道（単発・この回・これ以降）がどれも `""` を DB に入れ Google に送ることを、コードで追った。
+- 既存の試験との整合: 直す画面の試験（`frontend/src/pages/schedule/SchedulePageImpl.test.tsx:192-203` ほか）は `apiEvent` の説明・場所が null なので、新しい分岐に入らず今までどおり。
+- 決めごととの整合: ADR-1059 改訂 2026-11-20 の「空 `""` でも送る」をそのまま使う。DB の「空と NULL は同じ」（§3）も変えない。
+- 未解決: なし。

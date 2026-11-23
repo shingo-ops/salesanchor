@@ -19,6 +19,7 @@ export const ROUTE_TITLE_KEYS: Record<string, string> = {
   "/super-admin/settings/sa-products":        "nav.superAdminSaProducts",
   "/super-admin/users/viewers":               "nav.superAdminViewers",
   "/super-admin/users/login-requests":        "nav.superAdminLoginRequests",
+  "/super-admin/users/meta-review":           "nav.superAdminMetaReview",
   "/super-admin/users/viewer-templates":      "nav.superAdminViewerTemplates",
   "/":                           "nav.dashboard",
   "/lead-chat":                  "nav.leadChat",

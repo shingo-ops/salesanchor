@@ -55,6 +55,8 @@ _DEVICE_MIGRATIONS = (
 )
 # ADR-1068: self_login・パスワード再設定が読み書きする仮パスワードの印
 _MUST_CHANGE_MIGRATION = "20261107_130000_add_users_password_must_change.sql"
+# ADR-1055 What 11: Meta 審査用の会社だけのスイッチの列（tenants に2列・CHECK・部分一意の索引）
+_META_REVIEW_MIGRATION = "20261122_100000_add_tenants_meta_review_switch.sql"
 _GRANT_DDL = """
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO salesanchor_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO salesanchor_app;
@@ -113,6 +115,7 @@ async def _fresh():
         for mig in _DEVICE_MIGRATIONS:
             await _apply_migration(admin_engine, mig)
         await _apply_migration(admin_engine, _MUST_CHANGE_MIGRATION)
+        await _apply_migration(admin_engine, _META_REVIEW_MIGRATION)
         async with admin_engine.begin() as conn:
             for uid, tid, email in ((_USER_A, _TENANT_A, _EMAIL_A), (_USER_B, _TENANT_B, _EMAIL_B)):
                 await conn.execute(
@@ -569,3 +572,95 @@ async def test_route_writes_user_and_resets_context(self_auth_env, name, run, ch
     async with _fresh() as (admin_engine, app_engine):
         await run(admin_engine, app_engine)
         await check(admin_engine, True)
+
+
+# ⑤ Meta 審査用のスイッチ（ADR-1055 What 11）。印の無い会社は ON にできない・印は1社だけ
+async def test_meta_review_check_rejects_unmarked_tenant():
+    from sqlalchemy.exc import DBAPIError
+
+    async with _fresh() as (admin_engine, _app):
+        with pytest.raises(DBAPIError) as exc_info:
+            await _admin_exec(
+                admin_engine,
+                "UPDATE public.tenants SET meta_review_login_until = now() + interval '1 day' WHERE id = :t",
+                {"t": _TENANT_A},
+            )
+        assert _sqlstate(exc_info.value) == "23514"
+        rows = await _admin_exec(
+            admin_engine, "SELECT meta_review_login_until FROM public.tenants WHERE id = :t", {"t": _TENANT_A}
+        )
+        assert rows == [(None,)]
+        # 印を付ければ同じ UPDATE が通る
+        await _admin_exec(
+            admin_engine, "UPDATE public.tenants SET meta_review_tenant = true WHERE id = :t", {"t": _TENANT_A}
+        )
+        await _admin_exec(
+            admin_engine,
+            "UPDATE public.tenants SET meta_review_login_until = now() + interval '1 day' WHERE id = :t",
+            {"t": _TENANT_A},
+        )
+
+
+async def test_meta_review_marker_unique():
+    from sqlalchemy.exc import DBAPIError
+
+    async with _fresh() as (admin_engine, _app):
+        await _admin_exec(
+            admin_engine, "UPDATE public.tenants SET meta_review_tenant = true WHERE id = :t", {"t": _TENANT_A}
+        )
+        with pytest.raises(DBAPIError) as exc_info:
+            await _admin_exec(
+                admin_engine, "UPDATE public.tenants SET meta_review_tenant = true WHERE id = :t", {"t": _TENANT_B}
+            )
+        assert _sqlstate(exc_info.value) == "23505"
+
+
+async def test_meta_review_switch_updates_under_rls():
+    """運営の文脈なしは0行・運営の文脈は1行・文脈を付けて外した後の commit で値が残る（SQL だけ。PUT の口は呼ばない）。
+
+    土台は tenants の RLS を当てていないので、この試験の中でだけ当てて、最後に元に戻す。
+    RLS を当てる・戻すのは管理者の接続、確かめる UPDATE はアプリの接続（superuser は RLS を通り抜けるため）。
+    """
+    from sqlalchemy import text
+
+    update = "UPDATE public.tenants SET meta_review_login_until = now() + interval '1 day' WHERE meta_review_tenant"
+    async with _fresh() as (admin_engine, app_engine):
+        await _admin_exec(
+            admin_engine, "UPDATE public.tenants SET meta_review_tenant = true WHERE id = :t", {"t": _TENANT_A}
+        )
+        await _apply_migration(admin_engine, "20261016_170000_add_tenants_write_rls.sql")
+        try:
+            # (1) 運営の文脈なしは 0 行
+            conn, trans = await _ctx_conn(app_engine, None)
+            try:
+                assert (await conn.execute(text(update))).rowcount == 0
+            finally:
+                await trans.rollback()
+                await conn.close()
+            # (2) 運営の文脈は 1 行
+            conn, trans = await _ctx_conn(app_engine, None, operator=True)
+            try:
+                assert (await conn.execute(text(update))).rowcount == 1
+            finally:
+                await trans.rollback()
+                await conn.close()
+            # (3) UPDATE → 会社の文脈を付けて外す → commit で値が残る
+            conn, trans = await _ctx_conn(app_engine, None, operator=True)
+            try:
+                assert (await conn.execute(text(update))).rowcount == 1
+                await conn.execute(text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(_TENANT_A)})
+                await conn.execute(text("SELECT set_config('app.tenant_id', '', true)"))
+                await conn.execute(text("SELECT set_config('app.is_operator', '', true)"))
+                await trans.commit()
+            finally:
+                await conn.close()
+            rows = await _admin_exec(
+                admin_engine,
+                "SELECT meta_review_login_until IS NOT NULL FROM public.tenants WHERE id = :t",
+                {"t": _TENANT_A},
+            )
+            assert rows == [(True,)]
+        finally:
+            await _admin_exec(admin_engine, "ALTER TABLE public.tenants DISABLE ROW LEVEL SECURITY")
+            for policy in ("tenants_select", "tenants_insert", "tenants_update", "tenants_delete"):
+                await _admin_exec(admin_engine, f"DROP POLICY IF EXISTS {policy} ON public.tenants")

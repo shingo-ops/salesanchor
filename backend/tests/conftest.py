@@ -334,6 +334,8 @@ async def test_engine():
             statement = statement.replace("public.discord_server_apply_runs", "discord_server_apply_runs")
         if "public.registration_tokens" in statement:
             statement = statement.replace("public.registration_tokens", "registration_tokens")
+        if "public.auth_events" in statement:
+            statement = statement.replace("public.auth_events", "auth_events")
         if "public.tenants" in statement:
             statement = statement.replace("public.tenants", "tenants")
         if "public.tenant_deletion_audit" in statement:
@@ -1772,7 +1774,9 @@ async def setup_test_db(test_engine):
                 tenant_code  TEXT NOT NULL UNIQUE,
                 tenant_name  TEXT NOT NULL DEFAULT '',
                 company_name TEXT NOT NULL DEFAULT '',
-                is_active    INTEGER NOT NULL DEFAULT 1
+                is_active    INTEGER NOT NULL DEFAULT 1,
+                meta_review_tenant INTEGER NOT NULL DEFAULT 0,
+                meta_review_login_until TIMESTAMP
             )
         """))
         # テナント削除 中央監査ログ（public. は rewrite で除去済み）
@@ -1965,6 +1969,22 @@ async def db_session(test_engine, setup_test_db):
         await conn.execute(text("DELETE FROM channel_master_tenant_settings"))
         await conn.execute(text("DELETE FROM channel_masters WHERE tenant_id IS NOT NULL"))
         await conn.execute(text("DELETE FROM tenants WHERE id > 90"))
+
+
+@pytest_asyncio.fixture
+async def sqlite_auth_events(db_session):
+    """選んだ試験だけが使う auth_events 表（ほかの試験に残さない）。"""
+    await db_session.execute(
+        text(
+            "CREATE TABLE auth_events (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TIMESTAMP, "
+            "user_id INTEGER, path TEXT, status_code INTEGER, reason TEXT, user_agent TEXT)"
+        )
+    )
+    await db_session.commit()
+    yield
+    await db_session.rollback()
+    await db_session.execute(text("DROP TABLE IF EXISTS auth_events"))
+    await db_session.commit()
 
 
 def _mock_user():

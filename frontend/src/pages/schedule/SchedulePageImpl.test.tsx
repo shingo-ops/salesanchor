@@ -219,6 +219,62 @@ describe("SchedulePage share-with-staff toggle", () => {
   });
 });
 
+describe("SchedulePage clearing description and location (design §11)", () => {
+  it("K18: sends empty strings when an existing description and location are cleared", async () => {
+    answers.events = [apiEvent({ description: "Old note", location: "Room A" })];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
+    const dialog = await editorDialog();
+    fireEvent.change(within(dialog).getByLabelText(i18n.t("schedule.eventDescription")), { target: { value: "" } });
+    fireEvent.change(within(dialog).getByLabelText(i18n.t("schedule.eventLocation")), { target: { value: "" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalled());
+    const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
+    expect(body.description).toBe("");
+    expect(body.location).toBe("");
+  });
+
+  it("K18: keeps sending the text when it is not cleared", async () => {
+    answers.events = [apiEvent({ description: "Old note", location: "Room A" })];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
+    const dialog = await editorDialog();
+    fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalled());
+    const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
+    expect(body.description).toBe("Old note");
+    expect(body.location).toBe("Room A");
+  });
+
+  it("K19: does not send them when the event had none", async () => {
+    answers.events = [apiEvent({})];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
+    const dialog = await editorDialog();
+    fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalled());
+    const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
+    const sent = JSON.parse(JSON.stringify(body)) as Record<string, unknown>;
+    expect(sent).not.toHaveProperty("description");
+    expect(sent).not.toHaveProperty("location");
+  });
+
+  it("K19: does not send them when creating", async () => {
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: i18n.t("schedule.create") }));
+    fireEvent.change(await screen.findByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "New" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const body = vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>;
+    const sent = JSON.parse(JSON.stringify(body)) as Record<string, unknown>;
+    expect(sent).not.toHaveProperty("description");
+    expect(sent).not.toHaveProperty("location");
+  });
+});
+
 describe("SchedulePage popover placement (K1)", () => {
   const callbacks: Array<() => void> = [];
   let popoverHeight = 500;
