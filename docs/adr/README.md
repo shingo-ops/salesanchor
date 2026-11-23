@@ -261,7 +261,7 @@
 | [ADR-1083](./ADR-1083-expired-token-not-counted-as-bruteforce.md) | ADR-1083: 期限が切れただけの札は、接続元の回数止めに数えない | Proposed | — | — |
 | [ADR-1084](./ADR-1084-refresh-idle-7-days.md) | ADR-1084: 7 日使わなければログインし直し | Proposed | — | — |
 | [ADR-1085](./ADR-1085-browser-operation-delegation.md) | ADR-1085: しんごさんの Chrome の画面操作を区分つきで Opus に任せる | Draft | — | — |
-| [ADR-1086](./ADR-1086-inbox-pc-column-width.md) | ADR-1086: PC受信箱の3列の幅は「比率＋最大の幅」で決める | Proposed | — | — |
+| [ADR-1086](./ADR-1086-inbox-pc-column-width.md) | ADR-1086: PC受信箱の3列の幅は「比率＋最大の幅」で決める | Accepted | — | — |
 
 ## ステータス凡例
 
