@@ -54,7 +54,7 @@ PO の決定（ideal-state.md「区分の決め方の問答」）: メンバー�
 | 3 PO 本人だけ | 支払い・契約・プラン・請求、パスワードと2段階認証、鍵の発行と表示、アカウントとデータの削除、本人確認の書類、お金や契約が伴う規約への同意 | 同じ |
 
 - 迷うものは区分2に倒す（kgi.md 運用方針）。表に無い道具は止める（§5）。
-- **部屋 P の例外（PO 2026-11-23「1」）**: 自社アプリの試しの画面（ホスト名が `localhost`・`127.0.0.1`・`[::1]` のどれかと完全に一致し、かつ番号が 5173〔`frontend/vite.config.ts:29`〕のものだけ。住所と番号の正本は `tiers.json` の例外の一覧で、ここの「5173」はその初めの値。`localhost.evil.com`・`localhost@evil.com` 等は当たらない。【事実】リポジトリに試し用の公開の住所は見当たらない〔`git grep` で staging 等の住所 0 件〕。【未確認 V8】5173 番以外に手元の住所で動くもの〔agent-console・SSH の転送等〕。分かるまで 5173 番だけ）では、押す・打つ・選ぶも区分1にする。区分3の URL の止めと、カード番号・鍵の形の止めはここでも効く。`javascript_tool`・ファイルの持ち込みは区分2のまま。
+- **部屋 P の例外（PO 2026-11-23「1」）**: 自社アプリの試しの画面（ホスト名が `localhost`・`127.0.0.1`・`[::1]` のどれかと完全に一致し、かつ番号が 5173〔`frontend/vite.config.ts:29`〕のものだけ。住所と番号の正本は 「tiers.json」 の例外の一覧で、ここの「5173」はその初めの値。`localhost.evil.com`・`localhost@evil.com` 等は当たらない。【事実】リポジトリに試し用の公開の住所は見当たらない〔`git grep` で staging 等の住所 0 件〕。【未確認 V8】5173 番以外に手元の住所で動くもの〔agent-console・SSH の転送等〕。分かるまで 5173 番だけ）では、押す・打つ・選ぶも区分1にする。区分3の URL の止めと、カード番号・鍵の形の止めはここでも効く。`javascript_tool`・ファイルの持ち込みは区分2のまま。
   - 【事実】見張りの入力には、どれが送信のボタンかが出ない（座標・`tabId`・AI が書く `action_summary` だけ。審査4回目 High-1）。だから「手元でも送信だけ区分2」は機械では守れない。【未確認 V7】手元の開発環境が本物の鍵で外へ送る（LINE・メール・Meta・Google 等）か。扱いは §11 Q4（PO が決める）。
   - 【事実】`frontend/src` に `<iframe` は 0 件（`git grep`）。手元の画面の中に外のサイトのページを表示する変更が入ったら、この例外を見直す（見張りの受入試験と Opus の PR 審査で `<iframe` を数える・維持の表）。
 - evaluator（手元の担当）は同意票を使えない（【事実】`docs/handoff/conversation-consent/hooks/consent_check.py:318`〜`:319` で `agent_id` があれば不可）。**evaluator は区分1だけ**。区分2は Opus 本体が行う（A3）。
@@ -63,7 +63,7 @@ PO の決定（ideal-state.md「区分の決め方の問答」）: メンバー�
 
 ## 5. 見張り（chrome-op-guard）の設計
 
-置き場（実装カードで確定）: `docs/handoff/browser-operation-delegation/hooks/chrome_op_guard.py` と、区分の表 `docs/handoff/browser-operation-delegation/hooks/tiers.json`（**区分の正本はこの1か所。文書は書き写さずここを指す**）。取り付けは ADR-1033 の型（recon R3-6）に合わせ、PO の `!` 実行 `po-apply-chrome-guard.sh` と戻し `po-rollback-chrome-guard.sh`。
+置き場（実装カードで確定）: 「docs/handoff/browser-operation-delegation/hooks/chrome_op_guard.py」 と、区分の表 「docs/handoff/browser-operation-delegation/hooks/tiers.json」（**区分の正本はこの1か所。文書は書き写さずここを指す**）。取り付けは ADR-1033 の型（recon R3-6）に合わせ、PO の `!` 実行 「po-apply-chrome-guard.sh」 と戻し 「po-rollback-chrome-guard.sh」。
 
 道具ごとの判定（道具の入力は recon R6-2）。下の表の部屋 A の列は便A で設計し直す前の下書き（便1は全部を部屋 P として扱うので使わない・審査4回目 Low-1）。**許可表に無い道具・action は止める**（A8）。
 
@@ -81,13 +81,13 @@ PO の決定（ideal-state.md「区分の決め方の問答」）: メンバー�
 | `file_upload`・`upload_image`・`gif_creator`（書き出しでファイルを落とすか【未確認】のため） | 区分2 | 区分2 |
 | `browser_batch` | 便A で決める | 中の1つずつ上の判定。区分2が1つでも混じれば全体を止める（1操作ずつ出し直す。途中で止まると先に使った同意が無駄になるため） |
 
-今のタブの住所の覚え方（部屋 P の例外のため・審査4回目 High-2・M-1・M-2）: 見張りはタブごとに「最後に確かめた住所」を覚える。覚えてよいのは **道具の返事に出た住所だけ**（PostToolUse・V5）。【事実 recon R9】`navigate` の返事は渡した住所のままで、移った先を出さない。`computer` の screenshot と `tabs_context_mcp` の返事には「Tab Context」として移った後の住所が出る。ただし screenshot 等の文は `"<題名>" ("<住所>")` の形で、題名は外のページが自由に決められる（題名に `("http://localhost:5173/` を仕込めば、ゆるく読む見張りはだまされる・審査5回目 High-1）。だから見張りが住所の確かめに使うのは **`tabs_context_mcp` の返事の JSON の `availableTabs[]` の中で `tabId` が一致する項目の `url` だけ**。文の部分は読まない。JSON として読めない・一致する項目がちょうど1つでない・`url` が文字列でないときは「不明」（開かない側に倒れる）。読み方（審査6回目 M-4）: 返事の内容の塊を1つずつ、塊の文の全体を `json.loads` する。塊をつなげない。正規表現で探さない。`availableTabs` が並びである物の塊だけを使い、そういう塊が2つ以上なら「不明」。【事実 recon R9-7】`tabs_context_mcp` の返事は、JSON の塊1つの後に「Tab Context」の文の塊が続く。`tabs_context_mcp` には `tabId` を渡せない（道具の定義は `createIfEmpty` だけ）。だから下の「`tabId` の無い呼び出し」の決まりはページに効く操作だけに当て、`tabs_context_mcp` は `availableTabs[]` の各項目をその項目の `tabId` で確かめる（審査6回目 M-1）。`navigate` に渡した url は行き先の予定で、ページやサーバーの命令で別の住所に移るかもしれないため、`navigate` の後は「不明」。ページに効くすべての操作（`navigate`・戻る/進む・押す・`type`・`key`・ドラッグ・`form_input`・`javascript_tool`・ファイルの持ち込み・`browser_batch`）の後も「不明」にする。`tabId` の無いページに効く呼び出しの後は、そのセッションのすべてのタブを「不明」にする。覚える置き場は `~/.claude/logs/chrome-tab-state.json`、鍵は「セッション番号＋`tabId`」（同時に動く別のセッションの覚えを使わない）。書き込みは mkdir のロックで1つずつ。住所が不明、または手元の住所でないタブの押す操作は区分2。だから例外も V5 の答えの後に作る。
+今のタブの住所の覚え方（部屋 P の例外のため・審査4回目 High-2・M-1・M-2）: 見張りはタブごとに「最後に確かめた住所」を覚える。覚えてよいのは **道具の返事に出た住所だけ**（PostToolUse・V5）。【事実 recon R9】`navigate` の返事は渡した住所のままで、移った先を出さない。`computer` の screenshot と `tabs_context_mcp` の返事には「Tab Context」として移った後の住所が出る。ただし screenshot 等の文は `"<題名>" ("<住所>")` の形で、題名は外のページが自由に決められる（題名に `("http://localhost:5173/` を仕込めば、ゆるく読む見張りはだまされる・審査5回目 High-1）。だから見張りが住所の確かめに使うのは **`tabs_context_mcp` の返事の JSON の `availableTabs[]` の中で `tabId` が一致する項目の `url` だけ**。文の部分は読まない。JSON として読めない・一致する項目がちょうど1つでない・`url` が文字列でないときは「不明」（開かない側に倒れる）。読み方（審査6回目 M-4）: 返事の内容の塊を1つずつ、塊の文の全体を `json.loads` する。塊をつなげない。正規表現で探さない。`availableTabs` が並びである物の塊だけを使い、そういう塊が2つ以上なら「不明」。【事実 recon R9-7】`tabs_context_mcp` の返事は、JSON の塊1つの後に「Tab Context」の文の塊が続く。`tabs_context_mcp` には `tabId` を渡せない（道具の定義は `createIfEmpty` だけ）。だから下の「`tabId` の無い呼び出し」の決まりはページに効く操作だけに当て、`tabs_context_mcp` は `availableTabs[]` の各項目をその項目の `tabId` で確かめる（審査6回目 M-1）。`navigate` に渡した url は行き先の予定で、ページやサーバーの命令で別の住所に移るかもしれないため、`navigate` の後は「不明」。ページに効くすべての操作（`navigate`・戻る/進む・押す・`type`・`key`・ドラッグ・`form_input`・`javascript_tool`・ファイルの持ち込み・`browser_batch`）の後も「不明」にする。`tabId` の無いページに効く呼び出しの後は、そのセッションのすべてのタブを「不明」にする。覚える置き場は 「~/.claude/logs/chrome-tab-state.json」、鍵は「セッション番号＋`tabId`」（同時に動く別のセッションの覚えを使わない）。書き込みは mkdir のロックで1つずつ。住所が不明、または手元の住所でないタブの押す操作は区分2。だから例外も V5 の答えの後に作る。
 
-ページに効く操作の後の住所の確かめ（審査5回目 M-1・6回目 M-2・M-3）: 区分に関係なく、ページに効く操作をしたタブは、その後に読めた `tabs_context_mcp` の返事（JSON が読めて、そのタブの `url` があるもの）が記録されるまで、次の区分2を止める（区分3の止めと読む道具は止めない）。読めなかった返事は確かめに数えない（開かない側に倒れる）。だから読めない状態が続くと、区分2は1タブ1回しか通らない。これは T20 で取り付けの直後に分かり、T20 が通らなければ `po-rollback-chrome-guard.sh` で戻して設計し直す。Opus はページに効く操作の後に必ず `tabs_context_mcp` を呼ぶ。同意票に操作を2つ以上並べたときも、操作の間に `tabs_context_mcp` をはさむ（道具の呼び出しは人の入力に数えないので同意票は切れない・`consent_check.py:218`〜`:229`）。`tabId` の無い区分2の操作は、セッションのすべてのタブが最後のページに効く操作の後に確かめ済みのときだけ通す（審査7回目 Low-1）。押した結果で開いた新しいタブも `availableTabs[]` に出るので、そこで初めて確かめる。残る弱さ: 読み込みの途中で `url` が古いまま返るかは【未確認】（recon R9-3 では読み込み途中に `read_page` が失敗した）。区分3の画面に移った直後の古い `url` を見逃すことがある。G2 の事後の数えでは、その後に記録された `tabs_context_mcp` の返事のそのタブの `url` でも、区分3の型に当たるかを数える。
+ページに効く操作の後の住所の確かめ（審査5回目 M-1・6回目 M-2・M-3）: 区分に関係なく、ページに効く操作をしたタブは、その後に読めた `tabs_context_mcp` の返事（JSON が読めて、そのタブの `url` があるもの）が記録されるまで、次の区分2を止める（区分3の止めと読む道具は止めない）。読めなかった返事は確かめに数えない（開かない側に倒れる）。だから読めない状態が続くと、区分2は1タブ1回しか通らない。これは T20 で取り付けの直後に分かり、T20 が通らなければ 「po-rollback-chrome-guard.sh」 で戻して設計し直す。Opus はページに効く操作の後に必ず `tabs_context_mcp` を呼ぶ。同意票に操作を2つ以上並べたときも、操作の間に `tabs_context_mcp` をはさむ（道具の呼び出しは人の入力に数えないので同意票は切れない・`docs/handoff/conversation-consent/hooks/consent_check.py:218`〜`:229`）。`tabId` の無い区分2の操作は、セッションのすべてのタブが最後のページに効く操作の後に確かめ済みのときだけ通す（審査7回目 Low-1）。押した結果で開いた新しいタブも `availableTabs[]` に出るので、そこで初めて確かめる。残る弱さ: 読み込みの途中で `url` が古いまま返るかは【未確認】（recon R9-3 では読み込み途中に `read_page` が失敗した）。区分3の画面に移った直後の古い `url` を見逃すことがある。G2 の事後の数えでは、その後に記録された `tabs_context_mcp` の返事のそのタブの `url` でも、区分3の型に当たるかを数える。
 
 URL の当て方: 当てる前に形をそろえる（`https://` が無ければ足す・ホスト名を小文字にする・%で書き換えた文字を戻す）。区分3の型はホスト名とパスの頭で当てる。
 
-区分2の通し方: 見張りが `chrome <道具> <action> <action_summary または url> 文字:<長さ>:<sha256 の頭8文字> 回数:<repeat、無ければ1> 修飾:<modifiers、無ければ無し>` の1行を作り（`repeat`・`modifiers` も1行に入れる。「Enter 1回」の同意で 100 回押せないように・審査5回目 Low-1。`action_summary` に改行・`$`・バッククォートがあれば、1行を作る前に止める・Low-2）（打つ文字そのものは入れない。consent_check は通した行を `agent-events.jsonl` に `cmd_head` として残し〔`consent_check.py:451`〜`:456`〕、`mask()` は合言葉や鍵の一部の形しか伏せないため〔`:36`〜`:45`〕。改行や `$` を含む文字も、この形なら行が壊れない。審査3回目 M-c）、`consent_check.check()`（`consent_check.py:416`）に渡す。【事実】通るのは、最後の人の入力が手で打った「1」で（`:348`〜`:350`）、その直前の AI の返事の同意票の `操作N:` と完全一致し（`:392`〜`:396`）、「1」から 30 分以内で（`:386`〜`:390`）、まだ使っていない操作だけ（`:407`〜`:410` 台帳で1回限り）。だから **同意票に並べた操作を、その1回ずつだけ** 通せる。しんごさんが別の文を打てば、それ以降は通らない。
+区分2の通し方: 見張りが `chrome <道具> <action> <action_summary または url> 文字:<長さ>:<sha256 の頭8文字> 回数:<repeat、無ければ1> 修飾:<modifiers、無ければ無し>` の1行を作り（`repeat`・`modifiers` も1行に入れる。「Enter 1回」の同意で 100 回押せないように・審査5回目 Low-1。`action_summary` に改行・`$`・バッククォートがあれば、1行を作る前に止める・Low-2）（打つ文字そのものは入れない。consent_check は通した行を `agent-events.jsonl` に `cmd_head` として残し〔`docs/handoff/conversation-consent/hooks/consent_check.py:451`〜`:456`〕、`mask()` は合言葉や鍵の一部の形しか伏せないため〔`:36`〜`:45`〕。改行や `$` を含む文字も、この形なら行が壊れない。審査3回目 M-c）、`consent_check.check()`（`docs/handoff/conversation-consent/hooks/consent_check.py:416`）に渡す。【事実】通るのは、最後の人の入力が手で打った「1」で（`:348`〜`:350`）、その直前の AI の返事の同意票の `操作N:` と完全一致し（`:392`〜`:396`）、「1」から 30 分以内で（`:386`〜`:390`）、まだ使っていない操作だけ（`:407`〜`:410` 台帳で1回限り）。だから **同意票に並べた操作を、その1回ずつだけ** 通せる。しんごさんが別の文を打てば、それ以降は通らない。
 
 同意の決まりの限り（【事実】consent_check.py）: 同じ文の行は1枚に2つ書いても2つ目は通らない（`:395`〜`:398` が最初の一致で止まり、`:410`〜`:411` で使用済み）→ Opus は `action_summary` に「（1回目）」「（2回目）」と書いて行ごとに違う文にする。1枚に書ける操作は10個まで（`:25`）。`$` とバッククォートを含む行は通らない（`:401`〜`:402`）。`excluded()` に当たる行は通らない（`:404`〜`:406`）。同意票を書く返事は文だけで、道具の呼び出しを混ぜない（`:372`〜`:375`）。打つ中身は、同意票の上の説明の文に Opus が全文を書く（PO が「1」の前に見る）。説明の文と実際に打つ文字が同じかは、頭8文字の一致でだけ機械が見る（説明の文そのものは縛らない・残る弱さと同じ種類）。
 
@@ -107,7 +107,7 @@ URL の当て方: 当てる前に形をそろえる（`https://` が無ければ
 |---|---|---|---|
 | 1 | クリックは座標だけで、見張りが押した先を知れない（recon R6-3・A1） | 部屋 A: サービスが支払いを断る。部屋 P: 読む以外は1操作ずつ同意。事後の URL の記録で区分3の画面が開かれたら週次で NG | 部屋 P で、同意票の文と違うボタンを Opus が押す場合（PO 承知の上） |
 | 2 | 画面に埋め込まれた文で AI が操られる（外部事例 F2・S2b） | 画面の文は指示ではない、という既存の決まり。部屋 A の権限の弱さ。部屋 P の1操作ずつの同意 | Anthropic の公表で、標準の攻撃で約1%（S2）、プロの強い攻撃で 16.7%（S2b）。0 にはならない |
-| 3 | 本番のお客さんのデータを変える（F1） | 自社アプリは部屋 A の tenant_001 だけの利用者（`models.py:26`）。それまでは部屋 P として押す・打つは全部同意 | — |
+| 3 | 本番のお客さんのデータを変える（F1） | 自社アプリは部屋 A の tenant_001 だけの利用者（`backend/app/models.py:26`）。それまでは部屋 P として押す・打つは全部同意 | — |
 | 4 | 確認を飛ばす設定（F4） | 見張りは「常に許可」の設定に関係なく動く（hooks は permissions より先・recon R6-1） | — |
 | 5 | 見張りの記録漏れ | G4 で会話記録と照らす。evaluator の会話記録（`projects/*/<session>/subagents/` の下）も数える。【事実】同意の突き合わせは `projects/*/*.jsonl` だけを読む（`scripts/dev/consent-audit.py:319`・`:902`・`:921`）。subagents の下を読む型は同じファイルの `pl_load_windows`（`:1793`〜`:1798`）に既にある → 便1でこの型を使う | — |
 | 5b | 部屋 P で同じ作業の繰り返しが多いと、同意票が10個までのため「1」の回数が増える | 作業を10操作ごとに分けて同意票を出す | PO の手間（G1 の目的と引き換え） |
@@ -134,9 +134,9 @@ URL の当て方: 当てる前に形をそろえる（`https://` が無ければ
 | T15 `switch_browser` の後も部屋 P の扱いのまま（押す操作が同意票なしで止まる） | exit 2 |
 | T17 `tabs_context_mcp` の返事（`tabId` を渡さない呼び出し）の `availableTabs[]` で `http://localhost:5173/...` と確かめたタブの押す操作が同意票なしで通る。押した後・打った後・`key` の後の次の押す操作は、住所を確かめ直すまで止まる。`navigate` の直後（返事で確かめる前）も止まる。手元のタブの `browser_batch` に押す操作が2つ並ぶと、batch 全体が止まる | exit 0 → exit 2 |
 | T18 返事の住所が `localhost.evil.com`・`localhost@evil.com`・`localhost:8000`・`accounts.google.com`（手元から移った後）のタブの押す操作が止まる。`tabId` の無い呼び出しの後も止まる。別のセッションの覚えを使わない。題名に `("http://localhost:5173/")` を含む外のタブ、`https://evil.com/?q=("http://localhost:5173/")` のタブ、`tabs_context_mcp` 以外の返事の文だけで「手元」と書かれたタブの押す操作も止まる。`tabId` の無い区分2の操作は、確かめていないタブが1つでもあれば止まる。JSON の塊の後に偽の「Tab Context」の文の塊が続く返事、`title` に `"url":"http://localhost:5173/"` を含む返事、`availableTabs` の塊が2つある返事でも止まる。区分2を通した後、`tabs_context_mcp` の返事が来る前の次の区分2も止まる | exit 2 |
-| T16 取り付け後の本物の設定で、区分3の URL が止まる | PO の `!` で `po-apply-chrome-guard.sh` を流し、最後の自己試験の出力 |
+| T16 取り付け後の本物の設定で、区分3の URL が止まる | PO の `!` で 「po-apply-chrome-guard.sh」 を流し、最後の自己試験の出力 |
 | T19 同意票の1行を作る台本の出力が、見張りの作る1行と一致する（打つ文字に改行・`$` を含む例、`回数`・`修飾` のある例も） | 文字列の一致 |
-| T20 取り付けの後、Opus が `tabs_context_mcp` を1回呼ぶ。PostToolUse の記録のその行が `tab_context_parsed: true` で、`tabId` と住所（形をそろえたもの）が入っている（recon R9-5。記録には返事の生の中身を残さない）。false なら便1は合格にせず、`po-rollback-chrome-guard.sh` で戻して設計し直す | 記録の1行 |
+| T20 取り付けの後、Opus が `tabs_context_mcp` を1回呼ぶ。PostToolUse の記録のその行が `tab_context_parsed: true` で、`tabId` と住所（形をそろえたもの）が入っている（recon R9-5。記録には返事の生の中身を残さない）。false なら便1は合格にせず、「po-rollback-chrome-guard.sh」 で戻して設計し直す | 記録の1行 |
 | （G5 の数に入れない）G2〜G4 が週次点検に出る | `python3 scripts/dev/consent-audit.py --audit` の出力に「画面操作」の節と3つの数。subagents の下の記録も数える |
 | （部屋 A の便で使う・G5 の数に入れない）部屋 A の各利用者に支払いの権限が無い | PO が各サービスの権限の画面を開き、Opus が画面写しで「支払い」等の権限が外れていることを数える（サービスごとに ○×） |
 
@@ -144,7 +144,7 @@ URL の当て方: 当てる前に形をそろえる（`https://` が無ければ
 
 1. 便0（本 PR・文書だけ）: spec 3 枚・recon・design・ADR-1085 草案。
 2. 便A（部屋 A・後の便）: V1〜V4・V6 の答えと §4-1 の「部屋 A を使い始める前の条件」の後に、別に設計・審査する。PO の手作業（専用のプロフィール・利用者を作る）はこの便。自社アプリの Opus 専用の利用者は `is_super_admin=false`（`backend/app/models.py:33`）・会社の中の役割は一般にする。
-3. 便1（実装・クラウドの Sonnet）: **部屋 P だけ**（全部を部屋 P として扱う）。`chrome_op_guard.py`・`tiers.json`・PostToolUse の事後記録・試験 T1〜T15 と T17〜T20・apply/rollback・`consent-audit.py` の「画面操作」の節と subagents の読み取り（`pl_load_windows` の型）・既存の CI `.github/workflows/agent-hooks-test.yml` に試験を足し、対象パス（`:9`〜`:20`）に `docs/handoff/browser-operation-delegation/hooks/**` を足す・区分3の URL の型の最初の一覧と `computer` の action の全部の名は、Opus が道具の定義と各サービスの画面を読んで実装カードに書き、PO の実装承認で決める・部屋 P の例外の住所の覚え（§5）・同意票の1行を作る台本 `chrome-consent-line.py`（打つ文字から長さと sha256 の頭8文字を出す。Opus は同意票の前の返事で流す・審査4回目 M-5）・NG を既存の週次点検の知らせにつなぐ。PO の実装承認と実装カードの後。
+3. 便1（実装・クラウドの Sonnet）: **部屋 P だけ**（全部を部屋 P として扱う）。「chrome_op_guard.py」・「tiers.json」・PostToolUse の事後記録・試験 T1〜T15 と T17〜T20・apply/rollback・`scripts/dev/consent-audit.py` の「画面操作」の節と subagents の読み取り（`pl_load_windows` の型）・既存の CI `.github/workflows/agent-hooks-test.yml` に試験を足し、対象パス（`:9`〜`:20`）に `docs/handoff/browser-operation-delegation/hooks/**` を足す・区分3の URL の型の最初の一覧と `computer` の action の全部の名は、Opus が道具の定義と各サービスの画面を読んで実装カードに書き、PO の実装承認で決める・部屋 P の例外の住所の覚え（§5）・同意票の1行を作る台本 「chrome-consent-line.py」（打つ文字から長さと sha256 の頭8文字を出す。Opus は同意票の前の返事で流す・審査4回目 M-5）・NG を既存の週次点検の知らせにつなぐ。PO の実装承認と実装カードの後。
 4. 便1の取り付け: PO が `!` で apply を流す（recon R2-9。見張り役の設定は同意票で通せない）→ T16。
 5. 便2（文書）: ADR-1085 が Proposed になり、**かつ T16 が合格した後**（見張りの無い時期を作らない。審査2回目 Medium-6）、AGENTS.md:17・SW:95・SW:145・ADR-1003:40 の該当行、evidence-registry に「確認者: Opus（Claude in Chrome）」の書き方を足す（SW:170 により PR＋PO 承認）。
 6. 7 日後に K4、30 日後に G1〜G4 を数えて ADR を Accepted に。
@@ -158,7 +158,7 @@ URL の当て方: 当てる前に形をそろえる（`https://` が無ければ
 | C. Opus 専用の部屋と、支払い権限の無い利用者 | **採る（部屋 A）**。PO 2026-11-22 の問答で決定。メンバーを追加できないサービスは部屋 P |
 | D. 部屋 P も「見るだけ」に限り、押す作業は全部 PO | 採らない。PO が選択肢2（決めた作業だけ「1」で押す）を選んだ |
 
-## 10. 外部事例（5W2H）
+## 10. 外部・過去事例の参照と我々への応用（5W2H）
 
 | # | 成否 | Who | When | Where | What | Why（原因） | How | How much（数） | 出典 |
 |---|---|---|---|---|---|---|---|---|---|
@@ -184,7 +184,7 @@ PO に返すもの:
 
 - Q3 （解決 2026-11-23）部屋 P で押すときの残る弱さを受け入れる。PO「1」（ideal-state.md）。
 
-- Q5 （V7 の結果から・**便1を止めない**・審査5回目 M-3）手元に試しの環境が無いため、例外のままでは PC の画面の確かめ（G1）にほぼ効かない。手元の試しの環境を別のテーマで作るか、ほかの道にするか。便1の例外は作り物の入力で T17・T18 を試せ、手元は API につながらない（recon R8-5）ので、答えに関係なく安全。答えごとに便1の後で変わる点: (a) 試しの環境を作る → 入口が 80・443 番や手元の API になるので、`tiers.json` の例外の一覧を変える PR と V7・V8 のやり直し・evaluator が手元で押せる前提（Q4 (1)）の確かめ直し／(b) 例外をやめる → `tiers.json` の例外の一覧を空にするだけ。試験の数は変わらない／(c) 決めずに置く → 今のまま。
+- Q5 （V7 の結果から・**便1を止めない**・審査5回目 M-3）手元に試しの環境が無いため、例外のままでは PC の画面の確かめ（G1）にほぼ効かない。手元の試しの環境を別のテーマで作るか、ほかの道にするか。便1の例外は作り物の入力で T17・T18 を試せ、手元は API につながらない（recon R8-5）ので、答えに関係なく安全。答えごとに便1の後で変わる点: (a) 試しの環境を作る → 入口が 80・443 番や手元の API になるので、「tiers.json」 の例外の一覧を変える PR と V7・V8 のやり直し・evaluator が手元で押せる前提（Q4 (1)）の確かめ直し／(b) 例外をやめる → 「tiers.json」 の例外の一覧を空にするだけ。試験の数は変わらない／(c) 決めずに置く → 今のまま。
 - Q4 （解決 2026-11-23・PO「1」= (1)。V7 は便1の設計合格の条件）（審査4回目 High-1）手元の試しの画面の例外を、V7 を確かめる前に入れるか。(1) V7 で「手元は外へ送らない」と確かめてから例外を入れる（evaluator も手元で押せる）／(2) 確かめる前は例外を Opus 本体だけにし、evaluator は手元でも読むだけ。「送信は区分2」は機械で守れない残る弱さとする。
 
 Opus が調べるもの（V5 と、Q4 で (1) なら V7 が便1の設計合格の条件。V8 は例外の番号を広げる条件。V1〜V4・V6 は便A の着手条件）:
@@ -202,7 +202,7 @@ Opus が調べるもの（V5 と、Q4 で (1) なら V7 が便1の設計合格�
 
 ## 維持の仕組み
 
-守り手: 人手で守る（見張り chrome_op_guard.py は便1で作るため、便0の時点では存在しない。便1で `docs/handoff/browser-operation-delegation/hooks/chrome_op_guard.py` に替える）
+守り手: 人手で守る（見張り chrome_op_guard.py は便1で作るため、便0の時点では存在しない。便1で 「docs/handoff/browser-operation-delegation/hooks/chrome_op_guard.py」 に替える）
 
 | 何を | 誰（どの仕組み）が | いつ | 外れたら |
 |---|---|---|---|
@@ -210,9 +210,9 @@ Opus が調べるもの（V5 と、Q4 で (1) なら V7 が便1の設計合格�
 | 区分3・2の止め | `chrome-op-guard`（PreToolUse・machine） | Chrome の道具を呼ぶたび | exit 2 で止まる。壊れても止まる側（§5） |
 | 区分3の画面が開かれていないか（事後） | PostToolUse の事後記録 ＋ 週次点検 | 毎週 | 1件でもあれば NG（`tabs_context_mcp` の JSON の `url` で数える・§5） |
 | 部屋 P の例外の前提（手元の画面に外のページを中に表示しない） | Opus の PR 審査 | `frontend/` を変える PR のたび | `git grep -n "<iframe" frontend/src` が 0 件でなければ例外を見直す |
-| 部屋 P の例外の前提（手元が外へ送らない・審査5回目 M-4） | Opus の PR 審査 | `frontend/vite.config.ts` に `proxy` が入る PR・`tiers.json` の例外の一覧が変わる PR・手元に `.env` を置く手順が入る PR のたび | V7 をやり直し、結果が出るまで例外の一覧を空にする |
-| 区分の表の正本 | `tiers.json` 1か所。変更は PR＋PO 承認（見張り役の設定のため同意票で通さない・ADR-1033:20） | 変更のたび | 試験 T1〜T15・T17〜T19 が CI で落ちる。T16 は apply の自己試験、T20 は取り付け後の Opus の1回の呼び出しで確かめる |
-| G2〜G4 の数え | `consent-audit.py --audit` の「画面操作」の節 | 毎週月曜 09:30（ADR-1033 の既存の予定） | 0 でなければ点検の出力が NG。【事実】`consent-audit.py` に Discord へ送る処理は無い（recon で検索 0 件）→ 知らせ方は便1のカードで既存の週次点検の通知（memory: weekly_check_notify の仕組み）につなぐ |
+| 部屋 P の例外の前提（手元が外へ送らない・審査5回目 M-4） | Opus の PR 審査 | `frontend/vite.config.ts` に `proxy` が入る PR・「tiers.json」 の例外の一覧が変わる PR・手元に `.env` を置く手順が入る PR のたび | V7 をやり直し、結果が出るまで例外の一覧を空にする |
+| 区分の表の正本 | 「tiers.json」 1か所。変更は PR＋PO 承認（見張り役の設定のため同意票で通さない・ADR-1033:20） | 変更のたび | 試験 T1〜T15・T17〜T19 が CI で落ちる。T16 は apply の自己試験、T20 は取り付け後の Opus の1回の呼び出しで確かめる |
+| G2〜G4 の数え | `consent-audit.py --audit` の「画面操作」の節 | 毎週月曜 09:30（ADR-1033 の既存の予定） | 0 でなければ点検の出力が NG。【事実】`scripts/dev/consent-audit.py` に Discord へ送る処理は無い（recon で検索 0 件）→ 知らせ方は便1のカードで既存の週次点検の通知（memory: weekly_check_notify の仕組み）につなぐ |
 | 見張りの取り付けが外れていないか | apply の自己試験 T16 ＋ 週次点検で settings.json の matcher の有無を数える | 毎週 | 外れていれば点検が NG |
 | 確かめの記録 | evidence-registry の「確認者」欄 | 確かめのたび | G1 の数え（30 日目） |
 
@@ -224,7 +224,7 @@ Opus が調べるもの（V5 と、Q4 で (1) なら V7 が便1の設計合格�
 |---|---|---|---|
 | A1 | High | 区分1のページの中のリンクを押すと、`navigate` を通らずに区分3のページ（請求の画面等）へ移れる。PreToolUse の入力に今のタブの URL は無い。クリックの判定は AI 自身が書く `action_summary` 頼み | **作り方の選択を PO に返す**（§9 代替案 C を区分3の本当の止め方にするか） |
 | A2 | High | 見張りは tenant を見分けられない。【事実】自社アプリの URL に tenant は入らない（`git grep` で route に tenant の区切りが無い） | 本番アプリで押す・打つ操作は区分2にする方向（A1 の答えの後に直す） |
-| A3 | High | evaluator（サブエージェント）は consent_check で区分2を通せない（`consent_check.py:318`〜`:319` の `agent_id` の判定） | evaluator は区分1だけと明記（A1 の後にまとめて直す） |
+| A3 | High | evaluator（サブエージェント）は consent_check で区分2を通せない（`docs/handoff/conversation-consent/hooks/consent_check.py:318`〜`:319` の `agent_id` の判定） | evaluator は区分1だけと明記（A1 の後にまとめて直す） |
 | A4 | High | `navigate` の `back`・`forward` に URL の判定が効かない／`action_summary` が無いときの扱いが無い | 止める側に倒す。試験を足す |
 | A5 | High | 文の書き換えの時が ADR（Proposed の後）と design §8（Accepted の後）で食い違う | Proposed の後に揃える |
 | A6 | High | ADR の索引が「Accepted」と出た（状態の欄の括弧書きを読み違えた） | **直した**（状態の欄を `Draft` だけに） |
@@ -238,7 +238,7 @@ Opus が調べるもの（V5 と、Q4 で (1) なら V7 が便1の設計合格�
 | # | 手当て |
 |---|---|
 | A1 | §4-1 部屋 A（サービスが断る）と部屋 P（読む以外は1操作ずつ同意）に分けた。PO 決定 |
-| A2 | 自社アプリは部屋 A の tenant_001 だけの利用者（`models.py:26`）。作れるまで部屋 P |
+| A2 | 自社アプリは部屋 A の tenant_001 だけの利用者（`backend/app/models.py:26`）。作れるまで部屋 P |
 | A3 | evaluator は区分1だけ（§4-2・T14） |
 | A4 | `action_summary` が無い押す操作は止める。部屋 P の back/forward は区分2（T11・T12） |
 | A5 | 文の書き換えは ADR が Proposed の後の便2に揃えた（§8 の5） |
@@ -274,7 +274,7 @@ Opus が調べるもの（V5 と、Q4 で (1) なら V7 が便1の設計合格�
 | M-c | 打つ文字が `cmd_head` に残る・改行と `$` が通らない | 打つ文字は長さと sha256 の頭8文字だけを1行に入れる形にした。中身は同意票の説明の文に書く |
 | M-d | V5 が駄目だった時の手・一覧を誰が決めるか | V5 の行に代わりの手と「カードを出さない」を書いた。一覧の決め方は §8 便1に書いた |
 | L-a | kgi の「便0.5」 | 「便A」に直した |
-| L-b | CI の対象パスに hooks が無い | 便1に `agent-hooks-test.yml` の対象パスの追加を書いた |
+| L-b | CI の対象パスに hooks が無い | 便1に `.github/workflows/agent-hooks-test.yml` の対象パスの追加を書いた |
 | L-c | T4 の「両方の部屋」 | 外した |
 | L-d | G3 は作りの上で必ず一致 | kgi に「見張りが動いている確かめ」と書き、合格の意味を絞った |
 | L-e | `browser_batch` の区分2・`gif_creator` | 部屋 P では区分2が混じれば止める。`gif_creator` は区分2 |
@@ -289,7 +289,7 @@ Opus が調べるもの（V5 と、Q4 で (1) なら V7 が便1の設計合格�
 | M-2 | 複数のセッション・`tabId` の無い呼び出し | 鍵をセッション番号＋`tabId` に。`tabId` が無ければ確かめにしない。置き場とロックを書いた |
 | M-3 | 手元の住所が試しの画面と同じとは限らない・偽の形 | 5173 番の完全一致だけ。V8。T18 |
 | M-4 | 中に外のページを表示する場合 | `<iframe` 0 件を事実として書き、維持の表に見直しを足した |
-| M-5 | 同意票の1行を前もって作れるか | 台本 `chrome-consent-line.py` を便1に入れ、T19 |
+| M-5 | 同意票の1行を前もって作れるか | 台本 「chrome-consent-line.py」 を便1に入れ、T19 |
 | Low-1〜6 | 部屋 A の列の残り・状態の行・G5 の言葉・G3 の例・「プラン変更」・便1の範囲 | §5 の前に注記、状態の行・kgi・便1 を直した |
 
 ### 12-6. 審査5回目（2026-11-23・reviewer〔opus〕・同一 AI）: REVISE と手当て

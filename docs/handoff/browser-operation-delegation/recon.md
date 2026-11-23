@@ -39,13 +39,13 @@
 | R3-3 | `/Users/tanizawashingo/.claude/scripts/local-agent-guard/guard.py:100`〜`:105` | 手元で起動してよい担当は reviewer(opus) と evaluator(opus/fable)。evaluator は Chrome を使える |
 | R3-4 | `/Users/tanizawashingo/worktrees/salesanchor/release-browser-operation-delegation/docs/handoff/conversation-consent/hooks/consent_check.py:416` | `check(hook_input, command, now, home=None)` は任意の文字列 `command` を同意票の `操作N:` と完全一致で照らす。`:461`〜`:467` の `main()` は Bash の `tool_input.command` を渡している |
 | R3-5 | `/Users/tanizawashingo/worktrees/salesanchor/release-browser-operation-delegation/scripts/dev/consent-audit.py:11` | 週次点検 `--audit [--permissions]`。ADR-1033 の維持の仕組みで毎週月曜 09:30 に動く |
-| R3-6 | `/Users/tanizawashingo/worktrees/salesanchor/release-browser-operation-delegation/docs/handoff/conversation-consent/po-apply-consent.sh` | 見張りを PO の `!` 実行で取り付け、試験が不合格なら自動で戻す型（`po-rollback-consent.sh` と対） |
+| R3-6 | `/Users/tanizawashingo/worktrees/salesanchor/release-browser-operation-delegation/docs/handoff/conversation-consent/po-apply-consent.sh` | 見張りを PO の `!` 実行で取り付け、試験が不合格なら自動で戻す型（`docs/handoff/conversation-consent/po-rollback-consent.sh` と対） |
 
 ## R4. 今ない仕組み（穴）
 
-- R4-1【事実】`/Users/tanizawashingo/.claude/settings.json` の hooks に、`mcp__claude-in-chrome__` に当たる matcher は無い。全体に当たる PreToolUse は `agent-start-hook.sh`（セッション開始の記録だけ。`/Users/tanizawashingo/.claude/scripts/agent-start-hook.sh:1`〜`:30`）。Bash 向けの `local-agent-guard`（`settings.json:570`）は Agent と Bash だけ。
+- R4-1【事実】`/Users/tanizawashingo/.claude/settings.json` の hooks に、`mcp__claude-in-chrome__` に当たる matcher は無い。全体に当たる PreToolUse は 「agent-start-hook.sh」（セッション開始の記録だけ。`/Users/tanizawashingo/.claude/scripts/agent-start-hook.sh:1`〜`:30`）。Bash 向けの `local-agent-guard`（`.claude/settings.json:570`）は Agent と Bash だけ。
 - R4-2【事実】作業場所の `.claude/settings.json` の PreToolUse の matcher は `SubagentHandback`・`Bash`・`Write|Edit`・`mcp__github__.*` の4つで、Chrome は無い。
-- R4-3【事実】`permissions.allow/ask/deny` に chrome の語を含む行は、`~/.claude/settings.json`・作業場所の `.claude/settings.json` のどちらにも 0 行。
+- R4-3【事実】`permissions.allow/ask/deny` に chrome の語を含む行は、「~/.claude/settings.json」・作業場所の `.claude/settings.json` のどちらにも 0 行。
 - → 今は、Chrome の操作を機械で止める・数える仕組みが 0 個。止めているのは R2 の文の決まりと、毎回 PO に聞く手順だけ。
 
 ## R5. 社内の実績（AI が Chrome で確かめた記録）
@@ -53,7 +53,7 @@
 | # | 場所 | 事実 |
 |---|---|---|
 | R5-1 | `/Users/tanizawashingo/worktrees/salesanchor/release-browser-operation-delegation/docs/handoff/secretary-voice/results.md:4` `:15` `:16` `:74` | 2026-11-19 01 時台、PO の「1」で Opus が PO の Chrome を操作して測った。K4 短い 10/10（最長 0.839 秒）・長い 10/10（最長 0.697 秒）、K5 字数一致 30/30・494 字=494 字。スマホ側は PO が操作 |
-| R5-2 | `/Users/tanizawashingo/worktrees/salesanchor/release-browser-operation-delegation/docs/handoff/status-ssot-contact-company/recon.md:85` と `design.md:203` | 2026-11-11 AI が Chrome で本番の画面の選択肢を目視。設計の受け入れ基準 K4 の検証方法が「Chrome で開いて数える（保存はしない）」 |
+| R5-2 | `/Users/tanizawashingo/worktrees/salesanchor/release-browser-operation-delegation/docs/handoff/status-ssot-contact-company/recon.md:85` と `docs/handoff/status-ssot-contact-company/design.md:203` | 2026-11-11 AI が Chrome で本番の画面の選択肢を目視。設計の受け入れ基準 K4 の検証方法が「Chrome で開いて数える（保存はしない）」 |
 | R5-3 | `/Users/tanizawashingo/worktrees/salesanchor/release-browser-operation-delegation/docs/ai-agents/evidence-registry.md` | 「Opus…Chrome」「Claude in Chrome」の語の記録は 0 件（3,541 行を検索）。確かめの記録のひな形（`:7`〜`:20`）に「誰が確かめたか」の欄は無い。「確認者」の行は全体で 1 件だけ（`:1251` `- 確認者: Shingo`） |
 | R5-4 | PO 発言（ideal-state.md） | Meta の申請前の必須項目、Google Workspace のドメイン設定と Gmail の送受信の確かめを Opus が Chrome でやり切った。【未確認】リポジトリ・メモリにこの2件の作業記録は見つからない（Workspace は 0 件、Meta は「Chrome 専用プロファイル作成」の未完了の1行のみ）。PO の言葉を正本とする |
 
