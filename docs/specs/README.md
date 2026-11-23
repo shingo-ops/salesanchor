@@ -8,6 +8,7 @@
 
 | 領域 | 設計仕様書（あるべき姿） | 状態 | いつ読むか |
 |---|---|---|---|
+| ブラウザ操作の Opus への委任（browser-operation-delegation。PO のログイン済みの Chrome で Opus が画面の確かめと管理画面の設定をする。支払い等は PO 本人だけ・区分は見張りで機械で守る） | [browser-operation-delegation/README.md](browser-operation-delegation/README.md) | あるべき姿・KGI草案・recon・design草案 2026-11-22（PO 承認待ち） | Claude in Chrome で画面を操作する前・区分の表を変える前 |
 | 本番サーバーでの組み立てをやめる（build-on-github。5 つの箱を GitHub で組み立てて組織 GEN-RYU-System の非公開の倉庫にしまい、本番は指紋 sha256 で受け取る） | [build-on-github/README.md](build-on-github/README.md) | KGI K1〜K8 PO 承認 2026-11-04・recon・design（審査 APPROVE）・便1 実装済み（作り直し card-bin1-r3・未合流） | 本番への入れ替え（deploy.yml）・箱の組み立て・倉庫を変える前 |
 | AI 保守運用 24 時間化（ai-ops-247。報知器の感度・精度、応急処置、Mac に頼らない AI 起動〔routines〕、障害記録と月次成績表。discord-ops-intake は Mac 依存のため本テーマの予備 C） | [ai-ops-247/README.md](ai-ops-247/README.md) | あるべき姿・KGI 6件 PO承認 2026-10-13・recon・design・ADR-1012 草案・実装未着手 | 監視・障害対応・AI の自動起動を変える前 |
 | まとめ売り（N単位セット）の読み取り（bundle-sale。「40パックセット/¥24,000 残り15」を全商品で 商品名＋40パックセット／中身の単位／まとめ1つの値段／まとめの数 で保存・表示。ADR-1021 便2 の置き換え） | [bundle-sale/README.md](bundle-sale/README.md) | あるべき姿 2026-10-17・KGI K1〜K6 PO 合意 2026-10-17・recon・design（審査 APPROVE）・ADR-1027 Proposed・便1 カード作成・実装未着手 | まとめ売り（セット）の読み取り・保存・表示を変える前 |
