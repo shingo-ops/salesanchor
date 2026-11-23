@@ -91,7 +91,7 @@ LIVE 用の鍵（開始・終了・つなぎ中・話してください 等）�
 
 - **WebSocket・ストリーム・音声の入力の口は `backend/app/routers/assistant.py` に無い**（口は上の表で全部）。`speech` は 1 文ずつの一括取得（`frontend/src/features/secretary/useSecretaryVoice.ts:62-105`）。
 - 順番（`:1-9` の冒頭の説明）: ①守り・担当表と決まりを読む・頼みの大きさを測る・Meet 可否を読む ②`db.commit()`（`:~326`）③容器を呼ぶ ④会社の文脈を張り直す ⑤名前探し ⑥返す。AI を待つ間 DB の取引を開けない。
-- 担当を読む: `get_ai_assignment(db, "secretary_intent")`（`assistant.py:~282`・`services/ai_assignment.py:10-15` の SQL は `ai_job_assignments` JOIN `ai_job_choices`）。行が無いと `AiAssignmentMissing`→`503 not_ready`。
+- 担当を読む: `get_ai_assignment(db, "secretary_intent")`（`assistant.py:~282`・`backend/app/services/ai_assignment.py:16-19` の SQL は `ai_job_assignments` JOIN `ai_job_choices`）。行が無いと `AiAssignmentMissing`→`503 not_ready`。
 
 ### 2-2 秘書の頼みを AI の容器へ送る道（ADR-1058）
 
