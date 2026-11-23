@@ -149,3 +149,24 @@ agent-hooks-test.yml の paths に `'docs/handoff/browser-operation-delegation/*
 - 手元（クラウド）で `python3 -I -B scripts/dev/chrome-guard-tests.py ...` が fail=0、`python3 -I -B scripts/dev/consent-unit-tests.py docs/handoff/conversation-consent/hooks <tmp> <repo>` が FAIL 無し。生の出力の最後の 30 行を返事に貼る。
 - commit は Write でメッセージのファイルを作って `git commit -F`。push は `git push -u origin release/chrome-op-guard` を単独で。PR は作らない（Opus が作る）。
 - 返事の最後の行は `DONE` か `BLOCKED: <理由>` か `NEEDS_DECISION: <問い>`。設計と食い違う・分からないことは推測で埋めずに止める。
+
+## 11. 差し戻しの直し（2026-11-23 審査役 REQUEST_CHANGES on f351f228f の5点＋1点。§3〜§7 より優先）
+
+触るファイル: §0 の 1・4・7・9 だけ（chrome_op_guard.py・chrome_common.py・po-apply-chrome-guard.sh・chrome-guard-tests.py）。tiers.json・設計・ADR は触らない。
+
+1. **batch の項目の読み方（§3-4 の置き換え）**: 道具の定義（Opus が 2026-11-23 に読んだ。各項目は `{name, input}`、両方 required）どおり、各項目は「鍵がちょうど `name` と `input` の2つ」「name は str」「input は dict」のときだけ読む。ほかの鍵（`tool`・`tool_name`・`tool_input`・`params`・`arguments`・`action` など）が1つでもある、またはどちらかが欠けた項目があれば batch 全体を止める（reason `bad_batch`）。name の頭に `mcp__claude-in-chrome__` が付いていれば外す。`"action" があれば computer とみなす` の決まりは消す。
+2. **印を書けないとき止める（§3-9 の置き換え）**: ページに効く操作を通す直前に「不明」の印を書けなかった（ロック待ち3秒を超えた・状態ファイルが読めない・書けない）ときは exit 2（reason `state_write_failed`、文「chrome-op-guard: 操作の後の覚えを残せないため止めました。~/.claude/logs/chrome-tab-state.json を確かめてください」）。同意票はその時点で使用済みになるが、それでよい（止める側に倒す）。
+3. **区分3の URL の整形を強くする（§3-4 navigate の整形の置き換え）**。parse_url で次をこの順に行う:
+   - (a) ホスト名: urlsplit の hostname に unquote を2回 → `unicodedata.normalize("NFKC", …)` → `。`(U+3002)・`．`(U+FF0E)・`｡`(U+FF61) を `.` に → 小文字 → 末尾の `.` を外す → ASCII 以外が残れば各ラベルを `encodings.idna`（`"idna"` の codec）で ASCII にする。失敗したら None（止める）。IPv6（`[`…`]`）以外で、結果に `a-z 0-9 . -` 以外の文字があれば None（止める）。
+   - (b) パス: unquote を2回 → `\` は既に `/` → 連続する `/` を1つにまとめる → RFC 3986 5.2.4 の remove_dot_segments で `.` と `..` をたたむ（根より上には出ない）。
+   - (c) tier3_match のパスの正規表現は大文字小文字を区別しない（`re.IGNORECASE`）。
+   - text は整形後の scheme・host・port・path で作る（今と同じ形）。local_exception の判定はこの整形後の値で今と同じ。
+4. **手元の例外の `key` を狭める（§3-6 に足す）**: 手元の例外で区分1に下げるのは、`key` のときは `text` を空白で分けた各語に `+` が無く、`cmd`・`ctrl`・`control`・`meta`・`super`・`alt`・`option`・`command`・`win` のどれでもなく（大小区別なし）、`modifiers` が無いか空のときだけ。それ以外の `key` は区分2のまま（同意が要る）。アドレス欄へ移る道（cmd+l など）を塞ぐため。
+5. **取り付けの台本（§7）**: po-apply-chrome-guard.sh:166-169 の「許可券が現れた」場合、戻しの台本の終了コードを見て、0 以外なら `ROLLBACK FAILED: 許可券があるため戻せません。許可券が消えてから bash <戻しの台本> <バックアップ> を実行してください` を出して exit 3。0 なら今どおり exit 1。
+6. **試験（§6 に足す。既存の試験は残す）**:
+   - T7・T17 の batch の試験を全部 `{"name": …, "input": …}` の形に直す。
+   - T7 に足す: `name` と `tool` の両方を持つ項目（審査役の例 `{"name":"computer","tool":"read_page","input":{"action":"left_click",…}}`）が止まる／`input` が無い項目が止まる／本物の形の `{"name":"computer","input":{"action":"left_click",…,"action_summary":"x","tabId":1}}` が `batch_has_tier2` で止まる／`{"name":"mcp__claude-in-chrome__read_page","input":{}}` と `{"name":"computer","input":{"action":"screenshot"}}` の batch は通る。
+   - T1 に足す（すべて止まる）: `https://github.com/a/../settings/tokens`・`https://dash.cloudflare.com/profile/x/%2e%2e/api-tokens`・`https://pay%2Egoogle.com/`・`https://ｐａｙ.google.com/`・`https://pay。google.com/`・`https://github.com/Settings/tokens`・`https://github.com//settings/tokens`。通る: `https://example.com/a/../b`・`https://github.com/shingo-ops/salesanchor`。
+   - T17 に足す: 手元の確かめ済みのタブで `key` `text:"Enter"` は通る（区分1）／`text:"cmd+l"`・`text:"ctrl+l"`・`text:"Meta"`・`modifiers:"cmd"` 付きの `key` は同意なしで止まる。
+   - 新しい T21: 状態ファイルのロック（`<偽HOME>/.claude/logs/chrome-tab-state.lock` の dir を今の時刻で作っておく）がある間、区分1の navigate（`https://example.com/`）が reason `state_write_failed` で止まる。ロックを外すと通る。
+7. 終わりの条件は §10 と同じ（chrome-guard-tests fail=0・consent-unit-tests FAIL 無し・生の出力の最後の30行）。commit は1つ、push は `git push origin release/chrome-op-guard` を単独で。
