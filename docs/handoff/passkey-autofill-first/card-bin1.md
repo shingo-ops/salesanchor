@@ -108,9 +108,10 @@ LoginPage.test.tsx（既存の vi.mock に新しい関数を足す）:
 
 クラウドで行う。手順1 で `new-worktree.sh` が作った作業場所のパス（以下「作業場所」）を報告に書く。`cd 取り出した場所` はクラウドがこのリポジトリを取り出した最上位の場所に、`cd 作業場所` はそのパスに読み替える。1手順1命令。
 
-手順0 作業前の点検
-    cd 取り出した場所 && ./scripts/dev/executor-preflight.sh || exit 1
-    期待する出力: 0 で終わる。× なら停止して BLOCKED:（生出力の全文）。
+手順0 作業前の点検（クラウドでは流さない）
+    executor-preflight.sh はクラウドでは流さない。理由: クラウドには gh の認証が無く api.github.com にも届かないため、必ず失敗する（2026-11-24 1回目の実行で実測・exit 1）。この点検が守る「PR の名義（shingo-cc）」は、PR を作る Opus が手元で preflight を流して確かめる。担当は PR を作らない。
+    代わりに: cd 取り出した場所 && git rev-parse origin/main
+    期待する出力: 40桁の番号が出る。
 
 手順1 枝を作る（起点は origin/main）
     cd 取り出した場所 && git fetch origin
