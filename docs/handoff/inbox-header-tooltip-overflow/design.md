@@ -71,7 +71,7 @@
 **(2) 新しい画面の自動試験 `frontend/tests-e2e/visual-language/inbox-page-no-vertical-overflow.spec.ts`**
 
 - 置き場所の理由: GitHub の CI で今も走る画面の自動試験は `visual-language/` だけ（`.github/workflows/e2e.yml:170-175`。全体の E2E は `:294` で止めてある）。
-- 3つの幅（390・768・1280）で流れる。スマホ（390px。`inbox-helpers.ts` の `MOBILE_MAX_PX` 767 以下）はヘッダーのボタンを出さない（`InboxPage.tsx:83`）ので `test.skip` にする。
+- 3つの幅（390・768・1280）で流れる。スマホ（390px。`frontend/tests-e2e/visual-language/inbox-helpers.ts` の `MOBILE_MAX_PX` 767 以下）はヘッダーのボタンを出さない（`frontend/src/pages/inbox/InboxPage.tsx:83`）ので `test.skip` にする。
 - 中身:
 
 ```ts
@@ -114,7 +114,7 @@ test.describe("受信箱のページが縦にはみ出さない", () => {
 
 - `frontend/src/components.css:437-495`（吹き出しの共通の作り）: 変えない。`[data-tooltip]` 全体に `position: relative` を付ける案は採らない（§4 案B）。
 - `frontend/src/pages/inbox/InboxPage.tsx`・`frontend/src/components/HeaderButton.tsx`・`Button`: 変えない。
-- 絞り込みの開閉（`InboxConversationList.tsx:82`・`InboxConversationListMobile.tsx:89`）とカルテを閉じる（`InboxKartePanel.tsx:174`）の吹き出し: PC でははみ出しを作っていない（docs/handoff/inbox-header-tooltip-overflow/recon.md §3）。スマホ幅は Android 側の担当なので触らない。
+- 絞り込みの開閉（`frontend/src/pages/inbox/InboxConversationList.tsx:82`・`frontend/src/pages/inbox/InboxConversationListMobile.tsx:89`）とカルテを閉じる（`frontend/src/pages/inbox/InboxKartePanel.tsx:174`）の吹き出し: PC でははみ出しを作っていない（docs/handoff/inbox-header-tooltip-overflow/recon.md §3）。スマホ幅は Android 側の担当なので触らない。
 - `frontend/playwright.config.ts`（`SELF_WIDTH_SPECS` に入れない。この試験は project の幅で動かすため）・`.github/workflows/`: 変えない。
 - backend・migrations・scripts・ADR: 変えない。データと配線は変わらない。
 
@@ -124,7 +124,7 @@ test.describe("受信箱のページが縦にはみ出さない", () => {
 |---|---|---|
 | B | `[data-tooltip]` 全体に `position: relative` | `position: fixed`・`absolute` で置いている吹き出し付きの部品（`components.css:439` のコメントの `.inbox-settings-btn` 等）を、書く順番しだいで壊す。影響の範囲が全画面に広がる |
 | C | `InboxPage.css` に受信箱だけの指定を足す | 共通の箱の決まりがページごとに散らばる（SSOT に反する）。他のページで同じ失敗が起きる |
-| D | `HeaderButton` の部品の中で style を付ける | 受信箱は `HeaderButton` を使わず `Button` と `icon-btn` を直接並べている（`InboxPage.tsx:87-113`）ので効かない |
+| D | `HeaderButton` の部品の中で style を付ける | 受信箱は `HeaderButton` を使わず `Button` と `icon-btn` を直接並べている（`frontend/src/pages/inbox/InboxPage.tsx:87-113`）ので効かない |
 | E | 吹き出しの見えないときの場所を消す（`display:none`） | 共通の作り（`:437-495`）を変えることになり、表示の切り替えの動き（`transition`）が無くなる |
 
 ## 5. 弊害・トレードオフと対処
@@ -133,7 +133,7 @@ test.describe("受信箱のページが縦にはみ出さない", () => {
 |---|---|
 | `relative` にすると、ボタンが新しい重なりの基準になり、吹き出しが会話欄の下に隠れるおそれ | docs/handoff/inbox-header-tooltip-overflow/recon.md §3-1 で本番の画面で試し、設定の吹き出しが会話欄の上に見えることを確認済み。実装後も本番で K2 を目で確かめる |
 | 他の5つのページの `.page-header-actions` にも当たる | その5つは `data-tooltip` を渡していない（docs/handoff/inbox-header-tooltip-overflow/recon.md §2-3）。`[data-tooltip]` が無い部品には当たらないので見た目は変わらない |
-| カルテの見本写真の検査（1280×900）が変わるか | 写真は `.inbox-right-panel` だけを撮る（`karte-visual-gate.spec.ts:395-404`）。ヘッダーは写らないので変わらない見込み。落ちたら実装カードの想定分岐で止める |
+| カルテの見本写真の検査（1280×900）が変わるか | 写真は `.inbox-right-panel` だけを撮る（`frontend/tests-e2e/karte-visual-gate.spec.ts:395-404`）。ヘッダーは写らないので変わらない見込み。落ちたら実装カードの想定分岐で止める |
 
 ## 6. 受け入れ基準と検証方法
 
@@ -145,11 +145,13 @@ test.describe("受信箱のページが縦にはみ出さない", () => {
 | K4 機械で止める | 実装担当が、直す前のコードで新しい試験が落ちること・直した後に通ることを、クラウドで流した生の出力で示す。PR の CI「画面検査」が緑 |
 | K5 生の数字なし・他の画面不変 | `npm run check:all` が緑。差分が §3-3 の2ファイル（と書類）だけであることを審査役が確かめる |
 
-## 7. 外部事例
+## 7. 外部・過去事例の参照と我々への応用
 
 - CSS の仕様（MDN「position: absolute」）: 位置の基準は「position が static でない一番近い祖先」、無ければ最初の箱（ページ全体）。本件の原因と直し方はこの仕様そのものなので、他社の導入事例は要らない。
+- 過去事例: 前の件（docs/handoff/inbox-pc-column-width/recon.md §3-1）で同じはみ出し 31px を観測し、対象外として残していた。本件で直す。
 
 ## 8. 維持の仕組み
 
-- 新しい画面の自動試験（§3-3 (2)）が、PR のたびに GitHub の CI（画面検査）で、受信箱のページの高さと吹き出しの位置の基準を確かめる。
-- `components.css` のヘッダー右端の箱の指定にコメントで理由と本設計書を書き残す。
+- 守り手: frontend/tests-e2e/visual-language/inbox-page-no-vertical-overflow.spec.ts
+- 対象: 受信箱のヘッダー右端の吹き出し付きボタンが位置の基準を失い、ページが縦にはみ出すこと。PR のたびに GitHub の CI（画面検査 768px・1280px）で確かめる。
+- 関所なしの部分: 受信箱以外のページで、ヘッダーの箱の外に吹き出し付きの部品を置いた場合。共通の CSS の注意書き（`frontend/src/components.css:437-441`）と、本件で足すコメントで人手で守る。

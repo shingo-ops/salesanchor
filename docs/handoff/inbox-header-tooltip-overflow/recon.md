@@ -42,11 +42,11 @@
 |---|---|---|
 | `frontend/src/components/DesktopShell.tsx:416`・`:444` | 親に position あり | なし（下の §3 の実測） |
 | `frontend/src/pages/inbox/InboxMessageThread.tsx:471` | relative | なし |
-| `frontend/src/pages/inbox/InboxConversationList.tsx:82`・`InboxConversationListMobile.tsx:89`（絞り込みの開閉） | static | PC ではなし（§3） |
+| `frontend/src/pages/inbox/InboxConversationList.tsx:82`・`frontend/src/pages/inbox/InboxConversationListMobile.tsx:89`（絞り込みの開閉） | static | PC ではなし（§3） |
 | `frontend/src/pages/inbox/InboxKartePanel.tsx:174`（カルテを閉じる） | static | PC ではなし（§3） |
 | `frontend/src/pages/inbox/InboxPage.tsx:92`・`:101`・`:110`（本件） | static | **あり** |
 
-`.page-header-actions` を使う画面は他に5つある（`CompaniesPage.tsx:174`・`CompanyDetailPage.tsx:99`・`ContactsPage.tsx:241`・`DashboardPage.tsx:384`・`DesignSystemPage.tsx:412-452`）。この中で `data-tooltip` を渡すのは受信箱だけ（上の grep）。
+`.page-header-actions` を使う画面は他に5つある（`frontend/src/pages/companies/CompaniesPage.tsx:174`・`frontend/src/pages/company-detail/CompanyDetailPage.tsx:99`・`frontend/src/pages/contacts/ContactsPage.tsx:241`・`frontend/src/pages/dashboard/DashboardPage.tsx:384`・`frontend/src/pages/design-system/DesignSystemPage.tsx:412-452`）。この中で `data-tooltip` を渡すのは受信箱だけ（上の grep）。
 
 ## 3. 本番での実測（2026-11-23・https://app.salesanchor.jp/lead-chat・窓 1626×1392・Chrome）
 
