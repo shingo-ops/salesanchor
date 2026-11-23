@@ -57,7 +57,7 @@ def classify(t, ti, tiers):
         if action in tiers["computer_actions"]["tier1"]:
             return {"tier": 1, "reason": "computer_read"}
         if action in tiers["computer_actions"]["tier2"]:
-            return {"tier": 2, "reason": "computer_act", "lowerable": True}
+            return {"tier": 2, "reason": "computer_act", "lowerable": action != "key" or key_is_plain(ti)}
         return {"tier": "block", "reason": "unknown_action"}
     if t in tools["tier2"]:
         return {"tier": 2, "reason": "tier2_tool", "lowerable": t == "form_input"}
@@ -65,34 +65,39 @@ def classify(t, ti, tiers):
 
 
 def batch_items(ti):
-    """browser_batch の actions[] を [(道具名, 入力)] にする。読めなければ None（止める）。"""
+    """browser_batch の actions[] を [(道具名, 入力)] にする。
+    各項目は道具の定義どおり、鍵がちょうど name（str）と input（dict）の2つのときだけ読む。
+    それ以外の形が1つでもあれば None（batch 全体を止める）。"""
     acts = ti.get("actions")
     if not isinstance(acts, list) or not acts:
         return None
     out = []
     for a in acts:
-        if not isinstance(a, dict):
+        if not isinstance(a, dict) or set(a.keys()) != {"name", "input"}:
             return None
-        name = None
-        for k in ("tool", "name", "tool_name"):
-            if isinstance(a.get(k), str):
-                name = a[k]
-                break
-        inp = None
-        for k in ("input", "tool_input", "params", "arguments"):
-            if isinstance(a.get(k), dict):
-                inp = a[k]
-                break
-        if name is None and "action" in a:
-            name = "computer"
-        if name is None:
+        name, inp = a["name"], a["input"]
+        if not isinstance(name, str) or not isinstance(inp, dict):
             return None
         if name.startswith(cm.PREFIX):
             name = name[len(cm.PREFIX):]
-        if inp is None:
-            inp = {k: v for k, v in a.items() if k not in ("tool", "name", "tool_name")}
         out.append((name, inp))
     return out
+
+
+_KEY_MODS = {"cmd", "ctrl", "control", "meta", "super", "alt", "option", "command", "win"}
+
+
+def key_is_plain(ti):
+    """手元の例外で区分1に下げてよい key か（アドレス欄へ移る道を塞ぐ）。"""
+    text = ti.get("text")
+    if not isinstance(text, str) or not text.strip():
+        return False
+    if ti.get("modifiers") not in (None, ""):
+        return False
+    for w in text.split():
+        if "+" in w or w.lower() in _KEY_MODS:
+            return False
+    return True
 
 
 def page_affecting_key(t, ti):
@@ -236,8 +241,9 @@ def _decide(hi, now, consent_home):
             with cm.State() as st:
                 st.mark_unknown(sid, tab_id)
         except Exception:
-            # 通した後に覚えを残せなかった。次の区分2を確実に止めるため、ここでは止められない代わりに記録に残す
-            rec["state_write_failed"] = True
+            # 「不明」の印を書けないなら通さない（止める側に倒す。同意票は使用済みになるが、それでよい）
+            return done(2, "chrome-op-guard: 操作の後の覚えを残せないため止めました。~/.claude/logs/chrome-tab-state.json を確かめてください",
+                        2, "block", "state_write_failed")
     return done(0, "", tier, decision, reason)
 
 

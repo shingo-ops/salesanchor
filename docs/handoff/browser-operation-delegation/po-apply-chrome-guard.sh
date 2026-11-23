@@ -165,7 +165,10 @@ chmod "$smode" "$SETTINGS"
 # 4. T16
 if ls "$HOME/.claude/permits"/danger-permit-*.json >/dev/null 2>&1; then
   echo "danger-permit-*.json が現れた。自己試験を中止して戻す。"
-  bash "$ROLLBACK" "$BK"
+  if ! bash "$ROLLBACK" "$BK"; then
+    echo "ROLLBACK FAILED: 許可券があるため戻せません。許可券が消えてから bash $ROLLBACK $BK を実行してください"
+    exit 3
+  fi
   exit 1
 fi
 echo "[4] T16（本物の置き場に対する自己試験）"

@@ -180,13 +180,25 @@ for label, url in [("そのまま", "https://dash.cloudflare.com/abc/billing"),
                    ("末尾のドット", "https://dash.cloudflare.com./abc/billing"),
                    ("ユーザー情報つき", "https://x@dash.cloudflare.com/abc/billing"),
                    ("*. の型（paypal のサブドメイン）", "https://www.paypal.com/myaccount"),
-                   ("GitHub の鍵", "https://github.com/settings/tokens")]:
+                   ("GitHub の鍵", "https://github.com/settings/tokens"),
+                   ("../ で戻る（github）", "https://github.com/a/../settings/tokens"),
+                   ("%2e%2e で戻る（cloudflare）", "https://dash.cloudflare.com/profile/x/%2e%2e/api-tokens"),
+                   ("ホストの % 書き換え", "https://pay%2Egoogle.com/"),
+                   ("ホストの全角", "https://ｐａｙ.google.com/"),
+                   ("ホストの句点", "https://pay。google.com/"),
+                   ("パスの大文字", "https://github.com/Settings/tokens"),
+                   ("パスの // 連続", "https://github.com//settings/tokens")]:
     h = newhome()
     code, msg = call(h, hook("navigate", {"url": url, "tabId": 1}, h))
     rep("T1", "navigate 区分3: %s" % label, code == 2 and "区分3" in msg, "code=%s msg=%s" % (code, msg))
 h = newhome()
 code, _ = call(h, hook("navigate", {"url": "https://example.com/", "tabId": 1}, h))
 rep("T1", "navigate 普通の URL は通る（対照）", code == 0)
+for label, url in [("../ をたたむと普通の道", "https://example.com/a/../b"),
+                   ("GitHub の普通のリポジトリ", "https://github.com/shingo-ops/salesanchor")]:
+    h = newhome()
+    code, msg = call(h, hook("navigate", {"url": url, "tabId": 1}, h))
+    rep("T1", "navigate 通る: %s" % label, code == 0, "code=%s msg=%s" % (code, msg))
 
 # T2: 押す操作は同意票なしで止まる
 h = newhome()
@@ -260,21 +272,38 @@ for label, secret in [("sk-ant-", "sk-ant-" + "a" * 20), ("ghp_", "ghp_" + "b" *
 
 # T7: browser_batch
 h = newhome()
-b = {"actions": [{"tool": "read_page", "input": {"tabId": 1}},
-                 {"tool": "navigate", "input": {"url": "https://dash.cloudflare.com/x/billing", "tabId": 1}}]}
+b = {"actions": [{"name": "read_page", "input": {"tabId": 1}},
+                 {"name": "navigate", "input": {"url": "https://dash.cloudflare.com/x/billing", "tabId": 1}}]}
 code, _ = call(h, hook("browser_batch", b, h))
 rep("T7", "2つ目に区分3が入ると batch 全体が止まる", code == 2 and lines_of(h)[-1]["tier"] == 3)
 h = newhome()
-b = {"actions": [{"tool": "read_page", "input": {"tabId": 1}}, {"tool": "computer", "input": click(1)}]}
+b = {"actions": [{"name": "read_page", "input": {"tabId": 1}}, {"name": "computer", "input": click(1)}]}
 code, _ = call(h, hook("browser_batch", b, h))
 rep("T7", "区分2が1つでも混じると batch 全体が止まる", code == 2 and lines_of(h)[-1]["reason"] == "batch_has_tier2")
 h = newhome()
-b = {"actions": [{"tool": "read_page", "input": {"tabId": 1}}, {"tool": "computer", "input": {"action": "screenshot", "tabId": 1}}]}
+b = {"actions": [{"name": "read_page", "input": {"tabId": 1}}, {"name": "computer", "input": {"action": "screenshot", "tabId": 1}}]}
 code, _ = call(h, hook("browser_batch", b, h))
 rep("T7", "全部区分1の batch は通る", code == 0)
 h = newhome()
 code, _ = call(h, hook("browser_batch", {"actions": "ばらばら"}, h))
 rep("T7", "読めない batch は止まる", code == 2)
+
+h = newhome()
+b = {"actions": [{"name": "computer", "tool": "read_page", "input": {"action": "left_click", "coordinate": [1, 1], "action_summary": "x", "tabId": 1}}]}
+code, _ = call(h, hook("browser_batch", b, h))
+rep("T7", "name と tool の両方を持つ項目は batch 全体が止まる", code == 2 and lines_of(h)[-1]["reason"] == "bad_batch")
+h = newhome()
+b = {"actions": [{"name": "read_page"}]}
+code, _ = call(h, hook("browser_batch", b, h))
+rep("T7", "input が無い項目は batch 全体が止まる", code == 2 and lines_of(h)[-1]["reason"] == "bad_batch")
+h = newhome()
+b = {"actions": [{"name": "computer", "input": {"action": "left_click", "coordinate": [1, 1], "action_summary": "x", "tabId": 1}}]}
+code, _ = call(h, hook("browser_batch", b, h))
+rep("T7", "本物の形の押す操作は batch_has_tier2 で止まる", code == 2 and lines_of(h)[-1]["reason"] == "batch_has_tier2")
+h = newhome()
+b = {"actions": [{"name": PFX + "read_page", "input": {}}, {"name": "computer", "input": {"action": "screenshot"}}]}
+code, _ = call(h, hook("browser_batch", b, h))
+rep("T7", "頭つきの名前の read_page と screenshot だけの batch は通る", code == 0)
 
 # T8: javascript_tool
 h = newhome()
@@ -409,9 +438,19 @@ code, _ = call(h, hook("javascript_tool", {"text": "1+1", "tabId": 7}, h))
 rep("T17", "javascript_tool は手元のタブでも区分2のまま（同意票なしで止まる）", code == 2)
 code, _ = call(h, hook("file_upload", {"paths": ["/x"], "ref": "r", "tabId": 7}, h))
 rep("T17", "file_upload も手元のタブで区分2のまま", code == 2)
-b = {"actions": [{"tool": "computer", "input": click(7)}, {"tool": "computer", "input": click(7)}]}
+b = {"actions": [{"name": "computer", "input": click(7)}, {"name": "computer", "input": click(7)}]}
 code, _ = call(h, hook("browser_batch", b, h))
 rep("T17", "手元のタブの browser_batch に押す操作が2つ並ぶと全体が止まる", code == 2)
+
+for label, ti in [("Enter", {"text": "Enter"})]:
+    ctx_reply(h, [tab(7, LOCAL)])
+    code, _ = call(h, hook("computer", dict({"action": "key", "tabId": 7, "action_summary": "確定する"}, **ti), h))
+    rep("T17", "手元の確かめ済みのタブで key %s は通る（区分1）" % label, code == 0 and lines_of(h)[-1]["reason"] == "local_exception")
+for label, ti in [("cmd+l", {"text": "cmd+l"}), ("ctrl+l", {"text": "ctrl+l"}), ("Meta", {"text": "Meta"}),
+                  ("modifiers=cmd", {"text": "l", "modifiers": "cmd"})]:
+    ctx_reply(h, [tab(7, LOCAL)])
+    code, _ = call(h, hook("computer", dict({"action": "key", "tabId": 7, "action_summary": "確定する"}, **ti), h))
+    rep("T17", "手元のタブでも key %s は同意なしで止まる" % label, code == 2 and lines_of(h)[-1]["reason"] == "no_consent")
 
 # T18: 手元でないタブ・だましの返事
 bad_urls = [("localhost.evil.com", "http://localhost.evil.com:5173/"), ("localhost@evil.com", "http://localhost@evil.com:5173/"),
@@ -513,6 +552,16 @@ for tool, ti in cases:
         "guard=%r script=%r rc=%s err=%s" % (guard_line, p.stdout, p.returncode, p.stderr))
 p = subprocess.run([sys.executable, "-I", "-B", CONSENT_LINE, "[1]", "computer"], capture_output=True, text=True)
 rep("T19", "tool_input が連想配列でないと台本は失敗する", p.returncode == 2)
+
+# T21: 状態ファイルのロックが取れない間は、ページに効く操作を止める
+h = newhome()
+lock = os.path.join(h, ".claude", "logs", "chrome-tab-state.lock")
+os.makedirs(lock)
+code, _ = call(h, hook("navigate", {"url": "https://example.com/", "tabId": 1}, h))
+rep("T21", "ロックがある間は区分1の navigate も state_write_failed で止まる", code == 2 and lines_of(h)[-1]["reason"] == "state_write_failed")
+os.rmdir(lock)
+code, _ = call(h, hook("navigate", {"url": "https://example.com/", "tabId": 1}, h))
+rep("T21", "ロックを外すと通る", code == 0)
 
 print("DONE pass=%d fail=%d" % (PASS[0], FAIL[0]), flush=True)
 sys.exit(1 if FAIL[0] else 0)

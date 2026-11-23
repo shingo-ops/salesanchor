@@ -11,6 +11,7 @@ import os
 import re
 import shutil
 import time
+import unicodedata
 import urllib.parse
 
 PREFIX = "mcp__claude-in-chrome__"
@@ -74,9 +75,49 @@ _SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.\-]*://")
 _CTRL_RE = re.compile(r"[\x00-\x20\x7f]")
 
 
+def _norm_host(host):
+    """ホスト名の整形。止めるべきとき None。"""
+    for _ in range(2):
+        host = urllib.parse.unquote(host)
+    host = unicodedata.normalize("NFKC", host)
+    for ch in ("\u3002", "\uff0e", "\uff61"):
+        host = host.replace(ch, ".")
+    host = host.lower().rstrip(".")
+    if not host:
+        return None
+    if not host.isascii():
+        try:
+            host = host.encode("idna").decode("ascii")
+        except (UnicodeError, ValueError):
+            return None
+        host = host.lower().rstrip(".")
+    if ":" not in host and not re.fullmatch(r"[a-z0-9.\-]+", host):
+        return None
+    return host
+
+
+def _remove_dot_segments(path):
+    """RFC 3986 5.2.4。根より上には出ない。"""
+    stack = []
+    segs = path.split("/")[1:]
+    for seg in segs:
+        if seg == ".":
+            continue
+        if seg == "..":
+            if stack:
+                stack.pop()
+            continue
+        stack.append(seg)
+    out = "/" + "/".join(stack)
+    if segs and segs[-1] in (".", "..") and not out.endswith("/"):
+        out += "/"
+    return out
+
+
 def parse_url(url):
-    """整形した URL を {scheme, host, port, path, text} で返す。読めなければ None。
-    https:// が無ければ足す・ホストを小文字・末尾の . を外す・パスは % を2回まで戻す。"""
+    """整形した URL を {scheme, host, port, path, text} で返す。読めなければ None（呼ぶ側が止める）。
+    https:// が無ければ足す・ホストは unquote2回→NFKC→句点を . に→小文字→末尾の . を外す→idna・
+    パスは unquote2回→/ をまとめる→. と .. をたたむ。"""
     if not isinstance(url, str):
         return None
     u = _CTRL_RE.sub("", url.strip().replace("\\", "/"))
@@ -92,12 +133,19 @@ def parse_url(url):
         return None
     if not host:
         return None
-    host = host.lower().rstrip(".")
+    host = _norm_host(host)
+    if host is None:
+        return None
     if ":" in host:
         host = "[" + host + "]"
     path = sp.path or "/"
     for _ in range(2):
         path = urllib.parse.unquote(path)
+    path = path.replace("\\", "/")
+    path = re.sub(r"/+", "/", path)
+    if not path.startswith("/"):
+        path = "/" + path
+    path = _remove_dot_segments(path)
     hostport = host if port is None else "%s:%d" % (host, port)
     return {"scheme": sp.scheme.lower(), "host": host, "port": port, "path": path,
             "text": "%s://%s%s" % (sp.scheme.lower(), hostport, path)}
@@ -115,7 +163,7 @@ def tier3_match(parsed, tiers):
             ok = host == suf or host.endswith("." + suf)
         else:
             ok = host == pat
-        if ok and re.search(e["path_regex"], path):
+        if ok and re.search(e["path_regex"], path, re.IGNORECASE):
             return e["why"]
     return None
 
