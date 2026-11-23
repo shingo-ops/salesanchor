@@ -32,7 +32,7 @@
 - `backend/app/services/google_webhook.py`: `events().watch`（:98）・`channels().stop`（:145・:183）・`events().list`（:310 差分の取り込み）
 - 取り込んだ予定はアプリの予定の表 `calendar_events` に保存（ADR-1059:16）。保存先はさくらの VPS（日本）。最初は「自分だけ」、持ち主が選んだときだけ社員に見せる（ADR-1059:17〜19）。
 - 秘書のチャット（ADR-1056:16・ADR-1078:24）は AI（Gemini）に Google の予定のデータを渡さない。渡すのは利用者が書いた文・今の日時・会話中の予定の日時だけ。
-- 連携を外す口 `backend/app/routers/google_calendar.py:219`〜`:231` は `tenant_google_calendar_config` の行を消すだけ。Google 側の許可の取り消し（revoke）は呼ばない（同ファイル・`google_calendar.py`・`integrations.py`・`calendar_service.py` を `revoke` で検索して 0 件）。取り込み済みの `calendar_events` の行も消さない。
+- 連携を外す口 `backend/app/routers/google_calendar.py:219`〜`:231` は `tenant_google_calendar_config` の行を消すだけ。Google 側の許可の取り消し（revoke）は呼ばない（`backend/app/routers/google_calendar.py`・`backend/app/routers/integrations.py`・`backend/app/services/google_calendar.py`・`backend/app/services/calendar_service.py` を `revoke` で検索して 0 件）。取り込み済みの `calendar_events` の行も消さない。
 
 ## 3. 会社のサイトの個人情報のページ（事実）
 
