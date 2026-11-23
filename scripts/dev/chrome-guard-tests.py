@@ -436,6 +436,20 @@ call(h, hook("switch_browser", {}, h))
 ctx_reply(h, [tab(7, LOCAL)])
 code, _ = call(h, hook("computer", {"action": "key", "text": "Enter", "tabId": 7, "action_summary": "確定する"}, h))
 rep("T15", "切り替えの後に確かめ直すと手元のタブ7の key Enter が通る", code == 0 and lines_of(h)[-1]["reason"] == "local_exception")
+h = newhome()
+ctx_reply(h, [tab(7, LOCAL)])
+b = {"actions": [{"name": "select_browser", "input": {"deviceId": "d"}}], "tabId": 99}
+code, _ = call(h, hook("browser_batch", b, h))
+code2, _ = call(h, hook("computer", click(7), h))
+rep("T15", "手元の確かめ済みタブ7→batch の中の select_browser（上の段 tabId 99）の後の click(7) は止まり tab_unverified",
+    code == 0 and code2 == 2 and lines_of(h)[-1]["reason"] == "tab_unverified", "code=%s code2=%s" % (code, code2))
+h = newhome()
+ctx_reply(h, [tab(7, LOCAL)])
+b = {"actions": [{"name": "navigate", "input": {"url": "https://example.com/", "tabId": 7}}], "tabId": 99}
+code, _ = call(h, hook("browser_batch", b, h))
+code2, _ = call(h, hook("computer", click(7), h))
+rep("T15", "手元の確かめ済みタブ7→batch の中の navigate（上の段 tabId 99）の後の click(7) は止まり tab_unverified",
+    code == 0 and code2 == 2 and lines_of(h)[-1]["reason"] == "tab_unverified", "code=%s code2=%s" % (code, code2))
 
 # T17: 手元の画面（localhost:5173）の例外
 h = newhome()
