@@ -276,20 +276,20 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
                 }}
               />
               <IconToggleButton
-                  pressed={listen.listening}
-                  iconOff={SECRETARY_ICONS.listen}
-                  iconOn={SECRETARY_ICONS.listen}
-                  size="md"
-                  disabled={sending}
-                  onClick={() => {
-                    if (listen.listening) {
-                      listen.stop();
-                    } else {
-                      setTooLong(false);
-                      listen.start();
-                    }
-                  }}
-                  aria-label={t(listen.listening ? "secretary.listen.stop" : "secretary.listen.start")}
+                pressed={listen.listening}
+                iconOff={SECRETARY_ICONS.listen}
+                iconOn={SECRETARY_ICONS.listen}
+                size="md"
+                disabled={sending}
+                onClick={() => {
+                  if (listen.listening) {
+                    listen.stop();
+                  } else {
+                    setTooLong(false);
+                    listen.start();
+                  }
+                }}
+                aria-label={t(listen.listening ? "secretary.listen.stop" : "secretary.listen.start")}
                 />
             </div>
             {(listen.listening || listen.error || tooLong) && (

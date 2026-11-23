@@ -251,7 +251,7 @@ export default [{ ignores: ["src/api/generated/**"] }, {
   rules: {
     'local/no-japanese-literal': 'off',
   },
-}, // ADR-1085: 秘書の窓は日本語の直書きを CI で止める（全体は warn のまま）
+}, // ADR-1087: 秘書の窓は日本語の直書きを CI で止める（全体は warn のまま）
 {
   files: ['src/features/secretary/**/*.{ts,tsx}'],
   ignores: ['src/features/secretary/**/*.test.{ts,tsx}'],
