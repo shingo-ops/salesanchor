@@ -63,7 +63,13 @@ export async function passkeyAutofillSupported(): Promise<boolean> {
  */
 export async function startPasskeyAutofill(isStale: () => boolean): Promise<void> {
   if (isStale()) throw abortError();
-  const res = await postAuth<Challenge<PublicKeyCredentialRequestOptionsJSON>>("/passkey/login/options");
+  let res: Challenge<PublicKeyCredentialRequestOptionsJSON>;
+  // options の失敗（回数止めの 429・止まりの 503 など）は待ち受けを黙って始めない（design.md §6）
+  try {
+    res = await postAuth<Challenge<PublicKeyCredentialRequestOptionsJSON>>("/passkey/login/options");
+  } catch {
+    throw abortError();
+  }
   if (isStale()) throw abortError();
   const credential = await startAuthentication({ optionsJSON: res.options, useBrowserAutofill: true });
   if (isStale()) throw abortError();

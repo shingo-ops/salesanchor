@@ -284,6 +284,16 @@ describe("startPasskeyAutofill", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(currentAccessToken()).toBeNull();
   });
+
+  it("T3 options fails (429): AbortError, startAuthentication and verify are not called", async () => {
+    fetchMock.mockResolvedValue(json(429, { detail: "too many" }));
+
+    await expect(startPasskeyAutofill(() => false)).rejects.toMatchObject({ name: "AbortError" });
+
+    expect(mock.startAuthentication).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(currentAccessToken()).toBeNull();
+  });
 });
 
 describe("autoRegisterPasskey", () => {
