@@ -450,6 +450,17 @@ code, _ = call(h, hook("browser_batch", b, h))
 code2, _ = call(h, hook("computer", click(7), h))
 rep("T15", "手元の確かめ済みタブ7→batch の中の navigate（上の段 tabId 99）の後の click(7) は止まり tab_unverified",
     code == 0 and code2 == 2 and lines_of(h)[-1]["reason"] == "tab_unverified", "code=%s code2=%s" % (code, code2))
+for bad_id in (0, -1):
+    h = newhome()
+    ctx_reply(h, [tab(7, LOCAL)])
+    code, _ = call(h, hook("navigate", {"url": "https://example.com/", "tabId": bad_id}, h))
+    code2, _ = call(h, hook("computer", click(7), h))
+    rep("T15", "手元の確かめ済みタブ7→navigate tabId:%d の後の click(7) は止まり tab_unverified" % bad_id,
+        code == 0 and code2 == 2 and lines_of(h)[-1]["reason"] == "tab_unverified", "code=%s code2=%s" % (code, code2))
+h = newhome()
+ctx_reply(h, [tab(0, LOCAL)])
+code, _ = call(h, hook("computer", click(0), h))
+rep("T15", "tab(0, 手元) を返事で流しても click(0) は確かめ済みにならず止まる", code == 2, "code=%s" % code)
 
 # T17: 手元の画面（localhost:5173）の例外
 h = newhome()

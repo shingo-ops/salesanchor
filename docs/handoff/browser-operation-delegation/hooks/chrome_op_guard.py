@@ -33,7 +33,8 @@ def load_consent():
 
 def tab_id_of(ti):
     v = ti.get("tabId") if isinstance(ti, dict) else None
-    return v if isinstance(v, int) and not isinstance(v, bool) else None
+    # 1以上の整数だけを番号として使う（0・負の数は「無し」と同じ扱いで、セッションの全タブを不明にする側に倒す）
+    return v if isinstance(v, int) and not isinstance(v, bool) and v > 0 else None
 
 
 def classify(t, ti, tiers):

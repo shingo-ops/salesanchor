@@ -59,7 +59,7 @@ def record(hi, now=None, h=None):
     if tabs is not None:
         for it in tabs:
             if isinstance(it, dict) and isinstance(it.get("tabId"), int) and not isinstance(it.get("tabId"), bool) \
-                    and isinstance(it.get("url"), str):
+                    and it.get("tabId") > 0 and isinstance(it.get("url"), str):
                 entries.append((it["tabId"], it["url"]))
                 counts[it["tabId"]] = counts.get(it["tabId"], 0) + 1
     parsed = tabs is not None and len(entries) > 0
