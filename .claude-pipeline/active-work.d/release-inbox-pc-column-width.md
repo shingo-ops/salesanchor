@@ -2,4 +2,4 @@ branch: release/inbox-pc-column-width
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
-| release/inbox-pc-column-width | PC受信箱の3列の幅（一覧 最大330px・カルテ 最大480px・残りは会話欄）設計書・ADR-1086・実装 | 2026-11-23 | IN_PROGRESS | 5698 | | PO 実装承認「1」(2026-11-23)。実装はクラウド Sonnet 87d66e4ef |
+| release/inbox-pc-column-width | PC受信箱の3列の幅（一覧 最大330px・カルテ 最大480px・残りは会話欄）設計書・ADR-1086・実装 | 2026-11-23 | DONE | 5698 | | PO 実装承認「1」(2026-11-23)。実装はクラウド Sonnet 87d66e4ef |
