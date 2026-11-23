@@ -187,7 +187,13 @@ for label, url in [("そのまま", "https://dash.cloudflare.com/abc/billing"),
                    ("ホストの全角", "https://ｐａｙ.google.com/"),
                    ("ホストの句点", "https://pay。google.com/"),
                    ("パスの大文字", "https://github.com/Settings/tokens"),
-                   ("パスの // 連続", "https://github.com//settings/tokens")]:
+                   ("パスの // 連続", "https://github.com//settings/tokens"),
+                   ("https:/ 斜線1本（pay.google）", "https:/pay.google.com/"),
+                   ("http:/ 斜線1本（pay.google）", "http:/pay.google.com/"),
+                   ("https:/ 斜線1本（github の鍵）", "https:/github.com/settings/tokens"),
+                   ("HTTPS:/ 大文字", "HTTPS:/pay.google.com/"),
+                   ("https: 斜線なし", "https:pay.google.com"),
+                   ("https:/// 斜線3本", "https:///pay.google.com/")]:
     h = newhome()
     code, msg = call(h, hook("navigate", {"url": url, "tabId": 1}, h))
     rep("T1", "navigate 区分3: %s" % label, code == 2 and "区分3" in msg, "code=%s msg=%s" % (code, msg))
@@ -195,7 +201,9 @@ h = newhome()
 code, _ = call(h, hook("navigate", {"url": "https://example.com/", "tabId": 1}, h))
 rep("T1", "navigate 普通の URL は通る（対照）", code == 0)
 for label, url in [("../ をたたむと普通の道", "https://example.com/a/../b"),
-                   ("GitHub の普通のリポジトリ", "https://github.com/shingo-ops/salesanchor")]:
+                   ("GitHub の普通のリポジトリ", "https://github.com/shingo-ops/salesanchor"),
+                   ("localhost:5173/（ホスト:ポートは scheme と読まない）", "localhost:5173/"),
+                   ("https:/ 斜線1本の普通の道", "https:/example.com/")]:
     h = newhome()
     code, msg = call(h, hook("navigate", {"url": url, "tabId": 1}, h))
     rep("T1", "navigate 通る: %s" % label, code == 0, "code=%s msg=%s" % (code, msg))
@@ -442,12 +450,15 @@ b = {"actions": [{"name": "computer", "input": click(7)}, {"name": "computer", "
 code, _ = call(h, hook("browser_batch", b, h))
 rep("T17", "手元のタブの browser_batch に押す操作が2つ並ぶと全体が止まる", code == 2)
 
-for label, ti in [("Enter", {"text": "Enter"})]:
+for label, ti in [("Enter", {"text": "Enter"}), ("Tab", {"text": "Tab"}), ("Escape", {"text": "Escape"}),
+                  ("Down Down Enter", {"text": "Down Down Enter"})]:
     ctx_reply(h, [tab(7, LOCAL)])
     code, _ = call(h, hook("computer", dict({"action": "key", "tabId": 7, "action_summary": "確定する"}, **ti), h))
     rep("T17", "手元の確かめ済みのタブで key %s は通る（区分1）" % label, code == 0 and lines_of(h)[-1]["reason"] == "local_exception")
 for label, ti in [("cmd+l", {"text": "cmd+l"}), ("ctrl+l", {"text": "ctrl+l"}), ("Meta", {"text": "Meta"}),
-                  ("modifiers=cmd", {"text": "l", "modifiers": "cmd"})]:
+                  ("modifiers=cmd", {"text": "l", "modifiers": "cmd"}),
+                  ("F6", {"text": "F6"}), ("F5", {"text": "F5"}), ("BrowserBack", {"text": "BrowserBack"}),
+                  ("ctrl-l", {"text": "ctrl-l"}), ("Meta_L", {"text": "Meta_L"})]:
     ctx_reply(h, [tab(7, LOCAL)])
     code, _ = call(h, hook("computer", dict({"action": "key", "tabId": 7, "action_summary": "確定する"}, **ti), h))
     rep("T17", "手元のタブでも key %s は同意なしで止まる" % label, code == 2 and lines_of(h)[-1]["reason"] == "no_consent")
@@ -562,6 +573,19 @@ rep("T21", "ロックがある間は区分1の navigate も state_write_failed �
 os.rmdir(lock)
 code, _ = call(h, hook("navigate", {"url": "https://example.com/", "tabId": 1}, h))
 rep("T21", "ロックを外すと通る", code == 0)
+
+# T22: 台本の「$変数」のすぐ後ろに ASCII 以外の字を置かない（bash 3.2 の unbound variable を二度と入れない）
+import re  # noqa: E402
+script_dir = os.path.dirname(hookdir)
+bad_re = re.compile(r"\$[A-Za-z_][A-Za-z0-9_]*[^\x00-\x7f]")
+for sname in ("po-apply-chrome-guard.sh", "po-rollback-chrome-guard.sh"):
+    sp = os.path.join(script_dir, sname)
+    try:
+        with open(sp, encoding="utf-8") as f:
+            hits = [i + 1 for i, ln in enumerate(f.read().split("\n")) if bad_re.search(ln)]
+        rep("T22", "%s に $変数＋全角の字の行が0件" % sname, hits == [], "行=%s" % hits)
+    except OSError as e:
+        rep("T22", "%s を読める" % sname, False, str(e))
 
 print("DONE pass=%d fail=%d" % (PASS[0], FAIL[0]), flush=True)
 sys.exit(1 if FAIL[0] else 0)

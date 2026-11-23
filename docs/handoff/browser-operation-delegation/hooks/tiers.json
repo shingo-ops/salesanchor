@@ -15,6 +15,7 @@
     {"scheme":"http","host":"127.0.0.1","port":5173},
     {"scheme":"http","host":"[::1]","port":5173}
   ],
+  "local_plain_keys": ["Enter","Return","KP_Enter","Tab","Escape","Esc","Delete","Up","Down","Left","Right","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Home","End","Page_Up","Page_Down","PageUp","PageDown","space"],
   "tier3_urls": [
     {"host":"pay.google.com","path_regex":"^/","why":"支払い"},
     {"host":"payments.google.com","path_regex":"^/","why":"支払い"},

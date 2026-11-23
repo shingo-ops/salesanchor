@@ -79,7 +79,7 @@ if [ -d "$DST" ]; then
   for f in "${DEPLOY_FILES[@]}"; do
     chmod u+w "$DST/$f" 2>/dev/null
     rm -f "$DST/$f"
-    if [ -e "$DST/$f" ]; then echo "ROLLBACK FAILED: $f（削除できない）"; failed=1; else echo "  削除 $f"; fi
+    if [ -e "$DST/$f" ]; then echo "ROLLBACK FAILED: ${f}（削除できない）"; failed=1; else echo "  削除 $f"; fi
   done
   rm -f "$DST"/*.pyc 2>/dev/null
   rmdir "$DST" 2>/dev/null

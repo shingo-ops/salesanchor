@@ -46,7 +46,8 @@ def load_tiers(path=None):
     ca = t.get("computer_actions")
     if not isinstance(ca, dict) or not _is_str_list(ca.get("tier1")) or not _is_str_list(ca.get("tier2")):
         raise ValueError("tiers: computer_actions")
-    if not _is_str_list(t.get("page_affecting")) or not _is_str_list(t.get("secret_patterns")):
+    if not _is_str_list(t.get("page_affecting")) or not _is_str_list(t.get("secret_patterns")) \
+            or not _is_str_list(t.get("local_plain_keys")):
         raise ValueError("tiers: lists")
     le = t.get("local_exception")
     if not isinstance(le, list) or not all(
@@ -72,7 +73,8 @@ def _is_str_list(v):
 # ── URL の整形と区分3・手元の例外 ─────────────────────────────────
 
 _SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.\-]*://")
-_CTRL_RE = re.compile(r"[\x00-\x20\x7f]")
+_HTTP_SLASH_RE = re.compile(r"^(https?):/*", re.IGNORECASE)
+_CTRL_RE =re.compile(r"[\x00-\x20\x7f]")
 
 
 def _norm_host(host):
@@ -123,6 +125,8 @@ def parse_url(url):
     u = _CTRL_RE.sub("", url.strip().replace("\\", "/"))
     if not u:
         return None
+    # WHATWG: http・https は「scheme:」の後ろの / の数によらず scheme:// として読む
+    u = _HTTP_SLASH_RE.sub(lambda m: m.group(1).lower() + "://", u, count=1)
     if not _SCHEME_RE.match(u):
         u = "https://" + u
     try:

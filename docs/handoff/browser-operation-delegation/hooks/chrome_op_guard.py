@@ -57,7 +57,7 @@ def classify(t, ti, tiers):
         if action in tiers["computer_actions"]["tier1"]:
             return {"tier": 1, "reason": "computer_read"}
         if action in tiers["computer_actions"]["tier2"]:
-            return {"tier": 2, "reason": "computer_act", "lowerable": action != "key" or key_is_plain(ti)}
+            return {"tier": 2, "reason": "computer_act", "lowerable": action != "key" or key_is_plain(ti, tiers)}
         return {"tier": "block", "reason": "unknown_action"}
     if t in tools["tier2"]:
         return {"tier": 2, "reason": "tier2_tool", "lowerable": t == "form_input"}
@@ -84,20 +84,15 @@ def batch_items(ti):
     return out
 
 
-_KEY_MODS = {"cmd", "ctrl", "control", "meta", "super", "alt", "option", "command", "win"}
-
-
-def key_is_plain(ti):
-    """手元の例外で区分1に下げてよい key か（アドレス欄へ移る道を塞ぐ）。"""
+def key_is_plain(ti, tiers):
+    """手元の例外で区分1に下げてよい key か。tiers.json の local_plain_keys の語だけ許す（アドレス欄へ移る道を塞ぐ）。"""
     text = ti.get("text")
     if not isinstance(text, str) or not text.strip():
         return False
     if ti.get("modifiers") not in (None, ""):
         return False
-    for w in text.split():
-        if "+" in w or w.lower() in _KEY_MODS:
-            return False
-    return True
+    allowed = {k.lower() for k in tiers["local_plain_keys"]}
+    return all(w.lower() in allowed for w in text.split())
 
 
 def page_affecting_key(t, ti):

@@ -85,11 +85,11 @@ t16() {
   local navok='{"tool_name":"mcp__claude-in-chrome__navigate","tool_input":{"url":"https://example.com/"},"session_id":"t16","transcript_path":"'"$th"'/.claude/projects/-p/t16.jsonl"}'
   local click='{"tool_name":"mcp__claude-in-chrome__computer","tool_input":{"action":"left_click","coordinate":[1,1],"action_summary":"自己試験の押す操作"},"session_id":"t16","transcript_path":"'"$th"'/.claude/projects/-p/t16.jsonl"}'
   printf '%s' "$nav3" | HOME="$th" python3 -B "$guard" >/dev/null 2>&1; rc=$?
-  if [ "$rc" -eq 2 ]; then echo "  PASS T16-a 区分3の URL（cloudflare の請求）は exit 2"; else echo "  FAIL T16-a rc=$rc（2 のはず）"; ok=1; fi
+  if [ "$rc" -eq 2 ]; then echo "  PASS T16-a 区分3の URL（cloudflare の請求）は exit 2"; else echo "  FAIL T16-a rc=${rc}（2 のはず）"; ok=1; fi
   printf '%s' "$navok" | HOME="$th" python3 -B "$guard" >/dev/null 2>&1; rc=$?
-  if [ "$rc" -eq 0 ]; then echo "  PASS T16-b 普通の URL は exit 0"; else echo "  FAIL T16-b rc=$rc（0 のはず）"; ok=1; fi
+  if [ "$rc" -eq 0 ]; then echo "  PASS T16-b 普通の URL は exit 0"; else echo "  FAIL T16-b rc=${rc}（0 のはず）"; ok=1; fi
   printf '%s' "$click" | HOME="$th" python3 -B "$guard" >/dev/null 2>&1; rc=$?
-  if [ "$rc" -eq 2 ]; then echo "  PASS T16-c 同意なしの押す操作は exit 2"; else echo "  FAIL T16-c rc=$rc（2 のはず）"; ok=1; fi
+  if [ "$rc" -eq 2 ]; then echo "  PASS T16-c 同意なしの押す操作は exit 2"; else echo "  FAIL T16-c rc=${rc}（2 のはず）"; ok=1; fi
   rm -f "$th/.claude/projects/-p/t16.jsonl" "$th/.claude/logs"/*.jsonl "$th/.claude/logs"/*.json 2>/dev/null
   return "$ok"
 }
@@ -132,7 +132,7 @@ if [ -n "$UPDATE" ]; then
     else
       chmod u+w "$DST/$f" 2>/dev/null
       rm -f "$DST/$f"
-      if [ -e "$DST/$f" ]; then echo "ROLLBACK FAILED: $f"; RBF=1; else echo "  削除 $f（更新前は無かった）"; fi
+      if [ -e "$DST/$f" ]; then echo "ROLLBACK FAILED: $f"; RBF=1; else echo "  削除 ${f}（更新前は無かった）"; fi
     fi
   done
   if [ -n "$RBF" ]; then echo "バックアップ: $BK から手で戻してください。"; exit 3; fi
