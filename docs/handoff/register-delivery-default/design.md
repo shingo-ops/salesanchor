@@ -9,7 +9,7 @@ recon: `docs/handoff/register-delivery-default/recon.md`
 ## 2. 対象／対象外
 
 - 対象: `backend/app/routers/registration_tokens.py` の `register_customer` の住所の保存（305-347 行）と、試験 `backend/tests/test_public_register_company.py`。
-- 対象外: フロント（`RegisterPage.tsx`）、`add_address`（ADR-127 で false 固定のまま）、`change_billing`、請求先の is_default（送られた値のまま。`already_registered` の 409 判定を変えない）、migration。
+- 対象外: フロント（`frontend/src/pages/register/RegisterPage.tsx`）、`add_address`（ADR-127 で false 固定のまま）、`change_billing`、請求先の is_default（送られた値のまま。`already_registered` の 409 判定を変えない）、migration。
 
 ## 3. 変更前後
 
@@ -19,7 +19,7 @@ recon: `docs/handoff/register-delivery-default/recon.md`
 ## 4. 代替案と選んだ理由
 
 - 案A（選択）: サーバーで決める。フロントが何を送っても同じ結果になり、正本が 1 か所（サーバー）に決まる。すでに default の配送先がある会社でも一意制約にぶつからない。
-- 案B: `RegisterPage.tsx` で `is_default: true` を付ける。1 行で済むが、サーバーは送られた値を信じたままで、別の送り手や今後の画面変更で同じ漏れが起きる。
+- 案B: `frontend/src/pages/register/RegisterPage.tsx` で `is_default: true` を付ける。1 行で済むが、サーバーは送られた値を信じたままで、別の送り手や今後の画面変更で同じ漏れが起きる。
 - 案C: 何もしない。書き出しの配送先が空のまま。
 
 ## 5. リスクと対処
@@ -39,9 +39,10 @@ recon: `docs/handoff/register-delivery-default/recon.md`
 
 ## 7. 維持の仕組み
 
+- 守り手: CI の backend 試験（`backend/tests/test_public_register_company.py` の 2 件）。
 - 試験 2 件が CI の必須の試験で毎回走る。サーバーで決めるため、フロントの変更でこの漏れは戻らない。
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 
 不要。理由: 社内の 1 か所の値の決め方の直しで、外部の数値で決める判断が無い。
 
