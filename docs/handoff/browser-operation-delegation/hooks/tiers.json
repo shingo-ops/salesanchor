@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "tools": {
+    "tier1": ["read_page","get_page_text","find","tabs_context_mcp","tabs_create_mcp","tabs_close_mcp","read_console_messages","read_network_requests","resize_window","list_connected_browsers","select_browser","switch_browser"],
+    "tier2": ["javascript_tool","file_upload","upload_image","gif_creator","form_input"],
+    "special": ["navigate","computer","browser_batch"]
+  },
+  "computer_actions": {
+    "tier1": ["screenshot","scroll","scroll_to","zoom","wait","hover"],
+    "tier2": ["left_click","right_click","double_click","triple_click","type","key","left_click_drag"]
+  },
+  "page_affecting": ["navigate","computer:left_click","computer:right_click","computer:double_click","computer:triple_click","computer:type","computer:key","computer:left_click_drag","form_input","javascript_tool","file_upload","upload_image","browser_batch"],
+  "local_exception": [
+    {"scheme":"http","host":"localhost","port":5173},
+    {"scheme":"http","host":"127.0.0.1","port":5173},
+    {"scheme":"http","host":"[::1]","port":5173}
+  ],
+  "tier3_urls": [
+    {"host":"pay.google.com","path_regex":"^/","why":"支払い"},
+    {"host":"payments.google.com","path_regex":"^/","why":"支払い"},
+    {"host":"admin.google.com","path_regex":"^/(u/\\d+/)?ac/(billing|subscriptions|payment)","why":"Workspace の請求・プラン"},
+    {"host":"myaccount.google.com","path_regex":"^/(u/\\d+/)?(signinoptions|apppasswords|delete-services-or-account|security-checkup/.*password)","why":"パスワード・2段階認証・削除"},
+    {"host":"dash.cloudflare.com","path_regex":"^/[^/]+/(billing|subscriptions)|^/profile/(api-tokens|billing|authentication)","why":"請求・鍵・2段階認証"},
+    {"host":"github.com","path_regex":"^/settings/(billing|tokens|personal-access-tokens|security|admin|keys|apps/authorizations)|^/organizations/[^/]+/settings/(billing|security)","why":"請求・鍵・2段階認証・削除"},
+    {"host":"console.anthropic.com","path_regex":"^/settings/(billing|keys|plans)","why":"請求・鍵"},
+    {"host":"platform.claude.com","path_regex":"^/settings/(billing|keys|plans)","why":"請求・鍵"},
+    {"host":"claude.ai","path_regex":"^/settings/billing","why":"請求"},
+    {"host":"business.facebook.com","path_regex":"^/billing_hub|^/settings/(payment|security)","why":"広告の支払い・2段階認証"},
+    {"host":"*.facebook.com","path_regex":"^/(settings/payments|security/2fac|deactivate|delete)","why":"支払い・2段階認証・削除"},
+    {"host":"*.paypal.com","path_regex":"^/","why":"支払い"},
+    {"host":"dashboard.stripe.com","path_regex":"^/","why":"支払いの会社"},
+    {"host":"pay.ebay.com","path_regex":"^/","why":"購入"},
+    {"host":"*.ebay.com","path_regex":"^/(chkout|checkout|mye/myebay/payment)","why":"購入・支払い"},
+    {"host":"jp.mercari.com","path_regex":"^/(purchase|transaction/.+/pay|mypage/(payment|card|bank))","why":"購入・支払い・口座"},
+    {"host":"*.amazon.co.jp","path_regex":"^/(gp/buy|checkout|gp/checkoutportal|cpe/yourpayments|ap/cnep)","why":"購入・支払い・パスワード"},
+    {"host":"*.amazon.com","path_regex":"^/(gp/buy|checkout|cpe/yourpayments|ap/cnep)","why":"購入・支払い・パスワード"},
+    {"host":"secure.sakura.ad.jp","path_regex":"^/","why":"サーバーの契約"},
+    {"host":"console.cloud.google.com","path_regex":"^/billing","why":"請求"}
+  ],
+  "secret_patterns": ["sk-ant-[A-Za-z0-9_-]{10,}","sk-[A-Za-z0-9]{20,}","ghp_[A-Za-z0-9]{30,}","github_pat_[A-Za-z0-9_]{20,}","gho_[A-Za-z0-9]{30,}","AKIA[0-9A-Z]{16}","xox[abpr]-[A-Za-z0-9-]{10,}","AIza[0-9A-Za-z_-]{35}","-----BEGIN [A-Z ]*PRIVATE KEY-----"]
+}
