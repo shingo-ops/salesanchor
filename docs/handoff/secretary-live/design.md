@@ -5,7 +5,7 @@
 
 - 状態: 設計案作成済み・設計審査 1 回目 REVISE・2 回目 REVISE（[review-architect-2.md](review-architect-2.md)）・3 回目 REVISE（[review-architect-3.md](review-architect-3.md)・小さな直し）・4 回目 REVISE（[review-architect-4.md](review-architect-4.md)・便 A は合格・ADR 番号の衝突ほか）→ 指摘を直した 5 版・PO の決め 3 件済（L5/L7・請求書はボタン・目標の表）・実装未着手
 - 書いた人: Claude Opus（設計担当）2026-11-22
-- 目標: [kgi.md](kgi.md)（PO 承認済み 2026-11-23）／現在地: [recon.md](recon.md)／外の事例: [research.md](research.md)
+- 目標: [kgi.md](kgi.md)（PO 承認済み 2026-11-23）／現在地: [recon.md](recon.md)（docs/handoff/secretary-live/recon.md）／外の事例: [research.md](research.md)
 - 決まりの案: `docs/adr/ADR-1087-secretary-live-voice.md`（Proposed・草案）
 - 関わる決まり: ADR-1056（秘書・AI に渡すのは文と今だけ・作成は「作る」）、ADR-1058（秘書の AI の選び方）、ADR-1080（読み上げ・台帳・月の上限）、ADR-1082（聞き取り・マイクの許可）、ADR-1004（使用量台帳）、ADR-1062（Gemini の道の自動切替）、ADR-027（翻訳）、ADR-067・ADR-144（金型・デザイントークン）、ADR-135・ADR-136（migration 入り PR の GO）、ADR-1003（GO の委任）
 
