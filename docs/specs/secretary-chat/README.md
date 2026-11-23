@@ -28,6 +28,7 @@
 - 秘書の「決まり帳」（育てる仕組み・2026-11-12 目標は PO 承認済み・設計審査済み・実装未着手）: [kgi.md](../../handoff/secretary-rulebook/kgi.md)・[recon.md](../../handoff/secretary-rulebook/recon.md)・[design.md](../../handoff/secretary-rulebook/design.md)・[research.md](../../handoff/secretary-rulebook/research.md)
 - 秘書の「予定のカルテ」（予定の頼みで空いている必須の欄だけを順に聞く・2026-11-14 目標と設計は PO 承認済み・設計審査済み・実装は card.md から・ADR-1078）: [kgi.md](../../handoff/secretary-event-karte/kgi.md)・[recon.md](../../handoff/secretary-event-karte/recon.md)・[design.md](../../handoff/secretary-event-karte/design.md)。決まり帳の便3 と同じファイルを触るため、こちらを先に出す
 - 秘書の声（返事を一人ずつ選んだ声で読み上げる・2026-11-17 目標は PO 承認済み・設計案・実装未着手・ADR-1080）: [kgi.md](../../handoff/secretary-voice/kgi.md)・[recon.md](../../handoff/secretary-voice/recon.md)・[design.md](../../handoff/secretary-voice/design.md)・[research.md](../../handoff/secretary-voice/research.md)
+- 秘書の声の会話（話した言葉がその場で文字になるマイクと、Gemini Live の声の会話・2026-11-23 目標は PO 承認済み・設計審査中・実装未着手・ADR-1085）: [kgi.md](../../handoff/secretary-live/kgi.md)・[recon.md](../../handoff/secretary-live/recon.md)・[design.md](../../handoff/secretary-live/design.md)・[research.md](../../handoff/secretary-live/research.md)
 
 ## ステータス
 - あるべき姿: PO 発言を転記（2026-11-01）

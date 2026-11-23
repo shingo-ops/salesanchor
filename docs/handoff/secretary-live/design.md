@@ -3,9 +3,9 @@
 この文書は何か: 秘書のチャットで、話しながら文字が出るマイクと、声どうしで話せる LIVE を作るための設計図です。
 親（あるべき姿）: [docs/specs/secretary-chat/README.md](../../specs/secretary-chat/README.md)
 
-- 状態: 設計案作成済み・設計審査 1 回目 REVISE（[review-architect.md](review-architect.md)）→ 指摘を直した 2 版・PO 未承認・実装未着手
+- 状態: 設計案作成済み・設計審査 1 回目 REVISE・2 回目 REVISE（[review-architect-2.md](review-architect-2.md)）→ 指摘を直した 3 版・PO の決め 3 件済（L5/L7・請求書はボタン・目標の表）・実装未着手
 - 書いた人: Claude Opus（設計担当）2026-11-22
-- 目標: [kgi.md](kgi.md)（PO 再確認待ち）／現在地: [recon.md](recon.md)／外の事例: [research.md](research.md)
+- 目標: [kgi.md](kgi.md)（PO 承認済み 2026-11-23）／現在地: [recon.md](recon.md)／外の事例: [research.md](research.md)
 - 決まりの案: `docs/adr/ADR-1085-secretary-live-voice.md`（Proposed・草案）
 - 関わる決まり: ADR-1056（秘書・AI に渡すのは文と今だけ・作成は「作る」）、ADR-1058（秘書の AI の選び方）、ADR-1080（読み上げ・台帳・月の上限）、ADR-1082（聞き取り・マイクの許可）、ADR-1004（使用量台帳）、ADR-1062（Gemini の道の自動切替）、ADR-027（翻訳）、ADR-067・ADR-144（金型・デザイントークン）、ADR-135・ADR-136（migration 入り PR の GO）、ADR-1003（GO の委任）
 
@@ -24,6 +24,21 @@
 | 7 維持の仕組み欄・親リンク・1 行説明・ADR-144 の「ある」の過大 | 冒頭・§11・§16 |
 | 8 料金の出どころの書き分け | §4 |
 
+### 0-2 審査 2 回目の指摘（review-architect-2.md §2）と直した場所
+
+| 指摘 | 直した場所 |
+|---|---|
+| 1 読み上げの中身の出どころの矛盾 | §5（予定の読み上げの文は画面が作る・請求書の中身は Gemini に渡さない）・ADR-1085 改める点 |
+| 2 請求書は声で作るか | PO 2026-11-23「1」: 請求書はボタンだけ。§5-1・kgi.md L11。予定の声の「はい」は便 T0 で否定語とわざと違う日時を測ってから便 B |
+| 3 KGI の L2・L3・L5・L6・L11 | kgi.md §2（L5 と L7 は PO 2026-11-24「1」）|
+| 4 台帳の CHECK・列 | §6-3（outcome・error_code・purpose・sdk の作り直しと列の追加）・ADR-1085 改める点に ADR-1058 |
+| 5 上限の穴（使わなかった札・競争・合計を読めない・回数の数え先）| §5-2・§6-1・§6-2 |
+| 6 `Callout`・LIVE 専用の旗・戻る時刻・鍵が無いとき | §6-6・§6-2・§15 |
+| 7 札の期限で切れるか・別人の札の試験 | §5-2・§10・§11 |
+| 8 日本語の直書きを止める・守り手の行・親のリンク・照らし合わせの記録先・色の検査 | §9・§11・§16・`docs/specs/secretary-chat/README.md` |
+| 9 file:line の a・b・d・f | §3・§12-H・冒頭 |
+| 10 使えるのは super admin だけ | ADR-1085 |
+
 ## 1. 目的と、利用者に見える変化
 
 | | 今 | 後 |
@@ -38,7 +53,8 @@
 - 対象:
   - 画面: `frontend/src/features/secretary/`（LIVE の部品・聞き取りの部品・予定の下書きの部品の「作る」の口を外へ出す改修）、`frontend/public/` に音の処理のファイル（§5-3）、翻訳。
   - backend: `backend/app/routers/assistant.py` に LIVE の口 2 つ（札を出す・使用量を受け取る）、`backend/app/services/secretary_live.py`（新・上限と仮の行）、`backend/app/services/llm_budget.py`（値段表の音声の単価・sdk の対応）、`backend/app/routers/tcg_analysis_dashboard.py`（LIVE の今月の費用を出す）。
-  - DB: 台帳の値の追加（migration 1 本・便 T1）。
+  - DB: migration 2 本（どちらも便 T0）: LIVE 専用の旗の行（会社 4 だけ）と、台帳の CHECK の作り直し・列の追加（§6-3）。
+  - 設定: LIVE 専用の鍵の環境変数 `GEMINI_LIVE_API_KEY` を backend だけに渡す（`docker-compose.yml`。値を入れるのは PO・§5-2）。
   - nginx: CSP の `connect-src` 1 か所（`nginx/nginx.conf:96`）。
   - 試験。
 - 対象外: kgi.md §3 のとおり。秘書の文の AI（容器 `secretary-agent`・月額契約）は変えない。AI の担当表（ADR-1058）には LIVE を入れない（§6-5）。
@@ -50,12 +66,12 @@
 - 送れる文は 1,000 字まで: 画面 `secretaryApi.ts:10`・backend `backend/app/schemas/assistant.py:44`（`max_length=1000`）。
 - 秘書の返事は容器の AI が文 → JSON を一括で返す（`secretary-agent/server.mjs:131`）。流れる声を扱う口は無い。返事まで 5〜8 秒。
 - 会話は画面の state だけに持ち、窓を閉じると消える（`SecretaryChat.tsx:69-81` の `close()`）。
-- 請求書の「作る」は部品の中の `canCreate`（`SecretaryDraftInvoice.tsx:113-114`）が真のときだけ押せ、人が「送料を請求しない」にチェックすることが条件に入る（`:78`）。予定の「作る」は `SecretaryDraftEvent.tsx:46-51`・`:53-69`。
+- 請求書の「作る」は部品の中の `canCreate`（`SecretaryDraftInvoice.tsx:113-114`）が真のときだけ押せ、人が「送料を請求しない」にチェックすることが条件に入る（state `:76`・条件 `:114`・チェックの部品 `:252-258`）。予定の「作る」は `SecretaryDraftEvent.tsx:46-51`・`:53-69`。
 - 本番の画面は `connect-src 'self'`・`script-src 'self'`（`nginx/nginx.conf:96`）。マイクは `microphone=(self)` で許可済み（`:100`）。
 - 台帳 `public.llm_usage_events` の purpose・sdk は DB の CHECK で固定。値を足すには CHECK を作り直す migration が要る（型: `migrations/20261117_100100_add_llm_usage_tts_characters.sql`）。CHECK と写しの一致の試験: `backend/tests/test_secretary_voice_pg.py:104`。
-- 値段表 `LLM_PRICING`（`llm_budget.py:56`）は 1 モデルにつき入力・出力の 2 単価。`calculate_usage_cost`（`:225-250`）は音声と文字を分けない。
+- 値段表 `LLM_PRICING`（`llm_budget.py:56`）は 1 モデルにつき入力・出力の 2 単価。`calculate_usage_cost`（`:225-241`）は音声と文字を分けない。
 - 読み上げの月の上限は定数 `MONTHLY_CHAR_CAP = 900_000`（`backend/app/services/secretary_voice.py:22`）。読み上げは AI の担当表に入っておらず（担当表の仕事の一覧は `migrations/20261103_120000_create_ai_job_assignments.sql:32`）、provider `google_tts` は `llm_budget.py:184` の対応にだけある。
-- backend は Gemini の鍵を持つ（`docker-compose.yml:98`・`:246`）。台帳の Gemini の 30 日の合計は $40.55（本番台帳の読み取り 2026-11-22）。**これは値段表から計算した値で、請求書ではない**（`llm_budget.py:225-250`）。有料枠か・学習に使われないかの証拠にはならない → PO が Google の請求画面で確かめる（§12-A）。
+- backend は Gemini の鍵を持つ（`docker-compose.yml:98`・`:246`）。台帳の Gemini の 30 日の合計は $40.55（本番台帳の読み取り 2026-11-22）。**これは値段表から計算した値で、請求書ではない**（`llm_budget.py:225-241`）。有料枠か・学習に使われないかの証拠にはならない → PO が Google の請求画面で確かめる（§12-A）。
 
 ## 4. やり方の比べ（費用・速さ）
 
@@ -103,6 +119,8 @@
 - Gemini Live に渡す道具は「秘書に頼む（文）」の 1 つだけ。Gemini Live は会社のデータを読む道も、何かを作る道も持たない。データのある場所は今と同じで、写しを増やさない。
 - 道具の引数の文は、利用者が書いた文ではなく **Gemini が言い換えた文**。画面はその文を吹き出しに「秘書に頼んだ内容」として出し、利用者が目で確かめられるようにする。
 - 道具の結果として Gemini Live に返すのは、今の秘書の返事の文（`reply`）だけ。下書きの中身（相手・金額の数値の形）は返さない。結果の文に命令が紛れても、Gemini Live には道具が 1 つしか無く、作る道も無い（試験 §11）。
+- **例外は予定の確かめの読み上げだけ**（§5-1）。画面が予定の下書きの state から「相手・日時」の文を作り、道具の結果として Gemini Live にそのまま読ませる。Gemini に中身を作らせない。請求書の中身は Gemini に渡さない（請求書はボタンだけで作るため）。
+- 道具の呼び出しは画面が 1 本ずつ順に送る。秘書の容器は同時 1 本（recon.md `:100`）なので、前の頼みの途中で次が来たら待たせ、`429 busy` が返ったら Gemini Live に「少し待ってください」と言わせる文を結果として返す。
 - 聞き返し（カルテ・`SecretaryKarteAsk`）の最中に声で答えたときは、画面が今と同じく持っている karte を付けて `POST /assistant/messages` に送る（`schemas/assistant.py:44` 以降の形のまま）。
 - 道具の結果は 6〜8 秒かかる。その間、Gemini Live は「確かめます」と短く言う（指示文で決める）。
 - 両方の発言は、今の会話の吹き出し（`ChatBubble`）で同じ並びに出す。**窓を開いている間は残る。窓を閉じたら消える（今の秘書と同じ）**（L8）。
@@ -129,7 +147,10 @@
 
 - backend の新しい口 `POST /api/v1/assistant/live/session` が札を作って画面に渡す。Gemini の鍵そのものは画面に出さない。守りは秘書と同じ（`_SECRETARY_DEPENDENCIES` `assistant.py:98-103`）。
 - 札の設定: `uses=1`・つなぎ始め 1 分・つなぎの期限 **10 分**。モデル・指示文・道具の定義・声の種類・書き起こしは `liveConnectConstraints` で **backend が固定**し、画面からは変えさせない（札が漏れても別の使い方をさせない）。
-- 札の口の回数の上限: 1 人 1 時間に 20 回まで（上限の逃げ道をふさぐ）。超えたら 429。
+- 札の口の回数の上限: 1 人 1 時間に 20 回まで（上限の逃げ道をふさぐ）。超えたら 429。**数える場所は Redis**（今の回数の上限と同じ数え方・`backend/app/middleware/rate_limit.py:55-76`）。ただし今の回数の上限は Redis が止まると通す（`:7`・`:75-76`）。LIVE は費用が出るので逆にし、**Redis が読めなければ札を出さない**（503）。回数は数えるだけの一時の値で、会社のデータではない。
+- Gemini の鍵は LIVE 専用の環境変数 `GEMINI_LIVE_API_KEY` から読み、backend だけに渡す（今の `GEMINI_API_KEY` は backend と celery-worker の両方・`docker-compose.yml:98`・`:246`）。**値が空なら札を出さず、503 と「準備ができていません」の印を返す**。値を別の Google のプロジェクトの鍵にするかは PO が決め、値を入れるのも PO（§12-J）。
+- 使えるのは super admin だけ（秘書の守り 4 つ `assistant.py:98-103` の `require_super_admin`）。画面が送る使用量の申告を信じる作りは、この条件があって成り立つ。使える人を広げるときは設計を審査し直す（ADR-1085）。
+- 札の期限（10 分）で、**つないでいる最中の LIVE が実際に切れるか**は【未】（`expireTime` が「つなぎ始めまで」の意味なら切れない）。便 T0 で 11 分つなぎ続けて確かめる。切れなかったときの備えとして、画面は 10 分で LIVE を自分で終える（同じ 10 分を画面にも持つ。正本は backend の定数で、札の口の返事に入れて画面に渡す）。
 - 札・鍵を backend のログ・エラー文・画面のログに出さない（試験 §11）。
 - 使う SDK の版: `google-genai`（`backend/requirements.txt` の下限 `>=1.0.0`）で `auth_tokens.create` が使えるかは【未】。**便 T0 で使う版を固定してから作る**。
 
@@ -145,22 +166,32 @@
 ### 6-1 使用量の入り口（【公】で確かめた事実に合わせた作り）
 
 - 使用量（`usageMetadata`）は、つないだ側＝画面にだけ届く【公】。backend は直接は見られない。
-- そこで、**札を出す時に「この LIVE 1 回の最大の費用」を台帳に仮の 1 行として先に書く**（`outcome` は始めの印）。最大の費用は便 T0 で 10 分の LIVE を実測して決める（今は推測で書かない）。
-- LIVE を終えたら、画面が最後に受けた使用量を新しい口 `POST /api/v1/assistant/live/usage`（札の番号付き）に送る。backend はその仮の行を本当の量で書き直す。**届かなければ最大のまま残す**（多めに数える側に倒す）。
+- そこで、**札を出せた時に台帳に仮の 1 行を先に書く**（`outcome = 'pending'`・§6-3）。便 T0 では費用は空のまま。便 T1 からは「この LIVE 1 回の最大の費用」を入れる（最大は便 T0 で 10 分の LIVE を実測して決める。今は推測で書かない）。
+- 画面は Google につながった時に、新しい口 `POST /api/v1/assistant/live/usage` に「始めた」を送る（札の行の番号付き）。LIVE を終えたら、最後に受けた使用量と速さの記録を同じ口に送る。backend は仮の行を本当の量で 1 回だけ書き直す（`outcome = 'pending'` の行だけ・本人の札の行だけ）。
+- 書き直しが来ない行の扱い（次に札を出すときと、費用の画面を読むときに、同じ処理で直す）:
+  - 札を出して 2 分たっても「始めた」が来ない行 → 費用 0・`outcome = 'failed'`・`error_code = 'not_started'`。札は 1 回しか使えず、つなぎ始めの期限は 1 分（【公】）なので、その後はつなげず請求も立たない。期限後につなげないことは便 T0 で確かめる。
+  - 「始めた」が来て 15 分たっても終わりの報告が来ない行 → 便 T1 からは最大の費用で `ok` にする（多めに数える側に倒す）。便 T0 では費用は空のまま `ok` にし、Google の請求画面で照らす。
 - 画面が送る値は「申告」なので、毎月 1 回、Google の請求と台帳の LIVE の合計を照らす（§11）。差が 1 割を超えたら PO に知らせる。
 
 ### 6-2 上限の判定
 
-- 札を出す時に、今月の LIVE の合計（仮の行を含む）＋次の 1 回の最大が上限を超えるなら札を出さない。1 回のつなぎは最長 10 分で切れる（§5-2）ので、**上限に届いた後は、長くても 10 分のうちに LIVE が止まり、新しい LIVE は始まらない**（kgi.md L12）。文の秘書は今のまま使える。
+- 札を出す時に、今月の LIVE の合計（仮の行を含む）＋次の 1 回の最大が上限を超えるなら札を出さない。合計を数える前に、同じ取引の中で LIVE の上限用の advisory lock を取る（2 人が同時に札を取って両方が通るのを防ぐ）。**合計を読めなければ札を出さない**（503。読み上げの字数と同じ型・ADR-1080 `:20`）。1 回のつなぎは最長 10 分で切れる（§5-2）ので、**上限に届いた後は、長くても 10 分のうちに LIVE が止まり、新しい LIVE は始まらない**（kgi.md L12）。文の秘書は今のまま使える。
 - 黙ったままが 2 分続いたら画面が自動で終える（費用の守り）。
-- 上限の置き場: 読み上げと同じ型で、`backend/app/services/secretary_live.py` の定数 1 か所（`MONTHLY_COST_CAP_USD`）。変えるのは配備。止めたいときは配備を待たず、会社の機能の旗（`tenant_features` の秘書の行）で LIVE のボタンを消す（§15）。
+- 上限の置き場: 読み上げと同じ型で、`backend/app/services/secretary_live.py` の定数 1 か所（`MONTHLY_COST_CAP_USD`）。変えるのは配備。止めたいときは配備を待たず、LIVE 専用の旗（`tenant_features` の `secretary_live` の行）を切って LIVE のボタンを消す（§15）。秘書の旗 `secretary_chat` は秘書の全部の守りなので（`assistant.py:93`・`:99`）、それを切ると文の秘書も止まる。だから LIVE 専用の旗を足す。旗の行は表の行を足すだけで、表の作りは変えない（`migrations/20261101_120000_enable_secretary_chat_tenant4.sql:10` と同じ形の migration で会社 4 だけ）。
 - 既存の会社ごとの月の予算 `tenant_llm_budgets`・`check_budget`（`llm_budget.py:498`・`:441`）は使わない。理由: 秘書から使われているかが【未】（recon.md `:214`）で、使うと他の AI の仕事の予算と混ざる。LIVE は全社で 1 つの上限にする。
 
 ### 6-3 値段表と 1 行の形
 
 - 値段表の正本は `llm_budget.py` の 1 か所のまま。Gemini Live の音声と文字の単価が違うので、`LLM_PRICING` に音声の入力・出力の単価を足し、`calculate_usage_cost` が `usageMetadata` の種類ごとの内訳（音声・文字）から計算するよう広げる。
-- 1 行＝LIVE 1 回（ADR-1080 の読み上げ 1 回＝1 行と同じ粒度）。札を出せた・つなげなかった・途中で切れた・上限で断った、をすべて 1 行にし、`outcome`・`error_code` に残す（ADR-1058 の型）。
-- 新しい値: 使いみち `secretary_live`、sdk `google-genai-live`。`USAGE_PURPOSES`・`USAGE_SDKS`（`llm_budget.py:174`）と `USAGE_SDKS_BY_PROVIDER`（`:180-185`）に足し、試験 `test_super_admin_ai_jobs.py:29` を直す。
+- 1 行＝LIVE 1 回（ADR-1080 の読み上げ 1 回＝1 行と同じ粒度）。行を書くのは Google の口を呼んだ時だけ（札を作る呼び出し）。上限・回数・鍵が無いで断ったときは Google を呼んでいないので書かない（ADR-1058 `docs/adr/ADR-1058-ai-job-assignments.md:24`「API を呼んでいない失敗は書かない」のまま）。札を作る呼び出しが失敗したら、今の 9 つの `error_code` で `failed` の 1 行にする。
+- **migration（便 T0・1 本・今の型 `migrations/20261117_100100_add_llm_usage_tts_characters.sql` と同じく冪等）**。値を足すだけでは足りず、次を作り直す・足す（表や列を消す文は入れない。CHECK だけを「あれば外して」から作り直す）:
+  1. `outcome` の CHECK（`migrations/20261103_120000_create_ai_job_assignments.sql:128-129`）に `pending` を足す。
+  2. 組み合わせの CHECK（同 `:143-144`）を「`ok`・`pending` は `error_code` が空／`failed` は空でない」に作り直す。
+  3. `error_code` の CHECK（同 `:133`）に `not_started` を足す（10 個になる）。
+  4. `purpose` の CHECK に `secretary_live`、`sdk` の CHECK に `google-genai-live` を足す。
+  5. 列を足す（`ADD COLUMN IF NOT EXISTS`・既存の行は空）: `audio_prompt_tokens`・`audio_candidates_tokens`（音声の内訳。費用の計算の根拠を行に残す）、`live_reply_latency_ms INTEGER[]`・`live_barge_in_latency_ms INTEGER[]`（L5・L6 の 1 回ごとのミリ秒）。
+- 今の集計は `outcome = 'ok'` だけを数える（ADR-1058 `:24`）ので、`pending` の行は今の画面の数を変えない。
+- 写しの更新: `USAGE_PURPOSES`・`USAGE_SDKS`（`llm_budget.py:174-176`）に足す。`USAGE_SDKS_BY_PROVIDER`（`:180-185`）には **`gemini` に入れず**、読み上げ（`google_tts`）と同じ形で新しい鍵 `gemini_live` を足す。`gemini` に入れると「AI の担当」タブの Gemini の回数とログインの○×に LIVE が混ざる（`super_admin_ai_jobs.py:184`）。試験 `test_super_admin_ai_jobs.py:281` の期待の集合に `gemini_live` を足す。CHECK と写しの一致は `test_secretary_voice_pg.py:104` が見る。
 - ② OpenAI に切り替える場合の sdk の値は、そのときの migration で足す（切り替えは作り直しの別の便になるため）。
 
 ### 6-4 今月の費用を見る画面
@@ -173,18 +204,20 @@
 
 | 上限の持ち主 | 何の上限か（事実）| 画面がどう知るか | 画面の文の中身 |
 |---|---|---|---|
-| Sales Anchor（社内で決めた額）| LIVE の月の上限（§6-2）| backend の札の口が決まった失敗の印を返す | 社内で決めた今月の上限に達した・来月 1 日に戻る・文字の秘書は使える |
+| Sales Anchor（社内で決めた額）| LIVE の月の上限（§6-2）| backend の札の口が決まった失敗の印を返す | 社内で決めた今月の上限に達した・日本時間の来月 1 日 0 時に戻る・文字の秘書は使える |
+| Sales Anchor（準備）| LIVE 専用の鍵が入っていない・Redis が読めない・合計が読めない（§5-2・§6-2）| backend が 503 と決まった印を返す | 声の会話の準備ができていない・文字の秘書は使える・管理者に知らせる |
 | Sales Anchor（使いすぎの止め）| 札の口の 1 人 1 時間 20 回（§5-2）| backend が 429 と決まった印を返す | 短い間に何度も始めた・◯分後にまた使える |
 | Google（声の AI）の 1 回の長さ | 1 本のつなぎは約 10 分。終わる前に知らせ（GoAway・残り時間つき）が届く【公】| Google からの知らせ | あと◯秒で区切れる・押し直せば続けられる |
-| Google の請求先の月の上限 | 段階ごとの月の上限。届くと翌月 1 日まで止まる【公】| 札を作るときの Google の失敗の返事を backend が見分ける。**どの返事で届くかは【未】** → 便 T0 で Google の文書と実際の返事を確かめ、見分けられた印だけを画面の文にする | Google 側の今月の上限で止まった・PO に知らせる |
+| Google の請求先の月の上限 | 段階ごとの月の上限。届くと翌月 1 日まで止まる【公】（区切りの時間帯は【未】のため、画面は「来月」とだけ出し時刻は出さない）| 札を作るときの Google の失敗の返事を backend が見分ける。**どの返事で届くかは【未】** → 便 T0 で Google の文書と実際の返事を確かめ、見分けられた印だけを画面の文にする | Google 側の今月の上限で止まった・PO に知らせる |
 | Google の回数の上限 | 決まった時間あたりの回数【公】（数は請求先の段階で違う）| 同上【未】 | Google 側の回数の上限で止まった・少し待つ |
 | ブラウザ（マイクの印 A の聞き取り）| ブラウザが聞き取りを止めることがある【未】| Web Speech の失敗の印 | ブラウザの聞き取りが止まった・押し直す |
 | 送れる文の長さ | 1,000 字（`secretaryApi.ts:10`）| 画面が数える | 1,000 字を超えた・今◯字 |
 
 - ② を選んだら、OpenAI の `credit_balance_exhausted`（無料分の使い切り・公式に印がある）を「OpenAI の今月の無料分を使い切った」の文にする。
 - ChatGPT は、§12-H で ② を選ばない限り使わないので、ChatGPT の上限の文は作らない。② を選んだら、同じ表に「OpenAI の無料分を使い切った」を足す。
-- 見分けられない止まり方は推測で分類しない。「原因が分からない止まり方」の文を出し、Google からの印をそのまま台帳の `error_code` に残す（§6-3）。便 T0 で出た印を数え、見分けられたものから表に足す。
-- 印→文の対応の正本は画面の 1 か所（翻訳キー・ADR-027）。backend の失敗の印の正本は `secretary_live.py` の 1 か所。文は、今の読み上げの上限の知らせ（`SecretaryChat.tsx:165-169` の `secretary-draft__error` と `role="status"`・`secretary.voiceCapReached`）と同じ出し方にする。`components/` に警告の金型は見つからなかった（`Alert`・`Banner` の名前の部品は無い。2026-11-22 origin/main）。新しい部品は作らない。
+- 見分けられない止まり方は推測で分類しない。「原因が分からない止まり方」の文を出し、台帳の `error_code` は `other` にする（`error_code` は決まった 10 個だけ・§6-3）。Google の生の印は backend のログに残す。便 T0 で出た印を数え、見分けられたものから表に足す。
+- 印→文の対応の正本は画面の 1 か所（翻訳キー・ADR-027）。backend の失敗の印の正本は `secretary_live.py` の 1 か所。文は、注意の金型 `Callout`（`frontend/src/components/Callout.tsx:1-10`・ADR-144）で出す。社内と Google の上限・準備ができていないは `variant="warning"`（`role="alert"`）、10 分の区切りの予告・1,000 字は `variant="info"`（`role="status"`）。新しい部品は作らない。2 回目の審査の前は名前で探して見落としていた（用途で探し直した）。
+- Google の同時につなげる数の上限は【未】。使う人が数人なので表に足さず、便 T0 で出たら足す。
 
 ### 6-5 AI の担当表（ADR-1058）に入れない理由
 
@@ -213,21 +246,23 @@
 
 - 文字は全部 `t("key")`（ADR-027）。`ja.json`・`en.json` に同じキー。
 - 見た目は金型だけ（ADR-144）。LIVE の画面は `Sheet`・`Stack`・`IconToggleButton`・`ChatBubble`・`Button` を使う（recon.md 1-2）。絵柄は `frontend/src/constants/icons.tsx` の `SECRETARY_ICONS`（`:416`）に、LIVE・消音・終了を足す。色・余白はデザイントークンだけ（ADR-067）。新しい金型が要るときは作る前に PO に聞く。
-- **機械が見る範囲の注意**: ADR-144 の生の部品の検査は `frontend/src/pages/**` だけを見て、`features/` は日本語の直書きと loading の書き方だけを見る（`docs/adr/ADR-144-ui-component-governance.md:134`・`scripts/check-ui-governance.js:16-18`・`:47-48`）。LIVE の画面は `features/secretary/` に作るので、**金型を守るのは人の審査**（`docs/CC_UI_GOVERNANCE.md`）。マージ前の審査役の点検に「生の部品・色の直書きが無いこと」を入れる。
+- **機械が見る範囲の注意**: ADR-144 の生の部品の検査は `frontend/src/pages/**` だけを見て、`features/` は日本語の直書きと loading の書き方だけを見る（`docs/adr/ADR-144-ui-component-governance.md:134`・`scripts/check-ui-governance.js:16-18`・`:47-48`）。色・寸法の直書きは ADR-067 の検査（`check:css-colors`・`check:css-values`・`frontend/package.json:48`）が CI で見る。**人の審査に残るのは生の部品（`<select>`・`<input>` 等）と金型の選び方**。マージ前の審査役の点検に「生の部品が無いこと」を入れる。
+- **日本語の直書きは機械で止める**: `frontend/eslint.config.js` に `src/features/secretary/**` だけ `local/no-japanese-literal` を `error` にする override を足す（前例: 同じファイルの `:244`・`:252` の override）。CI の `lint-run`（`.github/workflows/e2e.yml:65`・`:87`）が落ちる。便 A の PR に入れる（先に出る便のため）。
 
 ## 10. 便の分け方（一度に 1 つ）
 
 | 便 | 中身 | 合格を見る目標 | migration |
 |---|---|---|---|
-| T0（試作）| 札の口（回数の上限つき）・LIVE の画面の最小形（話す・聞く・割り込み・両方の文字・消音・終了）・速さの計測の記録。**台帳・上限なし・機能の旗は PO の会社だけ**。料金ページの再確認・SDK の版の固定・CSP の接続先の確定・iPhone 実機・10 分の最大の費用の実測もここ | L4〜L7・L10 の測り・最大の費用の実測 | なし |
-| T1 | 台帳の値・仮の行・使用量の口・月の上限・費用の画面 | L12 | 1 本（台帳の値）→ GO まで main に入れない |
+| T0（試作）| 札の口（回数の上限つき・専用の鍵）・LIVE 専用の旗・台帳の仮の行と使用量の口（費用は空）・LIVE の画面の最小形（話す・聞く・割り込み・両方の文字・消音・終了・10 分で自分で終える）・速さの記録。**月の上限なし・旗は PO の会社だけ**。料金ページの再確認・SDK の版の固定・CSP の接続先の確定・iPhone 実機・10 分の最大の費用の実測・札の期限で切れるか（11 分つなぐ）・文の意味で話し終わりを見る設定があるか（L5/L7）・予定の声の「はい」の否定語とわざと違う日時（各 5 回）もここ | L4〜L7・L10 の測り・最大の費用の実測 | 2 本（旗の行・台帳）→ GO まで main に入れない |
+| T1 | 月の上限（仮の行の最大・錠・読めないとき出さない）・費用の画面 | L12 | なし |
 | A | マイクの印を PC にも・聞き続ける形・聞き直し | L2・L3 | なし |
 | B | LIVE で秘書に頼む（道具）・予定の声の「はい」（請求書はボタンだけ）・上限の持ち主の文・文字を会話に残す・ゆっくり | L8・L9・L11 | なし |
 | C | 「声で返事」を消す（試験 `SecretaryChat.test.tsx:501-631` も）・読み上げの口と声の設定の扱い（§12-G）| L1 | なし |
 
 - 順番: T0 → T1 → B → C。A は T0 と別に先に出せる。
 - **T0 の前に PO の了承が要る**: T0 でも本番で声の AI を使うので費用が出る（§12-A）。T0 の間の費用は、札の口の回数の上限と PO の会社だけの旗で抑える。T0 の費用は台帳に入らないため、Google の請求画面で PO と照らす。
-- GO: T1 は migration を含むので、PR 全体を GO（ADR-135・ADR-136）まで main に入れない。この migration は値を足すだけで、ADR-1003 の例外（DROP を含む等）に当たらないため、委任の GO で足りる。画面・backend だけの便も、GO の記録を PR に残す（`docs/STANDARD-WORKFLOW.md` の完了の定義）。
+- GO: T0 は migration を含むので、PR 全体を GO（ADR-135・ADR-136）まで main に入れない。この migration は CHECK の作り直しと列の追加だけで、表や列を消さないため ADR-1003 の例外に当たらず、委任の GO で足りる。PR 本文に「CHECK を外す文は作り直しのためで、表や列を消す文ではない」と書く。
+- 便 C（「声で返事」を消す）は、便 T0 と B の本番の測りで L4・L5（決め直した線）が合格してから出す。画面・backend だけの便も、GO の記録を PR に残す（`docs/STANDARD-WORKFLOW.md` の完了の定義）。
 - T0 で L5 を満たさないときは、② OpenAI に切り替えるかを PO に聞く。
 
 ## 11. 続けるための機械の仕組み
@@ -235,15 +270,17 @@
 | 何を守るか | 仕組み | 今あるか |
 |---|---|---|
 | 画面の文字の翻訳漏れ（ja と en の鍵の食い違い）| CI の `npm run check:all` の中の `check:i18n-missing-keys`（`.github/workflows/e2e.yml:87`・`frontend/package.json:28,48`）| ある（必須チェック「Lint & Dark Mode Check (ADR-067)」）|
-| 画面の日本語の直書き | `local/no-japanese-literal` は `frontend/eslint.config.js:31` で warn。CI の `eslint src`（`frontend/package.json:15`）は warn で落ちない。落ちるのは手元の commit の lint-staged（`--max-warnings=0`・`frontend/package.json:58`）だけ。クラウドの担当は node_modules が無いと lint-staged を飛ばす（2026-11-23 の commit の出力）| **機械では止まらない**。便 T0 の画面の試験に「`features/secretary/` の新しいファイルに日本語の直書きが 0 件」を足す |
-| 金型外の見た目 | `features/` は機械が見ない（§9）→ マージ前の審査役の点検 | **人の審査だけ**（機械は日本語の直書きと loading の書き方だけ）|
+| 画面の日本語の直書き | `local/no-japanese-literal` は `frontend/eslint.config.js:31` で warn。CI の `eslint src`（`frontend/package.json:15`）は warn で落ちない | **便 A で機械にする**: `src/features/secretary/**` だけ `error` の override（§9）。CI の `lint-run` で止まる |
+| 金型外の見た目 | 色・寸法の直書きは ADR-067 の検査（CI）。生の部品は `features/` を機械が見ない（§9）→ マージ前の審査役の点検 | 色・寸法は機械・**生の部品は人の審査だけ** |
 | 台帳の値の取り違え | DB の CHECK・`test_secretary_voice_pg.py:104` の一致の試験・`test_super_admin_ai_jobs.py:29` | ある（値の追加で更新）|
-| 月の上限を超えない | backend の試験: 合計＋次の最大が上限を超えると札を出さない・仮の行が使用量の報告で書き直され、報告が無ければ最大のまま | **新しく作る** |
+| 月の上限を超えない | backend の試験: 合計＋次の最大が上限を超えると札を出さない・仮の行が使用量の報告で 1 回だけ書き直される・「始めた」が来ない行は 2 分で 0 円・2 本同時に取っても上限を超えない・合計や Redis が読めなければ出さない・使用量の口は別人の札の行を書き換えない | **新しく作る** |
 | AI が勝手に作らない | 試験: 札に固定する道具が「秘書に頼む」1 つだけ／請求書は声では作らない／予定は窓の中の完全一致だけで作る／否定語・窓の外・部分一致では作らない | **新しく作る** |
-| 鍵と札が漏れない | 試験: 札の口の返事に鍵が無い・backend のログとエラー文に鍵も札も出ない・札の口は秘書の機能と権限を見る・回数の上限で 429 | **新しく作る** |
-| 速さ（L5・L6）| 画面が LIVE 1 回ごとに「こちらの声の終わり→秘書の声の始まり」「こちらの声→秘書の声の停止」のミリ秒を使用量の口に一緒に送り、台帳の行に残す | **新しく作る**（便 T0 は画面の記録のみ）|
-| 費用の照らし合わせ | 毎月 1 回、Google の請求と台帳の LIVE の合計を比べる（ADR-1080 の字数の照らしと同じ日に）。差が 1 割を超えたら PO へ | 手作業（ADR-1080 と同じ）|
-| 決まりの索引 | `docs/adr/FEATURE-INDEX.md` の秘書の行に ADR-1085 を足す | 便 T0 の PR で足す |
+| 鍵と札が漏れない | 試験: 札の口の返事に鍵が無い・backend のログとエラー文に鍵も札も出ない・札の口は LIVE の旗と秘書の守りを見る・回数の上限で 429・鍵が空なら 503 | **新しく作る** |
+| 道具の結果 | 画面の試験: 道具の結果は秘書の返事の文と、画面が作った予定の読み上げの文だけ（請求書の中身を渡さない）・Gemini は偽物に差し替えて CI で測る（本物の Gemini は本番の人の測り L11 が正本）| **新しく作る** |
+| 速さ（L5・L6）| 画面が LIVE 1 回ごとに「こちらの声の終わり→秘書の声の始まり」「こちらの声→秘書の声の停止」のミリ秒を使用量の口に一緒に送り、台帳の列 `live_reply_latency_ms`・`live_barge_in_latency_ms` に残す（§6-3）。本番の読み取り鍵で数える | **新しく作る**（便 T0）|
+| 費用の照らし合わせ | 毎月 1 回、Google の請求と台帳の LIVE の合計を比べる（ADR-1080 の字数の照らしと同じ日に）。差が 1 割を超えたら PO へ。結果は `docs/handoff/secretary-live/monthly-reconcile.md` に月ごとに 1 行足す | **手作業**。忘れたときに気づく仕組みは便 T1 の後に、週次の点検（週次点検の Discord の知らせ）に「前の月の行が無い」を足すかを PO に聞く |
+| 決まりの索引 | `docs/adr/FEATURE-INDEX.md` の秘書の行に ADR-1085 を足す | 便 A の PR で足す |
+| 親から子へのリンク | `docs/specs/secretary-chat/README.md` に `docs/handoff/secretary-live/` へのリンクを足す | この設計の PR で足した |
 
 ## 12. PO に決めてもらうこと
 
@@ -257,9 +294,12 @@
 
 - **H. ChatGPT の契約の種類**（Plus／Pro／Business）。Pro か Business なら、毎月の API の無料分の中で声の会話を使える（§4-1）。その場合は ② OpenAI を第一の候補にし直し、便 T0 で ① と並べて速さと 1 分の費用を測って選ぶ。Plus なら ① のまま。
   - **PO 2026-11-23「1」**: ChatGPT は Business を使う予定。席（Standard 2 席か Premium を含めるか）は、便 T0 で 1 分の費用を測ってから決める。Business は最低 2 席で、2 席分が毎月かかる（【三】値段の画面で T0 前に確かめる）。
-  - 別の問い（PO 2026-11-23）: ChatGPT のスマホアプリから Sales Anchor を動かすこと。Sales Anchor には MCP の口も OAuth の認可の口も無い（`git grep` origin/main `backend/app` で 0 件）。公式の文書では文字の会話から読み書きできる（Business は書き込みも可・作る前に毎回確認）。声の会話の中では使えないという利用者の報告が複数（community.openai.com/t/1382072・/t/1376009。公式の記載は無し）。**PO 2026-11-23「1」: 今は頼まず、このテーマに集中する。**
+  - 別の問い（PO 2026-11-23）: ChatGPT のスマホアプリから Sales Anchor を動かすこと。Sales Anchor には MCP の口が無い（`git grep -i mcp` origin/main `backend/app` で 0 件）。`oauth` は外のサービスへつなぐ側の口だけがある（`backend/app/main.py:52`・`:63`・`:76` の Discord・Google カレンダー・Meta）。Sales Anchor が OAuth の認可を出す側の口があるかは未確認。公式の文書では文字の会話から読み書きできる（Business は書き込みも可・作る前に毎回確認）。声の会話の中では使えないという利用者の報告が複数（community.openai.com/t/1382072・/t/1376009。公式の記載は無し）。**PO 2026-11-23「1」: 今は頼まず、このテーマに集中する。**
 
 - **I. 請求書を声の「はい」で作るか**（審査 2 回目 §3-2）。**PO 2026-11-23「1」: 請求書は画面の「作る」ボタンだけで作り、予定は声の「はい」で作る。** §5-1 と kgi.md L11 を直した。
+
+- **J. LIVE 専用の Google の鍵**（審査 2 回目 §3-3）。推奨: LIVE 専用の Google のプロジェクトを作り、その鍵を `GEMINI_LIVE_API_KEY` に入れる。分ければ、LIVE の使いすぎで翻訳・抽出が止まらず、毎月の照らし合わせも LIVE の分だけで比べられる。作りはどちらでも同じ（専用の環境変数を読む・§5-2）。値を入れるのは PO 本人。
+- **K. L5 と L7**（審査 2 回目 §3-1）。**PO 2026-11-24「1」: 便 T0 で、文の意味で話し終わりを見る設定が Gemini にあるかを先に測る。無ければ考える間（L7）を優先し、L5 は 3 秒以内に緩める。** kgi.md L5 を直した。
 
 - 外の事例の数値は電話・ドライブスルーの規模で、我々の社内の数人の使い方にそのまま当てはまらない（research.md §4-1）。だから便 T0 を本番で測ってから先へ進む。
 
@@ -284,11 +324,13 @@
 
 ## 15. 戻し方
 
-- 画面: LIVE のボタンは `tenant_features` の秘書の行と同じ条件で出す。止めるときはその旗を切れば、配備なしで LIVE のボタンが消え、文の秘書は今のまま動く。
-- コード: 便ごとの PR を戻す。台帳の値の追加は「無いときだけ」の migration で、戻しても今の行は壊れない。
+- 画面: LIVE のボタンは LIVE 専用の旗（`tenant_features` の `secretary_live` の行）が有効なときだけ出す。止めるときはその行を切れば、配備なしで LIVE のボタンが消え、文の秘書は今のまま動く（秘書の旗 `secretary_chat` は触らない）。
+- コード: 便ごとの PR を戻す。台帳の migration は「無いときだけ」の冪等な形で、コードを戻しても今の行は壊れない（足した値・列は残るが使われないだけ）。
 - 上限: 定数を 0 にして配備すれば札を出さない。
 
 ## 16. 維持の仕組み
+
+守り手: .github/workflows/e2e.yml（画面の検査 `lint-run`・翻訳の鍵の検査。今ある必須チェック）。下の表の新しい試験は便ごとに足し、足したらこの行に並べる。
 
 | 守り手 | 対象 | 関所 |
 |---|---|---|
@@ -296,5 +338,6 @@
 | 画面の試験 `frontend/src/features/secretary/SecretaryLive.test.tsx`（便 T0 で新しく作る）| 道具が 1 つ・声の一致の窓と完全一致・請求書は声で作らない・上限の文の持ち主 | CI の画面の試験（必須チェック）|
 | 台帳の一致の試験 `backend/tests/test_secretary_voice_pg.py`（既存）| CHECK と写しの一致 | CI の DB 付き試験 |
 | i18n の検査（既存）| 翻訳漏れ | CI |
-| マージ前の審査役（人の審査）| `features/secretary/` の金型・色の直書き | 関所なし（ADR-144 の機械が `features/` を見ないため）|
-| 毎月の照らし合わせ（手作業・ADR-1080 と同じ日）| Google の請求と台帳の差 | 関所なし（手作業）|
+| 画面の検査 `frontend/eslint.config.js` の override（便 A で足す）| `features/secretary/` の日本語の直書き | CI の `lint-run`（必須チェック）|
+| マージ前の審査役（人の審査）| `features/secretary/` の生の部品 | 関所なし（ADR-144 の機械が `features/` を見ないため）|
+| 毎月の照らし合わせ（手作業・ADR-1080 と同じ日）| Google の請求と台帳の差。記録は `monthly-reconcile.md` | 関所なし（手作業）|
