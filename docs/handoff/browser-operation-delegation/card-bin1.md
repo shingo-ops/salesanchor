@@ -184,3 +184,19 @@ agent-hooks-test.yml の paths に `'docs/handoff/browser-operation-delegation/*
    - 新しい T22（二度と同じ形を入れない見張り）: po-apply-chrome-guard.sh と po-rollback-chrome-guard.sh の全行を読み、正規表現 `\$[A-Za-z_][A-Za-z0-9_]*[^\x00-\x7f]` に当たる行が0件であること。台本の場所は chrome-guard-tests.py の引数の hooks の dir の1つ上の dir から求める。
 5. **直さないもの（審査役の「低い・参考」。理由つきで残す）**: `back ` などの空白・大文字つきの navigate（区分1の移動として通る。行き先は履歴の範囲で、同意なしに外へ何かを送る道ではない）。`www.github.com/settings/tokens` のような転送で区分3に着く道（設計 §5 が残る弱さとして受け入れ済み）。状態ファイルが `[]` の形のときに記録の行が残らない件（止める側に倒れており、通す道ではない）。
 6. 終わりの条件は §10 と同じ。chrome-guard-tests は fail=0、consent-unit-tests は FAIL 無し、§12-4 の足した試験が全部 PASS 行に出ること。commit は1つ、push は `git push origin release/chrome-op-guard` を単独で。
+
+## 13. 3回目の審査の中の指摘の直し（2026-11-23 審査役 APPROVE on 225dbb134 の指摘1。§3〜§12 より優先）
+
+触るファイル: hooks/chrome_op_guard.py・hooks/tiers.json・scripts/dev/chrome-guard-tests.py の3つだけ。設計・ADR・ほかのファイルは触らない。
+
+1. **ブラウザを切り替えたら、そのセッションの全タブの住所を「不明」にする**。【事実】手元の住所 `http://localhost:5173/` で確かめ済みのタブ 7 → `switch_browser {}` → `computer left_click tabId:7`（同意票なし）が exit 0 で通る（審査役の探り `SWITCH then click tab7 rc_click=0`、select_browser も同じ）。tabId はブラウザごとの番号なので、切り替え先の同じ番号のタブが外のサイトでも同意なしで押せる。設計 §7 の T15「switch_browser の後も部屋 P の扱いのまま（押す操作が同意票なしで止まる）」の趣旨に反する。直し方:
+   - tiers.json の `page_affecting` の並びの最後に `"switch_browser"` と `"select_browser"` を足す。
+   - chrome_op_guard.py の `_decide` の `if t in ("switch_browser", "select_browser"):` の所（今は `rec["room_changed"] = True` だけ）に `tab_id = None` を足す。入力に tabId があっても、セッションの全タブを不明にするため（`mark_unknown(sid, None)` の道を通す）。
+   - 印を書けないときは、今の `state_write_failed` の道のとおり止める（区分1の道具でも止まる。止める側に倒す）。
+2. **試験（T15 に足す。既存の T15 は残す）**:
+   - 手元の確かめ済みのタブ 7（`ctx_reply(h, [tab(7, LOCAL)])`）→ `switch_browser {}` → `computer` の `click(7)`（同意票なし）が exit 2 で、記録の reason が `tab_unverified`。
+   - 同じことを `select_browser {"deviceId": "d"}` でも確かめる。
+   - `switch_browser {"tabId": 7}` のように tabId が付いていても、別のタブ 8（切り替え前に確かめ済みの手元の住所）への `click(8)` が exit 2・reason `tab_unverified`。
+   - 切り替えの後に `ctx_reply(h, [tab(7, LOCAL)])` で確かめ直すと、手元のタブ 7 の `key` `Enter` が通る（reason `local_exception`）。
+3. 終わりの条件は §10 と同じ。chrome-guard-tests は fail=0、consent-unit-tests は FAIL 無し、§13-2 の足した試験が全部 PASS 行に出ること。commit は1つ、push は `git push origin release/chrome-op-guard` を単独で。
+4. **直さないもの（審査役の「低い・参考」。理由つきで残す）**: 戻しの後に settings.json に空の `"PostToolUse": []` が残る件（動きに影響なし）。T16-c が同意の判定より手前の tab_unverified で止まる件（止める側に倒れる）。`chrome://` への移動（区分3の一覧は PO 承認済みの範囲の外。便2で検討）。点区切りのカード番号（設計どおり）。`_CTRL_RE =re.compile` の空白（見た目だけ）。
