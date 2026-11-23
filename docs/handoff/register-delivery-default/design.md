@@ -48,7 +48,7 @@ recon: `docs/handoff/register-delivery-default/recon.md`
 
 ## 9. Opus 審査（同一 AI の自己審査）
 
-- 既存 ADR との整合: ADR-127 の add_address false 固定・請求先の降格を変えない。ADR-126 の already_registered の 409 は請求先の一意制約で残る。→ 整合。
+- 既存 ADR との整合: ADR-127 の add_address false 固定・請求先の降格を変えない。ADR-126 の already_registered の 409 は請求先の一意制約で残る。ADR-097（登録フォーム）に登録時の配送先の default を決めた文は無く、この直しで食い違わない。→ 整合。
 - 実物との照合: 行番号は origin/main fc20983a4 で確認（recon §2）。
 - 受入条件は CI と reader で○×が出る。
 - 判定: APPROVE。未解決事項なし。
