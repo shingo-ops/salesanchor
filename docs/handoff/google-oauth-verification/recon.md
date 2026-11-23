@@ -54,9 +54,30 @@
 - 求める権限は機能に必要な最小に限る。読むだけのアプリが書く権限を求めてはいけない。
 - 未審査でも、知っている少人数の利用は例外。ユーザー数の上限（このアプリは 100）がかかる。
 
+## 4-2. 手順1（権限を狭められるか）の公式の照合（2026-11-24 Chrome で読んだ）
+
+アプリが呼ぶ Google の操作は `backend/app/services/google_calendar.py` と `backend/app/services/google_webhook.py` の9種だけ（`grep -rnoE "\.(events|calendars|calendarList|colors|settings|freebusy|acl|channels)\(\)\.[a-zA-Z]+\(" backend/app` と複数行の呼び出し :361・:527 を合わせて数えた）。各操作の公式ページ（developers.google.com/workspace/calendar/api/v3/reference/…?hl=en）の「Authorization」欄で、狭い権限が載っているかを照らした。
+
+| 操作 | `calendar.events.owned` が載っているか | `calendar.calendars.readonly` が載っているか |
+|---|---|---|
+| events.list | ○ | — |
+| events.get | ○ | — |
+| events.insert（Meet 付き） | ○ | — |
+| events.patch | ○ | — |
+| events.delete | ○ | — |
+| events.instances | ○ | — |
+| events.watch | ○ | — |
+| calendars.get（色ラベル） | × | ○ |
+| channels.stop | 権限の欄なし | 権限の欄なし |
+
+- 使うカレンダー: `backend/app/services/google_calendar.py:335`〜`:346` の `get_calendar_id` は設定が無ければ `primary`（本人の主カレンダー）。アプリの中で `calendar_id` を書く文は 0 件（`tenant_google_calendar_config` への INSERT/UPDATE 3か所 `backend/app/routers/google_calendar.py:130`・`backend/app/routers/calendar.py:685`・`backend/app/services/google_calendar.py:284` はどれも `calendar_id` を書かない）。
+- 公式の意味（developers.google.com/workspace/calendar/api/auth）: `calendar.events.owned` は「自分が持ち主の Google カレンダーの予定を見る・作る・変える・消す」。`calendar.calendars.readonly` は「カレンダーの題名・説明・時間帯などの設定を見る」。
+- 書類の上での結論: `calendar.events.owned` と `calendar.calendars.readonly` の2つで、9種すべてが許可の欄に載る。
+
 ## 5. 未確認
 
-- `calendar.events` と `calendar.calendars.readonly` の組み合わせで、今の全機能（`calendars().get` の `labelProperties`、`events().watch`、Meet 付きの作成）が動くか。
+- `calendar.events.owned` と `calendar.calendars.readonly` の組み合わせで、実際に今の全機能が動くか（§4-2 は書類の上での照合だけ。他人から招待された予定を本人の主カレンダーで直す・消すときの動きも未確認）。
+- 今の6人の連携の合鍵は全権で同意を取ったもの。狭い権限に変えたとき、連携のやり直しが要るか。
 - `calendar`（全権）と `calendar.events` のそれぞれの区分（機密か制限付きか）。Google の権限の画面には区分の表示が無かった。データアクセスの画面で追加したときに出る区分で確かめる。
 - Search Console で salesanchor.jp の所有権を確認済みか（ようこそ画面が出ただけで、別のアカウントで登録済みの可能性は消せていない）。
 - データアクセスの画面に `calendar` を登録した時点で、審査が終わるまで利用者の画面や今の6人の連携に何か変わるか。
