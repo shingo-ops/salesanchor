@@ -8,6 +8,8 @@
 
 ---
 
+現在地（recon）: docs/handoff/browser-operation-delegation/recon.md
+
 ## 1. 目的
 
 PO の言葉（[ideal-state.md](../../specs/browser-operation-delegation/ideal-state.md)）: 実装後の画面の確かめ、Meta の申請前の必須項目、Google Workspace のドメイン設定と Gmail の確かめを Opus が Claude in Chrome で行う。決済など重要なものは PO が行う。
@@ -16,7 +18,7 @@ PO の言葉（[ideal-state.md](../../specs/browser-operation-delegation/ideal-s
 
 ## 2. 対象と対象外
 
-- 対象: このリポジトリで動く Opus 本体（手元の Mac）と、手元で起動してよい evaluator（`/Users/tanizawashingo/.claude/scripts/local-agent-guard/guard.py:100`〜`:105`）が使う `mcp__claude-in-chrome__*` の全道具。
+- 対象: このリポジトリで動く Opus 本体（手元の Mac）と、手元で起動してよい evaluator（「~/.claude/scripts/local-agent-guard/guard.py:100」〜`:105`）が使う `mcp__claude-in-chrome__*` の全道具。
 - 対象外: Playwright（ADR-042 の Layer 1。ログインの無い試験用の窓で、PO のログインを使わない）、スマホの実機、クラウドの担当（Chrome に届かない）、Chrome 拡張そのものの設定の変更。
 
 ## 3. 変更前と変更後
