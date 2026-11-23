@@ -3,9 +3,14 @@
  * 顔や指紋のデータは端末から出ない。ここで扱うのは、端末が返す署名つきの応答だけ。
  */
 import {
+  WebAuthnAbortService,
+  base64URLStringToBuffer,
   browserSupportsWebAuthn,
+  browserSupportsWebAuthnAutofill,
+  bufferToBase64URLString,
   startAuthentication,
   startRegistration,
+  type AuthenticationResponseJSON,
   type PublicKeyCredentialCreationOptionsJSON,
   type PublicKeyCredentialRequestOptionsJSON,
 } from "@simplewebauthn/browser";
@@ -23,15 +28,103 @@ export function passkeySupported(): boolean {
   return !isDevSession() && browserSupportsWebAuthn();
 }
 
+/** ログインの後半（verify → トークンをメモリに入れる）。3つのログインの道で共通。 */
+async function finishPasskeyLogin(challengeId: string, credential: AuthenticationResponseJSON): Promise<void> {
+  const token = await postAuth<TokenResponse>("/passkey/login/verify", {
+    challenge_id: challengeId,
+    credential,
+  });
+  adoptAccessToken(token.access_token, token.expires_in);
+}
+
 /** パスキーでログインする。成功するとメモリにアクセストークンが入る。 */
 export async function selfPasskeyLogin(): Promise<void> {
   const res = await postAuth<Challenge<PublicKeyCredentialRequestOptionsJSON>>("/passkey/login/options");
   const credential = await startAuthentication({ optionsJSON: res.options });
-  const token = await postAuth<TokenResponse>("/passkey/login/verify", {
-    challenge_id: res.challenge_id,
-    credential,
+  await finishPasskeyLogin(res.challenge_id, credential);
+}
+
+function abortError(): Error {
+  return Object.assign(new Error("stale"), { name: "AbortError" });
+}
+
+/** メール欄の候補にパスキーを出してよいか（端末が自動の候補に対応しているとき）。 */
+export async function passkeyAutofillSupported(): Promise<boolean> {
+  try {
+    return passkeySupported() && (await browserSupportsWebAuthnAutofill());
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * メール欄の候補からのログインを待ち受ける。候補が選ばれて顔・指紋が通ると verify まで進む。
+ * isStale() が true になった呼び出しは verify もトークンの保存もせず、AbortError で終わる。
+ */
+export async function startPasskeyAutofill(isStale: () => boolean): Promise<void> {
+  if (isStale()) throw abortError();
+  const res = await postAuth<Challenge<PublicKeyCredentialRequestOptionsJSON>>("/passkey/login/options");
+  if (isStale()) throw abortError();
+  const credential = await startAuthentication({ optionsJSON: res.options, useBrowserAutofill: true });
+  if (isStale()) throw abortError();
+  await finishPasskeyLogin(res.challenge_id, credential);
+}
+
+/** 待ち受け中の顔・指紋の確認を取り消す。 */
+export function cancelPasskeyCeremony(): void {
+  WebAuthnAbortService.cancelCeremony();
+}
+
+/** ブラウザが「選ぶ画面を挟まず確認を出す」（immediate）に対応しているか（Chrome 149 以降）。 */
+export async function immediateGetSupported(): Promise<boolean> {
+  try {
+    const getCaps = (PublicKeyCredential as unknown as {
+      getClientCapabilities?: () => Promise<Record<string, boolean>>;
+    }).getClientCapabilities;
+    if (typeof getCaps !== "function") return false;
+    const caps = await getCaps.call(PublicKeyCredential);
+    return caps.immediateGet === true;
+  } catch {
+    return false;
+  }
+}
+
+// DOM の型にまだ無い uiMode をここだけで足す
+type ImmediateCredentialRequestOptions = CredentialRequestOptions & { uiMode?: "immediate" };
+
+/** 選ぶ画面を挟まずに顔・指紋の確認を出してログインする。ブラウザの誤りはそのまま投げる。 */
+export async function immediatePasskeyLogin(): Promise<void> {
+  const res = await postAuth<Challenge<PublicKeyCredentialRequestOptionsJSON>>("/passkey/login/options");
+  const o = res.options;
+  const request: ImmediateCredentialRequestOptions = {
+    publicKey: {
+      challenge: base64URLStringToBuffer(o.challenge),
+      rpId: o.rpId,
+      timeout: o.timeout,
+      userVerification: o.userVerification,
+      ...(o.extensions ? { extensions: o.extensions as AuthenticationExtensionsClientInputs } : {}),
+    },
+    uiMode: "immediate",
+  };
+  const cred = (await navigator.credentials.get(request)) as PublicKeyCredential | null;
+  if (!cred) throw new Error("Authentication was not completed");
+  const r = cred.response as AuthenticatorAssertionResponse;
+  await finishPasskeyLogin(res.challenge_id, {
+    id: cred.id,
+    rawId: bufferToBase64URLString(cred.rawId),
+    type: "public-key",
+    response: {
+      authenticatorData: bufferToBase64URLString(r.authenticatorData),
+      clientDataJSON: bufferToBase64URLString(r.clientDataJSON),
+      signature: bufferToBase64URLString(r.signature),
+      userHandle: r.userHandle ? bufferToBase64URLString(r.userHandle) : undefined,
+    },
+    clientExtensionResults: cred.getClientExtensionResults(),
+    authenticatorAttachment:
+      cred.authenticatorAttachment === "platform" || cred.authenticatorAttachment === "cross-platform"
+        ? cred.authenticatorAttachment
+        : undefined,
   });
-  adoptAccessToken(token.access_token, token.expires_in);
 }
 
 /** この端末をパスキーとして登録する（ログイン中）。 */
