@@ -6325,6 +6325,7 @@
       "start": "Speak to type",
       "stop": "Stop listening",
       "listening": "Listening…",
+      "tooLong": "Stopped listening at {{max}} characters. This box can send up to {{max}} characters at once. Send this part, then speak the rest.",
       "error": {
         "unsupported": "Voice input is not available on this screen",
         "notAllowed": "Microphone access is not allowed. Allow the microphone in your device settings",
