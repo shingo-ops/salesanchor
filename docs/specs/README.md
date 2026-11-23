@@ -69,7 +69,7 @@
 | 在庫（自社在庫／ドロップシッピングの2種。接点：order_item の出どころ参照） | （仕様書未作成） | **pending** | 自社在庫とドロップシッピングの区別を扱う前（仕様書はまだ無い） |
 | 予約販売（接点：order の派生フロー） | （仕様書未作成） | **pending** | 予約販売を扱う前（仕様書はまだ無い） |
 | 送料マスタ（接点：見積送料の算出） | （仕様書未作成） | **pending** | 送料の計算を扱う前（仕様書はまだ無い） |
-| 請求先/配送先の住所区別（接点：company/order の住所） | （仕様書未作成） | **pending** | 請求先・配送先の住所を扱う前（仕様書はまだ無い） |
+| 請求先/配送先の住所区別（接点：company/order の住所）／├ お客様の住所フォームと住所の決まり（customer-address-form。登録フォームの見た目、送り先は1行35文字以内・英字と数字と記号だけ） | [customer-address-form/README.md](customer-address-form/README.md) | あるべき姿 2026-11-24・KGI 案（PO 承認待ち） | 請求先・配送先の住所、お客様の登録フォームを扱う前 |
 | 為替レート | （仕様書未作成・関連ADR: ADR-148） | 未 | 為替レートを扱う前（関連 ADR を読む） |
 | 翻訳送信・グロッサリ（接点: conversation_logs。会話ログの紐付けは取引フロー） | [inbox/translation-glossary/README.md](inbox/translation-glossary/README.md) | 仕様書あり（KGI承認済み・To-Be design済・recon未） | 翻訳して送る機能・用語集を変える前 |
 | 帳票・フォーム送付（見積・請求書・フォームの送付導線。中身の作りは quote-invoice、入金確認は受注管理を参照） | [inbox/invoice-form-send/README.md](inbox/invoice-form-send/README.md) | 仕様書あり（KGI承認済み・To-Be design済・recon未） | 見積・請求書・フォームを送る導線を変える前 |
