@@ -80,7 +80,7 @@
 
 /* ---- 左パネル ---- */
 .inbox-left-panel {
-  width: var(--width-inbox-panel);
+  width: min(var(--inbox-pc-list-ratio), var(--inbox-pc-list-max-w)); /* ADR-1086: 比率で広がり最大幅で止まる */
   flex-shrink: 0;
   flex-grow: 0;
   background: var(--bg-surface);
@@ -633,7 +633,7 @@
 
 /* ---- 右パネル ---- */
 .inbox-right-panel {
-  width: var(--karte-panel-width); /* カルテ専用幅（見本 396px）— --drawer-width: 300px は topbar ドロワー用で流用不可 */
+  width: min(var(--karte-pc-ratio), var(--karte-pc-max-w)); /* ADR-1086: PC帯は比率で広がり最大幅で止まる。タブレット帯は下の @media で --karte-panel-width に戻す */
   flex-shrink: 0;
   flex-grow: 0;
   background: var(--bg-surface);
