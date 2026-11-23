@@ -32,7 +32,7 @@ recon: `docs/handoff/register-delivery-default/recon.md`
 | 基準 | 検証方法 |
 |---|---|
 | 配送先を is_default=false で送っても、保存された配送先が true | 新しい試験 1（SQLite・CI） |
-| 「請求先と同じ」（true で送る）も true のまま | 既存の試験 `test_creates_company_when_lead_has_none` に配送先 true の確認を足す |
+| 「請求先と同じ」（true で送る）も true のまま | 新しい試験 1 で代わりに確かめる（配送先の印は送られた値を読まずサーバーで決めるため、true で送っても false で送っても同じ枝を通る。マージ前審査の指摘を受けて 2026-11-24 に書き直し） |
 | すでに default の配送先がある会社では、送った配送先は false で入り 200 | 新しい試験 2 |
 | 本番 tenant_001 で「配送先住所を登録する」を選んで送ると、新しい配送先が is_default=True | 反映後に Opus が Chrome で送信し reader で読む |
 | 会社一覧の書き出しの配送先列が埋まる会社が増える（tenant_001 の新しい会社） | reader で default の配送先を数える（配送先あり＝default あり） |
