@@ -2,7 +2,7 @@
 
 > この文書は何か: PC の受信箱で、会話一覧を細く・会話欄を広くするために、3列の幅の決め方を作り直す設計書。
 
-親（設計仕様書）: [docs/specs/inbox/README.md](../../specs/inbox/README.md) ／ 調査: [recon.md](./recon.md) ／ 決定: [ADR-1086](../../adr/ADR-1086-inbox-pc-column-width.md)
+親（設計仕様書）: [docs/specs/inbox/README.md](../../specs/inbox/README.md) ／ 調査: [docs/handoff/inbox-pc-column-width/recon.md](./recon.md) ／ 決定: [ADR-1086](../../adr/ADR-1086-inbox-pc-column-width.md)
 
 - 起案: 2026-11-23 Claude Opus（設計担当）
 - 区分: 既存テーマ（受信箱）の延長（STANDARD-WORKFLOW §1.8）。記録は `docs/specs/inbox/track-record.md` に追記する。
