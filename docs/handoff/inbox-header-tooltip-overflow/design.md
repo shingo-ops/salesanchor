@@ -31,7 +31,7 @@
 
 ### 3-2. 直し方: ヘッダー右端のボタン群の共通の箱で、吹き出し付きの部品に位置の基準を持たせる
 
-`.page-header-actions`（ADR-069。全ページ共通のヘッダー右端の箱。定義は `components.css` のここだけ＝SSOT）の中の `[data-tooltip]` に `position: relative` を付ける。
+`.page-header-actions`（ADR-144 の共通部品。全ページ共通のヘッダー右端の箱。定義は `components.css` のここだけ＝SSOT）の中の `[data-tooltip]` に `position: relative` を付ける。
 
 - これで吹き出しはボタンを基準にし、ボタンのすぐ下に出る（docs/handoff/inbox-header-tooltip-overflow/recon.md §3-1: 本番の画面で試し、はみ出し 0・吹き出し top 42px・横のはみ出しなしを確認）。
 - 共通の箱の CSS 1か所に書くので、今後ほかのページがヘッダーのボタンに吹き出しを付けても同じ失敗が起きない。

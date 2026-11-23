@@ -10,7 +10,8 @@
 ## 1. 既存 ADR の検索
 
 - `git grep -l -i -E "tooltip|HeaderButton|page-header-actions" -- docs/adr` → `docs/adr/ADR-067-design-token-enforcement.md` の1件だけ（`:141` opacity 0/1 の直書き許可の説明で tooltip に触れるだけ）。吹き出し（tooltip）の位置の決めごとを定めた ADR は無い。
-- 関係する決めごと: ADR-069（ヘッダー右端のボタン群 `.page-header-actions` を標準部品に昇格。`frontend/src/components.css:499-501` の見出しコメント）、ADR-067（デザイントークン）、ADR-144（UI ガバナンス。部品は `components/` と共通 CSS を先に使う）。
+- 関係する決めごと: ADR-067（デザイントークン）、ADR-144（UI ガバナンス。部品は `components/` と共通 CSS を先に使う）。
+- 注: `frontend/src/components.css:496` の見出しコメントは「ADR-069: 標準コンポーネントクラス」と書くが、`docs/adr/ADR-069-uptime-kuma-activation.md` は監視ダッシュボードの件で、標準部品の ADR ファイルは `docs/adr/` に見つからない（`git grep -l -i "page-header-actions" -- docs/adr` は 0 件）。本件ではこのコメントを直さない（範囲外）。
 
 ## 2. コードの事実
 

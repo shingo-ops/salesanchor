@@ -16,7 +16,7 @@
 |---|---|---|
 | 原因が実物で確かめられているか | ○ | 本番で吹き出しを消すとはみ出し 0（1426→1392）。3つのボタンの `::after` の top が 1400px（docs/handoff/inbox-header-tooltip-overflow/recon.md §3） |
 | 直し方が実物で効くか | ○ | 本番の画面に手元だけで指定を差し込み、はみ出し 0・吹き出し top 42px・横のはみ出しなし・マウスを乗せた吹き出しが見える（docs/handoff/inbox-header-tooltip-overflow/recon.md §3-1） |
-| 既存の決めごととの整合 | ○ | `frontend/src/components.css:437-441` のコメント「要素は position が必要」に沿う。ADR-069 の共通の箱（`components.css:501`）1か所に書く＝SSOT。ADR-067: 数字を足さない |
+| 既存の決めごととの整合 | ○ | `frontend/src/components.css:437-441` のコメント「要素は position が必要」に沿う。共通の箱（`components.css:501`。ADR-144 の共通 CSS）1か所に書く＝SSOT。ADR-067: 数字を足さない |
 | 影響の範囲 | ○ | `.page-header-actions` の使い手6画面のうち `data-tooltip` を渡すのは受信箱だけ（docs/handoff/inbox-header-tooltip-overflow/recon.md §2-3 の `git grep`） |
 | 見張り（同じ失敗を二度と通さない） | ○ | 新しい試験は CI で今も走る `visual-language/` に置く（`.github/workflows/e2e.yml:170-175`・全体の E2E は `:294` で停止）。直す前に落ちることを GitHub の CI で示す（impl-card.md §4 の 5） |
 | スマホを壊さない | ○ | スマホ幅はヘッダーのボタンを出さない（`frontend/src/pages/inbox/InboxPage.tsx:83`）。試験も skip |
