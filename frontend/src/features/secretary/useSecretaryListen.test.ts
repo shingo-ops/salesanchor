@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { classifyListenError, useSecretaryListen } from "./useSecretaryListen";
+import { LISTEN_MAX_IDLE_RESTARTS, classifyListenError, useSecretaryListen } from "./useSecretaryListen";
 
 // 日本語の文字は文字列リテラルに書かず、コードで作る（useSecretaryVoice.test.ts と同じ）
 const JP_TEXT = String.fromCharCode(0x3053, 0x3093, 0x306b, 0x3061, 0x306f);
@@ -89,7 +89,7 @@ describe("useSecretaryListen", () => {
     const rec = FakeRecognition.instances[0];
     expect(rec.lang).toBe("ja-JP");
     expect(rec.interimResults).toBe(true);
-    expect(rec.continuous).toBe(false);
+    expect(rec.continuous).toBe(true);
     expect(rec.maxAlternatives).toBe(1);
     expect(rec.start).toHaveBeenCalledTimes(1);
     expect(result.current.listening).toBe(true);
@@ -147,9 +147,9 @@ describe("useSecretaryListen", () => {
   it("clears the previous error on the next start", () => {
     const { result } = renderHook(() => useSecretaryListen(vi.fn()));
     act(() => result.current.start());
-    act(() => FakeRecognition.instances[0].emitError("no-speech"));
+    act(() => FakeRecognition.instances[0].emitError("network"));
     act(() => FakeRecognition.instances[0].emitEnd());
-    expect(result.current.error).toBe("noSpeech");
+    expect(result.current.error).toBe("network");
     act(() => result.current.start());
     expect(result.current.error).toBeNull();
   });
@@ -174,6 +174,7 @@ describe("useSecretaryListen", () => {
     act(() => rec.emitEnd());
     expect(result.current.error).toBe("network");
     expect(result.current.listening).toBe(false);
+    expect(FakeRecognition.instances.length).toBe(1);
   });
 
   it("shows nothing for an aborted error", () => {
@@ -217,5 +218,97 @@ describe("useSecretaryListen", () => {
     expect(result.current.listening).toBe(true);
     act(() => rec.emitEnd());
     expect(result.current.listening).toBe(false);
+  });
+});
+
+describe("useSecretaryListen keeps listening", () => {
+  const last = () => FakeRecognition.instances[FakeRecognition.instances.length - 1];
+
+  it("restarts with a new recognition when it ends by itself, and stays listening", () => {
+    const { result } = renderHook(() => useSecretaryListen(vi.fn()));
+    act(() => result.current.start());
+    act(() => FakeRecognition.instances[0].emitEnd());
+    expect(FakeRecognition.instances.length).toBe(2);
+    expect(last().start).toHaveBeenCalledTimes(1);
+    expect(result.current.listening).toBe(true);
+  });
+
+  it("does not restart after stop", () => {
+    const { result } = renderHook(() => useSecretaryListen(vi.fn()));
+    act(() => result.current.start());
+    act(() => result.current.stop());
+    act(() => FakeRecognition.instances[0].emitEnd());
+    expect(FakeRecognition.instances.length).toBe(1);
+    expect(result.current.listening).toBe(false);
+  });
+
+  it("does not restart after abort", () => {
+    const { result } = renderHook(() => useSecretaryListen(vi.fn()));
+    act(() => result.current.start());
+    const old = FakeRecognition.instances[0];
+    act(() => result.current.abort());
+    act(() => old.emitEnd());
+    expect(FakeRecognition.instances.length).toBe(1);
+    expect(result.current.listening).toBe(false);
+  });
+
+  it("stops with noSpeech after the idle restart limit", () => {
+    const { result } = renderHook(() => useSecretaryListen(vi.fn()));
+    act(() => result.current.start());
+    for (let i = 0; i < LISTEN_MAX_IDLE_RESTARTS; i += 1) {
+      act(() => last().emitEnd());
+      expect(result.current.listening).toBe(true);
+    }
+    expect(FakeRecognition.instances.length).toBe(LISTEN_MAX_IDLE_RESTARTS + 1);
+    act(() => last().emitEnd());
+    expect(FakeRecognition.instances.length).toBe(LISTEN_MAX_IDLE_RESTARTS + 1);
+    expect(result.current.listening).toBe(false);
+    expect(result.current.error).toBe("noSpeech");
+  });
+
+  it("resets the idle count on a final sentence and keeps restarting", () => {
+    const { result } = renderHook(() => useSecretaryListen(vi.fn()));
+    act(() => result.current.start());
+    for (let i = 0; i < LISTEN_MAX_IDLE_RESTARTS - 1; i += 1) act(() => last().emitEnd());
+    act(() => last().emitResult(JP_TEXT, true));
+    for (let i = 0; i < LISTEN_MAX_IDLE_RESTARTS; i += 1) {
+      act(() => last().emitEnd());
+      expect(result.current.listening).toBe(true);
+    }
+    expect(result.current.error).toBeNull();
+  });
+
+  it("does not restart after notAllowed and keeps the error", () => {
+    const { result } = renderHook(() => useSecretaryListen(vi.fn()));
+    act(() => result.current.start());
+    act(() => FakeRecognition.instances[0].emitError("not-allowed"));
+    act(() => FakeRecognition.instances[0].emitEnd());
+    expect(FakeRecognition.instances.length).toBe(1);
+    expect(result.current.listening).toBe(false);
+    expect(result.current.error).toBe("notAllowed");
+  });
+
+  it("hides a noSpeech error and restarts", () => {
+    const { result } = renderHook(() => useSecretaryListen(vi.fn()));
+    act(() => result.current.start());
+    act(() => FakeRecognition.instances[0].emitError("no-speech"));
+    expect(result.current.error).toBeNull();
+    act(() => FakeRecognition.instances[0].emitEnd());
+    expect(FakeRecognition.instances.length).toBe(2);
+    expect(result.current.listening).toBe(true);
+    expect(result.current.error).toBeNull();
+  });
+
+  it("does not pass the same final sentence twice across a restart", () => {
+    const onText = vi.fn();
+    const { result } = renderHook(() => useSecretaryListen(onText));
+    act(() => result.current.start());
+    const first = FakeRecognition.instances[0];
+    act(() => first.emitResult(JP_TEXT, true));
+    act(() => first.emitEnd());
+    act(() => first.emitResult(JP_TEXT, true));
+    expect(onText).toHaveBeenCalledTimes(1);
+    act(() => last().emitResult(JP_TEXT + JP_TEXT, true));
+    expect(onText).toHaveBeenCalledTimes(2);
   });
 });

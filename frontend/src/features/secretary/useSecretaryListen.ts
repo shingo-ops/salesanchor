@@ -83,6 +83,9 @@ export function classifyListenError(code: string): ListenError | null {
   }
 }
 
+/** 何も聞き取れないまま聞き直す回数の上限 */
+export const LISTEN_MAX_IDLE_RESTARTS = 5;
+
 export interface SecretaryListen {
   supported: boolean;
   listening: boolean;
@@ -98,15 +101,15 @@ export function useSecretaryListen(onText: (text: string) => void): SecretaryLis
   const [interim, setInterim] = useState("");
   const [error, setError] = useState<ListenError | "unsupported" | null>(null);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
+  const wantRef = useRef(false);
+  const idleRestartsRef = useRef(0);
   const onTextRef = useRef(onText);
   onTextRef.current = onText;
 
-  const start = useCallback(() => {
-    if (recRef.current) return;
-    setError(null);
-    setInterim("");
+  const begin = useCallback(function beginListen() {
     const Ctor = getSpeechRecognition();
     if (!Ctor) {
+      wantRef.current = false;
       setError("unsupported");
       return;
     }
@@ -114,7 +117,7 @@ export function useSecretaryListen(onText: (text: string) => void): SecretaryLis
     recRef.current = rec;
     rec.lang = "ja-JP";
     rec.interimResults = true;
-    rec.continuous = false;
+    rec.continuous = true;
     rec.maxAlternatives = 1;
     rec.onresult = (ev) => {
       if (recRef.current !== rec) return;
@@ -124,7 +127,10 @@ export function useSecretaryListen(onText: (text: string) => void): SecretaryLis
         const transcript = result[0]?.transcript ?? "";
         if (result.isFinal) {
           const finalText = transcript.trim();
-          if (finalText !== "") onTextRef.current(finalText);
+          if (finalText !== "") {
+            idleRestartsRef.current = 0;
+            onTextRef.current(finalText);
+          }
         } else {
           interimText += transcript;
         }
@@ -134,29 +140,51 @@ export function useSecretaryListen(onText: (text: string) => void): SecretaryLis
     rec.onerror = (ev) => {
       if (recRef.current !== rec) return;
       const kind = classifyListenError(ev.error);
-      if (kind !== null) setError(kind);
+      if (kind === null || kind === "noSpeech") return;
+      wantRef.current = false;
+      setError(kind);
     };
     rec.onend = () => {
       if (recRef.current !== rec) return;
-      setListening(false);
-      setInterim("");
       recRef.current = null;
+      setInterim("");
+      if (wantRef.current && idleRestartsRef.current < LISTEN_MAX_IDLE_RESTARTS) {
+        idleRestartsRef.current += 1;
+        beginListen();
+        return;
+      }
+      const hitLimit = wantRef.current;
+      wantRef.current = false;
+      setListening(false);
+      if (hitLimit) setError("noSpeech");
     };
     try {
       rec.start();
       setListening(true);
     } catch {
       recRef.current = null;
+      wantRef.current = false;
       setListening(false);
       setError("other");
     }
   }, []);
 
+  const start = useCallback(() => {
+    if (recRef.current) return;
+    wantRef.current = true;
+    idleRestartsRef.current = 0;
+    setError(null);
+    setInterim("");
+    begin();
+  }, [begin]);
+
   const stop = useCallback(() => {
+    wantRef.current = false;
     recRef.current?.stop();
   }, []);
 
   const abort = useCallback(() => {
+    wantRef.current = false;
     const rec = recRef.current;
     if (!rec) return;
     recRef.current = null;
