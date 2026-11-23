@@ -31,7 +31,7 @@
 
 `frontend/tests-e2e/visual-language/inbox-page-no-vertical-overflow.spec.ts` を、design.md §3-3 (2) のコードのとおりに作る（1文字も変えない）。
 
-### (2) 直す前に試験が落ちることを確かめる（§4 の 3）
+### (2) 直す前に試験が落ちることを確かめる（§4 の 5。GitHub の CI で見る）
 
 ### (3) `frontend/src/components.css:512` の `}` の直後（`:513` の空行の前）に4行足す
 
@@ -66,22 +66,31 @@
 | 起きたこと | すること |
 |---|---|
 | §1 の行が違う（main が進んで行がずれた等） | 中身が同じで行番号だけ違うなら、その中身の行に入れて続ける。中身が違えば BLOCKED: |
-| §4 の 3（直す前）で、768px・1280px の試験が落ちない | NEEDS_DECISION:（出力をそのまま書く）。直す前に落ちない試験は見張りにならない |
-| §4 の 5（直した後）で、768px の試験だけが `scrollHeight` で落ちる（`positions` は通る） | NEEDS_DECISION:（`scrollHeight` と `innerHeight` の値をそのまま書く）。他の原因がある。試験やコードを変えて通さない |
-| §4 の 5 で、390px が skip 以外になる | NEEDS_DECISION: |
+| §4 の 5（直す前・CI）で、768px・1280px の試験が落ちない | NEEDS_DECISION:（出力をそのまま書く）。直す前に落ちない試験は見張りにならない |
+| §4 の 11（直した後・CI）で、768px の試験だけが `scrollHeight` で落ちる（`positions` は通る） | NEEDS_DECISION:（`scrollHeight` と `innerHeight` の値をそのまま書く）。他の原因がある。試験やコードを変えて通さない |
+| §4 の 5・11 で、390px が skip 以外になる | NEEDS_DECISION: |
 | stylelint（`check:all` の中）が新しい指定で落ちる | NEEDS_DECISION:（文面をそのまま書く）。指定を書き換えて通さない |
 | 触っていないファイルの理由で検査が落ちる | 落ちた検査名と文面を書いて続ける。直さない |
-| `npm ci` や Playwright の取り付けが通らない | BLOCKED: |
+| `npm ci` が通らない | BLOCKED: |
 
 ## 4. 確かめの命令（frontend で上から1つずつ）
 
+2026-11-23 の1回目の依頼で、クラウドでは試験用のブラウザの取り付け（`npx playwright install --with-deps chromium`）が「Download failure, code=1」で通らなかった。そこで「直す前に落ちる・直した後に通る」は GitHub の CI（画面検査 768px・1280px）で確かめる。依頼は2回に分ける。
+
+**1回目の依頼（試験だけを入れる＝赤を見る）**
 1. `npm ci`
-2. `npx playwright install --with-deps chromium`
-3. （§2 (1) の後・(3) の前）`npx playwright test visual-language/inbox-page-no-vertical-overflow.spec.ts --project=vl-mobile-390 --project=vl-tablet-768 --project=vl-desktop-1280 --reporter=line` → 768 と 1280 が **落ちる**、390 が skip。出力をそのまま貼る
-4. （§2 (3) の後）`npm run check:all`
-5. 3 と同じ命令 → 768 と 1280 が **通る**、390 が skip。出力をそのまま貼る
-6. `npm run build`
-7. `git diff --stat origin/main...HEAD -- frontend` と `git status --short` → `frontend/src/components.css` と新しい spec の2つだけ
+2. §2 (1) の spec を作る
+3. `git diff --no-index /dev/null tests-e2e/visual-language/inbox-page-no-vertical-overflow.spec.ts | head -60`（中身が design.md §3-3 (2) と同じことを目で照合）
+4. `git status --short` → 新しい spec の1つだけ（作業場所の登録ファイルは除く）
+5. commit（spec だけ）して push。Opus が Draft の PR を作り、CI の画面検査で 768・1280 が落ち、390 が skip になるのを確かめる
+
+**2回目の依頼（CSS を入れる＝緑を見る）**
+6. `npm ci`
+7. §2 (3) の CSS 4行を Edit で入れる
+8. `npm run check:all`
+9. `npm run build`
+10. `git diff --stat origin/main...HEAD -- frontend` と `git status --short` → `frontend/src/components.css` と新しい spec の2つだけ
+11. commit（CSS だけ）して push。Opus が CI の画面検査が緑になるのを確かめる
 
 ## 5. 終わり方
 
