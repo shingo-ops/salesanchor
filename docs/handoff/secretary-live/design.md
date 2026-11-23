@@ -256,7 +256,7 @@
 
 - **H. ChatGPT の契約の種類**（Plus／Pro／Business）。Pro か Business なら、毎月の API の無料分の中で声の会話を使える（§4-1）。その場合は ② OpenAI を第一の候補にし直し、便 T0 で ① と並べて速さと 1 分の費用を測って選ぶ。Plus なら ① のまま。
   - **PO 2026-11-23「1」**: ChatGPT は Business を使う予定。席（Standard 2 席か Premium を含めるか）は、便 T0 で 1 分の費用を測ってから決める。Business は最低 2 席で、2 席分が毎月かかる（【三】値段の画面で T0 前に確かめる）。
-  - 別の問い（PO 2026-11-23）: ChatGPT のスマホアプリから Sales Anchor を動かすこと。Sales Anchor には MCP の口も OAuth の認可の口も無い（`git grep` origin/main `backend/app` で 0 件）。スマホアプリと声の会話で自作の連携が使えるかは【未】。別テーマとして扱う。
+  - 別の問い（PO 2026-11-23）: ChatGPT のスマホアプリから Sales Anchor を動かすこと。Sales Anchor には MCP の口も OAuth の認可の口も無い（`git grep` origin/main `backend/app` で 0 件）。公式の文書では文字の会話から読み書きできる（Business は書き込みも可・作る前に毎回確認）。声の会話の中では使えないという利用者の報告が複数（community.openai.com/t/1382072・/t/1376009。公式の記載は無し）。**PO 2026-11-23「1」: 今は頼まず、このテーマに集中する。**
 
 - 外の事例の数値は電話・ドライブスルーの規模で、我々の社内の数人の使い方にそのまま当てはまらない（research.md §4-1）。だから便 T0 を本番で測ってから先へ進む。
 
