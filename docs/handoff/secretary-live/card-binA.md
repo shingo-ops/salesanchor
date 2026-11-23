@@ -1,6 +1,6 @@
 # 実装カード 便 A: マイクの印を PC にも出し、話している間の文字を欄に出す
 
-正本: docs/handoff/secretary-live/design.md §7・§9・§10・§11。ADR-1085（Proposed）。KGI: kgi.md L2・L3（L13 の「文の長さ」の 1 件も）。
+正本: docs/handoff/secretary-live/design.md §7・§9・§10・§11。ADR-1087（Proposed）。KGI: kgi.md L2・L3（L13 の「文の長さ」の 1 件も）。
 PO の承認: KGI L1〜L13 は 2026-11-23「1」。実装からマージ・配備までの完走は 2026-11-24「1,…PRマージ、デプロイまで完走させてくれ」。
 ブランチ: `release/secretary-mic-live-text`（origin/main から新しく作る）。行番号は origin/main bef5a7a8b の値。
 0 円の便。backend・migration・台帳は触らない（ADR-1082 What 1 のまま）。
@@ -16,10 +16,9 @@ PO の承認: KGI L1〜L13 は 2026-11-23「1」。実装からマージ・配�
 1. `frontend/src/features/secretary/useSecretaryListen.ts`
 2. `frontend/src/features/secretary/useSecretaryListen.test.ts`
 3. `frontend/src/features/secretary/SecretaryChat.tsx`
-4. `frontend/src/features/secretary/SecretaryChat.test.tsx`（`describe("SecretaryChat listen mark"` の塊 :633-722 だけ）
+4. `frontend/src/features/secretary/SecretaryChat.test.tsx`（`describe("SecretaryChat listen mark"` の塊 :633-729 だけ）
 5. `frontend/src/locales/ja.json`・`frontend/src/locales/en.json`（`secretary.listen` の塊 :6324 の中だけ）
 6. `frontend/eslint.config.js`（override を 1 つ足すだけ）
-7. `docs/adr/FEATURE-INDEX.md`（:78 の秘書の行に ADR-1085 を足すだけ）
 
 触らない: backend・migrations・.github・useSecretaryVoice.ts・「声で返事」のトグル（便 C で消す）・下書きの部品・CSS・icons.tsx・design.md・ADR 本文。
 
@@ -46,8 +45,8 @@ PO の承認: KGI L1〜L13 は 2026-11-23「1」。実装からマージ・配�
 
 ## 変更 2: SecretaryChat.tsx（PC にも出す・欄に途中の文字・1,000 字）
 
-1. :255 の `{isMobile && (` と対の `)}` を外し、マイクの印を PC にも出す。聞き取りの無いブラウザでは、今と同じく印は出て、押すと `secretary.listen.error.unsupported` の文が出る（今の試験 `SecretaryChat.test.tsx:715` の動き）。
-2. 欄（:245 の `Textarea`）:
+1. :255 の `{isMobile && (` と対の `)}` を外し、マイクの印を PC にも出す。聞き取りの無いブラウザでは、今と同じく印は出て、押すと `secretary.listen.error.unsupported` の文が出る（今の試験 `SecretaryChat.test.tsx:716` の動き）。
+2. 欄（:246 の `Textarea`）:
    - `value={listen.listening ? text + listen.interim : text}`
    - `readOnly={listen.listening}`（聞いている間は打てない。止めた後に直せる）
 3. 下の案内（:268-273）: 聞いている間は `t("secretary.listen.listening")` だけを出す（途中の文字は欄に出すので、ここには出さない）。
@@ -55,6 +54,7 @@ PO の承認: KGI L1〜L13 は 2026-11-23「1」。実装からマージ・配�
 5. 1,000 字（`SECRETARY_MAX_TEXT`・:63）:
    - `useState` で `tooLong`（boolean）を足す。
    - :63 の受け口を、足した後の長さが `SECRETARY_MAX_TEXT` 以上になったら、先頭の `SECRETARY_MAX_TEXT` 字だけ残し、`setTooLong(true)` と `listen.stop()` を呼ぶ形に変える。`listen` を受け口の中で使うため、`useRef` に `listen.stop` を持って呼ぶ（受け口の作り直しで聞き取りを作り直さない）。
+   - 今の text は `useRef` で持ち、受け口の中では `setText` の更新関数（`prev`）を使わず `ref + heard` で長さを決め、`setText` には値を渡す。`setTooLong`・`stop` は更新関数の外で呼ぶ（更新関数は純粋でなければならず、開発時に 2 回呼ばれるため・審査 4 回目 N4）。
    - 案内の段に、`tooLong` のとき `t("secretary.listen.tooLong", { max: SECRETARY_MAX_TEXT })` を出す（聞き取りの誤りの文より先）。
    - `tooLong` は、欄を手で直したとき（`onChange`）・送ったとき・窓を閉じたとき・次に印を押したときに false に戻す。
 
@@ -70,7 +70,7 @@ PO の承認: KGI L1〜L13 は 2026-11-23「1」。実装からマージ・配�
 最後の `...storybook.configs["flat/recommended"]` の前に、次の 1 塊を足す（前例: 同じファイルの `src/pages/design-preview/**` の塊）。
 
 ```js
-// ADR-1085: 秘書の窓は日本語の直書きを CI で止める（全体は warn のまま）
+// ADR-1087: 秘書の窓は日本語の直書きを CI で止める（全体は warn のまま）
 {
   files: ['src/features/secretary/**/*.{ts,tsx}'],
   ignores: ['src/features/secretary/**/*.test.{ts,tsx}'],
@@ -82,9 +82,7 @@ PO の承認: KGI L1〜L13 は 2026-11-23「1」。実装からマージ・配�
 
 origin/main bef5a7a8b の `features/secretary/` は、日本語が注釈の中にしかない（Opus が `git show` で全 12 ファイルを確かめた）。足した後に error が出たら直さず BLOCKED:
 
-## 変更 5: FEATURE-INDEX.md
-
-:78 の行の ADR の欄の最後に ` ／ ADR-1085` を足し、内容の欄の「音声入力 / TTS」の後に「 / LIVE の声の会話」を足す。
+## 変更 5: なし（審査 4 回目 N1 の直しで、索引の秘書の行への ADR-1087 は設計の PR で足した。`docs/adr/FEATURE-INDEX.md` は触らない）
 
 ## 試験（期待を足す・変える）
 
@@ -104,7 +102,7 @@ SecretaryChat.test.tsx の listen mark の塊:
 2. `cd frontend && npx tsc --noEmit -p .`
 3. `cd frontend && npx eslint src/features/secretary`（error 0・warn 0）
 4. `cd frontend && node scripts/check-i18n-missing-keys.js`
-5. `git diff --stat origin/main` で触ったファイルが上の 7 種（8 ファイル）だけであること
+5. `git diff --stat origin/main` で触ったファイルが上の 6 種（7 ファイル）だけであること
 
 ## 想定される分岐（当たったらその場で止める）
 

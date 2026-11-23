@@ -20,7 +20,7 @@ from webauthn.helpers import parse_authentication_credential_json, parse_registr
 from webauthn.helpers.exceptions import WebAuthnException
 from webauthn.helpers.structs import CredentialDeviceType
 
-from app.auth import devices, geo, passkeys, recovery_codes, self_tokens
+from app.auth import devices, geo, meta_review, passkeys, recovery_codes, self_tokens
 from app.auth.dependencies import (
     CurrentSession,
     _get_client_ip,
@@ -435,7 +435,22 @@ async def self_login(
             trusted_device_id = found.id
             device_cookie_raw = devices.clean_cookie_value(cookie_raw)
             audit_new_device = False
-        elif user_row.last_login is None and await devices.count_all_devices(db, user_row.id) == 0:
+        elif meta_review.is_meta_review_on(await meta_review.meta_review_until(db, user_row.id)):
+            # ADR-1055 What 11: Meta 審査用の会社のスイッチが ON。機械は登録しない（OFF の後に残らない）
+            audit_reason, audit_new_device = "meta_review", True
+            background_tasks.add_task(
+                send_new_device_mail,
+                user_row.email,
+                when=devices.jst_text(),
+                device=devices.describe_user_agent(request.headers.get("user-agent")),
+                location=geo.lookup(ip),
+                note="Meta 審査用のスイッチが ON のためログインしました。 / Signed in while the Meta review switch is ON.",
+            )
+        elif (
+            user_row.last_login is None
+            and await devices.count_all_devices(db, user_row.id) == 0
+            and not await meta_review.is_meta_review_member(db, user_row.id)
+        ):
             # D5: 一度もログインしていない人の最初のログイン。この機械を最初のいつもの機械にする
             trusted_device_id, device_cookie_raw = await devices.register_device(
                 db, user_row.id, cookie_raw, "first_login", request
@@ -553,7 +568,10 @@ async def self_refresh(
         # 組に機械が無い。締切より前に作られた組は、この機械をいつもの機械として登録する（bootstrap）。
         # 締切より後に作られた組は 401（締切の1秒前は登録・ちょうどは 401）
         cutoff = devices.bootstrap_cutoff()
-        if cutoff is not None and rotated.family_created_at is not None and rotated.family_created_at < cutoff:
+        if meta_review.is_meta_review_on(await meta_review.meta_review_until(db, user_id)):
+            # ADR-1055 What 11: スイッチが ON の間だけ、機械の無い組の更新を通す
+            audit_reason = "meta_review_refresh"
+        elif cutoff is not None and rotated.family_created_at is not None and rotated.family_created_at < cutoff:
             device_id, device_cookie_raw = await devices.register_device(
                 db, user_id, request.cookies.get(devices.DEVICE_COOKIE_NAME), "bootstrap", request
             )
@@ -947,6 +965,8 @@ async def passkey_prompt_status(
     読むだけの口なので出どころの確認はしない（ブラウザは同じサイトあての GET に Origin を付けない）。
     本人の Bearer トークンが要るので、他のサイトからは読めない。
     """
+    if await meta_review.is_meta_review_session(db, request, current_user):
+        return PasskeyPromptStatus(can_auto=False, show_prompt=False)
     if not _is_fresh_password_login(request, current_user):
         return PasskeyPromptStatus(can_auto=False, show_prompt=False)
     count = await _passkey_count(db, current_user.id)
@@ -984,6 +1004,8 @@ async def passkey_register_options(
 ):
     """パスキー登録の options を作る（ログイン中の本人だけ）。"""
     _require_app_origin(request)
+    if await meta_review.is_meta_review_session(db, request, current_user):
+        raise HTTPException(status_code=403, detail="meta_review_session_no_enroll")
     auto = bool(data and data.auto)
     if auto and not _is_fresh_password_login(request, current_user):
         raise HTTPException(status_code=403, detail="auto_not_allowed")
@@ -1013,6 +1035,8 @@ async def passkey_register_verify(
 ):
     """パスキー登録の応答を確かめ、公開鍵を保存する。"""
     _require_app_origin(request)
+    if await meta_review.is_meta_review_session(db, request, current_user):
+        raise HTTPException(status_code=403, detail="meta_review_session_no_enroll")
     auto = False
     challenge = await passkeys.take_challenge("reg", str(current_user.id), data.challenge_id)
     if challenge is None:
@@ -1889,6 +1913,8 @@ async def recovery_codes_create(
 ):
     """予備の合言葉を10個作る（作り直しもここ。古い未使用は無効になる）。生の値はこの応答の1回だけ。"""
     _require_app_origin(request)
+    if await meta_review.is_meta_review_session(db, request, current_user):
+        raise HTTPException(status_code=403, detail="meta_review_session_no_enroll")
     codes = await recovery_codes.generate(db, current_user.id)
     await _record_auth_audit(
         db,

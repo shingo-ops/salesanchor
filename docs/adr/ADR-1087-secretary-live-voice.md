@@ -1,9 +1,9 @@
-# ADR-1085: 秘書チャットに声どうしの会話（LIVE）と聞き続けるマイクを足す（Gemini Live・秘書の仕事は今の道に任せる）
+# ADR-1087: 秘書チャットに声どうしの会話（LIVE）と聞き続けるマイクを足す（Gemini Live・秘書の仕事は今の道に任せる）
 
 | 項目 | 内容 |
 |------|------|
 | ステータス | Proposed（草案・2026-11-22。PO 未承認。LIVE（便 T0 以降）は、有料の声の AI（Google の有料枠の確認）・ADR-1056 の改め・月の上限・LIVE 専用の鍵を PO が決めるまで実装しない。マイク（便 A・What 7）はこれらに関わらない） |
-| 備考 | PO 2026-11-21「カメラと画面の共有は今回は不要。1. 表のとおりで決める【おすすめ】」。Amends ADR-1056・ADR-1058・ADR-1080・ADR-1082 の案。設計審査 1〜3 回目 REVISE → 直した 4 版（`docs/handoff/secretary-live/review-architect.md`・`review-architect-2.md`）。PO 2026-11-23「1」（請求書はボタンだけ）・2026-11-24「1」（L5 と L7） |
+| 備考 | PO 2026-11-21「カメラと画面の共有は今回は不要。1. 表のとおりで決める【おすすめ】」。Amends ADR-1056・ADR-1058・ADR-1080・ADR-1082 の案。設計審査 1〜4 回目 REVISE → 直した 5 版（`docs/handoff/secretary-live/review-architect.md`・`review-architect-2.md`）。PO 2026-11-23「1」（請求書はボタンだけ）・2026-11-24「1」（L5 と L7） |
 | 起案日 | 2026-11-22 |
 | 方針の決定者 | Shingo（PO） |
 | 関連 | [ADR-1056](ADR-1056-secretary-chat.md)、[ADR-1058](ADR-1058-ai-job-assignments.md)、[ADR-1080](ADR-1080-secretary-voice-tts.md)、[ADR-1082](ADR-1082-secretary-voice-input.md)、ADR-1004（使用量台帳）、ADR-027、ADR-067・ADR-144、ADR-135・ADR-136・ADR-1003。設計: `docs/handoff/secretary-live/design.md`・調査: `recon.md`・事例: `research.md`・目標: `kgi.md` |
@@ -29,7 +29,7 @@
   - 「AI 会社へ送るのは利用者が書いた文だけ」→ LIVE ではこちらの声と、秘書の返事の文（相手の会社名・金額を含むことがある）が Google（有料枠・学習に使わない枠であることを PO が確かめる）に送られる。
   - 「秘書の AI は道具を持たない」→ Gemini Live だけは道具「秘書に頼む（文）」を 1 つ持つ。その引数は利用者の文ではなく Gemini の言い換えなので、画面に「秘書に頼んだ内容」として出す。
   - 道具の結果を Gemini に戻す。結果の文に命令が紛れても、道具は 1 つで作る道は無い（試験で守る）。
-  - 下書きの中身の扱い: 予定の確かめの読み上げの文（相手・日時）だけは、画面が下書きから作って Gemini にそのまま読ませる（Google に渡る）。請求書の中身は Gemini に渡さない。
+  - 下書きの中身の扱い: 予定の確かめの読み上げの文（送る中身の空でない項目を全部）だけは、画面が下書きから作って Gemini にそのまま読ませる（Google に渡る）。請求書の中身は Gemini に渡さない。
   - 聞き返し（カルテ）の状態は、画面が今と同じく持ち、同じ形で送る。
 - **ADR-1058**: LIVE は AI の担当表に入れない（声の流れで、画面で選んで切り替えられないため）。読み上げ（`secretary_tts`）と同じ例外。OpenAI への切り替えは作り直しの別の便で、選択肢の値はそのときの migration で足す。`outcome` に `pending`（LIVE の仮の行だけ）、`error_code` に `not_started`（札を出したがつながなかった）を足し、10 個に閉じる（ADR-1058 の `:24` の 9 個を改める）。「API を呼んでいない失敗は書かない」はそのまま。sdk と provider の対応は `gemini` に混ぜず `gemini_live` を足す。
 - **ADR-1080**: 月の上限の型（backend の定数 1 か所・1 回＝1 行・毎月 Google の請求と照らす）を LIVE にも使う。「声で返事」は消す。読み上げの口は 30 日使われないことを確かめて別の便で消す。

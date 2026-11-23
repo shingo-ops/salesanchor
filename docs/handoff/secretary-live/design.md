@@ -3,10 +3,10 @@
 この文書は何か: 秘書のチャットで、話しながら文字が出るマイクと、声どうしで話せる LIVE を作るための設計図です。
 親（あるべき姿）: [docs/specs/secretary-chat/README.md](../../specs/secretary-chat/README.md)
 
-- 状態: 設計案作成済み・設計審査 1 回目 REVISE・2 回目 REVISE（[review-architect-2.md](review-architect-2.md)）・3 回目 REVISE（[review-architect-3.md](review-architect-3.md)・小さな直し）→ 指摘を直した 4 版・PO の決め 3 件済（L5/L7・請求書はボタン・目標の表）・実装未着手
+- 状態: 設計案作成済み・設計審査 1 回目 REVISE・2 回目 REVISE（[review-architect-2.md](review-architect-2.md)）・3 回目 REVISE（[review-architect-3.md](review-architect-3.md)・小さな直し）・4 回目 REVISE（[review-architect-4.md](review-architect-4.md)・便 A は合格・ADR 番号の衝突ほか）→ 指摘を直した 5 版・PO の決め 3 件済（L5/L7・請求書はボタン・目標の表）・実装未着手
 - 書いた人: Claude Opus（設計担当）2026-11-22
 - 目標: [kgi.md](kgi.md)（PO 承認済み 2026-11-23）／現在地: [recon.md](recon.md)／外の事例: [research.md](research.md)
-- 決まりの案: `docs/adr/ADR-1085-secretary-live-voice.md`（Proposed・草案）
+- 決まりの案: `docs/adr/ADR-1087-secretary-live-voice.md`（Proposed・草案）
 - 関わる決まり: ADR-1056（秘書・AI に渡すのは文と今だけ・作成は「作る」）、ADR-1058（秘書の AI の選び方）、ADR-1080（読み上げ・台帳・月の上限）、ADR-1082（聞き取り・マイクの許可）、ADR-1004（使用量台帳）、ADR-1062（Gemini の道の自動切替）、ADR-027（翻訳）、ADR-067・ADR-144（金型・デザイントークン）、ADR-135・ADR-136（migration 入り PR の GO）、ADR-1003（GO の委任）
 
 ---
@@ -19,7 +19,7 @@
 | 2 声の「はい」の仕様・請求書の安全の条件 | §5-1（請求書は声で作らない・予定だけ・完全一致・窓・否定語の試験・`submit` を外へ出す改修）|
 | 3 使用量の入り口・上限の置き場・値段表・失敗の行・費用の画面 | §6 |
 | 4 AudioWorklet・札の設定の固定・札の口の回数 | §5-2・§5-3 |
-| 5 ADR の改めの不足（1056・1058・1004・1080）| ADR-1085「改める点」|
+| 5 ADR の改めの不足（1056・1058・1004・1080）| ADR-1087「改める点」|
 | 6 便 T を T0・T1 に分ける | §10 |
 | 7 維持の仕組み欄・親リンク・1 行説明・ADR-144 の「ある」の過大 | 冒頭・§11・§16 |
 | 8 料金の出どころの書き分け | §4 |
@@ -28,28 +28,37 @@
 
 | 指摘 | 直した場所 |
 |---|---|
-| 1 読み上げの中身の出どころの矛盾 | §5（予定の読み上げの文は画面が作る・請求書の中身は Gemini に渡さない）・ADR-1085 改める点 |
+| 1 読み上げの中身の出どころの矛盾 | §5（予定の読み上げの文は画面が作る・請求書の中身は Gemini に渡さない）・ADR-1087 改める点 |
 | 2 請求書は声で作るか | PO 2026-11-23「1」: 請求書はボタンだけ。§5-1・kgi.md L11。予定の声の「はい」は便 T0 で否定語とわざと違う日時を測ってから便 B |
 | 3 KGI の L2・L3・L5・L6・L11 | kgi.md §2（L5 と L7 は PO 2026-11-24「1」）|
-| 4 台帳の CHECK・列 | §6-3（outcome・error_code・purpose・sdk の作り直しと列の追加）・ADR-1085 改める点に ADR-1058 |
+| 4 台帳の CHECK・列 | §6-3（outcome・error_code・purpose・sdk の作り直しと列の追加）・ADR-1087 改める点に ADR-1058 |
 | 5 上限の穴（使わなかった札・競争・合計を読めない・回数の数え先）| §5-2・§6-1・§6-2 |
 | 6 `Callout`・LIVE 専用の旗・戻る時刻・鍵が無いとき | §6-6・§6-2・§15 |
 | 7 札の期限で切れるか・別人の札の試験 | §5-2・§10・§11 |
 | 8 日本語の直書きを止める・守り手の行・親のリンク・照らし合わせの記録先・色の検査 | §9・§11・§16・`docs/specs/secretary-chat/README.md` |
 | 9 file:line の a・b・d・f | §3・§12-H・冒頭 |
-| 10 使えるのは super admin だけ | ADR-1085 |
+| 10 使えるのは super admin だけ | ADR-1087 |
 
 ### 0-3 審査 3 回目の指摘（review-architect-3.md §2）と直した場所
 
 | 指摘 | 直した場所 |
 |---|---|
-| R1 予定の「はい」を読み上げた下書きに結ぶ・読み上げに入れる項目・読み上げの忠実さ | §5-1 の 1・5〜7・§10・§11・kgi.md L11 の「確かめずに作る」・ADR-1085 Decision 3 |
+| R1 予定の「はい」を読み上げた下書きに結ぶ・読み上げに入れる項目・読み上げの忠実さ | §5-1 の 1・5〜7・§10・§11・kgi.md L11 の「確かめずに作る」・ADR-1087 Decision 3 |
 | R2 新しい列の読み取りビューの分類 | §6-3・§10・§11 |
 | R3 migration の作り方（定義を読んで作り直す・全値＋新値・登録）| §6-3 |
 | R4 日本語の直書きの override の便・札の口の試験の便・台本 20 文 | §9・§10・§11 |
 | R5 既存の AI の費用の合計に LIVE が混ざるか・Live の単価 | §6-4 |
 | R6 読む口は書き換えない | §6-1 |
 | R7 file:line 4 件 | §9（検査ごとに分けて引く）・§10・§12-G・§6-2 |
+
+### 0-4 審査 4 回目の指摘（review-architect-4.md §3・§4）と直した場所
+
+| 指摘 | 直した場所 |
+|---|---|
+| N1 ADR の番号 1085 が main で別の決め（ブラウザ操作の委任）に使われていた | 秘書 LIVE の ADR を **ADR-1087** に付け替え（main の最大は 1086・開いている PR に 1087 以上は無いことを 2026-11-24 に確かめた）。本文・この設計・カード・`docs/specs/secretary-chat/README.md` を揃えた。審査 1〜4 回目の記録の中の古い番号は記録のまま残す |
+| N2 読み上げの文の「相手」 | §4 の例外の行・ADR-1087 の改める点を §5-1 の 1 の言い方に揃えた |
+| N3 聞き直しの上限・override は試験を除く | §7・§9・§16 |
+| a〜c 行番号 3 件・N4 受け口の書き方 | §7（`:716`）・`card-binA.md`（C1〜C3）|
 
 ## 1. 目的と、利用者に見える変化
 
@@ -131,7 +140,7 @@
 - Gemini Live に渡す道具は「秘書に頼む（文）」の 1 つだけ。Gemini Live は会社のデータを読む道も、何かを作る道も持たない。データのある場所は今と同じで、写しを増やさない。
 - 道具の引数の文は、利用者が書いた文ではなく **Gemini が言い換えた文**。画面はその文を吹き出しに「秘書に頼んだ内容」として出し、利用者が目で確かめられるようにする。
 - 道具の結果として Gemini Live に返すのは、今の秘書の返事の文（`reply`）だけ。下書きの中身（相手・金額の数値の形）は返さない。結果の文に命令が紛れても、Gemini Live には道具が 1 つしか無く、作る道も無い（試験 §11）。
-- **例外は予定の確かめの読み上げだけ**（§5-1）。画面が予定の下書きの state から「相手・日時」の文を作り、道具の結果として Gemini Live にそのまま読ませる。Gemini に中身を作らせない。請求書の中身は Gemini に渡さない（請求書はボタンだけで作るため）。
+- **例外は予定の確かめの読み上げだけ**（§5-1）。画面が予定の下書きの state から、送る中身の空でない項目を全部入れた文（§5-1 の 1）を作り、道具の結果として Gemini Live にそのまま読ませる。Gemini に中身を作らせない。請求書の中身は Gemini に渡さない（請求書はボタンだけで作るため）。
 - 道具の呼び出しは画面が 1 本ずつ順に送る。秘書の容器は同時 1 本（recon.md `:100`）なので、前の頼みの途中で次が来たら待たせ、`429 busy` が返ったら Gemini Live に「少し待ってください」と言わせる文を結果として返す。
 - 聞き返し（カルテ・`SecretaryKarteAsk`）の最中に声で答えたときは、画面が今と同じく持っている karte を付けて `POST /assistant/messages` に送る（`schemas/assistant.py:44` 以降の形のまま）。
 - 道具の結果は 6〜8 秒かかる。その間、Gemini Live は「確かめます」と短く言う（指示文で決める）。
@@ -164,7 +173,7 @@
 - 札の設定: `uses=1`・つなぎ始め 1 分・つなぎの期限 **10 分**。モデル・指示文・道具の定義・声の種類・書き起こしは `liveConnectConstraints` で **backend が固定**し、画面からは変えさせない（札が漏れても別の使い方をさせない）。
 - 札の口の回数の上限: 1 人 1 時間に 20 回まで（上限の逃げ道をふさぐ）。超えたら 429。**数える場所は Redis**（今の回数の上限と同じ数え方・`backend/app/middleware/rate_limit.py:55-76`）。ただし今の回数の上限は Redis が止まると通す（`:7`・`:75-76`）。LIVE は費用が出るので逆にし、**Redis が読めなければ札を出さない**（503）。回数は数えるだけの一時の値で、会社のデータではない。
 - Gemini の鍵は LIVE 専用の環境変数 `GEMINI_LIVE_API_KEY` から読み、backend だけに渡す（今の `GEMINI_API_KEY` は backend と celery-worker の両方・`docker-compose.yml:98`・`:246`）。**値が空なら札を出さず、503 と「準備ができていません」の印を返す**。値を別の Google のプロジェクトの鍵にするかは PO が決め、値を入れるのも PO（§12-J）。
-- 使えるのは super admin だけ（秘書の守り 4 つ `assistant.py:98-103` の `require_super_admin`）。画面が送る使用量の申告を信じる作りは、この条件があって成り立つ。使える人を広げるときは設計を審査し直す（ADR-1085）。
+- 使えるのは super admin だけ（秘書の守り 4 つ `assistant.py:98-103` の `require_super_admin`）。画面が送る使用量の申告を信じる作りは、この条件があって成り立つ。使える人を広げるときは設計を審査し直す（ADR-1087）。
 - 札の期限（10 分）で、**つないでいる最中の LIVE が実際に切れるか**は【未】（`expireTime` が「つなぎ始めまで」の意味なら切れない）。便 T0 で 11 分つなぎ続けて確かめる。切れなかったときの備えとして、画面は 10 分で LIVE を自分で終える（同じ 10 分を画面にも持つ。正本は backend の定数で、札の口の返事に入れて画面に渡す）。
 - 札・鍵を backend のログ・エラー文・画面のログに出さない（試験 §11）。
 - 使う SDK の版: `google-genai`（`backend/requirements.txt` の下限 `>=1.0.0`）で `auth_tokens.create` が使えるかは【未】。**便 T0 で使う版を固定してから作る**。
@@ -244,13 +253,13 @@
 ### 6-5 AI の担当表（ADR-1058）に入れない理由
 
 - 担当表は「同じ形で呼べる文の AI を画面で選ぶ」ためのもの。LIVE は声の流れで、② に変えるにはつなぎ方の作り直しが要り、画面で選んで切り替えられない。
-- 読み上げ（`secretary_tts`）も担当表に入れず、コード 1 か所でモデルを決めている前例がある（§3）。LIVE も同じにし、モデル名は `secretary_live.py` の 1 か所だけに書く。ADR-1085 で ADR-1058 の例外として明記する。
+- 読み上げ（`secretary_tts`）も担当表に入れず、コード 1 か所でモデルを決めている前例がある（§3）。LIVE も同じにし、モデル名は `secretary_live.py` の 1 か所だけに書く。ADR-1087 で ADR-1058 の例外として明記する。
 
 ## 7. (A) マイクの印
 
 - 今の Web Speech の部品を、話している間ずっと聞く形にする（`continuous=true`・途中の文字を欄に出す）。PC にも出す（`isMobile` の条件を外す）。0 円で台帳に書かない（ADR-1082 What 1 のまま）。
-- ブラウザは無音などで聞き取りを自分で終えることがある【未】。そのため、押している間に聞き取りが終わったら画面がすぐ聞き直し、**それまでに決まった文字は欄に残したまま、新しい文字を後ろに足す**（同じ文字を二重に足さない: 決まった文字と途中の文字を分けて持つ）。
-- 対象のブラウザ: PC は Chrome と Edge の最新版、スマホは Android の Chrome と iPhone の Safari（kgi.md L2）。Web Speech の聞き取りが無いブラウザでは、今と同じく印は出て、押すと「この画面では声の聞き取りが使えません」と出る（`frontend/src/features/secretary/SecretaryChat.test.tsx:715` の動き。審査 3 回目の前に Opus が実物で確かめて直した）。
+- ブラウザは無音などで聞き取りを自分で終えることがある【未】。そのため、押している間に聞き取りが終わったら画面がすぐ聞き直し、**それまでに決まった文字は欄に残したまま、新しい文字を後ろに足す**（同じ文字を二重に足さない: 決まった文字と途中の文字を分けて持つ）。何も聞き取れないまま聞き直すのは 5 回まで（`LISTEN_MAX_IDLE_RESTARTS`）。届いたら止めて「声が聞き取れませんでした」と出す（無限に聞き直さない安全弁。時間の上限ではない・審査 4 回目 N3）。
+- 対象のブラウザ: PC は Chrome と Edge の最新版、スマホは Android の Chrome と iPhone の Safari（kgi.md L2）。Web Speech の聞き取りが無いブラウザでは、今と同じく印は出て、押すと「この画面では声の聞き取りが使えません」と出る（`frontend/src/features/secretary/SecretaryChat.test.tsx:716` の動き。審査 3 回目の前に Opus が実物で確かめて直した）。
 - 長さ: 聞いている時間に上限は付けない。送れる文の 1,000 字を変えるかは PO の決定（§12-F）。変えない間は 1,000 字を超えたら欄の下に字数を出して知らせる。長い文を秘書に送ったときの動き（容器 80 秒・body の上限 `assistant.py:89`・`secretary-agent/server.mjs:15`）は、1,000 字を変えるときに測る。便 A は送れる字数を変えない（今も手で 1,000 字まで打てる: `SecretaryChat.tsx:249` の `maxLength`）ので、便 A の前には測らない。便 A の作りは `card-binA.md`。
 - iPhone のホーム画面のアプリで Web Speech が動かない報告がある（Apple フォーラム 748048・research.md §2）。対象に入れるかは PO の決定（§12-D）。入れる場合は便 T0 で実機を測り、動かなければマイクの印は Gemini Live の書き起こしに切り替える（有料・台帳は §6）。
 
@@ -269,7 +278,7 @@
 - 文字は全部 `t("key")`（ADR-027）。`ja.json`・`en.json` に同じキー。
 - 見た目は金型だけ（ADR-144）。LIVE の画面は `Sheet`・`Stack`・`IconToggleButton`・`ChatBubble`・`Button` を使う（recon.md 1-2）。絵柄は `frontend/src/constants/icons.tsx` の `SECRETARY_ICONS`（`:416`）に、LIVE・消音・終了を足す。色・余白はデザイントークンだけ（ADR-067）。新しい金型が要るときは作る前に PO に聞く。
 - **機械が見る範囲の注意**（検査ごとに分けて引く・審査 3 回目 R7）: 生の部品の検査は `frontend/src/pages/` だけを見る（`scripts/check-ui-governance.js:47`）。loading の書き方の検査は `features/` も見る（同 `:16`）。日本語の直書きは ESLint の `local/no-japanese-literal`（`frontend/eslint.config.js:31`）の仕事。色・寸法の直書きは ADR-067 の検査（`check:css-colors`・`check:css-values`・`frontend/package.json:48`）が CI で見る。**人の審査に残るのは生の部品（`<select>`・`<input>` 等）と金型の選び方**。マージ前の審査役の点検に「生の部品が無いこと」を入れる。
-- **日本語の直書きは機械で止める**: `frontend/eslint.config.js` に `src/features/secretary/**` だけ `local/no-japanese-literal` を `error` にする override を足す（前例: 同じファイルの `:244`・`:252` の override）。CI の `lint-run`（`.github/workflows/e2e.yml:65`・`:87`）が落ちる。**便 A と便 T0 のうち先に出す便の PR に入れる**。便 A を先に出すので `card-binA.md` の変更 4 に入れた。origin/main `bef5a7a8b` の `features/secretary/` の日本語は注釈の中だけ（Opus が 12 ファイルを確かめた）なので、入れた瞬間に落ちる行は無い。PR で `eslint src/features/secretary` を実際に流して 0 件を確かめる（設定は後ろの塊が勝つため、置き場所の効き方も実物で確かめる）。
+- **日本語の直書きは機械で止める**: `frontend/eslint.config.js` に `src/features/secretary/**` だけ（試験ファイル `*.test.{ts,tsx}` は除く。試験は日本語を `String.fromCharCode` で作る）`local/no-japanese-literal` を `error` にする override を足す（前例: 同じファイルの `:244`・`:252` の override）。CI の `lint-run`（`.github/workflows/e2e.yml:65`・`:87`）が落ちる。**便 A と便 T0 のうち先に出す便の PR に入れる**。便 A を先に出すので `card-binA.md` の変更 4 に入れた。origin/main `bef5a7a8b` の `features/secretary/` の日本語は注釈の中だけ（Opus が 12 ファイルを確かめた）なので、入れた瞬間に落ちる行は無い。PR で `eslint src/features/secretary` を実際に流して 0 件を確かめる（設定は後ろの塊が勝つため、置き場所の効き方も実物で確かめる）。
 
 ## 10. 便の分け方（一度に 1 つ）
 
@@ -304,7 +313,7 @@
 | 道具の結果 | 画面の試験: 道具の結果は秘書の返事の文と、画面が作った予定の読み上げの文だけ（請求書の中身を渡さない）・Gemini は偽物に差し替えて CI で測る（本物の Gemini は本番の人の測り L11 が正本）| **新しく作る** |
 | 速さ（L5・L6）| 画面が LIVE 1 回ごとに「こちらの声の終わり→秘書の声の始まり」「こちらの声→秘書の声の停止」のミリ秒を使用量の口に一緒に送り、台帳の列 `live_reply_latency_ms`・`live_barge_in_latency_ms` に残す（§6-3）。本番の読み取り鍵で数える | **新しく作る**（便 T0）|
 | 費用の照らし合わせ | 毎月 1 回、Google の請求と台帳の LIVE の合計を比べる（ADR-1080 の字数の照らしと同じ日に）。差が 1 割を超えたら PO へ。結果は `docs/handoff/secretary-live/monthly-reconcile.md` に月ごとに 1 行足す | **手作業**。忘れたときに気づく仕組みは便 T1 の後に、週次の点検（週次点検の Discord の知らせ）に「前の月の行が無い」を足すかを PO に聞く |
-| 決まりの索引 | `docs/adr/FEATURE-INDEX.md` の秘書の行に ADR-1085 を足す | 便 A の PR で足す |
+| 決まりの索引 | `docs/adr/FEATURE-INDEX.md` の秘書の行に ADR-1087 を足す | 設計の PR で足した（CI の索引検査が新しい ADR を索引に求めるため・審査 4 回目 N1）|
 | 親から子へのリンク | `docs/specs/secretary-chat/README.md` に `docs/handoff/secretary-live/` へのリンクを足す | この設計の PR で足した |
 
 ## 12. PO に決めてもらうこと
@@ -363,6 +372,6 @@
 | 画面の試験 `frontend/src/features/secretary/SecretaryLive.test.tsx`（便 T0 で新しく作る）| 道具が 1 つ・声の一致の窓と完全一致・請求書は声で作らない・上限の文の持ち主 | CI の画面の試験（必須チェック）|
 | 台帳の一致の試験 `backend/tests/test_secretary_voice_pg.py`（既存）| CHECK と写しの一致 | CI の DB 付き試験 |
 | i18n の検査（既存）| 翻訳漏れ | CI |
-| 画面の検査 `frontend/eslint.config.js` の override（便 A で足す）| `features/secretary/` の日本語の直書き | CI の `lint-run`（必須チェック）|
+| 画面の検査 `frontend/eslint.config.js` の override（便 A で足す）| `features/secretary/` の日本語の直書き（試験ファイルを除く）| CI の `lint-run`（必須チェック）|
 | マージ前の審査役（人の審査）| `features/secretary/` の生の部品 | 関所なし（ADR-144 の機械が `features/` を見ないため）|
 | 毎月の照らし合わせ（手作業・ADR-1080 と同じ日）| Google の請求と台帳の差。記録は `monthly-reconcile.md` | 関所なし（手作業）|

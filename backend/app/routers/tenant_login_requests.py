@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import devices
+from app.auth import devices, meta_review
 from app.auth.dependencies import get_current_tenant, require_tenant_owner, reset_tenant_context
 from app.auth.origin import require_app_origin
 from app.database import get_db
@@ -76,6 +76,8 @@ async def approve_tenant_login_request(
 ):
     """オーナーが許可する。別の会社の依頼・頼んでいない依頼は 404、自分の依頼は 403。待つ機械は poll で入る。"""
     require_app_origin(request)
+    if await meta_review.is_meta_review_session(db, request, current_user):
+        raise HTTPException(status_code=403, detail="meta_review_session_no_enroll")
     rid = devices.parse_request_id(request_id)
     if rid is None:
         raise HTTPException(status_code=404, detail="not_found")

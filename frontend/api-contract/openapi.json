@@ -19779,6 +19779,136 @@
         "title": "MessageLabelType",
         "type": "string"
       },
+      "MetaReviewLoginItem": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ログインを試みた日時",
+            "title": "Created At"
+          },
+          "device": {
+            "description": "機械の種類",
+            "title": "Device",
+            "type": "string"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "試みたアカウントのメールアドレス",
+            "title": "Email"
+          },
+          "path": {
+            "description": "口の道",
+            "title": "Path",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "理由",
+            "title": "Reason"
+          },
+          "status_code": {
+            "description": "結果の番号（200 成功・202 許可待ち・それ以外は失敗）",
+            "title": "Status Code",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "status_code",
+          "device"
+        ],
+        "title": "MetaReviewLoginItem",
+        "type": "object"
+      },
+      "MetaReviewLoginList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MetaReviewLoginItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "MetaReviewLoginList",
+        "type": "object"
+      },
+      "MetaReviewStatus": {
+        "properties": {
+          "is_on": {
+            "description": "今スイッチが ON か",
+            "title": "Is On",
+            "type": "boolean"
+          },
+          "tenant_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "印の付いた会社の名前（無ければ null）",
+            "title": "Tenant Name"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "スイッチの期限（過ぎていてもそのまま。手で OFF のときは null）",
+            "title": "Until"
+          }
+        },
+        "required": [
+          "is_on"
+        ],
+        "title": "MetaReviewStatus",
+        "type": "object"
+      },
+      "MetaReviewSwitchBody": {
+        "properties": {
+          "on": {
+            "description": "true で ON（今から14日）、false で OFF",
+            "title": "On",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "on"
+        ],
+        "title": "MetaReviewSwitchBody",
+        "type": "object"
+      },
       "MonthlyByRoleItem": {
         "description": "月次集計の by_role 1 件分。",
         "properties": {
@@ -66742,6 +66872,129 @@
           }
         ],
         "summary": "Approve Login Request",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/meta-review": {
+      "get": {
+        "description": "スイッチの今の状態。until は保存された値をそのまま返す（過ぎていても NULL に直さない）。",
+        "operationId": "get_meta_review_api_v1_super_admin_meta_review_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaReviewStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Meta Review",
+        "tags": [
+          "super-admin"
+        ]
+      },
+      "put": {
+        "description": "スイッチを ON（今から14日）または OFF にする。印の会社が無ければ 409。",
+        "operationId": "put_meta_review_api_v1_super_admin_meta_review_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetaReviewSwitchBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaReviewStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Meta Review",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/meta-review/logins": {
+      "get": {
+        "description": "印の会社の人のログイン履歴（新しい順）。人の付かない記録（打ち間違い・回数制限）は出ない。",
+        "operationId": "list_meta_review_logins_api_v1_super_admin_meta_review_logins_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaReviewLoginList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Meta Review Logins",
         "tags": [
           "super-admin"
         ]

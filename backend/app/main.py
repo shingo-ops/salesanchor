@@ -115,6 +115,7 @@ from app.routers import (
     super_admin_link_templates,  # SA-05: リンクテンプレート SSOT admin CRUD
     super_admin_llm_budget,
     super_admin_login_requests,  # ADR-1055 K7: 管理者の許可
+    super_admin_meta_review,  # ADR-1055 What 11: Meta 審査用のスイッチ
     super_admin_note_master,  # 備考マスタ中央 admin
     super_admin_payment_fee_settings,  # 決済手数料設定マスタ中央 admin
     super_admin_phase_switch,
@@ -261,6 +262,7 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 # ADR-1055: 知らない機械からのログインの許可。一覧は /api/v1/auth/ の外（login の回数の枠を使わない）
 app.include_router(login_approvals.router, prefix="/api/v1", tags=["auth"])
 app.include_router(super_admin_login_requests.router, prefix="/api/v1", tags=["super-admin"])
+app.include_router(super_admin_meta_review.router, prefix="/api/v1", tags=["super-admin"])
 app.include_router(tenant_login_requests.router, prefix="/api/v1", tags=["tenant"], dependencies=[Depends(get_current_tenant)])
 # ADR-1019 段2: 閲覧専用ページの API（login・logout・inventory。閲覧者のトークンだけを見る）
 app.include_router(viewer.router, prefix="/api/v1/viewer", tags=["viewer"])

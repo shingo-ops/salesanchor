@@ -1,148 +1,110 @@
 name: Discord CI Status Notification
 
-# PR の全 check 完了時に Discord に結果を投稿する。
+# PR の点検が失敗したとき、1 回の送り込み（head の版）につき 1 通だけ Discord に知らせる。
+# 設計: docs/handoff/discord-ci-notify-fix/design.md（PO 2026-11-22「2」）
 #
-# トリガー: check_suite.types: [completed]
-#   GitHub Actions の workflow run 群を 1 まとまり (check_suite) として扱い、
-#   そのまとまりが完了した瞬間に 1 回だけ fire する。PR ごとに 1〜2 通知に収まる。
-#
-# 通知内容:
-#   - success (全 check pass): 🟢 緑 embed、PR 番号 + author + branch
-#   - failure (1 件でも fail): 🔴 赤 embed、PR 番号 + 失敗 check 一覧 + Actions URL
-#   - その他 (cancelled / timed_out): ⚪ グレー embed、原因
-#
-# 既存 PR/Issue 通知と同じ channel に投稿 (DISCORD_WEBHOOK_PR)。
+# きっかけ: workflow_run（ほかの仕組みが 1 つ終わるたび）。
+#   check_suite は GitHub Actions の点検では起動しないため使わない（recon.md F3）。
+# 成功・取り消し・この仕組み自身の終わりでは、ジョブを外す。
+# 2 通目を出さないため、送ったら版に印（commit status: discord-ci-notify）を付ける。
+# 印があれば送らない。同じ版の実行は concurrency で 1 つずつ流す。
 
 on:
-  check_suite:
+  workflow_run:
+    workflows: ["*"]
     types: [completed]
+
+permissions:
+  contents: read
 
 jobs:
   notify:
-    # check_suite に PR が紐づいていない (push to non-PR branch 等) ものはスキップ。
-    # fork からの PR でも secrets にアクセスできないためスキップ。
-    if: |
-      github.event.check_suite.pull_requests[0] != null &&
-      github.event.check_suite.head_branch != ''
+    # 外の人の PR（fork）は head_repository が違うので外す（公開リポジトリのため）。
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.pull_requests[0] != null &&
+      contains(fromJSON('["failure","timed_out","action_required"]'), github.event.workflow_run.conclusion)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: discord-ci-notify-${{ github.event.workflow_run.head_sha }}
+      cancel-in-progress: false
     permissions:
       checks: read
       pull-requests: read
-      actions: read
+      statuses: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+      WF_NAME: ${{ github.event.workflow_run.name }}
+      WF_URL: ${{ github.event.workflow_run.html_url }}
+      MARK_CONTEXT: discord-ci-notify
     steps:
-      - name: 通知判定 + 失敗 check 取得
-        id: status
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CONCLUSION: ${{ github.event.check_suite.conclusion }}
-          PR_NUMBER: ${{ github.event.check_suite.pull_requests[0].number }}
-          HEAD_SHA: ${{ github.event.check_suite.head_sha }}
-          REPO: ${{ github.repository }}
+      - name: 同じ版に知らせ済みか
+        id: seen
         run: |
           set -euo pipefail
+          n=$(gh api "repos/${REPO}/commits/${HEAD_SHA}/statuses?per_page=100" \
+            --jq "[.[] | select(.context == \"${MARK_CONTEXT}\")] | length")
+          if [ "$n" -gt 0 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
 
-          # check_suite の conclusion: success / failure / neutral / cancelled / skipped / timed_out / action_required / stale
-          case "$CONCLUSION" in
-            success)
-              echo "should_notify=true" >> "$GITHUB_OUTPUT"
-              echo "emoji=🟢" >> "$GITHUB_OUTPUT"
-              echo "color=3066993" >> "$GITHUB_OUTPUT"
-              echo "title_status=All checks passed" >> "$GITHUB_OUTPUT"
-              echo "failed_checks=" >> "$GITHUB_OUTPUT"
-              ;;
-            failure|timed_out|action_required)
-              echo "should_notify=true" >> "$GITHUB_OUTPUT"
-              echo "emoji=🔴" >> "$GITHUB_OUTPUT"
-              echo "color=15158332" >> "$GITHUB_OUTPUT"
-              echo "title_status=Some checks failed" >> "$GITHUB_OUTPUT"
-              # 失敗 check を取得 (最大 10 件)
-              # check_runs API で head_sha に紐づく全 check_run を取得し conclusion で絞る
-              failed=$(gh api -X GET "repos/${REPO}/commits/${HEAD_SHA}/check-runs?per_page=100" \
-                --jq '.check_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "action_required") | "• [\(.name)](\(.html_url))"' \
-                | head -n 10 | jq -Rs .)
-              echo "failed_checks=${failed}" >> "$GITHUB_OUTPUT"
-              ;;
-            cancelled|skipped|neutral|stale)
-              # cancelled は通知しない (rerun 中・手動キャンセル時のノイズ防止)
-              echo "should_notify=false" >> "$GITHUB_OUTPUT"
-              ;;
-            *)
-              echo "should_notify=false" >> "$GITHUB_OUTPUT"
-              ;;
-          esac
-
-      - name: PR メタ情報取得
-        id: pr
-        if: steps.status.outputs.should_notify == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.check_suite.pull_requests[0].number }}
-          REPO: ${{ github.repository }}
+      - name: 失敗した点検と PR の情報を集める
+        id: info
+        if: steps.seen.outputs.skip == 'false'
         run: |
           set -euo pipefail
-          # PR の title / author / branch / base を 1 コールで取得
+          gh api "repos/${REPO}/commits/${HEAD_SHA}/check-runs?per_page=100" > /tmp/runs.json
+          failed=$(jq -r '[.check_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "action_required") | "• [\(.name)](\(.html_url))"] | .[:10] | .[]' /tmp/runs.json)
+          if [ -z "$failed" ]; then
+            failed="• [${WF_NAME}](${WF_URL})"
+          fi
+          running=$(jq '[.check_runs[] | select(.status != "completed")] | length' /tmp/runs.json)
           gh api "repos/${REPO}/pulls/${PR_NUMBER}" \
             --jq '{title: .title, author: .user.login, head: .head.ref, base: .base.ref, url: .html_url}' \
             > /tmp/pr.json
-          {
-            echo "title<<EOF"
-            jq -r .title /tmp/pr.json
-            echo "EOF"
-            echo "author=$(jq -r .author /tmp/pr.json)"
-            echo "head=$(jq -r .head /tmp/pr.json)"
-            echo "base=$(jq -r .base /tmp/pr.json)"
-            echo "url=$(jq -r .url /tmp/pr.json)"
-          } >> "$GITHUB_OUTPUT"
+          jq -n \
+            --arg failed "$failed" \
+            --argjson running "$running" \
+            --slurpfile pr /tmp/pr.json \
+            '{failed: $failed, running: $running, pr: $pr[0]}' > /tmp/info.json
 
-      - name: Discord 通知
-        if: steps.status.outputs.should_notify == 'true'
+      - name: Discord に送る
+        if: steps.seen.outputs.skip == 'false'
         env:
           WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_CI }}
-          PR_NUMBER: ${{ github.event.check_suite.pull_requests[0].number }}
-          PR_TITLE: ${{ steps.pr.outputs.title }}
-          PR_URL: ${{ steps.pr.outputs.url }}
-          PR_AUTHOR: ${{ steps.pr.outputs.author }}
-          PR_HEAD: ${{ steps.pr.outputs.head }}
-          PR_BASE: ${{ steps.pr.outputs.base }}
-          EMOJI: ${{ steps.status.outputs.emoji }}
-          COLOR: ${{ steps.status.outputs.color }}
-          TITLE_STATUS: ${{ steps.status.outputs.title_status }}
-          FAILED_CHECKS: ${{ steps.status.outputs.failed_checks }}
-          ACTIONS_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          CHECKS_URL: ${{ steps.pr.outputs.url }}/checks
         run: |
           set -euo pipefail
+          jq --arg num "$PR_NUMBER" '{
+            embeds: [{
+              title: ("🔴 PR #" + $num + " — Some checks failed"),
+              description: .pr.title,
+              url: (.pr.url + "/checks"),
+              color: 15158332,
+              fields: ([
+                {name: "PR 作成者", value: .pr.author, inline: true},
+                {name: "ブランチ", value: (.pr.head + " → " + .pr.base), inline: true},
+                {name: "失敗した check", value: (.failed | if length > 1000 then .[0:1000] + "…" else . end), inline: false},
+                {name: "PR URL", value: .pr.url, inline: false}
+              ] + (if .running > 0 then [{name: "まだ動いている check", value: ((.running | tostring) + " 個（この知らせのあとに失敗が増えても、同じ版では送りません）"), inline: false}] else [] end)),
+              timestamp: (now | todate)
+            }]
+          }' /tmp/info.json | curl -sS --fail-with-body -H "Content-Type: application/json" -d @- "$WEBHOOK_URL"
 
-          # FAILED_CHECKS は JSON エンコード済の文字列 (jq -Rs で囲った) なので、jq --argjson で渡す。
-          # 空文字なら fields からは省略する。
-          if [ -n "$FAILED_CHECKS" ] && [ "$FAILED_CHECKS" != '""' ]; then
-            failed_field=$(jq -n --argjson value "$FAILED_CHECKS" \
-              '{name: "失敗した check", value: ($value // "—"), inline: false}')
-          else
-            failed_field='null'
-          fi
-
-          jq -n \
-            --arg title "${EMOJI} PR #${PR_NUMBER} — ${TITLE_STATUS}" \
-            --arg desc "$PR_TITLE" \
-            --arg url "$CHECKS_URL" \
-            --arg author "$PR_AUTHOR" \
-            --arg branch "$PR_HEAD → $PR_BASE" \
-            --arg pr_url "$PR_URL" \
-            --argjson color "$COLOR" \
-            --argjson failed_field "$failed_field" \
-            '{
-              embeds: [{
-                title: $title,
-                description: $desc,
-                url: $url,
-                color: $color,
-                fields: ([
-                  {name: "PR 作成者", value: $author, inline: true},
-                  {name: "ブランチ", value: $branch, inline: true},
-                  {name: "PR URL", value: $pr_url, inline: false}
-                ] + (if $failed_field == null then [] else [$failed_field] end)),
-                timestamp: (now | todate)
-              }]
-            }' | curl -sS -H "Content-Type: application/json" \
-                  -d @- "$WEBHOOK_URL"
+      - name: 版に知らせ済みの印を付ける
+        if: steps.seen.outputs.skip == 'false'
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          gh api -X POST "repos/${REPO}/statuses/${HEAD_SHA}" \
+            -f state=success \
+            -f context="${MARK_CONTEXT}" \
+            -f description="点検の失敗を Discord に知らせました" \
+            -f target_url="${RUN_URL}" > /dev/null

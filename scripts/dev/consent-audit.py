@@ -1956,6 +1956,115 @@ def run_prod_logins_cli(args, home, now):
                            args.mac_ip, print)
 
 
+CHROME_PREFIX = "mcp__claude-in-chrome__"
+CHROME_HOOKS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "docs", "handoff",
+                            "browser-operation-delegation", "hooks")
+
+
+def _chrome_common():
+    """chrome_common.py（区分の正本 tiers.json と URL の整形）を読む。書き写さない。"""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("chrome_common_for_audit", os.path.join(CHROME_HOOKS, "chrome_common.py"))
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m, m.load_tiers(os.path.join(CHROME_HOOKS, "tiers.json"))
+
+
+def _chrome_transcript_count(home, since):
+    """会話記録（projects/*/*.jsonl と projects/*/*/subagents/*.jsonl）の mcp__claude-in-chrome__ の tool_use の数（since 以降）。
+    subagents の下の読み方は pl_load_windows と同じ組み方。"""
+    pdir = paths(home)["projects"]
+    files = sorted(glob.glob(os.path.join(pdir, "*", "*.jsonl"))) + \
+        sorted(glob.glob(os.path.join(pdir, "*", "*", "subagents", "*.jsonl")))
+    n = 0
+    for p in files:
+        try:
+            if os.path.getmtime(p) < since.timestamp():
+                continue
+            with open(p, "rb") as f:
+                for raw in f:
+                    if CHROME_PREFIX.encode() not in raw:
+                        continue
+                    try:
+                        rec = json.loads(raw)
+                    except ValueError:
+                        continue
+                    if not isinstance(rec, dict) or rec.get("type") != "assistant":
+                        continue
+                    ts = parse_ts(rec.get("timestamp"))
+                    if ts is None or ts < since:
+                        continue
+                    msg = rec.get("message") if isinstance(rec.get("message"), dict) else {}
+                    content = msg.get("content")
+                    if isinstance(content, list):
+                        n += sum(1 for it in content if isinstance(it, dict) and it.get("type") == "tool_use"
+                                 and str(it.get("name", "")).startswith(CHROME_PREFIX))
+        except OSError:
+            continue
+    return n
+
+
+def chrome_section(home, now, out):
+    """5. 画面操作（ADR-1085）。G2・G3・G4 のどれかが1以上なら True（異常）。記録が無いときは異常にしない。"""
+    since = now - datetime.timedelta(days=DAYS)
+    log = os.path.join(os.path.dirname(paths(home)["ledger"]), "chrome-ops.jsonl")
+    if not os.path.exists(log):
+        out("5. 画面操作: 記録なし（見張りの取り付け前）")
+        return False
+    try:
+        cm, tiers = _chrome_common()
+    except Exception as e:
+        out("5. 画面操作: 区分表を読めない（%s）。点検できない" % type(e).__name__)
+        return True
+    recs = []
+    for r in read_jsonl(log):
+        ts = parse_ts(r.get("ts")) if isinstance(r, dict) else None
+        if ts is not None and ts >= since:
+            recs.append((ts, r))
+    # G2: 区分3の型に当たる URL（通ったもの。止めた記録は数えない）
+    g2 = 0
+    for ts, r in recs:
+        if r.get("type") == "tab_context":
+            urls = [t.get("url") for t in (r.get("tabs") or []) if isinstance(t, dict)]
+        elif r.get("tool") == "navigate" and r.get("decision") != "block":
+            urls = [r.get("url")]
+        else:
+            urls = []
+        g2 += sum(1 for u in urls if isinstance(u, str) and cm.tier3_match(cm.parse_url(u), tiers))
+    # G3: 同意で通した行と consent_consumed（±5秒）の突き合わせ
+    passes = [ts for ts, r in recs if r.get("decision") == "consent_pass"]
+    consumed = [event_time(e) for e in load_events(home)
+                if e.get("type") == "consent_consumed" and str(e.get("cmd_head", "")).startswith("chrome ")]
+    consumed = [t for t in consumed if t is not None and t >= since]
+    left = list(consumed)
+    unmatched_pass = 0
+    for ts in passes:
+        hit = next((c for c in left if abs((c - ts).total_seconds()) <= 5), None)
+        if hit is None:
+            unmatched_pass += 1
+        else:
+            left.remove(hit)
+    g3 = unmatched_pass + len(left)
+    # G4: 会話記録の tool_use の数と、見張りの記録の道具の呼び出しの数の差
+    n_tr = _chrome_transcript_count(home, since)
+    n_log = sum(1 for ts, r in recs if r.get("type") != "tab_context" and r.get("decision") in ("pass", "block", "consent_pass"))
+    g4 = abs(n_tr - n_log)
+    # 取りこぼし（参考）: ページに効く操作のうち、その後に同じセッションの tab_context が無いもの（各セッションの最後の1件は除く）
+    affecting = set(tiers["page_affecting"])
+    missed = 0
+    by_sid = {}
+    for ts, r in recs:
+        by_sid.setdefault(r.get("session"), []).append(r)
+    for sid, rs in by_sid.items():
+        ops = [i for i, r in enumerate(rs) if r.get("type") != "tab_context" and r.get("decision") in ("pass", "consent_pass")
+               and (r.get("tool") if r.get("tool") != "computer" else "computer:%s" % r.get("action")) in affecting]
+        for i in ops[:-1]:
+            if not any(r.get("type") == "tab_context" for r in rs[i + 1:]):
+                missed += 1
+    out("5. 画面操作: G2=%d G3=%d G4=%d 取りこぼし=%d" % (g2, g3, g4, missed))
+    return g2 >= 1 or g3 >= 1 or g4 >= 1
+
+
 def run_audit(home, now, with_permissions, out, commit=False, gh_view=None, git_run=None, until=None):
     since = now - datetime.timedelta(days=DAYS)
     events = load_events(home)
@@ -1989,7 +2098,8 @@ def run_audit(home, now, with_permissions, out, commit=False, gh_view=None, git_
     changes, n_reasons = 0, 0
     if with_permissions:
         changes, n_reasons = run_permissions(home, out, now, commit, gh_view, git_run)
-    abnormal = unmatched > 0 or guard_suspect > 0 or n_reasons > 0
+    chrome_abnormal = chrome_section(home, now, out)
+    abnormal = unmatched > 0 or guard_suspect > 0 or n_reasons > 0 or chrome_abnormal
     out("ABNORMAL=%s" % ("yes" if abnormal else "no"))
     return abnormal, changes
 

@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-11-23 / ADR 総数: 242 件
+最終更新: 2026-11-23 / ADR 総数: 244 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -260,7 +260,9 @@
 | [ADR-1082](./ADR-1082-secretary-voice-input.md) | ADR-1082: 秘書に声で話しかける（ブラウザの聞き取り・本番の画面でマイクを自分にだけ許す） | Proposed | Amends ADR-1080 | — |
 | [ADR-1083](./ADR-1083-expired-token-not-counted-as-bruteforce.md) | ADR-1083: 期限が切れただけの札は、接続元の回数止めに数えない | Proposed | — | — |
 | [ADR-1084](./ADR-1084-refresh-idle-7-days.md) | ADR-1084: 7 日使わなければログインし直し | Proposed | — | — |
-| [ADR-1085](./ADR-1085-secretary-live-voice.md) | ADR-1085: 秘書チャットに声どうしの会話（LIVE）と聞き続けるマイクを足す（Gemini Live・秘書の仕事は今の道に任せる） | Accepted | Amends ADR-1056 | — |
+| [ADR-1085](./ADR-1085-browser-operation-delegation.md) | ADR-1085: しんごさんの Chrome の画面操作を区分つきで Opus に任せる | Draft | — | — |
+| [ADR-1086](./ADR-1086-inbox-pc-column-width.md) | ADR-1086: PC受信箱の3列の幅は「比率＋最大の幅」で決める | Proposed | — | — |
+| [ADR-1087](./ADR-1087-secretary-live-voice.md) | ADR-1087: 秘書チャットに声どうしの会話（LIVE）と聞き続けるマイクを足す（Gemini Live・秘書の仕事は今の道に任せる） | Accepted | Amends ADR-1056 | — |
 
 ## ステータス凡例
 

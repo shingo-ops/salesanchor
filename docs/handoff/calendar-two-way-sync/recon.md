@@ -61,3 +61,13 @@
 ## 6. 分かっていないこと
 
 - Google の知らせが届くまでの秒数（Google は到着を保証しない。ADR-1059 Why）。本番で直してから DB が変わるまでの時刻を K で測る。
+
+## 便2（2026-11-22・Google で色を「なし」に戻したとき）
+
+- 既存 ADR の確認: `git grep -il "eventLabelId\|color_key" origin/main -- docs/adr/` で ADR-1059・ADR-1081 を確かめた。色の取り込みの決めは ADR-1059 改訂 2026-11-20 と ADR-1081。
+- 実物の行番号と本番の記録の数は design.md §10-2 に書いた（origin/main 2560f963f・Loki 7 日分: 取り込み 481 回（2026-11-19〜21 の記録）・古い色の番号だけの予定 0 件・`event_label_missing` 0 件・`event_label_colors_unavailable` 0 件）。
+
+## 便3（2026-11-23・アプリで説明・場所を空にしたとき）
+
+- 既存 ADR の確認: `git grep -il "description\|説明" origin/main -- docs/adr/ | grep -i calendar` で ADR-1059・ADR-1060 が出た。説明・場所の送り方の決めは ADR-1059 改訂 2026-11-20（「空 "" でも送る。None は送らない」）。ADR-1060 は Meet の件で、説明・場所の扱いは決めていない。
+- 実物の行番号は design.md §11-2 に書いた（origin/main 3763e55c7 で読んだ）。
