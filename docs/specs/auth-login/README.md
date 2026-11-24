@@ -22,6 +22,7 @@
 - [../../handoff/auth-self-hosted-passkey/recon.md](../../handoff/auth-self-hosted-passkey/recon.md)
 - [../../handoff/auth-self-hosted-passkey/design.md](../../handoff/auth-self-hosted-passkey/design.md)
 - [../../handoff/auth-self-hosted-passkey/handoff.md](../../handoff/auth-self-hosted-passkey/handoff.md)（引き継ぎ）
+- [../../handoff/passkey-autofill-first/](../../handoff/passkey-autofill-first/)（パスキーの自動の候補・2026-11-24 KGI 案）
 - [../../handoff/admin-2fa/recon.md](../../handoff/admin-2fa/recon.md)（管理者の2段階の確認・現状）
 - [../../handoff/admin-2fa/design.md](../../handoff/admin-2fa/design.md)（同・設計）
 - [../../handoff/admin-2fa/review-opus.md](../../handoff/admin-2fa/review-opus.md)（同・審査）

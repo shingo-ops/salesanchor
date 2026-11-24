@@ -29,6 +29,7 @@ from app.auth.dependencies import (
 from app.cache import invalidate_dashboard_cache
 from app.database import get_db
 from app.models import User
+from app.schemas.base import validate_delivery_address_line
 from app.schemas.company import (
     CompanyAddressInput,
     CompanyAddressResponse,
@@ -222,6 +223,36 @@ async def _compose_response(db: AsyncSession, main_row: dict) -> CompanyResponse
         discord=await _fetch_discord(db, cid),
         **stats,
     )
+
+
+def _addr_lines(a) -> tuple:
+    """住所1〜3を比べる形にする（空欄 "" と None は同じとみなす）。"""
+    get = a.get if isinstance(a, dict) else (lambda k: getattr(a, k))
+    return tuple((get(k) or None) for k in ("address_line_1", "address_line_2", "address_line_3"))
+
+
+async def _check_new_delivery_lines(db: AsyncSession, company_id: int | None, addresses) -> None:
+    """送り先のうち、今ある送り先と住所1〜3が違う行だけ決まりを当てる（D6・K12）。"""
+    existing: set[tuple] = set()
+    if company_id is not None:
+        rows = await db.execute(
+            text(
+                "SELECT address_line_1, address_line_2, address_line_3 FROM company_addresses "
+                "WHERE company_id = :cid AND address_type = 'delivery'"
+            ),
+            {"cid": company_id},
+        )
+        existing = {_addr_lines(dict(r)) for r in rows.mappings().all()}
+    for a in addresses:
+        a_type = a.get("address_type") if isinstance(a, dict) else a.address_type
+        if getattr(a_type, "value", a_type) != "delivery" or _addr_lines(a) in existing:
+            continue
+        for field in ("address_line_1", "address_line_2", "address_line_3"):
+            value = a.get(field) if isinstance(a, dict) else getattr(a, field)
+            try:
+                validate_delivery_address_line(value)
+            except ValueError as e:
+                raise HTTPException(status_code=422, detail=str(e))
 
 
 async def _replace_addresses(
@@ -476,6 +507,7 @@ async def create_company(
             await db.execute(text("UPDATE deals SET company_id = :cid WHERE id = :did"),
                 {"cid": new_id, "did": data.deal_id})
 
+        await _check_new_delivery_lines(db, None, data.addresses)
         await _replace_addresses(db, new_id, data.addresses)
         await _replace_sales_channels(db, new_id, data.sales_channels)
 
@@ -548,6 +580,8 @@ async def update_company(
         await _ensure_sales_rep_in_tenant(db, update_data["sales_rep_id"], tenant_id)
 
     addresses = update_data.pop("addresses", None)
+    if addresses is not None:
+        await _check_new_delivery_lines(db, company_id, addresses)
     sales_channels = update_data.pop("sales_channels", None)
     # AC3.4: discord キーが存在しない場合は _sentinel（未送信）として扱う
     _discord_sentinel = object()

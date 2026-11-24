@@ -302,9 +302,26 @@ async def register_customer(
             update_params,
         )
 
+    # 配送先の default はサーバーで決める: 会社にまだ default の配送先が無ければ、送られた中の最初の 1 件を default にする。
+    # 請求先は送られた値のまま（already_registered の 409 判定を変えない）。
+    has_default_delivery = (
+        await db.execute(
+            text(
+                "SELECT 1 FROM company_addresses "
+                "WHERE company_id = :cid AND address_type = 'delivery' AND is_default = TRUE LIMIT 1"
+            ),
+            {"cid": company_id},
+        )
+    ).first() is not None
+
     # 住所を登録
     # ADR-126 追補: is_default=true の重複（既登録）は 409 + "already_registered" を返す
     for addr in data.addresses:
+        if addr.address_type == "delivery":
+            is_default = not has_default_delivery
+            has_default_delivery = True
+        else:
+            is_default = addr.is_default
         try:
             await db.execute(
                 text("""
@@ -334,7 +351,7 @@ async def register_customer(
                     "state": addr.state,
                     "zip": addr.zip,
                     "country": addr.country_code,
-                    "is_default": addr.is_default,
+                    "is_default": is_default,
                 },
             )
         except SQLAlchemyError as e:

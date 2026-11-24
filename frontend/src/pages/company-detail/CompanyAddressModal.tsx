@@ -12,6 +12,10 @@ import { Button } from "../../components/Button";
 import { TextField } from "../../components/TextField";
 import { Select } from "../../components/Select";
 import { Checkbox } from "../../components/Checkbox";
+import { DELIVERY_ADDRESS_LINE_MAX, deliveryAddressLineError } from "../../utils/addressRules";
+
+type LineKey = "address_line_1" | "address_line_2" | "address_line_3";
+const LINE_KEYS: readonly LineKey[] = ["address_line_1", "address_line_2", "address_line_3"];
 
 interface Props {
   isOpen: boolean;
@@ -32,6 +36,13 @@ export function CompanyAddressModal({
   const [addrSubmitting, setAddrSubmitting] = useState(false);
   const [addrPhoneError, setAddrPhoneError] = useState<string | null>(null);
   const [addrModalError, setAddrModalError] = useState<string | null>(null);
+  const [lineErrors, setLineErrors] = useState<Partial<Record<LineKey, string>>>({});
+
+  /** 住所1〜3を打ち直したら、その欄の赤を消す。 */
+  const setLine = (key: LineKey, value: string) => {
+    setAddrForm({ ...addrForm, [key]: value });
+    setLineErrors((prev) => ({ ...prev, [key]: undefined }));
+  };
 
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
@@ -45,6 +56,19 @@ export function CompanyAddressModal({
       }
     }
     setAddrPhoneError(null);
+    // 送り先だけ住所1〜3に決まりを当てる（保存を押した時だけ赤くする・請求先は確かめない）
+    if (addrForm.address_type === "delivery") {
+      const found: Partial<Record<LineKey, string>> = {};
+      for (const key of LINE_KEYS) {
+        const ruleKey = deliveryAddressLineError(addrForm[key]);
+        if (ruleKey) found[key] = t(ruleKey, { max: DELIVERY_ADDRESS_LINE_MAX });
+      }
+      if (Object.keys(found).length > 0) {
+        setLineErrors(found);
+        return;
+      }
+    }
+    setLineErrors({});
     // F5: country_code は空 or 2 文字のみ許容
     if (addrForm.country_code && addrForm.country_code.length !== 2) {
       setAddrModalError(t("companies.countryCodeError"));
@@ -89,7 +113,7 @@ export function CompanyAddressModal({
               ]}
               disabled={!canEdit || addrSubmitting}
               value={addrForm.address_type}
-              onChange={(e) => handleAddressTypeChange(e.target.value as "billing" | "delivery")}
+              onChange={(e) => { setLineErrors({}); handleAddressTypeChange(e.target.value as "billing" | "delivery"); }}
             />
           </div>
           <div className="form-row">
@@ -116,15 +140,18 @@ export function CompanyAddressModal({
           </div>
           <div className="form-row"><label>{t("shipping.address1")}</label>
             <TextField disabled={!canEdit || addrSubmitting} value={addrForm.address_line_1}
-              onChange={(e) => setAddrForm({ ...addrForm, address_line_1: e.target.value })} />
+              onChange={(e) => setLine("address_line_1", e.target.value)}
+              error={lineErrors.address_line_1} />
           </div>
           <div className="form-row"><label>{t("shipping.address2")}</label>
             <TextField disabled={!canEdit || addrSubmitting} value={addrForm.address_line_2}
-              onChange={(e) => setAddrForm({ ...addrForm, address_line_2: e.target.value })} />
+              onChange={(e) => setLine("address_line_2", e.target.value)}
+              error={lineErrors.address_line_2} />
           </div>
           <div className="form-row"><label>{t("shipping.address3")}</label>
             <TextField disabled={!canEdit || addrSubmitting} value={addrForm.address_line_3}
-              onChange={(e) => setAddrForm({ ...addrForm, address_line_3: e.target.value })} />
+              onChange={(e) => setLine("address_line_3", e.target.value)}
+              error={lineErrors.address_line_3} />
           </div>
           <div className="form-row"><label>{t("shipping.city")}</label>
             <TextField disabled={!canEdit || addrSubmitting} value={addrForm.city}

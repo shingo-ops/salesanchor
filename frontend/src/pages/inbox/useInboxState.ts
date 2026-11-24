@@ -41,6 +41,7 @@ import {
   readInboxSettings,
 } from "./inbox.types";
 import type { ConvertAssigneeOption, InboxSettings, LeadDetail, StatusTabKey } from "./inbox.types";
+import { getKarteLayout } from "./karteLayout";
 import { buildReactionCreatePath, buildReactionDeletePath } from "./reactionPaths";
 
 // ---------------------------------------------------------------------------
@@ -264,6 +265,8 @@ export function useInboxState(): UseInboxStateReturn {
   const [cardSaveStatus, setCardSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [cardSaveError, setCardSaveError] = useState("");
   const [karteTab, setKarteTab] = useState<"contact" | "company" | "deal">("deal");
+  // ADR-1089: 住所の lead_id で開いた会話は selectLead を通らない。カルテが初めて届いたときに 1 回だけ、段階の最初のタブにする
+  const urlKarteTabPendingRef = useRef(initialLeadId !== null);
   const [showKartePanel, setShowKartePanel] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileModalTab, setProfileModalTab] = useState<"contact" | "company" | "deal">("deal");
@@ -652,15 +655,10 @@ export function useInboxState(): UseInboxStateReturn {
     setSendErrorCode(null);
     clearAttachment();
 
-    // ADR-108: set default karte tab based on lead_status
+    // ADR-1089: 最初に開くタブは段階ごとの見せ方（karteLayout.ts）の最初のタブ
     const conv = conversations.find((c) => c.lead_id === leadId);
-    const status = conv?.lead_status ?? "";
-    const postDealStatuses = ["existing_customer", "follow_up_short", "follow_up_long"];
-    if (postDealStatuses.includes(status)) {
-      setKarteTab("company");
-    } else {
-      setKarteTab("deal");
-    }
+    setKarteTab(getKarteLayout(conv?.lead_status).tabs[0]);
+    urlKarteTabPendingRef.current = false;
 
     // 同じ会話を選び直したときは効果が走らないため、ここで直接「開いた」を記録する
     // （審査 D2）。setSelectedLeadId(leadId) は同じ id では state が変わらず、
@@ -732,6 +730,13 @@ export function useInboxState(): UseInboxStateReturn {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLeadId, loadMessages, markRead, loadLeadDetail]);
+
+  // ADR-1089: 住所から開いた会話の最初のタブ（段階はカルテの中身から読む。一覧に無い古い会話でも決まるように）
+  useEffect(() => {
+    if (!urlKarteTabPendingRef.current || !leadDetail || leadDetail.id !== initialLeadId) return;
+    urlKarteTabPendingRef.current = false;
+    setKarteTab(getKarteLayout(leadDetail.status).tabs[0]);
+  }, [leadDetail, initialLeadId]);
 
   // メッセージリスト末尾へ自動スクロール（中身が届くたび。写しは中身が同じなら同じ物を返すので、届いた回数も見る）
   useEffect(() => {

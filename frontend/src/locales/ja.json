@@ -703,6 +703,8 @@
     "resetEmailSent": "再設定メールを送信しました。メールをご確認ください。",
     "backToLogin": "ログイン画面に戻る",
     "signInWithPasskey": "顔・指紋でログイン",
+    "passkeyNotOnDevice": "この機械にはパスキーがありません",
+    "passkeyUseOtherDevice": "スマホなど別の機械のパスキーを使う",
     "passkeyPromptTitle": "顔や指紋でログインできるようにしますか",
     "passkeyPromptBody": "次からはパスワードを入れずに、顔や指紋だけですぐにログインできます。",
     "passkeyPromptRegister": "登録する",
@@ -6320,11 +6322,25 @@
     "create": "作る",
     "cancel": "やめる",
     "thinking": "考えています…",
-    "voiceToggle": "声で返事",
+    "voiceToggle": "声で会話",
+    "edit": {
+      "replaced": "この下書きは、下の直した下書きに替えました。"
+    },
+    "voiceMode": {
+      "confirmEvent": "{{title}}を{{when}}に入れますか？",
+      "invoiceReady": "請求書の下書きを出しました。画面で中身を確かめて、作るボタンを押してください。",
+      "notCreated": "入れませんでした。",
+      "editedConfirm": "直しました。{{title}}を{{when}}に入れますか？",
+      "notEdited": "直すところが分かりませんでした。はい、か、いいえ、か、直したいところを言ってください。",
+      "checkScreen": "画面で確かめて、作るボタンを押してください。",
+      "yesWords": "はい|うん|お願い|入れて|作って|オッケー|ok",
+      "noWords": "いいえ|いや|違う|やめ|キャンセル|入れないで|作らないで|だめ|ダメ"
+    },
     "listen": {
       "start": "話して入力する",
       "stop": "聞くのをやめる",
       "listening": "聞いています…",
+      "tooLong": "{{max}} 字に達したので聞くのをやめました。この画面で一度に送れるのは {{max}} 字までです。いったん送ってから続きを話してください",
       "error": {
         "unsupported": "この画面では声の聞き取りが使えません",
         "notAllowed": "マイクが許可されていません。端末の設定でマイクを許可してください",
@@ -6537,5 +6553,9 @@
     "contactCompanyMismatch": "選んだ担当者はこの会社の人ではないため、請求書の材料を出せません。担当者を選び直してください。",
     "invoiceNotDraft": "この請求書は下書きではなくなったため、発行できません。画面を読み直してください。",
     "paymentFee": "支払い手数料の設定が見つからないため、合計を計算できません。設定の画面で PayPal の手数料を確かめてください。"
+  },
+  "addressRule": {
+    "ascii": "英字・数字・記号で入力してください",
+    "maxLength": "{{max}}文字以内で入力してください"
   }
 }

@@ -703,6 +703,8 @@
     "resetEmailSent": "Password reset email sent. Please check your inbox.",
     "backToLogin": "Back to sign in",
     "signInWithPasskey": "Sign in with face or fingerprint",
+    "passkeyNotOnDevice": "No passkey on this device",
+    "passkeyUseOtherDevice": "Use a passkey from another device, like your phone",
     "passkeyPromptTitle": "Sign in with your face or fingerprint?",
     "passkeyPromptBody": "Next time, sign in instantly with your face or fingerprint instead of your password.",
     "passkeyPromptRegister": "Set up",
@@ -6320,11 +6322,25 @@
     "create": "Create",
     "cancel": "Cancel",
     "thinking": "Thinking…",
-    "voiceToggle": "Read replies aloud",
+    "voiceToggle": "Voice conversation",
+    "edit": {
+      "replaced": "This draft was replaced by the updated one below."
+    },
+    "voiceMode": {
+      "confirmEvent": "Add {{title}} on {{when}}?",
+      "invoiceReady": "The invoice draft is ready. Check it on screen and press the create button.",
+      "notCreated": "I did not add it.",
+      "editedConfirm": "Updated. Add {{title}} on {{when}}?",
+      "notEdited": "I could not tell what to change. Say yes, no, or what to change.",
+      "checkScreen": "Please check the screen and press the create button.",
+      "yesWords": "yes|yeah|ok|okay|sure|please",
+      "noWords": "no|nope|cancel|stop|don't"
+    },
     "listen": {
       "start": "Speak to type",
       "stop": "Stop listening",
       "listening": "Listening…",
+      "tooLong": "Stopped listening at {{max}} characters. This box can send up to {{max}} characters at once. Send this part, then speak the rest.",
       "error": {
         "unsupported": "Voice input is not available on this screen",
         "notAllowed": "Microphone access is not allowed. Allow the microphone in your device settings",
@@ -6537,5 +6553,9 @@
     "contactCompanyMismatch": "The selected contact does not belong to this company, so the invoice details cannot be loaded. Choose the contact again.",
     "invoiceNotDraft": "This invoice is no longer a draft, so it cannot be issued. Reload the page.",
     "paymentFee": "No payment fee setting was found, so the total cannot be calculated. Check the PayPal fee in settings."
+  },
+  "addressRule": {
+    "ascii": "Please use English letters, numbers and symbols only.",
+    "maxLength": "Please enter {{max}} characters or fewer."
   }
 }

@@ -11379,6 +11379,17 @@
             ],
             "title": "Description"
           },
+          "edited": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited"
+          },
           "end": {
             "anyOf": [
               {
@@ -16424,6 +16435,11 @@
               }
             ],
             "title": "Description"
+          },
+          "edit": {
+            "default": false,
+            "title": "Edit",
+            "type": "boolean"
           },
           "end": {
             "anyOf": [

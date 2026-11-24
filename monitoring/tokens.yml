@@ -107,6 +107,7 @@ thresholds:
   # ログ異常検知（loki/rules/jarvis/alerts.yml）
   brute_force_per_5m:     10    # BruteForceAttempt: > 10（ログインの入口6つの 401・429 だけを数える）
   auth_failure_per_1h:    20    # SustainedAuthFailure: > 20（同じ数え方の1時間）
+  passkey_5xx_per_10m:     0    # PasskeyServerError: > 0（パスキーの道 options・verify の入口の 5xx）
   backend_error_per_5m:   30    # BackendErrorSpike: > 30
   db_error_per_5m:         5    # DatabaseError: > 5
 
@@ -121,6 +122,7 @@ for_durations:
   kuma_cert_invalid: "10m"  # CertInvalid: monitor_cert_is_valid == 0
   brute_force:       "1m"   # BruteForceAttempt
   auth_failure:      "5m"   # SustainedAuthFailure
+  passkey_server_error: "0m"  # PasskeyServerError
   backend_error:     "2m"   # BackendErrorSpike
   backend_worker:    "2m"   # BackendWorkerSaturated
   backend_sse:       "5m"   # BackendSseConnectionsHigh

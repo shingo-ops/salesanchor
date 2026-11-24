@@ -1057,6 +1057,43 @@ def test_t10_calendar_color_key_is_classified_on_bootstrapped_db(cluster):
         cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
 
 
+def test_t10_ops_incidents_alertname_severity_are_allowed(cluster):
+    """段階4 便3（PO 決定 D3）: ops_incidents の alertname・severity が allow（理由つき）で、
+    伏せた窓にそのまま見える。labels・annotations などほかの列は伏せたまま。
+    専用の DB を作り、終わったら消す。"""
+    name, conn = _new_db(cluster.control, "ai_cloud_t10_ops")
+    try:
+        c = conn.cursor()
+        c.execute(_read(_AI_READER_SQL))
+        c.execute(_read(_ROLE_SQL))
+        c.execute(_read(_META_SQL))
+        c.execute(_read("20261016_100000_create_ops_incident_tables.sql"))
+        c.execute(_read(_CREATE_SQL))
+        rows = _rows(
+            conn,
+            "SELECT column_name, class, reason FROM ai_cloud_meta.column_class"
+            " WHERE schema_pattern = 'public' AND table_name = 'ops_incidents'"
+            " AND column_name IN ('alertname', 'severity') ORDER BY column_name",
+        )
+        assert [r[0] for r in rows] == ["alertname", "severity"], "alertname・severity は各 1 行のはず"
+        for r in rows:
+            assert r[1] == "allow" and r[2].strip(), f"{r[0]} が allow（理由つき）でない: {r}"
+        modes = dict(
+            _rows(
+                conn,
+                "SELECT column_name, mode FROM ai_cloud_meta.build_columns WHERE view_name = 'public__ops_incidents'",
+            )
+        )
+        for col in ("alertname", "severity"):
+            assert modes.get(col) == "pass", f"{col} が pass でない: {modes.get(col)}"
+        for col in ("labels", "annotations", "fingerprint", "root_cause", "review_note"):
+            assert modes.get(col) is not None and modes[col] != "pass", f"{col} が伏せたままでない: {modes.get(col)}"
+    finally:
+        conn.close()
+        cur = cluster.control.cursor()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
 def test_t10_detects_added_columns(pg):
     """T10 の足した場合の試し: 分類の無い text 列・理由なしの allow・phone_number bigint を足すと落ちる。
     deny に当たる text 列（x_token_encrypted）を分類なしで足しても落ちない。"""

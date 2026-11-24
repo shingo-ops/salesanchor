@@ -152,6 +152,14 @@
 - 直し方：特定の利用者の設定ミスか攻撃かを切り分けて Opus に報告する。
 - 止め方：`amtool silence add alertname=SustainedAuthFailure --duration=PERIOD --comment=REASON`
 
+## PasskeyServerError
+
+- 札：ticket
+- 何が起きているか：パスキーのログインの道（`/api/v1/auth/passkey/login/options`・`/auth/passkey/login/verify`）で、本番が 5xx を返した記録が入口（nginx）の行に10分に1件以上ある。処理の途中で落ちた 500 と、入口が返す 502・504 は認証の記録（auth_events）に残らないので、入口の行で数える。設計: `docs/handoff/passkey-autofill-first/sustain-design.md` §5-4。
+- 最初に見るもの：Loki で `{job="containerlogs"} |~ "\"POST /api/v1/auth/passkey/login/(options|verify) HTTP/[0-9.]+\" 5[0-9][0-9] [0-9]+"`。同じ時刻のバックエンドの行で、例外の名前と、配備・再起動の最中かを見る。
+- 直し方：配備・再起動の最中の 502 だけなら様子を見る。続く・500 が出るなら、バックエンドの例外を Opus に報告する。パスワードのログインは別の道なので、利用者はパスワードでログインできる。
+- 止め方：`amtool silence add alertname=PasskeyServerError --duration=PERIOD --comment=REASON`
+
 ## BackendErrorSpike
 
 - 札：page

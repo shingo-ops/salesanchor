@@ -1,0 +1,185 @@
+// ============================================================================
+// karte-visual-gate.spec.ts の差し替え（ADR-1089）
+// 置き換えるのは次の5か所だけ。それ以外（Helpers・ADR-110-2/3・Default tab・
+// Contact tab・Visual regression）は1文字も変えない。
+// ============================================================================
+
+// ---------------------------------------------------------------------------
+// 差し替え A: 元の 126-138 行（[ADR-110-1] Tab order is deal / company / contact）を
+// 次の 3 本に置き換える
+// ---------------------------------------------------------------------------
+
+    test("[ADR-1089-1] Lead shows tabs deal / contact", async ({ page }) => {
+      await renderKarte(page, leadShinki, leadStatsPaid);
+      const tabs = page.locator('[data-testid="karte-tab-bar"] button');
+      await expect(tabs).toHaveCount(2);
+      await expect(tabs.nth(0)).toHaveAttribute("data-testid", "karte-tab-deal");
+      await expect(tabs.nth(1)).toHaveAttribute("data-testid", "karte-tab-contact");
+    });
+
+    test("[ADR-1089-1] Negotiating shows tabs deal / contact", async ({ page }) => {
+      await renderKarte(page, leadShoudanchuu, leadStatsPaid);
+      const tabs = page.locator('[data-testid="karte-tab-bar"] button');
+      await expect(tabs).toHaveCount(2);
+      await expect(tabs.nth(0)).toHaveAttribute("data-testid", "karte-tab-deal");
+      await expect(tabs.nth(1)).toHaveAttribute("data-testid", "karte-tab-contact");
+    });
+
+    test("[ADR-1089-1] Customer shows tabs company / contact / deal", async ({ page }) => {
+      await renderKarte(page, leadKisonkosaku, leadStatsPaid);
+      const tabs = page.locator('[data-testid="karte-tab-bar"] button');
+      await expect(tabs).toHaveCount(3);
+      await expect(tabs.nth(0)).toHaveAttribute("data-testid", "karte-tab-company");
+      await expect(tabs.nth(1)).toHaveAttribute("data-testid", "karte-tab-contact");
+      await expect(tabs.nth(2)).toHaveAttribute("data-testid", "karte-tab-deal");
+    });
+
+// ---------------------------------------------------------------------------
+// 差し替え B: 元の 167-175 行（[ADR-110-6] lock icon）を次に置き換える
+// （リードに顧客タブが無くなったため、成約後の見本で確かめる。最初から顧客タブ）
+// ---------------------------------------------------------------------------
+
+    test("[ADR-110-6] Performance summary heading has lock icon (read-only distinction)", async ({ page }) => {
+      await renderKarte(page, leadKisonkosaku, leadStatsPaid);
+
+      const lockIcon = page.locator('[data-testid="karte-lock-icon"]');
+      await expect(lockIcon).toBeVisible({ timeout: 5_000 });
+    });
+
+// ---------------------------------------------------------------------------
+// 差し替え C: 元の 178-268 行（describe "Deal tab -- customer fields must not appear"
+// と describe "Company tab -- 4 sections"）を、次の describe 1 つに置き換える
+// ---------------------------------------------------------------------------
+
+  test.describe("Fields per stage and tab (ADR-1089)", () => {
+
+    // 正本 karteLayout.ts と同じ並び。試験は画面の data-testid で照らす。
+    const ALL_FIELDS = [
+      "nickname", "country", "customer_type", "target_titles", "sales_form",
+      "next_action", "next_action_date", "response_speed", "temperature", "challenge",
+      "competitor_check", "estimated_scale", "monthly_forecast", "per_order_amount",
+      "monthly_frequency", "meeting_memo", "cs_memo",
+    ];
+
+    async function expectFields(page: Page, visible: string[], perfVisible: boolean) {
+      const content = page.locator(".right-panel-tab-content");
+      for (const f of ALL_FIELDS) {
+        const loc = content.locator(`[data-testid="karte-field-${f}"]`);
+        if (visible.includes(f)) {
+          await expect(loc, `${f} should be visible`).toBeVisible({ timeout: 5_000 });
+        } else {
+          await expect(loc, `${f} should not exist`).toHaveCount(0);
+        }
+      }
+      const perf = content.locator('[data-testid="karte-performance-section"]');
+      if (perfVisible) {
+        await expect(perf).toBeVisible({ timeout: 10_000 });
+      } else {
+        await expect(perf).toHaveCount(0);
+      }
+    }
+
+    test("[ADR-1089-2] Lead deal tab shows only lead fields", async ({ page }) => {
+      await renderKarte(page, leadShinki, leadStatsPaid);
+      await expectFields(page, [
+        "nickname", "country", "target_titles", "sales_form",
+        "next_action", "next_action_date", "response_speed", "temperature", "estimated_scale",
+      ], false);
+    });
+
+    test("[ADR-1089-2] Negotiating deal tab shows deal fields, no performance / cs_memo", async ({ page }) => {
+      await renderKarte(page, leadShoudanchuu, leadStatsPaid);
+      await expectFields(page, [
+        "nickname", "country", "customer_type", "target_titles", "sales_form",
+        "next_action", "next_action_date", "response_speed", "temperature", "challenge",
+        "competitor_check", "estimated_scale", "monthly_forecast", "per_order_amount",
+        "monthly_frequency", "meeting_memo",
+      ], false);
+    });
+
+    test("[ADR-1089-2] Customer company tab shows customer fields", async ({ page }) => {
+      await renderKarte(page, leadKisonkosaku, leadStatsPaid);
+      await expectFields(page, [
+        "nickname", "country", "customer_type", "target_titles", "sales_form",
+        "next_action", "next_action_date", "cs_memo",
+      ], true);
+    });
+
+    test("[ADR-1089-2] Customer deal tab shows deal record fields", async ({ page }) => {
+      await renderKarte(page, leadKisonkosaku, leadStatsPaid);
+      await page.locator('[data-testid="karte-tab-deal"]').click();
+      await expectFields(page, [
+        "response_speed", "temperature", "challenge", "competitor_check",
+        "estimated_scale", "monthly_forecast", "per_order_amount", "monthly_frequency",
+        "meeting_memo",
+      ], false);
+    });
+
+    test("[ADR-1089-2] Follow-up (oikomi) uses the customer layout", async ({ page }) => {
+      await renderKarte(page, leadOikomi, leadStatsPaid);
+      await expectFields(page, [
+        "nickname", "country", "customer_type", "target_titles", "sales_form",
+        "next_action", "next_action_date", "cs_memo",
+      ], true);
+    });
+
+    test("[ADR-110-4] Customer company tab has its section headings", async ({ page }) => {
+      await renderKarte(page, leadKisonkosaku, leadStatsPaid);
+      for (const id of [
+        "karte-section-basic-heading", "karte-section-deal-profile-heading",
+        "karte-section-next-action-heading", "karte-section-ro-heading",
+        "karte-section-handover-heading",
+      ]) {
+        await expect(page.locator(`[data-testid="${id}"]`)).toBeVisible({ timeout: 5_000 });
+      }
+    });
+
+    test("[ADR-1089-7] Customer deal tab has no next-action heading", async ({ page }) => {
+      await renderKarte(page, leadKisonkosaku, leadStatsPaid);
+      await page.locator('[data-testid="karte-tab-deal"]').click();
+      await expect(page.locator('[data-testid="karte-section-analysis-heading"]')).toBeVisible({ timeout: 5_000 });
+      await expect(page.locator('[data-testid="karte-section-next-action-heading"]')).toHaveCount(0);
+    });
+  });
+
+// ---------------------------------------------------------------------------
+// 差し替え D: 元の 272-287 行（[ADR-110-5] 0 invoices）の
+//   await renderKarte(page, leadShinkiNoDeal, leadStatsEmpty);
+//   await page.locator('[data-testid="karte-tab-company"]').click();
+// の 2 行だけを、次の 1 行に置き換える（成約後は最初から顧客タブ）。他の行はそのまま。
+// ---------------------------------------------------------------------------
+
+      await renderKarte(page, leadKisonkosakuNoDeal, leadStatsEmpty);
+
+// ---------------------------------------------------------------------------
+// 差し替え E: 元の 349-382 行（describe "Forbidden items"）を次に置き換える
+// （出ているタブを全部押して確かめる。リードと成約後の両方）
+// ---------------------------------------------------------------------------
+
+  test.describe("Forbidden items (ADR-110-8/9)", () => {
+
+    async function expectAbsentOnAllTabs(page: Page, text: string) {
+      const tabs = page.locator('[data-testid="karte-tab-bar"] button');
+      const count = await tabs.count();
+      for (let i = 0; i < count; i++) {
+        await tabs.nth(i).click();
+        await expect(page.getByText(text)).not.toBeVisible();
+      }
+    }
+
+    for (const [label, fixture] of [["lead", leadShinki], ["customer", leadKisonkosaku]] as const) {
+      // eslint-disable-next-line local/no-japanese-literal -- test name names the forbidden text
+      test(`[ADR-110-8] Text "追加予定" does not appear on screen (${label})`, async ({ page }) => {
+        await renderKarte(page, fixture, leadStatsPaid);
+        // eslint-disable-next-line local/no-japanese-literal -- asserting absence of forbidden text
+        await expectAbsentOnAllTabs(page, "追加予定");
+      });
+
+      // eslint-disable-next-line local/no-japanese-literal -- test name names the forbidden text
+      test(`[ADR-110-8] Text "担当者" does not appear on screen (${label})`, async ({ page }) => {
+        await renderKarte(page, fixture, leadStatsPaid);
+        // eslint-disable-next-line local/no-japanese-literal -- asserting absence of forbidden text
+        await expectAbsentOnAllTabs(page, "担当者");
+      });
+    }
+  });

@@ -174,3 +174,20 @@
 | `registration.error.invalid_token` | Invalid or expired registration link... | 登録リンクが無効または期限切れです... |
 | `registration.error.company_not_found` | Company information not found... | 会社情報が見つかりません... |
 | `registration.error.unexpected_error` | An unexpected error occurred... | 予期しないエラーが発生しました... |
+
+---
+
+## 追補: 送り先の住所1〜3の決まりと請求先の住所3（2026-11-24）
+
+### 背景
+
+FedEx の伝票は住所1行35文字・3行まで（`docs/handoff/customer-form-layout/evidence-local.md` §3）。登録フォームで決まり外の住所が入ると伝票を作れない。PO 決定 D2〜D6（`docs/handoff/customer-form-layout/decisions.md`）。
+
+### 決定
+
+- Section 1 に **Address Line 3（任意・テキスト・`company_addresses.address_line_3`）** を Address Line 2 の後に足す（D3）。
+- 送り先（`address_type='delivery'`）の住所1〜3は **印字できる英字・数字・記号・空白（0x20〜0x7E）だけ・1行35文字まで**（D2・D5）。文字の種類を先に確かめる。文は `addressRule.ascii`「英字・数字・記号で入力してください」・`addressRule.maxLength`「{{max}}文字以内で入力してください」。
+- 請求先の住所は自由。ただし「Ship to the same address.」を選んだ時は請求先が送り先になるので同じ決まりを当てる（D2）。
+- 社内の会社の住所の窓（送り先）と注文ごとの発送の欄にも同じ決まりを当てる。今ある住所は書き換えず、住所1〜3を変えずに保存する時は受け口で通す（D6）。
+- 見積書の PDF の宛名に住所3を載せる（D4）。
+- 決まりの正本は受け口 `backend/app/schemas/base.py` の `validate_delivery_address_line` と画面 `frontend/src/utils/addressRules.ts` の `deliveryAddressLineError` の2か所だけ（設計: `docs/handoff/customer-form-layout/design.md` §2）。

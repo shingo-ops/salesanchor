@@ -13,7 +13,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from app.schemas.base import validate_email_loose, validate_phone
+from app.schemas.base import validate_delivery_address_line, validate_email_loose, validate_phone
 
 # AddressInput の Optional[str] フィールド一覧（空文字列 → None 正規化対象）
 _ADDRESS_OPTIONAL_STR_FIELDS = frozenset({
@@ -112,6 +112,14 @@ class AddressInput(BaseModel):
         if len(upper) != 2 or not upper.isalpha():
             raise ValueError("country_code は2文字のアルファベット（例: JP, US）で指定してください")
         return upper
+
+    @model_validator(mode="after")
+    def check_delivery_address_lines(self) -> "AddressInput":
+        """送り先だけ住所1〜3に決まりを当てる（請求先は自由・D2）。"""
+        if self.address_type == "delivery":
+            for field in ("address_line_1", "address_line_2", "address_line_3"):
+                validate_delivery_address_line(getattr(self, field))
+        return self
 
 
 class RegisterRequest(BaseModel):

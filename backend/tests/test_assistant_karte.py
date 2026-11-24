@@ -14,7 +14,7 @@ import pytest
 
 from app.routers import assistant
 from app.schemas.assistant import IntentEvent, KarteIn
-from app.services.secretary_karte import merge_karte, next_ask, settle_dates
+from app.services.secretary_karte import merge_edit, merge_karte, next_ask, settle_dates
 from tests.test_assistant_router import _fixture, _mock_agent, _respond
 from tests.test_assistant_router import allowed as allowed  # noqa: F401
 
@@ -54,6 +54,7 @@ def _karte(**fields) -> dict:
         "add_meet": None,
         "asked": None,
         "asked_count": 0,
+        "edit": False,
     }
     k.update(fields)
     return k
@@ -354,3 +355,153 @@ def test_payload_at_max_size_is_within_limit():
     )
     payload = assistant._agent_payload("あ" * 1000, "sonnet", ["あ" * 150] * 20, karte)
     assert len(payload) <= assistant.AGENT_BODY_MAX_BYTES, len(payload)
+
+
+# ---- 便W: 声で下書きを直す（merge_edit と口） -------------------------------------
+
+
+def _k(**fields) -> KarteIn:
+    base = {"title": "定例", "start": S, "end": E, "location": "渋谷", "description": "旧", "edit": True}
+    base.update(fields)
+    return KarteIn(**base)
+
+
+def test_merge_edit_description_only_ai_wins_others_karte():
+    ev, changed = merge_edit(_ev(description="テスト"), _k())
+    assert (ev.description, ev.title, ev.start, ev.end, ev.location, changed) == ("テスト", "定例", S, E, "渋谷", True)
+
+
+def test_merge_edit_title_ai_beats_karte():
+    ev, changed = merge_edit(_ev(title="朝会"), _k())
+    assert (ev.title, changed) == ("朝会", True)
+
+
+def test_merge_edit_start_only_keeps_one_hour_length():
+    ev, changed = merge_edit(_ev(start="2026-11-02T16:00:00+09:00"), _k())
+    assert (ev.start, ev.end, changed) == ("2026-11-02T16:00:00+09:00", "2026-11-02T17:00:00+09:00", True)
+
+
+def test_merge_edit_start_and_end_both_from_ai():
+    ev, changed = merge_edit(_ev(start="2026-11-02T16:00:00+09:00", end="2026-11-02T18:00:00+09:00"), _k())
+    assert (ev.start, ev.end, changed) == ("2026-11-02T16:00:00+09:00", "2026-11-02T18:00:00+09:00", True)
+
+
+def test_merge_edit_all_null_is_not_changed():
+    ev, changed = merge_edit(_ev(), _k())
+    assert (ev.title, ev.start, ev.end, ev.description, changed) == ("定例", S, E, "旧", False)
+
+
+def test_merge_edit_blank_ai_text_keeps_karte():
+    ev, changed = merge_edit(_ev(title="   ", description=" "), _k())
+    assert (ev.title, ev.description, changed) == ("定例", "旧", False)
+
+
+def test_merge_edit_all_day_karte_ignores_ai_times():
+    k = _k(is_all_day=True, start="2026-11-02T00:00:00+09:00", end="2026-11-02T23:59:00+09:00")
+    ev, changed = merge_edit(_ev(start="2026-11-02T16:00:00+09:00", end="2026-11-02T17:00:00+09:00"), k)
+    assert (ev.start, ev.end, changed) == (k.start, k.end, False)
+
+
+def test_merge_edit_same_time_written_differently_is_not_changed():
+    ev, changed = merge_edit(_ev(start="2026-11-02T01:00:00Z"), _k())
+    assert (ev.start, ev.end, changed) == (S, E, False)
+
+
+def test_merge_edit_none_ev_is_base_and_false():
+    ev, changed = merge_edit(None, _k())
+    assert (ev.title, ev.start, ev.end, changed) == ("定例", S, E, False)
+
+
+def test_merge_edit_whitespace_only_difference_is_not_changed():
+    ev, changed = merge_edit(_ev(title=" 定例 ", description="旧  "), _k())
+    assert (ev.title, ev.description, changed) == ("定例", "旧", False)
+
+
+def test_merge_edit_karte_end_before_start_does_not_add_length():
+    k = _k(end="2026-11-02T09:00:00+09:00")
+    ev, _ = merge_edit(_ev(start="2026-11-02T16:00:00+09:00"), k)
+    assert ev.end == "2026-11-02T09:00:00+09:00"
+
+
+def test_merge_edit_mixed_offset_start_compares_by_text_and_keeps_karte_end():
+    k = _k(start="2026-11-02T10:00:00", end="2026-11-02T11:00:00")
+    ev, changed = merge_edit(_ev(start="2026-11-02T16:00:00+09:00"), k)
+    assert (ev.start, ev.end, changed) == ("2026-11-02T16:00:00+09:00", "2026-11-02T11:00:00", True)
+
+
+def _invoice() -> dict:
+    inv = {"company_name": "A社", "contact_name": None, "items": [{"product_name": "x", "quantity": 1}]}
+    return {"intent": {"kind": "invoice", "invoice": inv, "event": None, "reply": None}}
+
+
+@pytest.mark.asyncio
+async def test_edit_description_via_router(allowed, monkeypatch, meet):
+    meet(False)
+    _mock_agent(monkeypatch, _respond(200, _event(description="テスト")))
+    karte = _karte(title="定例", start=S, end=E, location="渋谷", edit=True)
+    data = (await allowed.post(URL, json={"text": "説明にテストと入れて", "karte": karte})).json()
+    d = data["draft"]
+    assert data["kind"] == "event"
+    assert (d["edited"], d["ask"], d["ask_count"], d["description"]) == (True, None, 0, "テスト")
+    assert (d["title"], d["start"], d["end"], d["location"]) == ("定例", S, E, "渋谷")
+
+
+@pytest.mark.asyncio
+async def test_edit_unknown_keeps_karte_and_edited_false(allowed, monkeypatch, meet):
+    meet(False)
+    _mock_agent(monkeypatch, _respond(200, _unknown()))
+    karte = _karte(title="定例", start=S, end=E, edit=True)
+    data = (await allowed.post(URL, json={"text": "うーん", "karte": karte})).json()
+    d = data["draft"]
+    assert data["kind"] == "event"
+    assert (d["edited"], d["title"], d["start"], d["end"], d["ask"]) == (False, "定例", S, E, None)
+
+
+@pytest.mark.asyncio
+async def test_edit_invoice_answer_is_ignored_and_no_name_search(allowed, monkeypatch, meet):
+    meet(False)
+    resolve = AsyncMock()
+    monkeypatch.setattr(assistant, "resolve_names", resolve)
+    _mock_agent(monkeypatch, _respond(200, _invoice()))
+    karte = _karte(title="定例", start=S, end=E, edit=True)
+    data = (await allowed.post(URL, json={"text": "請求書にして", "karte": karte})).json()
+    assert data["kind"] == "event"
+    assert (data["draft"]["edited"], data["draft"]["title"]) == (False, "定例")
+    resolve.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_edit_end_before_start_keeps_karte(allowed, monkeypatch, meet):
+    meet(False)
+    _mock_agent(monkeypatch, _respond(200, _event(end="2026-11-02T09:00:00+09:00")))
+    karte = _karte(title="定例", start=S, end=E, edit=True)
+    d = (await allowed.post(URL, json={"text": "終わりを9時にして", "karte": karte})).json()["draft"]
+    assert (d["edited"], d["start"], d["end"]) == (False, S, E)
+
+
+@pytest.mark.asyncio
+async def test_edit_same_start_does_not_move_date_by_description_words(allowed, monkeypatch, meet):
+    meet(False)
+    start, end = "2026-11-10T10:00:00+09:00", "2026-11-10T11:00:00+09:00"
+    _mock_agent(monkeypatch, _respond(200, _event(description="明日までに資料を持参", start=start)))
+    karte = _karte(title="定例", start=start, end=end, edit=True)
+    d = (await allowed.post(URL, json={"text": "説明に明日までに資料を持参と入れて", "karte": karte})).json()["draft"]
+    assert (d["start"], d["end"], d["description"], d["edited"]) == (start, end, "明日までに資料を持参", True)
+
+
+@pytest.mark.asyncio
+async def test_edit_changed_start_gets_day_table(allowed, monkeypatch, meet):
+    meet(False)
+    start, end = "2026-11-10T10:00:00+09:00", "2026-11-10T11:00:00+09:00"
+    _mock_agent(monkeypatch, _respond(200, _event(start="2026-11-04T10:00:00+09:00")))
+    karte = _karte(title="定例", start=start, end=end, edit=True)
+    d = (await allowed.post(URL, json={"text": "来週の月曜にして", "karte": karte})).json()["draft"]
+    assert (d["start"], d["end"], d["edited"]) == ("2026-11-02T10:00:00+09:00", "2026-11-02T11:00:00+09:00", True)
+
+
+@pytest.mark.asyncio
+async def test_without_edit_edited_is_null(allowed, monkeypatch, meet):
+    meet(False)
+    _mock_agent(monkeypatch, _respond(200, _event(title="面談", start=S, end=E)))
+    d = (await allowed.post(URL, json={"text": "面談", "karte": None})).json()["draft"]
+    assert d["edited"] is None

@@ -29,9 +29,9 @@ PO: しんご
 |---|---|
 | [翻訳・グロッサリ](translation-glossary/README.md) | 仕様書あり（KGI承認済み・design未） |
 | [帳票・フォーム送付（見積・請求書・フォーム）](invoice-form-send/README.md) | 仕様書あり（KGI承認済み・To-Be design済・recon未） |
-| [PC受信箱の3列の幅](../../handoff/inbox-pc-column-width/design.md)（ADR-1086） | 本番反映済み（2026-11-23・PCの5つの幅を実測で確認。タブレット・スマホ幅の実測とPOの見た目の確認は未） |
-| [受信箱のページが縦にはみ出す件](../../handoff/inbox-header-tooltip-overflow/design.md) | 設計審査済み（2026-11-23） |
-| 顧客カルテ | 未作成 |
+| [PC受信箱の3列の幅](../../handoff/inbox-pc-column-width/design.md)（ADR-1086） | 本番反映済み（2026-11-23・PCの5つの幅を実測で確認）。K7（タブレット・スマホ幅）は測らずに閉じる（2026-11-24 PO「タブレットは持っていないので見ることが出来ないがスマホに関しては3カラム式ではなくLINEやWhatsappの方式を採用して整備を進めている」） |
+| [受信箱のページが縦にはみ出す件](../../handoff/inbox-header-tooltip-overflow/design.md) | 本番反映済み・本番実測 K1〜K3 合格（2026-11-24・#5703） |
+| [顧客カルテの段階ごとの見せ方](../../handoff/inbox-karte-stage-tabs/design.md)（ADR-1089） | 設計済み（2026-11-24 PO が項目の置き場所の表を承認） |
 | Bot・定型文 | 未作成 |
 | 帳票・フォーム送付（見積/請求/登録） | 未作成 |
 
