@@ -31,7 +31,7 @@
 （１）定数 `const VOICE_SEND_SILENCE_MS = 1000;` を部品の外に 1 つ置く（ほかで同じ数を書かない）。
 （２）`onVoiceChange(true)` のとき、今の `voice.enable()` のあとで `listen.start()` を呼ぶ（同じ押した処理の中）。`false` のときは今の処理に `listen.abort()` と `pendingConfirm` を外す処理を足す。
 （３）自動で送る: `heardRef = useRef(false)` を足し、聞き取りの callback（今の 67-79 行）で文を足したら `true`、`send()` の頭と `onVoiceChange` で `false` にする。`sendRef = useRef(send); sendRef.current = send;` を毎回の描画で入れる。`useEffect` で、`voiceOn && listen.listening && heardRef.current && text.trim() !== "" && listen.interim === "" && !sending` のときだけ `setTimeout(() => void sendRef.current(), VOICE_SEND_SILENCE_MS)` を張る。依存は `[voiceOn, listen.listening, listen.interim, text, sending]`（`sendRef` を使うので `send` は依存に入れない。書き方の検査 `react-hooks/exhaustive-deps` の警告 0 件にする）。片付けで `clearTimeout`。声で会話が切れているときは何もしない（今と同じ）。
-（４）回数の印 `turnRef = useRef(0)` を足す。`send()` の頭・`onVoiceChange`・`close()` で 1 進める。`speakThenListen(id, spoken)` を作る: **最初に `listen.abort()` を呼び、`heardRef.current = false` にする**（マイクが開いたままボタンで作ったときなどに、秘書の声を拾わないため・審査 N1・`frontend/src/features/secretary/useSecretaryListen.ts:173` はすでに聞いているときの `start()` で何もしない）。次に呼んだときの `const turn = turnRef.current` を覚え、`const r = await voice.speak(spoken)`。`r !== "ok"` なら今の `setVoiceNote({id, kind: r})` と、声で会話を切る（`onVoiceChange(false)` と同じ処理）。`r === "ok"` かつ `voiceOnRef.current` かつ `turn === turnRef.current` なら `listen.start()`（読み上げを途中で止めても `speak` は "ok" を返すため・`frontend/src/features/secretary/useSecretaryVoice.ts:84`・`:96`・`:100`。印が違えばマイクを開かない）。
+（４）回数の印 `turnRef = useRef(0)` を足す。`send()` の頭・`onVoiceChange`・`close()` で 1 進める。`speakThenListen(id, spoken)` を作る: **最初に `listen.abort()` を呼び、`heardRef.current = false` にする**（マイクが開いたままボタンで作ったときなどに、秘書の声を拾わないため・審査 N1・`frontend/src/features/secretary/useSecretaryListen.ts:173` はすでに聞いているときの `start()` で何もしない）。次に `const turn = ++turnRef.current` で印を 1 つ進めて覚える（読み上げの途中で別の読み上げ（作るボタンの知らせ等）が始まったとき、古い方の終わりでマイクを開かないため・審査 N2。`frontend/src/features/secretary/useSecretaryVoice.ts:64` の `speak` は頭で前の読み上げを止め、前の方は `"ok"` を返す）。`const r = await voice.speak(spoken)`。`r !== "ok"` なら今の `setVoiceNote({id, kind: r})` と、声で会話を切る（`onVoiceChange(false)` と同じ処理）。`r === "ok"` かつ `voiceOnRef.current` かつ `turn === turnRef.current` なら `listen.start()`（読み上げを途中で止めても `speak` は "ok" を返すため・`frontend/src/features/secretary/useSecretaryVoice.ts:84`・`:96`・`:100`。印が違えばマイクを開かない）。
 （５）`send()` の中の読み上げを、声で会話の間は `speakThenListen` に替える。読む文は §15-6 の表のとおり:
 - 聞き返し: `reply.draft.reply`（今のまま）。
 - `ask` あり: `t(\`secretary.ask.${ask}\`)`（今のまま）。
@@ -82,7 +82,7 @@ export function judgeYesNo(text: string, yesWords: string[], noWords: string[]):
 `secretaryVoiceAnswer.test.ts`（日本語は今の試験と同じく `String.fromCharCode` か翻訳の値から作る）:
 - 「はい」→yes・「いいえ」→no・「はい、いや違う」→no・「えーと」→unknown・「ええと」→unknown・「ＯＫ」（全角）→yes・"let me look"→unknown・"I know"→unknown・"Yes, please."→yes・空の語は無視。
 
-`SecretaryChat.test.tsx`（今の偽物は 2 つの組に分かれている: 偽の AudioContext は「voice reply」の組（501-528 行付近）、偽の聞き取り FakeRec は「listen mark」の組（642-676 行付近）。T1〜T11 は両方を入れた新しい組で書く。試験は英語の画面で回るので、切り替えの名 `TOGGLE` は "Voice conversation" に直し、答えは en の語（yes・no）で言わせる）:
+`SecretaryChat.test.tsx`（今の偽物は 2 つの組に分かれている: 偽の AudioContext は「voice reply」の組（501-528 行付近）、偽の聞き取り FakeRec は「listen mark」の組（642-676 行付近）。T1〜T12 は両方を入れた新しい組で書く。試験は英語の画面で回るので、切り替えの名 `TOGGLE` は "Voice conversation" に直し、答えは en の語（yes・no）で言わせる）:
 - T1 声で会話を入れると `start` が 1 回呼ばれる。
 - T2 声で会話の間、聞き取った文があり途中の文字が空のまま 1000ms で送られる（偽の時計）。999ms では送られない。途中の文字があると送られない。手で打った文だけのときは送られない。
 - T3 声で会話が切れているときは、1000ms たっても送られない。
@@ -94,6 +94,7 @@ export function judgeYesNo(text: string, yesWords: string[], noWords: string[]):
 - T9 窓を閉じると確かめ待ちが外れる（もう一度開いて「はい」でも POST 0 回）。
 - T10 読み上げの途中で手で送ると、前の読み上げが終わっても `start` は呼ばれない（回数の印）。
 - T11 声で会話の間、マイクが開いた状態で予定の「作る」ボタンを押すと、作った知らせを読み始める前に `abort` が呼ばれ、読み上げの間に聞き取りの文が来ても送りは 0 回。
+- T12 声で会話の間、確かめの文を読んでいる途中で予定の「作る」ボタンを押すと、前の読み上げが終わっても `start` は呼ばれず、作った知らせを読み終わったときに 1 回だけ呼ばれる。送りは 0 回。
 - 予定を作った知らせ（声で会話の間）を読み終わると `start` が呼ばれる（T5 の中で確かめる）。
 
 ## 8. 合格（PR を出す前に自分で確かめる）
