@@ -43,7 +43,7 @@
 
 PO の決定: アプリが求める許可を `calendar` から `calendar.events.owned`＋`calendar.calendars.readonly` に狭める。以下は Opus の設計案（設計審査前）。
 
-### 変更前と変更後（触るファイルの全部は実装カード `card-narrow-scope.md`。受け取り口と画面の文も変える）
+### 変更前と変更後（触るファイルの全部は実装カード `docs/handoff/google-oauth-verification/card-narrow-scope.md`。受け取り口と画面の文も変える）
 
 | 場所（origin/main） | 変更前 | 変更後 | 理由 |
 |---|---|---|---|
@@ -51,12 +51,12 @@ PO の決定: アプリが求める許可を `calendar` から `calendar.events.
 | `backend/app/services/google_calendar.py:227-239`（`scopes` は `:237`） `_build_credentials` | `scopes=_SCOPES` | `scopes=None` | 下の「今の6人」を参照 |
 | `backend/app/services/google_calendar.py` `exchange_code` の `fetch_token` の後 | 受け取った許可を確かめない | 受け取った許可に2つが両方あるかを確かめ、欠けていれば「両方にチェックを入れて連携し直す」ことを伝える失敗にする | 許可が2つになると、Google の同意の画面で利用者が片方だけ外せる。外すと予定の作成か色ラベルの読み取りが後で失敗する |
 
-触らない範囲: `google_drive_oauth.py`（`drive.file` は機密の許可ではない）・予定の読み書きの処理・DB。画面は、片方だけ許可されたときの知らせの文を1つ足すだけ（今の知らせの帯を使う）。
+触らない範囲: `backend/app/services/google_drive_oauth.py`（`drive.file` は機密の許可ではない）・予定の読み書きの処理・DB。画面は、片方だけ許可されたときの知らせの文を1つ足すだけ（今の知らせの帯を使う）。
 
 ### 今つないでいる6人（つなぎ直しは不要の設計）
 
-- 【事実】合鍵の更新のとき、部品は `Credentials` に渡した `scopes` をそのまま Google に送る（Context7 `/googleapis/google-auth-library-python` の `credentials.py` の `refresh`）。
-- 【事実】部品の更新の依頼は、`scopes` が空のときは許可の範囲を送らない（`google/oauth2/_client.py` の `refresh_grant` の `if scopes:`。出典: [googleapis/google-auth-library-python _client.py](https://www.github.com/googleapis/google-auth-library-python/blob/82293fe2caaf5258babb5df1cff0a5ddc9e44b38/google/oauth2/_client.py)）。
+- 【事実】合鍵の更新のとき、部品は `Credentials` に渡した `scopes` をそのまま Google に送る（Context7 `/googleapis/google-auth-library-python` の credentials.py の `refresh`）。
+- 【事実】部品の更新の依頼は、`scopes` が空のときは許可の範囲を送らない（google/oauth2/_client.py の `refresh_grant` の `if scopes:`。出典: [googleapis/google-auth-library-python _client.py](https://www.github.com/googleapis/google-auth-library-python/blob/82293fe2caaf5258babb5df1cff0a5ddc9e44b38/google/oauth2/_client.py)）。
 - 設計: `_build_credentials` で `scopes=None` にする。こうすると、今の6人は前に許した全部の許可のまま合鍵が更新され続ける。新しくつなぐ人とつなぎ直した人だけが狭い2つになる。
 - 【未確認】`scopes=_SCOPES`（狭い2つ）のまま全部の許可の合鍵を更新したとき、Google が受け付けるか。`scopes=None` にすればこの問いに頼らずに済むので、試さない。
 
@@ -68,7 +68,7 @@ PO の決定: アプリが求める許可を `calendar` から `calendar.events.
 - 【事実】`oauthlib` は、返ってきた許可の範囲が求めた範囲と違うとき、既定で `Warning`（"Scope has changed"）を出す。環境変数 `OAUTHLIB_RELAX_TOKEN_SCOPE` を立てると出さない。例外には `token` が付く（oauthlib 1.0.0 の変更記録。出典: [oauthlib 0.7.0 の変更](https://newreleases.io/project/github/oauthlib/oauthlib/release/0.7.0)・[oauthlib issue 809](https://github-redirect.dependabot.com/oauthlib/oauthlib/issues/809)）。Context7 の `requests-oauthlib` の資料には、この動きの記載が無かった。
 - 【事実】今のコードは `fetch_token` の例外をすべて `RuntimeError("Google token 交換に失敗: …")` にする（`backend/app/services/google_calendar.py` の `exchange_code`）。だから片方だけの許可のときは、今のままでも連携は保存されない。ただし利用者には理由が分からない。
 - 設計: 環境変数は立てない（アプリ全体に効くため）。`exchange_code` で "Scope has changed" の `Warning` だけを分けて受け、「両方にチェックを入れて連携し直してください」に当たる失敗にする。
-- 【事実】審査1回目（`review-architect-narrow-1.md` §3）で、oauthlib 3.2.2・3.3.1・4.0.1 の実物を動かした。片方だけなら `Warning` が出て `token` が付く。2つ（順不同とも）なら出ない。ただし `Flow.fetch_token` 経由では `token["scope"]` がリストになる。受け取った範囲の読み方は実装カードの変更3に書いた。
+- 【事実】審査1回目（枝 release/google-calendar-narrow-scope-review1 の review-architect-narrow-1.md §3）で、oauthlib 3.2.2・3.3.1・4.0.1 の実物を動かした。片方だけなら `Warning` が出て `token` が付く。2つ（順不同とも）なら出ない。ただし `Flow.fetch_token` 経由では `token["scope"]` がリストになる。受け取った範囲の読み方は実装カードの変更3に書いた。
 - 失敗の文は画面の言葉の決まり（ADR-027・ADR-1071「起きたこと＋次にすること」）に合わせる。今の失敗の文の出し方（`backend/app/routers/google_calendar.py` の受け取り口）を読んでから決める。
 
 ### 受け入れの基準（この便）
@@ -111,6 +111,7 @@ PO の決定: アプリが求める許可を `calendar` から `calendar.events.
 ## 7. 維持の仕組み
 
 - K1〜K4 は §1 の表のとおり。
+- 守り手: Opus（設計担当）。許可の範囲は backend/tests/test_google_calendar.py の S1 の試験が狭い2つ以外を求めたら落とす。
 - 維持: 新しい Google の権限を足すときは、データアクセスの登録と個人情報のページの更新を同じ便に入れる。審査の状態は検証センターで年1回以上 Opus が読む（毎週の点検に足すかは便の中で決める）。
 
 ## 8. 外部・過去事例の参照と我々への応用
