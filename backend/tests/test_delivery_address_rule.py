@@ -43,6 +43,8 @@ def test_none_and_empty_ok():
 def test_newline_rejected():
     with pytest.raises(ValueError, match="address_line_non_ascii"):
         validate_delivery_address_line("a\nb")
+    with pytest.raises(ValueError, match="address_line_non_ascii"):
+        validate_delivery_address_line("abc\n")
 
 
 def test_kind_checked_before_length():

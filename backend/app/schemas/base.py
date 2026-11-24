@@ -47,7 +47,7 @@ def validate_delivery_address_line(value: str | None) -> str | None:
     """送り先の住所1行を確かめる。英字・数字・記号・空白だけ、35文字まで。"""
     if value is None:
         return None
-    if not _DELIVERY_ADDRESS_LINE_RE.match(value):
+    if not _DELIVERY_ADDRESS_LINE_RE.fullmatch(value):
         raise ValueError("address_line_non_ascii")
     if len(value) > DELIVERY_ADDRESS_LINE_MAX:
         raise ValueError("address_line_too_long")

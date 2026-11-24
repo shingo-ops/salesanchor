@@ -24,6 +24,7 @@ describe("deliveryAddressLineError（受け口 test_delivery_address_rule.py と
   });
   it("改行は ascii", () => {
     expect(deliveryAddressLineError("a\nb")).toBe("addressRule.ascii");
+    expect(deliveryAddressLineError("abc\n")).toBe("addressRule.ascii");
   });
   it("文字の種類を先に見る（東京×36）", () => {
     expect(deliveryAddressLineError("東京".repeat(36))).toBe("addressRule.ascii");
