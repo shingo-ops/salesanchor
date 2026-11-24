@@ -232,6 +232,21 @@
 - 別件（この便の変更ではない）: 移行の最後の ai_unmask_owner の権限付け直しが、2b の本番反映の 2 回とも statement timeout で失敗した（権限は前のまま）。前の本番反映でも同じだったかは未確認。
 - CI の別件: 2b の CI は、合流した head で PR が触らない試験により 2 回落ちた（1 回目: 共通の役割 aic_owner の取り合いと deadlock、2 回目: 試験用 uuid に「abc」が偶然含まれた件）。失敗分の再実行で 3 回目に全部通った。直し方は別のテーマで扱う。
 
+### 実装の 3 つ目の便の結果（2026-11-24。段取り表 `docs/handoff/ai-ops-247/card-stage4-bin3.md` §4。PO 決定 D3）
+
+PR #5729 を 2026-11-24 22:23 JST に合流（80d289df0）。GO #5729 は POの委任に基づくClaude Opus発行（委任 ID ADR-1003）。本番反映 run 45402899041 は success。Pre-deploy DB backup は 13:29:46Z、移行は 13:31:33Z に success。確かめは本番を読むだけ（`BEGIN READ ONLY`…`ROLLBACK`）。
+
+| # | 結果 | 根拠 |
+|---|---|---|
+| V2 | ○ build_log の最新は反映の後・ok | built_at 2026-11-24 13:31:30Z・ok t・ビュー 571・失敗 0 |
+| V3 | ○ column_class は 1165 行。ops_incidents の alertname・severity は allow | 無制限の鍵で読んだ。annotations・labels は mask のまま |
+| V4 | ○ ai_reader_cloud の役で読んだ名前と強さは、読み取りの鍵の道と 16 組・計 1007 行で一致 | 13:33:51Z に `ai_ro.public__ops_incidents` を数えた（AUDIT rows=16 result=ok）。最多は BruteForceAttempt・critical の 648 行。V1 の 1007 行と同じ |
+| V5 | ○ labels・annotations は伏せたまま | `masked:json:len=…:keys=…` の形。build_columns でも annotations・fingerprint・labels・review_note・root_cause は mode mask。alertname・severity は mode pass |
+
+- V1 は伏せた値で 13 組、V4 は 16 組だった。伏せた値は長さで作るため、違う名前が同じ値にまとまっていた。行数はどちらも 1007 で同じ。
+- CI の別件: 合流した head で、PR が触らない試験 `tests/test_product_blank_confirmations_pg.py::test_write_requires_operator_flag` が deadlock で 1 回落ちた。失敗分の再実行で 10006 passed になった。
+- 次の本番の変更（段取り表 C6）は、この反映から 24 時間あける。2026-11-25 22:31 JST 以降。
+
 ### 試しから設計に足すこと
 
 - 案 A（U2）は使える。ただし読むのは 1 ファイルずつ（raw.githubusercontent.com）。まとめて取る形（codeload）は 403 なので使わない。
