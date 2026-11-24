@@ -29,6 +29,8 @@ test.describe("本番の画面点検", () => {
     const res = await page.goto("/login");
     expect(res?.status(), "ログイン画面の応答").toBe(200);
     await expect(page.getByLabel("メールアドレス")).toBeVisible();
+    // パスキーの候補をメール欄に出す設定（sustain-design §5-2）。消えたら毎朝の点検で知らせる
+    await expect(page.getByLabel("メールアドレス"), "パスキーの候補の設定").toHaveAttribute("autocomplete", "email webauthn");
     await expect(page.getByLabel("パスワード", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "ログイン", exact: true })).toBeVisible();
   });
