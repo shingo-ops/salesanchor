@@ -2,10 +2,11 @@
 
 | 項目 | 内容 |
 |------|------|
-| ステータス | Accepted（PO 2026-11-24 チャット。選択肢「1. 決まりを書き直す【おすすめ】 「読める部屋は2つと知らせの3部屋」に書き直す案を作ります。」を選び、同じ返事で「PRマージ、デプロイまで完走させてくれ」） |
+| ステータス | Accepted（2026-11-24。PO の選択と完走の指示による。下の備考） |
+| 備考 | PO 2026-11-24 チャット（原文）: 選択肢「1. 決まりを書き直す【おすすめ】 「読める部屋は2つと知らせの3部屋」に書き直す案を作ります。しんごさんの承認を受けてから、記録と一緒に取り込みます。読む道は今のまま使えて、しんごさんの作業は承認だけです。」を選び、同じ返事で「離席するので、このセッションだけで最後まで完結させる。」「PRマージ、デプロイまで完走させてくれ。」。選択肢の「承認を受けてから」は、この完走の指示と ccopusgo の GO 委任で受けたものとして扱った（Opus の判断。PO の言葉は上の原文だけ） |
 | 起案日 | 2026-11-24 |
 | 方針の決定者 | Shingo（PO）。設計: Claude Opus |
-| 改める | Amends [ADR-1039](ADR-1039-discord-pdca-agent-console.md)（Decision 3 の「読む2つのチャンネル」だけを改める。ほかの Decision は変えない）。本 ADR が Accepted になったときに効く |
+| 改める | Amends ADR-1039（[本文](ADR-1039-discord-pdca-agent-console.md)。Decision 3 の「読む2つのチャンネル」を改める。Decision 7 の「鍵は Keychain に置く」には例外を1つ置く（Exceptions）。ほかの Decision は変えない）。本 ADR が Accepted になったときに効く |
 | 関連 | [ADR-079](ADR-079-claude-code-monitoring-access.md)（AI の読むだけの鍵の置き場）、[ADR-1024](ADR-1024-ai-readonly-db-path.md)（読むだけの道・役目を混ぜない）、[ADR-1012](ADR-1012-ai-ops-247.md)（24時間保守） |
 | 設計 | `docs/handoff/discord-reader-access/design.md`・`recon.md`・`review-opus.md` |
 
@@ -22,7 +23,7 @@
 1. ADR-1039 Decision 3 を次のとおり改める。「ボットの権限は、読むチャンネルの『見る』『履歴を読む』だけにする。読むチャンネルは、受付が読む2つ（不具合受付・誤り報告）と、AI が読むだけの知らせの3つ（🚨急ぎ・📋定期の報告・🛠開発の知らせ）とする」。
 2. 知らせの3部屋では、この Bot の「送る」「反応」「投稿の管理」「リンクの埋め込み」「添付」「スレッドを作る」「スレッドで送る」を止める（部屋ごとの上書きの deny。design §3）。
 3. agent-console の受付は、今までどおり受付の2部屋だけを読む。知らせの3部屋は受付の対象にしない。
-4. AI が読むための鍵の写しは `~/.claude-access.env`（ADR-079 の置き場）の1行だけにする。この置き場は、ADR-1039 Decision 7 の「件の作業から読めない」置き場に、もともと入っている（agent-console v0.55.3 の server/case-sandbox.ts 99 行の CASE_DENY_READ。315〜319 行で囲いの読み取りの拒否に使う。このリポジトリの外）。よって Decision 7 は改めない。
+4. AI が読むための鍵の写しは `~/.claude-access.env`（ADR-079 の置き場）の1行だけにする。この置き場は、ADR-1039 Decision 7 の「件の作業から読めない」置き場に、もともと入っている（agent-console v0.55.3 の server/case-sandbox.ts 99 行の CASE_DENY_READ。315〜319 行で囲いの読み取りの拒否に使う。このリポジトリの外）。Decision 7 の目的（件の作業から鍵を読めない）は守れる。置き場が Keychain だけでなくなる点は Exceptions に書く。
 5. 読めない（401・403）ときに、AI は強い Bot の鍵に切り替えない。止めて PO に知らせる。
 
 ## Why（なぜこの形か）
@@ -39,4 +40,4 @@
 
 ## Exceptions
 
-- なし。
+- ADR-1039 Decision 7 の「ボットの鍵は Keychain に置く」の例外として、SA Bug Intake の鍵の写しを ADR-079 の置き場 `~/.claude-access.env` に1行だけ置く。写しは PO が ! で行う（2026-11-24 PO「1」で選んだ案 A'。design §4）。AI が Keychain を開く道は作らない（go-identity-guard はゆるめない）。
