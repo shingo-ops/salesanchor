@@ -17,15 +17,15 @@ recon: `docs/handoff/invoice-create-portfolio/recon-pdf.md`
 
 ## 2. 対象と対象外
 - 対象（3か所だけ）: `frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:155-161`、`frontend/src/pages/quote-detail/QuoteDetailPage.tsx:96-98`。
-- 対象外: サーバー（道・権限・保存名はそのまま正しい・recon §2-3）。`lib/api.ts`・`lib/saveBlob.ts` は変えない。PDF を画面に埋め込む見せ方（nginx の守りの設定で止まる・recon §2-4）。
+- 対象外: サーバー（道・権限・保存名はそのまま正しい・recon §2-3）。`frontend/src/lib/api.ts`・`frontend/src/lib/saveBlob.ts` は変えない。PDF を画面に埋め込む見せ方（nginx の守りの設定で止まる・recon §2-4）。
 
 ## 3. 変え方
-今ある金型 `InvoiceCreatedModal.tsx:38-51` と同じ書き方にそろえる（同じ道具を使い、新しい道具を作らない）。
+今ある金型 `frontend/src/pages/invoice-create/InvoiceCreatedModal.tsx:38-51` と同じ書き方にそろえる（同じ道具を使い、新しい道具を作らない）。
 1. `api.getBlob("/invoices/${id}/pdf")` で札つきで読む（道の土台 `/api/v1` は api.ts が足す）。
 2. `saveBlob(blob, 名前)` で保存する。
 3. 失敗したら `setError(t("common.downloadFailed"))`。表示は今ある `error-message`（新しい部品・色・文言キーなし）。
 4. 読んでいる間はボタンを `loading`・`disabled` にする（Button 金型の今ある props）。2度押しで2回読むのを防ぐ。
-5. 保存名はサーバーの保存名の正本（`invoices.invoice_number`・`quotes.quote_code`）を画面が既に持っている値で作る。番号が空のときはボタンを出さない（R6 の金型 InvoiceCreatedModal.tsx:36 と同じ）。本番で番号が空の請求書・見積もりは0件（recon §2-6）。
+5. 保存名はサーバーの保存名の正本（`invoices.invoice_number`・`quotes.quote_code`）を画面が既に持っている値で作る。番号が空のときはボタンを出さない（R6 の金型 frontend/src/pages/invoice-create/InvoiceCreatedModal.tsx:36 と同じ）。本番で番号が空の請求書・見積もりは0件（recon §2-6）。
 
 ### 代わりの案と選ばなかった理由
 - 道の名前だけ `/api/v1/...` に直す: 札を送らないため 401 のまま（recon §2-2）。不採用。
@@ -58,9 +58,9 @@ recon: `docs/handoff/invoice-create-portfolio/recon-pdf.md`
 
 ## 7. 維持の仕組み
 - K6 は検証のコマンドで数え、結果を PR 本文に残す。同じ書き方が新しく入るのを止める見張りは今回は作らない（直したあと本番のコードに0件・必要になれば別テーマ）。
-- 担当: 請求書の画面を触る便の設計者（Opus）。
+- 守り手: 試験 InvoiceDetailPage.test.tsx・QuoteDetailPage.test.tsx（CI の必須チェック）と、請求書の画面を触る便の設計者（Opus）。
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 - 該当なし。理由: 既存の金型（InvoiceCreatedModal）を同じ画面群に広げる直しで、新しいやり方を選ぶ判断が無いため。
 
 ## 9. 設計審査（Opus 自己審査・2026-11-24）
