@@ -11,8 +11,8 @@
 
 - 目的: お客様が登録フォームを迷わず埋められる並びにし、FedEx の伝票に載らない住所（1行35文字超え・英字等以外）が新しく入らないようにする（D2・D5・D6）。
 - 対象: 公開フォーム3つ（/register・/register/address・/register/change-billing）、社内の会社の住所の窓（送り先）、注文ごとの発送の欄、見積書の PDF の宛名、決まりの受け口3つ。
-- 対象外: スマホ幅の見た目（PC 先行。スマホは崩れていないことだけ確かめる）、社内の画面の国の部品（`components/CountryCombobox.tsx`）、請求先の住所の決まり（自由のまま。D2）、今ある住所の書き換え（D6）、DB の列・migration、FedEx の伝票を出す受け口（recon §9）。
-- migration・`deploy.yml`・本番 `scripts/` に触らない → ADR-136 の危険 PR に当たらない。
+- 対象外: スマホ幅の見た目（PC 先行。スマホは崩れていないことだけ確かめる）、社内の画面の国の部品（`frontend/src/components/CountryCombobox.tsx`）、請求先の住所の決まり（自由のまま。D2）、今ある住所の書き換え（D6）、DB の列・migration、FedEx の伝票を出す受け口（recon §9）。
+- migration・`.github/workflows/deploy.yml`・本番 `scripts/` に触らない → ADR-136 の危険 PR に当たらない。
 
 ## 2. 決まりの中身（K6・K7・K13 の正本）
 
@@ -62,7 +62,7 @@ def validate_delivery_address_line(value: str | None) -> str | None:
         return self
 ```
 
-- 「Ship to the same address.」の時は画面が請求先を `delivery` として足して送る（`RegisterPage.tsx:200-207`）ので、受け口でも K8 が成り立つ。`/register/address` は `address_type: "delivery"` 固定（`RegisterAddressPage.tsx:44`）。`/register/change-billing` は `billing` 固定（型 `RegisterChangeBillingPage.tsx:28`・初期値 `:46`）で決まりは効かない。
+- 「Ship to the same address.」の時は画面が請求先を `delivery` として足して送る（`frontend/src/pages/register/RegisterPage.tsx:200-207`）ので、受け口でも K8 が成り立つ。`/register/address` は `address_type: "delivery"` 固定（`frontend/src/pages/register/RegisterAddressPage.tsx:44`）。`/register/change-billing` は `billing` 固定（型 `frontend/src/pages/register/RegisterChangeBillingPage.tsx:28`・初期値 `:46`）で決まりは効かない。
 
 ### 3-3 `backend/app/routers/companies.py` — 社内の住所の窓（K11・K12）
 
@@ -102,7 +102,7 @@ async def _check_new_delivery_lines(db: AsyncSession, company_id: int | None, ad
 ```
 
 - import に `from app.schemas.base import validate_delivery_address_line` を足す（既に `app.schemas.base` から import があればそこへ足す）。
-- `create_company`: `await _replace_addresses(db, new_id, data.addresses)`（`:479`）の直前に `await _check_new_delivery_lines(db, None, data.addresses)`。会社の INSERT の後で断ることになるが、`get_db`（`backend/app/database.py:70-79`）が例外で巻き戻すので何も残らない（審査 L2）。`_replace_addresses` の定義は `companies.py:227`。
+- `create_company`: `await _replace_addresses(db, new_id, data.addresses)`（`:479`）の直前に `await _check_new_delivery_lines(db, None, data.addresses)`。会社の INSERT の後で断ることになるが、`get_db`（`backend/app/database.py:70-79`）が例外で巻き戻すので何も残らない（審査 L2）。`_replace_addresses` の定義は `backend/app/routers/companies.py:227`。
 - `update_company`: `addresses = update_data.pop("addresses", None)`（`companies.py:550`）の直後、`if update_data:` の UPDATE より前に `if addresses is not None: await _check_new_delivery_lines(db, company_id, addresses)`。会社本体の UPDATE より前に断るので、途中まで書いた状態が残らない。
 - 会社の併合（`:852-915`）は住所の文字を書かないので触らない。
 
@@ -186,7 +186,7 @@ export function deliveryAddressLineError(value: string | null | undefined): Addr
 
 ### 4-3 翻訳キー（K14・ADR-027）
 
-`frontend/src/locales/ja.json` と `en.json` の一番上の階層に同じキーを足す（公開フォームと社内の画面の両方で使うので `registration` の中に入れない）:
+`frontend/src/locales/ja.json` と `frontend/src/locales/en.json` の一番上の階層に同じキーを足す（公開フォームと社内の画面の両方で使うので `registration` の中に入れない）:
 
 | キー | ja | en |
 |---|---|---|
@@ -221,7 +221,7 @@ export function deliveryAddressLineError(value: string | null | undefined): Addr
 
 - TSX 側の変更（審査 R2。これが無いと CSS が当たらない）:
   - (a) 先頭の import の後に `import "./CountryCombobox.css";`
-  - (b) 外枠の `<div style={{ position: "relative" }}>`（`CountryCombobox.tsx` では `:46` 付近。`RegisterAddressPage.tsx` の写し元では `:116`）を `<div className="register-combobox">` に
+  - (b) 外枠の `<div style={{ position: "relative" }}>`（`CountryCombobox.tsx` では `:46` 付近。`frontend/src/pages/register/RegisterAddressPage.tsx` の写し元では `:116`）を `<div className="register-combobox">` に
   - (c) 一覧の `<ul style={{ position: "absolute", … }}>`（`:62-75` 付近）を `<ul className="register-combobox__list">` に（`style` は丸ごと消す）
   - (d) 行の `<li … style={{ padding: "var(--spacing-2) var(--spacing-3)", … }}>`（`:81` 付近）を `className="register-combobox__option"` に。`style` の中に選んだ行の背景など上の CSS に無い宣言があれば、消さずに止めて報告する
   - (e) このファイルに `style={{` が残らない
@@ -231,19 +231,19 @@ export function deliveryAddressLineError(value: string | null | undefined): Addr
 
 ### 4-5 3つの公開フォームで共通に直すこと
 
-対象: `RegisterPage.tsx`（請求先と `ShippingAddressFields`）・`RegisterChangeBillingPage.tsx`・`RegisterAddressPage.tsx`。
+対象: `frontend/src/pages/register/RegisterPage.tsx`（請求先と `ShippingAddressFields`）・`frontend/src/pages/register/RegisterChangeBillingPage.tsx`・`frontend/src/pages/register/RegisterAddressPage.tsx`。
 
 | # | 直すこと | 前 | 後 |
 |---|---|---|---|
 | a | 外枠（K5） | `style={{ maxWidth: "600px", margin: "0 auto", padding: "var(--spacing-6)" }}` | `style={{ maxWidth: "var(--max-width-public-form)", margin: "0 auto", padding: 0 }}`（今の `--spacing-6` は未定義で、計算すると 0。0 と書いて今と同じにする・審査 R1） |
-| b | 言語切替（K1） | 右寄せの `<div>` の中の `Button` ＋ その下の `<h1>` | `<div className="page-header"><h1>…</h1><Button …/></div>`（`company-forms.css:17-31` の見出しの行の型。`App.tsx:137` で全画面に読み込み済み） |
+| b | 言語切替（K1） | 右寄せの `<div>` の中の `Button` ＋ その下の `<h1>` | `<div className="page-header"><h1>…</h1><Button …/></div>`（`company-forms.css:17-31` の見出しの行の型。`frontend/src/App.tsx:137` で全画面に読み込み済み） |
 | c | 国番号（K2） | 外枠 `<div style={{ width: "140px", flexShrink: 0 }}>`・`displayFn={(c) => \`${c.dial} ${c.code}\`}`・`onChange` で `COUNTRIES.find(...)` | 外枠 `<div className="field-w-xs" style={{ flexShrink: 0 }}>`・`displayFn={(c) => c.dial}`・`optionLabelFn={(c) => \`${c.dial} ${c.name}\`}`・`onChange={(val) => update…("telephone_dial", val)}`（`find` は消す） |
 | d | City・State・ZIP（K3・D1） | 3つの `<label>` が縦 | City の `<label>` はそのまま1行。その下に `<TwoColumn ratio="1:1" gap="4">` で State と ZIP の `<label>` を並べる |
 | e | 未定義の変数（K14） | `--spacing-N`・`--border-default`・`--color-red-500`・`--color-primary`・`--font-size-xs`・`--font-size-sm` | 幅を決める宣言（3フォームのすべての `<fieldset>`＝`RegisterPage.tsx:299, :482, :492`・`RegisterAddressPage.tsx:311`・`RegisterChangeBillingPage.tsx:245` の5つ。外枠は各ファイルの読み込み中・エラー・期限切れ・本体の4つとも §4-5 a と同じに の `border` と `padding`）は、今の計算の結果と同じ `border: "none"`・`padding: 0` と書く（K5 を守る・審査 R1）。それ以外（間隔 `gap`・`margin`・色・字の大きさ）は `--space-N`・`--border`・`--danger`・`--accent`・`--font-xs`・`--font-sm` へ名前を置き換える |
 
-- c の理由: 国番号の欄は番号だけを持つので、番号が同じ国（+1 の米国とバハマなど）でどれを選んでも欄は「+1」と出て、送る電話番号も今と同じ（`combinePhone` は `telephone_dial` だけを使う・`RegisterPage.tsx:136-139`）。
+- c の理由: 国番号の欄は番号だけを持つので、番号が同じ国（+1 の米国とバハマなど）でどれを選んでも欄は「+1」と出て、送る電話番号も今と同じ（`combinePhone` は `telephone_dial` だけを使う・`frontend/src/pages/register/RegisterPage.tsx:136-139`）。
 - e の注意: 未定義の変数を使った宣言は、計算の時点で無効になり初期値（余白 0・枠なし）になる。幅に効く外枠の `padding` と fieldset の `border`・`padding` は、その初期値を `0`・`none` と書いて今の幅をそのまま保つ。縦の間隔と色（必須の印が赤くなる・段の間が開く）は置き換えで効き始める。目に見える変化として evaluator の撮影で確かめる（§7 弊害）。
-- `shippingChoice` の初期値は `"same"`（`RegisterPage.tsx:107`）なので、開いた直後から請求先にも決まりが効く（審査 L11）。
+- `shippingChoice` の初期値は `"same"`（`frontend/src/pages/register/RegisterPage.tsx:107`）なので、開いた直後から請求先にも決まりが効く（審査 L11）。
 
 ### 4-6 住所1〜3の欄（K6・K7・K8・K9）
 
@@ -253,29 +253,29 @@ export function deliveryAddressLineError(value: string | null | undefined): Addr
   - `RegisterPage` の請求先の住所1〜3: 送り先の2択が「Ship to the same address.」の時だけ（`:454-476` の2択の状態の変数で分ける）。
   - `RegisterChangeBillingPage` の住所1〜3: 当てない。
 - 送信の前（各 `handleSubmit` の必須の確かめの後）: 当てる欄のどれかに決まり違反があれば送らない（`setError` の帯は出さず、欄の赤と文で知らせる）。
-- 請求先に住所3を足す（K9・D3）: `RegisterPage.tsx` の請求先の住所2（`:394-402`）の後と、`RegisterChangeBillingPage.tsx` の住所2（ラベル `:342`）の `</label>` の直後に、住所3の `TextField`（`registration.addressLine3`・任意）。入れ物 `AddressForm` は既に `address_line_3` を持ち、送る中身にも入る（`RegisterPage.tsx:39`・`RegisterChangeBillingPage.tsx:37`）。受け口は保存済み（`registration_tokens.py:575` の INSERT に `address_line_3` がある）。
+- 請求先に住所3を足す（K9・D3）: `frontend/src/pages/register/RegisterPage.tsx` の請求先の住所2（`:394-402`）の後と、`frontend/src/pages/register/RegisterChangeBillingPage.tsx` の住所2（ラベル `:342`）の `</label>` の直後に、住所3の `TextField`（`registration.addressLine3`・任意）。入れ物 `AddressForm` は既に `address_line_3` を持ち、送る中身にも入る（`frontend/src/pages/register/RegisterPage.tsx:39`・`frontend/src/pages/register/RegisterChangeBillingPage.tsx:37`）。受け口は保存済み（`backend/app/routers/registration_tokens.py:575` の INSERT に `address_line_3` がある）。
 
 ### 4-7 社内の住所の窓 `frontend/src/pages/company-detail/CompanyAddressModal.tsx`（K11・K12）
 
 - 状態を1つ足す: `const [lineErrors, setLineErrors] = useState<Partial<Record<"address_line_1" | "address_line_2" | "address_line_3", string>>>({});`
 - `handleSave` の電話の確かめの後に: `addrForm.address_type === "delivery"` なら住所1〜3を `deliveryAddressLineError` で確かめ、違反があれば `setLineErrors(...)` して `return`。請求先なら確かめない。
-- 住所1〜3の `TextField`（`CompanyAddressModal.tsx:117-127`）に `error={lineErrors.address_line_1}` などを渡す。欄を打ち直したらその欄の `lineErrors` を消す。
-- 窓の種類の選択（`CompanyAddressModal.tsx:92` の `onChange`）を `(e) => { setLineErrors({}); handleAddressTypeChange(e.target.value as "billing" | "delivery"); }` に替える（送り先 → 請求先に替えた時に赤を残さない・審査1回目 L3・2回目 R2'）。`handleAddressTypeChange` の本体（`useCompanyDetail.ts:224`）は触らない。
+- 住所1〜3の `TextField`（`frontend/src/pages/company-detail/CompanyAddressModal.tsx:117-127`）に `error={lineErrors.address_line_1}` などを渡す。欄を打ち直したらその欄の `lineErrors` を消す。
+- 窓の種類の選択（`frontend/src/pages/company-detail/CompanyAddressModal.tsx:92` の `onChange`）を `(e) => { setLineErrors({}); handleAddressTypeChange(e.target.value as "billing" | "delivery"); }` に替える（送り先 → 請求先に替えた時に赤を残さない・審査1回目 L3・2回目 R2'）。`handleAddressTypeChange` の本体（`frontend/src/pages/company-detail/useCompanyDetail.ts:224`）は触らない。
 - 保存を押した時だけ赤くなる（窓を開いただけでは赤くならない）＝K12「開いて保存しようとした時だけ赤くなる」。
 
 ### 4-8 注文ごとの発送の欄 `frontend/src/components/ShippingDetailPanel.tsx`（K11）
 
-- 住所の欄の描画（`ShippingDetailPanel.tsx:424-433` の `TEXT_FIELDS.address.map`）で、`f.key` が `address1`・`address2`・`address3` の3つだけ `<TextField label={t(f.labelKey)} value=… onChange=… error=… data-testid={`ship-input-${f.key}`} />` に替える。`error` は `deliveryAddressLineError(form[f.key])` のキーを `t(key, { max })` にしたもの。他の欄は今のまま。`TextField` は `data-testid` を入力欄に渡す（`TextField.tsx:95`）ので `order-shipping.spec.ts:269` は壊れない（審査 L4）。
+- 住所の欄の描画（`frontend/src/components/ShippingDetailPanel.tsx:424-433` の `TEXT_FIELDS.address.map`）で、`f.key` が `address1`・`address2`・`address3` の3つだけ `<TextField label={t(f.labelKey)} value=… onChange=… error=… data-testid={`ship-input-${f.key}`} />` に替える。`error` は `deliveryAddressLineError(form[f.key])` のキーを `t(key, { max })` にしたもの。他の欄は今のまま。`TextField` は `data-testid` を入力欄に渡す（`frontend/src/components/TextField.tsx:95`）ので `frontend/tests-e2e/order-shipping.spec.ts:269` は壊れない（審査 L4）。
 - `handleSubmit`（`:277`）の最初で3つのどれかに違反があれば送らない。
 
 ## 5. 触るもの／触らないもの
 
 | 触る | 触らない |
 |---|---|
-| `backend/app/schemas/base.py`・`registration_token.py`・`order_shipping_detail.py`・`backend/app/routers/companies.py`・`invoices.py` | `migrations/`・`deploy.yml`・本番 `scripts/`・DB の今ある住所 |
-| `frontend/src/tokens.css`・`components/field-size.css`・`utils/addressRules.ts`（新）・`locales/ja.json`・`locales/en.json` | `components/CountryCombobox.tsx`（社内の国の部品）・`constants/countries.ts` |
-| `pages/register/CountryCombobox.tsx`・`CountryCombobox.css`（新）・`RegisterPage.tsx`・`RegisterChangeBillingPage.tsx`・`RegisterAddressPage.tsx` | `registration_tokens.py`（受け口の流れは変えない）・会社の併合 |
-| `pages/company-detail/CompanyAddressModal.tsx`・`components/ShippingDetailPanel.tsx` | `useCompanyDetail.ts`（送り方は変えない）・社内の画面の請求先の確かめ |
+| `backend/app/schemas/base.py`・`backend/app/schemas/registration_token.py`・`backend/app/schemas/order_shipping_detail.py`・`backend/app/routers/companies.py`・`backend/app/routers/invoices.py` | `migrations/`・`.github/workflows/deploy.yml`・本番 `scripts/`・DB の今ある住所 |
+| `frontend/src/tokens.css`・`components/field-size.css`・`frontend/src/utils/addressRules.ts`（新）・`frontend/src/locales/ja.json`・`frontend/src/locales/en.json` | `frontend/src/components/CountryCombobox.tsx`（社内の国の部品）・`frontend/src/constants/countries.ts` |
+| `frontend/src/pages/register/CountryCombobox.tsx`・`CountryCombobox.css`（新）・`frontend/src/pages/register/RegisterPage.tsx`・`frontend/src/pages/register/RegisterChangeBillingPage.tsx`・`frontend/src/pages/register/RegisterAddressPage.tsx` | `backend/app/routers/registration_tokens.py`（受け口の流れは変えない）・会社の併合 |
+| `frontend/src/pages/company-detail/CompanyAddressModal.tsx`・`frontend/src/components/ShippingDetailPanel.tsx` | `frontend/src/pages/company-detail/useCompanyDetail.ts`（送り方は変えない）・社内の画面の請求先の確かめ |
 | 試験（§6） | スマホ幅の並び |
 
 ## 6. 試験
@@ -291,7 +291,7 @@ export function deliveryAddressLineError(value: string | null | undefined): Addr
 | 既存試験の直し | `backend/tests/test_order_shipping_details.py:317-335` | `nasty_addr` に改行が入っていて新しい決まりで断られる（今はこの POST の結果を見ていない）。`nasty_addr = 'Line1, "Quoted" Line2'`、`nasty_recipient = 'Smith, "Jr."\nDept'` に替え、改行の試しは受取人の欄で続ける |
 | 画面の決まり | `frontend/src/utils/addressRules.test.ts`（新・vitest） | 受け口の試験と同じ値で同じ答え |
 | 社内の窓・発送の欄（K11） | 発送の欄は既存の `frontend/src/components/SharedButtonMigration.test.tsx` に足す（`t` は鍵をそのまま返すモック）。住所の窓は新しい `frontend/src/pages/company-detail/CompanyAddressModal.test.tsx`（vitest・今は試験が無い） | 発送の欄の address1 に「東京」→ 欄に `addressRule.ascii`・送信が呼ばれない。窓の送り先で住所1に36文字 → 保存で `addressRule.maxLength`・保存が呼ばれない。請求先なら呼ばれる |
-| 国番号191か国（K2） | `frontend/src/pages/register/CountryCombobox.test.tsx`（新・vitest の画面試験。`AsyncCombobox.test.tsx` と同じ置き方） | `COUNTRIES` の全件で `displayFn = c => c.dial` の表示が番号だけ・「+1」を選ぶと欄が「+1」 |
+| 国番号191か国（K2） | `frontend/src/pages/register/CountryCombobox.test.tsx`（新・vitest の画面試験。`frontend/src/components/AsyncCombobox.test.tsx` と同じ置き方） | `COUNTRIES` の全件で `displayFn = c => c.dial` の表示が番号だけ・「+1」を選ぶと欄が「+1」 |
 | 画面の並び | `frontend/tests-e2e/register-form-ux.spec.ts` | B-3（「都道府県が市区町村より上」）は今のコードと逆で、CI の Playwright は止まっている（`.github/workflows/e2e.yml:294` `if: false`）。B-3 を K3 の形（City が1行・State と ZIP の上端が同じ）に書き換え、K1・K2（欄の `scrollWidth <= clientWidth` を 191 件）・K5（住所1の幅が変更前と同じ）・K6〜K9 を足す。住所の欄を探す時は `getByLabel` を使う（`TextField` のラベルは `<label for>` で入力欄の外・審査 L10）。CI では走らないので、evaluator がクラウドで `npx playwright test register-form-ux.spec.ts --project=chromium` を流す |
 
 ## 7. 弊害・トレードオフ
@@ -338,12 +338,13 @@ export function deliveryAddressLineError(value: string | null | undefined): Addr
 
 ## 11. 維持の仕組み
 
-- 決まりの値（35・文字の範囲）は受け口と画面に1つずつ。どちらかを変える時はこの設計の §2 を先に直す。`addressRules.ts` の先頭の注記で受け口の関数名を指している。
+- 守り手: backend/tests/test_delivery_address_rule.py と frontend/src/utils/addressRules.test.ts（決まりの値が変わると赤になる）
+- 決まりの値（35・文字の範囲）は受け口と画面に1つずつ。どちらかを変える時はこの設計の §2 を先に直す。`frontend/src/utils/addressRules.ts` の先頭の注記で受け口の関数名を指している。
 - 幅の金型 xs は field-size の設計書 §1 に載せる。新しい画面で国番号のような短い欄を作る時はこれを使う（ADR-144）。
-- Playwright の CI が止まっている（e2e.yml:294）間は、登録フォームを直す PR のたびに evaluator が `register-form-ux.spec.ts` をクラウドで流す。CI が再開すれば自動で守られる。
+- Playwright の CI が止まっている（e2e.yml:294）間は、登録フォームを直す PR のたびに evaluator が `frontend/tests-e2e/register-form-ux.spec.ts` をクラウドで流す。CI が再開すれば自動で守られる。
 - 本番の決まり外の住所の数（K12）は反映後に1回数えて記録する。増えていれば受け口の抜けとして直す。
 
 ## 12. 段取り
 
 1. この設計 PR（docs のみ）: recon・design・ADR-126 追補・field-size 設計書の xs 行・台帳。
-2. 実装 PR（同じ枝に足す・1テーマ）: クラウドの Sonnet が `card.md` で実装 → CI → クラウドの evaluator が e2e と撮影 → 手元の reviewer（opus）→ 確認済みコメント → マージ → 本番反映の確認 → K1〜K14 を本番で確かめる。
+2. 実装 PR（同じ枝に足す・1テーマ）: クラウドの Sonnet が `docs/handoff/customer-form-layout/card.md` で実装 → CI → クラウドの evaluator が e2e と撮影 → 手元の reviewer（opus）→ 確認済みコメント → マージ → 本番反映の確認 → K1〜K14 を本番で確かめる。

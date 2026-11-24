@@ -15,25 +15,25 @@
 
 | 道 | 画面 | 受け口 | 受け口の型（今） |
 |---|---|---|---|
-| A お客様のフォーム | `frontend/src/pages/register/RegisterPage.tsx`（/register）・`RegisterAddressPage.tsx`（/register/address）・`RegisterChangeBillingPage.tsx`（/register/change-billing） | `backend/app/routers/registration_tokens.py:217` register_customer・`:423` add_address・`:512` change_billing | `backend/app/schemas/registration_token.py:62-90` `AddressInput`（住所1〜3 は各 255 文字まで）。`RegisterRequest.addresses`・`AddAddressRequest.address`・`ChangeBillingRequest.address` の3つが同じ型を使う |
+| A お客様のフォーム | `frontend/src/pages/register/RegisterPage.tsx`（/register）・`frontend/src/pages/register/RegisterAddressPage.tsx`（/register/address）・`frontend/src/pages/register/RegisterChangeBillingPage.tsx`（/register/change-billing） | `backend/app/routers/registration_tokens.py:217` register_customer・`:423` add_address・`:512` change_billing | `backend/app/schemas/registration_token.py:62-90` `AddressInput`（住所1〜3 は各 255 文字まで）。`RegisterRequest.addresses`・`AddAddressRequest.address`・`ChangeBillingRequest.address` の3つが同じ型を使う |
 | B 社内の会社の画面の住所の窓 | `frontend/src/pages/company-detail/CompanyAddressModal.tsx`（住所1〜3 は `:117-128`） | `backend/app/routers/companies.py:517` PATCH `/companies/{id}`（住所は `:586-588`）・`:377` POST `/companies`（住所は `:479`） | `backend/app/schemas/company.py:53-69` `_CompanyAddressFields`／`:72-` `CompanyAddressInput`（電話・メールの確かめだけ） |
 | C 注文ごとの発送の欄 | `frontend/src/components/ShippingDetailPanel.tsx`（住所の欄の定義 `:107-110`・描画 `:424-434`） | `backend/app/routers/order_shipping_details.py:139-245`（POST で作る・PATCH で直す） | `backend/app/schemas/order_shipping_detail.py:63` `OrderShippingDetailBase`（address1〜3 は `:76-78`）。`Create` `:122`・`Update` `:127`・`Response` `:135` がすべて Base を継ぐ |
 
 - POST `/companies` を呼ぶ画面は無い（`git grep -n -E "post\(.*companies" origin/main -- frontend/src` が 0 件）。受け口だけがある。
-- 会社の併合（`companies.py:852-915`）は既存の行の付け替えだけで、住所の文字を書かない（decisions.md D6 の実物確認）。
+- 会社の併合（`backend/app/routers/companies.py:852-915`）は既存の行の付け替えだけで、住所の文字を書かない（decisions.md D6 の実物確認）。
 
 ## 2. 会社の住所は「全部消して全部入れ直す」
 
-- 保存は `companies.py:227-276` `_replace_addresses`：その会社の住所を全部消し、送られてきた住所を全部入れ直す。
-- 住所の窓は保存のたびに、その会社の **全部の住所** を送り直す：`CompanyAddressModal.tsx:55-62`（今の住所を全部並べ、直した1件だけ差し替える）→ `frontend/src/pages/company-detail/useCompanyDetail.ts:185-206`（`api.patch(`/companies/${company.id}`, { addresses: payload })`）。
+- 保存は `backend/app/routers/companies.py:227-276` `_replace_addresses`：その会社の住所を全部消し、送られてきた住所を全部入れ直す。
+- 住所の窓は保存のたびに、その会社の **全部の住所** を送り直す：`frontend/src/pages/company-detail/CompanyAddressModal.tsx:55-62`（今の住所を全部並べ、直した1件だけ差し替える）→ `frontend/src/pages/company-detail/useCompanyDetail.ts:185-206`（`api.patch(`/companies/${company.id}`, { addresses: payload })`）。
 - **このため、受け口の型（`CompanyAddressInput`）に決まりを付けると、決まり外の送り先を持つ会社では、請求先を1件直すだけでも保存できなくなる。** 本番のテナント004 には決まり外の送り先がある（decisions.md の「本番の今の住所の数」：35文字超え5件・英字等以外3件）。D6「今ある決まり外の住所は消さず書き換えず、次に直す時に赤くなる」に反する。→ design.md §3-2。
-- 住所の窓は空欄を `null` で送る（`useCompanyDetail.ts` の `toNull`）。DB に `""` で入っている行と `null` で送られた行は、比べる時に同じとみなす必要がある。
+- 住所の窓は空欄を `null` で送る（`frontend/src/pages/company-detail/useCompanyDetail.ts` の `toNull`）。DB に `""` で入っている行と `null` で送られた行は、比べる時に同じとみなす必要がある。
 
 ## 3. 注文ごとの発送の欄の本番の件数
 
 - 本番の読み取り専用の道（ADR-1024）で数えた：テナント001・003・004・005・006 の注文の発送の表は **0 件**（生の出力 `scratchpad/osd_count.txt`）。
-- この表に書く道はこの受け口だけ（`order_shipping_details.py:168` の INSERT）。→ 決まり外の行は今 0 件なので、作る時・直す時は必ず確かめてよい。
-- ただし `Response`（読み出し）も Base を継ぐ（`order_shipping_detail.py:135`）。決まりを Base に付けると読み出しにも効いてしまう。→ `Create` と `Update` にだけ付ける。
+- この表に書く道はこの受け口だけ（`backend/app/routers/order_shipping_details.py:168` の INSERT）。→ 決まり外の行は今 0 件なので、作る時・直す時は必ず確かめてよい。
+- ただし `Response`（読み出し）も Base を継ぐ（`backend/app/schemas/order_shipping_detail.py:135`）。決まりを Base に付けると読み出しにも効いてしまう。→ `Create` と `Update` にだけ付ける。
 
 ## 4. お客様のフォームの今の形（RegisterPage.tsx・692 行）
 
@@ -53,15 +53,15 @@
 | 送信の前の確かめ | `:140-195` | 必須だけ。決まり違反は画面の上の帯（`error-banner`）に1つずつ出す |
 | 受け口の 422 | `:222-227` | `detail` が配列なら `msg` をつないで帯に出す |
 
-- `RegisterChangeBillingPage.tsx`（411 行）：請求先だけ。言語切替 `:230`・見出し `:235`・国番号 140px `:268`・住所1・2 `:331`/`:342`（住所3 が無い）・国 `:384`・送り先 `POST /api/v1/public/register/change-billing` `:162`。
-- `RegisterAddressPage.tsx`（464 行）：**自前の `function CountryCombobox` を `:76` に持つ**（`pages/register/CountryCombobox.tsx` と同じものの写し）。言語切替 `:296`・見出し `:301`・国番号 140px `:327`・住所1〜3 `:375`/`:385`/`:395`・国 `:437`・送り先 `POST /api/v1/public/register/address` `:227`。
+- `frontend/src/pages/register/RegisterChangeBillingPage.tsx`（411 行）：請求先だけ。言語切替 `:230`・見出し `:235`・国番号 140px `:268`・住所1・2 `:331`/`:342`（住所3 が無い）・国 `:384`・送り先 `POST /api/v1/public/register/change-billing` `:162`。
+- `frontend/src/pages/register/RegisterAddressPage.tsx`（464 行）：**自前の `function CountryCombobox` を `:76` に持つ**（`frontend/src/pages/register/CountryCombobox.tsx` と同じものの写し）。言語切替 `:296`・見出し `:301`・国番号 140px `:327`・住所1〜3 `:375`/`:385`/`:395`・国 `:437`・送り先 `POST /api/v1/public/register/address` `:227`。
 
 ## 5. 国の欄の部品が2つある
 
 | 部品 | 使う所 | 国の一覧の出どころ |
 |---|---|---|
-| `frontend/src/components/CountryCombobox.tsx`（207 行・Storybook あり） | 社内の画面（`DutyRuleFormModal.tsx:187`・`LeadEditPage.tsx:264`・`LeadFormFields.tsx:162`・`LeadsPage.tsx:409`） | `api.get("/countries")`（`:43`）。この受け口はログインが要る（`backend/app/routers/countries.py` の `Depends(get_current_tenant)`）→ お客様のフォームでは使えない |
-| `frontend/src/pages/register/CountryCombobox.tsx`（98 行） | お客様のフォーム（RegisterPage・RegisterChangeBillingPage） | `constants/countries.ts`（ADR-126・F1） |
+| `frontend/src/components/CountryCombobox.tsx`（207 行・Storybook あり） | 社内の画面（`frontend/src/pages/admin/DutyRuleFormModal.tsx:187`・`frontend/src/pages/leads/LeadEditPage.tsx:264`・`frontend/src/pages/leads/LeadFormFields.tsx:162`・`frontend/src/pages/leads/LeadsPage.tsx:409`） | `api.get("/countries")`（`:43`）。この受け口はログインが要る（`backend/app/routers/countries.py` の `Depends(get_current_tenant)`）→ お客様のフォームでは使えない |
+| `frontend/src/pages/register/CountryCombobox.tsx`（98 行） | お客様のフォーム（RegisterPage・RegisterChangeBillingPage） | `frontend/src/constants/countries.ts`（ADR-126・F1） |
 
 - お客様のフォームの部品は、表示を `displayFn` で作り、選んだ値を探す時に `displayFn(c) === value || c.code === value || c.dial === value` の **最初の1件** を取る（`:30-33`）。米国の「+1」を選んでも、一覧で先に来るバハマ（BS）が見つかり「+1 BS」と出る。これが「+1 BS」の原因。
 - 一覧の見た目は直書き：`zIndex: 10`・`maxHeight: "200px"`・`var(--border-default)`（未定義）・`var(--spacing-2/3)`（未定義）（`:61-93`）。
@@ -75,7 +75,7 @@
 - 見出しと操作を1行に並べる型：`frontend/src/company-forms.css:17-31` の `.page-container .page-header`（`display:flex; justify-content:space-between`）と `h1` の字の大きさ。登録フォームの外枠は既に `className="page-container"`。
 - 幅の金型：`frontend/src/components/field-size.css` の `field-w-sm`（160）・`field-w-md`（280）・`field-w-lg`（100%・上限 480）。変数は `frontend/src/tokens.css:196-198`。「+000」が入る狭い段は無い。設計書は `docs/specs/design-system/component-ssot/field-size/design.md`（§1 幅3段）。
 - 一覧の重なり順の変数 `--z-dropdown`・影 `--shadow-lg`・角 `--radius-sm` は tokens.css にある。
-- フォームの最大幅 600px は直書き（`RegisterPage.tsx:280` の `maxWidth: "600px"`）。tokens.css に 600px のフォーム幅の変数は無い（`--max-width-form` は 560px・`--modal-max-w-md` はモーダル用）。
+- フォームの最大幅 600px は直書き（`frontend/src/pages/register/RegisterPage.tsx:280` の `maxWidth: "600px"`）。tokens.css に 600px のフォーム幅の変数は無い（`--max-width-form` は 560px・`--modal-max-w-md` はモーダル用）。
 
 ## 7. 見積書の宛名（D4）
 
@@ -86,7 +86,7 @@
 
 ## 8. 既存の試験
 
-- 受け口: `backend/tests/test_registration_token_schema.py`・`test_register_invite.py`・`test_public_register_company.py`・`test_order_shipping_details.py`・`test_invoice_pdf_address.py`。
+- 受け口: `backend/tests/test_registration_token_schema.py`・`backend/tests/test_register_invite.py`・`backend/tests/test_public_register_company.py`・`backend/tests/test_order_shipping_details.py`・`backend/tests/test_invoice_pdf_address.py`。
 - 画面: `frontend/tests-e2e/register-form-ux.spec.ts`。
 
 ## 9. 未確認として残すもの
