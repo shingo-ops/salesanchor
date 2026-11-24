@@ -1,7 +1,7 @@
 <!-- バッククォート内のパスはリポジトリルートからのフルパスのみ（ゲートが実在確認する）。
      このPRに含まれないファイル・リポジトリ外のパスはバッククォートを付けない。
      守り手: はファイルパスか「人手で守る」のみ -->
-# Phase 3 設計 — AI アシスタント（秘書を まとめ役＋係 へ）第2.2版・草案
+# Phase 3 設計 — AI アシスタント（秘書を まとめ役＋係 へ）第2.4版・草案
 
 この文書は、今の秘書を「まとめ役 1 人と、係ごとの専属 AI」に作り替える作りの案です。審査 4 件（第1版 2 件・第2版 1 件・第2.1版 1 件、どれも REVISE。§10）を受けて直した版です。
 
@@ -13,7 +13,7 @@ recon: [recon.md](recon.md)
 **対象ADR**: ADR-1056（今の秘書・改めが要る）・ADR-1058（AI の担当表・正本のまま使い、選択肢を migration で足す）・ADR-1077（決まり帳・正本のまま使う）・ADR-1078（カルテ・そのまま）・ADR-1004（使用の台帳）・ADR-1080/1082/1087（声・影響を受ける）・ADR-009/091/159（Discord・ADR-091 は改めが要る）・ADR-135/136（危険 PR の GO）・ADR-1003（secrets）  
 **日付**: 2026-11-25  
 **担当**: Planner（Claude Opus。審査は Fable〈クラウド〉と審査役〈Opus〉。同じ会社の AI どうしの審査で、独立した第三者の審査ではない）  
-**状態**: 設計案第2.3版作成済み／K1〜K9 と便0 の試し方は PO 承認済み（Q8）／第2.3版の再審査は下の §10／実装未着手
+**状態**: 設計案第2.4版作成済み／K1〜K9 と便0 の試し方は PO 承認済み（Q8）／第2.4版の再審査は下の §10／実装未着手
 
 ---
 
@@ -73,7 +73,7 @@ recon: [recon.md](recon.md)
 
 ## 4. 受け入れ基準（KGI・PO 承認済み 2026-11-25「1」＝requirements.md Q8）
 
-試しの頼みは今の秘書の束 `backend/app/assistant_regression/cases.json`（23 件。今の秘書の 69 件はこれを 3 回流したもの）を 3 回流す。比べる元は、決まり帳を付けた今の秘書の実測（`docs/handoff/secretary-rulebook/baseline.md` 中央値 7.88 秒・最長 12.42 秒）。日によって値が変わるので、便0 と同じ日に今の秘書も流して並べる（今の秘書は本番にしか無いので、その回だけ本番を読む許可を PO に取る）。束の正解「わからない」7 件（unknown 4・rule 3）は、まとめ役の答え「none」を正解とする。
+試しの頼みは今の秘書の束 `backend/app/assistant_regression/cases.json`（23 件。今の秘書の 69 件はこれを 3 回流したもの）を 3 回流す。比べる元は、決まり帳を付けた今の秘書の実測（`docs/handoff/secretary-rulebook/baseline.md` 中央値 7.88 秒・最長 12.42 秒）。日によって値が変わるので、便0 と同じ日に今の秘書も流して並べる（今の秘書は本番にしか無いので、その回だけ本番を読む。Q8 で PO 承認済み。読む日にその日の同意票を 1 回取る）。束の正解「わからない」7 件（unknown 4・rule 3）は、まとめ役の答え「none」を正解とする。
 
 | 基準 | 合格の線 | 検証方法 |
 |------|---------|---------|
@@ -95,8 +95,8 @@ recon: [recon.md](recon.md)
 - 係の部屋: 今の秘書の容器（`secretary-agent/`）の指示と同じ中身を人格の文書に置く。返す形は `secretary-agent/schema.json`。
 - 呼び方: Hermes の OpenAI 互換の口（鍵つき）。部屋は URL の頭 `/p/<部屋名>/` で名指し。知らない部屋名は Hermes が 404 で断る（部屋の取り違えで別の部屋が動かない）。
 - アプリ側の変更（便1）: 今の `/intent` の本文（`backend/app/routers/assistant.py:201`）を OpenAI 互換の頼みに直す変換部品を 1 つ足す。担当表の provider に `hermes`、sdk の対応表（`backend/app/services/llm_budget.py:180`）に足す。値の決まり（`migrations/20261103_120000_create_ai_job_assignments.sql:32`・`:33`、sdk の最新の決まり `migrations/20261117_100100_add_llm_usage_tts_characters.sql:35`〜37）を広げる migration は危険 PR。
-- 頭の渡し方（1 つの形にそろえる）: 担当表の列は provider・model の 2 つだけ（`migrations/20261103_120000_create_ai_job_assignments.sql:26`〜31）。新しい列は足さない。provider 欄は `hermes`（どの容器に送るか）。model 欄に「Hermes の AI 会社/頭」の組（例 `openai-codex/gpt-5.6-terra`）を入れ、アプリが `/` で分けて頼みの `provider` と `model` に入れて送る（api-server.md「Per-request model selection」: provider の無い model は無視される）。Hermes の `model_routes` の別名は使わない（provider なしで別名が効くかが説明書で確かめられない・4回目の審査）。
-  - 便0 の最初に確かめる: ①組で送ると返事の model と Hermes の記録がその頭になる ②違う provider を送ると 400 で断られる ③model だけ送ると部屋の既定の頭に落ちる（落ちたことが記録で分かる）。①が通らなければ止めて考え直す
+- 頭の渡し方（1 つの形にそろえる）: 担当表の列は provider・model の 2 つだけ（`migrations/20261103_120000_create_ai_job_assignments.sql:26`〜31）。新しい列は足さない。provider 欄は `hermes`（どの容器に送るか）。model 欄に「Hermes の AI 会社/頭」の組（例 `openai-codex/gpt-5.6-terra`）を入れ、アプリが**最初の** `/` で分け、前を `provider`、後ろを `model` として送る（頭の名前そのものに `/` が入る例がある: nous-portal.md の `anthropic/claude-opus-4.6`。`/` が無い値は形の誤りとしてアプリが断る）（api-server.md「Per-request model selection」: provider の無い model は無視される）。Hermes の `model_routes` の別名は使わない（provider なしで別名が効くかが説明書で確かめられない・4回目の審査）。
+  - 便0 の最初に確かめる: ①組で送ると返事の model と Hermes の記録がその頭になる ②違う provider を送ったときの動きを記録する（説明書の 400 は model_routes の別名とぶつかったときだけなので、合否には使わない）③model だけ送ると全体または部屋の既定の頭に落ちる（どちらに落ちたかを記録する。合否には使わない）。止めどころは①だけ: ①が通らなければ止めて考え直す
 - Hermes の設定（便0 で全部書き出し、版を固定してリポジトリに写しを置く。2回目の審査で確かめた説明書の項目）:
   - `gateway.multiplex_profiles: true`（部屋の名指しに要る）
   - 部屋ごとに別の `API_SERVER_KEY`（3 本。鍵を置く人は PO）
@@ -155,7 +155,8 @@ recon: [recon.md](recon.md)
 - 第1版: 審査役 REVISE（[review-opus-1.md](review-opus-1.md)）・Fable REVISE（[review-fable-1.md](review-fable-1.md)）。
 - 第2版: 審査役 REVISE（[review-opus-2.md](review-opus-2.md)）。指摘は第2.1版で本文に入れた。
 - 第2.1版: 審査役 REVISE（[review-opus-3.md](review-opus-3.md)）。会話の消し方・形の固定・AI 会社の名前の置き場・入れ方・台帳の単位・容器の守り・K3 の正解表を第2.2版で本文に入れた。PO が決める点は §9。
-- 第2.2版: 審査役 REVISE（[review-opus-4.md](review-opus-4.md)）。Q8 を §0・§5・§9 に入れ、頭の渡し方を「model 欄に AI 会社/頭の組・アプリが分けて送る」1 つにした。容器の守り・クラウドで Docker が動くか・消す口の通り方・unknown_execution・K7 の探す範囲・K2 の数え方を第2.3版で本文に入れた。第2.3版の再審査はまだ。
+- 第2.2版: 審査役 REVISE（[review-opus-4.md](review-opus-4.md)）。Q8 を §0・§5・§9 に入れ、頭の渡し方を「model 欄に AI 会社/頭の組・アプリが分けて送る」1 つにした。容器の守り・クラウドで Docker が動くか・消す口の通り方・unknown_execution・K7 の探す範囲・K2 の数え方を第2.3版で本文に入れた。
+- 第2.3版: 審査役 REVISE（[review-opus-5.md](review-opus-5.md)・軽い直し 3 点）。確かめ②を合否から外す・`/` の分け方・表題と本番の読み取りの書き方を第2.4版で直した。
 
 ## 維持の仕組み
 
