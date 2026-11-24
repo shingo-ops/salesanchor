@@ -88,10 +88,14 @@
 | events.patch の2回目（`PATCH .../events/sacheck20261124a`） | `HTTP/1.1 401 Unauthorized`・`"Invalid Credentials"`・`"authError"`。手順2の表示は「The access token will expire in seconds.」で残り秒数が空。権限ではなく合鍵（1時間で切れる）の期限の問題と読む（未確認）。予定は変わっていない |
 | 合鍵の更新（手順2 Refresh access token） | `HTTP/1.1 200 OK`（合鍵の値は読んでいない） |
 | events.patch の3回目（`PATCH .../events/sacheck20261124a`・本文 `{"summary":"...(patched)...","colorId":"5"}`） | `HTTP/1.1 200 OK`。返りの `"summary"` が `"Sales Anchor scope test (patched) - safe to delete"`、`"colorId"` が `"5"`。名前と色の変更が狭い権限で動く |
+| events.delete（2026-11-25・合鍵を更新して `DELETE .../events/sacheck20261124a`） | `HTTP/1.1 204 No Content`。試しの予定は消えた |
+
+- 実物の試しの結論: 狭い2つの権限で、色ラベルの読み取り・予定の作成（Meet 付き）・変更（名前と色）・削除が動いた。events.list・get・instances・watch と channels.stop は実物では試していない（書類の照合 §4-2 のみ）。
+- Playground への許可は PO の Google アカウントの「サードパーティ製のアプリとサービス」から外せる。Playground は 24 時間で更新の券を自動で取り消す（画面の注記）。
 
 ## 5. 未確認
 
-- `calendar.events.owned` と `calendar.calendars.readonly` の組み合わせで、実際に今の全機能が動くか（§4-2 は書類の上での照合だけ。他人から招待された予定を本人の主カレンダーで直す・消すときの動きも未確認）。
+- `calendar.events.owned` と `calendar.calendars.readonly` の組み合わせで、一覧の取り込み（list）・変更の知らせ（watch・channels.stop）が実物で動くか（作成・変更・削除・色ラベルは §4-3 で動いた）。他人から招待された予定を本人の主カレンダーで直す・消すときの動きも未確認（本物の招待では試さない）。
 - 今の6人の連携の合鍵は全権で同意を取ったもの。狭い権限に変えたとき、連携のやり直しが要るか。
 - `calendar`（全権）と `calendar.events` のそれぞれの区分（機密か制限付きか）。Google の権限の画面には区分の表示が無かった。データアクセスの画面で追加したときに出る区分で確かめる。
 - Search Console で salesanchor.jp の所有権を確認済みか（ようこそ画面が出ただけで、別のアカウントで登録済みの可能性は消せていない）。
