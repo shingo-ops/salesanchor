@@ -4,7 +4,7 @@
  * 日付と時刻の組み立ては今の予定の画面と同じ関数（combineDateTime など）を使う。
  */
 
-import { useState } from "react";
+import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Button } from "../../components/Button";
@@ -23,9 +23,20 @@ interface Props {
   draft: EventDraftData;
   onCreated: () => void;
   onCancel: () => void;
+  /** 声の「はい」で作るのに失敗したとき（今の失敗の表示のあとで呼ぶ） */
+  onVoiceFailed?: () => void;
 }
 
-export function SecretaryDraftEvent({ draft, onCreated, onCancel }: Props) {
+/** 親が声の「はい」で「作る」を呼ぶための口（ボタンと同じ submit を呼ぶ） */
+export interface SecretaryDraftEventHandle {
+  /** 作れる状態なら作り始めて true。作れない（欄が足りない・保存中）なら何もせず false */
+  submitByVoice(): boolean;
+}
+
+export const SecretaryDraftEvent = forwardRef<SecretaryDraftEventHandle, Props>(function SecretaryDraftEvent(
+  { draft, onCreated, onCancel, onVoiceFailed },
+  ref,
+) {
   const { t } = useTranslation();
   const [title, setTitle] = useState(draft.title ?? "");
   const [allDay, setAllDay] = useState(draft.is_all_day);
@@ -70,8 +81,25 @@ export function SecretaryDraftEvent({ draft, onCreated, onCancel }: Props) {
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.saveError"));
       setSaving(false);
+      onVoiceFailed?.();
     }
   };
+
+  const submitRef = useRef(submit);
+  submitRef.current = submit;
+  const canRef = useRef(canCreate);
+  canRef.current = canCreate && !saving;
+  useImperativeHandle(
+    ref,
+    () => ({
+      submitByVoice: () => {
+        if (!canRef.current) return false;
+        void submitRef.current();
+        return true;
+      },
+    }),
+    [],
+  );
 
   return (
     <div className="secretary-draft">
@@ -166,4 +194,4 @@ export function SecretaryDraftEvent({ draft, onCreated, onCancel }: Props) {
       </div>
     </div>
   );
-}
+});
