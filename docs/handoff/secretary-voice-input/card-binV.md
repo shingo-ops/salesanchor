@@ -31,14 +31,14 @@
 （１）定数 `const VOICE_SEND_SILENCE_MS = 1000;` を部品の外に 1 つ置く（ほかで同じ数を書かない）。
 （２）`onVoiceChange(true)` のとき、今の `voice.enable()` のあとで `listen.start()` を呼ぶ（同じ押した処理の中）。`false` のときは今の処理に `listen.abort()` と `pendingConfirm` を外す処理を足す。
 （３）自動で送る: `heardRef = useRef(false)` を足し、聞き取りの callback（今の 67-79 行）で文を足したら `true`、`send()` の頭と `onVoiceChange` で `false` にする。`sendRef = useRef(send); sendRef.current = send;` を毎回の描画で入れる。`useEffect` で、`voiceOn && listen.listening && heardRef.current && text.trim() !== "" && listen.interim === "" && !sending` のときだけ `setTimeout(() => void sendRef.current(), VOICE_SEND_SILENCE_MS)` を張る。依存は `[voiceOn, listen.listening, listen.interim, text, sending]`（`sendRef` を使うので `send` は依存に入れない。書き方の検査 `react-hooks/exhaustive-deps` の警告 0 件にする）。片付けで `clearTimeout`。声で会話が切れているときは何もしない（今と同じ）。
-（４）回数の印 `turnRef = useRef(0)` を足す。`send()` の頭・`onVoiceChange`・`close()` で 1 進める。`speakThenListen(id, spoken)` を作る: 呼んだときの `const turn = turnRef.current` を覚え、`const r = await voice.speak(spoken)`。`r !== "ok"` なら今の `setVoiceNote({id, kind: r})` と、声で会話を切る（`onVoiceChange(false)` と同じ処理）。`r === "ok"` かつ `voiceOnRef.current` かつ `turn === turnRef.current` なら `listen.start()`（読み上げを途中で止めても `speak` は "ok" を返すため・`frontend/src/features/secretary/useSecretaryVoice.ts:84`・`:96`・`:100`。印が違えばマイクを開かない）。
+（４）回数の印 `turnRef = useRef(0)` を足す。`send()` の頭・`onVoiceChange`・`close()` で 1 進める。`speakThenListen(id, spoken)` を作る: **最初に `listen.abort()` を呼び、`heardRef.current = false` にする**（マイクが開いたままボタンで作ったときなどに、秘書の声を拾わないため・審査 N1・`frontend/src/features/secretary/useSecretaryListen.ts:173` はすでに聞いているときの `start()` で何もしない）。次に呼んだときの `const turn = turnRef.current` を覚え、`const r = await voice.speak(spoken)`。`r !== "ok"` なら今の `setVoiceNote({id, kind: r})` と、声で会話を切る（`onVoiceChange(false)` と同じ処理）。`r === "ok"` かつ `voiceOnRef.current` かつ `turn === turnRef.current` なら `listen.start()`（読み上げを途中で止めても `speak` は "ok" を返すため・`frontend/src/features/secretary/useSecretaryVoice.ts:84`・`:96`・`:100`。印が違えばマイクを開かない）。
 （５）`send()` の中の読み上げを、声で会話の間は `speakThenListen` に替える。読む文は §15-6 の表のとおり:
 - 聞き返し: `reply.draft.reply`（今のまま）。
 - `ask` あり: `t(\`secretary.ask.${ask}\`)`（今のまま）。
-- 予定の最後の下書き: `draft.title` か `draft.start` が空なら、確かめ待ちにせず `checkScreen` を読む。空でなければ `t("secretary.voiceMode.confirmEvent", { title: draft.title, when })` を読み、`pendingConfirm = { id: pendingId, tries: 0 }`。`when` は `formatDraftDateLine({ startDate: formatDateInput(s), startTime: formatTimeInput(s), endDate: formatDateInput(e), endTime: formatTimeInput(e), allDay: draft.is_all_day }, t, i18n.language)`（`s = new Date(draft.start)`・`e = draft.end ? new Date(draft.end) : s`）。新しい書式は作らない。
+- 予定の最後の下書き: `draft.title`・`draft.start`・`draft.end` のどれかが空なら、確かめ待ちにせず `checkScreen` を読む。空でなければ `t("secretary.voiceMode.confirmEvent", { title: draft.title, when })` を読み、`pendingConfirm = { id: pendingId, tries: 0 }`。`when` は `formatDraftDateLine({ startDate: formatDateInput(s), startTime: formatTimeInput(s), endDate: formatDateInput(e), endTime: formatTimeInput(e), allDay: draft.is_all_day }, t, i18n.language)`（`s = new Date(draft.start)`・`e = new Date(draft.end)`）。`i18n` は `frontend/src/features/secretary/SecretaryChat.tsx:51` の `useTranslation()` から `const { t, i18n }` で取り出す。新しい書式は作らない。
 - 請求書: `t("secretary.voiceMode.invoiceReady")` だけ。会社名・金額・品名を文に入れない。
 - 失敗（catch の中・`forbidden` 以外）: 声で会話の間だけ `t(\`secretary.error.${kind}\`)` を読む。
-（６）確かめ待ちの答え: `send()` の頭で、声で会話かつ `pendingConfirm` があるときは、`sendSecretaryMessage` を呼ばない。利用者の吹き出しは今と同じに足し、`judgeYesNo(trimmed, yesWords, noWords)`（§5）で分ける。動き・読む文・また聞くかは design.md §15-5 の表のとおり。**表の読む文はすべて `speakThenListen` で読む**（読み終わるとまた聞く）。「はい」は `eventRefs.current.get(pendingConfirm.id)?.submitByVoice()` を呼び、`false` か部品が無いときは確かめ待ちを外して `checkScreen` を読む。考え中の吹き出しは出さない。
+（６）確かめ待ちの答え: `send()` の中で、今の `voice.stop()`・`listen.abort()`（123-124 行）の**後に**置き、声で会話かつ `pendingConfirm` があるときは、`sendSecretaryMessage` を呼ばない。利用者の吹き出しは今と同じに足し、`judgeYesNo(trimmed, yesWords, noWords)`（§5）で分ける。動き・読む文・また聞くかは design.md §15-5 の表のとおり。**表の読む文はすべて `speakThenListen` で読む**（読み終わるとまた聞く）。「はい」は `eventRefs.current.get(pendingConfirm.id)?.submitByVoice()` を呼び、`false` か部品が無いときは確かめ待ちを外して `checkScreen` を読む。考え中の吹き出しは出さない。
 （７）`markCreated`・`markCancelled` の中で `pendingConfirm` を外す。`close()` でも外す。`markCreated` の読み上げは、声で会話の間は `speakThenListen` にする（作った後も会話を続けるため）。`<SecretaryDraftEvent` に `onVoiceFailed={() => { 確かめ待ちを外す; 声で会話なら speakThenListen(m.id, t("secretary.voiceMode.checkScreen")) }}` を渡す。
 （８）`eventRefs = useRef(new Map<number, SecretaryDraftEventHandle>())`。221 行の `<SecretaryDraftEvent` に `ref={(h) => { if (h) eventRefs.current.set(m.id, h); else eventRefs.current.delete(m.id); }}` を渡す。
 （９）変えない: 送るボタンの `disabled`（304 行）・マイクの印・欄の `maxLength`・`close()` のほかの処理・声で会話が切れているときの `markCreated` の読み上げ（今の `speakFor`）。
@@ -59,7 +59,7 @@ export function judgeYesNo(text: string, yesWords: string[], noWords: string[]):
 ```
 - 比べる前に `text` と語を NFKC にし、英字は小文字にし、句読点・空白を除く形も作る。
 - `noWords` のどれかに当たれば `"no"`（否定を先に見る）。当たらず、文の頭が `yesWords` のどれかで始まれば `"yes"`。どちらでもなければ `"unknown"`。空の語は無視する。
-- 英字だけの語（yes・no・ok 等）は単語の区切りで比べる（`/\b語\b/`）。"look"・"know" に当てない。
+- 英字だけの語（yes・no・ok 等）は、句読点と空白を除く前の形（NFKC・小文字だけにした形）で単語の区切りで比べる（`/\b語\b/`）。"yes please" は yes、"look"・"know" には当てない。日本語の語は句読点と空白を除いた形で比べる。
 - 日本語の直書きを書かない（語は呼ぶ側が `t()` で読んで `split("|")` して渡す）。
 
 ## 6. 翻訳（ja と en で同じキー・同じ数）
@@ -80,9 +80,9 @@ export function judgeYesNo(text: string, yesWords: string[], noWords: string[]):
 ## 7. 試験（CI で回す。Mac では回さない）
 
 `secretaryVoiceAnswer.test.ts`（日本語は今の試験と同じく `String.fromCharCode` か翻訳の値から作る）:
-- 「はい」→yes・「いいえ」→no・「はい、いや違う」→no・「えーと」→unknown・「ええと」→unknown・「ＯＫ」（全角）→yes・"let me look"→unknown・"I know"→unknown・空の語は無視。
+- 「はい」→yes・「いいえ」→no・「はい、いや違う」→no・「えーと」→unknown・「ええと」→unknown・「ＯＫ」（全角）→yes・"let me look"→unknown・"I know"→unknown・"Yes, please."→yes・空の語は無視。
 
-`SecretaryChat.test.tsx`（今の偽物は 2 つの組に分かれている: 偽の AudioContext は「voice reply」の組（501-528 行付近）、偽の聞き取り FakeRec は「listen mark」の組（642-676 行付近）。T1〜T10 は両方を入れた新しい組で書く。試験は英語の画面で回るので、切り替えの名 `TOGGLE` は "Voice conversation" に直し、答えは en の語（yes・no）で言わせる）:
+`SecretaryChat.test.tsx`（今の偽物は 2 つの組に分かれている: 偽の AudioContext は「voice reply」の組（501-528 行付近）、偽の聞き取り FakeRec は「listen mark」の組（642-676 行付近）。T1〜T11 は両方を入れた新しい組で書く。試験は英語の画面で回るので、切り替えの名 `TOGGLE` は "Voice conversation" に直し、答えは en の語（yes・no）で言わせる）:
 - T1 声で会話を入れると `start` が 1 回呼ばれる。
 - T2 声で会話の間、聞き取った文があり途中の文字が空のまま 1000ms で送られる（偽の時計）。999ms では送られない。途中の文字があると送られない。手で打った文だけのときは送られない。
 - T3 声で会話が切れているときは、1000ms たっても送られない。
@@ -93,6 +93,7 @@ export function judgeYesNo(text: string, yesWords: string[], noWords: string[]):
 - T8 請求書の下書きで `invoiceReady` を読む。「はい」と言っても請求書の POST は 0 回（確かめ待ちにならない）。読んだ文に会社名・金額が入っていない。
 - T9 窓を閉じると確かめ待ちが外れる（もう一度開いて「はい」でも POST 0 回）。
 - T10 読み上げの途中で手で送ると、前の読み上げが終わっても `start` は呼ばれない（回数の印）。
+- T11 声で会話の間、マイクが開いた状態で予定の「作る」ボタンを押すと、作った知らせを読み始める前に `abort` が呼ばれ、読み上げの間に聞き取りの文が来ても送りは 0 回。
 - 予定を作った知らせ（声で会話の間）を読み終わると `start` が呼ばれる（T5 の中で確かめる）。
 
 ## 8. 合格（PR を出す前に自分で確かめる）
