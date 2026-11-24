@@ -3,6 +3,7 @@
 - 状態: 設計案作成済み（2026-11-24）。PO 承認「1」（2026-11-24 チャット「直す」）
 - 関係する決まり: `docs/adr/ADR-1089-inbox-karte-stage-layout.md`（表「最初に開くタブ」成約後＝顧客）
 - 前の設計: `docs/handoff/inbox-karte-stage-tabs/design.md`（K4「最初に顧客が開く」）
+- 現在地: `docs/handoff/inbox-karte-test-data/recon.md`（本番の観測・コードの行・今ある試験）
 
 ## 1. 目的（PO の言葉）
 
