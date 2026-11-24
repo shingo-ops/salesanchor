@@ -1274,3 +1274,79 @@ K9 の報告で案 1 を「push が止まる回数は増えません」と書い
 - 5 回目（2026-11-14・審査役 opus）：APPROVE（設計合格）。D1 と任意 a〜c は直ったと実物と bash 3.2 の実測で確認。採否に関わる指摘なし。任意 E1〜E3 を合格の後に反映した：E1 L8 (b)(c) の終了コードを「2 でない」から「0 である」へ（印の確かめの空振りを防ぐ）、E2 L8 (c) に渡す git の場所は realpath で解いた値、E3 L11 で判定に使う行が 0 件なら保留。いずれも受入条件を厳しくする向きの直しで、決め 1〜10 は変えていない。生の出力 /tmp/CC報告ファイル/rev-r4b2-bin2-r5/。
 - 未解決：ほかのセッションの `git worktree add` と同時に動いて安全か・強制終了で残った一時フォルダを OS がいつ消すか・CI の bash 5 での実測（いずれもリスクの欄に対処を書き、L11 の copy-fail・copy-rc の数えで確かめる）。
 - 状態：設計案作成済み・設計審査済み（APPROVE）。PO が選んだのは範囲（2026-11-14「1」）で、実装の承認はまだ。実装は未着手。
+
+## R4b-2 第3便 送る前の確認で直しかけの変更が残るときも、HEAD の写しで確認を流す（2026-11-24 PO 指示で設計）
+
+### 目的（PO の言葉で）
+PO 2026-11-24：「効果が今すぐ始めても変わらずあるのであれば先に塞いでおく」。push の前の確認（pre-push）で、記録済みのファイルに直しかけの変更が残っているとき、今は確認を流さずに push を通している（終了コード 2・dirty-tracked）。この素通りを無くし、確認を通っていない中身が PR に載る道を 1 つ減らす。
+
+### 今やる効果と、起きてから直す効果の比べ（PO の問いへの答え）
+- 塞ぐ効果は「この型の素通りが起きたとき、その中身を確認に通す」こと。起きる前に入れても後に入れても、1 回ごとの効果は同じ。後に入れると、入れるまでに起きた分だけ素通りが残る。
+- 起きてから直す利点は「本当に起きる型か」を数で確かめてから手間をかけられることだけ。この型は数えた期間に pre-push で 0 回（K9：第1便の反映 2026-11-06T08:43:41Z〜11-13T08:28:50Z・L11：2026-11-16T20:29:22Z〜11-23T23:29:04Z、生出力 /tmp/CC報告ファイル/l11-r4b2/summary.txt）。手で流したときだけ K9 で 3 回・L11 で 1 回。
+- 今入れる弊害：起きたとき、今はすぐ終わる（:159-161 で 2）送る前の確認が、写しで速い組を全部流すぶん延びる。L11 の pre-push・full・終了コード 0 の行の秒の中央値 51.7 秒（数えの台本 /tmp/CC報告ファイル/l11-r4b2/l11.py の最後の行で 4 列目 0 に絞っている）に写しの作成と片付け約 40 秒が足され、合わせて約 90 秒（第2便の実測と L11 の summary.txt）。中身が確認に落ちるときは push が止まるが、CI でも落ちる中身なので誤止めではない。→ 効果は今入れても変わらないので、PO の指示どおり先に塞ぐ。
+
+### 現在地（origin/main 1ac87e46b で確認）
+- scripts/dev/check-before-submit.sh:129：`git status --porcelain` に `??` 以外が 1 行でもあれば理由 dirty-tracked、全部 `??` なら dirty-untracked。
+- 同 :132：写しの道に入る条件は「dirty-untracked・--list-fixtures なし・写しの中でない」だけ。dirty-tracked は :159-161 で「commit してから流してください」と出して終了コード 2。
+- 同 :150：写しの中の入口は HEAD の切り離しの写しで流れる。直しかけの変更は写しに入らない（写しは HEAD から作るので、追跡中の変更も記録していないファイルも入らない）。
+- 同 :53：記録の 8 列目は、写しの中で 0・1 のとき untracked-copy。
+- 同 :51：呼び元は環境変数 CHECK_BEFORE_SUBMIT_CALLER（無ければ manual）。frontend/.husky/pre-push:90 が `CHECK_BEFORE_SUBMIT_CALLER=pre-push` を付けて呼ぶ。写しの中の入口はこの環境変数を引き継ぐ（:150 は環境を消さない）。
+- frontend/.husky/pre-push:41-54 で送る中身が今の HEAD と同じかを判定し、:62 で分かれる。違うときは :63-80 で skip-head・skip-otherhead などを記録して飛ばす。同じときは :83-86 で印が HEAD と同じなら流さずに通し、無ければ :88-90 で入口を流す。→ 入口が流れるとき、送られるのは HEAD そのもの。直しかけの変更は送られない（:51・:62）。
+- docs/ai-agents/executor-checklist.md:19：実行役は push の前に入口を手で流す。手で流すときは commit 前の確かめにも使われ得る。
+- 既存の試験で変わるもの：scripts/tests/test_check_before_submit.py の test_prepush_dirty_tracked_reason（:528-537。いまは 2・dirty-tracked を確かめている）。test_dirty_tracked_manual_exits_2（:227-236）は変わらない。
+
+### 対象と対象外
+- 対象：scripts/dev/check-before-submit.sh・scripts/tests/test_check_before_submit.py
+- 対象外（変えない）：手で流したとき（manual）の dirty-tracked（今までどおり 2）・frontend/.husky/pre-push・写しの作り方と片付け（第2便の決め 1・3）・記録の列の数（8 のまま）・new-worktree.sh・CI・必須チェック。
+
+### 変える前と後
+| 場面 | 今 | 第3便の後 |
+|---|---|---|
+| pre-push から呼ばれ、直しかけの変更がある（記録していないファイルが混ざっても同じ） | 2・dirty-tracked で何も流さず、pre-push は通す | 「直しかけの変更があります。push するのは HEAD なので、HEAD の写しで流します（直しかけの変更は確かめていません。約 40 秒増えます）」と出し、第2便と同じ写しの道で流す。0 なら通す・1 なら止める。8 列目は tracked-copy |
+| 手で流し、直しかけの変更がある | 2・dirty-tracked | 変えない |
+| 記録していないファイルだけ | 写しの道・untracked-copy | 変えない |
+
+決め：
+1. 写しの道に入る条件（:132）を、「dirty-untracked」または「dirty-tracked かつ `${CHECK_BEFORE_SUBMIT_CALLER:-manual}` が pre-push」にする。--list-fixtures なし・`${CBS_IN_COPY:-}` が 1 でない、は今までどおり両方に掛ける。
+2. 手で流したときに写しへ回さない理由：手で流すのは commit 前の確かめにも使われる。HEAD の写しで 0 を返すと「直しかけの変更も通った」と読み違える。pre-push では送られるのが HEAD なので、HEAD を確かめるのが正しい。
+3. 表示：dirty-tracked で写しへ回るときは :134 の文の代わりに「直しかけの変更があります。push するのは HEAD なので、HEAD の写しで流します（直しかけの変更は確かめていません。約 40 秒増えます）」を出す。一覧 `git status --short | head -20` は今までどおり先に出す。「約 40 秒増えます」はきれいな push と比べた数（pre-push:88 が先に「約 90〜190 秒」と出す）。
+4. 8 列目の名を分ける：外側の入口は写しの道に入った所で `cbs_kind=untracked; test "$CBS_REASON" = dirty-tracked && cbs_kind=tracked` と必ず両方の道で値を決め（片方だけで代入すると set -u で写しの subshell が落ち、bash 3.2.57 の実測で rc 127 → copy-rc になって push を通してしまう。CI の bash 5 での rc は未確認。どちらの版でも、必ず値を入れるのでこの道には入らない）、写しを呼ぶ所（:150）で環境変数 `CBS_COPY_KIND="$cbs_kind"` を必ず付ける。外から来た値を写しへ引き継がせないため、どちらの道でも明示して上書きする。写しの中の _cbs_log（:53）は、CBS_COPY_OK が 1 で 0・1 のとき、`${CBS_COPY_KIND:-}` が tracked なら tracked-copy、それ以外は untracked-copy。CBS_COPY_KIND は `${X:-}` で読む（set -u）。CBS_COPY_OK が 0 なら読まないので、外から渡しても 8 列目は変わらない。
+5. 写しの作り方・呼ぶ順番・片付け・copy-fail・copy-rc・印の行き先・--list-fixtures・記録の列・new-worktree.sh の数えは第2便の決め 1〜10 をそのまま使う（同じ道を通る）。第2便の対象外「dirty-tracked は今までどおり 2」は、pre-push から呼ばれた場合だけこの便で置き換える。
+6. 呼び元を偽って手で `CHECK_BEFORE_SUBMIT_CALLER=pre-push` を付けた場合は写しの道に入る。害は「読み違えの余地」だけで、送る中身の確かめは HEAD について正しい。止めない。
+7. 説明の文を直す（check-before-submit.sh）：:10-11 の終了コード 2 の説明に「pre-push から呼ばれたときの直しかけの変更は HEAD の写しで流す」を足す。:31-32 の 8 列目の説明に tracked-copy を足す。:126 と :130-131 の注記を「記録していないファイルだけ、または pre-push から呼ばれたとき」に直す。
+
+### ほかの案と選ばなかった理由
+- 手で流したときも写しへ回す：決め 2 の読み違えが起きる。
+- `git stash` で直しかけの変更を退けて流す：作業中のファイルを動かし、途中で落ちると戻らない（第2便と同じ理由）。
+- 直しかけの変更があれば push を止める：送る中身（HEAD）は確かめられるのに止めるのは誤止め。
+- 起きるまで待つ：PO の問いへの答えの欄のとおり、効果は同じで、待つ間の素通りが残るだけ。
+
+### 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| M1 pre-push で直しかけの変更があり HEAD がきれいなら、写しで流れて 0・行は 1 行・6 列目 pre-push・8 列目 tracked-copy・印が元の git の場所に HEAD で書かれる。記録していないファイル docs/zz-uncommitted.md も一緒に置いて、混ざっても tracked-copy になることを確かめる。外から `CBS_COPY_KIND=untracked` を渡しても tracked-copy になる（上書きの向き 1） | test_prepush_dirty_tracked_reason を書き換える（名も変える）。run_prepush に extra_env={"CBS_COPY_KIND":"untracked"} を付ける（pre-push:90 が消すのは git の変数だけなので入口まで届く）。印は read_stamp() で確かめる |
+| M2 直しかけの変更そのものは写しに入らない：backend/app/routers/zz_fixture_router.py を scripts/tests/rule-fixtures/tenant-schema/pass-commit-with-reset/files/backend/app/routers/zz_fixture_router.py.fixture の中身で commit し、作業場所だけ fail-commit-without-reset の同名の見本の中身に書き換えて、入口を `--only tenant-lint`・`CHECK_BEFORE_SUBMIT_CALLER=pre-push` で直接流すと 0、記録の 8 列目 tracked-copy（今のコードなら 2 なので空振りしない）。同じ fail の中身を commit すると 1（空振りでない確かめ） | 試験 1 本。run_script("--only","tenant-lint", extra_env={"CHECK_BEFORE_SUBMIT_CALLER":"pre-push"}) |
+| M3 HEAD に違反があり直しかけの変更もあるとき、pre-push は 1 で止める。記録は 1 行・8 列目 tracked-copy・read_stamp() は None・出力に「push を中断しました」 | 試験 1 本 |
+| M4 手で流したときの直しかけの変更は今までどおり 2・dirty-tracked・写しを作らない | 既存 test_dirty_tracked_manual_exits_2 がそのまま pass |
+| M5 記録していないファイルだけのときの 8 列目は今までどおり untracked-copy（外から CBS_COPY_KIND=tracked を渡して手で流しても untracked-copy のまま。外側が写しを呼ぶ所で untracked に上書きするため） | 既存 test_prepush_runs_in_copy_on_untracked が pass ＋ 外から CBS_COPY_KIND=tracked を付けて手で流す試験 1 本 |
+| M6 写しが残らない（git worktree list の行数と cbs-copy.* の数が前と同じ） | M1・M3 の試験の中で copy_state() を比べる |
+| M7 既存の試験（書き換える 1 本を除く）がそのまま pass。CI の必須チェックが pass | PR の CI 結果 |
+
+### リスクと対処
+- pre-push で直しかけの変更があるとき、今はすぐ終わる確認が約 90 秒かかるようになる → 表示で知らせる。数えた期間では 0 回。
+- この場面では手で先に流しても 2 で終わり印が書かれない（決め 2）。そのため pre-push:88 と docs/ai-agents/executor-checklist.md:19 の「先に手で流せば待たずに済む」が使えず、HEAD が変わるたびに約 90 秒待つ（写しで 0 になると印が HEAD で書かれ、同じ HEAD の再 push は pre-push:83-86 で流さずに通る）。Claude の Bash の既定の上限 2 分に近い → checklist:19 のとおり timeout 600000 で push する。直しかけの変更を commit してから流せば印が書ける。
+- 直しかけの変更が check-before-submit.sh 自身にあるとき、または HEAD の台本が第3便より前のときは、写しの中で HEAD の古い版が動く。HEAD の台本が第2便より後で第3便より前なら 8 列目は untracked-copy、第2便より前なら 8 列目は「-」で、印は写しの側に書かれて片付けで消える。どちらも判定（0・1）には影響しない。
+- 止まる push が増える → 止まるのは HEAD が確認に落ちるときだけで、CI でも落ちる中身。誤止めではない。
+- 戻し方：merge commit を revert。
+
+### 維持する担当・仕組み
+- 試験 scripts/tests/test_check_before_submit.py（CI の existing rule tests で毎回流れる）。
+- 反映後の数えは置かない（PO 2026-11-24「1」で見守りを終えた方針に合わせ、試験で確かめる）。
+
+### 外部事例
+該当なし（第2便と同じ手元の入口の内部の道で、外の事例が判断を変えない）。自社の前例は第2便（同じ写しの道）。
+
+### 審査の記録
+- 1 回目（2026-11-24・審査役 opus）：REVISE。採否に関わる指摘 2 件：R1 M2 の前半は今のコードでも pre-push が 2 を通して 0 になり空振り → 入口を --only tenant-lint・呼び元 pre-push で直接流し 8 列目も確かめる形にした。R2 弊害の時間が実物と合わない（今はすぐ終わる・後は約 90 秒・手で先に印を書けない）→ 今やる効果の欄とリスクの欄を直した。任意 a〜i（pre-push の行の範囲・M2 の見本の出どころ・M3 の確かめ・混ざったときの試験・上書きの両向き・変数の作り方と set -u・説明の文の直し・古い台本が動く場面・第2便の決め 8〜10 と対象外の置き換え）もすべて反映した。生の出力 /tmp/CC報告ファイル/rev-r4b2-bin3/。
+- 2 回目（2026-11-24・審査役 opus）：APPROVE（設計合格）。R1・R2 と任意 a〜i は実物と照らして直ったと確認（bash 3.2.57 の rc 127 も再現）。採否に関わる指摘なし。任意 o1〜o4・o6（bash 5 は未確認と添える・古い台本の 8 列目の場合分け・「HEAD が変わるたびに」・中央値の絞り方の出どころ・約 40 秒の比べる相手）は合格の後に反映した。o5（試験の名・:132 と :134 の変える前後のコード・test_check_before_submit.py:19 の説明が第2便から実物と合っていない件）は実装カード card-r4b2-bin3.md で決める。生の出力 /tmp/CC報告ファイル/rev-r4b2-bin3/review-r2.md。
+- 状態：設計案作成済み・設計審査済み（APPROVE）。PO の指示（2026-11-24「先に塞いでおく」）は範囲の選択。実装の承認は PO 2026-11-24「1」（第3便の報告の選択肢 1「実装を始める」）。o5 は実装カード card-r4b2-bin3.md で決めた。
