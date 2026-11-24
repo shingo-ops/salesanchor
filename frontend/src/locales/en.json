@@ -3480,6 +3480,7 @@
     "disconnect": "Disconnect",
     "connectSuccess": "Successfully connected",
     "connectError": "Connection failed",
+    "connectScopeMissing": "Only some Google Calendar permissions were granted. Select both on the Google screen and connect again.",
     "disconnectConfirm": "Disconnect Google Calendar?",
     "addEvent": "Add event",
     "editEvent": "Edit event",

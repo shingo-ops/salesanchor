@@ -107,6 +107,9 @@ async def connect_callback(
 
     try:
         result = await cal_svc.exchange_code(code, state)
+    except cal_svc.GoogleScopeNotGrantedError as e:
+        logger.warning("Google Calendar callback: 許可の一部が外された %s", e)
+        return RedirectResponse(f"{frontend_schedule}?connected=false&error=scope_missing")
     except ValueError as e:
         logger.warning("Google Calendar callback: state 検証失敗 %s", e)
         return RedirectResponse(f"{frontend_schedule}?connected=false&error=invalid_state")

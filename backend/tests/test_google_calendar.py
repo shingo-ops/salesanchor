@@ -859,3 +859,118 @@ class TestRouterStatusMeetAvailable:
         db.execute = AsyncMock(return_value=cfg)
         result = await connection_status(tenant_id=1, user=MagicMock(id=1), db=db)
         assert result["meet_available"] is False
+
+
+# ---------------------------------------------------------------------------
+# 許可の範囲を狭い2つにする（design §3-1）S1 / S2 / S3
+# ---------------------------------------------------------------------------
+
+_NARROW_EVENTS = "https://www.googleapis.com/auth/calendar.events.owned"
+_NARROW_CALS = "https://www.googleapis.com/auth/calendar.calendars.readonly"
+
+
+def _exchange_flow_raising(exc):
+    mock_flow = MagicMock()
+    mock_flow.fetch_token = MagicMock(side_effect=exc)
+    return mock_flow
+
+
+async def _run_exchange_with(exc):
+    from app.services.google_calendar import exchange_code
+
+    payload = {"tenant_id": 1, "user_id": 2, "nonce": "z"}
+    with patch("app.services.google_calendar.consume_state", AsyncMock(return_value=payload)):
+        with patch("google_auth_oauthlib.flow.Flow") as MockFlow:
+            MockFlow.from_client_config.return_value = _exchange_flow_raising(exc)
+            await exchange_code("auth-code", "valid-state")
+
+
+class TestNarrowScopes:
+    @pytest.mark.asyncio
+    async def test_s1_auth_url_requests_only_narrow_scopes(self):
+        from urllib.parse import parse_qs, urlparse
+
+        from app.services.google_calendar import get_auth_url
+
+        r = AsyncMock()
+        r.setex = AsyncMock(return_value=True)
+        with patch("app.services.google_calendar.get_redis", return_value=r):
+            url = await get_auth_url(tenant_id=1, user_id=2)
+
+        scopes = parse_qs(urlparse(url).query)["scope"][0].split()
+        assert sorted(scopes) == sorted([_NARROW_EVENTS, _NARROW_CALS])
+        assert "https://www.googleapis.com/auth/calendar" not in scopes
+
+    def test_s2_build_credentials_passes_scopes_none(self):
+        from app.services.google_calendar import _build_credentials
+
+        future = datetime.now(timezone.utc) + timedelta(hours=1)
+        with patch("google.oauth2.credentials.Credentials") as MockCreds:
+            _build_credentials("access-token", "refresh-token", future)
+
+        assert MockCreds.call_args.kwargs["scopes"] is None
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("token_scope", [[_NARROW_EVENTS], _NARROW_EVENTS])
+    @pytest.mark.parametrize("with_new_scope", [True, False])
+    async def test_s3a_partial_grant_raises_scope_not_granted(self, token_scope, with_new_scope):
+        from app.services.google_calendar import GoogleScopeNotGrantedError
+
+        w = Warning("Scope has changed")
+        w.token = {"scope": token_scope}
+        if with_new_scope:
+            w.new_scope = [_NARROW_EVENTS]
+        with pytest.raises(GoogleScopeNotGrantedError):
+            await _run_exchange_with(w)
+
+    @pytest.mark.asyncio
+    async def test_s3a_other_scope_only_raises_scope_not_granted(self):
+        from app.services.google_calendar import GoogleScopeNotGrantedError
+
+        w = Warning("Scope has changed")
+        w.token = {"scope": "https://www.googleapis.com/auth/calendar"}
+        with pytest.raises(GoogleScopeNotGrantedError):
+            await _run_exchange_with(w)
+
+    @pytest.mark.asyncio
+    async def test_s3a_prime_extra_scope_with_both_is_runtime_error(self):
+        from app.services.google_calendar import GoogleScopeNotGrantedError
+
+        w = Warning("Scope has changed")
+        w.new_scope = [_NARROW_CALS, _NARROW_EVENTS, "openid"]
+        w.token = {"scope": [_NARROW_CALS, _NARROW_EVENTS, "openid"]}
+        with pytest.raises(RuntimeError, match="token 交換") as ei:
+            await _run_exchange_with(w)
+        assert not isinstance(ei.value, GoogleScopeNotGrantedError)
+
+    @pytest.mark.asyncio
+    async def test_s3b_callback_redirects_scope_missing(self):
+        from app.routers.google_calendar import connect_callback
+        from app.services.google_calendar import GoogleScopeNotGrantedError
+        from fastapi.responses import RedirectResponse
+
+        with patch("app.routers.google_calendar.cal_svc.exchange_code",
+                   AsyncMock(side_effect=GoogleScopeNotGrantedError("partial"))):
+            response = await connect_callback(code="auth-code", state="valid", db=AsyncMock())
+
+        assert isinstance(response, RedirectResponse)
+        location = str(response.headers.get("location", ""))
+        assert "connected=false" in location
+        assert "error=scope_missing" in location
+
+    def test_s3c_real_oauthlib_warns_only_on_partial_grant(self):
+        from oauthlib.oauth2.rfc6749.parameters import validate_token_parameters
+        from oauthlib.oauth2.rfc6749.tokens import OAuth2Token
+        from app.services.google_calendar import _SCOPES
+
+        old = " ".join(_SCOPES)
+
+        def make(scope):
+            return OAuth2Token(
+                {"access_token": "x", "token_type": "Bearer", "scope": scope}, old_scope=old
+            )
+
+        with pytest.raises(Warning):
+            validate_token_parameters(make(_NARROW_EVENTS))
+        validate_token_parameters(make(" ".join(_SCOPES)))
+        validate_token_parameters(make(" ".join(reversed(_SCOPES))))

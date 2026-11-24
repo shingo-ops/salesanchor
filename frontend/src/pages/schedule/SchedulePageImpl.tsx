@@ -945,7 +945,11 @@ export default function SchedulePage() {
     if (connected === "true") {
       setBanner({ type: "success", message: t("schedule.connectSuccess") });
     } else if (connected === "false") {
-      setBanner({ type: "error", message: t("schedule.connectError") });
+      const errorCode = searchParams.get("error");
+      setBanner({
+        type: "error",
+        message: errorCode === "scope_missing" ? t("schedule.connectScopeMissing") : t("schedule.connectError"),
+      });
     }
     if (connected) {
       setSearchParams({}, { replace: true });

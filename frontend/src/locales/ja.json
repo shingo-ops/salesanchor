@@ -3480,6 +3480,7 @@
     "disconnect": "接続を解除する",
     "connectSuccess": "接続が完了しました",
     "connectError": "接続に失敗しました",
+    "connectScopeMissing": "Google カレンダーの許可が一部だけでした。Google の画面で2つとも選んで、もう一度接続してください",
     "disconnectConfirm": "Googleカレンダーの接続を解除しますか？",
     "addEvent": "予定を追加",
     "editEvent": "予定を編集",
