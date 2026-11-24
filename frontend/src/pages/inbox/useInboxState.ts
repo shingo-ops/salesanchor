@@ -41,6 +41,7 @@ import {
   readInboxSettings,
 } from "./inbox.types";
 import type { ConvertAssigneeOption, InboxSettings, LeadDetail, StatusTabKey } from "./inbox.types";
+import { getKarteLayout } from "./karteLayout";
 import { buildReactionCreatePath, buildReactionDeletePath } from "./reactionPaths";
 
 // ---------------------------------------------------------------------------
@@ -652,15 +653,9 @@ export function useInboxState(): UseInboxStateReturn {
     setSendErrorCode(null);
     clearAttachment();
 
-    // ADR-108: set default karte tab based on lead_status
+    // ADR-1089: 最初に開くタブは段階ごとの見せ方（karteLayout.ts）の最初のタブ
     const conv = conversations.find((c) => c.lead_id === leadId);
-    const status = conv?.lead_status ?? "";
-    const postDealStatuses = ["existing_customer", "follow_up_short", "follow_up_long"];
-    if (postDealStatuses.includes(status)) {
-      setKarteTab("company");
-    } else {
-      setKarteTab("deal");
-    }
+    setKarteTab(getKarteLayout(conv?.lead_status).tabs[0]);
 
     // 同じ会話を選び直したときは効果が走らないため、ここで直接「開いた」を記録する
     // （審査 D2）。setSelectedLeadId(leadId) は同じ id では state が変わらず、
