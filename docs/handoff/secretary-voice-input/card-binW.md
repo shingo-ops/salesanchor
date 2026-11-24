@@ -16,7 +16,7 @@
 | `backend/tests/test_assistant_karte.py` | §4 |
 | `secretary-agent/prompt.txt` | §16-5 の 1 行を `:14` の後に（文は design のとおり一字も変えない） |
 | `frontend/src/features/secretary/secretaryApi.ts` | §16-6 の 1 |
-| `frontend/src/features/secretary/SecretaryDraftEvent.tsx` | §16-6 の 2 |
+| `frontend/src/features/secretary/SecretaryDraftEvent.tsx` | §16-6 の 2 と 3 の `onSaving` |
 | `frontend/src/features/secretary/SecretaryChat.tsx` | §16-6 の 3 |
 | `frontend/src/features/secretary/SecretaryChat.test.tsx`・`SecretaryDraftEvent.test.tsx`（あれば） | §4 |
 | `frontend/src/locales/ja.json`・`en.json` | §16-6 の 4 |
@@ -46,10 +46,13 @@ backend（`backend/tests/test_assistant_karte.py`・今の試験の書き方に�
 - `merge_edit`: 説明だけ（AI の description が勝つ・ほかはカルテ・変わった真）／題名を替える（カルテの題名があっても AI が勝つ）／始まりだけ（長さ 1 時間を保つ）／始まりと終わり両方／AI が null だけ（変わった偽）／AI の値が空白だけ（カルテのまま）／終日のカルテで AI が時刻を返す（時刻は替えない）／同じ時刻を別の書き方（変わった偽）／ev が None。
 - `merge_edit` に足す: 空白つきの同じ文字（変わった偽）／カルテの終わりが始まりより前（長さを足さない）／時差の印が混ざる始まり（文字で比べる）。
 - 口: `edit: true` で AI が**請求書**を返す→ event・`edited` 偽・中身はカルテ・`resolve_names` が呼ばれない／`edit: true` で「終わりを始まりより前に」の答え→ カルテのまま・`edited` 偽。
+- 口（審査第 2 回 R1）: `edit: true`・カルテの始まりは明日でない日・文「説明に明日までに資料を持参と入れて」・偽の AI は description と**カルテと同じ start** を返す→ start・end はカルテのまま・description だけ変わる・`edited` 真。逆向き: 偽の AI が start を 3 日後で返し文「来週の月曜にして」→ `apply_day` で来週の月曜になる。
 - 口（今の karte 試験と同じ偽の AI の答え）: `edit: true` で AI が description を返す→ event・`edited` 真・`ask` null・ほかの欄はカルテ／AI が unknown を返す→ event・`edited` 偽・中身はカルテ／`edit` を付けない今の試験がそのまま通る／`edit` 無しの答えでは `edited` が null。
 
 frontend:
 - T7 を書き直す（`mockResolvedValueOnce` で `edited: false` の返しを 2 回足す）: はい／いいえでない文が 2 回とも直らない（偽の API が `edited: false`）→ 1 回目 `notEdited`、2 回目 `checkScreen`、予定は作られない。
+- 足す: 直せた後の新しい下書きで、はい／いいえでない文が直らない → 1 回目は `notEdited`（回数は 0 から数え直し）。
+- 足す: 直す頼みの API を保留にしたまま「作る」を押し、作成の API も保留のまま直す答えを返す → 前の吹き出しは替わらない・新しい下書きは出ない（`onSaving`）。
 - 足す: 「説明にテストと入れて」→ 偽の API が `edited: true`・description「テスト」の下書き → 前の下書きが `edit.replaced` の文になる・新しい下書きの説明欄が「テスト」・`editedConfirm` を読む → 「はい」で POST /calendar/events の本文の description が「テスト」。
 - 足す: 送った本文の `karte` が今の欄の値（手で直した題名を含む）と `edit: true`・`asked: null`・`asked_count: 0`。
 - 足す: 画面で「共有」を選んだ下書きを声で直すと、新しい下書きも「共有」のまま。
