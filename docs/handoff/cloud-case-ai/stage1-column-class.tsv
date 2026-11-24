@@ -229,7 +229,7 @@ public	ops_control	reason	mask		text
 public	ops_incident_events	actor	mask		text
 public	ops_incident_events	detail	mask		jsonb
 public	ops_incident_events	kind	allow	値の決まり ops_incident_events_kind_check で値が限られる	text
-public	ops_incidents	alertname	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	ops_incidents	alertname	allow	値は自分たちの見張りの規則の名前と口の決まった語（unknown・discord-bug-report）だけ・口は鍵が要る（PO 決定 D3）	text
 public	ops_incidents	annotations	mask		jsonb
 public	ops_incidents	detection_path	mask		text
 public	ops_incidents	fingerprint	mask		text
@@ -237,7 +237,7 @@ public	ops_incidents	first_aid_result	mask		text
 public	ops_incidents	labels	mask		jsonb
 public	ops_incidents	review_note	mask		text
 public	ops_incidents	root_cause	mask		text
-public	ops_incidents	severity	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	ops_incidents	severity	allow	値は自分たちの見張りの規則の強さ（critical・warning・info）だけ・口は鍵が要る（PO 決定 D3）	text
 public	ops_incidents	status	allow	値の決まり ops_incidents_status_check で値が限られる	text
 public	password_reset_tokens	purpose	allow	値の決まり ck_password_reset_tokens_purpose で値が限られる	text
 public	payment_fee_settings	currency	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
