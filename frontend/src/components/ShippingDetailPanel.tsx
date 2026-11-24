@@ -27,7 +27,8 @@ import { Modal } from "./Modal";
 import { Button } from "./Button";
 import { SelectControl } from "./Select";
 import { TextareaControl } from "./Textarea";
-import { TextFieldControl } from "./TextField";
+import { TextField, TextFieldControl } from "./TextField";
+import { DELIVERY_ADDRESS_LINE_MAX, deliveryAddressLineError } from "../utils/addressRules";
 import { LoadingBlock } from "./loading";
 
 export interface ShippingDetailDto {
@@ -274,9 +275,21 @@ export default function ShippingDetailPanel({
     return payload;
   };
 
+  /** 住所1〜3の決まり違反の文（合えば undefined）。決まりは utils/addressRules.ts の1か所。 */
+  const lineRuleText = (value: string): string | undefined => {
+    const key = deliveryAddressLineError(value);
+    return key ? t(key, { max: DELIVERY_ADDRESS_LINE_MAX }) : undefined;
+  };
+  const isAddressLineKey = (key: string): key is "address1" | "address2" | "address3" =>
+    key === "address1" || key === "address2" || key === "address3";
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
+    // 住所1〜3に決まり違反があれば送らない（欄の赤と文で知らせる）
+    if ((["address1", "address2", "address3"] as const).some((k) => deliveryAddressLineError(form[k]) !== null)) {
+      return;
+    }
     setSaving(true);
     try {
       const payload = buildPayload();
@@ -421,17 +434,29 @@ export default function ShippingDetailPanel({
                 gap: "var(--space-2) var(--space-4)",
               }}
             >
-              {TEXT_FIELDS.address.map((f) => (
-                <div className="form-group" key={f.key}>
-                  <label>{t(f.labelKey)}</label>
-                  <TextFieldControl
-                    type="text"
-                    value={form[f.key]}
-                    onChange={(ev) => setField(f.key, ev.target.value)}
-                    data-testid={`ship-input-${f.key}`}
-                  />
-                </div>
-              ))}
+              {TEXT_FIELDS.address.map((f) =>
+                isAddressLineKey(f.key) ? (
+                  <div className="form-group" key={f.key}>
+                    <TextField
+                      label={t(f.labelKey)}
+                      value={form[f.key]}
+                      onChange={(ev) => setField(f.key, ev.target.value)}
+                      error={lineRuleText(form[f.key])}
+                      data-testid={`ship-input-${f.key}`}
+                    />
+                  </div>
+                ) : (
+                  <div className="form-group" key={f.key}>
+                    <label>{t(f.labelKey)}</label>
+                    <TextFieldControl
+                      type="text"
+                      value={form[f.key]}
+                      onChange={(ev) => setField(f.key, ev.target.value)}
+                      data-testid={`ship-input-${f.key}`}
+                    />
+                  </div>
+                ),
+              )}
             </div>
           </fieldset>
 
