@@ -1,6 +1,6 @@
 # 実装カード: 受信箱のカルテの見せ方を段階で切り替える（ADR-1089）
 
-- 枝: `release/inbox-karte-stage-tabs`（origin/main `1ac87e46b` 起点）
+- 枝: 設計は `release/inbox-karte-stage-tabs`、実装は `release/inbox-karte-stage-tabs-impl`（origin/main 起点・設計を取り込む）
 - 設計: `design.md`・調査: `recon.md`・決定: `docs/adr/ADR-1089-inbox-karte-stage-layout.md`
 - 書く人: クラウドの Sonnet。設計に無いことはしない。迷ったら止まって `NEEDS_DECISION:` で返す。
 
@@ -13,7 +13,7 @@
 ## 受領確認
 
 - 始める前に、このカードの §2 の触るファイル 5 つと §3 の想定分岐を読んだことを、最初の報告で 1 行で返す（受領確認）。
-- 作業場所: `git fetch origin` → `bash scripts/new-worktree.sh release/inbox-karte-stage-tabs` → その場所へ移る → `git merge --no-edit origin/release/inbox-karte-stage-tabs`（設計書を取り込む）。
+- 作業場所: `git fetch origin` → `bash scripts/new-worktree.sh release/inbox-karte-stage-tabs-impl` → その場所へ移る → `git merge --no-edit origin/release/inbox-karte-stage-tabs`（設計書を取り込む。取り込みはこの1回だけ）。
 
 ## 1. 先に確かめる実物（違っていたら止まる）
 
@@ -86,7 +86,7 @@
 1. `cd frontend && npm ci && npm run generate:icon-sizes && npm run generate:api-types && npx tsc --noEmit` → 0 件。
 2. `cd frontend && npx eslint --max-warnings=0 src/pages/inbox/karteLayout.ts src/pages/inbox/karteLayout.test.ts src/pages/inbox/InboxKartePanel.tsx src/pages/inbox/useInboxState.ts` → 0 件。
 3. `cd frontend && npx vitest run src/pages/inbox/` → 全部通る。
-4. commit・push のあと、Opus が基準画像の作り直しを GitHub に頼む: `gh workflow run karte-gate.yml --ref release/inbox-karte-stage-tabs`。ボットが枝へ画像を commit する。Sonnet はここまでで `DONE` を返す。
+4. commit・push のあと、Opus が基準画像の作り直しを GitHub に頼む: `gh workflow run karte-gate.yml --ref release/inbox-karte-stage-tabs-impl`。ボットが枝へ画像を commit する。Sonnet はここまでで `DONE` を返す。
 5. 確かめ後の残し方: `grep -n "follow_up_short" frontend/src/pages/inbox/useInboxState.ts frontend/src/pages/inbox/InboxKartePanel.tsx` が 0 件。`grep -rln "follow_up_short" frontend/src/pages/inbox/ --include=*.ts --include=*.tsx` に出る製品のファイルは `inbox.types.ts`（左の一覧の絞り込み・今回は触らない）と `karteLayout.ts` の 2 つだけ（カルテの段階の一覧が 1 か所だけ）。
 
 ## 5. commit
