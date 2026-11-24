@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { saveBlob } from "../../lib/saveBlob";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { usePermissions } from "../../hooks/usePermissions";
 import { getStatusPresentation } from "../../utils/statusPresentation";
@@ -131,6 +132,8 @@ export default function InvoiceDetailPage() {
   const [voidReason, setVoidReason] = useState("");
   const [showVoidForm, setShowVoidForm] = useState(false);
   const [paymentDate, setPaymentDate] = useState<string>("");
+  // design-pdf D5: 読んでいる間のボタン（"pdf" | "copy"）。空なら読んでいない
+  const [pdfSaving, setPdfSaving] = useState<"" | "pdf" | "copy">("");
 
   const load = () => {
     void invalidate(["invoices", id ?? ""]);
@@ -152,12 +155,28 @@ export default function InvoiceDetailPage() {
     setVoidReason("");
   };
 
+  // design-pdf §3: 札つきで blob を読み、サーバーと同じ名前で保存する（金型 InvoiceCreatedModal.tsx と同じ）
+  const downloadBlob = async (kind: "pdf" | "copy", path: string, filename: string) => {
+    setError("");
+    setPdfSaving(kind);
+    try {
+      const blob = await api.getBlob(path);
+      saveBlob(blob, filename);
+    } catch {
+      setError(t("common.downloadFailed"));
+    } finally {
+      setPdfSaving("");
+    }
+  };
+
   const handleDownloadPdf = () => {
-    window.open(`/api/invoices/${id}/pdf`, "_blank");
+    if (!invoice?.invoice_number) return;
+    void downloadBlob("pdf", `/invoices/${id}/pdf`, `${invoice.invoice_number}.pdf`);
   };
 
   const handleDownloadCopyPdf = () => {
-    window.open(`/api/invoices/${id}/paypal-copy-pdf`, "_blank");
+    if (!invoice?.invoice_number) return;
+    void downloadBlob("copy", `/invoices/${id}/paypal-copy-pdf`, `${invoice.invoice_number}-paypal-copy.pdf`);
   };
 
   const fmt = (n: number | null) => n != null ? n.toLocaleString() : "-";
@@ -223,7 +242,9 @@ export default function InvoiceDetailPage() {
               {invoice.status !== "voided" && hasPermission("invoices.void") && (
                 <Button variant="danger" size="sm" layoutClassName="field-h-md" onClick={() => setShowVoidForm(true)}>{t("invoices.voidAction")}</Button>
               )}
-              <Button variant="secondary" size="sm" layoutClassName="field-h-md" onClick={handleDownloadPdf}>{t("invoices.snapshot.downloadPdf")}</Button>
+              {invoice.invoice_number && (
+                <Button variant="secondary" size="sm" layoutClassName="field-h-md" onClick={handleDownloadPdf} loading={pdfSaving === "pdf"} disabled={pdfSaving !== ""} data-testid="invoice-detail-download-pdf">{t("invoices.snapshot.downloadPdf")}</Button>
+              )}
             </>
           }
         />
@@ -248,8 +269,8 @@ export default function InvoiceDetailPage() {
             {invoice.paypal_invoicer_view_url && (
               <ButtonLink variant="secondary" size="md" href={invoice.paypal_invoicer_view_url} target="_blank" rel="noopener noreferrer">{t("invoices.paypal.openOriginal")}</ButtonLink>
             )}
-            {invoice.paypal_copy_pdf_at && (
-              <Button variant="secondary" size="md" onClick={handleDownloadCopyPdf}>{t("invoices.paypal.downloadCopyPdf")}</Button>
+            {invoice.paypal_copy_pdf_at && invoice.invoice_number && (
+              <Button variant="secondary" size="md" onClick={handleDownloadCopyPdf} loading={pdfSaving === "copy"} disabled={pdfSaving !== ""} data-testid="invoice-detail-download-copy-pdf">{t("invoices.paypal.downloadCopyPdf")}</Button>
             )}
           </div>
         </div>
