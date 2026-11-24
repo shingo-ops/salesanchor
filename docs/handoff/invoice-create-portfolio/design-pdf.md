@@ -2,6 +2,7 @@
 
 状態: 設計案作成済み・設計審査済み（Opus の自己審査。独立した第二者の審査ではない）・実装未着手。
 recon: `docs/handoff/invoice-create-portfolio/recon-pdf.md`
+対象ADR: ADR-101（見積・請求書）・ADR-027（文言は t() 経由。新しい文言キーなし）・ADR-144（UI の金型。既存の Button の props だけ使う）。recon §2-7 で、PDF の開き方を決めた ADR は無いことを確かめた。
 
 ## 0. PO の決定
 - 2026-11-24 PO「1」: 請求書の詳細画面で PDF が開かない件を調べて直す。
@@ -58,7 +59,7 @@ recon: `docs/handoff/invoice-create-portfolio/recon-pdf.md`
 
 ## 7. 維持の仕組み
 - K6 は検証のコマンドで数え、結果を PR 本文に残す。同じ書き方が新しく入るのを止める見張りは今回は作らない（直したあと本番のコードに0件・必要になれば別テーマ）。
-- 守り手: 試験 InvoiceDetailPage.test.tsx・QuoteDetailPage.test.tsx（CI の必須チェック）と、請求書の画面を触る便の設計者（Opus）。
+- 守り手: frontend/src/pages/invoice-detail/InvoiceDetailPage.test.tsx・frontend/src/pages/quote-detail/QuoteDetailPage.test.tsx（CI の必須チェック）と、請求書の画面を触る便の設計者（Opus）。
 
 ## 8. 外部・過去事例の参照と我々への応用
 - 該当なし。理由: 既存の金型（InvoiceCreatedModal）を同じ画面群に広げる直しで、新しいやり方を選ぶ判断が無いため。

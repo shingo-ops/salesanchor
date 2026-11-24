@@ -9,7 +9,7 @@
 ## 2. 観測した事実
 
 ### 2-1. ボタンが開く先
-- `/Users/tanizawashingo/worktrees/salesanchor/release-invoice-detail-pdf-download/frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:155-161`
+- `frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:155-161`
   ```tsx
   const handleDownloadPdf = () => {
     window.open(`/api/invoices/${id}/pdf`, "_blank");
@@ -18,7 +18,7 @@
     window.open(`/api/invoices/${id}/paypal-copy-pdf`, "_blank");
   };
   ```
-- `/Users/tanizawashingo/worktrees/salesanchor/release-invoice-detail-pdf-download/frontend/src/pages/quote-detail/QuoteDetailPage.tsx:96-98` も同じ書き方（`/api/quotes/${id}/pdf`）。
+- `frontend/src/pages/quote-detail/QuoteDetailPage.tsx:96-98` も同じ書き方（`/api/quotes/${id}/pdf`）。
 - `git grep -nE "window\.open\(\s*[\`'\"]/api" -- frontend/src` の結果は、上の3か所だけ。
 - この書き方は da004e6e6（2026-06-04・#1613）で入った。
 
