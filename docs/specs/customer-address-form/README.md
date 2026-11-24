@@ -19,10 +19,10 @@
 | 日付 | 状態 |
 |---|---|
 | 2026-11-23〜24 | PO 決定 D1〜D6（[../../handoff/customer-form-layout/decisions.md](../../handoff/customer-form-layout/decisions.md)）・実物の測定（[evidence-local.md](../../handoff/customer-form-layout/evidence-local.md)） |
-| 2026-11-24 | あるべき姿（PO の言葉）・KGI 案を作成。KGI は PO 承認待ち |
+| 2026-11-24 | あるべき姿（PO の言葉）・KGI K1〜K14 PO 承認（「1,」）。PC の見た目の依頼の書き取りもこの承認で確定 |
 
 ## 文書
 
 - [ideal-state.md](ideal-state.md) — あるべき姿（PO の言葉）
-- [kgi.md](kgi.md) — KGI（PO 承認待ち）
+- [kgi.md](kgi.md) — KGI（PO 承認済み）
 - 関連 ADR: ADR-126（登録フォームの入力の約束 v2）、ADR-027（画面の文字は翻訳キー経由）、ADR-144（UI 部品の金型）、ADR-067（デザイントークン）

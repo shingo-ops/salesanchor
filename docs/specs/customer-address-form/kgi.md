@@ -4,7 +4,7 @@
 
 親: [README.md](README.md)　／　あるべき姿: [ideal-state.md](ideal-state.md)　／　決定: [decisions.md](../../handoff/customer-form-layout/decisions.md)
 
-状態: 2026-11-24 案（PO 承認待ち）。
+状態: 2026-11-24 PO 承認（PO 回答「1,」＝「この案で承認する。国番号の欄は +000 の幅」）。
 
 試す場所: テスト用の会社（テナント001）の登録リンクを PC の Chrome（横幅 1280）で開く。社内の画面はテナント001 の会社の画面。
 
