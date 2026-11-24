@@ -90,7 +90,7 @@
 - 画面は会話の途中の予定（カルテ）を全部の欄で送る（`frontend/src/features/secretary/secretaryApi.ts:56-67`）。backend は AI に日時の 3 欄と直前に聞いた欄だけを送る（`backend/app/routers/assistant.py:190-207`。題名・場所・メモを送らないのは大きさの上限のため・`docs/handoff/secretary-event-karte/design.md:118`）。
 - AI の答えとカルテを合わせるとき、カルテに値がある欄はカルテが勝つ（`backend/app/services/secretary_karte.py:18-36`）。今のままでは、題名・時刻のように埋まった欄は声で変えられない。
 - カルテの形は知らない鍵を 422 で断る（`backend/app/schemas/assistant.py:18-32` の `extra="forbid"`）。直す頼みの印を足すには、この形に欄を足す必要がある。
-- 指示文に「埋まった予定の欄を直す頼み」の決まりは無い（`secretary-agent/prompt.txt:3-18` の 15 行）。
+- 指示文に「埋まった予定の欄を直す頼み」の決まりは無い（`secretary-agent/prompt.txt:3-18`・見出し 1 行と決まり 15 項目）。
 - はい／いいえの判定は、いいえの語が文のどこかにあれば「いいえ」（`frontend/src/features/secretary/secretaryVoiceAnswer.ts:60-65`・語の一覧は `frontend/src/locales/ja.json` の `secretary.voiceMode.noWords`）。「違う、4 時にして」は「いいえ」になり、下書きは取り消される（作られはしない）。
 
 ### 9-3 本物の AI に直す言い方を読ませた結果（2026-11-25 03:06 JST・Opus が実施）

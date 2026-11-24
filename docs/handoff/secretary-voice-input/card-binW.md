@@ -12,6 +12,7 @@
 | `backend/app/schemas/assistant.py` | design §16-4 の 1 |
 | `backend/app/services/secretary_karte.py` | §16-4 の 2（`merge_edit` を足す。`merge_karte`・`settle_dates`・`next_ask` は変えない） |
 | `backend/app/routers/assistant.py` | §16-4 の 3・4（`_agent_payload` は変えない） |
+| `frontend/api-contract/openapi.json` | §16-4 の 6（命令で書き出し直す。手で書かない） |
 | `backend/tests/test_assistant_karte.py` | §4 |
 | `secretary-agent/prompt.txt` | §16-5 の 1 行を `:14` の後に（文は design のとおり一字も変えない） |
 | `frontend/src/features/secretary/secretaryApi.ts` | §16-6 の 1 |
@@ -43,18 +44,22 @@
 
 backend（`backend/tests/test_assistant_karte.py`・今の試験の書き方に合わせる）:
 - `merge_edit`: 説明だけ（AI の description が勝つ・ほかはカルテ・変わった真）／題名を替える（カルテの題名があっても AI が勝つ）／始まりだけ（長さ 1 時間を保つ）／始まりと終わり両方／AI が null だけ（変わった偽）／AI の値が空白だけ（カルテのまま）／終日のカルテで AI が時刻を返す（時刻は替えない）／同じ時刻を別の書き方（変わった偽）／ev が None。
+- `merge_edit` に足す: 空白つきの同じ文字（変わった偽）／カルテの終わりが始まりより前（長さを足さない）／時差の印が混ざる始まり（文字で比べる）。
+- 口: `edit: true` で AI が**請求書**を返す→ event・`edited` 偽・中身はカルテ・`resolve_names` が呼ばれない／`edit: true` で「終わりを始まりより前に」の答え→ カルテのまま・`edited` 偽。
 - 口（今の karte 試験と同じ偽の AI の答え）: `edit: true` で AI が description を返す→ event・`edited` 真・`ask` null・ほかの欄はカルテ／AI が unknown を返す→ event・`edited` 偽・中身はカルテ／`edit` を付けない今の試験がそのまま通る／`edit` 無しの答えでは `edited` が null。
 
 frontend:
-- T7 を書き直す: はい／いいえでない文が 2 回とも直らない（偽の API が `edited: false`）→ 1 回目 `notEdited`、2 回目 `checkScreen`、予定は作られない。
+- T7 を書き直す（`mockResolvedValueOnce` で `edited: false` の返しを 2 回足す）: はい／いいえでない文が 2 回とも直らない（偽の API が `edited: false`）→ 1 回目 `notEdited`、2 回目 `checkScreen`、予定は作られない。
 - 足す: 「説明にテストと入れて」→ 偽の API が `edited: true`・description「テスト」の下書き → 前の下書きが `edit.replaced` の文になる・新しい下書きの説明欄が「テスト」・`editedConfirm` を読む → 「はい」で POST /calendar/events の本文の description が「テスト」。
 - 足す: 送った本文の `karte` が今の欄の値（手で直した題名を含む）と `edit: true`・`asked: null`・`asked_count: 0`。
 - 足す: 画面で「共有」を選んだ下書きを声で直すと、新しい下書きも「共有」のまま。
+- 足す: 直す頼みの API を保留にしたまま前の下書きの「作る」を押す → API を返す → 吹き出しは「作りました」のまま・新しい下書きは出ない・POST /calendar/events は 1 回。
 - 足す: 直す頼みが失敗（偽の API が 500）→ 失敗の文が出る・前の下書きは残り、ボタンで作れる。
 
 ## 5. 確かめ（push の前に全部）
 
-- `cd backend && pytest tests/test_assistant_karte.py -q`（全部緑）
+- `cd backend && pytest tests/test_assistant_karte.py tests/test_assistant_router.py -q`（全部緑）
+- `cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json` の後の `git diff --stat frontend/api-contract/openapi.json` を結果の行に貼る。差が `KarteIn.edit`・`EventDraft.edited` 以外に及べば止めて `NEEDS_DECISION:`。
 - `cd frontend && npx vitest run src/features/secretary`（全部緑）・`npx tsc --noEmit`・`npx eslint src/features/secretary`
 - `cd frontend && node scripts/check-i18n-missing-keys.js` と `node scripts/check-error-text-next-action.js`（両方とも合格）。ja と en の鍵が同じ。`askAgain` が両方から消えている（`git grep -n askAgain frontend/src` が 0 件）。
 - 生の出力は全部ファイルに残し、最後の返事に結果の行（合格の数・失敗の数）をそのまま書く。
