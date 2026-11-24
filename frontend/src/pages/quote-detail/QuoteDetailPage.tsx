@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api, ApiError } from "../../lib/api";
+import { saveBlob } from "../../lib/saveBlob";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { usePermissions } from "../../hooks/usePermissions";
 import { getStatusPresentation } from "../../utils/statusPresentation";
@@ -67,6 +68,7 @@ export default function QuoteDetailPage() {
   const invalidate = useInvalidateApi();
   const [fxRate, setFxRate] = useState<FxRateResult | null>(null);
   const [fxLoading, setFxLoading] = useState(false);
+  const [pdfSaving, setPdfSaving] = useState(false);
 
   const load = () => {
     void invalidate(["quotes", id ?? ""]);
@@ -93,8 +95,19 @@ export default function QuoteDetailPage() {
     }
   };
 
-  const handleDownloadPdf = () => {
-    window.open(`/api/quotes/${id}/pdf`, "_blank");
+  // design-pdf §3: 札つきで blob を読み、サーバーと同じ名前で保存する（金型 InvoiceCreatedModal.tsx と同じ）
+  const handleDownloadPdf = async () => {
+    if (!quote?.quote_code) return;
+    setError("");
+    setPdfSaving(true);
+    try {
+      const blob = await api.getBlob(`/quotes/${id}/pdf`);
+      saveBlob(blob, `${quote.quote_code}.pdf`);
+    } catch {
+      setError(t("common.downloadFailed"));
+    } finally {
+      setPdfSaving(false);
+    }
   };
 
   const handleFetchFxRate = async () => {
@@ -148,7 +161,9 @@ export default function QuoteDetailPage() {
                 {t("quotes.fx.fetchRate")}
               </Button>
             )}
-            <Button variant="secondary" size="sm" layoutClassName="field-h-md" onClick={handleDownloadPdf}>{t("invoices.snapshot.downloadPdf")}</Button>
+            {quote.quote_code && (
+              <Button variant="secondary" size="sm" layoutClassName="field-h-md" onClick={() => void handleDownloadPdf()} loading={pdfSaving} disabled={pdfSaving} data-testid="quote-detail-download-pdf">{t("invoices.snapshot.downloadPdf")}</Button>
+            )}
           </>
         }
       />
