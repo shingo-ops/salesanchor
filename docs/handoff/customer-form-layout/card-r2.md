@@ -20,8 +20,10 @@
 ## 確かめ
 
 - `git diff --stat origin/release/customer-form-pc-layout-impl` が上の1ファイル・1行だけ
-- `cd frontend && npx tsc --noEmit -p .` が通る（生出力を残す）
+- `cd frontend && npm run generate:api-types` を先に1回流す（型の元ファイルは git に入っていない。無いと tsc が無関係の4件で落ちる。1回目のクラウド実行で観測）
+- 続けて `npx tsc --noEmit -p .` が通る（生出力を残す）
 
 ## 想定の分岐
 
 - 前の形の行が見つからない時は止めて BLOCKED:
+- 型の元ファイルを作った後も tsc が落ちる時は、エラーの行に `RegisterPage.tsx` が含まれるかを見る。含まれれば BLOCKED:。含まれなければ、生出力を添えて commit・push してよい
