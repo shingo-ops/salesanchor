@@ -7,7 +7,7 @@ from __future__ import annotations
 import pytest
 from reportlab.pdfgen import canvas as rl_canvas
 
-from app.routers.invoices import _quote_pdf_address
+from app.routers.invoices import _join_address_lines, _quote_pdf_address
 from app.services.invoice_renderer import render_invoice_pdf, render_quote_pdf
 
 _OLD = {
@@ -76,3 +76,20 @@ def test_k4_quote_pdf_is_unchanged(drawn):
     drawn.clear()
     render_quote_pdf(_quote(stripped), {})
     assert drawn == before
+
+
+def test_join_address_lines_includes_line3():
+    row = {"address_line_1": "Line A", "address_line_2": "Line B", "address_line_3": "Line C"}
+    assert _join_address_lines(row) == "Line A Line B Line C"
+
+
+def test_join_address_lines_skips_empty_line3():
+    for empty in (None, ""):
+        row = {"address_line_1": "Line A", "address_line_2": "Line B", "address_line_3": empty}
+        assert _join_address_lines(row) == "Line A Line B"
+
+
+def test_quote_pdf_prints_line3(drawn):
+    snap = _quote_pdf_address(dict(_OLD, address="Line A Line B Line C"))
+    render_quote_pdf(_quote(snap), {})
+    assert any("Line C" in t for t in drawn)
