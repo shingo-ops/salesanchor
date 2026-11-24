@@ -78,7 +78,7 @@
   - 設定: LIVE 専用の鍵の環境変数 `GEMINI_LIVE_API_KEY` を backend だけに渡す（`docker-compose.yml`。値を入れるのは PO・§5-2）。
   - nginx: CSP の `connect-src` 1 か所（`nginx/nginx.conf:96`）。
   - 試験。
-- 対象外: kgi.md §3 のとおり。秘書の文の AI（容器 `secretary-agent`・月額契約）は変えない。AI の担当表（ADR-1058）には LIVE を入れない（§6-5）。
+- 対象外: kgi.md §3 のとおり。秘書の文の AI（本番は容器 `secretary-codex`・ChatGPT の無料プランのログイン・§4-1 の 2026-11-24 直し）は変えない。AI の担当表（ADR-1058）には LIVE を入れない（§6-5）。
 
 ## 3. 現在地の要点（recon.md の事実）
 
@@ -113,7 +113,7 @@
 
 | | 事実（出どころ）| 意味 |
 |---|---|---|
-| 今の秘書の文の AI | Claude の月額契約のログインで動かす（ADR-1056 `:15`）| 文の秘書は月額の中 |
+| 今の秘書の文の AI | **2026-11-24 直し**: 本番は ChatGPT（codex / gpt-5.6-terra・2026-11-11 21:49 JST から・ADR-1058）。本番 DB `ai_job_assignments` を reader 鍵で読んだ（2026-11-24 10:41 JST）。PO の ChatGPT は無料プラン（PO 2026-11-24「今は無料プランで動作確認や試しをしている」）。前の版の「Claude の月額契約」は古い ADR-1056 `:15` だけを読んだ誤り | 文の秘書は ChatGPT の無料プランのログインの中 |
 | Gemini の鍵で使う声の AI | 【公】Google の AI の月額プランの特典は AI Studio の画面の中だけ。鍵で API を使う分は「別に請求・管理」（ai.google.dev/gemini-api/docs/google-ai-plans）| **月額の中ではない。使った分だけ払う** |
 | Gemini の無料枠 | 【公】無料枠は料金 0 だが「製品の改善に使う: はい」。有料枠は「いいえ」（ai.google.dev/gemini-api/docs/pricing）| 無料枠だと会話が Google の学習に使われる → 有料枠が要る |
 | Gemini の使いすぎの止め | 【公】請求先の段階ごとに月の上限（段階 1 は $250）。届くと翌月 1 日まで全部の API が止まる（ai.google.dev/gemini-api/docs/billing）| 我々の上限とは別に Google 側の上限がある（§6-6）|
@@ -328,6 +328,9 @@
 
 - **H. ChatGPT の契約の種類**（Plus／Pro／Business）。Pro か Business なら、毎月の API の無料分の中で声の会話を使える（§4-1）。その場合は ② OpenAI を第一の候補にし直し、便 T0 で ① と並べて速さと 1 分の費用を測って選ぶ。Plus なら ① のまま。
   - **PO 2026-11-23「1」**: ChatGPT は Business を使う予定。席（Standard 2 席か Premium を含めるか）は、便 T0 で 1 分の費用を測ってから決める。Business は最低 2 席で、2 席分が毎月かかる（【三】値段の画面で T0 前に確かめる）。
+  - **PO 2026-11-24**: 今は ChatGPT の無料プランで試している。動くと見込めたら Business を契約する。LIVE は ChatGPT の無料分（契約の API の無料分）の中だけで作る（「1」）。→ **LIVE（便 T0 から先）は Business の契約まで作らない**。
+  - 2026-11-24 に確かめた事実（Context7 で OpenAI の公式の文書）: ChatGPT の声の会話（GPT-Live）は Plus 以上の ChatGPT のパソコンのアプリの中の機能で、API の鍵では使えない。Codex のログイン（ChatGPT のログイン）からは声の会話を呼べない（Codex の `codex-rs/core/src/realtime_conversation.rs` の `realtime_api_key()` が「realtime conversation requires API key auth」を返す）。API は ChatGPT の契約なしで使えるが、先払いの別の請求。毎月の API の無料分は Pro と Business だけ。無料の段（Free tier）は使える額の上限で、無料のお金ではない。
+  - 代わりに、0 円で作れる「交代で話す型」（ブラウザの聞き取り・Google の読み上げの無料枠・ChatGPT の無料プラン）を先に作る（PO 2026-11-24「1」・予定と請求書だけで小さく）。設計は `docs/handoff/secretary-voice-input/design.md` §15・目標は同 `kgi.md` §5。LIVE の L5（2 秒以内の返事）・L6（割り込み）はこの型では満たさない（LIVE の目標は変えない）。
   - 別の問い（PO 2026-11-23）: ChatGPT のスマホアプリから Sales Anchor を動かすこと。Sales Anchor には MCP の口が無い（`git grep -i mcp` origin/main `backend/app` で 0 件）。`oauth` は外のサービスへつなぐ側の口だけがある（`backend/app/main.py:52`・`:63`・`:76` の Discord・Google カレンダー・Meta）。Sales Anchor が OAuth の認可を出す側の口があるかは未確認。公式の文書では文字の会話から読み書きできる（Business は書き込みも可・作る前に毎回確認）。声の会話の中では使えないという利用者の報告が複数（community.openai.com/t/1382072・/t/1376009。公式の記載は無し）。**PO 2026-11-23「1」: 今は頼まず、このテーマに集中する。**
 
 - **I. 請求書を声の「はい」で作るか**（審査 2 回目 §3-2）。**PO 2026-11-23「1」: 請求書は画面の「作る」ボタンだけで作り、予定は声の「はい」で作る。** §5-1 と kgi.md L11 を直した。
