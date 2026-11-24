@@ -74,6 +74,21 @@
 - 公式の意味（developers.google.com/workspace/calendar/api/auth）: `calendar.events.owned` は「自分が持ち主の Google カレンダーの予定を見る・作る・変える・消す」。`calendar.calendars.readonly` は「カレンダーの題名・説明・時間帯などの設定を見る」。
 - 書類の上での結論: `calendar.events.owned` と `calendar.calendars.readonly` の2つで、9種すべてが許可の欄に載る。
 
+### 4-3. 実物の試し（2026-11-24・PO の主カレンダー・Google の練習用ページ OAuth 2.0 Playground の札）
+
+アプリの札ではなく Playground の札（利用者番号の頭 407408718192）で試した。権限の効き方は札によらず権限ごとに決まるため、権限の試しとして使う。合鍵の値は画面にも記録にも出していない。
+
+| 試し | 結果 |
+|---|---|
+| 1回目の同意（アカウントを選ぶ画面を長く開いたまま） | 同意の画面で `Error 400 (Bad Request)`。原因は未確認（受付の期限切れか）。何も許可されていない |
+| 2回目の同意（開き直してすぐ） | 同意できた。戻りの住所の `scope=` に `calendar.calendars.readonly` と `calendar.events.owned` の2つ |
+| calendars.get（`GET /calendar/v3/calendars/primary`） | `HTTP/1.1 200 OK`。中身に `"labelProperties"` と `"eventLabels"` がある（予定の色ラベル・ADR-1081 の読み取りが狭い権限で動く） |
+| events.insert（Meet 付き・`POST .../calendars/primary/events?conferenceDataVersion=1`・id `sacheck20261124a`・招待者なし） | `HTTP/1.1 200 OK`。返りに `"conferenceData"` と meet.google.com の会議の住所がある（住所の値は個人の予定のため記録しない） |
+| events.patch の1回目 | 送り方の選択で PATCH を押し損ね、`POST .../events/sacheck20261124a` で送った。`HTTP/1.1 404 Not Found`。予定は変わっていない（権限の試しにならないため数えない） |
+| events.patch の2回目（`PATCH .../events/sacheck20261124a`） | `HTTP/1.1 401 Unauthorized`・`"Invalid Credentials"`・`"authError"`。手順2の表示は「The access token will expire in seconds.」で残り秒数が空。権限ではなく合鍵（1時間で切れる）の期限の問題と読む（未確認）。予定は変わっていない |
+| 合鍵の更新（手順2 Refresh access token） | `HTTP/1.1 200 OK`（合鍵の値は読んでいない） |
+| events.patch の3回目（`PATCH .../events/sacheck20261124a`・本文 `{"summary":"...(patched)...","colorId":"5"}`） | `HTTP/1.1 200 OK`。返りの `"summary"` が `"Sales Anchor scope test (patched) - safe to delete"`、`"colorId"` が `"5"`。名前と色の変更が狭い権限で動く |
+
 ## 5. 未確認
 
 - `calendar.events.owned` と `calendar.calendars.readonly` の組み合わせで、実際に今の全機能が動くか（§4-2 は書類の上での照合だけ。他人から招待された予定を本人の主カレンダーで直す・消すときの動きも未確認）。
