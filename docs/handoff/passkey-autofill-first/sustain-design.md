@@ -1,6 +1,6 @@
 # パスキーの自動の候補 — 続けるための仕組み（設計案）
 
-状態: 設計案（Opus 作成・審査役2回目 REQUEST_CHANGES を受けて3版）。実装は PO の実装承認の後。
+状態: 設計案（Opus 作成・審査役3回目 REQUEST_CHANGES を受けて4版）。実装は PO の実装承認の後。
 親: [design.md](design.md) ／ KGI: [../../specs/auth-login/kgi.md](../../specs/auth-login/kgi.md)「KGI 追加 — パスキーの自動の候補」 ／ 対象 ADR: ADR-1013・ADR-1063（毎日点検の形の前例）・ADR-1051（画面点検の通知）
 
 ## 1. 目的（PO の言葉）
@@ -49,9 +49,10 @@ PO 2026-11-24:「この仕組みを標準化して管理定着させて継続さ
 - 数える人: 全社の管理者（public.users の is_super_admin が true）だけ。会社ごとの利用者は数えない。2026-11-24 の本番では id 1・3 の2人（reader 鍵で確かめた）。会社をまたぐ人の情報は出ない。
 - 数えるもの（auth_events と users だけ。ログインの成功の数え方は前例 backend/app/routers/super_admin_meta_review.py:157-166 と同じ4つの道。道の文字は backend/app/routers/auth.py:377・:1119、prefix は backend/app/main.py:260）:
   1. 人ごとのパスキーでのログイン成功＝`/api/v1/auth/passkey/login/verify` の 200
-  2. 人ごとのパスワードでのログイン成功＝`/api/v1/auth/login` の 200 ＋ `/api/v1/auth/login-requests/poll` の reason が approved_admin・approved_device ＋ `/api/v1/auth/login-requests/recovery` の 200（本番は知らない機械の確認が有効: .github/workflows/deploy.yml:442。login の 202 は数えない）
-  3. 人ごとのパスキーの割合＝(1)÷((1)+(2))。7日と30日の両方。両方0回なら「-」
-- 通知に名前・メール・IP・端末は載せない。人は id と role だけで書く（前例 backend/app/tasks/viewer_share_flag_monitor.py:4「id だけ」）。PO の id は 3（KGI の表と同じ）。Opus が月曜に読んで PO に伝える。
+  2. 人ごとのパスワードでのログイン成功を2つに分けて書く。(2a)＝`/api/v1/auth/login` の 200。(2b)＝`/api/v1/auth/login-requests/poll` の reason が approved_admin・approved_device ＋ `/api/v1/auth/login-requests/recovery` の 200（本番は知らない機械の確認が有効: .github/workflows/deploy.yml:442。login の 202 は数えない）
+  3. 人ごとのパスキーの割合＝(1)÷((1)+(2a))。PO が承認した KPI の測り方（docs/specs/auth-login/kgi.md:47）のまま変えない。(2b) は割合に入れず、件数を横に添える。7日と30日の両方。分母が0なら「-」
+- 12/24 の KPI の数えも同じ (1)÷((1)+(2a))。測り方を4つの道に広げるかは、(2b) の件数を見てから PO が決める（§11）。
+- 通知に名前・メール・IP・端末は載せない。人は id と role だけで書く（前例 backend/app/tasks/viewer_share_flag_monitor.py:4「id だけ」）。PO の id は 3（docs/adr/ADR-1056 の21行目「id 3 の PO 1 人」・docs/handoff/secretary-chat/design.md:36）。Opus が月曜に読んで PO に伝える。
 - 人の id は設定にもコードにも持たない（is_super_admin で選ぶ）。新しい設定・secrets は要らない。
 - 文の長さ: 送り方の元は本文を1800字で切る（tenant_isolation_daily_check.py:103）。1人1行・約60字で、管理者が20人を超えるまで切れない。
 - 自動点検の係（P5）はこの報告に入れない。毎朝 A5 の S2 がパスワードでログインし、失敗なら Discord に届く。
@@ -66,7 +67,7 @@ PO 2026-11-24:「この仕組みを標準化して管理定着させて継続さ
 - 入口（nginx）の行で数える。入口の行は `"POST /api/v1/auth/passkey/login/options HTTP/2.0" 499 0` の形（状態の後に数字）で、落ちた 500 も 502/504 も残る。
 - monitoring/loki/rules/jarvis/alerts.yml の auth_anomaly に1本足す。見張りの名前は `PasskeyServerError`。式は `sum(count_over_time({job="containerlogs"} |~ "\"POST /api/v1/auth/passkey/login/(options|verify) HTTP/[0-9.]+\" 5[0-9][0-9] [0-9]+" [10m])) > 0`（エスケープは alerts.yml:12 と同じ）・for 0m・severity warning・tier ticket・runbook_url は docs/runbooks/alerts.md の #passkeyservererror。届け先は今の Alertmanager（Discord）。
 - docs/runbooks/alerts.md に見出し `## PasskeyServerError` を、SustainedAuthFailure の節（:147）の後に同じ形（札・何が起きているか・最初に見るもの・直し方・止め方）で足す。monitoring/scripts/check_alert_rules.py がこのつながりを確かめる。
-- 本番（prod2）への置き方: 合流しても prod2 には自動で届かない。前例 docs/handoff/ai-ops-247/card-login-alert-bin8.md:227 の手順4と同じに Opus が置く（今の alerts.yml を控える → main の版を置く → sha256 が main と一致）。ずれは毎日 monitoring/scripts/check_config_drift.sh が数える。
+- 本番（prod2）への置き方: 合流しても prod2 には自動で届かない。前例 docs/handoff/ai-ops-247/card-login-alert-bin8.md:227 の手順4と同じに Opus が置く（今の alerts.yml を控える → main の版を置く → sha256 が main と一致）。毎日 09:23 の設定のずれの点検で誤って鳴らさないため、合流した日のうちに置く（同じ前例の手順3）。ずれは毎日 monitoring/scripts/check_config_drift.sh が数える。
 - 本番での試し（2026-11-24 13時台 JST・Loki）: 同じ式の 5xx を外した版はパスキーの道で直近7日 14件に当たり、5xx 版は 0件。誤報の元は今は無い。
 
 ### 5-3. 残りの確かめを KGI の表に書く（§4）
@@ -97,7 +98,7 @@ PO 2026-11-24:「この仕組みを標準化して管理定着させて継続さ
 | `email webauthn` が無いと S1 が赤 | GitHub の prod-ui-check を、S1 の期待を `email webauthn-x` に変えた見本の枝で手動実行し failure を見る（見本の枝は確かめた後に消す） |
 | 5-4 の見張りが prod2 で読み込まれている | prod2 の alerts.yml の sha256 が main と一致。Loki の `:3100/metrics` の `loki_ruler_` で始まり `jarvis` を含む行で、ルールの数が反映前より1本多い（前例 docs/handoff/ai-ops-247/card-stage1-bin1.md:109 の 8-4） |
 | 通知に名前・メール・IP が無い | backend の試験: 送る本文に users.full_name・email の値が入らない。CI の pytest 必須で緑 |
-| パスワードの成功を4つの道で数える | backend の試験: login 200・poll approved_admin・poll approved_device・recovery 200 を1件ずつ入れて (2) が4、login 202 は数えない |
+| パスワードの成功の数え分け | backend の試験: login 200 を1件・poll approved_admin・poll approved_device・recovery 200 を1件ずつ入れて (2a) が1・(2b) が3、login 202 は数えない。割合は (1)÷((1)+(2a)) |
 | 12/8・12/24 の数えが台帳にある | この PR の差分に tasks/todo.md の1行がある |
 | 新しい表・列・設定なし | PR の差分に migrations と .env の変更が無い |
 
@@ -116,4 +117,5 @@ PO 2026-11-24:「この仕組みを標準化して管理定着させて継続さ
 
 ## 11. 未解決（PO に戻すこと）
 - 実装（5-1・5-2・5-4）に進むかは PO の実装承認が要る。
+- KPI の測り方に (2b)（知らない機械の確認を通ったログイン）を入れるか。今は入れない（kgi.md:47 のまま）。週報で件数が見えてから PO が決める。
 - 残りの確かめ（§4 の iPhone・シークレット窓・PO の id での Android）は PO の手元の機械が要る。
