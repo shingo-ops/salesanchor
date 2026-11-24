@@ -5,7 +5,7 @@
 
 - 設計: `docs/handoff/ai-ops-247/stage4-design.md` §0 E5（:18）、§2 C3-2（:63）、§12 D3（:189）
 - 対象ADR: ADR-1012（段階4）、ADR-1052（伏せた窓）
-- 状態: 設計案作成済み。設計審査（クラウド）は未。実装は未着手
+- 状態: 設計案作成済み。設計審査（クラウド）1回目 REVISE（R1 1件）→ 直した。実装は未着手
 - 危険便: はい（`migrations/20261024_100300_create_ai_cloud_views.sql` を変える。ADR-135・ADR-136）。GO #番号が要る（POの委任に基づくClaude Opus発行）
 - 実装担当: クラウドの Sonnet（RemoteTrigger の一回実行）。push して止まる。PR は Opus が作る
 - PO の決定: D3「C3-2 を採る。alertname と severity を伏せる対象から外す（実装カードで行う）」（設計 §12 :189）。この表で新しく PO に聞くことは無い
@@ -17,7 +17,9 @@
 - 今の行: `('public','ops_incidents',ARRAY['alertname'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),`（:166）と `('public','ops_incidents',ARRAY['severity'],'mask', 同じ理由),`（:168）。status は allow（:169）。
 - tsv は alertname の行（:232）と severity の行（:240）。
 - 分類表の決まり: class は allow / mask / mask_bare、allow なら reason が空でない（`migrations/20261024_100000_create_ai_cloud_meta.sql:16-19`）。
-- このファイルは記録の対象ではない。毎回の移行の最後に EXIT trap が流す（`scripts/run_all_migrations.sh:425-449`）。記録の対象は `^run_(sql|py)` の行だけ（`scripts/lib/migration_record.sh:61-86`）で、このファイルは `docker exec … < "${REPO_DIR}/${AI_CLOUD_CREATE_SQL}"` で流れる（`scripts/run_all_migrations.sh:448`）。だからファイルを変えても記録の食い違い（(b)）にはならない。前例: 2026-11-16・11-18・11-20 に同じファイルを変えて本番に出した（`git log origin/main -- migrations/20261024_100300_create_ai_cloud_views.sql`）。
+- このファイルは記録の対象ではない。毎回の移行の最後に EXIT trap が流す（`scripts/run_all_migrations.sh:426`・`:445-448`・`:465`）。記録の対象は `^run_(sql|py)` の行だけ（`scripts/lib/migration_record.sh:61-86`）で、このファイルは `docker exec … < "${REPO_DIR}/${AI_CLOUD_CREATE_SQL}"` で流れる（`scripts/run_all_migrations.sh:448`）。だからファイルを変えても記録の食い違い（(b)）にはならない。前例: 2026-11-16（f0df9074a）・11-18（7526e4e67）・11-20（c99f45b27）に同じファイルを変えて本番に出した（フル履歴のある手元で `git log origin/main -- migrations/20261024_100300_create_ai_cloud_views.sql`）。
+- ただし別の門がある。このファイルの sha256 は `scripts/migration-guard/reference-allowlist.tsv:7` に固定されている。中身が変わると確かめ 8 の例外が効かなくなり、`scripts/check-migration-value-writes.py:164-174`（diff）と `:242-256`（repo）で落ちる。repo の検査は `.github/workflows/migration-guard.yml:441` で流れる。前例も :7 の sha を取り直し、理由欄に書き足している（card-s2-2c・card-E）。
+- このファイルが変わると `.github/workflows/migration-test.yml:1346` の前提の移行の工程も走る（CI で見る）。
 
 値はどこから来るか:
 - 見張りの知らせの口は、知らせのラベルの alertname（無ければ `unknown`）と severity をそのまま入れる（`backend/app/routers/ops.py:253-254`）。口は鍵が要る（同 :230 `require_ops_ingest`）。
@@ -40,9 +42,10 @@
 - `docs/handoff/cloud-case-ai/stage1-column-class.tsv` の :232 と :240 の 2 行
 - `backend/tests/ops/test_ai_cloud_views.py` に試験を 1 つ足す（:1017 の後ろ、:1060 の前）
 - `docs/ai-agents/ops-incident-agent.md` の :132 の 1 行
+- `scripts/migration-guard/reference-allowlist.tsv` の :7 の 1 行（sha256 と理由欄だけ）
 - 台帳 `.claude-pipeline/active-work.d/release-ai-ops-stage4-bin3-allow.md`
 
-触らない: labels・annotations など ops_incidents のほかの列の分類（mask のまま）、`backend/app/` のコード、`scripts/`、ほかの表の分類、行の数（1165 のまま）。
+触らない: labels・annotations など ops_incidents のほかの列の分類（mask のまま）、`backend/app/` のコード、`scripts/`（:7 の 1 行を除く）、ほかの表の分類、行の数（1165 のまま）。
 
 ## 2. 作り方（ブランチ release/ai-ops-stage4-bin3-allow）
 
@@ -60,11 +63,13 @@
 
 （３）`backend/tests/ops/test_ai_cloud_views.py` に `test_t10_ops_incidents_alertname_severity_are_allowed` を足す。形は :1017 の `test_t10_calendar_color_key_is_classified_on_bootstrapped_db` に合わせる:
 - `_new_db(cluster.control, "ai_cloud_t10_ops")` で専用の DB を作り、終わったら `DROP DATABASE IF EXISTS … WITH (FORCE)` で消す（:1054-1057 と同じ）。
-- 流す順: `salesanchor_app` のロールが無ければ作る（`backend/tests/test_ops_case_router.py:140` と同じ文）→ `_read(_AI_READER_SQL)` → `_read(_ROLE_SQL)` → `_read(_META_SQL)` → `_read("20261016_100000_create_ops_incident_tables.sql")` → `_read(_CREATE_SQL)`。
+- 流す順: `_read(_AI_READER_SQL)` → `_read(_ROLE_SQL)` → `_read(_META_SQL)` → `_read("20261016_100000_create_ops_incident_tables.sql")` → `_read(_CREATE_SQL)`。
 - 確かめること:
   - `ai_cloud_meta.column_class` の `schema_pattern='public' AND table_name='ops_incidents'` で、alertname と severity の行がそれぞれ 1 行・class が `allow`・reason が空でない。
   - `ai_cloud_meta.build_columns` の `view_name='public__ops_incidents'` で、alertname と severity の mode が `pass`。
   - 同じ view で labels・annotations・fingerprint・root_cause・review_note の mode が `pass` でない（伏せたまま）。
+- `salesanchor_app` のロールは作らない。ops の表の移行はロールが無くても通る（GRANT は `IF EXISTS` の中だけ。`migrations/20261016_100000_create_ops_incident_tables.sql:120-125`）。作るとクラスタに残る（`_Cluster.cleanup` は消さない。`backend/tests/ops/test_ai_cloud_views.py:80-91`）。
+- `build_columns` は admin の接続のまま `_rows(conn, sql)` で読む（SET ROLE は要らない）。
 - ほかの試験は変えない。
 
 （４）`docs/ai-agents/ops-incident-agent.md:132` の「通知の名前（alertname）と強さ（severity）は今は伏せてある（…）。名前は、サーバーが起こすときの文で渡す（…）。」を、次の文にする:
@@ -73,9 +78,16 @@
 
 （５）台帳を 1 つ足す（形は `.claude-pipeline/active-work.d/release-ai-ops-stage4-card-bin2.md` と同じ。状態 IN_PROGRESS・PR# は空）。
 
-（６）試験を流す: `backend/tests/ops/test_ai_cloud_views.py` 全部（新しい試験を含む）。手元に PostgreSQL が無く流せないときは、流せなかったことと理由を書く（CI で見る）。
+（６）`scripts/migration-guard/reference-allowlist.tsv` の :7（`migrations/20261024_100300_create_ai_cloud_views.sql` の行）を直す。（１）を最終形にした後で、最後に行う:
+- `sha256sum migrations/20261024_100300_create_ai_cloud_views.sql` の値を 2 列目に入れる。
+- 3 列目（理由）の末尾に「 / ai-ops-stage4-bin3（ops_incidents の alertname・severity を allow に変更）」を足す。
+- 列は 4 つ・タブ区切りのまま。ほかの行は変えない。
 
-（７）commit して push して止まる。PR は作らない。
+（７）確かめを流す:
+- `python3 scripts/check-migration-value-writes.py repo` の終了コードが 0。
+- `backend/tests/ops/test_ai_cloud_views.py` 全部（新しい試験を含む）。手元に PostgreSQL が無く流せないときは、流せなかったことと理由を書く（CI で見る）。
+
+（８）commit して push して止まる。PR は作らない。
 
 ## 3. 想定される分岐（ここに無い分岐は止まって報告）
 
@@ -87,6 +99,8 @@
 | 新しい試験で `20261016_100000_create_ops_incident_tables.sql` を流すところが失敗する | 名前と生の出力を出して止まる。移行のファイルは変えない |
 | 新しい試験で alertname の mode が pass にならない | 生の出力を出して止まる。生成の関数（`migrations/20261024_100000_create_ai_cloud_meta.sql`）は変えない |
 | ほかの試験が 1 つでも赤 | 名前と生の出力を出して止まる |
+| `reference-allowlist.tsv` に該当の行が無い・列が 4 つでない | 止まる |
+| `check-migration-value-writes.py repo` が 0 で終わらない | 生の出力を出して止まる |
 | tsv の列の数（6 列）が合わない行ができる | 直してから進む（タブの抜け）。直せなければ止まる |
 
 ## 4. 本番での確かめ（Opus。本番反映の後）
@@ -101,6 +115,8 @@
 | V4 | 反映の後に ai_reader_cloud の役で読んだ alertname・severity の種類と数 | 読み取りの鍵の道（`ai_ro.public__ops_incidents`）で同じ時に数えた種類と数に一致 |
 | V5 | 反映の後の labels・annotations | 伏せたまま（V1 と同じ形） |
 
+V1 の結果（2026-11-24 19:10 JST ごろ、反映の前。生の出力 /tmp/CC報告ファイル/bin3/v1-out.txt）: alertname・severity は `masked:len=…:ascii` の形で 13 組・計 1007 行。labels・annotations は `masked:json:…`。column_class は 1165 行で 4 列とも mask。build_log の最新は 2026-11-24 07:15:21 UTC・ok・ビュー 571・失敗 0。build_columns の 7 列（alertname・annotations・fingerprint・labels・review_note・root_cause・severity）はすべて mode mask。
+
 ## 5. 受け入れ基準
 
 | 基準 | 検証方法 |
@@ -109,6 +125,7 @@
 | 伏せた窓で 2 列がそのまま見え、ほかの列は伏せたまま | 新しい試験（mode）・本番 V3〜V5 |
 | 分類の行数は 1165 のまま | `backend/tests/ops/test_ai_cloud_views.py:486` が緑・本番 V3 |
 | 伏せた窓の作り直しが成功 | 本番 V2 |
+| migration-guard の repo 検査が緑（sha256 が今の中身と一致） | `python3 scripts/check-migration-value-writes.py repo` が 0・CI の migration-guard 緑 |
 | 相談係の指示書が今の見え方と合う | `docs/ai-agents/ops-incident-agent.md:132` の差分を Opus が読む |
 | 触ったファイルが §1 の範囲だけ | `git diff --name-only origin/main...HEAD` を Opus が読む |
 
@@ -116,6 +133,7 @@
 
 - この便の PR を revert して本番に出す。次の移行の終わりの作り直しで 2 列はまた伏せる（分類表は毎回空にして入れ直すため）。表の形は変えていないので、戻しのファイルは要らない。
 - revert の PR も `migrations/` を変えるので危険 PR で、GO #番号が要る。
+- revert は `reference-allowlist.tsv` の :7 の sha も一緒に戻す（同じ PR に入れてあるため、食い違わない）。
 - 戻した後、§4 の V2・V3（2 つとも mask）を同じやり方で確かめる。
 
 ## 7. 実装を頼む手順（Opus）
