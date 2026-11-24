@@ -423,8 +423,8 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 ### 15-13 画面が外れた後にマイクを開かない（便 V2・2026-11-25）
 
 - 起き方（事実・コードで確かめた）: 秘書の画面（`SecretaryChatInner`）が読み上げの途中で外れると、読み上げの部品の片付け `frontend/src/features/secretary/useSecretaryVoice.ts:107` が回数を進め、途中の `speak` は `"ok"` を返す（`:84`・`:96`）。`frontend/src/features/secretary/SecretaryChat.tsx:144` は `voiceOnRef` も回数の印 `turnRef` も変わっていないので `listen.start()` を呼ぶ。聞き取りの部品の片付け `frontend/src/features/secretary/useSecretaryListen.ts:200` はもう済んでいるので、開いたマイクを閉じる者がいない。PR #5738 の審査役の止めない指摘 1 件。
-- 外れる場面: 秘書を使う権利が無くなったとき（`SecretaryChat.tsx:436-443` の `visible` が偽）・秘書の窓を含む画面ごと消えたとき。窓を閉じるボタンは `close()` が印を進めるので今も起きない。
-- 直し方: `SecretaryChatInner` に、外れるときだけ動く片付けを 1 つ足し、`voiceOnRef` を偽にして `turnRef` を 1 進める（カード `card-binV2.md` §3）。声と聞き取りの部品は変えない（片付けは今のまま各自が行う）。
+- 外れる場面: 秘書を使う権利が無くなったとき（`frontend/src/features/secretary/SecretaryChat.tsx:436-443` の `visible` が偽）・秘書の窓を含む画面ごと消えたとき。窓を閉じるボタンは `close()` が印を進めるので今も起きない。
+- 直し方: `SecretaryChatInner` に、外れるときだけ動く片付けを 1 つ足し、`voiceOnRef` を偽にして `turnRef` を 1 進める（カード `docs/handoff/secretary-voice-input/card-binV2.md` §3）。声と聞き取りの部品は変えない（片付けは今のまま各自が行う）。
 - 代わりの案と選ばなかった理由: (a) `useSecretaryListen` に「外れた後は start を無視」を足す → ほかの使い道（声の入力の印）にも効き、範囲が広がる。(b) `speakThenListen` で毎回「まだ付いているか」を別の印で見る → 印が 2 つになり、回数の印と役目が重なる。今の回数の印を進めるだけの直しが最も小さい。
 - 確かめ方: 試験 T14（直す前は落ち、直した後は通る）。基準は kgi.md §5 V2「秘書の声が欄に入るのは 0 回」の守り。
 - 戻し方: この便の PR の merge commit を revert する。DB・設定の変更なし。
