@@ -41,7 +41,9 @@
 （６）確かめ待ちの答え: `send()` の中で、今の `voice.stop()`・`listen.abort()`（123-124 行）の**後に**置き、声で会話かつ `pendingConfirm` があるときは、`sendSecretaryMessage` を呼ばない。利用者の吹き出しは今と同じに足し、`judgeYesNo(trimmed, yesWords, noWords)`（§5）で分ける。動き・読む文・また聞くかは design.md §15-5 の表のとおり。**表の読む文はすべて `speakThenListen` で読む**（読み終わるとまた聞く）。「はい」は `eventRefs.current.get(pendingConfirm.id)?.submitByVoice()` を呼び、`false` か部品が無いときは確かめ待ちを外して `checkScreen` を読む。考え中の吹き出しは出さない。
 （７）`markCreated`・`markCancelled` の中で `pendingConfirm` を外す。`close()` でも外す。`markCreated` の読み上げは、声で会話の間は `speakThenListen` にする（作った後も会話を続けるため）。`<SecretaryDraftEvent` に `onVoiceFailed={() => { 確かめ待ちを外す; 声で会話なら speakThenListen(m.id, t("secretary.voiceMode.checkScreen")) }}` を渡す。
 （８）`eventRefs = useRef(new Map<number, SecretaryDraftEventHandle>())`。221 行の `<SecretaryDraftEvent` に `ref={(h) => { if (h) eventRefs.current.set(m.id, h); else eventRefs.current.delete(m.id); }}` を渡す。
-（９）変えない: 送るボタンの `disabled`（304 行）・マイクの印・欄の `maxLength`・`close()` のほかの処理・声で会話が切れているときの `markCreated` の読み上げ（今の `speakFor`）。
+（８-２）マイクの印を押したとき（`frontend/src/features/secretary/SecretaryChat.tsx:284-290`）: 声で会話の間に聞き始めるときだけ、`listen.start()` の前に `voice.stop()` を呼び、`turnRef` を 1 つ進める（読み上げの途中に押しても秘書の声を拾わないため・審査 4 回目 N3）。声で会話が切れているときは今のまま。
+（８-３）確かめ待ちを付けるのは、今の `sentIn === session.current`（143 行・153 行）が真のときだけ（窓を閉じた後に届いた返事では付けない）。
+（９）変えない: 送るボタンの `disabled`（304 行）・声で会話が切れているときのマイクの印・欄の `maxLength`・`close()` のほかの処理・声で会話が切れているときの `markCreated` の読み上げ（今の `speakFor`）。
 
 ## 4. SecretaryDraftEvent.tsx
 
@@ -82,7 +84,7 @@ export function judgeYesNo(text: string, yesWords: string[], noWords: string[]):
 `secretaryVoiceAnswer.test.ts`（日本語は今の試験と同じく `String.fromCharCode` か翻訳の値から作る）:
 - 「はい」→yes・「いいえ」→no・「はい、いや違う」→no・「えーと」→unknown・「ええと」→unknown・「ＯＫ」（全角）→yes・"let me look"→unknown・"I know"→unknown・"Yes, please."→yes・空の語は無視。
 
-`SecretaryChat.test.tsx`（今の偽物は 2 つの組に分かれている: 偽の AudioContext は「voice reply」の組（501-528 行付近）、偽の聞き取り FakeRec は「listen mark」の組（642-676 行付近）。T1〜T12 は両方を入れた新しい組で書く。試験は英語の画面で回るので、切り替えの名 `TOGGLE` は "Voice conversation" に直し、答えは en の語（yes・no）で言わせる）:
+`SecretaryChat.test.tsx`（今の偽物は 2 つの組に分かれている: 偽の AudioContext は「voice reply」の組（501-528 行付近）、偽の聞き取り FakeRec は「listen mark」の組（642-676 行付近）。T1〜T13 は両方を入れた新しい組で書く。試験は英語の画面で回るので、切り替えの名 `TOGGLE` は "Voice conversation" に直し、答えは en の語（yes・no）で言わせる）:
 - T1 声で会話を入れると `start` が 1 回呼ばれる。
 - T2 声で会話の間、聞き取った文があり途中の文字が空のまま 1000ms で送られる（偽の時計）。999ms では送られない。途中の文字があると送られない。手で打った文だけのときは送られない。
 - T3 声で会話が切れているときは、1000ms たっても送られない。
@@ -94,6 +96,7 @@ export function judgeYesNo(text: string, yesWords: string[], noWords: string[]):
 - T9 窓を閉じると確かめ待ちが外れる（もう一度開いて「はい」でも POST 0 回）。
 - T10 読み上げの途中で手で送ると、前の読み上げが終わっても `start` は呼ばれない（回数の印）。
 - T11 声で会話の間、マイクが開いた状態で予定の「作る」ボタンを押すと、作った知らせを読み始める前に `abort` が呼ばれ、読み上げの間に聞き取りの文が来ても送りは 0 回。
+- T13 声で会話の間、秘書の読み上げの途中でマイクの印を押すと、`start` の前に読み上げが止まり、止めた読み上げの終わりで `start` がもう 1 回呼ばれることはない。
 - T12 声で会話の間、確かめの文を読んでいる途中で予定の「作る」ボタンを押すと、前の読み上げが終わっても `start` は呼ばれず、作った知らせを読み終わったときに 1 回だけ呼ばれる。送りは 0 回。
 - 予定を作った知らせ（声で会話の間）を読み終わると `start` が呼ばれる（T5 の中で確かめる）。
 
