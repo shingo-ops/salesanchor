@@ -17,7 +17,7 @@ import {
   formatDateInput,
   formatTimeInput,
 } from "../../pages/schedule/schedule-utils";
-import type { EventDraftData } from "./secretaryApi";
+import { toKarteTime, type EventDraftData, type EventKarte } from "./secretaryApi";
 
 interface Props {
   draft: EventDraftData;
@@ -25,16 +25,22 @@ interface Props {
   onCancel: () => void;
   /** 声の「はい」で作るのに失敗したとき（今の失敗の表示のあとで呼ぶ） */
   onVoiceFailed?: () => void;
+  /** 「作る」で保存を始めた直後に呼ぶ（親が、作成の往復の間に直した下書きで置き換えないための印） */
+  onSaving?: () => void;
+  /** 画面で選び直した公開の範囲を引き継ぐときの最初の値 */
+  initialCalendarType?: "personal" | "shared";
 }
 
 /** 親が声の「はい」で「作る」を呼ぶための口（ボタンと同じ submit を呼ぶ） */
 export interface SecretaryDraftEventHandle {
   /** 作れる状態なら作り始めて true。作れない（欄が足りない・保存中）なら何もせず false */
   submitByVoice(): boolean;
+  /** 便W: 今の欄の値（直す頼みに付けるカルテ）と、画面で選んだ公開の範囲 */
+  currentValues(): { karte: EventKarte; calendarType: "personal" | "shared" };
 }
 
 export const SecretaryDraftEvent = forwardRef<SecretaryDraftEventHandle, Props>(function SecretaryDraftEvent(
-  { draft, onCreated, onCancel, onVoiceFailed },
+  { draft, onCreated, onCancel, onVoiceFailed, onSaving, initialCalendarType },
   ref,
 ) {
   const { t } = useTranslation();
@@ -48,7 +54,7 @@ export const SecretaryDraftEvent = forwardRef<SecretaryDraftEventHandle, Props>(
   const [endTime, setEndTime] = useState(() => (draft.end ? formatTimeInput(new Date(draft.end)) : ""));
   const [location, setLocation] = useState(draft.location ?? "");
   const [description, setDescription] = useState(draft.description ?? "");
-  const [calendarType, setCalendarType] = useState<"personal" | "shared">(draft.calendar_type);
+  const [calendarType, setCalendarType] = useState<"personal" | "shared">(initialCalendarType ?? draft.calendar_type);
   // ADR-1078: Meet は付けてよい人（meet_available）にだけ出す。最初の値は「はい」と答えたときだけ印あり
   const [addMeet, setAddMeet] = useState(draft.add_meet === true);
   const [saving, setSaving] = useState(false);
@@ -64,6 +70,7 @@ export const SecretaryDraftEvent = forwardRef<SecretaryDraftEventHandle, Props>(
   const submit = async () => {
     if (!canCreate) return;
     setSaving(true);
+    onSaving?.();
     setError("");
     try {
       await api.post("/calendar/events", {
@@ -89,6 +96,30 @@ export const SecretaryDraftEvent = forwardRef<SecretaryDraftEventHandle, Props>(
   submitRef.current = submit;
   const canRef = useRef(canCreate);
   canRef.current = canCreate && !saving;
+  const valuesRef = useRef<() => { karte: EventKarte; calendarType: "personal" | "shared" }>(() => {
+    throw new Error("not ready");
+  });
+  valuesRef.current = () => {
+    const text = (value: string) => value.trim().slice(0, 1000) || null;
+    const start = startDate === "" || (!allDay && startTime === "") ? null : toKarteTime(startDate, allDay ? "00:00" : startTime);
+    const end = endDate === "" || (!allDay && endTime === "") ? null : toKarteTime(endDate, allDay ? "23:59" : endTime);
+    return {
+      karte: {
+        title: text(title),
+        start,
+        end,
+        is_all_day: allDay,
+        location: text(location),
+        description: text(description),
+        is_meeting: draft.is_meeting,
+        add_meet: draft.meet_available ? addMeet : draft.add_meet,
+        asked: null,
+        asked_count: 0,
+        edit: true,
+      },
+      calendarType,
+    };
+  };
   useImperativeHandle(
     ref,
     () => ({
@@ -97,6 +128,7 @@ export const SecretaryDraftEvent = forwardRef<SecretaryDraftEventHandle, Props>(
         void submitRef.current();
         return true;
       },
+      currentValues: () => valuesRef.current(),
     }),
     [],
   );

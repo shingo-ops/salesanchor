@@ -55,7 +55,7 @@ from app.services.ai_assignment import get_ai_assignment
 from app.services.calendar_service import can_add_meet
 from app.services.llm_budget import USAGE_SDKS_BY_PROVIDER, UsageCounts, record_usage_isolated
 from app.services.secretary_dates import apply_day
-from app.services.secretary_karte import merge_karte, next_ask, settle_dates
+from app.services.secretary_karte import edit_changed, merge_edit, merge_karte, next_ask, same_time, settle_dates
 from app.services.secretary_resolve import resolve_names
 from app.services.secretary_rules import (
     RuleNotFound,
@@ -300,6 +300,7 @@ async def post_assistant_message(
     # ADR-1078: karte の鍵がある頼み＝新しい画面の道（1 通目は null）。鍵が無い頼み（開いたままの古い画面）は今と同じ動き
     new_path = "karte" in body.model_fields_set
     karte = body.karte
+    edit_mode = karte is not None and karte.edit
     now = _now_jst()
     payload = _agent_payload(body.text, assignment.model, rules, karte, now=now)
     if len(payload) > AGENT_BODY_MAX_BYTES:
@@ -330,8 +331,17 @@ async def post_assistant_message(
         final_kind = intent.kind
         final_ev: IntentEvent | None = intent.event
         event_start = event_end = None
+        edited = False
         if new_path:
-            if karte is not None and intent.kind == "unknown":
+            if edit_mode:
+                # 便W: 直す頼み。AI が値を返した欄だけ替え、ほかはカルテのまま（請求書・unknown もカルテのまま）
+                assert karte is not None
+                ai_ev = intent.event if intent.kind == "event" else None
+                if ai_ev is not None and ai_ev.start is not None and (karte.start is None or not same_time(ai_ev.start, karte.start)):
+                    ai_ev = apply_day(ai_ev, body.text, now.date(), None)
+                final_ev, edited = merge_edit(ai_ev, karte)
+                final_kind = "event"
+            elif karte is not None and intent.kind == "unknown":
                 # ④' カルテの途中の unknown は予定のまま続け、同じ欄をもう一度聞く
                 final_kind = "event"
                 final_ev = merge_karte(None, karte)
@@ -340,13 +350,23 @@ async def post_assistant_message(
                 final_ev = merge_karte(intent.event, karte)
             if final_kind == "event":
                 assert final_ev is not None
-                if intent.kind == "event":
+                if intent.kind == "event" and not edit_mode:
                     # date-reading: 今の文の日付の言い方を決まりの表で日付にする（AI の数えた日付の揺れを止める）
                     final_ev = apply_day(final_ev, body.text, now.date(), karte)
                 try:
                     final_ev = settle_dates(final_ev)
                 except (ValueError, TypeError):
                     raise _fail(502, "unreadable")
+                if edit_mode:
+                    assert karte is not None
+                    base_ev, _ = merge_edit(None, karte)
+                    if (base_ev.start is not None and final_ev.start is None) or (
+                        base_ev.end is not None and final_ev.end is None
+                    ):
+                        # 直した結果が日時を失ったら、前の下書き（カルテ）のまま・変わった＝偽
+                        final_ev, edited = base_ev, False
+                    elif edited and not edit_changed(final_ev, base_ev):
+                        edited = False
         elif intent.kind == "event":
             ev = intent.event
             assert ev is not None
@@ -373,7 +393,7 @@ async def post_assistant_message(
     await reset_tenant_context(db, tenant_id)
 
     # ⑤ 名前探し ⑥ 返す
-    if intent.kind == "invoice":
+    if final_kind == "invoice":
         inv = intent.invoice
         assert inv is not None
         candidates = await resolve_names(db, tenant_id, inv.company_name, inv.contact_name)
@@ -394,7 +414,10 @@ async def post_assistant_message(
         candidates = {"companies": [], "contacts": []}
         asked = karte.asked if karte is not None else None
         asked_count = karte.asked_count if karte is not None else 0
-        ask, ask_count = next_ask(ev, meet_available, asked, asked_count)
+        if edit_mode:
+            ask, ask_count = None, 0
+        else:
+            ask, ask_count = next_ask(ev, meet_available, asked, asked_count)
         draft = EventDraft(
             title=ev.title,
             start=ev.start,
@@ -408,6 +431,7 @@ async def post_assistant_message(
             meet_available=meet_available,
             ask=ask,
             ask_count=ask_count,
+            edited=edited if edit_mode else None,
         )
     elif intent.kind == "event":
         ev = intent.event

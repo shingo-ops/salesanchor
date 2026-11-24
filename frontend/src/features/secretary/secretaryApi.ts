@@ -4,6 +4,7 @@
  */
 
 import { api, ApiError } from "../../lib/api";
+import { combineDateTime } from "../../pages/schedule/schedule-utils";
 
 /** 口が返すのは下書きだけ。何も作られない */
 export const SECRETARY_TIMEOUT_MS = 100_000;
@@ -50,6 +51,8 @@ export interface EventDraftData {
   meet_available: boolean;
   ask: KarteAsk | null;
   ask_count: number;
+  /** 便W: 直す頼みの答えのときだけ真偽（直せたか）。ほかは null か無し */
+  edited?: boolean | null;
 }
 
 /** ADR-1078: 会話の間だけ持つ予定のカルテ（保存しない。閉じたら消す） */
@@ -64,6 +67,8 @@ export interface EventKarte {
   add_meet: boolean | null;
   asked: KarteAsk | null;
   asked_count: number;
+  /** 便W: 真なら確かめ待ちの下書きを声で直す頼み */
+  edit?: boolean;
 }
 
 /** 返ってきた下書きから次のカルテを作る（同じ名前の欄・asked ← ask・asked_count ← ask_count） */
@@ -80,6 +85,19 @@ export function karteFromDraft(draft: EventDraftData): EventKarte {
     asked: draft.ask,
     asked_count: draft.ask_count,
   };
+}
+
+/** 便W: 日付と時刻の欄の値を、時差の印つき（YYYY-MM-DDTHH:mm:00±HH:mm）の文字にする */
+export function toKarteTime(date: string, time: string): string {
+  const d = combineDateTime(date, time);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const offset = -d.getTimezoneOffset();
+  const sign = offset >= 0 ? "+" : "-";
+  const abs = Math.abs(offset);
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}:00${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`
+  );
 }
 
 export type AssistantReply =

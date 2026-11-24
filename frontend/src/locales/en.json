@@ -6323,11 +6323,15 @@
     "cancel": "Cancel",
     "thinking": "Thinking…",
     "voiceToggle": "Voice conversation",
+    "edit": {
+      "replaced": "This draft was replaced by the updated one below."
+    },
     "voiceMode": {
       "confirmEvent": "Add {{title}} on {{when}}?",
       "invoiceReady": "The invoice draft is ready. Check it on screen and press the create button.",
       "notCreated": "I did not add it.",
-      "askAgain": "Please answer yes or no.",
+      "editedConfirm": "Updated. Add {{title}} on {{when}}?",
+      "notEdited": "I could not tell what to change. Say yes, no, or what to change.",
       "checkScreen": "Please check the screen and press the create button.",
       "yesWords": "yes|yeah|ok|okay|sure|please",
       "noWords": "no|nope|cancel|stop|don't"

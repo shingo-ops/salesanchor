@@ -985,21 +985,170 @@ describe("SecretaryChat voice conversation", () => {
     expect(mock.postWithTimeout).toHaveBeenCalledTimes(1);
   }, SLOW);
 
-  it("T7: two unclear answers read askAgain then checkScreen and create nothing", async () => {
-    mock.postWithTimeout.mockResolvedValueOnce(eventReply);
+  const editReply = (draft: Record<string, unknown> = {}, edited: boolean | null = true) => ({
+    ...eventReply,
+    draft: { ...eventReply.draft, edited, ...draft },
+  });
+  const notEditedReply = () => editReply({}, false);
+  const deferred = <T,>() => {
+    let resolve: (v: T) => void = () => {};
+    let reject: (e: unknown) => void = () => {};
+    const promise = new Promise<T>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
+  };
+  const REPLACED = () => i18n.t("secretary.edit.replaced");
+
+  it("T7: two unreadable edit requests read notEdited then checkScreen and create nothing", async () => {
+    mock.postWithTimeout
+      .mockResolvedValueOnce(eventReply)
+      .mockResolvedValueOnce(notEditedReply())
+      .mockResolvedValueOnce(notEditedReply());
     await openVoice();
     await sayAndAnswered("meeting tomorrow", 1, 2);
     hear("uh");
     await waitFor(() => expect(startCount()).toBe(3), { timeout: 4000 });
-    expect(spoken()).toContain(i18n.t("secretary.voiceMode.askAgain"));
+    expect(spoken()).toContain(i18n.t("secretary.voiceMode.notEdited"));
+    expect(spoken()).not.toContain(i18n.t("secretary.voiceMode.checkScreen"));
     hear("hmm");
     await waitFor(() => expect(startCount()).toBe(4), { timeout: 4000 });
     const all = spoken();
-    expect(all.indexOf(i18n.t("secretary.voiceMode.askAgain"))).toBeLessThan(
+    expect(all.indexOf(i18n.t("secretary.voiceMode.notEdited"))).toBeLessThan(
       all.indexOf(i18n.t("secretary.voiceMode.checkScreen")),
     );
     expect(mock.post).not.toHaveBeenCalled();
-    expect(mock.postWithTimeout).toHaveBeenCalledTimes(1);
+    expect(mock.postWithTimeout).toHaveBeenCalledTimes(3);
+  }, SLOW);
+
+  it("W: after a successful edit the count restarts from zero (first miss reads notEdited)", async () => {
+    mock.postWithTimeout
+      .mockResolvedValueOnce(eventReply)
+      .mockResolvedValueOnce(editReply({ description: "Test" }))
+      .mockResolvedValueOnce(notEditedReply());
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("put test in the description");
+    await waitFor(() => expect(startCount()).toBe(3), { timeout: 4000 });
+    hear("hmm");
+    await waitFor(() => expect(startCount()).toBe(4), { timeout: 4000 });
+    expect(spoken()).toContain(i18n.t("secretary.voiceMode.notEdited"));
+    expect(spoken()).not.toContain(i18n.t("secretary.voiceMode.checkScreen"));
+  }, SLOW);
+
+  it("W: an edit replaces the draft, reads editedConfirm, and a yes creates with the new description", async () => {
+    mock.postWithTimeout
+      .mockResolvedValueOnce(eventReply)
+      .mockResolvedValueOnce(editReply({ description: "Test" }));
+    mock.post.mockResolvedValue({});
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("put test in the description");
+    await waitFor(() => expect(startCount()).toBe(3), { timeout: 4000 });
+    expect(await screen.findByText(REPLACED())).toBeTruthy();
+    expect((screen.getByLabelText("Description") as HTMLTextAreaElement).value).toBe("Test");
+    expect(spoken()).toContain("Updated. Add Meeting on");
+    hear("yes");
+    await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    expect(mock.post.mock.calls[0][0]).toBe("/calendar/events");
+    expect(mock.post.mock.calls[0][1]).toMatchObject({ description: "Test" });
+  }, SLOW);
+
+  it("W: the edit request carries the current field values (including hand-edited title) and edit:true", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(eventReply).mockResolvedValueOnce(notEditedReply());
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    fireEvent.change(screen.getByDisplayValue("Meeting"), { target: { value: "Hand edited" } });
+    hear("make it four");
+    await waitFor(() => expect(mock.postWithTimeout).toHaveBeenCalledTimes(2), { timeout: 4000 });
+    const body = mock.postWithTimeout.mock.calls[1][1] as { karte: Record<string, unknown> };
+    expect(body.karte).toMatchObject({ title: "Hand edited", edit: true, asked: null, asked_count: 0 });
+    expect(new Date(String(body.karte.start)).getTime()).toBe(new Date(eventReply.draft.start).getTime());
+    expect(new Date(String(body.karte.end)).getTime()).toBe(new Date(eventReply.draft.end).getTime());
+    expect(String(body.karte.start)).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00[+-]\d{2}:\d{2}$/);
+  }, SLOW);
+
+  it("W: a draft whose visibility was set to shared stays shared after a voice edit", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(eventReply).mockResolvedValueOnce(editReply({ location: "Shibuya" }));
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    fireEvent.change(screen.getByLabelText("Visibility"), { target: { value: "shared" } });
+    hear("location is shibuya");
+    expect(await screen.findByText(REPLACED(), undefined, { timeout: 4000 })).toBeTruthy();
+    expect((screen.getByLabelText("Visibility") as HTMLSelectElement).value).toBe("shared");
+  }, SLOW);
+
+  it("W: pressing Create while the edit request is pending leaves the old draft and shows no new one", async () => {
+    const edit = deferred<unknown>();
+    mock.postWithTimeout.mockResolvedValueOnce(eventReply).mockReturnValueOnce(edit.promise);
+    mock.post.mockResolvedValue({});
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("put test in the description");
+    await waitFor(() => expect(mock.postWithTimeout).toHaveBeenCalledTimes(2), { timeout: 4000 });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      edit.resolve(editReply({ description: "Test" }));
+    });
+    await flush();
+    expect(await screen.findByText(i18n.t("secretary.created.event"), { exact: false })).toBeTruthy();
+    expect(screen.queryByText(REPLACED())).toBeNull();
+    expect(screen.queryByDisplayValue("Test")).toBeNull();
+    expect(mock.post).toHaveBeenCalledTimes(1);
+  }, SLOW);
+
+  it("W: an edit answer arriving during the create round trip does not replace the draft", async () => {
+    const edit = deferred<unknown>();
+    const create = deferred<unknown>();
+    mock.postWithTimeout.mockResolvedValueOnce(eventReply).mockReturnValueOnce(edit.promise);
+    mock.post.mockReturnValueOnce(create.promise);
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("put test in the description");
+    await waitFor(() => expect(mock.postWithTimeout).toHaveBeenCalledTimes(2), { timeout: 4000 });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      edit.resolve(editReply({ description: "Test" }));
+    });
+    await flush();
+    expect(screen.queryByText(REPLACED())).toBeNull();
+    expect(screen.getAllByDisplayValue("Meeting").length).toBe(1);
+    await act(async () => {
+      create.resolve({});
+    });
+    await flush();
+    expect(mock.post).toHaveBeenCalledTimes(1);
+  }, SLOW);
+
+  it("W: when Create fails, an edit answer that arrives afterwards still gives a new draft", async () => {
+    const edit = deferred<unknown>();
+    mock.postWithTimeout.mockResolvedValueOnce(eventReply).mockReturnValueOnce(edit.promise);
+    mock.post.mockRejectedValueOnce(new Error("boom"));
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("put test in the description");
+    await waitFor(() => expect(mock.postWithTimeout).toHaveBeenCalledTimes(2), { timeout: 4000 });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    expect(await screen.findByText("boom")).toBeTruthy();
+    await act(async () => {
+      edit.resolve(editReply({ description: "Test" }));
+    });
+    expect(await screen.findByText(REPLACED(), undefined, { timeout: 4000 })).toBeTruthy();
+    expect((screen.getByLabelText("Description") as HTMLTextAreaElement).value).toBe("Test");
+  }, SLOW);
+
+  it("W: a failed edit request shows the error and keeps the old draft creatable", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(eventReply).mockRejectedValueOnce(new ApiError("x", 500, null));
+    mock.post.mockResolvedValue({});
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("put test in the description");
+    expect(await screen.findByText(i18n.t("secretary.error.generic"), undefined, { timeout: 4000 })).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: "Create" }));
+    await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1));
   }, SLOW);
 
   it("T8: an invoice draft reads only the fixed line and a spoken yes does not create it", async () => {

@@ -30,6 +30,8 @@ class KarteIn(BaseModel):
     add_meet: bool | None = None
     asked: AskField | None = None
     asked_count: int = Field(0, ge=0, le=2)
+    # 便W: 真なら「入れますか？」の確かめ待ちの下書きを声で直す頼み（AI が値を返した欄だけ替える）
+    edit: bool = False
 
     @field_validator("start", "end")
     @classmethod
@@ -170,6 +172,8 @@ class EventDraft(BaseModel):
     meet_available: bool = False
     ask: AskField | None = None
     ask_count: int = 0
+    # 便W: 直す頼みの答えのときだけ真偽（直せたか）。ほかは null
+    edited: bool | None = None
 
 
 class UnknownDraft(BaseModel):
