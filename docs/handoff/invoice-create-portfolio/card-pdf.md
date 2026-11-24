@@ -446,4 +446,85 @@ describe('QuoteDetailPage PDF (design-pdf)', () => {
 - 見張り（hook）に止められたら言い換えて回避しない。止めた文をそのまま報告して停止する。
 - 迷ったら推測で進めず停止して NEEDS_DECISION: で聞く。
 
+## 7. 追補1（Opus 2026-11-24 21:00 JST・CI の画面試験で1件落ちた分）
+
+### 7-0. 何が起きたか
+- CI「Frontend unit tests」で `frontend/src/components/AllLegacyButtonOperationMigration.test.tsx` の `opens invoice PDF boundaries exactly and performs no API write` が落ちた（`expected "bound " to be called once with arguments: [ '/api/invoices/3/pdf', '_blank' ]`）。
+- この試験は直す前の `window.open('/api/invoices/3/pdf')` をそのまま確かめていた。設計 §4 の影響範囲で試験側を数え忘れたのが原因（Opus の設計漏れ）。
+- `git grep -nE "/api/(invoices|quotes)/" -- frontend/src` で古い道を期待する行はこの1行だけ（2026-11-24 Opus 実測）。
+
+### 7-1. 触るファイル（追補1 はこれ1つだけ）
+- frontend/src/components/AllLegacyButtonOperationMigration.test.tsx（Edit 3 か所）
+- 触らない: §1 の4ファイル・その他すべて。
+
+### 7-2. 実装前点検
+- Q1 `git hash-object frontend/src/components/AllLegacyButtonOperationMigration.test.tsx` の先頭12字が `19cc98492222`。
+- Q2 手順A の2つの40桁（HEAD と origin の枝）が同じ。
+- 外れたら編集せず BLOCKED: で停止。
+
+### 7-3. 変更（Edit ツール。変更前の文が1か所だけ在ることを確かめてから置き換える）
+
+E1 変更前（14行目）:
+```
+const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), delete: vi.fn() }));
+```
+変更後（2行）:
+```
+const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), delete: vi.fn(), getBlob: vi.fn() }));
+const saveBlobMock = vi.hoisted(() => vi.fn());
+```
+
+E2 変更前（18行目）:
+```
+vi.mock('../lib/api', () => ({ api }));
+```
+変更後（2行）:
+```
+vi.mock('../lib/api', () => ({ api }));
+vi.mock('../lib/saveBlob', () => ({ saveBlob: saveBlobMock }));
+```
+
+E3 変更前（84〜86行目の3行）:
+```
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null); render(invoicePage());
+    fireEvent.click(await screen.findByRole('button', { name: String(instance.t('invoices.snapshot.downloadPdf')) }));
+    expect(open).toHaveBeenCalledExactlyOnceWith('/api/invoices/3/pdf', '_blank'); expect(api.post).not.toHaveBeenCalled(); expect(api.delete).not.toHaveBeenCalled();
+```
+変更後（5行）:
+```
+    const blob = new Blob(['%PDF-1.4'], { type: 'application/pdf' }); api.getBlob.mockResolvedValue(blob);
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null); render(invoicePage());
+    fireEvent.click(await screen.findByRole('button', { name: String(instance.t('invoices.snapshot.downloadPdf')) }));
+    await vi.waitFor(() => expect(saveBlobMock).toHaveBeenCalledExactlyOnceWith(blob, 'INV-3.pdf'));
+    expect(api.getBlob).toHaveBeenCalledExactlyOnceWith('/invoices/3/pdf'); expect(open).not.toHaveBeenCalled(); expect(api.post).not.toHaveBeenCalled(); expect(api.delete).not.toHaveBeenCalled();
+```
+- 試験の名前（80行目の `it(...)` の文）は変えない。
+
+### 7-4. 手順（作業場所の作り方は §3 手順1 と同じ。枝は origin に在る）
+
+手順A 作業場所（§3 手順1 のコマンドをそのまま流す。最後に `git rev-parse HEAD origin/release/invoice-detail-pdf-download` で2つの40桁を出す）
+
+手順B 点検（§7-2）
+    cd ~/worktrees/salesanchor/release-invoice-detail-pdf-download && git hash-object frontend/src/components/AllLegacyButtonOperationMigration.test.tsx
+
+手順C §7-3 の E1〜E3 を Edit ツールで置き換える。
+
+手順D 試験
+    cd ~/worktrees/salesanchor/release-invoice-detail-pdf-download/frontend && npm ci --no-audit --no-fund 2>&1 | tail -5
+    cd ~/worktrees/salesanchor/release-invoice-detail-pdf-download/frontend && npx vitest run src/components/AllLegacyButtonOperationMigration.test.tsx src/pages/invoice-detail src/pages/quote-detail 2>&1 | tail -30
+    cd ~/worktrees/salesanchor/release-invoice-detail-pdf-download/frontend && npm run check:all 2>&1 | tail -40
+  落ちたら直さず、出力の最後 40 行を貼って BLOCKED: で停止。ただし `Unexpected GET <道>` だけは §4 の1つめと同じ扱いで、この試験の mockImplementation に1条件足してよい（足した道を報告する）。
+
+手順E 差分・記録・送る
+    cd ~/worktrees/salesanchor/release-invoice-detail-pdf-download && git status --short | head -30
+    cd ~/worktrees/salesanchor/release-invoice-detail-pdf-download && git add frontend/src/components/AllLegacyButtonOperationMigration.test.tsx
+    cd ~/worktrees/salesanchor/release-invoice-detail-pdf-download && git -c user.name=shingo-cc -c user.email=shingo-cc@users.noreply.github.com commit -m "test: expect the authenticated PDF save in the legacy button test (card-pdf addendum 1)" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+    cd ~/worktrees/salesanchor/release-invoice-detail-pdf-download && git log --oneline -3
+    cd ~/worktrees/salesanchor/release-invoice-detail-pdf-download && git push -u origin release/invoice-detail-pdf-download
+    cd ~/worktrees/salesanchor/release-invoice-detail-pdf-download && git log --oneline origin/release/invoice-detail-pdf-download -1
+  status にこの試験ファイル以外の変更が出たら BLOCKED: で停止。push が拒まれたら force せず停止。
+
+### 7-5. 報告の形
+1 行目: `RECEIVED invoice-detail-pdf-addendum1 HEAD=` に手順A の HEAD の40桁。続けて手順ごとのコマンドと最後の行（試験は passed/failed の数の行）。最後の行は DONE / BLOCKED: / NEEDS_DECISION: のどれか。§6 の委任の定型はこの追補にもそのまま効く。
+
 END OF CARD

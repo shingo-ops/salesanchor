@@ -35,6 +35,7 @@ recon: `docs/handoff/invoice-create-portfolio/recon-pdf.md`
 
 ## 4. 影響範囲
 - 呼び出し元: 2つの関数はそれぞれのページの中だけで使う（`git grep -n "handleDownloadPdf\|handleDownloadCopyPdf" -- frontend/src` で対象の2ファイルのほかに `frontend/src/pages/integrations/FedexLabelValidationTab.tsx` が出るが、そのファイルの中だけの別の関数で `window.open('/api` を使っていない。触らない）。
+- 試験: `frontend/src/components/AllLegacyButtonOperationMigration.test.tsx:86` が直す前の `window.open('/api/invoices/3/pdf')` を確かめていた。最初の設計では数え忘れ、CI で落ちて見つけた（Opus の設計漏れ）。card-pdf.md §7 追補1 で、新しい形を確かめる試験に直す。`git grep -nE "/api/(invoices|quotes)/" -- frontend/src` の当たりはこの1行だけ。
 - 権限: サーバーは今と同じ invoices.view で確かめる。画面のボタンの出し方は変えない（番号が空のときだけ隠す）。
 
 ## 5. リスクと対処
