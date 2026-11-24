@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createInstance } from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -13,10 +14,20 @@ const mock = vi.hoisted(() => ({
   autoRegisterPasskey: vi.fn(),
   skipPasskeyPrompt: vi.fn(),
   registerPasskey: vi.fn(),
+  immediateGetSupported: vi.fn(),
+  immediatePasskeyLogin: vi.fn(),
+  passkeyAutofillSupported: vi.fn(),
+  startPasskeyAutofill: vi.fn(),
+  cancelPasskeyCeremony: vi.fn(),
 }));
 
 vi.mock("../../lib/auth/passkey", async (orig) => ({
   ...(await orig<typeof import("../../lib/auth/passkey")>()),
+  immediateGetSupported: mock.immediateGetSupported,
+  immediatePasskeyLogin: mock.immediatePasskeyLogin,
+  passkeyAutofillSupported: mock.passkeyAutofillSupported,
+  startPasskeyAutofill: mock.startPasskeyAutofill,
+  cancelPasskeyCeremony: mock.cancelPasskeyCeremony,
   passkeySupported: () => mock.passkey,
   selfPasskeyLogin: mock.selfPasskeyLogin,
   getPasskeyPrompt: mock.getPasskeyPrompt,
@@ -37,7 +48,7 @@ const tr = (key: string) => String(instance.t(key));
 let fetchMock: ReturnType<typeof vi.fn>;
 
 function renderLogin() {
-  render(
+  return render(
     <I18nextProvider i18n={instance}>
       <MemoryRouter initialEntries={["/login"]}>
         <AuthProvider>
@@ -81,6 +92,11 @@ beforeEach(async () => {
   mock.autoRegisterPasskey.mockReset().mockResolvedValue("created");
   mock.skipPasskeyPrompt.mockReset().mockResolvedValue(undefined);
   mock.registerPasskey.mockReset().mockResolvedValue(undefined);
+  mock.immediateGetSupported.mockReset().mockResolvedValue(false);
+  mock.immediatePasskeyLogin.mockReset().mockResolvedValue(undefined);
+  mock.passkeyAutofillSupported.mockReset().mockResolvedValue(false);
+  mock.startPasskeyAutofill.mockReset().mockImplementation(() => new Promise<void>(() => {}));
+  mock.cancelPasskeyCeremony.mockReset();
   fetchMock = vi.fn();
   vi.stubGlobal("fetch", fetchMock);
   expireSession();
@@ -370,6 +386,223 @@ describe("LoginPage (passkey button)", () => {
 
     expect(await screen.findByText(tr("authError.passkeyFailed"))).toBeTruthy();
     expect(screen.queryByText(tr("authError.invalidCredentials"))).toBeNull();
+  });
+});
+
+const named = (name: string) => Object.assign(new Error(name), { name });
+const flush = () =>
+  act(async () => {
+    await vi.advanceTimersByTimeAsync(0);
+  });
+const advance = (ms: number) =>
+  act(async () => {
+    await vi.advanceTimersByTimeAsync(ms);
+  });
+
+describe("LoginPage (passkey immediate button)", () => {
+  beforeEach(() => {
+    registerDevSession(null);
+    mock.passkey = true;
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ detail: "invalid_credentials" }), { status: 401 })),
+    );
+  });
+
+  it("T4 NotAllowedError shows the not-on-device notice; the link runs the current path once", async () => {
+    mock.immediateGetSupported.mockResolvedValue(true);
+    mock.immediatePasskeyLogin.mockRejectedValue(named("NotAllowedError"));
+    mock.selfPasskeyLogin.mockResolvedValue(undefined);
+    renderLogin();
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole("button", { name: tr("login.signInWithPasskey") }));
+
+    expect(await screen.findByText(tr("login.passkeyNotOnDevice"))).toBeTruthy();
+    expect(mock.selfPasskeyLogin).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: tr("login.passkeyUseOtherDevice") }));
+    await waitFor(() => expect(mock.selfPasskeyLogin).toHaveBeenCalledTimes(1));
+  });
+
+  it("T5 without immediate support the button uses the current path and not immediate", async () => {
+    mock.immediateGetSupported.mockResolvedValue(false);
+    mock.selfPasskeyLogin.mockResolvedValue(undefined);
+    renderLogin();
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole("button", { name: tr("login.signInWithPasskey") }));
+
+    await waitFor(() => expect(mock.selfPasskeyLogin).toHaveBeenCalledTimes(1));
+    expect(mock.immediatePasskeyLogin).not.toHaveBeenCalled();
+  });
+
+  it("T6 immediate success goes to the original page and skips the current path", async () => {
+    mock.immediateGetSupported.mockResolvedValue(true);
+    mock.immediatePasskeyLogin.mockResolvedValue(undefined);
+    await renderLoginWithHome();
+    await act(async () => {});
+
+    fireEvent.click(screen.getByRole("button", { name: tr("login.signInWithPasskey") }));
+
+    expect(await screen.findByTestId("after-login")).toBeTruthy();
+    expect(mock.immediatePasskeyLogin).toHaveBeenCalledTimes(1);
+    expect(mock.selfPasskeyLogin).not.toHaveBeenCalled();
+  });
+
+  it("T7 sign-in email has autocomplete 'email webauthn'; the reset email stays 'email'", () => {
+    renderLogin();
+    expect(screen.getByLabelText(tr("login.email")).getAttribute("autocomplete")).toBe("email webauthn");
+    fireEvent.click(screen.getByRole("button", { name: tr("login.forgotPassword") }));
+    expect(screen.getByLabelText(tr("login.email")).getAttribute("autocomplete")).toBe("email");
+  });
+});
+
+describe("LoginPage (passkey autofill)", () => {
+  let visibility: DocumentVisibilityState;
+  let visibilitySpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    registerDevSession(null);
+    mock.passkey = true;
+    mock.passkeyAutofillSupported.mockResolvedValue(true);
+    visibility = "visible";
+    visibilitySpy = vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ detail: "invalid_credentials" }), { status: 401 })),
+    );
+  });
+  afterEach(() => {
+    visibilitySpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  it("T8 starts once on open, stays silent on AbortError, and cancels on close", async () => {
+    mock.startPasskeyAutofill.mockRejectedValue(named("AbortError"));
+    const view = renderLogin();
+
+    await waitFor(() => expect(mock.startPasskeyAutofill).toHaveBeenCalledTimes(1));
+    await act(async () => {});
+    expect(document.querySelector(".error-message")).toBeNull();
+    mock.cancelPasskeyCeremony.mockClear();
+
+    view.unmount();
+
+    expect(mock.cancelPasskeyCeremony).toHaveBeenCalled();
+  });
+
+  it("T8 shows the passkey message only when verify failed", async () => {
+    mock.startPasskeyAutofill.mockRejectedValue(new SelfAuthError(401, "invalid_credentials"));
+    renderLogin();
+    expect(await screen.findByText(tr("authError.passkeyFailed"))).toBeTruthy();
+  });
+
+  it("T9 restarts after 240s (cancel first) and stops after 15 restarts", async () => {
+    vi.useFakeTimers();
+    renderLogin();
+    await flush();
+    await flush();
+    expect(mock.startPasskeyAutofill).toHaveBeenCalledTimes(1);
+
+    await advance(240_000);
+
+    expect(mock.startPasskeyAutofill).toHaveBeenCalledTimes(2);
+    const cancelOrder = mock.cancelPasskeyCeremony.mock.invocationCallOrder[0];
+    const starts = mock.startPasskeyAutofill.mock.invocationCallOrder;
+    expect(cancelOrder).toBeGreaterThan(starts[0]);
+    expect(cancelOrder).toBeLessThan(starts[1]);
+
+    for (let i = 0; i < 14; i++) await advance(240_000);
+    expect(mock.startPasskeyAutofill).toHaveBeenCalledTimes(16);
+    await advance(240_000);
+    await advance(240_000);
+    expect(mock.startPasskeyAutofill).toHaveBeenCalledTimes(16);
+  });
+
+  it("T10 does not restart while hidden; restarts once when visible again after 240s", async () => {
+    vi.useFakeTimers();
+    renderLogin();
+    await flush();
+    await flush();
+    expect(mock.startPasskeyAutofill).toHaveBeenCalledTimes(1);
+
+    document.dispatchEvent(new Event("visibilitychange"));
+    await flush();
+    expect(mock.startPasskeyAutofill).toHaveBeenCalledTimes(1);
+
+    visibility = "hidden";
+    await advance(240_000);
+    expect(mock.startPasskeyAutofill).toHaveBeenCalledTimes(1);
+
+    visibility = "visible";
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(mock.startPasskeyAutofill).toHaveBeenCalledTimes(2);
+  });
+
+  it("T11 does not restart while immediate is pending; restarts once after it ends in NotAllowedError", async () => {
+    vi.useFakeTimers();
+    mock.immediateGetSupported.mockResolvedValue(true);
+    let fail!: (e: Error) => void;
+    mock.immediatePasskeyLogin.mockReturnValue(new Promise<void>((_, reject) => { fail = reject; }));
+    renderLogin();
+    await flush();
+    await flush();
+    expect(mock.startPasskeyAutofill).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: tr("login.signInWithPasskey") }));
+    await flush();
+    await advance(1_500);
+    expect(mock.immediatePasskeyLogin).toHaveBeenCalledTimes(1);
+
+    await advance(240_000);
+    expect(mock.startPasskeyAutofill).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      fail(named("NotAllowedError"));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(mock.startPasskeyAutofill).toHaveBeenCalledTimes(2);
+    expect(screen.getByText(tr("login.passkeyNotOnDevice"))).toBeTruthy();
+  });
+
+  it("T12 isStale is true after unmount; a newer call is not stale", async () => {
+    vi.useFakeTimers();
+    const view = renderLogin();
+    await flush();
+    await flush();
+    await advance(240_000);
+    expect(mock.startPasskeyAutofill).toHaveBeenCalledTimes(2);
+    const first = mock.startPasskeyAutofill.mock.calls[0][0] as () => boolean;
+    const second = mock.startPasskeyAutofill.mock.calls[1][0] as () => boolean;
+    expect(first()).toBe(true);
+    expect(second()).toBe(false);
+
+    view.unmount();
+
+    expect(second()).toBe(true);
+  });
+
+  it("T12 under StrictMode only the last call is live; earlier ones are stale", async () => {
+    vi.useFakeTimers();
+    render(
+      <StrictMode>
+        <I18nextProvider i18n={instance}>
+          <MemoryRouter initialEntries={["/login"]}>
+            <AuthProvider>
+              <LoginPage />
+            </AuthProvider>
+          </MemoryRouter>
+        </I18nextProvider>
+      </StrictMode>,
+    );
+    await flush();
+    await flush();
+
+    const calls = mock.startPasskeyAutofill.mock.calls.map((c) => c[0] as () => boolean);
+    expect(calls.length).toBeGreaterThanOrEqual(1);
+    expect(calls[calls.length - 1]()).toBe(false);
+    for (const isStale of calls.slice(0, -1)) expect(isStale()).toBe(true);
   });
 });
 

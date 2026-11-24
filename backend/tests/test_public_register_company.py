@@ -115,3 +115,50 @@ class TestPublicRegisterCreatesCompany:
             await db_session.execute(text("SELECT name FROM companies WHERE lead_id = :l"), {"l": lead_id})
         ).scalar_one()
         assert name == "顧客花子"
+
+    async def test_separate_delivery_becomes_default(self, client, db_session):
+        lead_id = await create_lead(client, "配送先別")
+        token = await _issue_token(client, lead_id)
+        form = _form(token)
+        form["addresses"][1]["is_default"] = False
+
+        res = await client.post("/api/v1/public/register", json=form)
+        assert res.status_code == 200, res.text
+
+        flags = (
+            await db_session.execute(
+                text(
+                    "SELECT ca.is_default FROM company_addresses ca JOIN companies c ON c.id = ca.company_id "
+                    "WHERE c.lead_id = :l AND ca.address_type = 'delivery'"
+                ),
+                {"l": lead_id},
+            )
+        ).scalars().all()
+        assert [bool(f) for f in flags] == [True]
+
+    async def test_existing_default_delivery_is_kept(self, client, db_session):
+        lead_id = await create_lead(client, "配送先既存")
+        cid = await create_company(client, lead_id)
+        await db_session.execute(
+            text(
+                "INSERT INTO company_addresses (company_id, address_type, name, address_line_1, country_code, is_default) "
+                "VALUES (:c, 'delivery', 'Old Dock', '9 Old Rd', 'US', TRUE)"
+            ),
+            {"c": cid},
+        )
+        await db_session.commit()
+        token = await _issue_token(client, lead_id)
+
+        res = await client.post("/api/v1/public/register", json=_form(token))
+        assert res.status_code == 200, res.text
+
+        rows = (
+            await db_session.execute(
+                text(
+                    "SELECT name, is_default FROM company_addresses "
+                    "WHERE company_id = :c AND address_type = 'delivery' ORDER BY id"
+                ),
+                {"c": cid},
+            )
+        ).all()
+        assert [(r[0], bool(r[1])) for r in rows] == [("Old Dock", True), ("Acme Delivery", False)]
