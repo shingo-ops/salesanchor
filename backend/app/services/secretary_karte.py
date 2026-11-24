@@ -6,6 +6,8 @@ AI には次に聞く欄を決めさせない（聞く順と回数を試験で�
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+
 from app.schemas.assistant import IntentEvent, KarteIn, parse_iso
 
 ASK_ORDER = ("title", "start", "end", "add_meet")
@@ -81,3 +83,91 @@ def next_ask(ev: IntentEvent, meet_available: bool, asked: str | None, asked_cou
             return None, asked_count
         return field, asked_count + 1
     return field, 1
+
+
+def _text(value: str | None) -> str | None:
+    """前後の空白を除く。空なら None。"""
+    if value is None:
+        return None
+    stripped = value.strip()
+    return stripped or None
+
+
+def same_time(a: str | None, b: str | None) -> bool:
+    """時刻として同じか。読めない・時差の印の有無が混ざって比べられないときは文字で比べる。"""
+    if a is None or b is None:
+        return a is b
+    try:
+        return parse_iso(a) == parse_iso(b)
+    except (ValueError, TypeError):
+        return a == b
+
+
+def edit_changed(ev: IntentEvent, base: IntentEvent) -> bool:
+    """直す頼みで、題名・始まり・終わり・場所・説明・Meet のどれかが土台と違うか。"""
+    return (
+        _text(ev.title) != _text(base.title)
+        or _text(ev.location) != _text(base.location)
+        or _text(ev.description) != _text(base.description)
+        or ev.add_meet != base.add_meet
+        or not same_time(ev.start, base.start)
+        or not same_time(ev.end, base.end)
+    )
+
+
+def _read_time(value: str | None) -> datetime | None:
+    if value is None:
+        return None
+    try:
+        return parse_iso(value)
+    except ValueError:
+        return None
+
+
+def merge_edit(ev: IntentEvent | None, karte: KarteIn) -> tuple[IntentEvent, bool]:
+    """便W: 直す頼みの合わせ方（design.md §16-4 の 2）。土台はカルテ。AI が値を返した欄だけ AI の値。
+
+    戻り値は (合わせた予定, 変わったか)。ev が None なら土台のまま・変わった＝偽。
+    """
+    base = IntentEvent(
+        title=_text(karte.title),
+        start=karte.start,
+        end=karte.end,
+        is_all_day=karte.is_all_day,
+        location=_text(karte.location),
+        description=_text(karte.description),
+        is_meeting=karte.is_meeting,
+        add_meet=karte.add_meet,
+    )
+    if ev is None:
+        return base, False
+    values: dict[str, object] = base.model_dump()
+    for field in ("title", "location", "description"):
+        ai_value = _text(getattr(ev, field))
+        if ai_value is not None:
+            values[field] = ai_value
+    if ev.add_meet is not None:
+        values["add_meet"] = ev.add_meet
+    values["is_meeting"] = karte.is_meeting or ev.is_meeting
+    if not karte.is_all_day:
+        ai_start = _read_time(ev.start)
+        ai_end = _read_time(ev.end)
+        if ai_start is not None and not same_time(ev.start, karte.start):
+            values["start"] = ev.start
+        if ai_end is not None and not same_time(ev.end, karte.end):
+            values["end"] = ev.end
+        if ai_end is None and ai_start is not None and values["start"] == ev.start:
+            k_start = _read_time(karte.start)
+            k_end = _read_time(karte.end)
+            if (
+                k_start is not None
+                and k_end is not None
+                and ai_start.tzinfo is not None
+                and k_start.tzinfo is not None
+                and k_end.tzinfo is not None
+            ):
+                length = k_end - k_start
+                if length >= timedelta(0):
+                    values["end"] = (ai_start + length).isoformat(timespec="seconds")
+    merged = IntentEvent(**values)
+    return merged, edit_changed(merged, base)

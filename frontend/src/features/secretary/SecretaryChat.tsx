@@ -32,6 +32,7 @@ import {
   karteFromDraft,
   sendSecretaryMessage,
   type AssistantReply,
+  type EventDraftData,
   type EventKarte,
 } from "./secretaryApi";
 import "./SecretaryChat.css";
@@ -40,7 +41,13 @@ type ChatMessage =
   | { id: number; side: "user"; kind: "text"; text: string }
   | { id: number; side: "assistant"; kind: "text"; text: string; status?: "sending" | "error" }
   | { id: number; side: "assistant"; kind: "invoice"; reply: Extract<AssistantReply, { kind: "invoice" }> }
-  | { id: number; side: "assistant"; kind: "event"; reply: Extract<AssistantReply, { kind: "event" }> }
+  | {
+      id: number;
+      side: "assistant";
+      kind: "event";
+      reply: Extract<AssistantReply, { kind: "event" }>;
+      calendarType?: "personal" | "shared";
+    }
   | { id: number; side: "assistant"; kind: "ask"; reply: Extract<AssistantReply, { kind: "event" }> }
   | { id: number; side: "assistant"; kind: "created"; target: "invoice" | "event"; to: string };
 
@@ -95,6 +102,8 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
   // 予定の確かめ待ち（声で会話の間だけ持つ）
   const pendingConfirmRef = useRef<{ id: number; tries: number } | null>(null);
   const eventRefs = useRef(new Map<number, SecretaryDraftEventHandle>());
+  // 作った・取り消した・作成の途中の下書きの id（待つ間に直した下書きで復活させない）
+  const settledIds = useRef(new Set<number>());
   // 画面が外れたら、読み上げの途中の終わりでマイクを開かない（声と聞き取りの部品は自分で片付ける）
   useEffect(
     () => () => {
@@ -110,6 +119,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
     turnRef.current += 1;
     heardRef.current = false;
     pendingConfirmRef.current = null;
+    settledIds.current.clear();
     setOpen(false);
     setMessages([]);
     setText("");
@@ -155,6 +165,94 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
   const replaceMessage = (id: number, next: ChatMessage) =>
     setMessages((prev) => prev.map((m) => (m.id === id ? next : m)));
 
+  // 下書きの中身を読んで確かめを始める（声が続いているときだけ呼ぶ）。key は読み上げの文の鍵
+  const startConfirm = (id: number, d: EventDraftData, key: "confirmEvent" | "editedConfirm") => {
+    if (!d.title || !d.start || !d.end) {
+      void speakThenListen(id, t("secretary.voiceMode.checkScreen"));
+      return;
+    }
+    const s = new Date(d.start);
+    const e = new Date(d.end);
+    const when = formatDraftDateLine(
+      {
+        startDate: formatDateInput(s),
+        startTime: formatTimeInput(s),
+        endDate: formatDateInput(e),
+        endTime: formatTimeInput(e),
+        allDay: d.is_all_day,
+      },
+      t,
+      i18n.language,
+    );
+    pendingConfirmRef.current = { id, tries: 0 };
+    void speakThenListen(id, t(`secretary.voiceMode.${key}`, { title: d.title, when }));
+  };
+
+  // 便W: 確かめ待ちの間の、はい／いいえでない文は「直す頼み」として秘書に送る
+  const sendEdit = async (confirm: { id: number; tries: number }, trimmed: string) => {
+    const handle = eventRefs.current.get(confirm.id);
+    if (!handle) {
+      pendingConfirmRef.current = null;
+      void speakThenListen(confirm.id, t("secretary.voiceMode.checkScreen"));
+      return;
+    }
+    const { karte: editKarte, calendarType } = handle.currentValues();
+    pendingConfirmRef.current = null;
+    const pendingId = nextId.current++;
+    setMessages((prev) => [
+      ...prev,
+      { id: pendingId, side: "assistant", kind: "text", text: t("secretary.thinking"), status: "sending" },
+    ]);
+    setSending(true);
+    const sentIn = session.current;
+    try {
+      const reply = await sendSecretaryMessage(trimmed, editKarte);
+      if (sentIn !== session.current || settledIds.current.has(confirm.id)) {
+        setMessages((prev) => prev.filter((m) => m.id !== pendingId));
+        return;
+      }
+      const voiceKept = voiceOnRef.current && sentIn === session.current;
+      if (reply.kind === "event" && reply.draft.edited === true && !reply.draft.ask) {
+        replaceMessage(confirm.id, { id: confirm.id, side: "assistant", kind: "text", text: t("secretary.edit.replaced") });
+        replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "event", reply, calendarType });
+        if (voiceKept) startConfirm(pendingId, reply.draft, "editedConfirm");
+      } else {
+        replaceMessage(pendingId, {
+          id: pendingId,
+          side: "assistant",
+          kind: "text",
+          text: t("secretary.voiceMode.notEdited"),
+        });
+        if (voiceKept) {
+          if (confirm.tries === 0) {
+            pendingConfirmRef.current = { id: confirm.id, tries: 1 };
+            void speakThenListen(pendingId, t("secretary.voiceMode.notEdited"));
+          } else {
+            void speakThenListen(pendingId, t("secretary.voiceMode.checkScreen"));
+          }
+        }
+      }
+    } catch (err) {
+      const kind = classifySecretaryError(err);
+      if (kind === "forbidden") {
+        onForbidden();
+        return;
+      }
+      replaceMessage(pendingId, {
+        id: pendingId,
+        side: "assistant",
+        kind: "text",
+        text: t(`secretary.error.${kind}`),
+        status: "error",
+      });
+      if (voiceOnRef.current && sentIn === session.current) {
+        void speakThenListen(pendingId, t(`secretary.error.${kind}`));
+      }
+    } finally {
+      setSending(false);
+    }
+  };
+
   const send = async () => {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
@@ -183,12 +281,8 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
       } else if (answer === "no") {
         markCancelled(confirm.id);
         void speakThenListen(confirm.id, t("secretary.voiceMode.notCreated"));
-      } else if (confirm.tries === 0) {
-        pendingConfirmRef.current = { id: confirm.id, tries: 1 };
-        void speakThenListen(confirm.id, t("secretary.voiceMode.askAgain"));
       } else {
-        pendingConfirmRef.current = null;
-        void speakThenListen(confirm.id, t("secretary.voiceMode.checkScreen"));
+        await sendEdit(confirm, trimmed);
       }
       return;
     }
@@ -223,26 +317,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
         } else if (reply.kind === "event") {
           replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "event", reply });
           if (voiceOnRef.current && sentIn === session.current) {
-            const d = reply.draft;
-            if (!d.title || !d.start || !d.end) {
-              void speakThenListen(pendingId, t("secretary.voiceMode.checkScreen"));
-            } else {
-              const s = new Date(d.start);
-              const e = new Date(d.end);
-              const when = formatDraftDateLine(
-                {
-                  startDate: formatDateInput(s),
-                  startTime: formatTimeInput(s),
-                  endDate: formatDateInput(e),
-                  endTime: formatTimeInput(e),
-                  allDay: d.is_all_day,
-                },
-                t,
-                i18n.language,
-              );
-              pendingConfirmRef.current = { id: pendingId, tries: 0 };
-              void speakThenListen(pendingId, t("secretary.voiceMode.confirmEvent", { title: d.title, when }));
-            }
+            startConfirm(pendingId, reply.draft, "confirmEvent");
           }
         } else {
           replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "text", text: reply.draft.reply });
@@ -283,6 +358,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
 
   const markCreated = (id: number, target: "invoice" | "event", to: string) => {
     pendingConfirmRef.current = null;
+    settledIds.current.add(id);
     replaceMessage(id, { id, side: "assistant", kind: "created", target, to });
     if (voiceOnRef.current) {
       void speakThenListen(id, t(target === "invoice" ? "secretary.created.invoice" : "secretary.created.event"));
@@ -290,6 +366,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
   };
   const markCancelled = (id: number) => {
     pendingConfirmRef.current = null;
+    settledIds.current.add(id);
     replaceMessage(id, { id, side: "assistant", kind: "text", text: t("secretary.cancelled") });
   };
 
@@ -339,9 +416,13 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
                 else eventRefs.current.delete(m.id);
               }}
               draft={m.reply.draft}
+              initialCalendarType={m.calendarType}
+              onSaving={() => settledIds.current.add(m.id)}
               onCreated={() => markCreated(m.id, "event", "/schedule")}
               onCancel={() => markCancelled(m.id)}
               onVoiceFailed={() => {
+                // 作成が失敗した下書きは、また作れる状態に戻る
+                settledIds.current.delete(m.id);
                 pendingConfirmRef.current = null;
                 if (voiceOnRef.current) void speakThenListen(m.id, t("secretary.voiceMode.checkScreen"));
               }}
