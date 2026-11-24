@@ -1091,4 +1091,19 @@ describe("SecretaryChat voice conversation", () => {
     await flush();
     expect(startCount()).toBe(2);
   }, SLOW);
+
+  it("T14: unmounting during a reading does not open the mic afterwards", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(unknownReply("Hello there."));
+    const { unmount } = renderChat();
+    fireEvent.click(screen.getByRole("button", { name: FAB }));
+    fireEvent.click(await screen.findByRole("switch", { name: TOGGLE }));
+    expect(startCount()).toBe(1);
+    const release = holdNextSpeech();
+    hear("hi");
+    await waitFor(() => expect(mock.speech).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    unmount();
+    release();
+    await flush();
+    expect(startCount()).toBe(1);
+  }, SLOW);
 });

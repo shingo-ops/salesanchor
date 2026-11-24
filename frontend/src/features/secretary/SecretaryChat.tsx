@@ -95,6 +95,14 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
   // 予定の確かめ待ち（声で会話の間だけ持つ）
   const pendingConfirmRef = useRef<{ id: number; tries: number } | null>(null);
   const eventRefs = useRef(new Map<number, SecretaryDraftEventHandle>());
+  // 画面が外れたら、読み上げの途中の終わりでマイクを開かない（声と聞き取りの部品は自分で片付ける）
+  useEffect(
+    () => () => {
+      voiceOnRef.current = false;
+      turnRef.current += 1;
+    },
+    [],
+  );
 
   const close = () => {
     // 閉じたら会話とカルテを消す
