@@ -1353,6 +1353,18 @@ describe("SchedulePage on component molds (G26-G28)", () => {
     expect(badge.textContent).toBe(i18n.t("schedule.calendarLabels.meeting"));
   });
 
+  it("S5: ?connected=false&error=scope_missing shows the scope-missing message", async () => {
+    render(<MemoryRouter initialEntries={["/schedule?connected=false&error=scope_missing"]}><SchedulePage /></MemoryRouter>);
+    expect(await screen.findByText(i18n.t("schedule.connectScopeMissing"))).toBeTruthy();
+    expect(screen.queryByText(i18n.t("schedule.connectError"))).toBeNull();
+  });
+
+  it("S5: ?connected=false alone shows the generic connect error", async () => {
+    render(<MemoryRouter initialEntries={["/schedule?connected=false"]}><SchedulePage /></MemoryRouter>);
+    expect(await screen.findByText(i18n.t("schedule.connectError"))).toBeTruthy();
+    expect(screen.queryByText(i18n.t("schedule.connectScopeMissing"))).toBeNull();
+  });
+
   it("G28: the banner close is a mold Button with an svg icon and dismisses the banner", async () => {
     render(<MemoryRouter initialEntries={["/schedule?connected=true"]}><SchedulePage /></MemoryRouter>);
     const message = i18n.t("schedule.connectSuccess");

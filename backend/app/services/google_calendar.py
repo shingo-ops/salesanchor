@@ -39,7 +39,16 @@ from app.services import encryption
 
 logger = logging.getLogger(__name__)
 
-_SCOPES = ["https://www.googleapis.com/auth/calendar"]
+# 狭い2つ（design §3-1）。予定は本人が持つものだけ読み書きし、カレンダーの設定（色ラベル）は読むだけ。
+_SCOPES = [
+    "https://www.googleapis.com/auth/calendar.events.owned",
+    "https://www.googleapis.com/auth/calendar.calendars.readonly",
+]
+
+
+class GoogleScopeNotGrantedError(Exception):
+    """利用者が Google の同意の画面で、求めた許可の一部を外した。"""
+
 _REDIS_KEY_PREFIX = "google_cal_oauth_state:"
 _STATE_TTL_SECONDS = 600  # 10 分
 
@@ -197,6 +206,19 @@ async def exchange_code(code: str, state: str) -> dict:
     )
     try:
         await asyncio.to_thread(flow.fetch_token, code=code)
+    except Warning as e:
+        granted = getattr(e, "new_scope", None)
+        if not granted:
+            raw = (getattr(e, "token", None) or {}).get("scope")
+            if isinstance(raw, str):
+                granted = raw.split()
+            elif isinstance(raw, (list, tuple)):
+                granted = list(raw)
+            else:
+                granted = []
+        if not set(_SCOPES) <= set(granted or []):
+            raise GoogleScopeNotGrantedError(f"求めた許可の一部だけが許可された: {sorted(granted or [])}") from e
+        raise RuntimeError(f"Google token 交換に失敗: {e}") from e
     except Exception as e:
         raise RuntimeError(f"Google token 交換に失敗: {e}") from e
 
@@ -228,13 +250,14 @@ def _build_credentials(access_token: str, refresh_token: str, expiry: Optional[d
     """google.oauth2.credentials.Credentials を生成する。"""
     from google.oauth2.credentials import Credentials  # type: ignore[import]
 
+    # 範囲を送らないと、Google は前に許された範囲で合鍵を更新する。今つないでいる人（全部の許可）をつなぎ直させないため（design §3-1）
     return Credentials(
         token=access_token,
         refresh_token=refresh_token,
         token_uri="https://oauth2.googleapis.com/token",
         client_id=_get_client_id(),
         client_secret=_get_client_secret(),
-        scopes=_SCOPES,
+        scopes=None,
         expiry=expiry,
     )
 
