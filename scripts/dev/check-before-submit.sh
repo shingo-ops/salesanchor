@@ -9,6 +9,7 @@
 #
 # 終了コード: 0 = 流した検査が全部 ○ / 1 = 1 つでも × / 2 = 入口が使えない
 #   （commit していない変更・origin/main が無い・必須一覧が読めないか 0 件・--only の値が無いか知らない id・流した検査が 0 件）
+#   ただし commit していない変更のうち、記録していないファイルだけのとき（R4b-2 第2便）と、pre-push から呼ばれたときの直しかけの変更（第3便）は、HEAD の写しで流す
 #
 # 印と記録（R4b）:
 #   ・終了コード 0 かつ --only なしのときだけ、$(git rev-parse --git-dir)/check-before-submit.ok に HEAD の SHA を 1 行書く
@@ -30,6 +31,7 @@ set -u
 
 # --- 記録（R4b・R4b-2）: どの道で終わっても 1 行足す。書けなくても入口の結果は変えない ---
 # 引数の読み取りより前に置く（引数の誤り・--help でも 1 行残す）。7 列目 流し方・8 列目 終了コード 2 の理由
+# 写しで 0・1 のときの 8 列目: untracked-copy = 記録していないファイルだけ / tracked-copy = pre-push で直しかけの変更あり（第3便）
 CBS_MODE="-"
 CBS_REASON="-"
 HEAD_SHA=""
@@ -50,7 +52,7 @@ _cbs_log() {
   test -n "$branch" || { test "$CBS_COPY_OK" = 1 && branch="${CBS_ORIG_BRANCH:-}"; }
   caller="${CHECK_BEFORE_SUBMIT_CALLER:-manual}"
   reason="-"
-  case "$rc" in 0|1) test "$CBS_COPY_OK" = 1 && reason=untracked-copy ;; 2) reason="$CBS_REASON" ;; *) test "$CBS_REASON" = copy-rc && reason=copy-rc ;; esac
+  case "$rc" in 0|1) if test "$CBS_COPY_OK" = 1; then reason=untracked-copy; test "${CBS_COPY_KIND:-}" = tracked && reason=tracked-copy; fi ;; 2) reason="$CBS_REASON" ;; *) test "$CBS_REASON" = copy-rc && reason=copy-rc ;; esac
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$branch" "$head" "$rc" "$secs" "$caller" "$CBS_MODE" "$reason" \
     >> "${common}/check-before-submit.log" 2>/dev/null
   return $rc
@@ -123,15 +125,22 @@ if test "${CBS_IN_COPY:-}" = "1" && test -z "$(git branch --show-current 2>/dev/
   esac
 fi
 
-# --- commit していない変更があれば止める（見本の runner は commit 済みの HEAD から写しを作るため） ---
+# --- commit していない変更があれば止める（見本の runner は commit 済みの HEAD から写しを作るため）。記録していないファイルだけ、または pre-push から呼ばれたときは HEAD の写しで流す ---
 CBS_PORC=$(git status --porcelain)
 if test -n "$CBS_PORC"; then
   if printf '%s\n' "$CBS_PORC" | grep -qv '^??'; then CBS_REASON=dirty-tracked; else CBS_REASON=dirty-untracked; fi
-  # R4b-2 第2便: 記録していないファイルだけなら、HEAD の切り離しの写しを一時フォルダに作り、その中で同じ引数で流す。
+  # R4b-2 第2便・第3便: 記録していないファイルだけ、または pre-push から呼ばれたとき（直しかけの変更があっても送るのは HEAD）なら、
+  # HEAD の切り離しの写しを一時フォルダに作り、その中で同じ引数で流す。手で流したときの直しかけの変更は今までどおり 2（HEAD の 0 を「直しかけも通った」と読み違えないため）。
   # --list-fixtures のときと、写しの中（外から CBS_IN_COPY=1 が来たときも含む）では作らない
-  if test "$CBS_REASON" = "dirty-untracked" && test "$LIST_FIX" = "0" && test "${CBS_IN_COPY:-}" != "1"; then
+  if { test "$CBS_REASON" = "dirty-untracked" || { test "$CBS_REASON" = "dirty-tracked" && test "${CHECK_BEFORE_SUBMIT_CALLER:-manual}" = "pre-push"; }; } && test "$LIST_FIX" = "0" && test "${CBS_IN_COPY:-}" != "1"; then
     git status --short | head -20
-    echo "記録していないファイルがあります。HEAD の写しで流します（約 40 秒増えます）"
+    cbs_kind=untracked
+    test "$CBS_REASON" = dirty-tracked && cbs_kind=tracked
+    if test "$cbs_kind" = tracked; then
+      echo "直しかけの変更があります。push するのは HEAD なので、HEAD の写しで流します（直しかけの変更は確かめていません。約 40 秒増えます）"
+    else
+      echo "記録していないファイルがあります。HEAD の写しで流します（約 40 秒増えます）"
+    fi
     cbs_branch=$(git branch --show-current 2>/dev/null)
     cbs_gitdir=$(git rev-parse --path-format=absolute --git-dir 2>/dev/null)
     cbs_dir=$(mktemp -d "${TMPDIR:-/tmp}/cbs-copy.XXXXXX" 2>/dev/null) || { CBS_REASON=copy-fail; echo "写しの一時フォルダが作れません（終了コード 2）"; exit 2; }
@@ -147,7 +156,7 @@ if test -n "$CBS_PORC"; then
       echo "HEAD に入口の台本がありません（終了コード 2）"
       exit 2
     fi
-    (cd "$cbs_dir" 2>/dev/null || exit 3; CBS_IN_COPY=1 CBS_ORIG_BRANCH="$cbs_branch" CBS_ORIG_GITDIR="$cbs_gitdir" bash scripts/dev/check-before-submit.sh ${CBS_ARGS[@]+"${CBS_ARGS[@]}"} </dev/null)
+    (cd "$cbs_dir" 2>/dev/null || exit 3; CBS_IN_COPY=1 CBS_ORIG_BRANCH="$cbs_branch" CBS_ORIG_GITDIR="$cbs_gitdir" CBS_COPY_KIND="$cbs_kind" bash scripts/dev/check-before-submit.sh ${CBS_ARGS[@]+"${CBS_ARGS[@]}"} </dev/null)
     cbs_rc=$?
     case "$cbs_rc" in
       0|1|2) CBS_SKIP_LOG=1 ;;
