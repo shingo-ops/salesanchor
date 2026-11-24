@@ -15,7 +15,9 @@ import i18n from "../../i18n";
 import { COUNTRIES } from "../../constants/countries";
 import { CountryCombobox } from "./CountryCombobox";
 import { Button } from "../../components/Button";
-import { TextFieldControl } from "../../components/TextField";
+import { TextField, TextFieldControl } from "../../components/TextField";
+import { TwoColumn } from "../../components/TwoColumn";
+import { DELIVERY_ADDRESS_LINE_MAX, deliveryAddressLineError } from "../../utils/addressRules";
 import { Radio } from "../../components/Radio";
 import { LoadingBlock } from "../../components/loading";
 
@@ -77,6 +79,17 @@ function resolveErrorCode(code: unknown, t: (key: string) => string): string {
   }
   return t("registration.submitError");
 }
+
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/** 住所1〜3の決まり違反の文（合えば undefined）。画面の決まりは utils/addressRules.ts の1か所。 */
+function lineRuleText(value: string, t: Translate): string | undefined {
+  const key = deliveryAddressLineError(value);
+  return key ? t(key, { max: DELIVERY_ADDRESS_LINE_MAX }) : undefined;
+}
+
+const hasLineViolation = (a: AddressForm) =>
+  [a.address_line_1, a.address_line_2, a.address_line_3].some((v) => deliveryAddressLineError(v) !== null);
 
 export default function RegisterPage() {
   const { t } = useTranslation();
@@ -164,6 +177,10 @@ export default function RegisterPage() {
       setError(t("registration.countryRequired"));
       return;
     }
+    // 請求先は「Ship to the same address.」の時だけ決まりを当てる（欄の赤と文で知らせる）
+    if (shippingChoice === "same" && hasLineViolation(billingAddress)) {
+      return;
+    }
     setSubmitting(true);
 
     // Prepare billing address with combined phone
@@ -190,6 +207,10 @@ export default function RegisterPage() {
       }
       if (!deliveryAddress.country_code.trim()) {
         setError(t("registration.shippingCountryRequired"));
+        setSubmitting(false);
+        return;
+      }
+      if (hasLineViolation(deliveryAddress)) {
         setSubmitting(false);
         return;
       }
@@ -246,7 +267,7 @@ export default function RegisterPage() {
 
   if (loading) {
     return (
-      <div className="page-container" style={{ maxWidth: "600px", margin: "0 auto", padding: "var(--spacing-6)" }}>
+      <div className="page-container" style={{ maxWidth: "var(--max-width-public-form)", margin: "0 auto", padding: 0 }}>
         <LoadingBlock />
       </div>
     );
@@ -254,7 +275,7 @@ export default function RegisterPage() {
 
   if (error && !tokenInfo) {
     return (
-      <div className="page-container" style={{ maxWidth: "600px", margin: "0 auto", padding: "var(--spacing-6)" }}>
+      <div className="page-container" style={{ maxWidth: "var(--max-width-public-form)", margin: "0 auto", padding: 0 }}>
         <div className="error-banner">{error}</div>
       </div>
     );
@@ -262,7 +283,7 @@ export default function RegisterPage() {
 
   if (submitted) {
     return (
-      <div className="page-container" style={{ maxWidth: "600px", margin: "0 auto", padding: "var(--spacing-6)" }}>
+      <div className="page-container" style={{ maxWidth: "var(--max-width-public-form)", margin: "0 auto", padding: 0 }}>
         <h1>{t("registration.completeTitle")}</h1>
         <p>{t("registration.completeMessage")}</p>
       </div>
@@ -274,20 +295,22 @@ export default function RegisterPage() {
   const updateDelivery = (field: keyof AddressForm, value: string | boolean) =>
     setDeliveryAddress((prev) => ({ ...prev, [field]: value }));
 
-  const requiredMark = <span style={{ color: "var(--color-red-500)", fontWeight: "var(--font-weight-bold)" }}>*</span>;
+  // 請求先に決まりを当てるのは「Ship to the same address.」の時だけ（K8・D2）
+  const billingRule = shippingChoice === "same";
+
+  const requiredMark = <span style={{ color: "var(--danger)", fontWeight: "var(--font-weight-bold)" }}>*</span>;
 
   return (
-    <div className="page-container" style={{ maxWidth: "600px", margin: "0 auto", padding: "var(--spacing-6)" }}>
-      {/* Language toggle */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--spacing-3)" }}>
+    <div className="page-container" style={{ maxWidth: "var(--max-width-public-form)", margin: "0 auto", padding: 0 }}>
+      {/* Title row with language toggle (K1) */}
+      <div className="page-header">
+        <h1>{t("registration.title")}</h1>
         <Button variant="ghost" size="md" type="button" onClick={toggleLang}>
           {currentLang === "en" ? t("registration.switchToJapanese") : t("registration.switchToEnglish")}
         </Button>
       </div>
-
-      <h1>{t("registration.title")}</h1>
       {tokenInfo?.company_name && (
-        <p style={{ color: "var(--text-secondary)", marginBottom: "var(--spacing-4)" }}>
+        <p style={{ color: "var(--text-secondary)", marginBottom: "var(--space-4)" }}>
           {t("registration.companyLabel")}: {tokenInfo.company_name}
         </p>
       )}
@@ -296,14 +319,14 @@ export default function RegisterPage() {
 
       <form onSubmit={handleSubmit}>
         {/* Section 1: Billing Address Registration */}
-        <fieldset style={{ border: "1px solid var(--border-default)", borderRadius: "var(--radius-md)", padding: "var(--spacing-4)", marginBottom: "var(--spacing-4)" }}>
+        <fieldset style={{ border: "none", borderRadius: "var(--radius-md)", padding: 0, marginBottom: "var(--space-4)" }}>
           <legend style={{ fontWeight: "var(--font-weight-bold)" }}>{t("registration.section1Title")}</legend>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-3)" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
             {/* 1. Billing Name */}
             <label>
               {t("registration.billingName")} {requiredMark}
-              <p style={{ fontSize: "var(--font-size-xs)", color: "var(--text-secondary)", margin: "0 0 var(--spacing-1)" }}>
+              <p style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)", margin: "0 0 var(--space-1)" }}>
                 {t("registration.billingNameHint")}
               </p>
               <TextFieldControl
@@ -318,16 +341,14 @@ export default function RegisterPage() {
             <label>
               {t("registration.telephone")} {requiredMark}
             </label>
-            <div style={{ display: "flex", gap: "var(--spacing-2)" }}>
-              <div style={{ width: "140px", flexShrink: 0 }}>
+            <div style={{ display: "flex", gap: "var(--space-2)" }}>
+              <div className="field-w-xs" style={{ flexShrink: 0 }}>
                 <CountryCombobox
                   entries={COUNTRIES}
                   value={billingAddress.telephone_dial}
-                  onChange={(val) => {
-                    const found = COUNTRIES.find((c) => `${c.dial} ${c.code}` === val);
-                    updateBilling("telephone_dial", found ? found.dial : val);
-                  }}
-                  displayFn={(c) => `${c.dial} ${c.code}`}
+                  onChange={(val) => updateBilling("telephone_dial", val)}
+                  displayFn={(c) => c.dial}
+                  optionLabelFn={(c) => `${c.dial} ${c.name}`}
                   filterFn={(c, q) =>
                     c.name.toLowerCase().includes(q) ||
                     c.code.toLowerCase().includes(q) ||
@@ -360,7 +381,7 @@ export default function RegisterPage() {
             {/* 4. Payment Account Name (optional) */}
             <label>
               {t("registration.paymentRecipientName")}
-              <p style={{ fontSize: "var(--font-size-xs)", color: "var(--text-secondary)", margin: "0 0 var(--spacing-1)" }}>
+              <p style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)", margin: "0 0 var(--space-1)" }}>
                 {t("registration.paymentRecipientNameHint")}
               </p>
               <TextFieldControl
@@ -381,25 +402,32 @@ export default function RegisterPage() {
             </label>
 
             {/* 6. Address Line 1 */}
-            <label>
-              {t("registration.addressLine1")} {requiredMark}
-              <TextFieldControl
-                type="text"
-                value={billingAddress.address_line_1}
-                onChange={(e) => updateBilling("address_line_1", e.target.value)}
-                required
-              />
-            </label>
+            <TextField
+              label={t("registration.addressLine1")}
+              required
+              fullWidth
+              value={billingAddress.address_line_1}
+              onChange={(e) => updateBilling("address_line_1", e.target.value)}
+              error={billingRule ? lineRuleText(billingAddress.address_line_1, t) : undefined}
+            />
 
             {/* 7. Address Line 2 */}
-            <label>
-              {t("registration.addressLine2Hint")}
-              <TextFieldControl
-                type="text"
-                value={billingAddress.address_line_2}
-                onChange={(e) => updateBilling("address_line_2", e.target.value)}
-              />
-            </label>
+            <TextField
+              label={t("registration.addressLine2Hint")}
+              fullWidth
+              value={billingAddress.address_line_2}
+              onChange={(e) => updateBilling("address_line_2", e.target.value)}
+              error={billingRule ? lineRuleText(billingAddress.address_line_2, t) : undefined}
+            />
+
+            {/* 7b. Address Line 3 (K9) */}
+            <TextField
+              label={t("registration.addressLine3")}
+              fullWidth
+              value={billingAddress.address_line_3}
+              onChange={(e) => updateBilling("address_line_3", e.target.value)}
+              error={billingRule ? lineRuleText(billingAddress.address_line_3, t) : undefined}
+            />
 
             {/* 8. City */}
             <label>
@@ -411,25 +439,25 @@ export default function RegisterPage() {
               />
             </label>
 
-            {/* 9. State */}
-            <label>
-              {t("registration.state")}
-              <TextFieldControl
-                type="text"
-                value={billingAddress.state}
-                onChange={(e) => updateBilling("state", e.target.value)}
-              />
-            </label>
-
-            {/* 10. ZIP */}
-            <label>
-              {t("registration.zip")}
-              <TextFieldControl
-                type="text"
-                value={billingAddress.zip}
-                onChange={(e) => updateBilling("zip", e.target.value)}
-              />
-            </label>
+            {/* 9. State + 10. ZIP (K3) */}
+            <TwoColumn ratio="1:1" gap="4">
+              <label>
+                {t("registration.state")}
+                <TextFieldControl
+                  type="text"
+                  value={billingAddress.state}
+                  onChange={(e) => updateBilling("state", e.target.value)}
+                />
+              </label>
+              <label>
+                {t("registration.zip")}
+                <TextFieldControl
+                  type="text"
+                  value={billingAddress.zip}
+                  onChange={(e) => updateBilling("zip", e.target.value)}
+                />
+              </label>
+            </TwoColumn>
 
             {/* 11. Country */}
             <label>
@@ -451,8 +479,8 @@ export default function RegisterPage() {
             />
 
             {/* 12. Shipping question */}
-            <div style={{ marginTop: "var(--spacing-3)" }}>
-              <p style={{ fontWeight: "var(--font-weight-bold)", marginBottom: "var(--spacing-2)" }}>
+            <div style={{ marginTop: "var(--space-3)" }}>
+              <p style={{ fontWeight: "var(--font-weight-bold)", marginBottom: "var(--space-2)" }}>
                 {t("registration.shippingQuestion")} {requiredMark}
               </p>
               <div>
@@ -479,7 +507,7 @@ export default function RegisterPage() {
 
         {/* Section 2: Shipping Address Registration (hidden when "same") */}
         {shippingChoice === "proceed" && (
-          <fieldset style={{ border: "1px solid var(--border-default)", borderRadius: "var(--radius-md)", padding: "var(--spacing-4)", marginBottom: "var(--spacing-4)" }}>
+          <fieldset style={{ border: "none", borderRadius: "var(--radius-md)", padding: 0, marginBottom: "var(--space-4)" }}>
             <legend style={{ fontWeight: "var(--font-weight-bold)" }}>{t("registration.section2Title")}</legend>
             <ShippingAddressFields
               address={deliveryAddress}
@@ -489,14 +517,14 @@ export default function RegisterPage() {
         )}
 
         {/* Contact Info */}
-        <fieldset style={{ border: "2px solid var(--color-primary)", borderRadius: "var(--radius-md)", padding: "var(--spacing-4)", marginBottom: "var(--spacing-4)" }}>
-          <legend style={{ fontWeight: "var(--font-weight-bold)", padding: "0 var(--spacing-2)" }}>
+        <fieldset style={{ border: "none", borderRadius: "var(--radius-md)", padding: 0, marginBottom: "var(--space-4)" }}>
+          <legend style={{ fontWeight: "var(--font-weight-bold)", padding: "0 var(--space-2)" }}>
             {t("registration.contactInfo")}
           </legend>
-          <p style={{ fontSize: "var(--font-size-sm)", color: "var(--text-secondary)", margin: "0 0 var(--spacing-3)" }}>
+          <p style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", margin: "0 0 var(--space-3)" }}>
             {t("registration.contactHint")}
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-3)" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
             <label>
               {t("registration.contactName")}
               <TextFieldControl
@@ -548,10 +576,10 @@ function ShippingAddressFields({
   const { t } = useTranslation();
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-3)" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
       {/* 1. Recipient Name */}
       <label>
-        {t("registration.recipientName")} <span style={{ color: "var(--color-red-500)", fontWeight: "var(--font-weight-bold)" }}>*</span>
+        {t("registration.recipientName")} <span style={{ color: "var(--danger)", fontWeight: "var(--font-weight-bold)" }}>*</span>
         <TextFieldControl
           type="text"
           value={address.name}
@@ -562,16 +590,14 @@ function ShippingAddressFields({
 
       {/* 2. Telephone Number (optional for shipping) */}
       <label>{t("registration.telephone")}</label>
-      <div style={{ display: "flex", gap: "var(--spacing-2)" }}>
-        <div style={{ width: "140px", flexShrink: 0 }}>
+      <div style={{ display: "flex", gap: "var(--space-2)" }}>
+        <div className="field-w-xs" style={{ flexShrink: 0 }}>
           <CountryCombobox
             entries={COUNTRIES}
             value={address.telephone_dial}
-            onChange={(val) => {
-              const found = COUNTRIES.find((c) => `${c.dial} ${c.code}` === val);
-              onChange("telephone_dial", found ? found.dial : val);
-            }}
-            displayFn={(c) => `${c.dial} ${c.code}`}
+            onChange={(val) => onChange("telephone_dial", val)}
+            displayFn={(c) => c.dial}
+            optionLabelFn={(c) => `${c.dial} ${c.name}`}
             filterFn={(c, q) =>
               c.name.toLowerCase().includes(q) ||
               c.code.toLowerCase().includes(q) ||
@@ -610,35 +636,32 @@ function ShippingAddressFields({
       </label>
 
       {/* 5. Address Line 1 */}
-      <label>
-        {t("registration.addressLine1")} <span style={{ color: "var(--color-red-500)", fontWeight: "var(--font-weight-bold)" }}>*</span>
-        <TextFieldControl
-          type="text"
-          value={address.address_line_1}
-          onChange={(e) => onChange("address_line_1", e.target.value)}
-          required
-        />
-      </label>
+      <TextField
+        label={t("registration.addressLine1")}
+        required
+        fullWidth
+        value={address.address_line_1}
+        onChange={(e) => onChange("address_line_1", e.target.value)}
+        error={lineRuleText(address.address_line_1, t)}
+      />
 
       {/* 6. Address Line 2 */}
-      <label>
-        {t("registration.addressLine2")}
-        <TextFieldControl
-          type="text"
-          value={address.address_line_2}
-          onChange={(e) => onChange("address_line_2", e.target.value)}
-        />
-      </label>
+      <TextField
+        label={t("registration.addressLine2")}
+        fullWidth
+        value={address.address_line_2}
+        onChange={(e) => onChange("address_line_2", e.target.value)}
+        error={lineRuleText(address.address_line_2, t)}
+      />
 
       {/* 7. Address Line 3 (shipping only, ADR-126) */}
-      <label>
-        {t("registration.addressLine3")}
-        <TextFieldControl
-          type="text"
-          value={address.address_line_3}
-          onChange={(e) => onChange("address_line_3", e.target.value)}
-        />
-      </label>
+      <TextField
+        label={t("registration.addressLine3")}
+        fullWidth
+        value={address.address_line_3}
+        onChange={(e) => onChange("address_line_3", e.target.value)}
+        error={lineRuleText(address.address_line_3, t)}
+      />
 
       {/* 8. City */}
       <label>
@@ -650,29 +673,29 @@ function ShippingAddressFields({
         />
       </label>
 
-      {/* 9. State */}
-      <label>
-        {t("registration.state")}
-        <TextFieldControl
-          type="text"
-          value={address.state}
-          onChange={(e) => onChange("state", e.target.value)}
-        />
-      </label>
-
-      {/* 10. ZIP */}
-      <label>
-        {t("registration.zip")}
-        <TextFieldControl
-          type="text"
-          value={address.zip}
-          onChange={(e) => onChange("zip", e.target.value)}
-        />
-      </label>
+      {/* 9. State + 10. ZIP (K3) */}
+      <TwoColumn ratio="1:1" gap="4">
+        <label>
+          {t("registration.state")}
+          <TextFieldControl
+            type="text"
+            value={address.state}
+            onChange={(e) => onChange("state", e.target.value)}
+          />
+        </label>
+        <label>
+          {t("registration.zip")}
+          <TextFieldControl
+            type="text"
+            value={address.zip}
+            onChange={(e) => onChange("zip", e.target.value)}
+          />
+        </label>
+      </TwoColumn>
 
       {/* 11. Country */}
       <label>
-        {t("registration.country")} <span style={{ color: "var(--color-red-500)", fontWeight: "var(--font-weight-bold)" }}>*</span>
+        {t("registration.country")} <span style={{ color: "var(--danger)", fontWeight: "var(--font-weight-bold)" }}>*</span>
       </label>
       <CountryCombobox
         entries={COUNTRIES}

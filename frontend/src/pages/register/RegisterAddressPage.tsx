@@ -12,7 +12,9 @@ import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 import { COUNTRIES, type CountryEntry } from "../../constants/countries";
 import { Button } from "../../components/Button";
-import { TextFieldControl } from "../../components/TextField";
+import { TextField, TextFieldControl } from "../../components/TextField";
+import { TwoColumn } from "../../components/TwoColumn";
+import { DELIVERY_ADDRESS_LINE_MAX, deliveryAddressLineError } from "../../utils/addressRules";
 import { CountryCombobox } from "./CountryCombobox";
 import { LoadingBlock } from "../../components/loading";
 
@@ -126,6 +128,10 @@ export default function RegisterAddressPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // 送り先の住所1〜3の決まり違反は送らない（欄の赤と文で知らせる）
+    if ([address.address_line_1, address.address_line_2, address.address_line_3].some((v) => deliveryAddressLineError(v) !== null)) {
+      return;
+    }
     setSubmitting(true);
     setError("");
 
@@ -167,7 +173,7 @@ export default function RegisterAddressPage() {
 
   if (loading) {
     return (
-      <div className="page-container" style={{ maxWidth: "600px", margin: "0 auto", padding: "var(--spacing-6)" }}>
+      <div className="page-container" style={{ maxWidth: "var(--max-width-public-form)", margin: "0 auto", padding: 0 }}>
         <LoadingBlock />
       </div>
     );
@@ -175,7 +181,7 @@ export default function RegisterAddressPage() {
 
   if (error && !tokenInfo) {
     return (
-      <div className="page-container" style={{ maxWidth: "600px", margin: "0 auto", padding: "var(--spacing-6)" }}>
+      <div className="page-container" style={{ maxWidth: "var(--max-width-public-form)", margin: "0 auto", padding: 0 }}>
         <div className="error-banner">{error}</div>
       </div>
     );
@@ -183,30 +189,34 @@ export default function RegisterAddressPage() {
 
   if (submitted) {
     return (
-      <div className="page-container" style={{ maxWidth: "600px", margin: "0 auto", padding: "var(--spacing-6)" }}>
+      <div className="page-container" style={{ maxWidth: "var(--max-width-public-form)", margin: "0 auto", padding: 0 }}>
         <h1>{t("registration.addressAddedTitle")}</h1>
         <p>{t("registration.addressAddedMessage")}</p>
       </div>
     );
   }
 
+  const lineRuleText = (value: string): string | undefined => {
+    const key = deliveryAddressLineError(value);
+    return key ? t(key, { max: DELIVERY_ADDRESS_LINE_MAX }) : undefined;
+  };
+
   const updateField = (field: keyof AddressForm, value: string | boolean) =>
     setAddress((prev) => ({ ...prev, [field]: value }));
 
-  const requiredMark = <span style={{ color: "var(--color-red-500)", fontWeight: "var(--font-weight-bold)" }}>*</span>;
+  const requiredMark = <span style={{ color: "var(--danger)", fontWeight: "var(--font-weight-bold)" }}>*</span>;
 
   return (
-    <div className="page-container" style={{ maxWidth: "600px", margin: "0 auto", padding: "var(--spacing-6)" }}>
-      {/* Language toggle */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--spacing-3)" }}>
+    <div className="page-container" style={{ maxWidth: "var(--max-width-public-form)", margin: "0 auto", padding: 0 }}>
+      {/* Title row with language toggle (K1) */}
+      <div className="page-header">
+        <h1>{t("registration.addAddressTitle")}</h1>
         <Button variant="ghost" size="md" type="button" onClick={toggleLang}>
           {currentLang === "en" ? t("registration.switchToJapanese") : t("registration.switchToEnglish")}
         </Button>
       </div>
-
-      <h1>{t("registration.addAddressTitle")}</h1>
       {tokenInfo?.company_name && (
-        <p style={{ color: "var(--text-secondary)", marginBottom: "var(--spacing-4)" }}>
+        <p style={{ color: "var(--text-secondary)", marginBottom: "var(--space-4)" }}>
           {t("registration.companyLabel")}: {tokenInfo.company_name}
         </p>
       )}
@@ -214,9 +224,9 @@ export default function RegisterAddressPage() {
       {error && <div className="error-banner">{error}</div>}
 
       <form onSubmit={handleSubmit}>
-        <fieldset style={{ border: "1px solid var(--border-default)", borderRadius: "var(--radius-md)", padding: "var(--spacing-4)", marginBottom: "var(--spacing-4)" }}>
+        <fieldset style={{ border: "none", borderRadius: "var(--radius-md)", padding: 0, marginBottom: "var(--space-4)" }}>
           <legend style={{ fontWeight: "var(--font-weight-bold)" }}>{t("registration.addressDetails")}</legend>
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-3)" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
             {/* Recipient Name */}
             <label>
               {t("registration.recipientName")} {requiredMark}
@@ -229,16 +239,14 @@ export default function RegisterAddressPage() {
 
             {/* Telephone (dial code + number) */}
             <label>{t("registration.telephone")}</label>
-            <div style={{ display: "flex", gap: "var(--spacing-2)" }}>
-              <div style={{ width: "140px", flexShrink: 0 }}>
+            <div style={{ display: "flex", gap: "var(--space-2)" }}>
+              <div className="field-w-xs" style={{ flexShrink: 0 }}>
                 <CountryCombobox
                   entries={COUNTRIES}
                   value={address.telephone_dial}
-                  onChange={(val) => {
-                    const found = COUNTRIES.find((c) => `${c.dial} ${c.code}` === val);
-                    updateField("telephone_dial", found ? found.dial : val);
-                  }}
-                  displayFn={(c) => `${c.dial} ${c.code}`}
+                  onChange={(val) => updateField("telephone_dial", val)}
+                  displayFn={(c) => c.dial}
+                  optionLabelFn={(c) => `${c.dial} ${c.name}`}
                   filterFn={(c, q) =>
                     c.name.toLowerCase().includes(q) ||
                     c.code.toLowerCase().includes(q) ||
@@ -277,34 +285,32 @@ export default function RegisterAddressPage() {
             </label>
 
             {/* Address Line 1 */}
-            <label>
-              {t("registration.addressLine1")} {requiredMark}
-              <TextFieldControl
-                type="text"
-                value={address.address_line_1}
-                onChange={(e) => updateField("address_line_1", e.target.value)}
-              />
-            </label>
+            <TextField
+              label={t("registration.addressLine1")}
+              required
+              fullWidth
+              value={address.address_line_1}
+              onChange={(e) => updateField("address_line_1", e.target.value)}
+              error={lineRuleText(address.address_line_1)}
+            />
 
             {/* Address Line 2 */}
-            <label>
-              {t("registration.addressLine2")}
-              <TextFieldControl
-                type="text"
-                value={address.address_line_2}
-                onChange={(e) => updateField("address_line_2", e.target.value)}
-              />
-            </label>
+            <TextField
+              label={t("registration.addressLine2")}
+              fullWidth
+              value={address.address_line_2}
+              onChange={(e) => updateField("address_line_2", e.target.value)}
+              error={lineRuleText(address.address_line_2)}
+            />
 
             {/* Address Line 3 */}
-            <label>
-              {t("registration.addressLine3")}
-              <TextFieldControl
-                type="text"
-                value={address.address_line_3}
-                onChange={(e) => updateField("address_line_3", e.target.value)}
-              />
-            </label>
+            <TextField
+              label={t("registration.addressLine3")}
+              fullWidth
+              value={address.address_line_3}
+              onChange={(e) => updateField("address_line_3", e.target.value)}
+              error={lineRuleText(address.address_line_3)}
+            />
 
             {/* City */}
             <label>
@@ -316,25 +322,25 @@ export default function RegisterAddressPage() {
               />
             </label>
 
-            {/* State */}
-            <label>
-              {t("registration.state")}
-              <TextFieldControl
-                type="text"
-                value={address.state}
-                onChange={(e) => updateField("state", e.target.value)}
-              />
-            </label>
-
-            {/* ZIP */}
-            <label>
-              {t("registration.zip")}
-              <TextFieldControl
-                type="text"
-                value={address.zip}
-                onChange={(e) => updateField("zip", e.target.value)}
-              />
-            </label>
+            {/* State + ZIP (K3) */}
+            <TwoColumn ratio="1:1" gap="4">
+              <label>
+                {t("registration.state")}
+                <TextFieldControl
+                  type="text"
+                  value={address.state}
+                  onChange={(e) => updateField("state", e.target.value)}
+                />
+              </label>
+              <label>
+                {t("registration.zip")}
+                <TextFieldControl
+                  type="text"
+                  value={address.zip}
+                  onChange={(e) => updateField("zip", e.target.value)}
+                />
+              </label>
+            </TwoColumn>
 
             {/* Country */}
             <label>
