@@ -1,0 +1,87 @@
+<!-- バッククォート内のパスはリポジトリルートからのフルパスのみ（ゲートが実在確認する）。
+     このPRに含まれないファイル・リポジトリ外のパスはバッククォートを付けない。
+     守り手: はファイルパスか「人手で守る」のみ -->
+# recon — AI アシスタント（秘書を まとめ役＋係 へ）
+
+この文書は、今の秘書の仕組みと Hermes Agent の仕組みを、実物で確かめた記録です。
+
+親（仕様書）: [../../specs/secretary-chat/README.md](../../specs/secretary-chat/README.md)
+要件のすり合わせ: [requirements.md](requirements.md)
+
+**仕事名**: ai-assistant  
+**日付**: 2026-11-25（origin/main `ed9a9f158` 基準）  
+**対象ADR**: ADR-1056（今の秘書）・ADR-1058（AI の担当表）・ADR-009・ADR-091・ADR-159（Discord）・ADR-1077/1078/1080/1082/1087（秘書の足しかけ・Proposed）  
+**担当**: architect（Opus 自身。同一 AI の調べ）
+
+---
+
+## 既存 ADR の検索
+
+- `git grep -i "secretary\|秘書" docs/adr/` と `docs/specs/README.md` の索引で、上の ADR と仕様書 `docs/specs/secretary-chat/README.md` を確認（2026-11-25）。
+- `docs/adr/FEATURE-INDEX.md` の秘書の行（:79）から秘書の ADR 一式を確認。追加で関係する ADR: ADR-1003（secrets）・ADR-135/136（危険 PR の GO）・ADR-1004（台帳）。
+- 新規テーマか既存の延長かは PO に聞く（審査 R1。審査役の見立ては新規）。それまで仮に延長として親の下に置く。
+
+## file:line 引用表
+
+| 引用先 `path:line` | 確認内容 |
+|-------------------|---------|
+| `backend/app/routers/assistant.py:85` | 秘書の容器の宛先 `SECRETARY_AGENT_URL`（http://secretary-agent:8090） |
+| `backend/app/routers/assistant.py:106` | `agent_url(provider)`: 担当表の provider → 容器の宛先。配線の正本はここ 1 か所。ただし provider の値は DB の決まり（`migrations/20261103_120000_create_ai_job_assignments.sql:33`）と sdk の対応表（`backend/app/services/llm_budget.py:180`）にも縛られ、1 行では足りない（審査 M1・R3） |
+| `backend/app/routers/assistant.py:98` | 秘書の口の守り 4 つ（機能の札・super admin・顧客閲覧・請求書作成の権限） |
+| `backend/app/services/ai_assignment.py:33` | `get_ai_assignment(db, job_key)`: 仕事ごとの担当（provider・model）を DB から読む |
+| `backend/app/services/ai_assignment.py:47` | 画面で付け替えできる仕事は今 `secretary_intent` の 1 つだけ |
+| `docker-compose.secretary-agent.yml:19` | 今の秘書の容器は read_only（書き込み不可） |
+| `docker-compose.secretary-agent.yml:26` | mem_limit 512m |
+| `backend/app/discord_gateway/private_channel.py:51` | 本人・スタッフ・bot だけが見られる非公開の部屋を作る関数が既にある |
+| `backend/app/routers/invoices.py:153` | 請求書の列（issued_at・due_date・paid_at など） |
+| `backend/app/routers/invoices.py:899` | 入金登録は issued/overdue → paid |
+| `backend/app/routers/invoices.py:592` | 見積から作る請求書は `"due_date": None`（支払期日が空） |
+| `backend/app/routers/dashboard.py:138` | 「未払い」= status が issued または overdue、と既に数えている |
+| `backend/app/services/messaging_window.py:68` | 関数 compute_state の引数 `last_inbound_at`。値は `backend/app/routers/meta_inbox.py:952` で meta_messages から数えて出す（Meta の経路だけ） |
+
+## Hermes Agent（外部・公式。Context7 `/nousresearch/hermes-agent` で確認 2026-11-25）
+
+| 確認内容 | 出典 |
+|---|---|
+| 外から HTTP で話しかける口（OpenAI 互換 `/v1/chat/completions`・`/v1/responses`・`/health`）がある。鍵 `API_SERVER_KEY` 必須、既定は 127.0.0.1 だけで待つ | website/docs/user-guide/features/api-server.md・reference/environment-variables.md・gateway/platforms/api_server.py |
+| 部屋（profile）ごとに設定・頭（model）・人格（SOUL.md）・手順書（skills）・覚え書きが別 | user-guide/profiles（2026-11-24 取得の写し） |
+| まとめ役が係の部屋へ仕事を振る `profile_routes`（公式の追加部品 advanced-delegation）。振られた係はその部屋の頭・手順書・人格で動く | user-guide/features/delegation.md・tools/delegate_tool_routes.py |
+| 振った結果ごとに「どの部屋・どの AI 会社・どの頭で動いたか」（route）が返る | user-guide/features/delegation.md |
+| 追加部品が無い・切れているとき、振り分けは失敗として止まる（別の頭で勝手に動かない） | user-guide/configuration.md |
+| 覚え書き・手順書の書き込みを人の許可待ちにできる（write_approval） | user-guide/features/memory・skills（2026-11-24 取得の写し） |
+
+## 不明点リスト
+
+| # | 不明点 | 解消方法 | 状態 |
+|---|-------|---------|------|
+| 1 | 請求書を overdue に変える仕組みの有無 | `grep -rn overdue backend/app` | ✅ 解消: 書き換える所は無い（読むだけ: `backend/app/routers/dashboard.py:138`・`backend/app/routers/invoices.py:1008`）。催促の基準は「issued かつ期日（空なら発行日）から N 日」で数える |
+| 2 | Hermes を置くサーバーの容量（本番の置き場は PO が決める。prod1 の 4GB は `docs/adr/ADR-081-monitoring-vps-final-operational-design.md:168`） | 小さな試し（便0）で実測 | 未解決 → 設計 §6 の便0 で測る |
+| 3 | Hermes の道具（端末・ファイル・ネット）を全部切った状態で、振り分けと下書きが動くか | 便0 で実測 | 未解決 → 便0 |
+| 4 | LINE・Discord・メールでも最後の受信時刻が取れるか | 返信係を作るときに調べる | 未解決（最初の係ではないので後回し可） |
+| 5 | ChatGPT の容器が本番で動いているか | 本番の読み取りで確かめる | 未解決（本件の判断には影響しない） |
+
+**未解決ゼロ確認**: 未解決 2・3 は「動くかどうか」そのものなので、机の上では消せない。設計の便0（試しの部屋で実測）で消す。4・5 は最初の便に関係しない。
+
+## 7 観点（docs/specs/recon-standard/kgi.md）
+
+1. 現状の作り: 上の引用表。
+2. データの流れ: 頼みの文→アプリ→秘書の容器→JSON→画面→「作る」で今の口。
+3. 既存 ADR: 上の検索。
+4. 外の仕組み: Hermes の表。説明書の写しと版の固定は便0 のカードで行う。
+5. 維持の仕組み: 今の秘書は回帰の束 `backend/app/assistant_regression/cases.json` で守る。
+6. あるべき姿との対照: 「AI は下書きだけ」一致／「サーバーの中に置く」未定（PO の判断）／「データを分散させない」第2版で覚え書きを切って一致。
+7. 未確認: 上の不明点と design.md §9。
+
+## クラウドの作業場所での実測（2026-11-25・クラウドの Sonnet・読み取りと試しの起動だけ）
+
+| 確かめたこと | 結果（生の出力の要点） |
+|---|---|
+| 1回目（cse_01HHUUpTgL6mZFhvpgXoYzTT） | `docker --version` は 29.9.3。ただし中核が動いておらず `docker pull` は `failed to connect to the docker API at unix:///var/run/docker.sock` で失敗。メモリ 16087MB・CPU 4・空き 60G |
+| 2回目（cse_01HHUUpThNboS8XMASu5bkSs）中核の起動 | root（`id -u` 0）。`nohup dockerd` で起動し 1 回目の確かめで `docker info` が通った。Storage Driver overlayfs・Cgroup Version 1・Total Memory 15.71GiB |
+| 完成品の取得 | `nousresearch/hermes-agent:latest` 取得成功。digest `sha256:ef0650d523ee1b5ab32c779acabc446d9936869a9932591553688a62bcf0c42f`・作成 2026-11-24T07:09:27Z・4654999523 バイト |
+| 版 | `hermes --version` → `Hermes Agent v0.23.4 (2026.9.24)`・Python 3.14.9・OpenAI SDK 2.54.0 |
+| 普通の起動（`-m 2g`） | 15 秒後も動いている。CPU 103.6%・メモリ 352.8MiB / 2GiB・PIDS 42。ログに `install out of sync (pnpm…)` と `nous_auth_missing`（Nous Portal 未ログイン）の警告 |
+| 守りを付けた起動（`--read-only --cap-drop ALL --security-opt no-new-privileges:true --tmpfs /tmp`） | `Exited (111)`。ログ `s6-rmrf: fatal: unable to remove /run/s6: Read-only file system` |
+
+- 便0 の版は上の digest で固定する（design.md §5「入れ方」）。
+- 守りを付けた形は立たなかった。`/run` の書き込みが要る。どの権限を最小で戻すかは便0 で測る（design.md §5「容器の守り」の項目どおり。未確認: `--tmpfs /run` だけで立つか）。
