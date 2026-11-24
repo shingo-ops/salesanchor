@@ -2,6 +2,8 @@
 ADR-089: companies 系 API のテスト。
 customers API は Sprint 3 で廃止済み（ADR-089 Sprint 3）。
 """
+from sqlalchemy import text
+
 from tests.helpers_txn import create_lead
 
 
@@ -286,3 +288,58 @@ class TestCompanyDiscord:
 
         get_res = await client.get(f"/api/v1/companies/{company_id}")
         assert get_res.json()["discord"]["channel_id"] == "keep-me"
+
+
+class TestDeliveryAddressRule:
+    """送り先の住所1〜3の決まり（customer-address-form design §3-3・K12）"""
+
+    async def test_post_delivery_36_chars_rejected(self, client):
+        lead_id = await create_lead(client, "送り先36文字")
+        res = await client.post("/api/v1/companies", json={
+            "name": "送り先36文字",
+            "lead_id": lead_id,
+            "addresses": [{"address_type": "delivery", "address_line_1": "x" * 36}],
+        })
+        assert res.status_code == 422
+
+    async def test_patch_keeps_existing_non_conforming_delivery(self, client, db_session):
+        lead_id = await create_lead(client, "既存の長い住所")
+        create = await client.post("/api/v1/companies", json={"name": "既存の長い住所", "lead_id": lead_id})
+        company_id = create.json()["id"]
+        long_line = "y" * 40
+        await db_session.execute(
+            text(
+                "INSERT INTO company_addresses (company_id, address_type, address_line_1, country_code, is_default) "
+                "VALUES (:c, 'delivery', :a, 'US', TRUE)"
+            ),
+            {"c": company_id, "a": long_line},
+        )
+        await db_session.commit()
+        res = await client.patch(f"/api/v1/companies/{company_id}", json={
+            "addresses": [
+                {"address_type": "delivery", "address_line_1": long_line, "country_code": "US", "is_default": True},
+                {"address_type": "billing", "name": "直した請求先", "is_default": True},
+            ],
+        })
+        assert res.status_code == 200, res.text
+        lines = [a["address_line_1"] for a in res.json()["addresses"] if a["address_type"] == "delivery"]
+        assert lines == [long_line]
+
+    async def test_patch_changed_delivery_line_rejected(self, client, db_session):
+        lead_id = await create_lead(client, "別の長い住所")
+        create = await client.post("/api/v1/companies", json={"name": "別の長い住所", "lead_id": lead_id})
+        company_id = create.json()["id"]
+        await db_session.execute(
+            text(
+                "INSERT INTO company_addresses (company_id, address_type, address_line_1, country_code, is_default) "
+                "VALUES (:c, 'delivery', :a, 'US', TRUE)"
+            ),
+            {"c": company_id, "a": "y" * 40},
+        )
+        await db_session.commit()
+        res = await client.patch(f"/api/v1/companies/{company_id}", json={
+            "addresses": [
+                {"address_type": "delivery", "address_line_1": "z" * 40, "country_code": "US", "is_default": True},
+            ],
+        })
+        assert res.status_code == 422

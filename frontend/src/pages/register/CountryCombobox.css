@@ -1,0 +1,17 @@
+/* 公開フォームの国の部品（customer-address-form design §4-4）。ADR-067: 色・寸法は変数だけ */
+.register-combobox { position: relative; }
+.register-combobox__list {
+  position: absolute;
+  z-index: var(--z-dropdown);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  max-height: var(--dropdown-max-h);
+  min-width: var(--min-width-dropdown);
+  width: 100%;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.register-combobox__option { padding: var(--space-2) var(--space-3); cursor: pointer; }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { type CountryEntry } from "../../constants/countries";
 import { TextFieldControl } from "../../components/TextField";
+import "./CountryCombobox.css";
 
 /** Combobox with search filtering for country / dial code selection. */
 export function CountryCombobox({
@@ -8,6 +9,7 @@ export function CountryCombobox({
   value,
   onChange,
   displayFn,
+  optionLabelFn,
   filterFn,
   id,
 }: {
@@ -15,6 +17,8 @@ export function CountryCombobox({
   value: string;
   onChange: (val: string) => void;
   displayFn: (c: CountryEntry) => string;
+  /** 一覧の行の字。省けば displayFn。選んだ時に返す値は常に displayFn(c)。 */
+  optionLabelFn?: (c: CountryEntry) => string;
   filterFn: (c: CountryEntry, q: string) => boolean;
   id: string;
 }) {
@@ -43,7 +47,7 @@ export function CountryCombobox({
   }, []);
 
   return (
-    <div ref={ref} style={{ position: "relative" }}>
+    <div ref={ref} className="register-combobox">
       <TextFieldControl
         id={id}
         type="text"
@@ -59,28 +63,11 @@ export function CountryCombobox({
         autoComplete="off"
       />
       {open && filtered.length > 0 && (
-        <ul
-          style={{
-            position: "absolute",
-            zIndex: 10,
-            background: "var(--bg-surface)",
-            border: "1px solid var(--border-default)",
-            borderRadius: "var(--radius-sm)",
-            maxHeight: "200px",
-            overflow: "auto",
-            width: "100%",
-            margin: 0,
-            padding: 0,
-            listStyle: "none",
-          }}
-        >
+        <ul className="register-combobox__list">
           {filtered.map((c) => (
             <li
               key={c.code + c.dial}
-              style={{
-                padding: "var(--spacing-2) var(--spacing-3)",
-                cursor: "pointer",
-              }}
+              className="register-combobox__option"
               onMouseDown={(e) => {
                 e.preventDefault();
                 onChange(displayFn(c));
@@ -88,7 +75,7 @@ export function CountryCombobox({
                 setQuery("");
               }}
             >
-              {displayFn(c)}
+              {(optionLabelFn ?? displayFn)(c)}
             </li>
           ))}
         </ul>

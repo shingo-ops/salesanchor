@@ -196,6 +196,7 @@
   --field-w-sm:        160px;   /* 入力部品 幅金型 sm */
   --field-w-md:        280px;   /* 入力部品 幅金型 md */
   --field-w-lg-max:    480px;   /* 入力部品 幅金型 lg 上限 */
+  --field-w-xs:        80px;    /* 入力部品 幅金型 xs（国番号「+000」など4文字の欄） */
   --size-msg-attach-w:  240px;  /* メッセージバブル内画像添付 最大幅 */
   --size-msg-attach-h:  200px;  /* メッセージバブル内画像添付 最大高 */
   --textarea-min-h:     80px;   /* テキストエリア最小高 */
@@ -332,6 +333,7 @@
   --modal-max-w-lg:          800px;  /* Modal 金型 lg */
   --modal-profile-min-w:     480px;  /* プロフィールモーダル最小幅 */
   --max-width-form:          560px;  /* フォームレイアウト最大幅（アカウント設定等） */
+  --max-width-public-form:   600px;  /* お客様向けの登録フォームの最大幅（/register 系・今の 600px と同じ） */
   --modal-profile-max-w:     640px;  /* プロフィールモーダル最大幅 */
   --inbox-settings-min-w:    320px;  /* 受信箱設定モーダル最小幅 */
   --inbox-settings-max-w:    480px;  /* 受信箱設定モーダル最大幅 */
