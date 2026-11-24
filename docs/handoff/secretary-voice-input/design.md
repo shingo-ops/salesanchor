@@ -305,9 +305,9 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 | E4 | 聞き取りは話している間ずっと聞く形で本番に出ている。PO が PC で動くのを確かめた（2026-11-24「1,PCで問題なく動作した」） | `frontend/src/features/secretary/useSecretaryListen.ts:118-121` |
 | E5 | 聞き取りがブラウザの都合で終わると、画面は人の操作なしで聞き直す（最大 5 回） | 同 `:147-155`・`:87` |
 | E6 | 規格では、聞き取りを始める `start()` が投げる失敗は「画面が動いていない」「もう始まっている」の 2 つだけ。人の操作の中で呼ぶ決まりは無い | Web Speech API の規格（Context7 `/webaudio/web-speech-api`・index.bs:657・:660） |
-| E7 | 読み上げの音の準備（AudioContext）は、切り替えを押した処理の中で作る | `frontend/src/features/secretary/useSecretaryVoice.ts:48-53`・`SecretaryChat.tsx:101-110` |
+| E7 | 読み上げの音の準備（AudioContext）は、切り替えを押した処理の中で作る | `frontend/src/features/secretary/useSecretaryVoice.ts:48-53`・`frontend/src/features/secretary/SecretaryChat.tsx:101-110` |
 | E8 | 予定の「作る」は下書きの部品の中の `submit()` 1 か所。作れる条件は `canCreate` | `frontend/src/features/secretary/SecretaryDraftEvent.tsx:46-51`・`:53-74` |
-| E9 | 送るときは今も読み上げを止め、聞き取りを捨てる（自分の声を拾わない） | `SecretaryChat.tsx:123-124` |
+| E9 | 送るときは今も読み上げを止め、聞き取りを捨てる（自分の声を拾わない） | `frontend/src/features/secretary/SecretaryChat.tsx:123-124` |
 | E10 | 秘書が会社のデータを読むのは backend の検索だけ。AI に会社のデータは渡していない | ADR-1056・`backend/app/routers/assistant.py:192-205`（送る本文は文・今・決まり・カルテだけ） |
 
 ### 15-4 流れ（声で会話の 1 往復）
