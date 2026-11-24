@@ -68,6 +68,13 @@ class PayInvoiceRequest(BaseModel):
     paid_date: date | None = None
 
 
+def _join_address_lines(row) -> str:
+    """見積書の宛名の住所: 住所1〜3を空白でつなぐ（空・None は飛ばす）。"""
+    return " ".join(
+        filter(None, [row["address_line_1"], row["address_line_2"], row["address_line_3"]])
+    )
+
+
 async def _fetch_address_snapshot(
     db: AsyncSession,
     company_id: int | None,
@@ -102,9 +109,7 @@ async def _fetch_address_snapshot(
         "billing_display_name": row["billing_display_name"],
         "label": row["branch_name"],
         "postal_code": row["zip"],
-        "address": " ".join(
-            filter(None, [row["address_line_1"], row["address_line_2"]])
-        ),
+        "address": _join_address_lines(row),
         "city": row["city"],
         "state": row["state"],
         "country": row["country_code"],

@@ -6540,5 +6540,9 @@
     "contactCompanyMismatch": "The selected contact does not belong to this company, so the invoice details cannot be loaded. Choose the contact again.",
     "invoiceNotDraft": "This invoice is no longer a draft, so it cannot be issued. Reload the page.",
     "paymentFee": "No payment fee setting was found, so the total cannot be calculated. Check the PayPal fee in settings."
+  },
+  "addressRule": {
+    "ascii": "Please use English letters, numbers and symbols only.",
+    "maxLength": "Please enter {{max}} characters or fewer."
   }
 }
