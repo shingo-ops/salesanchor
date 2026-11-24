@@ -173,10 +173,11 @@ mode: handoff
 手順4 §3-1〜§3-4 を Edit で直す。
 
 手順5 検査を流す（.github/workflows/monitoring-check.yml と同じもの）
-    cd 作業場所 && pip install pyyaml
-    cd 作業場所 && python3 -c "import yaml; yaml.safe_load(open('monitoring/tokens.yml')); yaml.safe_load(open('monitoring/loki/rules/jarvis/alerts.yml'))"
-    cd 作業場所 && python3 monitoring/scripts/validate_tokens.py
-    cd 作業場所 && python3 monitoring/scripts/check_alert_rules.py
+    python3.12 -m venv /tmp/v312（作業場所の外。py312-guard の決まり）
+    cd 作業場所 && /tmp/v312/bin/pip install pyyaml
+    cd 作業場所 && /tmp/v312/bin/python -c "import yaml; yaml.safe_load(open('monitoring/tokens.yml')); yaml.safe_load(open('monitoring/loki/rules/jarvis/alerts.yml'))"
+    cd 作業場所 && /tmp/v312/bin/python monitoring/scripts/validate_tokens.py
+    cd 作業場所 && /tmp/v312/bin/python monitoring/scripts/check_alert_rules.py
     cd 作業場所 && grep -c "PasskeyServerError" monitoring/loki/rules/jarvis/alerts.yml docs/runbooks/alerts.md monitoring/tokens.yml
     期待する出力: 上の3つは誤り 0 で終わる（validate_tokens.py の「警告」はよい。この変更の前からある警告かを報告に書く）。grep は alerts.yml が 1・alerts.md が 2・tokens.yml が 2。落ちたら直してからもう一度流す。3回直しても落ちたら停止して BLOCKED:（生出力の全文を付ける）。
 

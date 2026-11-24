@@ -297,9 +297,10 @@ def run_passkey_weekly_report() -> dict:
 手順4 §3-1 を Write で作り、§3-2 を Edit で直し、§3-3 の試験を Write で書く。
 
 手順5 試験と検査を流す
-    cd 作業場所/backend && pip install -r requirements.txt -r requirements-dev.txt
-    cd 作業場所/backend && python -m pytest tests/test_passkey_weekly_report.py tests/test_celery_beat_registered.py tests/test_tenant_isolation_daily_check.py -q
-    cd 作業場所/backend && ruff check app/tasks/passkey_weekly_report.py app/celery_app.py tests/test_passkey_weekly_report.py
+    python3.12 -m venv /tmp/v312（作業場所の外。py312-guard の決まり。ruff が requirements-dev.txt に無ければ /tmp/v312/bin/pip install ruff）
+    cd 作業場所/backend && /tmp/v312/bin/pip install -r requirements.txt -r requirements-dev.txt
+    cd 作業場所/backend && /tmp/v312/bin/python -m pytest tests/test_passkey_weekly_report.py tests/test_celery_beat_registered.py tests/test_tenant_isolation_daily_check.py -q
+    cd 作業場所/backend && /tmp/v312/bin/python -m ruff check app/tasks/passkey_weekly_report.py app/celery_app.py tests/test_passkey_weekly_report.py
     期待する出力: 失敗 0（実 PostgreSQL の無い試験の skip はよい）・ruff の違反 0。落ちたら直してからもう一度流す。3回直しても落ちたら停止して BLOCKED:（生出力の全文を付ける）。
 
 手順6 差分のファイル一覧を確かめる
