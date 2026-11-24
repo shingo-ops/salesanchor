@@ -11,6 +11,9 @@
 /* --- 幅3段（widthで固定。lgは伸びるが上限あり）--- */
 /* SelectControl の既定幅（width:auto）より優先させるため複合セレクタを併記（design.md §AW AW-2b）。
    TextFieldControl の width:100%（.comp-field__input）より優先（§AY AY-2p） */
+.field-w-xs,
+.comp-select__control.field-w-xs,
+.comp-field__input.field-w-xs { width: var(--field-w-xs, 80px); }
 .field-w-sm,
 .comp-select__control.field-w-sm,
 .comp-field__input.field-w-sm { width: var(--field-w-sm, 160px); }
