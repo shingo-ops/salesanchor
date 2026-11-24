@@ -7,7 +7,7 @@
 ## 1. 既存 ADR の検索
 - `git grep -i discord origin/main -- docs/adr/FEATURE-INDEX.md` → ADR-009（Discord Gateway）・ADR-1012（24時間保守・Proposed）・ADR-159（webhook 送信）・ADR-1052（クラウドの相談係）。
 - `git grep -il discord origin/main -- docs/adr/` → 69 ファイル（2026-11-24。最初の版は索引だけを探し、全体の検索が抜けていた。マージ前の審査で指摘された）。この件に当たるのは次の2つ。
-  - `docs/adr/ADR-1039-discord-pdca-agent-console.md`（Accepted）。SA Bug Intake を決めている。Decision 3「ボットの権限は、読む2つのチャンネルの『見る』『履歴を読む』だけにする」（同ファイル 26 行）・Decision 7「ボットの鍵と報告の webhook は Keychain に置き、件の作業からは読めない設定にする」（同 30 行）。
+  - `docs/adr/ADR-1039-discord-pdca-agent-console.md`（Accepted）。SA Bug Intake を決めている。Decision 3「ボットの権限は、読む2つのチャンネルの『見る』『履歴を読む』だけにする」（同ファイル 27 行。ADR-1088 の合流で「改められる」の行が1行増えたため。前は 26 行）・Decision 7「ボットの鍵と報告の webhook は Keychain に置き、件の作業からは読めない設定にする」（同 31 行。前は 30 行）。
   - `docs/adr/ADR-1009-discord-ops-intake.md`（Superseded by ADR-1039。同ファイル 5 行）。下の discord-ops-intake の設計はこの時代のもの。
 - 食い違い: design §3 の3部屋の「見る」は Decision 3 の「2つ」と食い違う → PO 2026-11-24 の選択で ADR-1088 を起こし Decision 3 を改めた。Decision 7 は、目的（件の作業から読めない）は F9 のとおり守れる。置き場が Keychain だけでなくなる点は ADR-1088 の Exceptions に書いた。
 - 近い前例: `docs/adr/ADR-079-claude-code-monitoring-access.md`（AI に読むだけの監視の鍵を渡す）・`docs/adr/ADR-1024-ai-readonly-db-path.md`（本番 DB を読むだけの道。監視の鍵への相乗りを断り、専用の道にした）。
