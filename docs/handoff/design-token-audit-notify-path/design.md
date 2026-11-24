@@ -7,7 +7,7 @@
 **recon**: docs/handoff/design-token-audit-notify-path/recon.md  
 **日付**: 2026-11-24  
 **担当**: Planner（Opus 設計担当）  
-**状態**: 設計案作成済み・自己審査済み（APPROVE）・PO の実装承認待ち・実装未着手
+**状態**: 設計案作成済み・自己審査済み（APPROVE）・PO 実装承認済み（2026-11-24「1」）・クラウドの Sonnet が実装し push 済み（ef240f03b）・Opus が手元で照合済み（新規2ファイルはカードと一致・試験 8 本 OK・点検 143 件 不一致 0 件）・合流と本番での確認は未了
 
 ---
 
