@@ -43,7 +43,7 @@ PO 2026-11-24:「この仕組みを標準化して管理定着させて継続さ
 ## 5. 変更の案（3つ・どれも本番の DB は読むだけ）
 
 ### 5-1. 週1回のパスキーの報告（G1・G3 を埋める）
-- 新しい係 `backend/app/tasks/passkey_weekly_report.py`。形は ADR-1063 便6 の毎日点検（backend/app/tasks/tenant_isolation_daily_check.py）と同じ: DB を読むだけ・管理者用 Discord（環境変数 `ADMIN_NOTIFICATION_DISCORD_WEBHOOK`・tenant_isolation_daily_check.py:31 と同じ）・緑でも毎回送る（届かない＝止まっている）。
+- 新しい係（新しく作るファイル: backend/app/tasks の passkey_weekly_report.py）。形は ADR-1063 便6 の毎日点検（backend/app/tasks/tenant_isolation_daily_check.py）と同じ: DB を読むだけ・管理者用 Discord（環境変数 `ADMIN_NOTIFICATION_DISCORD_WEBHOOK`・tenant_isolation_daily_check.py:31 と同じ）・緑でも毎回送る（届かない＝止まっている）。
 - 時刻: 毎週月曜 09:10 JST（celery beat、backend/app/celery_app.py の `tenant-isolation-daily-check` の隣）。
 - 数えるもの（直近7日・auth_events だけ）:
   1. パスキーでのログイン成功（passkey/login/verify 200）の回数と人数
@@ -83,13 +83,15 @@ PO 2026-11-24:「この仕組みを標準化して管理定着させて継続さ
 | 画面点検 S1 が本番で緑。`email webauthn` を外した見本では赤 | prod-ui-check の実行結果。見本は手元の試験の差し替えで確かめる |
 | 新しい表・列なし | PR の差分に migrations が無い |
 
-## 9. 続けるための仕組み（だれが・何で）
+## 9. 維持の仕組み（だれが・何で）
+守り手: .github/workflows/e2e.yml（必須チェック「Lint & Dark Mode Check (ADR-067)」が vitest を流す）・.github/workflows/prod-ui-check.yml（毎朝の本番点検）・実装後は backend/app/celery_app.py の週1の係
+
 - 壊す変更: A1・A2（必須チェック）が止める。
 - 本番で壊れた: 5-2（毎朝）と 5-1 の赤（毎週）と A4（すぐ）が知らせる。
 - 効果: 5-1 が毎週数を届ける。読むのは Opus（毎週月曜の報告を読む）と PO。
 - 報告そのものが止まった: 月曜に届かないことで分かる（ADR-1063 便6 と同じ考え方）。
 
-## 10. 外部事例
+## 10. 外部・過去事例の参照と我々への応用
 - 同じ考え方（壊れたら知らせ・緑でも定期に送る）は、この会社の ADR-1063 便6 が前例。11/19〜11/24 で毎日届き、日数を数えられた（scratchpad k9 の記録）。
 - パスキーの普及の事例は design.md・evidence.md に記載済み（Microsoft・Yahoo! JAPAN・adidas ほか）。この設計は普及策ではなく見張りのため、新しい外部事例は使わない。
 
