@@ -499,7 +499,7 @@ describe("SecretaryChat event draft", () => {
 
 // 便2: 声で返事（V3）。AudioContext は偽物。読み上げの頼み（fetchSecretarySpeech）の回数を数える
 describe("SecretaryChat voice reply", () => {
-  const TOGGLE = "Read replies aloud";
+  const TOGGLE = "Voice conversation";
   let decoded: { connect: ReturnType<typeof vi.fn>; start: ReturnType<typeof vi.fn> } | null = null;
 
   beforeEach(() => {
@@ -775,4 +775,320 @@ describe("SecretaryChat listen mark", () => {
     fireEvent.click(screen.getByRole("button", { name: /close/i }));
     expect(instances[0].abort).toHaveBeenCalled();
   });
+});
+
+// 便V: 声で会話（交代で話す型）。偽の AudioContext と偽の聞き取りを両方入れる
+describe("SecretaryChat voice conversation", () => {
+  const TOGGLE = "Voice conversation";
+  const LISTEN = "Speak to type";
+  type Win = { SpeechRecognition?: unknown; webkitSpeechRecognition?: unknown };
+  const win = window as unknown as Win;
+  let saved: unknown;
+  let savedWebkit: unknown;
+  let instances: ConvRec[] = [];
+
+  class ConvRec {
+    lang = "";
+    interimResults = false;
+    continuous = false;
+    maxAlternatives = 1;
+    onresult: ((ev: unknown) => void) | null = null;
+    onerror: ((ev: unknown) => void) | null = null;
+    onend: (() => void) | null = null;
+    start = vi.fn();
+    stop = vi.fn();
+    abort = vi.fn();
+    constructor() {
+      instances.push(this);
+    }
+  }
+
+  const startCount = () => instances.reduce((n, r) => n + r.start.mock.calls.length, 0);
+  const live = () => instances[instances.length - 1];
+  const finalOf = (transcript: string) => Object.assign([{ transcript }], { isFinal: true });
+  const interimOf = (transcript: string) => Object.assign([{ transcript }], { isFinal: false });
+  const hear = (text: string, rec: ConvRec = live()) => {
+    act(() => {
+      rec.onresult?.({ resultIndex: 0, results: [finalOf(text)] });
+    });
+  };
+  const spoken = () => mock.speech.mock.calls.map((c) => String(c[0])).join(" ");
+  const unknownReply = (reply: string) => ({ kind: "unknown", draft: { reply }, candidates: none });
+  const flush = () =>
+    act(async () => {
+      await new Promise((r) => setTimeout(r, 60));
+    });
+  /** 次の読み上げの最初の片を止めておく。返した関数で放す */
+  const holdNextSpeech = () => {
+    let release: () => void = () => {};
+    mock.speech.mockImplementationOnce(
+      () =>
+        new Promise<Blob>((resolve) => {
+          release = () => resolve(new Blob(["x"]));
+        }),
+    );
+    return () => release();
+  };
+
+  beforeEach(() => {
+    saved = win.SpeechRecognition;
+    savedWebkit = win.webkitSpeechRecognition;
+    instances = [];
+    win.SpeechRecognition = ConvRec;
+    delete win.webkitSpeechRecognition;
+    mock.speech.mockReset();
+    mock.speech.mockResolvedValue(new Blob(["x"]));
+    mock.postWithTimeout.mockReset();
+    mock.post.mockReset();
+    class FakeAudioContext {
+      destination = {};
+      resume = vi.fn().mockResolvedValue(undefined);
+      close = vi.fn().mockResolvedValue(undefined);
+      decodeAudioData = vi.fn().mockResolvedValue({});
+      createBufferSource() {
+        const source = {
+          buffer: null as unknown,
+          onended: null as null | (() => void),
+          connect: vi.fn(),
+          stop: vi.fn(),
+          start: vi.fn(() => {
+            queueMicrotask(() => source.onended?.());
+          }),
+        };
+        return source;
+      }
+    }
+    Object.defineProperty(window, "AudioContext", { value: FakeAudioContext, configurable: true, writable: true });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    if (saved === undefined) delete win.SpeechRecognition;
+    else win.SpeechRecognition = saved;
+    if (savedWebkit === undefined) delete win.webkitSpeechRecognition;
+    else win.webkitSpeechRecognition = savedWebkit;
+  });
+
+  const openChat = async () => {
+    renderChat();
+    fireEvent.click(screen.getByRole("button", { name: FAB }));
+    return (await screen.findByRole("switch", { name: TOGGLE })) as HTMLInputElement;
+  };
+  const openVoice = async () => {
+    const toggle = await openChat();
+    fireEvent.click(toggle);
+    return toggle;
+  };
+  /** 聞き取った文で送り、返事の読み上げの終わりでまた聞くところまで進める */
+  const sayAndAnswered = async (text: string, sentCount: number, startsAfter: number) => {
+    hear(text);
+    await waitFor(() => expect(mock.postWithTimeout).toHaveBeenCalledTimes(sentCount), { timeout: 4000 });
+    await waitFor(() => expect(startCount()).toBe(startsAfter), { timeout: 4000 });
+  };
+  const SLOW = 20000;
+
+  it("T1: starts listening once when turned on", async () => {
+    await openVoice();
+    expect(instances.length).toBe(1);
+    expect(startCount()).toBe(1);
+  });
+
+  it("T2: sends after 1000ms of silence, not at 999ms; not with interim text or hand-typed text", async () => {
+    mock.postWithTimeout.mockResolvedValue(unknownReply("Okay."));
+    await openVoice();
+    vi.useFakeTimers();
+    hear("hello");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(999);
+    });
+    expect(mock.postWithTimeout).not.toHaveBeenCalled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(mock.postWithTimeout).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it("T2: interim text blocks the automatic send", async () => {
+    await openVoice();
+    vi.useFakeTimers();
+    hear("hello");
+    act(() => {
+      live().onresult?.({ resultIndex: 0, results: [interimOf("and more")] });
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(mock.postWithTimeout).not.toHaveBeenCalled();
+  });
+
+  it("T2: hand-typed text alone is not sent automatically", async () => {
+    await openVoice();
+    vi.useFakeTimers();
+    const box = screen.getByLabelText(/Tell me what you need/);
+    fireEvent.change(box, { target: { value: "typed" } });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(mock.postWithTimeout).not.toHaveBeenCalled();
+  });
+
+  it("T3: never sends automatically when the voice conversation is off", async () => {
+    await openChat();
+    fireEvent.click(await screen.findByRole("button", { name: LISTEN }));
+    vi.useFakeTimers();
+    hear("hello");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(mock.postWithTimeout).not.toHaveBeenCalled();
+  });
+
+  it("T4: listens again after the reply is read", async () => {
+    mock.postWithTimeout.mockResolvedValue(unknownReply("Hello there."));
+    await openVoice();
+    await sayAndAnswered("hi", 1, 2);
+    expect(spoken()).toContain("Hello there.");
+  }, SLOW);
+
+  it("T4: when reading fails, shows the note, does not listen again and turns the toggle off", async () => {
+    mock.speech.mockRejectedValue(new ApiError("x", 503, { code: "tts_not_configured" }));
+    mock.postWithTimeout.mockResolvedValue(unknownReply("plain reply"));
+    const toggle = await openVoice();
+    hear("hi");
+    expect(await screen.findByText(i18n.t("secretary.voiceFailed"), undefined, { timeout: 4000 })).toBeTruthy();
+    await waitFor(() => expect(toggle.checked).toBe(false));
+    expect(startCount()).toBe(1);
+  }, SLOW);
+
+  it("T5: reads the confirmation, then a spoken yes creates the event once", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(eventReply);
+    mock.post.mockResolvedValue({});
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    expect(spoken()).toContain("Add Meeting on");
+    hear("yes");
+    await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    expect(mock.post.mock.calls[0][0]).toBe("/calendar/events");
+    await waitFor(() => expect(startCount()).toBe(3), { timeout: 4000 });
+    expect(spoken()).toContain(i18n.t("secretary.created.event"));
+    expect(mock.postWithTimeout).toHaveBeenCalledTimes(1);
+  }, SLOW);
+
+  it("T6: a spoken no creates nothing and reads the not-created line", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(eventReply);
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("no");
+    await waitFor(() => expect(startCount()).toBe(3), { timeout: 4000 });
+    expect(mock.post).not.toHaveBeenCalled();
+    expect(spoken()).toContain(i18n.t("secretary.voiceMode.notCreated"));
+    expect(mock.postWithTimeout).toHaveBeenCalledTimes(1);
+  }, SLOW);
+
+  it("T7: two unclear answers read askAgain then checkScreen and create nothing", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(eventReply);
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("uh");
+    await waitFor(() => expect(startCount()).toBe(3), { timeout: 4000 });
+    expect(spoken()).toContain(i18n.t("secretary.voiceMode.askAgain"));
+    hear("hmm");
+    await waitFor(() => expect(startCount()).toBe(4), { timeout: 4000 });
+    const all = spoken();
+    expect(all.indexOf(i18n.t("secretary.voiceMode.askAgain"))).toBeLessThan(
+      all.indexOf(i18n.t("secretary.voiceMode.checkScreen")),
+    );
+    expect(mock.post).not.toHaveBeenCalled();
+    expect(mock.postWithTimeout).toHaveBeenCalledTimes(1);
+  }, SLOW);
+
+  it("T8: an invoice draft reads only the fixed line and a spoken yes does not create it", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(invoiceReply()).mockResolvedValue(unknownReply("Okay."));
+    await openVoice();
+    await sayAndAnswered("invoice for Acme", 1, 2);
+    const all = spoken();
+    expect(all).toContain(i18n.t("secretary.voiceMode.invoiceReady"));
+    expect(all).not.toContain("Acme");
+    expect(all).not.toContain("Widget");
+    hear("yes");
+    await waitFor(() => expect(mock.postWithTimeout).toHaveBeenCalledTimes(2), { timeout: 4000 });
+    expect(mock.post).not.toHaveBeenCalled();
+  }, SLOW);
+
+  it("T9: closing the window drops the pending confirmation", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(eventReply).mockResolvedValue(unknownReply("Okay."));
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    fireEvent.click(screen.getByRole("button", { name: /close/i }));
+    fireEvent.click(screen.getByRole("button", { name: FAB }));
+    fireEvent.click(await screen.findByRole("switch", { name: TOGGLE }));
+    hear("yes");
+    await waitFor(() => expect(mock.postWithTimeout).toHaveBeenCalledTimes(2), { timeout: 4000 });
+    expect(mock.post).not.toHaveBeenCalled();
+  }, SLOW);
+
+  it("T10: sending by hand during a reading stops the old reading from opening the mic", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(unknownReply("Hello there.")).mockReturnValueOnce(new Promise(() => {}));
+    await openVoice();
+    const release = holdNextSpeech();
+    hear("hi");
+    await waitFor(() => expect(mock.speech).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    const box = screen.getByLabelText(/Tell me what you need/);
+    fireEvent.change(box, { target: { value: "again" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() => expect(mock.postWithTimeout).toHaveBeenCalledTimes(2));
+    release();
+    await flush();
+    expect(startCount()).toBe(1);
+  }, SLOW);
+
+  it("T11: pressing Create with the mic open aborts first and ignores speech heard while reading", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(eventReply);
+    mock.post.mockResolvedValue({});
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    const open = live();
+    const release = holdNextSpeech();
+    fireEvent.click(await screen.findByRole("button", { name: "Create" }));
+    await waitFor(() => expect(open.abort).toHaveBeenCalled());
+    await waitFor(() => expect(mock.speech.mock.calls.length).toBeGreaterThanOrEqual(2));
+    const lastSpeech = Math.max(...mock.speech.mock.invocationCallOrder);
+    expect(open.abort.mock.invocationCallOrder[0]).toBeLessThan(lastSpeech);
+    hear("yes", open);
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 1300));
+    });
+    expect(mock.postWithTimeout).toHaveBeenCalledTimes(1);
+    release();
+    await flush();
+  }, SLOW);
+
+  it("T12: Create during the confirmation reading opens the mic only after the created line", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(eventReply);
+    mock.post.mockResolvedValue({});
+    await openVoice();
+    const release = holdNextSpeech();
+    hear("meeting tomorrow");
+    await waitFor(() => expect(mock.speech).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    fireEvent.click(await screen.findByRole("button", { name: "Create" }));
+    await waitFor(() => expect(startCount()).toBe(2), { timeout: 4000 });
+    release();
+    await flush();
+    expect(startCount()).toBe(2);
+    expect(mock.post).toHaveBeenCalledTimes(1);
+    expect(mock.postWithTimeout).toHaveBeenCalledTimes(1);
+  }, SLOW);
+
+  it("T13: pressing the mic mark during a reading stops it and the old reading does not open the mic", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(unknownReply("Hello there."));
+    await openVoice();
+    const release = holdNextSpeech();
+    hear("hi");
+    await waitFor(() => expect(mock.speech).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    fireEvent.click(screen.getByRole("button", { name: LISTEN }));
+    expect(startCount()).toBe(2);
+    release();
+    await flush();
+    expect(startCount()).toBe(2);
+  }, SLOW);
 });

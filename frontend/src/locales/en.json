@@ -6322,7 +6322,16 @@
     "create": "Create",
     "cancel": "Cancel",
     "thinking": "Thinking…",
-    "voiceToggle": "Read replies aloud",
+    "voiceToggle": "Voice conversation",
+    "voiceMode": {
+      "confirmEvent": "Add {{title}} on {{when}}?",
+      "invoiceReady": "The invoice draft is ready. Check it on screen and press the create button.",
+      "notCreated": "I did not add it.",
+      "askAgain": "Please answer yes or no.",
+      "checkScreen": "Please check the screen and press the create button.",
+      "yesWords": "yes|yeah|ok|okay|sure|please",
+      "noWords": "no|nope|cancel|stop|don't"
+    },
     "listen": {
       "start": "Speak to type",
       "stop": "Stop listening",
