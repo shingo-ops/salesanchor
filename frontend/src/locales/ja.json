@@ -703,6 +703,8 @@
     "resetEmailSent": "再設定メールを送信しました。メールをご確認ください。",
     "backToLogin": "ログイン画面に戻る",
     "signInWithPasskey": "顔・指紋でログイン",
+    "passkeyNotOnDevice": "この機械にはパスキーがありません",
+    "passkeyUseOtherDevice": "スマホなど別の機械のパスキーを使う",
     "passkeyPromptTitle": "顔や指紋でログインできるようにしますか",
     "passkeyPromptBody": "次からはパスワードを入れずに、顔や指紋だけですぐにログインできます。",
     "passkeyPromptRegister": "登録する",
@@ -6325,6 +6327,7 @@
       "start": "話して入力する",
       "stop": "聞くのをやめる",
       "listening": "聞いています…",
+      "tooLong": "{{max}} 字に達したので聞くのをやめました。この画面で一度に送れるのは {{max}} 字までです。いったん送ってから続きを話してください",
       "error": {
         "unsupported": "この画面では声の聞き取りが使えません",
         "notAllowed": "マイクが許可されていません。端末の設定でマイクを許可してください",

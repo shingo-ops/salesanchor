@@ -510,6 +510,10 @@
 .page-header-actions .icon-btn:hover {
   border-color: var(--border-icon);
 }
+/* 吹き出し（data-tooltip）の位置の基準をボタン自身にする。無いと吹き出しが窓の下に置かれ、ページが縦にはみ出す（docs/handoff/inbox-header-tooltip-overflow/design.md） */
+.page-header-actions [data-tooltip] {
+  position: relative;
+}
 
 /* --- Icon Button --- */
 /* stylelint-disable-next-line no-descending-specificity -- intentional: base .icon-btn defined after scoped override */

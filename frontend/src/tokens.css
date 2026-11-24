@@ -309,7 +309,8 @@
   /* ---- Inbox component sizes (Meta実測値) ---- */
   --height-tab-bar:        54px;   /* 受信箱タブバー高さ（36px × 1.5） */
   --height-tab-item:       36px;   /* 受信箱タブボタン高さ（バー内で中央寄せ） */
-  --width-inbox-panel:    443px;   /* 受信箱左パネル幅 */
+  --inbox-pc-list-ratio:  41.6%;   /* PC受信箱 一覧の比率（一覧＋会話欄の幅に対して。3列の幅の27%相当）ADR-1086 */
+  --inbox-pc-list-max-w:  330px;   /* PC受信箱 一覧の最大幅 ADR-1086 */
   --min-height-conv-item:  92px;   /* 会話アイテム最小高 */
   --min-height-conv-item-mobile: 76px;   /* 会話アイテム最小高（スマホ）: お手本実測76dp。PCは上の92pxのまま。出典 docs/specs/design-system/visual-language/benchmark/ */
   --min-width-dropdown:   180px;   /* 管理ドロップダウン最小幅 */
@@ -345,7 +346,9 @@
   --inbox-textarea-min-h:    60px;   /* カルテメモフィールド最小高 */
 
   /* ---- カルテパネル専用値（見本 karte_reference.html 準拠・4pxグリッド非準拠例外） ---- */
-  --karte-panel-width: 396px;  /* カルテパネル幅（見本 .panel） */
+  --karte-panel-width: 396px;  /* カルテパネル幅（見本 .panel）。タブレット帯の引き出しで使う。PC帯は下の2つ（ADR-1086） */
+  --karte-pc-ratio:      34.6%; /* PC受信箱 カルテの比率（受信箱の中身の幅に対して。3列の幅の35%相当）ADR-1086 */
+  --karte-pc-max-w:     480px;  /* PC受信箱 カルテの最大幅 ADR-1086 */
   --karte-h-pad:        18px;  /* カルテ共通横余白（ヘッダー・アクションバー） */
   --karte-field-py:      7px;  /* カルテフィールド縦padding（見本 .fbox） */
   --karte-field-px:      9px;  /* カルテフィールド横padding（見本 .fbox） */

@@ -14,6 +14,8 @@ on:
       - 'scripts/dev/consent-audit.py'
       - 'scripts/dev/consent-unit-tests.py'
       - 'docs/handoff/conversation-consent/hooks/**'
+      - 'docs/handoff/browser-operation-delegation/**'
+      - 'scripts/dev/chrome-guard-tests.py'
       - '.claude/hooks/requirement-*'
       - '.claude/hooks/test_requirement_*'
       - 'scripts/ci/feature_index_lib.py'
@@ -160,6 +162,35 @@ jobs:
             echo "consent unit tests: FAIL line found, or PASS/DONE missing"
             exit 1
           fi
+
+  chrome-guard-tests:
+    name: chrome-op-guard unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Run chrome-op-guard tests and judge by output lines
+        run: |
+          # 出力の行で判定する（FAIL 行が無く、DONE 行がある）
+          if python3 -I -B scripts/dev/chrome-guard-tests.py docs/handoff/browser-operation-delegation/hooks docs/handoff/conversation-consent/hooks "$RUNNER_TEMP/chrome" > "$RUNNER_TEMP/chrome.out"; then prc=0; else prc=$?; fi
+          cat "$RUNNER_TEMP/chrome.out"
+          if [ "$prc" != "0" ]; then
+            echo "chrome-guard-tests.py exited with $prc"
+            exit 1
+          fi
+          if grep -q '^FAIL' "$RUNNER_TEMP/chrome.out"; then
+            echo "chrome-guard tests: FAIL line found"
+            exit 1
+          fi
+          if ! grep -q '^DONE' "$RUNNER_TEMP/chrome.out"; then
+            echo "chrome-guard tests: DONE line missing"
+            exit 1
+          fi
+          echo "chrome-guard tests: all PASS"
 
   requirement-hooks:
     name: requirement hooks test

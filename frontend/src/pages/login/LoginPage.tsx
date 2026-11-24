@@ -7,12 +7,17 @@ import { SelfAuthError, askAdminLoginRequest, pollLoginRequest, recoverLoginRequ
 import type { AskAdminStatus, LoginApprovalRequired, LoginRequestPollStatus } from "../../lib/auth/selfAuth";
 import {
   autoRegisterPasskey,
+  cancelPasskeyCeremony,
   conditionalCreateSupported,
   getPasskeyPrompt,
+  immediateGetSupported,
+  immediatePasskeyLogin,
+  passkeyAutofillSupported,
   passkeyBrowserError,
   passkeySupported,
   registerPasskey,
   skipPasskeyPrompt,
+  startPasskeyAutofill,
 } from "../../lib/auth/passkey";
 import { clearRecoveryPromptMarksForCurrentUser } from "../../features/auth/RecoveryCodePrompt";
 import { Button } from "../../components/Button";
@@ -28,6 +33,12 @@ type Mode = "signIn" | "reset";
 /** 待つ機械が許可を確かめる間隔（ミリ秒）。429 を受けたら下の間隔に下げる */
 const POLL_INTERVAL_MS = 15_000;
 const POLL_BACKOFF_MS = 30_000;
+
+/** メール欄の候補の待ち受けを始め直す間隔（札は5分で切れる）と、始め直しの上限回数 */
+const AUTOFILL_RESTART_MS = 240_000;
+const AUTOFILL_MAX_RESTARTS = 15;
+/** 押した操作が、待ち受けの終わりを待つ上限（ミリ秒） */
+const AUTOFILL_WAIT_CAP_MS = 1_500;
 
 function formatRemaining(seconds: number): string {
   const safe = Math.max(0, seconds);
@@ -63,6 +74,13 @@ export default function LoginPage() {
   const [askResult, setAskResult] = useState<Exclude<AskAdminStatus, "expired"> | null>(null);
   const [askBusy, setAskBusy] = useState(false);
   const pollDelayRef = useRef(POLL_INTERVAL_MS);
+  // パスキー: 画面を開いた時に1回だけ調べる（押した後に await しない）。「この機械にはない」案内
+  const [immediateOk, setImmediateOk] = useState(false);
+  const [passkeyMissing, setPasskeyMissing] = useState(false);
+  // 待ち受けの世代の番号・押してから終わるまでの旗・待ち受けの終わり（reject しない）
+  const genRef = useRef(0);
+  const busyRef = useRef(false);
+  const waitRef = useRef<Promise<void>>(Promise.resolve());
   const { signIn, signInWithPasskey, sendPasswordReset, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -76,6 +94,80 @@ export default function LoginPage() {
       navigate(from, { replace: true });
     }
   }, [authLoading, user, navigate, from, enrolling, promptOpen, mustChange]);
+
+  // 選ぶ画面を挟まない確認（immediate）に対応しているかを、画面を開いた時に1回だけ調べる
+  useEffect(() => {
+    let cancelled = false;
+    void immediateGetSupported().then((ok) => {
+      if (!cancelled) setImmediateOk(ok);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // メール欄の候補にパスキーを出す待ち受け。条件が外れる・画面を離れると止める
+  useEffect(() => {
+    if (!(mode === "signIn" && !approval && !user && !enrolling && !promptOpen && !loading && !authLoading)) return;
+    let disposed = false;
+    let restarts = 0;
+    let startedAt = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const begin = () => {
+      const gen = ++genRef.current;
+      const isStale = () => genRef.current !== gen;
+      startedAt = Date.now();
+      clearTimeout(timer);
+      timer = setTimeout(onTimer, AUTOFILL_RESTART_MS);
+      waitRef.current = (async () => {
+        try {
+          if (!(await passkeyAutofillSupported())) return;
+          await startPasskeyAutofill(isStale);
+          if (!isStale()) navigate(from, { replace: true });
+        } catch (err) {
+          // 止めた・閉じた・古い・ブラウザ側の誤りは何も出さない。verify の失敗だけ出す
+          if (err instanceof SelfAuthError && !isStale()) {
+            setError(authErrorMessage(err, t, "passkey"));
+          }
+        }
+      })();
+    };
+
+    const bumpGeneration = () => {
+      genRef.current++;
+    };
+
+    const restart = () => {
+      restarts += 1;
+      bumpGeneration();
+      cancelPasskeyCeremony();
+      begin();
+    };
+
+    const canRestart = () => !disposed && !busyRef.current && restarts < AUTOFILL_MAX_RESTARTS;
+
+    function onTimer() {
+      // 隠れている間は何もしない（張り直さない）。見えた時に visibilitychange が引き継ぐ
+      if (document.visibilityState === "visible" && canRestart()) restart();
+    }
+
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - startedAt >= AUTOFILL_RESTART_MS && canRestart()) restart();
+    };
+
+    begin();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      disposed = true;
+      bumpGeneration();
+      // 押した操作の最中は、その操作が自分で必要な取り消しを持つ
+      if (!busyRef.current) cancelPasskeyCeremony();
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [mode, approval, user, enrolling, promptOpen, loading, authLoading, navigate, from, t]);
 
   // 待ちを終えてログイン画面に戻す（期限切れ・断られた）。poll と「管理者に頼む」の両方から使う
   const endApproval = useCallback((message: string) => {
@@ -234,6 +326,8 @@ export default function LoginPage() {
 
   const handlePasskeySignIn = async () => {
     setError("");
+    setPasskeyMissing(false);
+    busyRef.current = true;
     setLoading(true);
     try {
       await signInWithPasskey();
@@ -245,6 +339,37 @@ export default function LoginPage() {
           : authErrorMessage(err, t, "passkey"),
       );
     } finally {
+      busyRef.current = false;
+      setLoading(false);
+    }
+  };
+
+  // ボタン: immediate に対応していれば選ぶ画面を挟まず確認を出す。対応していなければ今まで通り
+  const handlePasskeyButton = async () => {
+    setError("");
+    setPasskeyMissing(false);
+    if (!immediateOk) return handlePasskeySignIn();
+    busyRef.current = true;
+    // loading-clear-exempt: パスキーの確認を待つ間のボタンの印。画面の中身は消さない（handlePasskeySignIn と同じ扱い）
+    setLoading(true);
+    let capTimer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      genRef.current++;
+      cancelPasskeyCeremony();
+      await Promise.race([
+        waitRef.current,
+        new Promise<void>((resolve) => {
+          capTimer = setTimeout(resolve, AUTOFILL_WAIT_CAP_MS);
+        }),
+      ]);
+      await immediatePasskeyLogin();
+      navigate(from, { replace: true });
+    } catch (err) {
+      if (err instanceof Error && err.name === "NotAllowedError") setPasskeyMissing(true);
+      else setError(authErrorMessage(err, t, "passkey"));
+    } finally {
+      clearTimeout(capTimer);
+      busyRef.current = false;
       setLoading(false);
     }
   };
@@ -398,7 +523,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  autoComplete="email"
+                  autoComplete="email webauthn"
                 />
               </div>
               <div className="form-group">
@@ -430,10 +555,15 @@ export default function LoginPage() {
                 fullWidth
                 type="button"
                 disabled={loading}
-                onClick={() => void handlePasskeySignIn()}
+                onClick={() => void handlePasskeyButton()}
               >
                 {t("login.signInWithPasskey")}
               </Button>
+            )}
+            {passkeySupported() && passkeyMissing && (
+              <Callout variant="info" title={t("login.passkeyNotOnDevice")}>
+                <TextLink onClick={() => void handlePasskeySignIn()}>{t("login.passkeyUseOtherDevice")}</TextLink>
+              </Callout>
             )}
             </Stack>
           </>
