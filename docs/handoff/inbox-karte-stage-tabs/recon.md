@@ -7,7 +7,7 @@
 
 - `git grep -n "karte" origin/main -- docs/adr/` と `docs/adr/FEATURE-INDEX.md` で探した。関わるのは次の 3 本。
   - `docs/adr/ADR-108-inbox-karte-panel-redesign.md:38` 「顧客タブは段階によらず同一レイアウト（フルスペック）。段階で変えるのは『既定で開くタブ』のみ」→ 今回の依頼と食い違う。ADR-1089 で改める。
-  - `docs/adr/ADR-108-inbox-karte-panel-redesign.md:103-106` 受入条件（顧客タブの項目・同一レイアウト・既定タブ）。
+  - `docs/adr/ADR-108-inbox-karte-panel-redesign.md:102-105` 受入条件（商談タブの項目・顧客タブの項目・同一レイアウト・既定タブ）。
   - `docs/adr/ADR-110-karte-reference-alignment.md`（Accepted）タブ順 商談 / 顧客 / 連絡先。
   - `docs/adr/ADR-109`（段階の内部の名前・`frontend/src/constants/leadStatus.ts:9-17`）。
 - ADR-1088 は PR #5713（未マージ）が使っているため、新しい番号は ADR-1089（`gh pr list --search ADR-1089` 0 件・origin/main に無し）。

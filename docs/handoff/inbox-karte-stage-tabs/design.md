@@ -20,7 +20,7 @@
 | K4 | 成約後のカルテのタブが「顧客・連絡先・商談」の順で、最初に顧客が開く | 画面試験 `[ADR-1089-1] Customer`・`[ADR-108-4] Existing customer / Oikomi`＋本番の画面の写真 |
 | K5 | 成約後の顧客タブ・商談タブの項目が表のとおり | 画面試験 `[ADR-1089-2] Customer company / deal / Follow-up` |
 | K6 | 失注・対象外のタブと項目の置き場所は今と同じ | 部品の試験 `karteLayout.test.ts`「表に無い段階」 |
-| K7 | 段階の一覧が書かれているのは 1 か所だけ | `grep -rn "follow_up_short" frontend/src/pages/inbox/ --include=*.ts --include=*.tsx \| grep -v test` が `karteLayout.ts` の 1 行 |
+| K7 | カルテの段階の一覧が書かれているのは 1 か所だけ | `grep -n "follow_up_short"` を `useInboxState.ts`・`InboxKartePanel.tsx` に流して 0 件。受信箱の製品のファイルで出るのは `karteLayout.ts` と `inbox.types.ts:25`（左の一覧の絞り込み・カルテとは別）の 2 つだけ |
 | K8 | 隠した項目の値は消えない | 保存の作り（`useInboxState.ts:549-560`・全部の値を送る）を変えていないことを差分で確かめる。`useInboxState.ts` の差分は 655-663 の 1 か所だけ |
 | K9 | 新しい色・寸法・文・部品を足していない | 差分に `.css`・`ja.json`・`en.json` が無い。入力欄は今の金型（`TextFieldControl`・`SelectControl`・`TextareaControl`・`SalesFormMultiSelect`）のまま |
 

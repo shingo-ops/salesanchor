@@ -24,7 +24,7 @@
 | 同 | 229-238 | タブの並び `(["deal", "company", "contact"] as KarteTabKey[]).map((tab) => (` と `karteTab === tab` |
 | 同 | 242 | `tab={karteTab}` |
 | 同 | 554 | `// === COMPANY TAB — ADR-110: 基本 / 取引プロフィール / 実績サマリー / 引き継ぎ ===` |
-| 同 | 717-720 | 商談タブの終わり（`</div>` `);` `}`） |
+| 同 | 718-720 | 商談タブの終わり（`</div>` `);` `}`） |
 | `frontend/src/pages/inbox/useInboxState.ts` | 655-663 | `// ADR-108: set default karte tab based on lead_status` から `setKarteTab("deal");` `}` まで |
 | `frontend/tests-e2e/karte-visual-gate.spec.ts` | 126, 167, 178, 231, 270, 349 | 各 test / describe の始まり（recon §2） |
 
@@ -87,7 +87,7 @@
 2. `cd frontend && npx eslint --max-warnings=0 src/pages/inbox/karteLayout.ts src/pages/inbox/karteLayout.test.ts src/pages/inbox/InboxKartePanel.tsx src/pages/inbox/useInboxState.ts` → 0 件。
 3. `cd frontend && npx vitest run src/pages/inbox/` → 全部通る。
 4. commit・push のあと、Opus が基準画像の作り直しを GitHub に頼む: `gh workflow run karte-gate.yml --ref release/inbox-karte-stage-tabs`。ボットが枝へ画像を commit する。Sonnet はここまでで `DONE` を返す。
-5. 確かめ後の残し方: `grep -rn "follow_up_short" frontend/src/pages/inbox/ --include=*.ts --include=*.tsx | grep -v test` が `karteLayout.ts` の 1 行だけ（成約後の段階の一覧が 1 か所だけ）。
+5. 確かめ後の残し方: `grep -n "follow_up_short" frontend/src/pages/inbox/useInboxState.ts frontend/src/pages/inbox/InboxKartePanel.tsx` が 0 件。`grep -rln "follow_up_short" frontend/src/pages/inbox/ --include=*.ts --include=*.tsx` に出る製品のファイルは `inbox.types.ts`（左の一覧の絞り込み・今回は触らない）と `karteLayout.ts` の 2 つだけ（カルテの段階の一覧が 1 か所だけ）。
 
 ## 5. commit
 

@@ -5,7 +5,7 @@
 | ステータス | Proposed（2026-11-24・PO が項目の置き場所の表に「1」。本番で PO が見て確かめたら決定に進める） |
 | 起案日 | 2026-11-24 |
 | 方針の決定者 | Shingo（PO） |
-| Amends | [ADR-108](ADR-108-inbox-karte-panel-redesign.md) の What 3（「顧客タブは段階によらず同一レイアウト」）と受入条件の 103〜106 行目、[ADR-110](ADR-110-karte-reference-alignment.md) の「タブ順は 商談 / 顧客 / 連絡先」 |
+| Amends | [ADR-108](ADR-108-inbox-karte-panel-redesign.md) の What 3（「顧客タブは段階によらず同一レイアウト」）と受入条件の 102〜105 行目（商談タブの項目・顧客タブの項目・同一レイアウト・既定タブ）、[ADR-110](ADR-110-karte-reference-alignment.md) の「タブ順は 商談 / 顧客 / 連絡先」 |
 | 関連 | ADR-109（段階の内部の名前）、ADR-027（画面の文字は t() 経由）、ADR-067・ADR-144（デザイントークン・金型）。設計: `docs/handoff/inbox-karte-stage-tabs/design.md`・調査: `recon.md` |
 
 ---
