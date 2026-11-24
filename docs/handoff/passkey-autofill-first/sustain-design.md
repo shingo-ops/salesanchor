@@ -64,7 +64,7 @@ PO 2026-11-24:「この仕組みを標準化して管理定着させて継続さ
 ### 5-4. パスキーの道の 5xx の見張り（G3 を埋める）
 - 記録の限界（事実）: auth_events は backend/app/middleware/audit.py が `call_next` の後に書く。処理の途中で落ちた 500 と、入口（nginx）が返す 502/504 は auth_events に残らない（審査役の指摘。Starlette の例外の順は Context7 kludex/starlette docs/exceptions.md）。だから 5xx は auth_events では数えない。
 - 入口（nginx）の行で数える。入口の行は `"POST /api/v1/auth/passkey/login/options HTTP/2.0" 499 0` の形（状態の後に数字）で、落ちた 500 も 502/504 も残る。
-- monitoring/loki/rules/jarvis/alerts.yml の auth_anomaly に1本足す。見張りの名前は `PasskeyServerError`。式は `sum(count_over_time({job="containerlogs"} |~ "\"POST /api/v1/auth/passkey/login/(options|verify) HTTP/[0-9.]+\" 5[0-9][0-9] [0-9]+" [10m])) > 0`（エスケープは alerts.yml:12 と同じ）・for 0m・severity warning・tier ticket・runbook_url は `docs/runbooks/alerts.md#passkeyservererror`。届け先は今の Alertmanager（Discord）。
+- monitoring/loki/rules/jarvis/alerts.yml の auth_anomaly に1本足す。見張りの名前は `PasskeyServerError`。式は `sum(count_over_time({job="containerlogs"} |~ "\"POST /api/v1/auth/passkey/login/(options|verify) HTTP/[0-9.]+\" 5[0-9][0-9] [0-9]+" [10m])) > 0`（エスケープは alerts.yml:12 と同じ）・for 0m・severity warning・tier ticket・runbook_url は docs/runbooks/alerts.md の #passkeyservererror。届け先は今の Alertmanager（Discord）。
 - docs/runbooks/alerts.md に見出し `## PasskeyServerError` を、SustainedAuthFailure の節（:147）の後に同じ形（札・何が起きているか・最初に見るもの・直し方・止め方）で足す。monitoring/scripts/check_alert_rules.py がこのつながりを確かめる。
 - 本番（prod2）への置き方: 合流しても prod2 には自動で届かない。前例 docs/handoff/ai-ops-247/card-login-alert-bin8.md:227 の手順4と同じに Opus が置く（今の alerts.yml を控える → main の版を置く → sha256 が main と一致）。ずれは毎日 monitoring/scripts/check_config_drift.sh が数える。
 - 本番での試し（2026-11-24 13時台 JST・Loki）: 同じ式の 5xx を外した版はパスキーの道で直近7日 14件に当たり、5xx 版は 0件。誤報の元は今は無い。
