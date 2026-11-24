@@ -71,3 +71,17 @@
 5. 維持の仕組み: 今の秘書は回帰の束 `backend/app/assistant_regression/cases.json` で守る。
 6. あるべき姿との対照: 「AI は下書きだけ」一致／「サーバーの中に置く」未定（PO の判断）／「データを分散させない」第2版で覚え書きを切って一致。
 7. 未確認: 上の不明点と design.md §9。
+
+## クラウドの作業場所での実測（2026-11-25・クラウドの Sonnet・読み取りと試しの起動だけ）
+
+| 確かめたこと | 結果（生の出力の要点） |
+|---|---|
+| 1回目（cse_01HHUUpTgL6mZFhvpgXoYzTT） | `docker --version` は 29.9.3。ただし中核が動いておらず `docker pull` は `failed to connect to the docker API at unix:///var/run/docker.sock` で失敗。メモリ 16087MB・CPU 4・空き 60G |
+| 2回目（cse_01HHUUpThNboS8XMASu5bkSs）中核の起動 | root（`id -u` 0）。`nohup dockerd` で起動し 1 回目の確かめで `docker info` が通った。Storage Driver overlayfs・Cgroup Version 1・Total Memory 15.71GiB |
+| 完成品の取得 | `nousresearch/hermes-agent:latest` 取得成功。digest `sha256:ef0650d523ee1b5ab32c779acabc446d9936869a9932591553688a62bcf0c42f`・作成 2026-11-24T07:09:27Z・4654999523 バイト |
+| 版 | `hermes --version` → `Hermes Agent v0.23.4 (2026.9.24)`・Python 3.14.9・OpenAI SDK 2.54.0 |
+| 普通の起動（`-m 2g`） | 15 秒後も動いている。CPU 103.6%・メモリ 352.8MiB / 2GiB・PIDS 42。ログに `install out of sync (pnpm…)` と `nous_auth_missing`（Nous Portal 未ログイン）の警告 |
+| 守りを付けた起動（`--read-only --cap-drop ALL --security-opt no-new-privileges:true --tmpfs /tmp`） | `Exited (111)`。ログ `s6-rmrf: fatal: unable to remove /run/s6: Read-only file system` |
+
+- 便0 の版は上の digest で固定する（design.md §5「入れ方」）。
+- 守りを付けた形は立たなかった。`/run` の書き込みが要る。どの権限を最小で戻すかは便0 で測る（design.md §5「容器の守り」の項目どおり。未確認: `--tmpfs /run` だけで立つか）。
