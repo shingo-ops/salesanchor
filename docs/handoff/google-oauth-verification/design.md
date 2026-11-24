@@ -41,7 +41,7 @@
 
 ## 3-1. 手順1の決定と、狭める便の設計（PO 2026-11-25「1」= 狭い2つに変える）
 
-PO の決定: アプリが求める許可を `calendar` から `calendar.events.owned`＋`calendar.calendars.readonly` に狭める。以下は Opus の設計案（設計審査前）。
+PO の決定: アプリが求める許可を `calendar` から `calendar.events.owned`＋`calendar.calendars.readonly` に狭める。以下は Opus の設計（設計審査2回目で APPROVE）。
 
 ### 変更前と変更後（触るファイルの全部は実装カード `docs/handoff/google-oauth-verification/card-narrow-scope.md`。受け取り口と画面の文も変える）
 

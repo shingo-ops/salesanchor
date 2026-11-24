@@ -10,7 +10,7 @@
   5. `frontend/src/locales/ja.json`
   6. `frontend/src/locales/en.json`
   7. `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`（画面の試験 S5）
-- 審査: `review-architect-narrow-1.md`（REVISE → R1・R2・L1〜L5 をこのカードと design §3-1 に反映済み）
+- 審査: 1回目 review-architect-narrow-1.md（REVISE → R1・R2・L1〜L5 をこのカードと design §3-1 に反映済み）、2回目 review-architect-narrow-2.md（APPROVE）。どちらも枝 release/google-calendar-narrow-scope-review1・-review2 にある
 
 ## 変更1 許可の範囲（`backend/app/services/google_calendar.py:42`）
 
