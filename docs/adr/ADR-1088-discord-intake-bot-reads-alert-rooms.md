@@ -6,7 +6,7 @@
 | 備考 | PO 2026-11-24 チャット（原文）: 選択肢「1. 決まりを書き直す【おすすめ】 「読める部屋は2つと知らせの3部屋」に書き直す案を作ります。しんごさんの承認を受けてから、記録と一緒に取り込みます。読む道は今のまま使えて、しんごさんの作業は承認だけです。」を選び、同じ返事で「離席するので、このセッションだけで最後まで完結させる。」「PRマージ、デプロイまで完走させてくれ。」。選択肢の「承認を受けてから」は、この完走の指示と ccopusgo の GO 委任で受けたものとして扱った（Opus の判断。PO の言葉は上の原文だけ） |
 | 起案日 | 2026-11-24 |
 | 方針の決定者 | Shingo（PO）。設計: Claude Opus |
-| 改める | Amends ADR-1039（[本文](ADR-1039-discord-pdca-agent-console.md)。Decision 3 の「読む2つのチャンネル」を改める。Decision 7 の「鍵は Keychain に置く」には例外を1つ置く（Exceptions）。ほかの Decision は変えない）。本 ADR が Accepted になったときに効く |
+| 改める | Amends ADR-1039（[本文](ADR-1039-discord-pdca-agent-console.md)。Decision 3 の「読む2つのチャンネル」を改める。Decision 7 の「鍵は Keychain に置く」には例外を1つ置く（Exceptions）。ほかの Decision は変えない）。2026-11-24 の Accepted から効いている |
 | 関連 | [ADR-079](ADR-079-claude-code-monitoring-access.md)（AI の読むだけの鍵の置き場）、[ADR-1024](ADR-1024-ai-readonly-db-path.md)（読むだけの道・役目を混ぜない）、[ADR-1012](ADR-1012-ai-ops-247.md)（24時間保守） |
 | 設計 | `docs/handoff/discord-reader-access/design.md`・`recon.md`・`review-opus.md` |
 
