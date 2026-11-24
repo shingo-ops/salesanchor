@@ -9,7 +9,8 @@
   4. `frontend/src/pages/schedule/SchedulePageImpl.tsx`
   5. `frontend/src/locales/ja.json`
   6. `frontend/src/locales/en.json`
-  7. 画面の試験を足すなら `frontend/src/pages/schedule/` の既存の試験ファイル1つ
+  7. `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`（画面の試験 S5）
+- 審査: `review-architect-narrow-1.md`（REVISE → R1・R2・L1〜L5 をこのカードと design §3-1 に反映済み）
 
 ## 変更1 許可の範囲（`backend/app/services/google_calendar.py:42`）
 
@@ -33,9 +34,23 @@ _SCOPES = [
 ## 変更3 片方だけ許可されたときの失敗（同ファイル `exchange_code`）
 
 - 同ファイルにクラスを足す: `class GoogleScopeNotGrantedError(Exception): """利用者が Google の同意の画面で、求めた許可の一部を外した。"""`
-- `await asyncio.to_thread(flow.fetch_token, code=code)` の `try` で、今の `except Exception` の前に `except Warning as e:` を足す。`e` に付く `token` の `scope`（空白区切り）を読み、`_SCOPES` の2つが両方そろっていなければ `GoogleScopeNotGrantedError` を出す。そろっていれば今と同じく `RuntimeError` にする。
-- 【実装の前に確かめる】今入る版の `oauthlib` で、範囲が変わったとき `fetch_token` から `Warning` が出て `token` が付くこと。`oauthlib.oauth2.rfc6749.parameters.validate_token_parameters` に `{"access_token":"x","token_type":"Bearer","scope":"https://www.googleapis.com/auth/calendar.events.owned"}` と、求めた範囲2つを渡す試験で確かめる。型か `token` の付き方が違えば、**実装をやめて BLOCKED: で返す**（推測で書き換えない）。
-- 2つとも許されたときに `Warning` が出ないこと（並び順が違っても）も同じ試験で確かめる。出るなら BLOCKED: で返す。
+- `await asyncio.to_thread(flow.fetch_token, code=code)`（`:198-201`）の `try` で、今の `except Exception` の前に `except Warning as e:` を足す。
+- 受け取った範囲の集め方（審査1回目 R2。実物の `Flow.fetch_token` 経由では `e.token["scope"]` が**リスト**、直接の検査では**文字列**だった）:
+  1. `granted = getattr(e, "new_scope", None)`（oauthlib `parameters.py:471` の `w.new_scope`。リスト）
+  2. それが無ければ `raw = (getattr(e, "token", None) or {}).get("scope")`。`str` なら `raw.split()`、`list`/`tuple` ならそのまま、どちらでもなければ空。
+  3. `granted_set = set(granted or [])`
+- 判定は `set(_SCOPES) <= granted_set`（求めた2つが含まれているか）。
+  - 含まれていない → `GoogleScopeNotGrantedError` を出す（片方だけ許された）。
+  - 含まれている（余分な範囲が返った場合など）→ 今と同じく `RuntimeError("Google token 交換に失敗: …")`。`include_granted_scopes="false"`（`:151`）なので通常は起きない（審査1回目 L5）。
+- 【実装の前に確かめる】（審査1回目 R1。3.2.2・3.3.1・4.0.1 の3版で審査役が動かして同じ結果）:
+  ```python
+  from oauthlib.oauth2.rfc6749.parameters import validate_token_parameters
+  from oauthlib.oauth2.rfc6749.tokens import OAuth2Token
+  tok = OAuth2Token({"access_token": "x", "token_type": "Bearer", "scope": "<返った範囲の空白区切り>"}, old_scope=" ".join(_SCOPES))
+  validate_token_parameters(tok)
+  ```
+  片方だけなら `Warning`（`e.token` と `e.new_scope` あり）、2つ（順不同とも）なら例外なし。違えば**実装をやめて BLOCKED: で返す**（推測で書き換えない）。
+- 確かめの出力に `python -c "import oauthlib; print(oauthlib.__version__)"` の結果も残す（`oauthlib` は requirements に直接の指定が無く、推移で入るため。審査1回目 L3）。
 
 ## 変更4 受け取り口（`backend/app/routers/google_calendar.py:109-115`）
 
@@ -51,7 +66,9 @@ _SCOPES = [
 
 `connected === "false"` のとき、`searchParams.get("error") === "scope_missing"` なら `t("schedule.connectScopeMissing")`、それ以外は今と同じ `t("schedule.connectError")`。新しい部品・色・直書きの文は足さない（今の知らせの帯をそのまま使う。ADR-144・ADR-067）。
 
-## 変更6 文（`ja.json` と `en.json` の `schedule` の `connectError` の次の行。同じキーを両方に）
+`searchParams.get("error")` は、今の `setSearchParams({}, …)`（`:951`）より前に読む。`:962` の `connectError` の別の使い道は触らない。
+
+## 変更6 文（`ja.json` と `en.json` の `schedule`（`:3389` 始まり）の中の `connectError`（`:3482`）の次の行。同じキーを両方に。`:1485` の別の名前空間の `connectError` とは別物）
 
 - ja: `"connectScopeMissing": "Google カレンダーの許可が一部だけでした。Google の画面で2つとも選んで、もう一度接続してください"`
 - en: `"connectScopeMissing": "Only some Google Calendar permissions were granted. Select both on the Google screen and connect again."`
@@ -62,9 +79,11 @@ _SCOPES = [
 |---|---|
 | S1 | `get_auth_url` の URL の `scope` を分解し、狭い2つだけで、`auth/calendar` 単体が無い |
 | S2 | `_build_credentials` が `Credentials` を `scopes=None` で呼ぶ（今の `TestBuildCredentials` に足す） |
-| S3a | `fetch_token` が `token` 付きの `Warning`（片方だけ）を出すと `GoogleScopeNotGrantedError` |
+| S3a | `fetch_token` が `Warning`（片方だけ）を出すと `GoogleScopeNotGrantedError`。`e.token["scope"]` を**リスト**で作った場合と**文字列**で作った場合の両方、`e.new_scope` がある場合と無い場合の両方で通す |
+| S3a' | `Warning` だが求めた2つが含まれる（余分あり）なら `RuntimeError` |
 | S3b | 受け取り口が `GoogleScopeNotGrantedError` で `error=scope_missing` に送る |
-| S3c | 実物の `oauthlib` の検査の関数で、片方だけなら `Warning`・2つとも（順不同）なら出ない |
+| S3c | 実物の `oauthlib` で、上の【実装の前に確かめる】の形（`OAuth2Token(..., old_scope=...)` を `validate_token_parameters` に渡す）で、片方だけなら `Warning`・2つとも（順不同）なら出ない |
+| S5 | 画面の試験（`frontend/src/pages/schedule/SchedulePageImpl.test.tsx:1357` 付近の `?connected=true` の試験と同じ形）で、`?connected=false&error=scope_missing` なら `connectScopeMissing` の文、`?connected=false` だけなら今の `connectError` の文が出る |
 
 既存の試験の `exchange_code` の成功の形（`creds.refresh_token` が無いと失敗、など）は変えない。
 
