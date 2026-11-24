@@ -26,7 +26,9 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.schemas.base import validate_delivery_address_line
 
 # 配送キャリア enum（DB の CHECK 制約と一致させる）。
 # 'elogi' / 'fedex' / 'dhl' / 'yamato' / 'other' のみ許可。
@@ -119,12 +121,21 @@ class OrderShippingDetailBase(BaseModel):
     ship_memo: str | None = Field(default=None, max_length=5000)
 
 
-class OrderShippingDetailCreate(OrderShippingDetailBase):
+class _DeliveryAddressLinesCheck(BaseModel):
+    """書き込みだけ住所1〜3に送り先の決まりを当てる（読み出しの Response には付けない）。"""
+
+    @field_validator("address1", "address2", "address3", check_fields=False)
+    @classmethod
+    def _check_delivery_line(cls, v: str | None) -> str | None:
+        return validate_delivery_address_line(v)
+
+
+class OrderShippingDetailCreate(_DeliveryAddressLinesCheck, OrderShippingDetailBase):
     """新規作成リクエスト。order_id は URL パスから渡される。"""
     pass
 
 
-class OrderShippingDetailUpdate(OrderShippingDetailBase):
+class OrderShippingDetailUpdate(_DeliveryAddressLinesCheck, OrderShippingDetailBase):
     """部分更新リクエスト。全フィールド optional は Base と同じ。
     router 側で `model_dump(exclude_unset=True)` を使い、明示指定された列のみ
     UPDATE する（None で「クリアしたい」場合は明示的に null を渡す必要あり）。
