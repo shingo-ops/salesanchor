@@ -18,14 +18,15 @@
 ## 既存 ADR の検索
 
 - `git grep -i "secretary\|秘書" docs/adr/` と `docs/specs/README.md` の索引で、上の ADR と仕様書 `docs/specs/secretary-chat/README.md` を確認（2026-11-25）。
-- 本件は既存テーマ「アプリ内のチャット秘書」の延長として扱う（STANDARD-WORKFLOW §1.8）。
+- `docs/adr/FEATURE-INDEX.md` の秘書の行（:79）から秘書の ADR 一式を確認。追加で関係する ADR: ADR-1003（secrets）・ADR-135/136（危険 PR の GO）・ADR-1004（台帳）。
+- 新規テーマか既存の延長かは PO に聞く（審査 R1。審査役の見立ては新規）。それまで仮に延長として親の下に置く。
 
 ## file:line 引用表
 
 | 引用先 `path:line` | 確認内容 |
 |-------------------|---------|
 | `backend/app/routers/assistant.py:85` | 秘書の容器の宛先 `SECRETARY_AGENT_URL`（http://secretary-agent:8090） |
-| `backend/app/routers/assistant.py:106` | `agent_url(provider)`: 担当表の provider → 容器の宛先。配線の正本はここ 1 か所。新しい容器はここに 1 行足せば呼べる形 |
+| `backend/app/routers/assistant.py:106` | `agent_url(provider)`: 担当表の provider → 容器の宛先。配線の正本はここ 1 か所。ただし provider の値は DB の決まり（`migrations/20261103_120000_create_ai_job_assignments.sql:33`）と sdk の対応表（`backend/app/services/llm_budget.py:180`）にも縛られ、1 行では足りない（審査 M1・R3） |
 | `backend/app/routers/assistant.py:98` | 秘書の口の守り 4 つ（機能の札・super admin・顧客閲覧・請求書作成の権限） |
 | `backend/app/services/ai_assignment.py:33` | `get_ai_assignment(db, job_key)`: 仕事ごとの担当（provider・model）を DB から読む |
 | `backend/app/services/ai_assignment.py:47` | 画面で付け替えできる仕事は今 `secretary_intent` の 1 つだけ |
@@ -36,7 +37,7 @@
 | `backend/app/routers/invoices.py:899` | 入金登録は issued/overdue → paid |
 | `backend/app/routers/invoices.py:592` | 見積から作る請求書は `"due_date": None`（支払期日が空） |
 | `backend/app/routers/dashboard.py:138` | 「未払い」= status が issued または overdue、と既に数えている |
-| `backend/app/services/messaging_window.py:68` | 会話ごとの `last_inbound_at`（お客様の最後のメッセージ時刻） |
+| `backend/app/services/messaging_window.py:68` | 関数 compute_state の引数 `last_inbound_at`。値は `backend/app/routers/meta_inbox.py:952` で meta_messages から数えて出す（Meta の経路だけ） |
 
 ## Hermes Agent（外部・公式。Context7 `/nousresearch/hermes-agent` で確認 2026-11-25）
 
@@ -54,9 +55,19 @@
 | # | 不明点 | 解消方法 | 状態 |
 |---|-------|---------|------|
 | 1 | 請求書を overdue に変える仕組みの有無 | `grep -rn overdue backend/app` | ✅ 解消: 書き換える所は無い（読むだけ: `backend/app/routers/dashboard.py:138`・`backend/app/routers/invoices.py:1008`）。催促の基準は「issued かつ期日（空なら発行日）から N 日」で数える |
-| 2 | Hermes を置くサーバーの容量（prod1 は 4GB で置かない方針） | 小さな試し（便0）で実測 | 未解決 → 設計 §6 の便0 で測る |
+| 2 | Hermes を置くサーバーの容量（本番の置き場は PO が決める。prod1 の 4GB は `docs/adr/ADR-081-monitoring-vps-final-operational-design.md:168`） | 小さな試し（便0）で実測 | 未解決 → 設計 §6 の便0 で測る |
 | 3 | Hermes の道具（端末・ファイル・ネット）を全部切った状態で、振り分けと下書きが動くか | 便0 で実測 | 未解決 → 便0 |
 | 4 | LINE・Discord・メールでも最後の受信時刻が取れるか | 返信係を作るときに調べる | 未解決（最初の係ではないので後回し可） |
 | 5 | ChatGPT の容器が本番で動いているか | 本番の読み取りで確かめる | 未解決（本件の判断には影響しない） |
 
 **未解決ゼロ確認**: 未解決 2・3 は「動くかどうか」そのものなので、机の上では消せない。設計の便0（試しの部屋で実測）で消す。4・5 は最初の便に関係しない。
+
+## 7 観点（docs/specs/recon-standard/kgi.md）
+
+1. 現状の作り: 上の引用表。
+2. データの流れ: 頼みの文→アプリ→秘書の容器→JSON→画面→「作る」で今の口。
+3. 既存 ADR: 上の検索。
+4. 外の仕組み: Hermes の表。説明書の写しと版の固定は便0 のカードで行う。
+5. 維持の仕組み: 今の秘書は回帰の束 `backend/app/assistant_regression/cases.json` で守る。
+6. あるべき姿との対照: 「AI は下書きだけ」一致／「サーバーの中に置く」未定（PO の判断）／「データを分散させない」第2版で覚え書きを切って一致。
+7. 未確認: 上の不明点と design.md §9。

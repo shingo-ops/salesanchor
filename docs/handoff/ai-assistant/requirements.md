@@ -49,7 +49,7 @@
 基準の一覧の 1 行に持たせる項目（案）: 名前／何を見るか／数字（例 4 時間）／どの係が案を作るか／急ぎか（夜中の扱い）／動かす・止める／記録する数字（当たった回数・そのまま「はい」・直して「はい」・無視）
 
 事実（Q4b の根拠）:
-- アプリはお客様の最後のメッセージの時刻を会話ごとに持っている（backend/app/services/messaging_window.py:68 `last_inbound_at`、backend/app/routers/meta_inbox.py:952）。いまは Meta の 24 時間の返信期限の計算に使う。
+- Meta の経路では、お客様の最後のメッセージの時刻を meta_messages から数えて出している（backend/app/routers/meta_inbox.py:952）。backend/app/services/messaging_window.py:68 はそれを受け取る引数。いまは Meta の 24 時間の返信期限の計算に使う。
 - LINE・Discord・メールなどすべての経路で同じ時刻が取れるかは未確認。
 
 PO の希望として記録（係の論点へ持ち越し）:
@@ -61,5 +61,5 @@ PO の希望として記録（係の論点へ持ち越し）:
 ## 4. 未確認
 
 - Hermes Agent を係何人で動かしたときに要るサーバーの容量
-- 各 AI 会社のデータの扱いの約束
+- 各 AI 会社のデータの扱いの約束 → 調べは PO が 2026-11-01 に禁止（docs/specs/secretary-chat/README.md:16）。調べずに、本物の会社データを外の AI に渡すかを PO に聞く（design.md §9）
 - ChatGPT の箱が本番で動いているか
