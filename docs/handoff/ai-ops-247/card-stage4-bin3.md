@@ -5,7 +5,7 @@
 
 - 設計: `docs/handoff/ai-ops-247/stage4-design.md` §0 E5（:18）、§2 C3-2（:63）、§12 D3（:189）
 - 対象ADR: ADR-1012（段階4）、ADR-1052（伏せた窓）
-- 状態: 設計案作成済み。設計審査（クラウド）1回目 REVISE（R1 1件）→ 直した。実装は未着手
+- 状態: 設計案作成済み。設計審査（クラウド）1回目 REVISE（R1 1件）→ 直した → 2回目 APPROVE（L1・L2 を反映）。実装は未着手
 - 危険便: はい（`migrations/20261024_100300_create_ai_cloud_views.sql` を変える。ADR-135・ADR-136）。GO #番号が要る（POの委任に基づくClaude Opus発行）
 - 実装担当: クラウドの Sonnet（RemoteTrigger の一回実行）。push して止まる。PR は Opus が作る
 - PO の決定: D3「C3-2 を採る。alertname と severity を伏せる対象から外す（実装カードで行う）」（設計 §12 :189）。この表で新しく PO に聞くことは無い
@@ -68,7 +68,7 @@
   - `ai_cloud_meta.column_class` の `schema_pattern='public' AND table_name='ops_incidents'` で、alertname と severity の行がそれぞれ 1 行・class が `allow`・reason が空でない。
   - `ai_cloud_meta.build_columns` の `view_name='public__ops_incidents'` で、alertname と severity の mode が `pass`。
   - 同じ view で labels・annotations・fingerprint・root_cause・review_note の mode が `pass` でない（伏せたまま）。
-- `salesanchor_app` のロールは作らない。ops の表の移行はロールが無くても通る（GRANT は `IF EXISTS` の中だけ。`migrations/20261016_100000_create_ops_incident_tables.sql:120-125`）。作るとクラスタに残る（`_Cluster.cleanup` は消さない。`backend/tests/ops/test_ai_cloud_views.py:80-91`）。
+- `salesanchor_app` のロールは作らない。ops の表の移行はロールが無くても通る（GRANT は `IF EXISTS` の中だけ。`migrations/20261016_100000_create_ops_incident_tables.sql:120-125`）。作るとクラスタに残る（`_Cluster.cleanup` は消さない。`backend/tests/ops/test_ai_cloud_views.py:79-96`）。
 - `build_columns` は admin の接続のまま `_rows(conn, sql)` で読む（SET ROLE は要らない）。
 - ほかの試験は変えない。
 
@@ -80,7 +80,7 @@
 
 （６）`scripts/migration-guard/reference-allowlist.tsv` の :7（`migrations/20261024_100300_create_ai_cloud_views.sql` の行）を直す。（１）を最終形にした後で、最後に行う:
 - `sha256sum migrations/20261024_100300_create_ai_cloud_views.sql` の値を 2 列目に入れる。
-- 3 列目（理由）の末尾に「 / ai-ops-stage4-bin3（ops_incidents の alertname・severity を allow に変更）」を足す。
+- 4 列目（decision_ref）の末尾に「 / ai-ops-stage4-bin3（ops_incidents の alertname・severity を allow に変更）」を足す（直近の前例と同じ列）。
 - 列は 4 つ・タブ区切りのまま。ほかの行は変えない。
 
 （７）確かめを流す:
@@ -151,7 +151,7 @@ V1 の結果（2026-11-24 19:10 JST ごろ、反映の前。生の出力 /tmp/CC
 
 ## 9. 自己審査（Opus。同一 AI による審査で、独立した第二者レビューではない）
 
-- 判定: APPROVE（段取り表として）。クラウドの設計審査はこれから。
+- 判定: APPROVE（段取り表として）。クラウドの設計審査は1回目 REVISE（`docs/handoff/ai-ops-247/review-architect-bin3-1.md`）→ 2回目 APPROVE（`docs/handoff/ai-ops-247/review-architect-bin3-2.md`）。
 - 根拠:
   - 変える所が 2 行×2 ファイル・試験 1 つ・指示書 1 行で、どれも行番号を確かめた（§0）。
   - ファイルは記録の対象の外で、毎回の移行の終わりに流れるので、記録の食い違いで止まらない（§0）。同じファイルを変えた前例が 3 回、本番に出ている。
