@@ -11,11 +11,13 @@ import { queryClient } from '../lib/query/apiQuery';
 import ja from '../locales/ja.json';
 
 const auth = vi.hoisted(() => ({ signIn: vi.fn(), signInWithPasskey: vi.fn(), sendPasswordReset: vi.fn(), user: null as { uid: string } | null }));
-const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), delete: vi.fn() }));
+const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), delete: vi.fn(), getBlob: vi.fn() }));
+const saveBlobMock = vi.hoisted(() => vi.fn());
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ ...auth, loading: false }),
 }));
 vi.mock('../lib/api', () => ({ api }));
+vi.mock('../lib/saveBlob', () => ({ saveBlob: saveBlobMock }));
 
 let instance = createInstance();
 function Location() { const location = useLocation(); return <output data-testid="location">{location.pathname}</output>; }
@@ -81,8 +83,10 @@ describe('all legacy Button operation migration', () => {
     auth.user = { uid: 'fixture-user' };
     const invoice = { id: 3, invoice_number: 'INV-3', quote_id: null, company_id: 1, currency: 'USD', subtotal: 1, shipping_fee: 0, tax_amount: 0, total_amount: 1, exchange_rate_jpy: null, exchange_rate_usd: null, amount_jpy: null, amount_usd: null, payment_method: null, status: 'draft', branch_number: null, erp_key: null, issued_at: null, due_date: null, paid_at: null, voided_at: null, void_reason: null, notes: null, created_at: '', items: [], ship_to_snapshot: null, bill_to_snapshot: null, duty_amount: null, fx_rate_snapshot: null, paypal_order_id: null, paypal_approval_url: null, payment_fee: null, paypal_invoicer_view_url: null, paypal_copy_pdf_at: '2026-01-01' };
     api.get.mockImplementation(async (url: string) => { if (url === '/me/permissions') return { permissions: [] }; if (url === '/invoices/3') return invoice; if (url === '/invoices/3/paypal-disputes') return []; throw new Error(`Unexpected GET ${url}`); });
+    const blob = new Blob(['%PDF-1.4'], { type: 'application/pdf' }); api.getBlob.mockResolvedValue(blob);
     const open = vi.spyOn(window, 'open').mockImplementation(() => null); render(invoicePage());
     fireEvent.click(await screen.findByRole('button', { name: String(instance.t('invoices.snapshot.downloadPdf')) }));
-    expect(open).toHaveBeenCalledExactlyOnceWith('/api/invoices/3/pdf', '_blank'); expect(api.post).not.toHaveBeenCalled(); expect(api.delete).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(saveBlobMock).toHaveBeenCalledExactlyOnceWith(blob, 'INV-3.pdf'));
+    expect(api.getBlob).toHaveBeenCalledExactlyOnceWith('/invoices/3/pdf'); expect(open).not.toHaveBeenCalled(); expect(api.post).not.toHaveBeenCalled(); expect(api.delete).not.toHaveBeenCalled();
   });
 });
