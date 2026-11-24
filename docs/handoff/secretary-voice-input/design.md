@@ -291,8 +291,8 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 
 ### 15-2 対象と対象外
 
-- 対象: `frontend/src/features/secretary/` の 4 ファイル（`SecretaryChat.tsx`・`SecretaryDraftEvent.tsx`・新 `secretaryVoiceAnswer.ts`・試験）と翻訳 2 ファイル。
-- 対象外: backend・DB・migration・nginx・deploy.yml・容器（`secretary-codex`）・AI への指示文（`prompt.txt`・`schema.json`）・聞き取りの部品 `useSecretaryListen.ts`・読み上げの部品 `useSecretaryVoice.ts`。**ChatGPT の無料分と Google の読み上げの無料枠の中だけで動く（新しい有料のサービス 0 件）**。
+- 対象: `frontend/src/features/secretary/` の 4 ファイル（`frontend/src/features/secretary/SecretaryChat.tsx`・`frontend/src/features/secretary/SecretaryDraftEvent.tsx`・新しいファイル secretaryVoiceAnswer.ts・試験）と翻訳 2 ファイル。
+- 対象外: backend・DB・migration・nginx・deploy.yml・容器（`secretary-codex`）・AI への指示文（secretary-codex の指示文と返事の形）・聞き取りの部品 `frontend/src/features/secretary/useSecretaryListen.ts`・読み上げの部品 `frontend/src/features/secretary/useSecretaryVoice.ts`。**ChatGPT の無料分と Google の読み上げの無料枠の中だけで動く（新しい有料のサービス 0 件）**。
 - 対象外（次のテーマ）: 予定と請求書以外の用事（横展開）。見積もりを作る機能。請求書を声だけで作ること。
 
 ### 15-3 事実（根拠つき）
@@ -327,7 +327,7 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 ### 15-5 予定の確かめ（声の「はい」）
 
 - 予定の最後の下書き（`kind: "event"` かつ `ask` が無い）が来たら、確かめ待ちの印 `pendingConfirm = { id, tries: 0 }` を持つ。
-- 確かめ待ちの間に送られた文は、ChatGPT に送らない。新しい 1 か所の関数 `judgeYesNo(text)`（`frontend/src/features/secretary/secretaryVoiceAnswer.ts`）で 3 つに分ける。
+- 確かめ待ちの間に送られた文は、ChatGPT に送らない。新しい 1 か所の関数 `judgeYesNo(text)`（新しいファイル frontend/src/features/secretary/secretaryVoiceAnswer.ts）で 3 つに分ける。
 
 | 答え | 動き | 読む文 |
 |---|---|---|
@@ -358,7 +358,7 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 ### 15-7 画面（金型・翻訳）
 
 - 部品は今のものだけ（`Toggle`・`IconToggleButton`・`Textarea`・`Button`・`ChatBubble`）。新しい金型・色・寸法は無い（ADR-067・ADR-144）。
-- 翻訳キー（`frontend/src/locales/ja.json`・`en.json` に同じキー）: `secretary.voiceToggle` の文を「声で会話」に変える。新しいキー: `secretary.voiceMode.confirmEvent`・`secretary.voiceMode.when`・`secretary.voiceMode.whenAllDay`・`secretary.voiceMode.invoiceReady`・`secretary.voiceMode.notCreated`・`secretary.voiceMode.askAgain`・`secretary.voiceMode.checkScreen`。
+- 翻訳キー（`frontend/src/locales/ja.json`・`frontend/src/locales/en.json` に同じキー）: `secretary.voiceToggle` の文を「声で会話」に変える。新しいキー: `secretary.voiceMode.confirmEvent`・`secretary.voiceMode.when`・`secretary.voiceMode.whenAllDay`・`secretary.voiceMode.invoiceReady`・`secretary.voiceMode.notCreated`・`secretary.voiceMode.askAgain`・`secretary.voiceMode.checkScreen`。
 - 日本語の直書きは CI の `local/no-japanese-literal` が止める（`frontend/eslint.config.js` の秘書の窓の override・ADR-1087）。`judgeYesNo` の語の一覧は日本語の文字が要るため、試験と同じく `String.fromCharCode` か翻訳キーで持つかを、実装の前にカードで 1 つに決める（§15-10）。
 
 ### 15-8 危ない点と手当て
