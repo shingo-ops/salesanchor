@@ -1,11 +1,11 @@
 # パスキーの自動の候補 — 続けるための仕組み（設計案）
 
-状態: 設計案（Opus 作成・審査役1回目 REQUEST_CHANGES を受けて2版）。実装は PO の実装承認の後。
+状態: 設計案（Opus 作成・審査役2回目 REQUEST_CHANGES を受けて3版）。実装は PO の実装承認の後。
 親: [design.md](design.md) ／ KGI: [../../specs/auth-login/kgi.md](../../specs/auth-login/kgi.md)「KGI 追加 — パスキーの自動の候補」 ／ 対象 ADR: ADR-1013・ADR-1063（毎日点検の形の前例）・ADR-1051（画面点検の通知）
 
 ## 1. 目的（PO の言葉）
 PO 2026-11-24:「この仕組みを標準化して管理定着させて継続させるための機械的な仕組みも出来ているか事実ベースで…」「残っていることも不透明にせずに事実確認を実施すること」。
-→ 人が覚えていなくても、(a) 壊す変更は合流できない、(b) 本番で壊れたら知らせが来る、(c) 効果の数が決まった日に自動で届く、の3つを機械で持つ。
+→ 人が覚えていなくても、(a) 壊す変更は合流できない、(b) 本番で壊れたら知らせが来る、(c) 効果の数が毎週自動で届く、の3つを機械で持つ。KGI の決まった日（12/8・12/24）の1回ずつの数えだけは週の区切りと合わないため、台帳に載せて Opus が手で数える（§5-1 末）。
 
 ## 2. 今ある仕組み（事実・2026-11-24 11:40 JST・origin/main 1ac87e46b）
 
@@ -46,14 +46,16 @@ PO 2026-11-24:「この仕組みを標準化して管理定着させて継続さ
 - 新しい係（新しく作るファイル: backend/app/tasks の passkey_weekly_report.py）。形は ADR-1063 便6 の毎日点検 backend/app/tasks/tenant_isolation_daily_check.py と同じ: DB を読むだけ（アプリの接続。前例 backend/app/routers/super_admin_meta_review.py:157-166 が public.auth_events を読む。auth_events に RLS は無い）・管理者用 Discord（環境変数 `ADMIN_NOTIFICATION_DISCORD_WEBHOOK`・tenant_isolation_daily_check.py:31・送り方 :98-109・動けなかったときも1通 :112-124 を写す）・毎回送る（届かない＝止まっている）。
 - 登録: backend/app/celery_app.py の `include=[...]`（:21-50）に係を足し、beat の予定（:255-258 の隣）に crontab(day_of_week=1, hour=9, minute=10)。timezone は Asia/Tokyo（:58）。
 - 区切り: 日本時間の暦日。月曜 09:10 の回は「前の週の月曜 00:00〜日曜 24:00（7日）」と「その日曜 24:00 までの30日」を数える。
-- 数えるもの（auth_events と users だけ。道の文字は実物の `/api/v1/auth/passkey/login/verify`（backend/app/routers/auth.py:1119）と `/api/v1/auth/login`（auth.py:377・prefix は backend/app/main.py:260））:
-  1. 人ごと（users.full_name）のパスキーでのログイン成功（verify 200）の回数
-  2. 人ごとのパスワードでのログイン成功（login 200）の回数と、成功があった暦日の数
-  3. 人ごとのパスキーの割合＝(1)÷((1)+(2)の回数)。7日と30日の両方
-- 人の id は設定にもコードにも持たない。PO は自分の名前の行を読む（KPI）。自動点検の係も名前の行で日数が見える（P5）。新しい設定・secrets は要らない。
-- 色は付けない（数を届けるだけ）。壊れの知らせは A5・5-2・5-4 が受け持つ。
-- 新しい表・列は作らない（P6 の約束どおり）。
-- 12/8（P5 の14日）と 12/24（KPI の30日）の決まった日の数えは、週の区切りと合わないためこの報告では代えない。tasks/todo.md に日付つきで載せ、Opus がその日に reader 鍵（ai_ro.public__auth_events）で1回数え、kgi.md に書く。P5 は毎日 A5（S2 のパスワードログイン・失敗で Discord）が機械で見ているので、数えは結果の記録だけ。
+- 数える人: 全社の管理者（public.users の is_super_admin が true）だけ。会社ごとの利用者は数えない。2026-11-24 の本番では id 1・3 の2人（reader 鍵で確かめた）。会社をまたぐ人の情報は出ない。
+- 数えるもの（auth_events と users だけ。ログインの成功の数え方は前例 backend/app/routers/super_admin_meta_review.py:157-166 と同じ4つの道。道の文字は backend/app/routers/auth.py:377・:1119、prefix は backend/app/main.py:260）:
+  1. 人ごとのパスキーでのログイン成功＝`/api/v1/auth/passkey/login/verify` の 200
+  2. 人ごとのパスワードでのログイン成功＝`/api/v1/auth/login` の 200 ＋ `/api/v1/auth/login-requests/poll` の reason が approved_admin・approved_device ＋ `/api/v1/auth/login-requests/recovery` の 200（本番は知らない機械の確認が有効: .github/workflows/deploy.yml:442。login の 202 は数えない）
+  3. 人ごとのパスキーの割合＝(1)÷((1)+(2))。7日と30日の両方。両方0回なら「-」
+- 通知に名前・メール・IP・端末は載せない。人は id と role だけで書く（前例 backend/app/tasks/viewer_share_flag_monitor.py:4「id だけ」）。PO の id は 3（KGI の表と同じ）。Opus が月曜に読んで PO に伝える。
+- 人の id は設定にもコードにも持たない（is_super_admin で選ぶ）。新しい設定・secrets は要らない。
+- 文の長さ: 送り方の元は本文を1800字で切る（tenant_isolation_daily_check.py:103）。1人1行・約60字で、管理者が20人を超えるまで切れない。
+- 自動点検の係（P5）はこの報告に入れない。毎朝 A5 の S2 がパスワードでログインし、失敗なら Discord に届く。
+- 12/8（P5 の14日）と 12/24（KPI の30日）の決まった日の数えは、週の区切りと合わないためこの報告では代えない。tasks/todo.md の「進行中」に1行、この PR で載せる（担当 Opus・次の一手に2つの日付）。Opus がその日に reader 鍵（ai_ro.public__auth_events）で1回数え、kgi.md に書く。P5 は毎日 A5（S2 のパスワードログイン・失敗で Discord）が機械で見ているので、数えは結果の記録だけ。
 
 ### 5-2. 毎朝の画面点検に1行足す（G2 を埋める）
 - tests/prod-check/prod-ui.spec.ts の S1 に、ログイン画面のメール欄の autocomplete が `email webauthn` であることを足す。
@@ -62,7 +64,9 @@ PO 2026-11-24:「この仕組みを標準化して管理定着させて継続さ
 ### 5-4. パスキーの道の 5xx の見張り（G3 を埋める）
 - 記録の限界（事実）: auth_events は backend/app/middleware/audit.py が `call_next` の後に書く。処理の途中で落ちた 500 と、入口（nginx）が返す 502/504 は auth_events に残らない（審査役の指摘。Starlette の例外の順は Context7 kludex/starlette docs/exceptions.md）。だから 5xx は auth_events では数えない。
 - 入口（nginx）の行で数える。入口の行は `"POST /api/v1/auth/passkey/login/options HTTP/2.0" 499 0` の形（状態の後に数字）で、落ちた 500 も 502/504 も残る。
-- monitoring/loki/rules/jarvis/alerts.yml の auth_anomaly に1本足す: `sum(count_over_time({job="containerlogs"} |~ "\"POST /api/v1/auth/passkey/login/(options|verify) HTTP/[0-9.]+\" 5[0-9][0-9] [0-9]+" [10m])) > 0`・for 0m・severity warning・tier ticket。届け先は今の Alertmanager（Discord）。docs/runbooks/alerts.md に見出しを足す（BruteForceAttempt :139 の形）。
+- monitoring/loki/rules/jarvis/alerts.yml の auth_anomaly に1本足す。見張りの名前は `PasskeyServerError`。式は `sum(count_over_time({job="containerlogs"} |~ "\"POST /api/v1/auth/passkey/login/(options|verify) HTTP/[0-9.]+\" 5[0-9][0-9] [0-9]+" [10m])) > 0`（エスケープは alerts.yml:12 と同じ）・for 0m・severity warning・tier ticket・runbook_url は `docs/runbooks/alerts.md#passkeyservererror`。届け先は今の Alertmanager（Discord）。
+- docs/runbooks/alerts.md に見出し `## PasskeyServerError` を、SustainedAuthFailure の節（:147）の後に同じ形（札・何が起きているか・最初に見るもの・直し方・止め方）で足す。monitoring/scripts/check_alert_rules.py がこのつながりを確かめる。
+- 本番（prod2）への置き方: 合流しても prod2 には自動で届かない。前例 docs/handoff/ai-ops-247/card-login-alert-bin8.md:227 の手順4と同じに Opus が置く（今の alerts.yml を控える → main の版を置く → sha256 が main と一致）。ずれは毎日 monitoring/scripts/check_config_drift.sh が数える。
 - 本番での試し（2026-11-24 13時台 JST・Loki）: 同じ式の 5xx を外した版はパスキーの道で直近7日 14件に当たり、5xx 版は 0件。誤報の元は今は無い。
 
 ### 5-3. 残りの確かめを KGI の表に書く（§4）
@@ -77,7 +81,7 @@ PO 2026-11-24:「この仕組みを標準化して管理定着させて継続さ
 | 弊害 | 対処 |
 |---|---|
 | Discord の通知が週1通増える | 管理者用の部屋だけ。月曜の1通 |
-| 人の名前が Discord に出る | 管理者用の部屋だけ（PO と担当エンジニア）。社内の利用者の名前と回数だけで、IP・端末は出さない |
+| 人が分かる情報が Discord に出る | id と role だけ。名前・メール・IP・端末は出さない（viewer_share_flag_monitor.py:4 の前例） |
 | 5-4 が1件で鳴る（うるさい） | パスキーの道は1日0〜14件。1件の 5xx でも人が見る価値がある。鳴りすぎたら [10m] と > 0 を見直す |
 | DB の負荷 | auth_events の (event_type, created_at) の索引あり（001:19-20）。7日分の数えだけ |
 
@@ -91,7 +95,10 @@ PO 2026-11-24:「この仕組みを標準化して管理定着させて継続さ
 | パスキーもパスワードも0回の人は割合を「-」と書く（0で割らない） | 同じ試験に1件 |
 | 画面点検 S1 が本番で緑 | 反映後の prod-ui-check の実行結果が success |
 | `email webauthn` が無いと S1 が赤 | GitHub の prod-ui-check を、S1 の期待を `email webauthn-x` に変えた見本の枝で手動実行し failure を見る（見本の枝は確かめた後に消す） |
-| 5-4 の見張りが読み込まれている | Grafana の Loki のルール一覧に新しい名前がある（Loki の rules API） |
+| 5-4 の見張りが prod2 で読み込まれている | prod2 の alerts.yml の sha256 が main と一致。Loki の `:3100/metrics` の `loki_ruler_` で始まり `jarvis` を含む行で、ルールの数が反映前より1本多い（前例 docs/handoff/ai-ops-247/card-stage1-bin1.md:109 の 8-4） |
+| 通知に名前・メール・IP が無い | backend の試験: 送る本文に users.full_name・email の値が入らない。CI の pytest 必須で緑 |
+| パスワードの成功を4つの道で数える | backend の試験: login 200・poll approved_admin・poll approved_device・recovery 200 を1件ずつ入れて (2) が4、login 202 は数えない |
+| 12/8・12/24 の数えが台帳にある | この PR の差分に tasks/todo.md の1行がある |
 | 新しい表・列・設定なし | PR の差分に migrations と .env の変更が無い |
 
 ## 9. 維持の仕組み（だれが・何で）
@@ -100,6 +107,7 @@ PO 2026-11-24:「この仕組みを標準化して管理定着させて継続さ
 - 壊す変更: A1・A2（必須チェック）が止める。
 - 本番で壊れた: 5-2（毎朝・候補の設定）・A5（毎朝・パスワード）・5-4（10分以内・パスキーの道の 5xx）・A4（すぐ・失敗の急増）が知らせる。
 - 効果: 5-1 が毎週数を届ける。読むのは Opus（毎週月曜の報告を読む）と PO。
+- 決まった日の1回の数え（12/8・12/24）: 人手で守る。理由: 週の区切りと合わない1回きりの数えで、係を作るほどではない。tasks/todo.md の行を Opus がセッション開始時に読む（todo.md:3 の決まり）。
 - 報告そのものが止まった: 月曜に届かないことで分かる（ADR-1063 便6 と同じ考え方）。
 
 ## 10. 外部・過去事例の参照と我々への応用
