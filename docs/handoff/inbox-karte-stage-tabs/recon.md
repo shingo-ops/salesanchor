@@ -22,7 +22,7 @@
 - `frontend/src/pages/inbox/useInboxState.ts:266` `karteTab` の初期値は `"deal"`。
 
 ### タブの中身
-- `frontend/src/pages/inbox/InboxKartePanel.tsx:464` `export function KarteTabContent`。呼び元は `InboxKartePanel.tsx:241` と試験 `frontend/src/pages/inbox/InboxKartePanel.discordButtons.test.tsx:27,40`（`tab="contact"` だけ）の 2 か所（`git grep -n KarteTabContent origin/main -- frontend`）。
+- `frontend/src/pages/inbox/InboxKartePanel.tsx:464` `export function KarteTabContent`。呼び元は `frontend/src/pages/inbox/InboxKartePanel.tsx:241` と試験 `frontend/src/pages/inbox/InboxKartePanel.discordButtons.test.tsx:27,40`（`tab="contact"` だけ）の 2 か所（`git grep -n KarteTabContent origin/main -- frontend`）。
 - 連絡先タブ `:477-552`（メール・電話番号・Discord・Messenger/Instagram の未連携の印・Discord のボタン）。今回は変えない。
 - 顧客タブ `:554-615`: 見出し 基本（呼び名・国・顧客タイプ）／取引プロフィール（取り扱いタイトル・販売形態）／実績サマリー（`PerformanceSummary`・読むだけ）／引き継ぎ（CS・関係性メモ）。
 - 商談タブ `:617-720`: 見出し 次のアクション（次回アクション・次回アクション日・返信速度）／見極め（温度感・課題・ニーズ・競合確認）／商談規模（想定規模・月間見込み金額・1件単価・月間頻度）／メモ（商談メモ）。
@@ -33,7 +33,7 @@
 
 ### 段階の名前
 - `frontend/src/constants/leadStatus.ts:9-17` `lead`・`negotiating`・`existing_customer`・`follow_up_short`・`follow_up_long`・`lost`・`out_of_scope`。
-- カルテの段階の印は `leadDetail.status` から出している（`InboxKartePanel.tsx:124`）。
+- カルテの段階の印は `leadDetail.status` から出している（`frontend/src/pages/inbox/InboxKartePanel.tsx:124`）。
 
 ## 2. 自動の試験
 
@@ -42,8 +42,8 @@
   - `:167-176`・`:231-268`・`:270-288`・`:349-383` リード（`leadShinki`）で顧客タブを押す → リードに顧客タブが無くなるので、成約後の見本（`leadKisonkosaku`）に替える。
   - `:178-229` 「商談タブに呼び名・国などが出ない」→ リードでは出るようになるので、段階ごとの置き場所の試験に置き換える。
   - `:290-319` 最初に開くタブ・`:321-347` 連絡先タブ → 今のまま通る。
-  - `:392-411` 基準画像 2 枚（`karte-lead-deal.png`・`karte-customer-company.png`）→ 中身が変わるため作り直す。作り直しは `karte-gate.yml` の手動実行（`--update-snapshots`・ボットが枝へ commit）。
-- 見本データの段階: `frontend/tests-e2e/fixtures/karte-lead-shinki-with-deal.json:4` `lead`／`karte-lead-shoudanchuu-with-deal.json:4` `negotiating`／`karte-lead-kisonkosaku-with-deal.json:4` `existing_customer`／`karte-lead-oikomi-with-deal.json:4` `follow_up_short`。
+  - `:392-411` 基準画像 2 枚（`karte-lead-deal.png`・`karte-customer-company.png`）→ 中身が変わるため作り直す。作り直しは `.github/workflows/karte-gate.yml` の手動実行（`--update-snapshots`・ボットが枝へ commit）。
+- 見本データの段階: `frontend/tests-e2e/fixtures/karte-lead-shinki-with-deal.json:4` `lead`／`frontend/tests-e2e/fixtures/karte-lead-shoudanchuu-with-deal.json:4` `negotiating`／`frontend/tests-e2e/fixtures/karte-lead-kisonkosaku-with-deal.json:4` `existing_customer`／`frontend/tests-e2e/fixtures/karte-lead-oikomi-with-deal.json:4` `follow_up_short`。
 - `frontend/tests-e2e/karte-screenshot-compare.spec.ts` は手動実行のときだけ・`continue-on-error`。リードは商談タブ、既存顧客は顧客タブを押すだけなので、そのまま動く（`:90-110`）。
 
 ## 3. 未確認

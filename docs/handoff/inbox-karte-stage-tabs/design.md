@@ -1,7 +1,7 @@
 # design: 受信箱のカルテの見せ方を段階で切り替える
 
 - 決定: `docs/adr/ADR-1089-inbox-karte-stage-layout.md`（What 1〜7）
-- 調査: `recon.md`（file:line）・実装カード: `impl-card.md`・中身の写し: `code/`
+- 調査: `docs/handoff/inbox-karte-stage-tabs/recon.md`（file:line）・実装カード: `docs/handoff/inbox-karte-stage-tabs/impl-card.md`・中身の写し: `code/`
 - PO 承認: 2026-11-24 チャット。項目の置き場所の表に「1,これで1度作成してみてほしい」。同じ文で、マージ・本番反映まで任せると明言。
 
 ## 1. 目的（PO の言葉）
@@ -19,14 +19,14 @@
 | K3 | 商談中のカルテのタブが「商談・連絡先」で、商談タブに実績サマリーと CS・関係性メモが無い | 画面試験 `[ADR-1089-1] Negotiating`・`[ADR-1089-2] Negotiating` |
 | K4 | 成約後のカルテのタブが「顧客・連絡先・商談」の順で、最初に顧客が開く | 画面試験 `[ADR-1089-1] Customer`・`[ADR-108-4] Existing customer / Oikomi`＋本番の画面の写真 |
 | K5 | 成約後の顧客タブ・商談タブの項目が表のとおり | 画面試験 `[ADR-1089-2] Customer company / deal / Follow-up` |
-| K6 | 失注・対象外のタブと項目の置き場所は今と同じ | 部品の試験 `karteLayout.test.ts`「表に無い段階」 |
-| K7 | カルテの段階の一覧が書かれているのは 1 か所だけ | `grep -n "follow_up_short"` を `useInboxState.ts`・`InboxKartePanel.tsx` に流して 0 件。受信箱の製品のファイルで出るのは `karteLayout.ts` と `inbox.types.ts:25`（左の一覧の絞り込み・カルテとは別）の 2 つだけ |
-| K8 | 隠した項目の値は消えない | 保存の作り（`useInboxState.ts:549-560`・全部の値を送る）を変えていないことを差分で確かめる。`useInboxState.ts` の差分は 655-663 の 1 か所だけ |
-| K9 | 新しい色・寸法・文・部品を足していない | 差分に `.css`・`ja.json`・`en.json` が無い。入力欄は今の金型（`TextFieldControl`・`SelectControl`・`TextareaControl`・`SalesFormMultiSelect`）のまま |
+| K6 | 失注・対象外のタブと項目の置き場所は今と同じ | 部品の試験 `frontend/src/pages/inbox/karteLayout.test.ts`「表に無い段階」 |
+| K7 | カルテの段階の一覧が書かれているのは 1 か所だけ | `grep -n "follow_up_short"` を `frontend/src/pages/inbox/useInboxState.ts`・`frontend/src/pages/inbox/InboxKartePanel.tsx` に流して 0 件。受信箱の製品のファイルで出るのは `frontend/src/pages/inbox/karteLayout.ts` と `frontend/src/pages/inbox/inbox.types.ts:25`（左の一覧の絞り込み・カルテとは別）の 2 つだけ |
+| K8 | 隠した項目の値は消えない | 保存の作り（`frontend/src/pages/inbox/useInboxState.ts:549-560`・全部の値を送る）を変えていないことを差分で確かめる。`frontend/src/pages/inbox/useInboxState.ts` の差分は 655-663 の 1 か所だけ |
+| K9 | 新しい色・寸法・文・部品を足していない | 差分に `.css`・`frontend/src/locales/ja.json`・`frontend/src/locales/en.json` が無い。入力欄は今の金型（`TextFieldControl`・`SelectControl`・`TextareaControl`・`SalesFormMultiSelect`）のまま |
 
 ## 3. 対象と対象外
 
-- 対象: PC の受信箱の右のカルテ（`InboxKartePanel.tsx` の `KarteTabContent` とタブの並び）、最初に開くタブ（`useInboxState.ts`）。
+- 対象: PC の受信箱の右のカルテ（`frontend/src/pages/inbox/InboxKartePanel.tsx` の `KarteTabContent` とタブの並び）、最初に開くタブ（`frontend/src/pages/inbox/useInboxState.ts`）。
 - 対象外: 連絡先タブの中身、下の操作の帯（成約にする・請求書）、実績サマリーの中身、backend・DB、スマホの受信箱（LINE 型・別に作っている）。
 
 ## 4. 変更前と後
@@ -35,12 +35,12 @@
 |---|---|---|
 | タブ | どの段階でも 商談・顧客・連絡先 | リード・商談中: 商談・連絡先／成約後: 顧客・連絡先・商談／その他: 前と同じ |
 | 項目の置き場所 | 段階によらず同じ | ADR-1089 の表のとおり |
-| 段階の一覧 | `useInboxState.ts:658` に直書き | `karteLayout.ts` の 1 か所 |
+| 段階の一覧 | `frontend/src/pages/inbox/useInboxState.ts:658` に直書き | `frontend/src/pages/inbox/karteLayout.ts` の 1 か所 |
 | 返信速度の見出し | 次のアクション | 見極め（全部の段階） |
 
 ## 5. 作り方
 
-- `karteLayout.ts`（新規）に、段階ごとの「出すタブの並び」と「タブごとの項目」と「見出しの並び」を書く（`code/karteLayout.ts.txt`）。
+- `frontend/src/pages/inbox/karteLayout.ts`（新規）に、段階ごとの「出すタブの並び」と「タブごとの項目」と「見出しの並び」を書く（`docs/handoff/inbox-karte-stage-tabs/code/karteLayout.ts.txt`）。
 - `KarteTabContent` の顧客・商談の 2 つの分かれ道を 1 つにする。項目ごとの入力欄の作り（`renderField`）は今の行をそのまま写し、印（`data-testid="karte-field-<項目>"`）だけ足す。見出しは今の 8 つの `t("inbox.section*")` をそのまま使う。項目が 1 つも無い見出しは出さない。`Fragment` だけで並べ、包む箱を増やさないので見た目の作り（CSS）は変わらない。
 - タブの並びは `getKarteLayout(leadDetail.status).tabs`。今のタブがその段階に無いときは最初のタブ（`resolveKarteTab`）。
 - 最初に開くタブは `getKarteLayout(conv.lead_status).tabs[0]`。
@@ -57,19 +57,19 @@
 
 | 危ないこと | 対処 |
 |---|---|
-| 隠した項目の値が消える | 保存は今もカルテの全部の値を送る（`useInboxState.ts:549-560`）。この行を触らない（K8） |
+| 隠した項目の値が消える | 保存は今もカルテの全部の値を送る（`frontend/src/pages/inbox/useInboxState.ts:549-560`）。この行を触らない（K8） |
 | 会話一覧の段階と、カルテの詳しい段階がずれ、最初のタブがその段階に無い | `resolveKarteTab` で、その段階の最初のタブを見せる（ADR-1089 What 6） |
 | 基準画像 2 枚が落ちる | 想定どおり。GitHub の手動実行で作り直し、PO に新しい画像を見てもらう |
 | 失注・対象外の人が困る | 今の置き場所のまま（K6）。PO の表に無いので、変えるかは PO に聞く |
-| Discord の招待のボタンが想定規模で出る件 | 連絡先タブにあり、値は `leadDetail.estimated_scale` から読む（`InboxKartePanel.tsx:534`）。出し分けに関係しない |
+| Discord の招待のボタンが想定規模で出る件 | 連絡先タブにあり、値は `leadDetail.estimated_scale` から読む（`frontend/src/pages/inbox/InboxKartePanel.tsx:534`）。出し分けに関係しない |
 
-## 8. 外部事例
+## 外部・過去事例の参照と我々への応用
 
 - 該当なし。理由: 社内のカルテの項目をどのタブに置くかは PO の使い方で決まる話で、外の数字で良し悪しを測れない。PO の表をそのまま正にする。
 
-## 9. 続ける仕組み
+## 維持の仕組み
 
-- 置き場所を変えたいときは `karteLayout.ts` の 1 か所と `karteLayout.test.ts` を直す。部品の試験が表と 1 対 1 で照らす。
+- 置き場所を変えたいときは `frontend/src/pages/inbox/karteLayout.ts` の 1 か所と `frontend/src/pages/inbox/karteLayout.test.ts` を直す。部品の試験が表と 1 対 1 で照らす。
 - 画面試験（CI「Karte Visual Gate」・必須チェック）が段階ごとのタブと 17 個の項目を毎回確かめる。
 - 守る人: 受信箱を触る実装役。決める人: PO。
 
