@@ -32,14 +32,14 @@
 | U2 | 住所の lead_id でリード・商談中を開くと「商談」のまま | 同じ試験。本番で 951・952 |
 | U3 | 住所で開いたあと、利用者がタブを押して変えたら、そのタブのまま（あとから戻されない） | 同じ試験（カルテが届いたあとに setKarteTab("contact") → 次の再描画でも contact） |
 | U4 | 一覧で押したときの動きは変わらない | 今の試験がそのまま緑（`frontend/src/pages/inbox/karteLayout.test.ts`・`frontend/src/pages/inbox/useInboxState.autoSelectBadge.test.tsx`・CI「Karte Visual Gate」） |
-| U5 | 触るのは `useInboxState.ts` と新しい試験 1 本だけ。CSS・翻訳・backend は触らない | `git diff origin/main --name-only` |
+| U5 | 触るのは `frontend/src/pages/inbox/useInboxState.ts` と新しい試験 1 本だけ。CSS・翻訳・backend は触らない | `git diff origin/main --name-only` |
 
 ## 5. 作り方
 
 - 住所から開いた会話のカルテ（`leadDetail`）が初めて届いたとき 1 回だけ、`getKarteLayout(leadDetail.status).tabs[0]` を入れる。
-- 段階はカルテの中身（`leadDetail.status`）から読む。一覧は最新 50 件しか読まないので、一覧に無い古い会話でも正しく決まるため（`backend/app/routers/meta_inbox.py:877`）。カルテのタブの並びも同じ `leadDetail.status` を読む（`InboxKartePanel.tsx:126`）。
+- 段階はカルテの中身（`leadDetail.status`）から読む。一覧は最新 50 件しか読まないので、一覧に無い古い会話でも正しく決まるため（`backend/app/routers/meta_inbox.py:877`）。カルテのタブの並びも同じ `leadDetail.status` を読む（`frontend/src/pages/inbox/InboxKartePanel.tsx:126`）。
 - 1 回だけにするため、印（`useRef`）を持つ。利用者が一覧で別の会話を押したら（`selectLead`）、印を下ろす。
-- 段階の一覧は `karteLayout.ts` の 1 か所のまま。新しく書かない（ADR-1089 What 4）。
+- 段階の一覧は `frontend/src/pages/inbox/karteLayout.ts` の 1 か所のまま。新しく書かない（ADR-1089 What 4）。
 
 ## 6. 代わりの案
 
@@ -57,5 +57,5 @@
 
 ## 維持の仕組み
 
-- 新しい部品の試験が CI で毎回流れる（U1〜U3）。
+- 守り手: 新しい部品の試験 `frontend/src/pages/inbox/useInboxState.karteTabFromUrl.test.tsx` が CI で毎回流れる（U1〜U3）。
 - 本番のテストデータ TST-KARTE-1〜3 で直したあとに確かめ、そのあと `docs/handoff/inbox-karte-test-data/rollback.sql` で消す（PO の同意のあと）。

@@ -5,7 +5,7 @@
 
 ## 1. 本番の観測（2026-11-24・テナント001・テストデータ）
 
-- テストデータ: `docs/handoff/inbox-karte-test-data/insert.sql`（PO が `run-insert.sh` で投入。リード 951=lead・952=negotiating・953=follow_up_short、送信メッセージ tst-karte-1〜3）
+- テストデータ: `docs/handoff/inbox-karte-test-data/insert.sql`（PO が `docs/handoff/inbox-karte-test-data/run-insert.sh` で投入。リード 951=lead・952=negotiating・953=follow_up_short、送信メッセージ tst-karte-1〜3）
 - `/lead-chat?lead_id=951` → タブ「商談・連絡先」、商談が選ばれている（設計どおり）
 - `/lead-chat?lead_id=952` → タブ「商談・連絡先」、商談が選ばれている（設計どおり）
 - `/lead-chat?lead_id=953` → タブ「顧客・連絡先・商談」の順は正しいが、商談が選ばれている（設計は顧客）
