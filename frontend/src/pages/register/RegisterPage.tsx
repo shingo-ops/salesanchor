@@ -518,7 +518,7 @@ export default function RegisterPage() {
 
         {/* Contact Info */}
         <fieldset style={{ border: "none", borderRadius: "var(--radius-md)", padding: 0, marginBottom: "var(--space-4)" }}>
-          <legend style={{ fontWeight: "var(--font-weight-bold)", padding: "0 var(--space-2)" }}>
+          <legend style={{ fontWeight: "var(--font-weight-bold)" }}>
             {t("registration.contactInfo")}
           </legend>
           <p style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)", margin: "0 0 var(--space-3)" }}>
