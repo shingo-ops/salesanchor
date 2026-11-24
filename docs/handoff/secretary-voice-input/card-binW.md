@@ -53,6 +53,7 @@ frontend:
 - T7 を書き直す（`mockResolvedValueOnce` で `edited: false` の返しを 2 回足す）: はい／いいえでない文が 2 回とも直らない（偽の API が `edited: false`）→ 1 回目 `notEdited`、2 回目 `checkScreen`、予定は作られない。
 - 足す: 直せた後の新しい下書きで、はい／いいえでない文が直らない → 1 回目は `notEdited`（回数は 0 から数え直し）。
 - 足す: 直す頼みの API を保留にしたまま「作る」を押し、作成の API も保留のまま直す答えを返す → 前の吹き出しは替わらない・新しい下書きは出ない（`onSaving`）。
+- 足す: 「作る」を押す → 作成の API が 500 → 直す答えが届く → 新しい下書きが出る（集合から外れている）。
 - 足す: 「説明にテストと入れて」→ 偽の API が `edited: true`・description「テスト」の下書き → 前の下書きが `edit.replaced` の文になる・新しい下書きの説明欄が「テスト」・`editedConfirm` を読む → 「はい」で POST /calendar/events の本文の description が「テスト」。
 - 足す: 送った本文の `karte` が今の欄の値（手で直した題名を含む）と `edit: true`・`asked: null`・`asked_count: 0`。
 - 足す: 画面で「共有」を選んだ下書きを声で直すと、新しい下書きも「共有」のまま。

@@ -468,7 +468,7 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
    - `if new_path:` の前で `edit_mode = karte is not None and karte.edit` を 1 回だけ作る。以後 `:376`・`:397` でも同じ名前を使う。
    - `if new_path:` の中の if 連鎖の**先頭**に `if edit_mode:` の枝を足す（今の `unknown` の枝・`event` の枝より前）。枝の中: 先頭に `assert karte is not None`（`:339` と同じ書き・型検査のため）。`ai_ev = intent.event if intent.kind == "event" else None`。`ai_ev` があり、`ai_ev.start` が null でなく、かつカルテの始まりと**時刻として違う**とき（カルテの始まりが null・または `parse_iso` で比べて違う。比べられなければ文字で比べる＝`merge_edit` と同じ比べ方）だけ `ai_ev = apply_day(ai_ev, body.text, now.date(), None)`。AI が始まりをカルテと同じ値で返したときは「言われていない欄」なので当てない（審査第 2 回 R1: 「説明に明日までに…」で日付が動くのを防ぐ）。`final_ev, edited = merge_edit(ai_ev, karte)`。`final_kind = "event"`。
    - 続く `if final_kind == "event":` の中の `if intent.kind == "event": final_ev = apply_day(...)`（`:341-345`）は、条件に `not edit_mode` を足して直す道では呼ばない（日付の表を 2 回当てない）。`settle_dates` は直す道でも呼ぶ。
-   - `settle_dates` の後、直す道で土台（カルテ）の始まり・終わりが埋まっていたのに null になったら（例: 始まり 10 時で「終わりを 9 時に」）、下書きはカルテのまま・変わった＝偽に戻す（前の下書きを失わない）。戻した値は `merge_edit(None, karte)` の値そのままで、`settle_dates` をもう一度は通さない。
+   - `settle_dates` の後、直す道で土台（カルテ）の始まり・終わりが埋まっていたのに null になったら（例: 始まり 10 時で「終わりを 9 時に」）、下書きはカルテのまま・変わった＝偽に戻す（前の下書きを失わない）。戻した値は `merge_edit(None, karte)` の値そのままで、`settle_dates` をもう一度は通さない。また `settle_dates` の後で、最終の題名・始まり・終わり・場所・説明・Meet が土台と同じなら変わった＝偽にする（数え直し）。
    - `:376` の `if intent.kind == "invoice":` を `if final_kind == "invoice":` に直す。`final_kind` は `intent.kind` で始まるので直す道以外は今と同じ。直す道で AI が請求書を返しても請求書の下書きは作らず、候補の検索（`resolve_names`）も呼ばない。
 4. `backend/app/routers/assistant.py:391-411` 下書きを作るところ: `edit_mode` のときは `next_ask` を呼ばず `ask=None`・`ask_count=0`・`edited=<変わったか>`。それ以外は今の `next_ask` で `edited=None`。
 5. AI に送る中身（`_agent_payload`・`:190-207`）は変えない。直す頼みでも日時の 3 欄と `asked`（null）だけ。大きさは今と同じ。
@@ -487,11 +487,11 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 3. `frontend/src/features/secretary/SecretaryChat.tsx`:
    - `:43` 予定の吹き出しに `calendarType?: "personal" | "shared"` を足し、`SecretaryDraftEvent` の `initialCalendarType` に渡す。
    - `:225-245` の「下書きの中身を読んで確かめを始める」部分を関数 `startConfirm(id, draft, key)` に出し、今の道（key＝confirmEvent）と直した後（key＝editedConfirm）の両方から呼ぶ（同じ処理を 2 か所に書かない）。
-   - 作った・取り消した下書きの id を覚える `useRef(new Set<number>())` を足し、`markCreated`・`markCancelled`（`:284-294`）で id を入れる（審査 R3）。さらに `SecretaryDraftEvent` に props `onSaving?: () => void` を足し、「作る」で `setSaving(true)` した直後（`SecretaryDraftEvent.tsx:66`）に呼ぶ。親はそこでも id を集合に入れる（作成の往復の途中に直した答えが届いても前の下書きを替えない・審査第 2 回 L1）。作成が失敗したら `onSaving` で入れた id を集合から外す（下書きはまた作れる状態に戻るため）。
+   - 作った・取り消した下書きの id を覚える `useRef(new Set<number>())` を足し、`markCreated`・`markCancelled`（`:284-294`）で id を入れる（審査 R3）。さらに `SecretaryDraftEvent` に props `onSaving?: () => void` を足し、「作る」で `setSaving(true)` した直後（`SecretaryDraftEvent.tsx:66`）に呼ぶ。親はそこでも id を集合に入れる（作成の往復の途中に直した答えが届いても前の下書きを替えない・審査第 2 回 L1）。作成が失敗したら `onSaving` で入れた id を集合から外す（下書きはまた作れる状態に戻るため）。外す場所は、失敗のとき既に呼ばれる `onVoiceFailed` の親の呼び先（`SecretaryChat.tsx:344-347`）。新しい props は足さない。
    - `:186-192`（はい／いいえ以外）を「直す頼み」に替える。下書きの口が無ければ今の `checkScreen` で終える。あれば `currentValues()` を読み、考え中の吹き出しを出して `sendSecretaryMessage(文, karte)` を送る。待つ間は確かめ待ちを外す。この道は `:193` の `return` の前にあり今の `finally`（`:268-270`）を通らないので、自前で `setSending(true)` と `try { … } finally { setSending(false) }` を書く（送り中は自動で送らない・:277）。
      - 答えが届いたら最初に: 窓を閉じた（`sentIn !== session.current`）か、前の下書きの id が作った・取り消した印に入っていれば、考え中の吹き出しを消して何もしない（待つ間にボタンで作った下書きを、直した下書きで復活させない・同じ予定を 2 件作らない）。
      - 答えが event で `edited` が真: 前の下書きの吹き出しを文 `secretary.edit.replaced` に替え、考え中の吹き出しを新しい下書き（公開の範囲は前の値）に替え、`startConfirm(新しい id, 下書き, "editedConfirm")`。
-     - それ以外（変わらない・unknown）: 考え中の吹き出しを `secretary.voiceMode.notEdited` に替える。回数が 0 なら確かめ待ちを回数 1 で前の下書きに戻して `notEdited` を読む。1 なら確かめ待ちを外して `checkScreen` を読む。直せた後の新しい下書きは回数 0 から数え直す（`startConfirm` が 0 で始める）。
+     - それ以外（変わらない・unknown）: 考え中の吹き出しを `secretary.voiceMode.notEdited` に替える。（声が続いているとき＝`voiceOnRef.current && sentIn === session.current` のときだけ）回数が 0 なら確かめ待ちを回数 1 で前の下書きに戻して `notEdited` を読む。声が切れていれば確かめ待ちは戻さず、文だけ出す。1 なら確かめ待ちを外して `checkScreen` を読む。直せた後の新しい下書きは回数 0 から数え直す（`startConfirm` が 0 で始める）。
      - 失敗: 今の `send` の失敗と同じ（権限なしは `onForbidden`・ほかは失敗の文を出して読む）。確かめ待ちは外したまま（前の下書きのボタンで作れる）。
      - 声で読むのは、今の道（`:211`・`:220`）と同じく `voiceOnRef.current && sentIn === session.current` のときだけ（`startConfirm` と失敗の読み上げも同じ）。
 4. 文言（`frontend/src/locales/ja.json`・`en.json` の `secretary`）: 足す `voiceMode.editedConfirm`「直しました。{{title}}を{{when}}に入れますか？」/「Updated. Add {{title}} on {{when}}?」、`voiceMode.notEdited`「直すところが分かりませんでした。はい、か、いいえ、か、直したいところを言ってください。」/「I could not tell what to change. Say yes, no, or what to change.」、`edit.replaced`「この下書きは、下の直した下書きに替えました。」/「This draft was replaced by the updated one below.」。使われなくなる `voiceMode.askAgain` は両方から消す。
@@ -504,6 +504,8 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 | AI が言われていない欄に値を入れ、勝手に変わる | 直した下書きは必ず画面に出し、「入れますか？」に「はい」と言うまで作らない。下調べでは言われていない欄に値が入ったのは 0/12（p6 の 1 回目の始まり・終わりはカルテと同じ値で、変わっていない）。W2 で数える |
 | 指示文を変えると今までの読み方が変わる | 足す行はカルテのある頼みだけに当たる。反映後に 23 件（W4）。23/23 でなければ PR を戻す |
 | 「はい、場所は渋谷にして」「オッケー、説明に〇〇と入れて」は「はい」と判定され、直さずに前の下書きで予定ができる（`secretaryVoiceAnswer.ts:63-64`・文の頭が肯定の語） | 判定は変えない。PO に知らせる（「はい」を先に言わずに直す頼みだけを言う）。困るなら次の便で考える |
+| 時刻の頼みと日付語の入った説明を 1 文で言う（「4 時に変えて、説明に明日と入れて」）と、日付も動きうる | 声は直した日付を読み上げ、画面にも下書きが出るので「はい」の前に気づける。PO に知らせる |
+| 日本以外の時差のブラウザでは、同じ時刻が違う値と数えられうる | 対象は日本のブラウザだけ。日付は +09:00 以外では替わらない（`secretary_dates.py:171`）ので安全な側に倒れる |
 | 「違う、4 時にして」は「いいえ」と判定され取り消される | 作られることは無い（安全な側）。判定は変えない。PO の目視で困るなら次の便で考える |
 | 直すたびに AI を 1 回呼ぶ | 秘書の 1 日の回数に数える（今の道と同じ）。新しい費用は無い（W6） |
 | 本番の容器の作り直しが失敗する | 配備は警告だけで前の容器が残る（`.github/workflows/deploy.yml:771-800`）。その間は説明・メモが読みにくいだけで、ほかは動く。反映後の 23 件と W1 の測りで気づく |
@@ -539,4 +541,4 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 
 - 第 1 回（2026-11-25・クラウドの Sonnet・`review-architect-binW-1.md`・枝 `release/secretary-voice-draft-edit-review1`）: REVISE。R1（openapi.json の書き出し）・R2（請求書の枝と日付の表の二重）・R3（待つ間に作った下書きの復活）を §16-4・§16-6 に直した。L1〜L6・L8・L9 も取り込んだ。L7 は recon §9-2 を直した。
 - 第 2 回（2026-11-25・`review-architect-binW-2.md`・枝 `release/secretary-voice-draft-edit-review2`）: REVISE。第 1 回の R1〜R3 は直ったと確認。新しい R1（直す道の `apply_day` が言われていない始まりの日付を動かす）を §16-4(3) に直した。L1（作る押下の途中の窓）・L2〜L6 も取り込んだ。
-- 第 3 回: （結果をここに書く）
+- 第 3 回（2026-11-25・`review-architect-binW-3.md`・枝 `release/secretary-voice-draft-edit-review3`）: **APPROVE**（R 0 件）。L1（失敗で外す口）・L2（`edited` の数え直し）・L3（声が切れたら確かめ待ちを戻さない）を §16-4・§16-6 に、L4・L5 を §16-7 に取り込んだ。
