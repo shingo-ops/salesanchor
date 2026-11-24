@@ -4,7 +4,7 @@
 - 改訂: 審査2回目 REVISE（[review-architect-2.md](review-architect-2.md)）の R1'・R2' と L1〜L4 を反映（2026-11-24）
 - 改訂: 審査1回目 REVISE（[review-architect-1.md](review-architect-1.md)）の R1〜R4 と L2〜L5・L7〜L13 を反映（2026-11-24）
 - 基準: `origin/main` = `a12741e7234b7fe2ec40a790a8aa3422e0d6eaa4`
-- 親: KGI [kgi.md](../../specs/customer-address-form/kgi.md)（K1〜K14・PO 承認 2026-11-24）／あるべき姿 [ideal-state.md](../../specs/customer-address-form/ideal-state.md)／決定 [decisions.md](decisions.md)（D1〜D6）／事実 [recon.md](recon.md)／外部の実測 [evidence-local.md](evidence-local.md)
+- 親: KGI [kgi.md](../../specs/customer-address-form/kgi.md)（K1〜K14・PO 承認 2026-11-24）／あるべき姿 [ideal-state.md](../../specs/customer-address-form/ideal-state.md)／決定 [decisions.md](decisions.md)（D1〜D6）／事実 [docs/handoff/customer-form-layout/recon.md](recon.md)／外部の実測 [evidence-local.md](evidence-local.md)
 - 関わる ADR: ADR-126（登録フォームの入力契約。§8 で追補）・ADR-144（UI の金型）・ADR-067（色・寸法の変数）・ADR-027（翻訳キー）・ADR-135/136（main 合流＝本番投入）
 
 ## 1. 目的と範囲
