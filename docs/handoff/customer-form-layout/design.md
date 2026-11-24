@@ -40,12 +40,14 @@ def validate_delivery_address_line(value: str | None) -> str | None:
     """送り先の住所1行を確かめる。英字・数字・記号・空白だけ、35文字まで。"""
     if value is None:
         return None
-    if not _DELIVERY_ADDRESS_LINE_RE.match(value):
+    if not _DELIVERY_ADDRESS_LINE_RE.fullmatch(value):
         raise ValueError("address_line_non_ascii")
     if len(value) > DELIVERY_ADDRESS_LINE_MAX:
         raise ValueError("address_line_too_long")
     return value
 ```
+
+照合は `.fullmatch` にする。`.match` と `$` では末尾の改行（例 `"abc\n"`）が通ってしまう（PR 5718 の審査 R1 で見つけて直した）。
 
 ### 3-2 `backend/app/schemas/registration_token.py` — お客様のフォーム（K6・K7・K8）
 
