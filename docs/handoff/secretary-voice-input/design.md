@@ -158,6 +158,7 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 - A を選んだので、聞き取りは使用量の台帳に書かない（費用 0 円）。下の 2 行は B を選んだときのもの
 - 一覧と CHECK の一致は既存の試験が見張る
 - 聞き取りの月の分数は使用量の画面で毎月見える
+- 声で会話（§15）: 試験 T1〜T10（`frontend/src/features/secretary/SecretaryChat.test.tsx`）と、はい・いいえの判定の試験（新しいファイル secretaryVoiceAnswer.test.ts）を CI の必須の確かめが毎回流す。V3 は T5〜T7、V4 は T8、V2 の「秘書の声を拾わない」は T4・T10 で守る（§15-12 の表）
 
 ## 補足: 次のテーマ（会話の相棒）への備え（2026-11-19）
 
@@ -314,30 +315,33 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 
 （１）「声で会話」を入れる → その処理の中で読み上げの音の準備をし（E7）、聞き取りを始める（`listen.start()`）。
 （２）話す → 文字が欄に出る（今のまま）。
-（３）欄に文字があり、途中の文字が空で、聞いている状態のまま 1.0 秒（定数 `VOICE_SEND_SILENCE_MS = 1000`）新しい文字が来ない → 今の `send()` を呼ぶ。`send()` は今のまま聞き取りを捨て、読み上げを止めてから送る（E9）。
+（３）この回に聞き取った文字が欄にあり（手で打った文だけのときは送らない）、途中の文字が空で、聞いている状態のまま 1.0 秒（定数 `VOICE_SEND_SILENCE_MS = 1000`）新しい文字が来ない → 今の `send()` を呼ぶ。`send()` は今のまま聞き取りを捨て、読み上げを止めてから送る（E9）。
 （４）返事が来る → 種類ごとに読む文を 1 つ決めて読む（§15-6 の表）。
-（５）読み終わった（`speak` が `"ok"`）、かつ声で会話のまま、かつ窓が同じ会話のまま → 聞き取りを始める（`listen.start()`）→（２）に戻る。
+（５）読み終わった（`speak` が `"ok"`）、かつ声で会話のまま、かつ窓が同じ会話のまま、かつ**読み始めた後に新しい送りが無い**（回数の印 `turnRef` が読み始めたときと同じ）→ 聞き取りを始める（`listen.start()`）→（２）に戻る。
 （６）読み上げが `"failed"` か `"cap"` → 今と同じ知らせを出し、声で会話を切る（マイクも止める）。文字のチャットは使える。
 （７）聞き取りが 5 回続けて何も聞き取れずに止まった（E5）→ 今と同じ「声が聞き取れませんでした」。声で会話は入ったまま。マイクの印を押すと再開する。
 （８）窓を閉じる・切り替えを切る → 今の `close()`・`onVoiceChange(false)` のまま全部止める。
 
 - 自動で送るのは「声で会話」が入っている間だけ。切れているときは今のまま人が送る（ADR-1082 What 4「勝手に送らない」は、切れているときの決まりとして残す。入れたときに自動で送ることは PO 2026-11-24「1」で承認）。
 - 聞いている間は送るボタンを押せない今の決まり（`:304`）はそのまま。自動で送るのはタイマーだけ。
+- 回数の印が要る理由（審査 B2）: 読み上げを途中で止めても `speak` は `"ok"` を返す（`frontend/src/features/secretary/useSecretaryVoice.ts:84`・`:96`・`:100`）。読み上げ中に手で送ると、前の読み上げの終わりでマイクが開き、次の返事の声を拾う。送るたび・切り替えのたび・閉じるたびに印を 1 つ進め、古い読み上げの終わりではマイクを開かない。
 
 ### 15-5 予定の確かめ（声の「はい」）
 
 - 予定の最後の下書き（`kind: "event"` かつ `ask` が無い）が来たら、確かめ待ちの印 `pendingConfirm = { id, tries: 0 }` を持つ。
-- 確かめ待ちの間に送られた文は、ChatGPT に送らない。新しい 1 か所の関数 `judgeYesNo(text)`（新しいファイル frontend/src/features/secretary/secretaryVoiceAnswer.ts）で 3 つに分ける。
+- 確かめ待ちの間に送られた文は、ChatGPT に送らない。新しい 1 か所の関数 `judgeYesNo(text, yesWords, noWords)`（新しいファイル frontend/src/features/secretary/secretaryVoiceAnswer.ts）で 3 つに分ける。語の一覧は翻訳キー `secretary.voiceMode.yesWords`・`noWords` の 1 か所（§15-10）。
 
-| 答え | 動き | 読む文 |
-|---|---|---|
-| はい | 下書きの部品の `submit()` を呼ぶ（部品に `ref` で口を 1 つ出す。中身は今の `submit()` と同じ 1 か所・E8）。作れたら今の `markCreated` | 「予定を作りました」（今の `secretary.created.event`） |
-| はい だが `canCreate` が偽 | 作らない | 「画面で確かめて、作るボタンを押してください」 |
-| いいえ | 作らない。今の `markCancelled` | 「入れませんでした」 |
-| 分からない（1 回目） | 作らない。もう 1 回だけ聞く | 「はい、か、いいえで答えてください」 |
-| 分からない（2 回目） | 作らない。確かめ待ちを外す | 「画面で確かめて、作るボタンを押してください」 |
+| 答え | 動き | 読む文 | 読んだ後にまた聞くか |
+|---|---|---|---|
+| はい | 下書きの部品の `submit()` を呼ぶ（部品に `ref` で口を 1 つ出す。中身は今の `submit()` と同じ 1 か所・E8）。作れたら今の `markCreated` | 「予定を作りました」（今の `secretary.created.event`） | 聞く（声で会話の間） |
+| はい だが `canCreate` が偽・保存中 | 作らない。確かめ待ちを外す | 「画面で確かめて、作るボタンを押してください」 | 聞く |
+| はい で作るのに失敗（`frontend/src/features/secretary/SecretaryDraftEvent.tsx:70-72`） | 下書きの部品の今の失敗の表示のまま。確かめ待ちを外す（部品に失敗を知らせる口 `onVoiceFailed` を 1 つ足す） | 「画面で確かめて、作るボタンを押してください」 | 聞く |
+| いいえ | 作らない。今の `markCancelled` | 「入れませんでした」 | 聞く |
+| 分からない（1 回目） | 作らない。もう 1 回だけ聞く | 「はい、か、いいえで答えてください」 | 聞く（答えを受けるため） |
+| 分からない（2 回目） | 作らない。確かめ待ちを外す | 「画面で確かめて、作るボタンを押してください」 | 聞く |
 
-- `judgeYesNo` の決まり: 否定の語（いいえ・いや・違う・やめ・キャンセル・入れないで・作らないで・だめ・ダメ）が 1 つでもあれば「いいえ」。否定が無く、肯定の語（はい・うん・お願い・入れて・作って・オッケー・OK・ええ）があれば「はい」。どちらも無ければ「分からない」。**否定を先に見る**（「はい、いや違う」は「いいえ」）。語の一覧はこのファイル 1 か所。
+- 下書きの用件か始まりが空（`EventDraftData.title`・`start` は `string | null`・`frontend/src/features/secretary/secretaryApi.ts:41-42`）のときは、確かめ待ちにせず「画面で確かめて、作るボタンを押してください」を読む。
+- `judgeYesNo` の決まり: 文を NFKC にして英字を小文字にし、句読点と空白を除いた形で比べる。否定の語が 1 つでもあれば「いいえ」（**否定を先に見る**。「はい、いや違う」は「いいえ」）。否定が無く、**文の頭が肯定の語で始まる**とき「はい」（「ええと」は「ええ」で始まるので、肯定の語から「ええ」を外す）。英語は単語の区切りで比べる（"look" を "ok"、"know" を "no" と見ない）。どちらでもなければ「分からない」。
 - 確かめ待ちの間に人が画面の「作る」「やめる」を押したら、確かめ待ちを外す（今の `markCreated`・`markCancelled` の中で外す）。
 - 確かめ待ちは、声で会話が切れているときは作らない（文字のチャットの動きは変えない）。
 
@@ -347,26 +351,29 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 |---|---|---|
 | 聞き返し（`kind: "unknown"`） | AI の `reply`（今のまま `:152-153`） | なし |
 | 予定のまだ聞く欄（`ask` あり） | 今のまま `secretary.ask.*`（`:143`） | なし |
-| 予定の最後の下書き | 「{用件}を{日時}に入れますか？」（新しい翻訳キー・日時は翻訳キーの差し込みで組む。直書きの日本語は使わない） | 新しく読む |
+| 予定の最後の下書き | 「{用件}を{日時}に入れますか？」（新しい翻訳キー。日時は今の作る小窓と同じ `formatDraftDateLine`（`frontend/src/pages/schedule/schedule-utils.ts:119`）で組む。例「11月10日(火) 午前10時～午前11時」） | 新しく読む |
 | 請求書の下書き | 決まった文（新しい翻訳キー）。会社名・金額・品名は読まない | 新しく読む |
 | 失敗の文（`secretary.error.*`） | その文 | 新しく読む（声で会話の間だけ） |
 | 作った知らせ | 今のまま（`:176`） | なし |
 
-- 請求書で会社名を読まない理由: 読み上げは Google に文を送る（ADR-1080 What 3）。会社名・金額を Google に送る道を新しく作らない。
+- 請求書で会社名を読まない理由: 読み上げは backend の口から Google に文を送る（ADR-1080 What 1・What 3）。会社名・金額を Google に送る道を新しく作らない。
 - 予定の用件は、PO が話した言葉を ChatGPT が書き直したもの。今も「声で返事」のとき聞き返しの文は Google に送っている。新しい種類のデータを送る道ではない。
+- 請求書の下書きを読んだ後もマイクは開く。そこで「はい」と言っても、普通の文として ChatGPT に送られるだけで、請求書は作られない（請求書を作る POST はボタンからだけ・`frontend/src/features/secretary/SecretaryDraftInvoice.tsx:124`・`:283`）。無料プランの回数を 1 回使う。
 
 ### 15-7 画面（金型・翻訳）
 
 - 部品は今のものだけ（`Toggle`・`IconToggleButton`・`Textarea`・`Button`・`ChatBubble`）。新しい金型・色・寸法は無い（ADR-067・ADR-144）。
-- 翻訳キー（`frontend/src/locales/ja.json`・`frontend/src/locales/en.json` に同じキー）: `secretary.voiceToggle` の文を「声で会話」に変える。新しいキー: `secretary.voiceMode.confirmEvent`・`secretary.voiceMode.when`・`secretary.voiceMode.whenAllDay`・`secretary.voiceMode.invoiceReady`・`secretary.voiceMode.notCreated`・`secretary.voiceMode.askAgain`・`secretary.voiceMode.checkScreen`。
-- 日本語の直書きは CI の `local/no-japanese-literal` が止める（`frontend/eslint.config.js` の秘書の窓の override・ADR-1087）。`judgeYesNo` の語の一覧は日本語の文字が要るため、試験と同じく `String.fromCharCode` か翻訳キーで持つかを、実装の前にカードで 1 つに決める（§15-10）。
+- 翻訳キー（`frontend/src/locales/ja.json`・`frontend/src/locales/en.json` に同じキー）: `secretary.voiceToggle` の文を「声で会話」に変える。新しいキー: `secretary.voiceMode.confirmEvent`・`secretary.voiceMode.invoiceReady`・`secretary.voiceMode.notCreated`・`secretary.voiceMode.askAgain`・`secretary.voiceMode.checkScreen`・`secretary.voiceMode.yesWords`・`secretary.voiceMode.noWords`。
+- 日本語の直書きは CI の `local/no-japanese-literal` が止める（`frontend/eslint.config.js` の秘書の窓の override・ADR-1087）。`judgeYesNo` の語の一覧は翻訳キーに置く（§15-10 で決定）。
 
 ### 15-8 危ない点と手当て
 
 | 危ない点 | 手当て | 確かめ |
 |---|---|---|
 | 秘書の声をマイクが拾い、自分の声を送る | 送る前に聞き取りを捨てる（E9）。読み上げの間は聞き取りを始めない（読み終わってから始める・§15-4（５）） | V2 で 3 往復して、秘書の声が欄に入らない |
-| 聞き違いで予定が入る | 「はい」が無い限り作らない。否定を先に見る（§15-5） | V3「いいえ」5 回で 0 件 |
+| 聞き違いで予定が入る | 「はい」が無い限り作らない。否定を先に見る。肯定は文の頭だけ・英語は単語の区切り（§15-5） | V3「いいえ」5 回で 0 件・試験で「ええと」「let me look」が「はい」にならない |
+| 読み上げを途中で止めた後にマイクが開き、次の返事の声を拾う（審査 B2） | 回数の印（§15-4（５）） | 試験 T10・V2 |
+| 声で会話を入れたとき、手で打った文が勝手に送られる | この回に聞き取った文字があるときだけ送る（§15-4（３）） | 試験 T2 |
 | 話の途中の間（ま）で送られる | 1.0 秒待つ。途中の文字があれば送らない | V1 で 10 回。送られた文が話した文と同じか |
 | iPhone で、読み終わった後に人の操作なしで聞き始められない【未確認】 | 規格には禁止は無い（E6）。動かなければ、マイクの印を 1 回押せば続く（§15-4（７）と同じ）。**それでも予定と請求書は頼める** | V6。iPhone の結果で「1 回押す型」に決めるかを PO に聞く |
 | iPhone で、マイクを使った後の読み上げが小さい受話口から出る【未確認】（§10 の報告） | 読み上げの前に聞き取りを捨てる（E9）。直らなければ PO に知らせる | V6 |
@@ -379,8 +386,10 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 
 ### 15-10 実装の前にカードで決めること（設計の残り 0 件にするため）
 
-- `judgeYesNo` の語の一覧の持ち方（日本語の直書きの検査に当たらない形）: 翻訳キー `secretary.voiceMode.yesWords`・`noWords`（`|` 区切り）に置き、`t()` で読む形にする。ja と en で同じキー。英語の画面では英語の語（yes・no 等）。→ これで決め、カードに書く。
-- 下書きの部品の口: `SecretaryDraftEvent` を `forwardRef` にし、`useImperativeHandle` で `submitByVoice(): boolean`（`canCreate` が偽なら何もせず false）を出す。ボタンの `submit()` と同じ関数を呼ぶ。
+- `judgeYesNo` の語の一覧の持ち方（日本語の直書きの検査に当たらない形）: 翻訳キー `secretary.voiceMode.yesWords`・`noWords`（`|` 区切り）に置き、`t()` で読んで渡す。ja と en で同じキー。英語の画面では英語の語（yes・no 等）。→ 決定。
+- 日時の読み方: `formatDraftDateLine` を使う（新しい書式を作らない）→ 決定。「(火)」を読み上げが「かようび」と読むかは【未確認】。V3 の目視で見る。
+- 書き方の検査（`react-hooks/exhaustive-deps`・`frontend/eslint.config.js:35`・`--max-warnings=0`）に当たらない形: 自動で送る処理は `sendRef.current = send` で持って呼ぶ。下書きの部品の口は `submitRef.current = submit` で持って呼ぶ → 決定。
+- 下書きの部品の口: `SecretaryDraftEvent` を `forwardRef` にし、`useImperativeHandle` で `submitByVoice(): boolean`（`canCreate` が偽か保存中なら何もせず false）を出す。ボタンの `submit()` と同じ関数を呼ぶ。作るのに失敗したら props の `onVoiceFailed` を呼ぶ。
 
 ### 15-11 外部・過去事例の参照と我々への応用
 
@@ -389,4 +398,17 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 
 ### 15-12 審査の記録
 
-- （審査の結果をここに書く）
+| 回 | 審査 | 結論 | 直したこと |
+|---|---|---|---|
+| 1 | マージ前の審査役（Claude Opus・2026-11-24・PR #5728 の HEAD 85156a5e2） | REVISE（止める指摘 5 件・止めない指摘 9 件） | B1 ADR-1082 What 4・5 に声で会話の追記／B2 回数の印（§15-4（５））／B3 確かめの後もまた聞く・作るのに失敗したとき（§15-5 の表）／B4 書き方の検査に当たらない形（§15-10）／B5 日時は `formatDraftDateLine`・空のとき（§15-5・§15-6）。止めない指摘: 行番号・試験の英語の切り替えの名・偽物 2 つ・はい/いいえの誤判定・§15-5 と §15-10 のずれ・ADR-1080 の番号・手で打った文の自動送り・請求書の後の「はい」・維持の仕組み（§13）を直した |
+
+- 受け入れの基準と確かめ方の対応:
+
+| 基準 | 確かめ方 |
+|---|---|
+| V1 | 本番の PC で録画して 10 回数える（kgi.md §5）・試験 T2（1000ms で送る・999ms で送らない） |
+| V2 | 本番の PC で 5 回・試験 T4・T10 |
+| V3 | 本番の PC で 5 回ずつ・試験 T5〜T7 |
+| V4 | 本番の PC で 5 回・試験 T8 |
+| V5 | 本番の台帳の読み上げの字数・新しい有料のサービスの数 |
+| V6 | PO の Android と iPhone で各 1 回 |
