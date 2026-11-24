@@ -433,3 +433,97 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 | 回 | 審査 | 結論 | 直したこと |
 |---|---|---|---|
 | V2-1 | マージ前の審査役（Claude Opus・2026-11-25） | APPROVE on 040b039e3（止める指摘 0。差分はカード §3・§4 と一字ずつ一致。片付けの順番に頼らない・StrictMode の害なしを実物で確認） | 止めない指摘のうち、PR 本文の GO原文を「GO #5739」の形に直した。作業中の札に PR 番号を書いた |
+
+## 16. 声で下書きを直す（便W・2026-11-25）
+
+### 16-1 目的と、利用者に見える変化
+
+- 目的: 予定の下書きが出た後、手を使わずに中身を直して、そのまま「はい」で作れるようにする（kgi.md §6）。
+- 前: 「入れますか？」の後は、はい／いいえしか聞かない。「説明に〇〇と入れて」は 2 回で「画面で確かめて」になり、直せない（recon.md §9-1）。
+- 後: はい／いいえ以外の文は「直す頼み」として秘書に送る。直った下書きが下に出て、前の下書きは「下の直した下書きに替えました」の一文になる。秘書は「直しました。〇〇を〇〇に入れますか？」と読む。直し方が読めなければ「直すところが分かりませんでした…」と読み、2 回続けば今と同じ「画面で確かめて」で終わる。
+
+### 16-2 対象と対象外
+
+- 対象: 予定の下書きの、題名・始まり・終わり・場所・説明・Meet。声で会話が入っていて、「入れますか？」の確かめ待ちの間だけ。
+- 対象外: 請求書の下書き（声では作らない約束のまま・§15-5）。終日の切り替え（終日の下書きでは時刻の頼みを使わない）。公開の範囲（画面で選んだ値を引き継ぐだけ）。手で打った文での直し（声で会話が切れているときは今のまま）。説明に「足す」（直すときは置き換え）。
+
+### 16-3 選んだ形と、選ばなかった形
+
+- A（画面だけで直す・AI と backend は今のまま）: カルテは値のある欄が勝つ（recon.md §9-2）ので、空の欄しか埋まらない。しかも PO の試した説明の言い方は AI が 1/2・メモは 0/2 しか読めない（recon.md §9-3）。PO の困りごとが直らないので選ばない。
+- B（題名・場所・説明も AI に送り、AI に全部の欄を返させる）: 大きさの上限 15,000 バイトを超える（`docs/handoff/secretary-event-karte/design.md:118`）。選ばない。
+- C（選ぶ形）: 画面は今の欄の値に「直す頼み」の印を付けて送る。backend は直す頼みのときだけ「AI が値を返した欄は AI、返さなかった欄はカルテ」で合わせる。AI に送る中身は今と同じ（日時の 3 欄だけ）。指示文に「直す頼み」の決まりを 1 行足し、説明・メモを読めるようにする。
+
+### 16-4 backend（変更前 → 変更後）
+
+1. `backend/app/schemas/assistant.py:18-32` `KarteIn`: 欄 `edit: bool = False` を `asked_count` の後に足す。`:159-172` `EventDraft`: 欄 `edited: bool | None = None` を `ask_count` の後に足す（直す頼みの答えのときだけ真偽、ほかは null）。
+2. `backend/app/services/secretary_karte.py` に `merge_edit(ev: IntentEvent | None, karte: KarteIn) -> tuple[IntentEvent, bool]` を足す（`merge_karte` は変えない）。
+   - 土台はカルテの値（題名・始まり・終わり・終日・場所・説明・会議・Meet）。`ev` が None なら土台のまま、変わった＝偽。
+   - 題名・場所・説明: AI の値が null でなく、前後の空白を除いて空でなければ AI の値。
+   - Meet: AI の値が null でなければ AI の値。会議: カルテか AI のどちらかが真なら真。終日: カルテの値のまま。
+   - 始まり・終わり（カルテが終日でないときだけ）: AI の始まりが時刻として読めればそれを使う。AI の終わりが読めればそれを使う。AI の終わりが無く始まりだけ変わったときは、カルテの長さ（終わり − 始まり）を新しい始まりに足す（時差の印つき ISO・秒まで）。長さを計算できない（カルテに片方が無い・時差の印の有無が混ざる）ときは、カルテの終わりのまま。
+   - 変わった: 題名・始まり・終わり・場所・説明・Meet のどれかが土台と違えば真。始まり・終わりは時刻として比べる（同じ時刻で書き方だけ違うものは変わっていない）。
+3. `backend/app/routers/assistant.py:331-348` 新しい画面の道: カルテがあり `karte.edit` が真のときは、今の `merge_karte` の分かれ道より先に次を行う。AI が event で始まりを返したら、その答えに `apply_day(ev, body.text, now.date(), None)`（日付の決まりの表を当てる）。続けて `merge_edit` → `settle_dates`。最終の種類は event（AI が unknown や請求書を返しても、下書きはカルテのまま・変わった＝偽）。
+4. `backend/app/routers/assistant.py:392-411` 下書きを作るところ: 直す頼みのときは `next_ask` を呼ばず `ask=None`・`ask_count=0`・`edited=<変わったか>`。
+5. AI に送る中身（`_agent_payload`・`:190-207`）は変えない。直す頼みでも日時の 3 欄と `asked`（null）だけ。大きさは今と同じ。
+
+### 16-5 指示文（`secretary-agent/prompt.txt`）
+
+- `:14` の後に 1 行足す（2 つの容器が同じファイルを読む・`docs/handoff/secretary-event-karte/design.md` §4-4）:
+  `- 「途中の予定」があり、利用者の文がその予定の欄を直す頼み（「説明にテストと入れて」「メモに資料を持参と書いて」「場所は渋谷にして」「4 時に変えて」「題名を定例会議にして」など）なら kind=event にし、言われた欄だけに値を入れ、言われていない欄は null にします。説明・メモ・備考・詳細は description に、場所は location に、題名・タイトル・件名は title に、言われた文字のとおりに入れます。`
+- カルテが無い頼みには「途中の予定」の見出しが付かない（`secretary-agent/compose.mjs:11-14`）ので、この行は今までの頼みに当たらない。確かめは W4（23 件）。
+
+### 16-6 frontend（変更前 → 変更後）
+
+1. `frontend/src/features/secretary/secretaryApi.ts:56-67` `EventKarte` に `edit?: boolean`、`:40-53` `EventDraftData` に `edited?: boolean | null` を足す。時差の印つきの時刻の文字を作る関数 `toKarteTime(date: string, time: string): string`（`combineDateTime` で作った時刻を、ブラウザの時差の印つき `YYYY-MM-DDTHH:mm:00+09:00` の形で書く）をここに足す。
+2. `frontend/src/features/secretary/SecretaryDraftEvent.tsx:31-34` の口に `currentValues(): { karte: EventKarte; calendarType: "personal" | "shared" }` を足す。今の欄の値から作る（題名・場所・説明は前後の空白を除き、空なら null。始まり・終わりは日付が空、または終日でなく時刻が空なら null。終日なら始まり 00:00・終わり 23:59。Meet は付けてよい人なら印の値、そうでなければ下書きの値。asked は null・asked_count は 0・edit は true）。props に `initialCalendarType?: "personal" | "shared"` を足し、`:51` の最初の値に使う。
+3. `frontend/src/features/secretary/SecretaryChat.tsx`:
+   - `:43` 予定の吹き出しに `calendarType?: "personal" | "shared"` を足し、`SecretaryDraftEvent` の `initialCalendarType` に渡す。
+   - `:225-245` の「下書きの中身を読んで確かめを始める」部分を関数 `startConfirm(id, draft, key)` に出し、今の道（key＝confirmEvent）と直した後（key＝editedConfirm）の両方から呼ぶ（同じ処理を 2 か所に書かない）。
+   - `:186-192`（はい／いいえ以外）を「直す頼み」に替える。下書きの口が無ければ今の `checkScreen` で終える。あれば `currentValues()` を読み、考え中の吹き出しを出して `sendSecretaryMessage(文, karte)` を送る。待つ間は確かめ待ちを外す（送り中は自動で送らない・:277）。
+     - 答えが event で `edited` が真: 前の下書きの吹き出しを文 `secretary.edit.replaced` に替え、考え中の吹き出しを新しい下書き（公開の範囲は前の値）に替え、`startConfirm(新しい id, 下書き, "editedConfirm")`。
+     - それ以外（変わらない・unknown）: 考え中の吹き出しを `secretary.voiceMode.notEdited` に替える。回数が 0 なら確かめ待ちを回数 1 で前の下書きに戻して `notEdited` を読む。1 なら確かめ待ちを外して `checkScreen` を読む。
+     - 失敗: 今の `send` の失敗と同じ（権限なしは `onForbidden`・ほかは失敗の文を出して読む）。確かめ待ちは外したまま（前の下書きのボタンで作れる）。
+     - 窓を閉じた後に届いた答えでは、確かめ待ちを付けない（`session` の値が違えば何もしない）。
+4. 文言（`frontend/src/locales/ja.json`・`en.json` の `secretary`）: 足す `voiceMode.editedConfirm`「直しました。{{title}}を{{when}}に入れますか？」/「Updated. Add {{title}} on {{when}}?」、`voiceMode.notEdited`「直すところが分かりませんでした。はい、か、いいえ、か、直したいところを言ってください。」/「I could not tell what to change. Say yes, no, or what to change.」、`edit.replaced`「この下書きは、下の直した下書きに替えました。」/「This draft was replaced by the updated one below.」。使われなくなる `voiceMode.askAgain` は両方から消す。
+5. 新しい部品・色・大きさは作らない（今の `ChatBubble`・`SecretaryDraftEvent` だけ）。
+
+### 16-7 危ない点と手当て
+
+| 危ない点 | 手当て |
+|---|---|
+| AI が言われていない欄に値を入れ、勝手に変わる | 直した下書きは必ず画面に出し、「入れますか？」に「はい」と言うまで作らない。下調べでは言われていない欄に値が入ったのは 0/12（p6 の 1 回目の始まり・終わりはカルテと同じ値で、変わっていない）。W2 で数える |
+| 指示文を変えると今までの読み方が変わる | 足す行はカルテのある頼みだけに当たる。反映後に 23 件（W4）。23/23 でなければ PR を戻す |
+| 「違う、4 時にして」は「いいえ」と判定され取り消される | 作られることは無い（安全な側）。判定は変えない。PO の目視で困るなら次の便で考える |
+| 直すたびに AI を 1 回呼ぶ | 秘書の 1 日の回数に数える（今の道と同じ）。新しい費用は無い（W6） |
+| 本番の容器の作り直しが失敗する | 配備は警告だけで前の容器が残る（`.github/workflows/deploy.yml:771-800`）。その間は説明・メモが読みにくいだけで、ほかは動く。反映後の 23 件と W1 の測りで気づく |
+
+### 16-8 戻し方
+
+- 便W の PR を戻す。画面・backend・指示文が一緒に戻る。古い画面は `edit` を送らないので、新しい backend・古い画面の組み合わせでも今と同じ動き。
+
+### 16-9 測り方
+
+- kgi.md §6 の W1〜W6。W1・W2・W4 は反映後に Opus が recon.md §9-3 と同じ道で流す。台本の結果は `docs/handoff/secretary-voice-input/binW/` に置く。
+
+| 基準 | 検証方法 |
+|---|---|
+| 直す頼みで AI の値が勝ち、時刻だけなら長さを保つ | backend の試験（`merge_edit` の分かれ道すべて・口の直す道）が CI で緑 |
+| はい／いいえ以外で直す頼みを送り、2 回読めなければ終える | 画面の試験（T7 を書き直す・直った下書きに「はい」で作る）が CI で緑 |
+| 説明・メモが読める | W1: 6 回中 5 回以上 |
+| ほかの欄が読める | W2: 12 回中 11 回以上 |
+| 今までの読み方 | W4: 23/23 |
+
+### 16-10 外部・過去事例の参照と我々への応用
+
+- Rasa の forms（`docs/handoff/secretary-event-karte/design.md` §10 で 2026-11-14 に確認済み）: 欄を集める会話の型。今回は「埋まった欄を言い直しで替える」ので、同じ型の延長として、言われた欄だけを替えて他は残す形を使う。数値は無く、成功の証明には使わない。
+- 今回の根拠は本番の AI の実測（recon.md §9-3・12 回）。外部の数は使わない。
+
+### 16-11 維持の仕組み
+
+- 合わせ方の正本は `backend/app/services/secretary_karte.py` の 1 か所（聞く道は `merge_karte`、直す道は `merge_edit`）。試験が CI（`.github/workflows/test.yml`）で毎回走る。
+- 指示文を変える PR のたびに 23 件を流す決まり（`docs/handoff/secretary-event-karte/design.md` §11）はそのまま。
+- 持ち主: 設計は Opus、実装はクラウドの Sonnet、合格の判定は Opus の実測と PO の目視（W5）。
+
+### 16-12 審査の記録
+
+- （設計の審査の結果をここに書く）

@@ -74,3 +74,39 @@
 - 読み上げ用の鍵（サービスアカウント secretary-tts）で Speech-to-Text が使えるかは **まだ確かめていない**
   - 手元の gcloud はログインが切れている（`gcloud projects get-iam-policy` → `Reauthentication failed`）
   - 本番から 1 回試す台本は用意済み（scratchpad の stt-probe.sh）。自動判定で止められたため、PO の `!` 実行を待つ
+
+## 9. 声で下書きを直す（便W・2026-11-25 調べ・origin/main 48a5fdb1d）
+
+### 9-1 起きたこと（PO の試し 2026-11-25）
+
+- PO は予定の下書きが出た後に「説明にテスト 消していい って入力して」と 2 回話した。秘書は「はい、か、いいえで答えてください」→「画面で確かめて…」と返し、説明は入らなかった。予定は作られていない。
+- 今の動きどおり。確かめ待ちの間は、はい／いいえ以外の文を AI に送らない（`frontend/src/features/secretary/SecretaryChat.tsx:167-193`）。1 回目は問い直し（:186-188）、2 回目は「画面で確かめて」で確かめ待ちを終える（:189-191）。その後の「OK」は新しい頼みとして AI に送られた（:195-206）。
+
+### 9-2 下書きと AI の間（実物）
+
+- 下書きの欄は、出た時の値で 1 回だけ作る（`frontend/src/features/secretary/SecretaryDraftEvent.tsx:41-53` の `useState` の初期値）。同じ部品に新しい下書きを渡しても欄は変わらない。替えるには部品を作り直す（React の key を替える）。
+- 親が下書きに触る口は `submitByVoice` だけ（`frontend/src/features/secretary/SecretaryDraftEvent.tsx:31-34`）。今の欄の値を読む口は無い。
+- 下書きの「公開の範囲」（`calendar_type`）は画面では personal と shared を選べる（:51・:170-179）。秘書の返事の型は personal だけ（`frontend/src/features/secretary/secretaryApi.ts:47`・`backend/app/schemas/assistant.py:167`）。
+- 画面は会話の途中の予定（カルテ）を全部の欄で送る（`frontend/src/features/secretary/secretaryApi.ts:56-67`）。backend は AI に日時の 3 欄と直前に聞いた欄だけを送る（`backend/app/routers/assistant.py:190-207`。題名・場所・メモを送らないのは大きさの上限のため・`docs/handoff/secretary-event-karte/design.md:118`）。
+- AI の答えとカルテを合わせるとき、カルテに値がある欄はカルテが勝つ（`backend/app/services/secretary_karte.py:18-36`）。今のままでは、題名・時刻のように埋まった欄は声で変えられない。
+- カルテの形は知らない鍵を 422 で断る（`backend/app/schemas/assistant.py:18-32` の `extra="forbid"`）。直す頼みの印を足すには、この形に欄を足す必要がある。
+- 指示文に「埋まった予定の欄を直す頼み」の決まりは無い（`secretary-agent/prompt.txt:3-18` の 15 行）。
+- はい／いいえの判定は、いいえの語が文のどこかにあれば「いいえ」（`frontend/src/features/secretary/secretaryVoiceAnswer.ts:60-65`・語の一覧は `frontend/src/locales/ja.json` の `secretary.voiceMode.noWords`）。「違う、4 時にして」は「いいえ」になり、下書きは取り消される（作られはしない）。
+
+### 9-3 本物の AI に直す言い方を読ませた結果（2026-11-25 03:06 JST・Opus が実施）
+
+- 道: 本番の backend の image の使い捨て容器から `http://secretary-codex:8090/intent` を直接呼んだ（ADR-1077 便0 と同じ道・制限のない鍵・PO の 2026-11-25 の許可「必要な権限は全て…使用して良い」）。使用の記録に行は入らない。
+- 条件: カルテ＝始まり 2026-11-26 15:00・終わり 16:00・終日でない・直前に聞いた欄なし。担当 AI は `gpt-5.6-terra`（本番の使用の記録の model 列で確かめた）。6 つの言い方を 2 回ずつ（計 12 回・全部 HTTP 200）。
+- 台本: `docs/handoff/secretary-voice-input/binW/probe_edit.py`。生の結果: `docs/handoff/secretary-voice-input/binW/probe-before-20261125.jsonl`。
+
+| 言い方 | 1 回目 | 2 回目 | 読めた数 |
+|---|---|---|---|
+| p1 説明にテスト 消していい って入力して | unknown | event・description「テスト」 | 1/2 |
+| p2 場所は渋谷の事務所にして | event・location | event・location | 2/2 |
+| p3 メモに資料を持っていくと書いて | unknown | unknown | 0/2 |
+| p4 時間を4時に変えて | event・start 16:00・end null | 同じ | 2/2 |
+| p5 タイトルを定例会議に変えて | event・title | event・title | 2/2 |
+| p6 Meetも付けて | event・add_meet true | event・add_meet true | 2/2 |
+
+- 読み取れること（事実）: 場所・時刻・題名・Meet は今の指示文のままで 8/8 読めた。説明・メモは 1/4。時刻だけ変える頼みでは終わりが null で返る（2/2）。
+- 未確認: 回数が 2 回ずつで少ない。指示文を足した後の数は便W の測り（kgi.md §6 W1・W2）で数える。
