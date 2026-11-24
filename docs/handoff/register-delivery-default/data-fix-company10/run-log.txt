@@ -1,0 +1,17 @@
+9c363d61f33316c769635affeff9a274350d1aa34c8350a67ba94780e54bae36  apply.sql
+2026-11-24T07:41:05Z
+BEGIN
+SET
+SET
+SET
+SET
+DO
+ id | company_id | address_type | is_default |          updated_at           
+----+------------+--------------+------------+-------------------------------
+  9 |         10 | billing      | t          | 2026-11-23 07:59:01.277953+00
+ 10 |         10 | delivery     | t          | 2026-11-24 07:41:07.195548+00
+(2 rows)
+
+NOTICE:  OK: 1 row set is_default=true
+COMMIT
+exit=0

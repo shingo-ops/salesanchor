@@ -179,6 +179,20 @@ describe('shared button migration: real panel operations', () => {
     await act(async () => { pending.resolve(data); });expect(saved).toHaveBeenCalledExactlyOnceWith(data);expect(close).toHaveBeenCalledTimes(1);
   });
 
+  it('blocks shipping submit when address1 breaks the delivery rule and shows the rule text (K11)', async () => {
+    render(<ShippingDetailPanel orderId={7} orderNumber="ORD-7" onClose={vi.fn()} />);
+    const input = await screen.findByTestId('ship-input-address1') as HTMLInputElement;
+    expect(screen.queryByText('addressRule.ascii')).toBeNull();
+    // eslint-disable-next-line local/no-japanese-literal -- 試験の入力値（日本語の住所）
+    fireEvent.change(input, { target: { value: '\u6771\u4eac' } });
+    expect(screen.getByText('addressRule.ascii')).toBeTruthy();
+    fireEvent.click(button('ship-save'));
+    expect(mock.patch).not.toHaveBeenCalled();
+    expect(mock.post).not.toHaveBeenCalled();
+    fireEvent.change(input, { target: { value: 'x'.repeat(36) } });
+    expect(screen.getByText('addressRule.maxLength')).toBeTruthy();
+  });
+
   it('confirms existing purchase once while confirming and updates displayed status', async () => {
     const saved=vi.fn(), close=vi.fn(), pending=deferred<typeof purchase>();mock.patch.mockReturnValue(pending.promise);
     render(<PurchaseDetailPanel orderId={7} orderNumber="ORD-7" onClose={close} onSaved={saved} />);await screen.findByTestId('pur-input-purchase_amount');

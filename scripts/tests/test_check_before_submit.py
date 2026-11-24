@@ -9,18 +9,18 @@
   1 main と同じ中身で流すと終了コード 0・必須チェックの全件の名前・流した検査の名前が出る
   2 違反を 1 つ入れた写しで流すと終了コード 1・落ちた検査の名前が出る（違反 2 種類）
   3 見本の台本・見本のフォルダを触ったときだけ、その見本が選ばれる
-  4 commit していない変更があると終了コード 2
+  4 手で流して直しかけの変更があると終了コード 2（記録していないファイルだけのとき・pre-push から呼ばれたときは HEAD の写しで流す）
   5 必須一覧が無い・0 件なら 2 / --only の値が無い・知らない id なら 2 / 流した検査が 0 件なら 2
   6 壊れた case.json は × で終了コード 1
   7 main より遅れた枝では「遅れている」と表示する（遅れていなければ出さない）
   R4b（印・記録・pre-push・validate-pr-body の知らせ）
   8 全部 ○ で印（HEAD の SHA）と記録の 1 行が書かれる。--only のとき・× のときは印を書かない
   9 (a) --only fixture-select だけなら終了コード 2 / (b) 見本のフォルダ select なら 2 / (d) 行頭の空白つきの # は必須に数えない
-  10 pre-push: 印が HEAD と同じなら入口を流さず通す / commit していない変更でも止めない / HEAD と違う中身・削除の push は流さない / × なら止める
+  10 pre-push: 印が HEAD と同じなら入口を流さず通す / commit していない変更（記録していないファイル・直しかけの変更）は HEAD の写しで流し、HEAD が × なら止める / HEAD と違う中身・削除の push は流さない / × なら止める
   11 validate-pr-body.sh: 印が無いと知らせと記録が出て、終了コードは印があるときと同じ
   R4c 便3（prepare が共通の設定に core.hooksPath を書く）
   14 一時のリポジトリと git worktree add の作業場所の両方で共通の設定に frontend/.husky が書かれる / 15 .git の無い場所・16 git の無い PATH・17 外のリポジトリの深い所は rc=0 で外の値を変えない / 18 3 か所の値が同じ
-設計: docs/handoff/rule-enforcement/design.md の R4a / R4b / R4c 便3
+設計: docs/handoff/rule-enforcement/design.md の R4a / R4b / R4b-2 第2便・第3便 / R4c 便3
 """
 import glob
 import os
@@ -208,6 +208,31 @@ class CheckBeforeSubmit(unittest.TestCase):
         self.assertEqual(rc, 1, out)
         self.assertIn("× lint_tenant_schema (strict)", out)
 
+    def test_dirty_tracked_change_is_not_in_copy(self):
+        fail = os.path.join(ROOT, "scripts/tests/rule-fixtures/tenant-schema/fail-commit-without-reset/files/"
+                            "backend/app/routers/zz_fixture_router.py.fixture")
+        ok = os.path.join(ROOT, "scripts/tests/rule-fixtures/tenant-schema/pass-commit-with-reset/files/"
+                          "backend/app/routers/zz_fixture_router.py.fixture")
+        self.put("backend/app/routers/zz_fixture_router.py", src=ok)
+        self.commit("test: tenant schema pass")
+        self.put("backend/app/routers/zz_fixture_router.py", src=fail)  # 作業場所だけ違反。commit しない
+        env = {"CHECK_BEFORE_SUBMIT_CALLER": "pre-push"}
+        rc, out = self.run_script("--only", "tenant-lint", extra_env=env)
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.log_rows()[-1][5], "pre-push")
+        self.assertEqual(self.log_rows()[-1][7], "tracked-copy")
+        self.commit("test: tenant schema violation")
+        rc, out = self.run_script("--only", "tenant-lint", extra_env=env)
+        self.assertEqual(rc, 1, out)
+        self.assertIn("× lint_tenant_schema (strict)", out)
+
+    def test_untracked_copy_kind_not_taken_from_outside(self):
+        self.put("docs/zz-uncommitted.md", "x\n")
+        rc, out = self.run_script("--only", "rule-registry", extra_env={"CBS_COPY_KIND": "tracked"})
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.log_rows()[-1][5], "manual")
+        self.assertEqual(self.log_rows()[-1][7], "untracked-copy")
+
     def test_prepush_stops_when_copy_fails_check(self):
         src = os.path.join(ROOT, "scripts/tests/rule-fixtures/tenant-schema/fail-commit-without-reset/files/"
                            "backend/app/routers/zz_fixture_router.py.fixture")
@@ -221,6 +246,23 @@ class CheckBeforeSubmit(unittest.TestCase):
         rows = self.log_rows()
         self.assertEqual(len(rows), 1, rows)
         self.assertEqual((rows[0][3], rows[0][5], rows[0][7]), ("1", "pre-push", "untracked-copy"))
+        self.assertIsNone(self.read_stamp())
+        self.assertEqual(self.copy_state(), before)
+
+    def test_prepush_stops_when_head_fails_with_dirty_tracked(self):
+        fail = os.path.join(ROOT, "scripts/tests/rule-fixtures/tenant-schema/fail-commit-without-reset/files/"
+                            "backend/app/routers/zz_fixture_router.py.fixture")
+        self.put("backend/app/routers/zz_fixture_router.py", src=fail)
+        self.put("docs/zz-tracked.md", "x\n")
+        self.install_prepush()  # 両方 commit される
+        before = self.copy_state()
+        self.put("docs/zz-tracked.md", "y\n")
+        rc, out = self.run_prepush(self.push_line())
+        self.assertEqual(rc, 1, out)
+        self.assertIn("push を中断しました", out)
+        rows = self.log_rows()
+        self.assertEqual(len(rows), 1, rows)
+        self.assertEqual((rows[0][3], rows[0][5], rows[0][7]), ("1", "pre-push", "tracked-copy"))
         self.assertIsNone(self.read_stamp())
         self.assertEqual(self.copy_state(), before)
 
@@ -525,16 +567,23 @@ class CheckBeforeSubmit(unittest.TestCase):
         self.assertEqual(len(rows), 1, rows)
         self.assertEqual((rows[0][3], rows[0][7]), ("skip-tag", "refs/tags/v1"))
 
-    def test_prepush_dirty_tracked_reason(self):
+    def test_prepush_runs_in_copy_on_dirty_tracked(self):
         self.put("docs/zz-tracked.md", "x\n")
         self.commit("test: add tracked file")
         self.install_prepush()
-        self.put("docs/zz-tracked.md", "y\n")  # 追記で追跡中の変更にする
-        rc, out = self.run_prepush(self.push_line())
+        before = self.copy_state()
+        self.put("docs/zz-tracked.md", "y\n")  # 追記で直しかけの変更にする
+        self.put("docs/zz-uncommitted.md", "x\n")  # 記録していないファイルも混ぜる
+        rc, out = self.run_prepush(self.push_line(), extra_env={"CBS_COPY_KIND": "untracked"})
         self.assertEqual(rc, 0, out)
+        self.assertIn("直しかけの変更があります", out)
+        self.assertIn("HEAD の写しで流します", out)
         rows = self.log_rows()
         self.assertEqual(len(rows), 1, rows)
-        self.assertEqual((rows[0][3], rows[0][7]), ("2", "dirty-tracked"))
+        self.assertEqual(len(rows[0]), 8, rows)
+        self.assertEqual((rows[0][3], rows[0][5], rows[0][7]), ("0", "pre-push", "tracked-copy"))
+        self.assertEqual(self.read_stamp(), git(self.wt, "rev-parse", "HEAD"))
+        self.assertEqual(self.copy_state(), before)
 
     def test_prepush_unexpected_exit_code_passes(self):
         self.install_prepush()

@@ -258,7 +258,7 @@ async def _check_routes(db: AsyncSession, company_id: int, invoice_id: int, y: i
     b = k3.bill_to
     assert (b.recipient_name, b.email, b.tax_id) == ("Recv 953", "a953@example.com", "TX953")
     assert (b.address_line_1, b.address_line_2, b.address_line_3) == ("L1", "L2", "L3")
-    assert (b.address, b.city, b.state, b.postal_code) == ("L1 L2", "C953", "S953", "Z953")
+    assert (b.address, b.city, b.state, b.postal_code) == ("L1 L2 L3", "C953", "S953", "Z953")
     assert b.country == "JP" and b.country_name == jp_name
     assert k3.issuer_region == "domestic"
 

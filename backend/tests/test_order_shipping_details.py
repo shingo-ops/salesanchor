@@ -314,8 +314,8 @@ class TestCsvEscape:
     async def test_csv_escapes_comma_quote_and_newline(self, client):
         """カンマ / ダブルクォート / 改行を含む値が破綻せず csv モジュールで再パースできる"""
         order_id = await _create_order(client, "ORD-SHIP-CSV-ESC")
-        nasty_addr = 'Line1, "Quoted"\nLine2'
-        nasty_recipient = 'Smith, "Jr."'
+        nasty_addr = 'Line1, "Quoted" Line2'
+        nasty_recipient = 'Smith, "Jr."\nDept'
         await client.post(
             f"/api/v1/orders/{order_id}/shipping",
             json={
