@@ -7,6 +7,7 @@
 | 起案日 | 2026-10-22 |
 | 方針の決定者 | Shingo（PO）。設計: Claude Opus |
 | 置き換える | Supersedes ADR-1009（§14-4 PO「1」。本 ADR が Accepted になったときに効く） |
+| 改められる | Amended by [ADR-1088](ADR-1088-discord-intake-bot-reads-alert-rooms.md)（Accepted 2026-11-24。Decision 3: 読むチャンネルに知らせの3部屋（読むだけ）を足す） |
 | 関連 | ADR-1009（置き換える受付）、ADR-1012（24時間保守。Decision 5 に追記）、ADR-1025（誤り報告。受け口・順番待ち・全停止を共通にする）、ADR-136（危険 PR の GO）、ADR-1003（GO の委任）、ADR-1033（会話の合意）、ADR-1052（本 ADR を改める。ADR-1052 が Accepted になったときに効く） |
 | 設計 | agent-console リポジトリ `docs/handoff/discord-pdca/design.md`・`recon.md`（agent-console PR #67 で保存。第0段の結果は同じ設計書に追記する） |
 
