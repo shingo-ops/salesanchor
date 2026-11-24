@@ -32,6 +32,20 @@ groups:
           description: "直近1時間にログインの失敗(401)と締め出し(429)が20件を超えました。"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#sustainedauthfailure"
 
+      # パスキーのログインの道(options・verify)で 5xx が10分に1件でも出た（sustain-design §5-4）
+      # 数えるのは入口(nginx)の行だけ（"5xx" の後に送った量の数字が続く形）。処理の途中で落ちた500と502/504は auth_events に残らないため
+      - alert: PasskeyServerError
+        expr: |
+          sum(count_over_time({job="containerlogs"} |~ "\"POST /api/v1/auth/passkey/login/(options|verify) HTTP/[0-9.]+\" 5[0-9][0-9] [0-9]+" [10m])) > 0
+        for: 0m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "パスキーのログインで本番の誤りが出ています"
+          description: "直近10分間に、パスキーのログインの道(options・verify)で 5xx が1件以上出ました。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#passkeyservererror"
+
   - name: error_anomaly
     rules:
       # バックエンドのエラーログ急増（5分間に30件以上）
