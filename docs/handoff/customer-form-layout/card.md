@@ -10,7 +10,7 @@
 
 - `git rev-parse HEAD` が、この枝の最新（依頼文に書いた sha）。
 - `backend/app/schemas/base.py` に `def validate_email_loose` がある。`DELIVERY_ADDRESS_LINE_MAX` がまだ無い。
-- `backend/app/routers/invoices.py` の 105 行が `            filter(None, [row["address_line_1"], row["address_line_2"]])`。
+- `backend/app/routers/invoices.py` の 106 行が `            filter(None, [row["address_line_1"], row["address_line_2"]])`。
 - `backend/app/routers/companies.py` に `async def _replace_addresses(` が1か所・`await _replace_addresses(db, new_id, data.addresses)` が1か所・`addresses = update_data.pop("addresses", None)` が1か所。
 - `frontend/src/tokens.css` に `--field-w-lg-max` と `--max-width-form` があり、`--field-w-xs` と `--max-width-public-form` が無い。
 - `frontend/src/pages/register/RegisterAddressPage.tsx` に `function CountryCombobox` がある。
@@ -39,7 +39,8 @@
 - `git grep -n "style={{ position" -- frontend/src/pages/register/CountryCombobox.tsx` が 0 件。
 - `git grep -n "spacing-\|border-default\|color-red-500\|color-primary\|font-size-xs\|font-size-sm" -- frontend/src/pages/register` が 0 件。
 - `git grep -nF 'x20-' -- backend/app frontend/src ':!*.test.*'` が `backend/app/schemas/base.py` 1件と `frontend/src/utils/addressRules.ts` 1件だけ。
-- `cd backend && python -m pytest tests/test_delivery_address_rule.py -q` が全部 passed（DB の要らない試験）。DB の要る試験は手元で動かなければその旨を書き、CI で確かめる。
+- `cd backend && python -m pytest tests/test_delivery_address_rule.py tests/test_invoice_pdf_address.py tests/test_order_shipping_details.py -q` が全部 passed。DB の要る試験は手元で動かなければその旨を書き、CI で確かめる。
+- `wc -l frontend/src/pages/register/RegisterPage.tsx` が 800 未満。
 - `git diff --stat origin/main...HEAD` が、docs・台帳・§2 の触るファイルだけ。
 
 ## 5. 想定分岐

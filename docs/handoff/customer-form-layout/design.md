@@ -1,6 +1,7 @@
 # design — お客様の住所フォームの並びと、送り先の住所の決まり（customer-address-form）
 
 - 書いた人: Claude Opus（設計担当）・2026-11-24
+- 改訂: 審査2回目 REVISE（[review-architect-2.md](review-architect-2.md)）の R1'・R2' と L1〜L4 を反映（2026-11-24）
 - 改訂: 審査1回目 REVISE（[review-architect-1.md](review-architect-1.md)）の R1〜R4 と L2〜L5・L7〜L13 を反映（2026-11-24）
 - 基準: `origin/main` = `a12741e7234b7fe2ec40a790a8aa3422e0d6eaa4`
 - 親: KGI [kgi.md](../../specs/customer-address-form/kgi.md)（K1〜K14・PO 承認 2026-11-24）／あるべき姿 [ideal-state.md](../../specs/customer-address-form/ideal-state.md)／決定 [decisions.md](decisions.md)（D1〜D6）／事実 [recon.md](recon.md)／外部の実測 [evidence-local.md](evidence-local.md)
@@ -138,7 +139,7 @@ def _join_address_lines(row) -> str:
     )
 ```
 
-- `:104-106` の `"address": " ".join(` から `),` までの3行を `"address": _join_address_lines(row),` の1行にする。
+- `:105-107` の `"address": " ".join(` から `),` までの3行を `"address": _join_address_lines(row),` の1行にする。
 
 請求書の PDF は分けた値で住所1〜3 を描くので見た目は変わらない（recon §7）。
 
@@ -220,7 +221,7 @@ export function deliveryAddressLineError(value: string | null | undefined): Addr
 
 - TSX 側の変更（審査 R2。これが無いと CSS が当たらない）:
   - (a) 先頭の import の後に `import "./CountryCombobox.css";`
-  - (b) 外枠の `<div style={{ position: "relative" }}>`（`:55`）を `<div className="register-combobox">` に
+  - (b) 外枠の `<div style={{ position: "relative" }}>`（`CountryCombobox.tsx` では `:46` 付近。`RegisterAddressPage.tsx` の写し元では `:116`）を `<div className="register-combobox">` に
   - (c) 一覧の `<ul style={{ position: "absolute", … }}>`（`:62-75` 付近）を `<ul className="register-combobox__list">` に（`style` は丸ごと消す）
   - (d) 行の `<li … style={{ padding: "var(--spacing-2) var(--spacing-3)", … }}>`（`:81` 付近）を `className="register-combobox__option"` に。`style` の中に選んだ行の背景など上の CSS に無い宣言があれば、消さずに止めて報告する
   - (e) このファイルに `style={{` が残らない
@@ -238,7 +239,7 @@ export function deliveryAddressLineError(value: string | null | undefined): Addr
 | b | 言語切替（K1） | 右寄せの `<div>` の中の `Button` ＋ その下の `<h1>` | `<div className="page-header"><h1>…</h1><Button …/></div>`（`company-forms.css:17-31` の見出しの行の型。`App.tsx:137` で全画面に読み込み済み） |
 | c | 国番号（K2） | 外枠 `<div style={{ width: "140px", flexShrink: 0 }}>`・`displayFn={(c) => \`${c.dial} ${c.code}\`}`・`onChange` で `COUNTRIES.find(...)` | 外枠 `<div className="field-w-xs" style={{ flexShrink: 0 }}>`・`displayFn={(c) => c.dial}`・`optionLabelFn={(c) => \`${c.dial} ${c.name}\`}`・`onChange={(val) => update…("telephone_dial", val)}`（`find` は消す） |
 | d | City・State・ZIP（K3・D1） | 3つの `<label>` が縦 | City の `<label>` はそのまま1行。その下に `<TwoColumn ratio="1:1" gap="4">` で State と ZIP の `<label>` を並べる |
-| e | 未定義の変数（K14） | `--spacing-N`・`--border-default`・`--color-red-500`・`--color-primary`・`--font-size-xs`・`--font-size-sm` | 幅を決める宣言（3フォームのすべての `<fieldset>` の `border` と `padding`）は、今の計算の結果と同じ `border: "none"`・`padding: 0` と書く（K5 を守る・審査 R1）。それ以外（間隔 `gap`・`margin`・色・字の大きさ）は `--space-N`・`--border`・`--danger`・`--accent`・`--font-xs`・`--font-sm` へ名前を置き換える |
+| e | 未定義の変数（K14） | `--spacing-N`・`--border-default`・`--color-red-500`・`--color-primary`・`--font-size-xs`・`--font-size-sm` | 幅を決める宣言（3フォームのすべての `<fieldset>`＝`RegisterPage.tsx:299, :482, :492`・`RegisterAddressPage.tsx:311`・`RegisterChangeBillingPage.tsx:245` の5つ。外枠は各ファイルの読み込み中・エラー・期限切れ・本体の4つとも §4-5 a と同じに の `border` と `padding`）は、今の計算の結果と同じ `border: "none"`・`padding: 0` と書く（K5 を守る・審査 R1）。それ以外（間隔 `gap`・`margin`・色・字の大きさ）は `--space-N`・`--border`・`--danger`・`--accent`・`--font-xs`・`--font-sm` へ名前を置き換える |
 
 - c の理由: 国番号の欄は番号だけを持つので、番号が同じ国（+1 の米国とバハマなど）でどれを選んでも欄は「+1」と出て、送る電話番号も今と同じ（`combinePhone` は `telephone_dial` だけを使う・`RegisterPage.tsx:136-139`）。
 - e の注意: 未定義の変数を使った宣言は、計算の時点で無効になり初期値（余白 0・枠なし）になる。幅に効く外枠の `padding` と fieldset の `border`・`padding` は、その初期値を `0`・`none` と書いて今の幅をそのまま保つ。縦の間隔と色（必須の印が赤くなる・段の間が開く）は置き換えで効き始める。目に見える変化として evaluator の撮影で確かめる（§7 弊害）。
@@ -259,12 +260,12 @@ export function deliveryAddressLineError(value: string | null | undefined): Addr
 - 状態を1つ足す: `const [lineErrors, setLineErrors] = useState<Partial<Record<"address_line_1" | "address_line_2" | "address_line_3", string>>>({});`
 - `handleSave` の電話の確かめの後に: `addrForm.address_type === "delivery"` なら住所1〜3を `deliveryAddressLineError` で確かめ、違反があれば `setLineErrors(...)` して `return`。請求先なら確かめない。
 - 住所1〜3の `TextField`（`CompanyAddressModal.tsx:117-127`）に `error={lineErrors.address_line_1}` などを渡す。欄を打ち直したらその欄の `lineErrors` を消す。
-- 窓の種類の切り替え（`handleAddressTypeChange`）で `setLineErrors({})` を呼ぶ（送り先 → 請求先に替えた時に赤を残さない・審査 L3）。
+- 窓の種類の選択（`CompanyAddressModal.tsx:92` の `onChange`）を `(e) => { setLineErrors({}); handleAddressTypeChange(e.target.value as "billing" | "delivery"); }` に替える（送り先 → 請求先に替えた時に赤を残さない・審査1回目 L3・2回目 R2'）。`handleAddressTypeChange` の本体（`useCompanyDetail.ts:224`）は触らない。
 - 保存を押した時だけ赤くなる（窓を開いただけでは赤くならない）＝K12「開いて保存しようとした時だけ赤くなる」。
 
 ### 4-8 注文ごとの発送の欄 `frontend/src/components/ShippingDetailPanel.tsx`（K11）
 
-- 住所の欄の描画（`ShippingDetailPanel.tsx:424-433` の `TEXT_FIELDS.address.map`）で、`f.key` が `address1`・`address2`・`address3` の3つだけ `<TextField label={t(f.labelKey)} value=… onChange=… error=… data-testid={`ship-input-${f.key}`} />` に替える。`error` は `deliveryAddressLineError(form[f.key])` のキーを `t(key, { max })` にしたもの。他の欄は今のまま。`TextField` は `data-testid` を入力欄に渡す（`TextField.tsx:93`）ので `order-shipping.spec.ts:269` は壊れない（審査 L4）。
+- 住所の欄の描画（`ShippingDetailPanel.tsx:424-433` の `TEXT_FIELDS.address.map`）で、`f.key` が `address1`・`address2`・`address3` の3つだけ `<TextField label={t(f.labelKey)} value=… onChange=… error=… data-testid={`ship-input-${f.key}`} />` に替える。`error` は `deliveryAddressLineError(form[f.key])` のキーを `t(key, { max })` にしたもの。他の欄は今のまま。`TextField` は `data-testid` を入力欄に渡す（`TextField.tsx:95`）ので `order-shipping.spec.ts:269` は壊れない（審査 L4）。
 - `handleSubmit`（`:277`）の最初で3つのどれかに違反があれば送らない。
 
 ## 5. 触るもの／触らないもの
