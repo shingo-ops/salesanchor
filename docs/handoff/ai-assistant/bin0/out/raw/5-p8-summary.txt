@@ -1,0 +1,11 @@
+## docker diff（普通の起動 約 70 秒後）を /run/s6 などの頭で数えた（全 298 行・先頭 100 行は 5-p8-diff.txt）
+     98 /run/s6
+     87 /run/hermes-service
+     79 /run/s6-rc:s6-rc-init:mgNoEi
+     28 /run/service
+      2 /run/s6-linux-init-container-results
+      1 /tmp/hermes-runtime
+      1 /tmp/
+      1 /run/s6-rc
+      1 /run/
+## データの置き場 /opt/data: ファイル総数 548

@@ -1,0 +1,8 @@
+== caps=[SETGID CHOWN SETUID] health=000
+Up 16 seconds
+chmod: changing permissions of '/run/hermes-service': Operation not permitted
+== caps=[SETGID CHOWN SETUID FOWNER] health=200
+Up 10 seconds
+== caps=[SETGID CHOWN SETUID FOWNER DAC_OVERRIDE] health=200
+Up 10 seconds
+s6-ftrigrd: fatal: unable to flush asyncout: Broken pipe
