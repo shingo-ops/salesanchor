@@ -113,25 +113,30 @@
 | # | 守り方 | 確かめ方 |
 |---|---|---|
 | G1 | 担当は専用の利用者 `ops-agent` で動かす。sudo なし・docker の組なし（docker の組は管理者と同じ力になるため） | `id ops-agent` に sudo と docker が無い |
-| G2 | メモリの上限: systemd の `MemoryHigh=1200M`（ここで押さえ始める）・`MemoryMax=1500M`（越えたら担当の中だけで止める）・`MemorySwapMax=0`。足りなくなったとき先に止まるのが担当になるよう `OOMScoreAdjust=1000` | `systemctl show` の値。設定の意味は systemd の公式（systemd.resource-control「MemoryMax=」：越えると OOM killer はその unit の中で動く。Context7 で 2026-11-25 に取得） |
+| G2 | メモリの上限: `MemoryHigh=1200M`（ここで押さえ始める）・`MemoryMax=1500M`（越えたら担当の中だけで止める）・`MemorySwapMax=0`・`OOMScoreAdjust=1000`。根拠の計算: 使えるメモリ 2,546MB（F1）− 1,500MB ＝ 残り約 1,046MB が監視の側に残る。ただし runner と Playwright が prod2 で動くなら（ADR-080 の「管理室VPSに追加するもの」・同 ADR のリスク表「4GB プランを推奨」）その山の分は F1 に入っていない。段取り 1 で runner の有無と山を測り、残りが 500MB を切る見込みなら始めない | `systemctl show` の値。設定の意味は systemd の公式（systemd.resource-control「MemoryMax=」。Context7 で 2026-11-25 に取得） |
 | G3 | 置く鍵は 2 つだけ: 担当のサブスクのログイン・Discord のボットの鍵。どちらも `ops-agent` の家の場所に置き、値は文書と会話に書かない | 家の場所の鍵の一覧。SSH の鍵・DB の鍵・case-api の札・GitHub の鍵が 0 件 |
 | G4 | 使える道具は Discord の返事の道具と Read だけ。Bash・書き込み・ネットの道具は許さない。一覧に無い道具は聞かずに断る設定にする | 一覧に無い命令（例: ファイルを作って）を頼み、止まらずに断る返事が来る。設定の名前は導入の時に公式資料と照らす（Agent SDK では `permissionMode: "dontAsk"`＋`allowedTools`。CLI の settings で同じ書き方が効くかは未確認・T1） |
 | G5 | Discord は PO のアカウントだけ: 公式の道具の組（pair）のあと `/discord:access policy allowlist` | K5 の試し |
-| G6 | 監視への影響を毎日見る: prod2 の使えるメモリ・監視の 11 個のコンテナの再起動の回数と OOMKilled | 始める前の値（基準）と毎日の値を比べる |
+| G6 | 監視への影響を毎日見る: prod2 の使えるメモリ・監視の各コンテナの再起動の回数（`RestartCount`）と OOMKilled | 段取り 1 の基準の値との差で判定する（差 0 なら ○） |
+| G7 | 本番と監視へ届く道を、担当の処理だけ塞ぐ。prod2 には prod1 の数字の出口を `0.0.0.0:19100/19187/19113/19121` で出す常時の転送がある（ADR-080 末尾の 2026-09-30 追記・recon F3）。担当の unit に `IPAddressDeny=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 49.212.137.46 49.212.160.98` を付け、loopback・docker の網・prod1・prod2 自身の番地へ繋げなくする（外の 443 番は塞がない） | 担当と同じ設定で一時的に動かした `curl -m 5 http://127.0.0.1:19187/metrics` と `http://49.212.160.98:3000` が失敗（○）。`https://api.anthropic.com` には繋がる（○） |
+| G8 | 監視の鍵と設定を担当から読めなくする。担当の unit に `ProtectSystem=strict`・`ReadWritePaths=/home/ops-agent`・`InaccessiblePaths=/home/ubuntu /root`・`PrivateTmp=yes`・`NoNewPrivileges=yes` を付ける（どれも systemd の公式の設定。Context7 で 2026-11-25 に確認） | 段取り 1 で `systemctl cat monitoring-tunnel.service` から転送の鍵の場所を読み、担当と同じ設定の下でその鍵・監視の compose の `.env`・`/home/ubuntu` が読めない（○） |
 
 ### 12-3. 段取り（サーバーに入れる直前に PO の確認を得る）
 
-1. 基準を取る: prod2 の `free -m`・`docker stats --no-stream`・各コンテナの再起動の回数（読むだけ）。
-2. 管理者として（PO の許可した管理用の鍵で）: `ops-agent` を作る（G1）。Claude Code を公式の方法で入れる（`curl -fsSL https://claude.ai/install.sh | bash`、入れるときに空きが約 512MB 要る・公式）。公式の Discord の道具が使う Bun を入れる。
-3. PO の手で（鍵の値を AI が扱わないため）: Discord の Developer Portal でボットを作る。prod2 の `ops-agent` で `claude` を開き、サブスクでログインする。`/plugin install discord@claude-plugins-official`・`/discord:configure`（ボットの鍵は PO が打つ）・スマホから DM してペアにする・`/discord:access policy allowlist`。
-4. 管理者として: 道具の一覧（G4）を入れる。systemd の unit を作る（G2 の値・`User=ops-agent`・`Restart=on-failure`）。対話の画面が要るため tmux の中で `claude --channels plugin:discord@claude-plugins-official` を動かす形を第一案とする（U-a・T1 で確かめる）。
-5. 試し T1（K1 を 3 回・K5・G4）と K2（再起動 1 回）を行う。
-6. 7 日間動かし、毎日 G6 とメモリの最大（cgroup の `memory.peak`）を記録する。
+1. 基準を取る（読むだけ）: prod2 の `free -m`・`docker stats --no-stream`・各コンテナの `RestartCount` と `OOMKilled`・runner の有無（`systemctl list-units` で actions.runner を探す）と、あれば直近の実行時のメモリの山・`systemctl cat monitoring-tunnel.service` で転送の鍵の場所と権限。残りが 500MB を切る見込みなら、ここで止めて PO に報告する。
+2. 管理者として（PO の許可した管理用の鍵で）: `ops-agent` を作る（G1）。担当の unit ファイル（G2・G7・G8 の値・`User=ops-agent`・`Restart=on-failure`）を先に置く。まだ起動しない。
+3. 管理者として: 導入も同じ上限の下で行う。`systemd-run --uid=ops-agent --pty` に G2 と G8 の値を `-p` で付けて、Claude Code を公式の方法で入れる（`curl -fsSL https://claude.ai/install.sh | bash`、空きが約 512MB 要る・公式）。公式の Discord の道具が使う Bun も同じ形で入れる。
+4. PO の手で（鍵の値を AI が扱わないため）: Discord の Developer Portal でボットを作る。同じ `systemd-run` の形（G2・G8 の上限付き）で `ops-agent` の `claude` を開き、サブスクでログインする。`/plugin install discord@claude-plugins-official`・`/discord:configure`（ボットの鍵は PO が打つ）・スマホから DM してペアにする・`/discord:access policy allowlist`。G7 はログインの通り道を塞ぐ恐れがあるため、この段だけ付けない（未確認）。
+5. 管理者として: 道具の一覧（G4）を入れ、G7・G8 の確かめを行う。tmux の中で `claude --channels plugin:discord@claude-plugins-official` を動かす形で unit を起動する（U-a・T1 で確かめる）。
+6. 試し T1（K1 を 3 回・K5・G4）と K2（再起動 1 回）を行う。
+7. 7 日間動かし、毎日 1 回 G6 と、担当のメモリの山（cgroup の `memory.peak`）と、上限で止まった回数（`journalctl -u` の記録）を記録する。
 
 ### 12-4. 合格と、止める条件
 
-- 合格: K1（3 回とも 2 分以内）・K2・K5・G4 が ○。7 日間で監視のコンテナの再起動 0 回・OOMKilled 0 件。担当のメモリの最大が 1500M 未満。
+- 合格: K1（3 回とも 2 分以内）・K2・K5・G4・G7・G8 が ○。7 日間で、監視のコンテナの再起動と OOMKilled が基準からの差 0。担当が上限で止まった回数 0。
+- 試しで測らないもの: K3（止まった時間）。生存の合図を送るには担当側に送る道が要り、G4・G7 と食い違うため。本運用の設計で決める。§6 T2 の「3GB 未満」は案 B（別のサーバー）での基準で、試しの基準はこの節が正。
 - すぐ止める（`systemctl stop`）: prod2 の使えるメモリが 500MB を切る／監視のコンテナが 1 つでも再起動する／PO 以外の書き込みに担当が反応する／一覧に無い道具が動く。止めたら PO に報告する。
+- 見る人と回数: 設計担当（Opus）が毎日 1 回、読むだけの命令で見る。そのあいだ（夜間を含む）の守りは G2 の上限だけ。自動で止める仕組みは作らない。PO は導入直前の確認で、これを承知のうえ始めるかを決める。
 
 ### 12-5. メモリが足りないとき（PO の案）
 
@@ -140,13 +145,14 @@
 
 ### 12-6. 戻し方
 
-- `systemctl disable --now` で止める → `ops-agent` を家の場所ごと消す → Discord のボットの鍵を Developer Portal で作り直して無効にする → claude.ai の設定で、このサーバーのログインを外す。監視の仕組みには手を入れていないので、戻すものは無い。
+- `systemctl disable --now` で止める → `ops-agent` を家の場所ごと消す → Discord のボットの鍵を Developer Portal で作り直して無効にする → claude.ai の設定で、このサーバーのログインを外す。担当の unit を消す。監視の仕組みには手を入れていないので、戻すものは無い。
 
 ### 12-7. 未確認（試しで確かめる）
 
 - U-a: systemd と tmux の形で、再起動のあと確認の画面が出ずに立ち上がるか。
 - U-c: 24 時間の常駐がサブスクの規約に合うか。公式に明言なし。PO は承知のうえで「1」を選んだ（§4-3）。
 - G4 の設定の書き方が CLI で効くか。
+- G7 の下でログインと Discord の道具が動くか（loopback を使うか）。`systemd-run` の `--uid`・`--pty` の書き方は導入時に公式の説明と照らす。
 - 長く使う札（`claude setup-token`）は「モデルへの頼みだけ」に使える札で、claude.ai の接続などは使えないと公式にある（https://code.claude.com/docs/en/authentication）。channels が使えるかは書かれていないので、試しでは画面でのログインを使う。
 
 ## 維持の仕組み
@@ -156,5 +162,5 @@
 
 ## 11. 自己審査（Opus）
 
-- 2026-11-25 追記: §4-3・§12 を足した。試しの段取りはクラウドの設計審査に出す。
+- 2026-11-25 追記: §4-3・§12 を足した。クラウドの設計審査（3 回目・Sonnet）の 8 件（runner の山・基準の差で判定・導入も上限の下で・数字の出口への道・監視の鍵の読み取り・上限の値の根拠・見る人と回数・合格の書き方）を §12 に入れ、G7・G8 を足した。
 - VERDICT: REVISE（実装には進めない）。根拠: D1（事業判断）・D3（ADR-1012:35 からの外れ）と U-a〜U-d・T4 が残る。マージ前の審査役（Opus）の指摘で D3 を足した。審査 2 回目（クラウド Sonnet・2026-11-25）の 4 件（本番の読み方・予備 C との関係・全停止と回数・許可の出し方）を §5・§6・§7 に入れた。草案として保存するのは可。事実の行はすべて recon の番号に結んだ。
