@@ -141,12 +141,12 @@ def _error_code(resp) -> str:
 1. 権限: `usePermissions()` から `isTenantAdmin` も取る。入れる条件を `hasPermission("staff.view") || isTenantAdmin` にする。持ち主一覧の問い合わせ（`:42-44`）は今どおり `staff.view` のときだけ。
    - 読み込み中の扱い（審査 R1）: `const ownersEnabled = !permsLoading && hasPermission("staff.view")` を作り、問い合わせの `enabled` と `loading = ownersEnabled && !ready && !ownersQ.isError` の両方に使う（今の `:45-51` の `loading` を置き換える）。
    - 画面の本体（`SubMenu`・Google 区画）は `loading` で包まない。持ち主の 2 区画（マイ・他）だけを `loading ? <LoadingBlock /> : …` にする（今の `:121` 付近で本体ごと `<LoadingBlock />` にしている形をやめる）。
-   - 左の並びの「マイカレンダー」「他のカレンダー」と、その 2 区画は `ownersEnabled` のときだけ出す（管理者で staff.view が無い人に空の項目を出さない）。
+   - 左の並びの「マイカレンダー」「他のカレンダー」と、その 2 区画は `ownersEnabled` のときだけ出す（管理者で staff.view が無い人に空の項目を出さない）。今の条件（「他のカレンダー」は `otherOwners.length > 0` のときだけ）は残し、両方を満たすときに出す。
    - Google 区画の状態の問い合わせは `enabled: isTenantAdmin === true` と書く（試験の差し替えで `undefined` になっても取りに行かない）。
 2. 左の並び（`:114-131`）を金型 `SubMenu`（`frontend/src/components/SubMenu.tsx`、`variant="flat"`、`onChange` で区画へ移る）に変える。項目: Google 連携（管理者だけ）・マイカレンダー・他のカレンダー（今と同じ条件）。`activeKey` は押した項目。CSS の `.schedule-settings__nav*`（`frontend/src/pages/schedule.css:788-828`）は使われなくなったら消す。
 3. Google 区画（管理者だけ、最上段、`id="schedule-settings-google"`）: 金型 `SectionCard`（title=`t("schedule.settingsGoogleTitle")`）。
    - `useApiQuery("/google-calendar/status", { enabled: isTenantAdmin === true })`。
-   - 未接続: 説明 `t("schedule.settingsGoogleDesc")` と `Button`（`t("schedule.connect")`）。押すと `ConfirmModal`（title=`t("schedule.connectNoticeTitle")`、message=段落 `t("schedule.connectNoticeBody")` と、その下に箇条書き（`ul`/`li`）で `t("schedule.connectNoticeItemEvents")`・`t("schedule.connectNoticeItemColors")`、最後の段落 `t("schedule.connectNoticeStop")`、confirmLabel=`t("schedule.connectNoticeConfirm")`）。確定で `/google-calendar/connect/start` → `window.location.href = auth_url`。
+   - 未接続: 説明 `t("schedule.settingsGoogleDesc")` と `Button`（`t("schedule.connect")`）。押すと `ConfirmModal`（title=`t("schedule.connectNoticeTitle")`、message=段落 `t("schedule.connectNoticeBody")` と、その下に箇条書き（`ul`/`li`。`docs/CC_UI_GOVERNANCE.md` に `ul` の禁止は無い。余白は既存の窓 `frontend/src/components/MergeCompanyModal.tsx:287` と同じ `marginTop: "var(--space-2)", marginBottom: 0, paddingLeft: "var(--space-5)"` にそろえ、色や数の直書きはしない）で `t("schedule.connectNoticeItemEvents")`・`t("schedule.connectNoticeItemColors")`、最後の段落 `t("schedule.connectNoticeStop")`、confirmLabel=`t("schedule.connectNoticeConfirm")`）。確定で `/google-calendar/connect/start` → `window.location.href = auth_url`。
    - 接続済み: `t("schedule.statusConnected")` と、接続日時（`connected_at` を今の日付の書式の関数で）、`Button variant="danger"`（`t("schedule.disconnect")`）。押すと `ConfirmModal danger`（title=`t("schedule.disconnectConfirm")`、message=`t("schedule.disconnectNotice")`、`confirmLoading`）。確定で `api.delete("/google-calendar/connect")` → 状態を読み直し → 成功の帯 `t("schedule.disconnectSuccess")`。失敗は `t("schedule.disconnectError")`。
 4. 結果の帯: `?connected=true|false&error=` を読む処理を予定ページから移す（文の選び方は今と同じ。`scope_missing` なら `connectScopeMissing`）。読み終えたら `setSearchParams({}, { replace: true })`。帯は今の画面の `success-message` / `error-message`（`frontend/src/components.css:421` ほか、既存の共通の決まり）。
 5. 死んだ欄を外す（K9）: 自分・他人の両方の行から `Toggle`（表示）と `SelectControl`（共有権限）を消す。保存は `{ color }` だけ送る（`backend/app/routers/calendar.py:79-82` は 3 つとも任意なので通る）。`ToggleMigration.test.tsx:25` の設定ページの行は数が 0 になるので外す。
@@ -231,4 +231,5 @@ def _error_code(resp) -> str:
 
 - 第1回（クラウド Sonnet・architect、2026-11-25）: REVISE。記録は `review-architect-bin1-1.md`（枝 `release/schedule-settings-review1`）。必須の直し R1（管理者で staff.view が無い人が読み込み中のまま止まる）1 件、軽い指摘 L1〜L8。
 - 直し: R1 を §4-2 の 1 と §5 の K1 に入れた。L1・L2・L3（行番号）、L4（取り込みの場所）、L5（§9 に 1 行）、L6（`connectBtnError` も消す）、L7（知らせの文を 4 キーに分け箇条書き）、L8（`enabled: isTenantAdmin === true`）も入れた。
-- 第2回: 直しの差分だけをクラウドで確かめる（結果は下に足す）。
+- 第2回（クラウド Sonnet・architect、2026-11-25）: **APPROVE**。記録は `review-architect-bin1-2.md`（枝 `release/schedule-settings-review2`）。R 無し。軽い指摘 L1（箇条書きの余白）・L2（他のカレンダーの今の条件を残す）は §4-2 に入れた。L3（管理者で staff.view が無い人の左の並びが 1 項目になる）は壊れないので直さない。
+- 同一 AI の別の担当による審査で、独立した第三者の審査ではない。
