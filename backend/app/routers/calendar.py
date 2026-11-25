@@ -36,6 +36,7 @@ from app.auth.dependencies import (
 from app.auth.system_roles import is_tenant_admin
 from app.database import get_db
 from app.models import User
+from app.services import calendar_categories as cat_svc
 from app.services import calendar_service as cal_svc
 from app.services import holiday_service
 from app.services.event_colors import EVENT_COLOR_KEYS
@@ -130,6 +131,7 @@ class CreateEventBody(BaseModel):
     add_meet: bool = False
     recurrence: RecurrenceValue = "none"
     color_key: Optional[str] = None
+    category: Optional[str] = None
 
     @field_validator("color_key")
     @classmethod
@@ -150,6 +152,7 @@ class UpdateEventBody(BaseModel):
     scope: Optional[RecurrenceScope] = None
     occurrence_start: Optional[str] = None
     color_key: Optional[str] = None
+    category: Optional[str] = None
 
     @field_validator("color_key")
     @classmethod
@@ -159,6 +162,106 @@ class UpdateEventBody(BaseModel):
 
 class SyncModeBody(BaseModel):
     sync_mode: str
+
+
+_VALID_CATEGORY_SHARES = ("self", "all")
+
+
+def _check_default_share(value: Optional[str]) -> Optional[str]:
+    if value is None or value in _VALID_CATEGORY_SHARES:
+        return value
+    raise ValueError("default_share は 'self' または 'all' を指定してください")
+
+
+class CalendarCategoryItem(BaseModel):
+    key: str
+    name: Optional[str]
+    color_key: Optional[str]
+    default_share: str
+    sort_order: int
+    is_active: bool
+
+
+class CreateCategoryBody(BaseModel):
+    name: str
+    color_key: Optional[str] = None
+    default_share: str = "all"
+
+    @field_validator("color_key")
+    @classmethod
+    def _color_key_valid(cls, v: Optional[str]) -> Optional[str]:
+        return _check_color_key(v)
+
+    @field_validator("default_share")
+    @classmethod
+    def _share_valid(cls, v: str) -> str:
+        return _check_default_share(v)  # type: ignore[return-value]
+
+
+class UpdateCategoryBody(BaseModel):
+    name: Optional[str] = None
+    color_key: Optional[str] = None
+    default_share: Optional[str] = None
+    is_active: Optional[bool] = None
+
+    @field_validator("color_key")
+    @classmethod
+    def _color_key_valid(cls, v: Optional[str]) -> Optional[str]:
+        return _check_color_key(v)
+
+    @field_validator("default_share")
+    @classmethod
+    def _share_valid(cls, v: Optional[str]) -> Optional[str]:
+        return _check_default_share(v)
+
+
+# ---------------------------------------------------------------------------
+# 予定の種類（calendar_categories）
+# ---------------------------------------------------------------------------
+
+
+@router.get("/calendar/categories", tags=["calendar"], response_model=list[CalendarCategoryItem])
+async def list_calendar_categories(
+    tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """予定の種類の全行（使わなくした種類も is_active 付きで）。"""
+    return await cat_svc.list_categories(db)
+
+
+@router.post(
+    "/calendar/categories",
+    status_code=status.HTTP_201_CREATED,
+    tags=["calendar"],
+    response_model=CalendarCategoryItem,
+)
+async def create_calendar_category(
+    body: CreateCategoryBody,
+    tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(require_tenant_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """予定の種類を足す（管理者のみ）。鍵は custom_N を裏側で決める。"""
+    return await cat_svc.create_category(db, tenant_id, body.name, body.color_key, body.default_share)
+
+
+@router.patch("/calendar/categories/{key}", tags=["calendar"], response_model=CalendarCategoryItem)
+async def update_calendar_category(
+    key: str,
+    body: UpdateCategoryBody,
+    tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(require_tenant_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """予定の種類の名前・色・共有の初期値・使うかどうかを直す（管理者のみ）。"""
+    fields = body.model_dump(exclude_none=True)
+    if not fields:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="no_fields_to_update")
+    updated = await cat_svc.update_category(db, tenant_id, key, fields)
+    if updated is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:calendar_category")
+    return updated
 
 
 # ---------------------------------------------------------------------------
@@ -445,6 +548,9 @@ async def create_event(
     recurrence_error = cal_svc.check_create_recurrence(body.model_dump())
     if recurrence_error:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=recurrence_error)
+    # 種類は表にある使っている鍵だけ（指定が無ければサービスが meeting を入れる）。判定は try の前（422 を 500 にしない）
+    if body.category is not None:
+        await cat_svc.validate_category_key(db, body.category)
     # Meet は Google をつないだ本人の予定にだけ付ける。判定はサービスを呼ぶ try の前で行う
     # （下の except Exception が HTTPException を 500 に変えてしまうため）
     if body.add_meet and not await cal_svc.can_add_meet(db, tenant_id, user.id):
@@ -543,6 +649,11 @@ async def update_event(
     )
     if recurrence_error:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=recurrence_error)
+
+    # 種類: 今の種類と違うときだけ表で確かめる（同じなら、使わなくした種類でも通す）
+    if "category" in payload:
+        current_category = await cat_svc.current_event_category(db, event, scope, occurrence_start)
+        await cat_svc.validate_category_key(db, payload["category"], current_category)
 
     if payload.get("add_meet"):
         # Meet を付けてよいのは、つないだ本人が持ち主の、Google に送ってある予定だけ。

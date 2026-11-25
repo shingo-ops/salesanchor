@@ -230,7 +230,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
           pendingConfirmRef.current = { id: confirm.id, tries: confirm.tries };
           void speakThenListen(pendingId, meetText);
         }
-      } else if (yesFallback) {
+      } else if (yesFallback && !(reply.kind === "event" && reply.draft.edit_dropped === true)) {
         // はいと直し: 直す欄が無かったので、前の下書きをそのまま作る
         setMessages((prev) => prev.filter((m) => m.id !== pendingId));
         if (voiceKept && !(eventRefs.current.get(confirm.id)?.submitByVoice() ?? false)) {

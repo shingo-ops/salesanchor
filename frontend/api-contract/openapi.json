@@ -3002,6 +3002,58 @@
         "title": "BuybackPriceListResponse",
         "type": "object"
       },
+      "CalendarCategoryItem": {
+        "properties": {
+          "color_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Key"
+          },
+          "default_share": {
+            "title": "Default Share",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "color_key",
+          "default_share",
+          "sort_order",
+          "is_active"
+        ],
+        "title": "CalendarCategoryItem",
+        "type": "object"
+      },
       "Candidate": {
         "properties": {
           "id": {
@@ -8185,6 +8237,35 @@
         "title": "CountryResponse",
         "type": "object"
       },
+      "CreateCategoryBody": {
+        "properties": {
+          "color_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Key"
+          },
+          "default_share": {
+            "default": "all",
+            "title": "Default Share",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CreateCategoryBody",
+        "type": "object"
+      },
       "CreateEventBody": {
         "properties": {
           "add_meet": {
@@ -8196,6 +8277,17 @@
             "default": "shared",
             "title": "Calendar Type",
             "type": "string"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
           },
           "color_key": {
             "anyOf": [
@@ -11378,6 +11470,17 @@
               }
             ],
             "title": "Description"
+          },
+          "edit_dropped": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edit Dropped"
           },
           "edited": {
             "anyOf": [
@@ -40517,6 +40620,56 @@
         "title": "UnresolvedResponse",
         "type": "object"
       },
+      "UpdateCategoryBody": {
+        "properties": {
+          "color_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Key"
+          },
+          "default_share": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Share"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "UpdateCategoryBody",
+        "type": "object"
+      },
       "UpdateEventBody": {
         "properties": {
           "add_meet": {
@@ -40540,6 +40693,17 @@
               }
             ],
             "title": "Calendar Type"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
           },
           "color_key": {
             "anyOf": [
@@ -47108,6 +47272,143 @@
         ]
       }
     },
+    "/api/v1/calendar/categories": {
+      "get": {
+        "description": "予定の種類の全行（使わなくした種類も is_active 付きで）。",
+        "operationId": "list_calendar_categories_api_v1_calendar_categories_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CalendarCategoryItem"
+                  },
+                  "title": "Response List Calendar Categories Api V1 Calendar Categories Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Calendar Categories",
+        "tags": [
+          "calendar",
+          "calendar"
+        ]
+      },
+      "post": {
+        "description": "予定の種類を足す（管理者のみ）。鍵は custom_N を裏側で決める。",
+        "operationId": "create_calendar_category_api_v1_calendar_categories_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarCategoryItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Calendar Category",
+        "tags": [
+          "calendar",
+          "calendar"
+        ]
+      }
+    },
+    "/api/v1/calendar/categories/{key}": {
+      "patch": {
+        "description": "予定の種類の名前・色・共有の初期値・使うかどうかを直す（管理者のみ）。",
+        "operationId": "update_calendar_category_api_v1_calendar_categories__key__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCategoryBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarCategoryItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Calendar Category",
+        "tags": [
+          "calendar",
+          "calendar"
+        ]
+      }
+    },
     "/api/v1/calendar/events": {
       "get": {
         "description": "カレンダーイベントを期間・タイプで取得する。",
@@ -50901,7 +51202,7 @@
     },
     "/api/v1/google-calendar/connect": {
       "delete": {
-        "description": "Google Calendar 接続を解除する（admin 専用）。",
+        "description": "Google Calendar 接続を解除する（admin 専用）。\n\n順番（design §3-2）: ①通知の窓口を止める ②Google で許可を取り消す ③設定行を消す。\n取り込み済みの予定（calendar_events）は消さない（PO 2026-11-25「2」）。",
         "operationId": "disconnect_api_v1_google_calendar_connect_delete",
         "responses": {
           "204": {

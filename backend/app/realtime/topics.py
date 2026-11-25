@@ -195,6 +195,8 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/buyback-prices/rematch"): _PENDING,
     ("POST", "/api/v1/buyback-prices/trigger"): _PENDING,
     ("POST", "/api/v1/buyback-prices/{shop_product_id}/link"): _PENDING,
+    ("POST", "/api/v1/calendar/categories"): _PENDING,
+    ("PATCH", "/api/v1/calendar/categories/{key}"): _PENDING,
     ("POST", "/api/v1/calendar/events"): _PENDING,
     ("DELETE", "/api/v1/calendar/events/{event_id}"): _PENDING,
     ("PATCH", "/api/v1/calendar/events/{event_id}"): _PENDING,

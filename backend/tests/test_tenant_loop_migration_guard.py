@@ -49,6 +49,7 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
                 "20261104_161223_add_calendar_events_meet_url.sql",
                 "20261112_170000_add_calendar_events_recurrence.sql",
                 "20261119_120000_add_calendar_events_color_key.sql",
+                "20261126_100000_create_calendar_categories.sql",
                 "20261106_150000_add_discord_role_link_tables.sql",
                 "20261112_160000_create_tenant_issuer_and_payment_tables.sql",
                 "20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql",
@@ -68,6 +69,16 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
                 "20261104_161223_add_calendar_events_meet_url.sql",
                 "20261112_170000_add_calendar_events_recurrence.sql",
                 "20261119_120000_add_calendar_events_color_key.sql",
+                "20261126_100000_create_calendar_categories.sql",
+            }
+        ),
+    ),
+    "test_calendar_categories.py": (
+        "scoped",
+        "",
+        frozenset(
+            {
+                "20261126_100000_create_calendar_categories.sql",
             }
         ),
     ),

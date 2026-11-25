@@ -483,7 +483,7 @@ def test_role_migration_is_idempotent(pg):
     # meta の migration も冪等（分類表の中身は消えない）
     n0 = _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0]
     c.execute(_read(_META_SQL))
-    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1165
+    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1169
 
 
 # ---------------------------------------------------------------- T10（CI の見張り）
@@ -1051,6 +1051,51 @@ def test_t10_calendar_color_key_is_classified_on_bootstrapped_db(cluster):
             " WHERE table_schema LIKE 'tenant\\_%' AND table_name = 'calendar_events' AND column_name = 'color_key'",
         )
         assert have, "bootstrap した DB の calendar_events に color_key が無い"
+    finally:
+        conn.close()
+        cur = cluster.control.cursor()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+def test_t10_calendar_categories_are_classified_on_bootstrapped_db(cluster):
+    """schedule-settings 便2a: 各社の calendar_categories の 4 欄（key・name は mask、color_key・default_share は
+    allow・理由つき）が分類され、分類の漏れが無い。bootstrap した DB に表が実在することも確かめる。"""
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    name, conn = _new_db(cluster.control, "ai_cloud_t10_calcat")
+    try:
+        c = conn.cursor()
+        c.execute(_read(_AI_READER_SQL))
+        c.execute(_read(_ROLE_SQL))
+        c.execute(_read(_META_SQL))
+        url = _psycopg_url(ADMIN_PG_URL, name).replace("postgresql://", "postgresql+asyncpg://", 1)
+        from tests.rls_bootstrap import bootstrap_tenant_schema
+
+        async def build():
+            eng = create_async_engine(url)
+            try:
+                await bootstrap_tenant_schema(eng, 1)
+            finally:
+                await eng.dispose()
+
+        asyncio.run(build())
+        c.execute(_read(_CREATE_SQL))
+        rows = _rows(
+            conn,
+            "SELECT column_name, class, reason FROM ai_cloud_meta.column_class"
+            " WHERE schema_pattern = 'tenant_*' AND table_name = 'calendar_categories' ORDER BY column_name",
+        )
+        got = {r[0]: (r[1], r[2]) for r in rows}
+        assert set(got) == {"color_key", "default_share", "key", "name"}
+        assert got["key"][0] == "mask" and got["name"][0] == "mask"
+        assert got["color_key"][0] == "allow" and got["color_key"][1].strip()
+        assert got["default_share"][0] == "allow" and got["default_share"][1].strip()
+        have = _rows(
+            conn,
+            "SELECT 1 FROM information_schema.tables"
+            " WHERE table_schema LIKE 'tenant\\_%' AND table_name = 'calendar_categories'",
+        )
+        assert have, "bootstrap した DB に calendar_categories が無い"
     finally:
         conn.close()
         cur = cluster.control.cursor()

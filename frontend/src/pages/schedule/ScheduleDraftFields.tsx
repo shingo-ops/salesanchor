@@ -17,7 +17,7 @@ import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 import { Toggle } from "../../components/Toggle";
 import { SCHEDULE_POPOVER_ICONS } from "../../constants/icons";
-import { CALENDARS, type CalendarId } from "../../features/schedule/calendars.config";
+import { categoryLabel, useCalendarCategories } from "../../features/schedule/useCalendarCategories";
 import { EVENT_COLOR_KEYS, eventColorLabelKey, eventColorVar, isEventColorKey } from "./eventColors";
 import type { ScheduleDraft, PopoverMode } from "./SchedulePageImpl";
 import {
@@ -277,23 +277,46 @@ export function DraftDateFields({
   ) : null;
 }
 
-export function DraftCategoryField({ appearance, mode, draft, onDraftChange }: FieldProps) {
+export function DraftCategoryField({
+  appearance,
+  mode,
+  draft,
+  onDraftChange,
+  currentCategory = null,
+}: FieldProps & { currentCategory?: string | null }) {
   const { t } = useTranslation();
+  const { categories, byKey } = useCalendarCategories();
   const CategoryIcon = SCHEDULE_POPOVER_ICONS.category;
   const page = appearance === "page";
   const changeCategory = (event: ChangeEvent<HTMLSelectElement>) => {
-    const category = event.target.value as CalendarId;
-    onDraftChange(
-      mode === "create"
-        ? { ...draft, category, visibleToStaff: category !== "personal" }
-        : { ...draft, category },
-    );
+    const category = event.target.value;
+    const picked = byKey.get(category);
+    // 作るときだけ、その種類の色と共有の初期値を入れる。直すときは種類だけ変える（手で付けた色や Google の色を消さない）
+    if (mode === "create" && picked) {
+      onDraftChange({
+        ...draft,
+        category,
+        colorKey: isEventColorKey(picked.color_key) ? picked.color_key : null,
+        visibleToStaff: picked.default_share === "all",
+      });
+      return;
+    }
+    onDraftChange({ ...draft, category });
   };
-  const options = CALENDARS.map((calendar) => (
-    <option key={calendar.id} value={calendar.id}>
-      {t(calendar.labelKey)}
-    </option>
-  ));
+  // 選び方に出るのは使っている種類だけ。今の予定の種類が使わなくした種類なら、それも 1 つ足す
+  const shown = categories
+    .filter((category) => category.is_active || category.key === currentCategory || category.key === draft.category)
+    .sort((a, b) => a.sort_order - b.sort_order);
+  const listed = shown.some((category) => category.key === draft.category);
+  const options = [
+    // 読み込み前・表に無い鍵のときも、選んでいる値を選び方に残す
+    ...(listed ? [] : [<option key={draft.category} value={draft.category}>{categoryLabel(draft.category, null, t)}</option>]),
+    ...shown.map((category) => (
+      <option key={category.key} value={category.key}>
+        {categoryLabel(category.key, category.name, t)}
+      </option>
+    )),
+  ];
   if (page) {
     return (
       <SelectControl
@@ -534,7 +557,7 @@ export function ScheduleDraftFields({
   return (
     <>
       <DraftDateFields {...common} mode={mode} creating={creating} expanded={expanded} />
-      <DraftCategoryField {...common} mode={mode} />
+      <DraftCategoryField {...common} mode={mode} currentCategory={item?.category ?? null} />
       <DraftColorField {...common} mode={mode} ownerColor={ownerColor} />
       <DraftMeetField {...common} item={item} meetAvailable={meetAvailable} />
       <DraftShareField {...common} canChangeVisibility={canChangeVisibility} />
