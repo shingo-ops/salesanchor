@@ -142,7 +142,7 @@
 
 ## 11. 「はい、〜にして」で前の下書きが作られる件・「あさって4時」が朝4時になる件（便W3・2026-11-25 調べ・origin/main 88c3fccd1）
 
-調べの台本と生の結果: `docs/handoff/secretary-voice-input/binW3/`（`probe_before.py`・`probe-before-20261125.jsonl` 118 行・`probe-before-20261125-table.txt`・`hours_count.py`・`hours-20261125.txt`）。本物の AI（`http://secretary-codex:8090/intent`・gpt-5.6-terra）に 1 件ずつ順に流した（同時に流すと 117/118 が 429 busy になった。AI は同時に 1 件だけ受ける）。118/118 が 200。
+調べの台本と生の結果: `docs/handoff/secretary-voice-input/binW3/`（`docs/handoff/secretary-voice-input/binW3/probe_before.py`・`probe-before-20261125.jsonl` 118 行・`probe-before-20261125-table.txt`・`docs/handoff/secretary-voice-input/binW3/hours_count.py`・`hours-20261125.txt`）。本物の AI（`http://secretary-codex:8090/intent`・gpt-5.6-terra）に 1 件ずつ順に流した（同時に流すと 117/118 が 429 busy になった。AI は同時に 1 件だけ受ける）。118/118 が 200。
 
 ### 11-1 何時を朝と読むか（AI の答え・最終の値）
 
@@ -171,8 +171,8 @@
 - 前の下書きで黙って作られる道は、今の作り（`frontend/src/features/secretary/SecretaryChat.tsx:235-240` の `yesFallback`）で 2 つある。
   （１）AI が直しを返さなかった（上の 0/22）。
   （２）AI は直しを返したが、合わせた結果が日時を失い、backend がカルテのまま・`edited` 偽に戻した（`backend/app/routers/assistant.py` の「直した結果が日時を失ったら」の分かれ）。例: 始まり 15:00 で「はい、終わりは5時にして」を AI が 05:00 と読むと、終わり < 始まりで終わりが空になり（`backend/app/services/secretary_karte.py:52-70` `settle_dates`）、前のままに戻る。画面は「はい」として前の下書きを作る。11-1 のとおり 5時を朝と読む回がある。
-- 直す道では聞き返しは出ない（`assistant.py` の `if edit_mode: ask, ask_count = None, 0`）。画面の `!reply.draft.ask` の条件は直す道では常に真。
-- 作った後に読む文は「予定を作りました。」だけ（`SecretaryChat.tsx:381-388` `markCreated`・`frontend/src/locales/ja.json` `secretary.created.event`）。
+- 直す道では聞き返しは出ない（`backend/app/routers/assistant.py` の `if edit_mode: ask, ask_count = None, 0`）。画面の `!reply.draft.ask` の条件は直す道では常に真。
+- 作った後に読む文は「予定を作りました。」だけ（`frontend/src/features/secretary/SecretaryChat.tsx:381-388` `markCreated`・`frontend/src/locales/ja.json` `secretary.created.event`）。
 
 ### 11-4 今までの試し 23 件（`backend/app/assistant_regression/cases.json`）
 
