@@ -509,6 +509,7 @@ async def update_event(
         "calendar_type": "calendar_type",
         "user_id": "user_id",
         "color_key": "color_key",
+        "category": "category",
     }
     # 色が変わったときだけ Google に色を送る（Google の色を勝手に外さない・ADR-1081）。UPDATE の前の値を読む
     send_color = False
@@ -679,7 +680,7 @@ async def delete_event(
 # 繰り返しの判定（ADR-1075 §12.5。誤りの識別の文字か None を返す。表は読むだけ）
 # ---------------------------------------------------------------------------
 
-_TEXT_FIELDS = ("title", "description", "location", "calendar_type", "user_id", "color_key")
+_TEXT_FIELDS = ("title", "description", "location", "calendar_type", "user_id", "color_key", "category")
 
 
 def parse_occurrence(value: Optional[str]) -> Optional[datetime]:
@@ -1053,7 +1054,7 @@ async def update_recurring_event(
         prev_color = (row if row is not None else master).get("color_key")
         send_color = "color_key" in payload and payload["color_key"] != prev_color
         row_fields: dict = {
-            k: payload[k] for k in ("title", "description", "location", "color_key") if k in payload
+            k: payload[k] for k in ("title", "description", "location", "color_key", "category") if k in payload
         }
         if "start_datetime" in payload:
             row_fields["start_datetime"] = plan["new_start"]
@@ -1119,7 +1120,7 @@ async def update_recurring_event(
             source,
             user_id=fields.get("user_id", master["user_id"]),
             calendar_type=fields.get("calendar_type", master["calendar_type"]),
-            category=master["category"],
+            category=fields.get("category", master["category"]),
             title=fields.get("title", source["title"]),
             description=fields.get("description", source["description"]),
             location=fields.get("location", source["location"]),
@@ -1221,7 +1222,7 @@ async def _update_single_to_recurring(
     """A: 単発の行に繰り返しを付ける。Google に id があれば消して作り直す。"""
     new_start = _as_jst(payload["start_datetime"]) if "start_datetime" in payload else rec.to_jst(event["start_datetime"])
     fields: dict = {}
-    for k in ("title", "description", "location", "calendar_type", "user_id", "is_all_day", "color_key"):
+    for k in ("title", "description", "location", "calendar_type", "user_id", "is_all_day", "color_key", "category"):
         if k in payload:
             fields[k] = payload[k]
     for k in ("start_datetime", "end_datetime"):
