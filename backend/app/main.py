@@ -67,6 +67,7 @@ from app.routers import (
     inventory_offers,  # Sprint 11 / F11 AC11.5: 仕入元現在オファー admin CRUD
     inventory_search,
     invoices,
+    issuer_profiles,  # ADR-1061 便2-2c2b: 書類に載せる会社情報
     item_corrections,  # PARITY-03 Phase 3 Stage 3: 修正履歴保存
     leads,
     line_import_devices,
@@ -88,6 +89,7 @@ from app.routers import (
     orders,
     own_inventory,  # ADR SA-04/05: A在庫テナント私有化
     payment_fee_settings,  # 決済手数料設定 テナント用
+    prefectures,  # ADR-1061 便2-2c2b: 都道府県 (public.prefectures)
     product_categories,  # 商品カテゴリマスタ テナント用
     product_masters,  # 各種マスタ (public.product_attribute_masters) 中央 admin
     products,
@@ -368,6 +370,10 @@ app.include_router(
     countries.router, prefix="/api/v1", tags=["countries"],
     dependencies=[Depends(get_current_tenant)],
 )
+app.include_router(
+    prefectures.router, prefix="/api/v1", tags=["prefectures"],
+    dependencies=[Depends(get_current_tenant)],
+)
 app.include_router(customer_statuses.router, prefix="/api/v1", tags=["customer-statuses"])
 # SA-05: 担当者チャンネルリンク生成 API（link_templates SSOT 経由）
 app.include_router(
@@ -491,6 +497,11 @@ app.include_router(
 # Sprint 8 / F8: テナント発行者情報 (PO PDF / メール差出人) admin CRUD
 app.include_router(
     tenant_profile.router, prefix="/api/v1", tags=["tenant_profile"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# ADR-1061 便2-2c2b: 書類に載せる会社情報（国内用・海外用）
+app.include_router(
+    issuer_profiles.router, prefix="/api/v1", tags=["issuer_profiles"],
     dependencies=[Depends(get_current_tenant)],
 )
 # ADR-106: テナントポリシー設定 (在庫集計フィルタ・見積有効期限・通貨・発行モード等)

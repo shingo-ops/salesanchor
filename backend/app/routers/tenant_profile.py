@@ -1,7 +1,7 @@
 """TenantProfile router (Sprint 8 / F8)
 
-各テナント admin が PO PDF / メールの差出人情報 (会社名・住所・印鑑 URL 等) を
-CRUD するエンドポイント。
+各テナント admin が印鑑画像 URL と既定の言語を読み書きするエンドポイント。
+会社名・住所・電話・メール・サイトは issuer_profiles へ移した (ADR-1061 便2-2c2b)。
 
 設計:
   - 1 テナント 1 行運用 (migration 069 で既定行を 1 行 seed)
@@ -67,8 +67,7 @@ async def get_tenant_profile(
     table = tenant_table_ref(db, tenant_id, "tenant_profile")
     row = (await db.execute(
         text(f"""
-            SELECT id, company_name, company_name_en, address, phone, email,
-                   website, seal_image_url, default_language,
+            SELECT id, seal_image_url, default_language,
                    created_at, updated_at
             FROM {table}
             ORDER BY id LIMIT 1
@@ -113,8 +112,7 @@ async def update_tenant_profile(
         # 何も指定なし → 現状返却
         row = (await db.execute(
             text(f"""
-                SELECT id, company_name, company_name_en, address, phone, email,
-                       website, seal_image_url, default_language,
+                SELECT id, seal_image_url, default_language,
                        created_at, updated_at
                 FROM {table} WHERE id = :id
             """),
@@ -144,8 +142,7 @@ async def update_tenant_profile(
 
     row = (await db.execute(
         text(f"""
-            SELECT id, company_name, company_name_en, address, phone, email,
-                   website, seal_image_url, default_language,
+            SELECT id, seal_image_url, default_language,
                    created_at, updated_at
             FROM {table} WHERE id = :id
         """),
