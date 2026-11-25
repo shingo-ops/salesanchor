@@ -1,3 +1,1 @@
-https://auth.openai.com/codex/device
-1HJA-TF1BC
-2026-11-25T03:54:59Z UTC・有効 900 秒（invoice・2回目）
+使用済み・時間切れ（invoice・2回目）
