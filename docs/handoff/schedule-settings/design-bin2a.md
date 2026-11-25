@@ -20,18 +20,18 @@
 
 | # | 事実 | 根拠 |
 |---|---|---|
-| F1 | 種類は 7 つで固定。DB の決まりと画面の表の 2 か所に書いてある | `backend/app/services/tenant.py:1579`（CHECK）・`frontend/src/features/schedule/calendars.config.ts:3-62` |
+| F1 | 種類は 7 つで固定。DB の決まりと画面の表の 2 か所に書いてある | `backend/app/services/tenant.py:1579`（CHECK）・frontend/src/features/schedule/calendars.config.ts の 3〜62 行（この便で消した） |
 | F2 | 予定を作る・直す受け口の入力の形に `category` が無い。画面は `category` を送るが、受け口で捨てられる | `backend/app/routers/calendar.py:122-160`・`frontend/src/pages/schedule/SchedulePageImpl.tsx:1006` |
 | F3 | 本番の予定 35 件はすべて種類が `meeting` | 読むだけの鍵で数えた（2026-11-25）: 会社1 3 件・会社4 32 件 |
 | F4 | 作る道は `payload.get("category", "meeting")` を入れる | `backend/app/services/calendar_service.py:423` |
 | F5 | 直す道で種類を落とす所が 5 か所ある: 単発の `update_event` の `field_map`（`:502-512`）・繰り返しの変わった欄を拾う `_TEXT_FIELDS`（`:682`）・「この予定だけ」の `row_fields`（`:1055-1057`）・「これ以降」の `category=master["category"]`（`:1122`）・「単発→繰り返し」の並び（`:1224`）。読む列 `EVENT_COLUMNS`（`:152`）と写し `_row_values`（`:973`）には有る | `backend/app/services/calendar_service.py` |
 | F6 | 画面で種類を選ぶと、作るときだけ「personal なら社員に見せない」に切り替わる | `frontend/src/pages/schedule/ScheduleDraftFields.tsx:284-290` |
-| F7 | 画面の種類の表の使い先は 3 ファイル: `ScheduleDraftFields.tsx:20`（`:285`・`:292`）・`SchedulePageImpl.tsx:28`（`:94`・`:153-154`・`:222-223`・`:319`・`:344-345`・`:399-400`・`:723-736`）・`schedule-utils.ts:62`（`:359`・`:398` も同じ型）。ほかは自分の試験 `calendars.config.test.ts` だけ | 審査 R7 の `git grep -n "calendars.config"` |
-| F8 | 色の選び方の金型 `ColorSwatchPicker` があり、予定の色で使っている。予定の色の点は `schedule-month__dot`（`SchedulePageImpl.tsx:663`・`:731`・`schedule.css:316`） | `ScheduleDraftFields.tsx:11`・`:327-345` |
+| F7 | 画面の種類の表の使い先は 3 ファイル: `frontend/src/pages/schedule/ScheduleDraftFields.tsx:20`（`:285`・`:292`）・`frontend/src/pages/schedule/SchedulePageImpl.tsx:28`（`:94`・`:153-154`・`:222-223`・`:319`・`:344-345`・`:399-400`・`:723-736`）・`frontend/src/pages/schedule/schedule-utils.ts:62`（`:359`・`:398` も同じ型）。ほかは自分の試験 frontend/src/features/schedule/calendars.config.test.ts（この便で消した） だけ | 審査 R7 の `git grep -n "calendars.config"` |
+| F8 | 色の選び方の金型 `ColorSwatchPicker` があり、予定の色で使っている。予定の色の点は `schedule-month__dot`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:663`・`:731`・`schedule.css:316`） | `frontend/src/pages/schedule/ScheduleDraftFields.tsx:11`・`:327-345` |
 | F9 | 本番 5 社（1・3・4・5・6）全部の `calendar_events` に CHECK `calendar_events_category_check`（7 種の一覧）がある | 読むだけの鍵で `pg_constraint` を読んだ（2026-11-25 Opus）: 5 行とも同じ名前・同じ定義 |
 | F10 | 移行の手本は ADR-1081 便1。登録は `scripts/run_all_migrations.sh:1483`・`backend/tests/rls_bootstrap.py:188`・`backend/tests/test_calendar_sync_tenant_reset_pg.py:54`・`backend/tests/test_tenant_loop_migration_guard.py:51`・`:70` の 5 行 | `git grep -n 20261119_120000_add_calendar_events_color_key` |
 | F11 | 管理者の判定は `is_tenant_admin(await get_user_system_keys(db, user.id))` | `backend/app/routers/calendar.py:523` |
-| F12 | 画面の読み方の正本は `useApiQuery`／取り直しは `useInvalidateApi`（会社ごとの写しの名前が付く） | `frontend/src/lib/query/apiQuery.ts:1-8`・`:52`・`ScheduleSettingsPage.tsx:54`・`:64` |
+| F12 | 画面の読み方の正本は `useApiQuery`／取り直しは `useInvalidateApi`（会社ごとの写しの名前が付く） | `frontend/src/lib/query/apiQuery.ts:1-8`・`:52`・`frontend/src/pages/schedule/ScheduleSettingsPage.tsx:54`・`:64` |
 | F13 | AI 用の写しの分類表は今 1165 行。試験は `== 1165`。表の sha256 は許可一覧にある | `migrations/20261024_100300_create_ai_cloud_views.sql:3`・`backend/tests/ops/test_ai_cloud_views.py:486`・`scripts/migration-guard/reference-allowlist.tsv:7` |
 | F14 | ひな形と移行後の会社の形の差は CI で 0 件を確かめる | `.github/workflows/migration-test.yml:2277`（`scripts/check_tenant_template_shape.py`） |
 
@@ -48,7 +48,7 @@
 | A7 | 種類の選び方に出るのは使っている種類だけ。今の予定の種類が使わなくした種類なら、それも出る | 画面の試験 |
 | A8 | 設定ページの「予定の種類」区画は管理者だけに見える | 画面の試験（管理者／staff.view だけ／管理者で staff.view なし の 3 通り） |
 | A9 | だれに見えるかは変わらない（要件 G6） | `git diff origin/main...HEAD -- backend/app/services/calendar_service.py` で、見え方の条件の行（`visibility_sql` の 3 行 `:242`・`:244`・`:246` と `where += f" AND {visibility_sql}"`）が差に出ない（ほかの行は変わる）＋本番で移行の前後に `calendar_type` ごとの件数を数えて同じ（会社1 personal 1・shared 2／会社4 personal 24・shared 8） |
-| A10 | 種類の一覧の正本が 1 か所 | `git grep -n "calendars.config" -- frontend/src` が 0 件／`git grep -n '"procurement"' -- frontend/src ':!frontend/src/locales'` が 0 件／`git grep -n "'procurement'" -- backend/app ':!backend/app/services/tenant.py'` が 0 件（`tenant.py` の中の行数は書き方で変わるので数えない）。i18n の `schedule.calendarLabels.*` は 7 種の名前の訳として残すので数えない |
+| A10 | 種類の一覧の正本が 1 か所 | `git grep -n "calendars.config" -- frontend/src` が 0 件／`git grep -n '"procurement"' -- frontend/src ':!frontend/src/locales'` が 0 件／`git grep -n "'procurement'" -- backend/app ':!backend/app/services/tenant.py'` が 0 件（`backend/app/services/tenant.py` の中の行数は書き方で変わるので数えない）。i18n の `schedule.calendarLabels.*` は 7 種の名前の訳として残すので数えない |
 | A11 | 新しい文字はすべて `t()`、ja/en 同じキー。部品は金型だけ。色の点は既存の `schedule-month__dot` を使い、新しい CSS の色を足さない | i18n 点検・UI governance gate・Lint & Dark Mode Check |
 | A12 | ひな形で作った会社と、移行を流した会社の形が同じ | CI のひな形と形の差の検査（F14）が通る |
 
@@ -78,8 +78,8 @@ CREATE TABLE IF NOT EXISTS {schema}.calendar_categories (
 - `name` が NULL の 7 種は、画面が今の i18n の名前（`schedule.calendarLabels.<key>`）を出す。名前を付けたらその名前を出す。
 - 色は NULL＝「種類の色なし（今どおりデフォルト）」。今の札の色から 24 色へ写す表は作らない（根拠の無い対応を作らないため）。
 - 予定の表: `calendar_events_category_check` を外し、`calendar_events_category_fkey FOREIGN KEY (category) REFERENCES {schema}.calendar_categories(key) ON UPDATE RESTRICT ON DELETE RESTRICT` を足す。種類の行は消さない（使わなくするだけ）ので RESTRICT で足りる。
-- `tenant.py` では `calendar_categories` の作成と 7 行を `calendar_events` より前に置き、`calendar_events` の CHECK の行を外部キーの行に置き換える。`:1577` のコメントを「登録の移行 `20261126_100000` で外部キーが付く」に直す。
-- 更新時刻: 関数 `{schema}.set_updated_at_calendar_categories()` とトリガ `trg_calendar_categories_updated_at` を、`tenant.py:2139`（関数）・`:2241`（トリガ）と同じ形で、ひな形と移行の両方に書く（A12）。
+- `backend/app/services/tenant.py` では `calendar_categories` の作成と 7 行を `calendar_events` より前に置き、`calendar_events` の CHECK の行を外部キーの行に置き換える。`:1577` のコメントを「登録の移行 `20261126_100000` で外部キーが付く」に直す。
+- 更新時刻: 関数 `{schema}.set_updated_at_calendar_categories()` とトリガ `trg_calendar_categories_updated_at` を、`backend/app/services/tenant.py:2139`（関数）・`:2241`（トリガ）と同じ形で、ひな形と移行の両方に書く（A12）。
 
 ### 3-2 移行（新規 `migrations/20261126_100000_create_calendar_categories.sql`）
 
@@ -91,14 +91,14 @@ CREATE TABLE IF NOT EXISTS {schema}.calendar_categories (
   4. `DROP CONSTRAINT IF EXISTS calendar_events_category_check`
   5. 確かめ: その部屋の `calendar_events` に、`contype = 'c'` で定義に `category` を含む制約が 1 件でも残れば `RAISE EXCEPTION`。全部屋を 1 つの `DO` ブロックに入れ、失敗すれば全体が戻る（手本と同じ）（名前が違う古い CHECK が残ると `custom_N` で予定が作れないため。本番 5 社は名前が同じ・F9）
 - 何度流しても同じ。
-- 登録は F10 の 5 行に倣う（`run_all_migrations.sh` は `:1483` の後ろ、今の末尾の `20261122_100000` の後・`mr_report_summary` の前。`rls_bootstrap.py` は件数 1。`test_calendar_sync_tenant_reset_pg.py` は True。`test_tenant_loop_migration_guard.py` は 2 つの一覧）。
+- 登録は F10 の 5 行に倣う（`scripts/run_all_migrations.sh` は `:1483` の後ろ、今の末尾の `20261122_100000` の後・`mr_report_summary` の前。`backend/tests/rls_bootstrap.py` は件数 1。`backend/tests/test_calendar_sync_tenant_reset_pg.py` は True。`backend/tests/test_tenant_loop_migration_guard.py` は 2 つの一覧）。
 - 保護表の一覧（`scripts/migration-guard/protected-tables.txt`）に `calendar` の表は無いので、7 行の INSERT は当たらない（審査 S8 で確認済み）。
 - AI 用の写しの分類（ADR-1052・F13）:
-  - `create_ai_cloud_views.sql` に 3 行: `ARRAY['key','name']` を `mask`（`key` は形だけの CHECK、`name` は自由な文字）、`ARRAY['color_key']` を `allow`（理由「値の決まり calendar_categories_color_key_check で値が限られる」）、`ARRAY['default_share']` を `allow`（理由「値の決まり calendar_categories_default_share_check で値が限られる」）。整数・真偽・日時の欄は行を作らない（`test_ai_cloud_views.py:52` の `_PASS_TYPES`）。
-  - `:3` の注記を 1165 → 1169、`test_ai_cloud_views.py:486` を 1169 に（分類表は欄ごとに 1 行。`ARRAY` は unnest で欄ごとに分かれる・`create_ai_cloud_views.sql:7`）。
+  - `migrations/20261024_100300_create_ai_cloud_views.sql` に 3 行: `ARRAY['key','name']` を `mask`（`key` は形だけの CHECK、`name` は自由な文字）、`ARRAY['color_key']` を `allow`（理由「値の決まり calendar_categories_color_key_check で値が限られる」）、`ARRAY['default_share']` を `allow`（理由「値の決まり calendar_categories_default_share_check で値が限られる」）。整数・真偽・日時の欄は行を作らない（`backend/tests/ops/test_ai_cloud_views.py:52` の `_PASS_TYPES`）。
+  - `:3` の注記を 1165 → 1169、`backend/tests/ops/test_ai_cloud_views.py:486` を 1169 に（分類表は欄ごとに 1 行。`ARRAY` は unnest で欄ごとに分かれる・`migrations/20261024_100300_create_ai_cloud_views.sql:7`）。
   - `docs/handoff/cloud-case-ai/stage1-column-class.tsv` に 4 行（6 列。`key` mask character varying・`name` mask character varying・`color_key` allow text・`default_share` allow character varying）。
   - `scripts/migration-guard/reference-allowlist.tsv:7` の sha256 を新しい値に、理由欄に「schedule-settings card-bin2a（分類3行追加: calendar_categories）」を書き足す。
-  - `test_ai_cloud_views.py` に `test_t10_calendar_color_key_is_classified_on_bootstrapped_db`（`:1017-`）と同じ形で、`calendar_categories` の 4 欄の分類を確かめる試験を 1 つ。
+  - `backend/tests/ops/test_ai_cloud_views.py` に `test_t10_calendar_color_key_is_classified_on_bootstrapped_db`（`:1017-`）と同じ形で、`calendar_categories` の 4 欄の分類を確かめる試験を 1 つ。
 - 戻し方: コードの PR を戻すだけ。表と外部キーは残す（古いコードは表を読まず、7 種は表に有るので外部キーに当たらない）。消す移行は作らない。注意: 戻す前に管理者が足した `custom_N` の種類の予定は、古い画面で札が出ない（`meta &&` で守られ壊れはしない）。古い画面で開いて保存すると種類が 7 種のどれかに変わりうる。
 
 ### 3-3 正本の読み書き（新規 `backend/app/services/calendar_categories.py`）
@@ -119,10 +119,10 @@ CREATE TABLE IF NOT EXISTS {schema}.calendar_categories (
 | `PATCH /calendar/categories/{key}` | 管理者 | 上の欄の一部。無い鍵は 404 `not_found:calendar_category` |
 
 - 消す道は作らない（外部キーで消せない。使わなくするで足りる）。
-- 色の値の確かめは既存の `_check_color_key`（`calendar.py:115`）。共有の初期値は `self`/`all` 以外 422。
+- 色の値の確かめは既存の `_check_color_key`（`backend/app/routers/calendar.py:115`）。共有の初期値は `self`/`all` 以外 422。
 - 予定の作る・直す入力に `category: Optional[str] = None` を足す。
   - 作る: 指定が無ければ `meeting`（使わなくできないので常に通る）。表に無い・使っていない鍵は 422 `invalid_category`。
-  - 直す: 指定があり、今の種類と違うときだけ同じ判定。同じなら通す（A4）。繰り返しの直しでの「今の種類」は、色の比べ方（`calendar_service.py:1049-1054`）と同じく、例外の行が有ればその行、無ければ元の行の値。
+  - 直す: 指定があり、今の種類と違うときだけ同じ判定。同じなら通す（A4）。繰り返しの直しでの「今の種類」は、色の比べ方（`backend/app/services/calendar_service.py:1049-1054`）と同じく、例外の行が有ればその行、無ければ元の行の値。
 - サービスで種類を通す 5 か所（F5）:
   1. `update_event` の `field_map`（`:502-512`）に `"category": "category"`
   2. `_TEXT_FIELDS`（`:682`）に `"category"`（「すべて」D1〜D3 はこれで効く）
@@ -135,20 +135,20 @@ CREATE TABLE IF NOT EXISTS {schema}.calendar_categories (
 
 ### 4-1 種類の正本を画面から消す
 
-- `frontend/src/features/schedule/calendars.config.ts` と `calendars.config.test.ts` を消す。種類の型は `string` にする（F7 の 3 ファイルすべて: `ScheduleDraftFields.tsx`・`SchedulePageImpl.tsx`・`schedule-utils.ts`）。
+- frontend/src/features/schedule/calendars.config.ts（この便で消した） と frontend/src/features/schedule/calendars.config.test.ts（この便で消した） を消す。種類の型は `string` にする（F7 の 3 ファイルすべて: `frontend/src/pages/schedule/ScheduleDraftFields.tsx`・`frontend/src/pages/schedule/SchedulePageImpl.tsx`・`frontend/src/pages/schedule/schedule-utils.ts`）。
 - 新規 `frontend/src/features/schedule/useCalendarCategories.ts`: `useApiQuery("/calendar/categories")`（F12）。名前を出す関数 `categoryLabel(cat, t)` = `cat.name ?? t(\`schedule.calendarLabels.${cat.key}\`)`。表に無い鍵（読み込み前など）は、7 種なら i18n 名、それ以外は鍵をそのまま出す。設定ページで書いたあとは `useInvalidateApi` で `["calendar","categories"]` を取り直す。
-- 予定の詳細の札（`SchedulePageImpl.tsx:319`・`:344-345`）: `Badge variant="neutral"` に種類の名前。種類に色があれば名前の前に既存の点 `schedule-month__dot`（背景 `eventColorVar(color_key)`）。新しい CSS の色は足さない。
+- 予定の詳細の札（`frontend/src/pages/schedule/SchedulePageImpl.tsx:319`・`:344-345`）: `Badge variant="neutral"` に種類の名前。種類に色があれば名前の前に既存の点 `schedule-month__dot`（背景 `eventColorVar(color_key)`）。新しい CSS の色は足さない。
 - 詳細の「種類」行（`:399-400`）と一覧の名前（`:723-736`）も `categoryLabel` に置き換える。`getCalendarMeta`（`:222-223`）は消す。
 
-### 4-2 種類を選ぶと初期値が入る（`ScheduleDraftFields.tsx` の `DraftCategoryField`）
+### 4-2 種類を選ぶと初期値が入る（`frontend/src/pages/schedule/ScheduleDraftFields.tsx` の `DraftCategoryField`）
 
 - 選び方の中身は、使っている種類（`is_active`）の `sort_order` 順。今の予定の種類が使わなくした種類なら、それも 1 つ足す（A7）。
 - 作るとき（`mode === "create"`）に変えたら: `colorKey = cat.color_key ?? null`（デフォルト）・`visibleToStaff = cat.default_share === "all"`（今の F6 の条件の置き換え）。
-- 直すときに変えたら: 種類だけ変える。色と共有は変えない（手で付けた色や Google の色を消さないため。共有は持ち主でない人が変えられないため・`SchedulePageImpl.tsx:1068`）。
-- 新しい予定の初期値（`SchedulePageImpl.tsx:954`・`:1203`）: 種類 `meeting` と、その種類の色・共有の初期値（読み込み前は今どおり色なし・全員）。
+- 直すときに変えたら: 種類だけ変える。色と共有は変えない（手で付けた色や Google の色を消さないため。共有は持ち主でない人が変えられないため・`frontend/src/pages/schedule/SchedulePageImpl.tsx:1068`）。
+- 新しい予定の初期値（`frontend/src/pages/schedule/SchedulePageImpl.tsx:954`・`:1203`）: 種類 `meeting` と、その種類の色・共有の初期値（読み込み前は今どおり色なし・全員）。
 - 送り先の本文: 作るは `:1006` で既に `category` を入れている。直すは種類が変わったときだけ `category` を入れる。
 
-### 4-3 設定ページの「予定の種類」区画（`ScheduleSettingsPage.tsx`）
+### 4-3 設定ページの「予定の種類」区画（`frontend/src/pages/schedule/ScheduleSettingsPage.tsx`）
 
 - 管理者だけに出す（便1 の Google 区画と同じ条件 `isTenantAdmin === true`）。左の並び（金型 `SubMenu`）に 1 項目足す。
 - 金型 `SectionCard` の中に、種類ごとに 1 行: 名前（金型 `TextFieldControl`）・色（金型 `ColorSwatchPicker`、先頭に「種類の色なし」）・共有の初期値（金型 `SelectControl`: 自分だけ／全員）・使う（金型 `Toggle`。`meeting` の行は切れない状態で出す）・保存（金型 `Button`）。7 種の名前の欄は空にでき、空なら i18n の名前に戻ると下に書く。
@@ -170,14 +170,14 @@ CREATE TABLE IF NOT EXISTS {schema}.calendar_categories (
   - 作るときに種類を選ぶと色と共有が入る／直すときは色と共有が変わらない
   - 使わなくした種類が選び方に出ない／今の予定の種類なら出る
   - 設定の区画が管理者だけ（3 通り）・足す・保存の失敗の文
-- 既存の試験: `SchedulePageImpl.test.tsx` など予定の画面を開く試験には `/calendar/categories` の応答の擬似を足す。`:1364` の札の試験は新しい札の形に直す。`calendars.config.test.ts` は消す。
+- 既存の試験: `frontend/src/pages/schedule/SchedulePageImpl.test.tsx` など予定の画面を開く試験には `/calendar/categories` の応答の擬似を足す。`:1364` の札の試験は新しい札の形に直す。frontend/src/features/schedule/calendars.config.test.ts（この便で消した） は消す。
 
 ## 6 触らない
 
-- 見え方の条件（`calendar_service.py:238-250`）・`calendar_type` の値・作る／直す／消すの権限の判定。便2b で扱う。
+- 見え方の条件（`backend/app/services/calendar_service.py:238-250`）・`calendar_type` の値・作る／直す／消すの権限の判定。便2b で扱う。
 - Google への色の送り（ADR-1081）。種類の色は予定の `color_key` に入るので、今の送り方がそのまま効く。
 - Google からの取り込み（`upsert_from_google`）。種類は欄の既定値 `meeting` のまま。
-- 秘書（`assistant.py`）の予定作成。種類は既定の `meeting`。
+- 秘書（`backend/app/routers/assistant.py`）の予定作成。種類は既定の `meeting`。
 - `calendar_owner_settings` と人ごとの色。便3 で扱う。
 
 ## 7 代替案
@@ -219,5 +219,5 @@ CREATE TABLE IF NOT EXISTS {schema}.calendar_categories (
 
 | 回 | 日 | 判定 | 記録 | 入れた直し |
 |---|---|---|---|---|
-| 1 | 2026-11-25 | REVISE（必須 7・推奨 8） | `review-architect-bin2a-1.md` | R1〜R7・S1〜S8 すべて（R5 は (a) の確かめと本番の制約名の読み取りの両方） |
-| 2 | 2026-11-25 | APPROVE（必須 0・推奨 12） | `review-architect-bin2a-2.md` | N1・N2・N5〜N8・S9・S10・S12 を本文へ。S11（本番の読み方）は A1・A2 を「反映後に Opus が読むだけの鍵で `pg_constraint` と各社の表を直接数える（CI の合否ではない）」と読む。S10 の tsv と SQL の 94 行のずれは別件 |
+| 1 | 2026-11-25 | REVISE（必須 7・推奨 8） | `docs/handoff/schedule-settings/review-architect-bin2a-1.md` | R1〜R7・S1〜S8 すべて（R5 は (a) の確かめと本番の制約名の読み取りの両方） |
+| 2 | 2026-11-25 | APPROVE（必須 0・推奨 12） | `docs/handoff/schedule-settings/review-architect-bin2a-2.md` | N1・N2・N5〜N8・S9・S10・S12 を本文へ。S11（本番の読み方）は A1・A2 を「反映後に Opus が読むだけの鍵で `pg_constraint` と各社の表を直接数える（CI の合否ではない）」と読む。S10 の tsv と SQL の 94 行のずれは別件 |
