@@ -2161,6 +2161,7 @@ async def client(db_session):
         "app.services.staff_create",  # ADR-1068: POST /staff の中身を切り出した先
         # Sprint 8 / F8: テナント発行者情報
         "app.routers.tenant_profile",
+        "app.routers.issuer_profiles",
         # Sprint D2: Discord Guild 設定
         "app.routers.discord_guild_config",
         # 監査ログ補完（高重要度2系統）
