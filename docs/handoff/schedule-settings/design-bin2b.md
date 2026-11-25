@@ -32,12 +32,12 @@
 | F12 | 画面の取り込みは `calendar_type` が `personal` 以外を全部 `shared` に丸める | `frontend/src/pages/schedule/schedule-utils.ts:372` |
 | F13 | 変更の知らせ（`calendar.events`）は会社単位の合図だけで、予定の中身を送らない | `backend/app/services/google_webhook.py:376-380` |
 | F14 | 金型に複数選択 `MultiSelect`（必須: `label`・`options`・`selected`・`onChange`・`clearLabel`・`allLabel`・`countLabel`。任意: `emptyLabel`・`layout`＝`popover`/`inline`/`row`）・選択 `SelectControl` がある | `frontend/src/components/MultiSelect.tsx:36-62`・`frontend/src/components/Select` |
-| F15 | 本番の CHECK の名前は 5 社とも `calendar_events_calendar_type_check`（`CHECK (calendar_type IN ('shared','personal'))`）と `calendar_categories_default_share_check`（`IN ('self','all')`）。ひな形 `tenant.py:1608` も同じ名前。古い移行 `migrations/078_create_calendar_events_tenant.sql:47-48` は名前を付けない CHECK で作っていた | 2026-11-25 19:00 JST 読むだけの鍵で `pg_constraint` を読んだ（10 行・AUDIT `rows=10 result=ok`） |
+| F15 | 本番の CHECK の名前は 5 社とも `calendar_events_calendar_type_check`（`CHECK (calendar_type IN ('shared','personal'))`）と `calendar_categories_default_share_check`（`IN ('self','all')`）。ひな形 `backend/app/services/tenant.py:1608` も同じ名前。古い移行 `migrations/078_create_calendar_events_tenant.sql:47-48` は名前を付けない CHECK で作っていた | 2026-11-25 19:00 JST 読むだけの鍵で `pg_constraint` を読んだ（10 行・AUDIT `rows=10 result=ok`） |
 | F16 | 書き込みの道で「ほかに変える欄が無いと何もせず返る」所がある: 単発の直す `update_event` は `set_clauses` が空なら早く返る（`:533-536`）。繰り返しの「すべて」D1 は `fields` が空なら行を直さない（`:1165-1167`）。作る `create_event` は `:434` で commit する。「これ以降」は `_insert_row` → `_commit`（`:1134-1135`） | `backend/app/services/calendar_service.py` 該当行 |
 | F17 | 「この予定だけ」で見せ方を変える判定は、送られた `calendar_type` が今の値と違うときだけ 422（同じ値なら通す） | `backend/app/services/calendar_service.py:858-859` |
-| F18 | 行の持ち主の守り（RLS）: `calendar_events`・`calendar_categories` には無い。`teams`・`team_members` には有る（`ENABLE` `tenant.py:2352-2353`・方針 `:2446`・`:2467`。会社の番号 `app.tenant_id` で絞る） | `backend/app/services/tenant.py` 該当行 |
+| F18 | 行の持ち主の守り（RLS）: `calendar_events`・`calendar_categories` には無い。`teams`・`team_members` には有る（`ENABLE` `backend/app/services/tenant.py:2352-2353`・方針 `:2446`・`:2467`。会社の番号 `app.tenant_id` で絞る） | `backend/app/services/tenant.py` 該当行 |
 | F19 | AI に見せる列の分類表: `calendar_categories.key` は `mask`（`migrations/20261024_100300_create_ai_cloud_views.sql:371`・`docs/handoff/cloud-case-ai/stage1-column-class.tsv:564`）。分類の行数の試験は今 1169（`backend/tests/ops/test_ai_cloud_views.py:486`） | 該当行 |
-| F20 | 理由の語の表 `frontend/src/lib/apiErrorReason.ts` と、その並びを数える試験 `backend/tests/test_api_error_reason_sync.py:41-69`。`calendar_categories.py` の理由の語（`category_conflict`・`invalid_category` など）は今この表に無い | 該当行 |
+| F20 | 理由の語の表 `frontend/src/lib/apiErrorReason.ts` と、その並びを数える試験 `backend/tests/test_api_error_reason_sync.py:41-69`。`backend/app/services/calendar_categories.py` の理由の語（`category_conflict`・`invalid_category` など）は今この表に無い | 該当行 |
 | F21 | 本番の予定の持ち主の列: `user_id` が NULL なのは会社4 の `shared` 6 件だけ（`created_by_user_id` はあり）。`personal` で `user_id` が NULL は 0 件。ほかは `user_id` と `created_by_user_id` が同じ。作る道は `user_id` に作った人を必ず入れる（`backend/app/services/calendar_service.py:422` の `"uid": user_id`）ので、`user_id` が NULL の行は Google 取り込み由来に限られる（第2回 S5） | 2026-11-25 19:04 JST 読むだけの鍵（AUDIT `rows=5 result=ok`） |
 
 ## 2 受入条件
@@ -53,7 +53,7 @@
 | B12 | 種類の `default_team_ids`: `PATCH` で送らなければ今の対応のまま。`default_share='team'` で `[]` は 422。種類を読むとき、使っていないチームは `default_team_ids` に入らない | 裏側の試験（3 通り） |
 | B6 | 種類の共有の初期値に「チーム」と初期のチーム（1 つ以上）を決められる。予定を作るときにその種類を選ぶと、共有「チーム」と初期のチームが入る | 裏側の試験＋画面の試験 |
 | B7 | 今ある予定の見え方は変わらない（要件 G6） | 本番で反映の前後に `category/calendar_type` ごとの件数を数えて F9 と同じ＋`team` 0 件。移行の試験で、移行の前後の `shared`／`personal` の行が同じ、かつ持ち主・ほかの人・管理者の 3 人それぞれに見える件数が移行の前後で同じ |
-| B8 | 共有の値の正本は層ごとに 1 か所: DB の CHECK 2 つ（予定・種類）・裏側の定数 2 つ（予定の `SHARE_VALUES`・種類の `CATEGORY_SHARE_VALUES`）・画面の型 1 つ（`CalendarShare`） | ①`git grep -n '"shared", "personal")' -- backend/app` が 0 件（閉じ括弧まで含める。定義 `("shared", "personal", "team")` には当たらない）（今 2 件 `calendar.py:542`・`:633`）②`git grep -n "^SHARE_VALUES\b\|^CATEGORY_SHARE_VALUES\b" -- backend/app` がちょうど 2 件 ③`git grep -n "_VALID_CATEGORY_SHARES" -- backend/app` が 0 件 ④`git grep -n '"self" | "all"' -- frontend/src` が型の定義の 1 件だけ（`CalendarShare` の定義のこと。`ScheduleItem.calendarType` の `"shared" | "personal" | "team"` は裏側の値の型で、この数の対象外） |
+| B8 | 共有の値の正本は層ごとに 1 か所: DB の CHECK 2 つ（予定・種類）・裏側の定数 2 つ（予定の `SHARE_VALUES`・種類の `CATEGORY_SHARE_VALUES`）・画面の型 1 つ（`CalendarShare`） | ①`git grep -n '"shared", "personal")' -- backend/app` が 0 件（閉じ括弧まで含める。定義 `("shared", "personal", "team")` には当たらない）（今 2 件 `backend/app/routers/calendar.py:542`・`:633`）②`git grep -n "^SHARE_VALUES\b\|^CATEGORY_SHARE_VALUES\b" -- backend/app` がちょうど 2 件 ③`git grep -n "_VALID_CATEGORY_SHARES" -- backend/app` が 0 件 ④`git grep -n '"self" | "all"' -- frontend/src` が型の定義の 1 件だけ（`CalendarShare` の定義のこと。`ScheduleItem.calendarType` の `"shared" | "personal" | "team"` は裏側の値の型で、この数の対象外） |
 | B9 | 新しい文字は `t()`・ja/en 同じキー。部品は金型だけ・色の直書きなし | i18n 点検・UI governance gate・Lint & Dark Mode Check |
 | B10 | ひな形で作った会社と、移行を流した会社の形が同じ | CI のひな形と形の差の検査 |
 
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS {schema}.calendar_category_teams (
   1. 既に「`team` を含む CHECK が名前 `calendar_events_calendar_type_check` で 1 つ」なら何もしない（何度流しても同じ）。
   2. 仮の名前 `calendar_events_calendar_type_check_v2` で `CHECK (calendar_type IN ('shared','personal','team')) NOT VALID` を足す（前の回で残っていれば足さない）→ `VALIDATE CONSTRAINT`。
   3. 古い CHECK を消す: `pg_constraint` で `conrelid = 表 AND contype = 'c' AND pg_get_constraintdef(oid) ~ '\mcalendar_type\M' AND conname <> 仮の名前` の行を全部 `DROP CONSTRAINT`（名前が違う古い部屋＝F15 の名前なし CHECK にも効く）。
-  4. `ALTER TABLE ... RENAME CONSTRAINT calendar_events_calendar_type_check_v2 TO calendar_events_calendar_type_check`（ひな形 `tenant.py:1608` と同じ名前にそろえる）。
+  4. `ALTER TABLE ... RENAME CONSTRAINT calendar_events_calendar_type_check_v2 TO calendar_events_calendar_type_check`（ひな形 `backend/app/services/tenant.py:1608` と同じ名前にそろえる）。
   - 種類は `calendar_categories_default_share_check`・`_v2`・`\mdefault_share\M` で同じ手順。
   - 全部屋 1 つの `DO`・1 つの取引。ロックは短い（ADR-1037。本番の行は 5 社で予定 38 行）。
 - 最後の確かめ: 各部屋で `calendar_type` を使う CHECK がちょうど 1 つ・名前が `calendar_events_calendar_type_check`・定義に `team` を含む。`default_share` も同じ。2 つの表がある。満たさなければ `RAISE EXCEPTION` で全体を戻す。
@@ -163,13 +163,13 @@ async def can_see_event(db, event_id: int, user_id: int) -> bool:
   - 出すのはチームの名前と番号だけ（メンバーは出さない）。同じ会社の人どうしで、予定の共有先を選ぶのに要る最小。チームの名前は今も会社の人に見える画面（予定の詳しい表示の共有の行）に出るので、新しく漏れる中身は無い（S6）。
 - 種類: `_VALID_CATEGORY_SHARES`（`:167`）を消し、`backend/app/services/calendar_categories.py` に `CATEGORY_SHARE_VALUES = ("self", "all", "team")` を 1 つ置いて受け口はそれを使う（B8）。`POST`/`PATCH /calendar/categories` に `default_team_ids: Optional[list[int]]`。
   - 決める共有＝送った `default_share`、無ければ今の値。`team` なら `default_team_ids` は 1 つ以上の使っているチーム（`validate_team_ids` と同じ確かめ。違えば 422 `invalid_team_ids`）。`PATCH` で `default_team_ids` を送らなければ今の対応のまま。`team` 以外にしたら対応を消す。`team` 以外で空でない `default_team_ids` は 422。
-  - `PATCH` の受け方は今の `_FIELD_COLUMNS`（`calendar_categories.py:109` 付近）の形に従い、`default_team_ids` は列ではないので `_FIELD_COLUMNS` に入れず別に扱う。`default_team_ids` だけの `PATCH` も `no_fields_to_update` にしない。
-  - `GET /calendar/categories` の各行に `default_team_ids`（使っているチームだけ・昇順。無ければ `[]`）（S4）。対応の書き手は `calendar_categories.py` に 1 つ（`set_category_teams`）。
+  - `PATCH` の受け方は今の `_FIELD_COLUMNS`（`backend/app/services/calendar_categories.py:109` 付近）の形に従い、`default_team_ids` は列ではないので `_FIELD_COLUMNS` に入れず別に扱う。`default_team_ids` だけの `PATCH` も `no_fields_to_update` にしない。
+  - `GET /calendar/categories` の各行に `default_team_ids`（使っているチームだけ・昇順。無ければ `[]`）（S4）。対応の書き手は `backend/app/services/calendar_categories.py` に 1 つ（`set_category_teams`）。
 - 新しい理由の語 `invalid_team_ids` は、画面の訳の表（`frontend/src/lib/apiErrorReason.ts`）と並びの試験（`backend/tests/test_api_error_reason_sync.py:41-69` の列に足す）に入れ、ja/en の `apiError` に文を足す（F20。種類の理由の語は今この表に無いので、この便では `invalid_team_ids` だけ足し、ほかは足さない）。`GET /calendar/teams` は変更の知らせの表（`backend/app/realtime/topics.py`）の決まりに従う（読むだけの道が要らなければ足さない。実装役が試験の失敗で確かめる）。
 
 ## 4 画面の変更
 
-### 4-1 共有の値（`frontend/src/pages/schedule/schedule-utils.ts`・`SchedulePageImpl.tsx`）
+### 4-1 共有の値（`frontend/src/pages/schedule/schedule-utils.ts`・`frontend/src/pages/schedule/SchedulePageImpl.tsx`）
 
 - 型 `CalendarShare = "self" | "all" | "team"` を `frontend/src/features/schedule/useCalendarCategories.ts` に 1 つ置き、`CalendarCategoryShare` はこれにする。裏側の値との変換（`self`↔`personal`・`all`↔`shared`・`team`↔`team`）も同じファイルに 1 組だけ置く。
 - `ApiCalendarEvent` に `team_ids: number[]`。`ScheduleItem.calendarType` を `"shared" | "personal" | "team"`、`teamIds: number[]` を足す。`normalizeEvent`（`:372`）は 3 つの値をそのまま写す。
@@ -179,12 +179,12 @@ async def can_see_event(db, event_id: int, user_id: int) -> bool:
 ### 4-2 予定の共有の選び方（`frontend/src/pages/schedule/ScheduleDraftFields.tsx:415-440`）
 
 - `Toggle` を金型 `SelectControl`（自分だけ／全員／チーム）に替える。`チーム` のとき、下に金型 `MultiSelect`（`useCalendarTeams` の一覧）を出す。チームが 0 件なら `MultiSelect` の `emptyLabel` に「使っているチームがありません」。
-- 金型の使い方: `SelectControl` は同じ画面のほかの欄と同じ `variant="editor-filled"`（`ScheduleDraftFields.tsx:151`）。`MultiSelect` は必須の `label`=`t("schedule.shareTeams")`・`clearLabel`=`t("schedule.shareTeamsClear")`・`allLabel`=`t("schedule.shareTeamsNone")`・`countLabel`=`(n) => t("schedule.shareTeamsCount", { count: n })`・`emptyLabel`=`t("schedule.noActiveTeams")` を渡す。予定の画面は引き出し（Drawer）の中なので `layout="inline"`、設定ページは `layout="popover"`（F14）。
+- 金型の使い方: `SelectControl` は同じ画面のほかの欄と同じ `variant="editor-filled"`（`frontend/src/pages/schedule/ScheduleDraftFields.tsx:151`）。`MultiSelect` は必須の `label`=`t("schedule.shareTeams")`・`clearLabel`=`t("schedule.shareTeamsClear")`・`allLabel`=`t("schedule.shareTeamsNone")`・`countLabel`=`(n) => t("schedule.shareTeamsCount", { count: n })`・`emptyLabel`=`t("schedule.noActiveTeams")` を渡す。予定の画面は引き出し（Drawer）の中なので `layout="inline"`、設定ページは `layout="popover"`（F14）。
 - `team` でチームが 0 個のとき保存を押せない（保存ボタンを止め、欄の下に文を出す）。裏側の 422 は最後の守り。
-- 繰り返しの予定を「この予定だけ」で直すとき、画面は `team_ids` を送らない。`calendar_type` は今と同じ値のまま送ってよい（今の画面は `canChangeVisibility` なら毎回送る: `SchedulePageImpl.tsx:1024-1025`）。裏側は `team_ids` が送られても元の行と同じなら通す（二重の守り）。
+- 繰り返しの予定を「この予定だけ」で直すとき、画面は `team_ids` を送らない。`calendar_type` は今と同じ値のまま送ってよい（今の画面は `canChangeVisibility` なら毎回送る: `frontend/src/pages/schedule/SchedulePageImpl.tsx:1024-1025`）。裏側は `team_ids` が送られても元の行と同じなら通す（二重の守り）。
 - `MultiSelect` の `selected`・`options[].value` は文字（`string[]`）。チームの id（数）は渡すときに `String(id)`、受け取るときに `Number(v)` で変える。変換は `useCalendarTeams` のそばに 1 組だけ置く（第2回 S2）。
 - 種類を選んだとき（`:291-305`）: `default_share` が `team` なら `share: "team"`・`teamIds: default_team_ids`。今の決まり（作るときだけ入れる・直すときは変えない）はそのまま。
-- 予定の詳しい表示（`SchedulePageImpl.tsx:395-405` の並び）に「共有」の行を足す（自分だけ／全員／チーム: 名前・名前）。名前は `useCalendarTeams` から引き、使っていないチームは出さない。`:402` の `schedule.calendarTypeValues.shared` はそのまま使ってよい（種類の名前が無いときの表示）。`calendarTypeValues` に `team`（チーム）を ja/en で足す（`frontend/src/locales/ja.json:3538`）。
+- 予定の詳しい表示（`frontend/src/pages/schedule/SchedulePageImpl.tsx:395-405` の並び）に「共有」の行を足す（自分だけ／全員／チーム: 名前・名前）。名前は `useCalendarTeams` から引き、使っていないチームは出さない。`:402` の `schedule.calendarTypeValues.shared` はそのまま使ってよい（種類の名前が無いときの表示）。`calendarTypeValues` に `team`（チーム）を ja/en で足す（`frontend/src/locales/ja.json:3538`）。
 
 ### 4-3 設定ページ（`frontend/src/pages/schedule/ScheduleSettingsPage.tsx:346-355`）
 
