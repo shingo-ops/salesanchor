@@ -1,6 +1,6 @@
 # design: 「顧客」に切り替える基準（便1）
 
-状態: **KGI は PO 承認済み**（2026-11-25 チャット「1」。K1〜K7 と §3 の前提）。設計審査はこれから。調査: [recon.md](recon.md)。ADR: [ADR-1090](../../adr/ADR-1090-customer-conversion-three-conditions.md)（Proposed）。
+状態: **KGI は PO 承認済み**（2026-11-25 チャット「1」。K1〜K7 と §3 の前提）。設計審査 1 回目は REVISE（2026-11-25・必須 4 件）。必須 2〜4 と推奨は本版で直した。必須 1（「登録済み」の判定のそろえ方）は §10 で PO の判断待ち。調査: [recon.md](recon.md)。ADR: [ADR-1090](../../adr/ADR-1090-customer-conversion-three-conditions.md)（Proposed）。
 
 ## 1. 目的（PO の言葉は recon §1）
 
@@ -42,23 +42,27 @@ PO の決定:
 
 新しい関数 `promote_lead_if_customer(db, tenant_id, lead_id) -> bool` を `backend/app/services/customer_conversion.py`（新規）に置く。
 
-- 3 つの条件を 1 本の SQL で確かめる。条件の SQL はこの関数の中だけに書く。
+- 最初に、そのリードの行を `SELECT ... FROM leads WHERE id = :lead_id FOR UPDATE` で押さえる（PostgreSQL のときだけ。試験の SQLite は FOR UPDATE が使えないので `is_postgresql(db)` で分ける・`registration_tokens.py:240-243` と同じ形）。理由: 入金とフォームの送信が別々の取引で同時に走ると、どちらも相手の書き込みが見えず（READ COMMITTED）、3 つそろっても切り替わらない。行を押さえると後の取引は前の取引の commit を待ち、その後の SQL で相手の書き込みが見える。
+- その後で、3 つの条件を 1 本の SQL で確かめる（押さえた後の別の文にする）。条件の SQL はこの関数の中だけに書く。
+- テナントの表（leads・companies・invoices・orders）は `tenant_table_ref(db, tenant_id, "<表>")`（`backend/app/auth/dependencies.py:438`）で書き、search_path に頼らない。全テナント共通の `public.registration_tokens` は `tenant_id = :tenant_id AND lead_id = :lead_id` で絞る（lead_id はテナントごとの番号なので、絞らないと他のテナントのトークンを数える）。
+- 会社（②）は会社の状態（active・archived など）を問わず数える。理由: 自動で戻さない決まり（§3）と合わせ、一度そろった記録の扱いを状態で変えないため。
 - そろっていれば `UPDATE leads SET status = 'existing_customer', updated_at = NOW() WHERE id = :lead_id AND status <> 'existing_customer'` を行う。監査の記録（`record_audit_log`、action="auto_convert"）を残す。
 - 呼んだ側の取引の中で動く（commit は呼び元）。
+- 失敗の切り離し: 関数の中身は `async with db.begin_nested():`（SAVEPOINT・`backend/app/routers/assistant.py:215` と同じ形）で包み、判定が例外を出したら SAVEPOINT だけを戻して `logger.error` を残し、False を返す。入金・フォームの記録は消さない（PayPal の戻りと通知は記録と commit が 1 つの try の中にあり、包まないと入金の記録ごと rollback される・`integrations.py:797-813`・`:940-962`）。切り替え損ねた人は、3 つのどれかが次に書かれたときに確かめ直される。
 
 呼ぶ場所（3 つの条件が書かれる道すべて。2026-11-25 に worktree の `git grep` で数えた・recon §7）:
 
 | 道 | 場所（今の行） | lead_id の求め方 |
 |---|---|---|
-| 登録フォームの送信 | `backend/app/routers/registration_tokens.py:215` `register_customer` の `mark_token_used` の後・commit 前 | トークンの lead_id |
-| 請求書の「入金登録」（手） | `backend/app/routers/invoices.py:899` の後・commit 前 | 請求書の company_id → `companies.lead_id` |
-| 請求書の「支払い状況を確認」（PayPal を手で確かめる） | `backend/app/routers/invoices.py:1145` の後・commit 前 | 同上 |
+| 登録フォームの送信 | `backend/app/routers/registration_tokens.py:217` `register_customer` の `mark_token_used`（`:403`）の後・commit（`:405`）の前 | トークンの lead_id |
+| 請求書の「入金登録」（手） | `backend/app/routers/invoices.py:885` `pay_invoice` の請求書の UPDATE（`:899`）と受注の UPDATE の後・commit 前 | 請求書の company_id → `companies.lead_id` |
+| 請求書の「支払い状況を確認」（PayPal を手で確かめる） | `backend/app/routers/invoices.py:1145` の UPDATE と受注の UPDATE の後・commit 前 | 同上 |
 | PayPal の戻り | `backend/app/routers/integrations.py:799` の後・commit 前 | 同上 |
 | PayPal の通知 | `backend/app/routers/integrations.py:948` の後・commit 前 | 同上 |
-| 注文の「支払済にする」 | `backend/app/routers/orders.py:596`（paid=true のときだけ）の後・commit 前 | 注文の company_id → `companies.lead_id` |
+| 注文の「支払済にする」 | `backend/app/routers/orders.py:571` `set_order_paid` の UPDATE（`:600-608`）の後・commit 前。`data.paid` が true のときだけ（`:596` は SET 句を組む行） | 注文の company_id → `companies.lead_id` |
 | 会社を作る（リード必須） | `backend/app/routers/companies.py:440` の後・commit 前 | `data.lead_id` |
 | 会社のリードを付け替える | `backend/app/routers/companies.py:610`（更新に lead_id が入るときだけ） | 新しい lead_id |
-| リードの統合 | `backend/app/routers/leads.py:3241` `merge_leads` の commit 前（会社が残る側へ移る） | 残る側の lead_id |
+| リードの統合 | `backend/app/routers/leads.py:3241` `merge_leads` の `_execute_lead_merge` の後、残る側を読み直す SELECT（`:3269` 付近）の**前**（返事の段階が古くならないように） | 残る側の lead_id |
 | 会社の統合 | `backend/app/routers/companies.py:742` `merge_companies` の commit 前（請求書・注文が残る側へ移る） | 残る側の会社の lead_id |
 
 - `backend/app/routers/integrations.py:653`（PayPal 決済テストの会社）は lead_id を書かないので対象外。
@@ -78,7 +82,7 @@ PO の決定:
 - メニューのリンク（PO 11/25「登録フォーム入力済みの顧客に対して再度登録フォームを発行すると重複したデータが発生する原因になるのでSSOTさせるためにフォーム登録済みの顧客には再発行はしない、変更が必要な場合は元のデータに追加していく形」）:
   - 登録がまだ: 「登録フォームのリンク」だけを出す。
   - 登録が済んだ: 「登録フォームのリンク」を出さない。「配送先を足すリンク」（add_address・配送先を 1 行足す）と「請求先を変えるリンク」（change_billing・前の請求先を残したまま新しい行を足して既定にする・ADR-127 §1）を出す。段階によらない（今は請求先を変えるリンクが既存顧客だけ・`InboxKartePanel.tsx:421`）。
-  - 「登録が済んだ」の判定は、新規登録のリンクを断る今の判定（`registration_tokens.py:86-102`・会社に既定の請求先がある）と同じものを使う。この判定を backend の 1 つの関数に移し、リンクを断る所と、カルテのデータ（`GET /leads/{id}` の返り値に `registration_completed` を足す）の両方がそれを呼ぶ。画面は自分で判定しない。
+  - 「登録が済んだ」の判定は backend の 1 つの関数に置き、新規登録のリンクを断る所（`registration_tokens.py:86-102`）・請求先を変えるリンクを未登録で断る所（`registration_tokens.py:105-120`・今は同じ SQL の写し）・カルテのデータ（`GET /leads/{id}` の返り値に `registration_completed` を足す）の 3 か所がそれを呼ぶ。画面は自分で判定しない。判定の中身（何をもって登録済みとするか）は §10 の PO の判断で決める。
   - 元のデータは消さず、足していく形は今の backend のまま（add_address は行を足す・change_billing は前の行を既定から外して新しい行を足す）。
 
 ### 4-4. 触らないもの
@@ -105,7 +109,8 @@ PO の決定:
 
 ## 7. 受入の確かめ方（KGI の検証方法の詳しい手順）
 
-- backend 試験: `backend/tests/test_customer_conversion.py`（新規）。K1 の 6 通り・K2 の 7 通り・K3 の 2 本・各道 1 本。
+- backend 試験: `backend/tests/test_customer_conversion.py`（新規）。K1 の 6 通り・K2 の 7 通り・K3 の 2 本・各道 1 本。ほかのテナントに同じ lead_id の使用済みトークンがあっても数えない試験 1 本。判定が例外を出しても入金の記録が残る試験 1 本。
+- 1 か所だけの試験（ADR-1090 受入条件の最後の行を ○× にする）: `backend/app` の中で `status = 'existing_customer'` を書く SQL と、登録済みの判定の SQL（`address_type = 'billing'` と `is_default`）が、決めた関数のファイルにしか無いことを、ファイルを読んで数える試験 1 本。
 - frontend 試験: karteLayout の追客 2 段階・帯の出し分け・選択肢に既存顧客が無いこと。
 - 本番: テスト株式会社の試しのリード（TST-KARTE-3 を使い回すか、新しく作るかは実装カードで決める）。K6 は反映の前後で reader で数える。
 
@@ -116,9 +121,14 @@ PO の決定:
 ## 9. 維持の仕組み
 
 - 判定の条件は `customer_conversion.py` の 1 か所だけ。ほかの場所に同じ条件を書かない（ADR-1090 に書く）。
-- 試験 `test_customer_conversion.py` が CI で毎回走る。手で既存顧客を付ける道が増えれば K3 の試験が落ちる。
+- 試験 `test_customer_conversion.py` が CI で毎回走る。手で既存顧客を付ける道が増えれば K3 の試験が落ちる。条件の SQL を別の場所に写せば「1 か所だけの試験」が落ちる。
 - 次の便（CSV の取り込み）も、この関数を通して既存顧客にする。
 
 ## 10. 未決事項
 
-- なし（KGI と §3 の前提は 2026-11-25 PO 承認済み）。
+- **「登録済み」をどの記録で決めるか（PO の判断待ち・設計審査 1 回目の必須 1）**。
+  - 今の設計は 2 つの記録を使っていて、食い違う: 条件①は「新規登録のフォームを送った記録」、リンクの出し分けは「会社に既定の請求先がある」。
+  - 本番の数（2026-11-25 18:36 JST・reader）: HIGH LIFE JPN は「請求先あり・フォームの記録なし」が 49 人、「両方あり」0 人、「フォームの記録だけ」1 人。テスト株式会社は「両方あり」3 人、「請求先だけ」1 人。
+  - 49 人は、フォームのリンクが出ず（請求先があるので 409）、条件①も満たせないので、このままでは既存顧客になる道が無い。
+  - 案 A: 両方を「会社に既定の請求先がある」にそろえる（フォームでも、会社の画面で手で入れても、4/23 に移した 49 人も登録済み）。
+  - 案 B: 両方を「フォームを送った記録」にそろえる。49 人にはフォームのリンクが出るが、送ると請求先が 2 つになる（PO の言う重複）ので、送れないように 409 を残すと、49 人は便2 まで既存顧客になれない。
