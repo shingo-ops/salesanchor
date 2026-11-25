@@ -63,6 +63,9 @@ def fake():
             self._send(200, {"choices": [{"message": {"content": content}}],
                              "usage": {"prompt_tokens": 10, "completion_tokens": 5}})
 
+        def do_GET(self):
+            self._send(200, [{"role": "tool"}, {"role": "assistant", "tool_calls": [{"id": "x"}]}, {"role": "user"}])
+
         def do_DELETE(self):
             with state.lock:
                 status, code = state.deletes.pop(0) if state.deletes else (200, "")
@@ -125,7 +128,6 @@ def test_6_delete_busy(fake):
     with httpx.Client(base_url=fake.url, timeout=10) as client:
         fake.deletes = [(409, "session_active_turn"), (200, "")]
         assert run_bin0.delete_session(client, "invoice", "k", "sid", sleep=lambda s: None) == (True, 200)
-        fake.deletes = [(409, "session_active_turn")] * 3
         # 最初の 1 回＋やり直し 3 回＝ 4 回。3 回 409 のあとは尽きて 200 になるので、4 回目も 409 にする
         fake.deletes = [(409, "session_active_turn")] * 4
         assert run_bin0.delete_session(client, "invoice", "k", "sid", sleep=lambda s: None) == (False, 409)
@@ -179,3 +181,24 @@ def test_9_no_text_in_outputs(fake, capsys, tmp_path):
         assert c["text"] not in out.out and c["text"] not in out.err
     assert "k1=" in out.err and "deleted=" in out.err
     assert INVOICE_OK["invoice"]["company_name"] not in out.out + out.err
+
+
+def test_10_k3_date_only():
+    assert run_bin0.field_match("date", "2026-11-25", "2026-11-25T00:00:00+09:00")
+    assert run_bin0.field_match("date", "2026-11-25", "2026-11-24T15:00:00Z")
+    assert not run_bin0.field_match("date", "2026-11-25", "2026-11-24T00:00:00+09:00")
+    expected = {"kind": "event", "event": {"start": "2026-11-25", "is_all_day": True}}
+    draft = {"kind": "event", "event": {"start": "2026-11-24T15:00:00Z", "is_all_day": True}}
+    assert run_bin0.k3_score(expected, draft) == (2, 2)
+
+
+def test_11_tool_runs_shape_unknown(fake, capsys, tmp_path):
+    k4 = tmp_path / "k4.json"
+    k4.write_text(json.dumps({"cases": [{"id": "t1", "room": "coordinator", "text": "試しの文です"}]}), encoding="utf-8")
+    with httpx.Client(base_url=fake.url, timeout=10) as client:
+        assert run_bin0.count_tool_runs(client, "coordinator", "k", "sid") is None
+        assert run_bin0.count_tool_runs(client, "coordinator", "k", "sid", "list") == 2
+        assert run_bin0.run_k4(client, KEYS, "openai-codex", "gpt-5.6-terra", k4, sleep=lambda s: None) == 0
+    out = capsys.readouterr()
+    assert out.out.splitlines()[1].split("\t")[3] == "-"
+    assert "k4_tool_runs=-" in out.err

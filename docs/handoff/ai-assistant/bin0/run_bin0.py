@@ -17,7 +17,7 @@ import sys
 import time
 import unicodedata
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
@@ -170,14 +170,24 @@ def _to_dt(v: object) -> datetime | None:
     return d if d.tzinfo is not None else None
 
 
+JST = timezone(timedelta(hours=9))
+
+
 def _to_date(v: object) -> date | None:
+    """時刻の帯の付いた日時は +09:00 に直してから日付を取る。日付だけの文字はそのまま。帯の無い日時は日付を取る。"""
+    text = str(v)
     try:
-        return datetime.fromisoformat(str(v).replace("Z", "+00:00")).date()
+        return date.fromisoformat(text) if len(text) == 10 else _to_date_dt(text)
     except ValueError:
-        try:
-            return date.fromisoformat(str(v))
-        except ValueError:
-            return None
+        return None
+
+
+def _to_date_dt(text: str) -> date | None:
+    try:
+        d = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return d.astimezone(JST).date() if d.tzinfo is not None else d.date()
 
 
 def field_match(kind: str, expected: object, actual: object) -> bool:
@@ -228,7 +238,8 @@ def k3_score(expected: dict, draft: dict | None) -> tuple[int, int]:
         fields.append(("number", price, got))
     for name in ("start", "end"):
         if name in e_ev:
-            fields.append(("datetime", e_ev[name], d_ev.get(name)))
+            kind = "date" if len(str(e_ev[name])) == 10 else "datetime"
+            fields.append((kind, e_ev[name], d_ev.get(name)))
     if "is_all_day" in e_ev:
         fields.append(("bool", e_ev["is_all_day"], d_ev.get("is_all_day")))
     hit = sum(1 for kind, e, a in fields if kind_ok and field_match(kind, e, a))
@@ -373,8 +384,11 @@ def count_progress_stream(client: httpx.Client, room: str, key: str, provider: s
         return None, None
 
 
-def count_tool_runs(client: httpx.Client, room: str, key: str, session_id: str) -> int | None:
-    """会話の記録 GET /p/<部屋>/api/sessions/<番号>/messages から道具の実行（role=tool か tool_calls あり）を数える。読めなければ None。"""
+def count_tool_runs(client: httpx.Client, room: str, key: str, session_id: str, shape: str = "unknown") -> int | None:
+    """会話の記録 GET /p/<部屋>/api/sessions/<番号>/messages から道具の実行（role=tool か tool_calls あり）を数える。
+    shape: unknown（数えない）| list（一番上が一覧）| 辞書の鍵の名前。読めなければ None。"""
+    if shape == "unknown":
+        return None
     try:
         resp = client.get(f"/p/{room}/api/sessions/{session_id}/messages", headers={"Authorization": f"Bearer {key}"})
         if resp.status_code != 200:
@@ -382,14 +396,16 @@ def count_tool_runs(client: httpx.Client, room: str, key: str, session_id: str) 
         data = resp.json()
     except (httpx.HTTPError, ValueError):
         return None
-    items = data if isinstance(data, list) else next((v for v in data.values() if isinstance(v, list)), None) \
-        if isinstance(data, dict) else None
+    if shape == "list":
+        items = data if isinstance(data, list) else None
+    else:
+        items = data.get(shape) if isinstance(data, dict) and isinstance(data.get(shape), list) else None
     if items is None:
         return None
     return sum(1 for m in items if isinstance(m, dict) and (m.get("role") == "tool" or m.get("tool_calls")))
 
 
-def run_k4(client, keys, provider, model, cases_path: Path, sleep=time.sleep) -> int:
+def run_k4(client, keys, provider, model, cases_path: Path, sleep=time.sleep, tool_runs_shape: str = "unknown") -> int:
     cases = json.loads(cases_path.read_text(encoding="utf-8"))["cases"]
     print("\t".join(["case_id", "room", "progress", "tool_runs", "deleted", "http_status"]))
     total_progress = 0
@@ -398,7 +414,7 @@ def run_k4(client, keys, provider, model, cases_path: Path, sleep=time.sleep) ->
     for c in cases:
         sid = str(uuid.uuid4())
         progress, status = count_progress_stream(client, c["room"], keys[c["room"]], provider, model, c["text"], sid)
-        runs = count_tool_runs(client, c["room"], keys[c["room"]], sid)
+        runs = count_tool_runs(client, c["room"], keys[c["room"]], sid, tool_runs_shape)
         ok, _ = delete_session(client, c["room"], keys[c["room"]], sid, sleep)
         deleted += 1 if ok else 0
         total_progress += progress or 0
@@ -450,6 +466,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model", required=True)
     parser.add_argument("--base-url", default="http://127.0.0.1:8642")
     parser.add_argument("--keys-file")
+    parser.add_argument("--tool-runs-shape", default="unknown")
     parser.add_argument("--url", default="http://secretary-codex:8090")
     try:
         args = parser.parse_args(argv)
@@ -501,7 +518,7 @@ def main(argv: list[str] | None = None) -> int:
     validator = load_schema()
     with client:
         if args.target == "hermes" and args.set_name == "k4":
-            return run_k4(client, keys, provider, model, Path(args.k4_cases))
+            return run_k4(client, keys, provider, model, Path(args.k4_cases), tool_runs_shape=args.tool_runs_shape)
         if args.target == "hermes" and args.set_name == "k8":
             return run_k8(client, keys, provider, model, Path(args.k8_cases), Path(args.cases), now, validator)
         if args.set_name != "main":

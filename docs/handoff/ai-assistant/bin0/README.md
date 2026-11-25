@@ -37,4 +37,5 @@
 - K9: 返事の使った量と Hermes の記録の突き合わせ（候補: `GET /health/detailed` の metrics と、会話の行の input_tokens・output_tokens）
 - K4: `GET /p/<部屋>/api/sessions/<番号>/messages` の返り形（台本は role=tool か tool_calls ありを数える。形が違えば `-`）
 - `hermes auth add openai-codex` が部屋ごとか全体か（S12）
+- S8: `fallback_providers: []` で、AI 会社の自動の切り替えが API の口でも切れているか（存在しない頭を送って、別の会社に切り替わらず誤りで返るか）
 - DELETE が会話の文を実際に消すか（K7 の探しで確かめる）

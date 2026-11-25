@@ -1,0 +1,27 @@
+1046:    device_data["interval"] = max(3, int(device_data.get("interval", "5")))
+1055:    max_wait = 15 * 60  # 15 minutes
+1136:    print("  1. Open this URL in your browser:")
+1137:    print(f"     \033[94m{issuer}/codex/device\033[0m\n")
+1138:    print("  2. Enter this code:")
+1140:    print("Waiting for sign-in... (press Ctrl+C to cancel)")
+1143:        poll_interval=device_data["interval"])
+458:    print(f'Added {provider} OAuth credential #{len(pool.entries())}: "{entry.label}"')
+496:    os.environ["HERMES_HOME"] = hermes_home
+481:def _auth_file_path() -> Path:
+482-    path = get_hermes_home() / "auth.json"
+483-    # Seat belt: under pytest, refuse to touch the real user's auth store (tests that forgot to
+usage: hermes auth logout [-h] provider
+
+positional arguments:
+  provider    Provider id
+
+options:
+  -h, --help  show this help message and exit
+usage: hermes auth remove [-h] provider target
+
+positional arguments:
+  provider    Provider id
+  target      Credential index, entry id, or exact label
+
+options:
+  -h, --help  show this help message and exit

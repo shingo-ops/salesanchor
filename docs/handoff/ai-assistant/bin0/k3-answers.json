@@ -18,7 +18,7 @@
     "company_name": "青葉トレーディング",
     "items": [
      {
-      "unit_price": 6000
+      "unit_price": null
      }
     ]
    }
@@ -121,6 +121,7 @@
   "e5": {
    "kind": "event",
    "event": {
+    "start": "2026-11-25",
     "is_all_day": true
    }
   },

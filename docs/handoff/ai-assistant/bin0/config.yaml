@@ -20,4 +20,5 @@ auxiliary:
     enabled: false
 
 # AI 会社の自動の切り替えを切る（既定は空の一覧 hermes_cli/config_defaults.py:25）
+# 未確認: API の口で効くかは便0-B 手順 7 の S8 で確かめる
 fallback_providers: []
