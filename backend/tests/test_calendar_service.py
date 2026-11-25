@@ -593,8 +593,6 @@ _T2 = datetime(2026, 11, 20, 2, 0, tzinfo=timezone.utc)
 
 def _app_origin_db(row, rowcount=1):
     """アプリ起源の予定用 db モック。実行された (sql, params) を db.calls に積む。"""
-    if row is not None and len(row) == 8:
-        row = (*row, False)  # 便4 で消した印（is_cancelled）も読むようにした
     db = AsyncMock()
     db.commit = AsyncMock()
     calls = []
@@ -649,30 +647,21 @@ class TestUpdateAppOriginFromGoogle:
         assert len(_updates(db2)) == 1
 
     @pytest.mark.asyncio
-    async def test_cancelled_marks_synced_row_cancelled(self):
+    async def test_cancelled_deletes_synced_single_row(self):
         db = _app_origin_db((5, "題", None, None, _T1, _T2, False, None))
         assert await self._go(db, _g_event(status="cancelled")) == "deleted"
         sqls = [s for s, _ in db.calls]
-        assert not any(s.lstrip().startswith(("SELECT id, title", "DELETE")) for s in sqls)
-        ups = _updates(db)
-        assert len(ups) == 1
-        sql, params = ups[0]
-        assert "is_cancelled = true" in sql
-        for guard in ("sync_status = 'synced'", "recurrence_rule IS NULL", "recurring_event_id IS NULL", "NOT is_cancelled"):
+        assert not any(s.lstrip().startswith("SELECT id, title") for s in sqls)
+        assert _updates(db) == []
+        dels = [(s, p) for s, p in db.calls if s.lstrip().startswith("DELETE")]
+        assert len(dels) == 1
+        sql, params = dels[0]
+        assert "is_cancelled" not in sql
+        for guard in ("sync_status = 'synced'", "recurrence_rule IS NULL", "recurring_event_id IS NULL", "LIKE 'app:1:%'"):
             assert guard in sql
         assert params == {"gid": "ev_app"}
         db0 = _app_origin_db(None, rowcount=0)
         assert await self._go(db0, _g_event(status="cancelled")) == "skipped"
-
-    @pytest.mark.asyncio
-    async def test_restored_in_google_clears_cancel(self):
-        db = _app_origin_db((5, "題", None, None, _T1, _T2, False, None, True))
-        assert await self._go(db, _g_event()) == "upserted"
-        ups = _updates(db)
-        assert len(ups) == 1
-        assert "is_cancelled = :is_cancelled" in ups[0][0]
-        assert ups[0][1]["is_cancelled"] is False
-        assert set(ups[0][1]) == {"is_cancelled", "id"}
 
     @pytest.mark.asyncio
     async def test_same_content_writes_nothing(self):
@@ -2325,6 +2314,19 @@ class TestUpsertRecurringInstance:
         assert out == "skipped"
         assert getter.await_count == 0
         assert self._writes(db) == []
+
+    @pytest.mark.asyncio
+    async def test_google_id_already_taken_is_skipped(self):
+        for event in (
+            {"id": "gm_20261126T010000Z", "status": "cancelled", "recurringEventId": "gm",
+             "originalStartTime": {"dateTime": "2026-11-26T10:00:00+09:00"}},
+            _g_inst(summary="臨時"),
+        ):
+            db = _inst_db()
+            db.handlers.insert(0, ("SELECT id FROM calendar_events WHERE google_event_id", [(50,)]))
+            out, _ = await self._go(db, event)
+            assert out == "skipped"
+            assert self._writes(db) == []
 
 
 class TestCheckRecurrenceRequest:

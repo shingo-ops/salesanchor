@@ -1453,25 +1453,25 @@ async def _update_app_origin_from_google(
 ) -> str:
     """アプリで作った予定を Google で直したとき、中身の列だけを入れる（ADR-1059 改訂 2026-11-20）。
 
-    - Google で消したら（別のカレンダーへ移したときも同じ形で届く）、行は消さず消した印を付けて隠す（"deleted"）。
+    - Google で消したら（別のカレンダーへ移したときも同じ形で届く）、送り終えた単発の行を消す（"deleted"）。
       自分だけの予定も会社の予定も同じ（ADR-1059 改訂 2026-11-25）。
-    - 消した印の行が Google で戻っていたら（cancelled でない）、印を外す。
     - アプリから送り終えた行（sync_status='synced'）で、中身が違う列だけを書く。
     - 見せ方・持ち主・起源・Meet の URL には触らない。Google へは書かない。
     - 色は Google の名札がアプリの色に当たるときだけ入れる（名札が表に無いときは触らない）。
     - Google に名札も colorId も無く、アプリの色が名札の表にある色なら、色を外す（ADR-1059 改訂 2026-11-22）。
-    戻り値は "upserted"（1 行書いた）・"deleted"（消した印を付けた）・"skipped"。commit は呼び元が行う。
+    戻り値は "upserted"（1 行書いた）・"deleted"（行を消した）・"skipped"。commit は呼び元が行う。
     """
     if google_event.get("status") == "cancelled":
+        # 単発の行には消した印を付けられない（calendar_events_cancelled_exception_check）。
+        # アプリで消すとき（delete_event）と同じく行を消す（ADR-1059 改訂 2026-11-25）
         res = await db.execute(
             text(
-                "UPDATE calendar_events SET is_cancelled = true, last_synced_at = NOW()"
+                "DELETE FROM calendar_events"
                 " WHERE google_event_id = :gid"
                 " AND sync_origin_id LIKE 'app:" + str(int(tenant_id)) + ":%'"
                 " AND sync_status = 'synced'"
                 " AND recurrence_rule IS NULL"
                 " AND recurring_event_id IS NULL"
-                " AND NOT is_cancelled"
             ),
             {"gid": google_event["id"]},
         )
@@ -1482,7 +1482,7 @@ async def _update_app_origin_from_google(
     found = await db.execute(
         text(
             "SELECT id, title, description, location, start_datetime, end_datetime,"
-            " is_all_day, color_key, is_cancelled FROM calendar_events"
+            " is_all_day, color_key FROM calendar_events"
             " WHERE google_event_id = :gid"
             " AND sync_origin_id LIKE 'app:" + str(int(tenant_id)) + ":%'"
             " AND sync_status = 'synced'"
@@ -1494,12 +1494,9 @@ async def _update_app_origin_from_google(
     row = found.first()
     if row is None:
         return "skipped"
-    row_id, r_title, r_desc, r_loc, r_start, r_end, r_all_day, r_color, r_cancelled = row
+    row_id, r_title, r_desc, r_loc, r_start, r_end, r_all_day, r_color = row
 
     changes = _content_changes(r_title, r_desc, r_loc, r_start, r_end, r_all_day, google_event)
-    if r_cancelled:
-        # Google のごみ箱から戻した（ADR-1059 改訂 2026-11-25）
-        changes["is_cancelled"] = False
     if label_colors is not None:
         label_id = google_event.get("eventLabelId")
         g_color = key_for_hex(label_colors.get(label_id)) if label_id else None
@@ -1574,6 +1571,15 @@ async def _adopt_google_instance(db: AsyncSession, tenant_id: int, row_id: int, 
     )
 
 
+async def _google_id_taken(db: AsyncSession, google_event_id: str) -> bool:
+    """回の Google の id を持つ行が既にあるか。あれば例外の行を作らない（重なり禁止 uq_calendar_events_google_event_id）。"""
+    res = await db.execute(
+        text("SELECT id FROM calendar_events WHERE google_event_id = :gid"),
+        {"gid": google_event_id},
+    )
+    return res.first() is not None
+
+
 async def _apply_app_instance_from_google(
     db: AsyncSession,
     tenant_id: int,
@@ -1645,6 +1651,9 @@ async def _apply_app_instance_from_google(
 
     if google_event.get("status") == "cancelled":
         if exc is None:
+            if await _google_id_taken(db, google_event["id"]):
+                logger.warning("回の Google の id を持つ行が既にあるため飛ばしました (google_event_id=%s)", google_event["id"])
+                return "skipped"
             new_id = await _insert_row(
                 db,
                 _row_values(
@@ -1686,6 +1695,9 @@ async def _apply_app_instance_from_google(
             original_start_datetime=occ,
         )
         values.update(changes)
+        if await _google_id_taken(db, google_event["id"]):
+            logger.warning("回の Google の id を持つ行が既にあるため飛ばしました (google_event_id=%s)", google_event["id"])
+            return "skipped"
         new_id = await _insert_row(db, values)
         await _adopt_google_instance(db, tenant_id, new_id, google_event["id"])
         return "upserted"
