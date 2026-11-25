@@ -1,0 +1,16 @@
+640:@manage_router.get("/api/sessions/{session_id}/mutation-snapshot")
+850:app.include_router(_sessions_routes.manage_router)
+75:    ("session_delete", ("DELETE", "/api/sessions/{session_id}")),
+1581:            ("DELETE", "/api/sessions/{session_id}", self._handle_delete_session),
+2704:            return _error_response(str(exc), 409, code="session_active_turn")
+3943:                self._app.router.add_route(method, f"/p/{{profile}}{path}", handler)
+171:DEFAULT_PORT = 8642
+61:    ("health", ("GET", "/health")), ("health_detailed", ("GET", "/health/detailed")),
+62:    ("models", ("GET", "/v1/models")), ("model_options", ("GET", "/api/model/options")),
+63:    ("chat_completions", ("POST", "/v1/chat/completions")),
+1569:            ("GET", "/health", self._handle_health),
+1572:            ("GET", "/v1/models", self._handle_models),
+1587:            ("POST", "/v1/chat/completions", self._handle_chat_completions),
+901:        provided_session_id = request.headers.get("X-Hermes-Session-Id", "").strip()
+48:_CLONE_CONFIG_FILES = ["config.yaml", ".env", "SOUL.md"]
+session_busy-in-api-server: 0
