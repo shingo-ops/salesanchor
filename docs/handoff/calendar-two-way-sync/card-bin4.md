@@ -685,3 +685,318 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 
 - `git push -u origin release/calendar-google-delete`。PR は作らない。
 - 返事の最後の行は `DONE <HEAD の sha>` か `BLOCKED: <理由>`。
+
+## 6. 改め（2026-11-25・DB の決まりに合わせる。design.md §12-10 が正）
+
+この節は、上の 1〜5 を入れたコミット 70451bf3c の上に足す直しです。上の 1〜5 はもう入っているので、やり直さない。
+
+- 枝: release/calendar-google-delete（HEAD 70451bf3c の上に 1 コミット足す。`git fetch origin` のあと `bash scripts/new-worktree.sh release/calendar-google-delete --claude` で場所を作り、`git log -1 --format=%H` が 70451bf3c で始まることを確かめる。違えば BLOCKED:）。
+- 触るファイルは 3 本だけ: `backend/app/services/calendar_service.py`・`backend/tests/test_calendar_service.py`・`backend/tests/test_calendar_sync_tenant_reset_pg.py`。ほかは触らない（文書は Opus が入れた）。
+
+### 6-0. 着手前の実物点検（違ったら止めて BLOCKED:）
+
+1. `calendar_service.py` の `_update_app_origin_from_google` に、6-1 の「変更前」がそのままあること。
+2. 同じ関数に `" is_all_day, color_key, is_cancelled FROM calendar_events"` が 1 つと、`row_id, r_title, r_desc, r_loc, r_start, r_end, r_all_day, r_color, r_cancelled = row` が 1 つあること。
+3. `_apply_app_instance_from_google` に `new_id = await _insert_row(` が 2 つあること。
+4. `test_calendar_service.py` に `def test_cancelled_marks_synced_row_cancelled(self):` と `def test_restored_in_google_clears_cancel(self):` が 1 つずつあり、`_app_origin_db` の中に `row = (*row, False)  # 便4 で消した印（is_cancelled）も読むようにした` があること。
+5. `test_calendar_sync_tenant_reset_pg.py` の最後の試験が `test_same_occurrence_exception_twice_is_rejected_by_unique_index` であること。
+
+### 6-1. 単発の消しを「行を消す」に替える（`_update_app_origin_from_google`）
+
+変更前:
+
+```python
+    if google_event.get("status") == "cancelled":
+        res = await db.execute(
+            text(
+                "UPDATE calendar_events SET is_cancelled = true, last_synced_at = NOW()"
+                " WHERE google_event_id = :gid"
+                " AND sync_origin_id LIKE 'app:" + str(int(tenant_id)) + ":%'"
+                " AND sync_status = 'synced'"
+                " AND recurrence_rule IS NULL"
+                " AND recurring_event_id IS NULL"
+                " AND NOT is_cancelled"
+            ),
+            {"gid": google_event["id"]},
+        )
+        return "deleted" if (res.rowcount or 0) > 0 else "skipped"
+```
+
+変更後:
+
+```python
+    if google_event.get("status") == "cancelled":
+        # 単発の行には消した印を付けられない（calendar_events_cancelled_exception_check）。
+        # アプリで消すとき（delete_event）と同じく行を消す（ADR-1059 改訂 2026-11-25）
+        res = await db.execute(
+            text(
+                "DELETE FROM calendar_events"
+                " WHERE google_event_id = :gid"
+                " AND sync_origin_id LIKE 'app:" + str(int(tenant_id)) + ":%'"
+                " AND sync_status = 'synced'"
+                " AND recurrence_rule IS NULL"
+                " AND recurring_event_id IS NULL"
+            ),
+            {"gid": google_event["id"]},
+        )
+        return "deleted" if (res.rowcount or 0) > 0 else "skipped"
+```
+
+同じ関数の docstring の次の 2 行を、
+
+```
+    - Google で消したら（別のカレンダーへ移したときも同じ形で届く）、行は消さず消した印を付けて隠す（"deleted"）。
+      自分だけの予定も会社の予定も同じ（ADR-1059 改訂 2026-11-25）。
+    - 消した印の行が Google で戻っていたら（cancelled でない）、印を外す。
+```
+
+次の 2 行に替える（3 行目の「消した印の行が…」は消す）:
+
+```
+    - Google で消したら（別のカレンダーへ移したときも同じ形で届く）、送り終えた単発の行を消す（"deleted"）。
+      自分だけの予定も会社の予定も同じ（ADR-1059 改訂 2026-11-25）。
+```
+
+docstring の `戻り値は "upserted"（1 行書いた）・"deleted"（消した印を付けた）・"skipped"。` は `戻り値は "upserted"（1 行書いた）・"deleted"（行を消した）・"skipped"。` に替える。
+
+### 6-2. 単発の戻しの道を取る（届かない道）
+
+同じ関数で:
+
+- `" is_all_day, color_key, is_cancelled FROM calendar_events"` → `" is_all_day, color_key FROM calendar_events"`
+- `row_id, r_title, r_desc, r_loc, r_start, r_end, r_all_day, r_color, r_cancelled = row` → `row_id, r_title, r_desc, r_loc, r_start, r_end, r_all_day, r_color = row`
+- 次の 3 行を消す:
+
+```python
+    if r_cancelled:
+        # Google のごみ箱から戻した（ADR-1059 改訂 2026-11-25）
+        changes["is_cancelled"] = False
+```
+
+### 6-3. 例外の行を作る前に Google の id の重なりを確かめる（`_apply_app_instance_from_google`）
+
+`_adopt_google_instance` の関数のすぐ下（空行 2 つを挟む）に足す:
+
+```python
+async def _google_id_taken(db: AsyncSession, google_event_id: str) -> bool:
+    """回の Google の id を持つ行が既にあるか。あれば例外の行を作らない（重なり禁止 uq_calendar_events_google_event_id）。"""
+    res = await db.execute(
+        text("SELECT id FROM calendar_events WHERE google_event_id = :gid"),
+        {"gid": google_event_id},
+    )
+    return res.first() is not None
+```
+
+`_apply_app_instance_from_google` の中の `new_id = await _insert_row(` の 2 か所それぞれのすぐ前に、同じ字下げで次を入れる:
+
+```python
+            if await _google_id_taken(db, google_event["id"]):
+                logger.warning("回の Google の id を持つ行が既にあるため飛ばしました (google_event_id=%s)", google_event["id"])
+                return "skipped"
+```
+
+（1 か所目は `if exc is None:` の中で字下げ 12、2 か所目は `values.update(changes)` の下で字下げ 8。それぞれ `new_id = await _insert_row(` と同じ字下げにそろえる。）
+
+### 6-4. `backend/tests/test_calendar_service.py`
+
+1. `_app_origin_db` の中の次の 2 行を消す:
+
+```python
+    if row is not None and len(row) == 8:
+        row = (*row, False)  # 便4 で消した印（is_cancelled）も読むようにした
+```
+
+2. `test_cancelled_marks_synced_row_cancelled` を、次に置き換える（名前も替える）:
+
+```python
+    @pytest.mark.asyncio
+    async def test_cancelled_deletes_synced_single_row(self):
+        db = _app_origin_db((5, "題", None, None, _T1, _T2, False, None))
+        assert await self._go(db, _g_event(status="cancelled")) == "deleted"
+        sqls = [s for s, _ in db.calls]
+        assert not any(s.lstrip().startswith("SELECT id, title") for s in sqls)
+        assert _updates(db) == []
+        dels = [(s, p) for s, p in db.calls if s.lstrip().startswith("DELETE")]
+        assert len(dels) == 1
+        sql, params = dels[0]
+        assert "is_cancelled" not in sql
+        for guard in ("sync_status = 'synced'", "recurrence_rule IS NULL", "recurring_event_id IS NULL", "LIKE 'app:1:%'"):
+            assert guard in sql
+        assert params == {"gid": "ev_app"}
+        db0 = _app_origin_db(None, rowcount=0)
+        assert await self._go(db0, _g_event(status="cancelled")) == "skipped"
+```
+
+3. `test_restored_in_google_clears_cancel` を関数ごと消す（デコレータの行も）。
+4. `class TestUpsertRecurringInstance:` の最後に足す:
+
+```python
+    @pytest.mark.asyncio
+    async def test_google_id_already_taken_is_skipped(self):
+        for event in (
+            {"id": "gm_20261126T010000Z", "status": "cancelled", "recurringEventId": "gm",
+             "originalStartTime": {"dateTime": "2026-11-26T10:00:00+09:00"}},
+            _g_inst(summary="臨時"),
+        ):
+            db = _inst_db()
+            db.handlers.insert(0, ("SELECT id FROM calendar_events WHERE google_event_id", [(50,)]))
+            out, _ = await self._go(db, event)
+            assert out == "skipped"
+            assert self._writes(db) == []
+```
+
+### 6-5. `backend/tests/test_calendar_sync_tenant_reset_pg.py`（本物の PostgreSQL で DB の決まりを通す）
+
+ファイルの最後に足す（CI では本物の PostgreSQL がある。Mac では回さない）:
+
+```python
+async def _mark_synced_from_app(admin_engine, event_id: int, gid: str) -> None:
+    from sqlalchemy import text
+
+    async with admin_engine.begin() as conn:
+        await conn.execute(
+            text(
+                f"UPDATE {_SCHEMA}.calendar_events SET google_event_id = :gid,"
+                " sync_origin_id = :oid, sync_status = 'synced' WHERE id = :id"
+            ),
+            {"gid": gid, "oid": f"app:{_TENANT}:{event_id}", "id": event_id},
+        )
+
+
+async def _count_rows(admin_engine, where_sql: str, params: dict) -> int:
+    from sqlalchemy import text
+
+    async with admin_engine.connect() as conn:
+        return (
+            await conn.execute(
+                text(f"SELECT count(*) FROM {_SCHEMA}.calendar_events WHERE {where_sql}"), params
+            )
+        ).scalar_one()
+
+
+async def _import_one(factory, item: dict, g_master: dict | None = None) -> str:
+    from app.auth.dependencies import set_tenant_context
+    from app.services import calendar_service
+
+    getter = AsyncMock(return_value=g_master)
+    async with factory() as db:
+        await set_tenant_context(db, _TENANT)
+        with patch("app.services.google_calendar.get_event", new=getter):
+            out = await calendar_service.upsert_from_google(db, _TENANT, item, _OWNER, series_cache={})
+        await db.commit()
+    return out
+
+
+def _g_master_for(master: dict) -> dict:
+    return {
+        "id": "gm978", "status": "confirmed", "summary": master["title"],
+        "recurrence": ["RRULE:" + master["recurrence_rule"]],
+        "start": {"dateTime": "2026-12-03T10:00:00+09:00"},
+        "end": {"dateTime": "2026-12-03T11:00:00+09:00"},
+    }
+
+
+# Google で消したアプリの単発の予定は、DB の決まりに外れずに行ごと消える（ADR-1059 改訂 2026-11-25）
+async def test_google_cancel_deletes_app_single_row_on_real_db():
+    from app.auth.dependencies import set_tenant_context
+    from app.services import calendar_service
+
+    admin_engine, app_engine, factory = await _setup()
+    try:
+        async with factory() as db:
+            await set_tenant_context(db, _TENANT)
+            created = await calendar_service.create_event(db, _TENANT, _OTHER, _payload())
+        await _mark_synced_from_app(admin_engine, created["id"], "g_single_978")
+        out = await _import_one(factory, {"id": "g_single_978", "status": "cancelled"})
+        assert out == "deleted"
+        assert await _count_rows(admin_engine, "id = :id", {"id": created["id"]}) == 0
+    finally:
+        await _teardown(admin_engine, app_engine)
+
+
+# 繰り返しの 1 回だけの消し・直しは、例外の行として DB の決まりに通る（ADR-1075 改訂 2026-11-25）
+async def test_google_instance_cancel_and_edit_insert_exceptions_on_real_db():
+    admin_engine, app_engine, factory = await _setup()
+    try:
+        master = await _create_weekly_master(factory)
+        await _mark_synced_from_app(admin_engine, master["id"], "gm978")
+        g_master = _g_master_for(master)
+        cancelled = {
+            "id": "gm978_20261210T010000Z", "status": "cancelled", "recurringEventId": "gm978",
+            "originalStartTime": {"dateTime": "2026-12-10T10:00:00+09:00"},
+        }
+        assert await _import_one(factory, cancelled, g_master) == "deleted"
+        edited = {
+            "id": "gm978_20261217T010000Z", "status": "confirmed", "summary": "臨時",
+            "recurringEventId": "gm978",
+            "originalStartTime": {"dateTime": "2026-12-17T10:00:00+09:00"},
+            "start": {"dateTime": "2026-12-17T10:00:00+09:00"},
+            "end": {"dateTime": "2026-12-17T11:00:00+09:00"},
+        }
+        assert await _import_one(factory, edited, g_master) == "upserted"
+        rows = sorted(await _exception_rows(admin_engine, master["id"]))
+        assert rows == [(False, "synced"), (True, "synced")]
+        assert await _count_rows(
+            admin_engine,
+            "recurring_event_id = :mid AND title = '臨時' AND google_event_id = :gid",
+            {"mid": master["id"], "gid": "gm978_20261217T010000Z"},
+        ) == 1
+        # 同じ知らせがもう一度来ても、何も書かない
+        assert await _import_one(factory, cancelled, g_master) == "skipped"
+        assert await _import_one(factory, edited, g_master) == "skipped"
+    finally:
+        await _teardown(admin_engine, app_engine)
+
+
+# 回の Google の id を持つ行が既にあれば、例外の行を作らずに飛ばす（取り込みを止めない）
+async def test_google_instance_with_taken_id_is_skipped_on_real_db():
+    from sqlalchemy import text
+
+    admin_engine, app_engine, factory = await _setup()
+    try:
+        master = await _create_weekly_master(factory)
+        await _mark_synced_from_app(admin_engine, master["id"], "gm978")
+        async with admin_engine.begin() as conn:
+            await conn.execute(
+                text(
+                    f"INSERT INTO {_SCHEMA}.calendar_events"
+                    " (title, start_datetime, end_datetime, source, sync_status, google_event_id)"
+                    " VALUES ('先にある行', :s, :e, 'google', 'synced', 'gm978_20261224T010000Z')"
+                ),
+                {
+                    "s": datetime(2026, 12, 24, 1, 0, tzinfo=timezone.utc),
+                    "e": datetime(2026, 12, 24, 2, 0, tzinfo=timezone.utc),
+                },
+            )
+        cancelled = {
+            "id": "gm978_20261224T010000Z", "status": "cancelled", "recurringEventId": "gm978",
+            "originalStartTime": {"dateTime": "2026-12-24T10:00:00+09:00"},
+        }
+        assert await _import_one(factory, cancelled, _g_master_for(master)) == "skipped"
+        assert await _exception_rows(admin_engine, master["id"]) == []
+    finally:
+        await _teardown(admin_engine, app_engine)
+```
+
+想定分岐（迷ったら止めて NEEDS_DECISION: で返す。推測で直さない）:
+
+- `create_event` が `_OTHER`（つないでいない人）で作った単発の行の形が `_mark_synced_from_app` の UPDATE で決まりに外れる → 止める。
+- `_create_weekly_master` の `master["recurrence_rule"]` が `FREQ=WEEKLY` で始まらない → 止める。
+- 6-5 の 3 本のどれかが CI で落ちたら、その試験の失敗の全文を返事に貼って止める（コードを推測で直さない）。
+
+### 6-6. 確かめ（Mac で試験は回さない。CI に任せる）
+
+1. `git diff --name-only 70451bf3c..HEAD` が 6 の 3 本だけであること。
+2. `git grep -n "is_cancelled = true" -- backend/app/services/calendar_service.py` の結果に、`recurring_event_id IS NULL` の行を直す文が無いこと（あるのは例外の行と、アプリの「この予定」を消す所だけ）。結果を返事に全部貼る。
+3. ruff と ast の確かめは 4 と同じ（3 本に替える）。
+
+### 6-7. commit と push
+
+```
+fix(calendar): delete app single rows on Google cancel and guard instance id collisions (ADR-1059 rev 2026-11-25)
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+```
+
+- `git push -u origin release/calendar-google-delete`。PR は作らない（もうある）。
+- 返事の最後の行は `DONE <HEAD の sha>` か `BLOCKED: <理由>` か `NEEDS_DECISION: <理由>`。
