@@ -660,25 +660,19 @@ async def update_event(
     if created_by != user.id and not is_tenant_admin(await get_user_system_keys(db, user.id)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="編集権限がありません")
 
-    if "calendar_type" in payload:
-        if payload["calendar_type"] not in cal_svc.SHARE_VALUES:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="calendar_type は 'shared'・'personal'・'team' のどれかを指定してください",
-            )
-        if event_owner != user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="見せ方を変えられるのは予定の持ち主だけです",
-            )
-        if payload["calendar_type"] == "personal":
-            payload["user_id"] = user.id
-    elif "team_ids" in payload and event_owner != user.id:
-        # team_ids だけを送った直しも、見せ方を変えるのと同じ（持ち主だけ）
+    if "calendar_type" in payload and payload["calendar_type"] not in cal_svc.SHARE_VALUES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="calendar_type は 'shared'・'personal'・'team' のどれかを指定してください",
+        )
+    # 見せ方（calendar_type）とチーム（team_ids）を変えられるのは持ち主だけ。team_ids だけを送った直しも同じ
+    if ("calendar_type" in payload or "team_ids" in payload) and event_owner != user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="見せ方を変えられるのは予定の持ち主だけです",
         )
+    if payload.get("calendar_type") == "personal":
+        payload["user_id"] = user.id
 
     # 繰り返しの判定（Meet の判定より前。422 はどれも下の try の前）
     recurrence_error = await cal_svc.check_recurrence_request(
