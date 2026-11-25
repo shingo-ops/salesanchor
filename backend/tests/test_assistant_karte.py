@@ -576,3 +576,73 @@ async def test_karte_without_edit_has_null_edited_and_meet_refused(allowed, monk
     karte = _karte(title="面談", start=S, end=E, edit=False)
     d = (await allowed.post(URL, json={"text": "面談", "karte": karte})).json()["draft"]
     assert (d["edited"], d["meet_refused"]) == (None, None)
+
+
+# ---- 便W3: 素の 1〜6時は午後・直せなかった印 edit_dropped ----------------------------
+
+K_S, K_E = "2026-11-30T15:00:00+09:00", "2026-11-30T16:00:00+09:00"
+
+
+@pytest.mark.asyncio
+async def test_w3_new_request_bare_4_is_afternoon(allowed, monkeypatch, meet):
+    meet(False)
+    _mock_agent(
+        monkeypatch,
+        _respond(200, _event(title="打ち合わせ", start="2026-11-02T04:00:00+09:00", end="2026-11-02T05:00:00+09:00")),
+    )
+    d = (await allowed.post(URL, json={"text": "明日4時に打ち合わせ", "karte": None})).json()["draft"]
+    assert (d["start"], d["end"]) == ("2026-11-02T16:00:00+09:00", "2026-11-02T17:00:00+09:00")
+
+
+@pytest.mark.asyncio
+async def test_w3_edit_end_bare_5_is_afternoon_and_edited(allowed, monkeypatch, meet):
+    meet(False)
+    _mock_agent(monkeypatch, _respond(200, _event(end="2026-11-30T05:00:00+09:00")))
+    karte = _karte(title="定例", start=K_S, end=K_E, edit=True)
+    d = (await allowed.post(URL, json={"text": "はい、終わりは5時にして", "karte": karte})).json()["draft"]
+    assert (d["end"], d["edited"], d["edit_dropped"]) == ("2026-11-30T17:00:00+09:00", True, False)
+
+
+@pytest.mark.asyncio
+async def test_w3_edit_dropped_when_end_before_start(allowed, monkeypatch, meet):
+    meet(False)
+    _mock_agent(monkeypatch, _respond(200, _event(end="2026-11-30T05:00:00+09:00")))
+    karte = _karte(title="定例", start=K_S, end=K_E, edit=True)
+    d = (await allowed.post(URL, json={"text": "終わりを朝5時にして", "karte": karte})).json()["draft"]
+    assert (d["start"], d["end"], d["edited"], d["edit_dropped"]) == (K_S, K_E, False, True)
+
+
+@pytest.mark.asyncio
+async def test_w3_edit_unknown_is_not_dropped(allowed, monkeypatch, meet):
+    meet(False)
+    _mock_agent(monkeypatch, _respond(200, _unknown()))
+    karte = _karte(title="定例", start=K_S, end=K_E, edit=True)
+    d = (await allowed.post(URL, json={"text": "うーん", "karte": karte})).json()["draft"]
+    assert (d["edited"], d["edit_dropped"]) == (False, False)
+
+
+@pytest.mark.asyncio
+async def test_w3_edit_dropped_when_settle_drops_end(allowed, monkeypatch, meet):
+    meet(False)
+    _mock_agent(monkeypatch, _respond(200, _event(end="2026-11-30T05:00:00+09:00")))
+    karte = _karte(title="定例", start=K_S, end=None, edit=True)
+    d = (await allowed.post(URL, json={"text": "はい、終わりを朝5時にして", "karte": karte})).json()["draft"]
+    assert (d["edited"], d["edit_dropped"]) == (False, True)
+
+
+@pytest.mark.asyncio
+async def test_w3_without_edit_edit_dropped_is_null(allowed, monkeypatch, meet):
+    meet(False)
+    _mock_agent(monkeypatch, _respond(200, _event(title="面談", start=S, end=E)))
+    d = (await allowed.post(URL, json={"text": "面談", "karte": _karte()})).json()["draft"]
+    assert d["edit_dropped"] is None
+
+
+@pytest.mark.asyncio
+async def test_w3_old_screen_path_bare_4_is_afternoon(allowed, monkeypatch, meet):
+    _mock_agent(
+        monkeypatch,
+        _respond(200, _event(title="打ち合わせ", start="2026-11-02T04:00:00+09:00", end="2026-11-02T05:00:00+09:00")),
+    )
+    d = (await allowed.post(URL, json={"text": "明日4時に打ち合わせ"})).json()["draft"]
+    assert d["start"] == "2026-11-02T16:00:00+09:00"

@@ -48,11 +48,18 @@ const answers = vi.hoisted(() => ({
   holidays: [] as Array<Record<string, unknown>>,
   canManageOthers: false,
   selfMissing: false,
+  categories: [] as Array<Record<string, unknown>>,
 }));
+
+/** 種類の表の応答（GET /calendar/categories）。必要な行だけ並べる */
+function categoryRow(key: string, over: Record<string, unknown> = {}) {
+  return { key, name: null, color_key: null, default_share: "all", sort_order: 1, is_active: true, ...over };
+}
 
 vi.mock("../../lib/api", () => ({
   api: {
     get: vi.fn(async (path: string) => {
+      if (path === "/calendar/categories") return answers.categories;
       if (path === "/me/permissions") return { permissions: answers.canManageOthers ? ["staff.view"] : [], is_tenant_admin: answers.isTenantAdmin };
       if (path === "/google-calendar/status") return { connected: answers.connected, meet_available: answers.meetAvailable };
       if (path === "/calendar/owners") {
@@ -97,6 +104,7 @@ beforeEach(async () => {
   answers.holidays = [];
   answers.canManageOthers = false;
   answers.selfMissing = false;
+  answers.categories = [];
   calendarProps.current = null;
   hrefSetter.mockReset();
   const fake = { ...window.location } as Record<string, unknown>;
@@ -125,35 +133,23 @@ describe("SchedulePage realtime refresh", () => {
   });
 });
 
-describe("SchedulePage Google calendar connect button", () => {
-  it("shows an enabled button to a tenant admin and starts the connect flow on click", async () => {
+describe("SchedulePage header (settings page owns the Google connection)", () => {
+  it("has no Google connect button in the header, for an admin either", async () => {
     answers.isTenantAdmin = true;
     view();
-    const btn = await screen.findByRole("button", { name: i18n.t("schedule.connectBtn") });
-    await waitFor(() => expect((btn as HTMLButtonElement).disabled).toBe(false));
-    fireEvent.click(btn);
-    await waitFor(() => expect(mockGet).toHaveBeenCalledWith("/google-calendar/connect/start"));
-    await waitFor(() => expect(hrefSetter).toHaveBeenCalledWith("https://accounts.example/auth"));
+    await waitFor(() => expect(mockGet).toHaveBeenCalledWith("/google-calendar/status"));
+    await screen.findByRole("button", { name: i18n.t("schedule.create") });
+    expect(screen.queryByRole("button", { name: /Googleカレンダー連携|連携済/ })).toBeNull();
+    expect(mockGet).not.toHaveBeenCalledWith("/google-calendar/connect/start");
   });
 
-  it("shows a disabled connected label when already connected", async () => {
+  it("shows the settings gear to a tenant admin without staff.view", async () => {
     answers.isTenantAdmin = true;
-    answers.connected = true;
+    answers.canManageOthers = false;
     view();
-    const btn = await screen.findByRole("button", { name: i18n.t("schedule.connectBtnConnected") });
-    expect((btn as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it("hides the button and never asks for status when not a tenant admin", async () => {
-    answers.isTenantAdmin = false;
-    view();
-    await waitFor(() => expect(mockGet).toHaveBeenCalledWith("/me/permissions"));
-    await waitFor(() => expect(mockGet.mock.calls.length).toBeGreaterThan(1));
-    expect(screen.queryByRole("button", { name: i18n.t("schedule.connectBtn") })).toBeNull();
-    expect(mockGet).not.toHaveBeenCalledWith("/google-calendar/status");
+    expect(await screen.findByRole("button", { name: i18n.t("schedule.settings") })).toBeTruthy();
   });
 });
-
 
 function todayAt(hour: number) {
   const d = new Date();
@@ -581,6 +577,29 @@ describe("SchedulePage Google Meet (K12)", () => {
     expect(await screen.findByText(i18n.t("schedule.meetFailed"))).toBeTruthy();
     // 予定は保存済みなので小窓は閉じる
     await waitFor(() => expect(screen.queryByLabelText(i18n.t("schedule.eventTitle"))).toBeNull());
+  });
+
+  it("G28: the banner close is a mold Button with an svg icon and dismisses the banner", async () => {
+    enableMeet();
+    view();
+    await openCreate();
+    fireEvent.click(await screen.findByRole("button", { name: addMeetLabel() }));
+    vi.mocked(api.post).mockResolvedValueOnce({ id: 1, meet_url: null });
+    save();
+    const message = i18n.t("schedule.meetFailed");
+    expect(await screen.findByText(message)).toBeTruthy();
+    const banner = screen.getByText(message).closest("div");
+    if (!banner) throw new Error("banner is missing");
+    const close = Array.from(banner.querySelectorAll("button")).find(
+      (b) => b.getAttribute("aria-label") === i18n.t("common.close"),
+    );
+    if (!close) throw new Error("close button is missing");
+    expect(close.className).toContain("comp-btn--sm");
+    expect(close.className).toContain("comp-btn--icon-only");
+    expect(close.className).toContain("schedule-banner__close");
+    expect(close.querySelector("svg")).not.toBeNull();
+    fireEvent.click(close);
+    await waitFor(() => expect(screen.queryByText(message)).toBeNull());
   });
 
   it("shows the join link for an event with meet_url and no Meet row on edit", async () => {
@@ -1347,40 +1366,119 @@ describe("SchedulePage on component molds (G26-G28)", () => {
     await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") });
     const badge = document.querySelector(".schedule-popover .comp-badge");
     if (!badge) throw new Error("badge is missing");
-    expect(badge.className).toContain("comp-badge--info");
+    expect(badge.className).toContain("comp-badge--neutral");
     expect(badge.className).toContain("comp-badge--soft");
     expect(badge.hasAttribute("style")).toBe(false);
+    // 種類に色が無ければ点は出ない・名前は 7 種の i18n の名前
+    expect(badge.querySelector(".schedule-month__dot")).toBeNull();
     expect(badge.textContent).toBe(i18n.t("schedule.calendarLabels.meeting"));
   });
 
-  it("S5: ?connected=false&error=scope_missing shows the scope-missing message", async () => {
-    render(<MemoryRouter initialEntries={["/schedule?connected=false&error=scope_missing"]}><SchedulePage /></MemoryRouter>);
-    expect(await screen.findByText(i18n.t("schedule.connectScopeMissing"))).toBeTruthy();
-    expect(screen.queryByText(i18n.t("schedule.connectError"))).toBeNull();
+  it("G27b: a category with a color shows the existing dot before its own name", async () => {
+    answers.categories = [categoryRow("meeting", { name: "商談", color_key: "tomato" })];
+    answers.events = [apiEvent({})];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") });
+    await waitFor(() => expect(document.querySelector(".schedule-popover .comp-badge")?.textContent).toBe("商談"));
+    const dot = document.querySelector(".schedule-popover .comp-badge .schedule-month__dot") as HTMLElement | null;
+    expect(dot).not.toBeNull();
+    expect(dot?.style.background).toContain("--event-color-tomato");
+  });
+});
+
+describe("SchedulePage category defaults (schedule-settings bin2a)", () => {
+  const categoryLabelOf = () => i18n.t("schedule.category");
+
+  it("A6: picking a category on create fills its color and share default", async () => {
+    answers.categories = [
+      categoryRow("meeting", { sort_order: 1 }),
+      categoryRow("personal", { sort_order: 2, default_share: "self" }),
+      categoryRow("shipping", { sort_order: 3, color_key: "tomato" }),
+    ];
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: i18n.t("schedule.create") }));
+    const select = (await screen.findByLabelText(categoryLabelOf())) as HTMLSelectElement;
+    await waitFor(() => expect(select.options.length).toBe(3));
+    const share = (await screen.findByRole("switch", { name: i18n.t("schedule.shareWithStaff") })) as HTMLInputElement;
+    expect(share.checked).toBe(true);
+    fireEvent.change(select, { target: { value: "personal" } });
+    expect(share.checked).toBe(false);
+    fireEvent.change(select, { target: { value: "shipping" } });
+    expect(share.checked).toBe(true);
+    const colorButton = screen.getByRole("button", { name: new RegExp(`^${i18n.t("schedule.eventColor")}`) });
+    expect(colorButton.getAttribute("aria-label")).toContain(i18n.t("schedule.eventColors.tomato"));
+    fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "Ship it" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const body = vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>;
+    expect(body.category).toBe("shipping");
+    expect(body.color_key).toBe("tomato");
+    expect(body.calendar_type).toBe("shared");
   });
 
-  it("S5: ?connected=false alone shows the generic connect error", async () => {
-    render(<MemoryRouter initialEntries={["/schedule?connected=false"]}><SchedulePage /></MemoryRouter>);
-    expect(await screen.findByText(i18n.t("schedule.connectError"))).toBeTruthy();
-    expect(screen.queryByText(i18n.t("schedule.connectScopeMissing"))).toBeNull();
+  it("A6: changing the category on edit changes only the category (color and share stay)", async () => {
+    answers.categories = [
+      categoryRow("meeting", { sort_order: 1 }),
+      categoryRow("personal", { sort_order: 2, default_share: "self" }),
+      categoryRow("shipping", { sort_order: 3, color_key: "tomato" }),
+    ];
+    answers.events = [apiEvent({ color_key: "basil" })];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
+    const dialog = await editorDialog();
+    const select = (await within(dialog).findByLabelText(categoryLabelOf())) as HTMLSelectElement;
+    await waitFor(() => expect(select.options.length).toBe(3));
+    const share = within(dialog).getByRole("switch", { name: i18n.t("schedule.shareWithStaff") }) as HTMLInputElement;
+    fireEvent.change(select, { target: { value: "personal" } });
+    expect(share.checked).toBe(true);
+    fireEvent.change(select, { target: { value: "shipping" } });
+    expect(share.checked).toBe(true);
+    const colorButton = within(dialog).getByRole("button", { name: new RegExp(`^${i18n.t("schedule.eventColor")}`) });
+    expect(colorButton.getAttribute("aria-label")).toContain(i18n.t("schedule.eventColors.basil"));
+    fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalled());
+    const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
+    expect(body.category).toBe("shipping");
+    expect(body.color_key).toBe("basil");
+    expect(body.calendar_type).toBe("shared");
   });
 
-  it("G28: the banner close is a mold Button with an svg icon and dismisses the banner", async () => {
-    render(<MemoryRouter initialEntries={["/schedule?connected=true"]}><SchedulePage /></MemoryRouter>);
-    const message = i18n.t("schedule.connectSuccess");
-    expect(await screen.findByText(message)).toBeTruthy();
-    const banner = screen.getByText(message).closest("div");
-    if (!banner) throw new Error("banner is missing");
-    const close = Array.from(banner.querySelectorAll("button")).find(
-      (b) => b.getAttribute("aria-label") === i18n.t("common.close"),
-    );
-    if (!close) throw new Error("close button is missing");
-    expect(close.className).toContain("comp-btn--sm");
-    expect(close.className).toContain("comp-btn--icon-only");
-    expect(close.className).toContain("schedule-banner__close");
-    expect(close.querySelector("svg")).not.toBeNull();
-    fireEvent.click(close);
-    await waitFor(() => expect(screen.queryByText(message)).toBeNull());
+  it("edit without changing the category does not send it", async () => {
+    answers.categories = [categoryRow("meeting")];
+    answers.events = [apiEvent({})];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
+    const dialog = await editorDialog();
+    fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalled());
+    expect("category" in (vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>)).toBe(false);
+  });
+
+  it("A7: the picker lists active categories only, plus the event's own category when it is inactive", async () => {
+    answers.categories = [
+      categoryRow("meeting", { sort_order: 1 }),
+      categoryRow("shipping", { sort_order: 2, is_active: false }),
+      categoryRow("billing", { sort_order: 3, is_active: false }),
+      categoryRow("custom_1", { sort_order: 4, name: "見積り" }),
+    ];
+    answers.events = [apiEvent({ category: "shipping" })];
+    view();
+    // 作るとき: 使っている種類だけ（meeting と custom_1）
+    fireEvent.click(await screen.findByRole("button", { name: i18n.t("schedule.create") }));
+    const createSelect = (await screen.findByLabelText(categoryLabelOf())) as HTMLSelectElement;
+    await waitFor(() => expect(Array.from(createSelect.options).map((o) => o.value)).toEqual(["meeting", "custom_1"]));
+    expect(Array.from(createSelect.options).map((o) => o.textContent)).toContain("見積り");
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.close") }));
+    // 直すとき: 今の予定の種類（使わなくした shipping）も出る。billing は出ない
+    fireEvent.click(await screen.findByText("Own Event"));
+    fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
+    const dialog = await editorDialog();
+    const editSelect = (await within(dialog).findByLabelText(categoryLabelOf())) as HTMLSelectElement;
+    await waitFor(() => expect(Array.from(editSelect.options).map((o) => o.value)).toEqual(["meeting", "shipping", "custom_1"]));
+    expect(editSelect.value).toBe("shipping");
   });
 });
 

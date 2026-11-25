@@ -55,6 +55,7 @@ export interface EventDraftData {
   edited?: boolean | null;
   /** 便W2: 直す頼みで Meet を付けてと言われたが付けられない人のとき真（ほかは null か無し） */
   meet_refused?: boolean | null;
+  edit_dropped?: boolean | null;
 }
 
 /** ADR-1078: 会話の間だけ持つ予定のカルテ（保存しない。閉じたら消す） */

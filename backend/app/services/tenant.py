@@ -1548,6 +1548,32 @@ CREATE TABLE IF NOT EXISTS {schema}.archives (
 );
 CREATE INDEX IF NOT EXISTS idx_archives_source ON {schema}.archives USING btree (source_table, source_id);
 
+-- 登録の移行: migrations/20261126_100000_create_calendar_categories.sql（予定の種類の表。calendar_events より前に作る）
+CREATE TABLE IF NOT EXISTS {schema}.calendar_categories (
+    key character varying(50) NOT NULL,
+    name character varying(50),
+    color_key text,
+    default_share character varying(10) DEFAULT 'all' NOT NULL,
+    sort_order integer NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT calendar_categories_pkey PRIMARY KEY (key),
+    CONSTRAINT calendar_categories_key_format_check CHECK (key ~ '^[a-z][a-z0-9_]{{0,49}}$'),
+    CONSTRAINT calendar_categories_default_share_check CHECK (default_share IN ('self', 'all')),
+    CONSTRAINT calendar_categories_color_key_check CHECK (color_key IN ('radicchio', 'cherry_blossom', 'flamingo', 'tomato', 'tangerine', 'pumpkin', 'mango', 'banana', 'citron', 'avocado', 'pistachio', 'basil', 'sage', 'eucalyptus', 'peacock', 'cobalt', 'lavender', 'blueberry', 'wisteria', 'amethyst', 'grape', 'cocoa', 'graphite', 'birch')),
+    CONSTRAINT calendar_categories_name_check CHECK (name IS NOT NULL OR key IN ('meeting', 'personal', 'procurement', 'shipping', 'billing', 'release', 'holiday'))
+);
+INSERT INTO {schema}.calendar_categories (key, default_share, sort_order) VALUES
+    ('meeting', 'all', 1),
+    ('personal', 'self', 2),
+    ('procurement', 'all', 3),
+    ('shipping', 'all', 4),
+    ('billing', 'all', 5),
+    ('release', 'all', 6),
+    ('holiday', 'all', 7)
+ON CONFLICT (key) DO NOTHING;
+
 -- 登録の移行: migrations/078_create_calendar_events_tenant.sql
 CREATE TABLE IF NOT EXISTS {schema}.calendar_events (
     id SERIAL,
@@ -1574,9 +1600,9 @@ CREATE TABLE IF NOT EXISTS {schema}.calendar_events (
     recurring_event_id integer,
     original_start_datetime timestamp with time zone,
     is_cancelled boolean DEFAULT false NOT NULL,
-    -- 分け表 A3: 予定の分類（本番 5 社全部にある。作る SQL migrations/20260621_020000_add_schedule_calendar_category_and_owner_settings.sql は登録に無い）
+    -- 分け表 A3: 予定の分類（本番 5 社全部にある）。登録の移行 20261126_100000 で外部キー calendar_events_category_fkey が付く
     category character varying(50) DEFAULT 'meeting'::character varying NOT NULL,
-    CONSTRAINT calendar_events_category_check CHECK (category IN ('meeting', 'personal', 'procurement', 'shipping', 'billing', 'release', 'holiday')),
+    CONSTRAINT calendar_events_category_fkey FOREIGN KEY (category) REFERENCES {schema}.calendar_categories(key) ON UPDATE RESTRICT ON DELETE RESTRICT,
     CONSTRAINT calendar_events_pkey PRIMARY KEY (id),
     CONSTRAINT calendar_events_color_key_check CHECK (color_key IN ('radicchio', 'cherry_blossom', 'flamingo', 'tomato', 'tangerine', 'pumpkin', 'mango', 'banana', 'citron', 'avocado', 'pistachio', 'basil', 'sage', 'eucalyptus', 'peacock', 'cobalt', 'lavender', 'blueberry', 'wisteria', 'amethyst', 'grape', 'cocoa', 'graphite', 'birch')),
     CONSTRAINT calendar_events_calendar_type_check CHECK (calendar_type IN ('shared', 'personal')),
@@ -2136,6 +2162,16 @@ BEGIN
 END $$;
 
 -- updated_at を更新する関数とトリガ
+CREATE OR REPLACE FUNCTION {schema}.set_updated_at_calendar_categories()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+      BEGIN
+        NEW.updated_at = NOW();
+        RETURN NEW;
+      END;
+      $function$;
+
 CREATE OR REPLACE FUNCTION {schema}.set_updated_at_calendar_events()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -2238,6 +2274,9 @@ AS $function$
 
 DO $$
 BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_calendar_categories_updated_at' AND tgrelid = '{schema}.calendar_categories'::regclass) THEN
+        CREATE TRIGGER trg_calendar_categories_updated_at BEFORE UPDATE ON {schema}.calendar_categories FOR EACH ROW EXECUTE FUNCTION {schema}.set_updated_at_calendar_categories();
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_calendar_events_updated_at' AND tgrelid = '{schema}.calendar_events'::regclass) THEN
         CREATE TRIGGER trg_calendar_events_updated_at BEFORE UPDATE ON {schema}.calendar_events FOR EACH ROW EXECUTE FUNCTION {schema}.set_updated_at_calendar_events();
     END IF;
