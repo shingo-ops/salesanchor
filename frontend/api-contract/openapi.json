@@ -16553,6 +16553,333 @@
         "title": "InvoiceUpdate",
         "type": "object"
       },
+      "IssuerProfileResponse": {
+        "properties": {
+          "address1": {
+            "title": "Address1",
+            "type": "string"
+          },
+          "address2": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address2"
+          },
+          "city": {
+            "title": "City",
+            "type": "string"
+          },
+          "company_name": {
+            "title": "Company Name",
+            "type": "string"
+          },
+          "country_code": {
+            "title": "Country Code",
+            "type": "string"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "is_invoice_registered": {
+            "title": "Is Invoice Registered",
+            "type": "boolean"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "prefecture_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prefecture Code"
+          },
+          "region": {
+            "enum": [
+              "domestic",
+              "overseas"
+            ],
+            "title": "Region",
+            "type": "string"
+          },
+          "registration_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration Number"
+          },
+          "state_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Region"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "required": [
+          "region",
+          "company_name",
+          "country_code",
+          "city",
+          "address1",
+          "is_invoice_registered",
+          "updated_at"
+        ],
+        "title": "IssuerProfileResponse",
+        "type": "object"
+      },
+      "IssuerProfileUpdate": {
+        "properties": {
+          "address1": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address1"
+          },
+          "address2": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address2"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "maxLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "is_invoice_registered": {
+            "default": false,
+            "title": "Is Invoice Registered",
+            "type": "boolean"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "maxLength": 10,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "prefecture_code": {
+            "anyOf": [
+              {
+                "maxLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prefecture Code"
+          },
+          "registration_number": {
+            "anyOf": [
+              {
+                "maxLength": 14,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration Number"
+          },
+          "state_region": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Region"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "title": "IssuerProfileUpdate",
+        "type": "object"
+      },
+      "IssuerProfilesResponse": {
+        "properties": {
+          "domestic": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IssuerProfileResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "legacy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LegacyIssuerValues"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "overseas": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IssuerProfileResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "IssuerProfilesResponse",
+        "type": "object"
+      },
       "KarteIn": {
         "additionalProperties": false,
         "description": "ADR-1078: 画面が会話の間だけ持つ予定のカルテ（保存しない）。字数・型・回数の上限をここで守る。",
@@ -18812,6 +19139,79 @@
           }
         },
         "title": "LeadUpdate",
+        "type": "object"
+      },
+      "LegacyIssuerValues": {
+        "description": "旧来の会社情報の表の6欄（読むだけ）。",
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "company_name_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name En"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "title": "LegacyIssuerValues",
         "type": "object"
       },
       "LineNameUpdate": {
@@ -27507,6 +27907,36 @@
           "extraction_item_count"
         ],
         "title": "PostSummary",
+        "type": "object"
+      },
+      "PrefectureResponse": {
+        "properties": {
+          "code": {
+            "maxLength": 2,
+            "minLength": 2,
+            "title": "Code",
+            "type": "string"
+          },
+          "name_en": {
+            "title": "Name En",
+            "type": "string"
+          },
+          "name_ja": {
+            "title": "Name Ja",
+            "type": "string"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "name_ja",
+          "name_en",
+          "sort_order"
+        ],
+        "title": "PrefectureResponse",
         "type": "object"
       },
       "PriorityProspectAxisBreakdown": {
@@ -39531,39 +39961,6 @@
       },
       "TenantProfileResponse": {
         "properties": {
-          "address": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Address"
-          },
-          "company_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Company Name"
-          },
-          "company_name_en": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Company Name En"
-          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -39574,31 +39971,9 @@
             "title": "Default Language",
             "type": "string"
           },
-          "email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Email"
-          },
           "id": {
             "title": "Id",
             "type": "integer"
-          },
-          "phone": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Phone"
           },
           "seal_image_url": {
             "anyOf": [
@@ -39615,17 +39990,6 @@
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
-          },
-          "website": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Website"
           }
         },
         "required": [
@@ -39638,42 +40002,6 @@
       },
       "TenantProfileUpdate": {
         "properties": {
-          "address": {
-            "anyOf": [
-              {
-                "maxLength": 5000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Address"
-          },
-          "company_name": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Company Name"
-          },
-          "company_name_en": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Company Name En"
-          },
           "default_language": {
             "anyOf": [
               {
@@ -39687,30 +40015,6 @@
             ],
             "title": "Default Language"
           },
-          "email": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Email"
-          },
-          "phone": {
-            "anyOf": [
-              {
-                "maxLength": 50,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Phone"
-          },
           "seal_image_url": {
             "anyOf": [
               {
@@ -39722,18 +40026,6 @@
               }
             ],
             "title": "Seal Image Url"
-          },
-          "website": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Website"
           }
         },
         "title": "TenantProfileUpdate",
@@ -43553,6 +43845,95 @@
         "summary": "Set Role Visibility",
         "tags": [
           "tenant-admin-inventory-visibility"
+        ]
+      }
+    },
+    "/api/v1/admin/issuer-profiles": {
+      "get": {
+        "description": "国内用・海外用の行と、旧来の会社情報の6欄を返す。",
+        "operationId": "get_issuer_profiles_api_v1_admin_issuer_profiles_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuerProfilesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Issuer Profiles",
+        "tags": [
+          "issuer_profiles"
+        ]
+      }
+    },
+    "/api/v1/admin/issuer-profiles/{region}": {
+      "put": {
+        "description": "片方の地域の行を丸ごと保存する（無ければ作る）。",
+        "operationId": "put_issuer_profile_api_v1_admin_issuer_profiles__region__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "region",
+            "required": true,
+            "schema": {
+              "enum": [
+                "domestic",
+                "overseas"
+              ],
+              "title": "Region",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssuerProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuerProfileResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Issuer Profile",
+        "tags": [
+          "issuer_profiles"
         ]
       }
     },
@@ -59490,6 +59871,36 @@
         "summary": "List Permissions",
         "tags": [
           "roles"
+        ]
+      }
+    },
+    "/api/v1/prefectures": {
+      "get": {
+        "operationId": "list_prefectures_api_v1_prefectures_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PrefectureResponse"
+                  },
+                  "title": "Response List Prefectures Api V1 Prefectures Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "都道府県一覧",
+        "tags": [
+          "prefectures"
         ]
       }
     },

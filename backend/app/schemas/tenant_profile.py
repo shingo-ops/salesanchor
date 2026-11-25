@@ -1,6 +1,7 @@
 """TenantProfile Pydantic schemas (Sprint 8 / F8)
 
-PO PDF / メール送信時の差出人情報 (各テナント名義) を管理する。
+印鑑画像 URL と既定の言語を管理する。会社名・住所・電話・メール・サイトは
+issuer_profiles へ移した (ADR-1061 便2-2c2b)。古い欄が送られてきても無視する。
 """
 from __future__ import annotations
 
@@ -13,12 +14,6 @@ _VALID_LANGUAGES = {"ja", "en", "ko", "zh"}
 
 class TenantProfileResponse(BaseModel):
     id: int
-    company_name: str | None = None
-    company_name_en: str | None = None
-    address: str | None = None
-    phone: str | None = None
-    email: str | None = None
-    website: str | None = None
     seal_image_url: str | None = None
     default_language: str = "ja"
     created_at: datetime
@@ -28,12 +23,6 @@ class TenantProfileResponse(BaseModel):
 
 
 class TenantProfileUpdate(BaseModel):
-    company_name: str | None = Field(default=None, max_length=255)
-    company_name_en: str | None = Field(default=None, max_length=255)
-    address: str | None = Field(default=None, max_length=5000)
-    phone: str | None = Field(default=None, max_length=50)
-    email: str | None = Field(default=None, max_length=255)
-    website: str | None = Field(default=None, max_length=255)
     seal_image_url: str | None = Field(default=None, max_length=5000)
     default_language: str | None = Field(default=None, min_length=2, max_length=2)
 
