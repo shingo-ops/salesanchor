@@ -223,9 +223,12 @@ def _event_db(created_by, calendar_type, owner, google_event_id=None, meet_url=N
 @pytest.mark.parametrize("is_admin", [False, True])
 async def test_patch_other_users_personal_event_is_404(is_admin):
     db = _event_db(created_by=202, calendar_type="personal", owner=202)
+    # 見えるかの判定は DB で行う（本物の DB の試験は test_calendar_team_share.py）。ここでは見えない扱いにする
     with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
         "app.routers.calendar.is_tenant_admin", return_value=is_admin
-    ), patch("app.routers.calendar.cal_svc.update_event", new=AsyncMock()) as upd:
+    ), patch("app.routers.calendar.cal_svc.can_see_event", new=AsyncMock(return_value=False)), patch(
+        "app.routers.calendar.cal_svc.update_event", new=AsyncMock()
+    ) as upd:
         with pytest.raises(HTTPException) as exc:
             await update_event(9, UpdateEventBody(title="x"), tenant_id=1, user=_mock_user(101), db=db)
     assert exc.value.status_code == 404
@@ -238,7 +241,9 @@ async def test_delete_other_users_personal_event_is_404(is_admin):
     db = _event_db(created_by=202, calendar_type="personal", owner=202)
     with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
         "app.routers.calendar.is_tenant_admin", return_value=is_admin
-    ), patch("app.routers.calendar.cal_svc.delete_event", new=AsyncMock()) as dele:
+    ), patch("app.routers.calendar.cal_svc.can_see_event", new=AsyncMock(return_value=False)), patch(
+        "app.routers.calendar.cal_svc.delete_event", new=AsyncMock()
+    ) as dele:
         with pytest.raises(HTTPException) as exc:
             await delete_event(9, tenant_id=1, user=_mock_user(101), db=db)
     assert exc.value.status_code == 404

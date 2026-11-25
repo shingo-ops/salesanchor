@@ -53,6 +53,7 @@ _MIGRATIONS = (
     ("20261112_170000_add_calendar_events_recurrence.sql", True),
     ("20261119_120000_add_calendar_events_color_key.sql", True),
     ("20261126_100000_create_calendar_categories.sql", True),
+    ("20261127_100000_add_calendar_team_share.sql", True),
 )
 
 

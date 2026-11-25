@@ -319,9 +319,9 @@ async def test_list_create_update_and_admin_only():
             with pytest.raises(ValidationError):
                 r.CreateCategoryBody(name="x", color_key="red")
             with pytest.raises(ValidationError):
-                r.CreateCategoryBody(name="x", default_share="team")
+                r.CreateCategoryBody(name="x", default_share="everyone")
             with pytest.raises(ValidationError):
-                r.UpdateCategoryBody(default_share="team")
+                r.UpdateCategoryBody(default_share="everyone")
         finally:
             await db.close()
 
