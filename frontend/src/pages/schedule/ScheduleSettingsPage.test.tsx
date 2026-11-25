@@ -28,17 +28,19 @@ const answers = vi.hoisted(() => ({
   connected: false,
   connectedAt: null as string | null,
   categories: [] as Array<Record<string, unknown>>,
+  teams: [] as Array<{ id: number; name: string }>,
 }));
 
 /** 種類の表の応答（GET /calendar/categories）の 1 行 */
 function categoryRow(key: string, over: Record<string, unknown> = {}) {
-  return { key, name: null, color_key: null, default_share: "all", sort_order: 1, is_active: true, ...over };
+  return { key, name: null, color_key: null, default_share: "all", default_team_ids: [], sort_order: 1, is_active: true, ...over };
 }
 
 vi.mock("../../lib/api", () => ({
   api: {
     get: vi.fn(async (path: string) => {
       if (path === "/calendar/categories") return answers.categories;
+      if (path === "/calendar/teams") return answers.teams;
       if (path === "/google-calendar/status") {
         return { connected: answers.connected, connected_at: answers.connectedAt };
       }
@@ -77,6 +79,7 @@ beforeEach(async () => {
   answers.connected = false;
   answers.connectedAt = null;
   answers.categories = [];
+  answers.teams = [];
   hrefSetter.mockReset();
   const fake = { ...window.location } as Record<string, unknown>;
   Object.defineProperty(fake, "href", { configurable: true, get: () => "http://localhost/", set: hrefSetter });
@@ -247,6 +250,50 @@ describe("ScheduleSettingsPage categories section (schedule-settings bin2a A8)",
         is_active: false,
       }),
     );
+  });
+
+  it("team default share: needs a team, then sends default_team_ids", async () => {
+    perms.isTenantAdmin = true;
+    answers.teams = [
+      { id: 1, name: "Team One" },
+      { id: 2, name: "Team Two" },
+    ];
+    answers.categories = [categoryRow("meeting"), categoryRow("shipping", { sort_order: 2 })];
+    view();
+    const region = await screen.findByRole("region", { name: categoriesTitle() });
+    const shares = (await within(region).findAllByLabelText(i18n.t("schedule.categoryDefaultShare"))) as HTMLSelectElement[];
+    expect(Array.from(shares[1].options).map((option) => option.value)).toEqual(["self", "all", "team"]);
+    fireEvent.change(shares[1], { target: { value: "team" } });
+    // 0 個のままでは送らず、文を出す
+    expect(await within(region).findByText(i18n.t("schedule.shareTeamsRequired"))).toBeTruthy();
+    fireEvent.click(within(region).getAllByRole("button", { name: i18n.t("schedule.settingsSave") })[1]);
+    expect(api.patch).not.toHaveBeenCalled();
+    fireEvent.click(await within(region).findByTestId("schedule-category-teams-shipping-button"));
+    fireEvent.click(await screen.findByTestId("schedule-category-teams-shipping-option-2"));
+    fireEvent.click(within(region).getAllByRole("button", { name: i18n.t("schedule.settingsSave") })[1]);
+    await waitFor(() =>
+      expect(api.patch).toHaveBeenCalledWith("/calendar/categories/shipping", {
+        name: "",
+        color_key: "",
+        default_share: "team",
+        default_team_ids: [2],
+        is_active: true,
+      }),
+    );
+  });
+
+  it("shows the saved default teams of a team category", async () => {
+    perms.isTenantAdmin = true;
+    answers.teams = [
+      { id: 1, name: "Team One" },
+      { id: 2, name: "Team Two" },
+    ];
+    answers.categories = [categoryRow("meeting"), categoryRow("shipping", { sort_order: 2, default_share: "team", default_team_ids: [1] })];
+    view();
+    const region = await screen.findByRole("region", { name: categoriesTitle() });
+    const button = await within(region).findByTestId("schedule-category-teams-shipping-button");
+    expect(button.textContent).toContain("Team One");
+    expect(within(region).queryByText(i18n.t("schedule.shareTeamsRequired"))).toBeNull();
   });
 
   it("adds a category with a name and posts it", async () => {

@@ -6,13 +6,37 @@
 import { useMemo } from "react";
 import { useApiQuery } from "../../lib/query/apiQuery";
 
-export type CalendarCategoryShare = "self" | "all";
+/** 共有の値（画面の型の正本）。自分だけ・全員・チーム。裏側の値との変換は下の 1 組だけ */
+export type CalendarShare = "self" | "all" | "team";
+export type CalendarCategoryShare = CalendarShare;
+/** 予定が裏側に持つ共有の値（calendar_type） */
+export type CalendarTypeValue = "personal" | "shared" | "team";
+
+/** 画面の共有 → 裏側の calendar_type（self↔personal・all↔shared・team↔team） */
+export function shareToCalendarType(share: CalendarShare): CalendarTypeValue {
+  if (share === "self") return "personal";
+  return share === "team" ? "team" : "shared";
+}
+
+/** 裏側の calendar_type → 画面の共有。知らない値は全員（今までの丸めと同じ） */
+export function calendarTypeToShare(calendarType: string | null | undefined): CalendarShare {
+  if (calendarType === "personal") return "self";
+  return calendarType === "team" ? "team" : "all";
+}
+
+/** 選び方（select）の値 → 共有。知らない値は全員 */
+export function parseShare(value: string): CalendarShare {
+  if (value === "self" || value === "team") return value;
+  return "all";
+}
 
 export interface CalendarCategory {
   key: string;
   name: string | null;
   color_key: string | null;
-  default_share: CalendarCategoryShare;
+  default_share: CalendarShare;
+  /** 共有の初期値が team のときの初期のチーム（使っているチームだけ・昇順） */
+  default_team_ids: number[];
   sort_order: number;
   is_active: boolean;
 }

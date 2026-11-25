@@ -25,7 +25,14 @@ import { PageLayout } from "../../components/PageLayout";
 import { TextFieldControl } from "../../components/TextField";
 import { CheckboxControl } from "../../components/CheckboxControl";
 import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from "../../constants/icons";
-import { categoryLabel, useCalendarCategories } from "../../features/schedule/useCalendarCategories";
+import {
+  calendarTypeToShare,
+  categoryLabel,
+  shareToCalendarType,
+  useCalendarCategories,
+  type CalendarShare,
+} from "../../features/schedule/useCalendarCategories";
+import { sameTeamIds, useCalendarTeams } from "../../features/schedule/useCalendarTeams";
 import { api } from "../../lib/api";
 import { eventColorVar, eventDisplayColor, isEventColorKey, type EventColorKey } from "./eventColors";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -33,7 +40,7 @@ import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { useRealtimeRefresh } from "../../hooks/useRealtimeRefresh";
 import { TOPICS } from "../../lib/realtime/topics";
 import "../schedule.css";
-import { ScheduleDraftFields, meetJoinUrl } from "./ScheduleDraftFields";
+import { ScheduleDraftFields, isTeamShareIncomplete, meetJoinUrl } from "./ScheduleDraftFields";
 import { ScheduleFullEditor } from "./ScheduleFullEditor";
 import {
   type AnchorRect,
@@ -97,7 +104,10 @@ export interface ScheduleDraft {
   endDate: string;
   endTime: string;
   allDay: boolean;
-  visibleToStaff: boolean;
+  /** 共有（自分だけ・全員・チーム）。裏側の calendar_type との変換は useCalendarCategories の 1 組 */
+  share: CalendarShare;
+  /** share が team のときのチームの番号 */
+  teamIds: number[];
   description: string;
   location: string;
   /** Google Meet の行を押した印（保存時に add_meet として送る） */
@@ -156,13 +166,21 @@ function createDraft(item?: ScheduleItem | null): ScheduleDraft {
     endDate: formatDateInput(baseEnd),
     endTime: formatTimeInput(baseEnd),
     allDay: item?.allDay ?? false,
-    visibleToStaff: item ? item.calendarType === "shared" : true,
+    share: item ? calendarTypeToShare(item.calendarType) : "all",
+    teamIds: item?.teamIds ?? [],
     description: item?.description ?? "",
     location: item?.location ?? "",
     addMeet: false,
     recurrence: item?.recurrence ?? "none",
     colorKey: item?.colorKey ?? null,
   };
+}
+
+/** 送る本文から team_ids を外す（「この予定だけ」用） */
+function withoutTeamIds(body: Record<string, unknown>): Record<string, unknown> {
+  const next = { ...body };
+  delete next.team_ids;
+  return next;
 }
 
 function addHours(date: Date, amount: number): Date {
@@ -316,6 +334,18 @@ function SchedulePopover({
   const categoryInfo = draft.category ? categoryByKey.get(draft.category) ?? null : null;
   const categoryName = draft.category ? categoryLabel(draft.category, categoryInfo?.name, t) : null;
   const categoryDot = isEventColorKey(categoryInfo?.color_key) ? eventColorVar(categoryInfo.color_key) : null;
+  // 詳しい表示の「共有」の行（自分だけ／全員／チーム: 名前・名前）。チームの名前は使っているチームだけ引く
+  const { byId: teamById } = useCalendarTeams();
+  let shareText: string | null = null;
+  if (item && item.source !== "shift") {
+    const share = calendarTypeToShare(item.calendarType);
+    if (share === "self") shareText = t("schedule.shareSelf");
+    else if (share === "all") shareText = t("schedule.shareAll");
+    else {
+      const names = item.teamIds.map((id) => teamById.get(id)?.name).filter((name): name is string => Boolean(name));
+      shareText = names.length > 0 ? `${t("schedule.shareTeam")}: ${names.join(", ")}` : t("schedule.shareTeam");
+    }
+  }
   const timeLabel = item ? formatSearchResultLine(item, t, i18n.language) : "";
   const meetUrl = meetJoinUrl(item);
   const joinMeetLink = meetUrl ? (
@@ -401,6 +431,12 @@ function SchedulePopover({
                 <dt>{t("schedule.category")}</dt>
                 <dd>{categoryName ?? t("schedule.calendarTypeValues.shared")}</dd>
               </div>
+              {shareText && (
+                <div>
+                  <dt>{t("schedule.shareLabel")}</dt>
+                  <dd>{shareText}</dd>
+                </div>
+              )}
               <div>
                 <dt>{t("schedule.source")}</dt>
                 <dd>
@@ -447,14 +483,18 @@ function SchedulePopover({
               <Button variant="ghost" onClick={onMoreOptions}>
                 {t("schedule.moreOptions")}
               </Button>
-              <Button variant="primary" onClick={onSave} disabled={!draft.title.trim()}>
+              <Button
+                variant="primary"
+                onClick={onSave}
+                disabled={!draft.title.trim() || isTeamShareIncomplete(draft, canChangeVisibility)}
+              >
                 {t("common.save")}
               </Button>
             </>
           ) : (
             <>
               {editable && (
-                <Button variant="primary" onClick={onSave}>
+                <Button variant="primary" onClick={onSave} disabled={isTeamShareIncomplete(draft, canChangeVisibility)}>
                   {t("schedule.editEvent")}
                 </Button>
               )}
@@ -956,7 +996,8 @@ export default function SchedulePage() {
     return {
       category: "meeting",
       colorKey: isEventColorKey(meeting?.color_key) ? meeting.color_key : null,
-      visibleToStaff: meeting ? meeting.default_share === "all" : true,
+      share: meeting ? meeting.default_share : ("all" as CalendarShare),
+      teamIds: meeting?.default_team_ids ?? [],
     };
   };
 
@@ -1022,7 +1063,10 @@ export default function SchedulePage() {
         color_key: draft.colorKey ?? "",
       };
       if (canChangeVisibility) {
-        body.calendar_type = draft.visibleToStaff ? "shared" : "personal";
+        body.calendar_type = shareToCalendarType(draft.share);
+        if (draft.share === "team") {
+          body.team_ids = draft.teamIds;
+        }
       }
       // Meet を付けるのは、つないだ本人で、Toggle が入っていて、まだ Meet が無い、繰り返さない予定だけ
       const wantsMeet = meetAvailable && draft.addMeet && !popover?.item?.meetUrl && draft.recurrence === "none";
@@ -1060,8 +1104,9 @@ export default function SchedulePage() {
         try {
           let saved: SaveResult | undefined;
           if (editing && numericId !== null) {
+            // 「この予定だけ」ではチームを送らない（チームの対応は元の行 1 つで、この回だけ変えられない）
             const payload = scope
-              ? { ...body, scope, occurrence_start: occurrenceStartOf(editing).toISOString() }
+              ? { ...(scope === "this" ? withoutTeamIds(body) : body), scope, occurrence_start: occurrenceStartOf(editing).toISOString() }
               : body;
             saved = await api.patch<SaveResult>(`/calendar/events/${numericId}`, payload);
           } else {
@@ -1082,7 +1127,9 @@ export default function SchedulePage() {
 
       if (editing && isRecurringItem(editing)) {
         const visibilityChanged =
-          canChangeVisibility && (draft.visibleToStaff ? "shared" : "personal") !== editing.calendarType;
+          canChangeVisibility &&
+          (shareToCalendarType(draft.share) !== editing.calendarType ||
+            (draft.share === "team" && !sameTeamIds(draft.teamIds, editing.teamIds)));
         const choices = scopeChoices("save", editing.isFirstOccurrence === true, recurrenceChanged || visibilityChanged);
         if (choices.length === 1) {
           await send(choices[0]);

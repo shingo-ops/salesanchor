@@ -96,6 +96,7 @@ describe("formatSearchResultLine", () => {
     allDay: false,
     category: null,
     calendarType: "shared",
+    teamIds: [],
     source: "app",
     ownerUserId: 101,
     ownerName: null,

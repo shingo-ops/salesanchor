@@ -17,6 +17,7 @@ import {
   DraftLocationField,
   DraftMeetField,
   DraftShareField,
+  isTeamShareIncomplete,
 } from "./ScheduleDraftFields";
 import type { ScheduleDraft } from "./SchedulePageImpl";
 import type { ScheduleItem } from "./schedule-utils";
@@ -76,7 +77,7 @@ export function ScheduleFullEditor({
       }
       saveLabel={t("common.save")}
       onSave={onSave}
-      saveDisabled={!draft.title.trim()}
+      saveDisabled={!draft.title.trim() || isTeamShareIncomplete(draft, canChangeVisibility)}
       cardTitle={t("schedule.eventDetail")}
       lead={
         <>
