@@ -503,3 +503,131 @@ async def test_same_occurrence_exception_twice_is_rejected_by_unique_index():
                 await conn.execute(insert, params)
     finally:
         await _teardown(admin_engine, app_engine)
+
+
+async def _mark_synced_from_app(admin_engine, event_id: int, gid: str) -> None:
+    from sqlalchemy import text
+
+    async with admin_engine.begin() as conn:
+        await conn.execute(
+            text(
+                f"UPDATE {_SCHEMA}.calendar_events SET google_event_id = :gid,"
+                " sync_origin_id = :oid, sync_status = 'synced' WHERE id = :id"
+            ),
+            {"gid": gid, "oid": f"app:{_TENANT}:{event_id}", "id": event_id},
+        )
+
+
+async def _count_rows(admin_engine, where_sql: str, params: dict) -> int:
+    from sqlalchemy import text
+
+    async with admin_engine.connect() as conn:
+        return (
+            await conn.execute(
+                text(f"SELECT count(*) FROM {_SCHEMA}.calendar_events WHERE {where_sql}"), params
+            )
+        ).scalar_one()
+
+
+async def _import_one(factory, item: dict, g_master: dict | None = None) -> str:
+    from app.auth.dependencies import set_tenant_context
+    from app.services import calendar_service
+
+    getter = AsyncMock(return_value=g_master)
+    async with factory() as db:
+        await set_tenant_context(db, _TENANT)
+        with patch("app.services.google_calendar.get_event", new=getter):
+            out = await calendar_service.upsert_from_google(db, _TENANT, item, _OWNER, series_cache={})
+        await db.commit()
+    return out
+
+
+def _g_master_for(master: dict) -> dict:
+    return {
+        "id": "gm978", "status": "confirmed", "summary": master["title"],
+        "recurrence": ["RRULE:" + master["recurrence_rule"]],
+        "start": {"dateTime": "2026-12-03T10:00:00+09:00"},
+        "end": {"dateTime": "2026-12-03T11:00:00+09:00"},
+    }
+
+
+# Google で消したアプリの単発の予定は、DB の決まりに外れずに行ごと消える（ADR-1059 改訂 2026-11-25）
+async def test_google_cancel_deletes_app_single_row_on_real_db():
+    from app.auth.dependencies import set_tenant_context
+    from app.services import calendar_service
+
+    admin_engine, app_engine, factory = await _setup()
+    try:
+        async with factory() as db:
+            await set_tenant_context(db, _TENANT)
+            created = await calendar_service.create_event(db, _TENANT, _OTHER, _payload())
+        await _mark_synced_from_app(admin_engine, created["id"], "g_single_978")
+        out = await _import_one(factory, {"id": "g_single_978", "status": "cancelled"})
+        assert out == "deleted"
+        assert await _count_rows(admin_engine, "id = :id", {"id": created["id"]}) == 0
+    finally:
+        await _teardown(admin_engine, app_engine)
+
+
+# 繰り返しの 1 回だけの消し・直しは、例外の行として DB の決まりに通る（ADR-1075 改訂 2026-11-25）
+async def test_google_instance_cancel_and_edit_insert_exceptions_on_real_db():
+    admin_engine, app_engine, factory = await _setup()
+    try:
+        master = await _create_weekly_master(factory)
+        await _mark_synced_from_app(admin_engine, master["id"], "gm978")
+        g_master = _g_master_for(master)
+        cancelled = {
+            "id": "gm978_20261210T010000Z", "status": "cancelled", "recurringEventId": "gm978",
+            "originalStartTime": {"dateTime": "2026-12-10T10:00:00+09:00"},
+        }
+        assert await _import_one(factory, cancelled, g_master) == "deleted"
+        edited = {
+            "id": "gm978_20261217T010000Z", "status": "confirmed", "summary": "臨時",
+            "recurringEventId": "gm978",
+            "originalStartTime": {"dateTime": "2026-12-17T10:00:00+09:00"},
+            "start": {"dateTime": "2026-12-17T10:00:00+09:00"},
+            "end": {"dateTime": "2026-12-17T11:00:00+09:00"},
+        }
+        assert await _import_one(factory, edited, g_master) == "upserted"
+        rows = sorted(await _exception_rows(admin_engine, master["id"]))
+        assert rows == [(False, "synced"), (True, "synced")]
+        assert await _count_rows(
+            admin_engine,
+            "recurring_event_id = :mid AND title = '臨時' AND google_event_id = :gid",
+            {"mid": master["id"], "gid": "gm978_20261217T010000Z"},
+        ) == 1
+        # 同じ知らせがもう一度来ても、何も書かない
+        assert await _import_one(factory, cancelled, g_master) == "skipped"
+        assert await _import_one(factory, edited, g_master) == "skipped"
+    finally:
+        await _teardown(admin_engine, app_engine)
+
+
+# 回の Google の id を持つ行が既にあれば、例外の行を作らずに飛ばす（取り込みを止めない）
+async def test_google_instance_with_taken_id_is_skipped_on_real_db():
+    from sqlalchemy import text
+
+    admin_engine, app_engine, factory = await _setup()
+    try:
+        master = await _create_weekly_master(factory)
+        await _mark_synced_from_app(admin_engine, master["id"], "gm978")
+        async with admin_engine.begin() as conn:
+            await conn.execute(
+                text(
+                    f"INSERT INTO {_SCHEMA}.calendar_events"
+                    " (title, start_datetime, end_datetime, source, sync_status, google_event_id)"
+                    " VALUES ('先にある行', :s, :e, 'google', 'synced', 'gm978_20261224T010000Z')"
+                ),
+                {
+                    "s": datetime(2026, 12, 24, 1, 0, tzinfo=timezone.utc),
+                    "e": datetime(2026, 12, 24, 2, 0, tzinfo=timezone.utc),
+                },
+            )
+        cancelled = {
+            "id": "gm978_20261224T010000Z", "status": "cancelled", "recurringEventId": "gm978",
+            "originalStartTime": {"dateTime": "2026-12-24T10:00:00+09:00"},
+        }
+        assert await _import_one(factory, cancelled, _g_master_for(master)) == "skipped"
+        assert await _exception_rows(admin_engine, master["id"]) == []
+    finally:
+        await _teardown(admin_engine, app_engine)

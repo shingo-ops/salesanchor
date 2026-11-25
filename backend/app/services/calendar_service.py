@@ -1402,6 +1402,49 @@ def _same_times(row_start, row_end, row_all_day: bool, g_start: dict, g_end: dic
     return row_start == g_s and row_end == g_e
 
 
+def _has_times(google_event: dict) -> bool:
+    """Google の予定に始まりと終わりがあるか。"""
+    g_start = google_event.get("start") or {}
+    g_end = google_event.get("end") or {}
+    return bool(
+        (g_start.get("dateTime") or g_start.get("date"))
+        and (g_end.get("dateTime") or g_end.get("date"))
+    )
+
+
+def _content_changes(
+    title: Optional[str],
+    description: Optional[str],
+    location: Optional[str],
+    start: datetime,
+    end: datetime,
+    all_day: bool,
+    google_event: dict,
+) -> dict:
+    """Google の予定とアプリの中身（題名・説明・場所・時間）を比べ、違う列だけを返す。色は見ない。
+
+    始まりと終わりがあることは呼び元が _has_times で確かめる。
+    """
+    g_start = google_event.get("start") or {}
+    g_end = google_event.get("end") or {}
+    changes: dict = {}
+    g_title = google_event.get("summary") or ""
+    if g_title != (title or ""):
+        changes["title"] = g_title
+    g_desc = google_event.get("description")
+    if _norm_text(g_desc) != _norm_text(description):
+        changes["description"] = g_desc or None
+    g_loc = google_event.get("location")
+    if _norm_text(g_loc) != _norm_text(location):
+        changes["location"] = g_loc or None
+    if not _same_times(start, end, all_day, g_start, g_end):
+        s_dt, e_dt, g_all_day = _google_times(g_start, g_end)
+        changes["start_datetime"] = s_dt
+        changes["end_datetime"] = e_dt
+        changes["is_all_day"] = g_all_day
+    return changes
+
+
 async def _update_app_origin_from_google(
     db: AsyncSession,
     tenant_id: int,
@@ -1410,20 +1453,30 @@ async def _update_app_origin_from_google(
 ) -> str:
     """アプリで作った予定を Google で直したとき、中身の列だけを入れる（ADR-1059 改訂 2026-11-20）。
 
-    - Google で消されても消さない（"skipped"）。
+    - Google で消したら（別のカレンダーへ移したときも同じ形で届く）、送り終えた単発の行を消す（"deleted"）。
+      自分だけの予定も会社の予定も同じ（ADR-1059 改訂 2026-11-25）。
     - アプリから送り終えた行（sync_status='synced'）で、中身が違う列だけを書く。
     - 見せ方・持ち主・起源・Meet の URL には触らない。Google へは書かない。
     - 色は Google の名札がアプリの色に当たるときだけ入れる（名札が表に無いときは触らない）。
     - Google に名札も colorId も無く、アプリの色が名札の表にある色なら、色を外す（ADR-1059 改訂 2026-11-22）。
-    戻り値は "upserted"（1 行書いた）か "skipped"。commit は呼び元が行う。
+    戻り値は "upserted"（1 行書いた）・"deleted"（行を消した）・"skipped"。commit は呼び元が行う。
     """
     if google_event.get("status") == "cancelled":
-        return "skipped"
-    g_start = google_event.get("start") or {}
-    g_end = google_event.get("end") or {}
-    if not (g_start.get("dateTime") or g_start.get("date")) or not (
-        g_end.get("dateTime") or g_end.get("date")
-    ):
+        # 単発の行には消した印を付けられない（calendar_events_cancelled_exception_check）。
+        # アプリで消すとき（delete_event）と同じく行を消す（ADR-1059 改訂 2026-11-25）
+        res = await db.execute(
+            text(
+                "DELETE FROM calendar_events"
+                " WHERE google_event_id = :gid"
+                " AND sync_origin_id LIKE 'app:" + str(int(tenant_id)) + ":%'"
+                " AND sync_status = 'synced'"
+                " AND recurrence_rule IS NULL"
+                " AND recurring_event_id IS NULL"
+            ),
+            {"gid": google_event["id"]},
+        )
+        return "deleted" if (res.rowcount or 0) > 0 else "skipped"
+    if not _has_times(google_event):
         return "skipped"
 
     found = await db.execute(
@@ -1443,21 +1496,7 @@ async def _update_app_origin_from_google(
         return "skipped"
     row_id, r_title, r_desc, r_loc, r_start, r_end, r_all_day, r_color = row
 
-    changes: dict = {}
-    g_title = google_event.get("summary") or ""
-    if g_title != (r_title or ""):
-        changes["title"] = g_title
-    g_desc = google_event.get("description")
-    if _norm_text(g_desc) != _norm_text(r_desc):
-        changes["description"] = g_desc or None
-    g_loc = google_event.get("location")
-    if _norm_text(g_loc) != _norm_text(r_loc):
-        changes["location"] = g_loc or None
-    if not _same_times(r_start, r_end, r_all_day, g_start, g_end):
-        s_dt, e_dt, all_day = _google_times(g_start, g_end)
-        changes["start_datetime"] = s_dt
-        changes["end_datetime"] = e_dt
-        changes["is_all_day"] = all_day
+    changes = _content_changes(r_title, r_desc, r_loc, r_start, r_end, r_all_day, google_event)
     if label_colors is not None:
         label_id = google_event.get("eventLabelId")
         g_color = key_for_hex(label_colors.get(label_id)) if label_id else None
@@ -1485,12 +1524,207 @@ async def _update_app_origin_from_google(
     return "upserted" if (res.rowcount or 0) > 0 else "skipped"
 
 
+def _rule_parts(rule: str) -> dict[str, str]:
+    """決まりの文字を「名前→値」の表にする（並びの違いを見ないで比べるため）。"""
+    parts: dict[str, str] = {}
+    for part in rule.split(";"):
+        if "=" in part:
+            key, value = part.split("=", 1)
+            parts[key.strip().upper()] = value.strip()
+    return parts
+
+
+def _same_series(master: dict, g_master: Optional[dict]) -> bool:
+    """Google の元の予定が、アプリの元の行と同じ繰り返しのままか（ADR-1075 改訂 2026-11-25）。
+
+    違えば Google で「これ以降」「すべて」を直した・消したとみなす。決まりは RRULE の行だけを比べる
+    （EXDATE・RDATE の行は見ない）。題名・説明・場所・始まりと終わりも比べる。色は見ない。
+    """
+    if not g_master or g_master.get("status") == "cancelled" or not _has_times(g_master):
+        return False
+    rules = [
+        line[len("RRULE:"):]
+        for line in (g_master.get("recurrence") or [])
+        if line.upper().startswith("RRULE:")
+    ]
+    if len(rules) != 1 or _rule_parts(rules[0]) != _rule_parts(master["recurrence_rule"] or ""):
+        return False
+    return not _content_changes(
+        master["title"],
+        master["description"],
+        master["location"],
+        master["start_datetime"],
+        master["end_datetime"],
+        bool(master["is_all_day"]),
+        g_master,
+    )
+
+
+async def _adopt_google_instance(db: AsyncSession, tenant_id: int, row_id: int, google_event_id: str) -> None:
+    """取り込みで作った例外の行に Google の回の id を持たせ、送り終えた印を付ける（commit は呼び元）。"""
+    await db.execute(
+        text(
+            "UPDATE calendar_events SET google_event_id = :gid, sync_origin_id = :oid,"
+            " sync_status = 'synced', last_synced_at = NOW() WHERE id = :id"
+        ),
+        {"gid": google_event_id, "oid": _build_sync_origin_id(tenant_id, row_id), "id": row_id},
+    )
+
+
+async def _google_id_taken(db: AsyncSession, google_event_id: str) -> bool:
+    """回の Google の id を持つ行が既にあるか。あれば例外の行を作らない（重なり禁止 uq_calendar_events_google_event_id）。"""
+    res = await db.execute(
+        text("SELECT id FROM calendar_events WHERE google_event_id = :gid"),
+        {"gid": google_event_id},
+    )
+    return res.first() is not None
+
+
+async def _apply_app_instance_from_google(
+    db: AsyncSession,
+    tenant_id: int,
+    google_event: dict,
+    series_cache: Optional[dict] = None,
+) -> str:
+    """アプリで作った繰り返しの 1 回分を Google で直した・消したとき、その回だけを入れる（ADR-1075 改訂 2026-11-25）。
+
+    - 元の行は、アプリから送り終えた（synced）繰り返しの元の行だけ。無ければ "skipped"。
+    - Google の元の予定を 1 回の取り込みに 1 回だけ読み（series_cache）、アプリの元の行と違えば
+      「これ以降」「すべて」の直し・消しとみなして "skipped"（アプリは今のまま）。
+    - 回は originalStartTime で決める。アプリの決まりの回でなければ "skipped"。
+    - 例外の行が送り中（pending）・送れなかった（failed）ときは触らない。
+    - 消した回: 例外の行に消した印を付ける（無ければ作る）。
+    - 直した回: 期待する中身（例外の行、無ければ元の行の中身をその回の時間にしたもの）と違うときだけ書く。色は入れない。
+    Google へは書かない。commit は呼び元。戻り値は "upserted" | "deleted" | "skipped"。
+    """
+    from app.services import google_calendar as gcal
+
+    cache = series_cache if series_cache is not None else {}
+    master_gid = google_event["recurringEventId"]
+    found = await db.execute(
+        text(
+            f"SELECT {EVENT_COLUMNS_SQL} FROM calendar_events"
+            " WHERE google_event_id = :gid"
+            " AND sync_origin_id LIKE 'app:" + str(int(tenant_id)) + ":%'"
+            " AND sync_status = 'synced'"
+            " AND recurrence_rule IS NOT NULL"
+            " AND recurring_event_id IS NULL"
+        ),
+        {"gid": master_gid},
+    )
+    record = found.first()
+    if record is None:
+        return "skipped"
+    master = event_from_row(record)
+    orig = google_event.get("originalStartTime") or {}
+    if not (orig.get("dateTime") or orig.get("date")):
+        return "skipped"
+
+    if master_gid not in cache:
+        try:
+            cache[master_gid] = await gcal.get_event(db, tenant_id, master_gid)
+        except Exception as e:
+            logger.warning("Google の繰り返しの元の予定を読めませんでした (google_event_id=%s): %s", master_gid, e)
+            cache[master_gid] = None
+    if not _same_series(master, cache[master_gid]):
+        return "skipped"
+
+    m_all_day = bool(master["is_all_day"])
+    m_start = rec.to_jst(master["start_datetime"])
+    orig_start = _google_times(orig, orig)[0]
+    if not rec.is_occurrence(master["recurrence_rule"], m_start, m_all_day, orig_start):
+        return "skipped"
+    occ = rec.occurrence_of(m_start, m_all_day, orig_start)
+    duration = rec.to_jst(master["end_datetime"]) - m_start
+
+    exc_found = await db.execute(
+        text(
+            "SELECT id, title, description, location, start_datetime, end_datetime,"
+            " is_all_day, is_cancelled, sync_status FROM calendar_events"
+            " WHERE recurring_event_id = :mid AND original_start_datetime = :orig"
+        ),
+        {"mid": master["id"], "orig": occ},
+    )
+    exc = exc_found.first()
+    if exc is not None and exc[8] != "synced":
+        return "skipped"
+
+    if google_event.get("status") == "cancelled":
+        if exc is None:
+            if await _google_id_taken(db, google_event["id"]):
+                logger.warning("回の Google の id を持つ行が既にあるため飛ばしました (google_event_id=%s)", google_event["id"])
+                return "skipped"
+            new_id = await _insert_row(
+                db,
+                _row_values(
+                    master,
+                    start_datetime=occ,
+                    end_datetime=occ + duration,
+                    recurring_event_id=master["id"],
+                    original_start_datetime=occ,
+                    is_cancelled=True,
+                ),
+            )
+            await _adopt_google_instance(db, tenant_id, new_id, google_event["id"])
+            return "deleted"
+        if exc[7]:
+            return "skipped"
+        res = await db.execute(
+            text(
+                "UPDATE calendar_events SET is_cancelled = true, last_synced_at = NOW()"
+                " WHERE id = :id AND sync_status = 'synced'"
+            ),
+            {"id": exc[0]},
+        )
+        return "deleted" if (res.rowcount or 0) > 0 else "skipped"
+
+    if not _has_times(google_event):
+        return "skipped"
+    if exc is None:
+        changes = _content_changes(
+            master["title"], master["description"], master["location"],
+            occ, occ + duration, m_all_day, google_event,
+        )
+        if not changes:
+            return "skipped"
+        values = _row_values(
+            master,
+            start_datetime=occ,
+            end_datetime=occ + duration,
+            recurring_event_id=master["id"],
+            original_start_datetime=occ,
+        )
+        values.update(changes)
+        if await _google_id_taken(db, google_event["id"]):
+            logger.warning("回の Google の id を持つ行が既にあるため飛ばしました (google_event_id=%s)", google_event["id"])
+            return "skipped"
+        new_id = await _insert_row(db, values)
+        await _adopt_google_instance(db, tenant_id, new_id, google_event["id"])
+        return "upserted"
+
+    changes = _content_changes(exc[1], exc[2], exc[3], exc[4], exc[5], bool(exc[6]), google_event)
+    if exc[7]:
+        changes["is_cancelled"] = False
+    if not changes:
+        return "skipped"
+    sets = ", ".join(f"{col} = :{col}" for col in changes)
+    res = await db.execute(
+        text(
+            f"UPDATE calendar_events SET {sets}, last_synced_at = NOW()"
+            " WHERE id = :id AND sync_status = 'synced'"
+        ),
+        {**changes, "id": exc[0]},
+    )
+    return "upserted" if (res.rowcount or 0) > 0 else "skipped"
+
+
 async def upsert_from_google(
     db: AsyncSession,
     tenant_id: int,
     google_event: dict,
     owner_user_id: int,
     label_colors: Optional[dict[str, str]] = None,
+    series_cache: Optional[dict] = None,
 ) -> str:
     """Google のイベントを DB に upsert する。戻り値は "upserted" | "deleted" | "skipped"。
 
@@ -1501,6 +1735,9 @@ async def upsert_from_google(
 
     アプリ起源（sync_origin_id が "app:tenant_id:" で始まる）の予定は _update_app_origin_from_google で中身の列だけを UPDATE する。取り込みは DB にだけ書き Google へは書かないので、行ったり来たりは起きない。
 
+    アプリで作った繰り返しの回は _apply_app_instance_from_google でその回だけを入れる（ADR-1075 改訂 2026-11-25）。
+    series_cache は 1 回の取り込みで Google の元の予定を 1 回だけ読むための入れ物（取り込みが作って渡す）。
+
     新規は calendar_type='personal'・持ち主 = owner_user_id。既にある行の
     calendar_type・user_id は上書きしない（ADR-1059 K4）。
     """
@@ -1508,10 +1745,10 @@ async def upsert_from_google(
     if not google_event_id:
         return "skipped"
 
-    # アプリで作った繰り返しの回は飛ばす（ADR-1075 決定6）
+    # アプリで作った繰り返しの回は、その回だけの直し・消しを入れる（ADR-1075 改訂 2026-11-25）
     recurring_event_id = google_event.get("recurringEventId")
     if recurring_event_id and await _is_app_origin(db, recurring_event_id, tenant_id):
-        return "skipped"
+        return await _apply_app_instance_from_google(db, tenant_id, google_event, series_cache)
 
     # アプリで作った予定は、中身の列だけを入れる（ADR-1059 改訂 2026-11-20）
     if await _is_app_origin(db, google_event_id, tenant_id):
