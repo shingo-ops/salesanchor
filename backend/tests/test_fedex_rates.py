@@ -182,6 +182,45 @@ class TestGetRates:
         assert quotes[0].currency == "JPY"
         assert quotes[0].transit_days == 2
 
+    @pytest.mark.parametrize("dest_zip", [None, ""])
+    def test_hk_empty_postal_code_sends_representative_999077(self, dest_zip):
+        """香港あてで郵便番号が空なら FedEx へ代表値 999077 を送る。"""
+        with patch("httpx.post", side_effect=[_mock_token_resp(), _mock_rates_resp()]) as m:
+            get_rates(
+                tenant_id=1,
+                environment="sandbox",
+                client_id="cid",
+                client_secret="csec",
+                account_number="123456789",
+                origin_country_code="JP",
+                destination_country_code="HK",
+                weight_kg=Decimal("1.0"),
+                destination_postal_code=dest_zip,
+            )
+        rates_call = m.call_args_list[1]
+        assert rates_call.args[0].endswith("/rate/v1/rates/quotes")
+        addr = rates_call.kwargs["json"]["requestedShipment"]["recipient"]["address"]
+        assert addr["countryCode"] == "HK"
+        assert addr["postalCode"] == "999077"
+
+    def test_hk_given_postal_code_is_sent_as_is(self):
+        """郵便番号があれば補完で上書きせずそのまま送る。"""
+        with patch("httpx.post", side_effect=[_mock_token_resp(), _mock_rates_resp()]) as m:
+            get_rates(
+                tenant_id=1,
+                environment="sandbox",
+                client_id="cid",
+                client_secret="csec",
+                account_number="123456789",
+                origin_country_code="JP",
+                destination_country_code="HK",
+                weight_kg=Decimal("1.0"),
+                destination_postal_code="0",
+            )
+        rates_call = m.call_args_list[1]
+        addr = rates_call.kwargs["json"]["requestedShipment"]["recipient"]["address"]
+        assert addr["postalCode"] == "0"
+
     def test_non_target_service_types_filtered_out(self):
         """TARGET_INTERNATIONAL_SERVICE_TYPES 以外のサービスはフィルタされる。"""
         quotes_data = [
