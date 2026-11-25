@@ -1491,5 +1491,8 @@ run_sql migrations/20261122_100000_add_tenants_meta_review_switch.sql
 # schedule-settings 便2a: 予定の種類を表 1 つへ（calendar_categories と 7 行・calendar_events.category を外部キーへ・冪等）
 run_sql migrations/20261126_100000_create_calendar_categories.sql
 
+# schedule-settings 便2b: 予定の共有に「チーム」を足す（calendar_event_teams・calendar_category_teams と CHECK への team・冪等）
+run_sql migrations/20261127_100000_add_calendar_team_share.sql
+
 # 実行済みの記録の集計（段5 5-3）。新しい手順は、この集計の行より上（上の run_ の並びの末尾）に足す。
 mr_report_summary

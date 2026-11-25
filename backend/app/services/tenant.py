@@ -1560,7 +1560,7 @@ CREATE TABLE IF NOT EXISTS {schema}.calendar_categories (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT calendar_categories_pkey PRIMARY KEY (key),
     CONSTRAINT calendar_categories_key_format_check CHECK (key ~ '^[a-z][a-z0-9_]{{0,49}}$'),
-    CONSTRAINT calendar_categories_default_share_check CHECK (default_share IN ('self', 'all')),
+    CONSTRAINT calendar_categories_default_share_check CHECK (default_share IN ('self', 'all', 'team')),
     CONSTRAINT calendar_categories_color_key_check CHECK (color_key IN ('radicchio', 'cherry_blossom', 'flamingo', 'tomato', 'tangerine', 'pumpkin', 'mango', 'banana', 'citron', 'avocado', 'pistachio', 'basil', 'sage', 'eucalyptus', 'peacock', 'cobalt', 'lavender', 'blueberry', 'wisteria', 'amethyst', 'grape', 'cocoa', 'graphite', 'birch')),
     CONSTRAINT calendar_categories_name_check CHECK (name IS NOT NULL OR key IN ('meeting', 'personal', 'procurement', 'shipping', 'billing', 'release', 'holiday'))
 );
@@ -1605,7 +1605,7 @@ CREATE TABLE IF NOT EXISTS {schema}.calendar_events (
     CONSTRAINT calendar_events_category_fkey FOREIGN KEY (category) REFERENCES {schema}.calendar_categories(key) ON UPDATE RESTRICT ON DELETE RESTRICT,
     CONSTRAINT calendar_events_pkey PRIMARY KEY (id),
     CONSTRAINT calendar_events_color_key_check CHECK (color_key IN ('radicchio', 'cherry_blossom', 'flamingo', 'tomato', 'tangerine', 'pumpkin', 'mango', 'banana', 'citron', 'avocado', 'pistachio', 'basil', 'sage', 'eucalyptus', 'peacock', 'cobalt', 'lavender', 'blueberry', 'wisteria', 'amethyst', 'grape', 'cocoa', 'graphite', 'birch')),
-    CONSTRAINT calendar_events_calendar_type_check CHECK (calendar_type IN ('shared', 'personal')),
+    CONSTRAINT calendar_events_calendar_type_check CHECK (calendar_type IN ('shared', 'personal', 'team')),
     CONSTRAINT calendar_events_cancelled_exception_check CHECK (((NOT is_cancelled) OR (recurring_event_id IS NOT NULL))),
     CONSTRAINT calendar_events_created_by_user_id_fkey FOREIGN KEY (created_by_user_id) REFERENCES public.users(id) ON DELETE SET NULL,
     CONSTRAINT calendar_events_exception_pair_check CHECK (((recurring_event_id IS NULL) = (original_start_datetime IS NULL))),
@@ -1628,6 +1628,20 @@ CREATE INDEX IF NOT EXISTS idx_calendar_events_range ON {schema}.calendar_events
 CREATE INDEX IF NOT EXISTS idx_calendar_events_sync_origin ON {schema}.calendar_events USING btree (sync_origin_id) WHERE (sync_origin_id IS NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_calendar_events_user_type ON {schema}.calendar_events USING btree (user_id, calendar_type);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_calendar_events_google_event_id ON {schema}.calendar_events USING btree (google_event_id) WHERE (google_event_id IS NOT NULL);
+
+-- 登録の移行: migrations/20261127_100000_add_calendar_team_share.sql（予定とチームの対応・種類の初期のチーム）。
+-- 親の calendar_events・calendar_categories に RLS が無いので、この 2 表にも付けない（design-bin2b.md §3-1）。
+CREATE TABLE IF NOT EXISTS {schema}.calendar_event_teams (
+    event_id integer NOT NULL REFERENCES {schema}.calendar_events(id) ON DELETE CASCADE,
+    team_id integer NOT NULL REFERENCES {schema}.teams(id) ON DELETE CASCADE,
+    PRIMARY KEY (event_id, team_id)
+);
+CREATE INDEX IF NOT EXISTS idx_calendar_event_teams_team ON {schema}.calendar_event_teams (team_id);
+CREATE TABLE IF NOT EXISTS {schema}.calendar_category_teams (
+    category_key character varying(50) NOT NULL REFERENCES {schema}.calendar_categories(key) ON UPDATE RESTRICT ON DELETE CASCADE,
+    team_id integer NOT NULL REFERENCES {schema}.teams(id) ON DELETE CASCADE,
+    PRIMARY KEY (category_key, team_id)
+);
 
 -- 分け表 A2: 予定の表示設定（本番 5 社全部にある。backend/app/routers/calendar.py が使う）。
 -- 作る SQL migrations/20260621_020000_add_schedule_calendar_category_and_owner_settings.sql は登録に無い。

@@ -371,6 +371,7 @@ FROM (VALUES
   ('tenant_*','calendar_categories',ARRAY['key','name'],'mask','key は形だけの決まり（calendar_categories_key_format_check）・name は自由な文字のため伏せる'),
   ('tenant_*','calendar_categories',ARRAY['color_key'],'allow','値の決まり calendar_categories_color_key_check で値が限られる'),
   ('tenant_*','calendar_categories',ARRAY['default_share'],'allow','値の決まり calendar_categories_default_share_check で値が限られる'),
+  ('tenant_*','calendar_category_teams',ARRAY['category_key'],'mask','key は形だけの決まり（calendar_categories_key_format_check）・name は自由な文字のため伏せる'),
   ('tenant_*','calendar_events',ARRAY['calendar_type'],'allow','値の決まり calendar_events_calendar_type_check で値が限られる'),
   ('tenant_*','calendar_events',ARRAY['color_key'],'allow','値の決まり calendar_events_color_key_check で値が限られる'),
   ('tenant_*','calendar_events',ARRAY['recurrence_rule'],'mask','値の決まりが値の一覧でなく文字の形だけのため伏せる'),

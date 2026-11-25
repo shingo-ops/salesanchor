@@ -238,7 +238,7 @@ class TestListEvents:
     async def test_returns_events(self):
         from app.services.calendar_service import list_events
         now = datetime(2026, 6, 1, 10, 0, 0, tzinfo=timezone.utc)
-        row = (1, 2, "shared", "meeting", "テスト会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木 花子", "田中 太郎", None, None, None, None, None)
+        row = (1, 2, "shared", "meeting", "テスト会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木 花子", "田中 太郎", None, None, None, None, None, [])
         db = _make_db(fetchall_return=[row])
         result = await list_events(db, tenant_id=1, start="2026-06-01", end="2026-06-30")
         assert len(result) == 1
@@ -270,7 +270,10 @@ class TestListEvents:
         db = _make_db(fetchall_return=[])
         await list_events(db, tenant_id=1, start="2026-06-01", end="2026-06-30", user_id=5)
         stmt, params = db.execute.call_args.args
-        assert "ce.calendar_type = 'shared' OR ce.user_id = :me" in stmt.text
+        from app.services.calendar_service import visibility_sql
+
+        assert visibility_sql("ce") in stmt.text
+        assert "COALESCE(ce.user_id, ce.created_by_user_id) = :me" in stmt.text
         assert params["me"] == 5
 
     @pytest.mark.asyncio
@@ -305,7 +308,9 @@ class TestListEvents:
         assert "ce.title ILIKE :title_q ESCAPE" in stmt.text
         assert "ORDER BY ce.start_datetime DESC" in stmt.text
         assert "LIMIT :limit" in stmt.text
-        assert "(ce.calendar_type = 'shared' OR ce.user_id = :me)" in stmt.text
+        from app.services.calendar_service import visibility_sql
+
+        assert visibility_sql("ce") in stmt.text
         assert ":start" not in stmt.text
         assert ":end" not in stmt.text
         assert params["title_q"] == "%商談%"
@@ -1560,7 +1565,7 @@ class TestListEventsMeetUrl:
         from app.services.calendar_service import list_events
 
         now = datetime(2026, 6, 1, 10, 0, 0, tzinfo=timezone.utc)
-        row = (1, 2, "shared", "meeting", "会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木", "田中", MEET, None, None, None, None)
+        row = (1, 2, "shared", "meeting", "会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木", "田中", MEET, None, None, None, None, [])
         db = _make_db(fetchall_return=[row])
         result = await list_events(db, tenant_id=1, start="2026-06-01", end="2026-06-30")
         assert result[0]["meet_url"] == MEET
@@ -1699,7 +1704,7 @@ class TestListRecurrence:
         now = _jt(2026, 11, 12)
         base = [1, 5, "shared", "meeting", "定例", None, None, now, now + timedelta(hours=1), False,
                 "gm", "app", "synced", 5, now, now, "鈴木", "田中", None,
-                "FREQ=WEEKLY;BYDAY=TH", None, None, None]
+                "FREQ=WEEKLY;BYDAY=TH", None, None, None, []]
         for k, v in over.items():
             base[k] = v
         return tuple(base)
@@ -1748,7 +1753,7 @@ class TestListRecurrence:
         assert "(ce.start_datetime < :end AND ce.end_datetime > :start AND ce.recurrence_rule IS NULL) OR" in main
         assert "ce.(" not in main
         assert "AND NOT ce.is_cancelled" in main
-        assert main.index("ce.user_id = :me") < main.index("AND NOT ce.is_cancelled")
+        assert main.index("= :me") < main.index("AND NOT ce.is_cancelled")
         assert "ce.recurrence_rule, ce.recurring_event_id, ce.original_start_datetime" in main
 
     @pytest.mark.asyncio
@@ -1759,7 +1764,9 @@ class TestListRecurrence:
         await list_events(db, 1, start="2026-11-01T00:00:00+09:00", end="2026-12-01T00:00:00+09:00", user_id=5)
         sql, params = db.calls[1]
         assert "ce.recurring_event_id = ANY(:ids)" in sql
-        assert "(ce.calendar_type = 'shared' OR ce.user_id = :me)" in sql
+        from app.services.calendar_service import visibility_sql
+
+        assert visibility_sql("ce") in sql
         assert "is_cancelled" not in sql  # 消した印の行も含めて引く
         assert params["ids"] == [1] and params["me"] == 5
 

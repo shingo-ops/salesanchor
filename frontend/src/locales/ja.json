@@ -3531,7 +3531,8 @@
     "calendarType": "カレンダー種別",
     "calendarTypeValues": {
       "shared": "共有",
-      "personal": "個人"
+      "personal": "個人",
+      "team": "チーム"
     },
     "personal": "個人",
     "meeting": "商談",
@@ -3591,7 +3592,16 @@
     "prevMonth": "前の月",
     "nextMonth": "次の月",
     "allDay": "終日",
-    "shareWithStaff": "社員にも見せる",
+    "shareLabel": "共有",
+    "shareSelf": "自分だけ",
+    "shareAll": "全員",
+    "shareTeam": "チーム",
+    "shareTeams": "共有するチーム",
+    "shareTeamsClear": "選択を外す",
+    "shareTeamsNone": "未選択",
+    "shareTeamsCount": "{{count}}チーム",
+    "shareTeamsRequired": "チームを1つ以上選んでください",
+    "noActiveTeams": "使っているチームがありません",
     "recurrence": {
       "label": "繰り返し",
       "none": "繰り返さない",
@@ -3640,8 +3650,6 @@
     "categoryColor": "種類の色",
     "categoryNoColor": "種類の色なし",
     "categoryDefaultShare": "共有の初期値",
-    "categoryShareSelf": "自分だけ",
-    "categoryShareAll": "全員",
     "categoryActive": "使う",
     "categoryErrorNameRequired": "名前が空です。名前を入れてからもう一度保存してください。",
     "categoryErrorConflict": "ほかの人と同時に足しました。もう一度押してください。",
@@ -6576,7 +6584,8 @@
     "paymentMethod": "選んだ支払方法は今は使えないため、請求書を保存できません。支払方法を選び直してください。",
     "contactCompanyMismatch": "選んだ担当者はこの会社の人ではないため、請求書の材料を出せません。担当者を選び直してください。",
     "invoiceNotDraft": "この請求書は下書きではなくなったため、発行できません。画面を読み直してください。",
-    "paymentFee": "支払い手数料の設定が見つからないため、合計を計算できません。設定の画面で PayPal の手数料を確かめてください。"
+    "paymentFee": "支払い手数料の設定が見つからないため、合計を計算できません。設定の画面で PayPal の手数料を確かめてください。",
+    "invalidTeamIds": "選んだチームが使えません。選び直してください。"
   },
   "issuerProfile": {
     "sectionTitle": "書類に載せる会社情報",

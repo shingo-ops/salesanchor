@@ -9,6 +9,7 @@ from __future__ import annotations
   PATCH  /calendar/events/{id}    — イベント更新
   DELETE /calendar/events/{id}    — イベント削除
   GET    /calendar/events/search  — 題名で予定を探す
+  GET    /calendar/teams          — 予定の共有先に選べるチーム（使っているものの名前と番号だけ）
   GET    /calendar/holidays       — 日本の祝日（期間・言語）
   GET    /calendar/sync-mode      — 同期モード確認
   PATCH  /calendar/sync-mode      — 同期モード変更（admin のみ）
@@ -132,6 +133,7 @@ class CreateEventBody(BaseModel):
     recurrence: RecurrenceValue = "none"
     color_key: Optional[str] = None
     category: Optional[str] = None
+    team_ids: Optional[list[int]] = None  # calendar_type が team のとき 1 つ以上の使っているチーム
 
     @field_validator("color_key")
     @classmethod
@@ -153,6 +155,7 @@ class UpdateEventBody(BaseModel):
     occurrence_start: Optional[str] = None
     color_key: Optional[str] = None
     category: Optional[str] = None
+    team_ids: Optional[list[int]] = None  # 決まりの表は calendar_service.validate_team_ids
 
     @field_validator("color_key")
     @classmethod
@@ -164,13 +167,15 @@ class SyncModeBody(BaseModel):
     sync_mode: str
 
 
-_VALID_CATEGORY_SHARES = ("self", "all")
-
-
 def _check_default_share(value: Optional[str]) -> Optional[str]:
-    if value is None or value in _VALID_CATEGORY_SHARES:
+    if value is None or value in cat_svc.CATEGORY_SHARE_VALUES:
         return value
-    raise ValueError("default_share は 'self' または 'all' を指定してください")
+    raise ValueError("default_share は 'self'・'all'・'team' のどれかを指定してください")
+
+
+class CalendarTeamItem(BaseModel):
+    id: int
+    name: str
 
 
 class CalendarCategoryItem(BaseModel):
@@ -180,12 +185,14 @@ class CalendarCategoryItem(BaseModel):
     default_share: str
     sort_order: int
     is_active: bool
+    default_team_ids: list[int] = []
 
 
 class CreateCategoryBody(BaseModel):
     name: str
     color_key: Optional[str] = None
     default_share: str = "all"
+    default_team_ids: Optional[list[int]] = None
 
     @field_validator("color_key")
     @classmethod
@@ -202,6 +209,7 @@ class UpdateCategoryBody(BaseModel):
     name: Optional[str] = None
     color_key: Optional[str] = None
     default_share: Optional[str] = None
+    default_team_ids: Optional[list[int]] = None
     is_active: Optional[bool] = None
 
     @field_validator("color_key")
@@ -243,7 +251,9 @@ async def create_calendar_category(
     db: AsyncSession = Depends(get_db),
 ):
     """予定の種類を足す（管理者のみ）。鍵は custom_N を裏側で決める。"""
-    return await cat_svc.create_category(db, tenant_id, body.name, body.color_key, body.default_share)
+    return await cat_svc.create_category(
+        db, tenant_id, body.name, body.color_key, body.default_share, body.default_team_ids
+    )
 
 
 @router.patch("/calendar/categories/{key}", tags=["calendar"], response_model=CalendarCategoryItem)
@@ -262,6 +272,26 @@ async def update_calendar_category(
     if updated is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:calendar_category")
     return updated
+
+
+# ---------------------------------------------------------------------------
+# 予定の共有先に選べるチーム
+# ---------------------------------------------------------------------------
+
+
+@router.get("/calendar/teams", tags=["calendar"], response_model=list[CalendarTeamItem])
+async def list_calendar_teams(
+    tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """使っているチームの名前と番号だけ（名前順）。メンバーは出さない。
+
+    teams.view の無い人（初期の役で営業・仕入・発送）も予定の共有先を選べるよう、ログインしていれば読める。
+    teams 表を読むだけで、写しは作らない。
+    """
+    result = await db.execute(text("SELECT id, name FROM teams WHERE is_active IS TRUE ORDER BY name, id"))
+    return [{"id": r[0], "name": r[1]} for r in result.fetchall()]
 
 
 # ---------------------------------------------------------------------------
@@ -539,11 +569,13 @@ async def create_event(
     db: AsyncSession = Depends(get_db),
 ):
     """アプリ内にイベントを作成し、Google Calendar に同期する。"""
-    if body.calendar_type not in ("shared", "personal"):
+    if body.calendar_type not in cal_svc.SHARE_VALUES:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="calendar_type は 'shared' または 'personal' を指定してください",
+            detail="calendar_type は 'shared'・'personal'・'team' のどれかを指定してください",
         )
+    # チームの確かめ（判定は try の前。422 を 500 にしない）。team は 1 つ以上の使っているチームが要る
+    team_ids = await cal_svc.validate_team_ids(db, body.calendar_type, body.team_ids)
     # 繰り返しの判定（Meet の判定より前。繰り返しと add_meet が両方あれば recurrence_meet_not_allowed）
     recurrence_error = cal_svc.check_create_recurrence(body.model_dump())
     if recurrence_error:
@@ -562,6 +594,7 @@ async def create_event(
     # "" はデフォルトに戻す印（None は exclude_none で落ちるため）。層の下へは None で渡す（鍵は残す）
     if create_payload.get("color_key") == "":
         create_payload["color_key"] = None
+    create_payload["team_ids"] = team_ids
     try:
         result = await cal_svc.create_event(
             db,
@@ -569,6 +602,8 @@ async def create_event(
             user_id=user.id,
             payload=create_payload,
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("イベント作成エラー: %s", e)
         raise HTTPException(
@@ -615,33 +650,29 @@ async def update_event(
         if not owner_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:calendar_event")
 
-    created_by, event_calendar_type, event_user_id = (
-        owner_row["created_by_user_id"],
-        owner_row["calendar_type"],
-        owner_row["user_id"],
-    )
+    created_by, event_user_id = owner_row["created_by_user_id"], owner_row["user_id"]
     event_google_id, event_meet_url = event["google_event_id"], event["meet_url"]
     event_owner = event_user_id if event_user_id is not None else created_by
-    # 他人の「自分だけ」予定は存在しないものとして扱う（管理者でも）
-    if event_calendar_type == "personal" and event_owner != user.id:
+    # 見えない予定（他人の「自分だけ」・メンバーでない「チーム」）は存在しないものとして扱う（管理者でも）
+    if not await cal_svc.can_see_event(db, owner_row["id"], user.id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:calendar_event")
 
     if created_by != user.id and not is_tenant_admin(await get_user_system_keys(db, user.id)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="編集権限がありません")
 
-    if "calendar_type" in payload:
-        if payload["calendar_type"] not in ("shared", "personal"):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="calendar_type は 'shared' または 'personal' を指定してください",
-            )
-        if event_owner != user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="見せ方を変えられるのは予定の持ち主だけです",
-            )
-        if payload["calendar_type"] == "personal":
-            payload["user_id"] = user.id
+    if "calendar_type" in payload and payload["calendar_type"] not in cal_svc.SHARE_VALUES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="calendar_type は 'shared'・'personal'・'team' のどれかを指定してください",
+        )
+    # 見せ方（calendar_type）とチーム（team_ids）を変えられるのは持ち主だけ。team_ids だけを送った直しも同じ
+    if ("calendar_type" in payload or "team_ids" in payload) and event_owner != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="見せ方を変えられるのは予定の持ち主だけです",
+        )
+    if payload.get("calendar_type") == "personal":
+        payload["user_id"] = user.id
 
     # 繰り返しの判定（Meet の判定より前。422 はどれも下の try の前）
     recurrence_error = await cal_svc.check_recurrence_request(
@@ -649,6 +680,17 @@ async def update_event(
     )
     if recurrence_error:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=recurrence_error)
+
+    # チームの確かめ（決まりの表は validate_team_ids。判定は try の前）。「この予定だけ」は対応を書かないので確かめない
+    # （違うかどうかは上の check_recurrence_request が 422 recurrence_this_not_allowed にする）
+    if scope != "this" and ("calendar_type" in payload or "team_ids" in payload):
+        validated_team_ids = await cal_svc.validate_team_ids(
+            db, payload.get("calendar_type"), payload.get("team_ids"), owner_row["calendar_type"]
+        )
+        if validated_team_ids is None:
+            payload.pop("team_ids", None)
+        else:
+            payload["team_ids"] = validated_team_ids
 
     # 種類: 今の種類と違うときだけ表で確かめる（同じなら、使わなくした種類でも通す）
     if "category" in payload:
@@ -693,6 +735,8 @@ async def update_event(
                 scope,
                 cal_svc.parse_occurrence(occurrence_start),
             )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("イベント更新エラー: %s", e)
         raise HTTPException(
@@ -727,8 +771,8 @@ async def delete_event(
         if not owner_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:calendar_event")
 
-    event_owner = owner_row["user_id"] if owner_row["user_id"] is not None else owner_row["created_by_user_id"]
-    if owner_row["calendar_type"] == "personal" and event_owner != user.id:
+    # 見えない予定（他人の「自分だけ」・メンバーでない「チーム」）は存在しないものとして扱う（管理者でも）
+    if not await cal_svc.can_see_event(db, owner_row["id"], user.id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:calendar_event")
 
     if owner_row["created_by_user_id"] != user.id and not is_tenant_admin(

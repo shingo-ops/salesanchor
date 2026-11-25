@@ -67,6 +67,7 @@ def test_table_rows_are_read():
         "contact_company_mismatch",
         "invoice_not_draft",
         "payment_fee",
+        "invalid_team_ids",
     ]
 
 

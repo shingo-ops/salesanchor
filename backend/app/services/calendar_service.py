@@ -23,7 +23,9 @@ from datetime import date, datetime, time, timedelta, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
+from fastapi import HTTPException, status
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import reset_tenant_context
@@ -188,6 +190,120 @@ def _google_body_for(ev: dict, send_color: bool = False) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# 見え方の正本（schedule-settings 便2b・design-bin2b.md §3-3）
+# ---------------------------------------------------------------------------
+
+SHARE_VALUES = ("shared", "personal", "team")  # 共有の値の正本（裏側）
+_INT4_MAX = 2147483647
+
+
+def visibility_sql(alias: str = "ce") -> str:
+    """この人に見える予定の条件。:me が無い呼び方はしない。
+
+    持ち主は COALESCE(user_id, created_by_user_id)。繰り返しの回・例外の行は元の行のチームで判定する
+    （COALESCE(recurring_event_id, id)）。使っていないチームは見ない。
+    """
+    return (
+        f"({alias}.calendar_type = 'shared'"
+        f" OR COALESCE({alias}.user_id, {alias}.created_by_user_id) = :me"
+        f" OR ({alias}.calendar_type = 'team' AND EXISTS ("
+        f"   SELECT 1 FROM calendar_event_teams cet"
+        f"   JOIN teams t ON t.id = cet.team_id AND t.is_active"
+        f"   JOIN team_members tm ON tm.team_id = cet.team_id AND tm.user_id = :me"
+        f"   WHERE cet.event_id = COALESCE({alias}.recurring_event_id, {alias}.id))))"
+    )
+
+
+async def can_see_event(db: AsyncSession, event_id: int, user_id: int) -> bool:
+    """1 件の予定が見えるか。条件は visibility_sql と同じ文を DB で確かめる（繰り返しの回は元の行の id を渡す）。"""
+    row = await db.execute(
+        text(f"SELECT 1 FROM calendar_events ce WHERE ce.id = :id AND {visibility_sql('ce')}"),
+        {"id": event_id, "me": user_id},
+    )
+    return row.first() is not None
+
+
+async def event_team_ids(db: AsyncSession, event_id: int) -> list[int]:
+    """予定（元の行）のチームの対応。id の昇順。"""
+    result = await db.execute(
+        text("SELECT team_id FROM calendar_event_teams WHERE event_id = :id ORDER BY team_id"),
+        {"id": event_id},
+    )
+    return [r[0] for r in result.fetchall()]
+
+
+async def set_event_teams(db: AsyncSession, event_id: int, team_ids: list[int]) -> None:
+    """予定のチームの対応を入れ替える書き手（唯一）。空なら消すだけ。commit しない＝呼び手の取引に乗る。"""
+    await db.execute(
+        text("DELETE FROM calendar_event_teams WHERE event_id = :id"),
+        {"id": event_id},
+    )
+    for team_id in team_ids:
+        await db.execute(
+            text("INSERT INTO calendar_event_teams (event_id, team_id) VALUES (:eid, :tid)"),
+            {"eid": event_id, "tid": team_id},
+        )
+
+
+def _invalid_team_ids() -> HTTPException:
+    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="invalid_team_ids")
+
+
+async def check_active_team_ids(db: AsyncSession, team_ids: list[int]) -> list[int]:
+    """重なりを除いて昇順にした list を返す。int4 の範囲外・無い id・使っていない id は 422 invalid_team_ids。"""
+    unique = sorted(set(team_ids))
+    if any(not isinstance(t, int) or t < 1 or t > _INT4_MAX for t in unique):
+        raise _invalid_team_ids()
+    if unique:
+        found = await db.execute(
+            text("SELECT id FROM teams WHERE id = ANY(:ids) AND is_active IS TRUE"),
+            {"ids": unique},
+        )
+        if len(found.fetchall()) != len(unique):
+            raise _invalid_team_ids()
+    return unique
+
+
+async def validate_team_ids(
+    db: AsyncSession,
+    calendar_type: Optional[str],
+    team_ids: Optional[list[int]],
+    current_type: Optional[str] = None,
+) -> Optional[list[int]]:
+    """共有とチームの確かめ（作る・直すの受け口が try の前に呼ぶ）。
+
+    決める共有は calendar_type、無ければ current_type（直すときの今の値）。重なりを除いて昇順にした list を返す。
+    今が team・決める共有も team・team_ids が None のときは None（呼び手は対応を書かない）。
+    team で空・team 以外で空でない・範囲外・無い id・使っていない id は 422 invalid_team_ids。
+    """
+    decided = calendar_type if calendar_type is not None else current_type
+    if decided == "team":
+        if team_ids is None:
+            if current_type == "team":
+                return None
+            raise _invalid_team_ids()
+        if len(team_ids) == 0:
+            raise _invalid_team_ids()
+        return await check_active_team_ids(db, team_ids)
+    if team_ids:
+        raise _invalid_team_ids()
+    return []
+
+
+async def write_event_teams_or_conflict(
+    db: AsyncSession, tenant_id: int, event_id: int, team_ids: list[int]
+) -> None:
+    """set_event_teams を呼ぶ。確かめと書き込みの間にチームが消えたら外部キーで失敗する → 戻して 409。"""
+    try:
+        await set_event_teams(db, event_id, team_ids)
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        await reset_tenant_context(db, tenant_id)
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="team_conflict")
+
+
+# ---------------------------------------------------------------------------
 # イベント一覧取得
 # ---------------------------------------------------------------------------
 
@@ -206,7 +322,8 @@ async def list_events(
 
     calendar_type が 'shared' の場合は全ユーザーのイベント。
     calendar_type が 'personal' の場合は user_id のイベントのみ。
-    どの指定でも、他人の 'personal' は返さない（'shared' か user_id 本人の予定だけ）。
+    どの指定でも、見えてよい予定だけ返す（visibility_sql）: 'shared'・持ち主（COALESCE(user_id, created_by_user_id)）本人の予定・
+    'team' の予定のうち使っているチームのメンバーである人。他人の 'personal' と、メンバーでない 'team' は返さない。
     title_query は題名の部分一致（%・_・\\ は文字として扱う）。指定時は新しい順・limit 件まで。
     """
     filters: list[str] = []
@@ -237,13 +354,13 @@ async def list_events(
             " AND ((ce.start_datetime < :end AND ce.end_datetime > :start AND ce.recurrence_rule IS NULL)"
             " OR (ce.recurrence_rule IS NOT NULL AND ce.start_datetime < :end))"
         )
-    # 見せ方の絞り: 他人の「自分だけ」予定は常に返さない
+    # 見せ方の絞り: 他人の「自分だけ」予定・メンバーでない「チーム」予定は常に返さない
     if user_id is None:
-        visibility_sql = "ce.calendar_type = 'shared'"
+        vis_where = "ce.calendar_type = 'shared'"
     else:
-        visibility_sql = "(ce.calendar_type = 'shared' OR ce.user_id = :me)"
+        vis_where = visibility_sql("ce")
         params["me"] = user_id
-    where += f" AND {visibility_sql}"
+    where += f" AND {vis_where}"
     where += " AND NOT ce.is_cancelled"
     if title_query is not None:
         escaped = title_query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
@@ -260,7 +377,10 @@ async def list_events(
             f" TRIM(COALESCE(created.surname_jp,'') || ' ' || COALESCE(created.given_name_jp,'')) AS created_by_name,"
             f" ce.meet_url,"
             f" ce.recurrence_rule, ce.recurring_event_id, ce.original_start_datetime,"
-            f" ce.color_key"
+            f" ce.color_key,"
+            f" CASE WHEN ce.calendar_type = 'team' THEN COALESCE((SELECT array_agg(cet.team_id ORDER BY cet.team_id)"
+            f"   FROM calendar_event_teams cet WHERE cet.event_id = COALESCE(ce.recurring_event_id, ce.id)),"
+            f"   ARRAY[]::integer[]) ELSE ARRAY[]::integer[] END AS team_ids"
             f" FROM calendar_events ce"
             f" LEFT JOIN public.users owner_user ON owner_user.id = ce.user_id"
             f" LEFT JOIN staff owner ON owner.user_id = owner_user.id"
@@ -301,6 +421,7 @@ async def list_events(
             "occurrence_start": r[21].isoformat() if r[20] is not None and r[21] else None,
             "is_first_occurrence": bool(r[19]) and r[20] is None,
             "color_key": r[22],
+            "team_ids": list(r[23] or []),
         }
 
     masters = [r for r in rows if r[19]]
@@ -342,7 +463,7 @@ async def list_events(
             if key in params:
                 exc_params[key] = params[key]
         exc_where = " AND ".join(
-            ["ce.recurring_event_id = ANY(:ids)", visibility_sql]
+            ["ce.recurring_event_id = ANY(:ids)", vis_where]
             + [f"ce.{f}" for f in type_filters]
         )
         exc_result = await db.execute(
@@ -431,6 +552,9 @@ async def create_event(
         },
     )
     event_id = result.scalar_one()
+    # チームの対応は INSERT と同じ取引に乗せる（commit の前）。受け口が validate_team_ids で確かめた組が入っている
+    if payload.get("calendar_type") == "team":
+        await write_event_teams_or_conflict(db, tenant_id, event_id, payload["team_ids"])
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072: commit 後は別接続になりうる。設定表は RLS（ADR-1018）
 
@@ -530,7 +654,14 @@ async def update_event(
                 params[k] = payload[k]
 
     add_meet = bool(payload.get("add_meet"))
+    # チームの対応: 受け口が確かめた組（キーが有るときだけ書く）。「ほかに変える欄が無いと返る」所より前に呼ぶ
+    team_write = payload.get("team_ids")
+    if team_write is not None:
+        await write_event_teams_or_conflict(db, tenant_id, event_id, team_write)
     if not set_clauses:
+        if team_write is not None:
+            await db.commit()
+            await reset_tenant_context(db, tenant_id)
         if add_meet:
             return await _attach_meet_only(db, tenant_id, event_id)
         return {"id": event_id, "meet_url": None}
@@ -858,6 +989,11 @@ async def check_recurrence_request(
     if scope == "this":
         if "calendar_type" in payload and payload["calendar_type"] != event.get("calendar_type"):
             return "recurrence_this_not_allowed"
+        # チームの対応は元の行 1 つ。「この予定だけ」では書かない。送られて元の行と違うときだけ 422（送らなければ確かめない）
+        if payload.get("team_ids") is not None and sorted(set(payload["team_ids"])) != await event_team_ids(
+            db, master["id"]
+        ):
+            return "recurrence_this_not_allowed"
         if choice is not None and choice != rec.rule_to_recurrence(master["recurrence_rule"]):
             return "recurrence_this_not_allowed"
         return None
@@ -1132,6 +1268,12 @@ async def update_recurring_event(
             recurrence_rule=new_rule,
         )
         new_id = await _insert_row(db, values)
+        # 新しい元の行のチーム: 送られた組、無ければ元の元の行の対応を写す（team のときだけ）
+        if values["calendar_type"] == "team":
+            copied = payload.get("team_ids")
+            if copied is None:
+                copied = await event_team_ids(db, master["id"])
+            await write_event_teams_or_conflict(db, tenant_id, new_id, copied)
         await _commit(db, tenant_id)
         new_row = _merged(values, id=new_id)
         if await _send_ok(db, tenant_id, master):
@@ -1165,6 +1307,9 @@ async def update_recurring_event(
         if fields:
             await _update_fields(db, "id = :id", {"id": master["id"]}, fields)
             await _update_fields(db, "recurring_event_id = :id", {"id": master["id"]}, fields)
+        # チームだけの直しも対応を書く（fields が空でも）。元の行の id に書く
+        if payload.get("team_ids") is not None:
+            await write_event_teams_or_conflict(db, tenant_id, master["id"], payload["team_ids"])
         after = _merged(master, **fields)
         await _commit(db, tenant_id)
         if fields and await _send_ok(db, tenant_id, master):
@@ -1202,6 +1347,8 @@ async def update_recurring_event(
     await db.execute(
         text("DELETE FROM calendar_events WHERE recurring_event_id = :mid"), {"mid": master["id"]}
     )
+    if payload.get("team_ids") is not None:
+        await write_event_teams_or_conflict(db, tenant_id, master["id"], payload["team_ids"])
     after = _merged(master, **set_fields)
     await _commit(db, tenant_id)
     if await _send_ok(db, tenant_id, master):
@@ -1230,6 +1377,8 @@ async def _update_single_to_recurring(
             fields[k] = _parse_dt(payload[k])
     fields["recurrence_rule"] = rec.build_rule(payload["recurrence"], new_start)
     await _update_fields(db, "id = :id", {"id": event["id"]}, fields)
+    if payload.get("team_ids") is not None:
+        await write_event_teams_or_conflict(db, tenant_id, event["id"], payload["team_ids"])
     after = _merged(event, **fields)
     await _commit(db, tenant_id)
     if await _send_ok(db, tenant_id, event):

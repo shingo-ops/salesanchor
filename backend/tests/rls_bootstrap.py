@@ -187,6 +187,7 @@ _TENANT_LOOP_MIGRATIONS = {
     "20261112_170000_add_calendar_events_recurrence.sql": 1,
     "20261119_120000_add_calendar_events_color_key.sql": 1,
     "20261126_100000_create_calendar_categories.sql": 1,
+    "20261127_100000_add_calendar_team_share.sql": 1,
     "20261005_150000_add_roles_system_key.sql": 1,
     "20261106_150000_add_discord_role_link_tables.sql": 1,
     "20261112_160000_create_tenant_issuer_and_payment_tables.sql": 1,

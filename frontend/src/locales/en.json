@@ -3531,7 +3531,8 @@
     "calendarType": "Calendar type",
     "calendarTypeValues": {
       "shared": "Shared",
-      "personal": "Personal"
+      "personal": "Personal",
+      "team": "Team"
     },
     "personal": "Personal",
     "meeting": "Meeting",
@@ -3591,7 +3592,16 @@
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
     "allDay": "All day",
-    "shareWithStaff": "Show to staff",
+    "shareLabel": "Sharing",
+    "shareSelf": "Only me",
+    "shareAll": "Everyone",
+    "shareTeam": "Team",
+    "shareTeams": "Teams to share with",
+    "shareTeamsClear": "Clear selection",
+    "shareTeamsNone": "None selected",
+    "shareTeamsCount": "{{count}} teams",
+    "shareTeamsRequired": "Choose at least one team",
+    "noActiveTeams": "There are no active teams",
     "recurrence": {
       "label": "Repeat",
       "none": "Does not repeat",
@@ -3639,8 +3649,6 @@
     "categoryColor": "Category color",
     "categoryNoColor": "No category color",
     "categoryDefaultShare": "Default sharing",
-    "categoryShareSelf": "Only me",
-    "categoryShareAll": "Everyone",
     "categoryActive": "In use",
     "categoryErrorNameRequired": "The name is empty. Enter a name and save again.",
     "categoryErrorConflict": "Someone else added a category at the same time. Press the button again.",
@@ -6576,7 +6584,8 @@
     "paymentMethod": "The selected payment method is no longer available, so the invoice cannot be saved. Choose a payment method again.",
     "contactCompanyMismatch": "The selected contact does not belong to this company, so the invoice details cannot be loaded. Choose the contact again.",
     "invoiceNotDraft": "This invoice is no longer a draft, so it cannot be issued. Reload the page.",
-    "paymentFee": "No payment fee setting was found, so the total cannot be calculated. Check the PayPal fee in settings."
+    "paymentFee": "No payment fee setting was found, so the total cannot be calculated. Check the PayPal fee in settings.",
+    "invalidTeamIds": "The selected teams cannot be used. Please choose again."
   },
   "issuerProfile": {
     "sectionTitle": "Company information on documents",
