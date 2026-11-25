@@ -472,20 +472,187 @@ class TestRouterCallback:
 
 
 class TestRouterDisconnect:
-    """接続解除エンドポイントのテスト。"""
+    """接続解除エンドポイントのテスト（design §3-2・§5 K3〜K5）。"""
 
     @pytest.mark.asyncio
-    async def test_disconnect_admin_succeeds(self):
+    async def test_disconnect_order_stop_revoke_delete(self):
+        """①通知の窓口を止める ②取り消す ③行を消す の順。calendar_events には触れない。"""
         from app.routers.google_calendar import disconnect
         from app.models import User
 
         user = MagicMock(spec=User)
         user.role = "admin"
         mock_db = AsyncMock()
+        calls: list[str] = []
 
-        await disconnect(tenant_id=1, user=user, db=mock_db)
-        mock_db.execute.assert_called_once()
+        async def _stop(db, tid):
+            calls.append("stop")
+
+        async def _revoke(db, tid):
+            calls.append("revoke")
+
+        async def _execute(stmt, params=None):
+            calls.append("delete:" + str(stmt))
+            return MagicMock()
+
+        mock_db.execute = AsyncMock(side_effect=_execute)
+
+        with patch("app.services.google_webhook.stop_webhook", AsyncMock(side_effect=_stop)), \
+             patch("app.routers.google_calendar.cal_svc.revoke_tenant_token",
+                   AsyncMock(side_effect=_revoke)), \
+             patch("app.routers.google_calendar.reset_tenant_context", AsyncMock()):
+            await disconnect(tenant_id=1, user=user, db=mock_db)
+
+        assert calls[0] == "stop"
+        assert calls[1] == "revoke"
+        assert calls[2].startswith("delete:")
+        assert "tenant_google_calendar_config" in calls[2]
+        assert all("calendar_events" not in c for c in calls)
         mock_db.commit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_disconnect_revoke_failure_502_keeps_row(self):
+        from app.routers.google_calendar import disconnect
+        from app.models import User
+        from app.services.google_calendar import GoogleRevokeError
+        from fastapi import HTTPException
+
+        user = MagicMock(spec=User)
+        user.role = "admin"
+        mock_db = AsyncMock()
+
+        with patch("app.services.google_webhook.stop_webhook", AsyncMock()), \
+             patch("app.routers.google_calendar.cal_svc.revoke_tenant_token",
+                   AsyncMock(side_effect=GoogleRevokeError("status=500 error="))):
+            with pytest.raises(HTTPException) as exc_info:
+                await disconnect(tenant_id=1, user=user, db=mock_db)
+
+        assert exc_info.value.status_code == 502
+        assert exc_info.value.detail == "google_revoke_failed"
+        mock_db.execute.assert_not_called()
+        mock_db.commit.assert_not_called()
+
+
+class TestRevokeTenantToken:
+    """revoke_tenant_token（design §3-1）。httpx は差し替えて外へ出さない。"""
+
+    @staticmethod
+    def _db(encrypted):
+        db = AsyncMock()
+        result = MagicMock()
+        result.first.return_value = None if encrypted is None else (encrypted,)
+        db.execute = AsyncMock(return_value=result)
+        return db
+
+    @staticmethod
+    def _client(status_code=200, body=None, post_exc=None):
+        resp = MagicMock()
+        resp.status_code = status_code
+        resp.json = MagicMock(return_value=body if body is not None else {})
+        client = MagicMock()
+        client.post = AsyncMock(side_effect=post_exc) if post_exc else AsyncMock(return_value=resp)
+        cm = MagicMock()
+        cm.__aenter__ = AsyncMock(return_value=client)
+        cm.__aexit__ = AsyncMock(return_value=None)
+        return cm, client
+
+    @pytest.mark.asyncio
+    async def test_200_posts_token_to_revoke_url(self):
+        from app.services import google_calendar as svc
+
+        cm, client = self._client(200)
+        with patch.object(svc.encryption, "decrypt", return_value="refresh-value"), \
+             patch.object(svc.httpx, "AsyncClient", return_value=cm):
+            await svc.revoke_tenant_token(self._db("enc"), 1)
+
+        args, kwargs = client.post.call_args
+        assert args[0] == svc._REVOKE_URL
+        assert kwargs["data"] == {"token": "refresh-value"}
+
+    @pytest.mark.asyncio
+    async def test_400_invalid_token_is_success(self):
+        from app.services import google_calendar as svc
+
+        cm, _ = self._client(400, {"error": "invalid_token"})
+        with patch.object(svc.encryption, "decrypt", return_value="v"), \
+             patch.object(svc.httpx, "AsyncClient", return_value=cm):
+            await svc.revoke_tenant_token(self._db("enc"), 1)
+
+    @pytest.mark.asyncio
+    async def test_400_other_raises(self):
+        from app.services import google_calendar as svc
+
+        cm, _ = self._client(400, {"error": "invalid_request"})
+        with patch.object(svc.encryption, "decrypt", return_value="v"), \
+             patch.object(svc.httpx, "AsyncClient", return_value=cm):
+            with pytest.raises(svc.GoogleRevokeError):
+                await svc.revoke_tenant_token(self._db("enc"), 1)
+
+    @pytest.mark.asyncio
+    async def test_500_raises(self):
+        from app.services import google_calendar as svc
+
+        cm, _ = self._client(500)
+        with patch.object(svc.encryption, "decrypt", return_value="v"), \
+             patch.object(svc.httpx, "AsyncClient", return_value=cm):
+            with pytest.raises(svc.GoogleRevokeError):
+                await svc.revoke_tenant_token(self._db("enc"), 1)
+
+    @pytest.mark.asyncio
+    async def test_network_failure_raises(self):
+        from app.services import google_calendar as svc
+
+        cm, _ = self._client(post_exc=svc.httpx.ConnectError("boom"))
+        with patch.object(svc.encryption, "decrypt", return_value="v"), \
+             patch.object(svc.httpx, "AsyncClient", return_value=cm):
+            with pytest.raises(svc.GoogleRevokeError):
+                await svc.revoke_tenant_token(self._db("enc"), 1)
+
+    @pytest.mark.asyncio
+    async def test_no_row_does_not_post(self):
+        from app.services import google_calendar as svc
+
+        with patch.object(svc.httpx, "AsyncClient") as ac:
+            await svc.revoke_tenant_token(self._db(None), 1)
+        ac.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_unreadable_token_does_not_post(self):
+        from app.services import google_calendar as svc
+
+        with patch.object(svc.encryption, "decrypt", side_effect=ValueError("bad")), \
+             patch.object(svc.httpx, "AsyncClient") as ac:
+            await svc.revoke_tenant_token(self._db("enc"), 1)
+        ac.assert_not_called()
+
+
+class TestCallbackRedirectTarget:
+    """戻り先が設定ページ（design §3-3・K7）。"""
+
+    @pytest.mark.asyncio
+    async def test_failure_redirects_to_settings(self):
+        from app.routers.google_calendar import connect_callback
+
+        with patch("app.routers.google_calendar.cal_svc.exchange_code",
+                   AsyncMock(side_effect=ValueError("invalid state"))):
+            response = await connect_callback(code="c", state="s", db=AsyncMock())
+        assert "/schedule/settings?" in str(response.headers.get("location", ""))
+
+    @pytest.mark.asyncio
+    async def test_success_redirects_to_settings(self):
+        from app.routers.google_calendar import connect_callback
+
+        result = {
+            "tenant_id": 1, "user_id": 2, "access_token": "a",
+            "refresh_token": "r", "expiry": None,
+        }
+        with patch("app.routers.google_calendar.cal_svc.exchange_code",
+                   AsyncMock(return_value=result)), \
+             patch("app.routers.google_calendar.set_tenant_context", AsyncMock()), \
+             patch("app.routers.google_calendar.reset_tenant_context", AsyncMock()):
+            response = await connect_callback(code="c", state="s", db=AsyncMock())
+        loc = str(response.headers.get("location", ""))
+        assert "/schedule/settings?connected=true" in loc
 
 
 # ---------------------------------------------------------------------------

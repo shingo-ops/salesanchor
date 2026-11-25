@@ -125,35 +125,23 @@ describe("SchedulePage realtime refresh", () => {
   });
 });
 
-describe("SchedulePage Google calendar connect button", () => {
-  it("shows an enabled button to a tenant admin and starts the connect flow on click", async () => {
+describe("SchedulePage header (settings page owns the Google connection)", () => {
+  it("has no Google connect button in the header, for an admin either", async () => {
     answers.isTenantAdmin = true;
     view();
-    const btn = await screen.findByRole("button", { name: i18n.t("schedule.connectBtn") });
-    await waitFor(() => expect((btn as HTMLButtonElement).disabled).toBe(false));
-    fireEvent.click(btn);
-    await waitFor(() => expect(mockGet).toHaveBeenCalledWith("/google-calendar/connect/start"));
-    await waitFor(() => expect(hrefSetter).toHaveBeenCalledWith("https://accounts.example/auth"));
+    await waitFor(() => expect(mockGet).toHaveBeenCalledWith("/google-calendar/status"));
+    await screen.findByRole("button", { name: i18n.t("schedule.create") });
+    expect(screen.queryByRole("button", { name: /Googleカレンダー連携|連携済/ })).toBeNull();
+    expect(mockGet).not.toHaveBeenCalledWith("/google-calendar/connect/start");
   });
 
-  it("shows a disabled connected label when already connected", async () => {
+  it("shows the settings gear to a tenant admin without staff.view", async () => {
     answers.isTenantAdmin = true;
-    answers.connected = true;
+    answers.canManageOthers = false;
     view();
-    const btn = await screen.findByRole("button", { name: i18n.t("schedule.connectBtnConnected") });
-    expect((btn as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it("hides the button and never asks for status when not a tenant admin", async () => {
-    answers.isTenantAdmin = false;
-    view();
-    await waitFor(() => expect(mockGet).toHaveBeenCalledWith("/me/permissions"));
-    await waitFor(() => expect(mockGet.mock.calls.length).toBeGreaterThan(1));
-    expect(screen.queryByRole("button", { name: i18n.t("schedule.connectBtn") })).toBeNull();
-    expect(mockGet).not.toHaveBeenCalledWith("/google-calendar/status");
+    expect(await screen.findByRole("button", { name: i18n.t("schedule.settings") })).toBeTruthy();
   });
 });
-
 
 function todayAt(hour: number) {
   const d = new Date();
@@ -581,6 +569,29 @@ describe("SchedulePage Google Meet (K12)", () => {
     expect(await screen.findByText(i18n.t("schedule.meetFailed"))).toBeTruthy();
     // 予定は保存済みなので小窓は閉じる
     await waitFor(() => expect(screen.queryByLabelText(i18n.t("schedule.eventTitle"))).toBeNull());
+  });
+
+  it("G28: the banner close is a mold Button with an svg icon and dismisses the banner", async () => {
+    enableMeet();
+    view();
+    await openCreate();
+    fireEvent.click(await screen.findByRole("button", { name: addMeetLabel() }));
+    vi.mocked(api.post).mockResolvedValueOnce({ id: 1, meet_url: null });
+    save();
+    const message = i18n.t("schedule.meetFailed");
+    expect(await screen.findByText(message)).toBeTruthy();
+    const banner = screen.getByText(message).closest("div");
+    if (!banner) throw new Error("banner is missing");
+    const close = Array.from(banner.querySelectorAll("button")).find(
+      (b) => b.getAttribute("aria-label") === i18n.t("common.close"),
+    );
+    if (!close) throw new Error("close button is missing");
+    expect(close.className).toContain("comp-btn--sm");
+    expect(close.className).toContain("comp-btn--icon-only");
+    expect(close.className).toContain("schedule-banner__close");
+    expect(close.querySelector("svg")).not.toBeNull();
+    fireEvent.click(close);
+    await waitFor(() => expect(screen.queryByText(message)).toBeNull());
   });
 
   it("shows the join link for an event with meet_url and no Meet row on edit", async () => {
@@ -1351,36 +1362,6 @@ describe("SchedulePage on component molds (G26-G28)", () => {
     expect(badge.className).toContain("comp-badge--soft");
     expect(badge.hasAttribute("style")).toBe(false);
     expect(badge.textContent).toBe(i18n.t("schedule.calendarLabels.meeting"));
-  });
-
-  it("S5: ?connected=false&error=scope_missing shows the scope-missing message", async () => {
-    render(<MemoryRouter initialEntries={["/schedule?connected=false&error=scope_missing"]}><SchedulePage /></MemoryRouter>);
-    expect(await screen.findByText(i18n.t("schedule.connectScopeMissing"))).toBeTruthy();
-    expect(screen.queryByText(i18n.t("schedule.connectError"))).toBeNull();
-  });
-
-  it("S5: ?connected=false alone shows the generic connect error", async () => {
-    render(<MemoryRouter initialEntries={["/schedule?connected=false"]}><SchedulePage /></MemoryRouter>);
-    expect(await screen.findByText(i18n.t("schedule.connectError"))).toBeTruthy();
-    expect(screen.queryByText(i18n.t("schedule.connectScopeMissing"))).toBeNull();
-  });
-
-  it("G28: the banner close is a mold Button with an svg icon and dismisses the banner", async () => {
-    render(<MemoryRouter initialEntries={["/schedule?connected=true"]}><SchedulePage /></MemoryRouter>);
-    const message = i18n.t("schedule.connectSuccess");
-    expect(await screen.findByText(message)).toBeTruthy();
-    const banner = screen.getByText(message).closest("div");
-    if (!banner) throw new Error("banner is missing");
-    const close = Array.from(banner.querySelectorAll("button")).find(
-      (b) => b.getAttribute("aria-label") === i18n.t("common.close"),
-    );
-    if (!close) throw new Error("close button is missing");
-    expect(close.className).toContain("comp-btn--sm");
-    expect(close.className).toContain("comp-btn--icon-only");
-    expect(close.className).toContain("schedule-banner__close");
-    expect(close.querySelector("svg")).not.toBeNull();
-    fireEvent.click(close);
-    await waitFor(() => expect(screen.queryByText(message)).toBeNull());
   });
 });
 
