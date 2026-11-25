@@ -1,6 +1,6 @@
 # design: 「顧客」に切り替える基準（便1）
 
-状態: **草案**（2026-11-25・KGI は PO の承認待ち）。調査: [recon.md](recon.md)。ADR: [ADR-1090](../../adr/ADR-1090-customer-conversion-three-conditions.md)（Proposed）。
+状態: **KGI は PO 承認済み**（2026-11-25 チャット「1」。K1〜K7 と §3 の前提）。設計審査はこれから。調査: [recon.md](recon.md)。ADR: [ADR-1090](../../adr/ADR-1090-customer-conversion-three-conditions.md)（Proposed）。
 
 ## 1. 目的（PO の言葉は recon §1）
 
@@ -46,16 +46,23 @@ PO の決定:
 - そろっていれば `UPDATE leads SET status = 'existing_customer', updated_at = NOW() WHERE id = :lead_id AND status <> 'existing_customer'` を行う。監査の記録（`record_audit_log`、action="auto_convert"）を残す。
 - 呼んだ側の取引の中で動く（commit は呼び元）。
 
-呼ぶ場所（3 つの条件が書かれる道すべて・recon §3）:
+呼ぶ場所（3 つの条件が書かれる道すべて。2026-11-25 に worktree の `git grep` で数えた・recon §7）:
 
-| 道 | 場所 | lead_id の求め方 |
+| 道 | 場所（今の行） | lead_id の求め方 |
 |---|---|---|
-| 登録フォームの送信 | `registration_tokens.py:215` `register_customer` の commit 前 | トークンの lead_id |
-| 手で入金登録 | `invoices.py` `pay_invoice` の commit 前 | `companies.lead_id`（請求書の company_id から） |
-| PayPal の戻り | `integrations.py:799` の後・commit 前 | 同上 |
-| PayPal の通知 | `integrations.py:948` の後・commit 前 | 同上 |
-| 注文の「支払済にする」 | `orders.py:571` `set_order_paid`（paid=true のときだけ）の commit 前 | `companies.lead_id`（注文の company_id から） |
-| 会社を手で作る・リードへつなぐ | `companies.py:440` ほか、`companies.lead_id` を書く道 | その lead_id（実装前に `lead_id` を書く道を全部数える） |
+| 登録フォームの送信 | `backend/app/routers/registration_tokens.py:215` `register_customer` の `mark_token_used` の後・commit 前 | トークンの lead_id |
+| 請求書の「入金登録」（手） | `backend/app/routers/invoices.py:899` の後・commit 前 | 請求書の company_id → `companies.lead_id` |
+| 請求書の「支払い状況を確認」（PayPal を手で確かめる） | `backend/app/routers/invoices.py:1145` の後・commit 前 | 同上 |
+| PayPal の戻り | `backend/app/routers/integrations.py:799` の後・commit 前 | 同上 |
+| PayPal の通知 | `backend/app/routers/integrations.py:948` の後・commit 前 | 同上 |
+| 注文の「支払済にする」 | `backend/app/routers/orders.py:596`（paid=true のときだけ）の後・commit 前 | 注文の company_id → `companies.lead_id` |
+| 会社を作る（リード必須） | `backend/app/routers/companies.py:440` の後・commit 前 | `data.lead_id` |
+| 会社のリードを付け替える | `backend/app/routers/companies.py:610`（更新に lead_id が入るときだけ） | 新しい lead_id |
+| リードの統合 | `backend/app/routers/leads.py:3241` `merge_leads` の commit 前（会社が残る側へ移る） | 残る側の lead_id |
+| 会社の統合 | `backend/app/routers/companies.py:742` `merge_companies` の commit 前（請求書・注文が残る側へ移る） | 残る側の会社の lead_id |
+
+- `backend/app/routers/integrations.py:653`（PayPal 決済テストの会社）は lead_id を書かないので対象外。
+- 実装役は着手時に `git grep -n -E "paid_at *= *(\{PAID_AT_SQL\}|NOW)|INSERT INTO companies|UPDATE companies SET|mark_token_used"` をもう一度流し、上の表と食い違えば止めて報告する。
 
 ### 4-2. 手で既存顧客にする道を閉じる（backend＋画面）
 
@@ -93,7 +100,7 @@ PO の決定:
 |---|---|
 | 条件を書く道を 1 つ見落とし、そろっても既存顧客にならない | 実装前に `companies.lead_id`・`invoices.paid_at`・`registration_tokens.used_at` を書く道を git grep で全部数え、カードに一覧で書く。試験で道ごとに 1 本 |
 | 手で既存顧客を付けていた担当者が困る | HIGH LIFE JPN で既存顧客を付けた人は今 0 人（recon §4）。画面の 422 の文で「支払いがそろうと自動で切り替わります」と出す |
-| 既存顧客にだけ AI が対応しない決まり（ADR-015）の相手が減る | 判定場所は実装前に確かめる（recon §6 未確認）。基準が厳しくなる方向なので、お客さんに AI が出すぎることは無いかを試験で確かめる |
+| 既存顧客にだけ AI が対応しない決まり（ADR-015）への影響 | 2026-11-25 `git grep -n existing_customer -- backend/app` で、AI の返事の道に既存顧客を見て分ける箇所は 0 件（数え方・型の定義だけ）。今回の変更で AI の動きは変わらない |
 | 成約数が減って見える | 今の HIGH LIFE JPN は既存顧客 0 人なので、今の数は変わらない |
 
 ## 7. 受入の確かめ方（KGI の検証方法の詳しい手順）
@@ -114,4 +121,4 @@ PO の決定:
 
 ## 10. 未決事項
 
-- なし（KGI と §3 の前提を PO が承認すれば、実装カードへ進める）。
+- なし（KGI と §3 の前提は 2026-11-25 PO 承認済み）。

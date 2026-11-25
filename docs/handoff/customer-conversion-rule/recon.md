@@ -64,3 +64,13 @@ ADR-015、ADR-108、ADR-1089、ADR-109、ADR-110、ADR-119、ADR-134、ADR-139�
 
 - `backend/app/routers/analytics.py:1129`「成約定義: leads.status = 'existing_customer'」ほか、成約数・成約率は existing_customer を数える（`analytics.py:116,519,539,577,593,1052,1090,1181,1214,1749` など）。式は変えない。新しい基準では、成約は「3 つがそろった人」の数になる。
 - `docs/adr/ADR-015.md:88-101`: 既存顧客には AI が対応しない。基準が厳しくなるので、AI が対応しない相手は減る（どこで判定しているかは便1 の実装前に確かめる・未確認）。
+
+## 7. 追加の調べ（2026-11-25・worktree の git grep）
+
+- 支払いを書く道: `backend/app/routers/invoices.py:899`（入金登録）・`invoices.py:1145`（支払い状況を確認）・`backend/app/routers/integrations.py:799`・`integrations.py:948`・`backend/app/routers/orders.py:596`（支払済にする。`orders.py:598` で取り消し）。
+- 画面のボタン: `frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:233`（入金登録）・`frontend/src/pages/orders/OrdersTable.tsx:146`（支払済にする）・`OrdersTable.tsx:174`（取り消し）。
+- 会社の lead_id を書く道: `backend/app/routers/companies.py:440`（作る・lead_id 必須 `backend/app/schemas/company.py:116`）・`companies.py:610`（更新。`companies.py:103` の更新できる列に lead_id あり）・`registration_tokens.py:270`。`integrations.py:653` は lead_id を書かない。
+- 統合: `backend/app/routers/leads.py:3241` `merge_leads`（会社を残る側へ移す・`reassigned_companies`）、`companies.py:742` `merge_companies`。
+- 登録済みの判定（新規登録のリンクを断る）: `backend/app/routers/registration_tokens.py:86-102`（会社に既定の請求先の住所がある）。
+- カルテの帯: `frontend/src/pages/inbox/InboxKartePanel.tsx:378-383`（帯はリードと既存顧客だけ）・`InboxKartePanel.tsx:401-431`（メニュー: 登録・住所を足す・請求先を変える〔既存顧客だけ〕）。カルテのリードは `frontend/src/pages/inbox/useInboxState.ts:381` で `GET /leads/{id}`（`backend/app/routers/leads.py:372` `get_lead`）。
+- AI の返事の道で既存顧客を見て分ける箇所: `git grep -n existing_customer -- backend/app` で 0 件（`schemas/lead.py:35`・`services/lead_conversion_factors.py:27`・`services/tenant.py:2284` は定義と数え方）。
