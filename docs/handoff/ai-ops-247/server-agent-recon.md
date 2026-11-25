@@ -21,15 +21,16 @@
 |---|---|---|
 | F1 | prod2 のメモリは全部で 3,915MB。使えるのは 2,546MB。スワップは 0。CPU は 4 個。ディスクは 158GB 空き。動いているのは監視の 11 個のコンテナ（最大は grafana 153.5MiB） | 2026-11-25 09:15:15Z に prod2 で `free -m`・`nproc`・`df -h /`・`docker stats --no-stream`（Mac の手元の記録 /tmp/CC報告ファイル/workresv/prod2-mem.txt） |
 | F2 | 9 月 29 日の prod2 は Ubuntu 24.04.4・使えるメモリ 2,581MB | `docs/handoff/gemini-egress-via-prod2/recon.md:54` |
-| F3 | prod2 には prod1 へ常時つなぐ autossh の仕組み（monitoring-tunnel.service）がある。prod1 への鍵が prod2 に置いてある | `docs/handoff/gemini-egress-via-prod2/recon.md:47` |
-| F4 | Claude Code の公式の動く条件: Ubuntu 20.04 以上・メモリ 4GB 以上 | 公式 setup（code.claude.com/docs/en/setup「System requirements」・Context7 で 2026-11-25 に確認） |
-| F5 | Discord の公式の道具（discord@claude-plugins-official）がある。`claude --channels plugin:discord@claude-plugins-official` で起動する。channels は研究プレビュー | 公式 channels・cli-reference（Context7・2026-11-25） |
-| F6 | 公式の Discord の道具は、ボットの投稿を読まずに捨てる（`if (msg.author.bot) return`） | Mac の手元の公式の道具 0.0.6 の server.ts 912 行目。2026-10-13 に webhook の投稿が届かないことを実測（ADR-1009 の経緯） |
-| F7 | 自前で手直しした道具は `--dangerously-load-development-channels` が要る。対話の画面で確認が出る。`-p` では無視される | 公式 channels-reference（Context7・2026-11-25） |
-| F8 | サブスクのログインは「ordinary use」向け。Pro・Max の上限は「ordinary, individual usage」を前提にしている。製品やサービスを作る人は API の鍵を使う | 公式 legal-and-compliance（Context7・2026-11-25） |
-| F9 | Remote Control: 自分の機械で動く Claude Code を、スマホの Claude アプリから操作できる。機械と claude の処理は動いたままにしておく必要がある | 公式 remote-control・mobile（Context7・2026-11-25） |
+| F3 | prod2 には prod1 へ常時つなぐ autossh の仕組み（monitoring-tunnel.service）がある。つなぐための認証の置き場は確かめていない（sudo にパスワードが要り読めない・同じ表の :53） | `docs/handoff/gemini-egress-via-prod2/recon.md:47` |
+| F4 | Claude Code の公式の動く条件: Ubuntu 20.04 以上・メモリ 4GB 以上 | https://code.claude.com/docs/en/setup「System requirements」（Context7 で 2026-11-25 に取得） |
+| F5 | Discord の公式の道具（discord@claude-plugins-official）がある。`claude --channels plugin:discord@claude-plugins-official` で起動する。channels は研究プレビュー | https://code.claude.com/docs/en/channels・https://code.claude.com/docs/en/cli-reference（Context7 で 2026-11-25 に取得） |
+| F6 | 公式の Discord の道具は、ボットの投稿を読まずに捨てる（`if (msg.author.bot) return`） | 0.0.4 では server.ts:806（`docs/adr/ADR-1009-discord-ops-intake.md:16`）。今の 0.0.6 では 912 行目（Mac の手元の写し ~/.claude/plugins/marketplaces/claude-plugins-official/external_plugins/discord/server.ts・2026-11-25 に grep・リポジトリの外） |
+| F7 | 自前で手直しした道具は `--dangerously-load-development-channels` が要る。対話の画面で確認が出る。`-p` では無視される | https://code.claude.com/docs/en/channels-reference（Context7 で 2026-11-25 に取得） |
+| F8 | サブスクのログインは「ordinary use」向け。Pro・Max の上限は「ordinary, individual usage」を前提にしている。製品やサービスを作る人は API の鍵を使う | https://code.claude.com/docs/en/legal-and-compliance（Context7 で 2026-11-25 に取得） |
+| F9 | Remote Control: 自分の機械で動く Claude Code を、スマホの Claude アプリから操作できる。機械と claude の処理は動いたままにしておく必要がある | https://code.claude.com/docs/en/remote-control（Context7 で 2026-11-25 に取得） |
 | F10 | Mac の手元の Claude Code（2.1.332）は、長く使った会話 1 つで 482MB を使っていた | 2026-11-25 に `ps -axo rss,command`（/tmp/CC報告ファイル/workresv/claude-rss.txt） |
-| F11 | 段階4 では、異常の知らせを受けて AI を起こすのはサーバー側（クラウドの routines）。Discord を通さない | `docs/handoff/ai-ops-247/stage4-design.md:78-101`（U1）・要件 R4 |
+| F11 | 段階4 では、異常の知らせを受けて AI を起こすのはサーバー側（クラウドの routines）。Discord を通さない | `docs/handoff/ai-ops-247/stage4-design.md:80-95`（U1 の選んだ案）・`docs/handoff/ai-ops-247/stage4-requirements.md:112`（R4） |
+| F12 | channels はログインのしかたとして claude.ai のログインと Console の API の鍵の両方に対応する（Bedrock などは対象外） | https://code.claude.com/docs/en/channels 冒頭（Context7 で 2026-11-25 に取得） |
 
 ## 3. 未確認（設計では前提にしない。試しで確かめる）
 
