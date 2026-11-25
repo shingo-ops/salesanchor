@@ -20,8 +20,8 @@
 - 対象外: 本番 FedEx・eLogi での実地確認（FedEx 本番申請後の動作確認で行う・PO 指示）。
 
 ## 3. 変更内容（追加する試験）
-### T1 見積もり: 香港で郵便番号が空なら 999077 を送る（`test_fedex_rates.py` の `class TestGetRates` に追加）
-既存 `test_success_returns_quotes`（:162）と同じ形で `httpx.post` を `side_effect=[_mock_token_resp(), _mock_rates_resp()]` で差し替える。配達日数の呼び出しは例外を握りつぶす（`fedex_rates.py:458,468`）ので2つで足りる。
+### T1 見積もり: 香港で郵便番号が空なら 999077 を送る（`backend/tests/test_fedex_rates.py` の `class TestGetRates` に追加）
+既存 `test_success_returns_quotes`（:162）と同じ形で `httpx.post` を `side_effect=[_mock_token_resp(), _mock_rates_resp()]` で差し替える。配達日数の呼び出しは例外を握りつぶす（`backend/app/services/fedex_rates.py:458,468`）ので2つで足りる。
 ```python
 @pytest.mark.parametrize("dest_zip", [None, ""])
 def test_hk_empty_postal_code_sends_representative_999077(self, dest_zip):
@@ -39,7 +39,7 @@ def test_hk_empty_postal_code_sends_representative_999077(self, dest_zip):
 ### T2 見積もり: 郵便番号があればそのまま送る（同クラス）
 T1 と同じ形で `destination_postal_code="0"` → `addr["postalCode"] == "0"`。補完が入力値を上書きしないことを守る。
 
-### T3 eLogi CSV: 香港で郵便番号が空なら ZIP 列は 0000000・DB は空（`test_order_shipping_details.py` の CSV 試験の並びに追加）
+### T3 eLogi CSV: 香港で郵便番号が空なら ZIP 列は 0000000・DB は空（`backend/tests/test_order_shipping_details.py` の CSV 試験の並びに追加）
 既存 `test_single_csv_returns_19_columns`（:214）と同じ形。`zip_code` を送らない。
 ```python
 async def test_single_csv_hk_empty_zip_fills_0000000(self, client):
@@ -58,7 +58,7 @@ async def test_single_csv_hk_empty_zip_fills_0000000(self, client):
 ```
 POST の成功コード 201 は既存 `test_create_shipping_for_order`（:46、:68 で `== 201`）で確認済み。
 
-### T4 見積書の届け先郵便番号: 香港で空なら None を返す（`test_invoice_totals.py` の :258-263 の並びに追加）
+### T4 見積書の届け先郵便番号: 香港で空なら None を返す（`backend/tests/test_invoice_totals.py` の :258-263 の並びに追加）
 ```python
 def test_destination_postal_code_hk_empty_returns_none():
     assert destination_postal_code({"country": "HK", "postal_code": None}, None) is None
@@ -84,12 +84,12 @@ None が `get_rates` に渡ると T1 の補完が効く。T1 と T4 で「会社
 | 基準 | 検証方法 |
 |---|---|
 | K1 T1〜T4 の試験が追加され、PR の必須 CI（pytest）が緑 | PR の Checks 画面で pytest が success・追加した試験名が実行ログに出る |
-| K2 補完を消すと試験が赤になる | クラウドの担当が一時的に `fedex_rates.py:308` の補完と `order_shipping_details.py:327-328` を外して試験を回し、T1・T3 が失敗する生出力を PR に貼る（外した変更は commit しない） |
+| K2 補完を消すと試験が赤になる | クラウドの担当が一時的に `backend/app/services/fedex_rates.py:308` の補完と `backend/app/routers/order_shipping_details.py:327-328` を外して試験を回し、T1・T3 が失敗する生出力を PR に貼る（外した変更は commit しない） |
 | K3 製品コードは1行も変わらない | `git diff origin/main...HEAD --name-only` が `backend/tests/` の3ファイルと本 docs・台帳だけ |
 
 区分: ADR-1015 の B-3（テストと正本でない docs だけ）。ADR-126 の未チェック項目へのチェックは正本の変更になるため本 PR に含めず、合流後に別の書類 PR で行う。
 
-## 7. 外部事例
+## 7. 外部・過去事例の参照と我々への応用
 不要。理由: 自社コードの既存の動きを試験で固定するだけ。FedEx 側の挙動は自社の sandbox 実測（recon.md）を根拠にし、外部の事例を成功の証明に使わない。
 
 ## 8. 維持の仕組み
