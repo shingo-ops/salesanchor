@@ -34,7 +34,7 @@
 ## 3. 想定される分かれ（迷ったら止めて `NEEDS_DECISION:`）
 
 - はい の語を取り除くとき、英字の語も句読点・空白を除いた形で取り除いてよい（文の頭の判定は今の `matchesAtStart` のまま。取り除くのは判定が yes になった後だけ）。
-- `same_time` を口で使わなくなったら、`backend/app/routers/assistant.py` の import から外す（ruff が未使用で止めるため）。
+- 日付の表の条件は `same_time` と `same_day` の両方（design §17-4 の 3）。`same_time` の import は残す。
 - `meet_refused` と `edited` が両方真のとき（場所と Meet を一緒に言った）は §17-5 3（１）の `editedMeetUnavailable`。
 - 試験の中の日本語の文は、今の `secretaryVoiceAnswer.test.ts` と同じく `String.fromCharCode` か ja.json から作る（試験に日本語を直書きしてよいかは今の試験ファイルの書き方に合わせる。`SecretaryChat.test.tsx` が直書きしていればそれに合わせる）。
 
@@ -42,6 +42,7 @@
 
 backend（`backend/tests/test_assistant_karte.py`・今の試験の書き方に合わせる）:
 - `same_day`: 同じ日の別の時刻→真／違う日→偽／片方 null→偽／時差の印が +09:00 でない→偽。
+- 口: `edit: true`・カルテの始まり `2026-11-10T02:00:00+01:00`・偽の AI は同じ瞬間の `2026-11-10T10:00:00+09:00` と description「明日」を返す・文「説明に明日と入れて」→ start は カルテのまま（日付が動かない）（審査 R1）。
 - 口: `edit: true`・カルテの始まり 2026-11-30 15:00・文「4時に変えて 説明 明日」・偽の AI は start 2026-11-30 16:00 と description「明日」を返す → start は 11/30 16:00・end 11/30 17:00（日付が動かない）・`edited` 真。
 - 口: `meet_available` 偽で `edit: true`・偽の AI が add_meet true だけを返す → `edited` 偽・`meet_refused` 真・add_meet null。
 - 口: `meet_available` 偽で、偽の AI が location と add_meet true を返す → `edited` 真・`meet_refused` 真・location が入る。
@@ -59,6 +60,7 @@ frontend `SecretaryChat.test.tsx`:
 - `meet_refused: true`・`edited: false` → `meetUnavailable` を読む・POST は呼ばれない・続けて「はい」で POST が 1 回（確かめ待ちが続いている）。
 - `meet_refused: true`・`edited: false` の後に、直らない文 2 回 → 1 回目 `notEdited`・2 回目 `checkScreen`（Meet の答えで回数が増えていない）。
 - `meet_refused: true`・`edited: true` → `editedMeetUnavailable` を読む。
+- 「はい、Meet も付けて」→ 偽の API が `meet_refused: true`・`edited: false` → POST は呼ばれない・`meetUnavailable` を読む（はいと直しでも作らない）。
 - 「はい、お願いします」で偽の API が 500 → 失敗の文・POST は呼ばれない・前の下書きはボタンで作れる。
 
 ## 5. 確かめ（push の前に全部）

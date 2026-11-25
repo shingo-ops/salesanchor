@@ -566,7 +566,7 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 
 ### 17-3 選んだ形と、選ばなかった形
 
-- (1) はい の後ろ: 文の頭の はい の語を全部取り除いて残りがあれば「はいと直し」として直す道に送る。AI が直せば聞き直し、直す欄が無ければ今までどおり作る。今より悪くなる形が無い（直せなかったときは今と同じく作る）。
+- (1) はい の後ろ: 文の頭の はい の語を全部取り除いて残りがあれば「はいと直し」として直す道に送る。AI が直せば聞き直し、直す欄が無ければ今までどおり作る。AI が答えたときは今より悪くなる形が無い（直せなかったときは今と同じく作る）。AI の呼び出しが失敗したときは作られない（§17-6）。
   - 選ばなかった: 残りがあれば必ず聞き直す（「はい、お願いします」が作られなくなり、今の動きが壊れる）／丁寧な語尾の一覧で「はい」と判定する（一覧の漏れで直しを取りこぼす・事実の数が無い）。
 - (2) 日付: 直す道で日付の表を当てるのは、AI の始まりの日付がカルテの日付と違うときだけにする。AI は時刻だけの直しで日付を 15/15 変えなかった（`docs/handoff/secretary-voice-input/recon.md` §10-2）ので、日付が動く道は表だけ。AI が日付を替えた（「あさってにして」）ときは今までどおり表で数え直す。
   - 選ばなかった: 直す道で表を当てない（AI の日付の数え違いを表で直せなくなる・`backend/tests/test_assistant_karte.py` の `test_edit_changed_start_gets_day_table` が壊れる）。
@@ -579,7 +579,7 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 2. `backend/app/services/secretary_dates.py` に公開の `same_day(a: str | None, b: str | None) -> bool` を足す。`_day_of(a)` と `_day_of(b)` が両方読めて同じ日なら真、それ以外は偽。`apply_day`・`_day_of` は変えない。
 3. `backend/app/routers/assistant.py` の直す道（今の `:336-343`）:
    - 前: `ai_ev = intent.event if intent.kind == "event" else None` の次に、`ai_ev.start` が null でなく、カルテの始まりが null か `same_time` で違えば `apply_day(ai_ev, body.text, now.date(), None)`。
-   - 後: `ai_ev` を作った次に、`meet_available` が偽で `ai_ev` が null でなく `ai_ev.add_meet` が null でなければ、`meet_refused = ai_ev.add_meet is True` とし、`ai_ev = ai_ev.model_copy(update={"add_meet": None})`。その次の `apply_day` の条件を「`ai_ev.start` が null でなく、カルテの始まりが null か `not same_day(ai_ev.start, karte.start)`」に替える（`same_time` の import は `merge_edit` 側で使うので消さない。口で使わなくなれば import から外す）。
+   - 後: `ai_ev` を作った次に、`meet_available` が偽で `ai_ev` が null でなく `ai_ev.add_meet` が null でなければ、`meet_refused = ai_ev.add_meet is True` とし、`ai_ev = ai_ev.model_copy(update={"add_meet": None})`。その次の `apply_day` の条件を「`ai_ev.start` が null でなく、かつ（カルテの始まりが null か、`not same_time(ai_ev.start, karte.start)` かつ `not same_day(ai_ev.start, karte.start)`）」に替える（同じ時刻でも同じ日でもないときだけ表を当てる。`same_day` は時差の印が +09:00 でないと偽になるので、外国の端末では今の `same_time` の守りが働く。`same_time` は口で使い続けるので import は残す）。
    - `meet_refused = False` は `edited = False`（今の `:334`）の次で作る。
    - `EventDraft(...)` に `meet_refused=meet_refused if edit_mode else None` を `edited=` の次に足す。
    - ほか（`merge_edit`・`settle_dates` の後の戻し・`next_ask`）は変えない。日時が消えてカルテに戻した場合も `meet_refused` はそのまま返す。
@@ -590,6 +590,7 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 1. `frontend/src/features/secretary/secretaryVoiceAnswer.ts`:
    - `YesNo` を `"yes" | "yesMore" | "no" | "unknown"` にする。
    - `judgeYesNo` は、いいえ の判定（今の `:63`）を先に見るのは同じ。はい の語が文の頭にあるとき（今の `:64`）、句読点・空白を除いた形の頭から はい の語（長い語から順に）を取り除くのを、取り除けなくなるまで繰り返す。残りが空なら `"yes"`、残りがあれば `"yesMore"`。
+   - 取り除く語は `squash(fold(語))` の形にし、その形が空になる語は飛ばす（繰り返しが止まらなくなるのを防ぐ）。取り除くのは、今の `matchesAtStart` で文の頭の判定が通った後だけ（英字の境界「yesterday」の守りはそのまま）。
    - 例: 「はい」「はい、入れて」「はいはい」「yes please」→ yes。「はい、場所は渋谷にして」「はい、お願いします」→ yesMore。
 2. `frontend/src/features/secretary/secretaryApi.ts` の `EventDraftData` に `meet_refused?: boolean | null` を足す。
 3. `frontend/src/features/secretary/SecretaryChat.tsx`:
@@ -622,7 +623,7 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 
 ### 17-8 測り方
 
-- `docs/handoff/secretary-voice-input/kgi.md` §7 X1〜X6。X1〜X3 は反映後に Opus が `docs/handoff/secretary-voice-input/binW2/probe_followup.py` を同じ道で流し、結果を同じ場所に置く。X5 は便W と同じ回帰 23 件。
+- `docs/handoff/secretary-voice-input/kgi.md` §7 X1〜X6。反映後の測りには、日付を替える頼み「あさって4時にして」を 3 回足し、日付が替わる数を記録する（目標には入れない・審査 L4）。X1〜X3 は反映後に Opus が `docs/handoff/secretary-voice-input/binW2/probe_followup.py` を同じ道で流し、結果を同じ場所に置く。X5 は便W と同じ回帰 23 件。
 
 | 基準 | 検証方法 |
 |---|---|
@@ -642,4 +643,4 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 
 ### 17-11 審査の記録
 
-- （審査のあとに書く）
+- 第 1 回（2026-11-25・クラウドの Sonnet・`origin/release/secretary-voice-edit-followup-review1` の `docs/handoff/secretary-voice-input/review-architect-binW2-1.md`）: REVISE。R1（`same_day` だけだと +09:00 以外の端末で「説明に明日」の直しで日付が動く）→ §17-4 の 3 の条件を `same_time` と `same_day` の両方にし、card §3・§4 に取り込んだ。L1（取り除く語の形と空の語）・L2（import の文）・L3（失敗時の言い切り）を直した。L4 は反映後の測りに「あさって4時にして」3 回を足す（§17-8）。L5 は card §4 に試験 1 本を足した。
