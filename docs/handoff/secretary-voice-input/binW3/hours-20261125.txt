@@ -1,0 +1,27 @@
+schemas 5
+schema_rows ten*** 3 all_day 0
+schema_rows ten*** 0 all_day 0
+schema_rows ten*** 32 all_day 0
+schema_rows ten*** 0 all_day 0
+schema_rows ten*** 0 all_day 0
+hour app 5 1
+hour app 7 4
+hour app 10 2
+hour app 11 1
+hour app 14 1
+hour app 17 1
+hour app 21 4
+hour app 22 1
+hour app 23 1
+hour google 9 2
+hour google 10 1
+hour google 11 2
+hour google 12 1
+hour google 14 2
+hour google 16 1
+hour google 17 1
+hour google 18 2
+hour google 19 1
+hour google 20 2
+hour google 21 1
+hour google 22 3

@@ -1184,6 +1184,46 @@ describe("SecretaryChat voice conversation", () => {
     expect(mock.post.mock.calls[0][0]).toBe("/calendar/events");
   }, SLOW);
 
+  it("W3: yes plus an edit that was dropped creates nothing, reads notEdited, and a bare yes then creates once", async () => {
+    mock.postWithTimeout
+      .mockResolvedValueOnce(eventReply)
+      .mockResolvedValueOnce(editReply({ edit_dropped: true }, false));
+    mock.post.mockResolvedValue({});
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("yes, change the end to five");
+    await waitFor(() => expect(startCount()).toBe(3), { timeout: 4000 });
+    expect(mock.post).not.toHaveBeenCalled();
+    expect(spoken()).toContain(i18n.t("secretary.voiceMode.notEdited"));
+    hear("yes");
+    await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    expect(mock.post.mock.calls[0][0]).toBe("/calendar/events");
+  }, SLOW);
+
+  it("W3: yes plus a request with nothing dropped (edit_dropped false) still creates the previous draft once", async () => {
+    mock.postWithTimeout
+      .mockResolvedValueOnce(eventReply)
+      .mockResolvedValueOnce(editReply({ edit_dropped: false }, false));
+    mock.post.mockResolvedValue({});
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("yes, go ahead");
+    await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    expect(mock.post.mock.calls[0][0]).toBe("/calendar/events");
+  }, SLOW);
+
+  it("W3: an edit request without yes and edit_dropped true reads notEdited", async () => {
+    mock.postWithTimeout
+      .mockResolvedValueOnce(eventReply)
+      .mockResolvedValueOnce(editReply({ edit_dropped: true }, false));
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("change the end to five");
+    await waitFor(() => expect(startCount()).toBe(3), { timeout: 4000 });
+    expect(mock.post).not.toHaveBeenCalled();
+    expect(spoken()).toContain(i18n.t("secretary.voiceMode.notEdited"));
+  }, SLOW);
+
   it("W2: a bare yes does not call the secretary API and creates once", async () => {
     mock.postWithTimeout.mockResolvedValueOnce(eventReply);
     mock.post.mockResolvedValue({});

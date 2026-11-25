@@ -11379,6 +11379,17 @@
             ],
             "title": "Description"
           },
+          "edit_dropped": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edit Dropped"
+          },
           "edited": {
             "anyOf": [
               {
