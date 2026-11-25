@@ -78,12 +78,6 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
         "",
         frozenset(
             {
-                "078_create_calendar_events_tenant.sql",
-                "20260621_020000_add_schedule_calendar_category_and_owner_settings.sql",
-                "20261103_200000_add_google_calendar_import_sync.sql",
-                "20261104_161223_add_calendar_events_meet_url.sql",
-                "20261112_170000_add_calendar_events_recurrence.sql",
-                "20261119_120000_add_calendar_events_color_key.sql",
                 "20261126_100000_create_calendar_categories.sql",
             }
         ),

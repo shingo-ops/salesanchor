@@ -38,20 +38,15 @@ _SCHEMA = f"tenant_{_TENANT}"
 _ADMIN_USER = 97901
 _STAFF_USER = 97902
 _MIGRATION = "20261126_100000_create_calendar_categories.sql"
-_MIGRATIONS = (
-    ("076_add_google_calendar_config.sql", False),
-    ("077_calendar_sync_mode_and_webhook_subscriptions.sql", False),
-    ("20260606_010000_add_google_drive_config.sql", False),
-    ("20261016_010000_add_google_config_rls.sql", False),
-    ("078_create_calendar_events_tenant.sql", True),
-    ("20260621_020000_add_schedule_calendar_category_and_owner_settings.sql", True),
-    ("20261103_200000_add_google_calendar_import_sync.sql", True),
-    ("20261104_161223_add_calendar_events_meet_url.sql", True),
-    ("20261112_170000_add_calendar_events_recurrence.sql", True),
-    ("20261119_120000_add_calendar_events_color_key.sql", True),
-    (_MIGRATION, True),
+# 会社の部屋の予定の表（種類の表と外部キーも）は bootstrap_tenant_schema が作る。bootstrap に無い共用の設定表だけ、無いときに足す
+_PUBLIC_MIGRATIONS = (
+    "076_add_google_calendar_config.sql",
+    "077_calendar_sync_mode_and_webhook_subscriptions.sql",
+    "20260606_010000_add_google_drive_config.sql",
+    "20261016_010000_add_google_config_rls.sql",
 )
 
+_READY = {"done": False}
 _DEFAULT_SEVEN = ("meeting", "personal", "procurement", "shipping", "billing", "release", "holiday")
 
 
@@ -82,25 +77,34 @@ async def _env():
 
     admin_engine = create_async_engine(ADMIN_PG_URL, echo=False)
     app_engine = create_async_engine(APP_PG_URL, echo=False, poolclass=NullPool)
-    await bootstrap_tenant_schema(admin_engine, _TENANT)
-    async with public_bootstrap_lock(admin_engine):
-        async with admin_engine.begin() as conn:
-            for filename, scoped in _MIGRATIONS:
-                await _apply_migration_on_conn(conn, filename, schema_name=_SCHEMA if scoped else None)
-    async with admin_engine.begin() as conn:
-        for uid in (_ADMIN_USER, _STAFF_USER):
-            await conn.execute(
-                text(
-                    "INSERT INTO public.users ("
-                    " id, tenant_id, username, email, full_name,"
-                    " role, is_active, is_super_admin, locale, theme)"
-                    " VALUES (:id, :t, :uname, :email, 'Cal Cat', 'admin',"
-                    "         TRUE, FALSE, 'ja', 'light')"
-                    " ON CONFLICT (id) DO NOTHING"
-                ),
-                {"id": uid, "t": _TENANT, "uname": f"cal-cat-{uid}", "email": f"cal-cat-{uid}@example.com"},
-            )
-        await conn.execute(text("DELETE FROM public.tenant_google_calendar_config WHERE tenant_id = :t"), {"t": _TENANT})
+    if not _READY["done"]:
+        # 共用の表（public）を触る下ごしらえは、この試験ファイルの中で 1 回だけ行う。
+        # 試験ごとにやり直すと、別のファイルの試験が共用の表を触る所と行き違ってデッドロックしやすい
+        await bootstrap_tenant_schema(admin_engine, _TENANT)
+        async with public_bootstrap_lock(admin_engine):
+            async with admin_engine.begin() as conn:
+                exists = (
+                    await conn.execute(text("SELECT to_regclass('public.tenant_google_calendar_config') IS NOT NULL"))
+                ).scalar_one()
+                if not exists:
+                    for filename in _PUBLIC_MIGRATIONS:
+                        await _apply_migration_on_conn(conn, filename)
+                for uid in (_ADMIN_USER, _STAFF_USER):
+                    await conn.execute(
+                        text(
+                            "INSERT INTO public.users ("
+                            " id, tenant_id, username, email, full_name,"
+                            " role, is_active, is_super_admin, locale, theme)"
+                            " VALUES (:id, :t, :uname, :email, 'Cal Cat', 'admin',"
+                            "         TRUE, FALSE, 'ja', 'light')"
+                            " ON CONFLICT (id) DO NOTHING"
+                        ),
+                        {"id": uid, "t": _TENANT, "uname": f"cal-cat-{uid}", "email": f"cal-cat-{uid}@example.com"},
+                    )
+                await conn.execute(
+                    text("DELETE FROM public.tenant_google_calendar_config WHERE tenant_id = :t"), {"t": _TENANT}
+                )
+        _READY["done"] = True
     await _cleanup(admin_engine)
     factory = async_sessionmaker(app_engine, class_=AsyncSession, expire_on_commit=False)
     try:
@@ -108,10 +112,6 @@ async def _env():
     finally:
         try:
             await _cleanup(admin_engine)
-            async with admin_engine.begin() as conn:
-                await conn.execute(
-                    text("DELETE FROM public.users WHERE id IN (:a, :b)"), {"a": _ADMIN_USER, "b": _STAFF_USER}
-                )
         finally:
             await admin_engine.dispose()
             await app_engine.dispose()
