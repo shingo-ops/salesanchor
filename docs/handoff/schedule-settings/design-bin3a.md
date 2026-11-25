@@ -57,7 +57,11 @@
   - `backend/app/services/tenant.py:1632` (the template comment)
   - `backend/tests/rls_bootstrap.py:190` (the mapping, count 1)
   - `backend/tests/test_calendar_sync_tenant_reset_pg.py:56` (append to the end of the run order)
-  - `backend/tests/test_tenant_loop_migration_guard.py` `_REVIEWED`: one entry for **each new test file** that runs or reads the new migration. Do not touch `:83`, which is the `test_calendar_team_share.py` entry (review R4)
+  - `backend/tests/test_tenant_loop_migration_guard.py` `_REVIEWED` (review 2 R1):
+    - Add the new migration name to the existing sets of `rls_bootstrap.py` (next to `:53`) and `test_calendar_sync_tenant_reset_pg.py` (next to `:74`). Both files will contain the name, so the guard (`:342`, `:364`) finds them.
+    - One entry for each new test file: the test that runs the migration is `scoped`; the test that only reads the migration file as text (the 24-pair check) is `text_only` with a reason (`:380-392` fails `text_only` without one). If both live in one file, one entry.
+    - The A6/A8 test needs no entry if its file does not contain the migration name.
+    - Do not touch `:83`, which is the `test_calendar_team_share.py` entry (review 1 R4).
 - **F11** Other places CI checks against (review R1–R3):
   - `.github/workflows/api-contract-check.yml:38-58` fails when `frontend/api-contract/openapi.json` differs from the exported API. `OwnerRosterItem` is at `:25683-25747` and `OwnerSettingsBody` at `:25788-25824`.
   - `scripts/migration-guard/reference-allowlist.tsv:7` holds the sha256 of `20261024_100300_create_ai_cloud_views.sql`. A different sha256 fails (rule at `:5`). Bin 2b fixed it the same way (`7b60986c7`).
@@ -83,13 +87,15 @@ A5 command (plain `|` inside `-E`; review R5):
 git grep -n -E 'is_visible|share_mode|_DEFAULT_OWNER_COLOR' -- backend/app frontend/src
 ```
 
-Today it finds `calendar.py` 53, 83-84, 94-95, 404-405, 410, 429-431, 462-470, 502, 529-530, 537, 552-554, `tenant.py:1652-1656`, `schedule-owner.ts` 1, 10-11, 30, 34, 45-46 and the test fixtures. After this bin it must find 0.
+Today it finds 38 lines: `calendar.py` 53, 83-84, 94-95, 404-405, 410, 429-431, 462-470, 502, 529-530, 537, 552-554, `tenant.py` 1652, 1653, 1656, `schedule-owner.ts` 10-11, 34, 45-46 and the test fixtures. After this bin it must find 0. `_VALID_OWNER_SHARE_MODES` (upper case) is not matched; its removal is checked in the diff. Front-end tests must not write `is_visible` or `share_mode`; check the response keys by exact match instead (review 2 L1).
 
 ## 3 Back-end changes
 
 ### 3-1 Migration `migrations/20261128_100000_owner_color_key_drop_dead_columns.sql`
 
 Put every tenant in one DO block. Skip any tenant that has no `calendar_owner_settings`. Each step must give the same result when run again.
+
+Tenants are chosen in exactly one place, written on one line as `FOR schema_rec IN SELECT nspname FROM pg_namespace WHERE nspname ~ '^tenant_\d+$' LOOP`, with nothing between `WHERE` and the condition (precedent `20261127_100000_add_calendar_team_share.sql:18`). The final check (step 5) runs inside the same loop. `rls_bootstrap.py:171-172`, `:200-207` counts this selector and adds `AND nspname = …` right after it, so the count must stay 1 (review 2 L3, L5).
 
 1. `ALTER TABLE %I.calendar_owner_settings ADD COLUMN IF NOT EXISTS color_key text`
 2. If `calendar_owner_settings_color_key_check` is missing (check by name), add `CHECK (color_key IN (the 24 keys, in the same order as calendar_events_color_key_check, tenant.py:1607))`. PostgreSQL lets NULL through an IN check, so NULL (the default color) is allowed. The type `text` and this exact wording match the existing `color_key` columns (`tenant.py:1555`, `:1599`, `:1607`), so the template and the migration have one shape (review L2).
@@ -185,7 +191,9 @@ names.length > 0
   - Add a real PostgreSQL test of the migration: carrying over the matching key, the non-matching value going to NULL, the 3 old columns being gone, the CHECK, and running twice.
     - How the old shape is made (review R6): the test tenant is built from the new template, so it already has the new shape. The test first turns it back into the old shape with `ALTER TABLE … ADD COLUMN color varchar(32) DEFAULT '#1a73e8' NOT NULL, ADD COLUMN is_visible boolean DEFAULT false NOT NULL, ADD COLUMN share_mode varchar(16) DEFAULT 'self' NOT NULL, DROP COLUMN color_key` (this also drops its CHECK), inserts rows with a matching hex (in upper case with spaces, to test `lower(btrim())`) and a non-matching hex, then runs the migration twice with `_apply_migration_on_conn(..., schema_name=...)`.
     - `scripts/check_test_schema_dup.py:28` only looks for `CREATE TABLE`, so `ALTER TABLE` in a test passes the gate.
-    - Add this test file to `_REVIEWED` in `test_tenant_loop_migration_guard.py` as `scoped` with the new migration name.
+    - Add this test file to `_REVIEWED` in `test_tenant_loop_migration_guard.py` as `scoped` with the new migration name (see F10).
+    - After the migration, check that `format_type` of `color_key` is `text` and that `pg_get_constraintdef` of `calendar_owner_settings_color_key_check` has the same 24 keys in the same order as `calendar_events_color_key_check` in the same tenant. The template shape check cannot catch a difference here, because on the new template the migration does nothing (review 2 L2).
+    - Insert the `public.users` rows first (foreign key at `tenant.py:1657`; precedent `_ensure_public_users`, `rls_bootstrap.py:236`). Use a tenant number no other test uses (precedent `test_calendar_team_share.py:37`, `_TENANT = 981`).
   - Add a real PostgreSQL test for A6 and A8: create one team event, set the team to `is_active = false`, and check that both the event list and `event_team_ids` no longer contain the team, and that the list count did not change.
   - Add the test that compares the 24 pairs and the CHECK keys (§3-1, review L3).
   - The test-only CREATE TABLE ban (test-schema-dup gate) applies. Tables are made by the template and the migration.
@@ -250,4 +258,7 @@ names.length > 0
   - R1 openapi.json → §3-2. R2 allowlist sha256 → §3-4. R3 count 1169 → §3-4. R4 `_REVIEWED` and the right lines → F10, §5. R5 A5 command → §2, §4-1. R6 how to make the old shape → §5.
   - L1 → §3-2. L2 → §3-1 (decided: `text` and the same CHECK wording as `calendar_events`). L3 → §3-1, §5. L4 → §5. L5 → §8. L8 → §5. L9 → A8.
   - L6 and L7 were records only (no change needed).
-- Round 2: (to be written)
+- Round 2 (cloud Sonnet, architect): **REVISE**. Record `review-architect-bin3a-2.md` on branch `release/schedule-settings-bin3a-review2`. All round 1 items confirmed in place.
+  - R1 (`_REVIEWED` also needs the 2 existing sets) → F10.
+  - L1 (A5 list) → §2. L2 (compare the migrated CHECK with the template) → §5. L3, L5 (one tenant selector on one line) → §3-1. L4, L6 were records only.
+- Round 3: (to be written)
