@@ -103,19 +103,19 @@ async def connect_callback(
     この endpoint は Bearer トークンなしで Google からリダイレクトされるため
     public_router（認証なし）に属する。state 検証でテナントを特定する。
     """
-    frontend_schedule = f"{_frontend_base_url()}/schedule"
+    frontend_settings = f"{_frontend_base_url()}/schedule/settings"
 
     try:
         result = await cal_svc.exchange_code(code, state)
     except cal_svc.GoogleScopeNotGrantedError as e:
         logger.warning("Google Calendar callback: 許可の一部が外された %s", e)
-        return RedirectResponse(f"{frontend_schedule}?connected=false&error=scope_missing")
+        return RedirectResponse(f"{frontend_settings}?connected=false&error=scope_missing")
     except ValueError as e:
         logger.warning("Google Calendar callback: state 検証失敗 %s", e)
-        return RedirectResponse(f"{frontend_schedule}?connected=false&error=invalid_state")
+        return RedirectResponse(f"{frontend_settings}?connected=false&error=invalid_state")
     except RuntimeError as e:
         logger.error("Google Calendar callback: token 交換失敗 %s", e)
-        return RedirectResponse(f"{frontend_schedule}?connected=false&error=token_exchange")
+        return RedirectResponse(f"{frontend_settings}?connected=false&error=token_exchange")
 
     tenant_id = result["tenant_id"]
     user_id = result["user_id"]
@@ -151,9 +151,9 @@ async def connect_callback(
     except Exception as e:
         await db.rollback()
         logger.error("Google Calendar callback: DB 保存失敗 %s", e)
-        return RedirectResponse(f"{frontend_schedule}?connected=false&error=db_error")
+        return RedirectResponse(f"{frontend_settings}?connected=false&error=db_error")
 
-    return RedirectResponse(f"{frontend_schedule}?connected=true")
+    return RedirectResponse(f"{frontend_settings}?connected=true")
 
 
 async def require_calendar_owner(
@@ -224,8 +224,22 @@ async def disconnect(
     user: User = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    """Google Calendar 接続を解除する（admin 専用）。"""
+    """Google Calendar 接続を解除する（admin 専用）。
 
+    順番（design §3-2）: ①通知の窓口を止める ②Google で許可を取り消す ③設定行を消す。
+    取り込み済みの予定（calendar_events）は消さない（PO 2026-11-25「2」）。
+    """
+    from app.services import google_webhook as webhook_svc
+
+    await webhook_svc.stop_webhook(db, tenant_id)
+    try:
+        await cal_svc.revoke_tenant_token(db, tenant_id)
+    except cal_svc.GoogleRevokeError as e:
+        logger.warning("Google Calendar disconnect: 取り消し失敗 tenant=%s %s", tenant_id, e)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="google_revoke_failed",
+        )
     await db.execute(
         text("DELETE FROM tenant_google_calendar_config WHERE tenant_id = :tid"),
         {"tid": tenant_id},

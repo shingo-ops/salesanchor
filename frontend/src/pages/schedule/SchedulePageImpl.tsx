@@ -827,13 +827,11 @@ export default function SchedulePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { hasPermission, isTenantAdmin } = usePermissions();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const canManageOwners = hasPermission("staff.view");
   const gcalStatusQ = useApiQuery<{ connected: boolean; meet_available?: boolean }>("/google-calendar/status", { enabled: isTenantAdmin });
-  const gcalConnected = gcalStatusQ.data?.connected === true;
   // Google Meet を付けてよいのは、Google をつないだ本人だけ（サーバーの can_add_meet の答え）
   const meetAvailable = gcalStatusQ.data?.meet_available === true;
-  const [gcalConnecting, setGcalConnecting] = useState(false);
   const demoState = (searchParams.get("demoState") as DemoState | null) ?? "normal";
   const [view, setView] = useState<ScheduleView>("week");
   const [anchorDate, setAnchorDate] = useState(() => new Date());
@@ -939,34 +937,6 @@ export default function SchedulePage() {
     () => owners.find((owner) => owner.isSelf)?.userId ?? null,
     [owners],
   );
-
-  useEffect(() => {
-    const connected = searchParams.get("connected");
-    if (connected === "true") {
-      setBanner({ type: "success", message: t("schedule.connectSuccess") });
-    } else if (connected === "false") {
-      const errorCode = searchParams.get("error");
-      setBanner({
-        type: "error",
-        message: errorCode === "scope_missing" ? t("schedule.connectScopeMissing") : t("schedule.connectError"),
-      });
-    }
-    if (connected) {
-      setSearchParams({}, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleGoogleConnect = async () => {
-    setGcalConnecting(true);
-    try {
-      const { auth_url } = await api.get<{ auth_url: string }>("/google-calendar/connect/start");
-      window.location.href = auth_url;
-    } catch {
-      setBanner({ type: "error", message: t("schedule.connectError") });
-      setGcalConnecting(false);
-    }
-  };
 
   // 自分の印が分かった時と期間を変えた時に、何も選んでいなければ自分を選ぶ（今の読み込みの後と同じ）
   useEffect(() => {
@@ -1445,17 +1415,6 @@ export default function SchedulePage() {
         }
         headerAction={
           <div className="schedule-shell__toolbar">
-            {isTenantAdmin && (
-              <Button
-                variant="ghost"
-                size="md"
-                loading={gcalConnecting}
-                disabled={gcalConnected || gcalConnecting}
-                onClick={handleGoogleConnect}
-              >
-                {gcalConnected ? t("schedule.connectBtnConnected") : t("schedule.connectBtn")}
-              </Button>
-            )}
             {searchOpen ? (
               <Popover
                 open={searchResultsOpen}
@@ -1514,7 +1473,7 @@ export default function SchedulePage() {
                 <SearchIcon size={18} aria-hidden="true" />
               </Button>
             )}
-            {canManageOwners && (
+            {(canManageOwners || isTenantAdmin) && (
               <Button
                 variant="ghost"
                 size="md"

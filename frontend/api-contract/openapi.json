@@ -50912,7 +50912,7 @@
     },
     "/api/v1/google-calendar/connect": {
       "delete": {
-        "description": "Google Calendar 接続を解除する（admin 専用）。",
+        "description": "Google Calendar 接続を解除する（admin 専用）。\n\n順番（design §3-2）: ①通知の窓口を止める ②Google で許可を取り消す ③設定行を消す。\n取り込み済みの予定（calendar_events）は消さない（PO 2026-11-25「2」）。",
         "operationId": "disconnect_api_v1_google_calendar_connect_delete",
         "responses": {
           "204": {
