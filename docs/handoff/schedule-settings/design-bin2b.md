@@ -1,7 +1,7 @@
 # 設計: 便2b 予定の共有に「チームを選ぶ」を足す
 
-- 版: 第2版（2026-11-25・Opus。第1回審査 REVISE の R1〜R7・S1〜S12 を入れた）
-- 状態: 設計案作成済み・第2回審査前
+- 版: 第3版（2026-11-25・Opus。第1回審査の R1〜R7・S1〜S12、第2回審査の R1・R2・S1〜S6 を入れた）
+- 状態: 設計案作成済み・第3回審査前
 - 元: `docs/handoff/schedule-settings/requirements.md`（G4・G5・G6。PO「1」で承認済み）・`docs/handoff/schedule-settings/design.md` §6・`docs/handoff/schedule-settings/design-bin2a.md` §0（便2 を 2 つに分けた理由）
 - 関連 ADR: ADR-027（i18n）・ADR-067／ADR-144（金型・デザイントークン）・ADR-072（commit 後の付け直し）・ADR-135／ADR-136（DB 変更の GO）・ADR-1037（ロック待ち 1 秒・長いロックを取らない）・ADR-1059（Google から取り込んだ予定は本人だけ）・ADR-1075（繰り返しの 3 択）・ADR-1081（予定の色）
 
@@ -38,7 +38,7 @@
 | F18 | 行の持ち主の守り（RLS）: `calendar_events`・`calendar_categories` には無い。`teams`・`team_members` には有る（`ENABLE` `tenant.py:2352-2353`・方針 `:2446`・`:2467`。会社の番号 `app.tenant_id` で絞る） | `backend/app/services/tenant.py` 該当行 |
 | F19 | AI に見せる列の分類表: `calendar_categories.key` は `mask`（`migrations/20261024_100300_create_ai_cloud_views.sql:371`・`docs/handoff/cloud-case-ai/stage1-column-class.tsv:564`）。分類の行数の試験は今 1169（`backend/tests/ops/test_ai_cloud_views.py:486`） | 該当行 |
 | F20 | 理由の語の表 `frontend/src/lib/apiErrorReason.ts` と、その並びを数える試験 `backend/tests/test_api_error_reason_sync.py:41-69`。`calendar_categories.py` の理由の語（`category_conflict`・`invalid_category` など）は今この表に無い | 該当行 |
-| F21 | 本番の予定の持ち主の列: `user_id` が NULL なのは会社4 の `shared` 6 件だけ（`created_by_user_id` はあり）。`personal` で `user_id` が NULL は 0 件。ほかは `user_id` と `created_by_user_id` が同じ | 2026-11-25 19:04 JST 読むだけの鍵（AUDIT `rows=5 result=ok`） |
+| F21 | 本番の予定の持ち主の列: `user_id` が NULL なのは会社4 の `shared` 6 件だけ（`created_by_user_id` はあり）。`personal` で `user_id` が NULL は 0 件。ほかは `user_id` と `created_by_user_id` が同じ。作る道は `user_id` に作った人を必ず入れる（`backend/app/services/calendar_service.py:422` の `"uid": user_id`）ので、`user_id` が NULL の行は Google 取り込み由来に限られる（第2回 S5） | 2026-11-25 19:04 JST 読むだけの鍵（AUDIT `rows=5 result=ok`） |
 
 ## 2 受入条件
 
@@ -47,13 +47,13 @@
 | B1 | 共有「チーム」の予定は、持ち主と、その予定のどれかのチーム（使っているチーム）に入っている人だけの一覧・探すに出る | 本物の PostgreSQL の試験: 持ち主・メンバー・メンバーでない人・メンバーでない管理者・使っていないチームのメンバー の 5 人で一覧と探すを呼び、出る／出ないが表のとおり |
 | B2 | メンバーでない人（管理者も）がその予定を直す・消すと 404 `not_found:calendar_event` | 本物の PostgreSQL の試験 |
 | B3 | 繰り返しのチーム予定は、回・例外の行・「これ以降」で分けた新しい元の行も、同じチームの人に見える | 本物の PostgreSQL の試験（3 通り） |
-| B4 | 作る・直すで共有が `team` になるとき（送った `calendar_type`、送っていなければ今の値で決める）は `team_ids`（1 つ以上・使っているチームの id）が要る。欠け・空・無い id・使っていない id・int4 の範囲外は 422 `invalid_team_ids`。`team` 以外で空でない `team_ids` を送ると 422 `invalid_team_ids`。同じ id の重なりは 1 つにまとめる | 裏側の試験（7 通り） |
+| B4 | 作る・直すで共有が `team` になるときの `team_ids` の決まりは §3-3 の「直すときの決まりの表」のとおり。作るときと、今が `team` 以外の予定を `team` にするときの欠け（送らない）・空は 422 `invalid_team_ids`。今が `team` の予定で `team_ids` を送らないのは通し、対応は今のまま。`team` で空を明示（`[]`）・無い id・使っていない id・int4 の範囲外は 422 `invalid_team_ids`。`team` 以外で空でない `team_ids` を送ると 422 `invalid_team_ids`。同じ id の重なりは 1 つにまとめる | 裏側の試験（7 通り） |
 | B5 | チームから別の共有に変えると、その予定のチームの対応は消える。チームを変えると入れ替わる。`team_ids` だけを送った直す（ほかの欄なし）でも入れ替わる。変えられるのは持ち主だけ（今の見せ方と同じ 403） | 裏側の試験（単発・繰り返しの「すべて」・`team_ids` だけ の 3 通り） |
-| B11 | 繰り返しのチーム予定の「この予定だけ」を持ち主が直す（題名だけ変える・画面と同じく今と同じ `team_ids` も送る）と 200。今と違う `team_ids`・`calendar_type` を送ると 422 `recurrence_this_not_allowed` | 裏側の試験（2 通り） |
+| B11 | 繰り返しのチーム予定の「この予定だけ」を持ち主が直す（題名だけ変える）: ①`calendar_type: "team"` を送り `team_ids` を送らない（画面と同じ）→ 200 ②今と同じ `team_ids` を送る → 200。③今と違う `team_ids` か違う `calendar_type` を送る → 422 `recurrence_this_not_allowed` | 裏側の試験（3 通り） |
 | B12 | 種類の `default_team_ids`: `PATCH` で送らなければ今の対応のまま。`default_share='team'` で `[]` は 422。種類を読むとき、使っていないチームは `default_team_ids` に入らない | 裏側の試験（3 通り） |
 | B6 | 種類の共有の初期値に「チーム」と初期のチーム（1 つ以上）を決められる。予定を作るときにその種類を選ぶと、共有「チーム」と初期のチームが入る | 裏側の試験＋画面の試験 |
 | B7 | 今ある予定の見え方は変わらない（要件 G6） | 本番で反映の前後に `category/calendar_type` ごとの件数を数えて F9 と同じ＋`team` 0 件。移行の試験で、移行の前後の `shared`／`personal` の行が同じ、かつ持ち主・ほかの人・管理者の 3 人それぞれに見える件数が移行の前後で同じ |
-| B8 | 共有の値の正本は層ごとに 1 か所: DB の CHECK 2 つ（予定・種類）・裏側の定数 2 つ（予定の `SHARE_VALUES`・種類の `CATEGORY_SHARE_VALUES`）・画面の型 1 つ（`CalendarShare`） | ①`git grep -n '"shared", "personal"' -- backend/app` が 0 件（今 2 件 `calendar.py:542`・`:633`）②`git grep -n "^SHARE_VALUES\b\|^CATEGORY_SHARE_VALUES\b" -- backend/app` がちょうど 2 件 ③`git grep -n "_VALID_CATEGORY_SHARES" -- backend/app` が 0 件 ④`git grep -n '"self" | "all"' -- frontend/src` が型の定義の 1 件だけ |
+| B8 | 共有の値の正本は層ごとに 1 か所: DB の CHECK 2 つ（予定・種類）・裏側の定数 2 つ（予定の `SHARE_VALUES`・種類の `CATEGORY_SHARE_VALUES`）・画面の型 1 つ（`CalendarShare`） | ①`git grep -n '"shared", "personal")' -- backend/app` が 0 件（閉じ括弧まで含める。定義 `("shared", "personal", "team")` には当たらない）（今 2 件 `calendar.py:542`・`:633`）②`git grep -n "^SHARE_VALUES\b\|^CATEGORY_SHARE_VALUES\b" -- backend/app` がちょうど 2 件 ③`git grep -n "_VALID_CATEGORY_SHARES" -- backend/app` が 0 件 ④`git grep -n '"self" | "all"' -- frontend/src` が型の定義の 1 件だけ（`CalendarShare` の定義のこと。`ScheduleItem.calendarType` の `"shared" | "personal" | "team"` は裏側の値の型で、この数の対象外） |
 | B9 | 新しい文字は `t()`・ja/en 同じキー。部品は金型だけ・色の直書きなし | i18n 点検・UI governance gate・Lint & Dark Mode Check |
 | B10 | ひな形で作った会社と、移行を流した会社の形が同じ | CI のひな形と形の差の検査 |
 
@@ -132,12 +132,25 @@ async def can_see_event(db, event_id: int, user_id: int) -> bool:
 - チームの対応の書き手は 1 つ: `async def set_event_teams(db, event_id: int, team_ids: list[int]) -> None`（その event_id の行を消して入れ直す。空なら消すだけ。commit しない＝呼び手の取引に乗る）。
 - 呼ぶ決まり（F16 の「何もせず返る」所の前に置く。commit の前に呼ぶ）:
   - 作る（`create_event`）: `calendar_type == "team"` なら INSERT の後・`:434` の commit の前に呼ぶ。
-  - 直す（単発 `update_event`）: 送られた中に `calendar_type` か `team_ids` があれば、`:533` の「`set_clauses` が空なら返る」より前に呼ぶ。呼んだら空で返さず commit する。決める共有＝送った `calendar_type`、無ければ今の値。`team` なら送った `team_ids`（送らなければ今の対応のまま＝呼ばない）。`team` 以外なら空で呼ぶ。
+  - 直す（単発 `update_event`）: 送られた中に `calendar_type` か `team_ids` があれば、`:533` の「`set_clauses` が空なら返る」より前に呼ぶ。呼んだら空で返さず commit する。決める共有＝送った `calendar_type`、無ければ今の値。`team_ids` の扱いは下の「直すときの決まりの表」のとおり。`team` 以外なら空で呼ぶ。
   - 繰り返しの「すべて」（D1・D2・D3）: 同じ決まりで元の行の id に呼ぶ。D1 は `:1165` の `if fields:` の外・`:1169` の `_commit` の前。
-  - 単発→繰り返し（`_update_single_to_recurring`）: 同じ決まりで、その行（元の行になる）の id に呼ぶ。`:1233` の `_commit` の前。
+  - 単発→繰り返し（`_update_single_to_recurring`）: 同じ決まりで、その行（元の行になる）の id に呼ぶ。`:1234` の `_commit` の前。
   - 「これ以降」: 新しい元の行（`new_id`）に、送られた `team_ids`、無ければ元の元の行の対応を写す。`_insert_row`（`:1134`）の後・`_commit`（`:1135`）の前。新しい行が `team` でなければ呼ばない。
-  - 「この予定だけ」: 対応は書かない。`team_ids` が送られ、元の行の対応（並べ替えて重なりを除いた集合）と違えば 422 `recurrence_this_not_allowed`（`check_recurrence_request` `:858-859` の `calendar_type` の判定と同じ「違うときだけ」）。同じなら通す（R1）。
-- チームの確かめは 1 つ: `async def validate_team_ids(db, calendar_type: Optional[str], team_ids: Optional[list[int]], current_type: Optional[str] = None) -> Optional[list[int]]`。決める共有は `calendar_type`、無ければ `current_type`（直すときの今の値）。重なりを除いて昇順にした list を返す。int4 の範囲外・無い id・使っていない id（`is_active` が NULL も使っていない扱い）・`team` で空・`team` 以外で空でない → HTTP 422 `invalid_team_ids`。受け口で `try` の前に呼ぶ（便2a の種類の確かめと同じ置き方。422 を 500 にしない）。直すときは `owner_row` の `calendar_type` を `current_type` に渡す。
+  - 「この予定だけ」: 対応は書かない。`team_ids` が送られ、元の行の対応（並べ替えて重なりを除いた集合）と違えば 422 `recurrence_this_not_allowed`（`check_recurrence_request` `:858-859` の `calendar_type` の判定と同じ「違うときだけ」）。同じなら通す。`team_ids` を送らなければ確かめない（第1回 R1・第2回 R1）。
+  - Google から回の変更が来たとき（`_apply_app_instance_from_google` `:1753-1755`）: 例外の行に対応は書かない。見え方は元の行の対応で決まる（B3 の「例外の行」の試験で確かめる。第2回 S6）。
+- 直すときの決まりの表（第2回 R1。単発・「すべて」・「これ以降」・単発→繰り返しに共通。「この予定だけ」は上の決まり）:
+
+  | 今の共有 | 送った `calendar_type` | 送った `team_ids` | 結果 | 対応 |
+  |---|---|---|---|---|
+  | `team` | `team` か送らない | 送らない | 通す | 今のまま（`validate_team_ids` は `None` を返し、`set_event_teams` を呼ばない） |
+  | `team` | `team` か送らない | 1 つ以上・正しい | 通す | 送った組に入れ替える |
+  | どれでも | 決める共有が `team` | `[]`（明示の空） | 422 `invalid_team_ids` | 変えない |
+  | `team` 以外 | `team` | 送らない | 422 `invalid_team_ids` | 変えない |
+  | どれでも | `team` 以外（送った、または今の値） | 送らない | 通す | 空で呼ぶ（`team` から外すときは対応が消える） |
+  | どれでも | `team` 以外 | 空でない | 422 `invalid_team_ids` | 変えない |
+
+  作るときは「今の共有」が無いので、`team` で `team_ids` を送らない・空は 422。
+- チームの確かめは 1 つ: `async def validate_team_ids(db, calendar_type: Optional[str], team_ids: Optional[list[int]], current_type: Optional[str] = None) -> Optional[list[int]]`。決める共有は `calendar_type`、無ければ `current_type`（直すときの今の値）。重なりを除いて昇順にした list を返す。今が `team`・決める共有も `team`・`team_ids` が `None` のときは `None` を返す（呼び手は対応を書かない）。int4 の範囲外・無い id・使っていない id（`is_active` が NULL も使っていない扱い）・`team` で空・`team` 以外で空でない → HTTP 422 `invalid_team_ids`。受け口で `try` の前に呼ぶ（便2a の種類の確かめと同じ置き方。422 を 500 にしない）。直すときは `owner_row` の `calendar_type` を `current_type` に渡す。
 - 確かめと書き込みの間にチームが消えた・使わなくなったとき: 消えたら外部キーで INSERT が失敗し 409 にする（便2a の `category_conflict` と同じ `IntegrityError` の扱い）。使わなくなっただけなら対応は残り、`visibility_sql` が使っていないチームを見ないので、持ち主だけに見える。
 - 説明文の直し: `list_events` の説明（`:207-209`）に「チーム」と持ち主の決め方を足す。`list_events` の中の変数 `visibility_sql`（例外の行の問い合わせ `:344-347` でも使う）は新しい関数の結果で作る（名前がぶつかるので変数名は `vis_where` に変える）。
 
@@ -168,13 +181,14 @@ async def can_see_event(db, event_id: int, user_id: int) -> bool:
 - `Toggle` を金型 `SelectControl`（自分だけ／全員／チーム）に替える。`チーム` のとき、下に金型 `MultiSelect`（`useCalendarTeams` の一覧）を出す。チームが 0 件なら `MultiSelect` の `emptyLabel` に「使っているチームがありません」。
 - 金型の使い方: `SelectControl` は同じ画面のほかの欄と同じ `variant="editor-filled"`（`ScheduleDraftFields.tsx:151`）。`MultiSelect` は必須の `label`=`t("schedule.shareTeams")`・`clearLabel`=`t("schedule.shareTeamsClear")`・`allLabel`=`t("schedule.shareTeamsNone")`・`countLabel`=`(n) => t("schedule.shareTeamsCount", { count: n })`・`emptyLabel`=`t("schedule.noActiveTeams")` を渡す。予定の画面は引き出し（Drawer）の中なので `layout="inline"`、設定ページは `layout="popover"`（F14）。
 - `team` でチームが 0 個のとき保存を押せない（保存ボタンを止め、欄の下に文を出す）。裏側の 422 は最後の守り。
-- 繰り返しの予定を「この予定だけ」で直すとき、画面は `team_ids` を送らない（`calendar_type` を今と同じなら送らない今の形にそろえる）。裏側は送られても元の行と同じなら通す（R1 の二重の守り）。
+- 繰り返しの予定を「この予定だけ」で直すとき、画面は `team_ids` を送らない。`calendar_type` は今と同じ値のまま送ってよい（今の画面は `canChangeVisibility` なら毎回送る: `SchedulePageImpl.tsx:1024-1025`）。裏側は `team_ids` が送られても元の行と同じなら通す（二重の守り）。
+- `MultiSelect` の `selected`・`options[].value` は文字（`string[]`）。チームの id（数）は渡すときに `String(id)`、受け取るときに `Number(v)` で変える。変換は `useCalendarTeams` のそばに 1 組だけ置く（第2回 S2）。
 - 種類を選んだとき（`:291-305`）: `default_share` が `team` なら `share: "team"`・`teamIds: default_team_ids`。今の決まり（作るときだけ入れる・直すときは変えない）はそのまま。
 - 予定の詳しい表示（`SchedulePageImpl.tsx:395-405` の並び）に「共有」の行を足す（自分だけ／全員／チーム: 名前・名前）。名前は `useCalendarTeams` から引き、使っていないチームは出さない。`:402` の `schedule.calendarTypeValues.shared` はそのまま使ってよい（種類の名前が無いときの表示）。`calendarTypeValues` に `team`（チーム）を ja/en で足す（`frontend/src/locales/ja.json:3538`）。
 
 ### 4-3 設定ページ（`frontend/src/pages/schedule/ScheduleSettingsPage.tsx:346-355`）
 
-- 共有の初期値の `SelectControl` に「チーム」を足す。`チーム` のとき `MultiSelect` で初期のチームを選ぶ。0 個なら保存しない（文を出す）。送るとき `default_team_ids`。
+- 共有の初期値の `SelectControl` に「チーム」を足す。`チーム` のとき `MultiSelect` で初期のチームを選ぶ。0 個なら保存しない（文を出す）。送るとき `default_team_ids`。フォームの状態（今は `defaultShare` だけ・`:346-355`）に `defaultTeamIds: number[]` を足し、`=== "self" ? "self" : "all"` の 2 値の決め打ちを `CalendarShare` の 3 値にする（第2回 S3）。
 
 ### 4-4 新しい文字（ja/en 同じキー・`schedule` の中）
 
@@ -186,8 +200,8 @@ async def can_see_event(db, event_id: int, user_id: int) -> bool:
   - B1 の 5 人 × 一覧・探す（出る／出ない）
   - B2 直す・消すの 404（メンバーでない人・メンバーでない管理者）と、メンバーの管理者は直せる
   - B3 繰り返し: 回が見える・「この予定だけ」の例外の行が見える・「これ以降」の新しい元の行が見える（メンバーでない人には 3 つとも出ない）
-  - B4 の 422（7 通り。`calendar_type` を送らず今が `team` の予定に空の `team_ids` を送る、を含む）・B5（チームを外す・入れ替える・`team_ids` だけ送る・繰り返しの「すべて」で題名を変えずにチームだけ変える・持ち主でない人の 403）
-  - B11（「この予定だけ」: 今と同じ `team_ids` で 200・違う `team_ids` で 422）・B12（3 通り）
+  - B4（「直すときの決まりの表」の 6 行を 1 つずつ・作るときの欠けと空・int4 の範囲外・重なりのまとめ。今が `team` で `team_ids` を送らない直すが 200 で対応が変わらない、を含む）・B5（チームを外す・入れ替える・`team_ids` だけ送る・繰り返しの「すべて」で題名を変えずにチームだけ変える・持ち主でない人の 403）
+  - B11（「この予定だけ」: `team_ids` を送らず 200・今と同じ `team_ids` で 200・違う `team_ids` で 422）・B12（3 通り）
   - 持ち主の決め方: `user_id` が NULL で `created_by_user_id` が自分の `team` 予定は、チームに入っていなくても自分には見える
   - B6 種類の初期のチーム（足す・直す・`team` 以外にすると消える・0 個で 422）
   - 移行（2 回流して同じ・CHECK が 1 つで名前が `calendar_events_calendar_type_check`・`team` が入る・ほかの値は入らない・前後で `shared`/`personal` の行が同じ・前後で 3 人それぞれに見える件数が同じ（S8）・名前なしの古い CHECK の部屋でも入れ替わる・`teams` が無い部屋は飛ばす）
@@ -245,3 +259,4 @@ async def can_see_event(db, event_id: int, user_id: int) -> bool:
 | 回 | 日 | 判定 | 記録 | 入れた直し |
 |---|---|---|---|---|
 | 1 | 2026-11-25 | REVISE | `docs/handoff/schedule-settings/review-architect-bin2b-1.md` | R1 §3-3「この予定だけ」・§4-2・B11／R2 §3-3 呼ぶ決まり・F16・B5／R3 §3-2 仮の名前・F15／R4 §3-1 RLS 無し・F18／R5 §3-2 分類・F19／R6 F7・§7／R7 B8／S1 F21・持ち主の決め方／S2 B4／S3・S4 §3-4・B12／S5 §4-2・§4-4・§5／S6 §3-4／S7 §6／S8 B7・§5／S9 F20／S10 §3-2・§3-3／S11 F15・F21 時刻／S12 §3-3 |
+| 2 | 2026-11-25 | REVISE | `docs/handoff/schedule-settings/review-architect-bin2b-2.md` | R1 §3-3「直すときの決まりの表」・`validate_team_ids` の `None`・B4・B11（3 通り）・§4-2「この予定だけ」／R2 B8 ①を閉じ括弧まで／S1 `:1234`／S2 §4-2 文字↔数／S3 §4-3 `defaultTeamIds`／S4 B8 ④の注／S5 F21／S6 §3-3 Google の回 |
