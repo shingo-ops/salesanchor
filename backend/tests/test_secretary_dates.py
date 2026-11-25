@@ -448,3 +448,86 @@ async def test_old_path_keeps_ai_date(allowed, monkeypatch, sunday):
     assert resp.status_code == 200, resp.text
     assert "2026-11-17" in json.dumps(resp.json(), ensure_ascii=False)
     assert "2026-11-16" not in json.dumps(resp.json(), ensure_ascii=False)
+
+
+# ---- 便W3: 午前・午後を言わない 1〜6時は午後（afternoon_hours） -------------------------
+
+from app.services.secretary_dates import afternoon_hours  # noqa: E402
+
+
+def _hev(start=None, end=None, **fields) -> IntentEvent:
+    return IntentEvent(title="打ち合わせ", start=start, end=end, **fields)
+
+
+def _hk(start: str) -> KarteIn:
+    return KarteIn(start=start)
+
+
+def _jst(day: str, hhmm: str) -> str:
+    return f"{day}T{hhmm}:00+09:00"
+
+
+D = "2026-11-26"
+
+AFTERNOON_CASES = [
+    ("明日4時に打ち合わせ", _jst(D, "04:00"), _jst(D, "05:00"), _jst(D, "16:00"), _jst(D, "17:00")),
+    ("明日1時から2時", _jst(D, "01:00"), _jst(D, "02:00"), _jst(D, "13:00"), _jst(D, "14:00")),
+    ("あさって4時半", _jst(D, "04:30"), None, _jst(D, "16:30"), None),
+    ("4時から1時間", _jst(D, "04:00"), None, _jst(D, "16:00"), None),
+    ("4時から1時間", _jst(D, "04:00"), _jst(D, "05:00"), _jst(D, "16:00"), _jst(D, "17:00")),
+    ("明日４時に打ち合わせ", _jst(D, "04:00"), _jst(D, "05:00"), _jst(D, "16:00"), _jst(D, "17:00")),
+    ("明日4時にteamで打ち合わせ", _jst(D, "04:00"), _jst(D, "05:00"), _jst(D, "16:00"), _jst(D, "17:00")),
+]
+
+
+@pytest.mark.parametrize(("text", "start", "end", "want_start", "want_end"), AFTERNOON_CASES)
+def test_afternoon_hours_moves_bare_1_to_6(text, start, end, want_start, want_end):
+    out = afternoon_hours(_hev(start, end), text, None)
+    assert (out.start, out.end) == (want_start, want_end)
+
+
+UNCHANGED_CASES = [
+    ("午前4時に打ち合わせ", _jst(D, "04:00"), _jst(D, "05:00")),
+    ("朝6時に打ち合わせ", _jst(D, "06:00"), _jst(D, "07:00")),
+    ("夜1時に打ち合わせ", _jst(D, "01:00"), _jst(D, "02:00")),
+    ("深夜2時に打ち合わせ", _jst(D, "02:00"), _jst(D, "03:00")),
+    ("4amに打ち合わせ", _jst(D, "04:00"), _jst(D, "05:00")),
+    ("4pmに打ち合わせ", _jst(D, "04:00"), _jst(D, "05:00")),
+    ("午後4時に打ち合わせ", _jst(D, "04:00"), _jst(D, "05:00")),
+    ("10時に打ち合わせ", _jst(D, "10:00"), _jst(D, "11:00")),
+    ("12時に打ち合わせ", _jst(D, "12:00"), _jst(D, "13:00")),
+    ("7時に打ち合わせ", _jst(D, "07:00"), _jst(D, "08:00")),
+    ("1時間にして", _jst(D, "03:00"), _jst(D, "04:00")),
+    ("4時に打ち合わせ", _jst(D, "16:00"), _jst(D, "17:00")),
+    ("4時に打ち合わせ", "2026-11-26T04:00:00", "2026-11-26T05:00:00"),
+]
+
+
+@pytest.mark.parametrize(("text", "start", "end"), UNCHANGED_CASES)
+def test_afternoon_hours_leaves_others(text, start, end):
+    ev = _hev(start, end)
+    out = afternoon_hours(ev, text, None)
+    assert (out.start, out.end) == (start, end)
+
+
+def test_afternoon_hours_all_day_unchanged():
+    ev = _hev(_jst(D, "04:00"), _jst(D, "05:00"), is_all_day=True)
+    assert afternoon_hours(ev, "明日4時", None) is ev
+
+
+def test_afternoon_hours_karte_morning_start_unchanged():
+    ev = _hev(None, _jst("2026-11-30", "06:00"))
+    out = afternoon_hours(ev, "終わりは6時", _hk(_jst("2026-11-30", "05:00")))
+    assert out.end == _jst("2026-11-30", "06:00")
+
+
+def test_afternoon_hours_karte_afternoon_start_moves_end():
+    ev = _hev(None, _jst("2026-11-30", "05:00"))
+    out = afternoon_hours(ev, "終わりは5時", _hk(_jst("2026-11-30", "15:00")))
+    assert out.end == _jst("2026-11-30", "17:00")
+
+
+def test_afternoon_hours_end_without_offset_is_not_compared():
+    ev = _hev(_jst(D, "04:00"), "2026-11-26T05:00:00")
+    out = afternoon_hours(ev, "明日4時から", None)
+    assert (out.start, out.end) == (_jst(D, "16:00"), "2026-11-26T05:00:00")
