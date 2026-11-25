@@ -41,8 +41,8 @@ vi.mock("../../lib/api", () => ({
           current_staff_id: 7,
           current_user_id: 101,
           owners: [
-            { staff_id: 7, user_id: 101, staff_code: "A01", name: "Owner Self", primary_email: null, color: "#112233", is_visible: true, share_mode: "self", is_self: true },
-            { staff_id: 8, user_id: 202, staff_code: "B02", name: "Owner Other", primary_email: null, color: "#445566", is_visible: true, share_mode: "view", is_self: false },
+            { staff_id: 7, user_id: 101, staff_code: "A01", name: "Owner Self", primary_email: null, color: "rgb(17, 34, 51)", is_visible: true, share_mode: "self", is_self: true },
+            { staff_id: 8, user_id: 202, staff_code: "B02", name: "Owner Other", primary_email: null, color: "rgb(68, 85, 102)", is_visible: true, share_mode: "view", is_self: false },
           ],
         };
       }
@@ -199,21 +199,26 @@ describe("ScheduleSettingsPage owners and nav (K9・K10)", () => {
     expect(screen.queryAllByRole("switch")).toHaveLength(0);
     expect(screen.queryAllByRole("combobox")).toHaveLength(0);
     fireEvent.click(screen.getAllByRole("button", { name: i18n.t("schedule.settingsSave") })[0]);
-    await waitFor(() => expect(api.patch).toHaveBeenCalledWith("/calendar/owners/101", { color: "#112233" }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith("/calendar/owners/101", { color: "rgb(17, 34, 51)" }));
   });
 
   it("renders the side list as the SubMenu mold and moves to a section on click", async () => {
     perms.isTenantAdmin = true;
     perms.staffView = true;
     const scroll = vi.fn();
+    const originalScrollIntoView = Element.prototype.scrollIntoView;
     Element.prototype.scrollIntoView = scroll;
-    view();
-    await screen.findByText("Owner Self");
-    const nav = document.querySelector("nav.comp-subnav");
-    expect(nav).not.toBeNull();
-    expect(document.querySelector(".schedule-settings__nav-item")).toBeNull();
-    const others = within(nav as HTMLElement).getByText(i18n.t("schedule.otherCalendars"));
-    fireEvent.click(others);
-    await waitFor(() => expect(scroll).toHaveBeenCalled());
+    try {
+      view();
+      await screen.findByText("Owner Self");
+      const nav = document.querySelector("nav.comp-subnav");
+      expect(nav).not.toBeNull();
+      expect(document.querySelector(".schedule-settings__nav-item")).toBeNull();
+      const others = within(nav as HTMLElement).getByText(i18n.t("schedule.otherCalendars"));
+      fireEvent.click(others);
+      await waitFor(() => expect(scroll).toHaveBeenCalled());
+    } finally {
+      Element.prototype.scrollIntoView = originalScrollIntoView;
+    }
   });
 });
