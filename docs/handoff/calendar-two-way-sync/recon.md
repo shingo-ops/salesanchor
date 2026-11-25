@@ -71,3 +71,17 @@
 
 - 既存 ADR の確認: `git grep -il "description\|説明" origin/main -- docs/adr/ | grep -i calendar` で ADR-1059・ADR-1060 が出た。説明・場所の送り方の決めは ADR-1059 改訂 2026-11-20（「空 "" でも送る。None は送らない」）。ADR-1060 は Meet の件で、説明・場所の扱いは決めていない。
 - 実物の行番号は design.md §11-2 に書いた（origin/main 3763e55c7 で読んだ）。
+
+## 便4（2026-11-25・Google で消したとき・繰り返しの 1 回だけを直した・消したとき）
+
+- 既存 ADR の確認: `git grep -il "is_cancelled\|recurringEventId\|cancelled" origin/main -- docs/adr/` で ADR-1059・ADR-1075 を確かめた。「Google で消しても消さない」は ADR-1059 改訂 2026-11-20（`docs/adr/ADR-1059-google-calendar-import-owner-private.md:30`）。「アプリで作った繰り返しの回は取り込まない」は ADR-1075 決定6（`docs/adr/ADR-1075-schedule-recurrence.md:20`）と Why（`:26`）。
+- 実物の行番号は design.md §12-2 に書いた（origin/main 88c3fccd1 で読んだ）。
+- 本番の数（読むだけの鍵・2026-11-25）: Google とつないだ会社は 2 社（tenant_001・tenant_004、どちらも両方向）。アプリで作って Google にもある予定は tenant_001 が 1 件（会社の予定・送り終えた）、tenant_004 が 4 件（自分だけ 3・会社 1・すべて送り終えた）。繰り返しの元の行と例外の行は全社で 0 件。
+- 予定の表を読む所: `calendar_events` を読むのは `backend/app/services/calendar_service.py`・`backend/app/services/google_webhook.py`・`backend/app/services/calendar_recurrence.py`・`backend/app/services/tenant.py`（表の作り）と予定の画面だけ。画面へ返す一覧は `backend/app/services/calendar_service.py:247` で `NOT ce.is_cancelled` を付ける。繰り返しの回は例外の行（消した印も含む）があれば広げた回から外す（`:337-366`）。
+- Google の公式の資料（Context7 `/websites/developers_google_workspace_calendar_api`・2026-11-25）:
+  - 差分の取り込みでは消した予定が `status: "cancelled"` で必ず届く。消した単発の予定は `id` だけが保証される。消した回は `id`・`recurringEventId`・`originalStartTime` が保証される。
+  - 予定を別のカレンダーへ移すと、元のカレンダーには「消した」と同じ形（`cancelled`・`id` だけ）が届く。消したのと見分けられない。
+  - `originalStartTime` は回を一意に決め、回を動かしても変わらない。`singleEvents=true` の回には `recurrence` が付かない。
+  - 1 回だけの直し・消しは例外の予定として持つ（取り消しは `status` に出る）。元の予定の `recurrence[]` は RRULE・EXRULE・RDATE・EXDATE の行の並び。
+  - 「すべて」「これ以降」を回ごとの直しで済ませないよう公式が注意している（回ごとに直すと例外が大量にできる）。
+- 分かっていないこと: Google の画面で「すべて」を消したとき、差分に元の予定 1 件が届くか、回ごとに届くか。どちらでも便4 は「アプリは今のまま」になるように作る（design.md §12-3）。
