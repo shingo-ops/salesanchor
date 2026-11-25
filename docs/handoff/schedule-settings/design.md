@@ -149,10 +149,10 @@ def _error_code(resp) -> str:
    - 未接続: 説明 `t("schedule.settingsGoogleDesc")` と `Button`（`t("schedule.connect")`）。押すと `ConfirmModal`（title=`t("schedule.connectNoticeTitle")`、message=段落 `t("schedule.connectNoticeBody")` と、その下に箇条書き（`ul`/`li`。`docs/CC_UI_GOVERNANCE.md` に `ul` の禁止は無い。余白は既存の窓 `frontend/src/components/MergeCompanyModal.tsx:287` と同じ `marginTop: "var(--space-2)", marginBottom: 0, paddingLeft: "var(--space-5)"` にそろえ、色や数の直書きはしない）で `t("schedule.connectNoticeItemEvents")`・`t("schedule.connectNoticeItemColors")`、最後の段落 `t("schedule.connectNoticeStop")`、confirmLabel=`t("schedule.connectNoticeConfirm")`）。確定で `/google-calendar/connect/start` → `window.location.href = auth_url`。
    - 接続済み: `t("schedule.statusConnected")` と、接続日時（`connected_at` を今の日付の書式の関数で）、`Button variant="danger"`（`t("schedule.disconnect")`）。押すと `ConfirmModal danger`（title=`t("schedule.disconnectConfirm")`、message=`t("schedule.disconnectNotice")`、`confirmLoading`）。確定で `api.delete("/google-calendar/connect")` → 状態を読み直し → 成功の帯 `t("schedule.disconnectSuccess")`。失敗は `t("schedule.disconnectError")`。
 4. 結果の帯: `?connected=true|false&error=` を読む処理を予定ページから移す（文の選び方は今と同じ。`scope_missing` なら `connectScopeMissing`）。読み終えたら `setSearchParams({}, { replace: true })`。帯は今の画面の `success-message` / `error-message`（`frontend/src/components.css:421` ほか、既存の共通の決まり）。
-5. 死んだ欄を外す（K9）: 自分・他人の両方の行から `Toggle`（表示）と `SelectControl`（共有権限）を消す。保存は `{ color }` だけ送る（`backend/app/routers/calendar.py:79-82` は 3 つとも任意なので通る）。`ToggleMigration.test.tsx:25` の設定ページの行は数が 0 になるので外す。
+5. 死んだ欄を外す（K9）: 自分・他人の両方の行から `Toggle`（表示）と `SelectControl`（共有権限）を消す。保存は `{ color }` だけ送る（`backend/app/routers/calendar.py:79-82` は 3 つとも任意なので通る）。`frontend/src/components/ToggleMigration.test.tsx:25` の設定ページの行は数が 0 になるので外す。
 6. 色の `<input type="color">` は今回は触らない（便3 で金型へ。既存の箇所で、今回足すものではない）。
 
-### 4-3 新しい文字（`ja.json` / `en.json` の `schedule` の中、同じキーを両方）
+### 4-3 新しい文字（`frontend/src/locales/ja.json` / `frontend/src/locales/en.json` の `schedule` の中、同じキーを両方）
 
 | キー | ja | en |
 |---|---|---|
@@ -169,7 +169,7 @@ def _error_code(resp) -> str:
 | disconnectError | 接続を解除できませんでした。少し時間をおいて、もう一度お試しください。 | Could not disconnect. Please wait a moment and try again. |
 | settingsConnectedAt | 接続した日時 | Connected on |
 
-使い回す既存キー: `connect`・`disconnect`・`disconnectConfirm`・`statusConnected`・`connectSuccess`・`connectError`・`connectScopeMissing`（`ja.json` の `schedule` に既にある）。使われなくなる `connectBtn`・`connectBtnConnected` は両方の言語から消す。`connectBtnError` は今もどこからも使われていない（審査 L6）ので、同時に両方の言語から消す。
+使い回す既存キー: `connect`・`disconnect`・`disconnectConfirm`・`statusConnected`・`connectSuccess`・`connectError`・`connectScopeMissing`（`frontend/src/locales/ja.json` の `schedule` に既にある）。使われなくなる `connectBtn`・`connectBtnConnected` は両方の言語から消す。`connectBtnError` は今もどこからも使われていない（審査 L6）ので、同時に両方の言語から消す。
 
 ## 5 便1 の試験
 
@@ -180,14 +180,14 @@ def _error_code(resp) -> str:
 | K3（関数） | `revoke_tenant_token`: 200 → 戻る／400 `invalid_token` → 戻る（K6）／400 他 → 例外／500 → 例外／通信失敗 → 例外／行が無い → POST しない／読めない合鍵 → POST せず戻る。POST の本文が `token=<値>` で宛先が `_REVOKE_URL`。httpx は差し替えて外へ出さない |
 | K7 | 受け取り口の戻り先が成功・失敗とも `/schedule/settings?` で始まる（今の callback の試験の場所を書き換える） |
 | K1・K2・K5・K7・K9・K10 | 新しい `frontend/src/pages/schedule/ScheduleSettingsPage.test.tsx`: 管理者に Google 区画／staff.view だけなら無い／管理者で staff.view なし→Google 区画が出て読み込みの丸が残らず `/calendar/owners` を呼ばない（審査 R1）／未接続で押すと窓→確定まで connect/start を呼ばない→確定で呼ぶ／接続済みで解除→ `api.delete("/google-calendar/connect")`→成功の文／解除失敗→失敗の文／`?connected=true` で成功の帯、`?connected=false&error=scope_missing` で許可一部の文／「表示」スイッチと「共有権限」欄が無い／並びが SubMenu |
-| K8 | `SchedulePageImpl.test.tsx` の「connect button」3 本（`describe("SchedulePage Google calendar connect button"`、今 `:128-155` 付近）を、「見出しにつなぐボタンが無い」1 本に置き換える。`?connected=` の試験（S5 の 2 本と G28、今 `:1356-1384` 付近）は設定ページの試験へ移す。G28（帯の閉じるボタン）は Meet の失敗の帯で同じことを確かめる形に変えるか、設定ページへ移す（帯の部品が同じなら設定ページ側で） |
+| K8 | `frontend/src/pages/schedule/SchedulePageImpl.test.tsx` の「connect button」3 本（`describe("SchedulePage Google calendar connect button"`、今 `:128-155` 付近）を、「見出しにつなぐボタンが無い」1 本に置き換える。`?connected=` の試験（S5 の 2 本と G28、今 `:1356-1384` 付近）は設定ページの試験へ移す。G28（帯の閉じるボタン）は Meet の失敗の帯で同じことを確かめる形に変えるか、設定ページへ移す（帯の部品が同じなら設定ページ側で） |
 | K11 | i18n の点検（`frontend/CLAUDE.md` の grep） |
 
 ## 6 便2（骨組み・詳しい設計は便1 の本番確認後）
 
 - 新しい表 `calendar_categories`（テナントごと）: `key`・`name`（NULL なら今の i18n の名前）・`color_key`（ADR-1081 の 24 色、`backend/app/services/event_colors.py` が正本）・`default_share`（`self`/`all`/`team`）・`default_team_ids` は別の表・`sort_order`・`is_active`。今の 7 種を最初の行として入れる。
 - チーム共有: 予定とチームの対応表（1 つの予定に複数チーム可。1 チームだけの使い方はその一部として満たせるため。PO「チームを選ぶ」の範囲内の設計判断）。`calendar_type` に `team` を足す。見える条件は「全員」「本人」「その予定のチームに入っている人」（`teams`・`team_members`、`backend/app/services/tenant.py:530-548`）。
-- 種類の固定の CHECK（`tenant.py:1579`）と画面の固定表（`frontend/src/features/schedule/calendars.config.ts:3-62`）を、表 1 つへ寄せる（正本 1 か所）。
+- 種類の固定の CHECK（`backend/app/services/tenant.py:1579`）と画面の固定表（`frontend/src/features/schedule/calendars.config.ts:3-62`）を、表 1 つへ寄せる（正本 1 か所）。
 - 種類を選ぶと色と共有が初期値で入る（あとで変えられる）。色は `color_key` に入れるので Google への色の送り（ADR-1081）はそのまま効く。
 - 受入: 要件 G4・G5・G6（今の見え方の件数が前後で同じ）。
 
@@ -195,7 +195,7 @@ def _error_code(resp) -> str:
 
 - 新しい表 `calendar_user_preferences`（人ごと）: 初期の表示・週の始まり・新しい予定の長さ・Meet を自動で付けるか・開いたときに見える人（自分/全員/チーム）。今の固定値（recon §7）がそのまま初期値。
 - 人ごとの色を金型の色の選び方へ。
-- 使われていない `is_visible`・`share_mode`（`tenant.py:1609-1619`）を消す。
+- 使われていない `is_visible`・`share_mode`（`backend/app/services/tenant.py:1609-1619`）を消す。
 - 受入: 要件 G7。
 
 ## 8 代替案
@@ -216,7 +216,7 @@ def _error_code(resp) -> str:
 | 予定ページの帯の試験が減る | 設定ページへ同じ形で移す（§5） |
 | 合鍵が読めない・空の行は、取り消さずに行だけ消え、画面は「取り消しました」と出す（審査 L5）。Google 側に許可が残ることがある | 読めない合鍵は二度と使えないための割り切り。本番の目視（K3）で Google の「サードパーティのアクセス」から消えたかを必ず見る。残っていれば PO がそこで手で外す |
 
-## 10 外部事例
+## 10 外部・過去事例の参照と我々への応用
 
 - Google カレンダー自身の設定画面（support.google.com/calendar/answer/6084644）は、表示・通知・共有を 1 つの設定ページの左の並びで分けている。今回の「1 ページ・左に区画」の形の参考。日付は未確認。数値の根拠には使わない。
 - 取り消しの手順は Google の公式文書（上の §3-1）に従う。
@@ -226,10 +226,11 @@ def _error_code(resp) -> str:
 - 解除の順番は裏側の試験で固定（順が崩れると落ちる）。
 - 見出しにつなぐボタンが戻らないことは画面の試験で固定。
 - 文字は i18n の点検、部品は UI の点検（ADR-144）と色の点検（ADR-067）が CI で毎回走る。
+- 守り手: CI（pytest・vitest・i18n 点検・UI governance gate・Lint & Dark Mode Check）。設計の持ち主は Opus（設計担当）
 
 ## 12 審査
 
-- 第1回（クラウド Sonnet・architect、2026-11-25）: REVISE。記録は `review-architect-bin1-1.md`（枝 `release/schedule-settings-review1`）。必須の直し R1（管理者で staff.view が無い人が読み込み中のまま止まる）1 件、軽い指摘 L1〜L8。
+- 第1回（クラウド Sonnet・architect、2026-11-25）: REVISE。記録は `docs/handoff/schedule-settings/review-architect-bin1-1.md`（枝 `release/schedule-settings-review1`）。必須の直し R1（管理者で staff.view が無い人が読み込み中のまま止まる）1 件、軽い指摘 L1〜L8。
 - 直し: R1 を §4-2 の 1 と §5 の K1 に入れた。L1・L2・L3（行番号）、L4（取り込みの場所）、L5（§9 に 1 行）、L6（`connectBtnError` も消す）、L7（知らせの文を 4 キーに分け箇条書き）、L8（`enabled: isTenantAdmin === true`）も入れた。
-- 第2回（クラウド Sonnet・architect、2026-11-25）: **APPROVE**。記録は `review-architect-bin1-2.md`（枝 `release/schedule-settings-review2`）。R 無し。軽い指摘 L1（箇条書きの余白）・L2（他のカレンダーの今の条件を残す）は §4-2 に入れた。L3（管理者で staff.view が無い人の左の並びが 1 項目になる）は壊れないので直さない。
+- 第2回（クラウド Sonnet・architect、2026-11-25）: **APPROVE**。記録は `docs/handoff/schedule-settings/review-architect-bin1-2.md`（枝 `release/schedule-settings-review2`）。R 無し。軽い指摘 L1（箇条書きの余白）・L2（他のカレンダーの今の条件を残す）は §4-2 に入れた。L3（管理者で staff.view が無い人の左の並びが 1 項目になる）は壊れないので直さない。
 - 同一 AI の別の担当による審査で、独立した第三者の審査ではない。
