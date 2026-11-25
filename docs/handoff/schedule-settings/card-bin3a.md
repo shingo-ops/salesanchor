@@ -6,7 +6,7 @@
 - 状態: 要件は PO 承認済み（2026-11-25「1」・G4〜G7。便3a は G6 の後片付けと人の色）。実装・マージ・本番反映までの委任も同日
 - 危険便: はい（`migrations/` と `scripts/run_all_migrations.sh` を触る。ADR-135/136 の GO は Opus が PR で記録する）
 - 担当: 実装 Sonnet（クラウド）は push まで／PR 作成・審査・マージ Opus
-- 枝: 既存の `release/schedule-settings-bin3`（設計文書が入っている枝）。`bash scripts/new-worktree.sh release/schedule-settings-bin3` で場所を作り、`git switch -C release/schedule-settings-bin3 origin/release/schedule-settings-bin3`。clone のまま commit しない。始める前に `git merge --no-edit origin/main` で main を取り込む
+- 枝: 既存の `release/schedule-settings-bin3`（設計文書が入っている枝）。`bash scripts/new-worktree.sh release/schedule-settings-bin3` で場所を作り、`git switch -C release/schedule-settings-bin3 origin/release/schedule-settings-bin3`。clone のまま commit しない。その後 `git rev-list --count HEAD..origin/main` を流す。0 でなければ main は取り込まず `BLOCKED: main が先に進んだ` で返す（クラウドの決まり `scripts/agent-hooks/cloud/rules.md:15`。Opus が枝を取り直す）
 - 触るファイル（これ以外は触らない）:
   1. `migrations/20261128_100000_owner_color_key_drop_dead_columns.sql`（新規）
   2. `scripts/run_all_migrations.sh`（登録 1 行。`20261127_100000_add_calendar_team_share.sql` の次・`mr_report_summary` の前）
@@ -20,7 +20,6 @@
   10. `frontend/src/pages/schedule/ScheduleSettingsPage.test.tsx`・`SchedulePageImpl.test.tsx`・`SchedulePageCache.test.tsx`・`frontend/src/lib/query/batch3bPages.test.tsx`
   11. `frontend/src/locales/ja.json`・`frontend/src/locales/en.json`
   12. `frontend/api-contract/openapi.json`（自動生成。手で書かない）
-  13. `.claude-pipeline/active-work.d/release-schedule-settings-bin3.md`（台帳・新規）
 
 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md・03-file.md・04-worktree.md・05-pr.md・10-executor.md。照合: 場所は new-worktree.sh で作る（04）・PR は担当が作らない（05）・プレースホルダなし（00）・push は `git push -u origin HEAD`（04）・各段で `git log` を確かめる（00）。
 
@@ -57,7 +56,7 @@ design §3-2 のとおり。
 - `OwnerRosterItem` は `color_key: Optional[str]`。`color`・`is_visible`・`share_mode` を消す。
 - 名簿と保存後の読み直しは `cos.color_key`。`_DEFAULT_OWNER_COLOR`・`_VALID_OWNER_SHARE_MODES`・`default_color` を消す。
 - 保存は `color_key` だけの upsert。`await db.commit()` の直後に `await reset_tenant_context(db, tenant_id)`（ADR-072）。
-- `invalid_color_key` を理由の表（`backend/tests/test_api_error_reason_sync.py`・`frontend/src/lib/apiErrorReason.ts`）に足す必要があるかを試験で確かめる。要るなら止めて報告する（触るファイルに無いため）。
+- `invalid_color_key` は理由の表（`frontend/src/lib/apiErrorReason.ts`）に足さない。`backend/tests/test_api_error_reason_sync.py:73-76` は表にあるコードが使われているかだけを見るので、足さなくても落ちない。もし落ちたら止めて報告する。
 
 ## 変更3 止めたチームを外す
 
@@ -86,7 +85,7 @@ design §4-4。ja/en に同じキー（`ownerColorDefault`・`shareTeamWithNames
 ## 変更7 openapi と台帳
 
 - `cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json`。差分が `OwnerRosterItem`・`OwnerSettingsBody` だけであることを `git diff frontend/api-contract/openapi.json` で確かめる。
-- 台帳 `release-schedule-settings-bin3.md` を main にある `release-schedule-settings-bin2b.md` と同じ形で、状態 `IN_PROGRESS`・PR# 空で作る。
+- 台帳（`.claude-pipeline/active-work.d/`）は作らない・commit しない（`rules.md:12`）。台帳は Opus が PR の時に足す。
 
 ## 変更8 試験
 
@@ -114,7 +113,7 @@ design §5 のとおり。
 - `ColorSwatchPicker` で null の選択肢が作れない（金型に無い部品が要る）。
 - 既存の試験が、この変更と関係なく落ちる。
 - openapi の差分が上の範囲を超えた。
-- main の取り込みで衝突した。
+- main が先に進んでいた（上の件数が 0 でない）。
 
 ## 報告
 

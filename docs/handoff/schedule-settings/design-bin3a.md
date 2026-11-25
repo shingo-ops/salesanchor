@@ -135,7 +135,8 @@ Tenants are chosen in exactly one place, written on one line as `FOR schema_rec 
 ### 3-4 AI copy classification (`migrations/20261024_100300_create_ai_cloud_views.sql:381-382`)
 
 - Remove the 2 rows `color` (mask) and `share_mode` (allow).
-- Add `('tenant_*','calendar_owner_settings',ARRAY['color_key'],'allow','values are limited by calendar_owner_settings_color_key_check')`, following the wording of the existing `calendar_categories` color_key row.
+- Add `('tenant_*','calendar_owner_settings',ARRAY['color_key'],'allow','値の決まり calendar_owner_settings_color_key_check で値が限られる')`, following the wording of the existing `calendar_categories` color_key row (Japanese, as in the real rows; review 3 L2).
+- In `docs/handoff/cloud-case-ai/stage1-column-class.tsv`, remove `:579-580` and add one `color_key` row in the same 6-column form (type `text`). No check reads this table; it follows the bin 2a precedent of keeping it equal to the SQL (review 3 L1).
 - Add one test following the precedent `backend/tests/ops/test_ai_cloud_views.py:1061`.
 - Change the count at `backend/tests/ops/test_ai_cloud_views.py:486` from 1170 to **1169** (2 rows out, 1 in; review R3). Also fix the stale "1169 行" comment at line 3 of the SQL file so that it says 1169.
 - After editing the SQL, put its new `sha256sum` into `scripts/migration-guard/reference-allowlist.tsv:7`, and add `/ schedule-settings 便3a（分類の入れ替え）` to the end of the reason column (review R2).
@@ -261,4 +262,7 @@ names.length > 0
 - Round 2 (cloud Sonnet, architect): **REVISE**. Record `review-architect-bin3a-2.md` on branch `release/schedule-settings-bin3a-review2`. All round 1 items confirmed in place.
   - R1 (`_REVIEWED` also needs the 2 existing sets) → F10.
   - L1 (A5 list) → §2. L2 (compare the migrated CHECK with the template) → §5. L3, L5 (one tenant selector on one line) → §3-1. L4, L6 were records only.
-- Round 3: (to be written)
+- Round 3 (cloud Sonnet, architect): **REVISE on the card only**. Record `review-architect-bin3a-3.md` on branch `release/schedule-settings-bin3a-review3`. All round 2 items confirmed in place; design line numbers and commands match.
+  - R1: the card told the implementer to merge main and to commit the ledger, which the cloud rules forbid (`scripts/agent-hooks/cloud/rules.md:12`, `:15`) → card fixed: check `git rev-list --count HEAD..origin/main` is 0, else BLOCKED; the ledger is added by Opus.
+  - L1 → §3-4 (stage1 table). L2 → §3-4 (Japanese reason). L3 → card (no need to add `invalid_color_key` to the reason table). L4: the production count for A8 is done by Opus after deploy (§11).
+- Design status: **APPROVE after round 3 fixes** (only the card and two wording lines changed; no new R).
