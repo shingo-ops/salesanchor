@@ -14,7 +14,7 @@
   - `docs/adr/ADR-1009-discord-ops-intake.md`（予備 C: Mac 上の Discord 受付）・`docs/adr/ADR-1039-discord-pdca-agent-console.md`（Discord の不具合報告を agent-console で受ける件）。
   - `docs/adr/ADR-080-monitoring-vps-separation.md`・`docs/adr/ADR-081-monitoring-vps-final-operational-design.md`（監視 VPS）。
 - この依頼と食い違う決定は見つからなかった。サーバーに Claude Code を常駐させる決定・却下の記録も無い。
-
+ ただし設計の §4-2（D3）で、ADR-1012:35「鍵は VM の外」から外れる点を PO 判断として挙げた。
 ## 2. 観測した事実
 
 | # | 事実 | 根拠 |
