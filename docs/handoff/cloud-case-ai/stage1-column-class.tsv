@@ -576,8 +576,7 @@ tenant_*	calendar_events	source	mask		character varying
 tenant_*	calendar_events	sync_origin_id	mask		character varying
 tenant_*	calendar_events	sync_status	allow	値の決まり calendar_events_sync_status_check で値が限られる	character varying
 tenant_*	calendar_events	title	mask		character varying
-tenant_*	calendar_owner_settings	color	mask		character varying
-tenant_*	calendar_owner_settings	share_mode	allow	値の決まり calendar_owner_settings_share_mode_check で値が限られる	character varying
+tenant_*	calendar_owner_settings	color_key	allow	値の決まり calendar_owner_settings_color_key_check で値が限られる	text
 tenant_*	channel_masters	connection_type	allow	値の決まり channel_masters_connection_type_check で値が限られる	character varying
 tenant_*	channel_masters	display_name	mask		character varying
 tenant_*	channel_masters	platform	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
