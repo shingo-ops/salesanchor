@@ -14,7 +14,8 @@
   - `docs/adr/ADR-1009-discord-ops-intake.md`（予備 C: Mac 上の Discord 受付）・`docs/adr/ADR-1039-discord-pdca-agent-console.md`（Discord の不具合報告を agent-console で受ける件）。
   - `docs/adr/ADR-080-monitoring-vps-separation.md`・`docs/adr/ADR-081-monitoring-vps-final-operational-design.md`（監視 VPS）。
 - この依頼と食い違う決定は見つからなかった。サーバーに Claude Code を常駐させる決定・却下の記録も無い。
- ただし設計の §4-2（D3）で、ADR-1012:35「鍵は VM の外」から外れる点を PO 判断として挙げた。
+- ただし設計の §4-2（D3）で、ADR-1012:35「鍵は VM の外」から外れる点を PO 判断として挙げた。
+
 ## 2. 観測した事実
 
 | # | 事実 | 根拠 |
@@ -29,7 +30,7 @@
 | F8 | サブスクのログインは「ordinary use」向け。Pro・Max の上限は「ordinary, individual usage」を前提にしている。製品やサービスを作る人は API の鍵を使う | https://code.claude.com/docs/en/legal-and-compliance（Context7 で 2026-11-25 に取得） |
 | F9 | Remote Control: 自分の機械で動く Claude Code を、スマホの Claude アプリから操作できる。機械と claude の処理は動いたままにしておく必要がある | https://code.claude.com/docs/en/remote-control（Context7 で 2026-11-25 に取得） |
 | F10 | Mac の手元の Claude Code（2.1.332）は、長く使った会話 1 つで 482MB を使っていた | 2026-11-25 に `ps -axo rss,command`（/tmp/CC報告ファイル/workresv/claude-rss.txt） |
-| F11 | 段階4 では、異常の知らせを受けて AI を起こすのはサーバー側（クラウドの routines）。Discord を通さない | `docs/handoff/ai-ops-247/stage4-design.md:80-95`（U1 の選んだ案）・`docs/handoff/ai-ops-247/stage4-requirements.md:112`（R4） |
+| F11 | 段階4 では、異常の知らせを受けて AI を起こすのはサーバー側（クラウドの routines）。Discord を通さない | `docs/handoff/ai-ops-247/stage4-requirements.md:112`（R4）・`docs/handoff/ai-ops-247/stage4-design.md:82`（U1 の選んだ案。前後は :80-95） |
 | F12 | channels はログインのしかたとして claude.ai のログインと Console の API の鍵の両方に対応する（Bedrock などは対象外） | https://code.claude.com/docs/en/channels 冒頭（Context7 で 2026-11-25 に取得） |
 
 ## 3. 未確認（設計では前提にしない。試しで確かめる）
