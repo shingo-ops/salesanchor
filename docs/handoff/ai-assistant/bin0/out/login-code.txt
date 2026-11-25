@@ -1,0 +1,3 @@
+https://auth.openai.com/codex/device
+1FRU-IPL29
+2026-11-25T03:17:04Z UTC・有効 900 秒
