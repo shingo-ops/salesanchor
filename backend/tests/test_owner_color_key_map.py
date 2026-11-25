@@ -49,7 +49,7 @@ def test_template_owner_settings_check_matches_calendar_events_check():
 
 def test_template_owner_settings_has_no_dead_columns():
     text = _TENANT_PY.read_text("utf-8")
-    start = text.index("CREATE TABLE IF NOT EXISTS {schema}.calendar_owner_settings (")
+    start = text.index("{schema}.calendar_owner_settings (")
     block = text[start : text.index(");", start)]
     assert "color_key text" in block
     for old in ("    color character", "is_visible", "share_mode"):
