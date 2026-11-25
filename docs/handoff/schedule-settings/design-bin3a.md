@@ -53,11 +53,15 @@
   - Precedent: bin 2a added the `calendar_categories` rows to the same file. Its test is `backend/tests/ops/test_ai_cloud_views.py:1061`.
 - **F9** At the start of every migration run, the AI views are dropped (`scripts/run_all_migrations.sh:412`, `:416`) and rebuilt at the end. Dropping a column is therefore not blocked by a view dependency. Precedent: `migrations/20261109_200000_drop_staff_firebase_uid.sql`.
 - **F10** Where a migration is registered. Same places as the bin 2b precedent, `20261127_100000_add_calendar_team_share.sql`:
-  - `scripts/run_all_migrations.sh:1495`
+  - `scripts/run_all_migrations.sh`: a new line right after `:1495` (the bin 2b line), before `mr_report_summary`
   - `backend/app/services/tenant.py:1632` (the template comment)
-  - `backend/tests/test_tenant_loop_migration_guard.py:53`, `:74`, `:83`
-  - `backend/tests/rls_bootstrap.py:190`
-  - `backend/tests/test_calendar_sync_tenant_reset_pg.py:56`
+  - `backend/tests/rls_bootstrap.py:190` (the mapping, count 1)
+  - `backend/tests/test_calendar_sync_tenant_reset_pg.py:56` (append to the end of the run order)
+  - `backend/tests/test_tenant_loop_migration_guard.py` `_REVIEWED`: one entry for **each new test file** that runs or reads the new migration. Do not touch `:83`, which is the `test_calendar_team_share.py` entry (review R4)
+- **F11** Other places CI checks against (review R1–R3):
+  - `.github/workflows/api-contract-check.yml:38-58` fails when `frontend/api-contract/openapi.json` differs from the exported API. `OwnerRosterItem` is at `:25683-25747` and `OwnerSettingsBody` at `:25788-25824`.
+  - `scripts/migration-guard/reference-allowlist.tsv:7` holds the sha256 of `20261024_100300_create_ai_cloud_views.sql`. A different sha256 fails (rule at `:5`). Bin 2b fixed it the same way (`7b60986c7`).
+  - `backend/tests/ops/test_ai_cloud_views.py:486` fixes the `column_class` count at `== 1170`.
 
 ## 2 Acceptance criteria
 
@@ -67,11 +71,19 @@
 | A2 | After choosing and saving, the people list on the schedule screen and events without their own color show that color. Choosing "default color" returns to the current blue (`var(--calendar-google-blue)`) | Screen test (display after save), back-end test (`color_key` saved, null resets to default) |
 | A3 | Saving a color that is not one of the 24 gets 422 `invalid_color_key`, and nothing is saved | Back-end test |
 | A4 | `calendar_owner_settings` has no `color`, `is_visible` or `share_mode` columns. It has `color_key`, and the CHECK allows only NULL or the 24 keys | Real PostgreSQL migration test, plus a production read with the read-only key (information_schema and pg_constraint) |
-| A5 | `git grep -n -E 'is_visible\|share_mode\|_DEFAULT_OWNER_COLOR' -- backend/app frontend/src` returns 0 hits | Command |
+| A5 | The old names are gone from product code, including comments | The command below §2 returns 0 hits |
 | A6 | An event whose team was deactivated does not include that team in `team_ids` (event list and after save) | Back-end test on real PostgreSQL |
 | A7 | No `": "` or `", "` written directly into the share line or the Google connection date line. The new text is ja/en with matching keys | `git grep -n -F '}: ${names.join(", ")}' -- frontend/src` returns 0 hits, `git grep -n -F '{t("schedule.settingsConnectedAt")}: ' -- frontend/src` returns 0 hits, and the i18n check |
-| A8 | Event counts do not change before and after (requirement G6) | Count the personal, shared and team events for t1 and t4 in production with the read-only key, before and after |
+| A8 | The team filter (§3-3) changes only which ids appear in `team_ids`. It does not remove any event from the list (requirement G6) | Back-end test on real PostgreSQL: the list count is the same before and after deactivating the team. In production, count the events for t1 and t4 with the read-only key before and after the deploy |
 | A9 | Running the migration twice gives the same result | Real PostgreSQL migration test (run it twice) |
+
+A5 command (plain `|` inside `-E`; review R5):
+
+```bash
+git grep -n -E 'is_visible|share_mode|_DEFAULT_OWNER_COLOR' -- backend/app frontend/src
+```
+
+Today it finds `calendar.py` 53, 83-84, 94-95, 404-405, 410, 429-431, 462-470, 502, 529-530, 537, 552-554, `tenant.py:1652-1656`, `schedule-owner.ts` 1, 10-11, 30, 34, 45-46 and the test fixtures. After this bin it must find 0.
 
 ## 3 Back-end changes
 
@@ -79,31 +91,34 @@
 
 Put every tenant in one DO block. Skip any tenant that has no `calendar_owner_settings`. Each step must give the same result when run again.
 
-1. `ALTER TABLE %I.calendar_owner_settings ADD COLUMN IF NOT EXISTS color_key character varying(32) NULL`
-2. If `calendar_owner_settings_color_key_check` is missing, add `CHECK (color_key IS NULL OR color_key IN (the 24 keys, in the same order as calendar_events_color_key_check, tenant.py:1607))`.
+1. `ALTER TABLE %I.calendar_owner_settings ADD COLUMN IF NOT EXISTS color_key text`
+2. If `calendar_owner_settings_color_key_check` is missing (check by name), add `CHECK (color_key IN (the 24 keys, in the same order as calendar_events_color_key_check, tenant.py:1607))`. PostgreSQL lets NULL through an IN check, so NULL (the default color) is allowed. The type `text` and this exact wording match the existing `color_key` columns (`tenant.py:1555`, `:1599`, `:1607`), so the template and the migration have one shape (review L2).
 3. Only when the `color` column still exists (check with information_schema), carry the old value over to the matching key:
 
    ```sql
    UPDATE … SET color_key = CASE lower(btrim(color)) WHEN '#ad1457' THEN 'radicchio' … (24 lines) END WHERE color_key IS NULL
    ```
 
+   The 24 `WHEN` lines are copied from `backend/app/services/event_colors.py:8-17` exactly. A test reads the migration file and checks that its 24 pairs equal `EVENT_COLORS` and that its CHECK keys equal `tenant.py:1607` (review L3; precedent `backend/tests/test_event_colors_tokens.py`).
    Rows whose value is not one of the 24 stay NULL, which means the default color. Production has 0 rows (F2).
+   Every `information_schema` check filters on both `table_schema` and `table_name` (precedent `20261109_200000_drop_staff_firebase_uid.sql`).
 4. `ALTER TABLE … DROP COLUMN IF EXISTS color, DROP COLUMN IF EXISTS is_visible, DROP COLUMN IF EXISTS share_mode`. Do not use CASCADE: if something depends on these columns, the migration should fail and stop. The share_mode CHECK goes away together with its column.
 5. Final check: in every tenant that was processed, if any of the 3 old columns remains or `color_key` is missing, `RAISE EXCEPTION`, which rolls the whole migration back.
 
 - Locks: `lock_timeout` (1s) from `run_sql` (ADR-1037). The table has 0 rows in production.
 - Rollback, written in a comment: `ADD COLUMN color varchar(32) DEFAULT '#1a73e8' NOT NULL, is_visible boolean DEFAULT false NOT NULL, share_mode varchar(16) DEFAULT 'self' NOT NULL` plus the CHECK, and `DROP COLUMN color_key`. The values do not come back, but production has 0 rows.
-- Registration: the same places as F10, as one set. In the template (`tenant.py:1649-1660`), change the 3 old columns to `color_key` plus its CHECK.
+- Registration: the same places as F10, as one set. In the template (`tenant.py:1649-1660`), replace the 3 old columns with `color_key text` and `CONSTRAINT calendar_owner_settings_color_key_check CHECK (color_key IN (…24 keys…))`, word for word the same as the migration.
 
 ### 3-2 API (`backend/app/routers/calendar.py`)
 
 - `OwnerSettingsBody` holds only `color_key: Optional[str] = None`.
   - If the request does not send `color_key` (judged with `model_fields_set`), return 422 `no_fields_to_update` as now.
   - Sending `null` means "back to the default color".
-  - A value that is not in `EVENT_COLOR_KEYS` (`backend/app/services/event_colors.py:252`) returns 422 `invalid_color_key`.
+  - Any other value not in `EVENT_COLOR_KEYS` (`backend/app/services/event_colors.py:18`, already imported at `calendar.py:43`) returns 422 `invalid_color_key`. This is raised inside the handler as `HTTPException(422, detail="invalid_color_key")`, the same form as `no_fields_to_update`; it is not a pydantic validator. The empty string `""` is not a key, so it also returns 422 (unlike events at `calendar.py:119`, which allow it).
 - `OwnerRosterItem` gets `color_key: Optional[str]` in place of `color`, `is_visible` and `share_mode`.
 - The roster and the re-read after save use `SELECT cos.color_key`. Remove `_DEFAULT_OWNER_COLOR`, `_VALID_OWNER_SHARE_MODES` and the `default_color` parameter.
 - Saving is the current upsert with only the `color_key` column: `INSERT … ON CONFLICT (staff_id) DO UPDATE SET color_key = EXCLUDED.color_key, updated_at = NOW()`. Keep `commit` followed by `reset_tenant_context` (ADR-072).
+- Regenerate the API contract and commit it (review R1): `cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json`. `frontend/src/api/generated/` is not tracked, so no type file changes.
 
 ### 3-3 Event teams to active teams only (`backend/app/services/calendar_service.py`)
 
@@ -116,6 +131,8 @@ Put every tenant in one DO block. Skip any tenant that has no `calendar_owner_se
 - Remove the 2 rows `color` (mask) and `share_mode` (allow).
 - Add `('tenant_*','calendar_owner_settings',ARRAY['color_key'],'allow','values are limited by calendar_owner_settings_color_key_check')`, following the wording of the existing `calendar_categories` color_key row.
 - Add one test following the precedent `backend/tests/ops/test_ai_cloud_views.py:1061`.
+- Change the count at `backend/tests/ops/test_ai_cloud_views.py:486` from 1170 to **1169** (2 rows out, 1 in; review R3). Also fix the stale "1169 行" comment at line 3 of the SQL file so that it says 1169.
+- After editing the SQL, put its new `sha256sum` into `scripts/migration-guard/reference-allowlist.tsv:7`, and add `/ schedule-settings 便3a（分類の入れ替え）` to the end of the reason column (review R2).
 
 ## 4 Screen changes
 
@@ -127,7 +144,7 @@ Put every tenant in one DO block. Skip any tenant that has no `calendar_owner_se
   - `colorKey = isEventColorKey(owner.color_key) ? owner.color_key : null`
   - `color = colorKey ? eventColorVar(colorKey) : DEFAULT_OWNER_COLOR` (`eventColors.ts`)
 - The places in F5 keep reading `owner.color`, so they do not change.
-- Rewrite the comment on `DEFAULT_OWNER_COLOR` to say that "the default color, when no color is set, lives in only this one place".
+- Rewrite the comment on `DEFAULT_OWNER_COLOR` to say that "the default color, when no color is set, lives in only this one place". The new comment must not contain the name `_DEFAULT_OWNER_COLOR`, because the A5 command would find it (review R5).
 
 ### 4-2 `frontend/src/pages/schedule/ScheduleSettingsPage.tsx`
 
@@ -164,13 +181,20 @@ names.length > 0
 
 - Back end:
   - Rewrite `backend/tests/test_calendar_owner_api.py` for color_key: save, null resets, out-of-range value returns 422, no fields returns 422, the response has no `is_visible` or `share_mode`.
+    - Call the handler with real bodies, `OwnerSettingsBody(color_key=None)` and `OwnerSettingsBody()`, not `SimpleNamespace(...)` as at `:95` and `:113` today. `model_fields_set` needs the real model (pydantic 2.10.6, `backend/requirements.txt:8`). The order of `db.execute` side effects (staff, staff, INSERT, re-read) stays the same (review L4).
   - Add a real PostgreSQL test of the migration: carrying over the matching key, the non-matching value going to NULL, the 3 old columns being gone, the CHECK, and running twice.
-  - Add a real PostgreSQL test for A6: event list, `event_team_ids`.
+    - How the old shape is made (review R6): the test tenant is built from the new template, so it already has the new shape. The test first turns it back into the old shape with `ALTER TABLE … ADD COLUMN color varchar(32) DEFAULT '#1a73e8' NOT NULL, ADD COLUMN is_visible boolean DEFAULT false NOT NULL, ADD COLUMN share_mode varchar(16) DEFAULT 'self' NOT NULL, DROP COLUMN color_key` (this also drops its CHECK), inserts rows with a matching hex (in upper case with spaces, to test `lower(btrim())`) and a non-matching hex, then runs the migration twice with `_apply_migration_on_conn(..., schema_name=...)`.
+    - `scripts/check_test_schema_dup.py:28` only looks for `CREATE TABLE`, so `ALTER TABLE` in a test passes the gate.
+    - Add this test file to `_REVIEWED` in `test_tenant_loop_migration_guard.py` as `scoped` with the new migration name.
+  - Add a real PostgreSQL test for A6 and A8: create one team event, set the team to `is_active = false`, and check that both the event list and `event_team_ids` no longer contain the team, and that the list count did not change.
+  - Add the test that compares the 24 pairs and the CHECK keys (§3-1, review L3).
   - The test-only CREATE TABLE ban (test-schema-dup gate) applies. Tables are made by the template and the migration.
 - Front end:
   - Remove `is_visible` and `share_mode` from the fake data in `ScheduleSettingsPage.test.tsx`, `SchedulePageImpl.test.tsx`, `SchedulePageCache.test.tsx` and `frontend/src/lib/query/batch3bPages.test.tsx`, and use `color_key`.
   - Settings page: there is no `type="color"`, choosing a color sends `color_key`, and "default color" sends `null`.
   - Schedule screen: a person's color key is drawn as `var(--event-color-…)`, the share line shows "チーム: A、B".
+  - Fix the existing assertions: `SchedulePageImpl.test.tsx:1939` (now `shareTeam` + `: Team One, Team Two`) becomes the new text (ja `チーム: A、B`, en `Team: A, B`); `ScheduleSettingsPage.test.tsx:348` (`{ color: "rgb(17, 34, 51)" }`) becomes `color_key` (review L8).
+  - The en value of `nameListSeparator` ends with a space. The implementer checks that no JSON formatter or i18n check trims values; if one does, stop and report.
 
 ## 6 Out of scope
 
@@ -195,6 +219,7 @@ names.length > 0
 | A test environment has a free value that is not one of the 24 | It goes to NULL, which shows the default color. Nothing is lost except the color |
 | Removing a column breaks the AI views | They are removed at the start of every run and rebuilt at the end (F9). The classification is also updated in the same PR (§3-4) |
 | An event whose team was deactivated shows an empty team selection | That is the right state: "no team chosen". The required message is already there (`ScheduleDraftFields.tsx:474`) |
+| The old team mapping rows stay in the table | Copies of a recurring event (`calendar_service.py:1273-1275`) carry only active teams. If the team is made active again, events that were not re-saved show the old team again. Display does not change while it is inactive, because the visibility check already ignores inactive teams (review L5) |
 
 ## 9 External and past examples
 
@@ -211,6 +236,8 @@ names.length > 0
   - The i18n check.
   - The UI governance gate (ADR-144) and Lint & Dark Mode Check (ADR-067).
   - The real PostgreSQL migration test.
+  - `api-contract-check` (openapi.json), migration-guard (allowlist sha256), `test_ai_cloud_views.py` (count) and `test_tenant_loop_migration_guard.py` (`_REVIEWED`).
+  - The template shape check `scripts/check_tenant_template_shape.py` (`tenant-template-shape`).
 - Owner of the design: Opus (the design role).
 
 ## 11 PO visual check in production
@@ -219,4 +246,8 @@ names.length > 0
 
 ## 12 Review
 
-- (to be written)
+- Round 1 (cloud Sonnet, architect): **REVISE**. Record `docs/handoff/schedule-settings/review-architect-bin3a-1.md` on branch `release/schedule-settings-bin3a-review1`.
+  - R1 openapi.json → §3-2. R2 allowlist sha256 → §3-4. R3 count 1169 → §3-4. R4 `_REVIEWED` and the right lines → F10, §5. R5 A5 command → §2, §4-1. R6 how to make the old shape → §5.
+  - L1 → §3-2. L2 → §3-1 (decided: `text` and the same CHECK wording as `calendar_events`). L3 → §3-1, §5. L4 → §5. L5 → §8. L8 → §5. L9 → A8.
+  - L6 and L7 were records only (no change needed).
+- Round 2: (to be written)
