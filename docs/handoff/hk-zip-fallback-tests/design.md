@@ -1,7 +1,7 @@
 # design: 郵便番号が空のときの補完を自動試験で守る（香港あて）
 
-状態: 設計案（Opus 作成・自己審査済み）。PO 承認・実装承認は未。
-参照: [recon.md](./recon.md)、ADR-126 §5（出口補完）、ADR-125（FedEx 見積もり）、FEATURE-INDEX.md:20
+状態: 設計審査済み（Opus 自己審査）。PO の実装承認 2026-11-25「1」。試験 T1〜T4 はクラウドの担当が追加済み。
+参照: docs/handoff/hk-zip-fallback-tests/recon.md、ADR-126 §5（出口補完）、ADR-125（FedEx 見積もり）、FEATURE-INDEX.md:20
 
 ## 1. 目的（KGI）
 香港あての送り先は郵便番号を空で登録する（PO 2026-11-25）。空のとき、アプリは2か所で値を補う。
@@ -93,7 +93,7 @@ None が `get_rates` に渡ると T1 の補完が効く。T1 と T4 で「会社
 不要。理由: 自社コードの既存の動きを試験で固定するだけ。FedEx 側の挙動は自社の sandbox 実測（recon.md）を根拠にし、外部の事例を成功の証明に使わない。
 
 ## 8. 維持の仕組み
-- 守り手: 必須 CI の pytest。補完を変える PR は自動で赤になる。
+- 守り手: 必須 CI の pytest（backend/tests/test_fedex_rates.py・backend/tests/test_order_shipping_details.py・backend/tests/test_invoice_totals.py）。補完を変える PR は自動で赤になる。
 - 本番での実地確認: 記録済み（PO 2026-11-25）。FedEx 本番申請後の動作確認で香港あて（郵便番号空）を見積もり・ラベルの両方で試す。
 
 ## 9. 実装カード（PO の実装承認後にクラウドの担当へ渡す）
