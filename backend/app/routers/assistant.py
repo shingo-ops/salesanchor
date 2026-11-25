@@ -54,7 +54,7 @@ from app.services import secretary_tts
 from app.services.ai_assignment import get_ai_assignment
 from app.services.calendar_service import can_add_meet
 from app.services.llm_budget import USAGE_SDKS_BY_PROVIDER, UsageCounts, record_usage_isolated
-from app.services.secretary_dates import apply_day
+from app.services.secretary_dates import apply_day, same_day
 from app.services.secretary_karte import edit_changed, merge_edit, merge_karte, next_ask, same_time, settle_dates
 from app.services.secretary_resolve import resolve_names
 from app.services.secretary_rules import (
@@ -332,12 +332,19 @@ async def post_assistant_message(
         final_ev: IntentEvent | None = intent.event
         event_start = event_end = None
         edited = False
+        meet_refused = False
         if new_path:
             if edit_mode:
                 # 便W: 直す頼み。AI が値を返した欄だけ替え、ほかはカルテのまま（請求書・unknown もカルテのまま）
                 assert karte is not None
                 ai_ev = intent.event if intent.kind == "event" else None
-                if ai_ev is not None and ai_ev.start is not None and (karte.start is None or not same_time(ai_ev.start, karte.start)):
+                if not meet_available and ai_ev is not None and ai_ev.add_meet is not None:
+                    meet_refused = ai_ev.add_meet is True
+                    ai_ev = ai_ev.model_copy(update={"add_meet": None})
+                if ai_ev is not None and ai_ev.start is not None and (
+                    karte.start is None
+                    or (not same_time(ai_ev.start, karte.start) and not same_day(ai_ev.start, karte.start))
+                ):
                     ai_ev = apply_day(ai_ev, body.text, now.date(), None)
                 final_ev, edited = merge_edit(ai_ev, karte)
                 final_kind = "event"
@@ -432,6 +439,7 @@ async def post_assistant_message(
             ask=ask,
             ask_count=ask_count,
             edited=edited if edit_mode else None,
+            meet_refused=meet_refused if edit_mode else None,
         )
     elif intent.kind == "event":
         ev = intent.event

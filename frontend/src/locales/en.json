@@ -6332,6 +6332,8 @@
       "invoiceReady": "The invoice draft is ready. Check it on screen and press the create button.",
       "notCreated": "I did not add it.",
       "editedConfirm": "Updated. Add {{title}} on {{when}}?",
+      "meetUnavailable": "Meet cannot be added. Say yes, no, or what to change.",
+      "editedMeetUnavailable": "Updated. Meet cannot be added. Add {{title}} on {{when}}?",
       "notEdited": "I could not tell what to change. Say yes, no, or what to change.",
       "checkScreen": "Please check the screen and press the create button.",
       "yesWords": "yes|yeah|ok|okay|sure|please",

@@ -11427,6 +11427,17 @@
             "title": "Meet Available",
             "type": "boolean"
           },
+          "meet_refused": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meet Refused"
+          },
           "start": {
             "anyOf": [
               {

@@ -173,6 +173,12 @@ def _day_of(value: str | None) -> date | None:
     return parsed.date()
 
 
+def same_day(a: str | None, b: str | None) -> bool:
+    """両方の日付（日本時間・時差の印なしか +09:00）が読めて同じ日なら真。それ以外は偽。"""
+    day_a, day_b = _day_of(a), _day_of(b)
+    return day_a is not None and day_b is not None and day_a == day_b
+
+
 def _with_day(value: str | None, day: date) -> str | None:
     """時刻の文字の日付の部分だけを day に替える（時刻・時差の印は文字のまま）。替えられなければ None。"""
     if _day_of(value) is None:

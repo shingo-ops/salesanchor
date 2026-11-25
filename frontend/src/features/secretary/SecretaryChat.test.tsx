@@ -1151,6 +1151,115 @@ describe("SecretaryChat voice conversation", () => {
     await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1));
   }, SLOW);
 
+  const MEET_UNAVAILABLE = () => i18n.t("secretary.voiceMode.meetUnavailable");
+  const meetRefusedReply = (edited: boolean, draft: Record<string, unknown> = {}) =>
+    editReply({ meet_refused: true, ...draft }, edited);
+
+  it("W2: yes plus a change edits first, reads editedConfirm, creates nothing; a bare yes then creates with the change", async () => {
+    mock.postWithTimeout
+      .mockResolvedValueOnce(eventReply)
+      .mockResolvedValueOnce(editReply({ location: "Shibuya" }));
+    mock.post.mockResolvedValue({});
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("yes, location is shibuya");
+    await waitFor(() => expect(startCount()).toBe(3), { timeout: 4000 });
+    expect(mock.postWithTimeout).toHaveBeenCalledTimes(2);
+    expect(mock.post).not.toHaveBeenCalled();
+    expect(spoken()).toContain("Updated. Add Meeting on");
+    hear("yes");
+    await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    expect(mock.post.mock.calls[0][1]).toMatchObject({ location: "Shibuya" });
+    expect(mock.postWithTimeout).toHaveBeenCalledTimes(2);
+  }, SLOW);
+
+  it("W2: yes plus a request with nothing to change creates the previous draft once", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(eventReply).mockResolvedValueOnce(notEditedReply());
+    mock.post.mockResolvedValue({});
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("yes, go ahead");
+    await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    expect(mock.postWithTimeout).toHaveBeenCalledTimes(2);
+    expect(mock.post.mock.calls[0][0]).toBe("/calendar/events");
+  }, SLOW);
+
+  it("W2: a bare yes does not call the secretary API and creates once", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(eventReply);
+    mock.post.mockResolvedValue({});
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("yes");
+    await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1), { timeout: 4000 });
+    expect(mock.postWithTimeout).toHaveBeenCalledTimes(1);
+  }, SLOW);
+
+  it("W2: meet refused without an edit reads meetUnavailable, creates nothing, and the confirmation continues", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(eventReply).mockResolvedValueOnce(meetRefusedReply(false));
+    mock.post.mockResolvedValue({});
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("add a meet link");
+    await waitFor(() => expect(startCount()).toBe(3), { timeout: 4000 });
+    expect(spoken()).toContain(MEET_UNAVAILABLE());
+    expect(mock.post).not.toHaveBeenCalled();
+    hear("yes");
+    await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1), { timeout: 4000 });
+  }, SLOW);
+
+  it("W2: a meet refusal does not count as a miss (next two unreadable requests read notEdited then checkScreen)", async () => {
+    mock.postWithTimeout
+      .mockResolvedValueOnce(eventReply)
+      .mockResolvedValueOnce(meetRefusedReply(false))
+      .mockResolvedValueOnce(notEditedReply())
+      .mockResolvedValueOnce(notEditedReply());
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("add a meet link");
+    await waitFor(() => expect(startCount()).toBe(3), { timeout: 4000 });
+    hear("uh");
+    await waitFor(() => expect(startCount()).toBe(4), { timeout: 4000 });
+    expect(spoken()).toContain(i18n.t("secretary.voiceMode.notEdited"));
+    expect(spoken()).not.toContain(i18n.t("secretary.voiceMode.checkScreen"));
+    hear("hmm");
+    await waitFor(() => expect(startCount()).toBe(5), { timeout: 4000 });
+    expect(spoken()).toContain(i18n.t("secretary.voiceMode.checkScreen"));
+  }, SLOW);
+
+  it("W2: meet refused together with an edit reads editedMeetUnavailable", async () => {
+    mock.postWithTimeout
+      .mockResolvedValueOnce(eventReply)
+      .mockResolvedValueOnce(meetRefusedReply(true, { location: "Shibuya" }));
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("location shibuya and a meet link");
+    await waitFor(() => expect(startCount()).toBe(3), { timeout: 4000 });
+    expect(spoken()).toContain("Updated. Meet cannot be added. Add Meeting on");
+  }, SLOW);
+
+  it("W2: yes plus a meet request never creates and reads meetUnavailable", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(eventReply).mockResolvedValueOnce(meetRefusedReply(false));
+    mock.post.mockResolvedValue({});
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("yes, add a meet link");
+    await waitFor(() => expect(startCount()).toBe(3), { timeout: 4000 });
+    expect(spoken()).toContain(MEET_UNAVAILABLE());
+    expect(mock.post).not.toHaveBeenCalled();
+  }, SLOW);
+
+  it("W2: yes plus a request whose API call fails shows the error, creates nothing, and the old draft stays creatable", async () => {
+    mock.postWithTimeout.mockResolvedValueOnce(eventReply).mockRejectedValueOnce(new ApiError("x", 500, null));
+    mock.post.mockResolvedValue({});
+    await openVoice();
+    await sayAndAnswered("meeting tomorrow", 1, 2);
+    hear("yes, go ahead");
+    expect(await screen.findByText(i18n.t("secretary.error.generic"), undefined, { timeout: 4000 })).toBeTruthy();
+    expect(mock.post).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole("button", { name: "Create" }));
+    await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1));
+  }, SLOW);
+
   it("T8: an invoice draft reads only the fixed line and a spoken yes does not create it", async () => {
     mock.postWithTimeout.mockResolvedValueOnce(invoiceReply()).mockResolvedValue(unknownReply("Okay."));
     await openVoice();
