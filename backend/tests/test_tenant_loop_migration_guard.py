@@ -75,6 +75,15 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
             }
         ),
     ),
+    "test_calendar_team_share.py": (
+        "scoped",
+        "",
+        frozenset(
+            {
+                "20261127_100000_add_calendar_team_share.sql",
+            }
+        ),
+    ),
     "test_calendar_categories.py": (
         "scoped",
         "",

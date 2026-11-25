@@ -16,7 +16,9 @@ export interface AnchorRect {
 export interface ApiCalendarEvent {
   id: number;
   user_id: number | null;
-  calendar_type: "shared" | "personal" | string;
+  calendar_type: "shared" | "personal" | "team" | string;
+  /** calendar_type が team のときのチームの番号（昇順）。ほかは空 */
+  team_ids?: number[];
   title: string;
   description: string | null;
   location: string | null;
@@ -61,7 +63,10 @@ export interface ScheduleItem {
   allDay: boolean;
   /** 予定の種類の鍵（正本は GET /calendar/categories。名前は useCalendarCategories で引く） */
   category: string | null;
-  calendarType: "shared" | "personal";
+  /** 裏側の値（calendar_type）。画面の共有（自分だけ・全員・チーム）への変換は useCalendarCategories の 1 組 */
+  calendarType: "shared" | "personal" | "team";
+  /** calendarType が team のときのチームの番号。ほかは空 */
+  teamIds: number[];
   source: "app" | "google" | "shift";
   ownerUserId: number | null;
   ownerName: string | null;
@@ -369,7 +374,8 @@ export function normalizeEvent(event: ApiCalendarEvent): ScheduleItem {
     end,
     allDay: event.is_all_day,
     category,
-    calendarType: event.calendar_type === "personal" ? "personal" : "shared",
+    calendarType: event.calendar_type === "personal" || event.calendar_type === "team" ? event.calendar_type : "shared",
+    teamIds: event.calendar_type === "team" && Array.isArray(event.team_ids) ? event.team_ids : [],
     source: event.source === "google" ? "google" : "app",
     ownerUserId,
     ownerName,
@@ -398,6 +404,7 @@ export function normalizeShift(shift: ApiShift, t: (key: string) => string): Sch
     allDay: false,
     category: "personal",
     calendarType: "personal",
+    teamIds: [],
     source: "shift",
     ownerUserId: shift.user_id,
     ownerName: null,

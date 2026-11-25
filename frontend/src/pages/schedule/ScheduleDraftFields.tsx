@@ -12,12 +12,14 @@ import { ColorSwatchPicker, type ColorSwatchOption } from "../../components/Colo
 import { ButtonLink } from "../../components/ButtonLink";
 import { Checkbox } from "../../components/Checkbox";
 import { EditorPageRow } from "../../components/EditorPage";
+import { MultiSelect } from "../../components/MultiSelect";
 import { SelectControl } from "../../components/Select";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 import { Toggle } from "../../components/Toggle";
 import { SCHEDULE_POPOVER_ICONS } from "../../constants/icons";
-import { categoryLabel, useCalendarCategories } from "../../features/schedule/useCalendarCategories";
+import { categoryLabel, parseShare, useCalendarCategories } from "../../features/schedule/useCalendarCategories";
+import { teamIdsToValues, useCalendarTeams, valuesToTeamIds } from "../../features/schedule/useCalendarTeams";
 import { EVENT_COLOR_KEYS, eventColorLabelKey, eventColorVar, isEventColorKey } from "./eventColors";
 import type { ScheduleDraft, PopoverMode } from "./SchedulePageImpl";
 import {
@@ -297,7 +299,8 @@ export function DraftCategoryField({
         ...draft,
         category,
         colorKey: isEventColorKey(picked.color_key) ? picked.color_key : null,
-        visibleToStaff: picked.default_share === "all",
+        share: picked.default_share,
+        teamIds: picked.default_share === "team" ? picked.default_team_ids ?? [] : [],
       });
       return;
     }
@@ -419,23 +422,77 @@ export function DraftShareField({
 }: Omit<FieldProps, "mode"> & { canChangeVisibility: boolean }) {
   const { t } = useTranslation();
   const ShareIcon = SCHEDULE_POPOVER_ICONS.share;
+  const { options: teamOptions } = useCalendarTeams({ enabled: canChangeVisibility });
   if (!canChangeVisibility) return null;
-  const toggle = (
+  const changeShare = (event: ChangeEvent<HTMLSelectElement>) => {
+    const share = parseShare(event.target.value);
+    // チームから外すとチームの選びは捨てる（チームに戻すときは選び直す）
+    onDraftChange({ ...draft, share, teamIds: share === "team" ? draft.teamIds : [] });
+  };
+  const shareOptions = [
+    { value: "self", label: t("schedule.shareSelf") },
+    { value: "all", label: t("schedule.shareAll") },
+    { value: "team", label: t("schedule.shareTeam") },
+  ];
+  const field = (
     <div className="schedule-field schedule-field--inline">
-      <span className="schedule-field__label">{t("schedule.shareWithStaff")}</span>
-      <Toggle
-        checked={draft.visibleToStaff}
-        aria-label={t("schedule.shareWithStaff")}
-        onCheckedChange={(next) => onDraftChange({ ...draft, visibleToStaff: next })}
-      />
+      <span className="schedule-field__label">{t("schedule.shareLabel")}</span>
+      {appearance === "page" ? (
+        <SelectControl
+          variant="editor-filled"
+          aria-label={t("schedule.shareLabel")}
+          value={draft.share}
+          options={shareOptions}
+          onChange={changeShare}
+        />
+      ) : (
+        <SelectControl
+          size="sm"
+          aria-label={t("schedule.shareLabel")}
+          value={draft.share}
+          options={shareOptions}
+          onChange={changeShare}
+        />
+      )}
     </div>
   );
-  if (appearance === "page") return toggle;
+  const teams =
+    draft.share === "team" ? (
+      <div className="schedule-field">
+        <MultiSelect
+          label={t("schedule.shareTeams")}
+          options={teamOptions}
+          selected={teamIdsToValues(draft.teamIds)}
+          onChange={(values) => onDraftChange({ ...draft, teamIds: valuesToTeamIds(values) })}
+          clearLabel={t("schedule.shareTeamsClear")}
+          allLabel={t("schedule.shareTeamsNone")}
+          countLabel={(count) => t("schedule.shareTeamsCount", { count })}
+          emptyLabel={t("schedule.noActiveTeams")}
+          layout="inline"
+          testId="schedule-share-teams"
+        />
+        {draft.teamIds.length === 0 && (
+          <span className="schedule-field__label">{t("schedule.shareTeamsRequired")}</span>
+        )}
+      </div>
+    ) : null;
+  const content = (
+    <>
+      {field}
+      {teams}
+    </>
+  );
+  if (appearance === "page") return content;
   return (
-    <CreateRow creating icon={<ShareIcon size={20} aria-hidden="true" />}>
-      {toggle}
+    <CreateRow creating icon={<ShareIcon size={20} aria-hidden="true" />} wrap>
+      {content}
     </CreateRow>
   );
+}
+
+/** 共有が「チーム」でチームが 1 つも選ばれていない（保存を止める）。共有を変えられない人の予定は送らないので数えない */
+export function isTeamShareIncomplete(draft: ScheduleDraft, canChangeVisibility: boolean): boolean {
+  return canChangeVisibility && draft.share === "team" && draft.teamIds.length === 0;
 }
 
 export function DraftLocationField({

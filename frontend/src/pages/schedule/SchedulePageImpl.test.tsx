@@ -49,17 +49,19 @@ const answers = vi.hoisted(() => ({
   canManageOthers: false,
   selfMissing: false,
   categories: [] as Array<Record<string, unknown>>,
+  teams: [] as Array<{ id: number; name: string }>,
 }));
 
 /** 種類の表の応答（GET /calendar/categories）。必要な行だけ並べる */
 function categoryRow(key: string, over: Record<string, unknown> = {}) {
-  return { key, name: null, color_key: null, default_share: "all", sort_order: 1, is_active: true, ...over };
+  return { key, name: null, color_key: null, default_share: "all", default_team_ids: [], sort_order: 1, is_active: true, ...over };
 }
 
 vi.mock("../../lib/api", () => ({
   api: {
     get: vi.fn(async (path: string) => {
       if (path === "/calendar/categories") return answers.categories;
+      if (path === "/calendar/teams") return answers.teams;
       if (path === "/me/permissions") return { permissions: answers.canManageOthers ? ["staff.view"] : [], is_tenant_admin: answers.isTenantAdmin };
       if (path === "/google-calendar/status") return { connected: answers.connected, meet_available: answers.meetAvailable };
       if (path === "/calendar/owners") {
@@ -105,6 +107,7 @@ beforeEach(async () => {
   answers.canManageOthers = false;
   answers.selfMissing = false;
   answers.categories = [];
+  answers.teams = [];
   calendarProps.current = null;
   hrefSetter.mockReset();
   const fake = { ...window.location } as Record<string, unknown>;
@@ -167,16 +170,16 @@ function apiEvent(over: Record<string, unknown>) {
   };
 }
 
-describe("SchedulePage share-with-staff toggle", () => {
-  const label = () => i18n.t("schedule.shareWithStaff");
+describe("SchedulePage share select (self / all / team)", () => {
+  const label = () => i18n.t("schedule.shareLabel");
 
-  it("shows the toggle on create, default on, and sends personal when switched off", async () => {
+  it("shows the share select on create, default all, and sends personal when set to self", async () => {
     view();
     fireEvent.click(await screen.findByRole("button", { name: i18n.t("schedule.create") }));
-    const toggle = (await screen.findByRole("switch", { name: label() })) as HTMLInputElement;
-    expect(toggle.checked).toBe(true);
-    fireEvent.click(toggle);
-    expect(toggle.checked).toBe(false);
+    const toggle = (await screen.findByRole("combobox", { name: label() })) as HTMLSelectElement;
+    expect(toggle.value).toBe("all");
+    fireEvent.change(toggle, { target: { value: "self" } });
+    expect(toggle.value).toBe("self");
     fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "Secret" } });
     fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
     await waitFor(() => expect(api.post).toHaveBeenCalled());
@@ -185,20 +188,20 @@ describe("SchedulePage share-with-staff toggle", () => {
     expect(body.calendar_type).toBe("personal");
   });
 
-  it("shows the toggle when editing own event and sends calendar_type", async () => {
+  it("shows the share select when editing own event and sends calendar_type", async () => {
     answers.events = [apiEvent({})];
     view();
     fireEvent.click(await screen.findByText("Own Event"));
     fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
     const dialog = await editorDialog();
-    expect(await within(dialog).findByRole("switch", { name: label() })).toBeTruthy();
+    expect(await within(dialog).findByRole("combobox", { name: label() })).toBeTruthy();
     fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
     await waitFor(() => expect(api.patch).toHaveBeenCalled());
     const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
     expect(body.calendar_type).toBe("shared");
   });
 
-  it("hides the toggle and omits calendar_type when editing someone else's event", async () => {
+  it("hides the share select and omits calendar_type when editing someone else's event", async () => {
     answers.canManageOthers = true;
     answers.events = [apiEvent({ id: 2, user_id: 202, created_by_user_id: 202, title: "Other Event" })];
     view();
@@ -207,7 +210,7 @@ describe("SchedulePage share-with-staff toggle", () => {
     fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
     const dialog = await editorDialog();
     await within(dialog).findByLabelText(i18n.t("schedule.eventTitle"));
-    expect(within(dialog).queryByRole("switch", { name: label() })).toBeNull();
+    expect(within(dialog).queryByRole("combobox", { name: label() })).toBeNull();
     fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
     await waitFor(() => expect(api.patch).toHaveBeenCalled());
     const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
@@ -1036,7 +1039,7 @@ describe("SchedulePage on CalendarView", () => {
       await waitFor(() => expect(screen.queryByRole("dialog", { name: i18n.t("schedule.fullEditLabel") })).toBeNull());
     });
 
-    it("EP4: the card lists Meet, location, category, share with staff, description in this order", async () => {
+    it("EP4: the card lists Meet, location, category, share, description in this order", async () => {
       answers.isTenantAdmin = true;
       answers.connected = true;
       answers.meetAvailable = true;
@@ -1044,7 +1047,7 @@ describe("SchedulePage on CalendarView", () => {
       const meet = await within(dialog).findByRole("button", { name: i18n.t("schedule.addMeet") });
       const location = within(dialog).getByLabelText(i18n.t("schedule.eventLocation"));
       const category = within(dialog).getByLabelText(i18n.t("schedule.category"));
-      const share = within(dialog).getByRole("switch", { name: i18n.t("schedule.shareWithStaff") });
+      const share = within(dialog).getByRole("combobox", { name: i18n.t("schedule.shareLabel") });
       const description = within(dialog).getByLabelText(i18n.t("schedule.eventDescription"));
       const follows = (a: Node, b: Node) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
       expect(follows(meet, location)).toBe(true);
@@ -1400,12 +1403,12 @@ describe("SchedulePage category defaults (schedule-settings bin2a)", () => {
     fireEvent.click(await screen.findByRole("button", { name: i18n.t("schedule.create") }));
     const select = (await screen.findByLabelText(categoryLabelOf())) as HTMLSelectElement;
     await waitFor(() => expect(select.options.length).toBe(3));
-    const share = (await screen.findByRole("switch", { name: i18n.t("schedule.shareWithStaff") })) as HTMLInputElement;
-    expect(share.checked).toBe(true);
+    const share = (await screen.findByRole("combobox", { name: i18n.t("schedule.shareLabel") })) as HTMLSelectElement;
+    expect(share.value).toBe("all");
     fireEvent.change(select, { target: { value: "personal" } });
-    expect(share.checked).toBe(false);
+    expect(share.value).toBe("self");
     fireEvent.change(select, { target: { value: "shipping" } });
-    expect(share.checked).toBe(true);
+    expect(share.value).toBe("all");
     const colorButton = screen.getByRole("button", { name: new RegExp(`^${i18n.t("schedule.eventColor")}`) });
     expect(colorButton.getAttribute("aria-label")).toContain(i18n.t("schedule.eventColors.tomato"));
     fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "Ship it" } });
@@ -1430,11 +1433,11 @@ describe("SchedulePage category defaults (schedule-settings bin2a)", () => {
     const dialog = await editorDialog();
     const select = (await within(dialog).findByLabelText(categoryLabelOf())) as HTMLSelectElement;
     await waitFor(() => expect(select.options.length).toBe(3));
-    const share = within(dialog).getByRole("switch", { name: i18n.t("schedule.shareWithStaff") }) as HTMLInputElement;
+    const share = within(dialog).getByRole("combobox", { name: i18n.t("schedule.shareLabel") }) as HTMLSelectElement;
     fireEvent.change(select, { target: { value: "personal" } });
-    expect(share.checked).toBe(true);
+    expect(share.value).toBe("all");
     fireEvent.change(select, { target: { value: "shipping" } });
-    expect(share.checked).toBe(true);
+    expect(share.value).toBe("all");
     const colorButton = within(dialog).getByRole("button", { name: new RegExp(`^${i18n.t("schedule.eventColor")}`) });
     expect(colorButton.getAttribute("aria-label")).toContain(i18n.t("schedule.eventColors.basil"));
     fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
@@ -1849,5 +1852,150 @@ describe("SchedulePage event colors (ADR-1081)", () => {
     fireEvent.click(radio);
     expect(document.querySelector(".schedule-popover")).not.toBeNull();
     expect(pendingOf()).toBeDefined();
+  });
+});
+
+describe("SchedulePage team share (schedule-settings bin2b)", () => {
+  const shareLabel = () => i18n.t("schedule.shareLabel");
+  const teams = [
+    { id: 1, name: "Team One" },
+    { id: 2, name: "Team Two" },
+  ];
+  const openCreateForm = async () => {
+    fireEvent.click(await screen.findByRole("button", { name: i18n.t("schedule.create") }));
+    return (await screen.findByRole("combobox", { name: shareLabel() })) as HTMLSelectElement;
+  };
+  const openEditor = async () => {
+    fireEvent.click(await screen.findByText("Own Event"));
+    fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
+    return editorDialog();
+  };
+
+  it("lists self / all / team, shows the team picker for team, and sends team_ids", async () => {
+    answers.teams = teams;
+    view();
+    const share = await openCreateForm();
+    expect(Array.from(share.options).map((option) => option.value)).toEqual(["self", "all", "team"]);
+    expect(screen.queryByTestId("schedule-share-teams-option-1")).toBeNull();
+    fireEvent.change(share, { target: { value: "team" } });
+    fireEvent.click(await screen.findByTestId("schedule-share-teams-option-1"));
+    fireEvent.click(screen.getByTestId("schedule-share-teams-option-2"));
+    fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "Team plan" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const body = vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>;
+    expect(body.calendar_type).toBe("team");
+    expect(body.team_ids).toEqual([1, 2]);
+  });
+
+  it("cannot save with team selected and no team chosen, and says why", async () => {
+    answers.teams = teams;
+    view();
+    const share = await openCreateForm();
+    fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "Team plan" } });
+    fireEvent.change(share, { target: { value: "team" } });
+    expect(await screen.findByText(i18n.t("schedule.shareTeamsRequired"))).toBeTruthy();
+    const save = screen.getByRole("button", { name: i18n.t("common.save") }) as HTMLButtonElement;
+    expect(save.disabled).toBe(true);
+    fireEvent.click(await screen.findByTestId("schedule-share-teams-option-2"));
+    expect(save.disabled).toBe(false);
+    expect(screen.queryByText(i18n.t("schedule.shareTeamsRequired"))).toBeNull();
+  });
+
+  it("shows the empty label when there is no active team", async () => {
+    view();
+    const share = await openCreateForm();
+    fireEvent.change(share, { target: { value: "team" } });
+    expect(await screen.findByText(i18n.t("schedule.noActiveTeams"))).toBeTruthy();
+  });
+
+  it("a category whose default share is team fills the share and the teams on create", async () => {
+    answers.teams = teams;
+    answers.categories = [
+      categoryRow("meeting", { sort_order: 1 }),
+      categoryRow("shipping", { sort_order: 2, default_share: "team", default_team_ids: [2] }),
+    ];
+    view();
+    const share = await openCreateForm();
+    const select = (await screen.findByLabelText(i18n.t("schedule.category"))) as HTMLSelectElement;
+    await waitFor(() => expect(select.options.length).toBe(2));
+    expect(share.value).toBe("all");
+    fireEvent.change(select, { target: { value: "shipping" } });
+    expect(share.value).toBe("team");
+    fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "Ship it" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const body = vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>;
+    expect(body.calendar_type).toBe("team");
+    expect(body.team_ids).toEqual([2]);
+  });
+
+  it("the detail popover has a share row with the team names", async () => {
+    answers.teams = teams;
+    answers.events = [apiEvent({ calendar_type: "team", team_ids: [1, 2] })];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    expect(await screen.findByText(i18n.t("schedule.shareLabel"))).toBeTruthy();
+    expect(await screen.findByText(`${i18n.t("schedule.shareTeam")}: Team One, Team Two`)).toBeTruthy();
+  });
+
+  it("the detail popover says Only me for a personal event", async () => {
+    answers.events = [apiEvent({ calendar_type: "personal" })];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    expect(await screen.findByText(i18n.t("schedule.shareSelf"))).toBeTruthy();
+  });
+
+  it("editing a team event keeps the share and sends the same team_ids", async () => {
+    answers.teams = teams;
+    answers.events = [apiEvent({ calendar_type: "team", team_ids: [2] })];
+    view();
+    const dialog = await openEditor();
+    const share = (await within(dialog).findByRole("combobox", { name: shareLabel() })) as HTMLSelectElement;
+    expect(share.value).toBe("team");
+    fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalled());
+    const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
+    expect(body.calendar_type).toBe("team");
+    expect(body.team_ids).toEqual([2]);
+  });
+
+  it("recurring event: this-only sends no team_ids, all sends them", async () => {
+    answers.teams = teams;
+    answers.events = [
+      apiEvent({
+        calendar_type: "team",
+        team_ids: [1],
+        recurrence_rule: "FREQ=WEEKLY;BYDAY=TH",
+        recurrence: "weekly",
+        recurring_event_id: 1,
+        occurrence_start: todayAt(10),
+        is_first_occurrence: false,
+      }),
+    ];
+    view();
+    let dialog = await openEditor();
+    fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
+    let scope = await screen.findByRole("dialog", { name: i18n.t("schedule.recurrence.editTitle") });
+    fireEvent.click(within(scope).getByRole("button", { name: i18n.t("common.ok") }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+    const thisBody = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
+    expect(thisBody.scope).toBe("this");
+    expect(thisBody.calendar_type).toBe("team");
+    expect("team_ids" in thisBody).toBe(false);
+
+    cleanup();
+    queryClient.clear();
+    vi.mocked(api.patch).mockClear();
+    view();
+    dialog = await openEditor();
+    fireEvent.click(within(dialog).getByRole("button", { name: i18n.t("common.save") }));
+    scope = await screen.findByRole("dialog", { name: i18n.t("schedule.recurrence.editTitle") });
+    fireEvent.click(within(scope).getByRole("radio", { name: i18n.t("schedule.recurrence.scopeAll") }));
+    fireEvent.click(within(scope).getByRole("button", { name: i18n.t("common.ok") }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
+    const allBody = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
+    expect(allBody.scope).toBe("all");
+    expect(allBody.team_ids).toEqual([1]);
   });
 });

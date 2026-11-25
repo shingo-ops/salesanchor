@@ -7,6 +7,7 @@ import ConfirmModal from "../../components/ConfirmModal";
 import { SectionCard } from "../../components/SectionCard";
 import { SubMenu } from "../../components/SubMenu";
 import { ColorSwatchPicker, type ColorSwatchOption } from "../../components/ColorSwatchPicker";
+import { MultiSelect } from "../../components/MultiSelect";
 import { SelectControl } from "../../components/Select";
 import { TextFieldControl } from "../../components/TextField";
 import { Toggle } from "../../components/Toggle";
@@ -14,10 +15,12 @@ import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import {
   categoryLabel,
+  parseShare,
   useCalendarCategories,
   type CalendarCategory,
-  type CalendarCategoryShare,
+  type CalendarShare,
 } from "../../features/schedule/useCalendarCategories";
+import { teamIdsToValues, useCalendarTeams, valuesToTeamIds } from "../../features/schedule/useCalendarTeams";
 import { usePermissions } from "../../hooks/usePermissions";
 import { api } from "../../lib/api";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
@@ -37,12 +40,14 @@ const EMPTY_OWNERS: CalendarOwner[] = [];
 interface CategoryForm {
   name: string;
   colorKey: string | null;
-  defaultShare: CalendarCategoryShare;
+  defaultShare: CalendarShare;
+  /** defaultShare が team のときの初期のチーム */
+  defaultTeamIds: number[];
   isActive: boolean;
 }
 
 const EMPTY_CATEGORY_FORMS: Record<string, CategoryForm> = {};
-const NEW_CATEGORY_FORM: CategoryForm = { name: "", colorKey: null, defaultShare: "all", isActive: true };
+const NEW_CATEGORY_FORM: CategoryForm = { name: "", colorKey: null, defaultShare: "all", defaultTeamIds: [], isActive: true };
 /** 足した種類の鍵の頭（裏側が決める。名前を空にできないのはこの種類だけ） */
 const CUSTOM_CATEGORY_PREFIX = "custom_";
 
@@ -51,6 +56,7 @@ function toCategoryForm(category: CalendarCategory): CategoryForm {
     name: category.name ?? "",
     colorKey: isEventColorKey(category.color_key) ? category.color_key : null,
     defaultShare: category.default_share,
+    defaultTeamIds: category.default_team_ids ?? [],
     isActive: category.is_active,
   };
 }
@@ -135,6 +141,8 @@ export default function ScheduleSettingsPage() {
   const [savedCategoryKey, setSavedCategoryKey] = useState<string | null>(null);
   const [categoryError, setCategoryError] = useState<string | null>(null);
   const NEW_CATEGORY_KEY = "__new__";
+  // 共有の初期値に選べるチーム（使っているものだけ）。種類の区画は管理者だけなので、管理者のときだけ読む
+  const { options: teamOptions } = useCalendarTeams({ enabled: isTenantAdmin === true });
 
   const categoryErrorText = (e: unknown): string => {
     const status = errorStatus(e);
@@ -157,6 +165,10 @@ export default function ScheduleSettingsPage() {
       setCategoryError(t("schedule.categoryErrorNameRequired"));
       return;
     }
+    if (form.defaultShare === "team" && form.defaultTeamIds.length === 0) {
+      setCategoryError(t("schedule.shareTeamsRequired"));
+      return;
+    }
     setSavingCategoryKey(key);
     setSavedCategoryKey(null);
     setCategoryError(null);
@@ -165,6 +177,7 @@ export default function ScheduleSettingsPage() {
         name: form.name.trim(),
         color_key: form.colorKey ?? "",
         default_share: form.defaultShare,
+        ...(form.defaultShare === "team" ? { default_team_ids: form.defaultTeamIds } : {}),
         is_active: form.isActive,
       });
       if (saved && typeof saved === "object" && "key" in saved) {
@@ -185,6 +198,10 @@ export default function ScheduleSettingsPage() {
       setCategoryError(t("schedule.categoryErrorNameRequired"));
       return;
     }
+    if (newCategory.defaultShare === "team" && newCategory.defaultTeamIds.length === 0) {
+      setCategoryError(t("schedule.shareTeamsRequired"));
+      return;
+    }
     setSavingCategoryKey(NEW_CATEGORY_KEY);
     setSavedCategoryKey(null);
     setCategoryError(null);
@@ -193,6 +210,7 @@ export default function ScheduleSettingsPage() {
         name: newCategory.name.trim(),
         color_key: newCategory.colorKey ?? "",
         default_share: newCategory.defaultShare,
+        ...(newCategory.defaultShare === "team" ? { default_team_ids: newCategory.defaultTeamIds } : {}),
       });
       if (created && typeof created === "object" && "key" in created) {
         setCategoryForms((current) => ({ ...current, [created.key]: toCategoryForm(created) }));
@@ -348,11 +366,31 @@ export default function ScheduleSettingsPage() {
             aria-label={t("schedule.categoryDefaultShare")}
             value={form.defaultShare}
             options={[
-              { value: "self", label: t("schedule.categoryShareSelf") },
-              { value: "all", label: t("schedule.categoryShareAll") },
+              { value: "self", label: t("schedule.shareSelf") },
+              { value: "all", label: t("schedule.shareAll") },
+              { value: "team", label: t("schedule.shareTeam") },
             ]}
-            onChange={(event) => onChange({ defaultShare: event.target.value === "self" ? "self" : "all" })}
+            onChange={(event) => onChange({ defaultShare: parseShare(event.target.value) })}
           />
+          {form.defaultShare === "team" && (
+            <>
+              <MultiSelect
+                label={t("schedule.shareTeams")}
+                options={teamOptions}
+                selected={teamIdsToValues(form.defaultTeamIds)}
+                onChange={(values) => onChange({ defaultTeamIds: valuesToTeamIds(values) })}
+                clearLabel={t("schedule.shareTeamsClear")}
+                allLabel={t("schedule.shareTeamsNone")}
+                countLabel={(count) => t("schedule.shareTeamsCount", { count })}
+                emptyLabel={t("schedule.noActiveTeams")}
+                layout="popover"
+                testId={`schedule-category-teams-${rowKey}`}
+              />
+              {form.defaultTeamIds.length === 0 && (
+                <span className="schedule-settings__description">{t("schedule.shareTeamsRequired")}</span>
+              )}
+            </>
+          )}
           {category && (
             <span className="schedule-settings__account">
               <span className="schedule-settings__description">{t("schedule.categoryActive")}</span>

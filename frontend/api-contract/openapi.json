@@ -3019,6 +3019,14 @@
             "title": "Default Share",
             "type": "string"
           },
+          "default_team_ids": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Default Team Ids",
+            "type": "array"
+          },
           "is_active": {
             "title": "Is Active",
             "type": "boolean"
@@ -3052,6 +3060,24 @@
           "is_active"
         ],
         "title": "CalendarCategoryItem",
+        "type": "object"
+      },
+      "CalendarTeamItem": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "CalendarTeamItem",
         "type": "object"
       },
       "Candidate": {
@@ -8255,6 +8281,20 @@
             "title": "Default Share",
             "type": "string"
           },
+          "default_team_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Team Ids"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -8348,6 +8388,20 @@
           "start_datetime": {
             "title": "Start Datetime",
             "type": "string"
+          },
+          "team_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Ids"
           },
           "title": {
             "title": "Title",
@@ -40644,6 +40698,20 @@
             ],
             "title": "Default Share"
           },
+          "default_team_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Team Ids"
+          },
           "is_active": {
             "anyOf": [
               {
@@ -40817,6 +40885,20 @@
               }
             ],
             "title": "Start Datetime"
+          },
+          "team_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Ids"
           },
           "title": {
             "anyOf": [
@@ -47940,6 +48022,38 @@
           }
         ],
         "summary": "Update Sync Mode",
+        "tags": [
+          "calendar",
+          "calendar"
+        ]
+      }
+    },
+    "/api/v1/calendar/teams": {
+      "get": {
+        "description": "使っているチームの名前と番号だけ（名前順）。メンバーは出さない。\n\nteams.view の無い人（初期の役で営業・仕入・発送）も予定の共有先を選べるよう、ログインしていれば読める。\nteams 表を読むだけで、写しは作らない。",
+        "operationId": "list_calendar_teams_api_v1_calendar_teams_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CalendarTeamItem"
+                  },
+                  "title": "Response List Calendar Teams Api V1 Calendar Teams Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Calendar Teams",
         "tags": [
           "calendar",
           "calendar"

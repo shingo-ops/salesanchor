@@ -3537,7 +3537,8 @@
     "calendarType": "Calendar type",
     "calendarTypeValues": {
       "shared": "Shared",
-      "personal": "Personal"
+      "personal": "Personal",
+      "team": "Team"
     },
     "personal": "Personal",
     "meeting": "Meeting",
@@ -3597,7 +3598,16 @@
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
     "allDay": "All day",
-    "shareWithStaff": "Show to staff",
+    "shareLabel": "Sharing",
+    "shareSelf": "Only me",
+    "shareAll": "Everyone",
+    "shareTeam": "Team",
+    "shareTeams": "Teams to share with",
+    "shareTeamsClear": "Clear selection",
+    "shareTeamsNone": "None selected",
+    "shareTeamsCount": "{{count}} teams",
+    "shareTeamsRequired": "Choose at least one team",
+    "noActiveTeams": "There are no active teams",
     "recurrence": {
       "label": "Repeat",
       "none": "Does not repeat",
@@ -3645,8 +3655,6 @@
     "categoryColor": "Category color",
     "categoryNoColor": "No category color",
     "categoryDefaultShare": "Default sharing",
-    "categoryShareSelf": "Only me",
-    "categoryShareAll": "Everyone",
     "categoryActive": "In use",
     "categoryErrorNameRequired": "The name is empty. Enter a name and save again.",
     "categoryErrorConflict": "Someone else added a category at the same time. Press the button again.",
