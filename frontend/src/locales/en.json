@@ -6536,6 +6536,7 @@
       "distribution_target": "The distribution target",
       "line_import_job": "The import job",
       "calendar_owner": "The person in charge",
+      "calendar_category": "The event category",
       "channel_master": "The channel",
       "goal": "The goal",
       "inventory_offer": "The offer",
