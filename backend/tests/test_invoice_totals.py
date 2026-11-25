@@ -263,6 +263,12 @@ def test_t20_destination_country_and_postal_code():
     assert destination_postal_code(None, None) is None
 
 
+def test_destination_postal_code_hk_empty_returns_none():
+    """香港で郵便番号が空なら None（get_rates 側で 999077 に補完される）。"""
+    assert destination_postal_code({"country": "HK", "postal_code": None}, None) is None
+    assert destination_postal_code({"country": "HK", "postal_code": ""}, None) is None
+
+
 def test_t21_today_jst_uses_japan_time(monkeypatch):
     class _Fixed(datetime):
         @classmethod
