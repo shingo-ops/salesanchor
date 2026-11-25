@@ -306,7 +306,8 @@ async def test_b1_visibility_for_five_people_in_list_and_search():
         finally:
             await db.close()
         by_title = {i["title"]: i["team_ids"] for i in items}
-        assert by_title == {"試験A": [t["t1"]], "試験B": [t["t3"]], "試験P": [], "試験S": []}
+        # 使っていないチーム t3 は team_ids に出さない（schedule-settings 便3a A6）。紐づけの行は残る（:285）
+        assert by_title == {"試験A": [t["t1"]], "試験B": [], "試験P": [], "試験S": []}
 
 
 async def test_owner_is_decided_by_user_id_or_created_by_when_user_id_is_null():
