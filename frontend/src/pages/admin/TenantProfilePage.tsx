@@ -1,17 +1,16 @@
 /**
- * TenantProfilePage (Sprint 8 / F8)
+ * TenantProfilePage（会社情報。Sprint 8 / F8 → ADR-1061 便2-2c2b）
  *
- * 各テナント admin が PO PDF / メールの差出人情報 (会社名・住所・印鑑 URL 等) を
- * 編集する画面。
+ * 上から: 印鑑画像 URL・既定の言語（この画面のフォーム）、書類に載せる会社情報（国内用・海外用。IssuerProfileSection）。
+ * 会社名・住所・電話・メール・サイトの欄は IssuerProfileSection へ移した（design.md §3-4）。
  *
  * 権限:
  *   tenant.profile.view → 閲覧
  *   tenant.profile.edit → 保存
  *
  * 関連:
- *   .claude-pipeline/spec.md F8 / AC8.7
  *   backend/app/routers/tenant_profile.py
- *   migrations/069_create_tenant_profile.sql
+ *   backend/app/routers/issuer_profiles.py
  */
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -22,18 +21,13 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
-import { TextareaControl } from "../../components/Textarea";
+import { Stack } from "../../components/Stack";
 import { TextFieldControl } from "../../components/TextField";
 import { LoadingBlock } from "../../components/loading";
+import { IssuerProfileSection } from "./IssuerProfileSection";
 
 interface TenantProfile {
   id: number;
-  company_name: string | null;
-  company_name_en: string | null;
-  address: string | null;
-  phone: string | null;
-  email: string | null;
-  website: string | null;
   seal_image_url: string | null;
   default_language: string;
   created_at: string;
@@ -41,35 +35,17 @@ interface TenantProfile {
 }
 
 interface FormState {
-  company_name: string;
-  company_name_en: string;
-  address: string;
-  phone: string;
-  email: string;
-  website: string;
   seal_image_url: string;
   default_language: string;
 }
 
 const emptyForm: FormState = {
-  company_name: "",
-  company_name_en: "",
-  address: "",
-  phone: "",
-  email: "",
-  website: "",
   seal_image_url: "",
   default_language: "ja",
 };
 
 const PROFILE_PATH = "/admin/tenant-profile";
 const toForm = (data: TenantProfile): FormState => ({
-  company_name: data.company_name ?? "",
-  company_name_en: data.company_name_en ?? "",
-  address: data.address ?? "",
-  phone: data.phone ?? "",
-  email: data.email ?? "",
-  website: data.website ?? "",
   seal_image_url: data.seal_image_url ?? "",
   default_language: data.default_language ?? "ja",
 });
@@ -90,7 +66,7 @@ export default function TenantProfilePage() {
   const shownError = error || readError;
 
   const handleChange = (key: keyof FormState) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     setForm((prev) => ({ ...prev, [key]: e.target.value }));
   };
@@ -132,131 +108,57 @@ export default function TenantProfilePage() {
       ) : !ready ? (
         <div className="error-message">{shownError}</div>
       ) : (
-        <form className="form" onSubmit={handleSave} data-testid="tenant-profile-form">
-          {shownError && <div className="error-message">{shownError}</div>}
-          {info && <div className="info-message" data-testid="tenant-profile-info">{info}</div>}
+        <Stack gap="6">
+          <form className="form" onSubmit={handleSave} data-testid="tenant-profile-form">
+            {shownError && <div className="error-message">{shownError}</div>}
+            {info && <div className="info-message" data-testid="tenant-profile-info">{info}</div>}
 
-          <div className="form-group">
-            <label htmlFor="tp-company-name">{t("tenantProfile.companyName")}</label>
-            <TextFieldControl
-              id="tp-company-name"
-              data-testid="tp-company-name"
-              type="text"
-              value={form.company_name}
-              onChange={handleChange("company_name")}
-              disabled={!canEdit}
-              maxLength={255}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="tp-company-name-en">{t("tenantProfile.companyNameEn")}</label>
-            <TextFieldControl
-              id="tp-company-name-en"
-              data-testid="tp-company-name-en"
-              type="text"
-              value={form.company_name_en}
-              onChange={handleChange("company_name_en")}
-              disabled={!canEdit}
-              maxLength={255}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="tp-address">{t("tenantProfile.address")}</label>
-            <TextareaControl
-              id="tp-address"
-              data-testid="tp-address"
-              value={form.address}
-              onChange={handleChange("address")}
-              disabled={!canEdit}
-              rows={3}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="tp-phone">{t("tenantProfile.phone")}</label>
-            <TextFieldControl
-              id="tp-phone"
-              data-testid="tp-phone"
-              type="text"
-              value={form.phone}
-              onChange={handleChange("phone")}
-              disabled={!canEdit}
-              maxLength={50}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="tp-email">{t("tenantProfile.email")}</label>
-            <TextFieldControl
-              id="tp-email"
-              data-testid="tp-email"
-              type="email"
-              value={form.email}
-              onChange={handleChange("email")}
-              disabled={!canEdit}
-              maxLength={255}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="tp-website">{t("tenantProfile.website")}</label>
-            <TextFieldControl
-              id="tp-website"
-              data-testid="tp-website"
-              type="text"
-              value={form.website}
-              onChange={handleChange("website")}
-              disabled={!canEdit}
-              maxLength={255}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="tp-seal-url">{t("tenantProfile.sealImageUrl")}</label>
-            <TextFieldControl
-              id="tp-seal-url"
-              data-testid="tp-seal-image-url"
-              type="text"
-              value={form.seal_image_url}
-              onChange={handleChange("seal_image_url")}
-              disabled={!canEdit}
-              placeholder="https://..."
-            />
-            <small className="form-hint">{t("tenantProfile.sealHint")}</small>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="tp-default-language">{t("tenantProfile.defaultLanguage")}</label>
-            <SelectControl
-              fullWidth
-              id="tp-default-language"
-              data-testid="tp-default-language"
-              value={form.default_language}
-              onChange={handleChange("default_language")}
-              disabled={!canEdit}
-            >
-              <option value="ja">{t("language.ja")} (ja)</option>
-              <option value="en">English (en)</option>
-              <option value="ko">한국어 (ko)</option>
-              <option value="zh">{t("language.zh")} (zh)</option>
-            </SelectControl>
-          </div>
-
-          {canEdit && (
-            <div className="form-actions">
-              <Button loading={saving} variant="primary" size="md"
-                type="submit"
-
-                disabled={saving}
-                data-testid="tenant-profile-save"
-              >
-                {t("common.save")}
-              </Button>
+            <div className="form-group">
+              <label htmlFor="tp-seal-url">{t("tenantProfile.sealImageUrl")}</label>
+              <TextFieldControl
+                id="tp-seal-url"
+                data-testid="tp-seal-image-url"
+                type="text"
+                value={form.seal_image_url}
+                onChange={handleChange("seal_image_url")}
+                disabled={!canEdit}
+                placeholder="https://..."
+              />
+              <small className="form-hint">{t("tenantProfile.sealHint")}</small>
             </div>
-          )}
-        </form>
+
+            <div className="form-group">
+              <label htmlFor="tp-default-language">{t("tenantProfile.defaultLanguage")}</label>
+              <SelectControl
+                fullWidth
+                id="tp-default-language"
+                data-testid="tp-default-language"
+                value={form.default_language}
+                onChange={handleChange("default_language")}
+                disabled={!canEdit}
+              >
+                <option value="ja">{t("language.ja")} (ja)</option>
+                <option value="en">English (en)</option>
+                <option value="ko">한국어 (ko)</option>
+                <option value="zh">{t("language.zh")} (zh)</option>
+              </SelectControl>
+            </div>
+
+            {canEdit && (
+              <div className="form-actions">
+                <Button loading={saving} variant="primary" size="md"
+                  type="submit"
+
+                  disabled={saving}
+                  data-testid="tenant-profile-save"
+                >
+                  {t("common.save")}
+                </Button>
+              </div>
+            )}
+          </form>
+          <IssuerProfileSection canEdit={canEdit} />
+        </Stack>
       )}
     </PageLayout>
   );

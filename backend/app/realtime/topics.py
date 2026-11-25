@@ -116,6 +116,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("PUT", "/api/v1/admin/inventory-visibility/roles/{role_id}"): _PENDING,
     ("PUT", "/api/v1/admin/tenant-policy"): _PENDING,
     ("PUT", "/api/v1/admin/tenant-profile"): _PENDING,
+    ("PUT", "/api/v1/admin/issuer-profiles/{region}"): _PENDING,
     ("POST", "/api/v1/admin/tenants"): _PENDING,
     ("POST", "/api/v1/archives"): _PENDING,
     ("POST", "/api/v1/archives/{archive_id}/restore"): _PENDING,
