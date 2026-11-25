@@ -1409,7 +1409,7 @@ describe("prefectureOptions and forms", () => {
 
 describe("prefecture names live only in the DB seed", () => {
   it("no source file under src contains a prefecture name", () => {
-    // この試験ファイル自身も src の下にある。名前を直接書くと自分に当たるので、文字の番号から組み立てる（北海道）
+    // この試験ファイル自身も src の下にある。名前を直接書くと自分に当たるので、文字の番号から組み立てる（都道府県コード 01 の名前）
     const name = String.fromCodePoint(0x5317, 0x6d77, 0x9053);
     const hits = walk(SRC_ROOT).filter((path) => readFileSync(path, "utf-8").includes(name));
     expect(hits).toEqual([]);
