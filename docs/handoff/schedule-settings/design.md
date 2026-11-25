@@ -20,7 +20,7 @@
 
 | 基準 | 内容 | 検証方法 |
 |---|---|---|
-| K1 | 設定ページに「Google カレンダー連携」区画があり、管理者だけに見える | 画面試験（管理者=見える／staff.view だけ=見えない）＋本番で PO 目視 |
+| K1 | 設定ページに「Google カレンダー連携」区画があり、管理者だけに見える | 画面試験（管理者=見える／staff.view だけ=見えない／管理者で staff.view なし=Google 区画が出て読み込みの丸が残らず `/calendar/owners` を呼ばない）＋本番で PO 目視 |
 | K2 | 未接続で「接続する」を押すと、まず知らせの窓が開き、読む・書く範囲と解除の場所が書いてある。「続ける」で初めて Google へ移る | 画面試験（窓が開くまで `/google-calendar/connect/start` を呼ばない） |
 | K3 | 解除で Google 側の許可が取り消され、アプリの設定行が消える | 裏側試験（取り消しの POST → 行の削除の順）＋本番で解除後に Google アカウントの「サードパーティのアクセス」から消えたことを PO 目視（要件 G2） |
 | K4 | 解除しても取り込み済みの予定は消えない | 裏側試験（`calendar_events` への DELETE を出さない）＋本番で解除前後の予定件数が同じ（読むだけの鍵で数える） |
@@ -87,7 +87,7 @@ def _error_code(resp) -> str:
 ```
 
 - 合鍵の値はどの記録にも出さない（ログは型名と状態番号だけ）。
-- `httpx` は `backend/requirements.txt:18`（0.28.1）。取り込みはファイル先頭に `import httpx`、`from sqlalchemy import text` が無ければ足す（今のファイルに合わせる）。
+- `httpx` は `backend/requirements.txt:18`（0.28.1）。`import httpx` はファイル先頭の取り込み（`:27-38`）に足す。`text` は他の関数（`:303`・`:330`・`:360`）に合わせ、関数の中で `from sqlalchemy import text` とする。
 
 ### 3-2 解除の受け口（`backend/app/routers/google_calendar.py:217-239` の `disconnect`）
 
@@ -122,7 +122,7 @@ def _error_code(resp) -> str:
 - 失敗のときは行を残す（K5）。通知の窓口は既に止まっているが、`/calendar/sync-mode` を開き直すと登録し直せる（今と同じ道）。
 - `cal_svc`・`HTTPException`・`status`・`logger` の取り込み名は今のファイルに合わせる。
 
-### 3-3 戻り先（同ファイル `connect_callback`、今 `:121`）
+### 3-3 戻り先（同ファイル `connect_callback`、`frontend_schedule = …` は今 `:106` 付近・`RedirectResponse` は `:112`・`:115`・`:118`・`:154`・`:156` 付近の 5 か所）
 
 `frontend_schedule = f"{_frontend_base_url()}/schedule"` を `f"{_frontend_base_url()}/schedule/settings"` に変える。変数名も `frontend_settings` に変え、5 か所の `RedirectResponse` を揃える。
 
@@ -135,14 +135,18 @@ def _error_code(resp) -> str:
 - 見出しのつなぐボタン（今 `:1448-1458`）を消す。`gcalConnecting`・`handleGoogleConnect`（`:960-969`）も、他で使っていなければ消す。
 - `?connected=` を読む `useEffect`（`:943-958`）を消す（設定ページへ移す）。
 - `gcalStatusQ`（`:832`）は Meet の可否に使うので残す。`banner`（`:842`）も Meet の失敗に使うので残す。
-- 歯車（今 `:1514-1523`）の条件を `canManageOwners` から `canManageOwners || isTenantAdmin` に変える（管理者が Google 区画へ行けるように）。
+- 歯車（今 `:1517-1526` 付近）の条件を `canManageOwners` から `canManageOwners || isTenantAdmin` に変える（管理者が Google 区画へ行けるように）。
 
 ### 4-2 設定ページ（`frontend/src/pages/schedule/ScheduleSettingsPage.tsx`）
 1. 権限: `usePermissions()` から `isTenantAdmin` も取る。入れる条件を `hasPermission("staff.view") || isTenantAdmin` にする。持ち主一覧の問い合わせ（`:42-44`）は今どおり `staff.view` のときだけ。
+   - 読み込み中の扱い（審査 R1）: `const ownersEnabled = !permsLoading && hasPermission("staff.view")` を作り、問い合わせの `enabled` と `loading = ownersEnabled && !ready && !ownersQ.isError` の両方に使う（今の `:45-51` の `loading` を置き換える）。
+   - 画面の本体（`SubMenu`・Google 区画）は `loading` で包まない。持ち主の 2 区画（マイ・他）だけを `loading ? <LoadingBlock /> : …` にする（今の `:121` 付近で本体ごと `<LoadingBlock />` にしている形をやめる）。
+   - 左の並びの「マイカレンダー」「他のカレンダー」と、その 2 区画は `ownersEnabled` のときだけ出す（管理者で staff.view が無い人に空の項目を出さない）。
+   - Google 区画の状態の問い合わせは `enabled: isTenantAdmin === true` と書く（試験の差し替えで `undefined` になっても取りに行かない）。
 2. 左の並び（`:114-131`）を金型 `SubMenu`（`frontend/src/components/SubMenu.tsx`、`variant="flat"`、`onChange` で区画へ移る）に変える。項目: Google 連携（管理者だけ）・マイカレンダー・他のカレンダー（今と同じ条件）。`activeKey` は押した項目。CSS の `.schedule-settings__nav*`（`frontend/src/pages/schedule.css:788-828`）は使われなくなったら消す。
 3. Google 区画（管理者だけ、最上段、`id="schedule-settings-google"`）: 金型 `SectionCard`（title=`t("schedule.settingsGoogleTitle")`）。
-   - `useApiQuery("/google-calendar/status", { enabled: isTenantAdmin })`。
-   - 未接続: 説明 `t("schedule.settingsGoogleDesc")` と `Button`（`t("schedule.connect")`）。押すと `ConfirmModal`（title=`t("schedule.connectNoticeTitle")`、message=`t("schedule.connectNoticeBody")`、confirmLabel=`t("schedule.connectNoticeConfirm")`）。確定で `/google-calendar/connect/start` → `window.location.href = auth_url`。
+   - `useApiQuery("/google-calendar/status", { enabled: isTenantAdmin === true })`。
+   - 未接続: 説明 `t("schedule.settingsGoogleDesc")` と `Button`（`t("schedule.connect")`）。押すと `ConfirmModal`（title=`t("schedule.connectNoticeTitle")`、message=段落 `t("schedule.connectNoticeBody")` と、その下に箇条書き（`ul`/`li`）で `t("schedule.connectNoticeItemEvents")`・`t("schedule.connectNoticeItemColors")`、最後の段落 `t("schedule.connectNoticeStop")`、confirmLabel=`t("schedule.connectNoticeConfirm")`）。確定で `/google-calendar/connect/start` → `window.location.href = auth_url`。
    - 接続済み: `t("schedule.statusConnected")` と、接続日時（`connected_at` を今の日付の書式の関数で）、`Button variant="danger"`（`t("schedule.disconnect")`）。押すと `ConfirmModal danger`（title=`t("schedule.disconnectConfirm")`、message=`t("schedule.disconnectNotice")`、`confirmLoading`）。確定で `api.delete("/google-calendar/connect")` → 状態を読み直し → 成功の帯 `t("schedule.disconnectSuccess")`。失敗は `t("schedule.disconnectError")`。
 4. 結果の帯: `?connected=true|false&error=` を読む処理を予定ページから移す（文の選び方は今と同じ。`scope_missing` なら `connectScopeMissing`）。読み終えたら `setSearchParams({}, { replace: true })`。帯は今の画面の `success-message` / `error-message`（`frontend/src/components.css:421` ほか、既存の共通の決まり）。
 5. 死んだ欄を外す（K9）: 自分・他人の両方の行から `Toggle`（表示）と `SelectControl`（共有権限）を消す。保存は `{ color }` だけ送る（`backend/app/routers/calendar.py:79-82` は 3 つとも任意なので通る）。`ToggleMigration.test.tsx:25` の設定ページの行は数が 0 になるので外す。
@@ -155,14 +159,17 @@ def _error_code(resp) -> str:
 | settingsGoogleTitle | Google カレンダー連携 | Google Calendar connection |
 | settingsGoogleDesc | 会社の Google カレンダーとつなぐと、アプリで作った予定が Google にも入ります。 | Connect your company's Google Calendar so events made in the app also appear in Google. |
 | connectNoticeTitle | Google カレンダーとつなぐ前に | Before you connect Google Calendar |
-| connectNoticeBody | つなぐと、このアプリは次のことをします。・あなたのカレンダーの予定を読み、作り、直し、消す（アプリで扱う予定だけ）・カレンダーの色の設定を読む（変えません）。つなぐのをやめたいときは、この設定ページの「接続を解除する」で Google の許可も取り消せます。 | Once connected, this app will: read, create, edit and delete events on your calendar (only the ones the app handles), and read your calendar's color settings (without changing them). To stop, use "Disconnect" on this settings page, which also revokes the Google permission. |
+| connectNoticeBody | つなぐと、このアプリは次のことをします。 | Once connected, this app will: |
+| connectNoticeItemEvents | あなたのカレンダーの予定を読み、作り、直し、消す（アプリで扱う予定だけ） | Read, create, edit and delete events on your calendar (only the ones the app handles) |
+| connectNoticeItemColors | カレンダーの色の設定を読む（変えません） | Read your calendar's color settings (without changing them) |
+| connectNoticeStop | つなぐのをやめたいときは、この設定ページの「接続を解除する」で Google の許可も取り消せます。 | To stop, use "Disconnect" on this settings page, which also revokes the Google permission. |
 | connectNoticeConfirm | Google の画面へ進む | Continue to Google |
 | disconnectNotice | Google 側の許可も取り消します。これまでに入った予定はアプリに残ります。 | This also revokes the permission on Google's side. Events already in the app are kept. |
 | disconnectSuccess | 接続を解除しました。Google 側の許可も取り消しました。 | Disconnected. The Google permission was also revoked. |
 | disconnectError | 接続を解除できませんでした。少し時間をおいて、もう一度お試しください。 | Could not disconnect. Please wait a moment and try again. |
 | settingsConnectedAt | 接続した日時 | Connected on |
 
-使い回す既存キー: `connect`・`disconnect`・`disconnectConfirm`・`statusConnected`・`connectSuccess`・`connectError`・`connectScopeMissing`（`ja.json` の `schedule` に既にある）。使われなくなる `connectBtn`・`connectBtnConnected` は他で使っていなければ両方の言語から消す。
+使い回す既存キー: `connect`・`disconnect`・`disconnectConfirm`・`statusConnected`・`connectSuccess`・`connectError`・`connectScopeMissing`（`ja.json` の `schedule` に既にある）。使われなくなる `connectBtn`・`connectBtnConnected` は両方の言語から消す。`connectBtnError` は今もどこからも使われていない（審査 L6）ので、同時に両方の言語から消す。
 
 ## 5 便1 の試験
 
@@ -172,8 +179,8 @@ def _error_code(resp) -> str:
 | K5 | 取り消しが `GoogleRevokeError` → 502・`detail="google_revoke_failed"`・DELETE も commit も呼ばない |
 | K3（関数） | `revoke_tenant_token`: 200 → 戻る／400 `invalid_token` → 戻る（K6）／400 他 → 例外／500 → 例外／通信失敗 → 例外／行が無い → POST しない／読めない合鍵 → POST せず戻る。POST の本文が `token=<値>` で宛先が `_REVOKE_URL`。httpx は差し替えて外へ出さない |
 | K7 | 受け取り口の戻り先が成功・失敗とも `/schedule/settings?` で始まる（今の callback の試験の場所を書き換える） |
-| K1・K2・K5・K7・K9・K10 | 新しい `frontend/src/pages/schedule/ScheduleSettingsPage.test.tsx`: 管理者に Google 区画／staff.view だけなら無い／未接続で押すと窓→確定まで connect/start を呼ばない→確定で呼ぶ／接続済みで解除→ `api.delete("/google-calendar/connect")`→成功の文／解除失敗→失敗の文／`?connected=true` で成功の帯、`?connected=false&error=scope_missing` で許可一部の文／「表示」スイッチと「共有権限」欄が無い／並びが SubMenu |
-| K8 | `SchedulePageImpl.test.tsx` の「connect button」3 本（`:53-80`）を、「見出しにつなぐボタンが無い」1 本に置き換える。`?connected=` の試験（S5 ほか、`:1340` 付近〜`:1380`）は設定ページの試験へ移す。G28（帯の閉じるボタン）は Meet の失敗の帯で同じことを確かめる形に変えるか、設定ページへ移す（帯の部品が同じなら設定ページ側で） |
+| K1・K2・K5・K7・K9・K10 | 新しい `frontend/src/pages/schedule/ScheduleSettingsPage.test.tsx`: 管理者に Google 区画／staff.view だけなら無い／管理者で staff.view なし→Google 区画が出て読み込みの丸が残らず `/calendar/owners` を呼ばない（審査 R1）／未接続で押すと窓→確定まで connect/start を呼ばない→確定で呼ぶ／接続済みで解除→ `api.delete("/google-calendar/connect")`→成功の文／解除失敗→失敗の文／`?connected=true` で成功の帯、`?connected=false&error=scope_missing` で許可一部の文／「表示」スイッチと「共有権限」欄が無い／並びが SubMenu |
+| K8 | `SchedulePageImpl.test.tsx` の「connect button」3 本（`describe("SchedulePage Google calendar connect button"`、今 `:128-155` 付近）を、「見出しにつなぐボタンが無い」1 本に置き換える。`?connected=` の試験（S5 の 2 本と G28、今 `:1356-1384` 付近）は設定ページの試験へ移す。G28（帯の閉じるボタン）は Meet の失敗の帯で同じことを確かめる形に変えるか、設定ページへ移す（帯の部品が同じなら設定ページ側で） |
 | K11 | i18n の点検（`frontend/CLAUDE.md` の grep） |
 
 ## 6 便2（骨組み・詳しい設計は便1 の本番確認後）
@@ -207,6 +214,7 @@ def _error_code(resp) -> str:
 | 解除を押した後、Google が取り消しを反映するまで少し時間がかかる（公式に記載） | 成功の文は「取り消しました」とし、本番の目視は数分おいて見る |
 | 管理者でない社員が歯車を押すと、今は入れない画面 | 条件を staff.view または管理者に揃え、どちらでもなければ今の文を出す |
 | 予定ページの帯の試験が減る | 設定ページへ同じ形で移す（§5） |
+| 合鍵が読めない・空の行は、取り消さずに行だけ消え、画面は「取り消しました」と出す（審査 L5）。Google 側に許可が残ることがある | 読めない合鍵は二度と使えないための割り切り。本番の目視（K3）で Google の「サードパーティのアクセス」から消えたかを必ず見る。残っていれば PO がそこで手で外す |
 
 ## 10 外部事例
 
@@ -221,4 +229,6 @@ def _error_code(resp) -> str:
 
 ## 12 審査
 
-（クラウドの審査の結果をここに記録する）
+- 第1回（クラウド Sonnet・architect、2026-11-25）: REVISE。記録は `review-architect-bin1-1.md`（枝 `release/schedule-settings-review1`）。必須の直し R1（管理者で staff.view が無い人が読み込み中のまま止まる）1 件、軽い指摘 L1〜L8。
+- 直し: R1 を §4-2 の 1 と §5 の K1 に入れた。L1・L2・L3（行番号）、L4（取り込みの場所）、L5（§9 に 1 行）、L6（`connectBtnError` も消す）、L7（知らせの文を 4 キーに分け箇条書き）、L8（`enabled: isTenantAdmin === true`）も入れた。
+- 第2回: 直しの差分だけをクラウドで確かめる（結果は下に足す）。

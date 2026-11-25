@@ -38,10 +38,10 @@ design §3-3 のとおり `connect_callback` の戻り先を `/schedule/settings
 design §4-1 のとおり。見出しのつなぐボタンと `?connected=` の処理を消し、歯車の条件を `canManageOwners || isTenantAdmin` にする。`gcalStatusQ` と `banner` は残す。
 
 ## 変更5 設定ページ
-design §4-2 の 1〜6 のとおり。金型は `SubMenu`・`SectionCard`・`ConfirmModal`・`Button` だけ。新しい色の直書き・生の button/select/input を足さない（ADR-144・ADR-067）。
+design §4-2 の 1〜6 のとおり。特に §4-2 の 1 の「読み込み中の扱い（審査 R1）」を守る: 読み込みの丸は持ち主の 2 区画だけに出し、Google 区画と左の並びは包まない。管理者で staff.view が無い人でも Google 区画が出ること。金型は `SubMenu`・`SectionCard`・`ConfirmModal`・`Button` だけ。新しい色の直書き・生の button/select/input を足さない（ADR-144・ADR-067）。
 
 ## 変更6 文字
-design §4-3 の表のキーを ja/en の `schedule` に足す。`connectBtn`・`connectBtnConnected` は他で使っていなければ両方から消す。
+design §4-3 の表のキーを ja/en の `schedule` に足す。`connectBtn`・`connectBtnConnected`・`connectBtnError` を両方から消す（消す前に `grep -rn "connectBtn" frontend/src` で使う所が触るファイルの中だけか確かめる）。
 
 ## 試験
 design §5 の表のとおり。外への通信（httpx）は差し替える。
