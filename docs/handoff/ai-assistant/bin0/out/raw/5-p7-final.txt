@@ -1,0 +1,6 @@
+coordinator models: 200
+calendar models: 200
+invoice models: 200
+Up 10 seconds
+1
+ReadonlyRootfs=true CapAdd=[CAP_CHOWN CAP_FOWNER CAP_SETGID CAP_SETUID] CapDrop=[ALL] SecOpt=[no-new-privileges:true]

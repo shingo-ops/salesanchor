@@ -1,0 +1,8 @@
+== caps=[SETGID] health=000
+Exited (2) 12 seconds ago
+chown: changing ownership of '/run/hermes-service': Operation not permitted
+s6-applyuidgid: fatal: unable to setuid: Operation not permitted
+== caps=[SETGID CHOWN] health=000
+Exited (2) 12 seconds ago
+chmod: changing permissions of '/run/hermes-service': Operation not permitted
+s6-applyuidgid: fatal: unable to setuid: Operation not permitted

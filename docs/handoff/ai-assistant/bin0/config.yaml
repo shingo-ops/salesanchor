@@ -1,0 +1,23 @@
+# 便0-A の Hermes 設定（完成品 v0.23.4・digest 固定）。鍵の値は書かない（鍵は部屋ごとの .env）。
+# 場所は完成品の中の hermes_cli/config_defaults.py・gateway/config.py（raw/3-grep.txt）。
+# 同じ内容を /opt/data/config.yaml と、各部屋 /opt/data/profiles/<部屋>/config.yaml に置く。
+gateway:
+  # gateway/config.py:783-785（nested_gateway の multiplex_profiles）
+  multiplex_profiles: true
+
+# 全部屋 API の口の道具は空。明示した空の一覧は「道具なし」で閉じる（hermes_cli/tools_config.py:559-566）
+platform_toolsets:
+  api_server: []
+
+# 覚え書き 2 つ off（hermes_cli/config_defaults.py:1261-1263）
+memory:
+  memory_enabled: false
+  user_profile_enabled: false
+
+# 会話の後ろで回る振り返りを off（agent/background_review.py:319 enabled の既定は true）
+auxiliary:
+  background_review:
+    enabled: false
+
+# AI 会社の自動の切り替えを切る（既定は空の一覧 hermes_cli/config_defaults.py:25）
+fallback_providers: []

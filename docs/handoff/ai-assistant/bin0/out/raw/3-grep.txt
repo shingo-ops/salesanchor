@@ -1,0 +1,42 @@
+## S1
+48:_CLONE_CONFIG_FILES = ["config.yaml", ".env", "SOUL.md"]
+1340:def create_profile(
+## S4 (config_defaults/tools_config/background_review)
+1261:    "memory": {  # Persistent memory — bounded curated memory injected into the system prompt
+1262:        "memory_enabled": True,
+1263:        "user_profile_enabled": True,
+559:def _platform_toolsets_explicitly_saved(config: dict, platform: str) -> bool:
+564:    falls back to the platform default. Callers use this to tell an explicit zero-tool
+319:        return is_truthy_value(task.get("enabled"), default=True), task
+## S5
+285:def _request_agent_overrides(
+300:        overrides["requested_provider"] = provider
+302:    if model and model != virtual_model and (provider or allow_bare_model):
+## S6
+1581:            ("DELETE", "/api/sessions/{session_id}", self._handle_delete_session),
+2683:    async def _handle_delete_session(self, request: web.Request) -> web.Response:
+2703:        except SessionWriteGuarded as exc:
+2704:            return _error_response(str(exc), 409, code="session_active_turn")
+2706:            # A hard delete must also drop the gateway's durable channel→session routing entries
+56:def delete_session(store, session_id, sessions_dir) -> bool:
+57:    """Hard-delete *session_id* with its local lineage and delegate children (``SessionWriteGuarded`` while a target
+1030:    def delete(
+60:def remove_session_files(sessions_dir: Optional[Path], session_id: str) -> None:
+115:def after_sessions_removed(store, store_home, removed_ids: Sequence[str], *, reason: str, primary: Optional[str] = None,
+121:        remove_session_files(sessions_dir, session_id)
+## S7
+gateway/platforms/api_server.py:0
+gateway/platforms/api_server_openai_routes.py:0
+## S8
+25:    "fallback_providers": [],
+## S9
+1313:        self._metrics_tokens_today += self._total_tokens_from_usage(usage)
+155:    "message_count", "tool_call_count", "input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens",
+## S10
+1180:                    await response.write(_sse_frame(delta[1], event="hermes.tool.progress"))
+1582:            ("GET", "/api/sessions/{session_id}/messages", self._handle_session_messages),
+2720:    async def _handle_session_messages(self, request: web.Request) -> web.Response:
+## S12
+1158:_CLONE_MATERIALIZE = (".env", "config.yaml", "auth.json", "SOUL.md")
+    # (written by any previous login) makes `hermes --profile <name> auth add nous --type oauth`
+    # a one-tap operation for multi-profile users.

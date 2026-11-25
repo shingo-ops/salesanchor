@@ -1,0 +1,12 @@
+Installed 15 packages in 5ms
+rules_count=0
+round	case_id	group	expected	coordinator_role	role_ok	schema_ok	retried	k3_hit	k3_total	seconds	coord_in	coord_out	role_in	role_out	deleted	http_status	error_code
+1	i1	invoice	invoice	unreadable	0	-	0	0	2	0.34	0	0	0	0	1	200	finish_error
+k1=0/1
+k2=0/0 retried=0
+k3=0/2
+seconds_median=0.34
+seconds_max=0.34
+coord_in=0 coord_out=0 role_in=0 role_out=0
+deleted=1/1
+undeleted_ids=0

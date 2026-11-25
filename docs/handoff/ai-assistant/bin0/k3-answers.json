@@ -1,0 +1,155 @@
+{
+ "fixed_now": "2026-11-16T10:00:00+09:00",
+ "answers": {
+  "i1": {
+   "kind": "invoice",
+   "invoice": {
+    "company_name": "株式会社みなと商事",
+    "items": [
+     {
+      "unit_price": 5500
+     }
+    ]
+   }
+  },
+  "i2": {
+   "kind": "invoice",
+   "invoice": {
+    "company_name": "青葉トレーディング",
+    "items": [
+     {
+      "unit_price": 6000
+     }
+    ]
+   }
+  },
+  "i3": {
+   "kind": "invoice",
+   "invoice": {
+    "company_name": "北風商会",
+    "items": [
+     {
+      "unit_price": null
+     }
+    ]
+   }
+  },
+  "i4": {
+   "kind": "invoice",
+   "invoice": {
+    "company_name": "株式会社ひかり物産",
+    "items": [
+     {
+      "unit_price": 1320
+     }
+    ],
+    "due_date": "2026-11-30"
+   }
+  },
+  "i5": {
+   "kind": "invoice",
+   "invoice": {
+    "company_name": "東山ホビー",
+    "items": [
+     {
+      "unit_price": 800
+     }
+    ]
+   }
+  },
+  "i6": {
+   "kind": "invoice",
+   "invoice": {
+    "company_name": "株式会社さくら企画",
+    "items": [
+     {
+      "unit_price": 2980
+     },
+     {
+      "unit_price": 120
+     }
+    ]
+   }
+  },
+  "i7": {
+   "kind": "invoice",
+   "invoice": {
+    "items": [
+     {
+      "unit_price": 1500
+     }
+    ]
+   }
+  },
+  "i8": {
+   "kind": "invoice",
+   "invoice": {
+    "company_name": "株式会社つばさ",
+    "items": [
+     {
+      "unit_price": null
+     }
+    ]
+   }
+  },
+  "e1": {
+   "kind": "event",
+   "event": {
+    "start": "2026-11-17T15:00:00+09:00",
+    "end": "2026-11-17T16:00:00+09:00"
+   }
+  },
+  "e2": {
+   "kind": "event",
+   "event": {
+    "start": "2026-11-20T10:00:00+09:00"
+   }
+  },
+  "e3": {
+   "kind": "event",
+   "event": {
+    "start": "2026-11-23T13:00:00+09:00"
+   }
+  },
+  "e4": {
+   "kind": "event",
+   "event": {
+    "start": "2026-11-16T17:30:00+09:00",
+    "end": "2026-11-16T19:30:00+09:00"
+   }
+  },
+  "e5": {
+   "kind": "event",
+   "event": {
+    "is_all_day": true
+   }
+  },
+  "e6": {
+   "kind": "event",
+   "event": {
+    "start": "2026-11-18T09:00:00+09:00",
+    "end": "2026-11-18T10:00:00+09:00"
+   }
+  },
+  "e7": {
+   "kind": "event",
+   "event": {
+    "start": "2026-11-20T14:00:00+09:00"
+   }
+  },
+  "e8": {
+   "kind": "event",
+   "event": {
+    "start": "2026-12-01T11:00:00+09:00",
+    "end": "2026-12-01T12:00:00+09:00"
+   }
+  },
+  "u1": {},
+  "u2": {},
+  "u3": {},
+  "u4": {},
+  "r1": {},
+  "r2": {},
+  "r3": {}
+ }
+}
