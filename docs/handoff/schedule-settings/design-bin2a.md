@@ -1,6 +1,6 @@
 # 設計: 便2a 予定の種類を DB の表 1 つへ（色・共有の初期値）
 
-- 状態: 設計案 第2版（Opus・2026-11-25）。第1回審査 REVISE（`review-architect-bin2a-1.md`）の R1〜R7・S1〜S8 を入れた。末尾「審査」に記録する
+- 状態: 設計審査済み（第2回 APPROVE・2026-11-25）。第2回の推奨を入れた第3版。末尾「審査」に記録する
 - 親の設計: `docs/handoff/schedule-settings/design.md` §1・§6（便2 の骨組み）
 - 要件: `docs/handoff/schedule-settings/requirements.md`（PO 2026-11-25「1」で承認）の G4・G6
 - 関わる ADR: ADR-1081（予定の色 24 色・正本 `backend/app/services/event_colors.py`）／ADR-144（UI 金型）／ADR-067（デザイントークン）／ADR-027（i18n）／ADR-072（commit 後の reset_tenant_context）／ADR-1037（移行のロック待ち）／ADR-1052（AI 用の写しの分類）／ADR-135・136（危険 PR の GO）
@@ -33,13 +33,13 @@
 | F11 | 管理者の判定は `is_tenant_admin(await get_user_system_keys(db, user.id))` | `backend/app/routers/calendar.py:523` |
 | F12 | 画面の読み方の正本は `useApiQuery`／取り直しは `useInvalidateApi`（会社ごとの写しの名前が付く） | `frontend/src/lib/query/apiQuery.ts:1-8`・`:52`・`ScheduleSettingsPage.tsx:54`・`:64` |
 | F13 | AI 用の写しの分類表は今 1165 行。試験は `== 1165`。表の sha256 は許可一覧にある | `migrations/20261024_100300_create_ai_cloud_views.sql:3`・`backend/tests/ops/test_ai_cloud_views.py:486`・`scripts/migration-guard/reference-allowlist.tsv:7` |
-| F14 | ひな形と移行後の会社の形の差は CI で 0 件を確かめる | `.github/workflows/migration-test.yml:2221`（`scripts/check_tenant_template_shape.py`） |
+| F14 | ひな形と移行後の会社の形の差は CI で 0 件を確かめる | `.github/workflows/migration-test.yml:2277`（`scripts/check_tenant_template_shape.py`） |
 
 ## 2 受入条件
 
 | 基準 | 内容 | 検証方法 |
 |---|---|---|
-| A1 | 全社に種類の表があり、今の 7 種が入っている | 移行の試験（2 回流して同じ）＋本番で読むだけの鍵で各社の `ai_ro.tenant_00N__calendar_categories` を数え 7 行（ビューが無ければ `SELECT count(*)` を `pg_class` の行の有無で代える） |
+| A1 | 全社に種類の表があり、今の 7 種が入っている | 移行の試験（2 回流して同じ）＋反映後に Opus が読むだけの鍵で各社の `tenant_00N.calendar_categories` を数え 7 行（CI の合否ではない） |
 | A2 | 予定の `category` は種類の表にある鍵だけ入る（外部キー）。種類の固定の CHECK は無い | 移行の試験（無い鍵の INSERT が失敗・`custom_1` を足した後はその鍵で INSERT が通る）＋本番で `pg_constraint` を読み、5 社とも `calendar_events_category_fkey` が有り・`category` を使う CHECK が 0 件 |
 | A3 | 予定を作る・直すときに選んだ種類が保存される。直す道は単発・この予定だけ・これ以降・すべて・単発→繰り返しの 5 通り | 裏側の試験（5 通りそれぞれ） |
 | A4 | 使わなくした種類・無い鍵で作ると 422 `invalid_category`。直すときに今の種類のままなら、使わなくした種類でも通る。`meeting` は使わなくできない（422 `category_not_disableable`） | 裏側の試験 |
@@ -47,8 +47,8 @@
 | A6 | 作るときに種類を選ぶと、その種類の色（無ければ「デフォルト」）と共有の初期値が入る。直すときに種類を変えても色と共有は変わらない | 画面の試験。本番は PO が §11 の手順で目視 |
 | A7 | 種類の選び方に出るのは使っている種類だけ。今の予定の種類が使わなくした種類なら、それも出る | 画面の試験 |
 | A8 | 設定ページの「予定の種類」区画は管理者だけに見える | 画面の試験（管理者／staff.view だけ／管理者で staff.view なし の 3 通り） |
-| A9 | だれに見えるかは変わらない（要件 G6） | `git diff origin/main...HEAD -- backend/app/services/calendar_service.py` で見え方の条件（`:238-250`）に差が無い＋本番で移行の前後に `calendar_type` ごとの件数を数えて同じ（会社1 personal 1・shared 2／会社4 personal 24・shared 8） |
-| A10 | 種類の一覧の正本が 1 か所 | `git grep -n "calendars.config" -- frontend/src` が 0 件／`git grep -n '"procurement"' -- frontend/src ':!frontend/src/locales'` が 0 件／`git grep -n "'procurement'" -- backend/app` が `tenant.py` の 2 行（初期の 7 行の INSERT と `calendar_categories_name_check`）だけ。i18n の `schedule.calendarLabels.*` は 7 種の名前の訳として残すので数えない |
+| A9 | だれに見えるかは変わらない（要件 G6） | `git diff origin/main...HEAD -- backend/app/services/calendar_service.py` で、見え方の条件の行（`visibility_sql` の 3 行 `:242`・`:244`・`:246` と `where += f" AND {visibility_sql}"`）が差に出ない（ほかの行は変わる）＋本番で移行の前後に `calendar_type` ごとの件数を数えて同じ（会社1 personal 1・shared 2／会社4 personal 24・shared 8） |
+| A10 | 種類の一覧の正本が 1 か所 | `git grep -n "calendars.config" -- frontend/src` が 0 件／`git grep -n '"procurement"' -- frontend/src ':!frontend/src/locales'` が 0 件／`git grep -n "'procurement'" -- backend/app ':!backend/app/services/tenant.py'` が 0 件（`tenant.py` の中の行数は書き方で変わるので数えない）。i18n の `schedule.calendarLabels.*` は 7 種の名前の訳として残すので数えない |
 | A11 | 新しい文字はすべて `t()`、ja/en 同じキー。部品は金型だけ。色の点は既存の `schedule-month__dot` を使い、新しい CSS の色を足さない | i18n 点検・UI governance gate・Lint & Dark Mode Check |
 | A12 | ひな形で作った会社と、移行を流した会社の形が同じ | CI のひな形と形の差の検査（F14）が通る |
 
@@ -85,18 +85,18 @@ CREATE TABLE IF NOT EXISTS {schema}.calendar_categories (
 
 - `^tenant_\d+$` の部屋ごとに、`calendar_events` が無い部屋は飛ばす（手本 `migrations/20261119_120000_add_calendar_events_color_key.sql`）。
 - 順に:
-  1. `ALTER TABLE calendar_events ADD COLUMN IF NOT EXISTS category varchar(50) NOT NULL DEFAULT 'meeting'`（本番は全社に有る・F9。無い会社が将来あっても通す）
+  1. `pg_attribute` に `calendar_events.category` が無い部屋だけ `ALTER TABLE calendar_events ADD COLUMN category varchar(50) NOT NULL DEFAULT 'meeting'`（有る部屋はロックを取らない・ADR-1037。本番は全社に有る・F9）
   2. 表を作る → 7 行 → 関数とトリガ
   3. 予定の外部キーを `NOT VALID` で足す（`pg_constraint` に同じ名前が無いときだけ）→ `VALIDATE`
   4. `DROP CONSTRAINT IF EXISTS calendar_events_category_check`
-  5. 確かめ: その部屋の `calendar_events` に、定義に `category` を含む CHECK が 1 件でも残れば `RAISE EXCEPTION`（名前が違う古い CHECK が残ると `custom_N` で予定が作れないため。本番 5 社は名前が同じ・F9）
+  5. 確かめ: その部屋の `calendar_events` に、`contype = 'c'` で定義に `category` を含む制約が 1 件でも残れば `RAISE EXCEPTION`。全部屋を 1 つの `DO` ブロックに入れ、失敗すれば全体が戻る（手本と同じ）（名前が違う古い CHECK が残ると `custom_N` で予定が作れないため。本番 5 社は名前が同じ・F9）
 - 何度流しても同じ。
 - 登録は F10 の 5 行に倣う（`run_all_migrations.sh` は `:1483` の後ろ、今の末尾の `20261122_100000` の後・`mr_report_summary` の前。`rls_bootstrap.py` は件数 1。`test_calendar_sync_tenant_reset_pg.py` は True。`test_tenant_loop_migration_guard.py` は 2 つの一覧）。
 - 保護表の一覧（`scripts/migration-guard/protected-tables.txt`）に `calendar` の表は無いので、7 行の INSERT は当たらない（審査 S8 で確認済み）。
 - AI 用の写しの分類（ADR-1052・F13）:
   - `create_ai_cloud_views.sql` に 3 行: `ARRAY['key','name']` を `mask`（`key` は形だけの CHECK、`name` は自由な文字）、`ARRAY['color_key']` を `allow`（理由「値の決まり calendar_categories_color_key_check で値が限られる」）、`ARRAY['default_share']` を `allow`（理由「値の決まり calendar_categories_default_share_check で値が限られる」）。整数・真偽・日時の欄は行を作らない（`test_ai_cloud_views.py:52` の `_PASS_TYPES`）。
-  - `:3` の注記を 1165 → 1169、`test_ai_cloud_views.py:486` を 1169 に（分類表は欄ごとに 1 行。`ARRAY` は unnest で欄ごとに分かれる・同ファイル `:6`）。
-  - `docs/handoff/cloud-case-ai/stage1-column-class.tsv` に 4 行（`key` mask・`name` mask・`color_key` allow・`default_share` allow）。
+  - `:3` の注記を 1165 → 1169、`test_ai_cloud_views.py:486` を 1169 に（分類表は欄ごとに 1 行。`ARRAY` は unnest で欄ごとに分かれる・`create_ai_cloud_views.sql:7`）。
+  - `docs/handoff/cloud-case-ai/stage1-column-class.tsv` に 4 行（6 列。`key` mask character varying・`name` mask character varying・`color_key` allow text・`default_share` allow character varying）。
   - `scripts/migration-guard/reference-allowlist.tsv:7` の sha256 を新しい値に、理由欄に「schedule-settings card-bin2a（分類3行追加: calendar_categories）」を書き足す。
   - `test_ai_cloud_views.py` に `test_t10_calendar_color_key_is_classified_on_bootstrapped_db`（`:1017-`）と同じ形で、`calendar_categories` の 4 欄の分類を確かめる試験を 1 つ。
 - 戻し方: コードの PR を戻すだけ。表と外部キーは残す（古いコードは表を読まず、7 種は表に有るので外部キーに当たらない）。消す移行は作らない。注意: 戻す前に管理者が足した `custom_N` の種類の予定は、古い画面で札が出ない（`meta &&` で守られ壊れはしない）。古い画面で開いて保存すると種類が 7 種のどれかに変わりうる。
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS {schema}.calendar_categories (
 
 - `list_categories(db) -> list[dict]`: `sort_order, key` の順で全行（使わなくした行も `is_active` 付きで返す）。
 - `get_category(db, key) -> dict | None`
-- `create_category(db, tenant_id, name, color_key, default_share) -> dict`: 鍵は `custom_` ＋ 今ある `custom_` の最大の数＋1。`sort_order` は最大＋1。同時に押されて鍵がぶつかったら（`IntegrityError`）409 `category_conflict`。
+- `create_category(db, tenant_id, name, color_key, default_share) -> dict`: 鍵は `custom_` ＋ 今ある `custom_` の最大の数＋1。`sort_order` は最大＋1。「最大の数」は数に直して取る（`custom_9` の次は `custom_10`）。同時に押されて鍵がぶつかったら（`IntegrityError`）`await db.rollback()` してから 409 `category_conflict`。
 - `update_category(db, tenant_id, key, fields) -> dict | None`: `name`（7 種は空の文字で NULL に戻せる。`custom_` は空にできず 422 `category_name_required`）・`color_key`（空の文字で NULL）・`default_share`・`is_active`。`meeting` を `is_active=false` にする指定は 422 `category_not_disableable`（Google からの取り込みと種類を送らない作成の既定が `meeting` のため）。
 - 名前は前後の空白を落としてから 1〜50 字を見る。
 - 書いたあとは `await db.commit()` の直後に `await reset_tenant_context(db, tenant_id)`（ADR-072）。
@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS {schema}.calendar_categories (
 - 色の値の確かめは既存の `_check_color_key`（`calendar.py:115`）。共有の初期値は `self`/`all` 以外 422。
 - 予定の作る・直す入力に `category: Optional[str] = None` を足す。
   - 作る: 指定が無ければ `meeting`（使わなくできないので常に通る）。表に無い・使っていない鍵は 422 `invalid_category`。
-  - 直す: 指定があり、今の種類と違うときだけ同じ判定。同じなら通す（A4）。
+  - 直す: 指定があり、今の種類と違うときだけ同じ判定。同じなら通す（A4）。繰り返しの直しでの「今の種類」は、色の比べ方（`calendar_service.py:1049-1054`）と同じく、例外の行が有ればその行、無ければ元の行の値。
 - サービスで種類を通す 5 か所（F5）:
   1. `update_event` の `field_map`（`:502-512`）に `"category": "category"`
   2. `_TEXT_FIELDS`（`:682`）に `"category"`（「すべて」D1〜D3 はこれで効く）
@@ -220,3 +220,4 @@ CREATE TABLE IF NOT EXISTS {schema}.calendar_categories (
 | 回 | 日 | 判定 | 記録 | 入れた直し |
 |---|---|---|---|---|
 | 1 | 2026-11-25 | REVISE（必須 7・推奨 8） | `review-architect-bin2a-1.md` | R1〜R7・S1〜S8 すべて（R5 は (a) の確かめと本番の制約名の読み取りの両方） |
+| 2 | 2026-11-25 | APPROVE（必須 0・推奨 12） | `review-architect-bin2a-2.md` | N1・N2・N5〜N8・S9・S10・S12 を本文へ。S11（本番の読み方）は A1・A2 を「反映後に Opus が読むだけの鍵で `pg_constraint` と各社の表を直接数える（CI の合否ではない）」と読む。S10 の tsv と SQL の 94 行のずれは別件 |
