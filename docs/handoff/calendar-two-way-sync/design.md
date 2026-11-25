@@ -305,6 +305,6 @@
   - 決め: この便では直さない。起きるのは Google への送りが失敗したときか、送る前後のごく短い間だけ。Google へ書き戻さないので行ったり来たりは続かない。送りが成功すれば、次の取り込みで消した印がまた付く（`:1652-1680` の消した回の道、印を付けるのは `:1674`）。
   - 失うもの: Google への送りが失敗したとき、アプリで消した回が Google に合わせて戻る。
   - 次の候補: アプリの道で、送り終えるまで送り中にする（`:1267`）。アプリの道の変更なので別の便にする。
-- ②（低）元の予定を読むカレンダーは会社の設定（`backend/app/services/google_calendar.py:404`）、取り込みは `"primary"`（`backend/app/services/google_webhook.py:299`）。送る道（`google_calendar.py:477`・`:499`・`:515`）も会社の設定を使う。本番の読むだけの鍵で `tenant_google_calendar_config` を読み、設定のある 2 社とも `primary` だった（2026-11-25 13:20 JST、2 行）。本番では食い違わない。
+- ②（低）元の予定を読むカレンダーは会社の設定（`backend/app/services/google_calendar.py:404`）、取り込みは `"primary"`（`backend/app/services/google_webhook.py:299`）。送る道（`backend/app/services/google_calendar.py:477`・`:499`・`:515`）も会社の設定を使う。本番の読むだけの鍵で `tenant_google_calendar_config` を読み、設定のある 2 社とも `primary` だった（2026-11-25 13:20 JST、2 行）。本番では食い違わない。
 - ③（低）「Google で消した回 × 送り中の例外の行」を直接試す試験は無い。コードは `:1649` で消す道・直す道より先に止める。この便では足さない。
 - ④（低）題名 500 字の決まり（`backend/app/services/tenant.py:1556`）は、前からある道と同じ種類の危なさ。この便では変えない。
