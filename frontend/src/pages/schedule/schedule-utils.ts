@@ -59,7 +59,8 @@ export interface ScheduleItem {
   start: Date;
   end: Date;
   allDay: boolean;
-  category: import("../../features/schedule/calendars.config").CalendarId | null;
+  /** 予定の種類の鍵（正本は GET /calendar/categories。名前は useCalendarCategories で引く） */
+  category: string | null;
   calendarType: "shared" | "personal";
   source: "app" | "google" | "shift";
   ownerUserId: number | null;
@@ -356,7 +357,7 @@ export function fitCreatePopover(
 export function normalizeEvent(event: ApiCalendarEvent): ScheduleItem {
   const start = parseLocalDate(event.start_datetime);
   const end = parseLocalDate(event.end_datetime);
-  const category = (event.category ?? (event.calendar_type === "personal" ? "personal" : "meeting")) as ScheduleItem["category"];
+  const category: ScheduleItem["category"] = event.category ?? (event.calendar_type === "personal" ? "personal" : "meeting");
   const ownerUserId = event.user_id ?? event.created_by_user_id ?? null;
   const ownerName = event.owner_name ?? event.created_by_name ?? null;
   const occurrenceStart = event.occurrence_start ? parseLocalDate(event.occurrence_start) : null;
