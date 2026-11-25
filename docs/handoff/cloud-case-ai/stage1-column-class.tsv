@@ -559,7 +559,11 @@ tenant_*	buddy_feedbacks	context	mask		text
 tenant_*	buddy_feedbacks	feedback_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
 tenant_*	buddy_feedbacks	reason	mask		text
 tenant_*	buddy_pairs	notes	mask		text
-tenant_*	calendar_events	calendar_type	allow	値の決まり calendar_events_calendar_type_check で値が限られる	character varying
+tenant_*	calendar_categories	color_key	allow	値の決まり calendar_categories_color_key_check で値が限られる	text
+tenant_*	calendar_categories	default_share	allow	値の決まり calendar_categories_default_share_check で値が限られる	character varying
+tenant_*	calendar_categories	key	mask	key は形だけの決まり（calendar_categories_key_format_check）・name は自由な文字のため伏せる	character varying
+tenant_*	calendar_categories	name	mask	key は形だけの決まり（calendar_categories_key_format_check）・name は自由な文字のため伏せる	character varying
+tenant_*	calendar_events	calendar_type	allow値の決まり calendar_events_calendar_type_check で値が限られる	character varying
 tenant_*	calendar_events	category	mask		character varying
 tenant_*	calendar_events	color_key	allow	値の決まり calendar_events_color_key_check で値が限られる	text
 tenant_*	calendar_events	description	mask		text
