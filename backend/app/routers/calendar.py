@@ -239,12 +239,10 @@ async def list_calendar_categories(
 async def create_calendar_category(
     body: CreateCategoryBody,
     tenant_id: int = Depends(get_current_tenant),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """予定の種類を足す（管理者のみ）。鍵は custom_N を裏側で決める。"""
-    if not is_tenant_admin(await get_user_system_keys(db, user.id)):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="この操作は管理者のみ実行できます")
     return await cat_svc.create_category(db, tenant_id, body.name, body.color_key, body.default_share)
 
 
@@ -253,12 +251,10 @@ async def update_calendar_category(
     key: str,
     body: UpdateCategoryBody,
     tenant_id: int = Depends(get_current_tenant),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_tenant_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """予定の種類の名前・色・共有の初期値・使うかどうかを直す（管理者のみ）。"""
-    if not is_tenant_admin(await get_user_system_keys(db, user.id)):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="この操作は管理者のみ実行できます")
     fields = body.model_dump(exclude_none=True)
     if not fields:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="no_fields_to_update")

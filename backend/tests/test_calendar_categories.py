@@ -291,12 +291,17 @@ async def test_list_create_update_and_admin_only():
                     await coro
                 assert ei.value.status_code == code and ei.value.detail == detail
 
-            # 管理者でなければ 403（足す・直す）
-            with _staff_keys():
-                await expect(403, "この操作は管理者のみ実行できます", r.create_calendar_category(
-                    body=r.CreateCategoryBody(name="x"), tenant_id=_TENANT, user=_user(_STAFF_USER), db=db))
-                await expect(403, "この操作は管理者のみ実行できます", r.update_calendar_category(
-                    key="meeting", body=r.UpdateCategoryBody(name="x"), tenant_id=_TENANT, user=_user(_STAFF_USER), db=db))
+            # 管理者でなければ 403（足す・直す）: (a) 受け口の配線 (b) 部品の文
+            from app.auth.dependencies import require_tenant_admin
+            for method, path in (("POST", "/calendar/categories"), ("PATCH", "/calendar/categories/{key}")):
+                route = next(
+                    x for x in r.router.routes
+                    if getattr(x, "path", None) == path and method in getattr(x, "methods", set())
+                )
+                assert require_tenant_admin in [d.call for d in route.dependant.dependencies], (method, path)
+            with patch("app.auth.dependencies.get_user_system_keys", return_value=set()):
+                await expect(403, "この操作は管理者のみ実行できます", require_tenant_admin(
+                    tenant_id=_TENANT, user=_user(_STAFF_USER), db=db))
             with _admin_keys():
                 await expect(404, "not_found:calendar_category", r.update_calendar_category(
                     key="nope", body=r.UpdateCategoryBody(name="x"), tenant_id=_TENANT, user=_user(_ADMIN_USER), db=db))
