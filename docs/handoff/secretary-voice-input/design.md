@@ -659,7 +659,7 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 ### 18-2 対象と対象外
 
 - 対象: backend の時刻の決まり 1 つ（`backend/app/services/secretary_dates.py`）と口の 2 か所（`backend/app/routers/assistant.py`）・答えの欄 1 つ（`backend/app/schemas/assistant.py` `EventDraft.edit_dropped`）・画面の分かれ 1 か所（`frontend/src/features/secretary/SecretaryChat.tsx` `sendEdit`）。
-- 対象外: 指示文（`secretary-agent/prompt.txt`）・はい／いいえの語の一覧・7〜12時の読み方・漢数字（「一時」は「いちじ＝しばらく」と区別できないため）・作った後に読む文。
+- 対象外: 指示文（`secretary-agent/prompt.txt`）・はい／いいえの語の一覧・7〜12時の読み方・漢数字（「一時」は「いちじ＝しばらく」と区別できないため）・「4:30」のように「時」の字が無い書き方（声の文字起こしは「4時半」の形）・作った後に読む文。
 
 ### 18-3 選んだ形と、選ばなかった形
 
@@ -676,16 +676,16 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 
 1. `backend/app/services/secretary_dates.py` に `afternoon_hours(ev: IntentEvent, text: str, karte: KarteIn | None) -> IntentEvent` を足す（`apply_day` の後ろ）。
    - 文を NFKC で直した形で見る（全角数字も同じに扱う）。
-   - 次のどれかが文にあれば、何も変えずに返す: `午前|午後|朝|昼|夕方|夕|夜|晩|深夜|未明|早朝|明け方|ごぜん|ごご|AM|PM|am|pm|a.m.|p.m.`（語は大文字小文字を区別しない）。
+   - 次のどれかが文にあれば、何も変えずに返す: `午前|午後|朝|昼|夕方|夕|夜|晩|深夜|未明|早朝|明け方|ごぜん|ごご|a.m.|p.m.`（部分一致）と、英字の `am`・`pm` は前後が英字でないときだけ（`(?<![A-Za-z])(?:am|pm)(?![A-Za-z])`。「4pm」は当たり、「team」「program」は当たらない）。語は大文字小文字を区別しない。
    - 文の中の「素の時刻」= 正規表現 `(?<![0-9])([1-6])\s*時(?!間)` が当たった数（1〜6）の集まり。空なら何も変えずに返す。「10時」「12時」は前が数字なので当たらない。「1時間」は当たらない。「4時半」「4時15分」は当たる。
    - 終日（`ev.is_all_day`）なら何も変えずに返す。
-   - `karte` があり、`karte.start` が読めて日本時間で 0〜6時なら、何も変えずに返す（前に朝の時刻を言って決めた下書きを、後の頼みで動かさない）。
+   - `karte` があり、`karte.start` が読めて日本時間で 0〜6時なら、何も変えずに返す（前に朝の時刻を言って決めた下書きを、後の頼みで動かさない）。時差の印があれば `astimezone` で日本時間に直してから時を見る。印が無ければ時をそのまま見る。
    - 始まり・終わりのそれぞれ: 値が読めて（`parse_iso`）、時差の印が +09:00 で、時が上の集まりに入っていれば、12 時間足す（文字は `isoformat(timespec="seconds")`）。印が無い・違う・読めない値は触らない。
-   - 始まりを足したあと、終わりが読めて新しい始まりより前なら、終わりにも 12 時間足す（「4時から1時間」で終わり 05:00 → 17:00）。
+   - 始まりを足したあと、終わりが読めて、終わりの時差の印も +09:00 で、新しい始まりより前なら、終わりにも 12 時間足す（「4時から1時間」で終わり 05:00 → 17:00）。印が無い・違う終わりは比べない（印が混ざると `datetime` の比べが `TypeError` になり、口の `try` は `HTTPException` しか受けないので 500 になる。審査 R1）。
    - どちらも変わらなければ `ev` をそのまま返す。
 2. `backend/app/routers/assistant.py`: `intent = envelope.intent` の直後に、`intent.kind == "event"` で `intent.event` が null でなければ `intent = intent.model_copy(update={"event": afternoon_hours(intent.event, body.text, karte)})`。新しい画面の道・直す道・古い画面の道のすべてで、カルテと合わせる前の AI の答えにだけ当たる。
 3. `backend/app/schemas/assistant.py` の `EventDraft` に `edit_dropped: bool | None = None`（直す頼みの答えのとき、AI は直しを返したが、合わせた結果が日時を失って前のままに戻したか。ほかは null）。
-4. `backend/app/routers/assistant.py` の直す道: `edit_dropped = False` を `edited = False` の隣に置く。「直した結果が日時を失ったら」の分かれで、戻す前の `edited` が真なら `edit_dropped = True`（その後 `edited = False` は今のまま）。`EventDraft(...)` に `edit_dropped=edit_dropped if edit_mode else None`。
+4. `backend/app/routers/assistant.py` の直す道: `edit_dropped = False` を `edited = False` の隣に置く。「直した結果が日時を失ったら」の分かれで、戻す前の `edited` が真なら `edit_dropped = True`（その後 `edited = False` は今のまま）。続く `elif edited and not edit_changed(final_ev, base_ev)` の分かれ（`settle_dates` が AI の値を落として結果がカルテと同じになったとき）でも、`edited = False` の前に `edit_dropped = True`（審査 L3）。`EventDraft(...)` に `edit_dropped=edit_dropped if edit_mode else None`。
 5. `frontend/api-contract/openapi.json` を命令で書き出し直す（差は `EventDraft.edit_dropped` だけ）。
 
 ### 18-5 frontend（変更前 → 変更後）
@@ -728,4 +728,4 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 
 ### 18-11 審査の記録
 
-- （審査の後に書く）
+- 第1回（クラウドの Sonnet・architect・`review-architect-binW3-1.md`・枝 `release/secretary-voice-w3-review1` 0d4354e9d）: REVISE。R1（終わりの時差の印が混ざると `TypeError` で 500）→ 18-4 の 1 と card §3・§4 に反映。L1（英字の am/pm は前後が英字でないときだけ）・L2（「4:30」は対象外と 18-2 に）・L3（`edit_changed` の分かれでも `edit_dropped`）・L5（カルテの朝の点検の時差）も反映。L4（`probe_after.py` に Meet の分かれが無い・yes_07 の 1 種だけ `edited` が口と違う）は測りの報告に書く。
