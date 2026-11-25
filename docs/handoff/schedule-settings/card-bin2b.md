@@ -35,7 +35,7 @@
 | 設計と同じ範囲か | design-bin2b.md §3〜§5 の項目だけを変更1〜8 に割り当てた |
 | 実物の行 | §1 F1〜F21 は第1〜3回審査で照合済み |
 | 本番の前提 | 5 社とも CHECK の名前は `calendar_events_calendar_type_check`・`calendar_categories_default_share_check`（F15）。`personal` で `user_id` が NULL は 0 件（F21） |
-| 設計審査 | 第1回 REVISE → 第2回 REVISE → 第3回（`review-architect-bin2b-3.md`） |
+| 設計審査 | 第1回 REVISE → 第2回 REVISE → 第3回 APPROVE（`review-architect-bin2b-3.md`）。第3回の推奨 S1〜S3 は設計に入れた |
 | 見え方を変えない | 今ある予定の見え方は B7 の試験で前後同じ |
 
 ## 受領確認

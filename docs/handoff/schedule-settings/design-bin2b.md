@@ -1,7 +1,7 @@
 # 設計: 便2b 予定の共有に「チームを選ぶ」を足す
 
 - 版: 第3版（2026-11-25・Opus。第1回審査の R1〜R7・S1〜S12、第2回審査の R1・R2・S1〜S6 を入れた）
-- 状態: 設計案作成済み・第3回審査前
+- 状態: 設計案作成済み・設計審査済み（第3回 APPROVE。推奨 S1〜S3 も入れた）
 - 元: `docs/handoff/schedule-settings/requirements.md`（G4・G5・G6。PO「1」で承認済み）・`docs/handoff/schedule-settings/design.md` §6・`docs/handoff/schedule-settings/design-bin2a.md` §0（便2 を 2 つに分けた理由）
 - 関連 ADR: ADR-027（i18n）・ADR-067／ADR-144（金型・デザイントークン）・ADR-072（commit 後の付け直し）・ADR-135／ADR-136（DB 変更の GO）・ADR-1037（ロック待ち 1 秒・長いロックを取らない）・ADR-1059（Google から取り込んだ予定は本人だけ）・ADR-1075（繰り返しの 3 択）・ADR-1081（予定の色）
 
@@ -47,7 +47,7 @@
 | B1 | 共有「チーム」の予定は、持ち主と、その予定のどれかのチーム（使っているチーム）に入っている人だけの一覧・探すに出る | 本物の PostgreSQL の試験: 持ち主・メンバー・メンバーでない人・メンバーでない管理者・使っていないチームのメンバー の 5 人で一覧と探すを呼び、出る／出ないが表のとおり |
 | B2 | メンバーでない人（管理者も）がその予定を直す・消すと 404 `not_found:calendar_event` | 本物の PostgreSQL の試験 |
 | B3 | 繰り返しのチーム予定は、回・例外の行・「これ以降」で分けた新しい元の行も、同じチームの人に見える | 本物の PostgreSQL の試験（3 通り） |
-| B4 | 作る・直すで共有が `team` になるときの `team_ids` の決まりは §3-3 の「直すときの決まりの表」のとおり。作るときと、今が `team` 以外の予定を `team` にするときの欠け（送らない）・空は 422 `invalid_team_ids`。今が `team` の予定で `team_ids` を送らないのは通し、対応は今のまま。`team` で空を明示（`[]`）・無い id・使っていない id・int4 の範囲外は 422 `invalid_team_ids`。`team` 以外で空でない `team_ids` を送ると 422 `invalid_team_ids`。同じ id の重なりは 1 つにまとめる | 裏側の試験（7 通り） |
+| B4 | 作る・直すで共有が `team` になるときの `team_ids` の決まりは §3-3 の「直すときの決まりの表」のとおり。作るときと、今が `team` 以外の予定を `team` にするときの欠け（送らない）・空は 422 `invalid_team_ids`。今が `team` の予定で `team_ids` を送らないのは通し、対応は今のまま。`team` で空を明示（`[]`）・無い id・使っていない id・int4 の範囲外は 422 `invalid_team_ids`。`team` 以外で空でない `team_ids` を送ると 422 `invalid_team_ids`。同じ id の重なりは 1 つにまとめる | 裏側の試験（§5 の B4 の並び: 表の 6 行・作るときの欠け・作るときの空・int4 の範囲外・重なりのまとめ） |
 | B5 | チームから別の共有に変えると、その予定のチームの対応は消える。チームを変えると入れ替わる。`team_ids` だけを送った直す（ほかの欄なし）でも入れ替わる。変えられるのは持ち主だけ（今の見せ方と同じ 403） | 裏側の試験（単発・繰り返しの「すべて」・`team_ids` だけ の 3 通り） |
 | B11 | 繰り返しのチーム予定の「この予定だけ」を持ち主が直す（題名だけ変える）: ①`calendar_type: "team"` を送り `team_ids` を送らない（画面と同じ）→ 200 ②今と同じ `team_ids` を送る → 200。③今と違う `team_ids` か違う `calendar_type` を送る → 422 `recurrence_this_not_allowed` | 裏側の試験（3 通り） |
 | B12 | 種類の `default_team_ids`: `PATCH` で送らなければ今の対応のまま。`default_share='team'` で `[]` は 422。種類を読むとき、使っていないチームは `default_team_ids` に入らない | 裏側の試験（3 通り） |
@@ -146,7 +146,7 @@ async def can_see_event(db, event_id: int, user_id: int) -> bool:
   | `team` | `team` か送らない | 1 つ以上・正しい | 通す | 送った組に入れ替える |
   | どれでも | 決める共有が `team` | `[]`（明示の空） | 422 `invalid_team_ids` | 変えない |
   | `team` 以外 | `team` | 送らない | 422 `invalid_team_ids` | 変えない |
-  | どれでも | `team` 以外（送った、または今の値） | 送らない | 通す | 空で呼ぶ（`team` から外すときは対応が消える） |
+  | どれでも | `team` 以外（送った、または今の値） | 送らない、または `[]` | 通す | 空で呼ぶ（`team` から外すときは対応が消える） |
   | どれでも | `team` 以外 | 空でない | 422 `invalid_team_ids` | 変えない |
 
   作るときは「今の共有」が無いので、`team` で `team_ids` を送らない・空は 422。
@@ -201,7 +201,7 @@ async def can_see_event(db, event_id: int, user_id: int) -> bool:
   - B2 直す・消すの 404（メンバーでない人・メンバーでない管理者）と、メンバーの管理者は直せる
   - B3 繰り返し: 回が見える・「この予定だけ」の例外の行が見える・「これ以降」の新しい元の行が見える（メンバーでない人には 3 つとも出ない）
   - B4（「直すときの決まりの表」の 6 行を 1 つずつ・作るときの欠けと空・int4 の範囲外・重なりのまとめ。今が `team` で `team_ids` を送らない直すが 200 で対応が変わらない、を含む）・B5（チームを外す・入れ替える・`team_ids` だけ送る・繰り返しの「すべて」で題名を変えずにチームだけ変える・持ち主でない人の 403）
-  - B11（「この予定だけ」: `team_ids` を送らず 200・今と同じ `team_ids` で 200・違う `team_ids` で 422）・B12（3 通り）
+  - B11（「この予定だけ」: `team_ids` を送らず 200・今と同じ `team_ids` で 200・違う `team_ids` で 422・違う `calendar_type` で 422）・B12（3 通り）
   - 持ち主の決め方: `user_id` が NULL で `created_by_user_id` が自分の `team` 予定は、チームに入っていなくても自分には見える
   - B6 種類の初期のチーム（足す・直す・`team` 以外にすると消える・0 個で 422）
   - 移行（2 回流して同じ・CHECK が 1 つで名前が `calendar_events_calendar_type_check`・`team` が入る・ほかの値は入らない・前後で `shared`/`personal` の行が同じ・前後で 3 人それぞれに見える件数が同じ（S8）・名前なしの古い CHECK の部屋でも入れ替わる・`teams` が無い部屋は飛ばす）
@@ -260,3 +260,4 @@ async def can_see_event(db, event_id: int, user_id: int) -> bool:
 |---|---|---|---|---|
 | 1 | 2026-11-25 | REVISE | `docs/handoff/schedule-settings/review-architect-bin2b-1.md` | R1 §3-3「この予定だけ」・§4-2・B11／R2 §3-3 呼ぶ決まり・F16・B5／R3 §3-2 仮の名前・F15／R4 §3-1 RLS 無し・F18／R5 §3-2 分類・F19／R6 F7・§7／R7 B8／S1 F21・持ち主の決め方／S2 B4／S3・S4 §3-4・B12／S5 §4-2・§4-4・§5／S6 §3-4／S7 §6／S8 B7・§5／S9 F20／S10 §3-2・§3-3／S11 F15・F21 時刻／S12 §3-3 |
 | 2 | 2026-11-25 | REVISE | `docs/handoff/schedule-settings/review-architect-bin2b-2.md` | R1 §3-3「直すときの決まりの表」・`validate_team_ids` の `None`・B4・B11（3 通り）・§4-2「この予定だけ」／R2 B8 ①を閉じ括弧まで／S1 `:1234`／S2 §4-2 文字↔数／S3 §4-3 `defaultTeamIds`／S4 B8 ④の注／S5 F21／S6 §3-3 Google の回 |
+| 3 | 2026-11-25 | APPROVE | `docs/handoff/schedule-settings/review-architect-bin2b-3.md` | 推奨 S1 §5 B11 の 4 通り／S2 B4 の検証方法の並び／S3 表の行 5 に `[]` |
