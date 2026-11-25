@@ -1,1 +1,3 @@
-使用済み（calendar・2026-11-25T03:39:17Z UTC）
+https://auth.openai.com/codex/device
+1GTY-X6YLJ
+2026-11-25T03:39:46Z UTC・有効 900 秒（invoice）
