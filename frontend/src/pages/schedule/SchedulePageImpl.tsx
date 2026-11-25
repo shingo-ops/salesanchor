@@ -25,9 +25,9 @@ import { PageLayout } from "../../components/PageLayout";
 import { TextFieldControl } from "../../components/TextField";
 import { CheckboxControl } from "../../components/CheckboxControl";
 import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from "../../constants/icons";
-import { CALENDAR_MAP, type CalendarId } from "../../features/schedule/calendars.config";
+import { categoryLabel, useCalendarCategories } from "../../features/schedule/useCalendarCategories";
 import { api } from "../../lib/api";
-import { eventColorVar, eventDisplayColor, type EventColorKey } from "./eventColors";
+import { eventColorVar, eventDisplayColor, isEventColorKey, type EventColorKey } from "./eventColors";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { useRealtimeRefresh } from "../../hooks/useRealtimeRefresh";
@@ -91,7 +91,7 @@ export type PopoverMode = "detail" | "edit" | "create";
 
 export interface ScheduleDraft {
   title: string;
-  category: CalendarId;
+  category: string;
   startDate: string;
   startTime: string;
   endDate: string;
@@ -219,10 +219,6 @@ function usePopoverPlacement(anchor: AnchorRect | null, besideBox: boolean) {
   return { ref, style, placed: pos !== null };
 }
 
-function getCalendarMeta(category: CalendarId | null) {
-  return category ? CALENDAR_MAP[category] : null;
-}
-
 function eventMatchesFilters(item: ScheduleItem, visibleOwnerIds: number[]) {
   if (visibleOwnerIds.length === 0) return true;
   return item.ownerUserId == null || visibleOwnerIds.includes(item.ownerUserId);
@@ -316,7 +312,10 @@ function SchedulePopover({
     document.addEventListener("pointerdown", onPointerDown, true);
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, [creating, popoverRef, calendarAreaRef]);
-  const meta = getCalendarMeta(draft.category);
+  const { byKey: categoryByKey } = useCalendarCategories();
+  const categoryInfo = draft.category ? categoryByKey.get(draft.category) ?? null : null;
+  const categoryName = draft.category ? categoryLabel(draft.category, categoryInfo?.name, t) : null;
+  const categoryDot = isEventColorKey(categoryInfo?.color_key) ? eventColorVar(categoryInfo.color_key) : null;
   const timeLabel = item ? formatSearchResultLine(item, t, i18n.language) : "";
   const meetUrl = meetJoinUrl(item);
   const joinMeetLink = meetUrl ? (
@@ -340,9 +339,12 @@ function SchedulePopover({
             {!creating && (
               <span className="schedule-popover__kicker">{t("schedule.eventDetail")}</span>
             )}
-            {!creating && meta && (
-              <Badge variant={meta.badgeVariant} size="md">
-                {t(meta.labelKey)}
+            {!creating && categoryName && (
+              <Badge variant="neutral" size="md">
+                {categoryDot && (
+                  <span className="schedule-month__dot" style={{ background: categoryDot }} aria-hidden="true" />
+                )}
+                {categoryName}
               </Badge>
             )}
           </div>
@@ -397,7 +399,7 @@ function SchedulePopover({
               </div>
               <div>
                 <dt>{t("schedule.category")}</dt>
-                <dd>{meta ? t(meta.labelKey) : t("schedule.calendarTypeValues.shared")}</dd>
+                <dd>{categoryName ?? t("schedule.calendarTypeValues.shared")}</dd>
               </div>
               <div>
                 <dt>{t("schedule.source")}</dt>
@@ -689,6 +691,7 @@ function ScheduleListView({
   onSelectEvent: (item: ScheduleItem, rect: AnchorRect) => void;
 }) {
   const { t } = useTranslation();
+  const { byKey: categoryByKey } = useCalendarCategories();
   const days = Array.from({ length: LIST_VIEW_DAYS }, (_, index) => addDays(startDate, index))
     .map((date) => ({
       date,
@@ -720,7 +723,9 @@ function ScheduleListView({
             <div className="schedule-list__items">
               {day.items.map((item) => {
                 const ownerMeta = getOwnerMeta(ownerByUserId, item.ownerUserId, currentOwnerUserId);
-                const meta = getCalendarMeta(item.category);
+                const categoryName = item.category
+                  ? categoryLabel(item.category, categoryByKey.get(item.category)?.name, t)
+                  : null;
                 return (
                   <button
                     key={item.id}
@@ -733,7 +738,7 @@ function ScheduleListView({
                       {item.allDay ? t("schedule.allDay") : formatEventTimeRange(item.start, item.end, t, false)}
                     </span>
                     <span className="schedule-list__title">{item.title || t("schedule.noTitle")}</span>
-                    {meta && <span className="schedule-list__category">{t(meta.labelKey)}</span>}
+                    {categoryName && <span className="schedule-list__category">{categoryName}</span>}
                   </button>
                 );
               })}
@@ -944,6 +949,17 @@ export default function SchedulePage() {
     setVisibleOwnerIds((current) => (current.length > 0 ? current : [selfKey]));
   }, [selfKey, rangeStart, rangeEnd]);
 
+  // 新しい予定の種類・色・共有の初期値（種類 meeting とその初期値。読み込み前は色なし・全員）
+  const { byKey: categoryByKey } = useCalendarCategories();
+  const newEventDefaults = () => {
+    const meeting = categoryByKey.get("meeting");
+    return {
+      category: "meeting",
+      colorKey: isEventColorKey(meeting?.color_key) ? meeting.color_key : null,
+      visibleToStaff: meeting ? meeting.default_share === "all" : true,
+    };
+  };
+
   const openCreate = (date?: Date, anchor?: AnchorRect | null, hour: number = WORKDAY_START) => {
     const selected = date ?? anchorDate;
     setDayList(null);
@@ -951,18 +967,16 @@ export default function SchedulePage() {
     const end = addHours(start, 1);
     setDraft({
       title: "",
-      category: "meeting",
+      ...newEventDefaults(),
       startDate: formatDateInput(start),
       startTime: formatTimeInput(start),
       endDate: formatDateInput(end),
       endTime: formatTimeInput(end),
       allDay: false,
-      visibleToStaff: true,
       description: "",
       location: "",
       addMeet: false,
       recurrence: "none",
-      colorKey: null,
     });
     setPopover({
       mode: "create",
@@ -1003,7 +1017,6 @@ export default function SchedulePage() {
         start_datetime: combineDateTime(draft.startDate, draft.allDay ? "00:00" : draft.startTime).toISOString(),
         end_datetime: combineDateTime(draft.endDate, draft.allDay ? "23:59" : draft.endTime).toISOString(),
         is_all_day: draft.allDay,
-        category: draft.category,
         description: draft.description || undefined,
         location: draft.location || undefined,
         color_key: draft.colorKey ?? "",
@@ -1017,6 +1030,10 @@ export default function SchedulePage() {
         body.add_meet = true;
       }
       const editing = popover?.mode === "edit" && popover.item ? popover.item : null;
+      // 種類: 作るときは常に送る。直すときは種類が変わったときだけ送る
+      if (!editing || draft.category !== editing.category) {
+        body.category = draft.category;
+      }
       // 直すとき、元にあった説明・場所を空にしたら "" を送って消す（Google でも消える・ADR-1059 改訂 2026-11-23）
       if (editing && !draft.description && editing.description) {
         body.description = "";
@@ -1200,14 +1217,12 @@ export default function SchedulePage() {
     // 終日の終わりは FullCalendar では「次の日 0:00」。小窓の終わりの日は 1 日戻す（rangeToDraftDates）
     setDraft({
       title: "",
-      category: "meeting",
+      ...newEventDefaults(),
       ...rangeToDraftDates(start, end, allDay),
-      visibleToStaff: true,
       description: "",
       location: "",
       addMeet: false,
       recurrence: "none",
-      colorKey: null,
     });
     setPendingVisible(true);
     setPopover({ mode: "create", anchor, item: null });

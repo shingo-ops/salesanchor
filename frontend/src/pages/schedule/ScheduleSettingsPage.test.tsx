@@ -1,3 +1,4 @@
+/* eslint-disable local/no-japanese-literal -- テスト: 管理者が付けた種類の名前（DB の値）が画面にそのまま出ることを検証する（ADR-027・precedent: SchedulePageImpl.test.tsx） */
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -26,11 +27,18 @@ vi.mock("../../hooks/usePermissions", () => ({
 const answers = vi.hoisted(() => ({
   connected: false,
   connectedAt: null as string | null,
+  categories: [] as Array<Record<string, unknown>>,
 }));
+
+/** 種類の表の応答（GET /calendar/categories）の 1 行 */
+function categoryRow(key: string, over: Record<string, unknown> = {}) {
+  return { key, name: null, color_key: null, default_share: "all", sort_order: 1, is_active: true, ...over };
+}
 
 vi.mock("../../lib/api", () => ({
   api: {
     get: vi.fn(async (path: string) => {
+      if (path === "/calendar/categories") return answers.categories;
       if (path === "/google-calendar/status") {
         return { connected: answers.connected, connected_at: answers.connectedAt };
       }
@@ -68,6 +76,7 @@ beforeEach(async () => {
   perms.loading = false;
   answers.connected = false;
   answers.connectedAt = null;
+  answers.categories = [];
   hrefSetter.mockReset();
   const fake = { ...window.location } as Record<string, unknown>;
   Object.defineProperty(fake, "href", { configurable: true, get: () => "http://localhost/", set: hrefSetter });
@@ -188,6 +197,96 @@ describe("ScheduleSettingsPage result banner (K7)", () => {
     view("/schedule/settings?connected=false");
     expect(await screen.findByText(i18n.t("schedule.connectError"))).toBeTruthy();
     expect(screen.queryByText(i18n.t("schedule.connectScopeMissing"))).toBeNull();
+  });
+});
+
+describe("ScheduleSettingsPage categories section (schedule-settings bin2a A8)", () => {
+  const categoriesTitle = () => i18n.t("schedule.categoriesTitle");
+
+  it("shows the categories section to a tenant admin (with and without staff.view)", async () => {
+    for (const staffView of [true, false]) {
+      perms.isTenantAdmin = true;
+      perms.staffView = staffView;
+      const { unmount } = view();
+      expect(await screen.findByRole("region", { name: categoriesTitle() })).toBeTruthy();
+      unmount();
+      queryClient.clear();
+    }
+  });
+
+  it("hides the categories section from a user with only staff.view", async () => {
+    perms.staffView = true;
+    view();
+    expect(await screen.findByText("Owner Self")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: categoriesTitle() })).toBeNull();
+  });
+
+  it("saves one category with its name, color, share and use", async () => {
+    perms.isTenantAdmin = true;
+    answers.categories = [categoryRow("meeting"), categoryRow("shipping", { sort_order: 2 })];
+    view();
+    const region = await screen.findByRole("region", { name: categoriesTitle() });
+    const names = await within(region).findAllByLabelText(i18n.t("schedule.categoryName"));
+    expect(names).toHaveLength(2);
+    // 7 種は名前が空で、i18n の名前が見本として出る
+    expect((names[1] as HTMLInputElement).placeholder).toBe(i18n.t("schedule.calendarLabels.shipping"));
+    fireEvent.change(names[1], { target: { value: "出荷便" } });
+    const shares = within(region).getAllByLabelText(i18n.t("schedule.categoryDefaultShare"));
+    fireEvent.change(shares[1], { target: { value: "self" } });
+    // meeting の「使う」は切れない
+    const uses = within(region).getAllByRole("switch", { name: i18n.t("schedule.categoryActive") }) as HTMLInputElement[];
+    expect(uses[0].disabled).toBe(true);
+    expect(uses[1].disabled).toBe(false);
+    fireEvent.click(uses[1]);
+    fireEvent.click(within(region).getAllByRole("button", { name: i18n.t("schedule.settingsSave") })[1]);
+    await waitFor(() =>
+      expect(api.patch).toHaveBeenCalledWith("/calendar/categories/shipping", {
+        name: "出荷便",
+        color_key: "",
+        default_share: "self",
+        is_active: false,
+      }),
+    );
+  });
+
+  it("adds a category with a name and posts it", async () => {
+    perms.isTenantAdmin = true;
+    answers.categories = [categoryRow("meeting")];
+    vi.mocked(api.post).mockResolvedValueOnce(categoryRow("custom_1", { name: "見積り", sort_order: 8 }));
+    view();
+    const region = await screen.findByRole("region", { name: categoriesTitle() });
+    fireEvent.click(within(region).getByRole("button", { name: i18n.t("schedule.categoryAdd") }));
+    const names = within(region).getAllByLabelText(i18n.t("schedule.categoryName"));
+    expect(names).toHaveLength(2);
+    // 名前が空のままでは送らず、文を出す
+    fireEvent.click(within(region).getAllByRole("button", { name: i18n.t("schedule.settingsSave") })[1]);
+    expect(await within(region).findByText(i18n.t("schedule.categoryErrorNameRequired"))).toBeTruthy();
+    expect(api.post).not.toHaveBeenCalled();
+    fireEvent.change(names[1], { target: { value: "見積り" } });
+    fireEvent.click(within(region).getAllByRole("button", { name: i18n.t("schedule.settingsSave") })[1]);
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith("/calendar/categories", {
+        name: "見積り",
+        color_key: "",
+        default_share: "all",
+      }),
+    );
+  });
+
+  it("shows the conflict sentence on 409 and the generic sentence on other failures", async () => {
+    perms.isTenantAdmin = true;
+    answers.categories = [categoryRow("meeting")];
+    view();
+    const region = await screen.findByRole("region", { name: categoriesTitle() });
+    fireEvent.click(within(region).getByRole("button", { name: i18n.t("schedule.categoryAdd") }));
+    const names = within(region).getAllByLabelText(i18n.t("schedule.categoryName"));
+    fireEvent.change(names[1], { target: { value: "契約" } });
+    vi.mocked(api.post).mockRejectedValueOnce(Object.assign(new Error("category_conflict"), { status: 409 }));
+    fireEvent.click(within(region).getAllByRole("button", { name: i18n.t("schedule.settingsSave") })[1]);
+    expect(await within(region).findByText(i18n.t("schedule.categoryErrorConflict"))).toBeTruthy();
+    vi.mocked(api.post).mockRejectedValueOnce(new Error("boom"));
+    fireEvent.click(within(region).getAllByRole("button", { name: i18n.t("schedule.settingsSave") })[1]);
+    expect(await within(region).findByText(i18n.t("schedule.categoryErrorSave"))).toBeTruthy();
   });
 });
 
