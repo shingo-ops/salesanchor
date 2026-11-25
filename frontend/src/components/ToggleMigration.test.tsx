@@ -21,7 +21,7 @@ describe('Toggle migration (AY-3b)', () => {
   const files: Array<[string, number]> = [
     ['pages/account-settings/PreferencesSection.tsx', 1],
     ['pages/inbox/InboxSettingsModal.tsx', 4],
-    ['pages/schedule/ScheduleDraftFields.tsx', 2],
+    ['pages/schedule/ScheduleDraftFields.tsx', 1],
   ];
 
   it.each(files)('%s uses <Toggle and no legacy toggle classes', (rel, count) => {
