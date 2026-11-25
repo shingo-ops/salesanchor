@@ -795,37 +795,6 @@
   min-width: 0;
 }
 
-.schedule-settings__nav-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-  min-height: var(--comp-input-height-sm);
-  padding: 0 var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  text-align: left;
-  cursor: pointer;
-  transition: background-color var(--duration-base) ease, border-color var(--duration-base) ease, color var(--duration-base) ease;
-}
-
-.schedule-settings__nav-item:hover {
-  background: var(--bg-hover);
-}
-
-.schedule-settings__nav-item--active {
-  border-color: var(--accent);
-  background: var(--schedule-gridline);
-  color: var(--accent);
-  box-shadow: var(--focus-ring-shadow);
-}
-
-.schedule-settings__nav-item svg {
-  flex: none;
-}
-
 .schedule-settings__content {
   display: flex;
   flex-direction: column;

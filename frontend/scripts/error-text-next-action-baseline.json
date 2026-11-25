@@ -166,7 +166,6 @@
     "reviewReason.extract_exception",
     "ruleManagement.test.gateError",
     "ruleManagement.toggleFail",
-    "schedule.connectBtnError",
     "schedule.connectError",
     "schedule.errorCreate",
     "schedule.errorDelete",
