@@ -1,6 +1,6 @@
 # 実装カード 便0-A: Hermes の試しの道具を置き、ログインの要らない確かめを流す
 
-- 設計: [design.md](design.md) 第2.4版（審査 6 回目 APPROVE・[review-opus-6.md](review-opus-6.md)）§4・§5・§8 便0。要件: [requirements.md](requirements.md) Q8・Q9。調べ: [recon.md](recon.md)「クラウドの作業場所での実測」。
+- 設計: [design.md](design.md) 第2.5版（会話を消す口だけ直した・第2.4版は審査 6 回目 APPROVE・[review-opus-6.md](review-opus-6.md)）§4・§5・§8 便0。要件: [requirements.md](requirements.md) Q8・Q9。調べ: [recon.md](recon.md)「クラウドの作業場所での実測」。
 - PO の実装承認: 2026-11-25 の返事「1」（Q9・選択肢 1「作り始めてよい」）。
 - ブランチ: `release/ai-assistant-bin0`（origin/main ea800930e から作成済み・このカードを含む）。PR は作らない（Opus が作る）。
 - 便0 を 2 つに分ける（Opus の決定・理由: ログインは PO が device code を打つ間だけ待てる。PO が居ない今はログイン無しで分かることだけを先に固める。「変更は一度に1つ」）。
@@ -19,6 +19,11 @@
 
 報告の 1 行目に「受領確認: card-bin0a を読んだ」と書く。
 
+## 2 回目の流し（前回は手順 3 の S6 で停止・NEEDS_DECISION）
+
+- 設計役の判断: 会話を消す口は API の口の DELETE だけにする（design.md 第2.5版 §5）。ダッシュボードは動かさない。
+- 前回の記録 `bin0/out/impl-report-a.md`・`probe-a-20261125.md`・`raw/3-s6-grep.txt` は同じ枝にある。表 1 の S1・S2・S3・S11 の ○ はそのまま使い、S4〜S10・S12 を読む。報告と記録は上書きしてよい。
+
 ## 守ること（全手順）
 
 - 鍵（API_SERVER_KEY）は作業場所の中で `openssl rand -hex 32` で作り、`/tmp/bin0-secrets/`（chmod 700）のファイルにだけ置く。画面・報告・commit に値を出さない。件数と長さだけ書く。
@@ -32,9 +37,9 @@
 ### 1. 作業場所
 
 - (1a) クラウドの写しの最上位で `git fetch origin main release/ai-assistant-bin0`
-- (1b) `bash scripts/new-worktree.sh release/ai-assistant-bin0 --claude`（末尾の起動失敗は無視）。以後 `<repo>` は出てきた絶対パス。
+- (1b) `bash scripts/new-worktree.sh release/ai-assistant-bin0 --claude`（末尾の起動失敗は無視）。以後 `<repo>` は出てきた絶対パス。作った直後に origin/main を指していたら `cd <repo> && git switch -C release/ai-assistant-bin0 origin/release/ai-assistant-bin0`（前回の実測）。
 - (1c) `cd <repo> && git log --oneline -1` が origin/release/ai-assistant-bin0 と同じ sha であること。違えば止まる。
-- (1d) 事前確認は `git config user.name`（shingo-cc）と `git rev-parse --verify origin/main` の 2 つだけ。executor-preflight.sh は流さない（前例 card-bin1.md:30）。
+- (1d) 事前確認は `git config user.name` と `git rev-parse --verify origin/main` の 2 つだけ（名前は値を書くだけ。クラウドでは Claude と出る・前回の実測）。executor-preflight.sh は流さない（前例 card-bin1.md:30）。
 
 ### 2. Docker と完成品
 
@@ -52,7 +57,7 @@
 | S3 | 部屋ごとの `API_SERVER_KEY` の置き方 | 止まる |
 | S4 | `platform_toolsets.api_server`・`memory_enabled`・`user_profile_enabled`・`auxiliary.background_review.enabled` の正しい書き方 | その項目を未確認にして先へ |
 | S5 | 頼みの `model` と `provider` を読む場所（provider の無い model を無視する所） | 未確認にして先へ |
-| S6 | `X-Hermes-Session-Id` を読む所、会話を消す道（mutation-snapshot と DELETE の道・`409 session_busy`・`409 unknown_execution`）と、それが部屋の名指しの道で通るか | 止まる |
+| S6 | 前回 ○ の分（`api_server_openai_routes.py:901`・`api_server.py:1581`・`:2704`・`:3943`）は読み直さない。今回は DELETE の処理 `api_server.py:2683-2717` と、その中で呼ぶ消す関数の中身を読み、会話の文（messages）を消すのか、印を付けるだけかを書く（design.md 第2.5版 §5） | 消さずに印だけなら止まる |
 | S7 | `response_format` を読むか | 未確認にして先へ |
 | S8 | AI 会社が失敗したときに別の会社へ切り替える仕組みと、それを切る設定 | 未確認にして先へ |
 | S9 | 1 回ごとの使った量を Hermes が記録する場所（ファイル・表の名前）と読み方（K9 用） | 未確認にして先へ |
@@ -81,7 +86,7 @@
 | P2 | 部屋ごとの正しい鍵で health（S11 の道）か `/p/{coordinator|calendar|invoice}/v1/models` | 200（3 部屋とも） |
 | P3 | 鍵なし・別の部屋の鍵 | 401 か 403（数字を書く） |
 | P4 | 無い部屋 `/p/nobody/...` | 404 |
-| P5 | 無い会話の番号に S6 の消す道（snapshot・DELETE）を部屋の鍵で | 状態の数字を書く（合否にしない） |
+| P5 | 無い会話の番号に `DELETE /p/{coordinator|calendar|invoice}/api/sessions/` ＋番号を部屋の鍵で。鍵なしでも 1 回 | 状態の数字を書く（合否にしない） |
 | P6 | 3 部屋で動いている間の最大メモリ（`docker stats --no-stream` を 10 秒おきに 6 回） | MiB を書く（合否にしない） |
 | P7 | 守りの最小: `--read-only --cap-drop ALL --security-opt no-new-privileges:true --tmpfs /tmp --tmpfs /run` で起動。立たなければ、ログの誤りに出た権限を 1 つずつ `--cap-add` で戻して立つまで試す（最大 8 回） | 立った形の全引数と、戻した権限ごとの理由（ログの行） |
 | P8 | Hermes が書き込む場所の一覧（普通の起動 60 秒後の `docker diff`・データの置き場の `find -type f`。各 100 行まで） | 一覧 |
@@ -121,7 +126,7 @@
 - hermes の 1 件の流れ:
   1. 新しい会話の番号（uuid4）を作り、`/p/coordinator/v1/chat/completions` に利用者の文だけを送る（`stream: false`）。答えを JSON として読み `role` を取る。読めなければ role=`unreadable`。
   2. role が calendar か invoice なら、別の新しい番号で `/p/<role>/v1/chat/completions` に送る。中身は `secretary-agent/compose.mjs` の `compose("", now, text, rules)` の結果の先頭の空白を除いたもの（node を子の処理で呼んで import する。写しを作らない）。答えを JSON として読み `secretary-agent/schema.json` で検査。通らなければ 1 回だけ同じ頼みでやり直し、その結果で数える（やり直した印を残す）。
-  3. 使った 2 つの会話を S6 の道で消す（snapshot → DELETE・409 session_busy は 2 秒あけて 3 回まで・409 unknown_execution は snapshot を取り直して 1 回だけ）。消せた数を残す。
+  3. 使った 2 つの会話を `DELETE /p/` ＋部屋名＋ `/api/sessions/` ＋番号で消す（部屋の鍵で）。409 `session_active_turn` は 2 秒あけて 3 回まで。200 と 404 を「消せた」に数える。それ以外はその番号を記録する。消せた数を残す（design.md 第2.5版 §5）。snapshot の口は使わない。
   4. 秒は 1. の送る前から 2. の答えまで（消す時間は入れない）。
 - 期待の係: expected が invoice → invoice、event → calendar、unknown → none（rule の 3 件も expected は unknown なので none）。
 - secretary の 1 件: run_baseline.py と同じ `/intent`（`rules` を付ける）。種類の判定は `app.schemas.assistant.AgentEnvelope` を関数の中で import（hermes のときは import しない）。
@@ -141,7 +146,7 @@
 3. 係の 1 回目が形の違う JSON・2 回目が正しい → schema_ok=1・retried=1。
 4. 係が 2 回とも形が違う → schema_ok=0・retried=1。
 5. まとめ役が JSON でない → coordinator_role=unreadable・role_ok=0。
-6. DELETE が 409 session_busy を 1 回返してから通る → deleted に数えられる。
+6. DELETE が 409 `session_active_turn` を 1 回返してから 200 → deleted に数えられる。3 回とも 409 → deleted に数えられず、番号の記録が 1 件。
 7. `--model openai-codex/gpt-5.6-terra` → 偽の Hermes が受け取った本文の provider=`openai-codex`・model=`gpt-5.6-terra`。`anthropic/claude-opus-4.6/x` は provider=`anthropic`・model=`claude-opus-4.6/x`。`/` 無しは終了コード 2。
 8. K3 の比べ方: 「株式会社 みなと商事」と「株式会社みなと商事」は当たり・`5500` と `5500.0` は当たり・`2026-11-17T15:00:00+09:00` と `2026-11-17T06:00:00Z` は当たり。
 9. 流した後の標準出力と標準エラーに、cases.json のどの頼みの文も含まれない。
