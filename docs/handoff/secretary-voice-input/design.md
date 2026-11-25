@@ -645,3 +645,87 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 
 - 第 1 回（2026-11-25・クラウドの Sonnet・review-architect-binW2-1.md・枝 `release/secretary-voice-edit-followup-review1`）: REVISE。R1（`same_day` だけだと +09:00 以外の端末で「説明に明日」の直しで日付が動く）→ §17-4 の 3 の条件を `same_time` と `same_day` の両方にし、card §3・§4 に取り込んだ。L1（取り除く語の形と空の語）・L2（import の文）・L3（失敗時の言い切り）を直した。L4 は反映後の測りに「あさって4時にして」3 回を足す（§17-8）。L5 は card §4 に試験 1 本を足した。
 - 第 2 回（2026-11-25・クラウドの Sonnet・review-architect-binW2-2.md・枝 `release/secretary-voice-edit-followup-review2`）: APPROVE（R なし）。R1・L1〜L5 の取り込みが実物と食い違わないことを確認。L1（「4時に変えて」の試験のカルテに +09:00 の印と終わり 16:00 を書く）を card §4 に取り込んだ。openapi の差が 1 欄で済むかは未確認のまま（card §5 の止める条件で守る）。
+
+## 18. 「はい、〜にして」で前の下書きが作られる件・「4時」が朝になる件（便W3・2026-11-25）
+
+事実: `docs/handoff/secretary-voice-input/recon.md` §11 ／ 目標: `docs/handoff/secretary-voice-input/kgi.md` §8 Y1〜Y6 ／ 指示書: `docs/handoff/secretary-voice-input/card-binW3.md`
+
+### 18-1 目的と、利用者に見える変化
+
+- 目的: 声で予定を入れるとき、言ったつもりの時刻・中身と違う予定が黙って作られないようにする。
+- 前: 「あさって4時にして」「明日1時に打ち合わせ」が朝 4 時・1 時になることがある（recon §11-1・1〜6時で 36 回中 13 回）。「はい、終わりは5時にして」で AI が 5 時を朝と読むと、終わりが始まりより前になり、前の下書きのまま黙って作られる（recon §11-3（２））。
+- 後: 午前・午後を言わない「1〜6時」は午後（13〜18時）で下書きになる。「午前4時」「朝6時」「夜1時」と言えば今までどおり。直しを言ったのに日時が崩れて直せなかったときは、「はい」が付いていても作らず「直すところが分かりませんでした…」と聞き直す。
+
+### 18-2 対象と対象外
+
+- 対象: backend の時刻の決まり 1 つ（`backend/app/services/secretary_dates.py`）と口の 2 か所（`backend/app/routers/assistant.py`）・答えの欄 1 つ（`backend/app/schemas/assistant.py` `EventDraft.edit_dropped`）・画面の分かれ 1 か所（`frontend/src/features/secretary/SecretaryChat.tsx` `sendEdit`）。
+- 対象外: 指示文（`secretary-agent/prompt.txt`）・はい／いいえの語の一覧・7〜12時の読み方・漢数字（「一時」は「いちじ＝しばらく」と区別できないため）・作った後に読む文。
+
+### 18-3 選んだ形と、選ばなかった形
+
+| 形 | 選んだか | 理由 |
+|---|---|---|
+| backend の決まりで、素の 1〜6時を午後にする（AI の答えの後・カルテと合わせる前） | 選ぶ | 毎回同じ答えになる。本番の予定で 1〜6時に始まるものは試しの 1 件だけ（recon §11-2）。日付の表（`apply_day`）と同じ置き場で、同じ書き方 |
+| 指示文に「午前・午後の無い 1〜6時は午後」と足す | 選ばない | 同じ言い方でも回によって答えが変わる（recon §11-1 の 2時・4時・5時）。指示文で決まりを守らせる確かさは測れていない。費用が増えないのは同じ |
+| 1〜6時を聞き返す（「午前ですか午後ですか」） | 選ばない | 1〜6時の朝の予定は本番で 0 件。毎回 1 往復増える |
+| 直せなかった印 `edit_dropped` を返し、画面は「はい」が付いていても作らない | 選ぶ | 黙って前の下書きで作られる道（recon §11-3（２））を、作らない側で閉じる。お願いします類（直しが無い）は今のまま作られる |
+| 「はい、〜」で直しが無いときも毎回聞き直す | 選ばない | お願いします類 14/14 が直しなしと読めており（recon §11-3）、毎回 1 往復増える |
+| 作った後に中身を読み上げる | 選ばない（今回は） | 上の 2 つで黙って違う予定になる道は閉じる。読む文を変えるのは別の便 |
+
+### 18-4 backend（変更前 → 変更後）
+
+1. `backend/app/services/secretary_dates.py` に `afternoon_hours(ev: IntentEvent, text: str, karte: KarteIn | None) -> IntentEvent` を足す（`apply_day` の後ろ）。
+   - 文を NFKC で直した形で見る（全角数字も同じに扱う）。
+   - 次のどれかが文にあれば、何も変えずに返す: `午前|午後|朝|昼|夕方|夕|夜|晩|深夜|未明|早朝|明け方|ごぜん|ごご|AM|PM|am|pm|a.m.|p.m.`（語は大文字小文字を区別しない）。
+   - 文の中の「素の時刻」= 正規表現 `(?<![0-9])([1-6])\s*時(?!間)` が当たった数（1〜6）の集まり。空なら何も変えずに返す。「10時」「12時」は前が数字なので当たらない。「1時間」は当たらない。「4時半」「4時15分」は当たる。
+   - 終日（`ev.is_all_day`）なら何も変えずに返す。
+   - `karte` があり、`karte.start` が読めて日本時間で 0〜6時なら、何も変えずに返す（前に朝の時刻を言って決めた下書きを、後の頼みで動かさない）。
+   - 始まり・終わりのそれぞれ: 値が読めて（`parse_iso`）、時差の印が +09:00 で、時が上の集まりに入っていれば、12 時間足す（文字は `isoformat(timespec="seconds")`）。印が無い・違う・読めない値は触らない。
+   - 始まりを足したあと、終わりが読めて新しい始まりより前なら、終わりにも 12 時間足す（「4時から1時間」で終わり 05:00 → 17:00）。
+   - どちらも変わらなければ `ev` をそのまま返す。
+2. `backend/app/routers/assistant.py`: `intent = envelope.intent` の直後に、`intent.kind == "event"` で `intent.event` が null でなければ `intent = intent.model_copy(update={"event": afternoon_hours(intent.event, body.text, karte)})`。新しい画面の道・直す道・古い画面の道のすべてで、カルテと合わせる前の AI の答えにだけ当たる。
+3. `backend/app/schemas/assistant.py` の `EventDraft` に `edit_dropped: bool | None = None`（直す頼みの答えのとき、AI は直しを返したが、合わせた結果が日時を失って前のままに戻したか。ほかは null）。
+4. `backend/app/routers/assistant.py` の直す道: `edit_dropped = False` を `edited = False` の隣に置く。「直した結果が日時を失ったら」の分かれで、戻す前の `edited` が真なら `edit_dropped = True`（その後 `edited = False` は今のまま）。`EventDraft(...)` に `edit_dropped=edit_dropped if edit_mode else None`。
+5. `frontend/api-contract/openapi.json` を命令で書き出し直す（差は `EventDraft.edit_dropped` だけ）。
+
+### 18-5 frontend（変更前 → 変更後）
+
+1. `frontend/src/features/secretary/secretaryApi.ts` の予定の下書きの型に `edit_dropped?: boolean | null;`（`meet_refused` の隣）。
+2. `frontend/src/features/secretary/SecretaryChat.tsx` `sendEdit` の `} else if (yesFallback) {` を `} else if (yesFallback && !(reply.kind === "event" && reply.draft.edit_dropped === true)) {` に替える。真のときは下の else（`notEdited` → 2 回目 `checkScreen`）へ進む。文の鍵は足さない。
+
+### 18-6 危ない点と手当て
+
+| 危ない点 | 手当て |
+|---|---|
+| 本当に朝 1〜6時の予定を「午前」を言わずに頼むと午後になる | 本番で 0 件（recon §11-2）。声は「〇〇を〇時に入れますか？」と読み、画面にも出るので「午前4時にして」と直せる |
+| 「朝礼」「夜会」のような題名の語で決まりが止まる | 止まったときは今と同じ（AI の読んだまま）。悪くはならない |
+| 直す道で、カルテが朝の時刻なのに後の頼みで午後に動く | カルテの始まりが 0〜6時なら決まりを当てない（18-4 の 1） |
+| `edit_dropped` で作られなくなり「はい」と言ったのに予定ができない | 「直すところが分かりませんでした…」と読み、前の下書きはボタンでも作れる。2 回目は「画面で確かめて」 |
+
+### 18-7 戻し方
+
+- 便W3 の PR を戻す。古い画面は `edit_dropped` を読まないので、新しい backend・古い画面でも便W2 と同じ動き。
+
+### 18-8 測り方
+
+- `docs/handoff/secretary-voice-input/kgi.md` §8 Y1〜Y6。反映後に Opus が `docs/handoff/secretary-voice-input/binW3/probe_after.py`（`probe_before.py` と同じ 118 件・最終の値は本番の口の新しい道と同じ順）を流し、`binW3/` に置く。Y5 は便W と同じ回帰 23 件。
+
+| 基準 | 検証方法 |
+|---|---|
+| 素の 1〜6時が午後になる・午前などを言えばそのまま・7時以降・10時・12時・1時間は変わらない | backend の試験（`afternoon_hours` の表・口の試験）が CI で緑。反映後 Y1 48/48・Y2 40/40 |
+| 直せなかったときは「はい」付きでも作らない | backend の試験（`edit_dropped` 真）と画面の試験（POST が呼ばれない・`notEdited` を読む）が CI で緑 |
+| お願いします類は今のまま作られる | 画面の試験（`edit_dropped` 偽・`edited` 偽で POST 1 回）が CI で緑。反映後 Y4 |
+| 今までの読み方 | Y5: 23/23 |
+
+### 18-9 外部・過去事例の参照と我々への応用
+
+- 外部の事例は使わない。理由: 判断の根拠は、この製品の本物の AI の答え（recon §11-1・§11-3 の 118 回）と本番の予定の時刻（recon §11-2）で足りる。
+
+### 18-10 維持の仕組み
+
+- 担当: 秘書の画面と口は ADR-1082 の持ち主（Opus が設計・クラウドの Sonnet が実装）。
+- 仕組み: 試験（`backend/tests/test_secretary_dates.py`・`backend/tests/test_assistant_karte.py`・`frontend/src/features/secretary/SecretaryChat.test.tsx`）が CI の必須チェックで毎回流れる。
+
+### 18-11 審査の記録
+
+- （審査の後に書く）
