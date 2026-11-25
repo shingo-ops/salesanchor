@@ -105,9 +105,9 @@ recon: [recon.md](recon.md)
   - `memory_enabled: false`・`user_profile_enabled: false`
   - `auxiliary.background_review.enabled: false`（会話の後ろで回る振り返り。1 回で約 3 万トークン使う）
   - 会話の保存: 説明書では止める設定が見つからない（3回目の審査）。アプリが頼みごとに新しい番号 `X-Hermes-Session-Id` を付け、返事の後に消す。消す口は API の口の `DELETE /p/<部屋名>/api/sessions/<番号>`（部屋ごとの鍵）だけを使う。使用中（409 `session_active_turn`）で断られたら 2 秒あけて 3 回までやり直し、それでも消えなければその番号を記録して K7 の探しで残りを確かめる。消した後も文の無い小さな記録が残る（web-dashboard.md）。これで ADR-1077「会話の全文は残さない」を満たしたとする（Q8 で PO 決定）。
-    - 第2.5版で直した（便0-A の実物の確かめ・[bin0/out/probe-a-20261125.md](bin0/out/probe-a-20261125.md) S6）: 第2.4版の「①消す前の確かめ（mutation-snapshot）→②DELETE・409 session_busy・409 unknown_execution」は、管理画面（ダッシュボード）の app にだけある口だった（完成品の中 `hermes_cli/web_routers/sessions.py:640`・`hermes_cli/web_server.py:850`）。API の口の道の表（`gateway/platforms/api_server.py:1569-1601`）には DELETE だけがあり（`:1581`）、使用中の断りは 409 `session_active_turn`（`:2704`）。`/p/<部屋名>/` は API の口の全ての道に付く（`:3943`）。
+    - 第2.5版で直した（便0-A の実物の確かめ・[bin0/out/probe-a-20261125.md](bin0/out/probe-a-20261125.md) S6）: 第2.4版の「①消す前の確かめ（mutation-snapshot）→②DELETE・409 session_busy・409 unknown_execution」は、管理画面（ダッシュボード）の app にだけある口だった（完成品の中 hermes_cli/web_routers/sessions.py:640・hermes_cli/web_server.py:850）。API の口の道の表（gateway/platforms/api_server.py:1569-1601）には DELETE だけがあり（:1581）、使用中の断りは 409 `session_active_turn`（:2704）。`/p/<部屋名>/` は API の口の全ての道に付く（:3943）。
     - ダッシュボードは動かさない。理由: 外から触れる口が増える・容器のメモリが増える。消せたかどうかは、消す口の答え（200 か 404）と K7 の探し（データの置き場全体を頼みの文で grep）の 2 つで確かめれば足りる。snapshot は消す前の中身の写しを取る口で、消すことそのものには要らない。
-    - 便0 で確かめる: DELETE の処理（`api_server.py:2683-2717`）が会話の文を消すのか印を付けるだけか（ソース）と、`/p/<部屋名>/` と部屋ごとの鍵で通るか（実物）。消えない形なら止めて考え直す
+    - 便0-A で確かめた（[bin0/out/probe-a-20261125.md](bin0/out/probe-a-20261125.md) S6・P5）: ソースの説明は会話そのものを消す（hard delete・会話の記録ファイルも消す）。`/p/<部屋名>/` と部屋の鍵で通る（無い番号は 404・鍵なしは 401）。行が実際に消えるかは便0-B の K7 の探しで確かめる。消えない形なら止めて考え直す
   - 形の固定（`response_format`）: Hermes の API の口の説明書には載っていない（api-server.md）。便0 の最初に実物で確かめる。通らなければ、アプリの形の検査で落として 1 回だけやり直す（Q8 で PO 決定）
   - AI 会社が失敗したときに別の会社へ自動で切り替わる仕組みは切る（切る設定が API の口で効くかを便0 で確かめる）
 - 入れ方: 公式の完成品（Docker の `nousresearch/hermes-agent`）を版の番号で固定する。pip での入れ方は公式に非対応。Python は 3.14 だけ。メモリは最低 1GB・推奨 2〜4GB（docker.md）。今の秘書の容器は 512MB（`docker-compose.secretary-agent.yml:26`）。
