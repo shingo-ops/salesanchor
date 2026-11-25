@@ -1,3 +1,1 @@
-https://auth.openai.com/codex/device
-1G1G-C6PKU
-2026-11-25T03:22:40Z UTC・有効 900 秒（coordinator）
+使用済み（coordinator・2026-11-25T03:34:05Z UTC）
