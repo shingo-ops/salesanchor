@@ -756,18 +756,29 @@ async def test_migration_replaces_old_check_even_with_another_name_and_keeps_vis
 
 
 async def test_migration_skips_rooms_without_teams_table():
+    """teams が無い部屋では移行が 2 つの表を作らず飛ばす。部屋は _SCHEMA を使い、取引ごと取り消して元に戻す。"""
+    from sqlalchemy import text
+
     async with _env() as (admin, _factory):
-        schema = "tenant_98200"
-        await _exec(admin, f"DROP SCHEMA IF EXISTS {schema} CASCADE")
-        await _exec(admin, f"CREATE SCHEMA {schema}")
-        try:
-            await _exec(admin, f"CREATE TABLE {schema}.calendar_events (id serial PRIMARY KEY, calendar_type text)")
-            await _exec(admin, f"CREATE TABLE {schema}.calendar_categories (key text PRIMARY KEY, default_share text)")
-            async with admin.begin() as conn:
-                await _apply_migration_on_conn(conn, _MIGRATION, schema_name=schema)
-            assert await _rows(
-                admin, "SELECT to_regclass(:a) IS NULL, to_regclass(:b) IS NULL",
-                a=f"{schema}.calendar_event_teams", b=f"{schema}.calendar_category_teams",
-            ) == [(True, True)]
-        finally:
-            await _exec(admin, f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+        async with admin.connect() as conn:
+            trans = await conn.begin()
+            try:
+                await conn.execute(text(f"DROP TABLE {_SCHEMA}.calendar_event_teams"))
+                await conn.execute(text(f"DROP TABLE {_SCHEMA}.calendar_category_teams"))
+                await conn.execute(text(f"ALTER TABLE {_SCHEMA}.teams RENAME TO teams_hidden_for_skip_test"))
+                await _apply_migration_on_conn(conn, _MIGRATION, schema_name=_SCHEMA)
+                created = (
+                    await conn.execute(
+                        text("SELECT to_regclass(:a), to_regclass(:b)"),
+                        {"a": f"{_SCHEMA}.calendar_event_teams", "b": f"{_SCHEMA}.calendar_category_teams"},
+                    )
+                ).one()
+                assert created[0] is None and created[1] is None
+            finally:
+                await trans.rollback()
+        # 取り消したあと、ほかの試験を壊していない（3 つの表が在る）
+        assert await _rows(
+            admin,
+            "SELECT to_regclass(:a) IS NOT NULL, to_regclass(:b) IS NOT NULL, to_regclass(:c) IS NOT NULL",
+            a=f"{_SCHEMA}.teams", b=f"{_SCHEMA}.calendar_event_teams", c=f"{_SCHEMA}.calendar_category_teams",
+        ) == [(True, True, True)]
