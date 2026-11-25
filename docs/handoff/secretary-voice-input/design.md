@@ -644,3 +644,4 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 ### 17-11 審査の記録
 
 - 第 1 回（2026-11-25・クラウドの Sonnet・`origin/release/secretary-voice-edit-followup-review1` の `docs/handoff/secretary-voice-input/review-architect-binW2-1.md`）: REVISE。R1（`same_day` だけだと +09:00 以外の端末で「説明に明日」の直しで日付が動く）→ §17-4 の 3 の条件を `same_time` と `same_day` の両方にし、card §3・§4 に取り込んだ。L1（取り除く語の形と空の語）・L2（import の文）・L3（失敗時の言い切り）を直した。L4 は反映後の測りに「あさって4時にして」3 回を足す（§17-8）。L5 は card §4 に試験 1 本を足した。
+- 第 2 回（2026-11-25・クラウドの Sonnet・`origin/release/secretary-voice-edit-followup-review2` の `docs/handoff/secretary-voice-input/review-architect-binW2-2.md`）: APPROVE（R なし）。R1・L1〜L5 の取り込みが実物と食い違わないことを確認。L1（「4時に変えて」の試験のカルテに +09:00 の印と終わり 16:00 を書く）を card §4 に取り込んだ。openapi の差が 1 欄で済むかは未確認のまま（card §5 の止める条件で守る）。

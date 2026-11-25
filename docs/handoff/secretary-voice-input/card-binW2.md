@@ -43,7 +43,7 @@
 backend（`backend/tests/test_assistant_karte.py`・今の試験の書き方に合わせる）:
 - `same_day`: 同じ日の別の時刻→真／違う日→偽／片方 null→偽／時差の印が +09:00 でない→偽。
 - 口: `edit: true`・カルテの始まり `2026-11-10T02:00:00+01:00`・偽の AI は同じ瞬間の `2026-11-10T10:00:00+09:00` と description「明日」を返す・文「説明に明日と入れて」→ start は カルテのまま（日付が動かない）（審査 R1）。
-- 口: `edit: true`・カルテの始まり 2026-11-30 15:00・文「4時に変えて 説明 明日」・偽の AI は start 2026-11-30 16:00 と description「明日」を返す → start は 11/30 16:00・end 11/30 17:00（日付が動かない）・`edited` 真。
+- 口: `edit: true`・カルテの始まり `2026-11-30T15:00:00+09:00`・終わり `2026-11-30T16:00:00+09:00`（両方 +09:00 の印つき・長さ 1 時間）・文「4時に変えて 説明 明日」・偽の AI は start 2026-11-30 16:00 と description「明日」を返す → start は 11/30 16:00・end 11/30 17:00（日付が動かない）・`edited` 真。
 - 口: `meet_available` 偽で `edit: true`・偽の AI が add_meet true だけを返す → `edited` 偽・`meet_refused` 真・add_meet null。
 - 口: `meet_available` 偽で、偽の AI が location と add_meet true を返す → `edited` 真・`meet_refused` 真・location が入る。
 - 口: `meet_available` 真で、偽の AI が add_meet true を返す → `edited` 真・`meet_refused` 偽・add_meet 真。
