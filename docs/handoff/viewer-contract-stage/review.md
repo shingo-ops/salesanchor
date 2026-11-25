@@ -352,3 +352,15 @@
 - 低（推測・未確認）: 名簿を消したときの SET NULL が FORCE RLS の下で効くかは CI で確かめる。本番の表の持ち主の属性は D10 のとおり本番反映の後に Opus が読む。
 - 低: API の形の数え方を、道の見出しの行だけに当たる形に直した（期待 2）。
 - 実装の枝は、この指示書が main に入った後に Opus が origin/main から `release/viewer-contract-bin2-2a` として作る（前の便と同じ形）。指示書の手順1・手順10 をその枝に直した。
+
+## 2026-11-25 便2-2c2b の指示書（設計担当 Opus の自己審査。独立した審査ではない）
+
+判定: APPROVE（自己審査）。マージ前に審査役 Opus の審査を受ける。
+- PO 2026-11-25「1」（会社情報の画面を国内用・海外用のタブで作る）。範囲は A20（一部）・A21（tenant_id の絞り込みだけ）・A24・A27・A28・A29（登録の欄）・A30・A32・A40・A42（タブの部分）。
+- 指示書で決めたこと（card-2-2c2b.md の D1〜D11）: 発行元を読む2つの処理に tenant_id の絞り込みを足す（返す値と引数は変えない）・旧来の表を読むのは read_legacy_issuer_values の1か所（A40 は issuer.py 1件のまま）・入力の決まりは issuer_rules.py で欄ごとの理由の番号を 422 で返し、DB の CHECK は最後の守りに残す・国の既定値なし（ADR-125 D5）・見えない欄は null・古い6欄は今の会社情報の口から外す（表の列は残す）・区切りは読めたときだけフォームの下に出す（batch3f Q1・Q2）・行の無いタブは前の値を読むだけで見せる・都道府県名は API から言語で選ぶ・保存ごとに監査1行・試験の都道府県は正本の seed から読む。
+- 照合: 基準 5a72c083f の写しで、直す所の「変更前」の文字列と件数（§0-3 P1〜P14）・main.py の差し込み位置・部品の書き出し名（Callout・Tabs・Textarea・Stack・TextField・Select・Toggle・CountryCombobox・SectionCard・ApiError.responseDetail・api.put）・pytest の asyncio_mode=auto を確かめた。
+- 限界1: 試験の SQLite には CHECK と外部キーが無い。表の CHECK は PG の試験 test_tenant_issuer_tables_pg.py が CI で確かめる。
+- 限界2: 発行時の 409 の道（会社情報が無いとき）は、ソースを読んで確かめただけ。この便では触らない。
+- 限界3: 本番の都道府県の47行が入っているかは未確認（この便では読まない。本番反映の後に Opus が読む）。
+- 限界4: A32（監査）は conftest の差し替えの記録（本当に audit_logs へ1行入れる）で確かめる。本物の record_audit_log の通り道は既存の試験に任せる。
+- 限界5: A21 の RLS と A20 の information_schema の確かめは、この便の範囲外。
