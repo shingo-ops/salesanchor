@@ -1,6 +1,6 @@
 # Design: schedule settings, bin 3b (personal defaults: first view, week start, event length, Meet, whose events to show)
 
-- Status: design draft (written by Opus). Review runs on the cloud, and the result is recorded in §12 "Review".
+- Status: design reviewed, APPROVE in round 2 (§12). Written by Opus; reviewed on the cloud.
 - Parent: `docs/handoff/schedule-settings/design.md` §7 (bin 3 skeleton). Requirements: `docs/handoff/schedule-settings/requirements.md` (PO approved 2026-11-25 "1", G4–G7). This bin is **G7** and the row 「開いたときの形」「新しい予定の初期値」 of the requirements table.
 - Depends on bin 3a (`design-bin3a.md`), which changes `calendar_owner_settings` to `staff_id, color_key, updated_at`. **Implementation starts only after bin 3a is merged to main**; the branch is then rebuilt from the new origin/main.
 - Line numbers below are from origin/main 314eeef1e unless marked "after 3a".
@@ -104,7 +104,7 @@ No CHECK ties `open_owners='team'` to a non-null `open_team_id`: `ON DELETE SET 
 - In `migrations/20261024_100300_create_ai_cloud_views.sql`, add one row per new column for `calendar_owner_settings`, following the existing row form and Japanese reasons:
   - `default_view`, `week_start`, `event_minutes`, `auto_meet`, `open_owners` → `allow` (fixed value lists by CHECK).
   - `open_team_id` → `allow` (a team number in the same company).
-- Update the count in `backend/tests/ops/test_ai_cloud_views.py` (after 3a it is 1169 → **1175**) and the count comment at line 3 of the SQL.
+- Update the count in `backend/tests/ops/test_ai_cloud_views.py` (after 3a it is 1169 → **1175**; if main has a different number when this bin is built, use that number + 6) and the count comment at line 3 of the SQL.
 - Put the new `sha256sum` of the SQL into `scripts/migration-guard/reference-allowlist.tsv` and add `/ schedule-settings 便3b（個人の初期値）` to the reason.
 - Add the 6 rows to `docs/handoff/cloud-case-ai/stage1-column-class.tsv`.
 
@@ -117,7 +117,8 @@ No CHECK ties `open_owners='team'` to a non-null `open_team_id`: `ON DELETE SET 
 
 ### 4-2 `SchedulePageImpl.tsx`
 
-- First view (F1): keep `useState("week")`; when preferences are loaded the first time and the person has not changed the view yet, `setView(prefs.default_view)` (a ref keeps it to once; a second ref is set when the person changes the view by hand).
+- First view (F1): keep `useState("week")`; when preferences are loaded the first time and the person has not changed the view yet, `setView(prefs.default_view)` (a ref keeps it to once; a second ref is set when the person changes the view by hand). The hand changes go through `setView` in several places (`:1421-1425` keys, `:1576`, `:1650`): wrap them in one function `changeViewByHand(view)` that sets the ref and calls `setView`, and use it at all of these places.
+- Owner type: add `team_ids` to `ApiCalendarOwnersResponse` items and `teamIds: number[]` to `CalendarOwner` (`schedule-owner.ts`, `normalizeOwner`); a missing value becomes `[]`. The `team` rule below reads it.
 - Week start (F2): `weekStart={prefs.week_start}`.
 - Whose events (F3): read `loading: permsLoading` from `usePermissions()` at `:874` (today it is not read). Apply the saved choice to `visibleOwnerIds` once, only when all of these have loaded: permissions (`!permsLoading`), owners, preferences, and, when `open_owners` is `team`, `/calendar/teams` (the existing `useCalendarTeams()` at `:338`). Before that, do nothing (the screen stays at "only me", today's behavior). If the person changed the people selection by hand before that moment, do not apply (a "touched by hand" ref, set in the selection handler, the same idea as the view). The rule:
   - `self` → `[selfKey]` (today's behavior)
@@ -137,9 +138,9 @@ No CHECK ties `open_owners='team'` to a non-null `open_team_id`: `ON DELETE SET 
   - First view: `SelectControl` (`components/Select.tsx`) with the 5 views (existing view labels).
   - Week start: `SelectControl`, Sunday / Monday.
   - Event length: `SelectControl`, 6 options.
-  - Meet: `Toggle` (`components/Toggle.tsx`), shown only when `meet_available` is true. `/google-calendar/status` keeps its admin-only read (`:120-122`); this bin does not change it. When the row is hidden, the PUT sends the loaded `auto_meet` value unchanged (never drops or resets it).
+  - Meet: `Toggle` (`components/Toggle.tsx`), shown only when `meet_available` is true. Add `meet_available?: boolean` to the page's `GoogleStatus` type (`:93-96`), the same shape as `SchedulePageImpl.tsx:877`. `/google-calendar/status` keeps its admin-only read (`:120-122`); this bin does not change it. When the row is hidden, the PUT sends the loaded `auto_meet` value unchanged (never drops or resets it).
   - Whose events: `SelectControl`, 3 options; "everyone" and "one team" shown only with `staff.view` (after `!permsLoading`); "one team" shows a `SelectControl` of teams from `/calendar/teams`.
-  - One Save button → `api.put("/calendar/preferences", body)` → `await` `useInvalidateApi()(["calendar","preferences"])` (`frontend/src/lib/query/apiQuery.ts:105`; it refetches the active query so the cache holds the new values before the success text shows) → success text; failure text on error.
+  - One Save button, disabled until `/calendar/preferences` has loaded successfully (so a failed or pending read never saves the defaults over the saved values) → `api.put("/calendar/preferences", body)` → `await` `useInvalidateApi()(["calendar","preferences"])` (`frontend/src/lib/query/apiQuery.ts:105`; it refetches the active query so the cache holds the new values before the success text shows) → success text; failure text on error.
 - Admin sections and the people-color sections keep their current conditions (`isTenantAdmin`, `ownersEnabled`).
 - Only existing molds (`components/`); no raw `select`/`input`, no color literals (ADR-144, ADR-067).
 
@@ -155,7 +156,8 @@ Under `schedule`: `prefsTitle`, `prefsFirstView`, `prefsWeekStart`, `prefsWeekSt
   - Owners: `team_ids` contains only active teams.
 - Front end:
   - `SchedulePageImpl.test.tsx`: B1 per value, B2 defaults, B6 (a)(b)(c), B8 Meet, gear for a plain user (B7).
-  - `ScheduleSettingsPage.test.tsx`: plain user sees only the personal section and it is the first section shown; saving sends the PUT body (with the loaded `auto_meet` when the Meet row is hidden); Meet toggle hidden without `meet_available`; "everyone"/"team" hidden without `staff.view`; a `staff.view` non-admin gets the team choices.
+  - `ScheduleSettingsPage.test.tsx`: plain user sees only the personal section and it is the first section shown; saving sends the PUT body (with the loaded `auto_meet` when the Meet row is hidden); Meet toggle hidden without `meet_available`; "everyone"/"team" hidden without `staff.view`; a `staff.view` non-admin gets the team choices; Save is disabled before preferences load.
+  - Existing tests to rewrite (they fail on purpose after this bin): `ScheduleSettingsPage.test.tsx:128-131` "shows the permission message to a user with neither" → the same user sees only the personal section; any `SchedulePageImpl.test.tsx` test asserting that a plain user has no gear (near `:149`) → the gear is shown.
   - `frontend/src/components/CalendarView.test.tsx` (existing file, where `normalizeSelectedRange` is already exercised): with `clickMinutes` 30 a click makes 30 minutes; without the prop it stays 60.
 
 ## 6 Out of scope
@@ -182,6 +184,7 @@ Under `schedule`: `prefsTitle`, `prefsFirstView`, `prefsWeekStart`, `prefsWeekSt
 | A plain user saved "everyone" before losing `staff.view` | The screen falls back to "only me" when `canManageOwners` is false (§4-2) |
 | Bin 3a and 3b both change the same table | 3b starts only after 3a is in main; its migration runs after 3a's in `run_all_migrations.sh` |
 | The PATCH color UPSERT overwrites preferences | B4 real PostgreSQL test |
+| The one-time apply uses a cached (old) `team_ids` right after a team change | Accepted: it is applied once per opening; the next opening reads fresh data |
 
 ## 9 External and past examples
 
@@ -202,3 +205,7 @@ Under `schedule`: `prefsTitle`, `prefsFirstView`, `prefsWeekStart`, `prefsWeekSt
 - Round 1 (cloud architect, `review-architect-bin3b-1.md` on branch `release/schedule-settings-bin3b-review1`, against 69967ed10): REVISE. 2 must-fix (R1, R2) and 10 light (L1–L10).
   - Opus checked the main claims against `origin/main` before applying: `usePermissions.ts:27` `loading`; `SchedulePageImpl.tsx:874` does not read `loading`, `:877` reads Google status only for admins, `:186` has only `addHours`; `ScheduleSettingsPage.tsx:91,129,145`; `apiErrorReason.ts:39`; `test_api_error_reason_sync.py:70`; `frontend/api-contract/openapi.json` exists; tenant numbers 978/979/981/989 in use. All match the review.
   - Applied: R1 → §4-2 "Whose events" waits for permissions, owners, preferences and (for team) the team list, and does not override a hand change; B6 gets (b)(c). R2 → §4-3 reads the team list for every user; Meet stays admin-only (stated in §4-2, §4-3, B7) and the PUT keeps the loaded `auto_meet`. L1 molds `SelectControl`/`Toggle`; L2 contract path and command; L3 `apiError.invalidTeam` in both lists; L4 commit then `reset_tenant_context`; L5 B5 checks the model; L6 registration places; L7 `addMinutes` is new; L8 test goes into `CalendarView.test.tsx`; L9 `personal` section key and first position, unused key removal; L10 refetch after save.
+- Round 2 (cloud architect, `review-architect-bin3b-2.md` on branch `release/schedule-settings-bin3b-review2`, against bc929f930): **APPROVE**. All 12 round-1 items confirmed against the code; no must-fix; 7 light notes.
+  - Opus checked against `origin/main` 314eeef1e: `ScheduleSettingsPage.test.tsx:128-131` permission-message test; `ScheduleSettingsPage.tsx:93-96` `GoogleStatus` has no `meet_available`; `SchedulePageImpl.tsx` `setView(` at `:1421-1425`, `:1576`, `:1650`; gear test at `SchedulePageImpl.test.tsx:149`. All match.
+  - Applied: L1 tests to rewrite (§5); L2 `meet_available` in `GoogleStatus` (§4-3); L3 `teamIds` on the owner type (§4-2); L4 Save disabled until loaded (§4-3, §5); L5 cached `team_ids` risk (§8); L6 one `changeViewByHand` wrapper (§4-2); L7 count = main + 6 (§3-4).
+- Status: design reviewed (APPROVE). Implementation waits for bin 3a on main.
