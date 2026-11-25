@@ -3642,7 +3642,7 @@
     "categoryName": "種類の名前",
     "categoryNamePlaceholder": "新しい種類の名前",
     "categoryNameBlankHint": "空にして保存すると、元の名前に戻ります。",
-    "categoryCannotDisable": "この種類は使わなくできません。",
+    "categoryCannotDisable": "この種類は常に使うため、使わない設定にはできません。このままご利用ください。",
     "categoryColor": "種類の色",
     "categoryNoColor": "種類の色なし",
     "categoryDefaultShare": "共有の初期値",

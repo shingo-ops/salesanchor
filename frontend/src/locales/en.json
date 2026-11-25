@@ -3641,7 +3641,7 @@
     "categoryName": "Category name",
     "categoryNamePlaceholder": "Name of the new category",
     "categoryNameBlankHint": "Saving with an empty name restores the original name.",
-    "categoryCannotDisable": "This category cannot be turned off.",
+    "categoryCannotDisable": "This category is always in use and cannot be turned off. Please leave it as it is.",
     "categoryColor": "Category color",
     "categoryNoColor": "No category color",
     "categoryDefaultShare": "Default sharing",
