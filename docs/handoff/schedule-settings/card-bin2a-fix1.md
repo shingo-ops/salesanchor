@@ -8,12 +8,13 @@
 
 マージ前審査（reviewer・opus）が REVISE。必須チェック 2 本（会社のひな形の形の差0・Frontend unit tests）が赤。Opus が手元で 3 件とも事実を確かめた。
 
-## 触るファイル（この 4 つだけ）
+## 触るファイル（この 5 つだけ）
 
 1. `migrations/20261126_100000_create_calendar_categories.sql`
 2. `frontend/src/lib/apiErrorReason.ts`（元のカードに無い。この直しで足す）
 3. `frontend/src/locales/ja.json` と `frontend/src/locales/en.json`
 4. `docs/handoff/cloud-case-ai/stage1-column-class.tsv`
+5. `frontend/src/lib/apiErrorReason.test.ts`（第2版で足す。1回目の実行が「66 件」固定の試験で止まったため）
 
 ## 直し
 
@@ -48,6 +49,8 @@
   - `apiErrorReason.ts` の表の `calendar_owner` 行の次に `calendar_category: "apiError.notFoundTarget.calendar_category",` を足す。
   - `ja.json` の `apiError.notFoundTarget` の `calendar_owner` の次に `"calendar_category": "予定の種類",` を足す。
   - `en.json` の同じ場所に `"calendar_category": "The event category",` を足す。
+  - `frontend/src/lib/apiErrorReason.test.ts:88-89` の件数を 66 から 67 にする（試験名の `has 66 targets` も `has 67 targets` にする）。この 2 か所の数字の他は触らない。
+- 1回目の実行で分かった事実: 移行の `$function$` の閉じと `tenant.py` の `$function$;` の差は区切りの外なので、関数の本文には入らない。空白の差だけ直せばよい。
 
 ### 直し3 表の壊れた 1 行を元に戻す
 
@@ -67,7 +70,7 @@
 
 ## 停止する条件（BLOCKED: で返す）
 
-- 上の 4 つ以外を変える必要が出た。
+- 上の 5 つ以外を変える必要が出た。
 - 直し1 をしても形の差が残った（残った物の名前と差の原文を書く）。
 - 上の試験が、この直しと関係なく落ちる。
 
