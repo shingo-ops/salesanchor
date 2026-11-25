@@ -174,6 +174,8 @@ class EventDraft(BaseModel):
     ask_count: int = 0
     # 便W: 直す頼みの答えのときだけ真偽（直せたか）。ほかは null
     edited: bool | None = None
+    # 便W2: 直す頼みの答えのとき、Meet を付けてと言われたが付けられない人だったか（ほかは null）
+    meet_refused: bool | None = None
 
 
 class UnknownDraft(BaseModel):

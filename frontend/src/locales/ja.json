@@ -6332,6 +6332,8 @@
       "invoiceReady": "請求書の下書きを出しました。画面で中身を確かめて、作るボタンを押してください。",
       "notCreated": "入れませんでした。",
       "editedConfirm": "直しました。{{title}}を{{when}}に入れますか？",
+      "meetUnavailable": "Meet は付けられません。はい、か、いいえ、か、直したいところを言ってください。",
+      "editedMeetUnavailable": "直しました。Meet は付けられません。{{title}}を{{when}}に入れますか？",
       "notEdited": "直すところが分かりませんでした。はい、か、いいえ、か、直したいところを言ってください。",
       "checkScreen": "画面で確かめて、作るボタンを押してください。",
       "yesWords": "はい|うん|お願い|入れて|作って|オッケー|ok",

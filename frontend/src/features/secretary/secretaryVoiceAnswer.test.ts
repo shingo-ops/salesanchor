@@ -51,3 +51,21 @@ describe("judgeYesNo", () => {
     expect(judgeYesNo("yes", ["", "yes"], [""])).toBe("yes");
   });
 });
+
+describe("judgeYesNo yesMore (bin W2)", () => {
+  const HAI_HAI = HAI + HAI;
+  const IRETE = c(0x5165, 0x308c, 0x3066);
+  const BASHO = c(0x5834, 0x6240, 0x306f, 0x6e0b, 0x8c37, 0x306b, 0x3057, 0x3066);
+  const ONEGAI = c(0x304a, 0x9858, 0x3044, 0x3057, 0x307e, 0x3059);
+  it("judges bare yes words (repeated, with filler yes words) as yes", () => {
+    expect(judgeYesNo(`${HAI}、${IRETE}`, JA_YES, JA_NO)).toBe("yes");
+    expect(judgeYesNo(HAI_HAI, JA_YES, JA_NO)).toBe("yes");
+    expect(judgeYesNo("Yes, please.", EN_YES, EN_NO)).toBe("yes");
+    expect(judgeYesNo("ok ok", EN_YES, EN_NO)).toBe("yes");
+  });
+  it("judges yes followed by more content as yesMore", () => {
+    expect(judgeYesNo(`${HAI}、${BASHO}`, JA_YES, JA_NO)).toBe("yesMore");
+    expect(judgeYesNo(`${HAI}、${ONEGAI}`, JA_YES, JA_NO)).toBe("yesMore");
+    expect(judgeYesNo("yes, at four", EN_YES, EN_NO)).toBe("yesMore");
+  });
+});

@@ -166,7 +166,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
     setMessages((prev) => prev.map((m) => (m.id === id ? next : m)));
 
   // 下書きの中身を読んで確かめを始める（声が続いているときだけ呼ぶ）。key は読み上げの文の鍵
-  const startConfirm = (id: number, d: EventDraftData, key: "confirmEvent" | "editedConfirm") => {
+  const startConfirm = (id: number, d: EventDraftData, key: "confirmEvent" | "editedConfirm" | "editedMeetUnavailable") => {
     if (!d.title || !d.start || !d.end) {
       void speakThenListen(id, t("secretary.voiceMode.checkScreen"));
       return;
@@ -189,7 +189,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
   };
 
   // 便W: 確かめ待ちの間の、はい／いいえでない文は「直す頼み」として秘書に送る
-  const sendEdit = async (confirm: { id: number; tries: number }, trimmed: string) => {
+  const sendEdit = async (confirm: { id: number; tries: number }, trimmed: string, yesFallback = false) => {
     const handle = eventRefs.current.get(confirm.id);
     if (!handle) {
       pendingConfirmRef.current = null;
@@ -215,7 +215,27 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
       if (reply.kind === "event" && reply.draft.edited === true && !reply.draft.ask) {
         replaceMessage(confirm.id, { id: confirm.id, side: "assistant", kind: "text", text: t("secretary.edit.replaced") });
         replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "event", reply, calendarType });
-        if (voiceKept) startConfirm(pendingId, reply.draft, "editedConfirm");
+        if (voiceKept) {
+          startConfirm(
+            pendingId,
+            reply.draft,
+            reply.draft.meet_refused === true ? "editedMeetUnavailable" : "editedConfirm",
+          );
+        }
+      } else if (reply.kind === "event" && reply.draft.meet_refused === true) {
+        // 直せず、Meet を断った: 前の下書きのまま確かめ待ちを続ける（回数は増やさない）
+        const meetText = t("secretary.voiceMode.meetUnavailable");
+        replaceMessage(pendingId, { id: pendingId, side: "assistant", kind: "text", text: meetText });
+        if (voiceKept) {
+          pendingConfirmRef.current = { id: confirm.id, tries: confirm.tries };
+          void speakThenListen(pendingId, meetText);
+        }
+      } else if (yesFallback) {
+        // はいと直し: 直す欄が無かったので、前の下書きをそのまま作る
+        setMessages((prev) => prev.filter((m) => m.id !== pendingId));
+        if (voiceKept && !(eventRefs.current.get(confirm.id)?.submitByVoice() ?? false)) {
+          void speakThenListen(confirm.id, t("secretary.voiceMode.checkScreen"));
+        }
       } else {
         replaceMessage(pendingId, {
           id: pendingId,
@@ -278,6 +298,8 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
         if (!(eventRefs.current.get(confirm.id)?.submitByVoice() ?? false)) {
           void speakThenListen(confirm.id, t("secretary.voiceMode.checkScreen"));
         }
+      } else if (answer === "yesMore") {
+        await sendEdit(confirm, trimmed, true);
       } else if (answer === "no") {
         markCancelled(confirm.id);
         void speakThenListen(confirm.id, t("secretary.voiceMode.notCreated"));

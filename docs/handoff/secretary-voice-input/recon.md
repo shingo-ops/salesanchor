@@ -110,3 +110,32 @@
 
 - 読み取れること（事実）: 場所・時刻・題名・Meet は今の指示文のままで 8/8 読めた。説明・メモは 1/4。時刻だけ変える頼みでは終わりが null で返る（2/2）。
 - 未確認: 回数が 2 回ずつで少ない。指示文を足した後の数は便W の測り（kgi.md §6 W1・W2）で数える。
+
+## 10. 声で直す便の気をつける点 3 つ（便W2・2026-11-25 調べ・origin/main ea800930e）
+
+### 10-1 実物
+
+- 「はい」の判定は、いいえの語が無く、文の頭が はい の語なら、後ろに何が続いても「はい」（`frontend/src/features/secretary/secretaryVoiceAnswer.ts:60-65`）。「はい」なら前の下書きをそのまま作る（`frontend/src/features/secretary/SecretaryChat.tsx:276-280`）。はい の語は `はい|うん|お願い|入れて|作って|オッケー|ok`（`frontend/src/locales/ja.json` の `secretary.voiceMode.yesWords`）。
+- 直す道で日付の表（`apply_day`）を当てるのは、AI の始まりがカルテと時刻として違うとき（`backend/app/routers/assistant.py:340-341`）。時刻だけ違っても当たる。表が文の中に日付の言い方を 1 つだけ見つけると、始まりの日をその日に替える（`backend/app/services/secretary_dates.py:201-228`）。
+- 手元で表を試した結果（Opus・2026-11-25・`backend/app/services/secretary_dates.py` を直接呼ぶ）: 「4時に変えて、説明に明日と入れて」など、読点や「して」でつながる 7 つの言い方は表が日付を見つけず（None）、日付は動かない。「4時に変えて 説明 明日」のように空白で区切ると表が「明日」を見つけ、カルテが明日でない日なら始まりの日が明日に動く。
+- Meet を付けられるかは `can_add_meet`（`backend/app/services/calendar_service.py:74-81`・Google をつないだ本人だけ真）。直す道は AI の add_meet をそのまま合わせ（`backend/app/services/secretary_karte.py` の `merge_edit`）、変わった＝真になる。返す下書きは付けられない人では add_meet を null にする（`backend/app/routers/assistant.py:430`）ので、画面は何も変わらないのに「直しました」と読む。
+
+### 10-2 本物の AI の答え（2026-11-25 09:14 JST・Opus が実施）
+
+- 道は §9-3 と同じ（本番の backend の image の使い捨て容器から秘書の容器を直接呼ぶ・記録に行は入らない）。カルテ＝題名「打ち合わせ」・始まり 2026-11-30 15:00・終わり 16:00（明日でない日）。今日＝2026-11-25。9 つの言い方を 3 回ずつ（計 27 回・全部 HTTP 200）。
+- 台本: `docs/handoff/secretary-voice-input/binW2/probe_followup.py`。生の結果: `docs/handoff/secretary-voice-input/binW2/probe-before-20261125.jsonl`。
+
+| 言い方 | 3 回の答え | 数 |
+|---|---|---|
+| d1 4時に変えて、説明に明日と入れて | 3 回とも start 11/30 16:00・description「明日」 | 日付を変えない 3/3 |
+| d2 16時にして、メモは明日の資料 | 3 回とも start 11/30 16:00・description「明日の資料」 | 3/3 |
+| d3 説明に今日の議事録と入れて4時にして | 3 回とも start 11/30 16:00・description「今日の議事録」 | 3/3 |
+| d4 時間を4時にしてメモに明日持参 | 3 回とも start 11/30 16:00・description「明日持参」 | 3/3 |
+| d5 4時に変えて | 3 回とも start 11/30 16:00 | 3/3 |
+| y1 はい、場所は渋谷にして | 3 回とも event・location「渋谷」 | 直す欄を返した 3/3 |
+| y2 オッケー、説明に資料と入れて | 3 回とも event・description「資料」 | 3/3 |
+| y3 はい、お願いします | 3 回とも unknown | 直す欄なし 3/3 |
+| y4 うん、それで | unknown 2 回・event で全部の欄 null 1 回 | 直す欄なし 3/3 |
+
+- 読み取れること（事実）: AI は時刻だけの直しで日付を 15/15 変えなかった。日付が動く道は表（`apply_day`）だけ。「はい」の後ろの直しは 6/6 読めた。後ろに直しが無い「はい」は 6/6 直す欄を返さなかった（`merge_edit` で変わった＝偽になる形）。
+- 未確認: 3 回ずつで少ない。反映後に kgi.md §7 X1〜X3 で同じ台本をもう一度流す。

@@ -505,3 +505,74 @@ async def test_without_edit_edited_is_null(allowed, monkeypatch, meet):
     _mock_agent(monkeypatch, _respond(200, _event(title="面談", start=S, end=E)))
     d = (await allowed.post(URL, json={"text": "面談", "karte": None})).json()["draft"]
     assert d["edited"] is None
+
+
+# ---- 便W2: 時刻だけの直しで日付が動かない・Meet を断る・edit なしは null ----------
+
+
+def test_same_day_cases():
+    from app.services.secretary_dates import same_day
+
+    assert same_day("2026-11-30T15:00:00+09:00", "2026-11-30T16:00:00+09:00") is True
+    assert same_day("2026-11-30T15:00:00+09:00", "2026-12-01T15:00:00+09:00") is False
+    assert same_day(None, "2026-11-30T15:00:00+09:00") is False
+    assert same_day("2026-11-30T15:00:00+09:00", None) is False
+    assert same_day("2026-11-30T15:00:00+01:00", "2026-11-30T16:00:00+01:00") is False
+    assert same_day("2026-11-30T15:00:00+09:00", "2026-11-30T15:00:00+01:00") is False
+
+
+@pytest.mark.asyncio
+async def test_edit_other_offset_same_instant_does_not_move_date(allowed, monkeypatch, meet):
+    meet(False)
+    karte_start = "2026-11-10T02:00:00+01:00"
+    ai_start = "2026-11-10T10:00:00+09:00"
+    _mock_agent(monkeypatch, _respond(200, _event(description="明日", start=ai_start)))
+    karte = _karte(title="定例", start=karte_start, end="2026-11-10T03:00:00+01:00", edit=True)
+    d = (await allowed.post(URL, json={"text": "説明に明日と入れて", "karte": karte})).json()["draft"]
+    assert d["start"] == karte_start
+
+
+@pytest.mark.asyncio
+async def test_edit_time_only_change_keeps_date_when_text_has_day_word(allowed, monkeypatch, meet):
+    meet(False)
+    start, end = "2026-11-30T15:00:00+09:00", "2026-11-30T16:00:00+09:00"
+    _mock_agent(monkeypatch, _respond(200, _event(start="2026-11-30T16:00:00+09:00", description="明日")))
+    karte = _karte(title="定例", start=start, end=end, edit=True)
+    d = (await allowed.post(URL, json={"text": "4時に変えて 説明 明日", "karte": karte})).json()["draft"]
+    assert (d["start"], d["end"], d["edited"]) == ("2026-11-30T16:00:00+09:00", "2026-11-30T17:00:00+09:00", True)
+
+
+@pytest.mark.asyncio
+async def test_edit_meet_only_unavailable_is_refused_not_edited(allowed, monkeypatch, meet):
+    meet(False)
+    _mock_agent(monkeypatch, _respond(200, _event(add_meet=True)))
+    karte = _karte(title="定例", start=S, end=E, edit=True)
+    d = (await allowed.post(URL, json={"text": "Meetも付けて", "karte": karte})).json()["draft"]
+    assert (d["edited"], d["meet_refused"], d["add_meet"]) == (False, True, None)
+
+
+@pytest.mark.asyncio
+async def test_edit_location_and_meet_unavailable_is_edited_and_refused(allowed, monkeypatch, meet):
+    meet(False)
+    _mock_agent(monkeypatch, _respond(200, _event(location="渋谷", add_meet=True)))
+    karte = _karte(title="定例", start=S, end=E, edit=True)
+    d = (await allowed.post(URL, json={"text": "場所は渋谷、Meetも付けて", "karte": karte})).json()["draft"]
+    assert (d["edited"], d["meet_refused"], d["location"]) == (True, True, "渋谷")
+
+
+@pytest.mark.asyncio
+async def test_edit_meet_available_is_kept_and_not_refused(allowed, monkeypatch, meet):
+    meet(True)
+    _mock_agent(monkeypatch, _respond(200, _event(add_meet=True)))
+    karte = _karte(title="定例", start=S, end=E, is_meeting=True, edit=True)
+    d = (await allowed.post(URL, json={"text": "Meetも付けて", "karte": karte})).json()["draft"]
+    assert (d["edited"], d["meet_refused"], d["add_meet"]) == (True, False, True)
+
+
+@pytest.mark.asyncio
+async def test_karte_without_edit_has_null_edited_and_meet_refused(allowed, monkeypatch, meet):
+    meet(False)
+    _mock_agent(monkeypatch, _respond(200, _event(title="面談", start=S, end=E)))
+    karte = _karte(title="面談", start=S, end=E, edit=False)
+    d = (await allowed.post(URL, json={"text": "面談", "karte": karte})).json()["draft"]
+    assert (d["edited"], d["meet_refused"]) == (None, None)
