@@ -34,7 +34,7 @@
 - 時刻の値の 12 時間足しは `parse_iso` で読んだ `datetime` に `timedelta(hours=12)` を足し `isoformat(timespec="seconds")`。時差の印が +09:00 でない・無い値は触らない（`_JST_OFFSET` と比べる）。終わり < 新しい始まりの比べも、終わりの印が +09:00 のときだけ行う（印が混ざると `datetime` の比べが `TypeError` になり 500 になる）。
 - カルテの始まりの朝の点検（0〜6時）: 時差の印があれば `astimezone` で日本時間に直してから時を見る。印が無ければ時をそのまま見る。
 - 「素の時刻」の数の集まりと、値の時（日本時間）を比べる。分は見ない（「4時半」→ 04:30 → 16:30）。
-- 止める語は design §18-4 の 1 の一覧どおり。NFKC の後、大文字小文字を区別せずに見る。日本語の語と `a.m.`・`p.m.` は部分一致、英字の `am`・`pm` は `(?<![A-Za-z])(?:am|pm)(?![A-Za-z])`（「4pm」「PM会議」は止まる・「team」「program」は止まらない）。
+- 止める語は design §18-4 の 1 の一覧どおり。NFKC の後、大文字小文字を区別せずに見る。日本語の語と `a.m.`・`p.m.` は部分一致（正規表現なら点は `a\.m\.` のように文字として書く）、英字の `am`・`pm` は `(?<![A-Za-z])(?:am|pm)(?![A-Za-z])`（「4pm」「PM会議」は止まる・「team」「program」は止まらない）。
 - `intent.model_copy(update={"event": ...})` で `Intent` の検査が飛ぶことが問題になれば止める（`Intent` に model_validator があれば、event の型を変えないので通るはず。違えば `NEEDS_DECISION:`）。
 - 今の試験が `afternoon_hours` で落ちたら、試験は直さず止めて `NEEDS_DECISION:`（落ちた試験名と生の出力を付ける）。
 
@@ -57,7 +57,7 @@ backend `backend/tests/test_assistant_karte.py`（今の口の試験の書き方
 - 直す道・カルテ 11/30 15:00〜16:00（+09:00）・文「はい、終わりは5時にして」・偽の AI が end `2026-11-30T05:00:00+09:00` だけ → end 17:00・`edited` 真・`edit_dropped` 偽。
 - 直す道・カルテ 11/30 15:00〜16:00・文「終わりを朝5時にして」・偽の AI が end 05:00 → 決まりは当たらず、終わり < 始まりで戻る → start/end はカルテのまま・`edited` 偽・`edit_dropped` 真。
 - 直す道・偽の AI が unknown → `edited` 偽・`edit_dropped` 偽。
-- 直す道・カルテ 11/30 15:00・終わり null・文「はい、終わりを朝5時にして」・偽の AI が end 05:00 だけ → `settle_dates` が終わりを落とし結果がカルテと同じ → `edited` 偽・`edit_dropped` 真（`elif edited and not edit_changed` の分かれ）。
+- 直す道・カルテ 11/30 15:00・終わり null・文「はい、終わりを朝5時にして」・偽の AI が end `2026-11-30T05:00:00+09:00` だけ → `settle_dates` が終わりを落とし結果がカルテと同じ → `edited` 偽・`edit_dropped` 真（`elif edited and not edit_changed` の分かれ）。
 - カルテがあって `edit` が偽 → `edit_dropped` null。
 - 古い画面の道（karte の鍵なし）・文「明日4時に打ち合わせ」・偽の AI 04:00 → start 16:00。
 - 今の `test_assistant_karte.py` の試験（`:541` の「4時に変えて 説明 明日」を含む）がそのまま通る。

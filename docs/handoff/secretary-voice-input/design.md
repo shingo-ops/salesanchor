@@ -729,3 +729,4 @@ research.md §3（ChatGPT の音声モード・2023-09-25 公開。形の見本�
 ### 18-11 審査の記録
 
 - 第1回（クラウドの Sonnet・architect・`review-architect-binW3-1.md`・枝 `release/secretary-voice-w3-review1` 0d4354e9d）: REVISE。R1（終わりの時差の印が混ざると `TypeError` で 500）→ 18-4 の 1 と card §3・§4 に反映。L1（英字の am/pm は前後が英字でないときだけ）・L2（「4:30」は対象外と 18-2 に）・L3（`edit_changed` の分かれでも `edit_dropped`）・L5（カルテの朝の点検の時差）も反映。L4（`probe_after.py` に Meet の分かれが無い・yes_07 の 1 種だけ `edited` が口と違う）は測りの報告に書く。
+- 第2回（クラウドの Sonnet・architect・`review-architect-binW3-2.md`・枝 `release/secretary-voice-w3-review2` aa7bbf6cb）: APPROVE。R 無し。L1（`a.m.` の点は文字として書く）・L2（偽の AI の終わりの値を日付つきで書く）を card §3・§4 に反映。L3 は測りの報告に Meet の分かれの 1 行を入れる。
