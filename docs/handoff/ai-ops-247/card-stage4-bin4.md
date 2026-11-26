@@ -6,7 +6,7 @@
 - 設計: `docs/handoff/ai-ops-247/stage4-design.md` §2（:40-77）・§3 U1（:78-101）・§4 U2（:103-119。この便では作らない。参考）・§5 U5（:121-127）・§13（:194-256）
 - 要件: `docs/handoff/ai-ops-247/stage4-requirements.md` R4〜R6（:112-114）・B2・B3（:157-158）・O6（:171）
 - 対象ADR: ADR-1012（段階4）、ADR-1052（相談係の伏せた窓）、ADR-135・ADR-136（本番 `scripts/` を含む PR の GO）
-- 状態: 設計案作成済み。設計審査 1 回目は REVISE（審査の記録は枝 release/ai-ops-stage4-bin4-review1 の docs/handoff/ai-ops-247/review-architect-stage4-bin4-1.md）で、R1〜R3・L1〜L6 を直した。2 回目は REVISE（審査の記録は枝 release/ai-ops-stage4-bin4-review2 の docs/handoff/ai-ops-247/review-architect-stage4-bin4-2.md）で、R1・L1〜L6 をこの版で直した。実装は未着手。PO の実装承認は未取得
+- 状態: 設計案作成済み。設計審査 1 回目は REVISE（審査の記録は枝 release/ai-ops-stage4-bin4-review1 の docs/handoff/ai-ops-247/review-architect-stage4-bin4-1.md）で、R1〜R3・L1〜L6 を直した。2 回目は REVISE（審査の記録は枝 release/ai-ops-stage4-bin4-review2 の docs/handoff/ai-ops-247/review-architect-stage4-bin4-2.md）で、R1・L1〜L6 を直した。3 回目は REVISE（審査の記録は枝 release/ai-ops-stage4-bin4-review3 の docs/handoff/ai-ops-247/review-architect-stage4-bin4-3.md）で、R1・L1〜L3 をこの版で直した。実装は未着手。PO の実装承認は未取得
 - 危険便: 4a はいいえ（`backend/` のコードだけ）。4b ははい（本番 `scripts/` と prod1 の crontab・`.env`。GO #番号が要る。POの委任に基づくClaude Opus発行）。4c はいいえ（Mac の定期実行だけ）
 - 実装担当: クラウドの Sonnet（RemoteTrigger の一回実行）。push して止まる。PR は Opus が作る
 - 便の番号について: 要件の道のり表の順番 9（`docs/handoff/ai-ops-247/stage4-requirements.md:232`）は「便4＝許可の注記」「便5＝サーバーが起こす部品」と分けていた。PO 2026-11-24「1」で、この 2 つと P5 を 1 枚の段取り表にまとめた（4a・4b・4c）。本番の変更は 4a → 4b → 4c の順に 1 つずつ行う
@@ -63,7 +63,7 @@ GitHub の App の範囲（P5）:
 
 未確認（この便で確かめる。確かめるまで、それに頼る作業に進まない）:
 - U-a prod1 の ubuntu から api.anthropic.com へ HTTPS で届くか（届かなければ止まって PO に聞く）。
-- U-b prod1 の `/home/ubuntu/salesanchor/.env` に CASE_ADMIN_TOKEN が入っているか（入っていなければ止まる。新しく置くのは secret の変更）。名前だけを `grep -c '^CASE_ADMIN_TOKEN='` で数え、値は読まない。
+- U-b prod1 の `/home/ubuntu/salesanchor/.env` に CASE_ADMIN_TOKEN が入っているか（入っていなければ止まる。新しく置くのは secret の変更）。名前だけを `grep -c '^CASE_ADMIN_TOKEN='` で数え、値は読まない。台本 3 のために、相談係の鍵 CASE_AGENT_TOKEN も同じく名前の数だけを数える（報告の口は相談係の鍵が要る。`backend/app/routers/ops_case.py:161`）。
 - U-d prod1 の `/home/ubuntu/salesanchor` で `git rev-parse HEAD` が取れるか（実行係へ渡す「本番で動いている版」の取り方）。
 - U-a・U-b・U-d は、§7（３）の台本 0（PO の `!`・読み取りだけ）で 4b の依頼の前に確かめる。
 - U-c GitHub の App の範囲を、画面以外の道で毎週読めるか（§1 の 4c）。
@@ -72,7 +72,7 @@ GitHub の App の範囲（P5）:
 
 入れる:
 - 4a（`backend/` のコードだけ・表は変えない）
-  1. round の step に `approve`（PO の許可）・`wake`（サーバーが AI を起こす。起こす前に書く予約）・`wake_skipped`（起こさなかった）・`wake_failed`（起こせなかった）の 4 つを足す。reason に `limit`（上限）を足す。`halt` は既にある
+  1. round の step に `approve`（PO の許可）・`wake`（サーバーが AI を起こす。起こす前に書く予約）・`wake_skipped`（起こさなかった）・`wake_failed`（起こせなかった）の 4 つを足す。reason に `limit`（上限）と `no_report`（使える報告が無い）を足す。`halt` は既にある
   2. `GET /ops/events` に `round_step` で絞る引数を足す（数えるため。§2 4a（２））
   3. 管理者の鍵で報告を読む口 `GET /ops/case/{incident_id}/reports` を足す。case-api には足さない。backend の口なので app と api の `/api/` からは届く（`nginx/nginx.conf:294`・:667。今の札の口と同じ。管理者の鍵が要る）
   4. 試験と `frontend/api-contract/openapi.json` の書き出し
@@ -94,6 +94,7 @@ GitHub の App の範囲（P5）:
 - 値を見たい申請を調べ係が使うこと（設計 :54。v1 では使わない）
 - 画面の変更（許可は v1 ではチャットで出す。設計 §12 D5 :191）
 - サーバーに常駐する担当（`docs/handoff/ai-ops-247/server-agent-design.md`）。あちらは PO が話しかける担当で、この便の「自動で起こす」道とは別
+- 報告を直す口・同じ件に同じ種類の報告を 2 通目として出す形。今は 1 件に種類ごとに 1 通で、2 通目は 409（`backend/app/routers/ops_case.py:518`・:533-534、一意は `migrations/20261113_200000_add_ops_case_report_kind.sql:22`）。表の権限も SELECT と INSERT だけ（`migrations/20261031_210000_create_ops_case.sql:499`）。表を変えない便なので、後の便の宿題にする（審査 3 回目 R1）
 
 ## 2. 作り方
 
@@ -115,7 +116,7 @@ GitHub の App の範囲（P5）:
   - 報告の出来事（kind `case_report`）とは kind で見分ける。Discord 発の回の記録とは step で見分ける（便2 の案 A。`docs/handoff/ai-ops-247/card-stage4-bin2.md:78`）。
 
 （５）試験（`backend/tests/` の ops と ops_case の試験に足す。本物の PostgreSQL で流す）:
-  - T1 step に approve・wake・wake_skipped・wake_failed、reason に limit を付けた注記が 200 で入り、detail の round に残る。
+  - T1 step に approve・wake・wake_skipped・wake_failed、reason に limit・no_report を付けた注記が 200 で入り、detail の round に残る。
   - T2 今の 9 つの step と 14 個の reason は今までどおり通る。知らない step（例 `approved`）は 422。
   - T3 `round_step=wake` で、wake の出来事だけが返る。case_report・Discord 発の start は返らない。
   - T4 `GET /ops/case/{id}/reports` は管理者の鍵で 200、相談係の鍵で 401、鍵なしで 401。nginx の case-api の道に当たらないことは、`nginx/nginx.conf` の正規表現を試験の中で `re` で当てて確かめる。
@@ -165,7 +166,7 @@ GitHub の App の範囲（P5）:
 （３）見張り（`monitoring/prometheus/alert_rules.yml` の FirstAid の隣）:
   - AIWakeStale: 起こす係が 5 分動いていない（FirstAidStale :509-518 と同じ形）。
   - AIWakeSkipped: 直近 30 分に wake_skipped か wake_failed の印がある（FirstAidEscalated :497-506 と同じ形）。tier は ticket（人がすぐ動く必要は無いが、知る必要がある）。
-  - 手順 `docs/runbooks/alerts.md` に 2 つの節を足す。手順には「上限で起こさなかった許可は、PO がもう一度許可を出すまで起こさない」を書く。reason `full` のときは、proposal を短くした報告を相談係に出し直させてから、PO が新しい approve を出す。reason `no_report` のときは、相談係に報告を出させてから、PO が新しい approve を出す。
+  - 手順 `docs/runbooks/alerts.md` に 2 つの節を足す。手順には「上限で起こさなかった許可は、PO がもう一度許可を出すまで起こさない」を書く。報告は件ごと・種類ごとに 1 通で、出した後は直せない（§1「入れない」）。このため、(a) reason `no_report` で、その件に種類 investigation の報告がまだ 1 通も無いときだけ、相談係に報告を出させてから PO が新しい approve を出す。(b) reason `full` のとき、または reason `no_report` で使えない報告（status investigating だけ・proposal が空）が既にあるときは、その件は起こす係では起こせない。PO は、実行係を手で起こすか、何もしないかを決める。相談係の指示書に proposal の字数の目安は足さない（full の数は 30 日の見直しで数え、多ければ決め直す）。
 
 （４）PO の画面での準備（実装の後、本番に入れる前）:
   - 実行係の routine: 置き場 salesanchor・コネクタなし。指示文は「文の proposal を設計として、実装を Sonnet に任せ、PR を出して止まる。merge しない」。API の口と鍵を足す。
@@ -173,10 +174,10 @@ GitHub の App の範囲（P5）:
   - Opus が RemoteTrigger の get で、routine に予定（cron）が無いこと・コネクタが空であることを確かめる。
 
 （５）PO の `!` 台本（Opus が作業用のフォルダに置き、中身を会話で見せてから）:
-  - 台本 0（読み取りだけ。4b の依頼の前）: prod1 の ubuntu で、api.anthropic.com への HTTPS の応答の数だけを出す（U-a）・`.env` の CASE_ADMIN_TOKEN の行の数だけを出す（U-b。値は読まない）・`git -C /home/ubuntu/salesanchor rev-parse HEAD` の結果を出す（U-d）。
+  - 台本 0（読み取りだけ。4b の依頼の前）: prod1 の ubuntu で、api.anthropic.com への HTTPS の応答の数だけを出す（U-a）・`.env` の CASE_ADMIN_TOKEN と CASE_AGENT_TOKEN の行の数だけを出す（U-b。値は読まない）・`git -C /home/ubuntu/salesanchor rev-parse HEAD` の結果を出す（U-d）。
   - 台本 1: Keychain の鍵を読み、prod1 の `.env` に `AI_WAKE_EXECUTE_FIRE_TOKEN` と routine の id を足す。前に `.env` の控えを取る。値は引数に置かず、標準入力で渡す。終わったら名前の数だけを出す。
   - 台本 2: crontab の控え → cron と同じ条件で 1 回試す（rc=0 でなければ登録しない。出力に読むコードの版を 1 行出させ、U-d の結果と同じかを見る）→ `* * * * * /usr/bin/flock -n /tmp/ai-wake.lock /usr/bin/python3 /home/ubuntu/salesanchor/scripts/ops/ai_wake.py >> /tmp/ai-wake.log 2>&1` を足す（同じ行が既にあれば足さない）→ `crontab -l | grep ai_wake` と textfile の中身を出す。first_aid の台本（`docs/handoff/ai-ops-247/card-stage3-bin-g.md:1119`）と同じ作り。
-  - 台本 3（V3 の前。PO の同意票を取ってから）: prod1 で、管理者の鍵で試しの件の札を作り（`POST /ops/case/{incident_id}/ticket`）、その札と相談係の鍵で報告を 1 通出す（`POST /ops/case/{incident_id}/report`。`backend/app/routers/ops_case.py:498`）。報告は種類 investigation・status reported・proposal「試し: PR を作らず止まる」。鍵と札は画面に出さず、HTTP の数だけを出す。
+  - 台本 3（V3 の前。PO の同意票を取ってから）: 先に 4a（３）の口で、試しの件の報告が 0 行かを確かめる（種類 investigation の報告が既にあれば 409 になる。あれば止まり、新しい試しの件を作るかを PO に聞く）。U-b で CASE_AGENT_TOKEN の行が 1 でなければ止まる。そのうえで prod1 で、管理者の鍵で試しの件の札を作り（`POST /ops/case/{incident_id}/ticket`）、その札と相談係の鍵で報告を 1 通出す（`POST /ops/case/{incident_id}/report`。`backend/app/routers/ops_case.py:498`）。報告は種類 investigation・status reported・proposal「試し: PR を作らず止まる」。鍵と札は画面に出さず、HTTP の数だけを出す。作った札は 24 時間有効のまま残る（`backend/app/routers/ops_case.py:50`）。試しの件だけの札で、値は画面に出していない。
 
 ### 4c ブランチなし（Mac の定期実行）→ 書類は release/ai-ops-stage4-bin4c-scope-check
 
@@ -198,7 +199,9 @@ GitHub の App の範囲（P5）:
 | 4b の 1 回試しで rc≠0 | crontab に登録しない。ログの終わりを Opus が読み、直す |
 | /fire が 400「Routine is paused.」 | routine が無効。PO に画面での有効化を頼む（勝手に有効にしない） |
 | 起こした実行係が PR を作らずに終わる | 実行記録を読み、報告にまとめて PO に聞く。起こし直すのは PO が新しい許可を出したときだけ（approve 1 つに起こすのは 1 回） |
-| 使える報告が無い件に approve が来た | 起こさず no_report を注記する（⑥a）。PO に「相談係の報告を先に」と伝える |
+| 使える報告が無い件に approve が来た（報告がまだ 1 通も無い） | 起こさず no_report を注記する（⑥a）。PO に「相談係の報告を先に。出たら新しい許可を」と伝える |
+| 使える報告が無い件に approve が来た（使えない報告が既にある）・full で起こさなかった | 報告は直せないので、その件は起こす係では起こせない。PO に「実行係を手で起こすか、何もしないか」を聞く |
+| 台本 3 の前に、試しの件に種類 investigation の報告が既にある | 止まる。新しい試しの件を作るかを PO に聞く |
 | 1 日に AIWakeSkipped が 2 回以上 | 上限 B3 の見直しを PO に聞く（設計 :119 の見込みと比べる） |
 | 4c の道 1 で GitHub がログインを求める | 道 2 に切り替える。Opus がログインしない |
 
@@ -206,7 +209,7 @@ GitHub の App の範囲（P5）:
 
 - V1（4a）本番の `GET /ops/events?round_step=wake` が 200 で items 0。`GET /ops/case/<件>/reports` が api では管理者の鍵で 200、case-api では 404。
 - V2（4b）crontab に 1 行・textfile の最後に動いた時刻が毎分進む（Grafana で `changes(...[5m]) > 0`）。
-- V3（4b）試しの件で実行係を 1 回起こす: 先に台本 3 で、試しの件に使える報告を 1 通置く。そのうえで、PO が許可の注記を書く操作を、試しの件（`ops_incidents` の OpsPipelineTest。PO の同意票を取ってから作る）で 1 回行い、5 分以内に wake の出来事が 1 行増え、実行係の routine の実行記録が 1 件増える。実行係には「試しなので PR を作らず止まる」と note に書く。V3 の後、wake の行の数と実行係の routine の実行記録の数が同じかを比べる（wake の行だけ残り /fire が届いていない回を見つけるため）。
+- V3（4b）試しの件で実行係を 1 回起こす: 先に台本 3 で、試しの件に使える報告を 1 通置く。そのうえで、PO が許可の注記を書く操作を、試しの件（`ops_incidents` の OpsPipelineTest。PO の同意票を取ってから作る）で 1 回行い、5 分以内に wake の出来事が 1 行増え、実行係の routine の実行記録が 1 件増える。実行係には「試しなので PR を作らず止まる」と note に書く。V3 の後、wake の行の数と実行係の routine の実行記録の数が同じかを比べる（wake の行だけ残り /fire が届いていない回を見つけるため）。/fire の時間切れで wake_failed（http=timeout）を書いた回は、実際には起きていることがあるので、別に数えて比べる。
 - V4（4b）全停止を入れた 2 分間、wake が増えない。外した後に動き出す（R6）。PO の同意票を取ってから行う。
 - V5（4b）24 時間、AIWakeStale が鳴らない。
 - V6（4c）最初の週次点検が月曜に動き、記録が 1 件残る。
@@ -261,4 +264,4 @@ GitHub の App の範囲（P5）:
 - 守り手: 試験 W1〜W13（CI）・見張り AIWakeStale・AIWakeSkipped（Discord）・全停止（PO がいつでも入れられる）・4c の週次点検（Discord）。
 - 関所なしの部分: approve の note の中身が PO の言葉どおりか。理由: 書くのは手元の Opus で、機械では照らせない。対処: 審査役が PR の審査で照らす。
 - 担当: ADR-1012 のテーマとして Opus が持つ。
-- 見直し: 4b の本番反映から 30 日で、日ごとの wake・wake_skipped・wake_failed の数を数え、wake の行の数と実行係の実行記録の数を比べ、B3 と F7・F9 を起こすかを PO と決める（設計 :180）。調べ係を起こす便は、O2・O4 の形と P-2・P-3 が揃ってから段取り表を作る。
+- 見直し: 4b の本番反映から 30 日で、日ごとの wake・wake_skipped・wake_failed の数を数え、wake の行の数と実行係の実行記録の数を比べ（wake_failed の http=timeout の回は別に数える）、full と no_report の数を数え、B3 と F7・F9 を起こすかを PO と決める（設計 :180）。調べ係を起こす便は、O2・O4 の形と P-2・P-3 が揃ってから段取り表を作る。報告を直す口（または 2 通目を許す形）は、full・no_report の数を見て後の便で決める。
