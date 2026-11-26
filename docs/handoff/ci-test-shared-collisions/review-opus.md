@@ -24,3 +24,11 @@
 - 原因: `backend/tests/ops/test_ai_cloud_views.py:229-231` は `ai_reader` があると skip する。`ai_reader` を作るのは便1の6ファイルだけ（`git grep` の結果）。消さなくなったので、先に作られた役割が残って skip になる。
 - 試験は -q で動くので、記録に試験ごとの結果は出ない。ほかの5ファイルの `pg_roles` の行は、無ければ作るものだけで、skip しない（`grep -n pg_roles` の結果）。
 - 対処: `docs/handoff/ci-test-shared-collisions/design.md` §3-1 の「追加」の項。直したあとの PR で skipped が 79 に戻ることを K3 とする。
+
+## 便2〜5の設計の審査（2026-11-27）
+- 結果は design.md §12。便2〜5は APPROVE。
+- B と C は PR 5669 で直っていた。クラウドの調べ（04b5cc9ba）は直した後のコードを読んでいたため、B の仕組みを説明できなかった。失敗の時刻と合流の時刻を並べて決着した（recon §6-1）。
+
+## 便2の直し（fecd101f5 の審査・2026-11-27）
+- 審査役（reviewer・opus）は REQUEST_CHANGES。CI の pytest は 2 failed（run 45880338323）。
+- 原因は設計の見落とし2つ。直し方は design.md §7-6。どちらも試験の中だけで直す。
