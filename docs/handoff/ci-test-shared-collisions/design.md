@@ -34,7 +34,7 @@ recon §2 の6ファイルについて、後片付けの中の共通の役割を
 
 - 使わなくなった変数（`existed`・`role_existed`・`_ROLES`・`self.existed` など）は、ほかで使っていなければ外す。使っていれば残す。lint（ruff）の指摘が 0 件になる形にそろえる。
 - 理由のコメントの文: `# 共通の役割はクラスタ全体で1つ。別の係が使っている途中で消すと落ちるため、試験では消さない（docs/handoff/ci-test-shared-collisions/design.md 便1）`
-- 触らない範囲: 役割を作る行、属性を一時的に変える試験（`test_ai_cloud_views.py:460-468`・`test_ops_case_db.py:621-627`）、`test_tenant_isolation_daily_check.py`（自分で作った名前の役割だけを消すため）、migration、製品コード、CI 設定。
+- 触らない範囲: 役割を作る行、属性を一時的に変える試験（`backend/tests/ops/test_ai_cloud_views.py:460-468`・`backend/tests/ops/test_ops_case_db.py:621-627`）、`backend/tests/test_tenant_isolation_daily_check.py`（自分で作った名前の役割だけを消すため）、migration、製品コード、CI 設定。
 
 ### 3-2. 代替案と選んだ理由
 - A（採用）共通の役割を消さない: 消すことが原因なので、消さなければ起きない。役割を作る migration は冪等なので、残っていても次の試験は困らない（recon §2）。CI の DB は回ごとの使い捨てで、残りは次の回に持ち越されない。
@@ -42,14 +42,14 @@ recon §2 の6ファイルについて、後片付けの中の共通の役割を
 - C 試験ごとに別の名前の役割を作る: migration は名前が決まっているので、名前を変えると migration の形を確かめられない。不採用。
 
 ### 3-3. リスクと対処
-- 手元の DB に役割が残る。パスワードの無い役割なので、ログインには使えない（`20261024_100100_create_ai_reader_cloud_role.sql:2`）。手元で消したいときは手で消す。
+- 手元の DB に役割が残る。パスワードの無い役割なので、ログインには使えない（`migrations/20261024_100100_create_ai_reader_cloud_role.sql:2`）。手元で消したいときは手で消す。
 - 属性を一時的に変える2か所の重なり（recon §2「未観測の近い危険」）は、便1では直さない。1便1種類の決まりに従う。便1の受け入れ基準 K4 で見張り、出たら次の便に入れる。
 
 ### 3-4. 受け入れ基準
 | 基準 | 検証方法 |
 |---|---|
 | K1: 差分は §3-1 の6ファイルと、本書類（recon・design・review-opus）・台帳だけ | `gh pr diff --name-only`（審査役） |
-| K2: 6ファイルに、共通の役割を消す `DROP ROLE` が1つも残らない | `git grep -n "DROP ROLE" -- backend/tests` で、`test_tenant_isolation_daily_check.py` 以外が0件（Opus） |
+| K2: 6ファイルに、共通の役割を消す `DROP ROLE` が1つも残らない | `git grep -n "DROP ROLE" -- backend/tests` で、`backend/tests/test_tenant_isolation_daily_check.py` 以外が0件（Opus） |
 | K3: PR の必須チェック pytest が pass。6ファイルの試験は数が減らず、skip も増えない | `gh pr checks` と、PR の run の記録で6ファイルの passed 数を main の直近の回と比べる（Opus） |
 | K4: 合流後の main の Backend Tests 30回で、`role "..." does not exist` と `already exists with unexpected attributes` が0件 | 30回分の失敗の記録を `--log-failed` で保存して数える（Opus・合流から約1〜2週） |
 
@@ -68,7 +68,7 @@ recon §2 の6ファイルについて、後片付けの中の共通の役割を
 - 変更: §3-1 の表のとおり。触らない範囲は §3-1 の最後の項。
 - 確かめ（手元で試験は回さない。試験は GitHub の CI で回す）:
   1. `git -C <wt> diff --stat` が6ファイルだけであること。
-  2. `git -C <wt> grep -n "DROP ROLE" -- backend/tests` が `test_tenant_isolation_daily_check.py` の2行だけであること。
+  2. `git -C <wt> grep -n "DROP ROLE" -- backend/tests` が `backend/tests/test_tenant_isolation_daily_check.py` の2行だけであること。
   3. `cd <wt>/backend && ruff check tests/ops/test_ai_cloud_views.py tests/ops/test_ai_job_assignments_db.py tests/ops/test_ops_case_db.py tests/ops/test_ops_case_report_kind_migration.py tests/test_ops_case_router.py tests/ops/test_ai_ro_views.py` が0件であること。
 - 想定の分かれ道:
   - 消す対象の変数がほかの試験で使われていた → 変数は残し、消す行だけを外す。
