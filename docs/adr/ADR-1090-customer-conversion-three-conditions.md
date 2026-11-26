@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 |------|------|
-| ステータス | Proposed（2026-11-25・PO が切り替えの形に「1」。KGI の承認待ち） |
+| ステータス | Proposed（2026-11-25・PO が切り替えの形に「1」・KGI 承認「1」。2026-11-26 登録済みの決め方に「1」） |
 | 起案日 | 2026-11-25 |
 | 方針の決定者 | Shingo（PO） |
 | Amends | [ADR-1089](ADR-1089-inbox-karte-stage-layout.md) What 2（「成約後＝existing_customer・follow_up_short・follow_up_long」→ 成約後は existing_customer だけ。追客は商談中と同じ見せ方） |
@@ -16,16 +16,17 @@
 - 「「追客（短期）」「追客（長期）」→見込みがある新規顧客である」
 - 段階そのものを自動で既存顧客に変える案に「1」。
 - 「手動で支払い確認した場合も支払い済みにカウントする」
+- 2026-11-26: 「登録が済んだ」を何で見るかの選択肢「「会社に請求先が入っている」で見る」に「1」。
 - 「まず正入りすると3つが揃った人だけを顧客にする。そのうえでアプリを使用する前に取引をしていた顧客をアプリにアップロードするための入口も設けてほしい、CSVで入れられる入口を作ってほしいのだが詳しい要件定義や方法については次便で進める」
 
 ## What（何を決めるか）
 
 1. リードの段階が `existing_customer` になるのは、次の 3 つがすべてそろったときだけ。
-   - ① 登録フォーム（新規登録の種類 `registration_tokens.type = 'register'`）を使い終えた（`used_at` あり）
+   - ① 登録が済んでいる: その人の会社に既定の請求先がある（`company_addresses.address_type = 'billing' AND is_default = TRUE`）。登録フォームで入れた人も、会社の画面で手で入れた人も同じに数える（PO 11/26「1」）
    - ② そのリードの会社がある（`companies.lead_id`）
    - ③ その会社に支払い済みの記録が 1 件以上ある（請求書の入金 `invoices.paid_at` か、注文の支払済 `orders.paid_at`。手で付けたものも数える）
-2. 3 つがそろったら、人の手を通さず自動で `existing_customer` にする。3 つのどれかが書かれる道（フォームの送信・請求書の入金登録・PayPal の戻りと通知・注文の「支払済にする」・会社をリードにつなぐ道）で、そのつど確かめる。
-3. 判定の条件は `backend/app/services/customer_conversion.py` の 1 か所だけに書く。ほかの場所に同じ条件を写さない。
+2. 3 つがそろったら、人の手を通さず自動で `existing_customer` にする。3 つのどれかが書かれる道（フォームの送信・会社の住所を書く道・請求書の入金登録・PayPal の戻りと通知・注文の「支払済にする」・会社をリードにつなぐ道）で、そのつど確かめる。
+3. 判定の条件は `backend/app/services/customer_conversion.py` の 1 か所だけに書く。ほかの場所に同じ条件を写さない。「登録が済んでいる」の判定も同じファイルの 1 つの関数にし、登録フォームのリンクを断る所・請求先を変えるリンクを断る所・カルテのデータがそれを呼ぶ。
 4. 手で `existing_customer` を選ぶことはできない（API は 422、画面の選択肢に出さない）。
 5. 追客（`follow_up_short`・`follow_up_long`）は「見込みのある新規顧客」。カルテは商談中と同じ見せ方にする。
 6. 自動で既存顧客から戻すことはしない。いま既存顧客の人の段階は変えない。
@@ -46,7 +47,7 @@
 
 ## 影響
 
-- backend: `leads.py`（作る・変えるの確認）、`registration_tokens.py`・`invoices.py`・`integrations.py`・会社を作る道（判定を呼ぶ）、新しい `services/customer_conversion.py`。DB の形は変えない（migration なし）。
+- backend: `leads.py`（作る・変えるの確認）、`registration_tokens.py`・`invoices.py`・`integrations.py`・`orders.py`・`companies.py`（判定を呼ぶ）、新しい `services/customer_conversion.py`。DB の形は変えない（migration なし）。
 - frontend: `constants/leadStatus.ts`、`pages/leads/LeadEditPage.tsx`・`LeadFormFields.tsx`、`pages/inbox/karteLayout.ts`・`InboxKartePanel.tsx`、翻訳 ja/en。
 - 数え方の式は変えない。成約数の意味が「3 つがそろった人」になる。
 
