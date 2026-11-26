@@ -13,6 +13,7 @@
   3. `frontend/src/pages/schedule/ScheduleSettingsPage.tsx`
   4. `frontend/src/locales/ja.json`・`frontend/src/locales/en.json`
   5. `frontend/src/pages/schedule/schedule-utils.test.ts`・`frontend/src/pages/schedule/SchedulePageImpl.test.tsx`・`frontend/src/pages/schedule/ScheduleSettingsPage.test.tsx`
+  6. `frontend/src/pages/schedule/SchedulePageCache.test.tsx`（擬似応答に初期値の 1 行を足すだけ。変更3）
 
 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md・03-file.md・04-worktree.md・05-pr.md・10-executor.md。照合: 場所は new-worktree.sh で作る（04）・PR は担当が作らない（05）・プレースホルダなし（00）・push は `git push -u origin HEAD`（04）・各段で `git log` を確かめる（00）。
 
@@ -23,7 +24,7 @@
 | 設計と同じ範囲か | design-bin3c.md §4-1・§4-2 だけを変更1・変更2 に割り当てた |
 | 実物の行 | §2 F1〜F13 は origin/main 331c18613 で Opus が読んだ |
 | 今の動きを変えない | `getMonthCells` の既定は 0（日曜）。初期値が行無しの人は今と同じ日曜始まり |
-| 設計審査 | design-bin3c.md §10 |
+| 設計審査 | design-bin3c.md §10（第1回 REVISE の R1・R2 をこのカードの変更3に入れた） |
 
 ## 受領確認
 
@@ -45,15 +46,20 @@ design §4-2 の 1〜3 のとおり。
 - 設定ページ: 初期値の区画の `{prefsError && ...}`（今の `:519`）の上に `{prefsQ.isError && !prefsReady && <div className="error-message" role="alert">{t("schedule.prefsLoadError")}</div>}`。
 - 予定ページ: `const { prefs, isLoaded: prefsLoaded, query: prefsQuery } = useCalendarPreferences({ enabled: live });`。`prefsFailed = live && prefsQuery.isError && !prefsLoaded`。`shownError` は design §4-2 の 3 の式。
 - 新しい部品・CSS・色は足さない。
+- ja の文に `frontend/scripts/check-error-text-next-action.js:28` の `FAILURE` に当たる語を入れない（`check:error-text-next-action` が赤になる）。文は design の字面のまま。
 
 ## 変更3 試験
 
 design §5 の K1〜K4。
 
 - `schedule-utils.test.ts`: K1（2026-11-15 を基に、`weekStart` 1 → 1 つ目 2026-10-26、0 と引数なし → 2026-11-01、どれも 42 個）。
-- `SchedulePageImpl.test.tsx`: K2（`week_start: 1` で見出しの 1 つ目が「月」・マスの 1 つ目が月曜。既定で「日」）。K4（初期値の GET だけを失敗させる。`prefsLoadErrorSchedule` の文が出る・予定は出る。読めたときは出ない）。擬似応答は今の `:54`・`:80` の形を使う。
-- `ScheduleSettingsPage.test.tsx`: K3（初期値の GET を失敗させる。`role="alert"` に `prefsLoadError` の文・保存ボタンは disabled）。擬似応答は今の `:34`・`:57` の形を使う。
+- 失敗の切替え: `SchedulePageImpl.test.tsx` と `ScheduleSettingsPage.test.tsx` の `answers`（今の `prefs` の次）に `prefsFail: false as boolean` を足す。`/calendar/preferences` の枝（`SchedulePageImpl.test.tsx:80-83`・`ScheduleSettingsPage.test.tsx:57-60`）の先頭で `if (answers.prefsFail) throw new Error("prefs failed");`。各ファイルの `beforeEach`（`SchedulePageImpl.test.tsx:119` 付近・`ScheduleSettingsPage.test.tsx:88` 付近）で `answers.prefsFail = false;` に戻す。
+- `SchedulePageImpl.test.tsx`: K2。初期値 `{ ...DEFAULT_PREFS, week_start: 1 }` の人と、既定（`prefs: null`）の人の 2 つ。見出しは `container.querySelectorAll(".schedule-mini-calendar__weekdays span")[0].textContent`、マスは `container.querySelectorAll(".schedule-mini-calendar__day")[0].textContent`。見出しの期待値は日本語の曜日名（「月」「日」。`Intl` の `"ja-JP"` で作るため画面の言語によらない）。時計は固定しない。マスの期待値は試験の中で今日から作る: 今月 1 日 `first = new Date(y, m, 1)` から `weekStart` 1 なら `(first.getDay() + 6) % 7` 日、0 なら `first.getDay()` 日戻した日の `getDate()` の文字。
+- `SchedulePageImpl.test.tsx`: K4。`prefsFail = true` で `prefsLoadErrorSchedule` の文が出る・予定（今ある試験と同じ 1 件）は出る。`prefsFail = false` では文が出ない。
+- `ScheduleSettingsPage.test.tsx`: K3。`prefsFail = true` で `role="alert"` に `prefsLoadError` の文・保存ボタンは disabled。
+- `SchedulePageCache.test.tsx`: `:73` の `/calendar/owners` の行の前に `if (path === "/calendar/preferences") return { default_view: "week", week_start: 0, event_minutes: 60, auto_meet: false, open_owners: "self", open_team_id: null };` を 1 行足す（今は `:76` の想定外の GET で投げ、この便の後は失敗の文が出るため）。ほかは触らない。
 - 文の確かめは、試験が今使っている i18n のやり方（実際の文か キー名か）に合わせる。
+- 上のほかの試験ファイルが、初期値の擬似応答が無いため新しい文で落ちたら、触らずに `BLOCKED:` でファイル名と落ちた試験名を返す。
 
 ## 確かめ
 
