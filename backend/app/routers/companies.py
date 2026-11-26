@@ -46,6 +46,7 @@ from app.services.audit import (
     snapshot_subtable_rows,
     snapshot_subtable_scalars,
 )
+from app.services.customer_conversion import promote_lead_if_customer
 from app.services.customer_statuses import (
     STATUS_ACTIVE,
     STATUS_ARCHIVED,
@@ -533,6 +534,10 @@ async def create_company(
             action="create", table_name="companies", record_id=new_id,
             new_data=new_data_payload,
         )
+        await promote_lead_if_customer(
+            db, tenant_id, data.lead_id,
+            actor_user_id=current_user.id, via="company_create",
+        )
         await db.commit()
         await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     except IntegrityError as e:
@@ -645,6 +650,12 @@ async def update_company(
         action="update", table_name="companies", record_id=company_id,
         old_data=dict(old_row), new_data=new_data_payload,
     )
+    # ADR-1091: リードの付け替え・住所の入れ替えで 3 つがそろうことがある
+    if "lead_id" in update_data or addresses is not None:
+        await promote_lead_if_customer(
+            db, tenant_id, None, company_id=company_id,
+            actor_user_id=current_user.id, via="company_update",
+        )
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     await invalidate_dashboard_cache(tenant_id)
@@ -1088,6 +1099,11 @@ async def merge_companies(
         old_data=merge_old_data,
     )
 
+    # ADR-1091: 請求書・注文・住所が残る側へ移るので、3 つがそろうことがある
+    await promote_lead_if_customer(
+        db, tenant_id, master_row["lead_id"],
+        actor_user_id=current_user.id, via="company_merge",
+    )
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     await invalidate_dashboard_cache(tenant_id)

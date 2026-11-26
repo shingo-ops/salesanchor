@@ -28,6 +28,8 @@ interface UseRecordDrawerReturn<F> {
   drawerOpen: boolean;
   editId: number | null;
   editForm: F;
+  /** 行を開いた時点のフォームの値（編集で変わらない。変えた項目だけ送りたいページ用） */
+  baseForm: F;
   setEditForm: React.Dispatch<React.SetStateAction<F>>;
   /** DataTable の onRowClick / 編集ボタンの onClick に渡す */
   handleRowClick: (record: { id: number }) => void;
@@ -43,10 +45,13 @@ export function useRecordDrawer<T extends { id: number }, F>(
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<F>(emptyForm);
+  const [baseForm, setBaseForm] = useState<F>(emptyForm);
 
   const handleRowClick = (record: { id: number }) => {
+    const form = toForm(record as T);
     setEditId(record.id);
-    setEditForm(toForm(record as T));
+    setEditForm(form);
+    setBaseForm(form);
     setDrawerOpen(true);
   };
 
@@ -54,7 +59,8 @@ export function useRecordDrawer<T extends { id: number }, F>(
     setDrawerOpen(false);
     setEditId(null);
     setEditForm(emptyForm);
+    setBaseForm(emptyForm);
   };
 
-  return { drawerOpen, editId, editForm, setEditForm, handleRowClick, closeDrawer };
+  return { drawerOpen, editId, editForm, baseForm, setEditForm, handleRowClick, closeDrawer };
 }

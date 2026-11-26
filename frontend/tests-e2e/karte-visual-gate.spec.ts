@@ -247,12 +247,14 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
       ], false);
     });
 
-    test("[ADR-1089-2] Follow-up (oikomi) uses the customer layout", async ({ page }) => {
+    test("[ADR-1091] Follow-up (oikomi) uses the negotiating layout", async ({ page }) => {
       await renderKarte(page, leadOikomi, leadStatsPaid);
       await expectFields(page, [
         "nickname", "country", "customer_type", "target_titles", "sales_form",
-        "next_action", "next_action_date", "cs_memo",
-      ], true);
+        "next_action", "next_action_date", "response_speed", "temperature", "challenge",
+        "competitor_check", "estimated_scale", "monthly_forecast", "per_order_amount",
+        "monthly_frequency", "meeting_memo",
+      ], false);
     });
 
     test("[ADR-110-4] Customer company tab has its section headings", async ({ page }) => {
@@ -316,11 +318,11 @@ test.describe("Karte Visual Gate -- ADR-108/110", () => {
       await expect(companyTab).toHaveClass(/active/);
     });
 
-    test("[ADR-108-4] Oikomi (follow-up) defaults to company tab", async ({ page }) => {
+    test("[ADR-1091] Oikomi (follow-up) defaults to deal tab", async ({ page }) => {
       await renderKarte(page, leadOikomi, leadStatsPaid);
 
-      const companyTab = page.locator('[data-testid="karte-tab-company"]');
-      await expect(companyTab).toHaveClass(/active/);
+      const dealTab = page.locator('[data-testid="karte-tab-deal"]');
+      await expect(dealTab).toHaveClass(/active/);
     });
   });
 

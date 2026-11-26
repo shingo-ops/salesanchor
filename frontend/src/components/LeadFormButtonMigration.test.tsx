@@ -42,8 +42,10 @@ function closed(scope: HTMLElement, mode: Mode) {
   else if (mode === 'quick') expect(scope.classList.contains('comp-drawer-panel--open')).toBe(false);
   else expect(screen.getByTestId('location').textContent).toBe('/crm/leads');
 }
-const quickPayload = { customer_name: ' Edited Lead ', email: null, phone: null, status: 'lead', type: null, notes: null, country: null };
-const payload = (mode: Mode) => mode === 'quick' ? quickPayload : { ...blank, customer_name: ' Edited Lead ' };
+const quickPayload = { customer_name: ' Edited Lead ', email: null, phone: null, type: null, notes: null, country: null };
+// ADR-1091: 段階を選び直していない保存（編集）は status を送らない。新規作成だけ status を送る。
+const { status: _blankStatus, ...blankNoStatus } = blank;
+const payload = (mode: Mode) => mode === 'quick' ? quickPayload : mode === 'full' ? { ...blankNoStatus, customer_name: ' Edited Lead ' } : { ...blank, customer_name: ' Edited Lead ' };
 const sender = (mode: Mode) => mode === 'create' ? mock.post : mock.patch;
 const path = (mode: Mode) => mode === 'create' ? '/leads' : '/leads/7';
 async function mount(mode: Mode) {
@@ -128,7 +130,7 @@ describe('Lead form migration with real input, permission and SSE hooks', () => 
     change(scope, 'leads.status', 'lost'); expect(field(scope, 'leads.lostReasonCode').value).toBe(''); expect(field(scope, 'leads.lostReason').value).toBe('');
     if (state === 'selected' || state === 'return') { change(scope, 'leads.lostReasonCode', '42'); change(scope, 'leads.lostReason', ' Reason '); }
     if (state === 'return') change(scope, 'leads.status', 'lead');
-    await submit(scope, mode, { ...payload(mode), status: state === 'return' ? 'lead' : 'lost', ...(state === 'return' ? {} : { close_reason_memo: state === 'selected' ? ' Reason ' : null, close_reasons: state === 'selected' ? [{ reason_id: 42, is_primary: true }] : [] }) });
+    await submit(scope, mode, { ...payload(mode), ...(state === 'selected' || state === 'empty' ? { status: 'lost' } : {}), ...(state === 'return' ? {} : { close_reason_memo: state === 'selected' ? ' Reason ' : null, close_reasons: state === 'selected' ? [{ reason_id: 42, is_primary: true }] : [] }) });
   });
   it('create lost sends fifteen keys without reason fields', async () => {
     mock.post.mockResolvedValue(lead); const scope = await mountForm('create'); change(scope, 'leads.status', 'lost');

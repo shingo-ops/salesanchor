@@ -38,6 +38,8 @@ export const API_ERROR_REASON_KEYS: Readonly<Record<string, string>> = {
   payment_fee: "apiError.paymentFee",
   invalid_team_ids: "apiError.invalidTeamIds",
   invalid_team: "apiError.invalidTeam",
+  existing_customer_is_automatic: "apiError.existingCustomerIsAutomatic",
+  already_existing_customer: "apiError.alreadyExistingCustomer",
 };
 
 /** detail が表のコードなら文言キー、そうでなければ null */

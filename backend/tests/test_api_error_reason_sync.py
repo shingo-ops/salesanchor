@@ -69,6 +69,8 @@ def test_table_rows_are_read():
         "payment_fee",
         "invalid_team_ids",
         "invalid_team",
+        "existing_customer_is_automatic",
+        "already_existing_customer",
     ]
 
 
