@@ -1,3 +1,3 @@
 https://auth.openai.com/codex/device
-40SA-I8TKM
-2026-11-26T12:45:45Z 発行・有効 900 秒（部屋: invoice・3回目の1回目）
+41HQ-OEE90
+2026-11-26T13:01:00Z 発行・有効 900 秒（部屋: invoice・3回目の2回目）
