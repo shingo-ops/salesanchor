@@ -550,7 +550,7 @@ async def update_lead(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="existing_customer_is_automatic",
         )
-    is_lost_transition =new_status == LeadStatus.lost.value and old_status != LeadStatus.lost.value
+    is_lost_transition = new_status == LeadStatus.lost.value and old_status != LeadStatus.lost.value
 
     if is_lost_transition:
         if not close_reasons_input:
@@ -3302,6 +3302,7 @@ async def merge_leads(
         {"id": master_id, "tid": tenant_id},
     )
     master_updated = updated_res.mappings().first()
+    registration_completed = await is_registration_completed(db, tenant_id, master_id)
 
     merge_summary = {
         "loser_id": loser_id,
@@ -3345,7 +3346,7 @@ async def merge_leads(
 
     return LeadResponse(
         **master_updated,
-        registration_completed=await is_registration_completed(db, tenant_id, master_id),
+        registration_completed=registration_completed,
     )
 
 

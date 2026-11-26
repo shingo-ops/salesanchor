@@ -52,7 +52,7 @@ from app.schemas.invoice import (
 from app.schemas.shipping import ShippingCalcResponse
 from app.services import invoice_payment_methods, invoice_totals, paypal_payments
 from app.services.audit import record_audit_log
-from app.services.customer_conversion import lead_id_of_company, promote_lead_if_customer
+from app.services.customer_conversion import promote_lead_if_customer
 from app.services.fx_currencies import list_invoice_currencies
 from app.services.inventory_aggregated_service import get_draft_inventory
 from app.services.invoice_payment_methods import PaymentMethodInvalid
@@ -914,7 +914,7 @@ async def pay_invoice(
                            action="pay", table_name="invoices", record_id=invoice_id,
                            new_data={"status": "paid"})
     await promote_lead_if_customer(
-        db, tenant_id, await lead_id_of_company(db, tenant_id, row["company_id"]),
+        db, tenant_id, None, company_id=row["company_id"],
         actor_user_id=current_user.id, via="invoice_pay",
     )
     await db.commit()
@@ -1167,7 +1167,7 @@ async def confirm_paypal_payment(
                            action="paypal_confirm", table_name="invoices", record_id=invoice_id,
                            new_data={"status": "paid", "payment_fee": result.get("fee")})
     await promote_lead_if_customer(
-        db, tenant_id, await lead_id_of_company(db, tenant_id, row["company_id"]),
+        db, tenant_id, None, company_id=row["company_id"],
         actor_user_id=current_user.id, via="invoice_paypal_check",
     )
     await db.commit()

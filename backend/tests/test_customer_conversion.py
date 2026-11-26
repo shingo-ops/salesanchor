@@ -330,3 +330,203 @@ def test_condition_is_written_in_one_place_only():
     src = (app_dir / "routers" / "registration_tokens.py").read_text(encoding="utf-8")
     assert src.count("JOIN companies c ON c.id = ca.company_id") == 0
     assert src.count("is_registration_completed(") == 2
+
+
+# ---------------------------------------------------------------------------
+# 道ごとの試験（審査 必須-3）: 3 つがそろう最後の 1 つを、その道が入れたとき existing_customer になる
+# ---------------------------------------------------------------------------
+
+_PP_CREDS = {"client_id": "x", "client_secret": "y", "environment": "sandbox"}
+
+
+async def _issued_paypal_invoice(client, db_session, company_id: int, pp_order_id: str) -> int:
+    """請求先を入れて請求書を発行し、PayPal の注文 ID を持たせる（まだ支払っていない）。"""
+    ct = await _contact(client, company_id)
+    r = await client.patch(f"/api/v1/companies/{company_id}", json={"addresses": BILLING})
+    assert r.status_code == 200, r.text
+    r = await client.post("/api/v1/invoices", json={
+        "company_id": company_id, "contact_id": ct, "shipping": {"mode": "none"},
+        "items": [{"product_name": "商品", "quantity": 1, "unit_price": "1000.00"}],
+    })
+    assert r.status_code == 201, r.text
+    inv_id = r.json()["id"]
+    assert (await client.post(f"/api/v1/invoices/{inv_id}/issue")).status_code == 200
+    await db_session.execute(
+        text("UPDATE invoices SET paypal_order_id = :p WHERE id = :i"), {"p": pp_order_id, "i": inv_id}
+    )
+    await db_session.commit()
+    return inv_id
+
+
+async def _paid_at(db_session, inv_id: int):
+    return (await db_session.execute(text("SELECT paid_at FROM invoices WHERE id = :i"), {"i": inv_id})).scalar_one()
+
+
+def _fake_paypal_return(monkeypatch):
+    from app.routers import integrations as integ
+
+    async def _creds(db, tid):
+        return dict(_PP_CREDS)
+
+    monkeypatch.setattr(integ.paypal_payments, "get_credentials", _creds)
+    monkeypatch.setattr(
+        integ.paypal_payments, "capture_order",
+        lambda *a, **k: {"captured": True, "fee": "1.00", "payment_date": None},
+    )
+
+
+def _fake_paypal_webhook(monkeypatch):
+    from app.routers import integrations as integ
+
+    async def _creds(db, tid):
+        return dict(_PP_CREDS)
+
+    async def _webhook_id(db, tid):
+        return "WH-CC-1"
+
+    monkeypatch.setattr(integ.paypal_payments, "get_credentials", _creds)
+    monkeypatch.setattr(integ.paypal_payments, "get_webhook_id", _webhook_id)
+    monkeypatch.setattr(integ.paypal_payments, "verify_webhook", lambda *a, **k: True)
+    monkeypatch.setattr(
+        integ.paypal_payments, "get_invoice_status",
+        lambda *a, **k: {"ok": True, "paid": True, "fee": "1.00", "payment_date": None},
+    )
+
+
+def _paid_event(inv_id: int, pp_order_id: str) -> dict:
+    return {
+        "event_type": "INVOICING.INVOICE.PAID",
+        "resource": {"invoice": {"id": pp_order_id, "detail": {"reference": f"999:{inv_id}"}}},
+    }
+
+
+async def _call_paypal_return(client, monkeypatch, inv_id: int, pp_order_id: str):
+    """戻りトークンの暗号化は鍵（環境変数）が要るので、解析だけ差し替える（トークン自体は test_paypal_return.py が見る）。"""
+    from app.services import paypal_payments
+
+    monkeypatch.setattr(paypal_payments, "parse_return_token", lambda t: (999, inv_id))
+    return await client.get("/api/v1/integrations/paypal/return", params={"t": "dummy", "token": pp_order_id})
+
+
+async def test_route_paypal_return_converts(client, db_session, monkeypatch):
+    """道: paypal_return（顧客が PayPal から戻る）。会社・請求先がある人の請求書が支払われて既存顧客になる。"""
+    _fake_paypal_return(monkeypatch)
+    lead = await create_lead(client, "PP戻り")
+    cid = await create_company(client, lead, name="PP戻り会社")
+    inv_id = await _issued_paypal_invoice(client, db_session, cid, "PP-RET-1")
+    assert await _status(db_session, lead) == "lead"
+    r = await _call_paypal_return(client, monkeypatch, inv_id, "PP-RET-1")
+    assert r.status_code == 200, r.text
+    assert await _status(db_session, lead) == "existing_customer"
+
+
+async def test_route_paypal_webhook_invoice_paid_converts(client, db_session, monkeypatch):
+    """道: _handle_invoice_paid（PayPal の入金通知）。"""
+    _fake_paypal_webhook(monkeypatch)
+    lead = await create_lead(client, "PP通知")
+    cid = await create_company(client, lead, name="PP通知会社")
+    inv_id = await _issued_paypal_invoice(client, db_session, cid, "PP-WH-1")
+    assert await _status(db_session, lead) == "lead"
+    r = await client.post("/api/v1/integrations/paypal/webhook", json=_paid_event(inv_id, "PP-WH-1"))
+    assert r.status_code == 200, r.text
+    assert await _paid_at(db_session, inv_id) is not None
+    assert await _status(db_session, lead) == "existing_customer"
+
+
+async def test_route_confirm_paypal_payment_converts(client, db_session, monkeypatch):
+    """道: confirm_paypal_payment（画面の「PayPal 入金確認」）。"""
+    from app.routers import invoices as inv_router
+
+    lead = await create_lead(client, "PP確認")
+    cid = await create_company(client, lead, name="PP確認会社")
+    inv_id = await _issued_paypal_invoice(client, db_session, cid, "PP-CONF-1")
+
+    async def _creds(db, tid):
+        return dict(_PP_CREDS)
+
+    monkeypatch.setattr(inv_router, "_require_paypal_creds", _creds)
+    monkeypatch.setattr(
+        inv_router.paypal_payments, "get_invoice_status",
+        lambda *a, **k: {"ok": True, "paid": True, "fee": "1.00", "payment_date": None, "message": "OK"},
+    )
+    assert await _status(db_session, lead) == "lead"
+    r = await client.post(f"/api/v1/invoices/{inv_id}/paypal-confirm")
+    assert r.status_code == 200, r.text
+    assert await _status(db_session, lead) == "existing_customer"
+
+
+async def _registered_and_paid_but_default_removed(client, db_session, lead: int, token_type: str, no: str):
+    """登録済みの人に公開リンクを作ってから、既定の請求先を外して支払う（支払いでは切り替わらない状態）。
+    戻り値: (トークン)。公開の道が請求先を入れたとき、最後の 1 つがそろう。"""
+    cid = await create_company(client, lead, name=f"{no}会社", addresses=BILLING)
+    r = await client.post("/api/v1/registration-tokens", json={"lead_id": lead, "type": token_type})
+    assert r.status_code in (200, 201), r.text
+    token = r.json()["token"]
+    await db_session.execute(
+        text("UPDATE company_addresses SET is_default = FALSE WHERE company_id = :c"), {"c": cid}
+    )
+    await db_session.commit()
+    await _pay_by_order(client, cid, no)
+    assert await _status(db_session, lead) == "lead"
+    return token
+
+
+_NEW_BILLING = {
+    "address_type": "billing", "is_default": True, "name": "B",
+    "address_line_1": "1 Main St", "country_code": "US",
+}
+
+
+async def test_route_add_address_converts(client, db_session):
+    """道: add_address（公開の住所追加）。既定の請求先を足して 3 つがそろう。"""
+    lead = await create_lead(client, "住所追加")
+    token = await _registered_and_paid_but_default_removed(client, db_session, lead, "add_address", "ORD-CC-ADDR")
+    r = await client.post("/api/v1/public/register/address", json={"token": token, "address": _NEW_BILLING})
+    assert r.status_code == 200, r.text
+    assert await _status(db_session, lead) == "existing_customer"
+
+
+async def test_route_change_billing_converts(client, db_session):
+    """道: change_billing（公開の請求先変更）。"""
+    lead = await create_lead(client, "請求先変更")
+    token = await _registered_and_paid_but_default_removed(client, db_session, lead, "change_billing", "ORD-CC-CHG")
+    r = await client.post(
+        "/api/v1/public/register/change-billing",
+        json={"token": token, "address": _NEW_BILLING, "billing_display_name": "B"},
+    )
+    assert r.status_code == 200, r.text
+    assert await _status(db_session, lead) == "existing_customer"
+
+
+async def test_paypal_return_keeps_paid_at_when_lead_lookup_raises(client, db_session, monkeypatch):
+    """paypal_return: lead_id_of_invoice が例外を出しても、invoices.paid_at は残り、応答は成功。"""
+    _fake_paypal_return(monkeypatch)
+    lead = await create_lead(client, "PP戻り例外")
+    cid = await create_company(client, lead, name="PP戻り例外会社")
+    inv_id = await _issued_paypal_invoice(client, db_session, cid, "PP-RET-BOOM")
+
+    async def boom(*a, **k):
+        raise RuntimeError("boom")
+
+    with patch("app.services.customer_conversion.lead_id_of_invoice", boom):
+        r = await _call_paypal_return(client, monkeypatch, inv_id, "PP-RET-BOOM")
+    assert r.status_code == 200, r.text
+    assert await _paid_at(db_session, inv_id) is not None
+    assert await _status(db_session, lead) == "lead"
+
+
+async def test_paypal_webhook_keeps_paid_at_when_lead_lookup_raises(client, db_session, monkeypatch):
+    """_handle_invoice_paid: lead_id_of_invoice が例外を出しても、invoices.paid_at は残り、応答は成功。"""
+    _fake_paypal_webhook(monkeypatch)
+    lead = await create_lead(client, "PP通知例外")
+    cid = await create_company(client, lead, name="PP通知例外会社")
+    inv_id = await _issued_paypal_invoice(client, db_session, cid, "PP-WH-BOOM")
+
+    async def boom(*a, **k):
+        raise RuntimeError("boom")
+
+    with patch("app.services.customer_conversion.lead_id_of_invoice", boom):
+        r = await client.post("/api/v1/integrations/paypal/webhook", json=_paid_event(inv_id, "PP-WH-BOOM"))
+    assert r.status_code == 200, r.text
+    assert await _paid_at(db_session, inv_id) is not None
+    assert await _status(db_session, lead) == "lead"

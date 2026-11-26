@@ -48,7 +48,7 @@ from app.schemas.order import (
     OrderUpdate,
 )
 from app.services.audit import record_audit_log
-from app.services.customer_conversion import lead_id_of_order, promote_lead_if_customer
+from app.services.customer_conversion import promote_lead_if_customer
 
 router = APIRouter()
 
@@ -615,7 +615,7 @@ async def set_order_paid(
     )
     if data.paid:
         await promote_lead_if_customer(
-            db, tenant_id, await lead_id_of_order(db, tenant_id, order_id),
+            db, tenant_id, None, order_id=order_id,
             actor_user_id=current_user.id, via="order_paid",
         )
     await db.commit()

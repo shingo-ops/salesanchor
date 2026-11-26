@@ -79,15 +79,29 @@ async def promote_lead_if_customer(
     *,
     actor_user_id: int | None,
     via: str,
+    company_id: int | None = None,
+    invoice_id: int | None = None,
+    order_id: int | None = None,
 ) -> bool:
     """3 つがそろっていれば、リードを existing_customer にする。切り替えたら True。
 
     判定の失敗は SAVEPOINT だけ戻して False を返す（呼び元の入金・登録の記録は残す）。
+    lead_id が None のときは invoice_id → order_id → company_id の順で lead_id を引く
+    （引く処理の失敗も同じ SAVEPOINT の中で止まり、呼び元の入金記録は残る）。
     """
-    if lead_id is None:
+    if lead_id is None and invoice_id is None and order_id is None and company_id is None:
         return False
     try:
         async with db.begin_nested():
+            if lead_id is None:
+                if invoice_id is not None:
+                    lead_id = await lead_id_of_invoice(db, tenant_id, invoice_id)
+                elif order_id is not None:
+                    lead_id = await lead_id_of_order(db, tenant_id, order_id)
+                elif company_id is not None:
+                    lead_id = await lead_id_of_company(db, tenant_id, company_id)
+                if lead_id is None:
+                    return False
             leads = tenant_table_ref(db, tenant_id, "leads")
             lock_sql = f"SELECT id FROM {leads} WHERE id = :lead_id"
             if is_postgresql(db):

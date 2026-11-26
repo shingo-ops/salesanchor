@@ -46,7 +46,7 @@ from app.services.audit import (
     snapshot_subtable_rows,
     snapshot_subtable_scalars,
 )
-from app.services.customer_conversion import lead_id_of_company, promote_lead_if_customer
+from app.services.customer_conversion import promote_lead_if_customer
 from app.services.customer_statuses import (
     STATUS_ACTIVE,
     STATUS_ARCHIVED,
@@ -653,7 +653,7 @@ async def update_company(
     # ADR-1091: リードの付け替え・住所の入れ替えで 3 つがそろうことがある
     if "lead_id" in update_data or addresses is not None:
         await promote_lead_if_customer(
-            db, tenant_id, await lead_id_of_company(db, tenant_id, company_id),
+            db, tenant_id, None, company_id=company_id,
             actor_user_id=current_user.id, via="company_update",
         )
     await db.commit()

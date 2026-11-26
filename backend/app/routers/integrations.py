@@ -45,7 +45,7 @@ from app.services import carrier_credentials as carriers
 from app.services import google_drive_oauth as drive_svc
 from app.services import paypal_payments
 from app.services.audit import record_audit_log
-from app.services.customer_conversion import lead_id_of_invoice, promote_lead_if_customer
+from app.services.customer_conversion import promote_lead_if_customer
 from app.services.payment_dates import PAID_AT_SQL, paypal_paid_at
 from app.services.test_pdf import render_test_pdf
 
@@ -809,7 +809,7 @@ async def paypal_return(
             {"iid": invoice_id, "paid_at": paid_at_value},
         )
         await promote_lead_if_customer(
-            db, tenant_id, await lead_id_of_invoice(db, tenant_id, invoice_id),
+            db, tenant_id, None, invoice_id=invoice_id,
             actor_user_id=None, via="paypal_return",
         )
         await db.commit()
@@ -962,7 +962,7 @@ async def _handle_invoice_paid(request: Request, db: AsyncSession, event: dict) 
                 {"iid": invoice_id, "paid_at": paid_at_value},
             )
             await promote_lead_if_customer(
-                db, tenant_id, await lead_id_of_invoice(db, tenant_id, invoice_id),
+                db, tenant_id, None, invoice_id=invoice_id,
                 actor_user_id=None, via="paypal_webhook",
             )
             await db.commit()
