@@ -19,6 +19,7 @@ from urllib.parse import urlsplit, urlunsplit
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+
 from tests.conftest import (
     OPS_CASE_HAS_SECRET_DDL,
     OPS_CASE_PLAIN_DEMO_DDL,
@@ -31,7 +32,9 @@ from tests.conftest import (
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 
 pytestmark = [
-    pytest.mark.skipif(not ADMIN_PG_URL, reason="実 PostgreSQL 環境が必要 (RLS_ADMIN_DATABASE_URL / TEST_PG_URL 未設定)。"),
+    pytest.mark.skipif(
+        not ADMIN_PG_URL, reason="実 PostgreSQL 環境が必要 (RLS_ADMIN_DATABASE_URL / TEST_PG_URL 未設定)。"
+    ),
     pytest.mark.asyncio,
 ]
 
@@ -126,10 +129,6 @@ async def env(monkeypatch):
     control = psycopg2.connect(_psycopg_url())
     control.autocommit = True
     cur = control.cursor()
-    existed = {}
-    for r in _ROLES:
-        cur.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (r,))
-        existed[r] = cur.fetchone() is not None
     dbname = f"ops_case_router_{uuid.uuid4().hex[:12]}"
     cur.execute(f'CREATE DATABASE "{dbname}"')
     admin_conn = psycopg2.connect(_psycopg_url(dbname))
@@ -162,7 +161,9 @@ async def env(monkeypatch):
     a.execute(_read("20261115_110000_drop_ops_case_report_single_unique.sql"))
 
     # backend の接続は salesanchor_app（接続のとき role を切り替える。パスワードを持たない試験 DB 用）
-    engine = create_async_engine(_asyncpg_url(dbname), echo=False, connect_args={"server_settings": {"role": "salesanchor_app"}})
+    engine = create_async_engine(
+        _asyncpg_url(dbname), echo=False, connect_args={"server_settings": {"role": "salesanchor_app"}}
+    )
     factory = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
     async def override_get_db():
@@ -184,12 +185,7 @@ async def env(monkeypatch):
         await engine.dispose()
         admin_conn.close()
         cur.execute(f'DROP DATABASE IF EXISTS "{dbname}" WITH (FORCE)')
-        for r in _ROLES:
-            if not existed[r]:
-                try:
-                    cur.execute(f"DROP ROLE IF EXISTS {r}")
-                except psycopg2.Error:
-                    pass
+        # 共通の役割はクラスタ全体で1つ。別の係が使っている途中で消すと落ちるため、試験では消さない（docs/handoff/ci-test-shared-collisions/design.md 便1）
         control.close()
 
 
@@ -226,14 +222,18 @@ async def _call(env, method, path, body, headers):
 async def test_admin_routes_reject_missing_wrong_and_agent_key(env, method, path, body):
     assert (await _call(env, method, path, body, {})).status_code == 401
     assert (await _call(env, method, path, body, {"Authorization": "Bearer nope"})).status_code == 401
-    assert (await _call(env, method, path, body, {"Authorization": f"Bearer {_AGENT_KEY}"})).status_code == 401  # 取り違え
+    assert (
+        await _call(env, method, path, body, {"Authorization": f"Bearer {_AGENT_KEY}"})
+    ).status_code == 401  # 取り違え
 
 
 @pytest.mark.parametrize("method,path,body", _AGENT_CALLS)
 async def test_agent_routes_reject_missing_wrong_and_admin_key(env, method, path, body):
     assert (await _call(env, method, path, body, {})).status_code == 401
     assert (await _call(env, method, path, body, {"Authorization": "Bearer nope"})).status_code == 401
-    assert (await _call(env, method, path, body, {"Authorization": f"Bearer {_ADMIN_KEY}", "X-Case-Ticket": "t"})).status_code == 401
+    assert (
+        await _call(env, method, path, body, {"Authorization": f"Bearer {_ADMIN_KEY}", "X-Case-Ticket": "t"})
+    ).status_code == 401
 
 
 @pytest.mark.parametrize("method,path,body", _ADMIN_CALLS + _AGENT_CALLS)
@@ -276,8 +276,12 @@ async def test_new_ticket_invalidates_previous(env):
     r = await env.client.post(f"{_BASE}/{iid}/ticket", headers=admin())
     ticket2 = r.json()["ticket"]
     assert ticket2 != ticket
-    assert (await env.client.post(f"{_BASE}/{iid}/unmask-requests", json=_good_body(), headers=agent(ticket))).status_code == 403
-    assert (await env.client.post(f"{_BASE}/{iid}/unmask-requests", json=_good_body(), headers=agent(ticket2))).status_code == 200
+    assert (
+        await env.client.post(f"{_BASE}/{iid}/unmask-requests", json=_good_body(), headers=agent(ticket))
+    ).status_code == 403
+    assert (
+        await env.client.post(f"{_BASE}/{iid}/unmask-requests", json=_good_body(), headers=agent(ticket2))
+    ).status_code == 200
 
 
 async def test_ticket_mismatch_other_case_expired_and_unknown_incident_are_403(env):
@@ -288,8 +292,12 @@ async def test_ticket_mismatch_other_case_expired_and_unknown_incident_are_403(e
     assert (await env.client.post(url, json=body, headers=agent())).status_code == 403  # 札なし
     assert (await env.client.post(url, json=body, headers=agent("wrong"))).status_code == 403
     assert (await env.client.post(url, json=body, headers=agent(other_ticket))).status_code == 403  # 別の件の札
-    assert (await env.client.post(f"{_BASE}/{uuid.uuid4()}/report", json=body, headers=agent(ticket))).status_code == 403  # 件なし
-    env.admin.cursor().execute("UPDATE ops_case.cases SET ticket_expires_at = now() - interval '1 second' WHERE incident_id = %s", (iid,))
+    assert (
+        await env.client.post(f"{_BASE}/{uuid.uuid4()}/report", json=body, headers=agent(ticket))
+    ).status_code == 403  # 件なし
+    env.admin.cursor().execute(
+        "UPDATE ops_case.cases SET ticket_expires_at = now() - interval '1 second' WHERE incident_id = %s", (iid,)
+    )
     assert (await env.client.post(url, json=body, headers=agent(ticket))).status_code == 403  # 期限切れ
     assert env.one("SELECT count(*) FROM ops_case.reports WHERE incident_id = %s", (iid,)) == 0
     assert other_iid != iid
@@ -315,7 +323,9 @@ async def test_report_once_then_409_and_oversize_413(env):
     assert bad.status_code == 422 and "weird" not in bad.text
 
 
-_CASE_REPORT_EVENTS_SQL = "SELECT count(*) FROM public.ops_incident_events WHERE incident_id = %s AND kind = 'case_report'"
+_CASE_REPORT_EVENTS_SQL = (
+    "SELECT count(*) FROM public.ops_incident_events WHERE incident_id = %s AND kind = 'case_report'"
+)
 
 
 async def test_report_three_kinds_then_409_and_one_event_each(env):
@@ -323,7 +333,9 @@ async def test_report_three_kinds_then_409_and_one_event_each(env):
     url = f"{_BASE}/{iid}/report"
     ids = []
     for n, kind in enumerate(("investigation", "verification", "effect"), start=1):
-        r = await env.client.post(url, json={"kind": kind, "status": "reported", "summary": "要約"}, headers=agent(ticket))
+        r = await env.client.post(
+            url, json={"kind": kind, "status": "reported", "summary": "要約"}, headers=agent(ticket)
+        )
         assert r.status_code == 200, r.text
         assert r.json()["kind"] == kind
         ids.append(r.json()["id"])
@@ -332,11 +344,14 @@ async def test_report_three_kinds_then_409_and_one_event_each(env):
     assert dup.status_code == 409
     assert env.one("SELECT count(*) FROM ops_case.reports WHERE incident_id = %s", (iid,)) == 3
     assert env.one(_CASE_REPORT_EVENTS_SQL, (iid,)) == 3  # 409 のときは増えない
-    assert env.one(
-        "SELECT count(*) FROM public.ops_incident_events WHERE incident_id = %s AND kind = 'case_report'"
-        " AND actor = 'case_agent'",
-        (iid,),
-    ) == 3
+    assert (
+        env.one(
+            "SELECT count(*) FROM public.ops_incident_events WHERE incident_id = %s AND kind = 'case_report'"
+            " AND actor = 'case_agent'",
+            (iid,),
+        )
+        == 3
+    )
     assert len(set(ids)) == 3
 
 
@@ -409,7 +424,14 @@ async def test_request_accepted_dedupes_and_returns_only_id_and_status(env):
         ("no_such_column", _good_body(column_names=["nope"])),
         ("no_such_view", _good_body(view_name="public__nope")),
         ("uuid_abc", _good_body(view_name="tenant_001__leads", column_names=["customer_name"], row_keys=["abc"])),
-        ("uuid_upper", _good_body(view_name="tenant_001__leads", column_names=["customer_name"], row_keys=["11111111-1111-1111-1111-11111111111A"])),
+        (
+            "uuid_upper",
+            _good_body(
+                view_name="tenant_001__leads",
+                column_names=["customer_name"],
+                row_keys=["11111111-1111-1111-1111-11111111111A"],
+            ),
+        ),
         ("int_1x", _good_body(row_keys=["1x"])),
         ("int_overflow", _good_body(row_keys=["2147483648"])),
         ("smallint_overflow", _good_body(view_name="public__small_pk", column_names=["memo"], row_keys=["40000"])),
@@ -451,7 +473,12 @@ async def test_third_request_is_refused_with_auto_limit_row(env):
     assert row == [("denied", "auto:limit", "limit")]
     # 4 本目も 409。自動で断った行は増えない（24 時間に 1 行）
     assert (await env.client.post(url, json=_good_body(row_keys=["4"]), headers=agent(ticket))).status_code == 409
-    assert env.one("SELECT count(*) FROM ops_case.unmask_requests WHERE incident_id = %s AND decided_by = 'auto:limit'", (iid,)) == 1
+    assert (
+        env.one(
+            "SELECT count(*) FROM ops_case.unmask_requests WHERE incident_id = %s AND decided_by = 'auto:limit'", (iid,)
+        )
+        == 1
+    )
     pend = (await env.client.get(f"{_BASE}/pending", headers=admin())).json()
     assert iid in {x["incident_id"] for x in pend["auto_denied"]}
 
@@ -459,7 +486,9 @@ async def test_third_request_is_refused_with_auto_limit_row(env):
 async def test_get_request_only_for_its_own_case(env):
     iid, ticket = await env.new_case()
     _other_iid, other_ticket = await env.new_case()
-    rid = (await env.client.post(f"{_BASE}/{iid}/unmask-requests", json=_good_body(), headers=agent(ticket))).json()["id"]
+    rid = (await env.client.post(f"{_BASE}/{iid}/unmask-requests", json=_good_body(), headers=agent(ticket))).json()[
+        "id"
+    ]
     r = await env.client.get(f"{_BASE}/unmask-requests/{rid}", headers=agent(ticket))
     assert r.status_code == 200
     assert set(r.json()) == {"id", "status", "expires_at", "read_count", "decision_reason"}
@@ -474,7 +503,9 @@ async def test_get_request_only_for_its_own_case(env):
 # ---------------------------------------------------------------------------------------------------
 async def _pending_request(env):
     iid, ticket = await env.new_case()
-    rid = (await env.client.post(f"{_BASE}/{iid}/unmask-requests", json=_good_body(), headers=agent(ticket))).json()["id"]
+    rid = (await env.client.post(f"{_BASE}/{iid}/unmask-requests", json=_good_body(), headers=agent(ticket))).json()[
+        "id"
+    ]
     return iid, ticket, rid
 
 
@@ -485,7 +516,9 @@ async def test_decision_approved_sets_expiry_from_backend_time(env):
     assert mine["row_count"] == 1 and mine["column_names"] == ["memo"] and "row_keys" not in mine
     before = datetime.now(timezone.utc)
     r = await env.client.post(
-        f"{_BASE}/unmask-requests/{rid}/decision", json={"decision": "approved", "reason": "確かめた", "minutes": 5}, headers=admin()
+        f"{_BASE}/unmask-requests/{rid}/decision",
+        json={"decision": "approved", "reason": "確かめた", "minutes": 5},
+        headers=admin(),
     )
     after = datetime.now(timezone.utc)
     assert r.status_code == 200, r.text
@@ -493,7 +526,11 @@ async def test_decision_approved_sets_expiry_from_backend_time(env):
         "SELECT status, decided_by, approved_minutes, expires_at FROM ops_case.unmask_requests WHERE id = %s", (rid,)
     )[0]
     assert (status, decided_by, minutes) == ("approved", "agent-console", 5)
-    assert before + timedelta(minutes=5) - timedelta(seconds=2) <= expires <= after + timedelta(minutes=5) + timedelta(seconds=2)
+    assert (
+        before + timedelta(minutes=5) - timedelta(seconds=2)
+        <= expires
+        <= after + timedelta(minutes=5) + timedelta(seconds=2)
+    )
     # 2 回目は 409
     again = await env.client.post(
         f"{_BASE}/unmask-requests/{rid}/decision", json={"decision": "denied", "reason": "x"}, headers=admin()
@@ -506,10 +543,18 @@ async def test_decision_approved_sets_expiry_from_backend_time(env):
 async def test_decision_validation(env):
     _iid, _t, rid = await _pending_request(env)
     url = f"{_BASE}/unmask-requests/{rid}/decision"
-    assert (await env.client.post(url, json={"decision": "approved", "reason": "x", "minutes": 16}, headers=admin())).status_code == 422
-    assert (await env.client.post(url, json={"decision": "approved", "reason": "x", "minutes": 0}, headers=admin())).status_code == 422
-    assert (await env.client.post(url, json={"decision": "approved", "reason": "x"}, headers=admin())).status_code == 422
-    assert (await env.client.post(url, json={"decision": "denied", "reason": "x", "minutes": 3}, headers=admin())).status_code == 422
+    assert (
+        await env.client.post(url, json={"decision": "approved", "reason": "x", "minutes": 16}, headers=admin())
+    ).status_code == 422
+    assert (
+        await env.client.post(url, json={"decision": "approved", "reason": "x", "minutes": 0}, headers=admin())
+    ).status_code == 422
+    assert (
+        await env.client.post(url, json={"decision": "approved", "reason": "x"}, headers=admin())
+    ).status_code == 422
+    assert (
+        await env.client.post(url, json={"decision": "denied", "reason": "x", "minutes": 3}, headers=admin())
+    ).status_code == 422
     assert (await env.client.post(url, json={"decision": "maybe", "reason": "x"}, headers=admin())).status_code == 422
     assert (await env.client.post(url, json={"decision": "denied", "reason": ""}, headers=admin())).status_code == 422
     assert env.one("SELECT status FROM ops_case.unmask_requests WHERE id = %s", (rid,)) == "pending"
@@ -519,7 +564,9 @@ async def test_decision_validation(env):
     assert nf.status_code == 404
     ok = await env.client.post(url, json={"decision": "denied", "reason": "不要"}, headers=admin())
     assert ok.status_code == 200
-    assert env.rows("SELECT status, expires_at FROM ops_case.unmask_requests WHERE id = %s", (rid,)) == [("denied", None)]
+    assert env.rows("SELECT status, expires_at FROM ops_case.unmask_requests WHERE id = %s", (rid,)) == [
+        ("denied", None)
+    ]
 
 
 async def test_audits_and_audit_inputs(env):

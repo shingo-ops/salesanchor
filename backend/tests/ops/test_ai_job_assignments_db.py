@@ -65,21 +65,14 @@ def _read(fname: str) -> str:
 
 
 class _Cluster:
-    """クラスタ共通のロールを、このテストが作った場合だけ消すための記録。"""
+    """クラスタ共通のロールは、このテストでは消さない（後片付けの呼び出し口だけ残す）。"""
 
     def __init__(self, control):
         self.control = control
-        cur = control.cursor()
-        self.existed = {}
-        for r in ("ai_reader", "ai_reader_cloud"):
-            cur.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (r,))
-            self.existed[r] = cur.fetchone() is not None
 
     def cleanup(self):
-        cur = self.control.cursor()
-        for r in ("ai_reader_cloud", "ai_reader"):
-            if not self.existed[r]:
-                cur.execute(f"DROP ROLE IF EXISTS {r}")
+        # 共通の役割はクラスタ全体で1つ。別の係が使っている途中で消すと落ちるため、試験では消さない（docs/handoff/ci-test-shared-collisions/design.md 便1）
+        pass
 
 
 @pytest.fixture(scope="module")

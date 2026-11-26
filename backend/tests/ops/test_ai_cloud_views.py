@@ -79,21 +79,14 @@ def _make_table(cur, qualified_name, columns):
 
 
 class _Cluster:
-    """クラスタ共通のロールを、このテストが作った場合だけ消すための記録。"""
+    """クラスタ共通のロールは、このテストでは消さない（後片付けの呼び出し口だけ残す）。"""
 
     def __init__(self, control):
         self.control = control
-        cur = control.cursor()
-        self.existed = {}
-        for r in ("ai_reader", "ai_reader_cloud", "aic_owner"):
-            cur.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (r,))
-            self.existed[r] = cur.fetchone() is not None
 
     def cleanup(self):
-        cur = self.control.cursor()
-        for r in ("ai_reader_cloud", "ai_reader", "aic_owner"):
-            if not self.existed[r]:
-                cur.execute(f"DROP ROLE IF EXISTS {r}")
+        # 共通の役割はクラスタ全体で1つ。別の係が使っている途中で消すと落ちるため、試験では消さない（docs/handoff/ci-test-shared-collisions/design.md 便1）
+        pass
 
 
 def _new_db(control, prefix):
@@ -278,7 +271,10 @@ def test_view_built_and_logged(pg):
 
 def test_t1_masked_values_and_shapes(pg):
     """T1: 伏せた形（長さと種類だけ）。秘密列は列ごと無い。数や日付はそのまま。"""
-    rows = _cloud(pg, "SELECT id, email, phone_number, tags, matrix, payload, payload_json FROM ai_cloud.public__pii_demo ORDER BY id")
+    rows = _cloud(
+        pg,
+        "SELECT id, email, phone_number, tags, matrix, payload, payload_json FROM ai_cloud.public__pii_demo ORDER BY id",
+    )
     r1 = rows[0]
     assert r1[1] == f"masked:len={len(_RAW_EMAIL)}:ascii"
     assert r1[2] == f"masked:len={len(_RAW_PHONE)}:ascii"
@@ -299,7 +295,9 @@ def test_t1_masked_values_and_shapes(pg):
     # そのままの型
     amount, born = _cloud(pg, "SELECT amount, born FROM ai_cloud.public__pii_demo WHERE id = 1")[0]
     assert float(amount) == 12.5 and str(born) == "2000-01-01"
-    cols = {r[0] for r in _rows(pg, "SELECT column_name FROM information_schema.columns WHERE table_schema = 'ai_cloud'")}
+    cols = {
+        r[0] for r in _rows(pg, "SELECT column_name FROM information_schema.columns WHERE table_schema = 'ai_cloud'")
+    }
     assert "access_token" not in cols and "password_hash" not in cols
     # 多バイトの形
     assert _cloud(pg, "SELECT name FROM ai_cloud.public__suppliers")[0][0].startswith("masked:len=")
@@ -361,7 +359,9 @@ def test_t1b_statistics_and_explain_do_not_leak(pg):
         "SELECT * FROM pg_stats_ext_exprs",
     ):
         out.append(_flat(_cloud(pg, q)))
-    out.append(_flat(_cloud(pg, "EXPLAIN (VERBOSE) SELECT * FROM ai_cloud.public__pii_demo WHERE email = 'zzz-not-the-value'")))
+    out.append(
+        _flat(_cloud(pg, "EXPLAIN (VERBOSE) SELECT * FROM ai_cloud.public__pii_demo WHERE email = 'zzz-not-the-value'"))
+    )
     out.append(_flat(_cloud(pg, "EXPLAIN (VERBOSE, ANALYZE) SELECT email, note FROM ai_cloud.public__pii_demo")))
     _assert_no_raw("\n".join(out))
     # 元の表の統計は ai_reader_cloud には見えない（列の SELECT 権限が無い）
@@ -613,7 +613,9 @@ def test_t10_new_device_approval_columns_are_classified_on_bootstrapped_db(clust
         c.execute(_read(_AUTH_EVENTS_SQL))
         c.execute(_read(_SELF_AUTH_SQL))
         c.execute(_read(_CREATE_SQL))
-        rows = _rows(conn, "SELECT table_name, column_name FROM ai_cloud_meta.column_class WHERE schema_pattern = 'public'")
+        rows = _rows(
+            conn, "SELECT table_name, column_name FROM ai_cloud_meta.column_class WHERE schema_pattern = 'public'"
+        )
         have = {(r[0], r[1]) for r in rows}
         missing = _DEVICE_APPROVAL_CLASSIFIED - have
         assert missing == set(), f"column_class に行が無い: {sorted(missing)}"
@@ -622,8 +624,7 @@ def test_t10_new_device_approval_columns_are_classified_on_bootstrapped_db(clust
         c.execute(_read(_DEVICE_APPROVAL_SQL))  # 冪等
         new_tables = {"user_trusted_devices", "auth_login_requests", "user_recovery_codes"}
         gaps = [
-            g for g in _classification_gaps(conn)
-            if g[1] in new_tables or (g[1], g[2]) == ("auth_events", "reason")
+            g for g in _classification_gaps(conn) if g[1] in new_tables or (g[1], g[2]) == ("auth_events", "reason")
         ]
         assert gaps == []
     finally:
@@ -664,7 +665,9 @@ def test_t10_web_push_columns_are_classified_on_bootstrapped_db(cluster):
         c.execute(_read(_AUTH_EVENTS_SQL))
         c.execute(_read(_SELF_AUTH_SQL))
         c.execute(_read(_CREATE_SQL))
-        rows = _rows(conn, "SELECT table_name, column_name FROM ai_cloud_meta.column_class WHERE schema_pattern = 'public'")
+        rows = _rows(
+            conn, "SELECT table_name, column_name FROM ai_cloud_meta.column_class WHERE schema_pattern = 'public'"
+        )
         have = {(r[0], r[1]) for r in rows}
         missing = _WEB_PUSH_CLASSIFIED - have
         assert missing == set(), f"column_class に行が無い: {sorted(missing)}"
@@ -800,7 +803,10 @@ def test_t10_viewer_contract_columns_are_classified_on_bootstrapped_db(cluster):
         assert gaps == [], f"分類の漏れ（表名・列名）: {[(g[1], g[2]) for g in gaps]}"
 
         modes = dict(
-            _rows(conn, "SELECT column_name, mode FROM ai_cloud_meta.build_columns WHERE source = 'public.viewer_invoices'")
+            _rows(
+                conn,
+                "SELECT column_name, mode FROM ai_cloud_meta.build_columns WHERE source = 'public.viewer_invoices'",
+            )
         )
         for col in sorted(_VIEWER_INVOICE_MASKED):
             assert modes[col] == "mask", col
@@ -1131,7 +1137,13 @@ def test_t10_calendar_owner_settings_is_classified_on_bootstrapped_db(cluster):
             " WHERE schema_pattern = 'tenant_*' AND table_name = 'calendar_owner_settings' ORDER BY column_name",
         )
         assert [r[0] for r in rows] == [
-            "auto_meet", "color_key", "default_view", "event_minutes", "open_owners", "open_team_id", "week_start",
+            "auto_meet",
+            "color_key",
+            "default_view",
+            "event_minutes",
+            "open_owners",
+            "open_team_id",
+            "week_start",
         ]
         assert all(r[1] == "allow" and r[2].strip() for r in rows)
         columns = _rows(
@@ -1140,8 +1152,15 @@ def test_t10_calendar_owner_settings_is_classified_on_bootstrapped_db(cluster):
             " WHERE table_schema LIKE 'tenant\\_%' AND table_name = 'calendar_owner_settings'",
         )
         assert {r[0] for r in columns} == {
-            "staff_id", "color_key", "updated_at",
-            "auto_meet", "default_view", "event_minutes", "open_owners", "open_team_id", "week_start",
+            "staff_id",
+            "color_key",
+            "updated_at",
+            "auto_meet",
+            "default_view",
+            "event_minutes",
+            "open_owners",
+            "open_team_id",
+            "week_start",
         }
     finally:
         conn.close()
