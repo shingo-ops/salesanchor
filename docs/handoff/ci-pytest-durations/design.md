@@ -1,7 +1,7 @@
 # design: CI の pytest の記録に遅い試験30件を毎回出す
 
 状態: 設計案作成済み・設計審査済み（Opus 自己審査）。PO の実装承認 2026-11-26「1」。
-参照: docs/handoff/ci-pytest-durations/recon.md
+参照: docs/handoff/ci-pytest-durations/recon.md、ADR-1015（`.github/` を触るため区分 A。PO 承認 2026-11-26「1」あり）
 
 ## 1. 目的（KGI）
 CI で本当に遅い試験を、毎回の記録で読めるようにする。今は CI の記録に試験ごとの時間が出ず、遅い試験を直す順番を決められない（recon.md「未確認」）。
