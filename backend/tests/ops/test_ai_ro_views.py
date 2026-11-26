@@ -65,8 +65,6 @@ def pg():
     control = psycopg2.connect(_psycopg_url(ADMIN_PG_URL))
     control.autocommit = True
     cur = control.cursor()
-    cur.execute("SELECT 1 FROM pg_roles WHERE rolname = 'ai_reader'")
-    role_existed = cur.fetchone() is not None
     name = "ai_ro_" + uuid.uuid4().hex[:12]
     cur.execute(f'CREATE DATABASE "{name}"')
     conn = psycopg2.connect(_psycopg_url(ADMIN_PG_URL, name))
@@ -95,8 +93,7 @@ def pg():
     finally:
         conn.close()
         cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
-        if not role_existed:
-            cur.execute("DROP ROLE IF EXISTS ai_reader")
+        # 共通の役割はクラスタ全体で1つ。別の係が使っている途中で消すと落ちるため、試験では消さない（docs/handoff/ci-test-shared-collisions/design.md 便1）
         control.close()
 
 

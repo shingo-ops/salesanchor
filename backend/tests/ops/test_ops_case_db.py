@@ -50,15 +50,6 @@ _CREATE_SQL = "20261024_100300_create_ai_cloud_views.sql"
 _CASE_SQL = "20261031_210000_create_ops_case.sql"
 _SPEED_SQL = "20261117_130000_grant_unmask_owner_once_per_source.sql"
 
-_ROLES = (
-    "ai_unmask",
-    "ai_unmask_owner",
-    "ai_reader_cloud",
-    "ai_reader",
-    "salesanchor_app",
-    "aic_owner",
-    "aic_nobody",
-)
 _MARKS = {"not_found", "ticket", "status", "expired", "used", "view", "source", "column", "key", "read_failed"}
 
 _RAW_NAME = "ひみつの名前 raw-customer-name"
@@ -82,26 +73,14 @@ def _hash(ticket: str) -> str:
 
 
 class _Cluster:
-    """クラスタ共通のロールを、このテストが作った場合だけ消すための記録。"""
+    """クラスタ共通のロールは、このテストでは消さない（後片付けの呼び出し口だけ残す）。"""
 
     def __init__(self, control):
         self.control = control
-        cur = control.cursor()
-        self.existed = {}
-        for r in _ROLES:
-            cur.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (r,))
-            self.existed[r] = cur.fetchone() is not None
 
     def cleanup(self):
-        import psycopg2
-
-        cur = self.control.cursor()
-        for r in _ROLES:
-            if not self.existed[r]:
-                try:
-                    cur.execute(f"DROP ROLE IF EXISTS {r}")
-                except psycopg2.Error:
-                    pass
+        # 共通の役割はクラスタ全体で1つ。別の係が使っている途中で消すと落ちるため、試験では消さない（docs/handoff/ci-test-shared-collisions/design.md 便1）
+        pass
 
 
 def _new_db(control, prefix):
@@ -161,7 +140,9 @@ def pg(cluster):
         c.execute("ALTER SCHEMA public OWNER TO aic_owner")
         c.execute("SET ROLE aic_owner")
         c.execute(OPS_CASE_PLAIN_DEMO_DDL)
-        c.execute("INSERT INTO public.plain_demo VALUES (1, 'memo-1', %s), (2, 'memo-2', 'b@example.test')", (_RAW_EMAIL,))
+        c.execute(
+            "INSERT INTO public.plain_demo VALUES (1, 'memo-1', %s), (2, 'memo-2', 'b@example.test')", (_RAW_EMAIL,)
+        )
         c.execute(OPS_CASE_TEXT_PK_DDL)
         c.execute("INSERT INTO public.text_pk VALUES ('k-1', 'text-memo')")
         c.execute(OPS_CASE_HAS_SECRET_DDL)
@@ -313,7 +294,10 @@ def test_t2_not_approved_returns_nothing(pg, status):
 
 def test_t2_unknown_request(pg):
     case = _Case(pg)
-    assert _denied(pg, "ai_unmask", "SELECT ops_case.unmask_fetch(%s, %s)", (str(uuid.uuid4()), case.ticket)) == "not_found"
+    assert (
+        _denied(pg, "ai_unmask", "SELECT ops_case.unmask_fetch(%s, %s)", (str(uuid.uuid4()), case.ticket))
+        == "not_found"
+    )
 
 
 def test_t3_other_case_ticket_and_expired_ticket(pg):
@@ -372,8 +356,13 @@ def test_t5b_wrong_key_type_is_read_failed_without_value(pg):
         _as(pg, "ai_unmask", "SELECT ops_case.unmask_fetch(%s, %s)", (str(rid), case.ticket))
     assert ei.value.pgcode == "42501"
     assert ei.value.diag.message_primary == "read_failed"
-    for part in (ei.value.diag.message_primary, ei.value.diag.message_detail, ei.value.diag.message_hint,
-                 ei.value.diag.context, str(ei.value)):
+    for part in (
+        ei.value.diag.message_primary,
+        ei.value.diag.message_detail,
+        ei.value.diag.message_hint,
+        ei.value.diag.context,
+        str(ei.value),
+    ):
         assert "abc" not in (part or "")
     assert _reads(pg) == before
     assert _read_count(pg, rid) == 0
@@ -515,7 +504,9 @@ def test_t6_public_has_no_execute(pg):
         assert n == 0, f"{sig}: PUBLIC に実行権限がある"
     assert _one(pg, "SELECT has_function_privilege('ai_unmask', 'ops_case.unmask_fetch(uuid,text)', 'EXECUTE')") is True
     for role in ("ai_reader", "ai_reader_cloud", "salesanchor_app"):
-        assert _one(pg, f"SELECT has_function_privilege('{role}', 'ops_case.unmask_fetch(uuid,text)', 'EXECUTE')") is False
+        assert (
+            _one(pg, f"SELECT has_function_privilege('{role}', 'ops_case.unmask_fetch(uuid,text)', 'EXECUTE')") is False
+        )
 
 
 def test_t6_owner_has_no_privilege_on_denied_tables(pg):

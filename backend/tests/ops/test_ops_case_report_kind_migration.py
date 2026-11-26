@@ -18,6 +18,7 @@ from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
 import pytest
+
 from tests.conftest import (
     OPS_CASE_HAS_SECRET_DDL,
     OPS_CASE_PLAIN_DEMO_DDL,
@@ -40,8 +41,6 @@ _CASE_SQL = "20261031_210000_create_ops_case.sql"
 _KIND_SQL = "20261113_200000_add_ops_case_report_kind.sql"
 _DROP_SQL = "20261115_110000_drop_ops_case_report_single_unique.sql"
 
-_ROLES = ("ai_unmask", "ai_unmask_owner", "ai_reader_cloud", "ai_reader", "salesanchor_app", "aic_owner")
-
 
 def _psycopg_url(url: str, dbname: str | None = None) -> str:
     url = url.replace("postgresql+asyncpg://", "postgresql://")
@@ -63,10 +62,6 @@ def pg():
     control = psycopg2.connect(_psycopg_url(ADMIN_PG_URL))
     control.autocommit = True
     cc = control.cursor()
-    existed = {}
-    for r in _ROLES:
-        cc.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (r,))
-        existed[r] = cc.fetchone() is not None
     name = f"ops_case_kind_{uuid.uuid4().hex[:12]}"
     cc.execute(f'CREATE DATABASE "{name}"')
     conn = psycopg2.connect(_psycopg_url(ADMIN_PG_URL, name))
@@ -100,12 +95,7 @@ def pg():
     finally:
         conn.close()
         cc.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
-        for r in _ROLES:
-            if not existed[r]:
-                try:
-                    cc.execute(f"DROP ROLE IF EXISTS {r}")
-                except psycopg2.Error:
-                    pass
+        # 共通の役割はクラスタ全体で1つ。別の係が使っている途中で消すと落ちるため、試験では消さない（docs/handoff/ci-test-shared-collisions/design.md 便1）
         control.close()
 
 
@@ -147,7 +137,9 @@ def test_second_investigation_is_rejected(migrated):
     c = migrated.cursor()
     c.execute("INSERT INTO ops_case.reports (incident_id, status) VALUES (%s, 'reported')", (iid,))
     with pytest.raises(psycopg2.errors.UniqueViolation):
-        c.execute("INSERT INTO ops_case.reports (incident_id, kind, status) VALUES (%s, 'investigation', 'reported')", (iid,))
+        c.execute(
+            "INSERT INTO ops_case.reports (incident_id, kind, status) VALUES (%s, 'investigation', 'reported')", (iid,)
+        )
     # 古い一意（incident_id だけ）でも、新しい一意（incident_id, kind）でも断られる
     c.execute("SELECT count(*) FROM ops_case.reports WHERE incident_id = %s", (iid,))
     assert c.fetchone()[0] == 1
