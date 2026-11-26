@@ -254,6 +254,7 @@ export function InboxKartePanel({
           {/* Fixed action bar with overflow */}
           <ActionBar
             status={leadDetail.status}
+            registrationCompleted={leadDetail.registration_completed === true}
             leadId={leadDetail.id}
             onConvertLead={handleConvertLead}
             onCreateInvoice={handleCreateInvoice}
@@ -335,10 +336,16 @@ export function InboxKartePanel({
 // ADR-110: Fixed Action Bar with "…" overflow
 // ---------------------------------------------------------------------------
 
-function ActionBar({
-  status, leadId, onConvertLead, onCreateInvoice, canMerge, onMerge,
+const INVOICE_PRIMARY_STATUSES: readonly string[] = [
+  "negotiating", "follow_up_short", "follow_up_long", "existing_customer",
+];
+
+export function ActionBar({
+  status, registrationCompleted, leadId, onConvertLead, onCreateInvoice, canMerge, onMerge,
 }: {
   status: string;
+  /** ADR-1091: その人の会社に既定の請求先がある（backend の判定をそのまま使う） */
+  registrationCompleted: boolean;
   leadId: number;
   onConvertLead: () => void;
   onCreateInvoice: () => void;
@@ -375,18 +382,19 @@ function ActionBar({
     }
   };
 
+  // ADR-1091: 帯はすべての段階で出す。大きいボタンは段階で決める（lost・out_of_scope は出さない）
   let primaryLabel: string | null = null;
   let primaryOnClick: (() => void) | null = null;
   if (status === "lead") { primaryLabel = t("inbox.actionConvert"); primaryOnClick = onConvertLead; }
-  else if (status === "existing_customer") { primaryLabel = t("inbox.actionCreateInvoice"); primaryOnClick = onCreateInvoice; }
-
-  if (!primaryLabel) return null;
+  else if (INVOICE_PRIMARY_STATUSES.includes(status)) { primaryLabel = t("inbox.actionCreateInvoice"); primaryOnClick = onCreateInvoice; }
 
   return (
     <div className="karte-action-bar" ref={barRef} data-testid="karte-action-bar">
-      <button type="button" className="karte-action-primary" data-testid="karte-action-primary" onClick={primaryOnClick!}>
-        {primaryLabel}
-      </button>
+      {primaryLabel && primaryOnClick && (
+        <button type="button" className="karte-action-primary" data-testid="karte-action-primary" onClick={primaryOnClick}>
+          {primaryLabel}
+        </button>
+      )}
       <button
         type="button"
         className="karte-action-overflow"
@@ -399,35 +407,39 @@ function ActionBar({
       </button>
       {menuOpen && (
         <div className="karte-overflow-menu" role="menu">
-          {/* ADR-127 E-2: Registration link generation */}
-          <button
-            type="button"
-            role="menuitem"
-            className="karte-overflow-item"
-            disabled={regLinkLoading}
-            onClick={() => generateLink("register")}
-          >
-            {t("registration.generateLink")}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="karte-overflow-item"
-            disabled={regLinkLoading}
-            onClick={() => generateLink("add_address")}
-          >
-            {t("registration.generateAddressLink")}
-          </button>
-          {status === "existing_customer" && (
+          {/* ADR-127 E-2 / ADR-1091: 登録がまだなら登録フォームのリンクだけ。済んだ人には出さず、元のデータに足すリンクだけ */}
+          {!registrationCompleted && (
             <button
               type="button"
               role="menuitem"
               className="karte-overflow-item"
               disabled={regLinkLoading}
-              onClick={() => generateLink("change_billing")}
+              onClick={() => generateLink("register")}
             >
-              {t("registration.generateChangeBillingLink")}
+              {t("registration.generateLink")}
             </button>
+          )}
+          {registrationCompleted && (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                className="karte-overflow-item"
+                disabled={regLinkLoading}
+                onClick={() => generateLink("add_address")}
+              >
+                {t("registration.generateAddressLink")}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="karte-overflow-item"
+                disabled={regLinkLoading}
+                onClick={() => generateLink("change_billing")}
+              >
+                {t("registration.generateChangeBillingLink")}
+              </button>
+            </>
           )}
           {regLink && (
             <div className="karte-overflow-link" style={{ padding: "var(--spacing-2)", wordBreak: "break-all", fontSize: "var(--font-size-xs)" }}>

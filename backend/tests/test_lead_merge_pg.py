@@ -652,3 +652,38 @@ async def test_error_unknown_lead_id_is_404(env):
     res = await env.merge(master, 999999)
     assert res.status_code == 404
     assert (await env.preview(master, 999999)).status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# ADR-1091: 統合で 3 つがそろうと、残る側が既存顧客になる（道ごとの試験: merge_leads）
+# ---------------------------------------------------------------------------
+
+@requires_pg
+@pytest.mark.asyncio
+async def test_merge_converts_master_when_loser_brings_the_three(env):
+    """loser の会社・既定の請求先・支払い済みの注文が master に移ると、master が existing_customer になる。"""
+    master = await env.lead("master")
+    loser = await env.lead("loser")
+    company_id = int((await env.run(
+        f"INSERT INTO {_SCHEMA}.companies (company_code, lead_id, name) VALUES ('CO-CCMRG', :l, 'CC-MRG') RETURNING id",
+        {"l": loser},
+    ))[0]["id"])
+    await env.run(
+        f"INSERT INTO {_SCHEMA}.company_addresses (company_id, address_type, is_default, country_code) "
+        "VALUES (:c, 'billing', TRUE, 'US')",
+        {"c": company_id},
+    )
+    await env.run(
+        f"INSERT INTO {_SCHEMA}.orders (tenant_id, company_id, order_number, paid_at) "
+        "VALUES (:t, :c, 'CC-MRG-1', NOW())",
+        {"t": _TENANT_ID, "c": company_id},
+    )
+    assert (await env.run(f"SELECT status FROM {_SCHEMA}.leads WHERE id = :l", {"l": master}))[0]["status"] == "lead"
+
+    res = await env.merge(master, loser)
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["id"] == master
+    assert body["status"] == "existing_customer"
+    assert body["registration_completed"] is True
+    assert (await env.run(f"SELECT status FROM {_SCHEMA}.leads WHERE id = :l", {"l": master}))[0]["status"] == "existing_customer"

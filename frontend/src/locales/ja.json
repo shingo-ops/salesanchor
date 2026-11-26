@@ -6605,7 +6605,9 @@
     "invoiceNotDraft": "この請求書は下書きではなくなったため、発行できません。画面を読み直してください。",
     "paymentFee": "支払い手数料の設定が見つからないため、合計を計算できません。設定の画面で PayPal の手数料を確かめてください。",
     "invalidTeamIds": "選んだチームが使えません。選び直してください。",
-    "invalidTeam": "選んだチームは使えません。選び直してください。"
+    "invalidTeam": "選んだチームは使えません。選び直してください。",
+    "existingCustomerIsAutomatic": "既存顧客には手で変えられません。登録フォーム・会社・支払いの 3 つがそろうと自動で切り替わります。",
+    "alreadyExistingCustomer": "この人はすでに既存顧客です。画面を読み込み直してください。"
   },
   "issuerProfile": {
     "sectionTitle": "書類に載せる会社情報",

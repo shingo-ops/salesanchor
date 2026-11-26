@@ -18536,6 +18536,17 @@
             ],
             "title": "Prospect Rank"
           },
+          "registration_completed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration Completed"
+          },
           "response_speed": {
             "anyOf": [
               {

@@ -29,7 +29,16 @@ describe("getKarteLayout", () => {
     expect(l.fields.deal).not.toContain("cs_memo");
   });
 
-  it.each(["existing_customer", "follow_up_short", "follow_up_long"])(
+  it.each(["follow_up_short", "follow_up_long"])(
+    "追客（%s）: 商談中と同じ見せ方（タブは 商談・連絡先）",
+    (status) => {
+      const l = getKarteLayout(status);
+      expect(l).toBe(getKarteLayout("negotiating"));
+      expect(l.tabs).toEqual(["deal", "contact"]);
+    },
+  );
+
+  it.each(["existing_customer"])(
     "成約後（%s）: タブは 顧客・連絡先・商談、顧客タブと商談タブの項目は表のとおり",
     (status) => {
       const l = getKarteLayout(status);
