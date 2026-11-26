@@ -557,7 +557,8 @@ export function useInboxState(): UseInboxStateReturn {
     try {
       const payload = Object.fromEntries(
         Object.entries(cardForm)
-          .filter(([k]) => k !== "id" && k !== "lead_code" && k !== "prospect_rank")
+          // ADR-1090: status・registration_completed は送らない（開いている間に自動で既存顧客になった人を古い段階で戻さない）
+          .filter(([k]) => k !== "id" && k !== "lead_code" && k !== "prospect_rank" && k !== "status" && k !== "registration_completed")
           .map(([k, v]) => [k, v === "" ? null : v])
       );
       const updated = await api.patch<LeadDetail>(`/leads/${leadDetail.id}`, payload);

@@ -71,6 +71,8 @@ export interface ConvertAssigneeOption {
 // ---------------------------------------------------------------------------
 
 export interface LeadDetail {
+  /** ADR-1090: その人の会社に既定の請求先がある（backend の 1 つの判定の結果。画面は自分で判定しない） */
+  registration_completed?: boolean | null;
   id: number;
   lead_code: string | null;
   customer_name: string;

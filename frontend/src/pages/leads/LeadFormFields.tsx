@@ -9,7 +9,7 @@ import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { CountryCombobox } from "../../components/CountryCombobox";
 import { Select } from "../../components/Select";
-import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
+import { MANUAL_LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
 import type { CloseReasonResponse } from "../../api/closeReasons";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
@@ -41,7 +41,7 @@ interface Props {
   closeReasonOptions: Pick<CloseReasonResponse, "id" | "label">[];
 }
 
-const LEAD_STATUSES: LeadStatusCode[] = [...LEAD_STATUS_CODES];
+const LEAD_STATUSES: LeadStatusCode[] = [...MANUAL_LEAD_STATUS_CODES];
 
 export function buildLostReasonUpdatePayload(
   status: string,
@@ -96,7 +96,12 @@ export function LostReasonFields({
 
 export function LeadFormFields({ form, onChange, closeReasonOptions }: Props) {
   const { t } = useTranslation();
-  const statusOptions = LEAD_STATUSES.map((s) => ({
+  // ADR-1090: 今の値が既存顧客の人だけ、その値を先頭に足して表示する
+  const statusOptions = (
+    form.status === "existing_customer"
+      ? (["existing_customer", ...LEAD_STATUSES] as LeadStatusCode[])
+      : LEAD_STATUSES
+  ).map((s) => ({
     value: s,
     label: t(`leads.statusCode.${s}`, { defaultValue: s }),
   }));

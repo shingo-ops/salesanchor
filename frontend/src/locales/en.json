@@ -6555,7 +6555,9 @@
     "paymentMethod": "The selected payment method is no longer available, so the invoice cannot be saved. Choose a payment method again.",
     "contactCompanyMismatch": "The selected contact does not belong to this company, so the invoice details cannot be loaded. Choose the contact again.",
     "invoiceNotDraft": "This invoice is no longer a draft, so it cannot be issued. Reload the page.",
-    "paymentFee": "No payment fee setting was found, so the total cannot be calculated. Check the PayPal fee in settings."
+    "paymentFee": "No payment fee setting was found, so the total cannot be calculated. Check the PayPal fee in settings.",
+    "existingCustomerIsAutomatic": "You can't set Existing customer by hand. It switches automatically once the registration form, company and payment are all in place.",
+    "alreadyExistingCustomer": "This person is already an existing customer. Please reload the page."
   },
   "addressRule": {
     "ascii": "Please use English letters, numbers and symbols only.",

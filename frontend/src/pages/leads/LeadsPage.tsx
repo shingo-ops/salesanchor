@@ -28,7 +28,7 @@ import { Button } from "../../components/Button";
 import { PageLayout } from "../../components/PageLayout";
 import { CountryCombobox } from "../../components/CountryCombobox";
 import { getStatusPresentation } from "../../utils/statusPresentation";
-import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
+import { LEAD_STATUS_CODES, MANUAL_LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
@@ -128,7 +128,7 @@ export default function LeadsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<CreateFormState>(emptyCreateForm);
   // 編集 Drawer
-  const { drawerOpen, editId, editForm, setEditForm, handleRowClick, closeDrawer } =
+  const { drawerOpen, editId, editForm, baseForm, setEditForm, handleRowClick, closeDrawer } =
     useRecordDrawer<Lead, LeadFormState>({ toForm, emptyForm: emptyEditForm });
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
@@ -207,7 +207,8 @@ export default function LeadsPage() {
         customer_name: editForm.customer_name,
         email: toNull(editForm.email),
         phone: toNull(editForm.phone),
-        status: editForm.status,
+        // ADR-1090: 選び直したときだけ送る（開いている間に自動で既存顧客になった人を古い段階で戻さない）
+        ...(editForm.status !== baseForm.status ? { status: editForm.status } : {}),
         type: toNull(editForm.type),
         notes: toNull(editForm.notes),
         country: toNull(editForm.country),
@@ -346,7 +347,7 @@ export default function LeadsPage() {
             label={t("leads.status")}
             value={createForm.status}
             onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}
-            options={LEAD_STATUSES.map((s) => ({
+            options={MANUAL_LEAD_STATUS_CODES.map((s) => ({
               value: s,
               label: translateLeadStatus(s),
             }))}
