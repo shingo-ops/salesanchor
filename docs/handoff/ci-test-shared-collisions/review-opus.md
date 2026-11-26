@@ -16,3 +16,11 @@
 - 行数が増えたのは、クラウドの担当が `ruff format` を6ファイルにかけたためである。上の比べ方で、整形の差に動きの違いは無かった。
 - K2: `git grep -n "DROP ROLE" -- backend/tests` は `backend/tests/test_tenant_isolation_daily_check.py:217,254` の2行だけ（合格）。
 - K1・K3・K4 は PR の CI と合流後の main で確かめる。
+
+## K3 の確かめ（HEAD fc0ff20ac・2026-11-27）
+- 結果: 不合格。PR の pytest は pass したが、skipped が main より1つ多い。
+  - main の直近6回（run 45850364363・45747857274・45736754252・45639855180・45627383586・45584731851）は、どれも skipped 79。
+  - PR の2回（run 45857839276・45858440452）は、どちらも skipped 80。
+- 原因: `backend/tests/ops/test_ai_cloud_views.py:229-231` は `ai_reader` があると skip する。`ai_reader` を作るのは便1の6ファイルだけ（`git grep` の結果）。消さなくなったので、先に作られた役割が残って skip になる。
+- 試験は -q で動くので、記録に試験ごとの結果は出ない。ほかの5ファイルの `pg_roles` の行は、無ければ作るものだけで、skip しない（`grep -n pg_roles` の結果）。
+- 対処: `docs/handoff/ci-test-shared-collisions/design.md` §3-1 の「追加」の項。直したあとの PR で skipped が 79 に戻ることを K3 とする。

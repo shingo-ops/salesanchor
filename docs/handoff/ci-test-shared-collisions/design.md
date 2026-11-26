@@ -32,6 +32,10 @@ recon §2 の6ファイルについて、後片付けの中の共通の役割を
 | `backend/tests/test_ops_case_router.py:187-192` | 同上 | 同上 |
 | `backend/tests/ops/test_ai_ro_views.py:98-99` | `if not role_existed: DROP ROLE IF EXISTS ai_reader` | この2行を外す |
 
+- 追加（2026-11-27・K3 の不合格を受けて）: `backend/tests/ops/test_ai_cloud_views.py:224-240` の `test_meta_migration_without_ai_reader` は、`ai_reader` があると skip する。役割を消さなくなると、ほかのファイルが先に作った `ai_reader` が残り、この試験が毎回 skip になる（PR の run 45857839276・45858440452 は skipped 80、main の直近6回は全部 79）。
+  - 変更前: `pg_roles` に `ai_reader` があれば `pytest.skip`。無ければ meta の migration をそのまま2回流す。
+  - 変更後: skip をやめる。meta の migration の文の役割の名前 `ai_reader` を、`re.sub(r"\bai_reader\b", absent, ...)` で確実に無い名前 `absent = f"ai_reader_absent_{uuid.uuid4().hex[:8]}"` に置き換えて2回流す。流す前に、`absent` が文に入ったこと（`assert absent in sql`）と、`pg_roles` に `absent` が無いこと（`assert` で確かめる）を確かめる。`\b` なので `ai_reader_cloud` は置き換わらない（`migrations/20261024_100000_create_ai_cloud_meta.sql` で `ai_reader` が出るのは :5-6 のコメントと :190-194 だけ）。
+  - これで「役割が無い DB でも migration が2回通る」を毎回確かめられる。共通の役割には触らない。
 - 使わなくなった変数（`existed`・`role_existed`・`_ROLES`・`self.existed` など）は、ほかで使っていなければ外す。使っていれば残す。lint（ruff）の指摘が 0 件になる形にそろえる。
 - 理由のコメントの文: `# 共通の役割はクラスタ全体で1つ。別の係が使っている途中で消すと落ちるため、試験では消さない（docs/handoff/ci-test-shared-collisions/design.md 便1）`
 - 触らない範囲: 役割を作る行、属性を一時的に変える試験（`backend/tests/ops/test_ai_cloud_views.py:460-468`・`backend/tests/ops/test_ops_case_db.py:621-627`）、`backend/tests/test_tenant_isolation_daily_check.py`（自分で作った名前の役割だけを消すため）、migration、製品コード、CI 設定。
