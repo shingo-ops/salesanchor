@@ -247,6 +247,14 @@ PR #5729 を 2026-11-24 22:23 JST に合流（80d289df0）。GO #5729 は POの�
 - CI の別件: 合流した head で、PR が触らない試験 `tests/test_product_blank_confirmations_pg.py::test_write_requires_operator_flag` が deadlock で 1 回落ちた。失敗分の再実行で 10006 passed になった。
 - 次の本番の変更（段取り表 C6）は、この反映から 24 時間あける。2026-11-25 22:31 JST 以降。
 
+### 24 時間後の確かめ（実装の 3 つ目の便。2026-11-26 21:24〜21:30 JST。本番を読むだけ）
+
+- ○ 反映から 24 時間が過ぎた（C6）。その後の本番反映 12 回はすべて success。
+- ○ 伏せた窓の作り直しの記録は最新が 2026-11-26 03:24:27Z・ok・ビュー 586・失敗 0。ops_incidents の alertname・severity は allow、labels・annotations は mask のまま。
+- ○ 反映の後に増えた障害記録は 1 件（BackendSseConnectionsHigh・解決済み）。直近 47 時間で、見張り対象の箱の「不健康」は 0。
+- 相談係の入口は鍵なしで 401（動いている）。鍵ありの読み取りは、この確かめでは行っていない。
+- 次: 4 つ目の段取り表 `docs/handoff/ai-ops-247/card-stage4-bin4.md`（U1 サーバーが起こす・U2 案A・P5 範囲の週次点検）。
+
 ### 試しから設計に足すこと
 
 - 案 A（U2）は使える。ただし読むのは 1 ファイルずつ（raw.githubusercontent.com）。まとめて取る形（codeload）は 403 なので使わない。
