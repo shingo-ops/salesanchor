@@ -19,6 +19,10 @@ interface CountryComboboxProps {
   placeholder?: string;
   disabled?: boolean;
   required?: boolean;
+  /** 渡すと TextField と同じラベルを出す。required のとき「*」を付ける */
+  label?: string;
+  /** 渡すと TextField と同じ赤い理由の行を欄の下に出す */
+  error?: string;
 }
 
 export function CountryCombobox({
@@ -29,6 +33,8 @@ export function CountryCombobox({
   placeholder,
   disabled = false,
   required = false,
+  label,
+  error,
 }: CountryComboboxProps) {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
@@ -86,7 +92,7 @@ export function CountryCombobox({
       ? `${selected.name} (${selected.code})`
       : value;
 
-  return (
+  const combobox = (
     <div ref={ref} style={{ position: "relative" }}>
       <div style={{ position: "relative" }}>
         <TextFieldControl
@@ -201,6 +207,29 @@ export function CountryCombobox({
             ))
           )}
         </div>
+      )}
+    </div>
+  );
+
+  if (label == null && error == null) return combobox;
+
+  return (
+    <div className={`comp-field comp-field--full${error != null ? " comp-field--error" : ""}`}>
+      {label != null && (
+        <label htmlFor={id} className="comp-field__label">
+          {label}
+          {required && (
+            <span className="comp-field__required" aria-hidden="true">
+              *
+            </span>
+          )}
+        </label>
+      )}
+      {combobox}
+      {error != null && (
+        <p className="comp-field__hint comp-field__hint--error" role="alert">
+          {error}
+        </p>
       )}
     </div>
   );
