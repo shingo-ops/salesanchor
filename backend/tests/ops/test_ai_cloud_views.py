@@ -223,17 +223,18 @@ def _assert_no_raw(text_):
 
 def test_meta_migration_without_ai_reader(cluster):
     """ai_reader が無い DB（CI の内部の試し）でも meta の migration が 2 回通る。
-    ai_reader はクラスタ共通なので、先に存在している・他の試験が作った後では確かめられない（skip）。
-    このファイルでは pg より前に走る位置に置く。"""
+    ai_reader はクラスタ共通で、ほかの試験が作ると残る。役割の名前を確実に無い名前へ置き換えて流す（docs/handoff/ci-test-shared-collisions/design.md 便1）。"""
+    absent = f"ai_reader_absent_{uuid.uuid4().hex[:8]}"
+    sql = re.sub(r"\bai_reader\b", absent, _read(_META_SQL))
+    assert absent in sql
     cur = cluster.control.cursor()
-    cur.execute("SELECT 1 FROM pg_roles WHERE rolname = 'ai_reader'")
-    if cur.fetchone() is not None:
-        pytest.skip("ai_reader が既にある（クラスタ共通のロール）")
+    cur.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (absent,))
+    assert cur.fetchone() is None
     name, conn = _new_db(cluster.control, "ai_cloud_noreader")
     try:
         c = conn.cursor()
-        c.execute(_read(_META_SQL))
-        c.execute(_read(_META_SQL))
+        c.execute(sql)
+        c.execute(sql)
         assert _rows(conn, "SELECT to_regclass('ai_cloud_meta.column_class') IS NOT NULL")[0][0] is True
     finally:
         conn.close()
