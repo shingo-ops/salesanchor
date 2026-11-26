@@ -3062,6 +3062,73 @@
         "title": "CalendarCategoryItem",
         "type": "object"
       },
+      "CalendarPreferences": {
+        "description": "ひとりひとりの初期値（自分の分だけ。利用者の欄は持たない）。",
+        "properties": {
+          "auto_meet": {
+            "default": false,
+            "title": "Auto Meet",
+            "type": "boolean"
+          },
+          "default_view": {
+            "default": "week",
+            "enum": [
+              "day",
+              "threeDay",
+              "week",
+              "month",
+              "list"
+            ],
+            "title": "Default View",
+            "type": "string"
+          },
+          "event_minutes": {
+            "default": 60,
+            "enum": [
+              15,
+              30,
+              45,
+              60,
+              90,
+              120
+            ],
+            "title": "Event Minutes",
+            "type": "integer"
+          },
+          "open_owners": {
+            "default": "self",
+            "enum": [
+              "self",
+              "all",
+              "team"
+            ],
+            "title": "Open Owners",
+            "type": "string"
+          },
+          "open_team_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Team Id"
+          },
+          "week_start": {
+            "default": 0,
+            "enum": [
+              0,
+              1
+            ],
+            "title": "Week Start",
+            "type": "integer"
+          }
+        },
+        "title": "CalendarPreferences",
+        "type": "object"
+      },
       "CalendarTeamItem": {
         "properties": {
           "id": {
@@ -25720,6 +25787,13 @@
             "title": "Staff Id",
             "type": "integer"
           },
+          "team_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Team Ids",
+            "type": "array"
+          },
           "user_id": {
             "anyOf": [
               {
@@ -25739,7 +25813,8 @@
           "name",
           "primary_email",
           "color_key",
-          "is_self"
+          "is_self",
+          "team_ids"
         ],
         "title": "OwnerRosterItem",
         "type": "object"
@@ -48308,6 +48383,80 @@
           }
         ],
         "summary": "Update Calendar Owner",
+        "tags": [
+          "calendar",
+          "calendar"
+        ]
+      }
+    },
+    "/api/v1/calendar/preferences": {
+      "get": {
+        "description": "自分の初期値。行が無いときは今までと同じ既定値（週・日曜・60 分・Meet なし・自分だけ）。",
+        "operationId": "get_calendar_preferences_api_v1_calendar_preferences_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarPreferences"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Calendar Preferences",
+        "tags": [
+          "calendar",
+          "calendar"
+        ]
+      },
+      "put": {
+        "description": "自分の初期値を保存する。色（color_key）には触れない。",
+        "operationId": "put_calendar_preferences_api_v1_calendar_preferences_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarPreferences"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarPreferences"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Calendar Preferences",
         "tags": [
           "calendar",
           "calendar"

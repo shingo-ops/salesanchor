@@ -576,7 +576,13 @@ tenant_*	calendar_events	source	mask		character varying
 tenant_*	calendar_events	sync_origin_id	mask		character varying
 tenant_*	calendar_events	sync_status	allow	値の決まり calendar_events_sync_status_check で値が限られる	character varying
 tenant_*	calendar_events	title	mask		character varying
+tenant_*	calendar_owner_settings	auto_meet	allow	真偽の 2 値だけが入る列	boolean
 tenant_*	calendar_owner_settings	color_key	allow	値の決まり calendar_owner_settings_color_key_check で値が限られる	text
+tenant_*	calendar_owner_settings	default_view	allow	値の決まり calendar_owner_settings_default_view_check で値が限られる	text
+tenant_*	calendar_owner_settings	event_minutes	allow	値の決まり calendar_owner_settings_event_minutes_check で値が限られる	smallint
+tenant_*	calendar_owner_settings	open_owners	allow	値の決まり calendar_owner_settings_open_owners_check で値が限られる	text
+tenant_*	calendar_owner_settings	open_team_id	allow	同じ会社の中のチームの番号（teams の id）で、自由な文字は入らない	integer
+tenant_*	calendar_owner_settings	week_start	allow	値の決まり calendar_owner_settings_week_start_check で値が限られる	smallint
 tenant_*	channel_masters	connection_type	allow	値の決まり channel_masters_connection_type_check で値が限られる	character varying
 tenant_*	channel_masters	display_name	mask		character varying
 tenant_*	channel_masters	platform	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying

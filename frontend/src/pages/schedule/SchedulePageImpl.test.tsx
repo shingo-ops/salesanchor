@@ -51,7 +51,18 @@ const answers = vi.hoisted(() => ({
   ownerColorKey: null as string | null,
   categories: [] as Array<Record<string, unknown>>,
   teams: [] as Array<{ id: number; name: string }>,
+  /** GET /calendar/preferences の応答。null は「行が無い」（既定値の応答） */
+  prefs: null as Record<string, unknown> | null,
+  /** 名簿の team_ids（自分・ほかの人） */
+  selfTeamIds: [] as number[],
+  otherTeamIds: [] as number[],
+  /** 入れた Promise が終わるまで、その応答を返さない（読み込みの順番の試験用） */
+  gate: { perms: null as Promise<void> | null, prefs: null as Promise<void> | null, teams: null as Promise<void> | null },
 }));
+
+const DEFAULT_PREFS = {
+  default_view: "week", week_start: 0, event_minutes: 60, auto_meet: false, open_owners: "self", open_team_id: null,
+};
 
 /** 種類の表の応答（GET /calendar/categories）。必要な行だけ並べる */
 function categoryRow(key: string, over: Record<string, unknown> = {}) {
@@ -62,8 +73,18 @@ vi.mock("../../lib/api", () => ({
   api: {
     get: vi.fn(async (path: string) => {
       if (path === "/calendar/categories") return answers.categories;
-      if (path === "/calendar/teams") return answers.teams;
-      if (path === "/me/permissions") return { permissions: answers.canManageOthers ? ["staff.view"] : [], is_tenant_admin: answers.isTenantAdmin };
+      if (path === "/calendar/teams") {
+        await answers.gate.teams;
+        return answers.teams;
+      }
+      if (path === "/calendar/preferences") {
+        await answers.gate.prefs;
+        return answers.prefs ?? DEFAULT_PREFS;
+      }
+      if (path === "/me/permissions") {
+        await answers.gate.perms;
+        return { permissions: answers.canManageOthers ? ["staff.view"] : [], is_tenant_admin: answers.isTenantAdmin };
+      }
       if (path === "/google-calendar/status") return { connected: answers.connected, meet_available: answers.meetAvailable };
       if (path === "/calendar/owners") {
         return {
@@ -71,8 +92,8 @@ vi.mock("../../lib/api", () => ({
           current_staff_id: 7,
           current_user_id: 101,
           owners: [
-            { staff_id: 7, user_id: 101, staff_code: "A01", name: "Owner Self", primary_email: null, color_key: answers.ownerColorKey, is_self: true },
-            { staff_id: 8, user_id: 202, staff_code: "B02", name: "Owner Other", primary_email: null, color_key: null, is_self: false },
+            { staff_id: 7, user_id: 101, staff_code: "A01", name: "Owner Self", primary_email: null, color_key: answers.ownerColorKey, is_self: true, team_ids: answers.selfTeamIds },
+            { staff_id: 8, user_id: 202, staff_code: "B02", name: "Owner Other", primary_email: null, color_key: null, is_self: false, team_ids: answers.otherTeamIds },
           ].filter((o) => !(answers.selfMissing && o.is_self)),
         };
       }
@@ -110,6 +131,10 @@ beforeEach(async () => {
   answers.ownerColorKey = null;
   answers.categories = [];
   answers.teams = [];
+  answers.prefs = null;
+  answers.selfTeamIds = [];
+  answers.otherTeamIds = [];
+  answers.gate = { perms: null, prefs: null, teams: null };
   calendarProps.current = null;
   hrefSetter.mockReset();
   const fake = { ...window.location } as Record<string, unknown>;
@@ -2007,5 +2032,236 @@ describe("SchedulePage team share (schedule-settings bin2b)", () => {
     const allBody = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
     expect(allBody.scope).toBe("all");
     expect(allBody.team_ids).toEqual([1]);
+  });
+});
+
+/** 入れた Promise を、あとで終わらせられる形で作る（応答を止めておく試験用） */
+function makeGate() {
+  let release = () => {};
+  const promise = new Promise<void>((resolve) => { release = resolve; });
+  return { promise, release };
+}
+
+/** 画面が今の初期値で組み直されるまで待つ（時間割へ渡る長さの値を目印にする。試験は event_minutes に 60 以外を入れる） */
+const waitForPrefsApplied = (minutes: number) => waitFor(() => expect(calendarProps.current?.clickMinutes).toBe(minutes));
+const flush = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 30)); });
+const ownerBox = (name: string) => screen.queryByRole("checkbox", { name }) as HTMLInputElement | null;
+
+describe("SchedulePage personal defaults (schedule-settings bin3b)", () => {
+  it("B7: shows the settings gear to a user who is neither admin nor staff.view", async () => {
+    answers.isTenantAdmin = false;
+    answers.canManageOthers = false;
+    view();
+    expect(await screen.findByRole("button", { name: i18n.t("schedule.settings") })).toBeTruthy();
+  });
+
+  it("B2: with no saved row it behaves as today (week, Sunday, 60 minutes, only me)", async () => {
+    answers.canManageOthers = true;
+    view();
+    await screen.findByRole("button", { name: i18n.t("schedule.create") });
+    await flush();
+    expect(calendarProps.current?.mode).toBe("days");
+    expect(calendarProps.current?.dayCount).toBe(7);
+    expect(calendarProps.current?.weekStart).toBe(0);
+    expect(calendarProps.current?.clickMinutes).toBe(60);
+    expect(ownerBox("Owner Self")?.checked).toBe(true);
+    expect(ownerBox("Owner Other")?.checked).toBe(false);
+  });
+
+  it.each([
+    ["month", "month", 7],
+    ["threeDay", "days", 3],
+    ["day", "days", 1],
+    ["week", "days", 7],
+  ])("B1: opens in the saved view %s", async (saved, mode, dayCount) => {
+    answers.prefs = { ...DEFAULT_PREFS, default_view: saved, event_minutes: 30 };
+    view();
+    await waitForPrefsApplied(30);
+    await waitFor(() => {
+      expect(calendarProps.current?.mode).toBe(mode);
+      if (mode === "days") expect(calendarProps.current?.dayCount).toBe(dayCount);
+    });
+  });
+
+  it("B1: opens in the list view when saved", async () => {
+    answers.prefs = { ...DEFAULT_PREFS, default_view: "list" };
+    view();
+    expect(await screen.findByRole("button", { name: i18n.t("schedule.listView") })).toBeTruthy();
+    await waitFor(() => expect(screen.queryByTestId("calendar-view")).toBeNull());
+    await flush();
+    expect(screen.queryByTestId("calendar-view")).toBeNull();
+  });
+
+  it("does not override a view the person changed by hand before the preferences arrived", async () => {
+    const gate = makeGate();
+    answers.gate.prefs = gate.promise;
+    answers.prefs = { ...DEFAULT_PREFS, default_view: "month", event_minutes: 30 };
+    view();
+    await screen.findByRole("button", { name: i18n.t("schedule.create") });
+    fireEvent.keyDown(window, { key: "d" });
+    await waitFor(() => expect(calendarProps.current?.dayCount).toBe(1));
+    gate.release();
+    await waitForPrefsApplied(30);
+    await flush();
+    expect(calendarProps.current?.mode).toBe("days");
+    expect(calendarProps.current?.dayCount).toBe(1);
+  });
+
+  it("B1: week start Monday reaches the calendar, and the week's events are asked for from a Monday", async () => {
+    answers.prefs = { ...DEFAULT_PREFS, week_start: 1 };
+    view();
+    await waitFor(() => expect(calendarProps.current?.weekStart).toBe(1));
+    await waitFor(() => {
+      const calls = mockGet.mock.calls.map((c) => String(c[0])).filter((path) => path.startsWith("/calendar/events?"));
+      const last = calls[calls.length - 1];
+      const start = new Date(new URL(`http://x${last}`).searchParams.get("start") as string);
+      const end = new Date(new URL(`http://x${last}`).searchParams.get("end") as string);
+      expect(start.getDay()).toBe(1);
+      expect(Math.round((end.getTime() - start.getTime()) / 86400000)).toBe(7);
+    });
+  });
+
+  it("B1: the saved length is used for a new event (30 minutes) and for a click in the grid", async () => {
+    answers.prefs = { ...DEFAULT_PREFS, event_minutes: 30 };
+    view();
+    await waitForPrefsApplied(30);
+    fireEvent.click(await screen.findByRole("button", { name: i18n.t("schedule.create") }));
+    await screen.findByLabelText(i18n.t("schedule.eventTitle"));
+    fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "Half hour" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const body = vi.mocked(api.post).mock.calls[0][1] as Record<string, string>;
+    expect((new Date(body.end_datetime).getTime() - new Date(body.start_datetime).getTime()) / 60000).toBe(30);
+  });
+
+  it("B2: a new event is 60 minutes with no saved row", async () => {
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: i18n.t("schedule.create") }));
+    await screen.findByLabelText(i18n.t("schedule.eventTitle"));
+    fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "One hour" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const body = vi.mocked(api.post).mock.calls[0][1] as Record<string, string>;
+    expect((new Date(body.end_datetime).getTime() - new Date(body.start_datetime).getTime()) / 60000).toBe(60);
+  });
+
+  it("B8: auto_meet turns Meet on for a new event only when Meet is available", async () => {
+    answers.isTenantAdmin = true;
+    answers.connected = true;
+    answers.meetAvailable = true;
+    answers.prefs = { ...DEFAULT_PREFS, auto_meet: true, event_minutes: 30 };
+    view();
+    await waitForPrefsApplied(30);
+    await waitFor(() => expect(mockGet).toHaveBeenCalledWith("/google-calendar/status"));
+    await flush();
+    fireEvent.click(await screen.findByRole("button", { name: i18n.t("schedule.create") }));
+    expect(await screen.findByText(i18n.t("schedule.meetPending"))).toBeTruthy();
+  });
+
+  it("B8: auto_meet with Meet unavailable leaves the new event without Meet", async () => {
+    answers.isTenantAdmin = true;
+    answers.connected = true;
+    answers.meetAvailable = false;
+    answers.prefs = { ...DEFAULT_PREFS, auto_meet: true, event_minutes: 30 };
+    view();
+    await waitForPrefsApplied(30);
+    await waitFor(() => expect(mockGet).toHaveBeenCalledWith("/google-calendar/status"));
+    await flush();
+    fireEvent.click(await screen.findByRole("button", { name: i18n.t("schedule.create") }));
+    await screen.findByLabelText(i18n.t("schedule.eventTitle"));
+    expect(screen.queryByText(i18n.t("schedule.meetPending"))).toBeNull();
+    fireEvent.change(screen.getByLabelText(i18n.t("schedule.eventTitle")), { target: { value: "No Meet" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    expect("add_meet" in (vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>)).toBe(false);
+  });
+
+  it("B1: opens with everyone checked when 'everyone' is saved and the person may see others", async () => {
+    answers.canManageOthers = true;
+    answers.prefs = { ...DEFAULT_PREFS, open_owners: "all" };
+    view();
+    await waitFor(() => expect(ownerBox("Owner Other")?.checked).toBe(true));
+    expect(ownerBox("Owner Self")?.checked).toBe(true);
+  });
+
+  it("falls back to only me when 'everyone' is saved but the person lost staff.view", async () => {
+    answers.canManageOthers = false;
+    answers.prefs = { ...DEFAULT_PREFS, open_owners: "all", event_minutes: 30 };
+    view();
+    await waitForPrefsApplied(30);
+    await flush();
+    expect(ownerBox("Owner Self")?.checked).toBe(true);
+    expect(ownerBox("Owner Other")).toBeNull();
+  });
+
+  it("B1: opens with the team's people and me checked when 'one team' is saved", async () => {
+    answers.canManageOthers = true;
+    answers.teams = [{ id: 3, name: "Team Three" }];
+    answers.otherTeamIds = [3];
+    answers.prefs = { ...DEFAULT_PREFS, open_owners: "team", open_team_id: 3 };
+    view();
+    await waitFor(() => expect(ownerBox("Owner Other")?.checked).toBe(true));
+    expect(ownerBox("Owner Self")?.checked).toBe(true);
+  });
+
+  it("B6 (a): a saved team that is not in the active team list falls back to only me", async () => {
+    answers.canManageOthers = true;
+    answers.teams = [{ id: 1, name: "Team One" }];
+    answers.otherTeamIds = [9];
+    answers.prefs = { ...DEFAULT_PREFS, open_owners: "team", open_team_id: 9, event_minutes: 30 };
+    view();
+    await waitForPrefsApplied(30);
+    await waitFor(() => expect(mockGet).toHaveBeenCalledWith("/calendar/teams"));
+    await flush();
+    expect(ownerBox("Owner Self")?.checked).toBe(true);
+    expect(ownerBox("Owner Other")?.checked).toBe(false);
+  });
+
+  it("B6 (b): a team list that arrives after the owners and preferences still applies 'one team'", async () => {
+    const gate = makeGate();
+    answers.gate.teams = gate.promise;
+    answers.canManageOthers = true;
+    answers.teams = [{ id: 3, name: "Team Three" }];
+    answers.otherTeamIds = [3];
+    answers.prefs = { ...DEFAULT_PREFS, open_owners: "team", open_team_id: 3, event_minutes: 30 };
+    view();
+    await waitForPrefsApplied(30);
+    await waitFor(() => expect(ownerBox("Owner Other")).not.toBeNull());
+    await flush();
+    expect(ownerBox("Owner Other")?.checked).toBe(false); // まだ当てない（チーム一覧が無い）
+    gate.release();
+    await waitFor(() => expect(ownerBox("Owner Other")?.checked).toBe(true));
+    expect(ownerBox("Owner Self")?.checked).toBe(true);
+  });
+
+  it("B6 (c): nothing is applied until the permissions have loaded", async () => {
+    const gate = makeGate();
+    answers.gate.perms = gate.promise;
+    answers.canManageOthers = true;
+    answers.prefs = { ...DEFAULT_PREFS, open_owners: "all", event_minutes: 30 };
+    view();
+    await waitForPrefsApplied(30);
+    await flush();
+    expect(ownerBox("Owner Other")).toBeNull();
+    expect(ownerBox("Owner Self")?.checked).toBe(true);
+    gate.release();
+    await waitFor(() => expect(ownerBox("Owner Other")?.checked).toBe(true));
+    expect(ownerBox("Owner Self")?.checked).toBe(true);
+  });
+
+  it("does not apply the saved people after the person chose people by hand", async () => {
+    const gate = makeGate();
+    answers.gate.prefs = gate.promise;
+    answers.canManageOthers = true;
+    answers.prefs = { ...DEFAULT_PREFS, open_owners: "all", event_minutes: 30 };
+    view();
+    fireEvent.click(await screen.findByRole("checkbox", { name: "Owner Other" }));
+    expect(ownerBox("Owner Other")?.checked).toBe(true);
+    fireEvent.click(ownerBox("Owner Other") as HTMLInputElement); // 外す
+    expect(ownerBox("Owner Other")?.checked).toBe(false);
+    gate.release();
+    await waitForPrefsApplied(30);
+    await flush();
+    expect(ownerBox("Owner Other")?.checked).toBe(false);
   });
 });

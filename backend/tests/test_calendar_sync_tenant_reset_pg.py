@@ -55,6 +55,7 @@ _MIGRATIONS = (
     ("20261126_100000_create_calendar_categories.sql", True),
     ("20261127_100000_add_calendar_team_share.sql", True),
     ("20261128_100000_owner_color_key_drop_dead_columns.sql", True),
+    ("20261129_100000_owner_settings_preferences.sql", True),
 )
 
 
