@@ -72,16 +72,17 @@ def _payload(**extra) -> dict:
 async def _cleanup(admin_engine) -> None:
     from sqlalchemy import text
 
-    async with admin_engine.begin() as conn:
-        await conn.execute(text(f"DELETE FROM {_SCHEMA}.calendar_events"))
-        await conn.execute(
-            text("DELETE FROM public.tenant_google_calendar_config WHERE tenant_id = :t"),
-            {"t": _TENANT},
-        )
-        await conn.execute(
-            text("DELETE FROM public.users WHERE id IN (:a, :b)"),
-            {"a": _OWNER, "b": _OTHER},
-        )
+    async with public_bootstrap_lock(admin_engine):
+        async with admin_engine.begin() as conn:
+            await conn.execute(text(f"DELETE FROM {_SCHEMA}.calendar_events"))
+            await conn.execute(
+                text("DELETE FROM public.tenant_google_calendar_config WHERE tenant_id = :t"),
+                {"t": _TENANT},
+            )
+            await conn.execute(
+                text("DELETE FROM public.users WHERE id IN (:a, :b)"),
+                {"a": _OWNER, "b": _OTHER},
+            )
 
 
 async def _setup():
@@ -98,37 +99,37 @@ async def _setup():
                 await _apply_migration_on_conn(
                     conn, filename, schema_name=_SCHEMA if scoped else None
                 )
-    async with admin_engine.begin() as conn:
-        for uid in (_OWNER, _OTHER):
+        async with admin_engine.begin() as conn:
+            for uid in (_OWNER, _OTHER):
+                await conn.execute(
+                    text(
+                        "INSERT INTO public.users ("
+                        " id, tenant_id, username, email, full_name,"
+                        " role, is_active, is_super_admin, locale, theme)"
+                        " VALUES (:id, :t, :uname, :email, 'Cal Reset', 'admin',"
+                        "         TRUE, FALSE, 'ja', 'light')"
+                        " ON CONFLICT (id) DO NOTHING"
+                    ),
+                    {
+                        "id": uid,
+                        "t": _TENANT,
+                        "uname": f"cal-reset-{uid}",
+                        "email": f"cal-reset-{uid}@example.com",
+                    },
+                )
+            await conn.execute(
+                text("DELETE FROM public.tenant_google_calendar_config WHERE tenant_id = :t"),
+                {"t": _TENANT},
+            )
             await conn.execute(
                 text(
-                    "INSERT INTO public.users ("
-                    " id, tenant_id, username, email, full_name,"
-                    " role, is_active, is_super_admin, locale, theme)"
-                    " VALUES (:id, :t, :uname, :email, 'Cal Reset', 'admin',"
-                    "         TRUE, FALSE, 'ja', 'light')"
-                    " ON CONFLICT (id) DO NOTHING"
+                    "INSERT INTO public.tenant_google_calendar_config"
+                    " (tenant_id, sync_mode, connected_by_user_id,"
+                    "  access_token_encrypted, refresh_token_encrypted, calendar_id)"
+                    " VALUES (:t, 'bidirectional', :u, 'x', 'y', 'primary')"
                 ),
-                {
-                    "id": uid,
-                    "t": _TENANT,
-                    "uname": f"cal-reset-{uid}",
-                    "email": f"cal-reset-{uid}@example.com",
-                },
+                {"t": _TENANT, "u": _OWNER},
             )
-        await conn.execute(
-            text("DELETE FROM public.tenant_google_calendar_config WHERE tenant_id = :t"),
-            {"t": _TENANT},
-        )
-        await conn.execute(
-            text(
-                "INSERT INTO public.tenant_google_calendar_config"
-                " (tenant_id, sync_mode, connected_by_user_id,"
-                "  access_token_encrypted, refresh_token_encrypted, calendar_id)"
-                " VALUES (:t, 'bidirectional', :u, 'x', 'y', 'primary')"
-            ),
-            {"t": _TENANT, "u": _OWNER},
-        )
     factory = async_sessionmaker(app_engine, class_=AsyncSession, expire_on_commit=False)
     return admin_engine, app_engine, factory
 
