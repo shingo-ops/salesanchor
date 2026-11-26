@@ -253,7 +253,7 @@ PR #5729 を 2026-11-24 22:23 JST に合流（80d289df0）。GO #5729 は POの�
 - ○ 伏せた窓の作り直しの記録は最新が 2026-11-26 03:24:27Z・ok・ビュー 586・失敗 0。ops_incidents の alertname・severity は allow、labels・annotations は mask のまま。
 - ○ 反映の後に増えた障害記録は 1 件（BackendSseConnectionsHigh・解決済み）。直近 47 時間で、見張り対象の箱の「不健康」は 0。
 - 相談係の入口は鍵なしで 401（動いている）。鍵ありの読み取りは、この確かめでは行っていない。
-- 次: 4 つ目の段取り表 `docs/handoff/ai-ops-247/card-stage4-bin4.md`（U1 サーバーが起こす・U2 案A・P5 範囲の週次点検）。
+- 次: 4 つ目の段取り表 `docs/handoff/ai-ops-247/card-stage4-bin4.md`（U1 許可の後にサーバーが実行係を起こす・P5 範囲の週次点検。障害で調べ係を起こす道と U2 案A は、要件 O2・O4 を入れた後の段取り表で作る）。
 
 ### 試しから設計に足すこと
 
