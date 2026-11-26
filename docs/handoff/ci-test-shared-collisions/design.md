@@ -223,3 +223,61 @@ recon §2 の6ファイルについて、後片付けの中の共通の役割を
 - 受け入れ基準 K1〜K8 は、どれも差分・grep・CI の記録で ○× を決められる。
 - 判定: 便2〜5は APPROVE。
 - 未解決: 準備が public の表を作り直す場合の残りの危険（§7-4）。これは K4 の30回で数える。見張りの試験は次のテーマ（§10）。
+
+## 13. 便6: 配り先の試験（F）— products と suppliers の DDL を、巻き戻さず確定させる
+根拠: recon §7。PO 2026-11-27「1」（他の種類も並行して調べて直す）。KGI は §5 のまま。
+
+### 13-1. 変更前後（変えるのは `backend/tests/test_tcg_distribution_pg.py` だけ）
+| 場所 | 変更前 | 変更後 |
+|---|---|---|
+| 新しい関数 `ensure_distribution_public(engine)` | 無い | 下の 13-2 の形で足す |
+| `create_schema`（:41-67） | `CREATE SCHEMA` の後に、2147483647 の札・SAVEPOINT・`_PUBLIC_PRODUCTS_DDL`・`_PUBLIC_SUPPLIERS_DDL`・SAVEPOINT へ戻す・札を外す・`_PUBLIC_PRODUCTS_DDL` もう一度・work_id の ALTER を流す | `CREATE SCHEMA`（:42）だけ残し、:43-67 を消す。:68 以降は変えない |
+| `distribution_db`（:109-126）と no-correction の試験（:236-250） | `engine.connect()` の前は何もしない | `create_async_engine(...)` の直後、`engine.connect()` の前に `await ensure_distribution_public(engine)` を1行足す |
+
+触らない範囲: :68 以降の `create_schema`（type_master・`20260919_020000`・`CONDITION_VALUE_STATEMENTS`・使い捨てスキーマの表。recon §7-3 のとおり、確定させるとほかの試験の前提が変わりうる）、試験の本体、`backend/tests/test_inventory_aggregated.py`、`backend/tests/rls_bootstrap.py`、ほかの試験ファイル、migrations、製品コード。
+
+### 13-2. `ensure_distribution_public(engine)` の形
+1. モジュールの変数 `_DIST_PUBLIC_READY = False` を置く。真なら何もしないで戻る（同じ worker の2回目から）。
+2. `async with public_bootstrap_lock(engine):`（`from tests.rls_bootstrap import public_bootstrap_lock`）の中で、`async with engine.begin() as conn:` の確定する transaction に、今の :43-67 を同じ順で入れる:
+   - `SELECT pg_advisory_lock(2147483647)` → SAVEPOINT → `_PUBLIC_PRODUCTS_DDL` → `_PUBLIC_SUPPLIERS_DDL` → 失敗なら SAVEPOINT へ戻す → `SELECT pg_advisory_unlock(2147483647)` → `_PUBLIC_PRODUCTS_DDL` もう一度 → work_id の ALTER。
+   - 札の順は §7-6 と同じ（public_bootstrap_lock → 2147483647 → products）。
+3. 塊を抜けたら `_DIST_PUBLIC_READY = True`。
+- 今の文をそのまま移すので、共有 DB に確定する中身は、ほかの試験か準備が既に確定させているもの（products の IF NOT EXISTS の DDL と work_id 列）と同じ。suppliers の DDL は今と同じく、失敗すれば戻す。
+
+### 13-3. 代替案と選んだ理由
+- 選んだ案: 輪を作る文（products と suppliers の DDL）だけを確定させる形。§7（便2）と同じ型で、輪の元は巻き戻す transaction の中の public の DDL だから。
+- 採らない案1: :68 以降も全部確定させる。`CONDITION_VALUE_STATEMENTS` の CHECK を共有の public.conditions に残すと、`backend/tests/test_line_conditions_value_group_rerun_pg.py:37` などの前提が変わりうる（recon §7-3）。
+- 採らない案2: 在庫の集計の試験の順を products → suppliers に替える。輪は消えるが、配り先の試験が products と suppliers の札を試験の間ずっと持つことは変わらず、ほかの相手で同じ形が出る。
+
+### 13-4. リスクと対処
+- 巻き戻す transaction に残る public の札: `20260919_020000` が新しい表を作るとき products の札を取りうる。配り先の試験は、その後で suppliers を待たないので、記録で見た輪は閉じない。残りは K12 の30回で数える。
+- 確定させる時に products の ALTER が短く ACCESS EXCLUSIVE を取る → public_bootstrap_lock の中の短い transaction なので、ほかの準備とは順番に流れる。
+
+### 13-5. 受け入れ基準
+| 基準 | 検証方法 |
+|---|---|
+| K11-1: `create_schema` の中に `_PUBLIC_PRODUCTS_DDL`・`_PUBLIC_SUPPLIERS_DDL`・`2147483647`・`work_id` が0件 | 差分と grep（Opus） |
+| K11-2: PR の必須チェック pytest が pass し、数が main の直近の回と同じ（`10246 passed, 79 skipped`） | `gh pr checks` と job の記録の最後の行（Opus）。skipped が違ったら原因を探してから進める |
+| K11-3: 差分が `backend/tests/test_tcg_distribution_pg.py` と docs・台帳だけ | `git diff origin/main...HEAD --name-only`（Opus） |
+| K12: 合流後の main 30回で、`idx_suppliers_line_name_active_unique` が出る deadlock が0件 | §5 の30回と一緒に数える（Opus・約1〜2週） |
+
+## 14. 便6の実装カード（カード丙・クラウドの担当へ渡す）
+- 作業場所: `bash scripts/new-worktree.sh release/ci-test-shared-collisions-bin6` で場所を作り、`git switch -C release/ci-test-shared-collisions-bin6 origin/release/ci-test-shared-collisions-bin6` で合わせる。
+- 変更: §13-1・§13-2 のとおり。手元で DB の試験は回さない。commit して push する。PR は作らない。`git add` するのは `backend/tests/test_tcg_distribution_pg.py` だけ。
+- 確かめ:
+  1. `git diff --stat origin/main...HEAD -- backend` が `backend/tests/test_tcg_distribution_pg.py` だけ。
+  2. `create_schema` の本体で `_PUBLIC_PRODUCTS_DDL|_PUBLIC_SUPPLIERS_DDL|2147483647|work_id` を grep して0件。
+  3. `cd backend && ruff check tests/test_tcg_distribution_pg.py` が0件。
+  4. `cd backend && python -m pytest tests/test_tenant_loop_migration_guard.py -q`（DB を使わない静的な見張り）が pass。
+- 想定の分かれ道:
+  - 行番号が今の main とずれていた → 中身で場所を決める。中身も違っていたら止めて報告する。
+  - `public_bootstrap_lock` が `tests.rls_bootstrap` に無い、または非同期の形でない → 止めて報告する。
+  - 見張りの試験が落ちた → 落ちた理由を生のまま報告して止める。
+
+## 15. 審査（便6・Opus 自己審査・2026-11-27）
+同じ AI による審査で、独立した第二者の審査ではない。
+- 輪（recon §7-2）は「巻き戻す transaction が products の札を持ったまま suppliers を待つ」ことで閉じる。§13 の後、その transaction は products と suppliers の DDL を流さないので、記録で見た輪は閉じない。
+- 確定させる文は今の文と同じで、IF NOT EXISTS か、失敗すれば戻す形。共有 DB の中身を新しく変えるのは、まだ無い場合の products の表・索引・work_id 列だけで、§7 の準備が既に確定させているものと同じ。
+- 札の順は §7-6 と同じで、tenant → public の決まりにも反しない（この関数は使い捨てスキーマの札を取る前に呼ぶ）。
+- K11-1〜K11-3 は差分・grep・CI の記録で ○× を決められる。K12 は合流後の30回で数える。
+- 判定: 便6は APPROVE。未解決: `20260919_020000` などの残りの public の文（§13-4）。K12 で数える。

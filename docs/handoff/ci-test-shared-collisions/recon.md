@@ -125,3 +125,24 @@ KGI の承認: PO 2026-11-26「1」（5種類すべてを直す設計にする�
 
 ### 6-5. 見張りを作るかの見積もり
 - 共有 DB の後片付けを札の外で流す関数を機械で探す試し（関数の中にスキーマを消す文か `public.` の DELETE があり、札の語が無いもの）: 53ファイル・76関数が当たった（使い捨て DB や SQLite を含む）。1つずつ分類が要るため、本テーマでは作らない（design §10）。
+
+## 7. 追記（2026-11-27・新しい種類 F。Opus が origin/main 0663dba4d と PR 5795 の失敗の記録で確かめた）
+### 7-1. 起きたこと
+- PR 5795 の run 45880826042（1回目）: `10245 passed, 79 skipped, 1 xfailed, 1 error`。落ちたのは `backend/tests/test_inventory_aggregated.py::test_stock_table_unchanged_and_same_cells_as_draft` の setup（DeadlockDetected）。PR 5795 の差分にこのファイルは無い。2回目は `10246 passed, 79 skipped` で通った。
+- DB の記録（19:14:41.346 UTC の行）:
+  - 6067 は public.products への行の追加で products の RowExclusiveLock を待ち、6070 に止められている。
+  - 6070 は `CREATE UNIQUE INDEX IF NOT EXISTS idx_suppliers_line_name_active_unique ON public.suppliers (line_name) ...` で suppliers の ShareLock を待ち、6067 に止められている。
+  - 6070 はその直後に `column "line_name" does not exist` を出し、そのまま次へ進んでいる（同じ文面は 6081・6087 でも出る）。
+- main の落ちた9回（recon §1）の記録には、この形は0回。
+
+### 7-2. 両側
+- 6067 側: `backend/tests/test_inventory_aggregated.py:258` の `async with eng.begin()` の塊。public.suppliers に2行入れてから public.products に入れる（:259-290）。短い確定する transaction。
+- 6070 側: `backend/tests/test_tcg_distribution_pg.py:41-67` の `create_schema`。fixture（:109-126・:236-250）が `conn.begin()` した巻き戻す transaction の中で、2147483647 の札 → SAVEPOINT → `_PUBLIC_PRODUCTS_DDL` → `_PUBLIC_SUPPLIERS_DDL` を流す。失敗したら SAVEPOINT へ戻して先へ進む（:54-55）。そのあと `_PUBLIC_PRODUCTS_DDL` をもう一度と `ALTER TABLE IF EXISTS public.products ADD COLUMN IF NOT EXISTS work_id INTEGER`（:67）を流す。札は試験の終わりの rollback まで持ち続ける。
+- 6070 側をこのファイルと決めた根拠:
+  - `git grep -n "_PUBLIC_SUPPLIERS_DDL" origin/main -- backend/tests` の使い手は5ファイル。そのうち `backend/tests/test_tcg_condition_review.py`・`backend/tests/test_tcg_import_progress_pg.py`・`backend/tests/test_tcg_sold_out_results.py`・`backend/tests/test_tcg_work_matching_integration.py`（`pg` fixture :385-398）は CREATE DATABASE で作った自分の DB で流す。共有 DB で流すのは `backend/tests/test_tcg_distribution_pg.py` だけ。
+  - 「line_name が無い」で失敗しても試験が続くのは、:54-55 の SAVEPOINT へ戻す形と合う。
+- 輪の形: 配り先の試験が products の札を持ったまま suppliers を待ち、在庫の集計の試験が suppliers の札を持ったまま products を待つ。種類 A（§6-3）と同じく、巻き戻す transaction の中で public の DDL を流すのが元。
+
+### 7-3. 配り先の試験の残りの public の文
+- :69-85 は 085・086・`20260921_060000`・`20260921_070000`・`type_master_seed_sql()`・`20260919_020000`・`CONDITION_VALUE_STATEMENTS` を流す。この5本の migration で products か suppliers の名前が出るのは `20260919_020000` だけ（:9 は説明文、:305 は新しい表の `REFERENCES public.products`）。
+- `CONDITION_VALUE_STATEMENTS`（`backend/tests/condition_value_columns.py:23-35`）は public.conditions に CHECK つきの列を足す。`backend/tests/test_line_conditions_value_group_rerun_pg.py:37` はその制約を IF EXISTS なしで DROP する。確定させると、ほかの試験の前提が変わりうる。
