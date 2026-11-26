@@ -64,7 +64,7 @@ recon §2 の6ファイルについて、後片付けの中の共通の役割を
 - KGI の数え方: 全便の合流後、main の Backend Tests 30回分の失敗の記録を Opus が読み、ぶつかりの種類ごとに数える。
 
 ## 6. 便1の実装カード（クラウドの担当へ渡す）
-- 作業場所: `bash scripts/new-worktree.sh release/ci-test-shared-collisions-bin1` で作る。`git -C <wt> merge --no-edit origin/release/ci-test-shared-collisions` で本書類を取り込む。
+- 作業場所: 本書類と同じブランチ `release/ci-test-shared-collisions` に足す（1つの PR に設計と実装をまとめる）。`bash scripts/new-worktree.sh release/ci-test-shared-collisions` で場所を作り、`git switch -C release/ci-test-shared-collisions origin/release/ci-test-shared-collisions` で合わせる。
 - 変更: §3-1 の表のとおり。触らない範囲は §3-1 の最後の項。
 - 確かめ（手元で試験は回さない。試験は GitHub の CI で回す）:
   1. `git -C <wt> diff --stat` が6ファイルだけであること。
