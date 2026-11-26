@@ -15,8 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app.routers import tcg_distribution as routes
 from app.services import tcg_distribution_svc as svc
-from tests.conftest import _PUBLIC_SUPPLIERS_DDL
 from tests.condition_value_columns import CONDITION_VALUE_STATEMENTS
+from tests.conftest import _PUBLIC_SUPPLIERS_DDL
+from tests.rls_bootstrap import public_bootstrap_lock
 from tests.seed_data import type_master_seed_sql
 from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL
 
@@ -38,33 +39,50 @@ async def _exec_multi_stmt(conn, sql: str) -> None:
     await raw.driver_connection.execute(sql)
 
 
+_DIST_PUBLIC_READY = False
+
+
+async def ensure_distribution_public(engine):
+    """public.products と public.suppliers の DDL を、使い捨てスキーマを巻き戻す transaction の外で確定させる。
+
+    products と suppliers の DDL を巻き戻す transaction の外で確定させる。
+    在庫の集計の試験との待ち合いの輪を作らないため（design §13）。
+    """
+    global _DIST_PUBLIC_READY
+    if _DIST_PUBLIC_READY:
+        return
+    async with public_bootstrap_lock(engine):
+        async with engine.begin() as conn:
+            await conn.exec_driver_sql("SELECT pg_advisory_lock(2147483647)")
+            try:
+                await conn.exec_driver_sql("SAVEPOINT public_products_ddl")
+                for stmt in _PUBLIC_PRODUCTS_DDL.split(";"):
+                    stmt = stmt.strip()
+                    if stmt:
+                        await conn.exec_driver_sql(stmt)
+                for stmt in _PUBLIC_SUPPLIERS_DDL.split(";"):
+                    stmt = stmt.strip()
+                    if stmt:
+                        await conn.exec_driver_sql(stmt)
+            except Exception:
+                await conn.exec_driver_sql("ROLLBACK TO SAVEPOINT public_products_ddl")
+            await conn.exec_driver_sql("SELECT pg_advisory_unlock(2147483647)")
+            # Guarantee public.products exists even if SAVEPOINT rolled back mid-way
+            # (e.g. public.suppliers DDL failed after public.products was created inside the SAVEPOINT,
+            # causing the entire SAVEPOINT — including the products CREATE — to be rolled back).
+            # _PUBLIC_PRODUCTS_DDL uses CREATE TABLE IF NOT EXISTS / CREATE UNIQUE INDEX IF NOT EXISTS
+            # so re-running outside the SAVEPOINT is safe (idempotent).
+            for stmt in _PUBLIC_PRODUCTS_DDL.split(";"):
+                stmt = stmt.strip()
+                if stmt:
+                    await conn.exec_driver_sql(stmt)
+            # Guarantee work_id column exists (belt-and-suspenders; also covers pre-existing tables).
+            await conn.exec_driver_sql("ALTER TABLE IF EXISTS public.products ADD COLUMN IF NOT EXISTS work_id INTEGER")
+    _DIST_PUBLIC_READY = True
+
+
 async def create_schema(conn, schema, corrections=True):
     await conn.execute(text(f"CREATE SCHEMA {schema}"))
-    await conn.exec_driver_sql("SELECT pg_advisory_lock(2147483647)")
-    try:
-        await conn.exec_driver_sql("SAVEPOINT public_products_ddl")
-        for stmt in _PUBLIC_PRODUCTS_DDL.split(';'):
-            stmt = stmt.strip()
-            if stmt:
-                await conn.exec_driver_sql(stmt)
-        for stmt in _PUBLIC_SUPPLIERS_DDL.split(';'):
-            stmt = stmt.strip()
-            if stmt:
-                await conn.exec_driver_sql(stmt)
-    except Exception:
-        await conn.exec_driver_sql("ROLLBACK TO SAVEPOINT public_products_ddl")
-    await conn.exec_driver_sql("SELECT pg_advisory_unlock(2147483647)")
-    # Guarantee public.products exists even if SAVEPOINT rolled back mid-way
-    # (e.g. public.suppliers DDL failed after public.products was created inside the SAVEPOINT,
-    # causing the entire SAVEPOINT — including the products CREATE — to be rolled back).
-    # _PUBLIC_PRODUCTS_DDL uses CREATE TABLE IF NOT EXISTS / CREATE UNIQUE INDEX IF NOT EXISTS
-    # so re-running outside the SAVEPOINT is safe (idempotent).
-    for stmt in _PUBLIC_PRODUCTS_DDL.split(';'):
-        stmt = stmt.strip()
-        if stmt:
-            await conn.exec_driver_sql(stmt)
-    # Guarantee work_id column exists (belt-and-suspenders; also covers pre-existing tables).
-    await conn.exec_driver_sql("ALTER TABLE IF EXISTS public.products ADD COLUMN IF NOT EXISTS work_id INTEGER")
     migrations = Path(__file__).resolve().parents[2] / "migrations"
     # Phase 2 SSOT: public.type_master required by fetch_output_rows JOIN
     for sql_file in (
@@ -113,6 +131,7 @@ async def distribution_db(monkeypatch):
     schema = "dist01_test_" + uuid4().hex
     monkeypatch.setattr(svc, "TCG_SCHEMA", schema)
     engine = create_async_engine(url.set(drivername="postgresql+asyncpg"))
+    await ensure_distribution_public(engine)
     try:
         async with engine.connect() as conn:
             transaction = await conn.begin()
@@ -238,6 +257,7 @@ async def test_missing_correction_table_is_reported(monkeypatch):
     schema = "dist01_no_correction_" + uuid4().hex
     monkeypatch.setattr(svc, "TCG_SCHEMA", schema)
     engine = create_async_engine(url.set(drivername="postgresql+asyncpg"))
+    await ensure_distribution_public(engine)
     try:
         async with engine.connect() as conn:
             transaction = await conn.begin()
