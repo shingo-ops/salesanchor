@@ -116,7 +116,7 @@ Environment=HOME=/home/ops-agent
 Environment=PATH=/home/ops-agent/.local/bin:/home/ops-agent/.bun/bin:/usr/local/bin:/usr/bin:/bin
 Environment=TERM=xterm-256color
 ExecStart=/usr/bin/tmux -S /home/ops-agent/.tmux/ops-agent.sock new-session -d -s ops-agent '/home/ops-agent/.local/bin/claude --channels plugin:discord@claude-plugins-official'
-ExecStop=/usr/bin/tmux -S /home/ops-agent/.tmux/ops-agent.sock kill-session -t ops-agent
+ExecStop=-/usr/bin/tmux -S /home/ops-agent/.tmux/ops-agent.sock kill-session -t ops-agent
 Restart=always
 RestartSec=30
 
@@ -127,6 +127,7 @@ MemorySwapMax=0
 OOMScoreAdjust=1000
 
 # G7 本番と監視へ届く道を塞ぐ（名前を引く 127.0.0.53 だけ開ける。Allow は Deny より先に判定される）
+# IPv6: localhost は ::1/128 も含む（systemd.resource-control）。prod2 には全体向けの IPv6 アドレスも既定の道も無い（2026-11-26 ip -6 で確認）。
 IPAddressDeny=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 49.212.137.46 49.212.160.98
 IPAddressAllow=127.0.0.53
 

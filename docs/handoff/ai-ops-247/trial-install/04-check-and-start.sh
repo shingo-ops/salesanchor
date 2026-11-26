@@ -101,6 +101,11 @@ case "${sudo_out}" in
   *"not allowed"*) report "G1 sudo -l -U ops-agent" "not allowed を含む" "含む" ok ;;
   *) report "G1 sudo -l -U ops-agent" "not allowed を含む" "含まない" ng ;;
 esac
+if test -S /run/docker.sock; then
+  report "G1 /run/docker.sock がある" "ある" "ある" ok
+else
+  report "G1 /run/docker.sock がある" "ある" "無い" ng
+fi
 expect_fail "G1 docker.sock に書けない（守りの下）" /usr/bin/test -w /run/docker.sock
 if run_g2_only /usr/bin/test -w /run/docker.sock >/dev/null 2>&1; then
   report "G1 docker.sock に書けない（守りの外）" "失敗する（組に入っていない）" "成功した" ng
@@ -161,10 +166,27 @@ else
 fi
 
 echo "== G4: 道具の制限の設定がある =="
-if grep -q '"defaultMode": "dontAsk"' /home/ops-agent/.claude/settings.json; then
-  report "G4 settings.json に dontAsk" "ある" "ある" ok
+G4_PY='
+import json, sys
+try:
+    p = json.load(open("/home/ops-agent/.claude/settings.json")).get("permissions", {})
+    allow = set(p.get("allow", []))
+    deny = set(p.get("deny", []))
+    need_allow = {"mcp__plugin_discord_discord__" + n for n in ("reply", "react", "fetch_messages")}
+    need_deny = {"Bash", "Write", "Edit", "NotebookEdit", "WebFetch", "WebSearch", "Agent",
+                 "mcp__plugin_discord_discord__download_attachment",
+                 "mcp__plugin_discord_discord__edit_message",
+                 "mcp__plugin_discord_discord__create_thread",
+                 "Read(//home/ops-agent/.claude/**)", "Read(//home/ops-agent/.claude.json)"}
+    ok = p.get("defaultMode") == "dontAsk" and need_allow <= allow and need_deny <= deny
+except Exception:
+    ok = False
+sys.exit(0 if ok else 1)
+'
+if python3 -c "${G4_PY}" >/dev/null 2>&1; then
+  report "G4 settings.json の制限（dontAsk・許す 3・断る 12）" "全部ある" "全部ある" ok
 else
-  report "G4 settings.json に dontAsk" "ある" "無い" ng
+  report "G4 settings.json の制限（dontAsk・許す 3・断る 12）" "全部ある" "1 つ以上欠けている" ng
 fi
 # 道具（discord プラグイン）が有効か。中身は表示せず ○× だけ
 if python3 -c 'import json,sys; d=json.load(open("/home/ops-agent/.claude/settings.json")); sys.exit(0 if d.get("enabledPlugins",{}).get("discord@claude-plugins-official") is True else 1)' >/dev/null 2>&1; then
@@ -198,4 +220,4 @@ systemctl enable --now ops-agent.service
 echo "== 起動後 =="
 systemctl is-active ops-agent.service
 systemctl show -p MemoryHigh,MemoryMax,MemorySwapMax,IPAddressDeny,IPAddressAllow,InaccessiblePaths ops-agent.service
-echo "（注）G4 の最終確認は Discord で「一覧に無い命令」を頼み、断る返事が来ること。G8 の Read の確認は、Discord で「/opt/salesanchor-monitoring/.env を読んで」と頼み、読めないと返ること。T1 で行う。"
+echo "（注）G4 の最終確認は Discord で「一覧に無い命令」を頼み、断る返事が来ること。G8 の証拠は上の stat の確かめだけ（Read は作業の場所の外なので、守りが無くても dontAsk で断られ、証拠にならない）。"

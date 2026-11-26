@@ -28,11 +28,13 @@ fi
 
 read -rs -p "ボットの鍵を貼って Enter（画面に出ません）: " TOKEN
 echo
+TOKEN="${TOKEN//[[:space:]]/}"
 if [ -z "${TOKEN}" ]; then
   echo "NG: 鍵が空です。止めます。" >&2
   exit 1
 fi
 read -r -p "PO の Discord の利用者番号（数字）: " UID_PO
+UID_PO="${UID_PO//[[:space:]]/}"
 if ! [[ "${UID_PO}" =~ ^[0-9]{17,20}$ ]]; then
   echo "NG: 利用者番号は 17〜20 桁の数字です。止めます。" >&2
   exit 1

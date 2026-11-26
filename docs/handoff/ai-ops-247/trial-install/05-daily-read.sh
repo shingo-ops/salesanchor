@@ -50,6 +50,7 @@ printf 'is-active: '
 systemctl is-active ops-agent.service || true
 printf 'NRestarts: '
 systemctl show -p NRestarts --value ops-agent.service || true
+printf 'tmux の部屋: '; if sudo -u ops-agent tmux -S /home/ops-agent/.tmux/ops-agent.sock has-session -t ops-agent 2>/dev/null; then echo ある; else echo "無い  ← 要確認"; fi
 
 printf 'memory.peak（バイト。上限 MemoryMax=1500M=1572864000 バイト）: '
 cat /sys/fs/cgroup/system.slice/ops-agent.service/memory.peak || echo "未取得（ファイルが無い。カーネルが対応していない可能性・未確認）"
