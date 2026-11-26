@@ -1,3 +1,1 @@
-https://auth.openai.com/codex/device
-47TD-N0D0O
-invoice 部屋: 出した時刻 15:18:09 UTC・有効 900 秒
+使用済み（15:28:55 UTC）invoice
