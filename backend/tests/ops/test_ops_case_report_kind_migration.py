@@ -41,8 +41,6 @@ _CASE_SQL = "20261031_210000_create_ops_case.sql"
 _KIND_SQL = "20261113_200000_add_ops_case_report_kind.sql"
 _DROP_SQL = "20261115_110000_drop_ops_case_report_single_unique.sql"
 
-_ROLES = ("ai_unmask", "ai_unmask_owner", "ai_reader_cloud", "ai_reader", "salesanchor_app", "aic_owner")
-
 
 def _psycopg_url(url: str, dbname: str | None = None) -> str:
     url = url.replace("postgresql+asyncpg://", "postgresql://")

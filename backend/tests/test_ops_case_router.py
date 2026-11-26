@@ -39,7 +39,6 @@ pytestmark = [
 ]
 
 _MIGRATIONS_DIR = Path(__file__).resolve().parents[2] / "migrations"
-_ROLES = ("ai_unmask", "ai_unmask_owner", "ai_reader_cloud", "ai_reader", "salesanchor_app", "aic_owner")
 _BASE = "/api/v1/ops/case"
 _VIEW_OK = "public__plain_demo"
 _AGENT_KEY = "agent-key-" + uuid.uuid4().hex

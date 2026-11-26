@@ -50,15 +50,6 @@ _CREATE_SQL = "20261024_100300_create_ai_cloud_views.sql"
 _CASE_SQL = "20261031_210000_create_ops_case.sql"
 _SPEED_SQL = "20261117_130000_grant_unmask_owner_once_per_source.sql"
 
-_ROLES = (
-    "ai_unmask",
-    "ai_unmask_owner",
-    "ai_reader_cloud",
-    "ai_reader",
-    "salesanchor_app",
-    "aic_owner",
-    "aic_nobody",
-)
 _MARKS = {"not_found", "ticket", "status", "expired", "used", "view", "source", "column", "key", "read_failed"}
 
 _RAW_NAME = "ひみつの名前 raw-customer-name"
