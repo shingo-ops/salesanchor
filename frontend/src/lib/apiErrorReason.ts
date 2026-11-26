@@ -37,6 +37,7 @@ export const API_ERROR_REASON_KEYS: Readonly<Record<string, string>> = {
   invoice_not_draft: "apiError.invoiceNotDraft",
   payment_fee: "apiError.paymentFee",
   invalid_team_ids: "apiError.invalidTeamIds",
+  invalid_team: "apiError.invalidTeam",
 };
 
 /** detail が表のコードなら文言キー、そうでなければ null */

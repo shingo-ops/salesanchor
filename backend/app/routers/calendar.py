@@ -11,6 +11,8 @@ from __future__ import annotations
   GET    /calendar/events/search  — 題名で予定を探す
   GET    /calendar/teams          — 予定の共有先に選べるチーム（使っているものの名前と番号だけ）
   GET    /calendar/holidays       — 日本の祝日（期間・言語）
+  GET    /calendar/preferences    — 自分の初期値（開いたときの形・週の始まり・予定の長さ・Meet・誰の予定を出すか）
+  PUT    /calendar/preferences    — 自分の初期値を保存（自分の分だけ）
   GET    /calendar/sync-mode      — 同期モード確認
   PATCH  /calendar/sync-mode      — 同期モード変更（admin のみ）
 
@@ -89,6 +91,19 @@ class OwnerRosterItem(BaseModel):
     primary_email: Optional[str]
     color_key: Optional[str]
     is_self: bool
+    # 使っているチームの番号だけ（番号順）。teams・team_members から毎回読む（写しは作らない）
+    team_ids: list[int]
+
+
+class CalendarPreferences(BaseModel):
+    """ひとりひとりの初期値（自分の分だけ。利用者の欄は持たない）。"""
+
+    default_view: Literal["day", "threeDay", "week", "month", "list"] = "week"
+    week_start: Literal[0, 1] = 0
+    event_minutes: Literal[15, 30, 45, 60, 90, 120] = 60
+    auto_meet: bool = False
+    open_owners: Literal["self", "all", "team"] = "self"
+    open_team_id: Optional[int] = None
 
 
 class OwnerRosterResponse(BaseModel):
@@ -395,7 +410,14 @@ async def list_calendar_owners(
     query = """
         SELECT
             s.id, s.user_id, s.staff_code, s.surname_jp, s.given_name_jp, u.email AS primary_email,
-            cos.color_key AS color_key
+            cos.color_key AS color_key,
+            ARRAY(
+                SELECT tm.team_id
+                FROM team_members tm
+                JOIN teams t ON t.id = tm.team_id AND t.is_active IS TRUE
+                WHERE tm.user_id = s.user_id
+                ORDER BY tm.team_id
+            ) AS team_ids
         FROM staff s
         JOIN public.users u ON u.id = s.user_id
         LEFT JOIN calendar_owner_settings cos ON cos.staff_id = s.user_id
@@ -421,6 +443,7 @@ async def list_calendar_owners(
             primary_email=row.get("primary_email"),
             color_key=row.get("color_key"),
             is_self=int(row["id"]) == current_staff_id,
+            team_ids=[int(t) for t in (row.get("team_ids") or [])],
         )
         for row in rows
     ]
@@ -493,7 +516,14 @@ async def update_calendar_owner(
         text("""
             SELECT
                 s.id, s.user_id, s.staff_code, s.surname_jp, s.given_name_jp, u.email AS primary_email,
-                cos.color_key AS color_key
+                cos.color_key AS color_key,
+                ARRAY(
+                    SELECT tm.team_id
+                    FROM team_members tm
+                    JOIN teams t ON t.id = tm.team_id AND t.is_active IS TRUE
+                    WHERE tm.user_id = s.user_id
+                    ORDER BY tm.team_id
+                ) AS team_ids
             FROM staff s
             JOIN public.users u ON u.id = s.user_id
             LEFT JOIN calendar_owner_settings cos ON cos.staff_id = s.user_id
@@ -517,6 +547,85 @@ async def update_calendar_owner(
         primary_email=data.get("primary_email"),
         color_key=data.get("color_key"),
         is_self=(current_staff_id == data["id"]) if current_staff_id is not None else False,
+        team_ids=[int(t) for t in (data.get("team_ids") or [])],
+    )
+
+
+_PREFERENCE_COLUMNS = ("default_view", "week_start", "event_minutes", "auto_meet", "open_owners", "open_team_id")
+
+
+@router.get("/calendar/preferences", tags=["calendar"], response_model=CalendarPreferences)
+async def get_calendar_preferences(
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """自分の初期値。行が無いときは今までと同じ既定値（週・日曜・60 分・Meet なし・自分だけ）。"""
+    result = await db.execute(
+        text(
+            "SELECT default_view, week_start, event_minutes, auto_meet, open_owners, open_team_id "
+            "FROM calendar_owner_settings WHERE staff_id = :uid"
+        ),
+        {"uid": current_user.id},
+    )
+    row = result.mappings().first()
+    if not row:
+        return CalendarPreferences()
+    return CalendarPreferences(**{col: row[col] for col in _PREFERENCE_COLUMNS})
+
+
+@router.put("/calendar/preferences", tags=["calendar"], response_model=CalendarPreferences)
+async def put_calendar_preferences(
+    body: CalendarPreferences,
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """自分の初期値を保存する。色（color_key）には触れない。"""
+    open_team_id = body.open_team_id
+    if body.open_owners == "team":
+        team = await db.execute(
+            text("SELECT 1 FROM teams WHERE id = :id AND is_active IS TRUE"),
+            {"id": open_team_id},
+        )
+        if open_team_id is None or not team.first():
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="invalid_team",
+            )
+    else:
+        open_team_id = None
+
+    await db.execute(
+        text(
+            "INSERT INTO calendar_owner_settings "
+            "(staff_id, default_view, week_start, event_minutes, auto_meet, open_owners, open_team_id) "
+            "VALUES (:uid, :default_view, :week_start, :event_minutes, :auto_meet, :open_owners, :open_team_id) "
+            "ON CONFLICT (staff_id) DO UPDATE SET "
+            "default_view = EXCLUDED.default_view, week_start = EXCLUDED.week_start, "
+            "event_minutes = EXCLUDED.event_minutes, auto_meet = EXCLUDED.auto_meet, "
+            "open_owners = EXCLUDED.open_owners, open_team_id = EXCLUDED.open_team_id, updated_at = NOW()"
+        ),
+        {
+            "uid": current_user.id,
+            "default_view": body.default_view,
+            "week_start": body.week_start,
+            "event_minutes": body.event_minutes,
+            "auto_meet": body.auto_meet,
+            "open_owners": body.open_owners,
+            "open_team_id": open_team_id,
+        },
+    )
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+
+    return CalendarPreferences(
+        default_view=body.default_view,
+        week_start=body.week_start,
+        event_minutes=body.event_minutes,
+        auto_meet=body.auto_meet,
+        open_owners=body.open_owners,
+        open_team_id=open_team_id,
     )
 
 

@@ -305,6 +305,17 @@ describe('T8 normalizeSelectedRange', () => {
     expect(r.end).toEqual(d(11));
   });
 
+  it('widens a click-only selection to clickMinutes (30 minutes)', () => {
+    const r = normalizeSelectedRange(d(10), d(10, 15), false, 30);
+    expect(r.start).toEqual(d(10));
+    expect(r.end).toEqual(d(10, 30));
+  });
+
+  it('keeps a longer selection even when clickMinutes is given', () => {
+    const r = normalizeSelectedRange(d(10), d(12), false, 30);
+    expect(r.end).toEqual(d(12));
+  });
+
   it('keeps a longer selection', () => {
     const r = normalizeSelectedRange(d(10), d(12), false);
     expect(r.start).toEqual(d(10));

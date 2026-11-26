@@ -20,6 +20,16 @@ import {
   type CalendarCategory,
   type CalendarShare,
 } from "../../features/schedule/useCalendarCategories";
+import {
+  DEFAULT_CALENDAR_PREFERENCES,
+  normalizePreferences,
+  PREFERENCE_EVENT_MINUTES,
+  PREFERENCE_VIEWS,
+  useCalendarPreferences,
+  type ApiCalendarPreferences,
+  type PreferenceOpenOwners,
+  type PreferenceView,
+} from "../../features/schedule/useCalendarPreferences";
 import { teamIdsToValues, useCalendarTeams, valuesToTeamIds } from "../../features/schedule/useCalendarTeams";
 import { usePermissions } from "../../hooks/usePermissions";
 import { api } from "../../lib/api";
@@ -89,11 +99,13 @@ function OwnerBadge({ owner }: { owner: CalendarOwner }) {
   );
 }
 
-type SectionKey = "google" | "categories" | "self" | "others";
+type SectionKey = "personal" | "google" | "categories" | "self" | "others";
 
 interface GoogleStatus {
   connected: boolean;
   connected_at?: string | null;
+  /** 新しい予定に Google Meet を付けられるか（Google をつないだ本人だけ） */
+  meet_available?: boolean;
 }
 
 export default function ScheduleSettingsPage() {
@@ -127,7 +139,7 @@ export default function ScheduleSettingsPage() {
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [activeSection, setActiveSection] = useState<SectionKey>("google");
+  const [activeSection, setActiveSection] = useState<SectionKey>("personal");
 
   // 予定の種類の区画（管理者だけ）。正本は GET /calendar/categories（useCalendarCategories）
   const { categories, query: categoriesQ } = useCalendarCategories();
@@ -142,8 +154,42 @@ export default function ScheduleSettingsPage() {
   const [savedCategoryKey, setSavedCategoryKey] = useState<string | null>(null);
   const [categoryError, setCategoryError] = useState<string | null>(null);
   const NEW_CATEGORY_KEY = "__new__";
-  // 共有の初期値に選べるチーム（使っているものだけ）。種類の区画は管理者だけなので、管理者のときだけ読む
-  const { options: teamOptions } = useCalendarTeams({ enabled: isTenantAdmin === true });
+  // 共有の初期値・開いたときのチームに選べるチーム（使っているものだけ。ログインしていれば誰でも読める）
+  const { options: teamOptions } = useCalendarTeams();
+
+  // ひとりひとりの初期値の区画（全員）。読めるまで保存ボタンは押せない（読めない・読み込み中に既定値で上書きしない）
+  const { query: prefsQ } = useCalendarPreferences();
+  const { form: prefForm, setForm: setPrefForm, ready: prefsReady } = useSeededForm(
+    "calendar/preferences",
+    prefsQ.data,
+    (d: ApiCalendarPreferences) => normalizePreferences(d),
+    DEFAULT_CALENDAR_PREFERENCES,
+  );
+  const [prefsSaving, setPrefsSaving] = useState(false);
+  const [prefsSaved, setPrefsSaved] = useState(false);
+  const [prefsError, setPrefsError] = useState<string | null>(null);
+  const meetAvailable = gcalStatusQ.data?.meet_available === true;
+  const canPickOwners = !permsLoading && hasPermission("staff.view");
+
+  const savePrefs = async () => {
+    if (!prefsReady) return;
+    setPrefsSaving(true);
+    setPrefsSaved(false);
+    setPrefsError(null);
+    try {
+      // Meet の行が隠れているときも、読んだ auto_meet をそのまま送る（落とさない・戻さない）
+      await api.put("/calendar/preferences", {
+        ...prefForm,
+        open_team_id: prefForm.open_owners === "team" ? prefForm.open_team_id : null,
+      });
+      await invalidate(["calendar", "preferences"]);
+      setPrefsSaved(true);
+    } catch (e) {
+      setPrefsError(errorStatus(e) === 422 && e instanceof Error && e.message ? e.message : t("schedule.prefsSaveError"));
+    } finally {
+      setPrefsSaving(false);
+    }
+  };
 
   const categoryErrorText = (e: unknown): string => {
     const status = errorStatus(e);
@@ -304,17 +350,8 @@ export default function ScheduleSettingsPage() {
     return <div className="page"><LoadingBlock /></div>;
   }
 
-  if (!hasPermission("staff.view") && !isTenantAdmin) {
-    return (
-      <PageLayout navKey="nav.scheduleSettings" subtitleKey="schedule.settingsSubtitle" noScroll>
-        <div className="error-message" role="alert">
-          {t("schedule.settingsPermissionRequired")}
-        </div>
-      </PageLayout>
-    );
-  }
-
   const menuItems = [
+    { key: "personal" as SectionKey, label: t("schedule.prefsTitle") },
     ...(isTenantAdmin ? [{ key: "google" as SectionKey, label: t("schedule.settingsGoogleTitle") }] : []),
     ...(isTenantAdmin ? [{ key: "categories" as SectionKey, label: t("schedule.categoriesTitle") }] : []),
     ...(ownersEnabled ? [{ key: "self" as SectionKey, label: t("schedule.myCalendars") }] : []),
@@ -477,6 +514,123 @@ export default function ScheduleSettingsPage() {
           />
 
           <div className="schedule-settings__content">
+            <section id="schedule-settings-personal" className="schedule-settings__section-anchor">
+              <SectionCard title={t("schedule.prefsTitle")}>
+                {prefsError && <div className="error-message" role="alert">{prefsError}</div>}
+                <div className="schedule-settings__calendar-row">
+                  <div className="schedule-settings__row-copy">
+                    <span>{t("schedule.prefsFirstView")}</span>
+                  </div>
+                  <div className="schedule-settings__calendar-actions">
+                    <SelectControl
+                      size="sm"
+                      aria-label={t("schedule.prefsFirstView")}
+                      value={prefForm.default_view}
+                      options={PREFERENCE_VIEWS.map((v) => ({ value: v, label: t(`schedule.${v}View`) }))}
+                      onChange={(event) => setPrefForm((cur) => ({ ...cur, default_view: event.target.value as PreferenceView }))}
+                    />
+                  </div>
+                </div>
+                <div className="schedule-settings__calendar-row">
+                  <div className="schedule-settings__row-copy">
+                    <span>{t("schedule.prefsWeekStart")}</span>
+                  </div>
+                  <div className="schedule-settings__calendar-actions">
+                    <SelectControl
+                      size="sm"
+                      aria-label={t("schedule.prefsWeekStart")}
+                      value={String(prefForm.week_start)}
+                      options={[
+                        { value: "0", label: t("schedule.prefsWeekStartSunday") },
+                        { value: "1", label: t("schedule.prefsWeekStartMonday") },
+                      ]}
+                      onChange={(event) => setPrefForm((cur) => ({ ...cur, week_start: event.target.value === "1" ? 1 : 0 }))}
+                    />
+                  </div>
+                </div>
+                <div className="schedule-settings__calendar-row">
+                  <div className="schedule-settings__row-copy">
+                    <span>{t("schedule.prefsEventMinutes")}</span>
+                  </div>
+                  <div className="schedule-settings__calendar-actions">
+                    <SelectControl
+                      size="sm"
+                      aria-label={t("schedule.prefsEventMinutes")}
+                      value={String(prefForm.event_minutes)}
+                      options={PREFERENCE_EVENT_MINUTES.map((m) => ({ value: String(m), label: t("schedule.prefsMinutesValue", { count: m }) }))}
+                      onChange={(event) => setPrefForm((cur) => ({ ...cur, event_minutes: Number(event.target.value) }))}
+                    />
+                  </div>
+                </div>
+                {meetAvailable && (
+                  <div className="schedule-settings__calendar-row">
+                    <div className="schedule-settings__row-copy">
+                      <span>{t("schedule.prefsAutoMeet")}</span>
+                    </div>
+                    <div className="schedule-settings__calendar-actions">
+                      <Toggle
+                        checked={prefForm.auto_meet}
+                        aria-label={t("schedule.prefsAutoMeet")}
+                        onCheckedChange={(next) => setPrefForm((cur) => ({ ...cur, auto_meet: next }))}
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="schedule-settings__calendar-row">
+                  <div className="schedule-settings__row-copy">
+                    <span>{t("schedule.prefsOpenOwners")}</span>
+                  </div>
+                  <div className="schedule-settings__calendar-actions">
+                    <SelectControl
+                      size="sm"
+                      aria-label={t("schedule.prefsOpenOwners")}
+                      value={prefForm.open_owners}
+                      options={[
+                        { value: "self", label: t("schedule.prefsOpenSelf") },
+                        ...(canPickOwners
+                          ? [
+                              { value: "all", label: t("schedule.prefsOpenAll") },
+                              { value: "team", label: t("schedule.prefsOpenTeam") },
+                            ]
+                          : []),
+                      ]}
+                      onChange={(event) => setPrefForm((cur) => ({ ...cur, open_owners: event.target.value as PreferenceOpenOwners }))}
+                    />
+                    {canPickOwners && prefForm.open_owners === "team" && (
+                      <SelectControl
+                        size="sm"
+                        aria-label={t("schedule.prefsTeam")}
+                        value={prefForm.open_team_id == null ? "" : String(prefForm.open_team_id)}
+                        placeholder={t("schedule.prefsTeam")}
+                        options={teamOptions}
+                        onChange={(event) => setPrefForm((cur) => ({
+                          ...cur,
+                          open_team_id: event.target.value === "" ? null : Number(event.target.value),
+                        }))}
+                      />
+                    )}
+                  </div>
+                </div>
+                <div className="schedule-settings__calendar-row">
+                  <div className="schedule-settings__calendar-actions">
+                    <Button
+                      variant="secondary"
+                      onClick={() => void savePrefs()}
+                      disabled={!prefsReady}
+                      loading={prefsSaving}
+                    >
+                      {t("schedule.settingsSave")}
+                    </Button>
+                    {prefsSaved && (
+                      <span className="schedule-settings__timestamp">
+                        <STATUS_ICONS.check size={ICON.sm} aria-hidden="true" /> {t("schedule.prefsSaved")}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </SectionCard>
+            </section>
+
             {isTenantAdmin && (
               <section id="schedule-settings-google" className="schedule-settings__section-anchor">
                 <SectionCard title={t("schedule.settingsGoogleTitle")}>

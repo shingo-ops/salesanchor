@@ -68,6 +68,7 @@ def test_table_rows_are_read():
         "invoice_not_draft",
         "payment_fee",
         "invalid_team_ids",
+        "invalid_team",
     ]
 
 

@@ -72,8 +72,8 @@ async def test_list_calendar_owners_manager_sees_others():
         side_effect=[
             _QueryResult(first={"id": 7, "tenant_id": 1, "user_id": 101, "staff_code": "A01", "surname_jp": "山田", "given_name_jp": "太郎", "primary_email": "owner@example.com"}),
             _QueryResult(all_rows=[
-                {"id": 7, "user_id": 101, "staff_code": "A01", "surname_jp": "山田", "given_name_jp": "太郎", "primary_email": "owner@example.com", "color_key": "tomato"},
-                {"id": 8, "user_id": 202, "staff_code": "B02", "surname_jp": "佐藤", "given_name_jp": "花子", "primary_email": "other@example.com", "color_key": None},
+                {"id": 7, "user_id": 101, "staff_code": "A01", "surname_jp": "山田", "given_name_jp": "太郎", "primary_email": "owner@example.com", "color_key": "tomato", "team_ids": [3, 5]},
+                {"id": 8, "user_id": 202, "staff_code": "B02", "surname_jp": "佐藤", "given_name_jp": "花子", "primary_email": "other@example.com", "color_key": None, "team_ids": []},
             ]),
         ]
     )
@@ -86,9 +86,12 @@ async def test_list_calendar_owners_manager_sees_others():
     assert result.owners[1].is_self is False
     assert result.owners[0].color_key == "tomato"
     assert result.owners[1].color_key is None
+    # 便3b: 使っているチームの番号（番号順）
+    assert result.owners[0].team_ids == [3, 5]
+    assert result.owners[1].team_ids == []
     # 応答の鍵は完全一致（古い 3 列は返さない）
     assert set(result.owners[0].model_dump()) == {
-        "staff_id", "user_id", "staff_code", "name", "primary_email", "color_key", "is_self",
+        "staff_id", "user_id", "staff_code", "name", "primary_email", "color_key", "is_self", "team_ids",
     }
 
 
@@ -133,9 +136,13 @@ async def test_update_calendar_owner_saves_color_key():
     assert result.color_key == "tomato"
     assert result.is_self is True
     assert set(result.model_dump()) == {
-        "staff_id", "user_id", "staff_code", "name", "primary_email", "color_key", "is_self",
+        "staff_id", "user_id", "staff_code", "name", "primary_email", "color_key", "is_self", "team_ids",
     }
-    assert "INSERT INTO calendar_owner_settings" in db.execute.call_args_list[2].args[0].text
+    upsert_sql = db.execute.call_args_list[2].args[0].text
+    assert "INSERT INTO calendar_owner_settings" in upsert_sql
+    # 便3b: 色の保存は初期値の 6 列に触れない
+    for column in ("default_view", "week_start", "event_minutes", "auto_meet", "open_owners", "open_team_id"):
+        assert column not in upsert_sql
     # ADR-1008 P2: パス引数は users.id。名簿は user_id で引き、設定の staff_id 列には users.id を入れる
     assert db.execute.call_args_list[0].args[1] == {"user_id": 101}
     assert db.execute.call_args_list[2].args[1] == {"staff_id": 101, "color_key": "tomato"}

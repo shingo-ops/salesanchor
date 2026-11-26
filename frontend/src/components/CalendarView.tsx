@@ -66,6 +66,7 @@ export function CalendarView({
   hourRange = 'events',
   scrollToNow = false,
   weekStart = 1,
+  clickMinutes = 60,
   fillHeight = false,
   onSelectRange,
   onEventMove,
@@ -387,7 +388,7 @@ export function CalendarView({
         selectable={Boolean(onSelectRange)}
         selectMirror={false}
         select={(arg) => {
-          const r = normalizeSelectedRange(arg.start, arg.end, arg.allDay);
+          const r = normalizeSelectedRange(arg.start, arg.end, arg.allDay, clickMinutes);
           onSelectRange?.(r.start, r.end, arg.allDay, pointRect(arg.jsEvent));
           arg.view.calendar.unselect();
         }}

@@ -72,6 +72,8 @@ export interface CalendarViewProps {
   scrollToNow?: boolean;
   /** 週の始まり。0＝日曜／1＝月曜（既定） */
   weekStart?: 0 | 1;
+  /** 時間割を押しただけで作る予定の長さ（分・既定 60） */
+  clickMinutes?: number;
   /** true で包む枠の高さいっぱいに広げる（月の升目を下まで）。既定は中身の高さ */
   fillHeight?: boolean;
   /** 押す・引っぱるで選んだ範囲。渡したときだけ選べる */
@@ -250,16 +252,17 @@ export function scrollTimeForNow(now: Date): string {
   return h === 0 ? '00:00:00' : `${pad2(h - 1)}:30:00`;
 }
 
-/** 押しただけ（15 分以下）なら始まりから 1 時間に広げる。終日はそのまま */
+/** 押しただけ（15 分以下）なら始まりから clickMinutes 分（既定 60 分）に広げる。終日はそのまま */
 export function normalizeSelectedRange(
   start: Date,
   end: Date,
   allDay: boolean,
+  clickMinutes: number = 60,
 ): { start: Date; end: Date } {
   if (allDay) return { start, end };
   const QUARTER = 15 * 60 * 1000;
   if (end.getTime() - start.getTime() <= QUARTER) {
-    return { start, end: new Date(start.getTime() + MS_PER_HOUR) };
+    return { start, end: new Date(start.getTime() + clickMinutes * 60 * 1000) };
   }
   return { start, end };
 }
