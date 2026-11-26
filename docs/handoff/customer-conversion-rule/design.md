@@ -82,7 +82,7 @@ PO の決定:
 - 画面: 選択肢の一覧から existing_customer を外した「手で選べる段階」の一覧を `frontend/src/constants/leadStatus.ts` に 1 つ足し（例 `MANUAL_LEAD_STATUS_CODES`）、`LeadEditPage.tsx:73`・`LeadFormFields.tsx:44` はそれを使う。今が既存顧客の人の編集画面では、今の値は表示する（選び直しはできない）。`LeadsPage.tsx:143` の一覧は 2 か所で使われている（審査 2 回目の必須 3）: 絞り込み（`:284`）は 7 つのまま、新規作成の画面（`:349`）は手で選べる段階の一覧に替える。
 - 422 の画面の文は `t()` で ja/en 両方に足す（ADR-027）。
 
-- 編集の保存で古い段階を送らない（審査 5 回目の必須 1・4 回目の必須 1 と同じ形の穴）: リード一覧の編集（`frontend/src/pages/leads/LeadsPage.tsx:210` `status: editForm.status`・控えは `toForm` の `:109`）と編集画面（`frontend/src/pages/leads/LeadEditPage.tsx:128` `status: form.status`・控えは `:83`）は、開いた時点の段階を毎回 PATCH で送っている。編集の間に入金などで自動で既存顧客になると、メモを 1 つ直しただけで古い段階が送られ、既存顧客が黙って戻る。直し方: 2 か所とも、`status` は開いた時点の値と違うとき（利用者が選び直したとき）だけ送る。失注の理由（`buildLostReasonUpdatePayload`・`LeadFormFields.tsx:46-58`）は今のまま（段階を送らなくても、backend の失注の確かめ `leads.py` の `is_lost_transition` は段階が変わるときだけ働くので、今と同じに動く）。
+- 編集の保存で古い段階を送らない（審査 5 回目の必須 1・4 回目の必須 1 と同じ形の穴）: リード一覧の編集（`frontend/src/pages/leads/LeadsPage.tsx:210` `status: editForm.status`・控えは `toForm` の `:109`）と編集画面（`frontend/src/pages/leads/LeadEditPage.tsx:128` `status: form.status`・控えは `:83`）は、開いた時点の段階を毎回 PATCH で送っている。編集の間に入金などで自動で既存顧客になると、メモを 1 つ直しただけで古い段階が送られ、既存顧客が黙って戻る。直し方: 2 か所とも、`status` は開いた時点の値と違うとき（利用者が選び直したとき）だけ送る。失注の理由（`buildLostReasonUpdatePayload`・`LeadFormFields.tsx:46-58`）は今のまま（段階を送らなくても、backend の失注の確かめ `leads.py` の `is_lost_transition` は段階が変わるときだけ働くので、今と同じに動く）。画面からリードを直す呼び出しは 8 か所（2026-11-26 `git grep` `patch.*/leads/`）。ほかの 5 か所は古い段階を送らない: ダッシュボード 2 か所（`PriorityProspectsSection.tsx:225`・`WeeklyAdvisorSection.tsx:237`）は次の行動だけ、受信箱の 3 か所（`useInboxState.ts:991`・`:1050`・`:1106`）は決まった段階を送る専用の呼び出し。カルテの保存（`:563`）は §4-3。
 
 ### 4-3. カルテ（画面）
 
