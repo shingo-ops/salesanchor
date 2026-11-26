@@ -141,6 +141,7 @@
 - [ ] Country・電話国番号とも、文字入力で候補が絞り込まれ、リストから選択した値（ISOコード／dial code）が保存される。自由文字列はそのまま保存されない。
 - [ ] +つき9桁の国際電話番号（例: +376367830）がバリデーションを通過する。
 - [ ] ZIP空欄で登録した顧客の eLogi CSV に埋め値が出力され、DB（company_addresses.zip / order_shipping_details.zip_code）は空のままである。
+  - 一部確認（2026-11-26・PO「1」でチェックは付けない）: eLogi CSV の埋め値 `0000000` と `order_shipping_details.zip_code` が空のままの部分は、自動試験 `backend/tests/test_order_shipping_details.py::TestElogiCsvSingle::test_single_csv_hk_empty_zip_fills_0000000` で確認済み。`company_addresses.zip` が空のまま保存される部分を確かめる試験は未作成（入力の空文字が None になることだけ `backend/tests/test_registration_token_schema.py::TestAddressInputEmptyNormalization::test_zip_empty_str_becomes_none` で確認）。
 - [ ] 配送先Email空欄の注文の eLogi CSV に請求先メールが出力される。
 - [ ] 送信されたデータが正しいテナントの companies / company_addresses（address_type別）に保存される（トークン検証経由・他テナント混入なし）。
 - [ ] 全文言が en.json / ja.json のキーで管理され、ESLint local/no-japanese-literal を通る。
