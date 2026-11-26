@@ -1,3 +1,1 @@
-https://auth.openai.com/codex/device
-497B-KX4JS
-calendar 部屋（2回目）: 出した時刻 15:48:01 UTC・有効 900 秒
+使用済み・時間切れ（16:02:53 UTC）calendar 2回目も時間切れ・使えない

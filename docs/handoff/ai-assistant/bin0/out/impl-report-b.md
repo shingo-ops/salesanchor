@@ -56,3 +56,20 @@
 - 所見: 番号の発行から 15 分のあいだ PO が打てる状況ではなかった可能性（未確認）。次回は PO が画面の前に居る時刻を決めてから起動するのがよい。
 
 BLOCKED: invoice 部屋のログインが 2 回とも時間切れ（3回目の実行。番号が打たれなかった）
+
+## 4回目
+
+| 手順 | 結果 |
+|---|---|
+| 1 | 作業場所 `/root/worktrees/salesanchor/release-ai-assistant-bin0b`。HEAD=origin/release/ai-assistant-bin0b=c907b20b0（以降を確認）。user.name=Claude・origin/main=24354620e |
+| 2 | dockerd 起動・digest 固定の取得（429 を数回くり返した後に成功）・`Hermes Agent v0.23.4` ○ |
+| 3f | pytest **11 passed**（`raw/b3-pytest.txt`） |
+| 5 | 鍵・3 部屋・起動（CA の束の読み取り専用の取り付けと SSL_CERT_FILE・REQUESTS_CA_BUNDLE つき・検証は切っていない）・`/health` 200・prompt_txt_sha256=913a71d5…53f2e |
+| 6 ログイン（部屋ごと） | invoice: 通った（1 回目）。coordinator: 通った（1 回目）。calendar: 1 回目・2 回目とも `Login timed out after 15 minutes`（番号が打たれなかった）。カード 6e のとおり停止 |
+| 7〜9 | 流していない（calendar の札が無く 3 部屋がそろわないため。6g も未実施） |
+
+- 見張りに止められた命令: なし。
+- 番号の push は部屋ごとに 1 ファイル（login-code.txt）だけ。最後の login-code.txt は calendar の時間切れの状態。
+- 所見: 前の回と違い、PO は invoice・coordinator の番号は打てた。calendar の 2 回は番号を出した後に打たれなかった（PO の都合かは未確認）。次回は 3 部屋とも続けて打てる時刻を決めてから起動するのがよい。invoice と coordinator の札はこの回の volume にだけ有り、後片付けで消える。
+
+BLOCKED: calendar 部屋のログインが 2 回とも時間切れ（4回目の実行。invoice・coordinator は通った）
