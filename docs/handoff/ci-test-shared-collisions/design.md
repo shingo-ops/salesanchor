@@ -48,7 +48,7 @@ recon §2 の6ファイルについて、後片付けの中の共通の役割を
 ### 3-4. 受け入れ基準
 | 基準 | 検証方法 |
 |---|---|
-| K1: 差分は §3-1 の6ファイルと、本書類・台帳だけ | `gh pr diff --name-only`（審査役） |
+| K1: 差分は §3-1 の6ファイルと、本書類（recon・design・review-opus）・台帳だけ | `gh pr diff --name-only`（審査役） |
 | K2: 6ファイルに、共通の役割を消す `DROP ROLE` が1つも残らない | `git grep -n "DROP ROLE" -- backend/tests` で、`test_tenant_isolation_daily_check.py` 以外が0件（Opus） |
 | K3: PR の必須チェック pytest が pass。6ファイルの試験は数が減らず、skip も増えない | `gh pr checks` と、PR の run の記録で6ファイルの passed 数を main の直近の回と比べる（Opus） |
 | K4: 合流後の main の Backend Tests 30回で、`role "..." does not exist` と `already exists with unexpected attributes` が0件 | 30回分の失敗の記録を `--log-failed` で保存して数える（Opus・合流から約1〜2週） |
