@@ -174,17 +174,15 @@ export function IssuerProfileSection({ canEdit }: IssuerProfileSectionProps) {
               maxLength={255}
               fullWidth
             />
-            <div className="form-group">
-              <label htmlFor={`${idp}-country`}>{t("issuerProfile.country")}</label>
-              <CountryCombobox
-                id={`${idp}-country`}
-                value={current.country_code}
-                onChange={(value) => update("country_code", value)}
-                disabled={locked}
-                required
-              />
-              {fieldError("country_code") && <div className="error-message">{fieldError("country_code")}</div>}
-            </div>
+            <CountryCombobox
+              id={`${idp}-country`}
+              label={t("issuerProfile.country")}
+              value={current.country_code}
+              onChange={(value) => update("country_code", value)}
+              error={fieldError("country_code")}
+              disabled={locked}
+              required
+            />
             <TextField
               id={`${idp}-postal-code`}
               label={t("issuerProfile.postalCode")}
