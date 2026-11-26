@@ -89,3 +89,5 @@
 
 - 第1回（クラウド Sonnet・architect、2026-11-26）: REVISE。記録は `docs/handoff/schedule-settings/review-architect-bin3c-1.md`（枝 `release/schedule-settings-bin3c-review1`）。式・範囲・文・金型は正しい。必須の直し R1（試験の失敗の切替え・時計・取り方）・R2（`SchedulePageCache.test.tsx` の擬似応答）。
 - 直し: R1・R2 はカードの変更3と触るファイルに入れた。L1・L2（行番号）・L4・L5（K6 の数え方）・L3 は §2・§5・§7 とカードに入れた。
+- 第2回（クラウド Sonnet・architect、2026-11-26）: APPROVE。記録は `docs/handoff/schedule-settings/review-architect-bin3c-2.md`（枝 `release/schedule-settings-bin3c-review2`）。第1回の指摘は全部直っていた。軽い指摘 L1（月曜の人は待つ）・L2（K3 の取り方）・L3（Cache の試験の止め方）はカード変更3に入れた。L4 は行番号の付近で通じるため直さない。
+- 状態: 設計審査済み（APPROVE）。

@@ -24,7 +24,7 @@
 | 設計と同じ範囲か | design-bin3c.md §4-1・§4-2 だけを変更1・変更2 に割り当てた |
 | 実物の行 | §2 F1〜F13 は origin/main 331c18613 で Opus が読んだ |
 | 今の動きを変えない | `getMonthCells` の既定は 0（日曜）。初期値が行無しの人は今と同じ日曜始まり |
-| 設計審査 | design-bin3c.md §10（第1回 REVISE の R1・R2 をこのカードの変更3に入れた） |
+| 設計審査 | design-bin3c.md §10（第1回 REVISE の R1・R2 を変更3に入れた。第2回 APPROVE、軽い指摘 L1〜L3 も変更3に入れた） |
 
 ## 受領確認
 
@@ -54,11 +54,12 @@ design §5 の K1〜K4。
 
 - `schedule-utils.test.ts`: K1（2026-11-15 を基に、`weekStart` 1 → 1 つ目 2026-10-26、0 と引数なし → 2026-11-01、どれも 42 個）。
 - 失敗の切替え: `SchedulePageImpl.test.tsx` と `ScheduleSettingsPage.test.tsx` の `answers`（今の `prefs` の次）に `prefsFail: false as boolean` を足す。`/calendar/preferences` の枝（`SchedulePageImpl.test.tsx:80-83`・`ScheduleSettingsPage.test.tsx:57-60`）の先頭で `if (answers.prefsFail) throw new Error("prefs failed");`。各ファイルの `beforeEach`（`SchedulePageImpl.test.tsx:119` 付近・`ScheduleSettingsPage.test.tsx:88` 付近）で `answers.prefsFail = false;` に戻す。
-- `SchedulePageImpl.test.tsx`: K2。初期値 `{ ...DEFAULT_PREFS, week_start: 1 }` の人と、既定（`prefs: null`）の人の 2 つ。見出しは `container.querySelectorAll(".schedule-mini-calendar__weekdays span")[0].textContent`、マスは `container.querySelectorAll(".schedule-mini-calendar__day")[0].textContent`。見出しの期待値は日本語の曜日名（「月」「日」。`Intl` の `"ja-JP"` で作るため画面の言語によらない）。時計は固定しない。マスの期待値は試験の中で今日から作る: 今月 1 日 `first = new Date(y, m, 1)` から `weekStart` 1 なら `(first.getDay() + 6) % 7` 日、0 なら `first.getDay()` 日戻した日の `getDate()` の文字。
+- `SchedulePageImpl.test.tsx`: K2。初期値 `{ ...DEFAULT_PREFS, week_start: 1 }` の人と、既定（`prefs: null`）の人の 2 つ。見出しは `container.querySelectorAll(".schedule-mini-calendar__weekdays span")[0].textContent`、マスは `container.querySelectorAll(".schedule-mini-calendar__day")[0].textContent`。見出しの期待値は日本語の曜日名（「月」「日」。`Intl` の `"ja-JP"` で作るため画面の言語によらない）。時計は固定しない。マスの期待値は試験の中で今日から作る: 今月 1 日 `first = new Date(y, m, 1)` から `weekStart` 1 なら `(first.getDay() + 6) % 7` 日、0 なら `first.getDay()` 日戻した日の `getDate()` の文字。月曜の人は初期値が後から届くので `waitFor` で待つ（`SchedulePageImpl.test.tsx:2110-2113` の B1 と同じ形）。既定の人は待たなくてよい。
 - `SchedulePageImpl.test.tsx`: K4。`prefsFail = true` で `prefsLoadErrorSchedule` の文が出る・予定（今ある試験と同じ 1 件）は出る。`prefsFail = false` では文が出ない。
-- `ScheduleSettingsPage.test.tsx`: K3。`prefsFail = true` で `role="alert"` に `prefsLoadError` の文・保存ボタンは disabled。
+- `ScheduleSettingsPage.test.tsx`: K3。`prefsFail = true` で `prefsLoadError` の文が出る（`screen.findByText(i18n.t("schedule.prefsLoadError"))`。`:476` と同じ書き方）。その要素が `role="alert"`。保存ボタンは既存の `saveButton()`（`:485`）で取り、disabled。
 - `SchedulePageCache.test.tsx`: `:73` の `/calendar/owners` の行の前に `if (path === "/calendar/preferences") return { default_view: "week", week_start: 0, event_minutes: 60, auto_meet: false, open_owners: "self", open_team_id: null };` を 1 行足す（今は `:76` の想定外の GET で投げ、この便の後は失敗の文が出るため）。ほかは触らない。
 - 文の確かめは、試験が今使っている i18n のやり方（実際の文か キー名か）に合わせる。
+- `SchedulePageCache.test.tsx` の試験が、足した 1 行のせいで落ちたら、ほかを直さずに `BLOCKED:` でその試験名を返す。
 - 上のほかの試験ファイルが、初期値の擬似応答が無いため新しい文で落ちたら、触らずに `BLOCKED:` でファイル名と落ちた試験名を返す。
 
 ## 確かめ
