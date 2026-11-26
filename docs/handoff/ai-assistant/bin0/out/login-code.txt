@@ -1,3 +1,1 @@
-https://auth.openai.com/codex/device
-41HQ-OEE90
-2026-11-26T13:01:00Z 発行・有効 900 秒（部屋: invoice・3回目の2回目）
+使用済み・時間切れ（invoice・3回目の2回目・2026-11-26 UTC）

@@ -38,4 +38,21 @@
 - 次の決定（Opus・PO）: PO が打てるときに invoice の 1 部屋だけ再実行すれば、手順 6g 以降を続けられる。それまでは coordinator と calendar の札がこの容器の volume にだけ有る（後片付けで消える）。
 - 後片付け結果: 4 つの場所（default・coordinator・calendar・invoice）で logout 命令を実行（終了コード 0）・試しの容器と volume を削除・鍵のファイルを 1 つずつ削除（残り 0 件）。
 
-BLOCKED: invoice 部屋のログインが 2 回とも時間切れ（番号が打たれなかった）
+（2回目の最後の行: BLOCKED: invoice 部屋のログインが 2 回とも時間切れ）
+
+## 3回目
+
+| 手順 | 結果 |
+|---|---|
+| 1 | 作業場所 `/root/worktrees/salesanchor/release-ai-assistant-bin0b`。HEAD=12be89f2a=origin/release/ai-assistant-bin0b（12be89f2a 以降を確認）。user.name=Claude・origin/main=c3834ee5f |
+| 2 | dockerd 起動・digest 固定の取得（1 回目は 429、再試行で成功）・`Hermes Agent v0.23.4` ○ |
+| 3f | pytest **11 passed**（`raw/b3-pytest.txt`） |
+| 5 | 鍵・3 部屋・起動（2回目と同じ CA の束の読み取り専用の取り付けと SSL_CERT_FILE・REQUESTS_CA_BUNDLE つき・検証は切っていない）・`/health` 200 |
+| 6 ログイン（invoice のみ着手） | 1 回目: `-p invoice` で番号を出し（12:45 UTC）push（dbb0d7532）。900 秒後 `Login timed out after 15 minutes`。2 回目: 出し直し（13:01 UTC）push（c582952f1）。同じく `Login timed out after 15 minutes`。**2 回とも時間切れ**のため、カードの 6e どおり停止。coordinator・calendar は未着手（順が invoice → coordinator → calendar のため） |
+| 7〜9 | 流していない |
+
+- 見張りに止められた命令: なし。
+- login-code.txt は時間切れの番号の状態（使えない）で、最後に「使用済み・時間切れ」へ更新して push した。
+- 所見: 番号の発行から 15 分のあいだ PO が打てる状況ではなかった可能性（未確認）。次回は PO が画面の前に居る時刻を決めてから起動するのがよい。
+
+BLOCKED: invoice 部屋のログインが 2 回とも時間切れ（3回目の実行。番号が打たれなかった）
