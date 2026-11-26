@@ -67,3 +67,61 @@ KGI の承認: PO 2026-11-26「1」（5種類すべてを直す設計にする�
 ## 5. 既存 ADR の検索結果
 - `git grep -il "xdist|bootstrap_lock|advisory_lock|DROP ROLE" docs/adr` → `docs/adr/ADR-1024-ai-readonly-db-path.md` だけが当たった。:80 は本番の戻し方（`DROP ROLE ai_reader`）であり、試験の決まりではない。
 - 試験の並列・共有 DB の決まりを定める ADR は見つからなかった。決まりは覚え書き test_lock_collisions にある（札の順番は tenant → public。DROP は `public_bootstrap_lock` の中）。
+
+## 6. 追記（2026-11-27・便2〜5の調べ。Opus が origin/main 33f2112f9 と失敗の記録で確かめた）
+起点の記録: クラウドの調べ `release/ci-test-shared-collisions-recon2`（04b5cc9ba）の調べの記録（recon-bin2-5）。そこで説明できなかった B は、下の 6-1 で決着した。
+
+### 6-1. B と C は PR 5669 で既に直っている
+- PR 5669（`release/ci-test-lock-fix-1121`）は 2026-11-21 14:50 UTC に合流した（bb6c4d63c）。その中の cc649a9dc が次の2つを `public_bootstrap_lock` の中へ入れた。
+  - B: `backend/tests/test_tenant_issuer_tables_pg.py` の DROP・ALTER・migration の塊（変更前は札の外の `admin_engine.begin()`）。
+  - C: `backend/tests/test_assistant_karte_pg.py` の `_cleanup`（`public.users` などの DELETE）と `_setup` の INSERT。
+- 失敗の記録（`/tmp/CC報告ファイル/collisions/f_<run>.log`）の起きた時刻:
+
+| run | 種類 | 起きた時刻（UTC） |
+|---|---|---|
+| 44096043994 | B | 11-17 13:46 |
+| 44203948916 | B | 11-17 23:58 |
+| 44849233250 | B | 11-21 01:17 |
+| 44854143246 | B | 11-21 02:07 |
+| 44024988826 | C | 11-17 05:33 |
+| 44686062120 | C と E | 11-20 06:11 |
+| 44343066606 | D | 11-18 |
+| 45346102865 | A | 11-24 07:11 |
+| 45823366830 | A | 11-26 12:50 |
+
+- 合流後（11-21 15:00 UTC 以降に作られた main の回）は25回: 成功21・失敗2・取り消し2。失敗2回はどちらも A。B と C は0回。
+- B の相手（記録から）: `tenant_963.tenant_issuer_profiles` を消す文が ACCESS EXCLUSIVE を待ち、相手は準備の migration `migrations/20261112_150000_create_viewer_contract_public_tables.sql` の後で `public.tenant_settings` に INSERT していた（`create_tenant_schema` の段）。
+- C の相手: カルテの `public.users` の DELETE と、「Phase 1 再設計: スタッフ・bot」の段（`create_tenant_schema`）。
+
+### 6-2. C と同じ形で、まだ札の外にあるもの（落ちたのはまだ見ていない）
+- `backend/tests/test_calendar_sync_tenant_reset_pg.py`（テナント978）
+  - `_cleanup`（:72-84）: `calendar_events`・`public.tenant_google_calendar_config`・`public.users` の DELETE を、札なしの `admin_engine.begin()` で流す。直す前のカルテと同じ形。呼び元は `_teardown`（:136-138）だけ。
+  - `_setup`（:87-）: migration は札の中（:95）。その後の `public.users` と `public.tenant_google_calendar_config` の INSERT・DELETE（:100-127）は札の外。
+- `backend/tests/test_staff_join_discord.py`（テナント973・psycopg2・autocommit）
+  - `_cleanup_pg`（:582-594）: tenant_973 のスキーマを CASCADE で消す文と、`public.users`・`public.tenants`・`public.permissions` の DELETE を札なしで流す。呼び元は `shared_pg` の後片付け（:615）と `_prep_pg`（:634）。
+  - `_prep_pg` の `public.permissions` と `public.users` の INSERT（:635-646）も札の外。
+- 2回の C の失敗の相手はカルテだった。カルテが札の中に入ったので、今はこの2つが同じ相手とぶつかる形が残る。
+
+### 6-3. A の仕組み（今も起きている）
+- run 45346102865: `test_product_blank_confirmations_pg::test_write_requires_operator_flag` の `INSERT INTO public.product_blank_confirmations` が products の RowShare を待つ。相手は `test_tcg_product_list_pg` の `product_db` で、`migrations/20261016_190000_create_product_blank_confirmations.sql` の ACCESS EXCLUSIVE を待っていた。
+- `backend/tests/test_tcg_product_list_pg.py`:
+  - `product_db`（:95-120）は、巻き戻す transaction（:106 で始め :118 で rollback）の中で `create_product_schema`（:47-92）を毎回流す。札は共有の xact 札（:110-113）。
+  - `create_product_schema` は使い捨てスキーマ（`product_csv_test_<uuid>`）の表に加えて、public の DDL も毎回流す: `_PUBLIC_PRODUCTS_DDL`（:50-54）、085・086（:63-64）、`20260921_060000`（:65）と product_kinds の行（:67-72）、`20260921_120000`（`ALTER TABLE public.products`・:74）、`20260921_070000`（:75）、type_master の行（:77）、`20260919_020000`（:79）、phase3 `20260920_010000`（:82-84）、`20260922_030000` と `20261016_190000`（:86-92）。
+  - 巻き戻すまで、これらの ACCESS EXCLUSIVE を持ち続ける。そのあいだにほかの worker が子の表を書いて products を待つと、互いに待ち合う。
+- public の DDL は、使い捨てスキーマの名前を受け取らない（`.replace("tenant_004", schema)` は :56-62 の3本と `_rewire_keyword_fks(schema)`（:78）だけ）。そのため public の分を transaction の外へ出しても、使い捨てスキーマの中身は変わらない。
+- phase3 は `nspname LIKE 'tenant_%'` のスキーマだけを回す（`migrations/20260920_010000_phase3_fk_rewire_unit_condition.sql:23-30`）。使い捨てスキーマは `product_csv_test_` で始まるので、この試験の表には何もしない。今は、ほかの worker の tenant_* の表を巻き戻す前提で書き換え、札を持ち続けている。
+- 見張り `backend/tests/test_tenant_loop_migration_guard.py:284-287` は、この試験を `own_database`（使い捨て DB）に分類している。実際は共有 DB `jarvis_test_db`（:97 の assert）なので、分類が実物と違う。
+- 手本: `backend/tests/rls_bootstrap.py:111-150` の `ensure_product_packagings`。DDL を transaction の外の別接続で、札の中で1回だけ確定させる。docstring（:112-124）に「巻き戻す transaction の中で DDL を流すと deadlock する」とある。
+- 共有 DB に確定させても困らないか:
+  - 085・086・`20260921_060000`・`20260921_070000`・type_master の行は、準備（`backend/tests/rls_bootstrap.py:19-38`・:293-295）が既に確定させている。
+  - `_PUBLIC_PRODUCTS_DDL`・`20260919_020000`・`20261016_190000` は、`backend/tests/test_product_blank_confirmations_pg.py:229-236` が札の中で確定させている。`20260922_030000` は `backend/tests/test_product_format_game_links_pg.py:27` が流す。
+  - product_kinds の行（TCG・FIGURE・GOODS）を数える試験は無い（`git grep "count(\*) FROM public.product_kinds" -- backend/tests` が0件）。
+
+### 6-4. E の仕組み
+- `backend/tests/test_rls_tenant_meta_config.py` の `setup_schemas`（:78-157）は、札なしの `admin_engine.begin()` で tenant_998・tenant_999 のスキーマと表・RLS・GRANT を作る（:87-150）。`tenant_meta_config` は `public.users` を外部キーで指す（:111）。後片付けで2つのスキーマを札なしで消す（:155-157）。
+- run 44686062120 で「ERROR at teardown of test_rls_visible_when_app_tenant_id_matches」として落ちた。相手は、当時札の外だったカルテの `public.users` の DELETE。
+- `backend/tests/test_countries_master.py`（:146-176）も同じ tenant_998・tenant_999 を札なしで作り、消さない。
+- 空いている番号: 946・947 は、`git grep -w -E "946|947"` で試験・migration・scripts・.github のどこにも出てこない。
+
+### 6-5. 見張りを作るかの見積もり
+- 共有 DB の後片付けを札の外で流す関数を機械で探す試し（関数の中にスキーマを消す文か `public.` の DELETE があり、札の語が無いもの）: 53ファイル・76関数が当たった（使い捨て DB や SQLite を含む）。1つずつ分類が要るため、本テーマでは作らない（design §10）。
