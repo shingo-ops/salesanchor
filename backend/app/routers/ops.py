@@ -361,6 +361,7 @@ async def list_events(
     kind: str | None = Query(None, pattern=r"^[a-z_]{1,32}$"),
     service: str | None = Query(None, pattern=r"^[a-z0-9_-]{1,64}$"),
     since: datetime | None = None,
+    round_step: str | None = Query(None, pattern=r"^[a-z_]{1,32}$"),
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
@@ -368,6 +369,7 @@ async def list_events(
 
     kind の値の正本は表の制約 ops_incident_events_kind_check。ここでは形だけを確かめる。
     service は出来事ではなく障害の labels から読む（注記の detail は形が決まっていて service を持たない。便F D3）。
+    round_step は detail の round.step で絞る（形だけ確かめる。値の正本は OpsRound の step。起こした回数を数えるため）。
     """
     if since is not None and since.tzinfo is None:
         since = since.replace(tzinfo=timezone.utc)
@@ -382,9 +384,10 @@ async def list_events(
                 "WHERE (CAST(:kind AS text) IS NULL OR e.kind = CAST(:kind AS text)) "
                 "AND (CAST(:service AS text) IS NULL OR i.labels->>'service' = CAST(:service AS text)) "
                 "AND (CAST(:since AS timestamptz) IS NULL OR e.occurred_at >= CAST(:since AS timestamptz)) "
+                "AND (CAST(:round_step AS text) IS NULL OR e.detail->'round'->>'step' = CAST(:round_step AS text)) "
                 "ORDER BY e.occurred_at DESC LIMIT :limit"
             ),
-            {"kind": kind, "service": service, "since": since, "limit": limit},
+            {"kind": kind, "service": service, "since": since, "round_step": round_step, "limit": limit},
         )
         items = [dict(r) for r in result.mappings().all()]
     finally:
@@ -427,6 +430,10 @@ class OpsRound(BaseModel):
         "stop",
         "notify_failed",
         "suspicious",
+        "approve",
+        "wake",
+        "wake_skipped",
+        "wake_failed",
     ]
     n: int = Field(ge=1, le=99)
     at: AwareDatetime
@@ -448,6 +455,8 @@ class OpsRound(BaseModel):
         "waiting_60m",
         "no-reply",
         "leftover",
+        "limit",
+        "no_report",
     ] | None = None
 
     @model_validator(mode="after")

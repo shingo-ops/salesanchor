@@ -11,6 +11,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -194,6 +195,7 @@ async def env(monkeypatch):
 _ADMIN_CALLS = [
     ("post", "/{iid}/ticket", None),
     ("get", "/pending", None),
+    ("get", "/{iid}/reports", None),
     ("post", "/unmask-requests/{rid}/decision", {"decision": "denied", "reason": "x"}),
     ("post", "/audits", {"findings": []}),
     ("get", "/audit-inputs", None),
@@ -619,3 +621,45 @@ async def test_db_failure_in_ticket_check_returns_503(env, monkeypatch):
     monkeypatch.setattr("app.routers.ops_case._verify_ticket", boom)
     r = await env.client.post(f"{_BASE}/{iid}/report", json={"status": "reported"}, headers=agent(ticket))
     assert r.status_code == 503 and r.json() == {"detail": "OPS_CASE_UNAVAILABLE"}
+
+
+# ---------------------------------------------------------------------------------------------------
+# 便4a: 管理者の鍵で報告を読む口
+# ---------------------------------------------------------------------------------------------------
+async def test_reports_read_with_admin_key_only(env):
+    iid, ticket = await env.new_case()
+    url = f"{_BASE}/{iid}/reports"
+    r = await env.client.get(url, headers=admin())
+    assert r.status_code == 200 and r.json() == {"items": []}
+    body = {"kind": "investigation", "status": "reported", "summary": "要約", "proposal": {"a": "日本語"}}
+    assert (await env.client.post(f"{_BASE}/{iid}/report", json=body, headers=agent(ticket))).status_code == 200
+    r = await env.client.get(url, headers=admin())
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert len(items) == 1
+    assert items[0]["incident_id"] == iid
+    assert items[0]["kind"] == "investigation" and items[0]["status"] == "reported"
+    assert items[0]["proposal"] == {"a": "日本語"}
+    assert set(items[0]) == {
+        "id", "incident_id", "kind", "status", "summary", "cause", "evidence", "proposal", "risk",
+        "needs_decision", "received_at",
+    }
+    assert (await env.client.get(url, headers=agent(ticket))).status_code == 401
+    assert (await env.client.get(url)).status_code == 401
+    # 別の件の報告は混ざらない
+    iid2, _ = await env.new_case()
+    assert (await env.client.get(f"{_BASE}/{iid2}/reports", headers=admin())).json() == {"items": []}
+
+
+async def test_reports_path_is_not_reachable_from_case_api_nginx():
+    nginx = (Path(__file__).resolve().parents[2] / "nginx" / "nginx.conf").read_text("utf-8")
+    start = nginx.index("server_name case-api.salesanchor.jp;")
+    block = nginx[start : nginx.index("server_name monitor.salesanchor.jp;")]
+    patterns = re.findall(r'location\s+~\s+"([^"]+)"', block)
+    exact = re.findall(r"location\s+=\s+(/\S+)\s*{", block)
+    assert patterns, "case-api の正規表現の道が読めない"
+    path = f"/api/v1/ops/case/{uuid.uuid4()}/reports"
+    assert not any(re.search(p, path) for p in patterns)
+    assert path not in exact
+    # 読めていることの対照: 報告の口は当たる
+    assert any(re.search(p, f"/api/v1/ops/case/{uuid.uuid4()}/report") for p in patterns)

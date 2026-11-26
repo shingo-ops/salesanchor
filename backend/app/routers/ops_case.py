@@ -3,6 +3,7 @@ ADR-1052 段2: 相談係（クラウドの Claude）の「件」の口 8 つ。
 
   POST /api/v1/ops/case/{incident_id}/ticket                         ADMIN  件の札を作る（応答で 1 回だけ返す）
   GET  /api/v1/ops/case/pending                                      ADMIN  判断待ちの申請と、自動で断った行
+  GET  /api/v1/ops/case/{incident_id}/reports                        ADMIN  その件の報告の全部（種類ごとに 1 行）
   POST /api/v1/ops/case/unmask-requests/{request_id}/decision        ADMIN  申請の許可・拒否
   POST /api/v1/ops/case/audits                                       ADMIN  週次点検の結果を残す
   GET  /api/v1/ops/case/audit-inputs                                 ADMIN  点検の材料（数だけ）
@@ -345,6 +346,35 @@ async def list_pending(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
         raise
     await _clear_operator(db)
     return {"pending": [dict(r) for r in pending], "auto_denied": [dict(r) for r in auto_denied]}
+
+
+@router.get("/ops/case/{incident_id}/reports", dependencies=[Depends(require_case_admin)])
+async def list_reports(incident_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    """その件の報告の全部（種類ごとに 1 行。なければ空）。管理者の鍵だけ。case-api には出さない。"""
+    try:
+        await set_operator_context(db)
+        rows = (
+            (
+                await db.execute(
+                    text(
+                        "SELECT id::text AS id, incident_id::text AS incident_id, kind, status, summary, cause, "
+                        "evidence, proposal, risk, needs_decision, received_at "
+                        "FROM ops_case.reports WHERE incident_id = CAST(:iid AS uuid) ORDER BY received_at, kind"
+                    ),
+                    {"iid": str(incident_id)},
+                )
+            )
+            .mappings()
+            .all()
+        )
+    except DBAPIError as exc:
+        await _safe_clear(db)
+        raise _unavailable("reports", exc) from None
+    except BaseException:
+        await _safe_clear(db)
+        raise
+    await _clear_operator(db)
+    return {"items": [dict(r) for r in rows]}
 
 
 @router.post("/ops/case/unmask-requests/{request_id}/decision", dependencies=[Depends(require_case_admin)])

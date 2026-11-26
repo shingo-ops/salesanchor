@@ -930,3 +930,103 @@ async def test_new_filters_reject_bad_values(env):
     ):
         resp = await env.client.get(path, headers=env.api_headers())
         assert resp.status_code == 422, path
+
+
+# ---------------------------------------------------------------------------
+# ADR-1012 段階4 便4a: round の step・reason の追加と round_step の絞り
+# ---------------------------------------------------------------------------
+_OLD_STEPS = [
+    "start", "launch_failed", "kept", "closed", "measure", "result", "stop", "notify_failed", "suspicious",
+]
+_OLD_REASONS = [
+    "failed-3", "unknown", "halt", "interrupted", "lost", "full", "not_ready", "failed", "cwd_invalid",
+    "needs_decision", "blocked", "waiting_60m", "no-reply", "leftover",
+]
+
+
+async def test_new_round_steps_and_reasons_are_recorded(env):
+    """T1 approve・wake・wake_skipped・wake_failed と reason limit・no_report が入り、detail の round に残る。"""
+    _, incident_id = await _new_discord_incident(env)
+    url = f"{_BASE}/incidents/{incident_id}/events"
+    cases = [
+        ("approve", None),
+        ("wake", None),
+        ("wake_skipped", "limit"),
+        ("wake_skipped", "no_report"),
+        ("wake_failed", None),
+    ]
+    for n, (step, reason) in enumerate(cases, start=1):
+        rd = _round(step=step, n=n, **({"reason": reason} if reason else {}))
+        resp = await env.client.post(
+            url, json={"kind": "ai", "note": "role=execute", "round": rd}, headers=env.api_headers()
+        )
+        assert resp.status_code == 200, (step, reason, resp.text)
+        events = [e for e in await _events(env, incident_id) if e["kind"] == "ai"]
+        assert _as_dict(events[-1]["detail"])["round"] == rd
+
+
+async def test_old_round_steps_and_reasons_still_pass_and_unknown_step_is_422(env):
+    """T2 今の 9 つの step と 14 個の reason は通る。知らない step は 422。"""
+    _, incident_id = await _new_discord_incident(env)
+    url = f"{_BASE}/incidents/{incident_id}/events"
+    for step in _OLD_STEPS:
+        extra = {"result": "fail"} if step == "result" else {}
+        resp = await env.client.post(
+            url, json={"kind": "ai", "round": _round(step=step, **extra)}, headers=env.api_headers()
+        )
+        assert resp.status_code == 200, step
+    for reason in _OLD_REASONS:
+        resp = await env.client.post(
+            url, json={"kind": "ai", "round": _round(reason=reason)}, headers=env.api_headers()
+        )
+        assert resp.status_code == 200, reason
+    before = len(await _events(env, incident_id))
+    resp = await env.client.post(
+        url, json={"kind": "ai", "round": _round(step="approved")}, headers=env.api_headers()
+    )
+    assert resp.status_code == 422
+    resp = await env.client.post(
+        url, json={"kind": "ai", "round": _round(reason="nope")}, headers=env.api_headers()
+    )
+    assert resp.status_code == 422
+    assert len(await _events(env, incident_id)) == before
+
+
+async def test_list_events_round_step_filter(env):
+    """T3 round_step=wake は wake の出来事だけ返す。case_report・start は返らない。"""
+    _, incident_id = await _new_discord_incident(env)
+    url = f"{_BASE}/incidents/{incident_id}/events"
+    for step in ("start", "approve", "wake"):
+        resp = await env.client.post(
+            url, json={"kind": "ai", "round": _round(step=step)}, headers=env.api_headers()
+        )
+        assert resp.status_code == 200
+    # round を持たない出来事（case_report の代わり。この試験の DB は便2a の移行を流さないため annotated を使う）
+    resp = await env.client.post(
+        url, json={"kind": "annotated", "note": "report-like"}, headers=env.api_headers()
+    )
+    assert resp.status_code == 200
+    resp = await env.client.get(
+        f"{_BASE}/events", params={"round_step": "wake", "limit": 100}, headers=env.api_headers()
+    )
+    assert resp.status_code == 200
+    mine = [e for e in resp.json()["items"] if e["incident_id"] == str(incident_id)]
+    assert len(mine) == 1
+    assert _as_dict(mine[0]["detail"])["round"]["step"] == "wake"
+    assert mine[0]["kind"] == "ai"
+    resp = await env.client.get(f"{_BASE}/events?round_step=Wake;", headers=env.api_headers())
+    assert resp.status_code == 422
+
+
+async def test_approve_note_over_500_chars_is_422(env):
+    """T5 approve の注記の note が 501 字なら 422。500 字は通る。"""
+    _, incident_id = await _new_discord_incident(env)
+    url = f"{_BASE}/incidents/{incident_id}/events"
+    resp = await env.client.post(
+        url, json={"kind": "ai", "note": "あ" * 501, "round": _round(step="approve")}, headers=env.api_headers()
+    )
+    assert resp.status_code == 422
+    resp = await env.client.post(
+        url, json={"kind": "ai", "note": "あ" * 500, "round": _round(step="approve")}, headers=env.api_headers()
+    )
+    assert resp.status_code == 200
