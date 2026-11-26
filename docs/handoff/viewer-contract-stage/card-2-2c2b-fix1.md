@@ -11,7 +11,7 @@
 ## Opus の決めごと
 
 - D1 印は金型の側で出す。国の欄の金型（frontend/src/components/CountryCombobox.tsx）に、省ける `label` と `error` を足す。描き方は TextField（frontend/src/components/TextField.tsx:83〜:105）と同じ形にする（`comp-field`・`comp-field__label`・`required` のとき `comp-field__required` の「*」・`comp-field__hint comp-field__hint--error` と `role="alert"`）。画面のファイルで「*」を手で書かない（PO 2026-11-12「金型登録のないハードコードを禁止」）。
-- D2 `label` も `error` も渡さないときは、今の描き方（:88〜:206 の外側の div から）を1文字も変えない。この金型を使うほかの4ファイル（DutyRuleFormModal・LeadEditPage・LeadFormFields・LeadsPage）は触らないし、見た目も変わらない。登録の画面（RegisterPage・RegisterAddressPage・RegisterChangeBillingPage）は別の部品 pages/register/CountryCombobox.tsx を使うので対象外。
+- D2 `label` も `error` も渡さないときは、今の描き方（:89 の `return (` の中・:90 の外側の div から）を1文字も変えない。この金型を使うほかの4ファイル（DutyRuleFormModal・LeadEditPage・LeadFormFields・LeadsPage）は触らないし、見た目も変わらない。登録の画面（RegisterPage・RegisterAddressPage・RegisterChangeBillingPage）は別の部品 pages/register/CountryCombobox.tsx を使うので対象外。
 - D3 `label` か `error` を渡したときは、外側を `<div className="comp-field comp-field--full">` で包み、その中に ①ラベル ②今の描き方（ref の付いた div。外側クリックで閉じる仕組みはこの div のまま） ③理由の行 の順で並べる。
 - D4 会社情報の画面（frontend/src/pages/admin/IssuerProfileSection.tsx:177〜:187）は、手書きの `<div className="form-group">`・`<label>`・`<div className="error-message">` をやめ、金型に `label={t("issuerProfile.country")}` と `error={fieldError("country_code")}` を渡す。国の欄の理由の出方が、ほかの欄（赤い字で欄の下）と同じになる。
 - D5 新しい文は足さない。ja.json・en.json は触らない（`issuerProfile.country` は既にある）。
@@ -55,7 +55,7 @@ RECEIVED viewer-contract-bin2-2c2b-fix1 HEAD=（git rev-parse HEAD の40文字�
 | P2 | frontend/src/components/CountryCombobox.tsx | 行数（wc -l） | 207 |
 | P3 | frontend/src/components/CountryCombobox.tsx | `  required?: boolean;` | 1 |
 | P4 | frontend/src/components/CountryCombobox.tsx | `ref={ref} style={{ position: "relative" }}` | 1 |
-| P5 | frontend/src/components/CountryCombobox.tsx | `label` を含む行 | 0 |
+| P5 | frontend/src/components/CountryCombobox.tsx | `label?:` を含む行 | 0 |
 | P6 | frontend/src/pages/admin/IssuerProfileSection.tsx | `issuerProfile.country")}</label>` | 1 |
 | P7 | frontend/src/pages/admin/IssuerProfileSection.tsx | `className="error-message">{fieldError("country_code")}` | 1 |
 | P8 | frontend/src の .tsx（stories と試験を除く） | `components/CountryCombobox"` を読み込むファイル | 5 |
@@ -128,7 +128,7 @@ export function CountryCombobox({
 }: CountryComboboxProps) {
 ```
 
-:88 の `return (` から :206 の `);` までは、`return` を `const combobox =` に変えるだけで、かっこの中身は1文字も変えない。そのすぐ後（関数を閉じる `}` の前）に次を足す。
+:89 の `return (` から :206 の `);` までは、`return` を `const combobox =` に変えるだけで、かっこの中身は1文字も変えない。そのすぐ後（関数を閉じる `}` の前）に次を足す。
 
 ```tsx
   if (label == null && error == null) return combobox;
@@ -195,7 +195,7 @@ export function CountryCombobox({
 
 | # | 渡すもの | 期待 |
 |---|---|---|
-| T1 | `label="Country"`・`required` | ラベル「Country」があり、その中に「*」（class `comp-field__required`）が1つ。`getByLabelText("Country")` で入力欄が取れる |
+| T1 | `label="Country"`・`required` | ラベル「Country」があり、その中に「*」（class `comp-field__required`）が1つ。`getByLabelText(/^Country\*?$/)` で入力欄が取れる（ラベルの文字は「*」を含めて「Country*」になるため。前例 frontend/src/pages/viewer/Password.test.tsx:24） |
 | T2 | `label="Country"`（required なし） | ラベルはあるが「*」は0 |
 | T3 | `label` も `error` も無し | `container.querySelector(".comp-field")` が null・`label` 要素が0（今の描き方のまま） |
 | T4 | `label="Country"`・`error="Required"` | `role="alert"` に「Required」が1つ |
@@ -220,7 +220,7 @@ cd ~/sa && ls frontend/src/components/CountryCombobox.test.tsx; echo "ls exit=$?
 cd ~/sa && wc -l frontend/src/components/CountryCombobox.tsx
 cd ~/sa && grep -c '  required?: boolean;' frontend/src/components/CountryCombobox.tsx
 cd ~/sa && grep -c 'ref={ref} style={{ position: "relative" }}' frontend/src/components/CountryCombobox.tsx
-cd ~/sa && grep -c 'label' frontend/src/components/CountryCombobox.tsx
+cd ~/sa && grep -c 'label?:' frontend/src/components/CountryCombobox.tsx
 cd ~/sa && grep -c 'issuerProfile.country")}</label>' frontend/src/pages/admin/IssuerProfileSection.tsx
 cd ~/sa && grep -c 'className="error-message">{fieldError("country_code")}' frontend/src/pages/admin/IssuerProfileSection.tsx
 cd ~/sa && grep -rln 'components/CountryCombobox"' frontend/src --include='*.tsx' | grep -v stories | grep -vc test
