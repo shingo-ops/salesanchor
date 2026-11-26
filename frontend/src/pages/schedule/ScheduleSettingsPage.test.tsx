@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
 import { queryClient } from "../../lib/query/apiQuery";
 import ScheduleSettingsPage from "./ScheduleSettingsPage";
+import { eventColorLabelKey } from "./eventColors";
 
 vi.mock("../../contexts/AuthContext", () => ({
   useAuth: () => ({ user: { uid: "user-a" } }),
@@ -51,8 +52,8 @@ vi.mock("../../lib/api", () => ({
           current_staff_id: 7,
           current_user_id: 101,
           owners: [
-            { staff_id: 7, user_id: 101, staff_code: "A01", name: "Owner Self", primary_email: null, color: "rgb(17, 34, 51)", is_visible: true, share_mode: "self", is_self: true },
-            { staff_id: 8, user_id: 202, staff_code: "B02", name: "Owner Other", primary_email: null, color: "rgb(68, 85, 102)", is_visible: true, share_mode: "view", is_self: false },
+            { staff_id: 7, user_id: 101, staff_code: "A01", name: "Owner Self", primary_email: null, color_key: "tomato", is_self: true },
+            { staff_id: 8, user_id: 202, staff_code: "B02", name: "Owner Other", primary_email: null, color_key: null, is_self: false },
           ],
         };
       }
@@ -345,7 +346,38 @@ describe("ScheduleSettingsPage owners and nav (K9・K10)", () => {
     expect(screen.queryAllByRole("switch")).toHaveLength(0);
     expect(screen.queryAllByRole("combobox")).toHaveLength(0);
     fireEvent.click(screen.getAllByRole("button", { name: i18n.t("schedule.settingsSave") })[0]);
-    await waitFor(() => expect(api.patch).toHaveBeenCalledWith("/calendar/owners/101", { color: "rgb(17, 34, 51)" }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith("/calendar/owners/101", { color_key: "tomato" }));
+  });
+
+  it("A1: person colors use the swatch picker, with no free color input", async () => {
+    perms.staffView = true;
+    view();
+    await screen.findByText("Owner Self");
+    expect(document.querySelector("input[type=color]")).toBeNull();
+    const pickers = document.querySelectorAll(".comp-color-swatch-picker");
+    expect(pickers.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("A2: choosing a color sends its color_key, and the default color sends null", async () => {
+    perms.staffView = true;
+    view();
+    await screen.findByText("Owner Self");
+    const colorLabel = i18n.t("schedule.settingsCalendarColor");
+    const openButton = (index: number) =>
+      screen.getAllByRole("button", { name: new RegExp(`^${colorLabel}:`) })[index];
+
+    const radio = (group: string, label: string) =>
+      screen.getAllByRole("radio", { name: label }).find((r) => (r as HTMLInputElement).name === group) as HTMLElement;
+
+    fireEvent.click(openButton(1));
+    fireEvent.click(radio("owner-color-8", i18n.t(eventColorLabelKey("basil"))));
+    fireEvent.click(screen.getAllByRole("button", { name: i18n.t("schedule.settingsSave") })[1]);
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith("/calendar/owners/202", { color_key: "basil" }));
+
+    fireEvent.click(openButton(0));
+    fireEvent.click(radio("owner-color-7", i18n.t("schedule.ownerColorDefault")));
+    fireEvent.click(screen.getAllByRole("button", { name: i18n.t("schedule.settingsSave") })[0]);
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith("/calendar/owners/101", { color_key: null }));
   });
 
   it("renders the side list as the SubMenu mold and moves to a section on click", async () => {

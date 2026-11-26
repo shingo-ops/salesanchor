@@ -49,8 +49,6 @@ router = APIRouter()
 _VALID_SYNC_MODES = ("bidirectional", "read_only", "write_only", "none")
 # ADR-1059 で ADR-1057 の取り込み停止を置き換え。write_only・none は取り込みの非常停止
 _ACCEPTED_SYNC_MODES = ("bidirectional", "read_only", "write_only", "none")
-_VALID_OWNER_SHARE_MODES = ("self", "view", "edit")
-_DEFAULT_OWNER_COLOR = "#1a73e8"
 
 
 def _owner_display_name(row: dict) -> str:
@@ -79,9 +77,8 @@ async def _current_staff_row(db: AsyncSession, current_user: User) -> dict | Non
 
 
 class OwnerSettingsBody(BaseModel):
-    color: Optional[str] = None
-    is_visible: Optional[bool] = None
-    share_mode: Optional[str] = None
+    # null は「標準の色へ戻す」。送らない（model_fields_set に無い）ときは 422 no_fields_to_update
+    color_key: Optional[str] = None
 
 
 class OwnerRosterItem(BaseModel):
@@ -90,9 +87,7 @@ class OwnerRosterItem(BaseModel):
     staff_code: str
     name: str
     primary_email: Optional[str]
-    color: str
-    is_visible: bool
-    share_mode: str
+    color_key: Optional[str]
     is_self: bool
 
 
@@ -400,14 +395,12 @@ async def list_calendar_owners(
     query = """
         SELECT
             s.id, s.user_id, s.staff_code, s.surname_jp, s.given_name_jp, u.email AS primary_email,
-            COALESCE(cos.color, :default_color) AS color,
-            COALESCE(cos.is_visible, FALSE) AS is_visible,
-            COALESCE(cos.share_mode, 'self') AS share_mode
+            cos.color_key AS color_key
         FROM staff s
         JOIN public.users u ON u.id = s.user_id
         LEFT JOIN calendar_owner_settings cos ON cos.staff_id = s.user_id
     """
-    params = {"default_color": _DEFAULT_OWNER_COLOR}
+    params: dict[str, object] = {}
     if can_manage_others:
         query += " ORDER BY s.staff_code, s.id"
     else:
@@ -426,9 +419,7 @@ async def list_calendar_owners(
             staff_code=row["staff_code"],
             name=_owner_display_name(dict(row)),
             primary_email=row.get("primary_email"),
-            color=row.get("color") or _DEFAULT_OWNER_COLOR,
-            is_visible=bool(row.get("is_visible")) if row.get("is_visible") is not None else False,
-            share_mode=row.get("share_mode") or "self",
+            color_key=row.get("color_key"),
             is_self=int(row["id"]) == current_staff_id,
         )
         for row in rows
@@ -456,23 +447,16 @@ async def update_calendar_owner(
             detail="この操作にはマネージャー権限が必要です",
         )
 
-    payload: dict[str, object] = {}
-    if body.color is not None:
-        payload["color"] = body.color
-    if body.is_visible is not None:
-        payload["is_visible"] = body.is_visible
-    if body.share_mode is not None:
-        if body.share_mode not in _VALID_OWNER_SHARE_MODES:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"share_mode は {_VALID_OWNER_SHARE_MODES} のいずれかを指定してください",
-            )
-        payload["share_mode"] = body.share_mode
-
-    if not payload:
+    if "color_key" not in body.model_fields_set:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="no_fields_to_update",
+        )
+    color_key = body.color_key
+    if color_key is not None and color_key not in EVENT_COLOR_KEYS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="invalid_color_key",
         )
 
     staff_row = await db.execute(
@@ -495,28 +479,12 @@ async def update_calendar_owner(
     current_staff = await _current_staff_row(db, user)
     current_staff_id = int(current_staff["id"]) if current_staff else None
 
-    insert_columns = ["staff_id"]
-    insert_values = [":staff_id"]
-    params: dict[str, object] = {"staff_id": user_id}
-    update_parts: list[str] = []
-    for key in ("color", "is_visible", "share_mode"):
-        if key in payload:
-            insert_columns.append(key)
-            insert_values.append(f":{key}")
-            params[key] = payload[key]
-            update_parts.append(f"{key} = EXCLUDED.{key}")
-
     await db.execute(
         text(
-            "INSERT INTO calendar_owner_settings ("
-            + ", ".join(insert_columns)
-            + ") VALUES ("
-            + ", ".join(insert_values)
-            + ") ON CONFLICT (staff_id) DO UPDATE SET "
-            + ", ".join(update_parts)
-            + ", updated_at = NOW()"
+            "INSERT INTO calendar_owner_settings (staff_id, color_key) VALUES (:staff_id, :color_key) "
+            "ON CONFLICT (staff_id) DO UPDATE SET color_key = EXCLUDED.color_key, updated_at = NOW()"
         ),
-        params,
+        {"staff_id": user_id, "color_key": color_key},
     )
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
@@ -525,16 +493,14 @@ async def update_calendar_owner(
         text("""
             SELECT
                 s.id, s.user_id, s.staff_code, s.surname_jp, s.given_name_jp, u.email AS primary_email,
-                COALESCE(cos.color, :default_color) AS color,
-                COALESCE(cos.is_visible, FALSE) AS is_visible,
-                COALESCE(cos.share_mode, 'self') AS share_mode
+                cos.color_key AS color_key
             FROM staff s
             JOIN public.users u ON u.id = s.user_id
             LEFT JOIN calendar_owner_settings cos ON cos.staff_id = s.user_id
             WHERE s.user_id = :user_id
             LIMIT 1
         """),
-        {"user_id": user_id, "default_color": _DEFAULT_OWNER_COLOR},
+        {"user_id": user_id},
     )
     row = refreshed.mappings().first()
     if not row:
@@ -549,9 +515,7 @@ async def update_calendar_owner(
         staff_code=data["staff_code"],
         name=_owner_display_name(data),
         primary_email=data.get("primary_email"),
-        color=data.get("color") or _DEFAULT_OWNER_COLOR,
-        is_visible=bool(data.get("is_visible")) if data.get("is_visible") is not None else False,
-        share_mode=data.get("share_mode") or "self",
+        color_key=data.get("color_key"),
         is_self=(current_staff_id == data["id"]) if current_staff_id is not None else False,
     )
 

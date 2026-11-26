@@ -26,6 +26,7 @@ import { api } from "../../lib/api";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { useSeededForm } from "../../lib/query/useSeededForm";
 import {
+  DEFAULT_OWNER_COLOR,
   normalizeOwner,
   type ApiCalendarOwnersResponse,
   type CalendarOwner,
@@ -289,7 +290,7 @@ export default function ScheduleSettingsPage() {
     setSavedStaffId(null);
     setError(null);
     try {
-      await api.patch(`/calendar/owners/${owner.userId}`, { color: owner.color });
+      await api.patch(`/calendar/owners/${owner.userId}`, { color_key: owner.colorKey });
       setSavedStaffId(owner.staffId);
       void invalidate(["calendar", "owners"]);
     } catch (e) {
@@ -320,6 +321,11 @@ export default function ScheduleSettingsPage() {
     ...(ownersEnabled && otherOwners.length > 0
       ? [{ key: "others" as SectionKey, label: t("schedule.otherCalendars") }]
       : []),
+  ];
+
+  const ownerColorOptions: ColorSwatchOption[] = [
+    { value: null, label: t("schedule.ownerColorDefault"), color: DEFAULT_OWNER_COLOR },
+    ...EVENT_COLOR_KEYS.map((key) => ({ value: key, label: t(eventColorLabelKey(key)), color: eventColorVar(key) })),
   ];
 
   const categoryColorOptions: ColorSwatchOption[] = [
@@ -422,11 +428,18 @@ export default function ScheduleSettingsPage() {
         {description && <span className="schedule-settings__description">{description}</span>}
       </div>
       <div className="schedule-settings__calendar-actions">
-        <input
-          type="color"
-          aria-label={t("schedule.settingsCalendarColor")}
-          value={owner.color}
-          onChange={(event) => updateOwner(owner.staffId, { color: event.target.value })}
+        <ColorSwatchPicker
+          label={t("schedule.settingsCalendarColor")}
+          name={`owner-color-${owner.staffId}`}
+          options={ownerColorOptions}
+          value={owner.colorKey}
+          onChange={(value) => {
+            const colorKey = isEventColorKey(value) ? value : null;
+            updateOwner(owner.staffId, {
+              colorKey,
+              color: colorKey ? eventColorVar(colorKey) : DEFAULT_OWNER_COLOR,
+            });
+          }}
         />
         <Button
           variant="secondary"
@@ -473,7 +486,7 @@ export default function ScheduleSettingsPage() {
                         <span>{t("schedule.statusConnected")}</span>
                         {gcalConnectedAt && !Number.isNaN(new Date(gcalConnectedAt).getTime()) && (
                           <span className="schedule-settings__description">
-                            {t("schedule.settingsConnectedAt")}: {formatDateInput(new Date(gcalConnectedAt))}
+                            {t("schedule.settingsConnectedAtValue", { date: formatDateInput(new Date(gcalConnectedAt)) })}
                           </span>
                         )}
                       </div>

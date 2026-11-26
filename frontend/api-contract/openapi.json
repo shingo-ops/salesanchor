@@ -25682,16 +25682,19 @@
       },
       "OwnerRosterItem": {
         "properties": {
-          "color": {
-            "title": "Color",
-            "type": "string"
+          "color_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Key"
           },
           "is_self": {
             "title": "Is Self",
-            "type": "boolean"
-          },
-          "is_visible": {
-            "title": "Is Visible",
             "type": "boolean"
           },
           "name": {
@@ -25708,10 +25711,6 @@
               }
             ],
             "title": "Primary Email"
-          },
-          "share_mode": {
-            "title": "Share Mode",
-            "type": "string"
           },
           "staff_code": {
             "title": "Staff Code",
@@ -25739,9 +25738,7 @@
           "staff_code",
           "name",
           "primary_email",
-          "color",
-          "is_visible",
-          "share_mode",
+          "color_key",
           "is_self"
         ],
         "title": "OwnerRosterItem",
@@ -25787,7 +25784,7 @@
       },
       "OwnerSettingsBody": {
         "properties": {
-          "color": {
+          "color_key": {
             "anyOf": [
               {
                 "type": "string"
@@ -25796,29 +25793,7 @@
                 "type": "null"
               }
             ],
-            "title": "Color"
-          },
-          "is_visible": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Is Visible"
-          },
-          "share_mode": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Share Mode"
+            "title": "Color Key"
           }
         },
         "title": "OwnerSettingsBody",
