@@ -21353,7 +21353,9 @@
                   "blocked",
                   "waiting_60m",
                   "no-reply",
-                  "leftover"
+                  "leftover",
+                  "limit",
+                  "no_report"
                 ],
                 "type": "string"
               },
@@ -21411,7 +21413,11 @@
               "result",
               "stop",
               "notify_failed",
-              "suspicious"
+              "suspicious",
+              "approve",
+              "wake",
+              "wake_skipped",
+              "wake_failed"
             ],
             "title": "Step",
             "type": "string"
@@ -57027,6 +57033,56 @@
         ]
       }
     },
+    "/api/v1/ops/case/{incident_id}/reports": {
+      "get": {
+        "description": "その件の報告の全部（種類ごとに 1 行。なければ空）。管理者の鍵だけ。case-api には出さない。",
+        "operationId": "list_reports_api_v1_ops_case__incident_id__reports_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response List Reports Api V1 Ops Case  Incident Id  Reports Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Reports",
+        "tags": [
+          "ops-case"
+        ]
+      }
+    },
     "/api/v1/ops/case/{incident_id}/ticket": {
       "post": {
         "description": "件の札を作る。あれば上書き（前の札は使えなくなる）。札は応答で 1 回だけ返す。",
@@ -57418,7 +57474,7 @@
     },
     "/api/v1/ops/events": {
       "get": {
-        "description": "B8 直近の出来事（ADR-1012 段階3 便F）。\n\nkind の値の正本は表の制約 ops_incident_events_kind_check。ここでは形だけを確かめる。\nservice は出来事ではなく障害の labels から読む（注記の detail は形が決まっていて service を持たない。便F D3）。",
+        "description": "B8 直近の出来事（ADR-1012 段階3 便F）。\n\nkind の値の正本は表の制約 ops_incident_events_kind_check。ここでは形だけを確かめる。\nservice は出来事ではなく障害の labels から読む（注記の detail は形が決まっていて service を持たない。便F D3）。\nround_step は detail の round.step で絞る（形だけ確かめる。値の正本は OpsRound の step。起こした回数を数えるため）。",
         "operationId": "list_events_api_v1_ops_events_get",
         "parameters": [
           {
@@ -57470,6 +57526,23 @@
                 }
               ],
               "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "round_step",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z_]{1,32}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Round Step"
             }
           },
           {
