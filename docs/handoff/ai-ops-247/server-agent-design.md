@@ -125,10 +125,10 @@
 
 1. 基準を取る（読むだけ）: prod2 の `free -m`・`docker stats --no-stream`・各コンテナの `RestartCount` と `OOMKilled`・runner の有無（`systemctl list-units` で actions.runner を探す）と、あれば直近の実行時のメモリの山・`systemctl cat monitoring-tunnel.service` で転送の鍵の場所と権限・監視の compose の `.env` の場所・名前を引く番地（G7）・`ip -6 addr`（G7）。残りが 500MB を切る見込みなら、ここで止めて PO に報告する。
    - 読む鍵: 監視用の読み取り鍵（`claude-monitor@`）は決まった表示（docker stats・free・df・uptime）しか返さず、送った命令を流さない（`docs/runbooks/claude-monitor-access.md:38`）。このため、段取り 1 と毎日の確認は、PO の許可した管理用の鍵で、この節に書いた読むだけの命令に限って流す。PO は導入直前の確認で、この鍵の使い方（7 日間・毎日 1 回・読むだけ）を承知するかを決める。
-2. 管理者として（PO の許可した管理用の鍵で）: `ops-agent` を作る（G1）。担当の unit ファイル（G2・G7・G8 の値・`User=ops-agent`・`Restart=on-failure`）を先に置く。まだ起動しない。道具の一覧（G4）の設定もこの段で `ops-agent` の家の場所に置く（段取り 4 のログインの間も Bash などが使えないようにするため）。
-3. 管理者として: 導入も同じ上限の下で行う。`systemd-run --uid=ops-agent --pty` に G2 と G8 の値を `-p` で付けて、Claude Code を公式の方法で入れる（`curl -fsSL https://claude.ai/install.sh | bash`、空きが約 512MB 要る・公式）。公式の Discord の道具が使う Bun も同じ形で入れる。
-4. PO の手で（鍵の値を AI が扱わないため）: Discord の Developer Portal でボットを作る。同じ `systemd-run` の形（G2・G8 の上限付き）で `ops-agent` の `claude` を開き、サブスクでログインする。`/plugin install discord@claude-plugins-official`・`/discord:configure`（ボットの鍵は PO が打つ）・スマホから DM してペアにする・`/discord:access policy allowlist`。G7 はログインの通り道を塞ぐ恐れがあるため、この段だけ付けない（未確認）。そのかわり G4 の一覧は段取り 2 で入っているので、この段でも担当は Bash を使えず 19187 などへ届かない。PO はこの段で担当に仕事を頼まない。
-5. 管理者として: G4 の一覧が効いていることを確かめ（一覧に無い命令を頼んで断られる）、G7・G8 の確かめを行う。tmux の中で `claude --channels plugin:discord@claude-plugins-official` を動かす形で unit を起動する（U-a・T1 で確かめる）。
+2. 管理者として（PO の許可した管理用の鍵で）: `ops-agent` を作る（G1）。担当の unit ファイル（G2・G7・G8 の値・`User=ops-agent`・`Restart=always`・`RestartSec=30`・`StartLimitIntervalSec=600`・`StartLimitBurst=5`）を先に置く。`Restart=on-failure` にしない理由: tmux の形では、担当が終わると tmux も 0 で終わるため、systemd から見て「正常に終わった」になり立ち上げ直さない（審査 2026-11-26 の指摘）。10 分に 5 回止まったら立ち上げ直しをやめ、毎日の確認で見つける。まだ起動しない。道具の一覧（G4）の設定もこの段で `ops-agent` の家の場所に置く（段取り 4 のログインの間も Bash などが使えないようにするため）。
+3. 管理者として: 導入も同じ上限の下で行う。`systemd-run --uid=ops-agent --pty` に G2 と G8 の値を `-p` で付けて、Claude Code を公式の方法で入れる（`curl -fsSL https://claude.ai/install.sh | bash`、空きが約 512MB 要る・公式）。公式の Discord の道具が使う Bun も同じ形で入れる。Discord の道具も、AI に頼まず命令で入れる: `claude plugin install discord --marketplace anthropics/claude-plugins-official -s user`（`claude plugin install --help` 2.1.332 で確認。担当の道具の許しの一覧を通らない）。G7 はこの段も付けない（3・4 の段だけ。外の 443 番に出る必要があるため）。
+4. PO の手で（鍵の値を AI が扱わないため）: Discord の Developer Portal でボットを作る（Public Bot は切る）。PO の Discord の利用者番号（Developer Mode の「Copy User ID」）を控える。同じ `systemd-run` の形（G2・G8 の上限付き）で `ops-agent` の `claude` を開き、サブスクでログインし、作業の場所を信頼する画面に答えて閉じる。ボットの鍵と利用者番号は、AI の入力欄ではなく、管理者の台本が出す見えない入力（`read -rs`）に PO が貼る。台本がそれを `~/.claude/channels/discord/.env`（`DISCORD_BOT_TOKEN=`・`DISCORD_ACCESS_MODE=static`）と `access.json`（`dmPolicy` は `allowlist`・`allowFrom` は PO の番号 1 つ・`groups` は空）に、持ち主 `ops-agent`・`600` で書く。`/discord:configure` と `/discord:access` は使わない。理由: この 2 つは中で Write の道具を使い（公式の道具の手順書 `skills/configure/SKILL.md`・`skills/access/SKILL.md` の `allowed-tools`、claude-plugins-official 668a0c65）、G4 の deny で止まる。また鍵を入力欄に打つと会話の記録に残る。`static` にすると名簿は起動時に読んだまま書き換わらない（道具の本体 `server.ts` 39-56 行と 183-200 行）。G7 はログインの通り道を塞ぐ恐れがあるため、この段だけ付けない（未確認）。そのかわり G4 の一覧は段取り 2 で入っているので、この段でも担当は Bash を使えず 19187 などへ届かない。PO はこの段で担当に仕事を頼まない。
+5. 管理者として: G4 の一覧が効いていることを確かめ（一覧に無い命令を頼んで断られる）、G7・G8 の確かめを行う。確かめは「効いた」と「元から届かない」を分ける: 先に同じ上限で `true` が通ることを確かめる（上限の書き間違いで全部が失敗して○に見えるのを防ぐ）。G7 は守りを外した同じ命令で 19187 番に届くことを先に確かめ、届かなければ確かめにならないので止まる。G8 は `stat -c %a` で場所の権限を読み、守りの下では `0`（systemd が上にかぶせる中身の無い印。公式 systemd の CONTAINER_INTERFACE「all zero access mode」）、守りの外では `0` 以外になることで効きを示す。tmux の中で `claude --channels plugin:discord@claude-plugins-official` を動かす形で unit を起動する（U-a・T1 で確かめる）。
 6. 試し T1（K1 を 3 回・K5・G4）と K2（再起動 1 回）を行う。
 7. 7 日間動かし、毎日 1 回、次を記録する: G6・担当が動いているか（`systemctl is-active` と担当の unit の `NRestarts`）・担当のメモリの山（cgroup の `memory.peak`）・上限で止まった回数（`journalctl -u` の記録）。担当が止まっていたら、その日のうちに PO に報告する。
 
@@ -150,7 +150,8 @@
 
 ### 12-7. 未確認（試しで確かめる）
 
-- U-a: systemd と tmux の形で、再起動のあと確認の画面が出ずに立ち上がるか。
+- U-a: systemd と tmux の形で、再起動のあと確認の画面が出ずに立ち上がるか。止まって見えたら、管理者が `tmux -S`（担当の tmux）の画面を読むだけで確かめ、PO に報告する。
+- 道具の起動のたびに `bun install` が走る（道具の `package.json` の start）。外の 443 番に出るので G7 の下でも通る見込みだが未確認。T1 で確かめる。
 - U-c: 24 時間の常駐がサブスクの規約に合うか。公式に明言なし。PO は承知のうえで「1」を選んだ（§4-3）。
 - G4 の設定の書き方が CLI で効くか。
 - G7 の下でログインと Discord の道具が動くか（loopback を使うか・名前を引く番地を開けるだけで足りるか）。`systemd-run` の `--uid`・`--pty` の書き方は導入時に公式の説明と照らす。
