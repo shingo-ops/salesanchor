@@ -137,8 +137,8 @@ recon §2 の6ファイルについて、後片付けの中の共通の役割を
   1. `ensure_product_list_public` の確定させる塊で、`pg_advisory_lock(2147483647)` を `LOCK TABLE public.products` より前に取る。外すのは `_PUBLIC_PRODUCTS_DDL` の後のまま。
   2. `20260919_020000` の後（`public.tcg_product_categories` ができた後）に、phase3 のファイルから `DO $phase3b$` から `$phase3b$;` までだけを切り出して流す。切り出した文に `LIKE 'tenant_` が無いことを assert する。前半の tenant を回す部分は流さない。
   3. `_product_list_public_ready` に「public.products.product_category_id の型が integer」を足す。
-  4. 見張りの試験の `_REVIEWED` に、`test_tcg_product_list_pg.py` を `text_only` で戻す。理由は「phase3 のファイルから public だけの Phase 3B を切り出して流す。tenant を回す前半は流さない」。
-- 受け入れ基準の追加: K9 = PR の pytest が pass し、`test_tcg_product_detail_pg.py` の2件が通る。K10 = 確定させる塊で、2147483647 の札の行が `LOCK TABLE` の行より上にある（差分で○×）。
+  4. 見張りの試験の `_REVIEWED` に、`backend/tests/test_tcg_product_list_pg.py` を `text_only` で戻す。理由は「phase3 のファイルから public だけの Phase 3B を切り出して流す。tenant を回す前半は流さない」。
+- 受け入れ基準の追加: K9 = PR の pytest が pass し、`backend/tests/test_tcg_product_detail_pg.py` の2件が通る。K10 = 確定させる塊で、2147483647 の札の行が `LOCK TABLE` の行より上にある（差分で○×）。
 
 ## 8. 便3: 請求書の表（B）— 直すものは無い
 - PR 5669 で直っている（recon §6-1）。合流後の main 25回で0回。
