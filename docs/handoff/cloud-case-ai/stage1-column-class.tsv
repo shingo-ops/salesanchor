@@ -559,6 +559,11 @@ tenant_*	buddy_feedbacks	context	mask		text
 tenant_*	buddy_feedbacks	feedback_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
 tenant_*	buddy_feedbacks	reason	mask		text
 tenant_*	buddy_pairs	notes	mask		text
+tenant_*	calendar_categories	color_key	allow	値の決まり calendar_categories_color_key_check で値が限られる	text
+tenant_*	calendar_categories	default_share	allow	値の決まり calendar_categories_default_share_check で値が限られる	character varying
+tenant_*	calendar_categories	key	mask	key は形だけの決まり（calendar_categories_key_format_check）・name は自由な文字のため伏せる	character varying
+tenant_*	calendar_categories	name	mask	key は形だけの決まり（calendar_categories_key_format_check）・name は自由な文字のため伏せる	character varying
+tenant_*	calendar_category_teams	category_key	mask	key は形だけの決まり（calendar_categories_key_format_check）・name は自由な文字のため伏せる	character varying
 tenant_*	calendar_events	calendar_type	allow	値の決まり calendar_events_calendar_type_check で値が限られる	character varying
 tenant_*	calendar_events	category	mask		character varying
 tenant_*	calendar_events	color_key	allow	値の決まり calendar_events_color_key_check で値が限られる	text
@@ -571,8 +576,13 @@ tenant_*	calendar_events	source	mask		character varying
 tenant_*	calendar_events	sync_origin_id	mask		character varying
 tenant_*	calendar_events	sync_status	allow	値の決まり calendar_events_sync_status_check で値が限られる	character varying
 tenant_*	calendar_events	title	mask		character varying
-tenant_*	calendar_owner_settings	color	mask		character varying
-tenant_*	calendar_owner_settings	share_mode	allow	値の決まり calendar_owner_settings_share_mode_check で値が限られる	character varying
+tenant_*	calendar_owner_settings	auto_meet	allow	真偽の 2 値だけが入る列	boolean
+tenant_*	calendar_owner_settings	color_key	allow	値の決まり calendar_owner_settings_color_key_check で値が限られる	text
+tenant_*	calendar_owner_settings	default_view	allow	値の決まり calendar_owner_settings_default_view_check で値が限られる	text
+tenant_*	calendar_owner_settings	event_minutes	allow	値の決まり calendar_owner_settings_event_minutes_check で値が限られる	smallint
+tenant_*	calendar_owner_settings	open_owners	allow	値の決まり calendar_owner_settings_open_owners_check で値が限られる	text
+tenant_*	calendar_owner_settings	open_team_id	allow	同じ会社の中のチームの番号（teams の id）で、自由な文字は入らない	integer
+tenant_*	calendar_owner_settings	week_start	allow	値の決まり calendar_owner_settings_week_start_check で値が限られる	smallint
 tenant_*	channel_masters	connection_type	allow	値の決まり channel_masters_connection_type_check で値が限られる	character varying
 tenant_*	channel_masters	display_name	mask		character varying
 tenant_*	channel_masters	platform	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying

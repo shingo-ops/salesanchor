@@ -66,6 +66,13 @@ final class RunLogger {
             json.put("trigger", trigger == null ? "" : trigger);
             json.put("keyguardLocked", isKeyguardLocked(context));
             json.put("screenOn", isInteractive(context));
+            // 電池最適化の除外状態（design.md追補「電池最適化で後回しにされたことを検知・記録・
+            // 復旧できる仕組み」2026-11-26）。不明（PowerManager取得不可・例外）なときは項目を
+            // 出さない（elapsedUpMs等、既存のnullable項目と同じ扱い）。
+            Boolean batteryOptimizationIgnored = RunScheduler.isIgnoringBatteryOptimizations(context);
+            if (batteryOptimizationIgnored != null) {
+                json.put("batteryOptimizationIgnored", batteryOptimizationIgnored.booleanValue());
+            }
         } catch (JSONException e) {
             Log.w(TAG, "run log start build failed: " + e);
             return;
@@ -210,6 +217,53 @@ final class RunLogger {
             }
         } catch (JSONException e) {
             Log.w(TAG, "run log scheduler event build failed: " + e);
+            return;
+        }
+        append(context, json);
+    }
+
+    /**
+     * 電池最適化の除外（{@code PowerManager#isIgnoringBatteryOptimizations}）が変化したときだけ
+     * 呼ぶ（design.md追補「電池最適化で後回しにされたことを検知・記録・復旧できる仕組み」
+     * 2026-11-26。{@link RunScheduler}のcheckBatteryOptimizationExemptionChanged参照）。
+     * {@link #logSchedulerEvent}と同じ「単発行・runIdに紐づかない」扱い。毎回は呼ばれない
+     * （変化時だけのため、ログが膨らまない）。
+     */
+    static void logBatteryExemptionChanged(Context context, boolean nowIgnoring) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("at", formatIso8601(System.currentTimeMillis()));
+            json.put("flow", "scheduler");
+            json.put("phase", "battery_exemption_changed");
+            json.put("ignoringBatteryOptimizations", nowIgnoring);
+        } catch (JSONException e) {
+            Log.w(TAG, "run log battery exemption build failed: " + e);
+            return;
+        }
+        append(context, json);
+    }
+
+    /**
+     * 空振り（予約した発火予定時刻を過ぎても発火しなかった）を検知したときに呼ぶ
+     * （design.md追補「電池最適化で後回しにされたことを検知・記録・復旧できる仕組み」
+     * 2026-11-26。{@link RunScheduler}のcheckStaleScheduledFires参照）。{@link #logSchedulerEvent}
+     * と同じ「単発行・runIdに紐づかない」扱い。
+     *
+     * @param triggerLabel {@link RunScheduler#labelFor}の日本語ラベル（"通知"/"補完"/"再試行"）
+     * @param scheduledAtMs 予約していた発火予定時刻（絶対epoch ms）
+     * @param lateByMs 現在時刻までの遅れ（ms）
+     */
+    static void logMissedFire(Context context, String triggerLabel, long scheduledAtMs, long lateByMs) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("at", formatIso8601(System.currentTimeMillis()));
+            json.put("flow", "scheduler");
+            json.put("phase", "missed_fire");
+            json.put("trigger", triggerLabel == null ? "" : triggerLabel);
+            json.put("scheduledAt", formatIso8601(scheduledAtMs));
+            json.put("lateByMs", lateByMs);
+        } catch (JSONException e) {
+            Log.w(TAG, "run log missed fire build failed: " + e);
             return;
         }
         append(context, json);

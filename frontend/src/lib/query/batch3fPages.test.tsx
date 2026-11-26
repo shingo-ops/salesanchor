@@ -30,17 +30,24 @@ vi.mock("../auth/selfAuth", () => ({
 vi.mock("../../hooks/usePermissions", () => ({ usePermissions: () => ({ hasPermission: () => true, loading: false }) }));
 vi.mock("../../hooks/useSSE", () => ({ useSSE: vi.fn() }));
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: "ja" } }),
   // api.ts が i18n.ts を読み、i18n.ts が initReactI18next を使う（同じ書き方: src/lib/query/batch3ePages.test.tsx）
   initReactI18next: { type: "3rdParty", init: () => {} },
 }));
 
-// 中身は画面の型（TenantProfilePage.tsx:27-39・TenantPolicyPage.tsx:25-34・DiscordConfigPage.tsx:27-42・
+// 中身は画面の型（TenantProfilePage.tsx の TenantProfile・issuerProfileForm.ts の IssuerProfiles・TenantPolicyPage.tsx:25-34・DiscordConfigPage.tsx:27-42・
 // ChannelsPage.tsx の DiscordGuildConfig）と backend の返事（discord_guild_config.py:37-42）の欄
 const GUILD = "1288437029213835356";
-const profile = {
-  id: 1, company_name: "Fixture Company", company_name_en: null, address: null, phone: null, email: null,
-  website: null, seal_image_url: null, default_language: "ja", created_at: "", updated_at: "",
+const profile = { id: 1, seal_image_url: null, default_language: "ja", created_at: "", updated_at: "" };
+// 会社名は国内用の会社情報の行に移った（ADR-1061 便2-2c2b）
+const issuerProfiles = {
+  domestic: {
+    region: "domestic", company_name: "Fixture Company", email: null, website: null, country_code: "JP",
+    postal_code: "1000001", prefecture_code: "13", state_region: null, city: "Fixture City", address1: "1-1",
+    address2: null, phone: null, is_invoice_registered: false, registration_number: null, updated_at: "",
+  },
+  overseas: null,
+  legacy: null,
 };
 const policy = {
   inventory_agg_filter: "none", agg_price_threshold_jpy: 12345, agg_qty_threshold: 0, quote_validity_days: 7,
@@ -57,6 +64,9 @@ const ticket = {
 };
 const fixtures: Record<string, unknown> = {
   "/admin/tenant-profile": profile,
+  "/admin/issuer-profiles": issuerProfiles,
+  "/prefectures": [],
+  "/countries": [],
   "/admin/tenant-policy": policy,
   "/admin/discord-config": discordConfig,
   "/admin/discord-ticket-config": ticket,

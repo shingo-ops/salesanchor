@@ -1488,5 +1488,17 @@ run_sql migrations/20261121_100000_add_invoice_payment_fee_charged.sql
 # ADR-1055 What 11: Meta 審査用の会社だけのスイッチの列
 run_sql migrations/20261122_100000_add_tenants_meta_review_switch.sql
 
+# schedule-settings 便2a: 予定の種類を表 1 つへ（calendar_categories と 7 行・calendar_events.category を外部キーへ・冪等）
+run_sql migrations/20261126_100000_create_calendar_categories.sql
+
+# schedule-settings 便2b: 予定の共有に「チーム」を足す（calendar_event_teams・calendar_category_teams と CHECK への team・冪等）
+run_sql migrations/20261127_100000_add_calendar_team_share.sql
+
+# schedule-settings 便3a: 人の色を 24 色の鍵へ・使っていない 3 列（color・is_visible・share_mode）を外す（冪等）
+run_sql migrations/20261128_100000_owner_color_key_drop_dead_columns.sql
+
+# schedule-settings 便3b: ひとりひとりの初期値 6 列（開いたときの形・週の始まり・予定の長さ・Meet・誰の予定を出すか）を足す（冪等）
+run_sql migrations/20261129_100000_owner_settings_preferences.sql
+
 # 実行済みの記録の集計（段5 5-3）。新しい手順は、この集計の行より上（上の run_ の並びの末尾）に足す。
 mr_report_summary

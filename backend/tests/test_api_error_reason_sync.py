@@ -67,6 +67,8 @@ def test_table_rows_are_read():
         "contact_company_mismatch",
         "invoice_not_draft",
         "payment_fee",
+        "invalid_team_ids",
+        "invalid_team",
         "existing_customer_is_automatic",
         "already_existing_customer",
     ]
@@ -80,8 +82,8 @@ def test_table_codes_are_used_in_app():
 
 def test_not_found_table_rows_are_read():
     targets = _targets()
-    assert len(targets) == 66
-    assert len(set(targets)) == 66
+    assert len(targets) == 67
+    assert len(set(targets)) == 67
 
 
 def test_not_found_targets_match_app():

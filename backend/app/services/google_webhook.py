@@ -332,12 +332,14 @@ async def sync_tenant_from_google(db: AsyncSession, tenant_id: int) -> dict:
         label_colors = await cal_svc.get_event_label_colors(db, tenant_id, "primary")
         # 名札の表を読む中でトークン更新の commit が入ることがあるので文脈を張り直す
         await set_tenant_context(db, tenant_id)
+        # アプリで作った繰り返しの Google の元の予定は、1 回の取り込みに 1 回だけ読む（ADR-1075 改訂 2026-11-25）
+        series_cache: dict = {}
         legacy_colorid = 0
         for item in items:
             if item.get("colorId") and not item.get("eventLabelId"):
                 legacy_colorid += 1
             outcome = await upsert_from_google(
-                db, tenant_id, item, owner_user_id, label_colors=label_colors
+                db, tenant_id, item, owner_user_id, label_colors=label_colors, series_cache=series_cache
             )
             if outcome == "upserted":
                 upserted += 1

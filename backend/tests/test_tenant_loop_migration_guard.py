@@ -49,6 +49,10 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
                 "20261104_161223_add_calendar_events_meet_url.sql",
                 "20261112_170000_add_calendar_events_recurrence.sql",
                 "20261119_120000_add_calendar_events_color_key.sql",
+                "20261126_100000_create_calendar_categories.sql",
+                "20261127_100000_add_calendar_team_share.sql",
+                "20261128_100000_owner_color_key_drop_dead_columns.sql",
+                "20261129_100000_owner_settings_preferences.sql",
                 "20261106_150000_add_discord_role_link_tables.sql",
                 "20261112_160000_create_tenant_issuer_and_payment_tables.sql",
                 "20261113_120000_create_tenant_duty_rules_and_invoice_columns.sql",
@@ -68,6 +72,55 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
                 "20261104_161223_add_calendar_events_meet_url.sql",
                 "20261112_170000_add_calendar_events_recurrence.sql",
                 "20261119_120000_add_calendar_events_color_key.sql",
+                "20261126_100000_create_calendar_categories.sql",
+                "20261127_100000_add_calendar_team_share.sql",
+                "20261128_100000_owner_color_key_drop_dead_columns.sql",
+                "20261129_100000_owner_settings_preferences.sql",
+            }
+        ),
+    ),
+    "test_calendar_owner_preferences_pg.py": (
+        "scoped",
+        "",
+        frozenset(
+            {
+                "20261129_100000_owner_settings_preferences.sql",
+            }
+        ),
+    ),
+    "test_calendar_owner_color_key.py": (
+        "scoped",
+        "",
+        frozenset(
+            {
+                "20261128_100000_owner_color_key_drop_dead_columns.sql",
+            }
+        ),
+    ),
+    "test_owner_color_key_map.py": (
+        "text_only",
+        "移行ファイルの WHEN 24 組と CHECK の鍵を文字として読み、event_colors.py・tenant.py と照合するだけで DB に流さない",
+        frozenset(
+            {
+                "20261128_100000_owner_color_key_drop_dead_columns.sql",
+            }
+        ),
+    ),
+    "test_calendar_team_share.py": (
+        "scoped",
+        "",
+        frozenset(
+            {
+                "20261127_100000_add_calendar_team_share.sql",
+            }
+        ),
+    ),
+    "test_calendar_categories.py": (
+        "scoped",
+        "",
+        frozenset(
+            {
+                "20261126_100000_create_calendar_categories.sql",
             }
         ),
     ),

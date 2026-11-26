@@ -47,6 +47,22 @@ PINはextraに載せない。受信すると `RunReceiver` が `UnlockAccessibil
 だめなら座標タップにフォールバック） → (c) Enter/完了を押す → (d) 3秒後にkeyguard状態を判定し、
 「ロック解除: 成功/失敗（理由）」の通知を出す、という流れで動く。
 
+## 電池最適化で後回しにされたことを検知・記録・復旧できる仕組み（2026-11-26）
+
+端末の省電力区分が上がる（電池最適化の除外が外れる）と、AlarmManagerの発火が1時間に1回などに
+制限され、予約した時刻を過ぎても発火しない「空振り」が起きる（実機2026-11-26で48分・予約4回・
+実行0回を確認）。これに気づけるよう3点を追加した。
+
+1. **除外状態の変化を記録**: `PowerManager#isIgnoringBatteryOptimizations` の現在値を、変化した
+   ときだけ実行ログ（run-YYYYMMDD.jsonl）に1行記録する（`RunScheduler#checkBatteryOptimizationExemptionChanged`、
+   毎回は記録しない）。また実行開始行（`logStart`）には毎回 `batteryOptimizationIgnored` を
+   付与する（不明なときは項目自体を出さない）。
+2. **空振りの記録**: 引き金（通知／補完／再試行）ごとに「発火予定時刻」を保存し、実際の発火で
+   消す。予約・発火などスケジューラの入口を通るたびに、保存値が120秒以上過去のまま残っていたら
+   「空振り」として実行ログに1行記録して消す（`RunScheduler#checkStaleScheduledFires`）。
+3. **設定画面から除外を戻せる**: 設定Activityに「電池の除外」状態表示と、
+   `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` を開くボタンを追加した。
+
 ## 既知の制約（報告書と重複するが実装者向けメモ）
 
 - ビルド環境の android.jar は API23 固定。`android:canPerformGestures` 属性はAPI24追加のため

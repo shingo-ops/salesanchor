@@ -47,11 +47,25 @@ async def get_issuer_country_code(db: AsyncSession, tenant_id: int, region: str 
         return None
     profiles = tenant_table_ref(db, tenant_id, "tenant_issuer_profiles")
     result = await db.execute(
-        text(f"SELECT country_code FROM {profiles} WHERE region = :region ORDER BY id LIMIT 1"),
-        {"region": region},
+        text(f"SELECT country_code FROM {profiles} WHERE tenant_id = :tenant_id AND region = :region ORDER BY id LIMIT 1"),
+        {"tenant_id": tenant_id, "region": region},
     )
     row = result.first()
     return (row[0] or None) if row else None
+
+
+async def read_legacy_issuer_values(db: AsyncSession, tenant_id: int) -> dict | None:
+    """旧来の会社情報の表の6欄（会社名・英語名・住所・電話・メール・サイト）を読む。この表を読むのはここ1か所だけ（A40）。"""
+    legacy = tenant_table_ref(db, tenant_id, "tenant_profile")
+    result = await db.execute(
+        text(f"""
+            SELECT company_name, company_name_en, address, phone, email, website
+            FROM {legacy}
+            ORDER BY id LIMIT 1
+        """),
+    )
+    row = result.mappings().first()
+    return dict(row) if row else None
 
 
 async def get_issuer(db: AsyncSession, tenant_id: int, region: str) -> dict:
@@ -68,11 +82,11 @@ async def get_issuer(db: AsyncSession, tenant_id: int, region: str) -> dict:
             FROM {profiles} p
             LEFT JOIN public.prefectures pr ON pr.code = p.prefecture_code
             LEFT JOIN public.countries co ON co.code = p.country_code
-            WHERE p.region = :region
+            WHERE p.tenant_id = :tenant_id AND p.region = :region
             ORDER BY p.id
             LIMIT 1
         """),
-        {"region": region},
+        {"tenant_id": tenant_id, "region": region},
     )
     row = result.mappings().first()
     if row:
@@ -85,15 +99,7 @@ async def get_issuer(db: AsyncSession, tenant_id: int, region: str) -> dict:
             "registration_number": row["registration_number"] if row["is_invoice_registered"] else None,
             "legacy": False,
         }
-    legacy = tenant_table_ref(db, tenant_id, "tenant_profile")
-    result = await db.execute(
-        text(f"""
-            SELECT company_name, company_name_en, address, phone, email, website
-            FROM {legacy}
-            ORDER BY id LIMIT 1
-        """),
-    )
-    old = result.mappings().first()
+    old = await read_legacy_issuer_values(db, tenant_id)
     if not old:
         return {"name": "", "address": "", "phone": "", "email": "", "website": "",
                 "registration_number": None, "legacy": True}

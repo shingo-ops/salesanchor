@@ -49,7 +49,7 @@ const contact = { id: 52, tenant_id: 1, company_id: 41, contact_code: "C52", lea
 const quote = { id: 7, quote_code: "Q-7", company_id: 4, contact_id: null, currency: "USD", subtotal: 10, total_amount: 10, status: "approved", validity_date: null, created_at: "" };
 const quoteDetail = { ...quote, shipping_fee: 0, tax_amount: 0, notes: null, items: [] };
 const team = { id: 7, name: "Fixture Team", leader_id: null, description: null, is_active: true, member_count: 0, created_at: "", updated_at: "" };
-const owners = { can_manage_others: true, current_staff_id: 1, current_user_id: 1, owners: [{ staff_id: 1, user_id: 1, staff_code: "S1", name: "Fixture Owner", primary_email: null, color: "", is_visible: true, share_mode: "self", is_self: true }] };
+const owners = { can_manage_others: true, current_staff_id: 1, current_user_id: 1, owners: [{ staff_id: 1, user_id: 1, staff_code: "S1", name: "Fixture Owner", primary_email: null, color_key: null, is_self: true }] };
 
 const fixtures: Record<string, unknown> = {
   "/units?page=1&per_page=100": [unit],

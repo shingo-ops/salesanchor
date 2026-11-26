@@ -33,6 +33,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
+import httpx
+
 from app.auth.dependencies import reset_tenant_context
 from app.cache import get_redis
 from app.services import encryption
@@ -571,6 +573,52 @@ async def get_instance(
     raise RuntimeError("繰り返しの回が見つかりません")
 
 
+_REVOKE_URL = "https://oauth2.googleapis.com/revoke"
+
+
+class GoogleRevokeError(Exception):
+    """Google が許可の取り消しを受け付けなかった（通信の失敗を含む）。"""
+
+
+def _error_code(resp) -> str:
+    try:
+        return str(resp.json().get("error", ""))
+    except Exception:
+        return ""
+
+
+async def revoke_tenant_token(db, tenant_id: int) -> None:
+    """接続している合鍵を Google で取り消す（design §3-1）。行が無ければ何もしない。"""
+    from sqlalchemy import text
+
+    row = await db.execute(
+        text("SELECT refresh_token_encrypted FROM tenant_google_calendar_config WHERE tenant_id = :tid"),
+        {"tid": tenant_id},
+    )
+    record = row.first()
+    if record is None or not record[0]:
+        return
+    try:
+        token = encryption.decrypt(record[0])
+    except Exception as e:  # 鍵が読めないなら、こちらでは二度と使えない。解除は進める
+        logger.error("revoke: 合鍵を読めない tenant=%s %s", tenant_id, type(e).__name__)
+        return
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                _REVOKE_URL,
+                data={"token": token},
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+    except httpx.HTTPError as e:
+        raise GoogleRevokeError(f"通信の失敗: {type(e).__name__}") from e
+    if resp.status_code == 200:
+        return
+    if resp.status_code == 400 and _error_code(resp) == "invalid_token":
+        return  # 既に取り消されている（利用者が Google 側で外した等）
+    raise GoogleRevokeError(f"status={resp.status_code} error={_error_code(resp)}")
+
+
 __all__ = [
     "issue_state",
     "consume_state",
@@ -582,4 +630,6 @@ __all__ = [
     "update_event",
     "delete_event",
     "get_instance",
+    "revoke_tenant_token",
+    "GoogleRevokeError",
 ]

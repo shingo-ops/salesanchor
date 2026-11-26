@@ -20,6 +20,8 @@ final class SchedulerStore {
     private static final String KEY_LAST_COMPLEMENT_ATTEMPT_AT = "last_complement_attempt_at";
     private static final String KEY_NOTIFICATION_RESERVED_AT = "notification_reserved_at";
     private static final String KEY_CONSECUTIVE_RETRY_COUNT = "consecutive_retry_count";
+    private static final String KEY_LAST_IGNORING_BATTERY_OPTIMIZATIONS = "last_ignoring_battery_optimizations";
+    private static final String KEY_SCHEDULED_FIRE_AT_PREFIX = "scheduled_fire_at_";
 
     /** 既定はOFF（design.md: インストール直後に勝手に動き出さないこと）。 */
     private static final boolean DEFAULT_ENABLED = false;
@@ -164,6 +166,43 @@ final class SchedulerStore {
 
     static void clearConsecutiveRetryCount(Context context) {
         prefs(context).edit().remove(KEY_CONSECUTIVE_RETRY_COUNT).apply();
+    }
+
+    /**
+     * 直近に確認した「電池最適化の除外」（{@code PowerManager#isIgnoringBatteryOptimizations}）の
+     * 状態。design.md追補「電池最適化で後回しにされたことを検知・記録・復旧できる仕組み」
+     * (2026-11-26)。{@link #wasLastScheduleExact}と同じ作り（既定値は楽観的にtrue。実際に
+     * 除外が外れたときだけfalseに切り替わる）。{@link RunScheduler}が変化時だけ更新する。
+     */
+    static boolean wasLastIgnoringBatteryOptimizations(Context context) {
+        return prefs(context).getBoolean(KEY_LAST_IGNORING_BATTERY_OPTIMIZATIONS, true);
+    }
+
+    static void setLastIgnoringBatteryOptimizations(Context context, boolean ignoring) {
+        prefs(context).edit().putBoolean(KEY_LAST_IGNORING_BATTERY_OPTIMIZATIONS, ignoring).apply();
+    }
+
+    /**
+     * 引き金（{@link RunScheduler}のTRIGGER_*定数）ごとの「発火予定時刻」（絶対epoch ms）。
+     * design.md追補「電池最適化で後回しにされたことを検知・記録・復旧できる仕組み」(2026-11-26):
+     * 省電力区分が上がるとAlarmManagerの発火が1時間に1回などに制限され、予約したのに発火
+     * しない「空振り」が起きる（実機2026-11-26で48分・予約4回・実行0回を確認）。予約時に
+     * ここへ保存し、発火を受けたら消す（{@link RunScheduler#onAlarmFired}）。スケジューラの
+     * 入口を通るたびに、残っている値が十分古ければ「空振り」として検知できる
+     * （{@link RunScheduler}参照）。{@link #getNotificationReservedAt}とは別の仕組み
+     * （そちらは通知引き金のバースト抑制専用の判定に使っており、意味が違うため共用しない）。
+     * 既定0（未予約）。
+     */
+    static long getScheduledFireAt(Context context, String triggerType) {
+        return prefs(context).getLong(KEY_SCHEDULED_FIRE_AT_PREFIX + triggerType, 0L);
+    }
+
+    static void setScheduledFireAt(Context context, String triggerType, long atMs) {
+        prefs(context).edit().putLong(KEY_SCHEDULED_FIRE_AT_PREFIX + triggerType, atMs).apply();
+    }
+
+    static void clearScheduledFireAt(Context context, String triggerType) {
+        prefs(context).edit().remove(KEY_SCHEDULED_FIRE_AT_PREFIX + triggerType).apply();
     }
 
     private static SharedPreferences prefs(Context context) {

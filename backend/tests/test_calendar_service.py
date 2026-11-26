@@ -238,7 +238,7 @@ class TestListEvents:
     async def test_returns_events(self):
         from app.services.calendar_service import list_events
         now = datetime(2026, 6, 1, 10, 0, 0, tzinfo=timezone.utc)
-        row = (1, 2, "shared", "meeting", "テスト会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木 花子", "田中 太郎", None, None, None, None, None)
+        row = (1, 2, "shared", "meeting", "テスト会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木 花子", "田中 太郎", None, None, None, None, None, [])
         db = _make_db(fetchall_return=[row])
         result = await list_events(db, tenant_id=1, start="2026-06-01", end="2026-06-30")
         assert len(result) == 1
@@ -270,7 +270,10 @@ class TestListEvents:
         db = _make_db(fetchall_return=[])
         await list_events(db, tenant_id=1, start="2026-06-01", end="2026-06-30", user_id=5)
         stmt, params = db.execute.call_args.args
-        assert "ce.calendar_type = 'shared' OR ce.user_id = :me" in stmt.text
+        from app.services.calendar_service import visibility_sql
+
+        assert visibility_sql("ce") in stmt.text
+        assert "COALESCE(ce.user_id, ce.created_by_user_id) = :me" in stmt.text
         assert params["me"] == 5
 
     @pytest.mark.asyncio
@@ -305,7 +308,9 @@ class TestListEvents:
         assert "ce.title ILIKE :title_q ESCAPE" in stmt.text
         assert "ORDER BY ce.start_datetime DESC" in stmt.text
         assert "LIMIT :limit" in stmt.text
-        assert "(ce.calendar_type = 'shared' OR ce.user_id = :me)" in stmt.text
+        from app.services.calendar_service import visibility_sql
+
+        assert visibility_sql("ce") in stmt.text
         assert ":start" not in stmt.text
         assert ":end" not in stmt.text
         assert params["title_q"] == "%商談%"
@@ -647,11 +652,21 @@ class TestUpdateAppOriginFromGoogle:
         assert len(_updates(db2)) == 1
 
     @pytest.mark.asyncio
-    async def test_cancelled_touches_nothing(self):
+    async def test_cancelled_deletes_synced_single_row(self):
         db = _app_origin_db((5, "題", None, None, _T1, _T2, False, None))
-        assert await self._go(db, _g_event(status="cancelled")) == "skipped"
+        assert await self._go(db, _g_event(status="cancelled")) == "deleted"
         sqls = [s for s, _ in db.calls]
-        assert not any(s.lstrip().startswith(("SELECT id, title", "UPDATE", "DELETE")) for s in sqls)
+        assert not any(s.lstrip().startswith("SELECT id, title") for s in sqls)
+        assert _updates(db) == []
+        dels = [(s, p) for s, p in db.calls if s.lstrip().startswith("DELETE")]
+        assert len(dels) == 1
+        sql, params = dels[0]
+        assert "is_cancelled" not in sql
+        for guard in ("sync_status = 'synced'", "recurrence_rule IS NULL", "recurring_event_id IS NULL", "LIKE 'app:1:%'"):
+            assert guard in sql
+        assert params == {"gid": "ev_app"}
+        db0 = _app_origin_db(None, rowcount=0)
+        assert await self._go(db0, _g_event(status="cancelled")) == "skipped"
 
     @pytest.mark.asyncio
     async def test_same_content_writes_nothing(self):
@@ -1154,6 +1169,14 @@ class TestSyncTenantFromGoogle:
         assert result == {"skipped": "no_owner"}
         assert kw == []
 
+    @pytest.mark.asyncio
+    async def test_passes_one_series_cache_per_sync(self):
+        db = _make_sync_db(sync_token="T")
+        service, _ = _make_list_service([{"items": [{"id": "a"}, {"id": "b"}], "nextSyncToken": "N"}])
+        _result, up = await self._run(db, service)
+        caches = [c.kwargs["series_cache"] for c in up.await_args_list]
+        assert len(caches) == 2 and caches[0] is caches[1] and caches[0] == {}
+
 
 class TestRegisterWebhook:
     @pytest.mark.asyncio
@@ -1542,7 +1565,7 @@ class TestListEventsMeetUrl:
         from app.services.calendar_service import list_events
 
         now = datetime(2026, 6, 1, 10, 0, 0, tzinfo=timezone.utc)
-        row = (1, 2, "shared", "meeting", "会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木", "田中", MEET, None, None, None, None)
+        row = (1, 2, "shared", "meeting", "会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木", "田中", MEET, None, None, None, None, [])
         db = _make_db(fetchall_return=[row])
         result = await list_events(db, tenant_id=1, start="2026-06-01", end="2026-06-30")
         assert result[0]["meet_url"] == MEET
@@ -1567,8 +1590,9 @@ def _jt(y, mo, d, h=10, mi=0):
 
 
 class _Res:
-    def __init__(self, rows):
+    def __init__(self, rows, rowcount=1):
         self._rows = rows
+        self.rowcount = rowcount
 
     def first(self):
         return self._rows[0] if self._rows else None
@@ -1680,7 +1704,7 @@ class TestListRecurrence:
         now = _jt(2026, 11, 12)
         base = [1, 5, "shared", "meeting", "定例", None, None, now, now + timedelta(hours=1), False,
                 "gm", "app", "synced", 5, now, now, "鈴木", "田中", None,
-                "FREQ=WEEKLY;BYDAY=TH", None, None, None]
+                "FREQ=WEEKLY;BYDAY=TH", None, None, None, []]
         for k, v in over.items():
             base[k] = v
         return tuple(base)
@@ -1729,7 +1753,7 @@ class TestListRecurrence:
         assert "(ce.start_datetime < :end AND ce.end_datetime > :start AND ce.recurrence_rule IS NULL) OR" in main
         assert "ce.(" not in main
         assert "AND NOT ce.is_cancelled" in main
-        assert main.index("ce.user_id = :me") < main.index("AND NOT ce.is_cancelled")
+        assert main.index("= :me") < main.index("AND NOT ce.is_cancelled")
         assert "ce.recurrence_rule, ce.recurring_event_id, ce.original_start_datetime" in main
 
     @pytest.mark.asyncio
@@ -1740,7 +1764,9 @@ class TestListRecurrence:
         await list_events(db, 1, start="2026-11-01T00:00:00+09:00", end="2026-12-01T00:00:00+09:00", user_id=5)
         sql, params = db.calls[1]
         assert "ce.recurring_event_id = ANY(:ids)" in sql
-        assert "(ce.calendar_type = 'shared' OR ce.user_id = :me)" in sql
+        from app.services.calendar_service import visibility_sql
+
+        assert visibility_sql("ce") in sql
         assert "is_cancelled" not in sql  # 消した印の行も含めて引く
         assert params["ids"] == [1] and params["me"] == 5
 
@@ -2128,18 +2154,186 @@ class TestDeleteRecurring:
             assert _statuses(db, "failed") == [] and _statuses(db, "synced") == []
 
 
+def _inst_db(master=None, exc=None, new_id=77, has_master=True):
+    """アプリで作った繰り返しの回の取り込み用。exc は (id, 題, 説明, 場所, 始, 終, 終日, 消した印, 送り) の 9 列。"""
+    master = master or _ev()
+    return _FakeDB(
+        [
+            ("SELECT 1 FROM calendar_events", [(1,)]),
+            ("recurrence_rule IS NOT NULL", [_tup(master)] if has_master else []),
+            ("is_cancelled, sync_status FROM", [exc] if exc else []),
+            ("INSERT INTO calendar_events", [(new_id,)]),
+        ],
+        sync_mode=None,
+    )
+
+
+def _g_master(**over) -> dict:
+    d = {
+        "id": "gm", "status": "confirmed", "summary": "定例",
+        "recurrence": ["RRULE:FREQ=WEEKLY;BYDAY=TH"],
+        "start": {"dateTime": "2026-11-12T10:00:00+09:00"},
+        "end": {"dateTime": "2026-11-12T11:00:00+09:00"},
+    }
+    d.update(over)
+    return d
+
+
+def _g_inst(day=26, **over) -> dict:
+    d = {
+        "id": f"gm_202611{day:02d}T010000Z", "status": "confirmed", "summary": "定例",
+        "recurringEventId": "gm",
+        "originalStartTime": {"dateTime": f"2026-11-{day:02d}T10:00:00+09:00"},
+        "start": {"dateTime": f"2026-11-{day:02d}T10:00:00+09:00"},
+        "end": {"dateTime": f"2026-11-{day:02d}T11:00:00+09:00"},
+    }
+    d.update(over)
+    return d
+
+
 class TestUpsertRecurringInstance:
-    @pytest.mark.asyncio
-    async def test_instance_of_app_origin_is_skipped(self):
+    async def _go(self, db, event, g_master=None, cache=None, get_event=None):
         from app.services.calendar_service import upsert_from_google
 
-        db = _make_db()
-        event = {"id": "gm_20261126T010000Z", "recurringEventId": "gm",
-                 "start": {"dateTime": "2026-11-26T10:00:00+09:00"}, "end": {"dateTime": "2026-11-26T11:00:00+09:00"}}
-        with patch("app.services.calendar_service._is_app_origin", new=AsyncMock(side_effect=[True])) as origin:
-            assert await upsert_from_google(db, 1, event, 5) == "skipped"
-        assert origin.await_args_list[0].args[1] == "gm"
-        db.execute.assert_not_called()
+        getter = get_event or AsyncMock(return_value=g_master or _g_master())
+        with patch("app.services.google_calendar.get_event", new=getter):
+            out = await upsert_from_google(db, 1, event, 5, series_cache=cache)
+        return out, getter
+
+    @staticmethod
+    def _writes(db):
+        return [(s, p) for s, p in db.calls if s.lstrip().startswith(("INSERT", "UPDATE", "DELETE"))]
+
+    @pytest.mark.asyncio
+    async def test_same_as_series_writes_nothing(self):
+        db = _inst_db()
+        out, getter = await self._go(db, _g_inst())
+        assert out == "skipped"
+        assert self._writes(db) == []
+        assert getter.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_google_master_is_read_once_per_sync(self):
+        cache: dict = {}
+        getter = AsyncMock(return_value=_g_master())
+        for day in (19, 26):
+            db = _inst_db()
+            await self._go(db, _g_inst(day), cache=cache, get_event=getter)
+        assert getter.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_single_instance_edit_inserts_synced_exception(self):
+        db = _inst_db()
+        out, _ = await self._go(db, _g_inst(summary="臨時"))
+        assert out == "upserted"
+        (ins_sql, ins), (up_sql, up) = self._writes(db)
+        assert ins_sql.lstrip().startswith("INSERT")
+        assert ins["title"] == "臨時"
+        assert ins["recurring_event_id"] == 1
+        assert ins["original_start_datetime"] == _jt(2026, 11, 26)
+        assert ins["start_datetime"] == _jt(2026, 11, 26) and ins["end_datetime"] == _jt(2026, 11, 26, 11)
+        assert ins["is_cancelled"] is False
+        assert ins["calendar_type"] == "shared" and ins["user_id"] == 5
+        assert "sync_status = 'synced'" in up_sql
+        assert up == {"gid": "gm_20261126T010000Z", "oid": "app:1:77", "id": 77}
+
+    @pytest.mark.asyncio
+    async def test_single_instance_delete_inserts_cancelled_exception(self):
+        db = _inst_db()
+        out, _ = await self._go(db, {"id": "gm_20261126T010000Z", "status": "cancelled", "recurringEventId": "gm",
+                                     "originalStartTime": {"dateTime": "2026-11-26T10:00:00+09:00"}})
+        assert out == "deleted"
+        (ins_sql, ins), (_up_sql, up) = self._writes(db)
+        assert ins["is_cancelled"] is True and ins["original_start_datetime"] == _jt(2026, 11, 26)
+        assert up["gid"] == "gm_20261126T010000Z"
+
+    @pytest.mark.asyncio
+    async def test_cancel_existing_synced_exception(self):
+        exc = (9, "定例", None, None, _jt(2026, 11, 26, 14), _jt(2026, 11, 26, 15), False, False, "synced")
+        db = _inst_db(exc=exc)
+        out, _ = await self._go(db, _g_inst(status="cancelled"))
+        assert out == "deleted"
+        writes = self._writes(db)
+        assert len(writes) == 1
+        assert "is_cancelled = true" in writes[0][0] and writes[0][1] == {"id": 9}
+
+    @pytest.mark.asyncio
+    async def test_already_cancelled_or_not_synced_is_skipped(self):
+        cancelled = (9, "定例", None, None, _jt(2026, 11, 26), _jt(2026, 11, 26, 11), False, True, "synced")
+        db = _inst_db(exc=cancelled)
+        assert (await self._go(db, _g_inst(status="cancelled")))[0] == "skipped"
+        assert self._writes(db) == []
+        for status in ("pending", "failed"):
+            pending = (9, "定例", None, None, _jt(2026, 11, 26), _jt(2026, 11, 26, 11), False, False, status)
+            db = _inst_db(exc=pending)
+            assert (await self._go(db, _g_inst(summary="臨時")))[0] == "skipped"
+            assert self._writes(db) == []
+
+    @pytest.mark.asyncio
+    async def test_edit_existing_exception_and_restore(self):
+        exc = (9, "定例", None, None, _jt(2026, 11, 26), _jt(2026, 11, 26, 11), False, False, "synced")
+        db = _inst_db(exc=exc)
+        out, _ = await self._go(db, _g_inst(location="会議室"))
+        assert out == "upserted"
+        (sql, params), = self._writes(db)
+        assert "WHERE id = :id AND sync_status = 'synced'" in sql
+        assert params == {"location": "会議室", "id": 9}
+        restored = (9, "定例", None, None, _jt(2026, 11, 26), _jt(2026, 11, 26, 11), False, True, "synced")
+        db = _inst_db(exc=restored)
+        out, _ = await self._go(db, _g_inst())
+        assert out == "upserted"
+        (_sql, params), = self._writes(db)
+        assert params == {"is_cancelled": False, "id": 9}
+
+    @pytest.mark.asyncio
+    async def test_series_changed_in_google_is_skipped(self):
+        changed = [
+            _g_master(recurrence=["RRULE:FREQ=WEEKLY;BYDAY=TH;UNTIL=20261119T145959Z"]),
+            _g_master(summary="定例（新）"),
+            _g_master(start={"dateTime": "2026-11-12T11:00:00+09:00"}, end={"dateTime": "2026-11-12T12:00:00+09:00"}),
+            _g_master(status="cancelled"),
+        ]
+        for g in changed:
+            db = _inst_db()
+            out, _ = await self._go(db, _g_inst(summary="臨時"), g_master=g)
+            assert out == "skipped"
+            assert self._writes(db) == []
+        db = _inst_db()
+        out, _ = await self._go(db, _g_inst(summary="臨時"), get_event=AsyncMock(side_effect=RuntimeError("boom")))
+        assert out == "skipped"
+        assert self._writes(db) == []
+
+    @pytest.mark.asyncio
+    async def test_rule_order_and_exdate_lines_are_ignored(self):
+        db = _inst_db()
+        g = _g_master(recurrence=["RRULE:BYDAY=TH;FREQ=WEEKLY", "EXDATE;TZID=Asia/Tokyo:20261119T100000"])
+        out, _ = await self._go(db, _g_inst(summary="臨時"), g_master=g)
+        assert out == "upserted"
+
+    @pytest.mark.asyncio
+    async def test_not_an_occurrence_or_no_synced_master_is_skipped(self):
+        db = _inst_db()
+        fri = _g_inst(originalStartTime={"dateTime": "2026-11-27T10:00:00+09:00"}, summary="臨時")
+        assert (await self._go(db, fri))[0] == "skipped"
+        assert self._writes(db) == []
+        db = _inst_db(has_master=False)
+        out, getter = await self._go(db, _g_inst(summary="臨時"))
+        assert out == "skipped"
+        assert getter.await_count == 0
+        assert self._writes(db) == []
+
+    @pytest.mark.asyncio
+    async def test_google_id_already_taken_is_skipped(self):
+        for event in (
+            {"id": "gm_20261126T010000Z", "status": "cancelled", "recurringEventId": "gm",
+             "originalStartTime": {"dateTime": "2026-11-26T10:00:00+09:00"}},
+            _g_inst(summary="臨時"),
+        ):
+            db = _inst_db()
+            db.handlers.insert(0, ("SELECT id FROM calendar_events WHERE google_event_id", [(50,)]))
+            out, _ = await self._go(db, event)
+            assert out == "skipped"
+            assert self._writes(db) == []
 
 
 class TestCheckRecurrenceRequest:

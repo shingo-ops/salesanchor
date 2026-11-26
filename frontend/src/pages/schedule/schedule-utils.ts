@@ -16,7 +16,9 @@ export interface AnchorRect {
 export interface ApiCalendarEvent {
   id: number;
   user_id: number | null;
-  calendar_type: "shared" | "personal" | string;
+  calendar_type: "shared" | "personal" | "team" | string;
+  /** calendar_type が team のときのチームの番号（昇順）。ほかは空 */
+  team_ids?: number[];
   title: string;
   description: string | null;
   location: string | null;
@@ -59,8 +61,12 @@ export interface ScheduleItem {
   start: Date;
   end: Date;
   allDay: boolean;
-  category: import("../../features/schedule/calendars.config").CalendarId | null;
-  calendarType: "shared" | "personal";
+  /** 予定の種類の鍵（正本は GET /calendar/categories。名前は useCalendarCategories で引く） */
+  category: string | null;
+  /** 裏側の値（calendar_type）。画面の共有（自分だけ・全員・チーム）への変換は useCalendarCategories の 1 組 */
+  calendarType: "shared" | "personal" | "team";
+  /** calendarType が team のときのチームの番号。ほかは空 */
+  teamIds: number[];
   source: "app" | "google" | "shift";
   ownerUserId: number | null;
   ownerName: string | null;
@@ -178,9 +184,9 @@ export function formatTimeInput(date: Date): string {
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
-export function getMonthCells(anchor: Date): Date[] {
+export function getMonthCells(anchor: Date, weekStart: 0 | 1 = 0): Date[] {
   const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
-  const start = addDays(first, -first.getDay());
+  const start = addDays(first, -((first.getDay() - weekStart + 7) % 7));
   return Array.from({ length: 42 }, (_, index) => addDays(start, index));
 }
 
@@ -356,7 +362,7 @@ export function fitCreatePopover(
 export function normalizeEvent(event: ApiCalendarEvent): ScheduleItem {
   const start = parseLocalDate(event.start_datetime);
   const end = parseLocalDate(event.end_datetime);
-  const category = (event.category ?? (event.calendar_type === "personal" ? "personal" : "meeting")) as ScheduleItem["category"];
+  const category: ScheduleItem["category"] = event.category ?? (event.calendar_type === "personal" ? "personal" : "meeting");
   const ownerUserId = event.user_id ?? event.created_by_user_id ?? null;
   const ownerName = event.owner_name ?? event.created_by_name ?? null;
   const occurrenceStart = event.occurrence_start ? parseLocalDate(event.occurrence_start) : null;
@@ -368,7 +374,8 @@ export function normalizeEvent(event: ApiCalendarEvent): ScheduleItem {
     end,
     allDay: event.is_all_day,
     category,
-    calendarType: event.calendar_type === "personal" ? "personal" : "shared",
+    calendarType: event.calendar_type === "personal" || event.calendar_type === "team" ? event.calendar_type : "shared",
+    teamIds: event.calendar_type === "team" && Array.isArray(event.team_ids) ? event.team_ids : [],
     source: event.source === "google" ? "google" : "app",
     ownerUserId,
     ownerName,
@@ -397,6 +404,7 @@ export function normalizeShift(shift: ApiShift, t: (key: string) => string): Sch
     allDay: false,
     category: "personal",
     calendarType: "personal",
+    teamIds: [],
     source: "shift",
     ownerUserId: shift.user_id,
     ownerName: null,

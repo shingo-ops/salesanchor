@@ -3002,6 +3002,151 @@
         "title": "BuybackPriceListResponse",
         "type": "object"
       },
+      "CalendarCategoryItem": {
+        "properties": {
+          "color_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Key"
+          },
+          "default_share": {
+            "title": "Default Share",
+            "type": "string"
+          },
+          "default_team_ids": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Default Team Ids",
+            "type": "array"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "color_key",
+          "default_share",
+          "sort_order",
+          "is_active"
+        ],
+        "title": "CalendarCategoryItem",
+        "type": "object"
+      },
+      "CalendarPreferences": {
+        "description": "ひとりひとりの初期値（自分の分だけ。利用者の欄は持たない）。",
+        "properties": {
+          "auto_meet": {
+            "default": false,
+            "title": "Auto Meet",
+            "type": "boolean"
+          },
+          "default_view": {
+            "default": "week",
+            "enum": [
+              "day",
+              "threeDay",
+              "week",
+              "month",
+              "list"
+            ],
+            "title": "Default View",
+            "type": "string"
+          },
+          "event_minutes": {
+            "default": 60,
+            "enum": [
+              15,
+              30,
+              45,
+              60,
+              90,
+              120
+            ],
+            "title": "Event Minutes",
+            "type": "integer"
+          },
+          "open_owners": {
+            "default": "self",
+            "enum": [
+              "self",
+              "all",
+              "team"
+            ],
+            "title": "Open Owners",
+            "type": "string"
+          },
+          "open_team_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Team Id"
+          },
+          "week_start": {
+            "default": 0,
+            "enum": [
+              0,
+              1
+            ],
+            "title": "Week Start",
+            "type": "integer"
+          }
+        },
+        "title": "CalendarPreferences",
+        "type": "object"
+      },
+      "CalendarTeamItem": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "CalendarTeamItem",
+        "type": "object"
+      },
       "Candidate": {
         "properties": {
           "id": {
@@ -8185,6 +8330,49 @@
         "title": "CountryResponse",
         "type": "object"
       },
+      "CreateCategoryBody": {
+        "properties": {
+          "color_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Key"
+          },
+          "default_share": {
+            "default": "all",
+            "title": "Default Share",
+            "type": "string"
+          },
+          "default_team_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Team Ids"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CreateCategoryBody",
+        "type": "object"
+      },
       "CreateEventBody": {
         "properties": {
           "add_meet": {
@@ -8196,6 +8384,17 @@
             "default": "shared",
             "title": "Calendar Type",
             "type": "string"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
           },
           "color_key": {
             "anyOf": [
@@ -8256,6 +8455,20 @@
           "start_datetime": {
             "title": "Start Datetime",
             "type": "string"
+          },
+          "team_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Ids"
           },
           "title": {
             "title": "Title",
@@ -11378,6 +11591,17 @@
               }
             ],
             "title": "Description"
+          },
+          "edit_dropped": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edit Dropped"
           },
           "edited": {
             "anyOf": [
@@ -16396,6 +16620,333 @@
         "title": "InvoiceUpdate",
         "type": "object"
       },
+      "IssuerProfileResponse": {
+        "properties": {
+          "address1": {
+            "title": "Address1",
+            "type": "string"
+          },
+          "address2": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address2"
+          },
+          "city": {
+            "title": "City",
+            "type": "string"
+          },
+          "company_name": {
+            "title": "Company Name",
+            "type": "string"
+          },
+          "country_code": {
+            "title": "Country Code",
+            "type": "string"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "is_invoice_registered": {
+            "title": "Is Invoice Registered",
+            "type": "boolean"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "prefecture_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prefecture Code"
+          },
+          "region": {
+            "enum": [
+              "domestic",
+              "overseas"
+            ],
+            "title": "Region",
+            "type": "string"
+          },
+          "registration_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration Number"
+          },
+          "state_region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Region"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "required": [
+          "region",
+          "company_name",
+          "country_code",
+          "city",
+          "address1",
+          "is_invoice_registered",
+          "updated_at"
+        ],
+        "title": "IssuerProfileResponse",
+        "type": "object"
+      },
+      "IssuerProfileUpdate": {
+        "properties": {
+          "address1": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address1"
+          },
+          "address2": {
+            "anyOf": [
+              {
+                "maxLength": 5000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address2"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "maxLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "is_invoice_registered": {
+            "default": false,
+            "title": "Is Invoice Registered",
+            "type": "boolean"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "maxLength": 10,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "prefecture_code": {
+            "anyOf": [
+              {
+                "maxLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prefecture Code"
+          },
+          "registration_number": {
+            "anyOf": [
+              {
+                "maxLength": 14,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registration Number"
+          },
+          "state_region": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Region"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "title": "IssuerProfileUpdate",
+        "type": "object"
+      },
+      "IssuerProfilesResponse": {
+        "properties": {
+          "domestic": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IssuerProfileResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "legacy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LegacyIssuerValues"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "overseas": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IssuerProfileResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "IssuerProfilesResponse",
+        "type": "object"
+      },
       "KarteIn": {
         "additionalProperties": false,
         "description": "ADR-1078: 画面が会話の間だけ持つ予定のカルテ（保存しない）。字数・型・回数の上限をここで守る。",
@@ -18655,6 +19206,79 @@
           }
         },
         "title": "LeadUpdate",
+        "type": "object"
+      },
+      "LegacyIssuerValues": {
+        "description": "旧来の会社情報の表の6欄（読むだけ）。",
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "company_name_en": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name En"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "title": "LegacyIssuerValues",
         "type": "object"
       },
       "LineNameUpdate": {
@@ -25125,16 +25749,19 @@
       },
       "OwnerRosterItem": {
         "properties": {
-          "color": {
-            "title": "Color",
-            "type": "string"
+          "color_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Key"
           },
           "is_self": {
             "title": "Is Self",
-            "type": "boolean"
-          },
-          "is_visible": {
-            "title": "Is Visible",
             "type": "boolean"
           },
           "name": {
@@ -25152,10 +25779,6 @@
             ],
             "title": "Primary Email"
           },
-          "share_mode": {
-            "title": "Share Mode",
-            "type": "string"
-          },
           "staff_code": {
             "title": "Staff Code",
             "type": "string"
@@ -25163,6 +25786,13 @@
           "staff_id": {
             "title": "Staff Id",
             "type": "integer"
+          },
+          "team_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Team Ids",
+            "type": "array"
           },
           "user_id": {
             "anyOf": [
@@ -25182,10 +25812,9 @@
           "staff_code",
           "name",
           "primary_email",
-          "color",
-          "is_visible",
-          "share_mode",
-          "is_self"
+          "color_key",
+          "is_self",
+          "team_ids"
         ],
         "title": "OwnerRosterItem",
         "type": "object"
@@ -25230,7 +25859,7 @@
       },
       "OwnerSettingsBody": {
         "properties": {
-          "color": {
+          "color_key": {
             "anyOf": [
               {
                 "type": "string"
@@ -25239,29 +25868,7 @@
                 "type": "null"
               }
             ],
-            "title": "Color"
-          },
-          "is_visible": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Is Visible"
-          },
-          "share_mode": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Share Mode"
+            "title": "Color Key"
           }
         },
         "title": "OwnerSettingsBody",
@@ -27350,6 +27957,36 @@
           "extraction_item_count"
         ],
         "title": "PostSummary",
+        "type": "object"
+      },
+      "PrefectureResponse": {
+        "properties": {
+          "code": {
+            "maxLength": 2,
+            "minLength": 2,
+            "title": "Code",
+            "type": "string"
+          },
+          "name_en": {
+            "title": "Name En",
+            "type": "string"
+          },
+          "name_ja": {
+            "title": "Name Ja",
+            "type": "string"
+          },
+          "sort_order": {
+            "title": "Sort Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "name_ja",
+          "name_en",
+          "sort_order"
+        ],
+        "title": "PrefectureResponse",
         "type": "object"
       },
       "PriorityProspectAxisBreakdown": {
@@ -39374,39 +40011,6 @@
       },
       "TenantProfileResponse": {
         "properties": {
-          "address": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Address"
-          },
-          "company_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Company Name"
-          },
-          "company_name_en": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Company Name En"
-          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -39417,31 +40021,9 @@
             "title": "Default Language",
             "type": "string"
           },
-          "email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Email"
-          },
           "id": {
             "title": "Id",
             "type": "integer"
-          },
-          "phone": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Phone"
           },
           "seal_image_url": {
             "anyOf": [
@@ -39458,17 +40040,6 @@
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
-          },
-          "website": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Website"
           }
         },
         "required": [
@@ -39481,42 +40052,6 @@
       },
       "TenantProfileUpdate": {
         "properties": {
-          "address": {
-            "anyOf": [
-              {
-                "maxLength": 5000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Address"
-          },
-          "company_name": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Company Name"
-          },
-          "company_name_en": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Company Name En"
-          },
           "default_language": {
             "anyOf": [
               {
@@ -39530,30 +40065,6 @@
             ],
             "title": "Default Language"
           },
-          "email": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Email"
-          },
-          "phone": {
-            "anyOf": [
-              {
-                "maxLength": 50,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Phone"
-          },
           "seal_image_url": {
             "anyOf": [
               {
@@ -39565,18 +40076,6 @@
               }
             ],
             "title": "Seal Image Url"
-          },
-          "website": {
-            "anyOf": [
-              {
-                "maxLength": 255,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Website"
           }
         },
         "title": "TenantProfileUpdate",
@@ -40517,6 +41016,70 @@
         "title": "UnresolvedResponse",
         "type": "object"
       },
+      "UpdateCategoryBody": {
+        "properties": {
+          "color_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Key"
+          },
+          "default_share": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Share"
+          },
+          "default_team_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Team Ids"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "UpdateCategoryBody",
+        "type": "object"
+      },
       "UpdateEventBody": {
         "properties": {
           "add_meet": {
@@ -40540,6 +41103,17 @@
               }
             ],
             "title": "Calendar Type"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
           },
           "color_key": {
             "anyOf": [
@@ -40653,6 +41227,20 @@
               }
             ],
             "title": "Start Datetime"
+          },
+          "team_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Ids"
           },
           "title": {
             "anyOf": [
@@ -43307,6 +43895,95 @@
         "summary": "Set Role Visibility",
         "tags": [
           "tenant-admin-inventory-visibility"
+        ]
+      }
+    },
+    "/api/v1/admin/issuer-profiles": {
+      "get": {
+        "description": "国内用・海外用の行と、旧来の会社情報の6欄を返す。",
+        "operationId": "get_issuer_profiles_api_v1_admin_issuer_profiles_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuerProfilesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Issuer Profiles",
+        "tags": [
+          "issuer_profiles"
+        ]
+      }
+    },
+    "/api/v1/admin/issuer-profiles/{region}": {
+      "put": {
+        "description": "片方の地域の行を丸ごと保存する（無ければ作る）。",
+        "operationId": "put_issuer_profile_api_v1_admin_issuer_profiles__region__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "region",
+            "required": true,
+            "schema": {
+              "enum": [
+                "domestic",
+                "overseas"
+              ],
+              "title": "Region",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssuerProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuerProfileResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Issuer Profile",
+        "tags": [
+          "issuer_profiles"
         ]
       }
     },
@@ -47108,6 +47785,143 @@
         ]
       }
     },
+    "/api/v1/calendar/categories": {
+      "get": {
+        "description": "予定の種類の全行（使わなくした種類も is_active 付きで）。",
+        "operationId": "list_calendar_categories_api_v1_calendar_categories_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CalendarCategoryItem"
+                  },
+                  "title": "Response List Calendar Categories Api V1 Calendar Categories Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Calendar Categories",
+        "tags": [
+          "calendar",
+          "calendar"
+        ]
+      },
+      "post": {
+        "description": "予定の種類を足す（管理者のみ）。鍵は custom_N を裏側で決める。",
+        "operationId": "create_calendar_category_api_v1_calendar_categories_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarCategoryItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Calendar Category",
+        "tags": [
+          "calendar",
+          "calendar"
+        ]
+      }
+    },
+    "/api/v1/calendar/categories/{key}": {
+      "patch": {
+        "description": "予定の種類の名前・色・共有の初期値・使うかどうかを直す（管理者のみ）。",
+        "operationId": "update_calendar_category_api_v1_calendar_categories__key__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCategoryBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarCategoryItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Calendar Category",
+        "tags": [
+          "calendar",
+          "calendar"
+        ]
+      }
+    },
     "/api/v1/calendar/events": {
       "get": {
         "description": "カレンダーイベントを期間・タイプで取得する。",
@@ -47575,6 +48389,80 @@
         ]
       }
     },
+    "/api/v1/calendar/preferences": {
+      "get": {
+        "description": "自分の初期値。行が無いときは今までと同じ既定値（週・日曜・60 分・Meet なし・自分だけ）。",
+        "operationId": "get_calendar_preferences_api_v1_calendar_preferences_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarPreferences"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Calendar Preferences",
+        "tags": [
+          "calendar",
+          "calendar"
+        ]
+      },
+      "put": {
+        "description": "自分の初期値を保存する。色（color_key）には触れない。",
+        "operationId": "put_calendar_preferences_api_v1_calendar_preferences_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarPreferences"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarPreferences"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Calendar Preferences",
+        "tags": [
+          "calendar",
+          "calendar"
+        ]
+      }
+    },
     "/api/v1/calendar/sync-mode": {
       "get": {
         "description": "現在の同期モードを返す。",
@@ -47639,6 +48527,38 @@
           }
         ],
         "summary": "Update Sync Mode",
+        "tags": [
+          "calendar",
+          "calendar"
+        ]
+      }
+    },
+    "/api/v1/calendar/teams": {
+      "get": {
+        "description": "使っているチームの名前と番号だけ（名前順）。メンバーは出さない。\n\nteams.view の無い人（初期の役で営業・仕入・発送）も予定の共有先を選べるよう、ログインしていれば読める。\nteams 表を読むだけで、写しは作らない。",
+        "operationId": "list_calendar_teams_api_v1_calendar_teams_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CalendarTeamItem"
+                  },
+                  "title": "Response List Calendar Teams Api V1 Calendar Teams Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Calendar Teams",
         "tags": [
           "calendar",
           "calendar"
@@ -50901,7 +51821,7 @@
     },
     "/api/v1/google-calendar/connect": {
       "delete": {
-        "description": "Google Calendar 接続を解除する（admin 専用）。",
+        "description": "Google Calendar 接続を解除する（admin 専用）。\n\n順番（design §3-2）: ①通知の窓口を止める ②Google で許可を取り消す ③設定行を消す。\n取り込み済みの予定（calendar_events）は消さない（PO 2026-11-25「2」）。",
         "operationId": "disconnect_api_v1_google_calendar_connect_delete",
         "responses": {
           "204": {
@@ -59075,6 +59995,36 @@
         "summary": "List Permissions",
         "tags": [
           "roles"
+        ]
+      }
+    },
+    "/api/v1/prefectures": {
+      "get": {
+        "operationId": "list_prefectures_api_v1_prefectures_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PrefectureResponse"
+                  },
+                  "title": "Response List Prefectures Api V1 Prefectures Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "都道府県一覧",
+        "tags": [
+          "prefectures"
         ]
       }
     },

@@ -54,7 +54,7 @@ from app.services import secretary_tts
 from app.services.ai_assignment import get_ai_assignment
 from app.services.calendar_service import can_add_meet
 from app.services.llm_budget import USAGE_SDKS_BY_PROVIDER, UsageCounts, record_usage_isolated
-from app.services.secretary_dates import apply_day, same_day
+from app.services.secretary_dates import afternoon_hours, apply_day, same_day
 from app.services.secretary_karte import edit_changed, merge_edit, merge_karte, next_ask, same_time, settle_dates
 from app.services.secretary_resolve import resolve_names
 from app.services.secretary_rules import (
@@ -325,6 +325,9 @@ async def post_assistant_message(
         cost = envelope.total_cost_usd
         error_events = envelope.error_events
         intent = envelope.intent
+        if intent.kind == "event" and intent.event is not None:
+            # 便W3: 午前・午後を言わない 1〜6時は午後（カルテと合わせる前の AI の答えにだけ当てる）
+            intent = intent.model_copy(update={"event": afternoon_hours(intent.event, body.text, karte)})
 
         # 予定の日時の検査（AI が unknown で聞き返すべきところを予定で返した場合もここで止まる）
         # ADR-1078: 新しい画面の道ではカルテと合わせてから検査する。最終の kind と ev で後の分かれ道を分ける
@@ -332,6 +335,7 @@ async def post_assistant_message(
         final_ev: IntentEvent | None = intent.event
         event_start = event_end = None
         edited = False
+        edit_dropped = False
         meet_refused = False
         if new_path:
             if edit_mode:
@@ -371,8 +375,10 @@ async def post_assistant_message(
                         base_ev.end is not None and final_ev.end is None
                     ):
                         # 直した結果が日時を失ったら、前の下書き（カルテ）のまま・変わった＝偽
+                        edit_dropped = edited
                         final_ev, edited = base_ev, False
                     elif edited and not edit_changed(final_ev, base_ev):
+                        edit_dropped = True
                         edited = False
         elif intent.kind == "event":
             ev = intent.event
@@ -440,6 +446,7 @@ async def post_assistant_message(
             ask_count=ask_count,
             edited=edited if edit_mode else None,
             meet_refused=meet_refused if edit_mode else None,
+            edit_dropped=edit_dropped if edit_mode else None,
         )
     elif intent.kind == "event":
         ev = intent.event
