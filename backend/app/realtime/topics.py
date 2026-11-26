@@ -202,6 +202,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("DELETE", "/api/v1/calendar/events/{event_id}"): _PENDING,
     ("PATCH", "/api/v1/calendar/events/{event_id}"): _PENDING,
     ("PATCH", "/api/v1/calendar/owners/{user_id}"): _PENDING,
+    ("PUT", "/api/v1/calendar/preferences"): _PENDING,
     ("PATCH", "/api/v1/calendar/sync-mode"): _PENDING,
     ("POST", "/api/v1/close-reasons"): _PENDING,
     ("PATCH", "/api/v1/close-reasons/{reason_id}"): _PENDING,

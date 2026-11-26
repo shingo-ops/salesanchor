@@ -1130,14 +1130,19 @@ def test_t10_calendar_owner_settings_is_classified_on_bootstrapped_db(cluster):
             "SELECT column_name, class, reason FROM ai_cloud_meta.column_class"
             " WHERE schema_pattern = 'tenant_*' AND table_name = 'calendar_owner_settings' ORDER BY column_name",
         )
-        assert [r[0] for r in rows] == ["color_key"]
-        assert rows[0][1] == "allow" and rows[0][2].strip()
+        assert [r[0] for r in rows] == [
+            "auto_meet", "color_key", "default_view", "event_minutes", "open_owners", "open_team_id", "week_start",
+        ]
+        assert all(r[1] == "allow" and r[2].strip() for r in rows)
         columns = _rows(
             conn,
             "SELECT column_name FROM information_schema.columns"
             " WHERE table_schema LIKE 'tenant\\_%' AND table_name = 'calendar_owner_settings'",
         )
-        assert {r[0] for r in columns} == {"staff_id", "color_key", "updated_at"}
+        assert {r[0] for r in columns} == {
+            "staff_id", "color_key", "updated_at",
+            "auto_meet", "default_view", "event_minutes", "open_owners", "open_team_id", "week_start",
+        }
     finally:
         conn.close()
         cur = cluster.control.cursor()

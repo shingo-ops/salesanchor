@@ -307,15 +307,14 @@ async def test_color_and_preferences_do_not_change_each_other():
         db = await _session(factory)
         try:
             with patch("app.routers.calendar.load_user_permissions", return_value={"staff.view"}):
-                with patch("app.routers.calendar.reset_tenant_context"):
-                    await _seed_staff(admin)
-                    await r.update_calendar_owner(
-                        user_id=_USER_A,
-                        body=r.OwnerSettingsBody(color_key="cobalt"),
-                        tenant_id=_TENANT,
-                        user=_user(_USER_A),
-                        db=db,
-                    )
+                await _seed_staff(admin)
+                await r.update_calendar_owner(
+                    user_id=_USER_A,
+                    body=r.OwnerSettingsBody(color_key="cobalt"),
+                    tenant_id=_TENANT,
+                    user=_user(_USER_A),
+                    db=db,
+                )
         finally:
             await db.close()
         assert (await _prefs(admin, _USER_A))[:3] == ("day", 0, 45)
