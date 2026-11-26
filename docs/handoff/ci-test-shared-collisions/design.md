@@ -1,6 +1,6 @@
 # design: CI の試験どうしのぶつかりで main が赤になるのを 0 回にする
 
-状態: 便1は設計案作成済み・設計審査済み（Opus 自己審査）・PO の実装承認 2026-11-27「1」（合流・本番反映まで委任）。便2〜5は調べ待ちで、実装はできない。
+状態: 便1は合流・本番反映済み（PR 5790・2026-11-27）。便2〜5は設計案作成済み・設計審査済み（Opus 自己審査・§12）。PO の指示 2026-11-27「1」（便1を実装し、ほかの種類も並べて調べる）と、最初の指示（合流・反映まで完走）に基づいて実装へ進める。
 参照: docs/handoff/ci-test-shared-collisions/recon.md（以下 recon）。関係する ADR: ADR-1024（共通の役割 `ai_reader` を定める。本番の戻し方 :80 だけが `DROP ROLE` を書く。試験の後片付けの決まりは無いので、本書は ADR-1024 を変えない）。区分: 試験コードだけを変える。製品コード・本番・CI 設定には触らない。
 
 ## 1. 目的（KGI）
@@ -10,13 +10,13 @@ main の試験が赤になるのは、今は試験どうしのぶつかりだけ
 ## 2. 進め方（1便1種類・変更→反映→測定）
 | 便 | 種類 | 状態 |
 |---|---|---|
-| 便1 | D 役割が消える | 本書 §3 で設計済み。PO 実装承認 2026-11-27「1」 |
-| 便2 | A 調べたが無い | 相手は確定（recon §3）。直し方の前に「未確認」2点をクラウドで調べる |
-| 便3 | B 請求書の表 | 仕組みが未確定（recon §4）。クラウドで調べる |
-| 便4 | C カルテ | 仕組みが未確定。クラウドで調べる |
-| 便5 | E テナント998 | 覚え書きの残り件。クラウドで調べる |
+| 便1 | D 役割が消える | 本書 §3。PR 5790 で合流・本番反映済み |
+| 便2 | A 調べたが無い | 本書 §7（recon §6-3）。PR は甲 |
+| 便3 | B 請求書の表 | PR 5669 で直っている（recon §6-1）。§8 で数えるだけ |
+| 便4 | C カルテ | カルテは PR 5669 で直っている。同じ形の2ファイルを §9 で直す。PR は乙 |
+| 便5 | E テナント998 | 本書 §9（recon §6-4）。PR は乙 |
 
-便2〜5は、調べた結果を recon に足して、本書に便ごとの節を足す。便ごとに審査してから実装する。
+便4と便5は、どちらも「札の外の後片付けを札で包む」同じ型なので、1つの PR（乙）にまとめる。効果は KGI の30回でまとめて数える。
 
 ## 3. 便1: 共通の役割を試験の後片付けで消さない
 
@@ -84,3 +84,130 @@ recon §2 の6ファイルについて、後片付けの中の共通の役割を
 - 受け入れ基準は、どれも記録や差分で ○× を決められる。
 - 判定: 便1は APPROVE。便2〜5は REVISE（調べが要る。recon §3・§4 の未確認）。
 - 未解決: 便2〜5の仕組み。属性を一時的に変える2か所の重なり（未観測）。
+
+## 7. 便2: 調べたが無い（A）— 商品一覧の試験の public の DDL を、巻き戻さず1回だけ確定させる
+根拠: recon §6-3。手本は `ensure_product_packagings`（`backend/tests/rls_bootstrap.py:111-150`）。
+
+### 7-1. 変更前後（変えるのは `backend/tests/test_tcg_product_list_pg.py` と、見張りの分類1件）
+| 場所 | 変更前 | 変更後 |
+|---|---|---|
+| `test_tcg_product_list_pg.py` 新しい関数 `ensure_product_list_public(engine)` | 無い | 下の 7-2 の形で足す |
+| `product_db`（:103） | `await ensure_product_packagings(engine)` | `await ensure_product_list_public(engine)`（中で `ensure_product_packagings` を先に呼ぶ） |
+| `create_product_schema`（:47-92） | 使い捨てスキーマの表と public の DDL を両方流す | 使い捨てスキーマの分だけにする: `CREATE SCHEMA`（:49）、t004 の3本（:56-62）、`_rewire_keyword_fks(schema)`（:78）。この順は変えない |
+| phase3（:80-84） | 巻き戻す transaction の中で流す | どこでも流さない（使い捨てスキーマには何もしないため。recon §6-3） |
+| `test_tenant_loop_migration_guard.py:284-287` | `test_tcg_product_list_pg.py` を `own_database` で phase3 と登録 | この登録を消す。消した後も見張りの試験が通ること（phase3 の名前がこのファイルに無くなるので、登録は要らなくなる） |
+
+触らない範囲: 試験の本体（:123 以降）、`product_db` の共有の xact 札（:108-113）と rollback（:118）、ほかの試験ファイル、`rls_bootstrap.py`、migrations、製品コード。
+
+### 7-2. `ensure_product_list_public(engine)` の形
+1. `await ensure_product_packagings(engine)`（products を本番の形で用意する。試験用の少列版の products を確定させない決まりを守る）。
+2. 札を取らずに揃っているかを確かめる関数 `_product_list_public_ready(engine)`。次がすべて真なら何もしないで戻る:
+   - `to_regclass` が NULL でない: `public.product_kinds`・`public.type_master`・`public.conditions`・`public.units`・`public.product_format_game_links`・`public.product_blank_confirmations`、それに `_PUBLIC_PRODUCTS_DDL` が作る表のすべて（実装役が DDL を読んで列挙する）。
+   - `public.products` に `product_kind_id` 列がある（information_schema.columns）。
+   - `public.product_kinds` に code が TCG・FIGURE・GOODS の行が3件ある。
+3. `async with public_bootstrap_lock(engine):` の中で2をもう一度確かめる。揃っていなければ `async with engine.begin() as conn:` で次を流す:
+   - `SET LOCAL lock_timeout = '60s'`、続けて `LOCK TABLE public.products IN ACCESS EXCLUSIVE MODE`（`rls_bootstrap.py:137-139` と同じ順）。
+   - 今の `create_product_schema` にある public の分を、今と同じ順で流す: `_PUBLIC_PRODUCTS_DDL`（2147483647 の札の取り外しも今のまま）、085、086、`20260921_060000`、product_kinds の3行、`20260921_120000`、`20260921_070000`、`type_master_seed_sql()`、`20260919_020000`、`20260922_030000`、`20261016_190000`。phase3 は入れない。
+   - 流し方は今の `_exec_multi_stmt` をそのまま使う。
+
+### 7-3. 代替案と選んだ理由
+- 選んだ案: 確定させる形。理由: このリポジトリで同じ deadlock を直した手本（ADR-1028 便3）と同じ型で、docstring に理由が書いてある。巻き戻す transaction が持つのは、使い捨てスキーマの表と、外部キーを足すときの products の札だけになる。
+- 採らない案1: xact 札を排他にして、相手の試験も札の中で書く。相手になりうる試験（public.products を書く試験すべて）を全部直す必要があり、範囲が分からない。
+- 採らない案2: 最初に全部の表を LOCK する。この fixture の中で新しく作る表は先に LOCK できないので、穴が残る。
+
+### 7-4. リスクと対処
+- 確定させた public の表が、ほかの試験の前提を変える → 7-2 の表と行は、どれも既にほかの試験か準備が確定させている（recon §6-3）。受け入れ K3 で、全体の passed と skipped の数が main の直近の回と同じことを見る。
+- 準備（bootstrap）が public の表を作り直すと、確かめと本番の間に表が消える → 今の荷姿の表と同じ残りの危険。K4 の30回で、A の文面で数える。
+- 2147483647 の札は今と同じ使い方にして、変えない。
+
+### 7-5. 受け入れ基準
+| 基準 | 検証方法 |
+|---|---|
+| K1: `create_product_schema` の中に public を書く文が残らない | `git diff` で 7-1 の表のとおりか。`create_product_schema` の中で `public.` を grep し、`_rewire_keyword_fks` 以外が0件（Opus） |
+| K2: PR の必須チェック pytest が pass する | `gh pr checks` で pytest が pass（Opus）。試験は -q で動き、記録に試験ごとの結果は出ない（review-opus「K3 の確かめ」）ので、ファイルごとの数は K3 で代える |
+| K3: 全体の数が変わらない | PR の run の pytest の最後の行が、main の直近の回と同じ passed・skipped の数（Opus）。public の表を確定させると「表が無ければ skip」の試験が変わりうるので、skipped が違ったら原因を探してから進める |
+| K4: 合流後の main 30回で、`product_blank_confirmations` か `product_csv_test_` が出る deadlock が0件 | 30回分の失敗の記録を保存して数える（Opus・約1〜2週） |
+
+## 8. 便3: 請求書の表（B）— 直すものは無い
+- PR 5669 で直っている（recon §6-1）。合流後の main 25回で0回。
+- 受け入れ: §7-5 の K4 と同じ30回で、`tenant_issuer_profiles` が出る deadlock を数える。0件なら済み。
+
+## 9. 便4・便5: カルテと同じ形の2つ（C）と、テナント998（E）を札の中へ入れる
+根拠: recon §6-2・§6-4。手本は cc649a9dc のカルテの直し方（札なしの `admin_engine.begin()` を `async with public_bootstrap_lock(admin_engine):` で包む）。
+
+### 9-1. 変更前後
+| 場所 | 変更前 | 変更後 |
+|---|---|---|
+| `backend/tests/test_calendar_sync_tenant_reset_pg.py` `_cleanup`（:72-84） | 札なしの `admin_engine.begin()` | `async with public_bootstrap_lock(admin_engine):` で包む。中の文は変えない |
+| 同 `_setup` の、migration の後の `admin_engine.begin()`（public.users の INSERT から tenant_google_calendar_config の INSERT まで） | 札の外 | :95 の札の塊の中へ移す（カルテと同じ） |
+| `backend/tests/test_staff_join_discord.py` | 札なし | ファイルの中に小さな関数 `_public_lock(cur)`（contextmanager）を足す。`SELECT pg_advisory_lock(%s, %s)` を取り、finally で `pg_advisory_unlock` する。数は `tests.rls_bootstrap` の `_PUBLIC_BOOTSTRAP_LOCK_NAMESPACE`・`_PUBLIC_BOOTSTRAP_LOCK_KEY` を import して使う（数を直に書かない） |
+| 同 `_cleanup_pg`（:582-594） | 札なし | 本体をすべて `with _public_lock(cur):` で包む |
+| 同 `_prep_pg` の `public.permissions` と `public.users` の INSERT（:635-646） | 札なし | `with _public_lock(cur):` で包む |
+| `backend/tests/test_rls_tenant_meta_config.py` | テナント 998・999 を使う。作る塊（:87-150）と消す塊（:155-157）は札なし | 998→946・999→947 にファイルの中ですべて置き換える（スキーマ名・数・`'page-998-1'` などの文字・SET LOCAL の値・docstring）。作る塊と消す塊を、それぞれ `async with public_bootstrap_lock(admin_engine):` で包む。`from tests.rls_bootstrap import public_bootstrap_lock` を足す |
+
+触らない範囲: `test_countries_master.py`（作るだけで消さない。E の消す側が別の番号になれば、重なりは消える）、ほかの試験ファイル、`rls_bootstrap.py`、製品コード。
+
+### 9-2. 札の順と二重取り
+- 3つのファイルとも、テナントの札は取らない（自分専用の番号のため）。public の札だけを取るので、順の決まり（tenant → public）に反しない。
+- advisory の札は接続ごとに数える。staff_join は同じ接続 `env.conn` で取るので、`_cleanup_pg` を `_prep_pg` から呼んでも詰まらない（同じ接続での二重取りは数が増えるだけ）。ただし `_prep_pg` で包むのは INSERT の塊だけにして、`_cleanup_pg` の呼び出し（:634）とは重ねない。
+- calendar_sync の `_cleanup` を、ほかの札の塊の中から呼ぶ所は無い（呼び元は `_teardown` だけ・recon §6-2）。別の接続で札を二重に取ると自分を待つので、実装役は呼び元を grep で確かめる。
+
+### 9-3. 代替案と選んだ理由
+- 選んだ案: 札で包む。理由: 11-05・11-06（PR 5179）と 11-21（PR 5669）に同じ型で直し、直した種類は合流後0回（recon §6-1）。
+- 採らない案: 試験ごとに使い捨て DB にする。各試験の作りを大きく変えるうえ、時間が延びる。
+- E で番号も変える理由: 札で包むだけでは、countries_master が札なしで同じスキーマを作る形が残る。番号を分ければ、消す側と作る側が別のスキーマになる。
+
+### 9-4. リスクと対処
+- 札で包むと、その間ほかの worker の準備が待つ → 包む文は数本の短い DML・DDL なので、待ちは短い。K3 で全体の時間を見る。
+- 946・947 がほかで使われていた → recon §6-4 で0件。実装役も `git grep -w -E "946|947"` を流してから変える。
+
+### 9-5. 受け入れ基準
+| 基準 | 検証方法 |
+|---|---|
+| K5: 3ファイルの、共有 DB を書く後片付けと作る塊が、どれも札の中にある | `git diff` が 9-1 の表のとおり（Opus） |
+| K6: `test_rls_tenant_meta_config.py` に 998・999 が残らない | `git grep -n -w -E "998|999" -- backend/tests/test_rls_tenant_meta_config.py` が0件（Opus） |
+| K7: PR の pytest が pass し、全体の passed・skipped の数が main の直近の回と同じ | `gh pr checks` と PR の run の pytest の最後の行（Opus） |
+| K8: 合流後の main 30回で、`public.users` の DELETE・`tenant_946`・`tenant_947`・`tenant_973`・`tenant_978` が出る deadlock か teardown の ERROR が0件 | §7-5 の K4 と同じ記録で数える（Opus） |
+
+## 10. 維持の仕組み（便2〜5）
+- 守り手: §7-5 と §9-5 の grep を、受け入れのときに Opus が流す。
+- 機械の見張り（札の外で共有 DB の後片付けをする関数を止める試験）は、このテーマでは作らない。試しに探すと53ファイル・76関数が当たり、使い捨て DB か共有 DB かを1つずつ分ける作業が要る（recon §6-5）。PO に次のテーマとして出す。
+- KGI の数え方は §5 のとおり。便2〜5の合流がそろった後の main の30回で数える。
+
+## 11. 便2〜5の実装カード（クラウドの担当へ渡す）
+共通: 手元で試験は回さない（試験は GitHub の CI で回す）。commit して push する。PR は作らない（Opus が作る）。`git add` するのは本カードに書いたファイルだけ。
+
+### 11-1. カード甲（便2）
+- 作業場所: `bash scripts/new-worktree.sh release/ci-test-shared-collisions-design2` で場所を作り、`git switch -C release/ci-test-shared-collisions-design2 origin/release/ci-test-shared-collisions-design2` で合わせる。
+- 変更: §7-1・§7-2 のとおり。
+- 確かめ:
+  1. `git diff --stat origin/main...HEAD -- backend` が `backend/tests/test_tcg_product_list_pg.py` と `backend/tests/test_tenant_loop_migration_guard.py` の2つだけ。
+  2. `create_product_schema` の本体で `public.` を grep し、出てくるのが `_rewire_keyword_fks` の呼び出しだけ。
+  3. `cd backend && ruff check tests/test_tcg_product_list_pg.py tests/test_tenant_loop_migration_guard.py` が0件。
+  4. `cd backend && python -m pytest tests/test_tenant_loop_migration_guard.py -q`（DB を使わない静的な見張り）が pass。
+- 想定の分かれ道:
+  - 行番号が今の main とずれていた → 中身で場所を決める。中身も違っていたら止めて報告する。
+  - 見張りの試験が「phase3 を流すのに登録が無い」などで落ちた → 登録を消した理由（このファイルが phase3 を流さなくなった）を確かめ、落ちる理由が別なら止めて報告する。
+  - `_PUBLIC_PRODUCTS_DDL` の表を確定させると products の少列版が作られる形だった → 止めて報告する（ensure_product_packagings が先に本番の形の products を作るので、起きない見込み）。
+
+### 11-2. カード乙（便4・便5）
+- 作業場所: `bash scripts/new-worktree.sh release/ci-test-shared-collisions-bin45`（origin/main から）。
+- 変更: §9-1 のとおり。
+- 確かめ:
+  1. `git diff --stat origin/main...HEAD` が3ファイルだけ。
+  2. `git grep -n -w -E "998|999" -- backend/tests/test_rls_tenant_meta_config.py` が0件。`git grep -n -w -E "946|947" -- backend migrations scripts .github` が `test_rls_tenant_meta_config.py` だけ。
+  3. `cd backend && ruff check tests/test_calendar_sync_tenant_reset_pg.py tests/test_staff_join_discord.py tests/test_rls_tenant_meta_config.py` が0件。
+  4. `git grep -n "_cleanup(" -- backend/tests/test_calendar_sync_tenant_reset_pg.py` の呼び元が、札の塊の中に無い。
+- 想定の分かれ道:
+  - `_PUBLIC_BOOTSTRAP_LOCK_NAMESPACE` などの名前が rls_bootstrap に無かった → 止めて報告する。
+  - meta_config の 998・999 が、ほかのファイルの試験と値で結びついていた → 止めて報告する。
+
+## 12. 審査（便2〜5・Opus 自己審査・2026-11-27）
+同じ AI による審査で、独立した第二者の審査ではない。
+- 便2: 待ち合いの輪（recon §6-3）は「巻き戻す transaction が public の表の ACCESS EXCLUSIVE を持ち続け、さらに別の表の ACCESS EXCLUSIVE を待つ」ことで閉じる。§7 の後、transaction の中で public に取る札は、`_rewire_keyword_fks` が外部キーを足すときの products の SHARE ROW EXCLUSIVE だけになる。これは相手が外部キーの確かめで取る ROW SHARE とぶつからない（PostgreSQL 16 の札の表・explicit-locking.html）。このため、記録で見た輪は閉じない。
+- 便2: 確定させる表と行は、どれもほかの試験か準備が既に確定させている（recon §6-3）。数の変化は K3 で見る。
+- 便3: 直すものは無い。根拠は合流前後の回数（recon §6-1）。
+- 便4・便5: 直し方は、合流後0回になった PR 5179・PR 5669 と同じ型である。札の順の決まり（tenant → public）に反しない（§9-2）。
+- 受け入れ基準 K1〜K8 は、どれも差分・grep・CI の記録で ○× を決められる。
+- 判定: 便2〜5は APPROVE。
+- 未解決: 準備が public の表を作り直す場合の残りの危険（§7-4）。これは K4 の30回で数える。見張りの試験は次のテーマ（§10）。
