@@ -61,6 +61,7 @@
 | 機能キーワード | 正準 ADR | 設計書 | コードの場所 | 補足 |
 |---|---|---|---|---|
 | i18n / 国際化 / ja.json / en.json | **ADR-027** | - | frontend/src/locales/** | 全 UI 文字列 `t()` 経由・キー同期必須 |
+| LINE 書き出しアプリ / 端末自動化 / 省電力 / AlarmManager / 電池最適化 / ユーザー補助 / 記録の保持 | **ADR-1090** | - | tools/line-auto-export-app/** | 端末アプリは省電力の間引きを前提に作る。除外の外れと空振りを記録し、設定画面から利用者が戻せる。実測値と Android の一般仕様を区別し回数の具体値に依存しない。記録は文字だけ（画面画像・音声・動画は保存しない）・保持は 90 日 |
 | リリース / release PR / develop→main / branch protection | **ADR-050** | [branch-operations](../specs/branch-operations/README.md) | - | merge commit のみ（squash 禁止＝back-merge 構造バグ防止）・Ruleset 15777895 |
 | リリース相乗り防止 / 危険変更の develop 入口関所 / develop=出荷可能 | **ADR-135** | - | - | 危険変更(migrations/deploy.yml/scripts)は PO GO まで feature で待機・develop マージ＝本番投入可宣言。CODEOWNERS/PRテンプレ済、B（B-2 方式）・C（main 必須チェック追加）・D・E も実施済み（ADR-135:32-60） |
 | 自動マージ / human-in-the-loop / develop 自動 merge | **ADR-056** | - | - | develop は AI 自動 merge・main は人間。通知集約 |

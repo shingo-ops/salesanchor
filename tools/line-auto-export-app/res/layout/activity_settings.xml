@@ -139,5 +139,35 @@
         android:id="@+id/scheduler_toggle_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
+
+    <!-- ここから電池最適化の除外（design.md追補「電池最適化で後回しにされたことを検知・記録・
+         復旧できる仕組み」2026-11-26）。除外が外れるとAlarmManagerの発火が大きく遅れるため、
+         利用者が自分で確認・復旧できる手段として用意する。 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="16dp"
+        android:background="#33000000" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/battery_section_title"
+        android:textSize="20sp"
+        android:paddingBottom="16dp" />
+
+    <TextView
+        android:id="@+id/battery_status_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:paddingBottom="8dp" />
+
+    <Button
+        android:id="@+id/battery_open_settings_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/battery_open_settings_button" />
 </LinearLayout>
 </ScrollView>
