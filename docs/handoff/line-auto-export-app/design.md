@@ -177,7 +177,7 @@ javac `--release 8` → dalvik-exchange で classes.dex → aapt でリソース
 3. 「記録用ストレージ権限を許可」ボタンで `WRITE_EXTERNAL_STORAGE` を許可（Android 10+ではスコープドストレージの影響で `Download/` 配下への書き込みが制限される可能性があり未検証＝下記「未対応事項」）。
 4. 設定画面の対象グループ欄を確認・保存（既定は `WeGo売ります掲示板グループ`）。
 5. 対象グループ宛にLINEメッセージを送ってもらい、通知が届いた後に設定画面へ戻って「記録件数」「最終記録」「記録先」が更新されるか確認。
-6. `adb shell run-as jp.salesanchor.lineexport ...` またはファイルマネージャで `Download/sa-line-notify/raw-YYYYMMDD.jsonl` と `talk-YYYYMMDD.txt` の中身を確認し、本文・改行・絵文字が欠落なく入っているか、`talk-*.txt` が `android_parser.py` でパースできる形式になっているかを確認する。
+6. `adb shell run-as jp.salesanchor.lineexport ...` またはファイルマネージャで `Download/sa-line-notify/raw-YYYYMMDD.jsonl` と `talk-YYYYMMDD.txt` の中身を確認し、本文・改行・絵文字が欠落なく入っているか、`talk-*.txt` が `tools/termux-line-import/android_parser.py` でパースできる形式になっているかを確認する。
 
 ### 未対応・不明点
 
@@ -278,13 +278,13 @@ uses-implied-permission: name='android.permission.READ_EXTERNAL_STORAGE' reason=
 
 1. **ADB版はLINEの要素をすべてノードのテキストで特定している**。`/root/line-auto-export/flow.sh:52,54,57,60,64` の `tap_by`/`find_scroll` に渡す正規表現は
    `text="WeGo売ります・BOX`（ホームのショートカット、前方一致）／`content-desc="Menu ボタン"`／`text="設定"`／`text="トーク履歴を送信"`／`text="Termux"`。
-   座標は `tap_by()` が `uiautomator dump` の `bounds` からその場で計算している（`flow.sh:19,23`）＝固定座標ではない。
+   座標は `tap_by()` が `uiautomator dump` の `bounds` からその場で計算している（`tools/line-auto-export/flow.sh:19,23`）＝固定座標ではない。
    `uiautomator dump` が読むのは **AccessibilityService が読むのと同じノードツリー**であり、この経路は本番で 2026-10-07 に44回成功している。
    → **LINEの各画面のノードは取得できると実証済み**。アプリ側は `ACTION_CLICK`（クリック可能な祖先へ委譲）で同じ操作ができ、座標計算が不要になるぶん ADB版より堅い。
 2. **例外が1つある**: Termuxの保存ダイアログの `EDIT` ボタンは **uiautomator に露出しない**（`/root/line-auto-export/auto-export.sh:13` のコメント、2026-09-17 スクリーンショットで確認）。
    ADB版も固定座標 `EDIT_X=872, EDIT_Y=1237`（画面1080x2340）でタップしている。
    → アプリ側も**この1点だけは座標ジェスチャ**にする（比率 x=0.8074, y=0.5287）。ADB版と同じ脆さであり、悪化はしない。
-3. 送信（salesanchorへのPOST）は Termux内の `client.py` が担い、宛先は固定HTTPS（`client.py:22`）。Wi-Fi/モバイルを区別するコードは1行も無い。
+3. 送信（salesanchorへのPOST）は Termux内の `tools/termux-line-import/client.py` が担い、宛先は固定HTTPS（`tools/termux-line-import/client.py:22`）。Wi-Fi/モバイルを区別するコードは1行も無い。
    → **アプリにINTERNET権限は追加しない**（誤送信の構造的防止を維持）。段階2でもアプリは「LINEのUIを操作してTermuxへ渡す」までを担う。
 
 ### 実装範囲（段階2のみ。スケジューラ・使用中スキップ・再ロックは段階3）
@@ -303,7 +303,7 @@ uses-implied-permission: name='android.permission.READ_EXTERNAL_STORAGE' reason=
 | 9 | 共有シートの到達 | `Termux` のノードが見つかること | `share_sheet` |
 | 10 | `Termux` をクリック | - | `termux_target` |
 | 11 | `EDIT` を**座標タップ**（比率 0.8074, 0.5287） | ダイアログはノードに露出しないため、ウィンドウのクラス名 `TermuxFileReceiverActivity` を **最大5秒**ポーリング（ADB版 auto-export.sh:154 の `seq 1 10`×`sleep 0.5`＝5秒と同値）→ 検出したら**1秒待って**タップ（同:156 の `sleep 1` と同値）。5秒で検出できなくても**タップは行い**、診断に `editクラス未検出` を残す（ADB版はここで失敗扱いにするが、このダイアログはそもそもノードに露出しないため、アプリ側はクラス名が読めないことを失敗とみなさない） | `edit_button` |
-| 12 | 後片付けは**何もしない** | ADB版の BACK×3（flow.sh:75-78）は**本番では実行されない**: `auto-export.sh:143` は `flow.sh 1 keep` と呼び、`flow.sh:73` の `keep` 分岐で後片付けの手前で `exit 0` する。本番は EDIT タップ後、`outbox.sqlite3` の送信結果を最大240秒待ってから HOME+SLEEP する（auto-export.sh:159-170）。**EDITタップ直後にBACKを撃つと保存ダイアログを取り消す恐れがある**ため、段階2では画面をそのまま残す。HOME・再ロックは段階3の範囲 | - |
+| 12 | 後片付けは**何もしない** | ADB版の BACK×3（flow.sh:75-78）は**本番では実行されない**: `tools/line-auto-export/auto-export.sh:143` は `tools/line-auto-export/flow.sh 1 keep` と呼び、`tools/line-auto-export/flow.sh:73` の `keep` 分岐で後片付けの手前で `exit 0` する。本番は EDIT タップ後、`outbox.sqlite3` の送信結果を最大240秒待ってから HOME+SLEEP する（auto-export.sh:159-170）。**EDITタップ直後にBACKを撃つと保存ダイアログを取り消す恐れがある**ため、段階2では画面をそのまま残す。HOME・再ロックは段階3の範囲 | - |
 
 段階名は **ADB版 flow.sh と同じ語**（`shortcut`/`open_chat`/`menu_button`/`open_menu`/`settings_item`/`open_settings`/`export_item`/`share_sheet`）に揃える。
 理由: 既存の `auto-export.log` の失敗履歴（例 2026-10-07 07:03 の `open_settings`）と直接比較できるようにするため。`group_mismatch`・`termux_target`・`edit_button` は段階2で新設。
@@ -965,4 +965,4 @@ watermark（取り込みの起点）は送信が受理されたときだけ進�
 
 ### 変えていないもの
 
-`USE_EXACT_ALARM` の宣言（効かないため）、`targetSdkVersion`（24 のまま）、`minSdkVersion`（23 のまま）、アラームの張り方（`setExactAndAllowWhileIdle` のまま）、送信側 `client.py`、`termux-job-scheduler` の登録。
+`USE_EXACT_ALARM` の宣言（効かないため）、`targetSdkVersion`（24 のまま）、`minSdkVersion`（23 のまま）、アラームの張り方（`setExactAndAllowWhileIdle` のまま）、送信側 `tools/termux-line-import/client.py`、`termux-job-scheduler` の登録。
