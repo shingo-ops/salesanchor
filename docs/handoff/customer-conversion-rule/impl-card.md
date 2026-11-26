@@ -54,13 +54,15 @@
 4. `leads.py`:
    - `create_lead`: `data.status == "existing_customer"` なら 422 `detail="existing_customer_is_automatic"`。
    - `update_lead`: 新しい status が existing_customer で、今の status が existing_customer でなければ同じ 422。今が existing_customer で同じ値を送るのは通す。
+   - `convert_lead`（商談に進める）: 今の status が existing_customer なら 409 `detail="already_existing_customer"`（早い 409 の所と、UPDATE の WHERE に `AND status <> 'existing_customer'` の両方）。試験 1 本。
    - `return LeadResponse(...)` の 5 か所すべてで `registration_completed=await is_registration_completed(db, tenant_id, <その lead の id>)` を入れる。
 5. `backend/app/schemas/lead.py`: `LeadResponse` に `registration_completed: bool | None = None`。
-6. `frontend/src/lib/apiErrorReason.ts`: 表に `existing_customer_is_automatic: "apiError.existingCustomerIsAutomatic",` を 1 行。`ja.json`・`en.json` の `apiError` に同じキーを足す。ja: 「既存顧客には手で変えられません。登録フォーム・会社・支払いの 3 つがそろうと自動で切り替わります。」 en: "You can't set Existing customer by hand. It switches automatically once the registration form, company and payment are all in place."
+6. `frontend/src/lib/apiErrorReason.ts`: 表に `existing_customer_is_automatic: "apiError.existingCustomerIsAutomatic",` を 1 行。`ja.json`・`en.json` の `apiError` に同じキーを足す。ja: 「既存顧客には手で変えられません。登録フォーム・会社・支払いの 3 つがそろうと自動で切り替わります。」 en: "You can't set Existing customer by hand. It switches automatically once the registration form, company and payment are all in place." もう 1 行 `already_existing_customer: "apiError.alreadyExistingCustomer",`。ja: 「この人はすでに既存顧客です。画面を読み込み直してください。」 en: "This person is already an existing customer. Please reload the page."
 7. `frontend/src/constants/leadStatus.ts`: `export const MANUAL_LEAD_STATUS_CODES = LEAD_STATUS_CODES.filter((c) => c !== "existing_customer");`（型は `LeadStatusCode[]`）。
 8. `LeadEditPage.tsx:73`・`LeadFormFields.tsx:44`: 手で選べる一覧を使う。今の値が existing_customer の人は、その値を選択肢の先頭に足して表示だけする（選び直しで他の段階には変えられる。既存顧客に戻す選択肢は今の値のときだけ見える）。
-   - `LeadEditPage.tsx:128` の保存: `status` は開いた時点の値（`:83` の控え）と違うときだけ送る（design §4-2）。
-9. `LeadsPage.tsx`: 絞り込み（:284）は 7 つのまま。新規作成（:349）は手で選べる一覧。編集の保存（:210）: `status` は開いた時点の値（`toForm` `:109` の控え）と違うときだけ送る（design §4-2）。失注の理由（`buildLostReasonUpdatePayload`）は今のまま。
+   - `frontend/src/lib/query/useSeededForm.ts`: 戻り値に `base: F` を足す（`seed !== null && ready ? seed.base : empty`）。ほかは変えない。
+   - `LeadEditPage.tsx:128` の保存: `status` は `base.status` と違うときだけ送る（design §4-2）。`leadQ.data.status` とは比べない。
+9. `LeadsPage.tsx`: 絞り込み（:284）は 7 つのまま。新規作成（:349）は手で選べる一覧。編集の保存（:210）: `status` は `baseForm.status` と違うときだけ送る（design §4-2）。`frontend/src/hooks/useRecordDrawer.ts` に `baseForm` の state を足し、`handleRowClick` で `toForm` の結果を `editForm` と同じに入れ、`closeDrawer` で `emptyForm` に戻し、戻り値に足す（ほかは変えない）。失注の理由（`buildLostReasonUpdatePayload`）は今のまま。
 10. `karteLayout.ts:114`: `["existing_customer"]` だけにする。`karteLayout.test.ts` の追客の期待を「商談中と同じ見せ方」に直す。
 11. `inbox.types.ts:73` の `LeadDetail` に `registration_completed?: boolean | null;`。
 12. `InboxKartePanel.tsx`（design §4-3）:
@@ -73,7 +75,7 @@
     - 新規 `backend/tests/test_customer_conversion.py`（K1 の 6 通り×③の 2 通り・K2 の 7 通り・K3 の 2 本・道ごとに 1 本・手で請求先を入れた人・判定が例外でも入金が残る・公開の道で監査の表に書かない・1 か所だけの試験 (a)(b)・`registration_completed` が 5 か所の返り値で入り、一覧では None）。
     - 新規 `backend/tests/test_customer_conversion_pg.py`（`test_assistant_karte_pg.py` と同じ形）。
     - `backend/tests/test_analytics.py:625,692,770,830,967-973` を、作った後に SQL で `UPDATE leads SET status = 'existing_customer'` する形へ。ほかに API で existing_customer を送る試験があれば同じ。
-    - 画面: `karteLayout.test.ts`・帯とメニューの出し分けの試験（`InboxKartePanel.discordButtons.test.tsx` と同じ置き方で新規）・`MANUAL_LEAD_STATUS_CODES` に既存顧客が無いこと・カルテの保存の PATCH に `status`・`registration_completed` が入らないこと（新規 `frontend/src/pages/inbox/useInboxState.blurSave.test.tsx`・`useInboxState.cache.test.tsx` と同じ置き方）・段階を選び直さない保存で PATCH に `status` が入らず、選び直すと入ること（新規 `frontend/src/pages/leads/LeadEditPage.statusSave.test.tsx` と、`LeadsPage.temperature.test.tsx` と同じ置き方の新規 `frontend/src/pages/leads/LeadsPage.statusSave.test.tsx`）。
+    - 画面: `karteLayout.test.ts`・帯とメニューの出し分けの試験（`InboxKartePanel.discordButtons.test.tsx` と同じ置き方で新規）・`MANUAL_LEAD_STATUS_CODES` に既存顧客が無いこと・カルテの保存の PATCH に `status`・`registration_completed` が入らないこと（新規 `frontend/src/pages/inbox/useInboxState.blurSave.test.tsx`・`useInboxState.cache.test.tsx` と同じ置き方）・段階を選び直さない保存で PATCH に `status` が入らず、選び直すと入ること。編集画面は直し始めた後に取り直しで段階が existing_customer に変わる場合も入らないこと（新規 `frontend/src/pages/leads/LeadEditPage.statusSave.test.tsx` と、`LeadsPage.temperature.test.tsx` と同じ置き方の新規 `frontend/src/pages/leads/LeadsPage.statusSave.test.tsx`）。
 
 触らない: `migrations/`・`.github/`・`scripts/`・数え方（analytics・dashboard・goals・reports）の式・CSS・連絡先タブ・`karte-visual-gate.spec.ts` の基準画像。
 
@@ -92,6 +94,6 @@
 
 ## 4. 終わり方
 
-1. `cd backend && pytest -q tests/test_customer_conversion.py tests/test_analytics.py tests/test_api_error_reason_sync.py`・`cd frontend && npm run lint && npx tsc --noEmit && npx vitest run src/pages/inbox src/constants src/lib` を流し、生の出力をそのまま報告に貼る。
+1. `cd backend && pytest -q tests/test_customer_conversion.py tests/test_analytics.py tests/test_api_error_reason_sync.py`・`cd frontend && npm run lint && npx tsc --noEmit && npx vitest run src/pages/inbox src/pages/leads src/constants src/lib src/hooks` を流し、生の出力をそのまま報告に貼る。
 2. commit（1 つか、backend と frontend の 2 つ）→ `git push -u origin HEAD`。
 3. PR は作らない（Opus が作る）。最後の行に `DONE` か `BLOCKED: <理由>` か `NEEDS_DECISION: <問い>`。
