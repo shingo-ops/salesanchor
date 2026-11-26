@@ -88,4 +88,29 @@
 
 ## 結果（担当が書く）
 
-- （ここに確かめた公式資料・未確認の点・shellcheck の結果を書く）
+記入: 2026-11-26（担当: 実装役）。作ったのは `trial-install/` の 6 ファイル（01〜06。カードの節 1〜7 のうち、2 は 01 の中身のため）。サーバーには繋いでいない。
+
+### 受入条件
+- ファイルがそろう: 01-prepare.sh・02-install.sh・03-po-login.md・04-check-and-start.sh・05-daily-read.sh・06-rollback.sh（○）
+- `bash -n`: 5 本とも 0 件（○）
+- unit の値（G2・G7・G8）と §12-2・§0 の値の照合: MemoryHigh=1200M・MemoryMax=1500M・MemorySwapMax=0・OOMScoreAdjust=1000・IPAddressDeny（並びは §12-2 と同じ）・IPAddressAllow=127.0.0.53・ProtectSystem=strict・ReadWritePaths=/home/ops-agent・InaccessiblePaths=/home/ubuntu /root /opt/salesanchor-monitoring・PrivateTmp・NoNewPrivileges（○）。04 の `-p` の値も同じ。IPv6 は足していない（§0 の測定による）。
+- 鍵の形（sk-ant・ghp_・PRIVATE KEY・xox）: 0 件（○）
+- 05-daily-read.sh: `rm`・`>`・`systemctl start/stop/restart`・`docker restart` が 0 件（○）
+- 01 の settings.json の中身は JSON として正しい（○）
+- shellcheck: この環境に無く未実施。
+
+### 公式資料で確かめた点
+- 道具の名前: `mcp__plugin_<plugin>_<server>__<tool>`（https://code.claude.com/docs/en/mcp・permissions）。plugin 名 discord・サーバー鍵 discord は公式プラグインの `.mcp.json`、道具 7 つの名前は README の表（https://github.com/anthropics/claude-plugins-official/tree/main/external_plugins/discord）。よって `mcp__plugin_discord_discord__reply` の形で書いた。server.ts の登録名そのものは未確認（README の表による）。
+- Read の絶対パスは `//` 始まり（`/` 始まりは別の意味）→ `Read(//home/ops-agent/.claude/**)` と書いた（permissions）。
+- `defaultMode: "dontAsk"`: カードの確認（permission-modes）を信用。この回は頁の原文を引いていない。
+- Claude Code・Bun の入れ方（setup・Bun の README）、`~/.local/bin/claude` の場所（setup）。
+- systemd-run の `--uid`・`--pty`・`--pipe`・`--wait`・`--collect`・`-p`・`--working-directory`: 手元の systemd 255 の `--help` で確認。公式の man は取れず（freedesktop.org がこのクラウドから引けない）、Context7 も無かった。
+
+### 未確認・気づき（審査役と PO に見てほしい点）
+1. **公式の Claude Code の動作条件は「4 GB+ RAM」**（setup）。prod2 の空きは約 2.5GB。設計の「約 512MB 要る」と食い違う。動くかは導入で分かる（止まるだけで壊れない）が、PO は知っておく必要がある。
+2. **G4 が設定用の命令まで止める恐れ**: `/discord:configure`・`/discord:access` は設定ファイルを書く。Write を deny した状態で通るかは未確認（設計 §12-7）。03 に「止まったら自分で直さず Opus へ」と書いた。
+3. deny の優先順・Grep/Glob が `Read(...)` の deny に従うか: 未確認（Grep・Glob の deny は足していない。カードの一覧どおり）。
+4. tmux と Type=forking（U-a）: 正常終了のあと Restart=on-failure は効かない。本体の見つけ方も未確認。K2 で確かめる。
+5. Bun の入れ方に unzip が要るかは未確認。02 は curl・unzip が無ければ入れずに止める確認を足した（カード外の追加。害は無い）。
+6. 02 の最後の `claude --version`・`bun --version` もカード外の追加（入った確認）。04 の G4 設定ファイルの確認も同様。
+7. G7 の下でのログインと Discord の道具の動作は T1 で確かめる（04 は入口の確認だけ）。
