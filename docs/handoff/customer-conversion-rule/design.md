@@ -1,6 +1,6 @@
 # design: 「顧客」に切り替える基準（便1）
 
-状態: **KGI は PO 承認済み**（2026-11-25 チャット「1」。K1〜K7 と §3 の前提）。設計審査 1 回目は REVISE（2026-11-25・必須 4 件）。必須 2〜4 と推奨は本版で直した。必須 1（「登録済み」の判定のそろえ方）は PO が 2026-11-26「1」で決めた（§3・会社に既定の請求先があること）。調査: [recon.md](recon.md)。ADR: [ADR-1090](../../adr/ADR-1090-customer-conversion-three-conditions.md)（Proposed）。
+状態: **KGI は PO 承認済み**（2026-11-25 チャット「1」。K1〜K7 と §3 の前提）。設計審査 1 回目は REVISE（2026-11-25・必須 4 件）。2 回目は REVISE（2026-11-26・必須 3 件＝公開の道の監査の記録・1 か所だけの試験の数え方・一覧の新規作成の選択肢。推奨 4〜6 も本版で直した）。必須 2〜4 と推奨は本版で直した。必須 1（「登録済み」の判定のそろえ方）は PO が 2026-11-26「1」で決めた（§3・会社に既定の請求先があること）。調査: [recon.md](recon.md)。ADR: [ADR-1090](../../adr/ADR-1090-customer-conversion-three-conditions.md)（Proposed）。
 
 ## 1. 目的（PO の言葉は recon §1）
 
@@ -40,14 +40,14 @@ PO の決定:
 
 ### 4-1. 判定は 1 か所（backend）
 
-新しい関数 `promote_lead_if_customer(db, tenant_id, lead_id) -> bool` を `backend/app/services/customer_conversion.py`（新規）に置く。
+新しい関数 `promote_lead_if_customer(db, tenant_id, lead_id, *, actor_user_id: int | None, via: str) -> bool` を `backend/app/services/customer_conversion.py`（新規）に置く。
 
 - 最初に、そのリードの行を `SELECT ... FROM leads WHERE id = :lead_id FOR UPDATE` で押さえる（PostgreSQL のときだけ。試験の SQLite は FOR UPDATE が使えないので `is_postgresql(db)` で分ける・`registration_tokens.py:240-243` と同じ形）。理由: 入金とフォームの送信が別々の取引で同時に走ると、どちらも相手の書き込みが見えず（READ COMMITTED）、3 つそろっても切り替わらない。行を押さえると後の取引は前の取引の commit を待ち、その後の SQL で相手の書き込みが見える。
 - その後で、3 つの条件を 1 本の SQL で確かめる（押さえた後の別の文にする）。条件の SQL はこの関数の中だけに書く。
 - 登録済みの判定は同じファイルの `is_registration_completed(db, tenant_id, lead_id) -> bool` に置き、`promote_lead_if_customer` もこれを使う（§4-3 の 3 か所もこれを呼ぶ）。
 - テナントの表（leads・companies・company_addresses・invoices・orders）は `tenant_table_ref(db, tenant_id, "<表>")`（`backend/app/auth/dependencies.py:438`）で書き、search_path に頼らない。判定に `public.registration_tokens` は使わない（PO 11/26「1」）。
 - 会社（②）は会社の状態（active・archived など）を問わず数える。理由: 自動で戻さない決まり（§3）と合わせ、一度そろった記録の扱いを状態で変えないため。
-- そろっていれば `UPDATE leads SET status = 'existing_customer', updated_at = NOW() WHERE id = :lead_id AND status <> 'existing_customer'` を行う。監査の記録（`record_audit_log`、action="auto_convert"）を残す。
+- そろっていれば `UPDATE leads SET status = 'existing_customer', updated_at = NOW() WHERE id = :lead_id AND status <> 'existing_customer'` を行う。記録の残し方（審査 2 回目の必須 1）: `audit_logs.user_id` は NOT NULL（`backend/app/services/tenant.py:484`）で、登録フォームの送信・配送先/請求先のフォーム・PayPal の戻りと通知はログインした人がいない道。`actor_user_id` があるとき（ログインした人の道）だけ `record_audit_log`（action="auto_convert"・new_data に `{"status": "existing_customer", "via": via}`）を書く。`actor_user_id` が None のときは監査の表に書かず、`logger.info("[customer_conversion] auto_convert tenant=%s lead=%s via=%s")` を残す（今もこれらの公開の道は監査の表に書いていない・`registration_tokens.py` の `record_audit_log` は `create_token` の 1 か所だけ）。架空のシステム利用者は作らない。`via` は表の「道」の英字名（例 `register_form`・`invoice_pay`・`paypal_return`・`paypal_webhook`・`order_paid`・`company_create`・`company_update`・`add_address`・`change_billing`・`lead_merge`・`company_merge`・`invoice_paypal_check`）。
 - 呼んだ側の取引の中で動く（commit は呼び元）。
 - 失敗の切り離し: 関数の中身は `async with db.begin_nested():`（SAVEPOINT・`backend/app/routers/assistant.py:215` と同じ形）で包み、判定が例外を出したら SAVEPOINT だけを戻して `logger.error` を残し、False を返す。入金・フォームの記録は消さない（PayPal の戻りと通知は記録と commit が 1 つの try の中にあり、包まないと入金の記録ごと rollback される・`integrations.py:797-813`・`:940-962`）。切り替え損ねた人は、3 つのどれかが次に書かれたときに確かめ直される。
 
@@ -73,11 +73,13 @@ PO の決定:
 - 配送先を足す・請求先を変えるフォームは、今の決まりでは登録済みの人にしか出ないので、新しく①を満たすことは無い。それでも `company_addresses` を書く道をすべて表に入れ、「書く道＝呼ぶ道」を grep で照らせる形にする。
 - 実装役は着手時に `git grep -n -E "paid_at *= *(\{PAID_AT_SQL\}|NOW)|INSERT INTO companies|UPDATE companies SET|mark_token_used|company_addresses"` をもう一度流し（`company_addresses` は INSERT・UPDATE・DELETE の行だけを見る）、上の表と食い違えば止めて報告する。
 
+- 呼び元の `actor_user_id`: ログインした人の道は `current_user.id`。公開の道（登録フォーム・配送先・請求先・PayPal の戻りと通知）は None。
+
 ### 4-2. 手で既存顧客にする道を閉じる（backend＋画面）
 
 - `leads.py:490` `update_lead`: 新しい status が existing_customer で、今が existing_customer でなければ 422（`detail="existing_customer_is_automatic"`）。
 - `leads.py:401` `create_lead`: status が existing_customer なら 422。
-- 画面: 選択肢の一覧から existing_customer を外した「手で選べる段階」の一覧を `frontend/src/constants/leadStatus.ts` に 1 つ足し（例 `MANUAL_LEAD_STATUS_CODES`）、`LeadEditPage.tsx:73`・`LeadFormFields.tsx:44` はそれを使う。今が既存顧客の人の編集画面では、今の値は表示する（選び直しはできない）。`LeadsPage.tsx:143` は絞り込み用なので 7 つのまま。
+- 画面: 選択肢の一覧から existing_customer を外した「手で選べる段階」の一覧を `frontend/src/constants/leadStatus.ts` に 1 つ足し（例 `MANUAL_LEAD_STATUS_CODES`）、`LeadEditPage.tsx:73`・`LeadFormFields.tsx:44` はそれを使う。今が既存顧客の人の編集画面では、今の値は表示する（選び直しはできない）。`LeadsPage.tsx:143` の一覧は 2 か所で使われている（審査 2 回目の必須 3）: 絞り込み（`:284`）は 7 つのまま、新規作成の画面（`:349`）は手で選べる段階の一覧に替える。
 - 422 の画面の文は `t()` で ja/en 両方に足す（ADR-027）。
 
 ### 4-3. カルテ（画面）
@@ -107,15 +109,19 @@ PO の決定:
 
 | 危ないこと | 対処 |
 |---|---|
-| 条件を書く道を 1 つ見落とし、そろっても既存顧客にならない | 実装前に `companies.lead_id`・`invoices.paid_at`・`registration_tokens.used_at` を書く道を git grep で全部数え、カードに一覧で書く。試験で道ごとに 1 本 |
+| 条件を書く道を 1 つ見落とし、そろっても既存顧客にならない | 実装前に `companies.lead_id`・`company_addresses`・`invoices.paid_at`・`orders.paid_at` を書く道を git grep で全部数え（§4-1 の grep）、カードに一覧で書く。試験で道ごとに 1 本 |
 | 手で既存顧客を付けていた担当者が困る | HIGH LIFE JPN で既存顧客を付けた人は今 0 人（recon §4）。画面の 422 の文で「支払いがそろうと自動で切り替わります」と出す |
 | 既存顧客にだけ AI が対応しない決まり（ADR-015）への影響 | 2026-11-25 `git grep -n existing_customer -- backend/app` で、AI の返事の道に既存顧客を見て分ける箇所は 0 件（数え方・型の定義だけ）。今回の変更で AI の動きは変わらない |
+| 行を押さえる順が道で逆になる（会社を直す道は会社→リード `companies.py:610`、リードの統合はリード→会社 `leads.py:3187`）。まれに PostgreSQL がデッドロックで片方を止める | 止まった側は SAVEPOINT が戻るだけで、入金・住所の記録は残る（判定の失敗は `logger.error`）。切り替えはそのとき抜け、3 つのどれかが次に書かれたときに確かめ直される。既知のこととして残す |
+| 公開の道（フォーム・PayPal）の切り替えは監査の表に残らない | `logger.info` に tenant・lead・via を残す（§4-1）。リードの `updated_at` も変わる |
 | 成約数が減って見える | 今の HIGH LIFE JPN は既存顧客 0 人なので、今の数は変わらない |
 
 ## 7. 受入の確かめ方（KGI の検証方法の詳しい手順）
 
-- backend 試験: `backend/tests/test_customer_conversion.py`（新規）。K1 の 6 通り・K2 の 7 通り・K3 の 2 本・各道 1 本。会社の画面で手で請求先を入れた人（フォームを使っていない人）も、支払いで既存顧客になる試験 1 本。判定が例外を出しても入金の記録が残る試験 1 本。
-- 1 か所だけの試験（ADR-1090 受入条件の最後の行を ○× にする）: `backend/app` の中で `status = 'existing_customer'` を書く SQL と、登録済みの判定の SQL（`address_type = 'billing'` と `is_default`）が、決めた関数のファイルにしか無いことを、ファイルを読んで数える試験 1 本。
+- backend 試験: `backend/tests/test_customer_conversion.py`（新規）。K1 の 6 通り・K2 の 7 通り・K3 の 2 本・各道 1 本。会社の画面で手で請求先を入れた人（フォームを使っていない人）も、支払いで既存顧客になる試験 1 本。判定が例外を出しても入金の記録が残る試験 1 本。ログインした人がいない道（登録フォームの送信・PayPal の戻り）で切り替わり、監査の表に書かずに済む試験 1 本（審査 2 回目の必須 1）。
+- 今ある試験の直し（審査 2 回目の推奨 4）: `backend/tests/test_analytics.py:625,692,770,830,967-973` は API から status=existing_customer を送ってリードを作っており、422 で落ちる。試験の下ごしらえで、作った後に SQL で直接 `UPDATE leads SET status = 'existing_customer'` を入れる形に替える（数え方の試験の目的は変えない）。ほかにも API で existing_customer を送る試験があれば同じに直す（実装役が `git grep -n existing_customer -- backend/tests frontend/src` で数える）。
+- PostgreSQL の試験（審査 2 回目の推奨 6）: `backend/tests/test_customer_conversion_pg.py`（新規・`test_assistant_karte_pg.py` と同じ形で、CI の `RLS_TEST_DATABASE_URL`・`RLS_ADMIN_DATABASE_URL` があるときに動く・`.github/workflows/test.yml:240-242`）。FOR UPDATE の分岐が通ること、2 本の取引（入金とフォーム送信）を順に重ねて最後に既存顧客になること、`tenant_table_ref` で別テナントの表を見ないことを確かめる。
+- 1 か所だけの試験（ADR-1090 受入条件の最後の行を ○× にする・審査 2 回目の必須 2 で数える形を絞った）: `backend/app` の `.py` を読み、(a) 正規表現 `SET\s+status\s*=\s*'existing_customer'` に合う行が `services/customer_conversion.py` にだけあること（読む側の `WHERE status = 'existing_customer'` は数えない）、(b) 登録済みの判定（`c.lead_id` と `'billing'` と `is_default` が 1 つの SQL に並ぶ形）が `services/customer_conversion.py` にだけあること。(b) は `registration_tokens.py` に `address_type = 'billing'` が 0 件になることで確かめる（今の写し 2 か所 `:86-102`・`:105-120` を関数の呼び出しに替えるため）。会社の画面の請求先の読み書き（`companies.py:869,887` など）・`erp.py`・`duplicates.py`・`tasks/reports.py` の `address_type = 'billing'` は住所を読む・選ぶ処理で、登録済みの判定ではないので数えない。
 - frontend 試験: karteLayout の追客 2 段階・帯の出し分け・選択肢に既存顧客が無いこと。
 - 本番: テスト株式会社の試しのリード（TST-KARTE-3 を使い回すか、新しく作るかは実装カードで決める）。K6 は反映の前後で reader で数える。
 
