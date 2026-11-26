@@ -35,7 +35,7 @@ if id ops-agent >/dev/null 2>&1; then
     pgrep -u ops-agent -a >&2 || true
     exit 1
   fi
-  userdel -r ops-agent
+  userdel -r ops-agent   # 家の場所ごと消えるので、置いた .env（ボットの鍵）も消える
   echo "消しました。"
 else
   echo "ops-agent はありません。飛ばします。"

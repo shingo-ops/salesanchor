@@ -45,6 +45,27 @@ run_as_agent() {
     "$@"
 }
 
+# 守りを外した窓（G2・G8 だけ・G7 なし）: G7 の対照用
+run_no_g7() {
+  systemd-run --uid=ops-agent --wait --collect --pipe -q \
+    --working-directory=/home/ops-agent/work \
+    -E HOME=/home/ops-agent \
+    -p MemoryHigh=1200M -p MemoryMax=1500M -p MemorySwapMax=0 -p OOMScoreAdjust=1000 \
+    -p ProtectSystem=strict -p ReadWritePaths=/home/ops-agent \
+    -p "InaccessiblePaths=/home/ubuntu /root /opt/salesanchor-monitoring" \
+    -p PrivateTmp=yes -p NoNewPrivileges=yes \
+    "$@"
+}
+
+# 守りの外（G2 だけ）: G8 の対照用
+run_g2_only() {
+  systemd-run --uid=ops-agent --wait --collect --pipe -q \
+    --working-directory=/home/ops-agent/work \
+    -E HOME=/home/ops-agent \
+    -p MemoryHigh=1200M -p MemoryMax=1500M -p MemorySwapMax=0 -p OOMScoreAdjust=1000 \
+    "$@"
+}
+
 FAILS=0
 report() {
   # report <名前> <期待> <実際> <ok|ng>
@@ -67,8 +88,26 @@ expect_fail() {
   fi
 }
 
+echo "== 対照: 上限の書き方が合っているか（/bin/true が 0 で終わる）=="
+if ! run_as_agent /bin/true >/dev/null 2>&1; then
+  echo "NG: 上限の書き方が違います（G2・G7・G8 の同じ値で /bin/true が 0 で終わりません）。確かめにならないので止めます。" >&2
+  exit 1
+fi
+echo "OK: /bin/true が 0 で終わりました。"
+
 echo "== G7: 本番と監視へ届かない・名前は引ける =="
-expect_fail "G7 監視の 19187 番へ届かない" /usr/bin/curl -m 5 -sS http://127.0.0.1:19187/metrics
+# 対照: 守りを外した窓（G7 なし）では届く。届かなければ「確かめにならない」
+if run_no_g7 /usr/bin/curl -m 5 -sS -o /dev/null http://127.0.0.1:19187/metrics >/dev/null 2>&1; then
+  report "G7 対照: 守り無しで 19187 番へ届く" "届く" "届いた" ok
+else
+  report "G7 対照: 守り無しで 19187 番へ届く" "届く（届かないと確かめにならない）" "届かなかった" ng
+fi
+expect_fail "G7 監視の 19187 番へ届かない" /usr/bin/curl -m 5 -sS -o /dev/null http://127.0.0.1:19187/metrics
+if run_no_g7 /usr/bin/curl -m 5 -sS -o /dev/null http://49.212.160.98:3000 >/dev/null 2>&1; then
+  report "G7 対照: 守り無しで 3000 番へ届く" "届く" "届いた" ok
+else
+  report "G7 対照: 守り無しで 3000 番へ届く" "届く（届かないと確かめにならない）" "届かなかった" ng
+fi
 expect_fail "G7 prod2 自身の 3000 番へ届かない" /usr/bin/curl -m 5 -sS http://49.212.160.98:3000
 
 if run_as_agent /usr/bin/getent hosts api.anthropic.com >/dev/null 2>&1; then
@@ -87,10 +126,17 @@ case "${code}" in
     ;;
 esac
 
-echo "== G8: 監視の鍵と設定が読めない =="
-expect_fail "G8 監視の .env を cat できない" /bin/cat /opt/salesanchor-monitoring/.env
-expect_fail "G8 /home/ubuntu を ls できない" /bin/ls /home/ubuntu
-expect_fail "G8 /root を ls できない" /bin/ls /root
+echo "== G8: 監視の鍵と設定が読めない（場所の権限 stat -c %a で見る）=="
+# 出どころ: systemd の CONTAINER_INTERFACE「all zero access mode」と namespace.c の MOUNT_INACCESSIBLE
+for d in /home/ubuntu /root /opt/salesanchor-monitoring; do
+  under="$(run_as_agent /usr/bin/stat -c %a "${d}" 2>/dev/null)"
+  outside="$(run_g2_only /usr/bin/stat -c %a "${d}" 2>/dev/null)"
+  if [ "${under}" = "0" ] && [ -n "${outside}" ] && [ "${outside}" != "0" ]; then
+    report "G8 ${d}" "守りの下 0・守りの外 0 以外" "下 ${under}・外 ${outside}" ok
+  else
+    report "G8 ${d}" "守りの下 0・守りの外 0 以外" "下 ${under:-（空）}・外 ${outside:-（空）}" ng
+  fi
+done
 
 echo "== G3: 家の場所に SSH の鍵が無い（ファイル名だけ。中身は見ない）=="
 ssh_names="$(find /home/ops-agent -path '*/.ssh' -o -path '*/.ssh/*' 2>/dev/null | sort)"
@@ -107,6 +153,15 @@ if grep -q '"defaultMode": "dontAsk"' /home/ops-agent/.claude/settings.json; the
 else
   report "G4 settings.json に dontAsk" "ある" "無い" ng
 fi
+# 持ち主と権限だけ見る（中身は読まない）
+for f in /home/ops-agent/.claude/channels/discord/.env /home/ops-agent/.claude/channels/discord/access.json; do
+  got="$(stat -c '%U %a' "${f}" 2>/dev/null)"
+  if [ "${got}" = "ops-agent 600" ]; then
+    report "G4 ${f##*/} の持ち主と権限" "ops-agent 600" "${got}" ok
+  else
+    report "G4 ${f##*/} の持ち主と権限" "ops-agent 600" "${got:-（ファイル無し）}" ng
+  fi
+done
 
 echo
 if [ "${FAILS}" -ne 0 ]; then

@@ -55,4 +55,9 @@
 
 ## 結果
 
-（実装役が書く）
+- 直した: 01（always・[Unit] に StartLimit 2 行・注記）・03b 新規・03・04（/bin/true 対照・G7 対照・G8 を stat -c %a に・G4 の持ち主と権限）・06（userdel -r で .env も消える旨を 1 行。Developer Portal の案内は既にあったので変更なし）。
+- bash -n: 01・03b・04・06 すべて通過。shellcheck: 未実施（この環境に無い）。
+- grep 'Restart=' 01-prepare.sh: Restart=always の 1 件。
+- grep discord:configure|discord:access 03-po-login.md: 「使わない理由」の 1 行のみ。
+- 鍵の値・利用者番号の実際の値: 0 件。
+- 未実施: 実機での動作確認（サーバーには繋いでいない）。

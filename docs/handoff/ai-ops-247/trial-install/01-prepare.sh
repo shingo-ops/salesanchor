@@ -19,8 +19,8 @@
 #
 # 未確認（導入の時に見る）:
 #  - U-a: Type=forking と tmux の形で、再起動のあと確認の画面が出ずに立ち上がるか。
-#  - tmux の中の claude が正常に終わったとき、tmux のサーバーも消えて unit が止まる。Restart=on-failure は失敗のときだけ効くので、
-#    正常終了のあとは自動では立ち上がらない（このとき止まったままになる）。K2 で確かめる。
+#  - tmux の中の claude が正常に終わったとき、tmux のサーバーも消えて unit が止まる。正常に終わっても立ち上げ直すため always にした。
+#    10 分に 5 回で止まり（StartLimitIntervalSec=600・StartLimitBurst=5。[Unit] に置く: systemd.unit「StartLimitIntervalSec=」）、毎日の確認で見つける。
 #  - Type=forking で tmux の親が抜けたあとの本体の見つけ方（PIDFile なし・systemd の推測）。
 
 set -euo pipefail
@@ -94,6 +94,8 @@ ls -l "${AGENT_HOME}/.claude/settings.json"
 echo "== 4/4 unit ${UNIT_PATH}（置くだけ。enable も start もしない）=="
 cat > "${UNIT_PATH}" <<'EOF'
 [Unit]
+StartLimitIntervalSec=600
+StartLimitBurst=5
 Description=ops-agent (Claude Code + Discord channel, trial)
 After=network-online.target
 Wants=network-online.target
@@ -108,7 +110,7 @@ Environment=PATH=/home/ops-agent/.local/bin:/home/ops-agent/.bun/bin:/usr/local/
 Environment=TERM=xterm-256color
 ExecStart=/usr/bin/tmux new-session -d -s ops-agent '/home/ops-agent/.local/bin/claude --channels plugin:discord@claude-plugins-official'
 ExecStop=/usr/bin/tmux kill-session -t ops-agent
-Restart=on-failure
+Restart=always
 RestartSec=30
 
 # G2 メモリ

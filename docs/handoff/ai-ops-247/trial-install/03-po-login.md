@@ -14,10 +14,12 @@
 ### A. Discord でボットを作る（PO の手・ブラウザ）
 
 1. https://discord.com/developers/applications で **New Application** を押し、名前を付けます。
-2. **Bot** の欄でユーザー名を作り、**Reset Token** を押してボットの鍵（トークン）を出します。**ここで見える値は、だれにも見せず、この後の手順 D の入力だけに使います。**
+2. **Bot** の欄でユーザー名を作り、**Reset Token** を押してボットの鍵（トークン）を出します。**ここで見える値は、だれにも見せず、この後の手順 D-2 の見えない入力だけに使います。**
 3. 同じ Bot の設定の **Privileged Gateway Intents** で **Message Content Intent** を ON にします。
 4. **OAuth2 > URL Generator** で `bot` を選び、次の権限だけ ON にします: View Channels・Send Messages・Send Messages in Threads・Create Public Threads・Read Message History・Attach Files・Add Reactions。
-5. できた URL を開き、自分のサーバーにボットを入れます。
+5. 同じ Bot の設定で **Public Bot を切ります**（自分だけが入れられるようにする）。
+6. Discord の **設定 → 詳細設定 → 開発者モード** を入れ、自分のアイコンを右クリックして **「ユーザーIDをコピー」** で番号を控えます（手順 D-2 で使う。値はどこにも書かない）。
+7. できた URL を開き、自分のサーバーにボットを入れます。
 
 （出どころ: https://code.claude.com/docs/en/channels の Discord の手順）
 
@@ -35,19 +37,16 @@ sudo systemd-run --uid=ops-agent --pty --wait --collect --working-directory=/hom
 
 1. 窓で `claude` と打って開きます。
 2. 画面の案内どおりにブラウザでログインします（claude.ai のサブスク）。ログインの札は画面に出ても、どこにも写さない・貼らない。
-3. 画面の確認（フォルダを信頼するか等）が出たら、内容を読んで答えます。
+3. 画面の確認が出たら、内容を読んで答えます。作業の場所を信頼するか聞かれたら「はい」を選びます。
 
-### D. Discord の道具を入れて鍵を打つ（PO の手）
+### D. Discord の道具を入れて鍵を置く（PO の手）
 
-窓の `claude` の中で、順に打ちます。
+`/discord:configure` と `/discord:access` は**使いません**。理由: 中で Write の道具を使うため 01 の制限（G4）で止まり、鍵も会話の記録に残るため。鍵は管理者の台本 03b で、窓の外から置きます。
 
-1. `/plugin install discord@claude-plugins-official`（導入範囲を聞かれたら user を選ぶ）
-2. 入れたあと `Run /reload-plugins to apply.` と出たら、案内に従います。
-3. `/discord:configure` ＋ ボットの鍵（手順 A-2 の値）。**この 1 行を打つのは PO の手だけ。**（出どころ: 公式の手順は `/discord:configure <token>`）
-4. `claude` をいったん閉じ、`claude --channels plugin:discord@claude-plugins-official` で開き直します。
-5. スマホの Discord から、作ったボットに DM を送ります。ボットがペアの合言葉を返します。
-6. 窓の `claude` で `/discord:access pair <合言葉>` を打ちます。
-7. `/discord:access policy allowlist` を打ちます（自分のアカウントだけにする）。
+1. B の窓のシェル（`claude` の外）で次を打ちます:
+   `claude plugin install discord --marketplace anthropics/claude-plugins-official -s user`
+2. 窓を閉じます。管理者が `sudo bash 03b-put-discord-keys.sh` を流し、PO が見えない入力に**ボットの鍵（手順 A-2）と自分の利用者番号（手順 A-6）**を貼ります。
+3. ここではペア（合言葉）も、許可名簿を切り替える命令も要りません（名簿は 03b で allowlist に置きました）。
 
 ### E. 終わらせる
 
@@ -56,6 +55,6 @@ sudo systemd-run --uid=ops-agent --pty --wait --collect --working-directory=/hom
 
 ## 止まったとき（未確認の点）
 
-- **D の手順が「許可されていない」と断られた場合**: 01 で入れた道具の制限（G4）が、プラグインの設定用の命令（`/plugin install`・`/discord:configure`・`/discord:access`）まで止めた可能性があります。これは未確認です（設計 §12-7 の「G4 の設定の書き方が CLI で効くか」）。**自分で `settings.json` をゆるめたり直したりしないでください。** そこで止めて、設計担当（Opus）に画面の言葉をそのまま伝えます。
+- **D の `claude plugin install` が失敗した場合**: 画面の言葉をそのまま設計担当（Opus）へ伝えます。**自分で `settings.json` をゆるめたり直したりしないでください。**
 - `claude` のログインが通らない／Discord の道具が動かない場合も、同じく止めて報告します。G7 を付けて試すのは、設計担当の指示があってからです。
 - どの場合も、鍵・札の値は報告に書きません。
