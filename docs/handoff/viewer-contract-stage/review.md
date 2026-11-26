@@ -377,3 +377,20 @@
 判定: 審査役 Opus は REVISE（高1件）。直した。
 - 高: r1 で足した試験のコメントの行末に、都道府県の実名がそのまま残っていた。試験はコメントも含めてファイルの全文を調べるので、r1 でも自分に当たって落ちる形のままだった。コメントの言葉を「都道府県コード 01 の名前」に変えた。
 - 確かめ: card の中で実名が出るのは §0-3 の P14 の表と手順2のコマンド（作る前に数える点検で、md ファイル）だけになった。frontend/src に書き写すコードの中には残っていない。
+
+## 2026-11-27 便2-2c2b 直し1 の指示書（設計担当 Opus の自己審査。独立した審査ではない）
+
+判定: APPROVE（自己審査）。マージ前に審査役 Opus の審査を受ける。
+- きっかけ: 2026-11-26 の本番の画面の確かめ（Chrome）。国の欄は必須（design.md :169・画面の `required`）なのに、ラベルに「*」が無かった。ほかは本番で確かめ済み（国内用・海外用のタブ・登録番号の誤りで 422 と欄の下の赤い理由・保存されない）。PO 2026-11-27「1」で直しの準備に進む。
+- 決めたこと（card-2-2c2b-fix1.md の D1〜D5）: 「*」は画面に手で書かず、国の欄の金型 CountryCombobox に省ける label と error を足して TextField と同じ形で出す。どちらも渡さないときは今の描き方のまま。
+- 照合: 基準 24354620e の写しで、§0-3 P1〜P8 を数えた（207 行・`label?:` 0 行・この金型を読み込むファイル 5。r1 で直した）。登録の画面3つは別の部品 pages/register/CountryCombobox.tsx を使うと import の行で確かめた。fieldError は理由が無いとき undefined を返す（IssuerProfileSection.tsx:67〜:70）。試験は vitest.unit.config.ts の include（src/**/*.test.{ts,tsx}）に入る。card-lint は違反 0（L24 の長い行の警告だけ）。
+- 限界1: 本番の画面で「*」が出たかは、反映の後に Opus が Chrome で見るまで分からない。
+- 限界2: 国の欄の理由の出方が `error-message` から `comp-field__hint--error` に変わる。文は同じ。見た目は赤い字で、ほかの欄と同じになる。
+
+## 2026-11-27 便2-2c2b 直し1 の指示書 r1（審査役 Opus の審査を受けて直した）
+
+判定: 審査役 Opus（417dc6ecd 対象）は REVISE（高2件・低2件）。直した。
+- 高1: P5 の「`label` を含む行 0」は実物と合わなかった（CountryCombobox.tsx:122 の `aria-label` に当たり 1 になる）。実装役は手順2で必ず止まる形だった。数える文字列を `label?:` に変えた（24354620e で 0 件を確かめた）。
+- 高2: T1 の `getByLabelText("Country")` は、required のときラベルの文字が「Country*」になり完全一致で当たらない（@testing-library/dom は aria-hidden の子の文字もつなげる）。`/^Country\*?$/` にした。前例は frontend/src/pages/viewer/Password.test.tsx:24。
+- 低1: 行番号を直した（`return (` は :89・外側の div は :90）。
+- 低2: error を渡すと外側に `comp-field--error` が付き入力欄の枠も赤くなる（FormField.css:116〜:121）。ラベルの見た目も `.form-group label` から `comp-field__label` に変わる。どちらもほかの欄と同じ形にそろう差で、目的に沿う。限界2 に足す。
