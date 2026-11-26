@@ -21,11 +21,11 @@ ADR-015、ADR-108、ADR-1089、ADR-109、ADR-110、ADR-119、ADR-134、ADR-139�
 
 ## 2. 段階を書き換える道（コードの事実）
 
-- 手で変える: `backend/app/routers/leads.py:490` `update_lead`（PATCH `/leads/{id}`）。`leads.py:519` で status を文字にし、`leads.py:535` は失注のときだけ追加の確認をする。**既存顧客への変更を止める確認は無い**。
-- 作るとき: `backend/app/routers/leads.py:401` `create_lead`、`leads.py:443` で `data.status` をそのまま入れる。
+- 手で変える: `backend/app/routers/leads.py:490` `update_lead`（PATCH `/leads/{id}`）。`backend/app/routers/leads.py:519` で status を文字にし、`backend/app/routers/leads.py:535` は失注のときだけ追加の確認をする。**既存顧客への変更を止める確認は無い**。
+- 作るとき: `backend/app/routers/leads.py:401` `create_lead`、`backend/app/routers/leads.py:443` で `data.status` をそのまま入れる。
 - 商談にする: `backend/app/routers/leads.py:828`（`SET status = 'negotiating'`）。
 - 統合: `backend/app/routers/leads.py:3241` `merge_leads`。消す側が lead 以外なら 400（status は書き換えない）。
-- 画面の選択肢: `frontend/src/constants/leadStatus.ts:9-17` の `LEAD_STATUS_CODES`（7 つ）を、`frontend/src/pages/leads/LeadEditPage.tsx:73`・`LeadFormFields.tsx:44`・`LeadsPage.tsx:143` がそのまま選択肢にしている。
+- 画面の選択肢: `frontend/src/constants/leadStatus.ts:9-17` の `LEAD_STATUS_CODES`（7 つ）を、`frontend/src/pages/leads/LeadEditPage.tsx:73`・`frontend/src/pages/leads/LeadFormFields.tsx:44`・`frontend/src/pages/leads/LeadsPage.tsx:143` がそのまま選択肢にしている。
 - backend 全体で `existing_customer` を**書き込む**コードは無い（`git grep -n existing_customer origin/main -- backend/app` は読む・数えるだけ）。いまの既存顧客はすべて手で付けたもの。
 
 ## 3. 3 つの条件を記録している場所（コードと本番の事実）
@@ -33,11 +33,11 @@ ADR-015、ADR-108、ADR-1089、ADR-109、ADR-110、ADR-119、ADR-134、ADR-139�
 | 条件 | 記録の場所 | 書かれる道 |
 |---|---|---|
 | ① 登録フォームに入力 | `public.registration_tokens`（列: id・tenant_id・lead_id・type・expires_at・used_at・created_by・created_at）。type は register・add_address・change_billing | `backend/app/routers/registration_tokens.py:215` `register_customer`（POST `/public/register`） |
-| ② 会社の登録 | `companies.lead_id`（`registration_tokens.py:50` のコメント「companies.lead_id が SSOT」） | フォーム: `registration_tokens.py:270`。ほかに手で作る `backend/app/routers/companies.py:440`、`backend/app/routers/integrations.py:653` |
-| ③ 初回の支払い | `invoices.paid_at`（`invoices.company_id` で会社へ） | 手で入金: `backend/app/routers/invoices.py:907` 付近 `pay_invoice`（`UPDATE invoices SET status = 'paid', paid_at = ...`）。PayPal 戻り: `backend/app/routers/integrations.py:799`。PayPal 通知: `integrations.py:948` |
+| ② 会社の登録 | `companies.lead_id`（`backend/app/routers/registration_tokens.py:50` のコメント「companies.lead_id が SSOT」） | フォーム: `backend/app/routers/registration_tokens.py:270`。ほかに手で作る `backend/app/routers/companies.py:440`、`backend/app/routers/integrations.py:653` |
+| ③ 初回の支払い | `invoices.paid_at`（`invoices.company_id` で会社へ） | 手で入金: `backend/app/routers/invoices.py:907` 付近 `pay_invoice`（`UPDATE invoices SET status = 'paid', paid_at = ...`）。PayPal 戻り: `backend/app/routers/integrations.py:799`。PayPal 通知: `backend/app/routers/integrations.py:948` |
 
 - 受注にも別の支払いの印がある: `backend/app/routers/orders.py:155` `set_order_paid`（手で付け外しできる。説明に「現状は手動フラグ」）。
-- 入金済みの請求書は無効にできない（`invoices.py` の void は `status == "paid"` を止める・上の void_invoice の 124 行目相当）。
+- 入金済みの請求書は無効にできない（`backend/app/routers/invoices.py` の void は `status == "paid"` を止める・上の void_invoice の 124 行目相当）。
 
 ## 4. 本番の数（2026-11-25 09:1x JST・reader）
 
@@ -67,10 +67,10 @@ ADR-015、ADR-108、ADR-1089、ADR-109、ADR-110、ADR-119、ADR-134、ADR-139�
 
 ## 7. 追加の調べ（2026-11-25・worktree の git grep）
 
-- 支払いを書く道: `backend/app/routers/invoices.py:899`（入金登録）・`invoices.py:1145`（支払い状況を確認）・`backend/app/routers/integrations.py:799`・`integrations.py:948`・`backend/app/routers/orders.py:596`（支払済にする。`orders.py:598` で取り消し）。
-- 画面のボタン: `frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:233`（入金登録）・`frontend/src/pages/orders/OrdersTable.tsx:146`（支払済にする）・`OrdersTable.tsx:174`（取り消し）。
-- 会社の lead_id を書く道: `backend/app/routers/companies.py:440`（作る・lead_id 必須 `backend/app/schemas/company.py:116`）・`companies.py:610`（更新。`companies.py:103` の更新できる列に lead_id あり）・`registration_tokens.py:270`。`integrations.py:653` は lead_id を書かない。
-- 統合: `backend/app/routers/leads.py:3241` `merge_leads`（会社を残る側へ移す・`reassigned_companies`）、`companies.py:742` `merge_companies`。
+- 支払いを書く道: `backend/app/routers/invoices.py:899`（入金登録）・`backend/app/routers/invoices.py:1145`（支払い状況を確認）・`backend/app/routers/integrations.py:799`・`backend/app/routers/integrations.py:948`・`backend/app/routers/orders.py:596`（支払済にする。`backend/app/routers/orders.py:598` で取り消し）。
+- 画面のボタン: `frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:233`（入金登録）・`frontend/src/pages/orders/OrdersTable.tsx:146`（支払済にする）・`frontend/src/pages/orders/OrdersTable.tsx:174`（取り消し）。
+- 会社の lead_id を書く道: `backend/app/routers/companies.py:440`（作る・lead_id 必須 `backend/app/schemas/company.py:116`）・`backend/app/routers/companies.py:610`（更新。`backend/app/routers/companies.py:103` の更新できる列に lead_id あり）・`backend/app/routers/registration_tokens.py:270`。`backend/app/routers/integrations.py:653` は lead_id を書かない。
+- 統合: `backend/app/routers/leads.py:3241` `merge_leads`（会社を残る側へ移す・`reassigned_companies`）、`backend/app/routers/companies.py:742` `merge_companies`。
 - 登録済みの判定（新規登録のリンクを断る）: `backend/app/routers/registration_tokens.py:86-102`（会社に既定の請求先の住所がある）。
-- カルテの帯: `frontend/src/pages/inbox/InboxKartePanel.tsx:378-383`（帯はリードと既存顧客だけ）・`InboxKartePanel.tsx:401-431`（メニュー: 登録・住所を足す・請求先を変える〔既存顧客だけ〕）。カルテのリードは `frontend/src/pages/inbox/useInboxState.ts:381` で `GET /leads/{id}`（`backend/app/routers/leads.py:372` `get_lead`）。
-- AI の返事の道で既存顧客を見て分ける箇所: `git grep -n existing_customer -- backend/app` で 0 件（`schemas/lead.py:35`・`services/lead_conversion_factors.py:27`・`services/tenant.py:2284` は定義と数え方）。
+- カルテの帯: `frontend/src/pages/inbox/InboxKartePanel.tsx:378-383`（帯はリードと既存顧客だけ）・`frontend/src/pages/inbox/InboxKartePanel.tsx:401-431`（メニュー: 登録・住所を足す・請求先を変える〔既存顧客だけ〕）。カルテのリードは `frontend/src/pages/inbox/useInboxState.ts:381` で `GET /leads/{id}`（`backend/app/routers/leads.py:372` `get_lead`）。
+- AI の返事の道で既存顧客を見て分ける箇所: `git grep -n existing_customer -- backend/app` で 0 件（`backend/app/schemas/lead.py:35`・`backend/app/services/lead_conversion_factors.py:27`・`backend/app/services/tenant.py:2284` は定義と数え方）。
