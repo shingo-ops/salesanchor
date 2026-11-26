@@ -5,6 +5,7 @@
 | 対象 | `release/line-export-battery-exempt-guard`（土台 `origin/main` c3834ee5f） |
 | 設計 | `docs/handoff/line-auto-export-app/design.md` 追補 2026-11-26 |
 | 現在地 | `docs/handoff/line-auto-export-app/recon.md` 追補 2026-11-26 |
+| 対象ADR | ADR-1090 |
 | 区分 | A（ADR-1015 の危険パス一覧に `tools/` が含まれるため） |
 | PO 承認 | 2026-11-26 Shingo（PO）「3点でgo」 |
 | 審査日 | 2026-11-26 |
