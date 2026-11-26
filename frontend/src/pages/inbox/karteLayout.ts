@@ -111,12 +111,14 @@ const OTHER_LAYOUT: KarteLayout = {
   },
 };
 
-const CUSTOMER_STATUSES: readonly string[] = ["existing_customer", "follow_up_short", "follow_up_long"];
+// ADR-1091: 成約後は既存顧客だけ。追客（短期・長期）は見込みのある新規顧客なので商談中と同じ見せ方
+const CUSTOMER_STATUSES: readonly string[] = ["existing_customer"];
+const NEGOTIATING_LIKE_STATUSES: readonly string[] = ["negotiating", "follow_up_short", "follow_up_long"];
 
 /** 段階（leads.status の内部の名前）から、カルテの見せ方を返す。 */
 export function getKarteLayout(status: string | null | undefined): KarteLayout {
   if (status === "lead") return LEAD_LAYOUT;
-  if (status === "negotiating") return NEGOTIATING_LAYOUT;
+  if (status && NEGOTIATING_LIKE_STATUSES.includes(status)) return NEGOTIATING_LAYOUT;
   if (status && CUSTOMER_STATUSES.includes(status)) return CUSTOMER_LAYOUT;
   return OTHER_LAYOUT;
 }

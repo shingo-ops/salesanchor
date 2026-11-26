@@ -16,7 +16,7 @@ import { Select } from "../../components/Select";
 import { api } from "../../lib/api";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { useSeededForm } from "../../lib/query/useSeededForm";
-import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
+import { MANUAL_LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
 import { closeReasonsPath, type CloseReasonResponse } from "../../api/closeReasons";
 import { LostReasonFields, buildLostReasonUpdatePayload } from "./LeadFormFields";
 import { TextareaControl } from "../../components/Textarea";
@@ -70,7 +70,7 @@ const emptyForm: FormState = {
   close_reason_id: "", close_reason_memo: "",
 };
 
-const LEAD_STATUSES: LeadStatusCode[] = [...LEAD_STATUS_CODES];
+const LEAD_STATUSES: LeadStatusCode[] = [...MANUAL_LEAD_STATUS_CODES];
 
 const formFromLead = (lead: Lead): FormState => ({
   customer_name: lead.customer_name,
@@ -98,7 +98,7 @@ export default function LeadEditPage() {
   const navigate = useNavigate();
   const leadQ = useApiQuery<Lead>(`/leads/${id}`, { enabled: id !== undefined });
   const reasonsQ = useApiQuery<CloseReasonResponse[]>(closeReasonsPath("lost"));
-  const { form, setForm, ready } = useSeededForm(`lead/${id}`, leadQ.data, formFromLead, emptyForm);
+  const { form, setForm, ready, base } = useSeededForm(`lead/${id}`, leadQ.data, formFromLead, emptyForm);
   const [error, setError] = useState("");
   const loading = leadQ.isError ? false : (!ready || reasonsQ.isPending);
   const closeReasonOptions = reasonsQ.data ?? [];
@@ -125,7 +125,8 @@ export default function LeadEditPage() {
         channel_type: toNull(form.channel_type),
         initiative: toNull(form.initiative),
         type: toNull(form.type),
-        status: form.status,
+        // ADR-1091: 選び直したときだけ送る（編集中に自動で既存顧客になった人を古い段階で戻さない）
+        ...(form.status !== base.status ? { status: form.status } : {}),
         temperature: toNull(form.temperature),
         estimated_scale: toNull(form.estimated_scale),
         customer_type: toNull(form.customer_type),
@@ -193,7 +194,10 @@ export default function LeadEditPage() {
             label={t("leads.status")}
             value={form.status}
             onChange={(e) => setForm({ ...form, status: e.target.value })}
-            options={LEAD_STATUSES.map((s) => ({
+            options={(form.status === "existing_customer"
+              ? (["existing_customer", ...LEAD_STATUSES] as LeadStatusCode[])
+              : LEAD_STATUSES
+            ).map((s) => ({
               value: s,
               label: t(`leads.statusCode.${s}`, { defaultValue: s }),
             }))}

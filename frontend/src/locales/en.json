@@ -6605,7 +6605,9 @@
     "invoiceNotDraft": "This invoice is no longer a draft, so it cannot be issued. Reload the page.",
     "paymentFee": "No payment fee setting was found, so the total cannot be calculated. Check the PayPal fee in settings.",
     "invalidTeamIds": "The selected teams cannot be used. Please choose again.",
-    "invalidTeam": "The selected team cannot be used. Please choose again."
+    "invalidTeam": "The selected team cannot be used. Please choose again.",
+    "existingCustomerIsAutomatic": "You can't set Existing customer by hand. It switches automatically once the registration form, company and payment are all in place.",
+    "alreadyExistingCustomer": "This person is already an existing customer. Please reload the page."
   },
   "issuerProfile": {
     "sectionTitle": "Company information on documents",

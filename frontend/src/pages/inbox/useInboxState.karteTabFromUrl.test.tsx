@@ -75,14 +75,8 @@ describe("useInboxState - karte first tab when opened from URL (ADR-1089)", () =
     await waitFor(() => expect(result.current.karteTab).toBe("company"));
   });
 
-  it("opens the company tab for follow_up_short", async () => {
-    const { result } = openFromUrl("follow_up_short");
-    await waitFor(() => expect(result.current.leadDetail?.id).toBe(1));
-    await waitFor(() => expect(result.current.karteTab).toBe("company"));
-  });
-
-  it("opens the deal tab for lead and negotiating", async () => {
-    for (const status of ["lead", "negotiating"]) {
+  it("opens the deal tab for lead, negotiating and follow_up (ADR-1091: follow_up looks like negotiating)", async () => {
+    for (const status of ["lead", "negotiating", "follow_up_short", "follow_up_long"]) {
       queryClient.clear();
       const { result, unmount } = openFromUrl(status);
       await waitFor(() => expect(result.current.leadDetail?.id).toBe(1));
@@ -92,7 +86,7 @@ describe("useInboxState - karte first tab when opened from URL (ADR-1089)", () =
   });
 
   it("keeps the tab the user picked after the karte is read again", async () => {
-    const { result, rerender } = openFromUrl("follow_up_short");
+    const { result, rerender } = openFromUrl("existing_customer");
     await waitFor(() => expect(result.current.karteTab).toBe("company"));
 
     act(() => {
