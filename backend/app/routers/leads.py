@@ -541,7 +541,7 @@ async def update_lead(
     new_status_raw = update_data.get("status")
     new_status = _enum_to_str(new_status_raw)
     old_status = old_row["status"]
-    # ADR-1090: 手で既存顧客にはできない（今が既存顧客で同じ値を送るのは通す）
+    # ADR-1091: 手で既存顧客にはできない（今が既存顧客で同じ値を送るのは通す）
     if (
         new_status == LeadStatus.existing_customer.value
         and old_status != LeadStatus.existing_customer.value
@@ -841,7 +841,7 @@ async def convert_lead(
         # 早期409（UXのため）。完全な保証は下のUPDATEで行う。
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="このリードは既に商談中です")
     if lead_row["status"] == "existing_customer":
-        # ADR-1090: 自動で既存顧客になった人を商談に戻さない
+        # ADR-1091: 自動で既存顧客になった人を商談に戻さない
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="already_existing_customer")
 
     updated = await db.execute(
@@ -3290,7 +3290,7 @@ async def merge_leads(
     result = await _execute_lead_merge(db, tenant_id, master_row, loser_row, plan)
     moved = result["moved"]
 
-    # ADR-1090: 会社・請求先・支払いが残る側へ移るので、3 つがそろうことがある（読み直しの前に）
+    # ADR-1091: 会社・請求先・支払いが残る側へ移るので、3 つがそろうことがある（読み直しの前に）
     await promote_lead_if_customer(
         db, tenant_id, master_id,
         actor_user_id=current_user.id, via="lead_merge",

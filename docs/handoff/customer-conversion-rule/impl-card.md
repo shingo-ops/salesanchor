@@ -1,14 +1,14 @@
-# 実装カード: 「既存顧客」は 3 つの条件がそろったときだけ自動で付く（ADR-1090）
+# 実装カード: 「既存顧客」は 3 つの条件がそろったときだけ自動で付く（ADR-1091）
 
 - 枝: 設計は `release/customer-conversion-rule`、実装は `release/customer-conversion-rule-impl`（origin/main 起点・設計を取り込む）
-- 設計: `design.md`（§4 が変更の中身・§7 が試験）・調査: `recon.md`・決定: `docs/adr/ADR-1090-customer-conversion-three-conditions.md`
+- 設計: `design.md`（§4 が変更の中身・§7 が試験）・調査: `recon.md`・決定: `docs/adr/ADR-1091-customer-conversion-three-conditions.md`
 - 書く人: クラウドの Sonnet。設計に無いことはしない。迷ったら止まって `NEEDS_DECISION:` で返す。
 - DB の形は変えない（`migrations/` を触らない）。
 
 ## 0. 読んだ節
 
 - `docs/ai-agents/executor-checklist.md`（作業前・commit 前・PR 前）
-- ADR-1090 What 1〜8・ADR-072（`tenant_table_ref`・commit 直後の `reset_tenant_context`）・ADR-027（画面の文は `t()`・ja/en 同じキー）・ADR-144（金型）・ADR-1071（失敗の文の理由コード表）
+- ADR-1091 What 1〜8・ADR-072（`tenant_table_ref`・commit 直後の `reset_tenant_context`）・ADR-027（画面の文は `t()`・ja/en 同じキー）・ADR-144（金型）・ADR-1071（失敗の文の理由コード表）
 
 ## 受領確認
 

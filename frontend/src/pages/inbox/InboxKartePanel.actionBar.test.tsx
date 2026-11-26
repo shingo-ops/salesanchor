@@ -1,5 +1,5 @@
 /**
- * ADR-1090 §4-3: カルテの下の帯（ActionBar）の出し分けの試験。
+ * ADR-1091 §4-3: カルテの下の帯（ActionBar）の出し分けの試験。
  * 帯はすべての段階で出す。大きいボタンは段階で決め、メニューのリンクは「登録が済んでいるか」だけで決める。
  * 試験の題は英語（lint の決まり local/no-japanese-literal）。
  */
@@ -47,7 +47,7 @@ function renderBar(status: string, registrationCompleted: boolean) {
   );
 }
 
-describe("Karte action bar (ADR-1090)", () => {
+describe("Karte action bar (ADR-1091)", () => {
   afterEach(cleanup);
 
   it.each([

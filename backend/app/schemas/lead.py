@@ -220,7 +220,7 @@ class LeadUpdate(BaseModel):
 
 class LeadResponse(BaseModel):
     """リード情報レスポンス"""
-    registration_completed: bool | None = None  # ADR-1090: 詳細系だけ入る（一覧は None）
+    registration_completed: bool | None = None  # ADR-1091: 詳細系だけ入る（一覧は None）
     id: int
     lead_code: str | None
     customer_name: str

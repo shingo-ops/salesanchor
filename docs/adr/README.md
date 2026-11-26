@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-11-26 / ADR 総数: 247 件
+最終更新: 2026-11-26 / ADR 総数: 248 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -266,6 +266,7 @@
 | [ADR-1088](./ADR-1088-discord-intake-bot-reads-alert-rooms.md) | ADR-1088: 不具合受付の Bot に、知らせの3部屋を読むだけの権限を足し、AI が強い鍵を使わずに知らせを読めるようにする | Accepted | Amends ADR-1039 | — |
 | [ADR-1089](./ADR-1089-inbox-karte-stage-layout.md) | ADR-1089: 受信箱のカルテの見せ方を段階（リード・商談中・成約後）で切り替える | Proposed | — | — |
 | [ADR-1090](./ADR-1090-line-export-app-power-management-resilience.md) | ADR-1090: 端末の LINE 書き出しアプリは Android の省電力の間引きを受ける前提で作り、除外の外れと空振りを記録して利用者が自分で戻せるようにする | Accepted | — | — |
+| [ADR-1091](./ADR-1091-customer-conversion-three-conditions.md) | ADR-1091: 「既存顧客」は 3 つの条件がそろったときだけ、自動で付く | Accepted | — | — |
 
 ## ステータス凡例
 

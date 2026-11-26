@@ -96,7 +96,7 @@ export function LostReasonFields({
 
 export function LeadFormFields({ form, onChange, closeReasonOptions }: Props) {
   const { t } = useTranslation();
-  // ADR-1090: 今の値が既存顧客の人だけ、その値を先頭に足して表示する
+  // ADR-1091: 今の値が既存顧客の人だけ、その値を先頭に足して表示する
   const statusOptions = (
     form.status === "existing_customer"
       ? (["existing_customer", ...LEAD_STATUSES] as LeadStatusCode[])

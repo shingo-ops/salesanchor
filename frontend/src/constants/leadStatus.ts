@@ -19,7 +19,7 @@ export const LEAD_STATUS_CODES = [
 export type LeadStatusCode = (typeof LEAD_STATUS_CODES)[number];
 
 /**
- * ADR-1090: 手で選べる段階。「既存顧客」は登録・会社・支払いの 3 つがそろうと自動で付くので、手では選べない。
+ * ADR-1091: 手で選べる段階。「既存顧客」は登録・会社・支払いの 3 つがそろうと自動で付くので、手では選べない。
  */
 export const MANUAL_LEAD_STATUS_CODES: LeadStatusCode[] = LEAD_STATUS_CODES.filter(
   (c) => c !== "existing_customer",

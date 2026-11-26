@@ -1,5 +1,5 @@
 /**
- * ADR-1090 §4-2: リードの編集画面の保存で、段階（status）は選び直したときだけ送る試験。
+ * ADR-1091 §4-2: リードの編集画面の保存で、段階（status）は選び直したときだけ送る試験。
  * 直し始めた後に取り直しで段階が existing_customer に変わっても、選び直さない保存の PATCH に status を入れない。
  * 試験の題は英語（lint の決まり local/no-japanese-literal）。
  */
@@ -75,7 +75,7 @@ function submit() {
   fireEvent.click(btn);
 }
 
-describe("LeadEditPage status save (ADR-1090)", () => {
+describe("LeadEditPage status save (ADR-1091)", () => {
   it("does not send status when the stage was not re-selected", async () => {
     mountPage();
     await waitFor(() => expect(screen.getByDisplayValue("edit-5")).toBeTruthy());

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LEAD_STATUS_CODES, MANUAL_LEAD_STATUS_CODES } from "./leadStatus";
 
-describe("MANUAL_LEAD_STATUS_CODES (ADR-1090)", () => {
+describe("MANUAL_LEAD_STATUS_CODES (ADR-1091)", () => {
   it("does not offer existing_customer (it is set automatically)", () => {
     expect(MANUAL_LEAD_STATUS_CODES).not.toContain("existing_customer");
   });

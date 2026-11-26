@@ -344,7 +344,7 @@ export function ActionBar({
   status, registrationCompleted, leadId, onConvertLead, onCreateInvoice, canMerge, onMerge,
 }: {
   status: string;
-  /** ADR-1090: その人の会社に既定の請求先がある（backend の判定をそのまま使う） */
+  /** ADR-1091: その人の会社に既定の請求先がある（backend の判定をそのまま使う） */
   registrationCompleted: boolean;
   leadId: number;
   onConvertLead: () => void;
@@ -382,7 +382,7 @@ export function ActionBar({
     }
   };
 
-  // ADR-1090: 帯はすべての段階で出す。大きいボタンは段階で決める（lost・out_of_scope は出さない）
+  // ADR-1091: 帯はすべての段階で出す。大きいボタンは段階で決める（lost・out_of_scope は出さない）
   let primaryLabel: string | null = null;
   let primaryOnClick: (() => void) | null = null;
   if (status === "lead") { primaryLabel = t("inbox.actionConvert"); primaryOnClick = onConvertLead; }
@@ -407,7 +407,7 @@ export function ActionBar({
       </button>
       {menuOpen && (
         <div className="karte-overflow-menu" role="menu">
-          {/* ADR-127 E-2 / ADR-1090: 登録がまだなら登録フォームのリンクだけ。済んだ人には出さず、元のデータに足すリンクだけ */}
+          {/* ADR-127 E-2 / ADR-1091: 登録がまだなら登録フォームのリンクだけ。済んだ人には出さず、元のデータに足すリンクだけ */}
           {!registrationCompleted && (
             <button
               type="button"

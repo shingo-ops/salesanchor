@@ -1,5 +1,5 @@
 /**
- * ADR-1090 §4-3: カルテの欄を離れたときの保存で、段階（status）と registration_completed を送らない試験。
+ * ADR-1091 §4-3: カルテの欄を離れたときの保存で、段階（status）と registration_completed を送らない試験。
  * 開いている間に入金などで自動で既存顧客になった人を、手元の古い段階で戻さないため。
  * 試験の題は英語（lint の決まり local/no-japanese-literal）。
  */
@@ -71,7 +71,7 @@ const conv = {
 // 開いた時点の控え: 商談中。registration_completed も入っている
 const LEAD = { id: 1, lead_code: "LD-00001", customer_name: "Alice", status: "negotiating", registration_completed: true };
 
-describe("useInboxState - karte blur save (ADR-1090)", () => {
+describe("useInboxState - karte blur save (ADR-1091)", () => {
   beforeEach(() => {
     queryClient.clear();
     localStorage.clear();

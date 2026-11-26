@@ -111,7 +111,7 @@ const OTHER_LAYOUT: KarteLayout = {
   },
 };
 
-// ADR-1090: 成約後は既存顧客だけ。追客（短期・長期）は見込みのある新規顧客なので商談中と同じ見せ方
+// ADR-1091: 成約後は既存顧客だけ。追客（短期・長期）は見込みのある新規顧客なので商談中と同じ見せ方
 const CUSTOMER_STATUSES: readonly string[] = ["existing_customer"];
 const NEGOTIATING_LIKE_STATUSES: readonly string[] = ["negotiating", "follow_up_short", "follow_up_long"];
 

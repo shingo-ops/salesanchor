@@ -75,7 +75,7 @@ describe("useInboxState - karte first tab when opened from URL (ADR-1089)", () =
     await waitFor(() => expect(result.current.karteTab).toBe("company"));
   });
 
-  it("opens the deal tab for lead, negotiating and follow_up (ADR-1090: follow_up looks like negotiating)", async () => {
+  it("opens the deal tab for lead, negotiating and follow_up (ADR-1091: follow_up looks like negotiating)", async () => {
     for (const status of ["lead", "negotiating", "follow_up_short", "follow_up_long"]) {
       queryClient.clear();
       const { result, unmount } = openFromUrl(status);

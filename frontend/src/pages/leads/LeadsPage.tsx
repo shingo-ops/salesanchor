@@ -207,7 +207,7 @@ export default function LeadsPage() {
         customer_name: editForm.customer_name,
         email: toNull(editForm.email),
         phone: toNull(editForm.phone),
-        // ADR-1090: 選び直したときだけ送る（開いている間に自動で既存顧客になった人を古い段階で戻さない）
+        // ADR-1091: 選び直したときだけ送る（開いている間に自動で既存顧客になった人を古い段階で戻さない）
         ...(editForm.status !== baseForm.status ? { status: editForm.status } : {}),
         type: toNull(editForm.type),
         notes: toNull(editForm.notes),

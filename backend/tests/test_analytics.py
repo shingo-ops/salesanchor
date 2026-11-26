@@ -64,7 +64,7 @@ async def _seed_leads(client, count: int = 3, prefix: str = "Lead"):
 
 
 async def _force_existing_customer(db_session, lead_id):
-    """ADR-1090: 既存顧客は API では付けられない。下ごしらえで SQL で直接入れる（数え方の試験の目的は変えない）。"""
+    """ADR-1091: 既存顧客は API では付けられない。下ごしらえで SQL で直接入れる（数え方の試験の目的は変えない）。"""
     await db_session.execute(
         text("UPDATE leads SET status = 'existing_customer' WHERE id = :id"), {"id": lead_id}
     )
@@ -72,7 +72,7 @@ async def _force_existing_customer(db_session, lead_id):
 
 
 async def _create_lead_via_api(client, db_session, payload, today):
-    """リードを API で作る。status=existing_customer のものは lead で作ってから SQL で直す（ADR-1090）。"""
+    """リードを API で作る。status=existing_customer のものは lead で作ってから SQL で直す（ADR-1091）。"""
     payload = {**payload, "created_at": str(today)}
     want_existing = payload.get("status") == "existing_customer"
     if want_existing:

@@ -125,7 +125,7 @@ export default function LeadEditPage() {
         channel_type: toNull(form.channel_type),
         initiative: toNull(form.initiative),
         type: toNull(form.type),
-        // ADR-1090: 選び直したときだけ送る（編集中に自動で既存顧客になった人を古い段階で戻さない）
+        // ADR-1091: 選び直したときだけ送る（編集中に自動で既存顧客になった人を古い段階で戻さない）
         ...(form.status !== base.status ? { status: form.status } : {}),
         temperature: toNull(form.temperature),
         estimated_scale: toNull(form.estimated_scale),

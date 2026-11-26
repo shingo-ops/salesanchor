@@ -1,5 +1,5 @@
 /**
- * ADR-1090 §4-2: リード一覧の編集の保存で、段階（status）は選び直したときだけ送る試験。
+ * ADR-1091 §4-2: リード一覧の編集の保存で、段階（status）は選び直したときだけ送る試験。
  * 開いている間に自動で既存顧客になった人を、開いた時点の古い段階で戻さないため。
  * 新規作成の選択肢に「既存顧客」が無いことも見る。試験の題は英語（lint の決まり local/no-japanese-literal）。
  */
@@ -64,7 +64,7 @@ function saveButton() {
   return screen.getAllByRole("button").find((b) => b.getAttribute("type") === "submit") as HTMLElement;
 }
 
-describe("LeadsPage edit drawer status save (ADR-1090)", () => {
+describe("LeadsPage edit drawer status save (ADR-1091)", () => {
   it("does not send status when the stage was not re-selected", async () => {
     await openDrawer();
     fireEvent.change(screen.getByDisplayValue("customer-7"), { target: { value: "customer-7b" } });

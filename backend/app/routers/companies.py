@@ -650,7 +650,7 @@ async def update_company(
         action="update", table_name="companies", record_id=company_id,
         old_data=dict(old_row), new_data=new_data_payload,
     )
-    # ADR-1090: リードの付け替え・住所の入れ替えで 3 つがそろうことがある
+    # ADR-1091: リードの付け替え・住所の入れ替えで 3 つがそろうことがある
     if "lead_id" in update_data or addresses is not None:
         await promote_lead_if_customer(
             db, tenant_id, await lead_id_of_company(db, tenant_id, company_id),
@@ -1099,7 +1099,7 @@ async def merge_companies(
         old_data=merge_old_data,
     )
 
-    # ADR-1090: 請求書・注文・住所が残る側へ移るので、3 つがそろうことがある
+    # ADR-1091: 請求書・注文・住所が残る側へ移るので、3 つがそろうことがある
     await promote_lead_if_customer(
         db, tenant_id, master_row["lead_id"],
         actor_user_id=current_user.id, via="company_merge",
