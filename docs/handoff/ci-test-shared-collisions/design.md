@@ -128,6 +128,18 @@ recon §2 の6ファイルについて、後片付けの中の共通の役割を
 | K3: 全体の数が変わらない | PR の run の pytest の最後の行が、main の直近の回と同じ passed・skipped の数（Opus）。public の表を確定させると「表が無ければ skip」の試験が変わりうるので、skipped が違ったら原因を探してから進める |
 | K4: 合流後の main 30回で、`product_blank_confirmations` か `product_csv_test_` が出る deadlock が0件 | 30回分の失敗の記録を保存して数える（Opus・約1〜2週） |
 
+### 7-6. 直し（PR 5794 の CI と審査役の指摘・2026-11-27）
+- 見落とし1: phase3 の後半（`migrations/20260920_010000_phase3_fk_rewire_unit_condition.sql:230-310`・Phase 3B）は、tenant を回さずに public.products の `product_category_id` を UUID から INTEGER に直す。§7-1 と recon §6-3 は前半だけを見ていた。
+  - 前の形はこれを毎回巻き戻す中で流していた。直す前の PR では UUID のまま確定し、`backend/tests/test_tcg_product_detail_pg.py` の2件が `operator does not exist: integer = uuid` で落ちた（run 45880338323・2 failed, 10244 passed）。
+  - ほかの試験（`backend/tests/test_tcg_completion_safety.py:160`・`backend/tests/test_tcg_work_matching_integration.py:325`）も、製品の型（INTEGER）を前提にしている。
+- 見落とし2: §7-2 は `LOCK TABLE public.products` の後で 2147483647 の札を取る順だった。`backend/tests/test_tcg_distribution_pg.py:43-56` は札を先に取ってから products を変える。逆の順なので待ち合いの輪ができうる。
+- 直し方（試験の中だけ）:
+  1. `ensure_product_list_public` の確定させる塊で、`pg_advisory_lock(2147483647)` を `LOCK TABLE public.products` より前に取る。外すのは `_PUBLIC_PRODUCTS_DDL` の後のまま。
+  2. `20260919_020000` の後（`public.tcg_product_categories` ができた後）に、phase3 のファイルから `DO $phase3b$` から `$phase3b$;` までだけを切り出して流す。切り出した文に `LIKE 'tenant_` が無いことを assert する。前半の tenant を回す部分は流さない。
+  3. `_product_list_public_ready` に「public.products.product_category_id の型が integer」を足す。
+  4. 見張りの試験の `_REVIEWED` に、`test_tcg_product_list_pg.py` を `text_only` で戻す。理由は「phase3 のファイルから public だけの Phase 3B を切り出して流す。tenant を回す前半は流さない」。
+- 受け入れ基準の追加: K9 = PR の pytest が pass し、`test_tcg_product_detail_pg.py` の2件が通る。K10 = 確定させる塊で、2147483647 の札の行が `LOCK TABLE` の行より上にある（差分で○×）。
+
 ## 8. 便3: 請求書の表（B）— 直すものは無い
 - PR 5669 で直っている（recon §6-1）。合流後の main 25回で0回。
 - 受け入れ: §7-5 の K4 と同じ30回で、`tenant_issuer_profiles` が出る deadlock を数える。0件なら済み。
