@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import inspect
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
@@ -11,6 +12,7 @@ import pytest
 from fastapi import HTTPException
 from pydantic import ValidationError
 
+from app.auth.dependencies import get_current_tenant
 from app.routers.calendar import (
     CalendarPreferences,
     get_calendar_preferences,
@@ -48,7 +50,7 @@ async def test_get_without_a_row_returns_todays_behavior():
     db = AsyncMock()
     db.execute = AsyncMock(return_value=_Result(first=None))
 
-    result = await get_calendar_preferences(current_user=_user(), db=db)
+    result = await get_calendar_preferences(tenant_id=1, current_user=_user(), db=db)
 
     assert result.model_dump() == _DEFAULTS
 
@@ -63,7 +65,7 @@ async def test_get_reads_only_my_row():
     db = AsyncMock()
     db.execute = AsyncMock(return_value=_Result(first=saved))
 
-    result = await get_calendar_preferences(current_user=_user(101), db=db)
+    result = await get_calendar_preferences(tenant_id=1, current_user=_user(101), db=db)
 
     assert result.model_dump() == saved
     statement, params = db.execute.call_args.args
@@ -190,3 +192,9 @@ def test_out_of_range_values_are_refused_by_the_model(bad):
 
 def test_defaults_equal_todays_behavior():
     assert CalendarPreferences().model_dump() == _DEFAULTS
+
+
+def test_get_depends_on_get_current_tenant():
+    """テナントの表を読むため、get_current_tenant で search_path を設定させる。"""
+    default = inspect.signature(get_calendar_preferences).parameters["tenant_id"].default
+    assert default.dependency is get_current_tenant

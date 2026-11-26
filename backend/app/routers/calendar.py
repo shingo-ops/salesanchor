@@ -556,6 +556,7 @@ _PREFERENCE_COLUMNS = ("default_view", "week_start", "event_minutes", "auto_meet
 
 @router.get("/calendar/preferences", tags=["calendar"], response_model=CalendarPreferences)
 async def get_calendar_preferences(
+    tenant_id: int = Depends(get_current_tenant),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
