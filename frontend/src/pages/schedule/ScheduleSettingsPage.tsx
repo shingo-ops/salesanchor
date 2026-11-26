@@ -516,6 +516,7 @@ export default function ScheduleSettingsPage() {
           <div className="schedule-settings__content">
             <section id="schedule-settings-personal" className="schedule-settings__section-anchor">
               <SectionCard title={t("schedule.prefsTitle")}>
+                {prefsQ.isError && !prefsReady && <div className="error-message" role="alert">{t("schedule.prefsLoadError")}</div>}
                 {prefsError && <div className="error-message" role="alert">{prefsError}</div>}
                 <div className="schedule-settings__calendar-row">
                   <div className="schedule-settings__row-copy">

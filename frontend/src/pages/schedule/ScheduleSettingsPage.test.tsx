@@ -35,6 +35,8 @@ const answers = vi.hoisted(() => ({
   prefs: null as Record<string, unknown> | null,
   /** true の間、初期値の読み込みを終わらせない */
   prefsPending: false,
+  /** true の間、初期値の読み込みは失敗する */
+  prefsFail: false as boolean,
 }));
 
 const DEFAULT_PREFS = {
@@ -55,6 +57,7 @@ vi.mock("../../lib/api", () => ({
         return { connected: answers.connected, connected_at: answers.connectedAt, meet_available: answers.meetAvailable };
       }
       if (path === "/calendar/preferences") {
+        if (answers.prefsFail) throw new Error("prefs failed");
         if (answers.prefsPending) return new Promise(() => {});
         return answers.prefs ?? DEFAULT_PREFS;
       }
@@ -97,6 +100,7 @@ beforeEach(async () => {
   answers.meetAvailable = false;
   answers.prefs = null;
   answers.prefsPending = false;
+  answers.prefsFail = false;
   hrefSetter.mockReset();
   const fake = { ...window.location } as Record<string, unknown>;
   Object.defineProperty(fake, "href", { configurable: true, get: () => "http://localhost/", set: hrefSetter });
@@ -484,6 +488,14 @@ describe("ScheduleSettingsPage personal section (schedule-settings bin3b)", () =
     expect((saveButton() as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(saveButton());
     expect(api.put).not.toHaveBeenCalled();
+  });
+
+  it("K3: shows the preference load failure sentence as an alert and keeps Save disabled", async () => {
+    answers.prefsFail = true;
+    view();
+    const sentence = await screen.findByText(i18n.t("schedule.prefsLoadError"));
+    expect(sentence.getAttribute("role")).toBe("alert");
+    expect((saveButton() as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("hides the Meet row without meet_available, and still sends the loaded auto_meet", async () => {

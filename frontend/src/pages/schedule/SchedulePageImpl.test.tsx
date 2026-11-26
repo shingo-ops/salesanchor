@@ -53,6 +53,8 @@ const answers = vi.hoisted(() => ({
   teams: [] as Array<{ id: number; name: string }>,
   /** GET /calendar/preferences の応答。null は「行が無い」（既定値の応答） */
   prefs: null as Record<string, unknown> | null,
+  /** true の間、初期値の読み込みは失敗する */
+  prefsFail: false as boolean,
   /** 名簿の team_ids（自分・ほかの人） */
   selfTeamIds: [] as number[],
   otherTeamIds: [] as number[],
@@ -78,6 +80,7 @@ vi.mock("../../lib/api", () => ({
         return answers.teams;
       }
       if (path === "/calendar/preferences") {
+        if (answers.prefsFail) throw new Error("prefs failed");
         await answers.gate.prefs;
         return answers.prefs ?? DEFAULT_PREFS;
       }
@@ -132,6 +135,7 @@ beforeEach(async () => {
   answers.categories = [];
   answers.teams = [];
   answers.prefs = null;
+  answers.prefsFail = false;
   answers.selfTeamIds = [];
   answers.otherTeamIds = [];
   answers.gate = { perms: null, prefs: null, teams: null };
@@ -2119,6 +2123,45 @@ describe("SchedulePage personal defaults (schedule-settings bin3b)", () => {
       expect(start.getDay()).toBe(1);
       expect(Math.round((end.getTime() - start.getTime()) / 86400000)).toBe(7);
     });
+  });
+
+  it("K2: the mini calendar starts on Monday when week_start is 1", async () => {
+    answers.prefs = { ...DEFAULT_PREFS, week_start: 1 };
+    const { container } = view();
+    await waitFor(() => {
+      expect(container.querySelectorAll(".schedule-mini-calendar__weekdays span")[0]?.textContent).toBe("月");
+    });
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth(), 1);
+    const back = (first.getDay() + 6) % 7;
+    const expected = String(new Date(now.getFullYear(), now.getMonth(), 1 - back).getDate());
+    expect(container.querySelectorAll(".schedule-mini-calendar__day")[0]?.textContent).toBe(expected);
+  });
+
+  it("K2: the mini calendar starts on Sunday when there is no saved preference", async () => {
+    const { container } = view();
+    await screen.findByRole("button", { name: i18n.t("schedule.create") });
+    expect(container.querySelectorAll(".schedule-mini-calendar__weekdays span")[0]?.textContent).toBe("日");
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth(), 1);
+    const expected = String(new Date(now.getFullYear(), now.getMonth(), 1 - first.getDay()).getDate());
+    expect(container.querySelectorAll(".schedule-mini-calendar__day")[0]?.textContent).toBe(expected);
+  });
+
+  it("K4: shows the preference load failure sentence while events still show", async () => {
+    answers.prefsFail = true;
+    answers.events = [apiEvent({})];
+    view();
+    expect(await screen.findByText(i18n.t("schedule.prefsLoadErrorSchedule"))).toBeTruthy();
+    expect(await screen.findByText("Own Event")).toBeTruthy();
+  });
+
+  it("K4: does not show the preference load failure sentence when the preferences load", async () => {
+    answers.events = [apiEvent({})];
+    view();
+    expect(await screen.findByText("Own Event")).toBeTruthy();
+    await flush();
+    expect(screen.queryByText(i18n.t("schedule.prefsLoadErrorSchedule"))).toBeNull();
   });
 
   it("B1: the saved length is used for a new event (30 minutes) and for a click in the grid", async () => {
