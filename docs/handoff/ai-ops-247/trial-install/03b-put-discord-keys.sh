@@ -21,6 +21,11 @@ if ! id ops-agent >/dev/null 2>&1; then
   exit 1
 fi
 
+if pgrep -u ops-agent >/dev/null; then
+  echo "NG: ops-agent の仕事が動いています。03 の窓を閉じてから流してください。" >&2
+  exit 1
+fi
+
 read -rs -p "ボットの鍵を貼って Enter（画面に出ません）: " TOKEN
 echo
 if [ -z "${TOKEN}" ]; then
@@ -44,6 +49,13 @@ install -d -o ops-agent -g ops-agent -m 700 /home/ops-agent/.claude
 install -d -o ops-agent -g ops-agent -m 700 /home/ops-agent/.claude/channels
 install -d -o ops-agent -g ops-agent -m 700 "${D}"
 
+for p in /home/ops-agent/.claude /home/ops-agent/.claude/channels "${D}"; do
+  if [ -L "${p}" ]; then
+    echo "NG: ${p} がシンボリックリンクです。止めます。" >&2
+    exit 1
+  fi
+done
+
 for f in "${D}/.env" "${D}/access.json"; do
   if [ -L "${f}" ]; then
     echo "NG: ${f} がシンボリックリンクです。止めます。" >&2
@@ -52,11 +64,15 @@ for f in "${D}/.env" "${D}/access.json"; do
 done
 
 umask 077
-printf '%s\n' "DISCORD_BOT_TOKEN=${TOKEN}" "DISCORD_ACCESS_MODE=static" > "${D}/.env"
-printf '%s\n' "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"${UID_PO}\"],\"groups\":{},\"pending\":{}}" > "${D}/access.json"
-
-chown ops-agent:ops-agent "${D}/.env" "${D}/access.json"
-chmod 600 "${D}/.env" "${D}/access.json"
+TMP_ENV="$(mktemp "${D}/.tmp.XXXXXX")"
+TMP_ACC="$(mktemp "${D}/.tmp.XXXXXX")"
+trap 'rm -f "${TMP_ENV}" "${TMP_ACC}"' EXIT
+printf '%s\n' "DISCORD_BOT_TOKEN=${TOKEN}" "DISCORD_ACCESS_MODE=static" > "${TMP_ENV}"
+printf '%s\n' "{\"dmPolicy\":\"allowlist\",\"allowFrom\":[\"${UID_PO}\"],\"groups\":{},\"pending\":{}}" > "${TMP_ACC}"
+chown ops-agent:ops-agent "${TMP_ENV}" "${TMP_ACC}"
+chmod 600 "${TMP_ENV}" "${TMP_ACC}"
+mv -fT "${TMP_ENV}" "${D}/.env"
+mv -fT "${TMP_ACC}" "${D}/access.json"
 
 unset TOKEN
 echo "置きました（持ち主と権限だけ表示。中身は出しません）:"

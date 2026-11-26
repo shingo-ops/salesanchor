@@ -3,7 +3,7 @@
 # 正の設計: docs/handoff/ai-ops-247/server-agent-design.md §12（G1・G2・G4・G7・G8）
 #
 # やること: 利用者 ops-agent を作る(G1) → 作業の場所を作る → 道具の制限(G4)を置く → unit を置く(daemon-reload だけ。enable・start はしない)
-# 2 回流しても壊れない（あれば作らない・設定ファイルは同じ中身で置き直す）。
+# 2 回流しても壊れない（03 の D の前まで。あれば作らない・設定ファイルは同じ中身で置き直す）。
 # 鍵・トークンの値はこの台本に無い。表示もしない。
 #
 # 公式資料で確かめた点（2026-11-26）:
@@ -57,10 +57,16 @@ echo "OK: sudo・docker の組に入っていません。"
 echo "== 2/4 作業の場所 ${AGENT_HOME}/work =="
 install -d -o "${AGENT_USER}" -g "${AGENT_USER}" -m 0755 "${AGENT_HOME}/work"
 ls -ld "${AGENT_HOME}/work"
+# tmux のつなぎ口を家の場所に置く（PrivateTmp=yes で /tmp の中が管理者から見えないため）
+install -d -o "${AGENT_USER}" -g "${AGENT_USER}" -m 0700 "${AGENT_HOME}/.tmux"
 
 echo "== 3/4 道具の制限（G4）を置く =="
 # 値は鍵ではない。道具の名前と許す・断るの一覧だけ。
 install -d -o "${AGENT_USER}" -g "${AGENT_USER}" -m 0700 "${AGENT_HOME}/.claude"
+if [ -f "${AGENT_HOME}/.claude/settings.json" ] && grep -q '"enabledPlugins"' "${AGENT_HOME}/.claude/settings.json"; then
+  echo "NG: 道具を入れた後です。01 を流し直すと道具の記録が消えるので止めます。置き直すときは 06 で戻してから最初から。" >&2
+  exit 1
+fi
 cat > "${AGENT_HOME}/.claude/settings.json" <<'EOF'
 {
   "permissions": {
@@ -102,14 +108,15 @@ Wants=network-online.target
 
 [Service]
 # 起動の形（U-a・未確認）: tmux の中で claude を動かす。止めるのは tmux kill-session。
+# tmux のつなぎ口（-S）は家の場所: PrivateTmp=yes で /tmp の中が管理者から見えないため。
 Type=forking
 User=ops-agent
 WorkingDirectory=/home/ops-agent/work
 Environment=HOME=/home/ops-agent
 Environment=PATH=/home/ops-agent/.local/bin:/home/ops-agent/.bun/bin:/usr/local/bin:/usr/bin:/bin
 Environment=TERM=xterm-256color
-ExecStart=/usr/bin/tmux new-session -d -s ops-agent '/home/ops-agent/.local/bin/claude --channels plugin:discord@claude-plugins-official'
-ExecStop=/usr/bin/tmux kill-session -t ops-agent
+ExecStart=/usr/bin/tmux -S /home/ops-agent/.tmux/ops-agent.sock new-session -d -s ops-agent '/home/ops-agent/.local/bin/claude --channels plugin:discord@claude-plugins-official'
+ExecStop=/usr/bin/tmux -S /home/ops-agent/.tmux/ops-agent.sock kill-session -t ops-agent
 Restart=always
 RestartSec=30
 

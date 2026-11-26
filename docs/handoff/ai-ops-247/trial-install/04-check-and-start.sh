@@ -95,6 +95,19 @@ if ! run_as_agent /bin/true >/dev/null 2>&1; then
 fi
 echo "OK: /bin/true が 0 で終わりました。"
 
+echo "== G1: sudo も docker も使えない =="
+sudo_out="$(sudo -l -U ops-agent 2>&1)"
+case "${sudo_out}" in
+  *"not allowed"*) report "G1 sudo -l -U ops-agent" "not allowed を含む" "含む" ok ;;
+  *) report "G1 sudo -l -U ops-agent" "not allowed を含む" "含まない" ng ;;
+esac
+expect_fail "G1 docker.sock に書けない（守りの下）" /usr/bin/test -w /run/docker.sock
+if run_g2_only /usr/bin/test -w /run/docker.sock >/dev/null 2>&1; then
+  report "G1 docker.sock に書けない（守りの外）" "失敗する（組に入っていない）" "成功した" ng
+else
+  report "G1 docker.sock に書けない（守りの外）" "失敗する（組に入っていない）" "失敗した" ok
+fi
+
 echo "== G7: 本番と監視へ届かない・名前は引ける =="
 # 対照: 守りを外した窓（G7 なし）では届く。届かなければ「確かめにならない」
 if run_no_g7 /usr/bin/curl -m 5 -sS -o /dev/null http://127.0.0.1:19187/metrics >/dev/null 2>&1; then
@@ -152,6 +165,17 @@ if grep -q '"defaultMode": "dontAsk"' /home/ops-agent/.claude/settings.json; the
   report "G4 settings.json に dontAsk" "ある" "ある" ok
 else
   report "G4 settings.json に dontAsk" "ある" "無い" ng
+fi
+# 道具（discord プラグイン）が有効か。中身は表示せず ○× だけ
+if python3 -c 'import json,sys; d=json.load(open("/home/ops-agent/.claude/settings.json")); sys.exit(0 if d.get("enabledPlugins",{}).get("discord@claude-plugins-official") is True else 1)' >/dev/null 2>&1; then
+  report "G4 enabledPlugins の discord@claude-plugins-official" "true" "true" ok
+else
+  report "G4 enabledPlugins の discord@claude-plugins-official" "true" "true ではない" ng
+fi
+if test -d /home/ops-agent/.claude/plugins; then
+  report "G4 /home/ops-agent/.claude/plugins の場所" "ある" "ある" ok
+else
+  report "G4 /home/ops-agent/.claude/plugins の場所" "ある" "無い" ng
 fi
 # 持ち主と権限だけ見る（中身は読まない）
 for f in /home/ops-agent/.claude/channels/discord/.env /home/ops-agent/.claude/channels/discord/access.json; do

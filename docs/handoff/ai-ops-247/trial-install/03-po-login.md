@@ -45,7 +45,7 @@ sudo systemd-run --uid=ops-agent --pty --wait --collect --working-directory=/hom
 
 1. B の窓のシェル（`claude` の外）で次を打ちます:
    `claude plugin install discord --marketplace anthropics/claude-plugins-official -s user`
-2. 窓を閉じます。管理者が `sudo bash 03b-put-discord-keys.sh` を流し、PO が見えない入力に**ボットの鍵（手順 A-2）と自分の利用者番号（手順 A-6）**を貼ります。
+2. 窓を閉じます。PO 本人が自分の端末で `sudo bash 03b-put-discord-keys.sh` を流し、見えない入力に**ボットの鍵（手順 A-2）と自分の利用者番号（手順 A-6）**を貼ります。画面の共有と端末の記録（録画・ログ）は切っておきます。
 3. ここではペア（合言葉）も、許可名簿を切り替える命令も要りません（名簿は 03b で allowlist に置きました）。
 
 ### E. 終わらせる
@@ -54,6 +54,8 @@ sudo systemd-run --uid=ops-agent --pty --wait --collect --working-directory=/hom
 2. 管理者に「終わった」と伝えます。次は管理者が `04-check-and-start.sh` を流します。
 
 ## 止まったとき（未確認の点）
+
+- 画面が止まって見えるときの読み方（読むだけ）: `sudo -u ops-agent tmux -S /home/ops-agent/.tmux/ops-agent.sock capture-pane -p -t ops-agent`
 
 - **D の `claude plugin install` が失敗した場合**: 画面の言葉をそのまま設計担当（Opus）へ伝えます。**自分で `settings.json` をゆるめたり直したりしないでください。**
 - `claude` のログインが通らない／Discord の道具が動かない場合も、同じく止めて報告します。G7 を付けて試すのは、設計担当の指示があってからです。
