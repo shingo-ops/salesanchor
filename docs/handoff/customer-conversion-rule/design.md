@@ -1,6 +1,6 @@
 # design: 「顧客」に切り替える基準（便1）
 
-状態: **KGI は PO 承認済み**（2026-11-25 チャット「1」。K1〜K7 と §3 の前提）。設計審査 1 回目は REVISE（2026-11-25・必須 4 件）。2 回目は REVISE（2026-11-26・必須 3 件＝公開の道の監査の記録・1 か所だけの試験の数え方・一覧の新規作成の選択肢。推奨 4〜6 も本版で直した）。3 回目は REVISE（2026-11-26・必須 1 件＝1 か所だけの試験 (b) の数え方。推奨 2〜5 とあわせて本版で直した）。4 回目は REVISE（2026-11-26・必須 1 件＝カルテの欄を離れたときの保存が古い段階を送り、自動の既存顧客を戻してしまう。推奨 2・3 とあわせて本版で直した）。必須 2〜4 と推奨は本版で直した。必須 1（「登録済み」の判定のそろえ方）は PO が 2026-11-26「1」で決めた（§3・会社に既定の請求先があること）。調査: [recon.md](recon.md)。ADR: [ADR-1090](../../adr/ADR-1090-customer-conversion-three-conditions.md)（Proposed）。
+状態: **KGI は PO 承認済み**（2026-11-25 チャット「1」。K1〜K7 と §3 の前提）。設計審査 1 回目は REVISE（2026-11-25・必須 4 件）。2 回目は REVISE（2026-11-26・必須 3 件＝公開の道の監査の記録・1 か所だけの試験の数え方・一覧の新規作成の選択肢。推奨 4〜6 も本版で直した）。3 回目は REVISE（2026-11-26・必須 1 件＝1 か所だけの試験 (b) の数え方。推奨 2〜5 とあわせて本版で直した）。4 回目は REVISE（2026-11-26・必須 1 件＝カルテの欄を離れたときの保存が古い段階を送り、自動の既存顧客を戻してしまう。推奨 2・3 とあわせて本版で直した）。5 回目は REVISE（2026-11-26・必須 1 件＝リード一覧の編集と編集画面の保存も開いた時点の段階を毎回送る。推奨 2・3 とあわせて本版で直した）。必須 2〜4 と推奨は本版で直した。必須 1（「登録済み」の判定のそろえ方）は PO が 2026-11-26「1」で決めた（§3・会社に既定の請求先があること）。調査: [recon.md](recon.md)。ADR: [ADR-1090](../../adr/ADR-1090-customer-conversion-three-conditions.md)（Proposed）。
 
 ## 1. 目的（PO の言葉は recon §1）
 
@@ -82,6 +82,8 @@ PO の決定:
 - 画面: 選択肢の一覧から existing_customer を外した「手で選べる段階」の一覧を `frontend/src/constants/leadStatus.ts` に 1 つ足し（例 `MANUAL_LEAD_STATUS_CODES`）、`LeadEditPage.tsx:73`・`LeadFormFields.tsx:44` はそれを使う。今が既存顧客の人の編集画面では、今の値は表示する（選び直しはできない）。`LeadsPage.tsx:143` の一覧は 2 か所で使われている（審査 2 回目の必須 3）: 絞り込み（`:284`）は 7 つのまま、新規作成の画面（`:349`）は手で選べる段階の一覧に替える。
 - 422 の画面の文は `t()` で ja/en 両方に足す（ADR-027）。
 
+- 編集の保存で古い段階を送らない（審査 5 回目の必須 1・4 回目の必須 1 と同じ形の穴）: リード一覧の編集（`frontend/src/pages/leads/LeadsPage.tsx:210` `status: editForm.status`・控えは `toForm` の `:109`）と編集画面（`frontend/src/pages/leads/LeadEditPage.tsx:128` `status: form.status`・控えは `:83`）は、開いた時点の段階を毎回 PATCH で送っている。編集の間に入金などで自動で既存顧客になると、メモを 1 つ直しただけで古い段階が送られ、既存顧客が黙って戻る。直し方: 2 か所とも、`status` は開いた時点の値と違うとき（利用者が選び直したとき）だけ送る。失注の理由（`buildLostReasonUpdatePayload`・`LeadFormFields.tsx:46-58`）は今のまま（段階を送らなくても、backend の失注の確かめ `leads.py` の `is_lost_transition` は段階が変わるときだけ働くので、今と同じに動く）。
+
 ### 4-3. カルテ（画面）
 
 - `karteLayout.ts:114` の成約後の一覧を `["existing_customer"]` だけにする。追客（短期・長期）は商談中と同じ見せ方（`NEGOTIATING_LAYOUT`）にする。ADR-1089 What 2 を直す。
@@ -133,7 +135,7 @@ PO の決定:
 - 今ある試験の直し（審査 2 回目の推奨 4）: `backend/tests/test_analytics.py:625,692,770,830,967-973` は API から status=existing_customer を送ってリードを作っており、422 で落ちる。試験の下ごしらえで、作った後に SQL で直接 `UPDATE leads SET status = 'existing_customer'` を入れる形に替える（数え方の試験の目的は変えない）。ほかにも API で existing_customer を送る試験があれば同じに直す（実装役が `git grep -n existing_customer -- backend/tests frontend/src` で数える）。SQL で直接入れている試験（例 `backend/tests/test_lead_merge_pg.py:639` の `env.lead(status="existing_customer")` は `:165-171` で直接 INSERT）は 422 にならないので直さない。`*_pg.py`・`*_rls.py` は PostgreSQL の試験の場所（CI の `.github/workflows/test.yml:240-242`）でだけ動き、手元の SQLite では飛ばされる。直した結果は CI の PostgreSQL の試験で確かめる（手元で通っただけで済ませない）。
 - PostgreSQL の試験（審査 2 回目の推奨 6）: `backend/tests/test_customer_conversion_pg.py`（新規・`test_assistant_karte_pg.py` と同じ形で、CI の `RLS_TEST_DATABASE_URL`・`RLS_ADMIN_DATABASE_URL` があるときに動く・`.github/workflows/test.yml:240-242`）。FOR UPDATE の分岐が通ること、2 本の取引（入金とフォーム送信）を順に重ねて最後に既存顧客になること、`tenant_table_ref` で別テナントの表を見ないことを確かめる。
 - 1 か所だけの試験（ADR-1090 受入条件の最後の行を ○× にする・審査 2 回目の必須 2 で数える形を絞った）: `backend/app` の `.py` を読み、(a) 正規表現 `SET\s+status\s*=\s*'existing_customer'` に合う行が `services/customer_conversion.py` にだけあること（読む側の `WHERE status = 'existing_customer'` は数えない）、(b) 登録済みの判定の写しが残っていないこと。数える形（審査 3 回目の必須 1 で直した）: `backend/app/routers/registration_tokens.py` に、今の写し 2 か所（`:91`・`:111`）だけにある文字列 `JOIN companies c ON c.id = ca.company_id` が 0 件、かつ同じファイルに `is_registration_completed(` が 2 件あること（2026-11-26 `git grep` で、この文字列は `backend/app` の中でこの 2 行だけ）。`change_billing` の `:563` の `AND address_type = 'billing'` は、前の請求先を既定から外す UPDATE で、登録済みの判定ではないので数えない（`address_type = 'billing'` の件数では数えない）。会社の画面の請求先の読み書き（`companies.py:869,887` など）・`erp.py`・`duplicates.py`・`tasks/reports.py` の `address_type = 'billing'` は住所を読む・選ぶ処理で、登録済みの判定ではないので数えない。
-- frontend 試験: karteLayout の追客 2 段階・帯の出し分け・選択肢に既存顧客が無いこと。カルテの欄を離れたときの保存で送る中身に `status` と `registration_completed` が入らないこと（控えに `status: "negotiating"` がある状態で保存し、PATCH の中身を確かめる・審査 4 回目の必須 1）。
+- frontend 試験: karteLayout の追客 2 段階・帯の出し分け・選択肢に既存顧客が無いこと。カルテの欄を離れたときの保存で送る中身に `status` と `registration_completed` が入らないこと（控えに `status: "negotiating"` がある状態で保存し、PATCH の中身を確かめる・審査 4 回目の必須 1）。リード一覧の編集と編集画面で、段階を選び直さずに保存したとき PATCH に `status` が入らず、選び直したときは入ること（審査 5 回目の必須 1）。
 - 本番: テスト株式会社の試しのリード（TST-KARTE-3 を使い回すか、新しく作るかは実装カードで決める）。K6 は反映の前後で reader で数える。
 
 ## 8. 外部事例

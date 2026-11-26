@@ -49,7 +49,7 @@
    - `async def is_registration_completed(db, tenant_id: int, lead_id: int) -> bool`（その人の会社に `address_type = 'billing' AND is_default = TRUE` の行がある）
    - `async def promote_lead_if_customer(db, tenant_id: int, lead_id: int | None, *, actor_user_id: int | None, via: str) -> bool`。`lead_id` が None なら何もせず False。中身は `async with db.begin_nested():` で包み、例外は `logger.error` を残して False。leads の行を（PostgreSQL のときだけ）`FOR UPDATE` で押さえてから、3 つを 1 本の SQL で確かめる。そろえば `UPDATE ... SET status = 'existing_customer', updated_at = NOW() WHERE id = :lead_id AND status <> 'existing_customer'`。書けた行があり `actor_user_id` があれば `record_audit_log(action="auto_convert", table_name="leads", record_id=lead_id, new_data={"status": "existing_customer", "via": via})`、None なら `logger.info("[customer_conversion] auto_convert tenant=%s lead=%s via=%s", ...)`。
    - 表はすべて `tenant_table_ref(db, tenant_id, "<表>")`。`existing_customer` を SET する文はこのファイルにだけ書く。
-2. 呼ぶ所（design §4-1 の表の 13 行どおり。どれも commit の前・その道の書き込みの後）: `registration_tokens.py`・`invoices.py`（2 か所）・`integrations.py`（2 か所）・`orders.py`（`data.paid` が true のときだけ）・`companies.py`（作る・直す・統合）・`leads.py`（統合は残る側を読み直す SELECT の前）。会社から lead_id を求める SQL も `tenant_table_ref` で書く。`actor_user_id` はログインした道が `current_user.id`、公開の道（登録フォーム・配送先・請求先・PayPal の戻りと通知）が None。
+2. 呼ぶ所（design §4-1 の表の 13 行のうち「会社を作るときの住所」は「会社を作る」と同じ 1 回の呼び出しなので、呼ぶ所は 12 か所。どれも commit の前・その道の書き込みの後）: `registration_tokens.py`・`invoices.py`（2 か所）・`integrations.py`（2 か所）・`orders.py`（`data.paid` が true のときだけ）・`companies.py`（作る・直す・統合）・`leads.py`（統合は残る側を読み直す SELECT の前）。会社から lead_id を求める SQL も `tenant_table_ref` で書く。`actor_user_id` はログインした道が `current_user.id`、公開の道（登録フォーム・配送先・請求先・PayPal の戻りと通知）が None。
 3. `registration_tokens.py:86-120` の写し 2 か所を `is_registration_completed` の呼び出しに替える（409 の `already_registered`・`not_registered` は今のまま）。このとき lead から tenant を求める必要があれば、`create_token` の今の `tenant_id` を使う。
 4. `leads.py`:
    - `create_lead`: `data.status == "existing_customer"` なら 422 `detail="existing_customer_is_automatic"`。
@@ -59,7 +59,8 @@
 6. `frontend/src/lib/apiErrorReason.ts`: 表に `existing_customer_is_automatic: "apiError.existingCustomerIsAutomatic",` を 1 行。`ja.json`・`en.json` の `apiError` に同じキーを足す。ja: 「既存顧客には手で変えられません。登録フォーム・会社・支払いの 3 つがそろうと自動で切り替わります。」 en: "You can't set Existing customer by hand. It switches automatically once the registration form, company and payment are all in place."
 7. `frontend/src/constants/leadStatus.ts`: `export const MANUAL_LEAD_STATUS_CODES = LEAD_STATUS_CODES.filter((c) => c !== "existing_customer");`（型は `LeadStatusCode[]`）。
 8. `LeadEditPage.tsx:73`・`LeadFormFields.tsx:44`: 手で選べる一覧を使う。今の値が existing_customer の人は、その値を選択肢の先頭に足して表示だけする（選び直しで他の段階には変えられる。既存顧客に戻す選択肢は今の値のときだけ見える）。
-9. `LeadsPage.tsx`: 絞り込み（:284）は 7 つのまま。新規作成（:349）は手で選べる一覧。
+   - `LeadEditPage.tsx:128` の保存: `status` は開いた時点の値（`:83` の控え）と違うときだけ送る（design §4-2）。
+9. `LeadsPage.tsx`: 絞り込み（:284）は 7 つのまま。新規作成（:349）は手で選べる一覧。編集の保存（:210）: `status` は開いた時点の値（`toForm` `:109` の控え）と違うときだけ送る（design §4-2）。失注の理由（`buildLostReasonUpdatePayload`）は今のまま。
 10. `karteLayout.ts:114`: `["existing_customer"]` だけにする。`karteLayout.test.ts` の追客の期待を「商談中と同じ見せ方」に直す。
 11. `inbox.types.ts:73` の `LeadDetail` に `registration_completed?: boolean | null;`。
 12. `InboxKartePanel.tsx`（design §4-3）:
@@ -72,7 +73,7 @@
     - 新規 `backend/tests/test_customer_conversion.py`（K1 の 6 通り×③の 2 通り・K2 の 7 通り・K3 の 2 本・道ごとに 1 本・手で請求先を入れた人・判定が例外でも入金が残る・公開の道で監査の表に書かない・1 か所だけの試験 (a)(b)・`registration_completed` が 5 か所の返り値で入り、一覧では None）。
     - 新規 `backend/tests/test_customer_conversion_pg.py`（`test_assistant_karte_pg.py` と同じ形）。
     - `backend/tests/test_analytics.py:625,692,770,830,967-973` を、作った後に SQL で `UPDATE leads SET status = 'existing_customer'` する形へ。ほかに API で existing_customer を送る試験があれば同じ。
-    - 画面: `karteLayout.test.ts`・帯とメニューの出し分けの試験（`InboxKartePanel.discordButtons.test.tsx` と同じ置き方で新規）・`MANUAL_LEAD_STATUS_CODES` に既存顧客が無いこと・カルテの保存の PATCH に `status`・`registration_completed` が入らないこと。
+    - 画面: `karteLayout.test.ts`・帯とメニューの出し分けの試験（`InboxKartePanel.discordButtons.test.tsx` と同じ置き方で新規）・`MANUAL_LEAD_STATUS_CODES` に既存顧客が無いこと・カルテの保存の PATCH に `status`・`registration_completed` が入らないこと（新規 `frontend/src/pages/inbox/useInboxState.blurSave.test.tsx`・`useInboxState.cache.test.tsx` と同じ置き方）・段階を選び直さない保存で PATCH に `status` が入らず、選び直すと入ること（新規 `frontend/src/pages/leads/LeadEditPage.statusSave.test.tsx` と、`LeadsPage.temperature.test.tsx` と同じ置き方の新規 `frontend/src/pages/leads/LeadsPage.statusSave.test.tsx`）。
 
 触らない: `migrations/`・`.github/`・`scripts/`・数え方（analytics・dashboard・goals・reports）の式・CSS・連絡先タブ・`karte-visual-gate.spec.ts` の基準画像。
 
@@ -81,7 +82,7 @@
 | 起きたこと | すること |
 |---|---|
 | §1 の行が違う（main が進んだ） | 中身が同じ場所を探して合わせる。中身が違えば止まって `NEEDS_DECISION:` |
-| grep の道が design §4-1 の表より多い・少ない | 止まって `NEEDS_DECISION:`（道の一覧を添える） |
+| grep の道が design §4-1 の表（呼ぶ所 12 か所）より多い・少ない | 止まって `NEEDS_DECISION:`（道の一覧を添える） |
 | SQLite の試験で `begin_nested` が使えない・外の取引まで戻る | 止まる（設計は SAVEPOINT だけ戻る前提） |
 | 公開の道で `tenant_id` が手元に無い | トークンの `tenant_id`・その道で今使っている値を使う。無ければ止まる |
 | `register_customer` の会社作り（:240 の FOR UPDATE）と判定の FOR UPDATE が同じ行を 2 回押さえる | 同じ取引の中なので待たない。そのまま |
