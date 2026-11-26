@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -25,7 +26,13 @@ from app.auth.viewer_signup_code import normalize_signup_code, signup_code_sha25
 from app.discord_gateway import private_channel, staff_join, ticket_channel_creator, viewer_trial
 from app.discord_gateway import staff_join_texts as T
 from app.discord_gateway.client import JarvisDiscordClient
-from tests.rls_bootstrap import _apply_migration, bootstrap_tenant_schema, public_bootstrap_lock
+from tests.rls_bootstrap import (
+    _PUBLIC_BOOTSTRAP_LOCK_KEY,
+    _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE,
+    _apply_migration,
+    bootstrap_tenant_schema,
+    public_bootstrap_lock,
+)
 from tests.test_super_admin_viewers import needs_ci_pg
 from tests.test_viewer_discord_trial import _guild, _interaction, _member, _Redis, _text_channel
 
@@ -579,17 +586,28 @@ class _PgEnv:
         self.perm_keys: list[str] = []  # この試験が入れた permissions の key（後で消す）
 
 
+@contextmanager
+def _public_lock(cur):
+    """共有 DB の public を書く塊を、ほかの準備・後片付けと同じ札（public_bootstrap_lock と同じ鍵）で包む。"""
+    cur.execute("SELECT pg_advisory_lock(%s, %s)", (_PUBLIC_BOOTSTRAP_LOCK_NAMESPACE, _PUBLIC_BOOTSTRAP_LOCK_KEY))
+    try:
+        yield
+    finally:
+        cur.execute("SELECT pg_advisory_unlock(%s, %s)", (_PUBLIC_BOOTSTRAP_LOCK_NAMESPACE, _PUBLIC_BOOTSTRAP_LOCK_KEY))
+
+
 def _cleanup_pg(cur, perm_keys, *, drop_tenant: bool) -> None:
     """この試験が入れた物だけ消す（ほかの会社・ほかの行には触れない）。"""
-    cur.execute("DELETE FROM public.staff_join_invites WHERE tenant_id = %s", (PG_TENANT,))
-    if drop_tenant:
-        cur.execute(f"DROP SCHEMA IF EXISTS {PG_SCHEMA} CASCADE")
-    cur.execute("DELETE FROM public.users WHERE id = %s", (PG_USER,))
-    if not drop_tenant:
-        return
-    cur.execute("DELETE FROM public.tenants WHERE id = %s", (PG_TENANT,))
-    if perm_keys:
-        cur.execute("DELETE FROM public.permissions WHERE key = ANY(%s)", (list(perm_keys),))
+    with _public_lock(cur):
+        cur.execute("DELETE FROM public.staff_join_invites WHERE tenant_id = %s", (PG_TENANT,))
+        if drop_tenant:
+            cur.execute(f"DROP SCHEMA IF EXISTS {PG_SCHEMA} CASCADE")
+        cur.execute("DELETE FROM public.users WHERE id = %s", (PG_USER,))
+        if not drop_tenant:
+            return
+        cur.execute("DELETE FROM public.tenants WHERE id = %s", (PG_TENANT,))
+        if perm_keys:
+            cur.execute("DELETE FROM public.permissions WHERE key = ANY(%s)", (list(perm_keys),))
 
 
 @pytest.fixture
@@ -633,17 +651,18 @@ def _prep_pg(env, *, admin_roles=True):
     cur = env.conn.cursor()
     _cleanup_pg(cur, env.perm_keys, drop_tenant=False)
     cur.execute("SELECT set_config('app.tenant_id', %s, false)", (str(PG_TENANT),))
-    cur.execute(
-        "INSERT INTO public.permissions (key, resource, action, description, category) VALUES "
-        "('staff.create', 'staff', 'create', 'スタッフを作成する', 'スタッフ管理'), "
-        "('staff.view', 'staff', 'view', 'スタッフを閲覧する', 'スタッフ管理') "
-        "ON CONFLICT (key) DO NOTHING RETURNING key"
-    )
-    env.perm_keys.extend(row[0] for row in cur.fetchall())
-    cur.execute(
-        "INSERT INTO public.users (id, tenant_id, email, is_active) VALUES (%s, %s, 'new@example.com', FALSE)",
-        (PG_USER, PG_TENANT),
-    )
+    with _public_lock(cur):
+        cur.execute(
+            "INSERT INTO public.permissions (key, resource, action, description, category) VALUES "
+            "('staff.create', 'staff', 'create', 'スタッフを作成する', 'スタッフ管理'), "
+            "('staff.view', 'staff', 'view', 'スタッフを閲覧する', 'スタッフ管理') "
+            "ON CONFLICT (key) DO NOTHING RETURNING key"
+        )
+        env.perm_keys.extend(row[0] for row in cur.fetchall())
+        cur.execute(
+            "INSERT INTO public.users (id, tenant_id, email, is_active) VALUES (%s, %s, 'new@example.com', FALSE)",
+            (PG_USER, PG_TENANT),
+        )
     cur.execute(
         f"INSERT INTO {PG_SCHEMA}.staff (tenant_id, user_id, staff_code, surname_jp, given_name_jp, status) "
         "VALUES (%s, %s, 'EMP-90701', '試験', '太郎', 'pending') RETURNING id",

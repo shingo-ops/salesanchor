@@ -40,6 +40,7 @@ import pytest_asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 
+from tests.rls_bootstrap import public_bootstrap_lock
 
 _RLS_DB_URL: Optional[str] = os.getenv("RLS_TEST_DATABASE_URL")
 # DDL (CREATE SCHEMA / CREATE TABLE / ALTER TABLE / CREATE POLICY) は管理者接続で実行
@@ -76,7 +77,7 @@ async def pg_engine():
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def setup_schemas(admin_engine, pg_engine):
-    """tenant_998 / tenant_999 schema + tenant_meta_config + RLS を 1 回だけ作る。
+    """tenant_946 / tenant_947 schema + tenant_meta_config + RLS を 1 回だけ作る。
 
     本物の `_TENANT_TABLES_SQL` を呼ばずに、最小限の DDL だけを直接適用する
     （RLS ポリシーの動作検証だけが目的のため）。
@@ -84,77 +85,79 @@ async def setup_schemas(admin_engine, pg_engine):
 
     各テスト前に行を TRUNCATE するため、テスト間で行が混在しない。
     """
-    async with admin_engine.begin() as conn:
-        for tid in (998, 999):
-            schema = f"tenant_{tid:03d}"
-            await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
-            # staff (FK 参照先のため最低限)
-            await conn.execute(text(f"""
-                CREATE TABLE IF NOT EXISTS {schema}.staff (
-                    id SERIAL PRIMARY KEY,
-                    tenant_id INTEGER NOT NULL DEFAULT {tid},
-                    primary_email VARCHAR(255)
-                )
-            """))
-            # tenant_meta_config 本体（migration 040 と同等）
-            await conn.execute(text(f"""
-                CREATE TABLE IF NOT EXISTS {schema}.tenant_meta_config (
-                    id SERIAL PRIMARY KEY,
-                    tenant_id INTEGER NOT NULL DEFAULT {tid},
-                    page_id VARCHAR(50) NOT NULL,
-                    page_name VARCHAR(200) NOT NULL,
-                    page_access_token_encrypted BYTEA NOT NULL,
-                    page_token_expires_at TIMESTAMPTZ,
-                    instagram_business_account_id VARCHAR(50),
-                    instagram_username VARCHAR(100),
-                    subscribed_fields JSONB,
-                    connected_by_staff_id INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
-                    connected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                    last_token_refreshed_at TIMESTAMPTZ,
-                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                    deactivated_at TIMESTAMPTZ,
-                    notes TEXT,
-                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                )
-            """))
-            await conn.execute(text(
-                f"ALTER TABLE {schema}.tenant_meta_config ENABLE ROW LEVEL SECURITY"
-            ))
-            # FORCE: テーブル所有者にも RLS 適用
-            # 注意: SUPERUSER は FORCE でもバイパスされるため、CI で非 SUPERUSER
-            # ロールを使うこと（test.yml で jarvis_app を作成）。
-            await conn.execute(text(
-                f"ALTER TABLE {schema}.tenant_meta_config FORCE ROW LEVEL SECURITY"
-            ))
-            # ポリシー再作成
-            await conn.execute(text(f"""
-                DROP POLICY IF EXISTS tenant_isolation_tenant_meta_config
-                  ON {schema}.tenant_meta_config
-            """))
-            await conn.execute(text(f"""
-                CREATE POLICY tenant_isolation_tenant_meta_config
-                  ON {schema}.tenant_meta_config
-                  USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER)
-            """))
-            # salesanchor_app に DML 付与（CI role = DML only。CREATE は付与しない）
-            await conn.execute(text(
-                f"GRANT USAGE ON SCHEMA {schema} TO salesanchor_app"
-            ))
-            await conn.execute(text(
-                f"GRANT SELECT, INSERT, UPDATE, DELETE "
-                f"ON ALL TABLES IN SCHEMA {schema} TO salesanchor_app"
-            ))
-            await conn.execute(text(
-                f"GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA {schema} TO salesanchor_app"
-            ))
+    async with public_bootstrap_lock(admin_engine):
+        async with admin_engine.begin() as conn:
+            for tid in (946, 947):
+                schema = f"tenant_{tid:03d}"
+                await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+                # staff (FK 参照先のため最低限)
+                await conn.execute(text(f"""
+                    CREATE TABLE IF NOT EXISTS {schema}.staff (
+                        id SERIAL PRIMARY KEY,
+                        tenant_id INTEGER NOT NULL DEFAULT {tid},
+                        primary_email VARCHAR(255)
+                    )
+                """))
+                # tenant_meta_config 本体（migration 040 と同等）
+                await conn.execute(text(f"""
+                    CREATE TABLE IF NOT EXISTS {schema}.tenant_meta_config (
+                        id SERIAL PRIMARY KEY,
+                        tenant_id INTEGER NOT NULL DEFAULT {tid},
+                        page_id VARCHAR(50) NOT NULL,
+                        page_name VARCHAR(200) NOT NULL,
+                        page_access_token_encrypted BYTEA NOT NULL,
+                        page_token_expires_at TIMESTAMPTZ,
+                        instagram_business_account_id VARCHAR(50),
+                        instagram_username VARCHAR(100),
+                        subscribed_fields JSONB,
+                        connected_by_staff_id INTEGER REFERENCES public.users(id) ON DELETE SET NULL,
+                        connected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        last_token_refreshed_at TIMESTAMPTZ,
+                        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                        deactivated_at TIMESTAMPTZ,
+                        notes TEXT,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    )
+                """))
+                await conn.execute(text(
+                    f"ALTER TABLE {schema}.tenant_meta_config ENABLE ROW LEVEL SECURITY"
+                ))
+                # FORCE: テーブル所有者にも RLS 適用
+                # 注意: SUPERUSER は FORCE でもバイパスされるため、CI で非 SUPERUSER
+                # ロールを使うこと（test.yml で jarvis_app を作成）。
+                await conn.execute(text(
+                    f"ALTER TABLE {schema}.tenant_meta_config FORCE ROW LEVEL SECURITY"
+                ))
+                # ポリシー再作成
+                await conn.execute(text(f"""
+                    DROP POLICY IF EXISTS tenant_isolation_tenant_meta_config
+                      ON {schema}.tenant_meta_config
+                """))
+                await conn.execute(text(f"""
+                    CREATE POLICY tenant_isolation_tenant_meta_config
+                      ON {schema}.tenant_meta_config
+                      USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER)
+                """))
+                # salesanchor_app に DML 付与（CI role = DML only。CREATE は付与しない）
+                await conn.execute(text(
+                    f"GRANT USAGE ON SCHEMA {schema} TO salesanchor_app"
+                ))
+                await conn.execute(text(
+                    f"GRANT SELECT, INSERT, UPDATE, DELETE "
+                    f"ON ALL TABLES IN SCHEMA {schema} TO salesanchor_app"
+                ))
+                await conn.execute(text(
+                    f"GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA {schema} TO salesanchor_app"
+                ))
 
     yield
 
     # cleanup: テスト用 schema を完全削除（管理者接続）
-    async with admin_engine.begin() as conn:
-        await conn.execute(text("DROP SCHEMA IF EXISTS tenant_998 CASCADE"))
-        await conn.execute(text("DROP SCHEMA IF EXISTS tenant_999 CASCADE"))
+    async with public_bootstrap_lock(admin_engine):
+        async with admin_engine.begin() as conn:
+            await conn.execute(text("DROP SCHEMA IF EXISTS tenant_946 CASCADE"))
+            await conn.execute(text("DROP SCHEMA IF EXISTS tenant_947 CASCADE"))
 
 
 @pytest_asyncio.fixture(loop_scope="module")
@@ -171,8 +174,8 @@ async def pg_conn(admin_engine, pg_engine, setup_schemas):
     """
     # テストデータ初期化（admin_engine = SUPERUSER で RLS を回避）
     async with admin_engine.begin() as admin_conn:
-        await admin_conn.execute(text("DELETE FROM tenant_998.tenant_meta_config"))
-        await admin_conn.execute(text("DELETE FROM tenant_999.tenant_meta_config"))
+        await admin_conn.execute(text("DELETE FROM tenant_946.tenant_meta_config"))
+        await admin_conn.execute(text("DELETE FROM tenant_947.tenant_meta_config"))
     # テスト本体は salesanchor_app（pg_engine）で実行（RLS が有効）
     async with pg_engine.connect() as conn:
         yield conn
@@ -199,36 +202,36 @@ async def test_rls_other_tenant_rows_invisible(pg_conn):
     """テナント A の context で B の行が SELECT で見えない。"""
     # データ投入: 各テナントを 1 件ずつ
     async with pg_conn.begin():
-        await _insert_dummy(pg_conn, 998, "page-998-1")
+        await _insert_dummy(pg_conn, 946, "page-946-1")
 
     async with pg_conn.begin():
-        await _insert_dummy(pg_conn, 999, "page-999-1")
+        await _insert_dummy(pg_conn, 947, "page-947-1")
 
-    # 検証: テナント 998 の context で tenant_999 のテーブルを見る
+    # 検証: テナント 946 の context で tenant_947 のテーブルを見る
     async with pg_conn.begin():
-        await pg_conn.execute(text("SET LOCAL app.tenant_id = '998'"))
+        await pg_conn.execute(text("SET LOCAL app.tenant_id = '946'"))
         rows = (await pg_conn.execute(text(
-            "SELECT page_id FROM tenant_999.tenant_meta_config"
+            "SELECT page_id FROM tenant_947.tenant_meta_config"
         ))).fetchall()
-        assert rows == [], f"テナント 998 の context で 999 の行が見えてしまう: {rows}"
+        assert rows == [], f"テナント 946 の context で 947 の行が見えてしまう: {rows}"
 
         # 自テナントは見える
         rows = (await pg_conn.execute(text(
-            "SELECT page_id FROM tenant_998.tenant_meta_config"
+            "SELECT page_id FROM tenant_946.tenant_meta_config"
         ))).fetchall()
-        assert any(r[0] == "page-998-1" for r in rows)
+        assert any(r[0] == "page-946-1" for r in rows)
 
 
 @pytest.mark.asyncio(loop_scope="module")
 async def test_rls_visible_when_app_tenant_id_matches(pg_conn):
     """app.tenant_id を切り替えると、そのテナントの行が見えるようになる。"""
     async with pg_conn.begin():
-        await _insert_dummy(pg_conn, 999, "page-999-2")
+        await _insert_dummy(pg_conn, 947, "page-947-2")
 
     async with pg_conn.begin():
-        await pg_conn.execute(text("SET LOCAL app.tenant_id = '999'"))
+        await pg_conn.execute(text("SET LOCAL app.tenant_id = '947'"))
         rows = (await pg_conn.execute(text(
-            "SELECT page_id FROM tenant_999.tenant_meta_config WHERE page_id = 'page-999-2'"
+            "SELECT page_id FROM tenant_947.tenant_meta_config WHERE page_id = 'page-947-2'"
         ))).fetchall()
         assert len(rows) == 1, f"自テナントの行が見えない: {rows}"
 
