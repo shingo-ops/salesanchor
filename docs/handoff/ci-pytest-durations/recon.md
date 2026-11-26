@@ -13,7 +13,7 @@
 ## 現在の CI（事実）
 - `.github/workflows/test.yml:224` の段「Run pytest (full suite + PostgreSQL RLS)」の実行行は `.github/workflows/test.yml:259` の `pytest -q --tb=short` の1行だけ。`--durations` は無い。
 - この行を参照している箇所は `git grep -n "pytest -q --tb=short" origin/main -- .github scripts docs/specs` で test.yml:259 の1件だけ。
-- `test.yml` の変更は、それ自体で pytest を流す（`detect-changes` の filter に `.github/workflows/test.yml` がある: `.github/workflows/test.yml:54`）。push の paths にも入っている（同 :27）。
+- `.github/workflows/test.yml` の変更は、それ自体で pytest を流す（`detect-changes` の filter に `.github/workflows/test.yml` がある: `.github/workflows/test.yml:54`）。push の paths にも入っている（同 :27）。
 - CI は Redis を横で動かし `REDIS_URL: redis://localhost:6379/0` を渡している（`.github/workflows/test.yml:251`）。
 
 ## クラウドでの実測（2026-11-26・Sonnet・SQLite のみ・nproc 4・HEAD 295bc608a）

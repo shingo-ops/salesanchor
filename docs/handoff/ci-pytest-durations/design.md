@@ -39,6 +39,7 @@ CI で本当に遅い試験を、毎回の記録で読めるようにする。�
 - pytest 公式の使い方「Profiling test execution duration」（Context7 /pytest-dev/pytest、how-to/usage.rst）が `--durations=N` を遅い試験の特定手段として案内している。数値の事例は不要（表示を足すだけで、効果の主張をしないため）。
 
 ## 8. 維持の仕組み
+- 守り手: `.github/workflows/test.yml:259` の `--durations=30`（必須チェック pytest の段で毎回動く）。
 - 一覧は毎回の CI 記録に出る。直す順番を決めるときに、PO 報告の前に Opus が直近の main の記録から読む。
 - 一覧から直す試験を選ぶのは別テーマ（PO 判断）。
 
