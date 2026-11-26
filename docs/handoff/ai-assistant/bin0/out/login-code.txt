@@ -1,3 +1,1 @@
-https://auth.openai.com/codex/device
-48CX-C6C2Z
-coordinator 部屋: 出した時刻 15:29:50 UTC・有効 900 秒
+使用済み（15:31:58 UTC）coordinator
