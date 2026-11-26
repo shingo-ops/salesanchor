@@ -3407,6 +3407,8 @@
     "prefsTeam": "Team",
     "prefsSaved": "Saved",
     "prefsSaveError": "Could not save. Please try again.",
+    "prefsLoadError": "Could not load your defaults. Please reopen the page.",
+    "prefsLoadErrorSchedule": "Could not load your defaults, so the standard view is shown.",
     "settingsAutomationSubtitle": "Configure automation and notifications.",
     "settingsBack": "Back to calendar",
     "settingsNavigation": "Settings sections",

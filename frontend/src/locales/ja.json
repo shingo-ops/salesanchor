@@ -3408,6 +3408,8 @@
     "prefsTeam": "チーム",
     "prefsSaved": "保存しました",
     "prefsSaveError": "保存できませんでした。もう一度お試しください。",
+    "prefsLoadError": "自分の初期値を読み込めませんでした。ページを開き直してください。",
+    "prefsLoadErrorSchedule": "自分の初期値を読み込めなかったため、標準の表示で開いています。",
     "settingsBack": "カレンダーへ戻る",
     "settingsNavigation": "設定セクション",
     "settingsTimezoneTokyo": "東京 (GMT+09:00)",
