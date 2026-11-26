@@ -32,4 +32,12 @@
     <string name="scheduler_status_off">タイマー: OFF</string>
     <string name="scheduler_toggle_turn_on">ONにする</string>
     <string name="scheduler_toggle_turn_off">OFFにする</string>
+
+    <!-- 電池最適化の除外（design.md追補「電池最適化で後回しにされたことを検知・記録・復旧できる仕組み」2026-11-26） -->
+    <string name="battery_section_title">電池の除外</string>
+    <string name="battery_status_exempt">電池の除外: されている</string>
+    <string name="battery_status_not_exempt">電池の除外: されていない</string>
+    <string name="battery_status_unknown">電池の除外: 不明</string>
+    <string name="battery_open_settings_button">電池の除外設定を開く</string>
+    <string name="battery_open_settings_failed">電池の除外設定を開けませんでした</string>
 </resources>

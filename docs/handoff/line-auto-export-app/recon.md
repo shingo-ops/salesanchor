@@ -55,3 +55,27 @@
 - `tools/termux-line-import/client.py:23` — 1回に送るファイルの上限（`MAX_BYTES`）。書き出しファイルがこれを超えると送らない。
 - `tools/termux-line-import/android_parser.py:3-4` — 「本文のバイト完全復元は保証しない」旨の明記。アプリ側は原本テキストをそのまま渡す設計にする根拠。
 - `docs/handoff/line-android-import/design.md:1` — 受信後の送信・通知・履歴・原本1件保持（完成済み）の設計。本件はその手前の「書き出しを自動化する部分」。
+
+## 追補 2026-11-26 現在地（電池最適化で後回しにされる経路）
+
+引用はすべて `origin/main`（c3834ee5f 時点）と実機 SC-51G の一次情報。
+
+### コード側の現在地
+
+- `tools/line-auto-export-app/AndroidManifest.xml:10-12` — `minSdkVersion 23` / `targetSdkVersion 24`。正確アラームの許可が compat 扱いになる理由。
+- `tools/line-auto-export-app/AndroidManifest.xml:16-23` — 宣言済みの権限は `WAKE_LOCK`・`WRITE_EXTERNAL_STORAGE`・`RECEIVE_BOOT_COMPLETED` の3つのみ。電池最適化の除外を求める権限は無い。
+- `RunScheduler.java` の `scheduleAt` — `trySetExactAndAllowWhileIdle` を試し、失敗時のみ `setAndAllowWhileIdle` に落ちる。すでに「正確＋省電力中でも発火」を要求している。
+- `RunScheduler.java` の `trySetExactAndAllowWhileIdle` — `canScheduleExactAlarms`（API31）はリフレクションが必要なため使わず、実際に呼んで失敗を検知する方式。
+- `RunScheduler.java` の `notifyIfExactModeChanged` と `SchedulerStore#wasLastScheduleExact` — 「前回値と比べ、変わったときだけ知らせる」既存の作り。今回の除外状態の検知はこの作りに倣った。
+- `RunScheduler.java` の `onQualifyingNotification` — `reserve` を記録して +30秒のアラームを張る入口。空振り時にログに残るのはこの1行だけだった。
+- `SchedulerStore.java` の `getNotificationReservedAt` — 通知引き金のバースト抑制専用。意味が違うため発火予定時刻の保存には共用しない。
+
+### 実機側の現在地（2026-11-26・`adb shell dumpsys`）
+
+- `dumpsys alarm` の設定値: `app_standby_window=+1h`・`standby_quota_rare=1`・`standby_quota_working=10`・`standby_quota_frequent=2`・`standby_quota_active=720`・`min_window=+10m`。
+- `am get-standby-bucket jp.salesanchor.lineexport` = `40`（RARE）＝1時間に1回しか発火できない。
+- `dumpsys deviceidle whitelist` に本アプリは不在（`user,com.termux,10420` のみ）。
+- 保留アラーム2件が同一 `whenElapsed=2074665196`、`origWhen` は 18:39:06 と 18:53:59、`nowELAPSED=2073958167`（18:57:11）。
+- `dumpsys accessibility` — `UnlockAccessibilityService` は `Bound services` に在り `Crashed services:{}`＝ユーザー補助は正常。切り分けの結果、原因はアラーム側に限定できた。
+- `dumpsys package jp.salesanchor.lineexport` — `versionCode=22 versionName=0.19.0-stage3 lastUpdateTime=2026-10-11`＝実機とリポジトリの版が一致。
+- アプリのログ `/sdcard/Download/sa-line-notify/run-20261126.jsonl` — 18:09:08 の `export/end success` 以降、`scheduler/reserve` が4件のみで `unlock`/`export` が無い。

@@ -177,7 +177,7 @@ javac `--release 8` → dalvik-exchange で classes.dex → aapt でリソース
 3. 「記録用ストレージ権限を許可」ボタンで `WRITE_EXTERNAL_STORAGE` を許可（Android 10+ではスコープドストレージの影響で `Download/` 配下への書き込みが制限される可能性があり未検証＝下記「未対応事項」）。
 4. 設定画面の対象グループ欄を確認・保存（既定は `WeGo売ります掲示板グループ`）。
 5. 対象グループ宛にLINEメッセージを送ってもらい、通知が届いた後に設定画面へ戻って「記録件数」「最終記録」「記録先」が更新されるか確認。
-6. `adb shell run-as jp.salesanchor.lineexport ...` またはファイルマネージャで `Download/sa-line-notify/raw-YYYYMMDD.jsonl` と `talk-YYYYMMDD.txt` の中身を確認し、本文・改行・絵文字が欠落なく入っているか、`talk-*.txt` が `android_parser.py` でパースできる形式になっているかを確認する。
+6. `adb shell run-as jp.salesanchor.lineexport ...` またはファイルマネージャで `Download/sa-line-notify/raw-YYYYMMDD.jsonl` と `talk-YYYYMMDD.txt` の中身を確認し、本文・改行・絵文字が欠落なく入っているか、`talk-*.txt` が `tools/termux-line-import/android_parser.py` でパースできる形式になっているかを確認する。
 
 ### 未対応・不明点
 
@@ -278,13 +278,13 @@ uses-implied-permission: name='android.permission.READ_EXTERNAL_STORAGE' reason=
 
 1. **ADB版はLINEの要素をすべてノードのテキストで特定している**。`/root/line-auto-export/flow.sh:52,54,57,60,64` の `tap_by`/`find_scroll` に渡す正規表現は
    `text="WeGo売ります・BOX`（ホームのショートカット、前方一致）／`content-desc="Menu ボタン"`／`text="設定"`／`text="トーク履歴を送信"`／`text="Termux"`。
-   座標は `tap_by()` が `uiautomator dump` の `bounds` からその場で計算している（`flow.sh:19,23`）＝固定座標ではない。
+   座標は `tap_by()` が `uiautomator dump` の `bounds` からその場で計算している（`tools/line-auto-export/flow.sh:19,23`）＝固定座標ではない。
    `uiautomator dump` が読むのは **AccessibilityService が読むのと同じノードツリー**であり、この経路は本番で 2026-10-07 に44回成功している。
    → **LINEの各画面のノードは取得できると実証済み**。アプリ側は `ACTION_CLICK`（クリック可能な祖先へ委譲）で同じ操作ができ、座標計算が不要になるぶん ADB版より堅い。
 2. **例外が1つある**: Termuxの保存ダイアログの `EDIT` ボタンは **uiautomator に露出しない**（`/root/line-auto-export/auto-export.sh:13` のコメント、2026-09-17 スクリーンショットで確認）。
    ADB版も固定座標 `EDIT_X=872, EDIT_Y=1237`（画面1080x2340）でタップしている。
    → アプリ側も**この1点だけは座標ジェスチャ**にする（比率 x=0.8074, y=0.5287）。ADB版と同じ脆さであり、悪化はしない。
-3. 送信（salesanchorへのPOST）は Termux内の `client.py` が担い、宛先は固定HTTPS（`client.py:22`）。Wi-Fi/モバイルを区別するコードは1行も無い。
+3. 送信（salesanchorへのPOST）は Termux内の `tools/termux-line-import/client.py` が担い、宛先は固定HTTPS（`tools/termux-line-import/client.py:22`）。Wi-Fi/モバイルを区別するコードは1行も無い。
    → **アプリにINTERNET権限は追加しない**（誤送信の構造的防止を維持）。段階2でもアプリは「LINEのUIを操作してTermuxへ渡す」までを担う。
 
 ### 実装範囲（段階2のみ。スケジューラ・使用中スキップ・再ロックは段階3）
@@ -303,7 +303,7 @@ uses-implied-permission: name='android.permission.READ_EXTERNAL_STORAGE' reason=
 | 9 | 共有シートの到達 | `Termux` のノードが見つかること | `share_sheet` |
 | 10 | `Termux` をクリック | - | `termux_target` |
 | 11 | `EDIT` を**座標タップ**（比率 0.8074, 0.5287） | ダイアログはノードに露出しないため、ウィンドウのクラス名 `TermuxFileReceiverActivity` を **最大5秒**ポーリング（ADB版 auto-export.sh:154 の `seq 1 10`×`sleep 0.5`＝5秒と同値）→ 検出したら**1秒待って**タップ（同:156 の `sleep 1` と同値）。5秒で検出できなくても**タップは行い**、診断に `editクラス未検出` を残す（ADB版はここで失敗扱いにするが、このダイアログはそもそもノードに露出しないため、アプリ側はクラス名が読めないことを失敗とみなさない） | `edit_button` |
-| 12 | 後片付けは**何もしない** | ADB版の BACK×3（flow.sh:75-78）は**本番では実行されない**: `auto-export.sh:143` は `flow.sh 1 keep` と呼び、`flow.sh:73` の `keep` 分岐で後片付けの手前で `exit 0` する。本番は EDIT タップ後、`outbox.sqlite3` の送信結果を最大240秒待ってから HOME+SLEEP する（auto-export.sh:159-170）。**EDITタップ直後にBACKを撃つと保存ダイアログを取り消す恐れがある**ため、段階2では画面をそのまま残す。HOME・再ロックは段階3の範囲 | - |
+| 12 | 後片付けは**何もしない** | ADB版の BACK×3（flow.sh:75-78）は**本番では実行されない**: `tools/line-auto-export/auto-export.sh:143` は `tools/line-auto-export/flow.sh 1 keep` と呼び、`tools/line-auto-export/flow.sh:73` の `keep` 分岐で後片付けの手前で `exit 0` する。本番は EDIT タップ後、`outbox.sqlite3` の送信結果を最大240秒待ってから HOME+SLEEP する（auto-export.sh:159-170）。**EDITタップ直後にBACKを撃つと保存ダイアログを取り消す恐れがある**ため、段階2では画面をそのまま残す。HOME・再ロックは段階3の範囲 | - |
 
 段階名は **ADB版 flow.sh と同じ語**（`shortcut`/`open_chat`/`menu_button`/`open_menu`/`settings_item`/`open_settings`/`export_item`/`share_sheet`）に揃える。
 理由: 既存の `auto-export.log` の失敗履歴（例 2026-10-07 07:03 の `open_settings`）と直接比較できるようにするため。`group_mismatch`・`termux_target`・`edit_button` は段階2で新設。
@@ -901,3 +901,68 @@ watermark（取り込みの起点）は送信が受理されたときだけ進�
 - `RunStatusOverlay`の遮断の作り（「停止」ボタンは削除済みのまま、復活させていない）、`overlayBlocking = armRetryOnFailure`の判定、`lockOnFinish`/`armRetryOnFailure`の分岐、`accessibility_service_config.xml`の`accessibilityEventTypes`、`NodeOps`の既存メソッドの挙動、`RunScheduler`の予約・補完・再試行の仕組み・キーガード判定は、いずれも変更していない。
 
 座標スワイプが遮断中に通るかなど、この追補の範囲外の未確定事項については推測を書かない（上の「未確定事項と検知方法」節のまま、別途判断する）。
+
+## 追補 2026-11-26 電池最適化で後回しにされたことを検知・記録・復旧できる仕組み
+
+対象ADR: ADR-1090（本追補の方針の芯と、記録の保持期間・上限の決定はここに記録した）。
+
+### 起きた事象（実機 2026-11-26）
+
+`run-20261126.jsonl` で 18:09:08 の `export/end success` のあと、LINE の新着通知が 18:36:43・18:43:33・18:47:47・18:53:29 の4回届き `scheduler/reserve`（+30秒）も記録されたのに、`unlock`/`export` が1回も走らなかった（48分の空振り）。アプリのログに理由は出ない。
+
+### 実測した事実（根拠・すべて `adb shell dumpsys` の一次情報）
+
+- 保留中の `*walarm*:jp.salesanchor.lineexport.SCHEDULED_RUN` 2件が **同一の `whenElapsed=2074665196`** に束ねられていた。`origWhen` は 18:39:06 と 18:53:59、`nowELAPSED=2073958167`（18:57:11）＝**発火予定は約19:09（遅れ30分/15分）**。
+- `am get-standby-bucket jp.salesanchor.lineexport` = **40（RARE）**。
+- `dumpsys deviceidle whitelist` に本アプリは**不在**（`com.termux` は在った）。
+- AlarmManager の設定値: `app_standby_window=+1h`・`standby_quota_active=720`・`standby_quota_working=10`・`standby_quota_frequent=2`・**`standby_quota_rare=1`**・`standby_quota_restricted=1`・`min_window=+10m`。
+- 発火した分の履歴に `policyWhenElapsed: app_standby=-57m12s531ms`＝省電力の方針で約57分ずらされた記録が残っていた。
+- アラームは `window=0 exactAllowReason=compat`＝**正確アラームは既に許可されている**。
+
+### 分かったこと（当初案の否定）
+
+- 原因は「正確さ」ではなく **1時間あたりの発火回数の割当**。RARE では1時間に1回しか発火できず、本アプリは1日約90回（約10分おき）動くため、あふれた予約が同一時刻に束ねられる。
+- コードは既に `setExactAndAllowWhileIdle` を使い、失敗時だけ不正確へ落ちる（`tools/line-auto-export-app/src/java/jp/salesanchor/lineexport/RunScheduler.java` の `trySetExactAndAllowWhileIdle`）。`targetSdkVersion` は 24 のため `USE_EXACT_ALARM`（API33向け）は効かない。**よって当初検討した `USE_EXACT_ALARM` の宣言は採用しない。**
+- 効く対処は電池最適化の除外のみ。2026-11-26 に ADB で `dumpsys deviceidle whitelist +jp.salesanchor.lineexport` ＋ `am set-standby-bucket … active` を適用し、区分が 40→**5（EXEMPTED）**になった直後に `scheduler/fire`（trigger=補完）→ 18:57:51 開始・18:58:02 `export/end success`・18:58:11 送信 `accepted`（HTTP 200・32,119バイト・基準 18:07）で**空振り分を回収**した。書き出しは全文＋60分の重なり、サーバは watermark で差分を取るため**遅れてもデータは失われない**。
+
+### 残る弱点と PO 決定
+
+除外は**ユーザー操作・Samsung のスリープ機能・アプリ再インストールで失われ、失われても誰も気づけない**（アプリは「予約した」としか記録しないため）。2026-11-26 に PO から「3点でgo」を受領し、次の3点を実装する。
+
+### 対処1 除外が外れたことに気づいて記録する
+
+`PowerManager#isIgnoringBatteryOptimizations`（API23追加のためリフレクション不要）で現在値を取り、`notifyIfExactModeChanged` と同じ「前回値と比べ、変わったときだけ記録する」作りにする。実装は `RunScheduler#isIgnoringBatteryOptimizations`・`RunScheduler#checkBatteryOptimizationExemptionChanged`（`scheduleAt` の末尾から呼ぶ）・`SchedulerStore#wasLastIgnoringBatteryOptimizations`。記録は `flow=scheduler` / `phase=battery_exemption_changed`。あわせて実行開始の記録に `batteryOptimizationIgnored` を足す（不明なときは項目を出さない＝既存の nullable 項目と同じ扱い）。
+
+### 対処2 空振り（予約したのに発火しない）を記録する
+
+予約時に引き金ごとの発火予定時刻を `SchedulerStore#setScheduledFireAt` に保存し、発火を受けたら `RunScheduler#onAlarmFired` の冒頭で消す。スケジューラの公開入口を通るたびに `checkStaleScheduledFires` が全引き金を確認し、保存値が **120秒（`STALE_FIRE_THRESHOLD_MS`）以上過去**なら `flow=scheduler` / `phase=missed_fire`（`trigger`・`scheduledAt`・`lateByMs`）を1行記録して消す。`cancelAll` では保存値も消す（意図したキャンセルを空振りと誤判定しないため）。`disable()` は `cancelAll` の前に `checkStaleScheduledFires` を呼び、本物の空振りだけ記録してから消す。
+
+### 対処3 設定画面から自分で復旧できるようにする
+
+`AndroidManifest.xml` に `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` を追加し、設定画面に現在の除外状態の表示と `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`（`package:` 付き）を開くボタンを置く。`ActivityNotFoundException` は捕まえて落ちない。文字はすべて `res/values/strings.xml`（`battery_*`）に置き、Java に日本語を直接書かない。`onResume`→`refreshStatus`→`refreshBatteryStatus` の経路があるため、設定画面から戻ると表示が更新される。
+
+### 守ること
+
+- 既存のタイミング（`FLOOR_INTERVAL_MS`・各引き金の間隔）とログの既存項目の意味は変えない。足すだけ。
+- APK の署名鍵は**既存の `build/debug.keystore`（2026-09-17 作成）を使う**。新しい鍵で署名すると上書き更新ができず、消して入れ直す＝PIN・ユーザー補助・通知の権限を失う。2026-11-26 の版は実機の APK と証明書 SHA-256 が一致することを `apksigner verify --print-certs` で確認済み（`c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709`）。
+- `sdk/android-34.jar` は追跡対象外。ビルドする環境ごとに用意する。
+
+### 検証
+
+| 基準 | 検証方法 |
+|---|---|
+| ビルドが通る | `cd tools/line-auto-export-app && bash build.sh` が終了コード0・`out/app-debug.apk` を出す |
+| 上書き更新できる（データ・権限が保たれる） | 新 APK と実機の APK の `apksigner verify --print-certs` の SHA-256 が一致 |
+| 版が上がっている | `aapt dump badging out/app-debug.apk` が `versionCode='23' versionName='0.20.0-stage3'` |
+| 除外が外れたら気づける | 実機で `adb shell dumpsys deviceidle whitelist -jp.salesanchor.lineexport` → 次の予約で `phase=battery_exemption_changed`・`ignoringBatteryOptimizations=false` が記録される |
+| 空振りを記録できる | 同上の状態で予約時刻+120秒以降に入口を通ると `phase=missed_fire` が `lateByMs` 付きで記録される |
+| 既存の集計が壊れない | `jq 'select(.flow=="export" and .phase=="end")'` 等の既存条件がそのまま動く（既存項目を変えていない） |
+
+### 外部・過去事例
+
+- Android の App Standby バケットごとのアラーム割当は端末の `dumpsys alarm` の `standby_quota_*` が正本。本件は推測ではなく当該端末（SC-51G）の実値で確認した。
+- 同種の「省電力で黙って止まる」事象は 2026-10-13 の記録（ユーザー補助サービス未接続時に合図が黙って捨てられる）と同じ系統＝**黙って止まる経路は記録を足して可視化する**という本リポジトリの既往の対処方針に沿う。
+
+### 変えていないもの
+
+`USE_EXACT_ALARM` の宣言（効かないため）、`targetSdkVersion`（24 のまま）、`minSdkVersion`（23 のまま）、アラームの張り方（`setExactAndAllowWhileIdle` のまま）、送信側 `tools/termux-line-import/client.py`、`termux-job-scheduler` の登録。

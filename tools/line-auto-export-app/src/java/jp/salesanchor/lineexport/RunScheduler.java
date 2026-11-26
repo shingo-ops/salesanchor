@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.os.PowerManager;
 import android.util.Log;
 
 import java.util.Calendar;
@@ -87,6 +88,16 @@ final class RunScheduler {
     static final String TRIGGER_COMPLEMENT = "complement";
     static final String TRIGGER_RETRY = "retry";
 
+    /** {@link #checkStaleScheduledFires}が全引き金を順に確認するための一覧。 */
+    private static final String[] ALL_TRIGGERS = {TRIGGER_NOTIFICATION, TRIGGER_COMPLEMENT, TRIGGER_RETRY};
+
+    /**
+     * 空振り（予約した発火予定時刻を過ぎても発火しない）とみなすしきい値。design.md追補
+     * 「電池最適化で後回しにされたことを検知・記録・復旧できる仕組み」(2026-11-26。PO決定)。
+     * 実機2026-11-26で確認した48分の空振り（予約4回・実行0回）を踏まえた値。
+     */
+    static final long STALE_FIRE_THRESHOLD_MS = 120L * 1000L;
+
     static final String EXTRA_TRIGGER = "trigger";
 
     // 3つの引き金は互いに独立のアラームとして共存させるため、requestCodeを別にする
@@ -115,6 +126,9 @@ final class RunScheduler {
             cancelAll(context);
             return;
         }
+        // スケジューラの入口を通るたびに空振りを確認する（design.md追補「電池最適化で
+        // 後回しにされたことを検知・記録・復旧できる仕組み」2026-11-26）。
+        checkStaleScheduledFires(context);
         long nextAt = computeNextComplementAt(context);
         scheduleAt(context, REQUEST_CODE_COMPLEMENT, nextAt, TRIGGER_COMPLEMENT);
         SchedulerStore.setPendingNextTrigger(context, TRIGGER_COMPLEMENT, nextAt);
@@ -122,6 +136,8 @@ final class RunScheduler {
 
     /** 設定画面でONにしたときの入口。 */
     static void enable(Context context) {
+        // スケジューラの入口を通るたびに空振りを確認する（design.md追補参照、上記と同じ）。
+        checkStaleScheduledFires(context);
         SchedulerStore.setEnabled(context, true);
         long nextAt = computeNextComplementAt(context);
         scheduleAt(context, REQUEST_CODE_COMPLEMENT, nextAt, TRIGGER_COMPLEMENT);
@@ -134,6 +150,9 @@ final class RunScheduler {
      * 同様に解除する）。暴走時に利用者が自分で止められる手段。
      */
     static void disable(Context context) {
+        // cancelAll（下記）が空振り検知用の保存値も一緒に消すため、本当に空振りだったものを
+        // 記録として残すならここで先に確認する（design.md追補参照、上記と同じ）。
+        checkStaleScheduledFires(context);
         SchedulerStore.setEnabled(context, false);
         cancelAll(context);
     }
@@ -157,6 +176,9 @@ final class RunScheduler {
         if (!SchedulerStore.isEnabled(context)) {
             return;
         }
+        // スケジューラの入口を通るたびに空振りを確認する（design.md追補「電池最適化で
+        // 後回しにされたことを検知・記録・復旧できる仕組み」2026-11-26）。
+        checkStaleScheduledFires(context);
         long now = System.currentTimeMillis();
         long reservedAt = SchedulerStore.getNotificationReservedAt(context);
         if (reservedAt > now) {
@@ -186,6 +208,9 @@ final class RunScheduler {
         if (!SchedulerStore.isEnabled(context)) {
             return;
         }
+        // スケジューラの入口を通るたびに空振りを確認する（design.md追補「電池最適化で
+        // 後回しにされたことを検知・記録・復旧できる仕組み」2026-11-26）。
+        checkStaleScheduledFires(context);
         long nextAt = System.currentTimeMillis() + RETRY_INTERVAL_MS;
         scheduleAt(context, REQUEST_CODE_RETRY, nextAt, TRIGGER_RETRY);
         // 実行ログ診断用。見送りで再試行を張ったことを今回の実行チェーンに残す
@@ -217,6 +242,9 @@ final class RunScheduler {
         if (!SchedulerStore.isEnabled(context)) {
             return;
         }
+        // スケジューラの入口を通るたびに空振りを確認する（design.md追補「電池最適化で
+        // 後回しにされたことを検知・記録・復旧できる仕組み」2026-11-26）。
+        checkStaleScheduledFires(context);
         int count = SchedulerStore.getConsecutiveRetryCount(context);
         if (count >= MAX_CONSECUTIVE_RETRIES) {
             RunLogger.logSchedulerEvent(context, "retry_capped", labelFor(TRIGGER_RETRY), null, null);
@@ -253,9 +281,16 @@ final class RunScheduler {
      * 時点でAlarmManager内部では消費済みのため明示cancelは不要）。
      */
     static void onAlarmFired(Context context, String triggerType) {
+        // 実際に発火を受けたので、空振り検知用に保存していた発火予定時刻を消す（design.md追補
+        // 「電池最適化で後回しにされたことを検知・記録・復旧できる仕組み」2026-11-26）。
+        // OFF中でも（通常は起きない経路だが）念のため先に消す。
+        SchedulerStore.clearScheduledFireAt(context, triggerType);
+
         if (!SchedulerStore.isEnabled(context)) {
             return;
         }
+        // 他の引き金が空振りのまま残っていないかも、この入口で確認する。
+        checkStaleScheduledFires(context);
 
         // 実行ログ診断用。このチェーンで新たに張るアラームをここから書き込み直すので、
         // 前回のチェーンの残り（古いnextTrigger）が今回のログに混ざらないよう先に消す。
@@ -330,6 +365,9 @@ final class RunScheduler {
         if (!SchedulerStore.isEnabled(context)) {
             return;
         }
+        // スケジューラの入口を通るたびに空振りを確認する（design.md追補「電池最適化で
+        // 後回しにされたことを検知・記録・復旧できる仕組み」2026-11-26）。
+        checkStaleScheduledFires(context);
         long nextAt = computeNextComplementAt(context);
         scheduleAt(context, REQUEST_CODE_COMPLEMENT, nextAt, TRIGGER_COMPLEMENT);
         SchedulerStore.setPendingNextTrigger(context, TRIGGER_COMPLEMENT, nextAt);
@@ -395,6 +433,13 @@ final class RunScheduler {
         }
         notifyIfExactModeChanged(context, exact);
         SchedulerStore.setLastScheduleWasExact(context, exact);
+        // 電池最適化の除外が変化していないかもここで確認する（design.md追補「電池最適化で
+        // 後回しにされたことを検知・記録・復旧できる仕組み」2026-11-26。notifyIfExactModeChanged
+        // と同じ「毎回ではなく変化時だけ記録する」作り）。
+        checkBatteryOptimizationExemptionChanged(context);
+        // 空振り検知用に、今回予約した発火予定時刻を引き金ごとに保存する（design.md追補参照、
+        // 上記と同じ）。発火を受けたらonAlarmFiredが消す。
+        SchedulerStore.setScheduledFireAt(context, triggerType, triggerAt);
     }
 
     /**
@@ -458,6 +503,15 @@ final class RunScheduler {
         // OFFにする・再起動時に再構成する際は、通知引き金の予約状態も一緒に消す
         // （design.md追補 2026-10-09。disable()はここを経由する）。
         SchedulerStore.clearNotificationReservedAt(context);
+        // 空振り検知用の発火予定時刻も一緒に消す（design.md追補「電池最適化で後回しにされた
+        // ことを検知・記録・復旧できる仕組み」2026-11-26）: ここでcancelした分は「OSが発火を
+        // 遅らせた空振り」ではなく「意図してcancelした」だけなので、消さずに残すと次にONに
+        // した時や次の入口チェックで本物の空振りと誤判定してしまう。呼び出し元（disable等）
+        // が本物の空振りを記録したい場合は、cancelAllを呼ぶ前にcheckStaleScheduledFiresを
+        // 呼んでおくこと（disable()参照）。
+        for (String triggerType : ALL_TRIGGERS) {
+            SchedulerStore.clearScheduledFireAt(context, triggerType);
+        }
     }
 
     /**
@@ -485,6 +539,81 @@ final class RunScheduler {
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm != null) {
             nm.notify(NOTIFICATION_ID_SCHEDULER, builder.build());
+        }
+    }
+
+    // ---- 電池最適化の除外（design.md追補「電池最適化で後回しにされたことを検知・記録・
+    //      復旧できる仕組み」2026-11-26） --------------------------------------------------
+
+    /**
+     * 電池最適化の除外（{@code PowerManager#isIgnoringBatteryOptimizations}）の現在値を取る。
+     * {@code isIgnoringBatteryOptimizations}はAPI23で追加されたメソッドのため、minSdk 23の
+     * android.jar(API23)から直接呼べる（{@link #trySetExactAndAllowWhileIdle}付近のコメントに
+     * あるcanScheduleExactAlarms（API31）のようなリフレクションは不要）。
+     * {@link PowerManager}が取得できない場合や例外時はnull（「不明」）を返す。呼び出し元は
+     * 必ずnullを扱い、落ちないこと。
+     */
+    static Boolean isIgnoringBatteryOptimizations(Context context) {
+        PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+        if (pm == null) {
+            return null;
+        }
+        try {
+            return Boolean.valueOf(pm.isIgnoringBatteryOptimizations(context.getPackageName()));
+        } catch (RuntimeException e) {
+            Log.w(TAG, "isIgnoringBatteryOptimizations failed: " + e);
+            return null;
+        }
+    }
+
+    /**
+     * 電池最適化の除外状態が変化したときだけ{@link RunLogger}へ記録する。design.md追補
+     * 「電池最適化で後回しにされたことを検知・記録・復旧できる仕組み」(2026-11-26):
+     * 現在はADBで除外済みだが、ユーザー操作やSamsungのスリープ機能で失われうる。失われても
+     * 今は誰も気づけないため、{@link #notifyIfExactModeChanged}と同じ「前回値と比較し、
+     * 変わったときだけ記録する」作りで検知する（毎回記録するとログが膨らむため）。
+     * 不明（{@link #isIgnoringBatteryOptimizations}がnull）のときは前回値も変えず、何もしない。
+     */
+    private static void checkBatteryOptimizationExemptionChanged(Context context) {
+        Boolean nowIgnoring = isIgnoringBatteryOptimizations(context);
+        if (nowIgnoring == null) {
+            return;
+        }
+        boolean previouslyIgnoring = SchedulerStore.wasLastIgnoringBatteryOptimizations(context);
+        if (nowIgnoring.booleanValue() == previouslyIgnoring) {
+            return;
+        }
+        SchedulerStore.setLastIgnoringBatteryOptimizations(context, nowIgnoring.booleanValue());
+        RunLogger.logBatteryExemptionChanged(context, nowIgnoring.booleanValue());
+    }
+
+    // ---- 空振り検知（design.md追補「電池最適化で後回しにされたことを検知・記録・復旧できる
+    //      仕組み」2026-11-26） ----------------------------------------------------------------
+
+    /**
+     * 予約・発火などスケジューラの入口を通るたびに呼び、引き金（{@link #ALL_TRIGGERS}）ごとに
+     * 保存されている発火予定時刻（{@link SchedulerStore#getScheduledFireAt}）が現在より
+     * {@link #STALE_FIRE_THRESHOLD_MS}以上過去のまま残っていないかを確認する。
+     *
+     * 省電力区分が上がるとAlarmManagerの発火が（この端末では）1時間に1回などに制限され、
+     * 予約した時刻を過ぎても発火しない「空振り」が起きる（実機2026-11-26で48分・予約4回・
+     * 実行0回を確認）。見つかった空振りは{@link RunLogger#logMissedFire}へ1行記録し、
+     * 保存値を消す（消さないと次の入口チェックで何度も記録してしまう）。
+     *
+     * 既存の予約間隔・タイミング（FLOOR_INTERVAL_MS等）には一切影響しない（記録を足すだけ）。
+     */
+    private static void checkStaleScheduledFires(Context context) {
+        long now = System.currentTimeMillis();
+        for (String triggerType : ALL_TRIGGERS) {
+            long scheduledAt = SchedulerStore.getScheduledFireAt(context, triggerType);
+            if (scheduledAt <= 0) {
+                continue;
+            }
+            long lateByMs = now - scheduledAt;
+            if (lateByMs >= STALE_FIRE_THRESHOLD_MS) {
+                RunLogger.logMissedFire(context, labelFor(triggerType), scheduledAt, lateByMs);
+                SchedulerStore.clearScheduledFireAt(context, triggerType);
+            }
         }
     }
 }
