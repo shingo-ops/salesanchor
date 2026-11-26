@@ -50,7 +50,7 @@ const OWNERS = {
   current_staff_id: 7,
   current_user_id: 101,
   owners: [
-    { staff_id: 7, user_id: 101, staff_code: "A01", name: "Owner Self", primary_email: null, color: null, is_visible: true, share_mode: "self", is_self: true },
+    { staff_id: 7, user_id: 101, staff_code: "A01", name: "Owner Self", primary_email: null, color_key: null, is_self: true },
   ],
 };
 const eventsAnswer = () => ({
