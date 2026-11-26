@@ -48,6 +48,7 @@ from app.schemas.order import (
     OrderUpdate,
 )
 from app.services.audit import record_audit_log
+from app.services.customer_conversion import lead_id_of_order, promote_lead_if_customer
 
 router = APIRouter()
 
@@ -612,6 +613,11 @@ async def set_order_paid(
         action="update", table_name="orders", record_id=order_id,
         old_data=dict(old_row), new_data={"paid": data.paid},
     )
+    if data.paid:
+        await promote_lead_if_customer(
+            db, tenant_id, await lead_id_of_order(db, tenant_id, order_id),
+            actor_user_id=current_user.id, via="order_paid",
+        )
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072
     await invalidate_dashboard_cache(tenant_id)

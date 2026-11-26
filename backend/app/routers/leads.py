@@ -52,6 +52,7 @@ from app.services import messaging_window as mw
 from app.services.audit import record_audit_log
 from app.services.channel_masters import normalize_channel_type_value
 from app.services.country_codes import parse_country_code
+from app.services.customer_conversion import is_registration_completed, promote_lead_if_customer
 from app.services.meta_graph import (
     MetaGraphAPIError,
     MetaGraphError,
@@ -389,6 +390,7 @@ async def get_lead(
     lead_dict = dict(row)
     lead_dict["sales_form_selections"] = await _fetch_lead_selections(db, tenant_id, lead_id)
     lead_dict["sales_form_options"] = await _fetch_sales_form_options(db, tenant_id)
+    lead_dict["registration_completed"] = await is_registration_completed(db, tenant_id, lead_id)
     return LeadResponse(**lead_dict)
 
 
@@ -405,6 +407,11 @@ async def create_lead(
     current_user: User = Depends(get_current_user),
 ):
     """リードを登録する（lead_codeは自動採番、prospect_rankは自動算出）"""
+    if _enum_to_str(data.status) == LeadStatus.existing_customer.value:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="existing_customer_is_automatic",
+        )
     await ensure_user_in_tenant(db, data.assigned_to, tenant_id)
     rank = compute_prospect_rank(
         _enum_to_str(data.temperature),
@@ -471,6 +478,8 @@ async def create_lead(
         action="create", table_name="leads", record_id=new_id,
         new_data=data.model_dump(exclude_none=True, mode="json"),
     )
+    # ADR-072: commit の後に db を使わないよう、返事に入れる値は commit の前に読む
+    registration_completed = await is_registration_completed(db, tenant_id, new_id)
     await db.commit()
     await invalidate_dashboard_cache(tenant_id)
     try:
@@ -479,7 +488,7 @@ async def create_lead(
     except Exception:
         logging.warning("[Leads] SSE publish 失敗（リード作成継続）: tenant_id=%s", tenant_id)
 
-    return LeadResponse(**row)
+    return LeadResponse(**row, registration_completed=registration_completed)
 
 
 @router.patch(
@@ -532,7 +541,16 @@ async def update_lead(
     new_status_raw = update_data.get("status")
     new_status = _enum_to_str(new_status_raw)
     old_status = old_row["status"]
-    is_lost_transition = new_status == LeadStatus.lost.value and old_status != LeadStatus.lost.value
+    # ADR-1090: 手で既存顧客にはできない（今が既存顧客で同じ値を送るのは通す）
+    if (
+        new_status == LeadStatus.existing_customer.value
+        and old_status != LeadStatus.existing_customer.value
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="existing_customer_is_automatic",
+        )
+    is_lost_transition =new_status == LeadStatus.lost.value and old_status != LeadStatus.lost.value
 
     if is_lost_transition:
         if not close_reasons_input:
@@ -752,6 +770,7 @@ async def update_lead(
     lead_dict = dict(row)
     lead_dict["sales_form_selections"] = await _fetch_lead_selections(db, tenant_id, lead_id)
     lead_dict["sales_form_options"] = await _fetch_sales_form_options(db, tenant_id)
+    lead_dict["registration_completed"] = await is_registration_completed(db, tenant_id, lead_id)
     return LeadResponse(**lead_dict)
 
 
@@ -821,13 +840,16 @@ async def convert_lead(
     if lead_row["status"] == "negotiating":
         # 早期409（UXのため）。完全な保証は下のUPDATEで行う。
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="このリードは既に商談中です")
+    if lead_row["status"] == "existing_customer":
+        # ADR-1090: 自動で既存顧客になった人を商談に戻さない
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="already_existing_customer")
 
     updated = await db.execute(
         text(f"""
             UPDATE {leads_t}
             SET status = 'negotiating', amount = :amount, currency = :currency,
                 expected_close_date = :expected_close_date, updated_at = NOW()
-            WHERE id = :id AND status != 'negotiating'
+            WHERE id = :id AND status != 'negotiating' AND status <> 'existing_customer'
             RETURNING {_LEAD_COLUMNS}
         """),
         {
@@ -856,10 +878,12 @@ async def convert_lead(
             "expected_close_date": data.expected_close_date,
         },
     )
+    # ADR-072: commit の後に db を使わないよう、返事に入れる値は commit の前に読む
+    registration_completed = await is_registration_completed(db, tenant_id, lead_id)
     await db.commit()
     await invalidate_dashboard_cache(tenant_id)
 
-    return LeadResponse(**row)
+    return LeadResponse(**row, registration_completed=registration_completed)
 
 
 # ---------------------------------------------------------------------------
@@ -3266,6 +3290,12 @@ async def merge_leads(
     result = await _execute_lead_merge(db, tenant_id, master_row, loser_row, plan)
     moved = result["moved"]
 
+    # ADR-1090: 会社・請求先・支払いが残る側へ移るので、3 つがそろうことがある（読み直しの前に）
+    await promote_lead_if_customer(
+        db, tenant_id, master_id,
+        actor_user_id=current_user.id, via="lead_merge",
+    )
+
     leads_t = tenant_table_ref(db, tenant_id, "leads")
     updated_res = await db.execute(
         text(f"SELECT {_LEAD_COLUMNS} FROM {leads_t} WHERE id = :id AND tenant_id = :tid"),
@@ -3313,7 +3343,10 @@ async def merge_leads(
         tenant_id, master_id, loser_id, moved, result["deleted"], result["filled_fields"],
     )
 
-    return LeadResponse(**master_updated)
+    return LeadResponse(
+        **master_updated,
+        registration_completed=await is_registration_completed(db, tenant_id, master_id),
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -63,6 +63,26 @@ async def _seed_leads(client, count: int = 3, prefix: str = "Lead"):
     return leads
 
 
+async def _force_existing_customer(db_session, lead_id):
+    """ADR-1090: 既存顧客は API では付けられない。下ごしらえで SQL で直接入れる（数え方の試験の目的は変えない）。"""
+    await db_session.execute(
+        text("UPDATE leads SET status = 'existing_customer' WHERE id = :id"), {"id": lead_id}
+    )
+    await db_session.commit()
+
+
+async def _create_lead_via_api(client, db_session, payload, today):
+    """リードを API で作る。status=existing_customer のものは lead で作ってから SQL で直す（ADR-1090）。"""
+    payload = {**payload, "created_at": str(today)}
+    want_existing = payload.get("status") == "existing_customer"
+    if want_existing:
+        payload["status"] = "lead"
+    res = await client.post("/api/v1/leads", json=payload)
+    assert res.status_code == 201, res.text
+    if want_existing:
+        await _force_existing_customer(db_session, res.json()["id"])
+
+
 async def _seed_deals(client, pairs, statuses=None):
     """リードの状態を商談相当に更新して返す"""
     from tests.helpers_txn import _resolve_db_session
@@ -622,11 +642,11 @@ class TestChannels:
             "customer_name": "ChGrossCo",
             "channel_type": "instagram",
             "initiative": "inbound",
-            "status": "existing_customer",
             "amount": 500000,
         })
         assert chgross_lead.status_code == 201, chgross_lead.text
         chgross_lead_id = chgross_lead.json()["id"]
+        await _force_existing_customer(db_session, chgross_lead_id)
         co = await client.post("/api/v1/companies", json={"name": "ChGrossCo", "lead_id": chgross_lead_id})
         co_id = co.json()["id"]
         ct = await client.post("/api/v1/contacts", json={
@@ -694,9 +714,7 @@ class TestConversionByAttribute:
             {"customer_name": "AttrLead3", "channel_type": "messenger", "country": "US", "sales_form": "ec_site", "temperature": "Cold", "response_speed": "3日超", "assigned_to": 999, "status": "lead"},
             {"customer_name": "AttrLead4", "channel_type": "messenger", "country": "US", "sales_form": "other", "temperature": "Hot", "response_speed": "24h以内", "assigned_to": 321, "status": "existing_customer"},
         ]:
-            payload["created_at"] = str(today)
-            res = await client.post("/api/v1/leads", json=payload)
-            assert res.status_code == 201, res.text
+            await _create_lead_via_api(client, db_session, payload, today)
 
         team_res = await client.get("/api/v1/analytics/conversion-by-attribute?scope=team")
         assert team_res.status_code == 200
@@ -772,9 +790,7 @@ class TestPriorityProspects:
             {"customer_name": "PriorityLead3", "channel_type": "phone", "country": "US", "sales_form": None, "temperature": "Cold", "response_speed": "3日超", "assigned_to": 999, "status": "lead", "monthly_forecast": None},
             {"customer_name": "PriorityLead4", "channel_type": "messenger", "country": "CA", "sales_form": "online", "temperature": "Warm", "response_speed": "3日以内", "assigned_to": 321, "status": "existing_customer", "monthly_forecast": 9999},
         ]:
-            payload["created_at"] = str(today)
-            res = await client.post("/api/v1/leads", json=payload)
-            assert res.status_code == 201, res.text
+            await _create_lead_via_api(client, db_session, payload, today)
 
         team_res = await client.get("/api/v1/analytics/conversion-by-attribute?scope=team")
         assert team_res.status_code == 200
@@ -827,11 +843,11 @@ class TestReasons:
         from tests.helpers_txn import create_lead
         reason_lead = await client.post("/api/v1/leads", json={
             "customer_name": "ReasonCo",
-            "status": "existing_customer",
             "notes": "品揃えが豊富でした",
         })
         assert reason_lead.status_code == 201, reason_lead.text
         reason_lead_id = reason_lead.json()["id"]
+        await _force_existing_customer(db_session, reason_lead_id)
         co = await client.post("/api/v1/companies", json={"name": "ReasonCo", "lead_id": reason_lead_id})
         co_id = co.json()["id"]
         ct = await client.post("/api/v1/contacts", json={
@@ -964,14 +980,16 @@ class TestWeeklyAdvisorDefensive:
         await _ensure_data_access_events_table(db_session)
         await _ensure_meta_messages_table(db_session)
 
-        reorder_lead = await client.post("/api/v1/leads", json={"customer_name": "Reorder Lead", "status": "existing_customer"})
+        reorder_lead = await client.post("/api/v1/leads", json={"customer_name": "Reorder Lead"})
         reorder_lead_id = reorder_lead.json()["id"]
-        churn_lead = await client.post("/api/v1/leads", json={"customer_name": "Churn Lead", "status": "existing_customer"})
+        churn_lead = await client.post("/api/v1/leads", json={"customer_name": "Churn Lead"})
         churn_lead_id = churn_lead.json()["id"]
-        comm_temp_lead = await client.post("/api/v1/leads", json={"customer_name": "Tokyo Trading Co.", "status": "existing_customer"})
+        comm_temp_lead = await client.post("/api/v1/leads", json={"customer_name": "Tokyo Trading Co."})
         comm_temp_lead_id = comm_temp_lead.json()["id"]
-        other_temp_lead = await client.post("/api/v1/leads", json={"customer_name": "Other Scope Co.", "status": "existing_customer"})
+        other_temp_lead = await client.post("/api/v1/leads", json={"customer_name": "Other Scope Co."})
         other_temp_lead_id = other_temp_lead.json()["id"]
+        for _lid in (reorder_lead_id, churn_lead_id, comm_temp_lead_id, other_temp_lead_id):
+            await _force_existing_customer(db_session, _lid)
 
         reorder_co = await client.post("/api/v1/companies", json={"name": "Blue Ocean Co.", "lead_id": reorder_lead_id})
         reorder_co_id = reorder_co.json()["id"]
