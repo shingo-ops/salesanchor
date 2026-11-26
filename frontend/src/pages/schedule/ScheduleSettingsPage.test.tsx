@@ -30,7 +30,16 @@ const answers = vi.hoisted(() => ({
   connectedAt: null as string | null,
   categories: [] as Array<Record<string, unknown>>,
   teams: [] as Array<{ id: number; name: string }>,
+  meetAvailable: false,
+  /** GET /calendar/preferences の応答。null は「行が無い」（既定値の応答） */
+  prefs: null as Record<string, unknown> | null,
+  /** true の間、初期値の読み込みを終わらせない */
+  prefsPending: false,
 }));
+
+const DEFAULT_PREFS = {
+  default_view: "week", week_start: 0, event_minutes: 60, auto_meet: false, open_owners: "self", open_team_id: null,
+};
 
 /** 種類の表の応答（GET /calendar/categories）の 1 行 */
 function categoryRow(key: string, over: Record<string, unknown> = {}) {
@@ -43,7 +52,11 @@ vi.mock("../../lib/api", () => ({
       if (path === "/calendar/categories") return answers.categories;
       if (path === "/calendar/teams") return answers.teams;
       if (path === "/google-calendar/status") {
-        return { connected: answers.connected, connected_at: answers.connectedAt };
+        return { connected: answers.connected, connected_at: answers.connectedAt, meet_available: answers.meetAvailable };
+      }
+      if (path === "/calendar/preferences") {
+        if (answers.prefsPending) return new Promise(() => {});
+        return answers.prefs ?? DEFAULT_PREFS;
       }
       if (path === "/google-calendar/connect/start") return { auth_url: "https://accounts.example/auth" };
       if (path === "/calendar/owners") {
@@ -81,6 +94,9 @@ beforeEach(async () => {
   answers.connectedAt = null;
   answers.categories = [];
   answers.teams = [];
+  answers.meetAvailable = false;
+  answers.prefs = null;
+  answers.prefsPending = false;
   hrefSetter.mockReset();
   const fake = { ...window.location } as Record<string, unknown>;
   Object.defineProperty(fake, "href", { configurable: true, get: () => "http://localhost/", set: hrefSetter });
@@ -98,6 +114,7 @@ const view = (url = "/schedule/settings") =>
   render(<MemoryRouter initialEntries={[url]}><ScheduleSettingsPage /></MemoryRouter>);
 
 const googleTitle = () => i18n.t("schedule.settingsGoogleTitle");
+const personalTitle = () => i18n.t("schedule.prefsTitle");
 
 describe("ScheduleSettingsPage Google section (K1)", () => {
   it("shows the Google section to a tenant admin", async () => {
@@ -126,9 +143,14 @@ describe("ScheduleSettingsPage Google section (K1)", () => {
     expect(screen.queryByText(i18n.t("schedule.myCalendars"))).toBeNull();
   });
 
-  it("shows the permission message to a user with neither", async () => {
+  it("shows only the personal section to a user with neither (no admin sections, no owners request)", async () => {
     view();
-    expect(await screen.findByText(i18n.t("schedule.settingsPermissionRequired"))).toBeTruthy();
+    expect(await screen.findByRole("region", { name: personalTitle() })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: googleTitle() })).toBeNull();
+    expect(screen.queryByRole("region", { name: i18n.t("schedule.categoriesTitle") })).toBeNull();
+    expect(screen.queryByText(i18n.t("schedule.myCalendars"))).toBeNull();
+    expect(mockGet).not.toHaveBeenCalledWith("/calendar/owners");
+    expect(mockGet).not.toHaveBeenCalledWith("/google-calendar/status");
   });
 });
 
@@ -343,9 +365,11 @@ describe("ScheduleSettingsPage owners and nav (K9・K10)", () => {
     perms.staffView = true;
     view();
     await screen.findByText("Owner Self");
+    // 人の色の区画には切り替えも共有権限の選択も無い（あるのは自分の初期値の選択 4 つだけ。Meet の行は隠れている）
     expect(screen.queryAllByRole("switch")).toHaveLength(0);
-    expect(screen.queryAllByRole("combobox")).toHaveLength(0);
-    fireEvent.click(screen.getAllByRole("button", { name: i18n.t("schedule.settingsSave") })[0]);
+    expect(screen.queryAllByRole("combobox")).toHaveLength(4);
+    expect(screen.queryByRole("combobox", { name: i18n.t("schedule.shareLabel") })).toBeNull();
+    fireEvent.click(screen.getAllByRole("button", { name: i18n.t("schedule.settingsSave") })[1]);
     await waitFor(() => expect(api.patch).toHaveBeenCalledWith("/calendar/owners/101", { color_key: "tomato" }));
   });
 
@@ -371,12 +395,12 @@ describe("ScheduleSettingsPage owners and nav (K9・K10)", () => {
 
     fireEvent.click(openButton(1));
     fireEvent.click(radio("owner-color-8", i18n.t(eventColorLabelKey("basil"))));
-    fireEvent.click(screen.getAllByRole("button", { name: i18n.t("schedule.settingsSave") })[1]);
+    fireEvent.click(screen.getAllByRole("button", { name: i18n.t("schedule.settingsSave") })[2]);
     await waitFor(() => expect(api.patch).toHaveBeenCalledWith("/calendar/owners/202", { color_key: "basil" }));
 
     fireEvent.click(openButton(0));
     fireEvent.click(radio("owner-color-7", i18n.t("schedule.ownerColorDefault")));
-    fireEvent.click(screen.getAllByRole("button", { name: i18n.t("schedule.settingsSave") })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: i18n.t("schedule.settingsSave") })[1]);
     await waitFor(() => expect(api.patch).toHaveBeenCalledWith("/calendar/owners/101", { color_key: null }));
   });
 
@@ -398,5 +422,127 @@ describe("ScheduleSettingsPage owners and nav (K9・K10)", () => {
     } finally {
       Element.prototype.scrollIntoView = originalScrollIntoView;
     }
+  });
+});
+
+describe("ScheduleSettingsPage personal section (schedule-settings bin3b)", () => {
+  const saveButton = () => within(screen.getByRole("region", { name: personalTitle() })).getByRole("button", { name: i18n.t("schedule.settingsSave") });
+  const openOwners = () => screen.getByRole("combobox", { name: i18n.t("schedule.prefsOpenOwners") }) as HTMLSelectElement;
+  const optionValues = (select: HTMLSelectElement) => Array.from(select.options).map((option) => option.value);
+
+  it("is the first section in the side list and the one shown first, for a plain user", async () => {
+    view();
+    await screen.findByRole("region", { name: personalTitle() });
+    const nav = document.querySelector("nav.comp-subnav") as HTMLElement;
+    expect(within(nav).getAllByRole("button")[0].textContent).toContain(personalTitle());
+  });
+
+  it("shows the saved values and saves them all in one PUT", async () => {
+    answers.prefs = { default_view: "month", week_start: 1, event_minutes: 30, auto_meet: false, open_owners: "self", open_team_id: null };
+    view();
+    const firstView = (await screen.findByRole("combobox", { name: i18n.t("schedule.prefsFirstView") })) as HTMLSelectElement;
+    await waitFor(() => expect(firstView.value).toBe("month"));
+    expect((screen.getByRole("combobox", { name: i18n.t("schedule.prefsWeekStart") }) as HTMLSelectElement).value).toBe("1");
+    expect((screen.getByRole("combobox", { name: i18n.t("schedule.prefsEventMinutes") }) as HTMLSelectElement).value).toBe("30");
+    fireEvent.change(firstView, { target: { value: "list" } });
+    fireEvent.change(screen.getByRole("combobox", { name: i18n.t("schedule.prefsWeekStart") }), { target: { value: "0" } });
+    fireEvent.change(screen.getByRole("combobox", { name: i18n.t("schedule.prefsEventMinutes") }), { target: { value: "90" } });
+    fireEvent.click(saveButton());
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/calendar/preferences", {
+        default_view: "list", week_start: 0, event_minutes: 90, auto_meet: false, open_owners: "self", open_team_id: null,
+      }),
+    );
+    expect(await screen.findByText(i18n.t("schedule.prefsSaved"))).toBeTruthy();
+  });
+
+  it("waits for the preferences cache to be reread before showing the saved sentence", async () => {
+    view();
+    await screen.findByRole("region", { name: personalTitle() });
+    await waitFor(() => expect((saveButton() as HTMLButtonElement).disabled).toBe(false));
+    const spy = vi.spyOn(queryClient, "invalidateQueries");
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(api.put).toHaveBeenCalled());
+    await screen.findByText(i18n.t("schedule.prefsSaved"));
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["api", "user-a", "calendar", "preferences"] });
+  });
+
+  it("shows the failure sentence when saving fails", async () => {
+    vi.mocked(api.put).mockRejectedValueOnce(new Error("boom"));
+    view();
+    await screen.findByRole("region", { name: personalTitle() });
+    await waitFor(() => expect((saveButton() as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(saveButton());
+    expect(await screen.findByText(i18n.t("schedule.prefsSaveError"))).toBeTruthy();
+    expect(screen.queryByText(i18n.t("schedule.prefsSaved"))).toBeNull();
+  });
+
+  it("keeps Save disabled until the preferences are read, so the defaults never overwrite saved values", async () => {
+    answers.prefsPending = true;
+    view();
+    await screen.findByRole("region", { name: personalTitle() });
+    expect((saveButton() as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(saveButton());
+    expect(api.put).not.toHaveBeenCalled();
+  });
+
+  it("hides the Meet row without meet_available, and still sends the loaded auto_meet", async () => {
+    answers.prefs = { default_view: "week", week_start: 0, event_minutes: 60, auto_meet: true, open_owners: "self", open_team_id: null };
+    view();
+    await screen.findByRole("region", { name: personalTitle() });
+    expect(screen.queryByRole("switch", { name: i18n.t("schedule.prefsAutoMeet") })).toBeNull();
+    await waitFor(() => expect((saveButton() as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(saveButton());
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/calendar/preferences", expect.objectContaining({ auto_meet: true })),
+    );
+  });
+
+  it("shows the Meet switch when Meet is available and saves the change", async () => {
+    perms.isTenantAdmin = true;
+    answers.connected = true;
+    answers.meetAvailable = true;
+    view();
+    const toggle = (await screen.findByRole("switch", { name: i18n.t("schedule.prefsAutoMeet") })) as HTMLInputElement;
+    expect(toggle.checked).toBe(false);
+    fireEvent.click(toggle);
+    fireEvent.click(saveButton());
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/calendar/preferences", expect.objectContaining({ auto_meet: true })),
+    );
+  });
+
+  it("offers only 'only me' to a user without staff.view", async () => {
+    view();
+    await screen.findByRole("region", { name: personalTitle() });
+    expect(optionValues(openOwners())).toEqual(["self"]);
+  });
+
+  it("offers everyone and one team to a staff.view user (not admin), with the team choices", async () => {
+    perms.staffView = true;
+    answers.teams = [{ id: 1, name: "Team One" }, { id: 2, name: "Team Two" }];
+    view();
+    await screen.findByRole("region", { name: personalTitle() });
+    await waitFor(() => expect(optionValues(openOwners())).toEqual(["self", "all", "team"]));
+    fireEvent.change(openOwners(), { target: { value: "team" } });
+    const team = (await screen.findByRole("combobox", { name: i18n.t("schedule.prefsTeam") })) as HTMLSelectElement;
+    await waitFor(() => expect(optionValues(team)).toEqual(["", "1", "2"]));
+    fireEvent.change(team, { target: { value: "2" } });
+    fireEvent.click(saveButton());
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/calendar/preferences", expect.objectContaining({ open_owners: "team", open_team_id: 2 })),
+    );
+  });
+
+  it("sends a null team when the mode is not team", async () => {
+    perms.staffView = true;
+    answers.prefs = { default_view: "week", week_start: 0, event_minutes: 60, auto_meet: false, open_owners: "all", open_team_id: 5 };
+    view();
+    await screen.findByRole("region", { name: personalTitle() });
+    await waitFor(() => expect((saveButton() as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(saveButton());
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/calendar/preferences", expect.objectContaining({ open_owners: "all", open_team_id: null })),
+    );
   });
 });

@@ -1497,5 +1497,8 @@ run_sql migrations/20261127_100000_add_calendar_team_share.sql
 # schedule-settings 便3a: 人の色を 24 色の鍵へ・使っていない 3 列（color・is_visible・share_mode）を外す（冪等）
 run_sql migrations/20261128_100000_owner_color_key_drop_dead_columns.sql
 
+# schedule-settings 便3b: ひとりひとりの初期値 6 列（開いたときの形・週の始まり・予定の長さ・Meet・誰の予定を出すか）を足す（冪等）
+run_sql migrations/20261129_100000_owner_settings_preferences.sql
+
 # 実行済みの記録の集計（段5 5-3）。新しい手順は、この集計の行より上（上の run_ の並びの末尾）に足す。
 mr_report_summary

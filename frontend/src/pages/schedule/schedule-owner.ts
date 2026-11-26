@@ -8,6 +8,8 @@ export interface ApiCalendarOwner {
   primary_email: string | null;
   color_key: string | null;
   is_self: boolean;
+  /** 使っているチームの番号（番号順）。古い返事に無いときは [] として扱う */
+  team_ids?: number[];
 }
 
 export interface ApiCalendarOwnersResponse {
@@ -28,6 +30,8 @@ export interface CalendarOwner {
   /** 画面に描く色 */
   color: string;
   isSelf: boolean;
+  /** 使っているチームの番号 */
+  teamIds: number[];
 }
 
 /** 色を決めていない（標準の色の）人や、持ち主が見つからない時に画面に描く色。標準の色の置き場はこの 1 か所だけ */
@@ -44,5 +48,6 @@ export function normalizeOwner(owner: ApiCalendarOwner): CalendarOwner {
     colorKey,
     color: colorKey ? eventColorVar(colorKey) : DEFAULT_OWNER_COLOR,
     isSelf: owner.is_self,
+    teamIds: owner.team_ids ?? [],
   };
 }

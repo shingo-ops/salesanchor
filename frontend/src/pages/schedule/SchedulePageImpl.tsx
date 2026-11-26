@@ -32,6 +32,7 @@ import {
   useCalendarCategories,
   type CalendarShare,
 } from "../../features/schedule/useCalendarCategories";
+import { useCalendarPreferences } from "../../features/schedule/useCalendarPreferences";
 import { sameTeamIds, useCalendarTeams } from "../../features/schedule/useCalendarTeams";
 import { api } from "../../lib/api";
 import { eventColorVar, eventDisplayColor, isEventColorKey, type EventColorKey } from "./eventColors";
@@ -68,7 +69,6 @@ import {
   formatMonthLabel,
   formatTimeInput,
   getMonthCells,
-  getWeekDays,
   isSameDay,
   eventNumericId,
   isRecurringItem,
@@ -189,12 +189,23 @@ function addHours(date: Date, amount: number): Date {
   return next;
 }
 
-function formatRangeTitle(view: ScheduleView, anchorDate: Date): string {
+function addMinutes(date: Date, amount: number): Date {
+  return new Date(date.getTime() + amount * 60 * 1000);
+}
+
+/** 週の始まりの曜日（0 日曜・1 月曜）に合わせた、その日を含む 7 日。getWeekDays は日曜始まりに固定のため、ここで曜日を渡す */
+function getWeekDaysFrom(anchor: Date, weekStart: 0 | 1): Date[] {
+  const base = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+  const start = addDays(base, -((base.getDay() - weekStart + 7) % 7));
+  return Array.from({ length: 7 }, (_, index) => addDays(start, index));
+}
+
+function formatRangeTitle(view: ScheduleView, anchorDate: Date, weekStart: 0 | 1): string {
   if (view === "month") return formatMonthLabel(anchorDate);
   if (view === "day") return formatDayLabel(anchorDate);
   if (view === "threeDay") return `${formatDayLabel(anchorDate)} - ${formatDayLabel(addDays(anchorDate, THREE_DAY_VIEW_DAYS - 1))}`;
   if (view === "list") return `${formatDayLabel(anchorDate)} - ${formatDayLabel(addDays(anchorDate, LIST_VIEW_DAYS - 1))}`;
-  const days = getWeekDays(anchorDate);
+  const days = getWeekDaysFrom(anchorDate, weekStart);
   return `${formatDayLabel(days[0])} - ${formatDayLabel(days[6])}`;
 }
 
@@ -873,7 +884,7 @@ function buildSchedule(
 export default function SchedulePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { hasPermission, isTenantAdmin } = usePermissions();
+  const { hasPermission, isTenantAdmin, loading: permsLoading } = usePermissions();
   const [searchParams] = useSearchParams();
   const canManageOwners = hasPermission("staff.view");
   const gcalStatusQ = useApiQuery<{ connected: boolean; meet_available?: boolean }>("/google-calendar/status", { enabled: isTenantAdmin });
@@ -881,6 +892,13 @@ export default function SchedulePage() {
   const meetAvailable = gcalStatusQ.data?.meet_available === true;
   const demoState = (searchParams.get("demoState") as DemoState | null) ?? "normal";
   const [view, setView] = useState<ScheduleView>("week");
+  // 開いたときの形は 1 回だけ当てる。手で形を変えた後は当てない
+  const viewTouchedRef = useRef(false);
+  const viewAppliedRef = useRef(false);
+  const changeViewByHand = (nextView: ScheduleView) => {
+    viewTouchedRef.current = true;
+    setView(nextView);
+  };
   const [anchorDate, setAnchorDate] = useState(() => new Date());
   const [panelOpen, setPanelOpen] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -925,10 +943,19 @@ export default function SchedulePage() {
 
   // useMemo で参照を安定させる: 毎レンダーで new Date() が生成されると
   // Object.is 比較が false になり useEffect が際限なく再発火する（shifts 500 無限ループの根本原因）
-  const rangeStart = useMemo(() => toRangeStart(view, anchorDate), [view, anchorDate]);
-  const rangeEnd = useMemo(() => toRangeEnd(view, anchorDate), [view, anchorDate]);
   // ADR-1054 段 3 の 7 回目: 3 本を写しの置き場で読む（path の文字は今と同じ）。見本の状態では取りに行かない。
   const live = demoState !== "loading" && demoState !== "empty";
+  // ひとりひとりの初期値（開いたときの形・週の始まり・予定の長さ・Meet・誰の予定を出すか）。読めるまでは今までと同じ既定値
+  const { prefs, isLoaded: prefsLoaded } = useCalendarPreferences({ enabled: live });
+  // 週は週の始まりの曜日に合わせる（toRangeStart・toRangeEnd は日曜始まりに固定のため、週だけここで置き換える）
+  const rangeStart = useMemo(
+    () => (view === "week" ? getWeekDaysFrom(anchorDate, prefs.week_start)[0] : toRangeStart(view, anchorDate)),
+    [view, anchorDate, prefs.week_start],
+  );
+  const rangeEnd = useMemo(
+    () => (view === "week" ? addDays(getWeekDaysFrom(anchorDate, prefs.week_start)[6], 1) : toRangeEnd(view, anchorDate)),
+    [view, anchorDate, prefs.week_start],
+  );
   const ownersQ = useApiQuery<ApiCalendarOwnersResponse>("/calendar/owners", { enabled: live });
   const eventsQ = useApiQuery<{ events: ApiCalendarEvent[] }>(
     `/calendar/events?start=${rangeStart.toISOString()}&end=${rangeEnd.toISOString()}`,
@@ -991,6 +1018,41 @@ export default function SchedulePage() {
     setVisibleOwnerIds((current) => (current.length > 0 ? current : [selfKey]));
   }, [selfKey, rangeStart, rangeEnd]);
 
+  // 開いたときの形: 初期値が読めたとき 1 回だけ当てる（手で形を変えた後は当てない）
+  useEffect(() => {
+    if (!prefsLoaded || viewAppliedRef.current) return;
+    viewAppliedRef.current = true;
+    if (viewTouchedRef.current) return;
+    setView(prefs.default_view);
+  }, [prefsLoaded, prefs.default_view]);
+
+  // 誰の予定を出すか: 権限・持ち主の一覧・初期値（team のときはチーム一覧も）が全部そろったとき 1 回だけ当てる。
+  // 手で人を選んだ後は当てない。それまでは今と同じく「自分だけ」のまま
+  const { byId: teamById, isLoaded: teamsLoaded } = useCalendarTeams();
+  const ownersAppliedRef = useRef(false);
+  const ownersTouchedRef = useRef(false);
+  useEffect(() => {
+    if (ownersAppliedRef.current || ownersTouchedRef.current) return;
+    if (permsLoading || !prefsLoaded || selfKey == null || owners.length === 0) return;
+    if (prefs.open_owners === "team" && !teamsLoaded) return;
+    ownersAppliedRef.current = true;
+    const keyOf = (owner: CalendarOwner) => owner.userId ?? owner.staffId;
+    if (prefs.open_owners === "all" && canManageOwners) {
+      setVisibleOwnerIds(owners.map(keyOf));
+    } else if (
+      prefs.open_owners === "team"
+      && canManageOwners
+      && prefs.open_team_id != null
+      && teamById.has(prefs.open_team_id)
+    ) {
+      const teamId = prefs.open_team_id;
+      const members = owners.filter((owner) => owner.teamIds.includes(teamId)).map(keyOf);
+      setVisibleOwnerIds([...new Set([selfKey, ...members])]);
+    } else {
+      setVisibleOwnerIds([selfKey]);
+    }
+  }, [permsLoading, prefsLoaded, prefs.open_owners, prefs.open_team_id, selfKey, owners, teamsLoaded, teamById, canManageOwners]);
+
   // 新しい予定の種類・色・共有の初期値（種類 meeting とその初期値。読み込み前は色なし・全員）
   const { byKey: categoryByKey } = useCalendarCategories();
   const newEventDefaults = () => {
@@ -1007,7 +1069,7 @@ export default function SchedulePage() {
     const selected = date ?? anchorDate;
     setDayList(null);
     const start = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate(), hour, 0, 0);
-    const end = addHours(start, 1);
+    const end = addMinutes(start, prefs.event_minutes);
     setDraft({
       title: "",
       ...newEventDefaults(),
@@ -1018,7 +1080,7 @@ export default function SchedulePage() {
       allDay: false,
       description: "",
       location: "",
-      addMeet: false,
+      addMeet: meetAvailable && prefs.auto_meet,
       recurrence: "none",
     });
     setPopover({
@@ -1204,11 +1266,11 @@ export default function SchedulePage() {
         ? Array.from({ length: THREE_DAY_VIEW_DAYS }, (_, i) => addDays(new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate()), i))
       : view === "list"
         ? []
-        : getWeekDays(anchorDate);
+        : getWeekDaysFrom(anchorDate, prefs.week_start);
   const visibleEvents = events.filter((item) => eventMatchesFilters(item, visibleOwnerIds));
   const allDayEvents = visibleEvents.filter((item) => item.allDay);
   const timedEvents = visibleEvents.filter((item) => !item.allDay);
-  const viewLabel = formatRangeTitle(view, anchorDate);
+  const viewLabel = formatRangeTitle(view, anchorDate, prefs.week_start);
   const SearchIcon = NAV_ICONS.search;
   const closeSearch = () => {
     setSearchOpen(false);
@@ -1223,6 +1285,7 @@ export default function SchedulePage() {
   const SettingsIcon = NAV_ICONS.settings;
 
   const toggleOwner = (ownerId: number) => {
+    ownersTouchedRef.current = true;
     setVisibleOwnerIds((current) => (
       current.includes(ownerId)
         ? current.filter((item) => item !== ownerId)
@@ -1270,7 +1333,7 @@ export default function SchedulePage() {
       ...rangeToDraftDates(start, end, allDay),
       description: "",
       location: "",
-      addMeet: false,
+      addMeet: meetAvailable && prefs.auto_meet,
       recurrence: "none",
     });
     setPendingVisible(true);
@@ -1420,11 +1483,11 @@ export default function SchedulePage() {
       case "ArrowRight": navigatePeriod("next"); break;
       case "k":
       case "ArrowLeft": navigatePeriod("prev"); break;
-      case "d": setView("day"); break;
-      case "x": setView("threeDay"); break;
-      case "w": setView("week"); break;
-      case "m": setView("month"); break;
-      case "a": setView("list"); break;
+      case "d": changeViewByHand("day"); break;
+      case "x": changeViewByHand("threeDay"); break;
+      case "w": changeViewByHand("week"); break;
+      case "m": changeViewByHand("month"); break;
+      case "a": changeViewByHand("list"); break;
       case "c": openCreate(new Date(), null, SHORTCUT_CREATE_HOUR); break;
       case "?": setShortcutsOpen(true); break;
       default: return;
@@ -1537,17 +1600,15 @@ export default function SchedulePage() {
                 <SearchIcon size={18} aria-hidden="true" />
               </Button>
             )}
-            {(canManageOwners || isTenantAdmin) && (
-              <Button
-                variant="ghost"
-                size="md"
-                iconOnly
-                aria-label={t("schedule.settings")}
-                onClick={() => navigate("/schedule/settings")}
-              >
-                <SettingsIcon size={18} aria-hidden="true" />
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="md"
+              iconOnly
+              aria-label={t("schedule.settings")}
+              onClick={() => navigate("/schedule/settings")}
+            >
+              <SettingsIcon size={18} aria-hidden="true" />
+            </Button>
             <Button
               variant="secondary"
               size="md"
@@ -1575,7 +1636,7 @@ export default function SchedulePage() {
               items={(["day", "threeDay", "week", "month", "list"] as const).map((nextView) => ({
                 key: nextView,
                 label: t(`schedule.${nextView}View`),
-                onSelect: () => setView(nextView),
+                onSelect: () => changeViewByHand(nextView),
               }))}
             />
           </div>
@@ -1635,7 +1696,8 @@ export default function SchedulePage() {
                       date={view === "month" ? anchorDate : viewDays[0]}
                       dayCount={view === "day" ? 1 : view === "threeDay" ? THREE_DAY_VIEW_DAYS : 7}
                       events={calendarEvents}
-                      weekStart={0}
+                      weekStart={prefs.week_start}
+                      clickMinutes={prefs.event_minutes}
                       appearance="schedule"
                       timeStyle="meridiem"
                       eventLayout="stacked"
@@ -1649,7 +1711,7 @@ export default function SchedulePage() {
                       }}
                       onDayClick={(date) => {
                         setAnchorDate(date);
-                        setView("day");
+                        changeViewByHand("day");
                         // 日の数字は時間割の中なので「外を押す」で閉じない。日表示へ移るときに作る小窓を閉じる（作り方 3）
                         setPopover((current) => (current?.mode === "create" ? null : current));
                       }}

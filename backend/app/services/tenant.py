@@ -1646,12 +1646,24 @@ CREATE TABLE IF NOT EXISTS {schema}.calendar_category_teams (
 -- 分け表 A2: 予定の表示設定（本番 5 社全部にある。backend/app/routers/calendar.py が使う）。
 -- 作る SQL migrations/20260621_020000_add_schedule_calendar_category_and_owner_settings.sql は登録に無い。
 -- 登録の移行: migrations/20261128_100000_owner_color_key_drop_dead_columns.sql（人の色を color_key へ・使っていない 3 列を外す）。
+-- 登録の移行: migrations/20261129_100000_owner_settings_preferences.sql（ひとりひとりの初期値 6 列: 開いたときの形・週の始まり・予定の長さ・Meet・誰の予定を出すか）。
 -- RLS は本番 003 と同じく切ったまま・方針は足さない（recon-5-0b/prod003/table_flags.tsv。RLS を付けるかは別のテーマ）
 CREATE TABLE IF NOT EXISTS {schema}.calendar_owner_settings (
     staff_id integer NOT NULL,
     color_key text,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    default_view text DEFAULT 'week' NOT NULL,
+    week_start smallint DEFAULT 0 NOT NULL,
+    event_minutes smallint DEFAULT 60 NOT NULL,
+    auto_meet boolean DEFAULT false NOT NULL,
+    open_owners text DEFAULT 'self' NOT NULL,
+    open_team_id integer,
     CONSTRAINT calendar_owner_settings_pkey PRIMARY KEY (staff_id),
+    CONSTRAINT calendar_owner_settings_default_view_check CHECK (default_view IN ('day', 'threeDay', 'week', 'month', 'list')),
+    CONSTRAINT calendar_owner_settings_week_start_check CHECK (week_start IN (0, 1)),
+    CONSTRAINT calendar_owner_settings_event_minutes_check CHECK (event_minutes IN (15, 30, 45, 60, 90, 120)),
+    CONSTRAINT calendar_owner_settings_open_owners_check CHECK (open_owners IN ('self', 'all', 'team')),
+    CONSTRAINT fk_calendar_owner_settings_open_team FOREIGN KEY (open_team_id) REFERENCES {schema}.teams(id) ON DELETE SET NULL,
     CONSTRAINT calendar_owner_settings_color_key_check CHECK (color_key IN ('radicchio', 'cherry_blossom', 'flamingo', 'tomato', 'tangerine', 'pumpkin', 'mango', 'banana', 'citron', 'avocado', 'pistachio', 'basil', 'sage', 'eucalyptus', 'peacock', 'cobalt', 'lavender', 'blueberry', 'wisteria', 'amethyst', 'grape', 'cocoa', 'graphite', 'birch')),
     CONSTRAINT fk_calendar_owner_settings_staff_id_user FOREIGN KEY (staff_id) REFERENCES public.users(id) ON DELETE CASCADE
 );
