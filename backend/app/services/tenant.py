@@ -1645,15 +1645,14 @@ CREATE TABLE IF NOT EXISTS {schema}.calendar_category_teams (
 
 -- 分け表 A2: 予定の表示設定（本番 5 社全部にある。backend/app/routers/calendar.py が使う）。
 -- 作る SQL migrations/20260621_020000_add_schedule_calendar_category_and_owner_settings.sql は登録に無い。
+-- 登録の移行: migrations/20261128_100000_owner_color_key_drop_dead_columns.sql（人の色を color_key へ・使っていない 3 列を外す）。
 -- RLS は本番 003 と同じく切ったまま・方針は足さない（recon-5-0b/prod003/table_flags.tsv。RLS を付けるかは別のテーマ）
 CREATE TABLE IF NOT EXISTS {schema}.calendar_owner_settings (
     staff_id integer NOT NULL,
-    color character varying(32) DEFAULT '#1a73e8'::character varying NOT NULL,
-    is_visible boolean DEFAULT false NOT NULL,
-    share_mode character varying(16) DEFAULT 'self'::character varying NOT NULL,
+    color_key text,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT calendar_owner_settings_pkey PRIMARY KEY (staff_id),
-    CONSTRAINT calendar_owner_settings_share_mode_check CHECK (share_mode IN ('self', 'view', 'edit')),
+    CONSTRAINT calendar_owner_settings_color_key_check CHECK (color_key IN ('radicchio', 'cherry_blossom', 'flamingo', 'tomato', 'tangerine', 'pumpkin', 'mango', 'banana', 'citron', 'avocado', 'pistachio', 'basil', 'sage', 'eucalyptus', 'peacock', 'cobalt', 'lavender', 'blueberry', 'wisteria', 'amethyst', 'grape', 'cocoa', 'graphite', 'birch')),
     CONSTRAINT fk_calendar_owner_settings_staff_id_user FOREIGN KEY (staff_id) REFERENCES public.users(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_calendar_owner_settings_staff_id ON {schema}.calendar_owner_settings USING btree (staff_id);

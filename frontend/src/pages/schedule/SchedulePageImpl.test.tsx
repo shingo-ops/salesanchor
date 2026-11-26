@@ -48,6 +48,7 @@ const answers = vi.hoisted(() => ({
   holidays: [] as Array<Record<string, unknown>>,
   canManageOthers: false,
   selfMissing: false,
+  ownerColorKey: null as string | null,
   categories: [] as Array<Record<string, unknown>>,
   teams: [] as Array<{ id: number; name: string }>,
 }));
@@ -70,8 +71,8 @@ vi.mock("../../lib/api", () => ({
           current_staff_id: 7,
           current_user_id: 101,
           owners: [
-            { staff_id: 7, user_id: 101, staff_code: "A01", name: "Owner Self", primary_email: null, color: null, is_visible: true, share_mode: "self", is_self: true },
-            { staff_id: 8, user_id: 202, staff_code: "B02", name: "Owner Other", primary_email: null, color: null, is_visible: false, share_mode: "view", is_self: false },
+            { staff_id: 7, user_id: 101, staff_code: "A01", name: "Owner Self", primary_email: null, color_key: answers.ownerColorKey, is_self: true },
+            { staff_id: 8, user_id: 202, staff_code: "B02", name: "Owner Other", primary_email: null, color_key: null, is_self: false },
           ].filter((o) => !(answers.selfMissing && o.is_self)),
         };
       }
@@ -106,6 +107,7 @@ beforeEach(async () => {
   answers.holidays = [];
   answers.canManageOthers = false;
   answers.selfMissing = false;
+  answers.ownerColorKey = null;
   answers.categories = [];
   answers.teams = [];
   calendarProps.current = null;
@@ -1757,6 +1759,14 @@ describe("SchedulePage event colors (ADR-1081)", () => {
     expect(String(color)).not.toContain("--event-color-");
   });
 
+  it("C1b: a box without a color uses the owner's chosen color token", async () => {
+    answers.ownerColorKey = "basil";
+    answers.events = [apiEvent({})];
+    view();
+    await screen.findByText("Own Event");
+    expect(boxOf("event-1")?.color).toBe("var(--event-color-basil)");
+  });
+
   it("C2: a box with color_key uses the event color token", async () => {
     answers.events = [apiEvent({ color_key: "tomato" })];
     view();
@@ -1936,7 +1946,7 @@ describe("SchedulePage team share (schedule-settings bin2b)", () => {
     view();
     fireEvent.click(await screen.findByText("Own Event"));
     expect(await screen.findByText(i18n.t("schedule.shareLabel"))).toBeTruthy();
-    expect(await screen.findByText(`${i18n.t("schedule.shareTeam")}: Team One, Team Two`)).toBeTruthy();
+    expect(await screen.findByText(i18n.t("schedule.shareTeamWithNames", { names: ["Team One", "Team Two"].join(i18n.t("schedule.nameListSeparator")) }))).toBeTruthy();
   });
 
   it("the detail popover says Only me for a personal event", async () => {

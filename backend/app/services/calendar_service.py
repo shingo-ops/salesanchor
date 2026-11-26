@@ -224,9 +224,13 @@ async def can_see_event(db: AsyncSession, event_id: int, user_id: int) -> bool:
 
 
 async def event_team_ids(db: AsyncSession, event_id: int) -> list[int]:
-    """予定（元の行）のチームの対応。id の昇順。"""
+    """予定（元の行）のチームの対応（止めたチームは除く）。id の昇順。"""
     result = await db.execute(
-        text("SELECT team_id FROM calendar_event_teams WHERE event_id = :id ORDER BY team_id"),
+        text(
+            "SELECT cet.team_id FROM calendar_event_teams cet"
+            " JOIN teams t ON t.id = cet.team_id AND t.is_active"
+            " WHERE cet.event_id = :id ORDER BY cet.team_id"
+        ),
         {"id": event_id},
     )
     return [r[0] for r in result.fetchall()]
@@ -379,7 +383,8 @@ async def list_events(
             f" ce.recurrence_rule, ce.recurring_event_id, ce.original_start_datetime,"
             f" ce.color_key,"
             f" CASE WHEN ce.calendar_type = 'team' THEN COALESCE((SELECT array_agg(cet.team_id ORDER BY cet.team_id)"
-            f"   FROM calendar_event_teams cet WHERE cet.event_id = COALESCE(ce.recurring_event_id, ce.id)),"
+            f"   FROM calendar_event_teams cet JOIN teams t ON t.id = cet.team_id AND t.is_active"
+            f"   WHERE cet.event_id = COALESCE(ce.recurring_event_id, ce.id)),"
             f"   ARRAY[]::integer[]) ELSE ARRAY[]::integer[] END AS team_ids"
             f" FROM calendar_events ce"
             f" LEFT JOIN public.users owner_user ON owner_user.id = ce.user_id"

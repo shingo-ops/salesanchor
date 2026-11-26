@@ -343,7 +343,9 @@ function SchedulePopover({
     else if (share === "all") shareText = t("schedule.shareAll");
     else {
       const names = item.teamIds.map((id) => teamById.get(id)?.name).filter((name): name is string => Boolean(name));
-      shareText = names.length > 0 ? `${t("schedule.shareTeam")}: ${names.join(", ")}` : t("schedule.shareTeam");
+      shareText = names.length > 0
+        ? t("schedule.shareTeamWithNames", { names: names.join(t("schedule.nameListSeparator")) })
+        : t("schedule.shareTeam");
     }
   }
   const timeLabel = item ? formatSearchResultLine(item, t, i18n.language) : "";

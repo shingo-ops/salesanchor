@@ -483,7 +483,7 @@ def test_role_migration_is_idempotent(pg):
     # meta の migration も冪等（分類表の中身は消えない）
     n0 = _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0]
     c.execute(_read(_META_SQL))
-    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1170
+    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1169
 
 
 # ---------------------------------------------------------------- T10（CI の見張り）
@@ -1096,6 +1096,48 @@ def test_t10_calendar_categories_are_classified_on_bootstrapped_db(cluster):
             " WHERE table_schema LIKE 'tenant\\_%' AND table_name = 'calendar_categories'",
         )
         assert have, "bootstrap した DB に calendar_categories が無い"
+    finally:
+        conn.close()
+        cur = cluster.control.cursor()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+def test_t10_calendar_owner_settings_is_classified_on_bootstrapped_db(cluster):
+    """schedule-settings 便3a: 各社の calendar_owner_settings は color_key だけが allow（理由つき）で分類され、
+    外した古い列（color・is_visible・share_mode）の分類は残らず、表の実際の列が分類されている。"""
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    name, conn = _new_db(cluster.control, "ai_cloud_t10_owner")
+    try:
+        c = conn.cursor()
+        c.execute(_read(_AI_READER_SQL))
+        c.execute(_read(_ROLE_SQL))
+        c.execute(_read(_META_SQL))
+        url = _psycopg_url(ADMIN_PG_URL, name).replace("postgresql://", "postgresql+asyncpg://", 1)
+        from tests.rls_bootstrap import bootstrap_tenant_schema
+
+        async def build():
+            eng = create_async_engine(url)
+            try:
+                await bootstrap_tenant_schema(eng, 1)
+            finally:
+                await eng.dispose()
+
+        asyncio.run(build())
+        c.execute(_read(_CREATE_SQL))
+        rows = _rows(
+            conn,
+            "SELECT column_name, class, reason FROM ai_cloud_meta.column_class"
+            " WHERE schema_pattern = 'tenant_*' AND table_name = 'calendar_owner_settings' ORDER BY column_name",
+        )
+        assert [r[0] for r in rows] == ["color_key"]
+        assert rows[0][1] == "allow" and rows[0][2].strip()
+        columns = _rows(
+            conn,
+            "SELECT column_name FROM information_schema.columns"
+            " WHERE table_schema LIKE 'tenant\\_%' AND table_name = 'calendar_owner_settings'",
+        )
+        assert {r[0] for r in columns} == {"staff_id", "color_key", "updated_at"}
     finally:
         conn.close()
         cur = cluster.control.cursor()
