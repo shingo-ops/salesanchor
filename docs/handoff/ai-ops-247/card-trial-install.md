@@ -1,5 +1,7 @@
 # 実装カード: prod2 での小さな試しの「導入の台本」（文書だけ）
 
+> 注: このカードの中身は card-trial-install-fix1.md・fix2.md・fix3.md で後から直した。食い違うところは fix1〜3 と台本 trial-install/ が正（例: `Restart=always`・`/discord:configure` は使わない）。
+
 - 正の設計: `docs/handoff/ai-ops-247/server-agent-design.md` §12（G1〜G8・段取り 1〜7・§12-4〜12-7）。食い違えば設計が正。迷ったら作らずに `NEEDS_DECISION:` で止まる。
 - PO 承認: 2026-11-25「1」（守り方付きで prod2 で小さく試す）・2026-11-26「1」（入れる手順書を作り、別の AI に審査させてから、もう一度だけ確認する）。
 - この便でサーバーには何もしない。台本を書いて commit・push するだけ。台本を流すのは、PO の同意を受けた Opus。
