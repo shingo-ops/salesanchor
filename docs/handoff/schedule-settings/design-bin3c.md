@@ -4,7 +4,7 @@
 
 - 状態: 設計案作成済み（Opus・2026-11-26）。PO は 2026-11-26 に「1」（この 2 点を設計から本番まで進める）を選んだ。実装・マージ・本番反映までの委任は同じ流れ（design-bin3b.md の委任と同じ）
 - 基準: origin/main 331c18613（#5778 の合流）
-- 関連: `docs/handoff/schedule-settings/design-bin3b.md`（初期値の本体）・`docs/specs/schedule/README.md`・ADR-027（文字は `t()`）・ADR-1054（読み方は `useApiQuery`）・ADR-144（金型）
+- 関連: `docs/handoff/schedule-settings/recon.md`（予定と設定の現在地）・`docs/handoff/schedule-settings/design-bin3b.md`（初期値の本体）・`docs/specs/schedule/README.md`・ADR-027（文字は `t()`）・ADR-067（色は既存のクラスだけ・新しい色を足さない）・ADR-1054（読み方は `useApiQuery`）・ADR-1071（失敗の文は「起きたこと＋次にすること」）・ADR-144（金型）
 
 ## 1. 目的（PO の言葉に寄せて）
 
@@ -80,6 +80,7 @@
 ## 8. 維持の仕組み
 
 - 試験 K1〜K4 が CI で毎回流れる。i18n の 2 キーの一致は CI の点検が見る。
+- 守り手: CI の vitest（`frontend/src/pages/schedule/schedule-utils.test.ts`・`frontend/src/pages/schedule/SchedulePageImpl.test.tsx`・`frontend/src/pages/schedule/ScheduleSettingsPage.test.tsx` の K1〜K4）と `check:i18n-missing-keys`・`check:error-text-next-action`。設計は Opus（設計担当）が持つ。
 
 ## 9. 外部・過去事例の参照と我々への応用
 

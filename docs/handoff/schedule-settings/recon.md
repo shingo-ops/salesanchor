@@ -51,7 +51,7 @@
 - Google カレンダーの設定（support.google.com/calendar/answer/6084644）: 歯車→設定→全般に、週の始まり・表示の形・予定の長さの初期値・時間帯を置く。予定の長さは利用者の設定が会社の設定より優先（support.google.com/a/answer/9347087）。いずれも検索結果の要約で、本文の日付は未確認
 
 ## 11. 予定の種類と共有（2026-11-25 追記）
-- 種類は7つで固定: 商談 meeting・個人 personal・仕入 procurement・発送 shipping・請求 billing・発売 release・休み holiday。一覧が2か所にある: 画面 frontend/src/features/schedule/calendars.config.ts:3-62 と、表の決まり backend/app/services/tenant.py:1579（calendar_events_category_check）
+- 種類は7つで固定: 商談 meeting・個人 personal・仕入 procurement・発送 shipping・請求 billing・発売 release・休み holiday。一覧が2か所にある: 画面 frontend/src/features/schedule/calendars.config.ts（便2a で消した。今は表の決まり 1 か所） と、表の決まり backend/app/services/tenant.py:1579（calendar_events_category_check）
 - 種類ごとの色: 画面の札の色で固定（calendars.config.ts の badgeVariant）。予定そのものの色は1件ずつ Google の24色から選ぶ（color_key・tenant.py:1581・ADR-1081）
 - 共有の今: 予定1件ごとに「社員にも見せる」（ScheduleDraftFields.tsx:391-412）→ 見せる=社内の全員（calendar_type shared）・見せない=自分だけ（personal）。これは効いている（backend/app/services/calendar_service.py:242-244 で他人の personal は返さない）
 - 種類を「個人」にすると自動で「見せない」になる（ScheduleDraftFields.tsx:288）。ほかの種類は決まりなし
