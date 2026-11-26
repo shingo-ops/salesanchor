@@ -64,6 +64,16 @@ _PUBLIC_TABLES = (
 )
 
 
+def _phase3b_sql() -> str:
+    """Phase 3B（public.products.product_category_id を INTEGER へ）だけ。tenant を回す前半は流さない。"""
+    body = (_MIGRATIONS / "20260920_010000_phase3_fk_rewire_unit_condition.sql").read_text()
+    start = body.index("DO $phase3b$")
+    end = body.index("$phase3b$;", start) + len("$phase3b$;")
+    sql = body[start:end]
+    assert "LIKE 'tenant_" not in sql
+    return sql
+
+
 async def _product_list_public_ready(engine) -> bool:
     """商品一覧の試験が使う public の表・列・product_kinds の3行が揃っているか（lock は取らない）。"""
     async with engine.connect() as conn:
@@ -78,6 +88,14 @@ async def _product_list_public_ready(engine) -> bool:
         )
         if not has_kind_id:
             return False
+        category_type = await conn.scalar(
+            text(
+                "SELECT data_type FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'product_category_id'"
+            )
+        )
+        if category_type != "integer":
+            return False
         kinds = await conn.scalar(
             text("SELECT count(*) FROM public.product_kinds WHERE code IN ('TCG','FIGURE','GOODS')")
         )
@@ -89,7 +107,7 @@ async def ensure_product_list_public(engine) -> None:
 
     巻き戻す transaction の中で public の DDL を流すと、終わるまで表ロックを持ち続け、
     ほかの worker と取る順が逆になって deadlock する。そのため別接続で流して確定させる。
-    ensure_product_packagings が先に本番形の products を用意する。phase3 は流さない。
+    ensure_product_packagings が先に本番形の products を用意する。phase3 は Phase 3B（public だけ）だけ流す。
     public_bootstrap_lock を取るので、この関数は lock の外から呼ぶこと。
     """
     await ensure_product_packagings(engine)
@@ -100,8 +118,8 @@ async def ensure_product_list_public(engine) -> None:
             return
         async with engine.begin() as conn:
             await conn.execute(text("SET LOCAL lock_timeout = '60s'"))
-            await conn.execute(text("LOCK TABLE public.products IN ACCESS EXCLUSIVE MODE"))
             await conn.exec_driver_sql("SELECT pg_advisory_lock(2147483647)")
+            await conn.execute(text("LOCK TABLE public.products IN ACCESS EXCLUSIVE MODE"))
             for stmt in _PUBLIC_PRODUCTS_DDL.split(";"):
                 stmt = stmt.strip()
                 if stmt:
@@ -128,6 +146,7 @@ async def ensure_product_list_public(engine) -> None:
             # type_master の行は migration ではなく試験側で入れる（ADR-1007 段2）。rename の後で入れる
             await conn.exec_driver_sql(type_master_seed_sql())
             await _exec_multi_stmt(conn, (_MIGRATIONS / "20260919_020000_master_ssot_public_tables.sql").read_text())
+            await _exec_multi_stmt(conn, _phase3b_sql())
             # ADR-1020 便2a: 詳細の取得が読む表（細分類・紐づけ・「調べたが無い」の印）。どれも IF NOT EXISTS の本番 migration。
             for name in (
                 "20260922_030000_product_format_game_links.sql",

@@ -291,6 +291,11 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
             }
         ),
     ),
+    "test_tcg_product_list_pg.py": (
+        "text_only",
+        "phase3 のファイルから public だけの Phase 3B を切り出して流す。tenant を回す前半は流さない",
+        frozenset({"20260920_010000_phase3_fk_rewire_unit_condition.sql"}),
+    ),
     "test_tcg_work_comparison_pg.py": (
         "own_database",
         "",
