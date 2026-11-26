@@ -13,7 +13,7 @@
 ## 受領確認
 
 - 最初の報告で、§2 の触るファイルと §3 の想定分岐を読んだことを 1 行で返す。
-- 作業場所: `git fetch origin` → `bash scripts/new-worktree.sh release/customer-conversion-rule-impl` → その場所へ移る → `git merge --no-edit origin/release/customer-conversion-rule`（設計書を取り込む。取り込みはこの 1 回だけ）→ `./scripts/dev/executor-preflight.sh || exit 1`。
+- 作業場所（設計書と同じ枝に実装を足し、PR は 1 つ。`scripts/agent-hooks/cloud/rules.md` の「push 済みの枝の続き」の手順）: `git fetch origin` → `bash scripts/new-worktree.sh release/customer-conversion-rule` → その場所へ移る → `git switch -C release/customer-conversion-rule origin/release/customer-conversion-rule` → `git rev-parse HEAD` と `git rev-parse origin/release/customer-conversion-rule` が同じことを確かめる → `./scripts/dev/executor-preflight.sh || exit 1`。ほかの枝の取り込み・rebase はしない。
 
 ## 1. 先に確かめる実物（違っていたら §3 の 1 行目）
 
