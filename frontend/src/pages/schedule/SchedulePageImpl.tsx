@@ -532,6 +532,7 @@ function ScheduleSidebar({
   onJumpToDate,
   onShiftMonth,
   canManageOthers,
+  weekStart,
 }: {
   currentMonth: Date;
   selectedDate: Date;
@@ -542,13 +543,14 @@ function ScheduleSidebar({
   onJumpToDate: (date: Date) => void;
   onShiftMonth: (direction: -1 | 1) => void;
   canManageOthers: boolean;
+  weekStart: 0 | 1;
 }) {
   const { t } = useTranslation();
   const AddIcon = NAV_ICONS.add;
-  const monthCells = getMonthCells(currentMonth);
+  const monthCells = getMonthCells(currentMonth, weekStart);
   const miniDays = Array.from(
     { length: 7 },
-    (_, index) => new Intl.DateTimeFormat("ja-JP", { weekday: "short" }).format(new Date(2024, 0, 7 + index)),
+    (_, index) => new Intl.DateTimeFormat("ja-JP", { weekday: "short" }).format(new Date(2024, 0, 7 + weekStart + index)),
   );
 
   return (
@@ -946,7 +948,8 @@ export default function SchedulePage() {
   // ADR-1054 段 3 の 7 回目: 3 本を写しの置き場で読む（path の文字は今と同じ）。見本の状態では取りに行かない。
   const live = demoState !== "loading" && demoState !== "empty";
   // ひとりひとりの初期値（開いたときの形・週の始まり・予定の長さ・Meet・誰の予定を出すか）。読めるまでは今までと同じ既定値
-  const { prefs, isLoaded: prefsLoaded } = useCalendarPreferences({ enabled: live });
+  const { prefs, isLoaded: prefsLoaded, query: prefsQuery } = useCalendarPreferences({ enabled: live });
+  const prefsFailed = live && prefsQuery.isError && !prefsLoaded;
   // 週は週の始まりの曜日に合わせる（toRangeStart・toRangeEnd は日曜始まりに固定のため、週だけここで置き換える）
   const rangeStart = useMemo(
     () => (view === "week" ? getWeekDaysFrom(anchorDate, prefs.week_start)[0] : toRangeStart(view, anchorDate)),
@@ -993,7 +996,7 @@ export default function SchedulePage() {
   const loading = live && (ownersQ.isPending || eventsQ.isPending || shiftsQ.isPending);
   // 写しを出したまま裏の取り直しが失敗した時だけ、取れなかった文を出す（写しが無い時の失敗は今と同じく出さない）
   const staleFailed = [ownersQ, eventsQ, shiftsQ].some((q) => q.isError && q.data !== undefined);
-  const shownError = error ?? (built.failed || staleFailed ? t("schedule.errorFetch") : null);
+  const shownError = error ?? (built.failed || staleFailed ? t("schedule.errorFetch") : prefsFailed ? t("schedule.prefsLoadErrorSchedule") : null);
   const selfKey = selfOwnerKey(owners);
   // 写しがあれば最初の描画から自分を選ぶ（全員の予定が一瞬出てから絞られる形にしない）
   const [visibleOwnerIds, setVisibleOwnerIds] = useState<number[]>(() => (selfKey != null ? [selfKey] : []));
@@ -1259,7 +1262,7 @@ export default function SchedulePage() {
 
   // 一覧は ScheduleListView が範囲の予定から日を作るので、ここでは使わない
   const viewDays = view === "month"
-    ? getMonthCells(anchorDate)
+    ? getMonthCells(anchorDate, prefs.week_start)
     : view === "day"
       ? [new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate())]
       : view === "threeDay"
@@ -1654,6 +1657,7 @@ export default function SchedulePage() {
               onJumpToDate={jumpToDate}
               onShiftMonth={shiftMonth}
               canManageOthers={canManageOwners}
+              weekStart={prefs.week_start}
             />
           )}
 

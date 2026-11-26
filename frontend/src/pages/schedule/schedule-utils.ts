@@ -184,9 +184,9 @@ export function formatTimeInput(date: Date): string {
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
-export function getMonthCells(anchor: Date): Date[] {
+export function getMonthCells(anchor: Date, weekStart: 0 | 1 = 0): Date[] {
   const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
-  const start = addDays(first, -first.getDay());
+  const start = addDays(first, -((first.getDay() - weekStart + 7) % 7));
   return Array.from({ length: 42 }, (_, index) => addDays(start, index));
 }
 
