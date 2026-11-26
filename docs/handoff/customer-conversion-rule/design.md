@@ -1,6 +1,6 @@
 # design: 「顧客」に切り替える基準（便1）
 
-状態: **KGI は PO 承認済み**（2026-11-25 チャット「1」。K1〜K7 と §3 の前提）。設計審査 1 回目は REVISE（2026-11-25・必須 4 件）。2 回目は REVISE（2026-11-26・必須 3 件＝公開の道の監査の記録・1 か所だけの試験の数え方・一覧の新規作成の選択肢。推奨 4〜6 も本版で直した）。必須 2〜4 と推奨は本版で直した。必須 1（「登録済み」の判定のそろえ方）は PO が 2026-11-26「1」で決めた（§3・会社に既定の請求先があること）。調査: [recon.md](recon.md)。ADR: [ADR-1090](../../adr/ADR-1090-customer-conversion-three-conditions.md)（Proposed）。
+状態: **KGI は PO 承認済み**（2026-11-25 チャット「1」。K1〜K7 と §3 の前提）。設計審査 1 回目は REVISE（2026-11-25・必須 4 件）。2 回目は REVISE（2026-11-26・必須 3 件＝公開の道の監査の記録・1 か所だけの試験の数え方・一覧の新規作成の選択肢。推奨 4〜6 も本版で直した）。3 回目は REVISE（2026-11-26・必須 1 件＝1 か所だけの試験 (b) の数え方。推奨 2〜5 とあわせて本版で直した）。必須 2〜4 と推奨は本版で直した。必須 1（「登録済み」の判定のそろえ方）は PO が 2026-11-26「1」で決めた（§3・会社に既定の請求先があること）。調査: [recon.md](recon.md)。ADR: [ADR-1090](../../adr/ADR-1090-customer-conversion-three-conditions.md)（Proposed）。
 
 ## 1. 目的（PO の言葉は recon §1）
 
@@ -85,11 +85,20 @@ PO の決定:
 ### 4-3. カルテ（画面）
 
 - `karteLayout.ts:114` の成約後の一覧を `["existing_customer"]` だけにする。追客（短期・長期）は商談中と同じ見せ方（`NEGOTIATING_LAYOUT`）にする。ADR-1089 What 2 を直す。
-- `InboxKartePanel.tsx:380-383`: 商談中・追客でも帯を出す。大きいボタンは「請求書を作成」。
+- `InboxKartePanel.tsx:380-383`: 帯（下の固定のボタンの列）はすべての段階で出す（審査 3 回目の推奨 4。リンクのメニューは帯の中にあり、帯が無いと K7 の「段階によらない」が守れないため）。大きいボタンは段階で決める:
+
+  | 段階 | 大きいボタン |
+  |---|---|
+  | lead | 「商談に進める」（今のまま） |
+  | negotiating・follow_up_short・follow_up_long・existing_customer | 「請求書を作成」 |
+  | lost・out_of_scope | 出さない（「⋯」のメニューだけを出す） |
+
+- `ActionBar`（`InboxKartePanel.tsx:338-346`）に `registrationCompleted: boolean` を足し、呼ぶ所（`:255-262`）で `leadDetail.registration_completed === true` を渡す。値が無い（undefined・null）ときは「まだ登録が済んでいない」として扱う。
+- メニューの「統合」は今も `canMerge && status === "lead"`（`InboxKartePanel.tsx:446`）で出し分けている。帯を広げても統合が出るのは lead だけのまま（審査 3 回目の推奨 5 は今のコードで満たされている）。この行は変えない。
 - メニューのリンク（PO 11/25「登録フォーム入力済みの顧客に対して再度登録フォームを発行すると重複したデータが発生する原因になるのでSSOTさせるためにフォーム登録済みの顧客には再発行はしない、変更が必要な場合は元のデータに追加していく形」）:
   - 登録がまだ: 「登録フォームのリンク」だけを出す。
   - 登録が済んだ: 「登録フォームのリンク」を出さない。「配送先を足すリンク」（add_address・配送先を 1 行足す）と「請求先を変えるリンク」（change_billing・前の請求先を残したまま新しい行を足して既定にする・ADR-127 §1）を出す。段階によらない（今は請求先を変えるリンクが既存顧客だけ・`InboxKartePanel.tsx:421`）。
-  - 「登録が済んだ」の判定は backend の 1 つの関数に置き、新規登録のリンクを断る所（`registration_tokens.py:86-102`）・請求先を変えるリンクを未登録で断る所（`registration_tokens.py:105-120`・今は同じ SQL の写し）・カルテのデータ（`GET /leads/{id}` の返り値に `registration_completed` を足す）の 3 か所がそれを呼ぶ。画面は自分で判定しない。判定の中身は「その人の会社に既定の請求先がある」（PO 11/26「1」・§3）。
+  - 「登録が済んだ」の判定は backend の 1 つの関数に置き、新規登録のリンクを断る所（`registration_tokens.py:86-102`）・請求先を変えるリンクを未登録で断る所（`registration_tokens.py:105-120`・今は同じ SQL の写し）・カルテのデータの 3 か所がそれを呼ぶ。カルテのデータ: `LeadResponse`（`backend/app/schemas/lead.py:221`）に `registration_completed: bool | None = None` を足し、`leads.py` で `LeadResponse` を返す 5 か所（`:392` 詳細・`:482` 作る・`:755` 直す・`:862` 商談に進める・`:3316` 統合）すべてで値を入れる。理由: カルテは直した後の返り値を手元の控えに書き戻す（`frontend/src/pages/inbox/useInboxState.ts:563-564`）ので、直す道で値が抜けるとメニューが「登録前」に戻ってしまう。画面の型 `LeadDetail`（`frontend/src/pages/inbox/inbox.types.ts:73`）にも `registration_completed?: boolean | null` を足す。画面は自分で判定しない。判定の中身は「その人の会社に既定の請求先がある」（PO 11/26「1」・§3）。
   - 元のデータは消さず、足していく形は今の backend のまま（add_address は行を足す・change_billing は前の行を既定から外して新しい行を足す）。
 
 ### 4-4. 触らないもの
@@ -118,10 +127,10 @@ PO の決定:
 
 ## 7. 受入の確かめ方（KGI の検証方法の詳しい手順）
 
-- backend 試験: `backend/tests/test_customer_conversion.py`（新規）。K1 の 6 通り・K2 の 7 通り・K3 の 2 本・各道 1 本。会社の画面で手で請求先を入れた人（フォームを使っていない人）も、支払いで既存顧客になる試験 1 本。判定が例外を出しても入金の記録が残る試験 1 本。ログインした人がいない道（登録フォームの送信・PayPal の戻り）で切り替わり、監査の表に書かずに済む試験 1 本（審査 2 回目の必須 1）。
-- 今ある試験の直し（審査 2 回目の推奨 4）: `backend/tests/test_analytics.py:625,692,770,830,967-973` は API から status=existing_customer を送ってリードを作っており、422 で落ちる。試験の下ごしらえで、作った後に SQL で直接 `UPDATE leads SET status = 'existing_customer'` を入れる形に替える（数え方の試験の目的は変えない）。ほかにも API で existing_customer を送る試験があれば同じに直す（実装役が `git grep -n existing_customer -- backend/tests frontend/src` で数える）。
+- backend 試験: `backend/tests/test_customer_conversion.py`（新規）。K1 の 6 通り（②を最後にする順番の作り方: 請求書は `company_id` が必須〔`backend/app/schemas/invoice.py:78`〕で、会社を作るときもリードが必須なので、先に別のリード X の会社に請求先と入金を入れ、最後に `update_company` で会社の lead_id を本人へ付け替える〔`companies.py:103` の `lead_id` は直せる列〕。X は 3 つがそろった時点で既存顧客になってよい。確かめるのは付け替えた直後に本人が既存顧客になること）・K2 の 7 通り・K3 の 2 本・各道 1 本。会社の画面で手で請求先を入れた人（フォームを使っていない人）も、支払いで既存顧客になる試験 1 本。判定が例外を出しても入金の記録が残る試験 1 本。ログインした人がいない道（登録フォームの送信・PayPal の戻り）で切り替わり、監査の表に書かずに済む試験 1 本（審査 2 回目の必須 1）。
+- 今ある試験の直し（審査 2 回目の推奨 4）: `backend/tests/test_analytics.py:625,692,770,830,967-973` は API から status=existing_customer を送ってリードを作っており、422 で落ちる。試験の下ごしらえで、作った後に SQL で直接 `UPDATE leads SET status = 'existing_customer'` を入れる形に替える（数え方の試験の目的は変えない）。ほかにも API で existing_customer を送る試験があれば同じに直す（実装役が `git grep -n existing_customer -- backend/tests frontend/src` で数える）。SQL で直接入れている試験（例 `backend/tests/test_lead_merge_pg.py:639` の `env.lead(status="existing_customer")` は `:165-171` で直接 INSERT）は 422 にならないので直さない。`*_pg.py`・`*_rls.py` は PostgreSQL の試験の場所（CI の `.github/workflows/test.yml:240-242`）でだけ動き、手元の SQLite では飛ばされる。直した結果は CI の PostgreSQL の試験で確かめる（手元で通っただけで済ませない）。
 - PostgreSQL の試験（審査 2 回目の推奨 6）: `backend/tests/test_customer_conversion_pg.py`（新規・`test_assistant_karte_pg.py` と同じ形で、CI の `RLS_TEST_DATABASE_URL`・`RLS_ADMIN_DATABASE_URL` があるときに動く・`.github/workflows/test.yml:240-242`）。FOR UPDATE の分岐が通ること、2 本の取引（入金とフォーム送信）を順に重ねて最後に既存顧客になること、`tenant_table_ref` で別テナントの表を見ないことを確かめる。
-- 1 か所だけの試験（ADR-1090 受入条件の最後の行を ○× にする・審査 2 回目の必須 2 で数える形を絞った）: `backend/app` の `.py` を読み、(a) 正規表現 `SET\s+status\s*=\s*'existing_customer'` に合う行が `services/customer_conversion.py` にだけあること（読む側の `WHERE status = 'existing_customer'` は数えない）、(b) 登録済みの判定（`c.lead_id` と `'billing'` と `is_default` が 1 つの SQL に並ぶ形）が `services/customer_conversion.py` にだけあること。(b) は `registration_tokens.py` に `address_type = 'billing'` が 0 件になることで確かめる（今の写し 2 か所 `:86-102`・`:105-120` を関数の呼び出しに替えるため）。会社の画面の請求先の読み書き（`companies.py:869,887` など）・`erp.py`・`duplicates.py`・`tasks/reports.py` の `address_type = 'billing'` は住所を読む・選ぶ処理で、登録済みの判定ではないので数えない。
+- 1 か所だけの試験（ADR-1090 受入条件の最後の行を ○× にする・審査 2 回目の必須 2 で数える形を絞った）: `backend/app` の `.py` を読み、(a) 正規表現 `SET\s+status\s*=\s*'existing_customer'` に合う行が `services/customer_conversion.py` にだけあること（読む側の `WHERE status = 'existing_customer'` は数えない）、(b) 登録済みの判定の写しが残っていないこと。数える形（審査 3 回目の必須 1 で直した）: `backend/app/routers/registration_tokens.py` に、今の写し 2 か所（`:91`・`:111`）だけにある文字列 `JOIN companies c ON c.id = ca.company_id` が 0 件、かつ同じファイルに `is_registration_completed(` が 2 件あること（2026-11-26 `git grep` で、この文字列は `backend/app` の中でこの 2 行だけ）。`change_billing` の `:563` の `AND address_type = 'billing'` は、前の請求先を既定から外す UPDATE で、登録済みの判定ではないので数えない（`address_type = 'billing'` の件数では数えない）。会社の画面の請求先の読み書き（`companies.py:869,887` など）・`erp.py`・`duplicates.py`・`tasks/reports.py` の `address_type = 'billing'` は住所を読む・選ぶ処理で、登録済みの判定ではないので数えない。
 - frontend 試験: karteLayout の追客 2 段階・帯の出し分け・選択肢に既存顧客が無いこと。
 - 本番: テスト株式会社の試しのリード（TST-KARTE-3 を使い回すか、新しく作るかは実装カードで決める）。K6 は反映の前後で reader で数える。
 
