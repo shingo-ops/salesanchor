@@ -281,11 +281,6 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
             }
         ),
     ),
-    "test_tcg_product_list_pg.py": (
-        "own_database",
-        "",
-        frozenset({"20260920_010000_phase3_fk_rewire_unit_condition.sql"}),
-    ),
     "test_tcg_sold_out_results.py": (
         "own_database",
         "",

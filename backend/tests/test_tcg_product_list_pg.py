@@ -24,6 +24,7 @@ from tests.rls_bootstrap import (
     _PUBLIC_BOOTSTRAP_LOCK_KEY,
     _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE,
     ensure_product_packagings,
+    public_bootstrap_lock,
 )
 from tests.seed_data import type_master_seed_sql
 from tests.test_tcg_work_matching_integration import (
@@ -44,52 +45,108 @@ async def _exec_multi_stmt(conn, sql: str) -> None:
     await raw.driver_connection.execute(sql)
 
 
+_MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
+
+# public に確定させる表（本番の migration と _PUBLIC_PRODUCTS_DDL が作るもの）
+_PUBLIC_TABLES = (
+    "products",
+    "product_kinds",
+    "type_master",
+    "units",
+    "conditions",
+    "tcg_note_master",
+    "tcg_status_master",
+    "tcg_product_categories",
+    "product_search_keywords",
+    "product_formats",
+    "product_format_game_links",
+    "product_blank_confirmations",
+)
+
+
+async def _product_list_public_ready(engine) -> bool:
+    """商品一覧の試験が使う public の表・列・product_kinds の3行が揃っているか（lock は取らない）。"""
+    async with engine.connect() as conn:
+        for table in _PUBLIC_TABLES:
+            if not await conn.scalar(text("SELECT to_regclass(:name) IS NOT NULL"), {"name": f"public.{table}"}):
+                return False
+        has_kind_id = await conn.scalar(
+            text(
+                "SELECT EXISTS (SELECT 1 FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'product_kind_id')"
+            )
+        )
+        if not has_kind_id:
+            return False
+        kinds = await conn.scalar(
+            text("SELECT count(*) FROM public.product_kinds WHERE code IN ('TCG','FIGURE','GOODS')")
+        )
+        return kinds == 3
+
+
+async def ensure_product_list_public(engine) -> None:
+    """public の DDL を、巻き戻す transaction の外で一度だけ確定（commit）させる。
+
+    巻き戻す transaction の中で public の DDL を流すと、終わるまで表ロックを持ち続け、
+    ほかの worker と取る順が逆になって deadlock する。そのため別接続で流して確定させる。
+    ensure_product_packagings が先に本番形の products を用意する。phase3 は流さない。
+    public_bootstrap_lock を取るので、この関数は lock の外から呼ぶこと。
+    """
+    await ensure_product_packagings(engine)
+    if await _product_list_public_ready(engine):
+        return
+    async with public_bootstrap_lock(engine):
+        if await _product_list_public_ready(engine):
+            return
+        async with engine.begin() as conn:
+            await conn.execute(text("SET LOCAL lock_timeout = '60s'"))
+            await conn.execute(text("LOCK TABLE public.products IN ACCESS EXCLUSIVE MODE"))
+            await conn.exec_driver_sql("SELECT pg_advisory_lock(2147483647)")
+            for stmt in _PUBLIC_PRODUCTS_DDL.split(";"):
+                stmt = stmt.strip()
+                if stmt:
+                    await conn.exec_driver_sql(stmt)
+            await conn.exec_driver_sql("SELECT pg_advisory_unlock(2147483647)")
+            await _exec_multi_stmt(conn, (_MIGRATIONS / "085_create_tcg_type_master.sql").read_text())
+            await _exec_multi_stmt(conn, (_MIGRATIONS / "086_seed_additional_tcg_types.sql").read_text())
+            await _exec_multi_stmt(conn, (_MIGRATIONS / "20260921_060000_create_product_kinds.sql").read_text())
+            # Seed public.product_kinds so detail/import services can resolve division codes
+            await conn.execute(
+                text("""
+                INSERT INTO public.product_kinds (code, name, display_order, is_active) VALUES
+                    ('TCG',    'トレーディングカードゲーム', 10, true),
+                    ('FIGURE', 'フィギュア',               20, true),
+                    ('GOODS',  'グッズ',                   30, true)
+                ON CONFLICT (code) DO NOTHING
+            """)
+            )
+            # ADR-156 Phase 3A: add product_kind_id FK column to public.products (idempotent if already added)
+            await _exec_multi_stmt(conn, (_MIGRATIONS / "20260921_120000_add_products_product_kind_id.sql").read_text())
+            await _exec_multi_stmt(
+                conn, (_MIGRATIONS / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text()
+            )
+            # type_master の行は migration ではなく試験側で入れる（ADR-1007 段2）。rename の後で入れる
+            await conn.exec_driver_sql(type_master_seed_sql())
+            await _exec_multi_stmt(conn, (_MIGRATIONS / "20260919_020000_master_ssot_public_tables.sql").read_text())
+            # ADR-1020 便2a: 詳細の取得が読む表（細分類・紐づけ・「調べたが無い」の印）。どれも IF NOT EXISTS の本番 migration。
+            for name in (
+                "20260922_030000_product_format_game_links.sql",
+                "20261016_190000_create_product_blank_confirmations.sql",
+            ):
+                await _exec_multi_stmt(conn, (_MIGRATIONS / name).read_text())
+
+
 async def create_product_schema(conn, schema):
-    """Build every disposable schema from the same production migrations."""
+    """使い捨てスキーマだけを作る。public の DDL は ensure_product_list_public が確定させ済み。"""
     await conn.execute(text(f"CREATE SCHEMA {schema}"))
-    await conn.exec_driver_sql("SELECT pg_advisory_lock(2147483647)")
-    for stmt in _PUBLIC_PRODUCTS_DDL.split(';'):
-        stmt = stmt.strip()
-        if stmt:
-            await conn.exec_driver_sql(stmt)
-    await conn.exec_driver_sql("SELECT pg_advisory_unlock(2147483647)")
-    migrations = Path(__file__).resolve().parents[2] / "migrations"
     for name in (
         "20260831_110000_create_tcg_analysis_tables_t004.sql",
         "20260903_180000_tcg_products_mark_en_t004.sql",
         "20260902_110000_tcg_classification_masters.sql",
     ):
-        sql = (migrations / name).read_text().replace("tenant_004", schema)
+        sql = (_MIGRATIONS / name).read_text().replace("tenant_004", schema)
         await _exec_multi_stmt(conn, sql)
-    await _exec_multi_stmt(conn, (migrations / "085_create_tcg_type_master.sql").read_text())
-    await _exec_multi_stmt(conn, (migrations / "086_seed_additional_tcg_types.sql").read_text())
-    await _exec_multi_stmt(conn, (migrations / "20260921_060000_create_product_kinds.sql").read_text())
-    # Seed public.product_kinds so detail/import services can resolve division codes
-    await conn.execute(text("""
-        INSERT INTO public.product_kinds (code, name, display_order, is_active) VALUES
-            ('TCG',    'トレーディングカードゲーム', 10, true),
-            ('FIGURE', 'フィギュア',               20, true),
-            ('GOODS',  'グッズ',                   30, true)
-        ON CONFLICT (code) DO NOTHING
-    """))
-    # ADR-156 Phase 3A: add product_kind_id FK column to public.products (idempotent if already added)
-    await _exec_multi_stmt(conn, (migrations / "20260921_120000_add_products_product_kind_id.sql").read_text())
-    await _exec_multi_stmt(conn, (migrations / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text())
-    # type_master の行は migration ではなく試験側で入れる（ADR-1007 段2）。rename の後で入れる
-    await conn.exec_driver_sql(type_master_seed_sql())
     await _exec_multi_stmt(conn, _rewire_keyword_fks(schema))
-    await _exec_multi_stmt(conn, (migrations / "20260919_020000_master_ssot_public_tables.sql").read_text())
-    # Master SSOT Phase 3: unit_id/condition_id UUID→INTEGER rewire + product_category_id UUID→INTEGER
-    # Strip BEGIN/COMMIT: this runs inside an outer transaction managed by product_db fixture.
-    _phase3_sql = (migrations / "20260920_010000_phase3_fk_rewire_unit_condition.sql").read_text()
-    _phase3_sql = _phase3_sql.replace("BEGIN;", "").replace("COMMIT;", "")
-    await _exec_multi_stmt(conn, _phase3_sql)
-    # ADR-1020 便2a: 詳細の取得が読む表（細分類・紐づけ・「調べたが無い」の印）。どれも IF NOT EXISTS の本番 migration。
-    for name in (
-        "20260922_030000_product_format_game_links.sql",
-        "20261016_190000_create_product_blank_confirmations.sql",
-    ):
-        await _exec_multi_stmt(conn, (migrations / name).read_text())
 
 
 @pytest_asyncio.fixture
@@ -100,8 +157,8 @@ async def product_db(monkeypatch):
     monkeypatch.setattr(routes, "TCG_SCHEMA", schema)
     engine = create_async_engine(url.set(drivername="postgresql+asyncpg"))
     try:
-        # 荷姿の表は transaction の外で一度だけ確定させる（巻き戻す DDL にすると表ロックを持ち続けて deadlock する）
-        await ensure_product_packagings(engine)
+        # 荷姿の表と public の DDL は transaction の外で一度だけ確定させる（巻き戻す DDL にすると表ロックを持ち続けて deadlock する）
+        await ensure_product_list_public(engine)
         async with engine.connect() as conn:
             transaction = await conn.begin()
             try:
