@@ -91,13 +91,13 @@ recon §2 の6ファイルについて、後片付けの中の共通の役割を
 ### 7-1. 変更前後（変えるのは `backend/tests/test_tcg_product_list_pg.py` と、見張りの分類1件）
 | 場所 | 変更前 | 変更後 |
 |---|---|---|
-| `test_tcg_product_list_pg.py` 新しい関数 `ensure_product_list_public(engine)` | 無い | 下の 7-2 の形で足す |
+| `backend/tests/test_tcg_product_list_pg.py` 新しい関数 `ensure_product_list_public(engine)` | 無い | 下の 7-2 の形で足す |
 | `product_db`（:103） | `await ensure_product_packagings(engine)` | `await ensure_product_list_public(engine)`（中で `ensure_product_packagings` を先に呼ぶ） |
 | `create_product_schema`（:47-92） | 使い捨てスキーマの表と public の DDL を両方流す | 使い捨てスキーマの分だけにする: `CREATE SCHEMA`（:49）、t004 の3本（:56-62）、`_rewire_keyword_fks(schema)`（:78）。この順は変えない |
 | phase3（:80-84） | 巻き戻す transaction の中で流す | どこでも流さない（使い捨てスキーマには何もしないため。recon §6-3） |
-| `test_tenant_loop_migration_guard.py:284-287` | `test_tcg_product_list_pg.py` を `own_database` で phase3 と登録 | この登録を消す。消した後も見張りの試験が通ること（phase3 の名前がこのファイルに無くなるので、登録は要らなくなる） |
+| `backend/tests/test_tenant_loop_migration_guard.py:284-287` | `backend/tests/test_tcg_product_list_pg.py` を `own_database` で phase3 と登録 | この登録を消す。消した後も見張りの試験が通ること（phase3 の名前がこのファイルに無くなるので、登録は要らなくなる） |
 
-触らない範囲: 試験の本体（:123 以降）、`product_db` の共有の xact 札（:108-113）と rollback（:118）、ほかの試験ファイル、`rls_bootstrap.py`、migrations、製品コード。
+触らない範囲: 試験の本体（:123 以降）、`product_db` の共有の xact 札（:108-113）と rollback（:118）、ほかの試験ファイル、`backend/tests/rls_bootstrap.py`、migrations、製品コード。
 
 ### 7-2. `ensure_product_list_public(engine)` の形
 1. `await ensure_product_packagings(engine)`（products を本番の形で用意する。試験用の少列版の products を確定させない決まりを守る）。
@@ -106,7 +106,7 @@ recon §2 の6ファイルについて、後片付けの中の共通の役割を
    - `public.products` に `product_kind_id` 列がある（information_schema.columns）。
    - `public.product_kinds` に code が TCG・FIGURE・GOODS の行が3件ある。
 3. `async with public_bootstrap_lock(engine):` の中で2をもう一度確かめる。揃っていなければ `async with engine.begin() as conn:` で次を流す:
-   - `SET LOCAL lock_timeout = '60s'`、続けて `LOCK TABLE public.products IN ACCESS EXCLUSIVE MODE`（`rls_bootstrap.py:137-139` と同じ順）。
+   - `SET LOCAL lock_timeout = '60s'`、続けて `LOCK TABLE public.products IN ACCESS EXCLUSIVE MODE`（`backend/tests/rls_bootstrap.py:137-139` と同じ順）。
    - 今の `create_product_schema` にある public の分を、今と同じ順で流す: `_PUBLIC_PRODUCTS_DDL`（2147483647 の札の取り外しも今のまま）、085、086、`20260921_060000`、product_kinds の3行、`20260921_120000`、`20260921_070000`、`type_master_seed_sql()`、`20260919_020000`、`20260922_030000`、`20261016_190000`。phase3 は入れない。
    - 流し方は今の `_exec_multi_stmt` をそのまま使う。
 
@@ -145,7 +145,7 @@ recon §2 の6ファイルについて、後片付けの中の共通の役割を
 | 同 `_prep_pg` の `public.permissions` と `public.users` の INSERT（:635-646） | 札なし | `with _public_lock(cur):` で包む |
 | `backend/tests/test_rls_tenant_meta_config.py` | テナント 998・999 を使う。作る塊（:87-150）と消す塊（:155-157）は札なし | 998→946・999→947 にファイルの中ですべて置き換える（スキーマ名・数・`'page-998-1'` などの文字・SET LOCAL の値・docstring）。作る塊と消す塊を、それぞれ `async with public_bootstrap_lock(admin_engine):` で包む。`from tests.rls_bootstrap import public_bootstrap_lock` を足す |
 
-触らない範囲: `test_countries_master.py`（作るだけで消さない。E の消す側が別の番号になれば、重なりは消える）、ほかの試験ファイル、`rls_bootstrap.py`、製品コード。
+触らない範囲: `backend/tests/test_countries_master.py`（作るだけで消さない。E の消す側が別の番号になれば、重なりは消える）、ほかの試験ファイル、`backend/tests/rls_bootstrap.py`、製品コード。
 
 ### 9-2. 札の順と二重取り
 - 3つのファイルとも、テナントの札は取らない（自分専用の番号のため）。public の札だけを取るので、順の決まり（tenant → public）に反しない。
@@ -165,7 +165,7 @@ recon §2 の6ファイルについて、後片付けの中の共通の役割を
 | 基準 | 検証方法 |
 |---|---|
 | K5: 3ファイルの、共有 DB を書く後片付けと作る塊が、どれも札の中にある | `git diff` が 9-1 の表のとおり（Opus） |
-| K6: `test_rls_tenant_meta_config.py` に 998・999 が残らない | `git grep -n -w -E "998|999" -- backend/tests/test_rls_tenant_meta_config.py` が0件（Opus） |
+| K6: `backend/tests/test_rls_tenant_meta_config.py` に 998・999 が残らない | `git grep -n -w -E "998|999" -- backend/tests/test_rls_tenant_meta_config.py` が0件（Opus） |
 | K7: PR の pytest が pass し、全体の passed・skipped の数が main の直近の回と同じ | `gh pr checks` と PR の run の pytest の最後の行（Opus） |
 | K8: 合流後の main 30回で、`public.users` の DELETE・`tenant_946`・`tenant_947`・`tenant_973`・`tenant_978` が出る deadlock か teardown の ERROR が0件 | §7-5 の K4 と同じ記録で数える（Opus） |
 
@@ -195,7 +195,7 @@ recon §2 の6ファイルについて、後片付けの中の共通の役割を
 - 変更: §9-1 のとおり。
 - 確かめ:
   1. `git diff --stat origin/main...HEAD` が3ファイルだけ。
-  2. `git grep -n -w -E "998|999" -- backend/tests/test_rls_tenant_meta_config.py` が0件。`git grep -n -w -E "946|947" -- backend migrations scripts .github` が `test_rls_tenant_meta_config.py` だけ。
+  2. `git grep -n -w -E "998|999" -- backend/tests/test_rls_tenant_meta_config.py` が0件。`git grep -n -w -E "946|947" -- backend migrations scripts .github` が `backend/tests/test_rls_tenant_meta_config.py` だけ。
   3. `cd backend && ruff check tests/test_calendar_sync_tenant_reset_pg.py tests/test_staff_join_discord.py tests/test_rls_tenant_meta_config.py` が0件。
   4. `git grep -n "_cleanup(" -- backend/tests/test_calendar_sync_tenant_reset_pg.py` の呼び元が、札の塊の中に無い。
 - 想定の分かれ道:

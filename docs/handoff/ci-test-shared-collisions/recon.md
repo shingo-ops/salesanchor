@@ -69,7 +69,7 @@ KGI の承認: PO 2026-11-26「1」（5種類すべてを直す設計にする�
 - 試験の並列・共有 DB の決まりを定める ADR は見つからなかった。決まりは覚え書き test_lock_collisions にある（札の順番は tenant → public。DROP は `public_bootstrap_lock` の中）。
 
 ## 6. 追記（2026-11-27・便2〜5の調べ。Opus が origin/main 33f2112f9 と失敗の記録で確かめた）
-起点の記録: クラウドの調べ `release/ci-test-shared-collisions-recon2`（04b5cc9ba）の `recon-bin2-5.md`。そこで説明できなかった B は、下の 6-1 で決着した。
+起点の記録: クラウドの調べ `release/ci-test-shared-collisions-recon2`（04b5cc9ba）の調べの記録（recon-bin2-5）。そこで説明できなかった B は、下の 6-1 で決着した。
 
 ### 6-1. B と C は PR 5669 で既に直っている
 - PR 5669（`release/ci-test-lock-fix-1121`）は 2026-11-21 14:50 UTC に合流した（bb6c4d63c）。その中の cc649a9dc が次の2つを `public_bootstrap_lock` の中へ入れた。
@@ -90,7 +90,7 @@ KGI の承認: PO 2026-11-26「1」（5種類すべてを直す設計にする�
 | 45823366830 | A | 11-26 12:50 |
 
 - 合流後（11-21 15:00 UTC 以降に作られた main の回）は25回: 成功21・失敗2・取り消し2。失敗2回はどちらも A。B と C は0回。
-- B の相手（記録から）: `tenant_963.tenant_issuer_profiles` を消す文が ACCESS EXCLUSIVE を待ち、相手は準備の migration `20261112_150000_create_viewer_contract_public_tables.sql` の後で `public.tenant_settings` に INSERT していた（`create_tenant_schema` の段）。
+- B の相手（記録から）: `tenant_963.tenant_issuer_profiles` を消す文が ACCESS EXCLUSIVE を待ち、相手は準備の migration `migrations/20261112_150000_create_viewer_contract_public_tables.sql` の後で `public.tenant_settings` に INSERT していた（`create_tenant_schema` の段）。
 - C の相手: カルテの `public.users` の DELETE と、「Phase 1 再設計: スタッフ・bot」の段（`create_tenant_schema`）。
 
 ### 6-2. C と同じ形で、まだ札の外にあるもの（落ちたのはまだ見ていない）
@@ -103,7 +103,7 @@ KGI の承認: PO 2026-11-26「1」（5種類すべてを直す設計にする�
 - 2回の C の失敗の相手はカルテだった。カルテが札の中に入ったので、今はこの2つが同じ相手とぶつかる形が残る。
 
 ### 6-3. A の仕組み（今も起きている）
-- run 45346102865: `test_product_blank_confirmations_pg::test_write_requires_operator_flag` の `INSERT INTO public.product_blank_confirmations` が products の RowShare を待つ。相手は `test_tcg_product_list_pg` の `product_db` で、`20261016_190000_create_product_blank_confirmations.sql` の ACCESS EXCLUSIVE を待っていた。
+- run 45346102865: `test_product_blank_confirmations_pg::test_write_requires_operator_flag` の `INSERT INTO public.product_blank_confirmations` が products の RowShare を待つ。相手は `test_tcg_product_list_pg` の `product_db` で、`migrations/20261016_190000_create_product_blank_confirmations.sql` の ACCESS EXCLUSIVE を待っていた。
 - `backend/tests/test_tcg_product_list_pg.py`:
   - `product_db`（:95-120）は、巻き戻す transaction（:106 で始め :118 で rollback）の中で `create_product_schema`（:47-92）を毎回流す。札は共有の xact 札（:110-113）。
   - `create_product_schema` は使い捨てスキーマ（`product_csv_test_<uuid>`）の表に加えて、public の DDL も毎回流す: `_PUBLIC_PRODUCTS_DDL`（:50-54）、085・086（:63-64）、`20260921_060000`（:65）と product_kinds の行（:67-72）、`20260921_120000`（`ALTER TABLE public.products`・:74）、`20260921_070000`（:75）、type_master の行（:77）、`20260919_020000`（:79）、phase3 `20260920_010000`（:82-84）、`20260922_030000` と `20261016_190000`（:86-92）。
@@ -113,8 +113,8 @@ KGI の承認: PO 2026-11-26「1」（5種類すべてを直す設計にする�
 - 見張り `backend/tests/test_tenant_loop_migration_guard.py:284-287` は、この試験を `own_database`（使い捨て DB）に分類している。実際は共有 DB `jarvis_test_db`（:97 の assert）なので、分類が実物と違う。
 - 手本: `backend/tests/rls_bootstrap.py:111-150` の `ensure_product_packagings`。DDL を transaction の外の別接続で、札の中で1回だけ確定させる。docstring（:112-124）に「巻き戻す transaction の中で DDL を流すと deadlock する」とある。
 - 共有 DB に確定させても困らないか:
-  - 085・086・`20260921_060000`・`20260921_070000`・type_master の行は、準備（`rls_bootstrap.py:19-38`・:293-295）が既に確定させている。
-  - `_PUBLIC_PRODUCTS_DDL`・`20260919_020000`・`20261016_190000` は、`test_product_blank_confirmations_pg.py:229-236` が札の中で確定させている。`20260922_030000` は `test_product_format_game_links_pg.py:27` が流す。
+  - 085・086・`20260921_060000`・`20260921_070000`・type_master の行は、準備（`backend/tests/rls_bootstrap.py:19-38`・:293-295）が既に確定させている。
+  - `_PUBLIC_PRODUCTS_DDL`・`20260919_020000`・`20261016_190000` は、`backend/tests/test_product_blank_confirmations_pg.py:229-236` が札の中で確定させている。`20260922_030000` は `backend/tests/test_product_format_game_links_pg.py:27` が流す。
   - product_kinds の行（TCG・FIGURE・GOODS）を数える試験は無い（`git grep "count(\*) FROM public.product_kinds" -- backend/tests` が0件）。
 
 ### 6-4. E の仕組み
