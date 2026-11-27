@@ -19,15 +19,15 @@
 ### 前のテーマとの差（recon §6-5 の 53ファイル・76関数）
 
 - 旧い条件（スキーマを消す文 か `public.` の行削除）で本台本を絞ると **ちょうど 76 関数 / 53 ファイル**＝前回と一致（事実・台本で再現）。
-- 今回の 86 関数 / 60 ファイルは、旧条件に **TRUNCATE・役割を消す・public の表を消す**を足したため。増えた 10 関数は: `ops/test_ops_case_db.py:524`・`test_llm_usage_events_migration_pg.py:61`・`test_meta_channels.py:759`・`test_rls_tenant_meta_config.py:164`・`test_tenant_isolation_daily_check.py:199,226`・`test_tenant_payment_versioning_pg.py:199`・`test_tenant_user_ref_guard_pg.py:121`・`test_viewer_discord_trial.py:960,991`。このうち新しくファイルが加わるのは 7（`test_meta_channels.py` は旧条件でも当たっていた）。
+- 今回の 86 関数 / 60 ファイルは、旧条件に **TRUNCATE・役割を消す・public の表を消す**を足したため。増えた 10 関数は: `backend/tests/ops/test_ops_case_db.py:524`・`backend/tests/test_llm_usage_events_migration_pg.py:61`・`backend/tests/test_meta_channels.py:759`・`backend/tests/test_rls_tenant_meta_config.py:164`・`backend/tests/test_tenant_isolation_daily_check.py:199,226`・`backend/tests/test_tenant_payment_versioning_pg.py:199`・`backend/tests/test_tenant_user_ref_guard_pg.py:121`・`backend/tests/test_viewer_discord_trial.py:960,991`。このうち新しくファイルが加わるのは 7（`backend/tests/test_meta_channels.py` は旧条件でも当たっていた）。
 
 ## 1. CI の接続先（分類の前提・事実）
 
 - 共有 DB = CI の1つの PostgreSQL `jarvis_test_db`。`RLS_ADMIN_DATABASE_URL`（jarvis）と `RLS_TEST_DATABASE_URL`（salesanchor_app）はどちらもこの DB（`.github/workflows/test.yml:240,242`）。
 - `TEST_PG_URL` は CI で **未設定**（`.github/workflows/test.yml:243-249`・`backend/tests/conftest.py:22-29`）。`TEST_PG_URL` だけで動く試験は CI では skip（手元で設定すると共有 DB に当たる）。
 - `DATABASE_URL` は conftest が SQLite（メモリ）に差し替える（`backend/tests/conftest.py:18`）。
-- 使い捨て DB の作り方は2つ: 各試験ファイルの `_fresh()`/`_new_db()`/`scratch_db` が `CREATE DATABASE`、または `tests/test_tcg_work_matching_integration.py:384-436` の `pg` fixture（`CREATE DATABASE` :398 → 終わりに `DROP DATABASE` :434）。
-- 札: `public_bootstrap_lock` = `pg_advisory_lock(20260623, 1)`（`tests/rls_bootstrap.py:54-80`）。`tenant_schema_lock` = `pg_advisory_lock(20260623, <tenant_id>)`（`tests/rls_bootstrap.py:334-347`）は **別の鍵**。
+- 使い捨て DB の作り方は2つ: 各試験ファイルの `_fresh()`/`_new_db()`/`scratch_db` が `CREATE DATABASE`、または `backend/tests/test_tcg_work_matching_integration.py:384-436` の `pg` fixture（`CREATE DATABASE` :398 → 終わりに `DROP DATABASE` :434）。
+- 札: `public_bootstrap_lock` = `pg_advisory_lock(20260623, 1)`（`backend/tests/rls_bootstrap.py:54-80`）。`tenant_schema_lock` = `pg_advisory_lock(20260623, <tenant_id>)`（`backend/tests/rls_bootstrap.py:334-347`）は **別の鍵**。
 
 ## 2. 分類表
 
@@ -162,7 +162,7 @@
 
 ## 4. 台本の取りこぼし・限界（事実と未確認）
 
-- 台本が数えるのは `public.` を付けた行削除・スキーマ/役割を消す・TRUNCATE・`public.` の表を消すだけ。`public.` を付けない行削除は件数外。参考として `public.` 無しの行削除だけの関数が 40 件ある（`scan.py` の出力 `# 参考` 行。**中身は Read していない＝未確認**）。例: `test_meta_channels.py:764`（`tenant_997` の表）・`test_rls_tenant_meta_config.py:177-178`（`tenant_946/947` の表）は共有 DB で札の外だが、台本の対象外。
+- 台本が数えるのは `public.` を付けた行削除・スキーマ/役割を消す・TRUNCATE・`public.` の表を消すだけ。`public.` を付けない行削除は件数外。参考として `public.` 無しの行削除だけの関数が 40 件ある（`docs/handoff/ci-test-cleanup-lock-guard/scan.py` の出力 `# 参考` 行。**中身は Read していない＝未確認**）。例: `backend/tests/test_meta_channels.py:764`（`tenant_997` の表）・`backend/tests/test_rls_tenant_meta_config.py:177-178`（`tenant_946/947` の表）は共有 DB で札の外だが、台本の対象外。
 - 札の有無は、その関数自身の原文に札の語があるかで判定。呼び出し元が札を持つ場合（§2-2 の B）は台本では当たるため、分類で B に振った。入れ子の関数が外側の札の中にあるものは、今回の当たりには出なかった（未確認の取りこぼしは無いと断言できない）。
 - 呼び出し元の札を追ったのは §2-2 の2件と、§2-3 の `_cleanup` 系（呼び出し行を確認したもの）だけ。C-skip 21件の関数本体は、後片付けの行と接続先（`TEST_PG_URL`・engine）を Read で確認したが、試験全体の流れまでは読んでいない。
 - 実際の CI で並行実行時にどれが衝突するかは**未確認**（本テーマは調べるだけで試験を回していない）。
@@ -214,7 +214,7 @@ D のうち札で囲んだ（2）
 - test_lead_merge_pg.py:`env`（`tenant_schema_lock` の内側で `public_bootstrap_lock`。順は tenant → public）
 - test_priority_prospects_pg_rls.py:`test_priority_prospects_pg_rls_all_requirements`（`DROP SCHEMA` の finally。skip のまま）
 
-呼び出し元の確認（設計 §4-3 (5)）: `_cleanup`・`_drop_product`・`_clear_control` などの呼び出し元を Grep で全部読み、いずれも `public_bootstrap_lock` の外から呼ばれていた（既に札の中なら BLOCKED のところ、該当なし）。`test_ops_incident_tables_rls.py`・`test_ops_router.py` の一部は別の鍵 `ops_control_lock`（鍵 1012002）の中から `_cleanup`/`_clear_control` を呼ぶ。順は ops_control_lock → public_bootstrap_lock で、逆に取る所はこの2ファイルに無い（Grep で確認）。
+呼び出し元の確認（設計 §4-3 (5)）: `_cleanup`・`_drop_product`・`_clear_control` などの呼び出し元を Grep で全部読み、いずれも `public_bootstrap_lock` の外から呼ばれていた（既に札の中なら BLOCKED のところ、該当なし）。`backend/tests/test_ops_incident_tables_rls.py`・`backend/tests/test_ops_router.py` の一部は別の鍵 `ops_control_lock`（鍵 1012002）の中から `_cleanup`/`_clear_control` を呼ぶ。順は ops_control_lock → public_bootstrap_lock で、逆に取る所はこの2ファイルに無い（Grep で確認）。
 
 ### 6-2. 分類表の件数（`_REVIEWED`・backend/tests/test_shared_db_cleanup_lock_guard.py）
 
@@ -243,7 +243,7 @@ D のうち札で囲んだ（2）
 
 (3) 指示どおりの `python -m pytest tests/test_shared_db_cleanup_lock_guard.py -q -p no:cacheprovider` は、このクラウドの環境では動かなかった（`python` に pytest が無い・`pytest` は `pytest_asyncio` と pyproject の addopts（xdist・cov）が無い）。設定と conftest を外した形 `pytest -c /dev/null --rootdir=. --noconftest tests/test_shared_db_cleanup_lock_guard.py -q -p no:cacheprovider` では `4 passed`。CI の形（`-n --dist=loadfile --cov`）での実行は未確認。DB を使う試験（直した38件の中身）は、このクラウドに PostgreSQL が無いため回していない＝動きは未確認（C-skip 21件は CI でも skip）。
 
-(4) わざと札なしの後片付け関数（一時ファイル `backend/tests/test_zz_tmp_probe_unlocked.py`）を足すと、見張りが落ちた:
+(4) わざと札なしの後片付け関数（一時ファイル backend/tests/test_zz_tmp_probe_unlocked.py。確かめた後に消した）を足すと、見張りが落ちた:
 ```
 FAILED tests/test_shared_db_cleanup_lock_guard.py::test_every_shared_db_cleanup_is_classified
 該当: test_zz_tmp_probe_unlocked.py::_tmp_probe_cleanup（delete_public_rows）

@@ -73,13 +73,15 @@ recon §2-3 の15件・§2-4 の21件・§4-1 の2件。直す案は recon の�
 | C-skip は CI で流れず、直しが正しいか CI で分からない | 形を他と同じにする。G6 で skipped の数が変わらないことを見る。中の動きは未確認と PR に書く |
 | 札で囲んで試験が遅くなる | 後片付けだけを囲む。Backend Tests の時間を main と比べて PR に書く |
 
-## 9. 戻し方・測り方・維持
+## 9. 戻し方・測り方・維持の仕組み
 - 戻し方: PR を revert する（試験コードと docs だけ）。
 - 測り方: G1〜G6 の表のとおり。
-- 維持: 見張りの試験が、新しく足した札なしの後片付けを CI で落とす。分類を足すときは理由を書く（書くまで落ちる）。
 
-## 10. 外部事例
-- 該当なし。理由: 試験の中の分類表と見張りは、このリポジトリの test_tenant_loop_migration_guard.py が既にある手本で、外の事例より直接の根拠になる。PostgreSQL の advisory lock の仕様は前のテーマで確かめた（ci-test-shared-collisions design）。
+## 維持の仕組み
+- 見張りの試験が、新しく足した札なしの後片付けを CI で落とす。分類を足すときは理由を書く（書くまで落ちる）。
+
+## 10. 外部・過去事例の参照と我々への応用
+- 該当なし。理由: 試験の中の分類表と見張りは、このリポジトリの backend/tests/test_tenant_loop_migration_guard.py が既にある手本で、外の事例より直接の根拠になる。PostgreSQL の advisory lock の仕様は前のテーマで確かめた（ci-test-shared-collisions design）。
 
 ## 11. 審査（Opus・同じ AI の自己審査）
 - 結論: APPROVE（設計合格）。
