@@ -1168,15 +1168,19 @@ PR #5811 の成果物（`versionCode=26`／`versionName=0.23.0-stage3`）を2026
 **門番1（`tools/line-auto-export-app/build.sh`）**:
 
 - 署名鍵（`build/debug.keystore`）が無いときは、既定では作らずエラーで止める（既存の鍵をコピーする候補パスと、`sdk/android-34.jar` も同様に追跡対象外である旨をメッセージに出す）。
-- 環境変数 `ALLOW_NEW_KEYSTORE=1` を与えたときだけ、本当に初めての環境向けの逃げ道として従来どおり `keytool` で新しい鍵を作る。そのときは「この APK は実機を上書き更新できない」という警告を目立つ形で出す。
+- 環境変数 `ALLOW_NEW_KEYSTORE=1` を与えたときだけ、本当に初めての環境向けの逃げ道として従来どおり `keytool` で新しい鍵を作る。そのときは「この APK は実機を上書き更新できない」という警告を目立つ形で出す。**この逃げ道を使った回は、下記の証明書の照合が一致しなくても警告だけで成功させる**（新しい鍵の証明書が定数と一致することは原理上あり得ないため、止めてしまうと逃げ道そのものが使えなくなる）。弱くならないよう、代わりに門番2が成果物の署名を検査する。
 - 署名後に `apksigner verify --print-certs` の Signer #1 の SHA-256 を取り出し、スクリプト内の定数 `EXPECTED_SIGNER_SHA256`（値は `c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709`）と一致しなければ exit 1 で止める。鍵を正式に入れ替えるときは、この定数と ADR-1090「7. 署名鍵」を同時に直す運用にすることで、仕組み（作業ツリーが鍵を持っていないだけの状態）と意図（鍵を本当に入れ替える決定）を区別する。
 - 最後に `tools/line-auto-export-app/out/BUILD-INFO.txt` を4行（`versionCode`・`versionName`・`signerSha256`・`apkSha256`）で書き出し、画面にも1行でまとめて印字する。
 
 **門番2（CI・新規 `scripts/ci/check_line_export_apk.py`）**:
 
-- pure Python（標準ライブラリのみ・`aapt` もAndroid SDKも使わない）。`tools/line-auto-export-app/out/BUILD-INFO.txt` の存在、`versionCode`/`versionName` が `tools/line-auto-export-app/AndroidManifest.xml` と一致すること、`apkSha256` が実ファイル `tools/line-auto-export-app/out/app-debug.apk` の実際のsha256と一致することの3つを検査する。
-- 事故1（版だけ上げてビルドし直し忘れ）は `versionCode`/`versionName` の不一致で捕まる。事故2（APK側だけ古いものをマージで選んでしまう）は `apkSha256` の不一致で捕まる。
+- pure Python（標準ライブラリのみ・`aapt` もAndroid SDKも使わない）。`tools/line-auto-export-app/out/BUILD-INFO.txt` の存在、`versionCode`/`versionName` が `tools/line-auto-export-app/AndroidManifest.xml` と一致すること、`apkSha256` が実ファイル `tools/line-auto-export-app/out/app-debug.apk` の実際のsha256と一致すること、**`signerSha256` が期待値と一致すること**の4つを検査する。4つ目の期待値は検査スクリプトに直書きせず、`tools/line-auto-export-app/build.sh` の `EXPECTED_SIGNER_SHA256` を読み取って使う（正本を1か所にして食い違いを防ぐ）。定数が読めなかった場合も明確なエラーで止める（黙って検査を飛ばさない）。
+- 事故1（版だけ上げてビルドし直し忘れ）は `versionCode`/`versionName` の不一致で捕まる。事故2（APK側だけ古いものをマージで選んでしまう）は `apkSha256` の不一致で捕まる。`ALLOW_NEW_KEYSTORE=1` で作った別鍵のAPKをコミットした場合は `signerSha256` の不一致で捕まる。
 - ワークフロー `.github/workflows/line-export-apk-guard.yml` から呼ばれる（`tools/line-auto-export-app/` 配下の変更があるPRのみ実行、`.github/workflows/adr-index-check.yml` と同じ変更検出の作り）。単体テストは `scripts/ci/test_check_line_export_apk.py`。
+
+### ②-2 main 側の「ビルド刻印」との関係（二重の仕組みではない）
+
+PR #5811 が `build.sh` に入れた刻印（`BuildStamp.java` を生成して `versionName` をAPKに埋め込み、ビルド直後に自己検査する）とは**見張る時点が違うため役割が重なっていない**。刻印の自己検査は「いま作ったAPKの中身が、いまのマニフェストの版と合っているか」を**ビルド時**に見る。本追補の門番2は「**コミットされている**成果物が、いまのソースと合っているか」を**CI（PR）時**に見る。事故2（マージで片側のAPKを選ぶ）はビルドを伴わないため刻印の自己検査では捕まらず、逆に本追補の門番だけでは作りかけのビルドの食い違いは見えない。両方必要である。
 
 ### ③変えていないもの
 
