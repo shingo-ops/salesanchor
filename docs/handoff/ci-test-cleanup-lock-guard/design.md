@@ -21,6 +21,7 @@
 - 前のテーマの 53ファイル・76関数は、条件を前と同じに絞ると一致する（recon §0）。
 
 ## 3. 既にある決まり（ADR）
+- 関係する ADR: ADR-1024（共通の役割 `ai_reader` を定める。見張りが数える「役割を消す」文の元。試験の後片付けの決まりは書いていないので、本書は ADR-1024 を変えない）。
 - `git grep -il -E "bootstrap_lock|advisory_lock|xdist|後片付け" origin/main -- docs/adr` は0件（2026-11-27）。この見張りの元になる決まりは無い。手本は試験の中の見張り backend/tests/test_tenant_loop_migration_guard.py（`_REVIEWED`）。
 
 ## 4. 決めたこと（Opus の設計判断）
@@ -73,7 +74,7 @@ recon §2-3 の15件・§2-4 の21件・§4-1 の2件。直す案は recon の�
 | C-skip は CI で流れず、直しが正しいか CI で分からない | 形を他と同じにする。G6 で skipped の数が変わらないことを見る。中の動きは未確認と PR に書く |
 | 札で囲んで試験が遅くなる | 後片付けだけを囲む。Backend Tests の時間を main と比べて PR に書く |
 
-## 9. 戻し方・測り方・維持の仕組み
+## 9. 戻し方・測り方
 - 戻し方: PR を revert する（試験コードと docs だけ）。
 - 測り方: G1〜G6 の表のとおり。
 
