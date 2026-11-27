@@ -1610,6 +1610,7 @@ async def _update_app_origin_from_google(
 
     - Google で消したら（別のカレンダーへ移したときも同じ形で届く）、送り終えた単発の行を消す（"deleted"）。
       自分だけの予定も会社の予定も同じ（ADR-1059 改訂 2026-11-25）。
+    - 単発の行が無く、送り終えた繰り返しの元の行なら、元の行を消す（ADR-1075 改訂 2026-11-27）。
     - アプリから送り終えた行（sync_status='synced'）で、中身が違う列だけを書く。
     - 見せ方・持ち主・起源・Meet の URL には触らない。Google へは書かない。
     - 色は Google の名札がアプリの色に当たるときだけ入れる（名札が表に無いときは触らない）。
@@ -1630,7 +1631,25 @@ async def _update_app_origin_from_google(
             ),
             {"gid": google_event["id"]},
         )
-        return "deleted" if (res.rowcount or 0) > 0 else "skipped"
+        if (res.rowcount or 0) > 0:
+            return "deleted"
+        # 元の予定の id で消した形が届いた（繰り返しの「すべて」を消した）。届いた予定そのものが消した形なので、
+        # Google には聞き直さない（ADR-1075 改訂 2026-11-27）
+        master_row = await db.execute(
+            text(
+                "SELECT id FROM calendar_events"
+                " WHERE google_event_id = :gid"
+                " AND sync_origin_id LIKE 'app:" + str(int(tenant_id)) + ":%'"
+                " AND sync_status = 'synced'"
+                " AND recurrence_rule IS NOT NULL"
+                " AND recurring_event_id IS NULL"
+            ),
+            {"gid": google_event["id"]},
+        )
+        found_master = master_row.first()
+        if found_master is None:
+            return "skipped"
+        return await _delete_app_series_from_google(db, tenant_id, found_master[0])
     if not _has_times(google_event):
         return "skipped"
 
@@ -1735,6 +1754,50 @@ async def _google_id_taken(db: AsyncSession, google_event_id: str) -> bool:
     return res.first() is not None
 
 
+async def _delete_app_series_from_google(
+    db: AsyncSession,
+    tenant_id: int,
+    master_id: int,
+    series_cache: Optional[dict] = None,
+) -> str:
+    """Google で繰り返しの「すべて」を消したとき、アプリの元の行を消す（ADR-1075 改訂 2026-11-27）。
+
+    - 例外の行に送り中（pending）・送れなかった（failed）の行が 1 つでもあれば消さない（"skipped"）。
+      警告は 1 回の取り込みで元 1 つにつき 1 回だけ残す。
+    - 消すのは、アプリから送り終えた繰り返しの元の行だけ。例外の行とチームの対応は外部キーで一緒に消える。
+    Google へは書かない。commit は呼び元。戻り値は "deleted" | "skipped"。
+    """
+    cache = series_cache if series_cache is not None else {}
+    held = await db.execute(
+        text(
+            "SELECT id FROM calendar_events"
+            " WHERE recurring_event_id = :mid AND sync_status <> 'synced' LIMIT 1"
+        ),
+        {"mid": master_id},
+    )
+    if held.first() is not None:
+        key = f"held:{master_id}"
+        if key not in cache:
+            cache[key] = True
+            logger.warning(
+                "Google で繰り返しを消しましたが、送り中の回があるのでアプリでは消しません (event_id=%s)",
+                master_id,
+            )
+        return "skipped"
+    res = await db.execute(
+        text(
+            "DELETE FROM calendar_events"
+            " WHERE id = :id"
+            " AND sync_origin_id LIKE 'app:" + str(int(tenant_id)) + ":%'"
+            " AND sync_status = 'synced'"
+            " AND recurrence_rule IS NOT NULL"
+            " AND recurring_event_id IS NULL"
+        ),
+        {"id": master_id},
+    )
+    return "deleted" if (res.rowcount or 0) > 0 else "skipped"
+
+
 async def _apply_app_instance_from_google(
     db: AsyncSession,
     tenant_id: int,
@@ -1746,6 +1809,7 @@ async def _apply_app_instance_from_google(
     - 元の行は、アプリから送り終えた（synced）繰り返しの元の行だけ。無ければ "skipped"。
     - Google の元の予定を 1 回の取り込みに 1 回だけ読み（series_cache）、アプリの元の行と違えば
       「これ以降」「すべて」の直し・消しとみなして "skipped"（アプリは今のまま）。
+    - 回も Google の元の予定も消した形なら「すべて」を消したとみなし、_delete_app_series_from_google で元の行を消す（ADR-1075 改訂 2026-11-27）。
     - 回は originalStartTime で決める。アプリの決まりの回でなければ "skipped"。
     - 例外の行が送り中（pending）・送れなかった（failed）ときは触らない。
     - 消した回: 例外の行に消した印を付ける（無ければ作る）。
@@ -1781,6 +1845,11 @@ async def _apply_app_instance_from_google(
         except Exception as e:
             logger.warning("Google の繰り返しの元の予定を読めませんでした (google_event_id=%s): %s", master_gid, e)
             cache[master_gid] = None
+    g_master = cache[master_gid]
+    # Google で「すべて」を消した: 回も元の予定も消した形で届く（ADR-1075 改訂 2026-11-27）。
+    # 読めなかったとき（None）・「これ以降」・「すべて」を直したときは、今のまま下で飛ばす
+    if google_event.get("status") == "cancelled" and isinstance(g_master, dict) and g_master.get("status") == "cancelled":
+        return await _delete_app_series_from_google(db, tenant_id, master["id"], cache)
     if not _same_series(master, cache[master_gid]):
         return "skipped"
 
