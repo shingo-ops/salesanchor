@@ -116,3 +116,52 @@
 
 - 端末は現在、PR #5808（`ensureOpen` のみ）のビルドで稼働中であり、本PR（保守口の強制開け直し）の機能は端末に未導入。LINEの取込自体は正常（17:11 success 確認済み）。
 - 本PRのマージ・実機への正しいビルドの導入は、PO の承認が揃うまで行わない（実機への `adb install`・再起動・`adb_wifi_enabled`/`adb_enabled` の書き換えは禁止のまま）。
+
+---
+
+## 続き（2026-11-27・合図ファイルの検知方式を作り直し。実機導入で `canRead()` の前提が崩れたことを受けて）
+
+| 項目 | 内容 |
+|---|---|
+| 対象 | `release/line-export-maintenance-cycle`（PR #5811・OPEN継続） |
+| 対象ADR | ADR-1092 追補3 |
+| 設計 | `docs/handoff/line-auto-export-app/design.md` 追補「合図検知の作り直し（`canRead()` 門番の撤去）」 |
+| PO 決定 | 2026-11-27 Shingo（PO）「読み取り権限は増やさない」 |
+| 区分 | A（`tools/` のため） |
+| 審査日 | 2026-11-27 |
+
+### 経緯（実機で前提が崩れたことの確定）
+
+上記「残っている不確かさ（実機で未証明）」節は「合図ファイルを読めるかどうかは実機で未証明」としていたが、PR #5811 の成果物（`versionCode=26`／`versionName=0.23.0-stage3`）を実機へ導入した結果、**未証明ではなく「機能していない」ことが確定した**。実機の `run-20261127.jsonl` に `result=signal_unreadable` が記録され、旧 `checkSignalFile` の `!dir.canRead()` が true になっていた。一方、同じディレクトリへの書き込み（この記録自体）は成功している。つまり**「書けるのに `canRead()` が false になる」**（`READ_EXTERNAL_STORAGE` 未付与・`targetSdkVersion=24`）という、design.md が懸念していた最悪のケースが実際に起きていた。
+
+### 設計変更
+
+PO は「読み取り権限を増やす」ではなく「読み取りに依存しない検知方式に変える」を選んだ。これに伴い `MaintenanceChannel.checkSignalFile` を次のように作り直した。
+
+1. `canRead()`／`isDirectory()` による事前の門番を撤去（`dir == null` のときだけ早期return）。
+2. 検知器を `new File(dir, "maintenance-open").delete()` の戻り値に変更。`true` なら合図を確定し、**削除してから** `cycle` を呼ぶ（順序を逆にすると削除失敗時に毎回 cycle してしまう、前回審査と同種の穴になるため、順序を審査観点として確認した＝OK）。
+3. 旧方式の `lastModified`＋`length` による識別子の重複判定（`SchedulerStore.getLastMaintenanceSignalId` 系）を削除。削除が成功した回だけ cycle するため、二重消費が原理的に起きない構造になり、該当の複雑さごと不要になった。
+4. 自己試験（`.maintenance-probe` の作成→削除の往復）を追加。成功したら `signal_channel_ok` を1回記録して以後は試験しない旗（`SchedulerStore.isSignalChannelConfirmed`）を立てる。失敗したら `signal_probe_failed` を専用の重複判定枠（`SchedulerStore.wasSignalProbeFailureRecorded`）で1回だけ記録する（旗は立てず次回また試す）。
+5. `signal_unreadable` という結果名・関連する `SchedulerStore` のキー（`last_signal_unreadable`）は撤去し、意味の異なる新しい結果名・枠に置き換えた。
+
+### 審査で見つけて直した欠陥
+
+**試験ファイルの残骸で「経路が壊れている」と誤報する**: `probeSignalChannel` の成功判定に使う `createNewFile()` は、ファイルが既に在るときもfalseを返す（異常ではない）。試験ファイル（`.maintenance-probe`）を作った直後〜削除する前にアプリの処理が落ちる（省電力による停止・プロセス終了等）と残骸が残り、次回の試験で `createNewFile()`=false・`delete()`=trueとなって、**経路は正常なのに `signal_probe_failed` を誤記録してしまう**（次の回には確認済みで自己回復するが、その1行を見て「経路が使えない」と誤判断する恐れがある。記録に騙されないことが本作業の主題のため、潰す必要がある指摘として扱った）。
+
+**直し**: 試験の最初に残骸の掃除としての `delete()` を1回入れ（結果は判定に使わない）、`createNewFile()` → 後始末の `delete()` の順で行うように変更した。成功判定は後ろ2つ（作成・後始末のdelete）だけで行う。`exists()`・`canRead()` 等の読み取り系の判定はここでも使っていない（この端末では読み取りが拒否されるため）。再現筋をコメントに残した。
+
+修正後に再ビルドし、終了コード0・`[3b/8]` で `OK: classes.dex に versionName=0.24.0-stage3 の刻印を確認`、署名SHA-256（`c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709`、実機と一致）を再確認した。
+
+### 確認した点
+
+1. **権限が増えていない**: `AndroidManifest.xml` の `<uses-permission>` に差分なし（`READ_EXTERNAL_STORAGE` 等の追加なし）。PO方針「読み取り権限は増やさない」を満たす。
+2. **削除してから cycle の順序**: `checkSignalFile` で `consumed = ... .delete()` の次に `if (consumed) { cycle(...); }` という順になっており、削除成功が確定した後にだけ cycle する。
+3. **重複判定の枠が分離されている**: `signal_probe_failed` の重複判定は `SchedulerStore.wasSignalProbeFailureRecorded`（専用キー `signal_probe_failure_recorded`）を使い、`ensureOpen`/`cycle` が使う `last_maintenance_channel_result` とは別枠。記録があふれる旧欠陥と同種の穴を作っていない。
+4. **試験ファイルの残骸対策**: `probeSignalChannel` は掃除delete→`createNewFile()`→後始末deleteの順に行い、成功判定を後ろ2つに限定している（上記「審査で見つけて直した欠陥」参照）。読み取り系の判定（`exists()`・`canRead()`）は使っていない。
+5. **版番号**: `versionCode` 26→27、`versionName` 0.23.0-stage3→0.24.0-stage3。`origin/main`（PR #5808 マージ後 25／0.22.0-stage3）および他のオープンPRと衝突しないことを確認した。
+6. **ビルド自己検査が通る**: `build.sh` 終了コード0、`[3b/8]` で `OK: classes.dex に versionName=0.24.0-stage3 の刻印を確認`。`strings -a` で `checkSignalFile`・`probeSignalChannel`・`signal_channel_ok`・`signal_probe_failed`・`.maintenance-probe` の存在、および旧 `signal_unreadable`・`last_maintenance_signal_id`・`last_signal_unreadable` の不在を確認した。
+7. **署名**: `apksigner verify --print-certs` の SHA-256 が実機の APK と一致（`c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709`、既存の `build/debug.keystore` を再利用）。
+
+### 未実施（この便の範囲外）
+
+- 実機への導入（`adb install`）と実機検証（`docs/handoff/line-auto-export-app/design.md` 追補「合図検知の作り直し」の実機検証手順(a)(b)(c)）。PO の承認後に Opus が実施する。

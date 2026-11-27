@@ -280,9 +280,10 @@ final class RunLogger {
      * @param result "opened"（0だったものを1にできた）/ "blocked"（書いたが1にならなかった。
      *     Wi-Fiが無い等）/ "no_permission"（WRITE_SECURE_SETTINGS未付与）/ "cycled_opened"
      *     （強制的に0→1と開け閉めして1になった）/ "cycled_blocked"（開け閉めしても1にならなかった。
-     *     Wi-Fiが無い等）/ "signal_unreadable"（合図ファイルの確認でストレージが読めなかった）
+     *     Wi-Fiが無い等）/ "signal_channel_ok"（合図ファイルの削除による検知の自己試験に成功した）
+     *     / "signal_probe_failed"（同自己試験が失敗した＝削除による検知が使えない可能性がある）
      * @param valueAfter 書き込みを試みた後に読み直した{@code adb_wifi_enabled}の値。
-     *     対象外（signal_unreadable等）のときは-1
+     *     対象外（signal_channel_ok・signal_probe_failed等）のときは-1
      * @param trigger 呼び出し元の引き金。"run"（毎回の実行予約時のensureOpen）/
      *     "boot"（起動時のcycle）/ "signal"（合図ファイルを見たcycle・checkSignalFile）
      */

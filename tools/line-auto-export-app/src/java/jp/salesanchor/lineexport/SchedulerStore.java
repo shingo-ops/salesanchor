@@ -23,8 +23,8 @@ final class SchedulerStore {
     private static final String KEY_LAST_IGNORING_BATTERY_OPTIMIZATIONS = "last_ignoring_battery_optimizations";
     private static final String KEY_SCHEDULED_FIRE_AT_PREFIX = "scheduled_fire_at_";
     private static final String KEY_LAST_MAINTENANCE_CHANNEL_RESULT = "last_maintenance_channel_result";
-    private static final String KEY_LAST_MAINTENANCE_SIGNAL_ID = "last_maintenance_signal_id";
-    private static final String KEY_LAST_SIGNAL_UNREADABLE = "last_signal_unreadable";
+    private static final String KEY_SIGNAL_CHANNEL_CONFIRMED = "signal_channel_confirmed";
+    private static final String KEY_SIGNAL_PROBE_FAILURE_RECORDED = "signal_probe_failure_recorded";
 
     /** 既定はOFF（design.md: インストール直後に勝手に動き出さないこと）。 */
     private static final boolean DEFAULT_ENABLED = false;
@@ -223,46 +223,35 @@ final class SchedulerStore {
     }
 
     /**
-     * 直近に処理した合図ファイル（{@code maintenance-open}）の識別子（{@code lastModified}と
-     * {@code length}を":"で連結した文字列）。design.md追補「保守口（無線デバッグ）の強制開け直し」
-     * ②: 合図ファイルの削除に失敗した場合、同じ合図で毎回cycleしてしまうのを防ぐため、処理済みの
-     * 合図をここに記録し、次回以降それと同一なら何もしない（{@link MaintenanceChannel
-     * #checkSignalFile}参照）。既定null（まだ一度も処理していない）。
+     * 合図ファイル（{@code maintenance-open}）の検知方式が、削除の往復による自己試験
+     * （{@link MaintenanceChannel#probeSignalChannel}）で「使える」と確認済みかどうか
+     * （design.md追補「保守口（無線デバッグ）の強制開け直し・合図検知の作り直し」2026-11-27、
+     * PO方針「読み取り権限は増やさない」）。確認済みになったら以後は自己試験を行わない
+     * （毎回のファイル操作を増やさないため）。既定false（まだ確認できていない）。
      */
-    static String getLastMaintenanceSignalId(Context context) {
-        return prefs(context).getString(KEY_LAST_MAINTENANCE_SIGNAL_ID, null);
+    static boolean isSignalChannelConfirmed(Context context) {
+        return prefs(context).getBoolean(KEY_SIGNAL_CHANNEL_CONFIRMED, false);
     }
 
-    static void setLastMaintenanceSignalId(Context context, String signalId) {
-        prefs(context).edit().putString(KEY_LAST_MAINTENANCE_SIGNAL_ID, signalId).apply();
+    static void setSignalChannelConfirmed(Context context, boolean confirmed) {
+        prefs(context).edit().putBoolean(KEY_SIGNAL_CHANNEL_CONFIRMED, confirmed).apply();
     }
 
     /**
-     * 削除できた合図の識別子を消す（Opus審査 2026-11-27 の指摘2: 削除に成功した場合も識別子を
-     * 保存し続けると、次に置いた合図が偶然同じ{@code lastModified}・{@code length}だと
-     * 「処理済み」と誤判定し、取りこぼす。削除に失敗したときだけ識別子を残す）。
+     * 合図検知の自己試験（{@link MaintenanceChannel#probeSignalChannel}）の失敗
+     * （{@code signal_probe_failed}）を、すでに1回記録したかどうか。design.md追補
+     * 「合図検知の作り直し」②「黙らせない」の重複防止専用の枠（{@link
+     * #getLastMaintenanceChannelResult}（{@code ensureOpen}/{@code cycle}が使う枠）を
+     * 共用すると記録が往復する。Opus審査 2026-11-27 の指摘と同種の穴。理由は
+     * {@link MaintenanceChannel#probeSignalChannel}のjavadoc参照）。試験が成功するまで
+     * trueのままにし、失敗が続く間は1行だけに留める。既定false（まだ一度も記録していない）。
      */
-    static void clearLastMaintenanceSignalId(Context context) {
-        prefs(context).edit().remove(KEY_LAST_MAINTENANCE_SIGNAL_ID).apply();
+    static boolean wasSignalProbeFailureRecorded(Context context) {
+        return prefs(context).getBoolean(KEY_SIGNAL_PROBE_FAILURE_RECORDED, false);
     }
 
-    /**
-     * 合図ファイル（{@code maintenance-open}）の確認でディレクトリが読めない・一覧できない
-     * 状態が、直前の確認でも起きていたかどうか。design.md追補「保守口（無線デバッグ）の
-     * 強制開け直し」②「黙らせない」の重複防止専用の枠（Opus審査 2026-11-27 の指摘1）:
-     * {@link #getLastMaintenanceChannelResult}（{@code ensureOpen}/{@code cycle}が使う枠）を
-     * 共用すると、同じ実行の中で{@code checkSignalFile}が"signal_unreadable"を書いて枠を
-     * 上書きし、直後の{@code ensureOpen}が「枠が変わった」と見て"blocked"等を書いて枠を
-     * 上書きする、という往復が起きて「変化したときだけ記録する」作法が崩れる
-     * （アプリは1日約70回動くため実害がある）。専用の枠に分けることで、signal_unreadableが
-     * 続く間は1行だけになる。既定false（まだ一度もsignal_unreadableを記録していない）。
-     */
-    static boolean wasLastSignalUnreadable(Context context) {
-        return prefs(context).getBoolean(KEY_LAST_SIGNAL_UNREADABLE, false);
-    }
-
-    static void setLastSignalUnreadable(Context context, boolean unreadable) {
-        prefs(context).edit().putBoolean(KEY_LAST_SIGNAL_UNREADABLE, unreadable).apply();
+    static void setSignalProbeFailureRecorded(Context context, boolean recorded) {
+        prefs(context).edit().putBoolean(KEY_SIGNAL_PROBE_FAILURE_RECORDED, recorded).apply();
     }
 
     private static SharedPreferences prefs(Context context) {

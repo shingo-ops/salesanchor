@@ -126,3 +126,29 @@
 端末に 16:48:51 に入った APK は版名（`versionName=0.22.0-stage3`／`versionCode=25`）が本PRの当初の版と同じだった。調査の結果、これは**別ブランチ `release/line-export-click-retry`（PR #5808）の正当なビルドと1バイト単位で同一**であることがハッシュ照合で確定した（版名が偽りだったわけではない。詳細は `docs/handoff/line-auto-export-app/design.md`・`docs/handoff/line-auto-export-app/review-opus-adr1092.md`）。真因は **PR #5808 と本PRが独立に同じ版番号を選んでいた**ことであり、版番号だけでは端末に入っているのがどちらのPRのコードか識別できない状態になっていた。対応として本PRの版を `versionCode=26`／`versionName=0.23.0-stage3` に上げ、衝突を解消した。
 
 再発防止のため `tools/line-auto-export-app/build.sh` に自己検査も追加した: `AndroidManifest.xml` の `versionName` を唯一の出所として生成した版名の刻印（`BuildStamp.VERSION_NAME`）が、できあがった `classes.dex` の中に実在するかを確認し、無ければビルドを失敗させる。これは「1つのビルドの中で版名とコードがずれていないか」を守るものであり、**今回のような複数PR間の版番号衝突は検出できない**（PR #5808 のビルド自体は自己整合していたため）。版番号の衝突は、ブランチ作成・統合前に他のオープンPRが使っている値を確認する運用で防ぐ必要がある。
+
+### 追補3: 合図ファイルの検知方式の作り直し（`canRead()` 門番の撤去、2026-11-27）
+
+#### 実機で測った事実（一次情報）
+
+PR #5811 の成果物（`versionCode=26`／`versionName=0.23.0-stage3`）を実機へ導入し、`checkSignalFile` が実際に動くところを確認した結果、次が確定した。
+
+- 導入直後、アプリ自身が `/sdcard/Download/sa-line-notify/run-20261127.jsonl` に次を記録した: `{"at":"2026-11-27T18:24:55+0900","flow":"scheduler","phase":"maintenance_channel","result":"signal_unreadable","adbWifiEnabled":-1,"trigger":"signal"}`。すなわち旧 `checkSignalFile` の `!dir.canRead()` が **true** になった。
+- ところが**同じディレクトリへの書き込みは成功している**（この記録自体がそこに書かれた）。`resolveStorageDir` は `ensureWritableDir` が通った `/sdcard/Download/sa-line-notify` を返している。
+- 端末の権限は `WRITE_EXTERNAL_STORAGE: granted=true` / **`READ_EXTERNAL_STORAGE: granted=false`**。アプリは `targetSdkVersion=24`（旧方式のストレージ）。
+- `/sdcard/Android/data/jp.salesanchor.lineexport/files` は本環境から書けず、存在しない（代替経路にならない）。
+
+つまり「**書けるのに `canRead()` が false になる**」ことが実機で確定した。`READ_EXTERNAL_STORAGE` 未付与＋`targetSdkVersion=24` の組み合わせでは、書き込み可能なディレクトリであっても `File#canRead()`／`isDirectory()` の戻り値は信頼できない。旧実装はこの `canRead()` を門番にしていたため、合図ファイルが実際にそこへ置かれても常に `signal_unreadable` になり、**合図を一度も検知できなかった**（実機で機能していなかったことが確定した）。
+
+#### PO の決定
+
+**読み取り権限は増やさない。** 合図の検知に中身の読み取りは不要で、「在るか見て、消す」だけで足りる。削除に必要な書き込み権限は既にある。
+
+#### 設計判断（門番の撤去・削除を検知器にする）
+
+- `canRead()`・`isDirectory()` による事前の門番を撤去した。読み取りが拒否される環境では stat 系の戻り値も信頼できないため、門番で弾かずに実際の操作（削除）を試す方式に変えた。
+- 検知器を `boolean consumed = new File(dir, "maintenance-open").delete();` に変えた。`delete()` が `true` を返したときだけ「合図が在って、いま消費した」と確定できる。**削除してから cycle する**（逆順だと削除が失敗する環境で同じ合図に毎回 cycle してしまう。旧実装の `lastModified`＋`length` による重複判定はこの方式では不要になり削除した。削除が成功した回だけ cycle するため、二重消費が原理的に起きない）。
+- `delete()` が false の「合図が無い」と「消せない（経路が壊れている）」を区別するため、まだ経路の健全性を確認できていない間だけ、自前の試験ファイル（`.maintenance-probe`）の作成→削除の往復による自己試験を行う。両方成功したら `signal_channel_ok` を1回記録して以後は試験しない。どちらかが失敗したら `signal_probe_failed` を専用の重複判定枠で1回だけ記録する（旗は立てず次回また試す）。
+- `signal_unreadable` という結果名は撤去した（`canRead()` 前提の名前であり、意味が変わるため流用しない）。
+
+詳細設計は `docs/handoff/line-auto-export-app/design.md` 追補「合図検知の作り直し」、審査は `docs/handoff/line-auto-export-app/review-opus-adr1092.md` 参照。版は `versionCode` 26→27、`versionName` 0.23.0-stage3→0.24.0-stage3 に上げた（在庫中の他PRとの衝突がないことを確認済み）。

@@ -5,6 +5,7 @@ import android.provider.Settings;
 import android.util.Log;
 
 import java.io.File;
+import java.io.IOException;
 
 /**
  * 端末の保守口（無線デバッグ）が切れていたら開き直す（ADR-1092、design.md追補 2026-11-27
@@ -52,10 +53,21 @@ final class MaintenanceChannel {
     /** {@link #cycle}が0→1と書き直したが、読み直しても1にならなかった結果（Wi-Fi無し等）。 */
     private static final String RESULT_CYCLED_BLOCKED = "cycled_blocked";
     /**
-     * 合図ファイルの確認でディレクトリが読めない・一覧できない（{@code READ_EXTERNAL_STORAGE}
-     * 未付与等）ときの結果（design.md追補「黙らせない」）。{@link #checkSignalFile}参照。
+     * {@link #checkSignalFile}の自己試験（{@link #PROBE_FILE_NAME}の作成→削除の往復）が
+     * 両方成功し、合図ファイルの経路（削除による検知）が使えると確認できた結果
+     * （design.md追補「保守口（無線デバッグ）の強制開け直し・合図検知の作り直し」2026-11-27）。
+     * 記録後は{@link SchedulerStore#setSignalChannelConfirmed}で旗を立て、以後は自己試験を
+     * 行わない。
      */
-    private static final String RESULT_SIGNAL_UNREADABLE = "signal_unreadable";
+    private static final String RESULT_SIGNAL_CHANNEL_OK = "signal_channel_ok";
+    /**
+     * 自己試験のどちらか（作成・削除）が失敗した結果。合図ファイルの検知そのもの
+     * （{@code delete()}）が機能しない可能性があることを黙らず示す（design.md追補参照）。
+     * 旗は立てないため次回また試験する。重複判定は{@link SchedulerStore
+     * #wasSignalProbeFailureRecorded}専用の枠で行い、一度記録したら試験が成功するまで
+     * 再記録しない（アプリは1日約70回動くため、毎回記録すると溢れる）。
+     */
+    private static final String RESULT_SIGNAL_PROBE_FAILED = "signal_probe_failed";
 
     /** {@link #ensureOpen}の呼び出し元（毎回の実行予約時）を示すtrigger値。 */
     static final String TRIGGER_RUN = "run";
@@ -70,6 +82,13 @@ final class MaintenanceChannel {
      * 強制開け直し」②。
      */
     private static final String SIGNAL_FILE_NAME = "maintenance-open";
+
+    /**
+     * {@link #checkSignalFile}の自己試験が作成・削除する試験ファイル名（design.md追補
+     * 「合図検知の作り直し」2026-11-27）。{@value #SIGNAL_FILE_NAME}とは別の名前にし、
+     * 合図ファイル本体とは絶対に衝突しないようにする。
+     */
+    private static final String PROBE_FILE_NAME = ".maintenance-probe";
 
     /** {@link #cycle}が0を書いた後、1を書くまでに待つ時間（確定仕様）。 */
     private static final long CYCLE_CLOSE_WAIT_MS = 2000L;
@@ -191,28 +210,33 @@ final class MaintenanceChannel {
 
     /**
      * 合図ファイル（{@value #SIGNAL_FILE_NAME}）があれば{@link #cycle}する（design.md追補
-     * 「保守口（無線デバッグ）の強制開け直し」②）。{@link RunScheduler#scheduleAt}から、
-     * {@link #ensureOpen}の直前に毎回呼ぶ。
+     * 「保守口（無線デバッグ）の強制開け直し・合図検知の作り直し」2026-11-27）。
+     * {@link RunScheduler#scheduleAt}から、{@link #ensureOpen}の直前に毎回呼ぶ。
      *
-     * ファイルが無ければ何もしない（記録もしない。通常状態）。あれば{@code cycle(context,
-     * TRIGGER_SIGNAL)}を実行し、ファイルを削除する。**削除に成功した場合は識別子を消す**
-     * （Opus審査 2026-11-27 の指摘2: 削除できたのに識別子を残すと、次に置いた合図が偶然同じ
-     * {@code lastModified}・{@code length}だと「処理済み」と誤判定し、合図を取りこぼす。
-     * 合図は「保守口が切れて困っている」ときに置かれるものなので、取りこぼしは人手に戻る
-     * ことを意味する）。**削除に失敗した場合だけ**、処理した合図の識別子（{@code
-     * lastModified}と{@code length}の組）を{@link SchedulerStore}に保存し、次回以降それと
-     * 同一なら何もしない（cycleもしない・記録もしない。同じ合図で毎回cycleしてしまうのを
-     * 防ぐため）。
+     * <p><b>実機で分かった前提（2026-11-27実測。design.md追補参照）</b>: 端末は
+     * {@code WRITE_EXTERNAL_STORAGE: granted=true} / {@code READ_EXTERNAL_STORAGE:
+     * granted=false}（targetSdk 24の旧方式ストレージ）。{@code dir.canRead()}は常にfalseを
+     * 返すが、同じディレクトリへの書き込み・削除は実際に成功する。PO方針は「読み取り権限は
+     * 増やさない」（合図の検知に中身の読み取りは不要で、「在るか見て、消す」だけで足りる）。
+     * そのため、{@code canRead()}・{@code isDirectory()}による門番は置かない（読み取りが
+     * 拒否される環境ではstat系の戻り値も信頼できないため、門番で弾かずに実際の削除操作を
+     * 試す方針。{@code dir == null}だけは{@link LineNotifyListenerService#resolveStorageDir}が
+     * 書き込み先すら解決できなかった場合であり、これだけは早期returnする）。
      *
-     * ディレクトリが読めない・一覧できない（{@code READ_EXTERNAL_STORAGE}が未付与である等）
-     * 場合は黙らず{@value #RESULT_SIGNAL_UNREADABLE}を記録する。重複防止は{@link
-     * SchedulerStore#wasLastSignalUnreadable}専用の枠で行う（Opus審査 2026-11-27 の指摘1:
-     * {@link #recordIfChanged}が使う{@code last_maintenance_channel_result}枠を共用すると、
-     * 同じ実行の中で{@code checkSignalFile}が"signal_unreadable"を書いて枠を上書きし、直後の
-     * {@link #ensureOpen}が「枠が変わった」と見て"blocked"等を書いて枠を上書きする、という
-     * 往復が起きて「変化したときだけ記録する」作法が崩れる。アプリは1日約70回動くため実害が
-     * ある。専用の枠に分けることで、読めない状態が続く間は1行だけになる。ディレクトリが読める
-     * 状態に戻ったら枠を解除し、次に読めなくなったときにまた1行記録できるようにする）。
+     * <p><b>削除を検知器にする</b>: {@code new File(dir, SIGNAL_FILE_NAME).delete()}が
+     * {@code true}を返したら「合図が在って、いま消費した」と確定できる。{@code false}は
+     * 「合図が無い」のか「消せない（経路が壊れている）」のか区別できないため、cycleも記録も
+     * しない（通常は前者。後者は下記の自己試験で別途検知する）。**必ず削除してからcycleする**
+     * （逆にすると、削除が失敗する環境では同じ合図ファイルで毎回cycleしてしまう。Opus審査
+     * 2026-11-27の指摘と同じ穴）。この方式では、削除が成功した回だけcycleするため、
+     * {@code lastModified}・{@code length}による識別子の重複判定（旧{@code
+     * SchedulerStore.getLastMaintenanceSignalId}系）は不要になり、削除した
+     * （二重消費が原理的に起きない）。
+     *
+     * <p><b>黙らせない（自己試験）</b>: {@code delete()}の{@code false}だけでは経路の健全性を
+     * 確認できないため、まだ確認できていない間（{@link SchedulerStore
+     * #isSignalChannelConfirmed}がfalseの間）だけ{@link #probeSignalChannel}を実行する。
+     * 確認できたら旗を立て、以後は試験しない（毎回のファイル操作を増やさないため）。
      */
     static void checkSignalFile(Context context) {
         if (!SELF_RECOVERY_ENABLED) {
@@ -220,66 +244,102 @@ final class MaintenanceChannel {
         }
         try {
             File dir = LineNotifyListenerService.resolveStorageDir(context);
-            if (dir == null || !dir.isDirectory() || !dir.canRead()) {
-                recordSignalUnreadableIfChanged(context);
+            if (dir == null) {
+                // 書き込み先すら解決できない（経路が丸ごと壊れている）。黙らず1回だけ記録する。
+                recordSignalProbeFailedIfChanged(context);
                 return;
             }
-            // 読めたので、読めない状態の記録枠を解除する（次に読めなくなったとき再び記録する）。
-            clearSignalUnreadable(context);
-            File signalFile = new File(dir, SIGNAL_FILE_NAME);
-            if (!signalFile.isFile()) {
-                // 合図なし（通常状態）。記録しない。
-                return;
+            if (!SchedulerStore.isSignalChannelConfirmed(context)) {
+                probeSignalChannel(context, dir);
             }
-            String signalId = signalFile.lastModified() + ":" + signalFile.length();
-            if (signalId.equals(SchedulerStore.getLastMaintenanceSignalId(context))) {
-                // 前回、削除に失敗したまま残っている同じ合図。再度cycleしない（design.md追補参照）。
-                return;
-            }
-            cycle(context, TRIGGER_SIGNAL);
-            boolean deleted = signalFile.delete();
-            if (deleted) {
-                // 削除できたので識別子は消す（次に同じ識別子の合図が来ても取りこぼさない。
-                // Opus審査 2026-11-27 の指摘2）。
-                SchedulerStore.clearLastMaintenanceSignalId(context);
-            } else {
-                // 削除に失敗したときだけ識別子を残し、同じ合図での再cycleを防ぐ。
-                SchedulerStore.setLastMaintenanceSignalId(context, signalId);
-                Log.w(TAG, "maintenance-open signal file delete failed; will not re-cycle on same signal");
+            // 削除を検知器として使う。trueなら「合図が在って、いま消費した」と確定できる。
+            boolean consumed = new File(dir, SIGNAL_FILE_NAME).delete();
+            if (consumed) {
+                cycle(context, TRIGGER_SIGNAL);
             }
         } catch (RuntimeException e) {
-            // READ_EXTERNAL_STORAGE未付与等によるSecurityExceptionもここで吸収し、黙らず記録する。
+            // SecurityException等もここで吸収し、黙らず記録する。
             Log.w(TAG, "checkSignalFile failed: " + e);
-            recordSignalUnreadableIfChanged(context);
+            recordSignalProbeFailedIfChanged(context);
         }
     }
 
     /**
-     * {@value #RESULT_SIGNAL_UNREADABLE}を、{@link SchedulerStore#wasLastSignalUnreadable}の
-     * 専用の枠で重複判定して記録する（{@link #checkSignalFile}参照。{@link #recordIfChanged}
-     * とは別の枠を使う理由はそちらのjavadoc・Opus審査 2026-11-27 の指摘1参照）。
+     * 経路の健全性を確認する自己試験（design.md追補「合図検知の作り直し」2026-11-27）。
+     * {@code dir}に試験ファイル（{@value #PROBE_FILE_NAME}）を作成→削除の往復を行う。
+     * 両方成功したら「経路は使える」と確定し、{@link SchedulerStore
+     * #setSignalChannelConfirmed}で旗を立てて{@value #RESULT_SIGNAL_CHANNEL_OK}を1回
+     * 記録する（旗が立った以後は{@link #checkSignalFile}が本メソッドを呼ばなくなるため、
+     * 自然に1回だけになる）。どちらかが失敗したら旗は立てず（次回また試す）、
+     * {@value #RESULT_SIGNAL_PROBE_FAILED}を{@link #recordSignalProbeFailedIfChanged}
+     * 経由で記録する（専用の枠で重複判定し、失敗が続く間は1行だけになる）。
+     *
+     * <p><b>先頭の掃除deleteが要る理由（Opus審査 2026-11-27の指摘）</b>:
+     * {@code createNewFile()}はファイルが既に在るときもfalseを返す（異常ではない）。試験
+     * ファイルを作った直後〜削除する前にアプリの処理が落ちる（省電力による停止・プロセス
+     * 終了等）と{@value #PROBE_FILE_NAME}が残ることがあり、次回の試験で
+     * {@code createNewFile()}=false・{@code delete()}=trueとなって、経路は正常なのに
+     * {@value #RESULT_SIGNAL_PROBE_FAILED}を誤記録してしまう（記録に騙されると方式の見直し
+     * を誤判断する）。そこで試験の最初に残骸の掃除としてのdeleteを1回入れ、
+     * {@code createNewFile()}を残骸の無い状態から行う。成功判定は後ろ2つ（作成・後始末の
+     * delete）だけで行い、掃除deleteの結果は使わない。{@code exists()}・{@code canRead()}
+     * 等の読み取り系の判定はここでも使わない（この端末では読み取りが拒否されるため）。
      */
-    private static void recordSignalUnreadableIfChanged(Context context) {
-        if (SchedulerStore.wasLastSignalUnreadable(context)) {
-            return;
+    private static void probeSignalChannel(Context context, File dir) {
+        File probeFile = new File(dir, PROBE_FILE_NAME);
+        // 掃除delete: 前回の試験が落ちて残った残骸を消す。結果は判定に使わない
+        // （無い状態からfalseが返るのは正常であり、これ自体は成否の材料にならない）。
+        try {
+            probeFile.delete();
+        } catch (SecurityException e) {
+            Log.w(TAG, "signal channel probe pre-cleanup failed: " + e);
         }
-        SchedulerStore.setLastSignalUnreadable(context, true);
-        RunLogger.logMaintenanceChannel(context, RESULT_SIGNAL_UNREADABLE, -1, TRIGGER_SIGNAL);
+        boolean created;
+        try {
+            created = probeFile.createNewFile();
+        } catch (IOException | SecurityException e) {
+            Log.w(TAG, "signal channel probe create failed: " + e);
+            created = false;
+        }
+        boolean deleted;
+        try {
+            // 作成に失敗しても、残っているかもしれない試験ファイルの後始末を必ず試みる。
+            deleted = probeFile.delete();
+        } catch (SecurityException e) {
+            Log.w(TAG, "signal channel probe cleanup failed: " + e);
+            deleted = false;
+        }
+        if (created && deleted) {
+            SchedulerStore.setSignalChannelConfirmed(context, true);
+            RunLogger.logMaintenanceChannel(context, RESULT_SIGNAL_CHANNEL_OK, -1, TRIGGER_SIGNAL);
+        } else {
+            recordSignalProbeFailedIfChanged(context);
+        }
     }
 
-    /** ディレクトリが読める状態に戻ったときに{@link #recordSignalUnreadableIfChanged}の枠を解除する。 */
-    private static void clearSignalUnreadable(Context context) {
-        if (SchedulerStore.wasLastSignalUnreadable(context)) {
-            SchedulerStore.setLastSignalUnreadable(context, false);
+    /**
+     * {@value #RESULT_SIGNAL_PROBE_FAILED}を、{@link SchedulerStore
+     * #wasSignalProbeFailureRecorded}専用の枠で重複判定して記録する（{@link #checkSignalFile}・
+     * {@link #probeSignalChannel}参照）。{@link #recordIfChanged}が使う
+     * {@code last_maintenance_channel_result}枠を共用すると、同じ実行の中で記録が往復して
+     * 「変化したときだけ記録する」作法が崩れる（Opus審査 2026-11-27 の指摘と同種の穴。
+     * design.md追補参照）ため、別の専用の枠を使う。
+     */
+    private static void recordSignalProbeFailedIfChanged(Context context) {
+        if (SchedulerStore.wasSignalProbeFailureRecorded(context)) {
+            return;
         }
+        SchedulerStore.setSignalProbeFailureRecorded(context, true);
+        RunLogger.logMaintenanceChannel(context, RESULT_SIGNAL_PROBE_FAILED, -1, TRIGGER_SIGNAL);
     }
 
     /**
      * 記録は{@link SchedulerStore}に保存した前回の結果と比較し、変化したときだけ
      * {@link RunLogger#logMaintenanceChannel}へ1行残す
      * （{@link RunScheduler}のwasLastIgnoringBatteryOptimizationsと同じ作り）。
-     * {@value #RESULT_SIGNAL_UNREADABLE}はここを使わず{@link #recordSignalUnreadableIfChanged}
-     * の専用の枠を使う（理由は同メソッドのjavadoc参照）。
+     * {@value #RESULT_SIGNAL_CHANNEL_OK}・{@value #RESULT_SIGNAL_PROBE_FAILED}はここを使わず
+     * {@link #recordSignalProbeFailedIfChanged}専用の枠（または旗立てによる自然な1回化）を
+     * 使う（理由は{@link #probeSignalChannel}のjavadoc参照）。
      */
     private static void recordIfChanged(Context context, String result, int valueAfter, String trigger) {
         String previous = SchedulerStore.getLastMaintenanceChannelResult(context);

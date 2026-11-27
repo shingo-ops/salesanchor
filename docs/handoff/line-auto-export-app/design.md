@@ -1027,19 +1027,22 @@ watermark（取り込みの起点）は送信が受理されたときだけ進�
 ### 対処
 
 1. **起動時は必ず cycle する**。`AlarmReceiver` の BOOT_COMPLETED 経路は `ensureOpen` ではなく `MaintenanceChannel.cycle(context, "boot")` を呼ぶ（既存の構造どおり goAsync や別スレッドへの委譲は無く、同期呼び出しのまま。cycle 内部の約2秒の待ちは BroadcastReceiver の実行時間制限（約10秒）に対して十分に短い）。
-2. **合図ファイルを見たら cycle する**。`RunScheduler.scheduleAt` が `MaintenanceChannel.ensureOpen` を呼ぶ直前に、合図ファイル（ファイル名 `maintenance-open`。拡張子なし。場所は `LineNotifyListenerService.resolveStorageDir` が返すディレクトリ＝`run-*.jsonl` と同じ場所）の有無を `MaintenanceChannel.checkSignalFile` で確認する。あれば `cycle(context, "signal")` を実行し、ファイルを削除する。削除に失敗した場合は、処理した合図の識別子（`lastModified` と `length` の組）を `SchedulerStore` に保存し、次回以降それと同一なら何もしない（cycle もしない・記録もしない）。**削除に成功した場合は識別子を消す**（Opus審査 2026-11-27 の指摘2: 削除できたのに識別子を残すと、次に置いた合図が偶然同じ `lastModified`・`length` だと「処理済み」と誤判定し取りこぼす。合図は「保守口が切れて困っている」ときに置かれるものなので、取りこぼしは人手に戻ることを意味する）。
+2. **合図ファイルを見たら cycle する**。`RunScheduler.scheduleAt` が `MaintenanceChannel.ensureOpen` を呼ぶ直前に、合図ファイル（ファイル名 `maintenance-open`。拡張子なし。場所は `LineNotifyListenerService.resolveStorageDir` が返すディレクトリ＝`run-*.jsonl` と同じ場所）を `MaintenanceChannel.checkSignalFile` で確認する。
+   **（2026-11-27・検知方式を作り直し。下記「合図検知の作り直し」節参照）** 検知器は `boolean consumed = new File(dir, "maintenance-open").delete();`。`delete()` が `true` を返したときだけ「合図が在って、いま消費した」と確定できるため、**削除してから** `cycle(context, "signal")` を呼ぶ（逆順にすると削除失敗時に同じ合図で毎回 cycle してしまう）。削除が成功した回だけ cycle するため、二重消費が原理的に起きず、旧方式が使っていた識別子（`lastModified`＋`length`）による重複判定は不要になり削除した。
 3. **毎回は cycle しない**。通常の実行予約時（`RunScheduler` の予約）は今までどおり `ensureOpen`（0 のときだけ 1 を書く）のまま。cycle は実行中の ADB 接続を切るため、「起動時」と「合図があったとき」だけに限定する。
 
 `cycle` の手順: `adb_wifi_enabled` に 0 を書く → 約2000ms 待つ → 1 を書く → 読み直す。読み直して 1 なら `cycled_opened`、1 にならなければ `cycled_blocked` として、どちらも変化比較せず毎回記録する（既存の `opened` と同じ考え方＝復旧の実績が残らないと ADR-1092「維持の仕組み」が成り立たない）。Wi-Fi が無い回は1を書いても定着しない（実測。上の追補 2026-11-27 参照）ため、その場合は `cycled_blocked` を記録して終わり、復旧は次回以降の `ensureOpen` に持ち越す。Wi-Fi 状態の判定（新しい権限の追加）は行わない。書き換える設定キーは `adb_wifi_enabled` だけ（ADR-1092 What-4）。`adb_enabled` には絶対に触らない。新しい権限はマニフェストに追加していない。
 
-### 黙らせない
+### 黙らせない（2026-11-27の実機事象を受けて作り直し。下記「合図検知の作り直し」節参照）
 
-合図ファイルの確認でディレクトリが読めない・一覧できない（`READ_EXTERNAL_STORAGE` が未付与である等）場合は、黙らず `signal_unreadable` を記録する（毎回は書かない。重複判定は `ensureOpen`/`cycle` の結果枠とは別の専用の枠で行う。理由は下記「Opus審査で見つけて直した欠陥」参照）。これが実機検証の判定材料になる。
+合図ファイルの検知を `delete()` の戻り値だけに頼ると、`false` が「合図が無い」のか「消せない（経路が壊れている）」のか区別できない。そこで、まだ経路の健全性を確認できていない間だけ自己試験（`.maintenance-probe` の作成→削除の往復）を行う。両方成功したら `signal_channel_ok` を1回記録して以後は試験せず、どちらかが失敗したら専用の重複判定枠で `signal_probe_failed` を1回だけ記録する（旗は立てず次回また試す）。これが実機検証の判定材料になる。旧 `signal_unreadable`（`canRead()` 前提）は撤去した。
 
-### Opus審査で見つけて直した欠陥（2026-11-27・続きの便）
+### Opus審査で見つけて直した欠陥（2026-11-27・続きの便。当時の実装に対する記録として残す）
 
 1. **記録があふれる**: `signal_unreadable` の重複判定が `ensureOpen`/`cycle` と共用の枠（`SchedulerStore.getLastMaintenanceChannelResult`）を使っていたため、ディレクトリが読めずかつWi-Fiが無い回に枠の往復が起き、記録が毎回2行出ていた。`SchedulerStore` に専用の枠（`last_signal_unreadable`）を追加して分離した。
 2. **合図を取りこぼす**: 合図ファイルの削除が成功した場合も識別子（`lastModified`+`length`）を保存していたため、次に置いた合図が偶然同じ識別子だと誤って無視していた。削除に成功したときは識別子を消す（保存するのは削除に失敗したときだけ）ように直した。
+
+**この2点の指摘は、下記「合図検知の作り直し」での `canRead()` 門番の撤去により、両方とも前提（`canRead()` 門番・識別子による重複判定）自体が無くなったため、現在のコードには存在しない。** 記録として残す。
 
 ### 版番号の衝突と、版名が中身を保証しない事象への対策（2026-11-27）
 
@@ -1068,13 +1071,46 @@ strings -a /tmp/device_extract/classes.dex | grep -x "checkSignalFile\|cycle\|ma
 
 目印の文字列（本PRなら `checkSignalFile`・`cycle`・`maintenance-open`・`cycled_opened`）が出れば、そのPRのコードが実際に動いている証拠になる。
 
+## 追補 2026-11-27 合図検知の作り直し（`canRead()` 門番の撤去）
+
+対象ADR: ADR-1092 追補3（本節と同日・同見出しの追補をADR側にも記録した）。
+
+### 実機で測った事実（一次情報・再測不要）
+
+PR #5811 の成果物（`versionCode=26`／`versionName=0.23.0-stage3`）を2026-11-27 18:24:55に実機へ導入済み。dex照合で `cycle`・`checkSignalFile`・刻印 `0.23.0-stage3` の存在を確認した。
+
+- 導入直後、アプリ自身が `/sdcard/Download/sa-line-notify/run-20261127.jsonl` に次を記録した: `{"at":"2026-11-27T18:24:55+0900","flow":"scheduler","phase":"maintenance_channel","result":"signal_unreadable","adbWifiEnabled":-1,"trigger":"signal"}`。
+- つまり旧 `checkSignalFile` の `!dir.canRead()` が **true** になった。**同じディレクトリに書き込みは成功している**（この記録自体がそこに書かれた）。`resolveStorageDir` は `ensureWritableDir` が通った `/sdcard/Download/sa-line-notify` を返している。
+- 端末の権限は `WRITE_EXTERNAL_STORAGE: granted=true` / **`READ_EXTERNAL_STORAGE: granted=false`**。アプリは `targetSdkVersion=24`（旧方式のストレージ）。
+- `/sdcard/Android/data/jp.salesanchor.lineexport/files` は存在しない（この環境から書けない）ので代替経路にならない。
+
+**結論**: 「書けるのに `canRead()` が false になる」ことが実機で確定した。旧実装は `canRead()`／`isDirectory()` を門番にしていたため、合図ファイルが実際に置かれても常にこの門番で弾かれ、**合図を一度も検知できていなかった**（design.md 上は「未証明」としていたが、実機導入により「機能していない」と確定した）。
+
+### PO の決定
+
+**読み取り権限は増やさない。** 合図の検知に中身の読み取りは不要で、「在るか見て、消す」だけで足りる。削除に必要な書き込み権限は既にある。
+
+### 設計判断（門番の撤去・削除を検知器にする）
+
+- `canRead()`・`isDirectory()` による事前の門番を撤去した。読み取りが拒否される環境ではstat系の戻り値（`isDirectory()`含む）も信頼できないため、門番で弾かずに実際の操作を試す方針に変えた。`dir == null`（`resolveStorageDir` が書き込み先すら解決できない）のときだけ早期returnする。
+- 検知器を `boolean consumed = new File(dir, "maintenance-open").delete();` に変えた。`delete()` が `true` を返したときだけ「合図が在って、いま消費した」と確定できる。**必ず削除してから cycle する**（逆順だと削除失敗時に同じ合図で毎回 cycle してしまう。旧審査の指摘と同種の穴）。
+- この方式により、`lastModified`＋`length` による識別子の重複判定（旧 `SchedulerStore` の signalId まわり）は不要になったため削除した。削除が成功した回だけ cycle するので、二重消費が原理的に起きない。
+- **黙らせない仕組み**: `delete()` が false の「合図が無い」と「消せない（経路が壊れている）」を区別するため、まだ経路の健全性を確認できていない間（`SchedulerStore.isSignalChannelConfirmed` がfalseの間）だけ自己試験を行う。`dir` に試験ファイル（`.maintenance-probe`）を作成→削除の往復を行い、両方成功したら「経路は使える」と記録して旗を立てる（`signal_channel_ok` を1回。以後は試験しない）。どちらかが失敗したら `signal_probe_failed` を専用の重複判定枠（`SchedulerStore.wasSignalProbeFailureRecorded`）で1回だけ記録する（旗は立てず次回また試す）。試験ファイルは後始末する（作成が失敗しても削除を試みる）。
+- `signal_unreadable` という結果名は撤去した（`canRead()` 前提の名前であり、意味が変わるため流用しない）。重複判定の枠は `cycle`/`ensureOpen` の結果枠（`last_maintenance_channel_result`）とは別の専用の枠を使う（過去の審査と同じ理由＝記録があふれないため）。
+
+### Opus審査で見つけて直した欠陥（2026-11-27・合図検知の作り直し便）
+
+**試験ファイルの残骸で「経路が壊れている」と誤報する**: `probeSignalChannel` の成功判定に使う `createNewFile()` は、ファイルが既に在るときもfalseを返す（異常ではない）。試験ファイル（`.maintenance-probe`）を作った直後〜削除する前にアプリの処理が落ちる（省電力による停止・プロセス終了等）と残骸が残り、次回の試験で `createNewFile()`=false・`delete()`=trueとなって、経路は正常なのに `signal_probe_failed` を誤記録してしまう（次の回には確認済みで自己回復するが、その1行を見て「経路が使えない」と誤判断する恐れがある）。**直し方**: 試験の最初に残骸の掃除としての `delete()` を1回入れ（結果は判定に使わない）、`createNewFile()` → 後始末の `delete()` の順で行い、成功判定は後ろ2つだけで行う。`exists()`・`canRead()` 等の読み取り系の判定はここでも使わない（この端末では読み取りが拒否されるため）。
+
+詳細コードは `tools/line-auto-export-app/src/java/jp/salesanchor/lineexport/MaintenanceChannel.java` の `checkSignalFile`／`probeSignalChannel`／`recordSignalProbeFailedIfChanged` 参照。版は `versionCode` 26→27、`versionName` 0.23.0-stage3→0.24.0-stage3 に上げた（在庫中の他PRとの衝突がないことを確認済み。`origin/main` は PR #5808 マージ後 25／0.22.0-stage3）。
+
 ### 実機検証手順（PO の承認後に実施。本PRの範囲外）
 
-**前提**: 実機に入れ直す前に、上の自己検査が `OK` で通ったビルド（本PRのコミットでビルドした `out/app-debug.apk`）であることを確認すること。さらに、実機に入れた後は版名の `dumpsys` 申告だけで判断せず、上記の `adb pull` → `strings` の手順で実際にそのPRのコードが動いていることを確認すること（版名は複数PR間で衝突しうるため）。
+**前提**: 実機に入れ直す前に、上の自己検査（build.sh [3b/8]）が `OK` で通ったビルド（本PRのコミットでビルドした `out/app-debug.apk`）であることを確認すること。さらに、実機に入れた後は版名の `dumpsys` 申告だけで判断せず、`adb pull` → `strings` の手順で実際にそのPRのコードが動いていることを確認すること（版名は複数PR間で衝突しうるため）。
 
-(a) 端末再起動後、`run-YYYYMMDD.jsonl` に `trigger=boot` の `cycled_opened`（または `cycled_blocked`）が出ることを確認する。
-(b) この開発環境（proot の中の Ubuntu）から `maintenance-open` を `/sdcard/Download/sa-line-notify/` に置き、10分以内に `trigger=signal` の記録が `run-YYYYMMDD.jsonl` に出て、`maintenance-open` ファイルが消えていることを確認する。
-(c) `signal_unreadable` が出た場合は、アプリが `READ_EXTERNAL_STORAGE` 未付与等によりこの方式でファイルを読めていないことを意味するため、合図の受け渡し方式（権限の追加・別の受け渡し経路等）の見直しが必要と判断する。
+(a) 合図ファイル（`maintenance-open`）を `/sdcard/Download/sa-line-notify/` に置き、10分以内に `run-YYYYMMDD.jsonl` に `trigger=signal` の `cycled_opened`（または `cycled_blocked`）が出て、`maintenance-open` ファイルが消えていることを確認する（＝削除を検知器にした方式が機能している）。
+(b) 初回（まだ `signal_channel_ok` を記録していない状態）は、上記(a)の実行の中で `signal_channel_ok` が1行出ることを確認する（自己試験が成功し、以後は試験しなくなる旗が立った証拠）。
+(c) `signal_probe_failed` が出た場合は、試験ファイル（`.maintenance-probe`）の作成・削除のいずれかが失敗しており、合図ファイルの削除による検知そのものが使えない可能性があることを意味する。その場合は方式の見直し（別の受け渡し経路への変更等）が必要と判断する。
 
 ### 変えていないもの
 
