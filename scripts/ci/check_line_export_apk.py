@@ -17,6 +17,13 @@ LINE自動書き出しアプリの APK (out/app-debug.apk) は二進ファイル
 どちらも「ビルドし直して BUILD-INFO.txt をコミットし直す」だけで直る
 （bash tools/line-auto-export-app/build.sh）。
 
+4つ目の検査（signerSha256）は別種の事故を捕まえる: 別の鍵で署名した APK を
+コミットしてしまった場合。build.sh の ALLOW_NEW_KEYSTORE=1 の逃げ道を使うと
+別鍵でも exit 0 でビルドが完了するため、鍵の取り違えはビルド自体では止まらない。
+期待する証明書の値は build.sh の EXPECTED_SIGNER_SHA256 定数を正本として読み取り
+（このスクリプトには直書きしない。食い違いの発生源を1箇所にするため）、
+BUILD-INFO.txt の signerSha256 と比較する。
+
 pure Python（標準ライブラリのみ）。aapt・Android SDK は使わない。
 使い方: python3 -I scripts/ci/check_line_export_apk.py --root <dir>
 """
@@ -32,8 +39,11 @@ APP_DIR = "tools/line-auto-export-app"
 BUILD_INFO_REL = f"{APP_DIR}/out/BUILD-INFO.txt"
 MANIFEST_REL = f"{APP_DIR}/AndroidManifest.xml"
 APK_REL = f"{APP_DIR}/out/app-debug.apk"
+BUILD_SH_REL = f"{APP_DIR}/build.sh"
 
 BUILD_CMD = "bash tools/line-auto-export-app/build.sh"
+
+EXPECTED_SIGNER_SHA256_RE = re.compile(r'EXPECTED_SIGNER_SHA256="([0-9a-fA-F]{64})"')
 
 
 def parse_build_info(text: str) -> dict[str, str]:
@@ -50,6 +60,11 @@ def parse_build_info(text: str) -> dict[str, str]:
 def parse_manifest_attr(text: str, attr: str) -> str | None:
     m = re.search(rf'android:{attr}="([^"]*)"', text)
     return m.group(1) if m else None
+
+
+def parse_expected_signer_sha256(build_sh_text: str) -> str | None:
+    m = EXPECTED_SIGNER_SHA256_RE.search(build_sh_text)
+    return m.group(1).lower() if m else None
 
 
 def sha256_of(path: Path) -> str:
@@ -69,6 +84,7 @@ def main() -> int:
     build_info_path = root / BUILD_INFO_REL
     manifest_path = root / MANIFEST_REL
     apk_path = root / APK_REL
+    build_sh_path = root / BUILD_SH_REL
 
     errors: list[str] = []
 
@@ -85,6 +101,20 @@ def main() -> int:
         print("SUMMARY missing_manifest=1")
         return 1
 
+    if not build_sh_path.is_file():
+        print(f"MISSING_BUILD_SH {BUILD_SH_REL} が存在しない（期待する署名証明書の値が読めない）")
+        print("SUMMARY missing_build_sh=1")
+        return 1
+
+    expected_signer_sha256 = parse_expected_signer_sha256(build_sh_path.read_text(encoding="utf-8"))
+    if not expected_signer_sha256:
+        print(
+            f"EXPECTED_SIGNER_SHA256_NOT_FOUND {BUILD_SH_REL} から "
+            "EXPECTED_SIGNER_SHA256 を読み取れない（検査を飛ばさず停止する）"
+        )
+        print("SUMMARY expected_signer_sha256_not_found=1")
+        return 1
+
     manifest_text = manifest_path.read_text(encoding="utf-8")
     manifest_version_code = parse_manifest_attr(manifest_text, "versionCode")
     manifest_version_name = parse_manifest_attr(manifest_text, "versionName")
@@ -92,6 +122,15 @@ def main() -> int:
     info_version_code = info.get("versionCode")
     info_version_name = info.get("versionName")
     info_apk_sha256 = info.get("apkSha256")
+    info_signer_sha256 = info.get("signerSha256")
+
+    if info_signer_sha256 != expected_signer_sha256:
+        errors.append(
+            "SIGNER_SHA256_MISMATCH signerSha256 が期待値と一致しない"
+            "（別の鍵で署名したAPKをコミットした可能性）: "
+            f"BUILD-INFO.txt={info_signer_sha256!r} / "
+            f"期待値({BUILD_SH_REL} の EXPECTED_SIGNER_SHA256)={expected_signer_sha256!r}"
+        )
 
     if info_version_code != manifest_version_code:
         errors.append(

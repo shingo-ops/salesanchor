@@ -144,14 +144,27 @@ if [ -z "$SIGNER_SHA256" ]; then
   exit 1
 fi
 if [ "$SIGNER_SHA256" != "$EXPECTED_SIGNER_SHA256" ]; then
-  echo "ERROR: 署名証明書が期待値と一致しない" >&2
-  echo "  期待値: $EXPECTED_SIGNER_SHA256" >&2
-  echo "  実際値: $SIGNER_SHA256" >&2
-  echo "  この鍵では実機を上書き更新できない。鍵を正式に入れ替える場合のみ、" >&2
-  echo "  build.shのEXPECTED_SIGNER_SHA256とADR-1090「7. 署名鍵」を同時に直す。" >&2
-  exit 1
+  if [ "${ALLOW_NEW_KEYSTORE:-}" = "1" ]; then
+    # ALLOW_NEW_KEYSTORE=1 の逃げ道を使った回は、新しい鍵の証明書がEXPECTED_SIGNER_SHA256と
+    # 一致することは原理的に無い。ここで exit 1 にすると逃げ道が常に死ぬため、警告を出して
+    # 続行する（この回のAPKが実機を上書き更新できないことはステップ7の警告で既に伝えている）。
+    echo "########################################################################"
+    echo "# WARNING: 署名証明書が期待値と一致しない（ALLOW_NEW_KEYSTORE=1 で新しい鍵を使用）。"
+    echo "# この APK は実機を上書き更新できない。"
+    echo "#   期待値: $EXPECTED_SIGNER_SHA256"
+    echo "#   実際値: $SIGNER_SHA256"
+    echo "########################################################################"
+  else
+    echo "ERROR: 署名証明書が期待値と一致しない" >&2
+    echo "  期待値: $EXPECTED_SIGNER_SHA256" >&2
+    echo "  実際値: $SIGNER_SHA256" >&2
+    echo "  この鍵では実機を上書き更新できない。鍵を正式に入れ替える場合のみ、" >&2
+    echo "  build.shのEXPECTED_SIGNER_SHA256とADR-1090「7. 署名鍵」を同時に直す。" >&2
+    exit 1
+  fi
+else
+  echo "OK: signer sha256 matches: $SIGNER_SHA256"
 fi
-echo "OK: signer sha256 matches: $SIGNER_SHA256"
 
 echo "-- [10/10] BUILD-INFO.txt を書き出す --"
 VERSION_CODE="$(grep -o 'android:versionCode="[0-9]*"' AndroidManifest.xml | head -1 | sed -E 's/.*="([0-9]*)"/\1/')"

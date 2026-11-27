@@ -24,7 +24,16 @@ MANIFEST = (
 )
 
 
-def make_repo(apk_bytes: bytes = b"apk-bytes", build_info: str | None = None, with_apk: bool = True) -> Path:
+EXPECTED_SIGNER_SHA256 = "c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709"
+
+
+def make_repo(
+    apk_bytes: bytes = b"apk-bytes",
+    build_info: str | None = None,
+    with_apk: bool = True,
+    with_build_sh: bool = True,
+    build_sh_text: str | None = None,
+) -> Path:
     tmp = Path(tempfile.mkdtemp())
     (tmp / APP_DIR / "out").mkdir(parents=True)
     (tmp / APP_DIR / "AndroidManifest.xml").write_text(MANIFEST, encoding="utf-8")
@@ -35,10 +44,14 @@ def make_repo(apk_bytes: bytes = b"apk-bytes", build_info: str | None = None, wi
         build_info = (
             "versionCode=25\n"
             "versionName=0.22.0-stage3\n"
-            "signerSha256=c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709\n"
+            f"signerSha256={EXPECTED_SIGNER_SHA256}\n"
             f"apkSha256={apk_sha256}\n"
         )
     (tmp / APP_DIR / "out" / "BUILD-INFO.txt").write_text(build_info, encoding="utf-8")
+    if with_build_sh:
+        if build_sh_text is None:
+            build_sh_text = f'#!/usr/bin/env bash\nEXPECTED_SIGNER_SHA256="{EXPECTED_SIGNER_SHA256}"\n'
+        (tmp / APP_DIR / "build.sh").write_text(build_sh_text, encoding="utf-8")
     return tmp
 
 
@@ -67,7 +80,7 @@ class CheckTests(unittest.TestCase):
         build_info = (
             "versionCode=24\n"
             "versionName=0.22.0-stage3\n"
-            "signerSha256=c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709\n"
+            f"signerSha256={EXPECTED_SIGNER_SHA256}\n"
             f"apkSha256={hashlib.sha256(b'apk-bytes').hexdigest()}\n"
         )
         root = make_repo(build_info=build_info)
@@ -79,7 +92,7 @@ class CheckTests(unittest.TestCase):
         build_info = (
             "versionCode=25\n"
             "versionName=0.21.0-stage3\n"
-            "signerSha256=c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709\n"
+            f"signerSha256={EXPECTED_SIGNER_SHA256}\n"
             f"apkSha256={hashlib.sha256(b'apk-bytes').hexdigest()}\n"
         )
         root = make_repo(build_info=build_info)
@@ -91,7 +104,7 @@ class CheckTests(unittest.TestCase):
         build_info = (
             "versionCode=25\n"
             "versionName=0.22.0-stage3\n"
-            "signerSha256=c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709\n"
+            f"signerSha256={EXPECTED_SIGNER_SHA256}\n"
             "apkSha256=" + "0" * 64 + "\n"
         )
         root = make_repo(build_info=build_info)
@@ -111,6 +124,39 @@ class CheckTests(unittest.TestCase):
         rc, out = run_check(root)
         self.assertEqual(rc, 1)
         self.assertIn("MISSING_MANIFEST", out)
+
+    def test_signer_sha256_matches_passes(self):
+        # make_repo()の既定どおり、BUILD-INFO.txtのsignerSha256とbuild.shの
+        # EXPECTED_SIGNER_SHA256が一致する場合は緑（test_good_sample_passesと同じ経路だが
+        # 明示的に確認する）。
+        root = make_repo()
+        rc, out = run_check(root)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("SUMMARY ok", out)
+
+    def test_signer_sha256_mismatch(self):
+        build_info = (
+            "versionCode=25\n"
+            "versionName=0.22.0-stage3\n"
+            "signerSha256=" + "1" * 64 + "\n"
+            f"apkSha256={hashlib.sha256(b'apk-bytes').hexdigest()}\n"
+        )
+        root = make_repo(build_info=build_info)
+        rc, out = run_check(root)
+        self.assertEqual(rc, 1)
+        self.assertIn("SIGNER_SHA256_MISMATCH", out)
+
+    def test_expected_signer_sha256_not_found_in_build_sh(self):
+        root = make_repo(build_sh_text="#!/usr/bin/env bash\necho no constant here\n")
+        rc, out = run_check(root)
+        self.assertEqual(rc, 1)
+        self.assertIn("EXPECTED_SIGNER_SHA256_NOT_FOUND", out)
+
+    def test_missing_build_sh(self):
+        root = make_repo(with_build_sh=False)
+        rc, out = run_check(root)
+        self.assertEqual(rc, 1)
+        self.assertIn("MISSING_BUILD_SH", out)
 
 
 if __name__ == "__main__":
