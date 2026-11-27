@@ -28,7 +28,9 @@ PROPS=(
   -p MemoryMax=1500M
   -p MemorySwapMax=0
   -p OOMScoreAdjust=1000
-  -p "IPAddressDeny=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 49.212.137.46 49.212.160.98"
+  # systemd-run（systemd 255）は localhost・link-local・multicast の名前を受け付けない（"Failed to parse IP address prefix: localhost"・2026-11-27 prod2 実測）。
+  # unit ファイル側ではこの名前が下の数字へ広がる（systemctl show -p IPAddressDeny で 11 個と一致を確認）。だからここは数字で書く。
+  -p "IPAddressDeny=127.0.0.0/8 ::1/128 169.254.0.0/16 fe80::/64 224.0.0.0/4 ff00::/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 49.212.137.46 49.212.160.98"
   -p IPAddressAllow=127.0.0.53
   -p ProtectSystem=strict
   -p ReadWritePaths=/home/ops-agent
@@ -115,12 +117,13 @@ fi
 
 echo "== G7: 本番と監視へ届かない・名前は引ける =="
 # 対照: 守りを外した窓（G7 なし）では届く。届かなければ「確かめにならない」
-if run_no_g7 /usr/bin/curl -m 5 -sS -o /dev/null http://127.0.0.1:19187/metrics >/dev/null 2>&1; then
-  report "G7 対照: 守り無しで 19187 番へ届く" "届く" "届いた" ok
+# 19187 番は管理者からも Connection reset（2026-11-27 実測）で答えが無く、監視の集め役も見ていない。だから答えが返る監視の 19100 番（node-exporter）で確かめる。
+if run_no_g7 /usr/bin/curl -m 5 -sS -o /dev/null http://127.0.0.1:19100/metrics >/dev/null 2>&1; then
+  report "G7 対照: 守り無しで 19100 番へ届く" "届く" "届いた" ok
 else
-  report "G7 対照: 守り無しで 19187 番へ届く" "届く（届かないと確かめにならない）" "届かなかった" ng
+  report "G7 対照: 守り無しで 19100 番へ届く" "届く（届かないと確かめにならない）" "届かなかった" ng
 fi
-expect_fail "G7 監視の 19187 番へ届かない" /usr/bin/curl -m 5 -sS -o /dev/null http://127.0.0.1:19187/metrics
+expect_fail "G7 監視の 19100 番へ届かない" /usr/bin/curl -m 5 -sS -o /dev/null http://127.0.0.1:19100/metrics
 if run_no_g7 /usr/bin/curl -m 5 -sS -o /dev/null http://49.212.160.98:3000 >/dev/null 2>&1; then
   report "G7 対照: 守り無しで 3000 番へ届く" "届く" "届いた" ok
 else
