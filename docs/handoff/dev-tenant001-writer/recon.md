@@ -68,3 +68,10 @@
 - 秘密の列（ADR-1024 の型）: `pg_attribute` を `attname ~* '^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential|account_number|^iban$'` で絞る → 7 表 9 列（design §3-2）。`information_schema.columns` では 0 行（他人の表の列が見えないため）
 - 既存の試験用ロール: `qa_tenant006_rw`（LOGIN・NOBYPASSRLS・接続上限なし。migration に無い）
 - 表 112・RLS 64・外部キー 31/72・引き金 30 の元: `pg_class.relrowsecurity`、`pg_constraint`（contype='f'）、`pg_trigger`（NOT tgisinternal）を tenant_001 で数えた
+
+## 9. 第2回審査のあとの追加の読み取り（reader 鍵、2026-11-27 12:30 JST）
+- 規則 B の 6 表の秘密でない列の数（`pg_attribute` を表ごとに数え、`lower(attname)` が拒否の型に当たらない列）: bots 13・discord_channel_webhooks 5・staff 18・tcg_distribution_targets 10・tenant_invoice_payment_bank 11・tenant_invoice_payment_wise 12（合計 69）
+- 秘密の列が「空を許さず既定値なし」（`attnotnull` true かつ `atthasdef` false）: bots・discord_channel_webhooks・tenant_invoice_payment_bank の 3 表。tcg_distribution_targets は既定値あり。staff・tenant_invoice_payment_wise は空を許す
+- tenant_001 の連番（relkind 'S'）: 74
+- `tenant_meta_config` の外部キー（`pg_constraint` を oid で結んで読んだ）: 1 本だけ。`fk_tenant_meta_config_connected_by_staff_id_user`（tenant_meta_config → public.users、消したとき空にする）。tenant_meta_config を参照先にする外部キーは 0 本。→ tenant_001 の別の表を消した連鎖で、tenant_meta_config の引き金が動く道は無い
+- `'tenant_001.tenant_meta_config'::regclass` を reader 鍵で使うと権限エラー（InsufficientPrivilege）。ai_reader は tenant_001 の USAGE を持たないため。→ 権限の数えは oid で渡す
