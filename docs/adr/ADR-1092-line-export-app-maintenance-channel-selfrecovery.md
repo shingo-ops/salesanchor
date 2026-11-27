@@ -120,3 +120,9 @@
 | 止められる | `SELF_RECOVERY_ENABLED` を false にしたビルドでは cycle・ensureOpen のいずれも値を書き換えないことをコードで確認 |
 
 設計: `docs/handoff/line-auto-export-app/design.md` 追補 2026-11-27「保守口（無線デバッグ）の強制開け直し」。
+
+### 追補2: 版名が中身を保証しない事象と、ビルドの自己検査（2026-11-27）
+
+端末に 16:48:51 に入った APK は版名（`versionName=0.22.0-stage3`／`versionCode=25`）は新しいのに、`classes.dex` の中身は本追補の変更前（PR #5803・`ensureOpen` のみ）のままだった事実が実機で見つかった（詳細・原因未確定の記録は `docs/handoff/line-auto-export-app/design.md` の同名節、審査記録は `docs/handoff/line-auto-export-app/review-opus-adr1092.md`）。版名だけを信じた実機検証は、合図ファイルを置いても何も起きず「アプリはファイルを読めない」という誤った結論に至る恐れがあった。
+
+対策として `build.sh` に自己検査を追加した: `AndroidManifest.xml` の `versionName` を唯一の出所として生成した版名の刻印（`BuildStamp.VERSION_NAME`）が、できあがった `classes.dex` の中に実在するかを確認し、無ければビルドを失敗させる。端末の古い `classes.dex` に対して同じ検査を行うと実際に不合格（文字列が見つからない）になることを確認済み。これにより、版名と中身がずれたAPKを本ビルド手順からは作れなくなった。

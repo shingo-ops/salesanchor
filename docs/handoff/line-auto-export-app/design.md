@@ -1034,9 +1034,28 @@ watermark（取り込みの起点）は送信が受理されたときだけ進�
 
 ### 黙らせない
 
-合図ファイルの確認でディレクトリが読めない・一覧できない（`READ_EXTERNAL_STORAGE` が未付与である等）場合は、黙らず `signal_unreadable` を `recordIfChanged` で1回だけ記録する（毎回は書かない）。これが実機検証の判定材料になる。
+合図ファイルの確認でディレクトリが読めない・一覧できない（`READ_EXTERNAL_STORAGE` が未付与である等）場合は、黙らず `signal_unreadable` を記録する（毎回は書かない。重複判定は `ensureOpen`/`cycle` の結果枠とは別の専用の枠で行う。理由は下記「Opus審査で見つけて直した欠陥」参照）。これが実機検証の判定材料になる。
+
+### Opus審査で見つけて直した欠陥（2026-11-27・続きの便）
+
+1. **記録があふれる**: `signal_unreadable` の重複判定が `ensureOpen`/`cycle` と共用の枠（`SchedulerStore.getLastMaintenanceChannelResult`）を使っていたため、ディレクトリが読めずかつWi-Fiが無い回に枠の往復が起き、記録が毎回2行出ていた。`SchedulerStore` に専用の枠（`last_signal_unreadable`）を追加して分離した。
+2. **合図を取りこぼす**: 合図ファイルの削除が成功した場合も識別子（`lastModified`+`length`）を保存していたため、次に置いた合図が偶然同じ識別子だと誤って無視していた。削除に成功したときは識別子を消す（保存するのは削除に失敗したときだけ）ように直した。
+
+### 版名が中身を保証しない事象への対策（2026-11-27）
+
+実機検証を始める前に、**端末に入ったAPKの版名（versionName/versionCode）が「中身（コード）」まで保証しない**という重大な事象が実機で見つかった。端末に 2026-11-27 16:48:51 に入ったAPKは `dumpsys` の申告上 `versionName=0.22.0-stage3`／`versionCode=25` だったが、`classes.dex`（md5 `216bf5c57db4a42f5e392c1c0de7c8d0`）を文字列照合した結果、`cycle`・`checkSignalFile`・`maintenance-open`・`cycled_opened` の文字列が1件も無く、実際のコードは PR #5803（`ensureOpen` のみ）のままだった。版名だけを信じて実機検証（本追補の「実機検証手順」）を行うと、合図ファイルを置いても何も起きず「アプリはファイルを読めない」という**誤った結論**に至る恐れがある。
+
+このAPKが生まれた経路は未確定（本PRの実装は2026-11-27 17:03以降の作業で、該当時刻 16:48:51 より後に初めてコミットが生まれているため、本PRの作業がその直接の原因ではないことは commit のタイムスタンプから確認できる。どのビルド・どの手順で生まれたかは別途調査中）。原因の特定を待たずに、**版名が中身を保証しない状態を機械的に防ぐ仕組み**を `tools/line-auto-export-app/build.sh` に追加した。
+
+**対策（`tools/line-auto-export-app/build.sh` の自己検査）**:
+
+- `AndroidManifest.xml` の `android:versionName` を**唯一の出所**として、ビルドのたびに `BuildStamp.java`（`final class BuildStamp { static final String VERSION_NAME = "..."; }`）を生成する（手で二重管理しない）。
+- ビルドの最後（`classes.dex` 生成直後、`[3b/8]`）に、できあがった `classes.dex` の中にその版名の文字列が実在するかを `grep -a -F` で確認する。**含まれていなければ 0 以外の終了コードでビルドを失敗させる**。
+- 検証: 端末の実際の古い `classes.dex`（上記 md5 `216bf5c5...`）に対して同じ `grep -a -F "0.22.0-stage3"` を実行すると**見つからない**（マッチ0件・終了コード1）。この端末の古い dex には旧版の文字列（`0.21.0-stage3`）も無い（本対策より前のビルドは版名をコードに刻印していなかったため）。一方、本PRのコミット（`2b8c6b808`）でビルドした `classes.dex` には `0.22.0-stage3` が1件存在し、自己検査は `OK` で通過した。これにより、今回見つかった「版名は新しいがdexの中身が古い」というズレを、この自己検査が機械的に検出できることを確認した。
 
 ### 実機検証手順（PO の承認後に実施。本PRの範囲外）
+
+**前提**: 実機に入れ直す前に、上の自己検査が `OK` で通ったビルド（本PRのコミットでビルドした `out/app-debug.apk`）であることを確認すること。版名の `dumpsys` 申告だけでは中身を保証しない（上記参照）。
 
 (a) 端末再起動後、`run-YYYYMMDD.jsonl` に `trigger=boot` の `cycled_opened`（または `cycled_blocked`）が出ることを確認する。
 (b) この開発環境（proot の中の Ubuntu）から `maintenance-open` を `/sdcard/Download/sa-line-notify/` に置き、10分以内に `trigger=signal` の記録が `run-YYYYMMDD.jsonl` に出て、`maintenance-open` ファイルが消えていることを確認する。
