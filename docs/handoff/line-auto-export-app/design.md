@@ -1041,21 +1041,36 @@ watermark（取り込みの起点）は送信が受理されたときだけ進�
 1. **記録があふれる**: `signal_unreadable` の重複判定が `ensureOpen`/`cycle` と共用の枠（`SchedulerStore.getLastMaintenanceChannelResult`）を使っていたため、ディレクトリが読めずかつWi-Fiが無い回に枠の往復が起き、記録が毎回2行出ていた。`SchedulerStore` に専用の枠（`last_signal_unreadable`）を追加して分離した。
 2. **合図を取りこぼす**: 合図ファイルの削除が成功した場合も識別子（`lastModified`+`length`）を保存していたため、次に置いた合図が偶然同じ識別子だと誤って無視していた。削除に成功したときは識別子を消す（保存するのは削除に失敗したときだけ）ように直した。
 
-### 版名が中身を保証しない事象への対策（2026-11-27）
+### 版番号の衝突と、版名が中身を保証しない事象への対策（2026-11-27）
 
-実機検証を始める前に、**端末に入ったAPKの版名（versionName/versionCode）が「中身（コード）」まで保証しない**という重大な事象が実機で見つかった。端末に 2026-11-27 16:48:51 に入ったAPKは `dumpsys` の申告上 `versionName=0.22.0-stage3`／`versionCode=25` だったが、`classes.dex`（md5 `216bf5c57db4a42f5e392c1c0de7c8d0`）を文字列照合した結果、`cycle`・`checkSignalFile`・`maintenance-open`・`cycled_opened` の文字列が1件も無く、実際のコードは PR #5803（`ensureOpen` のみ）のままだった。版名だけを信じて実機検証（本追補の「実機検証手順」）を行うと、合図ファイルを置いても何も起きず「アプリはファイルを読めない」という**誤った結論**に至る恐れがある。
+実機検証を始める前に重大な事象が見つかり、調査の結果**原因が確定した**（経緯は `docs/handoff/line-auto-export-app/review-opus-adr1092.md` の「続き（2026-11-27・版番号の衝突）」節に詳細を記録。ここでは確定した事実と対策のみ記す）。
 
-このAPKが生まれた経路は未確定（本PRの実装は2026-11-27 17:03以降の作業で、該当時刻 16:48:51 より後に初めてコミットが生まれているため、本PRの作業がその直接の原因ではないことは commit のタイムスタンプから確認できる。どのビルド・どの手順で生まれたかは別途調査中）。原因の特定を待たずに、**版名が中身を保証しない状態を機械的に防ぐ仕組み**を `tools/line-auto-export-app/build.sh` に追加した。
+**確定した事実**: 端末に 2026-11-27 16:48:51 に入ったAPK（`classes.dex` md5 `216bf5c57db4a42f5e392c1c0de7c8d0`）は `dumpsys` 申告上 `versionName=0.22.0-stage3`／`versionCode=25` で、本PRが当初作っていた版と**同じ値**だった。ハッシュ照合の結果、このAPKは別ブランチ `release/line-export-click-retry`（PR #5808・OPEN）のビルドと1バイト単位で同一であることが確定した。PR #5808 は `versionCode=25`／`versionName=0.22.0-stage3` を本PRより先にコミットしており、**2つの独立したPRが同じ版番号を取り合っていた**。版名が偽りだったわけではなく（PR #5808 のビルド自体は版名と中身が一致した正当なビルド）、**版番号だけでは、端末に入っているのがどちらのPRのコードかを識別できない**状態になっていたことが真因だった。
 
-**対策（`tools/line-auto-export-app/build.sh` の自己検査）**:
+**対応**: 本PRの `versionCode` を 25→26、`versionName` を 0.22.0-stage3→0.23.0-stage3 に上げ、PR #5808 の値と重複しないようにした。再ビルドし、自己検査（下記）が新しい版番号（`0.23.0-stage3`）で `OK` になることを確認した。
+
+**版名が中身を保証しない状態そのものへの対策（`tools/line-auto-export-app/build.sh` の自己検査。引き続き有効）**:
 
 - `AndroidManifest.xml` の `android:versionName` を**唯一の出所**として、ビルドのたびに `BuildStamp.java`（`final class BuildStamp { static final String VERSION_NAME = "..."; }`）を生成する（手で二重管理しない）。
 - ビルドの最後（`classes.dex` 生成直後、`[3b/8]`）に、できあがった `classes.dex` の中にその版名の文字列が実在するかを `grep -a -F` で確認する。**含まれていなければ 0 以外の終了コードでビルドを失敗させる**。
-- 検証: 端末の実際の古い `classes.dex`（上記 md5 `216bf5c5...`）に対して同じ `grep -a -F "0.22.0-stage3"` を実行すると**見つからない**（マッチ0件・終了コード1）。この端末の古い dex には旧版の文字列（`0.21.0-stage3`）も無い（本対策より前のビルドは版名をコードに刻印していなかったため）。一方、本PRのコミット（`2b8c6b808`）でビルドした `classes.dex` には `0.22.0-stage3` が1件存在し、自己検査は `OK` で通過した。これにより、今回見つかった「版名は新しいがdexの中身が古い」というズレを、この自己検査が機械的に検出できることを確認した。
+- 検証: 端末の実際の古い `classes.dex`（上記 md5 `216bf5c5...`）に対して同じ `grep -a -F "0.22.0-stage3"` を実行すると**見つからない**（マッチ0件・終了コード1）。一方、本PRのコミットでビルドした `classes.dex` には現在の版名が1件存在し、自己検査は `OK` で通過する。
+
+**自己検査の限界（過信しないこと）**: 今回の真因は「2つのPRが同じ版番号を使っていた」ことであり、PR #5808 のビルドは自己整合（版名と中身が一致）している。**この自己検査は「1つのビルドの中で版名とコードがずれていないか」しか検出できず、「複数のPR・ブランチ間で版番号が重複していないか」は検出できない。** 版番号の衝突は、ブランチを作る時点・統合前に、他にオープン中のPRが使っている値を確認して避ける運用でしか防げない。
+
+**実機で実際に動いているコードの識別方法（版名を信じない）**: 版名（`dumpsys`の申告）は中身を保証しない。実際に動いているコードを識別するには `classes.dex` の内容を直接確認する。
+
+```bash
+adb shell pm path jp.salesanchor.lineexport   # 実際のAPKパスを確認
+adb pull <上で分かったパス> /tmp/device.apk
+unzip -o /tmp/device.apk classes.dex -d /tmp/device_extract
+strings -a /tmp/device_extract/classes.dex | grep -x "checkSignalFile\|cycle\|maintenance-open\|cycled_opened"
+```
+
+目印の文字列（本PRなら `checkSignalFile`・`cycle`・`maintenance-open`・`cycled_opened`）が出れば、そのPRのコードが実際に動いている証拠になる。
 
 ### 実機検証手順（PO の承認後に実施。本PRの範囲外）
 
-**前提**: 実機に入れ直す前に、上の自己検査が `OK` で通ったビルド（本PRのコミットでビルドした `out/app-debug.apk`）であることを確認すること。版名の `dumpsys` 申告だけでは中身を保証しない（上記参照）。
+**前提**: 実機に入れ直す前に、上の自己検査が `OK` で通ったビルド（本PRのコミットでビルドした `out/app-debug.apk`）であることを確認すること。さらに、実機に入れた後は版名の `dumpsys` 申告だけで判断せず、上記の `adb pull` → `strings` の手順で実際にそのPRのコードが動いていることを確認すること（版名は複数PR間で衝突しうるため）。
 
 (a) 端末再起動後、`run-YYYYMMDD.jsonl` に `trigger=boot` の `cycled_opened`（または `cycled_blocked`）が出ることを確認する。
 (b) この開発環境（proot の中の Ubuntu）から `maintenance-open` を `/sdcard/Download/sa-line-notify/` に置き、10分以内に `trigger=signal` の記録が `run-YYYYMMDD.jsonl` に出て、`maintenance-open` ファイルが消えていることを確認する。

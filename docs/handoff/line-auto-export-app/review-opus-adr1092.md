@@ -76,27 +76,43 @@
 
 ---
 
-## 続き（2026-11-27・版名が中身を保証しなかった事象）
+## 続き（2026-11-27・版番号の衝突。当初「版名が中身を保証しなかった事象」として記録した件の訂正）
 
-PO が実機で重大な事実を測った: 端末のアプリが **2026-11-27 16:48:51 に入れ替えられていた**（実機への `adb install` は本便の作業規約で禁止されている操作）。さらに、入れ替わったAPKは `dumpsys` の申告では `versionName=0.22.0-stage3`／`versionCode=25`（本便が作る版と同じ）だが、**中身（`classes.dex`）は古い**ことが判明した。
+### 訂正（記録の正確さのため残す）
 
-### 事実（PO の実機計測・本審査で裏取りした範囲）
+当初、Opus は「端末のアプリが2026-11-27 16:48:51に入れ替えられ、版名（`versionName=0.22.0-stage3`／`versionCode=25`）は新しいのに中身は古い＝版名が偽りのAPKが入った」と記録し、本便（実装担当）がその入れ替えを行ったのではないかと疑って指摘した。**その後 Opus 自身が実機とハッシュで裏取りし、この疑いは誤りだったことが確定した。** 本便（実装担当）は `adb install` 等の adb コマンドを一度も実行していない（Bashコマンド履歴に `adb` は一度も現れない。事象発覚後に読み取り専用の `adb devices`／`which adb` を事実確認のために実行したのみ）。コミットのタイムスタンプ（worktree作成 2026-11-27T08:00:07Z・最初のコミット08:03:31Z）も、端末への入れ替え時刻（16:48:51 JST＝07:48:51 UTC）より後であり、物理的に本便の作業が原因になり得ないことを裏付けていた。
 
-- 端末の APK の `classes.dex`（md5 `216bf5c57db4a42f5e392c1c0de7c8d0`）には `ensureOpen` しか無く、`cycle`・`checkSignalFile` は存在しない。文字列 `maintenance-open`・`cycled_opened`・`signal_unreadable` も0件（本審査で同ファイルに対し `grep -a` で再確認し、PO の報告と一致した）。
-- 本ブランチのコミット `576269377`（1便目）・`2b8c6b808`（Opus審査の指摘2件を直した便）でビルドした `classes.dex` には、それぞれ該当する文字列が存在する（コミット済みのビルドは健全）。
-- **本PRの作業がその直接の原因ではないことを、コミットのタイムスタンプで確認した**: 端末への入れ替えは 16:48:51 JST（=07:48:51 UTC）。本ブランチの worktree 作成は 2026-11-27T08:00:07Z（17:00:07 JST）、最初のコミット `576269377` は 2026-11-27 17:03:31 JST（08:03:31 UTC）、`check-before-submit.sh` の実行記録も 08:04:14Z 以降のみ。いずれも件の入れ替え時刻より**後**であり、この時点で本ブランチのコミットはまだ1つも存在しなかった。本便の実装者（Claude、本審査記録の実装側）は `adb install` 等のadbコマンドを実行していない（本便のBashコマンド履歴に `adb` は一度も現れない。件の事象発覚後に読み取り専用の `adb devices`／`which adb` を事実確認のために実行したのみ）。
-- 入れ替わったAPKがどのビルド・どの手順・どのセッションで生まれたかは**未確定**（別のworktreeでの作業や、マニフェストだけ先に上げてビルドした等の心当たりは本便側には無い。「分からない」が正直な答え）。
+### 確定した事実（ハッシュ一致による特定）
 
-### 対策（版名が中身を保証しない状態を機械的に防ぐ）
+- 端末のAPK（md5 `cc6bbb97f81dc10570c7b738f598e255`）は、**別ブランチ `release/line-export-click-retry`（`/root/worktrees/release-line-export-click-retry/tools/line-auto-export-app/out/app-debug.apk`）のビルドと1バイト単位で同一**であることがハッシュ一致で確定した。そのツリーのビルド時刻は 15:46:49、マニフェスト更新は 15:46:46（本便のworktree作成・最初のコミットより前）。
+- そのツリーのコードに `cycle`・`checkSignalFile` は0件（＝PR #5803 のままのコード）。
+- そのブランチは **PR #5808（OPEN）** で、`versionCode=25`／`versionName=0.22.0-stage3` を**先に**コミット済みだった（`origin/main` は 24／0.21.0-stage3）。
+- つまり「版名が偽りのAPK」ではなく、**PR #5808 の正当な自己整合ビルド**だった。本便（本PR）も独立に同じ値（25／0.22.0-stage3）を次の版として選んでいたため、**2つのPRが同じ版番号を取り合っていた**。版番号だけでは、端末に入っているのがどちらのPRのコードかを識別できない状態になっていた。
 
-原因の特定を待たず、再発を防ぐ関所を `build.sh` に追加した（詳細: `docs/handoff/line-auto-export-app/design.md` 「版名が中身を保証しない事象への対策」節）:
+### 対応（版番号を上げて衝突を解消）
 
-- `AndroidManifest.xml` の `versionName` を唯一の出所として `BuildStamp.java`（`BuildStamp.VERSION_NAME`）を毎ビルド生成する。
-- ビルドの最後（`classes.dex` 生成直後）に、その版名の文字列が `classes.dex` に実在するかを `grep -a -F` で確認し、無ければビルドを失敗させる（0以外の終了コード）。
-- **この自己検査をコミット済みのAPK（`2b8c6b808`）で実際に流し、合格することを確認した**: `bash build.sh` の `[3b/8]` ステップが `OK: classes.dex に versionName=0.22.0-stage3 の刻印を確認` と出力し、ビルド全体が終了コード0で完了した。
-- **検知能力の確認**: 端末の古い `classes.dex`（md5 `216bf5c5...`）に対して同じ `grep -a -F "0.22.0-stage3"` を実行すると0件（不合格）になることを確認した。この dex には旧版文字列 `0.21.0-stage3` も無く（本対策より前のビルドは版名をコード側に刻印していなかったため）、本対策導入前はどの版でも中身の照合手段が無かったことも分かった。
+- 本PRの `versionCode` を 25→**26**、`versionName` を 0.22.0-stage3→**0.23.0-stage3** に上げ、PR #5808 の値と重複しないようにした。
+- 既存の `build/debug.keystore` で再ビルドし、署名 SHA-256（`c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709`）が変わらないことを確認した。
+- **自己検査（`build.sh [3b/8]`）を再実行し、`OK: classes.dex に versionName=0.23.0-stage3 の刻印を確認` を得た**（新しい版番号での刻印・検査が機能することを確認）。
+
+### 対策（版名が中身を保証しない事象そのものへの対策。引き続き有効）
+
+- `AndroidManifest.xml` の `versionName` を唯一の出所として `BuildStamp.java`（`BuildStamp.VERSION_NAME`）を毎ビルド生成し、ビルドの最後に `classes.dex` へその文字列が実在するかを `grep -a -F` で確認する自己検査は、引き続き有効（詳細: `docs/handoff/line-auto-export-app/design.md`）。
+- **この自己検査の限界（過信しないこと）**: 今回確定した真因は「版名そのものが偽り」ではなく「**異なる2つのPRが同じ版番号を使っていた**」ことだった。PR #5808 のビルドは自己整合（版名と中身が一致）しているため、**本自己検査はこの種の衝突を検出できない**。自己検査が守れるのは「1つのビルドの中で版名とコードがずれていないか」だけであり、「複数のPR・ブランチ間で版番号が重複していないか」は別の問題として運用で防ぐ必要がある（下記「運用上の注意」参照）。
+
+### 運用上の注意（今回の教訓）
+
+- 同じアプリ（`tools/line-auto-export-app/`）を複数のブランチが同時に触るため、**版番号（`versionCode`／`versionName`）は、他に在庫中（オープン）のPRが既に使っている値とぶつからない値を取る**。ブランチを作る時点で `gh pr list --search "tools/line-auto-export-app"` 等で他のオープンPRの版番号を確認するか、統合直前に最新の `origin/main` の値から改めて採番し直すのが安全。
+- **実機で実際に動いているコードの識別は、版名（`dumpsys`の申告）を信じず、`classes.dex` の内容を直接確認する**。手順:
+  ```bash
+  adb pull /data/app/~~<ランダム文字列>/jp.salesanchor.lineexport-<ランダム文字列>/base.apk /tmp/device.apk
+  # もしくは: adb shell pm path jp.salesanchor.lineexport でAPKの実際のパスを確認してから pull する
+  unzip -o /tmp/device.apk classes.dex -d /tmp/device_extract
+  strings -a /tmp/device_extract/classes.dex | grep -x "checkSignalFile\|cycle\|maintenance-open\|cycled_opened"
+  ```
+  目印の文字列（例: 本PRなら `checkSignalFile`・`cycle`・`maintenance-open`・`cycled_opened`）が出れば、そのPRのコードが実際に動いている証拠になる。
 
 ### 残っている懸念
 
-- 入れ替わったAPKの出自は未確定。別セッションの作業ログの確認が必要（本便の範囲外。PO・設計担当側で継続調査）。
-- 端末は現在、古いコード（`ensureOpen` のみ）で稼働中であり、LINEの取込自体は正常（17:11 success 確認済み）。本PRのマージ・実機導入は、原因確認とPOの承認が揃うまで行わない。
+- 端末は現在、PR #5808（`ensureOpen` のみ）のビルドで稼働中であり、本PR（保守口の強制開け直し）の機能は端末に未導入。LINEの取込自体は正常（17:11 success 確認済み）。
+- 本PRのマージ・実機への正しいビルドの導入は、PO の承認が揃うまで行わない（実機への `adb install`・再起動・`adb_wifi_enabled`/`adb_enabled` の書き換えは禁止のまま）。
