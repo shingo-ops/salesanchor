@@ -1,8 +1,8 @@
 # 実装カード 便6: 取り込みの「消した数」を、実際に消した分だけにする
 
 - 設計: docs/handoff/calendar-two-way-sync/design.md §14（正）。
-- 状態: PO 承認待ち（承認が出るまで実装しない）。
-- 枝: release/calendar-import-deleted-count（origin/main 起点。`bash scripts/new-worktree.sh release/calendar-import-deleted-count --claude` で作る。クラウドでは clone のまま commit しない）。
+- 状態: PO 承認済み（2026-11-27「1」: この成功条件のまま作る）。実装してよい。
+- 作業場所: 実装の枝は release/calendar-import-deleted-count-impl。クラウドでは clone のあと `bash scripts/new-worktree.sh release/calendar-import-deleted-count-impl` で origin/main から場所を作る。その場所で `git merge --no-edit origin/release/calendar-import-deleted-count` を流し、設計の commit を取り込んでから作業する（clone のまま commit しない）。
 - 触るファイルは 3 本だけ: `backend/app/services/calendar_service.py`・`backend/tests/test_calendar_service.py`・`backend/tests/test_calendar_sync_tenant_reset_pg.py`。ほかは触らない（migration・画面・文言・ADR・google_webhook.py も触らない）。
 
 ## 0. 着手前の実物点検（違ったら止めて BLOCKED: で返す）
@@ -122,5 +122,5 @@
 ## 6. commit と push
 
 - commit の文: `fix(calendar): count Google import deletions only when a row was deleted`。
-- push は `git -C <作業場所の絶対パス> push -u origin release/calendar-import-deleted-count` の 1 行だけで行う。
+- push は `git -C <作業場所の絶対パス> push -u origin release/calendar-import-deleted-count-impl` の 1 行だけで行う。
 - PR は作らない（Opus が作る）。終わったら DONE と commit の id を返す。
