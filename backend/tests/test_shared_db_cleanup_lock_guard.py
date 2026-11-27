@@ -255,6 +255,10 @@ _REVIEWED: dict[str, tuple[str, str]] = {
         "own_database",
         "scratch_db は使い捨て DB（:162）。DROP ROLE（:254）の役割は uuid の名前で一意（:227）",
     ),
+    "ops/test_ai_dev001_writer_db.py::test_rule_e_and_k4_public_fk_table_accepts_a_row_with_zero_public_privileges": (
+        "own_database",
+        "pg fixture が CREATE DATABASE（:58）。TRUNCATE は has_table_privilege に渡す権限の種類の文字で、消す文ではない（:251）",
+    ),
     # --- caller_locked（recon §2-2） ---
     "test_permission_resolution_pg.py::_remove_test_tenant_rows": (
         "caller_locked",
