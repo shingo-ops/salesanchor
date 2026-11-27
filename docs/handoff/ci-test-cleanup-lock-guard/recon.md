@@ -38,10 +38,10 @@
 
 | file:line | 関数 | 当たった文 | 分類 | 根拠 file:line |
 |---|---|---|---|---|
-| ops/test_ai_job_assignments_db.py:239 | test_d_history_is_append_only | row,trunc | A | `db` fixture が `CREATE DATABASE`（同:102）。文は `_fails`（失敗する前提）と使い捨て DB 内 |
-| ops/test_ai_job_assignments_db.py:289 | test_f_get_ai_assignment_reads_choice_and_raises_when_missing | row | A | 同:102（`db`）、削除は `db.cursor()`（:309） |
-| ops/test_ai_job_assignments_db.py:393 | test_h_history_names_fall_back | row | A | 同:102、削除は `db.cursor()`（:415） |
-| ops/test_ops_case_db.py:524 | test_t6_app_cannot_change_read_count | trunc | A | `pg` は `_new_db`（:135 → :91 `CREATE DATABASE`）。TRUNCATE は拒否の確認（:529 `_denied`） |
+| backend/tests/ops/test_ai_job_assignments_db.py:239 | test_d_history_is_append_only | row,trunc | A | `db` fixture が `CREATE DATABASE`（同:102）。文は `_fails`（失敗する前提）と使い捨て DB 内 |
+| backend/tests/ops/test_ai_job_assignments_db.py:289 | test_f_get_ai_assignment_reads_choice_and_raises_when_missing | row | A | 同:102（`db`）、削除は `db.cursor()`（:309） |
+| backend/tests/ops/test_ai_job_assignments_db.py:393 | test_h_history_names_fall_back | row | A | 同:102、削除は `db.cursor()`（:415） |
+| backend/tests/ops/test_ops_case_db.py:524 | test_t6_app_cannot_change_read_count | trunc | A | `pg` は `_new_db`（:135 → :91 `CREATE DATABASE`）。TRUNCATE は拒否の確認（:529 `_denied`） |
 | test_channel_masters_shared_pg.py:159 | test_deleting_tenant_removes_its_rows_in_both_tables | row | A | `_fresh()` が `CREATE DATABASE`（:58）、使用 :162 |
 | test_discord_config_rls.py:259 | test_update_delete_other_tenant_rows_affect_nothing | row | A | `_fresh()`（:124）、使用 :262 |
 | test_discord_server_records_rls.py:213 | test_update_delete_other_tenant_rows_affect_nothing | row | A | `_fresh()`（:88）、使用 :216 |

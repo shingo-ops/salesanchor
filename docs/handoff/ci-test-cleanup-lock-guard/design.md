@@ -16,7 +16,7 @@
 分類は3つ: 使い捨て（own_database・SQLite・文字として読むだけ）／札の中（public_bootstrap_lock か同じ鍵）／直した（札の中へ移した）。
 
 ## 2. 現在地（recon.md）
-- recon.md（origin/main 65934286b）: 86関数・60ファイルが当たる。A 39／B 2／C 15（CI で動く）／C-skip 21（`TEST_PG_URL` だけで動き CI では skip）／D 9。
+- docs/handoff/ci-test-cleanup-lock-guard/recon.md（origin/main 65934286b）: 86関数・60ファイルが当たる。A 39／B 2／C 15（CI で動く）／C-skip 21（`TEST_PG_URL` だけで動き CI では skip）／D 9。
 - Opus が手元で scan.py を流し直し、同じ 86関数・60ファイルを得た（2026-11-27）。
 - 前のテーマの 53ファイル・76関数は、条件を前と同じに絞ると一致する（recon §0）。
 
@@ -78,6 +78,7 @@ recon §2-3 の15件・§2-4 の21件・§4-1 の2件。直す案は recon の�
 - 測り方: G1〜G6 の表のとおり。
 
 ## 維持の仕組み
+- 守り手: backend/tests/test_shared_db_cleanup_lock_guard.py（必須チェック「pytest (SQLite + PostgreSQL RLS)」で毎回流れる）
 - 見張りの試験が、新しく足した札なしの後片付けを CI で落とす。分類を足すときは理由を書く（書くまで落ちる）。
 
 ## 10. 外部・過去事例の参照と我々への応用
