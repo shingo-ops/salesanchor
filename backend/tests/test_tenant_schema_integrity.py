@@ -100,7 +100,10 @@ async def test_schemas(admin_engine, pg_engine):
     DDL は管理者接続（admin_engine）で実行（CI role = DML only の不変条件）。
     pg_engine（salesanchor_app）はスキーマ読み取り（information_schema 等）専用。
     """
-    async with admin_engine.begin() as conn:
+    from tests.rls_bootstrap import public_bootstrap_lock
+
+    # 共有 DB のスキーマ作成・後片付けは public_bootstrap_lock の中で commit まで終える
+    async with public_bootstrap_lock(admin_engine), admin_engine.begin() as conn:
         await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA_A} CASCADE"))
         await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA_B} CASCADE"))
         await conn.execute(text(f"CREATE SCHEMA {_SCHEMA_A}"))
@@ -120,7 +123,7 @@ async def test_schemas(admin_engine, pg_engine):
 
     yield _SCHEMA_A, _SCHEMA_B
 
-    async with admin_engine.begin() as conn:
+    async with public_bootstrap_lock(admin_engine), admin_engine.begin() as conn:
         await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA_A} CASCADE"))
         await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA_B} CASCADE"))
 

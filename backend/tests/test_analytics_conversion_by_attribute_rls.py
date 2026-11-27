@@ -15,6 +15,7 @@ from app.database import get_db
 from app.models import User
 from app.routers import analytics as analytics_router
 from app.routers.analytics import conversion_by_attribute_summary
+from tests.rls_bootstrap import public_bootstrap_lock
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
@@ -250,7 +251,8 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
     finally:
         app.dependency_overrides.clear()
         with suppress(Exception):
-            async with admin_engine.begin() as conn:
+            # 共有 DB の後片付けは public_bootstrap_lock の中で commit まで終える
+            async with public_bootstrap_lock(admin_engine), admin_engine.begin() as conn:
                 for row_id in inserted_rows:
                     await conn.execute(
                         text(f"DELETE FROM {WORK_SCHEMA}.leads WHERE id = :id"),

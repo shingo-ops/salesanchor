@@ -566,7 +566,7 @@ async def seed_draft_four(seed_aggregated_dataset):
 
     yield {**data, "poke4_id": pid, "poke4_name": f"ポケカD_{tag}"}
 
-    async with eng.begin() as conn:
+    async with public_bootstrap_lock(eng), eng.begin() as conn:
         await conn.execute(text("DELETE FROM public.product_packagings WHERE product_id = :p"), {"p": pid})
         await conn.execute(text("DELETE FROM public.inventory WHERE product_id = :p"), {"p": pid})
         await conn.execute(text("DELETE FROM public.products WHERE id = :p"), {"p": pid})

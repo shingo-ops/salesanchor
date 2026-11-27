@@ -113,6 +113,7 @@ def _client_with_overrides(
 async def test_get_phase_returns_a_default(engine):
     """AC9.5: GET /super-admin/phase-switch/{tenant_id} → 現在 Phase A を返す。"""
     from sqlalchemy import text
+    from tests.rls_bootstrap import public_bootstrap_lock
 
     tag = uuid.uuid4().hex[:8]
     tenant_id = await _ensure_tenant(engine, f"sw_get_{tag}")
@@ -138,7 +139,7 @@ async def test_get_phase_returns_a_default(engine):
             assert body["scoped_phases"] == ["A"]
     finally:
         app.dependency_overrides.clear()
-        async with engine.begin() as conn:
+        async with public_bootstrap_lock(engine), engine.begin() as conn:
             await conn.execute(
                 text("DELETE FROM public.tenant_settings WHERE tenant_id = :tid"),
                 {"tid": tenant_id},
@@ -148,6 +149,7 @@ async def test_get_phase_returns_a_default(engine):
 async def test_put_phase_to_a_succeeds(engine):
     """AC9.3: PUT phase='A' → 200 OK (冪等、audit_log は best-effort 記録)。"""
     from sqlalchemy import text
+    from tests.rls_bootstrap import public_bootstrap_lock
 
     tag = uuid.uuid4().hex[:8]
     tenant_id = await _ensure_tenant(engine, f"sw_put_a_{tag}")
@@ -176,7 +178,7 @@ async def test_put_phase_to_a_succeeds(engine):
             assert phase == "A"
     finally:
         app.dependency_overrides.clear()
-        async with engine.begin() as conn:
+        async with public_bootstrap_lock(engine), engine.begin() as conn:
             await conn.execute(
                 text("DELETE FROM public.tenant_settings WHERE tenant_id = :tid"),
                 {"tid": tenant_id},
@@ -186,6 +188,7 @@ async def test_put_phase_to_a_succeeds(engine):
 async def test_put_phase_to_b_blocked_v1_2(engine):
     """AC9.3: PUT phase='B' → 400 phase_out_of_scope (spec v1.2 Out-of-scope)。"""
     from sqlalchemy import text
+    from tests.rls_bootstrap import public_bootstrap_lock
 
     tag = uuid.uuid4().hex[:8]
     tenant_id = await _ensure_tenant(engine, f"sw_put_b_{tag}")
@@ -220,7 +223,7 @@ async def test_put_phase_to_b_blocked_v1_2(engine):
                 assert row[0] != "B"
     finally:
         app.dependency_overrides.clear()
-        async with engine.begin() as conn:
+        async with public_bootstrap_lock(engine), engine.begin() as conn:
             await conn.execute(
                 text("DELETE FROM public.tenant_settings WHERE tenant_id = :tid"),
                 {"tid": tenant_id},
@@ -230,6 +233,7 @@ async def test_put_phase_to_b_blocked_v1_2(engine):
 async def test_put_phase_invalid_value_400(engine):
     """ALLOWED_PHASES 外 → 400 (DB CHECK の前段でブロック)。"""
     from sqlalchemy import text
+    from tests.rls_bootstrap import public_bootstrap_lock
 
     tag = uuid.uuid4().hex[:8]
     tenant_id = await _ensure_tenant(engine, f"sw_inv_{tag}")
@@ -244,7 +248,7 @@ async def test_put_phase_invalid_value_400(engine):
             assert r.status_code == 400, r.text
     finally:
         app.dependency_overrides.clear()
-        async with engine.begin() as conn:
+        async with public_bootstrap_lock(engine), engine.begin() as conn:
             await conn.execute(
                 text("DELETE FROM public.tenant_settings WHERE tenant_id = :tid"),
                 {"tid": tenant_id},
@@ -254,6 +258,7 @@ async def test_put_phase_invalid_value_400(engine):
 async def test_rbac_non_super_admin_403(engine):
     """AC9.3: is_super_admin=false なら 403。"""
     from sqlalchemy import text
+    from tests.rls_bootstrap import public_bootstrap_lock
 
     tag = uuid.uuid4().hex[:8]
     tenant_id = await _ensure_tenant(engine, f"sw_403_{tag}")
@@ -273,7 +278,7 @@ async def test_rbac_non_super_admin_403(engine):
             assert r_put.status_code == 403, r_put.text
     finally:
         app.dependency_overrides.clear()
-        async with engine.begin() as conn:
+        async with public_bootstrap_lock(engine), engine.begin() as conn:
             await conn.execute(
                 text("DELETE FROM public.tenant_settings WHERE tenant_id = :tid"),
                 {"tid": tenant_id},

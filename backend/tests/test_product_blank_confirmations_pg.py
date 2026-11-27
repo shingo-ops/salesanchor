@@ -56,8 +56,10 @@ async def _make_product(admin_engine) -> int:
 async def _drop_product(admin_engine, product_id: int) -> None:
     from sqlalchemy import text
 
-    async with admin_engine.begin() as conn:
-        await conn.execute(text("DELETE FROM public.products WHERE id = :id"), {"id": product_id})
+    # 共有 DB の後片付けは public_bootstrap_lock の中で commit まで終える
+    async with public_bootstrap_lock(admin_engine):
+        async with admin_engine.begin() as conn:
+            await conn.execute(text("DELETE FROM public.products WHERE id = :id"), {"id": product_id})
 
 
 async def _set_operator(conn) -> None:
