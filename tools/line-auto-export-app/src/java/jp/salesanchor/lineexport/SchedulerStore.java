@@ -23,6 +23,7 @@ final class SchedulerStore {
     private static final String KEY_LAST_IGNORING_BATTERY_OPTIMIZATIONS = "last_ignoring_battery_optimizations";
     private static final String KEY_SCHEDULED_FIRE_AT_PREFIX = "scheduled_fire_at_";
     private static final String KEY_LAST_MAINTENANCE_CHANNEL_RESULT = "last_maintenance_channel_result";
+    private static final String KEY_LAST_MAINTENANCE_SIGNAL_ID = "last_maintenance_signal_id";
 
     /** 既定はOFF（design.md: インストール直後に勝手に動き出さないこと）。 */
     private static final boolean DEFAULT_ENABLED = false;
@@ -218,6 +219,21 @@ final class SchedulerStore {
 
     static void setLastMaintenanceChannelResult(Context context, String result) {
         prefs(context).edit().putString(KEY_LAST_MAINTENANCE_CHANNEL_RESULT, result).apply();
+    }
+
+    /**
+     * 直近に処理した合図ファイル（{@code maintenance-open}）の識別子（{@code lastModified}と
+     * {@code length}を":"で連結した文字列）。design.md追補「保守口（無線デバッグ）の強制開け直し」
+     * ②: 合図ファイルの削除に失敗した場合、同じ合図で毎回cycleしてしまうのを防ぐため、処理済みの
+     * 合図をここに記録し、次回以降それと同一なら何もしない（{@link MaintenanceChannel
+     * #checkSignalFile}参照）。既定null（まだ一度も処理していない）。
+     */
+    static String getLastMaintenanceSignalId(Context context) {
+        return prefs(context).getString(KEY_LAST_MAINTENANCE_SIGNAL_ID, null);
+    }
+
+    static void setLastMaintenanceSignalId(Context context, String signalId) {
+        prefs(context).edit().putString(KEY_LAST_MAINTENANCE_SIGNAL_ID, signalId).apply();
     }
 
     private static SharedPreferences prefs(Context context) {

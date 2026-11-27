@@ -271,15 +271,22 @@ final class RunLogger {
 
     /**
      * 保守口（無線デバッグ）が切れていたら開き直す仕組み（ADR-1092、design.md追補 2026-11-27
-     * 「保守口（無線デバッグ）が切れたらアプリが開き直す」）の結果が変化したときだけ呼ぶ
-     * （{@link MaintenanceChannel}参照）。{@link #logBatteryExemptionChanged}と同じ
-     * 「単発行・runIdに紐づかない」扱い。毎回は呼ばれない（変化時だけのため、ログが膨らまない）。
+     * 「保守口（無線デバッグ）が切れたらアプリが開き直す」／「保守口（無線デバッグ）の強制
+     * 開け直し」）の結果を記録する（{@link MaintenanceChannel}参照）。{@code result}が
+     * "opened"/"cycled_opened"/"cycled_blocked"のときは毎回呼ばれる。それ以外（変化時だけ
+     * {@link MaintenanceChannel#recordIfChanged}経由で呼ばれる）は{@link
+     * #logBatteryExemptionChanged}と同じ「単発行・runIdに紐づかない」扱い。
      *
      * @param result "opened"（0だったものを1にできた）/ "blocked"（書いたが1にならなかった。
-     *     Wi-Fiが無い等）/ "no_permission"（WRITE_SECURE_SETTINGS未付与）
-     * @param valueAfter 書き込みを試みた後に読み直した{@code adb_wifi_enabled}の値
+     *     Wi-Fiが無い等）/ "no_permission"（WRITE_SECURE_SETTINGS未付与）/ "cycled_opened"
+     *     （強制的に0→1と開け閉めして1になった）/ "cycled_blocked"（開け閉めしても1にならなかった。
+     *     Wi-Fiが無い等）/ "signal_unreadable"（合図ファイルの確認でストレージが読めなかった）
+     * @param valueAfter 書き込みを試みた後に読み直した{@code adb_wifi_enabled}の値。
+     *     対象外（signal_unreadable等）のときは-1
+     * @param trigger 呼び出し元の引き金。"run"（毎回の実行予約時のensureOpen）/
+     *     "boot"（起動時のcycle）/ "signal"（合図ファイルを見たcycle・checkSignalFile）
      */
-    static void logMaintenanceChannel(Context context, String result, int valueAfter) {
+    static void logMaintenanceChannel(Context context, String result, int valueAfter, String trigger) {
         JSONObject json = new JSONObject();
         try {
             json.put("at", formatIso8601(System.currentTimeMillis()));
@@ -287,6 +294,7 @@ final class RunLogger {
             json.put("phase", "maintenance_channel");
             json.put("result", result);
             json.put("adbWifiEnabled", valueAfter);
+            json.put("trigger", trigger == null ? "" : trigger);
         } catch (JSONException e) {
             Log.w(TAG, "run log maintenance channel build failed: " + e);
             return;

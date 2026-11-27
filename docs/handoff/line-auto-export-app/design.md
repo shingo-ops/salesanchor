@@ -1005,3 +1005,43 @@ watermark（取り込みの起点）は送信が受理されたときだけ進�
 ### 変えていないもの
 
 既存のタイミング（`FLOOR_INTERVAL_MS` 等）、既存のログ項目の意味、`adb_enabled`、`targetSdkVersion`（24）、送信側 `tools/termux-line-import/client.py`。
+
+## 追補 2026-11-27 保守口（無線デバッグ）の強制開け直し
+
+対象ADR: ADR-1092 追補（本節と同日・同見出しの追補をADR側にも記録した）。
+
+### 実測した事実（2026-11-27・SC-51G・再測不要）
+
+- 端末 SC-51G / Android 16 / adb は `127.0.0.1:46467` でつながっている（`adb devices` で1台）。
+- アプリは `jp.salesanchor.lineexport` 0.21.0-stage3（2026-11-27 14:38 導入）。`android.permission.WRITE_SECURE_SETTINGS` は `granted=true`。
+- `adb_wifi_enabled`=1、`adb_enabled`=0、`service.adb.tcp.port`=5555（再起動で消える値）。
+- アプリは `targetSdkVersion=24`（旧方式のストレージ）。`WRITE_EXTERNAL_STORAGE` は `granted=true`、`READ_EXTERNAL_STORAGE` は `granted=false`。
+- この開発環境（proot の中の Ubuntu）から `/sdcard/Download/sa-line-notify/` へのファイル作成・削除は成功する（実証済み）。そこに置いたファイルは uid 10342 / group 1023 / 0660 になる。
+- アプリは製品ビルドで `run-as` が使えないため、**アプリ側がそのファイルを読めるか・消せるかは実機検証で確かめる段階**（下記「実機検証手順」参照）。読めない場合に黙らない作りにした（下記「対処」）。
+- 既存実績: `/sdcard/Download/sa-line-notify/run-20261127.jsonl` に `phase=maintenance_channel result=opened` が 14:41 に1件ある。
+
+### 解決したい穴
+
+既存の `MaintenanceChannel.ensureOpen` は `adb_wifi_enabled` が 0 のときだけ 1 を書く。ところが実機では**値が 1 のまま adbd（無線デバッグのサーバー本体）が動いていない**状態が起き、アプリは「1 だから正常」と見て何もせず、人が端末画面で OFF→ON するまで復旧しなかった。値を見るだけでは直らないため、強制的な 1→0→1 の開け閉め（cycle）を行う経路を追加した。
+
+### 対処
+
+1. **起動時は必ず cycle する**。`AlarmReceiver` の BOOT_COMPLETED 経路は `ensureOpen` ではなく `MaintenanceChannel.cycle(context, "boot")` を呼ぶ（既存の構造どおり goAsync や別スレッドへの委譲は無く、同期呼び出しのまま。cycle 内部の約2秒の待ちは BroadcastReceiver の実行時間制限（約10秒）に対して十分に短い）。
+2. **合図ファイルを見たら cycle する**。`RunScheduler.scheduleAt` が `MaintenanceChannel.ensureOpen` を呼ぶ直前に、合図ファイル（ファイル名 `maintenance-open`。拡張子なし。場所は `LineNotifyListenerService.resolveStorageDir` が返すディレクトリ＝`run-*.jsonl` と同じ場所）の有無を `MaintenanceChannel.checkSignalFile` で確認する。あれば `cycle(context, "signal")` を実行し、ファイルを削除する。削除に失敗した場合は、処理した合図の識別子（`lastModified` と `length` の組）を `SchedulerStore` に保存し、次回以降それと同一なら何もしない（cycle もしない・記録もしない）。削除が成功した場合も同様に識別子を保存する。
+3. **毎回は cycle しない**。通常の実行予約時（`RunScheduler` の予約）は今までどおり `ensureOpen`（0 のときだけ 1 を書く）のまま。cycle は実行中の ADB 接続を切るため、「起動時」と「合図があったとき」だけに限定する。
+
+`cycle` の手順: `adb_wifi_enabled` に 0 を書く → 約2000ms 待つ → 1 を書く → 読み直す。読み直して 1 なら `cycled_opened`、1 にならなければ `cycled_blocked` として、どちらも変化比較せず毎回記録する（既存の `opened` と同じ考え方＝復旧の実績が残らないと ADR-1092「維持の仕組み」が成り立たない）。Wi-Fi が無い回は1を書いても定着しない（実測。上の追補 2026-11-27 参照）ため、その場合は `cycled_blocked` を記録して終わり、復旧は次回以降の `ensureOpen` に持ち越す。Wi-Fi 状態の判定（新しい権限の追加）は行わない。書き換える設定キーは `adb_wifi_enabled` だけ（ADR-1092 What-4）。`adb_enabled` には絶対に触らない。新しい権限はマニフェストに追加していない。
+
+### 黙らせない
+
+合図ファイルの確認でディレクトリが読めない・一覧できない（`READ_EXTERNAL_STORAGE` が未付与である等）場合は、黙らず `signal_unreadable` を `recordIfChanged` で1回だけ記録する（毎回は書かない）。これが実機検証の判定材料になる。
+
+### 実機検証手順（PO の承認後に実施。本PRの範囲外）
+
+(a) 端末再起動後、`run-YYYYMMDD.jsonl` に `trigger=boot` の `cycled_opened`（または `cycled_blocked`）が出ることを確認する。
+(b) この開発環境（proot の中の Ubuntu）から `maintenance-open` を `/sdcard/Download/sa-line-notify/` に置き、10分以内に `trigger=signal` の記録が `run-YYYYMMDD.jsonl` に出て、`maintenance-open` ファイルが消えていることを確認する。
+(c) `signal_unreadable` が出た場合は、アプリが `READ_EXTERNAL_STORAGE` 未付与等によりこの方式でファイルを読めていないことを意味するため、合図の受け渡し方式（権限の追加・別の受け渡し経路等）の見直しが必要と判断する。
+
+### 変えていないもの
+
+既存の `ensureOpen` の挙動（0 のときだけ 1 を書く・1 のときは記録もしない・毎回の実行予約時だけに呼ばれる）、既存のタイミング（`FLOOR_INTERVAL_MS` 等）、既存のログ項目の意味、`adb_enabled`、`targetSdkVersion`（24）、送信側 `tools/termux-line-import/client.py`。ビルドは ADR-1090 の7に従い、実機と同じ既存の `build/debug.keystore` で再ビルドした（`apksigner verify --print-certs` の SHA-256 が実機の APK と一致することを確認済み）。

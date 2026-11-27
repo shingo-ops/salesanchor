@@ -437,8 +437,13 @@ final class RunScheduler {
         // 後回しにされたことを検知・記録・復旧できる仕組み」2026-11-26。notifyIfExactModeChanged
         // と同じ「毎回ではなく変化時だけ記録する」作り）。
         checkBatteryOptimizationExemptionChanged(context);
+        // 合図ファイル（maintenance-open）があれば強制的に開け閉め(cycle)する（design.md追補
+        // 「保守口（無線デバッグ）の強制開け直し」②）。ensureOpenより前に確認する（合図が
+        // あればensureOpenの「0なら1を書く」より強い手段で開け直すため）。
+        MaintenanceChannel.checkSignalFile(context);
         // 保守口（無線デバッグ）が切れていたら開き直す（ADR-1092、design.md追補 2026-11-27）。
-        // 全ての予約がここを通るため、通常運転はこれで覆える。
+        // 全ての予約がここを通るため、通常運転はこれで覆える。cycleとは違い、値が1なら何もしない
+        // （毎回はcycleしない。design.md追補「保守口（無線デバッグ）の強制開け直し」③）。
         MaintenanceChannel.ensureOpen(context);
         // 空振り検知用に、今回予約した発火予定時刻を引き金ごとに保存する（design.md追補参照、
         // 上記と同じ）。発火を受けたらonAlarmFiredが消す。
