@@ -119,3 +119,16 @@
 - 【事実】本番の数（読むだけの鍵・2026-11-26 15:43Z の片付け後）: tenant_001 の予定の行は元からの 3 行だけ。繰り返しの元の行・例外の行は 0 行。
 - 【事実】既存の試験 `backend/tests/test_calendar_service.py:2289-2304` の `test_series_changed_in_google_is_skipped` は、Google の元の予定が `cancelled` で回が「消していない」形（題名を直した回）のときに飛ばすことを確かめている。便5 は回も消した形のときだけ消すので、この試験はそのまま通る。
 - 【事実】本物の PostgreSQL の試験 `backend/tests/test_calendar_sync_tenant_reset_pg.py` に、取り込みの書き込みの試験がある（`:560` 単発の消し、`:578` 回の消し・直し、`:612` Google の id の重なり）。
+
+## 便6（2026-11-27・取り込みの「消した数」が膨らむ件）
+
+- PO の依頼: 2026-11-27「1」（実際に消した行だけを数えるように直す。設計を出して承認をもらう）。
+- 既存 ADR の確認: 取り込みの数え方を決めた ADR は無い（`git grep -il "upserted\|deleted=" origin/main -- docs/adr/` は 0 件・2026-11-27）。消す動きの決めは ADR-1059・ADR-1075 で、便6 は動きを変えない。
+- 【事実】本番の記録（Loki・2026-11-27 06:31:33 UTC）: 便5 の本番の確かめで「Google 取り込み完了 (tenant=1, upserted=0, deleted=730, full=False)」。本番の読むだけの鍵で、消えた行はテストの元の行 id 10 と例外の行 id 11 の 2 行（06:31:51 UTC に 0 行）。tenant_001 に残る 3 行（id 1・2・3、11/3〜11/5 作成）は更新時刻が変わっていない。
+- 【事実】実物（origin/main 218e4fc7c）:
+  - `backend/app/services/calendar_service.py:1983-1992`: Google で作った予定の消した知らせは `source='google'` の行を消し、消した行が 0 でも "deleted" を返す。
+  - ほかの "deleted" を返す所（`:1635`・`:1798`・`:1903`）は、行を消した・印を付けたときだけ返す。`:1893` は消した印の例外の行を 1 行作ったときに返す。
+  - `backend/app/services/google_webhook.py:346-347`: "deleted" を 1 つ 1 つ数える。`:376` で upserted と deleted の和が 0 より大きければ予定の画面へ合図を出す。`:382` で記録に出す。
+  - `:300` の差分は `singleEvents: True`。繰り返しを消すと、回が 1 つずつ消した形で届く。元の行を消した後の回は、`_is_app_origin` が偽になって `:1983-1992` へ落ちる。
+- 【推測】730 は Google が消した形で送った回の数。Google が何回分まで送るかは確かめていない。数がどうであれ、消した行は 0 行。
+- 【事実】`backend/tests/test_calendar_service.py:803-819` の `test_deletes_cancelled_event_only_google_rows` は、消した行の数を決めずに "deleted" を期待している。便6 で行の数を決めた試験へ直す。
