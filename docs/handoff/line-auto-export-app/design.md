@@ -966,3 +966,42 @@ watermark（取り込みの起点）は送信が受理されたときだけ進�
 ### 変えていないもの
 
 `USE_EXACT_ALARM` の宣言（効かないため）、`targetSdkVersion`（24 のまま）、`minSdkVersion`（23 のまま）、アラームの張り方（`setExactAndAllowWhileIdle` のまま）、送信側 `tools/termux-line-import/client.py`、`termux-job-scheduler` の登録。
+
+## 追補 2026-11-27 保守口（無線デバッグ）が切れたらアプリが開き直す
+
+対象ADR: ADR-1092（方針の芯と実測値はここに記録した）。
+
+### 実測した事実（2026-11-27・SC-51G）
+
+- Wi-Fi が切れている間は `adb_wifi_enabled` に 1 を書いても定着しない（直後・10 秒後ともに 0）。Wi-Fi 接続中なら定着する（直後・10 秒後ともに 1）。
+- `adb tcpip 5555` に切り替えると `adb_wifi_enabled` は 0 になる。固定ポートの待ち受けは `[::]:5555`＝全インターフェースで、同一 LAN から到達できる。
+- 原因の切り分け: 連続稼働 24 日（再起動は原因でない）／Samsung 自動ブロッカーは OFF・ブロック実績 0（原因でない）／Wi-Fi の切断は多数（ON:97・OFF:268、`WIFI_DISABLED` 2 回、`MAC_CHANGE` 由来あり）。
+- proot の中の Ubuntu から Android のコマンドは実行できない（`getprop`・`toybox`・`am`・`settings` の 3 方式すべて `Operation not permitted`）。
+- `WRITE_SECURE_SETTINGS` の保護レベルは `development` を含み、`pm grant` で付与できる。
+
+### 対処
+
+アプリに `WRITE_SECURE_SETTINGS` を宣言し、起動時（BOOT_COMPLETED）と毎回の実行時に `adb_wifi_enabled` を確認して 0 なら 1 を書く。Wi-Fi が無い回は定着しないため、次の回に持ち越す（1 日約 70 回動くので Wi-Fi が戻れば数分〜十数分で開き直る）。書き換えるのは `adb_wifi_enabled` の 1 キーだけで、`adb_enabled`（USB デバッグ）には触らない。記録は変化時だけ 1 行。コードの定数で止められるようにする。
+
+### 守ること
+
+- 固定ポート（`adb tcpip`）は常用しない。調査で開いた 5555 は本方式の確認後に閉じ、`adb_enabled` も 0 に戻す。
+- `pm grant` はアプリを削除して入れ直すと消える。入れ替え手順に付与を含める。
+- 端末を信頼できないネットワークで使うときは定数で止める。
+
+### 検証
+
+| 基準 | 検証方法 |
+|---|---|
+| ビルドが通る | `cd tools/line-auto-export-app && bash build.sh` が終了コード 0 |
+| 自動復旧が働く | `settings put global adb_wifi_enabled 0` の後にアプリを 1 回動かすと 1 に戻り、記録が 1 行残る |
+| 他の設定を書かない | 前後で `adb_enabled` の値が変わらない |
+| 既存の集計が壊れない | 既存のログ項目・タイミングを変えていないことを差分で確認 |
+
+### 外部・過去事例
+
+`adb tcpip` と `adb_enabled` の変更は、切替の瞬間に adbd を再起動させて自分の足場（ADB 接続）を壊す。2026-10-13 と 2026-11-27 に実際に起きた。復旧はポート走査（30000-55000・約 60 秒）→ `adb connect` で可能（2026-11-27 は 42181 で復帰）。この経験から足場をアプリ側に移した。
+
+### 変えていないもの
+
+既存のタイミング（`FLOOR_INTERVAL_MS` 等）、既存のログ項目の意味、`adb_enabled`、`targetSdkVersion`（24）、送信側 `tools/termux-line-import/client.py`。
