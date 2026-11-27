@@ -32,7 +32,7 @@
 | `UPDATE leads SET customer_name = 'dev001-k1-20261128-b' WHERE id = 954 RETURNING id, customer_name` | 18:29:21 | bcb8f1044ee4 | 1 | ok |
 | `DELETE FROM leads WHERE id = 954 AND customer_name = 'dev001-k1-20261128-b' RETURNING id` | 18:29:46 | c4d703a4091d | 1 | ok |
 
-- Mac の `~/.claude/logs/agent-events.jsonl` の 18:20〜18:49 UTC に、書く鍵の呼び出し・`psql-write-guard`・`agent-danger-hook` の `hook_blocked` は 0 行（この時間の `hook_blocked` 4 行は別のセッションの git push・PR 本文の止まり）。同意の画面も出なかった。
+- Mac の `~/.claude/logs/agent-events.jsonl` の 18:20〜18:49 UTC に、書く鍵の呼び出し・`psql-write-guard`・`agent-danger-hook` の `hook_blocked` は 0 行（この時間の `hook_blocked` 4 行は別のセッションの git push・PR 本文の止まり）。同意の画面も出なかった。この数えは手元で流した Python の画面の出力（ファイルには残していない）。
 
 ### K2（tenant_004 は 3 種類とも断られる）— ○
 
@@ -61,13 +61,15 @@
 
 (c)(d) `public_create=False`・`db_create=False`・`t001_create=False`・`secdef_exec=0`（18:47:45）。
 - 設計 §6 は reader 鍵で流すとしていたが、reader の台本は文の中の `CREATE`・`trigger` 等の語で断る（`rejected: write keyword is not allowed`）。同じ式を書く鍵の SELECT で流した。`has_*_privilege` は相手のロール名を引数で受けるので、どちらの鍵で流しても同じ値になる。
+- 値は流したときの画面の出力（ファイルには残していない）。流れたことは Loki の AUDIT（ts=18:47:45・result=ok）で確かめられる。2026-11-28 の審査のあとファイルに残す形で取り直そうとしたが、出力の書き出しを足したため決まった形から外れ、Mac の見張りが危険語の照合で止めた。言い換えて流し直すことはしていない。
 
 ### K4（public を参照する外部キーの表に足せる・public の書く権限 0）— ○
 
-- 1 回目（18:38:44）は `new row violates row-level security policy for table "companies"`（Loki の postgres の記録）。`companies` は `tenant_id` に既定値が無く、行の絞り込み `tenant_id = current_tenant_id()` に合わなかった。権限の不足ではなく文の書き漏れ。
+- 1 回目（18:38:44）は `new row violates row-level security policy for table "companies"`（Loki の postgres の記録）。`companies` は `tenant_id` に既定値が無く、行の絞り込み `tenant_id = current_tenant_id()` に合わなかった。権限の不足ではなく文の書き漏れ。PostgreSQL は行の絞り込みの違反にも権限不足と同じ番号 42501 を返すので、AUDIT の result は `db_error:InsufficientPrivilege` になっている。原因は Loki の postgres の記録の文面で見分けた。
 - 2 回目（18:44:01）: `tenant_id` を入れた `WITH l AS (INSERT INTO leads ...) INSERT INTO companies (tenant_id, company_code, lead_id, name, status) SELECT 1, ...` が成功（companies id 13・leads id 956）。
 - 後片付け（18:44:09）: companies 13 と leads 956 を消した。残り `leads LIKE 'dev001-%'`=0・`companies LIKE 'DEV001-%'`=0（18:44:24）。
 - public の表（r・p）で INSERT・UPDATE・DELETE・TRUNCATE のどれかが true の数: 0（18:44:24）。
+- 設計 §6 の K4 は reader 鍵で数えるとしていたが、reader の台本は文の中の書き込みの語で断るため、残りの数えと合わせて書く鍵の SELECT で流した（AUDIT の名乗りは `ai-dev001-writer-audit`・result=ok）。`has_table_privilege` は相手のロール名を引数で受けるので、どちらの鍵でも同じ値になる。値は流したときの画面の出力（K3(c)(d) と同じ扱い）。
 
 ### K5（aclexplode）— ○
 
@@ -87,7 +89,7 @@ reader 鍵・18:47:35・rows=10・result=ok。
 
 ### K6（Loki に 14 本）— ○
 
-- `{job=~".+"} |= "dev001-writer-audit"`・18:26〜18:50 UTC で 19 本。K1 の 1 文目（18:26:48）から K3(b) の 2 文目（18:38:03）までの幅で 14 本: result=ok 3 本・`db_error:InsufficientPrivilege` 11 本。
+- `{job=~".+"} |= "dev001-writer-audit"`・18:26〜18:50 UTC で 19 本（取り出した結果は 21 行。差の 2 行は Grafana の受付の記録にこの検索の URL そのものが引っかかった行で、AUDIT ではない）。K1 の 1 文目（18:26:48）から K3(b) の 2 文目（18:38:03）までの幅で 14 本: result=ok 3 本・`db_error:InsufficientPrivilege` 11 本。
 - 幅の外の 5 本は K4 の 1 回目・2 回目・後片付け・数え・K3(c)(d)。
 
 ### K7（読むだけの道）— ○
