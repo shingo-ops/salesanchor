@@ -1,3 +1,1 @@
-https://auth.openai.com/codex/device
-69IQ-3V9SA
-calendar 部屋・出した時刻 2026-11-27T17:49:38Z・有効 900 秒
+使用済み（2026-11-27T17:50:51Z）
