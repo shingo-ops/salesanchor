@@ -1,0 +1,11 @@
+## invoice: system付き(1往復)
+{"id": "chatcmpl-4c0e2710ebc3493e9960d69888fa7", "object": "
+HTTP_CODE=200
+## calendar: system付き(1往復)
+{"id": "chatcmpl-7d72da7ee2ee40c6ab555a6e1aa39", "object": "
+HTTP_CODE=200
+## coordinator: system付き(1往復)
+{"id": "chatcmpl-2703ac63852048ad9da8f7937f692", "object": "
+HTTP_CODE=200
+## invoice: system付き+履歴つき
+HTTP_CODE=200

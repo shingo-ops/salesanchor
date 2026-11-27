@@ -1,0 +1,12 @@
+## fake.log (chat 件数: 3)
+19:49:29 POST /v1/chat/completions stream=True roles=[system,user] SYS7735_in_system=True sys_pos(文字位置/system全長)=2356/2378 SYS7735_anywhere=True MARK=True n_tools=0 max_tokens=None sys0='あなたは振り分け係です。利用者の頼みの文�
+19:49:29 POST /v1/chat/completions stream=True roles=[system,user] SYS7735_in_system=True sys_pos(文字位置/system全長)=3373/3395 SYS7735_anywhere=True MARK=True n_tools=0 max_tokens=None sys0='あなたは、利用者の頼みの文を「決まった形�
+19:49:30 POST /v1/chat/completions stream=True roles=[system,user] SYS7735_in_system=True sys_pos(文字位置/system全長)=3370/3392 SYS7735_anywhere=True MARK=True n_tools=0 max_tokens=None sys0='あなたは、利用者の頼みの文を「決まった形�
+## 3 部屋の会話と usage（DELETE 前）
+coordinator api-53782e4b047b693e {'message_count': 3, 'input_tokens': 11, 'output_tokens': 7, 'api_call_count': 1}
+calendar api-80e1ed4971e9f8a6 {'message_count': 3, 'input_tokens': 11, 'output_tokens': 7, 'api_call_count': 1}
+invoice api-e70a3ff4493df32e {'message_count': 3, 'input_tokens': 11, 'output_tokens': 7, 'api_call_count': 1}
+[稼働中-DELETE前]   /opt/data/profiles/coordinator/state.db-wal MARK=7 SYS=6
+[稼働中-DELETE前]   /opt/data/profiles/invoice/state.db-wal MARK=7 SYS=6
+[稼働中-DELETE前]   /opt/data/profiles/calendar/state.db-wal MARK=7 SYS=6
+[稼働中-DELETE前] 合計 ファイル数=551 MARK7735行=21 SYS7735行=18

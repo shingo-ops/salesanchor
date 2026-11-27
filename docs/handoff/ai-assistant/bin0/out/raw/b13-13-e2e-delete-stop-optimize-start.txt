@@ -1,0 +1,45 @@
+## DELETE（3 部屋の全会話）
+$ DELETE /p/coordinator/api/sessions/api-53782e4b047b693e
+{"object": "hermes.session.deleted", "id": "api-53782e4b047b693e", "deleted": true}
+HTTP_CODE=200
+coordinator 残りの会話数: 0
+$ DELETE /p/calendar/api/sessions/api-80e1ed4971e9f8a6
+{"object": "hermes.session.deleted", "id": "api-80e1ed4971e9f8a6", "deleted": true}
+HTTP_CODE=200
+calendar 残りの会話数: 0
+$ DELETE /p/invoice/api/sessions/api-e70a3ff4493df32e
+{"object": "hermes.session.deleted", "id": "api-e70a3ff4493df32e", "deleted": true}
+HTTP_CODE=200
+invoice 残りの会話数: 0
+[稼働中-DELETE直後]   /opt/data/profiles/coordinator/state.db-wal MARK=9 SYS=8
+[稼働中-DELETE直後]   /opt/data/profiles/invoice/state.db-wal MARK=9 SYS=8
+[稼働中-DELETE直後]   /opt/data/profiles/calendar/state.db-wal MARK=9 SYS=8
+[稼働中-DELETE直後] 合計 ファイル数=552 MARK7735行=27 SYS7735行=24
+## docker stop
+b13-d
+T_stop_done=1795808996999
+[stop直後-optimize前]   /opt/data/profiles/coordinator/state.db-wal MARK=9 SYS=8
+[stop直後-optimize前]   /opt/data/profiles/invoice/state.db-wal MARK=9 SYS=8
+[stop直後-optimize前]   /opt/data/profiles/calendar/state.db-wal MARK=9 SYS=8
+[stop直後-optimize前] 合計 ファイル数=552 MARK7735行=27 SYS7735行=24
+## optimize（別の使い捨て容器・3 部屋）
+$ docker run --rm --network none -v <固定設定>:/etc/hermes:ro -v b13-r4:/opt/data $IMAGE hermes sessions optimize -p coordinator
+reconcile: profile=invoice prior_state=None action=registered
+Optimizing session store (FTS merge + VACUUM)…
+Optimized 2 FTS index(es).
+Database size: 0.4 MB -> 0.4 MB (reclaimed 0.0 MB)
+$ docker run --rm --network none -v <固定設定>:/etc/hermes:ro -v b13-r4:/opt/data $IMAGE hermes sessions optimize -p calendar
+reconcile: profile=invoice prior_state=None action=registered
+Optimizing session store (FTS merge + VACUUM)…
+Optimized 2 FTS index(es).
+Database size: 0.4 MB -> 0.4 MB (reclaimed 0.0 MB)
+$ docker run --rm --network none -v <固定設定>:/etc/hermes:ro -v b13-r4:/opt/data $IMAGE hermes sessions optimize -p invoice
+reconcile: profile=invoice prior_state=None action=registered
+Optimizing session store (FTS merge + VACUUM)…
+Optimized 2 FTS index(es).
+Database size: 0.4 MB -> 0.4 MB (reclaimed 0.0 MB)
+[optimize後-start前] 合計 ファイル数=553 MARK7735行=0 SYS7735行=0
+## start
+T_stop=1795808996999
+T_health200=1795809044435
+stopから /health 200 まで: 47436 ms（optimize 3 部屋と起動を含む）

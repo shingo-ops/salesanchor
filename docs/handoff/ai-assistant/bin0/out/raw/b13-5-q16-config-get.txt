@@ -1,0 +1,49 @@
+$ hermes -p coordinator config get memory.memory_enabled
+false
+$ hermes -p coordinator config get memory.user_profile_enabled
+false
+$ hermes -p coordinator config get platform_toolsets.api_server
+[]
+$ hermes -p coordinator config get auxiliary.background_review.enabled
+false
+$ hermes -p coordinator config get auxiliary.title_generation.enabled
+false
+$ hermes -p coordinator config get fallback_providers
+[]
+$ hermes -p coordinator config get logging.level
+WARNING
+$ hermes -p calendar config get memory.memory_enabled
+false
+$ hermes -p calendar config get memory.user_profile_enabled
+false
+$ hermes -p calendar config get platform_toolsets.api_server
+[]
+$ hermes -p calendar config get auxiliary.background_review.enabled
+false
+$ hermes -p calendar config get auxiliary.title_generation.enabled
+false
+$ hermes -p calendar config get fallback_providers
+[]
+$ hermes -p calendar config get logging.level
+WARNING
+$ hermes -p invoice config get memory.memory_enabled
+false
+$ hermes -p invoice config get memory.user_profile_enabled
+false
+$ hermes -p invoice config get platform_toolsets.api_server
+[]
+$ hermes -p invoice config get auxiliary.background_review.enabled
+false
+$ hermes -p invoice config get auxiliary.title_generation.enabled
+false
+$ hermes -p invoice config get fallback_providers
+[]
+$ hermes -p invoice config get logging.level
+WARNING
+# 対照: 固定設定なし(/etc/hermes を付けない)の別容器・volume b13-r3 を同じ命令で読む
+$ hermes -p invoice config get auxiliary.title_generation.enabled
+cont-init: info: /etc/cont-init.d/02-reconcile-profiles exited 0
+true
+$ hermes -p invoice config get logging.level
+cont-init: info: /etc/cont-init.d/02-reconcile-profiles exited 0
+INFO

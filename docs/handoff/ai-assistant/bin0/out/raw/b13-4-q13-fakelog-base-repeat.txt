@@ -1,0 +1,4 @@
+19:43:33 POST /v1/chat/completions stream=True roles=[system,user] SYS7735_in_system=False SYS7735_anywhere=False MARK=True n_tools=0 max_tokens=None sys0='あなたは、利用者の頼みの文を「決まった形」に書き換えるだけの係です。出力は指定された JSON の形だけです。  決め:' last='hello MARK7735'
+19:43:33 POST /v1/chat/completions stream=None roles=[system,user] SYS7735_in_system=False SYS7735_anywhere=False MARK=True n_tools=0 max_tokens=None sys0="You name chat sessions. Given the user's opening message, wr" last='hello MARK7735'
+19:43:34 POST /v1/chat/completions stream=True roles=[system,user] SYS7735_in_system=False SYS7735_anywhere=False MARK=True n_tools=0 max_tokens=None sys0='あなたは、利用者の頼みの文を「決まった形」に書き換えるだけの係です。出力は指定された JSON の形だけです。  決め:' last='hello MARK7735'
+19:43:59 POST /v1/chat/completions stream=True roles=[system,user] SYS7735_in_system=False SYS7735_anywhere=False MARK=True n_tools=0 max_tokens=None sys0='あなたは、利用者の頼みの文を「決まった形」に書き換えるだけの係です。出力は指定された JSON の形だけです。  決め:' last='hello MARK7735'

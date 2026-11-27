@@ -1,0 +1,14 @@
+# 管理者の固定設定（b13 の最終形）。/etc/hermes/config.yaml に読み取り専用で置く
+logging:
+  level: WARNING
+memory:
+  memory_enabled: false
+  user_profile_enabled: false
+platform_toolsets:
+  api_server: []
+auxiliary:
+  background_review:
+    enabled: false
+  title_generation:
+    enabled: false
+fallback_providers: []

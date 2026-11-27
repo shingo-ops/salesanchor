@@ -1,0 +1,7 @@
+# Q13 再数え: 最終形の固定設定・新しい volume(b13-r3)・invoice へ plain 1 回目、続けて plain 2 回目
+X-Hermes-Session-Id: api-f4c5218f73859156
+HTTP_CODE=200
+send#1 の後の chat 件数: 1
+X-Hermes-Session-Id: api-f4c5218f73859156
+HTTP_CODE=200
+send#2 の後の chat 件数: 2
