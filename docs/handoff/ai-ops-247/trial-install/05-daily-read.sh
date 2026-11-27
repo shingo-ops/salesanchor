@@ -50,7 +50,8 @@ printf 'is-active: '
 systemctl is-active ops-agent.service || true
 printf 'NRestarts: '
 systemctl show -p NRestarts --value ops-agent.service || true
-printf 'tmux の部屋: '; if sudo -u ops-agent tmux -S /home/ops-agent/.tmux/ops-agent.sock has-session -t ops-agent 2>/dev/null; then echo ある; else echo "無い  ← 要確認"; fi
+# 管理者の鍵の sudo はパスワードが要り、ここでは黙って失敗する（2026-11-28 実測で「無い」と誤って出た）。だから ps で担当の tmux の本体を数える。
+printf 'tmux の部屋: '; if ps -u ops-agent -o comm= | grep -q '^tmux'; then echo ある; else echo "無い  ← 要確認"; fi
 
 printf 'memory.peak（バイト。上限 MemoryMax=1500M=1572864000 バイト）: '
 cat /sys/fs/cgroup/system.slice/ops-agent.service/memory.peak || echo "未取得（ファイルが無い。カーネルが対応していない可能性・未確認）"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 03c-add-allow-id.sh — 返事をする相手（PO のアカウント）を1つ足し、担当を起動し直す（管理者が sudo で流す）
+# 03c-add-allow-id.sh — 返事をする相手（PO のアカウント）を1つ足し、担当を起動し直す（PO 本人が自分の端末で sudo で流す）
 # 出どころ: 道具の説明書 ACCESS.md（allowFrom の形）。DISCORD_ACCESS_MODE=static は起動時の内容に固定するので、足したあとに起動し直す。
 # 鍵（.env）には触らない。足すのは利用者番号だけ。
 set -euo pipefail
