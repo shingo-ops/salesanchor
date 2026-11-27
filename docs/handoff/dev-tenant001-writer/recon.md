@@ -50,7 +50,7 @@
 - `dashboard.refresh_all_tenant_kpis`・`tenant_isolation_daily_check`: 読むだけと見られるが、中身は未確認。
 
 ## 6. Mac 側の見張り
-- 本番 DB への書き込みの命令は、命令の文字で止まる（`~/.claude/scripts/agent-danger-hook.sh` の psql-write-guard と、DROP TABLE・DELETE FROM 等の語）。11/13〜11/27 に 36 回（その多くは検索の文字）。
+- 本番 DB への書き込みの命令は、命令の文字で止まる（~/.claude/scripts/agent-danger-hook.sh（Mac の個人設定。リポジトリ外） の psql-write-guard と、DROP TABLE・DELETE FROM 等の語）。11/13〜11/27 に 36 回（その多くは検索の文字）。
 - 読むだけの道（ADR-1024）は K17 でフックの免除なしで動いた。書き込みの道は SQL の本文に INSERT・DELETE 等が入るため、免除が要る見込み（未確認）。免除の追加は PO 本人が行う（AI は自分の見張りをゆるめない）。
 
 ## 7. 未確認（まとめ）

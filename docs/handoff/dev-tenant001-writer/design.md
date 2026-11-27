@@ -29,11 +29,11 @@
 | DB ロール | `ai_reader`（`migrations/20261017_130000_create_ai_reader_role.sql:10-17`） | `ai_dev001_writer`: LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS CONNECTION LIMIT 2。既にあって属性が違えば止める（同ファイル :10-17 と同じ形）。`log_statement=all`・`statement_timeout=60s`・`lock_timeout=1s`（ADR-1037 と同じ値）・`idle_in_transaction_session_timeout=60s`（同ファイル :27 と同じ。つかんだロックを持ったまま止まるのを切る） |
 | 権限 | `ai_ro` のビューに SELECT | §3-2 の規則で表ごと・列ごとに付ける（一括付与しない） |
 | 行の制限 | ビューで絞る | 台本が毎回 `SET LOCAL app.tenant_id = '1'` と `SET LOCAL search_path = tenant_001, public` を入れる（引き金の関数が public の物を名前で呼んでも動くように。public に書く権限は付かないので境界は変わらない（規則 E）。便2の pytest で K1 の 3 文が引き金ごと通るかを確かめる）。`public.current_tenant_id()` は `current_setting('app.tenant_id', true)::INTEGER` を返すだけ（`migrations/014_create_current_tenant_id_function.sql:15-21`）なので、これで RLS の 64 枚が開く |
-| 台本 | `backend/app/ops/readonly_query.py`（1 文だけ・`-- limit=N`・AUDIT を /dev/log へ） | `backend/app/ops/dev001_write.py`。1 文だけ。先頭の語が INSERT・UPDATE・DELETE・SELECT・WITH のどれかでなければ拒む。文の先頭の語が SET・RESET なら拒む（`UPDATE ... SET` は通す。`readonly_query.py:50` の `\bset\s` は写さない）。`set_config(`・`pg_catalog.set_config` は文のどこにあっても拒む（`readonly_query.py:49`・`:55` と同じ）。スキーマ名では拒まない（境界は DB の権限。K2・K3 を DB の権限エラーで測るため）。順番は「文を流す → AUDIT を送る → 送れたら commit、送れなければ rollback して終了コード 3」。DB エラーのときは「AUDIT を送る → 必ず rollback」。拒否・DB エラーで AUDIT を送れなかったときは終了コード 5（`readonly_query.py:270`・`:274`・`:310` と同じ）。拒否・DB エラーのときも AUDIT を送る（`readonly_query.py:266-274`・`:306-310` と同じ）。AUDIT の名乗りは `ai-dev001-writer-audit`（読むだけの道の `ai-reader-audit`（`readonly_query.py:37`）と分ける） |
-| 実行場所 | `docker-compose.ai-reader.yml` | `docker-compose.ai-dev001-writer.yml`（同じ守り: read_only・cap_drop ALL・no-new-privileges・mem 256m・環境変数 1 つ・/dev/log だけ） |
+| 台本 | `backend/app/ops/readonly_query.py`（1 文だけ・`-- limit=N`・AUDIT を /dev/log へ） | backend/app/ops/dev001_write.py（新規・まだ無い）。1 文だけ。先頭の語が INSERT・UPDATE・DELETE・SELECT・WITH のどれかでなければ拒む。文の先頭の語が SET・RESET なら拒む（`UPDATE ... SET` は通す。`backend/app/ops/readonly_query.py:50` の `\bset\s` は写さない）。`set_config(`・`pg_catalog.set_config` は文のどこにあっても拒む（`backend/app/ops/readonly_query.py:49`・`:55` と同じ）。スキーマ名では拒まない（境界は DB の権限。K2・K3 を DB の権限エラーで測るため）。順番は「文を流す → AUDIT を送る → 送れたら commit、送れなければ rollback して終了コード 3」。DB エラーのときは「AUDIT を送る → 必ず rollback」。拒否・DB エラーで AUDIT を送れなかったときは終了コード 5（`backend/app/ops/readonly_query.py:270`・`:274`・`:310` と同じ）。拒否・DB エラーのときも AUDIT を送る（`backend/app/ops/readonly_query.py:266-274`・`:306-310` と同じ）。AUDIT の名乗りは `ai-dev001-writer-audit`（読むだけの道の `ai-reader-audit`（`backend/app/ops/readonly_query.py:37`）と分ける） |
+| 実行場所 | `docker-compose.ai-reader.yml` | docker-compose.ai-dev001-writer.yml（新規・まだ無い）（同じ守り: read_only・cap_drop ALL・no-new-privileges・mem 256m・環境変数 1 つ・/dev/log だけ） |
 | 鍵 | `~/.ssh/salesanchor-reader`（restrict・command=・expiry-time） | `~/.ssh/salesanchor-dev001-writer`（同じ制限、期限は 2027-01-15 で reader とそろえる） |
 | 危険パス | `scripts/check-process-artifacts.js:1033-1035` | 同じ一覧に `^docker-compose\.ai-dev001-writer\.yml$` を足す（台本は `:1033` の `^backend\/app\/ops\//` で入る）。ADR-1024 Decision 7 と同じ理由 |
-| Mac の見張り | 免除なしで通る | 本文に INSERT・DELETE が入るため止まる見込み → この鍵のパスで始まる ssh だけを通す免除を、PO 本人が `~/.claude/scripts/agent-danger-hook.sh` に入れる（AI は入れない） |
+| Mac の見張り | 免除なしで通る | 本文に INSERT・DELETE が入るため止まる見込み → この鍵のパスで始まる ssh だけを通す免除を、PO 本人が ~/.claude/scripts/agent-danger-hook.sh に入れる（AI は入れない） |
 
 ### 3-2. 権限を付ける規則（R1・R3・R5）
 - 規則 A0（スキーマ）: `GRANT USAGE ON SCHEMA tenant_001 TO ai_dev001_writer`。CREATE は付けない。public は PUBLIC から USAGE を受け継ぐので付けない（§3-3）。
@@ -89,7 +89,7 @@
 | K3 | public・`tenant_meta_config`・秘密の列に書けない。新しい物も作れない | (a) public の表と `tenant_meta_config` に INSERT・UPDATE・DELETE を各 1 回（6 文）で DB の権限エラー 6 件。(b) `staff.avatar_token` の UPDATE 1 文と、`staff` への `DELETE ... RETURNING *` 1 文（2 文）で DB の権限エラー 2 件。(c) reader 鍵で `has_schema_privilege('ai_dev001_writer','public','CREATE')`・`has_database_privilege('ai_dev001_writer',current_database(),'CREATE')` が両方 false。(d) reader 鍵で、`pg_proc.prosecdef` の関数のうち引き金の関数を除き `has_function_privilege('ai_dev001_writer',oid,'EXECUTE')` が true の物 0 個 |
 | K4 | public を参照する外部キーを持つ表に 1 行足せる。public の権限は規則 E で決めた一覧どおり | INSERT 1 文が成功。reader 鍵で public の全表について `has_table_privilege('ai_dev001_writer', pg_class.oid, 種類)` が true の物を数え、設計の一覧（今は 0 件）と一致。表は名前でなく oid で渡す（ai_reader は tenant_001 の USAGE を持たず、名前を引く段で止まる。2026-11-27 に `'tenant_001.tenant_meta_config'::regclass` が権限エラーになるのを reader 鍵で確かめた） |
 | K5 | 新しいロールの権限が §3-2 の数と一致する（多くも少なくもない） | reader 鍵で `aclexplode` を使い、相手が ai_dev001_writer の行を数える。`information_schema.role_table_grants` は他のロールの権限を出さないため使わない。(i) `pg_namespace.nspacl`: tenant_001 の USAGE 1 行だけ。(ii) `pg_class.relacl`（relkind 'r','p'）: 105 表×4 種＋6 表×DELETE＝426 行、表の数 111。`tenant_meta_config` 0 行。(iii) `pg_attribute.attacl`: 6 表の秘密でない 69 列×3 種（SELECT・INSERT・UPDATE）＝207 行。秘密の 6 列と `tenant_meta_config` は 0 行。(iv) `pg_class.relacl`（relkind 'S'）: tenant_001 の連番の数と同じ行数（本番は今 74）。(v) tenant_001 以外の (i)〜(iv) は 0 行。数は grantor（権限を付けた人）が migration を流すロール 1 人のときの数（`aclexplode` は grantor ごとに行を出す）。列は `attnum > 0 AND NOT attisdropped` だけを数える。数は便2の時点の表に合わせて migration 適用の直前に数え直し、PR に書く |
-| K6 | 書き込みが全部記録に残る | K1〜K3(a)(b) の 14 文について、Loki で `ai-dev001-writer-audit` の行が 14 本ある。内訳は result=ok 3 本（K1）、result が `db_error` で始まる行 11 本（K2 3・K3(a) 6・K3(b) 2。台本は `readonly_query.py:310` と同じく `db_error:<種類>` と書く）。数える時間の幅は K1 の 1 文目の直前から K3(b) の 2 文目の直後までとし、K4 の INSERT は入れない。K3(a) で使う public の表は `public.tenants`、tenant_004 の表は K1 と同じ表の名前にする |
+| K6 | 書き込みが全部記録に残る | K1〜K3(a)(b) の 14 文について、Loki で `ai-dev001-writer-audit` の行が 14 本ある。内訳は result=ok 3 本（K1）、result が `db_error` で始まる行 11 本（K2 3・K3(a) 6・K3(b) 2。台本は `backend/app/ops/readonly_query.py:310` と同じく `db_error:<種類>` と書く）。数える時間の幅は K1 の 1 文目の直前から K3(b) の 2 文目の直後までとし、K4 の INSERT は入れない。K3(a) で使う public の表は `public.tenants`、tenant_004 の表は K1 と同じ表の名前にする |
 | K7 | 読むだけの道は前と同じに動く | reader 鍵で 1 文流し結果が出る |
 | K8 | 2 週間で、tenant_001 への書き込みで PO が待たされた回数が 0 回 | 便3が終わった日から 14 日間の Mac の記録で、psql-write の止まりのうち tenant_001 向けを数える |
 
@@ -99,16 +99,16 @@
    - 先に pytest で規則 E を測る（public 0 で外部キーのある表に 1 行足せるか）。あわせて規則 B の 6 表に INSERT を試す。結果を設計に書き足す。
    - pytest の tenant_001 は、使い捨ての PostgreSQL に `backend/app/services/tenant.py` のテナント作成で作る（規則 D の「無い物は飛ばす」だけでは試験にならないため）。順番は「テナントを作る → この migration を流す → K の文を流す」。
    - migration 1 本（ロール＋規則 A〜D）。`scripts/run_all_migrations.sh` の `mr_report_summary`（:1504）の上に `run_sql` を 1 行足す。deploy.yml は変えない。一度流すと書き換えできない（`scripts/check_migration_freeze.py`）ので、直すときは新しい migration を足す。
-   - 台本 `backend/app/ops/dev001_write.py` と試験、compose ファイル、`scripts/check-process-artifacts.js` の危険パスに 1 行。
+   - 台本 backend/app/ops/dev001_write.py（新規・まだ無い） と試験、compose ファイル、`scripts/check-process-artifacts.js` の危険パスに 1 行。
 3. 便3（PO の手作業）: ロールの合言葉の設定、鍵を作って本番の authorized_keys に入れる、Mac の見張りの免除。台本は AI が用意し PO が `!` で流す。
 4. 便4: K1〜K7 を測る。K8 は便3の終わりから 14 日後。
 
-## 8. 維持する担当と仕組み
+## 8. 維持の仕組み（維持する担当）
 - 新しい表が tenant_001 に増えたとき: 自動では書けない。要るときに新しい migration を足す（規則 D で組み立て直す形）。
 - 鍵の期限 2027-01-15: reader 鍵の更新と同じ日に見直す。
 - 権限のずれ: K3(c)(d)・K5 の数えを週次の点検に入れる（便4で入れ先を決める）。
 
-## 9. 外部事例
+## 9. 外部・過去事例の参照と我々への応用
 - PostgreSQL 公式「Row Security Policies」（Context7 /websites/postgresql、2026-11-27 取得）: 外部キー・一意の確かめは行の制限を受けない。→ §5 の対処の根拠。
 - 自社の先例: `qa_tenant006_rw`（手で足した試験用テナントの読み書きロール。recon-5-0-opus-prod.md:73-76）。手で足したため記録から作り直せないと分かっている → 案 D を不採用にした根拠。
 - 他社の数値つき事例は使わない。理由: 判断の根拠は自社の権限の実測（K2〜K5）で足り、外の数字では成功を示せない。
