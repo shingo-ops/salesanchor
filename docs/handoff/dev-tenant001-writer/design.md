@@ -101,6 +101,7 @@
    - migration 1 本（ロール＋規則 A〜D）。`scripts/run_all_migrations.sh` の `mr_report_summary`（:1504）の上に `run_sql` を 1 行足す。deploy.yml は変えない。一度流すと書き換えできない（`scripts/check_migration_freeze.py`）ので、直すときは新しい migration を足す。
    - 台本 backend/app/ops/dev001_write.py（新規・まだ無い） と試験、compose ファイル、`scripts/check-process-artifacts.js` の危険パスに 1 行。
 3. 便3（PO の手作業）: ロールの合言葉の設定、鍵を作って本番の authorized_keys に入れる、Mac の見張りの免除。台本は AI が用意し PO が `!` で流す。
+   - 2026-11-28 実施済み。固定コマンドには本番の `.env` を先に渡す（`--env-file /home/ubuntu/salesanchor/.env --env-file <書く役の env>`）。1 つだけだと既定の完成品の名前に落ちて古い完成品で動く。測定と理由: bin4-measure.md。`docker-compose.ai-dev001-writer.yml` の冒頭の説明の固定コマンドは古いまま（別の PR で直す）。
 4. 便4: K1〜K7 を測る。K8 は便3の終わりから 14 日後。
 
 ## 8. 維持の仕組み（維持する担当）
