@@ -1,0 +1,118 @@
+## api_server.py:2683-2713 delete handler
+    async def _handle_delete_session(self, request: web.Request) -> web.Response:
+        """DELETE /api/sessions/{session_id}."""
+        session_id = request.match_info["session_id"]
+        _session, err = await self._get_existing_session_or_404(session_id)
+        if err:
+            return err
+        store = self._store_beside(await self._ensure_store_async())
+        if store is None:
+            return self._session_db_unavailable()
+        # Same profile home the DB was resolved from (the profile middleware scopes
+        # get_hermes_home() for this request) — without it the transcript/dump scrub is skipped.
+        sessions_dir = None
+        try:
+            from hermes_constants import get_hermes_home
+            sessions_dir = Path(get_hermes_home()) / "sessions"
+        except Exception:
+            logger.debug("sessions dir unavailable for delete of %s", session_id, exc_info=True)
+        from gateway.platforms.api_server_store import delete_session
+        try:
+            deleted = await asyncio.to_thread(delete_session, store, session_id, sessions_dir)
+        except SessionWriteGuarded as exc:
+            return _error_response(str(exc), 409, code="session_active_turn")
+        if deleted:
+            # A hard delete must also drop the gateway's durable channel→session routing entries
+            # for the id, or the next inbound message resolves the SAME id and run_agent's
+            # INSERT OR IGNORE resurrects the deleted row (#42422).
+            runner = self.gateway_runner or request.app.get("gateway_runner")
+            session_store = getattr(runner, "session_store", None)
+            if session_store is not None:
+                await asyncio.to_thread(session_store.remove_by_session_id, session_id)
+            # Retirement erased the chat's image references; bytes nothing else holds go too. Off the
+## api_server_store.py:56-65
+def delete_session(store, session_id, sessions_dir) -> bool:
+    """Hard-delete *session_id* with its local lineage and delegate children (``SessionWriteGuarded`` while a target
+    holds a live lease), then run the post-delete work: hook, retired media, transcript files under *sessions_dir*.
+    True when a row was removed."""
+    from gateway.session_ingress_media import native_inputs_root
+    from session_retention import after_sessions_removed
+    removed = store.sessions.delete(session_id, refuse_guarded=True, media_root=str(native_inputs_root()))
+    after_sessions_removed(store, store.scope.profile_dir, removed, reason="delete", primary=session_id,
+                           sessions_dir=sessions_dir)
+    return bool(removed)
+## session_retention.py:115-121
+def after_sessions_removed(store, store_home, removed_ids: Sequence[str], *, reason: str, primary: Optional[str] = None,
+                           sessions_dir: Optional[Path] = None) -> None:
+    """The work a delete or prune runs after its write commits, in order: the plugin hook over *removed_ids*, retired-media collection (also when nothing was removed), then the transcript files of eve
+    emit_session_deleted(store_home, removed_ids, reason=reason, primary=primary, sessions_dir=sessions_dir)
+    collect_retired_media(store, store_home)
+    for session_id in removed_ids:
+        remove_session_files(sessions_dir, session_id)
+## sqlite_support.py:165-175 resolve_journal_mode
+def resolve_journal_mode() -> str:
+    """The configured ``database.journal_mode`` (``wal`` default; ``delete`` for filesystems without WAL-safe
+    durability: macOS virtiofs, NFS, SMB). Invalid values fail safe to ``wal``."""
+    try:
+        from hermes_cli.config import load_config_readonly
+        database = (load_config_readonly() or {}).get("database", {})
+        raw = database.get("journal_mode", "wal") if isinstance(database, dict) else "wal"
+    except Exception:  # health: allow BLE001 -- an unreadable config means the WAL default
+        return "wal"
+    mode = raw.strip().lower() if isinstance(raw, str) else ""
+    return mode if mode in ("wal", "delete") else "wal"
+## config_defaults.py:34-39
+    "database": {
+        "journal_mode": "wal",
+        # WAL sizing pragmas (ints). None = SQLite defaults (autocheckpoint 1000 pages, no limit).
+        "wal_autocheckpoint": None,
+        "journal_size_limit": None,
+    },
+## secure_delete grep (all .py/.md/.yaml)
+./hermes_cli/kanban_db_connect.py:657:            conn.execute("PRAGMA secure_delete=ON")
+## sessions_cmd.py:1057-1071 optimize
+def _cmd_optimize(args, *, persistence=None):
+    admin, db_path = _store_admin(persistence)
+    if admin is None:
+        return
+    before_mb = _size_mb(db_path)
+    print("Optimizing session store (FTS merge + VACUUM)…")
+    try:
+        n = admin.vacuum()  # merges FTS5 segments then VACUUMs; returns indexes merged
+    except Exception as e:
+        print(f"Error: optimization failed: {e}")
+        return 1
+    print(f"Optimized {n} FTS index(es).")
+    _print_size_change(admin, db_path, before_mb)
+
+
+## _maintenance.py:626-654 vacuum
+    def vacuum(self) -> int:
+        """VACUUM to reclaim space after large deletes (SQLite never shrinks on its own).
+        Takes an exclusive lock: callers must ensure no other writers are active. FTS5
+        segments are merged first (``'optimize'``) so their pages are reclaimed too;
+        returns the number of FTS indexes optimized (0 on merge failure / no FTS). A quarantined
+        handle (corrupt image, replaced file, lost WAL generation) raises before any rewrite: a
+        VACUUM reads every page and commits the result back, turning contained damage into an
+        amplified one. Same guard ``_execute_write`` applies to every write."""
+        with self._writer("vacuum") as holder:
+            holder._raise_if_db_corrupt()
+            optimized = 0
+            try:
+                optimized = _optimize_fts(holder)  # manages its own lock
+            except Exception as exc:  # health: allow BLE001 -- a failed FTS optimize is logged and VACUUM still runs
+                logger.warning("FTS optimize before VACUUM failed: %s", exc)
+            with holder._lock:
+                holder._raise_if_db_replaced()
+                if holder._conn is None:
+                    holder._reopen_after_close_locked(context="write")
+                # PASSIVE, not TRUNCATE: a manual `hermes sessions vacuum` runs in a transient CLI
+                # process; a TRUNCATE reset here would race a live gateway writer.
+                _try_checkpoint(holder, "PASSIVE", "WAL checkpoint (PASSIVE) before VACUUM failed: %s")
+                holder._conn.execute("VACUUM")
+                # VACUUM rewrites every page THROUGH the WAL; without this TRUNCATE a 3 GB DB leaves a 3 GB -wal.
+                _try_checkpoint(holder, "TRUNCATE", "WAL checkpoint (TRUNCATE) after VACUUM failed: %s")
+                # TRUNCATE may replace the WAL inode; adopt the new sidecars so the
+                # write-path generation guard does not halt this connection.
+                holder._record_db_file_identity()
+            return optimized

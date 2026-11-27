@@ -1,0 +1,47 @@
+## 命令: docker create（起動せず）→ docker run --rm --network none --entrypoint sh <IMAGE> -c 'ls /opt; ls /opt/hermes; find / -name hermes_state.py; find / -type d -name gateway -path *hermes*; which python3 hermes'
+## 結果
+data
+hermes
+Dockerfile
+LICENSE
+README.md
+acp_adapter
+activate
+activate.fish
+activate.ps1
+agent
+apps
+assets
+batch_runner.py
+bin
+cli-config.yaml.example
+cli.py
+contributors
+cron
+docker
+docker-compose.windows.yml
+docker-compose.yml
+eslint.config.shared.mjs
+evals
+gateway
+hermes
+hermes_agent
+hermes_agent-0.0.0.dist-info
+hermes_bootstrap.py
+hermes_cli
+hermes_constants.py
+hermes_constants_scratch.py
+hermes_constants_scratch_detach.py
+/opt/hermes/hermes_state.py
+/opt/hermes/tools/connectors/gateway
+/opt/hermes/gateway
+/opt/hermes/persistence/gateway
+/opt/hermes/persistence/sqlite/gateway
+/opt/hermes/apps/desktop/src/app/gateway
+/opt/hermes/evals/gateway
+/opt/hermes/.venv/bin/python3
+/opt/hermes/bin/hermes
+## 命令: docker cp hsrc-c:/opt/hermes /tmp/hsrc/ ; du -sh /tmp/hsrc => 2.4G
+## HEAD
+c4588a66a5da7dfc7ad87bf244cfc88501a2dc90
+sha256:ef0650d523ee1b5ab32c779acabc446d9936869a9932591553688a62bcf0c42f nousresearch/hermes-agent@sha256:ef0650d523ee1b5ab32c779acabc446d9936869a9932591553688a62bcf0c42f

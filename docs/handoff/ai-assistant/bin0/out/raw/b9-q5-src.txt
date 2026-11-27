@@ -1,0 +1,83 @@
+## schema_ddl 230-250 (session_model_usage ON DELETE CASCADE)
+CREATE TABLE IF NOT EXISTS session_model_usage (
+    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    model TEXT NOT NULL,
+    billing_provider TEXT NOT NULL DEFAULT '',
+    billing_base_url TEXT NOT NULL DEFAULT '',
+    billing_mode TEXT NOT NULL DEFAULT '',
+    task TEXT NOT NULL DEFAULT '',
+    api_call_count INTEGER NOT NULL DEFAULT 0,
+    input_tokens INTEGER NOT NULL DEFAULT 0,
+    output_tokens INTEGER NOT NULL DEFAULT 0,
+    cache_read_tokens INTEGER NOT NULL DEFAULT 0,
+    cache_write_tokens INTEGER NOT NULL DEFAULT 0,
+    reasoning_tokens INTEGER NOT NULL DEFAULT 0,
+    estimated_cost_usd REAL NOT NULL DEFAULT 0,
+    actual_cost_usd REAL NOT NULL DEFAULT 0,
+    cost_status TEXT,
+    cost_source TEXT,
+    first_seen REAL,
+    last_seen REAL,
+    PRIMARY KEY (session_id, model, billing_provider, billing_base_url, billing_mode, task)
+);
+## _store/sessions.py 1706-1717 (delete body)
+        from persistence.sqlite.conversation._store.retirement import retire_sessions
+        retire_sessions(conn, scope, media_root=media_root)
+        delegate_ids = _delete_delegate_children(conn, scope, media_root=media_root)
+        for sid in scope:  # orphan remaining children (branches) so FK is satisfied
+            conn.execute("UPDATE sessions SET parent_session_id = NULL WHERE parent_session_id = ?", (sid,))
+            conn.execute("DELETE FROM messages WHERE session_id = ?", (sid,))
+        conn.executemany("DELETE FROM sessions WHERE id = ?", [(sid,) for sid in scope])
+        _delete_unreferenced_system_prompts(conn)
+        removed_ids.extend([session_id, *sorted(set(scope) - {session_id}), *sorted(delegate_ids)])
+        return True
+    holder._execute_write(_do)
+    return tuple(removed_ids)
+## _holder.py:543 foreign_keys
+            conn.execute("PRAGMA foreign_keys=ON")
+## api_server.py 1130-1136, 1283-1316 (in-memory metrics_today)
+        self._metrics_day: str = self._metrics_day_key()
+        self._metrics_requests_today: int = 0
+        self._metrics_messages_today: int = 0
+        self._metrics_tokens_today: int = 0
+        self._metrics_latency_ms: list[float] = []
+        self._metrics_last_request_at: Optional[float] = None
+        self._metrics_last_heartbeat_at: Optional[float] = None
+        self._reset_metrics_if_needed()
+        heartbeat = self._metrics_last_heartbeat_at if heartbeat_at is None else heartbeat_at
+        return {
+            "host": self._host,
+            "port": self._port,
+            "active_runs": self._active_structured_run_count() + self._inflight_agent_runs,
+            "stored_runs": len(self._run_statuses),
+            "last_request_at": self._iso_timestamp(self._metrics_last_request_at),
+            "last_heartbeat": self._iso_timestamp(heartbeat),
+            "metrics_today": {
+                "day": self._metrics_day,
+                "requests": self._metrics_requests_today,
+                "messages": self._metrics_messages_today,
+                "tokens": self._metrics_tokens_today,
+                "latency_p95_ms": self._latency_p95_ms(self._metrics_latency_ms),
+            },
+        }
+
+    def _publish_runtime_status(self) -> None:
+        self._metrics_last_heartbeat_at = time.time()
+        self._write_runtime_status_safe(
+            "api_server_heartbeat",
+            platform_state="connected" if self.is_connected else "disconnected",
+            platform_metrics=self._api_server_status_payload(),
+        )
+
+    def _record_api_metrics(self, usage: Optional[dict[str, Any]], latency_seconds: float) -> None:
+        self._reset_metrics_if_needed()
+        self._metrics_requests_today += 1
+        self._metrics_messages_today += 1
+        self._metrics_tokens_today += self._total_tokens_from_usage(usage)
+        self._metrics_last_request_at = time.time()
+        self._metrics_latency_ms.append(max(0.0, latency_seconds * 1000.0))
+        if len(self._metrics_latency_ms) > API_SERVER_LATENCY_SAMPLE_LIMIT:
+## _record_api_metrics callers
+gateway/platforms/api_server.py:1309:    def _record_api_metrics(self, usage: Optional[dict[str, Any]], latency_seconds: float) -> None:
+gateway/platforms/api_server.py:3804:                self._record_api_metrics(usage, time.perf_counter() - started_at)
+gateway/platforms/api_server_runs.py:1149:        self._record_api_metrics(usage, time.perf_counter() - _run_started_at)
