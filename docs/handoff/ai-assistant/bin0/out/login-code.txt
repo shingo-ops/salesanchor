@@ -1,1 +1,3 @@
-使用済み・時間切れ（01:34:12 UTC）invoice 2回目も時間切れ・使えない
+https://auth.openai.com/codex/device
+51UM-O27JQ
+invoice 部屋・出した時刻 02:06 UTC・有効 900 秒
