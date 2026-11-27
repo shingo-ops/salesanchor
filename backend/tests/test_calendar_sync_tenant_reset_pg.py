@@ -660,6 +660,11 @@ async def test_google_series_cancel_deletes_master_and_exceptions_on_real_db():
         assert await _import_one(factory, cancelled, g_gone) == "deleted"
         assert await _count_rows(admin_engine, "id = :id", {"id": master["id"]}) == 0
         assert await _count_rows(admin_engine, "recurring_event_id = :id", {"id": master["id"]}) == 0
+        later = {
+            "id": "gm978_20261224T010000Z", "status": "cancelled", "recurringEventId": "gm978",
+            "originalStartTime": {"dateTime": "2026-12-24T10:00:00+09:00"},
+        }
+        assert await _import_one(factory, later, g_gone) == "skipped"
     finally:
         await _teardown(admin_engine, app_engine)
 

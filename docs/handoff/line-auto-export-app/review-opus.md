@@ -33,3 +33,36 @@
 
 - 実機へのインストールと、除外を外しての実挙動確認（`battery_exemption_changed`・`missed_fire` の記録確認）。インストールは稼働中の自動化に手を入れるため、PO の指示で別途行う。
 - `client.py:679` の `termux-job-scheduler` 呼び出しに残る「孫プロセスを殺さない」書き方（今回の範囲外。別作業）。
+
+# 審査 2026-11-27 押せなかったら押し直す（一発判定をやめる）
+
+対象: ブランチ release/line-export-click-retry（commit 67f6b4edf・b2745d8a1・1499e85d5）。設計の正本は design.md「追補 2026-11-27 押せなかったら押し直す（一発判定をやめる）」。
+
+## 根拠（実測。推測と区別する）
+
+- 集計元は端末の `/sdcard/Download/sa-line-notify/run-*.jsonl`（ADB不要で直読み）。`flow=export` / `phase=end` が 4,502件（2026-10-09〜11-27）、うち失敗123件。
+- 失敗の内訳: `termux_target` 97／`menu_button` 9／`shortcut` 8／`settings_item` 6／`export_item` 2／`open_chat` 1。**再試行を持たない3段階に114件（93%）が集まっている**。
+- 段階ごとの成功時の所要（中央値）: `termux_target` 8ms／`menu_button` 31ms／`shortcut` 1,541ms／`settings_item` 2,063ms／`export_item` 2,038ms。`settings_item`・`export_item` だけが `attempts` を4,470回以上記録している＝再試行を実装済み。
+- `termux_target` の失敗時の所要は**6ms**。手順9（`share_sheet`）は300msおき・期限10秒で「Termux」ノードを探し、その失敗は**0件**＝ノードは見つかっていた。したがって落ちているのは探索ではなく `NodeOps.clickNode` の結果が `accepted=false` になった回。
+- `NodeOps.clickNode` は押せる祖先を遡って `ACTION_CLICK`、祖先が無ければ bounds 中心へ gesture タップ、bounds が空なら false（NodeOps.java:479-495）。保存したノード参照が古くなるとこの3つすべてが成立せず、一発で false になる。
+- 判断: 共有シートは開いた直後に送信先候補が読み込まれて差し替わるため、手順9で保存した参照が手順10までに古くなる。**これは推測であり、`seenPackages` の記録（本便で追加）で次回から裏取りできる形にした。**
+
+## 確認したこと
+
+1. **成功時の経路が変わっていない**: `clickWithRetryStep` は `attempt==1 && firstCandidate!=null` のときだけ保存ノードを使う。手順10は `termuxNode` を渡し、手順2・手順4は null を渡す＝初回から探し直す（従来も初回に探していたので同じ）。一発で押せた回の動作・所要は従来と同一。
+2. **期限が既存の見張りに収まる**: 追加は1段階あたり最大3秒、3段階で最大9秒。遮断の帯の強制撤去は60秒（RunStatusOverlay.java:61）、フローの WakeLock 安全弁は120秒（LineExportFlow.java:196）。主スレッドは `schedule()`（postDelayed）で明け渡すため、停滞の見張り（MainThreadStallWatchdog、閾値3秒）にも触れない。
+3. **計測が集計できる形になっている**: `clickAttempts` は一発成功でも1を出す（出ない回があると母数が取れない）。`clickWaitMs` はその段階の合計ミリ秒。既存の `ScrollStats.toJson()` と同じ `recordStep` の extraFields 経路で、通知本文（平文）には出さない。
+4. **`seenPackages` の二重記録が無い**: `waitForPackage` のタイムアウト分岐から open_chat 専用の個別記録を削除し、`finish(boolean, String)` が失敗時だけ計算して `logExportEnd` のトップレベルに1回出す。`service.stopWindowRecording()` の**前**に読んでいるため値が取れる。成功時は null で項目を出さない（容量は58日38.0MBの実測がある）。
+5. **本文・個人情報を増やしていない**: 追加される記録はパッケージ名（最大3件）と回数・ミリ秒のみ。ノードのテキストやメッセージ本文は含まない（2026-10-08 実機1回目の不具合3の方針を維持）。
+6. **ビルドと署名**: `bash build.sh` 終了コード0。`aapt dump badging` が `versionCode='24' versionName='0.21.0-stage3'`。dex に `clickWithRetryStep`・`clickAttempts`・`clickWaitMs`・`seenPackages` が入っていることを `unzip -p out/app-debug.apk classes.dex | strings` で確認。証明書 SHA-256 は `c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709`＝実機の base.apk と一致。
+
+## 審査で見つけて直した欠陥（記録）
+
+**別の鍵で署名された APK が一度できていた。** 新しい作業ツリーでは `tools/line-auto-export-app/build/` が .gitignore 対象のため、`build.sh` の「debug keystore（初回のみ作成）」が**別の鍵を黙って作る**。その APK の証明書は `8736637d1db0c7e507ec94a490831fe0509ebfcd72989874c45ee5d1bcbf3b79` で実機と不一致＝上書き更新ができず、消して入れ直し＝暗証番号・ユーザー補助・通知の権限を失う。ADR-1090「7. 署名鍵」に禁止は明文化されているが、**build.sh は警告も照合もしない**ため気づけない。既存鍵を build/ にコピーして再ビルドし、一致を確認した（commit 1499e85d5）。
+
+**改善候補（本便の範囲外）**: build.sh に「鍵を新規作成したら目立つ警告を出す」または「署名後に証明書 SHA-256 を印字する」を足す。仕組みで止めないと作業ツリーを切るたびに踏む。
+
+## 未実施（この PR の時点）
+
+- 実機へのインストールと、`clickAttempts>1` が実際に記録されること・`termux_target` の失敗が減ることの確認。PO の指示（取り込みを止めないこと）に従い、実行の合間を狙って行う。
+- 画面の取り合いそのものを減らす設計（実測: 7.1分おきに8.4秒・1日約13分、遮断の帯は全画面でタップを飲み込む）。別便・PO判断待ち。

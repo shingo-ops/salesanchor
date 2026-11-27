@@ -1980,16 +1980,16 @@ async def upsert_from_google(
             db, tenant_id, google_event, label_colors=label_colors
         )
 
-    # 削除済みイベントの処理
+    # 削除済みイベントの処理。消す行が無ければ数えない（繰り返しを消した後の残りの回など・便6 2026-11-27）
     if google_event.get("status") == "cancelled":
-        await db.execute(
+        res = await db.execute(
             text(
                 "DELETE FROM calendar_events WHERE google_event_id = :gid"
                 " AND source = 'google'"
             ),
             {"gid": google_event_id},
         )
-        return "deleted"
+        return "deleted" if (res.rowcount or 0) > 0 else "skipped"
 
     title = google_event.get("summary", "")
     description = google_event.get("description")

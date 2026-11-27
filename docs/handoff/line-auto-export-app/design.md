@@ -1115,3 +1115,41 @@ PR #5811 の成果物（`versionCode=26`／`versionName=0.23.0-stage3`）を2026
 ### 変えていないもの
 
 既存の `ensureOpen` の挙動（0 のときだけ 1 を書く・1 のときは記録もしない・毎回の実行予約時だけに呼ばれる）、既存のタイミング（`FLOOR_INTERVAL_MS` 等）、既存のログ項目の意味、`adb_enabled`、`targetSdkVersion`（24）、送信側 `tools/termux-line-import/client.py`。ビルドは ADR-1090 の7に従い、実機と同じ既存の `build/debug.keystore` で再ビルドした（`apksigner verify --print-certs` の SHA-256 が実機の APK と一致することを確認済み）。
+
+## 追補 2026-11-27 押せなかったら押し直す（一発判定をやめる）
+
+### ①実測した事実
+
+端末の実行ログ `run-*.jsonl` 4,502回を集計した結果、書き出しの失敗123回の内訳は次のとおり:
+
+- `termux_target` **97回**／`menu_button` 9回／`shortcut` 8回 ＝ **待ちも再探索も持たない3段階で114回（93%）**
+- `settings_item` 6回／`export_item` 2回／`open_chat` 1回 ＝ 再試行を持つ段階はほぼ失敗しない
+
+`termux_target` は手順9（`share_sheet`、300msおき最大10秒のポーリング）で「Termux」ノードを**見つけている**（share_sheet の失敗は0回）。にもかかわらず手順10が**保存したノードをそのまま押し、押せなければ即 failure**（旧 `LineExportFlow.java:547-553`）していた。失敗時の所要は実測 **6ミリ秒**＝探し直しも待ちもしていなかった。共有一覧は開いた直後に候補が差し替わるためノード参照が古くなるのが原因と判断した。
+
+### ②変える前の作りと行番号
+
+`shortcut`（旧 `step2ClickShortcut`、旧 `LineExportFlow.java:412-425`）・`menu_button`（旧 `step4ClickMenuButton`、旧 `LineExportFlow.java:467-480`）・`termux_target`（旧 `step10ClickTermux`、旧 `LineExportFlow.java:547-561`）の3段階は、いずれも「1回探す→押す→押せなければ即 `finish(false, stage)`」という一発判定だった。`termux_target` は手順9（`step9WaitShareSheet`）が保存した `termuxNode`（インスタンス変数）をそのまま使っていた。
+
+### ③変えた後の作り
+
+3段階を、共通メソッド `clickWithRetry`/`clickWithRetryStep`（`tools/line-auto-export-app/src/java/jp/salesanchor/lineexport/LineExportFlow.java:849-897`）に置き換えた。新しい定数 `CLICK_RETRY_TIMEOUT_MS = 3000L`（期限3秒）を追加し、刻みは既存の `NODE_WAIT_POLL_MS`（300ms）を流用した（新しい刻みの定数は作らない）。
+
+振る舞い（既存の `waitForNode` と同じ再帰＋`schedule()` の形）:
+
+1. ノードを毎回ゼロから探す（前回の参照は使い回さない）。ただし `termux_target` だけは1回目に限り、手順9が保存した `termuxNode` をそのまま使ってよい（成功時の経路を今と同じに保ち、変更の危険を最小にするため）。押せなかった場合は `termuxNode` を捨て、2回目以降は他の2段階と同じくゼロから探し直す。
+2. 見つかったら `NodeOps.clickNode` で押す。`result.accepted` なら `recordStep(stage)` して次の手順へ進む。
+3. 見つからない・押せなかった場合、期限（3秒）を過ぎていれば `recordStep(stage)` → `finish(false, stage)`。
+4. 期限内なら `schedule(..., NODE_WAIT_POLL_MS, ...)` で 1 から繰り返す。
+
+探し方自体は変えていない: `shortcut`=`NodeOps.findByTextPrefix(service, SHORTCUT_TEXT_PREFIX)`、`menu_button`=`NodeOps.findByDescExact(service, MENU_BUTTON_DESC)`、`termux_target`=`NodeOps.findNodeByLabel(service, TERMUX_LABEL)`。手順9（`step9WaitShareSheet`）自体も変更していない。
+
+### ④計測項目
+
+`clickAttempts`（探して押そうとした回数。1なら一発成功＝今と同じ）と `clickWaitMs`（この段階に費やした合計ミリ秒）を、既存の `ScrollStats.toJson()` と同じ作りで各段階の `recordStep` の extraFields に載せる（`buildClickRetryExtraFields`、`LineExportFlow.java:886-897`）。一発成功の回も `clickAttempts: 1` を必ず出す（出ない回があると集計できないため）。
+
+あわせて、失敗したときに「見えていたアプリ名」をすべての段階で記録するよう広げた。`NodeOps.distinctWindowPackageNames(service)`（`NodeOps.java:135-172`）は従来 `open_chat` の失敗時だけ使われていたが（旧 `LineExportFlow.java:778-780`）、`finish(boolean success, String failedStage)` 側（`LineExportFlow.java:1117-`、`seenPackages` 変数）に1箇所にまとめ、失敗した回はすべて `logExportEnd` の extraFields に `seenPackages`（既存と同じカンマ区切りの文字列）として載せるようにした。`open_chat` 専用だった個別記録（`waitForPackage` のタイムアウト分岐）は削除し二重記録を避けた。成功した回には出さない（容量は58日で38MBという実測があるため）。
+
+### ⑤変えていないもの
+
+手順9（`step9WaitShareSheet`）のポーリング間隔・期限、3段階それぞれの探し方（`NodeOps.findByTextPrefix`/`findByDescExact`/`findNodeByLabel`）、`settings_item`/`export_item` のスクロール再試行（`scrollFindAndClick`、`SCROLL_MAX_RETRIES`・`SCROLL_SETTLE_DELAY_MS` など）、遮断モードの帯（`overlayBlocking`・`RunStatusOverlay`）。

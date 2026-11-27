@@ -808,12 +808,34 @@ class TestUpsertFromGoogle:
         origin_result = MagicMock()
         origin_result.first = MagicMock(return_value=None)  # not app origin
         delete_result = MagicMock()
+        delete_result.rowcount = 1
         db.execute = AsyncMock(side_effect=[origin_result, delete_result])
 
         out = await upsert_from_google(
             db, tenant_id=1, google_event={"id": "ev1", "status": "cancelled"}, owner_user_id=9
         )
         assert out == "deleted"
+        sql = db.execute.call_args_list[1].args[0].text
+        assert "source = 'google'" in sql
+        db.commit.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_cancelled_event_without_row_is_not_counted(self):
+        """消す行が無い消した知らせは "skipped"（取り込みの消した数に足さない・便6）。"""
+        from app.services.calendar_service import upsert_from_google
+
+        db = AsyncMock()
+        db.commit = AsyncMock()
+        origin_result = MagicMock()
+        origin_result.first = MagicMock(return_value=None)  # not app origin
+        delete_result = MagicMock()
+        delete_result.rowcount = 0
+        db.execute = AsyncMock(side_effect=[origin_result, delete_result])
+
+        out = await upsert_from_google(
+            db, tenant_id=1, google_event={"id": "ev_gone", "status": "cancelled"}, owner_user_id=9
+        )
+        assert out == "skipped"
         sql = db.execute.call_args_list[1].args[0].text
         assert "source = 'google'" in sql
         db.commit.assert_not_called()
