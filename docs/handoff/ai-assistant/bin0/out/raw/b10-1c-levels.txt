@@ -1,0 +1,12 @@
+## B10 (1c) invoice agent.log の段別（各行の先頭 150 字・鍵らしき値は伏せ字化済みのログ）
+2026-11-27 19:00:56,373 INFO gateway.run: inbound message: platform=api_server user=h:f2d3415ab4 chat=h:8f6538a232 msg_len=14 reply_to_id=None
+2026-11-27 19:00:56,493 WARNING gateway.run: Model resolution failed for session agent:invoice:api_server:dm:api-4c90a9302143ee41: Hermes is not conne
+2026-11-27 19:00:56,615 INFO gateway.run: response ready: platform=api_server chat=api-4c90a9302143ee41 session=agent:invoice:api_server:dm:api-4c90a9
+2026-11-27 19:00:56,616 INFO gateway.run: Transient agent failure in session api-4c90a9302143ee41 — persisting user message so conversation context 
+
+--- default home agent.log: turn 行の有無
+0
+/opt/data/logs/agent.log:0
+/opt/data/profiles/invoice/logs/agent.log:0
+/opt/data/profiles/invoice/logs/errors.log:0
+/opt/data/profiles/invoice/logs/gateway.log:0
