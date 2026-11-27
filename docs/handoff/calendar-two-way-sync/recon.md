@@ -96,4 +96,26 @@
 - 【事実】取り込みの繰り返し（`backend/app/services/google_webhook.py:339-347`）に 1 件ずつの try は無い。1 件の DB の失敗で、その回の取り込み全体が止まる。sync_token も進まない。
 - 【事実】アプリで単発の予定を消すとき（`delete_event` `backend/app/services/calendar_service.py:648-683`）は行を消してから Google を消す。
 - 【事実】CI は本物の PostgreSQL の試験を回す（`.github/workflows/test.yml:238-245` で `RLS_TEST_DATABASE_URL`・`RLS_ADMIN_DATABASE_URL`）。`backend/tests/test_calendar_sync_tenant_reset_pg.py` が使う。70451bf3c の試験は偽の DB だけで、決まりは通していない。
-- 【事実】`calendar_events` を指すほかの表は無い（参照は自分の表の recurring_event_id だけ）。行を消しても他の表は壊れない。
+- 【事実】`calendar_events` を指すほかの表は無い（参照は自分の表の recurring_event_id だけ）。行を消しても他の表は壊れない。（2026-11-27 追記: いまはチームとの対応表も指す。便5 の項を見る）
+
+## 便5（2026-11-27・Google で繰り返しの「すべての予定」を消したとき）
+
+- PO の依頼: 2026-11-27「1」（Google で毎週の予定を全部消したときに、アプリからも消えるようにする設計を作る）。
+- 既存 ADR の確認: `git grep -il "recurringEventId\|すべて" origin/main -- docs/adr/` と `docs/adr/FEATURE-INDEX.md` で ADR-1075・ADR-1059 を確かめた。「Google で『すべて』を直した・消したらアプリは今のまま」は ADR-1075 改訂 2026-11-25（`docs/adr/ADR-1075-schedule-recurrence.md:27`）。「これ以降は UNTIL で切る」「すべては元の行を直す」は決定5（`:19`）。
+- 【事実】実物（origin/main 65934286b）:
+  - 取り込みの入口 `backend/app/services/calendar_service.py:1876-1923` の `upsert_from_google`。`:1904-1906` で `recurringEventId` がアプリで作った元の予定を指せば `_apply_app_instance_from_google` へ回す。`:1909-1912` でアプリで作った予定の id そのものなら `_update_app_origin_from_google` へ回す。
+  - `_apply_app_instance_from_google`（`:1738-1873`）: `:1759-1772` で送り終えた繰り返しの元の行を読む。`:1778-1783` で Google の元の予定を `get_event` で 1 回だけ読む（読めなければ警告「Google の繰り返しの元の予定を読めませんでした」を残して None）。`:1784-1785` で `_same_series` が偽なら飛ばす。
+  - `_same_series`（`:1692-1715`）: `:1698` で Google の元の予定が無い・`status` が `cancelled`・時間が無いときは偽。
+  - `_update_app_origin_from_google`（`:1603-1679`）: `:1619-1633` の消した知らせは、送り終えた・繰り返しでない行（`recurrence_rule IS NULL AND recurring_event_id IS NULL`）だけを消す。元の予定の id そのものが消した形で届いても、元の行は消さない。
+  - アプリで「すべての予定」を消すとき（`delete_recurring_event` `:1400`、`# all` は `:1487-1497`）: 例外の行の Google の id を先に読み、元の行を id で消して commit し、そのあと Google の例外の回と元の予定を消す。例外の行は外部キーで一緒に消える。
+  - Google の元の予定を読む `backend/app/services/google_calendar.py:403-411` の `get_event`（`events().get`、失敗は RuntimeError）。
+  - 取り込みの回し方 `backend/app/services/google_webhook.py:291-347`: 差分は `singleEvents: True`・`calendarId: "primary"`・`timeMax` なし（`:298-307`）。1 回の取り込みに 1 つの `series_cache`（`:336`）。結果は「Google 取り込み完了 (tenant, upserted, deleted, full)」（`:382`）。
+  - Google で作った予定の消した知らせ（`backend/app/services/calendar_service.py:1915-1923`）は、`source='google'` の行だけを消し、行が無くても "deleted" を返す。
+- 【事実】表のつながり（`backend/app/services/tenant.py`）: `calendar_events.recurring_event_id` は自分の表の `id` を ON DELETE CASCADE で指す（`:1613`）。チームとの対応表 `calendar_event_teams.event_id` も ON DELETE CASCADE（`:1635`、移行 `migrations/20261127_100000_add_calendar_team_share.sql:32`）。元の行を消すと、例外の行とチームの対応も一緒に消える。アプリで「すべて」を消すときと同じ。
+- 【事実】本番の記録（Grafana の Loki、job=containerlogs、2026-11-26 15:10〜15:25 UTC、133 行）: 15:16:28 Google からの知らせ（webhook POST 200）→ 15:16:31 「Google 取り込み完了 (tenant=1, upserted=0, deleted=0, full=False)」。同じ時間に「繰り返しの元の予定」の警告は 0 行。だから `get_event` は失敗せずに返り、`_same_series` が偽になって飛ばした。
+- 【事実】Google の公式の資料（Context7 `/websites/developers_google_workspace_calendar_api`・2026-11-26 に読んだ）: `get` は消した予定（`status: "cancelled"`）も返す。差分の取り込みでは消した予定が必ず届く。`showDeleted` と `singleEvents` が両方 true のときは、消した回だけが届き、元の繰り返しの予定は届かない。消した例外の回は `id`・`recurringEventId`・`originalStartTime` だけが保証される。
+- 【推測】15:16 の `get_event` は `status: "cancelled"` の元の予定を返した。根拠は上の資料と、警告が 0 行で、元の予定はほかに変えていないこと。Google が返した中身は記録に出ないので見ていない。受け入れの基準 K-s1（本番）で確かめる。
+- 【未確認】15:16 の差分に回が何件届いたか。取り込みは件数を記録しない。
+- 【事実】本番の数（読むだけの鍵・2026-11-26 15:43Z の片付け後）: tenant_001 の予定の行は元からの 3 行だけ。繰り返しの元の行・例外の行は 0 行。
+- 【事実】既存の試験 `backend/tests/test_calendar_service.py:2289-2304` の `test_series_changed_in_google_is_skipped` は、Google の元の予定が `cancelled` で回が「消していない」形（題名を直した回）のときに飛ばすことを確かめている。便5 は回も消した形のときだけ消すので、この試験はそのまま通る。
+- 【事実】本物の PostgreSQL の試験 `backend/tests/test_calendar_sync_tenant_reset_pg.py` に、取り込みの書き込みの試験がある（`:560` 単発の消し、`:578` 回の消し・直し、`:612` Google の id の重なり）。

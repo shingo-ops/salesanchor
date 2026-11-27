@@ -636,3 +636,62 @@ async def test_google_instance_with_taken_id_is_skipped_on_real_db():
         assert await _exception_rows(admin_engine, master["id"]) == []
     finally:
         await _teardown(admin_engine, app_engine)
+
+
+# Google で繰り返しの「すべて」を消したら、元の行と例外の行が DB の決まりに外れずに消える（ADR-1075 改訂 2026-11-27）
+async def test_google_series_cancel_deletes_master_and_exceptions_on_real_db():
+    admin_engine, app_engine, factory = await _setup()
+    try:
+        master = await _create_weekly_master(factory)
+        await _mark_synced_from_app(admin_engine, master["id"], "gm978")
+        edited = {
+            "id": "gm978_20261217T010000Z", "status": "confirmed", "summary": "臨時",
+            "recurringEventId": "gm978",
+            "originalStartTime": {"dateTime": "2026-12-17T10:00:00+09:00"},
+            "start": {"dateTime": "2026-12-17T10:00:00+09:00"},
+            "end": {"dateTime": "2026-12-17T11:00:00+09:00"},
+        }
+        assert await _import_one(factory, edited, _g_master_for(master)) == "upserted"
+        g_gone = dict(_g_master_for(master), status="cancelled")
+        cancelled = {
+            "id": "gm978_20261210T010000Z", "status": "cancelled", "recurringEventId": "gm978",
+            "originalStartTime": {"dateTime": "2026-12-10T10:00:00+09:00"},
+        }
+        assert await _import_one(factory, cancelled, g_gone) == "deleted"
+        assert await _count_rows(admin_engine, "id = :id", {"id": master["id"]}) == 0
+        assert await _count_rows(admin_engine, "recurring_event_id = :id", {"id": master["id"]}) == 0
+    finally:
+        await _teardown(admin_engine, app_engine)
+
+
+# 送り中の例外の行があるときは、Google で「すべて」を消しても 1 行も消さない
+async def test_google_series_cancel_with_pending_exception_keeps_rows_on_real_db():
+    from sqlalchemy import text
+
+    admin_engine, app_engine, factory = await _setup()
+    try:
+        master = await _create_weekly_master(factory)
+        await _mark_synced_from_app(admin_engine, master["id"], "gm978")
+        edited = {
+            "id": "gm978_20261217T010000Z", "status": "confirmed", "summary": "臨時",
+            "recurringEventId": "gm978",
+            "originalStartTime": {"dateTime": "2026-12-17T10:00:00+09:00"},
+            "start": {"dateTime": "2026-12-17T10:00:00+09:00"},
+            "end": {"dateTime": "2026-12-17T11:00:00+09:00"},
+        }
+        assert await _import_one(factory, edited, _g_master_for(master)) == "upserted"
+        async with admin_engine.begin() as conn:
+            await conn.execute(
+                text(f"UPDATE {_SCHEMA}.calendar_events SET sync_status = 'pending' WHERE recurring_event_id = :id"),
+                {"id": master["id"]},
+            )
+        cancelled = {
+            "id": "gm978_20261210T010000Z", "status": "cancelled", "recurringEventId": "gm978",
+            "originalStartTime": {"dateTime": "2026-12-10T10:00:00+09:00"},
+        }
+        g_gone = dict(_g_master_for(master), status="cancelled")
+        assert await _import_one(factory, cancelled, g_gone) == "skipped"
+        assert await _count_rows(admin_engine, "id = :id", {"id": master["id"]}) == 1
+        assert await _count_rows(admin_engine, "recurring_event_id = :id", {"id": master["id"]}) == 1
+    finally:
+        await _teardown(admin_engine, app_engine)

@@ -1,0 +1,5 @@
+branch: release/calendar-google-series-delete-impl
+
+| ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
+|---|---|---|---|---|---|---|
+| release/calendar-google-series-delete-impl | 予定の Google 取り込み（繰り返しの「すべて」を Google で消したとき）便5 | 2026-11-27 | DONE | 5804 | - | PO 承認済み（11/27「1」）。実装はクラウド（b2918ba42）。設計 design.md §13・card-bin5.md・ADR-1075 改訂 2026-11-27。設計だけの枝 release/calendar-google-series-delete の台帳はこの枝へ移した |
