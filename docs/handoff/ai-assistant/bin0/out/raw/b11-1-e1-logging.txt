@@ -1,0 +1,39 @@
+fallback_providers: []
+
+logging:
+  level: WARNING
+/opt/data/profiles/calendar/config.yaml:0
+/opt/data/profiles/coordinator/config.yaml:0
+/opt/data/profiles/invoice/config.yaml:0
+## E1 送信
+200
+## E1 logging.level=WARNING を /opt/data/config.yaml のみに追加(部屋の config には無し)・invoice へ 1 回送信(HTTP 200)
+--- logs
+logs/agent.log total=244 INFO=238 WARNING=6 ERROR=0 MARK=0
+logs/gateway.log total=19 INFO=18 WARNING=1 ERROR=0 MARK=0
+logs/errors.log total=6 INFO=0 WARNING=6 ERROR=0 MARK=0
+profiles/invoice/logs/agent.log total=43 INFO=3 WARNING=1 ERROR=0 MARK=0
+profiles/invoice/logs/gateway.log total=43 INFO=3 WARNING=1 ERROR=0 MARK=0
+profiles/invoice/logs/errors.log total=40 INFO=0 WARNING=1 ERROR=0 MARK=0
+--- marker count
+4 ./profiles/invoice/state.db-wal
+TOTAL_LINES=4 FILES_SCANNED=536
+--- sessions
+{"object": "list", "data": [{"id": "api-515cba26aaf0bed0", "source": "api_server", "user_id": "api", "model": null, "title": null, "started_at": 1795806587.762793, "ended_at": null, "end_reason": null, "message_count": 1, "tool_call_count": 0, "input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0, "cache_write_tokens": 0, "reasoning_tokens": 0, "estimated_cost_usd": null, "actual_cost_usd": null, "api_call_count": 0, "parent_session_id": null, "last_active": 1795806589.913705, "preview": "", "pinned": false, "archived": false, "hidden": false, "has_system_prompt": false, "has_model_config": false, "is_internal_child": false}], "limit": 50, "offset": 0, "has_more": false}
+...
+grep: /opt/data/logs/agent.log: Permission denied
+grep: /opt/data/logs/agent.log: Permission denied
+     28 s6-supervise main-hermes
+    146 s6-svscan /run/hermes-service
+    172 /opt/hermes/.venv/bin/python -P -c import os, site, sys; sys.argv[0]='hermes'; site.addsitedir(os.environ['HERMES_SITE']); from hermes_cli.main import m
+2026-11-27 19:07:43,348 INFO hermes_cli.boot_bootstrap: home maintenance: code changed to 8fc037444731, running steps
+2026-11-27 19:07:45,602 INFO hermes_cli.plugins: Plugin 'browser-browser-use' registered browser provider: browser-use
+2026-11-27 19:07:45,607 INFO hermes_cli.plugins: Plugin 'browser-browserbase' registered browser provider: browserbase
+...
+    203 hermes_cli.plugins:
+     16 gateway.run:
+      5 tools.registry:
+      3 aiohttp.access:
+      2 hermes_cli.web_server:
+      2 hermes_cli.gateway_multiplex_mode:
+2026-11-27 19:09:46,937 WARNING gateway.platforms.api_server: [Api_Server] API server is network-accessible (0.0.0.0) AND the terminal backend is 'local' (unsandboxed). Agent work dispatched through this endpoint runs as the host user with full terminal/file access. Strongly consider a sandboxed bac
