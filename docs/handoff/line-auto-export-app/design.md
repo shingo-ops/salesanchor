@@ -1153,3 +1153,4 @@ PR #5811 の成果物（`versionCode=26`／`versionName=0.23.0-stage3`）を2026
 ### ⑤変えていないもの
 
 手順9（`step9WaitShareSheet`）のポーリング間隔・期限、3段階それぞれの探し方（`NodeOps.findByTextPrefix`/`findByDescExact`/`findNodeByLabel`）、`settings_item`/`export_item` のスクロール再試行（`scrollFindAndClick`、`SCROLL_MAX_RETRIES`・`SCROLL_SETTLE_DELAY_MS` など）、遮断モードの帯（`overlayBlocking`・`RunStatusOverlay`）。
+
