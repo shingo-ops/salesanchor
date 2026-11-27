@@ -111,7 +111,7 @@ REJECT = [
     "UPDATE leads SET name = set_config('x','y',false)",
     "DROP TABLE leads",
     "TRUNCATE leads",
-    "CREATE TABLE x (a int)",
+    "CREATE VIEW v AS SELECT 1",
     "ALTER TABLE leads ADD COLUMN x int",
     "GRANT ALL ON leads TO public",
     "COPY leads TO STDOUT",

@@ -26,7 +26,7 @@ ALTER ROLE ai_dev001_writer SET idle_in_transaction_session_timeout = '60s';
 -- 表の名前は手で並べない。tenant_meta_config には付けない。public には何も付けない。
 DO $dev001_grants$
 DECLARE
-  deny_re CONSTANT text := '^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential|account_number|^iban$';
+  deny constant text := '^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential|account_number|^iban$';
   tbl RECORD;
   safe_cols text;
 BEGIN
@@ -49,13 +49,13 @@ BEGIN
     IF EXISTS (
       SELECT 1 FROM pg_attribute a
       WHERE a.attrelid = tbl.oid AND a.attnum > 0 AND NOT a.attisdropped
-        AND lower(a.attname) ~ deny_re
+        AND lower(a.attname) ~ deny
     ) THEN
       -- 規則 B: 秘密の列を持つ表は、秘密でない列だけに SELECT・INSERT・UPDATE、DELETE は表に付ける
       SELECT string_agg(format('%I', a.attname), ', ' ORDER BY a.attnum) INTO safe_cols
       FROM pg_attribute a
       WHERE a.attrelid = tbl.oid AND a.attnum > 0 AND NOT a.attisdropped
-        AND NOT (lower(a.attname) ~ deny_re);
+        AND NOT (lower(a.attname) ~ deny);
       IF safe_cols IS NOT NULL THEN
         EXECUTE format(
           'GRANT SELECT (%1$s), INSERT (%1$s), UPDATE (%1$s) ON tenant_001.%2$I TO ai_dev001_writer',
