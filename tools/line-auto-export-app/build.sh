@@ -57,6 +57,41 @@ aapt package -f -m -J "$GEN_DIR" \
   -I "$AAPT_JAR"
 echo "OK: $GEN_DIR"
 
+# 版名（versionName）の唯一の出所は AndroidManifest.xml。ここで読み取り、
+# BuildStamp.java（下記）に埋め込む。手でもう1か所に書かない（二重管理禁止）。
+VERSION_NAME="$(grep -o 'android:versionName="[^"]*"' AndroidManifest.xml | head -1 | sed -E 's/.*"([^"]*)"$/\1/')"
+if [ -z "$VERSION_NAME" ]; then
+  echo "ERROR: AndroidManifest.xml から android:versionName を読み取れません" >&2
+  exit 1
+fi
+
+echo "-- [1b/10] BuildStamp.java を生成（versionName=$VERSION_NAME の刻印） --"
+# 2026-11-27: 実機で「マニフェストの版名は新しいが classes.dex の中身は古い」APKが
+# 見つかった（版名が中身を保証しない）。これを機械的に防ぐため、versionNameの文字列を
+# コードに刻印し、ビルド後に classes.dex の中にその文字列が実在するかを検査する
+# （下記 [3b/10]）。BuildStamp.java は手で編集しない生成物（唯一の出所は
+# AndroidManifest.xml のversionName）。
+BUILD_STAMP_DIR="$GEN_DIR/jp/salesanchor/lineexport"
+mkdir -p "$BUILD_STAMP_DIR"
+cat > "$BUILD_STAMP_DIR/BuildStamp.java" <<BUILDSTAMP_EOF
+package jp.salesanchor.lineexport;
+
+/**
+ * build.sh が生成する（手で編集しない）。唯一の出所は AndroidManifest.xml の
+ * android:versionName。ビルド後の自己検査（build.sh [3b/10]）が、できあがった
+ * classes.dex にこの値の文字列が実在するかを確認し、無ければビルドを失敗させる
+ * （design.md追補「保守口（無線デバッグ）の強制開け直し」。2026-11-27、実機で
+ * マニフェストの版名は新しいのにdexの中身が古いAPKが見つかった事象への対策）。
+ */
+final class BuildStamp {
+    static final String VERSION_NAME = "$VERSION_NAME";
+
+    private BuildStamp() {
+    }
+}
+BUILDSTAMP_EOF
+echo "OK: $BUILD_STAMP_DIR/BuildStamp.java"
+
 echo "-- [2/10] javac --release 8 (API23, メインソース) --"
 SHIM_SRC="src/java/jp/salesanchor/lineexport/GestureCallbackShim.java"
 mapfile -t JAVA_SOURCES < <(find src/java "$GEN_DIR" -name '*.java' ! -name "$(basename "$SHIM_SRC")")
@@ -76,6 +111,19 @@ echo "OK: javac compiled GestureCallbackShim.java -> $CLASSES_DIR"
 echo "-- [3/10] dalvik-exchange (classes -> classes.dex) --"
 dalvik-exchange --dex --output="$DEX_FILE" "$CLASSES_DIR"
 echo "OK: $DEX_FILE"
+
+echo "-- [3b/10] self-check: バージョン刻印がdexに入っているか --"
+# 版名（マニフェストの申告）とclasses.dexの中身がずれたAPKを作れないようにする検査
+# （2026-11-27 実機事象の対策。上記[1b/10]参照）。grep -a はdexがバイナリでも文字列を
+# 検索できる（dexの文字列プールはUTF-8の生テキストとして入っているため、javacが
+# 定数として埋め込んだ文字列はそのままバイト列として残る）。
+if grep -a -q -F "$VERSION_NAME" "$DEX_FILE"; then
+  echo "OK: classes.dex に versionName=$VERSION_NAME の刻印を確認"
+else
+  echo "ERROR: classes.dex に versionName=$VERSION_NAME の刻印が見つかりません。" >&2
+  echo "       マニフェストの版名と実際のコードがずれている可能性があります（ビルドを中止します）。" >&2
+  exit 1
+fi
 
 echo "-- [4/10] aapt package (resources + manifest -> app-unsigned.apk) --"
 aapt package -f \

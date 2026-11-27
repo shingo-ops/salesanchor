@@ -23,6 +23,8 @@ final class SchedulerStore {
     private static final String KEY_LAST_IGNORING_BATTERY_OPTIMIZATIONS = "last_ignoring_battery_optimizations";
     private static final String KEY_SCHEDULED_FIRE_AT_PREFIX = "scheduled_fire_at_";
     private static final String KEY_LAST_MAINTENANCE_CHANNEL_RESULT = "last_maintenance_channel_result";
+    private static final String KEY_SIGNAL_CHANNEL_CONFIRMED = "signal_channel_confirmed";
+    private static final String KEY_SIGNAL_PROBE_FAILURE_RECORDED = "signal_probe_failure_recorded";
 
     /** 既定はOFF（design.md: インストール直後に勝手に動き出さないこと）。 */
     private static final boolean DEFAULT_ENABLED = false;
@@ -218,6 +220,38 @@ final class SchedulerStore {
 
     static void setLastMaintenanceChannelResult(Context context, String result) {
         prefs(context).edit().putString(KEY_LAST_MAINTENANCE_CHANNEL_RESULT, result).apply();
+    }
+
+    /**
+     * 合図ファイル（{@code maintenance-open}）の検知方式が、削除の往復による自己試験
+     * （{@link MaintenanceChannel#probeSignalChannel}）で「使える」と確認済みかどうか
+     * （design.md追補「保守口（無線デバッグ）の強制開け直し・合図検知の作り直し」2026-11-27、
+     * PO方針「読み取り権限は増やさない」）。確認済みになったら以後は自己試験を行わない
+     * （毎回のファイル操作を増やさないため）。既定false（まだ確認できていない）。
+     */
+    static boolean isSignalChannelConfirmed(Context context) {
+        return prefs(context).getBoolean(KEY_SIGNAL_CHANNEL_CONFIRMED, false);
+    }
+
+    static void setSignalChannelConfirmed(Context context, boolean confirmed) {
+        prefs(context).edit().putBoolean(KEY_SIGNAL_CHANNEL_CONFIRMED, confirmed).apply();
+    }
+
+    /**
+     * 合図検知の自己試験（{@link MaintenanceChannel#probeSignalChannel}）の失敗
+     * （{@code signal_probe_failed}）を、すでに1回記録したかどうか。design.md追補
+     * 「合図検知の作り直し」②「黙らせない」の重複防止専用の枠（{@link
+     * #getLastMaintenanceChannelResult}（{@code ensureOpen}/{@code cycle}が使う枠）を
+     * 共用すると記録が往復する。Opus審査 2026-11-27 の指摘と同種の穴。理由は
+     * {@link MaintenanceChannel#probeSignalChannel}のjavadoc参照）。試験が成功するまで
+     * trueのままにし、失敗が続く間は1行だけに留める。既定false（まだ一度も記録していない）。
+     */
+    static boolean wasSignalProbeFailureRecorded(Context context) {
+        return prefs(context).getBoolean(KEY_SIGNAL_PROBE_FAILURE_RECORDED, false);
+    }
+
+    static void setSignalProbeFailureRecorded(Context context, boolean recorded) {
+        prefs(context).edit().putBoolean(KEY_SIGNAL_PROBE_FAILURE_RECORDED, recorded).apply();
     }
 
     private static SharedPreferences prefs(Context context) {

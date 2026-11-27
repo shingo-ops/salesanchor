@@ -86,3 +86,69 @@
 
 - 復旧が起きたことは記録に残るため、頻度が異常なら気づける。
 - 不要になったら定数を false にし、`pm revoke` で権限を取り消す。
+
+---
+
+## 追補: 保守口（無線デバッグ）の強制開け直し（2026-11-27）
+
+### 実機で分かったこと（値を見るだけでは直らない事象）
+
+既存の `ensureOpen`（`adb_wifi_enabled` が 0 のときだけ 1 を書く）は、値そのものが壊れている前提の作りだった。ところが実機では**値が 1 のまま adbd（無線デバッグのサーバー本体）が動いていない**状態が起きた。アプリは「1 だから正常」と見て何もせず、人が端末画面で OFF→ON するまで復旧しなかった。**値を見るだけでは直らない**ため、値を見ずに強制的に開け閉め（cycle）する経路が必要になった。
+
+### 追加のWhat
+
+7. **起動時（BOOT_COMPLETED）は必ず cycle する**。`AlarmReceiver` の BOOT_COMPLETED 経路は、`ensureOpen` ではなく、`adb_wifi_enabled` に **0 を書く → 約 2000ms 待つ → 1 を書く → 読み直す**（cycle）を呼ぶ。再起動直後は adbd が死んでいる可能性が高い場面であるため、値を見ずに毎回強制的に開け直す。
+8. **合図ファイルを見たら cycle する**。`RunScheduler` の毎回の予約処理（`scheduleAt`）が、`ensureOpen` を呼ぶ直前に合図ファイル（ファイル名 `maintenance-open`。場所は `run-*.jsonl` と同じディレクトリ）の有無を確認する。あれば cycle を実行し、そのファイルを削除する。削除に失敗した場合は、処理済みの合図の識別子（`lastModified` と `length` の組）を保存し、次回以降それと同一の合図では cycle も記録も行わない（同じ合図で毎回 cycle してしまうのを防ぐ）。
+9. **毎回は cycle しない**。通常の実行予約時は今までどおり `ensureOpen`（0 のときだけ 1 を書く）のまま。cycle は実行中の ADB 接続を切るため、「起動時」と「合図があったとき」の2か所に限定する。
+10. cycle の結果（`cycled_opened`／`cycled_blocked`）は、既存の `opened` と同じ考え方で**変化比較せず毎回記録する**（復旧の実績が残らないと「維持の仕組み」が成り立たないため）。合図ファイルの確認でストレージが読めない・一覧できない場合は、黙らず `signal_unreadable` を1回だけ記録する。
+
+### セキュリティ（合図ファイル方式のリスク評価）
+
+- 合図ファイル方式は、**端末のストレージに書ける主体なら合図を置ける**（この開発環境自身を含む）。この点は正直にリスクとして記録する。
+- ただし、合図が起こせるのは「無線デバッグを強制的に開け直す」ことだけである。新しい相手が実際に ADB で入るには、別途ペアリングと端末画面での許可操作が必要（本 ADR の既存のセキュリティ節のとおり）。合図ファイル自体には実行権限や新しい到達範囲は無く、既に開いている保守口を「開け直す」トリガーに過ぎない。
+- `SELF_RECOVERY_ENABLED` を false にすれば、起動時 cycle・合図ファイル cycle・`ensureOpen` のすべてが無効になり、合図ファイルを置いても何も起きなくなる。
+
+### 検証（追加）
+
+| 基準 | 検証方法 |
+|---|---|
+| 起動時に必ず cycle する | 端末再起動後、`run-YYYYMMDD.jsonl` に `trigger=boot` の `cycled_opened`（または `cycled_blocked`）が残る |
+| 合図ファイルで cycle する | `maintenance-open` を置いて10分以内に `trigger=signal` の記録が出て、ファイルが消える |
+| 毎回は cycle しない | 通常の実行予約の記録に `cycled_*` が出ない（`opened`／`blocked` のまま） |
+| 合図が読めないと黙らない | ストレージの読み取りに失敗する環境では `signal_unreadable` が1回だけ記録される（＝方式の見直しが必要という判定材料） |
+| 書き換えるキーが増えていない | `adb_enabled` を触るコードが無いことを差分で確認 |
+| 止められる | `SELF_RECOVERY_ENABLED` を false にしたビルドでは cycle・ensureOpen のいずれも値を書き換えないことをコードで確認 |
+
+設計: `docs/handoff/line-auto-export-app/design.md` 追補 2026-11-27「保守口（無線デバッグ）の強制開け直し」。
+
+### 追補2: 版番号の衝突（別PRとの versionCode/versionName 重複）と、ビルドの自己検査（2026-11-27）
+
+端末に 16:48:51 に入った APK は版名（`versionName=0.22.0-stage3`／`versionCode=25`）が本PRの当初の版と同じだった。調査の結果、これは**別ブランチ `release/line-export-click-retry`（PR #5808）の正当なビルドと1バイト単位で同一**であることがハッシュ照合で確定した（版名が偽りだったわけではない。詳細は `docs/handoff/line-auto-export-app/design.md`・`docs/handoff/line-auto-export-app/review-opus-adr1092.md`）。真因は **PR #5808 と本PRが独立に同じ版番号を選んでいた**ことであり、版番号だけでは端末に入っているのがどちらのPRのコードか識別できない状態になっていた。対応として本PRの版を `versionCode=26`／`versionName=0.23.0-stage3` に上げ、衝突を解消した。
+
+再発防止のため `tools/line-auto-export-app/build.sh` に自己検査も追加した: `AndroidManifest.xml` の `versionName` を唯一の出所として生成した版名の刻印（`BuildStamp.VERSION_NAME`）が、できあがった `classes.dex` の中に実在するかを確認し、無ければビルドを失敗させる。これは「1つのビルドの中で版名とコードがずれていないか」を守るものであり、**今回のような複数PR間の版番号衝突は検出できない**（PR #5808 のビルド自体は自己整合していたため）。版番号の衝突は、ブランチ作成・統合前に他のオープンPRが使っている値を確認する運用で防ぐ必要がある。
+
+### 追補3: 合図ファイルの検知方式の作り直し（`canRead()` 門番の撤去、2026-11-27）
+
+#### 実機で測った事実（一次情報）
+
+PR #5811 の成果物（`versionCode=26`／`versionName=0.23.0-stage3`）を実機へ導入し、`checkSignalFile` が実際に動くところを確認した結果、次が確定した。
+
+- 導入直後、アプリ自身が `/sdcard/Download/sa-line-notify/run-20261127.jsonl` に次を記録した: `{"at":"2026-11-27T18:24:55+0900","flow":"scheduler","phase":"maintenance_channel","result":"signal_unreadable","adbWifiEnabled":-1,"trigger":"signal"}`。すなわち旧 `checkSignalFile` の `!dir.canRead()` が **true** になった。
+- ところが**同じディレクトリへの書き込みは成功している**（この記録自体がそこに書かれた）。`resolveStorageDir` は `ensureWritableDir` が通った `/sdcard/Download/sa-line-notify` を返している。
+- 端末の権限は `WRITE_EXTERNAL_STORAGE: granted=true` / **`READ_EXTERNAL_STORAGE: granted=false`**。アプリは `targetSdkVersion=24`（旧方式のストレージ）。
+- `/sdcard/Android/data/jp.salesanchor.lineexport/files` は本環境から書けず、存在しない（代替経路にならない）。
+
+つまり「**書けるのに `canRead()` が false になる**」ことが実機で確定した。`READ_EXTERNAL_STORAGE` 未付与＋`targetSdkVersion=24` の組み合わせでは、書き込み可能なディレクトリであっても `File#canRead()`／`isDirectory()` の戻り値は信頼できない。旧実装はこの `canRead()` を門番にしていたため、合図ファイルが実際にそこへ置かれても常に `signal_unreadable` になり、**合図を一度も検知できなかった**（実機で機能していなかったことが確定した）。
+
+#### PO の決定
+
+**読み取り権限は増やさない。** 合図の検知に中身の読み取りは不要で、「在るか見て、消す」だけで足りる。削除に必要な書き込み権限は既にある。
+
+#### 設計判断（門番の撤去・削除を検知器にする）
+
+- `canRead()`・`isDirectory()` による事前の門番を撤去した。読み取りが拒否される環境では stat 系の戻り値も信頼できないため、門番で弾かずに実際の操作（削除）を試す方式に変えた。
+- 検知器を `boolean consumed = new File(dir, "maintenance-open").delete();` に変えた。`delete()` が `true` を返したときだけ「合図が在って、いま消費した」と確定できる。**削除してから cycle する**（逆順だと削除が失敗する環境で同じ合図に毎回 cycle してしまう。旧実装の `lastModified`＋`length` による重複判定はこの方式では不要になり削除した。削除が成功した回だけ cycle するため、二重消費が原理的に起きない）。
+- `delete()` が false の「合図が無い」と「消せない（経路が壊れている）」を区別するため、まだ経路の健全性を確認できていない間だけ、自前の試験ファイル（`.maintenance-probe`）の作成→削除の往復による自己試験を行う。両方成功したら `signal_channel_ok` を1回記録して以後は試験しない。どちらかが失敗したら `signal_probe_failed` を専用の重複判定枠で1回だけ記録する（旗は立てず次回また試す）。
+- `signal_unreadable` という結果名は撤去した（`canRead()` 前提の名前であり、意味が変わるため流用しない）。
+
+詳細設計は `docs/handoff/line-auto-export-app/design.md` 追補「合図検知の作り直し」、審査は `docs/handoff/line-auto-export-app/review-opus-adr1092.md` 参照。版は `versionCode` 26→27、`versionName` 0.23.0-stage3→0.24.0-stage3 に上げた（在庫中の他PRとの衝突がないことを確認済み）。
