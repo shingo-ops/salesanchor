@@ -116,7 +116,7 @@
 | G2 | メモリの上限: `MemoryHigh=1200M`（ここで押さえ始める）・`MemoryMax=1500M`（越えたら担当の中だけで止める）・`MemorySwapMax=0`・`OOMScoreAdjust=1000`。根拠の計算: 使えるメモリ 2,546MB（F1）− 1,500MB ＝ 残り約 1,046MB が監視の側に残る。ただし runner と Playwright が prod2 で動くなら（ADR-080 の「管理室VPSに追加するもの」・同 ADR のリスク表「4GB プランを推奨」）その山の分は F1 に入っていない。段取り 1 で runner の有無と山を測り、残りが 500MB を切る見込みなら始めない | `systemctl show` の値。設定の意味は systemd の公式（systemd.resource-control「MemoryMax=」。Context7 で 2026-11-25 に取得） |
 | G3 | 置く鍵は 2 つだけ: 担当のサブスクのログイン・Discord のボットの鍵。どちらも `ops-agent` の家の場所に置き、値は文書と会話に書かない | 04 は `ops-agent` の家に `.ssh` の鍵が 0 件であることを見る。DB の鍵・case-api の札・GitHub の鍵は、01〜03b のどの段でも `ops-agent` に置かない（置く手順が無い）ことで守る。04 で機械的には見ていない（2026-11-26 マージ前審査の指摘） |
 | G4 | 使える道具は Discord の返事の道具と Read だけ。Bash・書き込み・ネットの道具は許さない。一覧に無い道具は聞かずに断る設定にする | 一覧に無い命令（例: ファイルを作って）を頼み、止まらずに断る返事が来る。設定の名前は導入の時に公式資料と照らす（Agent SDK では `permissionMode: "dontAsk"`＋`allowedTools`。CLI の settings で同じ書き方が効くかは未確認・T1） |
-| G5 | Discord は PO のアカウントだけ: `/discord:access` は使わず、03b が `access.json` に allowlist（PO の番号 1 つ）を置き、`DISCORD_ACCESS_MODE=static` で書き換わらなくする（§12-3 段取り 4） | K5 の試し |
+| G5 | Discord は PO のアカウントだけ: `/discord:access` は使わず、03b が access.json に allowlist（PO の番号 1 つ）を置き、`DISCORD_ACCESS_MODE=static` で書き換わらなくする（§12-3 段取り 4） | K5 の試し |
 | G6 | 監視への影響を毎日見る: 監視の各コンテナの再起動の回数（`RestartCount`）と OOMKilled・prod2 の使えるメモリ | 再起動と OOMKilled は段取り 1 の基準の値との差 0 なら ○。使えるメモリは担当が動く分だけ必ず減るので差では見ず、500MB 以上なら ○ |
 | G7 | 本番と監視へ届く道を、担当の処理だけ塞ぐ。prod2 には prod1 の数字の出口を `0.0.0.0:19100/19187/19113/19121` で出す常時の転送がある（ADR-080 末尾の 2026-09-30 追記・recon F3）。担当の unit に `IPAddressDeny=127.0.0.0/8 ::1/128 169.254.0.0/16 fe80::/64 224.0.0.0/4 ff00::/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 49.212.137.46 49.212.160.98` を付け（2026-11-27 追記: systemd 255 の `systemd-run -p` は localhost・link-local・multicast の名前を読めず「Failed to parse IP address prefix: localhost」で止まった。unit ファイル側で名前が広がる先の数字で書く）、loopback・docker の網・prod1・prod2 自身の番地へ繋げなくする（外の 443 番は塞がない）。名前を引く道だけは開ける: 段取り 1 で `/etc/resolv.conf` と `resolvectl status` から名前を引く番地を読み（Ubuntu では普通 127.0.0.53）、その番地 1 つだけを `IPAddressAllow=` に書く（systemd では Allow が Deny より先に判定される・公式 systemd.resource-control「IPAddressAllow=」。Context7 で 2026-11-25 に確認）。prod1・prod2 に IPv6 の番地があれば、段取り 1 の `ip -6 addr`（prod2）で読み、同じ欄に足す | 担当と同じ設定で一時的に動かした `curl -m 5 http://127.0.0.1:19100/metrics`（2026-11-27 直し: 19187 番は管理者からも Connection reset で答えが無く、確かめにならない） と `http://49.212.160.98:3000` が失敗（○）。`getent hosts api.anthropic.com` で名前が引け、`https://api.anthropic.com` に繋がる（○） |
 | G8 | 監視の鍵と設定を担当から読めなくする。担当の unit に `ProtectSystem=strict`・`ReadWritePaths=/home/ops-agent`・`InaccessiblePaths=/home/ubuntu /root`・`PrivateTmp=yes`・`NoNewPrivileges=yes` を付ける（どれも systemd の公式の設定。Context7 で 2026-11-25 に確認）。`InaccessiblePaths` の欄は仮の値。段取り 1 で転送の鍵と監視の compose の `.env` の場所を読み、`/home/ubuntu` と `/root` の外（例 `/opt`・`/srv`・`/etc`）にあれば、その場所をこの欄に足してから unit を置く | 04 の `stat -c %a` で守りの下は 0・守りの外は 0 以外（○）。G8 の証拠は stat だけ（Read は作業の場所の外なので、守りが無くても dontAsk で断られ、証拠にならない） |
@@ -161,10 +161,10 @@
 
 - 04 の守りの確かめ 21 項目は、3 回目で全部合格した。1 回目は G7 の名前の書き方（§12-2 G7 の追記）、2 回目は 19187 番が答えない件で止まり、どちらも台本を直した。
 - 担当は 2026-11-28 03:21:11 JST に起動し、enable・active。起動し直しの回数 0、メモリは約 212MB。tmux の中で `claude --channels` と Discord の道具が動いている（U-a は起動の時点で○）。
-- 返事をする相手は PO の Discord のアカウント 2 つ。2 つ目は PO が別のアカウントで送っていたため、`03c-add-allow-id.sh` で足した（PO 本人が流す・dmPolicy と groups が変わっていないことを確かめてから入れ替える）。
+- 返事をする相手は PO の Discord のアカウント 2 つ。2 つ目は PO が別のアカウントで送っていたため、`docs/handoff/ai-ops-247/trial-install/03c-add-allow-id.sh` で足した（PO 本人が流す・dmPolicy と groups が変わっていないことを確かめてから入れ替える）。
 - 試しの間は、直接のメッセージだけで話す（`groups` は空のまま）。不具合受付のチャンネルで話すのは、PO が後日決める（PO 2026-11-28「2」）。
 - T1 の動作の確かめ: 「こんにちは」に返事が届いた（PO 確認）。「ls を実行して」は、命令の道具が無いと断った（G4 ○）。読むだけのファイル探しの道具は、作業の場所 `/home/ops-agent/work` の中では動いた。作業の場所の外を読めないことは G8 の stat で確かめ済みで、Discord からはまだ試していない。
-- 新しい台本: `03c-add-allow-id.sh`（相手を足す）・`07-read-pane.sh`（担当の画面を写すだけ）・`run-01-02.sh`・`open-window.sh`（01・02 と 03 の B を流す形にしたもの）。
+- 新しい台本: `docs/handoff/ai-ops-247/trial-install/03c-add-allow-id.sh`（相手を足す）・`docs/handoff/ai-ops-247/trial-install/07-read-pane.sh`（担当の画面を写すだけ）・`docs/handoff/ai-ops-247/trial-install/run-01-02.sh`・`docs/handoff/ai-ops-247/trial-install/open-window.sh`（01・02 と 03 の B を流す形にしたもの）。
 - 残り: 段取り 7 の 7 日間の毎日の確認（05）と K2（再起動 1 回）。
 
 ## 維持の仕組み
