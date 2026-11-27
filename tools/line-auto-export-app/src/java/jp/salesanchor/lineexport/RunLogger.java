@@ -269,6 +269,31 @@ final class RunLogger {
         append(context, json);
     }
 
+    /**
+     * 保守口（無線デバッグ）が切れていたら開き直す仕組み（ADR-1092、design.md追補 2026-11-27
+     * 「保守口（無線デバッグ）が切れたらアプリが開き直す」）の結果が変化したときだけ呼ぶ
+     * （{@link MaintenanceChannel}参照）。{@link #logBatteryExemptionChanged}と同じ
+     * 「単発行・runIdに紐づかない」扱い。毎回は呼ばれない（変化時だけのため、ログが膨らまない）。
+     *
+     * @param result "opened"（0だったものを1にできた）/ "blocked"（書いたが1にならなかった。
+     *     Wi-Fiが無い等）/ "no_permission"（WRITE_SECURE_SETTINGS未付与）
+     * @param valueAfter 書き込みを試みた後に読み直した{@code adb_wifi_enabled}の値
+     */
+    static void logMaintenanceChannel(Context context, String result, int valueAfter) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("at", formatIso8601(System.currentTimeMillis()));
+            json.put("flow", "scheduler");
+            json.put("phase", "maintenance_channel");
+            json.put("result", result);
+            json.put("adbWifiEnabled", valueAfter);
+        } catch (JSONException e) {
+            Log.w(TAG, "run log maintenance channel build failed: " + e);
+            return;
+        }
+        append(context, json);
+    }
+
     private static void append(Context context, JSONObject json) {
         try {
             File dir = LineNotifyListenerService.resolveStorageDir(context);

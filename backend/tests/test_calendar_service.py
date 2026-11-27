@@ -763,6 +763,32 @@ class TestUpdateAppOriginFromGoogle:
         assert await self._go(db, ev) == "skipped"
         assert _updates(db) == []
 
+    @pytest.mark.asyncio
+    async def test_cancelled_master_id_deletes_app_series(self):
+        db = _FakeDB(
+            [
+                ("SELECT 1 FROM calendar_events", [(1,)]),
+                ("SELECT id FROM calendar_events WHERE google_event_id", [(1,)]),
+            ],
+            sync_mode=None,
+        )
+        rowcounts = iter([0, 1])
+        orig_exec = db.execute
+
+        async def _exec(stmt, params=None):
+            r = await orig_exec(stmt, params)
+            sql = stmt.text if hasattr(stmt, "text") else str(stmt)
+            if sql.lstrip().startswith("DELETE"):
+                r.rowcount = next(rowcounts)
+            return r
+
+        db.execute = _exec
+        assert await self._go(db, {"id": "gm", "status": "cancelled"}) == "deleted"
+        dels = db.find("DELETE FROM calendar_events")
+        assert len(dels) == 2
+        assert "recurrence_rule IS NULL" in dels[0][1]
+        assert "WHERE id = :id" in dels[1][1] and dels[1][2] == {"id": 1}
+
 
 class TestUpsertFromGoogle:
     @pytest.mark.asyncio
@@ -2334,6 +2360,52 @@ class TestUpsertRecurringInstance:
             out, _ = await self._go(db, event)
             assert out == "skipped"
             assert self._writes(db) == []
+
+    @staticmethod
+    def _held_db(**kw):
+        db = _inst_db(**kw)
+        db.handlers.insert(0, ("sync_status <> 'synced'", [(9,)]))
+        return db
+
+    @pytest.mark.asyncio
+    async def test_all_cancelled_in_google_deletes_master(self):
+        db = _inst_db()
+        out, _ = await self._go(db, _g_inst(status="cancelled"), g_master=_g_master(status="cancelled"))
+        assert out == "deleted"
+        dels = [(s, p) for s, p in self._writes(db) if s.lstrip().startswith("DELETE")]
+        assert len(dels) == 1
+        sql, params = dels[0]
+        for guard in ("WHERE id = :id", "LIKE 'app:1:%'", "sync_status = 'synced'",
+                      "recurrence_rule IS NOT NULL", "recurring_event_id IS NULL"):
+            assert guard in sql
+        assert params == {"id": 1}
+        assert [s for s, _ in self._writes(db) if not s.lstrip().startswith("DELETE")] == []
+
+    @pytest.mark.asyncio
+    async def test_all_cancelled_with_pending_exception_is_held_and_warned_once(self, caplog):
+        cache: dict = {}
+        getter = AsyncMock(return_value=_g_master(status="cancelled"))
+        for day in (19, 26):
+            db = self._held_db()
+            out, _ = await self._go(db, _g_inst(day, status="cancelled"), cache=cache, get_event=getter)
+            assert out == "skipped"
+            assert self._writes(db) == []
+        assert sum("送り中の回があるので" in r.getMessage() for r in caplog.records) == 1
+
+    @pytest.mark.asyncio
+    async def test_cancelled_instance_when_master_unreadable_is_skipped(self):
+        db = _inst_db()
+        out, _ = await self._go(db, _g_inst(status="cancelled"), get_event=AsyncMock(side_effect=RuntimeError("x")))
+        assert out == "skipped"
+        assert self._writes(db) == []
+
+    @pytest.mark.asyncio
+    async def test_following_change_in_google_is_still_skipped(self):
+        cut = _g_master(recurrence=["RRULE:FREQ=WEEKLY;BYDAY=TH;UNTIL=20261125T145959Z"])
+        db = _inst_db()
+        out, _ = await self._go(db, _g_inst(status="cancelled"), g_master=cut)
+        assert out == "skipped"
+        assert self._writes(db) == []
 
 
 class TestCheckRecurrenceRequest:

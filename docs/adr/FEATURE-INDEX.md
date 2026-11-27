@@ -63,6 +63,7 @@
 |---|---|---|---|---|
 | i18n / 国際化 / ja.json / en.json | **ADR-027** | - | frontend/src/locales/** | 全 UI 文字列 `t()` 経由・キー同期必須 |
 | LINE 書き出しアプリ / 端末自動化 / 省電力 / AlarmManager / 電池最適化 / ユーザー補助 / 記録の保持 | **ADR-1090** | - | tools/line-auto-export-app/** | 端末アプリは省電力の間引きを前提に作る。除外の外れと空振りを記録し、設定画面から利用者が戻せる。実測値と Android の一般仕様を区別し回数の具体値に依存しない。記録は文字だけ（画面画像・音声・動画は保存しない）・保持は 90 日 |
+| 保守口 / 無線デバッグ / ワイヤレスデバッグ / ADB / adb_wifi_enabled / 端末の遠隔保守 | **ADR-1092** | - | tools/line-auto-export-app/** | 保守口は無線デバッグ（TLS＋ペアリング）を正とし、切れたらアプリ自身が開き直す。固定ポート（adb tcpip）は全インターフェースに開くため常用しない。書き換えるのは adb_wifi_enabled の1キーだけ・定数で止められる |
 | リリース / release PR / develop→main / branch protection | **ADR-050** | [branch-operations](../specs/branch-operations/README.md) | - | merge commit のみ（squash 禁止＝back-merge 構造バグ防止）・Ruleset 15777895 |
 | リリース相乗り防止 / 危険変更の develop 入口関所 / develop=出荷可能 | **ADR-135** | - | - | 危険変更(migrations/deploy.yml/scripts)は PO GO まで feature で待機・develop マージ＝本番投入可宣言。CODEOWNERS/PRテンプレ済、B（B-2 方式）・C（main 必須チェック追加）・D・E も実施済み（ADR-135:32-60） |
 | 自動マージ / human-in-the-loop / develop 自動 merge | **ADR-056** | - | - | develop は AI 自動 merge・main は人間。通知集約 |
@@ -77,6 +78,7 @@
 | 24時間保守運用 / 障害記録 / 応急処置 / routines / アラート札 page・auto・ticket | **ADR-1012**（Proposed） ／ ADR-115 | [ai-ops-247](../specs/ai-ops-247/README.md)、[discord-ops-intake](../specs/discord-ops-intake/README.md)、[mac-jobs-watch](../specs/mac-jobs-watch/README.md) | - | 経路の正本は Alertmanager・障害記録の正本はアプリ DB・AI は PR で修理（ADR-136 の GO）・C は予備 |
 | Meta / Facebook / Instagram / Webhook / ドメイン認証 / 撮影用データ / 英語UI | ADR-024 ／ ADR-025 ／ ADR-041 ／ ADR-026 ／ ADR-016 ／ ADR-017 ／ ADR-018 ／ ADR-019 ／ ADR-037 | - | backend/app/routers/meta.py、backend/app/services/meta_graph.py | 連携整備・フォールバック・mid TEXT 化・ドメイン認証タグ（ADR-016/017/018）・Instagram 送信（ADR-018）・撮影用データと英語 UI の一時デプロイ（ADR-019）・ページ接続経路の調査（ADR-037） |
 | クラウドの相談係 AI / Discord 発の保守 / 個人の値を伏せたビュー ai_cloud / 解除申請 | **ADR-1052**（Accepted） ／ ADR-1024 ／ ADR-1042 ／ ADR-1039 | - | backend/app/routers/ops_case.py | Discord は合図だけ・外へ出さない・中身は申請して Opus が許可・case-api だけに届く |
+| 試験用テナント（tenant_001）だけに書き込める AI の道 / ai_dev001_writer / 開発用テナント | **ADR-1093**（Proposed） ／ ADR-1024 | - | - | tenant_001 だけに書ける専用の DB ロール・台本・鍵。本物のお客さまの行には DB の権限で届かない。秘密の列は読めない |
 | Discord の知らせを AI が読む / 読むだけの鍵 / SA Bug Intake の権限 | **ADR-1088**（Accepted） ／ ADR-1039 ／ ADR-079 | [discord-ops-intake](../specs/discord-ops-intake/README.md) | - | 受付の Bot に知らせの3部屋の「見る」「履歴を読む」だけを足す・鍵の写しは ADR-079 の置き場（ADR-1039 Decision 7 の例外）・読めないときは強い鍵に切り替えず止める |
 | アプリ内チャット秘書 / 決まり帳 / 予定のカルテ / 声 / 音声入力 / TTS / LIVE の声の会話 | **ADR-1056** ／ ADR-1077 ／ ADR-1078 ／ ADR-1080 ／ ADR-1082 ／ ADR-1087 | [secretary-chat](../specs/secretary-chat/README.md) | backend/app/services/secretary_*.py、backend/app/routers/assistant.py | AI に会社のデータも道具も渡さず頼みの文を決まった形にする・決まり帳は人が承認してから効かせる・予定の頼みは予定と決める・声の読み上げと聞き取り |
 | AI の担当 / モデル割り当て / LLM 使用量 / llm_usage_events | **ADR-1058** ／ ADR-1004 | - | backend/app/services/ai_assignment.py、backend/app/services/llm_budget.py | 担当は DB の 1 か所・LLM 使用量台帳 |

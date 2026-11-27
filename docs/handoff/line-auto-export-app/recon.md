@@ -79,3 +79,12 @@
 - `dumpsys accessibility` — `UnlockAccessibilityService` は `Bound services` に在り `Crashed services:{}`＝ユーザー補助は正常。切り分けの結果、原因はアラーム側に限定できた。
 - `dumpsys package jp.salesanchor.lineexport` — `versionCode=22 versionName=0.19.0-stage3 lastUpdateTime=2026-10-11`＝実機とリポジトリの版が一致。
 - アプリのログ `/sdcard/Download/sa-line-notify/run-20261126.jsonl` — 18:09:08 の `export/end success` 以降、`scheduler/reserve` が4件のみで `unlock`/`export` が無い。
+
+## 追補 2026-11-27 現在地（保守口が切れる経路）
+
+- `tools/line-auto-export-app/AndroidManifest.xml` — 宣言済みの権限は `WAKE_LOCK`・`WRITE_EXTERNAL_STORAGE`・`RECEIVE_BOOT_COMPLETED`・`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` の 4 つ。設定を書く権限は無い。
+- `tools/line-auto-export-app/src/java/jp/salesanchor/lineexport/AlarmReceiver.java` — `BOOT_COMPLETED` と `SCHEDULED_RUN` の受け口。起動時に動く経路は既にある。
+- `tools/line-auto-export-app/src/java/jp/salesanchor/lineexport/RunScheduler.java` — `scheduleAt` が全予約の共通出口で、`notifyIfExactModeChanged` と `checkBatteryOptimizationExemptionChanged` が「変化時だけ記録する」作法の先例。
+- `tools/line-auto-export-app/src/java/jp/salesanchor/lineexport/SchedulerStore.java` — 前回値の保存先の作法（`wasLastIgnoringBatteryOptimizations` 等）。
+- `tools/line-auto-export-app/src/java/jp/salesanchor/lineexport/RunLogger.java` — `logBatteryExemptionChanged` が単発行の記録の先例。
+- 端末側（`adb shell`）: `adb_wifi_enabled` は Wi-Fi 無しでは 1 を受け付けない／`netstat -ltn` で固定ポートは `[::]:5555`／`dumpsys package` で `WRITE_SECURE_SETTINGS` の保護レベルに `development` を確認。
