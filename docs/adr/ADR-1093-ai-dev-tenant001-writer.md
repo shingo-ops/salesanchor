@@ -7,7 +7,7 @@
 | 起案日 | 2026-11-27 |
 | 方針の決定者 | Shingo（PO） |
 | 関連 | ADR-1024（読むだけの道。本 ADR はその型を書き込みに広げる）、ADR-1037（ロック待ち 1 秒）、ADR-025（秘密の列の手動投入は常時厳禁）、ADR-135/136（危険パスの GO）、ADR-113（設計持ち込みの様式） |
-| 設計・根拠 | [design.md](../handoff/dev-tenant001-writer/design.md)、[recon.md](../handoff/dev-tenant001-writer/recon.md)、[review-architect-1.md](../handoff/dev-tenant001-writer/review-architect-1.md) |
+| 設計・根拠 | [design.md](../handoff/dev-tenant001-writer/design.md)、[recon.md](../handoff/dev-tenant001-writer/recon.md)、[review-architect-1.md](../handoff/dev-tenant001-writer/review-architect-1.md)、[review-architect-2.md](../handoff/dev-tenant001-writer/review-architect-2.md)、[review-architect-3.md](../handoff/dev-tenant001-writer/review-architect-3.md) |
 
 ---
 
@@ -21,8 +21,8 @@ tenant_001（テスト株式会社）は開発・点検に使う試験用のテ�
 
 ## Decision（何を決めたか）
 
-1. DB のロール `ai_dev001_writer` を migration で作る。NOSUPERUSER・NOBYPASSRLS・CONNECTION LIMIT 2・`log_statement=all`・`statement_timeout=60s`・`lock_timeout=1s`。
-2. 権限は tenant_001 の表の行の読み書きだけ。`tenant_meta_config`（public を書き換える引き金がある）と秘密の列（ADR-1024 の拒否の型）には付けない。public には 0 から始め、試験で要ると分かった物だけを足す。
+1. DB のロール `ai_dev001_writer` を migration で作る。NOSUPERUSER・NOBYPASSRLS・CONNECTION LIMIT 2・`log_statement=all`・`statement_timeout=60s`・`lock_timeout=1s`・`idle_in_transaction_session_timeout=60s`。
+2. 権限は tenant_001 のスキーマの USAGE（CREATE なし）、表の行の読み書き、連番の USAGE だけ。`tenant_meta_config`（public を書き換える引き金がある）と秘密の列（ADR-1024 の拒否の型）には付けない。public には 0 から始め、試験で要ると分かった物だけを足す。
 3. 専用の台本（1 文だけ・AUDIT を送れなければ rollback）、専用のコンテナ、強制コマンドと期限つきの専用の鍵。読むだけの道と同じ守り。
 4. 境界は DB の権限だけ。台本の語の拒否と Mac の見張りの免除は事故よけ。
 5. Mac の見張りの免除は PO 本人が入れる。

@@ -75,3 +75,4 @@
 - tenant_001 の連番（relkind 'S'）: 74
 - `tenant_meta_config` の外部キー（`pg_constraint` を oid で結んで読んだ）: 1 本だけ。`fk_tenant_meta_config_connected_by_staff_id_user`（tenant_meta_config → public.users、消したとき空にする）。tenant_meta_config を参照先にする外部キーは 0 本。→ tenant_001 の別の表を消した連鎖で、tenant_meta_config の引き金が動く道は無い
 - `'tenant_001.tenant_meta_config'::regclass` を reader 鍵で使うと権限エラー（InsufficientPrivilege）。ai_reader は tenant_001 の USAGE を持たないため。→ 権限の数えは oid で渡す
+- 第3回審査 L3 の確かめ（reader 鍵、2026-11-27 12:40 JST、q23）: 6 表の秘密でない列を `attnum > 0 AND NOT attisdropped` で絞って数え直した。bots 13・discord_channel_webhooks 5・staff 18・tcg_distribution_targets 10・tenant_invoice_payment_bank 11・tenant_invoice_payment_wise 12（合計 69。q20 と同じ）。消した列は staff に 1 本ある。q20 の SQL にこの絞りがあったかは記録が残っていない（未確認）。絞った数え直しで 69 は変わらない
