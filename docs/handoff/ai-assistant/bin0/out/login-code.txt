@@ -1,3 +1,1 @@
-https://auth.openai.com/codex/device
-69EH-2OE6P
-invoice 部屋・出した時刻 2026-11-27T17:47:08Z・有効 900 秒
+使用済み（2026-11-27T17:48:18Z）
