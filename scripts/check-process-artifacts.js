@@ -1032,6 +1032,7 @@ const DANGEROUS_PATTERNS = [
   // ADR-1024 読み取り道の台本・compose（変更に GO 記録を要求）
   /^backend\/app\/ops\//,
   /^docker-compose\.ai-reader\.yml$/,
+  /^docker-compose\.ai-dev001-writer\.yml$/,  // ADR-1093 tenant_001 だけに書き込める道の実行場所（変更に GO 記録を要求）
   /^docker-compose\.ai-reader-http\.yml$/,  // ADR-1042 クラウド読み取り窓口
   // ADR-1047 決まり台帳と、その検査の入力（変更に GO 記録を要求）
   /^docs\/specs\/rule-enforcement\/rules\.yml$/,

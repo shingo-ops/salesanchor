@@ -1500,5 +1500,8 @@ run_sql migrations/20261128_100000_owner_color_key_drop_dead_columns.sql
 # schedule-settings 便3b: ひとりひとりの初期値 6 列（開いたときの形・週の始まり・予定の長さ・Meet・誰の予定を出すか）を足す（冪等）
 run_sql migrations/20261129_100000_owner_settings_preferences.sql
 
+# ADR-1093 便2: AI 用の tenant_001 だけに書き込める DB ロール ai_dev001_writer（秘密の列・tenant_meta_config・public には付けない。冪等）
+run_sql migrations/20261130_100000_create_ai_dev001_writer_role.sql
+
 # 実行済みの記録の集計（段5 5-3）。新しい手順は、この集計の行より上（上の run_ の並びの末尾）に足す。
 mr_report_summary

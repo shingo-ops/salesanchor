@@ -17,6 +17,7 @@ _ROOT = Path(__file__).resolve().parents[3]
 _SQL_FILES = (
     "migrations/20261017_130100_create_ai_ro_views.sql",
     "migrations/20261024_100000_create_ai_cloud_meta.sql",
+    "migrations/20261130_100000_create_ai_dev001_writer_role.sql",
 )
 _TEST_FILES = (
     "backend/tests/ops/test_ai_cloud_views.py",
