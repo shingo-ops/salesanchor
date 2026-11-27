@@ -1,1 +1,3 @@
-使用済み（02:32 UTC）invoice 通った
+https://auth.openai.com/codex/device
+5334-U3PI9
+coordinator 部屋・出した時刻 02:33 UTC・有効 900 秒
