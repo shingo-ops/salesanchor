@@ -70,6 +70,8 @@ async def engine():
 @pytest.mark.asyncio
 async def test_product_attribute_masters_crud_round_trip(engine):
     from sqlalchemy import text
+
+    from tests.rls_bootstrap import public_bootstrap_lock
     async with engine.connect() as conn:
         exists = (await conn.execute(text(
             "SELECT 1 FROM information_schema.tables "
@@ -79,13 +81,14 @@ async def test_product_attribute_masters_crud_round_trip(engine):
         pytest.skip("public.product_attribute_masters 未作成 (migration 20260604_170000 が必要)")
 
     label = "TEST_RARITY_ZZZ"
-    async with engine.begin() as conn:
+    # 共有 DB の後片付けは public_bootstrap_lock の中で commit まで終える
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         await conn.execute(text(
             "DELETE FROM public.product_attribute_masters "
             "WHERE attribute='rarity' AND label_ja = :l"
         ), {"l": label})
 
-    async with engine.begin() as conn:
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         new_id = (await conn.execute(text("""
             INSERT INTO public.product_attribute_masters
                 (attribute, label_ja, label_en, sort_order)

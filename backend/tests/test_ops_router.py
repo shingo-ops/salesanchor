@@ -144,8 +144,10 @@ async def env(monkeypatch):
 async def _clear_control(env: _Env):
     from sqlalchemy import text
 
-    async with env.admin_engine.begin() as conn:
-        await conn.execute(text("DELETE FROM public.ops_control WHERE id = 1"))
+    # 共有 DB の後片付けは public_bootstrap_lock の中で commit まで終える
+    async with public_bootstrap_lock(env.admin_engine):
+        async with env.admin_engine.begin() as conn:
+            await conn.execute(text("DELETE FROM public.ops_control WHERE id = 1"))
 
 
 async def _incidents(env: _Env, fp: str):

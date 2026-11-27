@@ -58,6 +58,8 @@ async def seed_search_dataset(engine):
     """
     from sqlalchemy import text
 
+    from tests.rls_bootstrap import public_bootstrap_lock
+
     tag = uuid.uuid4().hex[:8]
     sup_name = f"sprint7_sup_{tag}"
 
@@ -150,7 +152,8 @@ async def seed_search_dataset(engine):
         "alias_text": alias_text,
     }
 
-    async with engine.begin() as conn:
+    # 共有 DB の後片付けは public_bootstrap_lock の中で commit まで終える
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         await conn.execute(
             text("DELETE FROM public.supplier_aliases WHERE supplier_id = :s"),
             {"s": sup_id},

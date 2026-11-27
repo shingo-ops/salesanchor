@@ -158,12 +158,14 @@ async def test_type_master_migrations_do_not_reinsert_deleted_rows():
     from sqlalchemy import text
     from sqlalchemy.ext.asyncio import create_async_engine
 
-    from tests.rls_bootstrap import bootstrap_public_products
+    from tests.rls_bootstrap import bootstrap_public_products, public_bootstrap_lock
 
     engine = create_async_engine(ADMIN_PG_URL, echo=False)
     try:
+        # bootstrap_public_products は自分で札を取るので、札の外で先に呼ぶ
         await bootstrap_public_products(engine)
-        async with engine.connect() as conn:
+        # 消す・流し直す・rollback は public_bootstrap_lock の中で終える
+        async with public_bootstrap_lock(engine), engine.connect() as conn:
             trans = await conn.begin()
             try:
                 # 085 の seed 行（union_arena）と 086 の seed 行（xross_stars）を消してから、両方の migration を流す

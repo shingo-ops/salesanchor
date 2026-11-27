@@ -52,21 +52,23 @@ async def _setup():
 async def _cleanup(admin_engine, fingerprint: str | None = None, *, control: bool = False):
     from sqlalchemy import text
 
-    async with admin_engine.begin() as conn:
-        if fingerprint is not None:
-            await conn.execute(
-                text(
-                    "DELETE FROM public.ops_incident_events WHERE incident_id IN "
-                    "(SELECT id FROM public.ops_incidents WHERE fingerprint = :fp)"
-                ),
-                {"fp": fingerprint},
-            )
-            await conn.execute(
-                text("DELETE FROM public.ops_incidents WHERE fingerprint = :fp"),
-                {"fp": fingerprint},
-            )
-        if control:
-            await conn.execute(text("DELETE FROM public.ops_control WHERE id = 1"))
+    # 共有 DB の後片付けは public_bootstrap_lock の中で commit まで終える
+    async with public_bootstrap_lock(admin_engine):
+        async with admin_engine.begin() as conn:
+            if fingerprint is not None:
+                await conn.execute(
+                    text(
+                        "DELETE FROM public.ops_incident_events WHERE incident_id IN "
+                        "(SELECT id FROM public.ops_incidents WHERE fingerprint = :fp)"
+                    ),
+                    {"fp": fingerprint},
+                )
+                await conn.execute(
+                    text("DELETE FROM public.ops_incidents WHERE fingerprint = :fp"),
+                    {"fp": fingerprint},
+                )
+            if control:
+                await conn.execute(text("DELETE FROM public.ops_control WHERE id = 1"))
 
 
 async def _set_operator(conn) -> None:

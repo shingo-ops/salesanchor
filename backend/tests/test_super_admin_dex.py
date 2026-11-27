@@ -34,6 +34,7 @@ async def engine():
 async def test_pokemon_dex_update_round_trip(engine):
     """AC2.4: 既存 entry の name_en を編集 → 反映される。"""
     from sqlalchemy import text
+    from tests.rls_bootstrap import public_bootstrap_lock
 
     async with engine.connect() as conn:
         exists = (await conn.execute(text(
@@ -45,7 +46,7 @@ async def test_pokemon_dex_update_round_trip(engine):
 
     # テスト用 entry を投入（dex_number は本番 1-1025 と衝突しない巨大値）
     test_num = 999999
-    async with engine.begin() as conn:
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         await conn.execute(
             text("DELETE FROM public.pokemon_dex WHERE dex_number = :n"),
             {"n": test_num},

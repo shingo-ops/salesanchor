@@ -46,6 +46,7 @@ async def test_tcg_series_table_exists(engine):
 async def test_tcg_series_crud_round_trip(engine):
     """AC2.3 想定: SV1a 系の編集が public.tcg_series_master に反映される。"""
     from sqlalchemy import text
+    from tests.rls_bootstrap import public_bootstrap_lock
     async with engine.connect() as conn:
         exists = (await conn.execute(text(
             "SELECT 1 FROM information_schema.tables "
@@ -55,13 +56,13 @@ async def test_tcg_series_crud_round_trip(engine):
         pytest.skip("public.tcg_series_master 未作成")
 
     test_code = "TEST_SV1A_AC2_3"
-    async with engine.begin() as conn:
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         await conn.execute(
             text("DELETE FROM public.tcg_series_master WHERE series_code = :c"),
             {"c": test_code},
         )
 
-    async with engine.begin() as conn:
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         result = await conn.execute(text("""
             INSERT INTO public.tcg_series_master
                 (tcg_type, series_code, name_ja, name_en, category)
