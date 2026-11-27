@@ -62,7 +62,10 @@ async def setup_cross_tenant_tables(admin_engine):
     Uses a unique schema name per run to avoid conflicts when parallel CI
     jobs share the same PostgreSQL instance.
     """
-    async with admin_engine.begin() as conn:
+    from tests.rls_bootstrap import public_bootstrap_lock
+
+    # 共有 DB のスキーマ作成・後片付けは public_bootstrap_lock の中で commit まで終える
+    async with public_bootstrap_lock(admin_engine), admin_engine.begin() as conn:
         # Drop first for idempotency (handles leftover state from aborted prior runs)
         await conn.execute(text(f"DROP SCHEMA IF EXISTS {_TEST_SCHEMA} CASCADE"))
         await conn.execute(text(f"CREATE SCHEMA {_TEST_SCHEMA}"))
@@ -99,7 +102,7 @@ async def setup_cross_tenant_tables(admin_engine):
             )
         )
     yield
-    async with admin_engine.begin() as conn:
+    async with public_bootstrap_lock(admin_engine), admin_engine.begin() as conn:
         await conn.execute(text(f"DROP SCHEMA IF EXISTS {_TEST_SCHEMA} CASCADE"))
 
 

@@ -94,6 +94,7 @@ async def test_knowledge_rules_table_exists(engine):
 async def test_create_then_select_then_delete_rule(engine):
     """AC2.2 想定: CRUD 1 周が public.knowledge_rules に対して動作する。"""
     from sqlalchemy import text
+    from tests.rls_bootstrap import public_bootstrap_lock
     async with engine.connect() as conn:
         exists = (await conn.execute(text(
             "SELECT 1 FROM information_schema.tables "
@@ -102,7 +103,7 @@ async def test_create_then_select_then_delete_rule(engine):
     if not exists:
         pytest.skip("public.knowledge_rules 未作成")
 
-    async with engine.begin() as conn:
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         result = await conn.execute(text("""
             INSERT INTO public.knowledge_rules
                 (category, pattern_type, pattern, normalized_to, priority, language, is_active)

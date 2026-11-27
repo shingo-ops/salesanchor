@@ -51,10 +51,12 @@ async def _setup():
 async def _cleanup(admin_engine, report_id) -> None:
     from sqlalchemy import text
 
-    async with admin_engine.begin() as conn:
-        await conn.execute(text("DELETE FROM public.analysis_error_report_events WHERE report_id = :id"), {"id": report_id})
-        await conn.execute(text("DELETE FROM public.analysis_error_report_fields WHERE report_id = :id"), {"id": report_id})
-        await conn.execute(text("DELETE FROM public.analysis_error_reports WHERE id = :id"), {"id": report_id})
+    # 共有 DB の後片付けは public_bootstrap_lock の中で commit まで終える
+    async with public_bootstrap_lock(admin_engine):
+        async with admin_engine.begin() as conn:
+            await conn.execute(text("DELETE FROM public.analysis_error_report_events WHERE report_id = :id"), {"id": report_id})
+            await conn.execute(text("DELETE FROM public.analysis_error_report_fields WHERE report_id = :id"), {"id": report_id})
+            await conn.execute(text("DELETE FROM public.analysis_error_reports WHERE id = :id"), {"id": report_id})
 
 
 async def _set_operator(conn) -> None:

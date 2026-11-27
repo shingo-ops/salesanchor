@@ -11,6 +11,7 @@ from tests.rls_bootstrap import (
     _TENANT_BOOTSTRAP_MIGRATIONS,
     _scope_tenant_migration,
     bootstrap_tenant_schema,
+    public_bootstrap_lock,
     tenant_schema_lock,
 )
 
@@ -93,7 +94,8 @@ async def test_rls_bootstrap_schema_and_migration_share_one_transaction(unrelate
     finally:
         try:
             if unrelated_created:
-                async with admin_engine.begin() as conn:
+                # tenant_schema_lock の外。共有 DB の後片付けは public_bootstrap_lock の中で commit まで終える
+                async with public_bootstrap_lock(admin_engine), admin_engine.begin() as conn:
                     await conn.execute(text(f"DROP SCHEMA {unrelated_schema} CASCADE"))
         finally:
             await admin_engine.dispose()

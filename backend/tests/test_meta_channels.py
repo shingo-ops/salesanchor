@@ -721,7 +721,10 @@ async def pg_setup_scopes_schema(pg_admin_engine_for_scopes, pg_engine_for_scope
     test_rls_tenant_meta_config.py と schema 番号がぶつからないように 997 を使う。
     DDL は管理者接続（pg_admin_engine_for_scopes）で実行（CI role = DML only の不変条件）。
     """
-    async with pg_admin_engine_for_scopes.begin() as conn:
+    from tests.rls_bootstrap import public_bootstrap_lock
+
+    # 共有 DB のスキーマ作成・後片付けは public_bootstrap_lock の中で commit まで終える
+    async with public_bootstrap_lock(pg_admin_engine_for_scopes), pg_admin_engine_for_scopes.begin() as conn:
         await conn.execute(text("CREATE SCHEMA IF NOT EXISTS tenant_997"))
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS tenant_997.tenant_meta_config (
@@ -751,7 +754,7 @@ async def pg_setup_scopes_schema(pg_admin_engine_for_scopes, pg_engine_for_scope
 
     yield
 
-    async with pg_admin_engine_for_scopes.begin() as conn:
+    async with public_bootstrap_lock(pg_admin_engine_for_scopes), pg_admin_engine_for_scopes.begin() as conn:
         await conn.execute(text("DROP SCHEMA IF EXISTS tenant_997 CASCADE"))
 
 
