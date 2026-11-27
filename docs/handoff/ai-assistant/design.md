@@ -1,7 +1,7 @@
 <!-- バッククォート内のパスはリポジトリルートからのフルパスのみ（ゲートが実在確認する）。
      このPRに含まれないファイル・リポジトリ外のパスはバッククォートを付けない。
      守り手: はファイルパスか「人手で守る」のみ -->
-# Phase 3 設計 — AI アシスタント（秘書を まとめ役＋係 へ）第2.7版・草案
+# Phase 3 設計 — AI アシスタント（秘書を まとめ役＋係 へ）第2.8版・草案
 
 この文書は、今の秘書を「まとめ役 1 人と、係ごとの専属 AI」に作り替える作りの案です。§10 の審査を受けて直した版です。
 
@@ -13,7 +13,7 @@ recon: [recon.md](recon.md)
 **対象ADR**: ADR-1056（今の秘書・改めが要る）・ADR-1058（AI の担当表・正本のまま使い、選択肢を migration で足す）・ADR-1077（決まり帳・正本のまま使う）・ADR-1078（カルテ・そのまま）・ADR-1004（使用の台帳）・ADR-1080/1082/1087（声・影響を受ける）・ADR-009/091/159（Discord・ADR-091 は改めが要る）・ADR-135/136（危険 PR の GO）・ADR-1003（secrets）  
 **日付**: 2026-11-25  
 **担当**: Planner（Claude Opus。審査は Fable〈クラウド〉と審査役〈Opus〉。同じ会社の AI どうしの審査で、独立した第三者の審査ではない）  
-**状態**: 設計案第2.7版作成済み（便0-B 7回目の不合格〈K2・K7〉を受けた直し・第2.6版の審査 REVISE の直し）／K1〜K9 と便0 の試し方は PO 承認済み（Q8・基準の文は変えていない）／第2.4版は審査役 APPROVE・第2.6版は REVISE・第2.7版は審査待ち（§10）／アプリの実装未着手
+**状態**: 設計案第2.8版作成済み（便0-B 7回目の不合格〈K2・K7〉を受けた直し・第2.6版と第2.7版の審査 REVISE の直し）／K1〜K9 と便0 の試し方は PO 承認済み（Q8・基準の文は変えていない）／第2.4版は審査役 APPROVE・第2.6版・第2.7版は REVISE・第2.8版は審査待ち（§10）／アプリの実装未着手
 
 ---
 
@@ -83,7 +83,7 @@ recon: [recon.md](recon.md)
 | K4 道具が無い | 3 部屋それぞれに道具を使わせる頼み 5 件（ファイルを読む・コマンドを動かす・ネットを見る・覚える・別の部屋へ振る）＝15 件がどれも実行されない 15/15 | 便0: 会話を消す前に、その会話の記録に道具の実行が 0 件。あわせて流れの合図（`hermes.tool.progress`）も 0 件 |
 | K5 速さ | 中央値・最長とも、同じ日の今の秘書（決まり帳つき）の 2 倍以下（2 回呼ぶ分の上乗せだけを許す。今の値なら中央値 15.8 秒・最長 24.8 秒。声の会話の待ちが延びるので PO 承認の対象） | 便0: 頼みから下書きまでの秒を測る |
 | K6 メモリ | まとめ役＋係 2 部屋が動く間の最大メモリを GB で記録（合否ではなく本番の置き場の判断材料） | 便0: 10 秒おきに測った最大値 |
-| K7 残らない | 束を流した後、Hermes のデータの置き場全体（覚え書き・会話の記録・ログ〈agent.log など〉を含む全ファイル）に、流した頼みの文が 0 件。Hermes は既定で会話を保存するので、アプリが毎回その会話を消す（§5） | 便0: 束を流し終えたら §5「会話の保存」の後始末（会話を消す→容器を止める→別の使い捨て容器で 3 部屋とも詰め直す→起こす）をしてから、データの置き場全体を頼みの文で探す。探し方（第2.7版で決めた）: 止めた容器とは別の使い捨て容器（`--network none`）で、`/opt/data` 以下の全ファイルを `grep -a`（二値のファイルも読む）で探し、ファイルごとの行数を数える。`-I`（二値を読み飛ばす）は付けない（7回目の記録で `-I` 付きは state.db・state.db-wal を 1 件も出さず、`-I` 無しは 6 件出した: [bin0/out/raw/b8-k7.txt](bin0/out/raw/b8-k7.txt)）。数えるのは、止めた直後・各部屋を詰め直した直後（3 回）・起こした後 |
+| K7 残らない | 束を流した後、Hermes のデータの置き場全体（覚え書き・会話の記録・ログ〈agent.log など〉を含む全ファイル）に、流した頼みの文が 0 件。Hermes は既定で会話を保存するので、アプリが毎回その会話を消す（§5） | 便0: 束を流し終えたら §5「会話の保存」の後始末（会話を消す→容器を止める→別の使い捨て容器で 3 部屋とも詰め直す→起こす）をしてから、データの置き場全体を頼みの文で探す。探し方（第2.7版で決めた）: 止めた容器とは別の使い捨て容器（`--network none`）で、`/opt/data` 以下の全ファイルを `grep -a`（二値のファイルも読む）で探し、ファイルごとの行数を数える。`-I`（二値を読み飛ばす）は付けない（7回目の記録で `-I` 付きは state.db・state.db-wal を 1 件も出さず、`-I` 無しは 6 件出した: [bin0/out/raw/b8-k7.txt](bin0/out/raw/b8-k7.txt)）。数えるのは、**束を流す前（新しい置き場で 3 部屋を作って起こした後・起点）**・止めた直後・各部屋を詰め直した直後（3 回）・起こした後（第2.8版で起点を足した）。判定は「起点からファイルごとに増えた行が 0」: 起点に当たりの無いファイルに 1 行でも出たら×、起点に当たりのあるファイルは行数が起点と同じなら○。理由（事実）: 何も流していない新しい置き場でも、完成品の部品のファイル（skills の hermes-agent/templates/plugin.js）に束の短い文 1 件が当たる（[bin0/out/source-check-b.md](bin0/out/source-check-b.md)・7回目の [bin0/out/raw/b8-k7.txt](bin0/out/raw/b8-k7.txt) にも毎回出ている）。b4・b5 の 0 行は部品に当たらない目印で数えたもので、束の本物の文で 0 を数えたことはまだ無い。合格の線は変えない（流す前から部品にある文字は「流した頼みの文」に数えない、という読み方）。この読み方は便0 の判定のときに PO に一言で知らせる |
 | K8 会社の混ざり | 会社 A の作り物の名前を渡した後、会社 B として 10 問流して A の名前が出る件数 0 | 便0 |
 | K9 使った量 | 返事の使った量（usage）の合計と、Hermes の側の総使用量が一致する（後ろで回る処理の分が 0）69/69 | 便0: 頼みごとに、返事の usage（prompt_tokens・completion_tokens）と、消す**前**に読む Hermes の会話の量（`GET /p/<部屋名>/api/sessions/<番号>` の `session.input_tokens`・`output_tokens`・`api_call_count`）を比べる。入力・出力が一致し、`api_call_count` が 1 なら○（読み先は便0-B の調べ5回目で実物で決めた: [bin0/out/source-check-b5.md](bin0/out/source-check-b5.md) Q15。`/health/detailed` の数は送信を数えないので使わない）。消した後に Hermes に総量は残らないので、総量はアプリ側で足す。**この比べ方が後ろの処理を捕まえられるかは未確認**なので、本物の束の前に作り物の AI で対照を 1 回とる（第2.7版・§5「便0-B の最初の対照」）。対照で捕まえられないと分かったら、K9 をこの方法では測らず止めて設計役に戻す。本物の AI で返事の `prompt_tokens` と会話の `input_tokens` が違うときは、会話の `cache_read_tokens`・`reasoning_tokens` も記録して止め、設計役がどれを足して比べるかを決めてから判定する（作り物の AI ではどちらも 0 だった） |
 
@@ -99,9 +99,11 @@ recon: [recon.md](recon.md)
   - 便0 の最初に確かめる: ①組で送ると返事の model と Hermes の記録がその頭になる ②違う provider を送ったときの動きを記録する（説明書の 400 は model_routes の別名とぶつかったときだけなので、合否には使わない）③model だけ送ると全体または部屋の既定の頭に落ちる（どちらに落ちたかを記録する。合否には使わない）。止めどころは①だけ: ①が通らなければ止めて考え直す
 - Hermes の設定（便0 で全部書き出し、版を固定してリポジトリに写しを置く。2回目の審査で確かめた説明書の項目）:
   - 置き場（第2.6版・第2.7版で一覧にした）: 次の 8 つの鍵を、**管理者の固定設定 /etc/hermes/config.yaml の 1 か所だけ**に置き、読み取り専用で容器に差し込む（起動に `-v <固定設定の置き場>:/etc/hermes:ro` を足す）。`logging.level`・`memory.memory_enabled`・`memory.user_profile_enabled`・`platform_toolsets.api_server`・`auxiliary.background_review.enabled`・`auxiliary.title_generation.enabled`・`fallback_providers`・`gateway.multiplex_profiles`。部屋ごとの config（profiles/<部屋>/config.yaml）と起動する側の /opt/data/config.yaml には、この鍵を書かない（同じ設定を 2 か所に置かない）。
-    - 正本のファイルは `docs/handoff/ai-assistant/bin0/config.yaml` の 1 つにする。次の便のカードで、その中身を上の固定設定の形に置き換え、3 行目の注記（「同じ内容を 4 か所に置く」）を直し、`docs/handoff/ai-assistant/bin0/setup_profiles.sh:26`・`:35` の写しをやめる。`docs/handoff/ai-assistant/bin0/out/raw/b13-files/managed-final-config.yaml` は調べの記録で、正本ではない。
+    - 正本のファイルは `docs/handoff/ai-assistant/bin0/config.yaml` の 1 つにする。次の便のカードで、その中身を上の固定設定の形に置き換え、3 行目の注記（今は /opt/data/config.yaml と各部屋の config の 4 か所に置くと書いてある）を直し、`docs/handoff/ai-assistant/bin0/setup_profiles.sh:26`・`:35` の写しをやめる。`docs/handoff/ai-assistant/bin0/out/raw/b13-files/managed-final-config.yaml` は調べの記録で、正本ではない。
     - 固定設定に置かない物: `API_SERVER_KEY` は部屋ごとに値が違うので、今のまま各部屋の .env（`docs/handoff/ai-assistant/bin0/setup_profiles.sh:27-32`）。`model` と `provider` は設定に置かず、頼みごとに付ける（下の「頭の渡し方」）。作り物の AI へ向ける `model:` は対照の試しにだけ使い、試し専用の固定設定に入れる（本物の束の固定設定には入れない）。
-    - まだ確かめていないこと: `gateway.multiplex_profiles` を固定設定に置いた形（b5 では固定設定に入っていなかった）。部屋の config から鍵を抜いても固定設定だけで memory・toolsets・background_review・fallback が効くこと（b5 では部屋の config にも置いてあった）。どちらも下の `config get` と対照の試しで確かめ、違えば止める。
+    - 試し専用の固定設定（第2.8版で決めた）: 正本 `docs/handoff/ai-assistant/bin0/config.yaml` の 8 つの鍵 ＋ 作り物の AI へ向ける `model:` の塊（b5 と同じ中身: `docs/handoff/ai-assistant/bin0/out/raw/b13-files/model.yaml`）。対照①のときだけ `auxiliary.title_generation.enabled` を true に変える。台本が流すときに正本を読み、この 2 点だけを足し替えて使い捨ての置き場に書き出す。8 つの鍵を写した 2 つ目の表はリポジトリに置かない。
+    - 対照で台本が送る頭: 本物と同じ「頭の渡し方」で、model 欄の値を `custom/fake-model` とし、台本が最初の `/` で分けて `provider: custom`・`model: fake-model` を送る（b5 は `model` だけを送っていた: `docs/handoff/ai-assistant/bin0/out/raw/b13-files/body-plain.json`）。
+    - まだ確かめていないこと: `gateway.multiplex_profiles` を固定設定に置いた形（b5 では固定設定に入っていなかった）。部屋の config から鍵を抜いても固定設定だけで memory・toolsets・background_review・fallback が効くこと（b5 では部屋の config にも置いてあった）。固定設定に置いた `model:` が効くか（b5 では部屋の config と /opt/data/config.yaml に置いた）。台本の頼みの形（`model` と `provider` の両方）で作り物の AI へ届くか。どれも下の `config get` と対照の試しで確かめ、違えば止める。対照で作り物の AI へ 1 回も届かなければ止めて設計役に戻す（b5 の形〈部屋の config に `model:`〉に戻すかは設計役が決める）。
     - 理由（事実）: 起動する側の /opt/data/config.yaml は、README 手順 3 の守りで立てると起動のたびに既定のひな形で上書きされる（完成品の中 docker/stage2-hook.sh:438-447・実測 [bin0/out/source-check-b4.md](bin0/out/source-check-b4.md) Q9）。固定設定は守りのままで 3 部屋に効く（完成品の中 hermes_cli/managed_scope.py の 31 行目・実測 [bin0/out/source-check-b5.md](bin0/out/source-check-b5.md) Q16）。束を流す前に 3 部屋それぞれで `hermes -p <部屋> config get <鍵>` を全部の鍵について表示し、1 つでも違えば止める
   - `logging.level: WARNING`（第2.6版で追加。頼みの先頭 80 字を書く行は INFO〈完成品の中 agent/turn_context.py の 1290 行目〉。WARNING で agent.log の目印 0 行・実測 b4 E2）
   - `auxiliary.title_generation.enabled: false`（第2.6版で追加。新しい会話の最初の送信ごとに会話の題をつける AI 呼び出しが 1 回増える。切ると 1 回の送信で AI へ 1 回・実測 b5 Q13）
@@ -116,12 +118,13 @@ recon: [recon.md](recon.md)
     - ダッシュボードは動かさない。理由: 外から触れる口が増える・容器のメモリが増える。消せたかどうかは、消す口の答え（200 か 404）と K7 の探し（データの置き場全体を頼みの文で grep）の 2 つで確かめれば足りる。snapshot は消す前の中身の写しを取る口で、消すことそのものには要らない。
     - 便0-A で確かめた（[bin0/out/probe-a-20261125.md](bin0/out/probe-a-20261125.md) S6・P5）: ソースの説明は会話そのものを消す（hard delete・会話の記録ファイルも消す）。`/p/<部屋名>/` と部屋の鍵で通る（無い番号は 404・鍵なしは 401）。行が実際に消えるかは便0-B の K7 の探しで確かめる。消えない形なら止めて考え直す
     - 第2.6版で足した（便0-B 7回目と調べ 1〜5 回目・[bin0/out/source-check-b5.md](bin0/out/source-check-b5.md)）: 会話を保存しない口は無い（失敗した頼みも保存される）。DELETE は 200 を返すが、頼みの文は会話の保存の箱（state.db と state.db-wal）に残る。止めただけでも残る（b5: 止めた直後 目印 27 行）。**止めてから別の使い捨て容器で `hermes sessions optimize -p <部屋>`（箱の詰め直し）をすると 0 行**になった（b5: 3 部屋の通しで 0 行・1 回）。動かしたままの詰め直し（`--force`）は完成品のコメントが危ない側に置いているので使わない（完成品の中 hermes_cli/sessions_cmd.py の 1473 行目）。
-    - 便0 の後始末の順（K7 の前に 1 回だけ）: ①頼みごとに使った量を読む（K9）→②DELETE（今のまま頼みごと）→束が終わったら③`docker stop`→④`docker run --rm --network none`（固定設定を読み取り専用・同じ置き場）で 3 部屋それぞれ optimize→⑤起こして `/health` 200。止めてから 200 までの秒を記録する（b5 の実測 47.4 秒）。部屋ごとに optimize が効いたかを分けて見るため、各回の後に目印の数を数える（b5 では 3 回の後にしか数えていない。b5 の出力は 3 回とも `reconcile: profile=invoice` だった）。ある部屋を詰め直した後に、その部屋の箱の行が減らなかったら止める。数え方は §4 K7 の探し方。①〜⑤は台本（`docs/handoff/ai-assistant/bin0/run_bin0.py`）の中で行い、人の手ではやらない
+    - 便0 の後始末の順（K7 の前に 1 回だけ）: ①頼みごとに使った量を読む（K9）→②DELETE（今のまま頼みごと）→束が終わったら③`docker stop`→④`docker run --rm --network none`（固定設定を読み取り専用・同じ置き場）で 3 部屋それぞれ optimize→⑤起こして `/health` 200。止めてから 200 までの秒を記録する（b5 の実測 47.4 秒）。部屋ごとに optimize が効いたかを分けて見るため、各回の後に目印の数を数える（b5 では 3 回の後にしか数えていない。b5 の出力は 3 回とも `reconcile: profile=invoice` だった）。ある部屋を詰め直した後に、その部屋の箱の行が減らなかったら止める。数え方は §4 K7 の探し方。①〜⑤は台本（`docs/handoff/ai-assistant/bin0/run_bin0.py`）の中で行い、人の手ではやらない。今の台本は HTTP だけで docker を呼んでいないので、台本が容器の外から `docker stop`・`docker run`・`docker start` を呼ぶ場所をカードに書く
     - 消す口の答えの記録は「200 か 404」に分けて数える（今の台本 `docs/handoff/ai-assistant/bin0/run_bin0.py:136` は 404 も「消せた」と数えている）
   - 便0-B の最初の対照（第2.7版で足した・作り物の AI・ログイン不要・本物の束より前に 1 回）: b5 の作り物の AI（`docs/handoff/ai-assistant/bin0/out/raw/b13-files/fake_ai.py`）へ向けた試し専用の固定設定で、次の 3 つを確かめる。
-    - ①題づけを入れた（`auxiliary.title_generation.enabled: true`）固定設定で 1 回送り、作り物の AI に届いた回数と、会話の `api_call_count`・`input_tokens`・`output_tokens` を比べる。届いた 2 回目（題づけ）が会話の数に入れば、K9 の比べ方は後ろの処理を捕まえられる。入らなければ K9 をこの方法では測らず止めて設計役に戻す
+    - ①題づけを入れた（`auxiliary.title_generation.enabled: true`）固定設定で 1 回送り、作り物の AI に届いた回数と、会話の `api_call_count`・`input_tokens`・`output_tokens` を比べる。届いた 2 回目（題づけ）が会話の数に入れば、K9 の比べ方は後ろの処理を捕まえられる。入らなければ K9 をこの方法では測らず止めて設計役に戻す。題づけは返事の後ろで回る（[bin0/out/source-check-b5.md](bin0/out/source-check-b5.md) Q13）ので、作り物の AI の記録に chat が 2 行そろってから GET する。30 秒待っても 2 行にならなければ、その旨を記録して止める。この対照で確かめるのは題づけ 1 種類だけで、background_review・memory の分を会話の数が捕まえるかは分からない。K9 の記録に「対照は題づけだけで確かめた」と残す
     - ②台本が自分で作った番号（`X-Hermes-Session-Id`・`docs/handoff/ai-assistant/bin0/run_bin0.py:107`）で `GET /p/<部屋名>/api/sessions/<番号>` が 200 になる。404 なら止める
-    - ③本物の束と同じ固定設定（題づけ切り・`multiplex_profiles` 入り・部屋の config に鍵なし）で 3 部屋とも `/p/<部屋名>/` が答え、`config get` で 8 つの鍵が思った値になり、1 回の送信で作り物の AI へ 1 回だけ届く。違えば止める
+    - ③本物の束と同じ 8 つの鍵（題づけ切り・`multiplex_profiles` 入り・部屋の config に鍵なし）に、作り物用の `model:` だけを足した試し専用の固定設定で、3 部屋とも `/p/<部屋名>/` が答え、`config get` で 8 つの鍵が思った値になり、1 回の送信で作り物の AI へ 1 回だけ届く。違えば止める。あわせて、起動のあと /opt/data/config.yaml に `gateway.multiplex_profiles: true` が書き込まれたか（[bin0/out/source-check-b4.md](bin0/out/source-check-b4.md) Q9 では書き込まれた）を記録する（合否には使わない）
+    - 対照の止めどころのまとめ: 作り物の AI へ 1 回も届かない／①の回数が会話の数に入らない／①で 30 秒待っても 2 行にならない／②が 404／③が違う
     - 本番での後始末の間隔（何時間に 1 回止めて詰め直すか）は、止まる秒と、消した文が箱に残る時間の両方に関わるので、便0 の判定のときに PO が決める（§9）
   - 形の渡し方（第2.6版で直した）: Hermes には形を強制する口が無い（`response_format`・`json_schema` は読まれない・[bin0/out/source-check-b.md](bin0/out/source-check-b.md)）。7回目は形の表を渡し忘れ、請求書の下書きが 24 件中 4 件しか形を通らなかった（今の秘書は `secretary-agent/server.mjs:70` で `--json-schema` を渡している）。直し方: 係の部屋への頼みに role system の文を 1 つ付ける。中身は「出力は次の JSON Schema に合う JSON 1 つだけ」という決まった 1 文と、`secretary-agent/schema.json` をそのつど読んだ全文。写しは作らない（正本は schema.json の 1 つ）。Hermes はこの文を部屋の人格の**後ろ**につなげて AI に渡す（完成品の中 gateway/platforms/api_server_openai_routes.py の 719-726 行目・agent/chat_completion_helpers.py の 2096-2097 行目・実測 b5 Q14）。決まった 1 文は台本の定数 1 か所に置き、`docs/handoff/ai-assistant/bin0/run_bin0.py:106` の頼みの本文の messages の先頭に足す。まとめ役の部屋には付けない。返事はアプリ（便0 は台本）が同じ schema.json で検査し、落ちたら 1 回だけやり直す（Q8 で PO 決定）
   - `fallback_providers: []`（AI 会社が失敗したときに別の会社へ自動で切り替わる仕組みを切る。3 部屋で `[]` と表示されることは b5 Q16 で確かめた。存在しない頭を送ったときに切り替わらず誤りで返るかは便0 で確かめる）
@@ -178,6 +181,7 @@ recon: [recon.md](recon.md)
 - 第2.5版: 便0-A の実物の確かめで、会話を消す口が第2.4版の想定と違った（§5「会話の保存」）。設計役（Opus）が API の口の DELETE だけを使う形に直した。審査は便0-A の PR のマージ前審査で受ける。
 - 第2.6版: 便0-B 7回目（K2 25/48・K7 文が残る）の原因の確かめ（[bin0/out/opus-check-b.md](bin0/out/opus-check-b.md)）と Hermes の中身の調べ 5 回（[bin0/out/source-check-b.md](bin0/out/source-check-b.md)〜[b5](bin0/out/source-check-b5.md)）を受け、設計役（Opus）が §4 の検証方法（K2・K7・K9）と §5（設定の置き場・形の渡し方・会話の後始末）を直した。合格の線（基準の文）は変えていない。審査はクラウドで受ける。
 - 第2.6版: 審査役（architect・クラウド）REVISE（[review-architect-v26.md](review-architect-v26.md)）。R1 固定設定に置く鍵を名前で並べ、置かない物の置き場と正本のファイルを決める。R2 K7 の探しを `-I` 無しの `grep -a` に決める。R3 K9 の比べ方が後ろの処理を捕まえられるかの対照を足す。軽い指摘 L1〜L5 もあわせ、第2.7版で直した。
+- 第2.7版: 審査役（architect・クラウド）REVISE（[review-architect-v27.md](review-architect-v27.md)）。前回の 8 件は直っていた。R1 対照の試しで作り物の AI へ届く道（試し専用の固定設定・送る頭）を決める。R2 K7 に流す前の数（起点）を足し、増えた行で数える。軽い指摘 L1〜L5 もあわせ、第2.8版で直した。
 
 ## 維持の仕組み
 
