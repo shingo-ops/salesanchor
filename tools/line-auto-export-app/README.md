@@ -83,6 +83,38 @@ adb shell pm grant jp.salesanchor.lineexport android.permission.WRITE_SECURE_SET
 
 **アプリを削除して入れ直すと付与が消える**ため、入れ替え手順にこの付与をあわせて行うこと。
 
+### 保守口（無線デバッグ）の強制開け直し（2026-11-27）
+
+`ensureOpen`（上記）は `adb_wifi_enabled` が1なら「正常」と見て何もしないため、**値が1のまま
+adbd（無線デバッグのサーバー本体）が止まっている**実機事象には効かない。これを塞ぐため、値を
+見ずに強制的に0→（約2000ms待ち）→1と開け閉めする `MaintenanceChannel#cycle` を追加した。
+
+- 呼び出し場所は2つに限定する: `AlarmReceiver` のBOOT_COMPLETED経路（`trigger="boot"`。
+  `ensureOpen` の代わりに呼ぶ）と、`RunScheduler#scheduleAt` が毎回確認する合図ファイル
+  （`RunScheduler` の節参照。`trigger="signal"`）。
+- 毎回の実行予約時は今までどおり `ensureOpen` のまま（cycleはADB接続を切るため、起動時と
+  合図があったときだけに限定する）。
+- 結果（`cycled_opened`/`cycled_blocked`）は変化比較せず毎回記録する。合図ファイルが
+  読めない・一覧できない場合は `signal_unreadable` を1回だけ記録する（黙らない）。
+
+#### 合図ファイルで強制開け直しを促す
+
+端末のストレージ（`run-*.jsonl` と同じディレクトリ）に `maintenance-open`（拡張子なし・内容は
+空でよい）というファイルを置くと、次回の実行予約時（アプリは1日約70回動く）にアプリがそれを
+見つけて強制開け直し（cycle）を行い、ファイルを削除する。削除に失敗した場合は、同じ合図で
+毎回cycleしてしまうのを防ぐため、処理済みの識別子（`lastModified`と`length`）を保存し、
+次回以降その識別子と同一なら何もしない。
+
+```bash
+adb shell "run-as jp.salesanchor.lineexport touch /sdcard/Download/sa-line-notify/maintenance-open" \
+  2>/dev/null || adb shell "touch /sdcard/Download/sa-line-notify/maintenance-open"
+```
+
+（この開発環境からも `/sdcard/Download/sa-line-notify/` へ直接ファイルを作成できる場合がある。
+作成したファイルの権限によってアプリが読めない可能性があり、その場合は実行ログに
+`signal_unreadable` が記録される。詳細: `docs/handoff/line-auto-export-app/design.md` 追補
+2026-11-27「保守口（無線デバッグ）の強制開け直し」の実機検証手順。）
+
 ## 既知の制約（報告書と重複するが実装者向けメモ）
 
 - ビルド環境の android.jar は API23 固定。`android:canPerformGestures` 属性はAPI24追加のため
