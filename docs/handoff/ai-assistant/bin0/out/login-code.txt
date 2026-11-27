@@ -1,3 +1,1 @@
-https://auth.openai.com/codex/device
-4ZNR-4AS30
-invoice 2回目: 出した時刻 01:19:14 UTC・有効 900 秒
+使用済み・時間切れ（01:34:12 UTC）invoice 2回目も時間切れ・使えない

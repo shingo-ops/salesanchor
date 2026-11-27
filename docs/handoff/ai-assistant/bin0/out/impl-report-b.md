@@ -73,3 +73,22 @@ BLOCKED: invoice 部屋のログインが 2 回とも時間切れ（3回目の�
 - 所見: 前の回と違い、PO は invoice・coordinator の番号は打てた。calendar の 2 回は番号を出した後に打たれなかった（PO の都合かは未確認）。次回は 3 部屋とも続けて打てる時刻を決めてから起動するのがよい。invoice と coordinator の札はこの回の volume にだけ有り、後片付けで消える。
 
 BLOCKED: calendar 部屋のログインが 2 回とも時間切れ（4回目の実行。invoice・coordinator は通った）
+
+
+## 5回目
+
+| 手順 | 結果 |
+|---|---|
+| 1 | 作業場所 `/root/worktrees/salesanchor/release-ai-assistant-bin0b`。HEAD=origin/release/ai-assistant-bin0b=3ab179152（以降を確認）。user.name=Claude・origin/main=65934286b |
+| 2 | dockerd 起動・digest 固定の取得・`Hermes Agent v0.23.4` ○ |
+| 3f | pytest **11 passed**（`raw/b3-pytest.txt`） |
+| 5 | 鍵・3 部屋・起動（CA の束の読み取り専用の取り付けと SSL_CERT_FILE・REQUESTS_CA_BUNDLE つき・検証は切っていない）・`/health` 200・prompt_txt_sha256=913a71d5…53f2e |
+| 6 ログイン（部屋ごと） | invoice（先頭の部屋）: 1 回目（01:03 UTC に番号を出し push）・2 回目（01:19 UTC に出し直して push）とも `Login timed out after 15 minutes`（番号が打たれなかった）。カード 6e のとおり停止。coordinator・calendar は未着手 |
+| 7〜9 | 流していない（ログイン前提） |
+
+- 見張りに止められた命令: なし。
+- 番号の push は 1 ファイル（login-code.txt）だけ。最後の login-code.txt は「使用済み・時間切れ」。
+- 所見: 前回は invoice・coordinator が通ったが今回は invoice が 2 回とも打たれなかった。PO が打てる時刻を決めてから起動するのがよい（PO が画面の前に居たかは未確認）。
+- 後片付け（10d）: ログインは 1 つも作られていないので logout 不要。試しの容器・volume を削除、鍵のファイルを 1 つずつ削除。
+
+BLOCKED: invoice 部屋のログインが 2 回とも時間切れ（5回目の実行。番号が打たれなかった）
