@@ -1,1 +1,3 @@
-使用済み・時間切れ（03:03 UTC）coordinator 2回とも時間切れ・使えない
+https://auth.openai.com/codex/device
+69EH-2OE6P
+invoice 部屋・出した時刻 2026-11-27T17:47:08Z・有効 900 秒
