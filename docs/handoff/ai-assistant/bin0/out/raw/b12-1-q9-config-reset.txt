@@ -1,0 +1,19 @@
+## [-f /opt/data/config.yaml] as root in container, by capability set (dir mode drwx------ hermes)
+caps: --cap-add SETGID --cap-add CHOWN --cap-add SETUID --cap-add FOWNER
+  -f = false
+caps: --cap-add SETGID --cap-add CHOWN --cap-add SETUID --cap-add FOWNER --cap-add DAC_OVERRIDE
+  -f = true
+
+## boot with README-caps: config.yaml with logging.level WARNING (1170 bytes) before boot
+before: 82 bytes, logging lines=1
+health=200 after 11x
+after boot: 133740 bytes, logging lines=0
+agent.log since 19:31:31: INFO=130 WARNING=2
+gateway.log since 19:31:31: INFO=8
+
+## boot with README-caps+DAC_OVERRIDE: config.yaml with logging.level WARNING (1170 bytes) before boot
+before: 82 bytes, logging lines=1
+health=200 after 10x
+after boot: 82 bytes, logging lines=1
+agent.log since 19:31:53: INFO=0 WARNING=2
+gateway.log since 19:31:53: INFO=0

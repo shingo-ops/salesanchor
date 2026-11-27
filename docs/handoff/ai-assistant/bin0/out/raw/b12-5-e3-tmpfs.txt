@@ -1,0 +1,36 @@
+## setup volume b12-e3
+prompt_txt_sha256=913a71d5cbbbf064c5d2e76817062b585da8f90709e18fd91997829c9be53f2e
+room=coordinator soul_bytes=904 key_len=64
+room=calendar soul_bytes=3266 key_len=64
+room=invoice soul_bytes=3266 key_len=64
+## start e3 extra=[--tmpfs /opt/data/logs:uid=10000,gid=10000,mode=755]
+health=200 after 11x
+fake AI up (port 18765)
+## send MARK7734 once
+HTTP 200
+{"id": "chatcmpl-17b79ae1800a4e69bd3023baceb8e", "object": "chat.completion", "created": 1795807729, "model": "hermes-agent", "choices": [{"index": 0, "message": {"role": "assistant", "content": "FAKE-REPLY-OK"}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2}}
+--- fake.log:
+GET /v1/models
+GET /api/v1/models
+GET /api/v1/models
+GET /api/v1/models
+GET /v1/models/fake-model
+GET /v1/models
+POST /api/show stream=None has_MARK=False
+GET /api/v1/models
+GET /v1/models/fake-model
+GET /v1/models
+POST /api/show stream=None has_MARK=False
+POST /v1/chat/completions stream=True has_MARK=True
+POST /v1/chat/completions stream=None has_MARK=True
+## counts
+logs/agent.log total=155 MARK=0
+logs/gateway.log total=18 MARK=0
+logs/errors.log total=6 MARK=0
+profiles/invoice/logs/agent.log total=13 MARK=1
+profiles/invoice/logs/gateway.log total=2 MARK=0
+profiles/invoice/logs/errors.log total=1 MARK=0
+--- all files:
+1 ./profiles/invoice/logs/agent.log
+14 ./profiles/invoice/state.db-wal
+TOTAL_LINES=15 FILES_SCANNED=533

@@ -1,0 +1,247 @@
+=== hermes_logging.py:358-372
+358: 
+359: 
+360: def _adopt_secondary_home(home: Path) -> bool:
+361:     """Route *home*'s records to its own files when this process already logs for another home.
+362:     Enables profile routing for the union of homes (or widens the live routers); False when
+363:     *home* is the first home seen or is already served."""
+364:     try:
+365:         resolved = Path(home).expanduser().resolve()
+366:     except (TypeError, ValueError, OSError):
+367:         return False
+368:     with _queue_state_lock:
+369:         known = _known_log_homes()
+370:     if not known or resolved in known:
+371:         return False
+372:     return enable_profile_log_routing([*sorted(known), resolved])
+=== hermes_logging.py:404-424
+404:     # profile's records (the handlers carry no home filter), and a duplicate writer on top of
+405:     # an existing router.
+406:     if _adopt_secondary_home(home):
+407:         return log_dir
+408:     cfg_level, cfg_max_size, cfg_backup = _read_logging_config()
+409:     level_name = (log_level or cfg_level or "INFO").upper()
+410:     level = getattr(logging, level_name, logging.INFO)
+411:     max_bytes = (max_size_mb or cfg_max_size or 5) * 1024 * 1024
+412:     backups = backup_count or cfg_backup or 3
+413: 
+414:     from agent.redact import RedactingFormatter  # lazy: circular at module load
+415: 
+416:     root = logging.getLogger()
+417: 
+418:     # (filename, level, max_bytes, backup_count, component) — a component gates
+419:     # the file on ``mode`` and restricts it to that component's logger prefixes.
+420:     handler_specs = (
+421:         ("agent.log", level, max_bytes, backups, None),
+422:         ("errors.log", logging.WARNING, 2 * 1024 * 1024, 2, None),
+423:         ("gateway.log", logging.INFO, 5 * 1024 * 1024, 3, "gateway"),
+424:         ("gui.log", logging.INFO, 10 * 1024 * 1024, 5, "gui"),
+=== hermes_logging.py:247-250
+247: def _quiet_noisy_loggers() -> None:
+248:     """Pin noisy third-party loggers at WARNING."""
+249:     for name in _NOISY_LOGGERS:
+250:         logging.getLogger(name).setLevel(logging.WARNING)
+=== hermes_logging.py:1051-1071
+1051: def _read_logging_config():
+1052:     """Best-effort read of ``logging.*`` from config.yaml."""
+1053:     try:
+1054:         # Prefer the shared effective-config cache (managed overlay included, so an administrator
+1055:         # can pin logging.*) so this reuses hermes_cli.main's early parse (one config.yaml parse
+1056:         # per process); fall back to a direct parse for bare hermes_logging consumers.
+1057:         try:
+1058:             from hermes_cli.config_effective import load_user_config_effective
+1059:             cfg = load_user_config_effective(get_config_path())
+1060:         except Exception:
+1061:             from hermes_cli.config_backend import config_exists, read_config_doc
+1062:             config_path = get_config_path()
+1063:             cfg = (read_config_doc(config_path) or {}) if config_exists(config_path) else {}
+1064:         if not cfg:
+1065:             return (None, None, None)
+1066:         log_cfg = cfg.get("logging", {})
+1067:         if isinstance(log_cfg, dict):
+1068:             return (log_cfg.get("level"), log_cfg.get("max_size_mb"), log_cfg.get("backup_count"))
+1069:     except Exception:
+1070:         pass
+1071:     return (None, None, None)
+=== gateway/run_bootstrap.py:148-148
+148:     setup_logging(hermes_home=_hermes_home, mode="gateway")
+=== gateway/run_bootstrap.py:162-171
+162:     # Optional stderr handler from -v/-q: None (quiet) = none; 0 = WARNING; 1 = INFO; 2+ = DEBUG.
+163:     if verbosity is not None:
+164:         _stderr_level = {0: logging.WARNING, 1: logging.INFO}.get(verbosity, logging.DEBUG)
+165:         _stderr_handler = logging.StreamHandler(_safe_stderr())
+166:         _stderr_handler.setLevel(_stderr_level)
+167:         _stderr_handler.setFormatter(_gateway_stderr_formatter())
+168:         root = logging.getLogger()
+169:         root.addHandler(_stderr_handler)
+170:         if _stderr_level < root.level:  # so DEBUG records can reach the handler
+171:             root.setLevel(_stderr_level)
+=== hermes_cli/main.py:585-597
+585: 
+586: # Centralized file logging for every subcommand (agent.log + errors.log).
+587: # Dashboard entrypoints use GUI mode so gui.log captures pre-dispatch failures.
+588: try:
+589:     from hermes_logging import setup_logging as _setup_logging
+590: 
+591:     _setup_logging(
+592:         mode=(
+593:             "gui"
+594:             if next((arg for arg in sys.argv[1:] if not arg.startswith("-")), "")
+595:             in {"dashboard", "serve", "gui", "desktop"}
+596:             else "cli"
+597:         )
+=== agent/agent_init.py:611-619
+611: def _setup_logging(agent):
+612:     # agent.log (INFO+) + errors.log (WARNING+); idempotent so per-message gateway agents
+613:     # don't duplicate handlers.
+614:     from hermes_logging import setup_logging, setup_verbose_logging
+615:     # The ACTIVE home, not run_agent's import-time freeze: a Desktop serve backend builds agents
+616:     # for several profiles inside set_hermes_home_override(), and the frozen launch home made
+617:     # setup_logging() see a home it already served, so it never adopted the profile and every
+618:     # profile's records landed in the launch profile's agent.log (#125974).
+619:     setup_logging(hermes_home=get_hermes_home())
+=== agent/turn_context.py:41-43
+41: from agent.turn_author import parse_turn_author
+42: 
+43: logger = logging.getLogger(__name__)
+=== agent/turn_context.py:1275-1290
+1275:     _preview_text = summarize_user_message_for_log(user_message)
+1276:     _msg_preview = _preview_text[:80] + ("..." if len(_preview_text) > 80 else "")
+1277:     _turn_fmt = (
+1278:         "conversation turn: session=%s model=%s provider=%s platform=%s history=%d msg=%r"
+1279:     )
+1280:     _turn_args = [
+1281:         agent.session_id or "none", agent.model, agent.provider or "unknown",
+1282:         agent.platform or "unknown", len(conversation_history or []),
+1283:         _msg_preview.replace("\n", " "),
+1284:     ]
+1285:     # Fork turns (background review, side questions) reuse the parent's session_id and
+1286:     # model; tag their turn-start line so logs can tell them apart (#118693).
+1287:     if (_turn_origin := getattr(agent, "_turn_origin", None)):
+1288:         _turn_fmt += " origin=%s"
+1289:         _turn_args.append(_turn_origin)
+1290:     logger.info(_turn_fmt, *_turn_args)
+=== persistence/sqlite/admin/_maintenance.py:626-654
+626:     def vacuum(self) -> int:
+627:         """VACUUM to reclaim space after large deletes (SQLite never shrinks on its own).
+628:         Takes an exclusive lock: callers must ensure no other writers are active. FTS5
+629:         segments are merged first (``'optimize'``) so their pages are reclaimed too;
+630:         returns the number of FTS indexes optimized (0 on merge failure / no FTS). A quarantined
+631:         handle (corrupt image, replaced file, lost WAL generation) raises before any rewrite: a
+632:         VACUUM reads every page and commits the result back, turning contained damage into an
+633:         amplified one. Same guard ``_execute_write`` applies to every write."""
+634:         with self._writer("vacuum") as holder:
+635:             holder._raise_if_db_corrupt()
+636:             optimized = 0
+637:             try:
+638:                 optimized = _optimize_fts(holder)  # manages its own lock
+639:             except Exception as exc:  # health: allow BLE001 -- a failed FTS optimize is logged and VACUUM still runs
+640:                 logger.warning("FTS optimize before VACUUM failed: %s", exc)
+641:             with holder._lock:
+642:                 holder._raise_if_db_replaced()
+643:                 if holder._conn is None:
+644:                     holder._reopen_after_close_locked(context="write")
+645:                 # PASSIVE, not TRUNCATE: a manual `hermes sessions vacuum` runs in a transient CLI
+646:                 # process; a TRUNCATE reset here would race a live gateway writer.
+647:                 _try_checkpoint(holder, "PASSIVE", "WAL checkpoint (PASSIVE) before VACUUM failed: %s")
+648:                 holder._conn.execute("VACUUM")
+649:                 # VACUUM rewrites every page THROUGH the WAL; without this TRUNCATE a 3 GB DB leaves a 3 GB -wal.
+650:                 _try_checkpoint(holder, "TRUNCATE", "WAL checkpoint (TRUNCATE) after VACUUM failed: %s")
+651:                 # TRUNCATE may replace the WAL inode; adopt the new sidecars so the
+652:                 # write-path generation guard does not halt this connection.
+653:                 holder._record_db_file_identity()
+654:             return optimized
+=== persistence/sqlite/admin/_maintenance.py:682-689
+682:     def vacuum_blockers(self) -> tuple[tuple[int, str], ...]:
+683:         """Every holder that makes VACUUM unsafe: VACUUM plus the TRUNCATE checkpoint retire the WAL generation a
+684:         sibling writer still holds. The foreign scan skips this pid, so it is paired with the in-process arm: under
+685:         one multiplexed process another live store generation for this same path is as much a holder as another
+686:         process. VACUUM runs on the registry's writer for the file, so that generation is not counted."""
+687:         with self._writer("vacuum") as writer:
+688:             in_process = in_process_state_db_holders(self.db_path, exclude=writer)
+689:         return tuple(foreign_state_db_holders(self.db_path) + in_process)
+=== docker/stage2-hook.sh:436-447
+436:     if [ ! -f "$HERMES_HOME/$dest" ] && [ -f "$INSTALL_DIR/$src" ]; then
+437:         if refuse_symlinked_path "seed" "$HERMES_HOME/$dest"; then
+438:             :
+439:         else
+440:             as_hermes cp "$INSTALL_DIR/$src" "$HERMES_HOME/$dest"
+441:         fi
+442:     fi
+443: }
+444: # .env receives a generated API_SERVER_KEY below: seed it owner-only so it is
+445: # never 0644 under the ambient umask even if the later chmod 600 fails.
+446: (umask 077 && seed_one ".env" ".env.example")
+447: seed_one "config.yaml" "cli-config.yaml.example"
+=== hermes_cli/managed_scope.py:48-55
+48:     Priority: ``$HERMES_MANAGED_DIR`` (IT-only bootstrap override; never persisted to any .env;
+49:     honored only when non-empty AND the directory exists), then ``/etc/hermes`` when it exists.
+50:     A missing directory resolves to None — the common case, so it must be cheap + side-effect-free.
+51:     """
+52:     override = os.environ.get("HERMES_MANAGED_DIR", "").strip()
+53:     if override:
+54:         p = Path(override)
+55:     elif _under_pytest():
+=== persistence/sqlite/_holder.py:243-243
+243:     _WRITE_PATIENCE_S, _TRANSCRIPT_WRITE_PATIENCE_S, _ACTIVITY_WRITE_PATIENCE_S = 20.0, 60.0, 0.5
+=== hermes_logging.py:444-452
+444: 
+445:     if _logging_initialized and not force:
+446:         return log_dir
+447: 
+448:     # Root level must be low enough for the handlers to fire.
+449:     if root.level == logging.NOTSET or root.level > level:
+450:         root.setLevel(level)
+451:     _quiet_noisy_loggers()
+452:     _logging_initialized = True
+=== hermes_logging.py:240-246
+240: _NOISY_LOGGERS = (
+241:     "openai", "openai._base_client", "httpx", "httpx2", "httpcore", "asyncio", "hpack",
+242:     "hpack.hpack", "grpc", "modal", "urllib3", "urllib3.connectionpool", "websockets",
+243:     "charset_normalizer", "markdown_it",
+244: )
+245: 
+246: 
+=== hermes_logging.py:330-338
+330: COMPONENT_PREFIXES = {
+331:     # ``plugins.platforms``: messaging adapters that migrated out of
+332:     # ``gateway/platforms/`` into bundled plugins (#41112) are still gateway
+333:     # components and belong in gateway.log. ``agent.memory_caller_scope``: a multiplexed gateway's
+334:     # memory-provider profile refusals (#140058), which the operator reads in gateway.log.
+335:     "gateway": ("gateway", "hermes_plugins", "plugins.platforms", "agent.memory_caller_scope"),
+336:     "agent": ("agent", "run_agent", "model_tools", "batch_runner"),
+337:     "tools": ("tools",),
+338:     "cli": ("hermes_cli", "cli"),
+=== hermes_cli/config_defaults.py:1976-1980
+1976:     "logging": {  # File logging to ~/.hermes/logs/: agent.log captures INFO+, errors.log WARNING+.
+1977:         "level": "INFO",       # minimum level for agent.log: DEBUG, INFO, WARNING
+1978:         "max_size_mb": 5,      # max size per log file before rotation
+1979:         "backup_count": 3,     # rotated backups to keep
+1980:     },
+=== cli-config.yaml.example:78-81,105-117
+78: model:
+79:   # Default model to use (can be overridden with --model flag)
+80:   # Both "default" and "model" work as the key name here.
+81:   default: "anthropic/claude-opus-4.6"
+105:   #
+106:   # Local servers (LM Studio, Ollama, vLLM, llama.cpp):
+107:   #   "custom"       - Any other OpenAI-compatible endpoint. Set base_url below.
+108:   #   Aliases: "ollama", "vllm", "llamacpp" all map to "custom".
+109:   #   LM Studio is first-class and uses provider: "lmstudio".
+110:   #   It works with both no-auth and auth-enabled server modes.
+111:   #
+112:   # Can also be overridden for a single invocation with the --provider flag.
+113:   provider: "auto"
+114:   
+115:   # API configuration (falls back to OPENROUTER_API_KEY env var)
+116:   # api_key: "your-key-here"  # Uncomment to set here instead of .env
+117:   base_url: "https://openrouter.ai/api/v1"
+=== hermes_cli/gateway_multiplex_mode.py:215-222
+215:         if decision.source == "retired-opt-out":
+216:             (default_home / REWRITTEN_MARKER_NAME).write_text(RETIRED_OPT_OUT_REASON + "\n", encoding="utf-8")
+217:     except Exception:
+218:         logger.debug("could not persist gateway.multiplex_profiles: true", exc_info=True)
+219:         return False
+220:     logger.info("Wrote gateway.multiplex_profiles: true to %s (was %s).", cfg_path,
+221:                 "unset" if in_file is None else repr(in_file))
+222:     return True

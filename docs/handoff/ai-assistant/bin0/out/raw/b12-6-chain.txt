@@ -1,0 +1,67 @@
+## 1 回目（セッション id の取り出しを誤り、DELETE が実行されなかった。参考として残す）
+## restart gateway on volume b12-e2 (managed config mounted)
+health=200 after 10x
+## counts before DELETE
+2 ./profiles/invoice/state.db
+11 ./profiles/invoice/state.db-wal
+TOTAL_LINES=13 FILES_SCANNED=541
+sessions: 
+## counts after DELETE (gateway running)
+--- all files:
+2 ./profiles/invoice/state.db
+11 ./profiles/invoice/state.db-wal
+TOTAL_LINES=13 FILES_SCANNED=541
+docker stop done 10s
+## optimize in disposable container (gateway not running there? default entrypoint boots s6)
+Done: 0 new, 0 updated, 44 unchanged. 44 total bundled.
+⚠ install out of sync (pnpm: not installed or outdated) — this docker-managed install must rebuild the artifact to fix
+⚠ install out of sync (pnpm: not installed or outdated) — this docker-managed install must rebuild the artifact to fix
+Optimizing session store (FTS merge + VACUUM)…
+Optimized 2 FTS index(es).
+Database size: 0.4 MB -> 0.4 MB (reclaimed 0.0 MB)
+## start again
+health=200 after 10x
+## counts after start
+logs/agent.log total=103 MARK=0
+logs/gateway.log total=5 MARK=0
+logs/errors.log total=15 MARK=0
+profiles/invoice/logs/agent.log total=2 MARK=0
+profiles/invoice/logs/gateway.log (no file)
+profiles/invoice/logs/errors.log total=2 MARK=0
+--- all files:
+2 ./profiles/invoice/state.db
+TOTAL_LINES=2 FILES_SCANNED=542
+
+## 2 回目（DELETE 実行・これが正式の結果）
+## restart gateway on volume b12-e2 (managed config mounted)
+health=200 after 10x
+## counts before DELETE
+--- all files:
+2 ./profiles/invoice/state.db
+TOTAL_LINES=2 FILES_SCANNED=545
+sessions: api-b7c8f1e808160e4d 
+DELETE api-b7c8f1e808160e4d -> HTTP 200
+## counts after DELETE (gateway running)
+--- all files:
+2 ./profiles/invoice/state.db
+2 ./profiles/invoice/state.db-wal
+TOTAL_LINES=4 FILES_SCANNED=546
+docker stop done 10s
+## optimize in disposable container (gateway not running there? default entrypoint boots s6)
+Done: 0 new, 0 updated, 44 unchanged. 44 total bundled.
+⚠ install out of sync (pnpm: not installed or outdated) — this docker-managed install must rebuild the artifact to fix
+⚠ install out of sync (pnpm: not installed or outdated) — this docker-managed install must rebuild the artifact to fix
+Optimizing session store (FTS merge + VACUUM)…
+Optimized 2 FTS index(es).
+Database size: 0.4 MB -> 0.4 MB (reclaimed 0.0 MB)
+## start again
+health=200 after 10x
+## counts after start
+logs/agent.log total=122 MARK=0
+logs/gateway.log total=9 MARK=0
+logs/errors.log total=34 MARK=0
+profiles/invoice/logs/agent.log total=2 MARK=0
+profiles/invoice/logs/gateway.log (no file)
+profiles/invoice/logs/errors.log total=2 MARK=0
+--- all files:
+TOTAL_LINES=0 FILES_SCANNED=545
