@@ -1,3 +1,1 @@
-https://auth.openai.com/codex/device
-53SE-LT50P
-coordinator 部屋 2回目・出した時刻 02:48 UTC・有効 900 秒
+使用済み・時間切れ（03:03 UTC）coordinator 2回とも時間切れ・使えない

@@ -92,3 +92,22 @@ BLOCKED: calendar 部屋のログインが 2 回とも時間切れ（4回目の�
 - 後片付け（10d）: ログインは 1 つも作られていないので logout 不要。試しの容器・volume を削除、鍵のファイルを 1 つずつ削除。
 
 BLOCKED: invoice 部屋のログインが 2 回とも時間切れ（5回目の実行。番号が打たれなかった）
+
+
+## 6回目
+
+| 手順 | 結果 |
+|---|---|
+| 1 | 作業場所 `/root/worktrees/salesanchor/release-ai-assistant-bin0b`。HEAD=f0625fd40=origin/release/ai-assistant-bin0b（以降を確認）。user.name=Claude・origin/main=65934286b |
+| 2 | dockerd は起動済み・digest 固定の取得・`Hermes Agent v0.23.4` ○ |
+| 3f | pytest **11 passed**（`raw/b3-pytest.txt`） |
+| 5 | 鍵・3 部屋・起動（CA の束の読み取り専用の取り付けと SSL_CERT_FILE・REQUESTS_CA_BUNDLE つき・検証は切っていない）・`/health` 200・prompt_txt_sha256=913a71d5…53f2e |
+| 6 ログイン（部屋ごと） | invoice: 1 回目（02:06 UTC）時間切れ・2 回目（02:21 UTC）**通った**（02:32 UTC・使用済みに更新して push）。coordinator: 1 回目（02:33 UTC）・2 回目（02:48 UTC）とも `Login timed out after 15 minutes`。カード 6e のとおり停止。calendar は未着手 |
+| 7〜9 | 流していない（coordinator・calendar の札が無く 3 部屋がそろわないため） |
+
+- 見張りに止められた命令: なし。
+- 失敗の記録: invoice 2 回目の出し直しで、`cd` を背景の括弧の外に置いたため、番号のファイルを元の写し（/home/user/salesanchor）に作って stage したところで commit が「worktree 外」で中断された。`git restore --staged` とそのファイルの `rm` で元に戻し（残りは未追跡の登録ファイルだけ）、作業場所で同じ内容を commit・push した。範囲の外の変更は残っていない。
+- 所見: invoice の 2 回目は PO が打てた（約 11 分後）。coordinator は 2 回とも打たれなかった（PO が席を外したかは未確認）。札は volume にだけ有り、後片付けで消した。
+- 後片付け（10d）: 3 部屋で logout（終了コード 0）・試しの容器と volume を削除・鍵のファイルを 1 つずつ削除（残り 0 件）。
+
+BLOCKED: coordinator 部屋のログインが 2 回とも時間切れ（6回目の実行。invoice は通った）
