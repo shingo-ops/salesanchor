@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 03b-put-discord-keys.sh — ボットの鍵と PO の番号を置く（管理者が `sudo bash 03b-put-discord-keys.sh` で流す。PO が見えない入力に貼る）
+# 03b-put-discord-keys.sh — ボットの鍵と PO の番号を置く（PO 本人が自分の端末で `sudo bash 03b-put-discord-keys.sh` を流し、見えない入力に貼る）
 # 正の設計: docs/handoff/ai-ops-247/server-agent-design.md §12-3
 #
 # 出どころ: 道具の本体 external_plugins/discord/server.ts
