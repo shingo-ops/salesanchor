@@ -1,7 +1,7 @@
 # 実装カード 便5: Google で繰り返しの「すべての予定」を消したら、アプリからも消す
 
-- 設計: docs/handoff/calendar-two-way-sync/design.md §13（正）。ADR-1075 改訂案 2026-11-27。
-- 状態: 草案。PO の承認（成功条件と失うもの）が出るまで実装しない。
+- 設計: docs/handoff/calendar-two-way-sync/design.md §13（正）。ADR-1075 改訂 2026-11-27。
+- 状態: PO 承認済み（2026-11-27「1」: この設計のまま作る）。実装してよい。
 - 枝: release/calendar-google-series-delete（origin/main 起点。`bash scripts/new-worktree.sh release/calendar-google-series-delete --claude` で作られた場所で作業する。新しく作らない）。
 - 触るファイルは 3 本だけ: `backend/app/services/calendar_service.py`・`backend/tests/test_calendar_service.py`・`backend/tests/test_calendar_sync_tenant_reset_pg.py`。ほかは触らない（migration・画面・文言・ADR・google_webhook.py も触らない）。
 
