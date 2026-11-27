@@ -1,0 +1,31 @@
+--- カードの形（-rIl・hermes 利用者）
+skills/autonomous-ai-agents/hermes-agent/templates/plugin.js
+profiles/coordinator/skills/autonomous-ai-agents/hermes-agent/templates/plugin.js
+profiles/coordinator/logs/agent.log
+profiles/invoice/skills/autonomous-ai-agents/hermes-agent/templates/plugin.js
+profiles/invoice/logs/agent.log
+profiles/calendar/skills/autonomous-ai-agents/hermes-agent/templates/plugin.js
+profiles/calendar/logs/agent.log
+--- -I 無し（二値も探す）件ごとの場所
+skills/autonomous-ai-agents/hermes-agent/templates/plugin.js
+profiles/coordinator/skills/autonomous-ai-agents/hermes-agent/templates/plugin.js
+profiles/coordinator/state.db
+profiles/coordinator/logs/agent.log
+profiles/coordinator/state.db-wal
+profiles/invoice/skills/autonomous-ai-agents/hermes-agent/templates/plugin.js
+profiles/invoice/state.db
+profiles/invoice/logs/agent.log
+profiles/invoice/state.db-wal
+profiles/calendar/skills/autonomous-ai-agents/hermes-agent/templates/plugin.js
+profiles/calendar/state.db
+profiles/calendar/logs/agent.log
+profiles/calendar/state.db-wal
+--- 文ごとの当たり件数（-a・ファイル別）
+profiles/coordinator/state.db distinct_texts=1
+profiles/coordinator/state.db-wal distinct_texts=5
+profiles/coordinator/logs/agent.log distinct_texts=28
+profiles/invoice/state.db distinct_texts=3
+profiles/invoice/state.db-wal distinct_texts=4
+profiles/invoice/logs/agent.log distinct_texts=8
+profiles/calendar/state.db distinct_texts=2
+profiles/calendar/logs/agent.log distinct_texts=14

@@ -1,6 +1,6 @@
 warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
 Downloading pydantic-core (1.9MiB)
  Downloaded pydantic-core
-Installed 19 packages in 7ms
+Installed 19 packages in 13ms
 ...........                                                              [100%]
-11 passed in 5.74s
+11 passed in 5.12s

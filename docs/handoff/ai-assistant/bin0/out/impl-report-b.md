@@ -110,4 +110,28 @@ BLOCKED: invoice 部屋のログインが 2 回とも時間切れ（5回目の�
 - 所見: invoice の 2 回目は PO が打てた（約 11 分後）。coordinator は 2 回とも打たれなかった（PO が席を外したかは未確認）。札は volume にだけ有り、後片付けで消した。
 - 後片付け（10d）: 3 部屋で logout（終了コード 0）・試しの容器と volume を削除・鍵のファイルを 1 つずつ削除（残り 0 件）。
 
-BLOCKED: coordinator 部屋のログインが 2 回とも時間切れ（6回目の実行。invoice は通った）
+（6回目の最後の行: BLOCKED: coordinator 部屋のログインが 2 回とも時間切れ）
+
+
+## 7回目
+
+| 手順 | 結果 |
+|---|---|
+| 1 | 作業場所 `/root/worktrees/salesanchor/release-ai-assistant-bin0b`。HEAD=4bd56936f=origin/release/ai-assistant-bin0b（以降を確認）。user.name=Claude・origin/main=7a1f065e1 |
+| 2 | dockerd 起動・digest 固定の取得（直接 pull は 429、`docker run` の取得で成功）・`Hermes Agent v0.23.4` ○ |
+| 3f | pytest **11 passed**（`raw/b3-pytest.txt`） |
+| 5 | 鍵・3 部屋・起動（CA の束の読み取り専用の取り付けと環境変数つき・検証は切っていない）・`/health` 200・prompt_txt_sha256=913a71d5…53f2e |
+| 6 ログイン | invoice・coordinator・calendar の順に 1 回目で全部通った。番号は部屋ごとに 1 ファイル（login-code.txt）だけ commit・push、通った後に使用済みへ更新して push |
+| 6g | 3 部屋とも `finish_reason=stop`。S12 = **部屋ごと**（`raw/b6-s12.txt`） |
+| 7 | F1 ○・F5 ○（止めどころなし）。F2・F3・F4・F6・F7 の結果は `measure-b-20261125.md` の表 3 |
+| 8 | main 69 件（3 回）・k4・k8 を流した。終了コードはどれも 0 |
+| 9 | 表 4: K1 ○ 69/69・K2 × 25/48・K3 35/81（Opus が比べる）・K4 ○・K5 中央値 6.27 秒・最長 22.20 秒（Opus が比べる）・K6 最大 356.9 MiB・K7 ×（文が残る）・K8 ○ 0 件・K9 未確認 |
+| 10a/10b | 触ったのは `docs/handoff/ai-assistant/bin0/` の中だけ・鍵の値 0 件・札らしい文字列 0 件 |
+| 10d | 3 部屋で logout（終了コード 0）・試しの容器と volume を削除・鍵のファイルを 1 つずつ削除（残り 0 件） |
+
+- 見張りに止められた命令: なし。
+- カードからの違い（目的は同じ）: (1) F1 は `provider` と `model` を別の欄で送った（台本と同じ。1 欄結合は error）。(2) K7: 最初の探しは root で流して 0 件だったが、陽性対照で hermes 利用者でないと読めないと分かり `-u hermes` で流し直した。`docker cp` は読み取り専用の根で断られたので、標準入力から容器の `/tmp` へ渡した。`-I` を付けた形と付けない形の両方を `raw/b8-k7.txt` に残した。(3) 1 回の試しとして、K7 の陽性対照用に「こんにちは」以外の短い文を 1 回送り、消した。
+- K9: 会話を消すと Hermes 側の記録も消え、`/health/detailed` の総量は 0 のままなので、束全体の差は読めなかった（8e は実施できず・未確認）。
+- Opus への決めごと: K2（25/48）と K7（DELETE 後も `agent.log`・`state.db` に文が残る）は design.md §4 の線に届かない。design.md §8 の止めどころ（K1〜K5・K7〜K9 のどれかが落ちたら止めて PO に報告）に当たるので、先へ進める前の判断が要る。
+
+DONE

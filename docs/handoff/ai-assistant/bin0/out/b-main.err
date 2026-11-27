@@ -1,0 +1,11 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+Installed 15 packages in 13ms
+rules_count=0
+k1=69/69
+k2=25/48 retried=29
+k3=35/81
+seconds_median=6.27
+seconds_max=22.20
+coord_in=50586 coord_out=621 role_in=106857 role_out=10780
+deleted=146/146
+undeleted_ids=0
