@@ -414,11 +414,11 @@
 ### 14-3. 変更（card-bin6.md が正）
 - `:1983-1992` の DELETE の結果を受け、消した行が 1 以上なら "deleted"、0 なら "skipped" を返す。`:1798`・`:1903` と同じ形。
 - 試験 `test_deletes_cancelled_event_only_google_rows` を、消した行が 1 のとき "deleted" に直し、0 のとき "skipped" の試験を足す。
-- 触らない範囲: ほかの "deleted" を返す所・`google_webhook.py`・DB の形・migration・画面。
+- 触らない範囲: ほかの "deleted" を返す所・`backend/app/services/google_webhook.py`・DB の形・migration・画面。
 
 ### 14-4. なぜこの形か（代替案）
 - 採る案: 返す値を行の数で決める。ほかの道とそろい、呼び元を変えずに済む。
-- 採らない案 1（`google_webhook.py` で消した行の数を足し上げる）: 返す値の形を変えることになり、呼び元と 30 件ほどの試験に触る。目的に対して大きすぎる。
+- 採らない案 1（`backend/app/services/google_webhook.py` で消した行の数を足し上げる）: 返す値の形を変えることになり、呼び元と 30 件ほどの試験に触る。目的に対して大きすぎる。
 - 採らない案 2（記録の文だけ直す）: 数そのものが違うので、文だけでは直らない。
 - 失うもの: 記録の deleted は「行の数」ではなく「消した知らせの数」のまま。繰り返しを丸ごと消すと、元の行と例外の行が一緒に消えても 1 と数える（外部キーで一緒に消える行は数えない）。
 
@@ -443,7 +443,7 @@
 
 ### 14-9. 設計審査（同じ AI による自己審査・2026-11-27）
 - 判定: APPROVE（PO の承認が要るのは 14-5 の成功条件）。
-- 実物との照合: origin/main 218e4fc7c で `:1983-1992`・`google_webhook.py:336-382` を読んだ。"deleted" を読む所は `google_webhook.py:346` だけ（`git grep -n '"deleted"' origin/main -- backend/app/`）。
+- 実物との照合: origin/main 218e4fc7c で `:1983-1992`・`backend/app/services/google_webhook.py:336-382` を読んだ。"deleted" を読む所は `backend/app/services/google_webhook.py:346` だけ（`git grep -n '"deleted"' origin/main -- backend/app/`）。
 - DB の決まりとの照らし合わせ: 書き込みは変えない（同じ DELETE の結果を読むだけ）。値の決まり・重なり禁止・外部キーは関わらない。
 - 既存の試験: `side_effect=[origin_result, MagicMock()]` で取り込みを呼ぶ試験（`:1548`・`:1574`・`:2698`・`:2742`）は消した形でない予定なので、この 1 か所を通らない。
 - 未解決: なし。
