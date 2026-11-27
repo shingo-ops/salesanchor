@@ -195,15 +195,24 @@ final class MaintenanceChannel {
      * {@link #ensureOpen}の直前に毎回呼ぶ。
      *
      * ファイルが無ければ何もしない（記録もしない。通常状態）。あれば{@code cycle(context,
-     * TRIGGER_SIGNAL)}を実行し、ファイルを削除する。削除に失敗した場合に同じ合図で毎回
-     * cycleしてしまうのを防ぐため、処理した合図の識別子（{@code lastModified}と{@code length}
-     * の組）を{@link SchedulerStore}に保存し、次回以降それと同一なら何もしない（cycleもしない・
-     * 記録もしない）。削除が成功した場合も同様に識別子を保存する。
+     * TRIGGER_SIGNAL)}を実行し、ファイルを削除する。**削除に成功した場合は識別子を消す**
+     * （Opus審査 2026-11-27 の指摘2: 削除できたのに識別子を残すと、次に置いた合図が偶然同じ
+     * {@code lastModified}・{@code length}だと「処理済み」と誤判定し、合図を取りこぼす。
+     * 合図は「保守口が切れて困っている」ときに置かれるものなので、取りこぼしは人手に戻る
+     * ことを意味する）。**削除に失敗した場合だけ**、処理した合図の識別子（{@code
+     * lastModified}と{@code length}の組）を{@link SchedulerStore}に保存し、次回以降それと
+     * 同一なら何もしない（cycleもしない・記録もしない。同じ合図で毎回cycleしてしまうのを
+     * 防ぐため）。
      *
      * ディレクトリが読めない・一覧できない（{@code READ_EXTERNAL_STORAGE}が未付与である等）
-     * 場合は黙らず{@link #RESULT_SIGNAL_UNREADABLE}を{@link #recordIfChanged}で1回だけ記録する
-     * （アプリがこの方式で合図ファイルを読めているかどうかの実機検証の判定材料。design.md
-     * 追補「黙らせない」）。
+     * 場合は黙らず{@value #RESULT_SIGNAL_UNREADABLE}を記録する。重複防止は{@link
+     * SchedulerStore#wasLastSignalUnreadable}専用の枠で行う（Opus審査 2026-11-27 の指摘1:
+     * {@link #recordIfChanged}が使う{@code last_maintenance_channel_result}枠を共用すると、
+     * 同じ実行の中で{@code checkSignalFile}が"signal_unreadable"を書いて枠を上書きし、直後の
+     * {@link #ensureOpen}が「枠が変わった」と見て"blocked"等を書いて枠を上書きする、という
+     * 往復が起きて「変化したときだけ記録する」作法が崩れる。アプリは1日約70回動くため実害が
+     * ある。専用の枠に分けることで、読めない状態が続く間は1行だけになる。ディレクトリが読める
+     * 状態に戻ったら枠を解除し、次に読めなくなったときにまた1行記録できるようにする）。
      */
     static void checkSignalFile(Context context) {
         if (!SELF_RECOVERY_ENABLED) {
@@ -212,9 +221,11 @@ final class MaintenanceChannel {
         try {
             File dir = LineNotifyListenerService.resolveStorageDir(context);
             if (dir == null || !dir.isDirectory() || !dir.canRead()) {
-                recordIfChanged(context, RESULT_SIGNAL_UNREADABLE, -1, TRIGGER_SIGNAL);
+                recordSignalUnreadableIfChanged(context);
                 return;
             }
+            // 読めたので、読めない状態の記録枠を解除する（次に読めなくなったとき再び記録する）。
+            clearSignalUnreadable(context);
             File signalFile = new File(dir, SIGNAL_FILE_NAME);
             if (!signalFile.isFile()) {
                 // 合図なし（通常状態）。記録しない。
@@ -227,15 +238,39 @@ final class MaintenanceChannel {
             }
             cycle(context, TRIGGER_SIGNAL);
             boolean deleted = signalFile.delete();
-            // 削除の成否に関わらず識別子を保存する（design.md追補参照）。
-            SchedulerStore.setLastMaintenanceSignalId(context, signalId);
-            if (!deleted) {
+            if (deleted) {
+                // 削除できたので識別子は消す（次に同じ識別子の合図が来ても取りこぼさない。
+                // Opus審査 2026-11-27 の指摘2）。
+                SchedulerStore.clearLastMaintenanceSignalId(context);
+            } else {
+                // 削除に失敗したときだけ識別子を残し、同じ合図での再cycleを防ぐ。
+                SchedulerStore.setLastMaintenanceSignalId(context, signalId);
                 Log.w(TAG, "maintenance-open signal file delete failed; will not re-cycle on same signal");
             }
         } catch (RuntimeException e) {
             // READ_EXTERNAL_STORAGE未付与等によるSecurityExceptionもここで吸収し、黙らず記録する。
             Log.w(TAG, "checkSignalFile failed: " + e);
-            recordIfChanged(context, RESULT_SIGNAL_UNREADABLE, -1, TRIGGER_SIGNAL);
+            recordSignalUnreadableIfChanged(context);
+        }
+    }
+
+    /**
+     * {@value #RESULT_SIGNAL_UNREADABLE}を、{@link SchedulerStore#wasLastSignalUnreadable}の
+     * 専用の枠で重複判定して記録する（{@link #checkSignalFile}参照。{@link #recordIfChanged}
+     * とは別の枠を使う理由はそちらのjavadoc・Opus審査 2026-11-27 の指摘1参照）。
+     */
+    private static void recordSignalUnreadableIfChanged(Context context) {
+        if (SchedulerStore.wasLastSignalUnreadable(context)) {
+            return;
+        }
+        SchedulerStore.setLastSignalUnreadable(context, true);
+        RunLogger.logMaintenanceChannel(context, RESULT_SIGNAL_UNREADABLE, -1, TRIGGER_SIGNAL);
+    }
+
+    /** ディレクトリが読める状態に戻ったときに{@link #recordSignalUnreadableIfChanged}の枠を解除する。 */
+    private static void clearSignalUnreadable(Context context) {
+        if (SchedulerStore.wasLastSignalUnreadable(context)) {
+            SchedulerStore.setLastSignalUnreadable(context, false);
         }
     }
 
@@ -243,6 +278,8 @@ final class MaintenanceChannel {
      * 記録は{@link SchedulerStore}に保存した前回の結果と比較し、変化したときだけ
      * {@link RunLogger#logMaintenanceChannel}へ1行残す
      * （{@link RunScheduler}のwasLastIgnoringBatteryOptimizationsと同じ作り）。
+     * {@value #RESULT_SIGNAL_UNREADABLE}はここを使わず{@link #recordSignalUnreadableIfChanged}
+     * の専用の枠を使う（理由は同メソッドのjavadoc参照）。
      */
     private static void recordIfChanged(Context context, String result, int valueAfter, String trigger) {
         String previous = SchedulerStore.getLastMaintenanceChannelResult(context);

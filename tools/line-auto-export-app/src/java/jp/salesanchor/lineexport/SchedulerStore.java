@@ -24,6 +24,7 @@ final class SchedulerStore {
     private static final String KEY_SCHEDULED_FIRE_AT_PREFIX = "scheduled_fire_at_";
     private static final String KEY_LAST_MAINTENANCE_CHANNEL_RESULT = "last_maintenance_channel_result";
     private static final String KEY_LAST_MAINTENANCE_SIGNAL_ID = "last_maintenance_signal_id";
+    private static final String KEY_LAST_SIGNAL_UNREADABLE = "last_signal_unreadable";
 
     /** 既定はOFF（design.md: インストール直後に勝手に動き出さないこと）。 */
     private static final boolean DEFAULT_ENABLED = false;
@@ -234,6 +235,34 @@ final class SchedulerStore {
 
     static void setLastMaintenanceSignalId(Context context, String signalId) {
         prefs(context).edit().putString(KEY_LAST_MAINTENANCE_SIGNAL_ID, signalId).apply();
+    }
+
+    /**
+     * 削除できた合図の識別子を消す（Opus審査 2026-11-27 の指摘2: 削除に成功した場合も識別子を
+     * 保存し続けると、次に置いた合図が偶然同じ{@code lastModified}・{@code length}だと
+     * 「処理済み」と誤判定し、取りこぼす。削除に失敗したときだけ識別子を残す）。
+     */
+    static void clearLastMaintenanceSignalId(Context context) {
+        prefs(context).edit().remove(KEY_LAST_MAINTENANCE_SIGNAL_ID).apply();
+    }
+
+    /**
+     * 合図ファイル（{@code maintenance-open}）の確認でディレクトリが読めない・一覧できない
+     * 状態が、直前の確認でも起きていたかどうか。design.md追補「保守口（無線デバッグ）の
+     * 強制開け直し」②「黙らせない」の重複防止専用の枠（Opus審査 2026-11-27 の指摘1）:
+     * {@link #getLastMaintenanceChannelResult}（{@code ensureOpen}/{@code cycle}が使う枠）を
+     * 共用すると、同じ実行の中で{@code checkSignalFile}が"signal_unreadable"を書いて枠を
+     * 上書きし、直後の{@code ensureOpen}が「枠が変わった」と見て"blocked"等を書いて枠を
+     * 上書きする、という往復が起きて「変化したときだけ記録する」作法が崩れる
+     * （アプリは1日約70回動くため実害がある）。専用の枠に分けることで、signal_unreadableが
+     * 続く間は1行だけになる。既定false（まだ一度もsignal_unreadableを記録していない）。
+     */
+    static boolean wasLastSignalUnreadable(Context context) {
+        return prefs(context).getBoolean(KEY_LAST_SIGNAL_UNREADABLE, false);
+    }
+
+    static void setLastSignalUnreadable(Context context, boolean unreadable) {
+        prefs(context).edit().putBoolean(KEY_LAST_SIGNAL_UNREADABLE, unreadable).apply();
     }
 
     private static SharedPreferences prefs(Context context) {

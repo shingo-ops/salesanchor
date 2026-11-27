@@ -41,3 +41,35 @@
 - 調査で開いた固定ポート 5555 を閉じ、`adb_enabled` を 0 に戻す作業（本方式の確認後に実施）。
 - 調査で Termux に付与した `WRITE_SECURE_SETTINGS` の削除（PO 決定: 方法が決まり不要になったら消す）。
 - Wi-Fi 自体の安定化（画面操作・PO 実施）。
+
+---
+
+## 続き（2026-11-27・「保守口（無線デバッグ）の強制開け直し」便）
+
+| 項目 | 内容 |
+|---|---|
+| 対象 | `release/line-export-maintenance-cycle`（土台 `origin/main` 218e4fc7c） |
+| 対象ADR | ADR-1092 追補（同日） |
+| 設計 | `docs/handoff/line-auto-export-app/design.md` 追補 2026-11-27「保守口（無線デバッグ）の強制開け直し」 |
+| 区分 | A（`tools/` のため） |
+| 審査日 | 2026-11-27 |
+| 結果 | **APPROVE（指摘2点を審査中に修正済み）** |
+
+### 審査で見つけて直した欠陥
+
+1. **記録があふれる**: `checkSignalFile` が `signal_unreadable` を `recordIfChanged` で記録していたが、`recordIfChanged` は `SchedulerStore.getLastMaintenanceChannelResult`（`ensureOpen`/`cycle` と共用の1枠）を見ていた。そのため、ディレクトリが読めず（`signal_unreadable`）かつ Wi-Fi が無い（`ensureOpen` が `blocked`）回に、1回の実行の中で `checkSignalFile` が枠を `signal_unreadable` に上書き→直後の `ensureOpen` が「枠が変わった」と見て `blocked` に上書き、という往復が起き、記録が毎回2行出る（アプリは1日約70回動くため実害）。「変化したときだけ記録する」という作法が崩れていた。
+   - **直し**: `SchedulerStore` に合図ファイルの読み取り可否専用の枠（`last_signal_unreadable`、`wasLastSignalUnreadable`/`setLastSignalUnreadable`）を1つ足し、`signal_unreadable` の重複判定をそちらで行うよう `MaintenanceChannel` に `recordSignalUnreadableIfChanged`/`clearSignalUnreadable` を追加した。`ensureOpen`/`cycle` の結果枠とは完全に分離し、ディレクトリが読める状態に戻ったら枠を解除するため、読めない状態が続く間は1行だけになる。
+2. **合図を取りこぼす**: 削除が成功した場合も `signalId`（`lastModified`+`length`）を `SchedulerStore` に保存していたため、次に置いた合図が偶然同じ `lastModified` 秒・同じ長さだと「処理済み」と誤判定し、無視してしまう。合図は「保守口が切れて困っている」ときに置かれるものなので、取りこぼすと人手に戻ってしまう。
+   - **直し**: 削除に成功したときは `SchedulerStore.clearLastMaintenanceSignalId` で識別子を消す。保存するのは削除に失敗したときだけに変更した。コメント・javadocもこれに合わせて書き直した。
+
+修正後に再ビルドし、終了コード 0・`versionCode=25` / `versionName=0.22.0-stage3`・署名 SHA-256（`c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709`、既存APKと一致）を確認した。
+
+### 残っている不確かさ（実機で未証明）
+
+アプリが合図ファイル（`maintenance-open`）を**読めるかどうかは実機で未証明**である。実測で分かっている前提は以下（推測ではなく実機で測った値）:
+
+- アプリは `targetSdkVersion=24`（旧方式のストレージモデル）。
+- `WRITE_EXTERNAL_STORAGE` は `granted=true`、**`READ_EXTERNAL_STORAGE` は `granted=false`**。
+- アプリは製品ビルドで `run-as` が使えないため、アプリのプロセス権限で実際にファイルを読めるかを手元（proot環境）から直接確認する手段が無い。
+
+このため、合図ファイルの存在確認（`File#isFile`/`lastModified`/`length`）がアプリのプロセス内で `SecurityException` を投げる可能性があり、投げた場合は `checkSignalFile` の外側の `catch (RuntimeException e)` で吸収され `signal_unreadable` が記録される設計にしてある。**判定材料は実機ログの `signal_unreadable` の記録の有無**: 出れば方式の見直し（`READ_EXTERNAL_STORAGE` の追加権限付与、または別の受け渡し経路への変更）が必要、出なければこの方式で機能している。実機検証手順は `docs/handoff/line-auto-export-app/design.md` 追補に記載した。
