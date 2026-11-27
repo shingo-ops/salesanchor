@@ -1,3 +1,1 @@
-https://auth.openai.com/codex/device
-69GW-6ZE03
-coordinator 部屋・出した時刻 2026-11-27T17:48:32Z・有効 900 秒
+使用済み（2026-11-27T17:49:25Z）
