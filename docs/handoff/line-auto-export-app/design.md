@@ -1044,3 +1044,31 @@ watermark（取り込みの起点）は送信が受理されたときだけ進�
 
 手順9（`step9WaitShareSheet`）のポーリング間隔・期限、3段階それぞれの探し方（`NodeOps.findByTextPrefix`/`findByDescExact`/`findNodeByLabel`）、`settings_item`/`export_item` のスクロール再試行（`scrollFindAndClick`、`SCROLL_MAX_RETRIES`・`SCROLL_SETTLE_DELAY_MS` など）、遮断モードの帯（`overlayBlocking`・`RunStatusOverlay`）。
 
+## 追補 2026-11-27 署名鍵と成果物の作り直しを仕組みで守る
+
+対象ADR: ADR-1090（「7. 署名鍵」に禁止事項が文章として書かれていたが、仕組みでは守られていなかった）。本追補ではその一文を仕組み（スクリプトとCI）で強制する。ADR本体は編集していない。
+
+### ①実際に起きた2つの事故
+
+1. **2026-11-27、別の鍵で署名された APK ができた。** `tools/line-auto-export-app/build/` は `.gitignore` 対象のため、新しい作業ツリーで `build.sh` を走らせると「鍵が無ければ `keytool` で黙って作る」処理が別の鍵を黙って作っていた。実機に入っている APK の証明書は `c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709`（SHA-256）だが、別鍵で署名されたAPKの指紋は `8736637d1db0c7e507ec94a490831fe0509ebfcd72989874c45ee5d1bcbf3b79` だった。別鍵のAPKは実機を上書き更新できず、消して入れ直すとPIN・ユーザー補助・通知の権限を失い自動化が止まる。人が気づいたため実害は出なかった。
+2. **同日、APK 成果物だけが古いまま main に残った。** `tools/line-auto-export-app/out/app-debug.apk` は二進ファイルでマージされないため、main 取り込み時に衝突し、片側を選ぶとソースには入っている修正が成果物から消える。実機にそれを入れると修正が無かったことになる現象が実際に起きた。
+
+### ②入れた門番2つ
+
+**門番1（`tools/line-auto-export-app/build.sh`）**:
+
+- 署名鍵（`build/debug.keystore`）が無いときは、既定では作らずエラーで止める（既存の鍵をコピーする候補パスと、`sdk/android-34.jar` も同様に追跡対象外である旨をメッセージに出す）。
+- 環境変数 `ALLOW_NEW_KEYSTORE=1` を与えたときだけ、本当に初めての環境向けの逃げ道として従来どおり `keytool` で新しい鍵を作る。そのときは「この APK は実機を上書き更新できない」という警告を目立つ形で出す。
+- 署名後に `apksigner verify --print-certs` の Signer #1 の SHA-256 を取り出し、スクリプト内の定数 `EXPECTED_SIGNER_SHA256`（値は `c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709`）と一致しなければ exit 1 で止める。鍵を正式に入れ替えるときは、この定数と ADR-1090「7. 署名鍵」を同時に直す運用にすることで、仕組み（作業ツリーが鍵を持っていないだけの状態）と意図（鍵を本当に入れ替える決定）を区別する。
+- 最後に `tools/line-auto-export-app/out/BUILD-INFO.txt` を4行（`versionCode`・`versionName`・`signerSha256`・`apkSha256`）で書き出し、画面にも1行でまとめて印字する。
+
+**門番2（CI・新規 `scripts/ci/check_line_export_apk.py`）**:
+
+- pure Python（標準ライブラリのみ・`aapt` もAndroid SDKも使わない）。`tools/line-auto-export-app/out/BUILD-INFO.txt` の存在、`versionCode`/`versionName` が `tools/line-auto-export-app/AndroidManifest.xml` と一致すること、`apkSha256` が実ファイル `tools/line-auto-export-app/out/app-debug.apk` の実際のsha256と一致することの3つを検査する。
+- 事故1（版だけ上げてビルドし直し忘れ）は `versionCode`/`versionName` の不一致で捕まる。事故2（APK側だけ古いものをマージで選んでしまう）は `apkSha256` の不一致で捕まる。
+- ワークフロー `.github/workflows/line-export-apk-guard.yml` から呼ばれる（`tools/line-auto-export-app/` 配下の変更があるPRのみ実行、`.github/workflows/adr-index-check.yml` と同じ変更検出の作り）。単体テストは `scripts/ci/test_check_line_export_apk.py`。
+
+### ③変えていないもの
+
+アプリのコード（Java・リソース・`AndroidManifest.xml` の内容）、`versionCode`/`versionName`の値（この便では上げていない）、署名鍵そのもの（`build/debug.keystore` は既存のものを使い続ける）、ビルドの手順の本体（javac→dalvik-exchange→aapt→zipalign→apksignerの順序・各ステップの内容）はいずれも変更していない。足したのは「鍵が無いときに黙って作らない」「署名後に照合する」「BUILD-INFO.txtを書き出す」「CIで食い違いを検査する」の4点のみ。
+

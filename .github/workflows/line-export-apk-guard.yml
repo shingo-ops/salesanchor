@@ -1,0 +1,35 @@
+name: LINE Export APK Guard
+
+on:
+  pull_request:
+    branches: [main, develop]
+  merge_group:
+    types: [checks_requested]
+    branches: [main]
+
+jobs:
+  check:
+    name: LINE export APK artifact matches source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Check if line-auto-export-app files changed
+        id: app_changed
+        env:
+          DIFF_BASE: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || format('origin/{0}', github.base_ref) }}
+        run: |
+          git diff --name-only "${DIFF_BASE}...HEAD" \
+            | grep -qE '^tools/line-auto-export-app/' \
+            && echo "changed=true" >> "$GITHUB_OUTPUT" \
+            || echo "changed=false" >> "$GITHUB_OUTPUT"
+
+      - name: Check BUILD-INFO.txt matches source and artifact
+        if: steps.app_changed.outputs.changed == 'true'
+        run: python3 -I scripts/ci/check_line_export_apk.py --root .
+
+      - name: No line-auto-export-app files changed — skip
+        if: steps.app_changed.outputs.changed == 'false'
+        run: echo "✅ tools/line-auto-export-app/ の変更なし — APKガードをスキップ"
