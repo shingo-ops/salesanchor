@@ -364,7 +364,7 @@
 | K-s3 Google で「これ以降」「すべて」を直したとき、「これ以降」を消したとき、元の予定を読めなかったときは、アプリは変わらない | `backend/tests/test_calendar_service.py` の試験（CI） |
 | K-s4 送り中・送れなかった例外の行があるときは消さない。警告は元 1 つにつき 1 回。Google へは書かない | 同じ試験（CI） |
 | K-s5 元の予定の id で消した形が届いたときも、繰り返しの元の行が消える | 同じ試験（CI） |
-| K-s6 消すときに DB の決まりに外れない。例外の行が一緒に消える。送り中の回があるときは 1 行も消えない | 本物の PostgreSQL の試験 `backend/tests/test_calendar_sync_tenant_reset_pg.py`（CI）。チームの対応が一緒に消えることは、外部キーの定め（`tenant.py:1635`）とアプリで「すべて」を消すときと同じ文であることで確かめる（試験の準備にチームの表が要るため、この便では試験を足さない） |
+| K-s6 消すときに DB の決まりに外れない。例外の行が一緒に消える。送り中の回があるときは 1 行も消えない | 本物の PostgreSQL の試験 `backend/tests/test_calendar_sync_tenant_reset_pg.py`（CI）。チームの対応が一緒に消えることは、外部キーの定め（`backend/app/services/tenant.py:1635`）とアプリで「すべて」を消すときと同じ文であることで確かめる（試験の準備にチームの表が要るため、この便では試験を足さない） |
 | K-s7 今までの取り込み・繰り返し・予定の試験がそのまま通る | CI |
 
 ### 13-6. リスクと対処
@@ -389,9 +389,9 @@
 
 | 書き込み | 結果 | 根拠 |
 |---|---|---|
-| 送り終えた繰り返しの元の行を id で消す | ○ | 消すだけなので値の決まり（CHECK）・重なり禁止（UNIQUE）は関わらない。アプリで「すべて」を消すとき（`calendar_service.py:1489`）と同じ文 |
-| 例外の行が一緒に消える | ○ | `calendar_events_recurring_event_id_fkey` が ON DELETE CASCADE（`tenant.py:1613`） |
-| チームの対応が一緒に消える | ○ | `calendar_event_teams.event_id` が ON DELETE CASCADE（`tenant.py:1635`） |
+| 送り終えた繰り返しの元の行を id で消す | ○ | 消すだけなので値の決まり（CHECK）・重なり禁止（UNIQUE）は関わらない。アプリで「すべて」を消すとき（`backend/app/services/calendar_service.py:1489`）と同じ文 |
+| 例外の行が一緒に消える | ○ | `calendar_events_recurring_event_id_fkey` が ON DELETE CASCADE（`backend/app/services/tenant.py:1613`） |
+| チームの対応が一緒に消える | ○ | `calendar_event_teams.event_id` が ON DELETE CASCADE（`backend/app/services/tenant.py:1635`） |
 | ほかに calendar_events を指す表 | 無し | `git grep "REFERENCES.*calendar_events"` は上の 2 つだけ（origin/main 65934286b） |
 | 作る・直す（INSERT・UPDATE） | 無し | 便5 は書き足さない |
 

@@ -110,7 +110,7 @@
   - アプリで「すべての予定」を消すとき（`delete_recurring_event` `:1400`、`# all` は `:1487-1497`）: 例外の行の Google の id を先に読み、元の行を id で消して commit し、そのあと Google の例外の回と元の予定を消す。例外の行は外部キーで一緒に消える。
   - Google の元の予定を読む `backend/app/services/google_calendar.py:403-411` の `get_event`（`events().get`、失敗は RuntimeError）。
   - 取り込みの回し方 `backend/app/services/google_webhook.py:291-347`: 差分は `singleEvents: True`・`calendarId: "primary"`・`timeMax` なし（`:298-307`）。1 回の取り込みに 1 つの `series_cache`（`:336`）。結果は「Google 取り込み完了 (tenant, upserted, deleted, full)」（`:382`）。
-  - Google で作った予定の消した知らせ（`calendar_service.py:1915-1923`）は、`source='google'` の行だけを消し、行が無くても "deleted" を返す。
+  - Google で作った予定の消した知らせ（`backend/app/services/calendar_service.py:1915-1923`）は、`source='google'` の行だけを消し、行が無くても "deleted" を返す。
 - 【事実】表のつながり（`backend/app/services/tenant.py`）: `calendar_events.recurring_event_id` は自分の表の `id` を ON DELETE CASCADE で指す（`:1613`）。チームとの対応表 `calendar_event_teams.event_id` も ON DELETE CASCADE（`:1635`、移行 `migrations/20261127_100000_add_calendar_team_share.sql:32`）。元の行を消すと、例外の行とチームの対応も一緒に消える。アプリで「すべて」を消すときと同じ。
 - 【事実】本番の記録（Grafana の Loki、job=containerlogs、2026-11-26 15:10〜15:25 UTC、133 行）: 15:16:28 Google からの知らせ（webhook POST 200）→ 15:16:31 「Google 取り込み完了 (tenant=1, upserted=0, deleted=0, full=False)」。同じ時間に「繰り返しの元の予定」の警告は 0 行。だから `get_event` は失敗せずに返り、`_same_series` が偽になって飛ばした。
 - 【事実】Google の公式の資料（Context7 `/websites/developers_google_workspace_calendar_api`・2026-11-26 に読んだ）: `get` は消した予定（`status: "cancelled"`）も返す。差分の取り込みでは消した予定が必ず届く。`showDeleted` と `singleEvents` が両方 true のときは、消した回だけが届き、元の繰り返しの予定は届かない。消した例外の回は `id`・`recurringEventId`・`originalStartTime` だけが保証される。
