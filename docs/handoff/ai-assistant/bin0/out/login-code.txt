@@ -1,3 +1,3 @@
 https://auth.openai.com/codex/device
-51UM-O27JQ
-invoice 部屋・出した時刻 02:06 UTC・有効 900 秒
+52JW-6YDI9
+invoice 部屋 2回目・出した時刻 02:21 UTC・有効 900 秒
