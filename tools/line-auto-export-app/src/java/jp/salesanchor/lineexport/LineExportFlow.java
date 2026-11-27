@@ -104,6 +104,13 @@ final class LineExportFlow {
     /** ノード待ちのポーリング間隔。flow.shのwait_focus（20回×0.5秒=10秒）と同じ予算で300ms刻みにする。 */
     private static final long NODE_WAIT_POLL_MS = 300L;
     private static final long NODE_WAIT_TIMEOUT_MS = 10000L;
+    /**
+     * design.md追補 2026-11-27「押せなかったら押し直す（一発判定をやめる）」:
+     * shortcut/menu_button/termux_targetの3段階で「探す→押す、押せなければ探し直して押す」を
+     * 繰り返す期限。run-*.jsonl 4,502回の集計で、この3段階が待ちも再探索も持たず失敗123回中
+     * 114回（93%）を占めていたための対策。刻みは新設せずNODE_WAIT_POLL_MSを流用する。
+     */
+    private static final long CLICK_RETRY_TIMEOUT_MS = 3000L;
     /** スクロール再探索は最大4回（flow.sh:26-36のfind_scroll。初回探索+再探索4回=合計5回）。 */
     private static final int SCROLL_MAX_RETRIES = 4;
     /** find_scroll内のsleep 1（flow.sh:29）と同値。スクロール直後の安定待ち。 */
@@ -407,22 +414,20 @@ final class LineExportFlow {
         }, delayMs);
     }
 
-    // ---- 手順2: ショートカットをクリック --------------------------------------------------
+    // ---- 手順2: ショートカットをクリック（押し直し付き） --------------------------------------
 
     private void step2ClickShortcut() {
-        AccessibilityNodeInfo node = NodeOps.findByTextPrefix(service, SHORTCUT_TEXT_PREFIX);
-        if (node == null) {
-            recordStep(STAGE_SHORTCUT);
-            finish(false, STAGE_SHORTCUT);
-            return;
-        }
-        NodeOps.ClickResult result = NodeOps.clickNode(service, node);
-        recordStep(STAGE_SHORTCUT);
-        if (!result.accepted) {
-            finish(false, STAGE_SHORTCUT);
-            return;
-        }
-        step3WaitLineOpen();
+        clickWithRetry(STAGE_SHORTCUT, new NodeFinder() {
+            @Override
+            public AccessibilityNodeInfo find() {
+                return NodeOps.findByTextPrefix(service, SHORTCUT_TEXT_PREFIX);
+            }
+        }, null, new ClickRetryCallback() {
+            @Override
+            public void onSuccess() {
+                step3WaitLineOpen();
+            }
+        });
     }
 
     // ---- 手順3: トーク画面（LINE）の到達判定 ------------------------------------------------
@@ -462,32 +467,30 @@ final class LineExportFlow {
                 });
     }
 
-    // ---- 手順4: Menuボタン -----------------------------------------------------------------
+    // ---- 手順4: Menuボタン（押し直し付き） ---------------------------------------------------
 
     private void step4ClickMenuButton() {
-        AccessibilityNodeInfo node = NodeOps.findByDescExact(service, MENU_BUTTON_DESC);
-        if (node == null) {
-            recordStep(STAGE_MENU_BUTTON);
-            finish(false, STAGE_MENU_BUTTON);
-            return;
-        }
-        NodeOps.ClickResult result = NodeOps.clickNode(service, node);
-        recordStep(STAGE_MENU_BUTTON);
-        if (!result.accepted) {
-            finish(false, STAGE_MENU_BUTTON);
-            return;
-        }
-        // 手順5（open_menuの到達判定を別手順として持つ形）は廃止した（design.md追補
-        // 2026-10-08「実機2回目」参照）。メニューは縦に長く、「設定」が初期表示より
-        // 下にあることがある。アクセシビリティのノードツリーには画面外の項目が
-        // 載らないため、判定（ノード待ち）とスクロール探索を別手順に分けると、
-        // スクロールする前に判定だけが10秒でタイムアウトする（判定と探索の
-        // 二重化という設計ミスだった）。1秒の落ち着き待ちのあと、即時探索＋
-        // スクロール再探索（最大4回）をscrollFindAndClickにまとめて行わせる。
-        schedule("settle:" + STAGE_SETTINGS_ITEM, SCROLL_SETTLE_DELAY_MS, new Runnable() {
+        clickWithRetry(STAGE_MENU_BUTTON, new NodeFinder() {
             @Override
-            public void run() {
-                step6ClickSettings();
+            public AccessibilityNodeInfo find() {
+                return NodeOps.findByDescExact(service, MENU_BUTTON_DESC);
+            }
+        }, null, new ClickRetryCallback() {
+            @Override
+            public void onSuccess() {
+                // 手順5（open_menuの到達判定を別手順として持つ形）は廃止した（design.md追補
+                // 2026-10-08「実機2回目」参照）。メニューは縦に長く、「設定」が初期表示より
+                // 下にあることがある。アクセシビリティのノードツリーには画面外の項目が
+                // 載らないため、判定（ノード待ち）とスクロール探索を別手順に分けると、
+                // スクロールする前に判定だけが10秒でタイムアウトする（判定と探索の
+                // 二重化という設計ミスだった）。1秒の落ち着き待ちのあと、即時探索＋
+                // スクロール再探索（最大4回）をscrollFindAndClickにまとめて行わせる。
+                schedule("settle:" + STAGE_SETTINGS_ITEM, SCROLL_SETTLE_DELAY_MS, new Runnable() {
+                    @Override
+                    public void run() {
+                        step6ClickSettings();
+                    }
+                });
             }
         });
     }
@@ -544,21 +547,26 @@ final class LineExportFlow {
                 });
     }
 
-    // ---- 手順10: 「Termux」をクリック -------------------------------------------------------
+    // ---- 手順10: 「Termux」をクリック（押し直し付き） -----------------------------------------
+    //
+    // design.md追補 2026-11-27: 手順9（share_sheet）が見つけたtermuxNodeは1回目だけそのまま
+    // 使う（成功時の経路を今と同じに保つ）。押せなければtermuxNodeを捨て、
+    // NodeOps.findNodeByLabelでゼロから探し直すループに入る（共有一覧は開いた直後に候補が
+    // 差し替わるためノード参照が古くなるのが原因だった。失敗時の所要が実測6msだったのは
+    // 探し直しも待ちもしていなかったため）。
 
     private void step10ClickTermux() {
-        if (termuxNode == null) {
-            recordStep(STAGE_TERMUX_TARGET);
-            finish(false, STAGE_TERMUX_TARGET);
-            return;
-        }
-        NodeOps.ClickResult result = NodeOps.clickNode(service, termuxNode);
-        recordStep(STAGE_TERMUX_TARGET);
-        if (!result.accepted) {
-            finish(false, STAGE_TERMUX_TARGET);
-            return;
-        }
-        step11WaitEditClassThenTap();
+        clickWithRetry(STAGE_TERMUX_TARGET, new NodeFinder() {
+            @Override
+            public AccessibilityNodeInfo find() {
+                return NodeOps.findNodeByLabel(service, TERMUX_LABEL);
+            }
+        }, termuxNode, new ClickRetryCallback() {
+            @Override
+            public void onSuccess() {
+                step11WaitEditClassThenTap();
+            }
+        });
     }
 
     // ---- 手順11: EDITを押す（準備完了の判定はEDITノードの探索） -----------------------------
@@ -773,10 +781,11 @@ final class LineExportFlow {
             return;
         }
         if (System.currentTimeMillis() >= deadlineAt) {
-            // open_chat失敗時の診断: 実際に見えていたパッケージ名のみ（重複除去・最大3件）。
-            // ノードのテキストやメッセージ本文は含めない（2026-10-08実機1回目の不具合3）。
-            String seenPackages = NodeOps.distinctWindowPackageNames(service);
-            recordStep(stage, "見えていたパッケージ: " + seenPackages);
+            // design.md追補 2026-11-27: open_chat専用だった「見えていたパッケージ名」の記録は
+            // finish(false, stage)側（logExportEndのseenPackages）に一般化した。ここで個別に
+            // NodeOps.distinctWindowPackageNamesを呼ぶと二重記録になるため削除（2026-10-08
+            // 実機1回目の不具合3の対策自体は失っていない）。
+            recordStep(stage);
             finish(false, stage);
             return;
         }
@@ -813,6 +822,80 @@ final class LineExportFlow {
                 waitForNode(label, stage, deadlineAt, callback);
             }
         });
+    }
+
+    // ---- 共通: 探す→押す、押せなければ探し直して押す（期限CLICK_RETRY_TIMEOUT_MS） --------------
+    //
+    // design.md追補 2026-11-27「押せなかったら押し直す（一発判定をやめる）」: shortcut/
+    // menu_button/termux_targetの3段階を、ここに置き換える。waitForNode(上記)と同じ再帰＋
+    // schedule()の形。ノードは毎回ゼロから探す（前回の参照は絶対に使い回さない）ため、
+    // 2回目以降はfirstCandidateを無視してfinder.find()で探し直す。
+
+    private interface NodeFinder {
+        AccessibilityNodeInfo find();
+    }
+
+    private interface ClickRetryCallback {
+        void onSuccess();
+    }
+
+    /**
+     * firstCandidateが非nullなら1回目だけそのノードをそのまま使う（手順10がstep9の保存ノードを
+     * 1回目だけ使い回すため。手順2・手順4はnullを渡し、初回からfinder.find()で探す）。
+     * 押せたらrecordStep(stage)してcallback.onSuccess()へ。見つからない・押せなかった場合は
+     * 期限（CLICK_RETRY_TIMEOUT_MS）までNODE_WAIT_POLL_MS間隔でfinder.find()から探し直す。
+     * 期限を過ぎたらrecordStep(stage)→finish(false, stage)。
+     */
+    private void clickWithRetry(final String stage, final NodeFinder finder,
+            final AccessibilityNodeInfo firstCandidate, final ClickRetryCallback callback) {
+        long startedAt = System.currentTimeMillis();
+        clickWithRetryStep(stage, finder, firstCandidate, callback, startedAt,
+                startedAt + CLICK_RETRY_TIMEOUT_MS, 1);
+    }
+
+    private void clickWithRetryStep(final String stage, final NodeFinder finder,
+            final AccessibilityNodeInfo firstCandidate, final ClickRetryCallback callback,
+            final long startedAt, final long deadlineAt, final int attempt) {
+        AccessibilityNodeInfo node = (attempt == 1 && firstCandidate != null)
+                ? firstCandidate : finder.find();
+        boolean accepted = false;
+        if (node != null) {
+            NodeOps.ClickResult result = NodeOps.clickNode(service, node);
+            accepted = result.accepted;
+        }
+        if (accepted) {
+            // design.md追補 2026-11-27: 一発成功でもclickAttempts:1を必ず出す（集計のため）。
+            recordStep(stage, null, buildClickRetryExtraFields(attempt, startedAt));
+            callback.onSuccess();
+            return;
+        }
+        if (System.currentTimeMillis() >= deadlineAt) {
+            recordStep(stage, null, buildClickRetryExtraFields(attempt, startedAt));
+            finish(false, stage);
+            return;
+        }
+        schedule("clickRetry:" + stage, NODE_WAIT_POLL_MS, new Runnable() {
+            @Override
+            public void run() {
+                clickWithRetryStep(stage, finder, firstCandidate, callback, startedAt, deadlineAt, attempt + 1);
+            }
+        });
+    }
+
+    /**
+     * clickWithRetryの計測専用フィールド（ScrollStats.toJsonと同じ作り）。clickAttemptsは
+     * 探して押そうとした回数（1なら一発成功＝今と同じ）、clickWaitMsはこの段階に費やした
+     * 合計ミリ秒。
+     */
+    private JSONObject buildClickRetryExtraFields(int attempts, long startedAt) {
+        JSONObject o = new JSONObject();
+        try {
+            o.put("clickAttempts", attempts);
+            o.put("clickWaitMs", System.currentTimeMillis() - startedAt);
+        } catch (JSONException e) {
+            Log.w(TAG, "click retry extra fields build failed: " + e);
+        }
+        return o;
     }
 
     // ---- 共通: グループ名ノード待ち（正規化＋双方向部分一致、300ms間隔・期限10秒） ----------------
@@ -1042,6 +1125,11 @@ final class LineExportFlow {
         // stopWindowRecording()は履歴をクリアするため、読むのはその前に行う（診断用。
         // クラス名のみでパッケージ名・ノードのテキスト・メッセージ本文は含まない）。
         String recentClasses = success ? "" : service.recentWindowClassNames();
+        // design.md追補 2026-11-27: 失敗した段階で実際に見えていたパッケージ名
+        // （NodeOps.distinctWindowPackageNames、重複除去・最大3件）を、段階を問わずここ1箇所
+        // で記録する（旧: open_chat失敗時のみwaitForPackageが個別に記録していた）。成功した
+        // 回には出さない（ログが太るのを避ける）。
+        final String seenPackages = success ? null : NodeOps.distinctWindowPackageNames(service);
         service.stopWindowRecording();
         long elapsed = System.currentTimeMillis() - flowStartedAt;
         // 実時間(elapsed)とuptime(elapsedUptime、深いスリープ中は進まない)の両方を記録する
@@ -1091,7 +1179,7 @@ final class LineExportFlow {
                         releaseWakeLock();
                         postResultNotification(service, title, bodyBeforeLock);
                         logExportEnd(success, failedStage, elapsed, elapsedUptime, null,
-                                wakeHeldAtEnd, wakeHeldMs);
+                                wakeHeldAtEnd, wakeHeldMs, seenPackages);
                         // design.md追補 2026-10-09「取り込み失敗後に30分空いていた問題」と同じ
                         // 再試行。armRetryOnFailure==true（本番実行）のときだけ張る。
                         if (!success && armRetryOnFailure) {
@@ -1117,7 +1205,8 @@ final class LineExportFlow {
             long wakeHeldMs = wakeAcquiredAt > 0 ? (System.currentTimeMillis() - wakeAcquiredAt) : -1L;
             releaseWakeLock();
             postResultNotification(service, title, bodyBeforeLock);
-            logExportEnd(success, failedStage, elapsed, elapsedUptime, null, wakeHeldAtEnd, wakeHeldMs);
+            logExportEnd(success, failedStage, elapsed, elapsedUptime, null, wakeHeldAtEnd, wakeHeldMs,
+                    seenPackages);
             // armRetryOnFailure==falseのため実際には呼ばれないが、lockOnFinish==trueの経路
             // （下記）と対称に条件を書いておく（design.md追補 2026-10-10の指示どおり）。
             if (!success && armRetryOnFailure) {
@@ -1162,7 +1251,7 @@ final class LineExportFlow {
                 String finalBody = bodyBeforeLock + " / " + gestureSummary + " / 施錠:" + locked;
                 postResultNotification(service, title, finalBody);
                 logExportEnd(success, failedStage, elapsed, elapsedUptime, Boolean.valueOf(locked),
-                        wakeHeldAtEnd, wakeHeldMs);
+                        wakeHeldAtEnd, wakeHeldMs, seenPackages);
                 // design.md追補 2026-10-09「取り込み失敗後に30分空いていた問題」: 5分後に
                 // 再試行を予約する。armRetryOnFailure==true（本番実行）のときだけ対象
                 // （design.md追補2026-10-10でlockOnFinishと分離。checkResult()からの
@@ -1194,9 +1283,11 @@ final class LineExportFlow {
      * logUnlockEndと同じ値を指す。チェーンの先頭で1回だけ決まる情報のため）。
      * wakeHeldAtEnd/wakeHeldMs/editLockDelayMsはトップレベルの追加フィールドとして載せる
      * （design.md追補「遅い回の原因確定のための計測追加」）。
+     * seenPackages（design.md追補 2026-11-27）はfinish()が失敗時だけ計算した値（成功時は
+     * null）。ここでトップレベルに1回だけ出す。
      */
     private void logExportEnd(boolean success, String failedStage, long elapsedMs, long elapsedUpMs,
-            Boolean locked, boolean wakeHeldAtEnd, long wakeHeldMs) {
+            Boolean locked, boolean wakeHeldAtEnd, long wakeHeldMs, String seenPackages) {
         String nextTrigger = SchedulerStore.getPendingNextTrigger(service);
         Long nextAtMs = null;
         if (nextTrigger != null) {
@@ -1228,6 +1319,11 @@ final class LineExportFlow {
             }
             if (editLockDelayMs >= 0) {
                 extraFields.put("editLockDelayMs", editLockDelayMs);
+            }
+            // design.md追補 2026-11-27「押せなかったら押し直す（一発判定をやめる）」: 失敗した
+            // 段階で実際に見えていたパッケージ名（成功時はseenPackages==nullのため出さない）。
+            if (seenPackages != null && seenPackages.length() > 0) {
+                extraFields.put("seenPackages", seenPackages);
             }
             // design.md追補 2026-10-10「使用中に起動した回は施錠しない」: 施錠しなかった回
             // （lockOnFinish==false）だけtrueを出す（行った回は出さない）。lockedフィールドは
