@@ -66,6 +66,7 @@ async def test_supplier_type_check_constraint(engine):
 async def test_supplier_discord_routing_unique(engine):
     """AC2.5: UNIQUE(discord_guild_id, discord_channel_id) で重複不可。"""
     from sqlalchemy import text
+    from tests.rls_bootstrap import public_bootstrap_lock
     from sqlalchemy.exc import IntegrityError
 
     async with engine.connect() as conn:
@@ -112,7 +113,7 @@ async def test_supplier_discord_routing_unique(engine):
     assert raised, "UNIQUE 制約が動作していない"
 
     # cleanup
-    async with engine.begin() as conn:
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         await conn.execute(text(
             "DELETE FROM public.supplier_discord_routing WHERE supplier_id = :sid"
         ), {"sid": sup_id})
@@ -156,10 +157,15 @@ async def _setup_central_supplier(conn, suffix: str) -> int:
     return sup_id
 
 
-async def _cleanup_suppliers(conn, ids: list[int]) -> None:
+async def _cleanup_suppliers(engine, ids: list[int]) -> None:
     from sqlalchemy import text as t
-    for sid in ids:
-        await conn.execute(t("DELETE FROM public.suppliers WHERE id = :id"), {"id": sid})
+
+    from tests.rls_bootstrap import public_bootstrap_lock
+
+    # 共有 DB の後片付けは public_bootstrap_lock の中で commit まで終える
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
+        for sid in ids:
+            await conn.execute(t("DELETE FROM public.suppliers WHERE id = :id"), {"id": sid})
 
 
 async def test_export_csv(engine):
@@ -202,8 +208,7 @@ async def test_export_csv(engine):
         assert f"Central Supplier {suffix}" in names
 
     finally:
-        async with engine.begin() as conn:
-            await _cleanup_suppliers(conn, [sup_id])
+        await _cleanup_suppliers(engine, [sup_id])
 
 
 async def test_import_preview(engine):
@@ -328,8 +333,7 @@ async def test_import_commit(engine):
     assert row["notes"] == "committed via test"
 
     # cleanup
-    async with engine.begin() as conn:
-        await _cleanup_suppliers(conn, [row["id"]])
+    await _cleanup_suppliers(engine, [row["id"]])
 
 
 async def test_import_upsert(engine):
@@ -426,8 +430,7 @@ async def test_import_upsert(engine):
     assert new_row is not None
 
     # cleanup
-    async with engine.begin() as conn:
-        await _cleanup_suppliers(conn, [existing_id, new_row["id"]])
+    await _cleanup_suppliers(engine, [existing_id, new_row["id"]])
 
 
 async def test_import_validation_errors(engine):

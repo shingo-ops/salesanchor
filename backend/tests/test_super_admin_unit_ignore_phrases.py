@@ -15,7 +15,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from tests.rls_bootstrap import _apply_migration
+from tests.rls_bootstrap import _apply_migration, public_bootstrap_lock
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL") or os.getenv("TEST_PG_URL")
@@ -94,7 +94,8 @@ async def pg_client():
             yield c, created
     finally:
         app.dependency_overrides.clear()
-        async with admin_engine.begin() as conn:
+        # 共有 DB の後片付けは public_bootstrap_lock の中で commit まで終える
+        async with public_bootstrap_lock(admin_engine), admin_engine.begin() as conn:
             for pid in created:
                 await conn.execute(
                     text("DELETE FROM public.line_unit_ignore_phrases WHERE id = :id"),

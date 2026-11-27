@@ -96,10 +96,14 @@ async def _setup_source_less_schema(conn, schema: str) -> None:
     """))
 
 
-async def _drop_schema(conn, schema: str) -> None:
+async def _drop_schema(engine, schema: str) -> None:
     from sqlalchemy import text
+    from tests.rls_bootstrap import public_bootstrap_lock
 
-    await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema} CASCADE"))
+    # 共有 DB の後片付けは public_bootstrap_lock の中で commit まで終える
+    async with public_bootstrap_lock(engine):
+        async with engine.begin() as conn:
+            await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema} CASCADE"))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -147,8 +151,7 @@ async def test_old_sql_pattern_fails_without_source_column(engine):
         ), f"Expected UndefinedColumnError for 'source' column, got: {err_str}"
 
     finally:
-        async with engine.begin() as conn:
-            await _drop_schema(conn, schema)
+        await _drop_schema(engine, schema)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -184,8 +187,7 @@ async def test_new_backfill_skips_section1_when_source_dropped(engine):
         )
 
     finally:
-        async with engine.begin() as conn:
-            await _drop_schema(conn, schema)
+        await _drop_schema(engine, schema)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -218,8 +220,7 @@ async def test_discord_uid_inserted_correctly_without_source(engine):
         assert rows[0].external_id == "123456789012345678"
 
     finally:
-        async with engine.begin() as conn:
-            await _drop_schema(conn, schema)
+        await _drop_schema(engine, schema)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -258,5 +259,4 @@ async def test_backfill_idempotent_on_second_run(engine):
         assert total == 1, f"Expected 1 row total, got {total}"
 
     finally:
-        async with engine.begin() as conn:
-            await _drop_schema(conn, schema)
+        await _drop_schema(engine, schema)

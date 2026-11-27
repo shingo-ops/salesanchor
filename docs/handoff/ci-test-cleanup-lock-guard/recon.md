@@ -172,3 +172,83 @@
 `backend/tests/test_tenant_loop_migration_guard.py` の `_REVIEWED` は `dict[ファイル名, (分類, 理由, frozenset[移行名])]`（分類は `scoped`/`own_database`/`text_only`/`pg_url_only`）で、`_actual()` と `_expected()` の差を「分類表に無い」「実物に無い」の両方向で落とす（:373-408）。
 新しい見張りも同じ2方向比較が使える。ただし鍵を「ファイル名」から「ファイル::関数名」に変え（この86件は同一ファイル内で関数名の重複なし＝台本で確認）、集合は「当たった文の種類」か「呼び出し元 file:line」に替える。
 分類は `own_database`（`CREATE DATABASE` の存在確認 :418-421）・`pg_url_only`（`TEST_PG_URL` の確認 :424-426）・`text_only` をそのまま流用でき、`locked`（札の中）・`fixed`（直した）・`denied_check`（D の案）を足す形が自然（案であり実装は未確認）。
+
+## 6. 結果（実装役・Sonnet・設計 §4〜§6 に従う）
+
+### 6-1. 直した38件（file:関数）— すべて `public_bootstrap_lock` で囲んだ（backend/tests/ 配下）
+
+形: 消す文（と同じ接続の commit）を `async with public_bootstrap_lock(engine), engine.begin() as conn:` の中に入れた。後片付けの関数が `conn` を受けていたもの2つ（`_drop_schema`・`_cleanup_suppliers`）は、`engine` を受けて自分で札と `engine.begin()` を開く形に変え、呼び出し元（adr119 4か所・suppliers 3か所）を合わせた。消す文の中身・順は変えていない。
+
+C・CI で動く（15）
+- test_adr119_backfill_source_guard.py:`_drop_schema`（呼び出し4か所も変更）
+- test_analysis_error_report_tables_rls.py:`_cleanup`
+- test_analytics_conversion_by_attribute_rls.py:`test_conversion_by_attribute_rls_team_and_mine_under_tenant_006`
+- test_google_config_rls.py:`_cleanup`
+- test_inventory_aggregated.py:`seed_draft_four`
+- test_meta_channels.py:`pg_setup_scopes_schema`（作成と削除の両方）
+- test_ops_incident_tables_rls.py:`_cleanup`
+- test_ops_router.py:`_clear_control`
+- test_product_blank_confirmations_pg.py:`_drop_product`
+- test_products_cross_tenant_fk.py:`setup_cross_tenant_tables`（作成と削除の両方）
+- test_rls_bootstrap_ordering.py:`test_rls_bootstrap_schema_and_migration_share_one_transaction`（`tenant_schema_lock` の外の finally だけ）
+- test_staff_join_invites_rls.py:`_cleanup`
+- test_super_admin_unit_ignore_phrases.py:`pg_client`
+- test_tenant_schema_integrity.py:`test_schemas`（作成と削除の両方）
+- test_value_migrations_neutralized.py:`test_type_master_migrations_do_not_reinsert_deleted_rows`（`bootstrap_public_products` は札の外で先に呼び、消す・流し直す・rollback を札の中に）
+
+C-skip・CI では skip（21）
+- test_export_inventory_for_sheet.py:`_cleanup`
+- test_inventory_search.py:`seed_search_dataset`
+- test_inventory_search_perf.py:`bulk_seed`
+- test_phase_gate.py:`_cleanup`・`test_get_phase_returns_a_when_no_row`・`test_set_phase_upserts`
+- test_product_masters.py:`test_product_attribute_masters_crud_round_trip`（削除2か所）
+- test_purge_expired_inventory_offers.py:`test_purge_deletes_only_expired_offers`（同期 engine。同じ接続で `pg_advisory_lock(20260623, 1)`（`_PUBLIC_BOOTSTRAP_LOCK_NAMESPACE`・`_KEY` を import）を取り、finally で `pg_advisory_unlock`）
+- test_super_admin_aliases.py:`test_supplier_aliases_unique_constraint`・`test_csv_import_xmax_counts_inserted_vs_skipped`・`test_supplier_aliases_different_language_allowed`
+- test_super_admin_dex.py:`test_pokemon_dex_update_round_trip`
+- test_super_admin_knowledge.py:`test_create_then_select_then_delete_rule`
+- test_super_admin_phase_switch.py:`test_get_phase_returns_a_default`・`test_put_phase_to_a_succeeds`・`test_put_phase_to_b_blocked_v1_2`・`test_put_phase_invalid_value_400`・`test_rbac_non_super_admin_403`
+- test_super_admin_suppliers.py:`test_supplier_discord_routing_unique`・`_cleanup_suppliers`（呼び出し3か所も変更）
+- test_super_admin_tcg.py:`test_tcg_series_crud_round_trip`
+
+D のうち札で囲んだ（2）
+- test_lead_merge_pg.py:`env`（`tenant_schema_lock` の内側で `public_bootstrap_lock`。順は tenant → public）
+- test_priority_prospects_pg_rls.py:`test_priority_prospects_pg_rls_all_requirements`（`DROP SCHEMA` の finally。skip のまま）
+
+呼び出し元の確認（設計 §4-3 (5)）: `_cleanup`・`_drop_product`・`_clear_control` などの呼び出し元を Grep で全部読み、いずれも `public_bootstrap_lock` の外から呼ばれていた（既に札の中なら BLOCKED のところ、該当なし）。`test_ops_incident_tables_rls.py`・`test_ops_router.py` の一部は別の鍵 `ops_control_lock`（鍵 1012002）の中から `_cleanup`/`_clear_control` を呼ぶ。順は ops_control_lock → public_bootstrap_lock で、逆に取る所はこの2ファイルに無い（Grep で確認）。
+
+### 6-2. 分類表の件数（`_REVIEWED`・backend/tests/test_shared_db_cleanup_lock_guard.py）
+
+| 分類 | 件数 |
+|---|---|
+| own_database | 35（recon §2-1 の DB を使う33＋test_tenant_isolation_daily_check.py の2） |
+| text_only | 6（test_meta_channels.py:pg_conn_scopes・test_rls_tenant_meta_config.py:pg_conn・test_tenant_deletion.py:test_physical_delete_success・test_tenant_service.py:test_named_dollar_tag_function_body・test_viewer_password.py:execute・test_viewer_signup.py:execute） |
+| caller_locked | 2 |
+| tenant_locked | 1 |
+| denied_check | 4 |
+| 合計 | 48（= 86 − 直した38） |
+
+（件数は `_REVIEWED` を ast で数えた実測: own_database 35・text_only 6・caller_locked 2・tenant_locked 1・denied_check 4＝48。recon §2-1 の A 39件は own_database 33＋text_only 6。）
+
+### 6-3. 確かめ（生出力の要点）
+
+(1) `python3 -I docs/handoff/ci-test-cleanup-lock-guard/scan.py`（見張りの試験ファイルを足した後）
+```
+# 読んだ .py: 515 ファイル / 関数: 10815
+# 参考（件数外）: public. 無しの行削除だけの関数 40 件
+# 全件数: 48 関数 / 34 ファイル
+```
+表の件数 48 と一致（86 − 38 = 48）。
+
+(2) 変えた .py（29本）と新しい見張りを `python3 -m py_compile` → `COMPILE_OK`。
+
+(3) 指示どおりの `python -m pytest tests/test_shared_db_cleanup_lock_guard.py -q -p no:cacheprovider` は、このクラウドの環境では動かなかった（`python` に pytest が無い・`pytest` は `pytest_asyncio` と pyproject の addopts（xdist・cov）が無い）。設定と conftest を外した形 `pytest -c /dev/null --rootdir=. --noconftest tests/test_shared_db_cleanup_lock_guard.py -q -p no:cacheprovider` では `4 passed`。CI の形（`-n --dist=loadfile --cov`）での実行は未確認。DB を使う試験（直した38件の中身）は、このクラウドに PostgreSQL が無いため回していない＝動きは未確認（C-skip 21件は CI でも skip）。
+
+(4) わざと札なしの後片付け関数（一時ファイル `backend/tests/test_zz_tmp_probe_unlocked.py`）を足すと、見張りが落ちた:
+```
+FAILED tests/test_shared_db_cleanup_lock_guard.py::test_every_shared_db_cleanup_is_classified
+該当: test_zz_tmp_probe_unlocked.py::_tmp_probe_cleanup（delete_public_rows）
+1 failed, 3 passed
+```
+一時ファイルは消し、`git status` に残っていないことを確認（戻した後は `4 passed`）。
+
+(5) `git diff --name-only origin/main...HEAD` は backend/tests/ と docs/handoff/ci-test-cleanup-lock-guard/ と台帳（.claude-pipeline/active-work.d/）だけ（commit 後に再確認）。製品コード・migrations・CI 設定・rls_bootstrap.py・conftest.py は変えていない。

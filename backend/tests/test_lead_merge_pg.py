@@ -348,7 +348,8 @@ async def env():
             # 前の試験の merge_absorb が同じ record_id で残り、件数の確認がずれる
             tenant_tables = [f"{_SCHEMA}.{s.name}" for s in LEAD_MERGE_TABLES if s.schema == "tenant"]
             tenant_tables.append(f"{_SCHEMA}.audit_logs")
-            async with engine.begin() as conn:
+            # public.registration_tokens を消すので、tenant_schema_lock の内側で public_bootstrap_lock も取る（順は tenant → public）
+            async with public_bootstrap_lock(engine), engine.begin() as conn:
                 await conn.execute(
                     text(f"TRUNCATE {_SCHEMA}.leads, {', '.join(tenant_tables)} RESTART IDENTITY CASCADE")
                 )
