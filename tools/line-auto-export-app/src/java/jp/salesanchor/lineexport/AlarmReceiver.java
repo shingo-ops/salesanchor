@@ -10,7 +10,10 @@ import android.content.Intent;
  * requestRunAllを直接呼ぶ。RunReceiver経由にしない」）。外部アプリからの起動は想定しないため
  * AndroidManifest.xmlでは exported="false"。
  *
- * - {@code ACTION_BOOT_COMPLETED}: 再起動後に補完を張り直す（ONのときだけ）。
+ * - {@code ACTION_BOOT_COMPLETED}: 再起動後に補完を張り直す（ONのときだけ）。アプリ内タイマーが
+ *   OFFでも保守口（無線デバッグ）の確認は行うため、{@link RunScheduler#rescheduleIfEnabled}へ
+ *   委譲する前に{@link MaintenanceChannel#ensureOpen}を1回呼ぶ（ADR-1092、design.md追補
+ *   2026-11-27）。
  * - {@code ACTION_SCHEDULED_RUN}: アラーム発火。{@code EXTRA_TRIGGER}extraで渡された引き金
  *   種別（通知／補完／再試行）とともにRunScheduler.onAlarmFiredへ渡す。
  */
@@ -26,6 +29,7 @@ public class AlarmReceiver extends BroadcastReceiver {
         Context appContext = context.getApplicationContext();
         String action = intent.getAction();
         if (Intent.ACTION_BOOT_COMPLETED.equals(action)) {
+            MaintenanceChannel.ensureOpen(appContext);
             RunScheduler.rescheduleIfEnabled(appContext);
         } else if (ACTION_SCHEDULED_RUN.equals(action)) {
             String triggerType = intent.getStringExtra(RunScheduler.EXTRA_TRIGGER);

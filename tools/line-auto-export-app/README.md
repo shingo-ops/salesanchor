@@ -63,6 +63,26 @@ PINはextraに載せない。受信すると `RunReceiver` が `UnlockAccessibil
 3. **設定画面から除外を戻せる**: 設定Activityに「電池の除外」状態表示と、
    `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` を開くボタンを追加した。
 
+## 保守口（無線デバッグ）が切れたらアプリが開き直す仕組み（2026-11-27）
+
+端末の保守（ADB接続）の入口である無線デバッグが勝手に切れることがある（ADR-1092）。これに
+対して、アプリの起動時（BOOT_COMPLETED）と毎回の実行予約時に `adb_wifi_enabled` を確認し、
+0なら1を書く（`MaintenanceChannel#ensureOpen`、`RunScheduler#scheduleAt`と`AlarmReceiver`の
+BOOT_COMPLETED経路の2箇所から呼ぶ）。Wi-Fiが無い間は書いても定着しないため、その回は
+次回に持ち越す。書き換えるのは `adb_wifi_enabled` だけで、`adb_enabled`（USBデバッグ）には
+触らない。結果（`opened`/`blocked`/`no_permission`）が変化したときだけ実行ログに1行記録する。
+`MaintenanceChannel.SELF_RECOVERY_ENABLED` をfalseにすると丸ごと止められる。
+
+**権限の付与が別途必要**: このアプリに `android.permission.WRITE_SECURE_SETTINGS`
+（development保護レベル）を宣言しているが、インストール時には自動付与されない。
+以下をadbから1回実行する必要がある。
+
+```bash
+adb shell pm grant jp.salesanchor.lineexport android.permission.WRITE_SECURE_SETTINGS
+```
+
+**アプリを削除して入れ直すと付与が消える**ため、入れ替え手順にこの付与をあわせて行うこと。
+
 ## 既知の制約（報告書と重複するが実装者向けメモ）
 
 - ビルド環境の android.jar は API23 固定。`android:canPerformGestures` 属性はAPI24追加のため

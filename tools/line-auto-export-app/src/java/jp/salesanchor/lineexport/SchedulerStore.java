@@ -22,6 +22,7 @@ final class SchedulerStore {
     private static final String KEY_CONSECUTIVE_RETRY_COUNT = "consecutive_retry_count";
     private static final String KEY_LAST_IGNORING_BATTERY_OPTIMIZATIONS = "last_ignoring_battery_optimizations";
     private static final String KEY_SCHEDULED_FIRE_AT_PREFIX = "scheduled_fire_at_";
+    private static final String KEY_LAST_MAINTENANCE_CHANNEL_RESULT = "last_maintenance_channel_result";
 
     /** 既定はOFF（design.md: インストール直後に勝手に動き出さないこと）。 */
     private static final boolean DEFAULT_ENABLED = false;
@@ -203,6 +204,20 @@ final class SchedulerStore {
 
     static void clearScheduledFireAt(Context context, String triggerType) {
         prefs(context).edit().remove(KEY_SCHEDULED_FIRE_AT_PREFIX + triggerType).apply();
+    }
+
+    /**
+     * 直近に記録した保守口（無線デバッグ）の復旧結果（"opened"/"blocked"/"no_permission"）。
+     * ADR-1092、design.md追補 2026-11-27「保守口（無線デバッグ）が切れたらアプリが開き直す」。
+     * {@link #wasLastIgnoringBatteryOptimizations}と同じ作り（{@link MaintenanceChannel}が
+     * 前回値と比較し、変化したときだけ更新・記録する）。既定null（まだ一度も記録していない）。
+     */
+    static String getLastMaintenanceChannelResult(Context context) {
+        return prefs(context).getString(KEY_LAST_MAINTENANCE_CHANNEL_RESULT, null);
+    }
+
+    static void setLastMaintenanceChannelResult(Context context, String result) {
+        prefs(context).edit().putString(KEY_LAST_MAINTENANCE_CHANNEL_RESULT, result).apply();
     }
 
     private static SharedPreferences prefs(Context context) {
