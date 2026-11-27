@@ -58,3 +58,13 @@
 - U2 参照先の public の表に SELECT 権限が要るか（試験で測る）。
 - U3 DB を直接書いたときに外へ送る作業の全一覧（担当に全走査を頼む）。
 - U4 書き込みの道にフックの免除が要るか（試験で測る）。
+
+## 8. 第1回審査のあとの追加の読み取り（reader 鍵、2026-11-27 12:21 JST）
+使った SQL（L7。件数を後から確かめられるように書く）:
+- 表の数: `SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='tenant_001' AND c.relkind IN ('r','p')` → 112
+- スキーマの権限: `SELECT nspname, nspacl::text FROM pg_namespace WHERE nspname IN ('public','tenant_001')` → public は `=U/pg_database_owner`（PUBLIC は USAGE だけ）、tenant_001 は `jarvis=UC`・`salesanchor_app=U`・`ai_unmask_owner=U`
+- DB の権限: `SELECT datname, datacl::text FROM pg_database WHERE datname = current_database()` → `=Tc/jarvis`（PUBLIC は TEMP・CONNECT だけ）
+- SECURITY DEFINER の関数: `pg_proc` を `prosecdef` で絞る → 6 個（`ops_case.unmask_fetch` と 5 テナントの `sync_meta_page_routing`）
+- 秘密の列（ADR-1024 の型）: `pg_attribute` を `attname ~* '^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential|account_number|^iban$'` で絞る → 7 表 9 列（design §3-2）。`information_schema.columns` では 0 行（他人の表の列が見えないため）
+- 既存の試験用ロール: `qa_tenant006_rw`（LOGIN・NOBYPASSRLS・接続上限なし。migration に無い）
+- 表 112・RLS 64・外部キー 31/72・引き金 30 の元: `pg_class.relrowsecurity`、`pg_constraint`（contype='f'）、`pg_trigger`（NOT tgisinternal）を tenant_001 で数えた
