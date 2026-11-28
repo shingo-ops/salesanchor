@@ -1186,3 +1186,24 @@ PR #5811 が `build.sh` に入れた刻印（`BuildStamp.java` を生成して `
 
 アプリのコード（Java・リソース・`AndroidManifest.xml` の内容）、`versionCode`/`versionName`の値（この便では上げていない）、署名鍵そのもの（`build/debug.keystore` は既存のものを使い続ける）、ビルドの手順の本体（javac→dalvik-exchange→aapt→zipalign→apksignerの順序・各ステップの内容）はいずれも変更していない。足したのは「鍵が無いときに黙って作らない」「署名後に照合する」「BUILD-INFO.txtを書き出す」「CIで食い違いを検査する」の4点のみ。
 
+## 追補 2026-11-28 合図が黙って捨てられる穴（記録追加＋本番経路の再試行）
+
+### ①実測した事実（一次情報・再測不要）
+
+`RunScheduler.onAlarmFired()` が `RunLogger.logSchedulerEvent(context, "fire", ...)` を書いた直後に `UnlockAccessibilityService.requestRunAll(context, label)` を呼ぶ。この先に「黙って終わる道」が2つあり、どちらも**実行ログに何も残らず、再試行も張らない**:
+
+1. `UnlockAccessibilityService.requestRunAll(Context, String)` の `sInstance == null`（ユーザー補助サービスが未接続）→ `postFailureNotification` のみで return
+2. `UnlockAccessibilityService.startUnlockFlow()` の `running.compareAndSet(false, true)` が false（前の回が走っている）→ `Log.i` のみで return
+
+端末ログ51日分を集計した結果、`fire` が記録されたのに実行が始まらなかった回が **4,645回中6回**あり、最大 **59.6分** 取り込みが遅れた（原因は上記1）。補完の予約周期はコア時間帯30分／オフピーク60分のため、取り込み合図が1回捨てられると最悪60分待ちになる。
+
+### ②直し方
+
+- `RunLogger` に `logTriggerDropped(Context, String triggerLabel, String reason)` を追加した。`flow:"scheduler"`／`phase:"trigger_dropped"`／`trigger`（捨てられた合図のラベル）／`reason`（`"service_unbound"` または `"already_running"`）を記録する単発行（`logSchedulerEvent` 等と同じ「runIdに紐づかない」扱い）。メッセージ本文は含めない。
+- **本番経路（`requestRunAll(Context, String)` の `sInstance == null` 分岐）だけ**、記録に加えて `RunScheduler.scheduleRetryAfterFailure(context)` を張るようにした。既存の `postFailureNotification` の呼び出しは残したまま。`scheduleRetryAfterFailure` 自体は変更していない（OFF中は何もしない・上限2回・5分後という既存の挙動のまま）。再試行は補完の予約（`SchedulerStore` のpending-next）とは別の要求コードのアラームなので、補完の予約を消さない。
+- 手動検証用の入口（`requestRun(Context)`／`requestExport(Context)` の `sInstance == null` 分岐）は**記録のみ**追加し、再試行は張らない。読み取り専用の診断口 `requestDiagWindows` は対象外（無変更）。
+- `startUnlockFlow()` の「既に走っている」分岐（前の回が担うのが正しい挙動）も**記録のみ**追加し、再試行は張らない。
+
+### ③変えていないもの
+
+`postFailureNotification` の既存呼び出し、`scheduleRetryAfterFailure`／`requestDiagWindows` の中身、既存の各メソッドのそれ以外の挙動（見送り・床判定・施錠タイミング等）はいずれも変更していない。版は `versionCode` 27→28、`versionName` 0.24.0-stage3→0.25.0-stage3 に上げた（在庫中の他PRとの衝突がないことを確認済み）。
