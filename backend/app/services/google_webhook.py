@@ -241,7 +241,7 @@ async def sync_tenant_from_google(db: AsyncSession, tenant_id: int) -> dict:
     from googleapiclient.errors import HttpError
 
     from app.services import google_calendar as cal_svc
-    from app.services.calendar_service import upsert_from_google
+    from app.services.calendar_service import resend_cancelled_occurrences, upsert_from_google
 
     got = (
         await db.execute(
@@ -276,6 +276,17 @@ async def sync_tenant_from_google(db: AsyncSession, tenant_id: int) -> dict:
             return {"skipped": "not_connected"}
         # _get_service は中で commit することがあるので文脈を張り直す
         await set_tenant_context(db, tenant_id)
+
+        # アプリで消した繰り返しの回のうち Google へ届いていないものを、読む前に送り直す（便7・design §15）
+        if cfg[1] == "bidirectional":
+            try:
+                resent = await resend_cancelled_occurrences(db, tenant_id)
+                if resent:
+                    logger.info("消した回を Google へ送り直しました (tenant=%s, count=%s)", tenant_id, resent)
+            except Exception as e:
+                logger.warning("消した回の送り直しに失敗 (tenant=%s): %s", tenant_id, e)
+                await db.rollback()
+            await set_tenant_context(db, tenant_id)
 
         sub = (
             await db.execute(

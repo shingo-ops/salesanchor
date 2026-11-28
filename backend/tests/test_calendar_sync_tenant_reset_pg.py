@@ -700,3 +700,56 @@ async def test_google_series_cancel_with_pending_exception_keeps_rows_on_real_db
         assert await _count_rows(admin_engine, "recurring_event_id = :id", {"id": master["id"]}) == 1
     finally:
         await _teardown(admin_engine, app_engine)
+
+
+# アプリで消した回は、送れないうちは取り込みで戻らず、送り直しで送り終えた印になる（便7・design §15）
+async def test_app_cancelled_occurrence_not_revived_and_resent_on_real_db():
+    from datetime import datetime as _dt
+    from zoneinfo import ZoneInfo
+
+    from app.auth.dependencies import set_tenant_context
+    from app.services import calendar_service
+
+    admin_engine, app_engine, factory = await _setup()
+    try:
+        master = await _create_weekly_master(factory)
+        occ = _dt(2026, 12, 10, 10, 0, tzinfo=ZoneInfo("Asia/Tokyo"))
+        async with factory() as db:
+            await set_tenant_context(db, _TENANT)
+            await calendar_service.delete_recurring_event(db, _TENANT, master, "this", occ)
+        await _mark_synced_from_app(admin_engine, master["id"], "gm978")
+        alive = {
+            "id": "gm978_20261210T010000Z", "status": "confirmed", "summary": master["title"],
+            "recurringEventId": "gm978",
+            "originalStartTime": {"dateTime": "2026-12-10T10:00:00+09:00"},
+            "start": {"dateTime": "2026-12-10T10:00:00+09:00"},
+            "end": {"dateTime": "2026-12-10T11:00:00+09:00"},
+        }
+        assert await _import_one(factory, alive, _g_master_for(master)) == "skipped"
+        rows = await _exception_rows(admin_engine, master["id"])
+        assert [(r[0], r[1]) for r in rows] == [(True, "pending")]
+
+        getter = AsyncMock(return_value={"id": "gm978_20261210T010000Z", "status": "confirmed"})
+        sender = AsyncMock(return_value={})
+        now = _dt(2026, 12, 1, 9, 0, tzinfo=ZoneInfo("Asia/Tokyo"))
+        async with factory() as db:
+            await set_tenant_context(db, _TENANT)
+            with patch("app.services.google_calendar.get_instance", new=getter), patch(
+                "app.services.google_calendar.update_event", new=sender
+            ):
+                assert await calendar_service.resend_cancelled_occurrences(db, _TENANT, now=now) == 1
+        rows = await _exception_rows(admin_engine, master["id"])
+        assert [(r[0], r[1]) for r in rows] == [(True, "synced")]
+        assert await _count_rows(
+            admin_engine,
+            "recurring_event_id = :mid AND google_event_id = :gid",
+            {"mid": master["id"], "gid": "gm978_20261210T010000Z"},
+        ) == 1
+        assert sender.await_args.args[2:] == ("gm978_20261210T010000Z", {"status": "cancelled"})
+
+        # もう送るものは無い
+        async with factory() as db:
+            await set_tenant_context(db, _TENANT)
+            assert await calendar_service.resend_cancelled_occurrences(db, _TENANT, now=now) == 0
+    finally:
+        await _teardown(admin_engine, app_engine)

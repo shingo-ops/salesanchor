@@ -1225,6 +1225,42 @@ class TestSyncTenantFromGoogle:
         caches = [c.kwargs["series_cache"] for c in up.await_args_list]
         assert len(caches) == 2 and caches[0] is caches[1] and caches[0] == {}
 
+    @pytest.mark.asyncio
+    async def test_resends_cancelled_occurrences_before_reading_only_when_bidirectional(self):
+        order: list[str] = []
+        service, _ = _make_list_service([{"items": [], "nextSyncToken": "N"}])
+        first_list = service.events.return_value.list.side_effect
+
+        def _list(**kw):
+            order.append("list")
+            return first_list(**kw)
+
+        service.events.return_value.list.side_effect = _list
+
+        async def _resend(db, tenant_id):
+            order.append("resend")
+            return 0
+
+        with patch("app.services.calendar_service.resend_cancelled_occurrences", new=_resend):
+            await self._run(_make_sync_db(cfg=(9, "bidirectional"), sync_token="T"), service)
+        assert order == ["resend", "list"]
+
+        resend = AsyncMock(return_value=0)
+        service2, _ = _make_list_service([{"items": [], "nextSyncToken": "N"}])
+        with patch("app.services.calendar_service.resend_cancelled_occurrences", new=resend):
+            await self._run(_make_sync_db(cfg=(9, "read_only"), sync_token="T"), service2)
+        resend.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_resend_failure_does_not_stop_import(self):
+        db = _make_sync_db(cfg=(9, "bidirectional"), sync_token="T")
+        service, kw = _make_list_service([{"items": [{"id": "a"}], "nextSyncToken": "N"}])
+        resend = AsyncMock(side_effect=RuntimeError("boom"))
+        with patch("app.services.calendar_service.resend_cancelled_occurrences", new=resend):
+            _result, up = await self._run(db, service)
+        assert len(kw) == 1 and up.await_count == 1
+        db.rollback.assert_awaited()
+
 
 class TestRegisterWebhook:
     @pytest.mark.asyncio
@@ -2147,6 +2183,102 @@ class TestUpdateRecurring:
         assert 77 in _statuses(db, "synced")
 
 
+def _wrapped_http(status: int) -> RuntimeError:
+    """google_calendar が包んだ失敗の形（RuntimeError の __cause__ に HTTP の番号）。"""
+    from types import SimpleNamespace
+
+    cause = Exception(f"http {status}")
+    cause.resp = SimpleNamespace(status=status)
+    err = RuntimeError("イベント更新に失敗")
+    err.__cause__ = cause
+    return err
+
+
+def _resend_db(rows):
+    """送り直しの読み（消した印があり送り終えていない例外の行）に rows を返す偽の接続。"""
+    return _FakeDB([("e.is_cancelled = true AND e.sync_status IN", rows)], sync_mode=None)
+
+
+class TestResendCancelledOccurrences:
+    async def _run(self, db, g=None, now=None):
+        from app.services.calendar_service import resend_cancelled_occurrences
+
+        g = g or _G()
+        with _google(g):
+            n = await resend_cancelled_occurrences(db, 1, now=now or _jt(2026, 11, 28))
+        return n, g
+
+    @pytest.mark.asyncio
+    async def test_reads_30_days_and_50_rows(self):
+        db = _resend_db([])
+        n, g = await self._run(db, now=_jt(2026, 11, 28))
+        assert n == 0 and g.log == []
+        params = db.find("e.is_cancelled = true AND e.sync_status IN ('pending', 'failed')")[0][2]
+        assert params == {"since": _jt(2026, 10, 29), "lim": 50}
+
+    @pytest.mark.asyncio
+    async def test_row_with_id_is_resent_and_synced(self):
+        """K2: Google の id を持つ行は取り消しを送り直し、届いたら送り終えた印。"""
+        db = _resend_db([(9, "gx", _jt(2026, 11, 26), "gm", False)])
+        n, g = await self._run(db)
+        assert n == 1
+        assert g.log == [("update_event", "gx", {"status": "cancelled"})]
+        assert _statuses(db, "synced") == [9]
+
+    @pytest.mark.asyncio
+    async def test_row_without_id_finds_instance_with_deleted(self):
+        """K2: id の無い行は消した回も返す形で回を引き、送り、id と送り終えた印を書く。"""
+        db = _resend_db([(77, None, _jt(2026, 11, 26), "gm", False)])
+        getter = AsyncMock(return_value={"id": "ginst", "status": "confirmed"})
+        g = _G()
+        with _google(g), patch("app.services.google_calendar.get_instance", new=getter):
+            from app.services.calendar_service import resend_cancelled_occurrences
+
+            n = await resend_cancelled_occurrences(db, 1, now=_jt(2026, 11, 28))
+        assert n == 1
+        assert getter.await_args.kwargs == {"show_deleted": True}
+        assert g.log == [("update_event", "ginst", {"status": "cancelled"})]
+        ids = db.find("SET google_event_id = :gid, sync_origin_id = :oid,")[0][2]
+        assert ids["gid"] == "ginst" and ids["id"] == 77
+
+    @pytest.mark.asyncio
+    async def test_instance_already_cancelled_stops_resend(self):
+        """K3: Google で既に消した回なら送らずに送り終えた印。"""
+        db = _resend_db([(77, None, _jt(2026, 11, 26), "gm", False)])
+        getter = AsyncMock(return_value={"id": "ginst", "status": "cancelled"})
+        g = _G()
+        with _google(g), patch("app.services.google_calendar.get_instance", new=getter):
+            from app.services.calendar_service import resend_cancelled_occurrences
+
+            n = await resend_cancelled_occurrences(db, 1, now=_jt(2026, 11, 28))
+        assert n == 1 and g.log == []
+        assert _statuses(db, "synced") == [77]
+
+    @pytest.mark.asyncio
+    async def test_gone_410_stops_resend(self):
+        """K3: 410 は届いたとみなし送り終えた印。"""
+        db = _resend_db([(9, "gx", _jt(2026, 11, 26), "gm", False)])
+        with _google(_G()), patch(
+            "app.services.google_calendar.update_event", new=AsyncMock(side_effect=_wrapped_http(410))
+        ):
+            from app.services.calendar_service import resend_cancelled_occurrences
+
+            n = await resend_cancelled_occurrences(db, 1, now=_jt(2026, 11, 28))
+        assert n == 1 and _statuses(db, "synced") == [9] and _statuses(db, "failed") == []
+
+    @pytest.mark.asyncio
+    async def test_not_found_404_stays_failed(self):
+        """K3: 404 は送れなかったのまま（次の取り込みでまた送る）。"""
+        db = _resend_db([(9, "gx", _jt(2026, 11, 26), "gm", False)])
+        with _google(_G()), patch(
+            "app.services.google_calendar.update_event", new=AsyncMock(side_effect=_wrapped_http(404))
+        ):
+            from app.services.calendar_service import resend_cancelled_occurrences
+
+            n = await resend_cancelled_occurrences(db, 1, now=_jt(2026, 11, 28))
+        assert n == 0 and _statuses(db, "failed") == [9] and _statuses(db, "synced") == []
+
+
 class TestDeleteRecurring:
     async def _run(self, db, event, scope, g=None):
         from app.services.calendar_service import delete_recurring_event
@@ -2164,8 +2296,9 @@ class TestDeleteRecurring:
         assert ins["is_cancelled"] is True and ins["original_start_datetime"] == _jt(2026, 11, 26)
         assert g.names() == ["get_instance", "update_event"]
         assert g.log[1][1:] == ("ginst", {"status": "cancelled"})
-        ids = db.find("SET google_event_id = :gid, sync_origin_id = :oid WHERE id = :id")[0][2]
+        ids = db.find("SET google_event_id = :gid, sync_origin_id = :oid,")[0][2]
         assert ids["gid"] == "ginst" and ids["id"] == 77
+        assert 77 in _statuses(db, "synced")
 
     @pytest.mark.asyncio
     async def test_this_existing_exception_marked_cancelled(self):
@@ -2174,6 +2307,8 @@ class TestDeleteRecurring:
         assert db.find("INSERT INTO calendar_events") == []
         assert "is_cancelled = true" in db.find("UPDATE calendar_events SET is_cancelled")[0][1]
         assert g.log == [("update_event", "gx", {"status": "cancelled"})]
+        assert "sync_status = 'pending'" in db.find("UPDATE calendar_events SET is_cancelled")[0][1]
+        assert 9 in _statuses(db, "synced") and _statuses(db, "failed") == []
 
     @pytest.mark.asyncio
     async def test_following_cuts_without_insert(self):
@@ -2196,10 +2331,35 @@ class TestDeleteRecurring:
 
     @pytest.mark.asyncio
     async def test_failures_never_change_sync_status(self):
-        for scope in ("this", "following", "all"):
+        for scope in ("following", "all"):
             db = _master_db(exceptions=["ge1"])
             await self._run(db, _ev(), scope, g=_G(fail=lambda n, a: True))
             assert _statuses(db, "failed") == [] and _statuses(db, "synced") == []
+        # 「この予定」は送れなかった印を付け、次の取り込みで送り直す（便7・K1）
+        db = _master_db(exceptions=["ge1"])
+        await self._run(db, _ev(), "this", g=_G(fail=lambda n, a: True))
+        assert _statuses(db, "failed") == [77] and _statuses(db, "synced") == []
+
+    @pytest.mark.asyncio
+    async def test_this_without_google_keeps_status(self):
+        """送り先の無い元の行では、送らず印も変えない（便7）。"""
+        db = _master_db(exc_row=_exc())
+        g = await self._run(db, _ev(google_event_id=None), "this")
+        assert g.log == []
+        assert "sync_status" not in db.find("UPDATE calendar_events SET is_cancelled")[0][1]
+        assert _statuses(db, "synced") == [] and _statuses(db, "failed") == []
+
+    @pytest.mark.asyncio
+    async def test_this_gone_410_marks_synced(self):
+        """Google が「既に消えている」（410）と返したら、届いたとみなす（便7・K3）。"""
+        db = _master_db(exc_row=_exc())
+        with patch(
+            "app.services.google_calendar.update_event", new=AsyncMock(side_effect=_wrapped_http(410))
+        ), patch("app.services.calendar_service.reset_tenant_context", new=AsyncMock()):
+            from app.services.calendar_service import delete_recurring_event
+
+            await delete_recurring_event(db, 1, _ev(), "this", _jt(2026, 11, 26))
+        assert 9 in _statuses(db, "synced") and _statuses(db, "failed") == []
 
 
 def _inst_db(master=None, exc=None, new_id=77, has_master=True):

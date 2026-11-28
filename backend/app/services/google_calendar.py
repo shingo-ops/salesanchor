@@ -525,12 +525,18 @@ async def delete_event(db, tenant_id: int, event_id: str) -> None:
 
 
 async def get_instance(
-    db, tenant_id: int, recurring_event_id: str, original_start: datetime, is_all_day: bool
+    db,
+    tenant_id: int,
+    recurring_event_id: str,
+    original_start: datetime,
+    is_all_day: bool,
+    show_deleted: bool = False,
 ) -> dict:
     """繰り返しの予定の 1 回分を、決まりでの元の始まり（originalStartTime）で引いて返す（ADR-1075 §12.7 this）。
 
     timeMin（回の終わりの下限・含む）と timeMax（回の始まりの上限・含まない）で窓を作り（終日は前後 1 日ずつ広く）、
     返った回のうち originalStartTime が一致するものを返す。見つからなければ RuntimeError。
+    show_deleted が真のときは消した回も返す（Google の showDeleted・初期値は返さない。便7 の送り直しで使う）。
     """
     service = await _get_service(db, tenant_id)
     calendar_id = await get_calendar_id(db, tenant_id)
@@ -547,18 +553,17 @@ async def get_instance(
         window_start = start_jst
         window_end = start_jst + timedelta(seconds=1)
 
+    kwargs: dict = {
+        "calendarId": calendar_id,
+        "eventId": recurring_event_id,
+        "timeMin": window_start.isoformat(),
+        "timeMax": window_end.isoformat(),
+        "maxResults": 10,
+    }
+    if show_deleted:
+        kwargs["showDeleted"] = True
     try:
-        result = await asyncio.to_thread(
-            service.events()
-            .instances(
-                calendarId=calendar_id,
-                eventId=recurring_event_id,
-                timeMin=window_start.isoformat(),
-                timeMax=window_end.isoformat(),
-                maxResults=10,
-            )
-            .execute
-        )
+        result = await asyncio.to_thread(service.events().instances(**kwargs).execute)
     except Exception as e:
         raise RuntimeError(f"繰り返しの回の取得に失敗: {e}") from e
 

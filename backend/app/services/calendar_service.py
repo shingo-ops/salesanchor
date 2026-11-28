@@ -1050,6 +1050,90 @@ async def _mark_failed(db: AsyncSession, tenant_id: int, row_id: int, clear_ids:
     await _commit(db, tenant_id)
 
 
+def _google_status(e: BaseException) -> Optional[int]:
+    """包んだ失敗の元（googleapiclient の HttpError）の HTTP の番号。読めなければ None。"""
+    cause = e.__cause__
+    return getattr(getattr(cause, "resp", None), "status", None)
+
+
+async def _send_occurrence_cancel(
+    db: AsyncSession,
+    tenant_id: int,
+    row_id: int,
+    row_gid: Optional[str],
+    master_gid: str,
+    occ: datetime,
+    all_day: bool,
+    show_deleted: bool = False,
+) -> bool:
+    """繰り返しの 1 回の取り消しを Google へ送る（便7・design §15）。届いたら送り終えた印、届かなければ送れなかった印。
+
+    Google が「既に消えている」（410）と返したとき・消した形の回が返ったときは届いたとみなす。
+    回の Google の id がほかの行に既にあれば、書かずに送れなかった印にする（重なり禁止）。
+    """
+    from app.services import google_calendar as gcal
+
+    try:
+        gid = row_gid
+        if not gid:
+            instance = await gcal.get_instance(
+                db, tenant_id, master_gid, occ, all_day, show_deleted=show_deleted
+            )
+            gid = instance["id"]
+            if await _google_id_taken(db, gid):
+                logger.warning("回の Google の id を持つ行が既にあるため印を付けませんでした (event_id=%s)", row_id)
+                await _mark_failed(db, tenant_id, row_id)
+                return False
+            if instance.get("status") == "cancelled":
+                await _mark_synced(db, tenant_id, row_id, gid)
+                return True
+        try:
+            await gcal.update_event(db, tenant_id, gid, {"status": "cancelled"})
+        except Exception as e:
+            if _google_status(e) != 410:
+                raise
+            logger.info("Google の回は既に消えていました (event_id=%s)", row_id)
+        await _mark_synced(db, tenant_id, row_id, None if row_gid else gid)
+        return True
+    except Exception as e:
+        logger.warning("Google の回の取り消しに失敗 (event_id=%s): %s", row_id, e)
+        await _mark_failed(db, tenant_id, row_id)
+        return False
+
+
+_RESEND_DAYS = 30
+_RESEND_LIMIT = 50
+
+
+async def resend_cancelled_occurrences(
+    db: AsyncSession, tenant_id: int, now: Optional[datetime] = None
+) -> int:
+    """アプリで消した繰り返しの回のうち、Google へ届いていないものを送り直す（便7・design §15）。届いた数を返す。
+
+    取り込みの鍵（advisory lock 1059）の中で、Google を読む前に呼ぶ。回の始まりが 30 日より前のものは送らない。
+    """
+    now = now or datetime.now(timezone.utc)
+    rows = (
+        await db.execute(
+            text(
+                "SELECT e.id, e.google_event_id, e.original_start_datetime, m.google_event_id, m.is_all_day"
+                " FROM calendar_events e JOIN calendar_events m ON m.id = e.recurring_event_id"
+                " WHERE e.is_cancelled = true AND e.sync_status IN ('pending', 'failed')"
+                " AND m.google_event_id IS NOT NULL AND e.original_start_datetime >= :since"
+                " ORDER BY e.original_start_datetime, e.id LIMIT :lim"
+            ),
+            {"since": now - timedelta(days=_RESEND_DAYS), "lim": _RESEND_LIMIT},
+        )
+    ).fetchall()
+    done = 0
+    for row_id, row_gid, orig, master_gid, all_day in rows:
+        if await _send_occurrence_cancel(
+            db, tenant_id, row_id, row_gid, master_gid, orig, bool(all_day), show_deleted=True
+        ):
+            done += 1
+    return done
+
+
 async def _exception_google_ids(db: AsyncSession, master_id: int, from_occ: Optional[datetime] = None) -> list[str]:
     """消える例外の行の Google の id（消した印でないもの）。表を変える前に読む。"""
     sql = (
@@ -1416,10 +1500,13 @@ async def delete_recurring_event(
         scope = "all"
 
     if scope == "this":
+        send = await _send_ok(db, tenant_id, master)
         row = event if is_exc else await _find_exception(db, master["id"], occ)
         if row is not None:
+            # 送る会社では送り終えるまで送り中にする（取り込みで戻されない・便7）
+            pending = ", sync_status = 'pending'" if send else ""
             await db.execute(
-                text("UPDATE calendar_events SET is_cancelled = true WHERE id = :id"),
+                text(f"UPDATE calendar_events SET is_cancelled = true{pending} WHERE id = :id"),
                 {"id": row["id"]},
             )
             row_id, row_gid = row["id"], row.get("google_event_id")
@@ -1438,25 +1525,10 @@ async def delete_recurring_event(
             )
             row_gid = None
         await _commit(db, tenant_id)
-        if await _send_ok(db, tenant_id, master):
-            try:
-                gid = row_gid
-                found_here = False
-                if not gid:
-                    instance = await gcal.get_instance(
-                        db, tenant_id, master["google_event_id"], occ, m_all_day
-                    )
-                    gid = instance["id"]
-                    found_here = True
-                await gcal.update_event(db, tenant_id, gid, {"status": "cancelled"})
-                if found_here:
-                    await db.execute(
-                        text("UPDATE calendar_events SET google_event_id = :gid, sync_origin_id = :oid WHERE id = :id"),
-                        {"gid": gid, "oid": _build_sync_origin_id(tenant_id, row_id), "id": row_id},
-                    )
-                    await _commit(db, tenant_id)
-            except Exception as e:
-                logger.warning("Google の回の取り消しに失敗 (event_id=%s): %s", row_id, e)
+        if send:
+            await _send_occurrence_cancel(
+                db, tenant_id, row_id, row_gid, master["google_event_id"], occ, m_all_day
+            )
         return
 
     if scope == "following":
