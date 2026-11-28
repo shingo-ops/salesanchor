@@ -142,6 +142,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
         UnlockAccessibilityService instance = sInstance;
         if (instance == null) {
             postFailureNotification(context, "ユーザー補助サービスが未接続（無効化されている可能性）");
+            RunLogger.logTriggerDropped(context, "RUN(手動)", "service_unbound");
             return;
         }
         // 実行ログ診断用。RunSchedulerを経由しない入口なので、ここで前回チェーンの残りを消す
@@ -159,6 +160,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
         UnlockAccessibilityService instance = sInstance;
         if (instance == null) {
             postFailureNotification(context, "ユーザー補助サービスが未接続（無効化されている可能性）");
+            RunLogger.logTriggerDropped(context, "EXPORT(手動)", "service_unbound");
             return;
         }
         SchedulerStore.clearPendingNextTrigger(context);
@@ -185,6 +187,8 @@ public class UnlockAccessibilityService extends AccessibilityService {
         UnlockAccessibilityService instance = sInstance;
         if (instance == null) {
             postFailureNotification(context, "ユーザー補助サービスが未接続（無効化されている可能性）");
+            RunLogger.logTriggerDropped(context, triggerLabel, "service_unbound");
+            RunScheduler.scheduleRetryAfterFailure(context);
             return;
         }
         instance.startUnlockFlow(true, triggerLabel);
@@ -344,6 +348,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
     private void startUnlockFlow(boolean runAll, String triggerLabel) {
         if (!running.compareAndSet(false, true)) {
             Log.i(TAG, "unlock flow already running, ignoring duplicate trigger");
+            RunLogger.logTriggerDropped(this, triggerLabel, "already_running");
             return;
         }
 
