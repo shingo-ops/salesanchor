@@ -1,0 +1,5 @@
+chat {"http": 200, "finish_reason": "stop", "model": "gpt-5.6-terra", "usage": {"prompt_tokens": 709, "completion_tokens": 9, "input_tokens": null, "output_tokens": null, "total_tokens": 718}}
+session keys ['actual_cost_usd', 'api_call_count', 'archived', 'cache_read_tokens', 'cache_write_tokens', 'end_reason', 'ended_at', 'estimated_cost_usd', 'has_model_config', 'has_system_prompt', 'hidden', 'id', 'input_tokens', 'is_internal_child', 'message_count', 'model', 'output_tokens', 'parent_session_id', 'pinned', 'reasoning_tokens', 'source', 'started_at', 'title', 'tool_call_count', 'user_id']
+session fields {'model': 'gpt-5.6-terra', 'message_count': 3, 'tool_call_count': 0, 'input_tokens': 709, 'output_tokens': 9, 'cache_read_tokens': 0, 'cache_write_tokens': 0, 'reasoning_tokens': 0, 'estimated_cost_usd': 0.0, 'actual_cost_usd': None, 'api_call_count': 1, 'has_model_config': True}
+metrics_today after {'day': '2026-11-27', 'requests': 0, 'messages': 0, 'tokens': 0, 'latency_p95_ms': None}
+delete 200

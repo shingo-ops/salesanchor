@@ -1,0 +1,7 @@
+[start後-health200後] 合計 ファイル数=559 MARK7735行=0 SYS7735行=0
+sh: 1: cannot open /tmp/fake.log: No such file
+fake.log: 起動後の新容器 b13-e の行数: 0（旧容器 b13-d の分: chat 3 行・全行は下）
+(旧 b13-d の fake.log は停止で tmpfs ごと消えた。DELETE 前に読んだ b13-12 の 3 行 chat が最終)
+coordinator 起動後の会話数: 0
+calendar 起動後の会話数: 0
+invoice 起動後の会話数: 0

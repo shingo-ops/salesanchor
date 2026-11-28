@@ -1,0 +1,2 @@
+12:2026-11-27 19:42:20,339 DEBUG [api-f4c5218f73859156] agent.title_generator: Skipping derived title: a higher-authority title already holds session api-f4c5218f73859156
+13:2026-11-27 19:42:20,342 DEBUG [api-f4c5218f73859156] agent.title_generator: Auto-title upgrade deferred past the turn: shares the self-hosted endpoint with the main request

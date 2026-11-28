@@ -1,0 +1,24 @@
+## B10 (4) gateway を止める→数える→optimize→数える
+b10-run
+--- count after stop (optimize 前)
+1 ./profiles/invoice/state.db
+5 ./profiles/invoice/state.db-wal
+TOTAL_LINES=6 FILES_SCANNED=540
+--- optimize (gateway 停止後)
+Optimized 2 FTS index(es).
+Database size: 0.4 MB -> 0.4 MB (reclaimed 0.0 MB)
+s6-rc: info: service legacy-services: stopping
+s6-rc: info: service legacy-services successfully stopped
+s6-rc: info: service profile-gateways: stopping
+s6-rc: info: service main-hermes: stopping
+s6-rc: info: service dashboard: stopping
+s6-rc: info: service dashboard successfully stopped
+s6-rc: info: service main-hermes successfully stopped
+s6-rc: info: service profile-gateways successfully stopped
+s6-rc: info: service legacy-cont-init: stopping
+s6-rc: info: service legacy-cont-init successfully stopped
+s6-rc: info: service fix-attrs: stopping
+s6-rc: info: service fix-attrs successfully stopped
+s6-rc: warning: service s6rc-oneshot-runner is marked as essential, not stopping it
+--- count after optimize
+TOTAL_LINES=0 FILES_SCANNED=538

@@ -1,0 +1,5 @@
+## B10 既定（logging.level なし）で (1) をもう1回
+STATUS 200
+4 ./profiles/invoice/state.db-wal
+TOTAL_LINES=4 FILES_SCANNED=546
+invoice agent.log lines=43 INFO=3 WARNING=1 MARK=0

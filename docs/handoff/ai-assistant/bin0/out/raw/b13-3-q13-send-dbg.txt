@@ -1,0 +1,4 @@
+# Q13 診断: 固定設定 logging DEBUG で invoice へ plain 1 回
+
+{"id": "chatcmpl-cb245f0c72f84c48a6deffaba1344", "object": "chat.completion", "created": 1795808536, "model": "fake-model", "choices": [{"index": 0, "message": {"role": "assistant", "content": "FAKE-REPLY-OK"}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 11, "completion_tokens": 7, "total_tokens": 18}}
+HTTP_CODE=200

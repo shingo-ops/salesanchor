@@ -1,0 +1,9 @@
+{"id": "chatcmpl-9754d2df24c8455c80cc1ff969a11", "object": "chat.completion", "c
+
+send#1 増えた chat 件数: 2
+{"id": "chatcmpl-51cfbc71378a41408ab155f7325c3", "object": "chat.completion", "c
+
+send#2 増えた chat 件数: 1
+{"id": "chatcmpl-d30bdebf157a473980bfa4783528c", "object": "chat.completion", "c
+
+send#3 増えた chat 件数: 1

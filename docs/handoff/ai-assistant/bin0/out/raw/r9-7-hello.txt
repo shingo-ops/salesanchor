@@ -1,0 +1,3 @@
+room=invoice status=200 finish_reason=stop delete=200
+room=coordinator status=200 finish_reason=stop delete=200
+room=calendar status=200 finish_reason=stop delete=200

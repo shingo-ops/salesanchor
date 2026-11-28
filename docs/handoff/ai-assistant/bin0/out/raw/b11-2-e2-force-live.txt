@@ -1,0 +1,55 @@
+## E2 gateway 稼働中: 送信→DELETE→optimize --force
+send1 HTTP=200
+SID=api-515cba26aaf0bed0
+DELETE: {"object": "hermes.session.deleted", "id": "api-515cba26aaf0bed0", "deleted": true} 200
+--- 数え(DELETE後・optimize前)
+5 ./profiles/invoice/state.db-wal
+TOTAL_LINES=5 FILES_SCANNED=491
+--- logs(前)
+logs/agent.log total=242 INFO=236 WARNING=6 ERROR=0 MARK=0
+logs/gateway.log total=18 INFO=17 WARNING=1 ERROR=0 MARK=0
+logs/errors.log total=6 INFO=0 WARNING=6 ERROR=0 MARK=0
+profiles/invoice/logs/agent.log total=44 INFO=4 WARNING=1 ERROR=0 MARK=0
+profiles/invoice/logs/gateway.log total=44 INFO=4 WARNING=1 ERROR=0 MARK=0
+profiles/invoice/logs/errors.log total=40 INFO=0 WARNING=1 ERROR=0 MARK=0
+--- optimize --force (gateway 稼働中)
+exit=0
+⚠ install out of sync (pnpm: not installed or outdated) — this docker-managed install must rebuild the artifact to fix
+Optimizing session store (FTS merge + VACUUM)…
+Optimized 2 FTS index(es).
+Database size: 0.4 MB -> 0.4 MB (reclaimed 0.0 MB)
+--- 数え(optimize後)
+TOTAL_LINES=0 FILES_SCANNED=538
+--- 直後の送信
+invoice HTTP=200
+calendar HTTP=200
+health=200 running=true
+--- logs(後)
+logs/agent.log total=249 INFO=243 WARNING=6 ERROR=0 MARK=0
+logs/gateway.log total=19 INFO=18 WARNING=1 ERROR=0 MARK=0
+logs/errors.log total=6 INFO=0 WARNING=6 ERROR=0 MARK=0
+profiles/calendar/logs/agent.log total=43 INFO=3 WARNING=1 ERROR=0 MARK=0
+profiles/invoice/logs/agent.log total=89 INFO=8 WARNING=3 ERROR=0 MARK=0
+profiles/calendar/logs/gateway.log total=43 INFO=3 WARNING=1 ERROR=0 MARK=0
+profiles/invoice/logs/gateway.log total=87 INFO=7 WARNING=2 ERROR=0 MARK=0
+profiles/calendar/logs/errors.log total=40 INFO=0 WARNING=1 ERROR=0 MARK=0
+profiles/invoice/logs/errors.log total=81 INFO=0 WARNING=3 ERROR=0 MARK=0
+--- 数え(再送後)
+4 ./profiles/invoice/state.db-wal
+4 ./profiles/calendar/state.db-wal
+TOTAL_LINES=8 FILES_SCANNED=547
+1:2026-11-27 19:10:30,049 WARNING gateway.run: Model resolution failed for session agent:invoice:api_server:dm:api-515cba26aaf0bed0: Hermes is not connected to any AI provider yet. Run `hermes model` to pick one, type `/login` in chat, or add a key with `herme
+41:2026-11-27 19:10:38,731 WARNING hermes_cli.post_update: config migration skipped: This config predates version 12 (~2 years old) and can no longer be auto-migrated. Back up ~/profiles/invoice/config.yaml and run `hermes setup` to regenerate, or manually set
+42:2026-11-27 19:10:41,678 WARNING gateway.run: Model resolution failed for session agent:invoice:api_server:dm:api-dae6a6aaa4c3772c: Hermes is not connected to any AI provider yet. Run `hermes model` to pick one, type `/login` in chat, or add a key with `herm
+---
+1:2026-11-27 19:10:28,811 INFO gateway.run: inbound message: platform=api_server user=h:13770ae210 chat=h:4381ba9189 msg_len=14 reply_to_id=None
+2:2026-11-27 19:10:30,049 WARNING gateway.run: Model resolution failed for session agent:invoice:api_server:dm:api-515cba26aaf0bed0: Hermes is not connected to any AI provider yet. Run `hermes model` 
+42:2026-11-27 19:10:30,173 INFO gateway.run: response ready: platform=api_server chat=api-<伏せ字> session=agent:invoice:api_server:dm:api-515cba26aaf0bed0 time=1.4s api_calls=0 response=200 c
+43:2026-11-27 19:10:30,173 INFO gateway.run: Transient agent failure in session api-515cba26aaf0bed0 — persisting user message so conversation context is preserved on retry.
+44:2026-11-27 19:10:30,454 INFO gateway.session: SessionStore removed 1 routing entry for deleted session api-515cba26aaf0bed0
+45:2026-11-27 19:10:38,715 INFO hermes_cli.boot_bootstrap: home maintenance: code changed to 8fc037444731, running steps
+46:2026-11-27 19:10:38,731 WARNING hermes_cli.post_update: config migration skipped: This config predates version 12 (~2 years old) and can no longer be auto-migrated. Back up ~/profiles/invoice/confi
+47:2026-11-27 19:10:41,632 INFO gateway.run: inbound message: platform=api_server user=h:13770ae210 chat=h:e6599d56fe msg_len=15 reply_to_id=None
+48:2026-11-27 19:10:41,678 WARNING gateway.run: Model resolution failed for session agent:invoice:api_server:dm:api-dae6a6aaa4c3772c: Hermes is not connected to any AI provider yet. Run `hermes model`
+88:2026-11-27 19:10:41,720 INFO gateway.run: response ready: platform=api_server chat=api-<伏せ字> session=agent:invoice:api_server:dm:api-dae6a6aaa4c3772c time=0.1s api_calls=0 response=200 c
+89:2026-11-27 19:10:41,722 INFO gateway.run: Transient agent failure in session api-dae6a6aaa4c3772c — persisting user message so conversation context is preserved on retry.

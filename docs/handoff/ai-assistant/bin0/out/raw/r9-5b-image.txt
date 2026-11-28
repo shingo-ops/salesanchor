@@ -1,0 +1,79 @@
+== find
+/opt/hermes/persistence/sqlite/_schema.py
+/opt/hermes/persistence/sqlite/conversation/_store/usage.py
+/opt/hermes/persistence/conversation/usage.py
+count=1
+count=1
+count=1
+== grep usage
+-- /opt/hermes/persistence/conversation/usage.py
+140:    def record_auxiliary_usage(
+matches=1
+-- /opt/hermes/persistence/sqlite/conversation/_store/usage.py
+51:_MODEL_USAGE_UPSERT_SQL = """INSERT INTO session_model_usage (
+114:    land in ``session_model_usage`` under that task, but never become the session's recorded route.
+156:    # session_model_usage keyed by the live model preserves an accurate per-model breakdown regardless
+214:    """Accumulate a per-API-call usage delta into session_model_usage, inside the caller's
+222:    :meth:`record_auxiliary_usage` (issue #23270).
+238:def record_auxiliary_usage(
+245:    as a per-(model, provider, task) delta in ``session_model_usage`` WITHOUT touching
+296:                  FROM session_model_usage
+matches=8
+== schema
+5:write lock and the ``state_meta`` accessors they call.
+56:    """Point-read one ``state_meta`` row (``None`` when absent)."""
+57:    return conn.execute("SELECT value FROM state_meta WHERE key = ?", (key,)).fetchone()
+61:    conn.execute(f"DELETE FROM state_meta WHERE key IN ({','.join('?' for _ in keys)})", keys)
+125:    "CREATE INDEX IF NOT EXISTS idx_session_model_usage_session ON session_model_usage(session_id)",
+126:    "CREATE INDEX IF NOT EXISTS idx_session_model_usage_model ON session_model_usage(model)",
+128:_SESSION_MODEL_USAGE_HEAL_DDL = """CREATE TABLE session_model_usage (
+156:_SESSION_MODEL_USAGE_V20_SEED_SQL = """INSERT OR IGNORE INTO session_model_usage (
+189:    "INSERT INTO state_meta (key, value) VALUES (?, '1') ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+192:    "INSERT INTO state_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+194:_CLEAR_REBUILD_MARKERS_SQL = "DELETE FROM state_meta WHERE key IN ('fts_rebuild_high_water', 'fts_rebuild_progress')"
+195:# FTS_STORAGE_VERSION < 3 truncated tool rows only above a moving state_meta mark; the aligned
+197:_DROP_RETIRED_TOOL_HIGH_WATER_SQL = "DELETE FROM state_meta WHERE key = 'fts_tool_full_content_high_water'"
+585:            "SELECT value FROM state_meta WHERE key = ? LIMIT 1", (FTS_REBUILD_DEFERRAL_KEY,),
+622:        "INSERT INTO state_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+755:        + f"DELETE FROM state_meta WHERE key IN ('{FTS_STALE_KEY}', '{FTS_REBUILD_DEFERRAL_KEY}');COMMIT;"
+954:def _heal_session_model_usage_pk(holder: StoreHolder, cursor: sqlite3.Cursor) -> None:
+955:    """Rebuild ``session_model_usage`` when its PRIMARY KEY lacks ``task``: installs already at
+968:    pk_cols = _live_pk_columns(cursor, "session_model_usage")
+972:        "session_model_usage has legacy primary key %r (missing task); rebuilding with composite 6-column key",
+978:            cursor, "session_model_usage", "session_model_usage_legacy_pk", _SESSION_MODEL_USAGE_HEAL_DDL,
+980:            # records each API call into session_model_usage keyed by the live model, but existing
+986:            """INSERT OR IGNORE INTO session_model_usage (
+1002:                   FROM session_model_usage_legacy_pk""",
+1006:        logger.debug("session_model_usage PK heal skipped: %s", exc)
+1050:        "AND (m.id > COALESCE((SELECT CAST(value AS INTEGER) FROM state_meta "
+1052:        "OR m.id <= COALESCE((SELECT CAST(value AS INTEGER) FROM state_meta "
+1093:    # Rebuild session_model_usage if its PRIMARY KEY lacks the ``task`` column (5-column PK on installs
+1096:    _heal_session_model_usage_pk(holder, cursor)
+1129:    stale_row = cursor.execute("SELECT 1 FROM state_meta WHERE key = ? LIMIT 1", (FTS_STALE_KEY,)).fetchone()
+1146:            "INSERT OR IGNORE INTO state_meta (key, value) VALUES (?, ?)",
+1182:        "SELECT 1 FROM state_meta WHERE key = 'fts_storage_version' AND value = ? LIMIT 1",
+1228:        # v20: seed session_model_usage from sessions aggregates (OR IGNORE: newer rows win).
+1232:        _migrate_v22_session_model_usage(holder, cursor)
+1328:def _migrate_v22_session_model_usage(holder: StoreHolder, cursor: sqlite3.Cursor) -> None:
+1329:    """v22: ``task`` joins the session_model_usage PRIMARY KEY ('' = main loop; aux calls
+1332:        # v22: task-dimension usage attribution (issue #23270). session_model_usage gains a ``task``
+1337:            "SELECT COUNT(*) FROM pragma_table_info('session_model_usage') WHERE name = 'task' AND pk > 0"
+1342:            cursor, "session_model_usage", "session_model_usage_v21", _SESSION_MODEL_USAGE_V22_DDL,
+1343:            """INSERT INTO session_model_usage (
+1355:                               FROM session_model_usage_v21""",
+1359:        logger.debug("v22 session_model_usage rebuild skipped: %s", exc)
+1666:                        "INSERT INTO state_meta (key, value) VALUES (?, '1') "
+1755:        "DELETE FROM state_meta WHERE key IN ('fts_cjk_stale', 'fts_cjk_rebuild_high_water', 'fts_cjk_rebuild_progress')"
+-- state_meta create + 4 lines
+== (追加) state_meta を作る文を完成品の中で探す（_schema.py に無かったため）
+/opt/hermes/persistence/sqlite/_schema_ddl.py:306:CREATE TABLE IF NOT EXISTS state_meta (
+/opt/hermes/persistence/sqlite/_schema_ddl.py-307-    key TEXT PRIMARY KEY,
+/opt/hermes/persistence/sqlite/_schema_ddl.py-308-    value TEXT
+/opt/hermes/persistence/sqlite/_schema_ddl.py-309-);
+/opt/hermes/persistence/sqlite/_schema_ddl.py-310-
+--
+/opt/hermes/evals/postmortem/tests/test_postmortem_harness.py:26:    CREATE TABLE state_meta(key TEXT PRIMARY KEY, value TEXT);
+/opt/hermes/evals/postmortem/tests/test_postmortem_harness.py-27-    """)
+/opt/hermes/evals/postmortem/tests/test_postmortem_harness.py-28-    t0 = time.time() - 4000
+/opt/hermes/evals/postmortem/tests/test_postmortem_harness.py-29-    c.execute("INSERT INTO system_prompts VALUES ('h1', ?)", ("x" * 35_000,))
+/opt/hermes/evals/postmortem/tests/test_postmortem_harness.py-30-

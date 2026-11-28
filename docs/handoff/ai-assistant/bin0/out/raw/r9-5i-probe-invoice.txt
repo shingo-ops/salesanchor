@@ -1,0 +1,3 @@
+fake_lines=3
+probe=OK sid_by_script=1 get_status=200 chat_code=- reply_model=fake-model usage_in=11 usage_out=7 input_tokens=11 output_tokens=7 api_call_count=1 usage_main_sum=1 usage_main_rows=1 usage_aux=- usage_reads=1 usage_ok=1 fake_lead_lines=1
+after_usage_rows=0 after_session_rows=0 after_tombstone_rows=1

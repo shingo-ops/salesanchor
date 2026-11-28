@@ -1,0 +1,13 @@
+## B10 (3) gateway 稼働中に hermes sessions optimize -p invoice
+⚠ install out of sync (pnpm: not installed or outdated) — this docker-managed install must rebuild the artifact to fix
+Refusing `hermes sessions optimize`: another process is using /opt/data/profiles/invoice/state.db.
+  PID 164 (python -P -c import os, site, sys; sys.argv[0]='hermes'; site.addsitedir(os.envi): state.db, state.db-shm, state.db-wal
+Rewriting the database under a live writer is how every agent ends up refusing turns with the retired state.db-wal error. Nothing is lost.
+Stop them first (`hermes -p invoice gateway stop`, quit the Desktop app, pause cron), then re-run.
+Override with --force if you accept the risk.
+Recovery guide: https://hermes-agent.nousresearch.com/docs/user-guide/session-storage-recovery
+exit=1
+--- count after
+1 ./profiles/invoice/state.db
+5 ./profiles/invoice/state.db-wal
+TOTAL_LINES=6 FILES_SCANNED=540

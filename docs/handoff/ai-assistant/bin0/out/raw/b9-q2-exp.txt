@@ -1,0 +1,6 @@
+default agent.log exists: True
+default grep -a -c MARK2255 agent.log = 1
+default warn lines = 1
+warning agent.log exists: True
+warning grep -a -c MARK2255 agent.log = 0
+warning warn lines = 1

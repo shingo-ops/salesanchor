@@ -1,0 +1,3 @@
+# 管理者の固定設定（b4 と同じ: logging だけ）。/etc/hermes/config.yaml に読み取り専用で置く
+logging:
+  level: WARNING

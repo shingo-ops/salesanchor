@@ -1,0 +1,40 @@
+=== baseline
+scenario baseline sqlite 3.53.1
+journal_mode(live)= wal secure_delete(default)= 0
+[baseline] after insert (handle open): state.db:size=335872:grep_c=0 | state.db-wal:size=1054752:grep_c=2 | state.db-journal:absent
+delete_session -> True
+[baseline] after delete (handle open): state.db:size=335872:grep_c=0 | state.db-wal:size=1054752:grep_c=3 | state.db-journal:absent
+[baseline] after close: state.db:size=335872:grep_c=1 | state.db-wal:absent | state.db-journal:absent
+[baseline] grep -rIl (text files) whole home: ['/tmp/h_baseline/state.db']
+[baseline] grep -rac nonzero: ['/tmp/h_baseline/state.db:1']
+=== vacuum
+scenario vacuum sqlite 3.53.1
+journal_mode(live)= wal secure_delete(default)= 0
+[vacuum] after insert (handle open): state.db:size=335872:grep_c=0 | state.db-wal:size=1054752:grep_c=3 | state.db-journal:absent
+delete_session -> True
+[vacuum] after delete (handle open): state.db:size=335872:grep_c=0 | state.db-wal:size=1054752:grep_c=5 | state.db-journal:absent
+[vacuum] after close: state.db:size=335872:grep_c=2 | state.db-wal:absent | state.db-journal:absent
+pre-vacuum journal_mode wal
+[vacuum] after plain VACUUM (closed, sqlite3 module): state.db:size=335872:grep_c=0 | state.db-wal:absent | state.db-journal:absent
+[vacuum] after VACUUM + wal_checkpoint(TRUNCATE): state.db:size=335872:grep_c=0 | state.db-wal:absent | state.db-journal:absent
+[vacuum] grep -rIl (text files) whole home: none
+[vacuum] grep -rac nonzero: none
+=== delete_mode
+scenario delete_mode sqlite 3.53.1
+journal_mode(live)= delete secure_delete(default)= 0
+[delete_mode] after insert (handle open): state.db:size=335872:grep_c=1 | state.db-wal:absent | state.db-journal:absent
+delete_session -> True
+[delete_mode] after delete (handle open): state.db:size=335872:grep_c=1 | state.db-wal:absent | state.db-journal:absent
+[delete_mode] after close: state.db:size=335872:grep_c=1 | state.db-wal:absent | state.db-journal:absent
+[delete_mode] grep -rIl (text files) whole home: ['/tmp/h_delete_mode/state.db']
+[delete_mode] grep -rac nonzero: ['/tmp/h_delete_mode/state.db:1']
+=== secure_delete
+scenario secure_delete sqlite 3.53.1
+journal_mode(live)= wal secure_delete(default)= 0
+secure_delete(after set)= 1
+[secure_delete] after insert (handle open): state.db:size=335872:grep_c=0 | state.db-wal:size=1054752:grep_c=2 | state.db-journal:absent
+delete_session -> True
+[secure_delete] after delete (handle open): state.db:size=335872:grep_c=0 | state.db-wal:size=1054752:grep_c=2 | state.db-journal:absent
+[secure_delete] after close: state.db:size=335872:grep_c=0 | state.db-wal:absent | state.db-journal:absent
+[secure_delete] grep -rIl (text files) whole home: none
+[secure_delete] grep -rac nonzero: none

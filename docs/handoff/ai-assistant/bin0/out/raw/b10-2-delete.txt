@@ -1,0 +1,5 @@
+## B10 (2) DELETE /p/invoice/api/sessions/ID → 数える
+STATUS 200
+{"object": "hermes.session.deleted", "id": "api-4c90a9302143ee41", "deleted": true}
+5 ./profiles/invoice/state.db-wal
+TOTAL_LINES=5 FILES_SCANNED=539

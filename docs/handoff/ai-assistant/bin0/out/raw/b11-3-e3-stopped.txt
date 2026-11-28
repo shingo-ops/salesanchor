@@ -1,0 +1,53 @@
+## E3 送信→DELETE→docker stop→optimize(止めたまま)→docker start→/health
+send HTTP=200
+SID=api-515cba26aaf0bed0
+DELETE: {"object": "hermes.session.deleted", "id": "api-515cba26aaf0bed0", "deleted": true} 200
+--- 数え(DELETE後・stop前)
+5 ./profiles/invoice/state.db-wal
+TOTAL_LINES=5 FILES_SCANNED=491
+stopped running=false
+CMD: docker run --rm --network none -v b11-e3:/opt/data $D hermes sessions optimize -p invoice
+optimize exit=0
+health=200
+stop所要=10.1 s  optimize終了(stop開始から)=18.6 s  start直後=18.7 s  /health 200(stop開始から)=29.8 s
+--- optimize 出力
+/package/admin/s6-overlay/libexec/preinit: info: container permissions: uid=0 (root), euid=0, gid=0 (root), egid=0
+/package/admin/s6-overlay/libexec/preinit: info: /run permissions: uid=0 (root), gid=0 (root), perms=oxorgxgruxuwur
+cont-init: info: running /etc/cont-init.d/01-hermes-setup
+[stage2] Generated API_SERVER_KEY for the loopback gateway api_server
+[stage2] dependency environment: base
+[stage2] collected 0 unused dependency generations
+Syncing bundled skills into ~/.hermes/skills/ ...
+
+Done: 0 new, 0 updated, 44 unchanged. 44 total bundled.
+[stage2] Using pinned Chromium binary: /opt/hermes/tools/chromium-1248/chrome-linux64/chrome
+[stage2] Setup complete; starting user services
+cont-init: info: /etc/cont-init.d/01-hermes-setup exited 0
+--- 数え(start・health後)
+TOTAL_LINES=0 FILES_SCANNED=543
+/package/admin/s6-overlay/libexec/preinit: info: container permissions: uid=0 (root), euid=0, gid=0 (root), egid=0
+/package/admin/s6-overlay/libexec/preinit: info: /run permissions: uid=0 (root), gid=0 (root), perms=oxorgxgruxuwur
+cont-init: info: running /etc/cont-init.d/01-hermes-setup
+[stage2] Generated API_SERVER_KEY for the loopback gateway api_server
+[stage2] dependency environment: base
+[stage2] collected 0 unused dependency generations
+Syncing bundled skills into ~/.hermes/skills/ ...
+
+Done: 0 new, 0 updated, 44 unchanged. 44 total bundled.
+[stage2] Using pinned Chromium binary: /opt/hermes/tools/chromium-1248/chrome-linux64/chrome
+[stage2] Setup complete; starting user services
+cont-init: info: /etc/cont-init.d/01-hermes-setup exited 0
+cont-init: info: running /etc/cont-init.d/015-supervise-perms
+[supervise-perms] static s6-rc services: supervise/ readable/controllable by group hermes
+cont-init: info: /etc/cont-init.d/015-supervise-perms exited 0
+cont-init: info: running /etc/cont-init.d/02-reconcile-profiles
+reconcile: profile=default prior_state=running action=started
+reconcile: profile=calendar prior_state=None action=registered
+reconcile: profile=coordinator prior_state=None action=registered
+reconcile: profile=invoice prior_state=None action=registered
+cont-init: info: /etc/cont-init.d/02-reconcile-profiles exited 0
+⚠ install out of sync (pnpm: not installed or outdated) — this docker-managed install must rebuild the artifact to fix
+⚠ install out of sync (pnpm: not installed or outdated) — this docker-managed install must rebuild the artifact to fix
+Optimizing session store (FTS merge + VACUUM)…
+Optimized 2 FTS index(es).
+Database size: 0.4 MB -> 0.4 MB (reclaimed 0.0 MB)

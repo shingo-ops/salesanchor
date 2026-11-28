@@ -1,0 +1,23 @@
+2026-11-27 19:41:08,163 WARNING agent.model_metadata: Could not determine context length for model 'fake-model' (base_url=http://127.0.0.1:18765/v1) — falling back to 256,000 tokens. Set model.context_length in config.yaml to override.
+2026-11-27 19:42:15,230 DEBUG tools.mcp_tool: No MCP servers configured
+2026-11-27 19:42:18,050 INFO gateway.run: inbound message: platform=api_server user=h:ef0679d066 chat=h:83eba08470 msg_len=14 reply_to_id=None
+2026-11-27 19:42:18,449 DEBUG gateway.run: No session model override: session=agent:invoice:api_server:dm:api-f4c5218f73859156 config_model=fake-model override_keys=[]
+2026-11-27 19:42:18,459 DEBUG gateway.run: run_agent resolved: model=fake-model provider=custom session=agent:invoice:api_server:dm:api-f4c5218f73859156
+2026-11-27 19:42:19,513 INFO run_agent: OpenAI client created (agent_init, shared=True) thread=hermes-gateway_1:139972262250176 provider=custom base_url=http://127.0.0.1:18765/v1 model=fake-model
+2026-11-27 19:42:19,640 INFO agent.model_metadata: Could not detect context length for model 'fake-model' at http://127.0.0.1:18765/v1 — defaulting to 256,000 tokens (probe-down). Set model.context_length in config.yaml to override.
+2026-11-27 19:42:19,640 WARNING agent.model_metadata: Could not determine context length for model 'fake-model' (base_url=http://127.0.0.1:18765/v1) — falling back to 256,000 tokens. Set model.context_length in config.yaml to override.
+2026-11-27 19:42:19,790 INFO agent.model_metadata: Could not detect context length for model 'fake-model' at http://127.0.0.1:18765/v1 — defaulting to 256,000 tokens (probe-down). Set model.context_length in config.yaml to override.
+2026-11-27 19:42:19,801 DEBUG gateway.run: Created new agent for session agent:invoice:api_server:dm:api-f4c5218f73859156 (sig=ddadeb7b675ace66)
+2026-11-27 19:42:20,094 INFO [api-f4c5218f73859156] agent.turn_context: conversation turn: session=api-f4c5218f73859156 model=fake-model provider=custom platform=api_server history=0 msg='hello MARK7735'
+2026-11-27 19:42:20,339 DEBUG [api-f4c5218f73859156] agent.title_generator: Skipping derived title: a higher-authority title already holds session api-f4c5218f73859156
+2026-11-27 19:42:20,342 DEBUG [api-f4c5218f73859156] agent.title_generator: Auto-title upgrade deferred past the turn: shares the self-hosted endpoint with the main request
+2026-11-27 19:42:20,715 DEBUG [api-f4c5218f73859156] agent.chat_completion_helpers: Local provider detected (http://127.0.0.1:18765/v1) — stale stream timeout set to 900s
+2026-11-27 19:42:20,717 DEBUG [api-f4c5218f73859156] agent.chat_completion_stream_monitor: stream watchdog armed: stale=900s cap=0s model=fake-model
+2026-11-27 19:42:20,716 DEBUG agent.chat_completion_helpers: Local provider detected (http://127.0.0.1:18765/v1) — stream read timeout raised to 1800s
+2026-11-27 19:42:20,928 INFO run_agent: OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-5 (<lambda>):139971753440960 provider=custom base_url=http://127.0.0.1:18765/v1 model=fake-model
+2026-11-27 19:42:22,715 INFO [api-f4c5218f73859156] agent.conversation_loop: API call #1: model=fake-model provider=custom in=11 out=7 total=18 latency=2.1s id=fake-1
+2026-11-27 19:42:22,716 INFO [api-f4c5218f73859156] agent.prompt_cache_lifecycle.warmer: prompt cache warming stopped: cache window not guaranteed warm (refreshes=0, spent=$0.0000)
+2026-11-27 19:42:22,903 INFO [api-f4c5218f73859156] agent.conversation_loop: Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=1/9223372036854775807 budget=1/9223372036854775807 tool_turns=0 last_msg_role=assistant response_len=13 session=api-f4c5218f73859156
+2026-11-27 19:42:22,912 DEBUG [api-f4c5218f73859156] agent.prompt_cache_lifecycle.warmer: prompt cache warming ended: agent run settled
+2026-11-27 19:42:23,038 INFO gateway.run: response ready: platform=api_server chat=api-<伏せ字> session=agent:invoice:api_server:dm:api-f4c5218f73859156 time=5.0s api_calls=1 response=13 chars
+2026-11-27 19:42:23,411 DEBUG gateway.run: Auto voice reply skipped: mode=None adapter_auto_tts=False chat=api-<伏せ字> platform=api_server

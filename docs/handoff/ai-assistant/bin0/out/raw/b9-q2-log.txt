@@ -1,0 +1,73 @@
+## turn_context.py 1262-1292
+    )
+    _reset_per_turn_agent_state(agent)
+
+    _preview_text = summarize_user_message_for_log(user_message)
+    _msg_preview = _preview_text[:80] + ("..." if len(_preview_text) > 80 else "")
+    _turn_fmt = (
+        "conversation turn: session=%s model=%s provider=%s platform=%s history=%d msg=%r"
+    )
+    _turn_args = [
+        agent.session_id or "none", agent.model, agent.provider or "unknown",
+        agent.platform or "unknown", len(conversation_history or []),
+        _msg_preview.replace("\n", " "),
+    ]
+    # Fork turns (background review, side questions) reuse the parent's session_id and
+    # model; tag their turn-start line so logs can tell them apart (#118693).
+    if (_turn_origin := getattr(agent, "_turn_origin", None)):
+        _turn_fmt += " origin=%s"
+        _turn_args.append(_turn_origin)
+    logger.info(_turn_fmt, *_turn_args)
+## hermes_logging.py 405-432
+    # an existing router.
+    if _adopt_secondary_home(home):
+        return log_dir
+    cfg_level, cfg_max_size, cfg_backup = _read_logging_config()
+    level_name = (log_level or cfg_level or "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
+    max_bytes = (max_size_mb or cfg_max_size or 5) * 1024 * 1024
+    backups = backup_count or cfg_backup or 3
+
+    from agent.redact import RedactingFormatter  # lazy: circular at module load
+
+    root = logging.getLogger()
+
+    # (filename, level, max_bytes, backup_count, component) — a component gates
+    # the file on ``mode`` and restricts it to that component's logger prefixes.
+    handler_specs = (
+        ("agent.log", level, max_bytes, backups, None),
+        ("errors.log", logging.WARNING, 2 * 1024 * 1024, 2, None),
+        ("gateway.log", logging.INFO, 5 * 1024 * 1024, 3, "gateway"),
+        ("gui.log", logging.INFO, 10 * 1024 * 1024, 5, "gui"),
+    )
+    for filename, lvl, size, count, component in handler_specs:
+        if component is not None and mode != component:
+            continue
+        _add_rotating_handler(
+            log_dir / filename, level=lvl, max_bytes=size, backup_count=count,
+            formatter=RedactingFormatter(_LOG_FORMAT),
+            log_filter=_ComponentFilter(COMPONENT_PREFIXES[component]) if component else None,
+## config_defaults.py 1976-1980
+    "logging": {  # File logging to ~/.hermes/logs/: agent.log captures INFO+, errors.log WARNING+.
+        "level": "INFO",       # minimum level for agent.log: DEBUG, INFO, WARNING
+        "max_size_mb": 5,      # max size per log file before rotation
+        "backup_count": 3,     # rotated backups to keep
+    },
+## _read_logging_config tail
+        # can pin logging.*) so this reuses hermes_cli.main's early parse (one config.yaml parse
+        # per process); fall back to a direct parse for bare hermes_logging consumers.
+        try:
+            from hermes_cli.config_effective import load_user_config_effective
+            cfg = load_user_config_effective(get_config_path())
+        except Exception:
+            from hermes_cli.config_backend import config_exists, read_config_doc
+            config_path = get_config_path()
+            cfg = (read_config_doc(config_path) or {}) if config_exists(config_path) else {}
+        if not cfg:
+            return (None, None, None)
+        log_cfg = cfg.get("logging", {})
+        if isinstance(log_cfg, dict):
+            return (log_cfg.get("level"), log_cfg.get("max_size_mb"), log_cfg.get("backup_count"))
+    except Exception:
+        pass
+    return (None, None, None)

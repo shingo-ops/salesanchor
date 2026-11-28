@@ -1,0 +1,4 @@
+
+Login failed: Failed to request device code: [Errno -2] Name or service not known
+Login failed: Failed to request device code: [Errno -2] Name or service not known
+curl: (56) CONNECT tunnel failed, response 403

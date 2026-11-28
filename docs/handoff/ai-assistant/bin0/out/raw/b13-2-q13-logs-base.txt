@@ -1,0 +1,22 @@
+=== /opt/data/logs/agent.log
+2026-11-27 19:38:43,649 INFO hermes_cli.plugins: Plugin 'web-xai' registered web provider: xai
+2026-11-27 19:38:43,652 INFO hermes_cli.plugins: Plugin discovery complete: 62 found, 58 enabled
+2026-11-27 19:41:00,905 WARNING gateway.platforms.api_server: [Api_Server] API server is network-accessible (0.0.0.0) AND the terminal backend is 'local' (unsandboxed). Agent work dispatched through this endpoint runs as the host user with full terminal/file access. Strongly consider a sandboxed backend (terminal.backend: docker) and firewalling th
+2026-11-27 19:41:02,671 WARNING agent.auxiliary_unavailable: Auxiliary Nous client unavailable: Nous Portal runtime credentials unavailable: Hermes is not logged into Nous Portal. Run `hermes model` to re-authenticate. (code: nous_auth_missing)
+2026-11-27 19:41:02,672 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-11-27 19:41:02,673 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+2026-11-27 19:41:02,681 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-11-27 19:41:02,683 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+=== /opt/data/logs/errors.log
+2026-11-27 19:41:00,905 WARNING gateway.platforms.api_server: [Api_Server] API server is network-accessible (0.0.0.0) AND the terminal backend is 'local' (unsandboxed). Agent work dispatched through this endpoint runs as the host user with full terminal/file access. Strongly consider a sandboxed backend (terminal.backend: docker) and firewalling th
+2026-11-27 19:41:02,671 WARNING agent.auxiliary_unavailable: Auxiliary Nous client unavailable: Nous Portal runtime credentials unavailable: Hermes is not logged into Nous Portal. Run `hermes model` to re-authenticate. (code: nous_auth_missing)
+2026-11-27 19:41:02,672 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-11-27 19:41:02,673 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+2026-11-27 19:41:02,681 WARNING agent.auxiliary_client: Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-11-27 19:41:02,683 WARNING agent.auxiliary_client: resolve_provider_client: nous requested but Nous Portal not configured (run: hermes auth)
+=== /opt/data/profiles/invoice/logs/agent.log
+2026-11-27 19:41:08,163 WARNING agent.model_metadata: Could not determine context length for model 'fake-model' (base_url=http://127.0.0.1:18765/v1) — falling back to 256,000 tokens. Set model.context_length in config.yaml to override.
+=== /opt/data/profiles/invoice/logs/errors.log
+2026-11-27 19:41:08,163 WARNING agent.model_metadata: Could not determine context length for model 'fake-model' (base_url=http://127.0.0.1:18765/v1) — falling back to 256,000 tokens. Set model.context_length in config.yaml to override.
+=== /opt/data/profiles/invoice/logs/gateway.log
+tail: cannot open '/opt/data/profiles/invoice/logs/gateway.log' for reading: No such file or directory

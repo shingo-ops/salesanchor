@@ -1,0 +1,126 @@
+## cmd: grep -rn 'response_format\|json_schema' gateway/platforms/api_server*.py
+## cmd: chat/completions route lines
+gateway/platforms/api_server.py:3:Serves /v1/chat/completions, /v1/responses, /v1/models, /v1/capabilities, /api/sessions,
+gateway/platforms/api_server.py:6:``gateway.multiplex_profiles`` secondary profiles live at ``/p/<profile>/...``.
+gateway/platforms/api_server.py:28:# _resolve_request_profile result for a /p/<profile>/ prefix this gateway does not serve (-> 404);
+gateway/platforms/api_server.py:34:    """True when a /p/<profile>/ prefix names the profile this gateway serves. Fail closed: a
+gateway/platforms/api_server.py:35:    single-profile gateway answering /p/<x>/ served the owner's toolsets under another URL."""
+gateway/platforms/api_server.py:43:# Per-request /p/<profile>/ selection: set by the profile-prefix middleware, read by handlers.
+gateway/platforms/api_server.py:63:    ("chat_completions", ("POST", "/v1/chat/completions")),
+gateway/platforms/api_server.py:885:    """True when a /p/<profile>/ prefix names the profile this process was LAUNCHED as: its
+gateway/platforms/api_server.py:899:    A routed ``/p/<profile>/`` prefix namespaces the seed: the id keys process-wide state
+gateway/platforms/api_server.py:902:    the launch profile addressed through its own ``/p/<launch>/`` prefix keeps the un-prefixed id."""
+gateway/platforms/api_server.py:1056:    # ``/p/<profile>/v1/...`` on the shared listener (``_make_profile_prefix_middleware``).
+gateway/platforms/api_server.py:1099:        self._response_store = ResponseStore()  # this home's; a /p/<profile>/ route gets its own
+gateway/platforms/api_server.py:1116:        # Concurrency cap shared across all agent-serving endpoints (/v1/chat/completions, /v1/responses,
+gateway/platforms/api_server.py:1467:        # ``/p/<profile>/`` binds the callback to that profile's adapter map; a missing adapter there is a
+gateway/platforms/api_server.py:1513:    # -- Multi-profile multiplexing (/p/<profile>/...) --------------------------------
+gateway/platforms/api_server.py:1541:        """``/p/<profile>/<tail>`` → the served profile's shared-listener adapter (already scoped by the
+gateway/platforms/api_server.py:1549:        """Reject unknown /p/<profile>/ prefixes and scope the request home."""
+gateway/platforms/api_server.py:1567:        can assert the /p/<profile>/ mirrors without a listener)."""
+gateway/platforms/api_server.py:1587:            ("POST", "/v1/chat/completions", self._handle_chat_completions),
+gateway/platforms/api_server.py:2322:        model only, never credentials). Under /p/<profile>/ the primary id follows that profile."""
+gateway/platforms/api_server.py:3547:        ``profile`` is the ``/p/<profile>/`` prefix serving the request (``""`` = default). It must
+gateway/platforms/api_server.py:3939:            # Native routes + multiplex /p/<profile>/ mirrors (the prefix middleware validates and
+gateway/platforms/api_server.py:3943:                self._app.router.add_route(method, f"/p/{{profile}}{path}", handler)
+gateway/platforms/api_server.py:3944:            # Registered LAST so every native mirror above wins: anything else under /p/<profile>/ is a
+gateway/platforms/api_server.py:3946:            self._app.router.add_route("*", "/p/{profile}/{tail:.*}", self._handle_profile_ingress)
+gateway/platforms/api_server_openai_routes.py:3:``OpenAICompatRoutesMixin`` (inherited by ``APIServerAdapter``) carries ``/v1/chat/completions``,
+gateway/platforms/api_server_openai_routes.py:781:    """/v1/chat/completions and /v1/responses handlers + SSE writers."""
+gateway/platforms/api_server_openai_routes.py:866:        """POST /v1/chat/completions — OpenAI Chat Completions format."""
+gateway/platforms/api_server_openai_routes.py:1112:        ``/p/<profile>/v1/...`` mirror shares it, so the key carries ``_run_idempotency_scope`` (the same
+gateway/platforms/api_server_openai_routes.py:1115:        ``route`` is the logical endpoint (``/v1/...`` and its ``/p/<profile>/v1/...`` alias are the same
+gateway/platforms/api_server_profile_prefix.py:1:"""``/p/<profile>/`` prefix resolution for the shared api_server listener."""
+gateway/platforms/api_server_profile_prefix.py:37:    ``/p/Hermes/`` must name the same profile ``/p/hermes/`` does, never fall to the alias."""
+gateway/platforms/api_server_profile_prefix.py:57:    """Resolve + validate the /p/<profile>/ prefix: ``None`` (no prefix, or multiplexing off and the
+gateway/platforms/api_server_profile_prefix.py:77:        logger.warning("Cannot list served profiles for /p/%s/", profile, exc_info=True)
+## cmd: grep in gateway/run_turn.py agent run_agent for response_format
+agent/auxiliary_client.py:1639:def _translate_anthropic_response_format(anthropic_kwargs: dict[str, Any], response_format: Any) -> None:
+agent/auxiliary_client.py:1641:    if not isinstance(response_format, dict):
+agent/auxiliary_client.py:1643:    format_type = response_format.get("type")
+agent/auxiliary_client.py:1645:        json_schema = response_format.get("json_schema")
+agent/auxiliary_client.py:1728:        # response_format: top-level gets the same translation as the extra_body form; when both
+agent/auxiliary_client.py:1729:        # are present the extra_body form wins. Passthrough excludes ``reasoning``/``response_format``
+agent/auxiliary_client.py:1733:        top_level_response_format = kwargs.get("response_format")
+agent/auxiliary_client.py:1734:        if top_level_response_format is not None:
+agent/auxiliary_client.py:1735:            _translate_anthropic_response_format(anthropic_kwargs, top_level_response_format)
+agent/auxiliary_client.py:1738:            _translate_anthropic_response_format(anthropic_kwargs, caller_extra_body.get("response_format"))
+agent/auxiliary_client.py:1741:                if k not in {"reasoning", "response_format"} and not str(k).startswith("_")
+agent/auxiliary_client.py:3234:    """Provider 400/422 rejecting the structured-output field, on either wire: OpenAI ``response_format``
+agent/auxiliary_client.py:3245:        "response_format" in err_lower or "output_config" in err_lower
+agent/auxiliary_client.py:3248:    if "response_format" in err_lower and "unavailable" in err_lower:
+agent/auxiliary_client.py:3251:    # OBJECT-form json_schema by shape ("str type expected" on response_format.json_schema,
+agent/auxiliary_client.py:3254:    if "response_format" in err_lower and "json_schema" in err_lower:
+agent/auxiliary_client.py:3262:    return _is_unsupported_parameter_error(exc, "response_format") or _is_unsupported_parameter_error(exc, "output_config")
+agent/auxiliary_client.py:6567:    if "response_format" in merged_extra:
+agent/auxiliary_client.py:6568:        from agent.auxiliary_structured_output import without_unsupported_response_format
+agent/auxiliary_client.py:6569:        merged_extra = without_unsupported_response_format(merged_extra, provider_norm, effective_base, model, task)
+agent/auxiliary_structured_output.py:1:"""Structured-output (``response_format``) capability for auxiliary requests.
+agent/auxiliary_structured_output.py:3:Two sources decide whether an aux request may carry a ``response_format`` type up front:
+agent/auxiliary_structured_output.py:5:* the provider profile's ``unsupported_response_formats`` (DeepSeek's native API implements only
+agent/auxiliary_structured_output.py:7:  HTTP 400 "This response_format type is unavailable now"), also consulted when a ``custom`` route's
+agent/auxiliary_structured_output.py:20:do implement ``json_schema`` ("Invalid schema for response_format 'json_schema': additionalProperties
+agent/auxiliary_structured_output.py:31:# (route key, model, response_format type) triples a provider rejected in this process.
+agent/auxiliary_structured_output.py:48:def _response_format_type(request_kwargs: dict[str, Any]) -> Optional[str]:
+agent/auxiliary_structured_output.py:50:    response_format = (extra_body or {}).get("response_format") if isinstance(extra_body, dict) else None
+agent/auxiliary_structured_output.py:51:    if response_format is None:
+agent/auxiliary_structured_output.py:52:        response_format = request_kwargs.get("response_format")
+## grep response_format in codex/run_agent (empty = none)
+## grep body.get in openai_routes chat handler (lines 866-1060)
+16:        messages = body.get("messages")
+19:        stream = _coerce_request_bool(body.get("stream"), default=False)
+76:        model_name = body.get("model", self._model_name)
+97:        if provided_session_id and body.get("hermes_notification_category") == "diagnostic":
+173:            err_body["error"]["hermes"] = {
+## _request_agent_overrides keys
+
+
+def _request_agent_overrides(
+    body: Any, *, virtual_model: Optional[str] = None, allow_bare_model: bool = True
+) -> dict[str, Any]:
+    """Extract per-request model/provider/options for _run_agent.
+
+    The virtual model (``hermes-agent``) means "gateway default". A bare ``model`` without
+    ``provider`` is honored only when ``allow_bare_model`` (generic clients hardcode "gpt-4o";
+    OpenAI-compatible handlers pass the ``direct_model_requests`` opt-in, Hermes-native
+    endpoints always allow it). An explicit ``provider`` is always honored.
+    """
+    if not isinstance(body, dict):
+        return {}
+    overrides: dict[str, Any] = {}
+    provider = _clean_request_string(body.get("provider"))
+    if provider:
+        overrides["requested_provider"] = provider
+    model = _clean_request_string(body.get("model"))
+    if model and model != virtual_model and (provider or allow_bare_model):
+        overrides["requested_model"] = model
+    model_options = body.get("model_options")
+    if isinstance(model_options, dict):
+        overrides["model_options"] = dict(model_options)
+    return overrides
+
+## _parse_chat_messages
+
+
+def _parse_chat_messages(messages: list[Any]) -> tuple:
+    """Chat ``messages`` -> ``(system_prompt, conversation_messages, error_response_or_None)``.
+
+    System messages -> ephemeral system prompt layered ON TOP of core, flattened to text
+    (Anthropic rejects images there, OpenAI text models ignore them)."""
+    from gateway.platforms.api_server import (
+        _multimodal_validation_error, _normalize_chat_content, _normalize_multimodal_content)
+    system_prompt = None
+    conversation_messages: list[dict[str, str]] = []
+    for idx, msg in enumerate(messages):
+        role = msg.get("role", "")
+        raw_content = msg.get("content", "")
+        if role == "system":
+            content = _normalize_chat_content(raw_content)
+            system_prompt = content if system_prompt is None else system_prompt + "\n" + content
+        elif role in {"user", "assistant"}:
+            try:
+                content = _normalize_multimodal_content(raw_content)
+            except ValueError as exc:
+                return None, None, _multimodal_validation_error(exc, param=f"messages[{idx}].content")
+            conversation_messages.append({"role": role, "content": content})
+    return system_prompt, conversation_messages, None

@@ -1,0 +1,4 @@
+prompt_txt_sha256=913a71d5cbbbf064c5d2e76817062b585da8f90709e18fd91997829c9be53f2e
+room=coordinator soul_bytes=904 key_len=64 cfg_key_lines=0
+room=calendar soul_bytes=3266 key_len=64 cfg_key_lines=0
+room=invoice soul_bytes=3266 key_len=64 cfg_key_lines=0

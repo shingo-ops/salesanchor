@@ -1,0 +1,2 @@
+fake_lines=2
+probe=OK sid_by_script=1 get_status=200 chat_code=- reply_model=fake-model usage_in=11 usage_out=7 input_tokens=11 output_tokens=7 api_call_count=1

@@ -1,0 +1,13 @@
+# 通し: volume b13-r4（新規）・最終形の固定設定。各部屋へ MARK7735 + system(SYS7735) を 1 回
+## coordinator
+X-Hermes-Session-Id: api-53782e4b047b693e
+"usage": {"prompt_tokens": 11, "completion_tokens": 7, "total_tokens": 18}
+HTTP_CODE=200
+## calendar
+X-Hermes-Session-Id: api-80e1ed4971e9f8a6
+"usage": {"prompt_tokens": 11, "completion_tokens": 7, "total_tokens": 18}
+HTTP_CODE=200
+## invoice
+X-Hermes-Session-Id: api-e70a3ff4493df32e
+"usage": {"prompt_tokens": 11, "completion_tokens": 7, "total_tokens": 18}
+HTTP_CODE=200

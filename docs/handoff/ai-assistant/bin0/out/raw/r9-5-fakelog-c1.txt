@@ -1,0 +1,7 @@
+fake_ai=START lead_chars=33
+05:07:34 GET /v1/models (non-chat)
+05:07:34 POST /api/show (non-chat)
+05:07:35 GET /v1/models (non-chat)
+05:07:35 POST /api/show (non-chat)
+05:07:35 POST /v1/chat/completions stream=True roles=[system,user] SYS7735_in_system=False sys_pos(文字位置/system全長)=- SYS7735_anywhere=False MARK=False n_tools=0 max_tokens=None model=fake-model schema_lead=1
+05:07:35 POST /v1/chat/completions stream=None roles=[system,user] SYS7735_in_system=False sys_pos(文字位置/system全長)=- SYS7735_anywhere=False MARK=False n_tools=0 max_tokens=None model=fake-model schema_lead=0

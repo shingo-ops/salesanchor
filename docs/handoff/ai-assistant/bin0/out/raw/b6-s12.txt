@@ -1,0 +1,3 @@
+6g coordinator {"http": 200, "finish_reason": "stop", "model": "gpt-5.6-terra", "usage": {"prompt_tokens": 709, "completion_tokens": 9, "input_tokens": null, "output_tokens": null, "total_tokens": 718}} delete 200
+6g calendar {"http": 200, "finish_reason": "stop", "model": "gpt-5.6-terra", "usage": {"prompt_tokens": 1329, "completion_tokens": 94, "input_tokens": null, "output_tokens": null, "total_tokens": 1423}} delete 200
+6g invoice {"http": 200, "finish_reason": "stop", "model": "gpt-5.6-terra", "usage": {"prompt_tokens": 1331, "completion_tokens": 28, "input_tokens": null, "output_tokens": null, "total_tokens": 1359}} delete 200
