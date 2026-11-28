@@ -99,3 +99,11 @@ reader 鍵・18:47:35・rows=10・result=ok。
 ### K8 — 未測定
 
 - 2026-11-28 から 14 日間（〜2026-12-12）の Mac の記録で、tenant_001 向けの psql-write の止まりを数える。
+
+## 追い: 読む鍵（salesanchor-reader）の完成品の直し（2026-11-28）
+
+- 見つけたこと（09:5x JST・無制限鍵で読むだけ）: `authorized_keys` 6 行目の読む鍵の固定コマンドも `--env-file <ai-reader.env>` の 1 つだけで、`docker compose ... config --images` は `astro-webapp-backend`（2026-11-16 の古い完成品）を返した。本番の `.env` を先に足すと `ghcr.io/gen-ryu-system/salesanchor-backend@sha256:b265cb4f...`（画面やクラウドの読む道 ai-reader-http・ai-reader-cloud-http と同じ）になる。容器に渡る環境変数は `AI_READER_DATABASE_URL` の 1 つ・env_file 無し・read_only・backnet のままで、足す前後で同じ（`config --format json` で比べた）。
+- 直し: PO が Mac で台本 `e-reader-image-fix.sh` を `!` 実行（2026-11-28 09:56 JST）。読む鍵の行だけに `--env-file /home/ubuntu/salesanchor/.env` を先に足した。点検 6 つ（7 行のまま・ほかの 6 行は控えと同じ・本番の .env が入った・鍵は同じ・期限 20270115 のまま・権限と持ち主は同じ）すべて ○。控え: `authorized_keys.bak-reader-image-fix-20261128095605`。
+- 確かめ: 直したあと読む鍵で `SELECT current_user, now()` が `ai_reader` を返した（AUDIT ts=2026-11-28T00:56:19Z・sha=a72c8718b628・result=ok）。同じ時刻の `docker events`（create）で、その容器 `astro-webapp-ai-reader-run-6394989391d9` の完成品は `ghcr.io/gen-ryu-system/salesanchor-backend@sha256:b265cb4f...` だった。
+- 今の固定コマンド: `docker compose -f /home/ubuntu/salesanchor/docker-compose.ai-reader.yml --env-file /home/ubuntu/salesanchor/.env --env-file /home/ubuntu/.config/salesanchor/ai-reader.env run --rm -T --no-deps ai-reader`（`restrict`・`expiry-time="20270115"`）。
+- 同じ直しで、`docker-compose.ai-reader.yml` と `docker-compose.ai-dev001-writer.yml` の頭の説明に書かれた古い固定コマンドを今の形に直した（説明の行だけ。動きは変わらない）。
