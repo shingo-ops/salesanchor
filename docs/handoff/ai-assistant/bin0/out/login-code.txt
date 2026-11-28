@@ -1,1 +1,3 @@
-使用済み（2026-11-27T17:50:51Z）
+https://auth.openai.com/codex/device
+752A-40OZ8
+2026-11-28T05:11:17Z 有効 900 秒（invoice の部屋）
