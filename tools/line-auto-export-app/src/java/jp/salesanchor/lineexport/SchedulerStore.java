@@ -25,6 +25,7 @@ final class SchedulerStore {
     private static final String KEY_LAST_MAINTENANCE_CHANNEL_RESULT = "last_maintenance_channel_result";
     private static final String KEY_SIGNAL_CHANNEL_CONFIRMED = "signal_channel_confirmed";
     private static final String KEY_SIGNAL_PROBE_FAILURE_RECORDED = "signal_probe_failure_recorded";
+    private static final String KEY_DEFER_IN_USE_STARTED_AT = "defer_in_use_started_at";
 
     /** 既定はOFF（design.md: インストール直後に勝手に動き出さないこと）。 */
     private static final boolean DEFAULT_ENABLED = false;
@@ -252,6 +253,25 @@ final class SchedulerStore {
 
     static void setSignalProbeFailureRecorded(Context context, boolean recorded) {
         prefs(context).edit().putBoolean(KEY_SIGNAL_PROBE_FAILURE_RECORDED, recorded).apply();
+    }
+
+    /**
+     * 使用中で見送り始めた時刻（epoch ms）。design.md追補 2026-11-28 その2「使用中は短く
+     * 見送る（画面の取り合いを減らす）」: {@link RunScheduler}が見送りの上限
+     * （{@link RunScheduler#DEFER_MAX_MS}）判定に使う。未設定なら見送り中ではない
+     * （既に入っていれば上書きしない。引き金をまたいで1つを共有する＝通知で見送り続けて
+     * 上限に達すれば、次に来た補完でも強行になる）。実行に進んだ時点でクリアする。既定0。
+     */
+    static long getDeferInUseStartedAt(Context context) {
+        return prefs(context).getLong(KEY_DEFER_IN_USE_STARTED_AT, 0L);
+    }
+
+    static void setDeferInUseStartedAt(Context context, long whenMs) {
+        prefs(context).edit().putLong(KEY_DEFER_IN_USE_STARTED_AT, whenMs).apply();
+    }
+
+    static void clearDeferInUseStartedAt(Context context) {
+        prefs(context).edit().remove(KEY_DEFER_IN_USE_STARTED_AT).apply();
     }
 
     private static SharedPreferences prefs(Context context) {

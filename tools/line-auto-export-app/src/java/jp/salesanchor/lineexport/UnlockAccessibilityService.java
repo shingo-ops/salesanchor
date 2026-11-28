@@ -94,6 +94,11 @@ public class UnlockAccessibilityService extends AccessibilityService {
     // 解除成功と判定した場合のみこのフラグを見てLineExportFlowへ続ける。
     private volatile boolean runAllRequested;
 
+    // 使用中の見送り上限に達して見送らず強行した回かどうか（design.md追補 2026-11-28 その2
+    // 「使用中は短く見送る」）。checkResult()の解除成功後の続行（非同期）までstartUnlockFlow
+    // の引数を持ち越すためのフィールド。startExportFlowを経由してLineExportFlowまで渡す。
+    private volatile boolean currentForcedWhileInUse;
+
     // 今回の実行の引き金（診断用。結果通知の本文に「引き金:」として残す。design.md追補
     // 2026-10-08「段階3の方式変更」）。startUnlockFlowからcheckResult()経由でLineExportFlow
     // まで引き継ぐ。
@@ -148,7 +153,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
         // 実行ログ診断用。RunSchedulerを経由しない入口なので、ここで前回チェーンの残りを消す
         // （onAlarmFiredと同じ理由）。
         SchedulerStore.clearPendingNextTrigger(context);
-        instance.startUnlockFlow(false, "RUN(手動)");
+        instance.startUnlockFlow(false, "RUN(手動)", false);
     }
 
     /**
@@ -164,7 +169,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
             return;
         }
         SchedulerStore.clearPendingNextTrigger(context);
-        instance.startExportFlow(false, false, "EXPORT(手動)");
+        instance.startExportFlow(false, false, "EXPORT(手動)", false);
     }
 
     /**
@@ -182,8 +187,21 @@ public class UnlockAccessibilityService extends AccessibilityService {
      * 「何が引き金だったか」として残す（design.md追補 2026-10-08「段階3の方式変更」）。
      * ロック解除の成否はcheckResult()で判定し、成功した場合のみLINE操作へ続ける。
      * RUN単体（requestRun/startUnlockFlow(false, ...)）の挙動はこの経路では一切通らない。
+     * forcedWhileInUse=falseで{@link #requestRunAll(Context, String, boolean)}へ委譲する
+     * （従来どおり動く）。
      */
     static void requestRunAll(Context context, String triggerLabel) {
+        requestRunAll(context, triggerLabel, false);
+    }
+
+    /**
+     * ロック解除→LINE操作（本番の形）の実行トリガー。design.md追補 2026-11-28 その2
+     * 「使用中は短く見送る（画面の取り合いを減らす）」: forcedWhileInUseは、使用中の見送り
+     * 上限（{@link RunScheduler#DEFER_MAX_MS}）に達して見送らず強行した回かどうか。
+     * trueのときは{@link LineExportFlow}の遮断モードの帯を出さない（{@link #startExportFlow}
+     * 経由で渡す）。それ以外の挙動（ロック解除・再試行・施錠方針）は一切変えない。
+     */
+    static void requestRunAll(Context context, String triggerLabel, boolean forcedWhileInUse) {
         UnlockAccessibilityService instance = sInstance;
         if (instance == null) {
             postFailureNotification(context, "ユーザー補助サービスが未接続（無効化されている可能性）");
@@ -191,7 +209,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
             RunScheduler.scheduleRetryAfterFailure(context);
             return;
         }
-        instance.startUnlockFlow(true, triggerLabel);
+        instance.startUnlockFlow(true, triggerLabel, forcedWhileInUse);
     }
 
     /**
@@ -325,19 +343,22 @@ public class UnlockAccessibilityService extends AccessibilityService {
      *   - checkResult()の解除成功後の続行（本番実行、施錠する）:
      *     lockOnFinish=true, armRetryOnFailure=true
      * triggerLabelはLineExportFlowの結果通知に「引き金:」として残す。
+     * forcedWhileInUseはLineExportFlowへそのまま渡す（design.md追補 2026-11-28 その2「使用中は
+     * 短く見送る」。trueのときは遮断モードの帯を出さない）。
      */
     private void startExportFlow(final boolean lockOnFinish, final boolean armRetryOnFailure,
-            String triggerLabel) {
+            String triggerLabel, boolean forcedWhileInUse) {
         if (!exportRunning.compareAndSet(false, true)) {
             Log.i(TAG, "export flow already running, ignoring duplicate trigger");
             return;
         }
-        new LineExportFlow(this, lockOnFinish, armRetryOnFailure, triggerLabel, new LineExportFlow.Listener() {
-            @Override
-            public void onFinished() {
-                exportRunning.set(false);
-            }
-        }).start();
+        new LineExportFlow(this, lockOnFinish, armRetryOnFailure, forcedWhileInUse, triggerLabel,
+                new LineExportFlow.Listener() {
+                    @Override
+                    public void onFinished() {
+                        exportRunning.set(false);
+                    }
+                }).start();
     }
 
     @Override
@@ -345,7 +366,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
         // no-op
     }
 
-    private void startUnlockFlow(boolean runAll, String triggerLabel) {
+    private void startUnlockFlow(boolean runAll, String triggerLabel, boolean forcedWhileInUse) {
         if (!running.compareAndSet(false, true)) {
             Log.i(TAG, "unlock flow already running, ignoring duplicate trigger");
             RunLogger.logTriggerDropped(this, triggerLabel, "already_running");
@@ -353,6 +374,9 @@ public class UnlockAccessibilityService extends AccessibilityService {
         }
 
         runAllRequested = runAll;
+        // checkResult()の解除成功後の続行（非同期）までこの値を持ち越す（design.md追補
+        // 2026-11-28 その2「使用中は短く見送る」）。
+        currentForcedWhileInUse = forcedWhileInUse;
         currentTriggerLabel = triggerLabel == null ? "" : triggerLabel;
         currentRunId = RunLogger.newRunId();
         failureReasons = new StringBuilder();
@@ -403,7 +427,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
                 // （LOCK_DELAY_AFTER_EDIT_MS・drainCallbackSummary）はLineExportFlow#finish
                 // 側でarmRetryOnFailure==trueのときだけ素通しする（2026-10-08のジェスチャ
                 // 取り消し対策を維持するため）。
-                startExportFlow(false, true, currentTriggerLabel);
+                startExportFlow(false, true, currentTriggerLabel, currentForcedWhileInUse);
                 return;
             }
             postNotification(this, "ロック解除: 見送り", "ロックされていない（使用中） / 引き金:" + currentTriggerLabel);
@@ -640,7 +664,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
             // KEYCODE_HOME→KEYCODE_SLEEPに相当）。triggerLabelはLineExportFlowの結果通知へ
             // そのまま引き継ぐ。
             if (runAllRequested) {
-                startExportFlow(true, true, currentTriggerLabel);
+                startExportFlow(true, true, currentTriggerLabel, currentForcedWhileInUse);
             }
         } else {
             String reason = failureReasons.length() > 0

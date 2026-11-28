@@ -205,6 +205,7 @@ final class LineExportFlow {
     private final UnlockAccessibilityService service;
     private final boolean lockOnFinish;
     private final boolean armRetryOnFailure;
+    private final boolean forcedWhileInUse;
     private final String triggerLabel;
     private final Listener listener;
     private final Handler handler = new Handler();
@@ -331,12 +332,19 @@ final class LineExportFlow {
      *
      * triggerLabelは結果通知の本文に「引き金:」として残す診断用（design.md追補
      * 2026-10-08「段階3の方式変更」）。
+     *
+     * forcedWhileInUse: 使用中の見送り上限（{@link RunScheduler#DEFER_MAX_MS}）に達して
+     * 見送らず強行した回かどうか（design.md追補 2026-11-28 その2「使用中は短く見送る
+     * （画面の取り合いを減らす）」、PO決定）。trueのときは{@link #overlayBlocking}を
+     * falseにし、遮断モードの帯を出さない（強行した回は画面を奪わない）。それ以外の挙動
+     * （施錠方針・再試行・押し直し）は変えない。
      */
     LineExportFlow(UnlockAccessibilityService service, boolean lockOnFinish, boolean armRetryOnFailure,
-            String triggerLabel, Listener listener) {
+            boolean forcedWhileInUse, String triggerLabel, Listener listener) {
         this.service = service;
         this.lockOnFinish = lockOnFinish;
         this.armRetryOnFailure = armRetryOnFailure;
+        this.forcedWhileInUse = forcedWhileInUse;
         this.triggerLabel = triggerLabel == null ? "" : triggerLabel;
         this.listener = listener;
     }
@@ -379,7 +387,10 @@ final class LineExportFlow {
         // ノードクリックは帯を素通りするが座標タップは吸われることを実機で確認済み）。
         // PIN入力の画面にはクリック可能なノードが無く座標タップしか手段が無いため、帯を
         // 広げるとPIN入力そのものが吸われて解除できなくなる。
-        overlayBlocking = armRetryOnFailure;
+        // design.md追補 2026-11-28 その2「使用中は短く見送る」: 使用中の見送り上限に達して
+        // 見送らず強行した回（forcedWhileInUse==true）は遮断しない（強行した回は画面を
+        // 奪わない。PO決定）。
+        overlayBlocking = armRetryOnFailure && !forcedWhileInUse;
         overlayShown = overlay.show(service, overlayBlocking);
 
         // フロー実行中のみウィンドウ遷移のクラス名・パッケージ名を記録する（終了時にクリア）。
