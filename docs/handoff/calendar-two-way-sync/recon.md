@@ -132,3 +132,20 @@
   - `:300` の差分は `singleEvents: True`。繰り返しを消すと、回が 1 つずつ消した形で届く。元の行を消した後の回は、`_is_app_origin` が偽になって `:1983-1992` へ落ちる。
 - 【推測】730 は Google が消した形で送った回の数。Google が何回分まで送るかは確かめていない。数がどうであれ、消した行は 0 行。
 - 【事実】`backend/tests/test_calendar_service.py:803-819` の `test_deletes_cancelled_event_only_google_rows` は、消した行の数を決めずに "deleted" を期待している。便6 で行の数を決めた試験へ直す。
+
+## 便7（2026-11-28・アプリで消した繰り返しの 1 回が、Google への送りの失敗で戻る件）
+
+- PO の依頼: 2026-11-28「３：…直したい」。成功条件 K1〜K5 と本番反映までの完走は 2026-11-28「1」で承認。
+- 既存 ADR の確認: ADR-1075（繰り返し）・ADR-1059（取り込み）。送りの失敗のときの決めは無い。design.md §12-11 ① に「次の候補」として書かれている（`git grep -n "送り中にする" origin/main -- docs/handoff/calendar-two-way-sync/design.md`）。
+- 【事実】実物（origin/main 702e1767f）:
+  - `backend/app/services/calendar_service.py:1421-1424`: 前からある例外の行は `is_cancelled = true` だけ。sync_status は変えない。
+  - `:1426-1440`: 新しい行は `_insert_row`（`:1090`）で source='app'・sync_status='pending'。送れても `:1451-1456` は id だけ書き、送り終えた印を付けない。
+  - `:1458-1459`: 送りの失敗は警告「Google の回の取り消しに失敗」だけ。
+  - `:1873`: 取り込みは、送り終えていない例外の行に触らず "skipped"。
+  - `:1930-1938`: 送り終えた例外の行は、消していない形の回が届くと `is_cancelled = False` に戻す。
+  - `:1774`: Google で「すべて」を消したとき、送り終えていない例外の行があると消さない。
+  - `backend/app/services/google_calendar.py:492-511` `update_event` は失敗を `RuntimeError(...) from e` で包む（元の HttpError は `__cause__`）。`:527-573` `get_instance` は `showDeleted` を付けず、見つからなければ `RuntimeError("繰り返しの回が見つかりません")`。
+  - `backend/app/services/google_webhook.py:234-278`: 取り込みは会社ごとの鍵（advisory lock 1059）の中で、接続を確かめ文脈を張り直してから Google を読む（`:300` 以降）。
+  - DB の決まり: `migrations/078_create_calendar_events_tenant.sql:59-60` で sync_status は synced・pending・failed の 3 つ。
+- 【事実】本番（2026-11-28）: Loki で 2026-11-07〜11-28 の「回の取り消しに失敗」は 0 行（取り込みの完了の記録は週に約 1,150〜1,225 行）。tenant_001 の例外の行は 0 行（ai_ro の窓・2026-11-28T04:53:08Z）。今は戻った回は無い。
+- 【事実】Google の公式の資料（Context7・2026-11-28）: 410 "deleted" は「それ以上の動きは要らない」。`events.instances` の `showDeleted` は初期値が偽。
