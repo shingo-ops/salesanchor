@@ -19,5 +19,5 @@
 2026-11-27 19:42:22,716 INFO [api-f4c5218f73859156] agent.prompt_cache_lifecycle.warmer: prompt cache warming stopped: cache window not guaranteed warm (refreshes=0, spent=$0.0000)
 2026-11-27 19:42:22,903 INFO [api-f4c5218f73859156] agent.conversation_loop: Turn ended: reason=text_response(finish_reason=stop) model=fake-model api_calls=1/9223372036854775807 budget=1/9223372036854775807 tool_turns=0 last_msg_role=assistant response_len=13 session=api-f4c5218f73859156
 2026-11-27 19:42:22,912 DEBUG [api-f4c5218f73859156] agent.prompt_cache_lifecycle.warmer: prompt cache warming ended: agent run settled
-2026-11-27 19:42:23,038 INFO gateway.run: response ready: platform=api_server chat=api-f4c5218f73859156 session=agent:invoice:api_server:dm:api-f4c5218f73859156 time=5.0s api_calls=1 response=13 chars
-2026-11-27 19:42:23,411 DEBUG gateway.run: Auto voice reply skipped: mode=None adapter_auto_tts=False chat=api-f4c5218f73859156 platform=api_server
+2026-11-27 19:42:23,038 INFO gateway.run: response ready: platform=api_server chat=api-<伏せ字> session=agent:invoice:api_server:dm:api-f4c5218f73859156 time=5.0s api_calls=1 response=13 chars
+2026-11-27 19:42:23,411 DEBUG gateway.run: Auto voice reply skipped: mode=None adapter_auto_tts=False chat=api-<伏せ字> platform=api_server
