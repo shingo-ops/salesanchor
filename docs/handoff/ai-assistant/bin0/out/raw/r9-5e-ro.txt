@@ -1,0 +1,17 @@
+== command -v python3
+/opt/hermes/.venv/bin/python3
+== coordinator after
+A	0
+S	0
+T	0
+END
+== calendar after
+A	0
+S	0
+T	0
+END
+== invoice after
+A	0
+S	0
+T	0
+END

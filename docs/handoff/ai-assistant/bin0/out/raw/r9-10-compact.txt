@@ -1,0 +1,22 @@
+k7count label=after-stop files=568 hit_files=0 hit_lines=0
+optimize room=coordinator rc=0
+reconcile: profile=default prior_state=running action=started
+reconcile: profile=calendar prior_state=None action=registered
+reconcile: profile=coordinator prior_state=None action=registered
+reconcile: profile=invoice prior_state=None action=registered
+k7count label=after-optimize-coordinator files=566 hit_files=0 hit_lines=0
+optimize room=calendar rc=0
+reconcile: profile=default prior_state=running action=started
+reconcile: profile=calendar prior_state=None action=registered
+reconcile: profile=coordinator prior_state=None action=registered
+reconcile: profile=invoice prior_state=None action=registered
+k7count label=after-optimize-calendar files=564 hit_files=0 hit_lines=0
+optimize room=invoice rc=0
+reconcile: profile=default prior_state=running action=started
+reconcile: profile=calendar prior_state=None action=registered
+reconcile: profile=coordinator prior_state=None action=registered
+reconcile: profile=invoice prior_state=None action=registered
+k7count label=after-optimize-invoice files=562 hit_files=0 hit_lines=0
+stop_to_health_seconds=46.7
+k7count label=after-start files=569 hit_files=0 hit_lines=0
+compact=DONE

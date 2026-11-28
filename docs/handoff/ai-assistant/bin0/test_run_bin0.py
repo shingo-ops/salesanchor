@@ -1,4 +1,4 @@
-"""run_bin0.py の確かめ（偽の Hermes を 127.0.0.1 の空いた番号で立てる。card-bin0a.md の 9 つ + card-bin0b 2 つ + card-bin0b-r8 7 つ = 18 件）。"""
+"""run_bin0.py の確かめ（偽の Hermes を 127.0.0.1 の空いた番号で立てる。card-bin0a.md の 9 つ + card-bin0b 2 つ + card-bin0b-r8 7 つ + card-bin0b-r9 6 つ = 24 件）。"""
 
 from __future__ import annotations
 
@@ -14,7 +14,12 @@ import pytest
 import yaml
 
 sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent / "control"))
 import run_bin0  # noqa: E402
+import fake_ai  # noqa: E402
+
+REAL_READ_USAGE = run_bin0.read_usage
+MAIN_ONE = {"main_sum": 1, "main_rows": 1, "aux": {}}
 
 KEYS = {"coordinator": "k-coordinator-0000000000", "calendar": "k-calendar-000000000000", "invoice": "k-invoice-00000000000"}
 INVOICE_OK = {
@@ -40,6 +45,29 @@ class Fake:
         self.session_in = 10
         self.session_out = 5
         self.lock = threading.Lock()
+
+
+class UsageTable:
+    """明細の表の差し替え。usage の読みは seq を順に取り出す（尽きたら最後の値を返し続ける）。None は読めない。"""
+
+    def __init__(self):
+        self.seq: list = [MAIN_ONE]
+        self.usage_calls = 0
+        self.after = {"usage_rows": 2, "session_rows": 0, "tombstone_rows": 1}
+
+    def read(self, container, room, sid, mode):
+        if mode == "after":
+            return self.after
+        i = min(self.usage_calls, len(self.seq) - 1)
+        self.usage_calls += 1
+        return self.seq[i]
+
+
+@pytest.fixture(autouse=True)
+def table(monkeypatch):
+    t = UsageTable()
+    monkeypatch.setattr(run_bin0, "read_usage", t.read)
+    return t
 
 
 @pytest.fixture()
@@ -103,7 +131,7 @@ def run_case(fake, case_id="i1", expected="invoice", group="invoice", text="テ�
     with httpx.Client(base_url=fake.url, timeout=10) as client:
         return run_bin0.run_hermes_case(
             client, KEYS, "openai-codex", "gpt-5.6-terra", case, "2026-11-16T10:00:00+09:00", rules or [],
-            run_bin0.load_schema(), {}, sleep=lambda s: None)
+            run_bin0.load_schema(), {}, sleep=lambda s: None, container="c")
 
 
 def test_1_invoice_flow(fake):
@@ -166,6 +194,10 @@ def test_7_model_split(fake):
     keys_file.write_text(json.dumps(KEYS))
     try:
         assert run_bin0.main(["--target", "hermes", "--model", "gpt-5.6-terra", "--keys-file", str(keys_file)]) == 2
+        # --set main・k8 の hermes の道は --container が必須
+        for name in ("main", "k8"):
+            assert run_bin0.main(["--target", "hermes", "--set", name, "--model", "openai-codex/gpt-5.6-terra",
+                                  "--keys-file", str(keys_file)]) == 2
     finally:
         keys_file.unlink()
 
@@ -189,12 +221,13 @@ def test_9_no_text_in_outputs(fake, capsys, tmp_path):
     keys_file.write_text(json.dumps(KEYS))
     fake.replies = {"coordinator": ['{"role":"invoice"}'] * 3 + ['{"role":"none"}'], "invoice": [json.dumps(INVOICE_OK)] * 3}
     rc = run_bin0.main(["--target", "hermes", "--model", "openai-codex/gpt-5.6-terra", "--base-url", fake.url,
-                        "--keys-file", str(keys_file), "--cases", str(cases_file), "--rounds", "1"])
+                        "--keys-file", str(keys_file), "--cases", str(cases_file), "--rounds", "1", "--container", "c"])
     assert rc == 0
     out = capsys.readouterr()
     for c in data["cases"]:
         assert c["text"] not in out.out and c["text"] not in out.err
     assert "k1=" in out.err and "deleted=" in out.err and "k9=" in out.err and "k9_unreadable=" in out.err
+    assert "k9_mismatch=" in out.err
     assert INVOICE_OK["invoice"]["company_name"] not in out.out + out.err
 
 
@@ -240,14 +273,27 @@ def test_13_get_before_delete(fake):
     assert fake.calls[1][1] == fake.calls[2][1].replace("DELETE", "GET")
 
 
-def test_14_k9_ok(fake):
+def test_14_k9_ok(fake, table):
     fake.replies = {"coordinator": ['{"role":"none"}']}
     r = run_case(fake, "u1", "unknown", "unknown")
     assert (r["k9_ok"], r["get_status"], r["api_calls"], r["k9_cache"], r["k9_reasoning"]) == (1, "200", "1", 3, 2)
+    assert (r["k9_main_first"], r["k9_main_last"], r["k9_aux_first"], r["k9_aux_last"], r["k9_reads"]) == ("1", "1", "0", "0", "1")
+    # GET の添え: api_call_count 2 なら 0
     fake.api_call_count = 2
     fake.replies = {"coordinator": ['{"role":"none"}']}
     r = run_case(fake, "u1", "unknown", "unknown")
     assert r["k9_ok"] == 0 and r["api_calls"] == "2"
+    fake.api_call_count = 1
+    # 最後の読みで main_sum 2 なら 0
+    table.seq, table.usage_calls = [MAIN_ONE, {"main_sum": 2, "main_rows": 2, "aux": {}}], 0
+    fake.replies = {"coordinator": ['{"role":"none"}']}
+    r = run_case(fake, "u1", "unknown", "unknown")
+    assert r["k9_ok"] == 0 and (r["k9_main_first"], r["k9_main_last"]) == ("1", "2")
+    # 最後の読みで aux に title_generation の 1 行が出たら 0。1 回目の読みの値も残る（L2）
+    table.seq, table.usage_calls = [MAIN_ONE, {"main_sum": 1, "main_rows": 1, "aux": {"title_generation": (1, 1)}}], 0
+    fake.replies = {"coordinator": ['{"role":"none"}']}
+    r = run_case(fake, "u1", "unknown", "unknown")
+    assert r["k9_ok"] == 0 and (r["k9_aux_first"], r["k9_aux_last"]) == ("0", "1")
 
 
 def test_15_delete_404_counted_apart(fake):
@@ -328,3 +374,149 @@ def test_18_compact_order_and_stop(tmp_path, monkeypatch, capsys):
     assert run_bin0.main(argv) == 3
     assert "compact=STOPPED room=coordinator" in capsys.readouterr().out
     assert "start" not in calls
+
+
+# ---------------------------------------------------------------- card-bin0b-r9 の 6 件
+
+def test_19_read_usage(monkeypatch):
+    calls: list[list[str]] = []
+    reply = {"out": "", "rc": 0}
+
+    def fake_docker(args, timeout=600.0):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, reply["rc"], reply["out"], "")
+
+    monkeypatch.setattr(run_bin0, "_docker", fake_docker)
+    sid = "11111111-2222-3333-4444-555555555555"
+    reply["out"] = "U\t\t1\t1\nU\ttitle_generation\t2\t3\nEND\n"
+    got = REAL_READ_USAGE("bin0-run", "invoice", sid, "usage")
+    assert got == {"main_sum": 1, "main_rows": 1, "aux": {"title_generation": (2, 3)}}
+    assert calls[0] == ["exec", "-u", "hermes", "bin0-run", "python3", "-c", run_bin0.USAGE_INNER, "invoice", sid, "usage"]
+    assert sid not in run_bin0.USAGE_INNER and "mode=ro" in run_bin0.USAGE_INNER
+    reply["out"] = "A\t2\nS\t0\nT\t1\nEND\n"
+    assert REAL_READ_USAGE("bin0-run", "calendar", sid, "after") == {"usage_rows": 2, "session_rows": 0, "tombstone_rows": 1}
+    assert calls[1][-1] == "after"
+    reply["out"] = "ERR\tOperationalError\n"
+    assert REAL_READ_USAGE("bin0-run", "invoice", sid, "usage") is None
+    reply["out"] = "U\t\t1\t1\n"  # END が無い
+    assert REAL_READ_USAGE("bin0-run", "invoice", sid, "usage") is None
+    reply["out"], reply["rc"] = "END\n", 1
+    assert REAL_READ_USAGE("bin0-run", "invoice", sid, "usage") is None
+    n = len(calls)
+    assert REAL_READ_USAGE("bin0-run", "no-such-room", sid, "usage") is None
+    assert len(calls) == n  # ROOMS に無い部屋名は docker を呼ばない
+
+
+def test_20_first_read_pairs(fake, table):
+    zero = {"main_sum": 0, "main_rows": 0, "aux": {}}
+    table.seq = [zero, zero, MAIN_ONE]
+    fake.replies = {"coordinator": ['{"role":"none"}']}
+    r = run_case(fake, "u1", "unknown", "unknown")
+    assert r["k9_reads"] == "3" and r["k9_ok"] == 1
+    # 30 組とも表が 0 なら読めない（-）
+    table.seq, table.usage_calls = [zero], 0
+    fake.replies = {"coordinator": ['{"role":"none"}']}
+    r = run_case(fake, "u1", "unknown", "unknown")
+    assert r["k9_ok"] == "-" and r["k9_reads"] == "30"
+    # GET が 1・表が 0 のまま 30 組（上と同じ形）でも読めない（L1）
+    assert r["api_calls"] == "1"
+
+
+def _probe_env(monkeypatch, lead_lines=("0", "0")):
+    """probe の docker 呼びを差し替える。chat の行は 2、schema_lead=1 の行は lead_lines を順に返す。"""
+    leads = list(lead_lines)
+
+    def fake_docker(args, timeout=600.0):
+        if "schema_lead=1" in args:
+            return subprocess.CompletedProcess(args, 0, leads.pop(0) + "\n", "")
+        return subprocess.CompletedProcess(args, 0, "2\n", "")
+
+    monkeypatch.setattr(run_bin0, "_docker", fake_docker)
+    monkeypatch.setattr(run_bin0, "_sleep", lambda s: None)
+
+
+def _probe(fake, **kw):
+    with httpx.Client(base_url=fake.url, timeout=10) as client:
+        return run_bin0.run_probe(client, KEYS, "invoice", "custom", "fake-model", "こんにちは", "c", 2, **kw)
+
+
+def test_21_probe_wait_aux(fake, table, monkeypatch, capsys):
+    _probe_env(monkeypatch)
+    title = {"main_sum": 1, "main_rows": 1, "aux": {"title_generation": (1, 1)}}
+    table.seq = [MAIN_ONE, MAIN_ONE, title]
+    assert _probe(fake, wait_aux="title_generation") == 0
+    out = capsys.readouterr().out
+    assert "usage_aux=title_generation:1:1" in out and "usage_reads=3" in out and "usage_ok=1" in out
+    assert "usage_main_sum=1" in out and "after_usage_rows=2 after_session_rows=0 after_tombstone_rows=1" in out
+    # title_generation の行が出ないまま 30 組 → 7
+    _probe_env(monkeypatch)
+    table.seq, table.usage_calls = [MAIN_ONE], 0
+    assert _probe(fake, wait_aux="title_generation") == 7
+    assert "probe=USAGE_TIMEOUT reads=30" in capsys.readouterr().out
+    # main_sum 2 → 8
+    _probe_env(monkeypatch)
+    table.seq, table.usage_calls = [{"main_sum": 2, "main_rows": 2, "aux": {"title_generation": (1, 1)}}], 0
+    assert _probe(fake, wait_aux="title_generation") == 8
+    # --wait-aux なし: main_sum 1・aux 空なら 0、aux があれば 8
+    _probe_env(monkeypatch)
+    table.seq, table.usage_calls = [MAIN_ONE], 0
+    assert _probe(fake) == 0
+    _probe_env(monkeypatch)
+    table.seq, table.usage_calls = [title], 0
+    assert _probe(fake) == 8
+
+
+def test_22_probe_expect_lead(fake, table, monkeypatch, capsys):
+    _probe_env(monkeypatch, ("0", "0"))
+    assert _probe(fake, expect_lead=1) == 9
+    assert "fake_lead_lines=0" in capsys.readouterr().out
+    _probe_env(monkeypatch, ("3", "4"))
+    assert _probe(fake, expect_lead=1) == 0
+    _probe_env(monkeypatch, ("3", "4"))
+    assert _probe(fake, expect_lead=0) == 9
+
+
+def test_23_fake_lead_file(tmp_path, capsys):
+    out_file = tmp_path / "control" / "schema_lead.txt"
+    assert run_bin0.main(["--set", "fake-lead", "--out", str(out_file)]) == 0
+    assert out_file.read_bytes().decode("utf-8") == run_bin0.SCHEMA_SYSTEM_LEAD
+    cap = capsys.readouterr()
+    assert run_bin0.SCHEMA_SYSTEM_LEAD not in cap.out and run_bin0.SCHEMA_SYSTEM_LEAD not in cap.err
+    assert f"lead_chars={len(run_bin0.SCHEMA_SYSTEM_LEAD)}" in cap.err
+    assert (Path(__file__).parent / "control" / ".gitignore").read_text(encoding="utf-8") == "schema_lead.txt\n"
+
+
+def test_24_fake_ai_lead(tmp_path, monkeypatch):
+    log = tmp_path / "fake.log"
+    monkeypatch.setattr(fake_ai, "LOG", str(log))
+    lead = run_bin0.SCHEMA_SYSTEM_LEAD
+    # 無い・空白だけ → 終了コード 1 と NO_LEAD
+    monkeypatch.setenv("FAKE_LEAD_FILE", str(tmp_path / "none.txt"))
+    assert fake_ai.main() == 1 and "fake_ai=NO_LEAD" in log.read_text(encoding="utf-8")
+    log.write_text("", encoding="utf-8")
+    empty = tmp_path / "empty.txt"
+    empty.write_text(" \n", encoding="utf-8")
+    monkeypatch.setenv("FAKE_LEAD_FILE", str(empty))
+    assert fake_ai.main() == 1 and "fake_ai=NO_LEAD" in log.read_text(encoding="utf-8")
+    # 文のあるファイル: START の行に文字数だけ（待ち受けは立てない）
+    log.write_text("", encoding="utf-8")
+    lead_file = tmp_path / "lead.txt"
+    lead_file.write_bytes(lead.encode("utf-8"))
+    monkeypatch.setenv("FAKE_LEAD_FILE", str(lead_file))
+
+    class NoServe:
+        def __init__(self, *a, **k):
+            pass
+
+        def serve_forever(self):
+            return None
+
+    monkeypatch.setattr(fake_ai, "ThreadingHTTPServer", NoServe)
+    assert fake_ai.main() == 0
+    text = log.read_text(encoding="utf-8")
+    assert f"fake_ai=START lead_chars={len(lead)}" in text and lead not in text
+    # 文を含む messages で 1・含まない messages で 0（content が配列でも合わせて見る）
+    assert fake_ai.has_lead([{"role": "system", "content": lead + "\n\n{}"}, {"role": "user", "content": "x"}], lead)
+    assert fake_ai.has_lead([{"role": "system", "content": [{"type": "text", "text": lead}]}], lead)
+    assert not fake_ai.has_lead([{"role": "user", "content": "こんにちは"}], lead)
+    assert not fake_ai.has_lead([{"role": "user", "content": "こんにちは"}], "")

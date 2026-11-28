@@ -28,6 +28,7 @@ REPO = Path(__file__).resolve().parents[4]
 SECRETARY_DIR = REPO / "secretary-agent"
 DEFAULT_CASES = REPO / "backend" / "app" / "assistant_regression" / "cases.json"
 CONFIG_YAML = Path(__file__).with_name("config.yaml")
+CONTROL_DIR = Path(__file__).with_name("control")
 IMAGE = "nousresearch/hermes-agent@sha256:ef0650d523ee1b5ab32c779acabc446d9936869a9932591553688a62bcf0c42f"
 ROOMS = ("coordinator", "calendar", "invoice")
 # 管理者の固定設定の 8 つの鍵（正本は config.yaml）。(ドットでつないだ道, 部屋の config に出る最後の名前)
@@ -53,7 +54,10 @@ HEADER = [
     "k3_hit", "k3_total", "seconds", "coord_in", "coord_out", "role_in", "role_out",
     "deleted", "deleted_404", "http_status", "error_code",
     "get_status", "api_calls", "k9_ok", "k9_cache", "k9_reasoning",
+    "k9_main_first", "k9_main_last", "k9_aux_first", "k9_aux_last", "k9_reads",
 ]
+K9_FIELDS = ("k9_main_first", "k9_main_last", "k9_aux_first", "k9_aux_last", "k9_reads")
+USAGE_PAIRS = 30  # 1 回目の読みの組の最大数（1 秒おき）
 
 
 # ---------------------------------------------------------------- 部品
@@ -213,6 +217,63 @@ def get_session(client: httpx.Client, room: str, key: str, session_id: str) -> d
     return out
 
 
+# 明細の表（session_model_usage）を容器の中の読み取り専用で読む。部屋の名前と番号は引数で渡す（文に埋め込まない）。
+USAGE_INNER = r"""import sqlite3, sys
+room, sid, mode = sys.argv[1], sys.argv[2], sys.argv[3]
+try:
+    c = sqlite3.connect("file:/opt/data/profiles/" + room + "/state.db?mode=ro", uri=True)
+    if mode == "usage":
+        q = "SELECT task, COALESCE(SUM(api_call_count),0), COUNT(*) FROM session_model_usage WHERE session_id=? GROUP BY task"
+        for t, s, n in c.execute(q, (sid,)).fetchall():
+            print("U\t" + ("" if t is None else str(t)) + "\t" + str(s) + "\t" + str(n))
+    else:
+        a = c.execute("SELECT COUNT(*) FROM session_model_usage WHERE session_id=?", (sid,)).fetchone()[0]
+        b = c.execute("SELECT COUNT(*) FROM sessions WHERE id=?", (sid,)).fetchone()[0]
+        d = c.execute("SELECT COUNT(*) FROM state_meta WHERE key=?", ("gateway.retired_session.v1." + sid,)).fetchone()[0]
+        print("A\t" + str(a))
+        print("S\t" + str(b))
+        print("T\t" + str(d))
+    print("END")
+except Exception as e:
+    print("ERR\t" + type(e).__name__)
+"""
+
+
+def read_usage(container: str, room: str, sid: str, mode: str) -> dict | None:
+    """明細の表を読む。mode usage: {"main_sum","main_rows","aux":{task:(合計,行の数)}}。
+    mode after: {"usage_rows","session_rows","tombstone_rows"}。読めなければ None。"""
+    if room not in ROOMS or mode not in ("usage", "after"):
+        return None
+    try:
+        proc = _docker(["exec", "-u", "hermes", container, "python3", "-c", USAGE_INNER, room, sid, mode])
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    lines = proc.stdout.splitlines()
+    if "END" not in lines or any(ln.startswith("ERR") for ln in lines):
+        return None
+    try:
+        if mode == "usage":
+            main_sum = main_rows = 0
+            aux: dict[str, tuple[int, int]] = {}
+            for ln in lines:
+                parts = ln.split("\t")
+                if parts[0] != "U":
+                    continue
+                total, rows = int(parts[2]), int(parts[3])
+                if parts[1] == "":
+                    main_sum, main_rows = main_sum + total, main_rows + rows
+                else:
+                    old = aux.get(parts[1], (0, 0))
+                    aux[parts[1]] = (old[0] + total, old[1] + rows)
+            return {"main_sum": main_sum, "main_rows": main_rows, "aux": aux}
+        got = {ln.split("\t")[0]: int(ln.split("\t")[1]) for ln in lines if ln[:2] in ("A\t", "S\t", "T\t")}
+        return {"usage_rows": got["A"], "session_rows": got["S"], "tombstone_rows": got["T"]}
+    except (ValueError, IndexError, KeyError):
+        return None
+
+
 # ---------------------------------------------------------------- K3
 
 def _norm_text(v: object) -> str:
@@ -306,13 +367,15 @@ def k3_score(expected: dict, draft: dict | None) -> tuple[int, int]:
 # ---------------------------------------------------------------- 1 件
 
 def run_hermes_case(client, keys: dict, provider: str, model: str, case: dict, now: str, rules: list[str],
-                    validator: Draft202012Validator, answers: dict, sleep=time.sleep) -> dict:
+                    validator: Draft202012Validator, answers: dict, sleep=time.sleep,
+                    container: str | None = None) -> dict:
     expected_role = EXPECTED_ROLE[case["expected"]]
     row = {
         "coordinator_role": "-", "role_ok": 0, "schema_ok": "-", "retried": 0, "k3_hit": "-", "k3_total": "-",
         "coord_in": 0, "coord_out": 0, "role_in": 0, "role_out": 0, "deleted": 0, "deleted_404": 0, "used": 0,
         "http_status": "-", "error_code": "-", "undeleted": [], "_texts": [], "seconds": 0.0,
         "get_status": "-", "api_calls": "-", "k9_ok": "-", "k9_cache": "-", "k9_reasoning": "-",
+        **{f: "-" for f in K9_FIELDS},
     }
     used: list[tuple[str, str, int, int]] = []  # (部屋, 会話の番号, 返事の usage の入力, 出力)
     started = time.monotonic()
@@ -365,24 +428,60 @@ def run_hermes_case(client, keys: dict, provider: str, model: str, case: dict, n
     elif answer is not None:
         row["k3_hit"], row["k3_total"] = 0, 0
 
-    # 消す前に使った量を読む（K9）。会話ごとに GET → DELETE の順
+    # 消す前に使った量を読む（K9・design.md:88）。
+    # 1 回目の読み: 「GET → 明細の表」を 1 組とし、GET の api_call_count と表の main_sum が両方 1 以上になるまで
+    # 1 秒おきに最大 30 組。会話を全部読んだ後、会話ごとに DELETE の直前にもう一度だけ表を読む（最後の読み）。
+    reads: list[dict] = []
+    for room, sid, u_in, u_out in used:
+        sess: dict = {}
+        first = None
+        pairs = 0
+        first_ok = False
+        for i in range(USAGE_PAIRS):
+            sess = get_session(client, room, keys[room], sid)
+            first = read_usage(container, room, sid, "usage") if container else None
+            pairs = i + 1
+            api = sess["api_call_count"]
+            if isinstance(api, int) and api >= 1 and first is not None and first["main_sum"] >= 1:
+                first_ok = True
+                break
+            if i < USAGE_PAIRS - 1:
+                sleep(1)
+        reads.append({"room": room, "sid": sid, "in": u_in, "out": u_out, "sess": sess, "first": first,
+                      "pairs": pairs, "first_ok": first_ok})
+
     get_statuses: list[str] = []
     api_calls: list[str] = []
     mismatch = unreadable = False
     cache_vals: list[int] = []
     reason_vals: list[int] = []
-    for room, sid, u_in, u_out in used:
-        sess = get_session(client, room, keys[room], sid)
+    cols: dict[str, list[str]] = {f: [] for f in K9_FIELDS}
+
+    def aux_rows(u: dict | None) -> str:
+        return "-" if u is None else str(sum(n for _, n in u["aux"].values()))
+
+    for rd in reads:
+        room, sid, sess, first = rd["room"], rd["sid"], rd["sess"], rd["first"]
+        last = read_usage(container, room, sid, "usage") if container else None  # DELETE の直前
         get_statuses.append("-" if sess["status"] is None else str(sess["status"]))
         api_calls.append("-" if sess["api_call_count"] is None else str(sess["api_call_count"]))
         if sess["cache_read_tokens"] is not None:
             cache_vals.append(sess["cache_read_tokens"])
         if sess["reasoning_tokens"] is not None:
             reason_vals.append(sess["reasoning_tokens"])
-        if sess["status"] != 200 or any(sess[f] is None for f in ("input_tokens", "output_tokens", "api_call_count")):
-            unreadable = True
-        elif not (u_in == sess["input_tokens"] and u_out == sess["output_tokens"] and sess["api_call_count"] == 1):
+        cols["k9_main_first"].append("-" if first is None else str(first["main_sum"]))
+        cols["k9_main_last"].append("-" if last is None else str(last["main_sum"]))
+        cols["k9_aux_first"].append(aux_rows(first))
+        cols["k9_aux_last"].append(aux_rows(last))
+        cols["k9_reads"].append(str(rd["pairs"]))
+        # ずれ（0）は 読めない（-）より先
+        if last is not None and (last["main_sum"] > 1 or last["aux"]):
             mismatch = True
+        elif rd["first_ok"] and not (rd["in"] == sess["input_tokens"] and rd["out"] == sess["output_tokens"]
+                                     and sess["api_call_count"] == 1):
+            mismatch = True
+        if not rd["first_ok"] or last is None:
+            unreadable = True
         ok, status = delete_session(client, room, keys[room], sid, sleep)
         row["used"] += 1
         if ok:
@@ -396,6 +495,8 @@ def run_hermes_case(client, keys: dict, provider: str, model: str, case: dict, n
     row["k9_ok"] = 0 if mismatch else ("-" if unreadable else 1)
     row["k9_cache"] = sum(cache_vals) if cache_vals else "-"
     row["k9_reasoning"] = sum(reason_vals) if reason_vals else "-"
+    for f in K9_FIELDS:
+        row[f] = "/".join(cols[f]) if cols[f] else "-"
     return row
 
 
@@ -413,6 +514,7 @@ def run_secretary_case(client: httpx.Client, url: str, case: dict, now: str, mod
         "coord_in": "-", "coord_out": "-", "role_in": "-", "role_out": "-", "deleted": "-", "deleted_404": "-", "used": 0,
         "http_status": "-", "error_code": "-", "undeleted": [], "_texts": [], "seconds": 0.0,
         "get_status": "-", "api_calls": "-", "k9_ok": "-", "k9_cache": "-", "k9_reasoning": "-",
+        **{f: "-" for f in K9_FIELDS},
     }
     started = time.monotonic()
     draft = None
@@ -512,7 +614,8 @@ def run_k4(client, keys, provider, model, cases_path: Path, sleep=time.sleep, to
     return 0
 
 
-def run_k8(client, keys, provider, model, k8_path: Path, cases_path: Path, now_default: str, validator, sleep=time.sleep) -> int:
+def run_k8(client, keys, provider, model, k8_path: Path, cases_path: Path, now_default: str, validator, sleep=time.sleep,
+           container: str | None = None) -> int:
     k8 = json.loads(k8_path.read_text(encoding="utf-8"))
     data = json.loads(cases_path.read_text(encoding="utf-8"))
     now = data.get("fixed_now", now_default)
@@ -527,7 +630,7 @@ def run_k8(client, keys, provider, model, k8_path: Path, cases_path: Path, now_d
     leaks = 0
     forbidden = _norm_text(k8["forbidden"])
     for cid in k8["company_b_case_ids"]:
-        row = run_hermes_case(client, keys, provider, model, by_id[cid], now, [], validator, {}, sleep)
+        row = run_hermes_case(client, keys, provider, model, by_id[cid], now, [], validator, {}, sleep, container)
         leak = 1 if any(forbidden in _norm_text(t) for t in row["_texts"]) else 0
         leaks += leak
         print("\t".join([cid, str(leak), f"{row['deleted']}/{row['used']}"]))
@@ -766,11 +869,22 @@ def run_configcheck(container: str, config_path: Path = CONFIG_YAML) -> int:
     return 4 if bad else 0
 
 
+def _fake_lead_count(container: str) -> int:
+    proc = _docker(["exec", container, "grep", "-c", "schema_lead=1", "/tmp/fake.log"])
+    try:
+        return int(proc.stdout.strip() or 0)
+    except ValueError:
+        return 0
+
+
 def run_probe(client: httpx.Client, keys: dict, room: str, provider: str, model: str, text: str,
-              container: str | None, wait_fake_lines: int | None) -> int:
-    """1 回だけ送る（chat() と同じ道。係の部屋なら形の指示も付く）。台本が作った番号を使う。"""
+              container: str | None, wait_fake_lines: int | None, wait_aux: str | None = None,
+              expect_lead: int | None = None) -> int:
+    """1 回だけ送る（chat() と同じ道。係の部屋なら形の指示も付く）。台本が作った番号を使う。
+    終了コード: 5（chat が届かない）→ 7（使った量が読めない）→ 8（使った量の形が違う）→ 9（形の指示の届き方が違う）。"""
     sid = str(uuid.uuid4())
     system = schema_system() if room in ROLE_ROOMS else None
+    lead_before = _fake_lead_count(container) if container is not None else None
     r = chat(client, room, keys[room], provider, model, text, sid, system=system)
     if container is not None and wait_fake_lines is not None:
         lines = 0
@@ -788,7 +902,37 @@ def run_probe(client: httpx.Client, keys: dict, room: str, provider: str, model:
             delete_session(client, room, keys[room], sid)
             return 5
         print(f"fake_lines={lines}")
-    sess = get_session(client, room, keys[room], sid)
+    lead_lines = (_fake_lead_count(container) - (lead_before or 0)) if container is not None else None
+
+    # 使った量: 「GET → 明細の表」を 1 秒おきに最大 30 組（design.md:88 の読む順と時刻）
+    sess: dict = {}
+    usage = None
+    reads = 0
+    for i in range(USAGE_PAIRS):
+        sess = get_session(client, room, keys[room], sid)
+        usage = read_usage(container, room, sid, "usage") if container is not None else None
+        reads = i + 1
+        if usage is not None:
+            if wait_aux is not None:
+                done = usage["main_rows"] >= 1 and wait_aux in usage["aux"]
+            else:
+                api = sess["api_call_count"]
+                done = isinstance(api, int) and api >= 1 and usage["main_sum"] >= 1
+            if done:
+                break
+        if i < USAGE_PAIRS - 1:
+            _sleep(1)
+    else:
+        print(f"probe=USAGE_TIMEOUT reads={USAGE_PAIRS}")
+        delete_session(client, room, keys[room], sid)
+        return 7
+
+    if wait_aux is not None:
+        usage_ok = 1 if (usage["main_sum"] == 1 and list(usage["aux"]) == [wait_aux]
+                         and usage["aux"][wait_aux] == (1, 1)) else 0
+    else:
+        usage_ok = 1 if (usage["main_sum"] == 1 and not usage["aux"]) else 0
+    aux_text = ",".join(f"{t}:{n}:{rows}" for t, (n, rows) in sorted(usage["aux"].items())) or "-"
     fields = {
         "sid_by_script": 1 if sess["status"] == 200 else 0,
         "get_status": "-" if sess["status"] is None else sess["status"],
@@ -799,8 +943,29 @@ def run_probe(client: httpx.Client, keys: dict, room: str, provider: str, model:
     }
     for f in ("input_tokens", "output_tokens", "api_call_count"):
         fields[f] = "-" if sess[f] is None else sess[f]
-    print("probe=OK " + " ".join(f"{k}={v}" for k, v in fields.items()))
+    fields.update({
+        "usage_main_sum": usage["main_sum"], "usage_main_rows": usage["main_rows"], "usage_aux": aux_text,
+        "usage_reads": reads, "usage_ok": usage_ok,
+        "fake_lead_lines": "-" if lead_lines is None else lead_lines,
+    })
+    lead_ok = expect_lead is None or lead_lines is None or lead_lines == expect_lead
+    print(("probe=OK " if usage_ok and lead_ok else "probe=NG ") + " ".join(f"{k}={v}" for k, v in fields.items()))
     delete_session(client, room, keys[room], sid)
+    after = read_usage(container, room, sid, "after") if container is not None else None  # 合否に使わない（design.md:125）
+    print("after_usage_rows={} after_session_rows={} after_tombstone_rows={}".format(
+        *(["-"] * 3 if after is None else [after["usage_rows"], after["session_rows"], after["tombstone_rows"]])))
+    if not usage_ok:
+        return 8
+    if not lead_ok:
+        return 9
+    return 0
+
+
+def run_fake_lead(out_path: Path) -> int:
+    """形の指示の 1 文（SCHEMA_SYSTEM_LEAD が正本）を作り物の AI が読むファイルに書く。文は出さない。"""
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_bytes(SCHEMA_SYSTEM_LEAD.encode("utf-8"))
+    print(f"lead_chars={len(SCHEMA_SYSTEM_LEAD)}", file=sys.stderr)
     return 0
 
 
@@ -818,14 +983,15 @@ def main_probe(args) -> int:
         print("--model か --keys-file が読めません", file=sys.stderr)
         return 2
     with httpx.Client(base_url=args.base_url, timeout=TIMEOUT_SECONDS) as client:
-        return run_probe(client, keys, args.room, provider, model, args.text, args.container, args.wait_fake_lines)
+        return run_probe(client, keys, args.room, provider, model, args.text, args.container, args.wait_fake_lines,
+                         args.wait_aux, args.expect_lead)
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--target", choices=["hermes", "secretary"])
     parser.add_argument("--set", dest="set_name", default="main",
-                        choices=["main", "k4", "k8", "fixed-config", "k7count", "k7judge", "compact", "configcheck", "probe"])
+                        choices=["main", "k4", "k8", "fixed-config", "k7count", "k7judge", "compact", "configcheck", "probe", "fake-lead"])
     parser.add_argument("--out")
     parser.add_argument("--config", default=str(CONFIG_YAML))
     parser.add_argument("--test-model")
@@ -841,6 +1007,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--room")
     parser.add_argument("--text")
     parser.add_argument("--wait-fake-lines", type=int)
+    parser.add_argument("--wait-aux")
+    parser.add_argument("--expect-lead", type=int, choices=[0, 1])
     parser.add_argument("--cases", default=str(DEFAULT_CASES))
     parser.add_argument("--rules")
     parser.add_argument("--answers", default=str(Path(__file__).with_name("k3-answers.json")))
@@ -884,11 +1052,16 @@ def main(argv: list[str] | None = None) -> int:
         return run_configcheck(args.container, Path(args.config))
     if sn == "probe":
         return main_probe(args)
+    if sn == "fake-lead":
+        return run_fake_lead(Path(args.out) if args.out else CONTROL_DIR / "schema_lead.txt")
     if args.target is None or args.model is None:
         return 2
 
     provider = model = ""
     keys: dict = {}
+    if args.target == "hermes" and args.set_name in ("main", "k8") and not args.container:
+        print("--container が要ります（明細の表を読む容器）", file=sys.stderr)
+        return 2
     if args.target == "hermes":
         try:
             provider, model = parse_model(args.model)
@@ -932,7 +1105,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.target == "hermes" and args.set_name == "k4":
             return run_k4(client, keys, provider, model, Path(args.k4_cases), tool_runs_shape=args.tool_runs_shape)
         if args.target == "hermes" and args.set_name == "k8":
-            return run_k8(client, keys, provider, model, Path(args.k8_cases), Path(args.cases), now, validator)
+            return run_k8(client, keys, provider, model, Path(args.k8_cases), Path(args.cases), now, validator,
+                          container=args.container)
         if args.set_name != "main":
             print("k4・k8 は --target hermes だけ", file=sys.stderr)
             return 2
@@ -944,7 +1118,8 @@ def main(argv: list[str] | None = None) -> int:
         for rnd in range(1, args.rounds + 1):
             for case in cases:
                 if args.target == "hermes":
-                    r = run_hermes_case(client, keys, provider, model, case, now, rules, validator, answers)
+                    r = run_hermes_case(client, keys, provider, model, case, now, rules, validator, answers,
+                                    container=args.container)
                 else:
                     r = run_secretary_case(client, args.url, case, now, args.model, rules, answers)
                 rows.append(r)
@@ -956,6 +1131,7 @@ def main(argv: list[str] | None = None) -> int:
                     r["coord_in"], r["coord_out"], r["role_in"], r["role_out"], dstr, r["deleted_404"],
                     r["http_status"], r["error_code"],
                     r["get_status"], r["api_calls"], r["k9_ok"], r["k9_cache"], r["k9_reasoning"],
+                    *[r[f] for f in K9_FIELDS],
                 ]))
                 sys.stdout.flush()
 
@@ -978,8 +1154,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.target == "hermes":
         print(f"deleted={sum(r['deleted'] for r in rows)}/{sum(r['used'] for r in rows)} "
               f"deleted_404={sum(r['deleted_404'] for r in rows)}", file=sys.stderr)
-        print(f"k9={sum(1 for r in rows if r['k9_ok'] == 1)}/{n} k9_unreadable={sum(1 for r in rows if r['k9_ok'] == '-')}",
-              file=sys.stderr)
+        print(f"k9={sum(1 for r in rows if r['k9_ok'] == 1)}/{n} k9_unreadable={sum(1 for r in rows if r['k9_ok'] == '-')} "
+              f"k9_mismatch={sum(1 for r in rows if r['k9_ok'] == 0)}", file=sys.stderr)
         print(f"k9_cache={total('k9_cache')} k9_reasoning={total('k9_reasoning')}", file=sys.stderr)
         print(f"undeleted_ids={len(undeleted)}", file=sys.stderr)
         for sid in undeleted:

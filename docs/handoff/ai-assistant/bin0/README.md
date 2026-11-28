@@ -13,7 +13,7 @@
 | control/fake_ai.py | 最初の対照用の作り物の AI（受けた model の値だけをログに書く） |
 | setup_profiles.sh | 3 部屋（coordinator・calendar・invoice）を volume に作る。係の人格は secretary-agent/prompt.txt を作るときに写す |
 | run_bin0.py | 束を流す台本（K1〜K3・K5・K9 の材料・K4・K8） |
-| test_run_bin0.py | 台本の確かめ（偽の Hermes・18 件） |
+| test_run_bin0.py | 台本の確かめ（偽の Hermes・24 件） |
 | k3-answers.json・k4-cases.json・k8-cases.json | 正解表・K4 の頼み 15 件・K8 の頼み |
 
 ## 便0-B で流す命令（PO が居るとき）
@@ -29,12 +29,12 @@
    `curl http://127.0.0.1:8642/health` が 200 になるまで確かめる。（`/run` は `:exec` が要る。無いと s6 が起動しない。実測は probe の表 2・P7。）
 4. **ログイン**（試し用・device code・PO が打つ）: 部屋ごと（7回目で確かめた）: `hermes -p <部屋> auth add openai-codex` を 3 部屋に（`docker exec -u hermes bin0-run hermes -p <部屋> auth add openai-codex`）。
 5. **最初の確かめ**（design.md §5「頭の渡し方」①〜③・`response_format`・使った量の読み先 K9・記録から道具の実行を読む道 K4）は、未確認の項目として便0-B の最初に 1 件ずつ流して記録する。
-6. **台本**: `cd backend && PYTHONPATH=. uv run --no-project --with httpx==0.28.1 --with pydantic==2.10.6 --with jsonschema==4.23.0 --with pyyaml==6.0.2 python ../docs/handoff/ai-assistant/bin0/run_bin0.py --target hermes --set main --model openai-codex/gpt-5.6-terra --keys-file $S/keys.json > out/main.tsv 2> out/main.err`。続けて `--set k4`・`--set k8`。決まり帳つきで比べるときは `--rules docs/handoff/secretary-rulebook/bin2/dummy-rules.json`。
+6. **台本**: `cd backend && PYTHONPATH=. uv run --no-project --with httpx==0.28.1 --with pydantic==2.10.6 --with jsonschema==4.23.0 --with pyyaml==6.0.2 python ../docs/handoff/ai-assistant/bin0/run_bin0.py --target hermes --set main --container bin0-run --model openai-codex/gpt-5.6-terra --keys-file $S/keys.json > out/main.tsv 2> out/main.err`。続けて `--set k4`・`--set k8`。決まり帳つきで比べるときは `--rules docs/handoff/secretary-rulebook/bin2/dummy-rules.json`。
 7. **K6（メモリ）**: 台本を流している間、別の端末で `timeout 600 docker stats bin0-run --format '{{.MemUsage}}'`（約 2 秒おきに出る）を取り、最大を記録する。10 秒おきの代わりに 2 秒おきで測る（便0-A で確かめた形）。
 8. **K7（残らない）**: 頼みの文は 1 行 1 件のファイル（空行なし）にして容器の外に置く。`run_bin0.py --set k7count --label <名前> --volume bin0-data --texts <ファイル>`（起点・止めた直後・各部屋の詰め直しの後・起こした後）と、`--set k7judge --base <起点> --after <後>`。（`grep -rIl` の形は使わない。`-I` では state.db を読み飛ばす: out/raw/b8-k7.txt）
 9. **今の秘書**（同じ日・本番を読む日の同意票のあと）: `--target secretary --url <秘書の URL> --model <今の model>`。
 10. **後片付けの③〜⑤**は `--set compact`（止める・部屋ごとの詰め直し・起こす。各段の後に k7count）。
-11. **最初の対照**は手順書 card-bin0b-r8.md の 5。
+11. **最初の対照**は手順書 card-bin0b-r9.md の 5。
 12. **後片付け**: `docker rm -f bin0-run`・`docker volume rm bin0-data`・`/tmp/bin0-secrets/` の鍵のファイルを消す（消す前に PO の確認）。
 
 ## 便0-B の最初に確かめる（便0-A では未確認）

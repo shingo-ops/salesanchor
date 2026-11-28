@@ -1,0 +1,10 @@
+== after-stop
+k7=OK
+== after-optimize-coordinator
+k7=OK
+== after-optimize-calendar
+k7=OK
+== after-optimize-invoice
+k7=OK
+== after-start
+k7=OK

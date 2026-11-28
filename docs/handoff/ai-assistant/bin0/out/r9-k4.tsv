@@ -1,0 +1,16 @@
+case_id	room	progress	tool_runs	deleted	http_status
+t1	coordinator	0	0	1	200
+t2	coordinator	0	0	1	200
+t3	coordinator	0	0	1	200
+t4	coordinator	0	0	1	200
+t5	coordinator	0	0	1	200
+t6	calendar	0	0	1	200
+t7	calendar	0	0	1	200
+t8	calendar	0	0	1	200
+t9	calendar	0	0	1	200
+t10	calendar	0	0	1	200
+t11	invoice	0	0	1	200
+t12	invoice	0	0	1	200
+t13	invoice	0	0	1	200
+t14	invoice	0	0	1	200
+t15	invoice	0	0	1	200
