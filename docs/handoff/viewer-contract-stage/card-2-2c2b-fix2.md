@@ -28,7 +28,7 @@
 | 5 | 対象外（入力の決まり・表・画面・PDF の描き方・呼び出し元・旧来の表の道）を書いた | ○ |
 | 6 | 画面の文字の変更なし（t() の対象なし） | ○ |
 | 7 | 新しい置き場所を作らない（name_en・dial_code は既存の public の表） | ○ |
-| 8 | 試験のコマンドは今のリポジトリにある（pytest） | ○ |
+| 8 | 試験のコマンドは今のリポジトリにある（pytest）。Python 3.12 の venv で流す（py312-guard。先例: docs/handoff/auth-new-device-approval/stageW-card.md:163〜:164） | ○ |
 | 9 | 停止の条件を §4 に書いた | ○ |
 | 10 | 報告の形を §5 に書いた | ○ |
 
@@ -207,12 +207,16 @@ cd ~/worktrees/salesanchor/release-viewer-contract-bin2-2c2b-fix2 && grep -rn 'f
 4. 試験。
 
 ```
-cd ~/worktrees/salesanchor/release-viewer-contract-bin2-2c2b-fix2/backend && python3 --version
-cd ~/worktrees/salesanchor/release-viewer-contract-bin2-2c2b-fix2/backend && pip install -q -r requirements.txt -r requirements-dev.txt 2>&1 | tail -3
-cd ~/worktrees/salesanchor/release-viewer-contract-bin2-2c2b-fix2/backend && python3 -m pytest tests/test_issuer.py -q 2>&1 | tail -15
-cd ~/worktrees/salesanchor/release-viewer-contract-bin2-2c2b-fix2/backend && python3 -m pytest tests/test_invoice_draft_shipping.py tests/test_invoices.py -q 2>&1 | tail -15
-cd ~/worktrees/salesanchor/release-viewer-contract-bin2-2c2b-fix2/backend && ruff check app/ 2>&1 | tail -10
+cd ~/worktrees/salesanchor/release-viewer-contract-bin2-2c2b-fix2/backend && python3.12 --version
+cd ~/worktrees/salesanchor/release-viewer-contract-bin2-2c2b-fix2/backend && python3.12 -m venv /tmp/fix2-venv
+cd ~/worktrees/salesanchor/release-viewer-contract-bin2-2c2b-fix2/backend && /tmp/fix2-venv/bin/pip install -q -r requirements.txt -r requirements-dev.txt 2>&1 | tail -3
+cd ~/worktrees/salesanchor/release-viewer-contract-bin2-2c2b-fix2/backend && /tmp/fix2-venv/bin/python -m pytest tests/test_issuer.py -q 2>&1 | tail -15
+cd ~/worktrees/salesanchor/release-viewer-contract-bin2-2c2b-fix2/backend && /tmp/fix2-venv/bin/python -m pytest tests/test_invoice_draft_shipping.py tests/test_invoices.py -q 2>&1 | tail -15
+cd ~/worktrees/salesanchor/release-viewer-contract-bin2-2c2b-fix2/backend && /tmp/fix2-venv/bin/ruff check app/ 2>&1 | tail -10
 ```
+
+- 本番と同じ Python 3.12 の場所（venv）を /tmp/fix2-venv に作り、その中の pip・python・ruff だけを使う（見張り py312-guard の決まり。2026-11-28 の1回目はこの手順が無く、手順4で止まった）。
+- `python3.12 --version` が 3.12 でない・見つからないときは停止する（§4）。
 
 期待: pytest は failed 0・error 0。ruff は違反なし。
 
@@ -241,6 +245,7 @@ cd ~/worktrees/salesanchor/release-viewer-contract-bin2-2c2b-fix2 && git log --o
 - 手順1の is-ancestor が 0 でない。
 - §0-3 の数が1つでも違う。
 - §2 の「変更前」の文字列が見つからない、または2か所以上に当たる。
+- `python3.12` が見つからない、または venv の作成か pip install が失敗する。
 - pytest に failed か error がある（既存の試験が落ちたときも、直さずに生のまま報告する）。
 - 試験の DB（SQLite）で `pr.name_en` か `co.dial_code` が無いと言われる。
 - ruff が違反を出す。

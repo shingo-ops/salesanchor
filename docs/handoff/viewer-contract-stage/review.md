@@ -403,3 +403,9 @@
 - 照合: 基準 045abb209 の写しで §0-3 の P1〜P6 を数えた（114・352・1・1・1・0）。get_issuer を呼ぶのは invoices.py の3か所だけ。format_issuer_address を呼ぶのは issuer.py:95 だけ。name_en・dial_code は NOT NULL（移行のファイルの行で確かめた）。本番の値は Japan・+81・Aichi（読み取り専用の鍵）。card-lint は違反 0（L24 の長い行の警告だけ）。
 - 限界1: 本番の見積書で英語の住所が出たかは、反映のあと海外用を入れて Opus が Chrome で見るまで分からない。
 - 限界2: 海外用に日本語の番地を入れた会社では、英語の順に日本語が並ぶ。今、本番で海外用の行を持つ会社は無い。
+
+## 2026-11-28 便2-2c2b 直し2 の指示書の直し（設計担当 Opus。独立した審査ではない）
+- 起きたこと: クラウドの1回目（05:27 UTC 開始）は、手順1〜3（場所づくり・§0-3 の数 114・352・1・1・1・0 の一致・2ファイルの編集）まで進んだ。手順4の `pip install` が見張り py312-guard に止められて BLOCKED で終わった。環境の python3 は 3.11.18 だった。commit・push はしていない。
+- 原因: 指示書の手順4に、本番と同じ Python 3.12 の venv を作る手順を入れ忘れた（先例 docs/handoff/auth-new-device-approval/stageW-card.md:163〜:164 にある手順を写さなかった）。
+- 直したこと: 手順4を `python3.12 -m venv /tmp/fix2-venv` と、その中の pip・python・ruff で流す形にした。§4 に「python3.12 が無い・venv か pip が失敗したら停止」を足した。§0 #8 に先例を書いた。§1・§2・§0-3 は変えていない。
+- 照合: card-lint は exit 0（L24 の警告だけ）。
