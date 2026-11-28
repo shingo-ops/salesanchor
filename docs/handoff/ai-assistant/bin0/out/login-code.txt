@@ -1,3 +1,1 @@
-https://auth.openai.com/codex/device
-75KU-3PUE0
-2026-11-28T05:22:11Z 有効 900 秒（calendar の部屋）
+使用済み（2026-11-28T05:36:22Z）
