@@ -333,6 +333,57 @@ final class RunLogger {
         append(context, json);
     }
 
+    /**
+     * 使用中で見送った（defer_in_use）ときに呼ぶ（design.md追補 2026-11-28 その2「使用中は
+     * 短く見送る（画面の取り合いを減らす）」、PO決定。{@link RunScheduler#onAlarmFired}参照）。
+     * {@link #logTriggerDropped}と同じ「runIdに紐づかない単発行」扱い。メッセージ本文は
+     * 一切含めない。
+     *
+     * @param triggerLabel {@link RunScheduler#labelFor}の日本語ラベル（"通知"/"補完"/"再試行"）
+     * @param rearmedAtMs 再武装した発火予定時刻（絶対epoch ms）。補完（再武装しない）はnull
+     * @param deferredSinceMs 初回見送りからの経過ms
+     */
+    static void logDeferInUse(Context context, String triggerLabel, Long rearmedAtMs, long deferredSinceMs) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("at", formatIso8601(System.currentTimeMillis()));
+            json.put("flow", "scheduler");
+            json.put("phase", "defer_in_use");
+            json.put("trigger", triggerLabel == null ? "" : triggerLabel);
+            if (rearmedAtMs != null) {
+                json.put("rearmedAt", formatIso8601(rearmedAtMs.longValue()));
+            }
+            json.put("deferredSinceMs", deferredSinceMs);
+        } catch (JSONException e) {
+            Log.w(TAG, "run log defer in use build failed: " + e);
+            return;
+        }
+        append(context, json);
+    }
+
+    /**
+     * 使用中の見送りの上限（{@link RunScheduler#DEFER_MAX_MS}）に達し、見送らず強行した
+     * （forced_in_use）ときに呼ぶ（design.md追補 2026-11-28 その2、同上）。{@link
+     * #logTriggerDropped}と同じ「runIdに紐づかない単発行」扱い。
+     *
+     * @param triggerLabel {@link RunScheduler#labelFor}の日本語ラベル
+     * @param deferredMs 待った合計ms
+     */
+    static void logForcedInUse(Context context, String triggerLabel, long deferredMs) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("at", formatIso8601(System.currentTimeMillis()));
+            json.put("flow", "scheduler");
+            json.put("phase", "forced_in_use");
+            json.put("trigger", triggerLabel == null ? "" : triggerLabel);
+            json.put("deferredMs", deferredMs);
+        } catch (JSONException e) {
+            Log.w(TAG, "run log forced in use build failed: " + e);
+            return;
+        }
+        append(context, json);
+    }
+
     private static void append(Context context, JSONObject json) {
         try {
             File dir = LineNotifyListenerService.resolveStorageDir(context);

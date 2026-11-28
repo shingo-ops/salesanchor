@@ -1,6 +1,7 @@
 package jp.salesanchor.lineexport;
 
 import android.app.AlarmManager;
+import android.app.KeyguardManager;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -97,6 +98,21 @@ final class RunScheduler {
      * 実機2026-11-26で確認した48分の空振り（予約4回・実行0回）を踏まえた値。
      */
     static final long STALE_FIRE_THRESHOLD_MS = 120L * 1000L;
+
+    /**
+     * 使用中は短く見送る（design.md追補 2026-11-28 その2「使用中は短く見送る（画面の
+     * 取り合いを減らす）」、PO決定）。見送れる上限。これを超えたら見送らず強行する
+     * （強行した回は遮断しない。{@link UnlockAccessibilityService#requestRunAll(Context, String,
+     * boolean)}参照）。
+     */
+    static final long DEFER_MAX_MS = 10L * 60L * 1000L;
+    /** 使用中の見送りを再確認する間隔（通知・再試行のみ。補完は再武装しない）。 */
+    static final long DEFER_RECHECK_MS = 60L * 1000L;
+    /**
+     * この仕組み全体を止める定数（{@link MaintenanceChannel#SELF_RECOVERY_ENABLED}と同じ
+     * 作法）。falseにすると判定ごと素通しし、旧挙動（使用中でも即実行）に戻る。
+     */
+    static final boolean DEFER_WHILE_IN_USE_ENABLED = true;
 
     static final String EXTRA_TRIGGER = "trigger";
 
@@ -322,13 +338,68 @@ final class RunScheduler {
             }
         }
 
+        // 使用中は短く見送る（design.md追補 2026-11-28 その2「使用中は短く見送る（画面の
+        // 取り合いを減らす）」、PO決定）。床の判定の直後・fireログの直前に置く。
+        boolean forcedWhileInUse = false;
+        if (DEFER_WHILE_IN_USE_ENABLED && isInUse(context)) {
+            long deferStartedAt = SchedulerStore.getDeferInUseStartedAt(context);
+            if (deferStartedAt <= 0) {
+                // 未設定なら今の時刻を入れる（既に入っていれば上書きしない。引き金をまたいで
+                // 1つを共有する）。
+                deferStartedAt = now;
+                SchedulerStore.setDeferInUseStartedAt(context, deferStartedAt);
+            }
+            long deferredSinceMs = now - deferStartedAt;
+            if (deferredSinceMs < DEFER_MAX_MS) {
+                Long rearmedAtMs = null;
+                if (TRIGGER_NOTIFICATION.equals(triggerType) || TRIGGER_RETRY.equals(triggerType)) {
+                    // 通知・再試行は既存のdefer_floorと同じ流儀で、その引き金自身の要求コードで
+                    // 再武装する。
+                    long recheckAt = now + DEFER_RECHECK_MS;
+                    int requestCode = TRIGGER_NOTIFICATION.equals(triggerType)
+                            ? REQUEST_CODE_NOTIFICATION : REQUEST_CODE_RETRY;
+                    scheduleAt(context, requestCode, recheckAt, triggerType);
+                    if (TRIGGER_NOTIFICATION.equals(triggerType)) {
+                        // defer_floorと同じ理由: 古い予約が残ると次の通知が「予約済みでない」と
+                        // 誤判定して割り込んでしまう。
+                        SchedulerStore.setNotificationReservedAt(context, recheckAt);
+                    }
+                    rearmedAtMs = Long.valueOf(recheckAt);
+                }
+                // 補完は再武装しない: 要求コードを奪うと直前に張った「次回の補完」が消えるため
+                // （次回の補完に任せる）。
+                RunLogger.logDeferInUse(context, labelFor(triggerType), rearmedAtMs, deferredSinceMs);
+                return;
+            }
+            // 上限に達したので見送らず強行する。強行した回は遮断しない
+            // （UnlockAccessibilityService#requestRunAllへforcedWhileInUse=trueを渡す）。
+            forcedWhileInUse = true;
+            RunLogger.logForcedInUse(context, labelFor(triggerType), deferredSinceMs);
+        }
+        // 強行・通常実行のいずれでも、実行に進む時点でクリアする。
+        SchedulerStore.clearDeferInUseStartedAt(context);
+
         if (TRIGGER_NOTIFICATION.equals(triggerType)) {
             cancel(context, REQUEST_CODE_NOTIFICATION, TRIGGER_NOTIFICATION);
             SchedulerStore.clearNotificationReservedAt(context);
         }
         RunLogger.logSchedulerEvent(context, "fire", labelFor(triggerType), null, null);
 
-        UnlockAccessibilityService.requestRunAll(context, labelFor(triggerType));
+        UnlockAccessibilityService.requestRunAll(context, labelFor(triggerType), forcedWhileInUse);
+    }
+
+    /**
+     * 利用者が使用中かどうかの判定（design.md追補 2026-11-28 その2）。画面ON
+     * （{@link PowerManager#isInteractive()}）かつ非施錠（{@link
+     * KeyguardManager#isKeyguardLocked()}）のときだけ使用中とみなす。画面ONでも施錠中
+     * （実測2%・ポケット等）は使用中ではない（従来どおり実行する）。
+     */
+    private static boolean isInUse(Context context) {
+        PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+        KeyguardManager km = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
+        boolean interactive = pm != null && pm.isInteractive();
+        boolean locked = km != null && km.isKeyguardLocked();
+        return interactive && !locked;
     }
 
     /** 結果通知の本文に出す引き金の日本語ラベル（診断用）。 */

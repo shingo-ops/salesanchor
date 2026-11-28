@@ -1207,3 +1207,54 @@ PR #5811 が `build.sh` に入れた刻印（`BuildStamp.java` を生成して `
 ### ③変えていないもの
 
 `postFailureNotification` の既存呼び出し、`scheduleRetryAfterFailure`／`requestDiagWindows` の中身、既存の各メソッドのそれ以外の挙動（見送り・床判定・施錠タイミング等）はいずれも変更していない。版は `versionCode` 27→28、`versionName` 0.24.0-stage3→0.25.0-stage3 に上げた（在庫中の他PRとの衝突がないことを確認済み）。
+
+## 追補 2026-11-28 その2 使用中は短く見送る（画面の取り合いを減らす）
+
+### ①実測した事実（一次情報・再測不要）
+
+端末の実行ログ（`/sdcard/Download/sa-line-notify/run-*.jsonl`）直近5日 523回と `dumpsys usagestats`／`dumpsys power` から:
+
+- **1日105回**実行し、1回の画面占有は中央値 **10.5秒**（最長20秒）。合計 **1日18.8分**。
+- 契機の内訳は 通知82%／補完15%／再試行2%／手動・外部2%。実行間隔は中央値6分で、**44%が5分未満の連続**。
+- 実行開始時の画面状態（`unlock` 終了行の `screenOnAtStart`／`keyguardAtStart`・516回）は **画面ON＋解錠済み 54%／画面OFF 46%／画面ON＋施錠中 2%**。
+- 「画面ON＋解錠済み」が**アプリ自身が点けた画面の残り**ではないことを確認した: 直前の実行から2分以内に始まった回は2回（1%）だけ。さらに 14時台の実測で画面を点けていた持ち主は `SCREEN_BRIGHT_WAKE_LOCK ws=WorkSource{com.google.android.youtube}`＝**利用者本人の操作**だった。よって **1日およそ50回は人の操作中の割り込み**。
+- 画面がついている一区切りの長さ（`usagestats` の SCREEN_INTERACTIVE/NON_INTERACTIVE 17区間）は **中央値0.3分・75%点0.8分・76%が5分以内**（最長83分）。
+- 現状の作りは「施錠されていなければ即実行（PIN入力は飛ばす）」で、遮断モードの覆いは常時ON（全画面・タップを飲み込む）。
+
+### ②PO決定の変更（2026-11-28 GO）
+
+| | 内容 |
+|---|---|
+| 旧（2026-10-10） | 使用中でも即実行する。中断は受け入れる |
+| **新** | **使用中は最大10分まで見送る。10分を超えたら強行するが、そのときは遮断しない** |
+
+根拠: 割り込みが1日およそ50回ある一方、画面がついている一区切りは中央値0.3分・76%が5分以内。**短く待つだけでほとんどの割り込みを避けられ、取り込みの遅れは多くの場合1分未満**で済む。「回数自体を減らす」案（床3分→10分で1日105回→55回）は今回採らない: 減るのは夜間の無害な実行も含むため、同じ遅れの代償に対する見返りが小さい。
+
+### ③変えた後の作り
+
+- **使用中の判定**: `PowerManager.isInteractive()==true` かつ `KeyguardManager.isKeyguardLocked()==false`。場所は `RunScheduler.onAlarmFired()` の床（`FLOOR_INTERVAL_MS`）判定の**直後**・`fire` を書く**直前**。画面ONでも施錠中（ポケット等・実測2%）は従来どおり実行する。
+- **見送りの再確認**:
+  - 通知・再試行は既存 `defer_floor` と同じ流儀で、**同じ要求コード**で `now + DEFER_RECHECK_MS`（60秒）に再武装する。通知のときは `SchedulerStore.setNotificationReservedAt` も同じ時刻に更新する（床と同じ理由＝古い予約が残ると次の通知が「予約済みでない」と誤判定して割り込む）。
+  - **補完は再武装しない**。要求コードを奪うと直前に張った「次回の補完」が消えるため。次回の補完（コア時間帯30分／オフピーク60分）に任せる。補完は通知を取りこぼしたときの保険であり、鮮度の担保は通知側の上限10分が担う。
+- **上限（強行）**: 初回の見送り時刻を `SchedulerStore` の `deferInUseStartedAt` に記録する（既に入っていれば更新しない）。`now - deferInUseStartedAt >= DEFER_MAX_MS`（10分）なら見送らずに実行する。実行に進んだ時点でクリアする。この時刻は**引き金をまたいで1つ**を共有する（通知で見送り続けて10分たてば、次に来た補完でも強行になる）。
+- **強行した回は遮断しない**: `requestRunAll(Context, String, boolean forcedWhileInUse)` を追加し、`startUnlockFlow`→`LineExportFlow` まで引き渡す。`LineExportFlow` の `overlayBlocking` は `armRetryOnFailure && !forcedWhileInUse` とする。既存の1引数・2引数の入口は `forcedWhileInUse=false` のまま（従来どおり遮断する）。
+- **対象外**: 手動（`requestExport`／`requestRun`）と外部（`requestRunAll(Context)`＝RUN_ALL）は見送らない（人が明示的に出した要求のため）。読み取り専用の診断口 `requestDiagWindows` も無変更。
+- **無効化スイッチ**: `DEFER_WHILE_IN_USE_ENABLED`（既定 true）。false で判定ごと素通しし旧挙動に戻る（`MaintenanceChannel.SELF_RECOVERY_ENABLED` と同じ作法）。
+
+### ④計測項目
+
+- `defer_in_use`（`flow:"scheduler"`／`phase:"defer_in_use"`）: 見送った回。`trigger`（通知/補完/再試行）・再武装した時刻（補完は null）・`deferredSinceMs`（初回見送りからの経過）。
+- `forced_in_use`（同 `phase`）: 上限で強行した回。`deferredMs`（待った合計）。
+- 既存の `overlayBlocking`（export 終了行）で「強行時に遮断を外せたか」を確認できる。
+- 効果の読み方: `screenOnAtStart==true && keyguardAtStart==false` の回が **1日およそ50回**から何回に減ったか／`defer_in_use` の件数／`forced_in_use` の割合。
+
+### ⑤変えていないもの
+
+床3分（`FLOOR_INTERVAL_MS`）・通知デバウンス30秒・補完の間隔・再試行（5分・最大2回）・施錠の方針（使用中に起動した回は施錠しない）・通常実行の遮断モード（今までどおり遮断する）・覆いの自動解除60秒・PIN入力の手順・押し直し（`clickWithRetry`）。版は `versionCode` 28→29、`versionName` 0.25.0-stage3→0.26.0-stage3。
+
+### ⑥実機で確認すること（投入後）
+
+1. 画面を使っている最中に通知を起こし、`defer_in_use` が出て**画面が奪われない**こと
+2. 画面を消すと60秒以内に実行され、成功すること
+3. 10分以上使い続けたとき `forced_in_use` が出て、その回の `overlayBlocking` が **false** であること
+4. 1日分の記録で「使用中に始まった回」が投入前（約50回/日）から減ったこと
