@@ -502,7 +502,7 @@
 
 ### 15-9. 設計審査（同じ AI による自己審査・2026-11-28）
 - 判定: APPROVE（成功条件は PO 承認済み）。
-- 実物との照合: origin/main 702e1767f で `calendar_service.py:1013-1052`・`:1400-1462`・`:1737-1756`・`:1873`・`:1930-1938`、`google_calendar.py:492-573`、`google_webhook.py:234-336` を読んだ。`get_instance` の呼び元は `calendar_service.py:1227`・`:1446` の 2 つ（引数を足すだけで、どちらも変わらない）。
+- 実物との照合: origin/main 702e1767f で `backend/app/services/calendar_service.py:1013-1052`・`:1400-1462`・`:1737-1756`・`:1873`・`:1930-1938`、`backend/app/services/google_calendar.py:492-573`、`backend/app/services/google_webhook.py:234-336` を読んだ。`get_instance` の呼び元は `backend/app/services/calendar_service.py:1227`・`:1446` の 2 つ（引数を足すだけで、どちらも変わらない）。
 - DB の決まりとの照らし合わせ（`backend/app/services/tenant.py`・`migrations/078_create_calendar_events_tenant.sql:59-60`）:
 
 | 書き込み | 結果 | 根拠 |
