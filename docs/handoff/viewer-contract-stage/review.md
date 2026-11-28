@@ -397,7 +397,7 @@
 
 ## 2026-11-28 便2-2c2b 直し2 の指示書（設計担当 Opus の自己審査。独立した審査ではない）
 
-判定: APPROVE（自己審査）。マージ前に審査役 Opus の審査を受ける。電話の形（card-2-2c2b-fix2.md D3）と実装の開始は PO の答え待ち。
+判定: APPROVE（自己審査）。マージ前に審査役 Opus の審査を受ける。電話の形（card-2-2c2b-fix2.md D3）と実装の開始は、PO 2026-11-28「1」（「+81 9060727767」と出す。この答えで作り始める）で決まった。審査役 Opus は f0c9c1006 で APPROVE（低い指摘3件は 7e3ccbbdc で直した）。
 - きっかけ: 2026-11-28 に本番で国内用を入れた。今の組み立て（issuer.py:35〜:39）では、海外用に英語の番地を入れると見積書に「〒444-2141 愛知県Okazaki8-312 Ryokuyoudai, Kuwabara」と出る。PO 2026-11-28「1」で、海外用の書類では英語名の都道府県と英語の順に直す。
 - 決めたこと（design.md §3-4e・card の D1〜D6）: 書類の文字の組み立てだけを変える。表・入力の決まり・画面は変えない。都道府県の英語名と国番号は、すでにある public.prefectures.name_en と public.countries.dial_code から読む。新しい置き場所は作らない。
 - 照合: 基準 045abb209 の写しで §0-3 の P1〜P6 を数えた（114・352・1・1・1・0）。get_issuer を呼ぶのは invoices.py の3か所だけ。format_issuer_address を呼ぶのは issuer.py:95 だけ。name_en・dial_code は NOT NULL（移行のファイルの行で確かめた）。本番の値は Japan・+81・Aichi（読み取り専用の鍵）。card-lint は違反 0（L24 の長い行の警告だけ）。
