@@ -152,3 +152,17 @@
 
 - このため、主な会社の51社のうち48社は自動で決まり、すべて海外向けになる。3社は決められない。
 - §13 の「本番で国が空の取引先が何件あるかは、まだ数えていない」は、この節で数えた。
+
+## 15. 海外用の書類に載る日本の会社の住所と電話（2026-11-28。基準 origin/main 045abb209。生出力 /tmp/CC報告ファイル/fix2-recon-raw.txt・fix2-recon-2.txt・fix2-recon-3.txt・overseas-rules.txt）
+
+- 住所の並べ方は backend/app/services/issuer.py:30〜:41 の format_issuer_address の1か所だけ。国が JP なら地域（国内用・海外用）に関係なく「〒」＋都道府県の日本語名＋市区町村＋番地の順（:35〜:39）。JP 以外は「番地, 建物, 市, 州 郵便番号, 国名」の順（:40〜:41）。
+- 都道府県名は get_issuer（backend/app/services/issuer.py:71〜:114）が `pr.name_ja AS prefecture_name` だけを読む（:81）。name_en は読んでいない。国名は `co.name AS country_name`（:81）。
+- 電話は `"phone": row["phone"] or ""`（:96）で、保存した数字のまま返す。PDF は `TEL: {tenant_phone}` で出す（backend/app/services/invoice_renderer.py:295〜:296）。住所は 80 字で切る（同 :292）。
+- 入力の決まり（backend/app/services/issuer_rules.py:83〜:93）: 国が JP の行は、海外用でも郵便番号7桁・都道府県必須・州は空・電話は数字10〜11桁。そのため海外用に「+81」を入れることはできない。表の CHECK も同じ（migrations/20261112_160000_create_tenant_issuer_and_payment_tables.sql:39〜:67）。
+- get_issuer を呼ぶのは backend/app/routers/invoices.py:1212・:1260（請求書。地域が空なら overseas）・:1393（見積書。常に overseas）の3か所だけ。format_issuer_address を呼ぶのは issuer.py:95 の1か所だけ（backend/app 全体で定義と合わせて2行）。
+- public.prefectures の name_en は NOT NULL（migrations/20261112_150000_create_viewer_contract_public_tables.sql:13）。public.countries の dial_code は NOT NULL（migrations/20260621_010000_create_countries_master.sql:9）。
+- 本番の値（2026-11-28。読み取り専用の鍵）: countries の JP は name=Japan・dial_code=+81。prefectures の 23 は name_ja=愛知県・name_en=Aichi。tenant_001 の発行元の表は国内用の1行だけで、海外用の行はまだ無い。
+- 今のまま海外用に英語の番地を入れると、見積書には「〒444-2141 愛知県Okazaki8-312 Ryokuyoudai, Kuwabara」と出る（:37〜:38 の組み立てに当てはめた）。
+- 正しい英語の住所の手本は LP の lp/src/pages/privacy.astro:36・terms.astro:345 にある「8-312 Ryokuyoudai, Kuwabara, Okazaki, Aichi 444-2141, Japan」と「Phone: +81 90-6072-7767」。
+- 試験: backend/tests/test_issuer.py:154〜:164 が並べ方の単体、:204〜:256 が DB を通した読み方。国名と都道府県名は試験に書かず、seed（docs/handoff/viewer-contract-stage/data/prefectures.sql と frontend/src/constants/countries.ts）から読む決まり（同ファイル冒頭の説明）。
+- 既存の ADR の検索: `git grep -il "issuer\|発行元" docs/adr/` で当たるのは ADR-1061 だけ。英語の住所の並べ方を決めた ADR は無い。
