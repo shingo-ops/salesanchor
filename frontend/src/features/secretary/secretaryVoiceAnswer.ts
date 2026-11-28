@@ -4,7 +4,7 @@
  * この中に日本語の語は書かない。
  */
 
-export type YesNo = "yes" | "no" | "unknown";
+export type YesNo = "yes" | "yesMore" | "no" | "unknown";
 
 /** NFKC にして英字を小文字にする（句読点・空白はそのまま） */
 function fold(s: string): string {
@@ -56,11 +56,27 @@ function matchesAtStart(p: Prepared, word: string): boolean {
   return w !== "" && p.squashed.startsWith(w);
 }
 
-/** 否定を先に見る。否定が無く、文の頭が肯定の語なら yes。それ以外は unknown */
+/** はい の語を文の頭から（長い語から順に・取り除けなくなるまで）取り除いた残りが空か */
+function onlyYesWords(p: Prepared, words: string[]): boolean {
+  const forms = words
+    .map((w) => squash(fold(w)))
+    .filter((w) => w !== "")
+    .sort((a, b) => b.length - a.length);
+  let rest = p.squashed;
+  for (;;) {
+    const hit = forms.find((w) => rest.startsWith(w));
+    if (hit === undefined) break;
+    rest = rest.slice(hit.length);
+  }
+  return rest === "";
+}
+
+/** 否定を先に見る。否定が無く、文の頭が肯定の語なら、残りが無ければ yes・あれば yesMore。それ以外は unknown */
 export function judgeYesNo(text: string, yesWords: string[], noWords: string[]): YesNo {
   const p = prepare(text);
   const clean = (words: string[]) => words.map((w) => fold(w).trim()).filter((w) => w !== "");
   if (clean(noWords).some((w) => matchesAnywhere(p, w))) return "no";
-  if (clean(yesWords).some((w) => matchesAtStart(p, w))) return "yes";
+  const yes = clean(yesWords);
+  if (yes.some((w) => matchesAtStart(p, w))) return onlyYesWords(p, yes) ? "yes" : "yesMore";
   return "unknown";
 }

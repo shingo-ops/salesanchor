@@ -256,7 +256,7 @@ jobs:
           SKIP_REAL_LLM_TESTS: "1"
           GEMINI_API_KEY: ""
         run: |
-          pytest -q --tb=short
+          pytest -q --tb=short --durations=30
 
       # Phase 1-E F3-S2 v2 で test_rls_tenant_meta_config.py の fixture を修正後、
       # RLS テストを有効化する（services.postgres は workflow に既に組み込み済）。

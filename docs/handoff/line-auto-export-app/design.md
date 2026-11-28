@@ -177,7 +177,7 @@ javac `--release 8` → dalvik-exchange で classes.dex → aapt でリソース
 3. 「記録用ストレージ権限を許可」ボタンで `WRITE_EXTERNAL_STORAGE` を許可（Android 10+ではスコープドストレージの影響で `Download/` 配下への書き込みが制限される可能性があり未検証＝下記「未対応事項」）。
 4. 設定画面の対象グループ欄を確認・保存（既定は `WeGo売ります掲示板グループ`）。
 5. 対象グループ宛にLINEメッセージを送ってもらい、通知が届いた後に設定画面へ戻って「記録件数」「最終記録」「記録先」が更新されるか確認。
-6. `adb shell run-as jp.salesanchor.lineexport ...` またはファイルマネージャで `Download/sa-line-notify/raw-YYYYMMDD.jsonl` と `talk-YYYYMMDD.txt` の中身を確認し、本文・改行・絵文字が欠落なく入っているか、`talk-*.txt` が `android_parser.py` でパースできる形式になっているかを確認する。
+6. `adb shell run-as jp.salesanchor.lineexport ...` またはファイルマネージャで `Download/sa-line-notify/raw-YYYYMMDD.jsonl` と `talk-YYYYMMDD.txt` の中身を確認し、本文・改行・絵文字が欠落なく入っているか、`talk-*.txt` が `tools/termux-line-import/android_parser.py` でパースできる形式になっているかを確認する。
 
 ### 未対応・不明点
 
@@ -278,13 +278,13 @@ uses-implied-permission: name='android.permission.READ_EXTERNAL_STORAGE' reason=
 
 1. **ADB版はLINEの要素をすべてノードのテキストで特定している**。`/root/line-auto-export/flow.sh:52,54,57,60,64` の `tap_by`/`find_scroll` に渡す正規表現は
    `text="WeGo売ります・BOX`（ホームのショートカット、前方一致）／`content-desc="Menu ボタン"`／`text="設定"`／`text="トーク履歴を送信"`／`text="Termux"`。
-   座標は `tap_by()` が `uiautomator dump` の `bounds` からその場で計算している（`flow.sh:19,23`）＝固定座標ではない。
+   座標は `tap_by()` が `uiautomator dump` の `bounds` からその場で計算している（`tools/line-auto-export/flow.sh:19,23`）＝固定座標ではない。
    `uiautomator dump` が読むのは **AccessibilityService が読むのと同じノードツリー**であり、この経路は本番で 2026-10-07 に44回成功している。
    → **LINEの各画面のノードは取得できると実証済み**。アプリ側は `ACTION_CLICK`（クリック可能な祖先へ委譲）で同じ操作ができ、座標計算が不要になるぶん ADB版より堅い。
 2. **例外が1つある**: Termuxの保存ダイアログの `EDIT` ボタンは **uiautomator に露出しない**（`/root/line-auto-export/auto-export.sh:13` のコメント、2026-09-17 スクリーンショットで確認）。
    ADB版も固定座標 `EDIT_X=872, EDIT_Y=1237`（画面1080x2340）でタップしている。
    → アプリ側も**この1点だけは座標ジェスチャ**にする（比率 x=0.8074, y=0.5287）。ADB版と同じ脆さであり、悪化はしない。
-3. 送信（salesanchorへのPOST）は Termux内の `client.py` が担い、宛先は固定HTTPS（`client.py:22`）。Wi-Fi/モバイルを区別するコードは1行も無い。
+3. 送信（salesanchorへのPOST）は Termux内の `tools/termux-line-import/client.py` が担い、宛先は固定HTTPS（`tools/termux-line-import/client.py:22`）。Wi-Fi/モバイルを区別するコードは1行も無い。
    → **アプリにINTERNET権限は追加しない**（誤送信の構造的防止を維持）。段階2でもアプリは「LINEのUIを操作してTermuxへ渡す」までを担う。
 
 ### 実装範囲（段階2のみ。スケジューラ・使用中スキップ・再ロックは段階3）
@@ -303,7 +303,7 @@ uses-implied-permission: name='android.permission.READ_EXTERNAL_STORAGE' reason=
 | 9 | 共有シートの到達 | `Termux` のノードが見つかること | `share_sheet` |
 | 10 | `Termux` をクリック | - | `termux_target` |
 | 11 | `EDIT` を**座標タップ**（比率 0.8074, 0.5287） | ダイアログはノードに露出しないため、ウィンドウのクラス名 `TermuxFileReceiverActivity` を **最大5秒**ポーリング（ADB版 auto-export.sh:154 の `seq 1 10`×`sleep 0.5`＝5秒と同値）→ 検出したら**1秒待って**タップ（同:156 の `sleep 1` と同値）。5秒で検出できなくても**タップは行い**、診断に `editクラス未検出` を残す（ADB版はここで失敗扱いにするが、このダイアログはそもそもノードに露出しないため、アプリ側はクラス名が読めないことを失敗とみなさない） | `edit_button` |
-| 12 | 後片付けは**何もしない** | ADB版の BACK×3（flow.sh:75-78）は**本番では実行されない**: `auto-export.sh:143` は `flow.sh 1 keep` と呼び、`flow.sh:73` の `keep` 分岐で後片付けの手前で `exit 0` する。本番は EDIT タップ後、`outbox.sqlite3` の送信結果を最大240秒待ってから HOME+SLEEP する（auto-export.sh:159-170）。**EDITタップ直後にBACKを撃つと保存ダイアログを取り消す恐れがある**ため、段階2では画面をそのまま残す。HOME・再ロックは段階3の範囲 | - |
+| 12 | 後片付けは**何もしない** | ADB版の BACK×3（flow.sh:75-78）は**本番では実行されない**: `tools/line-auto-export/auto-export.sh:143` は `tools/line-auto-export/flow.sh 1 keep` と呼び、`tools/line-auto-export/flow.sh:73` の `keep` 分岐で後片付けの手前で `exit 0` する。本番は EDIT タップ後、`outbox.sqlite3` の送信結果を最大240秒待ってから HOME+SLEEP する（auto-export.sh:159-170）。**EDITタップ直後にBACKを撃つと保存ダイアログを取り消す恐れがある**ため、段階2では画面をそのまま残す。HOME・再ロックは段階3の範囲 | - |
 
 段階名は **ADB版 flow.sh と同じ語**（`shortcut`/`open_chat`/`menu_button`/`open_menu`/`settings_item`/`open_settings`/`export_item`/`share_sheet`）に揃える。
 理由: 既存の `auto-export.log` の失敗履歴（例 2026-10-07 07:03 の `open_settings`）と直接比較できるようにするため。`group_mismatch`・`termux_target`・`edit_button` は段階2で新設。
@@ -901,3 +901,309 @@ watermark（取り込みの起点）は送信が受理されたときだけ進�
 - `RunStatusOverlay`の遮断の作り（「停止」ボタンは削除済みのまま、復活させていない）、`overlayBlocking = armRetryOnFailure`の判定、`lockOnFinish`/`armRetryOnFailure`の分岐、`accessibility_service_config.xml`の`accessibilityEventTypes`、`NodeOps`の既存メソッドの挙動、`RunScheduler`の予約・補完・再試行の仕組み・キーガード判定は、いずれも変更していない。
 
 座標スワイプが遮断中に通るかなど、この追補の範囲外の未確定事項については推測を書かない（上の「未確定事項と検知方法」節のまま、別途判断する）。
+
+## 追補 2026-11-26 電池最適化で後回しにされたことを検知・記録・復旧できる仕組み
+
+対象ADR: ADR-1090（本追補の方針の芯と、記録の保持期間・上限の決定はここに記録した）。
+
+### 起きた事象（実機 2026-11-26）
+
+`run-20261126.jsonl` で 18:09:08 の `export/end success` のあと、LINE の新着通知が 18:36:43・18:43:33・18:47:47・18:53:29 の4回届き `scheduler/reserve`（+30秒）も記録されたのに、`unlock`/`export` が1回も走らなかった（48分の空振り）。アプリのログに理由は出ない。
+
+### 実測した事実（根拠・すべて `adb shell dumpsys` の一次情報）
+
+- 保留中の `*walarm*:jp.salesanchor.lineexport.SCHEDULED_RUN` 2件が **同一の `whenElapsed=2074665196`** に束ねられていた。`origWhen` は 18:39:06 と 18:53:59、`nowELAPSED=2073958167`（18:57:11）＝**発火予定は約19:09（遅れ30分/15分）**。
+- `am get-standby-bucket jp.salesanchor.lineexport` = **40（RARE）**。
+- `dumpsys deviceidle whitelist` に本アプリは**不在**（`com.termux` は在った）。
+- AlarmManager の設定値: `app_standby_window=+1h`・`standby_quota_active=720`・`standby_quota_working=10`・`standby_quota_frequent=2`・**`standby_quota_rare=1`**・`standby_quota_restricted=1`・`min_window=+10m`。
+- 発火した分の履歴に `policyWhenElapsed: app_standby=-57m12s531ms`＝省電力の方針で約57分ずらされた記録が残っていた。
+- アラームは `window=0 exactAllowReason=compat`＝**正確アラームは既に許可されている**。
+
+### 分かったこと（当初案の否定）
+
+- 原因は「正確さ」ではなく **1時間あたりの発火回数の割当**。RARE では1時間に1回しか発火できず、本アプリは1日約90回（約10分おき）動くため、あふれた予約が同一時刻に束ねられる。
+- コードは既に `setExactAndAllowWhileIdle` を使い、失敗時だけ不正確へ落ちる（`tools/line-auto-export-app/src/java/jp/salesanchor/lineexport/RunScheduler.java` の `trySetExactAndAllowWhileIdle`）。`targetSdkVersion` は 24 のため `USE_EXACT_ALARM`（API33向け）は効かない。**よって当初検討した `USE_EXACT_ALARM` の宣言は採用しない。**
+- 効く対処は電池最適化の除外のみ。2026-11-26 に ADB で `dumpsys deviceidle whitelist +jp.salesanchor.lineexport` ＋ `am set-standby-bucket … active` を適用し、区分が 40→**5（EXEMPTED）**になった直後に `scheduler/fire`（trigger=補完）→ 18:57:51 開始・18:58:02 `export/end success`・18:58:11 送信 `accepted`（HTTP 200・32,119バイト・基準 18:07）で**空振り分を回収**した。書き出しは全文＋60分の重なり、サーバは watermark で差分を取るため**遅れてもデータは失われない**。
+
+### 残る弱点と PO 決定
+
+除外は**ユーザー操作・Samsung のスリープ機能・アプリ再インストールで失われ、失われても誰も気づけない**（アプリは「予約した」としか記録しないため）。2026-11-26 に PO から「3点でgo」を受領し、次の3点を実装する。
+
+### 対処1 除外が外れたことに気づいて記録する
+
+`PowerManager#isIgnoringBatteryOptimizations`（API23追加のためリフレクション不要）で現在値を取り、`notifyIfExactModeChanged` と同じ「前回値と比べ、変わったときだけ記録する」作りにする。実装は `RunScheduler#isIgnoringBatteryOptimizations`・`RunScheduler#checkBatteryOptimizationExemptionChanged`（`scheduleAt` の末尾から呼ぶ）・`SchedulerStore#wasLastIgnoringBatteryOptimizations`。記録は `flow=scheduler` / `phase=battery_exemption_changed`。あわせて実行開始の記録に `batteryOptimizationIgnored` を足す（不明なときは項目を出さない＝既存の nullable 項目と同じ扱い）。
+
+### 対処2 空振り（予約したのに発火しない）を記録する
+
+予約時に引き金ごとの発火予定時刻を `SchedulerStore#setScheduledFireAt` に保存し、発火を受けたら `RunScheduler#onAlarmFired` の冒頭で消す。スケジューラの公開入口を通るたびに `checkStaleScheduledFires` が全引き金を確認し、保存値が **120秒（`STALE_FIRE_THRESHOLD_MS`）以上過去**なら `flow=scheduler` / `phase=missed_fire`（`trigger`・`scheduledAt`・`lateByMs`）を1行記録して消す。`cancelAll` では保存値も消す（意図したキャンセルを空振りと誤判定しないため）。`disable()` は `cancelAll` の前に `checkStaleScheduledFires` を呼び、本物の空振りだけ記録してから消す。
+
+### 対処3 設定画面から自分で復旧できるようにする
+
+`AndroidManifest.xml` に `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` を追加し、設定画面に現在の除外状態の表示と `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`（`package:` 付き）を開くボタンを置く。`ActivityNotFoundException` は捕まえて落ちない。文字はすべて `res/values/strings.xml`（`battery_*`）に置き、Java に日本語を直接書かない。`onResume`→`refreshStatus`→`refreshBatteryStatus` の経路があるため、設定画面から戻ると表示が更新される。
+
+### 守ること
+
+- 既存のタイミング（`FLOOR_INTERVAL_MS`・各引き金の間隔）とログの既存項目の意味は変えない。足すだけ。
+- APK の署名鍵は**既存の `build/debug.keystore`（2026-09-17 作成）を使う**。新しい鍵で署名すると上書き更新ができず、消して入れ直す＝PIN・ユーザー補助・通知の権限を失う。2026-11-26 の版は実機の APK と証明書 SHA-256 が一致することを `apksigner verify --print-certs` で確認済み（`c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709`）。
+- `sdk/android-34.jar` は追跡対象外。ビルドする環境ごとに用意する。
+
+### 検証
+
+| 基準 | 検証方法 |
+|---|---|
+| ビルドが通る | `cd tools/line-auto-export-app && bash build.sh` が終了コード0・`out/app-debug.apk` を出す |
+| 上書き更新できる（データ・権限が保たれる） | 新 APK と実機の APK の `apksigner verify --print-certs` の SHA-256 が一致 |
+| 版が上がっている | `aapt dump badging out/app-debug.apk` が `versionCode='23' versionName='0.20.0-stage3'` |
+| 除外が外れたら気づける | 実機で `adb shell dumpsys deviceidle whitelist -jp.salesanchor.lineexport` → 次の予約で `phase=battery_exemption_changed`・`ignoringBatteryOptimizations=false` が記録される |
+| 空振りを記録できる | 同上の状態で予約時刻+120秒以降に入口を通ると `phase=missed_fire` が `lateByMs` 付きで記録される |
+| 既存の集計が壊れない | `jq 'select(.flow=="export" and .phase=="end")'` 等の既存条件がそのまま動く（既存項目を変えていない） |
+
+### 外部・過去事例
+
+- Android の App Standby バケットごとのアラーム割当は端末の `dumpsys alarm` の `standby_quota_*` が正本。本件は推測ではなく当該端末（SC-51G）の実値で確認した。
+- 同種の「省電力で黙って止まる」事象は 2026-10-13 の記録（ユーザー補助サービス未接続時に合図が黙って捨てられる）と同じ系統＝**黙って止まる経路は記録を足して可視化する**という本リポジトリの既往の対処方針に沿う。
+
+### 変えていないもの
+
+`USE_EXACT_ALARM` の宣言（効かないため）、`targetSdkVersion`（24 のまま）、`minSdkVersion`（23 のまま）、アラームの張り方（`setExactAndAllowWhileIdle` のまま）、送信側 `tools/termux-line-import/client.py`、`termux-job-scheduler` の登録。
+
+## 追補 2026-11-27 保守口（無線デバッグ）が切れたらアプリが開き直す
+
+対象ADR: ADR-1092（方針の芯と実測値はここに記録した）。
+
+### 実測した事実（2026-11-27・SC-51G）
+
+- Wi-Fi が切れている間は `adb_wifi_enabled` に 1 を書いても定着しない（直後・10 秒後ともに 0）。Wi-Fi 接続中なら定着する（直後・10 秒後ともに 1）。
+- `adb tcpip 5555` に切り替えると `adb_wifi_enabled` は 0 になる。固定ポートの待ち受けは `[::]:5555`＝全インターフェースで、同一 LAN から到達できる。
+- 原因の切り分け: 連続稼働 24 日（再起動は原因でない）／Samsung 自動ブロッカーは OFF・ブロック実績 0（原因でない）／Wi-Fi の切断は多数（ON:97・OFF:268、`WIFI_DISABLED` 2 回、`MAC_CHANGE` 由来あり）。
+- proot の中の Ubuntu から Android のコマンドは実行できない（`getprop`・`toybox`・`am`・`settings` の 3 方式すべて `Operation not permitted`）。
+- `WRITE_SECURE_SETTINGS` の保護レベルは `development` を含み、`pm grant` で付与できる。
+
+### 対処
+
+アプリに `WRITE_SECURE_SETTINGS` を宣言し、起動時（BOOT_COMPLETED）と毎回の実行時に `adb_wifi_enabled` を確認して 0 なら 1 を書く。Wi-Fi が無い回は定着しないため、次の回に持ち越す（1 日約 70 回動くので Wi-Fi が戻れば数分〜十数分で開き直る）。書き換えるのは `adb_wifi_enabled` の 1 キーだけで、`adb_enabled`（USB デバッグ）には触らない。記録は変化時だけ 1 行。コードの定数で止められるようにする。
+
+### 守ること
+
+- 固定ポート（`adb tcpip`）は常用しない。調査で開いた 5555 は本方式の確認後に閉じ、`adb_enabled` も 0 に戻す。
+- `pm grant` はアプリを削除して入れ直すと消える。入れ替え手順に付与を含める。
+- 端末を信頼できないネットワークで使うときは定数で止める。
+
+### 検証
+
+| 基準 | 検証方法 |
+|---|---|
+| ビルドが通る | `cd tools/line-auto-export-app && bash build.sh` が終了コード 0 |
+| 自動復旧が働く | `settings put global adb_wifi_enabled 0` の後にアプリを 1 回動かすと 1 に戻り、記録が 1 行残る |
+| 他の設定を書かない | 前後で `adb_enabled` の値が変わらない |
+| 既存の集計が壊れない | 既存のログ項目・タイミングを変えていないことを差分で確認 |
+
+### 外部・過去事例
+
+`adb tcpip` と `adb_enabled` の変更は、切替の瞬間に adbd を再起動させて自分の足場（ADB 接続）を壊す。2026-10-13 と 2026-11-27 に実際に起きた。復旧はポート走査（30000-55000・約 60 秒）→ `adb connect` で可能（2026-11-27 は 42181 で復帰）。この経験から足場をアプリ側に移した。
+
+### 変えていないもの
+
+既存のタイミング（`FLOOR_INTERVAL_MS` 等）、既存のログ項目の意味、`adb_enabled`、`targetSdkVersion`（24）、送信側 `tools/termux-line-import/client.py`。
+
+## 追補 2026-11-27 保守口（無線デバッグ）の強制開け直し
+
+対象ADR: ADR-1092 追補（本節と同日・同見出しの追補をADR側にも記録した）。
+
+### 実測した事実（2026-11-27・SC-51G・再測不要）
+
+- 端末 SC-51G / Android 16 / adb は `127.0.0.1:46467` でつながっている（`adb devices` で1台）。
+- アプリは `jp.salesanchor.lineexport` 0.21.0-stage3（2026-11-27 14:38 導入）。`android.permission.WRITE_SECURE_SETTINGS` は `granted=true`。
+- `adb_wifi_enabled`=1、`adb_enabled`=0、`service.adb.tcp.port`=5555（再起動で消える値）。
+- アプリは `targetSdkVersion=24`（旧方式のストレージ）。`WRITE_EXTERNAL_STORAGE` は `granted=true`、`READ_EXTERNAL_STORAGE` は `granted=false`。
+- この開発環境（proot の中の Ubuntu）から `/sdcard/Download/sa-line-notify/` へのファイル作成・削除は成功する（実証済み）。そこに置いたファイルは uid 10342 / group 1023 / 0660 になる。
+- アプリは製品ビルドで `run-as` が使えないため、**アプリ側がそのファイルを読めるか・消せるかは実機検証で確かめる段階**（下記「実機検証手順」参照）。読めない場合に黙らない作りにした（下記「対処」）。
+- 既存実績: `/sdcard/Download/sa-line-notify/run-20261127.jsonl` に `phase=maintenance_channel result=opened` が 14:41 に1件ある。
+
+### 解決したい穴
+
+既存の `MaintenanceChannel.ensureOpen` は `adb_wifi_enabled` が 0 のときだけ 1 を書く。ところが実機では**値が 1 のまま adbd（無線デバッグのサーバー本体）が動いていない**状態が起き、アプリは「1 だから正常」と見て何もせず、人が端末画面で OFF→ON するまで復旧しなかった。値を見るだけでは直らないため、強制的な 1→0→1 の開け閉め（cycle）を行う経路を追加した。
+
+### 対処
+
+1. **起動時は必ず cycle する**。`AlarmReceiver` の BOOT_COMPLETED 経路は `ensureOpen` ではなく `MaintenanceChannel.cycle(context, "boot")` を呼ぶ（既存の構造どおり goAsync や別スレッドへの委譲は無く、同期呼び出しのまま。cycle 内部の約2秒の待ちは BroadcastReceiver の実行時間制限（約10秒）に対して十分に短い）。
+2. **合図ファイルを見たら cycle する**。`RunScheduler.scheduleAt` が `MaintenanceChannel.ensureOpen` を呼ぶ直前に、合図ファイル（ファイル名 `maintenance-open`。拡張子なし。場所は `LineNotifyListenerService.resolveStorageDir` が返すディレクトリ＝`run-*.jsonl` と同じ場所）を `MaintenanceChannel.checkSignalFile` で確認する。
+   **（2026-11-27・検知方式を作り直し。下記「合図検知の作り直し」節参照）** 検知器は `boolean consumed = new File(dir, "maintenance-open").delete();`。`delete()` が `true` を返したときだけ「合図が在って、いま消費した」と確定できるため、**削除してから** `cycle(context, "signal")` を呼ぶ（逆順にすると削除失敗時に同じ合図で毎回 cycle してしまう）。削除が成功した回だけ cycle するため、二重消費が原理的に起きず、旧方式が使っていた識別子（`lastModified`＋`length`）による重複判定は不要になり削除した。
+3. **毎回は cycle しない**。通常の実行予約時（`RunScheduler` の予約）は今までどおり `ensureOpen`（0 のときだけ 1 を書く）のまま。cycle は実行中の ADB 接続を切るため、「起動時」と「合図があったとき」だけに限定する。
+
+`cycle` の手順: `adb_wifi_enabled` に 0 を書く → 約2000ms 待つ → 1 を書く → 読み直す。読み直して 1 なら `cycled_opened`、1 にならなければ `cycled_blocked` として、どちらも変化比較せず毎回記録する（既存の `opened` と同じ考え方＝復旧の実績が残らないと ADR-1092「維持の仕組み」が成り立たない）。Wi-Fi が無い回は1を書いても定着しない（実測。上の追補 2026-11-27 参照）ため、その場合は `cycled_blocked` を記録して終わり、復旧は次回以降の `ensureOpen` に持ち越す。Wi-Fi 状態の判定（新しい権限の追加）は行わない。書き換える設定キーは `adb_wifi_enabled` だけ（ADR-1092 What-4）。`adb_enabled` には絶対に触らない。新しい権限はマニフェストに追加していない。
+
+### 黙らせない（2026-11-27の実機事象を受けて作り直し。下記「合図検知の作り直し」節参照）
+
+合図ファイルの検知を `delete()` の戻り値だけに頼ると、`false` が「合図が無い」のか「消せない（経路が壊れている）」のか区別できない。そこで、まだ経路の健全性を確認できていない間だけ自己試験（`.maintenance-probe` の作成→削除の往復）を行う。両方成功したら `signal_channel_ok` を1回記録して以後は試験せず、どちらかが失敗したら専用の重複判定枠で `signal_probe_failed` を1回だけ記録する（旗は立てず次回また試す）。これが実機検証の判定材料になる。旧 `signal_unreadable`（`canRead()` 前提）は撤去した。
+
+### Opus審査で見つけて直した欠陥（2026-11-27・続きの便。当時の実装に対する記録として残す）
+
+1. **記録があふれる**: `signal_unreadable` の重複判定が `ensureOpen`/`cycle` と共用の枠（`SchedulerStore.getLastMaintenanceChannelResult`）を使っていたため、ディレクトリが読めずかつWi-Fiが無い回に枠の往復が起き、記録が毎回2行出ていた。`SchedulerStore` に専用の枠（`last_signal_unreadable`）を追加して分離した。
+2. **合図を取りこぼす**: 合図ファイルの削除が成功した場合も識別子（`lastModified`+`length`）を保存していたため、次に置いた合図が偶然同じ識別子だと誤って無視していた。削除に成功したときは識別子を消す（保存するのは削除に失敗したときだけ）ように直した。
+
+**この2点の指摘は、下記「合図検知の作り直し」での `canRead()` 門番の撤去により、両方とも前提（`canRead()` 門番・識別子による重複判定）自体が無くなったため、現在のコードには存在しない。** 記録として残す。
+
+### 版番号の衝突と、版名が中身を保証しない事象への対策（2026-11-27）
+
+実機検証を始める前に重大な事象が見つかり、調査の結果**原因が確定した**（経緯は `docs/handoff/line-auto-export-app/review-opus-adr1092.md` の「続き（2026-11-27・版番号の衝突）」節に詳細を記録。ここでは確定した事実と対策のみ記す）。
+
+**確定した事実**: 端末に 2026-11-27 16:48:51 に入ったAPK（`classes.dex` md5 `216bf5c57db4a42f5e392c1c0de7c8d0`）は `dumpsys` 申告上 `versionName=0.22.0-stage3`／`versionCode=25` で、本PRが当初作っていた版と**同じ値**だった。ハッシュ照合の結果、このAPKは別ブランチ `release/line-export-click-retry`（PR #5808・OPEN）のビルドと1バイト単位で同一であることが確定した。PR #5808 は `versionCode=25`／`versionName=0.22.0-stage3` を本PRより先にコミットしており、**2つの独立したPRが同じ版番号を取り合っていた**。版名が偽りだったわけではなく（PR #5808 のビルド自体は版名と中身が一致した正当なビルド）、**版番号だけでは、端末に入っているのがどちらのPRのコードかを識別できない**状態になっていたことが真因だった。
+
+**対応**: 本PRの `versionCode` を 25→26、`versionName` を 0.22.0-stage3→0.23.0-stage3 に上げ、PR #5808 の値と重複しないようにした。再ビルドし、自己検査（下記）が新しい版番号（`0.23.0-stage3`）で `OK` になることを確認した。
+
+**版名が中身を保証しない状態そのものへの対策（`tools/line-auto-export-app/build.sh` の自己検査。引き続き有効）**:
+
+- `AndroidManifest.xml` の `android:versionName` を**唯一の出所**として、ビルドのたびに `BuildStamp.java`（`final class BuildStamp { static final String VERSION_NAME = "..."; }`）を生成する（手で二重管理しない）。
+- ビルドの最後（`classes.dex` 生成直後、`[3b/8]`）に、できあがった `classes.dex` の中にその版名の文字列が実在するかを `grep -a -F` で確認する。**含まれていなければ 0 以外の終了コードでビルドを失敗させる**。
+- 検証: 端末の実際の古い `classes.dex`（上記 md5 `216bf5c5...`）に対して同じ `grep -a -F "0.22.0-stage3"` を実行すると**見つからない**（マッチ0件・終了コード1）。一方、本PRのコミットでビルドした `classes.dex` には現在の版名が1件存在し、自己検査は `OK` で通過する。
+
+**自己検査の限界（過信しないこと）**: 今回の真因は「2つのPRが同じ版番号を使っていた」ことであり、PR #5808 のビルドは自己整合（版名と中身が一致）している。**この自己検査は「1つのビルドの中で版名とコードがずれていないか」しか検出できず、「複数のPR・ブランチ間で版番号が重複していないか」は検出できない。** 版番号の衝突は、ブランチを作る時点・統合前に、他にオープン中のPRが使っている値を確認して避ける運用でしか防げない。
+
+**実機で実際に動いているコードの識別方法（版名を信じない）**: 版名（`dumpsys`の申告）は中身を保証しない。実際に動いているコードを識別するには `classes.dex` の内容を直接確認する。
+
+```bash
+adb shell pm path jp.salesanchor.lineexport   # 実際のAPKパスを確認
+adb pull <上で分かったパス> /tmp/device.apk
+unzip -o /tmp/device.apk classes.dex -d /tmp/device_extract
+strings -a /tmp/device_extract/classes.dex | grep -x "checkSignalFile\|cycle\|maintenance-open\|cycled_opened"
+```
+
+目印の文字列（本PRなら `checkSignalFile`・`cycle`・`maintenance-open`・`cycled_opened`）が出れば、そのPRのコードが実際に動いている証拠になる。
+
+## 追補 2026-11-27 合図検知の作り直し（`canRead()` 門番の撤去）
+
+対象ADR: ADR-1092 追補3（本節と同日・同見出しの追補をADR側にも記録した）。
+
+### 実機で測った事実（一次情報・再測不要）
+
+PR #5811 の成果物（`versionCode=26`／`versionName=0.23.0-stage3`）を2026-11-27 18:24:55に実機へ導入済み。dex照合で `cycle`・`checkSignalFile`・刻印 `0.23.0-stage3` の存在を確認した。
+
+- 導入直後、アプリ自身が `/sdcard/Download/sa-line-notify/run-20261127.jsonl` に次を記録した: `{"at":"2026-11-27T18:24:55+0900","flow":"scheduler","phase":"maintenance_channel","result":"signal_unreadable","adbWifiEnabled":-1,"trigger":"signal"}`。
+- つまり旧 `checkSignalFile` の `!dir.canRead()` が **true** になった。**同じディレクトリに書き込みは成功している**（この記録自体がそこに書かれた）。`resolveStorageDir` は `ensureWritableDir` が通った `/sdcard/Download/sa-line-notify` を返している。
+- 端末の権限は `WRITE_EXTERNAL_STORAGE: granted=true` / **`READ_EXTERNAL_STORAGE: granted=false`**。アプリは `targetSdkVersion=24`（旧方式のストレージ）。
+- `/sdcard/Android/data/jp.salesanchor.lineexport/files` は存在しない（この環境から書けない）ので代替経路にならない。
+
+**結論**: 「書けるのに `canRead()` が false になる」ことが実機で確定した。旧実装は `canRead()`／`isDirectory()` を門番にしていたため、合図ファイルが実際に置かれても常にこの門番で弾かれ、**合図を一度も検知できていなかった**（design.md 上は「未証明」としていたが、実機導入により「機能していない」と確定した）。
+
+### PO の決定
+
+**読み取り権限は増やさない。** 合図の検知に中身の読み取りは不要で、「在るか見て、消す」だけで足りる。削除に必要な書き込み権限は既にある。
+
+### 設計判断（門番の撤去・削除を検知器にする）
+
+- `canRead()`・`isDirectory()` による事前の門番を撤去した。読み取りが拒否される環境ではstat系の戻り値（`isDirectory()`含む）も信頼できないため、門番で弾かずに実際の操作を試す方針に変えた。`dir == null`（`resolveStorageDir` が書き込み先すら解決できない）のときだけ早期returnする。
+- 検知器を `boolean consumed = new File(dir, "maintenance-open").delete();` に変えた。`delete()` が `true` を返したときだけ「合図が在って、いま消費した」と確定できる。**必ず削除してから cycle する**（逆順だと削除失敗時に同じ合図で毎回 cycle してしまう。旧審査の指摘と同種の穴）。
+- この方式により、`lastModified`＋`length` による識別子の重複判定（旧 `SchedulerStore` の signalId まわり）は不要になったため削除した。削除が成功した回だけ cycle するので、二重消費が原理的に起きない。
+- **黙らせない仕組み**: `delete()` が false の「合図が無い」と「消せない（経路が壊れている）」を区別するため、まだ経路の健全性を確認できていない間（`SchedulerStore.isSignalChannelConfirmed` がfalseの間）だけ自己試験を行う。`dir` に試験ファイル（`.maintenance-probe`）を作成→削除の往復を行い、両方成功したら「経路は使える」と記録して旗を立てる（`signal_channel_ok` を1回。以後は試験しない）。どちらかが失敗したら `signal_probe_failed` を専用の重複判定枠（`SchedulerStore.wasSignalProbeFailureRecorded`）で1回だけ記録する（旗は立てず次回また試す）。試験ファイルは後始末する（作成が失敗しても削除を試みる）。
+- `signal_unreadable` という結果名は撤去した（`canRead()` 前提の名前であり、意味が変わるため流用しない）。重複判定の枠は `cycle`/`ensureOpen` の結果枠（`last_maintenance_channel_result`）とは別の専用の枠を使う（過去の審査と同じ理由＝記録があふれないため）。
+
+### Opus審査で見つけて直した欠陥（2026-11-27・合図検知の作り直し便）
+
+**試験ファイルの残骸で「経路が壊れている」と誤報する**: `probeSignalChannel` の成功判定に使う `createNewFile()` は、ファイルが既に在るときもfalseを返す（異常ではない）。試験ファイル（`.maintenance-probe`）を作った直後〜削除する前にアプリの処理が落ちる（省電力による停止・プロセス終了等）と残骸が残り、次回の試験で `createNewFile()`=false・`delete()`=trueとなって、経路は正常なのに `signal_probe_failed` を誤記録してしまう（次の回には確認済みで自己回復するが、その1行を見て「経路が使えない」と誤判断する恐れがある）。**直し方**: 試験の最初に残骸の掃除としての `delete()` を1回入れ（結果は判定に使わない）、`createNewFile()` → 後始末の `delete()` の順で行い、成功判定は後ろ2つだけで行う。`exists()`・`canRead()` 等の読み取り系の判定はここでも使わない（この端末では読み取りが拒否されるため）。
+
+詳細コードは `tools/line-auto-export-app/src/java/jp/salesanchor/lineexport/MaintenanceChannel.java` の `checkSignalFile`／`probeSignalChannel`／`recordSignalProbeFailedIfChanged` 参照。版は `versionCode` 26→27、`versionName` 0.23.0-stage3→0.24.0-stage3 に上げた（在庫中の他PRとの衝突がないことを確認済み。`origin/main` は PR #5808 マージ後 25／0.22.0-stage3）。
+
+### 実機検証手順（PO の承認後に実施。本PRの範囲外）
+
+**前提**: 実機に入れ直す前に、上の自己検査（build.sh [3b/8]）が `OK` で通ったビルド（本PRのコミットでビルドした `out/app-debug.apk`）であることを確認すること。さらに、実機に入れた後は版名の `dumpsys` 申告だけで判断せず、`adb pull` → `strings` の手順で実際にそのPRのコードが動いていることを確認すること（版名は複数PR間で衝突しうるため）。
+
+(a) 合図ファイル（`maintenance-open`）を `/sdcard/Download/sa-line-notify/` に置き、10分以内に `run-YYYYMMDD.jsonl` に `trigger=signal` の `cycled_opened`（または `cycled_blocked`）が出て、`maintenance-open` ファイルが消えていることを確認する（＝削除を検知器にした方式が機能している）。
+(b) 初回（まだ `signal_channel_ok` を記録していない状態）は、上記(a)の実行の中で `signal_channel_ok` が1行出ることを確認する（自己試験が成功し、以後は試験しなくなる旗が立った証拠）。
+(c) `signal_probe_failed` が出た場合は、試験ファイル（`.maintenance-probe`）の作成・削除のいずれかが失敗しており、合図ファイルの削除による検知そのものが使えない可能性があることを意味する。その場合は方式の見直し（別の受け渡し経路への変更等）が必要と判断する。
+
+### 変えていないもの
+
+既存の `ensureOpen` の挙動（0 のときだけ 1 を書く・1 のときは記録もしない・毎回の実行予約時だけに呼ばれる）、既存のタイミング（`FLOOR_INTERVAL_MS` 等）、既存のログ項目の意味、`adb_enabled`、`targetSdkVersion`（24）、送信側 `tools/termux-line-import/client.py`。ビルドは ADR-1090 の7に従い、実機と同じ既存の `build/debug.keystore` で再ビルドした（`apksigner verify --print-certs` の SHA-256 が実機の APK と一致することを確認済み）。
+
+## 追補 2026-11-27 押せなかったら押し直す（一発判定をやめる）
+
+### ①実測した事実
+
+端末の実行ログ `run-*.jsonl` 4,502回を集計した結果、書き出しの失敗123回の内訳は次のとおり:
+
+- `termux_target` **97回**／`menu_button` 9回／`shortcut` 8回 ＝ **待ちも再探索も持たない3段階で114回（93%）**
+- `settings_item` 6回／`export_item` 2回／`open_chat` 1回 ＝ 再試行を持つ段階はほぼ失敗しない
+
+`termux_target` は手順9（`share_sheet`、300msおき最大10秒のポーリング）で「Termux」ノードを**見つけている**（share_sheet の失敗は0回）。にもかかわらず手順10が**保存したノードをそのまま押し、押せなければ即 failure**（旧 `LineExportFlow.java:547-553`）していた。失敗時の所要は実測 **6ミリ秒**＝探し直しも待ちもしていなかった。共有一覧は開いた直後に候補が差し替わるためノード参照が古くなるのが原因と判断した。
+
+### ②変える前の作りと行番号
+
+`shortcut`（旧 `step2ClickShortcut`、旧 `LineExportFlow.java:412-425`）・`menu_button`（旧 `step4ClickMenuButton`、旧 `LineExportFlow.java:467-480`）・`termux_target`（旧 `step10ClickTermux`、旧 `LineExportFlow.java:547-561`）の3段階は、いずれも「1回探す→押す→押せなければ即 `finish(false, stage)`」という一発判定だった。`termux_target` は手順9（`step9WaitShareSheet`）が保存した `termuxNode`（インスタンス変数）をそのまま使っていた。
+
+### ③変えた後の作り
+
+3段階を、共通メソッド `clickWithRetry`/`clickWithRetryStep`（`tools/line-auto-export-app/src/java/jp/salesanchor/lineexport/LineExportFlow.java:849-897`）に置き換えた。新しい定数 `CLICK_RETRY_TIMEOUT_MS = 3000L`（期限3秒）を追加し、刻みは既存の `NODE_WAIT_POLL_MS`（300ms）を流用した（新しい刻みの定数は作らない）。
+
+振る舞い（既存の `waitForNode` と同じ再帰＋`schedule()` の形）:
+
+1. ノードを毎回ゼロから探す（前回の参照は使い回さない）。ただし `termux_target` だけは1回目に限り、手順9が保存した `termuxNode` をそのまま使ってよい（成功時の経路を今と同じに保ち、変更の危険を最小にするため）。押せなかった場合は `termuxNode` を捨て、2回目以降は他の2段階と同じくゼロから探し直す。
+2. 見つかったら `NodeOps.clickNode` で押す。`result.accepted` なら `recordStep(stage)` して次の手順へ進む。
+3. 見つからない・押せなかった場合、期限（3秒）を過ぎていれば `recordStep(stage)` → `finish(false, stage)`。
+4. 期限内なら `schedule(..., NODE_WAIT_POLL_MS, ...)` で 1 から繰り返す。
+
+探し方自体は変えていない: `shortcut`=`NodeOps.findByTextPrefix(service, SHORTCUT_TEXT_PREFIX)`、`menu_button`=`NodeOps.findByDescExact(service, MENU_BUTTON_DESC)`、`termux_target`=`NodeOps.findNodeByLabel(service, TERMUX_LABEL)`。手順9（`step9WaitShareSheet`）自体も変更していない。
+
+### ④計測項目
+
+`clickAttempts`（探して押そうとした回数。1なら一発成功＝今と同じ）と `clickWaitMs`（この段階に費やした合計ミリ秒）を、既存の `ScrollStats.toJson()` と同じ作りで各段階の `recordStep` の extraFields に載せる（`buildClickRetryExtraFields`、`LineExportFlow.java:886-897`）。一発成功の回も `clickAttempts: 1` を必ず出す（出ない回があると集計できないため）。
+
+あわせて、失敗したときに「見えていたアプリ名」をすべての段階で記録するよう広げた。`NodeOps.distinctWindowPackageNames(service)`（`NodeOps.java:135-172`）は従来 `open_chat` の失敗時だけ使われていたが（旧 `LineExportFlow.java:778-780`）、`finish(boolean success, String failedStage)` 側（`LineExportFlow.java:1117-`、`seenPackages` 変数）に1箇所にまとめ、失敗した回はすべて `logExportEnd` の extraFields に `seenPackages`（既存と同じカンマ区切りの文字列）として載せるようにした。`open_chat` 専用だった個別記録（`waitForPackage` のタイムアウト分岐）は削除し二重記録を避けた。成功した回には出さない（容量は58日で38MBという実測があるため）。
+
+### ⑤変えていないもの
+
+手順9（`step9WaitShareSheet`）のポーリング間隔・期限、3段階それぞれの探し方（`NodeOps.findByTextPrefix`/`findByDescExact`/`findNodeByLabel`）、`settings_item`/`export_item` のスクロール再試行（`scrollFindAndClick`、`SCROLL_MAX_RETRIES`・`SCROLL_SETTLE_DELAY_MS` など）、遮断モードの帯（`overlayBlocking`・`RunStatusOverlay`）。
+
+## 追補 2026-11-27 署名鍵と成果物の作り直しを仕組みで守る
+
+対象ADR: ADR-1090（「7. 署名鍵」に禁止事項が文章として書かれていたが、仕組みでは守られていなかった）。本追補ではその一文を仕組み（スクリプトとCI）で強制する。ADR本体は編集していない。
+
+### ①実際に起きた2つの事故
+
+1. **2026-11-27、別の鍵で署名された APK ができた。** `tools/line-auto-export-app/build/` は `.gitignore` 対象のため、新しい作業ツリーで `build.sh` を走らせると「鍵が無ければ `keytool` で黙って作る」処理が別の鍵を黙って作っていた。実機に入っている APK の証明書は `c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709`（SHA-256）だが、別鍵で署名されたAPKの指紋は `8736637d1db0c7e507ec94a490831fe0509ebfcd72989874c45ee5d1bcbf3b79` だった。別鍵のAPKは実機を上書き更新できず、消して入れ直すとPIN・ユーザー補助・通知の権限を失い自動化が止まる。人が気づいたため実害は出なかった。
+2. **同日、APK 成果物だけが古いまま main に残った。** `tools/line-auto-export-app/out/app-debug.apk` は二進ファイルでマージされないため、main 取り込み時に衝突し、片側を選ぶとソースには入っている修正が成果物から消える。実機にそれを入れると修正が無かったことになる現象が実際に起きた。
+
+### ②入れた門番2つ
+
+**門番1（`tools/line-auto-export-app/build.sh`）**:
+
+- 署名鍵（`build/debug.keystore`）が無いときは、既定では作らずエラーで止める（既存の鍵をコピーする候補パスと、`sdk/android-34.jar` も同様に追跡対象外である旨をメッセージに出す）。
+- 環境変数 `ALLOW_NEW_KEYSTORE=1` を与えたときだけ、本当に初めての環境向けの逃げ道として従来どおり `keytool` で新しい鍵を作る。そのときは「この APK は実機を上書き更新できない」という警告を目立つ形で出す。**この逃げ道を使った回は、下記の証明書の照合が一致しなくても警告だけで成功させる**（新しい鍵の証明書が定数と一致することは原理上あり得ないため、止めてしまうと逃げ道そのものが使えなくなる）。弱くならないよう、代わりに門番2が成果物の署名を検査する。
+- 署名後に `apksigner verify --print-certs` の Signer #1 の SHA-256 を取り出し、スクリプト内の定数 `EXPECTED_SIGNER_SHA256`（値は `c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709`）と一致しなければ exit 1 で止める。鍵を正式に入れ替えるときは、この定数と ADR-1090「7. 署名鍵」を同時に直す運用にすることで、仕組み（作業ツリーが鍵を持っていないだけの状態）と意図（鍵を本当に入れ替える決定）を区別する。
+- 最後に `tools/line-auto-export-app/out/BUILD-INFO.txt` を4行（`versionCode`・`versionName`・`signerSha256`・`apkSha256`）で書き出し、画面にも1行でまとめて印字する。
+
+**門番2（CI・新規 `scripts/ci/check_line_export_apk.py`）**:
+
+- pure Python（標準ライブラリのみ・`aapt` もAndroid SDKも使わない）。`tools/line-auto-export-app/out/BUILD-INFO.txt` の存在、`versionCode`/`versionName` が `tools/line-auto-export-app/AndroidManifest.xml` と一致すること、`apkSha256` が実ファイル `tools/line-auto-export-app/out/app-debug.apk` の実際のsha256と一致すること、**`signerSha256` が期待値と一致すること**の4つを検査する。4つ目の期待値は検査スクリプトに直書きせず、`tools/line-auto-export-app/build.sh` の `EXPECTED_SIGNER_SHA256` を読み取って使う（正本を1か所にして食い違いを防ぐ）。定数が読めなかった場合も明確なエラーで止める（黙って検査を飛ばさない）。
+- 事故1（版だけ上げてビルドし直し忘れ）は `versionCode`/`versionName` の不一致で捕まる。事故2（APK側だけ古いものをマージで選んでしまう）は `apkSha256` の不一致で捕まる。`ALLOW_NEW_KEYSTORE=1` で作った別鍵のAPKをコミットした場合は `signerSha256` の不一致で捕まる。
+- ワークフロー `.github/workflows/line-export-apk-guard.yml` から呼ばれる（`tools/line-auto-export-app/` 配下の変更があるPRのみ実行、`.github/workflows/adr-index-check.yml` と同じ変更検出の作り）。単体テストは `scripts/ci/test_check_line_export_apk.py`。
+
+### ②-2 main 側の「ビルド刻印」との関係（二重の仕組みではない）
+
+PR #5811 が `build.sh` に入れた刻印（`BuildStamp.java` を生成して `versionName` をAPKに埋め込み、ビルド直後に自己検査する）とは**見張る時点が違うため役割が重なっていない**。刻印の自己検査は「いま作ったAPKの中身が、いまのマニフェストの版と合っているか」を**ビルド時**に見る。本追補の門番2は「**コミットされている**成果物が、いまのソースと合っているか」を**CI（PR）時**に見る。事故2（マージで片側のAPKを選ぶ）はビルドを伴わないため刻印の自己検査では捕まらず、逆に本追補の門番だけでは作りかけのビルドの食い違いは見えない。両方必要である。
+
+### ③変えていないもの
+
+アプリのコード（Java・リソース・`AndroidManifest.xml` の内容）、`versionCode`/`versionName`の値（この便では上げていない）、署名鍵そのもの（`build/debug.keystore` は既存のものを使い続ける）、ビルドの手順の本体（javac→dalvik-exchange→aapt→zipalign→apksignerの順序・各ステップの内容）はいずれも変更していない。足したのは「鍵が無いときに黙って作らない」「署名後に照合する」「BUILD-INFO.txtを書き出す」「CIで食い違いを検査する」の4点のみ。
+
+## 追補 2026-11-28 合図が黙って捨てられる穴（記録追加＋本番経路の再試行）
+
+### ①実測した事実（一次情報・再測不要）
+
+`RunScheduler.onAlarmFired()` が `RunLogger.logSchedulerEvent(context, "fire", ...)` を書いた直後に `UnlockAccessibilityService.requestRunAll(context, label)` を呼ぶ。この先に「黙って終わる道」が2つあり、どちらも**実行ログに何も残らず、再試行も張らない**:
+
+1. `UnlockAccessibilityService.requestRunAll(Context, String)` の `sInstance == null`（ユーザー補助サービスが未接続）→ `postFailureNotification` のみで return
+2. `UnlockAccessibilityService.startUnlockFlow()` の `running.compareAndSet(false, true)` が false（前の回が走っている）→ `Log.i` のみで return
+
+端末ログ51日分を集計した結果、`fire` が記録されたのに実行が始まらなかった回が **4,645回中6回**あり、最大 **59.6分** 取り込みが遅れた（原因は上記1）。補完の予約周期はコア時間帯30分／オフピーク60分のため、取り込み合図が1回捨てられると最悪60分待ちになる。
+
+### ②直し方
+
+- `RunLogger` に `logTriggerDropped(Context, String triggerLabel, String reason)` を追加した。`flow:"scheduler"`／`phase:"trigger_dropped"`／`trigger`（捨てられた合図のラベル）／`reason`（`"service_unbound"` または `"already_running"`）を記録する単発行（`logSchedulerEvent` 等と同じ「runIdに紐づかない」扱い）。メッセージ本文は含めない。
+- **本番経路（`requestRunAll(Context, String)` の `sInstance == null` 分岐）だけ**、記録に加えて `RunScheduler.scheduleRetryAfterFailure(context)` を張るようにした。既存の `postFailureNotification` の呼び出しは残したまま。`scheduleRetryAfterFailure` 自体は変更していない（OFF中は何もしない・上限2回・5分後という既存の挙動のまま）。再試行は補完の予約（`SchedulerStore` のpending-next）とは別の要求コードのアラームなので、補完の予約を消さない。
+- 手動検証用の入口（`requestRun(Context)`／`requestExport(Context)` の `sInstance == null` 分岐）は**記録のみ**追加し、再試行は張らない。読み取り専用の診断口 `requestDiagWindows` は対象外（無変更）。
+- `startUnlockFlow()` の「既に走っている」分岐（前の回が担うのが正しい挙動）も**記録のみ**追加し、再試行は張らない。
+
+### ③変えていないもの
+
+`postFailureNotification` の既存呼び出し、`scheduleRetryAfterFailure`／`requestDiagWindows` の中身、既存の各メソッドのそれ以外の挙動（見送り・床判定・施錠タイミング等）はいずれも変更していない。版は `versionCode` 27→28、`versionName` 0.24.0-stage3→0.25.0-stage3 に上げた（在庫中の他PRとの衝突がないことを確認済み）。

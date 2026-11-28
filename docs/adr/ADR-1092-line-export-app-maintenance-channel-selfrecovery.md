@@ -1,0 +1,154 @@
+# ADR-1092: 端末の保守口は無線デバッグを使い、切れたらアプリ自身が開き直す（固定ポートは常用しない）
+
+| 項目 | 内容 |
+|---|---|
+| ステータス | Accepted（2026-11-27・POの委任に基づくClaude Opus発行。方針の芯は PO 決定: 固定ポート化を試す・アプリによる自動復旧を作る・Wi-Fi の安定化も行う・調査で付与した Termux の権限は方法が決まり不要になったら消す（2026-11-27「1よい2よい3よい4方法が決まり不要になったら消す」）） |
+| 起案日 | 2026-11-27 |
+| 方針の決定者 | Shingo（PO） |
+| 関連 | ADR-1090（同じアプリの省電力耐性。本 ADR は保守口という別論点）、ADR-100（下流のサーバー側取り込み）、ADR-1003（GO の委任） |
+| 設計 | docs/handoff/line-auto-export-app/design.md（追補 2026-11-27。現在地: docs/handoff/line-auto-export-app/recon.md、審査: docs/handoff/line-auto-export-app/review-opus.md） |
+
+---
+
+## 背景（何に困っていたか）
+
+端末の保守（ログの取得・画面寸法の実測・アプリの入れ替え）は ADB を通じて行う。その ADB の入口である「ワイヤレスデバッグ」が勝手に切れ、そのたびに人が端末の画面で入れ直す必要があった（2026-09-23 は約6時間、2026-11-26 も1日以上停止）。
+
+## 実測した事実（2026-11-27・端末 SC-51G 1台・この時点）
+
+**この端末・この時点の測定値であり、他機種や将来の OS 版での挙動を保証しない。**
+
+- **Wi-Fi が切れている間は `adb_wifi_enabled` に 1 を書いても定着しない**。書いた直後も 10 秒後も 0 のままだった。
+- **Wi-Fi 接続中に 1 を書くと定着する**。直後・10 秒後ともに 1。
+- `adb tcpip 5555` に切り替えると `adb_wifi_enabled` は 0 になった。
+- 固定ポートの待ち受けは `netstat -ltn` で `[::]:5555 LISTEN`＝**全インターフェース**。同一 Wi-Fi 内の別機器から到達できる。
+- Wi-Fi を実際に切っても固定ポートの ADB は生存した（loopback のため）。
+- 原因の切り分け: 端末は**連続稼働 24 日**（再起動は原因でない）。Samsung の自動ブロッカーは `rampart_main_switch_enabled=0`・`rampart_blocked_adb_cmd=0`（＝機能 OFF・ブロック実績 0、原因でない）。Wi-Fi は切断が多数（カウンタ ON:97/OFF:268、`WIFI_DISABLED` 2 回、`MAC_CHANGE` 由来の切断あり、ローミング時の認証失敗あり）。
+- **proot の中の Ubuntu から Android のコマンドは一切実行できない**。`getprop`・`toybox`・`am`・`settings` を 3 通りの起動方法で試し、すべて `Operation not permitted`。
+- Termux は `WRITE_SECURE_SETTINGS` を manifest で要求しており、`pm grant` で付与できた（`granted=true`）。ただし proot の中からは上記の理由で使えない。
+- `android.permission.WRITE_SECURE_SETTINGS` の保護レベルは `signature|privileged|development|installer|role`＝**`development` を含むため adb から付与できる**。
+
+## Android の一般仕様として依拠する範囲
+
+ワイヤレスデバッグは Wi-Fi 接続に紐づく機能で、Wi-Fi が無い状態では有効にできない。**具体的な挙動（即座に 0 へ戻す等）は OS 版・端末メーカーに依存する**ため、上の実測値を根拠に設計する。
+
+## What（何を決めたか）
+
+1. **保守口は無線デバッグ（TLS＋ペアリング）を正とする。固定ポート（`adb tcpip`）は常用しない。**
+2. **書き出しアプリが、起動時（BOOT_COMPLETED）と毎回の実行時に `adb_wifi_enabled` を見て、0 なら 1 を書く。** Wi-Fi が無い回は定着しないので、次の回に持ち越す（アプリは 1 日約 70 回動くため、Wi-Fi が戻れば数分から十数分で開き直る）。
+3. アプリに `android.permission.WRITE_SECURE_SETTINGS` を宣言し、**`adb shell pm grant` で 1 回だけ付与する**（development 権限）。付与は運用者が行い、`pm revoke` で取り消せる。
+4. **アプリが書く設定は `adb_wifi_enabled` だけに限る。** `adb_enabled`（USB デバッグ）には触らない。
+5. 記録は**変化したときだけ** 1 行（既存の「変化時だけ記録する」作法に合わせる）。権限が無い・書けないときも 1 回だけ記録して黙らない。
+6. この動作は**コードの定数で止められる**ようにする。端末を信頼できないネットワークで使う場合は止める。
+
+## Why（なぜ）
+
+- 落ちる原因は Wi-Fi 側にあり、実測の切断回数を見る限り根絶できない。ゆえに「落ちないようにする」より「**落ちたら自動で開き直す**」に倒すのが確実である。
+- **固定ポートを常用しない理由**: 待ち受けが全インターフェースに開き、同一 LAN から到達できる（実測）。無線デバッグは TLS とペアリングを要し、ポートも毎回変わるため、保守口としてはこちらが安全である。
+- **実行主体をアプリにする理由**: proot の中からは Android のコマンドが動かない（実測）。Termux 側の常駐は人が起動する必要があり、Termux が終了すると消える。アプリは proot の外で動き、起動時と約 10 分おきに動く仕組みを既に持っている。
+
+## セキュリティ（記録）
+
+- 無線デバッグが**常時 ON に保たれる**。新しい相手が接続するにはペアリングと端末画面での許可が必要で、鍵を持たない相手は入れない。
+- アプリが書けるのは `adb_wifi_enabled` の 1 キーだけ（コードで限定）。権限は `pm revoke` でいつでも取り消せる。
+- 本 ADR の採用に伴い、**調査で一時的に入れた固定ポート（5555）は閉じ、`adb_enabled` は 0 に戻す**。
+- 調査で Termux に付与した `WRITE_SECURE_SETTINGS` は、本方式が動いたら削除する（PO 決定）。
+
+## 範囲外（この ADR では決めない）
+
+- Wi-Fi 自体の安定化（MAC ランダム化の解除・自動 OFF の無効化）。端末の画面操作が必要で PO が実施する。
+- 固定ポートの恒久化（採らない）。
+- 再起動直後に Wi-Fi が繋がるまでの空白（仕様として受け入れる）。
+
+## リスク・トレードオフ
+
+- **保守口が常時開く**ことと引き換えに、人手の介入を無くす。信頼できる家庭内 LAN を前提とする。前提が崩れたら定数で止める。
+- アプリに設定変更の権限を与える。付与は 1 キーの書き込みに限定し、取り消し手段（`pm revoke`）を残す。
+- `pm grant` はアプリを削除して入れ直すと消える。入れ替え手順に付与を含める。
+
+## 検証
+
+| 基準 | 検証方法 |
+|---|---|
+| ビルドが通る | `cd tools/line-auto-export-app && bash build.sh` が終了コード 0 で APK を出す |
+| 権限が付与できる | `adb shell pm grant jp.salesanchor.lineexport android.permission.WRITE_SECURE_SETTINGS` の後、`dumpsys package` で `granted=true` |
+| 自動復旧が働く | `settings put global adb_wifi_enabled 0` にしてアプリを 1 回動かすと、値が 1 に戻り、記録に 1 行残る |
+| 他の設定を書かない | `adb_enabled` の値が変わらないことを前後で確認 |
+| 止められる | 定数を false にしたビルドでは値を書き換えないことをコードで確認 |
+| 既存の集計が壊れない | 既存のログ項目・タイミングを変えていないことを差分で確認 |
+
+## 外部・過去事例
+
+- 2026-10-13 と 2026-11-27 の 2 回、`adb tcpip` および `adb_enabled` の変更で adbd が再起動し ADB 接続を失った。どちらもポート走査（`127.0.0.1` の 30000-55000、約 60 秒）→ `adb connect` で復旧できた（2026-11-27 は 42181 で復帰）。この経験から「**ADB 経由だけで完結する切替は、切替の瞬間に自分の足場を壊す**」と判断し、足場をアプリ側に移す本方式を選んだ。
+- 「黙って止まる経路は記録を足して可視化する」という本リポジトリの既往方針（ADR-1090）に合わせ、復旧の実績も記録に残す。
+
+## 維持の仕組み
+
+- 復旧が起きたことは記録に残るため、頻度が異常なら気づける。
+- 不要になったら定数を false にし、`pm revoke` で権限を取り消す。
+
+---
+
+## 追補: 保守口（無線デバッグ）の強制開け直し（2026-11-27）
+
+### 実機で分かったこと（値を見るだけでは直らない事象）
+
+既存の `ensureOpen`（`adb_wifi_enabled` が 0 のときだけ 1 を書く）は、値そのものが壊れている前提の作りだった。ところが実機では**値が 1 のまま adbd（無線デバッグのサーバー本体）が動いていない**状態が起きた。アプリは「1 だから正常」と見て何もせず、人が端末画面で OFF→ON するまで復旧しなかった。**値を見るだけでは直らない**ため、値を見ずに強制的に開け閉め（cycle）する経路が必要になった。
+
+### 追加のWhat
+
+7. **起動時（BOOT_COMPLETED）は必ず cycle する**。`AlarmReceiver` の BOOT_COMPLETED 経路は、`ensureOpen` ではなく、`adb_wifi_enabled` に **0 を書く → 約 2000ms 待つ → 1 を書く → 読み直す**（cycle）を呼ぶ。再起動直後は adbd が死んでいる可能性が高い場面であるため、値を見ずに毎回強制的に開け直す。
+8. **合図ファイルを見たら cycle する**。`RunScheduler` の毎回の予約処理（`scheduleAt`）が、`ensureOpen` を呼ぶ直前に合図ファイル（ファイル名 `maintenance-open`。場所は `run-*.jsonl` と同じディレクトリ）の有無を確認する。あれば cycle を実行し、そのファイルを削除する。削除に失敗した場合は、処理済みの合図の識別子（`lastModified` と `length` の組）を保存し、次回以降それと同一の合図では cycle も記録も行わない（同じ合図で毎回 cycle してしまうのを防ぐ）。
+9. **毎回は cycle しない**。通常の実行予約時は今までどおり `ensureOpen`（0 のときだけ 1 を書く）のまま。cycle は実行中の ADB 接続を切るため、「起動時」と「合図があったとき」の2か所に限定する。
+10. cycle の結果（`cycled_opened`／`cycled_blocked`）は、既存の `opened` と同じ考え方で**変化比較せず毎回記録する**（復旧の実績が残らないと「維持の仕組み」が成り立たないため）。合図ファイルの確認でストレージが読めない・一覧できない場合は、黙らず `signal_unreadable` を1回だけ記録する。
+
+### セキュリティ（合図ファイル方式のリスク評価）
+
+- 合図ファイル方式は、**端末のストレージに書ける主体なら合図を置ける**（この開発環境自身を含む）。この点は正直にリスクとして記録する。
+- ただし、合図が起こせるのは「無線デバッグを強制的に開け直す」ことだけである。新しい相手が実際に ADB で入るには、別途ペアリングと端末画面での許可操作が必要（本 ADR の既存のセキュリティ節のとおり）。合図ファイル自体には実行権限や新しい到達範囲は無く、既に開いている保守口を「開け直す」トリガーに過ぎない。
+- `SELF_RECOVERY_ENABLED` を false にすれば、起動時 cycle・合図ファイル cycle・`ensureOpen` のすべてが無効になり、合図ファイルを置いても何も起きなくなる。
+
+### 検証（追加）
+
+| 基準 | 検証方法 |
+|---|---|
+| 起動時に必ず cycle する | 端末再起動後、`run-YYYYMMDD.jsonl` に `trigger=boot` の `cycled_opened`（または `cycled_blocked`）が残る |
+| 合図ファイルで cycle する | `maintenance-open` を置いて10分以内に `trigger=signal` の記録が出て、ファイルが消える |
+| 毎回は cycle しない | 通常の実行予約の記録に `cycled_*` が出ない（`opened`／`blocked` のまま） |
+| 合図が読めないと黙らない | ストレージの読み取りに失敗する環境では `signal_unreadable` が1回だけ記録される（＝方式の見直しが必要という判定材料） |
+| 書き換えるキーが増えていない | `adb_enabled` を触るコードが無いことを差分で確認 |
+| 止められる | `SELF_RECOVERY_ENABLED` を false にしたビルドでは cycle・ensureOpen のいずれも値を書き換えないことをコードで確認 |
+
+設計: `docs/handoff/line-auto-export-app/design.md` 追補 2026-11-27「保守口（無線デバッグ）の強制開け直し」。
+
+### 追補2: 版番号の衝突（別PRとの versionCode/versionName 重複）と、ビルドの自己検査（2026-11-27）
+
+端末に 16:48:51 に入った APK は版名（`versionName=0.22.0-stage3`／`versionCode=25`）が本PRの当初の版と同じだった。調査の結果、これは**別ブランチ `release/line-export-click-retry`（PR #5808）の正当なビルドと1バイト単位で同一**であることがハッシュ照合で確定した（版名が偽りだったわけではない。詳細は `docs/handoff/line-auto-export-app/design.md`・`docs/handoff/line-auto-export-app/review-opus-adr1092.md`）。真因は **PR #5808 と本PRが独立に同じ版番号を選んでいた**ことであり、版番号だけでは端末に入っているのがどちらのPRのコードか識別できない状態になっていた。対応として本PRの版を `versionCode=26`／`versionName=0.23.0-stage3` に上げ、衝突を解消した。
+
+再発防止のため `tools/line-auto-export-app/build.sh` に自己検査も追加した: `AndroidManifest.xml` の `versionName` を唯一の出所として生成した版名の刻印（`BuildStamp.VERSION_NAME`）が、できあがった `classes.dex` の中に実在するかを確認し、無ければビルドを失敗させる。これは「1つのビルドの中で版名とコードがずれていないか」を守るものであり、**今回のような複数PR間の版番号衝突は検出できない**（PR #5808 のビルド自体は自己整合していたため）。版番号の衝突は、ブランチ作成・統合前に他のオープンPRが使っている値を確認する運用で防ぐ必要がある。
+
+### 追補3: 合図ファイルの検知方式の作り直し（`canRead()` 門番の撤去、2026-11-27）
+
+#### 実機で測った事実（一次情報）
+
+PR #5811 の成果物（`versionCode=26`／`versionName=0.23.0-stage3`）を実機へ導入し、`checkSignalFile` が実際に動くところを確認した結果、次が確定した。
+
+- 導入直後、アプリ自身が `/sdcard/Download/sa-line-notify/run-20261127.jsonl` に次を記録した: `{"at":"2026-11-27T18:24:55+0900","flow":"scheduler","phase":"maintenance_channel","result":"signal_unreadable","adbWifiEnabled":-1,"trigger":"signal"}`。すなわち旧 `checkSignalFile` の `!dir.canRead()` が **true** になった。
+- ところが**同じディレクトリへの書き込みは成功している**（この記録自体がそこに書かれた）。`resolveStorageDir` は `ensureWritableDir` が通った `/sdcard/Download/sa-line-notify` を返している。
+- 端末の権限は `WRITE_EXTERNAL_STORAGE: granted=true` / **`READ_EXTERNAL_STORAGE: granted=false`**。アプリは `targetSdkVersion=24`（旧方式のストレージ）。
+- `/sdcard/Android/data/jp.salesanchor.lineexport/files` は本環境から書けず、存在しない（代替経路にならない）。
+
+つまり「**書けるのに `canRead()` が false になる**」ことが実機で確定した。`READ_EXTERNAL_STORAGE` 未付与＋`targetSdkVersion=24` の組み合わせでは、書き込み可能なディレクトリであっても `File#canRead()`／`isDirectory()` の戻り値は信頼できない。旧実装はこの `canRead()` を門番にしていたため、合図ファイルが実際にそこへ置かれても常に `signal_unreadable` になり、**合図を一度も検知できなかった**（実機で機能していなかったことが確定した）。
+
+#### PO の決定
+
+**読み取り権限は増やさない。** 合図の検知に中身の読み取りは不要で、「在るか見て、消す」だけで足りる。削除に必要な書き込み権限は既にある。
+
+#### 設計判断（門番の撤去・削除を検知器にする）
+
+- `canRead()`・`isDirectory()` による事前の門番を撤去した。読み取りが拒否される環境では stat 系の戻り値も信頼できないため、門番で弾かずに実際の操作（削除）を試す方式に変えた。
+- 検知器を `boolean consumed = new File(dir, "maintenance-open").delete();` に変えた。`delete()` が `true` を返したときだけ「合図が在って、いま消費した」と確定できる。**削除してから cycle する**（逆順だと削除が失敗する環境で同じ合図に毎回 cycle してしまう。旧実装の `lastModified`＋`length` による重複判定はこの方式では不要になり削除した。削除が成功した回だけ cycle するため、二重消費が原理的に起きない）。
+- `delete()` が false の「合図が無い」と「消せない（経路が壊れている）」を区別するため、まだ経路の健全性を確認できていない間だけ、自前の試験ファイル（`.maintenance-probe`）の作成→削除の往復による自己試験を行う。両方成功したら `signal_channel_ok` を1回記録して以後は試験しない。どちらかが失敗したら `signal_probe_failed` を専用の重複判定枠で1回だけ記録する（旗は立てず次回また試す）。
+- `signal_unreadable` という結果名は撤去した（`canRead()` 前提の名前であり、意味が変わるため流用しない）。
+
+詳細設計は `docs/handoff/line-auto-export-app/design.md` 追補「合図検知の作り直し」、審査は `docs/handoff/line-auto-export-app/review-opus-adr1092.md` 参照。版は `versionCode` 26→27、`versionName` 0.23.0-stage3→0.24.0-stage3 に上げた（在庫中の他PRとの衝突がないことを確認済み）。

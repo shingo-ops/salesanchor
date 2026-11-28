@@ -10,6 +10,7 @@ from fastapi import HTTPException
 
 from app.routers.calendar import (
     CreateEventBody,
+    OwnerSettingsBody,
     SyncModeBody,
     UpdateEventBody,
     create_event,
@@ -48,7 +49,7 @@ async def test_list_calendar_owners_limits_non_manager_to_self():
         side_effect=[
             _QueryResult(first={"id": 7, "tenant_id": 1, "user_id": 101, "staff_code": "A01", "surname_jp": "山田", "given_name_jp": "太郎", "primary_email": "owner@example.com"}),
             _QueryResult(all_rows=[
-                {"id": 7, "user_id": 101, "staff_code": "A01", "surname_jp": "山田", "given_name_jp": "太郎", "primary_email": "owner@example.com", "color": None, "is_visible": None, "share_mode": None},
+                {"id": 7, "user_id": 101, "staff_code": "A01", "surname_jp": "山田", "given_name_jp": "太郎", "primary_email": "owner@example.com", "color_key": None},
             ]),
         ]
     )
@@ -60,7 +61,7 @@ async def test_list_calendar_owners_limits_non_manager_to_self():
     assert result.current_staff_id == 7
     assert result.owners[0].is_self is True
     assert result.owners[0].name == "山田 太郎"
-    assert result.owners[0].color == "#1a73e8"
+    assert result.owners[0].color_key is None
 
 
 @pytest.mark.asyncio
@@ -71,8 +72,8 @@ async def test_list_calendar_owners_manager_sees_others():
         side_effect=[
             _QueryResult(first={"id": 7, "tenant_id": 1, "user_id": 101, "staff_code": "A01", "surname_jp": "山田", "given_name_jp": "太郎", "primary_email": "owner@example.com"}),
             _QueryResult(all_rows=[
-                {"id": 7, "user_id": 101, "staff_code": "A01", "surname_jp": "山田", "given_name_jp": "太郎", "primary_email": "owner@example.com", "color": "#111111", "is_visible": True, "share_mode": "edit"},
-                {"id": 8, "user_id": 202, "staff_code": "B02", "surname_jp": "佐藤", "given_name_jp": "花子", "primary_email": "other@example.com", "color": "#222222", "is_visible": False, "share_mode": "view"},
+                {"id": 7, "user_id": 101, "staff_code": "A01", "surname_jp": "山田", "given_name_jp": "太郎", "primary_email": "owner@example.com", "color_key": "tomato", "team_ids": [3, 5]},
+                {"id": 8, "user_id": 202, "staff_code": "B02", "surname_jp": "佐藤", "given_name_jp": "花子", "primary_email": "other@example.com", "color_key": None, "team_ids": []},
             ]),
         ]
     )
@@ -83,7 +84,15 @@ async def test_list_calendar_owners_manager_sees_others():
     assert result.can_manage_others is True
     assert [owner.staff_code for owner in result.owners] == ["A01", "B02"]
     assert result.owners[1].is_self is False
-    assert result.owners[1].share_mode == "view"
+    assert result.owners[0].color_key == "tomato"
+    assert result.owners[1].color_key is None
+    # 便3b: 使っているチームの番号（番号順）
+    assert result.owners[0].team_ids == [3, 5]
+    assert result.owners[1].team_ids == []
+    # 応答の鍵は完全一致（古い 3 列は返さない）
+    assert set(result.owners[0].model_dump()) == {
+        "staff_id", "user_id", "staff_code", "name", "primary_email", "color_key", "is_self", "team_ids",
+    }
 
 
 @pytest.mark.asyncio
@@ -92,13 +101,12 @@ async def test_update_calendar_owner_requires_staff_view():
 
     with patch("app.routers.calendar.load_user_permissions", new=AsyncMock(return_value=set())):
         with pytest.raises(Exception) as exc_info:
-            await update_calendar_owner(7, SimpleNamespace(color="#123456", is_visible=True, share_mode="view"), tenant_id=1, user=_mock_user(), db=db)
+            await update_calendar_owner(7, OwnerSettingsBody(color_key="tomato"), tenant_id=1, user=_mock_user(), db=db)
 
     assert getattr(exc_info.value, "status_code", None) == 403
 
 
-@pytest.mark.asyncio
-async def test_update_calendar_owner_updates_only_provided_fields():
+def _owner_db(refreshed_color_key):
     db = AsyncMock()
     db.commit = AsyncMock()
     db.execute = AsyncMock(
@@ -106,22 +114,76 @@ async def test_update_calendar_owner_updates_only_provided_fields():
             _QueryResult(first=(1,)),
             _QueryResult(first={"id": 7, "tenant_id": 1, "user_id": 101, "staff_code": "A01", "surname_jp": "山田", "given_name_jp": "太郎", "primary_email": "owner@example.com"}),
             _QueryResult(first=None),
-            _QueryResult(first={"id": 7, "user_id": 101, "staff_code": "A01", "surname_jp": "山田", "given_name_jp": "太郎", "primary_email": "owner@example.com", "color": "#abcdef", "is_visible": True, "share_mode": "edit"}),
+            _QueryResult(first={"id": 7, "user_id": 101, "staff_code": "A01", "surname_jp": "山田", "given_name_jp": "太郎", "primary_email": "owner@example.com", "color_key": refreshed_color_key}),
         ]
     )
+    return db
 
-    body = SimpleNamespace(color="#abcdef", is_visible=True, share_mode="edit")
-    with patch("app.routers.calendar.load_user_permissions", new=AsyncMock(return_value={"staff.view"})):
-        result = await update_calendar_owner(101, body, tenant_id=1, user=_mock_user(), db=db)
 
-    assert result.color == "#abcdef"
-    assert result.is_visible is True
-    assert result.share_mode == "edit"
+async def _patch_owner(db, body):
+    with patch("app.routers.calendar.load_user_permissions", new=AsyncMock(return_value={"staff.view"})), patch(
+        "app.routers.calendar.reset_tenant_context", new=AsyncMock()
+    ):
+        return await update_calendar_owner(101, body, tenant_id=1, user=_mock_user(), db=db)
+
+
+@pytest.mark.asyncio
+async def test_update_calendar_owner_saves_color_key():
+    db = _owner_db("tomato")
+
+    result = await _patch_owner(db, OwnerSettingsBody(color_key="tomato"))
+
+    assert result.color_key == "tomato"
     assert result.is_self is True
-    assert "INSERT INTO calendar_owner_settings" in db.execute.call_args_list[2].args[0].text
+    assert set(result.model_dump()) == {
+        "staff_id", "user_id", "staff_code", "name", "primary_email", "color_key", "is_self", "team_ids",
+    }
+    upsert_sql = db.execute.call_args_list[2].args[0].text
+    assert "INSERT INTO calendar_owner_settings" in upsert_sql
+    # 便3b: 色の保存は初期値の 6 列に触れない
+    for column in ("default_view", "week_start", "event_minutes", "auto_meet", "open_owners", "open_team_id"):
+        assert column not in upsert_sql
     # ADR-1008 P2: パス引数は users.id。名簿は user_id で引き、設定の staff_id 列には users.id を入れる
     assert db.execute.call_args_list[0].args[1] == {"user_id": 101}
-    assert db.execute.call_args_list[2].args[1]["staff_id"] == 101
+    assert db.execute.call_args_list[2].args[1] == {"staff_id": 101, "color_key": "tomato"}
+
+
+@pytest.mark.asyncio
+async def test_update_calendar_owner_null_resets_to_default_color():
+    db = _owner_db(None)
+
+    result = await _patch_owner(db, OwnerSettingsBody(color_key=None))
+
+    assert result.color_key is None
+    assert db.execute.call_args_list[2].args[1] == {"staff_id": 101, "color_key": None}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("bad", ["red", "#d50000", "Tomato", ""])
+async def test_update_calendar_owner_rejects_value_outside_24_keys(bad):
+    db = _owner_db(None)
+
+    with pytest.raises(HTTPException) as exc:
+        await _patch_owner(db, OwnerSettingsBody(color_key=bad))
+
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "invalid_color_key"
+    # 何も保存しない
+    db.commit.assert_not_called()
+    db.execute.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_update_calendar_owner_without_color_key_is_422():
+    db = _owner_db(None)
+
+    with pytest.raises(HTTPException) as exc:
+        await _patch_owner(db, OwnerSettingsBody())
+
+    assert exc.value.status_code == 422
+    assert exc.value.detail == "no_fields_to_update"
+    db.commit.assert_not_called()
+    db.execute.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -223,9 +285,12 @@ def _event_db(created_by, calendar_type, owner, google_event_id=None, meet_url=N
 @pytest.mark.parametrize("is_admin", [False, True])
 async def test_patch_other_users_personal_event_is_404(is_admin):
     db = _event_db(created_by=202, calendar_type="personal", owner=202)
+    # 見えるかの判定は DB で行う（本物の DB の試験は test_calendar_team_share.py）。ここでは見えない扱いにする
     with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
         "app.routers.calendar.is_tenant_admin", return_value=is_admin
-    ), patch("app.routers.calendar.cal_svc.update_event", new=AsyncMock()) as upd:
+    ), patch("app.routers.calendar.cal_svc.can_see_event", new=AsyncMock(return_value=False)), patch(
+        "app.routers.calendar.cal_svc.update_event", new=AsyncMock()
+    ) as upd:
         with pytest.raises(HTTPException) as exc:
             await update_event(9, UpdateEventBody(title="x"), tenant_id=1, user=_mock_user(101), db=db)
     assert exc.value.status_code == 404
@@ -238,7 +303,9 @@ async def test_delete_other_users_personal_event_is_404(is_admin):
     db = _event_db(created_by=202, calendar_type="personal", owner=202)
     with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
         "app.routers.calendar.is_tenant_admin", return_value=is_admin
-    ), patch("app.routers.calendar.cal_svc.delete_event", new=AsyncMock()) as dele:
+    ), patch("app.routers.calendar.cal_svc.can_see_event", new=AsyncMock(return_value=False)), patch(
+        "app.routers.calendar.cal_svc.delete_event", new=AsyncMock()
+    ) as dele:
         with pytest.raises(HTTPException) as exc:
             await delete_event(9, tenant_id=1, user=_mock_user(101), db=db)
     assert exc.value.status_code == 404

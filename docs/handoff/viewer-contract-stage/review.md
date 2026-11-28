@@ -352,3 +352,60 @@
 - 低（推測・未確認）: 名簿を消したときの SET NULL が FORCE RLS の下で効くかは CI で確かめる。本番の表の持ち主の属性は D10 のとおり本番反映の後に Opus が読む。
 - 低: API の形の数え方を、道の見出しの行だけに当たる形に直した（期待 2）。
 - 実装の枝は、この指示書が main に入った後に Opus が origin/main から `release/viewer-contract-bin2-2a` として作る（前の便と同じ形）。指示書の手順1・手順10 をその枝に直した。
+
+## 2026-11-25 便2-2c2b の指示書（設計担当 Opus の自己審査。独立した審査ではない）
+
+判定: APPROVE（自己審査）。マージ前に審査役 Opus の審査を受ける。
+- PO 2026-11-25「1」（会社情報の画面を国内用・海外用のタブで作る）。範囲は A20（一部）・A21（tenant_id の絞り込みだけ）・A24・A27・A28・A29（登録の欄）・A30・A32・A40・A42（タブの部分）。
+- 指示書で決めたこと（card-2-2c2b.md の D1〜D11）: 発行元を読む2つの処理に tenant_id の絞り込みを足す（返す値と引数は変えない）・旧来の表を読むのは read_legacy_issuer_values の1か所（A40 は issuer.py 1件のまま）・入力の決まりは issuer_rules.py で欄ごとの理由の番号を 422 で返し、DB の CHECK は最後の守りに残す・国の既定値なし（ADR-125 D5）・見えない欄は null・古い6欄は今の会社情報の口から外す（表の列は残す）・区切りは読めたときだけフォームの下に出す（batch3f Q1・Q2）・行の無いタブは前の値を読むだけで見せる・都道府県名は API から言語で選ぶ・保存ごとに監査1行・試験の都道府県は正本の seed から読む。
+- 照合: 基準 5a72c083f の写しで、直す所の「変更前」の文字列と件数（§0-3 P1〜P14）・main.py の差し込み位置・部品の書き出し名（Callout・Tabs・Textarea・Stack・TextField・Select・Toggle・CountryCombobox・SectionCard・ApiError.responseDetail・api.put）・pytest の asyncio_mode=auto を確かめた。
+- 限界1: 試験の SQLite には CHECK と外部キーが無い。表の CHECK は PG の試験 test_tenant_issuer_tables_pg.py が CI で確かめる。
+- 限界2: 発行時の 409 の道（会社情報が無いとき）は、ソースを読んで確かめただけ。この便では触らない。
+- 限界3: 本番の都道府県の47行が入っているかは未確認（この便では読まない。本番反映の後に Opus が読む）。
+- 限界4: A32（監査）は conftest の差し替えの記録（本当に audit_logs へ1行入れる）で確かめる。本物の record_audit_log の通り道は既存の試験に任せる。
+- 限界5: A21 の RLS と A20 の information_schema の確かめは、この便の範囲外。
+
+## 2026-11-25 便2-2c2b の指示書 r1（審査役 Opus の審査を受けて直した）
+
+判定: 審査役 Opus は REVISE（高1件・低2件）。高の1件を直した。
+- 高: §2-15 の試験 issuerProfileForm.test.ts は、src の下に「北海道」を含むファイルが0件であることを確かめる。ところが、試験の中に「北海道」をそのまま書いていた。試験ファイル自身も src の下にあるので、自分に当たって必ず落ちる。直し方: 名前を String.fromCodePoint(0x5317, 0x6d77, 0x9053) で組み立てる（番号から戻すと「北海道」になることを python3 で確かめた）。§0-3 の P14 は作る前に数える点検なので、0件のままで合っている。
+- 低2件（Pydantic の max_length は前後の空白を落とす前に確かめられる・state_region と city の上限100は DDL の TEXT より厳しい）は直さない。DB の CHECK と食い違わず、保存できる値が狭まるだけ。
+- 審査役の未確認（A40 のファイル別件数・言語の選択肢の文字が check:all に止められないか・試験の実行結果）は、実装役の §3 の手順と §4 の止まる条件で確かめる。
+
+## 2026-11-25 便2-2c2b の指示書 r2（審査役 Opus の再審査を受けて直した）
+
+判定: 審査役 Opus は REVISE（高1件）。直した。
+- 高: r1 で足した試験のコメントの行末に、都道府県の実名がそのまま残っていた。試験はコメントも含めてファイルの全文を調べるので、r1 でも自分に当たって落ちる形のままだった。コメントの言葉を「都道府県コード 01 の名前」に変えた。
+- 確かめ: card の中で実名が出るのは §0-3 の P14 の表と手順2のコマンド（作る前に数える点検で、md ファイル）だけになった。frontend/src に書き写すコードの中には残っていない。
+
+## 2026-11-27 便2-2c2b 直し1 の指示書（設計担当 Opus の自己審査。独立した審査ではない）
+
+判定: APPROVE（自己審査）。マージ前に審査役 Opus の審査を受ける。
+- きっかけ: 2026-11-26 の本番の画面の確かめ（Chrome）。国の欄は必須（design.md :169・画面の `required`）なのに、ラベルに「*」が無かった。ほかは本番で確かめ済み（国内用・海外用のタブ・登録番号の誤りで 422 と欄の下の赤い理由・保存されない）。PO 2026-11-27「1」で直しの準備に進む。
+- 決めたこと（card-2-2c2b-fix1.md の D1〜D5）: 「*」は画面に手で書かず、国の欄の金型 CountryCombobox に省ける label と error を足して TextField と同じ形で出す。どちらも渡さないときは今の描き方のまま。
+- 照合: 基準 24354620e の写しで、§0-3 P1〜P8 を数えた（207 行・`label?:` 0 行・この金型を読み込むファイル 5。r1 で直した）。登録の画面3つは別の部品 pages/register/CountryCombobox.tsx を使うと import の行で確かめた。fieldError は理由が無いとき undefined を返す（IssuerProfileSection.tsx:67〜:70）。試験は vitest.unit.config.ts の include（src/**/*.test.{ts,tsx}）に入る。card-lint は違反 0（L24 の長い行の警告だけ）。
+- 限界1: 本番の画面で「*」が出たかは、反映の後に Opus が Chrome で見るまで分からない。
+- 限界2: 国の欄の理由の出方が `error-message` から `comp-field__hint--error` に変わる。文は同じ。見た目は赤い字で、ほかの欄と同じになる。
+
+## 2026-11-27 便2-2c2b 直し1 の指示書 r1（審査役 Opus の審査を受けて直した）
+
+判定: 審査役 Opus（417dc6ecd 対象）は REVISE（高2件・低2件）。直した。
+- 高1: P5 の「`label` を含む行 0」は実物と合わなかった（CountryCombobox.tsx:122 の `aria-label` に当たり 1 になる）。実装役は手順2で必ず止まる形だった。数える文字列を `label?:` に変えた（24354620e で 0 件を確かめた）。
+- 高2: T1 の `getByLabelText("Country")` は、required のときラベルの文字が「Country*」になり完全一致で当たらない（@testing-library/dom は aria-hidden の子の文字もつなげる）。`/^Country\*?$/` にした。前例は frontend/src/pages/viewer/Password.test.tsx:24。
+- 低1: 行番号を直した（`return (` は :89・外側の div は :90）。
+- 低2: error を渡すと外側に `comp-field--error` が付き入力欄の枠も赤くなる（FormField.css:116〜:121）。ラベルの見た目も `.form-group label` から `comp-field__label` に変わる。どちらもほかの欄と同じ形にそろう差で、目的に沿う。限界2 に足す。
+
+## 2026-11-28 便2-2c2b 直し2 の指示書（設計担当 Opus の自己審査。独立した審査ではない）
+
+判定: APPROVE（自己審査）。マージ前に審査役 Opus の審査を受ける。電話の形（card-2-2c2b-fix2.md D3）と実装の開始は、PO 2026-11-28「1」（「+81 9060727767」と出す。この答えで作り始める）で決まった。審査役 Opus は f0c9c1006 で APPROVE（低い指摘3件は 7e3ccbbdc で直した）。
+- きっかけ: 2026-11-28 に本番で国内用を入れた。今の組み立て（issuer.py:35〜:39）では、海外用に英語の番地を入れると見積書に「〒444-2141 愛知県Okazaki8-312 Ryokuyoudai, Kuwabara」と出る。PO 2026-11-28「1」で、海外用の書類では英語名の都道府県と英語の順に直す。
+- 決めたこと（design.md §3-4e・card の D1〜D6）: 書類の文字の組み立てだけを変える。表・入力の決まり・画面は変えない。都道府県の英語名と国番号は、すでにある public.prefectures.name_en と public.countries.dial_code から読む。新しい置き場所は作らない。
+- 照合: 基準 045abb209 の写しで §0-3 の P1〜P6 を数えた（114・352・1・1・1・0）。get_issuer を呼ぶのは invoices.py の3か所だけ。format_issuer_address を呼ぶのは issuer.py:95 だけ。name_en・dial_code は NOT NULL（移行のファイルの行で確かめた）。本番の値は Japan・+81・Aichi（読み取り専用の鍵）。card-lint は違反 0（L24 の長い行の警告だけ）。
+- 限界1: 本番の見積書で英語の住所が出たかは、反映のあと海外用を入れて Opus が Chrome で見るまで分からない。
+- 限界2: 海外用に日本語の番地を入れた会社では、英語の順に日本語が並ぶ。今、本番で海外用の行を持つ会社は無い。
+
+## 2026-11-28 便2-2c2b 直し2 の指示書の直し（設計担当 Opus。独立した審査ではない）
+- 起きたこと: クラウドの1回目（05:27 UTC 開始）は、手順1〜3（場所づくり・§0-3 の数 114・352・1・1・1・0 の一致・2ファイルの編集）まで進んだ。手順4の `pip install` が見張り py312-guard に止められて BLOCKED で終わった。環境の python3 は 3.11.18 だった。commit・push はしていない。
+- 原因: 指示書の手順4に、本番と同じ Python 3.12 の venv を作る手順を入れ忘れた（先例 docs/handoff/auth-new-device-approval/stageW-card.md:163〜:164 にある手順を写さなかった）。
+- 直したこと: 手順4を `python3.12 -m venv /tmp/fix2-venv` と、その中の pip・python・ruff で流す形にした。§4 に「python3.12 が無い・venv か pip が失敗したら停止」を足した。§0 #8 に先例を書いた。§1・§2・§0-3 は変えていない。
+- 照合: card-lint は exit 0（L24 の警告だけ）。

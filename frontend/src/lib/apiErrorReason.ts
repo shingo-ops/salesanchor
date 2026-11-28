@@ -36,6 +36,10 @@ export const API_ERROR_REASON_KEYS: Readonly<Record<string, string>> = {
   contact_company_mismatch: "apiError.contactCompanyMismatch",
   invoice_not_draft: "apiError.invoiceNotDraft",
   payment_fee: "apiError.paymentFee",
+  invalid_team_ids: "apiError.invalidTeamIds",
+  invalid_team: "apiError.invalidTeam",
+  existing_customer_is_automatic: "apiError.existingCustomerIsAutomatic",
+  already_existing_customer: "apiError.alreadyExistingCustomer",
 };
 
 /** detail が表のコードなら文言キー、そうでなければ null */
@@ -85,6 +89,7 @@ export const NOT_FOUND_TARGET_KEYS: Readonly<Record<string, string>> = {
   distribution_target: "apiError.notFoundTarget.distribution_target",
   line_import_job: "apiError.notFoundTarget.line_import_job",
   calendar_owner: "apiError.notFoundTarget.calendar_owner",
+  calendar_category: "apiError.notFoundTarget.calendar_category",
   channel_master: "apiError.notFoundTarget.channel_master",
   goal: "apiError.notFoundTarget.goal",
   inventory_offer: "apiError.notFoundTarget.inventory_offer",

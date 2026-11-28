@@ -189,6 +189,24 @@ INBOX_BADGE_USERS_DDL = """
     )
 """
 
+# update_lead が is_registration_completed で読む companies / company_addresses の最小形
+# （ADR-1091・既定の請求先の有無だけを見る）。
+INBOX_BADGE_COMPANIES_DDL = """
+    CREATE TABLE companies (
+        id INTEGER PRIMARY KEY,
+        lead_id INTEGER
+    )
+"""
+
+INBOX_BADGE_COMPANY_ADDRESSES_DDL = """
+    CREATE TABLE company_addresses (
+        id INTEGER PRIMARY KEY,
+        company_id INTEGER,
+        address_type VARCHAR(20),
+        is_default BOOLEAN
+    )
+"""
+
 # engine fixture が順に execute する DDL 一式（leads → sales_form_options →
 # sales_form_selections → meta_messages の順。外部キー的な参照順ではないが
 # 元のテスト内の実行順を保つ）。
@@ -198,6 +216,8 @@ INBOX_BADGE_SQLITE_DDL = (
     INBOX_BADGE_SALES_FORM_SELECTIONS_DDL,
     INBOX_BADGE_META_MESSAGES_DDL,
     INBOX_BADGE_USERS_DDL,
+    INBOX_BADGE_COMPANIES_DDL,
+    INBOX_BADGE_COMPANY_ADDRESSES_DDL,
 )
 
 # test_sqlite_alter_table_does_not_support_add_column_if_not_exists 用:
@@ -2161,6 +2181,7 @@ async def client(db_session):
         "app.services.staff_create",  # ADR-1068: POST /staff の中身を切り出した先
         # Sprint 8 / F8: テナント発行者情報
         "app.routers.tenant_profile",
+        "app.routers.issuer_profiles",
         # Sprint D2: Discord Guild 設定
         "app.routers.discord_guild_config",
         # 監査ログ補完（高重要度2系統）

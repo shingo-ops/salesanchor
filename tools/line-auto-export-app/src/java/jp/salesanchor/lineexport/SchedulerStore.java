@@ -20,6 +20,11 @@ final class SchedulerStore {
     private static final String KEY_LAST_COMPLEMENT_ATTEMPT_AT = "last_complement_attempt_at";
     private static final String KEY_NOTIFICATION_RESERVED_AT = "notification_reserved_at";
     private static final String KEY_CONSECUTIVE_RETRY_COUNT = "consecutive_retry_count";
+    private static final String KEY_LAST_IGNORING_BATTERY_OPTIMIZATIONS = "last_ignoring_battery_optimizations";
+    private static final String KEY_SCHEDULED_FIRE_AT_PREFIX = "scheduled_fire_at_";
+    private static final String KEY_LAST_MAINTENANCE_CHANNEL_RESULT = "last_maintenance_channel_result";
+    private static final String KEY_SIGNAL_CHANNEL_CONFIRMED = "signal_channel_confirmed";
+    private static final String KEY_SIGNAL_PROBE_FAILURE_RECORDED = "signal_probe_failure_recorded";
 
     /** 既定はOFF（design.md: インストール直後に勝手に動き出さないこと）。 */
     private static final boolean DEFAULT_ENABLED = false;
@@ -164,6 +169,89 @@ final class SchedulerStore {
 
     static void clearConsecutiveRetryCount(Context context) {
         prefs(context).edit().remove(KEY_CONSECUTIVE_RETRY_COUNT).apply();
+    }
+
+    /**
+     * 直近に確認した「電池最適化の除外」（{@code PowerManager#isIgnoringBatteryOptimizations}）の
+     * 状態。design.md追補「電池最適化で後回しにされたことを検知・記録・復旧できる仕組み」
+     * (2026-11-26)。{@link #wasLastScheduleExact}と同じ作り（既定値は楽観的にtrue。実際に
+     * 除外が外れたときだけfalseに切り替わる）。{@link RunScheduler}が変化時だけ更新する。
+     */
+    static boolean wasLastIgnoringBatteryOptimizations(Context context) {
+        return prefs(context).getBoolean(KEY_LAST_IGNORING_BATTERY_OPTIMIZATIONS, true);
+    }
+
+    static void setLastIgnoringBatteryOptimizations(Context context, boolean ignoring) {
+        prefs(context).edit().putBoolean(KEY_LAST_IGNORING_BATTERY_OPTIMIZATIONS, ignoring).apply();
+    }
+
+    /**
+     * 引き金（{@link RunScheduler}のTRIGGER_*定数）ごとの「発火予定時刻」（絶対epoch ms）。
+     * design.md追補「電池最適化で後回しにされたことを検知・記録・復旧できる仕組み」(2026-11-26):
+     * 省電力区分が上がるとAlarmManagerの発火が1時間に1回などに制限され、予約したのに発火
+     * しない「空振り」が起きる（実機2026-11-26で48分・予約4回・実行0回を確認）。予約時に
+     * ここへ保存し、発火を受けたら消す（{@link RunScheduler#onAlarmFired}）。スケジューラの
+     * 入口を通るたびに、残っている値が十分古ければ「空振り」として検知できる
+     * （{@link RunScheduler}参照）。{@link #getNotificationReservedAt}とは別の仕組み
+     * （そちらは通知引き金のバースト抑制専用の判定に使っており、意味が違うため共用しない）。
+     * 既定0（未予約）。
+     */
+    static long getScheduledFireAt(Context context, String triggerType) {
+        return prefs(context).getLong(KEY_SCHEDULED_FIRE_AT_PREFIX + triggerType, 0L);
+    }
+
+    static void setScheduledFireAt(Context context, String triggerType, long atMs) {
+        prefs(context).edit().putLong(KEY_SCHEDULED_FIRE_AT_PREFIX + triggerType, atMs).apply();
+    }
+
+    static void clearScheduledFireAt(Context context, String triggerType) {
+        prefs(context).edit().remove(KEY_SCHEDULED_FIRE_AT_PREFIX + triggerType).apply();
+    }
+
+    /**
+     * 直近に記録した保守口（無線デバッグ）の復旧結果（"opened"/"blocked"/"no_permission"）。
+     * ADR-1092、design.md追補 2026-11-27「保守口（無線デバッグ）が切れたらアプリが開き直す」。
+     * {@link #wasLastIgnoringBatteryOptimizations}と同じ作り（{@link MaintenanceChannel}が
+     * 前回値と比較し、変化したときだけ更新・記録する）。既定null（まだ一度も記録していない）。
+     */
+    static String getLastMaintenanceChannelResult(Context context) {
+        return prefs(context).getString(KEY_LAST_MAINTENANCE_CHANNEL_RESULT, null);
+    }
+
+    static void setLastMaintenanceChannelResult(Context context, String result) {
+        prefs(context).edit().putString(KEY_LAST_MAINTENANCE_CHANNEL_RESULT, result).apply();
+    }
+
+    /**
+     * 合図ファイル（{@code maintenance-open}）の検知方式が、削除の往復による自己試験
+     * （{@link MaintenanceChannel#probeSignalChannel}）で「使える」と確認済みかどうか
+     * （design.md追補「保守口（無線デバッグ）の強制開け直し・合図検知の作り直し」2026-11-27、
+     * PO方針「読み取り権限は増やさない」）。確認済みになったら以後は自己試験を行わない
+     * （毎回のファイル操作を増やさないため）。既定false（まだ確認できていない）。
+     */
+    static boolean isSignalChannelConfirmed(Context context) {
+        return prefs(context).getBoolean(KEY_SIGNAL_CHANNEL_CONFIRMED, false);
+    }
+
+    static void setSignalChannelConfirmed(Context context, boolean confirmed) {
+        prefs(context).edit().putBoolean(KEY_SIGNAL_CHANNEL_CONFIRMED, confirmed).apply();
+    }
+
+    /**
+     * 合図検知の自己試験（{@link MaintenanceChannel#probeSignalChannel}）の失敗
+     * （{@code signal_probe_failed}）を、すでに1回記録したかどうか。design.md追補
+     * 「合図検知の作り直し」②「黙らせない」の重複防止専用の枠（{@link
+     * #getLastMaintenanceChannelResult}（{@code ensureOpen}/{@code cycle}が使う枠）を
+     * 共用すると記録が往復する。Opus審査 2026-11-27 の指摘と同種の穴。理由は
+     * {@link MaintenanceChannel#probeSignalChannel}のjavadoc参照）。試験が成功するまで
+     * trueのままにし、失敗が続く間は1行だけに留める。既定false（まだ一度も記録していない）。
+     */
+    static boolean wasSignalProbeFailureRecorded(Context context) {
+        return prefs(context).getBoolean(KEY_SIGNAL_PROBE_FAILURE_RECORDED, false);
+    }
+
+    static void setSignalProbeFailureRecorded(Context context, boolean recorded) {
+        prefs(context).edit().putBoolean(KEY_SIGNAL_PROBE_FAILURE_RECORDED, recorded).apply();
     }
 
     private static SharedPreferences prefs(Context context) {

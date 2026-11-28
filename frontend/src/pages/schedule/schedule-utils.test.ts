@@ -8,6 +8,7 @@ import {
   fitCreatePopover,
   fitPopover,
   fitRecurrenceToDate,
+  getMonthCells,
   formatDraftDateLine,
   formatSearchResultLine,
   normalizeEvent,
@@ -96,6 +97,7 @@ describe("formatSearchResultLine", () => {
     allDay: false,
     category: null,
     calendarType: "shared",
+    teamIds: [],
     source: "app",
     ownerUserId: 101,
     ownerName: null,
@@ -455,5 +457,22 @@ describe("recurrence（便15B）", () => {
     expect(occ.isFirstOccurrence).toBe(true);
     expect(occ.recurrence).toBe("weekly");
     expect(normalizeEvent(base).id).toBe("event-1");
+  });
+});
+
+describe("getMonthCells", () => {
+  const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  it("starts on Monday when weekStart is 1", () => {
+    const cells = getMonthCells(new Date(2026, 10, 15), 1);
+    expect(cells).toHaveLength(42);
+    expect(ymd(cells[0])).toBe("2026-10-26");
+  });
+
+  it("starts on Sunday for weekStart 0 and when the argument is omitted", () => {
+    expect(ymd(getMonthCells(new Date(2026, 10, 15), 0)[0])).toBe("2026-11-01");
+    const cells = getMonthCells(new Date(2026, 10, 15));
+    expect(cells).toHaveLength(42);
+    expect(ymd(cells[0])).toBe("2026-11-01");
   });
 });

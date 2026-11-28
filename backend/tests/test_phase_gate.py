@@ -68,7 +68,10 @@ async def _ensure_tenant(engine, tenant_code: str) -> int:
 async def _cleanup(engine, tenant_id: int) -> None:
     from sqlalchemy import text
 
-    async with engine.begin() as conn:
+    from tests.rls_bootstrap import public_bootstrap_lock
+
+    # 共有 DB の後片付けは public_bootstrap_lock の中で commit まで終える
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         await conn.execute(
             text("DELETE FROM public.tenant_settings WHERE tenant_id = :tid"),
             {"tid": tenant_id},
@@ -81,12 +84,13 @@ async def test_get_phase_returns_a_when_no_row(engine):
     from sqlalchemy.ext.asyncio import async_sessionmaker
 
     from app.services.phase_gate import get_phase
+    from tests.rls_bootstrap import public_bootstrap_lock
 
     SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
     tag = uuid.uuid4().hex[:8]
     tenant_id = await _ensure_tenant(engine, f"pg_test_{tag}")
     # 行を確実に削除
-    async with engine.begin() as conn:
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         await conn.execute(
             text("DELETE FROM public.tenant_settings WHERE tenant_id = :tid"),
             {"tid": tenant_id},
@@ -182,12 +186,13 @@ async def test_set_phase_upserts(engine):
     from sqlalchemy.ext.asyncio import async_sessionmaker
 
     from app.services.phase_gate import set_phase
+    from tests.rls_bootstrap import public_bootstrap_lock
 
     SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
     tag = uuid.uuid4().hex[:8]
     tenant_id = await _ensure_tenant(engine, f"pg_test_{tag}")
     # 初期状態: 行無し
-    async with engine.begin() as conn:
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         await conn.execute(
             text("DELETE FROM public.tenant_settings WHERE tenant_id = :tid"),
             {"tid": tenant_id},

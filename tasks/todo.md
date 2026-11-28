@@ -8,6 +8,8 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| 受信箱の「対象外」ボタンで既存顧客の段階が外れてしまう道をふさぐ（ADR-1091 の続き・審査の推奨-2） | PO待ち | 未着手。ADR-1091 で手での「既存顧客」への切り替えと送信は止めた。受信箱の「対象外」ボタンは既存顧客の人にも押せ、段階が対象外に変わる | PO が着手を決めたら、既存顧客の人に対象外を出さない／押せない設計を作る | docs/handoff/customer-conversion-rule/design.md / ADR-1091 / PR #5786 | 2026-11-27 |
+| 会社の統合（merge_companies）が消した deals 表を書き換えて失敗する不具合 | PO待ち | 未着手。backend/app/routers/companies.py の merge_companies が 2026-07-29 に消した deals 表を UPDATE する。PR #5786 の前からある不具合。このため会社の統合の道の既存顧客の試験は足していない | PO が着手を決めたら、統合の処理から deals の UPDATE を外す設計と、統合の道の試験を作る | PR #5786 本文「試験」節 / docs/handoff/customer-conversion-rule/design.md | 2026-11-27 |
 | パスキーの自動の候補の決まった日の数え（P5 の14日・KPI の30日） | Opus | 本番反映 2026-11-24 03:27 JST。P5 は毎朝 A5 の画面点検が見ている | 2026-12-08 に P5（自動点検の係のログイン成功が14日すべてにあるか）、2026-12-24 に KPI（PO のパスキーの割合）を reader 鍵で数え kgi.md に書く | docs/handoff/passkey-autofill-first/sustain-design.md §5-1 / docs/specs/auth-login/kgi.md | 2026-11-24 |
 | 在庫はあるのに在庫表に出ない21商品（box＋sealed・unit 空・case＋shrink）を在庫表の集計で拾う | PO待ち | 未着手。PO 2026-11-18「1」で請求書の画面の組み込み（R5）を先に進め、この件は別テーマで後で直すと決定。それまで請求書で選べるのは在庫表に出る27商品だけ | 請求書の便R7まで終わった後、KGI を PO と決めて recon から始める（在庫表と請求書は同じ集計を使うので両方に出るようになる） | docs/handoff/invoice-create-portfolio/design-v2.md §2-2・§8・§11 | 2026-11-18 |
 | LINE 解析の引き継ぎの読み取り（_INHERIT_PRICE_SQL）を速くする | PO待ち | 未着手。売り切れの参照の 2 つと同じ遅い形が backend/app/services/line_analysis_v102_svc.py:1364 に残る。recon §4 で 1 回最大 2.3 秒 | PO が着手を決めたら、本番での呼ばれる回数を reader の道で数えてから設計する | docs/handoff/soldout-ref-read-speed/design.md §9・§11-3 / EV-20261110-SOLDOUT-REF | 2026-11-10 |

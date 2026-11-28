@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from datetime import date, timedelta
+from datetime import date, timedelta, timezone
 
 from app.schemas.assistant import IntentEvent, KarteIn, parse_iso
 
@@ -173,6 +173,12 @@ def _day_of(value: str | None) -> date | None:
     return parsed.date()
 
 
+def same_day(a: str | None, b: str | None) -> bool:
+    """両方の日付（日本時間・時差の印なしか +09:00）が読めて同じ日なら真。それ以外は偽。"""
+    day_a, day_b = _day_of(a), _day_of(b)
+    return day_a is not None and day_b is not None and day_a == day_b
+
+
 def _with_day(value: str | None, day: date) -> str | None:
     """時刻の文字の日付の部分だけを day に替える（時刻・時差の印は文字のまま）。替えられなければ None。"""
     if _day_of(value) is None:
@@ -226,3 +232,62 @@ def apply_day(ev: IntentEvent, text: str, today: date, karte: KarteIn | None) ->
     if old_day is not None and _day_of(ev.end) == old_day:
         update["end"] = _with_day(ev.end, day)
     return ev.model_copy(update=update)
+
+
+# ---- 便W3: 午前・午後を言わない 1〜6時は午後（design §18-4 の 1） ----------------------------
+
+# これが文にあれば午前・午後を言っている。何も変えない。英字の am・pm は前後が英字でないときだけ
+_AMPM_WORDS = re.compile(
+    r"午前|午後|朝|昼|夕方|夕|夜|晩|深夜|未明|早朝|明け方|ごぜん|ごご|a\.m\.|p\.m\.|(?<![a-z])(?:am|pm)(?![a-z])",
+    re.IGNORECASE,
+)
+_BARE_HOUR = re.compile(r"(?<![0-9])([1-6])\s*時(?!間)")
+
+
+def _shift_12h(value: str | None, hours: set[int]) -> str | None:
+    """+09:00 の値で、時が hours に入っていれば 12 時間足した文字を返す。それ以外は None（触らない）。"""
+    if value is None:
+        return None
+    try:
+        dt = parse_iso(value)
+    except (ValueError, TypeError):
+        return None
+    if dt.utcoffset() != _JST_OFFSET or dt.hour not in hours:
+        return None
+    return (dt + timedelta(hours=12)).isoformat(timespec="seconds")
+
+
+def afternoon_hours(ev: IntentEvent, text: str, karte: KarteIn | None) -> IntentEvent:
+    """午前・午後を言わない「1〜6時」を午後（13〜18時）にする。AI の答えの後・カルテと合わせる前に当てる。"""
+    norm = unicodedata.normalize("NFKC", text)
+    if _AMPM_WORDS.search(norm) or ev.is_all_day:
+        return ev
+    hours = {int(m) for m in _BARE_HOUR.findall(norm)}
+    if not hours:
+        return ev
+    if karte is not None and karte.start is not None:
+        try:
+            ks = parse_iso(karte.start)
+        except (ValueError, TypeError):
+            ks = None
+        if ks is not None:
+            if ks.tzinfo is not None:
+                ks = ks.astimezone(timezone(_JST_OFFSET))
+            if 0 <= ks.hour <= 6:
+                return ev
+    new_start = _shift_12h(ev.start, hours)
+    new_end = _shift_12h(ev.end, hours)
+    update: dict[str, object] = {}
+    if new_start is not None:
+        update["start"] = new_start
+        # 始まりを足したあと、終わりが +09:00 で新しい始まりより前なら終わりも足す
+        if new_end is None and ev.end is not None:
+            try:
+                end_dt = parse_iso(ev.end)
+            except (ValueError, TypeError):
+                end_dt = None
+            if end_dt is not None and end_dt.utcoffset() == _JST_OFFSET and end_dt < parse_iso(new_start):
+                new_end = (end_dt + timedelta(hours=12)).isoformat(timespec="seconds")
+    if new_end is not None:
+        update["end"] = new_end
+    return ev.model_copy(update=update) if update else ev

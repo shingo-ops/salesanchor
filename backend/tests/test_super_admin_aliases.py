@@ -36,6 +36,7 @@ async def engine():
 async def test_supplier_aliases_unique_constraint(engine):
     """AC1.2 確認: 同一 (supplier_id, alias_text, language) は重複不可。"""
     from sqlalchemy import text
+    from tests.rls_bootstrap import public_bootstrap_lock
     from sqlalchemy.exc import IntegrityError
 
     async with engine.connect() as conn:
@@ -57,7 +58,7 @@ async def test_supplier_aliases_unique_constraint(engine):
     test_alias = "TEST_AC1_2_RIZA_eX_SAR"
 
     # cleanup: 既存があれば消す
-    async with engine.begin() as conn:
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         await conn.execute(
             text("DELETE FROM public.supplier_aliases WHERE alias_text = :a"),
             {"a": test_alias},
@@ -86,7 +87,7 @@ async def test_supplier_aliases_unique_constraint(engine):
     assert raised, "UNIQUE 制約が動作していない"
 
     # cleanup
-    async with engine.begin() as conn:
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         await conn.execute(
             text("DELETE FROM public.supplier_aliases WHERE alias_text = :a"),
             {"a": test_alias},
@@ -103,6 +104,7 @@ async def test_csv_import_xmax_counts_inserted_vs_skipped(engine):
     ないため UNIQUE 衝突行も inserted にカウントしていた）。
     """
     from sqlalchemy import text
+    from tests.rls_bootstrap import public_bootstrap_lock
 
     async with engine.connect() as conn:
         exists = (await conn.execute(text(
@@ -126,7 +128,7 @@ async def test_csv_import_xmax_counts_inserted_vs_skipped(engine):
     ]
 
     # 事前 cleanup
-    async with engine.begin() as conn:
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         await conn.execute(
             text("DELETE FROM public.supplier_aliases WHERE alias_text = ANY(:as)"),
             {"as": aliases},
@@ -181,7 +183,7 @@ async def test_csv_import_xmax_counts_inserted_vs_skipped(engine):
     )
 
     # cleanup
-    async with engine.begin() as conn:
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         await conn.execute(
             text("DELETE FROM public.supplier_aliases WHERE alias_text = ANY(:as)"),
             {"as": aliases_r2},
@@ -191,6 +193,7 @@ async def test_csv_import_xmax_counts_inserted_vs_skipped(engine):
 async def test_supplier_aliases_different_language_allowed(engine):
     """同じ alias_text でも language が異なれば許容される（en 版と ja 版を共存）。"""
     from sqlalchemy import text
+    from tests.rls_bootstrap import public_bootstrap_lock
 
     async with engine.connect() as conn:
         exists = (await conn.execute(text(
@@ -209,7 +212,7 @@ async def test_supplier_aliases_different_language_allowed(engine):
 
     test_alias = "TEST_AC2_LANG_SPLIT"
 
-    async with engine.begin() as conn:
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         await conn.execute(
             text("DELETE FROM public.supplier_aliases WHERE alias_text = :a"),
             {"a": test_alias},
@@ -236,7 +239,7 @@ async def test_supplier_aliases_different_language_allowed(engine):
     assert cnt == 2, "ja と en が両方挿入されているはず"
 
     # cleanup
-    async with engine.begin() as conn:
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         await conn.execute(
             text("DELETE FROM public.supplier_aliases WHERE alias_text = :a"),
             {"a": test_alias},

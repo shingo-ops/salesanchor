@@ -12,7 +12,7 @@ export function useSeededForm<D, F>(
   data: D | undefined,
   toForm: (d: D) => F,
   empty: F,
-): { form: F; setForm: Dispatch<SetStateAction<F>>; ready: boolean } {
+): { form: F; setForm: Dispatch<SetStateAction<F>>; ready: boolean; base: F } {
   const { user } = useAuth();
   const fullKey = `${user?.uid ?? ""}\u0000${key}`;
   const [seed, setSeed] = useState<{ key: string; data: D; form: F; base: F } | null>(null);
@@ -28,5 +28,10 @@ export function useSeededForm<D, F>(
     [],
   );
   const ready = data !== undefined && seed !== null && seed.key === fullKey;
-  return { form: seed !== null && ready ? seed.form : empty, setForm, ready };
+  return {
+    form: seed !== null && ready ? seed.form : empty,
+    setForm,
+    ready,
+    base: seed !== null && ready ? seed.base : empty,
+  };
 }

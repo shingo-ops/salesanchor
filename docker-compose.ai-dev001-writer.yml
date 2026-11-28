@@ -1,0 +1,39 @@
+# ADR-1093 便2: AI 用「試験用テナント tenant_001 だけに書き込める道」の実行場所。
+# 本体の docker-compose.yml は変えない（別ファイル）。docker-compose.ai-reader.yml の写し。
+# 固定コマンド（便3 で authorized_keys に入れる）:
+#   docker compose -f <絶対パス>/docker-compose.ai-dev001-writer.yml --env-file <絶対パス>/.env --env-file <書く役の env>/ai-dev001-writer.env run --rm -T --no-deps ai-dev001-writer（本番の .env を先に渡す。無いと BACKEND_IMAGE が空で古い完成品になる）
+# 渡す環境変数は AI_DEV001_WRITER_DATABASE_URL の 1 つだけ。
+# AUDIT は /dev/log → auth.log → Loki。結果は残さない（logging none）。マウントはこのソケット 1 本だけ。
+# DATABASE_URL / ADMIN_DATABASE_URL / METADATA_FERNET_KEY は渡さない（env_file も使わない）。
+name: astro-webapp
+
+services:
+  ai-dev001-writer:
+    # backend と同じ完成品（.env の BACKEND_IMAGE。無ければ既定の名前）。
+    image: ${BACKEND_IMAGE:-astro-webapp-backend}
+    command: ["python", "-m", "app.ops.dev001_write"]
+    environment:
+      - AI_DEV001_WRITER_DATABASE_URL=${AI_DEV001_WRITER_DATABASE_URL:?AI_DEV001_WRITER_DATABASE_URL is required}
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    restart: "no"
+    logging:
+      driver: "none"
+    volumes:
+      - type: bind
+        source: /dev/log
+        target: /dev/log
+        bind:
+          create_host_path: false
+    stdin_open: true
+    networks:
+      - backnet
+
+networks:
+  backnet:
+    external: true
+    name: astro-webapp_backnet

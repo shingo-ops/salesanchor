@@ -48,6 +48,10 @@ from app.schemas.registration_token import (
     TokenVerifyResponse,
 )
 from app.services.audit import record_audit_log
+from app.services.customer_conversion import (
+    is_registration_completed,
+    promote_lead_if_customer,
+)
 from app.services.customer_statuses import STATUS_ACTIVE
 from app.services.registration_token import (
     create_registration_token,
@@ -84,18 +88,7 @@ async def create_token(
     """
     # ADR-127 §4 第1層ゲート: type=register かつ登録済みなら 409
     if data.type.value == "register":
-        already: bool = bool(await db.scalar(
-            text(
-                "SELECT EXISTS("
-                "  SELECT 1 FROM company_addresses ca"
-                "  JOIN companies c ON c.id = ca.company_id"
-                "  WHERE c.lead_id = :lead_id"
-                "  AND ca.address_type = 'billing'"
-                "  AND ca.is_default = TRUE"
-                ")"
-            ),
-            {"lead_id": data.lead_id},
-        ))
+        already: bool = await is_registration_completed(db, tenant_id, data.lead_id)
         if already:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -104,18 +97,7 @@ async def create_token(
 
     # change_billing は未登録（billing is_default=true なし）の会社には発行不可
     if data.type.value == "change_billing":
-        registered: bool = bool(await db.scalar(
-            text(
-                "SELECT EXISTS("
-                "  SELECT 1 FROM company_addresses ca"
-                "  JOIN companies c ON c.id = ca.company_id"
-                "  WHERE c.lead_id = :lead_id"
-                "  AND ca.address_type = 'billing'"
-                "  AND ca.is_default = TRUE"
-                ")"
-            ),
-            {"lead_id": data.lead_id},
-        ))
+        registered: bool = await is_registration_completed(db, tenant_id, data.lead_id)
         if not registered:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -401,6 +383,9 @@ async def register_customer(
 
     # トークンを使用済みにマーク
     await mark_token_used(db, str(token_id))
+    await promote_lead_if_customer(
+        db, tenant_id, lead_id, actor_user_id=None, via="register_form"
+    )
 
     await db.commit()
     await reset_tenant_context(db, tenant_id)
@@ -492,6 +477,9 @@ async def add_address(
 
     # トークンを使用済みにマーク
     await mark_token_used(db, str(token_id))
+    await promote_lead_if_customer(
+        db, tenant_id, lead_id, actor_user_id=None, via="add_address"
+    )
 
     await db.commit()
     await reset_tenant_context(db, tenant_id)
@@ -614,6 +602,9 @@ async def change_billing(
 
     # トークンを使用済みにマーク
     await mark_token_used(db, str(token_id))
+    await promote_lead_if_customer(
+        db, tenant_id, lead_id, actor_user_id=None, via="change_billing"
+    )
 
     await db.commit()
     await reset_tenant_context(db, tenant_id)

@@ -50,7 +50,7 @@ const OWNERS = {
   current_staff_id: 7,
   current_user_id: 101,
   owners: [
-    { staff_id: 7, user_id: 101, staff_code: "A01", name: "Owner Self", primary_email: null, color: null, is_visible: true, share_mode: "self", is_self: true },
+    { staff_id: 7, user_id: 101, staff_code: "A01", name: "Owner Self", primary_email: null, color_key: null, is_self: true },
   ],
 };
 const eventsAnswer = () => ({
@@ -70,6 +70,7 @@ vi.mock("../../lib/api", () => ({
       if (path === "/me/permissions") return { permissions: [], is_tenant_admin: false };
       if (isScheduleRead(path) && answers.mode === "hang") return new Promise<never>(() => {});
       if (isScheduleRead(path) && answers.mode === "fail") throw new Error("read failed");
+      if (path === "/calendar/preferences") return { default_view: "week", week_start: 0, event_minutes: 60, auto_meet: false, open_owners: "self", open_team_id: null };
       if (path === "/calendar/owners") return OWNERS;
       if (path.startsWith("/calendar/events?")) return eventsAnswer();
       if (path.startsWith("/shifts?")) return [];

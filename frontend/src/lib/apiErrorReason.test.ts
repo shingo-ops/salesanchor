@@ -73,7 +73,7 @@ describe("merge_target_archived", () => {
 
 describe("backend sync", () => {
   it("every table code is used in backend/app", () => {
-    expect(Object.keys(API_ERROR_REASON_KEYS).length).toBe(27);
+    expect(Object.keys(API_ERROR_REASON_KEYS).length).toBe(31);
     for (const code of Object.keys(API_ERROR_REASON_KEYS)) {
       expect(sources.includes(`"${code}"`), code).toBe(true);
     }
@@ -85,8 +85,8 @@ describe("not_found:<target> (ADR-1071 bin3)", () => {
     await i18n.changeLanguage("ja");
   });
 
-  it("has 66 targets, each key named after its target", () => {
-    expect(Object.keys(NOT_FOUND_TARGET_KEYS).length).toBe(66);
+  it("has 67 targets, each key named after its target", () => {
+    expect(Object.keys(NOT_FOUND_TARGET_KEYS).length).toBe(67);
     for (const [target, key] of Object.entries(NOT_FOUND_TARGET_KEYS)) {
       expect(key).toBe(`apiError.notFoundTarget.${target}`);
     }

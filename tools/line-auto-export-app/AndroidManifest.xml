@@ -6,8 +6,8 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="jp.salesanchor.lineexport"
-    android:versionCode="22"
-    android:versionName="0.19.0-stage3">
+    android:versionCode="28"
+    android:versionName="0.25.0-stage3">
 
     <uses-sdk
         android:minSdkVersion="23"
@@ -21,6 +21,19 @@
 
     <!-- 段階3: 再起動後にアプリ内タイマー（AlarmManager）を張り直すために必要。 -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- 設定画面から「電池の除外」設定（Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS）を
+         開くために必要。電池最適化の除外が外れるとAlarmManagerの発火が1時間に1回に制限され、
+         取り込みが長時間空振りするため、利用者が自分で復旧できる手段として用意する
+         （design.md追補「電池最適化で後回しにされたことを検知・記録・復旧できる仕組み」2026-11-26）。 -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- 保守口（無線デバッグ）が切れたら `adb_wifi_enabled` を1に戻すために必要
+         （ADR-1092、design.md追補 2026-11-27「保守口（無線デバッグ）が切れたらアプリが開き直す」）。
+         保護レベルに development を含むため adb から1回だけ付与する運用とし、本アプリの
+         インストール時には自動付与されない:
+         `adb shell pm grant jp.salesanchor.lineexport android.permission.WRITE_SECURE_SETTINGS` -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
 
     <!--
       android.permission.INTERNET は意図的に付与しない。

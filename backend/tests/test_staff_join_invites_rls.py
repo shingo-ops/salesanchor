@@ -64,11 +64,13 @@ async def _setup():
 async def _cleanup(admin_engine):
     from sqlalchemy import text
 
-    async with admin_engine.begin() as conn:
-        await conn.execute(
-            text("DELETE FROM public.staff_join_invites WHERE tenant_id IN (:a, :b)"),
-            {"a": _TENANT_A, "b": _TENANT_B},
-        )
+    # 共有 DB の後片付けは public_bootstrap_lock の中で commit まで終える
+    async with public_bootstrap_lock(admin_engine):
+        async with admin_engine.begin() as conn:
+            await conn.execute(
+                text("DELETE FROM public.staff_join_invites WHERE tenant_id IN (:a, :b)"),
+                {"a": _TENANT_A, "b": _TENANT_B},
+            )
 
 
 async def _teardown(admin_engine, app_engine):

@@ -45,6 +45,7 @@ from app.services import carrier_credentials as carriers
 from app.services import google_drive_oauth as drive_svc
 from app.services import paypal_payments
 from app.services.audit import record_audit_log
+from app.services.customer_conversion import promote_lead_if_customer
 from app.services.payment_dates import PAID_AT_SQL, paypal_paid_at
 from app.services.test_pdf import render_test_pdf
 
@@ -807,6 +808,10 @@ async def paypal_return(
                  "WHERE invoice_id=:iid AND status='awaiting_payment'"),
             {"iid": invoice_id, "paid_at": paid_at_value},
         )
+        await promote_lead_if_customer(
+            db, tenant_id, None, invoice_id=invoice_id,
+            actor_user_id=None, via="paypal_return",
+        )
         await db.commit()
     except Exception as e:  # noqa: BLE001
         await db.rollback()
@@ -955,6 +960,10 @@ async def _handle_invoice_paid(request: Request, db: AsyncSession, event: dict) 
                 text(f"UPDATE orders SET status='sourcing', paid_at={PAID_AT_SQL}, updated_at=NOW() "
                      "WHERE invoice_id=:iid AND status='awaiting_payment'"),
                 {"iid": invoice_id, "paid_at": paid_at_value},
+            )
+            await promote_lead_if_customer(
+                db, tenant_id, None, invoice_id=invoice_id,
+                actor_user_id=None, via="paypal_webhook",
             )
             await db.commit()
     except Exception as e:  # noqa: BLE001

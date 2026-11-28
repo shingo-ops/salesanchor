@@ -2,8 +2,10 @@ package jp.salesanchor.lineexport;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.TextUtils;
@@ -37,6 +39,9 @@ public class SettingsActivity extends Activity {
 
     private TextView schedulerStatusText;
     private Button schedulerToggleButton;
+
+    private TextView batteryStatusText;
+    private Button batteryOpenSettingsButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,6 +99,15 @@ public class SettingsActivity extends Activity {
             @Override
             public void onClick(View v) {
                 toggleScheduler();
+            }
+        });
+
+        batteryStatusText = (TextView) findViewById(R.id.battery_status_text);
+        batteryOpenSettingsButton = (Button) findViewById(R.id.battery_open_settings_button);
+        batteryOpenSettingsButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openBatteryOptimizationSettings();
             }
         });
 
@@ -181,6 +195,7 @@ public class SettingsActivity extends Activity {
 
         refreshNotifyStatus();
         refreshSchedulerStatus();
+        refreshBatteryStatus();
     }
 
     /**
@@ -209,5 +224,36 @@ public class SettingsActivity extends Activity {
         schedulerToggleButton.setText(enabled
                 ? R.string.scheduler_toggle_turn_off
                 : R.string.scheduler_toggle_turn_on);
+    }
+
+    /**
+     * 電池最適化の除外状態を表示する。design.md追補「電池最適化で後回しにされたことを検知・
+     * 記録・復旧できる仕組み」(2026-11-26): 除外が外れるとAlarmManagerの発火が大きく遅れるため、
+     * 利用者が自分で気づいて復旧できるようにする。不明（取得できない）ときはその旨を表示する。
+     */
+    private void refreshBatteryStatus() {
+        Boolean ignoring = RunScheduler.isIgnoringBatteryOptimizations(this);
+        if (ignoring == null) {
+            batteryStatusText.setText(R.string.battery_status_unknown);
+        } else {
+            batteryStatusText.setText(ignoring.booleanValue()
+                    ? R.string.battery_status_exempt
+                    : R.string.battery_status_not_exempt);
+        }
+    }
+
+    /**
+     * 電池の除外設定画面（Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS）を開く。
+     * このActivityが無い端末（カスタムROM等）ではActivityNotFoundExceptionが起きうるため、
+     * 必ず捕まえて落ちないようにする。
+     */
+    private void openBatteryOptimizationSettings() {
+        try {
+            Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+            intent.setData(Uri.parse("package:" + getPackageName()));
+            startActivity(intent);
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(this, R.string.battery_open_settings_failed, Toast.LENGTH_SHORT).show();
+        }
     }
 }

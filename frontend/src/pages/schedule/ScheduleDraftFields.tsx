@@ -12,12 +12,14 @@ import { ColorSwatchPicker, type ColorSwatchOption } from "../../components/Colo
 import { ButtonLink } from "../../components/ButtonLink";
 import { Checkbox } from "../../components/Checkbox";
 import { EditorPageRow } from "../../components/EditorPage";
+import { MultiSelect } from "../../components/MultiSelect";
 import { SelectControl } from "../../components/Select";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 import { Toggle } from "../../components/Toggle";
 import { SCHEDULE_POPOVER_ICONS } from "../../constants/icons";
-import { CALENDARS, type CalendarId } from "../../features/schedule/calendars.config";
+import { categoryLabel, parseShare, useCalendarCategories } from "../../features/schedule/useCalendarCategories";
+import { teamIdsToValues, useCalendarTeams, valuesToTeamIds } from "../../features/schedule/useCalendarTeams";
 import { EVENT_COLOR_KEYS, eventColorLabelKey, eventColorVar, isEventColorKey } from "./eventColors";
 import type { ScheduleDraft, PopoverMode } from "./SchedulePageImpl";
 import {
@@ -277,23 +279,47 @@ export function DraftDateFields({
   ) : null;
 }
 
-export function DraftCategoryField({ appearance, mode, draft, onDraftChange }: FieldProps) {
+export function DraftCategoryField({
+  appearance,
+  mode,
+  draft,
+  onDraftChange,
+  currentCategory = null,
+}: FieldProps & { currentCategory?: string | null }) {
   const { t } = useTranslation();
+  const { categories, byKey } = useCalendarCategories();
   const CategoryIcon = SCHEDULE_POPOVER_ICONS.category;
   const page = appearance === "page";
   const changeCategory = (event: ChangeEvent<HTMLSelectElement>) => {
-    const category = event.target.value as CalendarId;
-    onDraftChange(
-      mode === "create"
-        ? { ...draft, category, visibleToStaff: category !== "personal" }
-        : { ...draft, category },
-    );
+    const category = event.target.value;
+    const picked = byKey.get(category);
+    // 作るときだけ、その種類の色と共有の初期値を入れる。直すときは種類だけ変える（手で付けた色や Google の色を消さない）
+    if (mode === "create" && picked) {
+      onDraftChange({
+        ...draft,
+        category,
+        colorKey: isEventColorKey(picked.color_key) ? picked.color_key : null,
+        share: picked.default_share,
+        teamIds: picked.default_share === "team" ? picked.default_team_ids ?? [] : [],
+      });
+      return;
+    }
+    onDraftChange({ ...draft, category });
   };
-  const options = CALENDARS.map((calendar) => (
-    <option key={calendar.id} value={calendar.id}>
-      {t(calendar.labelKey)}
-    </option>
-  ));
+  // 選び方に出るのは使っている種類だけ。今の予定の種類が使わなくした種類なら、それも 1 つ足す
+  const shown = categories
+    .filter((category) => category.is_active || category.key === currentCategory || category.key === draft.category)
+    .sort((a, b) => a.sort_order - b.sort_order);
+  const listed = shown.some((category) => category.key === draft.category);
+  const options = [
+    // 読み込み前・表に無い鍵のときも、選んでいる値を選び方に残す
+    ...(listed ? [] : [<option key={draft.category} value={draft.category}>{categoryLabel(draft.category, null, t)}</option>]),
+    ...shown.map((category) => (
+      <option key={category.key} value={category.key}>
+        {categoryLabel(category.key, category.name, t)}
+      </option>
+    )),
+  ];
   if (page) {
     return (
       <SelectControl
@@ -396,23 +422,77 @@ export function DraftShareField({
 }: Omit<FieldProps, "mode"> & { canChangeVisibility: boolean }) {
   const { t } = useTranslation();
   const ShareIcon = SCHEDULE_POPOVER_ICONS.share;
+  const { options: teamOptions } = useCalendarTeams({ enabled: canChangeVisibility });
   if (!canChangeVisibility) return null;
-  const toggle = (
+  const changeShare = (event: ChangeEvent<HTMLSelectElement>) => {
+    const share = parseShare(event.target.value);
+    // チームから外すとチームの選びは捨てる（チームに戻すときは選び直す）
+    onDraftChange({ ...draft, share, teamIds: share === "team" ? draft.teamIds : [] });
+  };
+  const shareOptions = [
+    { value: "self", label: t("schedule.shareSelf") },
+    { value: "all", label: t("schedule.shareAll") },
+    { value: "team", label: t("schedule.shareTeam") },
+  ];
+  const field = (
     <div className="schedule-field schedule-field--inline">
-      <span className="schedule-field__label">{t("schedule.shareWithStaff")}</span>
-      <Toggle
-        checked={draft.visibleToStaff}
-        aria-label={t("schedule.shareWithStaff")}
-        onCheckedChange={(next) => onDraftChange({ ...draft, visibleToStaff: next })}
-      />
+      <span className="schedule-field__label">{t("schedule.shareLabel")}</span>
+      {appearance === "page" ? (
+        <SelectControl
+          variant="editor-filled"
+          aria-label={t("schedule.shareLabel")}
+          value={draft.share}
+          options={shareOptions}
+          onChange={changeShare}
+        />
+      ) : (
+        <SelectControl
+          size="sm"
+          aria-label={t("schedule.shareLabel")}
+          value={draft.share}
+          options={shareOptions}
+          onChange={changeShare}
+        />
+      )}
     </div>
   );
-  if (appearance === "page") return toggle;
+  const teams =
+    draft.share === "team" ? (
+      <div className="schedule-field">
+        <MultiSelect
+          label={t("schedule.shareTeams")}
+          options={teamOptions}
+          selected={teamIdsToValues(draft.teamIds)}
+          onChange={(values) => onDraftChange({ ...draft, teamIds: valuesToTeamIds(values) })}
+          clearLabel={t("schedule.shareTeamsClear")}
+          allLabel={t("schedule.shareTeamsNone")}
+          countLabel={(count) => t("schedule.shareTeamsCount", { count })}
+          emptyLabel={t("schedule.noActiveTeams")}
+          layout="inline"
+          testId="schedule-share-teams"
+        />
+        {draft.teamIds.length === 0 && (
+          <span className="schedule-field__label">{t("schedule.shareTeamsRequired")}</span>
+        )}
+      </div>
+    ) : null;
+  const content = (
+    <>
+      {field}
+      {teams}
+    </>
+  );
+  if (appearance === "page") return content;
   return (
-    <CreateRow creating icon={<ShareIcon size={20} aria-hidden="true" />}>
-      {toggle}
+    <CreateRow creating icon={<ShareIcon size={20} aria-hidden="true" />} wrap>
+      {content}
     </CreateRow>
   );
+}
+
+/** 共有が「チーム」でチームが 1 つも選ばれていない（保存を止める）。共有を変えられない人の予定は送らないので数えない */
+export function isTeamShareIncomplete(draft: ScheduleDraft, canChangeVisibility: boolean): boolean {
+  return canChangeVisibility && draft.share === "team" && draft.teamIds.length === 0;
 }
 
 export function DraftLocationField({
@@ -534,7 +614,7 @@ export function ScheduleDraftFields({
   return (
     <>
       <DraftDateFields {...common} mode={mode} creating={creating} expanded={expanded} />
-      <DraftCategoryField {...common} mode={mode} />
+      <DraftCategoryField {...common} mode={mode} currentCategory={item?.category ?? null} />
       <DraftColorField {...common} mode={mode} ownerColor={ownerColor} />
       <DraftMeetField {...common} item={item} meetAvailable={meetAvailable} />
       <DraftShareField {...common} canChangeVisibility={canChangeVisibility} />

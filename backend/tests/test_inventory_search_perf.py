@@ -59,6 +59,8 @@ async def bulk_seed(engine):
     """
     from sqlalchemy import text
 
+    from tests.rls_bootstrap import public_bootstrap_lock
+
     tag = uuid.uuid4().hex[:8]
     async with engine.begin() as conn:
         # bulk INSERT
@@ -85,7 +87,8 @@ async def bulk_seed(engine):
             },
         )
     yield tag
-    async with engine.begin() as conn:
+    # 共有 DB の後片付けは public_bootstrap_lock の中で commit まで終える
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         await conn.execute(
             text(
                 "DELETE FROM public.products WHERE product_code LIKE :pat"

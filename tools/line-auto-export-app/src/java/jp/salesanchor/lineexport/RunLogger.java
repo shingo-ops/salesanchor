@@ -66,6 +66,13 @@ final class RunLogger {
             json.put("trigger", trigger == null ? "" : trigger);
             json.put("keyguardLocked", isKeyguardLocked(context));
             json.put("screenOn", isInteractive(context));
+            // 電池最適化の除外状態（design.md追補「電池最適化で後回しにされたことを検知・記録・
+            // 復旧できる仕組み」2026-11-26）。不明（PowerManager取得不可・例外）なときは項目を
+            // 出さない（elapsedUpMs等、既存のnullable項目と同じ扱い）。
+            Boolean batteryOptimizationIgnored = RunScheduler.isIgnoringBatteryOptimizations(context);
+            if (batteryOptimizationIgnored != null) {
+                json.put("batteryOptimizationIgnored", batteryOptimizationIgnored.booleanValue());
+            }
         } catch (JSONException e) {
             Log.w(TAG, "run log start build failed: " + e);
             return;
@@ -210,6 +217,117 @@ final class RunLogger {
             }
         } catch (JSONException e) {
             Log.w(TAG, "run log scheduler event build failed: " + e);
+            return;
+        }
+        append(context, json);
+    }
+
+    /**
+     * 電池最適化の除外（{@code PowerManager#isIgnoringBatteryOptimizations}）が変化したときだけ
+     * 呼ぶ（design.md追補「電池最適化で後回しにされたことを検知・記録・復旧できる仕組み」
+     * 2026-11-26。{@link RunScheduler}のcheckBatteryOptimizationExemptionChanged参照）。
+     * {@link #logSchedulerEvent}と同じ「単発行・runIdに紐づかない」扱い。毎回は呼ばれない
+     * （変化時だけのため、ログが膨らまない）。
+     */
+    static void logBatteryExemptionChanged(Context context, boolean nowIgnoring) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("at", formatIso8601(System.currentTimeMillis()));
+            json.put("flow", "scheduler");
+            json.put("phase", "battery_exemption_changed");
+            json.put("ignoringBatteryOptimizations", nowIgnoring);
+        } catch (JSONException e) {
+            Log.w(TAG, "run log battery exemption build failed: " + e);
+            return;
+        }
+        append(context, json);
+    }
+
+    /**
+     * 空振り（予約した発火予定時刻を過ぎても発火しなかった）を検知したときに呼ぶ
+     * （design.md追補「電池最適化で後回しにされたことを検知・記録・復旧できる仕組み」
+     * 2026-11-26。{@link RunScheduler}のcheckStaleScheduledFires参照）。{@link #logSchedulerEvent}
+     * と同じ「単発行・runIdに紐づかない」扱い。
+     *
+     * @param triggerLabel {@link RunScheduler#labelFor}の日本語ラベル（"通知"/"補完"/"再試行"）
+     * @param scheduledAtMs 予約していた発火予定時刻（絶対epoch ms）
+     * @param lateByMs 現在時刻までの遅れ（ms）
+     */
+    static void logMissedFire(Context context, String triggerLabel, long scheduledAtMs, long lateByMs) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("at", formatIso8601(System.currentTimeMillis()));
+            json.put("flow", "scheduler");
+            json.put("phase", "missed_fire");
+            json.put("trigger", triggerLabel == null ? "" : triggerLabel);
+            json.put("scheduledAt", formatIso8601(scheduledAtMs));
+            json.put("lateByMs", lateByMs);
+        } catch (JSONException e) {
+            Log.w(TAG, "run log missed fire build failed: " + e);
+            return;
+        }
+        append(context, json);
+    }
+
+    /**
+     * 保守口（無線デバッグ）が切れていたら開き直す仕組み（ADR-1092、design.md追補 2026-11-27
+     * 「保守口（無線デバッグ）が切れたらアプリが開き直す」／「保守口（無線デバッグ）の強制
+     * 開け直し」）の結果を記録する（{@link MaintenanceChannel}参照）。{@code result}が
+     * "opened"/"cycled_opened"/"cycled_blocked"のときは毎回呼ばれる。それ以外（変化時だけ
+     * {@link MaintenanceChannel#recordIfChanged}経由で呼ばれる）は{@link
+     * #logBatteryExemptionChanged}と同じ「単発行・runIdに紐づかない」扱い。
+     *
+     * @param result "opened"（0だったものを1にできた）/ "blocked"（書いたが1にならなかった。
+     *     Wi-Fiが無い等）/ "no_permission"（WRITE_SECURE_SETTINGS未付与）/ "cycled_opened"
+     *     （強制的に0→1と開け閉めして1になった）/ "cycled_blocked"（開け閉めしても1にならなかった。
+     *     Wi-Fiが無い等）/ "signal_channel_ok"（合図ファイルの削除による検知の自己試験に成功した）
+     *     / "signal_probe_failed"（同自己試験が失敗した＝削除による検知が使えない可能性がある）
+     * @param valueAfter 書き込みを試みた後に読み直した{@code adb_wifi_enabled}の値。
+     *     対象外（signal_channel_ok・signal_probe_failed等）のときは-1
+     * @param trigger 呼び出し元の引き金。"run"（毎回の実行予約時のensureOpen）/
+     *     "boot"（起動時のcycle）/ "signal"（合図ファイルを見たcycle・checkSignalFile）
+     */
+    static void logMaintenanceChannel(Context context, String result, int valueAfter, String trigger) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("at", formatIso8601(System.currentTimeMillis()));
+            json.put("flow", "scheduler");
+            json.put("phase", "maintenance_channel");
+            json.put("result", result);
+            json.put("adbWifiEnabled", valueAfter);
+            json.put("trigger", trigger == null ? "" : trigger);
+        } catch (JSONException e) {
+            Log.w(TAG, "run log maintenance channel build failed: " + e);
+            return;
+        }
+        append(context, json);
+    }
+
+    /**
+     * 実行の合図が黙って捨てられた（実行ログに何も残らず、再試行も張られなかった）ときに
+     * 呼ぶ（design.md追補 2026-11-28「合図が黙って捨てられる穴」。51日分の端末ログで
+     * fire 4,645回中6回、最大59.6分の遅れが確認された。{@link UnlockAccessibilityService}の
+     * requestRunAll／requestRun／requestExportのsInstance==null分岐と、
+     * startUnlockFlow()の「既に走っている」分岐から呼ばれる）。{@link #logSchedulerEvent}
+     * と同じ「単発行・runIdに紐づかない」扱い。メッセージ本文は一切含めない。
+     *
+     * @param triggerLabel 捨てられた合図のラベル（{@link RunScheduler#labelFor}の日本語ラベル
+     *     や"RUN(手動)"等）。nullなら空文字
+     * @param reason 捨てられた理由。"service_unbound"（ユーザー補助サービスが未接続）／
+     *     "already_running"（前の回が走っている）。nullなら項目自体を出さない
+     */
+    static void logTriggerDropped(Context context, String triggerLabel, String reason) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("at", formatIso8601(System.currentTimeMillis()));
+            json.put("flow", "scheduler");
+            json.put("phase", "trigger_dropped");
+            json.put("trigger", triggerLabel == null ? "" : triggerLabel);
+            if (reason != null) {
+                json.put("reason", reason);
+            }
+        } catch (JSONException e) {
+            Log.w(TAG, "run log trigger dropped build failed: " + e);
             return;
         }
         append(context, json);

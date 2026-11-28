@@ -32,6 +32,7 @@ from app.models import User
 from app.routers import analytics as analytics_router
 from tests.rls_bootstrap import (
     bootstrap_tenant_schema,
+    public_bootstrap_lock,
     tenant_schema_lock,
 )
 
@@ -281,7 +282,8 @@ async def test_priority_prospects_pg_rls_all_requirements():
                         )
             finally:
                 with suppress(Exception):
-                    async with admin_engine.begin() as conn:
+                    # スキーマを消すので、tenant_schema_lock の内側で public_bootstrap_lock も取る（順は tenant → public）
+                    async with public_bootstrap_lock(admin_engine), admin_engine.begin() as conn:
                         for fid in foreign_inserted:
                             await conn.execute(
                                 text(f"DELETE FROM {foreign_schema}.leads WHERE id = :id"),

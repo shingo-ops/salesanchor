@@ -248,6 +248,28 @@ class TestElogiCsvSingle:
         assert data[17] == "100-0001"
         assert data[18] == "1-1 Marunouchi"
 
+    async def test_single_csv_hk_empty_zip_fills_0000000(self, client):
+        """香港あてで ZIP 空: CSV の ZIP2 列は 0000000、DB は空のまま（ADR-126 §5）"""
+        order_id = await _create_order(client, "ORD-SHIP-CSV-HK")
+        res = await client.post(
+            f"/api/v1/orders/{order_id}/shipping",
+            json={
+                "recipient_name": "Recipient HK",
+                "country_code": "HK",
+                "state_code": "Kowloon",
+                "city": "Cheung Sha Wan",
+                "address1": "1 Test Road",
+            },
+        )
+        assert res.status_code == 201, res.text
+        csv_res = await client.get(f"/api/v1/orders/{order_id}/shipping/elogi-csv")
+        assert csv_res.status_code == 200
+        data = list(csv.reader(StringIO(csv_res.text)))[1]
+        assert data[14] == "HK"
+        assert data[17] == "0000000"
+        got = await client.get(f"/api/v1/orders/{order_id}/shipping")
+        assert got.json()["zip_code"] is None
+
     async def test_single_csv_without_shipping_row(self, client):
         """発送情報未登録でも受注があれば CSV を返す（多くの列が空）"""
         order_id = await _create_order(client, "ORD-SHIP-CSV-NOSHIP")

@@ -147,7 +147,10 @@ async def _setup_movements(engine, tenant_id: int) -> dict:
 async def _cleanup(engine, tenant_id: int, product_ids: list[int]) -> None:
     from sqlalchemy import text
 
-    async with engine.begin() as conn:
+    from tests.rls_bootstrap import public_bootstrap_lock
+
+    # 共有 DB の後片付けは public_bootstrap_lock の中で commit まで終える
+    async with public_bootstrap_lock(engine), engine.begin() as conn:
         await conn.execute(
             text(
                 "DELETE FROM public.inventory_movements "

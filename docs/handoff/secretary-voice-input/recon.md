@@ -110,3 +110,70 @@
 
 - 読み取れること（事実）: 場所・時刻・題名・Meet は今の指示文のままで 8/8 読めた。説明・メモは 1/4。時刻だけ変える頼みでは終わりが null で返る（2/2）。
 - 未確認: 回数が 2 回ずつで少ない。指示文を足した後の数は便W の測り（kgi.md §6 W1・W2）で数える。
+
+## 10. 声で直す便の気をつける点 3 つ（便W2・2026-11-25 調べ・origin/main ea800930e）
+
+### 10-1 実物
+
+- 「はい」の判定は、いいえの語が無く、文の頭が はい の語なら、後ろに何が続いても「はい」（`frontend/src/features/secretary/secretaryVoiceAnswer.ts:60-65`）。「はい」なら前の下書きをそのまま作る（`frontend/src/features/secretary/SecretaryChat.tsx:276-280`）。はい の語は `はい|うん|お願い|入れて|作って|オッケー|ok`（`frontend/src/locales/ja.json` の `secretary.voiceMode.yesWords`）。
+- 直す道で日付の表（`apply_day`）を当てるのは、AI の始まりがカルテと時刻として違うとき（`backend/app/routers/assistant.py:340-341`）。時刻だけ違っても当たる。表が文の中に日付の言い方を 1 つだけ見つけると、始まりの日をその日に替える（`backend/app/services/secretary_dates.py:201-228`）。
+- 手元で表を試した結果（Opus・2026-11-25・`backend/app/services/secretary_dates.py` を直接呼ぶ）: 「4時に変えて、説明に明日と入れて」など、読点や「して」でつながる 7 つの言い方は表が日付を見つけず（None）、日付は動かない。「4時に変えて 説明 明日」のように空白で区切ると表が「明日」を見つけ、カルテが明日でない日なら始まりの日が明日に動く。
+- Meet を付けられるかは `can_add_meet`（`backend/app/services/calendar_service.py:74-81`・Google をつないだ本人だけ真）。直す道は AI の add_meet をそのまま合わせ（`backend/app/services/secretary_karte.py` の `merge_edit`）、変わった＝真になる。返す下書きは付けられない人では add_meet を null にする（`backend/app/routers/assistant.py:430`）ので、画面は何も変わらないのに「直しました」と読む。
+
+### 10-2 本物の AI の答え（2026-11-25 09:14 JST・Opus が実施）
+
+- 道は §9-3 と同じ（本番の backend の image の使い捨て容器から秘書の容器を直接呼ぶ・記録に行は入らない）。カルテ＝題名「打ち合わせ」・始まり 2026-11-30 15:00・終わり 16:00（明日でない日）。今日＝2026-11-25。9 つの言い方を 3 回ずつ（計 27 回・全部 HTTP 200）。
+- 台本: `docs/handoff/secretary-voice-input/binW2/probe_followup.py`。生の結果: `docs/handoff/secretary-voice-input/binW2/probe-before-20261125.jsonl`。
+
+| 言い方 | 3 回の答え | 数 |
+|---|---|---|
+| d1 4時に変えて、説明に明日と入れて | 3 回とも start 11/30 16:00・description「明日」 | 日付を変えない 3/3 |
+| d2 16時にして、メモは明日の資料 | 3 回とも start 11/30 16:00・description「明日の資料」 | 3/3 |
+| d3 説明に今日の議事録と入れて4時にして | 3 回とも start 11/30 16:00・description「今日の議事録」 | 3/3 |
+| d4 時間を4時にしてメモに明日持参 | 3 回とも start 11/30 16:00・description「明日持参」 | 3/3 |
+| d5 4時に変えて | 3 回とも start 11/30 16:00 | 3/3 |
+| y1 はい、場所は渋谷にして | 3 回とも event・location「渋谷」 | 直す欄を返した 3/3 |
+| y2 オッケー、説明に資料と入れて | 3 回とも event・description「資料」 | 3/3 |
+| y3 はい、お願いします | 3 回とも unknown | 直す欄なし 3/3 |
+| y4 うん、それで | unknown 2 回・event で全部の欄 null 1 回 | 直す欄なし 3/3 |
+
+- 読み取れること（事実）: AI は時刻だけの直しで日付を 15/15 変えなかった。日付が動く道は表（`apply_day`）だけ。「はい」の後ろの直しは 6/6 読めた。後ろに直しが無い「はい」は 6/6 直す欄を返さなかった（`merge_edit` で変わった＝偽になる形）。
+- 未確認: 3 回ずつで少ない。反映後に kgi.md §7 X1〜X3 で同じ台本をもう一度流す。
+
+## 11. 「はい、〜にして」で前の下書きが作られる件・「あさって4時」が朝4時になる件（便W3・2026-11-25 調べ・origin/main 88c3fccd1）
+
+調べの台本と生の結果: `docs/handoff/secretary-voice-input/binW3/`（`docs/handoff/secretary-voice-input/binW3/probe_before.py`・`probe-before-20261125.jsonl` 118 行・`probe-before-20261125-table.txt`・`docs/handoff/secretary-voice-input/binW3/hours_count.py`・`hours-20261125.txt`）。本物の AI（`http://secretary-codex:8090/intent`・gpt-5.6-terra）に 1 件ずつ順に流した（同時に流すと 117/118 が 429 busy になった。AI は同時に 1 件だけ受ける）。118/118 が 200。
+
+### 11-1 何時を朝と読むか（AI の答え・最終の値）
+
+| 言い方 | 新しい頼み「明日N時に打ち合わせ」（今 20:00 と 09:00・2 回ずつ） | 「あさってN時にして」（直す・カルテ 11/30 15:00） | 「N時に変えて」（直す） |
+|---|---|---|---|
+| 1時 | 01:00 が 4/4 | 13:00 が 2/2 | 13:00 が 2/2 |
+| 2時 | 14:00 が 3/4・02:00 が 1/4 | 14:00 が 2/2 | 14:00 が 2/2 |
+| 3時 | 15:00 が 4/4 | 15:00 が 2/2 | 15:00 が 2/2 |
+| 4時 | 16:00 が 3/4・04:00 が 1/4 | 16:00 が 2/2 | 16:00 が 2/2 |
+| 5時 | 17:00 が 4/4 | 17:00 が 1/2・05:00 が 1/2 | 17:00 が 2/2 |
+| 6時 | 06:00 が 4/4 | 06:00 が 2/2 | 18:00 が 2/2 |
+| 7〜11時 | すべて朝（07:00〜11:00）20/20 | 10/10 | 10/10 |
+
+- 1〜6時を朝と読んだ数は 36 回中 13 回。同じ言い方でも回によって朝と午後が入れ替わる（2時・4時・5時）。
+- 指示文（`secretary-agent/prompt.txt` 19 行）に午前・午後の決まりは無い。日付は「今の日時から数える」（`:7`）だけ。
+- backend は日付の部分だけを決まりの表で替える（`backend/app/services/secretary_dates.py:201` `apply_day`）。時刻は AI の読んだまま。
+
+### 11-2 本番の予定の始まりの時刻（日本時間・5 社の表・読むだけ）
+
+`hours-20261125.txt`: 予定 35 件（終日 0 件）。アプリで作った予定は 5時 1・7時 4・10時 2・11時 1・14時 1・17時 1・21時 4・22時 1・23時 1。Google 側は 9〜22時だけ。0〜6時に始まる予定は 1 件（5時・題名「カレンダー動作テスト(Google側で修正した)」・PO の試し）。7時の 4 件は作った時刻が始まりより後の試し。→ 実際の使い方で、1〜6時に始まる予定は 0 件。
+
+### 11-3 「はい、〜」の答え（カルテ 11/30 15:00〜16:00・2 回ずつ）
+
+- 直す頼み 8 種 × 2 = 16 回: 14 回が `edited` 真（言われた欄だけが変わった）。残り 2 回は「はい、3時からにして」でカルテが既に 15:00（変わらないので偽が正しい）。読み落としは 0/16（便W2 の 6/6 と合わせて 0/22）。
+- 「はい、お願いします」など 7 種 × 2 = 14 回: すべて `edited` 偽（AI は unknown か、空か、同じ値を返した）→ 前の下書きで作られる（設計どおり）。
+- 前の下書きで黙って作られる道は、今の作り（`frontend/src/features/secretary/SecretaryChat.tsx:235-240` の `yesFallback`）で 2 つある。
+  （１）AI が直しを返さなかった（上の 0/22）。
+  （２）AI は直しを返したが、合わせた結果が日時を失い、backend がカルテのまま・`edited` 偽に戻した（`backend/app/routers/assistant.py` の「直した結果が日時を失ったら」の分かれ）。例: 始まり 15:00 で「はい、終わりは5時にして」を AI が 05:00 と読むと、終わり < 始まりで終わりが空になり（`backend/app/services/secretary_karte.py:52-70` `settle_dates`）、前のままに戻る。画面は「はい」として前の下書きを作る。11-1 のとおり 5時を朝と読む回がある。
+- 直す道では聞き返しは出ない（`backend/app/routers/assistant.py` の `if edit_mode: ask, ask_count = None, 0`）。画面の `!reply.draft.ask` の条件は直す道では常に真。
+- 作った後に読む文は「予定を作りました。」だけ（`frontend/src/features/secretary/SecretaryChat.tsx:381-388` `markCreated`・`frontend/src/locales/ja.json` `secretary.created.event`）。
+
+### 11-4 今までの試し 23 件（`backend/app/assistant_regression/cases.json`）
+
+時刻の言い方は 15時・16時・10時・13時・17時半・9時・14時と「1 時間」「2 時間」（長さ）だけ。素の 1〜6時は 0 件。→ 11-1 の決まりを足しても 23 件の答えは変わらない。

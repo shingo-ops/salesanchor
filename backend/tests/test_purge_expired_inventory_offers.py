@@ -32,6 +32,7 @@ def test_purge_deletes_only_expired_offers():
     from sqlalchemy import create_engine, text
 
     from app.tasks.maintenance import purge_expired_inventory_offers
+    from tests.rls_bootstrap import _PUBLIC_BOOTSTRAP_LOCK_KEY, _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE
 
     engine = create_engine(_sync_url())
     tag = uuid.uuid4().hex[:8]
@@ -97,13 +98,28 @@ def test_purge_deletes_only_expired_offers():
         assert id_fresh in remaining, "未来 expires_at のオファーは残る"
         assert id_perm in remaining, "expires_at NULL の恒久オファーは残る"
     finally:
-        with engine.begin() as conn:
+        # 共有 DB の後片付けは public_bootstrap_lock と同じ鍵（同期 engine 版）を同じ接続で取り、
+        # commit まで札の中で終えてから外す
+        with engine.connect() as conn:
             conn.execute(
-                text("DELETE FROM public.inventory WHERE supplier_id = :sid"),
-                {"sid": supplier_id},
+                text("SELECT pg_advisory_lock(:namespace, :lock_key)"),
+                {"namespace": _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE, "lock_key": _PUBLIC_BOOTSTRAP_LOCK_KEY},
             )
-            conn.execute(
-                text("DELETE FROM public.suppliers WHERE id = :sid"),
-                {"sid": supplier_id},
-            )
+            try:
+                conn.execute(
+                    text("DELETE FROM public.inventory WHERE supplier_id = :sid"),
+                    {"sid": supplier_id},
+                )
+                conn.execute(
+                    text("DELETE FROM public.suppliers WHERE id = :sid"),
+                    {"sid": supplier_id},
+                )
+                conn.commit()
+            finally:
+                conn.rollback()
+                conn.execute(
+                    text("SELECT pg_advisory_unlock(:namespace, :lock_key)"),
+                    {"namespace": _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE, "lock_key": _PUBLIC_BOOTSTRAP_LOCK_KEY},
+                )
+                conn.commit()
         engine.dispose()
