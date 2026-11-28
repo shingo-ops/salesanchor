@@ -27,18 +27,37 @@ def decide_issuer_region(bill_to_snapshot: Mapping[str, Any] | None) -> str | No
     return "domestic" if country.strip().upper() == "JP" else "overseas"
 
 
-def format_issuer_address(row: Mapping[str, Any], prefecture_name: str | None, country_name: str | None) -> str:
-    """発行元の住所を 1 行にする。日本は〒・都道府県から、海外は通りから国へ。"""
+def format_issuer_address(
+    row: Mapping[str, Any], prefecture_name: str | None, country_name: str | None, *, english: bool = False
+) -> str:
+    """発行元の住所を 1 行にする。日本は〒・都道府県から、海外は通りから国へ。
+    english=True の日本（海外用の書類。design.md §3-4e）は、通りから国への英語の順にする。"""
     city = row.get("city") or ""
     address1 = row.get("address1") or ""
     address2 = row.get("address2") or ""
-    if row.get("country_code") == "JP":
+    if row.get("country_code") == "JP" and not english:
         postal = row.get("postal_code") or ""
         head = f"〒{postal[:3]}-{postal[3:]} " if postal else ""
         line = f"{head}{prefecture_name or ''}{city}{address1}"
         return f"{line} {address2}" if address2 else line
-    tail = f"{row.get('state_region') or ''} {row.get('postal_code') or ''}".strip()
+    if row.get("country_code") == "JP":
+        postal = row.get("postal_code") or ""
+        postal_text = f"{postal[:3]}-{postal[3:]}" if postal else ""
+        tail = f"{prefecture_name or ''} {postal_text}".strip()
+    else:
+        tail = f"{row.get('state_region') or ''} {row.get('postal_code') or ''}".strip()
     return ", ".join(p for p in [address1, address2, city, tail, country_name or ""] if p)
+
+
+def format_issuer_phone(
+    phone: str | None, country_code: str | None, dial_code: str | None, *, international: bool
+) -> str:
+    """発行元の電話を書類の形にする。海外用の書類の日本の番号は先頭の 0 を外して国番号を付ける（design.md §3-4e）。"""
+    if not phone:
+        return ""
+    if international and country_code == "JP" and dial_code and phone.startswith("0"):
+        return f"{dial_code} {phone[1:]}"
+    return phone
 
 
 async def get_issuer_country_code(db: AsyncSession, tenant_id: int, region: str | None) -> str | None:
@@ -78,7 +97,8 @@ async def get_issuer(db: AsyncSession, tenant_id: int, region: str) -> dict:
             SELECT p.company_name, p.email, p.website, p.country_code, p.postal_code,
                    p.state_region, p.city, p.address1, p.address2, p.phone,
                    p.is_invoice_registered, p.registration_number,
-                   pr.name_ja AS prefecture_name, co.name AS country_name
+                   pr.name_ja AS prefecture_name, pr.name_en AS prefecture_name_en,
+                   co.name AS country_name, co.dial_code AS country_dial_code
             FROM {profiles} p
             LEFT JOIN public.prefectures pr ON pr.code = p.prefecture_code
             LEFT JOIN public.countries co ON co.code = p.country_code
@@ -90,10 +110,13 @@ async def get_issuer(db: AsyncSession, tenant_id: int, region: str) -> dict:
     )
     row = result.mappings().first()
     if row:
+        english = region == "overseas"
+        prefecture_name = row["prefecture_name_en"] if english else row["prefecture_name"]
         return {
             "name": row["company_name"],
-            "address": format_issuer_address(row, row["prefecture_name"], row["country_name"]),
-            "phone": row["phone"] or "",
+            "address": format_issuer_address(row, prefecture_name, row["country_name"], english=english),
+            "phone": format_issuer_phone(row["phone"], row["country_code"], row["country_dial_code"],
+                                         international=english),
             "email": row["email"] or "",
             "website": row["website"] or "",
             "registration_number": row["registration_number"] if row["is_invoice_registered"] else None,

@@ -17,7 +17,7 @@ import pytest
 from sqlalchemy import text
 
 from app.services.invoice_renderer import render_invoice_pdf, render_quote_pdf
-from app.services.issuer import decide_issuer_region, format_issuer_address, get_issuer
+from app.services.issuer import decide_issuer_region, format_issuer_address, format_issuer_phone, get_issuer
 from tests.test_invoices import _create_approved_quote, _create_company_contact
 
 pytestmark = pytest.mark.usefixtures("stub_invoice_totals")
@@ -164,6 +164,26 @@ def test_format_issuer_address_overseas():
     assert format_issuer_address(row, None, "Countryname") == "1 Main St, SF, CA 94105, Countryname"
 
 
+def test_format_issuer_address_jp_english():
+    row = {"country_code": "JP", "postal_code": "4442141", "city": "C", "address1": "A1", "address2": None}
+    assert format_issuer_address(row, "P", "Countryname", english=True) == "A1, C, P 444-2141, Countryname"
+    row["address2"] = "B2"
+    assert format_issuer_address(row, "P", "Countryname", english=True) == "A1, B2, C, P 444-2141, Countryname"
+
+
+def test_format_issuer_address_jp_default_unchanged():
+    row = {"country_code": "JP", "postal_code": "4442141", "city": "C", "address1": "A1", "address2": None}
+    assert format_issuer_address(row, "P", "Countryname") == "〒444-2141 PCA1"
+
+
+def test_format_issuer_phone():
+    assert format_issuer_phone("09060727767", "JP", "+81", international=True) == "+81 9060727767"
+    assert format_issuer_phone("09060727767", "JP", "+81", international=False) == "09060727767"
+    assert format_issuer_phone("+14155550100", "US", "+1", international=True) == "+14155550100"
+    assert format_issuer_phone(None, "JP", "+81", international=True) == ""
+    assert format_issuer_phone("09060727767", "JP", None, international=True) == "09060727767"
+
+
 async def test_get_issuer_rejects_unknown_region(db_session):
     with pytest.raises(ValueError):
         await get_issuer(db_session, 999, "x")
@@ -204,6 +224,7 @@ async def test_get_issuer_reads_region_row_with_prefecture_and_registration(db_s
     issuer = await get_issuer(db_session, 999, "domestic")
     assert issuer["name"] == "Domestic Issuer"
     assert issuer["address"] == f"〒100-0001 {name_ja}CityAStreet1"
+    assert issuer["phone"] == "0312345678"
     assert issuer["registration_number"] == _REG_NO
     assert issuer["legacy"] is False
     # 行がある地域では空の欄を旧来の表で埋めない
@@ -235,6 +256,26 @@ async def test_get_issuer_overseas_uses_country_table_name(db_session):
     # 見積書は海外用の行を使う（invoices.py の呼び出しは下のソース検査で確かめる）
     out = _extract_text(render_quote_pdf(_quote_data(), issuer))
     assert "Overseas Issuer" in out
+
+
+async def test_get_issuer_overseas_jp_uses_english_order(db_session):
+    code, name_ja, name_en, sort_order = _PREF_ROW_RE.findall(_PREF_SEED.read_text("utf-8"))[22]
+    assert code == "23"
+    await db_session.execute(
+        text("INSERT OR IGNORE INTO prefectures (code, name_ja, name_en, sort_order) VALUES (:c, :j, :e, :s)"),
+        {"c": code, "j": name_ja, "e": name_en, "s": int(sort_order)},
+    )
+    country_name, dial = (await db_session.execute(
+        text("SELECT name, dial_code FROM countries WHERE code = 'JP'")
+    )).one()
+    await _insert_issuer(db_session, "overseas", company_name="Overseas JP Issuer", email="o@example.com",
+                         country_code="JP", prefecture_code="23", postal_code="4442141")
+    issuer = await get_issuer(db_session, 999, "overseas")
+    assert issuer["address"] == f"Street1, CityA, {name_en} 444-2141, {country_name}"
+    assert issuer["phone"] == f"{dial} 312345678"
+    out = _extract_text(render_quote_pdf(_quote_data(), issuer))
+    assert issuer["address"] in out
+    assert f"TEL: {dial} 312345678" in out
 
 
 async def test_get_issuer_falls_back_to_legacy_only_without_row(db_session):
