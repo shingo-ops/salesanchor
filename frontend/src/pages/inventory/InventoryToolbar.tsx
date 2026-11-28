@@ -116,8 +116,6 @@ interface Props {
   filterEnabled: boolean;
   showFilterPanel: boolean;
   onFilterPanelToggle: () => void;
-  /** 「詳細フィルタ」の文字に出す、効いている絞り込みの数（design.md 4-5） */
-  filterActiveCount: number;
 }
 
 export default function InventoryToolbar(p: Props) {
@@ -222,6 +220,7 @@ export default function InventoryToolbar(p: Props) {
       <ChevronRight className="inventory-toolbar__caret" size={ICON.md} aria-hidden />
     </Button>
   );
+  // PO 決定1（design.md 4-8）: スマホのボタン文字は数字を出さず常に「詳細フィルタ」で固定する
   const filterButtonMobile = (
     <Button
       variant="ghost"
@@ -233,9 +232,7 @@ export default function InventoryToolbar(p: Props) {
       aria-pressed={p.filterEnabled}
       onClick={p.onFilterPanelToggle}
     >
-      {p.filterActiveCount > 0
-        ? t("inventory.filterPanel.buttonWithCount", { count: p.filterActiveCount })
-        : t("inventory.filterPanel.button")}
+      {t("inventory.filterPanel.button")}
     </Button>
   );
 
