@@ -161,16 +161,16 @@ def format_issuer_phone(
                                          international=english),
 ```
 
-`from app.services.issuer import ...` の行（test_issuer.py:20）に `format_issuer_phone` を足す。
-
 ### 2-2. test_issuer.py に足す試験
+
+`from app.services.issuer import ...` の行（test_issuer.py:20）に `format_issuer_phone` を足す。
 
 | # | 名前 | 確かめること |
 |---|---|---|
 | T1 | test_format_issuer_address_jp_english | `{"country_code": "JP", "postal_code": "4442141", "city": "C", "address1": "A1", "address2": None}` に `("P", "Countryname", english=True)` → `"A1, C, P 444-2141, Countryname"`。address2 を `"B2"` にすると `"A1, B2, C, P 444-2141, Countryname"` |
 | T2 | test_format_issuer_address_jp_default_unchanged | 同じ行を english を渡さずに → `"〒444-2141 PCA1"`（今の形のまま） |
 | T3 | test_format_issuer_phone | `("09060727767", "JP", "+81", international=True)` → `"+81 9060727767"`。international=False → `"09060727767"`。`("+14155550100", "US", "+1", international=True)` → そのまま。`(None, "JP", "+81", international=True)` → `""`。dial_code が None → そのまま |
-| T4 | test_get_issuer_overseas_jp_uses_english_order | seed（_PREF_SEED）の 23 の行を prefectures に INSERT OR IGNORE（既存の test_get_issuer_reads_region_row_with_prefecture_and_registration と同じ書き方）。国の表から JP の name と dial_code を読む。overseas の行を country_code="JP"・prefecture_code="23"・postal_code="4442141" で入れる（_insert_issuer を使う。市区町村は "CityA"・番地は "Street1"・電話は "0312345678"）。`issuer["address"] == f"Street1, CityA, {name_en} 444-2141, {country_name}"`・`issuer["phone"] == f"{dial} 312345678"`。見積書の PDF（render_quote_pdf）の文字に住所と `f"TEL: {dial} 312345678"` が入る |
+| T4 | test_get_issuer_overseas_jp_uses_english_order | `code, name_ja, name_en, sort_order = _PREF_ROW_RE.findall(_PREF_SEED.read_text("utf-8"))[22]` で読み、`assert code == "23"` を書いてから prefectures に INSERT OR IGNORE（既存の test_get_issuer_reads_region_row_with_prefecture_and_registration と同じ書き方）。国の表から JP の name と dial_code を読む。overseas の行を country_code="JP"・prefecture_code="23"・postal_code="4442141" で入れる（_insert_issuer を使う。市区町村は "CityA"・番地は "Street1"・電話は "0312345678"）。`issuer["address"] == f"Street1, CityA, {name_en} 444-2141, {country_name}"`・`issuer["phone"] == f"{dial} 312345678"`。見積書の PDF（render_quote_pdf）の文字に住所と `f"TEL: {dial} 312345678"` が入る |
 | T5 | 既存の test_get_issuer_reads_region_row_with_prefecture_and_registration に1行足す | `assert issuer["phone"] == "0312345678"`（国内用の電話は変わらない） |
 
 既存の試験は1つも消さない・変えない（T5 の1行を足すだけ）。
