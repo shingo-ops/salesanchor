@@ -303,6 +303,36 @@ final class RunLogger {
         append(context, json);
     }
 
+    /**
+     * 実行の合図が黙って捨てられた（実行ログに何も残らず、再試行も張られなかった）ときに
+     * 呼ぶ（design.md追補 2026-11-28「合図が黙って捨てられる穴」。51日分の端末ログで
+     * fire 4,645回中6回、最大59.6分の遅れが確認された。{@link UnlockAccessibilityService}の
+     * requestRunAll／requestRun／requestExportのsInstance==null分岐と、
+     * startUnlockFlow()の「既に走っている」分岐から呼ばれる）。{@link #logSchedulerEvent}
+     * と同じ「単発行・runIdに紐づかない」扱い。メッセージ本文は一切含めない。
+     *
+     * @param triggerLabel 捨てられた合図のラベル（{@link RunScheduler#labelFor}の日本語ラベル
+     *     や"RUN(手動)"等）。nullなら空文字
+     * @param reason 捨てられた理由。"service_unbound"（ユーザー補助サービスが未接続）／
+     *     "already_running"（前の回が走っている）。nullなら項目自体を出さない
+     */
+    static void logTriggerDropped(Context context, String triggerLabel, String reason) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("at", formatIso8601(System.currentTimeMillis()));
+            json.put("flow", "scheduler");
+            json.put("phase", "trigger_dropped");
+            json.put("trigger", triggerLabel == null ? "" : triggerLabel);
+            if (reason != null) {
+                json.put("reason", reason);
+            }
+        } catch (JSONException e) {
+            Log.w(TAG, "run log trigger dropped build failed: " + e);
+            return;
+        }
+        append(context, json);
+    }
+
     private static void append(Context context, JSONObject json) {
         try {
             File dir = LineNotifyListenerService.resolveStorageDir(context);

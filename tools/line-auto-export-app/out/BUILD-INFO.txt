@@ -1,4 +1,4 @@
-versionCode=27
-versionName=0.24.0-stage3
+versionCode=28
+versionName=0.25.0-stage3
 signerSha256=c64146dcaca2e2fad8c8b0e37cb0eb0435be52b01f418d02f988d3e213972709
-apkSha256=b0df5b96df05a93d2fbb6f34c7ba6c9f0fcd8c7377e872fe1d7b62d133a24b61
+apkSha256=02b291c9dd2caed2853bf05f9d79809aaa18830f82ca9954e8d697372701e33e
