@@ -1,15 +1,17 @@
-"""run_bin0.py の確かめ（偽の Hermes を 127.0.0.1 の空いた番号で立てる。card-bin0a.md「偽の Hermes での確かめ」9 つ）。"""
+"""run_bin0.py の確かめ（偽の Hermes を 127.0.0.1 の空いた番号で立てる。card-bin0a.md の 9 つ + card-bin0b 2 つ + card-bin0b-r8 7 つ = 18 件）。"""
 
 from __future__ import annotations
 
 import json
 import sys
+import subprocess
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 import httpx
 import pytest
+import yaml
 
 sys.path.insert(0, str(Path(__file__).parent))
 import run_bin0  # noqa: E402
@@ -33,6 +35,10 @@ class Fake:
         self.deletes: list[tuple[int, str]] = []
         self.bodies: list[dict] = []
         self.paths: list[str] = []
+        self.calls: list[tuple[str, str]] = []  # (メソッド, 道) の順
+        self.api_call_count = 1
+        self.session_in = 10
+        self.session_out = 5
         self.lock = threading.Lock()
 
 
@@ -56,18 +62,27 @@ def fake():
             body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             room = self.path.split("/")[2]
             with state.lock:
+                state.calls.append(("POST", self.path))
                 state.bodies.append(body)
                 state.paths.append(self.path)
                 queue = state.replies.get(room, [])
                 content = queue.pop(0) if queue else "{}"
-            self._send(200, {"choices": [{"message": {"content": content}}],
+            self._send(200, {"model": "fake-model", "choices": [{"message": {"content": content}}],
                              "usage": {"prompt_tokens": 10, "completion_tokens": 5}})
 
         def do_GET(self):
-            self._send(200, [{"role": "tool"}, {"role": "assistant", "tool_calls": [{"id": "x"}]}, {"role": "user"}])
+            with state.lock:
+                state.calls.append(("GET", self.path))
+            if self.path.endswith("/messages"):
+                self._send(200, [{"role": "tool"}, {"role": "assistant", "tool_calls": [{"id": "x"}]}, {"role": "user"}])
+            else:
+                self._send(200, {"session": {"input_tokens": state.session_in, "output_tokens": state.session_out,
+                                             "api_call_count": state.api_call_count, "cache_read_tokens": 3,
+                                             "reasoning_tokens": 2}})
 
         def do_DELETE(self):
             with state.lock:
+                state.calls.append(("DELETE", self.path))
                 status, code = state.deletes.pop(0) if state.deletes else (200, "")
             if status == 409:
                 self._send(409, {"error": {"code": code, "message": "x"}})
@@ -132,7 +147,7 @@ def test_6_delete_busy(fake):
         fake.deletes = [(409, "session_active_turn")] * 4
         assert run_bin0.delete_session(client, "invoice", "k", "sid", sleep=lambda s: None) == (False, 409)
         fake.deletes = [(404, "")]
-        assert run_bin0.delete_session(client, "invoice", "k", "sid", sleep=lambda s: None) == (True, 404)
+        assert run_bin0.delete_session(client, "invoice", "k", "sid", sleep=lambda s: None) == (False, 404)
     fake.replies = {"coordinator": ['{"role":"none"}']}
     fake.deletes = [(409, "session_active_turn")] * 4
     r = run_case(fake, "u1", "unknown", "unknown")
@@ -179,7 +194,7 @@ def test_9_no_text_in_outputs(fake, capsys, tmp_path):
     out = capsys.readouterr()
     for c in data["cases"]:
         assert c["text"] not in out.out and c["text"] not in out.err
-    assert "k1=" in out.err and "deleted=" in out.err
+    assert "k1=" in out.err and "deleted=" in out.err and "k9=" in out.err and "k9_unreadable=" in out.err
     assert INVOICE_OK["invoice"]["company_name"] not in out.out + out.err
 
 
@@ -202,3 +217,114 @@ def test_11_tool_runs_shape_unknown(fake, capsys, tmp_path):
     out = capsys.readouterr()
     assert out.out.splitlines()[1].split("\t")[3] == "-"
     assert "k4_tool_runs=-" in out.err
+
+
+# ---------------------------------------------------------------- card-bin0b-r8 の 7 件
+
+def test_12_schema_system_first(fake):
+    fake.replies = {"coordinator": ['{"role":"invoice"}'], "invoice": [json.dumps(INVOICE_OK)]}
+    run_case(fake)
+    schema_text = (run_bin0.SECRETARY_DIR / "schema.json").read_text(encoding="utf-8")
+    coord, role = fake.bodies[0], fake.bodies[1]
+    assert all(m["role"] != "system" for m in coord["messages"])
+    assert role["messages"][0]["role"] == "system" and role["messages"][-1]["role"] == "user"
+    sys_text = role["messages"][0]["content"]
+    assert sys_text.startswith(run_bin0.SCHEMA_SYSTEM_LEAD) and schema_text in sys_text
+
+
+def test_13_get_before_delete(fake):
+    fake.replies = {"coordinator": ['{"role":"none"}']}
+    run_case(fake, "u1", "unknown", "unknown")
+    methods = [m for m, _ in fake.calls]
+    assert methods == ["POST", "GET", "DELETE"]
+    assert fake.calls[1][1] == fake.calls[2][1].replace("DELETE", "GET")
+
+
+def test_14_k9_ok(fake):
+    fake.replies = {"coordinator": ['{"role":"none"}']}
+    r = run_case(fake, "u1", "unknown", "unknown")
+    assert (r["k9_ok"], r["get_status"], r["api_calls"], r["k9_cache"], r["k9_reasoning"]) == (1, "200", "1", 3, 2)
+    fake.api_call_count = 2
+    fake.replies = {"coordinator": ['{"role":"none"}']}
+    r = run_case(fake, "u1", "unknown", "unknown")
+    assert r["k9_ok"] == 0 and r["api_calls"] == "2"
+
+
+def test_15_delete_404_counted_apart(fake):
+    fake.replies = {"coordinator": ['{"role":"none"}']}
+    fake.deletes = [(404, "")]
+    r = run_case(fake, "u1", "unknown", "unknown")
+    assert (r["deleted"], r["deleted_404"], r["undeleted"]) == (0, 1, [])
+
+
+def test_16_fixed_config(tmp_path, capsys):
+    canonical = run_bin0.CONFIG_YAML
+    before = canonical.read_text(encoding="utf-8")
+    conf = yaml.safe_load(before)
+    del conf["auxiliary"]["title_generation"]
+    cut = tmp_path / "cut.yaml"
+    cut.write_text(yaml.safe_dump(conf), encoding="utf-8")
+    assert run_bin0.main(["--set", "fixed-config", "--config", str(cut), "--out", str(tmp_path / "o1")]) == 2
+    assert "auxiliary.title_generation.enabled" in capsys.readouterr().err
+    model_file = tmp_path / "model.yaml"
+    model_file.write_text("model:\n  provider: custom\n  default: fake-model\n", encoding="utf-8")
+    assert run_bin0.main(["--set", "fixed-config", "--out", str(tmp_path / "o2"), "--test-model", str(model_file),
+                          "--title-on"]) == 0
+    assert "keys=8 test_model=1 title_on=1" in capsys.readouterr().err
+    written = yaml.safe_load((tmp_path / "o2" / "config.yaml").read_text(encoding="utf-8"))
+    assert written["auxiliary"]["title_generation"]["enabled"] is True and written["model"]["provider"] == "custom"
+    assert canonical.read_text(encoding="utf-8") == before
+
+
+def test_17_k7judge(tmp_path, capsys):
+    base = tmp_path / "base.tsv"
+    base.write_text("baseline\t/opt/data/a.db\t3\n", encoding="utf-8")
+
+    def judge(lines: str) -> str:
+        after = tmp_path / "after.tsv"
+        after.write_text(lines, encoding="utf-8")
+        assert run_bin0.main(["--set", "k7judge", "--base", str(base), "--after", str(after)]) == 0
+        return capsys.readouterr().out
+
+    assert "k7=NG" in judge("x\t/opt/data/a.db\t3\nx\t/opt/data/new.log\t1\n")
+    assert "k7=OK" in judge("x\t/opt/data/a.db\t3\n")
+    assert "k7=NG" in judge("x\t/opt/data/a.db\t4\n")
+
+
+def test_18_compact_order_and_stop(tmp_path, monkeypatch, capsys):
+    texts = tmp_path / "texts.txt"
+    texts.write_text("頼みの文その1\n", encoding="utf-8")
+    calls: list[str] = []
+    counts = {"n": 0}
+
+    def make(decrease: bool):
+        def fake_docker(args, timeout=600.0):
+            if args[0] in ("stop", "start"):
+                calls.append(args[0])
+                return subprocess.CompletedProcess(args, 0, "", "")
+            if "optimize" in args:
+                calls.append("optimize " + args[-1])
+                return subprocess.CompletedProcess(args, 0, "reconcile: ok\n", "")
+            calls.append("count")
+            counts["n"] += 1
+            # 数えるたびに各部屋の行が 2 ずつ減る（decrease が偽なら減らない）
+            n = 10 - 2 * (counts["n"] - 1) if decrease else 10
+            out = "N 5\n" + "".join(f"H\t/opt/data/profiles/{r}/state.db\t{n}\n" for r in run_bin0.ROOMS)
+            return subprocess.CompletedProcess(args, 0, out, "")
+        return fake_docker
+
+    monkeypatch.setattr(run_bin0, "_health_ok", lambda url: True)
+    monkeypatch.setattr(run_bin0, "_sleep", lambda s: None)
+    argv = ["--set", "compact", "--container", "c", "--volume", "v", "--fixed", str(tmp_path), "--texts", str(texts),
+            "--out-prefix", str(tmp_path / "k7")]
+    monkeypatch.setattr(run_bin0, "_docker", make(True))
+    assert run_bin0.main(argv) == 0
+    assert calls == ["stop", "count", "optimize coordinator", "count", "optimize calendar", "count",
+                     "optimize invoice", "count", "start", "count"]
+    assert "reconcile: ok" in capsys.readouterr().out
+    calls.clear()
+    counts["n"] = 0
+    monkeypatch.setattr(run_bin0, "_docker", make(False))
+    assert run_bin0.main(argv) == 3
+    assert "compact=STOPPED room=coordinator" in capsys.readouterr().out
+    assert "start" not in calls

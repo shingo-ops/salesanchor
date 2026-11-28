@@ -1,6 +1,10 @@
 # 便0-A の Hermes 設定（完成品 v0.23.4・digest 固定）。鍵の値は書かない（鍵は部屋ごとの .env）。
 # 場所は完成品の中の hermes_cli/config_defaults.py・gateway/config.py（raw/3-grep.txt）。
-# 同じ内容を /opt/data/config.yaml と、各部屋 /opt/data/profiles/<部屋>/config.yaml に置く。
+# 管理者の固定設定。/etc/hermes/config.yaml に読み取り専用で置く（起動に -v <置き場>:/etc/hermes:ro）。部屋の config と /opt/data/config.yaml にはこの鍵を書かない。
+logging:
+  # 頼みの先頭 80 字を書く行は INFO（agent/turn_context.py:1290）。WARNING で agent.log の目印 0 行（out/source-check-b4.md）
+  level: WARNING
+
 gateway:
   # gateway/config.py:783-785（nested_gateway の multiplex_profiles）
   multiplex_profiles: true
@@ -18,7 +22,10 @@ memory:
 auxiliary:
   background_review:
     enabled: false
+  title_generation:
+    # 新しい会話の最初の送信ごとに題づけの AI 呼び出しが 1 回増える（out/source-check-b5.md Q13）
+    enabled: false
 
 # AI 会社の自動の切り替えを切る（既定は空の一覧 hermes_cli/config_defaults.py:25）
-# 未確認: API の口で効くかは便0-B 手順 7 の S8 で確かめる
+# 7回目の F5 で、存在しない頭を送っても別の会社に切り替わらないことを確かめた（out/measure-b-20261125.md 表 3）
 fallback_providers: []

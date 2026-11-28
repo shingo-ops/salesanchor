@@ -2,6 +2,7 @@
 # 便0: 試しの Hermes のデータの置き場（Docker の名前付き volume）に 3 部屋を作る台本（card-bin0a.md 手順 4c）。
 # 使い方: bash setup_profiles.sh [VOLUME]   （既定 bin0-data）
 # 前提: /tmp/bin0-secrets/key-default・key-coordinator・key-calendar・key-invoice（中身は鍵の値だけ・本台本は値を出さない）
+# 固定設定は置かない（管理者の固定設定は run_bin0.py --set fixed-config で作り /etc/hermes に読み取り専用で渡す）。
 # 人格: coordinator は coordinator-soul.md。calendar・invoice は secretary-agent/prompt.txt を「作るときに写す」（正本は prompt.txt）。
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,16 +24,14 @@ for room in coordinator calendar invoice; do
   [ -d /opt/data/profiles/$room ] || { echo "部屋を作れなかった: $room" >&2; exit 1; }
   if [ "$room" = coordinator ]; then cp /setup/coordinator-soul.md /opt/data/profiles/$room/SOUL.md
   else cp /prompt/prompt.txt /opt/data/profiles/$room/SOUL.md; fi
-  cp /setup/config.yaml /opt/data/profiles/$room/config.yaml
   # 鍵は部屋の .env にだけ置く（既にある行は除く）。値は出さない
   grep -v "^API_SERVER_KEY=" /opt/data/profiles/$room/.env > /tmp/env.new || true
   eval "KEYVAL=\${KEY_$room}"
   [ "${#KEYVAL}" -ge 16 ] || { echo "鍵が短い・空: $room" >&2; exit 1; }
   printf "API_SERVER_KEY=%s\n" "$KEYVAL" >> /tmp/env.new
   cat /tmp/env.new > /opt/data/profiles/$room/.env
-  echo "room=$room soul_bytes=$(wc -c < /opt/data/profiles/$room/SOUL.md) key_len=${#KEYVAL}"
+  echo "room=$room soul_bytes=$(wc -c < /opt/data/profiles/$room/SOUL.md) key_len=${#KEYVAL} cfg_key_lines=$(grep -c -E "(level|memory_enabled|user_profile_enabled|api_server|background_review|title_generation|fallback_providers|multiplex_profiles)" /opt/data/profiles/$room/config.yaml || true)"
 done
-cp /setup/config.yaml /opt/data/config.yaml
 '
 # 鍵は環境変数ファイル（600）で渡す（容器の中の hermes 利用者は /secrets を読めないため）。終わったら消す
 ENVF="$SECRETS/setup.env"

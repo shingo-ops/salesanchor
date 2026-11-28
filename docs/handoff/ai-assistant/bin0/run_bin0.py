@@ -21,11 +21,28 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
+import yaml
 from jsonschema import Draft202012Validator
 
 REPO = Path(__file__).resolve().parents[4]
 SECRETARY_DIR = REPO / "secretary-agent"
 DEFAULT_CASES = REPO / "backend" / "app" / "assistant_regression" / "cases.json"
+CONFIG_YAML = Path(__file__).with_name("config.yaml")
+IMAGE = "nousresearch/hermes-agent@sha256:ef0650d523ee1b5ab32c779acabc446d9936869a9932591553688a62bcf0c42f"
+ROOMS = ("coordinator", "calendar", "invoice")
+# 管理者の固定設定の 8 つの鍵（正本は config.yaml）。(ドットでつないだ道, 部屋の config に出る最後の名前)
+FIXED_KEYS = (
+    "logging.level",
+    "memory.memory_enabled",
+    "memory.user_profile_enabled",
+    "platform_toolsets.api_server",
+    "auxiliary.background_review.enabled",
+    "auxiliary.title_generation.enabled",
+    "fallback_providers",
+    "gateway.multiplex_profiles",
+)
+SCHEMA_SYSTEM_LEAD = "出力は次の JSON Schema に合う JSON 1 つだけ。"
+ROLE_ROOMS = ("calendar", "invoice")  # 形の指示を付ける係の部屋
 ROLES = ("calendar", "invoice", "none")
 EXPECTED_ROLE = {"invoice": "invoice", "event": "calendar", "unknown": "none"}
 TIMEOUT_SECONDS = 120.0
@@ -34,7 +51,8 @@ DELETE_RETRIES = 3
 HEADER = [
     "round", "case_id", "group", "expected", "coordinator_role", "role_ok", "schema_ok", "retried",
     "k3_hit", "k3_total", "seconds", "coord_in", "coord_out", "role_in", "role_out",
-    "deleted", "http_status", "error_code",
+    "deleted", "deleted_404", "http_status", "error_code",
+    "get_status", "api_calls", "k9_ok", "k9_cache", "k9_reasoning",
 ]
 
 
@@ -94,7 +112,9 @@ def usage_pair(usage: object) -> tuple[int, int]:
 
 
 class ChatResult:
-    def __init__(self, status: int | None, code: str, content: str | None, usage_in: int, usage_out: int):
+    def __init__(self, status: int | None, code: str, content: str | None, usage_in: int, usage_out: int,
+                 model: str | None = None):
+        self.model = model  # 返事の model（名前だけ・中身ではない）
         self.status = status
         self.code = code  # "-" なら誤りなし
         self.content = content
@@ -102,8 +122,17 @@ class ChatResult:
         self.usage_out = usage_out
 
 
-def chat(client: httpx.Client, room: str, key: str, provider: str, model: str, content: str, session_id: str) -> ChatResult:
-    body = {"model": model, "provider": provider, "stream": False, "messages": [{"role": "user", "content": content}]}
+def schema_system() -> str:
+    """係の部屋に送る形の指示。schema.json をそのつど読んだ全文を使う。"""
+    return SCHEMA_SYSTEM_LEAD + "\n\n" + (SECRETARY_DIR / "schema.json").read_text(encoding="utf-8")
+
+
+def chat(client: httpx.Client, room: str, key: str, provider: str, model: str, content: str, session_id: str,
+         system: str | None = None) -> ChatResult:
+    messages = [{"role": "user", "content": content}]
+    if system is not None:
+        messages.insert(0, {"role": "system", "content": system})
+    body = {"model": model, "provider": provider, "stream": False, "messages": messages}
     headers = {"Authorization": f"Bearer {key}", "X-Hermes-Session-Id": session_id}
     try:
         resp = client.post(f"/p/{room}/v1/chat/completions", json=body, headers=headers)
@@ -129,11 +158,13 @@ def chat(client: httpx.Client, room: str, key: str, provider: str, model: str, c
     if finish == "error":  # ログイン無しの実測（P9）: 状態は 200 のまま finish_reason が error で返る
         return ChatResult(200, "finish_error", None, 0, 0)
     ui, uo = usage_pair(data.get("usage"))
-    return ChatResult(200, "-", text if isinstance(text, str) else None, ui, uo)
+    reply_model = data.get("model") if isinstance(data.get("model"), str) else None
+    return ChatResult(200, "-", text if isinstance(text, str) else None, ui, uo, reply_model)
 
 
 def delete_session(client: httpx.Client, room: str, key: str, session_id: str, sleep=time.sleep) -> tuple[bool, int | None]:
-    """DELETE /p/<部屋>/api/sessions/<番号>。200・404 は消せた。409 session_active_turn は 2 秒あけて 3 回までやり直す。"""
+    """DELETE /p/<部屋>/api/sessions/<番号>。200 だけを消せたとする（404 は戻りの状態の数字で呼び出し側が別に数える）。
+    409 session_active_turn は 2 秒あけて 3 回までやり直す。"""
     status: int | None = None
     for attempt in range(DELETE_RETRIES + 1):
         try:
@@ -141,8 +172,10 @@ def delete_session(client: httpx.Client, room: str, key: str, session_id: str, s
         except httpx.HTTPError:
             return False, None
         status = resp.status_code
-        if status in (200, 404):
+        if status == 200:
             return True, status
+        if status == 404:
+            return False, status
         busy = False
         if status == 409:
             try:
@@ -154,6 +187,30 @@ def delete_session(client: httpx.Client, room: str, key: str, session_id: str, s
             return False, status
         sleep(DELETE_RETRY_WAIT)
     return False, status
+
+
+SESSION_FIELDS = ("input_tokens", "output_tokens", "api_call_count", "cache_read_tokens", "reasoning_tokens")
+
+
+def get_session(client: httpx.Client, room: str, key: str, session_id: str) -> dict:
+    """GET /p/<部屋>/api/sessions/<番号>。戻りは {"status": 状態の数字か None, 5 つの欄: 数か None}。"""
+    out: dict = {"status": None, **{f: None for f in SESSION_FIELDS}}
+    try:
+        resp = client.get(f"/p/{room}/api/sessions/{session_id}", headers={"Authorization": f"Bearer {key}"})
+    except httpx.HTTPError:
+        return out
+    out["status"] = resp.status_code
+    if resp.status_code != 200:
+        return out
+    try:
+        sess = resp.json().get("session")
+    except (ValueError, AttributeError):
+        return out
+    if isinstance(sess, dict):
+        for f in SESSION_FIELDS:
+            v = sess.get(f)
+            out[f] = v if isinstance(v, int) and not isinstance(v, bool) else None
+    return out
 
 
 # ---------------------------------------------------------------- K3
@@ -253,15 +310,16 @@ def run_hermes_case(client, keys: dict, provider: str, model: str, case: dict, n
     expected_role = EXPECTED_ROLE[case["expected"]]
     row = {
         "coordinator_role": "-", "role_ok": 0, "schema_ok": "-", "retried": 0, "k3_hit": "-", "k3_total": "-",
-        "coord_in": 0, "coord_out": 0, "role_in": 0, "role_out": 0, "deleted": 0, "used": 0,
+        "coord_in": 0, "coord_out": 0, "role_in": 0, "role_out": 0, "deleted": 0, "deleted_404": 0, "used": 0,
         "http_status": "-", "error_code": "-", "undeleted": [], "_texts": [], "seconds": 0.0,
+        "get_status": "-", "api_calls": "-", "k9_ok": "-", "k9_cache": "-", "k9_reasoning": "-",
     }
-    used: list[tuple[str, str]] = []
+    used: list[tuple[str, str, int, int]] = []  # (部屋, 会話の番号, 返事の usage の入力, 出力)
     started = time.monotonic()
 
     sid1 = str(uuid.uuid4())
-    used.append(("coordinator", sid1))
     r1 = chat(client, "coordinator", keys["coordinator"], provider, model, case["text"], sid1)
+    used.append(("coordinator", sid1, r1.usage_in, r1.usage_out))
     row["coord_in"], row["coord_out"] = r1.usage_in, r1.usage_out
     row["_texts"].append(r1.content or "")
     if r1.code != "-":
@@ -280,8 +338,8 @@ def run_hermes_case(client, keys: dict, provider: str, model: str, case: dict, n
         prompt = compose_text(case["text"], now, rules)
         for attempt in (1, 2):
             sid2 = str(uuid.uuid4())
-            used.append((room, sid2))
-            r2 = chat(client, room, keys[room], provider, model, prompt, sid2)
+            r2 = chat(client, room, keys[room], provider, model, prompt, sid2, system=schema_system())
+            used.append((room, sid2, r2.usage_in, r2.usage_out))
             row["role_in"] += r2.usage_in
             row["role_out"] += r2.usage_out
             row["_texts"].append(r2.content or "")
@@ -307,13 +365,37 @@ def run_hermes_case(client, keys: dict, provider: str, model: str, case: dict, n
     elif answer is not None:
         row["k3_hit"], row["k3_total"] = 0, 0
 
-    for room, sid in used:
+    # 消す前に使った量を読む（K9）。会話ごとに GET → DELETE の順
+    get_statuses: list[str] = []
+    api_calls: list[str] = []
+    mismatch = unreadable = False
+    cache_vals: list[int] = []
+    reason_vals: list[int] = []
+    for room, sid, u_in, u_out in used:
+        sess = get_session(client, room, keys[room], sid)
+        get_statuses.append("-" if sess["status"] is None else str(sess["status"]))
+        api_calls.append("-" if sess["api_call_count"] is None else str(sess["api_call_count"]))
+        if sess["cache_read_tokens"] is not None:
+            cache_vals.append(sess["cache_read_tokens"])
+        if sess["reasoning_tokens"] is not None:
+            reason_vals.append(sess["reasoning_tokens"])
+        if sess["status"] != 200 or any(sess[f] is None for f in ("input_tokens", "output_tokens", "api_call_count")):
+            unreadable = True
+        elif not (u_in == sess["input_tokens"] and u_out == sess["output_tokens"] and sess["api_call_count"] == 1):
+            mismatch = True
         ok, status = delete_session(client, room, keys[room], sid, sleep)
         row["used"] += 1
         if ok:
             row["deleted"] += 1
+        elif status == 404:
+            row["deleted_404"] += 1
         else:
             row["undeleted"].append(sid)
+    row["get_status"] = "/".join(get_statuses)
+    row["api_calls"] = "/".join(api_calls)
+    row["k9_ok"] = 0 if mismatch else ("-" if unreadable else 1)
+    row["k9_cache"] = sum(cache_vals) if cache_vals else "-"
+    row["k9_reasoning"] = sum(reason_vals) if reason_vals else "-"
     return row
 
 
@@ -328,8 +410,9 @@ def run_secretary_case(client: httpx.Client, url: str, case: dict, now: str, mod
         payload["rules"] = rules
     row = {
         "coordinator_role": "-", "role_ok": 0, "schema_ok": 0, "retried": 0, "k3_hit": "-", "k3_total": "-",
-        "coord_in": "-", "coord_out": "-", "role_in": "-", "role_out": "-", "deleted": "-", "used": 0,
+        "coord_in": "-", "coord_out": "-", "role_in": "-", "role_out": "-", "deleted": "-", "deleted_404": "-", "used": 0,
         "http_status": "-", "error_code": "-", "undeleted": [], "_texts": [], "seconds": 0.0,
+        "get_status": "-", "api_calls": "-", "k9_ok": "-", "k9_cache": "-", "k9_reasoning": "-",
     }
     started = time.monotonic()
     draft = None
@@ -411,19 +494,21 @@ def run_k4(client, keys, provider, model, cases_path: Path, sleep=time.sleep, to
     total_progress = 0
     total_runs: int | None = 0
     deleted = 0
+    deleted_404 = 0
     for c in cases:
         sid = str(uuid.uuid4())
         progress, status = count_progress_stream(client, c["room"], keys[c["room"]], provider, model, c["text"], sid)
         runs = count_tool_runs(client, c["room"], keys[c["room"]], sid, tool_runs_shape)
-        ok, _ = delete_session(client, c["room"], keys[c["room"]], sid, sleep)
+        ok, dstatus = delete_session(client, c["room"], keys[c["room"]], sid, sleep)
         deleted += 1 if ok else 0
+        deleted_404 += 1 if dstatus == 404 else 0
         total_progress += progress or 0
         total_runs = None if runs is None or total_runs is None else total_runs + runs
         print("\t".join([c["id"], c["room"], "-" if progress is None else str(progress),
                          "-" if runs is None else str(runs), "1" if ok else "0", "-" if status is None else str(status)]))
     print(f"k4_progress={total_progress}", file=sys.stderr)
     print(f"k4_tool_runs={'-' if total_runs is None else total_runs}", file=sys.stderr)
-    print(f"deleted={deleted}/{len(cases)}", file=sys.stderr)
+    print(f"deleted={deleted}/{len(cases)} deleted_404={deleted_404}", file=sys.stderr)
     return 0
 
 
@@ -437,7 +522,8 @@ def run_k8(client, keys, provider, model, k8_path: Path, cases_path: Path, now_d
     # 会社 A: 決まりを付けて 1 件（請求書の部屋へ直接）
     sid = str(uuid.uuid4())
     sessions.append(("invoice", sid))
-    chat(client, "invoice", keys["invoice"], provider, model, compose_text(k8["company_a"]["text"], now, k8["company_a"]["rules"]), sid)
+    chat(client, "invoice", keys["invoice"], provider, model,
+         compose_text(k8["company_a"]["text"], now, k8["company_a"]["rules"]), sid, system=schema_system())
     leaks = 0
     forbidden = _norm_text(k8["forbidden"])
     for cid in k8["company_b_case_ids"]:
@@ -451,19 +537,317 @@ def run_k8(client, keys, provider, model, k8_path: Path, cases_path: Path, now_d
     return 0
 
 
+# ---------------------------------------------------------------- 固定設定・数え・後始末・読み出し・対照
+
+_MISSING = object()
+
+
+def _dig(data: object, dotted: str) -> object:
+    cur = data
+    for part in dotted.split("."):
+        if not isinstance(cur, dict) or part not in cur:
+            return _MISSING
+        cur = cur[part]
+    return cur
+
+
+def _set_dotted(data: dict, dotted: str, value: object) -> None:
+    parts = dotted.split(".")
+    cur = data
+    for part in parts[:-1]:
+        cur = cur.setdefault(part, {})
+    cur[parts[-1]] = value
+
+
+def run_fixed_config(config_path: Path, out_dir: Path, test_model: Path | None, title_on: bool) -> int:
+    """正本 config.yaml を読み、8 つの鍵が全部あれば out_dir/config.yaml に書く。正本は書き換えない。"""
+    try:
+        conf = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError):
+        print("正本の config.yaml が読めません", file=sys.stderr)
+        return 2
+    if not isinstance(conf, dict):
+        print("正本の config.yaml が辞書ではありません", file=sys.stderr)
+        return 2
+    missing = [k for k in FIXED_KEYS if _dig(conf, k) is _MISSING]
+    if missing:
+        print("無い鍵: " + " ".join(missing), file=sys.stderr)
+        return 2
+    if test_model is not None:
+        try:
+            block = yaml.safe_load(test_model.read_text(encoding="utf-8")).get("model")
+        except (OSError, yaml.YAMLError, AttributeError):
+            print("--test-model が読めません", file=sys.stderr)
+            return 2
+        if not isinstance(block, dict):
+            print("--test-model に model: の塊がありません", file=sys.stderr)
+            return 2
+        conf["model"] = block
+    if title_on:
+        _set_dotted(conf, "auxiliary.title_generation.enabled", True)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "config.yaml").write_text(yaml.safe_dump(conf, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    print(f"keys={len(FIXED_KEYS)} test_model={1 if test_model is not None else 0} title_on={1 if title_on else 0}",
+          file=sys.stderr)
+    return 0
+
+
+def _docker(args: list[str], timeout: float = 600.0) -> subprocess.CompletedProcess:
+    """docker を 1 回呼ぶ。試験ではここを差し替える。"""
+    return subprocess.run(["docker", *args], capture_output=True, text=True, timeout=timeout)
+
+
+def _sleep(seconds: float) -> None:
+    time.sleep(seconds)
+
+
+K7_INNER = (
+    'echo "N $(find /opt/data -type f | wc -l)"; '
+    'find /opt/data -type f | while IFS= read -r f; do '
+    'c=$(grep -a -c -F -f /texts.txt "$f" 2>/dev/null); '
+    '[ "${c:-0}" -gt 0 ] 2>/dev/null && printf "H\\t%s\\t%s\\n" "$f" "$c"; done; true'
+)
+
+
+def k7count(label: str, volume: str, texts: Path) -> tuple[list[tuple[str, int]], int]:
+    """置き場の全ファイルについて、頼みの文のどれかを含む行の数を数える（置き場は読むだけ・-I は付けない）。
+    戻りは ([(ファイル, 行数)…（1 行以上だけ）], 全ファイル数)。"""
+    proc = _docker(["run", "--rm", "--network", "none", "--entrypoint", "sh", "-u", "10000:10000",
+                    "-v", f"{volume}:/opt/data:ro", "-v", f"{texts.resolve()}:/texts.txt:ro", IMAGE, "-c", K7_INNER])
+    hits: list[tuple[str, int]] = []
+    total = 0
+    for line in proc.stdout.splitlines():
+        parts = line.split("\t")
+        if parts[0].startswith("N "):
+            try:
+                total = int(parts[0][2:])
+            except ValueError:
+                pass
+        elif parts[0] == "H" and len(parts) == 3 and parts[2].isdigit():
+            hits.append((parts[1], int(parts[2])))
+    return hits, total
+
+
+def write_k7(label: str, hits: list[tuple[str, int]]) -> str:
+    return "".join(f"{label}\t{f}\t{n}\n" for f, n in hits)
+
+
+def _texts_ok(texts: Path) -> bool:
+    try:
+        lines = texts.read_text(encoding="utf-8").split("\n")
+    except OSError:
+        return False
+    body = lines[:-1] if lines and lines[-1] == "" else lines
+    return bool(body) and all(line != "" for line in body)  # 空行があると全行に当たってしまう
+
+
+def run_k7count(label: str, volume: str, texts: Path) -> int:
+    if not _texts_ok(texts):
+        print("--texts が読めない・空・空行がある", file=sys.stderr)
+        return 2
+    hits, total = k7count(label, volume, texts)
+    sys.stdout.write(write_k7(label, hits))
+    print(f"files={total} hit_files={len(hits)} hit_lines={sum(n for _, n in hits)}", file=sys.stderr)
+    return 0
+
+
+def _read_k7(path: Path) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        parts = line.split("\t")
+        if len(parts) == 3 and parts[2].isdigit():
+            out[parts[1]] = int(parts[2])
+    return out
+
+
+def k7_diff(base: dict[str, int], after: dict[str, int]) -> list[tuple[str, int, int]]:
+    """起点に無いファイルに 1 行でも出たもの・起点より行が増えたもの（ファイル, 起点, 後）。"""
+    return [(f, base.get(f, 0), n) for f, n in sorted(after.items()) if n > base.get(f, 0)]
+
+
+def run_k7judge(base: Path, after: Path) -> int:
+    try:
+        b, a = _read_k7(base), _read_k7(after)
+    except OSError:
+        print("--base・--after が読めません", file=sys.stderr)
+        return 2
+    bad = k7_diff(b, a)
+    for f, nb, na in bad:
+        print(f"{f}\tbase={nb}\tafter={na}")
+    print("k7=NG" if bad else "k7=OK")
+    return 0
+
+
+def _room_db_lines(hits: list[tuple[str, int]], room: str) -> int:
+    return sum(n for f, n in hits if f.endswith((f"/profiles/{room}/state.db", f"/profiles/{room}/state.db-wal")))
+
+
+def _health_ok(url: str) -> bool:
+    try:
+        return httpx.get(url, timeout=3.0).status_code == 200
+    except httpx.HTTPError:
+        return False
+
+
+def run_compact(container: str, volume: str, fixed: Path, texts: Path, out_prefix: str,
+                base_url: str = "http://127.0.0.1:8642") -> int:
+    """後始末③〜⑤: 止める → 数える → 部屋ごとに詰め直す → 数える → 起こす → 数える（design.md §5）。"""
+    if not _texts_ok(texts):
+        print("--texts が読めない・空・空行がある", file=sys.stderr)
+        return 2
+
+    def count(label: str) -> list[tuple[str, int]]:
+        hits, total = k7count(label, volume, texts)
+        Path(f"{out_prefix}-{label}.tsv").write_text(write_k7(label, hits), encoding="utf-8")
+        print(f"k7count label={label} files={total} hit_files={len(hits)} hit_lines={sum(n for _, n in hits)}")
+        return hits
+
+    t0 = time.monotonic()
+    _docker(["stop", container])
+    prev = count("after-stop")
+    for room in ROOMS:
+        proc = _docker(["run", "--rm", "--network", "none", "-v", f"{fixed.resolve()}:/etc/hermes:ro",
+                        "-v", f"{volume}:/opt/data", IMAGE, "hermes", "sessions", "optimize", "-p", room])
+        print(f"optimize room={room} rc={proc.returncode}")
+        for line in proc.stdout.splitlines():
+            if line.lstrip().startswith("reconcile:"):
+                print(line)
+        cur = count(f"after-optimize-{room}")
+        before, after = _room_db_lines(prev, room), _room_db_lines(cur, room)
+        if before > 0 and after >= before:
+            print(f"compact=STOPPED room={room}")
+            return 3
+        prev = cur
+    _docker(["start", container])
+    healthy = False
+    for _ in range(180):
+        if _health_ok(f"{base_url}/health"):
+            healthy = True
+            break
+        _sleep(1)
+    print(f"stop_to_health_seconds={time.monotonic() - t0:.1f}")
+    if not healthy:
+        print("compact=HEALTH_TIMEOUT")
+        return 6
+    count("after-start")
+    print("compact=DONE")
+    return 0
+
+
+def _norm_got(text: str) -> str:
+    lines = [ln for ln in text.strip().splitlines() if ln.strip()]
+    v = lines[-1].strip() if lines else ""
+    if ":" in v and not v.startswith(("[", "'", '"')):
+        v = v.split(":", 1)[1].strip()
+    v = v.strip("'\"")
+    return v.lower() if v.lower() in ("true", "false") else v
+
+
+def _norm_expected(v: object) -> str:
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, list):
+        return "[]" if not v else json.dumps(v)
+    return str(v)
+
+
+def run_configcheck(container: str, config_path: Path = CONFIG_YAML) -> int:
+    conf = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    print("\t".join(["room", "key", "got", "expected", "ok"]))
+    bad = 0
+    for room in ROOMS:
+        for key in FIXED_KEYS:
+            expected = _norm_expected(_dig(conf, key))
+            proc = _docker(["exec", container, "hermes", "-p", room, "config", "get", key])
+            got = _norm_got(proc.stdout)
+            ok = 1 if got == expected else 0
+            bad += 0 if ok else 1
+            print("\t".join([room, key, got, expected, str(ok)]))
+    return 4 if bad else 0
+
+
+def run_probe(client: httpx.Client, keys: dict, room: str, provider: str, model: str, text: str,
+              container: str | None, wait_fake_lines: int | None) -> int:
+    """1 回だけ送る（chat() と同じ道。係の部屋なら形の指示も付く）。台本が作った番号を使う。"""
+    sid = str(uuid.uuid4())
+    system = schema_system() if room in ROLE_ROOMS else None
+    r = chat(client, room, keys[room], provider, model, text, sid, system=system)
+    if container is not None and wait_fake_lines is not None:
+        lines = 0
+        for _ in range(30):
+            proc = _docker(["exec", container, "grep", "-c", "/chat/completions", "/tmp/fake.log"])
+            try:
+                lines = int(proc.stdout.strip() or 0)
+            except ValueError:
+                lines = 0
+            if lines >= wait_fake_lines:
+                break
+            _sleep(1)
+        else:
+            print(f"probe=TIMEOUT fake_lines={lines}")
+            delete_session(client, room, keys[room], sid)
+            return 5
+        print(f"fake_lines={lines}")
+    sess = get_session(client, room, keys[room], sid)
+    fields = {
+        "sid_by_script": 1 if sess["status"] == 200 else 0,
+        "get_status": "-" if sess["status"] is None else sess["status"],
+        "chat_code": r.code,
+        "reply_model": r.model if r.model is not None else "-",
+        "usage_in": r.usage_in,
+        "usage_out": r.usage_out,
+    }
+    for f in ("input_tokens", "output_tokens", "api_call_count"):
+        fields[f] = "-" if sess[f] is None else sess[f]
+    print("probe=OK " + " ".join(f"{k}={v}" for k, v in fields.items()))
+    delete_session(client, room, keys[room], sid)
+    return 0
+
+
 # ---------------------------------------------------------------- main
 
+def main_probe(args) -> int:
+    if not (args.room in ROOMS and args.model and args.text and args.keys_file):
+        return 2
+    try:
+        provider, model = parse_model(args.model)
+        keys = json.loads(Path(args.keys_file).read_text(encoding="utf-8"))
+        if not isinstance(keys.get(args.room), str):
+            raise ValueError
+    except (OSError, TypeError, ValueError):
+        print("--model か --keys-file が読めません", file=sys.stderr)
+        return 2
+    with httpx.Client(base_url=args.base_url, timeout=TIMEOUT_SECONDS) as client:
+        return run_probe(client, keys, args.room, provider, model, args.text, args.container, args.wait_fake_lines)
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--target", choices=["hermes", "secretary"], required=True)
-    parser.add_argument("--set", dest="set_name", choices=["main", "k4", "k8"], default="main")
+    parser = argparse.ArgumentParser(allow_abbrev=False)
+    parser.add_argument("--target", choices=["hermes", "secretary"])
+    parser.add_argument("--set", dest="set_name", default="main",
+                        choices=["main", "k4", "k8", "fixed-config", "k7count", "k7judge", "compact", "configcheck", "probe"])
+    parser.add_argument("--out")
+    parser.add_argument("--config", default=str(CONFIG_YAML))
+    parser.add_argument("--test-model")
+    parser.add_argument("--title-on", action="store_true")
+    parser.add_argument("--label")
+    parser.add_argument("--volume")
+    parser.add_argument("--texts")
+    parser.add_argument("--base")
+    parser.add_argument("--after")
+    parser.add_argument("--container")
+    parser.add_argument("--fixed")
+    parser.add_argument("--out-prefix")
+    parser.add_argument("--room")
+    parser.add_argument("--text")
+    parser.add_argument("--wait-fake-lines", type=int)
     parser.add_argument("--cases", default=str(DEFAULT_CASES))
     parser.add_argument("--rules")
     parser.add_argument("--answers", default=str(Path(__file__).with_name("k3-answers.json")))
     parser.add_argument("--k4-cases", default=str(Path(__file__).with_name("k4-cases.json")))
     parser.add_argument("--k8-cases", default=str(Path(__file__).with_name("k8-cases.json")))
     parser.add_argument("--rounds", type=int, default=3)
-    parser.add_argument("--model", required=True)
+    parser.add_argument("--model")
     parser.add_argument("--base-url", default="http://127.0.0.1:8642")
     parser.add_argument("--keys-file")
     parser.add_argument("--tool-runs-shape", default="unknown")
@@ -473,6 +857,34 @@ def main(argv: list[str] | None = None) -> int:
     except SystemExit:
         return 2
     if args.rounds < 1:
+        return 2
+
+    sn = args.set_name
+    if sn == "fixed-config":
+        if not args.out:
+            return 2
+        return run_fixed_config(Path(args.config), Path(args.out), Path(args.test_model) if args.test_model else None,
+                                args.title_on)
+    if sn == "k7count":
+        if not (args.label and args.volume and args.texts):
+            return 2
+        return run_k7count(args.label, args.volume, Path(args.texts))
+    if sn == "k7judge":
+        if not (args.base and args.after):
+            return 2
+        return run_k7judge(Path(args.base), Path(args.after))
+    if sn == "compact":
+        if not (args.container and args.volume and args.fixed and args.texts and args.out_prefix):
+            return 2
+        return run_compact(args.container, args.volume, Path(args.fixed), Path(args.texts), args.out_prefix,
+                           args.base_url)
+    if sn == "configcheck":
+        if not args.container:
+            return 2
+        return run_configcheck(args.container, Path(args.config))
+    if sn == "probe":
+        return main_probe(args)
+    if args.target is None or args.model is None:
         return 2
 
     provider = model = ""
@@ -541,7 +953,9 @@ def main(argv: list[str] | None = None) -> int:
                 print("\t".join(str(x) for x in [
                     rnd, case["id"], case["group"], case["expected"], r["coordinator_role"], r["role_ok"],
                     r["schema_ok"], r["retried"], r["k3_hit"], r["k3_total"], f"{r['seconds']:.2f}",
-                    r["coord_in"], r["coord_out"], r["role_in"], r["role_out"], dstr, r["http_status"], r["error_code"],
+                    r["coord_in"], r["coord_out"], r["role_in"], r["role_out"], dstr, r["deleted_404"],
+                    r["http_status"], r["error_code"],
+                    r["get_status"], r["api_calls"], r["k9_ok"], r["k9_cache"], r["k9_reasoning"],
                 ]))
                 sys.stdout.flush()
 
@@ -562,7 +976,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"coord_in={total('coord_in')} coord_out={total('coord_out')} role_in={total('role_in')} role_out={total('role_out')}",
           file=sys.stderr)
     if args.target == "hermes":
-        print(f"deleted={sum(r['deleted'] for r in rows)}/{sum(r['used'] for r in rows)}", file=sys.stderr)
+        print(f"deleted={sum(r['deleted'] for r in rows)}/{sum(r['used'] for r in rows)} "
+              f"deleted_404={sum(r['deleted_404'] for r in rows)}", file=sys.stderr)
+        print(f"k9={sum(1 for r in rows if r['k9_ok'] == 1)}/{n} k9_unreadable={sum(1 for r in rows if r['k9_ok'] == '-')}",
+              file=sys.stderr)
+        print(f"k9_cache={total('k9_cache')} k9_reasoning={total('k9_reasoning')}", file=sys.stderr)
         print(f"undeleted_ids={len(undeleted)}", file=sys.stderr)
         for sid in undeleted:
             print(f"undeleted={sid}", file=sys.stderr)
